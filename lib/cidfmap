@@ -1,0 +1,16 @@
+%!
+% $Id: cidfmap,v 1.1 2004/02/14 22:32:07 atai Exp $
+% This is a sample map file for CIDFont category.
+
+%
+% The map is a set of records like this :
+%
+%  /substituted /original ;
+%
+%  Where 'substituted' is a name being used in a document,
+%  'original' is a name of an available resource.
+%
+% Example :
+%    
+%   /ShinGo-Bold  /HeiseiKakuGo-W5 ;
+%
