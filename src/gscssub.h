@@ -1,22 +1,28 @@
-/* Copyright (C) 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gscssub.h,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gscssub.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Client interface to color space substitution */
 
 #ifndef gscssub_INCLUDED
@@ -56,18 +62,18 @@
  */
 
 /* If pcs is NULL, it means undo any substitution. */
-int gs_setsubstitutecolorspace(P3(gs_state *pgs, gs_color_space_index csi,
-				  const gs_color_space *pcs));
+int gs_setsubstitutecolorspace(gs_state *pgs, gs_color_space_index csi,
+			       const gs_color_space *pcs);
 const gs_color_space *
-    gs_currentsubstitutecolorspace(P2(const gs_state *pgs,
-				      gs_color_space_index csi));
+    gs_currentsubstitutecolorspace(const gs_state *pgs,
+				   gs_color_space_index csi);
 
 /*
  * The following procedures are primarily for internal use, to provide
  * fast access to specific color spaces.
  */
-const gs_color_space *gs_current_DeviceGray_space(P1(const gs_state *pgs));
-const gs_color_space *gs_current_DeviceRGB_space(P1(const gs_state *pgs));
-const gs_color_space *gs_current_DeviceCMYK_space(P1(const gs_state *pgs));
+const gs_color_space *gs_current_DeviceGray_space(const gs_state *pgs);
+const gs_color_space *gs_current_DeviceRGB_space(const gs_state *pgs);
+const gs_color_space *gs_current_DeviceCMYK_space(const gs_state *pgs);
 
 #endif /* gscssub_INCLUDED */

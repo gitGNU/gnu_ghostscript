@@ -1,22 +1,28 @@
-/* Copyright (C) 1994, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1994, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: interp.h,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: interp.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Internal interfaces to interp.c and iinit.c */
 
 #ifndef interp_INCLUDED
@@ -25,12 +31,12 @@
 /* ------ iinit.c ------ */
 
 /* Enter a name and value into systemdict. */
-int i_initial_enter_name(P3(i_ctx_t *, const char *, const ref *));
+int i_initial_enter_name(i_ctx_t *, const char *, const ref *);
 #define initial_enter_name(nstr, pvalue)\
   i_initial_enter_name(i_ctx_p, nstr, pvalue)
 
 /* Remove a name from systemdict. */
-void i_initial_remove_name(P2(i_ctx_t *, const char *));
+void i_initial_remove_name(i_ctx_t *, const char *);
 #define initial_remove_name(nstr)\
   i_initial_remove_name(i_ctx_p, nstr)
 
@@ -53,17 +59,17 @@ extern const int gs_interp_num_special_ops;
  * If operator is hard-coded into the interpreter,
  * assign it a special type and index.
  */
-void gs_interp_make_oper(P3(ref * opref, op_proc_t, int index));
+void gs_interp_make_oper(ref * opref, op_proc_t, int index);
 
 /* Get the name corresponding to an error number. */
-int gs_errorname(P3(i_ctx_t *, int, ref *));
+int gs_errorname(i_ctx_t *, int, ref *);
 
 /* Put a string in $error /errorinfo. */
-int gs_errorinfo_put_string(P2(i_ctx_t *, const char *));
+int gs_errorinfo_put_string(i_ctx_t *, const char *);
 
 /* Initialize the interpreter. */
-int gs_interp_init(P3(i_ctx_t **pi_ctx_p, const ref *psystem_dict,
-		      gs_dual_memory_t *dmem));
+int gs_interp_init(i_ctx_t **pi_ctx_p, const ref *psystem_dict,
+		   gs_dual_memory_t *dmem);
 
 #ifndef gs_context_state_t_DEFINED
 #  define gs_context_state_t_DEFINED
@@ -74,21 +80,21 @@ typedef struct gs_context_state_s gs_context_state_t;
  * Create initial stacks for the interpreter.
  * We export this for creating new contexts.
  */
-int gs_interp_alloc_stacks(P2(gs_ref_memory_t * smem,
-			      gs_context_state_t * pcst));
+int gs_interp_alloc_stacks(gs_ref_memory_t * smem,
+			   gs_context_state_t * pcst);
 
 /*
  * Free the stacks when destroying a context.  This is the inverse of
  * create_stacks.
  */
-void gs_interp_free_stacks(P2(gs_ref_memory_t * smem,
-			      gs_context_state_t * pcst));
+void gs_interp_free_stacks(gs_ref_memory_t * smem,
+			   gs_context_state_t * pcst);
 
 /* Reset the interpreter. */
-void gs_interp_reset(P1(i_ctx_t *i_ctx_p));
+void gs_interp_reset(i_ctx_t *i_ctx_p);
 
 /* Define the top-level interface to the interpreter. */
-int gs_interpret(P5(i_ctx_t **pi_ctx_p, ref * pref, int user_errors,
-		    int *pexit_code, ref * perror_object));
+int gs_interpret(i_ctx_t **pi_ctx_p, ref * pref, int user_errors,
+		 int *pexit_code, ref * perror_object);
 
 #endif /* interp_INCLUDED */

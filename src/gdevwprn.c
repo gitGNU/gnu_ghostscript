@@ -1,28 +1,37 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevwprn.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevwprn.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
 /*
  * Microsoft Windows 3.n printer driver for Ghostscript.
  *
  * Original version by Russell Lang and
  * L. Peter Deutsch, Aladdin Enterprises.
  */
+
+/* This driver is very slow and as of 2002-09-14 it does not work. */
+
 #include "gdevmswn.h"
 #include "gp.h"
 #include "gpcheck.h"
@@ -47,9 +56,9 @@ typedef struct gx_device_win_prn_s gx_device_win_prn;
 #define wdev ((gx_device_win_prn *)dev)
 
 /* Forward references */
-private void near win_prn_addtool(P2(gx_device_win_prn *, int));
-private void near win_prn_maketools(P2(gx_device_win_prn *, HDC));
-private void near win_prn_destroytools(P1(gx_device_win_prn *));
+private void near win_prn_addtool(gx_device_win_prn *, int);
+private void near win_prn_maketools(gx_device_win_prn *, HDC);
+private void near win_prn_destroytools(gx_device_win_prn *);
 BOOL CALLBACK _export AbortProc(HDC, int);
 
 /* Device procedures */
@@ -207,6 +216,22 @@ win_prn_open(gx_device * dev)
 	wdev->nColors = 2;
     }
 
+    /* copy encode/decode procedures */
+    wdev->procs.encode_color = wdev->procs.map_rgb_color;
+    wdev->procs.decode_color = wdev->procs.map_color_rgb;
+    if (dev->color_info.depth == 1) {
+	wdev->procs.get_color_mapping_procs = 
+	    gx_default_DevGray_get_color_mapping_procs;
+	wdev->procs.get_color_comp_index = 
+	    gx_default_DevGray_get_color_comp_index;
+    }
+    else {
+	wdev->procs.get_color_mapping_procs = 
+	    gx_default_DevRGB_get_color_mapping_procs;
+	wdev->procs.get_color_comp_index = 
+	    gx_default_DevRGB_get_color_comp_index;
+    }
+
     /* create palette for display */
     if ((wdev->limgpalette = win_makepalette((gx_device_win *) dev))
 	== (LPLOGPALETTE) NULL) {
@@ -305,11 +330,10 @@ win_prn_output_page(gx_device * dev, int num_copies, int flush)
 
 /* Map a r-g-b color to the colors available under Windows */
 private gx_color_index
-win_prn_map_rgb_color(gx_device * dev, gx_color_value r, gx_color_value g,
-		      gx_color_value b)
+win_prn_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 {
     int i = wdev->nColors;
-    gx_color_index color = win_map_rgb_color(dev, r, g, b);
+    gx_color_index color = win_map_rgb_color(dev, cv);
 
     if (color != i)
 	return color;

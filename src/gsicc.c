@@ -1,22 +1,28 @@
-/* Copyright (C) 2001 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2001 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsicc.c,v 1.1 2004/01/14 16:59:49 atai Exp $ */
+/* $Id: gsicc.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Implementation of the ICCBased color space family */
 
 #include "math_.h"
@@ -125,7 +131,6 @@ RELOC_PTRS_END
  */
 private cs_proc_num_components(gx_num_components_CIEICC);
 private cs_proc_base_space(gx_alt_space_CIEICC);
-private cs_proc_equal(gx_equal_CIEICC);
 private cs_proc_init_color(gx_init_CIEICC);
 private cs_proc_restrict_color(gx_restrict_CIEICC);
 private cs_proc_concrete_space(gx_concrete_space_CIEICC);
@@ -139,7 +144,6 @@ private const gs_color_space_type gs_color_space_type_CIEICC = {
     &st_color_space_CIEICC,         /* stype - structure descriptor */
     gx_num_components_CIEICC,       /* num_components */
     gx_alt_space_CIEICC,            /* base_space */
-    gx_equal_CIEICC,                /* equal */
     gx_init_CIEICC,                 /* init_color */
     gx_restrict_CIEICC,             /* restrict_color */
     gx_concrete_space_CIEICC,       /* concrete_space */
@@ -147,6 +151,7 @@ private const gs_color_space_type gs_color_space_type_CIEICC = {
     NULL,                           /* remap_concrete_color */
     gx_default_remap_color,         /* remap_color */
     gx_install_CIE,                 /* install_cpsace */
+    gx_spot_colors_set_overprint,   /* set_overprint */
     gx_adjust_cspace_CIEICC,        /* adjust_cspace_count */
     gx_no_adjust_color_count        /* adjust_color_count */
 };
@@ -171,58 +176,6 @@ gx_alt_space_CIEICC(const gs_color_space * pcs)
     return (pcs->params.icc.picc_info->picc == NULL)
                 ? (const gs_color_space *)&pcs->params.icc.alt_space
                 : NULL;
-}
-
-/*
- * Return true if two ICCBased color spaces are equal. This routine is allowed
- * to return false even if the color spaces are equal (but not the converse),
- * so the following simple algorithm is used:
- *
- *   1. If one color space uses its alternative space, but the other does not,
- *      the two spaces are not the same.
- *
- *   2. If both color spaces use the alternative space, we recursively apply
- *      the question of equality to the base spaces.
- *
- *   3. If neither color space uses the alternative color space, the two
- *      spaces are considered the same only if they reference the same 
- *      data stream (which implies they must have the same number of
- *      components), and make use of the same ranges. No attempt is made to
- *      look into the stream (profile) contents.
- */
-private bool
-gx_equal_CIEICC(const gs_color_space * pcs0, const gs_color_space * pcs1)
-{
-    const gs_icc_params *   picc_params0 = &pcs0->params.icc;
-    const gs_icc_params *   picc_params1 = &pcs1->params.icc;
-    const gs_cie_icc *      picc_info0 = picc_params0->picc_info;
-    const gs_cie_icc *      picc_info1 = picc_params1->picc_info;
-
-    if (picc_info0->picc == NULL) {
-        if (picc_info1->picc != NULL)
-            return false;
-        return picc_params0->alt_space.type->equal(
-                        (const gs_color_space *)&picc_params0->alt_space,
-                        (const gs_color_space *)&picc_params1->alt_space );
-    } else if (picc_info1->picc == NULL)
-        return false;
-    else {
-        const gs_range *    pranges0 = picc_info0->Range.ranges;
-        const gs_range *    pranges1 = picc_info1->Range.ranges;
-        int                 i, ncomps = picc_info0->num_components;
-
-        if   ( picc_info0->instrp != picc_info1->instrp  ||
-               picc_info0->file_id != picc_info1->file_id  )
-            return false;
-
-        for ( i = 0;
-               i < ncomps &&
-               pranges0[i].rmin == pranges1[i].rmin &&
-               pranges0[i].rmax == pranges1[i].rmax;
-               i++ )
-            ;
-        return i == ncomps;
-    }
 }
 
 /*
@@ -669,9 +622,9 @@ gs_cspace_build_CIEICC(
      * valid WhitepPoint since PostScript always requires this, but ICC
      * assumes a D50 WhitePoint as a default
      */
-    picc_info->common.points.WhitePoint.u = 0.9642;		/* Profile illuminant - D50 */
+    picc_info->common.points.WhitePoint.u = (float)0.9642;		/* Profile illuminant - D50 */
     picc_info->common.points.WhitePoint.v = 1.0000;
-    picc_info->common.points.WhitePoint.w = 0.8249;
+    picc_info->common.points.WhitePoint.w = (float)0.8249;
     picc_info->common.install_cspace = gx_install_CIEICC;
     picc_info->num_components = 0;
     picc_info->Range = Range4_default;

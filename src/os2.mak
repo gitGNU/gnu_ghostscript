@@ -1,21 +1,27 @@
-#    Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999, 2000 artofcode LLC.  All rights reserved.
+#    Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
 # 
 #  This program is free software; you can redistribute it and/or modify it
-#  under the terms of the GNU General Public License as published by the
-#  Free Software Foundation; either version 2 of the License, or (at your
-#  option) any later version.
+#  under the terms of the GNU General Public License version 2
+#  as published by the Free Software Foundation.
 #
-#  This program is distributed in the hope that it will be useful, but
-#  WITHOUT ANY WARRANTY; without even the implied warranty of
+#
+#  This software is provided AS-IS with no warranty, either express or
+#  implied. That is, this program is distributed in the hope that it will 
+#  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#  General Public License for more details.
+#  General Public License for more details
 #
 #  You should have received a copy of the GNU General Public License along
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+# 
+# For more information about licensing, please refer to
+# http://www.ghostscript.com/licensing/. For information on
+# commercial licensing, go to http://www.artifex.com/licensing/ or
+# contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+# San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-
-# $Id: os2.mak,v 1.1 2004/01/14 16:59:52 atai Exp $
+# $Id: os2.mak,v 1.2 2004/02/14 22:20:19 atai Exp $
 # makefile for MS-DOS or OS/2 GCC/EMX platform.
 # Uses Borland (MSDOS) MAKER or 
 # Uses IBM NMAKE.EXE Version 2.000.000 Mar 27 1992
@@ -134,7 +140,7 @@ JVERSION=6
 # See libpng.mak for more information.
 
 PSRCDIR=libpng
-PVERSION=10205
+PVERSION=10204
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.
@@ -251,7 +257,7 @@ PLATFORM=os2_
 
 # Define the name of the makefile -- used in dependencies.
 
-MAKEFILE=$(GLSRCDIR)\os2.mak
+MAKEFILE=$(PSSRCDIR)\os2.mak
 TOP_MAKEFILES=$(MAKEFILE)
 
 # Define the files to be deleted by 'make clean'.
@@ -438,7 +444,7 @@ CC_NO_WARN=$(CC_)
 # Choose the language feature(s) to include.  See gs.mak for details.
 # Since we have a large address space, we include some optional features.
 
-FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev
+FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)epsf.dev
 
 # Choose whether to compile the .ps initialization files into the executable.
 # See gs.mak for details.
@@ -490,7 +496,7 @@ DEVICE_DEVS9=$(DD)pbm.dev $(DD)pbmraw.dev $(DD)pgm.dev $(DD)pgmraw.dev $(DD)pgnm
 DEVICE_DEVS10=$(DD)tiffcrle.dev $(DD)tiffg3.dev $(DD)tiffg32d.dev $(DD)tiffg4.dev $(DD)tifflzw.dev $(DD)tiffpack.dev
 DEVICE_DEVS11=$(DD)bmpmono.dev $(DD)bmp16.dev $(DD)bmp256.dev $(DD)bmp16m.dev $(DD)tiff12nc.dev $(DD)tiff24nc.dev
 DEVICE_DEVS12=$(DD)psmono.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
-DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
+DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev
 DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)epswrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
 DEVICE_DEVS16=$(DD)bbox.dev
@@ -512,8 +518,8 @@ DEVICE_DEVS20=$(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev
 !include "$(GLSRCDIR)\devs.mak"
 !include "$(GLSRCDIR)\pcwin.mak"
 !include "$(GLSRCDIR)\contrib.mak"
-!include "$(GLSRCDIR)\int.mak"
-!include "$(GLSRCDIR)\cfonts.mak"
+!include "$(PSSRCDIR)\int.mak"
+!include "$(PSSRCDIR)\cfonts.mak"
 
 # -------------------------------- Library -------------------------------- #
 
@@ -604,7 +610,7 @@ $(GENINIT_XE): $(PSSRC)geninit.c $(GENINIT_DEPS)
 $(gconfig__h): $(TOP_MAKEFILES) $(ECHOGS_XE)
 	$(ECHOGS_XE) -w $(gconfig__h) /* This file deliberately left blank. */
 
-$(gconfigv_h): $(GLSRCDIR)\os2.mak $(TOP_MAKEFILES) $(ECHOGS_XE)
+$(gconfigv_h): $(PSSRCDIR)\os2.mak $(TOP_MAKEFILES) $(ECHOGS_XE)
 	$(ECHOGS_XE) -w $(gconfigv_h) -x 23 define USE_ASM -x 2028 -q $(USE_ASM)-0 -x 29
 	$(ECHOGS_XE) -a $(gconfigv_h) -x 23 define USE_FPU -x 2028 -q $(FPU_TYPE)-0 -x 29
 	$(ECHOGS_XE) -a $(gconfigv_h) -x 23 define EXTEND_NAMES 0$(EXTEND_NAMES)
@@ -616,58 +622,58 @@ gsdllos2_h=$(GLSRC)gsdllos2.h
 
 # Interpreter main program
 
-ICONS=$(GLOBJ)gsos2.ico $(GLOBJ)gspmdrv.ico
+ICONS=$(PSOBJ)gsos2.ico $(GLOBJ)gspmdrv.ico
 
-$(GLOBJ)dpmain.$(OBJ): $(GLSRC)dpmain.c $(AK)\
+$(PSOBJ)dpmain.$(OBJ): $(PSSRC)dpmain.c $(AK)\
  $(gdevdsp_h) $(iapi_h) $(gscdefs_h) $(errors_h)
-	$(CC) $(CEXE) -I$(GLSRCDIR) -I$(GLGENDIR) $(GLO_)dpmain.$(OBJ) $(C_) $(GLSRC)dpmain.c
+	$(CC) $(CEXE) -I$(PSSRCDIR) -I$(GLSRCDIR) -I$(GLGENDIR) $(PSO_)dpmain.$(OBJ) $(C_) $(PSSRC)dpmain.c
 
 !if $(MAKEDLL)
 #making a DLL
-GS_ALL=$(GLOBJ)gsdll.$(OBJ) $(INT_ALL) $(INTASM)\
-  $(LIB_ALL) $(LIBCTR) $(ld_tr) $(GLGEN)lib.tr $(GLOBJ)$(GS).res $(ICONS)
+GS_ALL=$(PSOBJ)gsdll.$(OBJ) $(INT_ALL) $(INTASM)\
+  $(LIB_ALL) $(LIBCTR) $(ld_tr) $(GLGEN)lib.tr $(PSOBJ)$(GS).res $(ICONS)
 
-$(GS_XE): $(BINDIR)\$(GSDLL).dll $(GLSRC)dpmain.c $(gsdll_h) $(gsdllos2_h) $(GLSRC)gsos2.rc $(GLOBJ)gscdefs.$(OBJ)
+$(GS_XE): $(BINDIR)\$(GSDLL).dll $(PSSRC)dpmain.c $(gsdll_h) $(gsdllos2_h) $(PSSRC)gsos2.rc $(GLOBJ)gscdefs.$(OBJ)
 !if $(EMX)
-	$(COMPDIR)\$(COMP) $(CGDB) $(CO) -Zomf $(MT_OPT) -I$(GLSRCDIR) -I$(GLOBJDIR) -o$(GS_XE) $(GLSRC)dpmain.c $(GLOBJ)gscdefs.$(OBJ) $(GLSRC)gsos2.def
+	$(COMPDIR)\$(COMP) $(CGDB) $(CO) -Zomf $(MT_OPT) -I$(PSSRCDIR) -I$(GLSRCDIR) -I$(PSOBJDIR) -I$(GLOBJDIR) -o$(GS_XE) $(PSSRC)dpmain.c $(GLOBJ)gscdefs.$(OBJ) $(PSSRC)gsos2.def
 !endif
 !if $(IBMCPP)
-	$(CCAUX) -I$(GLSRCDIR) -I$(GLOBJDIR) /Fe$(GX_XE) $(GLSRC)dpmain.c $(GLOBJ)gscdefs.$(OBJ)
+	$(CCAUX) -I$(PSSRCDIR) -I$(GLSRCDIR) -I$(PSOBJDIR) -I$(GLOBJDIR) /Fe$(GX_XE) $(PSSRC)dpmain.c $(GLOBJ)gscdefs.$(OBJ)
 !endif
-	rc $(GLOBJ)$(GS).res $(GS_XE)
+	rc $(PSOBJ)$(GS).res $(GS_XE)
 
-$(GLOBJ)gsdll.$(OBJ): $(GLSRC)gsdll.c $(gsdll_h) $(ghost_h) $(gscdefs_h)
-	$(PSCC) $(GLO_)gsdll.$(OBJ) $(C_) $(GLSRC)gsdll.c
+$(PSOBJ)gsdll.$(OBJ): $(PSSRC)gsdll.c $(gsdll_h) $(ghost_h) $(gscdefs_h)
+	$(PSCC) $(PSO_)gsdll.$(OBJ) $(C_) $(PSSRC)gsdll.c
 
-$(BINDIR)\$(GSDLL).dll: $(GS_ALL) $(ALL_DEVS) $(GLOBJ)gsdll.$(OBJ)
+$(BINDIR)\$(GSDLL).dll: $(GS_ALL) $(ALL_DEVS) $(PSOBJ)gsdll.$(OBJ)
 !if $(EMX)
-	LINK386 /DEBUG $(COMPBASE)\lib\dll0.obj $(COMPBASE)\lib\end.lib @$(ld_tr) $(GLOBJ)gsdll.obj, $(BINDIR)\$(GSDLL).dll, ,$(X11LIBS) $(COMPBASE)\lib\gcc.lib $(COMPBASE)\lib\st\c.lib $(COMPBASE)\lib\st\c_dllso.lib $(COMPBASE)\lib\st\sys.lib $(COMPBASE)\lib\c_alias.lib $(COMPBASE)\lib\os2.lib, $(GLSRC)gsdll2.def
+	LINK386 /DEBUG $(COMPBASE)\lib\dll0.obj $(COMPBASE)\lib\end.lib @$(ld_tr) $(PSOBJ)gsdll.obj, $(BINDIR)\$(GSDLL).dll, ,$(X11LIBS) $(COMPBASE)\lib\gcc.lib $(COMPBASE)\lib\st\c.lib $(COMPBASE)\lib\st\c_dllso.lib $(COMPBASE)\lib\st\sys.lib $(COMPBASE)\lib\c_alias.lib $(COMPBASE)\lib\os2.lib, $(PSSRC)gsdll2.def
 !endif
 !if $(IBMCPP)
-	LINK386 /NOE /DEBUG @$(ld_tr) $(GLOBJ)gsdll.obj, $(BINDIR)\$(GSDLL).dll, , , $(GLSRC)gsdll2.def
+	LINK386 /NOE /DEBUG @$(ld_tr) $(PSOBJ)gsdll.obj, $(BINDIR)\$(GSDLL).dll, , , $(PSSRC)gsdll2.def
 !endif
 
 !else
 #making an EXE
-GS_ALL=$(GLOBJ)gs.$(OBJ) $(INT_ALL) $(INTASM)\
-  $(LIB_ALL) $(LIBCTR) $(ld_tr) $(GLGEN)lib.tr $(GLOBJ)$(GS).res $(ICONS)
+GS_ALL=$(PSOBJ)gs.$(OBJ) $(INT_ALL) $(INTASM)\
+  $(LIB_ALL) $(LIBCTR) $(ld_tr) $(GLGEN)lib.tr $(PSOBJ)$(GS).res $(ICONS)
 
 $(GS_XE): $(GS_ALL) $(ALL_DEVS)
-	$(COMPDIR)\$(COMP) $(CGDB) -I$(GLSRCDIR) -o $(GLOBJ)$(GS) $(GLOBJ)gs.$(OBJ) @$(ld_tr) $(INTASM) -lm
-	$(COMPDIR)\emxbind -r$(GLOBJ)$(GS).res $(COMPDIR)\emxl.exe $(GLOBJ)$(GS) $(GS_XE) -ac
-	del $(GLOBJ)$(GS)
+	$(COMPDIR)\$(COMP) $(CGDB) I$(PSSRCDIR) -I$(GLSRCDIR) -o $(PSOBJ)$(GS) $(PSOBJ)gs.$(OBJ) @$(ld_tr) $(INTASM) -lm
+	$(COMPDIR)\emxbind -r$(PSOBJ)$(GS).res $(COMPDIR)\emxl.exe $(PSOBJ)$(GS) $(GS_XE) -ac
+	del $(PSOBJ)$(GS)
 !endif
 
 # Make the icons from their text form.
 
-$(GLOBJ)gsos2.ico: $(GLSRC)gsos2.icx $(ECHOGS_XE)
-	$(ECHOGS_XE) -wb $(GLOBJ)gsos2.ico -n -X -r $(GLSRC)gsos2.icx
+$(PSOBJ)gsos2.ico: $(PSSRC)gsos2.icx $(ECHOGS_XE)
+	$(ECHOGS_XE) -wb $(PSOBJ)gsos2.ico -n -X -r $(PSSRC)gsos2.icx
 
 $(GLOBJ)gspmdrv.ico: $(GLSRC)gspmdrv.icx $(ECHOGS_XE)
 	$(ECHOGS_XE) -wb $(GLOBJ)gspmdrv.ico -n -X -r $(GLSRC)gspmdrv.icx
 
-$(GLOBJ)$(GS).res: $(GLSRC)$(GS).rc $(GLOBJ)gsos2.ico
-	rc -i $(COMPBASE)\include -i $(GLSRCDIR) -i $(GLOBJDIR) -r $(GLSRC)$(GS).rc $(GLOBJ)$(GS).res
+$(PSOBJ)$(GS).res: $(PSSRC)$(GS).rc $(PSOBJ)gsos2.ico
+	rc -i $(COMPBASE)\include -i $(PSSRCDIR) -i $(PSOBJDIR) -r $(PSSRC)$(GS).rc $(PSOBJ)$(GS).res
 	
 
 # PM driver program

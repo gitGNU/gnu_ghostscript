@@ -1,22 +1,28 @@
-/* Copyright (C) 1998, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1998, 2000, 2002 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gsmalloc.c,v 1.1 2004/01/14 16:59:50 atai Exp $ */
+/* $Id: gsmalloc.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* C heap allocator */
 #include "malloc_.h"
 #include "gdebug.h"
@@ -101,13 +107,13 @@ struct gs_malloc_block_s {
     malloc_block_data;
 /* ANSI C does not allow zero-size arrays, so we need the following */
 /* unnecessary and wasteful workaround: */
-#define _npad (-size_of(struct malloc_block_data_s) & 7)
-    byte _pad[(_npad == 0 ? 8 : _npad)];	/* pad to double */
+#define _npad (-size_of(struct malloc_block_data_s) & (arch_align_memory_mod - 1))
+    byte _pad[(_npad == 0 ? arch_align_memory_mod : _npad)];
 #undef _npad
 };
 
 /* Initialize a malloc allocator. */
-private long heap_available(P0());
+private long heap_available(void);
 gs_malloc_memory_t *
 gs_malloc_memory_init(void)
 {
@@ -177,6 +183,13 @@ gs_heap_alloc_bytes(gs_memory_t * mem, uint size, client_name_t cname)
 	else {
 	    gs_malloc_block_t *bp = (gs_malloc_block_t *) ptr;
 
+	    /*
+	     * We would like to check that malloc aligns blocks at least as
+	     * strictly as the compiler (as defined by arch_align_memory_mod).
+	     * However, Microsoft VC 6 does not satisfy this requirement.
+	     * See gsmemraw.h for more explanation.
+	     */
+	    set_msg(ok_msg);
 	    if (mmem->allocated)
 		mmem->allocated->prev = bp;
 	    bp->next = mmem->allocated;
@@ -185,7 +198,6 @@ gs_heap_alloc_bytes(gs_memory_t * mem, uint size, client_name_t cname)
 	    bp->type = &st_bytes;
 	    bp->cname = cname;
 	    mmem->allocated = bp;
-	    set_msg(ok_msg);
 	    ptr = (byte *) (bp + 1);
 	    gs_alloc_fill(ptr, gs_alloc_fill_alloc, size);
 	    mmem->used += size + sizeof(gs_malloc_block_t);
@@ -493,6 +505,7 @@ gs_malloc_init(void)
 {
     gs_malloc_memory_default = gs_malloc_memory_init();
     gs_malloc_wrap(&gs_memory_t_default, gs_malloc_memory_default);
+    gs_memory_t_default->stable_memory = gs_memory_t_default;
     return gs_memory_t_default;
 }
 

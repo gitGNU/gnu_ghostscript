@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>History of Ghostscript versions 4.n</title>
-<!-- $Id: History4.htm,v 1.1 2004/01/14 16:59:43 atai Exp $ -->
+<!-- $Id: History4.htm,v 1.2 2004/02/14 22:20:03 atai Exp $ -->
 <!-- Originally: history4.txt -->
 <!--
 	WARNING: do not use Pete Kaiser's emacs function "gs-toc" alone to
@@ -983,7 +983,7 @@ Updates the documentation for the uniprint driver.  (devices.txt)
 Clarifies the fact that Ghostscript reads Fontmap files from *all*
 directories in the search list.  (use.txt)
 
-Notes that building on GNU/Linux may require SM and ICE in the list of X
+Notes that building on Linux may require SM and ICE in the list of X
 libraries.  (make.txt)
 
 </pre><h3><a name="V4.72_Procedures"></a>Procedures</h3><pre>
@@ -3745,7 +3745,7 @@ color, omitted one line of pixels and displaced the image by one pixel.
 
 Adds an implementation of realloc, for systems that don't have one that
 works.  I don't know how to determine this automatically, so for the moment,
-the code uses our own implementation on GNU/Linux (where realloc is known to be
+the code uses our own implementation on Linux (where realloc is known to be
 broken, at least in some releases) and nowhere else.  (malloc_.h,
 gsmemory.c, gsmisc.c)
 
@@ -3971,8 +3971,14 @@ This software is distributed under license and may not be copied,
 modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
+For more information about licensing, please refer to
+http://www.ghostscript.com/licensing/. For information on
+commercial licensing, go to http://www.artifex.com/licensing/ or
+contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
 <p>
-<small>Ghostscript version 7.07, 17 May 2003
+<small>Ghostscript version 8.01, 30 January 2004
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

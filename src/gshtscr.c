@@ -1,22 +1,28 @@
-/* Copyright (C) 1993, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1993, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gshtscr.c,v 1.1 2004/01/14 16:59:49 atai Exp $ */
+/* $Id: gshtscr.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Screen (Type 1) halftone processing for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -26,6 +32,7 @@
 #include "gzstate.h"
 #include "gxdevice.h"           /* for gzht.h */
 #include "gzht.h"
+#include "gswts.h"
 
 /* Define whether to force all halftones to be strip halftones, */
 /* for debugging. */
@@ -60,8 +67,9 @@ private RELOC_PTRS_WITH(screen_enum_reloc_ptrs, gs_screen_enum *eptr)
 }
 RELOC_PTRS_END
 
-/* Define the default value of AccurateScreens that affects */
-/* setscreen and setcolorscreen. */
+/* Define the default value of AccurateScreens that affects setscreen
+   and setcolorscreen. Note that this is effectively a global, and
+   thus gets in the way of reentrancy. We'll want to fix that. */
 private bool screen_accurate_screens;
 
 /* Default AccurateScreens control */
@@ -74,6 +82,21 @@ bool
 gs_currentaccuratescreens(void)
 {
     return screen_accurate_screens;
+}
+
+/* As with AccurateScreens, this is also effectively a global. However,
+   it is going away soon. */
+private bool screen_use_wts;
+
+void
+gs_setusewts(bool use_wts)
+{
+    screen_use_wts = use_wts;
+}
+bool
+gs_currentusewts(void)
+{
+    return screen_use_wts;
 }
 
 /* Define the MinScreenLevels user parameter similarly. */
@@ -167,9 +190,9 @@ gx_compute_cell_values(gx_ht_cell_params_t * phcp)
 }
 
 /* Forward references */
-private int pick_cell_size(P6(gs_screen_halftone * ph,
+private int pick_cell_size(gs_screen_halftone * ph,
      const gs_matrix * pmat, ulong max_size, uint min_levels, bool accurate,
-                              gx_ht_cell_params_t * phcp));
+			   gx_ht_cell_params_t * phcp);
 
 /* Allocate a screen enumerator. */
 gs_screen_enum *
@@ -237,7 +260,7 @@ gs_screen_order_init_memory(gx_ht_order * porder, const gs_state * pgs,
                             gs_memory_t * mem)
 {
     gs_matrix imat;
-    ulong max_size = pgs->ht_cache->bits_size;
+    ulong max_size = max_tile_cache_bytes;
     int code;
 
     if (phsp->frequency < 0.1)
@@ -466,44 +489,47 @@ gs_screen_enum_init_memory(gs_screen_enum * penum, const gx_ht_order * porder,
     penum->halftone.type = ht_type_screen;
     penum->halftone.params.screen = *phsp;
     penum->x = penum->y = 0;
-    penum->strip = porder->num_levels / porder->width;
-    penum->shift = porder->shift;
-    /*
-     * We want a transformation matrix that maps the parallelogram
-     * (0,0), (U,V), (U-V',V+U'), (-V',U') to the square (+/-1, +/-1).
-     * If the coefficients are [a b c d e f] and we let
-     *      u = U = M/R, v = V = N/R,
-     *      r = -V' = -N'/R', s = U' = M'/R',
-     * then we just need to solve the equations:
-     *      a*0 + c*0 + e = -1      b*0 + d*0 + f = -1
-     *      a*u + c*v + e = 1       b*u + d*v + f = 1
-     *      a*r + c*s + e = -1      b*r + d*s + f = 1
-     * This has the following solution:
-     *      Q = 2 / (M*M' + N*N')
-     *      a = Q * R * M'
-     *      b = -Q * R' * N
-     *      c = Q * R * N'
-     *      d = Q * R' * M
-     *      e = -1
-     *      f = -1
-     */
-    {
-        const int M = porder->params.M, N = porder->params.N, R = porder->params.R;
-        const int M1 = porder->params.M1, N1 = porder->params.N1, R1 = porder->params.R1;
-        double Q = 2.0 / ((long)M * M1 + (long)N * N1);
 
-        penum->mat.xx = Q * (R * M1);
-        penum->mat.xy = Q * (-R1 * N);
-        penum->mat.yx = Q * (R * N1);
-        penum->mat.yy = Q * (R1 * M);
-        penum->mat.tx = -1.0;
-        penum->mat.ty = -1.0;
-        gs_matrix_invert(&penum->mat, &penum->mat_inv);
+    if (porder->wse == NULL) {
+	penum->strip = porder->num_levels / porder->width;
+	penum->shift = porder->shift;
+	/*
+	 * We want a transformation matrix that maps the parallelogram
+	 * (0,0), (U,V), (U-V',V+U'), (-V',U') to the square (+/-1, +/-1).
+	 * If the coefficients are [a b c d e f] and we let
+	 *      u = U = M/R, v = V = N/R,
+	 *      r = -V' = -N'/R', s = U' = M'/R',
+	 * then we just need to solve the equations:
+	 *      a*0 + c*0 + e = -1      b*0 + d*0 + f = -1
+	 *      a*u + c*v + e = 1       b*u + d*v + f = 1
+	 *      a*r + c*s + e = -1      b*r + d*s + f = 1
+	 * This has the following solution:
+	 *      Q = 2 / (M*M' + N*N')
+	 *      a = Q * R * M'
+	 *      b = -Q * R' * N
+	 *      c = Q * R * N'
+	 *      d = Q * R' * M
+	 *      e = -1
+	 *      f = -1
+	 */
+	{
+	    const int M = porder->params.M, N = porder->params.N, R = porder->params.R;
+	    const int M1 = porder->params.M1, N1 = porder->params.N1, R1 = porder->params.R1;
+	    double Q = 2.0 / ((long)M * M1 + (long)N * N1);
+
+	    penum->mat.xx = Q * (R * M1);
+	    penum->mat.xy = Q * (-R1 * N);
+	    penum->mat.yx = Q * (R * N1);
+	    penum->mat.yy = Q * (R1 * M);
+	    penum->mat.tx = -1.0;
+	    penum->mat.ty = -1.0;
+	    gs_matrix_invert(&penum->mat, &penum->mat_inv);
+	}
+	if_debug7('h', "[h]Screen: (%dx%d)/%d [%f %f %f %f]\n",
+		  porder->width, porder->height, porder->params.R,
+		  penum->mat.xx, penum->mat.xy,
+		  penum->mat.yx, penum->mat.yy);
     }
-    if_debug7('h', "[h]Screen: (%dx%d)/%d [%f %f %f %f]\n",
-              porder->width, porder->height, porder->params.R,
-              penum->mat.xx, penum->mat.xy,
-              penum->mat.yx, penum->mat.yy);
     return 0;
 }
 
@@ -515,6 +541,15 @@ gs_screen_currentpoint(gs_screen_enum * penum, gs_point * ppt)
     int code;
     double sx, sy; /* spot center in spot coords (integers) */
     gs_point spot_center; /* device coords */
+
+    if (penum->order.wse) {
+	int code;
+	code = gs_wts_screen_enum_currentpoint(penum->order.wse, ppt);
+	if (code > 0) {
+	    wts_sort_blue(penum->order.wse);
+	}
+	return code;
+    }
 
     if (penum->y >= penum->strip) {     /* all done */
         gx_ht_construct_spot_order(&penum->order);
@@ -560,26 +595,30 @@ gs_screen_currentpoint(gs_screen_enum * penum, gs_point * ppt)
 int
 gs_screen_next(gs_screen_enum * penum, floatp value)
 {
-    ht_sample_t sample;
-    int width = penum->order.width;
-    gx_ht_bit *bits = (gx_ht_bit *)penum->order.bit_data;
+    if (penum->order.wse) {
+	return gs_wts_screen_enum_next (penum->order.wse, value);
+    } else {
+	ht_sample_t sample;
+	int width = penum->order.width;
+	gx_ht_bit *bits = (gx_ht_bit *)penum->order.bit_data;
 
-    if (value < -1.0 || value > 1.0)
-        return_error(gs_error_rangecheck);
-    sample = (ht_sample_t) ((value + 1) * max_ht_sample);
+	if (value < -1.0 || value > 1.0)
+	    return_error(gs_error_rangecheck);
+	sample = (ht_sample_t) ((value + 1) * max_ht_sample);
 #ifdef DEBUG
-    if (gs_debug_c('H')) {
-        gs_point pt;
+	if (gs_debug_c('H')) {
+	    gs_point pt;
 
-        gs_screen_currentpoint(penum, &pt);
-        dlprintf6("[H]sample x=%d y=%d (%f,%f): %f -> %u\n",
-                  penum->x, penum->y, pt.x, pt.y, value, sample);
-    }
+	    gs_screen_currentpoint(penum, &pt);
+	    dlprintf6("[H]sample x=%d y=%d (%f,%f): %f -> %u\n",
+		      penum->x, penum->y, pt.x, pt.y, value, sample);
+	}
 #endif
-    bits[penum->y * width + penum->x].mask = sample;
-    if (++(penum->x) >= width)
-        penum->x = 0, ++(penum->y);
-    return 0;
+	bits[penum->y * width + penum->x].mask = sample;
+	if (++(penum->x) >= width)
+	    penum->x = 0, ++(penum->y);
+	return 0;
+    }
 }
 
 /* Install a fully constructed screen in the gstate. */
@@ -587,9 +626,12 @@ int
 gs_screen_install(gs_screen_enum * penum)
 {
     gx_device_halftone dev_ht;
+    int code;
 
     dev_ht.rc.memory = penum->halftone.rc.memory;
     dev_ht.order = penum->order;
     dev_ht.components = 0;
-    return gx_ht_install(penum->pgs, &penum->halftone, &dev_ht);
+    if ((code = gx_ht_install(penum->pgs, &penum->halftone, &dev_ht)) < 0)
+        gx_device_halftone_release(&dev_ht, dev_ht.rc.memory);
+    return code;
 }

@@ -1,20 +1,19 @@
 %    Copyright (C) 1990, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-% This program is free software; you can redistribute it and/or modify it
-% under the terms of the GNU General Public License as published by the
-% Free Software Foundation; either version 2 of the License, or (at your
-% option) any later version.
-%
-% This program is distributed in the hope that it will be useful, but
-% WITHOUT ANY WARRANTY; without even the implied warranty of
-% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-% Public License for more details.
-%
-% You should have received a copy of the GNU General Public License along
-% with this program; if not, write to the Free Software Foundation, Inc.,
-% 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_fonts.ps,v 1.1 2004/01/14 16:59:46 atai Exp $
+% $Id: gs_fonts.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
 % Font initialization and management code.
 
 % Define the default font.
@@ -448,12 +447,20 @@ buildfontdict 3 /.buildfont3 cvx put
     cvx exec
   end
 } bind def
+/.setloadingfont {
+   //systemdict /.loadingfont 3 -1 roll .forceput
+} .bind odef % .forceput must be bound and hidden
 /.loadfont
  {		% Some buggy fonts leave extra junk on the stack,
 		% so we have to make a closure that records the stack depth
 		% in a fail-safe way.
-   {{.loadfontfile} .execasresource} count 1 sub 2 .execn
-   count exch sub { pop } repeat
+   true .setloadingfont
+   { /FAPI_hook_disable pop % gs_fapi accesses this with execstack_lookup - don't remove !
+     {{.loadfontfile} .execasresource} count 1 sub 2 .execn
+     count exch sub { pop } repeat
+     exit
+   } loop % this loop is a pattern for execstack_lookup, don't remove !
+   false .setloadingfont
  } bind def
 
 % Find an alternate font to substitute for an unknown one.
@@ -721,7 +728,12 @@ FAKEFONTS not { (%END FAKEFONTS) .skipeof } if
       } ifelse
   .dofindfont
 } bind def
-$error /SubstituteFont { .stdsubstfont } put
+
+% Default font substitution does {pop /Courier} om many implementations.
+% GS post-process font substitution in .stdsubstfont and uses {} for
+% backward compatibility
+$error /SubstituteFont { } put
+
 % Scan the next directory on FONTPATH.
 /.scannextfontdir {	% - .scannextfontdir <bool>
 			% If we haven't scanned all the directories in
@@ -758,7 +770,7 @@ $error /SubstituteFont { .stdsubstfont } put
 	/findfont cvx /invalidfont signalerror
       } if
 			% Substitute for the font.  Don't alias.
-      $error /SubstituteFont get exec
+      $error /SubstituteFont get exec .stdsubstfont
     } ifelse
   } if
 } bind def
@@ -812,6 +824,19 @@ $error /SubstituteFont { .stdsubstfont } put
     }
    ifelse
  } bind def
+
+% any user of .putgstringcopy must use bind and executeonly
+/.putgstringcopy  %   <dict> <name> <string> .putgstringcopy -
+{ 2 index gcheck currentglobal
+  2 copy eq {
+    pop pop .forceput
+  } {
+    5 1 roll setglobal
+    dup length string copy
+    .forceput setglobal
+  } ifelse
+} .bind odef % must be bound and hidden for .forceput
+
 
 % Attempt to load a font from a file.
 /.tryloadfont {		% <fontname> .tryloadfont <font> true
@@ -900,15 +925,22 @@ $error /SubstituteFont { .stdsubstfont } put
 
 		% Check to make sure the font was actually loaded.
 	dup 3 index .fontknownget
-	 { 4 1 roll pop pop pop true exit } if
+	 { dup /PathLoad 4 index //.putgstringcopy exec
+           4 1 roll pop pop pop true exit 
+         } if
 
 		% Maybe the file had a different FontName.
 		% See if we can get a FontName from the file, and if so,
 		% whether a font by that name exists now.
-	exch (r) file .findfontname
-	 { 2 copy .fontknownget
-	    {	% Yes.  Stack: origfontname fontdirectory filefontname fontdict
+	exch dup      % Stack: origfontname fontdirectory path path
+	(r) file .findfontname
+	 {            % Stack: origfontname fontdirectory path filefontname
+	   2 index 1 index .fontknownget
+	    {	% Yes.  Stack: origfontname fontdirectory path filefontname fontdict
+              dup 4 -1 roll /PathLoad exch //.putgstringcopy exec
+                      % Stack: origfontname fontdirectory filefontname fontdict
 	      3 -1 roll pop exch
+	              % Stack: origfontname fontdict filefontname
 	      QUIET
 	       { pop
 	       }
@@ -916,11 +948,13 @@ $error /SubstituteFont { .stdsubstfont } put
 	         ( font for ) print 1 index =only
 	         (.) = flush
 	       }
-	      ifelse true exit
+	      ifelse  % Stack: origfontname fontdict
+	      exch pop true exit
+	              % Stack: fontdict
 	    }
-	   if pop
+	   if pop % Stack: origfontname fontdirectory path
 	 }
-	if pop
+	if pop pop  % Stack: origfontname
 
 		% The font definitely did not load correctly.
 	QUIET not
@@ -931,7 +965,9 @@ $error /SubstituteFont { .stdsubstfont } put
 
     } loop		% end of loop
 
- } bind def
+ } bind executeonly def % must be bound and hidden for .putgstringcopy
+
+currentdict /.putgstringcopy .undef
 
 % Define a procedure to load all known fonts.
 % This isn't likely to be very useful.

@@ -1,22 +1,28 @@
-/* Copyright (C) 1993, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1993, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gspcolor.c,v 1.1 2004/01/14 16:59:50 atai Exp $ */
+/* $Id: gspcolor.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Pattern color operators and procedures for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -54,16 +60,18 @@ private cs_proc_remap_color(gx_remap_Pattern);
 private cs_proc_init_color(gx_init_Pattern);
 private cs_proc_restrict_color(gx_restrict_Pattern);
 private cs_proc_install_cspace(gx_install_Pattern);
+private cs_proc_set_overprint(gx_set_overprint_Pattern);
 private cs_proc_adjust_cspace_count(gx_adjust_cspace_Pattern);
 private cs_proc_adjust_color_count(gx_adjust_color_Pattern);
 const gs_color_space_type gs_color_space_type_Pattern = {
     gs_color_space_index_Pattern, false, false,
     &st_color_space_Pattern, gx_num_components_Pattern,
-    gx_base_space_Pattern, gx_cspace_not_equal,
+    gx_base_space_Pattern,
     gx_init_Pattern, gx_restrict_Pattern,
     gx_no_concrete_space,
     gx_no_concretize_color, NULL,
     gx_remap_Pattern, gx_install_Pattern,
+    gx_set_overprint_Pattern,
     gx_adjust_cspace_Pattern, gx_adjust_color_Pattern
 };
 
@@ -158,8 +166,6 @@ gs_setpatternspace(gs_state * pgs)
 	    *(gs_paint_color_space *) pgs->color_space;
 	cs.params.pattern.has_base_space = true;
 	*pgs->color_space = cs;
-	/* Don't change orig_base_cspace_index. */
-	pgs->orig_cspace_index = gs_color_space_index_Pattern;
 	cs_full_init_color(pgs->ccolor, &cs);
 	gx_unset_dev_color(pgs);
     }
@@ -270,6 +276,16 @@ gx_install_Pattern(const gs_color_space * pcs, gs_state * pgs)
 	return 0;
     return (*pcs->params.pattern.base_space.type->install_cspace)
 	((const gs_color_space *) & pcs->params.pattern.base_space, pgs);
+}
+
+/*
+ * Set the overprint compositor for a Pattern color space. This does nothing;
+ * for patterns the overprint compositor is set at set_device_color time.
+*/
+private int
+gx_set_overprint_Pattern(const gs_color_space * pcs, gs_state * pgs)
+{
+    return 0;
 }
 
 /* Adjust the reference counts for Pattern color spaces or colors. */

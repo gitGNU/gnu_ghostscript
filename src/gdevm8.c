@@ -1,22 +1,28 @@
-/* Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevm8.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevm8.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* 8-bit-per-pixel "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"
@@ -60,12 +66,12 @@ mem_mapped8_fill_rectangle(gx_device * dev,
 
 /* Copy a monochrome bitmap. */
 /* We split up this procedure because of limitations in the bcc32 compiler. */
-private void mapped8_copy01(P9(chunk *, const byte *, int, int, uint,
-			       int, int, byte, byte));
-private void mapped8_copyN1(P8(chunk *, const byte *, int, int, uint,
-			       int, int, byte));
-private void mapped8_copy0N(P8(chunk *, const byte *, int, int, uint,
-			       int, int, byte));
+private void mapped8_copy01(chunk *, const byte *, int, int, uint,
+			    int, int, byte, byte);
+private void mapped8_copyN1(chunk *, const byte *, int, int, uint,
+			    int, int, byte);
+private void mapped8_copy0N(chunk *, const byte *, int, int, uint,
+			    int, int, byte);
 private int
 mem_mapped8_copy_mono(gx_device * dev,
 	       const byte * base, int sourcex, int sraster, gx_bitmap_id id,

@@ -1,22 +1,28 @@
-/* Copyright (C) 1995, 1997, 1998 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1995, 1997, 1998 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxclio.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxclio.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* I/O interface for command lists */
 
 #ifndef gxclio_INCLUDED
@@ -42,31 +48,31 @@ typedef void *clist_file_ptr;	/* We can't do any better than this. */
  * and only binary data (but the caller must append the "b" if needed).
  * Mode "r" with *fname = 0 is an error.
  */
-int clist_fopen(P6(char fname[gp_file_name_sizeof], const char *fmode,
-		   clist_file_ptr * pcf,
-		   gs_memory_t * mem, gs_memory_t *data_mem,
-		   bool ok_to_compress));
+int clist_fopen(char fname[gp_file_name_sizeof], const char *fmode,
+		clist_file_ptr * pcf,
+		gs_memory_t * mem, gs_memory_t *data_mem,
+		bool ok_to_compress);
 
 /*
  * Close a file, optionally deleting it.
  */
-int clist_fclose(P3(clist_file_ptr cf, const char *fname, bool delete));
+int clist_fclose(clist_file_ptr cf, const char *fname, bool delete);
 
 /*
  * Delete a file.
  */
-int clist_unlink(P1(const char *fname));
+int clist_unlink(const char *fname);
 
 /* ---------------- Writing ---------------- */
 
 /* clist_space_available returns min(requested, available). */
-long clist_space_available(P1(long requested));
+long clist_space_available(long requested);
 
-int clist_fwrite_chars(P3(const void *data, uint len, clist_file_ptr cf));
+int clist_fwrite_chars(const void *data, uint len, clist_file_ptr cf);
 
 /* ---------------- Reading ---------------- */
 
-int clist_fread_chars(P3(void *data, uint len, clist_file_ptr cf));
+int clist_fread_chars(void *data, uint len, clist_file_ptr cf);
 
 /* ---------------- Position/status ---------------- */
 
@@ -74,25 +80,23 @@ int clist_fread_chars(P3(void *data, uint len, clist_file_ptr cf));
  * Set the low-memory warning threshold.  clist_ferror_code will return 1
  * if fewer than this many bytes of memory are left for storing band data.
  */
-int clist_set_memory_warning(P2(clist_file_ptr cf, int bytes_left));
+int clist_set_memory_warning(clist_file_ptr cf, int bytes_left);
 
 /*
  * clist_ferror_code returns a negative error code per gserrors.h, not a
  * Boolean; 0 means no error, 1 means low-memory warning.
  */
-int clist_ferror_code(P1(clist_file_ptr cf));
+int clist_ferror_code(clist_file_ptr cf);
 
-long clist_ftell(P1(clist_file_ptr cf));
+long clist_ftell(clist_file_ptr cf);
 
 /*
  * We pass the file name to clist_rewind and clist_fseek in case the
  * implementation has to close and reopen the file.  (clist_fseek with
  * offset = 0 and mode = SEEK_END indicates we are about to append.)
  */
-void clist_rewind(P3(clist_file_ptr cf, bool discard_data,
-		     const char *fname));
+void clist_rewind(clist_file_ptr cf, bool discard_data, const char *fname);
 
-int clist_fseek(P4(clist_file_ptr cf, long offset, int mode,
-		   const char *fname));
+int clist_fseek(clist_file_ptr cf, long offset, int mode, const char *fname);
 
 #endif /* gxclio_INCLUDED */

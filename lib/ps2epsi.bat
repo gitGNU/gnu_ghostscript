@@ -1,5 +1,5 @@
 @echo off 
-@rem $Id: ps2epsi.bat,v 1.1 2004/01/14 16:59:47 atai Exp $
+@rem $Id: ps2epsi.bat,v 1.2 2004/02/14 22:20:04 atai Exp $
 
 if %1/==/ goto usage
 if %2/==/ goto usage

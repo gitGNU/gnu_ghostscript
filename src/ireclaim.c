@@ -1,22 +1,28 @@
-/* Copyright (C) 1995, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: ireclaim.c,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: ireclaim.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Interpreter's interface to garbage collector */
 #include "ghost.h"
 #include "errors.h"
@@ -33,13 +39,13 @@
 #include "store.h"		/* for make_array */
 
 /* Import preparation and cleanup routines. */
-extern void ialloc_gc_prepare(P1(gs_ref_memory_t *));
+extern void ialloc_gc_prepare(gs_ref_memory_t *);
 
 /* Forward references */
-private void gs_vmreclaim(P2(gs_dual_memory_t *, bool));
+private void gs_vmreclaim(gs_dual_memory_t *, bool);
 
 /* Initialize the GC hook in the allocator. */
-private int ireclaim(P2(gs_dual_memory_t *, int));
+private int ireclaim(gs_dual_memory_t *, int);
 private int
 ireclaim_init(i_ctx_t *i_ctx_p)
 {

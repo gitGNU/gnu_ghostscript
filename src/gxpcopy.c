@@ -1,22 +1,28 @@
-/* Copyright (C) 1992, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1992, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxpcopy.c,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxpcopy.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Path copying and flattening */
 #include "math_.h"
 #include "gx.h"
@@ -28,9 +34,9 @@
 #include "gzpath.h"
 
 /* Forward declarations */
-private void adjust_point_to_tangent(P3(segment *, const segment *,
-					const gs_fixed_point *));
-private int monotonize_internal(P2(gx_path *, const curve_segment *));
+private void adjust_point_to_tangent(segment *, const segment *,
+				     const gs_fixed_point *);
+private int monotonize_internal(gx_path *, const curve_segment *);
 
 /* Copy a path, optionally flattening or monotonizing it. */
 /* If the copy fails, free the new path. */
@@ -550,7 +556,7 @@ gx_curve_x_at_y(curve_cursor * prc, fixed y)
 	    if (xd < HALF_FIXED_BITS)
 		return (ufixed)xd * (ufixed)yrel / (ufixed)yd + xl;
 	} else {
-	    if (xd > -HALF_FIXED_BITS) {
+	    if (xd > -(fixed)HALF_FIXED_BITS) {
 		/* Be careful to take the floor of the result. */
 		ufixed num = (ufixed)(-xd) * (ufixed)yrel;
 		ufixed quo = num / (ufixed)yd;

@@ -1,22 +1,28 @@
-/* Copyright (C) 1995, 1996 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1995, 1996 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxbcache.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxbcache.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Bitmap cache structures */
 
 #ifndef gxbcache_INCLUDED
@@ -98,27 +104,27 @@ typedef struct gx_bits_cache_s {
 
 /* Initialize a cache.  The caller must allocate and initialize */
 /* the first chunk. */
-void gx_bits_cache_init(P2(gx_bits_cache *, gx_bits_cache_chunk *));
+void gx_bits_cache_init(gx_bits_cache *, gx_bits_cache_chunk *);
 
 /* ------ Chunks ------ */
 
 /* Initialize a chunk.  The caller must allocate it and its data. */
-void gx_bits_cache_chunk_init(P3(gx_bits_cache_chunk *, byte *, uint));
+void gx_bits_cache_chunk_init(gx_bits_cache_chunk *, byte *, uint);
 
 /* ------ Individual entries ------ */
 
 /* Attempt to allocate an entry.  If successful, set *pcbh and return 0. */
 /* If there isn't enough room, set *pcbh to an entry requiring freeing, */
 /* or to 0 if we are at the end of the chunk, and return -1. */
-int gx_bits_cache_alloc(P3(gx_bits_cache *, ulong, gx_cached_bits_head **));
+int gx_bits_cache_alloc(gx_bits_cache *, ulong, gx_cached_bits_head **);
 
 /* Shorten an entry by a given amount. */
-void gx_bits_cache_shorten(P4(gx_bits_cache *, gx_cached_bits_head *,
-			      uint, gx_bits_cache_chunk *));
+void gx_bits_cache_shorten(gx_bits_cache *, gx_cached_bits_head *,
+			   uint, gx_bits_cache_chunk *);
 
 /* Free an entry.  The caller is responsible for removing the entry */
 /* from any other structures (like a hash table). */
-void gx_bits_cache_free(P3(gx_bits_cache *, gx_cached_bits_head *,
-			   gx_bits_cache_chunk *));
+void gx_bits_cache_free(gx_bits_cache *, gx_cached_bits_head *,
+			gx_bits_cache_chunk *);
 
 #endif /* gxbcache_INCLUDED */

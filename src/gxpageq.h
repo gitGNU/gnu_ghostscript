@@ -1,22 +1,28 @@
-/* Copyright (C) 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxpageq.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxpageq.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Page queue implementation */
 
 /* Initial version 2/1/98 by John Desrosiers (soho@crl.com) */
@@ -141,7 +147,7 @@ struct gx_page_queue_entry_s {
 /* -------------- Public Procedure Declaraions --------------------- */
 
 /* Allocate a page queue. */
-gx_page_queue_t *gx_page_queue_alloc(P1(gs_memory_t *mem));
+gx_page_queue_t *gx_page_queue_alloc(gs_memory_t *mem);
 
 /*
  * Allocate and initialize a page queue entry.
@@ -149,17 +155,17 @@ gx_page_queue_t *gx_page_queue_alloc(P1(gs_memory_t *mem));
  */
 /* rets ptr to allocated object, 0 if VM error */
 gx_page_queue_entry_t *
-gx_page_queue_entry_alloc(P1(
+gx_page_queue_entry_alloc(
     gx_page_queue_t * queue	/* queue that entry is being alloc'd for */
-    ));
+    );
 
 /*
  * Free a page queue entry.
  * All page queue entries must be destroyed by this routine.
  */
-void gx_page_queue_entry_free(P1(
+void gx_page_queue_entry_free(
     gx_page_queue_entry_t * entry	/* entry to free up */
-    ));
+    );
 
 /*
  * Free the page_info resources held by the pageq entry.  Used to free
@@ -170,9 +176,9 @@ void gx_page_queue_entry_free(P1(
  * pageq entry itself (via gx_page_queue_entry_free), or you will leak
  * memory (lots).
  */
-void gx_page_queue_entry_free_page_info(P1(
+void gx_page_queue_entry_free_page_info(
     gx_page_queue_entry_t * entry	/* entry to free up */
-    ));
+    );
 
 /*
  * Initialize a page queue; this must be done before it can be used.
@@ -180,19 +186,19 @@ void gx_page_queue_entry_free_page_info(P1(
  * fail if insufficient memory is available.
  */
 /* -ve error code, or 0 */
-int gx_page_queue_init(P2(
+int gx_page_queue_init(
     gx_page_queue_t * queue,	/* page queue to init */
     gs_memory_t * memory	/* allocator for dynamic memory */
-    ));
+    );
 
 /*
  * Destroy a page queue which was initialized by gx_page_queue_init.
  * Any page queue entries in the queue are released and destroyed;
  * dynamic allocations are released.
  */
-void gx_page_queue_dnit(P1(
+void gx_page_queue_dnit(
     gx_page_queue_t * queue	/* page queue to dnit */
-    ));
+    );
 
 /*
  * If there are any pages in queue, wait until one of them finishes
@@ -200,26 +206,26 @@ void gx_page_queue_dnit(P1(
  * that want to wait until some memory has been freed.
  */
 /* rets 0 if no pages were waiting for rendering, 1 if actually waited */
-int gx_page_queue_wait_one_page(P1(
+int gx_page_queue_wait_one_page(
     gx_page_queue_t * queue	/* queue to wait on */
-    ));
+    );
 
 /*
  * Wait until all (if any) pages in queue have finished rendering. Typically
  * called by writer operations which need to drain the page queue before
  * continuing.
  */
-void gx_page_queue_wait_until_empty(P1(
+void gx_page_queue_wait_until_empty(
     gx_page_queue_t * queue		/* page queue to wait on */
-    ));
+    );
 
 /*
  * Add a pageq queue entry to the end of the page queue. If an unsatisfied
  * reader thread has an outstanding gx_page_queue_start_deque(), wake it up.
  */
-void gx_page_queue_enqueue(P1(
+void gx_page_queue_enqueue(
     gx_page_queue_entry_t * entry	/* entry to add */
-    ));
+    );
 
 /*
  * Allocate & construct a pageq entry, then add to the end of the pageq as
@@ -231,13 +237,13 @@ void gx_page_queue_enqueue(P1(
  * Typically called by writer when it has a (partial) page ready for rendering.
  */
 /* rets 0 ok, gs_error_Fatal if error */
-int gx_page_queue_add_page(P4(
+int gx_page_queue_add_page(
     gx_page_queue_t * queue,		/* page queue to add to */
     gx_page_queue_action_t action,		/* action code to queue */
     const gx_band_page_info_t * page_info,	/* bandinfo incl. bandlist */
     int page_count		/* # of copies to print if final "print," */
 				   /* 0 if partial page, -1 if cancel */
-    ));
+    );
 
 /*
  * Retrieve the least-recently added queue entry from the pageq. If no
@@ -257,9 +263,9 @@ int gx_page_queue_add_page(P4(
     } while (some condition);
  */
 gx_page_queue_entry_t *		/* removed entry */
-gx_page_queue_start_dequeue(P1(
+gx_page_queue_start_dequeue(
     gx_page_queue_t * queue	/* page queue to retrieve from */
-    ));
+    );
 
 /*
  * Free the pageq entry and its associated band list data, then signal any
@@ -268,8 +274,8 @@ gx_page_queue_start_dequeue(P1(
  * which does not free the band list data (a separate call of
  * gx_page_queue_entry_free_page_info is required).
  */
-void gx_page_queue_finish_dequeue(P1(
+void gx_page_queue_finish_dequeue(
     gx_page_queue_entry_t * entry  /* entry that was retrieved to delete */
-    ));
+    );
 
 #endif /*!defined(gxpageq_INCLUDED) */

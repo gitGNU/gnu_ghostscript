@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1996, 1997, 1998, 1999, 2001 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1996, 1997, 1998, 1999, 2001 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: imain.c,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: imain.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Common support for interpreter front ends */
 #include "memory_.h"
 #include "string_.h"
@@ -37,6 +43,7 @@ set_stdfiles(FILE * stdfiles[3])
 #include "gsmatrix.h"		/* for gxdevice.h */
 #include "gsutil.h"		/* for bytes_compare */
 #include "gxdevice.h"
+#include "gxalloc.h"
 #include "errors.h"
 #include "oper.h"
 #include "iconf.h"		/* for gs_init_* imports */
@@ -59,6 +66,7 @@ set_stdfiles(FILE * stdfiles[3])
 #include "interp.h"
 #include "ivmspace.h"
 #include "idisp.h"		/* for setting display device callback */
+#include "iplugin.h"
 
 /* ------ Exported data ------ */
 
@@ -81,10 +89,9 @@ name_table *the_gs_name_table;
 
 /* ------ Forward references ------ */
 
-private int gs_run_init_file(P3(gs_main_instance *, int *, ref *));
-private void print_resource_usage(P3(const gs_main_instance *,
-				     gs_dual_memory_t *,
-				     const char *));
+private int gs_run_init_file(gs_main_instance *, int *, ref *);
+private void print_resource_usage(const gs_main_instance *,
+				  gs_dual_memory_t *, const char *);
 
 /* ------ Initialization ------ */
 
@@ -169,6 +176,9 @@ gs_main_init1(gs_main_instance * minst)
 		return code;
 	}
 	code = obj_init(&minst->i_ctx_p, &idmem);  /* requires name_init */
+	if (code < 0)
+	    return code;
+        code = i_plugin_init(minst->i_ctx_p);
 	if (code < 0)
 	    return code;
 	minst->init_done = 1;
@@ -778,7 +788,7 @@ private char *gs_main_tempnames(gs_main_instance *minst)
 	    i = 0;
 	    while ((idict = dict_next(tempfiles, idict, &keyval[0])) >= 0) {
 		if (obj_string_data(&keyval[0], &data, &size) >= 0) {
-		    memcpy(tempnames+i, (char *)data, size);
+		    memcpy(tempnames+i, (const char *)data, size);
 		    i+= size;
 		    tempnames[i++] = '\0';
 		}
@@ -788,7 +798,7 @@ private char *gs_main_tempnames(gs_main_instance *minst)
     return tempnames;
 }
 
-/* Free all resources and exit. */
+/* Free all resources and return. */
 void
 gs_main_finit(gs_main_instance * minst, int exit_status, int code)
 {
@@ -796,7 +806,6 @@ gs_main_finit(gs_main_instance * minst, int exit_status, int code)
     int exit_code;
     ref error_object;
     char *tempnames;
-
     /*
      * Previous versions of this code closed the devices in the
      * device list here.  Since these devices are now prototypes,
@@ -814,8 +823,12 @@ gs_main_finit(gs_main_instance * minst, int exit_status, int code)
 	print_resource_usage(minst, &gs_imemory, "Final");
     /* Do the equivalent of a restore "past the bottom". */
     /* This will release all memory, close all open files, etc. */
-    if (minst->init_done >= 1)
-	alloc_restore_all(idmemory);
+    if (minst->init_done >= 1) {
+        gs_raw_memory_t *mem_raw = i_ctx_p->memory.current->parent;
+        i_plugin_holder *h = i_ctx_p->plugin_list;
+        alloc_restore_all(idmemory);
+        i_plugin_finit(mem_raw, h);
+    }
     /* clean up redirected stdout */
     if (minst->fstdout2 && (minst->fstdout2 != minst->fstdout)
 	    && (minst->fstdout2 != minst->fstderr)) {
@@ -836,24 +849,21 @@ gs_main_finit(gs_main_instance * minst, int exit_status, int code)
     gs_lib_finit(exit_status, code);
 }
 void
-gs_exit_with_code(int exit_status, int code)
+gs_to_exit_with_code(int exit_status, int code)
 {
     gs_finit(exit_status, code);
-    gp_do_exit(exit_status);
 }
 void
-gs_exit(int exit_status)
+gs_to_exit(int exit_status)
 {
-    gs_exit_with_code(exit_status, 0);
+    gs_to_exit_with_code(exit_status, 0);
 }
-
 void
 gs_abort(void)
 {
-    gs_exit(1);
-    /* This is the ONLY reference to exit() */
-    /* Even this one should be removed */
-    exit(1);	
+    gs_to_exit(1);
+    /* it's fatal calling OS independent exit() */
+    gp_do_exit(1);	
 }
 
 /* ------ Debugging ------ */

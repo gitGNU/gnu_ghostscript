@@ -1,22 +1,28 @@
-/* Copyright (C) 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevpsu.h,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevpsu.h,v 1.2 2004/02/14 22:20:06 atai Exp $ */
 /* Interface to PostScript-writing utilities */
 
 #ifndef gdevpsu_INCLUDED
@@ -36,7 +42,7 @@ typedef struct gx_device_pswrite_common_s {
 /* ---------------- Low level ---------------- */
 
 /* Write a 0-terminated array of strings as lines. */
-void psw_print_lines(P2(FILE *f, const char *const lines[]));
+void psw_print_lines(FILE *f, const char *const lines[]);
 
 /* ---------------- File level ---------------- */
 
@@ -44,31 +50,31 @@ void psw_print_lines(P2(FILE *f, const char *const lines[]));
  * Write the file header, up through the BeginProlog.  This must write to a
  * file, not a stream, because it may be called during finalization.
  */
-void psw_begin_file_header(P5(FILE *f, const gx_device *dev,
-			      const gs_rect *pbbox,
-			      gx_device_pswrite_common_t *pdpc, bool ascii));
+void psw_begin_file_header(FILE *f, const gx_device *dev,
+			   const gs_rect *pbbox,
+			   gx_device_pswrite_common_t *pdpc, bool ascii);
 
 /* End the file header.*/
-void psw_end_file_header(P1(FILE *f));
+void psw_end_file_header(FILE *f);
 
 /* End the file. */
-void psw_end_file(P5(FILE *f, const gx_device *dev,
-		     const gx_device_pswrite_common_t *pdpc,
-		     const gs_rect *pbbox, int page_count));
+void psw_end_file(FILE *f, const gx_device *dev,
+		  const gx_device_pswrite_common_t *pdpc,
+		  const gs_rect *pbbox, int page_count);
 
 /* ---------------- Page level ---------------- */
 
 /*
  * Write the page header.
  */
-void psw_write_page_header(P5(stream *s, const gx_device *dev,
-			      const gx_device_pswrite_common_t *pdpc,
-			      bool do_scale, long page_ord));
+void psw_write_page_header(stream *s, const gx_device *dev,
+			   const gx_device_pswrite_common_t *pdpc,
+			   bool do_scale, long page_ord);
 /*
  * Write the page trailer.  We do this directly to the file, rather than to
  * the stream, because we may have to do it during finalization.
  */
-void psw_write_page_trailer(P3(FILE *f, int num_copies, int flush));
+void psw_write_page_trailer(FILE *f, int num_copies, int flush);
 
 #endif /* gdevpsu_INCLUDED */
 

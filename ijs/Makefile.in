@@ -3,15 +3,12 @@
 CC=@CC@
 CFLAGS=-g -Wall -ansi -pedantic -Wmissing-prototypes
 LDLIBS=
-OBJ=.@OBJEXT@
-EXE=@EXEEXT@
+OBJ=.o
 
 # todo: this needs to be .dylib on OS X - write a test
-SHARED_LDFLAGS=-shared
 SHARED_OBJ=.so
-#SHARED_LDFLAGS=-dylib
-#SHARED_OBJ=.dylib
 
+EXE=
 FE=-o 
 IJS_EXEC_SERVER=ijs_exec_unix$(OBJ)
 RM=rm -f
@@ -45,7 +42,7 @@ libijs.a:	$(LIB_OBJS)
 # makes sense to separate them, but they're small enough to make this probably
 # not worthwhile.
 libijs$(SHARED_OBJ):	$(LIB_OBJS)
-	$(CC) $(SHARED_LDFLAGS) $^ -o $@
+	$(CC) -shared $^ -o $@
 
 ijs_client_example$(EXE):	ijs_client_example$(OBJ) ijs_client$(OBJ) $(IJS_COMMON_OBJ) $(IJS_EXEC_SERVER)
 	$(CC) $(CFLAGS) $(FE)ijs_client_example$(EXE) ijs_client_example$(OBJ) ijs_client$(OBJ) $(IJS_COMMON_OBJ) $(IJS_EXEC_SERVER) $(LDLIBS)
@@ -64,7 +61,7 @@ install:	all
 	$(INSTALL) ijs-config -c $(bindir)/ijs-config
 	$(INSTALL) libijs.a $(libdir)/libijs.a
 	$(INSTALL) libijs$(SHARED_OBJ) $(libdir)/libijs$(SHARED_OBJ)
-	-mkdir $(pkgincludedir)
+	mkdir $(pkgincludedir)
 	$(INSTALL) ijs.h $(pkgincludedir)/ijs.h
 	$(INSTALL) ijs_client.h $(pkgincludedir)/ijs_client.h
 	$(INSTALL) ijs_server.h $(pkgincludedir)/ijs_server.h

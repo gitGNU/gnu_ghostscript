@@ -1,22 +1,28 @@
-/* Copyright (C) 1995, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1995, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxalloc.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxalloc.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Structure definitions for standard allocator */
 /* Requires gsmemory.h, gsstruct.h */
 
@@ -201,6 +207,8 @@ extern_st(st_chunk);
  *      DO_ALL
  *              << code for all objects -- size is set >>
  *      END_OBJECTS_SCAN
+ *
+ * NB on error END_OBJECTS_SCAN calls gs_abort in debug systems.
  */
 #define SCAN_CHUNK_OBJECTS(cp)\
 	{	obj_header_t *pre = (obj_header_t *)((cp)->cbase);\
@@ -214,7 +222,7 @@ extern_st(st_chunk);
 #define DO_ALL\
 			size = pre_obj_contents_size(pre);\
 			{
-#define END_OBJECTS_SCAN_INCOMPLETE\
+#define END_OBJECTS_SCAN_NO_ABORT\
 			}\
 		}\
 	}
@@ -229,15 +237,15 @@ extern_st(st_chunk);
 		}\
 	}
 #else
-#  define END_OBJECTS_SCAN END_OBJECTS_SCAN_INCOMPLETE
+#  define END_OBJECTS_SCAN END_OBJECTS_SCAN_NO_ABORT
 #endif
 
 /* Initialize a chunk. */
 /* This is exported for save/restore. */
-void alloc_init_chunk(P5(chunk_t *, byte *, byte *, bool, chunk_t *));
+void alloc_init_chunk(chunk_t *, byte *, byte *, bool, chunk_t *);
 
 /* Initialize the string freelists in a chunk. */
-void alloc_init_free_strings(P1(chunk_t *));
+void alloc_init_free_strings(chunk_t *);
 
 /* Find the chunk for a pointer. */
 /* Note that ptr_is_within_chunk returns true even if the pointer */
@@ -253,7 +261,7 @@ typedef struct chunk_locator_s {
     const gs_ref_memory_t *memory;	/* for head & tail of chain */
     chunk_t *cp;		/* one-element cache */
 } chunk_locator_t;
-bool chunk_locate_ptr(P2(const void *, chunk_locator_t *));
+bool chunk_locate_ptr(const void *, chunk_locator_t *);
 
 #define chunk_locate(ptr, clp)\
   (((clp)->cp != 0 && ptr_is_in_chunk(ptr, (clp)->cp)) ||\
@@ -261,18 +269,18 @@ bool chunk_locate_ptr(P2(const void *, chunk_locator_t *));
 
 /* Close up the current chunk. */
 /* This is exported for save/restore and for the GC. */
-void alloc_close_chunk(P1(gs_ref_memory_t * mem));
+void alloc_close_chunk(gs_ref_memory_t * mem);
 
 /* Reopen the current chunk after a GC. */
-void alloc_open_chunk(P1(gs_ref_memory_t * mem));
+void alloc_open_chunk(gs_ref_memory_t * mem);
 
 /* Insert or remove a chunk in the address-ordered chain. */
 /* These are exported for the GC. */
-void alloc_link_chunk(P2(chunk_t *, gs_ref_memory_t *));
-void alloc_unlink_chunk(P2(chunk_t *, gs_ref_memory_t *));
+void alloc_link_chunk(chunk_t *, gs_ref_memory_t *);
+void alloc_unlink_chunk(chunk_t *, gs_ref_memory_t *);
 
 /* Free a chunk.  This is exported for save/restore and for the GC. */
-void alloc_free_chunk(P2(chunk_t *, gs_ref_memory_t *));
+void alloc_free_chunk(chunk_t *, gs_ref_memory_t *);
 
 /* Print a chunk debugging message. */
 /* Unfortunately, the ANSI C preprocessor doesn't allow us to */
@@ -453,20 +461,20 @@ extern const dump_control_t dump_control_all;
 /* Print one object with the given options. */
 /* Relevant options: type_addresses, no_types, pointers, pointed_strings, */
 /* contents. */
-void debug_print_object(P2(const void *obj, const dump_control_t * control));
+void debug_print_object(const void *obj, const dump_control_t * control);
 
 /* Print the contents of a chunk with the given options. */
 /* Relevant options: all. */
-void debug_dump_chunk(P2(const chunk_t * cp, const dump_control_t * control));
-void debug_print_chunk(P1(const chunk_t * cp));	/* default options */
+void debug_dump_chunk(const chunk_t * cp, const dump_control_t * control);
+void debug_print_chunk(const chunk_t * cp);	/* default options */
 
 /* Print the contents of all chunks managed by an allocator. */
 /* Relevant options: all. */
-void debug_dump_memory(P2(const gs_ref_memory_t * mem,
-			  const dump_control_t * control));
+void debug_dump_memory(const gs_ref_memory_t * mem,
+		       const dump_control_t * control);
 
 /* Find all the objects that contain a given pointer. */
-void debug_find_pointers(P2(const gs_ref_memory_t *mem, const void *target));
+void debug_find_pointers(const gs_ref_memory_t *mem, const void *target);
 
 #endif /* DEBUG */
 

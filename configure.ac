@@ -1,3 +1,19 @@
+dnl Copyright (C) 2002-2004 artofcode LLC. All rights reserved.
+  
+dnl This software is provided AS-IS with no warranty, either express or
+dnl implied.
+dnl  
+dnl This software is distributed under license and may not be copied,
+dnl modified or distributed except as expressly authorized under the terms
+dnl of the license contained in the file LICENSE in this distribution.
+dnl 
+dnl For more information about licensing, please refer to
+dnl http://www.ghostscript.com/licensing/. For information on
+dnl commercial licensing, go to http://www.artifex.com/licensing/ or
+dnl contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+dnl San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
+dnl $Id: configure.ac,v 1.2 2004/02/14 22:20:02 atai Exp $
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------
@@ -14,8 +30,10 @@ dnl --------------------------------------------------
 
 dnl AC_PROG_CC likes to add '-g -O2' to CFLAGS. however,
 dnl we ignore those flags and construct our own.
+save_cflags=$CFLAGS
 AC_PROG_CC
 AC_PROG_CPP
+CFLAGS=$save_cflags
 
 AC_PROG_RANLIB
 #AC_PROG_INSTALL
@@ -26,38 +44,36 @@ dnl --------------------------------------------------
 
 #AC_CANONICAL_HOST
 
-dnl Add our standard set of gcc flags if possible
 if test $ac_cv_prog_gcc = yes; then
-    cflags_to_try="-Wall -Wstrict-prototypes \
--Wmissing-declarations -Wmissing-prototypes \
--Wcast-qual -Wwrite-strings \
+  cflags_to_try="-Wall -Wstrict-prototypes -Wmissing-declarations \
+-Wmissing-prototypes -Wcast-qual -Wwrite-strings \
 -fno-builtin -fno-common"
+  optflags_to_try="-O2"
 else
-    cflags_to_try=
+  cflags_to_try=
+  optflags_to_try="-O"
 fi
-optflags_to_try="-O2"
-
+	
 AC_MSG_CHECKING([supported compiler flags])
 old_cflags=$CFLAGS
 echo
 for flag in $optflags_to_try; do
-    CFLAGS="$CFLAGS $flag"
-    AC_TRY_COMPILE(, [return 0;], [
-      echo "   $flag"
-      OPT_CFLAGS="$OPT_CFLAGS $flag"
-    ])
-    CFLAGS=$old_cflags
+  CFLAGS="$CFLAGS $flag"
+  AC_TRY_COMPILE(, [return 0;], [
+    echo "   $flag"
+    OPT_CFLAGS="$OPT_CFLAGS $flag"
+  ])
+  CFLAGS=$old_cflags
 done
 for flag in $cflags_to_try; do
-    CFLAGS="$CFLAGS $flag"
-    AC_TRY_COMPILE(, [return 0;], [
-	echo "   $flag"
-	GCFLAGS="$GCFLAGS $flag"
-    ])
-    CFLAGS=$old_cflags
+  CFLAGS="$CFLAGS $flag"
+  AC_TRY_COMPILE(, [return 0;], [
+    echo "   $flag"
+    GCFLAGS="$GCFLAGS $flag"
+  ])
+  CFLAGS=$old_cflags
 done
 AC_MSG_RESULT([ ...done.])
-
 
 dnl --------------------------------------------------
 dnl Check for headers
@@ -85,9 +101,37 @@ AC_STRUCT_TM
 
 dnl we aren't interested in all of DEFS, so manually insert
 dnl the flags we care about
-if test "$ac_cv_c_const" = yes; then
-	GCCFLAGS="$GCCFLAGS -Dconst="
+if test "$ac_cv_c_const" != yes; then
+	GCFLAGS="$GCFLAGS -Dconst="
 fi
+
+dnl try to find a 64 bit type for devicen color index
+uint64_type="none"
+ AC_CHECK_SIZEOF(unsigned long int)
+ if test $ac_cv_sizeof_unsigned_long_int = 8; then
+	uint64_type="unsigned long int"
+ else
+  AC_CHECK_SIZEOF(unsigned long long)
+  if test $ac_cv_sizeof_unsigned_long_long = 8; then
+	uint64_type="unsigned long long"
+  else
+   AC_CHECK_SIZEOF(unsigned __int64)
+   if test $ac_cv_sizeof_unsigned___int64 = 8; then
+	uint64_type="unsigned __int64"
+   else
+    AC_CHECK_SIZEOF(u_int64_t)
+    if test $ac_cv_sizeof_u_int64_t = 8; then
+	unit64_type="u_int64_t"
+    fi
+   fi
+  fi
+ fi
+dnl we don't need to do anything if a 64-bit type wasn't found
+dnl the code falls back to a (probably 32-bit) default
+if test "$uint64_type" != "none"; then
+	GCFLAGS="$GCFLAGS -DGX_COLOR_INDEX_TYPE=\"$uint64_type\""
+fi
+
 
 dnl --------------------------------------------------
 dnl Check for libraries
@@ -103,21 +147,18 @@ dnl A more sophisticated approach would be to test the shared lib
 dnl to see whether it has already been patched.
 LIBJPEGDIR=src
 if test -d jpeg; then
-	AC_MSG_RESULT([jpeg])
+	AC_MSG_RESULT([yes])
 	SHARE_LIBJPEG=0
 	LIBJPEGDIR=jpeg
-elif test -d jpeg-6b; then
-	AC_MSG_RESULT([jpeg-6b])
-	SHARE_LIBJPEG=0
-	LIBJPEGDIR=jpeg-6b
 else
 	AC_MSG_RESULT([no])
 	AC_CHECK_LIB(jpeg, jpeg_set_defaults, [SHARE_LIBJPEG=1], [
 		AC_MSG_ERROR([I wasn't able to find a copy
   of the jpeg library. This is required for compiling
-  ghostscript. Please download a copy of the source,  e.g.
-  from http://www.ijg.org/, unpack it at the top level of 
-  the gs source tree, and rename the directory to 'jpeg'.
+  ghostscript. Please download a copy of the source,
+  e.g. from http://www.ijg.org/, unpack it at the
+  top level of the gs source tree, and rename
+  the directory to 'jpeg'.
 		])
 	])
 fi
@@ -132,19 +173,16 @@ dnl zlib is needed for language level 3, and libpng
 # this seems a harmless default
 ZLIBDIR=src
 if test -d zlib; then
-	AC_MSG_RESULT([zlib])
+	AC_MSG_RESULT([yes])
 	SHARE_ZLIB=0
 	ZLIBDIR=zlib
-elif test -d zlib-1.1.4; then
-	AC_MSG_RESULT([zlib-1.1.4])
-	SHARE_ZLIB=0
-	ZLIBDIR=zlib-1.1.4
 else
 	AC_MSG_RESULT([no])
 	AC_CHECK_LIB(z, deflate, [SHARE_ZLIB=1], [
-		AC_MSG_ERROR([I did not find a copy of libz on your system.
-  Please either install it, or unpack a copy of the source in a
-  local directory named 'zlib'.
+		AC_MSG_ERROR([I did not find a copy of zlib on your system.
+Please either install it, or unpack a copy of the source in a
+local directory named 'zlib'. See http://www.gzip.org/zlib/
+for more information.
 		])
 	])
 fi
@@ -152,23 +190,21 @@ AC_SUBST(SHARE_ZLIB)
 AC_SUBST(ZLIBDIR)
 
 dnl png for the png output device; it also requires zlib
-AC_MSG_CHECKING([for local png library source])
 LIBPNGDIR=src
-PNGDEVS='$(DD)png16m.dev $(DD)pnggray.dev $(DD)pngmono.dev $(DD)png256.dev $(DD)png16.dev $(DD)pngalpha.dev'
+AC_MSG_CHECKING([for local png library source])
 if test -d libpng; then
-	AC_MSG_RESULT([libpng])
+	AC_MSG_RESULT([yes])
 	SHARE_LIBPNG=0
 	LIBPNGDIR=libpng
-elif test -d libpng-1.2.5; then
-	AC_MSG_RESULT([libpng-1.2.5])
-	SHARE_LIBPNG=0
-	LIBPNGDIR=libpng-1.2.5
+	PNGDEVS='$(DD)png16m.dev $(DD)pnggray.dev $(DD)pngmono.dev $(DD)png256.dev $(DD)png16.dev'
 else
 	AC_MSG_RESULT([no])
 	AC_CHECK_LIB(png, png_check_sig, [
 		SHARE_LIBPNG=1
+		PNGDEVS='$(DD)png16m.dev $(DD)pnggray.dev $(DD)pngmono.dev $(DD)png256.dev $(DD)png16.dev'
 	], [
 		SHARE_LIBPNG=0
+		AC_MSG_RESULT([no])
 		AC_MSG_NOTICE([disabling png output devices])
 		PNGDEVS=''
 	], [-lz])
@@ -195,31 +231,25 @@ fi
 AC_SUBST(IJSDIR)
 AC_SUBST(IJSDEVS)
 
-dnl look for gimp-print (stp) library implementation
-dnl AC_ARG_WITH([gimp-print], AC_HELP_STRING([--with-gimp-print],
-dnl [build the gimp-print (stp) driver]))
-dnl set safe defaults
-dnl STPLIB=gimpprint
-dnl    STPDEVS=''
-dnl if test x$with_gimp_print != xno; then
-dnl    AC_CHECK_LIB($STPLIB, stp_init, [
-dnl       AC_CHECK_HEADER([gimp-print/gimp-print.h], [
-dnl           STPDEVS='$(DD)stp.dev'
-dnl       ])
-dnl    ])
-dnl fi
-AC_SUBST(STPLIB)
-AC_SUBST(STPDEVS)
-
 dnl optional X11 for display devices
 AC_PATH_XTRA
+XLIBS=''
 if test x"$no_x" = x"yes"; then
 	AC_MSG_NOTICE([disabling X11 output devices])
 	X11DEVS=''
 else
+	# enable X11 output devices
 	X11DEVS='$(DD)x11.dev $(DD)x11alpha.dev $(DD)x11cmyk.dev $(DD)x11gray2.dev $(DD)x11gray4.dev $(DD)x11mono.dev'
+	# the makefile wants a list of just the library names in XLIBS
+	for item in -lXt $X_PRE_LIBS -lXext -lX11 $X_EXTRA_LIBS; do
+                stripped=`echo "$item" | sed -e 's/-l//'`
+                if test "x$stripped" != "x$item"; then
+                        XLIBS="$XLIBS $stripped"
+	fi
+	done
 fi
 AC_SUBST(X11DEVS)
+AC_SUBST(XLIBS)
 
 dnl executible name
 AC_ARG_WITH(gs, AC_HELP_STRING([--with-gs=NAME],
@@ -230,10 +260,10 @@ AC_SUBST(GS)
 dnl do we compile the postscript initialization files into Ghostscript?
 COMPILE_INITS="0"
 AC_ARG_ENABLE(compile-inits, AC_HELP_STRING([--enable-compile-inits],
-	[compile initialization files into Ghostscript]),[
-		if test x$enable_compile_inits = xyes; then
-			COMPILE_INITS="1"
-		fi])
+       [compile initialization files into Ghostscript]),[
+               if test x$enable_compile_inits = xyes; then
+                       COMPILE_INITS="1"
+               fi])
 AC_SUBST(COMPILE_INITS)
 
 dnl --------------------------------------------------

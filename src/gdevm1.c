@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevm1.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevm1.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* Monobit "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"
@@ -52,23 +58,19 @@ mem_full_alpha_device("image1", 0, 1, mem_open,
 
 /* Map color to/from RGB.  This may be inverted. */
 private gx_color_index
-mem_mono_map_rgb_color(gx_device * dev, gx_color_value r, gx_color_value g,
-		       gx_color_value b)
+mem_mono_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 {
     gx_device_memory * const mdev = (gx_device_memory *)dev;
-
-    return (gx_default_w_b_map_rgb_color(dev, r, g, b) ^
-	    mdev->palette.data[0]) & 1;
+    return (gx_default_w_b_map_rgb_color(dev, cv) ^ mdev->palette.data[0]) & 1;
 }
+
 private int
 mem_mono_map_color_rgb(gx_device * dev, gx_color_index color,
 		       gx_color_value prgb[3])
 {
     gx_device_memory * const mdev = (gx_device_memory *)dev;
-
-    return gx_default_w_b_map_color_rgb(dev,
-					(color ^ mdev->palette.data[0]) & 1,
-					prgb);
+    /* NB code doesn't make sense... map_color_rgb procedures return an error code */
+    return (gx_default_w_b_map_color_rgb(dev, color, prgb) ^ mdev->palette.data[0]) & 1;
 }
 
 /* Fill a rectangle with a color. */
@@ -86,7 +88,7 @@ mem_mono_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 #else
     fit_fill(dev, x, y, w, h);
     bits_fill_rectangle(scan_line_base(mdev, y), x, mdev->raster,
-			-(mono_fill_chunk) color, w, h);
+			-(int)(mono_fill_chunk) color, w, h);
     return 0;
 #endif
 }
@@ -498,7 +500,7 @@ int tx, int y, int tw, int th, gx_color_index color0, gx_color_index color1,
 	return gx_default_strip_tile_rectangle(dev, tiles, tx, y, tw, th,
 					       color0, color1, px, py);
     fit_fill(dev, tx, y, tw, th);
-    invert = -(uint) color0;
+    invert = (uint)(-(int) color0);
     source_raster = tiles->raster;
     source_data = tiles->data + ((y + py) % tiles->rep_height) * source_raster;
     tile_bits_size = tiles->size.y * source_raster;
@@ -715,7 +717,7 @@ mem1_word_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
     base = scan_line_base(mdev, y);
     raster = mdev->raster;
     mem_swap_byte_rect(base, raster, x, w, h, true);
-    bits_fill_rectangle(base, x, raster, -(mono_fill_chunk) color, w, h);
+    bits_fill_rectangle(base, x, raster, -(int)(mono_fill_chunk) color, w, h);
     mem_swap_byte_rect(base, raster, x, w, h, true);
     return 0;
 }

@@ -1,20 +1,19 @@
-%    Copyright (C) 1994-2002 artofcode LLC.  All rights reserved.
+%    Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-% This program is free software; you can redistribute it and/or modify it
-% under the terms of the GNU General Public License as published by the
-% Free Software Foundation; either version 2 of the License, or (at your
-% option) any later version.
-%
-% This program is distributed in the hope that it will be useful, but
-% WITHOUT ANY WARRANTY; without even the implied warranty of
-% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-% Public License for more details.
-%
-% You should have received a copy of the GNU General Public License along
-% with this program; if not, write to the Free Software Foundation, Inc.,
-% 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: pdf_font.ps,v 1.1 2004/01/14 16:59:47 atai Exp $
+% $Id: pdf_font.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
 % pdf_font.ps
 % PDF font operations.
 
@@ -29,18 +28,25 @@ pdfdict begin
 
 % ---------------- Encodings ---------------- %
 
+/.notdefEncoding 256 { /.notdef } repeat 256 packedarray def
+
 % Apply a list of differences to an Encoding.
 % Note that the differences may cause the array to grow.
-/updateencoding {	% <encoding> <differences> updateencoding <enc'>
+/updateencoding {	% <encoding|null> <differences> updateencoding <enc'>
 	% Calculate the length of the result.
-  exch 0 2 index {
-    dup type /nametype ne { exch pop } { pop 1 add } ifelse
+  % in case the incoming Encoding is null, use .notdefEncoding
+  exch dup null eq { pop .notdefEncoding } if
+  0 0 3 index {
+    dup type /nametype ne { exch pop oforce } { pop 1 add } ifelse
+    % Differences list may not be in order, update the largest_index
+    % stack: <Differences> <encoding> <largest_index> <at_index>
+    2 copy lt { exch pop dup } if	% at_index is new largest
   } forall
-  1 index length .max array dup 0 4 -1 roll putinterval
+  pop 1 index length .max array dup 0 4 -1 roll putinterval
   exch 0 exch {
 		% Stack: enc' code element
     dup type /nametype ne
-      { exch pop }
+      { exch pop oforce }
       { 3 copy put pop 1 add }
     ifelse
   } forall pop
@@ -50,7 +56,7 @@ pdfdict begin
 /getencoding		% <base-encoding> <font-resource> getencoding <enc>
  { /Encoding knownoget
     { dup type /nametype eq
-       { 
+       {
          % The published PDF specification says the Encoding name
          % "must be" one of the 3 predefined Encodings, implying
          % that an error should occur if it isn't.  However, Acrobat
@@ -77,35 +83,48 @@ pdfdict begin
    if
  } bdef
 
-% Rename a font with a generated name.
-/renamefont {		% <fontdict> renamefont <font'>
-  dup /FontName 2 copy get genfontname dup 5 1 roll put definefont
-} bind def
-
+% Define a font using it's FontName as the key.
 % Adjust a font according to the Encoding and Widths in the font resource.
 /adjustfont {		% <font-resource> <font> adjustfont <font'>
   getfontencoding
-  getfontmetrics 4 -1 roll pop .updatefont { renamefont } if
+  getfontmetrics 4 -1 roll pop .updatefont { dup /FontName get exch definefont } if
 } bind def
 
 % Get the (possibly modified) encoding of a font.
 /getfontencoding {	% <font-resource> <font> getfontencoding
 			%   <font-resource> <font> <Encoding|null>
   1 index /Encoding known {
-    dup /Encoding .knownget { 2 index getencoding } { null } ifelse
+    dup /Encoding knownoget { 2 index getencoding } { null } ifelse
   } {
     null
   } ifelse
 } bdef
 
-/find_in_diff     % <Differences> <index> find_in_diff <bool>
-{ false exch 0 4 3 roll
-  { dup type /nametype ne { exch pop } { pop 1 add } ifelse
-    2 copy eq {
-      pop pop pop true 0 0 exit
-    } if
+% Returns true if the current glyph is in the Differences array at
+% the specified index value. This is needed because the Widths
+% array may map to the same glyph at different positions from the
+% Encoding. We want to use the Width that was associated with the
+% one specified in the Encoding::Differences list.
+/match_in_diff     % <Differences> <index> <glyphname> match_in_diff <bool>
+{ false 4 1 roll 0 4 -1 roll	% stack: false index glyphname at_index==0 Differences
+  { exch 1 index type /nametype ne {
+      % stack: false index glyphname Diff_element at_index 
+      pop	% Diff_element is new at_index
+    } {
+      % stack: false index glyphname Diff_element at_index 
+      exch 2 index eq {
+        % stack: false index glyphname at_index 
+	dup 3 index eq {
+          true 5 1 roll	% stack: true false index glyphname at_index
+          pop exit
+        } if
+      } if
+      1 add		% at_index++ stack: false index glyphname at_index' 
+    } ifelse
   } forall
-  pop pop
+  % stack: true  false index     glyphname
+  %  or  : false index glyphname at_index
+  pop pop pop
 } bdef
 
 % Get the metrics of a font, if specified.
@@ -128,8 +147,23 @@ pdfdict begin
 		% Stack: font font-res mscale
       1 index /FirstChar oget dup 1 4 index /LastChar oget
        {	% Stack: font font-res mscale first-char index
-	 Encoding 1 index get
-	 Widths 2 index 4 index sub oget
+	 Encoding 1 index dup 2 index length ge {
+           (   **** Warning: Font Encoding array size is smaller than character range.\n)
+           pdfformaterror
+	   pop pop /.notdef
+         } {
+	   get
+	 } ifelse
+	 Widths 2 index 4 index sub dup 2 index length ge {
+           (   **** Warning: Font Widths array size is smaller than character range.\n)
+           pdfformaterror
+           % use MissingWidth if it's available, if not, default to 1000 (full width)
+	   pop pop 4 index /FontDescriptor knownoget {
+	     /MissingWidth knownoget not { 1000	} if
+	   } { 1000 } ifelse
+         } {
+	   get
+	 } ifelse
 	 	% Stack: font font-res mscale first-char index charname width
 	 4 index mul
 		% The following 'loop' is only context for 'exit'.
@@ -141,12 +175,15 @@ pdfdict begin
 		% same character appears more than once, because the Metrics
 		% dictionary works by character name, not by character code.
 		% We prefer to take (1) non-zero width, and (2) width for 
-		% the character code which appears in Differences.
+		% the character name which appears in Differences. If the
+		% character name appears in Differences, use the Width that
+		% corresponds to the index in differences.
+	   dup 0 eq { exit } if
 	   Metrics 2 index .knownget not { 0 } if 0 ne {
 	     5 index /Encoding knownoget not { exit } if
 	     dup type /dicttype ne { pop exit } if
 	     /Differences knownoget not { exit } if
-	     3 index //find_in_diff exec not { exit } if
+	     3 index 3 index //match_in_diff exec not { exit } if
 	   } if
 	   2 copy Metrics 3 1 roll put
 	   exit
@@ -180,7 +217,7 @@ pdfdict begin
   } ifelse
 } bdef
 
-currentdict /find_in_diff undef
+currentdict /match_in_diff undef
 
 % ---------------- Descriptors ---------------- %
 
@@ -209,56 +246,28 @@ currentdict /find_in_diff undef
 
 % ---------------- Utilities ---------------- %
 
-/.glyphpath {	% <glyphname> <boolean> .glyphpath -
-  % another glyphpath written in addxchar.ps does not work here...
-  currentfont 3 1 roll exch
-  currentfont dup length dict begin
-    { 1 index /Encoding eq { pop [ 3 -1 roll ] def } { def } ifelse } forall
-  currentdict end /.glyphpathfont exch definefont
-  setfont <00> exch charpath setfont
-} bdef
+/.pdforigfontcache_g 20 dict def
+currentglobal false setglobal
+systemdict /.pdforigfontcache_l 20 dict .forceput
+setglobal
 
-/makeboldfont {	% <basefont> <strokewidth> makeboldfont <boldfont>
-  10 dict begin
-    /strokewidth exch def
-    /basefont exch def
-    /FontMatrix matrix def
-    %/FontName basefont /FontName get def
-    /FontName /.boldfont def
-    /FontType 3 def
-    /Encoding basefont /Encoding get def
-    /FontBBox [ basefont /FontBBox get cvx exec
-      4 2 roll basefont /FontMatrix get transform
-      4 2 roll basefont /FontMatrix get transform
-    ] def
-    /BuildGlyph {
-      gsave
-      exch begin
-        basefont setfont
-        strokewidth setlinewidth
-        1 setlinejoin
-        newpath
-        0 0 moveto dup false .glyphpath stroke
-        0 0 moveto glyphshow
-        currentpoint setcharwidth
-      end
-      grestore
-    } bind def
-   currentdict
-  end
-  dup /FontName get exch definefont
+% Cache original fonts to prevent adjustfont to accumulate changes.
+/pdfcachefont {   % <font_name> pdfcachefont <font>
+  dup //.pdforigfontcache_g exch .knownget {
+    exch pop
+  } {
+    dup .pdforigfontcache_l exch .knownget {
+      exch pop
+    } {
+      dup findfont dup    
+      dup gcheck { //.pdforigfontcache_g } { .pdforigfontcache_l } ifelse
+                     % Stack : font_name font font cache
+      4 2 roll .growput
+    } ifelse
+  } ifelse
 } bind def
 
-% Fabricate a font name by adding ?'s on the end.
-/genfontname		% <name> genfontname <name>
- { dup length string cvs
-    { (?) concatstrings
-      dup cvn FontDirectory exch known not { cvn exit } if
-    }
-   loop
- } bdef
-
-% Find a font, and adjust its encoding if necessary.
+% Find a font (except for embedded ones), and adjust its encoding if necessary.
 /.pdfdfndict mark
   /defaultfontname /Helvetica
 .dicttomark readonly def
@@ -266,7 +275,7 @@ currentdict /find_in_diff undef
 		% If the font isn't available, synthesize one based on
 		% its descriptor.
   dup /Font resourcestatus {
-    pop pop findfont
+    pop pop pdfcachefont
   } {
     1 index /FontDescriptor knownoget {
 		% Stack: font-res fontname fontdesc
@@ -276,7 +285,18 @@ currentdict /find_in_diff undef
       exch 16#2 and 2 bitshift add	% 8, serif
 		% We should look at the fixed flag, too.
 		% Stack: font-res fontname fontdesc properties
-      1 index /FontName oget exch
+
+                % Even though /FontName is a required key in FontDescriptor dict
+                % (As of the PDF 1.4 Reference Manual), In the case of missing 
+                % /FontName key, we substitue /BaseFont for the value of /FontName.
+                % Yet another case of broken PDF's that Adobe Reader accepts.
+      1 index dup /FontName known {
+        /FontName oget exch
+      } {
+        (   **** FontDescriptor missing required /FontName key. BaseFont name used.\n)
+        pdfformaterror
+        pop 2 index exch	% grab the BaseFont from the stack.
+      } ifelse
 		% Analyzes font name and extract "Narrow" property
 		% which is not described by the FontDescriptor Flags.
       0 2 index .fontnameproperties 4 and or
@@ -288,12 +308,12 @@ currentdict /find_in_diff undef
 		% No available good substitution, use the standard one.
 	pop 1 index .substitutefont
       } if
-      QUIET not {
+      dup 3 index ne QUIET not and {
 	(Substituting font ) print dup =only
 	( for ) print 2 index =only (.) = flush
       } if
-      3 -1 roll pop findfont
-		% Stack: font-res fontdesc font
+      pdfcachefont
+		% Stack: font-res fontname fontdesc font
 		% If this is a small-caps font, replace the CharString
 		% entries for a..z.
       exch /Flags oget 16#20000 and 0 ne {
@@ -315,29 +335,18 @@ currentdict /find_in_diff undef
 	    0.7 dup scale 0 0 moveto show
 	  } /exec cvx 4 packedarray cvx put
 	} for put
-	renamefont
       } if
+      dup /FontName get 2 index ne {
+        true .copyfontdict
+        2 copy exch /FontName exch put
+      } if
+      definefont
     } {
 		% No descriptor available, use the default algorithm.
-      findfont
+      pdfcachefont
     } ifelse
-  } ifelse adjustfont
-} bdef
-/findpdffont {	% <font-resource> <fontname> findpdffont <font>
-  {} 3 1 roll			% proc fnres fnname
-  [
-    [ (,Bold)		{ .03 makeboldfont } ]
-    [ (,BoldItalic)	{ .03 makeboldfont [ 1 0 .3 1 0 0 ] makefont } bind ]
-    [ (,Italic)		{ [ 1 0 .3 1 0 0 ] makefont } bind ]
-  ] {
-    1 index dup length string cvs
-    1 index 0 get tailmatch {	% proc fnres fnname []
-      3 -1 roll pop exch 1 get	% proc fnres pre-fnname proc
-      4 -1 roll pop 3 1 roll	% proc fnres pre-fnname
-      exit
-    } { pop pop } ifelse 	% proc fnres fnname
-  } forall
-  pdffindfont exch exec
+  } ifelse
+  exch pop
 } bdef
 
 % ---------------- Type 1 fonts ---------------- %
@@ -377,7 +386,7 @@ currentdict /find_in_diff undef
   /eexec {
 	% Assume the font dictionary is directly below the file on the stack
     count 0 gt { /topFontDict 2 index cvlit store } if
-    55665 /eexecDecode filter
+    //.eexec_param_dict /eexecDecode filter
     //systemdict begin readtype1dictcopy begin cvx stopped
     currentdict readtype1dictcopy eq { end } if
     currentdict //systemdict eq { end } if
@@ -421,7 +430,7 @@ end readonly def
    count exch sub { pop } repeat
    PDFfile 3 -1 roll setfileposition
    /BaseFont oget findfont
-   adjustfont
+   exch pop
  } bdef
 
 % Execute the appropriate reading procedure.
@@ -450,7 +459,7 @@ end readonly def
   sectionstr 0 1 put	% either way we go to the next stage
   pfbhdr type1readdata
   1 index 0 get 16#80 eq {
-    (\n   **** Warning: Embedded Type1 font in PFB format is not valid PDF.)
+    (   **** Warning: Embedded Type1 font in PFB format is not valid PDF.\n)
     pdfformaterror
     DEBUG { (skipping PFB header) = flush } if
     exch pop buffer 0 5 getinterval type1readdata exch
@@ -459,7 +468,7 @@ end readonly def
     DEBUG { (PFB segment length = ) print dup = } if
     exch pop  % discard the string keeping the PFB segment length
     2 copy ne {
-      (\n   **** Warning: Type 1 PFB segment length and Length 1 value do not match.)
+      (   **** Warning: Type 1 PFB segment length and Length 1 value do not match.\n)
       pdfformaterror
       exch 	% keep the PFB length instead
     } if
@@ -489,9 +498,8 @@ end readonly def
         DEBUG { (PFB segment length = ) print dup = } if
 	exch pop  % discard the string keeping the PFB segment length
 	2 copy ne {
-          (\n   **** Warning: Type 1 PFB segment length and Length 2 value do not match.)
+          (   **** Warning: Type 1 PFB segment length and Length 2 value do not match.\n)
           pdfformaterror
-	  dup =
 	  exch 		% keep the PFB length instead
 	} if
 	  pop
@@ -548,12 +556,11 @@ readonly def
            DEBUG { (PFB segment length = ) print dup = } if
 	   exch pop  % discard the string keeping the PFB segment length
 	   2 copy ne {
-           (\n   **** Warning: Type 1 PFB segment length and Length 3 value do not match.)
+           (   **** Warning: Type 1 PFB segment length and Length 3 value do not match.\n)
            pdfformaterror
 	     exch 	% keep the PFB length instead
 	   } if
 	   pop
-	   (\n) pdfformaterror
          } if
          type1read3
        }
@@ -573,8 +580,6 @@ readonly def
 
 % ---------------- Type 3 fonts ---------------- %
 
-/.notdefEncoding 256 { /.notdef } repeat 256 packedarray def
-
 /buildType3 {		% <Type3-font-resource> buildType3 <font>
   8 dict begin
     /FontType 3 def
@@ -587,7 +592,10 @@ readonly def
       /FirstChar 1 index /FirstChar oget def
       /LastChar 1 index /LastChar oget def
     } if
-    /FontName 1 index /Name get genfontname def
+    /FontName 1 index /Name .knownget not { 
+       PDFfile fileposition 16 10 string cvrs cvn
+    } if def
+
     /Encoding .notdefEncoding 2 index getencoding def
 		% We have to define BuildChar rather than BuildGlyph:
 		% there is no PDF equivalent of glyphshow, and we need
@@ -636,59 +644,24 @@ readonly def
   /TimesNewRoman,Italic /Times-Italic
   /TimesNewRoman,Bold /Times-Bold
   /TimesNewRoman,BoldItalic /Times-BoldItalic
-  %
-  /ArialBlack,Italic /Arial-BlackItalic
-  /ArialNarrow,Bold /ArialNarrow-Bold
-  /ArialNarrow,BoldItalic /ArialNarrow-BoldItalic
-  /ArialNarrow,Italic /ArialNarrow-Italic
-  /BookAntiqua,Bold /BookAntiqua-Bold
-  /BookAntiqua,BoldItalic /BookAntiqua-BoldItalic
-  /BookAntiqua,Italic /BookAntiqua-Italic
-  /BookmanOldStyle,Bold /BookmanOldStyle-Bold
-  /BookmanOldStyle,BoldItalic /BookmanOldStyle-BoldItalic
-  /BookmanOldStyle,Italic /BookmanOldStyle-Italic
-  /CenturyGothic,Bold /CenturyGothic-Bold
-  /CenturyGothic,BoldItalic /CenturyGothic-BoldItalic
-  /CenturyGothic,Italic /CenturyGothic-Italic
-  /ComicSansMS,Bold /ComicSansMS-Bold
-  /CourierNew,Bold /CourierNewPS-BoldMT
-  /CourierNew,BoldItalic /CourierNewPS-BoldItalicMT
-  /CourierNew,Italic /CourierNewPS-ItalicMT
-  /FranklinGothicMedium,Italic /FranklinGothic-MediumItalic
-  /Garamond,Bold /Garamond-Bold
-  /Garamond,Italic /Garamond-Italic
-  /Georgia,Bold /Georgia-Bold
-  /Georgia,BoldItalic /Georgia-BoldItalic
-  /Georgia,Italic /Georgia-Italic
-  /Tahoma,Bold /Tahoma-Bold
-  /TrebuchetMS,Bold /TrebuchetMS-Bold
-  /TrebuchetMS,BoldItalic /Trebuchet-BoldItalic
-  /TrebuchetMS,Italic /TrebuchetMS-Italic
-  /Verdana,Bold /Verdana-Bold
-  /Verdana,BoldItalic /Verdana-BoldItalic
-  /Verdana,Italic /Verdana-Italic
 .dicttomark readonly def
 
 /buildTrueType {	% <TrueType-font-resource> buildTrueType <font>
-  dup /BaseFont get
+  dup /BaseFont oget
+  (   **** Warning: Fonts with Subtype = /TrueType should be embedded.\n) pdfformaterror
+  (                 But ) pdfformaterror dup =string cvs pdfformaterror ( is not embedded.\n) pdfformaterror
   dup TTfonts exch .knownget {
-    exch pop
-		% Hack required by the PDF specification: if the
-		% font resource has Subtype = /TrueType but the actual
-		% (installed) font is not a TrueType font, ignore the
-		% Encoding in the font resource.  However, all current
-		% versions of Acrobat Reader have the 14 base TrueType
-		% fonts built in, so this produces incorrect output for
-		% badly designed PDF files that specify these file names
-		% with /Subtype = /TrueType but no embedded definition.
-		% Compensate for this by removing the /Subtype key when
-		% looking up the font.
-    exch dup length dict copy dup /Subtype null put exch
-  } if
-  pdffindfont	% findfont for PDF
-  % disable the auto-bold and auto-italic since it sometimes applies
-  % so an already bold or italic substitute font
-  %findpdffont	% findfont and auto-bold and/or auto-italic font for PDF
+    QUIET not {
+      (Substituting font ) print dup =only
+      ( for ) print 1 index =only (.) = flush
+    } if
+    exch 3 1 roll pdffindfont
+    true .copyfontdict
+    2 copy exch /FontName exch put
+    definefont
+  } {
+    pdffindfont
+  } ifelse
 } bdef
 
 % Read an embedded TrueType font.
@@ -707,18 +680,33 @@ readonly def
 	pop
       } {
 	true resolvestream
-		% The following doesn't work for CIDToGIDMaps with more
-		% than 32K-1 entries.  We'll fix it later if necessary.
 		% Stack: filepos fontres font mapstream
-	dup 2 index /CIDCount oget 2 mul string readstring pop exch closefile
-	exch dup length 5 add dict .copydict
+	dup 2 index /CIDCount oget dup 32767 le {
+          2 mul string readstring pop
+        } {
+	  % Length exceeded max string size, use an array of two strings
+          % stack: filepos fontres font mapstream mapstream CIDCount
+          1 index 32767 string readstring not {
+            (   **** Warning: CIDToGIDMap length of ) pdfformaterror
+            dup length 2 div cvi =string cvs pdfformaterror
+            (, expected length of ) pdfformaterror
+            exch =string cvs pdfformaterror
+            (.\n) pdfformaterror
+            exch pop
+          } {
+	    3 1 roll 32767 sub string readstring pop 
+	    2 array astore
+          } ifelse
+        } ifelse
+	exch closefile exch dup length 5 add dict .copydict
 	dup /FID undef
 	dup /CIDMap 4 -1 roll put
 	dup /CIDFontName get exch /CIDFont defineresource
       } ifelse
     } if
   } {
-    null 2 index getencoding .loadpdfttfont
+    1 index /FontDescriptor oget /Flags get 4 and 0 ne % is_symbolic
+    .loadpdfttfont
   } ifelse
   exch pop
   PDFfile 3 -1 roll setfileposition
@@ -802,9 +790,11 @@ readonly def
 
 % Insert metrics into a CIDFont, by saving the PDF W, W2, DW, and DW2
 % arrays and using a (currently very inefficient) CDevProc.
-% For detail, refer "PDF Reference" third edition, p. 337,
-% "5.6.3 CIDFonts" and table "Entries in a CIDFont dictionary".
- 
+% For detail, refer "PDF Reference" 2nd ed., p314 "5.6.3 CIDFonts".
+% It notes default DW is 0, but Acrobat Reader uses 1000 as default.
+% If DW is 0, currentpoint does not move by default in rendering text
+% horizontally, the result is unreadable. You can check it by Acrobat.
+
 /.pdfDefaultDW  1000 def
 /.pdfDefaultDW2 [ 880 -1000 ] def
 
@@ -815,20 +805,18 @@ readonly def
   dup /XUID undef
 	% Insert the widths into the font.
 
-	% Stack: pdfresource newfont
+        % Stack: pdfresource newfont
 
   1 index /DW .knownget {
     1 index /DW 3 -1 roll put
-    } {
+  } {
     dup /DW .pdfDefaultDW put
-    } ifelse
-
+  } ifelse
 
   1 index /W .knownget {
     dup 2 index /W 3 -1 roll put
     .pdfMakeInternalW 1 index /.internalW 3 -1 roll put
   } if
-
 
   1 index /DW2 .knownget {
     1 index /DW2 3 -1 roll put
@@ -836,12 +824,10 @@ readonly def
     dup /DW2 .pdfDefaultDW2 put
   } ifelse
 
-
   1 index /W2 .knownget {
     dup 2 index /W2 3 -1 roll put
     .pdfMakeInternalW2 1 index /.internalW2 3 -1 roll put
   } if
-
 
   dup /CDevProc 1 index /CIDWProc load /exec load 3 packedarray cvx put
   exch pop
@@ -1011,10 +997,6 @@ readonly def
 
 } def
 
-
-
-%----------------------------------------------------------------
-
 % <string> <match> tailmatch ==> <pre> true
 %                            ==> <string> false
 /tailmatch {
@@ -1028,7 +1010,7 @@ readonly def
   } ifelse
 } bind def
 
-/makeboldcidfont {
+/makeboldfont {
   16 dict begin
     /strokewidth exch def
     /basecidfont exch def
@@ -1081,7 +1063,7 @@ readonly def
     dup dup length string cvs
     (,Bold) tailmatch {
       exch pop
-      cvn findCIDFont 0.03 makeboldcidfont
+      cvn findCIDFont 0.03 makeboldfont
       exit
     } if
     (,Italic) tailmatch {
@@ -1092,7 +1074,7 @@ readonly def
     } if
     (,BoldItalic) tailmatch {
       exch pop
-      cvn findCIDFont 0.03 makeboldcidfont
+      cvn findCIDFont 0.03 makeboldfont
       [ 1 0 0.3 1 0 0 ] makefont
       exit
     } if
@@ -1139,7 +1121,7 @@ readonly def
   closefile closefile pop
   PDFfile 3 -1 roll setfileposition
   /FontDescriptor oget /FontName oget findfont
-  adjustfont
+  exch pop
 } bdef
 
 % Read an embedded CFF CIDFont.
@@ -1171,46 +1153,64 @@ readonly def
   /CIDFontType2 /buildCIDType2 cvx
 .dicttomark readonly def
 
+/adjustfonttypes mark
+  /Type1 true
+  /MMType1 true
+  /TrueType true
+.dicttomark readonly def
+
 /resourcefont			% <font-resource> resourcefont <font>
- { dup /PSFont .knownget
-    { /FID .knownget { type /fonttype eq } { false } ifelse }
-    { false }
-   ifelse
-    { /PSFont get
-    }
-    { dup dup /FontDescriptor knownoget
-       {	% Stack: font-res font-res font-desc
-	 dup /FontFile knownoget
-	  { exch pop readtype1 true }
-	  { dup /FontFile2 knownoget
-	     { exch pop readtruetype true }
-	     { /FontFile3 knownoget
-		{ dup /Subtype get fontloadprocs exch get exec true }
-		{ false }
-	       ifelse
-	     }
+{ dup /PSFont .knownget
+  { /FID knownoget { type /fonttype eq } { //false } ifelse }
+  { //false }
+  ifelse
+  { /PSFont get }
+  { dup dup /FontDescriptor knownoget {	% Stack: font-res font-res font-desc
+      dup /FontObject .knownget {
+	3 1 roll pop pop
+      } {
+	dup /FontFile knownoget
+	{ exch pop readtype1 }
+	{ dup /FontFile2 knownoget
+	  { exch pop readtruetype }
+	  { /FontFile3 knownoget
+	    { dup /Subtype get fontloadprocs exch get exec }
+            { dup /Subtype get fonttypeprocs exch get exec }
 	    ifelse
 	  }
-	 ifelse
-       }
-       { false }
+	  ifelse
+	}
+	ifelse
+	1 index /FontDescriptor oget
+	1 index /FontObject exch put	    % Save pointer to the font
+      }
       ifelse
-		% Stack: font-res font-res false
-		%  -or-: font-res font true
-      not
-       { dup /Subtype get fonttypeprocs exch get exec }
-      if
-      2 copy /PSFont exch put
-      exch pop
     }
-   ifelse
- } bdef
+    { dup /Subtype get fonttypeprocs exch get exec }
+    ifelse
+	% Stack: font-res font
+    1 index 3 1 roll
+    1 index /Subtype get
+    //adjustfonttypes exch known { adjustfont } { exch pop } ifelse
+    dup 3 1 roll /PSFont exch put
+  }
+  ifelse
+} bdef
 
 drawopdict begin
   /d0 {
     .adjustcharwidth setcharwidth
   } bdef
   /d1 {
+    4 index 0 ne {
+      % invalid wy parameter for d1 in Type3 font (must be 0)
+      % Even though the PDF 1.4 specification states that this must be 0,
+      % Distiller sometimes creates Type3 fonts with non-zero wy. We set
+      % it to 0 since this is apparently what Acrobat Reader 4 and 5 do,
+      % but if the specification is ever changed to allow non-zero wy, this
+      % will not work.
+      5 -1 roll pop 0 5 1 roll	% set wy to 0
+    } if
     6 -2 roll .adjustcharwidth 6 2 roll setcachedevice
   } bdef
   /Tf {

@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: files.h,v 1.1 2004/01/14 16:59:47 atai Exp $ */
+/* $Id: files.h,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* Definitions for interpreter support for file objects */
 /* Requires stream.h */
 
@@ -36,12 +42,12 @@
 
 /* The stdxxx files.  We have to access them through procedures, */
 /* because they might have to be opened when referenced. */
-int zget_stdin(P2(i_ctx_t *, stream **));
-int zget_stdout(P2(i_ctx_t *, stream **));
-int zget_stderr(P2(i_ctx_t *, stream **));
+int zget_stdin(i_ctx_t *, stream **);
+int zget_stdout(i_ctx_t *, stream **);
+int zget_stderr(i_ctx_t *, stream **);
 extern bool gs_stdin_is_interactive;
 /* Test whether a stream is stdin. */
-bool zis_stdin(P1(const stream *));
+bool zis_stdin(const stream *);
 
 /* Define access to the stdio refs for operators. */
 #define ref_stdio (i_ctx_p->stdio)
@@ -52,7 +58,7 @@ bool zis_stdin(P1(const stream *));
 #define avm_invalid_file_entry avm_foreign
 extern stream *const invalid_file_entry;
 /* Make an invalid file object. */
-void make_invalid_file(P1(ref *));
+void make_invalid_file(ref *);
 
 /*
  * Macros for checking file validity.
@@ -74,7 +80,7 @@ void make_invalid_file(P1(ref *));
  * and stream procedures and modes reflect the current mode of use;
  * an id check failure will switch it to the other mode.
  */
-int file_switch_to_read(P1(const ref *));
+int file_switch_to_read(const ref *);
 
 #define check_read_file(svar,op)\
   BEGIN\
@@ -97,7 +103,7 @@ int file_switch_to_read(P1(const ref *));
 	}\
     }\
   END
-int file_switch_to_write(P1(const ref *));
+int file_switch_to_write(const ref *);
 
 #define check_write_file(svar,op)\
   BEGIN\
@@ -119,55 +125,55 @@ extern const uint file_default_buffer_size;
 
 /* Procedures exported by zfile.c. */
 	/* for imainarg.c */
-FILE *lib_fopen(P1(const char *));
+FILE *lib_fopen(const char *);
 
 	/* for imain.c */
-int lib_file_open(P7(const char *, uint, byte *, uint, uint *, ref *,
-		     gs_memory_t *));
+int lib_file_open(const char *, uint, byte *, uint, uint *, ref *,
+		  gs_memory_t *);
 
 	/* for imain.c */
 #ifndef gs_ref_memory_DEFINED
 #  define gs_ref_memory_DEFINED
 typedef struct gs_ref_memory_s gs_ref_memory_t;
 #endif
-int file_read_string(P4(const byte *, uint, ref *, gs_ref_memory_t *));
+int file_read_string(const byte *, uint, ref *, gs_ref_memory_t *);
 
 	/* for os_open in ziodev.c */
 #ifdef iodev_proc_fopen		/* in gxiodev.h */
-int file_open_stream(P7(const char *, uint, const char *, uint,
-			stream **, iodev_proc_fopen_t, gs_memory_t *));
+int file_open_stream(const char *, uint, const char *, uint, stream **,
+		     gx_io_device *, iodev_proc_fopen_t, gs_memory_t *);
 #endif
 
 	/* for zfilter.c */
-int filter_open(P7(const char *, uint, ref *, const stream_procs *,
-		   const stream_template *, const stream_state *,
-		   gs_memory_t *));
+int filter_open(const char *, uint, ref *, const stream_procs *,
+		const stream_template *, const stream_state *,
+		gs_memory_t *);
 
 	/* for zfileio.c */
-void make_stream_file(P3(ref *, stream *, const char *));
+void make_stream_file(ref *, stream *, const char *);
 
 	/* for ziodev.c */
-int file_close_finish(P1(stream *));
-int file_close_disable(P1(stream *));
-int file_close_file(P1(stream *));
+int file_close_finish(stream *);
+int file_close_disable(stream *);
+int file_close_file(stream *);
 
 	/* for gsmain.c, interp.c */
-int file_close(P1(ref *));
+int file_close(ref *);
 
 	/* for zfproc.c, ziodev.c */
-stream *file_alloc_stream(P2(gs_memory_t *, client_name_t));
+stream *file_alloc_stream(gs_memory_t *, client_name_t);
 
 /* Procedures exported by zfileio.c. */
 	/* for ziodev.c */
-int zreadline_from(P5(stream *s, gs_string *buf, gs_memory_t *bufmem,
-		      uint *pcount, bool *pin_eol));
+int zreadline_from(stream *s, gs_string *buf, gs_memory_t *bufmem,
+		   uint *pcount, bool *pin_eol);
 
 /* Procedures exported by zfileio.c. */
 	/* for zfile.c */
 int zfilelineedit(i_ctx_t *i_ctx_p);
 
 	/* for zfproc.c */
-int zneedstdin(P1(i_ctx_t *i_ctx_p));
-int zneedstdout(P1(i_ctx_t *i_ctx_p));
-int zneedstderr(P1(i_ctx_t *i_ctx_p));
+int zneedstdin(i_ctx_t *i_ctx_p);
+int zneedstdout(i_ctx_t *i_ctx_p);
+int zneedstderr(i_ctx_t *i_ctx_p);
 #endif /* files_INCLUDED */

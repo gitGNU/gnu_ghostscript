@@ -1,22 +1,28 @@
-/* Copyright (C) 1991, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1991, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: zcontext.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zcontext.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* Display PostScript context operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -49,8 +55,8 @@
 private int reschedule_interval = 100;
 
 /* Scheduling hooks in interp.c */
-extern int (*gs_interp_reschedule_proc)(P1(i_ctx_t **));
-extern int (*gs_interp_time_slice_proc)(P1(i_ctx_t **));
+extern int (*gs_interp_reschedule_proc)(i_ctx_t **);
+extern int (*gs_interp_time_slice_proc)(i_ctx_t **);
 extern int gs_interp_time_slice_ticks;
 
 /* Context structure */
@@ -295,15 +301,15 @@ context_reclaim(vm_spaces * pspaces, bool global)
 
 
 /* Forward references */
-private int context_create(P5(gs_scheduler_t *, gs_context_t **,
-			      const gs_dual_memory_t *,
-			      const gs_context_state_t *, bool));
-private long context_usertime(P0());
-private int context_param(P3(const gs_scheduler_t *, os_ptr, gs_context_t **));
-private void context_destroy(P1(gs_context_t *));
-private void stack_copy(P4(ref_stack_t *, const ref_stack_t *, uint, uint));
-private int lock_acquire(P2(os_ptr, gs_context_t *));
-private int lock_release(P1(ref *));
+private int context_create(gs_scheduler_t *, gs_context_t **,
+			   const gs_dual_memory_t *,
+			   const gs_context_state_t *, bool);
+private long context_usertime(void);
+private int context_param(const gs_scheduler_t *, os_ptr, gs_context_t **);
+private void context_destroy(gs_context_t *);
+private void stack_copy(ref_stack_t *, const ref_stack_t *, uint, uint);
+private int lock_acquire(os_ptr, gs_context_t *);
+private int lock_release(ref *);
 
 /* Internal procedures */
 private void
@@ -338,9 +344,9 @@ add_last(const gs_scheduler_t *psched, ctx_list_t *pl, gs_context_t *pc)
 
 /* ------ Initialization ------ */
 
-private int ctx_initialize(P1(i_ctx_t **));
-private int ctx_reschedule(P1(i_ctx_t **));
-private int ctx_time_slice(P1(i_ctx_t **));
+private int ctx_initialize(i_ctx_t **);
+private int ctx_reschedule(i_ctx_t **);
+private int ctx_time_slice(i_ctx_t **);
 private int
 zcontext_init(i_ctx_t *i_ctx_p)
 {
@@ -522,15 +528,15 @@ zdetach(i_ctx_t *i_ctx_p)
 }
 
 private int
-    do_fork(P6(i_ctx_t *i_ctx_p, os_ptr op, const ref * pstdin,
-	       const ref * pstdout, uint mcount, bool local)),
-    values_older_than(P4(const ref_stack_t * pstack, uint first, uint last,
-			 int max_space));
+    do_fork(i_ctx_t *i_ctx_p, os_ptr op, const ref * pstdin,
+	    const ref * pstdout, uint mcount, bool local),
+    values_older_than(const ref_stack_t * pstack, uint first, uint last,
+		      int max_space);
 private int
-    fork_done(P1(i_ctx_t *)),
-    fork_done_with_error(P1(i_ctx_t *)),
-    finish_join(P1(i_ctx_t *)),
-    reschedule_now(P1(i_ctx_t *));
+    fork_done(i_ctx_t *),
+    fork_done_with_error(i_ctx_t *),
+    finish_join(i_ctx_t *),
+    reschedule_now(i_ctx_t *);
 
 /* <mark> <obj1> ... <objN> <proc> .fork <context> */
 /* <mark> <obj1> ... <objN> <proc> <stdin|null> <stdout|null> */
@@ -922,11 +928,11 @@ zyield(i_ctx_t *i_ctx_p)
 /* ------ Condition and lock operators ------ */
 
 private int
-    monitor_cleanup(P1(i_ctx_t *)),
-    monitor_release(P1(i_ctx_t *)),
-    await_lock(P1(i_ctx_t *));
+    monitor_cleanup(i_ctx_t *),
+    monitor_release(i_ctx_t *),
+    await_lock(i_ctx_t *);
 private void
-     activate_waiting(P2(gs_scheduler_t *, ctx_list_t * pcl));
+     activate_waiting(gs_scheduler_t *, ctx_list_t * pcl);
 
 /* - condition <condition> */
 private int

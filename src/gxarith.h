@@ -1,25 +1,31 @@
-/* Copyright (C) 1990, 1993, 1994, 1996, 1998 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1990, 1993, 1994, 1996, 1998 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
 #ifndef gxarith_INCLUDED
 #  define gxarith_INCLUDED
 
-/*$Id: gxarith.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxarith.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Arithmetic macros for Ghostscript library */
 
 /* Define an in-line abs function, good for any signed numeric type. */
@@ -27,21 +33,21 @@
 
 /* Compute M modulo N.  Requires N > 0; guarantees 0 <= imod(M,N) < N, */
 /* regardless of the whims of the % operator for negative operands. */
-int imod(P2(int m, int n));
+int imod(int m, int n);
 
 /* Compute the GCD of two integers. */
-int igcd(P2(int x, int y));
+int igcd(int x, int y);
 
 /*
  * Given A, B, and M, compute X such that A*X = B mod M, 0 < X < M.
  * Requires: M > 0, 0 < A < M, 0 < B < M, gcd(A, M) | gcd(A, B).
  */
-int idivmod(P3(int a, int b, int m));
+int idivmod(int a, int b, int m);
 
 /*
  * Compute floor(log2(N)).  Requires N > 0.
  */
-int ilog2(P1(int n));
+int ilog2(int n);
 
 /* Test whether an integral value fits in a given number of bits. */
 /* This works for all integral types. */

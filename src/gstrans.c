@@ -1,22 +1,28 @@
-/* Copyright (C) 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gstrans.c,v 1.1 2004/01/14 16:59:50 atai Exp $ */
+/* $Id: gstrans.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Implementation of transparency, other than rendering */
 #include "gx.h"
 #include "gserrors.h"
@@ -112,12 +118,12 @@ gs_currenttextknockout(const gs_state *pgs)
   parameters.
 */
 #define dev_t_proc_begin_transparency_group(proc, dev_t)\
-  int proc(P6(gx_device *dev,\
+  int proc(gx_device *dev,\
     const gs_transparency_group_params_t *ptgp,\
     const gs_rect *pbbox,\
     gs_imager_state *pis,\
     gs_transparency_state_t **ppts,\
-    gs_memory_t *mem))
+    gs_memory_t *mem)
 #define dev_proc_begin_transparency_group(proc)\
   dev_t_proc_begin_transparency_group(proc, gx_device)
 
@@ -129,9 +135,9 @@ gs_currenttextknockout(const gs_state *pgs)
   the stack is *not* popped.
 */
 #define dev_t_proc_end_transparency_group(proc, dev_t)\
-  int proc(P3(gx_device *dev,\
+  int proc(gx_device *dev,\
     gs_imager_state *pis,\
-    gs_transparency_state_t **ppts))
+    gs_transparency_state_t **ppts)
 #define dev_proc_end_transparency_group(proc)\
   dev_t_proc_end_transparency_group(proc, gx_device)
 
@@ -141,12 +147,12 @@ gs_currenttextknockout(const gs_state *pgs)
   accumulates coverage values, not full pixel values.
 */
 #define dev_t_proc_begin_transparency_mask(proc, dev_t)\
-  int proc(P6(gx_device *dev,\
+  int proc(gx_device *dev,\
     const gs_transparency_mask_params_t *ptmp,\
     const gs_rect *pbbox,\
     gs_imager_state *pis,\
     gs_transparency_state_t **ppts,\
-    gs_memory_t *mem))
+    gs_memory_t *mem)
 #define dev_proc_begin_transparency_mask(proc)\
   dev_t_proc_begin_transparency_mask(proc, gx_device)
 
@@ -157,8 +163,8 @@ gs_currenttextknockout(const gs_state *pgs)
   end_mask fails, the stack is *not* popped.
 */
 #define dev_t_proc_end_transparency_mask(proc, dev_t)\
-  int proc(P2(gx_device *dev,\
-    gs_transparency_mask_t **pptm))
+  int proc(gx_device *dev,\
+    gs_transparency_mask_t **pptm)
 #define dev_proc_end_transparency_mask(proc)\
   dev_t_proc_end_transparency_mask(proc, gx_device)
 
@@ -167,8 +173,8 @@ gs_currenttextknockout(const gs_state *pgs)
   either a group or a mask.  Set *ppts to 0 iff the stack is now empty.
 */
 #define dev_t_proc_discard_transparency_layer(proc, dev_t)\
-  int proc(P2(gx_device *dev,\
-    gs_transparency_state_t **ppts))
+  int proc(gx_device *dev,\
+    gs_transparency_state_t **ppts)
 #define dev_proc_discard_transparency_layer(proc)\
   dev_t_proc_discard_transparency_layer(proc, gx_device)
 

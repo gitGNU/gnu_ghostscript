@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxstroke.c,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: gxstroke.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Path stroking procedures for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -86,7 +92,7 @@
  * check and covers many common cases.  Clients that care always have the
  * option of using strokepath to get an exact result.
  */
-private float join_expansion_factor(P2(const gs_imager_state *, gs_line_join));
+private float join_expansion_factor(const gs_imager_state *, gs_line_join);
 int
 gx_stroke_path_expansion(const gs_imager_state * pis, const gx_path * ppath,
 			 gs_fixed_point * ppt)
@@ -210,18 +216,18 @@ typedef partial_line *pl_ptr;
   ((pp)->x = (p).x, (pp)->y = (p).y)
 
 /* Other forward declarations */
-private bool width_is_thin(P1(pl_ptr));
-private void adjust_stroke(P3(pl_ptr, const gs_imager_state *, bool));
-private int line_join_points(P6(const gx_line_params * pgs_lp,
-				pl_ptr plp, pl_ptr nplp,
-				gs_fixed_point * join_points,
-				const gs_matrix * pmat, gs_line_join join));
-private void compute_caps(P1(pl_ptr));
-private int add_points(P4(gx_path *, const gs_fixed_point *,
-			  int, bool));
-private int add_round_cap(P2(gx_path *, const_ep_ptr));
-private int cap_points(P3(gs_line_cap, const_ep_ptr,
-			  gs_fixed_point * /*[3] */ ));
+private bool width_is_thin(pl_ptr);
+private void adjust_stroke(pl_ptr, const gs_imager_state *, bool);
+private int line_join_points(const gx_line_params * pgs_lp,
+			     pl_ptr plp, pl_ptr nplp,
+			     gs_fixed_point * join_points,
+			     const gs_matrix * pmat, gs_line_join join);
+private void compute_caps(pl_ptr);
+private int add_points(gx_path *, const gs_fixed_point *,
+		       int, bool);
+private int add_round_cap(gx_path *, const_ep_ptr);
+private int cap_points(gs_line_cap, const_ep_ptr,
+		       gs_fixed_point * /*[3] */ );
 
 /* Define the default implementation of the device stroke_path procedure. */
 int
@@ -255,10 +261,10 @@ gx_default_stroke_path(gx_device * dev, const gs_imager_state * pis,
  * with an appropriate cap.
  */
 #define stroke_line_proc(proc)\
-  int proc(P11(gx_path *, int, pl_ptr, pl_ptr, const gx_device_color *,\
-	       gx_device *, const gs_imager_state *,\
-	       const gx_stroke_params *, const gs_fixed_rect *, int,\
-	       gs_line_join))
+  int proc(gx_path *, int, pl_ptr, pl_ptr, const gx_device_color *,\
+	   gx_device *, const gs_imager_state *,\
+	   const gx_stroke_params *, const gs_fixed_rect *, int,\
+	   gs_line_join)
 typedef stroke_line_proc((*stroke_line_proc_t));
 
 private stroke_line_proc(stroke_add);
@@ -850,11 +856,11 @@ line_intersect(
 		  p_ptr pi)
 {				/* return intersection here */
     /* We don't have to do any scaling, the factors all work out right. */
-    float u1 = pd1->x, v1 = pd1->y;
-    float u2 = pd2->x, v2 = pd2->y;
+    double u1 = pd1->x, v1 = pd1->y;
+    double u2 = pd2->x, v2 = pd2->y;
     double denom = u1 * v2 - u2 * v1;
-    float xdiff = pp2->x - pp1->x;
-    float ydiff = pp2->y - pp1->y;
+    double xdiff = pp2->x - pp1->x;
+    double ydiff = pp2->y - pp1->y;
     double f1;
     double max_result = any_abs(denom) * (double)max_fixed;
 

@@ -1,22 +1,28 @@
-/* Copyright (C) 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gsparams.c,v 1.1 2004/01/14 16:59:50 atai Exp $ */
+/* $Id: gsparams.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Generic parameter list serializer & expander */
 
 /* Initial version 2/1/98 by John Desrosiers (soho@crl.com) */
@@ -37,32 +43,32 @@ typedef struct {
 
 /* ---------- Forward refs ----------- */
 private void
-ptr_align_to(P2(
+ptr_align_to(
 	    const byte ** src,	/* pointer to align */
 	    unsigned alignment	/* alignment, must be power of 2 */
-	    ));
+	    );
 private void
-wb_put_word(P2(
+wb_put_word(
 	    unsigned source,	/* number to put to buffer */
 	    WriteBuffer * dest	/* destination descriptor */
-	    ));
+	    );
 private void
-wb_put_bytes(P3(
+wb_put_bytes(
 	     const byte * source,	/* bytes to put to buffer */
 	     unsigned source_sizeof,	/* # bytes to put */
 	     WriteBuffer * dest		/* destination descriptor */
-	     ));
+	     );
 private void
-wb_put_alignment(P2(
+wb_put_alignment(
 		 unsigned alignment,	/* alignment to match, must be power 2 */
 		 WriteBuffer * dest	/* destination descriptor */
-		 ));
+		 );
 
 /* Get word compressed with wb_put_word */
 private unsigned		/* decompressed word */
-buf_get_word(P1(
+buf_get_word(
 	    const byte ** src	/* UPDATES: ptr to src buf ptr */
-	    ));
+	    );
 
 
 /* ------------ Serializer ------------ */

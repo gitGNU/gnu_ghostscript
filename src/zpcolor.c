@@ -1,22 +1,28 @@
-/* Copyright (C) 1994, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: zpcolor.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zpcolor.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* Pattern color */
 #include "ghost.h"
 #include "oper.h"
@@ -44,9 +50,9 @@
 extern const gs_color_space_type gs_color_space_type_Pattern;
 
 /* Forward references */
-private int zPaintProc(P2(const gs_client_color *, gs_state *));
-private int pattern_paint_prepare(P1(i_ctx_t *));
-private int pattern_paint_finish(P1(i_ctx_t *));
+private int zPaintProc(const gs_client_color *, gs_state *);
+private int pattern_paint_prepare(i_ctx_t *);
+private int pattern_paint_finish(i_ctx_t *);
 
 /* GC descriptors */
 private_st_int_pattern();
@@ -133,7 +139,9 @@ zsetpatternspace(i_ctx_t *i_ctx_p)
     uint edepth = ref_stack_count(&e_stack);
     int code;
 
-    check_read_type(*op, t_array);
+    if (!r_is_array(op))
+        return_error(e_typecheck);
+    check_read(*op);
     switch (r_size(op)) {
 	case 1:		/* no base space */
 	    cs.params.pattern.has_base_space = false;
@@ -180,7 +188,7 @@ const op_def zpcolor_l2_op_defs[] =
 /* ------ Internal procedures ------ */
 
 /* Render the pattern by calling the PaintProc. */
-private int pattern_paint_cleanup(P1(i_ctx_t *));
+private int pattern_paint_cleanup(i_ctx_t *);
 private int
 zPaintProc(const gs_client_color * pcc, gs_state * pgs)
 {
@@ -221,7 +229,8 @@ pattern_paint_prepare(i_ctx_t *i_ctx_p)
 	gs_grestore(pgs);
 	return code;
     }
-    gx_set_device_only(pgs, (gx_device *) pdev);
+    /* gx_set_device_only(pgs, (gx_device *) pdev); */
+    gs_setdevice_no_init(pgs, (gx_device *)pdev);
     push_mark_estack(es_other, pattern_paint_cleanup);
     ++esp;
     make_istruct(esp, 0, pdev);

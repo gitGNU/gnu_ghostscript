@@ -1,150 +1,37 @@
-/* Copyright (C) 1992, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1992, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: zimage2.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zimage2.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* image operator extensions for Level 2 PostScript */
-#include "math_.h"
 #include "memory_.h"
 #include "ghost.h"
-#include "oper.h"
-#include "gscolor.h"
-#include "gscspace.h"
-#include "gscolor2.h"
-#include "gsmatrix.h"
 #include "gsimage.h"
-#include "gxfixed.h"
-#include "idict.h"
-#include "idparam.h"
-#include "iimage.h"
+#include "gxiparam.h"
+#include "icstate.h"
 #include "iimage2.h"
-#include "ilevel.h"
 #include "igstate.h"		/* for igs */
 
-/* Extract and check the parameters for a gs_data_image_t. */
-int
-data_image_params(const ref *op, gs_data_image_t *pim,
-		  image_params *pip, bool require_DataSource,
-		  int num_components, int max_bits_per_component)
-{
-    int code;
-    int decode_size;
-    ref *pds;
-
-    check_type(*op, t_dictionary);
-    check_dict_read(*op);
-    if ((code = dict_int_param(op, "Width", 0, max_int_in_fixed / 2,
-			       -1, &pim->Width)) < 0 ||
-	(code = dict_int_param(op, "Height", 0, max_int_in_fixed / 2,
-			       -1, &pim->Height)) < 0 ||
-	(code = dict_matrix_param(op, "ImageMatrix",
-				  &pim->ImageMatrix)) < 0 ||
-	(code = dict_bool_param(op, "MultipleDataSources", false,
-				&pip->MultipleDataSources)) < 0 ||
-	(code = dict_int_param(op, "BitsPerComponent", 1,
-			       max_bits_per_component, -1,
-			       &pim->BitsPerComponent)) < 0 ||
-	(code = decode_size = dict_floats_param(op, "Decode",
-						num_components * 2,
-						&pim->Decode[0], NULL)) < 0 ||
-	(code = dict_bool_param(op, "Interpolate", false,
-				&pim->Interpolate)) < 0
-	)
-	return code;
-    pip->pDecode = &pim->Decode[0];
-    /* Extract and check the data sources. */
-    if ((code = dict_find_string(op, "DataSource", &pds)) <= 0) {
-	if (require_DataSource)
-	    return (code < 0 ? code : gs_note_error(e_rangecheck));
-	return 1;		/* no data source */
-    }
-    if (pip->MultipleDataSources) {
-	long i;
-        if (!r_is_array(pds))
-            return_error(e_typecheck);
-	if (r_size(pds) != num_components)
-	    return_error(e_rangecheck);
-	for (i = 0; i < num_components; ++i)
-            array_get(pds, i, &pip->DataSource[i]);
-    } else
-	pip->DataSource[0] = *pds;
-    return 0;
-}
-
-/* Extract and check the parameters for a gs_pixel_image_t. */
-int
-pixel_image_params(i_ctx_t *i_ctx_p, const ref *op, gs_pixel_image_t *pim,
-		   image_params *pip, int max_bits_per_component)
-{
-    int num_components =
-	gs_color_space_num_components(gs_currentcolorspace(igs));
-    int code;
-
-    if (num_components < 1)
-	return_error(e_rangecheck);	/* Pattern space not allowed */
-    pim->ColorSpace = gs_currentcolorspace(igs);
-    code = data_image_params(op, (gs_data_image_t *) pim, pip, true,
-			     num_components, max_bits_per_component);
-    if (code < 0)
-	return code;
-    pim->format =
-	(pip->MultipleDataSources ? gs_image_format_component_planar :
-	 gs_image_format_chunky);
-    return dict_bool_param(op, "CombineWithColor", false,
-			   &pim->CombineWithColor);
-}
-
-/* <dict> .image1 - */
-private int
-zimage1(i_ctx_t *i_ctx_p)
-{
-    os_ptr op = osp;
-    gs_image_t image;
-    image_params ip;
-    int code;
-
-    gs_image_t_init(&image, gs_currentcolorspace(igs));
-    code = pixel_image_params(i_ctx_p, op, (gs_pixel_image_t *)&image, &ip,
-			      12);
-    if (code < 0)
-	return code;
-    return zimage_setup(i_ctx_p, (gs_pixel_image_t *)&image, &ip.DataSource[0],
-			image.CombineWithColor, 1);
-}
-
-/* <dict> .imagemask1 - */
-private int
-zimagemask1(i_ctx_t *i_ctx_p)
-{
-    os_ptr op = osp;
-    gs_image_t image;
-    image_params ip;
-    int code;
-
-    gs_image_t_init_mask_adjust(&image, false,
-				gs_incachedevice(igs) != CACHE_DEVICE_NONE);
-    code = data_image_params(op, (gs_data_image_t *) & image, &ip, true, 1, 1);
-    if (code < 0)
-	return code;
-    if (ip.MultipleDataSources)
-	return_error(e_rangecheck);
-    return zimage_setup(i_ctx_p, (gs_pixel_image_t *)&image, &ip.DataSource[0],
-			true, 1);
-}
 
 /*
  * Process an image that has no explicit source data.  This isn't used by
@@ -162,13 +49,3 @@ process_non_source_image(i_ctx_t *i_ctx_p, const gs_image_common_t * pic,
     /* We didn't pass any data, so there's nothing to clean up. */
     return code;
 }
-
-/* ------ Initialization procedure ------ */
-
-const op_def zimage2_l2_op_defs[] =
-{
-    op_def_begin_level2(),
-    {"1.image1", zimage1},
-    {"1.imagemask1", zimagemask1},
-    op_def_end(0)
-};

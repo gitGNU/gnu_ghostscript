@@ -1,22 +1,28 @@
-/* Copyright (C) 1992, 1995, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1992, 1995, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: echogs.c,v 1.1 2004/01/14 16:59:47 atai Exp $ */
+/* $Id: echogs.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* 'echo'-like utility */
 #include "stdpre.h"
 #include <stdio.h>
@@ -27,7 +33,7 @@
  * cause type mismatches if const has been defined (usually with
  * -Dconst=), so it's only included if const is undefined.
  */
-extern int fputc(P2(int, FILE *)), fputs(P2(const char *, FILE *));
+extern int fputc(int, FILE *), fputs(const char *, FILE *);
 #endif
 
 /* Some systems have time_t in sys/types.h rather than time.h. */
@@ -84,7 +90,7 @@ extern int fputc(P2(int, FILE *)), fputs(P2(const char *, FILE *));
  * which writes 'a b'.
  */
 
-static int hputc(P2(int, FILE *)), hputs(P2(const char *, FILE *));
+static int hputc(int, FILE *), hputs(const char *, FILE *);
 
 int
 main(int argc, char *argv[])
@@ -103,8 +109,8 @@ main(int argc, char *argv[])
     char fname[FNSIZE];
     int newline = 1;
     int interact = 0;
-    int (*eputc)(P2(int, FILE *)) = fputc;
-    int (*eputs)(P2(const char *, FILE *)) = fputs;
+    int (*eputc)(int, FILE *) = fputc;
+    int (*eputs)(const char *, FILE *) = fputs;
 #define LINESIZE 1000
     char line[LINESIZE];
     char sw = 0, sp = 0, hexx = 0;

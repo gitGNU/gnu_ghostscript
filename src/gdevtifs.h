@@ -1,22 +1,28 @@
-/* Copyright (C) 1994, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevtifs.h,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevtifs.h,v 1.2 2004/02/14 22:20:06 atai Exp $ */
 /* Definitions for writing TIFF file formats. */
 
 #ifndef gdevtifs_INCLUDED
@@ -170,10 +176,10 @@ typedef enum {
     TIFFTAG_PageNumber = 297,	/* page number if multi-page */
     TIFFTAG_Software = 305,	/* software name & release */
     TIFFTAG_DateTime = 306,	/* creation date and time */
-/*
- * The CleanFaxData tag isn't in the TIFF 6 documentation, and many
- * TIFF-reading applications don't recognize it.  Don't use it!
- */
+    /*
+     * The CleanFaxData tag isn't in the TIFF 6 documentation, and many
+     * TIFF-reading applications don't recognize it.  Don't use it!
+     */
     TIFFTAG_CleanFaxData = 327	/* regenerated line info */
 #define	    CleanFaxData_clean		0	/* no errors detected */
 #define	    CleanFaxData_regenerated	1	/* receiver regenerated lines */
@@ -207,22 +213,22 @@ typedef struct gdev_tiff_state_s {
  * tags; the client can provide additional tags (pre-sorted) and
  * indirect values.
  */
-int gdev_tiff_begin_page(P8(gx_device_printer * pdev, gdev_tiff_state * tifs,
-			    FILE * fp,
-			    const TIFF_dir_entry * entries, int entry_count,
-			    const byte * values, int value_size,
-			    long max_strip_size));
+int gdev_tiff_begin_page(gx_device_printer * pdev, gdev_tiff_state * tifs,
+			 FILE * fp,
+			 const TIFF_dir_entry * entries, int entry_count,
+			 const byte * values, int value_size,
+			 long max_strip_size);
 
 /*
  * Finish writing a TIFF strip.  All data written since begin or last
  * end_strip is considered to be a single strip.
  */
-int gdev_tiff_end_strip(P2(gdev_tiff_state * tifs, FILE * fp));
+int gdev_tiff_end_strip(gdev_tiff_state * tifs, FILE * fp);
 
 /*
  * Finish writing a TIFF page.  StripOffsets and StripByteCounts are
  * patched into the file.
  */
-int gdev_tiff_end_page(P2(gdev_tiff_state * tifs, FILE * fp));
+int gdev_tiff_end_page(gdev_tiff_state * tifs, FILE * fp);
 
 #endif /* gdevtifs_INCLUDED */

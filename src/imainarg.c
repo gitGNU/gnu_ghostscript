@@ -1,28 +1,32 @@
-/* Copyright (C) 1996-2003 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: imainarg.c,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: imainarg.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Command line parsing and dispatching */
 #include "ctype_.h"
 #include "memory_.h"
 #include "string_.h"
-#include <stdlib.h>	/* for qsort */
-
 #include "ghost.h"
 #include "gp.h"
 #include "gsargs.h"
@@ -51,10 +55,11 @@
 #include "interp.h"
 #include "iutil.h"
 #include "ivmspace.h"
+#include "vdtrace.h"
 
 /* Import operator procedures */
-extern int zflush(P1(i_ctx_t *));
-extern int zflushpage(P1(i_ctx_t *));
+extern int zflush(i_ctx_t *);
+extern int zflushpage(i_ctx_t *);
 
 #ifndef GS_LIB
 #  define GS_LIB "GS_LIB"
@@ -86,26 +91,26 @@ extern int zflushpage(P1(i_ctx_t *));
 #define runInit 1
 #define runFlush 2
 #define runBuffer 4
-private int swproc(P3(gs_main_instance *, const char *, arg_list *));
-private int argproc(P2(gs_main_instance *, const char *));
-private int run_buffered(P2(gs_main_instance *, const char *));
-private int esc_strlen(P1(const char *));
-private void esc_strcat(P2(char *, const char *));
-private int runarg(P5(gs_main_instance *, const char *, const char *, const char *, int));
-private int run_string(P3(gs_main_instance *, const char *, int));
-private int run_finish(P4(gs_main_instance *, int, int, ref *));
-private int try_stdout_redirect(P3(gs_main_instance * minst, 
-    const char *command, const char *filename));
+private int swproc(gs_main_instance *, const char *, arg_list *);
+private int argproc(gs_main_instance *, const char *);
+private int run_buffered(gs_main_instance *, const char *);
+private int esc_strlen(const char *);
+private void esc_strcat(char *, const char *);
+private int runarg(gs_main_instance *, const char *, const char *, const char *, int);
+private int run_string(gs_main_instance *, const char *, int);
+private int run_finish(gs_main_instance *, int, int, ref *);
+private int try_stdout_redirect(gs_main_instance * minst, 
+				const char *command, const char *filename);
 
 /* Forward references for help printout */
-private void print_help(P1(gs_main_instance *));
-private void print_revision(P1(const gs_main_instance *));
-private void print_version(P1(const gs_main_instance *));
-private void print_usage(P1(const gs_main_instance *));
-private void print_devices(P1(const gs_main_instance *));
-private void print_emulators(P1(const gs_main_instance *));
-private void print_paths(P1(gs_main_instance *));
-private void print_help_trailer(P1(const gs_main_instance *));
+private void print_help(gs_main_instance *);
+private void print_revision(const gs_main_instance *);
+private void print_version(const gs_main_instance *);
+private void print_usage(const gs_main_instance *);
+private void print_devices(const gs_main_instance *);
+private void print_emulators(const gs_main_instance *);
+private void print_paths(gs_main_instance *);
+private void print_help_trailer(const gs_main_instance *);
 
 /* ------ Main program ------ */
 
@@ -115,6 +120,14 @@ gs_main_arg_fopen(const char *fname, void *vminst)
 {
     gs_main_set_lib_paths((gs_main_instance *) vminst);
     return lib_fopen(fname);
+}
+private void
+set_debug_flags(const char *arg, char *flags)
+{
+    byte value = (*arg == '-' ? (++arg, 0) : 0xff);
+
+    while (*arg)
+	flags[*arg++ & 127] = value;
 }
 #define arg_heap_copy(str) arg_copy(str, &gs_memory_default)
 int
@@ -401,7 +414,8 @@ run_stdin:
 		long width, height;
 		ref value;
 
-		gs_main_init1(minst);
+		if ((code = gs_main_init1(minst)) < 0)
+		    return code;
 		if (sscanf((const char *)arg, "%ldx%ld", &width, &height) != 2) {
 		    puts("-g must be followed by <width>x<height>");
 		    return e_Fatal;
@@ -477,7 +491,8 @@ run_stdin:
 	    }
 	    break;
 	case 'q':		/* quiet startup */
-	    gs_main_init1(minst);
+	    if ((code = gs_main_init1(minst)) < 0)
+		return code;
 	    initial_enter_name("QUIET", &vtrue);
 	    break;
 	case 'r':		/* define device resolution */
@@ -485,7 +500,8 @@ run_stdin:
 		float xres, yres;
 		ref value;
 
-		gs_main_init1(minst);
+		if ((code = gs_main_init1(minst)) < 0)
+		    return code;
 		switch (sscanf((const char *)arg, "%fx%f", &xres, &yres)) {
 		    default:
 			puts("-r must be followed by <res> or <xres>x<yres>");
@@ -519,7 +535,8 @@ run_stdin:
 		    eqp = strchr(adef, '#');
 		/* Initialize the object memory, scanner, and */
 		/* name table now if needed. */
-		gs_main_init1(minst);
+		if ((code = gs_main_init1(minst)) < 0)
+		    return code;
 		if (eqp == adef) {
 		    puts("Usage: -dname, -dname=token, -sname=string");
 		    return e_Fatal;
@@ -592,12 +609,16 @@ run_stdin:
 		initial_enter_name(adef, &value);
 		break;
 	    }
+	case 'T':
+            set_debug_flags(arg, vd_flags);
+	    break;
 	case 'u':		/* undefine name */
 	    if (!*arg) {
 		puts("-u requires a name to undefine.");
 		return e_Fatal;
 	    }
-	    gs_main_init1(minst);
+	    if ((code = gs_main_init1(minst)) < 0)
+		return code;
 	    i_initial_remove_name(minst->i_ctx_p, arg);
 	    break;
 	case 'v':		/* print revision */
@@ -630,12 +651,7 @@ run_stdin:
 	    return e_Quit;
 /*#endif */
 	case 'Z':
-	    {
-		byte value = (*arg == '-' ? (++arg, 0) : 0xff);
-
-		while (*arg)
-		    gs_debug[*arg++ & 127] = value;
-	    }
+            set_debug_flags(arg, gs_debug);
 	    break;
     }
     return 0;
@@ -674,17 +690,19 @@ argproc(gs_main_instance * minst, const char *arg)
 {
     int code = gs_main_init1(minst);		/* need i_ctx_p to proceed */
     char *filearg;
-    
+
     if (code < 0)
-    	return code;
+        return code;
     filearg = arg_heap_copy(arg);
+    if (filearg == NULL)
+        return e_Fatal;
     minst->i_ctx_p->filearg = filearg;	/* allow reading this file if SAFER set */
     if (minst->run_buffer_size) {
 	/* Run file with run_string. */
-	return run_buffered(minst, arg);
+	return run_buffered(minst, filearg);
     } else {
 	/* Run file directly in the normal way. */
-	return runarg(minst, "", arg, ".runfile", runInit | runFlush);
+	return runarg(minst, "", filearg, ".runfile", runInit | runFlush);
     }
 }
 private int
@@ -839,7 +857,6 @@ private const char help_trailer[] = "\
 For more information, see %s%sUse.htm.\n\
 Report bugs to %s, using the form in Bug-form.htm.\n";
 private const char help_devices[] = "Available devices:";
-private const char help_default_device[] = "Default output device:";
 private const char help_emulators[] = "Input formats:";
 private const char help_paths[] = "Search path:";
 
@@ -885,55 +902,24 @@ print_usage(const gs_main_instance *minst)
     outprintf("%s", help_usage2);
 }
 
-/* compare function for device name qsort */
-private int
-cmpstr(const void *v1, const void *v2)
-{
-    return strcmp( *(char * const *)v1, *(char * const *)v2 );
-}
-
 /* Print the list of available devices. */
 private void
 print_devices(const gs_main_instance *minst)
 {
-    outprintf("%s", help_default_device);
-    outprintf(" %s\n", gs_devicename(gs_getdevice(0)));
     outprintf("%s", help_devices);
     {
 	int i;
 	int pos = 100;
 	const gx_device *pdev;
-	const char **names;
-	size_t ndev = 0;
 
-	for (i = 0; (pdev = gs_getdevice(i)) != 0; i++)
-	    ;
-	ndev = (size_t)i;
-	names = (const char **)gs_alloc_bytes(minst->heap, ndev * sizeof(const char*), "print_devices");
-	if (names == (const char **)NULL) { /* old-style unsorted device list */
-	    for (i = 0; (pdev = gs_getdevice(i)) != 0; i++) {
-		const char *dname = gs_devicename(pdev);
-		int len = strlen(dname);
+	for (i = 0; (pdev = gs_getdevice(i)) != 0; i++) {
+	    const char *dname = gs_devicename(pdev);
+	    int len = strlen(dname);
 
-		if (pos + 1 + len > 76)
-		    outprintf("\n  "), pos = 2;
-		outprintf(" %s", dname);
-		pos += 1 + len;
-	    }
-	}
-	else {                          /* new-style sorted device list */
-	    for (i = 0; (pdev = gs_getdevice(i)) != 0; i++)
-		names[i] = gs_devicename(pdev);
-	    qsort((void*)names, ndev, sizeof(const char*), cmpstr);
-	    for (i = 0; i < ndev; i++) {
-		int len = strlen(names[i]);
-
-		if (pos + 1 + len > 76)
-		    outprintf("\n  "), pos = 2;
-		outprintf(" %s", names[i]);
-		pos += 1 + len;
-	    }
-	    gs_free((char *)names, ndev * sizeof(const char*), 1, "print_devices");
+	    if (pos + 1 + len > 76)
+		outprintf("\n  "), pos = 2;
+	    outprintf(" %s", dname);
+	    pos += 1 + len;
 	}
     }
     outprintf("\n");

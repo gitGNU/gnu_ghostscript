@@ -1,22 +1,28 @@
-/* Copyright (C) 1989-2003 artofcode, LLC.  All rights reserved.
+/* Copyright (C) 1989-2002 artofcode, LLC.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gp_macio.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gp_macio.c,v 1.2 2004/02/14 22:20:16 atai Exp $ */
 
 //#include "MacHeaders"
 #include <Palettes.h>
@@ -39,22 +45,24 @@
 #include <StringCompare.h>
 #include <Gestalt.h>
 #include <Folders.h>
-#include <Files.h>
 #include <Fonts.h>
 #include <FixMath.h>
 #include <Resources.h>
-
-#include "stdio_.h"
 #include "math_.h"
-#include "string_.h"
+#include <string.h>
 #include <stdlib.h>
-#include <stdarg.h>
-#include <console.h>
 
+//#include <stdio.h>
+//#include <cstdio.h>
+
+#include "sys/stat.h"
+#include "stdio_.h"
+#include <stdlib.h>
 #include "gx.h"
 #include "gp.h"
 #include "gxdevice.h"
-
+#include <stdarg.h>
+#include <console.h>
 #include "gp_mac.h"
 
 #include "stream.h"
@@ -272,7 +280,6 @@ mac_stdin_read_process(stream_state *st, stream_cursor_read *ignore_pr,
 {
     uint count = pw->limit - pw->ptr;
     /* callback to get more input */
-    if (pgsdll_callback == NULL) return EOFC;
     count = (*pgsdll_callback) (GSDLL_STDIN, (char*)pw->ptr + 1, count);
 	pw->ptr += count;	
 	return 1;
@@ -282,10 +289,8 @@ mac_stdin_read_process(stream_state *st, stream_cursor_read *ignore_pr,
 private int
 mac_stdout_write_process(stream_state *st, stream_cursor_read *pr,
   stream_cursor_write *ignore_pw, bool last)
-{
-    uint count = pr->limit - pr->ptr;
+{	uint count = pr->limit - pr->ptr;
  
-    if (pgsdll_callback == NULL) return EOFC;
     (*pgsdll_callback) (GSDLL_STDOUT, (char *)(pr->ptr + 1), count);
 	pr->ptr = pr->limit;
 	return 0;
@@ -294,10 +299,8 @@ mac_stdout_write_process(stream_state *st, stream_cursor_read *pr,
 private int
 mac_stderr_write_process(stream_state *st, stream_cursor_read *pr,
   stream_cursor_write *ignore_pw, bool last)
-{
-    uint count = pr->limit - pr->ptr;
+{	uint count = pr->limit - pr->ptr;
 
-    if (pgsdll_callback == NULL) return EOFC;
     (*pgsdll_callback) (GSDLL_STDOUT, (char *)(pr->ptr + 1), count);
 	pr->ptr = pr->limit;
 	return 0;
@@ -317,15 +320,16 @@ mac_std_available(register stream * s, long *pl)
 int
 fprintf(FILE *file, const char *fmt, ...)
 {
-	int count;
+	int		count;
 	va_list	args;
-	char buf[1024];
+	char	buf[1024];
 	
 	va_start(args,fmt);
 	
 	if (file != stdout  &&  file != stderr) {
 		count = vfprintf(file, fmt, args);
-	} else {
+	}
+	else {
 		count = vsprintf(buf, fmt, args);
 		return fwrite(buf, strlen(buf), 1, file);
 	}
@@ -339,7 +343,8 @@ fputs(const char *string, FILE *file)
 {
 	if (file != stdout  &&  file != stderr) {
 		return fwrite(string, strlen(string), 1, file);
-	} else {
+	}
+	else {
 		return fwrite(string, strlen(string), 1, file);
 	}
 }
@@ -403,19 +408,17 @@ gp_open_scratch_file (const char *prefix, char *fname, const char *mode)
 {
     char thefname[256];
     Str255 thepfname;
-    OSErr myErr;
-    short foundVRefNum;
-    long foundDirID;
-    FSSpec fSpec;
-    FILE *f;
+	OSErr myErr;
+	short foundVRefNum;
+	long foundDirID;
+	FSSpec fSpec;
+	strcpy (fname, (char *) prefix);
+	{
+		char newName[50];
 
-    strcpy (fname, (char *) prefix);
-      {
-	char newName[50];
-
-	tmpnam (newName);
-	strcat (fname, newName);
-      }
+		tmpnam (newName);
+		strcat (fname, newName);
+	}
 
    if ( strrchr(fname,':') == NULL ) {
        memcpy((char*)&thepfname[1],(char *)&fname[0],strlen(fname));
@@ -435,10 +438,7 @@ gp_open_scratch_file (const char *prefix, char *fname, const char *mode)
 	   thepfname[0]=strlen(thefname);
    }
 
-    f = gp_fopen (thefname, mode);
-    if (f == NULL)
-	eprintf1("**** Could not open temporary file %s\n", fname);
-    return f;    
+	return gp_fopen (thefname, mode);
 }
 
 /*
@@ -465,44 +465,43 @@ gp_open_scratch_file (const char *prefix, char *fname, const char *mode)
 /* Answer whether a path_string can meaningfully have a prefix applied */
 int
 gp_pathstring_not_bare(const char *fname, unsigned len) {
-    /* Macintosh paths are not 'bare' i.e., cannot have a prefix
-     * applied with predictable results if the string contains '::'
-     * If a pathstring starts with ':' we also call it not_bare since
-     * prefixing a 'somedir:' string would end up with '::' which will
-     * move up a directory level.
-     * While MacHD:somedir:xyz is a "root" or "absolute" reference we
-     * assume that this syntax is actually somedir:subdir:xyz since the
-     * HardDrive name will vary from site to site ("root" or "absolute"
-     * references aren't really practical on Macintosh pre OS/X). As
-     * far as we can tell, this whole area is confused on Mac since root
-     * level references and current_directory references look the same.
-     */
-     
-    if (len == 0)
-    	return 0;	/* empty path ?? */
-    	
+    /* Macintosh paths are not 'bare' i.e., cannot have a prefix	*/
+    /* applied with predictable results if the string contains '::'	*/
+    /* If a pathstring starts with ':' we also call it not_bare since	*/
+    /* prefixing a 'somedir:' string would end up with '::' which will	*/
+    /* move up a directory level.					*/
+    /* While MacHD:somedir:xyz is a "root" or "absolute" reference we	*/
+    /* assume that this syntax is actually somedir:subdir:xyz since the	*/
+    /* HardDrive name will vary from site to site ("root" or "absolute"	*/
+    /* references aren't really practical on Macintosh pre OS/X)	*/
+    /* As far as we can tell, this whole area is confused on Mac since	*/
+    /* root level references and current_directory references look the	*/
+    /* same.								*/
+
+    if (len != 0) {
 	if (*fname == ':') {	/* leading ':' */
-		return 1;			/* cannot be prefixed - not_bare, but	*/
-							/* *IS* relative to the current dir.	*/
+	    return 1;		/* cannot be prefixed - not_bare, but	*/
+				/* *IS* relative to the current dir.	*/
 	} else {
 	    char *p;
 	    bool lastWasColon;
 
 	    for (len, p = (char *)fname, lastWasColon = 0; len > 0; len--, p++) {
-			if (*p == ':') {
-			    if (lastWasColon != 0) 
-					return 1;	/* double ':' */
-				else
-					lastWasColon = 1;
-			} else
-				lastWasColon = 0;
-		}
-		
+		if (*p == ':') {
+		    if (lastWasColon != 0) 
+			return 1;
+		    else 
+			lastWasColon = 1;
+		} else
+		    lastWasColon = 0;
+	    }
 	    return 0;	/* pathstring *ASSUMED* bare */
 	    /* fixme: if the start of the pathstring up to the first ':'*/
 	    /* matches a drive name, then this is really an absolute	*/
 	    /* pathstring, and thus should be not_bare (return 1).	*/
 	}
+    } else 
+	return 0;	/* empty path ?? */
 }
 
 /* Answer whether the file_name references the directory	*/
@@ -602,7 +601,6 @@ gp_fopen (const char * fname, const char * mode) {
 
    char thefname[256];
    FILE *fid;
-   int ans;
 
 //sprintf((char*)&thefname[0],"\n%s\n",fname);
 //(*pgsdll_callback) (GSDLL_STDOUT, thefname, strlen(fname));
@@ -619,11 +617,11 @@ gp_fopen (const char * fname, const char * mode) {
 }
 
 FILE * 
-popen (const char * fname, const char * mode) {
-    return gp_fopen (fname,  mode );
+popen (const char * fname, const char * mode ) {
+	return gp_fopen (fname,  mode);
 }
 
 int
-pclose (FILE * pipe) {
-    return fclose (pipe);
+pclose (FILE * pipe ) {
+	return fclose (pipe);
 }

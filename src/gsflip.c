@@ -1,22 +1,28 @@
-/* Copyright (C) 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gsflip.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gsflip.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Routines for "flipping" image data */
 #include "gx.h"
 #include "gserrors.h"		/* for rangecheck in sample macros */
@@ -349,7 +355,7 @@ flipNx12(byte * buffer, const byte ** planes, int offset, int nbytes,
 }
 
 /* Flip data given number of planes and bits per pixel. */
-typedef int (*image_flip_proc) (P4(byte *, const byte **, int, int));
+typedef int (*image_flip_proc) (byte *, const byte **, int, int);
 private int
 flip_fail(byte * buffer, const byte ** planes, int offset, int nbytes)
 {
@@ -365,7 +371,7 @@ private const image_flip_proc image_flip4_procs[13] = {
     flip_fail, flip_fail, flip_fail, flip4x8,
     flip_fail, flip_fail, flip_fail, flip4x12
 };
-typedef int (*image_flipN_proc) (P6(byte *, const byte **, int, int, int, int));
+typedef int (*image_flipN_proc) (byte *, const byte **, int, int, int, int);
 private int
 flipN_fail(byte * buffer, const byte ** planes, int offset, int nbytes,
 	   int num_planes, int bits_per_sample)

@@ -1,22 +1,28 @@
-/* Copyright (C) 1995, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1995, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevrops.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevrops.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
 /* RasterOp source device */
 #include "gx.h"
 #include "gserrors.h"
@@ -94,7 +100,16 @@ private const gx_device_rop_texture gs_rop_texture_device = {
      NULL,				/* create_compositor */
      gx_forward_get_hardware_params,
      NULL,				/* text_begin */
-     NULL				/* finish_copydevice */
+     NULL,				/* finish_copydevice */
+     NULL,				/* begin_transparency_group */
+     NULL,				/* end_transparency_group */
+     NULL,				/* begin_transparency_mask */
+     NULL,				/* end_transparency_mask */
+     NULL,				/* discard_transparency_layer */
+     gx_forward_get_color_mapping_procs,
+     gx_forward_get_color_comp_index,
+     gx_forward_encode_color,
+     gx_forward_decode_color
     },
     0,				/* target */
     lop_default			/* log_op */

@@ -1,22 +1,28 @@
-/* Copyright (C) 1995, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1995, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevdrop.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevdrop.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* Default and device-independent RasterOp algorithms */
 #include "memory_.h"
 #include "gx.h"
@@ -257,15 +263,20 @@ pack_cmyk_1bit_from_standard(gx_device * dev, byte * dest, int destx,
 }
 
 private gx_color_index
-map_rgb_to_color_via_cmyk(gx_device * dev, gx_color_value r,
-			  gx_color_value g, gx_color_value b)
+map_rgb_to_color_via_cmyk(gx_device * dev, const gx_color_value rgbcv[])
 {
-    gx_color_value c = gx_max_color_value - r;
-    gx_color_value m = gx_max_color_value - g;
-    gx_color_value y = gx_max_color_value - b;
-    gx_color_value k = (c < m ? min(c, y) : min(m, y));
+    gx_color_value cmykcv[4];
+    
+    cmykcv[0] = gx_max_color_value - rgbcv[0];
+    cmykcv[1] = gx_max_color_value - rgbcv[1];
+    cmykcv[2] = gx_max_color_value - rgbcv[2];
+    cmykcv[3] = (cmykcv[0] < cmykcv[1] ? min(cmykcv[0], cmykcv[2]) : min(cmykcv[1], cmykcv[2]));
 
-    return (*dev_proc(dev, map_cmyk_color)) (dev, c - k, m - k, y - k, k);
+    cmykcv[0] -= cmykcv[3];
+    cmykcv[1] -= cmykcv[3];
+    cmykcv[2] -= cmykcv[3];
+
+    return (*dev_proc(dev, map_cmyk_color)) (dev, cmykcv);
 }
 private void
 pack_from_standard(gx_device * dev, byte * dest, int destx, const byte * src,
@@ -283,7 +294,6 @@ pack_from_standard(gx_device * dev, byte * dest, int destx, const byte * src,
 
     for (x = width; --x >= 0;) {
 	byte vr, vg, vb;
-	gx_color_value r, g, b;
 	gx_color_index pixel;
 	byte chop = 0x1;
 
@@ -298,10 +308,11 @@ pack_from_standard(gx_device * dev, byte * dest, int destx, const byte * src,
 	 * isn't accurate.
 	 */
 	for (;;) {
-	    r = gx_color_value_from_byte(vr);
-	    g = gx_color_value_from_byte(vg);
-	    b = gx_color_value_from_byte(vb);
-	    pixel = (*map) (dev, r, g, b);
+            gx_color_value cv[3];
+	    cv[0] = gx_color_value_from_byte(vr);
+	    cv[1] = gx_color_value_from_byte(vg);
+	    cv[2] = gx_color_value_from_byte(vb);
+	    pixel = (*map) (dev, cv);
 	    if (pixel != gx_no_color_index)
 		break;
 	    /* Reduce the color accuracy and try again. */
@@ -353,7 +364,7 @@ mem_default_strip_copy_rop(gx_device * dev,
 {
     int depth = dev->color_info.depth;
     int rop_depth = (gx_device_has_color(dev) ? 24 : 8);
-    void (*pack)(P7(gx_device *, byte *, int, const byte *, int, int, int)) =
+    void (*pack)(gx_device *, byte *, int, const byte *, int, int, int) =
 	(dev_proc(dev, map_cmyk_color) == cmyk_1bit_map_cmyk_color &&
 	 rop_depth == 24 ? pack_cmyk_1bit_from_standard : pack_from_standard);
     const gx_bitmap_format_t no_expand_options =

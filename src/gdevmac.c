@@ -1,23 +1,26 @@
-/* Copyright (C) 1994-2003 artofcode LLC. All rights reserved.
+/* Copyright (C) 1994-7 artofcode LLC.  All rights reserved.
   
-  This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
-
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along
-  with this program; if not, write to the Free Software Foundation, Inc.,
-  59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  This file is part of Aladdin Ghostscript.
+  
+  Aladdin Ghostscript is distributed with NO WARRANTY OF ANY KIND.  No author
+  or distributor accepts any responsibility for the consequences of using it,
+  or for whether it serves any particular purpose or works at all, unless he
+  or she says so in writing.  Refer to the Aladdin Ghostscript Free Public
+  License (the "License") for full details.
+  
+  Every copy of Aladdin Ghostscript must include a copy of the License,
+  normally in a plain ASCII text file named PUBLIC.  The License grants you
+  the right to copy, modify and redistribute Aladdin Ghostscript, but only
+  under certain conditions described in the License.  Among other things, the
+  License requires that the copyright notice and this notice be preserved on
+  all copies.
 */
 
-/* $Id: gdevmac.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
-
+/* $Id: gdevmac.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* MacOS bitmap output device. This code is superceeded by
+   the newer gsapi_* interface and the DISPLAY device. Please
+   use that instead. See doc/API.htm for more information */
+   
 #include "gdevmac.h"
 #include "gsparam.h"
 #include "gsdll.h"
@@ -151,8 +154,7 @@ mac_open(register gx_device *dev)
 	*mdev->currPicPos = 0x00ff;
 	
 	// notify the caller that a new device was opened
-	if (pgsdll_callback)
-		(*pgsdll_callback) (GSDLL_DEVICE, (char *)mdev, 1);
+	(*pgsdll_callback) (GSDLL_DEVICE, (char *)mdev, 1);
 	
 	return 0;
 }
@@ -182,8 +184,7 @@ mac_sync_output(gx_device * dev)
 	*mdev->currPicPos = 0x00ff;
 	
 	// tell the caller to sync
-	if (pgsdll_callback)
-		(*pgsdll_callback) (GSDLL_SYNC, (char *)mdev, 0);
+	(*pgsdll_callback) (GSDLL_SYNC, (char *)mdev, 0);
 	
 	return (0);
 }
@@ -204,8 +205,7 @@ mac_output_page(gx_device * dev, int copies, int flush)
 	}
 	
 	// tell the caller that the page is done
-	if (pgsdll_callback)
-		(*pgsdll_callback) (GSDLL_PAGE, (char *)mdev, 0);
+	(*pgsdll_callback) (GSDLL_PAGE, (char *)mdev, 0);
 	
 	gx_finish_output_page(dev, copies, flush);
 	
@@ -254,9 +254,8 @@ mac_close(register gx_device *dev)
 	}
 	
 	// notify the caller that the device was closed
-	// it has to dispose the PICT handle when it is ready!
-	if (pgsdll_callback)
-		(*pgsdll_callback) (GSDLL_DEVICE, (char *)mdev, 0);
+	// he has to dispose the PICT handle himself when he is ready!
+	(*pgsdll_callback) (GSDLL_DEVICE, (char *)mdev, 0);
 	
 	return 0;
 }
@@ -628,7 +627,9 @@ mac_put_params(gx_device *dev, gs_param_list *plist)
 		return code;
 	} else if (code == 0) {
 		
-		if (dev->LockSafetyParams) {
+		if (dev->LockSafetyParams &&
+			bytes_compare(outputFile.data, outputFile.size,
+			    (const byte *)mdev->outputFileName, strlen(mdev->outputFileName))) {
 			param_signal_error(plist, "OutputFile", gs_error_invalidaccess);
 			return gs_error_invalidaccess;
 		}

@@ -1,22 +1,28 @@
-/* Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxhint3.c,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxhint3.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Apply hints for Type 1 fonts. */
 #include "gx.h"
 #include "gserrors.h"
@@ -32,8 +38,8 @@
 
 /* Forward references */
 private void
-     apply_hstem_hints(P3(gs_type1_state *, int, gs_fixed_point *)), apply_vstem_hints(P3(gs_type1_state *, int, gs_fixed_point *));
-
+    apply_hstem_hints(gs_type1_state *, int, gs_fixed_point *),
+    apply_vstem_hints(gs_type1_state *, int, gs_fixed_point *);
 
 /*
  * Apply hints along a newly added tail of a subpath.
@@ -370,7 +376,7 @@ apply_wrapped_hints(gs_type1_state * pcis, subpath * psub, segment * pseg,
  * the hints.
  */
 void
-type1_apply_path_hints(gs_type1_state * pcis, bool closing, gx_path * ppath)
+type1_do_apply_path_hints(gs_type1_state * pcis, bool closing, gx_path * ppath)
 {
     segment *pseg = pcis->hint_next;
     segment *pnext;
@@ -478,10 +484,19 @@ type1_apply_path_hints(gs_type1_state * pcis, bool closing, gx_path * ppath)
 	pcis->hints_pending = hints;
     }
 }
+void
+type1_apply_path_hints(gs_type1_state * pcis, bool closing, gx_path * ppath)
+{
+    if (ppath->segments != 0)
+	type1_do_apply_path_hints(pcis, closing, ppath);
+    else {
+	/* We compute glyph bbox without hinting */
+    }
+}
 
 /* ------ Individual hints ------ */
 
-private const stem_hint *search_hints(P2(stem_hint_table *, fixed));
+private const stem_hint *search_hints(stem_hint_table *, fixed);
 
 /*
  * Adjust a point according to the relevant hints.

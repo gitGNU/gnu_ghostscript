@@ -2,21 +2,28 @@
 
 #    Copyright (C) 1999, 2000 Aladdin Enterprises.  All rights reserved.
 # 
-# This program is free software; you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by the
-# Free Software Foundation; either version 2 of the License, or (at your
-# option) any later version.
+#  This program is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU General Public License version 2
+#  as published by the Free Software Foundation.
 #
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-# Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+#  This software is provided AS-IS with no warranty, either express or
+#  implied. That is, this program is distributed in the hope that it will 
+#  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#  General Public License for more details
+#
+#  You should have received a copy of the GNU General Public License along
+#  with this program; if not, write to the Free Software Foundation, Inc.,
+#  59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+# 
+# For more information about licensing, please refer to
+# http://www.ghostscript.com/licensing/. For information on
+# commercial licensing, go to http://www.artifex.com/licensing/ or
+# contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+# San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: makeset.tcl,v 1.1 2004/01/14 16:59:53 atai Exp $
+# $Id: makeset.tcl,v 1.2 2004/02/14 22:20:20 atai Exp $
 
 # Make various Ghostscript filesets.  Assumes the current directory is gs.
 #   maketars
@@ -115,12 +122,12 @@ proc maketars {} {
 
     file delete $agz $abz2 $Dir
     ln-s . $Dir
-    sh tar -chf ghostscript-$Dot.tar --exclude=\\*CVS\\* --exclude=\\*.mak.tcl $Dir/configure $Dir/autogen.sh $Dir/Makefile.in $Dir/src $Dir/icclib $Dir/ijs $Dir/doc $Dir/lib $Dir/man $Dir/examples $Dir/toolbin
+    sh tar -chf ghostscript-$Dot.tar --exclude=\\*CVS\\* --exclude=\\*.mak.tcl $Dir/src $Dir/icclib $Dir/doc $Dir/lib $Dir/man $Dir/examples $Dir/toolbin
     file delete $Dir
     sh time bzip2 -c4 ghostscript-$Dot.tar > $abz2
     sh time gzip ghostscript-$Dot.tar
-    #ln-s ./gnu $Dir
-    #sh tar -czhf $agnu --exclude=\\*CVS\\* $Dir/*
+    ln-s ./gnu $Dir
+    sh tar -czhf $agnu --exclude=\\*CVS\\* $Dir/*
     file delete $Dir
     sh ls -l ghostscript-$Dot*.tar.*
 }
@@ -219,6 +226,7 @@ proc mergehist {news changes hist tmp} {
 	}
 	lappend nlines $l
     }
+    lappend nlines </pre>
 
     # Copy the prefix of the existing History file.
     while {[string first <li> [set l [gets $hist]]] != 0} {
@@ -322,6 +330,7 @@ proc mergehist {news changes hist tmp} {
 	}
 	puts $tmp $l
     }
+    puts $tmp </pre>
 
     # Copy the rest of the History file, changing the date at the end.
     puts $tmp <hr>
@@ -424,11 +433,19 @@ proc makemaster {} {
     movelist Font [list $afonts $ofonts $agfonts $ogfonts] $todir
 }
 
-# Call the procedure selected by the link name.
-switch [file tail $argv0] {
-    maketars {eval maketars $argv}
-    makefonts {eval makefonts $argv}
-    makehist {eval makehist $argv}
-    makewin {eval makewin $argv}
-    makemaster {eval makemaster $argv}
+# Call the procedure selected by the first switch (-makexxx) if any,
+# otherwise by the link name.
+if {[llength $argv] >= 1 && [string range [lindex $argv 0] 0 4] == "-make"} {
+    set progname [string range [lindex $argv 0] 1 end]
+    set args [lreplace $argv 0 0]
+} else {
+    set progname [file tail $argv0]
+    set args $argv
+}
+switch $progname {
+    maketars {eval maketars $args}
+    makefonts {eval makefonts $args}
+    makehist {eval makehist $args}
+    makewin {eval makewin $args}
+    makemaster {eval makemaster $args}
 }

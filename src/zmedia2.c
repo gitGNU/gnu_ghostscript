@@ -1,22 +1,28 @@
-/* Copyright (C) 1993, 1995, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1993, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: zmedia2.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zmedia2.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* Media matching for setpagedevice */
 #include "math_.h"
 #include "memory_.h"
@@ -31,10 +37,10 @@
 /* <pagedict> <attrdict> <policydict> <keys> .matchmedia <key> true */
 /* <pagedict> <attrdict> <policydict> <keys> .matchmedia false */
 /* <pagedict> null <policydict> <keys> .matchmedia null true */
-private int zmatch_page_size(P8(const ref * pvreq, const ref * pvmed,
-				int policy, int orient, bool roll,
-				float *best_mismatch, gs_matrix * pmat,
-				gs_point * pmsize));
+private int zmatch_page_size(const ref * pvreq, const ref * pvmed,
+			     int policy, int orient, bool roll,
+			     float *best_mismatch, gs_matrix * pmat,
+			     gs_point * pmsize);
 typedef struct match_record_s {
     ref best_key, match_key;
     uint priority, no_match_priority;
@@ -267,32 +273,37 @@ zmatchpagesize(i_ctx_t *i_ctx_p)
     return 0;
 }
 /* Match the PageSize.  See below for details. */
-private bool match_page_size(P8(const gs_point * request,
-				const gs_rect * medium,
-				int policy, int orient, bool roll,
-				float *best_mismatch, gs_matrix * pmat,
-				gs_point * pmsize));
+private int
+match_page_size(const gs_point * request,
+			     const gs_rect * medium,
+			     int policy, int orient, bool roll,
+			     float *best_mismatch, gs_matrix * pmat,
+			     gs_point * pmsize);
 private int
 zmatch_page_size(const ref * pvreq, const ref * pvmed,
 		 int policy, int orient, bool roll,
 		 float *best_mismatch, gs_matrix * pmat, gs_point * pmsize)
 {
     uint nr, nm;
+    int code;
+    ref rv[6];
 
-    check_array(*pvreq);
+    /* array_get checks array types and size. */
+    /* This allows normal or packed arrays to be used */
+    if ((code = array_get(pvreq, 1, &rv[1])) < 0)
+        return_error(code);
     nr = r_size(pvreq);
-    check_array(*pvmed);
+    if ((code = array_get(pvmed, 1, &rv[3])) < 0)
+        return_error(code);
     nm = r_size(pvmed);
     if (!((nm == 2 || nm == 4) && (nr == 2 || nr == nm)))
 	return_error(e_rangecheck);
     {
-	ref rv[6];
 	uint i;
 	double v[6];
 	int code;
 
 	array_get(pvreq, 0, &rv[0]);
-	array_get(pvreq, 1, &rv[1]);
 	for (i = 0; i < 4; ++i)
 	    array_get(pvmed, i % nm, &rv[i + 2]);
 	if ((code = num_params(rv + 5, 6, v)) < 0)
@@ -322,17 +333,19 @@ zmatch_page_size(const ref * pvreq, const ref * pvmed,
  * NOTE: The algorithm here doesn't work properly for variable-size media
  * when the match isn't exact.  We'll fix it if we ever need to.
  */
-private void make_adjustment_matrix(P5(const gs_point * request,
-				       const gs_rect * medium,
-				       gs_matrix * pmat,
-				       bool scale, int rotate));
-private bool
+private void make_adjustment_matrix(const gs_point * request,
+				    const gs_rect * medium,
+				    gs_matrix * pmat,
+				    bool scale, int rotate);
+private int
 match_page_size(const gs_point * request, const gs_rect * medium, int policy,
 		int orient, bool roll, float *best_mismatch, gs_matrix * pmat,
 		gs_point * pmsize)
 {
     double rx = request->x, ry = request->y;
 
+    if ((rx <= 0) || (ry <= 0))
+	return_error(e_rangecheck);
     if (policy == 7) {
 		/* (Adobe) hack: just impose requested values */
 	*best_mismatch = 0;
@@ -349,34 +362,38 @@ match_page_size(const gs_point * request, const gs_rect * medium, int policy,
 	    make_adjustment_matrix(request, medium, pmat, false, orient < 0 ? 0 : orient);
         } else if ( fit_direct ) {
             int rotate = orient < 0 ? 0 : orient;
-            *best_mismatch = rotate & 1 ? 0.1 : 0;
+
+            *best_mismatch = (rotate & 1 ? 0.1 : 0);
 	    make_adjustment_matrix(request, medium, pmat, false, (rotate + 1) & 2);
         } else if ( fit_rotated ) {
-            int rotate = orient < 0 ? 1 : orient;
-            *best_mismatch = rotate & 1 ? 0 : 0.1;
+            int rotate = (orient < 0 ? 1 : orient);
+
+            *best_mismatch = (rotate & 1 ? 0 : 0.1);
 	    make_adjustment_matrix(request, medium, pmat, false, rotate | 1);
         } else {
-	    int rotate = orient >= 0 ? orient : rx < ry ^ medium->q.x < medium->q.y;
+	    int rotate =
+		(orient >= 0 ? orient :
+		 (rx < ry) ^ (medium->q.x < medium->q.y));
 	    bool larger =
-	    (rotate & 1 ? medium->q.y >= rx && medium->q.x >= ry :
-	     medium->q.x >= rx && medium->q.y >= ry);
+		(rotate & 1 ? medium->q.y >= rx && medium->q.x >= ry :
+		 medium->q.x >= rx && medium->q.y >= ry);
 	    bool adjust = false;
 	    float mismatch = medium->q.x * medium->q.y - rx * ry;
 
 	    switch (policy) {
 	        default:		/* exact match only */
-		    return false;
+		    return 0;
 	        case 3:		/* nearest match, adjust */
 		    adjust = true;
 	        case 5:		/* nearest match, don't adjust */
 		    if (fabs(mismatch) >= fabs(*best_mismatch))
-		        return false;
+		        return 0;
 		    break;
 	        case 4:		/* next larger match, adjust */
 		    adjust = true;
 	        case 6:		/* next larger match, don't adjust */
 		    if (!larger || mismatch >= *best_mismatch)
-		        return false;
+		        return 0;
 		    break;
 	    }
 	    if (adjust)
@@ -406,7 +423,7 @@ match_page_size(const gs_point * request, const gs_rect * medium, int policy,
         pmsize->y = ADJUST_INTO(ry, medium->p.y, medium->q.y);
 #undef ADJUST_INTO
     }
-    return true;
+    return 1;
 }
 /*
  * Compute the adjustment matrix for scaling and/or rotating the page

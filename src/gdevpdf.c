@@ -1,32 +1,39 @@
-/* Copyright (C) 1996, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1996, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevpdf.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevpdf.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* PDF-writing driver */
+#include "fcntl_.h"
 #include "memory_.h"
 #include "string_.h"
+#include "time_.h"
 #include "unistd_.h"
 #include "gx.h"
 #include "gp.h"			/* for gp_get_realtime */
 #include "gserrors.h"
 #include "gxdevice.h"
 #include "gdevpdfx.h"
-#include "gdevpdff.h"
 #include "gdevpdfg.h"		/* only for pdf_reset_graphics */
 #include "gdevpdfo.h"
 
@@ -51,12 +58,6 @@ private
 ENUM_PTRS_WITH(device_pdfwrite_enum_ptrs, gx_device_pdf *pdev)
 {
     index -= gx_device_pdf_num_ptrs + gx_device_pdf_num_strings;
-    if (index < PDF_NUM_STD_FONTS)
-	ENUM_RETURN(pdev->std_fonts[index].font);
-    index -= PDF_NUM_STD_FONTS;
-    if (index < PDF_NUM_STD_FONTS)
-	ENUM_RETURN(pdev->std_fonts[index].pfd);
-    index -= PDF_NUM_STD_FONTS;
     if (index < NUM_RESOURCE_TYPES * NUM_RESOURCE_CHAINS)
 	ENUM_RETURN(pdev->resources[index / NUM_RESOURCE_CHAINS].chains[index % NUM_RESOURCE_CHAINS]);
     index -= NUM_RESOURCE_TYPES * NUM_RESOURCE_CHAINS;
@@ -87,10 +88,6 @@ private RELOC_PTRS_WITH(device_pdfwrite_reloc_ptrs, gx_device_pdf *pdev)
     {
 	int i, j;
 
-	for (i = 0; i < PDF_NUM_STD_FONTS; ++i) {
-	    RELOC_PTR(gx_device_pdf, std_fonts[i].font);
-	    RELOC_PTR(gx_device_pdf, std_fonts[i].pfd);
-	}
 	for (i = 0; i < NUM_RESOURCE_TYPES; ++i)
 	    for (j = 0; j < NUM_RESOURCE_CHAINS; ++j)
 		RELOC_PTR(gx_device_pdf, resources[i].chains[j]);
@@ -142,7 +139,7 @@ const gx_device_pdf gs_pdfwrite_device =
   gdev_pdf_copy_mono,
   gdev_pdf_copy_color,
   NULL,				/* draw_line */
-  NULL,				/* get_bits */
+  psdf_get_bits,		/* get_bits */
   gdev_pdf_get_params,
   gdev_pdf_put_params,
   NULL,				/* map_cmyk_color */
@@ -168,9 +165,9 @@ const gx_device_pdf gs_pdfwrite_device =
   NULL,				/* strip_copy_rop */
   NULL,				/* get_clipping_box */
   gdev_pdf_begin_typed_image,
-  NULL,				/* get_bits_rectangle */
+  psdf_get_bits_rectangle,	/* get_bits_rectangle */
   NULL,				/* map_color_rgb_alpha */
-  NULL,				/* create_compositor */
+  psdf_create_compositor,	/* create_compositor */
   NULL,				/* get_hardware_params */
   gdev_pdf_text_begin
  },
@@ -187,9 +184,11 @@ const gx_device_pdf gs_pdfwrite_device =
  1 /*true*/,			/* AutoPositionEPSFiles */
  1 /*true*/,			/* PreserveCopyPage */
  0 /*false*/,			/* UsePrologue */
+ 0,				/* OffOptimizations */
  1 /*true*/,			/* ReAssignCharacters */
  1 /*true*/,			/* ReEncodeCharacters */
  1,				/* FirstObjectNumber */
+ 1 /*true*/,			/* CompressFonts */
  0 /*false*/,			/* is_EPS */
  {-1, -1},			/* doc_dsc_info */
  {-1, -1},			/* page_dsc_info */
@@ -206,11 +205,6 @@ const gx_device_pdf gs_pdfwrite_device =
  {{0}},				/* asides */
  {{0}},				/* streams */
  {{0}},				/* pictures */
- 0,				/* open_font */
- 0 /*false*/,			/* use_open_font */
- 0,				/* embedded_encoding_id */
- -1,				/* max_embedded_code */
- 0,				/* random_offset */
  0,				/* next_id */
  0,				/* Catalog */
  0,				/* Info */
@@ -222,9 +216,7 @@ const gx_device_pdf gs_pdfwrite_device =
  0,				/* contents_length_id */
  0,				/* contents_pos */
  NoMarks,			/* procsets */
- {pdf_text_state_default},	/* text */
- {{0}},				/* std_fonts */
- {0},				/* space_char_ids */
+ 0,				/* text */
  {{0}},				/* text_rotation */
  0,				/* pages */
  0,				/* num_pages */
@@ -233,6 +225,7 @@ const gx_device_pdf gs_pdfwrite_device =
      {
 	 {0}}},			/* resources */
  {0},				/* cs_Patterns */
+ {0},				/* Identity_ToUnicode_CMaps */
  0,				/* last_resource */
  {
      {
@@ -242,7 +235,10 @@ const gx_device_pdf gs_pdfwrite_device =
  0,				/* outlines_open */
  0,				/* articles */
  0,				/* Dests */
- 0,				/* named_objects */
+ 0,				/* global_named_objects */
+ 0,				/* local_named_objects */
+ 0,				/* NI_stack */
+ 0,				/* Namespace_stack */
  0				/* open_graphics */
 };
 
@@ -301,13 +297,7 @@ pdf_reset_page(gx_device_pdf * pdev)
     pdf_reset_graphics(pdev);
     pdev->procsets = NoMarks;
     memset(pdev->cs_Patterns, 0, sizeof(pdev->cs_Patterns));	/* simplest to create for each page */
-    {
-	static const pdf_text_state_t text_default = {
-	    pdf_text_state_default
-	};
-
-	pdev->text = text_default;
-    }
+    pdf_reset_text_page(pdev->text);
 }
 
 /* Open a temporary file, with or without a stream. */
@@ -352,7 +342,6 @@ void
 pdf_initialize_ids(gx_device_pdf * pdev)
 {
     gs_param_string nstr;
-    char buf[PDF_MAX_PRODUCER];
 
     pdev->next_id = pdev->FirstObjectNumber;
 
@@ -365,9 +354,34 @@ pdf_initialize_ids(gx_device_pdf * pdev)
 
     param_string_from_string(nstr, "{DocInfo}");
     pdf_create_named_dict(pdev, &nstr, &pdev->Info, 0L);
-    pdf_store_default_Producer(buf);
-    cos_dict_put_c_key_string(pdev->Info, "/Producer", (byte *)buf,
-			      strlen(buf));
+    {
+	char buf[PDF_MAX_PRODUCER];
+
+	pdf_store_default_Producer(buf);
+	cos_dict_put_c_key_string(pdev->Info, "/Producer", (byte *)buf,
+				  strlen(buf));
+    }
+    /*
+     * Acrobat Distiller sets CreationDate and ModDate to the current
+     * date and time, rather than (for example) %%CreationDate from the
+     * PostScript file.  We think this is wrong, but we do the same.
+     */
+    {
+	struct tm tms;
+	time_t t;
+	char buf[1+2+4+2+2+2+2+2+2+1+1]; /* (D:yyyymmddhhmmss)\0 */
+
+	time(&t);
+	tms = *localtime(&t);
+	sprintf(buf,
+		"(D:%04d%02d%02d%02d%02d%02d)",
+		tms.tm_year + 1900, tms.tm_mon + 1, tms.tm_mday,
+		tms.tm_hour, tms.tm_min, tms.tm_sec);
+	cos_dict_put_c_key_string(pdev->Info, "/CreationDate", (byte *)buf,
+				  strlen(buf));
+	cos_dict_put_c_key_string(pdev->Info, "/ModDate", (byte *)buf,
+				  strlen(buf));
+    }
 
     /* Allocate the root of the pages tree. */
 
@@ -385,51 +399,78 @@ pdf_initialize_ids(gx_device_pdf * pdev)
 void
 pdf_set_process_color_model(gx_device_pdf * pdev)
 {
-    gx_color_index color = 0; /* black */
-    switch (pdev->color_info.num_components) {
-    case 1:
+    /*
+     * The conversion from PS to PDF should be transparent as possible.
+     * Particularly it should not change representation of colors.
+     * Perhaps due to historical reasons the source color information
+     * sometimes isn't accessible from device methods, and
+     * therefore they perform a mapping of colors to 
+     * an output color model. Here we handle some color models,
+     * which were selected almost due to antique reasons.
+     */
+    if (!strcmp(pdev->color_info.cm_name, "DeviceGray")) {
 	set_dev_proc(pdev, map_rgb_color, gx_default_gray_map_rgb_color);
 	set_dev_proc(pdev, map_color_rgb, gx_default_gray_map_color_rgb);
 	set_dev_proc(pdev, map_cmyk_color, NULL);
-	break;
-    case 3:
+        set_dev_proc(pdev, get_color_mapping_procs, gx_default_DevGray_get_color_mapping_procs);
+        set_dev_proc(pdev, get_color_comp_index, gx_default_DevGray_get_color_comp_index);
+        set_dev_proc(pdev, encode_color, gx_default_gray_encode);
+        set_dev_proc(pdev, decode_color, gx_default_decode_color);
+    } else if (!strcmp(pdev->color_info.cm_name, "DeviceRGB")) {
 	set_dev_proc(pdev, map_rgb_color, gx_default_rgb_map_rgb_color);
 	set_dev_proc(pdev, map_color_rgb, gx_default_rgb_map_color_rgb);
 	set_dev_proc(pdev, map_cmyk_color, NULL);
-	break;
-    case 4:
+        set_dev_proc(pdev, get_color_mapping_procs, gx_default_DevRGB_get_color_mapping_procs);
+        set_dev_proc(pdev, get_color_comp_index, gx_default_DevRGB_get_color_comp_index);
+        set_dev_proc(pdev, encode_color, gx_default_rgb_map_rgb_color);
+        set_dev_proc(pdev, decode_color, gx_default_rgb_map_color_rgb);
+    } else if (!strcmp(pdev->color_info.cm_name, "DeviceCMYK")) {
 	set_dev_proc(pdev, map_rgb_color, NULL);
 	set_dev_proc(pdev, map_color_rgb, cmyk_8bit_map_color_rgb);
        /* possible problems with aliassing on next statement */
 	set_dev_proc(pdev, map_cmyk_color, cmyk_8bit_map_cmyk_color);
-        color = gx_map_cmyk_color((gx_device *)pdev,
-		      frac2cv(frac_0), frac2cv(frac_0),
-		      frac2cv(frac_0), frac2cv(frac_1));
-	break;
-    default:			/* can't happen */
-	DO_NOTHING;
+        set_dev_proc(pdev, get_color_mapping_procs, gx_default_DevCMYK_get_color_mapping_procs);
+        set_dev_proc(pdev, get_color_comp_index, gx_default_DevCMYK_get_color_comp_index);
+        set_dev_proc(pdev, encode_color, cmyk_8bit_map_cmyk_color);
+        set_dev_proc(pdev, decode_color, cmyk_8bit_map_color_rgb);
+    } else {	/* can't happen - see the call from gdev_pdf_put_params. */
+ 	DO_NOTHING;
     }
-    color_set_pure(&pdev->fill_color, color);
-    color_set_pure(&pdev->stroke_color, color);
+    /* 
+     * Set initial color value.
+     * Doing this with a model-independent algorithm.
+     */
+    {
+	int i;
+	frac cm_comps[GX_DEVICE_COLOR_MAX_COMPONENTS];
+	gx_color_value cv[GX_DEVICE_COLOR_MAX_COMPONENTS];
+	gx_color_index color;
+	frac gray = frac_0;	/* Black */
+	const gx_cm_color_map_procs *procs;
+
+	/* map Black to color model components */
+	procs = dev_proc(pdev, get_color_mapping_procs)((gx_device *)pdev);
+	procs->map_gray((gx_device *)pdev, gray, cm_comps);
+	for (i = 0; i < pdev->color_info.num_components; i++)
+		cv[i] = frac2cv(cm_comps[i]);
+	/* Encode as a color index */
+	color = dev_proc(pdev, encode_color)((gx_device *)pdev, cv);
+	/* Now set it. */
+	color_set_pure(&pdev->fill_color, color);
+	color_set_pure(&pdev->stroke_color, color);
+    }
 }
 #ifdef __DECC
 #pragma optimize restore
 #endif
 
 /*
- * Reset the text state parameters to initial values.  This isn't a very
- * good place for this procedure, but the alternatives seem worse.
+ * Reset the text state parameters to initial values.
  */
 void
 pdf_reset_text(gx_device_pdf * pdev)
 {
-    pdev->text.character_spacing = 0;
-    pdev->text.font = NULL;
-    pdev->text.size = 0;
-    pdev->text.word_spacing = 0;
-    pdev->text.leading = 0;
-    pdev->text.use_leading = false;
-    pdev->text.render_mode = 0;
+    pdf_reset_text_state(pdev->text);
 }
 
 /* Open the device. */
@@ -456,18 +497,26 @@ pdf_open(gx_device * dev)
     /* any vector implementation procedures. */
     pdev->in_page = true;
     /*
-     * pdf_initialize_ids allocates some named objects, so we must
-     * initialize the named objects list now.
+     * pdf_initialize_ids allocates some (global) named objects, so we must
+     * initialize the named objects dictionary now.
      */
-    pdev->named_objects = cos_dict_alloc(pdev, "pdf_open(named_objects)");
+    pdev->local_named_objects =
+	pdev->global_named_objects =
+	cos_dict_alloc(pdev, "pdf_open(global_named_objects)");
+    /* Initialize internal structures that don't have IDs. */
+    pdev->NI_stack = cos_array_alloc(pdev, "pdf_open(NI stack)");
+    pdev->Namespace_stack = cos_array_alloc(pdev, "pdf_open(Namespace stack)");
     pdf_initialize_ids(pdev);
+    /* Now create a new dictionary for the local named objects. */
+    pdev->local_named_objects =
+	cos_dict_alloc(pdev, "pdf_open(local_named_objects)");
     pdev->outlines_id = 0;
     pdev->next_page = 0;
-    memset(pdev->space_char_ids, 0, sizeof(pdev->space_char_ids));
+    pdev->text = pdf_text_data_alloc(mem);
     pdev->pages =
 	gs_alloc_struct_array(mem, initial_num_pages, pdf_page_t,
 			      &st_pdf_page_element, "pdf_open(pages)");
-    if (pdev->pages == 0) {
+    if (pdev->text == 0 || pdev->pages == 0) {
 	code = gs_error_VMerror;
 	goto fail;
     }
@@ -489,39 +538,9 @@ pdf_open(gx_device * dev)
     pdev->outlines_open = 0;
     pdev->articles = 0;
     pdev->Dests = 0;
-    /* named_objects was initialized above */
+    /* {global,local}_named_objects was initialized above */
     pdev->open_graphics = 0;
     pdf_reset_page(pdev);
-
-    /*
-     * We don't use rand() for generating subset prefixes, because it isn't
-     * random across runs (always starts at 1).  We don't seed rand() from a
-     * one-time source of randomness, because a library should never assume
-     * it can modify program-global state.  So what we do is generate a
-     * one-time random offset, and combine that with the sequence produced
-     * by rand().
-     */
-    {
-	/*
-	 * If we're on a system that provides /dev/urandom, that's the best
-	 * source of good random bits.
-	 */
-	FILE *rfile = fopen("/dev/urandom", "rb");
-	if (rfile && fread(&pdev->random_offset, sizeof(pdev->random_offset),
-			   1, rfile) == sizeof(pdev->random_offset)
-	    )
-	    fclose(rfile);
-	else {
-	    /* Hope that the clock is random enough. */
-	    long tm[2];
-
-	    if (rfile)
-		fclose(rfile);
-	    gp_get_realtime(tm);
-	    pdev->random_offset = tm[0] + tm[1];
-	}
-    }
-
     return 0;
   fail:
     return pdf_close_files(pdev, code);
@@ -613,6 +632,7 @@ pdf_print_orientation(gx_device_pdf * pdev, pdf_page_t *page)
     }
 }
 
+
 /* Close the current page. */
 private int
 pdf_close_page(gx_device_pdf * pdev)
@@ -647,21 +667,14 @@ pdf_close_page(gx_device_pdf * pdev)
     if (code < 0)
 	return code;
 
-    /* Write out Functions. */
+    /* Write the Functions. */
 
     pdf_write_resource_objects(pdev, resourceFunction);
+    pdf_free_resource_objects(pdev, resourceFunction);
 
-    /*
-     * When Acrobat Reader 3 prints a file containing a Type 3 font with a
-     * non-standard Encoding, it apparently only emits the subset of the
-     * font actually used on the page.  Thus, if the "Download Fonts Once"
-     * option is selected, characters not used on the page where the font
-     * first appears will not be defined, and hence will print as blank if
-     * used on subsequent pages.  Thus, we can't allow a Type 3 font to
-     * add additional characters on subsequent pages.
-     */
-    if (pdev->CompatibilityLevel <= 1.2)
-	pdev->use_open_font = false;
+    /* Close use of text on the page. */
+
+    pdf_close_text_page(pdev);
 
     /* Accumulate text rotation. */
 
@@ -732,7 +745,7 @@ pdf_write_page(gx_device_pdf *pdev, int page_num)
     }
     stream_puts(s, ">>\n");
 
-    /* Write out the annotations array if any. */
+    /* Write the annotations array if any. */
 
     if (page->Annots) {
 	stream_puts(s, "/Annots");
@@ -784,6 +797,7 @@ pdf_close(gx_device * dev)
 	Pages_id = pdev->Pages->id;
     long Threads_id = 0;
     bool partial_page = (pdev->contents_id != 0 && pdev->next_page != 0);
+    int code = 0, code1;
 
     /*
      * If this is an EPS file, or if the file didn't end with a showpage for
@@ -808,8 +822,15 @@ pdf_close(gx_device * dev)
 
     /* Write the font resources and related resources. */
 
-    pdf_write_font_resources(pdev);
-    pdf_write_resource_objects(pdev, resourceCMap);
+    code1 = pdf_close_text_document(pdev);
+    if (code >= 0)
+	code = code1;
+    code1 = pdf_write_resource_objects(pdev, resourceCMap);
+    if (code >= 0)
+	code = code1;
+    code1 = pdf_free_resource_objects(pdev, resourceCMap);
+    if (code >= 0)
+	code = code1;
 
     /* Create the Pages tree. */
 
@@ -914,10 +935,13 @@ pdf_close(gx_device * dev)
     /*
      * Write the definitions of the named objects.
      * Note that this includes Form XObjects created by BP/EP, named PS
-     * XObjects, and eventually images named by NI.
+     * XObjects, and images named by NI.
      */
 
-    cos_dict_objects_write(pdev->named_objects, pdev);
+    do {
+	cos_dict_objects_write(pdev->local_named_objects, pdev);
+    } while (pdf_pop_namespace(pdev) >= 0);
+    cos_dict_objects_write(pdev->global_named_objects, pdev);
 
     /* Copy the resources into the main file. */
 
@@ -981,9 +1005,12 @@ pdf_close(gx_device * dev)
 
     /* Free named objects. */
 
-    cos_dict_objects_delete(pdev->named_objects);
-    COS_FREE(pdev->named_objects, "pdf_close(named_objects)");
-    pdev->named_objects = 0;
+    cos_dict_objects_delete(pdev->local_named_objects);
+    COS_FREE(pdev->local_named_objects, "pdf_close(local_named_objects)");
+    pdev->local_named_objects = 0;
+    cos_dict_objects_delete(pdev->global_named_objects);
+    COS_FREE(pdev->global_named_objects, "pdf_close(global_named_objects)");
+    pdev->global_named_objects = 0;
 
     /* Wrap up. */
 
@@ -991,9 +1018,6 @@ pdf_close(gx_device * dev)
     pdev->pages = 0;
     pdev->num_pages = 0;
 
-    {
-	int code = gdev_vector_close_file((gx_device_vector *) pdev);
-
-	return pdf_close_files(pdev, code);
-    }
+    code1 = gdev_vector_close_file((gx_device_vector *) pdev);
+    return pdf_close_files(pdev, code1);
 }

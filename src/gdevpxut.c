@@ -1,22 +1,28 @@
-/* Copyright (C) 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevpxut.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevpxut.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
 /* Utilities for PCL XL generation */
 #include "math_.h"
 #include "string_.h"
@@ -74,7 +80,7 @@ int
 px_write_select_media(stream *s, const gx_device *dev, pxeMediaSize_t *pms)
 {
 #define MSD(ms, res, w, h)\
-  { ms, (w) * 1.0 / (res), (h) * 1.0 / res },
+  { ms, (float)((w) * 1.0 / (res)), (float)((h) * 1.0 / res) },
     static const struct {
 	pxeMediaSize_t ms;
 	float width, height;
@@ -99,7 +105,7 @@ px_write_select_media(stream *s, const gx_device *dev, pxeMediaSize_t *pms)
      * According to the PCL XL documentation, MediaSize must always
      * be specified, but MediaSource is optional.
      */
-    px_put_uba(s, size, pxaMediaSize);
+    px_put_uba(s, (byte)size, pxaMediaSize);
     if (!pms || size != *pms) {
 	static const byte page_header_2[] = {
 	    DUB(eAutoSelect), DA(pxaMediaSource)
@@ -146,13 +152,13 @@ void
 px_put_a(stream * s, px_attribute_t a)
 {
     sputc(s, pxt_attr_ubyte);
-    sputc(s, a);
+    sputc(s, (byte)a);
 }
 void
 px_put_ac(stream *s, px_attribute_t a, px_tag_t op)
 {
     px_put_a(s, a);
-    sputc(s, op);
+    sputc(s, (byte)op);
 }
 
 void
@@ -190,7 +196,7 @@ void
 px_put_u(stream * s, uint i)
 {
     if (i <= 255)
-	px_put_ub(s, i);
+	px_put_ub(s, (byte)i);
     else
 	px_put_us(s, i);
 }
@@ -247,7 +253,7 @@ px_put_r(stream * s, floatp r)
     spputc(s, (byte) mantissa);
     spputc(s, (byte) (mantissa >> 8));
     spputc(s, (byte) (((exp + 127) << 7) + ((mantissa >> 16) & 0x7f)));
-    spputc(s, (exp + 127) >> 1);
+    spputc(s, (byte) ((exp + 127) >> 1));
 }
 void
 px_put_rl(stream * s, floatp r)

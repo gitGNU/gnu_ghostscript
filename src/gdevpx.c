@@ -1,22 +1,28 @@
-/* Copyright (C) 1997, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevpx.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevpx.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
 /* H-P PCL XL driver */
 #include "math_.h"
 #include "memory_.h"
@@ -195,7 +201,7 @@ pclxl_set_color_space(gx_device_pclxl * xdev, pxeColorSpace_t color_space)
     if (xdev->color_space != color_space) {
 	stream *s = pclxl_stream(xdev);
 
-	px_put_ub(s, color_space);
+	px_put_ub(s, (byte)color_space);
 	px_put_ac(s, pxaColorSpace, pxtSetColorSpace);
 	xdev->color_space = color_space;
     }
@@ -215,7 +221,7 @@ pclxl_set_color_palette(gx_device_pclxl * xdev, pxeColorSpace_t color_space,
 	    pxt_ubyte_array
 	};
 
-	px_put_ub(s, color_space);
+	px_put_ub(s, (byte)color_space);
 	PX_PUT_LIT(s, csp_);
 	px_put_u(s, palette_size);
 	px_put_bytes(s, palette, palette_size);
@@ -252,7 +258,7 @@ pclxl_set_color(gx_device_pclxl * xdev, const gx_drawing_color * pdc,
 	px_put_uba(s, 0, null_source);
     else
 	return_error(gs_error_rangecheck);
-    spputc(s, op);
+    spputc(s, (byte)op);
     return 0;
 }
 
@@ -291,7 +297,7 @@ pclxl_set_paints(gx_device_pclxl * xdev, gx_path_type_t type)
 	PX_PUT_LIT(s, nac_);
 	color_set_null(&xdev->fill_color);
 	if (rule != xdev->fill_rule) {
-	    px_put_ub(s, (rule == gx_path_type_even_odd ? eEvenOdd :
+	    px_put_ub(s, (byte)(rule == gx_path_type_even_odd ? eEvenOdd :
 		       eNonZeroWinding));
 	    px_put_ac(s, pxaFillMode, pxtSetFillMode);
 	    xdev->fill_rule = rule;
@@ -326,8 +332,8 @@ pclxl_set_cursor(gx_device_pclxl * xdev, int x, int y)
 private void
 px_put_np(stream * s, int count, pxeDataType_t dtype)
 {
-    px_put_uba(s, count, pxaNumberOfPoints);
-    px_put_uba(s, dtype, pxaPointType);
+    px_put_uba(s, (byte)count, pxaNumberOfPoints);
+    px_put_uba(s, (byte)dtype, pxaPointType);
 }
 private int
 pclxl_flush_points(gx_device_pclxl * xdev)
@@ -364,7 +370,7 @@ pclxl_flush_points(gx_device_pclxl * xdev)
 			px_put_ssp(s, xdev->points.data[i].x,
 				xdev->points.data[i].y);
 			px_put_a(s, pxaEndPoint);
-			spputc(s, op);
+			spputc(s, (byte)op);
 		    }
 		    goto zap;
 		}
@@ -388,7 +394,7 @@ pclxl_flush_points(gx_device_pclxl * xdev)
 		op = pxtLineRelPath;
 		/* Use byte values. */
 	      useb:px_put_np(s, count, data_type);
-		spputc(s, op);
+		spputc(s, (byte)op);
 		px_put_data_length(s, count * 2);	/* 2 bytes per point */
 		px_put_bytes(s, diffs, count * 2);
 		goto zap;
@@ -427,7 +433,7 @@ pclxl_flush_points(gx_device_pclxl * xdev)
 		return_error(gs_error_unknownerror);
 	}
 	px_put_np(s, count, eSInt16);
-	spputc(s, op);
+	spputc(s, (byte)op);
 	px_put_data_length(s, count * 4);	/* 2 UInt16s per point */
 	for (i = 0; i < count; ++i) {
 	    px_put_s(s, xdev->points.data[i].x);
@@ -510,7 +516,7 @@ pclxl_write_image_data(gx_device_pclxl * xdev, const byte * data, int data_bit,
 		)
 		goto ncfree;
 	    r.ptr = (const byte *)"\000\000\000\000\000";
-	    r.limit = r.ptr + (-width_bytes & 3);
+	    r.limit = r.ptr + (-(int)width_bytes & 3);
 	    if ((*s_RLE_template.process)
 		((stream_state *) & rlstate, &r, &w, false) != 0 ||
 		r.ptr != r.limit
@@ -541,7 +547,7 @@ pclxl_write_image_data(gx_device_pclxl * xdev, const byte * data, int data_bit,
     px_put_data_length(s, num_bytes);
     for (i = 0; i < height; ++i) {
 	px_put_bytes(s, data + i * raster, width_bytes);
-	px_put_bytes(s, (const byte *)"\000\000\000\000", -width_bytes & 3);
+	px_put_bytes(s, (const byte *)"\000\000\000\000", -(int)width_bytes & 3);
     }
 }
 
@@ -848,14 +854,12 @@ pclxl_setdash(gx_device_vector * vdev, const float *pattern, uint count,
 	 * Do the best we can.
 	 */
 	spputc(s, pxt_uint16_array);
-	px_put_ub(s, count);
+	px_put_ub(s, (byte)count);
 	for (i = 0; i < count; ++i)
 	    px_put_s(s, (uint)pattern[i]);
 	px_put_a(s, pxaLineDashStyle);
-	if (offset != 0) {
-	    px_put_rl(s, offset);
-	    px_put_a(s, pxaDashOffset);
-	}
+	if (offset != 0)
+	    px_put_usa(s, (uint)offset, pxaDashOffset);
     }
     spputc(s, pxtSetLineDash);
     return 0;
@@ -868,15 +872,15 @@ pclxl_setlogop(gx_device_vector * vdev, gs_logical_operation_t lop,
     stream *s = gdev_vector_stream(vdev);
 
     if (diff & lop_S_transparent) {
-	px_put_ub(s, (lop & lop_S_transparent ? 1 : 0));
+	px_put_ub(s, (byte)(lop & lop_S_transparent ? 1 : 0));
 	px_put_ac(s, pxaTxMode, pxtSetSourceTxMode);
     }
     if (diff & lop_T_transparent) {
-	px_put_ub(s, (lop & lop_T_transparent ? 1 : 0));
+	px_put_ub(s, (byte)(lop & lop_T_transparent ? 1 : 0));
 	px_put_ac(s, pxaTxMode, pxtSetPaintTxMode);
     }
     if (lop_rop(diff)) {
-	px_put_ub(s, lop_rop(lop));
+	px_put_ub(s, (byte)lop_rop(lop));
 	px_put_ac(s, pxaROP3, pxtSetROP);
     }
     return 0;
@@ -1049,7 +1053,7 @@ pclxl_endpath(gx_device_vector * vdev, gx_path_type_t type)
 	};
 
 	if (rule != xdev->clip_rule) {
-	    px_put_ub(s, (rule == gx_path_type_even_odd ? eEvenOdd :
+	    px_put_ub(s, (byte)(rule == gx_path_type_even_odd ? eEvenOdd :
 		       eNonZeroWinding));
 	    px_put_ac(s, pxaClipMode, pxtSetClipMode);
 	    xdev->clip_rule = rule;

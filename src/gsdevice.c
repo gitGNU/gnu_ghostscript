@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gsdevice.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gsdevice.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Device operators for Ghostscript library */
 #include "ctype_.h"
 #include "memory_.h"		/* for memchr, memcpy */
@@ -36,6 +42,7 @@
 #include "gxdevice.h"
 #include "gxdevmem.h"
 #include "gxiodev.h"
+#include "gxcspace.h"
 
 /* Include the extern for the device list. */
 extern_gs_lib_device_list();
@@ -404,7 +411,7 @@ gs_setdevice_no_init(gs_state * pgs, gx_device * dev)
      */
     rc_assign(pgs->device, dev, "gs_setdevice_no_init");
     gs_state_update_device(pgs);
-    return 0;
+    return pgs->overprint ? gs_do_set_overprint(pgs) : 0;
 }
 
 /* Initialize a just-allocated device. */
@@ -552,8 +559,8 @@ gx_device_set_resolution(gx_device * dev, floatp x_dpi, floatp y_dpi)
 {
     dev->HWResolution[0] = x_dpi;
     dev->HWResolution[1] = y_dpi;
-    dev->width = dev->MediaSize[0] * x_dpi / 72.0 + 0.5;
-    dev->height = dev->MediaSize[1] * y_dpi / 72.0 + 0.5;
+    dev->width = (int)(dev->MediaSize[0] * x_dpi / 72.0 + 0.5);
+    dev->height = (int)(dev->MediaSize[1] * y_dpi / 72.0 + 0.5);
 }
 
 /* Set the MediaSize, updating width and height to remain consistent. */
@@ -562,8 +569,8 @@ gx_device_set_media_size(gx_device * dev, floatp media_width, floatp media_heigh
 {
     dev->MediaSize[0] = media_width;
     dev->MediaSize[1] = media_height;
-    dev->width = media_width * dev->HWResolution[0] / 72.0 + 0.499;
-    dev->height = media_height * dev->HWResolution[1] / 72.0 + 0.499;
+    dev->width = (int)(media_width * dev->HWResolution[0] / 72.0 + 0.499);
+    dev->height = (int)(media_height * dev->HWResolution[1] / 72.0 + 0.499);
 }
 
 /*
@@ -658,7 +665,6 @@ gx_device_copy_params(gx_device *dev, const gx_device *target)
 private int
 gx_parse_output_format(gs_parsed_file_name_t *pfn, const char **pfmt)
 {
-    int code;
     bool have_format = false, field = 0;
     int width[2], int_width = sizeof(int) * 3, w = 0;
     uint i;
@@ -716,7 +722,6 @@ gx_parse_output_file_name(gs_parsed_file_name_t *pfn, const char **pfmt,
 			  const char *fname, uint fnlen)
 {
     int code;
-    int i;
 
     *pfmt = 0;
     pfn->memory = 0;

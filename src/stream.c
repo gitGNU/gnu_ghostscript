@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 2000, 2001 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 2000, 2001 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: stream.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: stream.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Stream package for Ghostscript interpreter */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"
@@ -26,9 +32,9 @@
 #include "strimpl.h"
 
 /* Forward declarations */
-private int sreadbuf(P2(stream *, stream_cursor_write *));
-private int swritebuf(P3(stream *, stream_cursor_read *, bool));
-private void stream_compact(P2(stream *, bool));
+private int sreadbuf(stream *, stream_cursor_write *);
+private int swritebuf(stream *, stream_cursor_read *, bool);
+private void stream_compact(stream *, bool);
 
 /* Structure types for allocating streams. */
 public_st_stream();
@@ -405,10 +411,10 @@ int
 sclose(register stream * s)
 {
     stream_state *st;
-    int code = (*s->procs.close) (s);
+    int status = (*s->procs.close) (s);
 
-    if (code < 0)
-	return code;
+    if (status < 0)
+	return status;
     st = s->state;
     if (st != 0) {
 	stream_proc_release((*release)) = st->template->release;
@@ -419,7 +425,7 @@ sclose(register stream * s)
 	s->state = (stream_state *) s;
     }
     s_disable(s);
-    return code;
+    return status;
 }
 
 /*
@@ -572,7 +578,7 @@ sputs(register stream * s, const byte * str, uint wlen, uint * pn)
 }
 
 /* Skip ahead a specified distance in a read stream. */
-/* Return 0 or an exception code. */
+/* Return 0 or an exception status. */
 /* Store the number of bytes skipped in *pskipped. */
 int
 spskip(register stream * s, long nskip, long *pskipped)
@@ -586,14 +592,14 @@ spskip(register stream * s, long nskip, long *pskipped)
     }
     if (s_can_seek(s)) {
 	long pos = stell(s);
-	int code = sseek(s, pos + n);
+	int status = sseek(s, pos + n);
 
 	*pskipped = stell(s) - pos;
-	return code;
+	return status;
     }
     min_left = sbuf_min_left(s);
     while (sbufavailable(s) < n + min_left) {
-	int code;
+	int status;
 
 	n -= sbufavailable(s);
 	s->srptr = s->srlimit;
@@ -601,10 +607,10 @@ spskip(register stream * s, long nskip, long *pskipped)
 	    *pskipped = nskip - n;
 	    return s->end_status;
 	}
-	code = sgetc(s);
-	if (code < 0) {
+	status = sgetc(s);
+	if (status < 0) {
 	    *pskipped = nskip - n;
-	    return code;
+	    return status;
 	}
 	--n;
     }
@@ -619,7 +625,7 @@ int
 sreadline(stream *s_in, stream *s_out, void *readline_data,
 	  gs_const_string *prompt, gs_string * buf,
 	  gs_memory_t * bufmem, uint * pcount, bool *pin_eol,
-	  bool (*is_stdin)(P1(const stream *)))
+	  bool (*is_stdin)(const stream *))
 {
     uint count = *pcount;
 
@@ -970,13 +976,13 @@ stream_compact(stream * s, bool always)
 
 /* String stream procedures */
 private int
-    s_string_available(P2(stream *, long *)),
-    s_string_read_seek(P2(stream *, long)),
-    s_string_write_seek(P2(stream *, long)),
-    s_string_read_process(P4(stream_state *, stream_cursor_read *,
-			     stream_cursor_write *, bool)),
-    s_string_write_process(P4(stream_state *, stream_cursor_read *,
-			      stream_cursor_write *, bool));
+    s_string_available(stream *, long *),
+    s_string_read_seek(stream *, long),
+    s_string_write_seek(stream *, long),
+    s_string_read_process(stream_state *, stream_cursor_read *,
+			  stream_cursor_write *, bool),
+    s_string_write_process(stream_state *, stream_cursor_read *,
+			   stream_cursor_write *, bool);
 
 /* Initialize a stream for reading a string. */
 void
@@ -1086,8 +1092,8 @@ s_string_write_process(stream_state * st, stream_cursor_read * pr,
 /* ------ Position-tracking stream ------ */
 
 private int
-    s_write_position_process(P4(stream_state *, stream_cursor_read *,
-				stream_cursor_write *, bool));
+    s_write_position_process(stream_state *, stream_cursor_read *,
+			     stream_cursor_write *, bool);
 
 /* Set up a write stream that just keeps track of the position. */
 void
@@ -1125,8 +1131,11 @@ s_init_filter(stream *fs, stream_state *fss, byte *buf, uint bsize,
     s_std_init(fs, buf, bsize, &s_filter_write_procs, s_mode_write);
     fs->procs.process = template->process;
     fs->state = fss;
-    if (template->init)
-	(template->init)(fss);
+    if (template->init) {
+	fs->end_status = (template->init)(fss);
+	if (fs->end_status < 0)
+	    return fs->end_status;
+    }
     fs->strm = target;
     return 0;
 }
@@ -1162,7 +1171,8 @@ s_add_filter(stream **ps, const stream_template *template,
     ess->template = template;
     ess->memory = mem;
     es->memory = mem;
-    s_init_filter(es, ess, buf, bsize, *ps);
+    if (s_init_filter(es, ess, buf, bsize, *ps) < 0)
+	return 0;
     *ps = es;
     return es;
 }

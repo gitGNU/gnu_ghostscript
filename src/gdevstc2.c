@@ -1,22 +1,28 @@
-/* Copyright (C) 1995, 1996 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1995, 1996 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevstc2.c,v 1.1 2004/01/14 16:59:48 atai Exp $*/
+/* $Id: gdevstc2.c,v 1.2 2004/02/14 22:20:06 atai Exp $*/
 /* Epson Stylus-Color Printer-Driver */
 
 /***
@@ -181,13 +187,13 @@ stc_fs(stcolor_device *sdev,int npixel,byte *bin,byte *bbuf,byte *out)
 
 /* -- "spotsize" */
      scale  = sdev->stc.dither->minmax[1];
-     buf[1] = scale + (scale > 0.0 ? 0.5 : -0.5);
+     buf[1] = (long)(scale + (scale > 0.0 ? 0.5 : -0.5));
 
 /* -- "threshold" */
      offset = sdev->stc.dither->minmax[0];
      scale -= offset;
-     if((offset+0.5*scale) > 0.0) buf[2] = offset + 0.5*scale + 0.5;
-     else                         buf[2] = offset + 0.5*scale - 0.5;
+     if((offset+0.5*scale) > 0.0) buf[2] = (long)(offset + 0.5*scale + 0.5);
+     else                         buf[2] = (long)(offset + 0.5*scale - 0.5);
 
 /*
  *   random values, that do not exceed half of normal value
@@ -209,10 +215,10 @@ stc_fs(stcolor_device *sdev,int npixel,byte *bin,byte *bbuf,byte *out)
         scale = (double) buf[1] / (double) rand_max;
 
         for(i = 0; i < sdev->color_info.num_components; ++ i)
-           buf[i+3] = 0.25000*scale*(buf[i+3]-rand_max/2);
+           buf[i+3] = (long)(0.25000*scale*(buf[i+3]-rand_max/2));
 
         for(     ; i < i2do; ++i) /* includes 2 additional pixels ! */
-           buf[i+3] = 0.28125*scale*(buf[i+3]-rand_max/2);
+           buf[i+3] = (long)(0.28125*scale*(buf[i+3]-rand_max/2));
 
      }
 
@@ -379,17 +385,17 @@ stc_fscmyk(stcolor_device *sdev,int npixel,byte *bin,byte *bbuf,byte *out)
 
 /* -- "spotsize" */
      scale  = sdev->stc.dither->minmax[1];
-     buf[1] = scale + (scale > 0.0 ? 0.5 : -0.5);
+     buf[1] = (long)(scale + (scale > 0.0 ? 0.5 : -0.5));
 
 /* -- "threshold" */
      offset = sdev->stc.dither->minmax[0];
      scale -= offset;
      if(sdev->stc.flags & STCDFLAG1) {
-        buf[2] = (sdev->stc.extv[0][sdev->stc.sizv[0]-1] - sdev->stc.extv[0][0])
-               * scale / 2.0 + offset;
+        buf[2] = (long)((sdev->stc.extv[0][sdev->stc.sizv[0]-1] - 
+		sdev->stc.extv[0][0]) * scale / 2.0 + offset);
      } else {
-        if((offset+0.5*scale) > 0.0) buf[2] = offset + 0.5*scale + 0.5;
-        else                         buf[2] = offset + 0.5*scale - 0.5;
+        if((offset+0.5*scale) > 0.0) buf[2] = (long)(offset + 0.5*scale + 0.5);
+        else                         buf[2] = (long)(offset + 0.5*scale - 0.5);
      }
 
 /*
@@ -412,10 +418,10 @@ stc_fscmyk(stcolor_device *sdev,int npixel,byte *bin,byte *bbuf,byte *out)
         scale = (double) buf[1] / (double) rand_max;
 
         for(i = 0; i < sdev->color_info.num_components; ++ i)
-           buf[i+3] = 0.25000*scale*(buf[i+3]-rand_max/2);
+           buf[i+3] = (long)(0.25000*scale*(buf[i+3]-rand_max/2));
 
         for(     ; i < i2do; ++i) /* includes 2 additional pixels ! */
-           buf[i+3] = 0.28125*scale*(buf[i+3]-rand_max/2);
+           buf[i+3] = (long)(0.28125*scale*(buf[i+3]-rand_max/2));
 
      }
 

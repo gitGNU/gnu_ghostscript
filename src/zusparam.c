@@ -1,23 +1,29 @@
 
-/* Copyright (C) 1996, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1996, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: zusparam.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zusparam.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* User and system parameter operators */
 #include "memory_.h"
 #include "string_.h"
@@ -56,8 +62,8 @@ typedef struct param_def_s {
 typedef struct long_param_def_s {
     param_def_common;
     long min_value, max_value;
-    long (*current)(P1(i_ctx_t *));
-    int (*set)(P2(i_ctx_t *, long));
+    long (*current)(i_ctx_t *);
+    int (*set)(i_ctx_t *, long);
 } long_param_def_t;
 
 #if arch_sizeof_long > arch_sizeof_int
@@ -68,14 +74,14 @@ typedef struct long_param_def_s {
 
 typedef struct bool_param_def_s {
     param_def_common;
-    bool (*current)(P1(i_ctx_t *));
-    int (*set)(P2(i_ctx_t *, bool));
+    bool (*current)(i_ctx_t *);
+    int (*set)(i_ctx_t *, bool);
 } bool_param_def_t;
 
 typedef struct string_param_def_s {
     param_def_common;
-    void (*current)(P2(i_ctx_t *, gs_param_string *));
-    int (*set)(P2(i_ctx_t *, gs_param_string *));
+    void (*current)(i_ctx_t *, gs_param_string *);
+    int (*set)(i_ctx_t *, gs_param_string *);
 } string_param_def_t;
 
 /* Define a parameter set (user or system). */
@@ -89,9 +95,9 @@ typedef struct param_set_s {
 } param_set;
 
 /* Forward references */
-private int setparams(P3(i_ctx_t *, gs_param_list *, const param_set *));
-private int currentparams(P2(i_ctx_t *, const param_set *));
-private int currentparam1(P2(i_ctx_t *, const param_set *));
+private int setparams(i_ctx_t *, gs_param_list *, const param_set *);
+private int currentparams(i_ctx_t *, const param_set *);
+private int currentparam1(i_ctx_t *, const param_set *);
 
 /* ------ Passwords ------ */
 
@@ -453,6 +459,18 @@ set_AccurateScreens(i_ctx_t *i_ctx_p, bool val)
     gs_setaccuratescreens(val);
     return 0;
 }
+/* Boolean values */
+private bool
+current_UseWTS(i_ctx_t *i_ctx_p)
+{
+    return gs_currentusewts();
+}
+private int
+set_UseWTS(i_ctx_t *i_ctx_p, bool val)
+{
+    gs_setusewts(val);
+    return 0;
+}
 private bool
 current_LockFilePermissions(i_ctx_t *i_ctx_p)
 {
@@ -470,6 +488,7 @@ set_LockFilePermissions(i_ctx_t *i_ctx_p, bool val)
 private const bool_param_def_t user_bool_params[] =
 {
     {"AccurateScreens", current_AccurateScreens, set_AccurateScreens},
+    {"UseWTS", current_UseWTS, set_UseWTS},
     {"LockFilePermissions", current_LockFilePermissions, set_LockFilePermissions}
 };
 

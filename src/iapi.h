@@ -1,22 +1,28 @@
 /* Copyright (C) 1996-2001 Ghostgum Software Pty Ltd.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: iapi.h,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: iapi.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 
 /*
  * Public API for Ghostscript interpreter
@@ -96,26 +102,6 @@
 # define GSDLLCALLPTR GSDLLCALL * 
 #endif
 
-/* Define these if this file is being included into the caller */
-/* Ghostscript defines these in stdpre.h */
-#ifndef P0
-# ifdef __PROTOTYPES__
-#  define P0() void
-#  define P1(t1) t1
-#  define P2(t1,t2) t1,t2
-#  define P3(t1,t2,t3) t1,t2,t3
-#  define P4(t1,t2,t3,t4) t1,t2,t3,t4
-#  define P5(t1,t2,t3,t4,t5) t1,t2,t3,t4,t5
-# else
-#  define P0()			/* */
-#  define P1(t1)			/* */
-#  define P2(t1,t2)		/* */
-#  define P3(t1,t2,t3)		/* */
-#  define P4(t1,t2,t3,t4)	/* */
-#  define P5(t1,t2,t3,t4,t5)	/* */
-# endif
-#endif
-
 #ifndef gs_main_instance_DEFINED
 # define gs_main_instance_DEFINED
 typedef struct gs_main_instance_s gs_main_instance;
@@ -144,7 +130,7 @@ typedef struct gsapi_revision_s {
  * size of the structure.
  */
 GSDLLEXPORT int GSDLLAPI 
-gsapi_revision(P2(gsapi_revision_t *pr, int len));
+gsapi_revision(gsapi_revision_t *pr, int len);
 
 /*
  * WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
@@ -161,7 +147,7 @@ gsapi_revision(P2(gsapi_revision_t *pr, int len));
  */
  
 GSDLLEXPORT int GSDLLAPI 
-gsapi_new_instance(P2(gs_main_instance **pinstance, void *caller_handle));
+gsapi_new_instance(gs_main_instance **pinstance, void *caller_handle);
 
 /*
  * WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
@@ -176,7 +162,7 @@ gsapi_new_instance(P2(gs_main_instance **pinstance, void *caller_handle));
  * before gsapi_delete_instance.
  */
 GSDLLEXPORT void GSDLLAPI 
-gsapi_delete_instance(P1(gs_main_instance *instance));
+gsapi_delete_instance(gs_main_instance *instance);
 
 /* Set the callback functions for stdio
  * The stdin callback function should return the number of
@@ -186,10 +172,10 @@ gsapi_delete_instance(P1(gs_main_instance *instance));
  * If a callback address is NULL, the real stdio will be used.
  */
 GSDLLEXPORT int GSDLLAPI 
-gsapi_set_stdio(P4(gs_main_instance *instance,
+gsapi_set_stdio(gs_main_instance *instance,
     int (GSDLLCALLPTR stdin_fn)(void *caller_handle, char *buf, int len),
     int (GSDLLCALLPTR stdout_fn)(void *caller_handle, const char *str, int len),
-    int (GSDLLCALLPTR stderr_fn)(void *caller_handle, const char *str, int len)));
+    int (GSDLLCALLPTR stderr_fn)(void *caller_handle, const char *str, int len));
 
 /* Set the callback function for polling.
  * This is used for handling window events or cooperative
@@ -197,8 +183,8 @@ gsapi_set_stdio(P4(gs_main_instance *instance,
  * Ghostscript was compiled with CHECK_INTERRUPTS
  * as described in gpcheck.h.
  */
-GSDLLEXPORT int GSDLLAPI gsapi_set_poll(P2(gs_main_instance *instance,
-    int (GSDLLCALLPTR poll_fn)(void *caller_handle)));
+GSDLLEXPORT int GSDLLAPI gsapi_set_poll(gs_main_instance *instance,
+    int (GSDLLCALLPTR poll_fn)(void *caller_handle));
 
 /* Set the display device callback structure.
  * If the display device is used, this must be called
@@ -206,7 +192,7 @@ GSDLLEXPORT int GSDLLAPI gsapi_set_poll(P2(gs_main_instance *instance,
  * See gdevdisp.h for more details.
  */
 GSDLLEXPORT int GSDLLAPI gsapi_set_display_callback(
-   P2(gs_main_instance *instance, display_callback *callback));
+   gs_main_instance *instance, display_callback *callback);
 
 
 /* Initialise the interpreter.
@@ -221,8 +207,8 @@ GSDLLEXPORT int GSDLLAPI gsapi_set_display_callback(
  *    call one or more gsapi_run_*() functions and then finish
  *    with gsapi_exit().
  */
-GSDLLEXPORT int GSDLLAPI gsapi_init_with_args(P3(gs_main_instance *instance, 
-    int argc, char **argv));
+GSDLLEXPORT int GSDLLAPI gsapi_init_with_args(gs_main_instance *instance, 
+    int argc, char **argv);
 
 /* 
  * The gsapi_run_* functions are like gs_main_run_* except
@@ -234,28 +220,28 @@ GSDLLEXPORT int GSDLLAPI gsapi_init_with_args(P3(gs_main_instance *instance,
  */
 
 GSDLLEXPORT int GSDLLAPI 
-gsapi_run_string_begin(P3(gs_main_instance *instance, 
-    int user_errors, int *pexit_code));
+gsapi_run_string_begin(gs_main_instance *instance, 
+    int user_errors, int *pexit_code);
 
 GSDLLEXPORT int GSDLLAPI 
-gsapi_run_string_continue(P5(gs_main_instance *instance, 
-    const char *str, unsigned int length, int user_errors, int *pexit_code));
+gsapi_run_string_continue(gs_main_instance *instance, 
+    const char *str, unsigned int length, int user_errors, int *pexit_code);
 
 GSDLLEXPORT int GSDLLAPI 
-gsapi_run_string_end(P3(gs_main_instance *instance, 
-    int user_errors, int *pexit_code));
+gsapi_run_string_end(gs_main_instance *instance, 
+    int user_errors, int *pexit_code);
 
 GSDLLEXPORT int GSDLLAPI 
-gsapi_run_string_with_length(P5(gs_main_instance *instance, 
-    const char *str, unsigned int length, int user_errors, int *pexit_code));
+gsapi_run_string_with_length(gs_main_instance *instance, 
+    const char *str, unsigned int length, int user_errors, int *pexit_code);
 
 GSDLLEXPORT int GSDLLAPI 
-gsapi_run_string(P4(gs_main_instance *instance, 
-    const char *str, int user_errors, int *pexit_code));
+gsapi_run_string(gs_main_instance *instance, 
+    const char *str, int user_errors, int *pexit_code);
 
 GSDLLEXPORT int GSDLLAPI 
-gsapi_run_file(P4(gs_main_instance *instance, 
-    const char *file_name, int user_errors, int *pexit_code));
+gsapi_run_file(gs_main_instance *instance, 
+    const char *file_name, int user_errors, int *pexit_code);
 
 
 /* Exit the interpreter.
@@ -263,42 +249,50 @@ gsapi_run_file(P4(gs_main_instance *instance,
  * has been called, and just before gsapi_delete_instance().
  */
 GSDLLEXPORT int GSDLLAPI 
-gsapi_exit(P1(gs_main_instance *instance));
+gsapi_exit(gs_main_instance *instance);
+
+/* Visual Tracer */
+/* This function is only for debug purpose clients */
+struct vd_trace_interface_s;
+GSDLLEXPORT void GSDLLAPI 
+gsapi_set_visual_tracer(struct vd_trace_interface_s *I);
 
 
 /* function prototypes */
 typedef int (GSDLLAPIPTR PFN_gsapi_revision)(
-    P2(gsapi_revision_t *pr, int len));
+    gsapi_revision_t *pr, int len);
 typedef int (GSDLLAPIPTR PFN_gsapi_new_instance)(
-    P2(gs_main_instance **pinstance, void *caller_handle));
+    gs_main_instance **pinstance, void *caller_handle);
 typedef void (GSDLLAPIPTR PFN_gsapi_delete_instance)(
-    P1(gs_main_instance *instance));
-typedef int (GSDLLAPIPTR PFN_gsapi_set_stdio)(P4(gs_main_instance *instance,
+    gs_main_instance *instance);
+typedef int (GSDLLAPIPTR PFN_gsapi_set_stdio)(gs_main_instance *instance,
     int (GSDLLCALLPTR stdin_fn)(void *caller_handle, char *buf, int len),
     int (GSDLLCALLPTR stdout_fn)(void *caller_handle, const char *str, int len),
-    int (GSDLLCALLPTR stderr_fn)(void *caller_handle, const char *str, int len)));
-typedef int (GSDLLAPIPTR PFN_gsapi_set_poll)(P2(gs_main_instance *instance,
-    int(GSDLLCALLPTR poll_fn)(void *caller_handle)));
+    int (GSDLLCALLPTR stderr_fn)(void *caller_handle, const char *str, int len));
+typedef int (GSDLLAPIPTR PFN_gsapi_set_poll)(gs_main_instance *instance,
+    int(GSDLLCALLPTR poll_fn)(void *caller_handle));
 typedef int (GSDLLAPIPTR PFN_gsapi_set_display_callback)(
-   P2(gs_main_instance *instance, display_callback *callback));
+    gs_main_instance *instance, display_callback *callback);
 typedef int (GSDLLAPIPTR PFN_gsapi_init_with_args)(
-    P3(gs_main_instance *instance, int argc, char **argv));
+    gs_main_instance *instance, int argc, char **argv);
 typedef int (GSDLLAPIPTR PFN_gsapi_run_string_begin)(
-    P3(gs_main_instance *instance, int user_errors, int *pexit_code));
+    gs_main_instance *instance, int user_errors, int *pexit_code);
 typedef int (GSDLLAPIPTR PFN_gsapi_run_string_continue)(
-    P5(gs_main_instance *instance, const char *str, unsigned int length, 
-    int user_errors, int *pexit_code));
+    gs_main_instance *instance, const char *str, unsigned int length,
+    int user_errors, int *pexit_code);
 typedef int (GSDLLAPIPTR PFN_gsapi_run_string_end)(
-    P3(gs_main_instance *instance, int user_errors, int *pexit_code));
+    gs_main_instance *instance, int user_errors, int *pexit_code);
 typedef int (GSDLLAPIPTR PFN_gsapi_run_string_with_length)(
-    P5(gs_main_instance *instance, const char *str, unsigned int length, 
-    int user_errors, int *pexit_code));
+    gs_main_instance *instance, const char *str, unsigned int length,
+    int user_errors, int *pexit_code);
 typedef int (GSDLLAPIPTR PFN_gsapi_run_string)(
-    P4(gs_main_instance *instance, const char *str, 
-    int user_errors, int *pexit_code));
-typedef int (GSDLLAPIPTR PFN_gsapi_run_file)(P4(gs_main_instance *instance, 
-    const char *file_name, int user_errors, int *pexit_code));
-typedef int (GSDLLAPIPTR PFN_gsapi_exit)(P1(gs_main_instance *instance));
+    gs_main_instance *instance, const char *str, 
+    int user_errors, int *pexit_code);
+typedef int (GSDLLAPIPTR PFN_gsapi_run_file)(gs_main_instance *instance, 
+    const char *file_name, int user_errors, int *pexit_code);
+typedef int (GSDLLAPIPTR PFN_gsapi_exit)(gs_main_instance *instance);
+typedef void (GSDLLAPIPTR PFN_gsapi_set_visual_tracer) 
+    (struct vd_trace_interface_s *I);
 
 
 #ifdef __MACINTOSH__

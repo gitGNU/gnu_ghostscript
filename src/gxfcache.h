@@ -1,39 +1,50 @@
-/* Copyright (C) 1992, 1995, 1997, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1992, 1995, 1997, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxfcache.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxfcache.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Font and character cache definitions and procedures */
 /* Requires gsfont.h */
 
 #ifndef gxfcache_INCLUDED
 #  define gxfcache_INCLUDED
 
+#include "gsccode.h"
 #include "gsuid.h"
 #include "gsxfont.h"
 #include "gxbcache.h"
+#include "gxfixed.h"
 #include "gxftype.h"
 
 /* ------ Font/matrix pair cache entry ------ */
 
+#ifndef gs_font_DEFINED
+#  define gs_font_DEFINED
+typedef struct gs_font_s gs_font;
+#endif
 #ifndef cached_fm_pair_DEFINED
 #  define cached_fm_pair_DEFINED
 typedef struct cached_fm_pair_s cached_fm_pair;
-
 #endif
 
 /*
@@ -254,16 +265,17 @@ struct gs_font_dir_s {
 #define st_font_dir_max_ptrs 4
 
 /* Character cache procedures (in gxccache.c and gxccman.c) */
-int gx_char_cache_alloc(P7(gs_memory_t * struct_mem, gs_memory_t * bits_mem,
-			   gs_font_dir * pdir, uint bmax, uint mmax,
-			   uint cmax, uint upper));
-void gx_char_cache_init(P1(gs_font_dir *));
-void gx_purge_selected_cached_chars(P3(gs_font_dir *, bool(*)(P2(cached_char *, void *)), void *));
+int gx_char_cache_alloc(gs_memory_t * struct_mem, gs_memory_t * bits_mem,
+			gs_font_dir * pdir, uint bmax, uint mmax,
+			uint cmax, uint upper);
+void gx_char_cache_init(gs_font_dir *);
+void gx_purge_selected_cached_chars(gs_font_dir *, bool(*)(cached_char *, void *), void *);
 cached_fm_pair *
-               gx_lookup_fm_pair(P2(gs_font *, const gs_state *));
+               gx_lookup_fm_pair(gs_font *, const gs_state *);
 cached_fm_pair *
-               gx_add_fm_pair(P4(gs_font_dir *, gs_font *, const gs_uid *, const gs_state *));
-void gx_lookup_xfont(P3(const gs_state *, cached_fm_pair *, int));
-void gs_purge_fm_pair(P3(gs_font_dir *, cached_fm_pair *, int));
+               gx_add_fm_pair(gs_font_dir *, gs_font *, const gs_uid *, const gs_state *);
+void gx_lookup_xfont(const gs_state *, cached_fm_pair *, int);
+void gs_purge_fm_pair(gs_font_dir *, cached_fm_pair *, int);
+void gs_purge_font_from_char_caches(gs_font_dir *, const gs_font *);
 
 #endif /* gxfcache_INCLUDED */

@@ -1,22 +1,28 @@
-/* Copyright (C) 1993, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1993, 2000, 2002 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: zchar1.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zchar1.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* Type 1 character display operator */
 #include "memory_.h"
 #include "ghost.h"
@@ -30,6 +36,7 @@
 #include "gxtype1.h"
 #include "gzstate.h"		/* for path for gs_type1_init */
 				/* (should only be gsstate.h) */
+#include "gscencs.h"
 #include "gspaint.h"		/* for gs_fill, gs_stroke */
 #include "gspath.h"
 #include "gsrect.h"
@@ -43,6 +50,32 @@
 #include "igstate.h"
 #include "iname.h"
 #include "store.h"
+
+/*
+ * Properly designed fonts, which have no self-intersecting outlines
+ * and in which outer and inner outlines are drawn in opposite
+ * directions, aren't affected by choice of filling rule; but some
+ * badly designed fonts in the Genoa test suite seem to require
+ * using the even-odd rule to match Adobe interpreters.
+ */
+#define GS_CHAR_FILL gs_eofill	/* gs_fill or gs_eofill */
+
+/* ============== PATCH BEG=================== */
+/*
+ * On April 4, 2002, we received bug report #539359
+ * which we interpret as some Genoa test are now obsolete,
+ * so we need to drop the bad font tolerance feature
+ * explained above. This temporary patch changes
+ * the even-odd rule back to non-zero rule.
+ * This patch to be kept until we accumulate
+ * enough information from regression testing and
+ * from user responses.
+ */
+
+#undef  GS_CHAR_FILL
+#define GS_CHAR_FILL gs_fill	/* gs_fill or gs_eofill */
+ 
+/* ============== PATCH END=================== */
 
 /* ---------------- Utilities ---------------- */
 
@@ -105,30 +138,29 @@ gs_private_st_suffix_add1(st_gs_type1exec_state, gs_type1exec_state,
 			  i_ctx_p);
 
 /* Forward references */
-private int bbox_continue(P1(i_ctx_t *));
-private int nobbox_continue(P1(i_ctx_t *));
-private int type1_push_OtherSubr(P4(i_ctx_t *, const gs_type1exec_state *,
-				    int (*)(P1(i_ctx_t *)), const ref *));
-private int type1_call_OtherSubr(P4(i_ctx_t *, const gs_type1exec_state *,
-				    int (*)(P1(i_ctx_t *)), const ref *));
-private int type1_callout_dispatch(P3(i_ctx_t *, int (*)(P1(i_ctx_t *)),
-				      int));
-private int type1_continue_dispatch(P5(i_ctx_t *, gs_type1exec_state *,
-				       const ref *, ref *, int));
-private int op_type1_cleanup(P1(i_ctx_t *));
-private void op_type1_free(P1(i_ctx_t *));
+private int bbox_continue(i_ctx_t *);
+private int nobbox_continue(i_ctx_t *);
+private int type1_push_OtherSubr(i_ctx_t *, const gs_type1exec_state *,
+				 int (*)(i_ctx_t *), const ref *);
+private int type1_call_OtherSubr(i_ctx_t *, const gs_type1exec_state *,
+				 int (*)(i_ctx_t *), const ref *);
+private int type1_callout_dispatch(i_ctx_t *, int (*)(i_ctx_t *), int);
+private int type1_continue_dispatch(i_ctx_t *, gs_type1exec_state *,
+				    const ref *, ref *, int);
+private int op_type1_cleanup(i_ctx_t *);
+private void op_type1_free(i_ctx_t *);
 private void
-     type1_cis_get_metrics(P2(const gs_type1_state * pcis, double psbw[4]));
-private int bbox_getsbw_continue(P1(i_ctx_t *));
-private int type1exec_bbox(P3(i_ctx_t *, gs_type1exec_state *, gs_font *));
-private int bbox_finish_fill(P1(i_ctx_t *));
-private int bbox_finish_stroke(P1(i_ctx_t *));
-private int bbox_fill(P1(i_ctx_t *));
-private int bbox_stroke(P1(i_ctx_t *));
-private int nobbox_finish(P2(i_ctx_t *, gs_type1exec_state *));
-private int nobbox_draw(P2(i_ctx_t *, int (*)(P1(gs_state *))));
-private int nobbox_fill(P1(i_ctx_t *));
-private int nobbox_stroke(P1(i_ctx_t *));
+     type1_cis_get_metrics(const gs_type1_state * pcis, double psbw[4]);
+private int bbox_getsbw_continue(i_ctx_t *);
+private int type1exec_bbox(i_ctx_t *, gs_type1exec_state *, gs_font *);
+private int bbox_finish_fill(i_ctx_t *);
+private int bbox_finish_stroke(i_ctx_t *);
+private int bbox_fill(i_ctx_t *);
+private int bbox_stroke(i_ctx_t *);
+private int nobbox_finish(i_ctx_t *, gs_type1exec_state *);
+private int nobbox_draw(i_ctx_t *, int (*)(gs_state *));
+private int nobbox_fill(i_ctx_t *);
+private int nobbox_stroke(i_ctx_t *);
 
 /* <font> <code|name> <name> <charstring> .type1execchar - */
 private int
@@ -201,7 +233,6 @@ charstring_execchar(i_ctx_t *i_ctx_p, int font_type_mask)
 	cxs.sbw[2] = 0;
 	cxs.sbw[3] = -penum->FontBBox_as_Metrics2.x; /* Sic! */
 	cxs.use_FontBBox_as_Metrics2 = true;
-	cxs.present = metricsSideBearingAndWidth;
     }
     /* Establish a current point. */
     code = gs_moveto(igs, 0.0, 0.0);
@@ -229,8 +260,7 @@ charstring_execchar(i_ctx_t *i_ctx_p, int font_type_mask)
 	const ref *opstr = op;
 	ref other_subr;
 
-	if (cxs.present == metricsSideBearingAndWidth
-	    && !cxs.use_FontBBox_as_Metrics2) {
+	if (cxs.present == metricsSideBearingAndWidth) {
 	    gs_point sbpt;
 
 	    sbpt.x = cxs.sbw[0], sbpt.y = cxs.sbw[1];
@@ -308,48 +338,11 @@ type1exec_bbox(i_ctx_t *i_ctx_p, gs_type1exec_state * pcxs,
     } else {
 	/* We have the width and bounding box: */
 	/* set up the cache device now. */
-        double w[2];
-        w[0] = pcxs->sbw[2], w[1] = pcxs->sbw[3];
-      
-	if (pcxs->use_FontBBox_as_Metrics2) {
-	   /* In this case, we have to calculate width for WMode=0. 
-	      pcxs->sbw[2, 3] is width for WMode=1.
-	      Normally, the width for WMode=0 is not used in WMode=1 
-	      rendering. However, if CDevProc is defined, 
-	      the width for WMode=0 is used. 
-	      Do the same as the case pcxs->present == metricsNone */
-	     double sbw[4];
-	     ref cnref;
-	     ref other_subr;
-	     int code;
-	     
-	    /* Since an OtherSubr callout might change osp, */
-	    /* save the character name now. */
-	    ref_assign(&cnref, op - 1);
-	    code = type1_continue_dispatch(i_ctx_p, pcxs, op, &other_subr, 4);
-	    op = osp;		/* OtherSubrs might change it */
-	    switch (code) {
- 	     default:		/* code < 0 or done, error */
-		 return ((code < 0 ? code :
-			 gs_note_error(e_invalidfont)));
-	    case type1_result_callothersubr:	/* unknown OtherSubr */
-		return type1_call_OtherSubr(i_ctx_p, pcxs,
-					    bbox_getsbw_continue,
-					    &other_subr);
-	    case type1_result_sbw:	/* [h]sbw, done */
-		break;
-	    }
-	    type1_cis_get_metrics(pcis, sbw);
-	    w[0] = sbw[2], w[1] = sbw[3];
-	    /* Now actual width is available, I can calculate much 
-	       better side bearing for WMode 1 from the width. */
-	    pcxs->sbw[0] = w[0] / 2;
-	}
  	return zchar_set_cache(i_ctx_p, pbfont, op - 1,
 			       (pcxs->present == metricsSideBearingAndWidth
 			        && !pcxs->use_FontBBox_as_Metrics2 ?
 			        pcxs->sbw : NULL),
-			       w,
+			       pcxs->sbw + 2,
 			       &pcxs->char_bbox,
 			       bbox_finish_fill, bbox_finish_stroke, 
 			       (pcxs->use_FontBBox_as_Metrics2 ? pcxs->sbw : NULL));
@@ -393,7 +386,7 @@ bbox_getsbw_continue(i_ctx_t *i_ctx_p)
 
 /* <font> <code|name> <name> <charstring> <sbx> <sby> %bbox_{fill|stroke} - */
 /* <font> <code|name> <name> <charstring> %bbox_{fill|stroke} - */
-private int bbox_finish(P2(i_ctx_t *, int (*)(P1(i_ctx_t *))));
+private int bbox_finish(i_ctx_t *, int (*)(i_ctx_t *));
 private int
 bbox_finish_fill(i_ctx_t *i_ctx_p)
 {
@@ -405,7 +398,7 @@ bbox_finish_stroke(i_ctx_t *i_ctx_p)
     return bbox_finish(i_ctx_p, bbox_stroke);
 }
 private int
-bbox_finish(i_ctx_t *i_ctx_p, int (*cont) (P1(i_ctx_t *)))
+bbox_finish(i_ctx_t *i_ctx_p, int (*cont) (i_ctx_t *))
 {
     os_ptr op = osp;
     gs_font *pfont;
@@ -494,7 +487,7 @@ bbox_continue(i_ctx_t *i_ctx_p)
  * of type1execchar are still on the o-stack.
  */
 private int
-bbox_draw(i_ctx_t *i_ctx_p, int (*draw)(P1(gs_state *)))
+bbox_draw(i_ctx_t *i_ctx_p, int (*draw)(gs_state *))
 {
     os_ptr op = osp;
     gs_rect bbox;
@@ -546,7 +539,6 @@ bbox_draw(i_ctx_t *i_ctx_p, int (*draw)(P1(gs_state *)))
 	if (code < 0)
 	    return code;
 	cxs.present = code;
-	cxs.use_FontBBox_as_Metrics2 = false;
     }  else {
 	cxs.sbw[0] = penum->FontBBox_as_Metrics2.x / 2;
 	cxs.sbw[1] = penum->FontBBox_as_Metrics2.y;
@@ -558,14 +550,14 @@ bbox_draw(i_ctx_t *i_ctx_p, int (*draw)(P1(gs_state *)))
     code = type1_exec_init(&cxs.cis, penum, igs, pfont1);
     if (code < 0)
 	return code;
-    cxs.char_bbox = bbox;
+    cxs.char_bbox = pfont1->FontBBox;
     return type1exec_bbox(i_ctx_p, &cxs, pfont);
 }
 private int
 bbox_fill(i_ctx_t *i_ctx_p)
 {
-    /* See nobbox_fill for why we use eofill here. */
-    return bbox_draw(i_ctx_p, gs_eofill);
+    /* See above re GS_CHAR_FILL. */
+    return bbox_draw(i_ctx_p, GS_CHAR_FILL);
 }
 private int
 bbox_stroke(i_ctx_t *i_ctx_p)
@@ -593,15 +585,15 @@ type1_continue_dispatch(i_ctx_t *i_ctx_p, gs_type1exec_state *pcxs,
 {
     int value;
     int code;
-    gs_const_string charstring;
-    gs_const_string *pchars;
+    gs_glyph_data_t cs_data;
+    gs_glyph_data_t *pcsd;
 
     if (pcref == 0) {
-	pchars = 0;
+	pcsd = 0;
     } else {
-	charstring.data = pcref->value.const_bytes;
-	charstring.size = r_size(pcref);
-	pchars = &charstring;
+	gs_glyph_data_from_string(&cs_data, pcref->value.const_bytes,
+				  r_size(pcref), NULL);
+	pcsd = &cs_data;
     }
     /*
      * Since OtherSubrs may push or pop values on the PostScript operand
@@ -615,7 +607,7 @@ type1_continue_dispatch(i_ctx_t *i_ctx_p, gs_type1exec_state *pcxs,
     memcpy(pcxs->save_args, osp - (num_args - 1), num_args * sizeof(ref));
     osp -= num_args;
     gs_type1_set_callback_data(&pcxs->cis, pcxs);
-    code = pcxs->cis.pfont->data.interpret(&pcxs->cis, pchars, &value);
+    code = pcxs->cis.pfont->data.interpret(&pcxs->cis, pcsd, &value);
     switch (code) {
 	case type1_result_callothersubr: {
 	    /*
@@ -641,7 +633,7 @@ type1_continue_dispatch(i_ctx_t *i_ctx_p, gs_type1exec_state *pcxs,
  */
 private int
 type1_push_OtherSubr(i_ctx_t *i_ctx_p, const gs_type1exec_state *pcxs,
-		     int (*cont)(P1(i_ctx_t *)), const ref *pos)
+		     int (*cont)(i_ctx_t *), const ref *pos)
 {
     int i, n = pcxs->num_args;
 
@@ -665,7 +657,7 @@ type1_push_OtherSubr(i_ctx_t *i_ctx_p, const gs_type1exec_state *pcxs,
  */
 private int
 type1_call_OtherSubr(i_ctx_t *i_ctx_p, const gs_type1exec_state * pcxs,
-		     int (*cont) (P1(i_ctx_t *)),
+		     int (*cont) (i_ctx_t *),
 		     const ref * pos)
 {
     /* Move the Type 1 interpreter state to the heap. */
@@ -685,7 +677,7 @@ type1_call_OtherSubr(i_ctx_t *i_ctx_p, const gs_type1exec_state * pcxs,
 
 /* Continue from an OtherSubr callout while building the path. */
 private int
-type1_callout_dispatch(i_ctx_t *i_ctx_p, int (*cont)(P1(i_ctx_t *)),
+type1_callout_dispatch(i_ctx_t *i_ctx_p, int (*cont)(i_ctx_t *),
 		       int num_args)
 {
     ref other_subr;
@@ -759,7 +751,6 @@ nobbox_finish(i_ctx_t *i_ctx_p, gs_type1exec_state * pcxs)
     int code;
     gs_text_enum_t *penum = op_show_find(i_ctx_p);
     gs_font *pfont;
-    double w[2];
 
     if ((code = gs_pathbbox(igs, &pcxs->char_bbox)) < 0 ||
 	(code = font_param(op - 3, &pfont)) < 0
@@ -771,24 +762,13 @@ nobbox_finish(i_ctx_t *i_ctx_p, gs_type1exec_state * pcxs)
 	gs_font_base *const pbfont = (gs_font_base *) pfont;
 	gs_font_type1 *const pfont1 = (gs_font_type1 *) pfont;
 
-	if (pcxs->present == metricsNone
-	    || pcxs->use_FontBBox_as_Metrics2) {
+	if (pcxs->present == metricsNone) {
 	    gs_point endpt;
 
 	    if ((code = gs_currentpoint(igs, &endpt)) < 0)
 		return code;
-	    /* We will not use sbw[3, 4]. 
-	       If pcxs->use_FontBBox_as_Metrics2 is true,
-	       sbw[3, 4] are used as arguments(W1x, W1y) of setcachedevice2. 
-	       We will use w[0, 1] as W0x and W0y of setcachedevice2.
-	       W0 and W1 is differrent parameters. Don't confuse. */
-	    w[0] = endpt.x, w[1] = endpt.y;
+	    pcxs->sbw[2] = endpt.x, pcxs->sbw[3] = endpt.y;
 	    pcxs->present = metricsSideBearingAndWidth;
-	    if (pcxs->use_FontBBox_as_Metrics2) {
-	      /* Now actual width is available, I can calculate much 
-		 better side bearing for WMode 1 from the width. */
-	      pcxs->sbw[0] = w[0] / 2;
-	    }
 	}
 	/*
 	 * We only need to rebuild the path from scratch if we might
@@ -804,7 +784,7 @@ nobbox_finish(i_ctx_t *i_ctx_p, gs_type1exec_state * pcxs)
 	    return type1exec_bbox(i_ctx_p, pcxs, pfont);
 	}
 	return zchar_set_cache(i_ctx_p, pbfont, op, NULL,
-	                       w,
+	                       pcxs->sbw + 2,
 			       &pcxs->char_bbox,
 			       nobbox_fill, nobbox_stroke,
 			       (pcxs->use_FontBBox_as_Metrics2 ? pcxs->sbw : NULL));
@@ -812,7 +792,7 @@ nobbox_finish(i_ctx_t *i_ctx_p, gs_type1exec_state * pcxs)
 }
 /* Finish by popping the operands and filling or stroking. */
 private int
-nobbox_draw(i_ctx_t *i_ctx_p, int (*draw)(P1(gs_state *)))
+nobbox_draw(i_ctx_t *i_ctx_p, int (*draw)(gs_state *))
 {
     int code = draw(igs);
 
@@ -823,14 +803,8 @@ nobbox_draw(i_ctx_t *i_ctx_p, int (*draw)(P1(gs_state *)))
 private int
 nobbox_fill(i_ctx_t *i_ctx_p)
 {
-    /*
-     * Properly designed fonts, which have no self-intersecting outlines
-     * and in which outer and inner outlines are drawn in opposite
-     * directions, aren't affected by choice of filling rule; but some
-     * badly designed fonts in the Genoa test suite seem to require
-     * using the even-odd rule to match Adobe interpreters.
-     */
-    return nobbox_draw(i_ctx_p, gs_eofill);
+    /* See above re GS_CHAR_FILL. */
+    return nobbox_draw(i_ctx_p, GS_CHAR_FILL);
 }
 private int
 nobbox_stroke(i_ctx_t *i_ctx_p)
@@ -857,17 +831,17 @@ const op_def zchar1_op_defs[] =
 /* ------ Auxiliary procedures for type 1 fonts ------ */
 
 private int
-z1_glyph_data(gs_font_type1 * pfont, gs_glyph glyph, gs_const_string * pstr)
+z1_glyph_data(gs_font_type1 * pfont, gs_glyph glyph, gs_glyph_data_t *pgd)
 {
     ref gref;
 
     glyph_ref(glyph, &gref);
-    return zchar_charstring_data((gs_font *)pfont, &gref, pstr);
+    return zchar_charstring_data((gs_font *)pfont, &gref, pgd);
 }
 
 private int
 z1_subr_data(gs_font_type1 * pfont, int index, bool global,
-	     gs_const_string * pstr)
+	     gs_glyph_data_t *pgd)
 {
     const font_data *pfdata = pfont_data(pfont);
     ref subr;
@@ -879,36 +853,31 @@ z1_subr_data(gs_font_type1 * pfont, int index, bool global,
     if (code < 0)
 	return code;
     check_type_only(subr, t_string);
-    pstr->data = subr.value.const_bytes;
-    pstr->size = r_size(&subr);
+    gs_glyph_data_from_string(pgd, subr.value.const_bytes, r_size(&subr),
+			      NULL);
     return 0;
 }
 
 private int
 z1_seac_data(gs_font_type1 *pfont, int ccode, gs_glyph *pglyph,
-	     gs_const_string *pstr)
+	     gs_glyph_data_t *pgd)
 {
-    ref std_glyph;
-    int code = array_get(&StandardEncoding, (long)ccode, &std_glyph);
+    gs_glyph glyph = gs_c_known_encode((gs_char)ccode,
+				       ENCODING_INDEX_STANDARD);
+    int code;
+    gs_const_string gstr;
+    ref rglyph;
 
-    if (code < 0)
+    if (glyph == GS_NO_GLYPH)
+	return_error(e_rangecheck);
+    if ((code = gs_c_glyph_name(glyph, &gstr)) < 0 ||
+	(code = name_ref(gstr.data, gstr.size, &rglyph, 0)) < 0
+	)
 	return code;
-    if (pglyph) {
-	switch (r_type(&std_glyph)) {
-	case t_name:
-	    *pglyph = name_index(&std_glyph);
-	    break;
-	case t_integer:
-	    *pglyph = gs_min_cid_glyph + std_glyph.value.intval;
-	    if (*pglyph < gs_min_cid_glyph || *pglyph > gs_max_glyph)
-		*pglyph = gs_no_glyph;
-	    break;
-	default:
-	    return_error(e_typecheck);
-	}
-    }
-    if (pstr)
-	code = zchar_charstring_data((gs_font *)pfont, &std_glyph, pstr);
+    if (pglyph)
+	*pglyph = name_index(&rglyph);
+    if (pgd)
+	code = zchar_charstring_data((gs_font *)pfont, &rglyph, pgd);
     return code;
 }
 
@@ -960,14 +929,14 @@ zchar1_glyph_outline(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
 {
     gs_font_type1 *const pfont1 = (gs_font_type1 *)font;
     ref gref;
-    gs_const_string charstring;
+    gs_glyph_data_t gdata;
     int code;
 
     glyph_ref(glyph, &gref);
-    code = zchar_charstring_data(font, &gref, &charstring);
+    code = zchar_charstring_data(font, &gref, &gdata);
     if (code < 0)
 	return code;
-    return zcharstring_outline(pfont1, &gref, &charstring, pmat, ppath);
+    return zcharstring_outline(pfont1, &gref, &gdata, pmat, ppath);
 }
 /*
  * Get a glyph outline given a CharString.  The glyph_outline procedure
@@ -975,10 +944,10 @@ zchar1_glyph_outline(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
  */
 int
 zcharstring_outline(gs_font_type1 *pfont1, const ref *pgref,
-		    const gs_const_string *pgstr,
+		    const gs_glyph_data_t *pgd_orig,
 		    const gs_matrix *pmat, gx_path *ppath)
 {
-    const gs_const_string *pchars = pgstr;
+    const gs_glyph_data_t *pgd = pgd_orig;
     int code;
     gs_type1exec_state cxs;
     gs_type1_state *const pcis = &cxs.cis;
@@ -988,18 +957,22 @@ zcharstring_outline(gs_font_type1 *pfont1, const ref *pgref,
     ref *pcdevproc;
     int value;
     gs_imager_state gis;
-    double sbw[4];
+    double sbw[4], wv[4];
     gs_point mpt;
 
     pdata = &pfont1->data;
-    if (pgstr->size <= max(pdata->lenIV, 0))
+    if (pgd->bits.size <= max(pdata->lenIV, 0))
 	return_error(e_invalidfont);
     pfdict = &pfont_data(pfont1)->dict;
     if (dict_find_string(pfdict, "CDevProc", &pcdevproc) > 0)
 	return_error(e_rangecheck); /* can't call CDevProc from here */
     switch (pfont1->WMode) {
     default:
-	code = zchar_get_metrics2((gs_font_base *)pfont1, pgref, sbw);
+	code = zchar_get_metrics2((gs_font_base *)pfont1, pgref, wv);
+	sbw[0] = wv[2];
+	sbw[1] = wv[3];
+	sbw[2] = wv[0];
+	sbw[3] = wv[1];
 	if (code)
 	    break;
 	/* falls through */
@@ -1038,7 +1011,7 @@ zcharstring_outline(gs_font_type1 *pfont1, const ref *pgref,
     }
     /* Continue interpreting. */
 icont:
-    code = pfont1->data.interpret(pcis, pchars, &value);
+    code = pfont1->data.interpret(pcis, pgd, &value);
     switch (code) {
     case 0:		/* all done */
 	/* falls through */
@@ -1048,15 +1021,15 @@ icont:
 	return_error(e_rangecheck); /* can't handle it */
     case type1_result_sbw:	/* [h]sbw, just continue */
 	type1_cis_get_metrics(pcis, cxs.sbw);
-	pchars = 0;
+	pgd = 0;
 	goto icont;
     }
 }
 
 /*
- * Redefine glyph_info to take Metrics[2] and CDevProc into account.
- * (If CDevProc is present, return e_rangecheck, since we can't call the
- * interpreter from here.)
+ * Redefine glyph_info to take Metrics[2] and CDevProc into account (unless
+ * GLYPH_INFO_OUTLINE_WIDTHS is set).  If CDevProc is present, return
+ * e_rangecheck, since we can't call the interpreter from here.
  */
 int
 z1_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
@@ -1068,34 +1041,57 @@ z1_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
     gs_font_base *const pbfont = (gs_font_base *)font;
     int wmode = pfont->WMode;
     const ref *pfdict = &pfont_data(pbfont)->dict;
-    double sbw[4];
     int width_members = members & (GLYPH_INFO_WIDTH0 << wmode);
-    int default_members = members - width_members;
+    int outline_widths = members & GLYPH_INFO_OUTLINE_WIDTHS;
+    bool modified_widths = false;
+    int default_members = members - (width_members + outline_widths);
     int done_members = 0;
     int code;
 
     if (!width_members)
 	return gs_type1_glyph_info(font, glyph, pmat, members, info);
-    if (dict_find_string(pfdict, "CDevProc", &pcdevproc) > 0)
-	return_error(e_rangecheck); /* can't handle it */
     glyph_ref(glyph, &gref);
     if (width_members == GLYPH_INFO_WIDTH1) {
-	code = zchar_get_metrics2(pbfont, &gref, sbw);
+	double wv[4];
+	code = zchar_get_metrics2(pbfont, &gref, wv);
 	if (code > 0) {
-	    info->width[1].x = sbw[2];
-	    info->width[1].y = sbw[3];
+	    modified_widths = true;
+	    info->width[1].x = wv[0];
+	    info->width[1].y = wv[1];
+	    info->v.x = wv[2];
+	    info->v.y = wv[3];
 	    done_members = width_members;
 	    width_members = 0;
 	}
     }
     if (width_members) {
+	double sbw[4];
 	code = zchar_get_metrics(pbfont, &gref, sbw);
 	if (code > 0) {
+	    modified_widths = true;
 	    info->width[wmode].x = sbw[2];
 	    info->width[wmode].y = sbw[3];
+	    if (code == metricsSideBearingAndWidth) {
+		info->v.x = sbw[0];
+		info->v.y = sbw[1];
+	    } else {
+		info->v.x = 0;
+		info->v.y = 0;
+	    }
 	    done_members = width_members;
 	    width_members = 0;
 	}
+    }
+
+    if (outline_widths) {
+	if (modified_widths || dict_find_string(pfdict, "CDevProc", &pcdevproc) > 0) {
+	    /* Discard the modified widths, but indicate they exist. */
+	    width_members |= done_members;
+	    done_members = outline_widths;
+	}
+    } else {
+	if (dict_find_string(pfdict, "CDevProc", &pcdevproc) > 0)
+	    return_error(e_rangecheck); /* can't handle it */
     }
     default_members |= width_members;
     if (default_members) {

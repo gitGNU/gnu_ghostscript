@@ -1,22 +1,28 @@
-/* Copyright (C) 1996, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1996, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gstype2.c,v 1.1 2004/01/14 16:59:50 atai Exp $ */
+/* $Id: gstype2.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Adobe Type 2 charstring interpreter */
 #include "math_.h"
 #include "memory_.h"
@@ -28,7 +34,7 @@
 #include "gxmatrix.h"
 #include "gxcoord.h"
 #include "gxistate.h"
-#include "gzpath.h"
+#include "gxpath.h"
 #include "gxfont.h"
 #include "gxfont1.h"
 #include "gxtype1.h"
@@ -87,7 +93,7 @@ type2_vstem(gs_type1_state * pcis, cs_ptr csp, cs_ptr cstack)
 
     apply_path_hints(pcis, false);
     for (ap = cstack; ap + 1 <= csp; x += ap[1], ap += 2)
-	type1_vstem(pcis, x += ap[0], ap[1]);
+	type1_vstem(pcis, x += ap[0], ap[1], false);
     pcis->num_hints += (csp + 1 - cstack) >> 1;
     return 0;
 }
@@ -117,7 +123,7 @@ enable_hints(stem_hint_table * psht, const byte * mask)
  * argument is only for compatibility with the Type 1 charstring interpreter.
  */
 int
-gs_type2_interpret(gs_type1_state * pcis, const gs_const_string * str,
+gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 		   int *ignore_pindex)
 {
     gs_font_type1 *pfont = pcis->pfont;
@@ -158,11 +164,10 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_const_string * str,
     s.pcis = pcis;
     INIT_CSTACK(cstack, csp, pcis);
 
-    if (str == 0)
+    if (pgd == 0)
 	goto cont;
-    ipsp->char_string = *str;
-    ipsp->free_char_string = 0;	/* don't free caller-supplied strings */
-    cip = str->data;
+    ipsp->cs_data = *pgd;
+    cip = pgd->bits.data;
   call:state = crypt_charstring_seed;
     if (encrypted) {
 	int skip = pdata->lenIV;
@@ -182,14 +187,15 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_const_string * str,
 	    /* This is a number, decode it and push it on the stack. */
 
 	    if (c < c_pos2_0) {	/* 1-byte number */
-		decode_push_num1(csp, c);
+		decode_push_num1(csp, cstack, c);
 	    } else if (c < cx_num4) {	/* 2-byte number */
-		decode_push_num2(csp, c, cip, state, encrypted);
+		decode_push_num2(csp, cstack, c, cip, state, encrypted);
 	    } else if (c == cx_num4) {	/* 4-byte number */
 		long lw;
 
 		decode_num4(lw, cip, state, encrypted);
 		/* 32-bit numbers are 16:16. */
+		CS_CHECK_PUSH(csp, cstack);
 		*++csp = arith_rshift(lw, 16 - _fixed_shift);
 	    } else		/* not possible */
 		return_error(gs_error_invalidfont);
@@ -222,7 +228,7 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_const_string * str,
 	    case c_callsubr:
 		c = fixed2int_var(*csp) + pdata->subroutineNumberBias;
 		code = pdata->procs.subr_data
-		    (pfont, c, false, &ipsp[1].char_string);
+		    (pfont, c, false, &ipsp[1].cs_data);
 	      subr:if (code < 0) {
 	            /* Calling a Subr with an out-of-range index is clearly a error:
 	             * the Adobe documentation says the results of doing this are
@@ -237,15 +243,10 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_const_string * str,
 		--csp;
 		ipsp->ip = cip, ipsp->dstate = state;
 		++ipsp;
-		ipsp->free_char_string = code;
-		cip = ipsp->char_string.data;
+		cip = ipsp->cs_data.bits.data;
 		goto call;
 	    case c_return:
-		if (ipsp->free_char_string > 0)
-		    gs_free_const_string(pfont->memory,
-					 ipsp->char_string.data,
-					 ipsp->char_string.size,
-					 "gs_type2_interpret");
+		gs_glyph_data_free(&ipsp->cs_data, "gs_type2_interpret");
 		--ipsp;
 		goto cont;
 	    case c_undoc15:
@@ -274,10 +275,12 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_const_string * str,
 		}
 		check_first_operator(csp > cstack);
 		accum_y(*csp);
-	      move:if ((pcis->hint_next != 0 || path_is_drawing(sppath)))
+	      move:
+		if ((pcis->hint_next != 0 || !gx_path_is_void(sppath)))
 		    apply_path_hints(pcis, true);
 		code = gx_path_add_point(sppath, ptx, pty);
-	      cc:if (code < 0)
+	      cc:
+		if (code < 0)
 		    return code;
 		goto pp;
 	    case cx_rlineto:
@@ -322,13 +325,17 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_const_string * str,
 		    code = gx_path_close_subpath(sppath);
 		    if (code < 0)
 			return code;
+		    apply_path_hints(pcis, true);
 		}
-		/*
-		 * It is an undocumented (!) feature of Type 2 CharStrings
-		 * that if endchar is invoked with 4 or 5 operands, it is
-		 * equivalent to the Type 1 seac operator!  In this case,
-		 * the asb operand of seac is missing: we assume it is
-		 * the same as the l.s.b. of the accented character.
+  		/*
+		 * It is a feature of Type 2 CharStrings that if endchar is
+		 * invoked with 4 or 5 operands, it is equivalent to the
+		 * Type 1 seac operator. In this case, the asb operand of
+		 * seac is missing: we assume it is the same as the
+		 * l.s.b. of the accented character.  This feature was
+		 * undocumented until the 16 March 2000 version of the Type
+		 * 2 Charstring Format specification, but, thankfully, is
+		 * described in that revision.
 		 */
 		if (csp >= cstack + 3) {
 		    check_first_operator(csp > cstack + 3);
@@ -336,7 +343,7 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_const_string * str,
 		    if (code < 0)
 			return code;
 		    clear;
-		    cip = ipsp->char_string.data;
+		    cip = ipsp->cs_data.bits.data;
 		    goto call;
 		}
 		/*
@@ -356,7 +363,7 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_const_string * str,
 		    /* do accent of seac */
 		    spt = pcis->position;
 		    ipsp = &pcis->ipstack[pcis->ips_count - 1];
-		    cip = ipsp->char_string.data;
+		    cip = ipsp->cs_data.bits.data;
 		    goto call;
 		}
 		return code;
@@ -386,10 +393,14 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_const_string * str,
 	    case cx_hvcurveto:
 		vertical = false;
 	      hvc:for (ap = cstack; ap + 3 <= csp; vertical = !vertical, ap += 4) {
-		    gs_fixed_point pt1, pt2;
-		    fixed ax0 = sppath->position.x - ptx;
-		    fixed ay0 = sppath->position.y - pty;
+		    gs_fixed_point pt1, pt2, p;
+		    fixed ax0, ay0;
 
+		    code = gx_path_current_point(sppath, &p);
+		    if (code < 0)
+			return code;
+		    ax0 = p.x - ptx;
+		    ay0 = p.y - pty;
 		    if (vertical)
 			accum_y(ap[0]);
 		    else
@@ -432,7 +443,8 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_const_string * str,
 		    deltas = base + n - 1;
 		    for (j = 0; j < n; j++, base++, deltas += k - 1)
 			for (i = 1; i < k; i++)
-			    *base += deltas[i] * pfont->data.WeightVector.values[i];
+			    *base += (fixed)(deltas[i] * 
+				pfont->data.WeightVector.values[i]);
 		}
 		cnext;
 	    case c2_hstemhm:
@@ -443,7 +455,7 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_const_string * str,
 		    fixed x = 0;
 
 		    for (ap = cstack; ap + 1 <= csp; x += ap[1], ap += 2)
-			type1_hstem(pcis, x += ap[0], ap[1]);
+			type1_hstem(pcis, x += ap[0], ap[1], false);
 		}
 		pcis->num_hints += (csp + 1 - cstack) >> 1;
 		cnext;
@@ -553,13 +565,14 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_const_string * str,
 		    ++cip;
 		    charstring_next(*cip, state, c2, encrypted);
 		    ++cip;
+		    CS_CHECK_PUSH(csp, cstack);
 		    *++csp = int2fixed((((c1 ^ 0x80) - 0x80) << 8) + c2);
 		}
 		goto pushed;
 	    case c2_callgsubr:
 		c = fixed2int_var(*csp) + pdata->gsubrNumberBias;
 		code = pdata->procs.subr_data
-		    (pfont, c, true, &ipsp[1].char_string);
+		    (pfont, c, true, &ipsp[1].cs_data);
 		goto subr;
 	    case cx_escape:
 		charstring_next(*cip, state, c, encrypted);
@@ -654,6 +667,7 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_const_string * str,
 			csp -= 3;
 			break;
 		    case ce2_random:
+			CS_CHECK_PUSH(csp, cstack);
 			++csp;
 			/****** NYI ******/
 			break;
@@ -661,7 +675,7 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_const_string * str,
 			{
 			    double prod = fixed2float(csp[-1]) * *csp;
 
-			    csp[-1] =
+			    csp[-1] = 
 				(prod > max_fixed ? max_fixed :
 				 prod < min_fixed ? min_fixed : prod);
 			}
@@ -672,6 +686,7 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_const_string * str,
 			    *csp = float2fixed(sqrt(fixed2float(*csp)));
 			break;
 		    case ce2_dup:
+			CS_CHECK_PUSH(csp, cstack);
 			csp[1] = *csp;
 			++csp;
 			break;

@@ -7,7 +7,7 @@
  * the file image.h on SGI's file server; there is no copyright on that file.
  */
 
-/*$Id: gdevsgi.h,v 1.1 2004/01/14 16:59:48 atai Exp $*/
+/* $Id: gdevsgi.h,v 1.2 2004/02/14 22:20:06 atai Exp $*/
 /* SGI raster file definitions */
 
 #ifndef gdevsgi_INCLUDED

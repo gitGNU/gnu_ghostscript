@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxmatrix.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxmatrix.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Internal matrix routines for Ghostscript library */
 
 #ifndef gxmatrix_INCLUDED
@@ -38,13 +44,13 @@ typedef struct gs_matrix_fixed_s {
 } gs_matrix_fixed;
 
 /* Make a gs_matrix_fixed from a gs_matrix. */
-int gs_matrix_fixed_from_matrix(P2(gs_matrix_fixed *, const gs_matrix *));
+int gs_matrix_fixed_from_matrix(gs_matrix_fixed *, const gs_matrix *);
 
 /* Coordinate transformations to fixed point. */
-int gs_point_transform2fixed(P4(const gs_matrix_fixed *, floatp, floatp,
-				gs_fixed_point *));
-int gs_distance_transform2fixed(P4(const gs_matrix_fixed *, floatp, floatp,
-				   gs_fixed_point *));
+int gs_point_transform2fixed(const gs_matrix_fixed *, floatp, floatp,
+			     gs_fixed_point *);
+int gs_distance_transform2fixed(const gs_matrix_fixed *, floatp, floatp,
+				gs_fixed_point *);
 
 /*
  * Define the fixed-point coefficient structure for avoiding
@@ -70,7 +76,7 @@ typedef struct {
  * prevent overflow for integer arithmetic.  (This is a very custom
  * routine.)  The intermediate value may exceed the size of a long integer.
  */
-fixed fixed_coeff_mult(P4(fixed, long, const fixed_coeff *, int));
+fixed fixed_coeff_mult(fixed, long, const fixed_coeff *, int);
 
 /*
  * Multiply a fixed whose integer part usually does not exceed max_bits

@@ -1,22 +1,28 @@
-/* Copyright (C) 1996, 1998, 1999, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1996, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: zfont42.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zfont42.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* Type 42 font creation operator */
 #include "memory_.h"
 #include "ghost.h"
@@ -34,8 +40,9 @@
 #include "store.h"
 
 /* Forward references */
-private int z42_string_proc(P4(gs_font_type42 *, ulong, uint, const byte **));
-private int z42_gdir_get_outline(P3(gs_font_type42 *, uint, gs_const_string *));
+private int z42_string_proc(gs_font_type42 *, ulong, uint, const byte **);
+private uint z42_get_glyph_index(gs_font_type42 *, gs_glyph);
+private int z42_gdir_get_outline(gs_font_type42 *, uint, gs_glyph_data_t *);
 private font_proc_enumerate_glyph(z42_enumerate_glyph);
 private font_proc_enumerate_glyph(z42_gdir_enumerate_glyph);
 private font_proc_encode_char(z42_encode_char);
@@ -96,6 +103,7 @@ build_gs_TrueType_font(i_ctx_t *i_ctx_p, os_ptr op, gs_font_type42 **ppfont,
      * The procedures that access glyph information must accept either
      * glyph names or glyph indexes.
      */
+    pfont->data.get_glyph_index = z42_get_glyph_index;
     pfont->procs.encode_char = z42_encode_char;
     pfont->procs.glyph_info = z42_glyph_info;
     pfont->procs.glyph_outline = z42_glyph_outline;
@@ -203,47 +211,6 @@ const op_def zfont42_op_defs[] =
     op_def_end(0)
 };
 
-/*
- * Get a glyph outline from GlyphDirectory.  Return an empty string if
- * the glyph is missing or out of range.
- */
-int
-font_gdir_get_outline(const ref *pgdir, long glyph_index,
-		      gs_const_string * pgstr)
-{
-    ref iglyph;
-    ref gdef;
-    ref *pgdef;
-    int code;
-
-    if (r_has_type(pgdir, t_dictionary)) {
-	make_int(&iglyph, glyph_index);
-	code = dict_find(pgdir, &iglyph, &pgdef) - 1; /* 0 => not found */
-    } else {
-	code = array_get(pgdir, glyph_index, &gdef);
-	pgdef = &gdef;
-    }
-    if (code < 0) {
-	pgstr->data = 0;
-	pgstr->size = 0;
-    } else if (!r_has_type(pgdef, t_string)) {
-	return_error(e_typecheck);
-    } else {
-	pgstr->data = pgdef->value.const_bytes;
-	pgstr->size = r_size(pgdef);
-    }
-    return 0;
-}
-private int
-z42_gdir_get_outline(gs_font_type42 * pfont, uint glyph_index,
-		     gs_const_string * pgstr)
-{
-    const font_data *pfdata = pfont_data(pfont);
-    const ref *pgdir = &pfdata->u.type42.GlyphDirectory;
-
-    return font_gdir_get_outline(pgdir, (long)glyph_index, pgstr);
-}
-
 /* Reduce a glyph name to a glyph index if needed. */
 private gs_glyph
 glyph_to_index(const gs_font *font, gs_glyph glyph)
@@ -263,6 +230,51 @@ glyph_to_index(const gs_font *font, gs_glyph glyph)
 	    return index_glyph;
     }
     return gs_min_cid_glyph;	/* glyph 0 is notdef */
+}
+private uint
+z42_get_glyph_index(gs_font_type42 *pfont, gs_glyph glyph)
+{
+    return glyph_to_index((gs_font *)pfont, glyph) - GS_MIN_CID_GLYPH;
+}
+
+/*
+ * Get a glyph outline from GlyphDirectory.  Return an empty string if
+ * the glyph is missing or out of range.
+ */
+int
+font_gdir_get_outline(const ref *pgdir, long glyph_index,
+		      gs_glyph_data_t *pgd)
+{
+    ref iglyph;
+    ref gdef;
+    ref *pgdef;
+    int code;
+
+    if (r_has_type(pgdir, t_dictionary)) {
+	make_int(&iglyph, glyph_index);
+	code = dict_find(pgdir, &iglyph, &pgdef) - 1; /* 0 => not found */
+    } else {
+	code = array_get(pgdir, glyph_index, &gdef);
+	pgdef = &gdef;
+    }
+    if (code < 0) {
+	gs_glyph_data_from_null(pgd);
+    } else if (!r_has_type(pgdef, t_string)) {
+	return_error(e_typecheck);
+    } else {
+	gs_glyph_data_from_string(pgd, pgdef->value.const_bytes, r_size(pgdef),
+				  NULL);
+    }
+    return 0;
+}
+private int
+z42_gdir_get_outline(gs_font_type42 * pfont, uint glyph_index,
+		     gs_glyph_data_t *pgd)
+{
+    const font_data *pfdata = pfont_data(pfont);
+    const ref *pgdir = &pfdata->u.type42.GlyphDirectory;
+
+    return font_gdir_get_outline(pgdir, (long)glyph_index, pgd);
 }
 
 /* Enumerate glyphs from CharStrings or loca / glyf. */

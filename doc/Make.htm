@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>How to build Ghostscript from source code</title>
-<!-- $Id: Make.htm,v 1.1 2004/01/14 16:59:44 atai Exp $ -->
+<!-- $Id: Make.htm,v 1.2 2004/02/14 22:20:03 atai Exp $ -->
 <!-- Originally: make.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -34,6 +34,7 @@
 <li><a href="#Unpack_Ghostscript">How to unpack Ghostscript itself</a>
 <li><a href="#Unpack_libraries">How to unpack the third-party libraries</a>
 </ul>
+<li><a href="#Bug_check">How to check for post-release bug fixes</a>
 <li><a href="#Makefile_overview">How to prepare the makefiles</a>
 <ul>
 <li><a href="#Preparing_makefiles">Changes for your environment</a>
@@ -75,8 +76,7 @@
 <li><a href="#386_Unix">386 Unix</a>
 <li><a href="#BSDI">BSDI</a>
 <li><a href="#Digital_Unix">Digital Unix (Alpha)</a>
-<li><a href="#FreeBSD">FreeBSD</a>
-<li><a href="#GNULinux">GNU/Linux</a>
+<li><a href="#Linux">GNU/Linux</a>
 <li><a href="#NeXTSTEP">NeXTSTEP / OpenSTEP</a>
 <li><a href="#SCO">SCO Unix/Xenix</a>
 <li><a href="#SVR4">SVR4 Unix</a>
@@ -115,6 +115,7 @@
 <li><a href="#Plan_9">Plan 9</a>
 <li><a href="#QNX">QNX</a>
 </ul>
+<li><a href="#UFST_build">How to build Ghostscript with UFST</a>
 </ul></blockquote>
 
 <!-- [1.2 end table of contents] =========================================== -->
@@ -144,8 +145,7 @@ code.  There are four major steps to building Ghostscript:
 the required third-party libraries.
 <li>Unpack the archive files into the Ghostscript directory and correctly
 named subdirectories.
-<li>Prepare the makefiles, including specific changes for your operating
-environment and your choice of configuration options.
+<li>Configure the build to match your system and desired configuration options.
 <li>Invoke "<b><tt>make</tt></b>" to build the software.
 </ol>
 
@@ -166,7 +166,9 @@ the source code for some third-party libraries that Ghostscript uses.
 <h3><a name="Ghostscript_source"></a>Ghostscript source code</h3>
 
 <p><a name="Authoritative_distribution_site"></a>
-Ghostscript is available from all the standard GNU mirrors, e.g.
+There are two kinds of Ghostscript distributions available.
+ GNU Ghostscript should be
+available on all GNU sites, such as
 
 <blockquote>
 <a href="ftp://ftp.gnu.org/pub/gnu/"
@@ -185,7 +187,7 @@ files:
 <b><tt>ghostscript-fonts-other-</tt></b>#.##<b><tt>.tar.gz</tt></b>
 </blockquote>
 
-<p>For recent versions of Ghostscript there may also be zip files
+<p>For recent versions of Ghostscript there are also zip files
 
 <blockquote>
 <b><tt>gs</tt></b>###<b><tt>src.zip</tt></b><br>
@@ -498,6 +500,19 @@ files</a>.
 
 <hr>
 
+<h2><a name="Bug_check"></a>How to check for post-release bug fixes</h2>
+
+<p>
+Bug information and fixes are tracked on SourceForge.
+For more information, please visit
+
+<blockquote>
+<a href="http://sourceforge.net/projects/ghostscript">
+http://sourceforge.net/projects/ghostscript</a>
+</blockquote>
+
+<hr>
+
 <h2><a name="Makefile_overview"></a>How to prepare the makefiles</h2>
 
 <p>
@@ -506,21 +521,22 @@ the diverse requirements of all the different systems where they may be
 used.
 
 <p>
-New with this release is support for the GNU autoconf tool for generating
-an automatic configuration script. If you're on unix or a related system
-that supports unix shell scripts, this is the easiest option to use.
+Ghostscript has an automatic configuration script. If you're on unix or
+a system that supports unix shell scripts, this is the easiest option to use.
 Simply type:
 
-<blockquote>
-<tt>./configure</tt>
+<blockquote><pre>
+./configure
 </blockquote>
 
 from the top level of the ghostscript source directory. It should configure
 itself based on what's available on your system, warn you of any missing
 dependencies, and generate a Makefile. At this point you can skip to the
-section <a href="#Invoke_make">invoking make</a> below. Note that the
-autoconfiguration option is only available with the unix .tar distribution
-of the source.
+section <a href="#Invoke_make">invoking make</a> below. Also, many common 
+configuration options (like install location) can be set through options 
+to the configure script. Type '<tt>./configure --help</tt>' for a complete
+listing. Note that the configuration option is only available with the 
+unix .tar distributions of the source.
 
 <p>
 If your system doesn't support the configure script or you don't wish to
@@ -529,13 +545,15 @@ the options by hand to match your system as described below.
 Fortunately, the only makefiles you're likely to want to change are
 relatively small ones containing platform-specific information.
 
-
 <blockquote><a name="Platform-specific_makefiles"></a><table cellpadding=0 cellspacing=0>
 <tr><th colspan=3 bgcolor="#CCCC00"><hr><font size="+1">Platform-specific makefiles</font><hr>
 <tr>	<th align=left>Makefile
 	<td>&nbsp;&nbsp;&nbsp;&nbsp;
 	<th align=left>Used for
 <tr>	<td colspan=3><hr>
+<tr>	<td><b><tt>Makefile.in</tt></b>
+	<td>&nbsp;
+	<td>Template makefile for the autoconf build
 <tr>	<td><b><tt>bcwin32.mak</tt></b>
 	<td>&nbsp;
 	<td>MS Windows with Borland/Inprise compilers
@@ -554,9 +572,6 @@ relatively small ones containing platform-specific information.
 <tr>	<td><b><tt>unixansi.mak</tt></b>
 	<td>&nbsp;
 	<td>Unix with ANSI C compilers other than gcc
-<tr>	<td><b><tt>watc.mak</tt></b>
-	<td>&nbsp;
-	<td>DOS with Watcom compilers
 <tr>	<td><b><tt>watcw32.mak</tt></b>
 	<td>&nbsp;
 	<td>MS Windows with Watcom compilers
@@ -571,6 +586,12 @@ relatively small ones containing platform-specific information.
 <tr>	<td><b><tt>gs.mak</tt></b>
 	<td>&nbsp;
 	<td>Documentation and miscellany
+<tr>	<td><b><tt>icclib.mak</tt></b>
+	<td>&nbsp;
+	<td>ICC color correction library
+<tr>	<td><b><tt>ijs.mak</tt></b>
+	<td>&nbsp;
+	<td>IJS raster driver library
 <tr>	<td><b><tt>int.mak</tt></b>
 	<td>&nbsp;
 	<td>Main makefile for the PostScript &amp; PDF interpreter
@@ -625,7 +646,11 @@ include comments describing all these except the
 <b><tt>DEVICE_DEVS</tt></b> options.  These are described in
 <b><tt>devs.mak</tt></b> and <b><tt>contrib.mak</tt></b>, even though the
 file that must be edited to select them is the <a
-href="#Platform-specific_makefiles">platform-specific makefile</a>.
+href="#Platform-specific_makefiles">platform-specific makefile</a>.  Check
+also the <b><tt>JVERSION</tt></b> and <b><tt>PVERSION</tt></b> macros in
+the platform-specific makefile, and adjust them if they don't match the
+JPEG and PNG library versions you're using: see <b><tt>jpeg.mak</tt></b>
+and <b><tt>libpng.mak</tt></b> for more information.
 
 <p>
 Some platform-specific options are described in the sections for individual
@@ -749,19 +774,22 @@ alone.
 
 <h4><a name="GNU_readline"></a>GNU readline</h4>
 
+
+<h4><a name="GNU_readline"></a>GNU readline</h4>
+
 <p>
 GNU Ghostscript distributions include support for GNU readline, but this
 is not officially supported at this time. We will, however, welcome bug
 fixes or updates, and distribute them with subsequent releases.
 
+
 <h3><a name="Makefile_setup"></a>Setting up "makefile"</h3>
 
 <p>
-
 After going through the steps just described to <a href="#Unpack">unpack
 the
-sources</a>, make any desired <a href="#Preparing_makefiles">changes to
-the
+sources</a>, configure the build and make any desired
+<a href="#Preparing_makefiles">changes to the
 makefiles</a>, and unpack or create links to the <a
 href="#Unpack_libraries">third party libraries</a>, as the final step in
 preparing to build Ghostscript you must usually associate the name
@@ -911,11 +939,6 @@ All Ghostscript builds in PC (DOS and MS Windows) environments are 32- or
 	<td valign=top><a href="#Microsoft_build">Microsoft Visual C++ 4 to 7</a>
 	<td>&nbsp;
 	<td valign=top>MS Windows 32-bit
-<tr>	<td valign=top><b><tt>watc.mak</tt></b>
-	<td>&nbsp;
-	<td valign=top><a href="#Watcom_build">Watcom C/386 or C++</a>
-	<td>&nbsp;
-	<td valign=top>MS-DOS 32-bit (extended)
 <tr>	<td valign=top><b><tt>watcw32.mak</tt></b>
 	<td>&nbsp;
 	<td valign=top><a href="#Watcom_build">Watcom C/386 or C++</a>
@@ -1056,8 +1079,7 @@ class="offsite">ftp://ftp.borland.com/pub/borlandcpp/devsupport/patches/bc4_5/</
 </blockquote>
 
 <li>Borland C++ 4.52 has a bug that causes the 32-bit Windows executable to
-fail during startup.  Borland (now Inprise) provides a patch for this bug
-in
+fail during startup.  Borland provides a patch for this bug in
 
 <blockquote>
 <a
@@ -1071,13 +1093,31 @@ attempt to compile Ghostscript with these compilers.  If you want to report
 this bug to Borland, send them the result of compiling
 <b><tt>ziodev.c</tt></b> and tell them to look at the code generated for
 <b><tt>file_is_valid()</tt></b> and <b><tt>!file_is_valid()</tt></b>.  We
-don't know whether Borland C++ 5.02 still has this problem.
+don't know whether Borland C++ 5.02 still has this problem. The problem 
+does not appear to exist in Borland C++Builder 4 or 5.</li>
 
 <li>When building for the MS Windows Win32s environment, the make
 process will stop after it has created <b><tt>genarch.exe</tt></b>.
 You should then run "<b><tt>_genarch.bat</tt></b>", wait until
 <b><tt>genarch</tt></b> has finished and then exit MS Windows.  Then type
 "<b><tt>make</tt></b>" again to restart the make process.
+
+<li>Borland C++Builder 5 and above require <strong><tt>BUILDER_VERSION</tt></strong>
+to be set explicitly&nbsp; to 5 in the make file because the version of MAKE which ships
+with this product (Version 5.2) is the same as that shipped with Version 4.5. Therefore,
+there is no way to automatically establish the compiler version that is in use. Note that
+because a 16 bit compile does not ship with Version 5.5, conditionals have been added to
+prevent attempts to compile 16 bit code when <tt><strong>BUILDER_VERSION = 5</strong></tt></li>
+<li>Note that under Borland C++Builder 5,&nbsp; MAKE
+does not stop when <tt><strong>_genarch.bat</strong></tt> should be run as described
+above. It is necessary for the user to Abort the make by pressing Control-C. You should
+then run &quot;<b><tt>_genarch.bat</tt></b>&quot;, wait until <b><tt>genarch</tt></b> has
+finished and then exit MS Windows. Then type &quot;<b><tt>make</tt></b>&quot; again to
+restart the make process. All targets are built succesfully if this step is ignored. <tt><strong>I
+don't know if the targets are correct although they seem to run OK.</strong></tt></li>
+<li>To prevent the compiler terminating because too
+many warning messages have been generated, copy the file&nbsp; file <tt><strong>bcc32.cfg </strong></tt>to
+the top level directory using the following command:</li>
 
 </ul>
 
@@ -1124,7 +1164,7 @@ You should then run "<b><tt>_genarch.bat</tt></b>", wait until
 <p> To specify the Ghostscript program arguments, select <b><tt>Project/Settings</tt></b>. 
   Select the <b><tt>Debug</tt></b> tab. Change the <b><tt>Category</tt></b> to 
   <b><tt>General</tt></b>. Then specify the desired program arguments. For example, 
-  specifying: <b><tt>examples/tiger.ps</tt></b> will result in the tiger example 
+  specifying: <b><tt>examples/tiger.eps</tt></b> will result in the tiger example 
   file being displayed when Ghostscript is executed. . 
 <p> A final note: it is possible to create a command file (build.bat) to be used 
   for the build command line. If many different workspaces/projects are created, 
@@ -1224,13 +1264,6 @@ the detailed procedure.
 <h3><a name="Watcom_build"></a>Watcom environment</h3>
 
 <p>
-Because of limitations in the way that Watcom implemented their
-<b><tt>wmake</tt></b> program, you must run the Watcom tools under MS
-Windows, even if you are generating a DOS executable.  This is very
-unfortunate, and there is no good technical reason for it, but we were
-unable to persuade Watcom (now Powersoft) to do anything about it.
-
-<p>
 To use the Watcom compiler, add to <b><tt>AUTOEXEC.BAT</tt></b> the line
 "<b><tt>set&nbsp;DOS4G=quiet</tt></b>".  Check that
 <b><tt>AUTOEXEC.BAT</tt></b> also contains a line of the form
@@ -1246,9 +1279,6 @@ the directory where you installed the Watcom tools, and that the setting of
 	<td>&nbsp;&nbsp;&nbsp;
 	<th align=left>Give the command
 <tr>	<td colspan=3><hr>
-<tr>	<td>DOS
-	<td>&nbsp;
-	<td nowrap><b><tt>echo&nbsp;!include&nbsp;src\watc.mak&nbsp;&gt;makefile</tt></b>
 <tr>	<td>MS Windows
 	<td>&nbsp;
 	<td nowrap><b><tt>echo&nbsp;!include&nbsp;src\watcw32.mak&nbsp;&gt;makefile</tt></b>
@@ -1256,8 +1286,7 @@ the directory where you installed the Watcom tools, and that the setting of
 
 <p>
 Before compiling, change the definition of the <b><tt>WCVERSION</tt></b>
-macro in the makefile (<b><tt>watc.mak</tt></b> or
-<b><tt>watcw32.mak</tt></b>) to the version of the Watcom compiler you are
+macro in the makefile (<b><tt>watcw32.mak</tt></b>) to the version of the Watcom compiler you are
 using.  This is necessary to handle some minor incompatibilities between
 versions.
 
@@ -1267,11 +1296,6 @@ To run the <b><tt>make</tt></b> program, give the commmand
 <blockquote>
 <b><tt>wmake -u</tt></b>
 </blockquote>
-
-<p>
-For information on using the GNU <b><tt>make</tt></b> program with the
-Watcom compiler to build MS-DOS executables, which avoids the limitations in
-<b><tt>wmake</tt></b>, see <a href="New-user.htm#MS-DOS">here</a>.
 
 <h3><a name="Cygwin32_build"></a>Cygwin32 gcc</h3>
 
@@ -1283,7 +1307,7 @@ changes:
 
 <ul>
 <li>Add "<b><tt>b</tt></b>" to the call to <b><tt>fopen</tt></b> in <b><tt>gp_open_scratch</tt></b>
-<li>Mirror the <b><tt>gp_ntfs</tt></b> logic for <b><tt>gp_file_name_is_absolute</tt></b>
+<li>Mirror the <b><tt>gp_ntfs</tt></b> logic for <b><tt>gp_pathstring_not_bare</tt></b>
 </ul>
 
 <p>
@@ -1348,6 +1372,12 @@ compiler from Intel's Software Performance Tools web site:
 
 <h3><a name="MacOS"></a>Traditional MacOS</h3>
 
+<hr>
+
+<h2><a name="Mac_build"></a>How to build Ghostscript from source (MacOS version)</h2>
+
+<h3><a name="MacOS"></a>Traditional MacOS</h3>
+
 <p>
 The Macintosh version of Ghostscript requires the <a href="http://www.metrowerks.com/"
 class="offsite">Metrowerks Codewarrior</a> development suite. Download the 
@@ -1367,6 +1397,11 @@ download the gratis <a href="http://stuffit.com/download.html"
 class="offsite">Stuffit Expander</a> to open it.
 
 <p>
+If your system doesn't automatically unpack the source archive, you can
+download the free <a href="http://stuffit.com/download.html"
+class="offsite">Stuffit Expander</a> to open it.
+
+<p>
 This archive includes appropriate versions of the jpeg, zlib and libpng 3rd party
 library source for convenience. You must still download the fonts and place them in an
 appropriate location, along with the contents of the <tt>lib</tt> directory from the source
@@ -1382,10 +1417,12 @@ MacGSView, to actually view or convert postscript and pdf documents.
 <p>
 The unix source distribution (.tar.gz) builds fine on Darwin/MacOS X,
 albeit without a display device. You can generally just use the <tt>Makefile</tt>
-generated by ./configure or <tt>macosx.mak</tt> as your top-level makefile.
-This will allow you to use Ghostscript from the command line as a BSD-layer
-tool to rasterize  postscript and pdf and convert between
-the various formats supported by Ghostscript.
+generated by ./configure or <tt>macosx.mak</tt>
+as your top-level makefile and get a reasonable default build. This will
+allow you to use Ghostscript from the command line as a BSD-layer tool
+to rasterize postscript and pdf to image files, and convert between the 
+high-level formats supported by Ghostscript. See the instructions for the
+unix build below for details of how to customize this build.
 
 <p>
 There is also a support for building Ghostscript as a framework. This is
@@ -1399,7 +1436,9 @@ can use it. You may need to create the Frameworks/ directory on some systems.
 <p>
 Finally, there is a <tt>macos-mcp.mak</tt> makefile that can be
 used to set up the Codewarrior shared library component build described
-in the section on <a href="#MacOS">Classic MacOS</a> above.
+in the section on <a href="#MacOS">Classic MacOS</a> above. Currently
+this makefile is distributed only with the MacOS-specific <tt>.sit</tt>
+source archive, but with be included generally in future releases.
 
 <p>
 To set up the shlib build, download and uncompress the Ghostscript source.
@@ -1428,6 +1467,24 @@ targets are provided, one with carbon and one without.
 <hr>
 
 <h2><a name="Unix_build"></a>How to build Ghostscript from source (Unix version)</h2>
+
+<p>
+Ghostscript now ships with a build system for unix-like operating systems 
+based on GNU Autoconf. In general the following should work to configure
+and build Ghostscript:
+
+<blockquote><pre>
+./configure
+make
+</pre></blockquote>
+
+Please report any problems with this method on your system as a bug.
+
+<p>
+For the convenience of those already familiar with Ghostscript, the old method 
+based on hand-edited makefiles is still supported. It may also be helpful in
+getting Ghostscript to build on very old platforms. This section deals exclusively
+with that older method and includes numerous pointers regarding legacy systems.
 
 <p>
 Before issuing the <b><tt>make</tt></b> command to build Ghostscript, you
@@ -1479,7 +1536,7 @@ I don't do "make install" until I've done
 <pre>
 	cd ...build-directory.../gs-x.yz
 	cd lib
-	../bin/gs ../examples/tiger.ps
+	../bin/gs ../examples/tiger.eps
 </pre>
 
 <p>
@@ -1590,10 +1647,6 @@ environment.  Some Unix environments may require changing the
 <b><tt>LDFLAGS</tt></b> macro in the makefile; be sure to check the <a
 href="#Unix_build">Unix section</a> for your specific tools, operating
 system, and hardware.
-
-<p>
-Ghostscript uses ANSI syntax for function definitions. Building
-with pre-ANSI C compilers is no longer supported.
 
 <h3><a name="Shared_object"></a>Shared object</h3>
 To build Ghostscript as a shared object with gcc 
@@ -1711,15 +1764,7 @@ see the section about <a href="#VMS_build">building under OpenVMS</a> below.
 
 </ul>
 
-<h4><a name="FreeBSD"></a>FreeBSD</h4>
-
-<p>
-On FreeBSD systems, in the top-level makefile (<b><tt>unixansi.mak</tt></b>,
-<b><tt>unix-gcc.mak</tt></b>, change the
-value of <b><tt>STDLIBS</tt></b> from <b><tt>-lpthread -lm</tt></b> to
-<b><tt>-lc_r -lm</tt></b> before building.
-
-<h4><a name="GNULinux"></a>GNU/Linux</h4>
+<h4><a name="Linux"></a>GNU/Linux</h4>
 
 <ul>
 <li>If you build on GNU/Linux with X11 R6 or later, you may get link-time error
@@ -1729,102 +1774,27 @@ the makefile is set to
 "<b><tt>Xt&nbsp;SM&nbsp;ICE&nbsp;Xext&nbsp;X11</tt></b>" rather than
 "<b><tt>Xt&nbsp;Xext&nbsp;X11</tt></b>".
 
-<li>With gcc version 2.6.3 or later, you may encounter an incompatibility
-in object formats (<b><tt>a.out</tt></b> vs. ELF) with the XFree86 library.
+<li>On very old systems (circa gcc version 2.6.3), you may encounter an incompatibility
+in object formats (a.out vs. ELF) with the XFree86 library.
 Typically, <b><tt>ld</tt></b> complains that some X library is not found,
 or that many <b><tt>Xlib</tt></b> or <b><tt>Xt</tt></b> functions are not
 found in the library (similar to the messages for omitting
 <b><tt>SM</tt></b> and <b><tt>ICE</tt></b> from <b><tt>XLIBS</tt></b>).  Or
 you get a message when you start Ghostscript that the program or the shared
 library is an unrecognized format.
-If this happens, edit <b><tt>unix-gcc.mak</tt></b> to add the switches
+If this happens, edit your top-level makefile to add the switches
 "<b><tt>-b i486-linuxaout</tt></b>" to both <b><tt>CFLAGS</tt></b> and
 <b><tt>LDFLAGS</tt></b>, then "<b><tt>make clean</tt></b>" followed by
 "<b><tt>make</tt></b>").  If this doesn't help, or if other strange things
 happen, contact your GNU/Linux supplier or support resource.
 
-<li>A few of Ghostscript's drivers are multi-threaded (currently only those
-whose names begin with "bmpa").  These drivers require <b><tt>libc</tt></b>
-version 6 or higher.  Some GNU/Linux distributions, including Red Hat
-distributions before 5.0, have <b><tt>libc</tt></b> version 5, so these
-drivers may not compile.  If this happens, remove these drivers (from the
-definitions of <b><tt>DEVICE_DEVS*</tt></b> in
-<b><tt>unix-gcc.mak</tt></b>), and, if you wish, substitute the
-corresponding single-threaded drivers, whose names don't include the "a".
-
+<li>A few of Ghostscript's drivers are multi-threaded. None of them are
+in the default build. Currently the only ones are the "bmpa" series.
+These drivers require <b><tt>libc</tt></b>
+version 6 or higher. Most distributions include this, but it may be
+an issue on very old systems.
 </ul>
 
-<p>
-You may want to create <a href="http://www.rpm.org">RPM</a> (<b>R</b>ed Hat
-<b>P</b>ackage <b>M</b>anager) files for Ghostscript.  Because of the lack
-of standardization of installation directory names between GNU/Linux releases,
-Ghostscript does not come with any RPM specification files.  You may wish to
-contact the following people who have created RPM spec files in the past:
-
-<blockquote>
-Henri Gomez <a href="mailto:hgomez@slib.fr">hgomez@slib.fr</a><br>
-Russell Lang <a href="mailto:gsview@ghostgum.com.au">gsview@ghostgum.com.au</a><br>
-Cristian Gafton <a href="mailto:gafton@redhat.com">gafton@redhat.com</a><br>
-Preston Brown <a href="mailto:pbrown@redhat.com">pbrown@redhat.com</a><br>
-</blockquote>
-
-<p>
-The following instructions may work for the Ghostscript 6.0x distributions,
-once you have RPM spec files that you believe are appropriate.
-
-<p>
-To create RPMs for Ghostscript N.NN:
-
-<ul>
-<li>Change to your source directory (<b><tt>/usr/src/redhat</tt></b> for Red Hat
-   Linux 5.1).
-<li>Copy <b><tt>ghostscript-N.NN*.tar.gz</tt></b> (4 source files) to the
-<b><tt>SOURCES</tt></b> subdirectory.
-<li>Copy <b><tt>ghostscript-fonts-std-6.0.tar.gz</tt></b> and
-<b><tt>ghostscript-fonts-other-6.0.tar.gz</tt></b> to the
-<b><tt>SOURCES</tt></b> subdirectory.
-<li>From <b><tt>SOURCES/ghostscript-N.NN.tar.gz</tt></b>,
-<ul>
-<li>extract <b><tt>rpm-conf.dif</tt></b> and copy to
-<b><tt>SOURCES/ghostscript-N.NN-config.patch</tt></b>
-<li>extract <b><tt>gs.rps</tt></b> and copy to
-<b><tt>SPECS/ghostscript-N.NN.spec</tt></b>
-<li>extract <b><tt>gs-fonts.rps</tt></b> and copy to
-<b><tt>SPECS/ghostscript-fonts-N.NN.spec</tt></b>
-</ul>
-If the contents of these files have become out of date, you
-will need to update the version number N.NN in the spec files,
-and update the patch file.
-<li> Change to the SPECS subdirectory and then execute the commands
-<blockquote><b><tt>
-rpm -ba ghostscript-N.NN.spec<br>
-rpm -ba ghostscript-fonts-N.NN.spec
-</tt></b></blockquote>
-This will create the RPM files
-<blockquote><b><tt>
-RPMS/i386/ghostscript-N.NN-1.i386.rpm<br>
-RPMS/noarch/ghostscript-fonts-N.NN-1.noarch.rpm<br>
-SRPMS/ghostscript-N.NN-1.src.rpm<br>
-SRPMS/ghostscript-fonts-N.NN-1.src.rpm<br>
-</tt></b></blockquote>
-<li> See instructions on how to <a href="Install.htm#Install_Unix">install
- Ghostscript under Unix</a>.
-</ul>
-
-<p>
-Bruce Babcock
-&lt;<a href="mailto:babcock@math.psu.edu">babcock@math.psu.edu</a>&gt; has
-made available everything needed to build Ghostscript under Slackware
-3.*, Red Hat 4.* and 5.*, and Debian 1.* and 2.0; the files include
-instructions and shell scripts to build and install Ghostscript, as well as
-all the source and font kits and patches needed:
-
-<blockquote>
-<a href="ftp://ykbsb2.yk.psu.edu/pub/ghost/GS-5.10/" 
-class="offsite">ftp://ykbsb2.yk.psu.edu/pub/ghost/GS-5.10/</a><br>
-<a href="ftp://ykbsb2.yk.psu.edu/pub/ghost/GS-5.10-Extra/" 
-class="offsite">ftp://ykbsb2.yk.psu.edu/pub/ghost/GS-5.10-Extra/</a>
-</blockquote>
 
 <h4><a name="NeXTSTEP"></a>NeXTSTEP / OpenSTEP</h4>
 
@@ -1832,8 +1802,8 @@ class="offsite">ftp://ykbsb2.yk.psu.edu/pub/ghost/GS-5.10-Extra/</a>
 <li>If you are using a NeXTSTEP version before 3.3, please get a no-cost
 upgrade (along with Y2K patches) from Apple.
 
-<li>For all NeXTSTEP systems, use <b><tt>unix-gcc.mak</tt></b>.  Make the
-following changes:
+<li>If '<tt>./configure && make</tt>' fails, then for all NeXTSTEP systems, use 
+<b><tt>unix-gcc.mak</tt></b> and make the following changes:
 
 <ul>
 <li>In <b><tt>unix-aux.mak</tt></b> (and <b><tt>ugcclib.mak</tt></b>, if you
@@ -1977,41 +1947,6 @@ compiler works.
 <li>The Alpha code generator in gcc 2.7.2.1 is broken.  gcc 2.5.8 and 2.6.3
 are probably usable.  Versions before 2.5.0 are believed not to work.  We
 suggest you use a recent version.
-
-<li>If you really want to use gcc 2.7.x, here is a patch for that version
-from gcc maintainer Jim Wilson
-&lt;<a href="mailto:wilson@cygnus.com">wilson@cygnus.com</a>&gt;.
-
-<pre>
-*** reload.c.orig       Sun Mar  9 14:05:23 1997
---- reload.c    Sun Mar  9 14:06:54 1997
-*************** push_secondary_reload (in_p, x, opnum, o
-*** 589,600 ****
-         set it up now.  */
-
-        if (in_p &amp;&amp; icode == CODE_FOR_nothing
-!         &amp;&amp; SECONDARY_MEMORY_NEEDED (class, reload_class, reload_mode))
-!       get_secondary_mem (x, reload_mode, opnum, type);
-
-        if (! in_p &amp;&amp; icode == CODE_FOR_nothing
-!         &amp;&amp; SECONDARY_MEMORY_NEEDED (reload_class, class, reload_mode))
-!       get_secondary_mem (x, reload_mode, opnum, type);
-  #endif
-      }
-
---- 589,600 ----
-         set it up now.  */
-
-        if (in_p &amp;&amp; icode == CODE_FOR_nothing
-!         &amp;&amp; SECONDARY_MEMORY_NEEDED (class, reload_class, mode))
-!       get_secondary_mem (x, mode, opnum, type);
-
-        if (! in_p &amp;&amp; icode == CODE_FOR_nothing
-!         &amp;&amp; SECONDARY_MEMORY_NEEDED (reload_class, class, mode))
-!       get_secondary_mem (x, mode, opnum, type);
-  #endif
-      }
-</pre>
 </ul>
 
 <h4><a name="Apollo"></a>H-P Apollo</h4>
@@ -2086,7 +2021,7 @@ standard distribution):
 
 <li>Ghostscript builds on H-P machines with either GNU gcc or H-P's
 ANSI-capable <b><tt>cc</tt></b>.  The minimal, non-ANSI-capable
-<b><tt>cc</tt></b> that ships with a basic HPUX system does <b><em>not</em></b>
+<b><tt>cc</tt></b> that shiped with some basic HPUX system does <em>not</em>
 work.  If <b><tt>cc</tt></b> on your system doesn't accept the
 <b><tt>-Aa</tt></b> switch, then you need to get the full
 <b><tt>cc</tt></b> or gcc.
@@ -2127,10 +2062,8 @@ compiler revision; some users have reported success with
 <b><tt>-D_POSIX_SOURCE</tt></b> in <b><tt>CFLAGS</tt></b>, but recent tests
 do not show these to be necessary.
 
-<li>If you use gcc, it's a good idea to have a recent release -- 2.7.2.1 or
-later -- but gcc 2.6.3 has been known to work with past releases of
-Ghostscript.  gcc versions earlier than 2.6.3, and 2.7.* earlier than
-2.7.2.1, are known <b><em>not</em></b> to work.  You may be able to get a working
+<li>If you use gcc, it's a good idea to have a recent release -- at the
+very least 2.7.2.1 or later.You may be able to get a working
 executable with an older gcc by removing <b><tt>-O</tt></b> from
 <b><tt>CFLAGS</tt></b>.
 </ul>
@@ -2563,7 +2496,7 @@ class="offsite">ftp://ftp.gnu.org/pub/gnu/</a>
 <p>
 As of Ghostscript version 5.68 you can use MMK or MMS to build Ghostscript on
 OpenVMS.  MMS is a utility available from Compaq (Digital);
-MMK is a freely-available program largely compatible with MMS.
+MMK is a free program largely compatible with MMS.
 
 <p>
 Building Ghostscript with MMK or MMS uses the file
@@ -2582,6 +2515,13 @@ Specify <b><tt>DECWINDOWS1_2=1</tt></b> for DECWINDOWS 1.2,
 and other parts of the world where ISO standard paper sizes are used, add
 <b><tt>,"A4_PAPER=1"</tt></b> just before the final closing parenthesis to
 make A4 the default paper size at run time.
+
+<p>
+To download MMK (source code, and VAX and Alpha executables), visit
+
+<blockquote>
+<a href="http://www.madgoat.com/mmk.html">http://www.madgoat.com/mmk.html</a>
+</blockquote>
 
 <hr>
 
@@ -2740,6 +2680,50 @@ to begin
 </pre></blockquote>
 </dl>
 
+
+<h2><a name="UFST_build"></a>How to build Ghostscript with UFST</h2>
+
+<p>
+<em>Note: This section is only for customers who have licensed Agfa's UFST.
+Other users please skip this section.
+</em>
+
+<p>
+Ghostscript sources do not include UFST sources. You need to obtain them from Agfa.
+Ghostscript includes only some source modules that provide a bridge to UFST.
+
+<p>
+Ghostscript makefiles do not include any script for building UFST libraries.
+Refer to Agfa's manual how to build them. UFST object libraries must be built
+before building Ghostscript with the UFST bridge.
+
+<p>
+To build Ghostscript with UFST, specify additional options for "make":
+
+<dl>
+<dt><b><tt>UFST_BRIDGE=1</tt></b>
+<dd>forces the UFST bridge to build.
+
+<dt><b><tt>UFST_ROOT=path</tt></b>
+<dd>specifies the path to UFST root directory or folder.
+
+<dt><b><tt>UFST_CFLAGS=options</tt></b>
+<dd>specifies C compiler options for UFST library. Refer to Agfa's manual for information about them.
+
+<dt><b><tt>UFST_LIB_EXT=extension</tt></b>
+<dd>sets the file name extension for object libraries. You must use the appropriate one for your platform and linker.
+</dl>
+
+<p>An example for Unix/GCC :
+<blockquote>
+<tt>UFST_BRIDGE=1 UFST_ROOT=../Agfa UFST_CFLAG=-DGCCx86 UFST_LIB_EXT=.a</tt>
+</blockquote>
+
+<p>For Windows/MSVC you need only specify UFST_ROOT.
+msvc32.mak sets the other options automatically.
+
+<p>
+
 <!-- [2.0 end contents] ==================================================== -->
 
 <!-- [3.0 begin visible trailer] =========================================== -->
@@ -2757,8 +2741,14 @@ This software is distributed under license and may not be copied,
 modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
+For more information about licensing, please refer to
+http://www.ghostscript.com/licensing/. For information on
+commercial licensing, go to http://www.artifex.com/licensing/ or
+contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
 <p>
-<small>Ghostscript version 7.07, 17 May 2003
+<small>Ghostscript version 8.01, 30 January 2004
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

@@ -1,22 +1,28 @@
-/* Copyright (C) 1998 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1998 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gsparams.h,v 1.1 2004/01/14 16:59:50 atai Exp $ */
+/* $Id: gsparams.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Serializer/expander for gs_parm_list's */
 
 #ifndef gsparams_INCLUDED
@@ -38,13 +44,13 @@
  * Serialize the contents of a gs_param_list, including sub-collections,
  * onto a stream.  The list must be in READ mode.
  */
-int gs_param_list_puts(P2(stream *dest, gs_param_list *list));
+int gs_param_list_puts(stream *dest, gs_param_list *list);
 
 /*
  * Unserialize a parameter list, including sub-collections, from a stream.
  * The list must be in WRITE mode.
  */
-int gs_param_list_gets(P3(stream *src, gs_param_list *list, gs_memory_t *mem));
+int gs_param_list_gets(stream *src, gs_param_list *list, gs_memory_t *mem);
 
 #else	/****************/
 
@@ -57,14 +63,14 @@ int gs_param_list_gets(P3(stream *src, gs_param_list *list, gs_memory_t *mem));
  * less than or equal to the buffer size.  Note that the buffer may be
  * NULL, in which case nothing is stored (but the size is still returned).
  */
-int gs_param_list_serialize(P3(gs_param_list *list, byte *buf, int buf_size));
+int gs_param_list_serialize(gs_param_list *list, byte *buf, int buf_size);
 
 /*
  * Unserialize a parameter list from a buffer.  Return the actual number
  * of bytes occupied by the list, or a negative error code.  The buffer
  * must be void * aligned.
  */
-int gs_param_list_unserialize(P2(gs_param_list *list, const byte *buf));
+int gs_param_list_unserialize(gs_param_list *list, const byte *buf);
 
 #endif	/****************/
 

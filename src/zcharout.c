@@ -1,22 +1,28 @@
-/* Copyright (C) 1996, 1997, 1999, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1996, 1997, 1999, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: zcharout.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zcharout.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* Common code for outline (Type 1 / 4 / 42) fonts */
 #include "memory_.h"
 #include "ghost.h"
@@ -278,10 +284,10 @@ zchar_set_cache(i_ctx_t *i_ctx_p, const gs_font_base * pbfont,
  * Get the CharString data corresponding to a glyph.  Return typecheck
  * if it isn't a string.
  */
-private bool charstring_is_notdef_proc(P1(const ref *));
-private int charstring_make_notdef(P2(gs_const_string *, const gs_font *));
+private bool charstring_is_notdef_proc(const ref *);
+private int charstring_make_notdef(gs_glyph_data_t *, gs_font *);
 int
-zchar_charstring_data(gs_font *font, const ref *pgref, gs_const_string *pstr)
+zchar_charstring_data(gs_font *font, const ref *pgref, gs_glyph_data_t *pgd)
 {
     ref *pcstr;
 
@@ -296,17 +302,16 @@ zchar_charstring_data(gs_font *font, const ref *pgref, gs_const_string *pstr)
 	 * (with our present font-writing code), we recognize this as a
 	 * special case and return a Type 1 CharString consisting of
 	 *	0 0 hsbw endchar
-	 * Note that we rely on garbage collection to free this string.
 	 */
 	if (font->FontType == ft_encrypted &&
 	    charstring_is_notdef_proc(pcstr)
 	    )
-	    return charstring_make_notdef(pstr, font);
+	    return charstring_make_notdef(pgd, font);
 	else
 	    return_error(e_typecheck);
     }
-    pstr->data = pcstr->value.const_bytes;
-    pstr->size = r_size(pcstr);
+    gs_glyph_data_from_string(pgd, pcstr->value.const_bytes, r_size(pcstr),
+			      NULL);
     return 0;
 }
 private bool
@@ -336,9 +341,9 @@ charstring_is_notdef_proc(const ref *pcstr)
     return false;
 }
 private int
-charstring_make_notdef(gs_const_string *pstr, const gs_font *font)
+charstring_make_notdef(gs_glyph_data_t *pgd, gs_font *font)
 {
-    const gs_font_type1 *const pfont = (const gs_font_type1 *)font;
+    gs_font_type1 *const pfont = (gs_font_type1 *)font;
     static const byte char_data[4] = {
 	139,			/* 0 */
 	139,			/* 0 */
@@ -350,8 +355,7 @@ charstring_make_notdef(gs_const_string *pstr, const gs_font *font)
 
     if (chars == 0)
 	return_error(e_VMerror);
-    pstr->data = chars;
-    pstr->size = len;
+    gs_glyph_data_from_string(pgd, chars, len, font);
     if (pfont->data.lenIV < 0)
 	memcpy(chars, char_data, sizeof(char_data));
     else {
@@ -367,6 +371,9 @@ charstring_make_notdef(gs_const_string *pstr, const gs_font *font)
  * Enumerate the next glyph from a directory.  This is essentially a
  * wrapper around dict_first/dict_next to implement the enumerate_glyph
  * font procedure.
+ *
+ * Note that *prdict will be null if the font is a subfont of a
+ * CIDFontType 0 CIDFont.
  */
 int
 zchar_enumerate_glyph(const ref *prdict, int *pindex, gs_glyph *pglyph)
@@ -374,6 +381,8 @@ zchar_enumerate_glyph(const ref *prdict, int *pindex, gs_glyph *pglyph)
     int index = *pindex - 1;
     ref elt[2];
 
+    if (!r_has_type(prdict, t_dictionary))
+	return 0;		/* *pindex was 0, is still 0 */
     if (index < 0)
 	index = dict_first(prdict);
 next:

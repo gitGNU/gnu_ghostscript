@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1995, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1995, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: zstring.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zstring.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* String operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -149,6 +155,28 @@ found:
     return 0;
 }
 
+/* <string> <charstring> .stringbreak <int|null> */
+private int
+zstringbreak(i_ctx_t *i_ctx_p)
+{
+    os_ptr op = osp;
+    uint i, j;
+
+    check_read_type(op[-1], t_string);
+    check_read_type(*op, t_string);
+    /* We can't use strpbrk here, because C doesn't allow nulls in strings. */
+    for (i = 0; i < r_size(op - 1); ++i)
+	for (j = 0; j < r_size(op); ++j)
+	    if (op[-1].value.const_bytes[i] == op->value.const_bytes[j]) {
+		make_int(op - 1, i);
+		goto done;
+	    }
+    make_null(op - 1);
+ done:
+    pop(1);
+    return 0;
+}
+
 /* <obj> <pattern> .stringmatch <bool> */
 private int
 zstringmatch(i_ctx_t *i_ctx_p)
@@ -186,6 +214,7 @@ const op_def zstring_op_defs[] =
     {"1.namestring", znamestring},
     {"2search", zsearch},
     {"1string", zstring},
+    {"2.stringbreak", zstringbreak},
     {"2.stringmatch", zstringmatch},
     op_def_end(0)
 };

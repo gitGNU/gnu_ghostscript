@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevx.h,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevx.h,v 1.2 2004/02/14 22:20:06 atai Exp $ */
 /* Definitions for X Windows drivers */
 /* Requires gxdevice.h and x_.h */
 
@@ -245,12 +251,12 @@ typedef struct gx_device_X_s {
     symbol_fonts, dingbat_fonts)
 
 /* Send an event to the Ghostview process */
-void gdev_x_send_event(P2(gx_device_X *xdev, Atom msg));
+void gdev_x_send_event(gx_device_X *xdev, Atom msg);
 
 /* function to keep track of screen updates */
-void x_update_add(P5(gx_device_X *, int, int, int, int));
-void gdev_x_clear_window(P1(gx_device_X *));
-int x_catch_free_colors(P2(Display *, XErrorEvent *));
+void x_update_add(gx_device_X *, int, int, int, int);
+void gdev_x_clear_window(gx_device_X *);
+int x_catch_free_colors(Display *, XErrorEvent *);
 
 /* Number used to distinguish when resolution was set from the command line */
 #define FAKE_RES (16*72)
@@ -258,13 +264,13 @@ int x_catch_free_colors(P2(Display *, XErrorEvent *));
 /* ------ Inter-module procedures ------ */
 
 /* Exported by gdevxcmp.c for gdevxini.c */
-int gdev_x_setup_colors(P1(gx_device_X *));
-void gdev_x_free_colors(P1(gx_device_X *));
-void gdev_x_free_dynamic_colors(P1(gx_device_X *));
+int gdev_x_setup_colors(gx_device_X *);
+void gdev_x_free_colors(gx_device_X *);
+void gdev_x_free_dynamic_colors(gx_device_X *);
 
 /* Exported by gdevxini.c for gdevx.c */
-int gdev_x_open(P1(gx_device_X *));
-int gdev_x_close(P1(gx_device_X *));
+int gdev_x_open(gx_device_X *);
+int gdev_x_close(gx_device_X *);
 
 /* Driver procedures exported for gdevx.c */
 dev_proc_map_rgb_color(gdev_x_map_rgb_color);  /* gdevxcmp.c */

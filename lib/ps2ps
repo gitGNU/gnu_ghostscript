@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: ps2ps,v 1.1 2004/01/14 16:59:47 atai Exp $
+# $Id: ps2ps,v 1.2 2004/02/14 22:20:04 atai Exp $
 # "Distill" PostScript.
 
 OPTIONS="-dSAFER"
@@ -13,7 +13,8 @@ do
 done
 
 if [ $# -ne 2 ]; then
-	echo "Usage: `basename $0` ...switches... input.ps output.ps" 1>&2
+	echo "Usage: `basename $0` [options] input.ps output.ps" 1>&2
+	echo "  e.g. `basename $0` -sPAPERSIZE=a4 input.ps output.ps" 1>&2
 	exit 1
 fi
 

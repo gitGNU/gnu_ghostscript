@@ -1,22 +1,28 @@
-/* Copyright (C) 1994, 1996, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1994, 1996, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevm16.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevm16.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* 16-bit-per-pixel "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"
@@ -43,12 +49,11 @@ const gx_device_memory mem_true16_device =
 
 /* Map a r-g-b color to a color index. */
 private gx_color_index
-mem_true16_map_rgb_color(gx_device * dev, gx_color_value r, gx_color_value g,
-			 gx_color_value b)
+mem_true16_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 {
-    return ((r >> (gx_color_value_bits - 5)) << 11) +
-	((g >> (gx_color_value_bits - 6)) << 5) +
-	(b >> (gx_color_value_bits - 5));
+    return ((cv[0] >> (gx_color_value_bits - 5)) << 11) +
+	((cv[1] >> (gx_color_value_bits - 6)) << 5) +
+	(cv[2] >> (gx_color_value_bits - 5));
 }
 
 /* Map a color index to a r-g-b color. */

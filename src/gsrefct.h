@@ -1,22 +1,28 @@
-/* Copyright (C) 1993, 1994, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1993, 1994, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gsrefct.h,v 1.1 2004/01/14 16:59:50 atai Exp $ */
+/* $Id: gsrefct.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Reference counting definitions */
 
 #ifndef gsrefct_INCLUDED
@@ -41,16 +47,16 @@ struct rc_header_s {
     long ref_count;
     gs_memory_t *memory;
 #define rc_free_proc(proc)\
-  void proc(P3(gs_memory_t *, void *, client_name_t))
+  void proc(gs_memory_t *, void *, client_name_t)
     rc_free_proc((*free));
 };
 
 #ifdef DEBUG
-void rc_trace_init_free(P2(const void *vp, const rc_header *prc));
-void rc_trace_free_struct(P3(const void *vp, const rc_header *prc,
-			     client_name_t cname));
-void rc_trace_increment(P2(const void *vp, const rc_header *prc));
-void rc_trace_adjust(P3(const void *vp, const rc_header *prc, int delta));
+void rc_trace_init_free(const void *vp, const rc_header *prc);
+void rc_trace_free_struct(const void *vp, const rc_header *prc,
+			  client_name_t cname);
+void rc_trace_increment(const void *vp, const rc_header *prc);
+void rc_trace_adjust(const void *vp, const rc_header *prc, int delta);
 #define IF_RC_DEBUG(call) if (gs_debug_c('^')) dlputs(""), call
 #else
 #define IF_RC_DEBUG(call) DO_NOTHING

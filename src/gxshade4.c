@@ -1,22 +1,28 @@
-/* Copyright (C) 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxshade4.c,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: gxshade4.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Rendering for Gouraud triangle shadings */
 #include "math_.h"
 #include "memory_.h"
@@ -74,10 +80,10 @@ mesh_subdivide_triangle(mesh_fill_state_t *pfs, mesh_frame_t *fp)
     float r2min, r2max;
     float tri_area_2;
 
-    dabx = fp->vb.p.x - fp->va.p.x;
-    daby = fp->vb.p.y - fp->va.p.y;
-    dbcx = fp->vc.p.x - fp->vb.p.x;
-    dbcy = fp->vc.p.y - fp->vb.p.y;
+    dabx = (float)(fp->vb.p.x - fp->va.p.x);
+    daby = (float)(fp->vb.p.y - fp->va.p.y);
+    dbcx = (float)(fp->vc.p.x - fp->vb.p.x);
+    dbcy = (float)(fp->vc.p.y - fp->vb.p.y);
     dacx = (dabx + dbcx);
     dacy = (daby + dbcy);
     r2ab = dabx * dabx + daby * daby;
@@ -85,9 +91,9 @@ mesh_subdivide_triangle(mesh_fill_state_t *pfs, mesh_frame_t *fp)
     r2ac = dacx * dacx + dacy * dacy;
 
     SET_MIN_MAX_3(r2min, r2max, r2ab, r2bc, r2ac);
-    tri_area_2 = fp->va.p.y * (fp->vc.p.x - fp->vb.p.x) +
+    tri_area_2 = (float)(fp->va.p.y * (fp->vc.p.x - fp->vb.p.x) +
 	fp->vb.p.y * (fp->va.p.x - fp->vc.p.x) +
-	fp->vc.p.y * (fp->vb.p.x - fp->va.p.x);
+	fp->vc.p.y * (fp->vb.p.x - fp->va.p.x));
 
     if (fabs(tri_area_2) < 0.5 * r2max) {
 	/* skinny triangle, subdivide longest edge */
@@ -178,7 +184,6 @@ mesh_subdivide_triangle(mesh_fill_state_t *pfs, mesh_frame_t *fp)
 int
 mesh_fill_triangle(mesh_fill_state_t *pfs)
 {
-    const gs_shading_mesh_t *psh = pfs->pshm;
     gs_imager_state *pis = pfs->pis;
     mesh_frame_t *fp = &pfs->frames[pfs->depth - 1];
     int ci;
@@ -226,7 +231,7 @@ mesh_fill_triangle(mesh_fill_state_t *pfs)
 	/* Fill the triangle with the color. */
 	{
 	    gx_device_color dev_color;
-	    const gs_color_space *pcs = psh->params.ColorSpace;
+	    const gs_color_space *pcs = pfs->direct_space;
 	    gs_client_color fcc;
 	    int code;
 

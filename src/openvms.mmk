@@ -1,21 +1,27 @@
-#    Copyright (C) 1997, 2000 artofcode LLC. All rights reserved.
+#    Copyright (C) 1997, 2000 Aladdin Enterprises. All rights reserved.
 # 
-# This program is free software; you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by the
-# Free Software Foundation; either version 2 of the License, or (at your
-# option) any later version.
+#  This program is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU General Public License version 2
+#  as published by the Free Software Foundation.
 #
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-# Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+#  This software is provided AS-IS with no warranty, either express or
+#  implied. That is, this program is distributed in the hope that it will 
+#  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#  General Public License for more details
+#
+#  You should have received a copy of the GNU General Public License along
+#  with this program; if not, write to the Free Software Foundation, Inc.,
+#  59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+# 
+# For more information about licensing, please refer to
+# http://www.ghostscript.com/licensing/. For information on
+# commercial licensing, go to http://www.artifex.com/licensing/ or
+# contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+# San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-
-# $Id: openvms.mmk,v 1.1 2004/01/14 16:59:52 atai Exp $
+# $Id: openvms.mmk,v 1.2 2004/02/14 22:20:19 atai Exp $
 # makefile for OpenVMS VAX and Alpha using MMK
 #
 # Please contact Jim Dunham (dunham@omtool.com) if you have questions.
@@ -140,9 +146,9 @@ JVERSION=6
 .ifdef SYSLIB
 PSRCDIR=sys$library:
 .else
-PSRCDIR=[--.libpng-1_2_2]
+PSRCDIR=[--.libpng-1_0_10]
 .endif
-PVERSION=10202
+PVERSION=10010
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.
@@ -176,7 +182,12 @@ X_INCLUDE=DECW$INCLUDE
 .ifdef DEBUG
 SW_DEBUG=/DEBUG/NOOPTIMIZE
 .else
-SW_DEBUG=/NODEBUG/OPTIMIZE
+# This should include /OPTIMIZE, but some OpenVMS compilers have an
+# optimizer bug that causes them to generate incorrect code for gdevpsfx.c,
+# so we must disable optimization.  (Eventually we will check for the bug
+# in genarch and enable optimization if it is safe.)
+#SW_DEBUG=/NODEBUG/OPTIMIZE
+SW_DEBUG=/NODEBUG/NOOPTIMIZE
 .endif
 
 SW_PLATFORM=/DECC/PREFIX=ALL/NESTED_INCLUDE=PRIMARY/name=(as_is,short)
@@ -190,7 +201,13 @@ SW_PAPER=/DEFINE=("A4","HAVE_MKSTEMP")
 SW_PAPER=/DEFINE=("HAVE_MKSTEMP")
 .endif
 
-COMP=CC$(SW_DEBUG)$(SW_PLATFORM)$(SW_PAPER)
+.ifdef IEEE
+SW_IEEE=/float=ieee
+.else
+SW_IEEE=
+.endif
+
+COMP=CC$(SW_DEBUG)$(SW_PLATFORM)$(SW_PAPER)$(SW_IEEE)
 
 # LINK is the full linker path name
 
@@ -242,7 +259,7 @@ DEVICE_DEVS20=
 
 # Choose the language feature(s) to include.  See gs.mak for details.
 
-FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev
+FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)fapi.dev
 
 # Choose whether to compile the .ps initialization files into the executable.
 # See gs.mak for details.
@@ -357,7 +374,7 @@ CC=$(COMP)
 
 LINK=$(LINKER)/EXE=$@ $+,$(GLSRCDIR)OPENVMS.OPT/OPTION
 
-# Define the auxiliary program dependency. We don't use this.
+# Define the auxiliary program dependency. We don't need this.
 
 AK=
 
@@ -435,6 +452,11 @@ macro :
 .else
 	@ a4p = 0
 .endif
+.ifdef IEEE
+	@ i3e = 1
+.else
+	@ i3e = 0
+.endif
 .ifdef SYSLIB
 	@ dsl = 1
 .else
@@ -447,6 +469,7 @@ macro :
 	@ if decw12 then macro = macro + "DECWINDOWS1_2=1,"
 	@ if a4p then macro = macro + "A4_PAPER=1,"
 	@ if dsl then macro = macro + "SYSLIB=1,"
+	@ if i3e then macro = macro + "IEEE=1,"
 	@ if macro.nes."" then macro = f$extract(0,f$length(macro)-1,macro)+ ")"
 	$(MMS)$(MMSQUALIFIERS)'macro' $(GS_XE)
 

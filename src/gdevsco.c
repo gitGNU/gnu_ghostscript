@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1992, 1993 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1992, 1993 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevsco.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevsco.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
 /* 17Jul91 - wb - based on gdevpcfb.c */
 /* 31Jul91 - Rick Calder rick@rick.att.com - ifdefs for AT&T UNIX 4.0 2.1 */
 /* 13Sep91 - wb - modify for gs24b2 */
@@ -41,15 +47,15 @@
 #if defined(__STDC__)
 #include <stdlib.h>
 #else
-extern char *getenv(P1(const char *));
+extern char *getenv(const char *);
 #endif
 
 #if defined(M_XENIX)
 #include <prototypes.h>
 #include <fcntl.h>
 #else
-extern int ioctl(P3(int, int,...));
-extern int open(P3(const char *, int,...));
+extern int ioctl(int, int,...);
+extern int open(const char *, int,...);
 #endif
 
 private int console_fd = -1;	/* file descriptor of console */
@@ -63,7 +69,7 @@ private int cur_mode = -1;	/* current video mode */
  * /dev/tty = current terminal
  */
 
-private void open_console(P1(void));
+private void open_console(void);
 
 private void
 open_console()

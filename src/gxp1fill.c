@@ -1,22 +1,28 @@
-/* Copyright (C) 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxp1fill.c,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxp1fill.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* PatternType 1 filling algorithms */
 #include "math_.h"
 #include "gx.h"
@@ -104,8 +110,8 @@ private int
 tile_by_steps(tile_fill_state_t * ptfs, int x0, int y0, int w0, int h0,
 	      const gx_color_tile * ptile,
 	      const gx_strip_bitmap * tbits_or_tmask,
-	      int (*fill_proc) (P5(const tile_fill_state_t * ptfs,
-				   int x, int y, int w, int h)))
+	      int (*fill_proc) (const tile_fill_state_t * ptfs,
+				int x, int y, int w, int h))
 {
     int x1 = x0 + w0, y1 = y0 + h0;
     int i0, i1, j0, j1, i, j;

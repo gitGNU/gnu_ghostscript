@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: ps2ascii,v 1.1 2004/01/14 16:59:47 atai Exp $
+# $Id: ps2ascii,v 1.2 2004/02/14 22:20:04 atai Exp $
 # Extract ASCII text from a PostScript file.  Usage:
 #	ps2ascii [infile.ps [outfile.txt]]
 # If outfile is omitted, output goes to stdout.
@@ -8,7 +8,7 @@
 
 trap "rm -f _temp_.err _temp_.out" 0 1 2 15
 
-OPTIONS="-q -dNODISPLAY -dSAFER -dNOBIND -dWRITESYSTEMDICT -dSIMPLE"
+OPTIONS="-q -dNODISPLAY -dSAFER -dDELAYBIND -dWRITESYSTEMDICT -dSIMPLE"
 if ( test $# -eq 0 ) then
 	gs $OPTIONS -c save -f ps2ascii.ps - -c quit
 elif ( test $# -eq 1 ) then

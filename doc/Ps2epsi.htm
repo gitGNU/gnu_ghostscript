@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>Convert PostScript to Encapsulated PostScript Interchange format</title>
-<!-- $Id: Ps2epsi.htm,v 1.1 2004/01/14 16:59:44 atai Exp $ -->
+<!-- $Id: Ps2epsi.htm,v 1.2 2004/02/14 22:20:03 atai Exp $ -->
 <!-- Originally: ps2epsi.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -23,8 +23,10 @@ format</h1>
 
 <blockquote><ul>
 <li><a href="#Overview">Overview</a>
+<li><a href="#Framemaker">Framemaker can use EPSI</a>
 <li><a href="#Usage">Usage</a>
 <ul>
+<li><a href="#MSDOS_usage">MS-DOS</a>
 <li><a href="#Unix_usage">Unix</a>
 </ul>
 <li><a href="#Limitations">Limitations</a>
@@ -70,9 +72,33 @@ of the full PostScript page. The displayed quality is often not very good,
 but the final printed version uses the "real" PostScript, and thus has the
 normal full PostScript quality.
 
+<h2><a name="Framemaker"></a>Framemaker can use EPSI</h2>
+
+<p>
+The <a href="http://www.adobe.com/products/framemaker/main.html"
+class="offsite">Adobe Framemaker</a> DTP system is one application which 
+understands EPSI files, and <b><tt>ps2epsi</tt></b> has been tested using 
+Framemaker 3.0 on a Sun workstation with a number of PostScript diagrams 
+from a variety of sources. Framemaker on other platforms may also be able 
+to use files made with <b><tt>ps2epsi</tt></b>, although this has not been 
+tested.
+
 <hr>
 
 <h2><a name="Usage"></a>Usage</h2>
+
+<h3><a name="MSDOS_usage"></a>MS-DOS</h3>
+
+<p>
+Using the supplied batch file <b><tt>ps2epsi.bat</tt></b>, the command is
+
+<blockquote>
+<b><tt>ps2epsi</tt></b> <b><em>infile.ps</em></b> <b><em>outfile.epi</em></b>
+</blockquote>
+
+<p>
+where <b><em>infile.ps</em></b> is the original PostScript file, and
+<b><em>outfile.epi</em></b> is the output EPSI file to be created.
 
 <h3><a name="Unix_usage"></a>Unix</h3>
 
@@ -116,9 +142,12 @@ encapsulation fails because of the nature of the original PostScript file.
 	<td>&nbsp;&nbsp;&nbsp;
 	<th align=left>Contents
 <tr>	<td colspan=3><hr>
-<tr valign=top>	<td><b><tt>Ps2epsi.htm</tt></b>
+<tr valign=top>	<td><b><tt>ps2epsi.htm</tt></b>
 	<td>&nbsp;
 	<td>This document
+<tr valign=top>	<td><b><tt>ps2epsi.bat</tt></b>
+	<td>&nbsp;
+	<td>MS-DOS batch file
 <tr valign=top>	<td><b><tt>ps2epsi</tt></b>
 	<td>&nbsp;
 	<td>Unix shell script
@@ -145,8 +174,14 @@ This software is distributed under license and may not be copied,
 modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
+For more information about licensing, please refer to
+http://www.ghostscript.com/licensing/. For information on
+commercial licensing, go to http://www.artifex.com/licensing/ or
+contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
 <p>
-<small>Ghostscript version 7.07, 17 May 2003
+<small>Ghostscript version 8.01, 30 January 2004
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

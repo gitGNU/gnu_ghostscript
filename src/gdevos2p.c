@@ -1,22 +1,28 @@
-/* Copyright (C) 1995, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1995, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevos2p.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevos2p.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /*
  * OS/2 printer device
  *
@@ -254,10 +260,12 @@ os2prn_open(gx_device * dev)
     if (depth == 0) {
 	/* Set parameters that were unknown before opening device */
 	/* Find out if the device supports color */
-	/* We recognize 1, 3, 8 and 24 bit color devices */
+	/* We recognize 1 bit monochrome and 24 bit color devices */
 	DevQueryCaps(opdev->hdc, CAPS_COLOR_PLANES, 2, caps);
 	/* caps[0] is #color planes, caps[1] is #bits per plane */
 	depth = caps[0] * caps[1];
+	if (depth > 1)
+	    depth = 24;
     }
     os2prn_set_bpp(dev, depth);
 
@@ -561,81 +569,57 @@ os2prn_print_page(gx_device_printer * pdev, FILE * file)
 /* 24-bit color mappers (taken from gdevmem2.c). */
 /* Note that OS/2 expects RGB values in the order B,G,R. */
 
-/* Map a r-g-b color to a color index. */
+/* Encode a r-g-b color to a color index. */
 private gx_color_index
-os2prn_map_rgb_color(gx_device * dev, gx_color_value r, gx_color_value g,
-		     gx_color_value b)
+os2prn_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 {
-    switch (dev->color_info.depth) {
-	case 1:
-	    return gdev_prn_map_rgb_color(dev, r, g, b);
-	case 4:
-	    /* use only 8 colors */
-	    return (r > (gx_max_color_value / 2 + 1) ? 4 : 0) +
-		(g > (gx_max_color_value / 2 + 1) ? 2 : 0) +
-		(b > (gx_max_color_value / 2 + 1) ? 1 : 0);
-	case 8:
-	    return pc_8bit_map_rgb_color(dev, r, g, b);
-	case 24:
-	    return gx_color_value_to_byte(r) +
+    gx_color_value r = cv[0];
+    gx_color_value g = cv[1];
+    gx_color_value b = cv[2];
+    return gx_color_value_to_byte(r) +
 		((uint) gx_color_value_to_byte(g) << 8) +
 		((ulong) gx_color_value_to_byte(b) << 16);
-    }
-    return 0;			/* error */
 }
 
-/* Map a color index to a r-g-b color. */
+/* Decode a color index to a r-g-b color. */
 private int
 os2prn_map_color_rgb(gx_device * dev, gx_color_index color,
 		     gx_color_value prgb[3])
 {
-    switch (dev->color_info.depth) {
-	case 1:
-	    gdev_prn_map_color_rgb(dev, color, prgb);
-	    break;
-	case 4:
-	    /* use only 8 colors */
-	    prgb[0] = (color & 4) ? gx_max_color_value : 0;
-	    prgb[1] = (color & 2) ? gx_max_color_value : 0;
-	    prgb[2] = (color & 1) ? gx_max_color_value : 0;
-	    break;
-	case 8:
-	    pc_8bit_map_color_rgb(dev, color, prgb);
-	    break;
-	case 24:
-	    prgb[2] = gx_color_value_from_byte(color >> 16);
-	    prgb[1] = gx_color_value_from_byte((color >> 8) & 0xff);
-	    prgb[0] = gx_color_value_from_byte(color & 0xff);
-	    break;
-    }
+    prgb[2] = gx_color_value_from_byte(color >> 16);
+    prgb[1] = gx_color_value_from_byte((color >> 8) & 0xff);
+    prgb[0] = gx_color_value_from_byte(color & 0xff);
     return 0;
 }
 
 void
 os2prn_set_bpp(gx_device * dev, int depth)
 {
-    if (depth > 8) {
-	static const gx_device_color_info os2prn_24color = dci_std_color(24);
-
-	dev->color_info = os2prn_24color;
-    } else if (depth >= 8) {
-	/* 8-bit (SuperVGA-style) color. */
-	/* (Uses a fixed palette of 3,3,2 bits.) */
-	static const gx_device_color_info os2prn_8color = dci_pc_8bit;
-
-	dev->color_info = os2prn_8color;
-    } else if (depth >= 3) {
-	/* 3 plane printer */
-	/* suitable for impact dot matrix CMYK printers */
-	/* create 4-bit bitmap, but only use 8 colors */
-	static const gx_device_color_info os2prn_4color = dci_values(3, 4, 1, 1, 2, 2);
-
-	dev->color_info = os2prn_4color;
-    } else {			/* default is black_and_white */
-	static const gx_device_color_info os2prn_1color = dci_std_color(1);
-
-	dev->color_info = os2prn_1color;
+    gx_device_color_info dci = dev->color_info;
+    static const gx_device_color_info os2prn_dci_rgb = dci_std_color(24);
+    static const gx_device_color_info os2prn_dci_mono = dci_black_and_white;
+    if (depth == 24) {
+	dci = os2prn_dci_rgb;
+	dev->procs.get_color_mapping_procs = gx_default_DevRGB_get_color_mapping_procs;
+	dev->procs.get_color_comp_index = gx_default_DevRGB_get_color_comp_index;
+	dev->procs.map_rgb_color = dev->procs.encode_color = 
+		os2prn_map_rgb_color;
+	dev->procs.map_color_rgb = dev->procs.decode_color = 
+		os2prn_map_color_rgb;
+    } else {	/* default is black and white */
+	dci = os2prn_dci_mono;
+	dev->procs.get_color_mapping_procs = gx_default_DevGray_get_color_mapping_procs;
+	dev->procs.get_color_comp_index = gx_default_DevGray_get_color_comp_index;
+	dev->procs.map_rgb_color = dev->procs.encode_color = 
+		gx_default_b_w_map_rgb_color;
+	dev->procs.map_color_rgb = dev->procs.decode_color = 
+		gx_default_b_w_map_color_rgb;
     }
+    /* restore old anti_alias info */
+    dci.anti_alias = dev->color_info.anti_alias;
+    dev->color_info = dci;
+    /* Set the mask bits, etc. even though we are setting linear: unknown */
+    set_linear_color_bits_mask_shift(dev);
 }
 
 /* Get list of queues from SplEnumQueue */

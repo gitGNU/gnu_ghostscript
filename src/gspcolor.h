@@ -1,22 +1,28 @@
-/* Copyright (C) 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gspcolor.h,v 1.1 2004/01/14 16:59:50 atai Exp $ */
+/* $Id: gspcolor.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Client interface to Pattern color */
 
 #ifndef gspcolor_INCLUDED
@@ -98,8 +104,8 @@ extern_st(st_pattern_instance);
 /* ---------------- Procedures ---------------- */
 
 /* Set a Pattern color or a Pattern color space. */
-int gs_setpattern(P2(gs_state *, const gs_client_color *));
-int gs_setpatternspace(P1(gs_state *));
+int gs_setpattern(gs_state *, const gs_client_color *);
+int gs_setpatternspace(gs_state *);
 
 /*
  * Construct a Pattern color of any PatternType.
@@ -107,9 +113,9 @@ int gs_setpatternspace(P1(gs_state *));
  * same allocator as for the gs_state argument.  Note that gs_make_pattern
  * uses rc_alloc_struct_1 to allocate pattern instances.
  */
-int gs_make_pattern(P5(gs_client_color *, const gs_pattern_template_t *,
-		       const gs_matrix *, gs_state *, gs_memory_t *));
-const gs_pattern_template_t *gs_get_pattern(P1(const gs_client_color *));
+int gs_make_pattern(gs_client_color *, const gs_pattern_template_t *,
+		    const gs_matrix *, gs_state *, gs_memory_t *);
+const gs_pattern_template_t *gs_get_pattern(const gs_client_color *);
 
 /*
  * Adjust the reference count of a pattern. This is intended to support
@@ -118,6 +124,6 @@ const gs_pattern_template_t *gs_get_pattern(P1(const gs_client_color *));
  * applications, they need some way to release or retain the instances as
  * needed.
  */
-void gs_pattern_reference(P2(gs_client_color * pcc, int delta));
+void gs_pattern_reference(gs_client_color * pcc, int delta);
 
 #endif /* gspcolor_INCLUDED */

@@ -1,22 +1,28 @@
-/* Copyright (C) 1994, 1995, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1994, 1995, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: iscannum.c,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: iscannum.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Number scanner for Ghostscript interpreter */
 #include "math_.h"
 #include "ghost.h"
@@ -38,7 +44,7 @@
  */
 int
 scan_number(const byte * str, const byte * end, int sign,
-	    ref * pref, const byte ** psp)
+	    ref * pref, const byte ** psp, const bool PDFScanRules)
 {
     const byte *sp = str;
 #define GET_NEXT(cvar, sp, end_action)\
@@ -272,7 +278,22 @@ l2d:
     /* We saw a '.' while accumulating an integer in ival. */
 i2r:
     exp10 = 0;
-    while (IS_DIGIT(d, c)) {
+    while (IS_DIGIT(d, c) || c == '-') {
+	/*
+	 * PostScript gives an error on numbers with a '-' following a '.'
+	 * Adobe Acrobat Reader (PDF) apparently doesn't treat this as an
+	 * error. Experiments show that the numbers following the '-' are
+	 * ignored, so we swallow the fractional part. PDFScanRules enables
+	 * this compatibility kloodge.
+	 */
+	if (c == '-') {
+	    if (!PDFScanRules)
+		break;
+	    do {
+		GET_NEXT(c, sp, c = EOFC);
+	    } while (IS_DIGIT(d, c));
+	    break;
+	}
 	if (WOULD_OVERFLOW(ival, d, max_int)) {
 	    lval = ival;
 	    goto l2r;
@@ -295,7 +316,16 @@ i2r:
 
     /* We saw a '.' while accumulating a long in lval. */
 l2r:
-    while (IS_DIGIT(d, c)) {
+    while (IS_DIGIT(d, c) || c == '-') {
+	/* Handle bogus '-' following '.' as in i2r above.	*/
+	if (c == '-') {
+	    if (!PDFScanRules)
+		break;
+	    do {
+		GET_NEXT(c, sp, c = EOFC);
+	    } while (IS_DIGIT(d, c));
+	    break;
+	}
 	if (WOULD_OVERFLOW(lval, d, max_long)) {
 	    dval = lval;
 	    goto fd;

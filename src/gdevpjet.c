@@ -1,22 +1,28 @@
-/* Copyright (C) 1991, 1992 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1991, 1992 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevpjet.c,v 1.1 2004/01/14 16:59:48 atai Exp $*/
+/* $Id: gdevpjet.c,v 1.2 2004/02/14 22:20:05 atai Exp $*/
 /* H-P PaintJet, PaintJet XL, and DEC LJ250 drivers. */
 /* Thanks to Rob Reiss (rob@moray.berkeley.edu) for the PaintJet XL */
 /* modifications. */
@@ -35,7 +41,7 @@
 private dev_proc_print_page(lj250_print_page);
 private dev_proc_print_page(paintjet_print_page);
 private dev_proc_print_page(pjetxl_print_page);
-private int pj_common_print_page(P4(gx_device_printer *, FILE *, int, const char *));
+private int pj_common_print_page(gx_device_printer *, FILE *, int, const char *);
 private gx_device_procs paintjet_procs =
   prn_color_procs(gdev_prn_open, gdev_prn_output_page, gdev_prn_close,
     gdev_pcl_3bit_map_rgb_color, gdev_pcl_3bit_map_color_rgb);
@@ -65,7 +71,7 @@ const gx_device_printer far_data gs_pjetxl_device =
 	3, pjetxl_print_page);
 
 /* Forward references */
-private int compress1_row(P3(const byte *, const byte *, byte *));
+private int compress1_row(const byte *, const byte *, byte *);
 
 /* ------ Internal routines ------ */
 

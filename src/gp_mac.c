@@ -1,24 +1,29 @@
-/* Copyright (C) 1989 - 1995, 1997 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989 - 1995, 2001 artofcode LLC.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gp_mac.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gp_mac.c,v 1.2 2004/02/14 22:20:16 atai Exp $ */
 
-#ifndef __CARBON__
 #include <Palettes.h>
 #include <Aliases.h>
 #include <Quickdraw.h>
@@ -28,7 +33,6 @@
 #include <Controls.h>
 #include <Script.h>
 #include <Timer.h>
-#include <Time.h>
 #include <Folders.h>
 #include <Resources.h>
 #include <Sound.h>
@@ -41,34 +45,44 @@
 #include <Fonts.h>
 #include <FixMath.h>
 #include <Resources.h>
-#else
-#include <Carbon.h>
-#endif
-
-#include <stdlib.h>
 #include "math_.h"
+#include <string.h>
+#include <stdlib.h>
+
+
+#include <Time.h>
+#include <sys/types.h>
 #include "time_.h"
 #include "memory_.h"
 #include "string_.h"
-
 #include "gx.h"
 #include "gp.h"
 #include "gsdll.h"
 #include "gpcheck.h"
 #include "gp_mac.h"
 #include "gdebug.h"
-
+#include "sys/stat.h"
+#include <stdarg.h>
 /*#include "gpgetenv.h"*/
 #include "gsexit.h"
 
 HWND hwndtext;	/* used as identifier for the dll instance */
 
 
+void
+noMemoryExit(void)
+{
+	Alert(307, NULL);
+	ExitToShell();
+}
+
 char *
 mygetenv(const char * env)
 {
-	return (NULL);
+	return (NULL);	
 }
+
+
 
 void
 gp_init (void)
@@ -76,7 +90,6 @@ gp_init (void)
 	extern char    *gs_lib_default_path;
 	extern char    *gs_init_file;
 	
-
 #if 0
 	/*...Initialize Ghostscript's default library paths and initialization file...*/
 
@@ -107,7 +120,7 @@ gp_exit(int exit_status, int code)
 void
 gp_do_exit(int exit_status)
 {
-/*    exit(exit_status);*/
+    exit(exit_status);
 }
 
 /* gettimeofday */
@@ -118,14 +131,14 @@ int
 gettimeofday(struct timeval *tvp)
 {
     struct tm tms;
-    static unsigned long offset = 0;
+    static long offset = 0;
     long ticks;
 
     if (!offset) {
 	time(&offset);
-	offset -= (time((unsigned long *)&tms) / HZ);
+	offset -= (time((long *)&tms) / HZ);
     }
-    ticks = time((unsigned long *)&tms);
+    ticks = time((long *)&tms);
     tvp->tv_sec = ticks / HZ + offset;
     tvp->tv_usec = (ticks % HZ) * (1000 * 1000 / HZ);
     return 0;
@@ -144,7 +157,7 @@ gp_get_realtime(long *pdt)
 
 	if (gettimeofday(&tp) == -1) {
 	    lprintf("Ghostscript: gettimeofday failed!\n");
-	    gs_exit(1);
+	    gs_abort();
 	}
 
     /* tp.tv_sec is #secs since Jan 1, 1970 */
@@ -175,7 +188,7 @@ gp_get_usertime(long *pdt)
  * If no string is available, return NULL.  The caller may assume
  * the string is allocated statically and permanently.
  */
-const char *	gp_strerror(P1(int))
+const char *	gp_strerror(int)
 {
 	return NULL;
 }
@@ -187,13 +200,15 @@ const char *	gp_strerror(P1(int))
 /* and time (in milliseconds since midnight). */
 
 void
-gp_get_clock (long *pdt)
-{
+gp_get_clock (long *pdt) {
+
    gp_get_realtime(pdt);	/* Use an approximation on other hosts.  */
+  
 }
 
 void
 gpp_get_clock (long *pdt)
+
 {
 	long				secs;
 	DateTimeRec			dateRec;
@@ -222,6 +237,7 @@ UnsignedWide beginMicroTickCount={0,0};
 
 /* Read the current date (in days since Jan. 1, 1980) */
 /* and time (in nanoseconds since midnight). */
+
 void
 gpp_get_realtime (long *pdt)
 {
@@ -249,7 +265,7 @@ gpp_get_realtime (long *pdt)
     nMicroTickCount.hi = microTickCount.hi - beginMicroTickCount.hi;
     
 	GetDateTime ((unsigned long *) &secs);
-	//SecondsToDate (secs, &dateRec);
+	SecondsToDate (secs, &dateRec);
 
 
 	/* If the date is reasonable, subtract the days since Jan. 1, 1980 */
@@ -277,6 +293,7 @@ gpp_get_realtime (long *pdt)
 
 static void
 do_get_clock (DateTimeRec *dateRec, long *pdt)
+
 {
 long idate;
 static const int mstart[12] =
@@ -309,7 +326,7 @@ gpp_get_usertime(long *pdt)
 /* Initialize the console. */
 /* do nothing, we did it in gp_init()! */
 void
-gp_init_console(P0())
+gp_init_console(void)
 {
 }
 
@@ -323,14 +340,31 @@ gp_console_puts (const char *str, uint size)
 	return;
 }
 
+/* Make the console current on the screen. */
+/*
+int
+gp_make_console_current (gx_device *dev)
+{
+	return 0;
+}
+*/
+
+/* Make the graphics current on the screen. */
+/*
+int
+gp_make_graphics_current (gx_device *dev)
+{
+	return 0;
+}
+*/
+
 const char *
-gp_getenv_display(P0())
+gp_getenv_display(void)
 {
 	return NULL;
 }
 
 
-#ifdef CHECK_INTERRUPTS
 int
 gp_check_interrupts(void)
 {
@@ -340,11 +374,10 @@ gp_check_interrupts(void)
 		lastYieldTicks = TickCount();
 		/* the hwnd parameter which is submitted in gsdll_init to the DLL */
 		/* is returned in every gsdll_poll message in the count parameter */
-		if (pgsdll_callback)
-			return (*pgsdll_callback) (GSDLL_POLL, 0, (long) hwndtext);
+		return (*pgsdll_callback) (GSDLL_POLL, 0, (long) hwndtext);
 		return 0;
 	} else {
 		return 0;
 	}
 }
-#endif
+

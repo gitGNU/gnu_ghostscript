@@ -1,22 +1,28 @@
-/* Copyright (C) 1993, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1993, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxfarith.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxfarith.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Floating point arithmetic macros for Ghostscript library */
 
 #ifndef gxfarith_INCLUDED
@@ -127,19 +133,19 @@ typedef ulong _f_uint_t;
  * radians, hit exact values at multiples of 90 degrees, and are implemented
  * efficiently on machines with slow (or no) floating point.
  */
-double gs_sin_degrees(P1(double angle));
-double gs_cos_degrees(P1(double angle));
+double gs_sin_degrees(double angle);
+double gs_cos_degrees(double angle);
 typedef struct gs_sincos_s {
     double sin, cos;
     bool orthogonal;		/* angle is multiple of 90 degrees */
 } gs_sincos_t;
-void gs_sincos_degrees(P2(double angle, gs_sincos_t * psincos));
+void gs_sincos_degrees(double angle, gs_sincos_t * psincos);
 
 /*
  * Define an atan2 function that returns an angle in degrees and uses
  * the PostScript quadrant rules.  Note that it may return
  * gs_error_undefinedresult.
  */
-int gs_atan2_degrees(P3(double y, double x, double *pangle));
+int gs_atan2_degrees(double y, double x, double *pangle);
 
 #endif /* gxfarith_INCLUDED */

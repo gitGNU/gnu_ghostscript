@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1992, 1993, 1994, 1995, 1996, 1997, 1998 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1992, 1993, 1994, 1995, 1996, 1997, 1998 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdebug.h,v 1.1 2004/01/14 16:59:47 atai Exp $ */
+/* $Id: gdebug.h,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* Debugging machinery definitions */
 
 #ifndef gdebug_INCLUDED
@@ -54,7 +60,7 @@
 
 /* Define the array of debugging flags, indexed by character code. */
 extern char gs_debug[128];
-bool gs_debug_c(P1(int /*char */ ));
+bool gs_debug_c(int /*char */ );
 
 /*
  * Define an alias for a specialized debugging flag
@@ -117,11 +123,11 @@ extern FILE *gs_debug_out;
 #endif
 
 /* Debugging support procedures in gsmisc.c */
-void debug_dump_bytes(P3(const byte * from, const byte * to,
-			 const char *msg));
-void debug_dump_bitmap(P4(const byte * from, uint raster, uint height,
-			  const char *msg));
-void debug_print_string(P2(const byte * str, uint len));
-void debug_print_string_hex(P2(const byte * str, uint len));
+void debug_dump_bytes(const byte * from, const byte * to,
+		      const char *msg);
+void debug_dump_bitmap(const byte * from, uint raster, uint height,
+		       const char *msg);
+void debug_print_string(const byte * str, uint len);
+void debug_print_string_hex(const byte * str, uint len);
 
 #endif /* gdebug_INCLUDED */

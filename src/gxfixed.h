@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxfixed.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxfixed.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Fixed-point arithmetic for Ghostscript */
 
 #ifndef gxfixed_INCLUDED
@@ -135,6 +141,21 @@ typedef ulong ufixed;		/* only used in a very few places */
 #endif
 
 /*
+ * Define a macro for checking for overflow of the sum of two fixed values
+ * and and setting the result to the sum if no overflow.
+ * This is a pseudo-function that returns a "limitcheck" if the result
+ * will overflow. Set the result to the max/min _fixed value (depending
+ * on the sign of the operands (note: overflow can only occur with like
+ * signed input values). While the result is only set once, the operand
+ * values are used multiply, so pointer modification operand use will
+ * result in MANY more increments/decrements of the pointer than desired.
+ */
+/* usage: (int)code = CHECK_SET_FIXED_SUM(fixed_result, fixed_op1, fixed_op2); */
+#define CHECK_SET_FIXED_SUM(r, a, b) \
+     ((((a) ^ (b)) >= 0) && ((((a)+(b)) ^ (a)) < 0) ? \
+       (((r)=(((a)<0) ? min_fixed : max_fixed)), gs_error_limitcheck) : \
+       (((r) = ((a)+(b))), 0))		/* no overflow */
+/*
  * Define a procedure for computing a * b / c when b and c are non-negative,
  * b < c, and a * b exceeds (or might exceed) the capacity of a long.
  * Note that this procedure takes the floor, rather than truncating
@@ -144,7 +165,7 @@ typedef ulong ufixed;		/* only used in a very few places */
  * the double-length multiply/divide instructions that almost all hardware
  * provides....
  */
-fixed fixed_mult_quo(P3(fixed A, fixed B, fixed C));
+fixed fixed_mult_quo(fixed A, fixed B, fixed C);
 
 /*
  * Transforming coordinates involves multiplying two floats, or a float
@@ -173,12 +194,12 @@ fixed fixed_mult_quo(P3(fixed A, fixed B, fixed C));
  */
 #if USE_FPU_FIXED && arch_sizeof_short == 2
 #define NEED_SET_FMUL2FIXED
-int set_fmul2fixed_(P3(fixed *, long, long));
+int set_fmul2fixed_(fixed *, long, long);
 #define CHECK_FMUL2FIXED_VARS(vr, vfa, vfb, dtemp)\
   set_fmul2fixed_(&vr, *(const long *)&vfa, *(const long *)&vfb)
 #define FINISH_FMUL2FIXED_VARS(vr, dtemp)\
   DO_NOTHING
-int set_dfmul2fixed_(P4(fixed *, ulong, long, long));
+int set_dfmul2fixed_(fixed *, ulong, long, long);
 #  if arch_is_big_endian
 #  define CHECK_DFMUL2FIXED_VARS(vr, vda, vfb, dtemp)\
      set_dfmul2fixed_(&vr, ((const ulong *)&vda)[1], *(const long *)&vfb, *(const long *)&vda)
@@ -215,8 +236,8 @@ int set_dfmul2fixed_(P4(fixed *, ulong, long, long));
  * R and F must be variables, not expressions; V and E may be expressions.
  */
 #if USE_FPU_FIXED
-int set_float2fixed_(P3(fixed *, long, int));
-int set_double2fixed_(P4(fixed *, ulong, long, int));
+int set_float2fixed_(fixed *, long, int);
+int set_double2fixed_(fixed *, ulong, long, int);
 
 # define set_float2fixed_vars(vr,vf)\
     (sizeof(vf) == sizeof(float) ?\
@@ -224,8 +245,8 @@ int set_double2fixed_(P4(fixed *, ulong, long, int));
      set_double2fixed_(&vr, ((const ulong *)&vf)[arch_is_big_endian],\
 		       ((const long *)&vf)[1 - arch_is_big_endian],\
 		       fixed_fraction_bits))
-long fixed2float_(P2(fixed, int));
-void set_fixed2double_(P3(double *, fixed, int));
+long fixed2float_(fixed, int);
+void set_fixed2double_(double *, fixed, int);
 
 /*
  * We need the (double *)&vf cast to prevent compile-time error messages,

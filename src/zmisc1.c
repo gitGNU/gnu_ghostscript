@@ -1,22 +1,28 @@
-/* Copyright (C) 1994, 1997, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1994, 1997, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: zmisc1.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zmisc1.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* Miscellaneous Type 1 font operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -31,8 +37,8 @@
 
 /* <state> <from_string> <to_string> .type1encrypt <new_state> <substring> */
 /* <state> <from_string> <to_string> .type1decrypt <new_state> <substring> */
-private int type1crypt(P2(i_ctx_t *,
-			int (*)(P4(byte *, const byte *, uint, ushort *))));
+private int type1crypt(i_ctx_t *,
+		       int (*)(byte *, const byte *, uint, ushort *));
 private int
 ztype1encrypt(i_ctx_t *i_ctx_p)
 {
@@ -45,7 +51,7 @@ ztype1decrypt(i_ctx_t *i_ctx_p)
 }
 private int
 type1crypt(i_ctx_t *i_ctx_p,
-	   int (*proc)(P4(byte *, const byte *, uint, ushort *)))
+	   int (*proc)(byte *, const byte *, uint, ushort *))
 {
     os_ptr op = osp;
     crypt_state state;
@@ -111,17 +117,22 @@ zexD(i_ctx_t *i_ctx_p)
     (*s_exD_template.set_defaults)((stream_state *)&state);
     if (r_has_type(op, t_dictionary)) {
 	uint cstate;
+        bool is_eexec;
 
 	check_dict_read(*op);
 	if ((code = dict_uint_param(op, "seed", 0, 0xffff, 0x10000,
 				    &cstate)) < 0 ||
 	    (code = dict_int_param(op, "lenIV", 0, max_int, 4,
-				   &state.lenIV)) < 0
+				   &state.lenIV)) < 0 ||
+	    (code = dict_bool_param(op, "eexec", false,
+				   &is_eexec)) < 0
 	    )
 	    return code;
 	state.cstate = cstate;
+        state.binary = (is_eexec ? -1 : 1);
 	code = 1;
     } else {
+        state.binary = 1;
 	code = eexec_param(op, &state.cstate);
     }
     if (code < 0)
@@ -155,7 +166,7 @@ zexD(i_ctx_t *i_ctx_p)
 		pss->binary_to_hex = 0;
 	    }
 	    state.record_left = pss->record_left;
-	}
+	} 
     }
     return filter_read(i_ctx_p, code, &s_exD_template, (stream_state *)&state, 0);
 }

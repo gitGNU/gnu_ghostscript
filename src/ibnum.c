@@ -1,22 +1,28 @@
-/* Copyright (C) 1990, 1996, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1990, 1996, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: ibnum.c,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: ibnum.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Level 2 encoded number reading utilities for Ghostscript */
 #include "math_.h"
 #include "memory_.h"
@@ -190,27 +196,38 @@ sdecodelong(const byte * p, int format)
 float
 sdecodefloat(const byte * p, int format)
 {
-    bits32 lnum = (bits32) sdecodelong(p, format);
+    bits32 lnum;
     float fnum;
 
-#if !arch_floats_are_IEEE
-    if (format != num_float_native) {
-	/* We know IEEE floats take 32 bits. */
-	/* Convert IEEE float to native float. */
-	int sign_expt = lnum >> 23;
-	int expt = sign_expt & 0xff;
-	long mant = lnum & 0x7fffff;
-
-	if (expt == 0 && mant == 0)
-	    fnum = 0;
-	else {
-	    mant += 0x800000;
-	    fnum = (float)ldexp((float)mant, expt - 127 - 23);
-	}
-	if (sign_expt & 0x100)
-	    fnum = -fnum;
-    } else
-#endif
+    if ((format & ~(num_msb | num_lsb)) == num_float_native) {
+	/*
+	 * Just read 4 bytes and interpret them as a float, ignoring
+	 * any indication of byte ordering.
+	 */
+	memcpy(&lnum, p, 4);
 	fnum = *(float *)&lnum;
+    } else {
+	lnum = (bits32) sdecodelong(p, format);
+#if !arch_floats_are_IEEE
+	{
+	    /* We know IEEE floats take 32 bits. */
+	    /* Convert IEEE float to native float. */
+	    int sign_expt = lnum >> 23;
+	    int expt = sign_expt & 0xff;
+	    long mant = lnum & 0x7fffff;
+
+	    if (expt == 0 && mant == 0)
+		fnum = 0;
+	    else {
+		mant += 0x800000;
+		fnum = (float)ldexp((float)mant, expt - 127 - 23);
+	    }
+	    if (sign_expt & 0x100)
+		fnum = -fnum;
+	}
+#else
+	    fnum = *(float *)&lnum;
+#endif
+    }
     return fnum;
 }

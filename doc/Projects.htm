@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>Ghostscript projects</title>
-<!-- $Id: Projects.htm,v 1.1 2004/01/14 16:59:44 atai Exp $ -->
+<!-- $Id: Projects.htm,v 1.2 2004/02/14 22:20:03 atai Exp $ -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
 
@@ -91,6 +91,13 @@ In order to integrate Ghostscript into XMetaL and other applications it
 would be convenient for Ghostscript to be distributed as a COM object
 along with the current gswin32.exe, gswin32c.exe and gsdll32.dll files.
 
+<h3>Visual Trace window for X.</h3>
+
+<p>
+Currently Ghostscript implements Visual Trace window for Windows only
+(see <I>wdtrace.c</I>). An implementation for X would be useful. 
+
+<p>
 <hr>
 
 <h2><a name="Driver_architecture"></a>Driver Architecture</h2>
@@ -121,7 +128,7 @@ Currently, drivers must be linked into the executable.  We would like to be
 able to load drivers dynamically.  Doing this requires defining a
 platform-independent API (presumably extending the current gp_* APIs) that
 would work at least on GNU/Linux, vendor Unix, MS Windows, and Macintosh.  Unix
-systems should include Sun, HP, AIX, IRIX, DEC; Linux ELF and a.out formats
+systems should include Sun, HP, AIX, IRIX, DEC; GNU/Linux ELF and a.out formats
 should both be supported.  <I>Consider the Netscape plug-in
 architecture.</I>
 
@@ -276,6 +283,18 @@ is difficult.  <I>This would probably involve extending the library APIs for
 images so that they could pass a stream, possibly including filters, instead
 of the (fully decoded) data rows.</I>
 
+<h3>Emit warnings when producing PDF output.</h3>
+
+<p>
+Currently, the PDF writer has no way to emit warnings.  Users would like to
+see warnings when fonts cannot be embedded (this is actually required when
+the value of CannotEmbedFontPolicy is set to /Warning), and for some other
+questionable situations like non-existent Dests (SourceForge "bug" #480853).
+Probably the right way to handle this is with a pseudo device parameter
+called "Warnings" that is a list of strings: the pdfwrite driver would add
+strings to this list, and the ps2pdf script (lib/gs_pdfwr.ps) would read
+them out, print them, and reset them at the end of each page.
+
 <hr>
 
 <h2><a name="Graphics_functionality"></a>Graphics functionality</h2>
@@ -385,6 +404,43 @@ the functions are very non-linear (which we have actually seen in practice).
 <I>This should only be done if the function is, in fact,
 severely non-linear, since interpreting the function definition will almost
 always be much slower than interpolating in the table.</I>
+
+<h3>Replace PostScript procedures with Function objects.</h3>
+
+<p>
+Currently, there is a lot of tiresome code for doing callbacks with
+continuations for loading the caches that hold sampled values for the
+procedures listed under "Change sampled functions ..." above.  For the
+Separation and DeviceN tint transform functions, and only for these,
+PostScript code associated with the setcolorspace operator actually converts
+the PostScript procedure to a Function object -- to a FunctionType 4
+(PostScript subset) Function if possible, or to a FunctionType 0 (sampled)
+Function if not.  This approach should be used for all the other sampled
+functions.  Doing this would reduce the amount of C code significantly,
+while only increasing PostScript code slightly.
+
+<p>
+This change would require touching (and slightly changing) all PostScript
+operators that currently do such callbacks: for example, rather than a
+setblackgeneration operator that takes a PostScript procedure as its
+operand, we would have a .setblackgeneration operator that takes as operands
+both the PostScript procedure (so that currentblackgeneration can return it)
+*and* a Function derived from it (which will actually be used when loading
+the cache, or for sampling directly if desired).
+
+<p>
+In some cases, this approach has a non-negligible space cost.  If the
+PostScript procedure cannot be represented as a FunctionType 4 Function, it
+must be sampled and represented as a FunctionType 0 Function.  Then the BG /
+UCR / transfer / ... cache will essentially just hold a copy of the Function
+data.  While it is likely that this situation will be rare in practice, it
+might be worth looking into changing the internal representation of these
+caches so that they were the same as the representation of a FunctionType 0
+Function with a particular choice of parameters.  Then the PostScript code
+that called .buildsampledfunction when necessary could arrange the
+parameters to have the same values as the internal representation of the
+cache, and the cache could use the Function data directly.  This is probably
+not worth the trouble.
 
 <h3>Add optional cubic interpolation to RenderTable and other table
 lookup.</h3>
@@ -594,6 +650,7 @@ should really be up to the driver author.</I>
 
 <h3>Ghostscript has no %ram% device.</h3>
 
+<p>
 The %ram% device is documented in PS Supplement 3010 and 3011 dated August 30, 1999.
 This is probably not a major impediment to portability, but it would be handy.
 <p><I>
@@ -602,6 +659,22 @@ of the temporary directory (usually /tmp), with the name chosen and the
 directory created in such a way as to avoid /tmp races and similar
 problems. Ghostscript should delete the subdirectory when it exits.
 </I>
+
+<h3>The PDF interpreter doesn't handle misused Widths right.</h3>
+
+<p>
+Adobe Acrobat Reader can handle PDF fonts in which the Widths array is being
+misused to override the widths in the font, even if the same character
+appears multiple places in the font's encoding.  Ghostscript's PDF
+interpreter can't do this using the PostScript Metrics dictionary, because
+PostScript provides no straightforward way to do this; the present code
+tries to hack it, but can't always succeed.  <I>We propose to add a new,
+optional, non-standard .Widths array to Type 1 and Type 42, indexed by
+character code, that the C code would access directly.  That would get rid
+of the current hacks, and would add very little code (in fact, it might not
+net add code at all, because of the code that we could remove from the PDF
+interpreter).  The character code is already being passed to .type1execchar
+and .type42execchar, so no operator definitions would have to change.</I>
 
 <!-- [2.0 end contents] ==================================================== -->
 
@@ -620,8 +693,14 @@ This software is distributed under license and may not be copied,
 modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
+For more information about licensing, please refer to
+http://www.ghostscript.com/licensing/. For information on
+commercial licensing, go to http://www.artifex.com/licensing/ or
+contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
 <p>
-<small>Ghostscript version 7.07, 17 May 2003
+<small>Ghostscript version 8.01, 30 January 2004
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

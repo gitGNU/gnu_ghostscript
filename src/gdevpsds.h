@@ -1,22 +1,28 @@
-/* Copyright (C) 1997, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevpsds.h,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevpsds.h,v 1.2 2004/02/14 22:20:06 atai Exp $ */
 /* Image processing stream interface for PostScript and PDF writers */
 
 #ifndef gdevpsds_INCLUDED
@@ -49,7 +55,7 @@ extern const stream_template s_8_2_template;
 extern const stream_template s_8_4_template;
 
 /* Initialize an expansion or reduction stream. */
-int s_1248_init(P3(stream_1248_state *ss, int Columns, int samples_per_pixel));
+int s_1248_init(stream_1248_state *ss, int Columns, int samples_per_pixel);
 
 /* ---------------- Color space conversion ---------------- */
 
@@ -66,7 +72,7 @@ typedef struct stream_C2R_state_s {
 extern const stream_template s_C2R_template;
 
 /* Initialize a CMYK => RGB conversion stream. */
-int s_C2R_init(P2(stream_C2R_state *ss, const gs_imager_state *pis));
+int s_C2R_init(stream_C2R_state *ss, const gs_imager_state *pis);
 
 /* Convert an image to indexed form (IndexedEncode filter). */
 typedef struct stream_IE_state_s {
@@ -128,7 +134,7 @@ typedef struct stream_Downsample_state_s {
 } stream_Downsample_state;
 
 /* Return the number of samples after downsampling. */
-int s_Downsample_size_out(P3(int size_in, int factor, bool pad));
+int s_Downsample_size_out(int size_in, int factor, bool pad);
 
 /* Subsample */
 typedef struct stream_Subsample_state_s {
@@ -148,5 +154,33 @@ typedef struct stream_Average_state_s {
   gs_private_st_ptrs1(st_Average_state, stream_Average_state,\
     "stream_Average_state", avg_enum_ptrs, avg_reloc_ptrs, sums)
 extern const stream_template s_Average_template;
+
+/* ---------------- Image compression chooser ---------------- */
+
+typedef struct stream_compr_chooser_state_s {
+    stream_state_common;
+    uint choice;
+    uint width, height, depth, bits_per_sample;
+    uint samples_count, bits_left;
+    ulong packed_data;
+    byte *sample;
+    ulong upper_plateaus, lower_plateaus;
+    ulong gradients;
+} stream_compr_chooser_state;
+
+#define private_st_compr_chooser_state()	/* in gdevpsds.c */\
+  gs_private_st_ptrs1(st_compr_chooser_state, stream_compr_chooser_state, \
+    "stream_compr_chooser_state",\
+    compr_chooser_enum_ptrs, compr_chooser_reloc_ptrs, sample)
+
+extern const stream_template s_compr_chooser_template;
+
+/* Set image dimensions. */
+int
+s_compr_chooser_set_dimensions(stream_compr_chooser_state * st, int width, 
+			       int height, int depth, int bits_per_sample);
+
+/* Get choice */
+uint s_compr_chooser__get_choice(stream_compr_chooser_state *st, bool force);
 
 #endif /* gdevpsds_INCLUDED */

@@ -1,9 +1,9 @@
 #!/bin/sh
 # Run this to set up the build system: configure, makefiles, etc.
 
-# $Id: autogen.sh,v 1.1 2004/01/14 16:59:41 atai Exp $
+# $Id: autogen.sh,v 1.2 2004/02/14 22:20:02 atai Exp $
 
-package="ghostscript"
+package="gnu_ghostscript"
 
 srcdir=`dirname $0`
 test -z "$srcdir" && srcdir=.

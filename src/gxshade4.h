@@ -1,22 +1,28 @@
-/* Copyright (C) 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxshade4.h,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: gxshade4.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Internal definitions for triangle shading rendering */
 
 #ifndef gxshade4_INCLUDED
@@ -49,16 +55,16 @@ typedef struct mesh_fill_state_s {
 /****** NEED GC DESCRIPTOR ******/
 
 /* Initialize the fill state for triangle shading. */
-void mesh_init_fill_state(P5(mesh_fill_state_t * pfs,
-			     const gs_shading_mesh_t * psh,
-			     const gs_rect * rect,
-			     gx_device * dev, gs_imager_state * pis));
+void mesh_init_fill_state(mesh_fill_state_t * pfs,
+			  const gs_shading_mesh_t * psh,
+			  const gs_rect * rect,
+			  gx_device * dev, gs_imager_state * pis);
 
 /* Fill one triangle in a mesh. */
-void mesh_init_fill_triangle(P5(mesh_fill_state_t * pfs,
-				const mesh_vertex_t *va,
-				const mesh_vertex_t *vb,
-				const mesh_vertex_t *vc, bool check_clipping));
-int mesh_fill_triangle(P1(mesh_fill_state_t * pfs));
+void mesh_init_fill_triangle(mesh_fill_state_t * pfs,
+			     const mesh_vertex_t *va,
+			     const mesh_vertex_t *vb,
+			     const mesh_vertex_t *vc, bool check_clipping);
+int mesh_fill_triangle(mesh_fill_state_t * pfs);
 
 #endif /* gxshade4_INCLUDED */

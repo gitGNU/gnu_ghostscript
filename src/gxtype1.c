@@ -1,22 +1,28 @@
-/* Copyright (C) 1997, 1998, 1999, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxtype1.c,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: gxtype1.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Adobe Type 1 font interpreter support */
 #include "math_.h"
 #include "gx.h"
@@ -57,10 +63,12 @@ public_st_gs_type1_state();
 private 
 ENUM_PTRS_WITH(gs_type1_state_enum_ptrs, gs_type1_state *pcis)
 {
-    if (index < pcis->ips_count + 4) {
-	ENUM_RETURN_CONST_STRING_PTR(gs_type1_state,
-				     ipstack[index - 4].char_string);
-    }
+    index -= 4;
+    if (index < pcis->ips_count * ST_GLYPH_DATA_NUM_PTRS)
+	return ENUM_USING(st_glyph_data,
+			&pcis->ipstack[index / ST_GLYPH_DATA_NUM_PTRS].cs_data,
+			  sizeof(pcis->ipstack[0].cs_data),
+			  index % ST_GLYPH_DATA_NUM_PTRS);
     return 0;
 }
 ENUM_PTR3(0, gs_type1_state, pfont, pis, path);
@@ -76,10 +84,10 @@ private RELOC_PTRS_WITH(gs_type1_state_reloc_ptrs, gs_type1_state *pcis)
     RELOC_PTR(gs_type1_state, callback_data);
     for (i = 0; i < pcis->ips_count; i++) {
 	ip_state_t *ipsp = &pcis->ipstack[i];
-	int diff = ipsp->ip - ipsp->char_string.data;
+	int diff = ipsp->ip - ipsp->cs_data.bits.data;
 
-	RELOC_CONST_STRING_VAR(ipsp->char_string);
-	ipsp->ip = ipsp->char_string.data + diff;
+	RELOC_USING(st_glyph_data, &ipsp->cs_data, sizeof(ipsp->cs_data));
+	ipsp->ip = ipsp->cs_data.bits.data + diff;
     }
 } RELOC_PTRS_END
 
@@ -109,6 +117,7 @@ gs_type1_interp_init(register gs_type1_state * pcis, gs_imager_state * pis,
     const gs_log2_scale_point *plog2_scale =
 	(FORCE_HINTS_TO_BIG_PIXELS ? pscale : &no_scale);
 
+    if_debug0('1', "[1]gs_type1_interp_init\n");
     pcis->pfont = pfont;
     pcis->pis = pis;
     pcis->path = ppath;
@@ -123,8 +132,7 @@ gs_type1_interp_init(register gs_type1_state * pcis, gs_imager_state * pis,
     pcis->os_count = 0;
     pcis->ips_count = 1;
     pcis->ipstack[0].ip = 0;
-    pcis->ipstack[0].char_string.data = 0;
-    pcis->ipstack[0].char_string.size = 0;
+    gs_glyph_data_from_null(&pcis->ipstack[0].cs_data);
     pcis->ignore_pops = 0;
     pcis->init_done = -1;
     pcis->sb_set = false;
@@ -231,36 +239,38 @@ gs_op1_closepath(register is_ptr ps)
     int code;
 
     /* Check for and suppress a microscopic closing line. */
-    if ((psub = ppath->current_subpath) != 0 &&
-	(pseg = psub->last) != 0 &&
-	(dx = pseg->pt.x - psub->pt.x,
-	 any_abs(dx) < float2fixed(0.1)) &&
-	(dy = pseg->pt.y - psub->pt.y,
-	 any_abs(dy) < float2fixed(0.1))
-	)
-	switch (pseg->type) {
-	    case s_line:
-		code = gx_path_pop_close_subpath(sppath);
-		break;
-	    case s_curve:
-		/*
-		 * Unfortunately, there is no "s_curve_close".  (Maybe there
-		 * should be?)  Just adjust the final point of the curve so it
-		 * is identical to the closing point.
-		 */
-		pseg->pt = psub->pt;
+    if (ppath->segments != 0) {
+	if ((psub = ppath->current_subpath) != 0 &&
+	    (pseg = psub->last) != 0 &&
+	    (dx = pseg->pt.x - psub->pt.x,
+	     any_abs(dx) < float2fixed(0.1)) &&
+	    (dy = pseg->pt.y - psub->pt.y,
+	     any_abs(dy) < float2fixed(0.1))
+	    )
+	    switch (pseg->type) {
+		case s_line:
+		    code = gx_path_pop_close_subpath(sppath);
+		    break;
+		case s_curve:
+		    /*
+		     * Unfortunately, there is no "s_curve_close".  (Maybe there
+		     * should be?)  Just adjust the final point of the curve so it
+		     * is identical to the closing point.
+		     */
+		    pseg->pt = psub->pt;
 #define pcseg ((curve_segment *)pseg)
-		pcseg->p2.x -= dx;
-		pcseg->p2.y -= dy;
+		    pcseg->p2.x -= dx;
+		    pcseg->p2.y -= dy;
 #undef pcseg
-		/* falls through */
-	    default:
-		/* What else could it be?? */
-		code = gx_path_close_subpath(sppath);
-    } else
-	code = gx_path_close_subpath(sppath);
-    if (code < 0)
-	return code;
+		    /* falls through */
+		default:
+		    /* What else could it be?? */
+		    code = gx_path_close_subpath(sppath);
+	} else
+	    code = gx_path_close_subpath(sppath);
+	if (code < 0)
+	    return code;
+    }
     return gx_path_add_point(ppath, ptx, pty);	/* put the point where it was */
 }
 
@@ -320,8 +330,8 @@ gs_type1_blend(gs_type1_state *pcis, fixed *csp, int num_results)
 	 j++, base++, deltas += k1
 	 )
 	for (i = 1; i <= k1; i++)
-	    *base += deltas[i] *
-		pdata->WeightVector.values[i];
+	    *base += (fixed)(deltas[i] *
+		pdata->WeightVector.values[i]);
     pcis->ignore_pops = num_results;
     return num_values - num_results + 2;
 }
@@ -336,7 +346,7 @@ gs_type1_seac(gs_type1_state * pcis, const fixed * cstack, fixed asb,
 	      ip_state_t * ipsp)
 {
     gs_font_type1 *pfont = pcis->pfont;
-    gs_const_string bcstr;
+    gs_glyph_data_t bgdata;
     int code;
 
     /* Save away all the operands. */
@@ -348,12 +358,11 @@ gs_type1_seac(gs_type1_state * pcis, const fixed * cstack, fixed asb,
     pcis->os_count = 0;		/* clear */
     /* Ask the caller to provide the base character's CharString. */
     code = pfont->data.procs.seac_data
-	(pfont, fixed2int_var(cstack[2]), NULL, &bcstr);
+	(pfont, fixed2int_var(cstack[2]), NULL, &bgdata);
     if (code < 0)
 	return code;
     /* Continue with the supplied string. */
-    ipsp->char_string = bcstr;
-    ipsp->free_char_string = code;
+    ipsp->cs_data = bgdata;
     return 0;
 }
 
@@ -374,7 +383,7 @@ gs_type1_endchar(gs_type1_state * pcis)
 	/* Do the accent. */
 	gs_font_type1 *pfont = pcis->pfont;
 	gs_op1_state s;
-	gs_const_string astr;
+	gs_glyph_data_t agdata;
 	int achar = pcis->seac_accent;
 	int code;
 
@@ -399,13 +408,12 @@ gs_type1_endchar(gs_type1_state * pcis)
 	/* Remove any base character hints. */
 	reset_stem_hints(pcis);
 	/* Ask the caller to provide the accent's CharString. */
-	code = pfont->data.procs.seac_data(pfont, achar, NULL, &astr);
+	code = pfont->data.procs.seac_data(pfont, achar, NULL, &agdata);
 	if (code < 0)
 	    return code;
 	/* Continue with the supplied string. */
 	pcis->ips_count = 1;
-	pcis->ipstack[0].char_string = astr;
-	pcis->ipstack[0].free_char_string = code;
+	pcis->ipstack[0].cs_data = agdata;
 	return 1;
     }
     if (pcis->hint_next != 0 || path_is_drawing(ppath))
@@ -461,6 +469,173 @@ gs_type1_endchar(gs_type1_state * pcis)
 
 /* ------ Font procedures ------ */
 
+
+/*
+ * If a Type 1 character is defined with 'seac', store the character codes
+ * in chars[0] and chars[1] and return 1; otherwise, return 0 or <0.
+ * This is exported only for the benefit of font copying.
+ */
+int
+gs_type1_piece_codes(/*const*/ gs_font_type1 *pfont,
+		     const gs_glyph_data_t *pgd, gs_char *chars)
+{
+    gs_type1_data *const pdata = &pfont->data;
+    /*
+     * Decode the CharString looking for seac.  We have to process
+     * callsubr, callothersubr, and return operators, but if we see
+     * any other operators other than [h]sbw, pop, hint operators,
+     * or endchar, we can return immediately.  We have to include
+     * endchar because it is an (undocumented) equivalent for seac
+     * in Type 2 CharStrings: see the cx_endchar case in
+     * gs_type2_interpret in gstype2.c.
+     *
+     * It's really unfortunate that we have to duplicate so much parsing
+     * code, but factoring out the parser from the interpreter would
+     * involve more restructuring than we're prepared to do right now.
+     */
+    bool encrypted = pdata->lenIV >= 0;
+    fixed cstack[ostack_size];
+    fixed *csp;
+    ip_state_t ipstack[ipstack_size + 1];
+    ip_state_t *ipsp = &ipstack[0];
+    const byte *cip;
+    crypt_state state;
+    int c;
+    int code;
+    
+    CLEAR_CSTACK(cstack, csp);
+    cip = pgd->bits.data;
+ call:
+    state = crypt_charstring_seed;
+    if (encrypted) {
+	int skip = pdata->lenIV;
+
+	/* Skip initial random bytes */
+	for (; skip > 0; ++cip, --skip)
+	    decrypt_skip_next(*cip, state);
+    }
+ top:
+    for (;;) {
+	uint c0 = *cip++;
+
+	charstring_next(c0, state, c, encrypted);
+	if (c >= c_num1) {
+	    /* This is a number, decode it and push it on the stack. */
+	    if (c < c_pos2_0) {	/* 1-byte number */
+		decode_push_num1(csp, cstack, c);
+	    } else if (c < cx_num4) {	/* 2-byte number */
+		decode_push_num2(csp, cstack, c, cip, state, encrypted);
+	    } else if (c == cx_num4) {	/* 4-byte number */
+		long lw;
+
+		decode_num4(lw, cip, state, encrypted);
+		CS_CHECK_PUSH(csp, cstack);
+		*++csp = int2fixed(lw);
+	    } else		/* not possible */
+		return_error(gs_error_invalidfont);
+	    continue;
+	}
+#define cnext CLEAR_CSTACK(cstack, csp); goto top
+	switch ((char_command) c) {
+	default:
+	    goto out;
+	case c_callsubr:
+	    c = fixed2int_var(*csp) + pdata->subroutineNumberBias;
+	    code = pdata->procs.subr_data
+		(pfont, c, false, &ipsp[1].cs_data);
+	    if (code < 0)
+		return_error(code);
+	    --csp;
+	    ipsp->ip = cip, ipsp->dstate = state;
+	    ++ipsp;
+	    cip = ipsp->cs_data.bits.data;
+	    goto call;
+	case c_return:
+	    gs_glyph_data_free(&ipsp->cs_data, "gs_type1_piece_codes");
+	    --ipsp;
+	    cip = ipsp->ip, state = ipsp->dstate;
+	    goto top;
+	case cx_hstem:
+	case cx_vstem:
+	case c1_hsbw:
+	    cnext;
+	case cx_endchar:
+	    if (csp < cstack + 3)
+		goto out;	/* not seac */
+	do_seac:
+	    /* This is the payoff for all this code! */
+	    chars[0] = fixed2int(csp[-1]);
+	    chars[1] = fixed2int(csp[0]);
+	    return 1;
+	case cx_escape:
+	    charstring_next(*cip, state, c, encrypted);
+	    ++cip;
+	    switch ((char1_extended_command) c) {
+	    default:
+		goto out;
+	    case ce1_vstem3:
+	    case ce1_hstem3:
+	    case ce1_sbw:
+		cnext;
+	    case ce1_pop:
+		/*
+		 * pop must do nothing, since it is used after
+		 * subr# 1 3 callothersubr.
+		 */
+		goto top;
+	    case ce1_seac:
+		goto do_seac;
+	    case ce1_callothersubr:
+		switch (fixed2int_var(*csp)) {
+		default:
+		    goto out;
+		case 3:
+		    csp -= 2;
+		    goto top;
+		case 12:
+		case 13:
+		case 14:
+		case 15:
+		case 16:
+		case 17:
+		case 18:
+		    cnext;
+		}
+	    }
+	}
+#undef cnext
+    }
+ out:
+    return 0;
+}
+
+/*
+ * Get PIECES and/or NUM_PIECES of a Type 1 glyph.  Sets info->num_pieces
+ * and/or stores into info->pieces.  Updates info->members.  This is a
+ * single-use procedure broken out only for readability.
+ */
+private int
+gs_type1_glyph_pieces(gs_font_type1 *pfont, const gs_glyph_data_t *pgd,
+		      int members, gs_glyph_info_t *info)
+{
+    gs_char chars[2];
+    gs_glyph glyphs[2];
+    int code = gs_type1_piece_codes(pfont, pgd, chars);
+    gs_type1_data *const pdata = &pfont->data;
+    gs_glyph *pieces =
+	(members & GLYPH_INFO_PIECES ? info->pieces : glyphs);
+    int acode, bcode;
+
+    info->num_pieces = 0;	/* default */
+    if (code <= 0)		/* no seac, possibly error */
+	return code;
+    bcode = pdata->procs.seac_data(pfont, chars[0], &pieces[0], NULL);
+    acode = pdata->procs.seac_data(pfont, chars[1], &pieces[1], NULL);
+    code = (bcode < 0 ? bcode : acode);
+    info->num_pieces = 2;
+    return code;
+}
+
 int
 gs_type1_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
 		    int members, gs_glyph_info_t *info)
@@ -470,9 +645,10 @@ gs_type1_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
     int wmode = pfont->WMode;
     int piece_members = members & (GLYPH_INFO_NUM_PIECES | GLYPH_INFO_PIECES);
     int width_members = members & (GLYPH_INFO_WIDTH0 << wmode);
-    int default_members = members - (piece_members + width_members);
-    int code = 0, gcode = 0;
-    gs_const_string str;
+    int default_members = members & ~(piece_members | width_members |
+				     GLYPH_INFO_OUTLINE_WIDTHS);
+    int code = 0;
+    gs_glyph_data_t gdata;
 
     if (default_members) {
 	code = gs_default_glyph_info(font, glyph, pmat, default_members, info);
@@ -482,155 +658,17 @@ gs_type1_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
     } else
 	info->members = 0;
 
-    if (default_members != members) {
-	if ((gcode = pdata->procs.glyph_data(pfont, glyph, &str)) < 0)
-	    return gcode;		/* non-existent glyph */
-    }
+    if (default_members == members)
+	return code;		/* all done */
+
+    if ((code = pdata->procs.glyph_data(pfont, glyph, &gdata)) < 0)
+	return code;		/* non-existent glyph */
 
     if (piece_members) {
-	gs_glyph *pieces =
-	    (members & GLYPH_INFO_PIECES ? info->pieces : (gs_glyph *)0);
-	/*
-	 * Decode the CharString looking for seac.  We have to process
-	 * callsubr, callothersubr, and return operators, but if we see
-	 * any other operators other than [h]sbw, pop, hint operators,
-	 * or endchar, we can return immediately.  We have to include
-	 * endchar because it is an (undocumented) equivalent for seac
-	 * in Type 2 CharStrings: see the cx_endchar case in
-	 * gs_type2_interpret in gstype2.c.
-	 *
-	 * It's really unfortunate that we have to duplicate so much parsing
-	 * code, but factoring out the parser from the interpreter would
-	 * involve more restructuring than we're prepared to do right now.
-	 */
-	bool encrypted = pdata->lenIV >= 0;
-	fixed cstack[ostack_size];
-	fixed *csp;
-	ip_state_t ipstack[ipstack_size + 1];
-	ip_state_t *ipsp = &ipstack[0];
-	const byte *cip;
-	crypt_state state;
-	int c;
-    
-	CLEAR_CSTACK(cstack, csp);
-	info->num_pieces = 0;	/* default */
-	cip = str.data;
-    call:
-	state = crypt_charstring_seed;
-	if (encrypted) {
-	    int skip = pdata->lenIV;
-
-	    /* Skip initial random bytes */
-	    for (; skip > 0; ++cip, --skip)
-		decrypt_skip_next(*cip, state);
-	}
-    top:
-	for (;;) {
-	    uint c0 = *cip++;
-
-	    charstring_next(c0, state, c, encrypted);
-	    if (c >= c_num1) {
-		/* This is a number, decode it and push it on the stack. */
-		if (c < c_pos2_0) {	/* 1-byte number */
-		    decode_push_num1(csp, c);
-		} else if (c < cx_num4) {	/* 2-byte number */
-		    decode_push_num2(csp, c, cip, state, encrypted);
-		} else if (c == cx_num4) {	/* 4-byte number */
-		    long lw;
-
-		    decode_num4(lw, cip, state, encrypted);
-		    *++csp = int2fixed(lw);
-		} else		/* not possible */
-		    return_error(gs_error_invalidfont);
-		continue;
-	    }
-#define cnext CLEAR_CSTACK(cstack, csp); goto top
-	    switch ((char_command) c) {
-	    default:
-		goto out;
-	    case c_callsubr:
-		c = fixed2int_var(*csp);
-		code = pdata->procs.subr_data
-		    (pfont, c, false, &ipsp[1].char_string);
-		if (code < 0)
-		    return_error(code);
-		--csp;
-		ipsp->ip = cip, ipsp->dstate = state;
-		++ipsp;
-		ipsp->free_char_string = code;
-		cip = ipsp->char_string.data;
-		goto call;
-	    case c_return:
-		if (ipsp->free_char_string > 0)
-		    gs_free_const_string(pfont->memory,
-					 ipsp->char_string.data,
-					 ipsp->char_string.size,
-					 "gs_type1_glyph_info");
-		--ipsp;
-		cip = ipsp->ip, state = ipsp->dstate;
-		goto top;
-	    case cx_hstem:
-	    case cx_vstem:
-	    case c1_hsbw:
-		cnext;
-	    case cx_endchar:
-		if (csp < cstack + 3)
-		    goto out;	/* not seac */
-	    do_seac:
-		/* This is the payoff for all this code! */
-		if (pieces) {
-		    gs_char bchar = fixed2int(csp[-1]);
-		    gs_char achar = fixed2int(csp[0]);
-		    int bcode =
-			pdata->procs.seac_data(pfont, bchar,
-					       &pieces[0], NULL);
-		    int acode =
-			pdata->procs.seac_data(pfont, achar,
-					       &pieces[1], NULL);
-
-		    code = (bcode < 0 ? bcode : acode);
-		}
-		info->num_pieces = 2;
-		goto out;
-	    case cx_escape:
-		charstring_next(*cip, state, c, encrypted);
-		++cip;
-		switch ((char1_extended_command) c) {
-		default:
-		    goto out;
-		case ce1_vstem3:
-		case ce1_hstem3:
-		case ce1_sbw:
-		    cnext;
-		case ce1_pop:
-		    /*
-		     * pop must do nothing, since it is used after
-		     * subr# 1 3 callothersubr.
-		     */
-		    goto top;
-		case ce1_seac:
-		    goto do_seac;
-		case ce1_callothersubr:
-		    switch (fixed2int_var(*csp)) {
-		    default:
-			goto out;
-		    case 3:
-			csp -= 2;
-			goto top;
-		    case 12:
-		    case 13:
-		    case 14:
-		    case 15:
-		    case 16:
-		    case 17:
-		    case 18:
-			cnext;
-		    }
-		}
-	    }
-#undef cnext
-	}
-out:	info->members |= piece_members;
+	code = gs_type1_glyph_pieces(pfont, &gdata, members, info);
+	if (code < 0)
+	    return code;
+	info->members |= piece_members;
     }
 
     if (width_members) {
@@ -657,7 +695,7 @@ out:	info->members |= piece_members;
 	if (code < 0)
 	    return code;
 	cis.charpath_flag = true;	/* suppress hinting */
-	code = pdata->interpret(&cis, &str, &value);
+	code = pdata->interpret(&cis, &gdata, &value);
 	switch (code) {
 	case 0:		/* done with no [h]sbw, error */
 	    code = gs_note_error(gs_error_invalidfont);
@@ -668,13 +706,13 @@ out:	info->members |= piece_members;
 	case type1_result_sbw:
 	    info->width[wmode].x = fixed2float(cis.width.x);
 	    info->width[wmode].y = fixed2float(cis.width.y);
+	    info->v.x = fixed2float(cis.lsb.x);
+	    info->v.y = fixed2float(cis.lsb.y);
 	    break;
 	}
 	info->members |= width_members;
     }
 
-    if (gcode > 0)
-	gs_free_const_string(font->memory, str.data, str.size,
-			     "gs_type1_glyph_info");
+    gs_glyph_data_free(&gdata, "gs_type1_glyph_info");
     return code;
 }

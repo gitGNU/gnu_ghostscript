@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>Fonts and font facilities supplied with Ghostscript</title>
-<!-- $Id: Fonts.htm,v 1.1 2004/01/14 16:59:43 atai Exp $ -->
+<!-- $Id: Fonts.htm,v 1.2 2004/02/14 22:20:03 atai Exp $ -->
 <!-- Originally: fonts.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -26,11 +26,9 @@
 <li><a href="#Other_fonts">Other free fonts</a>
 <ul>
 <li><a href="#Computer_Modern">Computer Modern Fontmap</a>
-<li><a href="#CID_Adobe">CJK CID-keyed fonts by Adobe</a>
-<li><a href="#CMap_Adobe">Adobe CMaps</a>
 <li><a href="#Chinese">Free Chinese (Hanzi) fonts</a>
 <li><a href="#Japanese">Free Japanese (Kanji) fonts</a>
-<li><a href="#Korean">Free Korean (Hangul and Hanja) fonts</a>
+<li><a href="#Unicode_CMaps">Unicode CMaps</a>
 <li><a href="#Cyrillic">Free Cyrillic fonts</a>
 <li><a href="#Partial_Unicode_fonts">(Partial) Unicode fonts</a>
 </ul>
@@ -139,16 +137,31 @@ detail in the <a href="Hershey.htm">documentation on Hershey fonts</a>.
 	<td>&nbsp;&nbsp;
 	<td><b>Types</b>
 <tr>	<td colspan=7><hr>
+<tr valign=top>	<td>DOS and<br>MS Windows
+	<td>&nbsp;
+	<td><b><tt>gs###fn1.zip</tt></b>
+	<td>&nbsp;
+	<td>Basic
+	<td>&nbsp;
+	<td><b><tt>.pfb</tt></b>
+<tr valign=top>	<td>&nbsp;
+	<td>&nbsp;
+	<td><b><tt>gs###fn2.zip</tt></b>
+	<td>&nbsp;
+	<td>Miscellaneous
+	<td>&nbsp;
+	<td>Various, for<br>different fonts
+<tr>	<td colspan=7><hr>
 <tr valign=top>	<td>Unix
 	<td>&nbsp;
-	<td><b><tt>gnu-gs-fonts-std-#.##.tar.gz</tt></b>
+	<td><b><tt>ghostscript-fonts-std-#.##.tar.gz</tt></b>
 	<td>&nbsp;
 	<td>Basic
 	<td>&nbsp;
 	<td><b><tt>.afm</tt></b>,
 	    <b><tt>.pfb</tt></b>,<br><b><tt>.pfm</tt></b> <tr valign=top> <td>&nbsp;
 	<td>&nbsp;
-	<td><b><tt>gnu-gs-fonts-other-#.##.tar.gz</tt></b>
+	<td><b><tt>ghostscript-fonts-other-#.##.tar.gz</tt></b>
 	<td>&nbsp;
 	<td>Miscellaneous
 	<td>&nbsp;
@@ -159,14 +172,14 @@ detail in the <a href="Hershey.htm">documentation on Hershey fonts</a>.
 </blockquote>
 
 <p>
-"#.##" and "###" are the version number with and without punctuation. The
-fonts are not updated every release, so just use the most recent
-versions.
+"#.##" and "###" are the version number with and without punctuation.
 Fonts can be found at
 
 <blockquote>
-<a href="ftp://ftp.gnu.org/gnu/ghostscript/" 
-class="offsite">ftp://ftp.gnu.org/gnu/ghostscript/</a> (and mirrors)<br>
+ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/AFPL/gs###/ (for a particular version)<br>
+<a href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/AFPL/fonts/" 
+class="offsite">ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/AFPL/fonts/</a> (for
+several versions)
 </blockquote>
 
 <hr>
@@ -192,21 +205,60 @@ or from other <a href="New-user.htm#CTAN">CTAN</a> sites.
 <h3><a name="Chinese"></a>Free Chinese (Hanzi) fonts</h3>
 
 <p>
-A free PostScript font for Traditional Chinese "KaiSu" in
-<a href="CJK.htm#About_OCF_fonts">OCF</a> format,
-originally provided courtesy of Jackson Technology,
+A free Chinese font, originally provided by courtesy of Jackson Technology,
 Ltd., Taiwan under the GPL and now distributed by the Taiwan NeXT User
 Group, is available from:
 
 <blockquote>
-<a
-href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/hanzi/"
-class="offsite">
-ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/hanzi/
-</a>
+<a href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/3rdparty/fonts/hanzi/" 
+class="offsite">ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/3rdparty/fonts/hanzi/</a>
+</blockquote>
+
+<p>
+Prof. Wu of the Department of Economics of National Taiwan University has
+created several free Type 1 Chinese fonts designed to be used with TeX.  His
+e-mail is <a
+href="mailto:ntut019@ccms.ntu.edu.tw">ntut019@ccms.ntu.edu.tw</a>.  The
+fonts are available from
+
+<blockquote>
+<a href="ftp://cle.linux.org.tw/pub/fonts/cwfont/" 
+class="offsite">ftp://cle.linux.org.tw/pub/fonts/cwfont/</a><br>
+</blockquote>
+
+<p>
+Arphic Technology Co., Ltd., has made several free TrueType Chinese fonts
+available under the Arphic Public License, a license very similar to the
+GPL.  (Ghostscript can use TrueType fonts if Ghostscript is compiled with
+the <tt><b>ttfont</b></tt> feature included: see <a
+href="Make.htm#Features_and_devices">here</a> for more information.)  The
+fonts and license are available from
+
+<blockquote>
+<a href="ftp://cle.linux.org.tw/pub/fonts/arphic/" 
+class="offsite">ftp://cle.linux.org.tw/pub/fonts/arphic/</a><br>
 </blockquote>
 
 <h3><a name="Japanese"></a>Free Japanese (Kanji) fonts</h3>
+
+<p>
+Mr. Tetsurou Tanaka of the Department of Engineering, University of Tokyo,
+has created a set of free Kanji fonts available from
+
+<blockquote>
+<a href="ftp://ftp.ipl.t.u-tokyo.ac.jp/Font/" 
+class="offsite">ftp://ftp.ipl.t.u-tokyo.ac.jp/Font/</a><br>
+</blockquote>
+
+<p>
+along with documentation in Japanese and English describing their
+conditions of use and how to use them.  An older copy of these fonts, under
+somewhat different names, is available at the Ghostscript site:
+
+<blockquote>
+<a href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/3rdparty/fonts/kanji/">
+ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/3rdparty/fonts/kanji/</a><br>
+</blockquote>
 
 <p>
 Mr. Norio Katayama has done some work to make Ghostscript work well with
@@ -214,28 +266,22 @@ Kanji fonts.  An easy-to-install Kanji font for Ghostscript, with
 installation instructions, is at
 
 <blockquote>
-<a
-href="http://www.enel.ucalgary.ca/People/far/howto/gs-ttf.html" 
-class="offsite">
-http://www.enel.ucalgary.ca/People/far/howto/gs-ttf.html
-</a>
+<a href="http://www.cit.ics.saitama-u.ac.jp/~far/howto/gs-ttf.html" 
+class="offsite">http://www.cit.ics.saitama-u.ac.jp/~far/howto/gs-ttf.html</a>
 </blockquote>
 
 <p>
-The same site has patches to make Ghostscript work with Japanese OCF fonts via VFlib,
+The same site has patches to make Ghostscript work with Japanese VF fonts,
 with documentation in both English and Japanese:
 
 <blockquote>
-<a
-href="http://www.enel.ucalgary.ca/People/far/howto/gs-vflib.html" 
-class="offsite">
-http://www.enel.ucalgary.ca/People/far/howto/gs-vflib.html
-</a>
+<a href="http://www.cit.ics.saitama-u.ac.jp/~far/howto/gs-vflib.html" 
+class="offsite">http://www.cit.ics.saitama-u.ac.jp/~far/howto/gs-vflib.html</a>
 </blockquote>
 
 <p>
 Here are some other resources in Japanese relating to VFlib and using
-Ghostscript with Japanese OCF fonts:
+Ghostscript with Japanese fonts:
 
 <blockquote><dl compact>
 <dt><a href="http://kakugawa.aial.hiroshima-u.ac.jp/~kakugawa/Hacks/" 
@@ -243,23 +289,20 @@ class="offsite">http://kakugawa.aial.hiroshima-u.ac.jp/~kakugawa/Hacks/</a>
 <dt><a href="http://itohws03.ee.noda.sut.ac.jp/~matsuda/VFlib-FT/" 
 class="offsite">http://itohws03.ee.noda.sut.ac.jp/~matsuda/VFlib-FT/</a>
 <dd>Author &lt;<a href="mailto:matsuda@itohws01.ee.noda.sut.ac.jp">matsuda@itohws01.ee.noda.sut.ac.jp</a>&gt;
+<dt><a href="http://www.rd.nacsis.ac.jp/~katayama/homepage/ghostscript/Japanese.html"
+class="offsite">http://www.rd.nacsis.ac.jp/~katayama/homepage/ghostscript/Japanese.html</a>
+<dd>Author &lt;<a href="mailto:katayama@rd.nacsis.ac.jp">katayama@rd.nacsis.ac.jp</a>&gt;
 </dl></blockquote>
 
-<h3><a name="Korean"></a>Free Korean (Hangul and Hanja) fonts</h3>
+<h3><a name="Unicode_CMaps"></a>Unicode CMaps</h3>
 
 <p>
-Hwan Design Inc. created Hangul TrueType fonts (including Hanja)
-and released under license similar to BSD.
-These fonts can be used as <a href="CJK.htm#About_CID_keyed_fonts">
-CID-keyed font</a> via on-the-fly CIDFontType2 conversion. Refer
-<a href="CJK.htm">CJK.htm</a>
+Some Unicode CMaps that can be used with Ghostscript are freely downloadable from
 
 <blockquote>
-<a href="ftp://ftp.mizi.com/pub/baekmuk/"
-class="offsite">
-ftp://ftp.mizi.com/pub/baekmuk/</a>
+<a href="ftp://ftp.oreilly.com/pub/examples/nutshell/ujip/adobe/" 
+class="offsite">ftp://ftp.oreilly.com/pub/examples/nutshell/ujip/adobe/</a>
 </blockquote>
-
 
 <h3><a name="Cyrillic"></a>Free Cyrillic fonts</h3>
 
@@ -270,12 +313,36 @@ N. Glonty and A. Samarin created in 1989 a Cyrillic extension of TeX's
 for instance at
 
 <blockquote>
-<a
-href="ftp://ctan.tug.org/tex-archive/fonts/cyrillic/cmcyr/" 
-class="offsite">
-ftp://ctan.tug.org/tex-archive/fonts/cyrillic/cmcyr/
-</a>
+<a href="ftp://ctan.tug.org/tex-archive/fonts/cyrillic/cmcyr/" 
+class="offsite">ftp://ctan.tug.org/tex-archive/fonts/cyrillic/cmcyr/</a>
 </blockquote>
+
+<p>
+<a href="New-user.htm#CTAN">CTAN's</a> entire collection of Cyrillic fonts
+is, for instance, at
+
+<blockquote>
+<a href="ftp://ctan.tug.org/tex-archive/fonts/cyrillic/" 
+class="offsite">ftp://ctan.tug.org/tex-archive/fonts/cyrillic/</a>
+</blockquote>
+
+<p>
+Basil K. Malyshev created the "Paradissa Fonts Collection" in 1993.  It
+contained 165 fonts, including the Glonty and Samarin font above plus other
+Computer Modern, Euler, and LaTeX fonts, all in PostScript Type 1 format
+with <code>.afm</code> and <code>.pfm</code> files, compatible with ATM.
+The collection could once be found through CTAN, for instance at
+
+<blockquote>
+http://www.ctan.org/tex-archive/fonts/
+<!-- orginal was ftp://ctan.tug.org/tex-archive/fonts/postscript/cm/ -->
+</blockquote>
+
+<p>
+but the collection no longer seems to be available. However, the
+<a href="http://www.ctan.org/tex-archive/fonts/" class="offsite">ctan fonts directory</a>
+remains an excellent source of free fonts, many of which are offered in
+postscript as well we as TeX Metafont format.
 
 <hr>
 
@@ -408,34 +475,16 @@ entry for your new font; the format for entries is documented
 in Fontmap itself.  Since later entries in Fontmap override earlier
 entries, a font you add at the end supersedes any corresponding fonts supplied
 with Ghostscript and defined earlier in the file.
-In the PC world, Type 1 fonts are customarily given names ending in
-<tt><b>.PFA</b></tt> or <tt><b>.PFB</b></tt>.  Ghostscript can use these
-directly: you just need to make the entry in Fontmap.
-To add CID-keyed fonts, refer <a href="CJK.htm">CJK.htm</a>.
 
 <p>
-If you want to use with Ghostscript a commercial fonts
-(fonts sold as individual package,
- Type 1 and CID fonts bundled to Adobe products,
- TrueType fonts bundled to Microsoft Windows and Apple Macintosh, etc),
-please read carefully the license that accompanies the font to
-satisfy yourself that you may do so legally.
-
-The license of bundled fonts are usually quite varied:
-browsing-only, printable, and embeddable.
-The license of the system and the license of fonts on
-the system must be descriminated.
-Even if you have officially licensed system,
-it does not mean you can use bundled fonts as you want.
-In addition to, TrueType and OpenType format have internal
-flags to restrict embedding, but, unfortunately,
-sometimes they does not reflect the license
-correctly.
-You have to check the license of EACH fonts which you want to
-use with Ghostscript.
-
-We take no responsibility for any possible violations of such licenses.
-
+In the PC world, Type 1 fonts are customarily given names ending in
+<tt><b>.PFA</b></tt> or <tt><b>.PFB</b></tt>.  Ghostscript can use these
+directly: you just need to make the entry in Fontmap.  If you want to use
+with Ghostscript a commercial Type 1 font (such as fonts obtained in
+conjunction with Adobe Type Manager), please read carefully the license that
+accompanies the font to satisfy yourself that you may do so legally; we take
+no responsibility for any possible violations of such licenses.  The same
+applies to TrueType fonts.
 
 <h3><a name="Convert_BDF"></a>Converting BDF fonts</h3>
 
@@ -1279,8 +1328,14 @@ This software is distributed under license and may not be copied,
 modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
+For more information about licensing, please refer to
+http://www.ghostscript.com/licensing/. For information on
+commercial licensing, go to http://www.artifex.com/licensing/ or
+contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
 <p>
-<small>Ghostscript version 7.07, 17 May 2003
+<small>Ghostscript version 8.01, 30 January 2004
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

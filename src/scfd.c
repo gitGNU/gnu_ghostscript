@@ -1,22 +1,28 @@
-/* Copyright (C) 1992, 1995, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1992, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: scfd.c,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: scfd.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* CCITTFax decoding filter */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"
@@ -200,10 +206,10 @@ d:			memset(q, black_byte, rlen >> 3);\
 		*q ^= ((1 << rlen) - 1) << qbit
 
 /* Buffer refill for CCITTFaxDecode filter */
-private int cf_decode_eol(P2(stream_CFD_state *, stream_cursor_read *));
-private int cf_decode_1d(P2(stream_CFD_state *, stream_cursor_read *));
-private int cf_decode_2d(P2(stream_CFD_state *, stream_cursor_read *));
-private int cf_decode_uncompressed(P2(stream_CFD_state *, stream_cursor_read *));
+private int cf_decode_eol(stream_CFD_state *, stream_cursor_read *);
+private int cf_decode_1d(stream_CFD_state *, stream_cursor_read *);
+private int cf_decode_2d(stream_CFD_state *, stream_cursor_read *);
+private int cf_decode_uncompressed(stream_CFD_state *, stream_cursor_read *);
 private int
 s_CFD_process(stream_state * st, stream_cursor_read * pr,
 	      stream_cursor_write * pw, bool last)

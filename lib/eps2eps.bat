@@ -1,5 +1,5 @@
 @echo off 
-@rem $Id: eps2eps.bat,v 1.1 2004/01/14 16:59:46 atai Exp $
+@rem $Id: eps2eps.bat,v 1.2 2004/02/14 22:20:04 atai Exp $
 @rem "Distill" Encapsulated PostScript.
 
 if %1/==/ goto usage

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: pphs,v 1.1 2004/01/14 16:59:47 atai Exp $
+# $Id: pphs,v 1.2 2004/02/14 22:20:04 atai Exp $
 # Print the Primary Hint Stream from a linearized PDF file.  Usage:
 #	pphs filename.pdf
 # Output goes to stdout.

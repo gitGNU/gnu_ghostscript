@@ -36,34 +36,34 @@ Table of contents
      * Which document contains what?
           + Primarily for users:
 
+   Deprecated.htm
    Devices.htm
-   Helpers.htm
-       Humor.htm
+       Helpers.htm
+   Humor.htm
    New-user.htm
    Ps2epsi.htm
-   Ps2pdf.htm
-       Readme.htm
+       Ps2pdf.htm
+   Readme.htm
+   Unix-lpr.htm
    Use.htm
 
           + For both users and developers:
 
    Changes.htm
-   Current.htm
-   CJK.htm
+    Copying.htm
    Fonts.htm
-       Hershey.htm
-   History*.htm
+   Hershey.htm
+       History*.htm
    Install.htm
    Language.htm
    Make.htm
        News.htm
    Psfiles.htm
-
+ 
           + Primarily for developers:
 
    API.htm
    C-style.htm
-   CJKTTCID.htm
    DLL.htm
    Develop.htm
    Drivers.htm
@@ -75,6 +75,7 @@ Table of contents
        Ps-style.htm
    Release.htm
    Source.htm
+
    Xfonts.htm
      _________________________________________________________________
 
@@ -85,17 +86,15 @@ Document roadmap by theme
    A new user of Ghostscript should begin by reading the material
    specifically for new users, then as many of these documents as seem
    useful:
-     * how to install Ghostscript
-     * how to use Ghostscript; some of this information information also
-       found in gs.1, the Unix "man" page for Ghostscript.
-     * the catalogs at the beginning of devs.mak and contrib.mak, which
-       list all the devices for which Ghostscript is able to produce
-       output (although if you got Ghostscript in binary form, it will
-       only include some of these devices)
-     * detailed information about some specific devices that Ghostscript
-       knows about
+     * how to use Ghostscript. This includes both a quickstart
+       introduction to the commandline version and more extensive
+       reference material.
+     * detailed information about specific devices that Ghostscript can
+       use for output
+     * information about reporting problems--but remember that
+       Ghostscript comes with NO WARRANTY and NO SUPPORT
      * more detailed information about how to use Ghostscript under Unix
-       with lpr as a filter for non-PostScript printers
+       with lpr as a filter for printing
      * about the fonts distributed with Ghostscript, including how to add
        or replace fonts
      * a description of the Ghostscript language, and its differences
@@ -105,8 +104,8 @@ Document roadmap by theme
 
   Before building Ghostscript
 
-   If you are going to compile Ghostscript, rather than just use an
-   executable you got from somewhere, you should read:
+   If you are going to compile Ghostscript from source, rather than just
+   use an executable you got from somewhere, you may want to read:
      * how to build Ghostscript and install it
      _________________________________________________________________
 
@@ -116,10 +115,9 @@ What should I read if I'm not a new user?
    you should begin by reading this file, then
      * News.htm, for incompatible changes and new features in the current
        release;
-     * Current.htm, for known problems in the current release;
      * if you wish, Changes.htm, for a detailed list of changes in the
        current release;
-     * if you wish, History#.htm (currently History7.htm), for changes in
+     * if you wish, History#.htm (currently History8.htm), for changes in
        other releases.
      _________________________________________________________________
 
@@ -135,7 +133,13 @@ What if I'm a developer?
      * the guide to the Ghostscript source code
      * the interface between Ghostscript and device drivers
      * about the external font interface between Ghostscript and
-       platform-supplied fonts (but read about drivers in general first)
+       platform-supplied fonts
+
+   If you are considering distributing Ghostscript 
+   in conjunction with a commercial product, you should read
+   the license carefully, and you should also read
+     * additional clarification of the circumstances under which
+       Ghostscript can be distributed with a commercial product
 
    If you intend to use Ghostscript in the form of a dynamic link library
    (DLL) under OS/2 or Microsoft Windows or in the form of shared object
@@ -164,10 +168,17 @@ Presence on the World Wide Web
 
   Ghostscript's home page
 
-   GNU Ghostscript has a home page on the World Wide Web with helpful
-   information. Pleave visit:
+
+   GNU Ghostscript has a home page on the World Wide Web. Pleave visit:
 
      http://www.gnu.org/software/ghostscript/
+     
+   Ghostscript also has another page on the World Wide Web with helpful
+   information such as the FAQ (Frequently Asked Questions) and a list of
+   known problems and workarounds for the current release (in the
+   "Obtaining" file for that release):
+
+     http://www.cs.wisc.edu/~ghost/
 
    More material about Ghostscript can be found at
 
@@ -207,9 +218,8 @@ Which document contains what?
 
    API.htm
           On MS-Windows and OS/2, Ghostscript is compiled as a dynamic
-          link library (DLL). On GNU/Linux, Ghostscript can be compiled
-          as a shared object. This describes how to use it. For
-          developers.
+          link library (DLL). On GNU/Linux, Ghostscript can be compiled as a
+          shared object. This describes how to use it. For developers.
 
    C-style.htm
           Guidelines and style for C coding, which you should follow if,
@@ -221,18 +231,11 @@ Which document contains what?
           pre-release, generated mechanically from the CVS logs. For
           developers.
 
-   CJK.htm
-          Usage of features to support CJK CID-keyed fonts in
-          Ghostscript.
 
-   CJKTTCID.htm
-          Note providing information on utilization of CJK (Chinese,
-          Japanese and Korean) TrueType fonts as CIDFontType2 fonts from
-          the viewpoint of its validity and limitations.
-
-   Current.htm
-          Information specifically about the current release of
-          Ghostscript. See also the latest news of changes.
+   Copying.htm
+          This is the Free Software Foundation's GNU General Public
+          License, the license governing use and distribution of this
+          version of GNU Ghostscript.
 
    DLL.htm
           On OS/2, MS Windows-16 and MS Windows-32 platforms, Ghostscript
@@ -244,6 +247,11 @@ Which document contains what?
           Code orientation for developers. Contains a detailed breakdown
           of the source files by functional group, and overviews of the
           major architectural features and services.
+
+   Deprecated.htm
+          Documention for deprecated devices and features. Features
+          described here will be removed in future versions of
+          Ghostscript.
 
    Devices.htm
           Detailed information about some specific devices for which
@@ -273,6 +281,7 @@ Which document contains what?
    History*.htm
           The history of changes in all Ghostscript releases:
 
+     History8.htm for Ghostscript versions 8.n
      History7.htm for Ghostscript versions 7.n
      History6.htm for Ghostscript versions 6.n
      History5.htm for Ghostscript versions 5.n
@@ -351,7 +360,7 @@ Which document contains what?
           A description of the PostScript files (other than font files)
           distributed with Ghostscript, including initialization
           routines, utility programs, and sample printable files.
-
+  
    Readme.htm
           This document.
 
@@ -363,6 +372,9 @@ Which document contains what?
    Source.htm
           A guide to the Ghostscript source code, for development and
           debugging.
+
+   Unix-lpr.htm
+          How to set up Ghostscript as a Unix lpr filter.
 
    Use.htm
           Detailed instructions on how to use Ghostscript, including such
@@ -376,12 +388,16 @@ Which document contains what?
           font-rendering mechanism, for developers.
      _________________________________________________________________
 
-   Copyright © 1996, 2000 Aladdin Enterprises. All rights reserved.
+   Copyright © 1996-2002 artofcode LLC. All rights reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied. This software is distributed under license and may not be
    copied, modified or distributed except as expressly authorized under
    the terms of the license contained in the file LICENSE in this
-   distribution.
+   distribution. For more information about licensing, please refer to
+   http://www.ghostscript.com/licensing/. Go to 
+   http://www.artifex.com/licensing/ or contact Artifex
+   Software, Inc., 101 Lucas Valley Road #110, San Rafael, CA 94903,
+   U.S.A., +1(415)492-9861.
 
-   Ghostscript version 7.07, 17 May 2003
+   Ghostscript version 8.01, 30 January 2004

@@ -1,22 +1,28 @@
-/* Copyright (C) 1996, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1996, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gsdcolor.h,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/*$Id: gsdcolor.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Device color representation for drivers */
 
 #ifndef gsdcolor_INCLUDED
@@ -27,10 +33,16 @@
 #include "gxbitmap.h"
 #include "gxhttile.h"
 #include "gxcindex.h"
+#include "gxwts.h"
 
 #ifndef gx_device_color_DEFINED
 #  define gx_device_color_DEFINED
 typedef struct gx_device_color_s gx_device_color;
+#endif
+
+#ifndef gx_device_saved_color_DEFINED
+#  define gx_device_saved_color_DEFINED
+typedef struct gx_device_color_saved_s  gx_device_color_saved;
 #endif
 
 #ifndef gx_device_halftone_DEFINED
@@ -77,9 +89,14 @@ typedef struct gx_device_halftone_s gx_device_halftone;
 #define gx_dc_is_colored_halftone(pdc)\
   ((pdc)->type == gx_dc_type_ht_colored)
 
-/* Test device colors for equality. */
-bool gx_device_color_equal(P2(const gx_device_color *pdevc1,
-			      const gx_device_color *pdevc2));
+/*
+ * Test device colors for equality.  Testing for equality is done
+ * for determining when cache values, etc. can be used.  Thus these
+ * routines should err toward false responses if there is any question
+ * about the equality of the two device colors.
+ */
+bool gx_device_color_equal(const gx_device_color *pdevc1,
+			   const gx_device_color *pdevc2);
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * The definitions in the following section of the file, plus the ones
@@ -134,25 +151,10 @@ bool gx_device_color_equal(P2(const gx_device_color *pdevc1,
 #define _color_set_c(pdc, i, b, l)\
   ((pdc)->colors.colored.c_base[i] = (b),\
    (pdc)->colors.colored.c_level[i] = (l))
-void gx_complete_rgb_halftone(P2(gx_device_color *pdevc,
-				 gx_device_halftone *pdht));
-#define color_set_rgb_halftone(pdc, ht, br, lr, bg, lg, bb, lb, a)\
-  (_color_set_c(pdc, 0, br, lr),\
-   _color_set_c(pdc, 1, bg, lg),\
-   _color_set_c(pdc, 2, bb, lb),\
-   (pdc)->colors.colored.alpha = (a),\
-   gx_complete_rgb_halftone(pdc, ht))
+
 /* Some special clients set the individual components separately. */
-void gx_complete_cmyk_halftone(P2(gx_device_color *pdevc,
-				  gx_device_halftone *pdht));
-#define color_finish_set_cmyk_halftone(pdc, ht)\
-  gx_complete_cmyk_halftone(pdc, ht)
-#define color_set_cmyk_halftone(pdc, ht, bc, lc, bm, lm, by, ly, bk, lk)\
-   (_color_set_c(pdc, 0, bc, lc),\
-    _color_set_c(pdc, 1, bm, lm),\
-    _color_set_c(pdc, 2, by, ly),\
-    _color_set_c(pdc, 3, bk, lk),\
-    color_finish_set_cmyk_halftone(pdc, ht))
+void gx_complete_halftone(gx_device_color *pdevc, int num_comps,
+                          gx_device_halftone *pdht);
 
 /* Note that color_set_null_pattern doesn't set mask.ccolor. */
 #define color_set_null_pattern(pdc)\
@@ -273,6 +275,7 @@ struct gx_device_color_s {
 	} binary;
 	struct _col {
 	    gx_device_halftone *c_ht; /* non-const for setting cache ptr */
+	    ushort num_components;
 	    byte c_base[GX_DEVICE_COLOR_MAX_COMPONENTS];
 	    uint c_level[GX_DEVICE_COLOR_MAX_COMPONENTS];
 	    ushort /*gx_color_value */ alpha;
@@ -286,6 +289,14 @@ struct gx_device_color_s {
 #endif
 #endif
 	} colored;
+	struct _wts {
+	    const gx_device_halftone *w_ht;
+	    wts_screen_sample_t levels[GX_DEVICE_COLOR_MAX_COMPONENTS];
+	    ushort num_components;
+
+	    /* plane_mask and base_color would be an optimization */
+	    gx_color_index plane_vector[GX_DEVICE_COLOR_MAX_COMPONENTS];
+	} wts;
 	struct _pat {
 	    gx_color_tile *p_tile;
 	} /*(colored) */ pattern;
@@ -307,6 +318,61 @@ struct gx_device_color_s {
   gs_public_st_composite(st_device_color, gx_device_color, "gx_device_color",\
     device_color_enum_ptrs, device_color_reloc_ptrs)
 #define st_device_color_max_ptrs (st_client_color_max_ptrs + 2)
+
+/*
+ * For the command list, it is useful to record the most recent device
+ * color placed in a band, so as to avoid sending unnecessary
+ * information. The following structure is used for that purpose. It is
+ * created by the save_dc method, and can be utilized by the write
+ * method. It should otherwise be considered opaque, though it is
+ * guarranteed not to contain pointers to allocated memory (and thus does
+ * not interact with the GC code for containing structures).
+ *
+ * The reason a structure distinct from the device color itself is used
+ * for this purpose is related to an anomally involving reference to
+ * device halftones. The gx_device_halftone structure is reference
+ * counted, but a long standing (and not easily removable) convention
+ * in the code states that only reference from imager (graphic) states
+ * to halftones are counted; reference from device colors are not. The
+ * pointer to a halftone in a saved device color may, therefore,
+ * become a dangling pointer. This does not occur in other uses of a
+ * device color, because a color can only be usable when the hafltone
+ * it references is the current halftone in some imager state.
+ *
+ * Because halftones are large and seldom changed, they are always sent
+ * as "all bands" commands. Individual device colors, by contrast, are
+ * usually written just for the bands that make use of them. The
+ * distinction between these two cases can only be handled by command
+ * list writer code itself, so this structure does not involve the
+ * halftone. If the halftone changes, however, the write method should
+ * be passed a null pointer for the saved color operand; this will
+ * ensure the the full device color information is written.
+ *
+ * Currently patterns cannot be passed through the command list, so
+ * pattern information is not included in this structure.
+ */
+
+struct gx_device_color_saved_s {
+    gx_device_color_type    type;
+    union _svc {
+        gx_color_index  pure;
+        struct _svbin {
+            gx_color_index  b_color[2];
+            uint            b_level;
+            int             b_index;
+        }               binary;
+        struct _svcol {
+            byte    c_base[GX_DEVICE_COLOR_MAX_COMPONENTS];
+            uint    c_level[GX_DEVICE_COLOR_MAX_COMPONENTS];
+            ushort  alpha;
+        }               colored;
+        struct _swts {
+            wts_screen_sample_t levels[GX_DEVICE_COLOR_MAX_COMPONENTS];
+        }               wts;
+    }                       colors;
+    gs_int_point            phase;
+};
+
 
 /*
  * Define the standard device color types.
@@ -338,6 +404,9 @@ extern const gx_device_color_type_t *const gx_dc_type_ht_binary;	/* gxht.c */
 #endif
 #ifndef gx_dc_type_ht_colored
 extern const gx_device_color_type_t *const gx_dc_type_ht_colored;	/* gxcht.c */
+#endif
+#ifndef gx_dc_type_ht_colored
+extern const gx_device_color_type_t *const gx_dc_type_wts;	/* gxwts.c */
 #endif
 
 #endif /* gsdcolor_INCLUDED */

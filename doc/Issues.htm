@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>Ghostscript Open Issues.</title>
-<!-- $Id: Issues.htm,v 1.1 2004/01/14 16:59:44 atai Exp $ -->
+<!-- $Id: Issues.htm,v 1.2 2004/02/14 22:20:03 atai Exp $ -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
 
@@ -84,39 +84,24 @@ When pdfwrite device cannot open the output file it fails with:
 
 When CIDFont-CMap pair required by PDF file is not available GS
 fails with:
-<pre>/undefinedresource in --findresource--</pre>
+<blockquote><pre>/undefinedresource in --findresource--</pre></blockquote>
 
 <hr>
 <h2><a name="Minor_bugs"></a>Minor Bugs.</h2>
 
-<h3>PageSize cannot use packedarray</h3>
-PageSize doesn't accept packed array as an argument if the page size is
-adjusted, for instance, to the whole number of pixels. The following
-program 
-<pre>
-%!
-/x 333.33333333 def /y 666.66666666 def
-
-<< /PageSize x y 2 packedarray >> setpagedevice
-(pached passed)==    % fails
-%EOF
-</pre>
-fails with
-<pre>
-Error: /configurationerror in --setpagedevice--
-Additional information: [/PageSize [333.333344 666.666687]]
-</pre>
-
 <h3> Multiple encode filters in a pipeline fail.</h3>
 The following code fragment should output "3E>". It outputs nothing. 
-<pre>
+<blockquote><pre>
 %!PS 
 (%stdout) (w) file 
 /ASCIIHexEncode filter 
 /ASCIIHexEncode filter 
 closefile 
-</pre>
+</pre></blockquote>
 SourceForge bug #224134, December 2, 2000.
+<p>
+<i>LPD reports that this behavior is in fact according to spec and 
+programs cannot rely on this behavior.</i>
 
 <h3> Bad JPEG stream in PDF generated when source ends prematurely</h3>
 When GS converts the source image to JPEG stream in PDF file and the
@@ -149,56 +134,58 @@ ps2pdf ignores transfer functions in the shaded fill but
 uses them for vector objects. The following sample program 
 has 2 shaded fills and 2 rectangles that should have the 
 same color as the left end of the shaded fill.
-<pre>
+<blockquote><pre>
 
-      <</PageSize [612 200] /Policies<</PageSize 1>> >>setpagedevice 
-      612 1 scale 
-      /grad 
-      { gsave 
-	  0 0 1 100 rectclip 
-	  <<
-	      /ColorSpace [/DeviceCMYK] 
-	      /Domain [0 1] 
-	      /Coords [0 0 1 0] 
-	      /Extend [false false] 
-	      /Function 
-	      << /FunctionType 3 
+%!
+&lt;&lt;/PageSize [612 200] /Policies&lt;&lt;/PageSize 1&gt;&gt; &gt;&gt;setpagedevice 
+612 1 scale 
+/grad 
+{ gsave 
+  0 0 1 100 rectclip 
+  &lt;&lt;
+	  /ColorSpace [/DeviceCMYK] 
+	  /Domain [0 1] 
+	  /Coords [0 0 1 0] 
+	  /Extend [false false] 
+	  /Function 
+	  &lt;&lt; /FunctionType 3 
 		  /Domain [ 0 1] 
 		  /Functions 
-		  [ <<
-		      /FunctionType 2 
-		      /N 1 
-		      /C0 [ 0 0.5 0 0 ] 
-		      /Domain [ 0 1] 
-		      /C1 [0.5 0 0 0] 
-		  >> ] 
+		  [ &lt;&lt;
+			  /FunctionType 2 
+			  /N 1 
+			  /C0 [ 0 0.5 0 0 ] 
+			  /Domain [ 0 1] 
+			  /C1 [0.5 0 0 0] 
+		  &gt;&gt; ] 
 		  /Bounds [] 
 		  /Encode [0 1] 
-	      >> 
-	      /ShadingType 2 
-	  >> shfill 
+	  &gt;&gt; 
+	  /ShadingType 2 
+  &gt;&gt; shfill 
 
-      0 0.5 0 0 setcmykcolor 
-      0 0 0.1 50 rectfill 
-      grestore 
-      } def 
+  0 0.5 0 0 setcmykcolor 
+  0 0 0.1 50 rectfill 
+  grestore 
+} def 
 
-      grad 
-      {1 exch 2 div sub} settransfer 
-      0 100 translate 
-      grad 
-      showpage 
-</pre>
+grad 
+{1 exch 2 div sub} settransfer 
+0 100 translate 
+grad 
+showpage 
+
+</pre></blockquote>
 SourceForge Bug #232334, Feb 14, 2001.
 
 <h3>ResourceFileName gives wrong result with Font category.</h3>
 The following sequence:
 
-<pre>
-	/Font /Category findresource begin 
-	/CharterBT-Roman 255 string ResourceFileName = 
-	end 
-</pre>
+<blockquote><pre>
+/Font /Category findresource begin 
+/CharterBT-Roman 255 string ResourceFileName = 
+end 
+</pre></blockquote>
 
 Gives the results:
 <pre>
@@ -207,7 +194,7 @@ Gives the results:
 
 This should be a valid platform specific file name and path such as:
 <pre>
-        f:/fonts/bchr.pfa 
+        f:/afpl/fonts/bchr.pfa 
 </pre>
 SourceForge Bug #233403, Feb 21, 2001.
 <h3>GS doesn't handle names of separations with HalftoneType 5.</h3>
@@ -220,13 +207,58 @@ SourceForge Bug #406643, Mar 7, 2001.
 
 <h3> PDF 1.4 images don't deallocate all memory </h3>
 
+<p>
 The pdf14_begin_typed_image() function in the PDF 1.4 device creates
 a marking device, but this is not freed on end_image. The garbage
 collector will free it, so it's not a real memory leak, but it would
 still be nicer to free it explicitly.
 
-<h3> </h3>
+<h3> Truetype fonts are written with incorrect table checksums </h3>
 
+<p>
+psf_write_truetype_data() writes truetype fonts with incorrect 
+checksums on most tables. Most truetype interpreters ignore these
+so in practice the issue hasn't been a problem. Nevertheless,
+Ghostscript is embedding off-spec fonts in pdf documents.
+
+<p>
+A complete fix should generate font data in 2 passes: the
+first pass computes the checksums, the second one
+really writes data. Fonts can be very large, so
+buffering the entire font is not a good solution. The 
+checksums can't be modified after the data is written
+because the output stream may not be positionable 
+(likely it's a FlateEncode filter).
+
+<p>
+<i>Igor suggests implementing a special encoding filter for
+checksums, and executing the body of
+psf_write_truetype_data twice: first with the checksum
+filter, second with the real output stream. After a TT
+table is completed, its checksum to be taken from the
+filter and to be put into the 'tables' array.</i>
+
+<p>
+SourceForge Bug #615620, September 27, 2002.
+
+<h3> save restore fails from the command line </h3>
+
+<p>
+Entering 'save' followed by 'restore' from the interactive
+Ghostscript prompt (on separate lines) generates an /invalidrestore
+exception. It shouldn't. This is a long standing issue.
+
+<p>
+The problem is that the string that is used
+for command line input by the 'executive'
+processing still exists when the 'restore'
+happens, but this string is brought into
+existence after the 'save' operation, thus
+an causing an invalidrestore.
+
+<p>
+SourceForge Bug #603689, September 2, 2002.
+ 
 <hr>
 
 <h2><a name="Driver_Issues"></a>Driver Issues.</h2>
@@ -245,17 +277,17 @@ postscript file to the printer prior to printing the problem
 file.  This works but it leaves a .5" margin at the top
 and left which is may be ok for some uses.
 </I>
-<pre>
+<blockquote><pre>
 
 %!PS-Adobe-2.0
 % Reset the offset and margins.
-<<
+&lt;&lt;
     /PageOffset [-12 -18]
     /Margins [0 0]
     /.HWMargins [0 0 0 0]
->>
+&gt;&gt;
 setpagedevice
-</pre>
+</pre></blockquote>
 
 <I>
 This is an instance of the endless struggle with printer margins, especially
@@ -265,6 +297,21 @@ the corner of the printable area, and if the latterm whether the page should
 be clipped or scaled.
 </I>
 <p>
+
+<h3> User request for pdfwrite to convert all colors.</h3>
+
+<p>
+Currently, pdfwrite only converts fill/stroke/text/imagemask colors to the
+color space defined by ProcessColorModel, not colors in images.  A user
+requested that it convert all colors, including images.  (SourceForge "bug"
+#485498.)
+
+<i>
+ProcessColorModel is a stopgap until pdfwrite handles device-dependent
+vector/text/mask colors properly -- i.e., no longer converts them to a
+single color space.  I.e., this request is for a significant enhancement,
+not a bug fix.
+</i>
 
 <hr>
 
@@ -316,19 +363,19 @@ PLRM says "The dictionary returned by currentpagedevice always
 contains an entry for every parameter supported by the device".
 GS prints both messages in the following program: 
 
-<pre>
+<blockquote><pre>
 %! 
 currentpagedevice /Orientation known not 
 { (This printer does _not_ support Orientation.) = 
 } 
 if 
-<</Orientation 1>> setpagedevice 
+&lt;&lt;/Orientation 1gt;gt; setpagedevice 
 currentpagedevice /Orientation known 
 { (Err... wait... it does.) = 
 } 
 if 
 %%EOF 
-</pre>
+</pre></blockquote>
 SourceForge bug #220967, October 31, 2000.
 <p><I>
 The handling of Orientation is a mess. The PLRM says quite explicitly
@@ -366,25 +413,25 @@ can result from behaviour that is different from Adobe printer implementations.
 Current implementation is incompatible with most font installers. Installers
 expect that:
 <ul>
-"filenameforall" enumerates all files in all directories using the relative path name.
+<li>"filenameforall" enumerates all files in all directories using the relative path name.
 Directory names, including . and .. are not enumerated
 </ul>
 <ul>
-characters not supported on the platform are encoded.
+<li>characters not supported on the platform are encoded.
 </ul>
 <ul>
-"(w) file" operator creates directories if necessary.
+<li>"(w) file" operator creates directories if necessary.
 </ul>
 </I>
 
 <h3>Cannot load Adobe's fonts. </h3>
 The following program fails with Adobe fonts: 
 
-<pre>
+<blockquote><pre>
 (C*) 
 { cvn findfont pop 
 } 255 string /Font resourceforall 
-</pre>
+</pre></blockquote>
 SourceForge Bug #226462, December 20, 2000.
 <p>
 <I>
@@ -433,7 +480,7 @@ SourceForge Bug #441959 keeps good test data for this.
 
 The following program prints differently to stdout on GS and Adobe :
 <p>
-<pre>
+<blockquote><pre>
 %!
 /proc
   { currentfile =string readline pop
@@ -461,7 +508,7 @@ test
 (stop) ==
 
 %%EOF
-</pre>
+</pre></blockquote>
 <p>
 <I>
 Adobe fills entire input buffer of ASCIIHexDecode with procedure's output,
@@ -473,9 +520,23 @@ so as the procedure is called exact number of times. Thus, GS is more conservati
 Anoter useful test to be made by repeating lines %31-%39 hundred times,
 without intermediate empty lines.
 <p>
-<h3>                                              </h3>
-<p>
 
+<h3>Improper handling of hybrid fonts.</h3>
+
+Hybrid fonts are described in section 9.2 of the "Adobe Type 1 Font Format" book.
+Such fonts cannot load into global VM due to internal usage of <I>save/restore</I>
+(and should do into local VM).
+Hybrid fonts can be recognized by the appearance of the word 'hires' with
+a pre-scan over the font, the same way that .findfontvalue works now.
+
+<h3>Job server loop isn't implemented.</h3>
+
+Rather <I>startjob</I> and <I>exitserver</I> are stubbed in lib/gs_lev2.ps,
+it appears insufficietly compartible with Adobe interpreters.
+Particularly the outermost <I>restore</I> unwinds global VM while interpreting a
+document specified in command line argument. Perhaps global VM should not unwind
+during a document interpretation. A compatible change should introduce a new command
+line option for etablishing a job server loop around douments.
 
 <!-- [2.0 end contents] ==================================================== -->
 
@@ -483,9 +544,10 @@ without intermediate empty lines.
 <hr>
 
 <p>
-<small>Copyright &copy; 2000 artofocode LLC.  All rights reserved.</small>
+<small>Copyright &copy; 2000-2002 artofocode LLC.  All rights reserved.</small>
 
 <p>
+<small>
 This software is provided AS-IS with no warranty, either express or
 implied.
 
@@ -493,8 +555,15 @@ This software is distributed under license and may not be copied,
 modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
+For more information about licensing, please refer to
+http://www.ghostscript.com/licensing/. For information on
+commercial licensing, go to http://www.artifex.com/licensing/ or
+contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+</small>
+
 <p>
-<small>Ghostscript version 7.07, 17 May 2003
+<small>Ghostscript version 8.01, 30 January 2004
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

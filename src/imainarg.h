@@ -1,22 +1,28 @@
-/* Copyright (C) 1996, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1996, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: imainarg.h,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: imainarg.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* argv/argc interface to imainarg.c */
 
 #ifndef imainarg_INCLUDED
@@ -35,12 +41,11 @@ typedef struct gs_main_instance_s gs_main_instance;
  * argv should really be const char *[], but ANSI C requires writable
  * strings (which, however, it forbids the callee to modify!).
  */
-int gs_main_init_with_args(P3(gs_main_instance * minst, int argc,
-			      char *argv[]));
+int gs_main_init_with_args(gs_main_instance * minst, int argc, char *argv[]);
 
 /*
  * Run the 'start' procedure (after processing the command line).
  */
-int gs_main_run_start(P1(gs_main_instance * minst));
+int gs_main_run_start(gs_main_instance * minst);
 
 #endif /* imainarg_INCLUDED */

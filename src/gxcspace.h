@@ -1,22 +1,28 @@
-/* Copyright (C) 1996, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1996, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxcspace.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxcspace.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Implementation of color spaces */
 /* Requires gsstruct.h */
 
@@ -73,7 +79,7 @@ struct gs_color_space_type_s {
      */
 
 #define cs_proc_num_components(proc)\
-  int proc(P1(const gs_color_space *))
+  int proc(const gs_color_space *)
 #define cs_num_components(pcs)\
   (*(pcs)->type->num_components)(pcs)
 	cs_proc_num_components((*num_components));
@@ -85,25 +91,15 @@ struct gs_color_space_type_s {
      */
 
 #define cs_proc_base_space(proc)\
-  const gs_color_space *proc(P1(const gs_color_space *))
+  const gs_color_space *proc(const gs_color_space *)
 #define cs_base_space(pcs)\
   (*(pcs)->type->base_space)(pcs)
 	cs_proc_base_space((*base_space));
 
-    /*
-     * Test whether this color space is equal to another one of the same
-     * type.  Spurious 'false' answers are OK if the real test is too much
-     * work, but spurious 'true' answers are not.
-     */
-
-#define cs_proc_equal(proc)\
-  bool proc(P2(const gs_color_space *, const gs_color_space *))
-	cs_proc_equal((*equal));
-
     /* Construct the initial color value for this space. */
 
 #define cs_proc_init_color(proc)\
-  void proc(P2(gs_client_color *, const gs_color_space *))
+  void proc(gs_client_color *, const gs_color_space *)
 #define cs_init_color(pcc, pcs)\
   (*(pcs)->type->init_color)(pcc, pcs)
 #define cs_full_init_color(pcc, pcs)\
@@ -113,7 +109,7 @@ struct gs_color_space_type_s {
     /* Force a client color into its legal range. */
 
 #define cs_proc_restrict_color(proc)\
-  void proc(P2(gs_client_color *, const gs_color_space *))
+  void proc(gs_client_color *, const gs_color_space *)
 #define cs_restrict_color(pcc, pcs)\
   ((pcs)->type->restrict_color(pcc, pcs))
 	cs_proc_restrict_color((*restrict_color));
@@ -122,8 +118,8 @@ struct gs_color_space_type_s {
     /* (Not defined for Pattern spaces.) */
 
 #define cs_proc_concrete_space(proc)\
-  const gs_color_space *proc(P2(const gs_color_space *,\
-				const gs_imager_state *))
+  const gs_color_space *proc(const gs_color_space *,\
+				const gs_imager_state *)
 #define cs_concrete_space(pcs, pis)\
   (*(pcs)->type->concrete_space)(pcs, pis)
 	cs_proc_concrete_space((*concrete_space));
@@ -137,8 +133,8 @@ struct gs_color_space_type_s {
      */
 
 #define cs_proc_concretize_color(proc)\
-  int proc(P4(const gs_client_color *, const gs_color_space *,\
-    frac *, const gs_imager_state *))
+  int proc(const gs_client_color *, const gs_color_space *,\
+    frac *, const gs_imager_state *)
 #define cs_concretize_color(pcc, pcs, values, pis)\
   (*(pcs)->type->concretize_color)(pcc, pcs, values, pis)
 	cs_proc_concretize_color((*concretize_color));
@@ -147,28 +143,44 @@ struct gs_color_space_type_s {
     /* (Only defined for concrete color spaces.) */
 
 #define cs_proc_remap_concrete_color(proc)\
-  int proc(P5(const frac *, gx_device_color *, const gs_imager_state *,\
-    gx_device *, gs_color_select_t))
+  int proc(const frac *, const gs_color_space * pcs, gx_device_color *,\
+	const gs_imager_state *, gx_device *, gs_color_select_t)
 	cs_proc_remap_concrete_color((*remap_concrete_color));
 
     /* Map a color directly to a device color. */
 
 #define cs_proc_remap_color(proc)\
-  int proc(P6(const gs_client_color *, const gs_color_space *,\
+  int proc(const gs_client_color *, const gs_color_space *,\
     gx_device_color *, const gs_imager_state *, gx_device *,\
-    gs_color_select_t))
+    gs_color_select_t)
 	cs_proc_remap_color((*remap_color));
 
     /* Install the color space in a graphics state. */
 
 #define cs_proc_install_cspace(proc)\
-  int proc(P2(const gs_color_space *, gs_state *))
+  int proc(const gs_color_space *, gs_state *)
 	cs_proc_install_cspace((*install_cspace));
+
+    /*
+     * Push the appropriate overprint compositor onto the current device.
+     * This is distinct from install_cspace as it may need to be called
+     * when the overprint parameter is changed.
+     *
+     * This routine need only be called if:
+     *   1. The color space or color model has changed, and overprint
+     *      is true.
+     *   2. The overprint mode setting has changed, and overprint is true.
+     *   3. The overprint mode setting has changed.
+     */
+
+#define cs_proc_set_overprint(proc)\
+  int proc(const gs_color_space *, gs_state *)
+	cs_proc_set_overprint((*set_overprint));
 
     /* Adjust reference counts of indirect color space components. */
 
 #define cs_proc_adjust_cspace_count(proc)\
-  void proc(P2(const gs_color_space *, int))
+  void proc(const gs_color_space *, int)
 #define cs_adjust_cspace_count(pgs, delta)\
   (*(pgs)->color_space->type->adjust_cspace_count)((pgs)->color_space, delta)
 	cs_proc_adjust_cspace_count((*adjust_cspace_count));
@@ -182,7 +194,7 @@ struct gs_color_space_type_s {
      */
 
 #define cs_proc_adjust_color_count(proc)\
-  void proc(P3(const gs_client_color *, const gs_color_space *, int))
+  void proc(const gs_client_color *, const gs_color_space *, int)
 #define cs_adjust_color_count(pgs, delta)\
   (*(pgs)->color_space->type->adjust_color_count)\
     ((pgs)->ccolor, (pgs)->color_space, delta)
@@ -206,8 +218,6 @@ cs_proc_num_components(gx_num_components_1);
 cs_proc_num_components(gx_num_components_3);
 cs_proc_num_components(gx_num_components_4);
 cs_proc_base_space(gx_no_base_space);
-cs_proc_equal(gx_cspace_is_equal);
-cs_proc_equal(gx_cspace_not_equal);
 cs_proc_init_color(gx_init_paint_1);
 cs_proc_init_color(gx_init_paint_3);
 cs_proc_init_color(gx_init_paint_4);
@@ -219,6 +229,7 @@ cs_proc_concrete_space(gx_same_concrete_space);
 cs_proc_concretize_color(gx_no_concretize_color);
 cs_proc_remap_color(gx_default_remap_color);
 cs_proc_install_cspace(gx_no_install_cspace);
+cs_proc_set_overprint(gx_spot_colors_set_overprint);
 cs_proc_adjust_cspace_count(gx_no_adjust_cspace_count);
 cs_proc_adjust_color_count(gx_no_adjust_color_count);
 
@@ -243,11 +254,11 @@ extern_st(st_color_space);
  * Initialize the type and memory fields of a color space, possibly
  * allocating it first.  This is only used by color space implementations.
  */
-void gs_cspace_init(P3(gs_color_space *pcs,
-		       const gs_color_space_type *pcstype,
-		       gs_memory_t *mem));
-int gs_cspace_alloc(P3(gs_color_space **ppcspace,
-		       const gs_color_space_type *pcstype,
-		       gs_memory_t *mem));
+void gs_cspace_init(gs_color_space *pcs,
+		    const gs_color_space_type *pcstype,
+		    gs_memory_t *mem);
+int gs_cspace_alloc(gs_color_space **ppcspace,
+		    const gs_color_space_type *pcstype,
+		    gs_memory_t *mem);
 
 #endif /* gxcspace_INCLUDED */

@@ -1,22 +1,28 @@
-/* Copyright (C) 1995, 1996, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1995, 1996, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxline.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxline.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Private line parameter definitions */
 
 #ifndef gxline_INCLUDED
@@ -61,20 +67,19 @@ typedef struct gx_line_params_s {
   ((plp)->half_width = (wid) / 2)
 #define gx_current_line_width(plp)\
   ((plp)->half_width * 2)
-int gx_set_miter_limit(P2(gx_line_params *, floatp));
+int gx_set_miter_limit(gx_line_params *, floatp);
 
 #define gx_current_miter_limit(plp)\
   ((plp)->miter_limit)
-int gx_set_dash(P5(gx_dash_params *, const float *, uint, floatp,
-		   gs_memory_t *));
+int gx_set_dash(gx_dash_params *, const float *, uint, floatp, gs_memory_t *);
 
 #define gx_set_dash_adapt(pdp, adpt) ((pdp)->adapt = (adpt))
-int gx_set_dot_length(P3(gx_line_params *, floatp, bool));
+int gx_set_dot_length(gx_line_params *, floatp, bool);
 
 /* See gsline.c for the computation of miter_check. */
 #define gx_line_params_initial\
  0.0, gs_cap_butt, gs_join_miter, gs_join_bevel /* for Adobe compatibility */,\
- 10.0, 0.20305866, 0.0, 0/*false*/,\
+ 10.0, (float)0.20305866, 0.0, 0/*false*/,\
   { identity_matrix_body }, { gx_dash_params_initial }
 
 #endif /* gxline_INCLUDED */

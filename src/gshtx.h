@@ -1,31 +1,37 @@
-/* Copyright (C) 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gshtx.h,v 1.1 2004/01/14 16:59:49 atai Exp $ */
+/* $Id: gshtx.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* High-level interface to stand-alone halftone/transfer objects */
 
 #ifndef gshtx_INCLUDED
 #  define gshtx_INCLUDED
 
 #include "gsmemory.h"
-#include "gscsepnm.h"
 #include "gsht1.h"
 #include "gxtmap.h"
+#include "gscspace.h"
 
 /*
  * The stand-alone halftone structures are opaque, and are placed in an opaque
@@ -87,30 +93,28 @@ typedef gs_mapping_closure_proc_t gs_ht_transfer_proc;	/* see gxtmap.h */
  *    (the client must do that directly).
  */
 
-extern int gs_ht_build(P3(gs_ht ** ppht, uint num_comps, gs_memory_t * pmem));
+extern int gs_ht_build(gs_ht ** ppht, uint num_comps, gs_memory_t * pmem);
 
-extern int gs_ht_set_spot_comp(P9(
+extern int gs_ht_set_spot_comp(
 				     gs_ht * pht,
 				     int component_index,
-				     gs_ht_separation_name sepr_name,
 				     floatp freq,
 				     floatp angle,
-				     float (*spot_func) (P2(floatp, floatp)),
+				     float (*spot_func) (floatp, floatp),
 				     bool accurate,
 				     gs_ht_transfer_proc transfer,
 				     const void *client_data
-			       ));
+			       );
 
-extern int gs_ht_set_threshold_comp(P8(
+extern int gs_ht_set_threshold_comp(
 					  gs_ht * pht,
 					  int component_index,
-					  gs_ht_separation_name sepr_name,
 					  int width,
 					  int height,
 					  const gs_const_string * thresholds,
 					  gs_ht_transfer_proc transfer,
 					  const void *client_data
-				    ));
+				    );
 
 /*
  * This procedure specifies a (possibly non-monotonic) halftone of size
@@ -121,20 +125,19 @@ extern int gs_ht_set_threshold_comp(P8(
  *
  * Note that the client is responsible for releasing the mask data.
  */
-extern int gs_ht_set_mask_comp(P9(
+extern int gs_ht_set_mask_comp(
 				     gs_ht * pht,
 				     int component_index,
-				     gs_ht_separation_name sepr_name,
 				     int width,
 				     int height,
 				     int num_levels,
 				     const byte * masks,	/* width x height x num_levels */
 				     gs_ht_transfer_proc transfer,
 				     const void *client_data
-			       ));
+			       );
 
-extern void gs_ht_reference(P1(gs_ht * pht));
-extern void gs_ht_release(P1(gs_ht * pht));
+extern void gs_ht_reference(gs_ht * pht);
+extern void gs_ht_release(gs_ht * pht);
 
 #define gs_ht_assign(pto, pfrom)    \
     BEGIN                           \
@@ -147,6 +150,6 @@ extern void gs_ht_release(P1(gs_ht * pht));
 #define gs_ht_init_ptr(pto, pfrom)          \
     BEGIN gs_ht_reference(pfrom); pto = pfrom; END
 
-extern int gs_ht_install(P2(gs_state * pgs, gs_ht * pht));
+extern int gs_ht_install(gs_state * pgs, gs_ht * pht);
 
 #endif /* gshtx_INCLUDED */

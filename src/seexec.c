@@ -1,22 +1,28 @@
-/* Copyright (C) 1994, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1994, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: seexec.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: seexec.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* eexec filters */
 #include "stdio_.h"		/* includes std.h */
 #include "strimpl.h"
@@ -107,20 +113,34 @@ s_exD_process(stream_state * st, stream_cursor_read * pr,
     if (ss->binary < 0) {
 	/*
 	 * This is the very first time we're filling the buffer.
-	 * Determine whether this is ASCII or hex encoding.
 	 */
 	const byte *const decoder = scan_char_decoder;
 	int i;
 
-        if (rcount < 8 && !last)
-            return 0; 
+        if (ss->pfb_state == 0) {
+	    /*
+	     * Skip '\t', '\r', '\n', ' ' at the beginning of the input stream,
+	     * because Adobe interpreters do this. Don't skip '\0' or '\f'.
+	     */
+	    for (; rcount; rcount--, p++) {
+		byte c = p[1];
+		if(c != '\t' && c != char_CR && c != char_EOL && c != ' ')
+		    break;
+	    }
+	    pr->ptr = p;
+	    count = min(wcount, rcount);
+	}
 
 	/*
+	 * Determine whether this is ASCII or hex encoding.
 	 * Adobe's documentation doesn't actually specify the test
 	 * that eexec should use, but we believe the following
 	 * gives correct answers even on certain non-conforming
 	 * PostScript files encountered in practice:
 	 */
+        if (rcount < 8 && !last)
+            return 0; 
+
 	ss->binary = 0;
 	for (i = min(8, rcount); i > 0; i--)
 	    if (!(decoder[p[i]] <= 0xf ||

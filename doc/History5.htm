@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>History of Ghostscript versions 5.n</title>
-<!-- $Id: History5.htm,v 1.1 2004/01/14 16:59:43 atai Exp $ -->
+<!-- $Id: History5.htm,v 1.2 2004/02/14 22:20:03 atai Exp $ -->
 <!--
 	WARNING: do not use Pete Kaiser's emacs function "gs-toc" alone to
 	re-create the table of contents here, because it will replace the
@@ -1583,7 +1583,7 @@ Removes an unnecessary #include &lt;semaphore.h&gt;.  (gp_semon.c)
 
 Adds a module that implements semaphores using the pthreads mutex
 facilities, as an alternative to gp_posem.c.  Unfortunately, using this
-module causes immediate crashes on both GNU/Linux and BSDI, and we don't know
+module causes immediate crashes on both Linux and BSDI, and we don't know
 why.  (Let us know if you figure it out.)  (gp_ptsem.c)
 
 </pre><h3><a name="5.96_PDF_writer"></a>PDF writer</h3><pre>
@@ -4075,7 +4075,7 @@ openvms.mmk, os2.mak, unix-gcc.mak, unixansi.mak, unixtrad.mak, watc.mak,
 watcw32.mak)
 
 Adds a PROFILE compilation switch, similar to DEBUG, to work around the fact
-that gprof under GNU/Linux doesn't count time in memset, memcpy, or other C
+that gprof under Linux doesn't count time in memset, memcpy, or other C
 library procedures.  PROFILE will substitute our own versions of memset,
 memcpy, and memmove.  Currently, this switch is supported only on Unix.
 (unix-end.mak)
@@ -4188,7 +4188,7 @@ When compiling with gcc, replaces inline with __inline__ to get rid of a
 potential warning.  (stdpre.h)
 
 Adds our own implementations of memset, memcpy, and memmove, to work around
-the fact that gprof under GNU/Linux doesn't count time in C library procedures.
+the fact that gprof under Linux doesn't count time in C library procedures.
 (memory_.h, string_.h, gsmisc.c)
 
 Finishes implementing planar rendering for printer / banded devices.
@@ -5996,7 +5996,7 @@ Adds a note to the C style guide about nested vs. multi-branch 'if'
 statements.  (doc/C-style.htm)
 
 Notes that the multi-threaded ("async") drivers require libc version 6 or
-higher under GNU/Linux.  (doc/Make.htm)
+higher under Linux.  (doc/Make.htm)
 
 Notes additional Irix/MIPSpro combinations that compile idict.c incorrectly,
 and gives a workaround.  (doc/Make.htm)
@@ -10548,7 +10548,7 @@ possibly causing incorrectly colored output.  (gdevvec.c)
 since the path was embedded in the gs_state_contents, confused the garbage
 collector, causing memory access errors.  We fixed this by de-embedding the
 path object: see below.  (gsstate.c)
-	- On some GNU/Linux systems, the X driver could get a memory access
+	- On some Linux systems, the X driver could get a memory access
 error when displaying patterns.  We fixed this by adding calls on XInitImage
 in the necessary places when running X11R6.  (gdevx.c)
 	- PDF output didn't check names for unusual characters, and could
@@ -13445,8 +13445,14 @@ This software is distributed under license and may not be copied,
 modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
+For more information about licensing, please refer to
+http://www.ghostscript.com/licensing/. For information on
+commercial licensing, go to http://www.artifex.com/licensing/ or
+contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
 <p>
-<small>Ghostscript version 7.07, 17 May 2003
+<small>Ghostscript version 8.01, 30 January 2004
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

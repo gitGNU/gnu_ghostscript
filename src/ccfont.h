@@ -1,22 +1,28 @@
-/* Copyright (C) 1992, 1995, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1992, 1995, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: ccfont.h,v 1.1 2004/01/14 16:59:47 atai Exp $ */
+/* $Id: ccfont.h,v 1.2 2004/02/14 22:20:04 atai Exp $ */
 /* Header for fonts compiled into C. */
 
 #ifndef ccfont_INCLUDED
@@ -67,21 +73,19 @@ typedef struct {
  * to avoid having externs, which compromise sharability.
  */
 typedef struct cfont_procs_s {
-    int (*ref_dict_create) (P5(i_ctx_t *, ref *, const cfont_dict_keys *,
-			       cfont_string_array, const ref *));
-    int (*string_dict_create) (P5(i_ctx_t *, ref *, const cfont_dict_keys *,
-				  cfont_string_array,
-				  cfont_string_array));
-    int (*num_dict_create) (P6(i_ctx_t *, ref *, const cfont_dict_keys *,
-			       cfont_string_array, const ref *,
-			       const char *));
-    int (*name_array_create) (P4(i_ctx_t *, ref *, cfont_string_array, int));
-    int (*string_array_create) (P5(i_ctx_t *, ref *, cfont_string_array,
-				   int /*size */ , uint /*protection */ ));
-    int (*scalar_array_create) (P5(i_ctx_t *, ref *, const ref *,
-				   int /*size */ , uint /*protection */ ));
-    int (*name_create) (P3(i_ctx_t *, ref *, const char *));
-    int (*ref_from_string) (P4(i_ctx_t *, ref *, const char *, uint));
+    int (*ref_dict_create) (i_ctx_t *, ref *, const cfont_dict_keys *,
+			    cfont_string_array, const ref *);
+    int (*string_dict_create) (i_ctx_t *, ref *, const cfont_dict_keys *,
+			       cfont_string_array, cfont_string_array);
+    int (*num_dict_create) (i_ctx_t *, ref *, const cfont_dict_keys *,
+			    cfont_string_array, const ref *, const char *);
+    int (*name_array_create) (i_ctx_t *, ref *, cfont_string_array, int);
+    int (*string_array_create) (i_ctx_t *, ref *, cfont_string_array,
+				int /*size */ , uint /*protection */ );
+    int (*scalar_array_create) (i_ctx_t *, ref *, const ref *,
+				int /*size */ , uint /*protection */ );
+    int (*name_create) (i_ctx_t *, ref *, const char *);
+    int (*ref_from_string) (i_ctx_t *, ref *, const char *, uint);
 } cfont_procs;
 
 /*
@@ -90,14 +94,14 @@ typedef struct cfont_procs_s {
  * a tiny procedural interface for getting access to the compiled font table.
  */
 #define ccfont_proc(proc)\
-  int proc(P3(i_ctx_t *, const cfont_procs *, ref *))
+  int proc(i_ctx_t *, const cfont_procs *, ref *)
 typedef ccfont_proc((*ccfont_fproc));
 
 /*
  * There should be some consts in the *** below, but a number of
  * C compilers don't handle const properly in such situations.
  */
-extern int ccfont_fprocs(P2(int *, const ccfont_fproc **));
+extern int ccfont_fprocs(int *, const ccfont_fproc **);
 
 #define ccfont_version 19	/* for checking against libraries */
 

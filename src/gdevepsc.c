@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1992, 1995 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1992, 1995 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevepsc.c,v 1.1 2004/01/14 16:59:48 atai Exp $*/
+/* $Id: gdevepsc.c,v 1.2 2004/02/14 22:20:05 atai Exp $*/
 /* Epson color dot-matrix printer driver by dave@exlog.com */
 #include "gdevprn.h"
 
@@ -77,18 +83,18 @@ static char rgb_color[2][2][2] =	{
 /* Map an RGB color to a printer color. */
 #define cv_shift (sizeof(gx_color_value) * 8 - 1)
 private gx_color_index
-epson_map_rgb_color(gx_device *dev,
-  gx_color_value r, gx_color_value g, gx_color_value b)
+epson_map_rgb_color(gx_device *dev, const gx_color_value cv[])
 {
-if (gx_device_has_color(dev))
-	{
+
+    gx_color_value r = cv[0];
+    gx_color_value g = cv[1];
+    gx_color_value b = cv[2];
+    
+    if (gx_device_has_color(dev))
 /* use ^7 so WHITE is 0 for internal calculations */
-	return (gx_color_index)rgb_color[r >> cv_shift][g >> cv_shift][b >> cv_shift] ^ 7;	
-	}
-else
-	{
-	return gx_default_map_rgb_color(dev, r, g, b);
-	}
+        return (gx_color_index)rgb_color[r >> cv_shift][g >> cv_shift][b >> cv_shift] ^ 7;	
+    else
+	return gx_default_map_rgb_color(dev, cv);
 }
 
 /* Map the printer color back to RGB. */
@@ -139,16 +145,16 @@ const gx_device_printer far_data gs_epsonc_device =
 /* ------ Internal routines ------ */
 
 /* Forward references */
-private void epsc_output_run(P6(byte *, int, int, char, FILE *, int));
+private void epsc_output_run(byte *, int, int, char, FILE *, int);
 
 /* Send the page to the printer. */
 #define DD 0x80				/* double density flag */
 private int
 epsc_print_page(gx_device_printer *pdev, FILE *prn_stream)
-{	static char graphics_modes_9[5] =
+{	static int graphics_modes_9[5] =
 	   {	-1, 0 /*60*/, 1	/*120*/, -1, DD+3 /*240*/
 	   };
-	static char graphics_modes_24[7] =
+	static int graphics_modes_24[7] =
 	   {	-1, 32 /*60*/, 33 /*120*/, 39 /*180*/,
 		-1, -1, DD+40 /*360*/
 	   };
@@ -159,9 +165,9 @@ epsc_print_page(gx_device_printer *pdev, FILE *prn_stream)
 	byte *in = (byte *)gs_malloc(in_size+1, 1, "epsc_print_page(in)");
 	int out_size = ((pdev->width + 7) & -8) * y_mult;
 	byte *out = (byte *)gs_malloc(out_size+1, 1, "epsc_print_page(out)");
-	int x_dpi = pdev->x_pixels_per_inch;
-	char start_graphics =
-		(y_24pin ? graphics_modes_24 : graphics_modes_9)[x_dpi / 60];
+	int x_dpi = (int)pdev->x_pixels_per_inch;
+	char start_graphics = (char)
+		((y_24pin ? graphics_modes_24 : graphics_modes_9)[x_dpi / 60]);
 	int first_pass = (start_graphics & DD ? 1 : 0);
 	int last_pass = first_pass * 2;
 	int dots_per_space = x_dpi / 10;	/* pica space = 1/10" */

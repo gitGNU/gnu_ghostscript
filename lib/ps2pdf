@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: ps2pdf,v 1.1 2004/01/14 16:59:47 atai Exp $
+# $Id: ps2pdf,v 1.2 2004/02/14 22:20:04 atai Exp $
 # Convert PostScript to PDF.
 
 # Currently, we produce PDF 1.2 by default, but this is not guaranteed

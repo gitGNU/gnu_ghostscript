@@ -1,20 +1,19 @@
 %    Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-% This program is free software; you can redistribute it and/or modify it
-% under the terms of the GNU General Public License as published by the
-% Free Software Foundation; either version 2 of the License, or (at your
-% option) any later version.
-%
-% This program is distributed in the hope that it will be useful, but
-% WITHOUT ANY WARRANTY; without even the implied warranty of
-% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-% Public License for more details.
-%
-% You should have received a copy of the GNU General Public License along
-% with this program; if not, write to the Free Software Foundation, Inc.,
-% 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_type1.ps,v 1.1 2004/01/14 16:59:47 atai Exp $
+% $Id: gs_type1.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
 % Type 1 font support code.
 
 % The standard representation for PostScript compatible fonts is described
@@ -27,10 +26,9 @@
 % that these entries are present in the built-in fonts.)
 /.buildfont1
  {
-   false 1 index /FontBBox .knownget {
-     { 0 ne { not exit } if } forall
-   } if
-   { dup /FontInfo known not
+   dup .fontbbox {
+     pop pop pop pop
+     dup /FontInfo known not
       { .growfontdict dup /FontInfo 2 dict put }
      if
      dup dup /FontInfo get dup dup
@@ -39,15 +37,13 @@
       }
       { dup length 2 add dict .copydict
         dup /UnderlinePosition known not
-         { dup /UnderlinePosition 3 index /FontBBox .knownget
-            { 1 get 2 div }			% 1/2 the font descent
-	    { -100 } ifelse put
+         { dup /UnderlinePosition 3 index /FontBBox get
+           1 get 2 div put 			% 1/2 the font descent
          }
         if
         dup /UnderlineThickness known not
-         { dup /UnderlineThickness 3 index /FontBBox .knownget
-            { dup 3 get exch 1 get sub 20 div }	% 1/20 the font height
-    	    { 50 } ifelse put
+         { dup /UnderlineThickness 3 index /FontBBox get
+           dup 3 get exch 1 get sub 20 div put 	% 1/20 the font height
          }
         if
         1 index /FontInfo get wcheck not { readonly } if
@@ -133,8 +129,9 @@ ifelse
     } if
   end
 } bind def
-% CCRun is an undocumented procedure provided for Type 4 and Type 0 fonts.
+
 1183615869 internaldict begin
+% CCRun is an undocumented procedure provided for Type 4 and Type 0 fonts.
 % Apparently there are two different argument lists for CCRun.
 % Handling the one with the extra Private dictionary requires fabricating
 % a Type 1 font on the fly, since we aren't currently prepared to parse the
@@ -164,6 +161,22 @@ ifelse
     3 index /Encoding get exch get
   } if exch .type1execchar
 } bind def
+
+% setweightvector is an undocumented procedure that force writes
+% weight vector to the font. Do extra checks for safety.
+/setweightvector { % <font> <vector> setweightvector -
+  dup type dup /arraytype ne exch /packedarraytype ne and
+  2 index type /dicttype ne or {
+    /setweightvector cvx /typecheck signalerror
+  } if
+  1 index /FontType known not {
+    /setweightvector cvx /invalidfont signalerror
+  } if
+  dup gcheck 2 index gcheck not and {
+    /setweightvector cvx /invalidaccess signalerror
+  } if
+  /WeightVector exch .forceput
+} .bind executeonly def 
 end
 
 % Register the font types for definefont.

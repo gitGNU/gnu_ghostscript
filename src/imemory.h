@@ -1,22 +1,28 @@
-/* Copyright (C) 1993, 1994, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1993, 1994, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: imemory.h,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: imemory.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Ghostscript memory allocator extensions for interpreter level */
 
 #ifndef imemory_INCLUDED
@@ -40,31 +46,31 @@ typedef struct gs_ref_memory_s gs_ref_memory_t;
 
 	/* Allocate a ref array. */
 
-int gs_alloc_ref_array(P5(gs_ref_memory_t * mem, ref * paref,
-			  uint attrs, uint num_refs, client_name_t cname));
+int gs_alloc_ref_array(gs_ref_memory_t * mem, ref * paref,
+		       uint attrs, uint num_refs, client_name_t cname);
 
 	/* Resize a ref array. */
 	/* Currently this is only implemented for shrinking, */
 	/* not growing. */
 
-int gs_resize_ref_array(P4(gs_ref_memory_t * mem, ref * paref,
-			   uint new_num_refs, client_name_t cname));
+int gs_resize_ref_array(gs_ref_memory_t * mem, ref * paref,
+			uint new_num_refs, client_name_t cname);
 
 	/* Free a ref array. */
 
-void gs_free_ref_array(P3(gs_ref_memory_t * mem, ref * paref,
-			  client_name_t cname));
+void gs_free_ref_array(gs_ref_memory_t * mem, ref * paref,
+		       client_name_t cname);
 
 	/* Allocate a string ref. */
 
-int gs_alloc_string_ref(P5(gs_ref_memory_t * mem, ref * psref,
-			   uint attrs, uint nbytes, client_name_t cname));
+int gs_alloc_string_ref(gs_ref_memory_t * mem, ref * psref,
+			uint attrs, uint nbytes, client_name_t cname);
 
 /* Register a ref root.  This just calls gs_register_root. */
 /* Note that ref roots are a little peculiar: they assume that */
 /* the ref * that they point to points to a *statically* allocated ref. */
-int gs_register_ref_root(P4(gs_memory_t *mem, gs_gc_root_t *root,
-			    void **pp, client_name_t cname));
+int gs_register_ref_root(gs_memory_t *mem, gs_gc_root_t *root,
+			 void **pp, client_name_t cname);
 
 
 /*
@@ -90,7 +96,7 @@ struct gs_dual_memory_s {
     vm_spaces spaces;		/* system, global, local */
     uint current_space;		/* = current->space */
     /* Garbage collection hook */
-    int (*reclaim) (P2(gs_dual_memory_t *, int));
+    int (*reclaim) (gs_dual_memory_t *, int);
     /* Masks for store checking, see isave.h. */
     uint test_mask;
     uint new_mask;

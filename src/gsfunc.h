@@ -1,26 +1,34 @@
-/* Copyright (C) 1997, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1997, 2000, 2002 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gsfunc.h,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gsfunc.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Generic definitions for Functions */
 
 #ifndef gsfunc_INCLUDED
 #  define gsfunc_INCLUDED
+
+#include "gstypes.h"		/* for gs_range_t */
 
 /* ---------------- Types and structures ---------------- */
 
@@ -76,33 +84,48 @@ typedef struct gs_function_info_s {
 
 /* Evaluate a function. */
 #define FN_EVALUATE_PROC(proc)\
-  int proc(P3(const gs_function_t * pfn, const float *in, float *out))
+  int proc(const gs_function_t * pfn, const float *in, float *out)
 typedef FN_EVALUATE_PROC((*fn_evaluate_proc_t));
 
 /* Test whether a function is monotonic. */
 #define FN_IS_MONOTONIC_PROC(proc)\
-  int proc(P4(const gs_function_t * pfn, const float *lower,\
-	      const float *upper, gs_function_effort_t effort))
+  int proc(const gs_function_t * pfn, const float *lower,\
+	   const float *upper, gs_function_effort_t effort)
 typedef FN_IS_MONOTONIC_PROC((*fn_is_monotonic_proc_t));
 
 /* Get function information. */
 #define FN_GET_INFO_PROC(proc)\
-  void proc(P2(const gs_function_t *pfn, gs_function_info_t *pfi))
+  void proc(const gs_function_t *pfn, gs_function_info_t *pfi)
 typedef FN_GET_INFO_PROC((*fn_get_info_proc_t));
 
 /* Put function parameters on a parameter list. */
 #define FN_GET_PARAMS_PROC(proc)\
-  int proc(P2(const gs_function_t *pfn, gs_param_list *plist))
+  int proc(const gs_function_t *pfn, gs_param_list *plist)
 typedef FN_GET_PARAMS_PROC((*fn_get_params_proc_t));
+
+/*
+ * Create a new function with scaled output.  The i'th output value is
+ * transformed linearly so that [0 .. 1] are mapped to [pranges[i].rmin ..
+ * pranges[i].rmax].  Any necessary parameters or subfunctions of the
+ * original function are copied, not shared, even if their values aren't
+ * changed, so that the new function can be freed without having to worry
+ * about freeing data that should be kept.  Note that if there is a "data
+ * source", it is shared, not copied: this should not be a problem, since
+ * gs_function_free does not free the data source.
+ */
+#define FN_MAKE_SCALED_PROC(proc)\
+  int proc(const gs_function_t *pfn, gs_function_t **ppsfn,\
+	   const gs_range_t *pranges, gs_memory_t *mem)
+typedef FN_MAKE_SCALED_PROC((*fn_make_scaled_proc_t));
 
 /* Free function parameters. */
 #define FN_FREE_PARAMS_PROC(proc)\
-  void proc(P2(gs_function_params_t * params, gs_memory_t * mem))
+  void proc(gs_function_params_t * params, gs_memory_t * mem)
 typedef FN_FREE_PARAMS_PROC((*fn_free_params_proc_t));
 
 /* Free a function. */
 #define FN_FREE_PROC(proc)\
-  void proc(P3(gs_function_t * pfn, bool free_params, gs_memory_t * mem))
+  void proc(gs_function_t * pfn, bool free_params, gs_memory_t * mem)
 typedef FN_FREE_PROC((*fn_free_proc_t));
 
 /* Define the generic function structures. */
@@ -111,6 +134,7 @@ typedef struct gs_function_procs_s {
     fn_is_monotonic_proc_t is_monotonic;
     fn_get_info_proc_t get_info;
     fn_get_params_proc_t get_params;
+    fn_make_scaled_proc_t make_scaled;
     fn_free_params_proc_t free_params;
     fn_free_proc_t free;
 } gs_function_procs_t;
@@ -151,14 +175,18 @@ typedef struct gs_function_XxYy_params_s {
  * header file, one to allocate and initialize an instance of that type,
  * and one to free the parameters of that type.
 
-int gs_function_XxYy_init(P3(gs_function_t **ppfn,
-			     const gs_function_XxYy_params_t *params,
-			     gs_memory_t *mem));
+int gs_function_XxYy_init(gs_function_t **ppfn,
+			  const gs_function_XxYy_params_t *params,
+			  gs_memory_t *mem));
 
-void gs_function_XxYy_free_params(P2(gs_function_XxYy_params_t *params,
-				     gs_memory_t *mem));
+void gs_function_XxYy_free_params(gs_function_XxYy_params_t *params,
+				  gs_memory_t *mem);
 
  */
+
+/* Allocate an array of function pointers. */
+int alloc_function_array(uint count, gs_function_t *** pFunctions,
+			 gs_memory_t *mem);
 
 /* Evaluate a function. */
 #define gs_function_evaluate(pfn, in, out)\
@@ -188,6 +216,10 @@ void gs_function_XxYy_free_params(P2(gs_function_XxYy_params_t *params,
 /* Write function parameters. */
 #define gs_function_get_params(pfn, plist)\
   ((pfn)->head.procs.get_params(pfn, plist))
+
+/* Create a scaled function. */
+#define gs_function_make_scaled(pfn, ppsfn, pranges, mem)\
+  ((pfn)->head.procs.make_scaled(pfn, ppsfn, pranges, mem))
 
 /* Free function parameters. */
 #define gs_function_free_params(pfn, mem)\

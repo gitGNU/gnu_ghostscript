@@ -1,22 +1,28 @@
-/* Copyright (C) 1995, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: zcrd.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zcrd.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* CIE color rendering operators */
 #include "math_.h"
 #include "ghost.h"
@@ -37,12 +43,12 @@
 #include "store.h"		/* for make_null */
 
 /* Forward references */
-private int zcrd1_proc_params(P2(os_ptr op, ref_cie_render_procs * pcprocs));
-private int zcrd1_params(P4(os_ptr op, gs_cie_render * pcrd,
-			ref_cie_render_procs * pcprocs, gs_memory_t * mem));
-private int cache_colorrendering1(P4(i_ctx_t *i_ctx_p, gs_cie_render * pcrd,
-				     const ref_cie_render_procs * pcprocs,
-				     gs_ref_memory_t * imem));
+private int zcrd1_proc_params(os_ptr op, ref_cie_render_procs * pcprocs);
+private int zcrd1_params(os_ptr op, gs_cie_render * pcrd,
+			 ref_cie_render_procs * pcprocs, gs_memory_t * mem);
+private int cache_colorrendering1(i_ctx_t *i_ctx_p, gs_cie_render * pcrd,
+				  const ref_cie_render_procs * pcprocs,
+				  gs_ref_memory_t * imem);
 
 /* - currentcolorrendering <dict> */
 private int
@@ -249,7 +255,7 @@ zcrd1_params(os_ptr op, gs_cie_render * pcrd,
 }
 
 /* Cache the results of the color rendering procedures. */
-private int cie_cache_render_finish(P1(i_ctx_t *));
+private int cie_cache_render_finish(i_ctx_t *);
 private int
 cache_colorrendering1(i_ctx_t *i_ctx_p, gs_cie_render * pcrd,
 		      const ref_cie_render_procs * pcrprocs,
@@ -261,7 +267,7 @@ cache_colorrendering1(i_ctx_t *i_ctx_p, gs_cie_render * pcrd,
 
     if (code < 0 ||
 	(code = cie_cache_push_finish(i_ctx_p, cie_cache_render_finish, imem, pcrd)) < 0 ||
-	(code = cie_prepare_cache3(i_ctx_p, &pcrd->DomainLMN, pcrprocs->EncodeLMN.value.const_refs, &pcrd->caches.EncodeLMN[0], pcrd, imem, "Encode.LMN")) < 0 ||
+	(code = cie_prepare_cache3(i_ctx_p, &pcrd->DomainLMN, pcrprocs->EncodeLMN.value.const_refs, pcrd->caches.EncodeLMN.caches, pcrd, imem, "Encode.LMN")) < 0 ||
 	(code = cie_prepare_cache3(i_ctx_p, &pcrd->DomainABC, pcrprocs->EncodeABC.value.const_refs, &pcrd->caches.EncodeABC[0], pcrd, imem, "Encode.ABC")) < 0
 	) {
 	esp = ep;
@@ -324,9 +330,9 @@ cie_cache_render_finish(i_ctx_t *i_ctx_p)
 
 /* Load the joint caches. */
 private int
-    cie_exec_tpqr(P1(i_ctx_t *)),
-    cie_post_exec_tpqr(P1(i_ctx_t *)),
-    cie_tpqr_finish(P1(i_ctx_t *));
+    cie_exec_tpqr(i_ctx_t *),
+    cie_post_exec_tpqr(i_ctx_t *),
+    cie_tpqr_finish(i_ctx_t *);
 int
 cie_cache_joint(i_ctx_t *i_ctx_p, const ref_cie_render_procs * pcrprocs,
 		const gs_cie_common *pcie, gs_state * pgs)
@@ -376,7 +382,7 @@ cie_cache_joint(i_ctx_t *i_ctx_p, const ref_cie_render_procs * pcrprocs,
     }
     return cie_prepare_cache3(i_ctx_p, &pcrd->RangePQR,
 			      pqr_procs.value.const_refs,
-			      &pjc->TransformPQR[0],
+			      pjc->TransformPQR.caches,
 			      pjc, imem, "Transform.PQR");
 }
 
@@ -435,6 +441,64 @@ cie_tpqr_finish(i_ctx_t *i_ctx_p)
     return code;
 }
 
+/* Ws Bs Wd Bd Ps .transformPQR_scale_wb[012] Pd
+
+   The default TransformPQR procedure is implemented in C, rather than
+   PostScript, as a speed optimization.
+
+   This TransformPQR implements a relative colorimetric intent by scaling
+   the XYZ values relative to the white and black points.
+*/
+private int
+ztpqr_scale_wb_common(i_ctx_t *i_ctx_p, int idx)
+{
+    os_ptr op = osp;
+    double a[4], Ps; /* a[0] = ws, a[1] = bs, a[2] = wd, a[3] = bd */
+    double result;
+    int code;
+    int i;
+
+    code = real_param(op, &Ps);
+    if (code < 0) return code;
+
+    for (i = 0; i < 4; i++) {
+	ref tmp;
+
+	code = array_get(op - 4 + i, idx, &tmp);
+	if (code >= 0)
+	    code = real_param(&tmp, &a[i]);
+	if (code < 0) return code;
+    }
+
+    if (a[0] == a[1])
+	return_error(e_undefinedresult);
+    result = a[3] + (a[2] - a[3]) * (Ps - a[1]) / (a[0] - a[1]);
+    make_real(op - 4, result);
+    pop(4);
+    return 0;
+}
+
+/* Ws Bs Wd Bd Ps .TransformPQR_scale_wb0 Pd */
+private int
+ztpqr_scale_wb0(i_ctx_t *i_ctx_p)
+{
+    return ztpqr_scale_wb_common(i_ctx_p, 3);
+}
+
+/* Ws Bs Wd Bd Ps .TransformPQR_scale_wb2 Pd */
+private int
+ztpqr_scale_wb1(i_ctx_t *i_ctx_p)
+{
+    return ztpqr_scale_wb_common(i_ctx_p, 4);
+}
+
+/* Ws Bs Wd Bd Ps .TransformPQR_scale_wb2 Pd */
+private int
+ztpqr_scale_wb2(i_ctx_t *i_ctx_p)
+{
+    return ztpqr_scale_wb_common(i_ctx_p, 5);
+}
+
 /* ------ Initialization procedure ------ */
 
 const op_def zcrd_l2_op_defs[] =
@@ -450,5 +514,8 @@ const op_def zcrd_l2_op_defs[] =
     {"3%cie_exec_tpqr", cie_exec_tpqr},
     {"2%cie_post_exec_tpqr", cie_post_exec_tpqr},
     {"1%cie_tpqr_finish", cie_tpqr_finish},
+    {"5.TransformPQR_scale_WB0", ztpqr_scale_wb0},
+    {"5.TransformPQR_scale_WB1", ztpqr_scale_wb1},
+    {"5.TransformPQR_scale_WB2", ztpqr_scale_wb2},
     op_def_end(0)
 };

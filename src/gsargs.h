@@ -1,22 +1,28 @@
-/* Copyright (C) 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gsargs.h,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gsargs.h,v 1.2 2004/02/14 22:20:16 atai Exp $ */
 /* Command line argument list management */
 
 #ifndef gsargs_INCLUDED
@@ -43,7 +49,7 @@ typedef struct arg_source_s {
 } arg_source;
 typedef struct arg_list_s {
     bool expand_ats;		/* if true, expand @-files */
-    FILE *(*arg_fopen) (P2(const char *fname, void *fopen_data));
+    FILE *(*arg_fopen) (const char *fname, void *fopen_data);
     void *fopen_data;
     const char **argp;
     int argn;
@@ -53,9 +59,9 @@ typedef struct arg_list_s {
 } arg_list;
 
 /* Initialize an arg list. */
-void arg_init(P5(arg_list * pal, const char **argv, int argc,
-	      FILE * (*arg_fopen) (P2(const char *fname, void *fopen_data)),
-		 void *fopen_data));
+void arg_init(arg_list * pal, const char **argv, int argc,
+	      FILE * (*arg_fopen) (const char *fname, void *fopen_data),
+	      void *fopen_data);
 
 /*
  * Push a string onto an arg list.
@@ -63,21 +69,21 @@ void arg_init(P5(arg_list * pal, const char **argv, int argc,
  * If mem != 0, it is used to free the string when we are done with it.
  * Return 0 on success, non-zero on failure
  */
-int arg_push_memory_string(P3(arg_list * pal, char *str, gs_memory_t * mem));
+int arg_push_memory_string(arg_list * pal, char *str, gs_memory_t * mem);
 
 #define arg_push_string(pal, str)\
   arg_push_memory_string(pal, str, (gs_memory_t *)0);
 
 /* Clean up an arg list before exiting. */
-void arg_finit(P1(arg_list * pal));
+void arg_finit(arg_list * pal);
 
 /*
  * Get the next arg from a list.
  * Note that these are not copied to the heap.
  */
-const char *arg_next(P2(arg_list * pal, int *code));
+const char *arg_next(arg_list * pal, int *code);
 
 /* Copy an argument string to the heap. */
-char *arg_copy(P2(const char *str, gs_memory_t * mem));
+char *arg_copy(const char *str, gs_memory_t * mem);
 
 #endif /* gsargs_INCLUDED */

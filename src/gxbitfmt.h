@@ -1,22 +1,28 @@
-/* Copyright (C) 1997, 1998 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1997, 1998 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxbitfmt.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxbitfmt.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Definitions for bitmap storage formats */
 
 #ifndef gxbitfmt_INCLUDED
@@ -45,9 +51,6 @@ typedef ulong gx_bitmap_format_t;
   (GB_COLORS_GRAY | GB_COLORS_RGB | GB_COLORS_CMYK)
 #define GB_COLORS_ALL\
   (GB_COLORS_NATIVE | GB_COLORS_STANDARD_ALL)
-#define gb_colors_for_device(dev)\
-  ((dev)->color_info.num_components == 4 ? GB_COLORS_CMYK :\
-   (dev)->color_info.num_components == 3 ? GB_COLORS_RGB : GB_COLORS_GRAY)
 #define GB_COLORS_NAMES\
   "colors_native", "colors_Gray", "colors_RGB", "colors_CMYK"
 

@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1995, 1997, 1998, 1999, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1995, 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: iinit.c,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: iinit.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Initialize internally known objects for Ghostscript interpreter */
 #include "string_.h"
 #include "ghost.h"
@@ -59,7 +65,7 @@
 #endif
 /* The size of level2dict, if applicable, can be set in the makefile. */
 #ifndef LEVEL2DICT_SIZE
-#  define LEVEL2DICT_SIZE 233
+#  define LEVEL2DICT_SIZE 251
 #endif
 /* Ditto the size of ll3dict. */
 #ifndef LL3DICT_SIZE
@@ -71,7 +77,7 @@
 #endif
 /* Define an arbitrary size for the operator procedure tables. */
 #ifndef OP_ARRAY_TABLE_SIZE
-#  define OP_ARRAY_TABLE_SIZE 180
+#  define OP_ARRAY_TABLE_SIZE 300
 #endif
 #ifndef OP_ARRAY_TABLE_GLOBAL_SIZE
 #  define OP_ARRAY_TABLE_GLOBAL_SIZE OP_ARRAY_TABLE_SIZE
@@ -463,8 +469,10 @@ op_init(i_ctx_t *i_ctx_p)
 		uint opidx = (tptr - op_defs_all) * OP_DEFS_MAX_SIZE +
 		    index_in_table;
 
-		if (index_in_table >= OP_DEFS_MAX_SIZE)
-		    dprintf1("opdef overrun: %s\n", def->oname);
+		if (index_in_table >= OP_DEFS_MAX_SIZE) {
+		    lprintf1("opdef overrun! %s\n", def->oname);
+		    return_error(e_Fatal);
+		}
 		gs_interp_make_oper(&oper, def->proc, opidx);
 		/* The first character of the name is a digit */
 		/* giving the minimum acceptable number of operands. */

@@ -1,22 +1,28 @@
-/* Copyright (C) 1998, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1998, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: icstate.h,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: icstate.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Externally visible context state */
 
 #ifndef icstate_INCLUDED
@@ -52,12 +58,14 @@ struct gs_context_state_s {
     ref userparams;		/* t_dictionary */
     int scanner_options;	/* derived from userparams */
     bool LockFilePermissions;	/* accessed from userparams */
-    byte *filearg;		/* null terminated string of file being run */
+    char *filearg;		/* C string of the file being run */
+				/* (allocated on the C heap, no gc needed) */
     ref stdio[3];		/* t_file */
     /* Put the stacks at the end to minimize other offsets. */
     dict_stack_t dict_stack;
     exec_stack_t exec_stack;
     op_stack_t op_stack;
+    struct i_plugin_holder_s *plugin_list;
 };
 extern const long rand_state_initial; /* in zmath.c */
 

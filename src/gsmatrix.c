@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1995, 1996, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1995, 1996, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gsmatrix.c,v 1.1 2004/01/14 16:59:50 atai Exp $ */
+/* $Id: gsmatrix.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Matrix operators for Ghostscript library */
 #include "math_.h"
 #include "memory_.h"
@@ -311,7 +317,7 @@ gs_points_bbox(const gs_point pts[4], gs_rect * pbox)
 private int
 bbox_transform_either_only(const gs_rect * pbox_in, const gs_matrix * pmat,
 			   gs_point pts[4],
-     int (*point_xform) (P4(floatp, floatp, const gs_matrix *, gs_point *)))
+     int (*point_xform) (floatp, floatp, const gs_matrix *, gs_point *))
 {
     int code;
 
@@ -327,7 +333,7 @@ bbox_transform_either_only(const gs_rect * pbox_in, const gs_matrix * pmat,
 private int
 bbox_transform_either(const gs_rect * pbox_in, const gs_matrix * pmat,
 		      gs_rect * pbox_out,
-     int (*point_xform) (P4(floatp, floatp, const gs_matrix *, gs_point *)))
+     int (*point_xform) (floatp, floatp, const gs_matrix *, gs_point *))
 {
     int code;
 
@@ -417,13 +423,15 @@ gs_point_transform2fixed(const gs_matrix_fixed * pmat,
 	    if ((code = CHECK_DFMUL2FIXED_VARS(t, x, pmat->xx, xtemp)) < 0)
 		return code;
 	    FINISH_DFMUL2FIXED_VARS(t, xtemp);
-	    px += t;		/* should check for overflow */
+	    if ((code = CHECK_SET_FIXED_SUM(px, px, t)) < 0)
+	        return code;
 	}
 	if (!is_fzero(pmat->yy)) {
 	    if ((code = CHECK_DFMUL2FIXED_VARS(t, y, pmat->yy, ytemp)) < 0)
 		return code;
 	    FINISH_DFMUL2FIXED_VARS(t, ytemp);
-	    py += t;		/* should check for overflow */
+	    if ((code = CHECK_SET_FIXED_SUM(py, py, t)) < 0)
+	        return code;
 	}
     } else {
 	if ((code = CHECK_DFMUL2FIXED_VARS(px, x, pmat->xx, xtemp)) < 0 ||
@@ -436,11 +444,13 @@ gs_point_transform2fixed(const gs_matrix_fixed * pmat,
 	    if ((code = CHECK_DFMUL2FIXED_VARS(t, y, pmat->yx, ytemp)) < 0)
 		return code;
 	    FINISH_DFMUL2FIXED_VARS(t, ytemp);
-	    px += t;		/* should check for overflow */
+	    if ((code = CHECK_SET_FIXED_SUM(px, px, t)) < 0)
+	        return code;
 	}
     }
-    ppt->x = px + pmat->tx_fixed;	/* should check for overflow */
-    ppt->y = py + pmat->ty_fixed;	/* should check for overflow */
+    if (((code = CHECK_SET_FIXED_SUM(ppt->x, px, pmat->tx_fixed)) < 0) ||
+        ((code = CHECK_SET_FIXED_SUM(ppt->y, py, pmat->ty_fixed)) < 0) )
+        return code;
     return 0;
 }
 
@@ -463,13 +473,15 @@ gs_distance_transform2fixed(const gs_matrix_fixed * pmat,
 	if ((code = CHECK_DFMUL2FIXED_VARS(t, dy, pmat->yx, ytemp)) < 0)
 	    return code;
 	FINISH_DFMUL2FIXED_VARS(t, ytemp);
-	px += t;		/* should check for overflow */
+	if ((code = CHECK_SET_FIXED_SUM(px, px, t)) < 0)
+	    return code;
     }
     if (!is_fzero(pmat->xy)) {
 	if ((code = CHECK_DFMUL2FIXED_VARS(t, dx, pmat->xy, xtemp)) < 0)
 	    return code;
 	FINISH_DFMUL2FIXED_VARS(t, xtemp);
-	py += t;		/* should check for overflow */
+	if ((code = CHECK_SET_FIXED_SUM(py, py, t)) < 0)
+	    return code;
     }
     ppt->x = px;
     ppt->y = py;
@@ -561,8 +573,8 @@ sget_matrix(stream *s, gs_matrix *pmat)
 	    float value;
 
 	    status = sgets(s, (byte *)&value, sizeof(value), &nread);
-	    if (status < 0)
-		return status;
+	    if (status < 0 && status != EOFC)
+		return_error(gs_error_ioerror);
 	    coeff[i] = value;
 	    switch ((b >> 6) & 3) {
 		case 1:
@@ -574,15 +586,15 @@ sget_matrix(stream *s, gs_matrix *pmat)
 		case 3:
 		    status = sgets(s, (byte *)&coeff[i ^ 3],
 				   sizeof(coeff[0]), &nread);
-		    if (status < 0)
-			return status;
+		    if (status < 0 && status != EOFC)
+			return_error(gs_error_ioerror);
 	    }
 	}
     for (; i < 6; ++i, b <<= 1)
 	if (b & 0x80) {
 	    status = sgets(s, (byte *)&coeff[i], sizeof(coeff[0]), &nread);
-	    if (status < 0)
-		return status;
+	    if (status < 0 && status != EOFC)
+		return_error(gs_error_ioerror);
 	} else
 	    coeff[i] = 0.0;
     pmat->xx = coeff[0];

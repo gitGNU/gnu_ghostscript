@@ -1,21 +1,27 @@
 #    Copyright (C) 1997-2002 artofcode LLC. All rights reserved.
 # 
-# This program is free software; you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by the
-# Free Software Foundation; either version 2 of the License, or (at your
-# option) any later version.
+#  This program is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU General Public License version 2
+#  as published by the Free Software Foundation.
 #
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-# Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+#  This software is provided AS-IS with no warranty, either express or
+#  implied. That is, this program is distributed in the hope that it will 
+#  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#  General Public License for more details
+#
+#  You should have received a copy of the GNU General Public License along
+#  with this program; if not, write to the Free Software Foundation, Inc.,
+#  59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+# 
+# For more information about licensing, please refer to
+# http://www.ghostscript.com/licensing/. For information on
+# commercial licensing, go to http://www.artifex.com/licensing/ or
+# contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+# San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-
-# $Id: unixinst.mak,v 1.1 2004/01/14 16:59:53 atai Exp $
+# $Id: unixinst.mak,v 1.2 2004/02/14 22:20:19 atai Exp $
 # Partial makefile common to all Unix and Desqview/X configurations,
 # containing the `install' targets.
 # This is the very last part of the makefile for these configurations.
@@ -65,11 +71,8 @@ install-libdata:
 	-mkdir -p $(gsdatadir)
 	-mkdir -p $(gsdatadir)/lib
 	$(SH) -c 'for f in \
-Fontmap Fontmap.GS \
-CIDFnmap CIDFnmap.Ore CIDFnmap.ARP CIDFnmap.Bae CIDFnmap.Koc \
-CIDFnmap.Sol CIDFnmap.Win \
-CIDFnmap.CJK \
-CIDFnmap.b5 CIDFnmap.gb CIDFnmap.ksx CIDFnmap.sj \
+Fontmap Fontmap.GS cidfmap \
+FAPIcidfmap FAPIconfig FAPIfontmap xlatmap \
 ht_ccsto.ps \
 acctest.ps addxchar.ps align.ps bdftops.ps \
 caption.ps cid2code.ps decrypt.ps docie.ps \
@@ -95,12 +98,12 @@ pdf2dsc.ps pdfopt.ps ;\
 # install html documentation
 DOC_PAGES=PUBLIC README index.html gs.css \
 	   API.htm Bug-form.htm Bug-info.htm \
-	   C-style.htm CJK.htm CJKTTCID.htm Changes.htm Commprod.htm Copying.htm \
+	   C-style.htm Changes.htm Commprod.htm Copying.htm \
 	   Current.htm DLL.htm Develop.htm Devices.htm Drivers.htm \
 	   Fonts.htm Helpers.htm Hershey.htm \
 	   History1.htm History2.htm History3.htm History4.htm \
-	   History5.htm History6.htm History7.htm \
-	   Htmstyle.htm Humor.htm Install.htm Issues.htm Language.htm \
+	   History5.htm History6.htm \
+	   Htmstyle.htm Humor.htm Install.htm Language.htm \
 	   Lib.htm Maintain.htm Make.htm New-user.htm \
 	   News.htm Projects.htm Ps-style.htm Ps2epsi.htm Ps2pdf.htm \
 	   Psfiles.htm Public.htm Readme.htm Release.htm \
@@ -148,15 +151,8 @@ install-man: $(PSMANDIR)/gs.1
 install-examples:
 	-mkdir -p $(exdir)
 	for f in \
-alphabet.ps colorcir.ps doretree.ps escher.ps golfer.ps \
-grayalph.ps snowflak.ps tiger.ps vasarely.ps waterfal.ps \
+alphabet.ps chess.ps colorcir.ps doretree.ps escher.ps \
+golfer.eps grayalph.ps snowflak.ps tiger.eps vasarely.ps waterfal.ps \
 ridt91.eps ;\
 	do $(INSTALL_DATA) $(PSEXDIR)/$$f $(exdir) ;\
-	done
-	-mkdir -p $(exdir)/cjk
-	for f in \
-all_ac1.ps all_ag1.ps all_aj1.ps all_aj2.ps all_ak1.ps \
-gscjk_ac.ps gscjk_ag.ps gscjk_aj.ps gscjk_ak.ps \
-iso2022.ps;\
-	do $(INSTALL_DATA) $(PSEXDIR)/cjk/$$f $(exdir)/cjk ;\
 	done

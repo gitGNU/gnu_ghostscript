@@ -1,5 +1,5 @@
 @echo off 
-@rem $Id: ps2ps.bat,v 1.1 2004/01/14 16:59:47 atai Exp $
+@rem $Id: ps2ps.bat,v 1.2 2004/02/14 22:20:04 atai Exp $
 @rem "Distill" PostScript.
 
 if %1/==/ goto usage
@@ -18,6 +18,7 @@ rem Watcom C deletes = signs, so use # instead.
 goto end
 
 :usage
-echo "Usage: ps2ps ...switches... input.ps output.ps"
+echo "Usage: ps2ps [options] input.ps output.ps"
+echo "  e.g. ps2ps -sPAPERSIZE=a4 input.ps output.ps
 
 :end

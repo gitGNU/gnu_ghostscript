@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999, 2000, 2001 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevprn.h,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevprn.h,v 1.2 2004/02/14 22:20:06 atai Exp $ */
 /* Common header file for memory-buffered printers */
 
 #ifndef gdevprn_INCLUDED
@@ -109,7 +115,7 @@ typedef struct gx_printer_device_procs_s {
      */
 
 #define prn_dev_proc_print_page(proc)\
-  int proc(P2(gx_device_printer *, FILE *))
+  int proc(gx_device_printer *, FILE *)
     prn_dev_proc_print_page((*print_page));
 /* BACKWARD COMPATIBILITY */
 #define dev_proc_print_page(proc) prn_dev_proc_print_page(proc)
@@ -117,7 +123,7 @@ typedef struct gx_printer_device_procs_s {
     /* Print the page on the output file, with a given # of copies. */
 
 #define prn_dev_proc_print_page_copies(proc)\
-  int proc(P3(gx_device_printer *, FILE *, int))
+  int proc(gx_device_printer *, FILE *, int)
     prn_dev_proc_print_page_copies((*print_page_copies));
 /* BACKWARD COMPATIBILITY */
 #define dev_proc_print_page_copies(proc) prn_dev_proc_print_page_copies(proc)
@@ -141,7 +147,7 @@ typedef struct gx_printer_device_procs_s {
      */
 
 #define prn_dev_proc_get_space_params(proc)\
-  void proc(P2(const gx_device_printer *, gdev_prn_space_params *))
+  void proc(const gx_device_printer *, gdev_prn_space_params *)
     prn_dev_proc_get_space_params((*get_space_params));
 
     /*
@@ -157,7 +163,7 @@ typedef struct gx_printer_device_procs_s {
      */
 
 #define prn_dev_proc_start_render_thread(proc)\
-  int proc(P1(gdev_prn_start_render_params *))
+  int proc(gdev_prn_start_render_params *)
     prn_dev_proc_start_render_thread((*start_render_thread));
 
     /*
@@ -172,11 +178,11 @@ typedef struct gx_printer_device_procs_s {
      */
 
 #define prn_dev_proc_open_render_device(proc)\
-  int proc(P1(gx_device_printer *))
+  int proc(gx_device_printer *)
     prn_dev_proc_open_render_device((*open_render_device));
 
 #define prn_dev_proc_close_render_device(proc)\
-  int proc(P1(gx_device_printer *))
+  int proc(gx_device_printer *)
     prn_dev_proc_close_render_device((*close_render_device));
 
     /*
@@ -197,7 +203,7 @@ typedef struct gx_printer_device_procs_s {
      * default.  */
 
 #define prn_dev_proc_buffer_page(proc)\
-  int proc(P3(gx_device_printer *, FILE *, int))
+  int proc(gx_device_printer *, FILE *, int)
     prn_dev_proc_buffer_page((*buffer_page));
 
 } gx_printer_device_procs;
@@ -333,7 +339,6 @@ prn_dev_proc_buffer_page(gx_default_buffer_page); /* returns an error */
 	NULL,	/* strip_copy_rop, */\
 	NULL,	/* get_clipping_box */\
 	NULL,	/* begin_typed_image */\
-	NULL,	/* get_bits_rectangle */\
 	NULL,	/* map_color_rgb_alpha */\
 	NULL,	/* create_compositor */\
 	NULL,	/* get_hardware_params */\
@@ -410,6 +415,22 @@ extern const gx_device_procs prn_std_procs;
   prn_device_margins_body(dtype, procs, dname, w10, h10, xdpi, ydpi,\
     lm, tm, lm, bm, rm, tm, ncomp, depth, mg, mc, dg, dc, print_page)
 
+#define prn_device_margins_body_extended(dtype, procs, dname, w10, h10, xdpi, ydpi, lo, to, lm, bm, rm, tm, mcomp, ncomp, pol, depth, gi, mg, mc, dg, dc, ef, cn, print_page)\
+	std_device_full_body_type_extended(dtype, &procs, dname, &st_device_printer,\
+	  (int)((long)(w10) * (xdpi) / 10),\
+	  (int)((long)(h10) * (ydpi) / 10),\
+	  xdpi, ydpi,\
+	  mcomp, ncomp, pol, depth, gi, mg, mc, dg, dc, ef, cn,\
+	  -(lo) * (xdpi), -(to) * (ydpi),\
+	  (lm) * 72.0, (bm) * 72.0,\
+	  (rm) * 72.0, (tm) * 72.0\
+	),\
+	prn_device_body_rest_(print_page)
+
+#define prn_device_body_extended(dtype, procs, dname, w10, h10, xdpi, ydpi, lm, bm, rm, tm, mcomp, ncomp, pol, depth, gi, mg, mc, dg, dc, ef, cn, print_page)\
+  prn_device_margins_body_extended(dtype, procs, dname, w10, h10, xdpi, ydpi,\
+    lm, tm, lm, bm, rm, tm, mcomp, ncomp, pol, depth, gi, mg, mc, dg, dc, ef, cn, print_page)
+
 #define prn_device_std_margins_body(dtype, procs, dname, w10, h10, xdpi, ydpi, lo, to, lm, bm, rm, tm, color_bits, print_page)\
 	std_device_std_color_full_body_type(dtype, &procs, dname, &st_device_printer,\
 	  (int)((float)(w10) * (xdpi) / 10 + 0.5),\
@@ -467,18 +488,18 @@ extern const gx_device_procs prn_std_procs;
  * Open the printer's output file if necessary.
  */
 /* VMS limits procedure names to 31 characters. */
-int gdev_prn_open_printer_seekable(P3(gx_device *dev, bool binary_mode,
-				      bool seekable));
+int gdev_prn_open_printer_seekable(gx_device *dev, bool binary_mode,
+				   bool seekable);
 /* BACKWARD COMPATIBILITY */
 #define gdev_prn_open_printer_positionable gdev_prn_open_printer_seekable
 /* open_printer defaults positionable = false */
-int gdev_prn_open_printer(P2(gx_device * dev, bool binary_mode));
+int gdev_prn_open_printer(gx_device * dev, bool binary_mode);
 /*
  * Test whether the printer's output file was just opened, i.e., whether
  * this is the first page being written to this file.  This is only valid
  * at the entry to a driver's print_page procedure.
  */
-bool gdev_prn_file_is_new(P1(const gx_device_printer *pdev));
+bool gdev_prn_file_is_new(const gx_device_printer *pdev);
 
 /*
  * Determine the number of bytes required for one scan line of output to
@@ -498,18 +519,18 @@ bool gdev_prn_file_is_new(P1(const gx_device_printer *pdev));
  * is stored in *range_start, and the height of the range is returned.
  * If the parameters are invalid, the procedure returns -1.
  */
-int gdev_prn_colors_used(P5(gx_device *dev, int y, int height,
-			    gx_colors_used_t *colors_used,
-			    int *range_start));
+int gdev_prn_colors_used(gx_device *dev, int y, int height,
+			 gx_colors_used_t *colors_used,
+			 int *range_start);
 /*
  * Determine the colors used in a saved page.  We still need the device
  * in order to know the total page height.
  */
-int gx_page_info_colors_used(P6(const gx_device *dev,
-				const gx_band_page_info_t *page_info,
-				int y, int height,
-				gx_colors_used_t *colors_used,
-				int *range_start));
+int gx_page_info_colors_used(const gx_device *dev,
+			     const gx_band_page_info_t *page_info,
+			     int y, int height,
+			     gx_colors_used_t *colors_used,
+			     int *range_start);
 
 /*
  * Render a subrectangle of the page into a target device provided by the
@@ -533,11 +554,11 @@ int gx_page_info_colors_used(P6(const gx_device *dev,
  * asked to execute an operation that requires full pixels, it will return
  * an error.
  */
-int gdev_prn_render_rectangle(P5(gx_device_printer *pdev,
-				 const gs_int_rect *prect,
-				 gx_device *target,
-				 const gx_render_plane_t *render_plane,
-				 bool clear));
+int gdev_prn_render_rectangle(gx_device_printer *pdev,
+			      const gs_int_rect *prect,
+			      gx_device *target,
+			      const gx_render_plane_t *render_plane,
+			      bool clear);
 
 /*
  * Read one or more rasterized scan lines for printing.
@@ -555,18 +576,18 @@ int gdev_prn_render_rectangle(P5(gx_device_printer *pdev,
  * occur in the preallocated buffer, and a pointer into the buffer will be
  * returned.
  */
-int gdev_prn_get_lines(P8(gx_device_printer *pdev, int y, int height,
-			  byte *buffer, uint bytes_per_line,
-			  byte **actual_buffer, uint *actual_bytes_per_line,
-			  const gx_render_plane_t *render_plane));
+int gdev_prn_get_lines(gx_device_printer *pdev, int y, int height,
+		       byte *buffer, uint bytes_per_line,
+		       byte **actual_buffer, uint *actual_bytes_per_line,
+		       const gx_render_plane_t *render_plane);
 
 /*
  * Read a rasterized scan line for sending to the printer.
  * This is essentially a simplified form of gdev_prn_get_lines,
  * except that it also calls gdev_prn_clear_trailing_bits.
  */
-int gdev_prn_get_bits(P4(gx_device_printer *pdev, int y, byte *buffer,
-			 byte **actual_buffer));
+int gdev_prn_get_bits(gx_device_printer *pdev, int y, byte *buffer,
+		      byte **actual_buffer);
 
 /*
  * Copy scan lines to send to the printer.  This is now DEPRECATED,
@@ -574,7 +595,7 @@ int gdev_prn_get_bits(P4(gx_device_printer *pdev, int y, byte *buffer,
  * the right form in the rasterizer buffer.  Use gdev_prn_get_bits
  * instead.  For documentation, see the implementation in gdevprn.c.
  */
-int gdev_prn_copy_scan_lines(P4(gx_device_printer *, int, byte *, uint));
+int gdev_prn_copy_scan_lines(gx_device_printer *, int, byte *, uint);
 
 /*
  * Clear any trailing bits in the last byte of one or more scan lines
@@ -582,13 +603,13 @@ int gdev_prn_copy_scan_lines(P4(gx_device_printer *, int, byte *, uint));
  * the device is only used to get the width and depth, and need not be
  * a printer device.
  */
-void gdev_prn_clear_trailing_bits(P4(byte *data, uint raster, int height,
-				     const gx_device *dev));
+void gdev_prn_clear_trailing_bits(byte *data, uint raster, int height,
+				  const gx_device *dev);
 
 /*
  * Close the printer's output file.
  */
-int gdev_prn_close_printer(P1(gx_device *));
+int gdev_prn_close_printer(gx_device *);
 
 /* Print a single copy of a page by calling print_page_copies. */
 prn_dev_proc_print_page(gx_print_page_single_copy);
@@ -603,16 +624,16 @@ prn_dev_proc_print_page_copies(gx_default_print_page_copies);
  * Determine the number of scan lines that should actually be passed
  * to the device.
  */
-int gdev_prn_print_scan_lines(P1(gx_device *));
+int gdev_prn_print_scan_lines(gx_device *);
 
 /* Allocate / reallocate / free printer memory. */
-int gdev_prn_allocate_memory(P4(gx_device *pdev,
-				gdev_prn_space_params *space,
-				int new_width, int new_height));
-int gdev_prn_reallocate_memory(P4(gx_device *pdev,
-				  gdev_prn_space_params *space,
-				  int new_width, int new_height));
-int gdev_prn_free_memory(P1(gx_device *pdev));
+int gdev_prn_allocate_memory(gx_device *pdev,
+			     gdev_prn_space_params *space,
+			     int new_width, int new_height);
+int gdev_prn_reallocate_memory(gx_device *pdev,
+			       gdev_prn_space_params *space,
+			       int new_width, int new_height);
+int gdev_prn_free_memory(gx_device *pdev);
 
 /*
  * Create the buffer device for a printer device.  Clients should always
@@ -621,10 +642,10 @@ int gdev_prn_free_memory(P1(gx_device *pdev));
  * code needs this: normally it is dev_proc(some_dev, create_buf_device).
  */
 typedef dev_proc_create_buf_device((*create_buf_device_proc_t));
-int gdev_create_buf_device(P6(create_buf_device_proc_t cbd_proc,
-			      gx_device **pbdev, gx_device *target,
-			      const gx_render_plane_t *render_plane,
-			      gs_memory_t *mem, bool for_band));
+int gdev_create_buf_device(create_buf_device_proc_t cbd_proc,
+			   gx_device **pbdev, gx_device *target,
+			   const gx_render_plane_t *render_plane,
+			   gs_memory_t *mem, bool for_band);
 
 /* BACKWARD COMPATIBILITY */
 #define dev_print_scan_lines(dev)\
@@ -639,14 +660,13 @@ int gdev_create_buf_device(P6(create_buf_device_proc_t cbd_proc,
 
 #if 0				/**************** VMS linker gets upset *************** */
 #endif
-int gdev_prn_initialize(P3(gx_device *, const char *, dev_proc_print_page((*))));
-void gdev_prn_init_color(P4(gx_device *, int, dev_proc_map_rgb_color((*)), dev_proc_map_color_rgb((*))));
+int gdev_prn_initialize(gx_device *, const char *, dev_proc_print_page((*)));
+void gdev_prn_init_color(gx_device *, int, dev_proc_map_rgb_color((*)), dev_proc_map_color_rgb((*)));
 
 #define prn_device_type(dtname, initproc, pageproc)\
 private dev_proc_print_page(pageproc);\
 device_type(dtname, st_prn_device, initproc)
 
-/****** FOLLOWING SHOULD CHECK __PROTOTYPES__ ******/
 #define prn_device_type_mono(dtname, dname, initproc, pageproc)\
 private dev_proc_print_page(pageproc);\
 private int \
@@ -655,7 +675,6 @@ initproc(gx_device *dev)\
 }\
 device_type(dtname, st_prn_device, initproc)
 
-/****** DITTO ******/
 #define prn_device_type_color(dtname, dname, depth, initproc, pageproc, rcproc, crproc)\
 private dev_proc_print_page(pageproc);\
 private int \

@@ -1,22 +1,28 @@
-/* Copyright (C) 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevbmpc.c,v 1.1 2004/01/14 16:59:47 atai Exp $ */
+/* $Id: gdevbmpc.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* .BMP file format driver utilities */
 #include "gdevprn.h"
 #include "gdevbmp.h"
@@ -176,6 +182,9 @@ write_bmp_header(gx_device_printer *pdev, FILE *file)
 
 	q.reserved = 0;
 	for (i = 0; i != 1 << depth; i++) {
+	    /* Note that the use of map_color_rgb is deprecated in
+	       favor of decode_color. This should work, though, because
+	       backwards compatibility is preserved. */
 	    (*dev_proc(pdev, map_color_rgb))((gx_device *)pdev,
 					     (gx_color_index)i, rgb);
 	    q.red = gx_color_value_to_byte(rgb[0]);
@@ -214,9 +223,11 @@ write_bmp_separated_header(gx_device_printer *pdev, FILE *file)
 
 /* Map a r-g-b color to a color index. */
 gx_color_index
-bmp_map_16m_rgb_color(gx_device * dev, gx_color_value r, gx_color_value g,
-		  gx_color_value b)
+bmp_map_16m_rgb_color(gx_device * dev, const gx_color_value cv[])
 {
+
+    gx_color_value r, g, b;
+    r = cv[0]; g = cv[1]; b = cv[2];
     return gx_color_value_to_byte(r) +
 	((uint) gx_color_value_to_byte(g) << 8) +
 	((ulong) gx_color_value_to_byte(b) << 16);

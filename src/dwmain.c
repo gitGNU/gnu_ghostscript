@@ -1,22 +1,28 @@
 /* Copyright (C) 1996-2001 Ghostgum Software Pty Ltd.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: dwmain.c,v 1.1 2004/01/14 16:59:47 atai Exp $ */
+/* $Id: dwmain.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* Ghostscript DLL loader for Windows */
 
 #define STRICT
@@ -29,11 +35,13 @@
 #define GSREVISION gs_revision
 #include "errors.h"
 #include "iapi.h"
+#include "vdtrace.h"
 
 #include "dwmain.h"
 #include "dwdll.h"
 #include "dwtext.h"
 #include "dwimg.h"
+#include "dwtrace.h"
 #include "dwreg.h"
 #include "gdevdsp.h"
 
@@ -51,7 +59,7 @@ const LPSTR szIniSection = "Text";
 
 
 GSDLL gsdll;
-void *instance;
+gs_main_instance *instance;
 HWND hwndtext;
 
 char start_string[] = "systemdict /start get exec\n";
@@ -270,6 +278,11 @@ int new_main(int argc, char *argv[])
 	return 1;
     }
 
+#ifdef DEBUG
+    visual_tracer_init();
+    gsdll.set_visual_tracer(&visual_tracer);
+#endif
+
     gsdll.set_stdio(instance, gsdll_stdin, gsdll_stdout, gsdll_stderr);
     gsdll.set_poll(instance, gsdll_poll);
     gsdll.set_display_callback(instance, &display);
@@ -310,6 +323,10 @@ int new_main(int argc, char *argv[])
     gsdll.exit(instance);
 
     gsdll.delete_instance(instance);
+
+#ifdef DEBUG
+    visual_tracer_close();
+#endif
 
     unload_dll(&gsdll);
 

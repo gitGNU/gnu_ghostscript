@@ -1,16 +1,5 @@
-IJS 0.34
-22 Apr 2002
-
-News as of 0.34:
-
-The source files now have official MIT license banners. Thanks to
-www.opensource.org for hosting the ur-text of this license. Also
-some clarifications on namespace management in the spec.
-
-There is now an IJS website, graciously hosted by linuxprinting.org.
-http://www.linuxprinting.org/ijs/
-
-There have been some minor improvements in the makefile.
+IJS 0.33
+22 Jan 2002
 
 News as of 0.33:
 
@@ -169,8 +158,7 @@ while communicating that it's not specific to HP printers.
 
 Licensing
 
-All source code in this distribution is released under the MIT
-License. I want everybody to be able to use this.
+MIT. I want everybody to be able to use this.
 
 
 More stuff to write:

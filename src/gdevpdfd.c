@@ -1,22 +1,28 @@
-/* Copyright (C) 1997, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevpdfd.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevpdfd.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* Path drawing procedures for pdfwrite driver */
 #include "math_.h"
 #include "gx.h"
@@ -177,51 +183,58 @@ pdf_must_put_clip_path(gx_device_pdf * pdev, const gx_clip_path * pcpath)
 int
 pdf_put_clip_path(gx_device_pdf * pdev, const gx_clip_path * pcpath)
 {
+    int code;
     stream *s = pdev->strm;
+    gs_id new_id;
 
+    /* Check for no update needed. */
     if (pcpath == NULL) {
 	if (pdev->clip_path_id == pdev->no_clip_path_id)
 	    return 0;
-	stream_puts(s, "Q\nq\n");
-	pdev->clip_path_id = pdev->no_clip_path_id;
+	new_id = pdev->no_clip_path_id;
     } else {
 	if (pdev->clip_path_id == pcpath->id)
 	    return 0;
+	new_id = pcpath->id;
 	if (gx_cpath_includes_rectangle(pcpath, fixed_0, fixed_0,
 					int2fixed(pdev->width),
 					int2fixed(pdev->height))
 	    ) {
 	    if (pdev->clip_path_id == pdev->no_clip_path_id)
 		return 0;
-	    stream_puts(s, "Q\nq\n");
-	    pdev->clip_path_id = pdev->no_clip_path_id;
-	} else {
-	    gdev_vector_dopath_state_t state;
-	    gs_cpath_enum cenum;
-	    gs_fixed_point vs[3];
-	    int pe_op;
-
-	    stream_puts(s, "Q\nq\n");
-	    gdev_vector_dopath_init(&state, (gx_device_vector *)pdev,
-				    gx_path_type_fill, NULL);
-	    /*
-	     * We have to break 'const' here because the clip path
-	     * enumeration logic uses some internal mark bits.
-	     * This is very unfortunate, but until we can come up with
-	     * a better algorithm, it's necessary.
-	     */
-	    gx_cpath_enum_init(&cenum, (gx_clip_path *) pcpath);
-	    while ((pe_op = gx_cpath_enum_next(&cenum, vs)) > 0)
-		gdev_vector_dopath_segment(&state, pe_op, vs);
-	    pprints1(s, "%s n\n", (pcpath->rule <= 0 ? "W" : "W*"));
-	    if (pe_op < 0)
-		return pe_op;
-	    pdev->clip_path_id = pcpath->id;
+	    new_id = pdev->no_clip_path_id;
 	}
     }
-    pdev->text.font = 0;
-    if (pdev->context == PDF_IN_TEXT)
-	pdev->context = PDF_IN_STREAM;
+    /*
+     * The contents must be open already, so the following will only exit
+     * text or string context.
+     */
+    code = pdf_open_contents(pdev, PDF_IN_STREAM);
+    if (code < 0)
+	return 0;
+    stream_puts(s, "Q\nq\n");
+    if (new_id != pdev->no_clip_path_id) {
+	gdev_vector_dopath_state_t state;
+	gs_cpath_enum cenum;
+	gs_fixed_point vs[3];
+	int pe_op;
+
+	gdev_vector_dopath_init(&state, (gx_device_vector *)pdev,
+				gx_path_type_fill, NULL);
+	/*
+	 * We have to break 'const' here because the clip path
+	 * enumeration logic uses some internal mark bits.
+	 * This is very unfortunate, but until we can come up with
+	 * a better algorithm, it's necessary.
+	 */
+	gx_cpath_enum_init(&cenum, (gx_clip_path *) pcpath);
+	while ((pe_op = gx_cpath_enum_next(&cenum, vs)) > 0)
+	    gdev_vector_dopath_segment(&state, pe_op, vs);
+	pprints1(s, "%s n\n", (pcpath->rule <= 0 ? "W" : "W*"));
+	if (pe_op < 0)
+	    return pe_op;
+    }
+    pdev->clip_path_id = new_id;
     pdf_reset_graphics(pdev);
     return 0;
 }
@@ -275,13 +288,12 @@ gdev_pdf_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath
      * drawing anything.
      */
     bool have_path;
+    gs_fixed_rect box = {{0, 0}, {0, 0}};
 
     /*
      * Check for an empty clipping path.
      */
     if (pcpath) {
-	gs_fixed_rect box;
-
 	gx_cpath_outer_box(pcpath, &box);
 	if (box.p.x >= box.q.x || box.p.y >= box.q.y)
 	    return 0;		/* empty clipping path */
@@ -314,7 +326,17 @@ gdev_pdf_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath
 	double scale;
 	gs_matrix smat;
 	gs_matrix *psmat = NULL;
+	
+	if (pcpath) {
+	    gs_fixed_rect box1;
 
+	    code = gx_path_bbox(ppath, &box1);
+	    if (code < 0)
+		return code;
+ 	    rect_intersect(box1, box);
+ 	    if (box1.p.x > box1.q.x || box1.p.y > box1.q.y)
+  		return 0;		/* outside the clipping path */
+	}
 	if (params->flatness != pdev->state.flatness) {
 	    pprintg1(s, "%g i\n", params->flatness);
 	    pdev->state.flatness = params->flatness;

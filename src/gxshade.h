@@ -1,22 +1,28 @@
-/* Copyright (C) 1998, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1998, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxshade.h,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: gxshade.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Internal definitions for shading rendering */
 
 #ifndef gxshade_INCLUDED
@@ -118,9 +124,9 @@ struct shade_coord_stream_s {
     int left;			/* # of bits left in bits */
     const gs_shading_mesh_params_t *params;
     const gs_matrix_fixed *pctm;
-    int (*get_value)(P3(shade_coord_stream_t *cs, int num_bits, uint *pvalue));
-    int (*get_decoded)(P4(shade_coord_stream_t *cs, int num_bits,
-			  const float decode[2], float *pvalue));
+    int (*get_value)(shade_coord_stream_t *cs, int num_bits, uint *pvalue);
+    int (*get_decoded)(shade_coord_stream_t *cs, int num_bits,
+		       const float decode[2], float *pvalue);
 };
 
 /* Define one vertex of a mesh. */
@@ -130,22 +136,22 @@ typedef struct mesh_vertex_s {
 } mesh_vertex_t;
 
 /* Initialize a packed value stream. */
-void shade_next_init(P3(shade_coord_stream_t * cs,
-			const gs_shading_mesh_params_t * params,
-			const gs_imager_state * pis));
+void shade_next_init(shade_coord_stream_t * cs,
+		     const gs_shading_mesh_params_t * params,
+		     const gs_imager_state * pis);
 
 /* Get the next flag value. */
-int shade_next_flag(P2(shade_coord_stream_t * cs, int BitsPerFlag));
+int shade_next_flag(shade_coord_stream_t * cs, int BitsPerFlag);
 
 /* Get one or more coordinate pairs. */
-int shade_next_coords(P3(shade_coord_stream_t * cs, gs_fixed_point * ppt,
-			 int num_points));
+int shade_next_coords(shade_coord_stream_t * cs, gs_fixed_point * ppt,
+		      int num_points);
 
 /* Get a color.  Currently all this does is look up Indexed colors. */
-int shade_next_color(P2(shade_coord_stream_t * cs, float *pc));
+int shade_next_color(shade_coord_stream_t * cs, float *pc);
 
 /* Get the next vertex for a mesh element. */
-int shade_next_vertex(P2(shade_coord_stream_t * cs, mesh_vertex_t * vertex));
+int shade_next_vertex(shade_coord_stream_t * cs, mesh_vertex_t * vertex);
 
 /*
    Currently, all shading fill procedures follow the same algorithm:
@@ -175,32 +181,40 @@ int shade_next_vertex(P2(shade_coord_stream_t * cs, mesh_vertex_t * vertex));
 
  */
 
-/* Define the common structure for recursive subdivision. */
+/*
+ * Define the common structure for recursive subdivision.
+ *
+ * direct_space is the same as the original ColorSpace unless the
+ * original space is an Indexed space, in which case direct_space is the
+ * base space of the original space.  This is the space in which color
+ * computations are done.
+ */
 #define shading_fill_state_common\
   gx_device *dev;\
   gs_imager_state *pis;\
-  int num_components;		/* # of color components */\
+  const gs_color_space *direct_space;\
+  int num_components;		/* # of color components in direct_space */\
   float cc_max_error[GS_CLIENT_COLOR_MAX_COMPONENTS]
 typedef struct shading_fill_state_s {
     shading_fill_state_common;
 } shading_fill_state_t;
 
 /* Initialize the common parts of the recursion state. */
-void shade_init_fill_state(P4(shading_fill_state_t * pfs,
-			      const gs_shading_t * psh, gx_device * dev,
-			      gs_imager_state * pis));
+void shade_init_fill_state(shading_fill_state_t * pfs,
+			   const gs_shading_t * psh, gx_device * dev,
+			   gs_imager_state * pis);
 
 /* Transform a bounding box into device space. */
-int shade_bbox_transform2fixed(P3(const gs_rect * rect,
-				  const gs_imager_state * pis,
-				  gs_fixed_rect * rfixed));
+int shade_bbox_transform2fixed(const gs_rect * rect,
+			       const gs_imager_state * pis,
+			       gs_fixed_rect * rfixed);
 
 /* Fill one piece of a shading. */
 #ifndef gx_device_color_DEFINED
 #  define gx_device_color_DEFINED
 typedef struct gx_device_color_s gx_device_color;
 #endif
-int shade_fill_path(P3(const shading_fill_state_t * pfs, gx_path * ppath,
-		       gx_device_color * pdevc));
+int shade_fill_path(const shading_fill_state_t * pfs, gx_path * ppath,
+		    gx_device_color * pdevc);
 
 #endif /* gxshade_INCLUDED */

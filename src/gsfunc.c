@@ -1,23 +1,30 @@
-/* Copyright (C) 1997, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gsfunc.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gsfunc.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Generic Function support */
+#include "memory_.h"
 #include "gx.h"
 #include "gserrors.h"
 #include "gsparam.h"
@@ -25,6 +32,29 @@
 
 /* GC descriptors */
 public_st_function();
+gs_private_st_ptr(st_function_ptr, gs_function_t *, "gs_function_t *",
+		  function_ptr_enum_ptrs, function_ptr_reloc_ptrs);
+gs_private_st_element(st_function_ptr_element, gs_function_t *,
+		      "gs_function_t *[]", function_ptr_element_enum_ptrs,
+		      function_ptr_element_reloc_ptrs, st_function_ptr);
+
+/* Allocate an array of function pointers. */
+int
+alloc_function_array(uint count, gs_function_t *** pFunctions,
+		     gs_memory_t *mem)
+{
+    gs_function_t **ptr;
+
+    if (count == 0)
+	return_error(gs_error_rangecheck);
+    ptr = gs_alloc_struct_array(mem, count, gs_function_t *,
+				&st_function_ptr_element, "Functions");
+    if (ptr == 0)
+	return_error(gs_error_VMerror);
+    memset(ptr, 0, sizeof(*ptr) * count);
+    *pFunctions = ptr;
+    return 0;
+}
 
 /* Generic free_params implementation. */
 void
@@ -86,7 +116,9 @@ gs_function_get_info_default(const gs_function_t *pfn, gs_function_info_t *pfi)
     pfi->Functions = 0;
 }
 
-/* Write generic parameters (FunctionType, Domain, Range) on a parameter list. */
+/*
+ * Write generic parameters (FunctionType, Domain, Range) on a parameter list.
+ */
 int
 fn_common_get_params(const gs_function_t *pfn, gs_param_list *plist)
 {
@@ -106,4 +138,74 @@ fn_common_get_params(const gs_function_t *pfn, gs_param_list *plist)
 	    ecode = code;
     }
     return ecode;
+}
+
+/*
+ * Copy an array of numeric values when scaling a function.
+ */
+void *
+fn_copy_values(const void *pvalues, int count, int size, gs_memory_t *mem)
+{
+    if (pvalues) {
+	void *values = gs_alloc_byte_array(mem, count, size, "fn_copy_values");
+
+	if (values)
+	    memcpy(values, pvalues, count * size);
+	return values;
+    } else
+	return 0;		/* caller must check */
+}
+
+/*
+ * If necessary, scale the Range or Decode array for fn_make_scaled.
+ * Note that we must always allocate a new array.
+ */
+int
+fn_scale_pairs(const float **ppvalues, const float *pvalues, int npairs,
+	       const gs_range_t *pranges, gs_memory_t *mem)
+{
+    if (pvalues == 0)
+	*ppvalues = 0;
+    else {
+	float *out = (float *)
+	    gs_alloc_byte_array(mem, 2 * npairs, sizeof(*pvalues),
+				"fn_scale_pairs");
+
+	*ppvalues = out;
+	if (out == 0)
+	    return_error(gs_error_VMerror);
+	if (pranges) {
+	    /* Allocate and compute scaled ranges. */
+	    int i;
+	    for (i = 0; i < npairs; ++i) {
+		double base = pranges[i].rmin, factor = pranges[i].rmax - base;
+
+		out[2 * i] = pvalues[2 * i] * factor + base;
+		out[2 * i + 1] = pvalues[2 * i + 1] * factor + base;
+	    }
+	} else
+	    memcpy(out, pvalues, 2 * sizeof(*pvalues) * npairs);
+    }
+    return 0;
+}
+
+/*
+ * Scale the generic part of a function (Domain and Range).
+ * The client must have copied the parameters already.
+ */
+int
+fn_common_scale(gs_function_t *psfn, const gs_function_t *pfn,
+		const gs_range_t *pranges, gs_memory_t *mem)
+{
+    int code;
+
+    psfn->head = pfn->head;
+    psfn->params.Domain = 0;		/* in case of failure */
+    psfn->params.Range = 0;
+    if ((code = fn_scale_pairs(&psfn->params.Domain, pfn->params.Domain,
+			       pfn->params.m, NULL, mem)) < 0 ||
+	(code = fn_scale_pairs(&psfn->params.Range, pfn->params.Range,
+			       pfn->params.n, pranges, mem)) < 0)
+	return code;
+    return 0;
 }

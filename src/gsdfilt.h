@@ -2,24 +2,29 @@
   Copyright (C) 2001 artofcode LLC.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
   Author: Raph Levien <raph@artofcode.com>
 */
-
-/* $Id: gsdfilt.h,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gsdfilt.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 
 #ifndef gsdfilt_INCLUDED
 #  define gsdfilt_INCLUDED
@@ -34,8 +39,6 @@
    chain.
 */
 
-#define DFILTER_TEST
-
 #ifndef gs_device_filter_stack_DEFINED
 #  define gs_device_filter_stack_DEFINED
 typedef struct gs_device_filter_stack_s gs_device_filter_stack_t;
@@ -45,18 +48,15 @@ typedef struct gs_device_filter_stack_s gs_device_filter_stack_t;
 typedef struct gs_device_filter_s gs_device_filter_t;
 
 struct gs_device_filter_s {
-    int (*push)(gs_device_filter_t *self, gs_memory_t *mem,
+    int (*push)(gs_device_filter_t *self, gs_memory_t *mem, gs_state *pgs,
 		gx_device **pdev, gx_device *target);
-    int (*pop)(gs_device_filter_t *self, gs_memory_t *mem, gs_state *pgs,
-	       gx_device *dev);
+    int (*prepop)(gs_device_filter_t *self, gs_memory_t *mem, gs_state *pgs,
+		  gx_device *dev);
+    int (*postpop)(gs_device_filter_t *self, gs_memory_t *mem, gs_state *pgs,
+		   gx_device *dev);
 };
 
 extern_st(st_gs_device_filter);
-
-#ifdef DFILTER_TEST
-int gs_test_device_filter(gs_device_filter_t **pdf, gs_memory_t *mem);
-#endif
-
 
 /**
  * gs_push_device_filter: Push a device filter.
@@ -92,5 +92,6 @@ int gs_pop_device_filter(gs_memory_t *mem, gs_state *pgs);
  * Return value: 0 on success, or error code.
  **/
 int gs_clear_device_filters(gs_memory_t *mem, gs_state *pgs);
+
 
 #endif /* gsdfilt_INCLUDED */

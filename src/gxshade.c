@@ -1,28 +1,35 @@
-/* Copyright (C) 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxshade.c,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: gxshade.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Shading rendering support */
 #include "math_.h"
 #include "gx.h"
 #include "gserrors.h"
 #include "gsrect.h"
 #include "gxcspace.h"
+#include "gscindex.h"
 #include "gscie.h"		/* requires gscspace.h */
 #include "gxdevcli.h"
 #include "gxistate.h"
@@ -38,12 +45,12 @@
 /* ================ Packed coordinate streams ================ */
 
 /* Forward references */
-private int cs_next_packed_value(P3(shade_coord_stream_t *, int, uint *));
-private int cs_next_array_value(P3(shade_coord_stream_t *, int, uint *));
-private int cs_next_packed_decoded(P4(shade_coord_stream_t *, int,
-				      const float[2], float *));
-private int cs_next_array_decoded(P4(shade_coord_stream_t *, int,
-				     const float[2], float *));
+private int cs_next_packed_value(shade_coord_stream_t *, int, uint *);
+private int cs_next_array_value(shade_coord_stream_t *, int, uint *);
+private int cs_next_packed_decoded(shade_coord_stream_t *, int,
+				   const float[2], float *);
+private int cs_next_array_decoded(shade_coord_stream_t *, int,
+				  const float[2], float *);
 
 /* Initialize a packed value stream. */
 void
@@ -119,7 +126,10 @@ cs_next_packed_value(shade_coord_stream_t * cs, int num_bits, uint * pvalue)
     return 0;
 }
 
-/* Get the next (integer) value from an unpacked array. */
+/*
+ * Get the next (integer) value from an unpacked array.  Note that
+ * num_bits may be 0 if we are reading a coordinate or color value.
+ */
 private int
 cs_next_array_value(shade_coord_stream_t * cs, int num_bits, uint * pvalue)
 {
@@ -127,8 +137,10 @@ cs_next_array_value(shade_coord_stream_t * cs, int num_bits, uint * pvalue)
     uint read;
 
     if (sgets(cs->s, (byte *)&value, sizeof(float), &read) < 0 ||
-	read != sizeof(float) || value < 0 || value >= (1 << num_bits) ||
-	value != (int)value
+	read != sizeof(float) || value < 0 ||
+	(num_bits != 0 && num_bits < sizeof(uint) * 8 &&
+	 value >= (1 << num_bits)) ||
+	value != (uint)value
 	)
 	return_error(gs_error_rangecheck);
     *pvalue = (uint) value;
@@ -218,15 +230,25 @@ shade_next_color(shade_coord_stream_t * cs, float *pc)
     int num_bits = cs->params->BitsPerComponent;
 
     if (index == gs_color_space_index_Indexed) {
-	uint i;
-	int code = cs->get_value(cs, num_bits, &i);
+	int ncomp = gs_color_space_num_components(gs_cspace_base_space(pcs));
+	uint ci;
+	int code = cs->get_value(cs, num_bits, &ci);
+	gs_client_color cc;
+	int i;
 
 	if (code < 0)
 	    return code;
-	/****** DO INDEXED LOOKUP TO pc[] ******/
+	if (ci >= gs_cspace_indexed_num_entries(pcs))
+	    return_error(gs_error_rangecheck);
+	code = gs_cspace_indexed_lookup(&pcs->params.indexed, (int)ci, &cc);
+	if (code < 0)
+	    return code;
+	for (i = 0; i < ncomp; ++i)
+	    pc[i] = cc.paint.values[i];
     } else {
 	int i, code;
-	int ncomp = gs_color_space_num_components(pcs);
+	int ncomp = (cs->params->Function != 0 ? 1 :
+		     gs_color_space_num_components(pcs));
 
 	for (i = 0; i < ncomp; ++i)
 	    if ((code = cs->get_decoded(cs, num_bits, decode + i * 2, &pc[i])) < 0)
@@ -267,8 +289,9 @@ shade_init_fill_state(shading_fill_state_t * pfs, const gs_shading_t * psh,
 
     pfs->dev = dev;
     pfs->pis = pis;
-    pfs->num_components = gs_color_space_num_components(pcs);
 top:
+    pfs->direct_space = pcs;
+    pfs->num_components = gs_color_space_num_components(pcs);
     switch ( gs_color_space_get_index(pcs) )
 	{
 	case gs_color_space_index_Indexed:
@@ -292,8 +315,12 @@ top:
 	    break;
 	}
     if (num_colors <= 32) {
-	/****** WRONG FOR MULTI-PLANE HALFTONES ******/
-	num_colors *= pis->dev_ht->order.num_levels;
+	gx_ht_order_component *components = pis->dev_ht->components;
+	if (components && components[0].corder.wts)
+	    num_colors = 256;
+	else
+	    /****** WRONG FOR MULTI-PLANE HALFTONES ******/
+	    num_colors *= pis->dev_ht->components[0].corder.num_levels;
     }
     if (max_error < 1.0 / num_colors)
 	max_error = 1.0 / num_colors;

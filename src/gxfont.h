@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1999, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1995, 1996, 1997, 1999, 2000, 2002 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxfont.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxfont.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Font object structure */
 /* Requires gsmatrix.h, gxdevice.h */
 
@@ -25,6 +31,8 @@
 
 #include "gsccode.h"
 #include "gsfont.h"
+#include "gsgdata.h"
+#include "gsmatrix.h"
 #include "gsnotify.h"
 #include "gsuid.h"
 #include "gsstype.h"		/* for extern_st */
@@ -109,8 +117,30 @@ typedef struct gs_font_info_s {
 
 } gs_font_info_t;
 
+#define public_st_gs_font_info() /* in gsfont.c */\
+  BASIC_PTRS(gs_font_info_ptrs) {\
+    GC_CONST_STRING_ELT(gs_font_info_t, Copyright),\
+    GC_CONST_STRING_ELT(gs_font_info_t, Notice),\
+    GC_CONST_STRING_ELT(gs_font_info_t, FamilyName),\
+    GC_CONST_STRING_ELT(gs_font_info_t, FullName)\
+  };\
+  gs_public_st_basic(st_gs_font_info, gs_font_info_t, "gs_font_info_t",\
+		     gs_font_info_ptrs, gs_font_info_data)
+
 /*
  * Define the structure used to return information about a glyph.
+ *
+ * Note that a glyph may have two different sets of widths: those stored in
+ * the outline (which includes hmtx for TrueType fonts), and those actually
+ * used when rendering the glyph.  Currently, these differ only for Type 1
+ * fonts that use Metrics or CDevProc to change the widths.  The glyph_info
+ * procedure normally returns the rendering widths: to get the outline
+ * widths, clients use GLYPH_INFO_OUTLINE_WIDTHS.  The glyph_info procedure
+ * should set GLYPH_INFO_OUTLINE_WIDTHS in the response (the `members' in
+ * the gs_glyph_info_t structure) iff it was set in the request *and* the
+ * glyph actually has two different sets of widths.  With this arrangement,
+ * fonts that don't distinguish the two sets of widths don't need to do
+ * anything special, and don't need to test for GLYPH_INFO_OUTLINE_WIDTHS.
  */
 typedef struct gs_glyph_info_s {
     int members;		/* mask of which members are valid */
@@ -119,6 +149,7 @@ typedef struct gs_glyph_info_s {
 #define GLYPH_INFO_WIDTH1 2	/* must be WIDTH0 << 1 */
 #define GLYPH_INFO_WIDTHS (GLYPH_INFO_WIDTH0 | GLYPH_INFO_WIDTH1)
     gs_point width[2];		/* width for WMode 0/1 */
+    gs_point v;			/* glyph origin for WMode 1 */
 #define GLYPH_INFO_BBOX 4
     gs_rect bbox;
 #define GLYPH_INFO_NUM_PIECES 8
@@ -126,6 +157,7 @@ typedef struct gs_glyph_info_s {
 #define GLYPH_INFO_PIECES 16
     gs_glyph *pieces;		/* pieces are stored here: the caller must */
 				/* preset pieces if INFO_PIECES is set. */
+#define GLYPH_INFO_OUTLINE_WIDTHS 32 /* return unmodified widths, see above */
 } gs_glyph_info_t;
 
 /* Define the "object" procedures of fonts. */
@@ -140,7 +172,7 @@ typedef struct gs_font_procs_s {
      */
 
 #define font_proc_define_font(proc)\
-  int proc(P2(gs_font_dir *, gs_font *))
+  int proc(gs_font_dir *, gs_font *)
     font_proc_define_font((*define_font));
 
     /*
@@ -149,7 +181,7 @@ typedef struct gs_font_procs_s {
      */
 
 #define font_proc_make_font(proc)\
-  int proc(P4(gs_font_dir *, const gs_font *, const gs_matrix *, gs_font **))
+  int proc(gs_font_dir *, const gs_font *, const gs_matrix *, gs_font **)
     font_proc_make_font((*make_font));
 
     /*
@@ -162,8 +194,8 @@ typedef struct gs_font_procs_s {
      */
 
 #define font_proc_font_info(proc)\
-  int proc(P4(gs_font *font, const gs_point *pscale, int members,\
-	      gs_font_info_t *info))
+  int proc(gs_font *font, const gs_point *pscale, int members,\
+	   gs_font_info_t *info)
     font_proc_font_info((*font_info));
 
     /*
@@ -179,7 +211,7 @@ typedef struct gs_font_procs_s {
 #define FONT_SAME_ENCODING 4
 
 #define font_proc_same_font(proc)\
-  int proc(P3(const gs_font *font, const gs_font *ofont, int mask))
+  int proc(const gs_font *font, const gs_font *ofont, int mask)
     font_proc_same_font((*same_font));
 
     /* ------ Glyph-level procedures ------ */
@@ -193,7 +225,7 @@ typedef struct gs_font_procs_s {
      */
 
 #define font_proc_encode_char(proc)\
-  gs_glyph proc(P3(gs_font *, gs_char, gs_glyph_space_t))
+  gs_glyph proc(gs_font *, gs_char, gs_glyph_space_t)
     font_proc_encode_char((*encode_char));
 
     /*
@@ -204,8 +236,8 @@ typedef struct gs_font_procs_s {
      */
 
 #define font_proc_enumerate_glyph(proc)\
-  int proc(P4(gs_font *font, int *pindex, gs_glyph_space_t glyph_space,\
-	      gs_glyph *pglyph))
+  int proc(gs_font *font, int *pindex, gs_glyph_space_t glyph_space,\
+	   gs_glyph *pglyph)
     font_proc_enumerate_glyph((*enumerate_glyph));
 
     /*
@@ -221,8 +253,8 @@ typedef struct gs_font_procs_s {
      */
 
 #define font_proc_glyph_info(proc)\
-  int proc(P5(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,\
-	      int members, gs_glyph_info_t *info))
+  int proc(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,\
+	   int members, gs_glyph_info_t *info)
     font_proc_glyph_info((*glyph_info));
 
     /*
@@ -232,9 +264,17 @@ typedef struct gs_font_procs_s {
      */
 
 #define font_proc_glyph_outline(proc)\
-  int proc(P4(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,\
-	      gx_path *ppath))
+  int proc(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,\
+	   gx_path *ppath)
     font_proc_glyph_outline((*glyph_outline));
+
+    /*
+     * Return the (string) name of a glyph.
+     */
+
+#define font_proc_glyph_name(proc)\
+  int proc(gs_font *font, gs_glyph glyph, gs_const_string *pstr)
+    font_proc_glyph_name((*glyph_name));
 
     /* ------ Glyph rendering procedures ------ */
 
@@ -245,7 +285,7 @@ typedef struct gs_font_procs_s {
      */
 
 #define font_proc_init_fstack(proc)\
-  int proc(P2(gs_text_enum_t *, gs_font *))
+  int proc(gs_text_enum_t *, gs_font *)
     font_proc_init_fstack((*init_fstack));
 
     /*
@@ -259,7 +299,7 @@ typedef struct gs_font_procs_s {
      */
 
 #define font_proc_next_char_glyph(proc)\
-  int proc(P3(gs_text_enum_t *pte, gs_char *pchar, gs_glyph *pglyph))
+  int proc(gs_text_enum_t *pte, gs_char *pchar, gs_glyph *pglyph)
     font_proc_next_char_glyph((*next_char_glyph));
 
     /*
@@ -271,13 +311,8 @@ typedef struct gs_font_procs_s {
      */
 
 #define font_proc_build_char(proc)\
-  int proc(P5(gs_text_enum_t *, gs_state *, gs_font *, gs_char, gs_glyph))
+  int proc(gs_text_enum_t *, gs_state *, gs_font *, gs_char, gs_glyph)
     font_proc_build_char((*build_char));
-
-    /* Callback procedures for external font rasterizers */
-    /* (see gsccode.h for details.) */
-
-    gx_xfont_callbacks callbacks;
 
 } gs_font_procs;
 
@@ -293,6 +328,7 @@ font_proc_encode_char(gs_no_encode_char);
 font_proc_enumerate_glyph(gs_no_enumerate_glyph);
 font_proc_glyph_info(gs_default_glyph_info);
 font_proc_glyph_outline(gs_no_glyph_outline);
+font_proc_glyph_name(gs_no_glyph_name);
 /* Default glyph rendering procedures in gstext.c */
 font_proc_init_fstack(gs_default_init_fstack);
 font_proc_next_char_glyph(gs_default_next_char_glyph);
@@ -364,25 +400,35 @@ extern_st(st_gs_font_ptr_element);
 /* Allocate and minimally initialize a font. */
 /* Does not set: FontMatrix, FontType, key_name, font_name. */
 gs_font *
-  gs_font_alloc(P5(gs_memory_t *mem, gs_memory_type_ptr_t pstype,
-		   const gs_font_procs *procs, gs_font_dir *dir,
-		   client_name_t cname));
+  gs_font_alloc(gs_memory_t *mem, gs_memory_type_ptr_t pstype,
+		const gs_font_procs *procs, gs_font_dir *dir,
+		client_name_t cname);
+
+/* Initialize the notification list for a font. */
+void gs_font_notify_init(gs_font *font);
 
 /*
  * Register/unregister a client for notification by a font.  Currently
  * the clients are only notified when a font is freed.  Note that any
  * such client must unregister itself when *it* is freed.
  */
-int gs_font_notify_register(P3(gs_font *font, gs_notify_proc_t proc,
-			       void *proc_data));
-int gs_font_notify_unregister(P3(gs_font *font, gs_notify_proc_t proc,
-				 void *proc_data));
+int gs_font_notify_register(gs_font *font, gs_notify_proc_t proc,
+			    void *proc_data);
+int gs_font_notify_unregister(gs_font *font, gs_notify_proc_t proc,
+			      void *proc_data);
+
+#ifndef FAPI_server_DEFINED
+#define FAPI_server_DEFINED
+typedef struct FAPI_server_s FAPI_server;
+#endif
 
 /* Define a base (not composite) font. */
 #define gs_font_base_common\
 	gs_font_common;\
 	gs_rect FontBBox;\
 	gs_uid UID;\
+	FAPI_server *FAPI; \
+        void *FAPI_font_data; \
 	gs_encoding_index_t encoding_index;\
 	gs_encoding_index_t nearest_encoding_index  /* (may be >= 0 even if */\
 						/* encoding_index = -1) */
@@ -404,14 +450,14 @@ extern_st(st_gs_font_base);
 /* Allocate and minimally initialize a base font. */
 /* Does not set: same elements as gs_alloc_font. */
 gs_font_base *
-  gs_font_base_alloc(P5(gs_memory_t *mem, gs_memory_type_ptr_t pstype,
-			const gs_font_procs *procs, gs_font_dir *dir,
-			client_name_t cname));
+  gs_font_base_alloc(gs_memory_t *mem, gs_memory_type_ptr_t pstype,
+		     const gs_font_procs *procs, gs_font_dir *dir,
+		     client_name_t cname);
 
 /*
  * Test whether a glyph is the notdef glyph for a base font.
  * The test is somewhat adhoc: perhaps this should be a virtual procedure.
  */
-bool gs_font_glyph_is_notdef(P2(gs_font_base *bfont, gs_glyph glyph));
+bool gs_font_glyph_is_notdef(gs_font_base *bfont, gs_glyph glyph);
 
 #endif /* gxfont_INCLUDED */

@@ -1,20 +1,27 @@
-#    Copyright (C) 1999, 2000 artofcode LLC.  All rights reserved.
+#    Copyright (C) 1999, 2000 Aladdin Enterprises.  All rights reserved.
 # 
-# This program is free software; you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by the
-# Free Software Foundation; either version 2 of the License, or (at your
-# option) any later version.
+#  This program is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU General Public License version 2
+#  as published by the Free Software Foundation.
 #
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-# Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+#  This software is provided AS-IS with no warranty, either express or
+#  implied. That is, this program is distributed in the hope that it will 
+#  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#  General Public License for more details
+#
+#  You should have received a copy of the GNU General Public License along
+#  with this program; if not, write to the Free Software Foundation, Inc.,
+#  59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+# 
+# For more information about licensing, please refer to
+# http://www.ghostscript.com/licensing/. For information on
+# commercial licensing, go to http://www.artifex.com/licensing/ or
+# contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+# San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: all-arch.mak,v 1.1 2004/01/14 16:59:47 atai Exp $
+# $Id: all-arch.mak,v 1.2 2004/02/14 22:20:04 atai Exp $
 #
 # Author:
 # 	Nelson H. F. Beebe
@@ -185,7 +192,7 @@ COMMON_ARGS		= DEVICE_DEVS_EXTRA='$(DEVICE_DEVS_EXTRA)' \
 			  JSRCDIR='$(JSRCDIR)' \
 			  PNGSRCDIR='$(PNGSRCDIR)' \
 			  PSRCDIR='$(PNGSRCDIR)' \
-			  PVERSION=10205 \
+			  PVERSION=10204 \
 			  SHARE_LIBPNG='$(SHARE_LIBPNG)' \
 			  SHARE_ZLIB='$(SHARE_ZLIB)' \
 			  XCFLAGS='$(XCFLAGS)' \
@@ -245,11 +252,10 @@ SGIARCH64LIB		= lib64
 SHARE_LIBPNG		= 1
 SHARE_ZLIB		= 1
 
-# Use of the shared libraries still requires reference to source code in
-# these directories:
-JSRCDIR			= $(SRCDIR)/jpeg/jpeg-6b
-PNGSRCDIR		= $(SRCDIR)/libpng/libpng-1.0.10
-ZSRCDIR			= $(SRCDIR)/zlib/zlib-1.1.3
+# These are our standard paths to the library source trees
+JSRCDIR			= $(SRCDIR)/jpeg
+PNGSRCDIR		= $(SRCDIR)/libpng
+ZSRCDIR			= $(SRCDIR)/zlib
 
 # Use this to provide alternate targets to make, instead of the default
 # all.  It can also be used to pass additional arguments to child makes,

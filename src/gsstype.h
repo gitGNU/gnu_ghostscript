@@ -1,22 +1,28 @@
-/* Copyright (C) 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gsstype.h,v 1.1 2004/01/14 16:59:50 atai Exp $ */
+/* $Id: gsstype.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Definition of structure type descriptors and extern_st */
 
 #ifndef gsstype_INCLUDED
@@ -47,21 +53,21 @@ typedef struct enum_ptr_s {
 		/* Clear the marks of a structure. */
 
 #define struct_proc_clear_marks(proc)\
-  void proc(P3(void /*obj_header_t*/ *pre, uint size,\
-    const gs_memory_struct_type_t *pstype))
+  void proc(void /*obj_header_t*/ *pre, uint size,\
+    const gs_memory_struct_type_t *pstype)
 
 		/* Enumerate the pointers in a structure. */
 
 #define struct_proc_enum_ptrs(proc)\
-  gs_ptr_type_t proc(P6(EV_CONST void /*obj_header_t*/ *ptr, uint size,\
+  gs_ptr_type_t proc(EV_CONST void /*obj_header_t*/ *ptr, uint size,\
     int index, enum_ptr_t *pep, const gs_memory_struct_type_t *pstype,\
-    gc_state_t *gcst))
+    gc_state_t *gcst)
 
 		/* Relocate all the pointers in this structure. */
 
 #define struct_proc_reloc_ptrs(proc)\
-  void proc(P4(void /*obj_header_t*/ *ptr, uint size,\
-    const gs_memory_struct_type_t *pstype, gc_state_t *gcst))
+  void proc(void /*obj_header_t*/ *ptr, uint size,\
+    const gs_memory_struct_type_t *pstype, gc_state_t *gcst)
 
 		/*
 		 * Finalize this structure just before freeing it.
@@ -76,7 +82,7 @@ typedef struct enum_ptr_s {
 		 */
 
 #define struct_proc_finalize(proc)\
-  void proc(P1(void /*obj_header_t*/ *ptr))
+  void proc(void /*obj_header_t*/ *ptr)
 
 /*
  * A descriptor for an object (structure) type.

@@ -1,22 +1,28 @@
-/* Copyright (C) 1993, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1993, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: igc.c,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: igc.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Garbage collector for Ghostscript */
 #include "memory_.h"
 #include "ghost.h"
@@ -72,18 +78,18 @@ struct gc_mark_stack_s {
 #define ms_size_min 50		/* min size for segment in free block */
 
 /* Forward references */
-private void gc_init_mark_stack(P2(gc_mark_stack *, uint));
-private void gc_objects_clear_marks(P1(chunk_t *));
-private void gc_unmark_names(P1(name_table *));
-private int gc_trace(P3(gs_gc_root_t *, gc_state_t *, gc_mark_stack *));
-private int gc_rescan_chunk(P3(chunk_t *, gc_state_t *, gc_mark_stack *));
-private int gc_trace_chunk(P3(chunk_t *, gc_state_t *, gc_mark_stack *));
-private bool gc_trace_finish(P1(gc_state_t *));
-private void gc_clear_reloc(P1(chunk_t *));
-private void gc_objects_set_reloc(P1(chunk_t *));
-private void gc_do_reloc(P3(chunk_t *, gs_ref_memory_t *, gc_state_t *));
-private void gc_objects_compact(P2(chunk_t *, gc_state_t *));
-private void gc_free_empty_chunks(P1(gs_ref_memory_t *));
+private void gc_init_mark_stack(gc_mark_stack *, uint);
+private void gc_objects_clear_marks(chunk_t *);
+private void gc_unmark_names(name_table *);
+private int gc_trace(gs_gc_root_t *, gc_state_t *, gc_mark_stack *);
+private int gc_rescan_chunk(chunk_t *, gc_state_t *, gc_mark_stack *);
+private int gc_trace_chunk(chunk_t *, gc_state_t *, gc_mark_stack *);
+private bool gc_trace_finish(gc_state_t *);
+private void gc_clear_reloc(chunk_t *);
+private void gc_objects_set_reloc(chunk_t *);
+private void gc_do_reloc(chunk_t *, gs_ref_memory_t *, gc_state_t *);
+private void gc_objects_compact(chunk_t *, gc_state_t *);
+private void gc_free_empty_chunks(gs_ref_memory_t *);
 
 /* Forward references for pointer types */
 private ptr_proc_unmark(ptr_struct_unmark);
@@ -513,7 +519,7 @@ gs_gc_reclaim(vm_spaces * pspaces, bool global)
 		      (ulong) mem, total.allocated, total.used);
 	    gs_memory_status((gs_memory_t *) mem, &total);
 	    mem->gc_allocated = mem->allocated + total.allocated;
-	    mem->inherited = -mem->allocated;
+	    mem->inherited = -(int)mem->allocated;
 	}
 	mem = space_memories[ispace];
 	mem->previous_status = total;
@@ -754,7 +760,7 @@ gc_trace_chunk(chunk_t * cp, gc_state_t * pstate, gc_mark_stack * pmstack)
 /* Return -1 if we overflowed the mark stack, */
 /* 0 if we completed successfully without marking any new objects, */
 /* 1 if we completed and marked some new objects. */
-private int gc_extend_stack(P2(gc_mark_stack *, gc_state_t *));
+private int gc_extend_stack(gc_mark_stack *, gc_state_t *);
 private int
 gc_trace(gs_gc_root_t * rp, gc_state_t * pstate, gc_mark_stack * pmstack)
 {

@@ -1,41 +1,49 @@
-/* Copyright (C) 1989, 1992, 1993, 1994, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1992, 1993, 1994, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gscolor1.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gscolor1.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Level 1 extended color operators for Ghostscript library */
 #include "gx.h"
 #include "gserrors.h"
 #include "gsstruct.h"
 #include "gsutil.h"		/* for gs_next_ids */
 #include "gsccolor.h"
-#include "gscssub.h"
 #include "gxcspace.h"
 #include "gxdcconv.h"
 #include "gxdevice.h"		/* for gx_color_index */
 #include "gxcmap.h"
 #include "gzstate.h"
 #include "gscolor1.h"
+#include "gscolor2.h"
+#include "gxhttype.h"
+#include "gzht.h"
 
 /* Imports from gscolor.c */
-void load_transfer_map(P3(gs_state *, gx_transfer_map *, floatp));
+void load_transfer_map(gs_state *, gx_transfer_map *, floatp);
 
 /* Imported from gsht.c */
-void gx_set_effective_transfer(P1(gs_state *));
+void gx_set_effective_transfer(gs_state *);
 
 /* Force a parameter into the range [0.0..1.0]. */
 #define FORCE_UNIT(p) (p < 0.0 ? 0.0 : p > 1.0 ? 1.0 : p)
@@ -44,95 +52,24 @@ void gx_set_effective_transfer(P1(gs_state *));
 int
 gs_setcmykcolor(gs_state * pgs, floatp c, floatp m, floatp y, floatp k)
 {
-    gs_client_color *pcc = pgs->ccolor;
+    gs_color_space      cs;
+    int                 code;
 
-    if (pgs->in_cachedevice)
-	return_error(gs_error_undefined);
-    cs_adjust_color_count(pgs, -1);
-    gs_cspace_assign(pgs->color_space, gs_current_DeviceCMYK_space(pgs));
-    pgs->orig_cspace_index = pgs->orig_base_cspace_index =
-	gs_color_space_index_DeviceCMYK;
-    pcc->paint.values[0] = FORCE_UNIT(c);
-    pcc->paint.values[1] = FORCE_UNIT(m);
-    pcc->paint.values[2] = FORCE_UNIT(y);
-    pcc->paint.values[3] = FORCE_UNIT(k);
-    pcc->pattern = 0;		/* for GC */
-    gx_unset_dev_color(pgs);
-    return 0;
-}
+    gs_cspace_init_DeviceCMYK(&cs);
+    if ((code = gs_setcolorspace(pgs, &cs)) >= 0) {
+       gs_client_color *    pcc = pgs->ccolor;
 
-/* currentcmykcolor */
-int
-gs_currentcmykcolor(const gs_state * pgs, float pr4[4])
-{
-    const gs_client_color *pcc = pgs->ccolor;
-    const gs_color_space *pcs = pgs->color_space;
-    const gs_color_space *pbcs = pcs;
-    const gs_imager_state *const pis = (const gs_imager_state *)pgs;
-    gs_color_space_index csi = pgs->orig_cspace_index;
-    frac fcc[4];
-    gs_client_color cc;
-    int code;
-
-  sw:switch (csi) {
-	case gs_color_space_index_DeviceGray:
-	    pr4[0] = pr4[1] = pr4[2] = 0.0;
-	    pr4[3] = 1.0 - pcc->paint.values[0];
-	    return 0;
-	case gs_color_space_index_DeviceRGB:
-	    color_rgb_to_cmyk(float2frac(pcc->paint.values[0]),
-			      float2frac(pcc->paint.values[1]),
-			      float2frac(pcc->paint.values[2]),
-			      pis, fcc);
-	    pr4[0] = frac2float(fcc[0]);
-	    pr4[1] = frac2float(fcc[1]);
-	    pr4[2] = frac2float(fcc[2]);
-	    pr4[3] = frac2float(fcc[3]);
-	    return 0;
-	case gs_color_space_index_DeviceCMYK:
-	    pr4[0] = pcc->paint.values[0];
-	    pr4[1] = pcc->paint.values[1];
-	    pr4[2] = pcc->paint.values[2];
-	    pr4[3] = pcc->paint.values[3];
-	    return 0;
-        case gs_color_space_index_CIEICC:
-         icc_cs:if (gs_cspace_base_space(pbcs) != NULL)
-                  goto bcs;
-                break;
-	case gs_color_space_index_DeviceN:
-	case gs_color_space_index_Separation:
-	  ds:if (cs_concrete_space(pbcs, pis) == pbcs)
-		break;		/* not using alternative space */
-	    /* (falls through) */
-	case gs_color_space_index_Indexed:
-	  bcs:pbcs = gs_cspace_base_space(pbcs);
-	    switch (pbcs->type->index) {
-		case gs_color_space_index_DeviceN:
-		case gs_color_space_index_Separation:
-		    goto ds;
-                case gs_color_space_index_CIEICC:
-                    goto icc_cs;
-		default:	/* outer switch will catch undefined cases */
-		    break;
-	    }
-	    code = cs_concretize_color(pcc, pcs, fcc, pis);
-	    if (code < 0)
-		return code;
-	    cc.paint.values[0] = frac2float(fcc[0]);
-	    cc.paint.values[1] = frac2float(fcc[1]);
-	    cc.paint.values[2] = frac2float(fcc[2]);
-	    cc.paint.values[3] = frac2float(fcc[3]);
-	    pcc = &cc;
-	    pcs = pbcs;
-	    csi = pgs->orig_base_cspace_index;
-	    goto sw;
-	default:
-	    break;
+        cs_adjust_color_count(pgs, -1); /* not strictly necessary */
+        pcc->paint.values[0] = FORCE_UNIT(c);
+        pcc->paint.values[1] = FORCE_UNIT(m);
+        pcc->paint.values[2] = FORCE_UNIT(y);
+        pcc->paint.values[3] = FORCE_UNIT(k);
+        pcc->pattern = 0;		/* for GC */
+        gx_unset_dev_color(pgs);
     }
-    pr4[0] = pr4[1] = pr4[2] = 0.0;
-    pr4[3] = 1.0;
-    return 0;
+    return code;
 }
+
 
 /* setblackgeneration */
 /* Remap=0 is used by the interpreter. */
@@ -202,9 +139,10 @@ gs_setcolortransfer_remap(gs_state * pgs, gs_mapping_proc red_proc,
 			  gs_mapping_proc blue_proc,
 			  gs_mapping_proc gray_proc, bool remap)
 {
-    gx_transfer_colored *ptran = &pgs->set_transfer.colored;
-    gx_transfer_colored old;
+    gx_transfer *ptran = &pgs->set_transfer;
+    gx_transfer old;
     gs_id new_ids = gs_next_ids(4);
+    gx_device * dev = pgs->device;
 
     old = *ptran;
     rc_unshare_struct(ptran->gray, gx_transfer_map, &st_transfer_map,
@@ -223,6 +161,14 @@ gs_setcolortransfer_remap(gs_state * pgs, gs_mapping_proc red_proc,
     ptran->green->id = new_ids + 2;
     ptran->blue->proc = blue_proc;
     ptran->blue->id = new_ids + 3;
+    ptran->red_component_num = 
+        gs_color_name_component_number(dev, "Red", 3, ht_type_colorscreen);
+    ptran->green_component_num = 
+        gs_color_name_component_number(dev, "Green", 5, ht_type_colorscreen);
+    ptran->blue_component_num = 
+        gs_color_name_component_number(dev, "Blue", 4, ht_type_colorscreen);
+    ptran->gray_component_num = 
+        gs_color_name_component_number(dev, "Gray", 4, ht_type_colorscreen);
     if (remap) {
 	load_transfer_map(pgs, ptran->red, 0.0);
 	load_transfer_map(pgs, ptran->green, 0.0);
@@ -254,7 +200,7 @@ gs_setcolortransfer(gs_state * pgs, gs_mapping_proc red_proc,
 void
 gs_currentcolortransfer(const gs_state * pgs, gs_mapping_proc procs[4])
 {
-    const gx_transfer_colored *ptran = &pgs->set_transfer.colored;
+    const gx_transfer *ptran = &pgs->set_transfer;
 
     procs[0] = ptran->red->proc;
     procs[1] = ptran->green->proc;

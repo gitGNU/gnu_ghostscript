@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 2000, 2001 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 2000, 2001 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: zfileio.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zfileio.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* File I/O operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -34,11 +40,11 @@
 #include "estack.h"
 
 /* Forward references */
-private int write_string(P2(ref *, stream *));
-private int handle_read_status(P5(i_ctx_t *, int, const ref *, const uint *,
-				  op_proc_t));
-private int handle_write_status(P5(i_ctx_t *, int, const ref *, const uint *,
-				   op_proc_t));
+private int write_string(ref *, stream *);
+private int handle_read_status(i_ctx_t *, int, const ref *, const uint *,
+			       op_proc_t);
+private int handle_write_status(i_ctx_t *, int, const ref *, const uint *,
+				op_proc_t);
 
 /* ------ Operators ------ */
 
@@ -109,7 +115,7 @@ zwrite(i_ctx_t *i_ctx_p)
 }
 
 /* <file> <string> readhexstring <substring> <filled_bool> */
-private int zreadhexstring_continue(P1(i_ctx_t *));
+private int zreadhexstring_continue(i_ctx_t *);
 
 /* We keep track of the odd digit in the next byte of the string */
 /* beyond the bytes already used.  (This is just for convenience; */
@@ -195,7 +201,7 @@ zreadhexstring_continue(i_ctx_t *i_ctx_p)
 }
 
 /* <file> <string> writehexstring - */
-private int zwritehexstring_continue(P1(i_ctx_t *));
+private int zwritehexstring_continue(i_ctx_t *);
 private int
 zwritehexstring_at(i_ctx_t *i_ctx_p, os_ptr op, uint odd)
 {
@@ -274,7 +280,7 @@ zwritehexstring_continue(i_ctx_t *i_ctx_p)
 }
 
 /* <file> <string> readstring <substring> <filled_bool> */
-private int zreadstring_continue(P1(i_ctx_t *));
+private int zreadstring_continue(i_ctx_t *);
 private int
 zreadstring_at(i_ctx_t *i_ctx_p, os_ptr op, uint start)
 {
@@ -352,8 +358,8 @@ zwritestring(i_ctx_t *i_ctx_p)
 }
 
 /* <file> <string> readline <substring> <bool> */
-private int zreadline(P1(i_ctx_t *));
-private int zreadline_continue(P1(i_ctx_t *));
+private int zreadline(i_ctx_t *);
+private int zreadline_continue(i_ctx_t *);
 
 /*
  * We could handle readline the same way as readstring,
@@ -736,7 +742,7 @@ zunread(i_ctx_t *i_ctx_p)
 }
 
 /* <file> <obj> <==flag> .writecvp - */
-private int zwritecvp_continue(P1(i_ctx_t *));
+private int zwritecvp_continue(i_ctx_t *);
 private int
 zwritecvp_at(i_ctx_t *i_ctx_p, os_ptr op, uint start, bool first)
 {

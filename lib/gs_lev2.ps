@@ -1,20 +1,19 @@
 %    Copyright (C) 1990, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-% This program is free software; you can redistribute it and/or modify it
-% under the terms of the GNU General Public License as published by the
-% Free Software Foundation; either version 2 of the License, or (at your
-% option) any later version.
-%
-% This program is distributed in the hope that it will be useful, but
-% WITHOUT ANY WARRANTY; without even the implied warranty of
-% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-% Public License for more details.
-%
-% You should have received a copy of the GNU General Public License along
-% with this program; if not, write to the Free Software Foundation, Inc.,
-% 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_lev2.ps,v 1.1 2004/01/14 16:59:46 atai Exp $
+% $Id: gs_lev2.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
 % Initialization file for Level 2 functions.
 % When this is run, systemdict is still writable,
 % but (almost) everything defined here goes into level2dict.
@@ -70,22 +69,10 @@ level2dict begin
 
 % currentuser/systemparams creates and returns a dictionary in the
 % current VM.  The easiest way to make this work is to copy any composite
-% PostScript-level parameters to global VM.  Currently we have strings
-% as well as arrays. For arrays, we also need to copy any contents that
-% are in VM. Also copying string parameters insures the contents won't
-% be changed. Also be careful to preserve 'executable' state.
+% PostScript-level parameters to global VM.  Currently, the only such
+% parameters are strings.  In fact, we always copy string parameters,
+% so that we can be sure the contents won't be changed.
 /.copyparam {			% <value> .copyparam <value'>
-  dup type /arraytype eq {
-    .currentglobal true .setglobal exch 
-    dup xcheck exch		% original executable state
-    [ exch {
-      dup type dup /arraytype eq exch /stringtype eq or {
-        .copyparam	% recurse to handle composite array elements
-      } if
-    } forall ]
-    exch { cvx } if		% set executable state
-    exch .setglobal
-  } if
   dup type /stringtype eq {
     .currentglobal true .setglobal
     1 index length string exch .setglobal
@@ -304,9 +291,10 @@ psuserparams /ProcessComment {.checkprocesscomment} put
 } bind def
 /ProcessDSCComment null .definepsuserparam
 psuserparams /ProcessDSCComment {.checkprocesscomment} put
+/.loadingfont false def
 (%ProcessDSCComment) cvn {
   /ProcessDSCComment getuserparam
-  dup null eq { pop pop pop } { exec } ifelse
+  dup null eq .loadingfont or { pop pop pop } { exec } ifelse
 } bind def
 
 % ------ Miscellaneous ------ %
@@ -497,6 +485,8 @@ currentsystemparams
 
 % The following do not depend on the presence of setpagedevice.
 /buildtime 1 index /BuildTime get def
+% Also define /buildtime in systemdict because Adobe does so and some fonts use it as ID
+systemdict /buildtime dup load put
 /byteorder 1 index /ByteOrder get def
 /checkpassword { .checkpassword 0 gt } bind def
 dup /DoStartPage known
@@ -586,13 +576,13 @@ currentdict end
 % defined here, rather than in gs_init.ps, because they require the
 % resource machinery.
 
-/devforall {		% <pattern> <proc> <scratch> devforall -
+/devforall {		% <proc> <scratch> devforall -
   exch {
     1 index currentdevparams
     /Type .knownget { /FileSystem eq } { false } ifelse
     { exec } { pop pop } ifelse
   } /exec load 3 packedarray cvx exch
-  (*) 3 1 roll ppstack flush /IODevice resourceforall
+  (*) 3 1 roll /IODevice resourceforall
 } odef
 /devstatus {		% <(%disk*%)> devstatus <searchable> <writable>
 			%   <hasNames> <mounted> <removable> <searchOrder>
@@ -603,7 +593,7 @@ currentdict end
       dup /IODevice resourcestatus {
 	pop pop dup currentdevparams
 	dup /Searchable get
-	exch dup /Writable get
+	exch dup /Writeable get
 	exch dup /HasNames get
 	exch dup /Mounted get
 	exch dup /Removable get
@@ -624,109 +614,30 @@ currentdict end
 
 % ------ Color spaces ------ %
 
-% Attempt to convert a tint transformation procedure to a type 4 Function.
-% The value <m> is the number  of function inputs
-% The current color space defines the number of function output values.
-% The current color space will be the alternate color space for the function.
-% If the conversion fails then build a color cube function.
+% Move setcolorsapce, setcolor, and colorspacedict to level2dict
+level2dict /setcolorspace .cspace_util 1 index get put
+level2dict /setcolor .cspace_util 1 index get put
+level2dict /colorspacedict .cspace_util 1 index get put
 
-/.converttinttransform {	% [.. .. .. proc ] <m>
-				%   .converttinttransform [.. .. .. proc']
-  .currentglobal			% Save current global memory state
-  2 index gcheck .setglobal		% Set gobal mode to match the array's mode
-  4 dict				% Build a dictionary for our type 4 function
-    dup /FunctionType 4 put		% Set FunctionType
-    dup /Function 5 index 3 get put	% Set function expression
-		% Stack: orig m global func
-    dup /Domain
-    [ 5 index {0 1} repeat ] put	% set Domain values
-    dup /Range
-    [ mark currentcolor counttomark
-    dup 2 add 1 roll cleartomark	% # of components in alternate space
-    {0 1} repeat ] put			% Set Range values
-  { .buildfunction } .internalstopped	% Try to build a type 4 function
-  dup
-  {				% type 4 function failed - Collect data for a color cube
-    pop					% Remove duplicate copy of stopped status
-    pop					% Remove invalid type 4 function
-    1 index				% Get number of inputs
-    mark currentcolor counttomark	% Count number of output colors
-    dup 2 add 1 roll cleartomark	% # of components in alternate space
-    4 index 3 get			% Get tint transform function
-    { .buildcolorcube } .internalstopped 
-  } if
-  {					% Color cube build failed
-    pop pop pop exch pop exch pop	% Remove unused parameters
-    .setglobal				% Restore global state
-  } {					% Function build succeeded - install function
-					% Stack: orig m global func
-    3 -1 roll pop			% Stack: orig global func
-    2 index 4 array copy dup 3 4 -1 roll put
-    exch .setglobal exch pop
-  } ifelse
-} bind def
+% Add the level 2 color spaces
+% DevicePixel is actually a LanguageLevel 3 feature; it is here for
+% historical reasons.
+%% Replace 1 (gs_devpxl.ps) 
+(gs_devpxl.ps) runlibfile
 
-% Define the setcolorspace procedures:
-%	<colorspace> proc <colorspace'|null>
-% We have to define the dictionary first, so it can be bound into the
-% implementation procedure, but we can't populate it until the procedure
-% has been defined, so that the procedure can get bound into recursive calls.
-/colorspacedict 20 dict def
+%% Replace 1 (gs_ciecs2.ps)
+(gs_ciecs2.ps) runlibfile
 
-/.devcs [
-  /DeviceGray /DeviceRGB /DeviceCMYK /DevicePixel
-] readonly def
-/currentcolorspace {		% - currentcolorspace <array>
-  .currentcolorspace dup type /integertype eq {
-    //.devcs exch 1 getinterval
-  } if
-} odef
-currentdict /.devcs .undef
+%% Replace 1 (gs_indxd.ps)
+(gs_indxd.ps) runlibfile
 
-/setcolorspace {		% <name|array> setcolorspace -
-  dup dup dup type /nametype ne { 0 get } if
-  //colorspacedict exch get exec
-  dup null eq { pop } { .setcolorspace } ifelse pop
-} odef
+%% Replace 1 (gs_sepr.ps)
+(gs_sepr.ps) runlibfile
 
-colorspacedict
-  dup /DeviceGray { pop 0 setgray null } bind put
-  dup /DeviceRGB { pop 0 0 0 setrgbcolor null } bind put
-  /setcmykcolor where
-   { pop dup /DeviceCMYK { pop 0 0 0 1 setcmykcolor null } bind put
-   } if
-  /.setcieaspace where
-   { pop dup /CIEBasedA { NOCIE { pop 0 setgray null } { dup 1 get .setcieaspace } ifelse } bind put
-   } if
-  /.setcieabcspace where
-   { pop dup /CIEBasedABC { NOCIE { pop 0 0 0 setrgbcolor null } { dup 1 get .setcieabcspace } ifelse } bind put
-   } if
-  /.setciedefspace where
-   { pop dup /CIEBasedDEF { NOCIE { pop 0 0 0 setrgbcolor null } { dup 1 get .setciedefspace } ifelse } bind put
-   } if
-  /.setciedefgspace where
-   { pop dup /CIEBasedDEFG { NOCIE { pop 0 0 0 1 setcmykcolor null } { dup 1 get .setciedefgspace } ifelse } bind put
-   } if
-  /.setseparationspace where
-   { pop dup /Separation { dup 2 get setcolorspace dup 1 .converttinttransform .setseparationspace } bind put
-   } if
-  /.setindexedspace where
-   { pop dup /Indexed { dup 1 get setcolorspace dup .setindexedspace } bind put
-   } if
-  /.nullpatternspace [/Pattern] readonly def
-  /.setpatternspace where
-   { pop dup /Pattern
-      { dup type /nametype eq { pop //.nullpatternspace } if
-	dup length 1 gt { dup 1 get setcolorspace } if
-        dup .setpatternspace
-      } bind put
-   } if
-	% If DeviceN space is included, gs_ll3.ps registers it.
-  /.setdevicepixelspace where
-   { pop dup /DevicePixel { dup .setdevicepixelspace } bind put
-   } if
-  currentdict /.nullpatternspace .undef
-pop
+%% Replace 1 (gs_patrn.ps)
+(gs_patrn.ps) runlibfile
+
+
 
 % ------ CIE color rendering ------ %
 
@@ -801,28 +712,10 @@ mark
 % This TransformPQR implements a relative colorimetric intent by scaling
 % the XYZ values relative to the white and black points.
    /TransformPQR
-     [ { 5 1 roll                    % p Ws Bs Wd Bd
-         4 {3 get 5 1 roll} repeat   % ws bs wd bd p 
-         3 index sub                 % ws bs wd bd p-bs 
-         1 index                     % ws bs wd bd p-bs bd
-         6 2 roll                    % p-bs bd ws bs wd bd 
-         sub                         % p-bs bd ws bs wd-bd 
-         5 1 roll                    % wd-bd p-bs bd ws bs  
-         sub                         % wd-bd p-bs bd ws-bs  
-         4 2 roll                    % bd ws-bs wd-bd p-bs 
-         mul                         % bd ws-bs (wd-bd)*(p-bs)
-         exch div add                % bd + (wd-bd)*(p-bs)/(ws-bs)
-       } bind
-       { 5 1 roll
-         4 {4 get 5 1 roll} repeat
-         3 index sub 1 index 6 2 roll sub 5 1 roll
-         sub 4 2 roll mul exch div add
-       } bind
-       { 5 1 roll
-         4 {5 get 5 1 roll} repeat
-         3 index sub 1 index 6 2 roll sub 5 1 roll
-         sub 4 2 roll mul exch div add
-       } bind
+     % The implementations have been moved to C for performance.
+     [ { .TransformPQR_scale_WB0 } bind
+       { .TransformPQR_scale_WB1 } bind 
+       { .TransformPQR_scale_WB2 } bind
      ] readonly
    /RangeLMN [0 0.9505 0 1 0 1.0890] readonly
    /MatrixABC
@@ -900,36 +793,5 @@ def
   } if setcolor
 } odef
 
-% Extend image and imagemask to accept dictionaries.
-% We must create .imagetypes and .imagemasktypes outside level2dict,
-% and leave some extra space because we're still in Level 1 mode.
-systemdict begin
-/.imagetypes 5 dict
-  dup 1 /.image1 load put
-def
-/.imagemasktypes 5 dict
-  dup 1 /.imagemask1 load put
-def
-end
-
-/.image /image load def
-/image {
-  dup type /dicttype eq {
-    dup /ImageType get //.imagetypes exch get exec
-  } {
-    //.image
-  } ifelse
-} odef
-currentdict /.image undef
-
-/.imagemask /imagemask load def
-/imagemask {
-  dup type /dicttype eq {
-    dup /ImageType get //.imagemasktypes exch get exec
-  } {
-    //.imagemask
-  } ifelse
-} odef
-currentdict /.imagemask undef
 
 end				% level2dict

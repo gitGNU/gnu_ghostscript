@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1992, 1993, 1994, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1992, 1993, 1994, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: memory_.h,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: memory_.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Generic substitute for Unix memory.h */
 
 #ifndef memory__INCLUDED
@@ -88,24 +94,30 @@ extern bcopy(), bcmp(), bzero();
 #  define MEMORY__NEED_MEMSET
 #endif
 
-/* Declare substitutes for library procedures we supply. */
+/*
+ * Declare substitutes for library procedures we supply.  We undef them
+ * first, just in case we are substituting for an existing library facility
+ * that happens to be implemented as a macro.
+ */
 #ifdef MEMORY__NEED_MEMMOVE
+#  undef memmove
 #  define memmove(dest,src,len) gs_memmove(dest,src,len)
-void *gs_memmove(P3(void *, const void *, size_t));
+void *gs_memmove(void *, const void *, size_t);
 #endif
 #ifdef MEMORY__NEED_MEMCPY
+#  undef memcpy
 #  define memcpy(dest,src,len) gs_memcpy(dest,src,len)
-void *gs_memcpy(P3(void *, const void *, size_t));
+void *gs_memcpy(void *, const void *, size_t);
 #endif
 #ifdef MEMORY__NEED_MEMSET
+#  undef memset
 #  define memset(dest,ch,len) gs_memset(dest,ch,len)
-void *gs_memset(P3(void *, int, size_t));
+void *gs_memset(void *, int, size_t);
 #endif
 #ifdef MEMORY__NEED_MEMCHR
+#  undef memchr
 #  define memchr(ptr,ch,len) gs_memchr(ptr,ch,len)
-void *gs_memchr(P3(const void *, int, size_t));
+void *gs_memchr(const void *, int, size_t);
 #endif
-
-
 
 #endif /* memory__INCLUDED */

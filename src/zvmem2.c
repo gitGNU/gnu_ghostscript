@@ -1,22 +1,28 @@
-/* Copyright (C) 1992, 1993, 1994, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1992, 1993, 1994, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: zvmem2.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zvmem2.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* Level 2 "Virtual memory" operators */
 #include "ghost.h"
 #include "oper.h"
@@ -27,8 +33,8 @@
 #include "store.h"
 
 /* Garbage collector control parameters. */
-#define DEFAULT_VM_THRESHOLD_SMALL 20000
-#define DEFAULT_VM_THRESHOLD_LARGE 250000
+#define DEFAULT_VM_THRESHOLD_SMALL 100000
+#define DEFAULT_VM_THRESHOLD_LARGE 1000000
 #define MIN_VM_THRESHOLD 1
 #define MAX_VM_THRESHOLD max_long
 
@@ -80,8 +86,6 @@ zgcheck(i_ctx_t *i_ctx_p)
 int
 set_vm_threshold(i_ctx_t *i_ctx_p, long val)
 {
-    gs_memory_gc_status_t stat;
-
     if (val < -1)
 	return_error(e_rangecheck);
     else if (val == -1)
@@ -91,12 +95,8 @@ set_vm_threshold(i_ctx_t *i_ctx_p, long val)
 	val = MIN_VM_THRESHOLD;
     else if (val > MAX_VM_THRESHOLD)
 	val = MAX_VM_THRESHOLD;
-    gs_memory_gc_status(idmemory->space_global, &stat);
-    stat.vm_threshold = val;
-    gs_memory_set_gc_status(idmemory->space_global, &stat);
-    gs_memory_gc_status(idmemory->space_local, &stat);
-    stat.vm_threshold = val;
-    gs_memory_set_gc_status(idmemory->space_local, &stat);
+    gs_memory_set_vm_threshold(idmemory->space_global, val);
+    gs_memory_set_vm_threshold(idmemory->space_local, val);
     return 0;
 }
 
@@ -104,17 +104,9 @@ int
 set_vm_reclaim(i_ctx_t *i_ctx_p, long val)
 {
     if (val >= -2 && val <= 0) {
-	gs_memory_gc_status_t stat;
-
-	gs_memory_gc_status(idmemory->space_system, &stat);
-	stat.enabled = val >= -1;
-	gs_memory_set_gc_status(idmemory->space_system, &stat);
-	gs_memory_gc_status(idmemory->space_global, &stat);
-	stat.enabled = val >= -1;
-	gs_memory_set_gc_status(idmemory->space_global, &stat);
-	gs_memory_gc_status(idmemory->space_local, &stat);
-	stat.enabled = val == 0;
-	gs_memory_set_gc_status(idmemory->space_local, &stat);
+	gs_memory_set_vm_reclaim(idmemory->space_system, (val >= -1));
+	gs_memory_set_vm_reclaim(idmemory->space_global, (val >= -1));
+	gs_memory_set_vm_reclaim(idmemory->space_local, (val == 0));
 	return 0;
     } else
 	return_error(e_rangecheck);

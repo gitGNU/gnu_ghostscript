@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gximono.c,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gximono.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* General mono-component image rendering */
 #include "gx.h"
 #include "memory_.h"
@@ -79,16 +85,6 @@ gs_image_class_3_mono(gx_image_enum * penum)
     return 0;
 }
 
-/* ------ Rendering procedure ------ */
-
-/* Provide a fake map_gray procedure for the DevicePixel color space. */
-private void
-no_map_gray(frac pixel, gx_device_color * pdc, const gs_imager_state * pis,
-	    gx_device * dev, gs_color_select_t select)
-{
-    color_set_pure(pdc, frac2byte(pixel));
-}
-
 /*
  * Rendering procedure for general mono-component images, dealing with
  * multiple bit-per-sample images, general transformations, arbitrary
@@ -104,17 +100,10 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
     gs_logical_operation_t lop = penum->log_op;
     const bool masked = penum->masked;
     const gs_color_space *pcs;	/* only set for non-masks */
-    cmap_proc_gray((*map_gray));	/* ditto */
     cs_proc_remap_color((*remap_color));	/* ditto */
     gs_client_color cc;
     gx_device_color *pdevc = &penum->icolor1;	/* color for masking */
-    /*
-     * Make sure the cache setup matches the graphics state.  Also determine
-     * whether all tiles fit in the cache.  We may bypass the latter check
-     * for masked images with a pure color.
-     */
-    bool tiles_fit =
-	(pis && penum->device_color ? gx_check_tile_cache(pis) : false);
+    bool tiles_fit;
     uint mask_base = penum->mask_color.values[0];
     uint mask_limit =
 	(penum->use_mask_color ?
@@ -130,8 +119,6 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
     if (!color_is_set(pdevc)) {\
 	if ((uint)(sample_value - mask_base) < mask_limit)\
 	    color_set_null(pdevc);\
-	else if (penum->device_color)\
-	    (*map_gray)(byte2frac(sample_value), pdevc, pis, dev, gs_color_select_source);\
 	else {\
 	    decode_sample(sample_value, cc, 0);\
 	    code = (*remap_color)(&cc, pcs, pdevc, pis, dev, gs_color_select_source);\
@@ -160,18 +147,23 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
 
     if (h == 0)
 	return 0;
+    /*
+     * Make sure the cache setup matches the graphics state.  Also determine
+     * whether all tiles fit in the cache.  We may bypass the latter check
+     * for masked images with a pure color.
+     */
+
+    /* TO_DO_DEVICEN - The gx_check_tile_cache_current() routine is bogus */
+
+    if (pis == 0 || !gx_check_tile_cache_current(pis)) {
+        image_init_clues(penum, penum->bps, penum->spp);
+    }
+    tiles_fit = (pis && penum->device_color ? gx_check_tile_cache(pis) : false);
     next = penum->dda.pixel0;
     xrun = dda_current(next.x);
     if (!masked) {
 	pcs = penum->pcs;	/* (may not be set for masks) */
-	if (penum->device_color)
-	    map_gray =
-		(gs_color_space_get_index(pcs) ==
-		 gs_color_space_index_DeviceGray ?
-		 gx_get_cmap_procs(pis, dev)->map_gray :
-		 no_map_gray /*DevicePixel */ );
-	else
-	    remap_color = pcs->type->remap_color;
+        remap_color = pcs->type->remap_color;
     }
     run = *psrc;
     /* Find the last transition in the input. */
@@ -494,8 +486,7 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
 		{		/* Now fill the region between xrun and xl. */
 		    int xi = fixed2int_var(xrun);
 		    int wi = fixed2int_var(xl) - xi;
-		    int xei, tsx;
-		    const gx_strip_bitmap *tile;
+		    int xei;
 
 		    if (wi <= 0) {
 			if (wi == 0)
@@ -531,35 +522,9 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
 				IMAGE_SET_GRAY(run);
 				htrun = run;
 			    }
-			    /* We open-code gx_fill_rectangle, */
-			    /* because we've done some of the work for */
-			    /* halftone tiles in advance. */
-			    if (color_is_pure(pdevc)) {
-				code = (*fill_proc) (dev, xi, yt, wi, iht,
-						     pdevc->colors.pure);
-			    } else if (!color_is_binary_halftone(pdevc)) {
-				code =
-				    gx_fill_rectangle_device_rop(xi, yt, wi, iht,
-							   pdevc, dev, lop);
-			    } else if (tile_offset >= 0 &&
-				(tile = &pdevc->colors.binary.b_tile->tiles,
-				 (tsx = (xi + phase_x) % tile->rep_width) + wi <= tile->size.x)
-				) {	/* The pixel(s) fit(s) in a single (binary) tile. */
-				byte *row = tile->data + tile_offset;
+                            code = gx_fill_rectangle_device_rop(xi, yt, wi, iht,
+                                                                 pdevc, dev, lop);
 
-				code = (*copy_mono_proc)
-				    (dev, row, tsx, tile->raster, gx_no_bitmap_id,
-				     xi, yt, wi, iht,
-				     pdevc->colors.binary.color[0],
-				     pdevc->colors.binary.color[1]);
-			    } else {
-				code = (*tile_proc) (dev,
-					&pdevc->colors.binary.b_tile->tiles,
-						     xi, yt, wi, iht,
-					      pdevc->colors.binary.color[0],
-					      pdevc->colors.binary.color[1],
-					    pdevc->phase.x, pdevc->phase.y);
-			    }
 		    }
 		    if (code < 0)
 			goto err;

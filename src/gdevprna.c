@@ -1,22 +1,28 @@
-/* Copyright (C) 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevprna.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevprna.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
 /* Generic asynchronous printer driver support */
 
 /* Initial version 2/1/98 by John Desrosiers (soho@crl.com) */
@@ -55,17 +61,17 @@ private dev_proc_get_hardware_params(gdev_prn_async_write_get_hardware_params);
 private dev_proc_put_params(gdev_prn_async_render_put_params);
 
 /* ---------------- Forward Declarations ---------------------- */
-private void gdev_prn_dealloc(P1(gx_device_printer *));
+private void gdev_prn_dealloc(gx_device_printer *);
 private proc_free_up_bandlist_memory(gdev_prn_async_write_free_up_bandlist_memory);
-private int flush_page(P2(gx_device_printer *, bool));
-private int reopen_clist_after_flush(P1(gx_device_printer *));
-private void reinit_printer_into_printera(P1(gx_device_printer * const));
-private int alloc_bandlist_memory(P2(gs_memory_t **, gs_memory_t *));
-private void free_bandlist_memory(P1(gs_memory_t *));
-private int alloc_render_memory(P3(gs_memory_t **, gs_memory_t *, long));
-private void free_render_memory(P1(gs_memory_t *));
+private int flush_page(gx_device_printer *, bool);
+private int reopen_clist_after_flush(gx_device_printer *);
+private void reinit_printer_into_printera(gx_device_printer * const);
+private int alloc_bandlist_memory(gs_memory_t **, gs_memory_t *);
+private void free_bandlist_memory(gs_memory_t *);
+private int alloc_render_memory(gs_memory_t **, gs_memory_t *, long);
+private void free_render_memory(gs_memory_t *);
 private gs_memory_recover_status_t
-    prna_mem_recover(P2(gs_memory_retrying_t *rmem, void *proc_data));
+    prna_mem_recover(gs_memory_retrying_t *rmem, void *proc_data);
 
 /* ------ Open/close ------ */
 

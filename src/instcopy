@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: instcopy,v 1.1 2004/01/14 16:59:52 atai Exp $
+# $Id: instcopy,v 1.2 2004/02/14 22:20:19 atai Exp $
 #
 # Implement a uniform 'install' syntax independent of which of the two
 # "standard" install programs is installed.  Based on ideas in, but not

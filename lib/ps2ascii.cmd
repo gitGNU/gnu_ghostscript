@@ -1,4 +1,4 @@
-/* $Id: ps2ascii.cmd,v 1.1 2004/01/14 16:59:47 atai Exp $ */
+/* $Id: ps2ascii.cmd,v 1.2 2004/02/14 22:20:04 atai Exp $ */
 /*
  * This file is maintained by a user: if you have any questions about it,
  * please contact Mark Hale (mark.hale@physics.org).
@@ -7,12 +7,12 @@
 @echo off
 if '%1'=='' goto a0
 if '%2'=='' goto a1
-gsos2 -q -dNODISPLAY -dNOBIND -dWRITESYSTEMDICT -dSIMPLE ps2ascii.ps %1 -c quit >%2
+gsos2 -q -dNODISPLAY -dDELAYBIND -dWRITESYSTEMDICT -dSIMPLE ps2ascii.ps %1 -c quit >%2
 goto x
 :a0
-gsos2 -q -dNODISPLAY -dNOBIND -dWRITESYSTEMDICT -dSIMPLE ps2ascii.ps - -c quit
+gsos2 -q -dNODISPLAY -dDELAYBIND -dWRITESYSTEMDICT -dSIMPLE ps2ascii.ps - -c quit
 goto x
 :a1
-gsos2 -q -dNODISPLAY -dNOBIND -dWRITESYSTEMDICT -dSIMPLE ps2ascii.ps %1 -c quit
+gsos2 -q -dNODISPLAY -dDELAYBIND -dWRITESYSTEMDICT -dSIMPLE ps2ascii.ps %1 -c quit
 goto x
 :x

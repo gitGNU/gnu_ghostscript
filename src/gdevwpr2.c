@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevwpr2.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevwpr2.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
 /*
  * Microsoft Windows 3.n printer driver for Ghostscript.
  * Original version by Russell Lang and
@@ -231,6 +237,7 @@ gx_device_win_pr2 far_data gs_mswinpr2_device =
     NULL,			/* win32_hdevnames */
     NULL,			/* lpfnAbortProc */
     NULL,			/* lpfnCancelProc */
+    NULL,			/* hDlgModeless */
     false,			/* use_old_spool_name */
     NULL			/* original_device */
 };
@@ -610,19 +617,21 @@ win_pr2_print_page(gx_device_printer * pdev, FILE * file)
 
 /* Map a r-g-b color to a color index. */
 private gx_color_index
-win_pr2_map_rgb_color(gx_device * dev, gx_color_value r, gx_color_value g,
-		      gx_color_value b)
+win_pr2_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 {
+    gx_color_value r = cv[0];
+    gx_color_value g = cv[1];
+    gx_color_value b = cv[2];
     switch (dev->color_info.depth) {
 	case 1:
-	    return gdev_prn_map_rgb_color(dev, r, g, b);
+	    return gdev_prn_map_rgb_color(dev, cv);
 	case 4:
 	    /* use only 8 colors */
 	    return (r > (gx_max_color_value / 2 + 1) ? 4 : 0) +
 		(g > (gx_max_color_value / 2 + 1) ? 2 : 0) +
 		(b > (gx_max_color_value / 2 + 1) ? 1 : 0);
 	case 8:
-	    return pc_8bit_map_rgb_color(dev, r, g, b);
+	    return pc_8bit_map_rgb_color(dev, cv);
 	case 24:
 	    return gx_color_value_to_byte(r) +
 		((uint) gx_color_value_to_byte(g) << 8) +
@@ -689,6 +698,22 @@ win_pr2_set_bpp(gx_device * dev, int depth)
     }
     
     ((gx_device_win_pr2 *)dev)->selected_bpp = depth;
+
+    /* copy encode/decode procedures */
+    dev->procs.encode_color = dev->procs.map_rgb_color;
+    dev->procs.decode_color = dev->procs.map_color_rgb;
+    if (depth == 1) {
+	dev->procs.get_color_mapping_procs = 
+	    gx_default_DevGray_get_color_mapping_procs;
+	dev->procs.get_color_comp_index = 
+	    gx_default_DevGray_get_color_comp_index;
+    }
+    else {
+	dev->procs.get_color_mapping_procs = 
+	    gx_default_DevRGB_get_color_mapping_procs;
+	dev->procs.get_color_comp_index = 
+	    gx_default_DevRGB_get_color_comp_index;
+    }
 }
 
 /********************************************************************************/
@@ -1080,7 +1105,7 @@ win_pr2_getdc(gx_device_win_pr2 * wdev)
     }
     
     if (wdev->win32_hdevmode) {
-	LPDEVMODE pdevmode = (LPDEVMODE) GlobalLock(GlobalLock(wdev->win32_hdevmode));
+	LPDEVMODE pdevmode = (LPDEVMODE) GlobalLock(wdev->win32_hdevmode);
 	if (pdevmode) {
 	    memcpy(pdevmode, podevmode, sizeof(DEVMODE));
 	    GlobalUnlock(wdev->win32_hdevmode);

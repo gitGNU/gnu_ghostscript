@@ -1,35 +1,44 @@
-/* Copyright (C) 1989, 1995, 1996, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1995, 1996, 1998, 1999, 2002 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: genarch.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
-/* Generate a header file (arch.h) with parameters */
-/* reflecting the machine architecture and compiler characteristics. */
+/* $Id: genarch.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
+/*
+ * Generate a header file (arch.h) with parameters
+ * reflecting the machine architecture and compiler characteristics.
+ */
 
 #include "stdpre.h"
 #include <ctype.h>
 #include <stdio.h>
 /*
- * In theory, not all systems provide <string.h>, or declare memset in
- * that header file, but at this point I don't think we care about any
+ * In theory, not all systems provide <string.h> or <setjmp.h>, or declare
+ * memset in <string.h>, but at this point I don't think we care about any
  * that don't.
  */
 #include <string.h>
 #include <time.h>
+#include <setjmp.h>
 
 /* We should write the result on stdout, but the original Turbo C 'make' */
 /* can't handle output redirection (sigh). */
@@ -63,14 +72,30 @@ define_int(FILE *f, const char *str, int value)
     fprintf(f, "#define %s %d\n", str, value);
 }
 
-const char ff_str[] = "ffffffffffffffff";	/* 8 bytes */
+private void
+print_ffs(FILE *f, int nbytes)
+{
+    int i;
+
+    for (i = 0; i < nbytes; ++i)
+	fprintf(f, "ff");
+}
+
+private int
+ilog2(int n)
+{
+    int i = 0, m = n;
+
+    while (m > 1)
+	++i, m = (m + 1) >> 1;
+    return i;
+}
 
 int
 main(int argc, char *argv[])
 {
     char *fname = argv[1];
     long one = 1;
-    int ff_strlen = sizeof(ff_str) - 1;
     struct {
 	char c;
 	short s;
@@ -95,8 +120,11 @@ main(int argc, char *argv[])
 	char c;
 	double d;
     } sd;
-    static int log2s[17] =
-    {0, 0, 1, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4};
+    /* Some architectures have special alignment requirements for jmpbuf. */
+    struct {
+	char c;
+	jmp_buf j;
+    } sj;
     long lm1 = -1;
     long lr1 = lm1 >> 1, lr2 = lm1 >> 2;
     unsigned long um1 = ~(unsigned long)0;
@@ -112,7 +140,7 @@ main(int argc, char *argv[])
 	float f;
 	int i;
 	long l;
-    } f0 , f1, fm1;
+    } f0, f1, fm1;
     int floats_are_IEEE;
     FILE *f = fopen(fname, "w");
 
@@ -120,7 +148,9 @@ main(int argc, char *argv[])
 	fprintf(stderr, "genarch.c: can't open %s for writing\n", fname);
 	return exit_FAILED;
     }
-    fprintf(f, "/* Parameters derived from machine and compiler architecture */\n");
+    fprintf(f, "/* Parameters derived from machine and compiler architecture. */\n");
+    fprintf(f, "/* This file is generated mechanically by genarch.c. */\n");
+
     /* We have to test the size dynamically here, */
     /* because the preprocessor can't evaluate sizeof. */
     f0.f = 0.0, f1.f = 1.0, fm1.f = -1.0;
@@ -138,13 +168,14 @@ main(int argc, char *argv[])
     define_int(f, "ARCH_ALIGN_PTR_MOD", OFFSET_IN(sp, p));
     define_int(f, "ARCH_ALIGN_FLOAT_MOD", OFFSET_IN(sf, f));
     define_int(f, "ARCH_ALIGN_DOUBLE_MOD", OFFSET_IN(sd, d));
+    define_int(f, "ARCH_ALIGN_STRUCT_MOD", OFFSET_IN(sj, j));
 #undef OFFSET_IN
 
     section(f, "Scalar sizes");
 
-    define_int(f, "ARCH_LOG2_SIZEOF_SHORT", log2s[size_of(short)]);
-    define_int(f, "ARCH_LOG2_SIZEOF_INT", log2s[size_of(int)]);
-    define_int(f, "ARCH_LOG2_SIZEOF_LONG", log2s[size_of(long)]);
+    define_int(f, "ARCH_LOG2_SIZEOF_SHORT", ilog2(size_of(short)));
+    define_int(f, "ARCH_LOG2_SIZEOF_INT", ilog2(size_of(int)));
+    define_int(f, "ARCH_LOG2_SIZEOF_LONG", ilog2(size_of(long)));
     define_int(f, "ARCH_SIZEOF_PTR", size_of(char *));
     define_int(f, "ARCH_SIZEOF_FLOAT", size_of(float));
     define_int(f, "ARCH_SIZEOF_DOUBLE", size_of(double));
@@ -164,10 +195,18 @@ main(int argc, char *argv[])
 
     section(f, "Unsigned max values");
 
+    /*
+     * We can't use fprintf with a numeric value for PRINT_MAX, because
+     * too many compilers produce warnings or do the wrong thing for
+     * complementing or widening unsigned types.
+     */
 #define PRINT_MAX(str, typ, tstr, l)\
-  define(f, str);\
-  fprintf(f, "((%s)0x%s%s + (%s)0)\n",\
-    tstr, ff_str + ff_strlen - size_of(typ) * 2, l, tstr)
+  BEGIN\
+    define(f, str);\
+    fprintf(f, "((%s)0x", tstr);\
+    print_ffs(f, sizeof(typ));\
+    fprintf(f, "%s + (%s)0)\n", l, tstr);\
+  END
     PRINT_MAX("ARCH_MAX_UCHAR", unsigned char, "unsigned char", "");
     PRINT_MAX("ARCH_MAX_USHORT", unsigned short, "unsigned short", "");
     /*
@@ -187,7 +226,7 @@ main(int argc, char *argv[])
      * non-linearity in the time required to fill blocks with memset.
      */
     {
-#define MAX_BLOCK (1 << 20)
+#define MAX_BLOCK (1 << 22)	/* max 4M cache */
 	static char buf[MAX_BLOCK];
 	int bsize = 1 << 10;
 	int nreps = 1;

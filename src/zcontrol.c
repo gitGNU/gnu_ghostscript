@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: zcontrol.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zcontrol.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* Control operators */
 #include "string_.h"
 #include "ghost.h"
@@ -29,16 +35,16 @@
 #include "store.h"
 
 /* Forward references */
-private int no_cleanup(P1(i_ctx_t *));
-private uint count_exec_stack(P2(i_ctx_t *, bool));
-private uint count_to_stopped(P2(i_ctx_t *, long));
-private int unmatched_exit(P2(os_ptr, op_proc_t));
+private int no_cleanup(i_ctx_t *);
+private uint count_exec_stack(i_ctx_t *, bool);
+private uint count_to_stopped(i_ctx_t *, long);
+private int unmatched_exit(os_ptr, op_proc_t);
 
 /* See the comment in opdef.h for an invariant which allows */
 /* more efficient implementation of for, loop, and repeat. */
 
 /* <[test0 body0 ...]> .cond - */
-private int cond_continue(P1(i_ctx_t *));
+private int cond_continue(i_ctx_t *);
 private int
 zcond(i_ctx_t *i_ctx_p)
 {
@@ -154,7 +160,7 @@ zexecn(i_ctx_t *i_ctx_p)
 }
 
 /* <obj> superexec - */
-private int end_superexec(P1(i_ctx_t *));
+private int end_superexec(i_ctx_t *);
 private int
 zsuperexec(i_ctx_t *i_ctx_p)
 {
@@ -188,15 +194,13 @@ end_superexec(i_ctx_t *i_ctx_p)
 /* 	After execution, the array will be placed on  the top of the	*/
 /*	operand stack (on top of any elemetns pushed by <executable>	*/
 /*	for both the normal case and for the error case.		*/
-private int end_runandhide(P1(i_ctx_t *));
-private int err_end_runandhide(P1(i_ctx_t *));
+private int end_runandhide(i_ctx_t *);
+private int err_end_runandhide(i_ctx_t *);
 private int
 zrunandhide(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
     es_ptr ep;
-    uint size;
-    int code;
 
     check_op(2);
     if (!r_is_array(op - 1))
@@ -295,9 +299,9 @@ zifelse(i_ctx_t *i_ctx_p)
 
 /* <init> <step> <limit> <proc> for - */
 private int
-    for_pos_int_continue(P1(i_ctx_t *)),
-    for_neg_int_continue(P1(i_ctx_t *)),
-    for_real_continue(P1(i_ctx_t *));
+    for_pos_int_continue(i_ctx_t *),
+    for_neg_int_continue(i_ctx_t *),
+    for_real_continue(i_ctx_t *);
 int
 zfor(i_ctx_t *i_ctx_p)
 {
@@ -307,7 +311,7 @@ zfor(i_ctx_t *i_ctx_p)
     check_estack(7);
     ep = esp + 6;
     check_proc(*op);
-    /* Push a mark, the control variable, the initial value, */
+    /* Push a mark, the control variable set to the initial value, */
     /* the increment, the limit, and the procedure, */
     /* and invoke the continuation operator. */
     if (r_has_type(op - 3, t_integer) &&
@@ -411,38 +415,62 @@ for_real_continue(i_ctx_t *i_ctx_p)
     return o_push_estack;
 }
 
-/* Here we provide an internal variant of 'for' that enumerates the */
-/* values 0, 1/N, 2/N, ..., 1 precisely.  The arguments must be */
-/* the integers 0, 1, and N.  We need this for */
-/* loading caches such as the transfer function cache. */
-private int for_fraction_continue(P1(i_ctx_t *));
+/*
+ * Here we provide an internal variant of 'for' that enumerates the values
+ * A, ((N-1)*A+1*B)/N, ((N-2)*A+2*B)/N, ..., B precisely.  The arguments are
+ * A (real), N (integer), and B (real).  We need this for loading caches such
+ * as the transfer function cache.
+ *
+ * NOTE: This computation must match the SAMPLE_LOOP_VALUE macro in gscie.h.
+ */
+private int for_samples_continue(i_ctx_t *);
+/* <first> <count> <last> <proc> %for_samples - */
 int
-zfor_fraction(i_ctx_t *i_ctx_p)
+zfor_samples(i_ctx_t *i_ctx_p)
 {
-    int code = zfor(i_ctx_p);
+    os_ptr op = osp;
+    es_ptr ep;
 
-    if (code < 0)
-	return code;		/* shouldn't ever happen! */
-    make_op_estack(esp, for_fraction_continue);
-    return code;
+    check_type(op[-3], t_real);
+    check_type(op[-2], t_integer);
+    check_type(op[-1], t_real);
+    check_proc(*op);
+    check_estack(8);
+    ep = esp + 7;
+    make_mark_estack(ep - 6, es_for, no_cleanup);
+    make_int(ep - 5, 0);
+    memcpy(ep - 4, op - 3, 3 * sizeof(ref));
+    ref_assign(ep - 1, op);
+    make_op_estack(ep, for_samples_continue);
+    esp = ep;
+    pop(4);
+    return o_push_estack;
 }
 /* Continuation procedure */
 private int
-for_fraction_continue(i_ctx_t *i_ctx_p)
+for_samples_continue(i_ctx_t *i_ctx_p)
 {
-    register es_ptr ep = esp;
-    int code = for_pos_int_continue(i_ctx_p);
+    os_ptr op = osp;
+    es_ptr ep = esp;
+    long var = ep[-4].value.intval;
+    float a = ep[-3].value.realval;
+    long n = ep[-2].value.intval;
+    float b = ep[-1].value.realval;
 
-    if (code != o_push_estack)
-	return code;
-    /* We must use osp instead of op here, because */
-    /* for_pos_int_continue pushes a value on the o-stack. */
-    make_real(osp, (float)osp->value.intval / ep[-1].value.intval);
-    return code;
+    if (var > n) {
+	esp -= 6;		/* pop everything */
+	return o_pop_estack;
+    }
+    push(1);
+    make_real(op, ((n - var) * a + var * b) / n);
+    ep[-4].value.intval = var + 1;
+    ref_assign_inline(ep + 2, ep);	/* saved proc */
+    esp = ep + 2;
+    return o_push_estack;
 }
 
 /* <int> <proc> repeat - */
-private int repeat_continue(P1(i_ctx_t *));
+private int repeat_continue(i_ctx_t *);
 private int
 zrepeat(i_ctx_t *i_ctx_p)
 {
@@ -478,7 +506,7 @@ repeat_continue(i_ctx_t *i_ctx_p)
 }
 
 /* <proc> loop */
-private int loop_continue(P1(i_ctx_t *));
+private int loop_continue(i_ctx_t *);
 private int
 zloop(i_ctx_t *i_ctx_p)
 {
@@ -702,8 +730,8 @@ zcountexecstack1(i_ctx_t *i_ctx_p)
 /* <array> <include_marks> .execstack <subarray> */
 /* <array> execstack <subarray> */
 /* execstack is an operator solely for the sake of the Genoa tests. */
-private int execstack_continue(P1(i_ctx_t *));
-private int execstack2_continue(P1(i_ctx_t *));
+private int execstack_continue(i_ctx_t *);
+private int execstack2_continue(i_ctx_t *);
 private int
 push_execstack(i_ctx_t *i_ctx_p, os_ptr op1, bool include_marks,
 	       op_proc_t cont)
@@ -834,7 +862,7 @@ zquit(i_ctx_t *i_ctx_p)
 }
 
 /* - currentfile <file> */
-private ref *zget_current_file(P1(i_ctx_t *));
+private ref *zget_current_file(i_ctx_t *);
 private int
 zcurrentfile(i_ctx_t *i_ctx_p)
 {
@@ -923,8 +951,8 @@ const op_def zcontrol3_op_defs[] = {
     {"0%for_pos_int_continue", for_pos_int_continue},
     {"0%for_neg_int_continue", for_neg_int_continue},
     {"0%for_real_continue", for_real_continue},
-    {"4%for_fraction", zfor_fraction},
-    {"0%for_fraction_continue", for_fraction_continue},
+    {"4%for_samples", zfor_samples},
+    {"0%for_samples_continue", for_samples_continue},
     {"0%loop_continue", loop_continue},
     {"0%repeat_continue", repeat_continue},
     {"0%stopped_push", stopped_push},

@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>Overview of Ghostscript</title>
-<!-- $Id: Readme.htm,v 1.1 2004/01/14 16:59:44 atai Exp $ -->
+<!-- $Id: Readme.htm,v 1.2 2004/02/14 22:20:03 atai Exp $ -->
 <!-- Originally: README -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -77,15 +77,19 @@ PostScript, and PDF reference documentation</a>
 <li>Primarily for users:
 <blockquote><table cellpadding=0 cellspacing=0>
 <tr><td valign=top>
+<a href="#Bug-form">Bug-form.htm</a><br>
+<a href="#Bug-info">Bug-info.htm</a><br>
+<a href="#Deprecated">Deprecated.htm</a><br>
 <a href="#Devices">Devices.htm</a><br>
-<a href="#Helpers">Helpers.htm</a><br>
 <td>&nbsp;&nbsp;&nbsp;<td valign=top>
+<a href="#Helpers">Helpers.htm</a><br>
 <a href="#Humor">Humor.htm</a><br>
 <a href="#New-user">New-user.htm</a><br>
 <a href="#Ps2epsi">Ps2epsi.htm</a><br>
-<a href="#Ps2pdf">Ps2pdf.htm</a><br>
 <td>&nbsp;&nbsp;&nbsp;<td valign=top>
+<a href="#Ps2pdf">Ps2pdf.htm</a><br>
 <a href="#Readme">Readme.htm</a><br>
+<a href="#Unix-lpr">Unix-lpr.htm</a><br>
 <a href="#Use">Use.htm</a><br>
 <tr><td valign=top>
 </table></blockquote>
@@ -93,11 +97,10 @@ PostScript, and PDF reference documentation</a>
 <blockquote><table cellpadding=0 cellspacing=0>
 <tr><td valign=top>
 <a href="#Changes">Changes.htm</a><br>
-<a href="#Current">Current.htm</a><br>
-<a href="#CJK">CJK.htm</a><br>
+<a href="#Copying">Copying.htm</a><br>
 <a href="#Fonts">Fonts.htm</a><br>
-<td>&nbsp;&nbsp;&nbsp;<td valign=top>
 <a href="#Hershey">Hershey.htm</a><br>
+<td>&nbsp;&nbsp;&nbsp;<td valign=top>
 <a href="#History">History*.htm</a><br>
 <a href="#Install">Install.htm</a><br>
 <a href="#Language">Language.htm</a><br>
@@ -105,13 +108,13 @@ PostScript, and PDF reference documentation</a>
 <td>&nbsp;&nbsp;&nbsp;<td valign=top>
 <a href="#News">News.htm</a><br>
 <a href="#Psfiles">Psfiles.htm</a><br>
+<a href="#Public">Public.htm</a><br>
 </table></blockquote>
 <li>Primarily for developers:
 <blockquote><table cellpadding=0 cellspacing=0>
 <tr><td valign=top>
 <a href="#API">API.htm</a><br>
 <a href="#C-style">C-style.htm</a><br>
-<a href="#CJKTTCID">CJKTTCID.htm</a><br>
 <a href="#DLL">DLL.htm</a><br>
 <a href="#Develop">Develop.htm</a><br>
 <a href="#Drivers">Drivers.htm</a><br>
@@ -119,7 +122,6 @@ PostScript, and PDF reference documentation</a>
 <a href="#Htmstyle">Htmstyle.htm</a><br>
 <a href="#Issues">Issues.htm</a><br>
 <a href="#Lib">Lib.htm</a><br>
-<a href="#Maintain">Maintain.htm</a><br>
 <a href="#Projects">Projects.htm</a><br>
 <td>&nbsp;&nbsp;&nbsp;<td valign=top>
 <a href="#Ps-style">Ps-style.htm</a><br>
@@ -148,20 +150,26 @@ A new user of Ghostscript should begin by reading the material
 these documents as seem useful:
 
 <ul>
-<li>how to <a href="Install.htm">install Ghostscript</a>
 
-<li>how to <a href="Use.htm">use Ghostscript</a>; some of this information
-information also found in <b><tt>gs.1</tt></b>, the Unix
-"man" page for Ghostscript.
+<li>how to <a href="Use.htm">use Ghostscript</a>. This includes both
+a quickstart introduction to the commandline version and more extensive
+reference material.
 
-<li>the catalogs at the beginning of <b><tt>devs.mak</tt></b> and
-<b><tt>contrib.mak</tt></b>, which list all the devices for which
-Ghostscript is able to produce output (although if you got Ghostscript in
-binary form, it will only include some of these devices)
+<li>detailed information about <a href="Devices.htm">specific
+devices</a> that Ghostscript can use for output
 
-<li>detailed information about <a href="Devices.htm">some specific
-devices</a> that Ghostscript knows about
+<li>information about <a href="Bug-info.htm">reporting problems</a>--but
+remember that Ghostscript comes with <strong>NO WARRANTY</strong> and <strong>NO
+SUPPORT</strong>
 
+<li>more detailed information about how to use Ghostscript under
+Unix with <tt>lpr</tt> <a href="Unix-lpr.htm">as a filter</a>
+for printing
+
+</ul>
+
+
+<ul>
 <li> about the <a href="Fonts.htm">fonts distributed with
 Ghostscript</a>, including how to add or replace fonts
 
@@ -175,8 +183,8 @@ Ghostscript</a> (other than fonts)
 <h3><a name="Before_building"></a>Before building Ghostscript</h3>
 
 <p>
-If you are going to compile Ghostscript, rather than just use an executable
-you got from somewhere, you should read:
+If you are going to compile Ghostscript from source, rather than just use an executable
+you got from somewhere, you may want to read:
 
 <ul>
 <li> <a href="Make.htm">how to build Ghostscript</a> and
@@ -195,14 +203,11 @@ should begin by reading this file, then
 <li> <a href="News.htm">News.htm</a>, for incompatible changes and new
 features in the current release;
 
-<li> <a href="Current.htm">Current.htm</a>, for known problems in the
-current release;
-
 <li> if you wish, <a href="Changes.htm">Changes.htm</a>, for a detailed list
 of changes in the current release;
 
 <li> if you wish, History#.htm (currently <a
-href="History6.htm">History7.htm</a>), for changes in other releases.
+href="History8.htm">History8.htm</a>), for changes in other releases.
 </ul>
 
 <hr>
@@ -228,8 +233,16 @@ If you are going to write a new driver for Ghostscript, you should read
 drivers</a>
 
 <li> about the <a href="Xfonts.htm">external font interface</a> between
-Ghostscript and platform-supplied fonts (but read about
-<a href="Drivers.htm">drivers in general</a> first)
+Ghostscript and platform-supplied fonts
+</ul>
+
+<p>
+If you are considering distributing Ghostscript in conjunction with a commercial product, you should read the
+<a href="Copying.htm">license</a> carefully, and you should also read
+
+<ul>
+<li> additional clarification of the circumstances under which Ghostscript
+can be distributed <a href="Commprod.htm">with a commercial product</a>
 </ul>
 
 <p>
@@ -279,12 +292,14 @@ Ghostscript's HTML-based documentation.
 <h3><a name="Web_home_page"></a>Ghostscript's home page</h3>
 
 <p>
-GNU Ghostscript has a home page on the World Wide Web with helpful
-information. Pleave visit:
+Ghostscript has a home page on the World Wide Web with helpful information
+such as the FAQ (Frequently Asked Questions) and a list of known problems
+and workarounds for the current release (in the
+"Obtaining" file for that release):
 
 <blockquote>
-<a href="http://www.gnu.org/software/ghostscript/" 
-class="offsite">http://www.gnu.org/software/ghostscript/</a>
+<a href="http://www.cs.wisc.edu/~ghost/" 
+class="offsite">http://www.cs.wisc.edu/~ghost/</a>
 </blockquote>
 
 <p>
@@ -330,11 +345,21 @@ class="offsite">Adobe's ftp
 site</a>, but not necessarily under the same filenames.
 
 <h3><a name="Web_other"></a>Other material on the WWW</h3>
+<P>
+GNU Ghostscript has a home page on the World Wide Web with helpful
+information. Pleave visit:
+
+<blockquote>
+<a href="http://www.gnu.org/software/ghostscript/" 
+class="offsite">http://www.gnu.org/software/ghostscript/</a>
+</blockquote>
 
 <p>
-Much other material about Ghostscript is available on the World Wide Web,
-both as web pages and as archived Usenet and mailing list discussions.  Use
-the well-known search engines to find such material.
+More material about Ghostscript can be found at
+
+<blockquote>
+<a href="http://www.ghostscript.com/" class="offsite">http://www.ghostscript.com/</a>
+</blockquote>
 
 <p>
 There is a good manual for Ghostscript available in PDF form,
@@ -382,21 +407,18 @@ pre-release, generated mechanically from the CVS logs. For developers.
 </dl>
 
 <dl>
-<dt><a name="CJK"></a><a href="CJK.htm"><b>CJK.htm</b></a>
-<dd> Usage of features to support CJK CID-keyed fonts in Ghostscript.
+<dt><a name="Commprod"></a><a href="Commprod.htm"><b>Commprod.htm</b></a>
+<dd> The conditions under which Ghostscript may be distributed in a
+commercial context.  See also the <a href="#Public">Aladdin Free Public
+License</a>.
 </dl>
 
 <dl>
-<dt><a name="CJKTTCID"></a><a href="CJKTTCID.htm"><b>CJKTTCID.htm</b></a>
-<dd> Note providing information on utilization of CJK (Chinese,
-Japanese and Korean) TrueType fonts as CIDFontType2 fonts from the
-viewpoint of its validity and limitations. 
-</dl>
-
-<dl>
-<dt><a name="Current"></a><a href="Current.htm"><b>Current.htm</b></a>
-<dd> Information specifically about the current release of Ghostscript.
-See also the <a href="#News">latest news</a> of changes.
+<dt><a name="Copying"></a><a href="Copying.htm"><b>Copying.htm</b></a>
+<dd>This is 
+the <a href="http://www.gnu.org/">Free Software Foundation's</a> GNU
+<a href="http://www.gnu.org/copyleft/gpl.html">General Public License</a>,
+the license governing use and distribution of this version of GNU Ghostscript.
 </dl>
 
 <dl>
@@ -412,6 +434,12 @@ Use <a href="#API"><b>API.htm</b></a> instead.
 <dd> Code orientation for developers. Contains a detailed breakdown of
 the source files by functional group, and overviews of the major
 architectural features and services.
+</dl>
+
+<dl>
+<dt><a name="Deprecated"></a><a href="Deprecated.htm"><b>Deprecated.htm</b></a></dt>
+<dd> Documention for deprecated devices and features. Features described here
+will be removed in future versions of Ghostscript.</dd>
 </dl>
 
 <dl>
@@ -452,6 +480,7 @@ Hershey fonts, giving the terms of use and describing their encoding.
 <dt><a name="History"></a><b>History*.htm</b>
 <dd> The history of changes in all Ghostscript releases:
 <blockquote>
+<a href="History8.htm">History8.htm</a> for Ghostscript versions 8.n<br>
 <a href="History7.htm">History7.htm</a> for Ghostscript versions 7.n<br>
 <a href="History6.htm">History6.htm</a> for Ghostscript versions 6.n<br>
 <a href="History5.htm">History5.htm</a> for Ghostscript versions 5.n<br>
@@ -501,10 +530,6 @@ operations in the PostScript language and in Adobe Portable Document Format
 (PDF). For developers.
 </dl>
 
-<dl>
-<dt><a name="Maintain"></a><a href="Maintain.htm"><b>Maintain.htm</b></a>
-<dd> Assorted Ghostscript maintenance procedures. For developers.
-</dl>
 
 <dl>
 <dt><a name="Make"></a><a href="Make.htm"><b>Make.htm</b></a>
@@ -584,6 +609,12 @@ distribution.
 
 
 <dl>
+<dt><a name="Unix-lpr"></a><a href="Unix-lpr.htm"><b>Unix-lpr.htm</b></a>
+<dd> How to set up Ghostscript as a Unix <tt><b>lpr</b></tt>
+filter.
+</dl>
+
+<dl>
 <dt><a name="Use"></a><a href="Use.htm"><b>Use.htm</b></a>
 <dd> Detailed instructions on how to use Ghostscript, including such
 matters as designating an output device; choosing a default paper size;
@@ -604,8 +635,7 @@ font-rendering mechanism, for developers.
 <hr>
 
 <p>
-<small>Copyright &copy; 1996, 2000 Aladdin Enterprises.  All rights
-reserved.</small>
+<small>Copyright &copy; 1996-2002 artofcode LLC. All rights reserved.</small>
 
 <p>
 This software is provided AS-IS with no warranty, either express or
@@ -615,8 +645,14 @@ This software is distributed under license and may not be copied,
 modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
+For more information about licensing, please refer to
+http://www.ghostscript.com/licensing/. Go to
+http://www.artifex.com/licensing/ or
+contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
 <p>
-<small>Ghostscript version 7.07, 17 May 2003
+<small>Ghostscript version 8.01, 30 January 2004
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

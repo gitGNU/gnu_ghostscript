@@ -1,288 +1,132 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html><head>
-<title>Ghostscript 7.07 change history as of 2003-05-17 15:57:59</title>
-<link rel=stylesheet type="text/css" href="gs.css">
-</head><body>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"   "http://www.w3.org/TR/html4/strict.dtd"><html>
+<head>
+<title>Ghostscript change history</title>
+<link rel=stylesheet type="text/css" href="gs.css"></head>
+<body>
+<p><strong><a name="2004-02-01"></a>
+2004-02-01  Andy Tai</strong></p>
+<blockquote><pre>
+Create and change product name to 'GNU Ghostscript'.
+</pre></blockquote>
 
-<!-- cvs command: cvs -d giles@cvs.ghostscript.com:/cvs/ghostscript -Q log  -rGS_7_0X_GNU -->
+<p><strong><a name="2004-01-30_2310"></a>
+2004-01-30 23:10 Ralph Giles</strong></p>
+<blockquote><pre>
+Convert a hardwired product name to 'GPL Ghostscript'.
+</pre></blockquote>
 
-<ul>
-<li><a href="#7.07-Documentation">Documentation</a>,
-    <a href="#7.07-Procedures">Procedures</a>,
-    <a href="#7.07-Utilities">Utilities</a>,
-    <a href="#7.07-Drivers">Drivers</a>,
-    <a href="#7.07-PDF_Interpreter">PDF Interpreter</a>,
-    <a href="#7.07-Interpreter">Interpreter</a>,
-    <a href="#7.07-Library">Library</a>,
-    <a href="#7.07-Other">Other</a>
-</ul>
+<p><strong><a name="2004-01-30_2309"></a>
+2004-01-30 23:09 Ralph Giles</strong></p>
+<blockquote><pre>
+Replace the license header of some of the test scripts with the generic version.
+</pre></blockquote>
 
+<p><strong><a name="2004-01-30_0921"></a>
+2004-01-30 09:21 Ralph Giles</strong></p>
+<blockquote><pre>
+Missed a line in the license change.
+</pre></blockquote>
 
-<h2><a name="7.07-Documentation"></a>Documentation</h2><pre>
+<p><strong><a name="2004-01-30_0908"></a>
+2004-01-30 09:08 Russell Lang</strong></p>
+<blockquote><pre>
+Update Windows files to "GPL Ghostscript".
+</pre></blockquote>
 
-Increment the version number after release. (doc/News.htm [1.90.2.18.2.6]:
-2003/04/08 11:05:47 giles)
+<p><strong><a name="2004-01-30_0842"></a>
+2004-01-30 08:42 Russell Lang</strong></p>
+<blockquote><pre>
+Update copyright date for Windows release to 2004.
+</pre></blockquote>
 
-Apply standard FSF license banner to files missed the 7.06 release. Patch
-from Brett Smith. (doc/Readme.htm [1.31.2.16.2.5]: 2003/04/12 14:02:38
-giles)
+<p><strong><a name="2004-01-30_0800"></a>
+2004-01-30 08:00 Ralph Giles</strong></p>
+<blockquote><pre>
+Use the correct year in the release date.
+</pre></blockquote>
 
-Update the version and data for the 7.07 release.
-(doc/API.htm [1.11.2.13.2.6], doc/C-style.htm [1.21.2.11.2.5],
-doc/DLL.htm [1.15.2.11.2.5], doc/Develop.htm [1.47.2.18.2.6],
-doc/Devices.htm [1.34.2.15.2.6], doc/Drivers.htm [1.21.2.11.2.5],
-doc/Fonts.htm [1.22.2.13.2.6], doc/Helpers.htm [1.17.2.11.2.5],
-doc/History1.htm [1.13.2.11.2.5], doc/History2.htm [1.13.2.11.2.6],
-doc/History3.htm [1.13.2.11.2.6], doc/History4.htm [1.13.2.11.2.6],
-doc/History5.htm [1.15.2.11.2.6], doc/History6.htm [1.30.2.11.2.6],
-doc/History7.htm [1.5.2.17.2.7], doc/Htmstyle.htm [1.18.2.11.2.5],
-doc/Install.htm [1.26.2.13.2.6], doc/Issues.htm [1.15.2.13.2.5],
-doc/Language.htm [1.34.2.16.2.5], doc/Lib.htm [1.14.2.11.2.5],
-doc/Maintain.htm [1.23.2.12.2.6], doc/Make.htm [1.36.2.19.2.6],
-doc/New-user.htm [1.30.2.14.2.6], doc/News.htm [1.90.2.18.2.7],
-doc/Projects.htm [1.33.2.11.2.6], doc/Ps-style.htm [1.13.2.11.2.5],
-doc/Ps2epsi.htm [1.15.2.12.2.6], doc/Ps2pdf.htm [1.32.2.11.2.5],
-doc/Psfiles.htm [1.22.2.12.2.5], doc/Readme.htm [1.31.2.16.2.6],
-doc/Release.htm [1.40.2.23.2.6], doc/Source.htm [1.13.2.11.2.5],
-doc/Use.htm [1.33.2.22.2.6],
-doc/Xfonts.htm [1.13.2.11.2.5], doc/gs-vms.hlp [1.12.2.10.2.5],
-man/dvipdf.1 [1.10.2.9.2.5], man/font2c.1 [1.10.2.9.2.5],
-man/gs.1 [1.10.2.10.2.5], man/gslp.1 [1.10.2.9.2.5],
-man/gsnd.1 [1.10.2.9.2.5], man/pdf2dsc.1 [1.10.2.9.2.5],
-man/pdf2ps.1 [1.12.2.9.2.5], man/pdfopt.1 [1.10.2.9.2.5],
-man/pf2afm.1 [1.10.2.9.2.5], man/pfbtopfa.1 [1.11.2.9.2.5],
-man/printafm.1 [1.10.2.9.2.5], man/ps2ascii.1 [1.10.2.9.2.5],
-man/ps2epsi.1 [1.10.2.10.2.5], man/ps2pdf.1 [1.14.2.11.2.5],
-man/ps2pdfwr.1 [1.13.2.10.2.5], man/ps2ps.1 [1.17.2.9.2.5],
-man/wftopfa.1 [1.10.2.9.2.5]: 2003/05/17 14:38:59 giles)
+<p><strong><a name="2004-01-30_0730"></a>
+2004-01-30 07:30 Ralph Giles</strong></p>
+<blockquote><pre>
+Correct the link to History8.htm.
+</pre></blockquote>
 
-Update the release notes. (doc/News.htm [1.90.2.18.2.8]: 2003/05/17 14:44:22
-giles)
+<p><strong><a name="2004-01-30_0657"></a>
+2004-01-30 06:57 Ralph Giles</strong></p>
+<blockquote><pre>
+Update News and release date.
+</pre></blockquote>
 
-</pre><h2><a name="7.07-Procedures"></a>Procedures</h2><pre>
+<p><strong><a name="2004-01-30_0134"></a>
+2004-01-30 01:34 Ralph Giles</strong></p>
+<blockquote><pre>
+Update the regression test suite to the latest version from HEAD.
+</pre></blockquote>
 
-Increment the version number after release. (version.mak [1.36.2.9.2.5]:
-2003/04/08 11:05:47 giles)
+<p><strong><a name="2004-01-30_0019"></a>
+2004-01-30 00:19 Ralph Giles</strong></p>
+<blockquote><pre>
+Change notice in some files that had been missed during original update
+to the unified notice.
+</pre></blockquote>
 
-Apply standard FSF license banner to files missed the 7.06 release. Patch
-from Brett Smith. (toolbin/3way.tcl [1.3.6.1.2.1],
-toolbin/cvs2hist.py [1.9.2.2.2.1], toolbin/errlist.tcl [1.3.6.1.2.1],
-toolbin/gsindent [1.3.6.1.2.1], toolbin/gsmake.tcl [1.5.6.1.2.1],
-toolbin/gssubst [1.1.4.1.2.1], toolbin/headers.tcl [1.3.6.1.2.1],
-toolbin/leaks.tcl [1.3.6.1.2.1], toolbin/makegnu.tcl [1.3.6.1.2.1],
-toolbin/makeset.tcl [1.10.2.3.2.1], toolbin/many2pdf.tcl [1.1.4.1.2.1],
-toolbin/pdfinflt.ps [1.1.2.1.2.1], toolbin/pre [1.11.2.3.2.1],
-toolbin/precheck.tcl [1.3.6.1.2.1], toolbin/suite.tcl [1.3.6.1.2.1],
-toolbin/tmake.tcl [1.3.6.1.2.1]: 2003/04/12 14:02:39 giles)
+<p><strong><a name="2004-01-20_1916"></a>
+2004-01-20 19:16 Ralph Giles</strong> (<a href="Details.htm#2004-01-20_1916">details</a>)</p>
+<blockquote><pre>
+Replace a fixed-filename tempfile fopen with gp_open_scratch_file() for improved robustness in the
+pnga device. Part of the fix for bug 687243.
 
-Add the bbox device to the default macos shlib build. Bug 686811.
-(macos-mcp.mak [1.3.2.8.2.2]: 2003/04/27 23:50:11 giles)
+</pre></blockquote>
 
-Add the display device to the default macos shlib build.
-(macos-mcp.mak [1.3.2.8.2.3]: 2003/04/27 23:52:55 giles)
+<p><strong><a name="2004-01-20_0150"></a>
+2004-01-20 01:50 Ralph Giles</strong></p>
+<blockquote><pre>
+Propagate mkstemp and FILENAME_MAX changes from HEAD.
+</pre></blockquote>
 
-Log message: For the pngalpha device, set the default background color to
-white in the bKGD chunk. Add an option -dBackgroundColor=16#RRGGBB to
-explicitly set the background color. This is needed by a common web browser
-that doesn't correctly support PNG with alpha transparency. DETAILS:
-Programs that don't fully support alpha transparency let libpng convert an
-RGBA image to RGB. The background color used is either provided by the
-program, or in the bKGD chunk, or it falls back to gray. MSIE was defaulting
-to a gray background which is not commonly used on web pages. By writing a
-white bKGD chunk, PNG files will display correctly against a white
-background in MSIE. If a solid color for a web page background is used with
-&lt;body bgcolor="#CCCC00"&gt;, then PNG images appearing on that page would
-need to be created with -dBackgroundColor=16#CCCC00. For textured background
-there is no hope. Microsoft needs to fix Internet Explorer.
-(libpng.mak [1.10.2.3.2.2]: 2003/05/15 10:05:29 ghostgum)
+<p><strong><a name="2004-01-19_2321"></a>
+2004-01-19 23:21 Ralph Giles</strong></p>
+<blockquote><pre>
+Remove some very old scripts which contain /tmp races, a security risk should someone actually try to use them. Part of the fix for bug 687243.
+</pre></blockquote>
 
-Update the version and data for the 7.07 release.
-(version.mak [1.36.2.9.2.6]: 2003/05/17 14:39:00 giles)
+<p><strong><a name="2004-01-06_2050"></a>
+2004-01-06 20:50 Ralph Giles</strong></p>
+<blockquote><pre>
+Propagate some configure script updates from HEAD.
+</pre></blockquote>
 
-</pre><h2><a name="7.07-Utilities"></a>Utilities</h2><pre>
+<p><strong><a name="2003-12-12_1804"></a>
+2003-12-12 18:04 Ralph Giles</strong></p>
+<blockquote><pre>
+Link to History8.htm in the list of history files. Patch from Alexei Podtelez.
+</pre></blockquote>
 
-Apply standard FSF license banner to files missed the 7.06 release. Patch
-from Brett Smith. (lib/Fontmap.ATB [1.2.6.1.2.1],
-lib/Fontmap.ATM [1.2.6.1.2.1], lib/Fontmap.GS [1.2.6.1.2.1],
-lib/Fontmap.OS2 [1.2.6.1.2.1], lib/Fontmap.SGI [1.2.6.1.2.1],
-lib/Fontmap.Sol [1.2.6.1.2.1], lib/Fontmap.Ult [1.2.6.1.2.1],
-lib/addxchar.ps [1.2.6.1.2.1], lib/align.ps [1.2.6.1.2.1],
-lib/bdftops.ps [1.3.2.2.2.1], lib/caption.ps [1.2.6.1.2.1],
-lib/cid2code.ps [1.3.4.1.2.1], lib/docie.ps [1.2.6.1.2.1],
-lib/errpage.ps [1.2.6.1.2.1], lib/font2c.ps [1.3.2.1.2.1],
-lib/font2pcl.ps [1.2.6.2.2.1], lib/gslp.ps [1.2.6.2.2.1],
-lib/gsnup.ps [1.2.6.1.2.1], lib/image-qa.ps [1.3.2.1.2.1],
-lib/impath.ps [1.3.4.1.2.1], lib/jispaper.ps [1.2.6.1.2.1],
-lib/lines.ps [1.2.6.1.2.1], lib/markhint.ps [1.2.6.1.2.1],
-lib/markpath.ps [1.2.6.1.2.1], lib/packfile.ps [1.2.6.2.2.1],
-lib/pcharstr.ps [1.2.6.1.2.1], lib/pdf2dsc.ps [1.3.4.2.2.1],
-lib/pdfopt.ps [1.10.2.2.2.1], lib/pdfwrite.ps [1.7.2.1.2.1],
-lib/pfbtopfa.ps [1.2.6.1.2.1], lib/ppath.ps [1.2.6.1.2.1],
-lib/pphs.ps [1.3.2.1.2.1], lib/ps2ai.ps [1.2.6.1.2.1],
-lib/ps2ascii.ps [1.3.2.2.2.1], lib/ps2epsi.ps [1.5.2.3.2.1],
-lib/rollconv.ps [1.1.8.1], lib/showchar.ps [1.2.6.1.2.1],
-lib/stcinfo.ps [1.2.6.1.2.1], lib/stcolor.ps [1.2.6.1.2.1],
-lib/stocht.ps [1.3.6.1.2.1], lib/traceimg.ps [1.2.6.2.2.1],
-lib/traceop.ps [1.2.6.1.2.1], lib/type1enc.ps [1.2.6.1.2.1],
-lib/type1ops.ps [1.2.6.1.2.1], lib/uninfo.ps [1.2.6.1.2.1],
-lib/unprot.ps [1.2.6.1.2.1], lib/viewcmyk.ps [1.2.6.2.2.1],
-lib/viewgif.ps [1.2.6.1.2.1], lib/viewjpeg.ps [1.1.6.2.2.1],
-lib/viewmiff.ps [1.2.6.1.2.1], lib/viewpbm.ps [1.2.6.2.2.1],
-lib/viewpcx.ps [1.2.6.2.2.1], lib/viewps2a.ps [1.2.6.1.2.1],
-lib/wftopfa.ps [1.2.6.1.2.1], lib/winmaps.ps [1.2.6.1.2.1],
-lib/wrfont.ps [1.2.6.1.2.1], lib/zeroline.ps [1.2.6.1.2.1]: 2003/04/12
-14:02:38 giles)
+<p><strong><a name="2003-12-11_0327"></a>
+2003-12-11 03:27 Ralph Giles</strong></p>
+<blockquote><pre>
+Propagate the name change to the interpreter and update the revision date.
+</pre></blockquote>
 
-Avoid calling a null pgsdll_callback, as can happen with the new client api
-and CHECK_INTERRUPTS. This fix affects primarily MacOS; similar protections
-are already in place for other platforms, although the global was not
-explicitly initialized to null. Also return EOFC in the mac stdio stream
-process if no callback is defined. Closes bug 686768. Also backports some
-code cleanup from HEAD. (gp_mac.c [1.1.4.3.2.2], gp_macio.c [1.2.4.5.2.3]:
-2003/04/12 16:37:26 giles)
+<p><strong><a name="2003-12-11_0324"></a>
+2003-12-11 03:24 Ralph Giles</strong></p>
+<blockquote><pre>
+Relicense the 8.0x branch as GPL Ghostscript.
+</pre></blockquote>
 
-Add a missing variable declaration for VMS. Patch from Forrest Cahoon and
-Jouk Jansen. (gp_vms.c [1.7.2.3.2.2]: 2003/04/14 13:58:04 giles)
+<p><strong><a name="2003-11-21_2201"></a>
+2003-11-21 22:01 Ray Johnston</strong></p>
+<blockquote><pre>
+Security fixes. Add detection of %pipe% device when in SAFER mode. Also
+fix detection of 'renamefile' to prevent rename from a file that is not on
+the PermitFileControl list. Similar to the changes made for 7.0x by
+version 1.11.2.5.
+</pre></blockquote>
 
-</pre><h2><a name="7.07-Drivers"></a>Drivers</h2><pre>
-
-Avoid calling a null pgsdll_callback, as can happen with the new client api
-and CHECK_INTERRUPTS. This fix affects primarily MacOS; similar protections
-are already in place for other platforms, although the global was not
-explicitly initialized to null. Also return EOFC in the mac stdio stream
-process if no callback is defined. Closes bug 686768. Also backports some
-code cleanup from HEAD. (gdevmac.c [1.1.4.3.2.2]: 2003/04/12 16:37:26 giles)
-
-In the display device, store the line pointers separately from the bits, so
-that the bits can be placed in special memory (e.g. allocated in video
-memory). Fixes Bug 686780 display_memalloc() asks for too much memory. If
-reopening the display device fails after setting the callback, display an
-error message. Allocate the large display bitmap using a low level allocator
-to avoid exceeding the memory limit of the previously used device stable
-memory allocator. Fixes bugs 686836 "-r doesn't work" and duplicate 686838
-"Ghostscript doesn't do anything". DETAILS: The display memory device and
-the raster including line pointers was allocated using the stable allocator
-of the display device. This had a limit of 1Mbyte, which was exceeded when
-the resolution was greater then 114dpi. This would cause subsequent
-allocations to fail, but it appears that nothing else tried to use this
-allocator after the display device. The display device was changed to
-allocate the line pointers separately to allow the raster to be allocated in
-special memory, e.g. video memory or shared memory. This caused the
-subsequent allocation of the line pointers to fail when resolution exceeded
-114dpi. The modified code now allocates the raster with
-gs_alloc_byte_array_immovable, which allocates directly from the C heap, not
-subject to any memory limit apart from the overall -K limit if specified,
-and is not subject to garbage collection. The normal allocator now has
-sufficient memory to allocate the line pointers without problem. The raster
-pointer is removed from the pointers that are enumerated during garbage
-collection. (gdevdsp.c [1.5.2.5.2.3]: 2003/05/01 10:06:26 ghostgum)
-
-Log message: For the pngalpha device, set the default background color to
-white in the bKGD chunk. Add an option -dBackgroundColor=16#RRGGBB to
-explicitly set the background color. This is needed by a common web browser
-that doesn't correctly support PNG with alpha transparency. DETAILS:
-Programs that don't fully support alpha transparency let libpng convert an
-RGBA image to RGB. The background color used is either provided by the
-program, or in the bKGD chunk, or it falls back to gray. MSIE was defaulting
-to a gray background which is not commonly used on web pages. By writing a
-white bKGD chunk, PNG files will display correctly against a white
-background in MSIE. If a solid color for a web page background is used with
-&lt;body bgcolor="#CCCC00"&gt;, then PNG images appearing on that page would
-need to be created with -dBackgroundColor=16#CCCC00. For textured background
-there is no hope. Microsoft needs to fix Internet Explorer.
-(gdevpng.c [1.4.2.1.2.3]: 2003/05/15 10:05:29 ghostgum)
-
-</pre><h2><a name="7.07-PDF_Interpreter"></a>PDF Interpreter</h2><pre>
-
-Apply standard FSF license banner to files missed the 7.06 release. Patch
-from Brett Smith. (lib/pdf_base.ps [1.14.2.1.2.1],
-lib/pdf_draw.ps [1.36.2.2.2.1], lib/pdf_font.ps [1.23.2.6.2.1],
-lib/pdf_main.ps [1.35.2.7.2.3], lib/pdf_ops.ps [1.17.2.2.2.1]: 2003/04/12
-14:02:39 giles)
-
-</pre><h2><a name="7.07-Interpreter"></a>Interpreter</h2><pre>
-
-Increment the version number after release. (lib/gs_init.ps [1.40.2.12.2.2]:
-2003/04/08 11:05:47 giles)
-
-Apply standard FSF license banner to files missed the 7.06 release. Patch
-from Brett Smith. (examples/waterfal.ps [1.3.2.1.2.1],
-lib/gs_agl.ps [1.2.6.1.2.1], lib/gs_btokn.ps [1.5.2.1.2.1],
-lib/gs_ccfnt.ps [1.5.2.1.2.1], lib/gs_ce_e.ps [1.2.6.1.2.1],
-lib/gs_cff.ps [1.10.2.1.2.1], lib/gs_cidcm.ps [1.5.2.2.2.1],
-lib/gs_cidfn.ps [1.18.4.5.2.1], lib/gs_cmap.ps [1.11.2.4.2.1],
-lib/gs_cmdl.ps [1.2.6.1.2.1], lib/gs_css_e.ps [1.2.6.1.2.1],
-lib/gs_dbt_e.ps [1.2.6.1.2.1], lib/gs_diskf.ps [1.2.6.1.2.1],
-lib/gs_dpnxt.ps [1.2.6.1.2.1], lib/gs_dps.ps [1.4.6.1.2.1],
-lib/gs_dps1.ps [1.2.6.1.2.1], lib/gs_dps2.ps [1.3.4.1.2.1],
-lib/gs_dscp.ps [1.4.2.1.2.1], lib/gs_epsf.ps [1.2.6.11.2.3],
-lib/gs_fform.ps [1.2.6.1.2.1], lib/gs_fonts.ps [1.13.2.3.2.1],
-lib/gs_frsd.ps [1.4.6.1.2.1], lib/gs_icc.ps [1.2.2.1.2.1],
-lib/gs_il1_e.ps [1.2.6.1.2.1], lib/gs_il2_e.ps [1.2.6.1.2.1],
-lib/gs_init.ps [1.40.2.12.2.3], lib/gs_kanji.ps [1.2.6.1.2.1],
-lib/gs_ksb_e.ps [1.2.6.1.2.1], lib/gs_l2img.ps [1.2.6.1.2.1],
-lib/gs_lev2.ps [1.7.2.4.2.3], lib/gs_lgo_e.ps [1.3.6.1.2.1],
-lib/gs_lgx_e.ps [1.2.6.1.2.1], lib/gs_ll3.ps [1.10.2.2.2.1],
-lib/gs_mex_e.ps [1.2.6.1.2.1], lib/gs_mgl_e.ps [1.3.6.1.2.1],
-lib/gs_mro_e.ps [1.2.6.1.2.1], lib/gs_pdf_e.ps [1.2.6.1.2.1],
-lib/gs_pdfwr.ps [1.11.2.1.2.1], lib/gs_pfile.ps [1.2.6.1.2.1],
-lib/gs_rdlin.ps [1.2.6.1.2.1], lib/gs_res.ps [1.16.2.2.2.1],
-lib/gs_setpd.ps [1.8.2.2.2.2], lib/gs_statd.ps [1.5.2.2.2.1],
-lib/gs_std_e.ps [1.2.6.1.2.1], lib/gs_sym_e.ps [1.2.6.1.2.1],
-lib/gs_trap.ps [1.3.6.2.2.1], lib/gs_ttf.ps [1.9.2.4.2.1],
-lib/gs_typ32.ps [1.3.2.2.2.1], lib/gs_typ42.ps [1.2.6.1.2.1],
-lib/gs_type1.ps [1.5.2.1.2.1], lib/gs_wan_e.ps [1.2.6.1.2.1],
-lib/gs_wl1_e.ps [1.2.6.1.2.1], lib/gs_wl2_e.ps [1.2.6.1.2.1],
-lib/gs_wl5_e.ps [1.2.6.1.2.1]: 2003/04/12 14:02:38 giles)
-
-Sort the list of devices in the output of 'gs -h' so they're easier to read.
-List the default device separately as it's no longer first. Based on a patch
-from Nelson Beebe. Closes bug 416746. Also correct a warning in argproc().
-(imainarg.c [1.13.2.3.2.2]: 2003/04/12 16:43:14 giles)
-
-In the display device, store the line pointers separately from the bits, so
-that the bits can be placed in special memory (e.g. allocated in video
-memory). Fixes Bug 686780 display_memalloc() asks for too much memory. If
-reopening the display device fails after setting the callback, display an
-error message. Allocate the large display bitmap using a low level allocator
-to avoid exceeding the memory limit of the previously used device stable
-memory allocator. Fixes bugs 686836 "-r doesn't work" and duplicate 686838
-"Ghostscript doesn't do anything". DETAILS: The display memory device and
-the raster including line pointers was allocated using the stable allocator
-of the display device. This had a limit of 1Mbyte, which was exceeded when
-the resolution was greater then 114dpi. This would cause subsequent
-allocations to fail, but it appears that nothing else tried to use this
-allocator after the display device. The display device was changed to
-allocate the line pointers separately to allow the raster to be allocated in
-special memory, e.g. video memory or shared memory. This caused the
-subsequent allocation of the line pointers to fail when resolution exceeded
-114dpi. The modified code now allocates the raster with
-gs_alloc_byte_array_immovable, which allocates directly from the C heap, not
-subject to any memory limit apart from the overall -K limit if specified,
-and is not subject to garbage collection. The normal allocator now has
-sufficient memory to allocate the line pointers without problem. The raster
-pointer is removed from the pointers that are enumerated during garbage
-collection. (idisp.c [1.2.2.2.2.2]: 2003/05/01 10:06:26 ghostgum)
-
-Security fixes. Add detection of %pipe% device when in SAFER mode. Also fix
-detection of 'renamefile' to prevent rename from a file that is not on the
-PermitFileControl list. (zfile.c [1.11.2.4.2.2]: 2003/05/17 14:28:33 ray)
-
-</pre><h2><a name="7.07-Library"></a>Library</h2><pre>
-
-Increment the version number after release. (gscdef.c [1.15.2.4.2.3]:
-2003/04/08 11:05:47 giles)
-
-Update the version and data for the 7.07 release. (gscdef.c [1.15.2.4.2.4]:
-2003/05/17 14:39:00 giles)
-
-</pre><h2><a name="7.07-Other"></a>Other</h2><pre>
-
-Test the optimization compiler flag '-O2' before using it since some vendor
-compilers have different syntax. (Makefile.in [1.1.4.13.2.3],
-configure.ac [1.4.4.12.2.2]: 2003/04/16 13:59:56 giles)
-
-Include the bbox device in the default autoconf build.
-(Makefile.in [1.1.4.13.2.4]: 2003/04/29 18:33:31 giles)
-
-</pre></body></html>
+<p><strong><a name="2003-11-20_1929"></a>
+2003-11-20 19:29 Ray Johnston</strong></p>
+<blockquote><pre>
+Bump version in preparation for 8.01 GPL release.
+</pre></blockquote>
+</body>
+</html>

@@ -1,22 +1,28 @@
-/* Copyright (C) 1992, 1995, 1996, 1997, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1992, 1995, 1996, 1997, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevwdib.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevwdib.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
 /* MS Windows 3.n driver for Ghostscript using a DIB for buffering. */
 #include "gdevmswn.h"
 #include "gxdevmem.h"
@@ -101,7 +107,7 @@ private const gx_device_procs win_dib_procs =
 gx_device_win_dib far_data gs_mswindll_device =
 {
     std_device_std_body(gx_device_win_dib, &win_dib_procs, "mswindll",
-			INITIAL_WIDTH, INITIAL_HEIGHT,	/* win_open() fills these in later */
+			INITIAL_WIDTH, INITIAL_HEIGHT,/* win_open() fills these in later */
 			INITIAL_RESOLUTION, INITIAL_RESOLUTION	/* win_open() fills these in later */
     ),
     {0},			/* std_procs */
@@ -459,7 +465,7 @@ win_dib_make_dib(gx_device_win * dev, int orgx, int orgy, int wx, int wy)
     if (wdev->color_info.depth > 16)
 	palcount = 0;
     else if (wdev->color_info.depth > 8)
-	palcount = 3;		// 16-bit BI_BITFIELDS
+	palcount = 3;		/* 16-bit BI_BITFIELDS */
     else
 	palcount = wdev->nColors;
 

@@ -1,28 +1,35 @@
-/* Copyright (C) 1990, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1990, 2000, 2001 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxtype1.h,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: gxtype1.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Private Adobe Type 1 / Type 2 charstring interpreter definitions */
 
 #ifndef gxtype1_INCLUDED
 #  define gxtype1_INCLUDED
 
 #include "gscrypt1.h"
+#include "gsgdata.h"
 #include "gstype1.h"
 #include "gxop1.h"
 
@@ -132,10 +139,8 @@ typedef struct {
 typedef struct {
     const byte *ip;
     crypt_state dstate;
-    gs_const_string char_string;	/* original CharString or Subr, */
-					/* for GC */
-    int free_char_string;		/* if > 0, free char_string */
-					/* after executing it */
+    gs_glyph_data_t cs_data;	/* original CharString or Subr, */
+				/* for GC */
 } ip_state_t;
 
 /* Get the next byte from a CharString.  It may or may not be encrypted. */
@@ -253,11 +258,20 @@ typedef fixed *cs_ptr;
     }\
   END
 
+#define CS_CHECK_PUSH(csp, cstack)\
+  BEGIN\
+    if (csp >= &cstack[countof(cstack)-1])\
+      return_error(gs_error_invalidfont);\
+  END
+
 /* Decode a 1-byte number. */
 #define decode_num1(var, c)\
   (var = c_value_num1(c))
-#define decode_push_num1(csp, c)\
-  (*++csp = int2fixed(c_value_num1(c)))
+#define decode_push_num1(csp, cstack, c)\
+  BEGIN\
+    CS_CHECK_PUSH(csp, cstack);\
+    *++csp = int2fixed(c_value_num1(c));\
+  END
 
 /* Decode a 2-byte number. */
 #define decode_num2(var, c, cip, state, encrypted)\
@@ -269,11 +283,12 @@ typedef fixed *cs_ptr;
 	   c_value_neg2(c, 0) - cn);\
     charstring_skip_next(c2, state, encrypted);\
   END
-#define decode_push_num2(csp, c, cip, state, encrypted)\
+#define decode_push_num2(csp, cstack, c, cip, state, encrypted)\
   BEGIN\
     uint c2 = *cip++;\
     int cn;\
 \
+    CS_CHECK_PUSH(csp, cstack);\
     cn = charstring_this(c2, state, encrypted);\
     if ( c < c_neg2_0 )\
       { if_debug2('1', "[1] (%d)+%d\n", c_value_pos2(c, 0), cn);\
@@ -310,48 +325,50 @@ typedef fixed *cs_ptr;
 
 /* ------ Shared Type 1 / Type 2 charstring utilities ------ */
 
-void gs_type1_finish_init(P2(gs_type1_state * pcis, is_ptr ps));
+void gs_type1_finish_init(gs_type1_state * pcis, is_ptr ps);
 
-int gs_type1_sbw(P5(gs_type1_state * pcis, fixed sbx, fixed sby,
-		    fixed wx, fixed wy));
+int gs_type1_sbw(gs_type1_state * pcis, fixed sbx, fixed sby,
+		 fixed wx, fixed wy);
 
 /* blend returns the number of values to pop. */
-int gs_type1_blend(P3(gs_type1_state *pcis, fixed *csp, int num_results));
+int gs_type1_blend(gs_type1_state *pcis, fixed *csp, int num_results);
 
-int gs_type1_seac(P4(gs_type1_state * pcis, const fixed * cstack,
-		     fixed asb_diff, ip_state_t * ipsp));
+int gs_type1_seac(gs_type1_state * pcis, const fixed * cstack,
+		  fixed asb_diff, ip_state_t * ipsp);
 
-int gs_type1_endchar(P1(gs_type1_state * pcis));
+int gs_type1_endchar(gs_type1_state * pcis);
 
 /* ----- Interface between main Type 1 interpreter and hint routines ----- */
 
 /* Font level hints */
-void reset_font_hints(P2(font_hints *, const gs_log2_scale_point *));
-void compute_font_hints(P4(font_hints *, const gs_matrix_fixed *,
-			   const gs_log2_scale_point *,
-			   const gs_type1_data *));
+void reset_font_hints(font_hints *, const gs_log2_scale_point *);
+void compute_font_hints(font_hints *, const gs_matrix_fixed *,
+			const gs_log2_scale_point *,
+			const gs_type1_data *);
 
 /* Character level hints */
-void reset_stem_hints(P1(gs_type1_state *)), update_stem_hints(P1(gs_type1_state *)),
-     type1_replace_stem_hints(P1(gs_type1_state *)),
+void
+    reset_stem_hints(gs_type1_state *),
+    update_stem_hints(gs_type1_state *),
+    type1_replace_stem_hints(gs_type1_state *),
+    type1_apply_path_hints(gs_type1_state *, bool, gx_path *),
+    type1_do_hstem(gs_type1_state *, fixed, fixed, bool,
+		   const gs_matrix_fixed *),
+    type1_do_vstem(gs_type1_state *, fixed, fixed, bool,
+		   const gs_matrix_fixed *),
+    type1_do_center_vstem(gs_type1_state *, fixed, fixed,
+			  const gs_matrix_fixed *);
+
 #define replace_stem_hints(pcis)\
   (apply_path_hints(pcis, false),\
    type1_replace_stem_hints(pcis))
-     type1_apply_path_hints(P3(gs_type1_state *, bool, gx_path *)),
 #define apply_path_hints(pcis, closing)\
   type1_apply_path_hints(pcis, closing, pcis->path)
-     type1_do_hstem(P4(gs_type1_state *, fixed, fixed,
-		       const gs_matrix_fixed *)),
-#define type1_hstem(pcis, y, dy)\
-  type1_do_hstem(pcis, y, dy, &(pcis)->pis->ctm)
-      type1_do_vstem(P4(gs_type1_state *, fixed, fixed,
-			const gs_matrix_fixed *)),
-#define type1_vstem(pcis, x, dx)\
-  type1_do_vstem(pcis, x, dx, &(pcis)->pis->ctm)
-      type1_do_center_vstem(P4(gs_type1_state *, fixed, fixed,
-			       const gs_matrix_fixed *));
-
-#define center_vstem(pcis, x0, dx)\
+#define type1_hstem(pcis, y, dy, add_lsb)\
+  type1_do_hstem(pcis, y, dy, add_lsb, &(pcis)->pis->ctm)
+#define type1_vstem(pcis, x, dx, add_lsb)\
+  type1_do_vstem(pcis, x, dx, add_lsb, &(pcis)->pis->ctm)
+#define type1_center_vstem(pcis, x0, dx)\
   type1_do_center_vstem(pcis, x0, dx, &(pcis)->pis->ctm)
 
 #endif /* gxtype1_INCLUDED */

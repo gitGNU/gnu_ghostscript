@@ -1,22 +1,28 @@
-/* Copyright (C) 1994, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1994, 2000, 2001 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxfont1.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxfont1.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Type 1 / Type 2 font data definition */
 
 #ifndef gxfont1_INCLUDED
@@ -57,19 +63,15 @@ typedef struct gs_type1_data_s gs_type1_data;
 
 typedef struct gs_type1_data_procs_s {
 
-    /*
-     * Get the data for any glyph.  Return 1 if the string is newly
-     * allocated (using the font's allocator) and should be freed by the
-     * caller, 0 if the string should not be freed, < 0 on error.
-     */
+    /* Get the data for any glyph.  Return >= 0 or < 0 as usual. */
 
-    int (*glyph_data)(P3(gs_font_type1 * pfont, gs_glyph glyph,
-			 gs_const_string * pgdata));
+    int (*glyph_data)(gs_font_type1 * pfont, gs_glyph glyph,
+		      gs_glyph_data_t *pgd);
 
     /* Get the data for a Subr.  Return like glyph_data. */
 
-    int (*subr_data)(P4(gs_font_type1 * pfont, int subr_num, bool global,
-			gs_const_string * psdata));
+    int (*subr_data)(gs_font_type1 * pfont, int subr_num, bool global,
+		     gs_glyph_data_t *pgd);
 
     /*
      * Get the data for a seac character, including the glyph and/or the
@@ -78,8 +80,8 @@ typedef struct gs_type1_data_procs_s {
      * Return like glyph_data.
      */
 
-    int (*seac_data)(P4(gs_font_type1 * pfont, int ccode,
-			gs_glyph * pglyph, gs_const_string * pcdata));
+    int (*seac_data)(gs_font_type1 * pfont, int ccode,
+		     gs_glyph * pglyph, gs_glyph_data_t *pgd);
 
     /*
      * Push (a) value(s) onto the client ('PostScript') stack during
@@ -87,12 +89,12 @@ typedef struct gs_type1_data_procs_s {
      * closure pointer, not the font pointer, as the first argument.
      */
 
-    int (*push_values)(P3(void *callback_data, const fixed *values,
-			  int count));
+    int (*push_values)(void *callback_data, const fixed *values,
+		       int count);
 
     /* Pop a value from the client stack. */
 
-    int (*pop_value)(P2(void *callback_data, fixed *value));
+    int (*pop_value)(void *callback_data, fixed *value);
 
 } gs_type1_data_procs_t;
 
@@ -159,5 +161,13 @@ extern_st(st_gs_font_type1);
 
 /* Export font procedures so they can be called from the interpreter. */
 font_proc_glyph_info(gs_type1_glyph_info);
+
+/*
+ * If a Type 1 character is defined with 'seac', store the character codes
+ * in chars[0] and chars[1] and return 1; otherwise, return 0 or <0.
+ * This is exported only for the benefit of font copying.
+ */
+int gs_type1_piece_codes(/*const*/ gs_font_type1 *pfont,
+			 const gs_glyph_data_t *pgd, gs_char *chars);
 
 #endif /* gxfont1_INCLUDED */

@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>Background information for new users of Ghostscript</title>
-<!-- $Id: New-user.htm,v 1.1 2004/01/14 16:59:44 atai Exp $ -->
+<!-- $Id: New-user.htm,v 1.2 2004/02/14 22:20:03 atai Exp $ -->
 <!-- Originally: new-user.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -26,6 +26,7 @@
 <li><a href="#Find_Ghostscript">How is Ghostscript licensed?  Where can I find it?</a>
 <ul>
 <li><a href="#GNU_gs">GNU Ghostscript</a>
+<li><a href="#Commercial_gs">Commercial versions</a>
 </ul>
 <li><a href="#Third-party_libraries">Libraries obtained from other parties</a>
 <li><a href="#Support">What if I want support?</a>
@@ -42,8 +43,9 @@
 <ul>
 <li><a href="#Previewer_X">Previewers for X Windows</a>
 <li><a href="#Previewer_DOS-Win">Previewers for DOS and MS Windows</a>
-<li><a href="#Previewer_GNULinux">A previewer for GNU/Linux</a>
+<li><a href="#Previewer_Linux">A previewer for GNU/Linux</a>
 </ul>
+<li><a href="#Fonts">Fonts</a>
 <li><a href="#Related_programs">Related programs</a>
 </ul>
 <li><a href="#Need_help">If you need help</a>
@@ -108,18 +110,31 @@ itself.
 
 <p>
 Ghostscript is a copyrighted work (artofcode LLC owns the copyright);
-it is not shareware or in the public domain.  Different versions of it are
-distributed with three different licenses:
+it is not shareware or in the public domain.  
 
 <h4><a name="GNU_gs"></a>GNU Ghostscript</h4>
 
 <p>
-GNU Ghostscript is distributed under the terms of the GNU <a
+Versions entitled "GNU Ghostscript" are distributed with the GNU <a
 href="http://www.gnu.org/copyleft/gpl.html">General Public License</a>,
 which allows free use, and free copying and redistribution under certain
-conditions (including, in some cases, commercial distribution).
-You can always get the current version of GNU Ghostscript by Internet FTP
-from any of the many GNU distribution sites.  The GNU home ftp site is
+conditions (including, in some cases, commercial distribution).   You can always get the current
+version of GNU Ghostscript by Internet FTP from
+
+<blockquote>
+<a href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/" 
+class="offsite">ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/</a>
+</blockquote>
+
+<p>
+or under AFS by direct reference to
+
+<blockquote>
+/afs/cs.wisc.edu/p/mirror/pub/mirrors/ghost/gnu/current/
+</blockquote>
+
+<p>
+or from any of the many GNU distribution sites.  The GNU home ftp site is
 
 <blockquote>
 <a href="ftp://ftp.gnu.org/pub/gnu/"
@@ -127,13 +142,13 @@ class="offsite">ftp://ftp.gnu.org/pub/gnu/</a>
 </blockquote>
 
 <p>
-For a more complete list of sites, including sites outside the U.S. and
-other ways of obtaining GNU software, contact
-the <a href="http://www.gnu.org/">Free Software Foundation</a>
-<a href="mailto:gnu@gnu.org">&lt;gnu@gnu.org&gt;</a>.
+For a more complete list of sites, including sites outside the U.S., write
+to <a href="mailto:gnu@gnu.org">gnu@gnu.org</a>.  The
+<a href="Commprod.htm#FSF-address">Free Software Foundation</a> makes GNU
+Ghostscript available on tape and CD-ROM.
 
 <p><a name="CTAN"></a>
-Versions of Ghostscript are also available from sites in the
+GNU versions are also available from sites in the
 Comprehensive TeX Archive Network (CTAN), in a tree based at
 /tex-archive/support/ghostscript/, which you can find at these principal
 CTAN distribution sites ("participating hosts") as of mid-1998:
@@ -167,6 +182,18 @@ instance
 class="offsite">ftp://ctan.tug.org/tex-archive/CTAN.sites</a>
 </blockquote>
 
+<h4><a name="Commercial_gs"></a>Commercial versions</h4>
+
+<p>
+Finally, Ghostscript is also available for commercial licensing.  See
+"<a href="#Commercial_use">What about commercial use?</a>" for details.
+
+<p>
+GNU Ghostscript come with <b>NO WARRANTY</b> and
+<b>NO SUPPORT</b>.  If you have a question or a problem to report, please
+see "<a href="#Need_help">If you need help</a>" for information about what
+to do.
+
 <hr>
 
 <h3><a name="Third-party_libraries"></a>Libraries obtained from other parties</h3>
@@ -186,7 +213,8 @@ library
 <dd>The executable versions of Ghostscript are based in part on the work of
 the Independent JPEG Group.  For more information, see
 <b><tt>jpeg.mak</tt></b> in the main Ghostscript source directory and
-<b><tt>README</tt></b> in the libjpeg source directory.
+<b><tt>README</tt></b> in the <b><tt>jpeg</tt></b> subdirectory of the
+Ghostscript source code
 
 <dt>The <a href="http://www.libpng.org/pub/png/"
 class="offsite">Portable Network
@@ -194,22 +222,25 @@ Graphics</a> (PNG) library created by Dave Martindale, Guy Eric Schalnat,
 Paul Schmidt, and Tim Wegner, of Group 42, Inc.
 <dd>For more information, see <b><tt>libpng.mak</tt></b> in the main
 Ghostscript source directory, and <b><tt>README</tt></b> and
-<b><tt>png.h</tt></b> in the libpng source directory.
+<b><tt>png.h</tt></b> in the <b><tt>libpng</tt></b> subdirectory of the
+Ghostscript source code.
 
 <dt>The <a href="http://www.gzip.org/zlib/"
 class="offsite">zlib</a> library
 created by Jean-loup Gailly and Mark Adler
 <dd>For more information, see <b><tt>zlib.mak</tt></b> in the main
 Ghostscript source directory, and <b><tt>README</tt></b> in the
-zlib source code.
+<b><tt>zlib</tt></b> subdirectory of the Ghostscript source code.
 </dl></blockquote>
 
 <p>
-These libraries do not fall under the GPL but come with their own licenses,
+These libraries do <b>NOT</b> fall under either the GNU License or the
+Aladdin Free Public License; they come with their own licenses,
 which also allow free use and redistribution under appropriate
 circumstances and which appear in the files mentioned just above.  These
 libraries are entirely original works of their respective authors, and are
-provided as is with no warranty and no support.
+provided <strong>AS IS</strong> with <strong>NO WARRANTY</strong> and 
+<strong>NO SUPPORT</strong>.
 
 <hr>
 
@@ -219,6 +250,9 @@ provided as is with no warranty and no support.
 Neither artofcode LLC nor any organization known to us currently offers
 Ghostscript support for end-users -- that is, for people or companies who
 just want to use Ghostscript and not redistribute it as part of a product.
+Companies that include Ghostscript in their products under a commercial
+license (see next section) may offer support to end-users, but it would be
+support for the company's own product, not for Ghostscript <em>per se</em>.
 
 <p>
 Nothing in the GNU license prevents anyone from providing
@@ -228,15 +262,157 @@ who wants to offer such support.
 
 <hr>
 
+<h3><a name="Commercial_use"></a>What about commercial use?</h3>
+
+<p>
+GNU Ghostscript may not be incorporated into commercial products which
+forbid copying or for which customers cannot obtain source code for no more
+than the cost of reproduction, although it may be distributed ("aggregated")
+with commercial products; However, Ghostscript is also available for
+commercial licensing, which in addition to the right to incorporate
+Ghostscript into commercial products includes support, a limited warranty,
+high-quality fonts, and other benefits.  For more information about
+commercial licensing of Ghostscript, please contact our commercial
+distribution partner, the only entity legally authorized to distribute
+Ghostscript <em>per se</em> on any terms other than the GNU 
+license:
+
+<blockquote><address>
+Licensing Information<br>
+Artifex Software Inc.<br>
+101 Lucas Valley Road, Suite 110<br>
+San Rafael, CA 94903  U.S.A.<br>
++1-415-492-9861 Voice<br>
++1-415-492-9862 Fax<br>
+<a href="mailto:info@artifex.com">info@artifex.com</a><br>
+<a href="http://www.artifex.com/">http://www.artifex.com/</a>
+</address></blockquote>
+
+<p>
+Artifex does not offer commercial support as a separate service; support is
+available only to OEM licensees (that is, licensees who redistribute
+Ghostscript in a product).
+
+<hr>
+
 <h3><a name="Platforms"></a>What platforms does Ghostscript run on?</h3>
 
 <p>
-Ghostscript is written entirely in C, with special care taken to make it
-portable to a wide variety of systems. It is actively maintained on many
-unix-like operating systems, Microsoft Windows, Apple's MacOS and
-OpenVMS and can easily be ported to others. Please see <a
-href="Make.htm">Making Ghostscript</a> for details on the build process
-and hints for various platforms. 
+Ghostscript is written entirely in C (with some optional assembly-language
+accelerators for DOS platforms), with special care taken to make it run
+properly on systems of either byte order ("low-endian" and "high-endian")
+and of various word lengths.  GNU Ghostscript is known to run on the
+following platform families:
+
+<ul>
+<li>A wide variety of Unix systems using X Windows version 11, releases 4, 5,
+and 6, including
+
+<ul compact>
+<li>Sun-3, Sun-4, Sun-386i, Sun SPARCStation with SunOS 4 and Solaris 2.[56]
+<li>Generic Intel-based systems running GNU/Linux, 386/ix, 386BSD, FreeBSD, ISC Unix, SCO Unix, and Solaris
+<li>H-P 9000/300 and 9000/800
+<li>DECStation 2100, 3100, and 5xxx
+<li>Alpha systems running Digital Unix
+<li>VAX running Ultrix
+<li>Sequent Symmetry
+<li>Convex C1 and C2
+<li>Tektronix 4300
+<li>SGI Iris Indigo
+<li>4.4BSD Unix systems (FreeBSD on Intel)
+<li>NetBSD on Intel, Sun SPARC, Motorola M68K (Apple, Amiga, Sun, H-P), and VAX
+</ul>
+
+<li>Sun workstations running SunView
+
+<li>VAX and Alpha systems running OpenVMS with X11 compiled with
+either DEC C or gcc
+</ul>
+
+<blockquote>
+<a href="http://www.cs.wisc.edu/~ghost/macos/" 
+class="offsite">http://www.cs.wisc.edu/~ghost/macos/</a>
+</blockquote>
+</ul>
+
+<p>
+It is very likely that Ghostscript will run under other versions of DOS,
+and other versions of Unix that support X11, but it has not been tested in
+these environments.  (Ghostscript does not run well on PC-compatibles with
+Hercules display cards, since text and graphics output interfere with each
+other, but you can work around this by redirecting the text output to a file.)
+
+<h4><a name="Third-party_platforms"></a>Ports done by users</h4>
+
+<p>
+Ghostscript has been ported to a number of platforms by users, who are
+willing to be contacted about problems on those specific platforms:
+
+<dl>
+<dt><b>NeXT</b>
+<dd>For information and possibly precompiled binaries for NeXT machines,
+contact Alan Barclay in the U.K. at +44-1224-591779 (voice and fax).
+</dl>
+
+<dl>
+<dt><b>Amiga</b>
+<dd>For information on a port to the Amiga, contact Andreas Maschke
+&lt;<a href="mailto:epgbc@cluster6.urz.uni-halle.de">epgbc@cluster6.urz.uni-halle.de</a>&gt;.
+This port includes drivers by Andreas Heitmann for
+
+<blockquote><table cellpadding=0 cellspacing=0>
+<tr><td>IFF<td>&nbsp;&nbsp;<td>file format
+<tr><td>RETINA<td>&nbsp;<td>graphics board
+<tr><td>INTUI<td>&nbsp;<td>Amiga window system
+</table></blockquote>
+</dl>
+
+<dl>
+<dt><b>SMS/QDOS</b>
+<dd>For information on a port to the SMS/QDOS operating system, contact
+<blockquote><address>
+Jonathan R. Hudson<br>
++44-1703-867843 telephone and fax<br>
+<a href="mailto:jrh@jrhudson.demon.co.uk">jrh@jrhudson.demon.co.uk</a><br>
+http://www.jrhudson.demon.co.uk/
+</address></blockquote>
+
+<p>
+The Web site has precompiled binaries, and the port includes includes drivers for:
+
+<blockquote><table cellpadding=0 cellspacing=0>
+<tr>	<td>pic:
+	<td>&nbsp;&nbsp;
+	<td>native graphics format
+	<td>&nbsp;&nbsp;
+	<td>(PIC, 1-, -2, 4-, 8-colour formats)
+<tr>	<td>qfax:
+	<td>&nbsp;
+	<td>fax files
+	<td>&nbsp;
+	<td>(1D, 2D normal and fine)
+</table></blockquote>
+</dl>
+
+<dl>
+<dt><b>Plan 9</b>
+<dd>For source boddles and precompiled binaries for the operating system
+Plan 9 from Bell Labs, contact Nigel Roles
+&lt;<a href="mailto:ngr@cotswold.demon.co.uk">ngr@cotswold.demon.co.uk</a>&gt;.
+or check
+
+<blockquote>
+<a href="http://www.cotswold.demon.co.uk/dist/gs/" 
+class="offsite">http://www.cotswold.demon.co.uk/dist/gs/</a>
+</blockquote>
+</dl>
+
+<dl>
+<dt><b>MS-DOS</b> <dd>For information on compiling Ghostscript for MS-DOS
+with the Watcom C++ compiler and GNU make (which avoids the severe
+limitations in Watcom's wmake program), contact Boguslaw Jackowski &lt;<a
+href="mailto:B.Jackowski@gust.org.pl">B.Jackowski@gust.org.pl</a>&gt;.
+</dl>
 
 <hr>
 
@@ -247,11 +423,11 @@ and hints for various platforms.
 <p>
 A number of people have created Ghostscript drivers that they prefer to
 distribute directly, rather than including them in the Ghostscript
-distributions. Please refer to <a
-href="http://www.linuxprinting.org/"
-class="offsite">www.linuxprinting.org</a> or your favorite search engine
-for
-relevant examples.
+distributions.  For a current list, please see the Ghostscript home page at
+<a
+href="http://www.cs.wisc.edu/~ghost/" 
+class="offsite">http://www.cs.wisc.edu/~ghost/</a>.
+
 
 <h3><a name="Previewers"></a>Previewers</h3>
 
@@ -261,6 +437,58 @@ contributed screen previewers with better user interfaces.
 
 <h4><a name="Previewer_X"></a>Previewers for X Windows</h4>
 
+<p>
+We know of three freely available X Windows screen previewers based on
+Ghostscript: <b><tt>Ghostview</tt></b>, <b><tt>gv</tt></b>, and
+<b><tt>GSPreview</tt></b>.  Most users who have expressed an opinion prefer
+<b><tt>gv</tt></b> over <b><tt>Ghostview</tt></b>.
+
+<dl>
+<dt><b><tt>gv</tt></b>
+<dd>gv, which is derived from Ghostview, is available from CTAN sites and
+through the site of its author, Johannes Plass
+&lt;<a href="mailto:plass@thep.physik.uni-mainz.de">plass@thep.physik.uni-mainz.de</a>&gt;:
+
+<blockquote>
+<a href="http://wwwthep.physik.uni-mainz.de/~plass/gv/" 
+class="offsite">http://wwwthep.physik.uni-mainz.de/~plass/gv/</a>
+</blockquote>
+
+A copy of gv (but perhaps not the most recent version)
+can also be found at:
+
+<blockquote>
+<a href="http://www.cs.wisc.edu/~ghost/gv/" 
+class="offsite">http://www.cs.wisc.edu/~ghost/gv/</a><br>
+<a href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/gv/" 
+class="offsite">ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/gv/</a>
+</blockquote>
+
+<p>
+gv is available for OpenVMS (both VAX and Alpha), called GhostView-VMS or
+gv-vms.  Some places you can find it are:
+
+<blockquote>
+<a href="ftp://axp.psl.ku.dk/decwindows/xaw3d/" 
+class="offsite">ftp://axp.psl.ku.dk/decwindows/xaw3d/</a><br>
+<a href="ftp://ftp.wku.edu/vms/fileserv/x11kit.zip" 
+class="offsite">ftp://ftp.wku.edu/vms/fileserv/x11kit.zip</a>
+</blockquote>
+</dl>
+
+<dl>
+<dt><b><tt>Ghostview</tt></b>
+<dd>For information on Ghostview, contact Tim Theisen
+&lt;<a href="mailto:ghostview@cs.wisc.edu">ghostview@cs.wisc.edu</a>&gt;.
+You can get Ghostview from
+
+<blockquote>
+<a
+href="http://www.cs.wisc.edu/~ghost/gv/" 
+class="offsite">http://www.cs.wisc.edu/~ghost/gv/</a>
+</blockquote>
+</dl>
+
 <dl>
 <dt><b><tt>GSPreview</tt></b>
 <dd>For information on GSPreview, contact Richard Hesketh
@@ -268,6 +496,46 @@ contributed screen previewers with better user interfaces.
 </dl>
 
 <h4><a name="Previewer_DOS-Win"></a>Previewers for DOS and MS Windows</h4>
+
+<dl>
+<dt><a name="GSview"></a><b><tt>GSview</tt></b>
+<dd>GSview, a popular freely available MS Windows and OS/2 screen previewer
+based on Ghostscript, is available from
+
+<blockquote>
+<a href="http://www.cs.wisc.edu/~ghost/gsview/" 
+class="offsite">http://www.cs.wisc.edu/~ghost/gsview/</a>
+</blockquote>
+
+<p>
+For technical information on GSview for Windows or PM GSview, please contact
+Russell Lang &lt;<a
+href="mailto:gsview@ghostgum.com.au">gsview@ghostgum.com.au</a>&gt;.  These
+programs are also available for <a href="#Commercial_use">commercial
+licensing</a> from Artifex Software Inc.
+</dl>
+
+<dl>
+<dt><b><tt>ps_view</tt></b>
+<dd>GUST, the Polish TeX Users Group, has created <b><tt>ps_view</tt></b>,
+a public-domain DOS package that provides "an interactive environement for
+previewing PostScript documents. The current version can drive the current
+version of the Ghostscript interpreter; enables scaling, rotating, restart,
+on-line help, printing the screen, etc."  <b><tt>ps_view</tt></b> is
+available from its home site and from CTAN:
+
+<blockquote>
+<a href="ftp://ftp.pg.gda.pl/pub/TeX/support/ps_view/" 
+class="offsite">ftp://ftp.pg.gda.pl/pub/TeX/support/ps_view/</a><br>
+<a href="ftp://ftp.dante.de/tex-archive/support/ps_view/" 
+class="offsite">ftp://ftp.dante.de/tex-archive/support/ps_view/</a>
+</blockquote>
+
+<p>
+<b><tt>ps_view's</tt></b> authors are Boguslaw Jackowski and Piotr
+Pianowsky
+&lt;<a href="mailto:P.Pianowski@gust.org.pl">P.Pianowski@gust.org.pl</a>&gt;.
+</dl>
 
 <dl>
 <dt><b><tt>psv</tt></b>
@@ -280,7 +548,7 @@ ftp://puccini.ujf-grenoble.fr/pub/contrib-ps/DOS-PSV/
 </blockquote>
 </dl>
 
-<h4><a name="Previewer_GNULinux"></a>A previewer for GNU/Linux</h4>
+<h4><a name="Previewer_Linux"></a>A previewer for GNU/Linux</h4>
 
 <dl>
 <dt><b><tt>BMV</tt></b> <dd>Jan Kybic has created a Ghostscript-based
@@ -295,6 +563,25 @@ href="ftp://sunsite.unc.edu/pub/Linux/apps/graphics/viewers/svga/bmv-1.2.tgz"
 class="offsite">ftp://sunsite.unc.edu/pub/Linux/apps/graphics/viewers/svga/bmv-1.2.tgz</a>
 </blockquote>
 </dl>
+
+<hr>
+
+<h3><a name="Fonts"></a>Fonts</h3>
+
+<p>
+The <a href="Fonts.htm">fonts available for Ghostscript</a>, and how to use
+and add fonts in general, are extensively documented.  See
+<a href="Fonts.htm">that documentation</a> for (almost) all information
+about fonts.  Nelson Beebe maintains a useful set of information about
+PostScript Type 1 fonts, including sources for freely distributable and
+commercially licensed fonts and an extensive list of Unix systems and the
+fonts available for them:
+
+<blockquote>
+<a
+href="http://www.math.utah.edu/~beebe/fonts/postscript-type-1-fonts.html" 
+class="offsite">http://www.math.utah.edu/~beebe/fonts/postscript-type-1-fonts.html</a>
+</blockquote>
 
 <hr>
 
@@ -315,6 +602,17 @@ headers, and many more.  You can find the current version at
 class="offsite">http://www.iki.fi/~mtr/genscript/</a> (home page)<br>
 <a href="ftp://ftp.gnu.org/pub/gnu/" 
 class="offsite">ftp://ftp.gnu.org/pub/gnu/enscript/</a>enscript-*.tar.gz
+</blockquote>
+
+<dt><b><tt>pdf2html</tt></b>
+<dd><b><tt>pdf2html</tt></b> is a free utility that converts PDF to PNG
+images wrapped in HTML files.  It doesn't preserve the text of the PDF, only
+the appearance.  You can find the current version at
+
+<blockquote>
+<a href="ftp://atrey.karlin.mff.cuni.cz/pub/local/clock/pdf2html"
+class="offsite">
+ftp://atrey.karlin.mff.cuni.cz/pub/local/clock/pdf2html</a>
 </blockquote>
 
 <dt><b><tt>pstotext</tt></b>
@@ -400,20 +698,24 @@ GRAPHSUP</tt></b>.  This service has no connection with the main Ghostscript
 developers.
 
 <p>
-If you have problems with Ghostscript and you have access to the
+artofcode LLC doesn't respond to questions from users of the freely
+available versions of Ghostscript.  (Responding to questions and problem
+reports is one of the benefits that <a href="#Commercial_use">Artifex
+Software</a> provides to commercial users in exchange for the licensing
+fee.)  If you have problems with Ghostscript and you have access to the
 Internet, we suggest to post your question to one of these Usenet
 newsgroups:
 
 <dl>
 <dt><b><tt><a href="news:gnu.ghostscript.bug">gnu.ghostscript.bug</a></tt></b>
-<dd>if your question is about <b>GNU Ghostscript</b>.  If you have access to Internet mail, but not Usenet news,
+<dd>if your question is about <b>GNU Ghostscript</b> (currently versions
+5.10 and below).  If you have access to Internet mail, but not Usenet news,
 write to <b><tt>bug-ghostscript@gnu.org</tt></b>, which is equivalent to
 posting to that newsgroup.
 
 <dt><b><tt><a href="news:comp.lang.postscript">comp.lang.postscript</a></tt></b>
-<dd>if you have a general question about Ghostscript. Note
-however that this newsgroup was not intended for Ghostscript
-discussion <em>per se</em>.
+<dd>if your question is about <b>Ghostscript</b> (currently
+versions 5.50 and above).  
 </dl>
 
 <p>
@@ -439,12 +741,12 @@ reporting problems.
 <p>
 As of mid-September 2000, artofcode LLC is responsible for the future
 development of Ghostscript.  Please do not contact us if all you want is
-help with Ghostscript!  Ghostscript is
+help with the freely distributed versions of Ghostscript!  Ghostscript is
 free, but our time is not.  If you call for help, we will tell you politely
 that we cannot answer your question.  Ghostscript's documentation, while not
 of commercial end-user quality, has been adequate for thousands of users
 (for many of whom English is a foreign language), so the answer to your
-question is very likely in it somewhere. <!-- ouch -->
+question is very likely in it somewhere.
 
 <p>
 Here is our contact information:
@@ -461,9 +763,10 @@ tel/fax +1 707 746 6398<br>
 <h3>Aladdin Enterprises</h3>
 
 <p>
-Aladdin Enterprises, the original authors of Ghostscript, is no
-longer responsible for Ghostscript, but may be available for small
-contract projects.  Here is their contact information:
+We at Aladdin Enterprises, the original authors of Ghostscript, are no
+longer responsible for Ghostscript, and cannot answer general questions
+about it, but we may be available for small contract projects.  Here is our
+contact information:
 
 <blockquote><address>
 Aladdin Enterprises<br>
@@ -476,8 +779,8 @@ class="offsite">http://www.ghostscript.com/</a>
 </address></blockquote>
 
 <p>
-If you want help with Ghostscript, or want to report a problem, please do
-not contact us.  We will not be able to help you.
+If you just want help with Ghostscript, or want to report a problem, please
+do not contact us.  We will not be able to help you.
 
 <hr>
 
@@ -572,7 +875,7 @@ contributed significantly to improving Ghostscript.
 <hr>
 
 <p>
-<small>Copyright &copy; 1996-2002 artofcode LLC.  All rights
+<small>Copyright &copy; 1996, 2000 Aladdin Enterprises.  All rights
 reserved.</small>
 
 <p>
@@ -583,8 +886,14 @@ This software is distributed under license and may not be copied,
 modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
+For more information about licensing, please refer to
+http://www.ghostscript.com/licensing/. For information on
+commercial licensing, go to http://www.artifex.com/licensing/ or
+contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
 <p>
-<small>Ghostscript version 7.07, 17 May 2003
+<small>Ghostscript version 8.01, 30 January 2004
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

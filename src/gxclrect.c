@@ -1,22 +1,28 @@
-/* Copyright (C) 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxclrect.c,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxclrect.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Rectangle-oriented command writing for command list */
 #include "gx.h"
 #include "gserrors.h"
@@ -430,6 +436,10 @@ clist_copy_alpha(gx_device * dev, const byte * data, int data_x,
     int log2_depth = ilog2(depth);
     int y0;
     int data_x_bit;
+
+    /* If the target can't perform copy_alpha, exit now */
+    if (depth > 1 && (cdev->disable_mask & clist_disable_copy_alpha) != 0)
+	return_error(gs_error_unknownerror);
 
     fit_copy(dev, data, data_x, raster, id, x, y, width, height);
     y0 = y;

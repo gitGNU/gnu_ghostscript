@@ -1,22 +1,28 @@
-/* Copyright (C) 1991, 1992, 1998 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1991, 1992, 1998 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxop1.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxop1.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Type 1 state shared between interpreter and compiled fonts. */
 
 #ifndef gxop1_INCLUDED
@@ -62,14 +68,14 @@ typedef gs_op1_state *is_ptr;
     pty += c_fixed(dy, yy);\
     if ( sfc.skewed ) ptx += c_fixed(dy, yx);\
   END
-void accum_xy_proc(P3(is_ptr ps, fixed dx, fixed dy));
+void accum_xy_proc(is_ptr ps, fixed dx, fixed dy);
 
 #define accum_xy(dx,dy)\
   accum_xy_proc(&s, dx, dy)
 
 /* Define operator procedures. */
-int gs_op1_closepath(P1(is_ptr ps));
-int gs_op1_rrcurveto(P7(is_ptr ps, fixed dx1, fixed dy1,
-			fixed dx2, fixed dy2, fixed dx3, fixed dy3));
+int gs_op1_closepath(is_ptr ps);
+int gs_op1_rrcurveto(is_ptr ps, fixed dx1, fixed dy1,
+		     fixed dx2, fixed dy2, fixed dx3, fixed dy3);
 
 #endif /* gxop1_INCLUDED */

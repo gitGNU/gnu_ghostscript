@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 2000, 2001 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 2000, 2001 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: interp.c,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: interp.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Ghostscript language interpreter */
 #include "memory_.h"
 #include "string_.h"
@@ -81,13 +87,13 @@ no_reschedule(i_ctx_t **pi_ctx_p)
 {
     return_error(e_invalidcontext);
 }
-int (*gs_interp_reschedule_proc)(P1(i_ctx_t **)) = no_reschedule;
+int (*gs_interp_reschedule_proc)(i_ctx_t **) = no_reschedule;
 
 /*
  * The procedure to call for time-slicing.
  * This is a no-op unless the context machinery has been installed.
  */
-int (*gs_interp_time_slice_proc)(P1(i_ctx_t **)) = 0;
+int (*gs_interp_time_slice_proc)(i_ctx_t **) = 0;
 
 /*
  * The number of interpreter "ticks" between calls on the time_slice_proc.
@@ -130,15 +136,15 @@ struct stats_interp_s {
 #endif
 
 /* Forward references */
-private int estack_underflow(P1(i_ctx_t *));
-private int interp(P3(i_ctx_t **, const ref *, ref *));
-private int interp_exit(P1(i_ctx_t *));
-private void set_gc_signal(P3(i_ctx_t *, int *, int));
-private int copy_stack(P3(i_ctx_t *, const ref_stack_t *, ref *));
-private int oparray_pop(P1(i_ctx_t *));
-private int oparray_cleanup(P1(i_ctx_t *));
-private int zsetstackprotect(P1(i_ctx_t *));
-private int zcurrentstackprotect(P1(i_ctx_t *));
+private int estack_underflow(i_ctx_t *);
+private int interp(i_ctx_t **, const ref *, ref *);
+private int interp_exit(i_ctx_t *);
+private void set_gc_signal(i_ctx_t *, int *, int);
+private int copy_stack(i_ctx_t *, const ref_stack_t *, ref *);
+private int oparray_pop(i_ctx_t *);
+private int oparray_cleanup(i_ctx_t *);
+private int zsetstackprotect(i_ctx_t *);
+private int zcurrentstackprotect(i_ctx_t *);
 
 /* Stack sizes */
 
@@ -432,7 +438,7 @@ interp_reclaim(i_ctx_t **pi_ctx_p, int space)
  * In case of a quit or a fatal error, also store the exit code.
  * Set *perror_object to null or the error object.
  */
-private int gs_call_interp(P5(i_ctx_t **, ref *, int, int *, ref *));
+private int gs_call_interp(i_ctx_t **, ref *, int, int *, ref *);
 int
 gs_interpret(i_ctx_t **pi_ctx_p, ref * pref, int user_errors, int *pexit_code,
 	     ref * perror_object)
@@ -870,7 +876,7 @@ interp(i_ctx_t **pi_ctx_p /* context for execution, updated if resched */,
 	  r_packed_is_name(iref_packed) :
 	  r_has_type(IREF, t_name)))
 	) {
-	void debug_print_ref(P1(const ref *));
+	void debug_print_ref(const ref *);
 	os_ptr save_osp = osp;	/* avoid side-effects */
 	es_ptr save_esp = esp;
 

@@ -1,22 +1,28 @@
-/* Copyright (C) 1991, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1991, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxclread.c,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxclread.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Command list reading for Ghostscript. */
 #include "memory_.h"
 #include "gx.h"
@@ -30,7 +36,6 @@
 #include "gxcldev.h"
 #include "gxgetbit.h"
 #include "gxhttile.h"
-#include "gdevht.h"
 #include "gdevplnx.h"
 /*
  * We really don't like the fact that gdevprn.h is included here, since
@@ -140,17 +145,17 @@ private const stream_template s_band_read_template = {
 
 /* Forward references */
 
-private int clist_render_init(P1(gx_device_clist *));
-private int clist_playback_file_bands(P8(clist_playback_action action,
-					 gx_device_clist_reader *cdev,
-					 gx_band_page_info_t *page_info,
-					 gx_device *target,
-					 int band_first, int band_last,
-					 int x0, int y0));
-private int clist_rasterize_lines(P6(gx_device *dev, int y, int lineCount,
-				     gx_device *bdev,
-				     const gx_render_plane_t *render_plane,
-				     int *pmy));
+private int clist_render_init(gx_device_clist *);
+private int clist_playback_file_bands(clist_playback_action action,
+				      gx_device_clist_reader *cdev,
+				      gx_band_page_info_t *page_info,
+				      gx_device *target,
+				      int band_first, int band_last,
+				      int x0, int y0);
+private int clist_rasterize_lines(gx_device *dev, int y, int lineCount,
+				  gx_device *bdev,
+				  const gx_render_plane_t *render_plane,
+				  int *pmy);
 
 /* Calculate the raster for a chunky or planar device. */
 private int

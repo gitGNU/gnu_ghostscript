@@ -1,21 +1,27 @@
-#    Copyright (C) 1989, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+#    Copyright (C) 1989, 1996-9, 2002 artofcode LLC.  All rights reserved.
 # 
 #  This program is free software; you can redistribute it and/or modify it
-#  under the terms of the GNU General Public License as published by the
-#  Free Software Foundation; either version 2 of the License, or (at your
-#  option) any later version.
+#  under the terms of the GNU General Public License version 2
+#  as published by the Free Software Foundation.
 #
-#  This program is distributed in the hope that it will be useful, but
-#  WITHOUT ANY WARRANTY; without even the implied warranty of
+#
+#  This software is provided AS-IS with no warranty, either express or
+#  implied. That is, this program is distributed in the hope that it will 
+#  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#  General Public License for more details.
+#  General Public License for more details
 #
 #  You should have received a copy of the GNU General Public License along
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+# 
+# For more information about licensing, please refer to
+# http://www.ghostscript.com/licensing/. For information on
+# commercial licensing, go to http://www.artifex.com/licensing/ or
+# contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+# San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-
-# $Id: gs.mak,v 1.1 2004/01/14 16:59:48 atai Exp $
+# $Id: gs.mak,v 1.2 2004/02/14 22:20:16 atai Exp $
 # Generic makefile, common to all platforms, products, and configurations.
 # The platform-specific makefiles `include' this file.
 
@@ -56,9 +62,11 @@
 #	    and linking libgz/libz explicitly.
 #	ZLIB_NAME - the name of the shared zlib, either gz (for libgz, -lgz)
 #	    or z (for libz, -lz).
+#	ICCSRCDIR - the name of the ICC lib source dir, currently
+#	    always icclib (compiled in statically)
 #	DEVICE_DEVS - the devices to include in the executable.
 #	    See devs.mak for details.
-#	DEVICE_DEVS1...DEVICE_DEVS20 - additional devices, if the definition
+#	DEVICE_DEVS1...DEVICE_DEVS21 - additional devices, if the definition
 #	    of DEVICE_DEVS doesn't fit on one line.  See devs.mak for details.
 #	FEATURE_DEVS - what features to include in the executable.
 #	    Normally this is one of:
@@ -87,6 +95,9 @@
 #			Included automatically in the psl2 feature.
 #		    dct - support for DCTEncode/Decode filters.
 #			Included automatically in the psl2 feature.
+#                   diskn - support for %disk IODevice emulation. Adds support
+#                       for %disk0 thru %disk9. Use requires setting the /Root
+#                       paramter for each %disk (see Language.htm).
 #		    dps - (partial) support for Display PostScript extensions:
 #			see Language.htm for details.
 #		    dpsnext - (partial) support for Display PostScript
@@ -107,6 +118,7 @@
 #			Included automatically in the psl2 feature.
 #		    type42 - support for Type 42 (embedded TrueType) fonts.
 #			Included automatically in the psl2 feature.
+#                   fapi - Font API (3d party font renderer interface).
 #		There are quite a number of other sub-features that can be
 #		selectively included in or excluded from a configuration,
 #		but the above are the ones that are most likely to be of
@@ -169,10 +181,10 @@
 #		leaf procedures, which don't need to build stack frames.
 #		This is needed only because many compilers aren't able to
 #		recognize leaf procedures on their own.
-#       AK - if a particular platform requires any programs or data files
-#               to be built before compiling the source code, AK must list
-#               them.
-#       EXP - the prefix for invoking an executable program in a specified
+#	AK - if a particular platform requires any programs or data files
+#		to be built before compiling the source code, AK must list
+#		them.
+#	EXP - the prefix for invoking an executable program in a specified
 #		directory (MCR on OpenVMS, null on all other platforms).
 #	SH - the shell for scripts (null on MS-DOS, sh on Unix).
 #	CONFILES - the arguments for genconf to generate the appropriate
@@ -256,7 +268,6 @@ mostlyclean : config-clean
 	$(RMN_) $(GSGEN)gconfig*.c $(GSGEN)gscdefs*.c $(GSGEN)iconfig*.c
 	$(RMN_) $(GSGEN)_temp_* $(GSGEN)_temp_*.* $(GSOBJ)*.map $(GSOBJ)*.sym
 	$(RMN_) $(GENARCH_XE) $(GENCONF_XE) $(GENDEV_XE) $(GENHT_XE) $(GENINIT_XE)
-	$(RMN_) $(ECHOGS_XE)
 	$(RMN_) $(GSGEN)gs_init.c $(BEGINFILES)
 
 # Remove only configuration-dependent information.
@@ -274,6 +285,8 @@ SETDEV2=$(EXP)$(ECHOGS_XE) -e .dev -w- -l-dev2 -b -s -l-obj
 SETPDEV2=$(EXP)$(ECHOGS_XE) -e .dev -w- -l-dev2 -b -s -l-include -l$(GLGENDIR)$(D)page -l-obj
 SETMOD=$(EXP)$(ECHOGS_XE) -e .dev -w- -l-obj
 ADDMOD=$(EXP)$(ECHOGS_XE) -e .dev -a- $(NULL)
+SETCOMP=$(EXP)$(ECHOGS_XE) -e .dev -w- -l-comp
+ADDCOMP=$(EXP)$(ECHOGS_XE) -e .dev -a- -l-comp
 
 # Define the search lists and compilation switches for the third-party
 # libraries, and the compilation switches for their clients.
@@ -345,7 +358,8 @@ DEVS_ALL=$(GLGENDIR)$(D)$(PLATFORM).dev\
  $(DEVICE_DEVS6) $(DEVICE_DEVS7) $(DEVICE_DEVS8) $(DEVICE_DEVS9) \
  $(DEVICE_DEVS10) $(DEVICE_DEVS11) $(DEVICE_DEVS12) $(DEVICE_DEVS13) \
  $(DEVICE_DEVS14) $(DEVICE_DEVS15) $(DEVICE_DEVS16) $(DEVICE_DEVS17) \
- $(DEVICE_DEVS18) $(DEVICE_DEVS19) $(DEVICE_DEVS20) $(DEVICE_DEVS_EXTRA)
+ $(DEVICE_DEVS18) $(DEVICE_DEVS19) $(DEVICE_DEVS20) $(DEVICE_DEVS21) \
+ $(DEVICE_DEVS_EXTRA)
 
 devs_tr=$(GLGENDIR)$(D)devs.tr
 $(devs_tr) : $(GS_MAK) $(TOP_MAKEFILES) $(ECHOGS_XE)
@@ -373,6 +387,7 @@ $(devs_tr) : $(GS_MAK) $(TOP_MAKEFILES) $(ECHOGS_XE)
 	$(EXP)$(ECHOGS_XE) -a $(devs_tr) -+ $(DEVICE_DEVS18)
 	$(EXP)$(ECHOGS_XE) -a $(devs_tr) -+ $(DEVICE_DEVS19)
 	$(EXP)$(ECHOGS_XE) -a $(devs_tr) -+ $(DEVICE_DEVS20)
+	$(EXP)$(ECHOGS_XE) -a $(devs_tr) -+ $(DEVICE_DEVS21)
 	$(EXP)$(ECHOGS_XE) -a $(devs_tr) -+ $(DEVICE_DEVS_EXTRA)
 	$(EXP)$(ECHOGS_XE) -a $(devs_tr) - $(GLGENDIR)$(D)libcore
 

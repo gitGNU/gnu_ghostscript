@@ -1,26 +1,44 @@
-/* Copyright (C) 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxttf.h,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: gxttf.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Table definitions for TrueType fonts */
 
 #ifndef gxttf_INCLUDED
 #  define gxttf_INCLUDED
+
+/* ------ Composite glyf component flags ------ */
+
+#define TT_CG_ARGS_ARE_WORDS     (1<<0)
+#define TT_CG_ARGS_ARE_XY_VALUES (1<<1)
+#define TT_CG_ROUND_XY_TO_GRID   (1<<2)
+#define TT_CG_HAVE_SCALE         (1<<3)
+#define TT_CG_MORE_COMPONENTS    (1<<5)
+#define TT_CG_HAVE_XY_SCALE      (1<<6)
+#define TT_CG_HAVE_2X2           (1<<7)
+#define TT_CG_HAVE_INSTRUCTIONS  (1<<8)
+#define TT_CG_USE_MY_METRICS     (1<<9)
 
 /* ------ head ------ */
 
@@ -77,7 +95,7 @@ typedef struct longHorMetric_s {
 
 typedef struct ttf_maxp_s {
     byte
-	version[2],		/* 1.0 */
+	version[4],		/* 1.0 */
 	numGlyphs[2],
 	maxPoints[2],
 	maxContours[2],

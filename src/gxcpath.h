@@ -1,22 +1,28 @@
-/* Copyright (C) 1991, 1995, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1991, 1995, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxcpath.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxcpath.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Definitions for clipping lists and devices */
 /* Requires gxdevice.h */
 
@@ -113,13 +119,13 @@ extern_st(st_device_clip);
   gs_public_st_composite_use_final(st_device_clip, gx_device_clip,\
     "gx_device_clip", device_clip_enum_ptrs, device_clip_reloc_ptrs,\
     gx_device_finalize)
-void gx_make_clip_translate_device(P5(gx_device_clip * dev,
-				      const gx_clip_list * list,
-				      int tx, int ty, gs_memory_t *mem));
+void gx_make_clip_translate_device(gx_device_clip * dev,
+				   const gx_clip_list * list,
+				   int tx, int ty, gs_memory_t *mem);
 
 #define gx_make_clip_device(dev, list)\
   gx_make_clip_translate_device(dev, list, 0, 0, NULL)
-void gx_make_clip_path_device(P2(gx_device_clip *, const gx_clip_path *));
+void gx_make_clip_path_device(gx_device_clip *, const gx_clip_path *);
 
 #define clip_rect_print(ch, str, ar)\
   if_debug7(ch, "[%c]%s 0x%lx: (%d,%d),(%d,%d)\n", ch, str, (ulong)ar,\
@@ -128,17 +134,17 @@ void gx_make_clip_path_device(P2(gx_device_clip *, const gx_clip_path *));
 /* Exported by gxcpath.c for gxacpath.c */
 
 /* Initialize a clip list. */
-void gx_clip_list_init(P1(gx_clip_list *));
+void gx_clip_list_init(gx_clip_list *);
 
 /* Free a clip list. */
-void gx_clip_list_free(P2(gx_clip_list *, gs_memory_t *));
+void gx_clip_list_free(gx_clip_list *, gs_memory_t *);
 
 /* Set the outer box for a clipping path from its bounding box. */
-void gx_cpath_set_outer_box(P1(gx_clip_path *));
+void gx_cpath_set_outer_box(gx_clip_path *);
 
 /* Exported by gxcpath.c for gxclip.c */
 
 /* Return the rectangle list of a clipping path (for local use only). */
-const gx_clip_list *gx_cpath_list(P1(const gx_clip_path *pcpath));
+const gx_clip_list *gx_cpath_list(const gx_clip_path *pcpath);
 
 #endif /* gxcpath_INCLUDED */

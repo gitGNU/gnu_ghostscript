@@ -1,20 +1,19 @@
 %    Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-% This program is free software; you can redistribute it and/or modify it
-% under the terms of the GNU General Public License as published by the
-% Free Software Foundation; either version 2 of the License, or (at your
-% option) any later version.
-%
-% This program is distributed in the hope that it will be useful, but
-% WITHOUT ANY WARRANTY; without even the implied warranty of
-% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-% Public License for more details.
-%
-% You should have received a copy of the GNU General Public License along
-% with this program; if not, write to the Free Software Foundation, Inc.,
-% 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_statd.ps,v 1.1 2004/01/14 16:59:47 atai Exp $
+% $Id: gs_statd.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
 % This file provides statusdict, serverdict, and assorted LaserWriter
 % operators, mostly for the benefit of poorly designed PostScript programs
 % that 'know' they are running on a LaserWriter.
@@ -119,7 +118,7 @@ statusdict begin
 % Define the pagetype values for the known page formats.
 % The values for all but letter and note are arbitrary.
 /.pagetypenames
- { /letter /note	%do not change this line, needed by 'setpagetype'
+ [ /letter /note	%do not change this line, needed by 'setpagetype'
    /legal /lettersmall
    /11x17 /ledger
    /a4small /a3 /a4
@@ -132,7 +131,7 @@ STRICT { (%END SIZES) .skipeof } if
    /isob0 /isob1 /isob2 /isob3 /isob4 /isob5 /isob6
    /jisb0 /jisb1 /jisb2 /jisb3 /jisb4 /jisb5 /jisb6
 %END SIZES
- } cvlit readonly def
+ ] cvlit readonly def
 
 %%%%%% The following items were suggested by a user as useful.
 
@@ -191,6 +190,8 @@ STRICT { (%END SIZES) .skipeof } if
  /diskonline {
     false (%disk*%) { pop not exit } 100 string /IODevice resourceforall
  } bind def
+ /diskstatus {10240 2097152 } bind odef %  - diskstatus <free> <total> (in 1024 byte pages)
+
 %/dostartpage
  /eescratch {pop 0} bind def
  /idlefonts {statusdict begin mark .idlefonts aload pop end} bind def
@@ -257,7 +258,8 @@ STRICT { (%END SIZES) .skipeof } if
 		% The Adobe documentation only defines setpagetype
 		% (a Level 1 operator) as accepting the values 0 and 1,
 		% so we do too.
-      dup .pagetypenames 0 2 getinterval exch get //systemdict exch get exec
+      dup .pagetypenames 0 2 getinterval exch get
+      //systemdict /userdict get exch get cvx exec
       /pagetype exch def
     end
   } bind def
@@ -310,6 +312,7 @@ end	% statusdict
 systemdict begin
 .currentglobal true .setglobal
 
+/devformat true def
 /devforall {		% <pattern> <proc> <scratch> devforall -
   exch {
     1 index currentdevparams

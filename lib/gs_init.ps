@@ -1,20 +1,19 @@
-% (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+% Copyright (C) 1989-2002 artofcode LLC. All rights reserved.
 % 
-% This program is free software; you can redistribute it and/or modify it
-% under the terms of the GNU General Public License as published by the
-% Free Software Foundation; either version 2 of the License, or (at your
-% option) any later version.
-%
-% This program is distributed in the hope that it will be useful, but
-% WITHOUT ANY WARRANTY; without even the implied warranty of
-% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-% Public License for more details.
-%
-% You should have received a copy of the GNU General Public License along
-% with this program; if not, write to the Free Software Foundation, Inc.,
-% 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_init.ps,v 1.1 2004/01/14 16:59:46 atai Exp $
+% $Id: gs_init.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
 % Initialization file for the interpreter.
 % When this is run, systemdict is still writable.
 
@@ -30,11 +29,11 @@
 
 % Check the interpreter revision.  NOTE: the interpreter code requires
 % that the first non-comment token in this file be an integer.
-707
+801
 dup revision ne
  { (gs: Interpreter revision \() print revision 10 string cvs print
    (\) does not match gs_init.ps revision \() print 10 string cvs print
-   (\).\n) print flush null 1 .quit
+   (\).\n) print flush //null 1 .quit
  }
 if pop
 
@@ -115,7 +114,6 @@ currentdict /NOCCFONTS known   /NOCCFONTS exch def
 currentdict /NOCIE known   /NOCIE exch def
 currentdict /NODISPLAY known   not /DISPLAYING exch def
 currentdict /NOFONTMAP known   /NOFONTMAP exch def
-currentdict /NOCIDFONTMAP known /NOCIDFONTMAP exch def
 currentdict /NOFONTPATH known   /NOFONTPATH exch def
 currentdict /NOGC known   /NOGC exch def
 currentdict /NOINTERPOLATE .knownget { /INTERPOLATE exch not def } if
@@ -123,6 +121,8 @@ currentdict /NOPAGEPROMPT known   /NOPAGEPROMPT exch def
 currentdict /NOPAUSE known   /NOPAUSE exch def
 currentdict /NOPLATFONTS known   /NOPLATFONTS exch def
 currentdict /NOPROMPT known   /NOPROMPT exch def
+currentdict /NOTRANSPARENCY known   /NOTRANSPARENCY exch def
+currentdict /DOPS known   /DOPS exch def
 % The default value of ORIENT1 is true, not false.
 currentdict /ORIENT1 known not { /ORIENT1 true def } if
 currentdict /OSTACKPRINT known   /OSTACKPRINT exch def
@@ -133,11 +133,11 @@ currentdict /OUTPUTFILE known	% obsolete
 currentdict /QUIET known   /QUIET exch def
 % DELAYSAFER is effectively the same as newer NOSAFER
 currentdict /DELAYSAFER known { /DELAYSAFER true def /NOSAFER true def } if
-currentdict /PARANOIDSAFER known /PARANOIDSAFER exch def
 /SAFER currentdict /NOSAFER known {
   false
 } {
-  currentdict /SAFER known PARANOIDSAFER or
+  currentdict /SAFER known
+  currentdict /PARANOIDSAFER known or	% PARANOIDSAFER is equivalent
 }
 ifelse def
 currentdict /SHORTERRORS known   /SHORTERRORS exch def
@@ -263,18 +263,18 @@ DELAYBIND NOBIND not and
  } if
 
 %**************** BACKWARD COMPATIBILITY ****************
-/hwsizedict mark /HWSize null .dicttomark readonly def
+/hwsizedict mark /HWSize //null .dicttomark readonly def
 /copyscanlines {		% <device> <y> <string> copyscanlines <substr>
   0 3 1 roll 3 index //hwsizedict .getdeviceparams
   exch pop exch pop aload pop 3 2 roll
-  0 exch null exch .getbitsrect exch pop
+  0 exch //null exch .getbitsrect exch pop
 } bind odef
 currentdict /hwsizedict .undef
 /getdeviceprops
- { null .getdeviceparams
+ { //null .getdeviceparams
  } bind odef
 /.putdeviceprops
- { null true counttomark 1 add 3 roll .putdeviceparams
+ { //null true counttomark 1 add 3 roll .putdeviceparams
    dup type /booleantype ne
     { dup mark eq { /unknown /rangecheck } if
       counttomark 4 add 1 roll cleartomark pop pop pop
@@ -291,6 +291,21 @@ currentdict /hwsizedict .undef
 /min { .min } bind def		% use .min instead
 /unread /.unread load def	% use .peekstring instead
 %**************** END OF BACKWARD COMPATIBILITY SECTION ****************
+
+% Utility procedure to sort an array
+% <array> <lt-proc> .sort <array>
+/.sort {
+  1 index length 1 sub -1 1 {
+    2 index exch 2 copy get 3 copy	% arr proc arr i arr[i] arr i arr[i]
+    0 1 3 index 1 sub {
+      3 index 1 index get	% arr proc arr i arr[i] arr imax amax j arr[j]
+      2 index 1 index 10 index exec {	% ... amax < arr[j]
+	4 2 roll
+      } if pop pop
+    } for			% arr proc arr i arr[i] arr imax amax
+    4 -1 roll exch 4 1 roll put put
+  } for pop
+} bind def
 
 % Define predefined procedures substituting for operators,
 % in alphabetical order.
@@ -338,9 +353,13 @@ userdict /#copies 1 put
 /.echo /echo load def
 userdict /.echo.mode true put
 /echo	{dup /.echo.mode exch store .echo} odef
+/.eexec_param_dict mark
+  /eexec true
+  /seed 55665
+.dicttomark readonly def
 /eexec {
 	% Rebind .currentresourcefile if it is the source for the eexec.
-  dup 55665 //filterdict /eexecDecode get exec
+  dup //.eexec_param_dict //filterdict /eexecDecode get exec
   cvx exch .currentresourcefile eq
   //systemdict begin { {exec} .execasresource } { exec } ifelse
 	% Only pop systemdict if it is still the top element,
@@ -359,7 +378,9 @@ userdict /.echo.mode true put
 	      { currentrgbcolor { setrgbcolor } }
 	     ifelse
 	   }
-	  ifelse 1 setgray .fillpage exec
+	  ifelse
+          currentoverprint false setoverprint 1 setgray .fillpage setoverprint
+          exec
 	} odef
 % To satisfy the Genoa FTS, executive must be a procedure, not an operator.
 /executive
@@ -367,7 +388,7 @@ userdict /.echo.mode true put
 	     { (%statementedit) (r) file } stopped
 	     { pop pop $error /errorname get /undefinedfilename eq
 		{ .clearerror exit } if		% EOF
-	       handleerror null		% ioerror??
+	       handleerror //null		% ioerror??
 	     }
 	    if
 	    cvx { .runexec } execute
@@ -416,11 +437,11 @@ userdict /.echo.mode true put
 %	<lit-file|fileproc> .runexec1 <lit-file|fileproc> .runexec2
 /.runexec1 {		% <file|fileproc> .runexec1 -
   dup type /filetype ne { cvx exec } if
-  cvx null 2 .stopped
+  cvx //null 2 .stopped
 	% If we got back here from a startjob, just keep going.
 	% startjob replaces the null on the o-stack with a procedure
 	% to be executed when we get back here.
-  dup null ne { exec true } { pop false } ifelse
+  dup //null ne { exec true } { pop false } ifelse
 } bind def
 /.runexec2 {		% <continue> <file|fileproc> .runexec2 -
   exch {
@@ -439,7 +460,24 @@ userdict /.echo.mode true put
 	//setdash
 } odef
 /setdevice
-	{ .setdevice { erasepage } if } odef
+  {
+    .setdevice
+      {
+        mark
+          { 		% Reset the halftone since the device may differ
+            currenthalftone
+            dup type /dicttype eq
+              { sethalftone }
+              { pop }
+            ifelse
+          }
+        stopped
+        cleartomark
+        erasepage
+      }
+    if
+  }
+odef
 /setlinecap {
 	dup 2 gt { /setlinecap load /rangecheck signalerror } if
 	.setlinecap
@@ -455,16 +493,20 @@ userdict /.echo.mode true put
 	0 .endpage .doneshowpage {
 	  .currentnumcopies true .outputpage
 	  (>>showpage, press <return> to continue<<\n) .confirm
-	  erasepage
-	} if initgraphics .beginpage
+	  initgraphics
+          currentoverprint false setoverprint 1 setcolor
+          .fillpage
+          setoverprint 0 setcolor
+	}
+	{ initgraphics } ifelse .beginpage
 } odef
 % Code output by Adobe Illustrator relies on the fact that
 % `stack' is a procedure, not an operator!!!
 /stack	{ 0 1 count 3 sub { index = } for } bind def
-/start	{ BATCH { null 0 .quit } { executive } ifelse } def
+/start	{ BATCH { //null 0 .quit } { executive } ifelse } def
 % Internal uses of stopped that aren't going to do a stop if an error occurs
 % should use .internalstopped to avoid setting newerror et al.
-/.internalstopped { null 1 .stopped null ne } bind def
+/.internalstopped { //null 1 .stopped //null ne } bind def
 /store {	% Don't alter operands before completing.
 	1 index where { 2 index 2 index put pop pop } { def } ifelse
 } odef
@@ -490,7 +532,7 @@ currentdict /.typenames .undef
 /.makeinternaldict {
   .currentglobal true .setglobal
     [ /dup .systemvar 1183615869 /eq .systemvar
-	[ /pop .systemvar null ] cvx
+	[ /pop .systemvar //null ] cvx
 	false .setglobal
 	dup 1 10 dict .forceput	% proc is global, dict is local
 	true .setglobal
@@ -593,7 +635,7 @@ currentdict /superexec .knownget {
 } odef
 /finddevice {		% <devicename> finddevice <device>
   /devicedict .systemvar exch get
-  dup 1 get null eq {
+  dup 1 get //null eq {
 		% This is the first request for this type of device.
 		% Create a default instance now.
 		% Stack: [proto null]
@@ -608,7 +650,7 @@ currentdict /superexec .knownget {
 
 % Run a resource file.  This allows us to distinguish resource objects
 % from objects coming from input files.
-userdict /.currentresourcefile null put
+userdict /.currentresourcefile //null put
 /.execasresource {	% <file> <proc|runfile> .execasresource -
   /stopped .systemvar
   /.currentresourcefile .uservar
@@ -625,7 +667,7 @@ userdict /.currentresourcefile null put
 % Define procedures for getting and setting the current device resolution.
 
 /gsgetdeviceprop	% <device> <propname> gsgetdeviceprop <value>
- { 2 copy mark exch null .dicttomark .getdeviceparams
+ { 2 copy mark exch //null .dicttomark .getdeviceparams
    dup mark eq		% if true, not found
     { pop dup /undefined signalerror }
     { 5 1 roll pop pop pop pop }
@@ -643,7 +685,7 @@ userdict /.currentresourcefile null put
 /shellarguments		% -> shell_arguments true (or) false
 	{ /ARGUMENTS where
 	   { /ARGUMENTS get dup type /arraytype eq
-	      { aload pop /ARGUMENTS null store true }
+	      { aload pop /ARGUMENTS //null store true }
 	      { pop false }
 	     ifelse }
 	   { false } ifelse
@@ -757,7 +799,7 @@ userdict /.currentresourcefile null put
  } bind def
 /.errorhandler		% <command> <errorname> .errorhandler -
   {		% Detect an internal 'stopped'.
-    1 .instopped { null eq { pop pop stop } if } if
+    1 .instopped { //null eq { pop pop stop } if } if
     $error /.inerror get 1 .instopped { pop } { pop true } ifelse
      { .unstoppederrorhandler
      } if	% detect error recursion
@@ -779,13 +821,13 @@ userdict /.currentresourcefile null put
      }
     ifelse
     $error /position currentfile status
-     { currentfile { fileposition } .internalstopped { pop null } if
+     { currentfile { fileposition } .internalstopped { pop //null } if
      }
      {		% If this was a scanner error, the file is no longer current,
 		% but the command holds the file, which may still be open.
        $error /command get dup type /filetype eq
-        { { fileposition } .internalstopped { pop null } if }
-        { pop null }
+        { { fileposition } .internalstopped { pop //null } if }
+        { pop //null }
        ifelse
      }
     ifelse put
@@ -803,7 +845,7 @@ userdict /.currentresourcefile null put
        /command load errorname SHORTERRORS
 	{ (%%[ Error: ) print =only flush
 	  (; OffendingCommand: ) print =only
-	  errorinfo dup null eq {
+	  errorinfo dup //null eq {
 	    pop
 	  } {
 	    (;\nErrorInfo:) print
@@ -816,7 +858,7 @@ userdict /.currentresourcefile null put
 	}
 	{ (Error: ) print ==only flush
 	  ( in ) print ==only flush
-	  errorinfo dup null eq {
+	  errorinfo dup //null eq {
 	    pop
 	  } {
 	    (\nAdditional information: ) print ==only flush
@@ -900,7 +942,7 @@ userdict /.currentresourcefile null put
 	}
        ifelse
 
-       position null ne
+       position //null ne
 	{ (Current file position is ) print position = }
        if
 
@@ -908,8 +950,8 @@ userdict /.currentresourcefile null put
 % Define a procedure for clearing the error indication.
 /.clearerror
  { $error /newerror false put
-   $error /errorname null put
-   $error /errorinfo null put
+   $error /errorname //null put
+   $error /errorinfo //null put
    0 .setoserrno
  } bind def
 
@@ -928,7 +970,7 @@ $error begin
   /globalmode .currentglobal def
   /.inerror false def
   /.nosetlocal true def
-  /position null def
+  /position //null def
 end
 % Define errordict similarly.  It has one entry per error name,
 %   plus handleerror.  However, some astonishingly badly written PostScript
@@ -1034,18 +1076,11 @@ end
 /rootfont where { pop /findencoding { .findencoding } def } if
 
 % Define .registerencoding.
-% NOTE: the name registeredencodings is known to (initialized by and shared
-% with) the interpreter.
+% NOTE: This procedure no longer does anything, but it must continue to
+% exist for the sake of toolbin/encs2c.ps.
 /.registerencoding {	% <index> <array> .registerencoding -
-	% Check that the array is indexable.
-	% (It might still be a string, but then the .namestring will fail.)
-  dup 0 0 getinterval pop
-	% Check that all the elements of the array are names.
-  dup { .namestring pop } forall
-	% Do the store.
-  //registeredencodings 2 index 2 index readonly put pop pop
+  pop pop
 } bind odef
-systemdict /registeredencodings .undef
 
 % Load StandardEncoding.
 %% Replace 1 (gs_std_e.ps)
@@ -1086,7 +1121,7 @@ errordict /rangecheck { pop stop } put	% pop the command
   1 add dict  /devicedict 1 index def
   begin			% 2nd copy of count is on stack
    { dup .devicename exch
-     dup wcheck { dup } { null } ifelse 2 array astore def
+     dup wcheck { dup } { //null } ifelse 2 array astore def
    } repeat
   end
 put		% errordict /rangecheck
@@ -1183,7 +1218,7 @@ devicedict /Default devicedict .defaultdevicename get put
     { DITHERPPI
     }
     { dup cvi 100 idiv 15 .min
-       {null 46 46 60 60 60 106 106 106 106 133 133 133 133 133 150}
+       {//null 46 46 60 60 60 106 106 106 106 133 133 133 133 133 150}
       exch get
      }
    ifelse
@@ -1198,11 +1233,22 @@ devicedict /Default devicedict .defaultdevicename get put
 	% If so, don't bother with color screening or gamma correction.
 	% Also don't do gamma correction on very high-resolution devices.
 	% (This should depend on dot gain, not resolution, but we don't
-	% currently have a way to determine this.)
+	% currently have a way to determine this.) Ignore missing components
+        % (*Values = 1).
    currentdevice mark
      /RedValues 0 /GreenValues 0 /BlueValues 0 /GrayValues 0
    .dicttomark .getdeviceparams
-   counttomark 2 idiv 1 sub { exch pop .min } repeat
+   counttomark 2 idiv 1 sub
+    { exch pop dup 1 le
+       { pop }
+       { exch dup 1 le
+          { pop }
+          { .min }
+        ifelse
+       }
+      ifelse
+    }
+   repeat
    exch pop exch pop 32 lt 4 index 800 lt and 5 1 roll
 	% Stack: doscreen dpi freq angle proc
 	% Ghostscript currently doesn't use correct, per-plane halftones
@@ -1240,36 +1286,46 @@ devicedict /Default devicedict .defaultdevicename get put
     }
    ifelse
 } bind def
-/.sethiresscreen {	% <dpi> .sethiresscreen -
-  .sethireshalftone
-			% Stack: doscreen
-    {	% Set the transfer function to lighten up the grays.
-	% We correct at the high end so that very light grays
-	% don't disappear completely if they darken <1 screen pixel.
-	% Parameter values closer to 1 are better for devices with
-	% less dot spreading; lower values are better with more spreading.
-	% The value 0.8 is a compromise that will probably please no one!
-	%
-	% Because of a bug in FrameMaker, we have to accept operands
-	% outside the valid range of [0..1].
-      { dup dup 0.0 gt exch 1.0 lt and
-	 { 0.8 exp dup dup 0.9375 gt exch 0.999 lt and	% > 15/16
-	    { .currentscreenlevels 1 sub	% tweak to avoid boundary
-	      1 exch div 1 exch sub .min
-	    }
-	   if
-	 }
-	if
+/.sethiresscreen {	% <dpi> .sethiresscreen 
+  .sethireshalftone     % pushes true if a screen halftone used
+			% Stack: doscree
+  {
+    % Set the transfer function to lighten up the grays.
+    % We correct at the high end so that very light grays
+    % don't disappear completely if they darken <1 screen pixel.
+    % Parameter values closer to 1 are better for devices with
+    % less dot spreading; lower values are better with more spreading.
+    % The value 0.8 is a compromise that will probably please no one!
+    %
+    % Because of a bug in FrameMaker, we have to accept operands
+    % outside the valid range of [0..1].
+    {
+      dup dup 0.0 gt exch 1.0 lt and
+      {
+        0.8 exp
+        dup 0.998 lt   % 254.5 / 255
+        {	% Keep at least one halftone dot if not saturated color
+          .currentscreenlevels 1 sub dup 1 sub exch div
+	  .min
+        }
+        if
       }
+      if
     }
-    {	% Set the transfer function to the identity.
-      0 array cvx		% Genoa CET won't accept a packed array!
-    }
-   ifelse settransfer
-   /setstrokeadjust where { pop false setstrokeadjust } if
-	% Increase fill adjustment so that we effectively use Adobe's
-	% any-part-of-pixel rule.
-   0.5 .setfilladjust
+  }
+  {
+     % Set the transfer function to the identity.
+     0 array cvx     % Genoa CET won't accept a packed array!
+  }
+  ifelse
+  settransfer
+  /setstrokeadjust where
+  { pop false setstrokeadjust }
+  if
+
+  % Increase fill adjustment so that we effectively use Adobe's
+  % any-part-of-pixel rule.
+  0.5 .setfilladjust
 } bind def
 % Set the default screen and BG/UCR.
 /.setdefaultbgucr {
@@ -1317,6 +1373,23 @@ devicedict /Default devicedict .defaultdevicename get put
   .useloresscreen { .setloresscreen } { .sethiresscreen } ifelse
   .setdefaultbgucr
 } bind def
+
+% Load basic color support
+%% Replace 1 (gs_cspace.ps)
+(gs_cspace.ps) runlibfile
+
+(END BASIC COLOR) VMDEBUG
+
+%% Replace 1 (gs_devcs.ps)
+(gs_devcs.ps) runlibfile
+
+(END LEVEL 1 COLOR) VMDEBUG
+
+% Load image support
+%% Replace 1 (gs_img.ps)
+(gs_img.ps) runlibfile
+
+(END IMAGE) VMDEBUG
 
 % Load the initialization files for optional features.
 %% Replace 4 INITFILES
@@ -1428,7 +1501,7 @@ if
 % It is possible to specify resolution, pixel size, and page size;
 % since any two of these determine the third, conflicts are possible.
 % We simply pass them to .setdeviceparams and let it sort things out.
-   mark /HWResolution null /HWSize null /PageSize null .dicttomark
+   mark /HWResolution //null /HWSize //null /PageSize //null .dicttomark
    .getdeviceparams .dicttomark begin
    mark
 	% Check for resolution.
@@ -1630,9 +1703,7 @@ readonly def
 {
   SAFETY /safe get not {
     <<
-      PARANOIDSAFER {		% only PARANOIDSAFER locks down reading files
-        /PermitFileReading [ ]
-      } if
+      /PermitFileReading [ ]
       /PermitFileWriting [ ]
       /PermitFileControl [ ]
     >> setuserparams

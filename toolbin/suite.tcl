@@ -2,29 +2,37 @@
 
 #    Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
 # 
-# This program is free software; you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by the
-# Free Software Foundation; either version 2 of the License, or (at your
-# option) any later version.
+#  This program is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU General Public License version 2
+#  as published by the Free Software Foundation.
 #
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-# Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+#  This software is provided AS-IS with no warranty, either express or
+#  implied. That is, this program is distributed in the hope that it will 
+#  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#  General Public License for more details
+#
+#  You should have received a copy of the GNU General Public License along
+#  with this program; if not, write to the Free Software Foundation, Inc.,
+#  59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+# 
+# For more information about licensing, please refer to
+# http://www.ghostscript.com/licensing/. For information on
+# commercial licensing, go to http://www.artifex.com/licensing/ or
+# contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+# San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: suite.tcl,v 1.1 2004/01/14 16:59:54 atai Exp $
+# $Id: suite.tcl,v 1.2 2004/02/14 22:20:20 atai Exp $
 
 # Run some or all of a Genoa test suite, optionally checking for memory leaks.
 # Command line syntax:
 set HELP {Usage:
     suite (--[no-]band | --[no-]check | --[no-]debug |
-       --[no-]display[=<device>] | --[no-]missing | --[no-]print[=<device>] |
-       --[no-]profile | --[no-]remote[=<host>] | --[no-]sort |
-       --[no-]together | -<switch> | <dirname>[,<filename>] | <filename>)*
+       --[no-]display[=<device>] | --[no-]missing | --[no-]pause |
+       --[no-]print[=<device>] | --[no-]profile | --[no-]remote[=<host>] |
+       --[no-]sort | --[no-]together | -<switch> |
+       <dirname>[,<filename>] | <filename>)*
 }
 
 # Note: test failure is typically indicated by one or more of the following:
@@ -40,6 +48,7 @@ set SW(debug) 0			;# don't actually execute the test
 set SW(display) 0		;# use display instead of printer
 				;# (or device if value != 1)
 set SW(missing) 0		;# only run if log file is missing
+set SW(pause) 0			;# pause after each page
 set SW(print) 0			;# don't discard output, print for LJ4
 				;# (or device if value != 1)
 set SW(profile) 0		;# assume -pg executable, profile execution
@@ -54,8 +63,11 @@ set SW(together) 0		;# run all files together, not individually
 #	REMOTED(remotename) = 1 if the given file has been copied to
 #	  the given host
 
-proc test_args {band display print xe switches} {
-    set args [list -K40000 -Z@:? -dNOPAUSE -dBATCH]
+proc test_args {band display pause print xe switches output} {
+    set args [list -K40000 -Z@:? -dBATCH]
+    if {!$pause} {
+	lappend args -dNOPAUSE
+    }
     if {$display != "0"} {
 				# Use the default device, or a given device.
 	if {$display != "1"} {
@@ -65,7 +77,7 @@ proc test_args {band display print xe switches} {
 	lappend args -r600 -sDEVICE=pbmraw -sOutputFile=/dev/null
     } else {
 	if {$print == "1"} {set print ljet4}
-	lappend args -r600 -sDEVICE=$print -sOutputFile=t.[exec date +%H%M%S].%03d.$print
+	lappend args -r600 -sDEVICE=$print -sOutputFile=${output}.%03d.$print
     }
     if $band {
 	lappend args -dMaxBitmap=200000 -dBufferSpace=200000
@@ -200,19 +212,26 @@ proc suite {filelist switches} {
     }
     foreach fl $files {
 	set test_xe [test_xe [lindex $fl 0]]
-	set test_args [test_args $SW(band) $SW(display) $SW(print) $test_xe $switches]
 	set output [output_name $fl]
+	set test_args [test_args $SW(band) $SW(display) $SW(pause) $SW(print) $test_xe $switches $output]
+	if $SW(pause) {
+	    set in1 [list]
+	    set in0 [list]
+	} else {
+	    set in1 [list -_ <]
+	    set in0 [list -_]
+	}
 	if {![regexp {gs$} $test_xe]} {
 	    set pre [list]
 	    set post $fl
 	    set lib [glob lib/*.ps]
 	} elseif {[llength $fl] == 1} {
 	    set pre [list]
-	    set post [list -_ < [lindex $fl 0]]
+	    set post [concat $in1 [list [lindex $fl 0]]]
 	    set lib [list]
 	} else {
 	    set pre [concat cat $fl |]
-	    set post [list -_]
+	    set post $in0
 	    set lib [list]
 	}
 	if $SW(check) {

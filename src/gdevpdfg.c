@@ -1,22 +1,28 @@
-/* Copyright (C) 1999, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1999, 2000, 2001 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevpdfg.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevpdfg.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* Graphics state management for pdfwrite driver */
 #include "math_.h"
 #include "string_.h"
@@ -44,9 +50,10 @@ pdf_reset_graphics(gx_device_pdf * pdev)
 {
     gx_color_index color = 0; /* black on DeviceGray and DeviceRGB */
     if(pdev->color_info.num_components == 4) {
-        color = gx_map_cmyk_color((gx_device *)pdev,
-		      frac2cv(frac_0), frac2cv(frac_0),
-		      frac2cv(frac_0), frac2cv(frac_1));
+        gx_color_value cv[4];
+        cv[0] = cv[1] = cv[2] = frac2cv(frac_0);
+        cv[3] = frac2cv(frac_1);
+        color = dev_proc(pdev, map_cmyk_color)((gx_device *)pdev, cv);
     }
     color_set_pure(&pdev->fill_color, color);
     color_set_pure(&pdev->stroke_color, color);
@@ -123,29 +130,16 @@ pdf_set_pure_color(gx_device_pdf * pdev, gx_color_index color,
     return pdf_reset_color(pdev, &dcolor, pdcolor, ppscc);
 }
 
-/* Get the (string) name of a separation, */
-/* returning a newly allocated string with a / prefixed. */
-/****** BOGUS for all but standard separations ******/
+/*
+ * Convert a string into cos name.
+ */
 int
-pdf_separation_name(gx_device_pdf *pdev, cos_value_t *pvalue,
-		    gs_separation_name sname)
+pdf_string_to_cos_name(gx_device_pdf *pdev, const byte *str, uint len, 
+		       cos_value_t *pvalue)
 {
-    static const char *const snames[] = {
-	gs_ht_separation_name_strings
-    };
-    static char buf[sizeof(ulong) * 8 / 3 + 2];	/****** BOGUS ******/
-    const char *str;
-    uint len;
-    byte *chars;
+    byte *chars = gs_alloc_string(pdev->pdf_memory, len + 1, 
+                                  "pdf_string_to_cos_name");
 
-    if ((ulong)sname < countof(snames)) {
-	str = snames[(int)sname];
-    } else {			/****** TOTALLY BOGUS ******/
-	sprintf(buf, "S%ld", (ulong)sname);
-	str = buf;
-    }
-    len = strlen(str);
-    chars = gs_alloc_string(pdev->pdf_memory, len + 1, "pdf_separation_name");
     if (chars == 0)
 	return_error(gs_error_VMerror);
     chars[0] = '/';
@@ -153,8 +147,6 @@ pdf_separation_name(gx_device_pdf *pdev, cos_value_t *pvalue,
     cos_string_value(pvalue, chars, len + 1);
     return 0;
 }
-
-/* ------ Support ------ */
 
 /* Print a Boolean using a format. */
 private void
@@ -230,9 +222,11 @@ pdf_write_transfer_map(gx_device_pdf *pdev, const gx_transfer_map *map,
 	if (map->proc == gs_identity_transfer)
 	    i = transfer_map_size;
 	else
-	    for (i = 0; i < transfer_map_size; ++i)
-		if (map->values[i] != bits2frac(i, log2_transfer_map_size))
-		    break;
+ 	    for (i = 0; i < transfer_map_size; ++i) {
+ 		fixed d = map->values[i] - bits2frac(i, log2_transfer_map_size);
+ 		if (any_abs(d) > fixed_epsilon) /* ignore small noise */
+  		    break;
+ 	    }
 	if (i == transfer_map_size) {
 	    strcpy(ids, key);
 	    strcat(ids, "/Identity");
@@ -242,7 +236,7 @@ pdf_write_transfer_map(gx_device_pdf *pdev, const gx_transfer_map *map,
     params.m = 1;
     params.Domain = domain01;
     params.n = 1;
-    range01[0] = range0, range01[1] = 1;
+    range01[0] = (float)range0, range01[1] = 1.0;
     params.Range = range01;
     params.Order = 1;
     params.DataSource.access =
@@ -278,19 +272,12 @@ pdf_write_transfer(gx_device_pdf *pdev, const gx_transfer_map *map,
  * functions used for testing must do the same in order to get identical
  * results.  Currently we only do this for a few of the functions.
  */
-#ifdef __PROTOTYPES__
 #define HT_FUNC(name, expr)\
   private floatp name(floatp xd, floatp yd) {\
     float x = (float)xd, y = (float)yd;\
     return d2f(expr);\
   }
-#else
-#define HT_FUNC(name, expr)\
-  private floatp name(x, y) floatp x, y; {\
-    float x = (float)xd, y = (float)yd;\
-    return d2f(expr);\
-  }
-#endif
+
 /*
  * In most versions of gcc (e.g., 2.7.2.3, 2.95.4), return (float)xxx
  * doesn't actually do the coercion.  Force this here.  Note that if we
@@ -380,7 +367,7 @@ HT_FUNC(ht_Double, (d2fsin_d(x * 180) + d2fsin_d(y * 360)) / 2)
 HT_FUNC(ht_InvertedDouble, -(d2fsin_d(x * 180) + d2fsin_d(y * 360)) / 2)
 typedef struct ht_function_s {
     const char *fname;
-    floatp (*proc)(P2(floatp, floatp));
+    floatp (*proc)(floatp, floatp);
 } ht_function_t;
 private const ht_function_t ht_functions[] = {
     {"Round", ht_Round},
@@ -494,8 +481,7 @@ pdf_write_spot_halftone(gx_device_pdf *pdev, const gs_spot_halftone *psht,
      * See if we can recognize the spot function, by comparing its sampled
      * values against those in the order.
      */
-    {
-	gs_screen_enum senum;
+    {	gs_screen_enum senum;
 	gx_ht_order order;
 	int code;
 
@@ -504,7 +490,7 @@ pdf_write_spot_halftone(gx_device_pdf *pdev, const gs_spot_halftone *psht,
 	if (code < 0)
 	    goto notrec;
 	for (i = 0; i < countof(ht_functions); ++i) {
-	    floatp (*spot_proc)(P2(floatp, floatp)) = ht_functions[i].proc;
+	    floatp (*spot_proc)(floatp, floatp) = ht_functions[i].proc;
 	    gs_point pt;
 
 	    gs_screen_enum_init_memory(&senum, &order, NULL, &psht->screen,
@@ -647,26 +633,56 @@ pdf_write_threshold2_halftone(gx_device_pdf *pdev,
     }
     return pdf_end_data(&writer);
 }
+private int 
+pdf_get_halftone_component_index(const gs_multiple_halftone *pmht,
+				 const gx_device_halftone *pdht,
+				 int dht_index)
+{
+    int j;
+
+    for (j = 0; j < pmht->num_comp; j++)
+	if (pmht->components[j].comp_number == dht_index)
+	    break;
+    if (j == pmht->num_comp) { 
+	/* Look for Default. */
+	for (j = 0; j < pmht->num_comp; j++)
+	    if (pmht->components[j].comp_number == GX_DEVICE_COLOR_MAX_COMPONENTS)
+		break;
+	if (j == pmht->num_comp)
+	    return_error(gs_error_undefined);
+    }
+    return j;
+}
 private int
 pdf_write_multiple_halftone(gx_device_pdf *pdev,
 			    const gs_multiple_halftone *pmht,
 			    const gx_device_halftone *pdht, long *pid)
 {
     stream *s;
-    int i, code;
+    int i, code, last_comp = 0;
     gs_memory_t *mem = pdev->pdf_memory;
     long *ids;
+    bool done_Default = false;
 
     ids = (long *)gs_alloc_byte_array(mem, pmht->num_comp, sizeof(long),
 				      "pdf_write_multiple_halftone");
     if (ids == 0)
 	return_error(gs_error_VMerror);
-    for (i = 0; i < pmht->num_comp; ++i) {
-	const gs_halftone_component *const phtc = &pmht->components[i];
-	const gx_ht_order *porder =
-	    (pdht->components == 0 ? &pdht->order :
-	     &pdht->components[i].corder);
+    for (i = 0; i < pdht->num_comp; ++i) {
+	const gs_halftone_component *phtc;
+	const gx_ht_order *porder;
 
+	code = pdf_get_halftone_component_index(pmht, pdht, i);
+	if (code < 0)
+	    return code;
+	if (pmht->components[code].comp_number == GX_DEVICE_COLOR_MAX_COMPONENTS) {
+	    if (done_Default)
+		continue;
+	    done_Default = true;
+	}
+	phtc = &pmht->components[code];
+	porder = (pdht->components == 0 ? &pdht->order :
+	               &pdht->components[i].corder);
 	switch (phtc->type) {
 	case ht_type_spot:
 	    code = pdf_write_spot_halftone(pdev, &phtc->params.spot,
@@ -692,18 +708,40 @@ pdf_write_multiple_halftone(gx_device_pdf *pdev,
     *pid = pdf_begin_separate(pdev);
     s = pdev->strm;
     stream_puts(s, "<</Type/Halftone/HalftoneType 5\n");
-    for (i = 0; i < pmht->num_comp; ++i) {
-	const gs_halftone_component *const phtc = &pmht->components[i];
+    done_Default = false;
+    for (i = 0; i < pdht->num_comp; ++i) {
+	const gs_halftone_component *phtc;
+	byte *str;
+	uint len;
 	cos_value_t value;
 
-	code = pdf_separation_name(pdev, &value, phtc->cname);
+	code = pdf_get_halftone_component_index(pmht, pdht, i);
 	if (code < 0)
+	    return code;
+	if (pmht->components[code].comp_number == GX_DEVICE_COLOR_MAX_COMPONENTS) {
+	    if (done_Default)
+		continue;
+	    done_Default = true;
+	}
+	phtc = &pmht->components[code];
+	if ((code = pmht->get_colorname_string(phtc->cname, &str, &len)) < 0 ||
+            (code = pdf_string_to_cos_name(pdev, str, len, &value)) < 0)
 	    return code;
 	cos_value_write(&value, pdev);
 	gs_free_string(mem, value.contents.chars.data,
 		       value.contents.chars.size,
 		       "pdf_write_multiple_halftone");
 	pprintld1(s, " %ld 0 R\n", ids[i]);
+	last_comp = i;
+    }
+    if (!done_Default) {
+	/*
+	 * BOGUS: Type 5 halftones must contain Default component.
+	 * Perhaps we have no way to obtain it,
+	 * because pdht contains ProcessColorModel components only.
+	 * We copy the last component as Default one.
+	 */
+	pprintld1(s, " /Default %ld 0 R\n", ids[last_comp]);
     }
     stream_puts(s, ">>\n");
     gs_free_object(mem, ids, "pdf_write_multiple_halftone");
@@ -726,7 +764,7 @@ pdf_update_halftone(gx_device_pdf *pdev, const gs_imager_state *pis,
     switch (pht->type) {
     case ht_type_screen:
 	code = pdf_write_screen_halftone(pdev, &pht->params.screen,
-					 &pdht->order, &id);
+					 &pdht->components[0].corder, &id);
 	break;
     case ht_type_colorscreen:
 	code = pdf_write_colorscreen_halftone(pdev, &pht->params.colorscreen,
@@ -734,15 +772,15 @@ pdf_update_halftone(gx_device_pdf *pdev, const gs_imager_state *pis,
 	break;
     case ht_type_spot:
 	code = pdf_write_spot_halftone(pdev, &pht->params.spot,
-				       &pdht->order, &id);
+				       &pdht->components[0].corder, &id);
 	break;
     case ht_type_threshold:
 	code = pdf_write_threshold_halftone(pdev, &pht->params.threshold,
-					    &pdht->order, &id);
+					    &pdht->components[0].corder, &id);
 	break;
     case ht_type_threshold2:
 	code = pdf_write_threshold2_halftone(pdev, &pht->params.threshold2,
-					     &pdht->order, &id);
+					     &pdht->components[0].corder, &id);
 	break;
     case ht_type_multiple:
     case ht_type_multiple_colorscreen:
@@ -798,23 +836,31 @@ private int
 pdf_update_transfer(gx_device_pdf *pdev, const gs_imager_state *pis,
 		    char *trs)
 {
-    int i;
+    int i, pi = -1;
     bool multiple = false, update = false;
     gs_id transfer_ids[4];
     int code = 0;
+    const gx_transfer_map *tm[4];
 
-    for (i = 0; i < 4; ++i) {
-	transfer_ids[i] = pis->set_transfer.indexed[i]->id;
-	if (pdev->transfer_ids[i] != transfer_ids[i])
-	    update = true;
-	if (transfer_ids[i] != transfer_ids[0])
-	    multiple = true;
-    }
+    tm[0] = pis->set_transfer.red;
+    tm[1] = pis->set_transfer.green;
+    tm[2] = pis->set_transfer.blue;
+    tm[3] = pis->set_transfer.gray;
+    for (i = 0; i < 4; ++i) 
+	if (tm[i] != NULL) {
+	    transfer_ids[i] = tm[i]->id;
+	    if (pdev->transfer_ids[i] != tm[i]->id)
+		update = true;
+	    if (pi != -1 && transfer_ids[i] != transfer_ids[pi])
+		multiple = true;
+	    pi = i;
+	} else 
+	    transfer_ids[i] = -1;
     if (update) {
 	int mask;
 
 	if (!multiple) {
-	    code = pdf_write_transfer(pdev, pis->set_transfer.indexed[0],
+	    code = pdf_write_transfer(pdev, tm[pi],
 				      "/TR", trs);
 	    if (code < 0)
 		return code;
@@ -822,14 +868,15 @@ pdf_update_transfer(gx_device_pdf *pdev, const gs_imager_state *pis,
 	} else {
 	    strcpy(trs, "/TR[");
 	    mask = 0;
-	    for (i = 0; i < 4; ++i) {
-		code = pdf_write_transfer_map(pdev,
-					      pis->set_transfer.indexed[i],
-					      0, false, "", trs + strlen(trs));
-		if (code < 0)
-		    return code;
-		mask |= (code == 0) << i;
-	    }
+	    for (i = 0; i < 4; ++i) 
+		if (tm[i] != NULL) {
+		    code = pdf_write_transfer_map(pdev,
+						  tm[i],
+						  0, false, "", trs + strlen(trs));
+		    if (code < 0)
+			return code;
+		    mask |= (code == 0) << i;
+		}
 	    strcat(trs, "]");
 	}
 	memcpy(pdev->transfer_ids, transfer_ids, sizeof(pdev->transfer_ids));
@@ -911,7 +958,7 @@ pdf_prepare_drawing(gx_device_pdf *pdev, const gs_imager_state *pis,
      * removal, halftone phase, overprint mode, smoothness, blend mode, text
      * knockout.
      */
-    if (pdev->CompatibilityLevel >= 1.2) {
+    {
 	gs_int_point phase, dev_phase;
 	char hts[5 + MAX_FN_CHARS + 1],
 	    trs[5 + MAX_FN_CHARS * 4 + 6 + 1],
@@ -1005,22 +1052,20 @@ pdf_prepare_fill(gx_device_pdf *pdev, const gs_imager_state *pis)
     if (code < 0)
 	return code;
     /* Update overprint. */
-    if (pdev->CompatibilityLevel >= 1.2) {
-	if (pdev->params.PreserveOverprintSettings &&
-	    pdev->fill_overprint != pis->overprint
-	    ) {
-	    code = pdf_open_gstate(pdev, &pres);
-	    if (code < 0)
-		return code;
-	    /* PDF 1.2 only has a single overprint setting. */
-	    if (pdev->CompatibilityLevel < 1.3) {
-		pprintb1(pdev->strm, "/OP %s", pis->overprint);
-		pdev->stroke_overprint = pis->overprint;
-	    } else {
-		pprintb1(pdev->strm, "/op %s", pis->overprint);
-	    }
-	    pdev->fill_overprint = pis->overprint;
+    if (pdev->params.PreserveOverprintSettings &&
+	pdev->fill_overprint != pis->overprint
+	) {
+	code = pdf_open_gstate(pdev, &pres);
+	if (code < 0)
+	    return code;
+	/* PDF 1.2 only has a single overprint setting. */
+	if (pdev->CompatibilityLevel < 1.3) {
+	    pprintb1(pdev->strm, "/OP %s", pis->overprint);
+	    pdev->stroke_overprint = pis->overprint;
+	} else {
+	    pprintb1(pdev->strm, "/op %s", pis->overprint);
 	}
+	pdev->fill_overprint = pis->overprint;
     }
     return pdf_end_gstate(pdev, pres);
 }
@@ -1035,26 +1080,24 @@ pdf_prepare_stroke(gx_device_pdf *pdev, const gs_imager_state *pis)
     if (code < 0)
 	return code;
     /* Update overprint, stroke adjustment. */
-    if (pdev->CompatibilityLevel >= 1.2) {
-	if (pdev->params.PreserveOverprintSettings &&
-	    pdev->stroke_overprint != pis->overprint
-	    ) {
-	    code = pdf_open_gstate(pdev, &pres);
-	    if (code < 0)
-		return code;
-	    pprintb1(pdev->strm, "/OP %s", pis->overprint);
-	    pdev->stroke_overprint = pis->overprint;
-	    /* PDF 1.2 only has a single overprint setting. */
-	    if (pdev->CompatibilityLevel < 1.3)
-		pdev->fill_overprint = pis->overprint;
-	}
-	if (pdev->state.stroke_adjust != pis->stroke_adjust) {
-	    code = pdf_open_gstate(pdev, &pres);
-	    if (code < 0)
-		return code;
-	    pprintb1(pdev->strm, "/SA %s", pis->stroke_adjust);
-	    pdev->state.stroke_adjust = pis->stroke_adjust;
-	}
+    if (pdev->params.PreserveOverprintSettings &&
+	pdev->stroke_overprint != pis->overprint
+	) {
+	code = pdf_open_gstate(pdev, &pres);
+	if (code < 0)
+	    return code;
+	pprintb1(pdev->strm, "/OP %s", pis->overprint);
+	pdev->stroke_overprint = pis->overprint;
+	/* PDF 1.2 only has a single overprint setting. */
+	if (pdev->CompatibilityLevel < 1.3)
+	    pdev->fill_overprint = pis->overprint;
+    }
+    if (pdev->state.stroke_adjust != pis->stroke_adjust) {
+	code = pdf_open_gstate(pdev, &pres);
+	if (code < 0)
+	    return code;
+	pprintb1(pdev->strm, "/SA %s", pis->stroke_adjust);
+	pdev->state.stroke_adjust = pis->stroke_adjust;
     }
     return pdf_end_gstate(pdev, pres);
 }
@@ -1063,12 +1106,11 @@ pdf_prepare_stroke(gx_device_pdf *pdev, const gs_imager_state *pis)
 int
 pdf_prepare_image(gx_device_pdf *pdev, const gs_imager_state *pis)
 {
-    pdf_resource_t *pres = 0;
-    int code = pdf_prepare_drawing(pdev, pis, "/ca %g", &pres);
-
-    if (code < 0)
-	return code;
-    return pdf_end_gstate(pdev, pres);
+    /*
+     * As it turns out, this requires updating the same parameters as for
+     * filling.
+     */
+    return pdf_prepare_fill(pdev, pis);
 }
 
 /* Update the graphics state for an ImageType 1 mask. */

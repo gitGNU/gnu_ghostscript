@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1995, 1998 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1995, 1998 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevsvga.h,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevsvga.h,v 1.2 2004/02/14 22:20:06 atai Exp $ */
 /* Common definitions and procedures for SuperVGA drivers */
 /* Requires gdevpcfb.h */
 
@@ -48,9 +54,9 @@ typedef struct {
 typedef struct gx_device_svga_s gx_device_svga;
 struct gx_device_svga_s {
     gx_device_common;
-    int (*get_mode) (P0());
-    void (*set_mode) (P1(int));
-    void (*set_page) (P3(gx_device_svga * fbdev, int pnum, int wnum));
+    int (*get_mode) (void);
+    void (*set_mode) (int);
+    void (*set_page) (gx_device_svga * fbdev, int pnum, int wnum);
     bool fixed_colors;		/* if true, used a fixed palette */
     const mode_info *mode;	/* BIOS display mode info */
     uint raster;		/* frame buffer bytes per line */
@@ -59,7 +65,7 @@ struct gx_device_svga_s {
     /* Following are device-specific. */
     union {
 	struct {
-	    void (*bios_set_page) (P2(int, int));	/* set-page function */
+	    void (*bios_set_page) (int, int);	/* set-page function */
 	    int pn_shift;	/* log2(64K/granularity) */
 	} vesa;
 	struct {
@@ -88,8 +94,8 @@ struct gx_device_svga_s {
   svga_color_device(procs, name, 8, 31, 4, get_mode, set_mode, set_page)
 
 /* Utility procedures */
-void svga_init_colors(P1(gx_device *));
-int svga_find_mode(P2(gx_device *, const mode_info *));
-int svga_open(P1(gx_device *));
+void svga_init_colors(gx_device *);
+int svga_find_mode(gx_device *, const mode_info *);
+int svga_open(gx_device *);
 
 #endif /* gdevsvga_INCLUDED */

@@ -521,7 +521,7 @@ else
 fi
 
 
-IJS_VERSION=0.34
+IJS_VERSION=0.33
 
 # Extract the first word of "gcc", so it can be a program name with args.
 set dummy gcc; ac_word=$2

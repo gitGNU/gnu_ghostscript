@@ -1,20 +1,19 @@
 %    Copyright (C) 1991, 1995, 1996, 1998, 1999 Aladdin Enterprises.  All rights reserved.
 % 
-% This program is free software; you can redistribute it and/or modify it
-% under the terms of the GNU General Public License as published by the
-% Free Software Foundation; either version 2 of the License, or (at your
-% option) any later version.
-%
-% This program is distributed in the hope that it will be useful, but
-% WITHOUT ANY WARRANTY; without even the implied warranty of
-% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-% Public License for more details.
-%
-% You should have received a copy of the GNU General Public License along
-% with this program; if not, write to the Free Software Foundation, Inc.,
-% 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: ps2ascii.ps,v 1.1 2004/01/14 16:59:47 atai Exp $
+% $Id: ps2ascii.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
 % Extract the ASCII text from a PostScript file.  Nothing is displayed.
 % Instead, ASCII information is written to stdout.  The idea is similar to
 % Glenn Reid's `distillery', only a lot more simple-minded, and less robust.
@@ -59,7 +58,7 @@
 % Note that this code will only work in all cases if systemdict is writable
 % and if `binding' the definitions of operators defined as procedures
 % is deferred.  For this reason, it is normally invoked with
-%	gs -q -dNODISPLAY -dNOBIND -dWRITESYSTEMDICT ps2ascii.ps
+%	gs -q -dNODISPLAY -dDELAYBIND -dWRITESYSTEMDICT ps2ascii.ps
 
 % Thanks to:
 %    J Greely <jgreely@cis.ohio-state.edu> for improvements to this code;
@@ -1490,13 +1489,10 @@ end
 % Bind the operators we just defined, and all the others if we didn't
 % do it before.  Also reenable 'bind' for future files.
 
-.bindoperators
-NOBIND currentdict systemdict ne and
- { systemdict begin .bindoperators end }
-if
-NOBIND
- { /bind /.bind load def }
-if
+DELAYBIND {
+  .bindnow
+  /bind /.bind load def
+} if
 
 % Make systemdict read-only if it wasn't already.
 
@@ -1505,5 +1501,3 @@ systemdict wcheck { systemdict readonly pop } if
 % Restore the current local/global VM mode.
 
 exec
-
-

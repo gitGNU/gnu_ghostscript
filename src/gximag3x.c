@@ -1,22 +1,28 @@
-/* Copyright (C) 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gximag3x.c,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gximag3x.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* ImageType 3x image implementation */
 /****** THE REAL WORK IS NYI ******/
 #include "math_.h"		/* for ceil, floor */
@@ -121,13 +127,13 @@ typedef struct image3x_channel_values_s {
     gs_int_rect rect;
     gs_image_t image;
 } image3x_channel_values_t;
-private bool is_multiple(P2(int x, int y));
-private int check_image3x_mask(P6(const gs_image3x_t *pim,
-				  const gs_image3x_mask_t *pimm,
-				  const image3x_channel_values_t *ppcv,
-				  image3x_channel_values_t *pmcv,
-				  image3x_channel_state_t *pmcs,
-				  gs_memory_t *mem));
+private bool is_multiple(int x, int y);
+private int check_image3x_mask(const gs_image3x_t *pim,
+			       const gs_image3x_mask_t *pimm,
+			       const image3x_channel_values_t *ppcv,
+			       image3x_channel_values_t *pmcv,
+			       image3x_channel_state_t *pmcs,
+			       gs_memory_t *mem);
 int
 gx_begin_image3x_generic(gx_device * dev,
 			const gs_imager_state *pis, const gs_matrix *pmat,
@@ -215,8 +221,8 @@ gx_begin_image3x_generic(gx_device * dev,
 	gs_color_space *pmcs;
 
 	if (penum->mask[i].depth == 0) {	/* mask not supplied */
-	    midev[0] = 0;
-	    minfo[0] = 0;
+	    midev[i] = 0;
+	    minfo[i] = 0;
 	    continue;
 	}
 	pmcs =  gs_alloc_struct(mem, gs_color_space, &st_color_space,
@@ -231,8 +237,8 @@ gx_begin_image3x_generic(gx_device * dev,
 	    (code = gs_bbox_transform(&mrect, &mat, &mrect)) < 0
 	    )
 	    return code;
-	origin[i].x = floor(mrect.p.x);
-	origin[i].y = floor(mrect.p.y);
+	origin[i].x = (int)floor(mrect.p.x);
+	origin[i].y = (int)floor(mrect.p.y);
 	code = make_mid(&mdev, dev,
 			(int)ceil(mrect.q.x) - origin[i].x,
 			(int)ceil(mrect.q.y) - origin[i].y,
@@ -240,7 +246,7 @@ gx_begin_image3x_generic(gx_device * dev,
 	if (code < 0)
 	    goto out1;
 	penum->mask[i].mdev = mdev;
-	gs_image_t_init_gray(&mask[i].image, pis); /* gray is bogus */
+        gs_image_t_init(&mask[i].image, pmcs);
 	mask[i].image.ColorSpace = pmcs;
 	mask[i].image.adjust = false;
 	{
@@ -370,9 +376,12 @@ check_image3x_extent(floatp mask_coeff, floatp data_coeff)
 	return false;
     return true;
 }
-/* Check mask parameters. */
-/* Reads ppcv->{matrix,corner,rect}, sets pmcv->{matrix,corner,rect} and */
-/* pmcs->{InterleaveType,width,height,full_height,data,y,skip}. */
+/*
+ * Check mask parameters.
+ * Reads ppcv->{matrix,corner,rect}, sets pmcv->{matrix,corner,rect} and
+ * pmcs->{InterleaveType,width,height,full_height,depth,data,y,skip}.
+ * If the mask is omitted, sets pmcs->depth = 0 and returns normally.
+ */
 private bool
 check_image3x_mask(const gs_image3x_t *pim, const gs_image3x_mask_t *pimm,
 		   const image3x_channel_values_t *ppcv,
@@ -382,8 +391,10 @@ check_image3x_mask(const gs_image3x_t *pim, const gs_image3x_mask_t *pimm,
     int mask_width = pimm->MaskDict.Width, mask_height = pimm->MaskDict.Height;
     int code;
 
-    if (pimm->MaskDict.BitsPerComponent == 0) /* mask missing */
+    if (pimm->MaskDict.BitsPerComponent == 0) { /* mask missing */
+	pmcs->depth = 0;
 	return 0;
+    }
     if (mask_height <= 0)
 	return_error(gs_error_rangecheck);
     switch (pimm->InterleaveType) {

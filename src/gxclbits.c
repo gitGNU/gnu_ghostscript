@@ -1,22 +1,28 @@
-/* Copyright (C) 1995, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxclbits.c,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxclbits.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Halftone and bitmap writing for command lists */
 #include "memory_.h"
 #include "gx.h"
@@ -256,7 +262,7 @@ cmd_store_tile_params(byte * dp, const gx_strip_bitmap * tile, int depth,
 		      uint csize)
 {
     byte *p = dp + 2;
-    byte bd = depth - 1;
+    byte bd = cmd_depth_to_code(depth);
 
     *dp = cmd_count_op(cmd_opv_set_tile_size, csize);
     p = cmd_put_w(tile->rep_width, p);
@@ -306,7 +312,7 @@ cmd_put_tile_index(gx_device_clist_writer *cldev, gx_clist_state *pcls,
 /* If necessary, write out data for a single color map. */
 int
 cmd_put_color_map(gx_device_clist_writer * cldev, cmd_map_index map_index,
-		  const gx_transfer_map * map, gs_id * pid)
+	int comp_num, const gx_transfer_map * map, gs_id * pid)
 {
     byte *dp;
     int code;
@@ -314,27 +320,30 @@ cmd_put_color_map(gx_device_clist_writer * cldev, cmd_map_index map_index,
     if (map == 0) {
 	if (pid && *pid == gs_no_id)
 	    return 0;	/* no need to write */
-	code = set_cmd_put_all_op(dp, cldev, cmd_opv_set_misc, 2);
+	code = set_cmd_put_all_op(dp, cldev, cmd_opv_set_misc, 3);
 	if (code < 0)
 	    return code;
 	dp[1] = cmd_set_misc_map + (cmd_map_none << 4) + map_index;
+	dp[2] = comp_num;
 	if (pid)
 	    *pid = gs_no_id;
     } else {
 	if (pid && map->id == *pid)
 	    return 0;	/* no need to write */
 	if (map->proc == gs_identity_transfer) {
-	    code = set_cmd_put_all_op(dp, cldev, cmd_opv_set_misc, 2);
+	    code = set_cmd_put_all_op(dp, cldev, cmd_opv_set_misc, 3);
 	    if (code < 0)
 		return code;
 	    dp[1] = cmd_set_misc_map + (cmd_map_identity << 4) + map_index;
+	    dp[2] = comp_num;
 	} else {
 	    code = set_cmd_put_all_op(dp, cldev, cmd_opv_set_misc,
-				      2 + sizeof(map->values));
+				      3 + sizeof(map->values));
 	    if (code < 0)
 		return code;
 	    dp[1] = cmd_set_misc_map + (cmd_map_other << 4) + map_index;
-	    memcpy(dp + 2, map->values, sizeof(map->values));
+	    dp[2] = comp_num;
+	    memcpy(dp + 3, map->values, sizeof(map->values));
 	}
 	if (pid)
 	    *pid = map->id;

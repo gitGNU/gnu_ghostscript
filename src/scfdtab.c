@@ -1,6 +1,6 @@
-/* Copyright (C) 1992, 1993, 1998, 1999 artofcode LLC.  All rights reserved. */
+/* Copyright (C) 1992, 1993, 1998, 1999 Aladdin Enterprises.  All rights reserved. */
 
-/* $Id: scfdtab.c,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: scfdtab.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Tables for CCITTFaxDecode filter. */
 
 /* This file was generated automatically.  It is governed by the same terms */
@@ -932,8 +932,8 @@ const cfd_node cf_uncompressed_decode[] = {
 };
 
 /* Dummy executable code to pacify compilers. */
-void scfdtab_dummy(P0());
+void scfdtab_dummy(void);
 void
-scfdtab_dummy()
+scfdtab_dummy(void)
 {
 }

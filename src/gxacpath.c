@@ -1,22 +1,28 @@
-/* Copyright (C) 1993, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1993, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxacpath.c,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/*$Id: gxacpath.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Accumulator for clipping paths */
 #include "gx.h"
 #include "gserrors.h"
@@ -85,7 +91,16 @@ private const gx_device_cpath_accum gs_cpath_accum_device =
   NULL,
   NULL,
   gx_default_text_begin,
-  gx_default_finish_copydevice
+  gx_default_finish_copydevice,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL
  }
 };
 
@@ -126,10 +141,8 @@ gx_cpath_accum_end(const gx_device_cpath_accum * padev, gx_clip_path * pcpath)
     apath.path.bbox.p.y = int2fixed(padev->bbox.p.y);
     apath.path.bbox.q.x = int2fixed(padev->bbox.q.x);
     apath.path.bbox.q.y = int2fixed(padev->bbox.q.y);
-    /* Using the setbbox flag here is slightly bogus, */
-    /* but it's as good a way as any to indicate that */
-    /* the bbox is accurate. */
-    apath.path.bbox_set = 1;
+    /* indicate that the bbox is accurate */
+    apath.path.bbox_accurate = 1;
     /* Note that the result of the intersection might be */
     /* a single rectangle.  This will cause clip_path_is_rect.. */
     /* to return true.  This, in turn, requires that */

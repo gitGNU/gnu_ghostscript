@@ -1,26 +1,34 @@
-/* Copyright (C) 1996, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1996, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevnfwd.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevnfwd.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* Null and forwarding device implementation */
 #include "gx.h"
 #include "gserrors.h"
 #include "gxdevice.h"
+#include "gxcmap.h"
+#include "memory_.h"
 
 /* ---------------- Forwarding procedures ---------------- */
 
@@ -97,6 +105,10 @@ gx_device_forward_fill_in_procs(register gx_device_forward * dev)
     fill_dev_proc(dev, create_compositor, gx_no_create_compositor);
     fill_dev_proc(dev, get_hardware_params, gx_forward_get_hardware_params);
     fill_dev_proc(dev, text_begin, gx_forward_text_begin);
+    fill_dev_proc(dev, get_color_mapping_procs, gx_forward_get_color_mapping_procs);
+    fill_dev_proc(dev, get_color_comp_index, gx_forward_get_color_comp_index);
+    fill_dev_proc(dev, encode_color, gx_forward_encode_color);
+    fill_dev_proc(dev, decode_color, gx_forward_decode_color);
     gx_device_fill_in_procs((gx_device *) dev);
 }
 
@@ -108,7 +120,10 @@ gx_device_forward_color_procs(gx_device_forward * dev)
     set_dev_proc(dev, map_color_rgb, gx_forward_map_color_rgb);
     set_dev_proc(dev, map_cmyk_color, gx_forward_map_cmyk_color);
     set_dev_proc(dev, map_rgb_alpha_color, gx_forward_map_rgb_alpha_color);
-    set_dev_proc(dev, map_color_rgb_alpha, gx_forward_map_color_rgb_alpha);
+    set_dev_proc(dev, get_color_mapping_procs, gx_forward_get_color_mapping_procs);
+    set_dev_proc(dev, get_color_comp_index, gx_forward_get_color_comp_index);
+    set_dev_proc(dev, encode_color, gx_forward_encode_color);
+    set_dev_proc(dev, decode_color, gx_forward_decode_color);
 }
 
 void
@@ -148,14 +163,13 @@ gx_forward_output_page(gx_device * dev, int num_copies, int flush)
 }
 
 gx_color_index
-gx_forward_map_rgb_color(gx_device * dev, gx_color_value r, gx_color_value g,
-			 gx_color_value b)
+gx_forward_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 {
     gx_device_forward * const fdev = (gx_device_forward *)dev;
     gx_device *tdev = fdev->target;
 
-    return (tdev == 0 ? gx_default_map_rgb_color(dev, r, g, b) :
-	    dev_proc(tdev, map_rgb_color)(tdev, r, g, b));
+    return (tdev == 0 ? gx_error_encode_color(dev, cv) :
+	    dev_proc(tdev, map_rgb_color)(tdev, cv));
 }
 
 int
@@ -260,14 +274,13 @@ gx_forward_put_params(gx_device * dev, gs_param_list * plist)
 }
 
 gx_color_index
-gx_forward_map_cmyk_color(gx_device * dev, gx_color_value c, gx_color_value m,
-			  gx_color_value y, gx_color_value k)
+gx_forward_map_cmyk_color(gx_device * dev, const gx_color_value cv[])
 {
     gx_device_forward * const fdev = (gx_device_forward *)dev;
     gx_device *tdev = fdev->target;
 
-    return (tdev == 0 ? gx_default_map_cmyk_color(dev, c, m, y, k) :
-	    dev_proc(tdev, map_cmyk_color)(tdev, c, m, y, k));
+    return (tdev == 0 ? gx_default_map_cmyk_color(dev, cv) :
+	    dev_proc(tdev, map_cmyk_color)(tdev, cv));
 }
 
 const gx_xfont_procs *
@@ -588,6 +601,126 @@ gx_forward_text_begin(gx_device * dev, gs_imager_state * pis,
 		memory, ppenum);
 }
 
+/* Forwarding device color mapping procs. */
+
+/*
+ * We need to forward the color mapping to the target device.
+ */
+static void
+fwd_map_gray_cs(gx_device * dev, frac gray, frac out[])
+{
+    gx_device_forward * const fdev = (gx_device_forward *)dev;
+    gx_device * const tdev = fdev->target;
+    const gx_cm_color_map_procs * pprocs;
+
+    /* Verify that all of the pointers and procs are set */
+    /* If not then use a default routine.  This case should be an error */
+    if (tdev == 0 || dev_proc(tdev, get_color_mapping_procs) == 0 ||
+          (pprocs = dev_proc(tdev, get_color_mapping_procs(tdev))) == 0 ||
+          pprocs->map_gray == 0)
+        gray_cs_to_gray_cm(tdev, gray, out);   /* if all else fails */
+    else
+        pprocs->map_gray(tdev, gray, out);
+}
+
+/*
+ * We need to forward the color mapping to the target device.
+ */
+static void
+fwd_map_rgb_cs(gx_device * dev, const gs_imager_state *pis,
+				   frac r, frac g, frac b, frac out[])
+{
+    gx_device_forward * const fdev = (gx_device_forward *)dev;
+    gx_device * const tdev = fdev->target;
+    const gx_cm_color_map_procs * pprocs;
+
+    /* Verify that all of the pointers and procs are set */
+    /* If not then use a default routine.  This case should be an error */
+    if (tdev == 0 || dev_proc(tdev, get_color_mapping_procs) == 0 ||
+          (pprocs = dev_proc(tdev, get_color_mapping_procs(tdev))) == 0 ||
+          pprocs->map_rgb == 0)
+        rgb_cs_to_rgb_cm(tdev, pis, r, g, b, out);   /* if all else fails */
+    else
+        pprocs->map_rgb(tdev, pis, r, g, b, out);
+}
+
+/*
+ * We need to forward the color mapping to the target device.
+ */
+static void
+fwd_map_cmyk_cs(gx_device * dev, frac c, frac m, frac y, frac k, frac out[])
+{
+    gx_device_forward * const fdev = (gx_device_forward *)dev;
+    gx_device * const tdev = fdev->target;
+    const gx_cm_color_map_procs * pprocs;
+
+    /* Verify that all of the pointers and procs are set */
+    /* If not then use a default routine.  This case should be an error */
+    if (tdev == 0 || dev_proc(tdev, get_color_mapping_procs) == 0 ||
+          (pprocs = dev_proc(tdev, get_color_mapping_procs(tdev))) == 0 ||
+          pprocs->map_cmyk == 0)
+        cmyk_cs_to_cmyk_cm(tdev, c, m, y, k, out);   /* if all else fails */
+    else
+        pprocs->map_cmyk(tdev, c, m, y, k, out);
+};
+
+static const gx_cm_color_map_procs FwdDevice_cm_map_procs = {
+    fwd_map_gray_cs, fwd_map_rgb_cs, fwd_map_cmyk_cs
+};
+/*
+ * Instead of returning the target device's mapping procs, we need
+ * to return a list of forwarding wrapper procs for the color mapping
+ * procs.  This is required because the target device mapping procs
+ * may also need the target device pointer (instead of the forwarding
+ * device pointer).
+ */
+const gx_cm_color_map_procs *
+gx_forward_get_color_mapping_procs(const gx_device * dev)
+{
+    const gx_device_forward * fdev = (const gx_device_forward *)dev;
+    gx_device * tdev = fdev->target;
+
+    return (tdev == 0 || dev_proc(tdev, get_color_mapping_procs) == 0
+	? gx_default_DevGray_get_color_mapping_procs(dev)
+	: &FwdDevice_cm_map_procs);
+}
+
+int
+gx_forward_get_color_comp_index(const gx_device * dev, const char * pname,
+						int name_size, int src_index)
+{
+    const gx_device_forward * fdev = (const gx_device_forward *)dev;
+    gx_device *tdev = fdev->target;
+
+    return (tdev == 0 
+	? gx_error_get_color_comp_index(dev, pname, name_size, src_index)
+	: dev_proc(tdev, get_color_comp_index)(tdev, pname, name_size, src_index));
+}
+
+gx_color_index
+gx_forward_encode_color(gx_device * dev, const gx_color_value colors[])
+{
+    gx_device_forward * const fdev = (gx_device_forward *)dev;
+    gx_device *tdev = fdev->target;
+
+    return (tdev == 0 ? gx_error_encode_color(dev, colors)
+		      : dev_proc(tdev, encode_color)(tdev, colors));
+}
+
+int
+gx_forward_decode_color(gx_device * dev, gx_color_index cindex, gx_color_value colors[])
+{
+    gx_device_forward * const fdev = (gx_device_forward *)dev;
+    gx_device *tdev = fdev->target;
+
+    if (tdev == 0)	/* If no device - just clear the color values */
+	memset(colors, 0, sizeof(gx_color_value[GX_DEVICE_COLOR_MAX_COMPONENTS]));
+    else
+	dev_proc(tdev, decode_color)(tdev, cindex, colors);
+    return 0;
+}
+
+
 /* ---------------- The null device(s) ---------------- */
 
 private dev_proc_fill_rectangle(null_fill_rectangle);
@@ -602,6 +735,7 @@ private dev_proc_fill_trapezoid(null_fill_trapezoid);
 private dev_proc_fill_parallelogram(null_fill_parallelogram);
 private dev_proc_fill_triangle(null_fill_triangle);
 private dev_proc_draw_thin_line(null_draw_thin_line);
+private dev_proc_decode_color(null_decode_color);
 /* We would like to have null implementations of begin/data/end image, */
 /* but we can't do this, because image_data must keep track of the */
 /* Y position so it can return 1 when done. */
@@ -651,7 +785,16 @@ private dev_proc_strip_copy_rop(null_strip_copy_rop);
 	gx_non_imaging_create_compositor,\
 	gx_forward_get_hardware_params,\
 	gx_default_text_begin,\
-	gx_default_finish_copydevice\
+	gx_default_finish_copydevice,\
+	NULL,				/* begin_transparency_group */\
+	NULL,				/* end_transparency_group */\
+	NULL,				/* begin_transparency_mask */\
+	NULL,				/* end_transparency_mask */\
+	NULL,				/* discard_transparency_layer */\
+	gx_default_DevGray_get_color_mapping_procs,	/* get_color_mapping_procs */\
+	gx_default_DevGray_get_color_comp_index,/* get_color_comp_index */\
+	gx_default_gray_fast_encode,		/* encode_color */\
+	null_decode_color		/* decode_color */\
 }
 
 const gx_device_null gs_null_device = {
@@ -667,6 +810,13 @@ std_device_std_body_type_open(gx_device_null, 0, "nullpage", &st_device_null,
     null_procs(gx_page_device_get_page_device /* a page device */ ),
     0				/* target */
 };
+
+private int
+null_decode_color(gx_device * dev, gx_color_index cindex, gx_color_value colors[])
+{
+    colors[0] = (cindex & 1) ?  gx_max_color_value : 0;
+    return 0;
+}
 
 private int
 null_fill_rectangle(gx_device * dev, int x, int y, int w, int h,

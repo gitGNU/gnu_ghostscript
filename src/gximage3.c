@@ -1,22 +1,28 @@
-/* Copyright (C) 1997, 1998, 1999, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gximage3.c,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gximage3.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* ImageType 3 image implementation */
 #include "math_.h"		/* for ceil, floor */
 #include "memory_.h"
@@ -183,7 +189,7 @@ gx_begin_image3(gx_device * dev,
  * Begin a generic ImageType 3 image, with client handling the creation of
  * the mask image and mask clip devices.
  */
-private bool check_image3_extent(P2(floatp mask_coeff, floatp data_coeff));
+private bool check_image3_extent(floatp mask_coeff, floatp data_coeff);
 int
 gx_begin_image3_generic(gx_device * dev,
 			const gs_imager_state *pis, const gs_matrix *pmat,
@@ -330,8 +336,8 @@ gx_begin_image3_generic(gx_device * dev,
 	(code = gs_bbox_transform(&mrect, &mat, &mrect)) < 0
 	)
 	return code;
-    origin.x = floor(mrect.p.x);
-    origin.y = floor(mrect.p.y);
+    origin.x = (int)floor(mrect.p.x);
+    origin.y = (int)floor(mrect.p.y);
     code = make_mid(&mdev, dev, (int)ceil(mrect.q.x) - origin.x,
 		    (int)ceil(mrect.q.y) - origin.y, mem);
     if (code < 0)
@@ -372,8 +378,14 @@ gx_begin_image3_generic(gx_device * dev,
     gs_image_t_init(&i_pixel, pim->ColorSpace);
     {
 	const gx_image_type_t *type1 = i_pixel.type;
+        const bool mask = i_pixel.ImageMask;
 
+        /* On gcc 2.95.4 for Alpha all structures are padded to 8 byte
+         * boundary but sizeof(bool) == 4. First member of the subclass
+         * is restored because it is overwritten by padding data.
+         */
 	*(gs_pixel_image_t *)&i_pixel = *(const gs_pixel_image_t *)pim;
+	i_pixel.ImageMask = mask;
 	i_pixel.type = type1;
     }
     code = make_mcde(dev, pis, pmat, (const gs_image_common_t *)&i_pixel,

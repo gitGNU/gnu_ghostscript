@@ -1,22 +1,28 @@
-/* Copyright (C) 1992, 1993, 1997, 1998, 1999, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1992, 1993, 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevbmp.c,v 1.1 2004/01/14 16:59:47 atai Exp $ */
+/* $Id: gdevbmp.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* .BMP file format output drivers */
 #include "gdevprn.h"
 #include "gdevpccm.h"
@@ -42,12 +48,13 @@ prn_device(prn_std_procs, "bmpmono",
 private const gx_device_procs bmpgray_procs =
 prn_color_procs(gdev_prn_open, gdev_prn_output_page, gdev_prn_close,
 		gx_default_gray_map_rgb_color, gx_default_gray_map_color_rgb);
-const gx_device_printer gs_bmpgray_device =
-prn_device(bmpgray_procs, "bmpgray",
+const gx_device_printer gs_bmpgray_device = {
+  prn_device_body(gx_device_printer, bmpgray_procs, "bmpgray",
 	   DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
 	   X_DPI, Y_DPI,
 	   0, 0, 0, 0,		/* margins */
-	   8, bmp_print_page);
+	   1, 8, 255, 0, 256, 0, bmp_print_page)
+};
 
 /* 1-bit-per-plane separated CMYK color. */
 
@@ -141,7 +148,7 @@ bmp_print_page(gx_device_printer * pdev, FILE * file)
 {
     uint raster = gdev_prn_raster(pdev);
     /* BMP scan lines are padded to 32 bits. */
-    uint bmp_raster = raster + (-raster & 3);
+    uint bmp_raster = raster + (-(int)raster & 3);
     byte *row = gs_alloc_bytes(pdev->memory, bmp_raster, "bmp file buffer");
     int y;
     int code;		/* return code */
@@ -177,7 +184,7 @@ bmp_cmyk_print_page(gx_device_printer * pdev, FILE * file)
     int plane_depth = pdev->color_info.depth / 4;
     uint raster = bitmap_raster(pdev->width * plane_depth);
     /* BMP scan lines are padded to 32 bits. */
-    uint bmp_raster = raster + (-raster & 3);
+    uint bmp_raster = raster + (-(int)raster & 3);
     byte *row = gs_alloc_bytes(pdev->memory, bmp_raster, "bmp file buffer");
     int y;
     int code = 0;		/* return code */

@@ -1,22 +1,28 @@
-/* Copyright (C) 1998, 1999, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevbmpa.c,v 1.1 2004/01/14 16:59:47 atai Exp $ */
+/* $Id: gdevbmpa.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* .BMP file format output drivers: Demo of ASYNC rendering */
 
 /* 2000-04-20 ghost@aladdin.com - Makes device structures const, changing
@@ -178,7 +184,7 @@ const gx_device_async gs_bmpa32b_device =
 
 /* --------- Forward declarations ---------- */
 
-private void bmpa_reader_thread(P1(void *));
+private void bmpa_reader_thread(void *);
 
 /* ------------ Writer Instance procedures ---------- */
 
@@ -245,9 +251,9 @@ bmpa_cmyk_writer_open(gx_device *pdev  /* Driver instance to open */)
 
 /* Forward declarations */
 private int
-    bmpa_reader_buffer_planes(P6(gx_device_printer *pdev, FILE *prn_stream,
-				 int num_copies, int first_plane,
-				 int last_plane, int raster));
+    bmpa_reader_buffer_planes(gx_device_printer *pdev, FILE *prn_stream,
+			      int num_copies, int first_plane,
+			      int last_plane, int raster);
 
 /* Thread to do rendering, started by bmpa_reader_start_render_thread */
 private void 

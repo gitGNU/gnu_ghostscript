@@ -3,7 +3,7 @@
 <html>
 <head>
 <title>Ghostscript and the PostScript language</title>
-<!-- $Id: Language.htm,v 1.1 2004/01/14 16:59:44 atai Exp $ -->
+<!-- $Id: Language.htm,v 1.2 2004/02/14 22:20:03 atai Exp $ -->
 <!-- Originally: language.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -164,7 +164,7 @@ a very few special devices.
 <li><b><tt>IODevice</tt></b>s other than <b><tt>%stdin</tt></b>,
 <b><tt>%stdout</tt></b>, <b><tt>%stderr</tt></b>, <b><tt>%lineedit</tt></b>,
 <b><tt>%statementedit</tt></b>, <b><tt>%os%</tt></b>, and (if configured)
-<b><tt>%pipe%</tt></b>.
+<b><tt>%pipe%</tt></b> and <b><tt>%disk0%</tt></b> through <b><tt>%disk0%</tt></b>.
 </ul>
 
 <p>
@@ -937,6 +937,14 @@ place of a string with a very few operators.
 </dl>
 
 <dl>
+<dt><b><tt>&lt;string&gt; &lt;charstring&gt; .stringbreak &lt;index|null&gt;</tt></b>
+<dd>Searches for a character in <b><tt>string</tt></b> that appears
+somewhere in <b><tt>charstring</tt></b>.  If such a character is found,
+returns the index of the first such character; if no such character is
+found, returns <b><tt>null</tt></b>.
+</dl>
+
+<dl>
 <dt><b><tt>&lt;obj&gt; &lt;pattern&gt; .stringmatch &lt;bool&gt;</tt></b>
 <dd>Matches <b><tt>obj</tt></b> against a pattern in which '*' matches 0 or
 more characters and '?' matches any single character.  If
@@ -1064,9 +1072,36 @@ use <b><tt>.peekstring</tt></b> in new code.
 <p>
 Ghostscript also supports the following <b><tt>IODevice</tt></b> in
 addition to a subset of those defined in the Adobe documentation:
+<ul>
+<li>
 <b><tt>%pipe%command</tt></b>, which opens a pipe on the given command.
 This is supported only on operating systems that provide
 <b><tt>popen</tt></b> (primarily Unix systems, and not all of those).
+<p>
+<li>
+<b><tt>%disk#%</tt></b>, which emulates the %disk0
+through %disk9 devices on some Adobe PostScript printers. This pseudo
+device provides a flat filenaming system with a user definable location
+for the files (/Root). These devices will only be present if the
+diskn.dev feature is specified during the build.
+<p>
+This feature is intended to allow compatibility with font downloaders
+that expect to store fonts on the %disk device of the printer.
+<p>
+Use of the %disk#% devices requires that the location of files be given
+by the user setting the /Root device parameter. The syntax for setting
+the /Root parameter is:<pre>
+    mark /Root (directory_specification) (%disk#) .putdevparams
+</pre>
+For example, to store the files of the %disk0 device on the directory
+/tmp/disk0, use:<pre>
+    mark /Root (/tmp/disk0/) (%disk0) .putdevparams
+</pre>
+The files will be stored in the specified directory with arbitrary names.
+A mapping file is used to store the association between the file
+names given for the file operations on the %diskn# device and the file
+that resides in the /Root directory.
+</ul>
 
 <h4><a name="Virtual_memory"></a>Virtual memory operators</h4>
 
@@ -1181,10 +1216,6 @@ using <b><tt>stopped</tt></b> in order to report errors but continue processing.
 <b><tt>-dDELAYSAFER</tt></b>, this operator can be used to enter <b>SAFER</b>
 mode (see <a href="Use.htm#Safer"><b>-dSAFER</b></a>)
 <p>
-<b>Note: </b>If <b><tt>-dPARANOIDSAFER</tt></b> was specified on the command
-line, <b><tt>.setsafe</tt></b> also sets the <b><tt>PermitFileReading</tt></b> 
-parameter to an empty array.
-<p>
 Since <b>SAFER</b> mode is implemented with userparameters and device parameters,
 it is possible to use <b><tt>save</tt></b> and <b><tt>restore</tt></b> before
 and after <b><tt>.setsafe</tt></b> to return to <b>NOSAFER</b> mode, but care
@@ -1200,7 +1231,7 @@ will be erased as a side effect of this operator</b>
 <dt><b><tt>- .locksafe -</tt></b>
 <dd>
 This operator sets the current device's <b><tt>.LockSafetyParams</tt></b>
-and the <b><tt>LockFilePermissions</tt></b> user parameter true as well as
+and the <b><tt>LockFilePermissions</tt></b> userparameter true as well as
 adding the paths on LIBPATH and FONTPATH and the paths given by the
 system params /GenericResourceDir and /FontResourceDir to the current
 PermitFileReading list of paths.
@@ -1208,10 +1239,10 @@ PermitFileReading list of paths.
 If Ghostscript is started with <b><tt>-dNOSAFER</tt></b> or 
 <b><tt>-dDELAYSAFER</tt></b>, this operator can be used to enter <b>SAFER</b>
 mode with the current set of <b><tt>PermitFile...</tt></b> user parameters
-in effect. Since <b><tt>.setsafe</tt></b> sets the <b><tt>PermitFileWriting</tt></b>
-and <b><tt>PermitFileControl</tt></b> user parameters to empty arrays, a script
-or job server that needs to enable certain paths for file Writing and/or Control
-can use this operator to perform the locking needed to enter <b>SAFER</b> mode.
+in effect. Since <b><tt>.setsafe</tt></b> sets the <b><tt>PermitFile...</tt></b>
+user parameters to empty arrays, a script or job server that needs to
+enable certain paths for file Reading, Writing and/or Control can use this
+operator to perform the locking needed to enter <b>SAFER</b> mode.
 <p>
 For example, to enable reading everywhere, but disallow writing and file
 control (deleting and renaming files), the following can be used:
@@ -1466,7 +1497,8 @@ Type 1 Font Format documentation.  The <b><tt>seed_integer</tt></b> must be
 
 <blockquote>
 <b><tt>seed &lt;16-bit integer&gt;</tt></b> (required)<br>
-<b><tt>lenIV &lt;non-negative integer&gt;</tt></b> (default=4)
+<b><tt>lenIV &lt;non-negative integer&gt;</tt></b> (default=4)<br>
+<b><tt>eexec &lt;bool&gt;</tt></b> (default=<b><tt>false</b></tt>)
 </blockquote>
 </dl>
 
@@ -1693,6 +1725,18 @@ devices), 2, or 4.
 </dl>
 
 <p>
+Ghostscript also supports the following read-only parameter that is not a
+true device parameter:
+
+<dl>
+<dt><b><tt>.EmbedFontObjects &lt;integer&gt</tt></b>
+<dd>If non-zero, indicates that the device may embed font objects (as
+opposed to bitmaps for individual characters) in the output.  The purpose of
+this parameter is to disable third-party font renderers for such devices.
+(This is zero for almost all devices.)
+</dl>
+
+<p>
 In addition, the following are defined per Adobe's documentation for the
 <b><tt>setpagedevice</tt></b> operator:
 
@@ -1861,6 +1905,11 @@ on LIBPATH or FONTPATH or the Resource paths specified by the /FontResourceDir
 or /GenericResourceDir system params. Files cannot be opened for writing
 anywhere and cannot be deleted or renamed except for files created with the
 <a href=#Tempfile><b>.tempfile</b></a> operator).
+<p>
+<b>Note: </b>Limiting file reading as above is <b>NOT</b> compatible with
+SAFER mode in release versions before 7.11 and corresponds to the use of
+<b><tt>-dPARANOIDSAFER</tt></b> in version 7.04 (up to and not including
+version 7.10) and GPL versions 6.53 (up to and not including 6.60).
 </dl>
 
 <hr>
@@ -1888,8 +1937,14 @@ This software is distributed under license and may not be copied,
 modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
+For more information about licensing, please refer to
+http://www.ghostscript.com/licensing/. For information on
+commercial licensing, go to http://www.artifex.com/licensing/ or
+contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
 <p>
-<small>Ghostscript version 7.07, 17 May 2003
+<small>Ghostscript version 8.01, 30 January 2004
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

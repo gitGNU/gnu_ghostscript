@@ -1,22 +1,28 @@
-/* Copyright (C) 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevpdfg.h,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevpdfg.h,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* Internal graphics interfaces for PDF-writing driver. */
 
 #ifndef gdevpdfg_INCLUDED
@@ -53,10 +59,25 @@ typedef struct gs_color_space_s gs_color_space;
 #endif
 
 /*
+ * Define a ColorSpace resource.  We need to retain the range scaling
+ * information (if any).
+ */
+typedef struct pdf_color_space_s pdf_color_space_t;
+struct pdf_color_space_s {
+    pdf_resource_common(pdf_color_space_t);
+    const gs_range_t *ranges;
+};
+/* The descriptor is public because it is for a resource type. */
+#define public_st_pdf_color_space()  /* in gdevpdfc.c */\
+  gs_public_st_suffix_add1(st_pdf_color_space, pdf_color_space_t,\
+    "pdf_color_space_t", pdf_color_space_enum_ptrs,\
+    pdf_color_space_reloc_ptrs, st_pdf_resource, ranges)
+
+/*
  * Create a local Device{Gray,RGB,CMYK} color space corresponding to the
  * given number of components.
  */
-int pdf_cspace_init_Device(P2(gs_color_space *pcs, int num_components));
+int pdf_cspace_init_Device(gs_color_space *pcs, int num_components);
 
 /*
  * Create a PDF color space corresponding to a PostScript color space.
@@ -65,50 +86,55 @@ int pdf_cspace_init_Device(P2(gs_color_space *pcs, int num_components));
  * necessary and set *pvalue to refer to it.  In the latter case, if
  * by_name is true, return a string /Rxxxx rather than a reference to
  * the actual object.
+ *
+ * If ppranges is not NULL, then if the domain of the color space had
+ * to be scaled (to convert a CIEBased space to ICCBased), store a pointer
+ * to the ranges in *ppranges, otherwise set *ppranges to 0.
  */
-int pdf_color_space(P5(gx_device_pdf *pdev, cos_value_t *pvalue,
-		       const gs_color_space *pcs,
-		       const pdf_color_space_names_t *pcsn,
-		       bool by_name));
+int pdf_color_space(gx_device_pdf *pdev, cos_value_t *pvalue,
+		    const gs_range_t **ppranges,
+		    const gs_color_space *pcs,
+		    const pdf_color_space_names_t *pcsn,
+		    bool by_name);
 
 /* Create colored and uncolored Pattern color spaces. */
-int pdf_cs_Pattern_colored(P2(gx_device_pdf *pdev, cos_value_t *pvalue));
-int pdf_cs_Pattern_uncolored(P2(gx_device_pdf *pdev, cos_value_t *pvalue));
+int pdf_cs_Pattern_colored(gx_device_pdf *pdev, cos_value_t *pvalue);
+int pdf_cs_Pattern_uncolored(gx_device_pdf *pdev, cos_value_t *pvalue);
 
 /* Set the ProcSets bits corresponding to an image color space. */
-void pdf_color_space_procsets(P2(gx_device_pdf *pdev,
-				 const gs_color_space *pcs));
+void pdf_color_space_procsets(gx_device_pdf *pdev,
+			      const gs_color_space *pcs);
 
 /* ---------------- Exported by gdevpdfg.c ---------------- */
 
 /* Reset the graphics state parameters to initial values. */
-void pdf_reset_graphics(P1(gx_device_pdf *pdev));
+void pdf_reset_graphics(gx_device_pdf *pdev);
 
 /* Set the fill or stroke color. */
 /* pdecolor is &pdev->fill_color or &pdev->stroke_color. */
-int pdf_set_pure_color(P4(gx_device_pdf *pdev, gx_color_index color,
+int pdf_set_pure_color(gx_device_pdf *pdev, gx_color_index color,
+		       gx_drawing_color *pdcolor,
+		       const psdf_set_color_commands_t *ppscc);
+int pdf_set_drawing_color(gx_device_pdf *pdev,
+			  const gx_drawing_color *pdc,
 			  gx_drawing_color *pdcolor,
-			  const psdf_set_color_commands_t *ppscc));
-int pdf_set_drawing_color(P4(gx_device_pdf *pdev,
-			     const gx_drawing_color *pdc,
-			     gx_drawing_color *pdcolor,
-			     const psdf_set_color_commands_t *ppscc));
+			  const psdf_set_color_commands_t *ppscc);
 
 /*
  * Bring the graphics state up to date for a drawing operation.
  * (Text uses either fill or stroke.)
  */
-int pdf_prepare_fill(P2(gx_device_pdf *pdev, const gs_imager_state *pis));
-int pdf_prepare_stroke(P2(gx_device_pdf *pdev, const gs_imager_state *pis));
-int pdf_prepare_image(P2(gx_device_pdf *pdev, const gs_imager_state *pis));
-int pdf_prepare_imagemask(P3(gx_device_pdf *pdev, const gs_imager_state *pis,
-			     const gx_drawing_color *pdcolor));
+int pdf_prepare_fill(gx_device_pdf *pdev, const gs_imager_state *pis);
+int pdf_prepare_stroke(gx_device_pdf *pdev, const gs_imager_state *pis);
+int pdf_prepare_image(gx_device_pdf *pdev, const gs_imager_state *pis);
+int pdf_prepare_imagemask(gx_device_pdf *pdev, const gs_imager_state *pis,
+			  const gx_drawing_color *pdcolor);
 
-/* Get the (string) name of a separation, */
-/* returning a newly allocated string with a / prefixed. */
-/****** BOGUS for all but standard separations ******/
-int pdf_separation_name(P3(gx_device_pdf *pdev, cos_value_t *pvalue,
-			   gs_separation_name sname));
+/*
+ * Convert a string into cos name.
+ */
+int pdf_string_to_cos_name(gx_device_pdf *pdev, const byte *str, uint len, 
+		       cos_value_t *pvalue);
 
 /* ---------------- Exported by gdevpdfj.c ---------------- */
 
@@ -137,16 +163,16 @@ extern const pdf_image_names_t pdf_image_names_full, pdf_image_names_short;
 /* Store the values of image parameters other than filters. */
 /* pdev is used only for updating procsets. */
 /* pcsvalue is not used for masks. */
-int pdf_put_image_values(P5(cos_dict_t *pcd, gx_device_pdf *pdev,
-			    const gs_pixel_image_t *pic,
-			    const pdf_image_names_t *pin,
-			    const cos_value_t *pcsvalue));
+int pdf_put_image_values(cos_dict_t *pcd, gx_device_pdf *pdev,
+			 const gs_pixel_image_t *pic,
+			 const pdf_image_names_t *pin,
+			 const cos_value_t *pcsvalue);
 
 /* Store filters for an image. */
 /* Currently this only saves parameters for CCITTFaxDecode. */
-int pdf_put_image_filters(P4(cos_dict_t *pcd, gx_device_pdf *pdev,
-			     const psdf_binary_writer * pbw,
-			     const pdf_image_names_t *pin));
+int pdf_put_image_filters(cos_dict_t *pcd, gx_device_pdf *pdev,
+			  const psdf_binary_writer * pbw,
+			  const pdf_image_names_t *pin);
 
 /* ------ Image writing ------ */
 
@@ -158,68 +184,87 @@ int pdf_put_image_filters(P4(cos_dict_t *pcd, gx_device_pdf *pdev,
  * PDF images are always specified top-to-bottom.
  * data_h is the actual number of data rows, which may be less than h.
  */
-void pdf_make_bitmap_matrix(P6(gs_matrix * pmat, int x, int y, int w, int h,
-			       int h_actual));
+void pdf_make_bitmap_matrix(gs_matrix * pmat, int x, int y, int w, int h,
+			    int h_actual);
 
 /* Put out the gsave and matrix for an image. */
-void pdf_put_image_matrix(P3(gx_device_pdf * pdev, const gs_matrix * pmat,
-			     floatp y_scale));
+void pdf_put_image_matrix(gx_device_pdf * pdev, const gs_matrix * pmat,
+			  floatp y_scale);
 
 /* Put out a reference to an image resource. */
-int pdf_do_image(P4(gx_device_pdf * pdev, const pdf_resource_t * pres,
-		    const gs_matrix * pimat, bool in_contents));
+int pdf_do_image(gx_device_pdf * pdev, const pdf_resource_t * pres,
+		 const gs_matrix * pimat, bool in_contents);
 
 /* Define the structure for writing an image. */
 typedef struct pdf_image_writer_s {
-    psdf_binary_writer binary;
+    psdf_binary_writer binary[3];
+    int alt_writer_count; /* no. of active elements in writer[] (1,2,3) */
     const pdf_image_names_t *pin;
     pdf_resource_t *pres;	/* XObject resource iff not in-line */
     int height;			/* initially specified image height */
     cos_stream_t *data;
     const char *end_string;	/* string to write after EI if in-line */
+    cos_dict_t *named;		/* named dictionary from NI */
 } pdf_image_writer;
 extern_st(st_pdf_image_writer);	/* public for gdevpdfi.c */
-#define public_st_pdf_image_writer()\
-  gs_public_st_suffix_add2(st_pdf_image_writer, pdf_image_writer,\
-    "pdf_image_writer", pdf_image_writer_enum_ptrs,\
-    pdf_image_writer_reloc_ptrs, st_psdf_binary_writer, pres, data)
-#define pdf_image_writer_max_ptrs (psdf_binary_writer_max_ptrs + 2)
+#define public_st_pdf_image_writer() /* in gdevpdfj.c */\
+  gs_public_st_composite(st_pdf_image_writer, pdf_image_writer,\
+    "pdf_image_writer", pdf_image_writer_enum_ptrs, pdf_image_writer_reloc_ptrs)
+#define pdf_image_writer_max_ptrs (psdf_binary_writer_max_ptrs * 3 + 3)
 
 /*
- * Begin writing an image, creating the resource if not in-line and
- * pres == 0, and setting up the binary writer.
+ * Begin writing an image, creating the resource if not in-line, and setting
+ * up the binary writer.  If pnamed != 0, it is a dictionary object created
+ * by a NI pdfmark.
  */
-int pdf_begin_write_image(P7(gx_device_pdf * pdev, pdf_image_writer * piw,
-			     gx_bitmap_id id, int w, int h,
-			     pdf_resource_t *pres, bool in_line));
+int pdf_begin_write_image(gx_device_pdf * pdev, pdf_image_writer * piw,
+			  gx_bitmap_id id, int w, int h,
+			  cos_dict_t *pnamed, bool in_line,
+			  int alt_writer_count);
 
 /* Begin writing the image data, setting up the dictionary and filters. */
-int pdf_begin_image_data(P4(gx_device_pdf * pdev, pdf_image_writer * piw,
-			    const gs_pixel_image_t * pim,
-			    const cos_value_t *pcsvalue));
+int pdf_begin_image_data(gx_device_pdf * pdev, pdf_image_writer * piw,
+			 const gs_pixel_image_t * pim,
+			 const cos_value_t *pcsvalue, 
+			 int alt_writer_index);
 
 /* Copy the data for a mask or monobit bitmap. */
-int pdf_copy_mask_bits(P7(stream *s, const byte *base, int sourcex,
-			  int raster, int w, int h, byte invert));
+int pdf_copy_mask_bits(stream *s, const byte *base, int sourcex,
+		       int raster, int w, int h, byte invert);
 
 /* Copy the data for a colored image (device pixels). */
-int pdf_copy_color_bits(P7(stream *s, const byte *base, int sourcex,
-			   int raster, int w, int h, int bytes_per_pixel));
+int pdf_copy_color_bits(stream *s, const byte *base, int sourcex,
+			int raster, int w, int h, int bytes_per_pixel);
+
+/* Complete image data. */
+int
+pdf_complete_image_data(gx_device_pdf *pdev, pdf_image_writer *piw, int data_h,
+			int width, int bits_per_pixel);
 
 /* Finish writing the binary image data. */
-int pdf_end_image_binary(P3(gx_device_pdf *pdev, pdf_image_writer *piw,
-			    int data_h));
+int pdf_end_image_binary(gx_device_pdf *pdev, pdf_image_writer *piw,
+			 int data_h);
 
 /*
  * Finish writing an image.  If in-line, write the BI/dict/ID/data/EI and
  * return 1; if a resource, write the resource definition and return 0.
  */
-int pdf_end_write_image(P2(gx_device_pdf * pdev, pdf_image_writer * piw));
+int pdf_end_write_image(gx_device_pdf * pdev, pdf_image_writer * piw);
+
+/*
+ *  Make alternative stream for image compression choice.
+ */
+int pdf_make_alt_stream(gx_device_pdf * pdev, psdf_binary_writer * piw);
+
+/* 
+ * End binary with choosing image compression. 
+ */
+int pdf_choose_compression(pdf_image_writer * piw, bool end_binary);
 
 /* ---------------- Exported by gdevpdfv.c ---------------- */
 
 /* Write a color value. */
-int pdf_put_drawing_color(P3(gx_device_pdf *pdev, const gx_drawing_color *pdc,
-			     const psdf_set_color_commands_t *ppscc));
+int pdf_put_drawing_color(gx_device_pdf *pdev, const gx_drawing_color *pdc,
+			  const psdf_set_color_commands_t *ppscc);
 
 #endif /* gdevpdfg_INCLUDED */

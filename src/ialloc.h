@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1995, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1995, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: ialloc.h,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: ialloc.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Interface to Ghostscript interpreter memory allocator */
 
 #ifndef ialloc_INCLUDED
@@ -63,15 +69,15 @@
   gs_free_const_string(imemory, data, nbytes, cname)
 
 /* Initialize the interpreter's allocator. */
-int ialloc_init(P4(gs_dual_memory_t *, gs_raw_memory_t *, uint, bool));
+int ialloc_init(gs_dual_memory_t *, gs_raw_memory_t *, uint, bool);
 
 /* ------ Internal routines ------ */
 
 /* Reset the request values that identify the cause of a GC. */
-void ialloc_reset_requested(P1(gs_dual_memory_t *));
+void ialloc_reset_requested(gs_dual_memory_t *);
 
 /* Validate the contents of memory. */
-void ialloc_validate_spaces(P1(const gs_dual_memory_t *));
+void ialloc_validate_spaces(const gs_dual_memory_t *);
 
 #define ivalidate_spaces() ialloc_validate_spaces(idmemory)
 
@@ -82,16 +88,16 @@ void ialloc_validate_spaces(P1(const gs_dual_memory_t *));
 /* Get the space attribute of the current allocator. */
 #define ialloc_space(dmem) ((dmem)->current_space)
 #define icurrent_space ialloc_space(idmemory)
-uint imemory_space(P1(const gs_ref_memory_t *));
+uint imemory_space(const gs_ref_memory_t *);
 
 /* Select the allocation space. */
-void ialloc_set_space(P2(gs_dual_memory_t *, uint));
+void ialloc_set_space(gs_dual_memory_t *, uint);
 
 /* Get the l_new attribute of an allocator. */
-uint imemory_new_mask(P1(const gs_ref_memory_t *));
+uint imemory_new_mask(const gs_ref_memory_t *);
 
 /* Get the save level of an allocator. */
-int imemory_save_level(P1(const gs_ref_memory_t *));
+int imemory_save_level(const gs_ref_memory_t *);
 
 /*
  * Ref-related facilities.

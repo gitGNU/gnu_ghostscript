@@ -1,22 +1,28 @@
-/* Copyright (C) 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxclip.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxclip.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Internal definitions for clipping */
 
 #ifndef gxclip_INCLUDED
@@ -54,19 +60,19 @@ typedef struct clip_callback_data_s {
 
 /* Declare the callback procedures. */
 int
-    clip_call_fill_rectangle(P5(clip_callback_data_t * pccd,
-				int xc, int yc, int xec, int yec)),
-    clip_call_copy_mono(P5(clip_callback_data_t * pccd,
-			   int xc, int yc, int xec, int yec)),
-    clip_call_copy_color(P5(clip_callback_data_t * pccd,
-			    int xc, int yc, int xec, int yec)),
-    clip_call_copy_alpha(P5(clip_callback_data_t * pccd,
-			    int xc, int yc, int xec, int yec)),
-    clip_call_fill_mask(P5(clip_callback_data_t * pccd,
-			   int xc, int yc, int xec, int yec)),
-    clip_call_strip_tile_rectangle(P5(clip_callback_data_t * pccd,
-				      int xc, int yc, int xec, int yec)),
-    clip_call_strip_copy_rop(P5(clip_callback_data_t * pccd,
-				int xc, int yc, int xec, int yec));
+    clip_call_fill_rectangle(clip_callback_data_t * pccd,
+			     int xc, int yc, int xec, int yec),
+    clip_call_copy_mono(clip_callback_data_t * pccd,
+			int xc, int yc, int xec, int yec),
+    clip_call_copy_color(clip_callback_data_t * pccd,
+			 int xc, int yc, int xec, int yec),
+    clip_call_copy_alpha(clip_callback_data_t * pccd,
+			 int xc, int yc, int xec, int yec),
+    clip_call_fill_mask(clip_callback_data_t * pccd,
+			int xc, int yc, int xec, int yec),
+    clip_call_strip_tile_rectangle(clip_callback_data_t * pccd,
+				   int xc, int yc, int xec, int yec),
+    clip_call_strip_copy_rop(clip_callback_data_t * pccd,
+			     int xc, int yc, int xec, int yec);
 
 #endif /* gxclip_INCLUDED */

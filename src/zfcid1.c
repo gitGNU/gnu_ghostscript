@@ -1,22 +1,28 @@
-/* Copyright (C) 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2000, 2001 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: zfcid1.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zfcid1.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* CIDFontType 1 and 2 operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -109,55 +115,48 @@ z11_CIDMap_proc(gs_font_cid2 *pfont, gs_glyph glyph)
 /* Handle MetricsCount when accessing outline or metrics information. */
 private int
 z11_get_outline(gs_font_type42 * pfont, uint glyph_index,
-		gs_const_string * pgstr)
+		gs_glyph_data_t *pgd)
 {
     gs_font_cid2 *const pfcid = (gs_font_cid2 *)pfont;
     int skip = pfcid->cidata.MetricsCount << 1;
-    int code = pfcid->cidata.orig_procs.get_outline(pfont, glyph_index, pgstr);
+    int code = pfcid->cidata.orig_procs.get_outline(pfont, glyph_index, pgd);
 
     if (code >= 0) {
-	byte *data = (byte *)pgstr->data;  /* break const */
-	uint size = pgstr->size;
+	uint size = pgd->bits.size;
 
 	if (size <= skip) {
-	    if (code > 0 && size != 0)
-		gs_free_string(pfont->memory, data, size, "z11_get_outline");
-	    pgstr->data = 0, pgstr->size = 0;
+	    gs_glyph_data_free(pgd, "z11_get_outline");
+	    gs_glyph_data_from_null(pgd);
 	} else {
-	    if (code > 0) {
-		/* Newly allocated, freeble string. */
-		memmove(data, data + skip, size - skip);
-		pgstr->data = gs_resize_string(pfont->memory, data,
-					       size, size - skip,
-					       "z11_get_outline");
-	    } else {
-		pgstr->data += skip;
-	    }
-	    pgstr->size = size - skip;
+	    gs_glyph_data_substring(pgd, skip, size - skip);
 	}
     }
     return code;
 }
+
+#define GET_U16_MSB(p) (((uint)((p)[0]) << 8) + (p)[1])
+#define GET_S16_MSB(p) (int)((GET_U16_MSB(p) ^ 0x8000) - 0x8000)
+
 private int
 z11_get_metrics(gs_font_type42 * pfont, uint glyph_index, int wmode,
 		float sbw[4])
 {
     gs_font_cid2 *const pfcid = (gs_font_cid2 *)pfont;
     int skip = pfcid->cidata.MetricsCount << 1;
-    gs_const_string gstr;
+    gs_glyph_data_t gdata;
     const byte *pmetrics;
     int lsb, width;
     int code = 0;
 
-    if (wmode > skip >> 2 ||
-	(code = pfcid->cidata.orig_procs.get_outline(pfont, glyph_index, &gstr)) < 0 ||
-	gstr.size < skip
+    if (wmode >= skip >> 2 ||
+	(code = pfcid->cidata.orig_procs.get_outline(pfont, glyph_index, &gdata)) < 0 ||
+	gdata.bits.size < skip
 	)
 	return pfcid->cidata.orig_procs.get_metrics(pfont, glyph_index, wmode,
 						    sbw);
-    pmetrics = gstr.data + skip - (wmode << 2);
-    lsb = (pmetrics[2] << 8) + pmetrics[3];
-    width = (pmetrics[0] << 8) + pmetrics[1];
+    pmetrics = gdata.bits.data + skip - 4 - (wmode << 2);
+    lsb = GET_S16_MSB(pmetrics + 2);
+    width = GET_U16_MSB(pmetrics + 0);
     {
 	double factor = 1.0 / pfont->data.unitsPerEm;
 
@@ -169,9 +168,7 @@ z11_get_metrics(gs_font_type42 * pfont, uint glyph_index, int wmode,
 	    sbw[2] = width * factor, sbw[3] = 0;
 	}
     }
-    if (code > 0)
-	gs_free_const_string(pfont->memory, gstr.data, gstr.size,
-			     "z11_get_metrics");
+    gs_glyph_data_free(&gdata, "z11_get_metrics");
     return 0;
 }
 
@@ -250,11 +247,24 @@ ztype11mapcid(i_ctx_t *i_ctx_p)
 
     if (code < 0)
 	return code;
-    if (pfont->FontType != ft_CID_TrueType)
-	return_error(e_invalidfont);
     check_type(*op, t_integer);
-    code = z11_CIDMap_proc((gs_font_cid2 *)pfont,
-			   (gs_glyph)(gs_min_cid_glyph + op->value.intval));
+#if defined(TEST)
+    /* Allow a Type 42 font here, for testing .wrapfont. */
+    if (pfont->FontType == ft_TrueType) {
+	/* Use the CID as the glyph index. */
+	if (op->value.intval < 0 ||
+	    op->value.intval >= ((gs_font_type42 *)pfont)->data.numGlyphs
+	    )
+	    return_error(e_rangecheck);
+	code = (int)op->value.intval;
+    } else
+#endif
+    {
+	if (pfont->FontType != ft_CID_TrueType)
+	    return_error(e_invalidfont);
+	code = z11_CIDMap_proc((gs_font_cid2 *)pfont,
+			(gs_glyph)(gs_min_cid_glyph + op->value.intval));
+    }
     if (code < 0)
 	return code;
     make_int(op - 1, code);

@@ -1,28 +1,16 @@
-/* Copyright (C) 2000 artofcode LLC.  All rights reserved.
-  
-  This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+/***************************************************************************
+ *                                                                         *
+ * Author : Jouk Jansen (joukj@hrem.stm.tudelft.nl)                        *
+ *                                                                         *
+ * Last revision : 22 August 2000                                          *
+ * $Id: vms_x_fix.h,v 1.2 2004/02/14 22:20:19 atai Exp $
+ *                                                                         *
+ * Repair definitions of Xlib when compileing with /name=(as_is) on VMS    *
+ *                                                                         *
+ ***************************************************************************/
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along
-  with this program; if not, write to the Free Software Foundation, Inc.,
-  59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
-*/
-
-/* $Id: vms_x_fix.h,v 1.1 2004/01/14 16:59:53 atai Exp $ */
-
-/* Repair definitions of Xlib when compileing with /name=(as_is) on VMS */
-/* contributed by Jouk Jansen (joukj@hrem.stm.tudelft.nl) */
-
-#ifndef VMS_X_FIX
-#define VMS_X_FIX
+#ifndef vms_x_fix_INCLUDED
+#  define vms_x_fix_INCLUDED
 
 #define DtSaverGetWindows DTSAVERGETWINDOWS
 #define XAddHosts XADDHOSTS
@@ -899,4 +887,4 @@ extern void XtFree(char*);
 }
 #endif
 
-#endif
+#endif /* vms_x_fix_INCLUDED */

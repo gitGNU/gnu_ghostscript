@@ -1,22 +1,28 @@
-/* Copyright (C) 1991, 1992, 1993, 1997, 1998, 1999, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1991, 1992, 1993, 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gschar0.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gschar0.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Composite font decoding for Ghostscript library */
 #include "memory_.h"
 #include "gx.h"
@@ -78,7 +84,8 @@ gs_type0_init_fstack(gs_text_enum_t *pte, gs_font * pfont)
   if (fdepth == MAX_FONT_STACK)\
     return_error(gs_error_invalidfont);\
   pfont = pdata->FDepVector[pdata->Encoding[fidx]];\
-  if (++fdepth > orig_depth || pfont != pte->fstack.items[fdepth].font)\
+  if (++fdepth > orig_depth || pfont != pte->fstack.items[fdepth].font ||\
+      orig_index != fidx)\
     pte->fstack.items[fdepth].font = pfont, changed = 1;\
   pte->fstack.items[fdepth].index = fidx
 
@@ -103,6 +110,7 @@ gs_type0_next_char_glyph(gs_text_enum_t *pte, gs_char *pchr, gs_glyph *pglyph)
     const byte *end = str + pte->text.size;
     int fdepth = pte->fstack.depth;
     int orig_depth = fdepth;
+    int orig_index = pte->fstack.items[fdepth].index;
     gs_font *pfont;
 
 #define pfont0 ((gs_font_type0 *)pfont)
@@ -387,8 +395,7 @@ gs_type0_next_char_glyph(gs_text_enum_t *pte, gs_char *pchr, gs_glyph *pglyph)
 			    dlprintf(")\n");
 			}
 			code = gs_cmap_decode_next(pdata->CMap, &cstr,
-					(unsigned int*) &submindex, &fidx,
-						   &chr, &glyph);
+					(uint*) &submindex, &fidx, &chr, &glyph);
 			mindex += submindex;
 		    } else {
 			cstr.data = str;
@@ -413,7 +420,6 @@ gs_type0_next_char_glyph(gs_text_enum_t *pte, gs_char *pchr, gs_glyph *pglyph)
 		    /****** RESCAN chr IF DESCENDANT IS CMAP'ED ******/
 		    break;
 		}
-
 	}
 
 	select_descendant(pfont, pdata, fidx, fdepth);
@@ -441,5 +447,5 @@ done:
 	      fdepth, (ulong) pte->fstack.items[fdepth].font,
 	      pte->fstack.items[fdepth].index, changed);
     return changed;
-#undef pfont0
 }
+#undef pfont0

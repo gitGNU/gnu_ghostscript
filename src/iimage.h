@@ -1,22 +1,28 @@
-/* Copyright (C) 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: iimage.h,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: iimage.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Image operator entry points */
 /* Requires gscspace.h, gxiparam.h */
 
@@ -25,21 +31,30 @@
 
 /* These procedures are exported by zimage.c for other modules. */
 
-/* Exported for zcolor1.c */
-int zimage_opaque_setup(P6(i_ctx_t *i_ctx_p, os_ptr op, bool multi,
-			   gs_image_alpha_t alpha, const gs_color_space * pcs,
-			   int npop));
+/*
+ * Define a structure for image parameters other than those defined
+ * in the gs_*image*_t structure.
+ */
+typedef struct image_params_s {
+    bool MultipleDataSources;
+    ref DataSource[gs_image_max_components];
+    const float *pDecode;
+} image_params;
 
-/* Exported for zimage2.c */
-int zimage_setup(P5(i_ctx_t *i_ctx_p, const gs_pixel_image_t * pim,
-		    const ref * sources, bool uses_color, int npop));
+/* Extract and check parameters for an image. */
+int data_image_params(const ref *op, gs_data_image_t *pim,
+                      image_params *pip, bool require_DataSource,
+                      int num_components, int max_bits_per_component,
+                      bool has_alpha);
+int pixel_image_params(i_ctx_t *i_ctx_p, const ref *op,
+                       gs_pixel_image_t *pim, image_params * pip,
+                       int max_bits_per_component, bool has_alpha);
 
-/* Exported for zcolor3.c */
-int zimage_data_setup(P5(i_ctx_t *i_ctx_p, const gs_pixel_image_t * pim,
-			 gx_image_enum_common_t * pie,
-			 const ref * sources, int npop));
+/* Exported for zimage3.c and ztrans.c */
+int zimage_setup(i_ctx_t *i_ctx_p, const gs_pixel_image_t * pim,
+                 const ref * sources, bool uses_color, int npop);
 
-/* Exported for zcolor1.c and zdpnext.c. */
-int zimage_multiple(P2(i_ctx_t *i_ctx_p, bool has_alpha));
+/* Exported for zdpnext.c */
+int image1_setup(i_ctx_t * i_ctx_p, bool has_alpha);
 
 #endif /* iimage_INCLUDED */

@@ -1,20 +1,19 @@
 %    Copyright (C) 1995, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-% This program is free software; you can redistribute it and/or modify it
-% under the terms of the GNU General Public License as published by the
-% Free Software Foundation; either version 2 of the License, or (at your
-% option) any later version.
-%
-% This program is distributed in the hope that it will be useful, but
-% WITHOUT ANY WARRANTY; without even the implied warranty of
-% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-% Public License for more details.
-%
-% You should have received a copy of the GNU General Public License along
-% with this program; if not, write to the Free Software Foundation, Inc.,
-% 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_cidfn.ps,v 1.1 2004/01/14 16:59:46 atai Exp $
+% $Id: gs_cidfn.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
 % ProcSet for implementing CIDFont and CIDMap resources.
 % When this is run, systemdict is still writable.
 
@@ -60,7 +59,7 @@ dup 0 {
     end
   } if
   1 index exch .buildfont9 exch pop
-} bind put
+} put % Don't bind it here, because gs_fapi.ps redefines .buildfont9
 
 % Add entries to a new CIDFontType 0 font per documentation (FontMatrix)
 % or for .buildfont9 (FDArray.Private.Subrs).
@@ -69,7 +68,8 @@ dup 0 {
   dup /FontMatrix known not {
     dup /FontMatrix [0.001 0 0 0.001 0 0] put
     dup /FDArray get {
-      /FontMatrix get [1000 0 0 1000 0 0] 1 index concatmatrix pop
+       dup /FontMatrix get [1000 0 0 1000 0 0] matrix concatmatrix
+       /FontMatrix exch put
     } forall
   } if
   dup /FDArray get {
@@ -130,14 +130,14 @@ dup 0 {
 dup 1 {
   10 .checkfonttype pop
   1 index exch .buildfont10 exch pop
-} bind put
+} put % Don't bind it here because gs_fapi.ps redefines .buildfont10
 
 % ------ CIDFontType 2 (FontType 11) ------ %
 
 dup 2 {
   11 .checkfonttype pop
   1 index exch .buildfont11 exch pop
-} bind put
+} put % Don't bind it here because gs_fapi.ps redefines .buildfont11
 
 pop		% .cidfonttypes
 
@@ -336,322 +336,19 @@ languagelevel exch 2 .setlanguagelevel
   dup /CIDFontType get //.cidfonttypes exch get exec
 } odef
 
-/.loadcidfontwithoutpop {
-    dup 4 string .peekstring pop dup (ttcf) eq exch (\000\001\000\000) eq or {
-    .loadcjkvttcidfont
-  } {
-    /CIDFont /Category findresource /.Instances get
-    dup length 2 div cvi dict .copydict exch
-    .loadfont
-    % Stack: <<original-.Instances>>
-    /CIDFont /Category findresource /.Instances get {% forall
-	% <<original-.Instances>> key value
-	2 index 2 index known {
-	    pop pop
-	} {
-	    pop exch pop /CIDFont findresource exit
-	} ifelse
-    } forall
-    dup /CIDFontName known not {
-	{Internal Error in .loadcidfontwithoutpop} stop
-    } if
-  } ifelse
-} bind def
-
-/.loadcidfont {
-  .loadcidfontwithoutpop pop
-} bind def
-
-% Define the name of the CID font map file.
-/defaultcidfontmap (CIDFnmap) def
-userdict /CIDFontmap 10 dict put
-
-% <dict> <file> .readCIDFontmap <dict>
-% Code from gs_fonts.ps::.readFontmap
-/.readCIDFontmap {
-    { dup token not { closefile exit } if
-      % This is a hack to get around the absurd habit of MS-DOS editors
-      % of adding an EOF character at the end of the file.
-      dup (\032) eq { pop closefile exit } if
-      1 index token not
-       { (CIDFontmap entry for ) print dup =only
-	 ( has no associated file or alias name!  Giving up.) = flush
-	 {.readCIDFontmap} 0 get 1 .quit
-       } if
-      dup type dup /stringtype eq exch /nametype eq or not
-       { (CIDFontmap entry for ) print 1 index =only
-	 ( has an invalid file or alias name!  Giving up.) = flush
-	 {.readCIDFontmap} 0 get 1 .quit
-       } if
-		% stack: dict file cidfontname filename|aliasname
-      1 index type /stringtype eq
-      1 index type /nametype eq and 1 index xcheck and
-      1 index /run eq 2 index /.runlibfile eq or and {
-		% This is an inclusion entry.
-	pop findlibfile { exch pop } { file } ifelse
-	2 index exch .readCIDFontmap pop
-      } {
-		% This is a real entry.
-		% stack: dict file cidfontname filename|aliasname
-
-		% Before staring a game, we need a hack.
-		% Some CJK pdf file contains a cidfontname that cannot 
-		% be represented as a nametype literal. Instead, the
-		% cidfontname is represented as a string literal.
-		% If a cidfontname is represented as a stringtype object,
-		% it must be converted to a nametype object. 
-		% We handle such a case here.
-	exch dup type /stringtype eq {cvn} if exch
-
-	        % stack: dict file cidfontname filename|aliasname
-		% Read and pop tokens until a semicolon.
-       { 2 index token not
-	  { (CIDFontmap entry for ) print 1 index =only
-	    ( ends prematurely!  Giving up.) = flush
-	    {.readCIDFontmap} 0 get 1 .quit
-	  } if
-	 dup /; eq { pop 3 index 3 1 roll .growput exit } if
-	 % Format:
-	 %   /CIDFontname (file) ttc-index ;
-	 %   /CIDFontname (file) /Code->CID-dict ;
-	 %   /CIDFontname (file) ttc-index /Code->CID-dict ;
-	 %
-	 % e.g.
-	 %   /HG-MinchoL     (hgminchol.ttc) 1 /Adobe-Japan1-Unicode ;
-	 %   /HG-PMinchoL    (hgminchol.ttc) 2 /Adobe-Japan1-Unicode ;
-	 %   /HG-MinchoL-J2  (hgminchol.ttc) 1 /Adobe-Japan2-Unicode ;
-	 %   /HG-PGothicB    (hggothicb.ttc) 2 ;
-	 %   /HG-GothicB-J2  (hggothicb.ttc) /Adobe-Japan2-Unicode ;
-	 % 
-	 % CID Fontmap entry is stored into CIDFontmap dict as an array.
-	 % Array format:
-	 %   [filename ttc-index]
-	 %   [filename /Code->CID-dict]
-	 %   [filename ttc-index /Code->CID-dict]
-	 %
-	 % Type: 
-	 %   filename: string
-	 %   ttc-index: integer
-	 %   /Code->CID-dict: name
-	 %
-	 % stack: dict file cidfontname filename something
-	 1 index type /nametype eq {
-	   (CIDFontmap entry for ) print 2 index =only
-	   (defines an alias! Giving up.) = flush
-	   {.readCIDFontmap} 0 get 1 .quit
-	 } if
-	 % stack: dict file cidfontname filename something
-	 exch [ exch 3 -1 roll
-	 % stack: dict file cidfontname [ filename something 
-	 dup type /integertype eq {
-	   % stack: dict file cidfontname [ filename int
-	   % Read next token
-	   4 index token not
-	   { (CIDFontmap entry for ) print 3 index =only
-	     ( ends prematurely!  Giving up.) = flush
-	     {.readCIDFontmap} 0 get 1 .quit
-	   } if
-	 } if
-	 % stack: dict file cidfontname [ filename int something
-	 % or     dict file cidfontname [ filename something
-	 dup /; eq not 1 index type /nametype eq and {
-	   % stack: dict file cidfontname [ filename  /Code->CID
-	   % or     dict file cidfontname [ filename  int /Code->CID
-	   % Read next token
-	   counttomark 2 eq {4} {5} ifelse index token not
-	   { (CIDFontmap entry for ) print
-	     counttomark 2 eq {3} {4} ifelse index =only
-	     ( ends prematurely!  Giving up.) = flush
-	     {.readCIDFontmap} 0 get 1 .quit
-	   } if
-	 } if
-	 % stack: dict file cidfontname [ filename int /Code->CID something
-	 % or     dict file cidfontname [ filename /Code->CID something
-	 dup /; eq {
-	     pop ]
-	     3 index 3 1 roll .growput exit
-	 } if
-	 pop
-       } loop
-      } ifelse
-    } loop
-} bind def
-
-% <file> .loadCIDFontmap -
-/.loadCIDFontmap {
-    userdict /CIDFontmap get exch
-    .readCIDFontmap pop
-} bind def
-
-% Code from .loadinitialfonts
-/.loadinitialcidfonts
- { NOCIDFONTMAP not
-    { /CIDFONTMAP where
-	  { pop [ CIDFONTMAP .pathlist ]
-	     {
-               dup VMDEBUG findlibfile
-		{ exch pop .loadCIDFontmap }
-		{ /undefinedfilename signalerror }
-	       ifelse
-	     }
-	  }
-	  { LIBPATH
-	     {
-               defaultcidfontmap 1 index .filenamedirseparator
-	       exch concatstrings concatstrings dup VMDEBUG
-	       (r) { file } .internalstopped
-		{ pop pop } { .loadCIDFontmap } ifelse
-	     }
-	  }
-	 ifelse forall
-    }
-   if
-   %%% Do nothing
- } bind def
-
-.loadinitialcidfonts
-
-/CIDFontmapHandler <<
-  /nametype {
-    /CIDFont findresource
-    /CIDFont defineresource pop
-  } bind
-  /stringtype {
-    findlibfile {
-      exch pop
-      % Define CIDFont with a name defined in the font file
-      .loadcidfontwithoutpop
-      % Define CIDFont with a name define in CIDFontmap
-      dup length 0 ne {
-	  dup /CIDFontName get 2 index eq {
-	      % Avoid duplicated defineresource for the same CIDFont
-	      pop pop
-	  } {
-	      % Give a name different from the name defined in the file
-	      /CIDFont defineresource pop
-	  } ifelse
-      } {
-	  pop pop
-      } ifelse
-    } {
-      /undefinedresource signalerror
-    } ifelse
-  } bind
-  /arraytype {
-  % Replace filename in the array with file
-      dup 0 get
-      findlibfile {
-	  3 1 roll pop
-	  copyarray dup 3 1 roll 0
-	  3 -1 roll put
-	  % Expand array
-	  aload pop .loadcjkvttcidfont
-	  /CIDFont defineresource pop
-      } {
-	  /undefinedresource signalerror
-      } ifelse
-  } bind
->> def
-
-%%% CIDFontmap Public Interface
-% /CIDFontName .CIDFontmapKnown true|false
-/.CIDFontmapKnown {
-    userdict /CIDFontmap get exch known
-} bind def
-
-% /CIDFontName .CIDFontmapKnownget value true
-% /CIDFontName .CIDFontmapKnownget false
-/.CIDFontmapKnownget {
-    userdict /CIDFontmap get exch .knownget
-} bind def
-
-% /CIDFontName value .CIDFontmapRunHandler -
-/.CIDFontmapRunHandler {
-    dup CIDFontmapHandler exch type get .execasresource
-} bind def
-
-% proc .CIDFontmapForAll -
-/.CIDFontmapForAll {
-    CIDFontmap exch forall
-} bind def
-
-% proc .CIDFontmapForAllKey -
-/.CIDFontmapForAllKey {
-    [ /pop cvx 3 -1 roll /exec cvx ] cvx .CIDFontmapForAll
-} bind def
-
 /CIDFont /Generic /Category findresource dup length dict .copydict
 dup /InstanceType /dicttype put
 dup /DefineResource {
   .buildcidfont
   /Generic /Category findresource /DefineResource get exec
 } put
-/.originalresourceforall 1 index /ResourceForAll get def
-dup /ResourceForAll {
-    currentglobal false setglobal
-    % (template) (proc) (scratch) g
-    [           % (template) (proc) (scratch) g [
-	%
-	% 1. Gather CIDFont name in /Resource/CIDFont
-	%
-	4 index % (template) (proc) (scratch) g [ (template)
-	{cvn}      % (template) (proc) (scratch) g [ (template) {cvn}
-	4 index % (template) (proc) (scratch) g    [ (template) {cvn} (scratch)
-	.originalresourceforall
-	% (template) (proc) (scratch) g [ ...
-	%
-	% 2. Gather CIDFont name in CIDFontmap
-	%
-	{
-	    dup length string cvs
-	    dup     % (template) (proc) (scratch) g [ ... (Key) (Key)
-	    counttomark 4 add index
-	    % (template) (proc) (scratch) g [ ... (Key) (Key) (template)
-	    .stringmatch {
-		cvn
-		% (template) (proc) (scratch) g [ ... /Key
-		% 3. Remove duplicated /Key
-		counttomark -1 1  {
-		    index 1 index eq {
-			pop exit % Duplicated
-		    } if
-		} for
-	    } {
-		pop
-	    } ifelse
-	} .CIDFontmapForAllKey
-    ]
-    exch setglobal
-    %
-    % 4. Build extended procedure
-    %
-    % (template) (proc) (scratch) [CIDFontmapKeys]
-    4 -1 roll pop
-    % (proc) (scratch) [CIDFontmapKeys]
-    3 1 roll
-    % [CIDFontmapKeys] (proc) (scratch)
-    [ exch {cvs} aload pop
-    % [CIDFontmapKeys] (proc) [ (scratch) -cvs-
-    4 -1 roll aload pop ] cvx
-    % [CIDFontmapKeys] proc++
-    %
-    % 5. Exec
-    %
-    forall
-} put
-
 % CIDFonts may be defined in CFF OpenType files.
 % Check for this here.
 /.loadcidfontresource {
   dup .ResourceFile {
-    {.loadcidfont} .execasresource
+    {.loadfont} .execasresource
   } {
-    pop dup
-    .CIDFontmapKnownget {
-      .CIDFontmapRunHandler
-    } {
-      dup /undefinedresource signalerror
-    } ifelse
+    dup /undefinedresource signalerror
   } ifelse
 } bind def
 dup /.LoadResource {
@@ -659,13 +356,6 @@ dup /.LoadResource {
     .loadcidfontresource
   } {
     true setglobal {.loadcidfontresource} stopped false setglobal {stop} if
-  } ifelse
-} bind put
-dup /.ResourceFileStatus {
-    dup .CIDFontmapKnown {
-    pop 2 -1 true
-  } {
-    .ResourceFile { closefile 2 -1 true } { pop false } ifelse
   } ifelse
 } bind put
 
@@ -700,3 +390,6 @@ dup /.CheckResource {
 /Category defineresource pop
 
 .setlanguagelevel
+
+%% Replace 1 (gs_ciddc.ps)
+(gs_ciddc.ps) runlibfile

@@ -1,22 +1,28 @@
-/* Copyright (C) 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: zchar42.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zchar42.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* Type 42 character display operator */
 #include "ghost.h"
 #include "oper.h"
@@ -39,8 +45,8 @@
 #include "store.h"
 
 /* <font> <code|name> <name> <glyph_index> .type42execchar - */
-private int type42_fill(P1(i_ctx_t *));
-private int type42_stroke(P1(i_ctx_t *));
+private int type42_fill(i_ctx_t *);
+private int type42_stroke(i_ctx_t *);
 private int
 ztype42execchar(i_ctx_t *i_ctx_p)
 {
@@ -97,10 +103,11 @@ ztype42execchar(i_ctx_t *i_ctx_p)
 				       (uint) op->value.intval, false, sbw42);
 	if (code < 0)
 	    return code;
+	present = metricsSideBearingAndWidth;
 	for (i = 0; i < 4; ++i)
 	    sbw[i] = sbw42[i];
-	w[0]   = sbw[2];
-	w[1]   = sbw[3];
+	w[0] = sbw[2];
+	w[1] = sbw[3];
 	if (gs_rootfont(igs)->WMode) { /* for vertically-oriented metrics */
 	    code = gs_type42_wmode_metrics((gs_font_type42 *) pfont,
 					   (uint) op->value.intval,
@@ -114,15 +121,14 @@ ztype42execchar(i_ctx_t *i_ctx_p)
 		}
 	    } else {
 		sbw[0] = sbw[2] / 2;
-		sbw[1] = (pbfont->FontBBox.q.y + pbfont->FontBBox.p.y
-			  - sbw42[3]) / 2;
+		sbw[1] = (pbfont->FontBBox.q.y + pbfont->FontBBox.p.y - sbw42[3]) / 2;
 		sbw[2] = sbw42[2];
 		sbw[3] = sbw42[3];
 	    }
 	}
     } else {
-      w[0]   = sbw[2];
-      w[1]   = sbw[3];
+        w[0] = sbw[2];
+        w[1] = sbw[3];
     }
     return zchar_set_cache(i_ctx_p, pbfont, op - 1,
 			   (present == metricsSideBearingAndWidth ?
@@ -133,8 +139,8 @@ ztype42execchar(i_ctx_t *i_ctx_p)
 }
 
 /* Continue after a CDevProc callout. */
-private int type42_finish(P2(i_ctx_t *i_ctx_p,
-			     int (*cont)(P1(gs_state *))));
+private int type42_finish(i_ctx_t *i_ctx_p,
+			  int (*cont)(gs_state *));
 private int
 type42_fill(i_ctx_t *i_ctx_p)
 {
@@ -148,7 +154,7 @@ type42_stroke(i_ctx_t *i_ctx_p)
 /* <font> <code|name> <name> <glyph_index> <sbx> <sby> %type42_{fill|stroke} - */
 /* <font> <code|name> <name> <glyph_index> %type42_{fill|stroke} - */
 private int
-type42_finish(i_ctx_t *i_ctx_p, int (*cont) (P1(gs_state *)))
+type42_finish(i_ctx_t *i_ctx_p, int (*cont) (gs_state *))
 {
     os_ptr op = osp;
     gs_font *pfont;

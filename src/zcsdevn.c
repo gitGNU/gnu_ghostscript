@@ -1,22 +1,28 @@
-/* Copyright (C) 1997, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: zcsdevn.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zcsdevn.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* DeviceN color space support */
 #include "memory_.h"
 #include "ghost.h"
@@ -31,27 +37,10 @@
 #include "ifunc.h"
 #include "igstate.h"
 #include "iname.h"
+#include "zht2.h"
 
 /* Imported from gscdevn.c */
 extern const gs_color_space_type gs_color_space_type_DeviceN;
-
-/*
- * This routine is used as an interpeter callback function for the
- * graphics library.  This routine translates a colorname_index value,
- * (which is how the separation and DeviceN colorant names are passed
- * to the graphics library) into a character string pointer and a
- * string length.
- */
-private int
-gs_get_colorname_string(gs_separation_name colorname_index,
-			unsigned char **ppstr, unsigned int *pname_size)
-{
-    ref nref;
-
-    name_index_ref(colorname_index, &nref);
-    name_string_ref(&nref, &nref);
-    return obj_string_data(&nref, (const unsigned char**) ppstr, pname_size);
-}
 
 /* <array> .setdevicenspace - */
 /* The current color space is the alternate space for the DeviceN space. */
@@ -64,6 +53,7 @@ zsetdevicenspace(i_ctx_t *i_ctx_p)
     gs_device_n_map *pmap;
     uint num_components;
     gs_color_space cs;
+    const gs_color_space * pacs;
     ref_colorspace cspace_old;
     gs_function_t *pfn;
     int code;
@@ -88,26 +78,20 @@ zsetdevicenspace(i_ctx_t *i_ctx_p)
     check_proc(pcsa[2]);
     
     /* The alternate color space has been selected as the current color space */
-    cs = *gs_currentcolorspace(igs);
-    if (!cs.type->can_be_alt_space)
-	return_error(e_rangecheck);
-    /*
-     * Allocate space for DeviceN color map function.  This can be either
-     * a type 4 function or we can collecte data for a color cube (type 0
-     * function).
-     */
-    code = alloc_device_n_map(&pmap, imemory, ".setdevicenspace(map)");
+    pacs = gs_currentcolorspace(igs);
+    cs = *pacs;
+    /* See zcsindex.c for why we use memmove here. */
+    memmove(&cs.params.device_n.alt_space, &cs,
+	    sizeof(cs.params.device_n.alt_space));
+    gs_cspace_init(&cs, &gs_color_space_type_DeviceN, NULL);
+    code = gs_build_DeviceN(&cs, num_components, pacs, imemory);
     if (code < 0)
 	return code;
+    names = cs.params.device_n.names;
+    pmap = cs.params.device_n.map;
+    cs.params.device_n.get_colorname_string = gs_get_colorname_string;
 
-    /* Allocate space for color names list and copy names from input array. */
-    names = (gs_separation_name *)
-	ialloc_byte_array(num_components, sizeof(gs_separation_name),
-			  ".setdevicenspace(names)");
-    if (names == 0) {
-	ifree_object(pmap, ".setdevicenspace(map)");
-	return_error(e_VMerror);
-    }
+    /* Pick up the names of the components */
     {
 	uint i;
 	ref sname;
@@ -136,10 +120,6 @@ zsetdevicenspace(i_ctx_t *i_ctx_p)
 
     /* Now set the current color space as DeviceN */
 
-    /* See zcsindex.c for why we use memmove here. */
-    memmove(&cs.params.device_n.alt_space, &cs,
-	    sizeof(cs.params.device_n.alt_space));
-    gs_cspace_init(&cs, &gs_color_space_type_DeviceN, NULL);
     cspace_old = istate->colorspace;
     /*
      * pcsa is a pointer to element 1 (2nd element)  in the DeviceN
@@ -147,11 +127,7 @@ zsetdevicenspace(i_ctx_t *i_ctx_p)
      * which is the tint transform.
      */
     istate->colorspace.procs.special.device_n.layer_names = pcsa[0];
-    istate->colorspace.procs.special.device_n.tint_transform = pcsa[2];
-    cs.params.device_n.names = names;
-    cs.params.device_n.num_components = num_components;
-    cs.params.device_n.map = pmap;
-    cs.params.device_n.get_colorname_string = gs_get_colorname_string;
+    istate->colorspace.procs.special.device_n.tint_transform = pcsa[2];    
     pfn = ref_function(pcsa + 2);	/* See comment above */
     if (!pfn)
 	code = gs_note_error(e_rangecheck);
@@ -164,9 +140,13 @@ zsetdevicenspace(i_ctx_t *i_ctx_p)
     }
     gs_cspace_set_devn_function(&cs, pfn);
     code = gs_setcolorspace(igs, &cs);
+    if (code < 0) {
+	istate->colorspace = cspace_old;
+	return code;
+    }
     rc_decrement(pmap, ".setdevicenspace(map)");  /* build sets rc = 1 */
     pop(1);
-    return code;
+    return 0;
 }
 
 
@@ -178,4 +158,3 @@ const op_def zcsdevn_op_defs[] =
     {"1.setdevicenspace", zsetdevicenspace},
     op_def_end(0)
 };
-

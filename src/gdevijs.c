@@ -1,22 +1,28 @@
 /* Copyright (C) 2001-2002 artofcode LLC.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevijs.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevijs.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /*
  * IJS device for Ghostscript.
  * Intended to work with any IJS compliant inkjet driver, including
@@ -1052,14 +1058,26 @@ gsijs_set_color_format(gx_device_ijs *ijsdev)
 	    ijsdev->procs.map_rgb_color = gx_default_gray_map_rgb_color;
 	    ijsdev->procs.map_color_rgb = gx_default_gray_map_color_rgb;
 	}
+	ijsdev->procs.encode_color = gx_default_gray_fast_encode;
+	ijsdev->procs.decode_color = gx_default_decode_color;
+	dci.polarity = GX_CINFO_POLARITY_ADDITIVE;
+	dci.gray_index = 0;
     } else if (!strcmp (ColorSpace, "DeviceRGB")) {
 	components = 3;
 	ijsdev->procs.map_rgb_color = gx_default_rgb_map_rgb_color;
 	ijsdev->procs.map_color_rgb = gx_default_rgb_map_color_rgb;
+	ijsdev->procs.encode_color = gx_default_rgb_map_rgb_color;
+	ijsdev->procs.decode_color = gx_default_rgb_map_color_rgb;
+	dci.polarity = GX_CINFO_POLARITY_ADDITIVE;
+	dci.gray_index = GX_CINFO_COMP_NO_INDEX;
     } else if (!strcmp (ColorSpace, "DeviceCMYK")) {
 	components = 4;
 	ijsdev->procs.map_cmyk_color = cmyk_8bit_map_cmyk_color;
 	ijsdev->procs.map_color_rgb = cmyk_8bit_map_color_rgb;
+	ijsdev->procs.encode_color = cmyk_8bit_map_cmyk_color;
+	ijsdev->procs.decode_color = gx_default_decode_color;
+	dci.polarity = GX_CINFO_POLARITY_SUBTRACTIVE;
+	dci.gray_index = 3;
     } else {
 	return -1;
     }
@@ -1072,10 +1090,12 @@ gsijs_set_color_format(gx_device_ijs *ijsdev)
     dci.dither_grays = maxvalue+1;
     dci.dither_colors = components > 1 ? maxvalue+1 : 0;
 
-    /* restore old anti_alias info */
-    dci.anti_alias = ijsdev->color_info.anti_alias;
-
+    dci.separable_and_linear = GX_CINFO_SEP_LIN;
+    dci.cm_name = ColorSpace;
+    
     ijsdev->color_info = dci;
+
+    set_linear_color_bits_mask_shift((gx_device *)ijsdev);
 
     return 0;
 }

@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>The Ghostscript Interpreter Application Programming Interface (API)</title>
-<!-- $Id: API.htm,v 1.1 2004/01/14 16:59:43 atai Exp $ -->
+<!-- $Id: API.htm,v 1.2 2004/02/14 22:20:02 atai Exp $ -->
 <!-- Supercedes the API in DLL.htm -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -30,9 +30,15 @@
 <li><a href="#set_stdio"><b><tt>gsapi_set_stdio</tt></b></a>
 <li><a href="#set_poll"><b><tt>gsapi_set_poll</tt></b></a>
 <li><a href="#set_display_callback"><b><tt>gsapi_set_display_callback</tt></b></a>
+<li><a href="#run"><b><tt>gsapi_run_string_begin</tt></b></a>
+<li><a href="#run"><b><tt>gsapi_run_string_continue</tt></b></a>
+<li><a href="#run"><b><tt>gsapi_run_string_end</tt></b></a>
+<li><a href="#run"><b><tt>gsapi_run_string_with_length</tt></b></a>
+<li><a href="#run"><b><tt>gsapi_run_string</tt></b></a>
 <li><a href="#init"><b><tt>gsapi_init_with_args</tt></b></a>
 <li><a href="#run"><b><tt>gsapi_run_*</tt></b></a>
 <li><a href="#exit"><b><tt>gsapi_exit</tt></b></a>
+<li><a href="#set_visual_tracer"><b><tt>gsapi_set_visual_tracer</tt></b></a>
 <li><a href="#return_codes">Return codes</a>
 </ul>
 <li><a href="#Example_usage">Example usage</a>
@@ -66,7 +72,7 @@ is described here.
 <p>
 The Ghostscript interpreter can be built as a dynamic link library 
 (DLL) on the Windows or OS/2 platforms, as a shared object on the 
-GNU/Linux platform and as a framework on MacOS X.
+Linux platform and as a framework on MacOS X.
 With some changes, it could be built as a static library.
 This document describes the Application Programming Interface (API)
 for the Ghostscript interpreter library.  
@@ -96,7 +102,7 @@ multiple programs simultaneously.
 MULTIPLE NONSHARED data segments and can be called by multiple programs
 simultaneously.
 
-<li>The GNU/Linux shared object <b><tt>libgs.so</tt></b>
+<li>The Linux shared object <b><tt>libgs.so</tt></b>
 can be used by multiple programs simultaneously.
 
 <li>The MacOS X <b><tt>Ghostscript.framework</tt></b> can also be used
@@ -105,7 +111,7 @@ by multiple applications at once.
 
 <p>
 The source for the executable is in <b><tt>dw</tt></b>*.* (Windows),
-<b><tt>dp</tt></b>*.* (OS/2) and  <b><tt>dx</tt></b>*.* (GNU/Linux).  
+<b><tt>dp</tt></b>*.* (OS/2) and  <b><tt>dx</tt></b>*.* (Linux).  
 See these source files for examples of how to use the DLL.
 
 <p>
@@ -139,7 +145,7 @@ values and error handling.
 <li><b><tt>
 int 
 <a href="#revision">gsapi_revision</a>
-  (gsapi_revision_t *pr, int len));
+  (gsapi_revision_t *pr, int len);
 </tt></b>
 
 <li><b><tt>
@@ -225,6 +231,12 @@ int
 int 
 <a href="#exit">gsapi_exit</a>
 (gs_main_instance *instance);
+</tt></b>
+
+<li><b><tt>
+int
+<a href="#set_visual_tracer">gsapi_set_visual_tracer</a>
+(gstruct vd_trace_interface_s *I);
 </tt></b>
 
 </ul>
@@ -335,6 +347,15 @@ This must be called on shutdown if <b><tt>gsapi_init_with_args()</tt></b>
 has been called, and just before <b><tt>gsapi_delete_instance()</tt></b>.
 </blockquote>
 
+<h3><a name="set_visual_tracer"></a><b><tt>gsapi_set_visual_tracer()</tt></b></h3>
+<blockquote>
+Pass visual tracer interface block to Ghostscript.
+See <a href="Lib.htm#Visual_trace"><b><tt>Lib.htm</tt></b></a> for reference about 
+the interface block structure.
+This function is useful for debug clients only. Release clients must not call it.
+</blockquote>
+
+
 <h3><a name="return_codes"></a>Return codes</h3>
 
 <p>
@@ -391,7 +412,11 @@ Reading from <b><tt>%stdin</tt></b> uses the stdin callback.
 
 
 <h2><a name="Example_usage"></a>Example Usage</h2>
-Some overly simple examples of using the Ghostscript interpreter library are:
+Some overly simple examples of using the Ghostscript interpreter library 
+are below.  Some more examples including other programming languages
+may be found at
+<a href="http://www.cs.wisc.edu/~ghost/doc/gsapi.htm">
+http://www.cs.wisc.edu/~ghost/doc/gsapi.htm</a>.
   
 <h3>Example 1</h3>
 <pre>
@@ -607,7 +632,7 @@ Options include
 </ul>
 The format values are described in 
 <b><tt><a href="../src/gdevdsp.h">gdevdsp.h</a></tt></b>.
-The format is flexible enough to support common Windows, OS/2, GNU/Linux
+The format is flexible enough to support common Windows, OS/2, Linux
 and Mac raster formats.  To select the display device with a 
 Windows 24-bit RGB raster:
 <pre>
@@ -640,7 +665,7 @@ You are then responsible for displaying this raster.
 Some examples are in 
 <b><tt><a href="../src/dwmain.c">dwmain.c</a></tt></b> (Windows),
 <b><tt><a href="../src/dpmain.c">dpmain.c</a></tt></b> (OS/2) and  
-<b><tt><a href="../src/dxmain.c">dxmain.c</a></tt></b> (X11/GNU/Linux).  
+<b><tt><a href="../src/dxmain.c">dxmain.c</a></tt></b> (X11/Linux).  
 
 <p>
 
@@ -661,8 +686,14 @@ This software is distributed under license and may not be copied,
 modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
+For more information about licensing, please refer to
+http://www.ghostscript.com/licensing/. For information on
+commercial licensing, go to http://www.artifex.com/licensing/ or
+contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
 <p>
-<small>Ghostscript version 7.07, 17 May 2003
+<small>Ghostscript version 8.01, 30 January 2004
 
 
 <!-- [3.0 end visible trailer] ============================================= -->

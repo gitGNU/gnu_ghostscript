@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>How to prepare a Ghostscript release</title>
-<!-- $Id: Release.htm,v 1.1 2004/01/14 16:59:44 atai Exp $ -->
+<!-- $Id: Release.htm,v 1.2 2004/02/14 22:20:03 atai Exp $ -->
 <!-- Originally: make.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -24,8 +24,10 @@
 <li><a href="#Introduction">Introduction</a>
 <li><a href="#Servers">Servers</a>
 <ul>
+<li><a href="#Development_files">Development sources and bug reports</a>
 <li><a href="#Distribution">Distribution</a>
 </ul>
+<li><a href="#Release_numbering">Release numbering</a>
 <li><a href="#Making_distributions">Making distributions</a>
 <ul>
 <li><a href="#Preparing_source">Preparing the source code</a>
@@ -38,6 +40,11 @@
 <li><a href="#Public_releases">Public releases</a>
 </ul>
 <li><a href="#After_releasing">After releasing</a>
+<li><a href="#GNU_releases">GNU Ghostscript releases</a>
+<ul>
+<li><a href="#GNU_code">GNU code</a>
+<li><a href="#GNU_after_releasing">After releasing (GNU)</a>
+</ul>
 <li><a href="#Fonts">Fonts</a>
 </ul></blockquote>
 
@@ -74,6 +81,12 @@ be sure to specify all command lines, file names, etc. in explicit
 detail.
 
 <p>
+The release process for the GPL and AFPL branches are similar, though
+there are some differences in terms of policy and release locations. See
+the section on <a href="#GNU_releases">GNU releases</a> below for
+information specific to GNU Ghostscript.
+
+<p>
 File names below that don't include an explicit subdirectory name are in the
 <b><tt>src</tt></b> subdirectory.
 
@@ -85,7 +98,7 @@ you will want to change.
 
 <li>If you make any significant changes, please edit
 <b><tt>gscdef.c</tt></b> to change <b><tt>GS_PRODUCTFAMILY</tt></b> and
-<b><tt>GS_PRODUCT</tt></b> from "GNU Ghostscript" to something else,
+<b><tt>GS_PRODUCT</tt></b> from "AFPL Ghostscript" to something else,
 in order to avoid confusion with artofcode's releases.
 
 <li>In the same file, you may also want to edit <b><tt>GS_COPYRIGHT</tt></b>
@@ -95,48 +108,138 @@ notice that is there).
 <li>You will almost certainly want to edit <b><tt>version.mak</tt></b> to
 change the revision date, <b><tt>GS_REVISIONDATE</tt></b>.
 
-<li>If you want to change the version number, you must change it in both
-<b><tt>version.mak</tt></b> (<b><tt>GS_VERSION_</tt></b>*) and
-<b><tt>lib/gs_init.ps</tt></b> (the integer on a line by itself near the
-beginning of the file).
+<li>If you want to change the release number, you must change it in all the
+places listed under <a href="#Release_numbering">"Release numbering"</a>
+below.
 
 </ul>
 
 <h2><a name="Servers"></a>Servers</h2>
 
 <p>
-The Ghostscript source files are maintained on sites accessible to
+The GNU and AFPL Ghostscript files are maintained on sites accessible to
 the public.  One specific site hosts the active CVS repository for code,
 data, and documentation, and the bug report data base; several sites
-offer distributions with version numbers, intended for wider
+offer distributions with release numbers, intended for wider
 distribution.
+
+<h3><a name="Development_files"></a>Development sources and bug reports</h3>
+
+<p>
+The primary repository for GNU and AFPL Ghostscript is <a
+href="http://www.ghostscript.com/" class="offsite">ghostscript.com</a>.
+Please check there first for any news about releases or current work,
+and for information about where to download ghostscript and how to
+access the mailing lists.
+
+CVS access is through <a
+href="http://cvs.ghostscript.com/"
+class="offsite">cvs.ghostscript.com</a>.
+
+<p>
+It may also be helpful to
+read the SourceForge AFPL Ghostscript home page (<a
+href="http://sourceforge.net/projects/ghostscript/" 
+class="offsite">http://sourceforge.net/projects/ghostscript/</a>).
 
 <h3><a name="Distribution"></a>Distribution</h3>
 
 <p>
-The primary distribution site for GNU Ghostscript is the <a
-href="ftp://ftp.gnu.org/gnu/ghostscript/" class="offsite">GNU ftp
-site</a> and its <a
-href="http://www.gnu.org/prep/ftp.html" class="offsite">mirrors</a>.
+Stable, beta, and development releases are all available from
+<blockquote>
+<a
+href="http://sourceforge.net/project/showfiles.php?group_id=1897" 
+class="offsite">http://sourceforge.net/project/showfiles.php?group_id=1897</a>
+</blockquote>
 
 <p>
 Stable releases are also distributed from
 
 <blockquote>
 <a
+href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/AFPL/" 
+class="offsite">ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/AFPL/</a> or
+<br>
+<a
 href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/" 
 class="offsite">ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/</a>
 </blockquote>
+
+<p>
+Development releases are also distributed from
+
+<blockquote>
+<a href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/AFPL/test/" 
+class="offsite">ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/AFPL/test/</a>
+</blockquote>
+
+<h2><a name="Release_numbering"></a>Release numbering</h2>
+
+<p>
+Ghostscript uses a two-part (major.minor) release number. The second part
+of the release number is a 2-digit decimal fraction: it counts 00,
+01, 02, and so on through 99.
+
+<ul>
+
+<li>Release numbers N.0x and N.5x indicate stable versions.
+<li>Successive increments generally indicate bug fixes and minor enhancements. 
+<li>Development, testing and beta releases generally begin with a minor release number that is
+a multiple of ten and increment from there.
+</ul>
+
+<p>
+Release numbers appear in the following places in the Ghostscript files:
+
+<ul>
+
+<li>In <b><tt>lib/gs_init.ps</tt></b>, as an integer (release number x100) at the beginning of the
+file just after the initial comment blocks.
+
+<li>In <b><tt>src/version.mak</tt></b>, split into 3 lines.
+
+<li>In <b><tt>doc/News.htm</tt></b>, in the two headers and their labels and at the very end in
+the copyright footer.
+
+<li>At the foot of most documenation files. However, these are updated mechanically from the value
+in <b><tt>News.htm</tt></b> as part of the release process and do not need to be maintained
+directly.
+</ul>
+
+<h3>Before a release</h3>
+
+<p>
+The current release number in the development code must be set to the desired value. The increment
+from just after the previous release (see below) is sufficient for minor updates. In the case of
+major changes or a new stable release, the number will need to be bumped; this is generally done
+as the first step of preparing a new release.
+
+<h3>After a release</h3>
+
+<p>
+After making a release the release number in CVS is incremented. Thus versions built
+from cvs are always marked with a future (or unused) release number to avoid confusion.
+
+<p>
+Additionally, After an N.00 or N.50 stable release, a branch is made in cvs so that development 
+can continue independently of changes to the stable series. When this happens, the minor release
+number is incremented by 10 (or 20) on the development branch (and by 1 on the new stable branch,
+as above) to avoid collisions.
+
+<p>
+While incrementing the release number after making a release may seem
+counter-intuitive, it ensures that, at any given time, the version
+number alone is sufficient to distinguish between the current CVS
+state and a numbered release.
 
 <h2><a name="Making_distributions"></a>Making distributions</h2>
 
 <p>
 This document only discusses source distributions.  Source distributions
-currently can only be made on GNU/Linux systems (but it probably wouldn't
-take much work to support other Unix-like systems).  Ghostscript as
-distributed also
+currently can only be made on GNU/Linux systems (but it probably wouldn't take
+much work to support other Unix systems).  Ghostscript as distributed also
 often includes executables or other packages for the Windows and MacOS
-environments, but artofcode does not produce these, and this document does not
+environments, but artofcode does not always produce these, and this document does not
 discuss them.  For more information about Windows packages, please contact
 <a href="mailto:bug-gswin@ghostscript.com"><tt>bug-gswin@ghostscript.com</tt></a>;
 for more information about MacOS packages, please contact <a
@@ -167,13 +270,13 @@ environment.
 <h3><a name="Preparing_source"></a>Preparing the source code</h3>
 
 <p>
+If necessary, update the release number by incrementing it as described in
+<a href="#Release_numbering">Release numbering</a> above.
+
+<p>
 Update references to the date for release:
 
 <ul>
-
-<li>In <b><tt>lib/gs_init.ps</tt></b>, as an integer (release number
-x100) at the beginning of the file just after the initial comment
-blocks.
 
 <li>In <b><tt>version.mak</tt></b>, the numeric date.
 
@@ -183,6 +286,7 @@ and in the copyright footer both the year and the release date.
 
 </ul>
 
+<p>
 We recommend using a UTC release date to avoid timezone skew.
 
 <p>
@@ -209,20 +313,19 @@ version/date inconsistencies, and mismatches between the working directory
 and the CVS repository by running:
 
 <blockquote><pre>
-toolbin/pre
+toolbin/pre.tcl
 </pre></blockquote>
 
 <p>
 This program compares the result of various greps against a check file,
 writing the results of grep on one output file and the differences from the
-check file on another.  See the source code of
-<b><tt>toolbin/pre</tt></b> for the default file names.  The
+check file on another.  See the source code for the default file names.  The
 important one is the check file,
-<b><tt>toolbin/pre.chk</tt></b>.  <b><tt>pre</tt></b> also verifies
+<b><tt>toolbin/pre.chk</tt></b>.  <b><tt>pre.tcl</tt></b> also verifies
 that the
 right information is in the following places:
 <ul>
-<li>version number in <b><tt>man/*.1</tt></b>, <b><tt>doc/*.htm</tt></b>,
+<li>release number in <b><tt>man/*.1</tt></b>, <b><tt>doc/*.htm</tt></b>,
 <b><tt>version.mak</tt></b>, <b><tt>doc/gs-vms.hlp</tt></b>,
 <b><tt>lib/gs_init.ps</tt></b>
 <li>revision date in <b><tt>man/*.1</tt></b>, <b><tt>doc/*.htm</tt></b>,
@@ -235,14 +338,14 @@ right information is in the following places:
 If necessary, run
 
 <blockquote><pre>
-toolbin/pre update
+toolbin/pre.tcl update
 </pre></blockquote>
 
 <p>
 to update the version and revision date in the doc files, and then run
 
 <blockquote><pre>
-toolbin/pre
+toolbin/pre.tcl
 </pre></blockquote>
 
 <p>
@@ -291,9 +394,9 @@ Do a smoke test, updating the example paths as necessary:
 
 <blockquote><pre>
 unset GS_DEVICE GS_FONTPATH GS_LIB GS_OPTIONS
-./bin/gs -I./lib -I./fonts -dNOPAUSE -dBATCH /gs/toolbin/smoke.ps
+./bin/gs -I./lib -I./fonts -dNOPAUSE -dBATCH toolbin/smoke.ps
 ./bin/gs -I./lib -I./fonts -dNOPAUSE -dBATCH -sDEVICE=bitcmyk\
-  -sOutputFile=/dev/null -r600 -dBufferSpace=50000 /gs/toolbin/smoke.ps
+  -sOutputFile=/dev/null -r600 -dBufferSpace=100000 toolbin/smoke.ps
 </pre></blockquote>
 
 <p>
@@ -304,7 +407,6 @@ This reads files named
 <b><tt>data/ps/*.ps</tt></b>
 <b><tt>data/psl2/*.ps</tt></b>
 <b><tt>data/psl3/*.ps</tt></b>
-<b><tt>data/pdf/*.pdf</tt></b>
 </pre></blockquote>
 
 <p>
@@ -327,12 +429,17 @@ cvs commit
 to ensure the repository is up to date.
 
 <p>
-Execute
+Execute either (for the main HEAD branch)
 
 <blockquote><pre>
+toolbin/cvs2hist.py -j &lt;previous_tag&gt; -r '-b' -v &lt;new_version&gt; &gt; doc/Changes.htm
+</pre></blockquote>
+or (for a non-HEAD branch)
+<blockquote><pre>
 toolbin/cvs2hist.py -j &lt;previous_tag&gt; -r '-r&lt;branch_tag&gt;' -v &lt;new_version&gt; &gt; doc/Changes.htm
-</pre>
-e.g. <pre>toolbin/cvs2hist.py -j gs7_04 -r '-rGS_7_0X' -v 7.05</pre>
+</pre></blockquote>
+e.g.
+<blockquote><pre>toolbin/cvs2hist.py -j gs7_20 -r '-b' -v 7.21</pre>
 </blockquote>
 
 <p>
@@ -348,9 +455,7 @@ variations in naming.
 Run
 
 <blockquote><pre>
-tclsh
-% source toolbin/makeset.tcl
-% makehist
+toolbin/makehist.tcl
 </pre></blockquote>
 
 <p>
@@ -390,11 +495,12 @@ Pull a fresh copy for distribution from the cvs repository:
 
 
 <p>
-Generate the text versions of the README document:
+Generate the text versions of the README and PUBLIC documents:
 
 <blockquote>
 <pre><tt>cd ghostscript-#.##</tt>
 <tt>lynx -dump -nolist doc/Readme.htm &gt; doc/README</tt>
+<tt>lynx -dump -nolist doc/Public.htm &gt; doc/PUBLIC</tt></pre>
 </blockquote>
 
 <p>
@@ -445,7 +551,7 @@ convenience of windows developers. See below.
 For Windows testing, you will need, in addition to the files listed
 under "<a href="#Preparing_source">Preparing the source</a>" above:
 <blockquote><pre>
-<b><tt>toolbin/makewin</tt></b> (link to <b><tt>makeset.tcl</tt></b>)
+<b><tt>toolbin/makewin.tcl</tt></b>
 </pre></blockquote>
 
 <p>
@@ -545,7 +651,8 @@ files such as
 Unzip <b><tt>gsNNNsrc.zip</tt></b>.  
 The directory must be named <b><tt>gsN.NN</tt></b>.
 <p>
-Extract the fonts <b><tt>gnu-gs-fonts-std-6.0.tar.gz</tt></b>
+Extract the AFPL fonts <b><tt>ghostscript-fonts-std-6.0.tar.gz</tt></b>
+or GNU fonts <b><tt>gnu-gs-fonts-std-6.0.tar.gz</tt></b>
 into a directory <b><tt>fonts</tt></b> adjacent to the 
 <b><tt>gsN.NN</tt></b> directory.  
 The fonts are needed in this location for building 
@@ -580,7 +687,8 @@ If you do not have WinZip Self-Extractor, you can use
 Upload <b><tt>ghostscript-#.##.tar.*</tt></b> to SourceForge (by anonymous
 FTP to <b><tt>upload.sourceforge.net</tt></b>, directory
 <b><tt>/incoming</tt></b>), and then post it using the "File Release"
-facility in the Ghostscript project.
+facility in the AFPL Ghostscript project. If this is a stable AFPL
+release put it in the <b><tt>ghostscript</tt></b> module.
 If this is a GNU release, put it in the <b><tt>gnu-gs</tt></b> module.
 If this is a test release or beta release, put
 it in the <b><tt>gs-devel</tt></b> or <b><tt>gs-beta</tt></b> module,
@@ -589,14 +697,18 @@ If you are adding executable builds or source archives for other
 platforms to an existing source release, please use the same release
 date as the source release, not the current date.
 
+<p>
+If <b><tt>doc/C-style.htm</tt></b> has changed, put it on
+<b><tt>ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/AFPL/C-style.htm</tt></b>.
+
 <h3><a name="Beta_distributions"></a>Beta distributions</h3>
 
 <p>
 Do the steps for distributions in general.
 
 <p>
-Upload <b><tt>ghostscript-#.##.tar.*</tt></b> to the testing directory on
-mirror.cs.wisc.edu.
+Upload <b><tt>ghostscript-#.##.tar.*</tt></b> to
+<b><tt>ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/AFPL/test</tt></b>.
 
 <p>
 Send an email announcement to the <tt>gs-test</tt> list
@@ -605,17 +717,11 @@ announcing the new release.
 <h3><a name="Public_releases"></a>Public releases</h3>
 
 <p>
-Update the title (current version #), first heading (previous version #),
-and "new features" and "known problems" lists in
-<b><tt>doc/Current.htm</tt></b>.
-
-<p>
 Do the steps for distributions in general.
 
 <p>
 Create a directory at
-<b><tt>ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/gs###/</tt></b>. 
-In that
+<b><tt>ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/AFPL/gs###/</tt></b>.  In that
 directory, store the following files:
 
 <ul>
@@ -666,7 +772,7 @@ number of the fonts:
 <p>
 (Note that the link names are somewhat inconsistent: some of them retain the
 version number of the file being referenced, and some of them use the
-Ghostscript version number.  This is a historical artifact that might be
+Ghostscript release number.  This is a historical artifact that might be
 changed someday.)
 
 <p>
@@ -682,28 +788,8 @@ The Wisconsin server should update automatically.
 <h2><a name="After_releasing"></a>After releasing</h2>
 
 <p>
-E-mail the full URL and the <b><tt>md5sum</tt></b> of the new archive(s) to
-<a href="mailto:ftp-upload@gnu.org"><tt>ftp-upload@gnu.org</tt></a>. This
-will allow the site maintainers to add the new release to the GNU
-distribution network.
-
-<p>
-It may also be helpful to have the Free Software Foundation review the
-code before release to see whether it meets their standards for
-distribution from the gnu.org website.
-
-<p>
-Update the version number by incrementing it:
-
-<ul>
-
-<li>In <b><tt>lib/gs_init.ps</tt></b>, at the very beginning of the file.
-
-<li>In <b><tt>version.mak</tt></b>, in 3 definitions.
-
-<li>In <b><tt>doc/News.htm</tt></b>, in 4 places.
-
-</ul>
+Update the release number by incrementing it as described in <a
+href="#Release_numbering">Release numbering</a> above.
 
 <p>
 In <b><tt>gscdef.c</tt></b>, edit the definition of
@@ -713,12 +799,55 @@ In <b><tt>gscdef.c</tt></b>, edit the definition of
 Edit <b><tt>doc/News.htm</tt></b> to remove all the content.
 
 
+<h2><a name="GNU_releases"></a>GNU Ghostscript releases</h2>
+
+<p>
+artofcode LLC re-releases each stable AFPL Ghostscript branch under
+the GPL--as GNU Ghostscript--when the next major stable AFPL 
+release comes out, or after one calendar year, whichever comes first.
+
+<h3><a name="GNU_code"></a>GNU code</h3>
+
+<p>
+To make a GNU Ghostscript release from AFPL Ghostscript, update the
+LICENCE file to reflect the new status of the code. In general there
+can be no recipe for this as it depends on the niceties of ownership and
+permisison attached to each piece of code. However, a previous GNU
+release can serve as a guide.
+
+<p>
+There are also generally some portions of code (usually drivers) which
+are limited to GNU Ghostscript only. These may want porting to the new
+version before release.
+
+<p>Once the license change is complete and the codebase has been
+updated to satifaction, follow the release process as described for AFPL
+Ghostscript above to test and package the new version. The distribution
+methods are parallel to those for the AFPL, with the GPL releases
+generally going under a separate header. For example, on the wisc
+ftp site upload the file to 
+<tt>ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/gs###/</tt>.
+
+<h3><a name="GNU_after_releasing"></a>After releasing (GNU)</h3>
+
+<p>
+E-mail the full URL and the <b><tt>md5sum</tt></b> of the new archive(s) to
+<a href="mailto:ftp-upload@gnu.org"><tt>ftp-upload@gnu.org</tt></a>.
+
+<p>
+It may also be helpful to have the Free Software Foundation review the
+code before release to see whether it meets their standards for
+distribution from the gnu.org website.
+
+
 <h2><a name="Fonts"></a>Fonts</h2>
 
 <p>
 artofcode LLC distributes a package of the base 35 PostScript fonts, and a
-package of other miscellaneous fonts. These are released with a
-licence matching that of the Ghostscript code.
+package of other miscellaneous fonts.  As with the Ghostscript code, each
+package is released both with the AFPL and with the GPL; however, unlike the
+Ghostscript code, artofcode releases these versions simultaneously rather
+than with a one-version delay.
 
 <p>
 To make the font packages, run the command
@@ -738,10 +867,12 @@ gnu-gs-fonts-other-#.##.tar.gz
 </pre></blockquote>
 
 <p>
-The second two should be uploaded to
-<b><tt>ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/fonts/</tt></b>,
-and the url and md5sum sent to the GNU ftp maintainers as with the
-ghostscript source.
+The first two of these use the AFPL, and should be uploaded to
+<b><tt>ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/AFPL/fonts/</tt></b>.  The other two
+use the GPL, and should be uploaded to
+<b><tt>ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/fonts/</tt></b>.  For the GNU
+release, also see <a href="#GNU_after_releasing">"After releasing
+(GNU)"</a>.
 
 <!-- [2.0 end contents] ==================================================== -->
 
@@ -760,8 +891,14 @@ This software is distributed under license and may not be copied,
 modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
+For more information about licensing, please refer to
+http://www.ghostscript.com/licensing/. For information on
+commercial licensing, go to http://www.artifex.com/licensing/ or
+contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
 <p>
-<small>Ghostscript version 7.07, 17 May 2003
+<small>Ghostscript version 8.01, 30 January 2004
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gzstate.h,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: gzstate.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Private graphics state definition for Ghostscript library */
 
 #ifndef gzstate_INCLUDED
@@ -96,10 +102,7 @@ struct gs_state_s {
 
     /* Color (device-independent): */
 
-    gs_color_space_index	/* before substitution */
-        orig_cspace_index, orig_base_cspace_index;
     gs_color_space *color_space; /* after substitution */
-    gx_device_color_spaces_t device_color_spaces; /* substituted spaces */
     gs_client_color *ccolor;
 
     /* Color caches: */
@@ -148,10 +151,7 @@ struct gs_state_s {
   m(4,view_clip) m(5,effective_clip_path)\
   m(6,color_space) m(7,ccolor) m(8,dev_color)\
   m(9,font) m(10,root_font) m(11,show_gstate) /*m(---,device)*/\
-  m(12,transparency_group_stack)\
-  m(13,device_color_spaces.named.Gray)\
-  m(14,device_color_spaces.named.RGB)\
-  m(15,device_color_spaces.named.CMYK)
-#define gs_state_num_ptrs 16
+  m(12,transparency_group_stack)
+#define gs_state_num_ptrs 13
 
 #endif /* gzstate_INCLUDED */

@@ -1,22 +1,28 @@
-/* Copyright (C) 1994 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1994 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdev8bcm.h,v 1.1 2004/01/14 16:59:47 atai Exp $ */
+/* $Id: gdev8bcm.h,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* 8-bit color map support */
 /* Requires gxdevice.h (for gx_color_value) */
 
@@ -54,12 +60,12 @@ typedef struct gx_8bit_color_map_s {
 } gx_8bit_color_map;
 
 /* Initialize an 8-bit color map. */
-void gx_8bit_map_init(P2(gx_8bit_color_map *, int));
+void gx_8bit_map_init(gx_8bit_color_map *, int);
 
 /* Look up a color in an 8-bit color map. */
 /* Return -1 if not found. */
-int gx_8bit_map_rgb_color(P4(const gx_8bit_color_map *, gx_color_value,
-			     gx_color_value, gx_color_value));
+int gx_8bit_map_rgb_color(const gx_8bit_color_map *, gx_color_value,
+			  gx_color_value, gx_color_value);
 
 /* Test whether an 8-bit color map has room for more entries. */
 #define gx_8bit_map_is_full(pcm)\
@@ -67,7 +73,7 @@ int gx_8bit_map_rgb_color(P4(const gx_8bit_color_map *, gx_color_value,
 
 /* Add a color to an 8-bit color map. */
 /* Return -1 if the map is full. */
-int gx_8bit_add_rgb_color(P4(gx_8bit_color_map *, gx_color_value,
-			     gx_color_value, gx_color_value));
+int gx_8bit_add_rgb_color(gx_8bit_color_map *, gx_color_value,
+			  gx_color_value, gx_color_value);
 
 #endif /* gdev8bcm_INCLUDED */

@@ -1,5 +1,5 @@
 @echo off 
-@rem $Id: pdf2ps.bat,v 1.1 2004/01/14 16:59:47 atai Exp $
+@rem $Id: pdf2ps.bat,v 1.2 2004/02/14 22:20:04 atai Exp $
 @rem Convert PDF to PostScript.
 
 if %1/==/ goto usage

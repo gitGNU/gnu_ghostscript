@@ -1,22 +1,28 @@
-/* Copyright (C) 1993, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1993, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxpcmap.c,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxpcmap.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Pattern color mapping for Ghostscript library */
 #include "math_.h"
 #include "memory_.h"
@@ -32,6 +38,7 @@
 #include "gxdevice.h"
 #include "gxdevmem.h"
 #include "gxpcolor.h"
+#include "gxp1impl.h"
 #include "gzstate.h"
 
 /* Define the default size of the Pattern cache. */
@@ -123,10 +130,19 @@ private const gx_device_pattern_accum gs_pattern_accum_device =
      gx_default_begin_typed_image,
      pattern_accum_get_bits_rectangle,
      NULL,
-     NULL,
+     gx_default_create_compositor,
      NULL,
      gx_default_text_begin,
-     gx_default_finish_copydevice
+     gx_default_finish_copydevice,
+     NULL,
+     NULL,
+     NULL,
+     NULL,
+     NULL,
+     NULL,
+     NULL,
+     NULL,
+     NULL
  },
  0,				/* target */
  0, 0, 0, 0			/* bitmap_memory, bits, mask, instance */
@@ -298,6 +314,9 @@ pattern_accum_copy_mono(gx_device * dev, const byte * data, int data_x,
 {
     gx_device_pattern_accum *const padev = (gx_device_pattern_accum *) dev;
 
+    /* opt out early if nothing to render (some may think this a bug) */
+    if (color0 == gx_no_color_index && color1 == gx_no_color_index)
+        return 0;
     if (padev->bits)
 	(*dev_proc(padev->target, copy_mono))
 	    (padev->target, data, data_x, raster, id, x, y, w, h,
@@ -470,7 +489,7 @@ gx_pattern_cache_free_entry(gx_pattern_cache * pcache, gx_color_tile * ctile)
  * device, but it may zero out the bitmap_memory pointers to prevent
  * the accumulated bitmaps from being freed when the device is closed.
  */
-private void make_bitmap(P3(gx_strip_bitmap *, const gx_device_memory *, gx_bitmap_id));
+private void make_bitmap(gx_strip_bitmap *, const gx_device_memory *, gx_bitmap_id);
 int
 gx_pattern_cache_add_entry(gs_imager_state * pis,
 		   gx_device_pattern_accum * padev, gx_color_tile ** pctile)
@@ -558,7 +577,7 @@ make_bitmap(register gx_strip_bitmap * pbm, const gx_device_memory * mdev,
 /* Purge selected entries from the pattern cache. */
 void
 gx_pattern_cache_winnow(gx_pattern_cache * pcache,
-  bool(*proc) (P2(gx_color_tile * ctile, void *proc_data)), void *proc_data)
+  bool(*proc) (gx_color_tile * ctile, void *proc_data), void *proc_data)
 {
     uint i;
 

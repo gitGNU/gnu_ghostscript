@@ -1,22 +1,28 @@
-/* Copyright (C) 1995, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1995, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gslib.c,v 1.1 2004/01/14 16:59:50 atai Exp $ */
+/* $Id: gslib.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Test program for Ghostscript library */
 /* Capture stdin/out/err before gsio.h redefines them. */
 #include "stdio_.h"
@@ -37,7 +43,6 @@ get_real(void)
 #include "gsmatrix.h"
 #include "gsstate.h"
 #include "gscspace.h"
-#include "gscssub.h"
 #include "gscolor2.h"
 #include "gscoord.h"
 #include "gscie.h"
@@ -63,21 +68,21 @@ get_real(void)
 /*#define CAPTURE */
 
 /* Test programs */
-private int test1(P2(gs_state *, gs_memory_t *));	/* kaleidoscope */
-private int test2(P2(gs_state *, gs_memory_t *));	/* pattern fill */
-private int test3(P2(gs_state *, gs_memory_t *));	/* RasterOp */
-private int test4(P2(gs_state *, gs_memory_t *));	/* set resolution */
-private int test5(P2(gs_state *, gs_memory_t *));	/* images */
-private int test6(P2(gs_state *, gs_memory_t *));	/* CIE API, snapping */
-private int test7(P2(gs_state *, gs_memory_t *));	/* non-monot HT */
-private int test8(P2(gs_state *, gs_memory_t *));	/* transp patterns */
+private int test1(gs_state *, gs_memory_t *);	/* kaleidoscope */
+private int test2(gs_state *, gs_memory_t *);	/* pattern fill */
+private int test3(gs_state *, gs_memory_t *);	/* RasterOp */
+private int test4(gs_state *, gs_memory_t *);	/* set resolution */
+private int test5(gs_state *, gs_memory_t *);	/* images */
+private int test6(gs_state *, gs_memory_t *);	/* CIE API, snapping */
+private int test7(gs_state *, gs_memory_t *);	/* non-monot HT */
+private int test8(gs_state *, gs_memory_t *);	/* transp patterns */
 
 #ifdef CAPTURE
 #include "k/capture.c"
-private int test10(P2(gs_state *, gs_memory_t *));	/* captured data */
+private int test10(gs_state *, gs_memory_t *);	/* captured data */
 
 #endif
-private int (*tests[]) (P2(gs_state *, gs_memory_t *)) =
+private int (*tests[]) (gs_state *, gs_memory_t *) =
 {
     test1, test2, test3, test4, test5,
 	test6, test7, test8, 0
@@ -90,7 +95,7 @@ private int (*tests[]) (P2(gs_state *, gs_memory_t *)) =
 extern_gs_lib_device_list();
 
 /* Forward references */
-private float odsf(P2(floatp, floatp));
+private float odsf(floatp, floatp);
 
 /* Provide a single point for all "C" stdout and stderr.
  * Eventually these will always be referenced through an instance structure. 
@@ -305,10 +310,16 @@ gs_reloc_const_string(gs_const_string * sptr, gc_state_t * gcst)
 
 /* Other stubs */
 void
-gs_exit(int exit_status)
+gs_to_exit(int exit_status)
 {
     gs_lib_finit(exit_status, 0);
-    exit(exit_status);
+}
+
+void
+gs_abort(void)
+{
+    gs_to_exit(1); /* cleanup */
+    gp_do_exit(1); /* system independent exit() */	
 }
 
 
@@ -542,6 +553,9 @@ test5(gs_state * pgs, gs_memory_t * mem)
 	0x88, 0xcc, 0x00, 0x44,
 	0xcc, 0x00, 0x44, 0x88
     };
+    gs_color_space gray_cs;
+
+    gs_cspace_init_DeviceGray(&gray_cs);
 
     /*
      * Neither ImageType 3 nor 4 needs a current color,
@@ -593,8 +607,10 @@ test5(gs_state * pgs, gs_memory_t * mem)
     {
 	gs_image1_t image1;
 	void *info1;
+        gs_color_space cs;
 
-	gs_image_t_init_gray(&image1, (const gs_imager_state *)pgs);
+        gs_cspace_init_DeviceGray(&cs);
+	gs_image_t_init(&image1, &cs);
 	/* image */
 	image1.ImageMatrix.xx = W;
 	image1.ImageMatrix.yy = -H;
@@ -645,8 +661,7 @@ test5(gs_state * pgs, gs_memory_t * mem)
 	    0x66
 	};
 
-	gs_image3_t_init(&image3, gs_current_DeviceGray_space(pgs),
-			 interleave_scan_lines);
+	gs_image3_t_init(&image3, &gray_cs, interleave_scan_lines);
 	/* image */
 	image3.ImageMatrix.xx = W;
 	image3.ImageMatrix.yy = -H;
@@ -717,7 +732,7 @@ test5(gs_state * pgs, gs_memory_t * mem)
 	gs_image4_t image4;
 	const byte *data4 = data3;
 
-	gs_image4_t_init(&image4, gs_current_DeviceGray_space(pgs));
+	gs_image4_t_init(&image4, &gray_cs);
 	/* image */
 	image4.ImageMatrix.xx = W;
 	image4.ImageMatrix.yy = -H;
@@ -808,10 +823,13 @@ test6(gs_state * pgs, gs_memory_t * mem)
     };
     gx_device_cmap *cmdev;
     int code;
+    gs_color_space rgb_cs;
+
+    gs_cspace_init_DeviceRGB(&rgb_cs);
 
     gs_scale(pgs, 150.0, 150.0);
     gs_translate(pgs, 0.5, 0.5);
-    gs_setcolorspace(pgs, gs_current_DeviceRGB_space(pgs));
+    gs_setcolorspace(pgs, &rgb_cs);
     spectrum(pgs, 5);
     gs_translate(pgs, 1.2, 0.0);
     /* We must set the CRD before the color space. */
@@ -876,7 +894,7 @@ test7(gs_state * pgs, gs_memory_t * mem)
     /* Fabricate a Type 5 halftone. */
     code = gs_ht_build(&pht, 1, mem);
     dprintf1("ht build code = %d\n", code);
-    code = gs_ht_set_mask_comp(pht, 0, gs_ht_separation_Default,
+    code = gs_ht_set_mask_comp(pht, 0,
 			       4, 4, 4, masks, NULL, NULL);
     dprintf1("set mask code = %d\n", code);
     code = gs_sethalftone(pgs, pht);
@@ -921,15 +939,14 @@ test8(gs_state * pgs, gs_memory_t * mem)
     gs_const_string table;
     gs_color_space *pcs;
     gs_client_color ccolor;
+    gs_color_space rgb_cs;
+
+    gs_cspace_init_DeviceRGB(&rgb_cs);
 
     table.data =
 	(const byte *)"\377\377\377\377\000\000\000\377\000\000\000\000";
     table.size = 12;
-    gs_cspace_build_Indexed(&pcs,
-			    gs_current_DeviceRGB_space(pgs),
-			    4,
-			    &table,
-			    mem);
+    gs_cspace_build_Indexed(&pcs, &rgb_cs, 4, &table, mem);
     ptile.data = pdata;
     ptile.raster = 4;
     ptile.size.x = ptile.size.y = 16;
@@ -1079,8 +1096,16 @@ test10(gs_state * pgs, gs_memory_t * mem)
     eprintf1("putdeviceparams: code=%d\n", code);
     gs_c_param_list_release(&list);
 
+    /* note: initgraphics no longer resets the color or color space */
     gs_erasepage(pgs);
     gs_initgraphics(pgs);
+    {
+        gs_color_space cs;
+
+        gs_cspace_init_DeviceGray(&cs);
+        gs_setcolorspace(pgs, &cs);
+    }
+    
     gs_clippath(pgs);
     gs_pathbbox(pgs, &cliprect);
     eprintf4("	cliprect = [[%g,%g],[%g,%g]]\n",

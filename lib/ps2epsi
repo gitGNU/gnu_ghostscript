@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: ps2epsi,v 1.1 2004/01/14 16:59:47 atai Exp $
+# $Id: ps2epsi,v 1.2 2004/02/14 22:20:04 atai Exp $
 
 tmpfile=/tmp/ps2epsi$$
 
@@ -58,8 +58,7 @@ rm -f $tmpfile
 cat << BEGINEPS
 save countdictstack mark newpath /showpage {} def /setpagedevice {pop} def
 %%EndProlog
-%%Page: 1 1
-%%BeginDocument: ${infile}
+%%Page 1 1
 BEGINEPS
 
 cat "${infile}" |
@@ -67,7 +66,6 @@ sed -e '/^%%BeginPreview:/,/^%%EndPreview[^!-~]*$/d' -e '/^%!PS-Adobe/d'\
 	-e '/^%%[A-Za-z][A-Za-z]*[^!-~]*$/d' -e '/^%%[A-Za-z][A-Za-z]*: /d'
 
 cat << ENDEPS
-%%EndDocument
 %%Trailer
 cleartomark countdictstack exch sub { end } repeat restore
 %%EOF

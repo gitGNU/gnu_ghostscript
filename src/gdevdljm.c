@@ -1,22 +1,30 @@
-/* Copyright (C) 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2000 artofcode LLC. All rights reserved.
 
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
- */
+   
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+*/
 
-/*$Id: gdevdljm.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevdljm.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* Generic monochrome H-P DeskJet/LaserJet driver */
+
 #include "gdevprn.h"
 #include "gdevdljm.h"
 
@@ -73,8 +81,8 @@ dljet_mono_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 #define out_row_alt ((byte *)out_row_alt_words)
 #define prev_row ((byte *)prev_row_words)
     byte *out_data;
-    int x_dpi = pdev->x_pixels_per_inch;
-    int y_dpi = pdev->y_pixels_per_inch;
+    int x_dpi = (int)pdev->x_pixels_per_inch;
+    int y_dpi = (int)pdev->y_pixels_per_inch;
     int y_dots_per_pixel = dots_per_inch / y_dpi;
     int num_rows = dev_print_scan_lines(pdev);
 
@@ -125,6 +133,9 @@ dljet_mono_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
     fputs("\033&l0o0l0E", prn_stream);
     fputs(page_init, prn_stream);
     fprintf(prn_stream, "\033&l%dX", num_copies);	/* # of copies */
+    if (features & PCL_CAN_SET_PAPER_SIZE){ 
+        fprintf(prn_stream, "\033&|%dA", paper_size); 
+    } 
 
     /* End raster graphics, position cursor at top. */
     fputs("\033*rB\033*p0x0Y", prn_stream);

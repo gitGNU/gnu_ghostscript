@@ -1,27 +1,34 @@
 /* Copyright (C) 1992, 1995, 1998, 1999 artofcode LLC.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: iccfont.c,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: iccfont.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Initialization support for compiled fonts */
 
 #include "string_.h"
 #include "ghost.h"
 #include "gsstruct.h"		/* for iscan.h */
+#include "gscencs.h"
 #include "gsmatrix.h"
 #include "gxfont.h"		/* for ifont.h */
 #include "ccfont.h"
@@ -43,7 +50,7 @@
 /* ------ Private code ------ */
 
 /* Forward references */
-private int cfont_ref_from_string(P4(i_ctx_t *, ref *, const char *, uint));
+private int cfont_ref_from_string(i_ctx_t *, ref *, const char *, uint);
 
 typedef struct {
     i_ctx_t *i_ctx_p;
@@ -126,9 +133,13 @@ cfont_put_next(ref * pdict, key_enum * kep, const ref * pvalue)
     }
     if (kp->num_enc_keys) {
 	const charindex *skp = kp->enc_keys++;
+	gs_glyph glyph = gs_c_known_encode((gs_char)skp->charx, skp->encx);
+	gs_const_string gstr;
 
-	code = array_get(&registered_Encoding(skp->encx), (long)(skp->charx),
-			 &kname);
+	if (glyph == GS_NO_GLYPH)
+	    code = gs_note_error(e_undefined);
+	else if ((code = gs_c_glyph_name(glyph, &gstr)) >= 0)
+	    code = name_ref(gstr.data, gstr.size, &kname, 0);
 	kp->num_enc_keys--;
     } else {			/* must have kp->num_str_keys != 0 */
 	code = cfont_next_string(&kep->strings);

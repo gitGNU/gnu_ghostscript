@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1995, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1995, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxchar.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxchar.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Internal character definition for Ghostscript library */
 /* Requires gsmatrix.h, gxfixed.h */
 
@@ -80,10 +86,8 @@ struct gs_show_enum_s {
     gs_int_rect obox;		/* int version of (outer) clip box */
     int ftx, fty;		/* transformed font translation */
     /* Following are updated dynamically */
-    gs_glyph (*encode_char)(P3(gs_font *, gs_char, gs_glyph_space_t));  /* copied from font */
-    gs_log2_scale_point log2_suggested_scale;	/* suggested scaling */
-				/* factors for oversampling, */
-				/* based on FontBBox and CTM */
+    gs_glyph (*encode_char)(gs_font *, gs_char, gs_glyph_space_t);  /* copied from font */
+    gs_log2_scale_point fapi_log2_scale; /* scaling factors for oversampling with FAPI, -1 = not valid */
     gx_device_memory *dev_cache;	/* cache device */
     gx_device_memory *dev_cache2;	/* underlying alpha memory device, */
 				/* if dev_cache is an alpha buffer */
@@ -101,7 +105,7 @@ struct gs_show_enum_s {
     /*gs_point returned.total_width;*/		/* total width of string, set at end */
     show_width_status width_status;
     /*gs_log2_scale_point log2_scale;*/
-    int (*continue_proc) (P1(gs_show_enum *));	/* continuation procedure */
+    int (*continue_proc) (gs_show_enum *);	/* continuation procedure */
 };
 #define gs_show_enum_s_DEFINED
 /* The structure descriptor is public for gschar.c. */
@@ -116,15 +120,18 @@ typedef struct gs_font_dir_s gs_font_dir;
 
 #endif
 cached_char *
-            gx_alloc_char_bits(P7(gs_font_dir *, gx_device_memory *, gx_device_memory *, ushort, ushort, const gs_log2_scale_point *, int));
-void gx_open_cache_device(P2(gx_device_memory *, cached_char *));
-void gx_free_cached_char(P2(gs_font_dir *, cached_char *));
-void gx_add_cached_char(P5(gs_font_dir *, gx_device_memory *, cached_char *, cached_fm_pair *, const gs_log2_scale_point *));
-void gx_add_char_bits(P3(gs_font_dir *, cached_char *, const gs_log2_scale_point *));
+            gx_alloc_char_bits(gs_font_dir *, gx_device_memory *, gx_device_memory *, ushort, ushort, const gs_log2_scale_point *, int);
+void gx_open_cache_device(gx_device_memory *, cached_char *);
+void gx_free_cached_char(gs_font_dir *, cached_char *);
+void gx_add_cached_char(gs_font_dir *, gx_device_memory *, cached_char *, cached_fm_pair *, const gs_log2_scale_point *);
+void gx_add_char_bits(gs_font_dir *, cached_char *, const gs_log2_scale_point *);
 cached_char *
-            gx_lookup_cached_char(P5(const gs_font *, const cached_fm_pair *, gs_glyph, int, int));
+            gx_lookup_cached_char(const gs_font *, const cached_fm_pair *, gs_glyph, int, int);
 cached_char *
-            gx_lookup_xfont_char(P6(const gs_state *, cached_fm_pair *, gs_char, gs_glyph, const gx_xfont_callbacks *, int));
-int gx_image_cached_char(P2(gs_show_enum *, cached_char *));
+            gx_lookup_xfont_char(const gs_state *, cached_fm_pair *, gs_char, gs_glyph, int);
+int gx_image_cached_char(gs_show_enum *, cached_char *);
+void gx_compute_text_oversampling(const gs_show_enum * penum, const gs_font *pfont,
+				  int alpha_bits, gs_log2_scale_point *p_log2_scale);
+int set_char_width(gs_show_enum *penum, gs_state *pgs, floatp wx, floatp wy);
 
 #endif /* gxchar_INCLUDED */

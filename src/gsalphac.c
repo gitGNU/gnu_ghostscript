@@ -1,22 +1,28 @@
-/* Copyright (C) 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gsalphac.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gsalphac.c,v 1.2 2004/02/14 22:20:16 atai Exp $ */
 /* Alpha-compositing implementation */
 #include "memory_.h"
 #include "gx.h"
@@ -64,10 +70,10 @@ typedef struct const_pixel_row_s {
  * alpha data to test whether there are any actual values that would
  * generate a non-unity alpha result.
  */
-int composite_values(P5(const pixel_row_t * pdest,
-			const const_pixel_row_t * psource,
-			int values_per_pixel, uint num_pixels,
-			const gs_composite_params_t * pcp));
+int composite_values(const pixel_row_t * pdest,
+		     const const_pixel_row_t * psource,
+		     int values_per_pixel, uint num_pixels,
+		     const gs_composite_params_t * pcp);
 
 /* ---------------- Alpha-compositing objects ---------------- */
 
@@ -97,8 +103,9 @@ private composite_create_default_compositor_proc(c_alpha_create_default_composit
 private composite_equal_proc(c_alpha_equal);
 private composite_write_proc(c_alpha_write);
 private composite_read_proc(c_alpha_read);
-private const gs_composite_type_t gs_composite_alpha_type =
+const gs_composite_type_t gs_composite_alpha_type =
 {
+    GX_COMPOSITOR_ALPHA,
     {
 	c_alpha_create_default_compositor,
 	c_alpha_equal,
@@ -176,19 +183,19 @@ c_alpha_read(gs_composite_t ** ppcte, const byte * data, uint size,
 	     gs_memory_t * mem)
 {
     gs_composite_alpha_params_t params;
+    int code, nbytes = 1;
 
     if (size < 1 || *data > composite_op_last)
 	return_error(gs_error_rangecheck);
     params.op = *data;
     if (params.op == composite_Dissolve) {
-	if (size != 1 + sizeof(params.delta))
+	if (size < 1 + sizeof(params.delta))
 	    return_error(gs_error_rangecheck);
 	memcpy(&params.delta, data + 1, sizeof(params.delta));
-    } else {
-	if (size != 1)
-	    return_error(gs_error_rangecheck);
+	nbytes += sizeof(params.delta);
     }
-    return gs_create_composite_alpha(ppcte, &params, mem);
+    code = gs_create_composite_alpha(ppcte, &params, mem);
+    return code < 0 ? code : nbytes;
 }
 
 /* ---------------- Alpha-compositing device ---------------- */
@@ -318,10 +325,9 @@ dca_close(gx_device * dev)
 /* ------ (RGB) color mapping ------ */
 
 private gx_color_index
-dca_map_rgb_color(gx_device * dev,
-		  gx_color_value r, gx_color_value g, gx_color_value b)
+dca_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 {
-    return dca_map_rgb_alpha_color(dev, r, g, b, gx_max_color_value);
+    return dca_map_rgb_alpha_color(dev, cv[0], cv[1], cv[2], gx_max_color_value);
 }
 private gx_color_index
 dca_map_rgb_alpha_color(gx_device * dev,
@@ -453,7 +459,7 @@ dca_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
     }
     rect.p.x = x, rect.q.x = x + w;
     std_params.options =
-	gb_colors_for_device(dev) |
+	GB_COLORS_NATIVE |
 	(GB_ALPHA_LAST | GB_DEPTH_8 | GB_PACKING_CHUNKY |
 	 GB_RETURN_COPY | GB_RETURN_POINTER | GB_ALIGN_ANY |
 	 GB_OFFSET_0 | GB_OFFSET_ANY | GB_RASTER_STANDARD |

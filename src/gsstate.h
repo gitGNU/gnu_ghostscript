@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gsstate.h,v 1.1 2004/01/14 16:59:50 atai Exp $ */
+/* $Id: gsstate.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
 /* Public graphics state API */
 
 #ifndef gsstate_INCLUDED
@@ -28,20 +34,35 @@
 typedef struct gs_state_s gs_state;
 #endif
 
+/* opague type for overprint compositor parameters */
+#ifndef gs_overprint_params_t_DEFINED
+#  define gs_overprint_params_t_DEFINED
+typedef struct gs_overprint_params_s    gs_overprint_params_t;
+#endif
+
 /* Initial allocation and freeing */
-gs_state *gs_state_alloc(P1(gs_memory_t *));	/* 0 if fails */
-int gs_state_free(P1(gs_state *));
+gs_state *gs_state_alloc(gs_memory_t *);	/* 0 if fails */
+int gs_state_free(gs_state *);
 
 /* Initialization, saving, restoring, and copying */
-int gs_gsave(P1(gs_state *)), gs_grestore(P1(gs_state *)), gs_grestoreall(P1(gs_state *));
-int gs_grestore_only(P1(gs_state *));
-int gs_gsave_for_save(P2(gs_state *, gs_state **)), gs_grestoreall_for_restore(P2(gs_state *, gs_state *));
-gs_state *gs_gstate(P1(gs_state *));
-gs_state *gs_state_copy(P2(gs_state *, gs_memory_t *));
-int gs_copygstate(P2(gs_state * /*to */ , const gs_state * /*from */ )),
-      gs_currentgstate(P2(gs_state * /*to */ , const gs_state * /*from */ )),
-      gs_setgstate(P2(gs_state * /*to */ , const gs_state * /*from */ ));
-int gs_initgraphics(P1(gs_state *));
+int gs_gsave(gs_state *), gs_grestore(gs_state *), gs_grestoreall(gs_state *);
+int gs_grestore_only(gs_state *);
+int gs_gsave_for_save(gs_state *, gs_state **), gs_grestoreall_for_restore(gs_state *, gs_state *);
+gs_state *gs_gstate(gs_state *);
+gs_state *gs_state_copy(gs_state *, gs_memory_t *);
+int gs_copygstate(gs_state * /*to */ , const gs_state * /*from */ ),
+      gs_currentgstate(gs_state * /*to */ , const gs_state * /*from */ ),
+      gs_setgstate(gs_state * /*to */ , const gs_state * /*from */ );
+
+int gs_state_update_overprint(gs_state *, const gs_overprint_params_t *);
+bool gs_currentoverprint(const gs_state *);
+void gs_setoverprint(gs_state *, bool);
+int gs_currentoverprintmode(const gs_state *);
+int gs_setoverprintmode(gs_state *, int);
+
+int gs_do_set_overprint(gs_state *);
+
+int gs_initgraphics(gs_state *);
 
 /* Device control */
 #include "gsdevice.h"
@@ -55,23 +76,21 @@ int gs_initgraphics(P1(gs_state *));
 /* Halftone screen */
 #include "gsht.h"
 #include "gscsel.h"
-int gs_setscreenphase(P4(gs_state *, int, int, gs_color_select_t));
-int gs_currentscreenphase(P3(const gs_state *, gs_int_point *,
-			     gs_color_select_t));
+int gs_setscreenphase(gs_state *, int, int, gs_color_select_t);
+int gs_currentscreenphase(const gs_state *, gs_int_point *, gs_color_select_t);
 
 #define gs_sethalftonephase(pgs, px, py)\
   gs_setscreenphase(pgs, px, py, gs_color_select_all)
 #define gs_currenthalftonephase(pgs, ppt)\
   gs_currentscreenphase(pgs, ppt, 0)
-int gx_imager_setscreenphase(P4(gs_imager_state *, int, int,
-				gs_color_select_t));
+int gx_imager_setscreenphase(gs_imager_state *, int, int, gs_color_select_t);
 
 /* Miscellaneous */
-int gs_setfilladjust(P3(gs_state *, floatp, floatp));
-int gs_currentfilladjust(P2(const gs_state *, gs_point *));
-void gs_setlimitclamp(P2(gs_state *, bool));
-bool gs_currentlimitclamp(P1(const gs_state *));
+int gs_setfilladjust(gs_state *, floatp, floatp);
+int gs_currentfilladjust(const gs_state *, gs_point *);
+void gs_setlimitclamp(gs_state *, bool);
+bool gs_currentlimitclamp(const gs_state *);
 #include "gscpm.h"
-gs_in_cache_device_t gs_incachedevice(P1(const gs_state *));
+gs_in_cache_device_t gs_incachedevice(const gs_state *);
 
 #endif /* gsstate_INCLUDED */

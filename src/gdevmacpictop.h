@@ -1,25 +1,4 @@
-/* Copyright (C) 1997-2002 artofcode LLC.  All rights reserved.                     
-
-  This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
-
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along
-  with this program; if not, write to the Free Software Foundation, Inc.,
-  59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
-*/
-
-/* $Id: gdevmacpictop.h,v 1.1 2004/01/14 16:59:48 atai Exp $ */
-
-/* Helpers for working with Classic MacOS Quickdraw pictures */
-/* (obsoleted by the DISPLAY device) */
+/* $Id: gdevmacpictop.h,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 
 #ifndef gdevmacpictop_INCLUDED
 #  define gdevmacpictop_INCLUDED
@@ -686,5 +665,8 @@
 			(*dev_proc(dev, map_color_rgb))(dev, col, rgb);									\
 			PICT_RGBBkCol(ptr, rgb[0], rgb[1], rgb[2]);										\
 		}
+
+
+
 
 #endif /* gdevmacpictop_INCLUDED */

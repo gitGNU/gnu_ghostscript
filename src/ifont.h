@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: ifont.h,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: ifont.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Interpreter internal font representation */
 
 #ifndef ifont_INCLUDED
@@ -71,15 +77,6 @@ extern_st(st_font_data);
 #define pfont_data(pfont) ((font_data *)((pfont)->client_data))
 #define pfont_dict(pfont) (&pfont_data(pfont)->dict)
 
-/* Registered encodings, for the benefit of platform fonts, `seac', */
-/* and compiled font initialization. */
-/* This is a t_array ref that points to the encodings. */
-#define registered_Encodings_countof NUM_KNOWN_ENCODINGS
-extern ref registered_Encodings;
-
-#define registered_Encoding(i) (registered_Encodings.value.refs[i])
-#define StandardEncoding registered_Encoding(0)
-
 /* ================Internal procedures shared across files ================ */
 
 /* ---------------- Exported by zchar.c ---------------- */
@@ -88,7 +85,7 @@ extern ref registered_Encodings;
  * Get the FontBBox from a font dictionary, if any; if none, or if invalid,
  * return 4 zeros.
  */
-int font_bbox_param(P2(const ref * pfdict, double bbox[4]));
+int font_bbox_param(const ref * pfdict, double bbox[4]);
 
 /* ---------------- Exported by zfont.c ---------------- */
 
@@ -101,14 +98,14 @@ typedef struct gs_font_s gs_font;
  * Check a parameter that should be a valid font dictionary, and return
  * the gs_font stored in its FID entry.
  */
-int font_param(P2(const ref * pfdict, gs_font ** ppfont));
+int font_param(const ref * pfdict, gs_font ** ppfont);
 
 /*
  * Mark a glyph as a PostScript name (if it isn't a CID) for the garbage
  * collector.  Return true if a mark was just added.  This procedure is
  * intended to be used as the mark_glyph procedure in the character cache.
  */
-bool zfont_mark_glyph_name(P2(gs_glyph glyph, void *ignore_data));
+bool zfont_mark_glyph_name(gs_glyph glyph, void *ignore_data);
 
 /*
  * Return information about a font, including information from the FontInfo

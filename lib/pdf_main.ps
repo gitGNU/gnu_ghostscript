@@ -1,20 +1,19 @@
 %    Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-% This program is free software; you can redistribute it and/or modify it
-% under the terms of the GNU General Public License as published by the
-% Free Software Foundation; either version 2 of the License, or (at your
-% option) any later version.
-%
-% This program is distributed in the hope that it will be useful, but
-% WITHOUT ANY WARRANTY; without even the implied warranty of
-% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-% Public License for more details.
-%
-% You should have received a copy of the GNU General Public License along
-% with this program; if not, write to the Free Software Foundation, Inc.,
-% 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: pdf_main.ps,v 1.1 2004/01/14 16:59:47 atai Exp $
+% $Id: pdf_main.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
 % pdf_main.ps
 % PDF file- and page-level operations.
 
@@ -69,16 +68,25 @@ DingbatsEncoding pop
 % Redefine 'run' so it recognizes PDF files.
 systemdict begin
 /.runps /run load def
+/runpdfstring 5 string def
 /run {
   dup type /filetype ne { (r) file } if
   dup ( ) .peekstring {
     (%) eq {
-      dup (     ) .peekstring {
-	(%PDF-) eq {
+      dup (  ) .peekstring {
+	(%P) eq {
+	  dup //runpdfstring {
+		% Some invalid files might have extra-long first lines....
+	    { readstring } .internalstopped not { pop pop exit } if
+	    pop =string
+	  } loop
+	  //runpdfstring (%PDF-) anchorsearch {
+	    pop pop 
 	    dup (%stdin) (r) file eq {
 	      % Copy PDF from stdin to temporary file then run it.
 	      null (w+) //systemdict /.tempfile get exec exch 3 1 roll
 	      % stack: tempname stdin tempfile
+	      dup //runpdfstring writestring
 	      1024 string
 	      {
 		% stack: tempname stdin tempfile string
@@ -96,16 +104,19 @@ systemdict begin
 	      runpdf
 	    } ifelse
 	  } {
-	    cvx .runps % doesn't start with %PDF-
+	    pop cvx .runexec
 	  } ifelse
 	} {
-	  pop cvx .runps % didn't read 5 characters
+	  cvx .runps
 	} ifelse
+      } {
+	closefile
+      } ifelse
     } {
-      cvx .runps % didn't start with %
+      cvx .runps
     } ifelse
   } {
-    pop closefile % file was empty
+    closefile
   } ifelse
 } bind odef
 currentdict /runpdfstring .undef
@@ -117,6 +128,7 @@ currentdict /runpdfstring .undef
 	% This is counter-intuitive, and we don't understand why it happens,
 	% but the improvement is significant.
    /PDFTopSave save def
+   0 setobjectformat
    /Page# null def
    /Page null def
    /DSCPageCount 0 def
@@ -151,12 +163,13 @@ currentdict /runpdfstring .undef
       QUIET not { (Page ) print dup == flush } if
       pdfgetpage pdfshowpage
     } for
+   Repaired { printrepaired } if
    currentdict pdfclose
    end			% temporary dict
    end			% pdfdict
-   end			% userdict
    end			% GS_PDF_ProcSet
    PDFTopSave restore
+   end			% userdict
 } bind def
 end			% systemdict
 % Redefine the procedure that the C code uses for running piped input.
@@ -174,7 +187,9 @@ pdfdict begin
 
 /traileropdict mark
   (<<) cvn { mark } bind
-  (>>) cvn /.dicttomark load
+  (>>) cvn { { .dicttomark } stopped {
+	      (   **** File has unbalanced >> in trailer.\n) pdfformaterror
+             } if } bind
   ([) cvn { mark } bind		% ditto
   (]) cvn dup load
 %  /true true		% see .pdfexectoken in pdf_base.ps
@@ -233,6 +248,29 @@ pdfdict begin
 
 % Open a PDF file and read the header, trailer, and cross-reference.
 /pdfopen {		% <file> pdfopen <dict>
+	% Color space substitution in PDF is handled somewhat differently
+	% than in PostScript. A given device color space will be substituted
+	% if the corresponding "Default..." entry exists in the Page's
+	% Resource dictionary (which might be inhereted); there is no
+	% UseCIEColor to enable/disable color mapping.
+	%
+	% This behavior is achieved by always setting UseCIEColor to true
+	% in the page device dictionary. If the value of this parameter was
+	% originally false (i.e.: the output device does not perform color
+	% space substitution by default), the instances DefaultGray,
+	% DefaultRGB, and DefaultCMYK of the (local) ColorSpace category
+	% are redefined to be DeviceGray, DeviceRGB, and DeviceCMYK,
+	% respectively. This is not done if UseCIEColor is true by default,
+	% as in that case color substitution is presumably desired even
+	% if the file does not request it.
+   currentpagedevice /UseCIEColor .knownget dup { pop } if not
+    { .currentglobal false .setglobal
+      /DefaultGray { /DeviceGray } cvlit /ColorSpace defineresource pop
+      /DefaultRGB { /DeviceRGB } cvlit /ColorSpace defineresource pop
+      /DefaultCMYK { /DeviceCMYK } cvlit /ColorSpace defineresource pop
+      .setglobal
+    }
+   if
   pdfopenfile begin
   pdfopencache
   .writepdfmarks {
@@ -261,6 +299,8 @@ pdfdict begin
      /Printed currentpagedevice /OutputFile known def
    } ifelse
    /PSLevel1 where { pop } { /PSLevel1 false def } ifelse
+   % NB: PDFfile is used outside of the PDF code to determine that a
+   % PDF job is being processed; to not change or hide this key.
    cvlit /PDFfile exch def
    /PDFsource PDFfile def
    /Repaired false def
@@ -277,8 +317,7 @@ pdfdict begin
     }
    if
 	% Read any previous cross-reference tables.
-   Trailer { /Prev .knownget not { exit } if readxref } loop
-   Repaired { printrepaired } if
+   Trailer { /Prev knownoget not { exit } if readxref } loop
    currentdict end
  } bind def
 
@@ -317,9 +356,8 @@ pdfdict begin
     dup (%%EOF\n) eq exch dup (%%EOF\r) eq
     exch (%%EOF\r\n) eq or or not
   } ifelse {
-    (
-   **** This file has a corrupted %%EOF marker, or garbage after the %%EOF.
-) pdfformaterror
+    (   **** Warning: File has a corrupted %%EOF marker, or garbage after %%EOF.\n)
+    pdfformaterror
   } if
   PDFfile exch setfileposition
 	% Now read the startxref and xref start position.
@@ -331,9 +369,8 @@ pdfdict begin
   } {	% else, this file has 'startxref #####' format
     (startxref) ne { /findxref cvx /syntaxerror signalerror } if
     cvi		% xref start position
-    (
-   **** The format of the startxref line in this file is invalid.
-) pdfformaterror
+    (   **** Warning: format of the startxref line in this file is invalid.\n)
+    pdfformaterror
     exch PDFfile exch setfileposition
   } ifelse
 } bind def
@@ -345,18 +382,21 @@ pdfdict begin
   stderrprint
   /Repaired true store
 } bind def
-/printrepaired {
-  Trailer /Info knownoget {
+
+/knownoget_safe
+{ knownoget
+} odef
+
+/printProducer {
+  Trailer /Info { knownoget_safe } stopped { false } if {
     /Producer knownoget not { null } if
   } {
     null
   } ifelse
   dup null eq {
-    pop (\
-   **** Please notify the author of the software that produced this file
-)
+    pop
   } {
-    (   **** The file was produced by ) stderrprint
+    (   **** The file was produced by: \n   **** >>>> ) stderrprint
 	% Handle a Unicode Producer.
     (\376\377) anchorsearch {
       pop dup length 2 idiv string 0 1 2 index length 1 sub {
@@ -365,15 +405,19 @@ pdfdict begin
       } for exch pop
     } if
     stderrprint
-    (:
-   **** please notify the author of this software
-)
-  } ifelse stderrprint
-(\
-   **** that the file does not conform to Adobe's published PDF
-   **** specification.  Processing of the file will continue normally.
-
-) stderrprint
+    ( <<<<\n) stderrprint
+  } ifelse
+} bind def
+/printrepaired {
+   (\n   **** This file had errors that were repaired or ignored.\n)
+  stderrprint
+  printProducer
+  (   **** Please notify the author of the software that produced this\n)
+  stderrprint
+  (   **** file that it does not conform to Adobe's published PDF\n)
+  stderrprint
+  (   **** specification.\n\n)
+  stderrprint
 } bind def
 
 % Write the outline structure for a file.  Uses linkdest (below).
@@ -511,7 +555,7 @@ pdfdict begin
     Trailer /Root oget /Dests knownoget {
       exch knownoget not { null } if
     } {
-      null
+      pop null
     } ifelse
   } {
     dup type /stringtype eq {
@@ -595,6 +639,11 @@ end readonly def
   } bind def
 end readonly def
 
+% **** The following procedure should not be changed to allow clients
+% **** to directly interface with the constituent procedures. GSview
+% **** and some Artifex customers rely on the pdfshowpage_init,
+% **** pdfshowpage_setpage, pdfshowpage_finish so all logic should be
+% **** implemented in one of those three procedures.
 /pdfshowpage		% <pagedict> pdfshowpage -
  { dup /Page exch store
    pdfshowpage_init 
@@ -625,8 +674,10 @@ end readonly def
 } bind def
 
 /pdfshowpage_setpage {	% <pagedict> pdfshowpage_setpage <pagedict>
-  4 dict begin		% for setpagedevice
+  5 dict begin		% for setpagedevice
 	% Stack: pagedict
+  % UseCIEColor is always true for PDF; see the comment in runpdf above
+  /UseCIEColor true def
   currentpagedevice /Orientation 2 index /Rotate pget not { 0 } if 90 idiv
 	% Rotate specifies *clockwise* rotation!
     neg 3 and def
@@ -664,7 +715,11 @@ end readonly def
 
 /pdfshowpage_finish {	% <pagedict> pdfshowpage_finish -
    save /PDFSave exch store
+   /PDFdictstackcount countdictstack store
    (before exec) VMDEBUG
+
+   % set up color space substitution (this must be inside the page save)
+   pdfshowpage_setcspacesub
 
   .writepdfmarks {
 
@@ -704,11 +759,10 @@ end readonly def
   } if
   dictbeginpage /DefaultMatrix 1 index store setmatrix
   dup		  % for showing annotations below
-  count /pdfemptycount exch store
-  gsave
+  count 1 sub /pdfemptycount exch store
 	% If the page uses any transparency features, show it within
 	% a transparency group.
-  PDFversion 1.4 lt {
+  PDFversion 1.4 lt NOTRANSPARENCY or {
     showpagecontents
   } {
     dup pageusestransparency {
@@ -735,20 +789,40 @@ end readonly def
       showpagecontents
     } ifelse
   } ifelse
-  grestore
-   % todo: mixing drawing ops outside the device filter could cause
-   % problems, for example with the pnga device.
-   /Annots knownoget { { oforce drawannot } forall } if
-   endpage
-   end			% scratch dict
-   (after exec) VMDEBUG
-   PDFSave restore
+  % check for extra garbage on the ostack and clean it up
+  count pdfemptycount sub dup 0 ne {
+    (   **** File did not complete the page properly and may be damaged.\n)
+    pdfformaterror
+    { pop } repeat
+  } {
+    pop
+  } ifelse
+  % todo: mixing drawing ops outside the device filter could cause
+  % problems, for example with the pnga device.
+  /Annots knownoget { { oforce drawannot } forall } if
+  endpage
+  end			% scratch dict
+  % Some PDF files don't have matching q/Q (gsave/grestore) so we need
+  % to clean up any left over dicts from the dictstack
+  countdictstack PDFdictstackcount sub dup 0 ne { 
+    (   **** Warning: File has imbalanced q/Q operators \(too many q's\)\n)
+    pdfformaterror
+    { end } repeat
+  } {
+    pop
+  } ifelse
+  (after exec) VMDEBUG
+  Repaired		% pass Repaired state around the restore
+  PDFSave restore
+  /Repaired exch def
 } bind def
 /showpagecontents {	% <pagedict> showpagecontents -
+  gsave		% preserve gstate for Annotations later
   /Contents knownoget not { 0 array } if
   dup type /arraytype ne { 1 array astore } if {
     oforce false resolvestream pdfopdict .pdfrun
   } forall
+  grestore
 } bind def
 /processcolorspace {	% - processcolorspace <colorspace>
 	% The following is per the PLRM3.
@@ -761,23 +835,21 @@ end readonly def
 % ------ Transparency support ------ %
 
 % Determine whether a page might invoke any transparency features:
-%	- Group in the page dictionary
-%	- Non-default ca, CA, or SMask in an ExtGState
-%	- Form XObject with Group
+%	- Non-default BM, ca, CA, or SMask in an ExtGState
 %	- Image XObject with SMask
-% ****** DO WE NEED TO LOOK IN RESOURCE DICTS OF OTHER CONTENT STREAMS? ******
+% Note: we deliberately don't check to see whether a Group is defined,
+% because Adobe Illustrator 10 (and possibly other applications) define
+% a page-level group whether transparency is actually used or not.
+% Ignoring the presence of Group is justified because, in the absence
+% of any other transparency features, they have no effect.
 /pageusestransparency {		% <pagedict> pageusestransparency <bool>
-  PDFversion 1.4 lt {
+  PDFversion 1.4 lt NOTRANSPARENCY or {
     pop false
   } {
-    dup /Group known {
-      pop true
-    } {
-      false exch {
-	dup resourceusestransparency { pop not exit } if
-	/Parent knownoget not { exit } if
-      } loop
-    } ifelse
+    false exch {
+      dup resourceusestransparency { pop not exit } if
+      /Parent knownoget not { exit } if
+    } loop
   } ifelse
 } bind def
 % Check the Resources of a page or Form.
@@ -787,6 +859,9 @@ end readonly def
     dup /ExtGState knownoget {
       false exch {
 	exch pop oforce
+	dup /BM knownoget { dup /Normal ne exch /Compatible ne and
+	                    { pop not exit } if
+                          } if
 	dup /ca knownoget { 1 ne { pop not exit } if } if
 	dup /CA knownoget { 1 ne { pop not exit } if } if
 	dup /SMask knownoget { /None ne { pop not exit } if } if
@@ -798,7 +873,6 @@ end readonly def
 	exch pop oforce dup /Subtype get
 	dup /Image eq { 1 index /SMask known { pop pop not exit } if } if
 	/Form eq {
-	  dup /Group known { pop not exit } if
 	  resourceusestransparency { not exit } if
 	} {
 	  pop
@@ -808,6 +882,57 @@ end readonly def
     pop false exit
   } loop
 } bind def
+
+% ------ ColorSpace substitution support ------ %
+
+%
+%  <pagedict>   pdfshowpage_setcspacesub   <pagedict>
+%
+% Set up color space substitution for a page. Invocations of this procedure
+% must be bracketed by the save/restore operation for the page, to avoid
+% unintended affects on other pages.
+%
+% If any color space substitution is used, and the current color space is a
+% device dependent color space, make sure the current color space is updated.
+% There is an optimization in the setcolorspace pseudo-operator that does
+% nothing if both the current and operand color spaces are the same. For
+% PostScript this optimization is disabled if the UseCIEColor page device
+% parameter is true. This is not the case for PDF, as performance suffers
+% significantly on some PDF files if color spaces are set repeatedly. Hence,
+% if color space substitution is to be used, and the current color space
+% is a device dependent color space, we must make sure to "transition" the
+% current color space.
+%
+/pdfshowpage_setcspacesub
+  {
+    false
+      { /DefaultGray /DefaultRGB /DefaultCMYK }
+      {
+        dup 3 index /ColorSpace //rget exec
+          { resolvecolorspace /ColorSpace defineresource pop }
+          { pop }
+        ifelse
+      }
+    forall
+
+    % if using color space substitution, "transition" the current color space
+      {
+        currentcolorspace dup length 1 eq   % always an array
+          {
+            0 get
+            dup /DeviceGray eq 1 index /DeviceRGB eq or 1 index /DeviceCMYK or
+              { /Pattern setcolorspace setcolorspace }
+              { pop }
+            ifelse
+          }
+          { pop }
+        if
+      }
+    if
+  }
+bind def
+
+
 
 end			% pdfdict
 .setglobal

@@ -1,22 +1,28 @@
-/* Copyright (C) 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: spsdf.h,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: spsdf.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Common output syntax and parameters for PostScript and PDF writers */
 
 #ifndef spsdf_INCLUDED
@@ -36,15 +42,14 @@ typedef struct stream_s stream;
 #define PRINT_BINARY_OK 1
 #define PRINT_ASCII85_OK 2
 #define PRINT_HEX_NOT_OK 4
-void s_write_ps_string(P4(stream * s, const byte * str, uint size,
-			  int print_ok));
+void s_write_ps_string(stream * s, const byte * str, uint size, int print_ok);
 
 /*
  * Create a stream that just keeps track of how much has been written
  * to it.  We use this for measuring data that will be stored rather
  * than written to an actual stream.
  */
-int s_alloc_position_stream(P2(stream ** ps, gs_memory_t * mem));
+int s_alloc_position_stream(stream ** ps, gs_memory_t * mem);
 
 /*
  * Create/release a parameter list for printing (non-default) filter
@@ -74,14 +79,13 @@ typedef struct printer_param_list_s {
 
 #define param_printer_params_default_values 0, 0, 0, "\n", 0
 extern const param_printer_params_t param_printer_params_default;
-int s_alloc_param_printer(P4(gs_param_list ** pplist,
-			     const param_printer_params_t * ppp, stream * s,
-			     gs_memory_t * mem));
-void s_free_param_printer(P1(gs_param_list * plist));
+int s_alloc_param_printer(gs_param_list ** pplist,
+			  const param_printer_params_t * ppp, stream * s,
+			  gs_memory_t * mem);
+void s_free_param_printer(gs_param_list * plist);
 /* Initialize or release a list without allocating or freeing it. */
-int s_init_param_printer(P3(printer_param_list_t *prlist,
-			    const param_printer_params_t * ppp, stream * s));
-void s_release_param_printer(P1(printer_param_list_t *prlist));
-
+int s_init_param_printer(printer_param_list_t *prlist,
+			 const param_printer_params_t * ppp, stream * s);
+void s_release_param_printer(printer_param_list_t *prlist);
 
 #endif /* spsdf_INCLUDED */

@@ -1,22 +1,28 @@
-/* Copyright (C) 1989-1994, 1998 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989-1994, 1998 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevepsn.c,v 1.1 2004/01/14 16:59:48 atai Exp $*/
+/* $Id: gdevepsn.c,v 1.2 2004/02/14 22:20:05 atai Exp $*/
 /*
  * Epson (and similar) dot-matrix printer driver for Ghostscript.
  *
@@ -138,7 +144,7 @@ const gx_device_printer far_data gs_ibmpro_device =
 /* ------ Driver procedures ------ */
 
 /* Forward references */
-private void eps_output_run(P6(byte *, int, int, char, FILE *, int));
+private void eps_output_run(byte *, int, int, char, FILE *, int);
 
 /* Send the page to the printer. */
 #define DD 0x40				/* double density flag */
@@ -168,7 +174,7 @@ eps_print_page(gx_device_printer *pdev, FILE *prn_stream, int y_9pin_high,
 	byte *in = buf1;
 	byte *out = buf2;
 	int out_y_mult = (y_24pin ? 3 : 1);
-	int x_dpi = pdev->x_pixels_per_inch;
+	int x_dpi = (int)pdev->x_pixels_per_inch;
 	char start_graphics =
 		(y_24pin ? graphics_modes_24 : graphics_modes_9)[x_dpi / 60];
 	int first_pass = (start_graphics & DD ? 1 : 0);

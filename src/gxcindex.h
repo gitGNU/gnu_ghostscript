@@ -1,22 +1,28 @@
-/* Copyright (C) 1995, 1996, 1997, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1995, 1996, 1997, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxcindex.h,v 1.1 2004/01/14 16:59:51 atai Exp $ */
+/* $Id: gxcindex.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
 /* Define the device color index type and macros */
 
 #ifndef gxcindex_INCLUDED
@@ -30,7 +36,7 @@
  * sizeof(gx_color_index) * 8, since for larger values, there aren't enough
  * bits in a gx_color_index to have even 1 bit per component.
  */
-#define GX_DEVICE_COLOR_MAX_COMPONENTS 6
+#define GX_DEVICE_COLOR_MAX_COMPONENTS 16
 
 /*
  * We might change gx_color_index to a pointer or a structure in the
@@ -56,7 +62,11 @@ typedef struct { ulong value[2]; } gx_color_index_data;
 #else  /* !TEST_CINDEX_STRUCT */
 
 /* Define the type for device color index (pixel value) data. */
+#ifdef GX_COLOR_INDEX_TYPE
+typedef GX_COLOR_INDEX_TYPE gx_color_index_data;
+#else
 typedef ulong gx_color_index_data;
+#endif
 
 #endif /* (!)TEST_CINDEX_STRUCT */
 
@@ -76,14 +86,16 @@ extern const gx_color_index_data gx_no_color_index_data;
 typedef gx_color_index_data gx_color_index;
 #define arch_sizeof_color_index arch_sizeof_long
 
-/* Define the 'transparent' color index. */
-#define gx_no_color_index_value (-1)	/* no cast -> can be used in #if */
-
-/* The SGI C compiler provided with Irix 5.2 gives error messages */
-/* if we use the proper definition of gx_no_color_index: */
-/*#define gx_no_color_index ((gx_color_index)gx_no_color_index_value) */
-/* Instead, we must spell out the typedef: */
-#define gx_no_color_index ((unsigned long)gx_no_color_index_value)
+/*
+ * Define the 'transparent' or 'undefined' color index.
+ */
+#define gx_no_color_index_value (~0)	/* no cast -> can be used in #if */
+/*
+ * There was a comment here about the SGI C compiler provided with Irix 5.2
+ * giving error messages.  I hope that was fixed when the value of gx_no_color_index
+ * was changed from (-1) to (~0).  If not then let us know.
+ */
+#define gx_no_color_index ((gx_color_index)gx_no_color_index_value)
 
 #endif /* (!)TEST_CINDEX_POINTER */
 
@@ -96,7 +108,7 @@ typedef gx_color_index_data gx_color_index;
  *          LINE_ACCUM(color, bpp);
  *      }
  * This code must be enclosed in { }, since DECLARE_LINE_ACCUM declares
- * variables.  Supported values of bpp are 1, 2, 4, 8, 12, 16, 24, 32.
+ * variables.  Supported values of bpp are 1, 2, 4, or n * 8, where n <= 8.
  *
  * Note that DECLARE_LINE_ACCUM declares the variables l_dptr, l_dbyte, and
  * l_dbit.  Other code in the loop may use these variables.
@@ -104,7 +116,7 @@ typedef gx_color_index_data gx_color_index;
 #define DECLARE_LINE_ACCUM(line, bpp, xo)\
 	sample_store_declare_setup(l_dptr, l_dbit, l_dbyte, line, 0, bpp)
 #define LINE_ACCUM(color, bpp)\
-	sample_store_next32(color, l_dptr, l_dbit, bpp, l_dbyte)
+	sample_store_next_any(color, l_dptr, l_dbit, bpp, l_dbyte)
 #define LINE_ACCUM_SKIP(bpp)\
 	sample_store_skip_next(l_dptr, l_dbit, bpp, l_dbyte)
 #define LINE_ACCUM_STORE(bpp)\

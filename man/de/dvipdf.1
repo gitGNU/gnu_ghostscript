@@ -1,17 +1,17 @@
-.\" $Id: dvipdf.1,v 1.1 2004/01/14 16:59:47 atai Exp $
+.\" $Id: dvipdf.1,v 1.2 2004/02/14 22:20:04 atai Exp $
 .\" Using encoding of the German (de_DE) translation: ISO-8859-1
 .\" Translation by Tobias Burnus <burnus@gmx.de> and Thomas Hoffmann
-.TH DVIPDF 1 "8.Juli 2002" 7.06 Ghostscript \" -*- nroff -*-
+.TH DVIPDF 1 "8.Juli 2002" 7.21 Ghostscript \" -*- nroff -*-
 .SH NAME
 dvipdf \- konvertiert TeX-DVI-Dateien nach PDF mittels Ghostscript und dvips
 .SH SYNTAX
 \fBdvipdf\fR [ \fIOptionen\fR ] \fIEingabe.dvi\fR [ \fIAusgabe.pdf\fR ] ...
 .SH BESCHREIBUNG
-Das Skript ruft
+Das Skript ruf
 .BR dvips (1)
-mit dem Parameter
+mit dem
 .B -q
-auf und leitet die Ausgabe über eine Pipe an
+Parameter auf und leitet die Ausgabe über eine Pipe an
 .BR gs (1)
 weiter, das mit den folgenden Paramtern aufgerufen wird:
 
@@ -24,8 +24,8 @@ und allen in der Kommandozeile angegeben Optionen.
 .SH SIEHE AUCH
 gs(1), dvips(1)
 .SH VERSION
-Dieses Dokument wurde zuletzt für Ghostscript Version 7.0x durchgesehen.
+Dieses Dokument wurde zuletzt für Ghostscript Version 7.21 durchgesehen.
 .SH AUTOR
-artofcode LLC ist der Hauptautor von Ghostscript.
-Russell J. Lang <rjl@aladdin.com> ist der Autor des Hauptteils des MS-Windows Quelltexts in Ghostscript.
+artofcode LLC und Artifex Software, bug-gs at ghostscript.com, sind die
+Hauptautoren von Ghostscript.
 Diese Manpage ist von George Ferguson.

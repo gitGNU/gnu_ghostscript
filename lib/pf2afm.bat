@@ -1,5 +1,5 @@
 @echo off 
-@rem $Id: pf2afm.bat,v 1.1 2004/01/14 16:59:47 atai Exp $
+@rem $Id: pf2afm.bat,v 1.2 2004/02/14 22:20:04 atai Exp $
 @rem Make an AFM file from PFB / PFA and (optionally) PFM files.
 
 if %1/==/ goto usage

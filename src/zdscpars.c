@@ -1,22 +1,28 @@
-/* Copyright (C) 2000 artofcode LLC.   All rights reserved.
+/* Copyright (C) 2000 Artifex Software Inc.   All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
  */
 
-/*$Id: zdscpars.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zdscpars.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* C language interface routines to DSC parser */
 
 /*
@@ -105,7 +111,7 @@ typedef struct dsc_data_s {
 } dsc_data_t;
 
 /* Structure descriptors */
-private void dsc_finalize(P1(void *vptr));
+private void dsc_finalize(void *vptr);
 gs_private_st_simple_final(st_dsc_data_t, dsc_data_t, "dsc_data_struct", dsc_finalize);
 
 /* Define the key name for storing the instance pointer in a dictionary. */
@@ -351,7 +357,7 @@ dsc_viewing_orientation(gs_param_list *plist, const CDSC *pData)
 typedef struct cmd_list_s {
     int code;			/* Russell's DSC parser code (see dsc.h) */
     const char *comment_name;	/* A name to be returned to postscript caller */
-    int (*dsc_proc) (P2(gs_param_list *, const CDSC *));
+    int (*dsc_proc) (gs_param_list *, const CDSC *);
 				/* A routine for transferring parameter values
 				   from C data structure to postscript dictionary
 				   key/value pairs. */

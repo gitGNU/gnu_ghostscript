@@ -1,22 +1,28 @@
-/* Copyright (C) 1994, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: ichar.h,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: ichar.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Character rendering operator definitions and support procedures */
 /* Requires gstext.h */
 
@@ -58,20 +64,20 @@
 #define seproc eseproc(esp)
 
 /* Procedures exported by zchar.c for zchar*.c. */
-gs_text_enum_t *op_show_find(P1(i_ctx_t *));
-int op_show_setup(P2(i_ctx_t *, os_ptr));
-int op_show_enum_setup(P1(i_ctx_t *));
-int op_show_finish_setup(P4(i_ctx_t *, gs_text_enum_t *, int, op_proc_t));
-int op_show_continue(P1(i_ctx_t *));
-int op_show_continue_pop(P2(i_ctx_t *, int));
-int op_show_continue_dispatch(P3(i_ctx_t *, int, int));
-int op_show_free(P2(i_ctx_t *, int));
-void glyph_ref(P2(gs_glyph, ref *));
-int finish_stringwidth(P1(i_ctx_t *));
+gs_text_enum_t *op_show_find(i_ctx_t *);
+int op_show_setup(i_ctx_t *, os_ptr);
+int op_show_enum_setup(i_ctx_t *);
+int op_show_finish_setup(i_ctx_t *, gs_text_enum_t *, int, op_proc_t);
+int op_show_continue(i_ctx_t *);
+int op_show_continue_pop(i_ctx_t *, int);
+int op_show_continue_dispatch(i_ctx_t *, int, int);
+int op_show_free(i_ctx_t *, int);
+void glyph_ref(gs_glyph, ref *);
+int finish_stringwidth(i_ctx_t *);
 
 /* Exported by zchar.c for zcharout.c */
-bool zchar_show_width_only(P1(const gs_text_enum_t *));
-int zsetcachedevice(P1(i_ctx_t *));
-int zsetcachedevice2(P1(i_ctx_t *));
+bool zchar_show_width_only(const gs_text_enum_t *);
+int zsetcachedevice(i_ctx_t *);
+int zsetcachedevice2(i_ctx_t *);
 
 #endif /* ichar_INCLUDED */

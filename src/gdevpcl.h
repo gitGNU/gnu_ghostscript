@@ -1,22 +1,28 @@
-/* Copyright (C) 1992, 2000 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1992, 2000 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevpcl.h,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevpcl.h,v 1.2 2004/02/14 22:20:05 atai Exp $ */
 /* Support for PCL-based printer drivers */
 /* Requires gdevprn.h */
 
@@ -50,7 +56,7 @@
 #define PAPER_SIZE_B5 100
 
 /* Get the paper size code, based on width and height. */
-int gdev_pcl_paper_size(P1(gx_device *));
+int gdev_pcl_paper_size(gx_device *);
 
 /* Color mapping procedures for 3-bit-per-pixel RGB printers */
 dev_proc_map_rgb_color(gdev_pcl_3bit_map_rgb_color);
@@ -59,9 +65,9 @@ dev_proc_map_color_rgb(gdev_pcl_3bit_map_color_rgb);
 /* Row compression routines */
 typedef ulong word;
 int
-    gdev_pcl_mode2compress(P3(const word * row, const word * end_row, byte * compressed)),
-    gdev_pcl_mode2compress_padded(P4(const word * row, const word * end_row, byte * compressed, bool pad)),
-    gdev_pcl_mode3compress(P4(int bytecount, const byte * current, byte * previous, byte * compressed)),
-    gdev_pcl_mode9compress(P4(int bytecount, const byte * current, const byte * previous, byte * compressed));
+    gdev_pcl_mode2compress(const word * row, const word * end_row, byte * compressed),
+    gdev_pcl_mode2compress_padded(const word * row, const word * end_row, byte * compressed, bool pad),
+    gdev_pcl_mode3compress(int bytecount, const byte * current, byte * previous, byte * compressed),
+    gdev_pcl_mode9compress(int bytecount, const byte * current, const byte * previous, byte * compressed);
 
 #endif /* gdevpcl_INCLUDED */

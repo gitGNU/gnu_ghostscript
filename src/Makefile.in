@@ -1,20 +1,27 @@
-#    Copyright (C) 1997-2002 artofcode LLC. All rights reserved.
+#    Copyright (C) 1997, 2002-2003 artofcode LLC.  All rights reserved.
 # 
-# This program is free software; you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by the
-# Free Software Foundation; either version 2 of the License, or (at your
-# option) any later version.
+#  This program is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU General Public License version 2
+#  as published by the Free Software Foundation.
 #
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-# Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+#  This software is provided AS-IS with no warranty, either express or
+#  implied. That is, this program is distributed in the hope that it will 
+#  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#  General Public License for more details
+#
+#  You should have received a copy of the GNU General Public License along
+#  with this program; if not, write to the Free Software Foundation, Inc.,
+#  59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+# 
+# For more information about licensing, please refer to
+# http://www.ghostscript.com/licensing/. For information on
+# commercial licensing, go to http://www.artifex.com/licensing/ or
+# contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+# San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: Makefile.in,v 1.1 2004/01/14 16:59:47 atai Exp $
+# $Id: Makefile.in,v 1.2 2004/02/14 22:20:04 atai Exp $
 # makefile template for/from the autoconf build.
 # @configure_input@
 
@@ -30,11 +37,11 @@ VPATH = @srcdir@
 # for the graphics library (GL) and the PostScript/PDF interpreter (PS).
 
 BINDIR=./bin
-GLSRCDIR=$(srcdir)/./src
+GLSRCDIR=$(srcdir)/src
 GLGENDIR=./obj
 GLOBJDIR=./obj
-PSSRCDIR=$(srcdir)/./src
-PSLIBDIR=$(srcdir)/./lib
+PSSRCDIR=$(srcdir)/src
+PSLIBDIR=$(srcdir)/lib
 PSGENDIR=./obj
 PSOBJDIR=./obj
 
@@ -177,10 +184,6 @@ ICCSRCDIR=$(srcdir)/icclib
 IJSSRCDIR=@IJSDIR@
 IJSEXECTYPE=unix
 
-# Define library names for the Gimp-Print (stp) driver
-
-STPLIB=@STPLIB@
-
 # Define how to build the library archives.  (These are not used in any
 # standard configuration.)
 
@@ -199,8 +202,8 @@ CC=@CC@
 
 CCLD=$(CC)
 
-# Define the general cc flags, warnings and such.
-GCFLAGS=@GCFLAGS@
+# Define the default gcc flags.
+GCFLAGS=@GCFLAGS@ @CFLAGS@
 
 # Define the added flags for standard, debugging, profiling 
 # and shared object builds.
@@ -237,7 +240,7 @@ CFLAGS=$(CFLAGS_STANDARD) $(GCFLAGS) $(XCFLAGS)
 # XLDFLAGS can be set from the command line.
 XLDFLAGS=
 
-LDFLAGS=$(XLDFLAGS)
+LDFLAGS=@LDFLAGS@ $(XLDFLAGS)
 
 # Define any extra libraries to link into the executable.
 # ISC Unix 2.2 wants -linet.
@@ -278,13 +281,12 @@ XINCLUDE=@X_CFLAGS@
 #XLIBS=Xt SM ICE Xext X11
 
 # We use the autoconf macro AC_PATH_XTRA which defines X_LIBS with
-# the -L (or whatever). It also defines X_EXTRA_LIBS which
-# should be slotted into XLIBS below and X_PRE_LIBS which should go
-# before -lX11. We do not handle these and should, but they are empty
-# on most modern platforms.
+# the -L (or whatever). It also defines X_PRE_LIBS and X_EXTRA_LIBS 
+# all three of which are stripped and slotted into XLIBS below.
+# Usually however, all but X_LIBS are empty on modern platforms.
 XLIBDIRS=@X_LIBS@
 XLIBDIR=
-XLIBS=Xt Xext X11
+XLIBS=@XLIBS@
 
 # Define whether this platform has floating point hardware:
 #	FPU_TYPE=2 means floating point is faster than fixed point.
@@ -297,9 +299,6 @@ XLIBS=Xt Xext X11
 
 FPU_TYPE=1
 
-# Don't bother with DOS asm implementations
-USE_ASM=0
-
 # Define the .dev module that implements thread and synchronization
 # primitives for this platform.
 
@@ -310,14 +309,11 @@ USE_ASM=0
 # Default is No sync primitives since some platforms don't have it (HP-UX)
 SYNC=nosync
 
-# programs we use
-RM=rm -f
-
 # ------ Devices and features ------ #
 
 # Choose the language feature(s) to include.  See gs.mak for details.
 
-FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)epsf.dev $(GLD)pipe.dev
+FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)epsf.dev $(GLD)pipe.dev $(PSD)fapi.dev
 #FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev
 #FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)rasterop.dev $(GLD)pipe.dev
 # The following is strictly for testing.
@@ -369,7 +365,7 @@ DEVICE_DEVS1=$(DD)bmpmono.dev $(DD)bmpgray.dev $(DD)bmpsep1.dev $(DD)bmpsep8.dev
 DEVICE_DEVS2=
 DEVICE_DEVS3=$(DD)deskjet.dev $(DD)djet500.dev $(DD)laserjet.dev $(DD)ljetplus.dev $(DD)ljet2p.dev $(DD)ljet3.dev $(DD)ljet3d.dev $(DD)ljet4.dev $(DD)ljet4d.dev $(DD)lj5mono.dev $(DD)lj5gray.dev
 DEVICE_DEVS4=$(DD)cdeskjet.dev $(DD)cdjcolor.dev $(DD)cdjmono.dev $(DD)cdj550.dev $(DD)pj.dev $(DD)pjxl.dev $(DD)pjxl300.dev
-DEVICE_DEVS5=$(DD)uniprint.dev @IJSDEVS@ @STPDEVS@
+DEVICE_DEVS5=$(DD)uniprint.dev @IJSDEVS@
 DEVICE_DEVS6=$(DD)bj10e.dev $(DD)bj200.dev $(DD)bjc600.dev $(DD)bjc800.dev
 DEVICE_DEVS7=$(DD)faxg3.dev $(DD)faxg32d.dev $(DD)faxg4.dev
 DEVICE_DEVS8=$(DD)pcxmono.dev $(DD)pcxgray.dev $(DD)pcx16.dev $(DD)pcx256.dev $(DD)pcx24b.dev $(DD)pcxcmyk.dev
@@ -381,12 +377,13 @@ DEVICE_DEVS12=$(DD)psmono.dev $(DD)psgray.dev $(DD)psrgb.dev $(DD)bit.dev $(DD)b
 DEVICE_DEVS13=@PNGDEVS@
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev
 DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)epswrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
-
 DEVICE_DEVS16=$(DD)bbox.dev
+
 DEVICE_DEVS17=
 DEVICE_DEVS18=
 DEVICE_DEVS19=
 DEVICE_DEVS20=$(DD)cljet5.dev $(DD)cljet5c.dev
+DEVICE_DEVS21=$(DD)spotrgb.dev $(DD)spotcmyk.dev $(DD)devicen.dev $(DD)xcf.dev
 
 # ---------------------------- End of options --------------------------- #
 
@@ -397,13 +394,14 @@ MAKEFILE=Makefile
 TOP_MAKEFILES=$(MAKEFILE) $(GLSRCDIR)/unixhead.mak
 
 # Define the auxiliary program dependency. We don't use this.
+
 AK=
 
 # Define the compilation rules and flags.
 
 CCFLAGS=$(GENOPT) $(CAPOPT) $(CFLAGS)
 CC_=$(CC) $(CCFLAGS)
-CCAUX=$(CC)
+CCAUX=$(CC)  $(GCFLAGS)
 CC_LEAF=$(CC_)
 # note gcc can't use -fomit-frame-pointer with -pg.
 CC_LEAF_PG=$(CC_)
@@ -426,7 +424,6 @@ include $(GLSRCDIR)/icclib.mak
 include $(GLSRCDIR)/ijs.mak
 include $(GLSRCDIR)/devs.mak
 include $(GLSRCDIR)/contrib.mak
-include $(GLSRCDIR)/gnudevs.mak
 include $(GLSRCDIR)/unix-aux.mak
 include $(GLSRCDIR)/unixlink.mak
 include $(GLSRCDIR)/unix-dll.mak
@@ -446,6 +443,3 @@ maintainer-clean: distclean
 	-$(RM) configure.ac
 	-$(RM) configure
 	-$(RM) Makefile.in
-
-check: default
-	$(NO_OP)

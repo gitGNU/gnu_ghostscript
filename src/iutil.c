@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: iutil.c,v 1.1 2004/01/14 16:59:52 atai Exp $ */
+/* $Id: iutil.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
 /* Utilities for Ghostscript interpreter */
 #include "math_.h"		/* for fabs */
 #include "memory_.h"
@@ -97,7 +103,7 @@ obj_eq(const ref * pref1, const ref * pref2)
 	/*
 	 * Only a few cases need be considered here:
 	 * integer/real (and vice versa), name/string (and vice versa),
-	 * and extended operators.
+	 * arrays, and extended operators.
 	 */
 	switch (r_type(pref1)) {
 	    case t_integer:
@@ -118,6 +124,13 @@ obj_eq(const ref * pref1, const ref * pref2)
 		name_string_ref(pref2, &nref);
 		pref2 = &nref;
 		break;
+
+		/* differing array types can match if length is 0 */
+	    case t_array:
+	    case t_mixedarray:
+	    case t_shortarray:
+		return r_is_array(pref2) &&
+		       r_size(pref1) == 0 && r_size(pref2) == 0;
 	    default:
 		if (r_btype(pref1) != r_btype(pref2))
 		    return false;
@@ -129,11 +142,13 @@ obj_eq(const ref * pref1, const ref * pref2)
      */
     switch (r_btype(pref1)) {
 	case t_array:
-	    return (pref1->value.refs == pref2->value.refs &&
+	    return ((pref1->value.refs == pref2->value.refs ||
+	             r_size(pref1) == 0) &&
 		    r_size(pref1) == r_size(pref2));
 	case t_mixedarray:
 	case t_shortarray:
-	    return (pref1->value.packed == pref2->value.packed &&
+	    return ((pref1->value.packed == pref2->value.packed ||
+	             r_size(pref1) == 0) &&
 		    r_size(pref1) == r_size(pref2));
 	case t_boolean:
 	    return (pref1->value.boolval == pref2->value.boolval);
@@ -237,7 +252,7 @@ obj_string_data(const ref *op, const byte **pchars, uint *plen)
  * repeatedly to print on a stream, which may require suspending at any
  * point to handle stream callouts.
  */
-private void ensure_dot(P1(char *));
+private void ensure_dot(char *);
 int
 obj_cvp(const ref * op, byte * str, uint len, uint * prlen,
 	int full_print, uint start_pos, gs_memory_t *mem)
@@ -725,7 +740,7 @@ float_params(const ref * op, int count, float *pval)
 		*--pval = op->value.realval;
 		break;
 	    case t_integer:
-		*--pval = op->value.intval;
+		*--pval = (float)op->value.intval;
 		break;
 	    case t__invalid:
 		return_error(e_stackunderflow);
@@ -733,6 +748,34 @@ float_params(const ref * op, int count, float *pval)
 		return_error(e_typecheck);
 	}
     return 0;
+}
+
+/* Get N numeric parameters (as floating point numbers) from an array */
+int
+process_float_array(const ref * parray, int count, float * pval)
+{
+    int         code = 0, indx0 = 0;
+
+    /* we assume parray is an array of some type, of adequate length */
+    if (r_has_type(parray, t_array))
+        return float_params(parray->value.refs + count - 1, count, pval);
+
+    /* short/mixed array; convert the entries to refs */
+    while (count > 0 && code >= 0) {
+        int     i, subcount;
+        ref     ref_buff[20];   /* 20 is arbitrary */
+
+        subcount = (count > countof(ref_buff) ? countof(ref_buff) : count);
+        for (i = 0; i < subcount && code >= 0; i++)
+            code = array_get(parray, (long)(i + indx0), &ref_buff[i]);
+        if (code >= 0)
+            code = float_params(ref_buff + subcount - 1, subcount, pval);
+        count -= subcount;
+        pval += subcount;
+        indx0 += subcount;
+    }
+
+    return code;
 }
 
 /* Get a single real parameter. */

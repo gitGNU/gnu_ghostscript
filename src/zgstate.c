@@ -1,22 +1,28 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation; either version 2 of the License, or (at your
-  option) any later version.
+  under the terms of the GNU General Public License version 2
+  as published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
+
+  This software is provided AS-IS with no warranty, either express or
+  implied. That is, this program is distributed in the hope that it will 
+  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
+  General Public License for more details
 
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: zgstate.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* $Id: zgstate.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
 /* Graphics state operators */
 #include "math_.h"
 #include "ghost.h"
@@ -28,6 +34,8 @@
 #include "igstate.h"
 #include "gsmatrix.h"
 #include "store.h"
+#include "gscspace.h"
+#include "iname.h"
 
 /* Structure descriptors */
 private_st_int_gstate();
@@ -36,7 +44,7 @@ private_st_int_remap_color_info();
 /* ------ Utilities ------ */
 
 private int
-zset_real(i_ctx_t *i_ctx_p, int (*set_proc)(P2(gs_state *, floatp)))
+zset_real(i_ctx_t *i_ctx_p, int (*set_proc)(gs_state *, floatp))
 {
     os_ptr op = osp;
     double param;
@@ -51,7 +59,7 @@ zset_real(i_ctx_t *i_ctx_p, int (*set_proc)(P2(gs_state *, floatp)))
 }
 
 private int
-zset_bool(i_ctx_t *i_ctx_p, void (*set_proc)(P2(gs_state *, bool)))
+zset_bool(i_ctx_t *i_ctx_p, void (*set_proc)(gs_state *, bool))
 {
     os_ptr op = osp;
 
@@ -62,7 +70,7 @@ zset_bool(i_ctx_t *i_ctx_p, void (*set_proc)(P2(gs_state *, bool)))
 }
 
 private int
-zcurrent_bool(i_ctx_t *i_ctx_p, bool (*current_proc)(P1(const gs_state *)))
+zcurrent_bool(i_ctx_t *i_ctx_p, bool (*current_proc)(const gs_state *))
 {
     os_ptr op = osp;
 
@@ -74,13 +82,14 @@ zcurrent_bool(i_ctx_t *i_ctx_p, bool (*current_proc)(P1(const gs_state *)))
 /* ------ Operations on the entire graphics state ------ */
 
 /* "Client" procedures */
-private void *gs_istate_alloc(P1(gs_memory_t * mem));
-private int gs_istate_copy(P2(void *to, const void *from));
-private void gs_istate_free(P2(void *old, gs_memory_t * mem));
+private void *gs_istate_alloc(gs_memory_t * mem);
+private int gs_istate_copy(void *to, const void *from);
+private void gs_istate_free(void *old, gs_memory_t * mem);
 private const gs_state_client_procs istate_procs = {
     gs_istate_alloc,
     gs_istate_copy,
-    gs_istate_free
+    gs_istate_free,
+    0,			/* copy_for */
 };
 
 /* Initialize the graphics stack. */
@@ -104,6 +113,7 @@ int_gstate_alloc(const gs_dual_memory_t * dmem)
     make_real(proc0.value.refs + 1, 0.0);
     iigs->black_generation = proc0;
     iigs->undercolor_removal = proc0;
+    make_false(&iigs->use_cie_color);
     /*
      * Even though the gstate itself is allocated in local VM, the
      * container for the color remapping procedure must be allocated in
@@ -150,13 +160,11 @@ zgrestoreall(i_ctx_t *i_ctx_p)
 private int
 zinitgraphics(i_ctx_t *i_ctx_p)
 {
-    /* gs_initgraphics does a setgray; we must clear the interpreter's */
-    /* cached copy of the color space object. */
-    int code = gs_initgraphics(igs);
-
-    if (code >= 0)
-	make_null(&istate->colorspace.array);
-    return code;
+    /*
+     * gs_initigraphics does not reset the colorspace;
+     * this is now handled in the PostScript code.
+     */
+    return gs_initgraphics(igs);
 }
 
 /* ------ Operations on graphics state elements ------ */
