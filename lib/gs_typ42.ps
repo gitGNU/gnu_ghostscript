@@ -1,0 +1,45 @@
+%    Copyright (C) 1996 Aladdin Enterprises.  All rights reserved.
+% 
+% This program is free software; you can redistribute it and/or modify it
+% under the terms of the GNU General Public License as published by the
+% Free Software Foundation; either version 2 of the License, or (at your
+% option) any later version.
+%
+% This program is distributed in the hope that it will be useful, but
+% WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+% Public License for more details.
+%
+% You should have received a copy of the GNU General Public License along
+% with this program; if not, write to the Free Software Foundation, Inc.,
+% 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+
+% $Id: gs_typ42.ps,v 1.1 2004/01/14 16:59:47 atai Exp $
+% Type 42 font support code.
+
+% Here are the BuildChar and BuildGlyph implementation for Type 42 fonts.
+% The names %Type42BuildChar and %Type42BuildGlyph are known to the
+% interpreter.  The real work is done in an operator:
+%	<font> <code|name> <name> <glyphindex> .type42execchar -
+
+(%Type42BuildChar) cvn	% <font> <code> %Type42BuildChar -
+ { 1 index /Encoding get 1 index get .type42build
+ } bind def
+(%Type42BuildGlyph) cvn	% <font> <name> %Type42BuildGlyph -
+ { dup .type42build
+ } bind def
+/.type42build		% <font> <code|name> <name> .type42build -
+ { 2 index begin
+    dup CharStrings exch .knownget not
+     { 2 copy eq { exch pop /.notdef exch } if
+       QUIET not
+	{ (Substituting .notdef for ) print = flush }
+	{ pop }
+       ifelse
+       /.notdef CharStrings /.notdef get
+     } if
+   end .type42execchar
+ } bind def
+
+% Register the font type for definefont.
+buildfontdict 42 /.buildfont42 cvx put

@@ -1,0 +1,76 @@
+%    Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
+% 
+% This program is free software; you can redistribute it and/or modify it
+% under the terms of the GNU General Public License as published by the
+% Free Software Foundation; either version 2 of the License, or (at your
+% option) any later version.
+%
+% This program is distributed in the hope that it will be useful, but
+% WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+% Public License for more details.
+%
+% You should have received a copy of the GNU General Public License along
+% with this program; if not, write to the Free Software Foundation, Inc.,
+% 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+
+% $Id: gs_ccfnt.ps,v 1.1 2004/01/14 16:59:46 atai Exp $
+% Find and register all the precompiled font operators in systemdict.
+
+/registerfont			% <fontname> <fontdict> registerfont <font>
+ { DEBUG { (Registering ) print 1 index = } if
+   dup begin
+     Encoding type /nametype eq
+      { Encoding .findencoding /Encoding exch def
+      }
+     if
+     dup /PrefEnc known
+      { PrefEnc type /nametype eq
+	 { PrefEnc .findencoding /PrefEnc exch def
+	 }
+	if
+      }
+     if
+     dup /FDepVector known
+      { /FDepVector [ FDepVector
+	 { .FontDirectory 1 index .knownget
+	    { exch pop }
+	    { ccfonts 1 index .knownget
+	       { registerfont
+	       }
+	       { Fontmap 1 index known
+		  { findfont }
+		  { pop NullFont }
+		 ifelse
+	       }
+	      ifelse
+	    }
+	   ifelse
+	 }
+	forall ] readonly def
+      }
+     if
+   end
+   % Use the value of definefont appropriate at run-time, not bind-time
+   /definefont load exec
+ } bind odef
+% Bind recursive call (bind descends into oparrays: feature!)
+/registerfont dup load bind def
+
+/.loadinitialfonts {
+  //.loadinitialfonts exec
+  NOCCFONTS not {
+    /ccfonts mark
+      0 1 null .getccfont 1 sub { .getccfont dup /FontName get exch } for
+    .dicttomark def
+		% Make sure these fonts are registered as "resources".
+    currentfile {
+      pop ccfonts {
+	.FontDirectory 2 index known { pop pop } { registerfont pop } ifelse
+      } forall
+    } .execasresource
+    currentdict /ccfonts .undef
+  } if
+} bind def
+
+currentdict /registerfont .undef

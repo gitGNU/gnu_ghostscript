@@ -1,0 +1,592 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Background information for new users of Ghostscript</title>
+<!-- $Id: New-user.htm,v 1.1 2004/01/14 16:59:44 atai Exp $ -->
+<!-- Originally: new-user.txt -->
+<link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
+</head>
+
+<body>
+<!-- [1.0 begin visible header] ============================================ -->
+
+<!-- [1.1 begin headline] ================================================== -->
+
+<h1>Background information for new users of Ghostscript</h1>
+
+<!-- [1.1 end headline] ==================================================== -->
+
+<!-- [1.2 begin table of contents] ========================================= -->
+
+<h2>Table of contents</h2>
+
+<ul>
+<li><a href="#Overview">An overview of Ghostscript</a>
+<ul>
+<li><a href="#Find_Ghostscript">How is Ghostscript licensed?  Where can I find it?</a>
+<ul>
+<li><a href="#GNU_gs">GNU Ghostscript</a>
+</ul>
+<li><a href="#Third-party_libraries">Libraries obtained from other parties</a>
+<li><a href="#Support">What if I want support?</a>
+<li><a href="#Commercial_use">What about commercial use?</a>
+<li><a href="#Platforms">What platforms does Ghostscript run on?</a>
+<ul>
+<li><a href="#Third-party_platforms">Ports done by users</a>
+</ul>
+</ul>
+<li><a href="#Related_work">Related work</a>
+<ul>
+<li><a href="#Drivers">Drivers</a>
+<li><a href="#Previewers">Previewers</a>
+<ul>
+<li><a href="#Previewer_X">Previewers for X Windows</a>
+<li><a href="#Previewer_DOS-Win">Previewers for DOS and MS Windows</a>
+<li><a href="#Previewer_GNULinux">A previewer for GNU/Linux</a>
+</ul>
+<li><a href="#Related_programs">Related programs</a>
+</ul>
+<li><a href="#Need_help">If you need help</a>
+<ul>
+<li><a href="#Reporting_problems">Reporting problems</a>
+</ul>
+<li><a href="#Contacting_us">Contacting Ghostscript headquarters</a>
+<li><a href="#How_to_help">How you can help improve Ghostscript</a>
+<li><a href="#Acknowledgments">Acknowledgements</a>
+</ul>
+
+<!-- [1.2 end table of contents] =========================================== -->
+
+<!-- [1.3 begin hint] ====================================================== -->
+
+<p>For other information, see the <a href="Readme.htm">Ghostscript
+overview</a>.
+
+<!-- [1.3 end hint] ======================================================== -->
+
+<hr>
+
+<!-- [1.0 end visible header] ============================================== -->
+
+<!-- [2.0 begin contents] ================================================== -->
+
+<h2><a name="Overview"></a>An overview of Ghostscript</h2>
+
+<p>
+Ghostscript is the name of a set of software that provides:
+
+<ul>
+<li>An interpreter for the <b>PostScript</b><small><sup>TM</sup></small>
+language and the Adobe <b>Portable Document Format</b> (<b>PDF</b> --
+sometimes confused with Acrobat, Adobe's PDF browser and editor product);
+
+<li>Input modules (utilities) for reading a variety of raster formats,
+including <b>CMYK</b>, <b>GIF</b>, <b>JFIF</b> (<b>JPEG</b>), <b>MIFF</b>,
+<b>PBM</b>/<b>PGM</b>/<b>PPM</b>, and <b>PCX</b>;
+
+<li>Output modules (drivers) for a wide variety of window systems (including
+X Windows and Microsoft Windows), raster file formats, and printers, as well
+as a PDF output module that implements functions similar to Adobe's
+Acrobat<small><sup>TM</sup></small> Distiller<small><sup>TM</sup></small>
+product; and
+
+<li>The Ghostscript library, a set of procedures to implement the graphics
+and filtering capabilities that are primitive operations in the PostScript
+language and in PDF.
+</ul>
+
+<p>
+In simple terms, this means that Ghostscript can read a PostScript or PDF
+file and display the results on the screen or convert them into a form you
+can print on a non-PostScript printer. Especially together with several
+popular <a href="#Previewers">previewers</a>, with Ghostscript you can view
+or print an entire document or even isolated pages, even if your computer
+doesn't have Display PostScript and your printer doesn't handle PostScript
+itself.
+
+<h3><a name="Find_Ghostscript"></a>How is Ghostscript licensed?  Where can I find it?</h3>
+
+<p>
+Ghostscript is a copyrighted work (artofcode LLC owns the copyright);
+it is not shareware or in the public domain.  Different versions of it are
+distributed with three different licenses:
+
+<h4><a name="GNU_gs"></a>GNU Ghostscript</h4>
+
+<p>
+GNU Ghostscript is distributed under the terms of the GNU <a
+href="http://www.gnu.org/copyleft/gpl.html">General Public License</a>,
+which allows free use, and free copying and redistribution under certain
+conditions (including, in some cases, commercial distribution).
+You can always get the current version of GNU Ghostscript by Internet FTP
+from any of the many GNU distribution sites.  The GNU home ftp site is
+
+<blockquote>
+<a href="ftp://ftp.gnu.org/pub/gnu/"
+class="offsite">ftp://ftp.gnu.org/pub/gnu/</a>
+</blockquote>
+
+<p>
+For a more complete list of sites, including sites outside the U.S. and
+other ways of obtaining GNU software, contact
+the <a href="http://www.gnu.org/">Free Software Foundation</a>
+<a href="mailto:gnu@gnu.org">&lt;gnu@gnu.org&gt;</a>.
+
+<p><a name="CTAN"></a>
+Versions of Ghostscript are also available from sites in the
+Comprehensive TeX Archive Network (CTAN), in a tree based at
+/tex-archive/support/ghostscript/, which you can find at these principal
+CTAN distribution sites ("participating hosts") as of mid-1998:
+
+<blockquote><table cellpadding=0 cellspacing=0>
+<tr>	<td><a
+href="ftp://ctan.tug.org/tex-archive/support/ghostscript/"
+class="offsite">ftp://ctan.tug.org/tex-archive/support/ghostscript/</a>
+	<td>&nbsp;&nbsp;
+	<td>Massachusetts, U.S.A.
+<tr>	<td><a href="ftp://ftp.dante.de/tex-archive/support/ghostscript/"
+class="offsite">ftp://ftp.dante.de/tex-archive/support/ghostscript/</a>
+	<td>&nbsp;
+	<td>Deutschland
+<tr>	<td><a
+href="ftp://ftp.tex.ac.uk/tex-archive/support/ghostscript/"
+class="offsite">ftp://ftp.tex.ac.uk/tex-archive/support/ghostscript/</a>
+	<td>&nbsp;
+	<td>United Kingdom
+</table></blockquote>
+
+<p>
+CTAN has more than fifty mirror sites around the world.  For information
+about CTAN sites, including how to use them over the World Wide Web, visit
+<a href="http://www.ctan.org/" class="offsite">ctan.org</a> or get
+the file <b><tt>CTAN.sites</tt></b> from any CTAN server, for
+instance
+
+<blockquote>
+<a href="ftp://ctan.tug.org/tex-archive/CTAN.sites" 
+class="offsite">ftp://ctan.tug.org/tex-archive/CTAN.sites</a>
+</blockquote>
+
+<hr>
+
+<h3><a name="Third-party_libraries"></a>Libraries obtained from other parties</h3>
+
+<p>
+The Ghostscript source code distribution, and the Ghostscript executable
+code, include libraries obtained from other parties.  All the source files
+mentioned in this section are in the Ghostscript and third-party library
+source kits.  The documentation of <a href="Make.htm">how to build
+Ghostscript</a> tells <a href="Make.htm#Acquiring">where to get these
+libraries</a> and <a href="Make.htm#Unpack">how to unpack them</a>.
+
+<blockquote><dl>
+<dt>The <a href="http://www.ijg.org/" class="offsite">Independent JPEG
+Group</a> (IJG)
+library
+<dd>The executable versions of Ghostscript are based in part on the work of
+the Independent JPEG Group.  For more information, see
+<b><tt>jpeg.mak</tt></b> in the main Ghostscript source directory and
+<b><tt>README</tt></b> in the libjpeg source directory.
+
+<dt>The <a href="http://www.libpng.org/pub/png/"
+class="offsite">Portable Network
+Graphics</a> (PNG) library created by Dave Martindale, Guy Eric Schalnat,
+Paul Schmidt, and Tim Wegner, of Group 42, Inc.
+<dd>For more information, see <b><tt>libpng.mak</tt></b> in the main
+Ghostscript source directory, and <b><tt>README</tt></b> and
+<b><tt>png.h</tt></b> in the libpng source directory.
+
+<dt>The <a href="http://www.gzip.org/zlib/"
+class="offsite">zlib</a> library
+created by Jean-loup Gailly and Mark Adler
+<dd>For more information, see <b><tt>zlib.mak</tt></b> in the main
+Ghostscript source directory, and <b><tt>README</tt></b> in the
+zlib source code.
+</dl></blockquote>
+
+<p>
+These libraries do not fall under the GPL but come with their own licenses,
+which also allow free use and redistribution under appropriate
+circumstances and which appear in the files mentioned just above.  These
+libraries are entirely original works of their respective authors, and are
+provided as is with no warranty and no support.
+
+<hr>
+
+<h3><a name="Support"></a>What if I want support?</h3>
+
+<p>
+Neither artofcode LLC nor any organization known to us currently offers
+Ghostscript support for end-users -- that is, for people or companies who
+just want to use Ghostscript and not redistribute it as part of a product.
+
+<p>
+Nothing in the GNU license prevents anyone from providing
+support for Ghostscript, either free or commercial.  We would be happy to
+include in the Ghostscript documentation the contact information for anyone
+who wants to offer such support.
+
+<hr>
+
+<h3><a name="Platforms"></a>What platforms does Ghostscript run on?</h3>
+
+<p>
+Ghostscript is written entirely in C, with special care taken to make it
+portable to a wide variety of systems. It is actively maintained on many
+unix-like operating systems, Microsoft Windows, Apple's MacOS and
+OpenVMS and can easily be ported to others. Please see <a
+href="Make.htm">Making Ghostscript</a> for details on the build process
+and hints for various platforms. 
+
+<hr>
+
+<h2><a name="Related_work"></a>Related work</h2>
+
+<h3><a name="Drivers"></a>Drivers</h3>
+
+<p>
+A number of people have created Ghostscript drivers that they prefer to
+distribute directly, rather than including them in the Ghostscript
+distributions. Please refer to <a
+href="http://www.linuxprinting.org/"
+class="offsite">www.linuxprinting.org</a> or your favorite search engine
+for
+relevant examples.
+
+<h3><a name="Previewers"></a>Previewers</h3>
+
+<p>
+The Ghostscript user interface is very primitive, so several people have
+contributed screen previewers with better user interfaces.
+
+<h4><a name="Previewer_X"></a>Previewers for X Windows</h4>
+
+<dl>
+<dt><b><tt>GSPreview</tt></b>
+<dd>For information on GSPreview, contact Richard Hesketh
+&lt;<a href="mailto:rlh@ukc.ac.uk">rlh@ukc.ac.uk</a>&gt;.
+</dl>
+
+<h4><a name="Previewer_DOS-Win"></a>Previewers for DOS and MS Windows</h4>
+
+<dl>
+<dt><b><tt>psv</tt></b>
+<dd><b><tt>PSV</tt></b>, another keyboard-based PostScript viewing package
+for DOS, appears to be redistributable with no restrictions.  It was once
+available from
+
+<blockquote>
+ftp://puccini.ujf-grenoble.fr/pub/contrib-ps/DOS-PSV/
+</blockquote>
+</dl>
+
+<h4><a name="Previewer_GNULinux"></a>A previewer for GNU/Linux</h4>
+
+<dl>
+<dt><b><tt>BMV</tt></b> <dd>Jan Kybic has created a Ghostscript-based
+bitmap previewing program for GNU/Linux called <b><tt>BMV</tt></b>, which
+doesn't use X Windows but is based on <b><tt>svgalib</tt></b>.  He says
+there is a port of <b><tt>BMV</tt></b> for SCO Unix by William Bader.
+<b><tt>BMV</tt></b> is available from
+
+<blockquote>
+<a
+href="ftp://sunsite.unc.edu/pub/Linux/apps/graphics/viewers/svga/bmv-1.2.tgz" 
+class="offsite">ftp://sunsite.unc.edu/pub/Linux/apps/graphics/viewers/svga/bmv-1.2.tgz</a>
+</blockquote>
+</dl>
+
+<hr>
+
+<h3><a name="Related_programs"></a>Related programs</h3>
+
+<dl>
+<dt><b><tt>genscript</tt></b>
+<dd><b><tt>genscript</tt></b> is a free replacement for the
+<b><tt>enscript</tt></b> program.  <b><tt>genscript</tt></b> converts plain
+text files to PostScript and sends the generated PostScript output to the
+specified printer or to a file.  <b><tt>genscript</tt></b> can be easily
+extended to handle different output media, and it has many options which can
+be used to customize printouts, including 2-up printing, pagination, complex
+headers, and many more.  You can find the current version at
+
+<blockquote>
+<a href="http://www.iki.fi/~mtr/genscript/" 
+class="offsite">http://www.iki.fi/~mtr/genscript/</a> (home page)<br>
+<a href="ftp://ftp.gnu.org/pub/gnu/" 
+class="offsite">ftp://ftp.gnu.org/pub/gnu/enscript/</a>enscript-*.tar.gz
+</blockquote>
+
+<dt><b><tt>pstotext</tt></b>
+<dd>A good free utility <b><tt>pstotext</tt></b> uses Ghostscript to extract
+plain text from PostScript files.  It is much better than the
+<b><tt>ps2ascii</tt></b> utility distributed with Ghostscript.  You can read
+the <b><tt>pstotext</tt></b> documentation at
+
+<blockquote>
+<a
+href="http://www.research.digital.com/SRC/virtualpaper/manpages/pstotext.1.html" 
+class="offsite">http://www.research.digital.com/SRC/virtualpaper/manpages/pstotext.1.html</a>
+</blockquote>
+
+<p>
+and download the <b><tt>pstotext</tt></b> kit from
+
+<blockquote>
+<a href="http://www.research.digital.com/SRC/virtualpaper/pstotext.html" 
+class="offsite">http://www.research.digital.com/SRC/virtualpaper/pstotext.html</a>
+</blockquote>
+
+<p>
+<b><tt>pstotext</tt></b> is unsupported, but the authors,
+Paul McJones
+&lt;<a href="mailto:paul.mcjones@acm.org">paul.mcjones@acm.org</a>&gt;
+and Andrew Birrell
+&lt;<a href="mailto:birrell@pa.dec.com">birrell@pa.dec.com</a>&gt;, are
+happy to have your questions and comments either by e-mail or <a href="http://www.research.digital.com/SRC/virtualpaper/comments.html" 
+class="offsite">here</a>
+
+<p>
+For more information about the authors' Virtual Paper project, which
+attempts to make on-line reading of lengthy material (like research
+reports, manuals, or entire books) comfortable, read:
+
+<blockquote>
+<a href="http://www.research.digital.com/SRC/virtualpaper" 
+class="offsite">http://www.research.digital.com/SRC/virtualpaper</a>
+</blockquote>
+
+<dt><b><tt>PreScript</tt></b>
+<dd>This is another good free utility that uses Ghostscript to extract text
+from PostScript or PDF files.  It can also generate very simple HTML,
+keeping some of the formatting.  It is unsupported, but is the product of an
+active research project.  Its home page is:
+
+<blockquote>
+<a href="http://www.nzdl.org/html/prescript.html" 
+class="offsite">http://www.nzdl.org/html/prescript.html</a>
+</blockquote>
+
+</dl>
+
+<hr>
+
+<h2><a name="Need_help"></a>If you need help</h2>
+
+<p>
+The list of Frequently Asked Questions (FAQ) isn't updated very often, so
+it may be somewhat out of date.  It's available from
+
+<blockquote>
+<a href="http://www.cs.wisc.edu/~ghost/doc/faq.htm" 
+class="offsite">http://www.cs.wisc.edu/~ghost/doc/faq.htm</a><br>
+<a href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/faq.htm" 
+class="offsite">ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/faq.htm</a>
+</blockquote>
+
+<p>
+or by AFS from
+
+<blockquote>
+/afs/cs.wisc.edu/p/mirror/pub/mirrors/ghost/faq.htm
+</blockquote>
+
+<p>
+CompuServe announced in December 1995 that the Graphics Support Forum offers
+Message Section and Library 21, "Ghostscript", for technical assistance with
+Ghostscript.  Ghostscript is available for downloading in Library 21,
+"Ghostscript." To access the Graphics Support Forum, <b><tt>GO
+GRAPHSUP</tt></b>.  This service has no connection with the main Ghostscript
+developers.
+
+<p>
+If you have problems with Ghostscript and you have access to the
+Internet, we suggest to post your question to one of these Usenet
+newsgroups:
+
+<dl>
+<dt><b><tt><a href="news:gnu.ghostscript.bug">gnu.ghostscript.bug</a></tt></b>
+<dd>if your question is about <b>GNU Ghostscript</b>.  If you have access to Internet mail, but not Usenet news,
+write to <b><tt>bug-ghostscript@gnu.org</tt></b>, which is equivalent to
+posting to that newsgroup.
+
+<dt><b><tt><a href="news:comp.lang.postscript">comp.lang.postscript</a></tt></b>
+<dd>if you have a general question about Ghostscript. Note
+however that this newsgroup was not intended for Ghostscript
+discussion <em>per se</em>.
+</dl>
+
+<p>
+There are hundreds of Ghostscript user sites all over the world, and another
+user will often be able to help you.  If you have trouble with a specific
+device driver, look at <b><tt>devs.mak</tt></b> and
+<b><tt>contrib.mak</tt></b> in the Ghostscript source directory to see in
+which file the driver is defined.  If it's defined in
+<b><tt>contrib.mak</tt></b>, the list of contributed drivers, please contact
+the author directly: the maintainers of Ghostscript can't help you with
+user-maintained drivers.
+
+<h3><a name="Reporting_problems"></a>Reporting problems</h3>
+
+<p>
+Please read <a href="Bug-info.htm">Bug-info.htm</a> for information about
+reporting problems.
+
+<hr>
+
+<h2><a name="Contacting_us"></a>Contacting Ghostscript headquarters</h2>
+
+<p>
+As of mid-September 2000, artofcode LLC is responsible for the future
+development of Ghostscript.  Please do not contact us if all you want is
+help with Ghostscript!  Ghostscript is
+free, but our time is not.  If you call for help, we will tell you politely
+that we cannot answer your question.  Ghostscript's documentation, while not
+of commercial end-user quality, has been adequate for thousands of users
+(for many of whom English is a foreign language), so the answer to your
+question is very likely in it somewhere. <!-- ouch -->
+
+<p>
+Here is our contact information:
+
+<blockquote><address>
+Raph Levien<br>
+artofcode LLC<br>
+940 Tyler St. Studio 6<br>
+Benicia, CA 94510<br>
+tel/fax +1 707 746 6398<br>
+<a href="mailto:raph@artofcode.com">raph@artofcode.com</a>
+</address></blockquote>
+
+<h3>Aladdin Enterprises</h3>
+
+<p>
+Aladdin Enterprises, the original authors of Ghostscript, is no
+longer responsible for Ghostscript, but may be available for small
+contract projects.  Here is their contact information:
+
+<blockquote><address>
+Aladdin Enterprises<br>
+203 Santa Margarita Avenue<br>
+Menlo Park, CA 94025 U.S.A.<br>
++1-650-322-1734 fax<br>
+<a href="mailto:ghost@aladdin.com">ghost@aladdin.com</a><br>
+<a href="http://www.ghostscript.com/"
+class="offsite">http://www.ghostscript.com/</a>
+</address></blockquote>
+
+<p>
+If you want help with Ghostscript, or want to report a problem, please do
+not contact us.  We will not be able to help you.
+
+<hr>
+
+<h2><a name="How_to_help"></a>How you can help improve Ghostscript</h2>
+
+<p>
+The most valuable thing you can do to help improve Ghostscript is to help
+test it.  We make three different grades of release available, each of
+which needs a different kind of testing.
+
+<ul>
+<li><em>Stable</em> releases are made available about every 9 months, after
+a beta test period.  Reporting problems as described <a
+href="#Reporting_problems">above</a> often results in a fix being posted on
+our Web site.
+</ul>
+
+<ul>
+<li><em>Beta</em> releases are posted starting about 6 weeks before a
+planned public release.  These are candidates for public release, and need
+intensive testing.
+</ul>
+
+<ul>
+<li><em>Development</em> releases are posted every few weeks.  These are not
+supposed to be good enough for general use, but testing them is still very
+helpful, since it gets problems corrected before the intensive beta test
+period.
+</ul>
+
+<p>
+You can always find the current public release and the current beta or
+tester release on our <a href="http://www.cs.wisc.edu/~ghost/">Web
+site</a>.  If you would like to be notified when new beta or tester releases
+are posted, please <a href="#Contacting_us">contact us</a>.
+
+<p>
+There are also some useful projects that we don't have enough resources to
+work on, and with which we would appreciate help.  See <a
+href="Projects.htm">this list</a> for details.
+
+<hr>
+
+<h2><a name="Acknowledgments"></a>Acknowledgements</h2>
+
+<p>
+Ghostscript was originally created, and through the year 2000 was primarily
+developed and maintained, by L. Peter Deutsch, President of Aladdin
+Enterprises (not to be confused with Peter J. Deutsch, founder of Bunyip
+Information Systems Inc.).
+
+<p>
+Special thanks are due to Russell Lang, for the
+<b><tt>GSview for Windows</tt></b> and
+<b><tt>PM GSview</tt></b> programs, and for contributing most of the code for
+the Microsoft Windows and OS/2 environments; to Tim Theisen, for the
+<b><tt>Ghostview</tt></b> program for X Windows and for major contributions
+to, and assistance with support of, the code for the X Windows
+environment; to Martin Fong and Mark Lentczner, for the first Macintosh
+ports; to Pete Kaiser
+&lt;<a href="mailto:kaiser@acm.org">kaiser@acm.org</a>&gt;, for redoing all
+of the documentation in HTML;
+and to the <a href="http://www.ijg.org/">Independent
+JPEG Group</a>, to Group 42, Inc., and to Jean-loup Gailly and Mark Adler,
+for creating the freely available libraries that Ghostscript uses.
+
+<p>
+Special thanks are due to URW++ Design and Development Incorporated, of
+Hamburg, Germany (<a href="http://www.urwpp.de/">http://www.urwpp.de/</a>)
+for making a commercial-quality set of the 35 standard PostScript Type 1
+fonts available for free distribution under the GNU and Aladdin licenses,
+and for updating them to include Adobe's expanded PostScript 3 character
+set.
+
+<p>
+Special thanks are due to Richard Stallman and the
+<a href="http://www.gnu.org/" class="offsite">Free Software
+Foundation</a> for originating
+the <a href="http://www.gnu.org/copyleft/gpl.html" class="offsite">GNU
+General Public
+License</a>, for originally motivating Aladdin's interest in creating free
+software, and for being the primary distributor of GNU Ghostscript on the
+Internet.
+
+<p>
+See also the <a href="Helpers.htm">list of the many other people</a> who have
+contributed significantly to improving Ghostscript.
+
+<!-- [2.0 end contents] ==================================================== -->
+
+<!-- [3.0 begin visible trailer] =========================================== -->
+<hr>
+
+<p>
+<small>Copyright &copy; 1996-2002 artofcode LLC.  All rights
+reserved.</small>
+
+<p>
+This software is provided AS-IS with no warranty, either express or
+implied.
+
+This software is distributed under license and may not be copied,
+modified or distributed except as expressly authorized under the terms
+of the license contained in the file LICENSE in this distribution.
+
+<p>
+<small>Ghostscript version 7.07, 17 May 2003
+
+<!-- [3.0 end visible trailer] ============================================= -->
+
+</body>
+</html>

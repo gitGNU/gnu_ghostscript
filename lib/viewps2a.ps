@@ -1,0 +1,33 @@
+%    Copyright (C) 1995 Aladdin Enterprises.  All rights reserved.
+% 
+% This program is free software; you can redistribute it and/or modify it
+% under the terms of the GNU General Public License as published by the
+% Free Software Foundation; either version 2 of the License, or (at your
+% option) any later version.
+%
+% This program is distributed in the hope that it will be useful, but
+% WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+% Public License for more details.
+%
+% You should have received a copy of the GNU General Public License along
+% with this program; if not, write to the Free Software Foundation, Inc.,
+% 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+
+% $Id: viewps2a.ps,v 1.1 2004/01/14 16:59:47 atai Exp $
+% Display a file produced by ps2ascii with no switch or with -dCOMPLEX.
+% This is just a procset to read in before the file to display.
+
+/init { 0.1 0.1 scale } bind def
+init
+/next { currentfile token pop } bind def
+/F { next next pop next exch selectfont } bind def
+/P { showpage init } bind def
+/S
+ { next next moveto
+   next dup stringwidth pop next exch div
+   gsave 1 scale show grestore
+ } bind def
+/C { next next next setrgbcolor } bind def
+/I { next next next next gsave 0.75 setgray rectfill grestore } bind def
+/R { next next next next rectfill } bind def

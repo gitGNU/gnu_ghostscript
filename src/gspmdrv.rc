@@ -1,0 +1,40 @@
+/* Copyright (C) 1992, 1993 artofcode LLC.  All rights reserved.
+  
+  This program is free software; you can redistribute it and/or modify it
+  under the terms of the GNU General Public License as published by the
+  Free Software Foundation; either version 2 of the License, or (at your
+  option) any later version.
+
+  This program is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along
+  with this program; if not, write to the Free Software Foundation, Inc.,
+  59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+
+*/
+
+/*$Id: gspmdrv.rc,v 1.1 2004/01/14 16:59:50 atai Exp $*/
+/* Resources for gspmdrv.exe, the PM display driver for Ghostscript */
+
+#include <os2.h>
+#include "gspmdrv.h"
+
+ICON ID_GSPMDRV obj\gspmdrv.ico
+
+DLGTEMPLATE IDD_ABOUT LOADONCALL MOVEABLE DISCARDABLE
+BEGIN
+  DIALOG "About Ghostscript PM driver", IDD_ABOUT, 10, 10, 250, 76, WS_VISIBLE, FCF_SYSMENU | FCF_TITLEBAR
+  BEGIN
+    ICON ID_GSPMDRV, ID_GSPMDRV, 8, 56, 20, 16, WS_GROUP
+    LTEXT "Ghostscript Presentation Manager Driver", -1, 34, 64, 210, 8
+    LTEXT GSPMDRV_VERSION, -1, 34, 56, 210, 8
+    LTEXT "Copyright (C) 1992, 1993 Aladdin Enterprises.", -1, 34, 48, 210, 8
+    LTEXT "All rights reserved", -1, 34, 40, 210, 8
+    PUSHBUTTON  "OK", DID_OK, 105, 8, 40, 14
+  END
+END
+
+

@@ -1,0 +1,52 @@
+#!/bin/sh
+
+#    Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
+# 
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+# Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+
+# $Id: gsindent,v 1.1 2004/01/14 16:59:53 atai Exp $
+
+# This script formats C source code per the Ghostscript C style guide.
+# The perl invocations work around a bug in GNU indent.
+
+if [ $# -ne 0 ]; then
+    for f in $*
+    do
+	$0 < $f > /tmp/$$
+	cp -p $f $f.bak
+	if ( test ! -e $f~ ) then cp -p $f $f~; fi
+	mv /tmp/$$ $f
+    done
+    exit
+fi
+exec \
+perl -pe 's{(#.*/\*)(\*.*)}{$1&$2}' | \
+indent \
+--blank-lines-after-declarations \
+--no-blank-lines-after-procedures \
+--leave-optional-blank-lines \
+--braces-on-if-line \
+--indent-level4 \
+--case-indentation4 \
+--no-space-after-function-call-names \
+--dont-star-comments \
+--declaration-indentation0 \
+--procnames-start-lines \
+--continue-at-parentheses \
+--cuddle-else \
+--no-space-after-casts \
+--leave-preprocessor-space \
+- | \
+perl -pe 's{(#.*/\*)&(\*.*)}{$1$2}'

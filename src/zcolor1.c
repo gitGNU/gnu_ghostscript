@@ -1,0 +1,218 @@
+/* Copyright (C) 1993, 2000 artofcode LLC.  All rights reserved.
+  
+  This program is free software; you can redistribute it and/or modify it
+  under the terms of the GNU General Public License as published by the
+  Free Software Foundation; either version 2 of the License, or (at your
+  option) any later version.
+
+  This program is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along
+  with this program; if not, write to the Free Software Foundation, Inc.,
+  59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+
+*/
+
+/*$Id: zcolor1.c,v 1.1 2004/01/14 16:59:53 atai Exp $ */
+/* Level 1 extended color operators */
+#include "ghost.h"
+#include "oper.h"
+#include "estack.h"
+#include "ialloc.h"
+#include "igstate.h"
+#include "iutil.h"
+#include "store.h"
+#include "gxfixed.h"
+#include "gxmatrix.h"
+#include "gzstate.h"
+#include "gxdevice.h"
+#include "gxcmap.h"
+#include "gscolor1.h"
+#include "gscssub.h"
+#include "gxcspace.h"
+#include "icolor.h"
+#include "iimage.h"
+
+/* - currentblackgeneration <proc> */
+private int
+zcurrentblackgeneration(i_ctx_t *i_ctx_p)
+{
+    os_ptr op = osp;
+
+    push(1);
+    *op = istate->black_generation;
+    return 0;
+}
+
+/* - currentcmykcolor <cyan> <magenta> <yellow> <black> */
+private int
+zcurrentcmykcolor(i_ctx_t *i_ctx_p)
+{
+    os_ptr op = osp;
+    float par[4];
+    int code = gs_currentcmykcolor(igs, par);
+
+    if (code < 0)
+	return code;
+    push(4);
+    make_floats(op - 3, par, 4);
+    return 0;
+}
+
+/* - currentcolortransfer <redproc> <greenproc> <blueproc> <grayproc> */
+private int
+zcurrentcolortransfer(i_ctx_t *i_ctx_p)
+{
+    os_ptr op = osp;
+
+    push(4);
+    op[-3] = istate->transfer_procs.colored.red;
+    op[-2] = istate->transfer_procs.colored.green;
+    op[-1] = istate->transfer_procs.colored.blue;
+    *op = istate->transfer_procs.colored.gray;
+    return 0;
+}
+
+/* - currentundercolorremoval <proc> */
+private int
+zcurrentundercolorremoval(i_ctx_t *i_ctx_p)
+{
+    os_ptr op = osp;
+
+    push(1);
+    *op = istate->undercolor_removal;
+    return 0;
+}
+
+/* <proc> setblackgeneration - */
+private int
+zsetblackgeneration(i_ctx_t *i_ctx_p)
+{
+    os_ptr op = osp;
+    int code;
+
+    check_proc(*op);
+    check_ostack(zcolor_remap_one_ostack - 1);
+    check_estack(1 + zcolor_remap_one_estack);
+    code = gs_setblackgeneration_remap(igs, gs_mapped_transfer, false);
+    if (code < 0)
+	return code;
+    istate->black_generation = *op;
+    pop(1);
+    push_op_estack(zcolor_remap_color);
+    return zcolor_remap_one(i_ctx_p, &istate->black_generation,
+			    igs->black_generation, igs,
+			    zcolor_remap_one_finish);
+}
+
+/* <cyan> <magenta> <yellow> <black> setcmykcolor - */
+private int
+zsetcmykcolor(i_ctx_t *i_ctx_p)
+{
+    os_ptr op = osp;
+    double par[4];
+    int code;
+
+    if ((code = num_params(op, 4, par)) < 0 ||
+	(code = gs_setcmykcolor(igs, par[0], par[1], par[2], par[3])) < 0
+	)
+	return code;
+    make_null(&istate->colorspace.array);
+    pop(4);
+    return 0;
+}
+
+/* <redproc> <greenproc> <blueproc> <grayproc> setcolortransfer - */
+private int
+zsetcolortransfer(i_ctx_t *i_ctx_p)
+{
+    os_ptr op = osp;
+    int code;
+
+    check_proc(op[-3]);
+    check_proc(op[-2]);
+    check_proc(op[-1]);
+    check_proc(*op);
+    check_ostack(zcolor_remap_one_ostack * 4 - 4);
+    check_estack(1 + zcolor_remap_one_estack * 4);
+    istate->transfer_procs.colored.red = op[-3];
+    istate->transfer_procs.colored.green = op[-2];
+    istate->transfer_procs.colored.blue = op[-1];
+    istate->transfer_procs.colored.gray = *op;
+    if ((code = gs_setcolortransfer_remap(igs,
+				     gs_mapped_transfer, gs_mapped_transfer,
+				     gs_mapped_transfer, gs_mapped_transfer,
+					  false)) < 0
+	)
+	return code;
+    /* Use osp rather than op here, because zcolor_remap_one pushes. */
+    pop(4);
+    push_op_estack(zcolor_reset_transfer);
+    if ((code = zcolor_remap_one(i_ctx_p,
+				 &istate->transfer_procs.colored.red,
+				 igs->set_transfer.colored.red, igs,
+				 zcolor_remap_one_finish)) < 0 ||
+	(code = zcolor_remap_one(i_ctx_p,
+				 &istate->transfer_procs.colored.green,
+				 igs->set_transfer.colored.green, igs,
+				 zcolor_remap_one_finish)) < 0 ||
+	(code = zcolor_remap_one(i_ctx_p,
+				 &istate->transfer_procs.colored.blue,
+				 igs->set_transfer.colored.blue, igs,
+				 zcolor_remap_one_finish)) < 0 ||
+	(code = zcolor_remap_one(i_ctx_p, &istate->transfer_procs.colored.gray,
+				 igs->set_transfer.colored.gray, igs,
+				 zcolor_remap_one_finish)) < 0
+	)
+	return code;
+    return o_push_estack;
+}
+
+/* <proc> setundercolorremoval - */
+private int
+zsetundercolorremoval(i_ctx_t *i_ctx_p)
+{
+    os_ptr op = osp;
+    int code;
+
+    check_proc(*op);
+    check_ostack(zcolor_remap_one_ostack - 1);
+    check_estack(1 + zcolor_remap_one_estack);
+    code = gs_setundercolorremoval_remap(igs, gs_mapped_transfer, false);
+    if (code < 0)
+	return code;
+    istate->undercolor_removal = *op;
+    pop(1);
+    push_op_estack(zcolor_remap_color);
+    return zcolor_remap_one(i_ctx_p, &istate->undercolor_removal,
+			    igs->undercolor_removal, igs,
+			    zcolor_remap_one_signed_finish);
+}
+
+/* <width> <height> <bits/comp> <matrix> */
+/*      <datasrc_0> ... <datasrc_ncomp-1> true <ncomp> colorimage - */
+/*      <datasrc> false <ncomp> colorimage - */
+private int
+zcolorimage(i_ctx_t *i_ctx_p)
+{
+    return zimage_multiple(i_ctx_p, false);
+}
+
+/* ------ Initialization procedure ------ */
+
+const op_def zcolor1_op_defs[] =
+{
+    {"0currentblackgeneration", zcurrentblackgeneration},
+    {"0currentcmykcolor", zcurrentcmykcolor},
+    {"0currentcolortransfer", zcurrentcolortransfer},
+    {"0currentundercolorremoval", zcurrentundercolorremoval},
+    {"1setblackgeneration", zsetblackgeneration},
+    {"4setcmykcolor", zsetcmykcolor},
+    {"4setcolortransfer", zsetcolortransfer},
+    {"1setundercolorremoval", zsetundercolorremoval},
+    {"7colorimage", zcolorimage},
+    op_def_end(0)
+};

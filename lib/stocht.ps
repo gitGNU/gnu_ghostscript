@@ -1,0 +1,63 @@
+%    Copyright (C) 1999, 2000 Aladdin Enterprises.  All rights reserved.
+% 
+% This program is free software; you can redistribute it and/or modify it
+% under the terms of the GNU General Public License as published by the
+% Free Software Foundation; either version 2 of the License, or (at your
+% option) any later version.
+%
+% This program is distributed in the hope that it will be useful, but
+% WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+% Public License for more details.
+%
+% You should have received a copy of the GNU General Public License along
+% with this program; if not, write to the Free Software Foundation, Inc.,
+% 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+
+% $Id: stocht.ps,v 1.1 2004/01/14 16:59:47 atai Exp $
+% helper file to simplify use of Stochastic Halftone - uses ht_ccsto.ps
+
+% This file sets the /StochasticDefault /Halftone as the current
+% and the /Default halftoning, loading the Stochastic halftone
+% if required.
+
+% Stochastic halftoning is recommended for inkjet printers, and may
+% produce output as pleasing as the more computationally expensive
+% "error diffusion" that *some* device drivers provide.
+
+% For printing technologies other than inkjet, Stochastic halftoning
+% may not look better than standard screening. In particular, thermal
+% transfer and direct thermal tend to be better with standard ordered
+% screening methods. Some laser printers may produce "smoother"
+% looking gray shades with Stochastic halftoning. Try it, and if
+% you like it, use it.
+
+% Note that this /Default halftone can be overridden by PostScript
+% operators that set the screening or halftone (such as setscreen).
+
+% To make Stochastic Halftone be "sticky" so that other screening and
+% halftone setting in the subsequent PostScript will be ignored, use:
+%	-c "<< /HalftoneMode 1 >> setuserparams"
+% on the command line prior to the file to be processed. For example,
+%
+% gs stocht.ps -c "<< /HalftoneMode 1 >> setuserparams" -f examples/tiger.ps
+
+% Alternatively, the command to set the /HalftoneMode userparam can be
+% concatenated to this file (see below).
+
+% =====================================================================
+% Try to get the previously defined resource
+{ /StochasticDefault /Halftone findresource } stopped
+{
+  pop pop
+  % Need to load the Stochastic Halftone using the lib file
+  (ht_ccsto.ps) runlibfile
+} if
+
+% If we didn't error out by now, then go ahead and define the /Default
+/StochasticDefault /Halftone findresource
+/Default exch /Halftone defineresource
+sethalftone	% Use the halftone
+
+% Uncomment the next line to make the Stocahstic halftoning be "sticky"
+% << /HalftoneMode 1 >> setuserparams

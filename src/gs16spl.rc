@@ -1,0 +1,42 @@
+/* Copyright (C) 1995, 1999, Russell Lang.  All rights reserved.
+  
+  This program is free software; you can redistribute it and/or modify it
+  under the terms of the GNU General Public License as published by the
+  Free Software Foundation; either version 2 of the License, or (at your
+  option) any later version.
+
+  This program is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along
+  with this program; if not, write to the Free Software Foundation, Inc.,
+  59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+
+*/
+
+/*$Id: gs16spl.rc,v 1.1 2004/01/14 16:59:48 atai Exp $*/
+/* Resources for GS16SPL.EXE, 16-bit access to print spooler */
+/* 1995-11-10 */
+
+#include <windows.h>
+
+#define ID_TEXT 100
+
+#ifndef gstext_ico
+#define gstext_ico gswin.ico
+#endif
+
+1 ICON gstext_ico
+
+SpoolDlgBox DIALOG 20, 32, 158, 56
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "GS Win32s/Win16 spooler"
+FONT 8, "Helv"
+BEGIN
+	CONTROL "&Cancel", IDCANCEL, "button", BS_DEFPUSHBUTTON | WS_GROUP | WS_TABSTOP | WS_CHILD, 8, 36, 32, 14
+	ICON 1, 1, 8, 8, 16, 16
+	LTEXT "", ID_TEXT, 40, 12, 108, 8, WS_CHILD | WS_VISIBLE | WS_GROUP
+END
+

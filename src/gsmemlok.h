@@ -1,0 +1,57 @@
+/* Copyright (C) 1998, 1999 artofcode LLC.  All rights reserved.
+  
+  This program is free software; you can redistribute it and/or modify it
+  under the terms of the GNU General Public License as published by the
+  Free Software Foundation; either version 2 of the License, or (at your
+  option) any later version.
+
+  This program is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along
+  with this program; if not, write to the Free Software Foundation, Inc.,
+  59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+
+*/
+
+/*$Id: gsmemlok.h,v 1.1 2004/01/14 16:59:50 atai Exp $ */
+/* Interface to monitor-locked heap memory allocator */
+
+/* Initial version 2/1/98 by John Desrosiers (soho@crl.com) */
+
+#if !defined(gsmemlok_INCLUDED)
+#  define gsmemlok_INCLUDED
+
+#include "gsmemory.h"
+#include "gxsync.h"
+
+/*
+ * This allocator encapsulates another allocator with a mutex.
+ * Note that it does not keep track of memory that it acquires:
+ * thus free_all with FREE_ALL_DATA is a no-op.
+ */
+
+typedef struct gs_memory_locked_s {
+    gs_memory_common;		/* interface outside world sees */
+    gs_memory_t *target;	/* allocator to front */
+    gx_monitor_t *monitor;	/* monitor to serialize access to functions */
+} gs_memory_locked_t;
+
+/* ---------- Public constructors/destructors ---------- */
+
+/* Initialize a locked memory manager. */
+int gs_memory_locked_init(P2(
+			     gs_memory_locked_t * lmem,	/* allocator to init */
+			     gs_memory_t * target	/* allocator to monitor lock */
+			     ));
+
+/* Release a locked memory manager. */
+/* Note that this has no effect on the target. */
+void gs_memory_locked_release(P1(gs_memory_locked_t *lmem));
+
+/* Get the target of a locked memory manager. */
+gs_memory_t * gs_memory_locked_target(P1(const gs_memory_locked_t *lmem));
+
+#endif /*!defined(gsmemlok_INCLUDED) */

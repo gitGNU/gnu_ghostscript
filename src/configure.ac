@@ -1,0 +1,261 @@
+dnl Process this file with autoconf to produce a configure script
+
+dnl ------------------------------------------------
+dnl Initialization and Versioning
+dnl ------------------------------------------------
+
+AC_INIT
+AC_PREREQ(2.52)
+AC_CONFIG_SRCDIR(src/gs.c)
+
+dnl --------------------------------------------------  
+dnl Check for programs
+dnl --------------------------------------------------  
+
+dnl AC_PROG_CC likes to add '-g -O2' to CFLAGS. however,
+dnl we ignore those flags and construct our own.
+AC_PROG_CC
+AC_PROG_CPP
+
+AC_PROG_RANLIB
+#AC_PROG_INSTALL
+
+dnl --------------------------------------------------
+dnl Set build flags based on environment
+dnl --------------------------------------------------
+
+#AC_CANONICAL_HOST
+
+dnl Add our standard set of gcc flags if possible
+if test $ac_cv_prog_gcc = yes; then
+    cflags_to_try="-Wall -Wstrict-prototypes \
+-Wmissing-declarations -Wmissing-prototypes \
+-Wcast-qual -Wwrite-strings \
+-fno-builtin -fno-common"
+else
+    cflags_to_try=
+fi
+optflags_to_try="-O2"
+
+AC_MSG_CHECKING([supported compiler flags])
+old_cflags=$CFLAGS
+echo
+for flag in $optflags_to_try; do
+    CFLAGS="$CFLAGS $flag"
+    AC_TRY_COMPILE(, [return 0;], [
+      echo "   $flag"
+      OPT_CFLAGS="$OPT_CFLAGS $flag"
+    ])
+    CFLAGS=$old_cflags
+done
+for flag in $cflags_to_try; do
+    CFLAGS="$CFLAGS $flag"
+    AC_TRY_COMPILE(, [return 0;], [
+	echo "   $flag"
+	GCFLAGS="$GCFLAGS $flag"
+    ])
+    CFLAGS=$old_cflags
+done
+AC_MSG_RESULT([ ...done.])
+
+
+dnl --------------------------------------------------
+dnl Check for headers
+dnl --------------------------------------------------
+
+AC_HEADER_DIRENT
+AC_HEADER_STDC
+AC_CHECK_HEADERS([errno.h fcntl.h limits.h malloc.h memory.h stdlib.h string.h strings.h sys/ioctl.h sys/param.h sys/time.h syslog.h unistd.h])
+
+# for gdev3b1.c (AT&T terminal interface)
+AC_CHECK_HEADER([sys/window.h])
+
+dnl --------------------------------------------------
+dnl Check for typedefs, structures, etc
+dnl --------------------------------------------------
+
+AC_C_CONST
+AC_C_INLINE
+AC_TYPE_MODE_T
+AC_TYPE_OFF_T
+AC_TYPE_SIZE_T
+AC_STRUCT_ST_BLOCKS
+AC_HEADER_TIME
+AC_STRUCT_TM
+
+dnl we aren't interested in all of DEFS, so manually insert
+dnl the flags we care about
+if test "$ac_cv_c_const" = yes; then
+	GCCFLAGS="$GCCFLAGS -Dconst="
+fi
+
+dnl --------------------------------------------------
+dnl Check for libraries
+dnl --------------------------------------------------
+
+AC_CHECK_LIB(m, cos)
+dnl AC_CHECK_LIB(pthread, pthread_create)
+
+AC_MSG_CHECKING([for local jpeg library source])
+dnl At present, we give the local source priority over the shared
+dnl build, so that the D_MAX_BLOCKS_IN_MCU patch will be applied.
+dnl A more sophisticated approach would be to test the shared lib
+dnl to see whether it has already been patched.
+LIBJPEGDIR=src
+if test -d jpeg; then
+	AC_MSG_RESULT([jpeg])
+	SHARE_LIBJPEG=0
+	LIBJPEGDIR=jpeg
+elif test -d jpeg-6b; then
+	AC_MSG_RESULT([jpeg-6b])
+	SHARE_LIBJPEG=0
+	LIBJPEGDIR=jpeg-6b
+else
+	AC_MSG_RESULT([no])
+	AC_CHECK_LIB(jpeg, jpeg_set_defaults, [SHARE_LIBJPEG=1], [
+		AC_MSG_ERROR([I wasn't able to find a copy
+  of the jpeg library. This is required for compiling
+  ghostscript. Please download a copy of the source,  e.g.
+  from http://www.ijg.org/, unpack it at the top level of 
+  the gs source tree, and rename the directory to 'jpeg'.
+		])
+	])
+fi
+AC_SUBST(SHARE_LIBJPEG)
+AC_SUBST(LIBJPEGDIR)
+
+dnl these are technically optional
+
+AC_MSG_CHECKING([for local zlib source])
+dnl zlib is needed for language level 3, and libpng
+# we must define ZLIBDIR regardless because libpng.mak does a -I$(ZLIBDIR)
+# this seems a harmless default
+ZLIBDIR=src
+if test -d zlib; then
+	AC_MSG_RESULT([zlib])
+	SHARE_ZLIB=0
+	ZLIBDIR=zlib
+elif test -d zlib-1.1.4; then
+	AC_MSG_RESULT([zlib-1.1.4])
+	SHARE_ZLIB=0
+	ZLIBDIR=zlib-1.1.4
+else
+	AC_MSG_RESULT([no])
+	AC_CHECK_LIB(z, deflate, [SHARE_ZLIB=1], [
+		AC_MSG_ERROR([I did not find a copy of libz on your system.
+  Please either install it, or unpack a copy of the source in a
+  local directory named 'zlib'.
+		])
+	])
+fi
+AC_SUBST(SHARE_ZLIB)
+AC_SUBST(ZLIBDIR)
+
+dnl png for the png output device; it also requires zlib
+AC_MSG_CHECKING([for local png library source])
+LIBPNGDIR=src
+PNGDEVS='$(DD)png16m.dev $(DD)pnggray.dev $(DD)pngmono.dev $(DD)png256.dev $(DD)png16.dev $(DD)pngalpha.dev'
+if test -d libpng; then
+	AC_MSG_RESULT([libpng])
+	SHARE_LIBPNG=0
+	LIBPNGDIR=libpng
+elif test -d libpng-1.2.5; then
+	AC_MSG_RESULT([libpng-1.2.5])
+	SHARE_LIBPNG=0
+	LIBPNGDIR=libpng-1.2.5
+else
+	AC_MSG_RESULT([no])
+	AC_CHECK_LIB(png, png_check_sig, [
+		SHARE_LIBPNG=1
+	], [
+		SHARE_LIBPNG=0
+		AC_MSG_NOTICE([disabling png output devices])
+		PNGDEVS=''
+	], [-lz])
+fi
+AC_SUBST(SHARE_LIBPNG)
+AC_SUBST(LIBPNGDIR)
+AC_SUBST(PNGDEVS)
+
+dnl look for IJS implementation
+AC_ARG_WITH(ijs, AC_HELP_STRING([--with-ijs],[include IJS driver support]))
+dnl set safe defaults
+    IJSDIR=src
+    IJSDEVS=''
+if test x$with_ijs != xno; then
+    AC_MSG_CHECKING([for local ijs library source])
+    if test -d ijs; then
+        AC_MSG_RESULT([yes])
+        IJSDIR=ijs
+        IJSDEVS='$(DD)ijs.dev'
+    else
+        AC_MSG_RESULT([no])
+    fi
+fi
+AC_SUBST(IJSDIR)
+AC_SUBST(IJSDEVS)
+
+dnl look for gimp-print (stp) library implementation
+dnl AC_ARG_WITH([gimp-print], AC_HELP_STRING([--with-gimp-print],
+dnl [build the gimp-print (stp) driver]))
+dnl set safe defaults
+dnl STPLIB=gimpprint
+dnl    STPDEVS=''
+dnl if test x$with_gimp_print != xno; then
+dnl    AC_CHECK_LIB($STPLIB, stp_init, [
+dnl       AC_CHECK_HEADER([gimp-print/gimp-print.h], [
+dnl           STPDEVS='$(DD)stp.dev'
+dnl       ])
+dnl    ])
+dnl fi
+AC_SUBST(STPLIB)
+AC_SUBST(STPDEVS)
+
+dnl optional X11 for display devices
+AC_PATH_XTRA
+if test x"$no_x" = x"yes"; then
+	AC_MSG_NOTICE([disabling X11 output devices])
+	X11DEVS=''
+else
+	X11DEVS='$(DD)x11.dev $(DD)x11alpha.dev $(DD)x11cmyk.dev $(DD)x11gray2.dev $(DD)x11gray4.dev $(DD)x11mono.dev'
+fi
+AC_SUBST(X11DEVS)
+
+dnl executible name
+AC_ARG_WITH(gs, AC_HELP_STRING([--with-gs=NAME],
+	[name of the ghostscript executible [[gs]]]),
+	[GS="$with_gs"],[GS='gs'])
+AC_SUBST(GS)
+
+dnl do we compile the postscript initialization files into Ghostscript?
+COMPILE_INITS="0"
+AC_ARG_ENABLE(compile-inits, AC_HELP_STRING([--enable-compile-inits],
+	[compile initialization files into Ghostscript]),[
+		if test x$enable_compile_inits = xyes; then
+			COMPILE_INITS="1"
+		fi])
+AC_SUBST(COMPILE_INITS)
+
+dnl --------------------------------------------------
+dnl Check for library functions
+dnl --------------------------------------------------
+
+AC_CHECK_FUNCS([mkstemp], [HAVE_MKSTEMP=-DHAVE_MKSTEMP])
+AC_SUBST(HAVE_MKSTEMP)
+
+AC_FUNC_FORK
+AC_PROG_GCC_TRADITIONAL
+AC_FUNC_MALLOC
+AC_FUNC_MEMCMP
+AC_TYPE_SIGNAL
+AC_FUNC_STAT
+AC_FUNC_VPRINTF
+AC_CHECK_FUNCS([bzero dup2 floor gettimeofday memchr memmove memset mkdir mkfifo modf pow putenv rint setenv sqrt strchr strerror strrchr strspn strstr])
+
+dnl --------------------------------------------------
+dnl Do substitutions
+dnl --------------------------------------------------
+
+AC_SUBST(OPT_CFLAGS)
+AC_SUBST(GCFLAGS)
+AC_OUTPUT(Makefile)

@@ -1,0 +1,31 @@
+.\" $Id: dvipdf.1,v 1.1 2004/01/14 16:59:47 atai Exp $
+.\" Using encoding of the German (de_DE) translation: ISO-8859-1
+.\" Translation by Tobias Burnus <burnus@gmx.de> and Thomas Hoffmann
+.TH DVIPDF 1 "8.Juli 2002" 7.06 Ghostscript \" -*- nroff -*-
+.SH NAME
+dvipdf \- konvertiert TeX-DVI-Dateien nach PDF mittels Ghostscript und dvips
+.SH SYNTAX
+\fBdvipdf\fR [ \fIOptionen\fR ] \fIEingabe.dvi\fR [ \fIAusgabe.pdf\fR ] ...
+.SH BESCHREIBUNG
+Das Skript ruft
+.BR dvips (1)
+mit dem Parameter
+.B -q
+auf und leitet die Ausgabe über eine Pipe an
+.BR gs (1)
+weiter, das mit den folgenden Paramtern aufgerufen wird:
+
+.ce
+.B -q -dNOPAUSE -dBATCH -sDEVICE=pdfwrite
+
+sowie mit
+.B -sOutputFile
+und allen in der Kommandozeile angegeben Optionen.
+.SH SIEHE AUCH
+gs(1), dvips(1)
+.SH VERSION
+Dieses Dokument wurde zuletzt für Ghostscript Version 7.0x durchgesehen.
+.SH AUTOR
+artofcode LLC ist der Hauptautor von Ghostscript.
+Russell J. Lang <rjl@aladdin.com> ist der Autor des Hauptteils des MS-Windows Quelltexts in Ghostscript.
+Diese Manpage ist von George Ferguson.

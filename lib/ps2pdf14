@@ -1,0 +1,5 @@
+#!/bin/sh
+# $Id: ps2pdf14,v 1.1 2004/01/14 16:59:47 atai Exp $
+# Convert PostScript to PDF 1.4 (Acrobat 5-and-later compatible).
+
+exec ps2pdfwr -dCompatibilityLevel=1.4 "$@"
