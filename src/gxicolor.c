@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxicolor.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxicolor.c,v 1.3 2005/04/18 12:05:57 Arabidopsis Exp $ */
 /* Color image rendering */
 #include "gx.h"
 #include "memory_.h"
@@ -92,7 +92,7 @@ gs_image_class_4_color(gx_image_enum * penum)
 	penum->mask_color.mask = 0;
 	penum->mask_color.test = ~0;
     }
-    return image_render_color;
+    return &image_render_color;
 }
 
 /* ------ Rendering procedures ------ */
@@ -179,7 +179,7 @@ image_render_color(gx_image_enum *penum_orig, const byte *buffer, int data_x,
     memset(&next, 0, sizeof(next));
     /* Ensure that we don't get any false dev_color_eq hits. */
     if (use_cache) {
-	color_set_pure(&empty_clue.dev_color, gx_no_color_index);
+	set_nonclient_dev_color(&empty_clue.dev_color, gx_no_color_index);
 	pic = &empty_clue;
     }
     cs_full_init_color(&cc, pcs);

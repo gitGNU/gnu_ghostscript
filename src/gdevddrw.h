@@ -22,13 +22,11 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevddrw.h,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: gdevddrw.h,v 1.2 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Prototypes of some polygon and image drawing procedures */
 
 #ifndef gdevddrw_INCLUDED
 #  define gdevddrw_INCLUDED
-
-#if DROPOUT_PREVENTION
 
 enum fill_trap_flags {
     ftf_peak0 = 1,
@@ -40,7 +38,6 @@ int
 gx_fill_trapezoid_narrow(gx_device * dev, const gs_fixed_edge * left,
     const gs_fixed_edge * right, fixed ybot, fixed ytop, int flags,
     const gx_device_color * pdevc, gs_logical_operation_t lop);
-#endif
 
 #endif /* gdevddrw_INCLUDED */
 

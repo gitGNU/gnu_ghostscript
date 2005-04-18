@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: ifont.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: ifont.h,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Interpreter internal font representation */
 
 #ifndef ifont_INCLUDED
@@ -44,6 +44,7 @@ typedef struct font_data_s {
     ref BuildGlyph;
     ref Encoding;
     ref CharStrings;
+    ref GlyphNames2Unicode;
     union _fs {
 	struct _f1 {
 	    ref OtherSubrs;	/* from Private dictionary */

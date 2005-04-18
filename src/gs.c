@@ -22,14 +22,14 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gs.c,v 1.2 2004/02/14 22:20:16 atai Exp $ */
+/* $Id: gs.c,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* 'main' program for Ghostscript */
 #include "ghost.h"
 #include "imain.h"
 #include "imainarg.h"
 #include "iapi.h"
 #include "iminst.h"
-#include "errors.h"
+#include "ierrors.h"
 
 /* Define an optional array of strings for testing. */
 /*#define RUN_STRINGS */

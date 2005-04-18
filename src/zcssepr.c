@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zcssepr.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: zcssepr.c,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Separation color space support */
 #include "memory_.h"
 #include "ghost.h"
@@ -70,7 +70,6 @@ zsetseparationspace(i_ctx_t *i_ctx_p)
     const gs_color_space * pacs;
     ref_colorspace cspace_old;
     ref sname, name_none, name_all;
-    gs_separation_name *names = NULL;
     gs_device_n_map *pmap = NULL;
     gs_function_t *pfn = NULL;
     separation_type sep_type;

@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gscie.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gscie.c,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* CIE color rendering cache management */
 #include "math_.h"
 #include "memory_.h"
@@ -662,17 +662,14 @@ cie_cache3_set_interpolation(gx_cie_vector_cache3_t * pvc)
 
     /* Iterate over output components. */
     for (j = 0; j < 3; ++j) {
-	cie_cached_value rmin, rmax;
-
 	/* Iterate over sub-caches. */
-	for (k = 0; k < 3; ++k) {
-	    cie_interpolation_range_t *p =
-		&pvc->caches[k].vecs.params.interpolation_ranges[j];
+	cie_interpolation_range_t *p = 
+		&pvc->caches[0].vecs.params.interpolation_ranges[j];
+        cie_cached_value rmin = p->rmin, rmax = p->rmax;
 
-	    if (k == 0)
-		rmin = p->rmin, rmax = p->rmax;
-	    else
-		rmin = min(rmin, p->rmin), rmax = max(rmax, p->rmax);
+	for (k = 1; k < 3; ++k) {
+	    p = &pvc->caches[k].vecs.params.interpolation_ranges[j];
+	    rmin = min(rmin, p->rmin), rmax = max(rmax, p->rmax);
 	}
 	pvc->interpolation_ranges[j].rmin = rmin;
 	pvc->interpolation_ranges[j].rmax = rmax;
@@ -832,7 +829,13 @@ gs_cie_cache_init(cie_cache_params * pcache, gs_sample_loop_params_t * pslp,
 #else
     pcache->base = A - delta / 2;	/* so lookup will round */
 #endif
-    pcache->factor = (delta == 0 ? 0 : N / R);
+    /*
+     * If size of the domain is zero, then use 1.0 as the scaling
+     * factor.  This prevents divide by zero errors in later calculations.
+     * This should only occurs with zero matrices.  It does occur with
+     * Genoa test file 050-01.ps.
+     */
+    pcache->factor = (any_abs(delta) < 1e-30 ? 1.0 : N / R);
     if_debug4('c', "[c]cache %s 0x%lx base=%g, factor=%g\n",
 	      (const char *)cname, (ulong) pcache,
 	      pcache->base, pcache->factor);

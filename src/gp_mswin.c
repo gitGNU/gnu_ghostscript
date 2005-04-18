@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gp_mswin.c,v 1.2 2004/02/14 22:20:16 atai Exp $ */
+/* $Id: gp_mswin.c,v 1.3 2005/04/18 12:05:59 Arabidopsis Exp $ */
 /*
  * Microsoft Windows platform support for Ghostscript.
  *
@@ -680,29 +680,89 @@ FILE *mswin_popen(const char *cmd, const char *mode)
 /* Write the actual file name at fname. */
 FILE *
 gp_open_scratch_file(const char *prefix, char *fname, const char *mode)
-{	/* The -7 is for XXXXXX plus a possible final \. */
-    int prefix_length = strlen(prefix);
-    int len = gp_file_name_sizeof - prefix_length - 7;
+{
+    UINT n;
+    DWORD l;
+    HANDLE hfile = INVALID_HANDLE_VALUE;
+    int fd = -1;
+    FILE *f = NULL;
+    char sTempDir[_MAX_PATH];
+    char sTempFileName[_MAX_PATH];
 
-    if (gp_pathstring_not_bare(prefix, prefix_length) ||
-	gp_gettmpdir(fname, &len) != 0
-	)
-	*fname = 0;
-    else {
-	char *temp;
+    memset(fname, 0, gp_file_name_sizeof);
+    if (!gp_file_name_is_absolute(prefix, strlen(prefix))) {
+	int plen = sizeof(sTempDir);
 
-	/* Prevent X's in path from being converted by mktemp. */
-	for (temp = fname; *temp; temp++)
-	    *temp = tolower(*temp);
-	if (strlen(fname) && (fname[strlen(fname) - 1] != '\\'))
-	    strcat(fname, "\\");
+	if (gp_gettmpdir(sTempDir, &plen) != 0)
+	    l = GetTempPath(sizeof(sTempDir), sTempDir);
+	else
+	    l = strlen(sTempDir);
+    } else {
+	strncpy(sTempDir, prefix, sizeof(sTempDir));
+	prefix = "";
+	l = strlen(sTempDir);
     }
-    if (strlen(fname) + prefix_length + 7 >= gp_file_name_sizeof)
-	return 0;		/* file name too long */
-    strcat(fname, prefix);
-    strcat(fname, "XXXXXX");
-    mktemp(fname);
-    return gp_fopentemp(fname, mode);
+    /* Fix the trailing terminator so GetTempFileName doesn't get confused */
+    if (sTempDir[l-1] == '/')
+	sTempDir[l-1] = '\\';		/* What Windoze prefers */
+
+    if (l <= sizeof(sTempDir)) {
+	n = GetTempFileName(sTempDir, prefix, 0, sTempFileName);
+	if (n == 0) {
+	    /* If 'prefix' is not a directory, it is a path prefix. */
+	    int l = strlen(sTempDir), i;
+
+	    for (i = l - 1; i > 0; i--) {
+		uint slen = gs_file_name_check_separator(sTempDir + i, l, sTempDir + l);
+
+		if (slen > 0) {
+		    sTempDir[i] = 0;   
+		    i += slen;
+		    break;
+		}
+	    }
+	    if (i > 0)
+		n = GetTempFileName(sTempDir, sTempDir + i, 0, sTempFileName);
+	}
+	if (n != 0) {
+	    hfile = CreateFile(sTempFileName, 
+		GENERIC_READ | GENERIC_WRITE | DELETE,
+		FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CREATE_ALWAYS,
+		FILE_ATTRIBUTE_NORMAL /* | FILE_FLAG_DELETE_ON_CLOSE */, 
+		NULL);
+	    /*
+	     * Can't apply FILE_FLAG_DELETE_ON_CLOSE due to 
+	     * the logics of clist_fclose. Also note that
+	     * gdev_prn_render_pages requires multiple temporary files
+	     * to exist simultaneousely, so that keeping all them opened
+	     * may exceed available CRTL file handles.
+	     */
+	}
+    }
+    if (hfile != INVALID_HANDLE_VALUE) {
+	/* Associate a C file handle with an OS file handle. */
+	fd = _open_osfhandle((long)hfile, 0);
+	if (fd == -1)
+	    CloseHandle(hfile);
+	else {
+	    /* Associate a C file stream with C file handle. */
+	    f = fdopen(fd, mode);
+	    if (f == NULL)
+		_close(fd);
+	}
+    }
+    if (f != NULL) {
+	if ((strlen(sTempFileName) < gp_file_name_sizeof))
+	    strncpy(fname, sTempFileName, gp_file_name_sizeof - 1);
+	else {
+	    /* The file name is too long. */
+	    fclose(f);
+	    f = NULL;
+	}
+    }
+    if (f == NULL)
+	eprintf1("**** Could not open temporary file '%s'\n", fname);
+    return f;
 }
 
 /* Open a file with the given name, as a stream of uninterpreted bytes. */
@@ -712,3 +772,23 @@ gp_fopen(const char *fname, const char *mode)
     return fopen(fname, mode);
 }
 
+/* ------ Font enumeration ------ */
+ 
+ /* This is used to query the native os for a list of font names and
+  * corresponding paths. The general idea is to save the hassle of
+  * building a custom fontmap file.
+  */
+ 
+void *gp_enumerate_fonts_init(gs_memory_t *mem)
+{
+    return NULL;
+}
+         
+int gp_enumerate_fonts_next(void *enum_state, char **fontname, char **path)
+{
+    return 0;
+}
+                         
+void gp_enumerate_fonts_free(void *enum_state)
+{
+}           

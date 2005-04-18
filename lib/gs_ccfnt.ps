@@ -13,11 +13,11 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_ccfnt.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
+% $Id: gs_ccfnt.ps,v 1.3 2005/04/18 12:06:08 Arabidopsis Exp $
 % Find and register all the precompiled font operators in systemdict.
 
 /registerfont			% <fontname> <fontdict> registerfont <font>
- { DEBUG { (Registering ) print 1 index = } if
+ { CCFONTDEBUG { (Registering ) print 1 index = } if
    dup begin
      Encoding type /nametype eq
       { Encoding .findencoding /Encoding exch def

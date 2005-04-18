@@ -22,12 +22,12 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: ibnum.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: ibnum.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Level 2 encoded number reading utilities for Ghostscript */
 #include "math_.h"
 #include "memory_.h"
 #include "ghost.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "stream.h"
 #include "ibnum.h"
 #include "imemory.h"		/* for iutil.h */

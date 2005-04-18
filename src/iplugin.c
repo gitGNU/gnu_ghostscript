@@ -22,14 +22,14 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: iplugin.c,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: iplugin.c,v 1.2 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Plugin manager */
 
 #include "malloc_.h"
 #include "string_.h"
 #include "ghost.h"
 #include "gxalloc.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "ialloc.h"
 #include "iplugin.h"
 #include "icstate.h"

@@ -3,7 +3,7 @@
 <head>
 <title>Information for Ghostscript developers</title>
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
-<!-- $Id: Develop.htm,v 1.2 2004/02/14 22:20:02 atai Exp $ -->
+<!-- $Id: Develop.htm,v 1.3 2005/04/18 12:06:12 Arabidopsis Exp $ -->
 </head>
 
 <body>
@@ -65,6 +65,7 @@
     <a href="#PostScript_code">PostScript code</a>
 </ul>
 <li><a href="#PDF_interpreter">PDF interpreter</a>
+<li><a href="#PPD">PostScript Printer Description</a>
 <li><a href="#Build_process">Build process</a>
 <ul>
 <li><a href="#Makefile_structure">Makefile structure</a>,
@@ -476,6 +477,11 @@ DCT (JPEG):
 <a href="../src/sjpege.c">src/sjpege.c</a>.
 
 <dt>
+JBIG2:
+<a href="../src/sjbig2.h">src/sjbig2.h</a>,
+<a href="../src/sjbig2.c">src/sjbig2.c</a>.
+
+<dt>
 Other compression/decompression:
 <dd>
 <a href="../src/slzwc.c">src/slzwc.c</a>,
@@ -711,14 +717,21 @@ Path building:
 Path rendering:
 <dd>
 <a href="../src/gdevddrw.c">src/gdevddrw.c</a>,
+<a href="../src/gdevddrw.h">src/gdevddrw.h</a>,
+<a href="../src/gxdtfill.h">src/gxdtfill.h</a>,
 <a href="../src/gsdps1.c">src/gsdps1.c</a>,
 <a href="../src/gspaint.c">src/gspaint.c</a>,
 <a href="../src/gspaint.h">src/gspaint.h</a>,
 <a href="../src/gspenum.h">src/gspenum.h</a>,
 <a href="../src/gxfill.c">src/gxfill.c</a>,
+<a href="../src/gxfill.h">src/gxfill.h</a>,
+<a href="../src/gxfdrop.c">src/gxdrop.c</a>,
+<a href="../src/gxfdrop.h">src/gxdrop.h</a>,
 <a href="../src/gxpaint.c">src/gxpaint.c</a>,
 <a href="../src/gxpaint.h">src/gxpaint.h</a>,
-<a href="../src/gxstroke.c">src/gxstroke.c</a>.
+<a href="../src/gxstroke.c">src/gxstroke.c</a>,
+<a href="../src/gzspotan.c">src/gzspotan.c</a>,
+<a href="../src/gzspotan.h">src/gzspotan.h</a>.
 
 <dt>
 Clipping:
@@ -770,6 +783,8 @@ Character rendering + font cache, generic:
 <a href="../src/gscpm.h">src/gscpm.h</a>,
 <a href="../src/gsgdata.c">src/gsgdata.c</a>,
 <a href="../src/gsgdata.h">src/gsgdata.h</a>,
+<a href="../src/gsgcache.c">src/gsgcache.c</a>,
+<a href="../src/gsgcache.h">src/gsgcache.h</a>,
 <a href="../src/gstext.c">src/gstext.c</a>,
 <a href="../src/gstext.h">src/gstext.h</a>,
 <a href="../src/gxbcache.c">src/gxbcache.c</a>,
@@ -796,6 +811,8 @@ Character rendering, specific FontTypes:
 <a href="../src/gxhint1.c">src/gxhint1.c</a>,
 <a href="../src/gxhint2.c">src/gxhint2.c</a>,
 <a href="../src/gxhint3.c">src/gxhint3.c</a>,
+<a href="../src/gxhintn.h">src/gxhintn.h</a>,
+<a href="../src/gxhintn.c">src/gxhintn.c</a>,
 <a href="../src/gxop1.h">src/gxop1.h</a>,
 <a href="../src/gxtype1.c">src/gxtype1.c</a>,
 <a href="../src/gxtype1.h">src/gxtype1.h</a>.
@@ -1122,9 +1139,9 @@ Halftoning:
 <dt>
 Well tempered screening:
 <dd>
-<a href="../src/gswts.h">src/gswts.h</a>.
-<a href="../src/gswts.c">src/gswts.c</a>.
-<a href="../src/gxwts.h">src/gxwts.h</a>.
+<a href="../src/gswts.h">src/gswts.h</a>,
+<a href="../src/gswts.c">src/gswts.c</a>,
+<a href="../src/gxwts.h">src/gxwts.h</a>,
 <a href="../src/gxwts.c">src/gxwts.c</a>.
 
 </dl>
@@ -1230,8 +1247,8 @@ Advanced transparency:
 <a href="../src/gstrans.h">src/gstrans.h</a>,
 <a href="../src/gxblend.c">src/gxblend.c</a>,
 <a href="../src/gxblend.h">src/gxblend.h</a>,
-<a href="../src/gdevp14.c">src/gdevp14.c</a>.
-<a href="../src/gdevp14.h">src/gdevp14.h</a>.
+<a href="../src/gdevp14.c">src/gdevp14.c</a>,
+<a href="../src/gdevp14.h">src/gdevp14.h</a>,
 <a href="../src/gdevpnga.c">src/gdevpnga.c</a>.
 
 <dt>
@@ -1425,7 +1442,9 @@ Accessing rendered bits:
 High-level device support:
 <dd>
 <a href="../src/gdevvec.c">src/gdevvec.c</a>,
-<a href="../src/gdevvec.h">src/gdevvec.h</a>.
+<a href="../src/gdevvec.h">src/gdevvec.h</a>,
+<a href="../src/gxhldevc.c">src/gxhldevc.c</a>,
+<a href="../src/gxhldevc.h">src/gxhldevc.h</a>.
 
 <dt>
 Banding:
@@ -1452,7 +1471,7 @@ Banding:
 <a href="../src/gxdhtserial.c">src/gxdhtserial.c</a>,
 <a href="../src/gxdhtserial.h">src/gxdhtserial.h</a>,
 <a href="../src/gsserial.c">src/gsserial.c</a>,
-<a href="../src/gsserial.h">src/gsserial.h</a>,
+<a href="../src/gsserial.h">src/gsserial.h</a>.
 
 </dl>
 
@@ -1464,7 +1483,7 @@ Banding:
 Visual Trace support :
 <dd>
 <a href="../src/vdtrace.h">src/vdtrace.h</a>,
-<a href="../src/vdtrace.c">src/vdtrace.c</a>
+<a href="../src/vdtrace.c">src/vdtrace.c</a>.
 </dl>
 
 See <a href="Lib.htm">doc/Lib.htm</a> for extensive documentation on
@@ -1525,7 +1544,7 @@ Memory devices, specific depths:
 <dt>
 Alpha-related devices:
 <dd>
-<a href="../src/gdevabuf.c">src/gdevabuf.c</a>,
+<a href="../src/gdevabuf.c">src/gdevabuf.c</a>.
 
 <dt>
 Other devices:
@@ -1535,8 +1554,7 @@ Other devices:
 <a href="../src/gdevmrun.c">src/gdevmrun.c</a>,
 <a href="../src/gdevmrun.h">src/gdevmrun.h</a>,
 <a href="../src/gdevplnx.c">src/gdevplnx.c</a>,
-<a href="../src/gdevplnx.h">src/gdevplnx.h</a>,
-
+<a href="../src/gdevplnx.h">src/gdevplnx.h</a>.
 </dl>
 
 <p>
@@ -1559,7 +1577,7 @@ See under <a href="#Clipping">Clipping</a> above.
 Device filter stack:
 <dd>
 <a href="../src/gsdfilt.c">src/gsdfilt.c</a>,
-<a href="../src/gsdfilt.h">src/gsdfilt.h</a>,
+<a href="../src/gsdfilt.h">src/gsdfilt.h</a>.
 
 <dt>
 Other devices:
@@ -1672,6 +1690,8 @@ New text and fonts:
 <a href="../src/gdevpdts.h">src/gdevpdts.h</a>,
 <a href="../src/gdevpdtt.c">src/gdevpdtt.c</a>,
 <a href="../src/gdevpdtt.h">src/gdevpdtt.h</a>,
+<a href="../src/gdevpdtv.c">src/gdevpdtv.c</a>,
+<a href="../src/gdevpdtv.h">src/gdevpdtv.h</a>,
 <a href="../src/gdevpdtw.c">src/gdevpdtw.c</a>,
 <a href="../src/gdevpdtw.h">src/gdevpdtw.h</a>,
 <a href="../src/gdevpdtx.h">src/gdevpdtx.h</a>.
@@ -1684,7 +1704,7 @@ Graphics:
 <a href="../src/gdevpdfd.c">src/gdevpdfd.c</a>,
 <a href="../src/gdevpdfg.c">src/gdevpdfg.c</a>,
 <a href="../src/gdevpdfg.h">src/gdevpdfg.h</a>,
-<a href="../src/gdevpdfk.c">src/gdevpdfk.c</a>.
+<a href="../src/gdevpdfk.c">src/gdevpdfk.c</a>,
 <a href="../src/gdevpdfv.c">src/gdevpdfv.c</a>.
 
 <dt>
@@ -1824,6 +1844,7 @@ Fax and TIFF:
 Example DeviceN devices:
 <dd>
 <a href="../src/gdevdevn.c">src/gdevdevn.c</a>,
+<a href="../src/gdevdevn.h">src/gdevdevn.h</a>,
 <a href="../src/gdevxcf.c">src/gdevxcf.c</a>,
 <a href="../src/gdevpsd.c">src/gdevpsd.c</a>,
 <a href="../src/gdevperm.c">src/gdevperm.c</a>.
@@ -2240,6 +2261,7 @@ Filters:
 <a href="../src/zfilter.c">src/zfilter.c</a>,
 <a href="../src/zfilter2.c">src/zfilter2.c</a>,
 <a href="../src/zfilterx.c">src/zfilterx.c</a>,
+<a href="../src/zfjbig2.c">src/zfjbig2.c</a>,
 <a href="../src/zfmd5.c">src/zfmd5.c</a>,
 <a href="../src/zfarc4.c">src/zfarc4.c</a>,
 <a href="../src/zfproc.c">src/zfproc.c</a>,
@@ -2254,6 +2276,7 @@ File and stream I/O:
 <a href="../src/zbseq.c">src/zbseq.c</a>,
 <a href="../src/zdscpars.c">src/zdscpars.c</a>,
 <a href="../src/zfile.c">src/zfile.c</a>,
+<a href="../src/zfile1.c">src/zfile1.c</a>,
 <a href="../src/zfileio.c">src/zfileio.c</a>,
 <a href="../src/ztoken.c">src/ztoken.c</a>.
 
@@ -2313,6 +2336,7 @@ Device management:
 <a href="../src/ziodev2.c">src/ziodev2.c</a>,
 <a href="../src/ziodevs.c">src/ziodevs.c</a>,
 <a href="../src/ziodevsc.c">src/ziodevsc.c</a>,
+<a href="../src/ziodevst.c">src/ziodevst.c</a>,
 <a href="../src/zmedia2.c">src/zmedia2.c</a>,
 <a href="../src/zdfilter.c">src/zdfilter.c</a>.
 
@@ -2339,6 +2363,7 @@ Fonts and text:
 <a href="../src/zchar2.c">src/zchar2.c</a>,
 <a href="../src/zchar32.c">src/zchar32.c</a>,
 <a href="../src/zchar42.c">src/zchar42.c</a>,
+<a href="../src/zchar42.h">src/zchar42.h</a>,
 <a href="../src/zcharout.c">src/zcharout.c</a>,
 <a href="../src/zcharx.c">src/zcharx.c</a>,
 <a href="../src/zcid.c">src/zcid.c</a>,
@@ -2352,7 +2377,43 @@ Fonts and text:
 <a href="../src/zfont1.c">src/zfont1.c</a>,
 <a href="../src/zfont2.c">src/zfont2.c</a>,
 <a href="../src/zfont32.c">src/zfont32.c</a>,
-<a href="../src/zfont42.c">src/zfont42.c</a>.
+<a href="../src/zfont42.c">src/zfont42.c</a>,
+<a href="../src/zfontenum.c">src/zfontenum.c</a>.
+
+<dt>
+A bridge to the True Type bytecode interpreter:
+<dd>
+<a href="../src/gxttfb.c">src/gxttfb.c</a>,
+<a href="../src/gxttfb.h">src/gxttfb.h</a>,
+<a href="../src/ttfoutl.h">src/ttfoutl.h</a>,
+<a href="../src/ttfmain.c">src/ttfmain.c</a>,
+<a href="../src/ttfmemd.c">src/ttfmemd.c</a>,
+<a href="../src/ttfmemd.h">src/ttfmemd.h</a>,
+<a href="../src/ttfinp.c">src/ttfinp.c</a>,
+<a href="../src/ttfinp.h">src/ttfinp.h</a>.
+
+<dt>
+A reduced True Type bytecode interpreter:
+<br><em>(this is based in part on the work of the Freetype Team and incorporates some code from
+the
+FreeType 1 project)</em>
+<dd>
+<a href="../src/ttfsfnt.h">src/ttfsfnt.h</a>,
+<a href="../src/ttcalc.c">src/ttcalc.c</a>,
+<a href="../src/ttcalc.h">src/ttcalc.h</a>,
+<a href="../src/ttcommon.h">src/ttcommon.h</a>,
+<a href="../src/ttconf.h">src/ttconf.h</a>,
+<a href="../src/ttconfig.h">src/ttconfig.h</a>,
+<a href="../src/ttinterp.c">src/ttinterp.c</a>,
+<a href="../src/ttinterp.h">src/ttinterp.h</a>,
+<a href="../src/ttload.c">src/ttload.c</a>,
+<a href="../src/ttload.h">src/ttload.h</a>,
+<a href="../src/ttmisc.h">src/ttmisc.h</a>,
+<a href="../src/ttobjs.c">src/ttobjs.c</a>,
+<a href="../src/ttobjs.h">src/ttobjs.h</a>,
+<a href="../src/tttables.h">src/tttables.h</a>,
+<a href="../src/tttype.h">src/tttype.h</a>,
+<a href="../src/tttypes.h">src/tttypes.h</a>.
 
 <dt>
 Color, pattern, and halftone:
@@ -2377,7 +2438,7 @@ Color, pattern, and halftone:
 <a href="../src/zhsb.c">src/zhsb.c</a>,
 <a href="../src/zht.c">src/zht.c</a>,
 <a href="../src/zht1.c">src/zht1.c</a>,
-<a href="../src/zht2.h">src/zht2.h</a>.
+<a href="../src/zht2.h">src/zht2.h</a>,
 <a href="../src/zht2.c">src/zht2.c</a>,
 <a href="../src/zpcolor.c">src/zpcolor.c</a>,
 <a href="../src/zshade.c">src/zshade.c</a>,
@@ -2488,13 +2549,21 @@ href="#PostScript_interpreter_extensions">below</a>.
 Font API :
 <dd>
 <a href="../src/ifapi.h">src/ifapi.h</a>,
-<a href="../src/zfapi.c">src/zfapi.c</a>.
+<a href="../src/zfapi.c">src/zfapi.c</a>,
 <a href="../src/fapiufst.c">src/fapiufst.c</a>,
+<a href="../src/fapi_ft.c">src/fapi_ft.c</a>,
+<a href="../src/wrfont.h">src/wrfont.h</a>,
+<a href="../src/wrfont.c">src/wrfont.c</a>,
+<a href="../src/write_t1.h">src/write_t1.h</a>,
+<a href="../src/write_t1.c">src/write_t1.c</a>,
+<a href="../src/write_t2.h">src/write_t2.h</a>,
+<a href="../src/write_t2.c">src/write_t2.c</a>,
 
 <dt>
 Miscellaneous support:
 <dd>
-<a href="../src/errors.h">src/errors.h</a>,
+<a href="../src/ierrors.h">src/ierrors.h</a>,
+<a href="../src/errors.h">src/errors.h</a> <em>(deprecated)</em>,
 <a href="../src/ghost.h">src/ghost.h</a>,
 <a href="../src/iconf.c">src/iconf.c</a>,
 <a href="../src/iconf.h">src/iconf.h</a>,
@@ -2540,6 +2609,8 @@ Level 2:
 <a href="../lib/gs_lev2.ps">lib/gs_lev2.ps</a>,
 <a href="../lib/gs_res.ps">lib/gs_res.ps</a>,
 <a href="../lib/gs_resmp.ps">lib/gs_resmp.ps</a>,
+<a href="../lib/gs_resst.ps">lib/gs_resst.ps</a>,
+<a href="../lib/gs_stres.ps">lib/gs_stres.ps</a>,
 <a href="../lib/gs_setpd.ps">lib/gs_setpd.ps</a>.
 
 <dt>
@@ -2574,7 +2645,7 @@ Color Space Loading:
 <a href="../lib/gs_devpxl.ps">lib/gs_devpxl.ps</a>,
 <a href="../lib/gs_indxd.ps">lib/gs_indxd.ps</a>,
 <a href="../lib/gs_patrn.ps">lib/gs_patrn.ps</a>,
-<a href="../lib/gs_sepr.ps">lib/gs_sepr.ps</a>
+<a href="../lib/gs_sepr.ps">lib/gs_sepr.ps</a>.
 
 <dt>
 ICC color profiles:
@@ -2610,7 +2681,8 @@ Font name mapping:
 Generic:
 <dd>
 <a href="../lib/gs_ccfnt.ps">lib/gs_ccfnt.ps</a>,
-<a href="../lib/gs_fonts.ps">lib/gs_fonts.ps</a>.
+<a href="../lib/gs_fonts.ps">lib/gs_fonts.ps</a>,
+<a href="../lib/gs_fntem.ps">lib/gs_fntem.ps</a>.
 
 <dt>
 Type 1 and CFF:
@@ -2632,7 +2704,8 @@ CID-keyed:
 <a href="../lib/gs_cidfn.ps">lib/gs_cidfn.ps</a>,
 <a href="../lib/gs_cmap.ps">lib/gs_cmap.ps</a>,
 <a href="../lib/gs_ciddc.ps">lib/gs_ciddc.ps</a>,
-<a href="../lib/gs_cidfm.ps">lib/gs_cidfm.ps</a>.
+<a href="../lib/gs_cidfm.ps">lib/gs_cidfm.ps</a>,
+<a href="../lib/gs_cidtt.ps">lib/gs_cidtt.ps</a>.
 
 <dt>
 Font API:
@@ -2774,8 +2847,27 @@ Files:
 <a href="../lib/pdf_draw.ps">lib/pdf_draw.ps</a>,
 <a href="../lib/pdf_font.ps">lib/pdf_font.ps</a>,
 <a href="../lib/pdf_main.ps">lib/pdf_main.ps</a>,
+<a href="../lib/pdf_rbld.ps">lib/pdf_rbld.ps</a>,
 <a href="../lib/pdf_ops.ps">lib/pdf_ops.ps</a>,
 <a href="../lib/pdf_sec.ps">lib/pdf_sec.ps</a>.
+
+</dl>
+
+<h3><a name="PPD"></a>PostScript Printer Description</h3>
+<p>
+A PostScript Printer Description tells a generic PostScript printer 
+driver how to generate PostScript for a particular printer.
+Ghostscript includes a PPD file for generating PostScript 
+intended to be converted to PDF.  A Windows INF file for
+installing the PPD on Windows 2000 and XP is included.
+
+<dl>
+
+<dt>
+Files:
+<dd>
+<a href="../lib/ghostpdf.ppd">lib/ghostpdf.ppd</a>,
+<a href="../lib/ghostpdf.inf">lib/ghostpdf.inf</a>.
 
 </dl>
 
@@ -3165,7 +3257,6 @@ Script files without PC versions:
 <a href="../lib/dvipdf">lib/dvipdf</a>,
 <a href="../lib/fixmswrd.pl">lib/fixmswrd.pl</a>,
 <a href="../lib/lprsetup.sh">lib/lprsetup.sh</a>,
-<a href="../lib/pfbtopfa">lib/pfbtopfa</a>,
 <a href="../lib/pj-gs.sh">lib/pj-gs.sh</a>,
 <a href="../lib/pphs">lib/pphs</a>,
 <a href="../lib/printafm">lib/printafm</a>,
@@ -3180,6 +3271,8 @@ Script files with PC versions:
 <a href="../lib/bdftops">lib/bdftops</a>,
 <a href="../lib/bdftops.bat">lib/bdftops.bat</a>,
 <a href="../lib/bdftops.cmd">lib/bdftops.cmd</a>,
+<a href="../lib/dumphint">lib/dumphint</a>,
+<a href="../lib/dumphint.bat">lib/dumphint.bat</a>,
 <a href="../lib/eps2eps">lib/eps2eps</a>,
 <a href="../lib/eps2eps.bat">lib/eps2eps.bat</a>,
 <a href="../lib/eps2eps.cmd">lib/eps2eps.cmd</a>,
@@ -3208,6 +3301,8 @@ Script files with PC versions:
 <a href="../lib/pf2afm">lib/pf2afm</a>,
 <a href="../lib/pf2afm.bat">lib/pf2afm.bat</a>,
 <a href="../lib/pf2afm.cmd">lib/pf2afm.cmd</a>,
+<a href="../lib/pfbtopfa">lib/pfbtopfa</a>,
+<a href="../lib/pfbtopfa.bat">lib/pfbtopfa.bat</a>,
 <a href="../lib/ps2ascii">lib/ps2ascii</a>,
 <a href="../lib/ps2ascii.bat">lib/ps2ascii.bat</a>,
 <a href="../lib/ps2ascii.cmd">lib/ps2ascii.cmd</a>,
@@ -3989,6 +4084,7 @@ Files:
 <a href="../src/pipe_.h">src/pipe_.h</a>,
 <a href="../src/png_.h">src/png_.h</a>,
 <a href="../src/stat_.h">src/stat_.h</a>,
+<a href="../src/stdint_.h">src/stdint_.h</a>,
 <a href="../src/stdio_.h">src/stdio_.h</a>,
 <a href="../src/string_.h">src/string_.h</a>,
 <a href="../src/time_.h">src/time_.h</a>,
@@ -4218,6 +4314,7 @@ Third-party libraries:
 <dd>
 <a href="../src/icclib.mak">src/icclib.mak</a>,
 <a href="../src/ijs.mak">src/ijs.mak</a>,
+<a href="../src/jbig2.mak">src/jbig2.mak</a>,
 <a href="../src/jpeg.mak">src/jpeg.mak</a>,
 <a href="../src/libpng.mak">src/libpng.mak</a>,
 <a href="../src/zlib.mak">src/zlib.mak</a>.
@@ -4393,23 +4490,30 @@ OS/2 files:
 <dt>
 Unix files:
 <dd>
-<a href="../src/dxmain.c">src/dxmain.c</a>.
+<a href="../src/dxmain.c">src/dxmain.c</a>,
 <a href="../src/dxmainc.c">src/dxmainc.c</a>.
 
 <dt>
 Macintosh files:
 <dd>
-<a href="../src/gdevmac.c">src/gdevmac.c</a>.
-<a href="../src/gdevmac.h">src/gdevmac.h</a>.
-<a href="../src/gdevmacpictop.h">src/gdevmacpictop.h</a>.
-<a href="../src/gdevmacttf.h">src/gdevmacttf.h</a>.
-<a href="../src/gdevmacxf.c">src/gdevmacxf.c</a>.
-<a href="../src/gp_mac.c">src/gp_mac.c</a>.
-<a href="../src/gp_mac.h">src/gp_mac.h</a>.
-<a href="../src/gp_macio.c">src/gp_macio.c</a>.
-<a href="../src/macgenmcpxml.sh">src/macgenmcpxml.sh</a>.
-<a href="../src/macsysstat.h">src/macsysstat.h</a>.
-<a href="../src/macsystypes.h">src/macsystypes.h</a>.
+<a href="../src/gdevmac.c">src/gdevmac.c</a>,
+<a href="../src/gdevmac.h">src/gdevmac.h</a>,
+<a href="../src/gdevmacpictop.h">src/gdevmacpictop.h</a>,
+<a href="../src/gdevmacttf.h">src/gdevmacttf.h</a>,
+<a href="../src/gdevmacxf.c">src/gdevmacxf.c</a>,
+<a href="../src/gp_mac.c">src/gp_mac.c</a>,
+<a href="../src/gp_mac.h">src/gp_mac.h</a>,
+<a href="../src/gp_macio.c">src/gp_macio.c</a>,
+<a href="../src/gp_macpoll.c">src/gp_macpoll.c</a>,
+<a href="../src/gsiomacres.c">src/gsiomacres.c</a>,
+<a href="../src/macgenmcpxml.sh">src/macgenmcpxml.sh</a>,
+<a href="../src/macsystypes.h">src/macsystypes.h</a>,
+<a href="../src/macos_carbon_pre.h">src/macos_carbon_pre.h</a>,
+<a href="../src/macos_carbon_d_pre.h">src/macos_carbon_d_pre.h</a>,
+<a href="../src/macos_classic_d_pre.h">src/macos_classic_d_pre.h</a>,
+
+<a href="../src/dmmain.c">src/dmmain.c</a>,
+<a href="../src/dmmain.r">src/dmmain.r</a>.
 
 <dt>
 VMS files:
@@ -4499,7 +4603,7 @@ contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
 <p>
-<small>Ghostscript version 8.01, 30 January 2004
+<small>Ghostscript version 8.15, 22 September 2004
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 1993, 1994, 1996, 1997, 1998, 1999, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 1993-2003 artofcode LLC.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
   under the terms of the GNU General Public License version 2
@@ -22,8 +22,8 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: stdpre.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
-/* Standard definitions for Aladdin Enterprises code not needing arch.h */
+/* $Id: stdpre.h,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
+/* Standard definitions for Ghostscript code not needing arch.h */
 
 #ifndef stdpre_INCLUDED
 #  define stdpre_INCLUDED
@@ -258,10 +258,15 @@ typedef unsigned short ushort;
 typedef unsigned int uint;
 typedef unsigned long ulong;
 
-/* Since sys/types.h often defines one or more of these (depending on */
-/* the platform), we have to take steps to prevent name clashes. */
-/*** NOTE: This requires that you include std.h *before* any other ***/
-/*** header file that includes sys/types.h. ***/
+/* Since sys/types.h may define one or more of these (depending on
+ * the platform), we have to take steps to prevent name clashes.
+ * Unfortunately this can clobber valid definitions for the size-
+ * specific types, but there's no simple solution.
+ *
+ * NOTE: This requires that you include std.h *before* any other
+ * header file that includes sys/types.h.
+ *
+ */
 #define bool bool_		/* (maybe not needed) */
 #define uchar uchar_
 #define uint uint_
@@ -292,13 +297,16 @@ typedef int bool;
 #endif
 #endif
 /*
- * MetroWerks CodeWarrior predefines true and false, probably as 1 and 0.
- * We need to cancel those definitions for our own code.
+ * Older versions of MetroWerks CodeWarrior defined true and false, but they're now
+ * an enum in the (MacOS) Universal Interfaces. The only way around this is to escape
+ * our own definitions wherever MacTypes.h is included.
  */
+#ifndef __MACOS__
 #undef false
 #define false ((bool)0)
 #undef true
 #define true ((bool)1)
+#endif /* __MACOS__ */
 
 /*
  * Compilers disagree as to whether macros used in macro arguments

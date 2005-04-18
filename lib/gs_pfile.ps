@@ -13,7 +13,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_pfile.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
+% $Id: gs_pfile.ps,v 1.3 2005/04/18 12:06:08 Arabidopsis Exp $
 % Runtime support for minimum-space fonts and packed files.
 
 % ****** NOTE: This file must be kept consistent with
@@ -42,7 +42,7 @@
 	% by reading it into a buffer.  We rely on the fact that
 	% save/restore don't affect file positions.
 	% Stack: istart ilength dfilter
-   save exch 1000 string
+   save exch 64000 string
 	% Stack: istart ilength save dfilter scratch
    4 index 1 index length idiv { 2 copy readstring pop pop } repeat
    2 copy 0 8 -1 roll 2 index length mod getinterval readstring pop pop pop

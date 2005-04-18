@@ -13,7 +13,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_frsd.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
+% $Id: gs_frsd.ps,v 1.3 2005/04/18 12:06:08 Arabidopsis Exp $
 % Implementation of ReusableStreamDecode filter.
 % This file must be loaded after gs_lev2.ps and gs_res.ps.
 
@@ -59,7 +59,7 @@ level2dict begin
     } if
     10 dict exch {
 		% Stack: dict filters parms CloseSource contdict file
-      dup 1000 string readstring
+      dup 64000 string readstring
       3 index dup length 4 -1 roll put not { exit } if
     } loop pop
 		% Concatenate the contents into one big string.
@@ -67,7 +67,7 @@ level2dict begin
     0 1 index { length exch pop add } forall
     .bigstring exch {
 		% Stack: dict filters parms CloseSource string index substring
-      exch 1000 mul exch 2 index 3 1 roll putinterval
+      exch 64000 mul exch 2 index 3 1 roll putinterval
     } forall
 		% Now create the stream on the string.
     1 index .reusablestream

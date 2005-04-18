@@ -1,4 +1,4 @@
-/* Copyright (C) 1991, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 1991-2002 artofcode LLC.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
   under the terms of the GNU General Public License version 2
@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gp.h,v 1.2 2004/02/14 22:20:06 atai Exp $ */
+/* $Id: gp.h,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Interface to platform-specific routines */
 /* Requires gsmemory.h */
 
@@ -174,8 +174,22 @@ extern const char gp_fmode_binary_suffix[];
 extern const char gp_fmode_rb[];
 extern const char gp_fmode_wb[];
 
-/* Create and open a scratch file with a given name prefix. */
-/* Write the actual file name at fname. */
+/**
+ * gp_open_scratch_file: Create a scratch file.
+ * @prefix: Name prefix.
+ * @fname: Where to store filename of newly created file.
+ * @mode: File access mode (in fopen syntax).
+ *
+ * Creates a scratch (temporary) file in the filesystem. The exact
+ * location and name of the file is platform dependent, but in general
+ * uses @prefix as a prefix. If @prefix is not absolute, then choose
+ * an appropriate system directory, usually as determined from
+ * gp_gettmpdir(), followed by a path as returned from a system call.
+ *
+ * Implementations should make sure that 
+ *
+ * Return value: Opened file object, or NULL on error.
+ **/
 FILE *gp_open_scratch_file(const char *prefix,
 			   char fname[gp_file_name_sizeof],
 			   const char *mode);
@@ -187,32 +201,96 @@ FILE *gp_fopen(const char *fname, const char *mode);
 /* if 2nd param true, text mode if 2nd param false */
 int gp_setmode_binary(FILE * pfile, bool mode);
 
-/* Answer whether a path string is not "bare" (returns true) i.e.,	*/
-/* contains an absolute reference, an initial 'current directory' ref	*/
-/* or some form of relative reference to the parent directory. The	*/
-/* "non_bare" pathstrings are those for	which it is not valid to prefix	*/
-/* a path (and expect the result to still be meaningful/valid).		*/
-/*									*/
-/* Some examples of non-bare pathstrings platform variants are:		*/
-/*	unix:	starts with '/' or './', or contains '../'		*/
-/*	mac:	starts with ':', or contains '::'			*/
-/*	VMS:	contains (starts with) directory '[  ]' spec.		*/
-/*	Win:	contains initial drive letter, initial '.', '/' or '\'	*/
-/*		or contains '../' or '..\'				*/
-bool gp_pathstring_not_bare(const char *fname, uint len);
+typedef enum {
+    gp_combine_small_buffer = -1,
+    gp_combine_cant_handle = 0,
+    gp_combine_success = 1
+} gp_file_name_combine_result;
 
-/* Answer whether a file name contains a parent directory reference,	*/
-/* e.g., "../somefile". Currently used for security purposes.		*/
-/* Some example platform variants of this are:				*/
-/*	unix:	contains '../'	Windows: contains '..\' or '../'	*/
-/*	mac:	contains '::'	VMS:	'[ ]' contains '-.'		*/
-bool gp_file_name_references_parent(const char *fname, uint len);
+/*
+ * Combine a file name with a prefix.
+ * Concatenates two paths and reduce parten references and current 
+ * directory references from the concatenation when possible.
+ * The trailing zero byte is being added.
+ * Various platforms may share this code.
+ */
+gp_file_name_combine_result gp_file_name_combine(const char *prefix, uint plen, 
+	    const char *fname, uint flen, bool no_sibling, char *buffer, uint *blen);
 
-/* Answer the string to be used for combining a directory/device prefix */
-/* with a base file name. The prefix directory/device is examined to	*/
-/* determine if a separator is needed and may return an empty string	*/
-/* in some cases (platform dependent).					*/
-const char *gp_file_name_concat_string(const char *prefix, uint plen);
+/* -------------- Helpers for gp_file_name_combine_generic ------------- */
+/* Platforms, which do not call gp_file_name_combine_generic, */
+/* must stub the helpers against linkage problems. */
+
+/* Return length of root prefix of the file name, or zero. */
+/*	unix:   length("/")	    */
+/*	Win:    length("c:/") or length("//computername/cd:/")  */
+/*	mac:	length("volume:")    */
+/*	VMS:	length("device:[root.]["	    */
+uint gp_file_name_root(const char *fname, uint len);
+
+/* Check whether a part of file name starts (ends) with a separator. */
+/* Must return the length of the separator.*/
+/* If the 'len' is negative, must search in backward direction. */
+/*	unix:   '/'	    */
+/*	Win:    '/' or '\'  */
+/*	mac:	':' except "::"	    */
+/*	VMS:	smart - see the implementation   */
+uint gs_file_name_check_separator(const char *fname, int len, const char *item);
+
+/* Check whether a part of file name is a parent reference. */
+/*	unix, Win:  equal to ".."	*/
+/*	mac:	equal to ":"		*/
+/*	VMS:	equal to "."		*/
+bool gp_file_name_is_parent(const char *fname, uint len);
+
+/* Check if a part of file name is a current directory reference. */
+/*	unix, Win:  equal to "."	*/
+/*	mac:	equal to ""		*/
+/*	VMS:	equal to ""		*/
+bool gp_file_name_is_current(const char *fname, uint len);
+
+/* Returns a string for referencing the current directory. */
+/*	unix, Win:  "."	    */
+/*	mac:	":"	    */
+/*	VMS:	""          */
+const char *gp_file_name_current(void);
+
+/* Returns a string for separating a file name item. */
+/*	unix, Win:  "/"	    */
+/*	mac:	":"	    */
+/*	VMS:	"]"	    */
+const char *gp_file_name_separator(void);
+
+/* Returns a string for separating a directory item. */
+/*	unix, Win:  "/"	    */
+/*	mac:	":"	    */
+/*	VMS:	"."	    */
+const char *gp_file_name_directory_separator(void);
+
+/* Returns a string for representing a parent directory reference. */
+/*	unix, Win:  ".."    */
+/*	mac:	":"	    */
+/*	VMS:	"."	    */
+const char *gp_file_name_parent(void);
+
+/* Answer whether the platform allows parent refenences. */
+/*	unix, Win, Mac: yes */
+/*	VMS:	no.         */
+bool gp_file_name_is_partent_allowed(void);
+
+/* Answer whether an empty item is meanful in file names on the platform. */
+/*	unix, Win:  no	    */
+/*	mac:	yes	    */
+/*	VMS:	yes         */
+bool gp_file_name_is_empty_item_meanful(void);
+
+/* Read a 'resource' stored in a special database indexed by a 32 bit  */
+/* 'type' and 16 bit 'id' in an extended attribute of a file. The is   */
+/* primarily for accessing fonts on MacOS, which classically used this */
+/* format. Presumedly a 'nop' on systems that don't support Apple HFS. */
+int gp_read_macresource(byte *buf, const char *fname, 
+                                     const uint type, const ushort id);
+
 
 /* ------ Printer accessing ------ */
 
@@ -278,5 +356,29 @@ uint gp_enumerate_files_next(file_enum * pfen, char *ptr, uint maxlen);
  * structure and any subsidiary structures, strings, buffers, etc.
  */
 void gp_enumerate_files_close(file_enum * pfen);
+
+
+/* ------ Font enumeration ------ */
+
+/* This is used to query the native os for a list of font names and 
+ * corresponding paths. The general idea is to save the hassle of 
+ * building a custom fontmap file
+ */
+
+/* allocate and initialize the iterator
+   returns a pointer to its local state or NULL on failure */
+void *gp_enumerate_fonts_init(gs_memory_t *mem);
+
+/* get the next element in the font enumeration
+   Takes a pointer to its local state and pointers in which to
+   return C strings. The string 'name' is the font name, 'path'
+   is the access path for the font resource. The returned strings
+   are only safe to reference until until the next call.
+   Returns 0 when no more fonts are available, a positive value 
+   on success, or negative value on error. */
+int gp_enumerate_fonts_next(void *enum_state, char **fontname, char **path);
+
+/* clean up and deallocate the iterator */
+void gp_enumerate_fonts_free(void *enum_state);
 
 #endif /* gp_INCLUDED */

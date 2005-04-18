@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: time_.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: time_.h,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Generic substitute for Unix sys/time.h */
 
 #ifndef time__INCLUDED
@@ -44,19 +44,20 @@
  */
 #ifdef HAVE_SYS_TIME_H
 #  include <sys/time.h>
-#  if defined(Plan9) || defined(M_UNIX) || defined(_IBMR2) || defined(_SEQUENT_) || defined(__GNUC__)
+#  if defined(Plan9) || defined(M_UNIX) || defined(_IBMR2) || defined(_SEQUENT_) || defined(__GNUC__) || defined(__INTEL_COMPILER)
      /* Plan 9, SCO, AIX and Sequent's DYNIX/ptx need both time.h and
-        sys/time.h! As of version 2.2, at least some glibc
-        installations also require both files. */
+      * sys/time.h! As of version 2.2, at least some glibc
+      * installations also require both files. 
+      * Following Duraid Madina's request we also do it on Intel compiler.
+      */
 #    include <time.h>
 #  endif
 #else
 #  include <time.h>
-#  ifndef __DECC
+#  if !defined(__DECC) && !defined(__MWERKS__)
 struct timeval {
     long tv_sec, tv_usec;
 };
-
 #  endif
 struct timezone {
     int tz_minuteswest, tz_dsttime;
@@ -99,3 +100,4 @@ struct timezone {
 #endif
 
 #endif /* time__INCLUDED */
+

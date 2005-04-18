@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: files.h,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: files.h,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Definitions for interpreter support for file objects */
 /* Requires stream.h */
 
@@ -128,8 +128,8 @@ extern const uint file_default_buffer_size;
 FILE *lib_fopen(const char *);
 
 	/* for imain.c */
-int lib_file_open(const char *, uint, byte *, uint, uint *, ref *,
-		  gs_memory_t *);
+int lib_file_open(i_ctx_t *, const char *, uint, byte *, uint, 
+		    uint *, ref *, gs_memory_t *);
 
 	/* for imain.c */
 #ifndef gs_ref_memory_DEFINED

@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: iapi.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: iapi.h,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 
 /*
  * Public API for Ghostscript interpreter
@@ -31,7 +31,7 @@
  * Should work for Windows, OS/2, Linux, Mac.
  *
  * DLL exported functions should be as similar as possible to imain.c
- * You will need to include "errors.h".
+ * You will need to include "ierrors.h".
  *
  * Current problems:
  * 1. Ghostscript does not support multiple instances.
@@ -55,8 +55,14 @@
 #ifndef iapi_INCLUDED
 #  define iapi_INCLUDED
 
-#ifdef __WINDOWS__
-# define _Windows
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#if defined(_WINDOWS_) || defined(__WINDOWS__)
+# ifndef _Windows
+#  define _Windows
+# endif
 #endif
 
 #ifdef _Windows
@@ -80,7 +86,7 @@
 # endif
 #endif	/* OS2 && __IBMC */
 
-#ifdef __MACINTOSH__
+#ifdef __MACOS__
 # pragma export on
 #endif
 
@@ -182,6 +188,9 @@ gsapi_set_stdio(gs_main_instance *instance,
  * multitasking.  This function will only be called if
  * Ghostscript was compiled with CHECK_INTERRUPTS
  * as described in gpcheck.h.
+ * The polling function should return 0 if all is well,
+ * and negative if it wants ghostscript to abort.
+ * The polling function must be fast.
  */
 GSDLLEXPORT int GSDLLAPI gsapi_set_poll(gs_main_instance *instance,
     int (GSDLLCALLPTR poll_fn)(void *caller_handle));
@@ -295,8 +304,12 @@ typedef void (GSDLLAPIPTR PFN_gsapi_set_visual_tracer)
     (struct vd_trace_interface_s *I);
 
 
-#ifdef __MACINTOSH__
+#ifdef __MACOS__
 #pragma export off
+#endif
+
+#ifdef __cplusplus
+} /* extern 'C' protection */
 #endif
 
 #endif /* iapi_INCLUDED */

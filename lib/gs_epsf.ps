@@ -13,7 +13,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_epsf.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
+% $Id: gs_epsf.ps,v 1.3 2005/04/18 12:06:08 Arabidopsis Exp $
 % Allow the interpreter to encapsulate EPS files, to recognize MS-DOS 
 % EPSF file headers, and skip to the PostScript section of the file.
 
@@ -49,7 +49,7 @@
 
 % Rescale and translate to fit the BoundingBox on the page
 /EPSBoundingBoxFitPage { % llx lly urx ury --
-  DEBUG { (gs_epsf.ps: Rescaling EPS to fit page\n) print flush } if
+  EPSDEBUG { (gs_epsf.ps: Rescaling EPS to fit page\n) print flush } if
   clippath pathbbox newpath
   % translate to new origin at lower left of clippath
   3 index 3 index translate
@@ -67,7 +67,7 @@
 
 % Crop the page to the BoundingBox
 /EPSBoundingBoxCrop { % llx lly urx ury --
-  DEBUG { 
+  EPSDEBUG { 
     (gs_epsf.ps: Setting pagesize from EPS bounding box\n) print flush 
   } if
   exch 3 index sub exch 2 index sub % stack: llx lly urx-llx ury-lly
@@ -121,12 +121,12 @@
     } {
       (%%BoundingBox:) anchorsearch {
 	pop 
-	DEBUG { (gs_epsf.ps: found %%BoundingBox\n) print flush } if
+	EPSDEBUG { (gs_epsf.ps: found %%BoundingBox\n) print flush } if
 	1 EPSBoundingBoxProcess
       } {
 	(%%HiResBoundingBox:) anchorsearch {
 	  pop 
-	  DEBUG { (gs_epsf.ps: found %%HiResBoundingBox\n) print flush } if
+	  EPSDEBUG { (gs_epsf.ps: found %%HiResBoundingBox\n) print flush } if
 	2 EPSBoundingBoxProcess
 	} { 
 	  pop % Not interested in this DSC comment
@@ -157,7 +157,8 @@
   /runEPS_page_count currentpagedevice /PageCount get def 
   0 EPSBoundingBoxSetState
   .runNoEPS
-  currentpagedevice /PageCount get runEPS_page_count sub 0 eq { showpage } if
+  currentpagedevice /PageCount get runEPS_page_count sub 0 eq 
+  { /showpage load exec } if
   count runEPS_op_count sub {pop} repeat
   countdictstack runEPS_dict_count sub {end} repeat
   runEPS_save restore
@@ -170,29 +171,29 @@
       dup (%!PS-Adobe-X.X EPSF-X.X) .peekstring {
       (EPSF) search {
         pop pop pop
-        DEBUG {(runEPS: Found EPS\n) print flush} if
+        EPSDEBUG {(runEPS: Found EPS\n) print flush} if
         systemdict /NOEPS known {
           cvx .runNoEPS
         } {
           cvx .runEPS
         } ifelse
       } {
-        DEBUG {(runEPS: Normal DSC\n) print flush} if
+        EPSDEBUG {(runEPS: Normal DSC\n) print flush} if
         pop
           cvx .runNoEPS
 
       } ifelse
       } {
-        DEBUG {(runEPS: Short DSC\n) print flush} if
+        EPSDEBUG {(runEPS: Short DSC\n) print flush} if
       pop
         cvx .runNoEPS
       } ifelse
     } {
-      DEBUG {(runEPS: Not DSC\n) print flush} if
+      EPSDEBUG {(runEPS: Not DSC\n) print flush} if
       cvx .runNoEPS
     } ifelse
   } {
-    DEBUG {(runEPS: Short non-DSC\n) print flush} if
+    EPSDEBUG {(runEPS: Short non-DSC\n) print flush} if
     pop
     cvx .runNoEPS
   } ifelse
@@ -206,20 +207,11 @@
 /run
  { dup type /filetype ne { (r) file } if
 		% Check for MS-DOS EPSF file (see Red Book p. 729).
-   true exch 0 1 3
-    {		% Stack: true file index
-      1 index read dup { pop dup .epsfheader 3 index get eq } if
-       { pop pop }	% if matched, don't need the character
-       {	% unread characters (wasn't EPSF)
-	 2 index exch unread     % unread mismatch character
-	 dup {   % loop unreading backwards in .epsfheader
-	   1 sub dup .epsfheader exch get 2 index exch unread
-	 } repeat pop
-	 exch not exch exit	% change true to false
-       }
-      ifelse
-    }
-   for exch	% Stack: file true/false
+ dup (    ) .peekstring 
+  { .epsfheader eq { dup (    ) readstring exch pop } { false } ifelse }
+  { pop false }
+ ifelse
+		% Stack: file true/false
     {		% This block is executed if the file is MS-DOS EPSF.
 		% Build up the little-endian byte offset and length.
       2

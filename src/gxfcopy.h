@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxfcopy.h,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: gxfcopy.h,v 1.2 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Font copying for high-level output */
 
 #ifndef gxfcopy_INCLUDED
@@ -33,6 +33,11 @@
 #ifndef gs_font_DEFINED
 #  define gs_font_DEFINED
 typedef struct gs_font_s gs_font;
+#endif
+
+#ifndef gs_matrix_DEFINED
+#  define gs_matrix_DEFINED
+typedef struct gs_matrix_s gs_matrix;
 #endif
 
 /*
@@ -68,7 +73,8 @@ typedef struct gs_font_s gs_font;
  * The resulting font supports querying (font_info, glyph_info, etc.) and
  * rendering (glyph_outline, etc.), but it does not support make_font.
  */
-int gs_copy_font(gs_font *font, gs_memory_t *mem, gs_font **pfont_new);
+int gs_copy_font(gs_font *font, const gs_matrix *orig_matrix, 
+		    gs_memory_t *mem, gs_font **pfont_new);
 
 /*
  * Copy a glyph, including any sub-glyphs.  The destination font ("copied"
@@ -118,6 +124,7 @@ int gs_copy_glyph(gs_font *font, gs_glyph glyph, gs_font *copied);
  */
 #define COPY_GLYPH_NO_OLD 1
 #define COPY_GLYPH_NO_NEW 2
+#define COPY_GLYPH_BY_INDEX 4
 int gs_copy_glyph_options(gs_font *font, gs_glyph glyph, gs_font *copied,
 			  int options);
 

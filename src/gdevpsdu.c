@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpsdu.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
+/* $Id: gdevpsdu.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Common utilities for PostScript and PDF writers */
 #include "stdio_.h"		/* for FILE for jpeglib.h */
 #include "jpeglib_.h"		/* for sdct.h */
@@ -115,18 +115,6 @@ psdf_setlogop(gx_device_vector * vdev, gs_logical_operation_t lop,
 }
 
 int
-psdf_setfillcolor(gx_device_vector * vdev, const gx_drawing_color * pdc)
-{
-    return psdf_set_color(vdev, pdc, &psdf_set_fill_color_commands);
-}
-
-int
-psdf_setstrokecolor(gx_device_vector * vdev, const gx_drawing_color * pdc)
-{
-    return psdf_set_color(vdev, pdc, &psdf_set_stroke_color_commands);
-}
-
-int
 psdf_dorect(gx_device_vector * vdev, fixed x0, fixed y0, fixed x1, fixed y1,
 	    gx_path_type_t type)
 {
@@ -204,14 +192,30 @@ psdf_adjust_color_index(gx_device_vector *vdev, gx_color_index color)
     return (color == (gx_no_color_index ^ 1) ? gx_no_color_index : color);
 }
 
+/* Round a double value to a specified precision. */
+double 
+psdf_round(double v, int precision, int radix)
+{
+    double mul = 1;
+    double w = v;
+
+    if (w <= 0)
+	return w;
+    while (w < precision) {
+	w *= radix;
+	mul *= radix;
+    }
+    return (int)(w + 0.5) / mul;
+}
+
 /*
  * Since we only have 8 bits of color to start with, round the
  * values to 3 digits for more compact output.
  */
-private double
-round_byte_color(int cv)
+private inline double
+round_byte_color(gx_color_index cv)
 {
-    return (int)(cv * (1000.0 / 255.0) + 0.5) / 1000.0;
+    return (int)((uint)cv * (1000.0 / 255.0) + 0.5) / 1000.0;
 }
 int
 psdf_set_color(gx_device_vector * vdev, const gx_drawing_color * pdc,
@@ -235,7 +239,7 @@ psdf_set_color(gx_device_vector * vdev, const gx_drawing_color * pdc,
 	switch (vdev->color_info.num_components) {
 	case 4:
 	    /* if (v0 == 0 && v1 == 0 && v2 == 0 && ...) */
-	    if ((color & (0xffffff << 8)) == 0 && ppscc->setgray != 0) {
+	    if ((color & 0xffffff00) == 0 && ppscc->setgray != 0) {
 		v3 = 1.0 - v3;
 		goto g;
 	    }

@@ -22,11 +22,12 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: szlibd.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: szlibd.c,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* zlib decoding (decompression) filter stream */
+#include "memory_.h"
 #include "std.h"
 #include "gsmemory.h"
-#include "gsmalloc.h"		/* for gs_memory_default */
+#include "gsmalloc.h"	/* for gs_memory_default */
 #include "strimpl.h"
 #include "szlibxx.h"
 
@@ -70,6 +71,7 @@ s_zlibD_process(stream_state * st, stream_cursor_read * pr,
     z_stream *zs = &ss->dynamic->zstate;
     const byte *p = pr->ptr;
     int status;
+    static const unsigned char jaws_empty[] = {0x58, 0x85, 1, 0, 0, 0, 0, 0, 1, 0x0A};
 
     /* Detect no input or full output so that we don't get */
     /* a Z_BUF_ERROR return. */
@@ -81,6 +83,14 @@ s_zlibD_process(stream_state * st, stream_cursor_read * pr,
     zs->avail_in = pr->limit - p;
     zs->next_out = pw->ptr + 1;
     zs->avail_out = pw->limit - pw->ptr;
+    if (zs->total_in == 0 && zs->avail_in >= 10 && !memcmp(zs->next_in, jaws_empty, 10)) {
+        /* JAWS PDF generator encodes empty stream as jaws_empty[].
+         * The stream declares that the data block length is zero
+         * but zlib routines regard a zero length data block to be an error.
+         */
+        pr->ptr += 10;
+        return EOFC;
+    }
     status = inflate(zs, Z_PARTIAL_FLUSH);
     pr->ptr = zs->next_in - 1;
     pw->ptr = zs->next_out - 1;

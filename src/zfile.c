@@ -1,4 +1,4 @@
-/* Copyright (C) 1989, 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 1989, 2000-2004, artofcode LLC.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
   under the terms of the GNU General Public License version 2
@@ -22,14 +22,16 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zfile.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: zfile.c,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Non-I/O file operators */
 #include "memory_.h"
 #include "string_.h"
+#include "unistd_.h"
 #include "ghost.h"
 #include "gscdefs.h"		/* for gx_io_device_table */
 #include "gsutil.h"		/* for bytes_compare */
 #include "gp.h"
+#include "gpmisc.h"
 #include "gsfname.h"
 #include "gsstruct.h"		/* for registering root */
 #include "gxalloc.h"		/* for streams */
@@ -149,69 +151,83 @@ make_invalid_file(ref * fp)
 }
 
 /* Check a file name for permission by stringmatch on one of the */
-/* strings of the permitgroup array */
+/* strings of the permitgroup array. */
 private int
-check_file_permissions(i_ctx_t *i_ctx_p, const char *fname, int len,
+check_file_permissions_reduced(i_ctx_t *i_ctx_p, const char *fname, int len,
 			const char *permitgroup)
 {
     long i;
     ref *permitlist = NULL;
     /* an empty string (first character == 0) if '\' character is */
     /* recognized as a file name separator as on DOS & Windows	  */
-    bool use_windows_pathsep = *gp_file_name_concat_string("\\", 1) == '\0';
-    bool fname_bare = !gp_pathstring_not_bare(fname, len);
-    const char *sep_string = NULL;
-    int cwd_len = 0, sep_len = 0;
+    const char *win_sep2 = "\\";
+    bool use_windows_pathsep = (gs_file_name_check_separator(win_sep2, 1, win_sep2) == 1);
+    uint plen = gp_file_name_parents(fname, len);
+
+    /* Assuming a reduced file name. */
 
     if (dict_find_string(&(i_ctx_p->userparams), permitgroup, &permitlist) <= 0)
         return 0;	/* if Permissions not found, just allow access */
-    if (fname_bare) {
-	cwd_len = strlen(gp_current_directory_name);
-	sep_string = gp_file_name_concat_string(gp_current_directory_name, cwd_len);
-	sep_len = strlen(sep_string);
-    }
 
     for (i=0; i<r_size(permitlist); i++) {
         ref permitstring;
 	const string_match_params win_filename_params = {
 		'*', '?', '\\', true, true	/* ignore case & '/' == '\\' */
 	};
+	const byte *permstr;
+	uint permlen;
+	int cwd_len = 0;
 
 	if (array_get(permitlist, i, &permitstring) < 0 ||
 	    r_type(&permitstring) != t_string 
 	   )    
 	    break;	/* any problem, just fail */
+	permstr = permitstring.value.bytes;
+	permlen = r_size(&permitstring);
+	/* 
+	 * Check if any file name is permitted with "*".
+	 */
+	if (permlen == 1 && permstr[0] == '*')
+	    return 0;		/* success */
+	/* 
+	 * If the filename starts with parent references, 
+	 * the permission element must start with same number of parent references.
+	 */
+	if (plen != 0 && plen != gp_file_name_parents((const char *)permstr, permlen))
+	    continue;
+	cwd_len = gp_file_name_cwds((const char *)permstr, permlen);
+	/*
+	 * If the permission starts with "./", absolute paths
+	 * are not permitted.
+	 */
+	if (cwd_len > 0 && gp_file_name_is_absolute(fname, len))
+	    continue;
+	/*
+	 * If the permission starts with "./", relative paths
+	 * with no "./" are allowed as well as with "./".
+	 * 'fname' has no "./" because it is reduced.
+	 */
         if (string_match( (const unsigned char*) fname, len,
-			  permitstring.value.bytes, r_size(&permitstring), 
-		use_windows_pathsep ? &win_filename_params : NULL)
-	   ) {
-	    /*
-	     * We can't know where we will get to if we reference the parent
-	     * directory, so don't allow access if LockFilePermissions is true
-	     * unless the Permission string starts with '*' (anywhere).
-	     */
-	    if (i_ctx_p->LockFilePermissions &&
-		gp_file_name_references_parent(fname, len) &&
-		    permitstring.value.bytes[0] != '*')
-		continue;	/* disregard this match and keep trying */
-	    else
-		return 0;		/* success */
-	}
-	    /* fname is a bare name meaning it will default to the current
-	     * directory. Check to see if the current permitted path is the
-             * platform's current directory, and if so, succeed.
-	     */
-	if (fname_bare && 
-	    (r_size(&permitstring) >= cwd_len + sep_len + 1) &&
-		(bytes_compare(permitstring.value.bytes, cwd_len,
-			(const byte *)gp_current_directory_name, cwd_len) == 0) &&
-		(bytes_compare(permitstring.value.bytes+cwd_len, sep_len,
-			(const byte *)sep_string, sep_len) == 0) &&
-		(permitstring.value.bytes[cwd_len+sep_len] == '*'))
-	    return 0;	/* permitstring was CWD + sep + * */
+			  permstr + cwd_len, permlen - cwd_len, 
+		use_windows_pathsep ? &win_filename_params : NULL))
+	    return 0;		/* success */
     }
     /* not found */
     return e_invalidfileaccess;
+}
+
+/* Check a file name for permission by stringmatch on one of the */
+/* strings of the permitgroup array */
+private int
+check_file_permissions(i_ctx_t *i_ctx_p, const char *fname, int len,
+			const char *permitgroup)
+{
+    char fname_reduced[gp_file_name_sizeof];
+    uint rlen = sizeof(fname_reduced);
+
+    if (gp_file_name_reduce(fname, len, fname_reduced, &rlen) != gp_combine_success)
+	return e_invalidaccess;		/* fail if we couldn't reduce */
+    return check_file_permissions_reduced(i_ctx_p, fname_reduced, rlen, permitgroup);
 }
 
 /* <name_string> <access_string> file <file> */
@@ -565,22 +581,6 @@ execfile_cleanup(i_ctx_t *i_ctx_p)
     return zclosefile(i_ctx_p);
 }
 
-/* <dir> .filenamedirseparator <string> */
-private int
-zfilenamedirseparator(i_ctx_t *i_ctx_p)
-{
-    os_ptr op = osp;
-    const char *sepr;
-
-    check_read_type(*op, t_string);
-    sepr =
-	gp_file_name_concat_string((const char *)op->value.const_bytes,
-				   r_size(op));
-    make_const_string(op, avm_foreign | a_readonly,
-		      strlen(sepr), (const byte *)sepr);
-    return 0;
-}
-
 /* - .filenamelistseparator <string> */
 private int
 zfilenamelistseparator(i_ctx_t *i_ctx_p)
@@ -641,25 +641,7 @@ zlibfile(i_ctx_t *i_ctx_p)
     } else {
 	ref fref;
 
-	/* Skip checks if this file name came from the command line. */
-	if (i_ctx_p->LockFilePermissions &&
-	    (i_ctx_p->filearg == NULL ||
-	    bytes_compare(op->value.bytes, r_size(op),
-	    (const byte *)i_ctx_p->filearg,
-			  strlen( (const char*) i_ctx_p->filearg)) != 0)
-	   ) {
-	    /* Check to see if this file is allowed */
-	    /* Possibly we should allow access to parent directories if */
-	    /* PermitFileReading includes (*), but this is unlikely if  */
-	    /* we are locked (and we checked LockFilePerminssions above).*/
-	    if (gp_file_name_references_parent(pname.fname, pname.len) ||
-		(gp_pathstring_not_bare(pname.fname, pname.len) &&
-		check_file_permissions(i_ctx_p, pname.fname, pname.len,
-					"PermitFileReading") < 0)
-	       ) 
-		    return_error(e_invalidfileaccess);
-	}
-	code = lib_file_open(pname.fname, pname.len, cname, MAX_CNAME,
+	code = lib_file_open(i_ctx_p, pname.fname, pname.len, cname, MAX_CNAME,
 			     &clen, &fref, imemory);
 	if (code >= 0) {
 	    s = fptr(&fref);
@@ -681,6 +663,22 @@ zlibfile(i_ctx_t *i_ctx_p)
     push(1);
     make_true(op);
     return 0;
+}
+
+/* A "simple" prefix is defined as a (possibly empty) string of
+   alphanumeric, underscore, and hyphen characters. */
+private bool
+prefix_is_simple(const char *pstr)
+{
+    int i;
+    char c;
+
+    for (i = 0; (c = pstr[i]) != 0; i++) {
+	if (!(c == '-' || c == '_' || (c >= '0' && c <= '9') ||
+	      (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')))
+	    return false;
+    }
+    return true;
 }
 
 /* <prefix|null> <access_string> .tempfile <name_string> <file> */
@@ -714,13 +712,16 @@ ztempfile(i_ctx_t *i_ctx_p)
 	prefix[psize] = 0;
 	pstr = prefix;
     }
-    if (i_ctx_p->LockFilePermissions) 
-        if (gp_file_name_references_parent(pstr, strlen(pstr)) ||
-	    (gp_pathstring_not_bare(pstr, strlen(pstr)) &&
-	      check_file_permissions(i_ctx_p, pstr, strlen(pstr),
-	      				"PermitFileWriting") < 0 )
-	)
+
+    if (gp_file_name_is_absolute(pstr, strlen(pstr))) {
+	if (check_file_permissions(i_ctx_p, pstr, strlen(pstr),
+				   "PermitFileWriting") < 0) {
 	    return_error(e_invalidfileaccess);
+	}
+    } else if (!prefix_is_simple(pstr)) {
+	return_error(e_invalidfileaccess);
+    }
+
     s = file_alloc_stream(imemory, "ztempfile(stream)");
     if (s == 0)
 	return_error(e_VMerror);
@@ -747,17 +748,6 @@ ztempfile(i_ctx_t *i_ctx_p)
     return code;
 }
 
-/* <string> .pathstring_not_bare <bool> */
-private int
-zpathstring_not_bare(i_ctx_t *i_ctx_p)
-{
-    os_ptr op = osp;
-    check_type(*op, t_string);
-    make_bool(op, gp_pathstring_not_bare((char *)op->value.bytes, r_size(op)));
-    return 0;
-}
-
-
 /* ------ Initialization procedure ------ */
 
 const op_def zfile_op_defs[] =
@@ -766,14 +756,12 @@ const op_def zfile_op_defs[] =
     {"1.execfile", zexecfile},
     {"2file", zfile},
     {"3filenameforall", zfilenameforall},
-    {"1.filenamedirseparator", zfilenamedirseparator},
     {"0.filenamelistseparator", zfilenamelistseparator},
     {"1.filenamesplit", zfilenamesplit},
     {"1.libfile", zlibfile},
     {"2renamefile", zrenamefile},
     {"1status", zstatus},
     {"2.tempfile", ztempfile},
-    {"2.pathstring_not_bare", zpathstring_not_bare},
 		/* Internal operators */
     {"0%file_continue", file_continue},
     {"0%execfile_finish", execfile_finish},
@@ -790,16 +778,16 @@ parse_file_name(const ref * op, gs_parsed_file_name_t * pfn, bool safemode)
     int code;
 
     check_read_type(*op, t_string);
+    code = gs_parse_file_name(pfn, (const char *)op->value.const_bytes,
+			      r_size(op));
+    if (code < 0)
+	return code;
     /*
      * Check here for the %pipe device which is illegal when
      * LockFilePermissions is true. In the future we might want to allow
      * the %pipe device to be included on the PermitFile... paths, but
      * for now it is simply disallowed.
      */
-    code = gs_parse_file_name(pfn, (const char *)op->value.const_bytes,
-			      r_size(op));
-    if (code < 0)
-	    return code;
     if (pfn->iodev && safemode && strcmp(pfn->iodev->dname, "%pipe%") == 0)
 	return e_invalidfileaccess;
     return code;
@@ -911,97 +899,186 @@ make_stream_file(ref * pfile, stream * s, const char *access)
     }
 }
 
-/* Open an OS-level file (like fopen), using the search paths if necessary. */
-/* Note that it does not automatically look in the current */
-/* directory first (or at all): this is like Unix, and unlike MS-DOS. */
-private int
-lib_file_fopen(gx_io_device * iodev, const char *bname,
-	       const char *ignore_access, FILE ** pfile,
-	       char *rfname, uint rnamelen)
+private gp_file_name_combine_result 
+gp_file_name_combine_patch(const char *prefix, uint plen, const char *fname, uint flen, 
+			    bool no_sibling, char *buffer, uint *blen)
 {
-    char fmode[3];		/* r, [b], null */
-    int len = strlen(bname);
-    const gs_file_path *pfpath = &gs_lib_path;
-    uint pi;
+    return gp_file_name_combine(prefix, plen, fname, flen, no_sibling, buffer, blen);
+}
 
-    strcpy(fmode, "r");
+/* Prepare a stream with a file name. */
+/* Return 0 if successful, error code if not. */
+/* On a successful return, the C file name is in the stream buffer. */
+/* If fname==0, set up stream, and buffer. */
+private int
+file_prepare_stream(const char *fname, uint len, const char *file_access, 
+		 uint buffer_size, stream ** ps, char fmode[4], 
+		 gx_io_device *iodev, gs_memory_t *mem)
+{
+    byte *buffer;
+    register stream *s;
+
+    /* Open the file, always in binary mode. */
+    strcpy(fmode, file_access);
     strcat(fmode, gp_fmode_binary_suffix);
-    if (gp_pathstring_not_bare(bname, len))
-	return (*iodev->procs.fopen)(iodev, bname, fmode, pfile,
-				     rfname, rnamelen);
-    /* Go through the list of search paths */
-    for (pi = 0; pi < r_size(&pfpath->list); ++pi) {
-	const ref *prdir = pfpath->list.value.refs + pi;
-	const char *pstr = (const char *)prdir->value.const_bytes;
-	uint plen = r_size(prdir);
-	const char *cstr =
-	gp_file_name_concat_string(pstr, plen);
-	int up, i;
-	int code;
+    if (buffer_size == 0)
+	buffer_size = file_default_buffer_size;
+    if (len >= buffer_size)    /* we copy the file name into the buffer */
+	return_error(e_limitcheck);
+    /* Allocate the stream first, since it persists */
+    /* even after the file has been closed. */
+    s = file_alloc_stream(mem, "file_prepare_stream");
+    if (s == 0)
+	return_error(e_VMerror);
+    /* Allocate the buffer. */
+    buffer = gs_alloc_bytes(mem, buffer_size, "file_prepare_stream(buffer)");
+    if (buffer == 0)
+	return_error(e_VMerror);
+    if (fname != 0) {
+	memcpy(buffer, fname, len);
+	buffer[len] = 0;	/* terminate string */
+    } else
+	buffer[0] = 0;	/* safety */
+    s->cbuf = buffer;
+    s->bsize = s->cbsize = buffer_size;
+    *ps = s;
+    return 0;
+}
 
-	/* Concatenate the prefix, combiner, and file name. */
-	/* Do this carefully in case rfname is the same */
-	/* as fname.  (We don't worry about the case */
-	/* where rfname only overlaps fname.) */
-	up = plen + strlen(cstr);
-	if (up + len + 1 > rnamelen)
-	    return_error(e_limitcheck);
-	for (i = len + 1; --i >= 0;)
-	    rfname[i + up] = bname[i];
-	memcpy(rfname, pstr, plen);
-	memcpy(rfname + plen, cstr, strlen(cstr));
-	code = (*iodev->procs.fopen)(iodev, rfname, fmode,
-				     pfile, rfname, rnamelen);
-	if (code >= 0)
-	    return code;
-	/* strcpy isn't guaranteed to work for overlapping */
-	/* source and destination, so: */
-	if (rfname == bname)
-	    for (i = 0; (rfname[i] = rfname[i + up]) != 0; i++);
+private int
+check_file_permissions_aux(i_ctx_t *i_ctx_p, char *fname, uint flen)
+{   /* i_ctx_p is NULL running init files. */
+    /* fname must be reduced. */
+    if (i_ctx_p == NULL)
+	return 0;
+    if (check_file_permissions_reduced(i_ctx_p, fname, flen, "PermitFileReading") < 0)
+	return_error(e_invalidfileaccess);
+    return 0;
+}
+
+
+/* The startup code calls this to open @-files. */
+private int
+lib_fopen_with_libpath(i_ctx_t *i_ctx_p, gx_io_device *iodev, 
+		const char *fname, uint flen, char fmode[4], char *buffer, int blen,
+		FILE **file)
+{   /* i_ctx_p is NULL running init files. */
+    bool starting_arg_file = false;
+    bool search_with_no_combine = false;
+    bool search_with_combine = false;
+
+    if (i_ctx_p != NULL) {
+	starting_arg_file = i_ctx_p->starting_arg_file;
+	i_ctx_p->starting_arg_file = false;
+    } else
+	starting_arg_file = true;
+    if (gp_file_name_is_absolute(fname, flen)) {
+       search_with_no_combine = true;
+       search_with_combine = false;
+    } else {
+       search_with_no_combine = starting_arg_file;
+       search_with_combine = true;
+    }
+    if (search_with_no_combine) {
+	uint blen1 = blen;
+
+	if (gp_file_name_reduce(fname, flen, buffer, &blen1) != gp_combine_success)
+	    goto skip;
+	if (iodev->procs.fopen(iodev, buffer, fmode, file,
+				 buffer, blen) == 0) {
+	    if (starting_arg_file ||
+		check_file_permissions_aux(i_ctx_p, buffer, blen1) >= 0)
+		    return 0;
+	    iodev->procs.fclose(iodev, *file);
+	    *file = NULL;
+	    return_error(e_invalidfileaccess);
+	} else
+	    *file = NULL;
+	skip:;
+    } 
+    if (search_with_combine) {
+	const gs_file_path *pfpath = &gs_lib_path;
+	uint pi;
+
+	for (pi = 0; pi < r_size(&pfpath->list); ++pi) {
+	    const ref *prdir = pfpath->list.value.refs + pi;
+	    const char *pstr = (const char *)prdir->value.const_bytes;
+	    uint plen = r_size(prdir), blen1 = blen;
+
+	    gp_file_name_combine_result r = gp_file_name_combine_patch(pstr, plen, 
+		    fname, flen, false, buffer, &blen1);
+	    if (r != gp_combine_success)
+		continue;
+	    if (iodev->procs.fopen(iodev, buffer, fmode, file,
+					 buffer, blen) == 0) {
+		if (starting_arg_file ||
+		    check_file_permissions_aux(i_ctx_p, buffer, blen1) >= 0)
+		    return 0;
+		iodev->procs.fclose(iodev, *file);
+		*file = NULL;
+		return_error(e_invalidfileaccess);
+	    }
+	    *file = NULL; /* safety */
+	}
     }
     return_error(e_undefinedfilename);
 }
+
 /* The startup code calls this to open @-files. */
 FILE *
-lib_fopen(const char *bname)
+lib_fopen(const char *fname)
 {
-    FILE *file = NULL;
     /* We need a buffer to hold the expanded file name. */
     char buffer[gp_file_name_sizeof];
     /* We can't count on the IODevice table to have been initialized yet. */
     /* Allocate a copy of the default IODevice. */
-    gx_io_device iodev_default_copy;
-    int code;
+    gx_io_device iodev_default_copy = *gx_io_device_table[0];
+    char fmode[3] = "r";
+    FILE *file = NULL;
 
-    iodev_default_copy = *gx_io_device_table[0];
-    code = lib_file_fopen(&iodev_default_copy, bname, "r", &file,
-			  buffer, gp_file_name_sizeof);
-    return (code < 0 ? NULL : file);
+    strcat(fmode, gp_fmode_binary_suffix);
+    lib_fopen_with_libpath(NULL, &iodev_default_copy, fname, strlen(fname), 
+			    fmode, buffer, sizeof(buffer), &file);
+    return file;
 }
 
 /* Open a file stream on an OS file and create a file object, */
 /* using the search paths. */
 /* The startup code calls this to open the initialization file gs_init.ps. */
 int
-lib_file_open(const char *fname, uint len, byte * cname, uint max_clen,
+lib_file_open(i_ctx_t *i_ctx_p, const char *fname, uint len, byte * cname, uint max_clen,
 	      uint * pclen, ref * pfile, gs_memory_t *mem)
-{
+{   /* i_ctx_p is NULL running init files. */
     stream *s;
-    int code = file_open_stream(fname, len, "r", file_default_buffer_size,
-				&s, (gx_io_device *)0, lib_file_fopen, mem);
-    char *bname;
+    int code;
+    char fmode[4];  /* r/w/a, [+], [b], null */
+    char *buffer;
     uint blen;
+    gx_io_device *iodev = iodev_default;
+    FILE *file;
 
+    code = file_prepare_stream(fname, len, "r", file_default_buffer_size, 
+			    &s, fmode, iodev, mem);
     if (code < 0)
 	return code;
+    if (fname == 0)
+	return 0;
+    buffer = (char *)s->cbuf;
+    code = lib_fopen_with_libpath(i_ctx_p, iodev, fname, len, fmode, buffer, s->bsize, &file);
+    if (code < 0) {
+	s->cbuf = NULL;
+	s->bsize = s->cbsize = 0;
+	gs_free_object(mem, buffer, "lib_file_open");
+        return code;
+    }
+    file_init_stream(s, file, fmode, (byte *)buffer, s->bsize);
     /* Get the name from the stream buffer. */
-    bname = (char *)s->cbuf;
-    blen = strlen(bname);
+    blen = strlen(buffer);
     if (blen > max_clen) {
 	sclose(s);
-	return_error(e_limitcheck);
+        return_error(e_limitcheck);
     }
-    memcpy(cname, bname, blen);
+    memcpy(cname, buffer, blen);
     *pclen = blen;
     make_stream_file(pfile, s, "r");
     return 0;
@@ -1067,49 +1144,23 @@ file_open_stream(const char *fname, uint len, const char *file_access,
 		 uint buffer_size, stream ** ps, gx_io_device *iodev,
 		 iodev_proc_fopen_t fopen_proc, gs_memory_t *mem)
 {
-    byte *buffer;
-    register stream *s;
+    int code;
+    FILE *file;
+    char fmode[4];  /* r/w/a, [+], [b], null */
 
-    if (buffer_size == 0)
-	buffer_size = file_default_buffer_size;
-    if (len >= buffer_size)    /* we copy the file name into the buffer */
-	return_error(e_limitcheck);
-    /* Allocate the stream first, since it persists */
-    /* even after the file has been closed. */
-    s = file_alloc_stream(mem, "file_open_stream");
-    if (s == 0)
-	return_error(e_VMerror);
-    /* Allocate the buffer. */
-    buffer = gs_alloc_bytes(mem, buffer_size, "file_open_stream(buffer)");
-    if (buffer == 0)
-	return_error(e_VMerror);
-    if (fname != 0) {
-	/* Copy the name (so we can terminate it with a zero byte.) */
-	char *file_name = (char *)buffer;
-	char fmode[4];		/* r/w/a, [+], [b], null */
-	FILE *file;
-	int code;
-
-	memcpy(file_name, fname, len);
-	file_name[len] = 0;	/* terminate string */
-	/* Open the file, always in binary mode. */
-	strcpy(fmode, file_access);
-	strcat(fmode, gp_fmode_binary_suffix);
-	if (!iodev)
-	    iodev = iodev_default;
-	code = (*fopen_proc)(iodev, file_name, fmode, &file,
-			     (char *)buffer, buffer_size);
-	if (code < 0) {
-	    gs_free_object(mem, buffer, "file_open_stream(buffer)");
-	    return code;
-	}
-	/* Set up the stream. */
-	file_init_stream(s, file, fmode, buffer, buffer_size);
-    } else {			/* just save the buffer and size */
-	s->cbuf = buffer;
-	s->bsize = s->cbsize = buffer_size;
-    }
-    *ps = s;
+    if (!iodev)
+	iodev = iodev_default;
+    code = file_prepare_stream(fname, len, file_access, buffer_size, ps, fmode, 
+			    (!iodev ? iodev_default : iodev), mem);
+    if (code < 0)
+	return code;
+    if (fname == 0)
+	return 0;
+    code = (*fopen_proc)(iodev, (char *)(*ps)->cbuf, fmode, &file,
+			 (char *)(*ps)->cbuf, (*ps)->bsize);
+    if (code < 0)
+	return code;
+    file_init_stream(*ps, file, fmode, (*ps)->cbuf, (*ps)->bsize);
     return 0;
 }
 

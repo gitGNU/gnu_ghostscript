@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpdt.h,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: gdevpdt.h,v 1.2 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Interface for pdfwrite text and fonts */
 
 #ifndef gdevpdt_INCLUDED
@@ -42,6 +42,11 @@
 /* ================ Procedures ================ */
 
 /* ---------------- Utility (for gdevpdf.c) ---------------- */
+
+/*
+ * Allocate and initialize text state bookkeeping.
+ */
+pdf_text_state_t *pdf_text_state_alloc(gs_memory_t *mem);
 
 /*
  * Allocate and initialize the text data structure.

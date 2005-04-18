@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevm64.c,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/*$Id: gdevm64.c,v 1.2 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* 64-bit-per-pixel "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"
@@ -76,19 +76,19 @@ mem_full_alpha_device("image64", 64, 0, mem_open,
 #if arch_is_big_endian
 /* Unpack a color into 32 bit chunks. */
 #  define declare_unpack_color(abcd, efgh, color)\
-	bits32 abcd = (color) >> 32;\
-	bits32 efgh = (color)
+	bits32 abcd = (bits32)((color) >> 32);\
+	bits32 efgh = (bits32)((color))
 #else
 /* Unpack a color into 32 bit chunks. */
 #  define declare_unpack_color(abcd, efgh, color)\
-	bits32 abcd = (0x000000ff & ((color) >> 56)) |\
-		      (0x0000ff00 & ((color) >> 40)) |\
-		      (0x00ff0000 & ((color) >> 24)) |\
-		      (0xff000000 & ((color) >> 8));\
-	bits32 efgh = (0x000000ff & ((color) >> 24)) |\
-		      (0x0000ff00 & ((color) >> 8)) |\
-		      (0x00ff0000 & ((color) << 8)) |\
-		      (0xff000000 & ((color) << 24))
+	bits32 abcd = (bits32)((0x000000ff & ((color) >> 56)) |\
+			       (0x0000ff00 & ((color) >> 40)) |\
+			       (0x00ff0000 & ((color) >> 24)) |\
+			       (0xff000000 & ((color) >> 8)));\
+	bits32 efgh = (bits32)((0x000000ff & ((color) >> 24)) |\
+			       (0x0000ff00 & ((color) >> 8)) |\
+			       (0x00ff0000 & ((color) << 8)) |\
+			       (0xff000000 & ((color) << 24)))
 #endif
 #define dest32 ((bits32 *)dest)
 

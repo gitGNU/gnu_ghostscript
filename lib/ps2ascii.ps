@@ -13,7 +13,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: ps2ascii.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
+% $Id: ps2ascii.ps,v 1.3 2005/04/18 12:06:08 Arabidopsis Exp $
 % Extract the ASCII text from a PostScript file.  Nothing is displayed.
 % Instead, ASCII information is written to stdout.  The idea is similar to
 % Glenn Reid's `distillery', only a lot more simple-minded, and less robust.
@@ -1187,6 +1187,15 @@ mark
     /cc X                           % char-data
     dup type /stringtype ne {]} if  % char-data
 
+    /ch-xoff where
+    { pop }
+    { dup /Cd exch def
+      /ch-width { Cw } def
+      /ch-height { Ch } def
+      /ch-xoff { Cx } def
+      /ch-yoff { Cy } def
+      /ch-dx { Cdx } def
+    } ifelse
     /ch-data X
     nn /base get cc ctr put     % (adds ctr to cc'th position of BASE)
     nn /BitMaps get
@@ -1276,6 +1285,8 @@ userdict /start-hook {
                                                     % was a hyphen
         }
     if                                          % string
+    currentfont /FontType get 0 ne
+      {
     { % begin forall                            % c
         dup                                     % c c
         currentfont /Encoding get               % c c vec
@@ -1288,6 +1299,19 @@ userdict /start-hook {
         .show.stdout exch writestring
     }
     forall
+      }
+      { (\0) dup 0 get 0 eq
+          { 0 1 put
+            (%stderr) (w) file dup
+            (*** Warning: composite font characters dumped without decoding.\n) writestring
+            closefile
+          }
+          { pop
+          }
+        ifelse 
+        .show.stdout exch writestring
+      }
+    ifelse
 } odef
 
 /.showstring1 {                 % string
@@ -1487,12 +1511,9 @@ userdict /start-hook {
 end
 
 % Bind the operators we just defined, and all the others if we didn't
-% do it before.  Also reenable 'bind' for future files.
+% do it before.
 
-DELAYBIND {
-  .bindnow
-  /bind /.bind load def
-} if
+DELAYBIND { .bindnow } if
 
 % Make systemdict read-only if it wasn't already.
 

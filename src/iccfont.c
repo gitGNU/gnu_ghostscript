@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: iccfont.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: iccfont.c,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* Initialization support for compiled fonts */
 
 #include "string_.h"
@@ -32,7 +32,7 @@
 #include "gsmatrix.h"
 #include "gxfont.h"		/* for ifont.h */
 #include "ccfont.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "ialloc.h"
 #include "idict.h"
 #include "ifont.h"
@@ -174,6 +174,7 @@ cfont_ref_dict_create(i_ctx_t *i_ctx_p, ref *pdict,
 	if (code < 0)
 	    return code;
     }
+    r_store_attrs(dict_access_ref(pdict), a_all, kp->dict_attrs);
     return 0;
 }
 
@@ -205,6 +206,7 @@ cfont_string_dict_create(i_ctx_t *i_ctx_p, ref *pdict,
 	if (code < 0)
 	    return code;
     }
+    r_store_attrs(dict_access_ref(pdict), a_all, kp->dict_attrs);
     return 0;
 }
 
@@ -236,6 +238,7 @@ cfont_num_dict_create(i_ctx_t *i_ctx_p, ref * pdict,
 	if (code < 0)
 	    return code;
     }
+    r_store_attrs(dict_access_ref(pdict), a_all, kp->dict_attrs);
     return 0;
 }
 

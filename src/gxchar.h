@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxchar.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxchar.h,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $ */
 /* Internal character definition for Ghostscript library */
 /* Requires gsmatrix.h, gxfixed.h */
 
@@ -48,6 +48,12 @@ typedef struct cached_fm_pair_s cached_fm_pair;
 #ifndef gs_font_DEFINED
 #  define gs_font_DEFINED
 typedef struct gs_font_s gs_font;
+#endif
+
+/* The type of text enum objects is opaque. */
+#ifndef gs_text_enum_DEFINED
+#  define gs_text_enum_DEFINED
+typedef struct gs_text_enum_s gs_text_enum_t;
 #endif
 
 /* The types of memory and null devices may be opaque. */
@@ -88,6 +94,7 @@ struct gs_show_enum_s {
     /* Following are updated dynamically */
     gs_glyph (*encode_char)(gs_font *, gs_char, gs_glyph_space_t);  /* copied from font */
     gs_log2_scale_point fapi_log2_scale; /* scaling factors for oversampling with FAPI, -1 = not valid */
+    gs_point fapi_glyph_shift;          /* glyph shift for FAPI-handled font */
     gx_device_memory *dev_cache;	/* cache device */
     gx_device_memory *dev_cache2;	/* underlying alpha memory device, */
 				/* if dev_cache is an alpha buffer */
@@ -113,6 +120,9 @@ struct gs_show_enum_s {
   gs_public_st_composite(st_gs_show_enum, gs_show_enum, "gs_show_enum",\
     show_enum_enum_ptrs, show_enum_reloc_ptrs)
 
+/* Get the current character code. */
+int gx_current_char(const gs_text_enum_t * pte);
+
 /* Cached character procedures (in gxccache.c and gxccman.c) */
 #ifndef gs_font_dir_DEFINED
 #  define gs_font_dir_DEFINED
@@ -126,12 +136,14 @@ void gx_free_cached_char(gs_font_dir *, cached_char *);
 void gx_add_cached_char(gs_font_dir *, gx_device_memory *, cached_char *, cached_fm_pair *, const gs_log2_scale_point *);
 void gx_add_char_bits(gs_font_dir *, cached_char *, const gs_log2_scale_point *);
 cached_char *
-            gx_lookup_cached_char(const gs_font *, const cached_fm_pair *, gs_glyph, int, int);
+            gx_lookup_cached_char(const gs_font *, const cached_fm_pair *, gs_glyph, int, int, gs_fixed_point *);
 cached_char *
             gx_lookup_xfont_char(const gs_state *, cached_fm_pair *, gs_char, gs_glyph, int);
 int gx_image_cached_char(gs_show_enum *, cached_char *);
 void gx_compute_text_oversampling(const gs_show_enum * penum, const gs_font *pfont,
 				  int alpha_bits, gs_log2_scale_point *p_log2_scale);
 int set_char_width(gs_show_enum *penum, gs_state *pgs, floatp wx, floatp wy);
+int gx_default_text_restore_state(gs_text_enum_t *pte);
+int gx_hld_stringwidth_begin(gs_imager_state * pis, gx_path **path);
 
 #endif /* gxchar_INCLUDED */

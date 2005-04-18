@@ -22,13 +22,15 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpdfi.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevpdfi.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Image handling for PDF-writing driver */
 #include "memory_.h"
 #include "gx.h"
 #include "gserrors.h"
 #include "gsdevice.h"
 #include "gsflip.h"
+#include "gsstate.h"
+#include "gscolor2.h"
 #include "gdevpdfx.h"
 #include "gdevpdfg.h"
 #include "gdevpdfo.h"		/* for data stream */
@@ -36,6 +38,9 @@
 #include "gximage3.h"
 #include "gximag3x.h"
 #include "gsiparm4.h"
+#include "gxdcolor.h"
+#include "gxpcolor.h"
+#include "gxhldevc.h"
 
 /* Forward references */
 private image_enum_proc_plane_data(pdf_image_plane_data);
@@ -247,7 +252,6 @@ pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
 	gs_image3x_t type3x;
 	gs_image4_t type4;
     } image[2];
-    ulong nbytes;
     int width, height;
     const gs_range_t *pranges = 0;
     int alt_writer_count;
@@ -273,11 +277,12 @@ pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
 	is_mask = pim1->ImageMask;
 	if (is_mask) {
 	    /* If parameters are invalid, use the default implementation. */
-	    if (pim1->BitsPerComponent != 1 ||
-		!((pim1->Decode[0] == 0.0 && pim1->Decode[1] == 1.0) ||
-		  (pim1->Decode[0] == 1.0 && pim1->Decode[1] == 0.0))
-		)
-		goto nyi;
+	    if (pdcolor->type != &gx_dc_pattern)
+		if (pim1->BitsPerComponent != 1 ||
+		    !((pim1->Decode[0] == 0.0 && pim1->Decode[1] == 1.0) ||
+		      (pim1->Decode[0] == 1.0 && pim1->Decode[1] == 0.0))
+		    )
+		    goto nyi;
 	}
 	in_line = context == PDF_IMAGE_DEFAULT &&
 	    can_write_image_in_line(pdev, pim1);
@@ -324,13 +329,29 @@ pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
 	if (pdf_convert_image4_to_image1(pdev, pis, pdcolor,
 					 (const gs_image4_t *)pic,
 					 &image[0].type1, &icolor) >= 0) {
+	    gs_state *pgs = (gs_state *)gx_hld_get_gstate_ptr(pis);
+
+	    if (pgs == NULL)
+		return_error(gs_error_unregistered); /* Must not happen. */
+
 	    /* Undo the pop of the NI stack if necessary. */
 	    if (pnamed)
 		cos_array_add_object(pdev->NI_stack, COS_OBJECT(pnamed));
-	    return pdf_begin_typed_image(pdev, pis, pmat,
+	    /* HACK: temporary patch the color space, to allow 
+	       pdf_prepare_imagemask to write the right color for the imagemask. */
+	    code = gs_gsave(pgs);
+	    if (code < 0)
+		return code;
+	    code = gs_setcolorspace(pgs, ((const gs_image4_t *)pic)->ColorSpace);
+	    if (code < 0)
+		return code;
+	    code = pdf_begin_typed_image(pdev, pis, pmat,
 					 (gs_image_common_t *)&image[0].type1,
 					 prect, &icolor, pcpath, mem,
 					 pinfo, context);
+	    if (code < 0)
+		return code;
+	    return gs_grestore(pgs);
 	}
 	/* No luck.  Masked images require PDF 1.3 or higher. */
 	if (pdev->CompatibilityLevel < 1.3)
@@ -359,10 +380,12 @@ pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
     pcs = pim->ColorSpace;
     num_components = (is_mask ? 1 : gs_color_space_num_components(pcs));
 
-    code = pdf_open_page(pdev, PDF_IN_STREAM);
+    if (pdf_must_put_clip_path(pdev, pcpath))
+	code = pdf_unclip(pdev);
+    else 
+	code = pdf_open_page(pdev, PDF_IN_STREAM);
     if (code < 0)
 	return code;
-    pdf_put_clip_path(pdev, pcpath);
     if (context == PDF_IMAGE_TYPE3_MASK) {
 	/*
 	 * The soft mask for an ImageType 3x image uses a DevicePixel
@@ -377,6 +400,9 @@ pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
 	code = pdf_prepare_image(pdev, pis);
     if (code < 0)
 	goto nyi;
+    code = pdf_put_clip_path(pdev, pcpath);
+    if (code < 0)
+	return code;
     if (prect)
 	rect = *prect;
     else {
@@ -401,10 +427,14 @@ pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
     pie->bits_per_pixel =
 	pim->BitsPerComponent * num_components / pie->num_planes;
     pie->rows_left = height;
-    nbytes = (((ulong) pie->width * pie->bits_per_pixel + 7) >> 3) *
+    if (pnamed != 0) /* Don't in-line the image if it is named. */
+	in_line = false;
+    else {
+        double nbytes = (double)(((ulong) pie->width * pie->bits_per_pixel + 7) >> 3) *
 	pie->num_planes * pie->rows_left;
-    /* Don't in-line the image if it is named. */
-    in_line &= nbytes <= MAX_INLINE_IMAGE_BYTES && pnamed == 0;
+	
+	in_line &= (nbytes < pdev->MaxInlineImageSize);
+    }
     if (rect.p.x != 0 || rect.p.y != 0 ||
 	rect.q.x != pim->Width || rect.q.y != pim->Height ||
 	(is_mask && pim->CombineWithColor)
@@ -633,7 +663,7 @@ pdf_image_end_image_data(gx_image_enum_common_t * info, bool draw_last,
     pdf_image_enum *pie = (pdf_image_enum *)info;
     int height = pie->writer.height;
     int data_height = height - pie->rows_left;
-    int code;
+    int code = 0;
 
     if (pie->writer.pres)
 	((pdf_x_object_t *)pie->writer.pres)->data_height = data_height;
@@ -851,3 +881,48 @@ pdf_image3x_make_mcde(gx_device *dev, const gs_imager_state *pis,
     return cos_dict_put_c_key_object(cos_stream_dict(pmcs), "/SMask",
 				     pmie->writer.pres->object);
 }
+
+/*
+   The pattern management device method.
+   See gxdevcli.h about return codes.
+ */
+int
+gdev_pdf_pattern_manage(gx_device *pdev1, gx_bitmap_id id,
+		gs_pattern1_instance_t *pinst, pattern_manage_t function)
+{   
+    gx_device_pdf *pdev = (gx_device_pdf *)pdev1;
+    int code;
+    pdf_resource_t *pres;
+
+    switch (function) {
+	case pattern_manage__can_accum:
+	    return 1;
+	case pattern_manage__start_accum:
+	    code = pdf_enter_substream(pdev, resourcePattern, id, &pres, true);
+	    if (code < 0)
+		return code;
+	    pres->rid = id;
+	    code = pdf_store_pattern1_params(pdev, pres, pinst);
+	    if (code < 0)
+		return code;
+	    return 1;
+	case pattern_manage__finish_accum:
+	    code = pdf_add_procsets(pdev->substream_Resources, pdev->procsets);
+	    if (code < 0)
+		return code;
+	    code = pdf_exit_substream(pdev);
+	    if (code < 0)
+		return code;
+	    return 1;
+	case pattern_manage__load:
+	    pres = pdf_find_resource_by_gs_id(pdev, resourcePattern, id);
+	    if (pres == 0)
+		return gs_error_undefined;
+	    code = pdf_add_resource(pdev, pdev->substream_Resources, "/Pattern", pres);
+	    if (code < 0)
+		return code;
+	    return 1;
+    }
+    return_error(gs_error_unregistered);
+}
+

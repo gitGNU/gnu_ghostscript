@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zchar42.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: zchar42.c,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* Type 42 character display operator */
 #include "ghost.h"
 #include "oper.h"
@@ -43,6 +43,62 @@
 #include "ifont.h"		/* for font_param */
 #include "igstate.h"
 #include "store.h"
+#include "zchar42.h"
+
+/* Get a Type 42 character metrics and set the cache device. */
+int
+zchar42_set_cache(i_ctx_t *i_ctx_p, gs_font_base *pbfont, ref *cnref, 
+	    uint glyph_index, op_proc_t cont, op_proc_t *exec_cont, bool put_lsb)
+{   double sbw[4];
+    double w[2];
+    int present;
+    int code = zchar_get_metrics(pbfont, cnref, sbw);
+
+    if (code < 0)
+	return code;
+    present = code;
+    if (present == metricsNone) {
+	float sbw42[4];
+	int i;
+
+	code = gs_type42_wmode_metrics((gs_font_type42 *)pbfont,
+				       glyph_index, false, sbw42);
+	if (code < 0)
+	    return code;
+	present = metricsSideBearingAndWidth;
+	for (i = 0; i < 4; ++i)
+	    sbw[i] = sbw42[i];
+	w[0] = sbw[2];
+	w[1] = sbw[3];
+	if (gs_rootfont(igs)->WMode) { /* for vertically-oriented metrics */
+	    code = gs_type42_wmode_metrics((gs_font_type42 *)pbfont,
+					   glyph_index,
+					   true, sbw42);
+	    if (code < 0) { /* no vertical metrics */
+		if (pbfont->FontType == ft_CID_TrueType) {
+		    sbw[0] = sbw[2] / 2;
+		    sbw[1] = pbfont->FontBBox.q.y;
+		    sbw[2] = 0;
+		    sbw[3] = pbfont->FontBBox.p.y - pbfont->FontBBox.q.y;
+		}
+	    } else {
+		sbw[0] = sbw[2] / 2;
+		sbw[1] = (pbfont->FontBBox.q.y + pbfont->FontBBox.p.y - sbw42[3]) / 2;
+		sbw[2] = sbw42[2];
+		sbw[3] = sbw42[3];
+	    }
+	}
+    } else {
+        w[0] = sbw[2];
+        w[1] = sbw[3];
+    }
+    return zchar_set_cache(i_ctx_p, pbfont, cnref,
+			   (put_lsb && present == metricsSideBearingAndWidth ?
+			    sbw : NULL),
+			   w, &pbfont->FontBBox,
+			   cont, exec_cont,
+			   gs_rootfont(igs)->WMode ? sbw : NULL);
+}
 
 /* <font> <code|name> <name> <glyph_index> .type42execchar - */
 private int type42_fill(i_ctx_t *);
@@ -55,9 +111,9 @@ ztype42execchar(i_ctx_t *i_ctx_p)
     int code = font_param(op - 3, &pfont);
     gs_font_base *const pbfont = (gs_font_base *) pfont;
     gs_text_enum_t *penum = op_show_find(i_ctx_p);
-    int present;
-    double sbw[4];
-    double w[2];
+    op_proc_t cont = (pbfont->PaintType == 0 ? type42_fill : type42_stroke), exec_cont = 0;
+    ref *cnref;
+    uint glyph_index;
 
     if (code < 0)
 	return code;
@@ -87,55 +143,16 @@ ztype42execchar(i_ctx_t *i_ctx_p)
      */
     check_type(*op, t_integer);
     check_ostack(3);		/* for lsb values */
-    present = zchar_get_metrics(pbfont, op - 1, sbw);
-    if (present < 0)
-	return present;
     /* Establish a current point. */
     code = gs_moveto(igs, 0.0, 0.0);
     if (code < 0)
 	return code;
-    /* Get the metrics and set the cache device. */
-    if (present == metricsNone) {
-	float sbw42[4];
-	int i;
-
-	code = gs_type42_wmode_metrics((gs_font_type42 *) pfont,
-				       (uint) op->value.intval, false, sbw42);
-	if (code < 0)
-	    return code;
-	present = metricsSideBearingAndWidth;
-	for (i = 0; i < 4; ++i)
-	    sbw[i] = sbw42[i];
-	w[0] = sbw[2];
-	w[1] = sbw[3];
-	if (gs_rootfont(igs)->WMode) { /* for vertically-oriented metrics */
-	    code = gs_type42_wmode_metrics((gs_font_type42 *) pfont,
-					   (uint) op->value.intval,
-					   true, sbw42);
-	    if (code < 0) { /* no vertical metrics */
-		if (pfont->FontType == ft_CID_TrueType) {
-		    sbw[0] = sbw[2] / 2;
-		    sbw[1] = pbfont->FontBBox.q.y;
-		    sbw[2] = 0;
-		    sbw[3] = pbfont->FontBBox.p.y - pbfont->FontBBox.q.y;
-		}
-	    } else {
-		sbw[0] = sbw[2] / 2;
-		sbw[1] = (pbfont->FontBBox.q.y + pbfont->FontBBox.p.y - sbw42[3]) / 2;
-		sbw[2] = sbw42[2];
-		sbw[3] = sbw42[3];
-	    }
-	}
-    } else {
-        w[0] = sbw[2];
-        w[1] = sbw[3];
-    }
-    return zchar_set_cache(i_ctx_p, pbfont, op - 1,
-			   (present == metricsSideBearingAndWidth ?
-			    sbw : NULL),
-			   w, &pbfont->FontBBox,
-			   type42_fill, type42_stroke,
-			   gs_rootfont(igs)->WMode ? sbw : NULL);
+    cnref = op - 1;
+    glyph_index = (uint)op->value.intval;
+    code = zchar42_set_cache(i_ctx_p, pbfont, cnref, glyph_index, cont, &exec_cont, true);
+    if (code >= 0 && exec_cont != 0)
+	code = (*exec_cont)(i_ctx_p);
+    return code;
 }
 
 /* Continue after a CDevProc callout. */
@@ -144,7 +161,14 @@ private int type42_finish(i_ctx_t *i_ctx_p,
 private int
 type42_fill(i_ctx_t *i_ctx_p)
 {
-    return type42_finish(i_ctx_p, gs_fill);
+    int code;
+    gs_fixed_point fa = i_ctx_p->pgs->fill_adjust;
+
+    i_ctx_p->pgs->fill_adjust.x = i_ctx_p->pgs->fill_adjust.y = 0;
+    code = type42_finish(i_ctx_p, gs_fill);
+    i_ctx_p->pgs->fill_adjust = fa; /* Not sure whether we need to restore it,
+                                       but this isn't harmful. */
+    return code;
 }
 private int
 type42_stroke(i_ctx_t *i_ctx_p)
@@ -188,10 +212,17 @@ type42_finish(i_ctx_t *i_ctx_p, int (*cont) (gs_state *))
      * the current gstate and path.  This is a design bug that we will
      * have to address someday!
      */
+#if NEW_TT_INTERPRETER
+    code = gs_type42_append((uint)opc->value.intval, (gs_imager_state *)igs,
+			    igs->path, &penum->log2_scale,
+			    (penum->text.operation & TEXT_DO_ANY_CHARPATH) != 0,
+			    pfont->PaintType, penum->pair);
+#else
     code = gs_type42_append((uint)opc->value.intval, (gs_imager_state *)igs,
 			    igs->path, &penum->log2_scale,
 			    (penum->text.operation & TEXT_DO_ANY_CHARPATH) != 0,
 			    pfont->PaintType, (gs_font_type42 *)pfont);
+#endif
     if (code < 0)
 	return code;
     pop((psbpt == 0 ? 4 : 6));

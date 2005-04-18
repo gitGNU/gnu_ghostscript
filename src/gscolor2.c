@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gscolor2.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gscolor2.c,v 1.3 2005/04/18 12:05:57 Arabidopsis Exp $ */
 /* Level 2 color operators for Ghostscript library */
 #include "memory_.h"
 #include "gx.h"
@@ -34,6 +34,7 @@
 #include "gxcolor2.h"
 #include "gzstate.h"
 #include "gxpcolor.h"
+#include "stream.h"
 
 /* ---------------- General colors and color spaces ---------------- */
 
@@ -82,8 +83,8 @@ gs_setcolor(gs_state * pgs, const gs_client_color * pcc)
     gs_color_space *    pcs = pgs->color_space;
     gs_client_color     cc_old = *pgs->ccolor;
 
-    if (pgs->in_cachedevice)
-	return_error(gs_error_undefined);
+   if (pgs->in_cachedevice)
+	return_error(gs_error_undefined); /* PLRM3 page 215. */
     gx_unset_dev_color(pgs);
     (*pcs->type->adjust_color_count)(pcc, pcs, 1);
     *pgs->ccolor = *pcc;
@@ -167,6 +168,7 @@ private cs_proc_concretize_color(gx_concretize_Indexed);
 private cs_proc_install_cspace(gx_install_Indexed);
 private cs_proc_set_overprint(gx_set_overprint_Indexed);
 private cs_proc_adjust_cspace_count(gx_adjust_cspace_Indexed);
+private cs_proc_serialize(gx_serialize_Indexed);
 const gs_color_space_type gs_color_space_type_Indexed = {
     gs_color_space_index_Indexed, false, false,
     &st_color_space_Indexed, gx_num_components_1,
@@ -176,7 +178,8 @@ const gs_color_space_type gs_color_space_type_Indexed = {
     gx_concretize_Indexed, NULL,
     gx_default_remap_color, gx_install_Indexed,
     gx_set_overprint_Indexed,
-    gx_adjust_cspace_Indexed, gx_no_adjust_color_count
+    gx_adjust_cspace_Indexed, gx_no_adjust_color_count,
+    gx_serialize_Indexed
 };
 
 /* GC procedures. */
@@ -501,4 +504,61 @@ gs_cspace_indexed_lookup(const gs_indexed_params *pip, int index,
 	}
 	return 0;
     }
+}
+
+/* ---------------- Serialization. -------------------------------- */
+
+private int 
+gx_serialize_Indexed(const gs_color_space * pcs, stream * s)
+{
+    const gs_indexed_params * p = &pcs->params.indexed;
+    uint n;
+    int code = gx_serialize_cspace_type(pcs, s);
+
+    if (code < 0)
+	return code;
+    code = cs_serialize((const gs_color_space *)&p->base_space, s);
+    if (code < 0)
+	return code;
+    code = sputs(s, (const byte *)&p->hival, sizeof(p->hival), &n);
+    if (code < 0)
+	return code;
+    code = sputs(s, (const byte *)&p->use_proc, sizeof(p->use_proc), &n);
+    if (code < 0)
+	return code;
+    if (p->use_proc) {
+	code = sputs(s, (const byte *)&p->lookup.map->num_values, 
+		sizeof(p->lookup.map->num_values), &n);
+	if (code < 0)
+	    return code;
+	code = sputs(s, (const byte *)&p->lookup.map->values[0], 
+		sizeof(p->lookup.map->values[0]) * p->lookup.map->num_values, &n);
+    } else {
+	code = sputs(s, (const byte *)&p->lookup.table.size, 
+			sizeof(p->lookup.table.size), &n);
+	if (code < 0)
+	    return code;
+	code = sputs(s, p->lookup.table.data, p->lookup.table.size, &n);
+    }
+    return code;
+}
+
+/* ---------------- High level device support -------------------------------- */
+
+/*
+ * This special function forces a device to include the current
+ * color space into the output. Returns 'rangecheck' if the device can't handle it.
+ * The primary reason is to include DefaultGray, DefaultRGB, DefaultCMYK into PDF.
+ * Should be called for each page that requires the resource.
+ * Redundant calls per page with same cspace id are allowed.
+ * Redundant calls per page with different cspace id are are allowed but 
+ * highly undesirable.
+ * No need to call it with color spaces explicitly referred by the document,
+ * because they are included automatically.
+ * res_name and name_length passes the resource name.
+ */
+int
+gs_includecolorspace(gs_state * pgs, const byte *res_name, int name_length)
+{
+    return (*dev_proc(pgs->device, include_color_space))(pgs->device, pgs->color_space, res_name, name_length);
 }

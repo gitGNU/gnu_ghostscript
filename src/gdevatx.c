@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevatx.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevatx.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Practical Automation ATX-23, -24, and -38 driver */
 
 #include "math_.h"

@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxshade1.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxshade1.c,v 1.3 2005/04/18 12:05:57 Arabidopsis Exp $ */
 /* Rendering for non-mesh shadings */
 #include "math_.h"
 #include "memory_.h"
@@ -887,7 +887,7 @@ gs_shading_R_fill_rectangle(const gs_shading_t * psh0, const gs_rect * rect,
     gs_distance_transform(state.delta.x, state.delta.y, &ctm_only(pis), &dev_dpt);
     gs_distance_transform(state.dr, 0, &ctm_only(pis), &dev_dr);
     
-    state.width = hypot(dev_dpt.x, dev_dpt.y) + fabs(dev_dr.x);
+    state.width = hypot(dev_dpt.x, dev_dpt.y) + hypot(dev_dr.x, dev_dr.y);
 
     dist_between_circles = hypot(x1-x0, y1-y0);
 

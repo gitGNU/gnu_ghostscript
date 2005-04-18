@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsdevice.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsdevice.c,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* Device operators for Ghostscript library */
 #include "ctype_.h"
 #include "memory_.h"		/* for memchr, memcpy */
@@ -408,7 +408,22 @@ gs_setdevice_no_init(gs_state * pgs, gx_device * dev)
     /*
      * Just set the device, possibly changing color space but no other
      * device parameters.
+     * 
+     * Make sure we don't close the device if dev == pgs->device
+     * This could be done by allowing the rc_assign to close the
+     * old 'dev' if the rc goes to 0 (via the device structure's
+     * finalization procedure), but then the 'code' from the dev
+     * closedevice would not be propagated up. We want to allow
+     * the code to be handled, particularly for the pdfwrite
+     * device.
      */
+    if (pgs->device != NULL && pgs->device->rc.ref_count == 1 &&
+	pgs->device != dev) {
+	int code = gs_closedevice(pgs->device);
+
+	if (code < 0)
+	    return code;
+    }
     rc_assign(pgs->device, dev, "gs_setdevice_no_init");
     gs_state_update_device(pgs);
     return pgs->overprint ? gs_do_set_overprint(pgs) : 0;
@@ -479,9 +494,9 @@ gs_closedevice(gx_device * dev)
 
     if (dev->is_open) {
 	code = (*dev_proc(dev, close_device))(dev);
+	dev->is_open = false;
 	if (code < 0)
 	    return_error(code);
-	dev->is_open = false;
     }
     return code;
 }
@@ -804,14 +819,18 @@ gx_device_open_output_file(const gx_device * dev, char *fname,
 	if (!parsed.fname)
 	    return_error(gs_error_undefinedfilename);
 	strcpy(fmode, gp_fmode_wb);
-	if (positionable)
-	    strcat(fmode, "+");
-	return parsed.iodev->procs.fopen(parsed.iodev, parsed.fname, fmode,
-					 pfile, NULL, 0);
+  	if (positionable)
+  	    strcat(fmode, "+");
+ 	code = parsed.iodev->procs.fopen(parsed.iodev, parsed.fname, fmode,
+  					 pfile, NULL, 0);
+ 	if (code)
+     	    eprintf1("**** Could not open the file %s .\n", parsed.fname);
+ 	return code;
     }
     *pfile = gp_open_printer((fmt ? pfname : fname), binary);
     if (*pfile)
-	return 0;
+  	return 0;
+    eprintf1("**** Could not open the file %s .\n", (fmt ? pfname : fname));
     return_error(gs_error_invalidfileaccess);
 }
 

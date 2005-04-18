@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gstype1.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gstype1.h,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Client interface to Adobe Type 1 font routines */
 
 #ifndef gstype1_INCLUDED
@@ -46,8 +46,8 @@ struct gs_type1_data_s;
 #endif
 int gs_type1_interp_init(gs_type1_state * pcis, gs_imager_state * pis,
 			 gx_path * ppath, const gs_log2_scale_point * pscale,
-			 bool charpath_flag, int paint_type,
-			 gs_font_type1 * pfont);
+			 const gs_log2_scale_point * psubpixels, bool no_grid_fitting, 
+			 int paint_type, gs_font_type1 * pfont);
 void gs_type1_set_callback_data(gs_type1_state *pcis, void *callback_data);
 void gs_type1_set_lsb(gs_type1_state * pcis, const gs_point * psbpt);
 void gs_type1_set_width(gs_type1_state * pcis, const gs_point * pwpt);
@@ -74,6 +74,8 @@ typedef charstring_interpret_proc((*charstring_interpret_proc_t));
 
 /* Define the Type 1 interpreter. */
 charstring_interpret_proc(gs_type1_interpret);
+/* Define the Type 2 interpreter. */
+charstring_interpret_proc(gs_type2_interpret);
 
 /* ------ CharString number representation ------ */
 

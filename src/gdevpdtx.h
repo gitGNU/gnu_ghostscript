@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpdtx.h,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: gdevpdtx.h,v 1.2 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Shared implementation definitions for pdfwrite text and fonts */
 
 #ifndef gdevpdtx_INCLUDED
@@ -99,5 +99,7 @@ typedef struct pdf_font_resource_s pdf_font_resource_t;
 
 /* Get the object ID of a font resource. */
 long pdf_font_id(const pdf_font_resource_t *pdfont);
+/* Register charproc fonts with the page or substream. */
+int pdf_used_charproc_fonts(gx_device_pdf *pdev, pdf_font_resource_t *pdfont);
 
 #endif /* gdevpdtx_INCLUDED */

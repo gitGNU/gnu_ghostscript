@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gp_os9.c,v 1.2 2004/02/14 22:20:16 atai Exp $ */
+/* $Id: gp_os9.c,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* OSK-specific routines for Ghostscript */
 #include "pipe_.h"
 #include "string_.h"
@@ -31,7 +31,6 @@
 #include "gp.h"
 #include <signal.h>
 #include <stdlib.h>		/* for exit */
-#include <sys/param.h>		/* for MAXPATHLEN */
 
 int interrupted;
 
@@ -158,3 +157,24 @@ gp_setmode_binary(FILE * pfile, bool binary)
 	file->_flag &= ~_RBF;
     return 0;
 }
+
+/* ------ Font enumeration ------ */
+ 
+ /* This is used to query the native os for a list of font names and
+  * corresponding paths. The general idea is to save the hassle of
+  * building a custom fontmap file.
+  */
+ 
+void *gp_enumerate_fonts_init(gs_memory_t *mem)
+{
+    return NULL;
+}
+         
+int gp_enumerate_fonts_next(void *enum_state, char **fontname, char **path)
+{
+    return 0;
+}
+                         
+void gp_enumerate_fonts_free(void *enum_state)
+{
+}           

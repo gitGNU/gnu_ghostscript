@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: ichar1.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: ichar1.h,v 1.3 2005/04/18 12:05:59 Arabidopsis Exp $ */
 /* Type 1 / Type 2 character rendering operator procedures */
 
 #ifndef ichar1_INCLUDED
@@ -46,8 +46,16 @@ font_proc_glyph_outline(zchar1_glyph_outline);
  * Get a glyph outline given a CharString.  The glyph_outline procedure
  * for CIDFontType 0 fonts uses this.
  */
-int zcharstring_outline(gs_font_type1 *pfont, const ref *pgref,
+int zcharstring_outline(gs_font_type1 *pfont, int WMode, const ref *pgref,
 			const gs_glyph_data_t *pgd,
 			const gs_matrix *pmat, gx_path *ppath);
+
+int
+z1_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
+	      int members, gs_glyph_info_t *info);
+
+int z1_glyph_info_generic(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
+	      int members, gs_glyph_info_t *info, font_proc_glyph_info((*proc)), 
+	      int wmode);
 
 #endif /* ichar1_INCLUDED */

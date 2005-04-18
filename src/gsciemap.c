@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsciemap.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsciemap.c,v 1.3 2005/04/18 12:06:01 Arabidopsis Exp $ */
 /* CIE color rendering */
 #include "math_.h"
 #include "gx.h"
@@ -43,6 +43,7 @@
  * compiler providing 'inline'.
  */
 #define LOOKUP_INDEX_(vin, pcache, fbits)\
+  (cie_cached_value)\
   ((vin) <= (pcache)->vecs.params.base ? 0 :\
    (vin) >= (pcache)->vecs.params.limit ? (gx_cie_cache_size - 1) << (fbits) :\
    cie_cached_product2int( ((vin) - (pcache)->vecs.params.base),\
@@ -247,7 +248,7 @@ gx_remap_CIEABC(const gs_client_color * pc, const gs_color_space * pcs,
 		      frac2float(conc[2]), frac2float(conc[3]));
 	    gx_remap_concrete_cmyk(conc[0], conc[1], conc[2], conc[3],
 				   pdc, pis, dev, select);
-	    return 0;
+	    goto done;
 	default:	/* Can't happen. */
 	    return_error(gs_error_unknownerror);
 	case 3:
@@ -259,6 +260,12 @@ map3:
 	      frac2float(conc[2]));
     gx_remap_concrete_rgb(conc[0], conc[1], conc[2], pdc, pis,
 			  dev, select);
+done:
+    /* Save original color space and color info into dev color */
+    pdc->ccolor.paint.values[0] = pc->paint.values[0];
+    pdc->ccolor.paint.values[1] = pc->paint.values[1];
+    pdc->ccolor.paint.values[2] = pc->paint.values[2];
+    pdc->ccolor_valid = true;
     return 0;
 }
 int
@@ -386,7 +393,9 @@ gx_cie_real_remap_finish(cie_cached_vector3 vec3, frac * pconc,
 #define EABC(i)\
   cie_interpolate_fracs(pcrd->caches.EncodeABC[i].fixeds.ints.values, tabc[i])
 #define FABC(i)\
-  (EABC(i) << (_fixed_shift - _cie_interpolate_bits))
+  (_fixed_shift >= _cie_interpolate_bits) ? \
+  (EABC(i) <<  (_fixed_shift - _cie_interpolate_bits)) : \
+  (EABC(i) >> -(_fixed_shift - _cie_interpolate_bits))
 	rfix[0] = FABC(0);
 	rfix[1] = FABC(1);
 	rfix[2] = FABC(2);
@@ -533,7 +542,7 @@ cie_lookup_mult3(cie_cached_vector3 * pvec,
   (i >= (gx_cie_cache_size - 1) << _cie_interpolate_bits ? p : p + 1)
 
     if (I_IN_RANGE(0, u)) {
-	cie_cached_value i = (float)I_INDEX(0, u);
+	cie_cached_value i = I_INDEX(0, u);
 	const cie_cached_vector3 *p = I_ENTRY(i, 0);
 	const cie_cached_vector3 *p1 = I_ENTRY1(i, p);
 
@@ -549,7 +558,7 @@ cie_lookup_mult3(cie_cached_vector3 * pvec,
     }
 
     if (I_IN_RANGE(1, v)) {
-	cie_cached_value i = (float)I_INDEX(1, v);
+	cie_cached_value i = I_INDEX(1, v);
 	const cie_cached_vector3 *p = I_ENTRY(i, 1);
 	const cie_cached_vector3 *p1 = I_ENTRY1(i, p);
 
@@ -565,7 +574,7 @@ cie_lookup_mult3(cie_cached_vector3 * pvec,
     }
 
     if (I_IN_RANGE(2, w)) {
-	cie_cached_value i = (float)I_INDEX(2, w);
+	cie_cached_value i = I_INDEX(2, w);
 	const cie_cached_vector3 *p = I_ENTRY(i, 2);
 	const cie_cached_vector3 *p1 = I_ENTRY1(i, p);
 

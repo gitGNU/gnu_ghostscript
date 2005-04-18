@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpdfm.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevpdfm.c,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* pdfmark processing for PDF-writing driver */
 #include "math_.h"
 #include "memory_.h"
@@ -38,7 +38,6 @@
 
 /* GC descriptors */
 private_st_pdf_article();
-private_st_pdf_graphics_save();
 
 /*
  * The pdfmark pseudo-parameter indicates the occurrence of a pdfmark
@@ -58,6 +57,8 @@ private_st_pdf_graphics_save();
 				/* in 1st argument */
 #define PDFMARK_NO_REFS 8	/* don't substitute references for names */
 				/* anywhere */
+#define PDFMARK_TRUECTM 16	/* pass the true CTM to the procedure, */
+				/* not the one transformed to reflect the default user space */
 typedef struct pdfmark_name_s {
     const char *mname;
     pdfmark_proc((*proc));
@@ -146,7 +147,7 @@ pdfmark_make_dest(char dstr[MAX_DEST_STRING], gx_device_pdf * pdev,
     int len;
 
     if (view_string.size == 0)
-	param_string_from_string(view_string, "[/XYZ 0 0 1]");
+	param_string_from_string(view_string, "[/XYZ null null null]");
     if (page == 0)
 	strcpy(dstr, "[null ");
     else if (pdfmark_find_key("/Action", pairs, count, &action) &&
@@ -587,6 +588,19 @@ pdfmark_put_ao_pairs(gx_device_pdf * pdev, cos_dict_t *pcd,
 			 COS_OBJECT_VALUE(&avalue, adict));
 	} else if (pdf_key_eq(Action + 1, "/GoTo"))
 	    pdfmark_put_pair(pcd, Action);
+	else if (Action[1].size < 30) {
+	    /* Hack: we could substitute names in pdfmark_process,
+	       now should recognize whether it was done. 
+	       Not a perfect method though. 
+	       Go with it for a while. */
+	    char buf[30];
+	    int d0, d1;
+
+	    memcpy(buf, Action[1].data, Action[1].size);
+	    buf[Action[1].size] = 0;
+	    if (sscanf(buf, "%d %d R", &d0, &d1) == 2)
+		pdfmark_put_pair(pcd, Action);
+	}
     }
     /*
      * If we have /Dest or /File without the right kind of action,
@@ -682,6 +696,7 @@ pdfmark_write_outline(gx_device_pdf * pdev, pdf_outline_node_t * pnode,
     stream *s;
 
     pdf_open_separate(pdev, pnode->id);
+    pnode->action->id = pnode->id;
     s = pdev->strm;
     stream_puts(s, "<< ");
     cos_dict_elements_write(pnode->action, pdev);
@@ -1149,6 +1164,111 @@ pdfmark_PAGE(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
     return pdfmark_put_pairs(pdf_current_page_dict(pdev), pairs, count);
 }
 
+/* Add a page label for the current page. The last label on a page 
+ * overrides all previous labels for this page. Unlabeled pages will get 
+ * empty page labels. label == NULL flushes the last label */
+private int 
+pdfmark_add_pagelabel(gx_device_pdf * pdev, const gs_param_string *label) 
+{
+    cos_value_t value;
+    cos_dict_t *dict = 0;
+    int code = 0;
+
+    /* create label dict (and page label array if not present yet) */
+    if (label != 0) {
+        if (!pdev->PageLabels) {
+            pdev->PageLabels = cos_array_alloc(pdev, 
+                    "pdfmark_add_pagelabel(PageLabels)");
+            if (pdev->PageLabels == 0)
+                return_error(gs_error_VMerror);
+            pdev->PageLabels->id = pdf_obj_ref(pdev);
+
+            /* empty label for unlabled pages before first labled page */
+            pdev->PageLabels_current_page = 0;
+            pdev->PageLabels_current_label = cos_dict_alloc(pdev,
+                                           "pdfmark_add_pagelabel(first)");
+            if (pdev->PageLabels_current_label == 0)
+                return_error(gs_error_VMerror);
+        }
+
+        dict = cos_dict_alloc(pdev, "pdfmark_add_pagelabel(dict)");
+        if (dict == 0)
+            return_error(gs_error_VMerror);
+
+        code = cos_dict_put_c_key(dict, "/P", cos_string_value(&value, 
+            label->data, label->size));
+        if (code < 0) {
+            COS_FREE(dict, "pdfmark_add_pagelabel(dict)");
+            return code;
+        }
+    }
+
+    /* flush current label */
+    if (label == 0 || pdev->next_page != pdev->PageLabels_current_page) {
+        /* handle current label */
+        if (pdev->PageLabels_current_label) {
+            if (code >= 0) {
+                code = cos_array_add_int(pdev->PageLabels, 
+                        pdev->PageLabels_current_page);
+                if (code >= 0) 
+                    code = cos_array_add(pdev->PageLabels,
+                            COS_OBJECT_VALUE(&value, 
+                                pdev->PageLabels_current_label));
+            }
+            pdev->PageLabels_current_label = 0;
+        }
+
+        /* handle unlabled pages between current labeled page and 
+         * next labeled page */
+        if (pdev->PageLabels) {
+            if (pdev->next_page - pdev->PageLabels_current_page > 1) {
+                cos_dict_t *tmp = cos_dict_alloc(pdev, 
+                        "pdfmark_add_pagelabel(tmp)");
+                if (tmp == 0)
+                    return_error(gs_error_VMerror);
+
+                code = cos_array_add_int(pdev->PageLabels, 
+                        pdev->PageLabels_current_page + 1);
+                if (code >= 0) 
+                    code = cos_array_add(pdev->PageLabels,
+                            COS_OBJECT_VALUE(&value, tmp));
+            }
+        }
+    }
+
+    /* new current label */
+    if (pdev->PageLabels_current_label)
+        COS_FREE(pdev->PageLabels_current_label, 
+                "pdfmark_add_pagelabel(current_label)");
+    pdev->PageLabels_current_label = dict;
+    pdev->PageLabels_current_page = pdev->next_page;
+
+    return code;
+}
+
+/* Close the pagelabel numtree.*/
+int 
+pdfmark_end_pagelabels(gx_device_pdf * pdev) 
+{
+    return pdfmark_add_pagelabel(pdev, 0);
+}
+
+/* [ /Label string /PlateColor string pdfmark */
+/* FIXME: /PlateColor is ignored */
+private int
+pdfmark_PAGELABEL(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
+	     const gs_matrix * pctm, const gs_param_string * no_objname)
+{
+    gs_param_string key;
+
+    if (pdev->CompatibilityLevel >= 1.3) {
+        if (pdfmark_find_key("/Label", pairs, count, &key)) {
+            return pdfmark_add_pagelabel(pdev, &key); 
+        }
+    }
+    return 0;
+}
+
 /* DOCINFO pdfmark */
 private int
 pdfmark_DOCINFO(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
@@ -1171,6 +1291,8 @@ pdfmark_DOCINFO(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	const byte *vdata;	/* alt_pair[1].data */
 	uint vsize;		/* alt_pair[1].size */
 	byte *str = 0;
+
+	vsize = 0x0badf00d; /* Quiet compiler. */
 
 	if (pdf_key_eq(pairs + i, "/Producer")) {
 	    /*
@@ -1251,14 +1373,6 @@ pdfmark_DOCVIEW(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	return pdfmark_put_pairs(pdev->Catalog, pairs, count);
 }
 
-/* [ /Label str1 /PlateColor str2 /PAGELABEL pdfmark */
-private int
-pdfmark_PAGELABEL(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
-		  const gs_matrix * pctm, const gs_param_string * no_objname)
-{
-    return 0;			/****** NOT IMPLEMENTED YET ******/
-}
-
 /* ---------------- Named object pdfmarks ---------------- */
 
 /* [ /BBox [llx lly urx ury] /_objdef {obj} /BP pdfmark */
@@ -1268,64 +1382,64 @@ pdfmark_BP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 {
     gs_rect bbox;
     cos_stream_t *pcs;
-    pdf_graphics_save_t *pdgs;
     int code;
-    double xscale = pdev->HWResolution[0] / 72.0,
-	yscale = pdev->HWResolution[1] / 72.0;
-    char bbox_str[6 + 4 * 12];
+    gs_matrix ictm;
+    byte bbox_str[6 + 6 * 15], matrix_str[6 + 6 * 15];
+    int bbox_str_len, matrix_str_len;
+    stream s;
 
     if (objname == 0 || count != 2 || !pdf_key_eq(&pairs[0], "/BBox"))
 	return_error(gs_error_rangecheck);
+    code = gs_matrix_invert(pctm, &ictm);
+    if (code < 0)
+	return code;
     if (sscanf((const char *)pairs[1].data, "[%lg %lg %lg %lg]",
-	       &bbox.p.x, &bbox.p.y, &bbox.q.x, &bbox.q.y) != 4
-	)
+	       &bbox.p.x, &bbox.p.y, &bbox.q.x, &bbox.q.y) != 4)
 	return_error(gs_error_rangecheck);
     if ((pdev->used_mask << 1) == 0)
 	return_error(gs_error_limitcheck);
-    code = pdf_make_named(pdev, objname, cos_type_stream,
-			  (cos_object_t **)&pcs, true);
-    if (code < 0)
-	return code;
+    {	pdf_resource_t *pres;
+	cos_value_t value;
+
+	code = pdf_open_page(pdev, PDF_IN_STREAM);
+	if (code < 0)
+	    return code;
+	code = pdf_enter_substream(pdev, resourceXObject, gs_no_id, &pres, true);
+	if (code < 0)
+	    return code;
+	pcs = (cos_stream_t *)pres->object;
+ 	pdev->substream_Resources = cos_dict_alloc(pdev, "pdfmark_BP");
+ 	if (!pdev->substream_Resources)
+	    return_error(gs_error_VMerror);
+	code = cos_dict_put(pdev->local_named_objects, objname->data,
+				objname->size, cos_object_value(&value, pres->object));
+	if (code < 0)
+	    return code;
+	pres->named = true;
+	pres->where_used = 0;	/* initially not used */
+	pcs->pres = pres;
+    }
     pcs->is_graphics = true;
     gs_bbox_transform(&bbox, pctm, &bbox);
-    sprintf(bbox_str, "[%.8g %.8g %.8g %.8g]",
-	    bbox.p.x * xscale, bbox.p.y * yscale,
-	    bbox.q.x * xscale, bbox.q.y * yscale);
+    swrite_string(&s, bbox_str, sizeof(bbox_str));
+    pprintg4(&s, "[%g %g %g %g]",
+	    bbox.p.x, bbox.p.y, bbox.q.x, bbox.q.y);
+    bbox_str_len = stell(&s);
+    swrite_string(&s, matrix_str, sizeof(bbox_str));
+    pprintg6(&s, "[%g %g %g %g %g %g]",
+	    ictm.xx, ictm.xy, ictm.yx, ictm.yy, ictm.tx, ictm.tx);
+    matrix_str_len = stell(&s);
     if ((code = cos_stream_put_c_strings(pcs, "/Type", "/XObject")) < 0 ||
 	(code = cos_stream_put_c_strings(pcs, "/Subtype", "/Form")) < 0 ||
 	(code = cos_stream_put_c_strings(pcs, "/FormType", "1")) < 0 ||
-	(code = cos_stream_put_c_strings(pcs, "/Matrix", "[1 0 0 1 0 0]")) < 0 ||
 	(code = cos_dict_put_c_key_string(cos_stream_dict(pcs), "/BBox",
-					  (byte *)bbox_str,
-					  strlen(bbox_str))) < 0
+					  bbox_str, bbox_str_len)) < 0 ||
+	(code = cos_dict_put_c_key_string(cos_stream_dict(pcs), "/Matrix",
+				      matrix_str, matrix_str_len)) < 0 ||
+ 	(code = cos_dict_put_c_key_object(cos_stream_dict(pcs), "/Resources", 
+ 					  COS_OBJECT(pdev->substream_Resources))) < 0
 	)
 	return code;
-    pdgs = gs_alloc_struct(pdev->pdf_memory, pdf_graphics_save_t,
-			   &st_pdf_graphics_save, "pdfmark_BP");
-    if (pdgs == 0)
-	return_error(gs_error_VMerror);
-    if (pdev->context != PDF_IN_NONE) {
-	code = pdf_open_page(pdev, PDF_IN_STREAM);
-	if (code < 0) {
-	    gs_free_object(pdev->pdf_memory, pdgs, "pdfmark_BP");
-	    return code;
-	}
-    }
-    if (!pdev->open_graphics) {
-	pdev->pictures.save_strm = pdev->strm;
-	pdev->strm = pdev->pictures.strm;
-    }
-    pdgs->prev = pdev->open_graphics;
-    pdgs->object = pcs;
-    pdgs->position = stell(pdev->pictures.strm);
-    pdgs->save_context = pdev->context;
-    pdgs->save_procsets = pdev->procsets;
-    pdgs->save_contents_id = pdev->contents_id;
-    pdev->open_graphics = pdgs;
-    pdev->context = PDF_IN_STREAM;
-    pdev->procsets = 0;
-    pdev->contents_id = pcs->id;
-    pdev->used_mask <<= 1;
     return 0;
 }
 
@@ -1334,93 +1448,15 @@ private int
 pdfmark_EP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	   const gs_matrix * pctm, const gs_param_string * no_objname)
 {
-    pdf_graphics_save_t *pdgs = pdev->open_graphics;
-    pdf_resource_t *pres;
-    cos_stream_t *pcs;
-    long start;
-    uint size;
     int code;
 
-    if (count != 0 || pdgs == 0 || !(pcs = pdgs->object)->is_open)
-	return_error(gs_error_rangecheck);
-    code = pdf_open_contents(pdev, PDF_IN_STREAM);
+    code = pdf_add_procsets(pdev->substream_Resources, pdev->procsets);
     if (code < 0)
 	return code;
-    code = pdf_alloc_resource(pdev, resourceXObject, gs_no_id, &pres,
-			      pcs->id);
+    code = pdf_exit_substream(pdev);
     if (code < 0)
 	return code;
-    pres->object = COS_OBJECT(pcs);
-    pcs->pres = pres;
-    pres->named = true;
-    pres->where_used = 0;	/* initially not used */
-    /* Add the resources to the stream object. */
-    {
-	cos_dict_t *pcrd = cos_dict_alloc(pdev, "EP");
-	pdf_page_t page;
-	int i;
-	cos_value_t v;
-
-	if (pcrd == 0)
-	    return_error(gs_error_VMerror);
-	code = pdf_store_page_resources(pdev, &page);
-	if (code < 0)
-	    goto fail;
-	for (i = 0; i < countof(page.resource_ids); ++i)
-	    if (page.resource_ids[i]) {
-		char idstr[sizeof(long) / 3 + 1 + 5]; /* %ld 0 R\0 */
-
-		sprintf(idstr, "%ld 0 R", page.resource_ids[i]);
-		cos_string_value(&v, (byte *)idstr, strlen(idstr));
-		code = cos_dict_put_c_key(pcrd, pdf_resource_type_names[i], &v);
-		if (code < 0)
-		    goto fail;
-	    }
-	{
-	    char str[5 + 7 + 7 + 7 + 5 + 2];
-
-	    strcpy(str, "[/PDF");
-	    if (page.procsets & ImageB)
-		strcat(str, "/ImageB");
-	    if (page.procsets & ImageC)
-		strcat(str, "/ImageC");
-	    if (page.procsets & ImageI)
-		strcat(str, "/ImageI");
-	    if (page.procsets & Text)
-		strcat(str, "/Text");
-	    strcat(str, "]");
-	    cos_string_value(&v, (byte *)str, strlen(str));
-	    code = cos_dict_put_c_key(pcrd, "/ProcSet", &v);
-	    if (code < 0)
-		goto fail;
-	}
-	code = cos_dict_put_c_key_object(cos_stream_dict(pcs), "/Resources",
-					 COS_OBJECT(pcrd));
-    }
- fail:
-    start = pdgs->position;
-    pcs->is_open = false;
-    size = stell(pdev->strm) - start;
-    pdev->open_graphics = pdgs->prev;
-    pdev->context = pdgs->save_context;
-    pdev->procsets = pdgs->save_procsets;
-    pdev->contents_id = pdgs->save_contents_id;
-    gs_free_object(pdev->pdf_memory, pdgs, "pdfmark_EP");
-    /* Copy the data to the streams file. */
-    sflush(pdev->strm);
-    sseek(pdev->strm, start);
-    fseek(pdev->pictures.file, start, SEEK_SET);
-    pdf_copy_data(pdev->streams.strm, pdev->pictures.file, size);
-    if (code >= 0)
-	code = cos_stream_add(pcs, size);
-    /* Keep the file in sync with the stream. */
-    fseek(pdev->pictures.file, start, SEEK_SET);
-    if (!pdev->open_graphics) {
-	pdev->strm = pdev->pictures.save_strm;
-	pdev->pictures.save_strm = 0;
-    }
-    pdev->used_mask >>= 1;
-    return code;
+    return 0;
 }
 
 /* [ {obj} /SP pdfmark */
@@ -1429,7 +1465,6 @@ pdfmark_SP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	   const gs_matrix * pctm, const gs_param_string * no_objname)
 {
     cos_object_t *pco;		/* stream */
-    gs_matrix ctm;
     int code;
 
     if (count != 1)
@@ -1441,10 +1476,7 @@ pdfmark_SP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
     code = pdf_open_contents(pdev, PDF_IN_STREAM);
     if (code < 0)
 	return code;
-    ctm = *pctm;
-    ctm.tx *= pdev->HWResolution[0] / 72.0;
-    ctm.ty *= pdev->HWResolution[1] / 72.0;
-    pdf_put_matrix(pdev, "q ", &ctm, "cm");
+    pdf_put_matrix(pdev, "q ", pctm, "cm");
     pprintld1(pdev->strm, "/R%ld Do Q\n", pco->id);
     pco->pres->where_used |= pdev->used_mask;
     return 0;
@@ -1820,13 +1852,13 @@ private const pdfmark_name mark_names[] =
     {"PS",           pdfmark_PS,          PDFMARK_NAMEABLE},
     {"PAGES",        pdfmark_PAGES,       0},
     {"PAGE",         pdfmark_PAGE,        0},
+    {"PAGELABEL",    pdfmark_PAGELABEL,   0},
     {"DOCINFO",      pdfmark_DOCINFO,     0},
     {"DOCVIEW",      pdfmark_DOCVIEW,     0},
-    {"PAGELABEL",    pdfmark_PAGELABEL,   0},
 	/* Named objects. */
-    {"BP",           pdfmark_BP,          PDFMARK_NAMEABLE},
+    {"BP",           pdfmark_BP,          PDFMARK_NAMEABLE | PDFMARK_TRUECTM},
     {"EP",           pdfmark_EP,          0},
-    {"SP",           pdfmark_SP,          PDFMARK_ODD_OK | PDFMARK_KEEP_NAME},
+    {"SP",           pdfmark_SP,          PDFMARK_ODD_OK | PDFMARK_KEEP_NAME | PDFMARK_TRUECTM},
     {"OBJ",          pdfmark_OBJ,         PDFMARK_NAMEABLE},
     {"PUT",          pdfmark_PUT,         PDFMARK_ODD_OK | PDFMARK_KEEP_NAME},
     {".PUTDICT",     pdfmark_PUTDICT,     PDFMARK_ODD_OK | PDFMARK_KEEP_NAME},
@@ -1880,18 +1912,6 @@ pdfmark_process(gx_device_pdf * pdev, const gs_param_string_array * pma)
 	       &ctm.xx, &ctm.xy, &ctm.yx, &ctm.yy, &ctm.tx, &ctm.ty) != 6
 	)
 	return_error(gs_error_rangecheck);
-    /*
-     * Our coordinate system is scaled so that user space is always
-     * default user space.  Adjust the CTM to match this.
-     */
-    {
-	double xscale = 72.0 / pdev->HWResolution[0],
-	    yscale = 72.0 / pdev->HWResolution[1];
-
-	ctm.xx *= xscale, ctm.xy *= yscale;
-	ctm.yx *= xscale, ctm.yy *= yscale;
-	ctm.tx *= xscale, ctm.ty *= yscale;
-    }
     size -= 2;			/* remove CTM & pdfmark name */
     for (pmn = mark_names; pmn->mname != 0; ++pmn)
 	if (pdf_key_eq(pts, pmn->mname)) {
@@ -1900,6 +1920,20 @@ pdfmark_process(gx_device_pdf * pdev, const gs_param_string_array * pma)
 	    gs_param_string *pairs;
 	    int j;
 
+    /*
+     * Our coordinate system is scaled so that user space is always
+	     * default user space.  Adjust the CTM to match this, except if this
+	     * particular pdfmark requires the "true" CTM.
+     */
+	    if (pmn->options & PDFMARK_TRUECTM)
+		DO_NOTHING;
+	    else {
+	double xscale = 72.0 / pdev->HWResolution[0],
+	    yscale = 72.0 / pdev->HWResolution[1];
+	ctm.xx *= xscale, ctm.xy *= yscale;
+	ctm.yx *= xscale, ctm.yy *= yscale;
+	ctm.tx *= xscale, ctm.ty *= yscale;
+    }
 	    if (size & !odd_ok)
 		return_error(gs_error_rangecheck);
 	    if (pmn->options & PDFMARK_NAMEABLE) {

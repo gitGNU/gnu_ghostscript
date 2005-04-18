@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gstype2.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gstype2.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Adobe Type 2 charstring interpreter */
 #include "math_.h"
 #include "memory_.h"
@@ -38,6 +38,7 @@
 #include "gxfont.h"
 #include "gxfont1.h"
 #include "gxtype1.h"
+#include "gxhintn.h"
 
 /* NOTE: The following are not yet implemented:
  *	Registry items other than 0
@@ -65,6 +66,8 @@ type2_sbw(gs_type1_state * pcis, cs_ptr csp, cs_ptr cstack, ip_state_t * ipsp,
 	  bool explicit_width)
 {
     fixed wx;
+    t1_hinter *h = &pcis->h;
+    int code;
 
     if (explicit_width) {
 	wx = cstack[0] + pcis->pfont->data.nominalWidthX;
@@ -72,6 +75,9 @@ type2_sbw(gs_type1_state * pcis, cs_ptr csp, cs_ptr cstack, ip_state_t * ipsp,
 	--csp;
     } else
 	wx = pcis->pfont->data.defaultWidthX;
+    code = t1_hinter__sbw(h, fixed_0, fixed_0, wx, fixed_0);
+    if (code < 0)
+	return code;
     gs_type1_sbw(pcis, fixed_0, fixed_0, wx, fixed_0);
     /* Back up the interpretation pointer. */
     ipsp->ip--;
@@ -90,28 +96,16 @@ type2_vstem(gs_type1_state * pcis, cs_ptr csp, cs_ptr cstack)
 {
     fixed x = 0;
     cs_ptr ap;
+    t1_hinter *h = &pcis->h;
+    int code;
 
-    apply_path_hints(pcis, false);
-    for (ap = cstack; ap + 1 <= csp; x += ap[1], ap += 2)
-	type1_vstem(pcis, x += ap[0], ap[1], false);
+    for (ap = cstack; ap + 1 <= csp; x += ap[1], ap += 2) {
+        code = t1_hinter__vstem(h, x += ap[0], ap[1]);
+	if (code < 0)
+	    return code;
+    }
     pcis->num_hints += (csp + 1 - cstack) >> 1;
     return 0;
-}
-
-/* Enable only the hints selected by a mask. */
-private void
-enable_hints(stem_hint_table * psht, const byte * mask)
-{
-    stem_hint *table = &psht->data[0];
-    stem_hint *ph = table + psht->current;
-
-    for (ph = &table[psht->count]; --ph >= table;) {
-	ph->active = (mask[ph->index >> 3] & (0x80 >> (ph->index & 7))) != 0;
-	if_debug6('1', "[1]  %s %u: %g(%g),%g(%g)\n",
-		  (ph->active ? "enable" : "disable"), ph->index,
-		  fixed2float(ph->v0), fixed2float(ph->dv0),
-		  fixed2float(ph->v1), fixed2float(ph->dv1));
-    }
 }
 
 /* ------ Main interpreter ------ */
@@ -128,8 +122,8 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 {
     gs_font_type1 *pfont = pcis->pfont;
     gs_type1_data *pdata = &pfont->data;
+    t1_hinter *h = &pcis->h;
     bool encrypted = pdata->lenIV >= 0;
-    gs_op1_state s;
     fixed cstack[ostack_size];
     cs_ptr csp;
 #define clear CLEAR_CSTACK(cstack, csp)
@@ -151,17 +145,26 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 
     switch (pcis->init_done) {
 	case -1:
+	    t1_hinter__init(h, pcis->path);
 	    break;
 	case 0:
-	    gs_type1_finish_init(pcis, &s);	/* sets sfc, ptx, pty, origin */
+	    gs_type1_finish_init(pcis);	/* sets origin */
+            code = t1_hinter__set_mapping(h, &pcis->pis->ctm,
+			    &pfont->FontMatrix, &pfont->base->FontMatrix,
+			    pcis->scale.x.log2_unit, pcis->scale.x.log2_unit,
+			    pcis->scale.x.log2_unit - pcis->log2_subpixels.x,
+			    pcis->scale.y.log2_unit - pcis->log2_subpixels.y,
+			    pcis->origin.x, pcis->origin.y, 
+			    gs_currentaligntopixels(pfont->dir));
+	    if (code < 0)
+	    	return code;
+	    code = t1_hinter__set_font_data(h, 2, pdata, pcis->no_grid_fitting);
+	    if (code < 0)
+	    	return code;
 	    break;
 	default /*case 1 */ :
-	    ptx = pcis->position.x;
-	    pty = pcis->position.y;
-	    sfc = pcis->fc;
+	    break;
     }
-    sppath = pcis->path;
-    s.pcis = pcis;
     INIT_CSTACK(cstack, csp, pcis);
 
     if (pgd == 0)
@@ -261,37 +264,20 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 	    case cx_vstem:
 		goto vstem;
 	    case cx_vmoveto:
-		/*
-		 * Type 2 CharStrings, unlike Type 1, insert an explicit
-		 * closepath before a moveto rather than an implicit one.
-		 * (This makes a difference for charpath.)  Note that if
-		 * we are just getting the glyph info, sppath may be 0:
-		 * this is OK, because check_first_operator will return.
-		 */
-		if (pfont->PaintType != 1 && sppath != 0) {
-		    code = gx_path_close_subpath(sppath);
-		    if (code < 0)
-			return code;
-		}
 		check_first_operator(csp > cstack);
-		accum_y(*csp);
+                code = t1_hinter__rmoveto(h, 0, *csp);
 	      move:
-		if ((pcis->hint_next != 0 || !gx_path_is_void(sppath)))
-		    apply_path_hints(pcis, true);
-		code = gx_path_add_point(sppath, ptx, pty);
 	      cc:
 		if (code < 0)
 		    return code;
 		goto pp;
 	    case cx_rlineto:
 		for (ap = cstack; ap + 1 <= csp; ap += 2) {
-		    accum_xy(ap[0], ap[1]);
-		    code = gx_path_add_line(sppath, ptx, pty);
+		    code = t1_hinter__rlineto(h, ap[0], ap[1]);
 		    if (code < 0)
 			return code;
 		}
-	      pp:if_debug2('1', "[1]pt=(%g,%g)\n",
-			  fixed2float(ptx), fixed2float(pty));
+	      pp:
 		cnext;
 	    case cx_hlineto:
 		vertical = false;
@@ -299,34 +285,24 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 	    case cx_vlineto:
 		vertical = true;
 	      hvl:for (ap = cstack; ap <= csp; vertical = !vertical, ++ap) {
-		    if (vertical)
-			accum_y(*ap);
-		    else
-			accum_x(*ap);
-		    code = gx_path_add_line(sppath, ptx, pty);
+		    if (vertical) {
+			code = t1_hinter__rlineto(h, 0, ap[0]);
+		    } else {
+			code = t1_hinter__rlineto(h, ap[0], 0);
+		    }
 		    if (code < 0)
 			return code;
 		}
 		goto pp;
 	    case cx_rrcurveto:
 		for (ap = cstack; ap + 5 <= csp; ap += 6) {
-		    code = gs_op1_rrcurveto(&s, ap[0], ap[1], ap[2],
+		    code = t1_hinter__rcurveto(h, ap[0], ap[1], ap[2],
 					    ap[3], ap[4], ap[5]);
 		    if (code < 0)
 			return code;
 		}
 		goto pp;
 	    case cx_endchar:
-		/*
-		 * See vmoveto above re closing the subpath.  Note that
-		 * sppath may be 0 if we are just getting the glyph info.
-		 */
-		if (pfont->PaintType != 1 && sppath != 0) {
-		    code = gx_path_close_subpath(sppath);
-		    if (code < 0)
-			return code;
-		    apply_path_hints(pcis, true);
-		}
   		/*
 		 * It is a feature of Type 2 CharStrings that if endchar is
 		 * invoked with 4 or 5 operands, it is equivalent to the
@@ -339,7 +315,7 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 		 */
 		if (csp >= cstack + 3) {
 		    check_first_operator(csp > cstack + 3);
-		    code = gs_type1_seac(pcis, cstack, pcis->lsb.x, ipsp);
+		    code = gs_type1_seac(pcis, cstack, 0, ipsp);
 		    if (code < 0)
 			return code;
 		    clear;
@@ -351,6 +327,15 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 		 * In this case, there might be a width on the stack.
 		 */
 		check_first_operator(csp >= cstack);
+		code = t1_hinter__endchar(h, (pcis->seac_accent >= 0));
+		if (code < 0)
+		    return code;
+		if (pcis->seac_accent < 0) {
+		    code = t1_hinter__endglyph(h);
+		    if (code < 0)
+			return code;
+		} else
+		    t1_hinter__setcurrentpoint(h, pcis->save_adxy.x, pcis->save_adxy.y);
 		code = gs_type1_endchar(pcis);
 		if (code == 1) {
 		    /*
@@ -361,7 +346,6 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 		     */
 		    pcis->num_hints = 0;
 		    /* do accent of seac */
-		    spt = pcis->position;
 		    ipsp = &pcis->ipstack[pcis->ips_count - 1];
 		    cip = ipsp->cs_data.bits.data;
 		    goto call;
@@ -369,23 +353,23 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 		return code;
 	    case cx_rmoveto:
 		/* See vmoveto above re closing the subpath. */
-		if (pfont->PaintType != 1 && sppath != 0) {
-		    code = gx_path_close_subpath(sppath);
-		    if (code < 0)
-			return code;
+		check_first_operator(!((csp - cstack) & 1));
+		if (csp > cstack + 1) {
+		  /* Some Type 2 charstrings omit the vstemhm operator before rmoveto, 
+		     even though this is only allowed before hintmask and cntrmask.
+		     Thanks to Felix Pahl.
+		   */
+		  type2_vstem(pcis, csp - 2, cstack);
+		  cstack [0] = csp [-1];
+		  cstack [1] = csp [ 0];
+		  csp = cstack + 1;
 		}
-		check_first_operator(csp > cstack + 1);
-		accum_xy(csp[-1], *csp);
+                code = t1_hinter__rmoveto(h, csp[-1], *csp);
 		goto move;
 	    case cx_hmoveto:
 		/* See vmoveto above re closing the subpath. */
-		if (pfont->PaintType != 1 && sppath != 0) {
-		    code = gx_path_close_subpath(sppath);
-		    if (code < 0)
-			return code;
-		}
 		check_first_operator(csp > cstack);
-		accum_x(*csp);
+                code = t1_hinter__rmoveto(h, *csp, 0);
 		goto move;
 	    case cx_vhcurveto:
 		vertical = true;
@@ -393,34 +377,19 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 	    case cx_hvcurveto:
 		vertical = false;
 	      hvc:for (ap = cstack; ap + 3 <= csp; vertical = !vertical, ap += 4) {
-		    gs_fixed_point pt1, pt2, p;
-		    fixed ax0, ay0;
-
-		    code = gx_path_current_point(sppath, &p);
-		    if (code < 0)
-			return code;
-		    ax0 = p.x - ptx;
-		    ay0 = p.y - pty;
-		    if (vertical)
-			accum_y(ap[0]);
-		    else
-			accum_x(ap[0]);
-		    pt1.x = ptx + ax0, pt1.y = pty + ay0;
-		    accum_xy(ap[1], ap[2]);
-		    pt2.x = ptx, pt2.y = pty;
+		    gs_fixed_point pt[2] = {{0, 0}, {0, 0}};
 		    if (vertical) {
+			pt[0].y = ap[0];
+			pt[1].x = ap[3];
 			if (ap + 4 == csp)
-			    accum_xy(ap[3], ap[4]);
-			else
-			    accum_x(ap[3]);
+			    pt[1].y = ap[4];
 		    } else {
+			pt[0].x = ap[0];
 			if (ap + 4 == csp)
-			    accum_xy(ap[4], ap[3]);
-			else
-			    accum_y(ap[3]);
+			    pt[1].x = ap[4];
+			pt[1].y = ap[3];
 		    }
-		    code = gx_path_add_curve(sppath, pt1.x, pt1.y,
-					     pt2.x, pt2.y, ptx, pty);
+		    code = t1_hinter__rcurveto(h, pt[0].x, pt[0].y, ap[1], ap[2], pt[1].x, pt[1].y);
 		    if (code < 0)
 			return code;
 		}
@@ -448,14 +417,15 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 		}
 		cnext;
 	    case c2_hstemhm:
-		pcis->have_hintmask = true;
 	      hstem:check_first_operator(!((csp - cstack) & 1));
-		apply_path_hints(pcis, false);
 		{
 		    fixed x = 0;
 
-		    for (ap = cstack; ap + 1 <= csp; x += ap[1], ap += 2)
-			type1_hstem(pcis, x += ap[0], ap[1], false);
+		    for (ap = cstack; ap + 1 <= csp; x += ap[1], ap += 2) {
+			    code = t1_hinter__hstem(h, x += ap[0], ap[1]);
+			    if (code < 0)
+				return code;
+		    }
 		}
 		pcis->num_hints += (csp + 1 - cstack) >> 1;
 		cnext;
@@ -464,12 +434,8 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 		 * A hintmask at the beginning of the CharString is
 		 * equivalent to vstemhm + hintmask.  For simplicity, we use
 		 * this interpretation everywhere.
-		 *
-		 * Even though the Adobe documentation doesn't say this,
-		 * it appears that the same holds true for cntrmask.
 		 */
 	    case c2_cntrmask:
-		pcis->have_hintmask = true;
 		check_first_operator(!((csp - cstack) & 1));
 		type2_vstem(pcis, csp, cstack);
 		/*
@@ -483,8 +449,6 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 		    byte mask[max_total_stem_hints / 8];
 		    int i;
 
-		    if_debug3('1', "[1]mask[%d:%dh,%dv]", pcis->num_hints,
-			  pcis->hstem_hints.count, pcis->vstem_hints.count);
 		    for (i = 0; i < pcis->num_hints; ++cip, i += 8) {
 			charstring_next(*cip, state, mask[i >> 3], encrypted);
 			if_debug1('1', " 0x%02x", mask[i >> 3]);
@@ -496,35 +460,33 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 			/****** NYI ******/
 		    } else {	/* hintmask or equivalent */
 			if_debug0('1', "[1]hstem hints:\n");
-			enable_hints(&pcis->hstem_hints, mask);
 			if_debug0('1', "[1]vstem hints:\n");
-			enable_hints(&pcis->vstem_hints, mask);
+			code = t1_hinter__hint_mask(h, mask);
+			if (code < 0)
+			    return code;
 		    }
 		}
 		break;
 	    case c2_vstemhm:
-		pcis->have_hintmask = true;
 	      vstem:check_first_operator(!((csp - cstack) & 1));
 		type2_vstem(pcis, csp, cstack);
 		cnext;
 	    case c2_rcurveline:
 		for (ap = cstack; ap + 5 <= csp; ap += 6) {
-		    code = gs_op1_rrcurveto(&s, ap[0], ap[1], ap[2], ap[3],
+		    code = t1_hinter__rcurveto(h, ap[0], ap[1], ap[2], ap[3],
 					    ap[4], ap[5]);
 		    if (code < 0)
 			return code;
 		}
-		accum_xy(ap[0], ap[1]);
-		code = gx_path_add_line(sppath, ptx, pty);
+		code = t1_hinter__rlineto(h, ap[0], ap[1]);
 		goto cc;
 	    case c2_rlinecurve:
 		for (ap = cstack; ap + 7 <= csp; ap += 2) {
-		    accum_xy(ap[0], ap[1]);
-		    code = gx_path_add_line(sppath, ptx, pty);
+		    code = t1_hinter__rlineto(h, ap[0], ap[1]);
 		    if (code < 0)
 			return code;
 		}
-		code = gs_op1_rrcurveto(&s, ap[0], ap[1], ap[2], ap[3],
+		code = t1_hinter__rcurveto(h, ap[0], ap[1], ap[2], ap[3],
 					ap[4], ap[5]);
 		goto cc;
 	    case c2_vvcurveto:
@@ -534,7 +496,7 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 		    fixed dxa = (n & 1 ? *ap++ : 0);
 
 		    for (; ap + 3 <= csp; ap += 4) {
-			code = gs_op1_rrcurveto(&s, dxa, ap[0], ap[1], ap[2],
+			code = t1_hinter__rcurveto(h, dxa, ap[0], ap[1], ap[2],
 						fixed_0, ap[3]);
 			if (code < 0)
 			    return code;
@@ -549,7 +511,7 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 		    fixed dya = (n & 1 ? *ap++ : 0);
 
 		    for (; ap + 3 <= csp; ap += 4) {
-			code = gs_op1_rrcurveto(&s, ap[0], dya, ap[1], ap[2],
+			code = t1_hinter__rcurveto(h, ap[0], dya, ap[1], ap[2],
 						ap[3], fixed_0);
 			if (code < 0)
 			    return code;
@@ -677,7 +639,7 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 
 			    csp[-1] = 
 				(prod > max_fixed ? max_fixed :
-				 prod < min_fixed ? min_fixed : prod);
+				 prod < min_fixed ? min_fixed : (fixed)prod);
 			}
 			--csp;
 			break;
@@ -767,20 +729,19 @@ flex:			{
 				flex_depth = join.y;
 			    if (fabs(flex_depth) < fixed2float(*csp)) {
 				/* Do flex as line. */
-				accum_xy(x_end, y_end);
-				code = gx_path_add_line(sppath, ptx, pty);
+				code = t1_hinter__rlineto(h, x_end, y_end);
 			    } else {
 				/*
 				 * Do flex as curve.  We can't jump to rrc,
 				 * because the flex operators don't clear
 				 * the stack (!).
 				 */
-				code = gs_op1_rrcurveto(&s,
+				code = t1_hinter__rcurveto(h, 
 					csp[-12], csp[-11], csp[-10],
 					csp[-9], csp[-8], csp[-7]);
 				if (code < 0)
 				    return code;
-				code = gs_op1_rrcurveto(&s,
+				code = t1_hinter__rcurveto(h, 
 					csp[-6], csp[-5], csp[-4],
 					csp[-3], csp[-2], csp[-1]);
 			    }

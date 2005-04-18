@@ -23,7 +23,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zusparam.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: zusparam.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* User and system parameter operators */
 #include "memory_.h"
 #include "string_.h"
@@ -420,6 +420,30 @@ set_MinScreenLevels(i_ctx_t *i_ctx_p, long val)
     gs_setminscreenlevels((uint) val);
     return 0;
 }
+private long
+current_AlignToPixels(i_ctx_t *i_ctx_p)
+{
+    return gs_currentaligntopixels(ifont_dir);
+}
+private int
+set_AlignToPixels(i_ctx_t *i_ctx_p, long val)
+{
+    gs_setaligntopixels(ifont_dir, (uint)val);
+    return 0;
+}
+#if NEW_TT_INTERPRETER
+private long
+current_GridFitTT(i_ctx_t *i_ctx_p)
+{
+    return gs_currentgridfittt(ifont_dir);
+}
+private int
+set_GridFitTT(i_ctx_t *i_ctx_p, long val)
+{
+    gs_setgridfittt(ifont_dir, (uint)val);
+    return 0;
+}
+#endif
 private const long_param_def_t user_long_params[] =
 {
     {"JobTimeout", 0, MAX_UINT_PARAM,
@@ -444,7 +468,13 @@ private const long_param_def_t user_long_params[] =
      current_WaitTimeout, set_WaitTimeout},
     /* Extensions */
     {"MinScreenLevels", 0, MAX_UINT_PARAM,
-     current_MinScreenLevels, set_MinScreenLevels}
+     current_MinScreenLevels, set_MinScreenLevels},
+    {"AlignToPixels", 0, 1,
+     current_AlignToPixels, set_AlignToPixels}
+#if NEW_TT_INTERPRETER
+    , {"GridFitTT", 0, 1,
+     current_GridFitTT, set_GridFitTT}
+#endif
 };
 
 /* Boolean values */

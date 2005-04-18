@@ -22,10 +22,10 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: ireclaim.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: ireclaim.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Interpreter's interface to garbage collector */
 #include "ghost.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "gsstruct.h"
 #include "iastate.h"
 #include "icontext.h"

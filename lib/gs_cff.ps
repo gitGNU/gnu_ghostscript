@@ -13,7 +13,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_cff.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
+% $Id: gs_cff.ps,v 1.3 2005/04/18 12:06:08 Arabidopsis Exp $
 % Loader for CFF (compressed) fonts, including OpenType CFFs.
 % The following are not implemented yet:
 %	Deleted entries in the Name Index
@@ -57,7 +57,7 @@
       pop pop /.loadottofontfile cvx /invalidfont signalerror
     } if
     f 4 string readstring pop (CFF ) eq { sub exit } if
-    1 sub
+    f 12 string readstring pop pop 1 sub	% skip to next table
   } loop
 		% Stack: tablesread
   card32 pop card32 card32
@@ -184,17 +184,17 @@ mark
 /next {		% - next <byte>
   f read {
     1 advance
-    DEBUG { (  ) print dup = } if
+    CFFDEBUG { (  ) print dup = } if
   } if
 } bind def
 /next2 {	% - next2 <byte1> <byte2>
   f read {
     f read {
       2 advance
-      DEBUG { (  ) print 1 index =only (,) print dup = } if
+      CFFDEBUG { (  ) print 1 index =only (,) print dup = } if
     } {
       1 advance
-      DEBUG { (  ) print dup = } if
+      CFFDEBUG { (  ) print dup = } if
     } ifelse
   } if
 } bind def
@@ -203,7 +203,7 @@ mark
     pop ()
   } {
     string f exch readstring pop dup length advance
-    DEBUG { (  ) print dup == } if
+    CFFDEBUG { (  ) print dup == } if
   } ifelse
 } bind def
 /card8		% - card8 <card8>
@@ -231,19 +231,19 @@ def
   /card16 load
 def
 /Index {	% <name> Index <name> <array>
-  DEBUG { (% reading Index: ) print dup = } if
+  CFFDEBUG { (% reading Index: ) print dup = } if
   mark card16 dup 0 ne {
     1 exch next offsetproc dup exec pop exch {
       dup exec dup 4 -1 roll sub 3 1 roll exch
     } repeat pop
   } if pop .packtomark
-  DEBUG { (% Index lengths = ) print dup === } if
+  CFFDEBUG { (% Index lengths = ) print dup === } if
   [ exch { nextstring } forall ] readonly
 } bind def
 /tokens {	% - tokens <num1> ... <op#> (op# = 12 means EOF)
   {
     f read not { 12 exit } if
-    DEBUG { (..) print dup = } if
+    CFFDEBUG { (..) print dup = } if
     1 advance
     dup 12 eq { pop next 32 add exit } if
     dup 28 lt { exit } if
@@ -296,7 +296,7 @@ def
 /Dict {		% <opsdict> Dict -
   /opdict exch store {
     mark tokens
-    DEBUG { (tokens: ) print ] dup === mark exch aload pop } if
+    CFFDEBUG { (tokens: ) print ] dup === mark exch aload pop } if
     opdict exch .knownget { exec } if cleartomark
   } loop cleartomark
 } bind def
@@ -314,7 +314,7 @@ def
 % ------ Top dictionary ------ %
 
 /offput {	% <offset> <proc> offput -
-  DEBUG { (queued: ) print 1 index =only ( ) print dup === } if
+  CFFDEBUG { (queued: ) print 1 index =only ( ) print dup === } if
   currentdict exch aload length 1 add packedarray cvx
   offsets 3 1 roll put
 } bind def
@@ -326,7 +326,7 @@ def
   /queued exch store
 } bind def
 /printvk {	% <value> <key> printvk <value> <key>
-  DEBUG { (\t% ) print dup =only ( = ) print 1 index === } if
+  CFFDEBUG { (\t% ) print dup =only ( = ) print 1 index === } if
 } bind def
 /xxput {	% <value> <key> <dict> xxput -
   3 1 roll exch put
@@ -341,7 +341,7 @@ def
   printvk xdef
 } bind def
 /topdictops mark
-  12 { DEBUG { (\t% EOD) = } if exit }
+  12 { CFFDEBUG { (\t% EOD) = } if exit }
   0 { idstring /version putfi }
   1 { idstring /Notice putfi }
   32 { idstring /Copyright putfi }
@@ -495,18 +495,22 @@ def
   } forall ] /FDArray xdef end end
 } bind def
 
-% Note: this implementation can overflow the operand stack.
-% We'll fix this if it ever becomes necessary.
 /fdselectformats [
-{ [ exch charstringcount pop { card8 } repeat ] } bind
-{ /FDSelect cvx /invalidfont signalerror } bind
-dup
-{ pop [ card16 card16 exch {
-		% Stack: previndex
-    card8 card16 dup 4 1 roll 3 -1 roll sub 1 sub {
-      exch 1 index
-    } repeat exch
-  } repeat pop ]
+% Note: this procedure can overflow the operand stack.
+% We'll fix this if it ever becomes necessary.
+{ [ exch charstringcount pop { card8 } repeat ] } bind	% Format 0
+{ /FDSelect cvx /invalidfont signalerror } bind		% Format 1
+dup							% Format 2
+% The following procedure does not use excessive op-stack space.
+{ pop 65535 array card16 card16 exch			% Format 3
+  { % Stack: array previndex
+    card8 card16 
+    exch 1 index 4 -1 roll
+    exch 1 exch 1 sub
+    { 3 index exch 2 index put } for pop
+  } repeat
+  % now resize the array to the final index.
+  0 exch getinterval
 } bind
 ] readonly def
 
@@ -523,7 +527,7 @@ dup
 } bind def
 
 /privatedictops mark
-  12 { DEBUG { (\t% EOD) = } if exit }
+  12 { CFFDEBUG { (\t% EOD) = } if exit }
   6 { deltarray /BlueValues pxdef }
   7 { deltarray /OtherBlues pxdef }
   8 { deltarray /FamilyBlues pxdef }
@@ -582,7 +586,7 @@ dup
 		% The value of Encoding is either a number, for predefined
 		% encodings, or an array of mixed GIDs and names.
   /Encoding mark Encoding
-  DEBUG { (Encoding: ) print dup === flush } if
+  CFFDEBUG { (Encoding: ) print dup === flush } if
   dup type /integertype eq {
     StandardEncodings exch get { idname } forall
   } {
@@ -594,7 +598,7 @@ dup
 		% Note that they may only correspond to an initial
 		% subset of the charset.
   /CharStrings charset length CharStringArray length .min dict def
-  DEBUG {
+  CFFDEBUG {
     charset length =only ( charset ) print
     CharStringArray length =only ( CharStringArray) =
     charset == flush
@@ -612,7 +616,7 @@ dup
 		% Construct the GlyphDirectory, similar to CharStrings.
   /FDBytes FDArray length 1 gt { 1 } { 0 } ifelse def
   /GlyphDirectory charset length CharStringArray length .min dict def
-  DEBUG {
+  CFFDEBUG {
     charset length =only ( charset ) print
     CharStringArray length =only ( CharStringArray) =
     charset == flush
@@ -657,7 +661,7 @@ dup
   /cff exch def
   /pos 0 def
   /resname exch cvlit def
-  /DEBUG DEBUG def	% bring the binding closer
+  /DEBUG CFFDEBUG def	% bring the binding closer
 
 	% Read the header.
 
@@ -702,23 +706,24 @@ dup
 
 	% Read other tables with queued offsets.
 
-  DEBUG { (offsets: ) print [ offsets { pop } forall ] == } if
+  CFFDEBUG { (offsets: ) print [ offsets { pop } forall ] == } if
   { /f cff def
-    DEBUG { (pos=) print pos = } if
+    CFFDEBUG { (pos=) print pos = } if
     offsets pos 2 copy .knownget not { pop pop exit } if
     3 1 roll undef
-    DEBUG { (exec queued: ) print dup == } if
+    CFFDEBUG { (exec queued: ) print dup == } if
     exec
   } loop
   offsets length 0 ne {
-    (Error: missing tables at ) print [ offsets { pop } forall ] ==
-    (Current position is ) print pos ==
-    flush stop
+    QUIET not {
+      (Error reading the CFF font ) print resname =string cvs print ( : missing tables at ) print [ offsets { pop } forall ] ==
+      (Current position is ) print pos ==
+    } if
   } if
 
 	% Process out-of-order tables.
 
-  DEBUG { queued length =only ( queued) = flush } if
+  CFFDEBUG { queued length =only ( queued) = flush } if
   queued { exec } forall
 
 	% Update Encoding and CharStrings.
@@ -732,10 +737,10 @@ dup
 	% Wrap up.
 
   resname mark 0 1 fonts length 1 sub {
-    DEBUG { dup =only ( ) print flush } if
+    CFFDEBUG { dup =only ( ) print flush } if
     dup names exch get
     forceresname { pop resname } if
-    DEBUG { dup == flush } if
+    CFFDEBUG { dup == flush } if
     exch fonts exch get
     dup /CIDFontType known {
 		% This is a CIDFont.

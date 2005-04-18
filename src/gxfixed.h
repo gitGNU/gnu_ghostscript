@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxfixed.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxfixed.h,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $ */
 /* Fixed-point arithmetic for Ghostscript */
 
 #ifndef gxfixed_INCLUDED
@@ -42,10 +42,10 @@ typedef ulong ufixed;		/* only used in a very few places */
 #define fixed_0 0L
 #define fixed_epsilon 1L
 /*
- * 12 bits of fraction provides both the necessary accuracy and
+ * 8 bits of fraction provides both the necessary accuracy and
  * a sufficiently large range of coordinates.
  */
-#define _fixed_shift 12
+#define _fixed_shift 8
 #define fixed_fraction_bits _fixed_shift
 #define fixed_int_bits (sizeof(fixed) * 8 - _fixed_shift)
 #define fixed_scale (1<<_fixed_shift)

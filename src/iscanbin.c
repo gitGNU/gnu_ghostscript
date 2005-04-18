@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: iscanbin.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: iscanbin.c,v 1.3 2005/04/18 12:06:01 Arabidopsis Exp $ */
 /* Ghostscript binary token scanner and writer */
 #include "math_.h"
 #include "memory_.h"
@@ -32,7 +32,7 @@
 #include "stream.h"
 #include "strimpl.h"		/* for sfilter.h */
 #include "sfilter.h"		/* for iscan.h */
-#include "errors.h"
+#include "ierrors.h"
 #include "ialloc.h"
 #include "iddict.h"
 #include "dstack.h"		/* for immediately evaluated names */

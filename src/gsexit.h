@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsexit.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsexit.h,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Declarations for exits */
 
 #ifndef gsexit_INCLUDED
@@ -33,12 +33,12 @@
  *  normally they do exit cleanup and error messaging
  *  without calling system exit() returning to the caller.
  */
-void gs_to_exit(int exit_status);
+int gs_to_exit(int exit_status);
 
 /** some clients prefer this to return the postscript error code
  * to the caller otherwise the same as gs_to_exit()
  */
-void gs_to_exit_with_code(int exit_status, int code);
+int gs_to_exit_with_code(int exit_status, int code);
 
 /** The client must provide this.  
  * After possible cleanup it may call gp_do_exit() which calls exit() in a platform

@@ -22,9 +22,10 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gsht.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/*$Id: gsht.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* setscreen operator for Ghostscript library */
 #include "memory_.h"
+#include "string_.h"
 #include <stdlib.h>		/* for qsort */
 #include "gx.h"
 #include "gserrors.h"
@@ -229,15 +230,22 @@ gs_setscreenphase(gs_state * pgs, int x, int y, gs_color_select_t select)
     return code;
 }
 
+int
+gs_currentscreenphase_pis(const gs_imager_state * pis, gs_int_point * pphase,
+		      gs_color_select_t select)
+{
+    if (select < 0 || select >= gs_color_select_count)
+	return_error(gs_error_rangecheck);
+    *pphase = pis->screen_phase[select];
+    return 0;
+}
+
 /* .currentscreenphase */
 int
 gs_currentscreenphase(const gs_state * pgs, gs_int_point * pphase,
 		      gs_color_select_t select)
 {
-    if (select < 0 || select >= gs_color_select_count)
-	return_error(gs_error_rangecheck);
-    *pphase = pgs->screen_phase[select];
-    return 0;
+    return gs_currentscreenphase_pis((const gs_imager_state *)pgs, pphase, select);
 }
 
 /* currenthalftone */
@@ -629,7 +637,11 @@ gx_device_halftone_release(gx_device_halftone * pdht, gs_memory_t * mem)
  *
  * Two other checks are also made.  If the name is "Default" then a value
  * of GX_DEVICE_COLOR_MAX_COMPONENTS is returned.  This is done to
- * simplify the handling of default halftones.
+ * simplify the handling of default halftones.  Note:  The device also
+ * uses GX_DEVICE_COLOR_MAX_COMPONENTS to indicate colorants which are
+ * known but not being used due to the SeparationOrder parameter.  In this
+ * case we return -1 since the colorant is not currently being used by the
+ * device.
  *
  * If the halftone type is colorscreen or multiple colorscreen, then we
  * also check for Red/Cyan, Green/Magenta, Blue/Yellow, and Gray/Black
@@ -657,8 +669,18 @@ gs_color_name_component_number(const gx_device * dev, const char * pname,
      * Check if this is a device colorant.
      */
     num_colorant = check_colorant_name_length(dev, pname, name_size);
-    if (num_colorant >= 0)
+    if (num_colorant >= 0) {
+	/*
+	 * The device will return GX_DEVICE_COLOR_MAX_COMPONENTS if the
+	 * colorant is logically present in the device but not being used
+	 * because a SeparationOrder parameter is specified.  Since we are
+	 * using this value to indicate 'Default', we use -1 to indicate
+	 * that the colorant is not really being used.
+	 */
+	if (num_colorant == GX_DEVICE_COLOR_MAX_COMPONENTS)
+	    num_colorant = -1;
 	return num_colorant;
+    }
 
     /*
      * Check if this is the default component

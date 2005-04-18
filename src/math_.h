@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: math_.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: math_.h,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Generic substitute for math.h */
 
 #ifndef math__INCLUDED
@@ -68,13 +68,13 @@
 #endif
 
 /* Define the hypot procedure on those few systems that don't provide it. */
-#ifdef _IBMR2
+#if defined(_IBMR2)
 /* The RS/6000 has hypot, but math.h doesn't declare it! */
 extern double hypot(double, double);
-#else
-#  if !defined(__TURBOC__) && !defined(BSD4_2) && !defined(VMS) && !defined(__MWERKS__)
-#    define hypot(x,y) sqrt((x)*(x)+(y)*(y))
-#  endif
+#elif defined(_MSC_VER)
+#  define hypot(x,y) _hypot(x,y)
+#elif !defined(__TURBOC__) && !defined(BSD4_2) && !defined(VMS) && !defined(__MWERKS__) && !defined(HAVE_HYPOT)
+#  define hypot(x,y) sqrt((double)(x)*(x)+(double)(y)*(y))
 #endif
 
 #ifdef OSK

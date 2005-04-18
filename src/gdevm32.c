@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevm32.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevm32.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* 32-bit-per-pixel "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"
@@ -52,7 +52,7 @@ mem_full_device("image32", 24, 8, mem_open,
 
 /* Swap the bytes of a color if needed. */
 #define color_swap_bytes(color)\
-  (((color) >> 24) + (((color) >> 8) & 0xff00) +\
+  ((((color) >> 24) & 0xff) + (((color) >> 8) & 0xff00) +\
    (((color) & 0xff00) << 8) + ((color) << 24))
 #if arch_is_big_endian
 #  define arrange_bytes(color) (color)

@@ -50,7 +50,7 @@ Table of contents
           + For both users and developers:
 
    Changes.htm
-    Copying.htm
+   COPYING
    Fonts.htm
    Hershey.htm
        History*.htm
@@ -175,8 +175,8 @@ Presence on the World Wide Web
      
    Ghostscript also has another page on the World Wide Web with helpful
    information such as the FAQ (Frequently Asked Questions) and a list of
-   known problems and workarounds for the current release (in the
-   "Obtaining" file for that release):
+   known problems and workarounds for the current AFPL Ghostscript
+   release (in the "Obtaining" file for that release):
 
      http://www.cs.wisc.edu/~ghost/
 
@@ -231,11 +231,9 @@ Which document contains what?
           pre-release, generated mechanically from the CVS logs. For
           developers.
 
-
-   Copying.htm
-          This is the Free Software Foundation's GNU General Public
-          License, the license governing use and distribution of this
-          version of GNU Ghostscript.
+   COPYING
+          The text of the GNU General Public License, the copyright terms
+          under which GNU Ghostscript is available.
 
    DLL.htm
           On OS/2, MS Windows-16 and MS Windows-32 platforms, Ghostscript
@@ -400,4 +398,4 @@ Which document contains what?
    Software, Inc., 101 Lucas Valley Road #110, San Rafael, CA 94903,
    U.S.A., +1(415)492-9861.
 
-   Ghostscript version 8.01, 30 January 2004
+   Ghostscript version 8.15, 22 September 2004

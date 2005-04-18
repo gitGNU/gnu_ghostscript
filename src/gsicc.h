@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsicc.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsicc.h,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Structures for ICCBased color space parameters */
 /* requires: gspsace.h, gscolor2.h */
 
@@ -178,5 +178,11 @@ extern  int     gs_cspace_build_CIEICC( gs_color_space **   ppcspace,
 
 int
 gx_load_icc_profile(gs_cie_icc *picc_info);
+
+/*
+ * Increment color space reference counts.
+ */
+void
+gx_increment_cspace_count(const gs_color_space * pcs);
 
 #endif /* gsicc_INCLUDED */

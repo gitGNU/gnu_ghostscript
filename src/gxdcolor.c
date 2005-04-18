@@ -22,9 +22,10 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxdcolor.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/*$Id: gxdcolor.c,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Pure and null device color implementation */
 #include "gx.h"
+#include "memory_.h"
 #include "gserrors.h"
 #include "gsbittab.h"
 #include "gxdcolor.h"
@@ -264,7 +265,7 @@ gx_dc_no_fill_rectangle(const gx_device_color *pdevc, int x, int y,
 	return 0;
     if (lop_uses_T(lop))
 	return_error(gs_error_Fatal);
-    color_set_pure(&filler, 0);	 /* any valid value for dev will do */
+    set_nonclient_dev_color(&filler, 0);   /* any valid value for dev will do */
     return gx_dc_pure_fill_rectangle(&filler, x, y, w, h, dev, lop, source);
 }
 

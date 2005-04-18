@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxcldev.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/*$Id: gxcldev.h,v 1.3 2005/04/18 12:05:59 Arabidopsis Exp $ */
 /* Internal definitions for Ghostscript command lists. */
 
 #ifndef gxcldev_INCLUDED
@@ -371,6 +371,7 @@ int cmd_put_params(gx_device_clist_writer *, gs_param_list *);
 #ifdef DEBUG
 int cmd_count_op(int op, uint size);
 void cmd_uncount_op(int op, uint size);
+void cmd_print_stats(void);
 #  define cmd_count_add1(v) (v++)
 #else
 #  define cmd_count_op(op, size) (op)

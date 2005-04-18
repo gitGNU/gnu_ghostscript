@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gp_wgetv.c,v 1.2 2004/02/14 22:20:16 atai Exp $ */
+/* $Id: gp_wgetv.c,v 1.3 2005/04/18 12:06:01 Arabidopsis Exp $ */
 /* MS Windows implementation of gp_getenv */
 
 #include <windows.h>

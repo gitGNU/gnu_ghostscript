@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsgdata.h,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: gsgdata.h,v 1.2 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Interface for glyph data access */
 
 #ifndef gsgdata_INCLUDED
@@ -62,11 +62,15 @@
 /* ------ Structure declaration ------ */
 
 typedef struct gs_glyph_data_procs_s gs_glyph_data_procs_t;
-typedef struct gs_glyph_data_s {
+#ifndef gs_glyph_data_DEFINED
+#   define gs_glyph_data_DEFINED
+typedef struct gs_glyph_data_s gs_glyph_data_t;
+#endif
+struct gs_glyph_data_s {
     gs_const_bytestring bits;	/* pointer to actual data returned here */
     const gs_glyph_data_procs_t *procs;
     void *proc_data;
-} gs_glyph_data_t;
+};
 extern_st(st_glyph_data);
 #define ST_GLYPH_DATA_NUM_PTRS 2
 

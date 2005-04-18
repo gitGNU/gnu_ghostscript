@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxi12bit.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxi12bit.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* 12-bit image procedures */
 #include "gx.h"
 #include "memory_.h"
@@ -121,7 +121,7 @@ gs_image_class_2_fracs(gx_image_enum * penum)
 		    bits2frac(penum->mask_color.values[i], 12);
 	}
 	if_debug0('b', "[b]render=frac\n");
-	return image_render_frac;
+	return &image_render_frac;
     }
     return 0;
 }
@@ -213,7 +213,8 @@ image_render_frac(gx_image_enum * penum, const byte * buffer, int data_x,
     memset(&run, 0, sizeof(run));
     memset(&next, 0, sizeof(next));
     /* Ensure that we don't get any false dev_color_eq hits. */
-    color_set_pure(&devc1, gx_no_color_index);
+    set_nonclient_dev_color(&devc1, gx_no_color_index);
+    set_nonclient_dev_color(&devc2, gx_no_color_index);
     cs_full_init_color(&cc, pcs);
     run.v[0] = ~psrc[0];	/* force remap */
 

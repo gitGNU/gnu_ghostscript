@@ -1,4 +1,4 @@
-/* Copyright (C) 1993, 2000-2004 artofcode LLC. All rights reserved.
+/* Copyright (C) 1993, 2000-2004 artofcode LLC.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
   under the terms of the GNU General Public License version 2
@@ -22,12 +22,12 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gp_unifs.c,v 1.2 2004/02/14 22:20:16 atai Exp $ */
+/* $Id: gp_unifs.c,v 1.3 2005/04/18 12:06:01 Arabidopsis Exp $ */
 /* "Unix-like" file system platform routines for Ghostscript */
 
 #include "memory_.h"
 #include "string_.h"
-#include "stdio_.h"		/* for FILENAME_MAX */
+#include "stdio_.h"
 #include "gx.h"
 #include "gp.h"
 #include "gpmisc.h"
@@ -75,7 +75,8 @@ gp_open_scratch_file(const char *prefix, char fname[gp_file_name_sizeof],
     int prefix_length = strlen(prefix);
     int len = gp_file_name_sizeof - prefix_length - 8;
     FILE *fp;
-    if (gp_pathstring_not_bare(prefix, prefix_length))
+
+    if (gp_file_name_is_absolute(prefix, prefix_length))
 	*fname = 0;
     else if (gp_gettmpdir(fname, &len) != 0)
 	strcpy(fname, "/tmp/");
@@ -95,10 +96,10 @@ gp_open_scratch_file(const char *prefix, char fname[gp_file_name_sizeof],
     {
 	    int file;
 	    char ofname[gp_file_name_sizeof];
-
+	
 	    /* save the old filename template in case mkstemp fails */
 	    memcpy(ofname, fname, gp_file_name_sizeof);
-
+ 
 	    file = mkstemp(fname);
 	    if (file < -1) {
 		    eprintf1("**** Could not open temporary file %s\n", ofname);

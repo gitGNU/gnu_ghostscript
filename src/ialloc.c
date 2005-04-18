@@ -22,11 +22,11 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: ialloc.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: ialloc.c,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* Memory allocator for Ghostscript interpreter */
 #include "gx.h"
 #include "memory_.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "gsstruct.h"
 #include "iref.h"		/* must precede iastate.h */
 #include "iastate.h"

@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxclrect.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxclrect.c,v 1.3 2005/04/18 12:06:01 Arabidopsis Exp $ */
 /* Rectangle-oriented command writing for command list */
 #include "gx.h"
 #include "gserrors.h"
@@ -591,8 +591,10 @@ clist_strip_copy_rop(gx_device * dev,
 	gx_color_index D = pcls->colors_used.or;
 	int code;
 
+	/* Reducing D, S, T to rop_operand (which apparently is 32 bit) appears safe
+	   due to 'all' a has smaller snumber of significant bits. */
 	pcls->colors_used.or =
-	    ((rop_proc_table[color_rop])(D, S, T) & all) | D;
+	    ((rop_proc_table[color_rop])((rop_operand)D, (rop_operand)S, (rop_operand)T) & all) | D;
 	pcls->colors_used.slow_rop |= slow_rop;
 	if (rop3_uses_T(rop)) {
 	    if (tcolors == 0 || tcolors[0] != tcolors[1]) {

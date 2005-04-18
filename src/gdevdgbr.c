@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevdgbr.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevdgbr.c,v 1.3 2005/04/18 12:06:01 Arabidopsis Exp $ */
 /* Default implementation of device get_bits[_rectangle] */
 #include "memory_.h"
 #include "gx.h"
@@ -781,51 +781,4 @@ gx_default_get_bits_rectangle(gx_device * dev, const gs_int_rect * prect,
     return (code < 0 ? code : 0);
 }
 
-/* ------ Debugging printout ------ */
 
-#ifdef DEBUG
-
-void
-debug_print_gb_options(gx_bitmap_format_t options)
-{
-    static const char *const option_names[] = {
-	GX_BITMAP_FORMAT_NAMES
-    };
-    const char *prev = "   ";
-    int i;
-
-    dlprintf1("0x%lx", (ulong) options);
-    for (i = 0; i < sizeof(options) * 8; ++i)
-	if ((options >> i) & 1) {
-	    dprintf2("%c%s",
-		     (!memcmp(prev, option_names[i], 3) ? '|' : ','),
-		     option_names[i]);
-	    prev = option_names[i];
-	}
-    dputc('\n');
-}
-
-void 
-debug_print_gb_planes(const gs_get_bits_params_t * params, int num_planes)
-{
-    gs_get_bits_options_t options = params->options;
-    int i;
-
-    debug_print_gb_options(options);
-    for (i = 0; i < num_planes; ++i)
-	dprintf2("data[%d]=0x%lx ", i, (ulong)params->data[i]);
-    if (options & GB_OFFSET_SPECIFIED)
-	dprintf1("x_offset=%d ", params->x_offset);
-    if (options & GB_RASTER_SPECIFIED)
-	dprintf1("raster=%u", params->raster);
-    dputc('\n');
-}
-
-void 
-debug_print_gb_params(const gs_get_bits_params_t * params)
-{
-    debug_print_gb_planes(params, 1);
-}
-
-
-#endif /* DEBUG */

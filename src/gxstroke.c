@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxstroke.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxstroke.c,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Path stroking procedures for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -346,7 +346,8 @@ gx_stroke_path_only(gx_path * ppath, gx_path * to_path, gx_device * pdev,
 	 pgs_lp->join == gs_join_none ? gs_join_bevel : pgs_lp->join);
     float line_width = pgs_lp->half_width;	/* (*half* the line width) */
     bool always_thin;
-    double line_width_and_scale, device_line_width_scale;
+    double line_width_and_scale;
+    double device_line_width_scale = 0; /* Quiet compiler. */
     double device_dot_length = pgs_lp->dot_length * fixed_1;
     const subpath *psub;
 
@@ -564,13 +565,10 @@ gx_stroke_path_only(gx_path * ppath, gx_path * to_path, gx_device * pdev,
 		}
 		/*
 		 * The entire subpath is degenerate, but it includes
-		 * more than one point.  If we are using round caps or
-		 * the dot length is non-zero, draw the caps, otherwise
-		 * do nothing.
+		 * more than one point.  If the dot length is non-zero,
+		 * draw the caps, otherwise do nothing.
 		 */
-		if (!(pgs_lp->cap == gs_cap_round ||
-		      pgs_lp->dot_length != 0)
-		    )
+		if (pgs_lp->dot_length != 0)
 		    break;
 		/*
 		 * Orient the dot according to the previous segment if
@@ -636,8 +634,8 @@ gx_stroke_path_only(gx_path * ppath, gx_path * to_path, gx_device * pdev,
 		if (uniform != 0) {
 		    /* We can save a lot of work in this case. */
 		    /* We know orient != orient_other. */
-		    float dpx = udx, dpy = udy;
-		    float wl = device_line_width_scale /
+		    double dpx = udx, dpy = udy;
+		    double wl = device_line_width_scale /
 		    hypot(dpx, dpy);
 
 		    pl.e.cdelta.x = (fixed) (dpx * wl);

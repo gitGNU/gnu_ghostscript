@@ -22,11 +22,11 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: ilocate.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: ilocate.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Object locating and validating for Ghostscript memory manager */
 #include "ghost.h"
 #include "memory_.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "gsexit.h"
 #include "gsstruct.h"
 #include "iastate.h"

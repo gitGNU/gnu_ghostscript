@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zfcmap.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: zfcmap.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* CMap creation operator */
 #include "memory_.h"
 #include "ghost.h"
@@ -399,7 +399,7 @@ zbuildcmap(i_ctx_t *i_ctx_p)
 				     r_size(&rname), r_size(&rcidsi),
 				     0, 0, 0, 0, 0, imemory)) < 0)
 	goto fail;
-    if ((code = dict_int_param(op, "CMapType", 0, 1, -1, &pcmap->CMapType)) < 0 ||
+    if ((code = dict_int_param(op, "CMapType", 0, 1, 0, &pcmap->CMapType)) < 0 ||
 	(code = dict_float_param(op, "CMapVersion", 0.0, &pcmap->CMapVersion)) < 0 ||
 	(code = dict_uid_param(op, &pcmap->uid, 0, imemory, i_ctx_p)) < 0 ||
 	(code = dict_int_param(op, "WMode", 0, 1, 0, &pcmap->WMode)) < 0
@@ -436,9 +436,9 @@ zbuildcmap(i_ctx_t *i_ctx_p)
 	goto fail;
     return zreadonly(i_ctx_p);
 fail:
-    free_code_map(&pcmap->notdef, imemory);
-    free_code_map(&pcmap->def, imemory);
     if (pcmap) {
+	free_code_map(&pcmap->notdef, imemory);
+	free_code_map(&pcmap->def, imemory);
 	ifree_object(pcmap->CIDSystemInfo, "zbuildcmap(CIDSystemInfo)");
 	ifree_object(pcmap, "zbuildcmap(cmap)");
     }

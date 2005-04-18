@@ -22,13 +22,14 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zpcolor.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: zpcolor.c,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Pattern color */
 #include "ghost.h"
 #include "oper.h"
 #include "gscolor.h"
 #include "gsmatrix.h"
 #include "gsstruct.h"
+#include "gscoord.h"
 #include "gxcspace.h"
 #include "gxfixed.h"		/* for gxcolor2.h */
 #include "gxcolor2.h"
@@ -36,6 +37,7 @@
 #include "gxdevice.h"
 #include "gxdevmem.h"		/* for gxpcolor.h */
 #include "gxpcolor.h"
+#include "gxpath.h"
 #include "estack.h"
 #include "ialloc.h"
 #include "icremap.h"
@@ -45,6 +47,7 @@
 #include "igstate.h"
 #include "ipcolor.h"
 #include "store.h"
+#include "memory_.h"
 
 /* Imported from gspcolor.c */
 extern const gs_color_space_type gs_color_space_type_Pattern;
@@ -152,13 +155,12 @@ zsetpatternspace(i_ctx_t *i_ctx_p)
 	    cs = *gs_currentcolorspace(igs);
 	    if (cs_num_components(&cs) < 0)	/* i.e., Pattern space */
 		return_error(e_rangecheck);
-	    /* We can't count on C compilers to recognize the aliasing */
-	    /* that would be involved in a direct assignment, so.... */
 	    {
-		gs_paint_color_space cs_paint;
-
-		cs_paint = *(gs_paint_color_space *) & cs;
-		cs.params.pattern.base_space = cs_paint;
+		/* We can't count on C compilers to recognize the aliasing */
+		/* that would be involved in a direct assignment */
+		/* cs.params.pattern.base_space = *(gs_paint_color_space *)&cs; */
+		/* At least MSVC7 chocks with it. */
+		memmove(&cs.params.pattern.base_space, &cs, sizeof(gs_paint_color_space));
 	    }
 	    cs.params.pattern.has_base_space = true;
     }
@@ -168,6 +170,7 @@ zsetpatternspace(i_ctx_t *i_ctx_p)
 	ref_stack_pop_to(&e_stack, edepth);
 	return code;
     }
+    make_null(&istate->pattern); /* PLRM: initial color value is a null object */
     pop(1);
     return (ref_stack_count(&e_stack) == edepth ? 0 : o_push_estack);	/* installation will load the caches */
 }
@@ -206,20 +209,34 @@ pattern_paint_prepare(i_ctx_t *i_ctx_p)
     gs_pattern1_instance_t *pinst =
 	(gs_pattern1_instance_t *)gs_currentcolor(pgs)->pattern;
     ref *pdict = &((int_pattern *) pinst->template.client_data)->dict;
-    gx_device_pattern_accum *pdev;
+    gx_device_pattern_accum *pdev = NULL;
+    gx_device *cdev = gs_currentdevice_inline(igs);
     int code;
     ref *ppp;
+    bool internal_accum = true;
 
-    check_estack(5);
-    pdev = gx_pattern_accum_alloc(imemory, "pattern_paint_prepare");
-    if (pdev == 0)
-	return_error(e_VMerror);
-    pdev->instance = pinst;
-    pdev->bitmap_memory = gstate_pattern_cache(pgs)->memory;
-    code = (*dev_proc(pdev, open_device)) ((gx_device *) pdev);
-    if (code < 0) {
-	ifree_object(pdev, "pattern_paint_prepare");
+    check_estack(6);
+    code = dev_proc(cdev, pattern_manage)(cdev, pinst->id, pinst, 
+			    pattern_manage__can_accum);
+    if (code < 0)
 	return code;
+    internal_accum = (code == 0);
+    if (internal_accum) {
+	pdev = gx_pattern_accum_alloc(imemory, "pattern_paint_prepare");
+	if (pdev == 0)
+	    return_error(e_VMerror);
+	pdev->instance = pinst;
+	pdev->bitmap_memory = gstate_pattern_cache(pgs)->memory;
+	code = (*dev_proc(pdev, open_device)) ((gx_device *) pdev);
+	if (code < 0) {
+	    ifree_object(pdev, "pattern_paint_prepare");
+	    return code;
+	}
+    } else {
+	code = gx_pattern_cache_add_dummy_entry((gs_imager_state *)igs, 
+		    pinst, cdev->color_info.depth);
+	if (code < 0)
+	    return code;
     }
     code = gs_gsave(pgs);
     if (code < 0)
@@ -230,10 +247,36 @@ pattern_paint_prepare(i_ctx_t *i_ctx_p)
 	return code;
     }
     /* gx_set_device_only(pgs, (gx_device *) pdev); */
-    gs_setdevice_no_init(pgs, (gx_device *)pdev);
+    if (internal_accum)
+	gs_setdevice_no_init(pgs, (gx_device *)pdev);
+    else {
+	gs_matrix m;
+	gs_fixed_rect clip_box;
+
+	gs_make_identity(&m);
+	gs_setmatrix(igs, &m);
+	clip_box.p.x = float2fixed(pinst->template.BBox.p.x);
+	clip_box.p.y = float2fixed(pinst->template.BBox.p.y);
+	clip_box.q.x = float2fixed(pinst->template.BBox.q.x);
+	clip_box.q.y = float2fixed(pinst->template.BBox.q.y);
+	code = gx_clip_to_rectangle(igs, &clip_box);
+	if (code < 0) {
+	    gs_grestore(pgs);
+	    return code;
+	}
+	code = dev_proc(cdev, pattern_manage)(cdev, pinst->id, pinst, 
+				pattern_manage__start_accum);
+	if (code < 0) {
+	    gs_grestore(pgs);
+	    return code;
+	}
+    }
     push_mark_estack(es_other, pattern_paint_cleanup);
     ++esp;
     make_istruct(esp, 0, pdev);
+    ++esp;
+    /* Save operator stack depth in case PaintProc leaves junk on ostack. */
+    make_int(esp, ref_stack_count(&o_stack));
     push_op_estack(pattern_paint_finish);
     dict_find_string(pdict, "PaintProc", &ppp);		/* can't fail */
     *++esp = *ppp;
@@ -244,14 +287,23 @@ pattern_paint_prepare(i_ctx_t *i_ctx_p)
 private int
 pattern_paint_finish(i_ctx_t *i_ctx_p)
 {
-    gx_device_pattern_accum *pdev = r_ptr(esp, gx_device_pattern_accum);
-    gx_color_tile *ctile;
-    int code = gx_pattern_cache_add_entry((gs_imager_state *)igs,
-					  pdev, &ctile);
+    int o_stack_adjust = ref_stack_count(&o_stack) - esp->value.intval;
+    gx_device_pattern_accum *pdev = r_ptr(esp - 1, gx_device_pattern_accum);
 
-    if (code < 0)
-	return code;
-    esp -= 2;
+    if (pdev != NULL) {
+	gx_color_tile *ctile;
+	int code = gx_pattern_cache_add_entry((gs_imager_state *)igs,
+					  pdev, &ctile);
+	if (code < 0)
+	    return code;
+    }
+    if (o_stack_adjust > 0) {
+#if 0
+	dlprintf1("PaintProc left %d extra on operator stack!\n", o_stack_adjust);
+#endif
+	pop(o_stack_adjust);
+    }
+    esp -= 3;
     pattern_paint_cleanup(i_ctx_p);
     return o_pop_estack;
 }
@@ -260,10 +312,22 @@ pattern_paint_finish(i_ctx_t *i_ctx_p)
 private int
 pattern_paint_cleanup(i_ctx_t *i_ctx_p)
 {
-    gx_device_pattern_accum *const pdev =
+    gx_device_pattern_accum *const pdev = 
 	r_ptr(esp + 2, gx_device_pattern_accum);
+    int code;
 
-    /* grestore will free the device, so close it first. */
-    (*dev_proc(pdev, close_device)) ((gx_device *) pdev);
-    return gs_grestore(igs);
+    if (pdev != NULL) {
+	/* grestore will free the device, so close it first. */
+	(*dev_proc(pdev, close_device)) ((gx_device *) pdev);
+    }
+    code = gs_grestore(igs);
+    if (pdev == NULL) {
+	gx_device *cdev = gs_currentdevice_inline(igs);
+	int code1 = dev_proc(cdev, pattern_manage)(cdev, gx_no_bitmap_id, NULL, 
+				pattern_manage__finish_accum);
+	
+	if (code == 0 && code1 < 0)
+	    code = code1;
+    }
+    return code;
 }

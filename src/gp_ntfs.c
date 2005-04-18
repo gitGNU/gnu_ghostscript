@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gp_ntfs.c,v 1.2 2004/02/14 22:20:16 atai Exp $ */
+/* $Id: gp_ntfs.c,v 1.3 2005/04/18 12:06:01 Arabidopsis Exp $ */
 /* file system stuff for MS-Windows WIN32 and MS-Windows NT */
 /* hacked from gp_dosfs.c by Russell Lang */
 
@@ -36,6 +36,7 @@
 #include "gsmemory.h"
 #include "gsstruct.h"
 #include "gp.h"
+#include "gpmisc.h"
 #include "gsutil.h"
 #include "windows_.h"
 
@@ -89,67 +90,6 @@ const char gp_fmode_binary_suffix[] = "b";
 const char gp_fmode_rb[] = "rb";
 const char gp_fmode_wb[] = "wb";
 
-/* Answer whether a path_string can meaningfully have a prefix applied */
-bool
-gp_pathstring_not_bare(const char *fname, unsigned len)
-{   /* A file name is not bare if it contains a drive specifications	*/
-    /* (second character is a :) or if it starts with a '.', '/' or '\\'*/
-    /* or it contains '/../' (parent reference)				*/
-    if ((len > 0) && ((*fname == '/') || (*fname == '\\') ||
-	  (*fname == '.') || ((len > 2) && (fname[1] == ':'))))
-	return true;
-    while (len-- > 3) {
-        int c = *fname++;
-
-	if (((c == '/') || (c == '\\')) &&
-	    ((len >= 3) && (bytes_compare(fname, 2, "..", 2) == 0) &&
-			((fname[2] == '/') || (fname[2] == '\\'))))
-	    return true;
-    }
-    return false;
-}
-
-/* Answer whether the file_name references the directory	*/
-/* containing the specified path (parent). 			*/
-bool
-gp_file_name_references_parent(const char *fname, unsigned len)
-{
-    int i = 0, last_sep_pos = -1;
-
-    /* A file name references its parent directory if it starts */
-    /* with ../ or ..\  or if one of these strings follows / or \ */
-    while (i < len) {
-	if (fname[i] == '/' || fname[i] == '\\') {
-	    last_sep_pos = i++;
-	    continue;
-	}
-	if (fname[i++] != '.')
-	    continue;
-        if (i > last_sep_pos + 2 || (i < len && fname[i] != '.'))
-	    continue;
-	i++;
-	/* have separator followed by .. */
-	if (i < len && (fname[i] == '/' || fname[i++] == '\\'))
-	    return true;
-    }
-    return false;
-}
-
-/* Answer the string to be used for combining a directory/device prefix */
-/* with a base file name.  The file name is known to not be absolute. */
-const char *
-gp_file_name_concat_string(const char *prefix, uint plen)
-{
-    if (plen > 0)
-	switch (prefix[plen - 1]) {
-	    case ':':
-	    case '/':
-	    case '\\':
-		return "";
-	};
-    return "/";
-}
-
 /* ------ File enumeration ------ */
 
 struct file_enum_s {
@@ -167,7 +107,8 @@ gs_private_st_ptrs1(st_file_enum, struct file_enum_s, "file_enum",
 		    file_enum_enum_ptrs, file_enum_reloc_ptrs, pattern);
 
 /* Initialize an enumeration.  Note that * and ? in a directory */
-/* don't work, and \ is taken literally unless a second \ follows. */
+/* don't work with the OS call currently used. The '\' escape	*/
+/* character is removed for the 'Find...File' function.		*/
 file_enum *
 gp_enumerate_files_init(const char *pat, uint patlen, gs_memory_t * mem)
 {
@@ -175,7 +116,7 @@ gp_enumerate_files_init(const char *pat, uint patlen, gs_memory_t * mem)
     int pat_size = 2 * patlen + 1;
     char *pattern;
     int hsize = 0;
-    int i;
+    int i, j;
 
     if (pfen == 0)
 	return 0;
@@ -187,22 +128,25 @@ gp_enumerate_files_init(const char *pat, uint patlen, gs_memory_t * mem)
 				     "gp_enumerate_files(pattern)");
     if (pattern == 0)
 	return 0;
-    memcpy(pattern, pat, patlen);
-    /* find directory name = header */
-    for (i = 0; i < patlen; i++) {
-	switch (pat[i]) {
-	    case '\\':
-		if (i + 1 < patlen && pat[i + 1] == '\\')
+    /* translate the template into a pattern discarding the escape  */
+    /* char '\' (not needed by the OS Find...File logic). Note that */
+    /* a final '\' in the string is also discarded.		    */
+    for (i = 0, j=0; i < patlen; i++) {
+	if (pat[i] == '\\') {
 		    i++;
-		/* falls through */
-	    case ':':
-	    case '/':
-		hsize = i + 1;
+	    if (i == patlen)
+		break;		/* '\' at end ignored */
 	}
+	pattern[j++]=pat[i];
     }
-    pattern[patlen] = 0;
+    /* Scan for last path separator to determine 'head_size' (directory part) */
+    for (i = 0; i < j; i++) {
+	if(pattern[i] == '/' || pattern[i] == '\\' || pattern[i] == ':')
+	hsize = i+1;
+    }
+    pattern[j] = 0;
     pfen->pattern = pattern;
-    pfen->patlen = patlen;
+    pfen->patlen = j;
     pfen->pat_size = pat_size;
     pfen->head_size = hsize;
     pfen->memory = mem;
@@ -234,7 +178,8 @@ gp_enumerate_files_next(file_enum * pfen, char *ptr, uint maxlen)
               }
           }
         if ( strcmp(".",  pfen->find_data.cFileName)
-          && strcmp("..", pfen->find_data.cFileName))
+          && strcmp("..", pfen->find_data.cFileName)
+	  && (pfen->find_data.dwFileAttributes != FILE_ATTRIBUTE_DIRECTORY))
             break;
       } 
    
@@ -270,3 +215,83 @@ gp_enumerate_files_close(file_enum * pfen)
 		   "gp_enumerate_files_close(pattern)");
     gs_free_object(mem, pfen, "gp_enumerate_files_close");
 }
+
+
+/* -------------- Helpers for gp_file_name_combine_generic ------------- */
+
+uint gp_file_name_root(const char *fname, uint len)
+{   int i = 0;
+    
+    if (len == 0)
+	return 0;
+    if (len > 1 && fname[0] == '\\' && fname[1] == '\\') {
+	/* A network path: "\\server\share\" */
+	int k = 0;
+
+	for (i = 2; i < len; i++)
+	    if (fname[i] == '\\' || fname[i] == '/')
+		if (k++) {
+		    i++;
+		    break;
+		}
+    } else if (fname[0] == '/' || fname[0] == '\\') {
+	/* Absolute with no drive. */
+	i = 1;
+    } else if (len > 1 && fname[1] == ':') {
+	/* Absolute with a drive. */
+	i = (len > 2 && (fname[2] == '/' || fname[2] == '\\') ? 3 : 2);
+    }
+    return i;
+}
+
+uint gs_file_name_check_separator(const char *fname, int len, const char *item)
+{   if (len > 0) {
+	if (fname[0] == '/' || fname[0] == '\\')
+	    return 1;
+    } else if (len < 0) {
+	if (fname[-1] == '/' || fname[-1] == '\\')
+	    return 1;
+    }
+    return 0;
+}
+
+bool gp_file_name_is_parent(const char *fname, uint len)
+{   return len == 2 && fname[0] == '.' && fname[1] == '.';
+}
+
+bool gp_file_name_is_current(const char *fname, uint len)
+{   return len == 1 && fname[0] == '.';
+}
+
+const char *gp_file_name_separator(void)
+{   return "/";
+}
+
+const char *gp_file_name_directory_separator(void)
+{   return "/";
+}
+
+const char *gp_file_name_parent(void)
+{   return "..";
+}
+
+const char *gp_file_name_current(void)
+{   return ".";
+}
+
+bool gp_file_name_is_partent_allowed(void)
+{   return true;
+}
+
+bool gp_file_name_is_empty_item_meanful(void)
+{   return false;
+}
+
+gp_file_name_combine_result
+gp_file_name_combine(const char *prefix, uint plen, const char *fname, uint flen, 
+		    bool no_sibling, char *buffer, uint *blen)
+{
+    return gp_file_name_combine_generic(prefix, plen, 
+	    fname, flen, no_sibling, buffer, blen);
+}
+

@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: stream.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: stream.c,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Stream package for Ghostscript interpreter */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"
@@ -523,6 +523,8 @@ sgets(stream * s, byte * buf, uint nmax, uint * pn)
 		cw.limit -= min_left;
 		status = sreadbuf(s, &cw);
 		cw.limit += min_left;
+		/* Compact the stream so stell will return the right result. */
+		stream_compact(s, true);
 		/*
 		 * We know the stream buffer is empty, so it's safe to
 		 * update position.  However, we need to reset the read
@@ -800,9 +802,9 @@ sreadbuf(stream * s, stream_cursor_write * pbuf)
 	    oldpos = pw->ptr;
 	    status = (*curr->procs.process) (curr->state, pr, pw, eof);
 	    pr->limit += left;
-	    if_debug4('s', "[s]after read 0x%lx, nr=%u, nw=%u, status=%d\n",
+	    if_debug5('s', "[s]after read 0x%lx, nr=%u, nw=%u, status=%d, position=%d\n",
 		      (ulong) curr, (uint) (pr->limit - pr->ptr),
-		      (uint) (pw->limit - pw->ptr), status);
+		      (uint) (pw->limit - pw->ptr), status, s->position);
 	    if (strm == 0 || status != 0)
 		break;
 	    if (strm->end_status < 0) {
@@ -813,8 +815,9 @@ sreadbuf(stream * s, stream_cursor_write * pbuf)
 	    MOVE_AHEAD(curr, prev);
 	    stream_compact(curr, false);
 	}
-	/* If curr reached EOD and is a filter stream, close it. */
-	if (strm != 0 && status == EOFC &&
+	/* If curr reached EOD and is a filter or file stream, close it. */
+	/* (see PLRM 3rd, sec 3.8.2, p80) */
+	if ((strm != 0 || curr->file) && status == EOFC &&
 	    curr->cursor.r.ptr >= curr->cursor.r.limit &&
 	    curr->close_at_eod
 	    ) {
@@ -1044,6 +1047,15 @@ s_string_read_seek(register stream * s, long pos)
     s->srptr = s->cbuf + pos - 1;
     /* We might be seeking after a reusable string reached EOF. */
     s->srlimit = s->cbuf + s->bsize - 1;
+    /* 
+     * When the file reaches EOF,
+     * stream_compact sets s->position to its end. 
+     * Reset it now to allow stell to work properly
+     * after calls to this function.
+     * Note that if the riched EOF and this fuction
+     * was not called, stell still returns a wrong value.
+     */
+    s->position = 0;
     return 0;
 }
 

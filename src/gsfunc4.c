@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsfunc4.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsfunc4.c,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* Implementation of FunctionType 4 (PostScript Calculator) Functions */
 #include "math_.h"
 #include "memory_.h"
@@ -36,6 +36,7 @@
 #include "strimpl.h"
 #include "sfilter.h"		/* for SubFileDecode */
 #include "spprint.h"
+#include "stream.h"
 
 typedef struct gs_function_PtCr_s {
     gs_function_head_t head;
@@ -774,6 +775,22 @@ gs_function_PtCr_free_params(gs_function_PtCr_params_t * params, gs_memory_t * m
     fn_common_free_params((gs_function_params_t *) params, mem);
 }
 
+/* Serialize. */
+private int
+gs_function_PtCr_serialize(const gs_function_t * pfn, stream *s)
+{
+    uint n;
+    const gs_function_PtCr_params_t * p = (const gs_function_PtCr_params_t *)&pfn->params;
+    int code = fn_common_serialize(pfn, s);
+
+    if (code < 0)
+	return code;
+    code = sputs(s, (const byte *)&p->ops.size, sizeof(p->ops.size), &n);
+    if (code < 0)
+	return code;
+    return sputs(s, p->ops.data, p->ops.size, &n);
+}
+
 /* Allocate and initialize a PostScript Calculator function. */
 int
 gs_function_PtCr_init(gs_function_t ** ppfn,
@@ -788,7 +805,8 @@ gs_function_PtCr_init(gs_function_t ** ppfn,
 	    fn_common_get_params,
 	    (fn_make_scaled_proc_t) fn_PtCr_make_scaled,
 	    (fn_free_params_proc_t) gs_function_PtCr_free_params,
-	    fn_common_free
+	    fn_common_free,
+	    (fn_serialize_proc_t) gs_function_PtCr_serialize,
 	}
     };
     int code;

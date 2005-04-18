@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsstate.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsstate.h,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* Public graphics state API */
 
 #ifndef gsstate_INCLUDED
@@ -90,6 +90,8 @@ int gs_setfilladjust(gs_state *, floatp, floatp);
 int gs_currentfilladjust(const gs_state *, gs_point *);
 void gs_setlimitclamp(gs_state *, bool);
 bool gs_currentlimitclamp(const gs_state *);
+void gs_settextrenderingmode(gs_state * pgs, uint trm);
+uint gs_currenttextrenderingmode(const gs_state * pgs);
 #include "gscpm.h"
 gs_in_cache_device_t gs_incachedevice(const gs_state *);
 

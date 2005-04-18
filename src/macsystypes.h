@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: macsystypes.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: macsystypes.h,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 
 #ifndef __sys_types_h__
 #define __sys_types_h__
@@ -30,7 +30,6 @@
 #include <MacTypes.h>
 #include <unix.h>
 #define CHECK_INTERRUPTS
-#define HAVE_SYS_TIME_H
 
 /* use a 64 bit type for color vectors. (from MacTypes.h)
    this is important for devicen support, but can be safely
@@ -47,8 +46,9 @@ int myfprintf(FILE *file, const char *fmt, ...);
 int myfputs(const char *string, FILE *file);
 #endif
 
-#ifndef __MACINTOSH__
-#define __MACINTOSH__
+/* Metrowerks CodeWarrior should define this */
+#ifndef __MACOS__
+#define __MACOS__
 #endif
 
 #endif /* __sys_types_h__ */

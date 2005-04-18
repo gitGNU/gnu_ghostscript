@@ -22,14 +22,14 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: iinit.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: iinit.c,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Initialize internally known objects for Ghostscript interpreter */
 #include "string_.h"
 #include "ghost.h"
 #include "gscdefs.h"
 #include "gsexit.h"
 #include "gsstruct.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "ialloc.h"
 #include "iddict.h"
 #include "dstack.h"

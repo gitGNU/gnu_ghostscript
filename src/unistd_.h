@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: unistd_.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: unistd_.h,v 1.3 2005/04/18 12:05:59 Arabidopsis Exp $ */
 /* Generic substitute for Unix unistd.h */
 
 #ifndef unistd__INCLUDED
@@ -44,11 +44,23 @@
 #  include <io.h>
 #endif
 
-#if defined(_MSC_VER) || defined(__BORLANDC__) && defined(__WIN32__) 
+#if defined(_MSC_VER) 
 #  define fsync(handle) _commit(handle)
 #  define read(fd, buf, len) _read(fd, buf, len)
+#  define isatty(fd) _isatty(fd)
+#  define setmode(fd, mode) _setmode(fd, mode)
+#  define fstat(fd, buf) _fstat(fd, buf)
+#  define dup(fd) _dup(fd)
+#  define open(fname, flags, mode) _open(fname, flags, mode)
+#  define close(fd) _close(fd)
+#elif defined(__BORLANDC__) && defined(__WIN32__) 
+#  define fsync(handle) _commit(handle)
+#  define read(fd, buf, len) _read(fd, buf, len)
+#  define isatty(fd) _isatty(fd)
+#  define setmode(fd, mode) _setmode(fd, mode)
 #else
 #  include <unistd.h>
 #endif
 
 #endif   /* unistd__INCLUDED */
+

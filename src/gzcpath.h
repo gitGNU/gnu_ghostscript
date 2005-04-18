@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gzcpath.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gzcpath.h,v 1.3 2005/04/18 12:05:57 Arabidopsis Exp $ */
 /* Structure definitions for clipping paths */
 /* Requires gzpath.h. */
 
@@ -48,6 +48,26 @@ typedef struct gx_clip_rect_list_s {
     "gx_clip_rect_list", clip_rect_list_enum_ptrs, clip_rect_list_reloc_ptrs,\
     st_clip_list, list)
 
+/*
+ * When the clip path consists of the intersection of two or more
+ * source paths, we maintain the complete list paths, so that it
+ * can be accurately output for high-level devices.
+ */
+
+typedef struct gx_cpath_path_list_s gx_cpath_path_list;
+
+struct gx_cpath_path_list_s {
+    gx_path path;
+    rc_header rc;
+    int rule;
+    gx_cpath_path_list *next;
+};
+
+#define private_st_cpath_path_list() 	/* in gxcpath.c */\
+  gs_private_st_suffix_add1(st_cpath_path_list, gx_cpath_path_list,\
+    "gs_cpath_list", cpath_path_list_enum_ptrs, cpath_path_list_reloc_ptrs,\
+    st_path, next)
+
 /* gx_clip_path is a 'subclass' of gx_path. */
 struct gx_clip_path_s {
     gx_path path;
@@ -62,6 +82,7 @@ struct gx_clip_path_s {
     gs_fixed_rect outer_box;
     gx_clip_rect_list *rect_list;
     bool path_valid;		/* path representation is valid */
+    gx_cpath_path_list *path_list;
     /* The id changes whenever the clipping region changes. */
     gs_id id;
 };

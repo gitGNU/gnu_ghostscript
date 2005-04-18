@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevijs.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevijs.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /*
  * IJS device for Ghostscript.
  * Intended to work with any IJS compliant inkjet driver, including
@@ -579,7 +579,7 @@ gsijs_open(gx_device *dev)
 	code = gsijs_set_margin_params(ijsdev);
 
     return code;
-};
+}
 
 /* Close the gsijs driver */
 private int
@@ -1083,6 +1083,7 @@ gsijs_set_color_format(gx_device_ijs *ijsdev)
     }
 
     maxvalue = (1 << bpc) - 1;
+    dci.max_components = components;
     dci.num_components = components;
     dci.depth = bpc * components;
     dci.max_gray = maxvalue;

@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxdevice.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxdevice.h,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Definitions for device implementors */
 
 #ifndef gxdevice_INCLUDED
@@ -276,6 +276,9 @@ dev_proc_create_compositor(gx_null_create_compositor);
 dev_proc_get_hardware_params(gx_default_get_hardware_params);
 dev_proc_text_begin(gx_default_text_begin);
 dev_proc_finish_copydevice(gx_default_finish_copydevice);
+dev_proc_pattern_manage(gx_default_pattern_manage);
+dev_proc_fill_rectangle_hl_color(gx_default_fill_rectangle_hl_color);
+dev_proc_include_color_space(gx_default_include_color_space);
 /* BACKWARD COMPATIBILITY */
 #define gx_non_imaging_create_compositor gx_null_create_compositor
 
@@ -345,6 +348,9 @@ dev_proc_get_color_mapping_procs(gx_forward_get_color_mapping_procs);
 dev_proc_get_color_comp_index(gx_forward_get_color_comp_index);
 dev_proc_encode_color(gx_forward_encode_color);
 dev_proc_decode_color(gx_forward_decode_color);
+dev_proc_pattern_manage(gx_forward_pattern_manage);
+dev_proc_fill_rectangle_hl_color(gx_forward_fill_rectangle_hl_color);
+dev_proc_include_color_space(gx_forward_include_color_space);
 
 /* ---------------- Implementation utilities ---------------- */
 
@@ -425,8 +431,6 @@ int gx_device_close_output_file(const gx_device * dev, const char *fname,
 #define gx_device_must_halftone(dev)\
   ((gx_device_has_color(dev) ? (dev)->color_info.max_color :\
     (dev)->color_info.max_gray) < 31)
-#define gx_color_device_must_halftone(dev)\
-  ((dev)->color_info.max_gray < 31)
 
 /*
  * Do generic work for output_page.  All output_page procedures must call

@@ -1,4 +1,4 @@
-/* Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 1996-2003 artofcode LLC.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
   under the terms of the GNU General Public License version 2
@@ -22,11 +22,13 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: imainarg.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: imainarg.c,v 1.3 2005/04/18 12:05:57 Arabidopsis Exp $ */
 /* Command line parsing and dispatching */
 #include "ctype_.h"
 #include "memory_.h"
 #include "string_.h"
+#include <stdlib.h>	/* for qsort */
+
 #include "ghost.h"
 #include "gp.h"
 #include "gsargs.h"
@@ -37,7 +39,7 @@
 #include "gxdevmem.h"
 #include "gsdevice.h"
 #include "stream.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "estack.h"
 #include "ialloc.h"
 #include "strimpl.h"		/* for sfilter.h */
@@ -696,7 +698,6 @@ argproc(gs_main_instance * minst, const char *arg)
     filearg = arg_heap_copy(arg);
     if (filearg == NULL)
         return e_Fatal;
-    minst->i_ctx_p->filearg = filearg;	/* allow reading this file if SAFER set */
     if (minst->run_buffer_size) {
 	/* Run file with run_string. */
 	return run_buffered(minst, filearg);
@@ -749,10 +750,11 @@ runarg(gs_main_instance * minst, const char *pre, const char *arg,
        const char *post, int options)
 {
     int len = strlen(pre) + esc_strlen(arg) + strlen(post) + 1;
+    int code;
     char *line;
 
     if (options & runInit) {
-	int code = gs_main_init2(minst);	/* Finish initialization */
+	code = gs_main_init2(minst);	/* Finish initialization */
 
 	if (code < 0)
 	    return code;
@@ -765,7 +767,10 @@ runarg(gs_main_instance * minst, const char *pre, const char *arg,
     strcpy(line, pre);
     esc_strcat(line, arg);
     strcat(line, post);
-    return run_string(minst, line, options);
+    minst->i_ctx_p->starting_arg_file = true;
+    code = run_string(minst, line, options);
+    minst->i_ctx_p->starting_arg_file = false;
+    return code;
 }
 private int
 run_string(gs_main_instance * minst, const char *str, int options)
@@ -854,9 +859,10 @@ private const char help_usage2[] = "\
  -sOutputFile=<file> select output file: - for stdout, |command for pipe,\n\
                                          embed %d or %ld for page #\n";
 private const char help_trailer[] = "\
-For more information, see %s%sUse.htm.\n\
+For more information, see %s.\n\
 Report bugs to %s, using the form in Bug-form.htm.\n";
 private const char help_devices[] = "Available devices:";
+private const char help_default_device[] = "Default output device:";
 private const char help_emulators[] = "Input formats:";
 private const char help_paths[] = "Search path:";
 
@@ -902,24 +908,55 @@ print_usage(const gs_main_instance *minst)
     outprintf("%s", help_usage2);
 }
 
+/* compare function for qsort */
+private int
+cmpstr(const void *v1, const void *v2)
+{
+    return strcmp( *(char * const *)v1, *(char * const *)v2 );
+}
+
 /* Print the list of available devices. */
 private void
 print_devices(const gs_main_instance *minst)
 {
+    outprintf("%s", help_default_device);
+    outprintf(" %s\n", gs_devicename(gs_getdevice(0)));
     outprintf("%s", help_devices);
     {
 	int i;
 	int pos = 100;
 	const gx_device *pdev;
+	const char **names;
+	size_t ndev = 0;
 
-	for (i = 0; (pdev = gs_getdevice(i)) != 0; i++) {
-	    const char *dname = gs_devicename(pdev);
-	    int len = strlen(dname);
+	for (i = 0; (pdev = gs_getdevice(i)) != 0; i++)
+	    ;
+	ndev = (size_t)i;
+	names = (const char **)gs_alloc_bytes(minst->heap, ndev * sizeof(const char*), "print_devices");
+	if (names == (const char **)NULL) { /* old-style unsorted device list */
+	    for (i = 0; (pdev = gs_getdevice(i)) != 0; i++) {
+		const char *dname = gs_devicename(pdev);
+		int len = strlen(dname);
 
-	    if (pos + 1 + len > 76)
-		outprintf("\n  "), pos = 2;
-	    outprintf(" %s", dname);
-	    pos += 1 + len;
+		if (pos + 1 + len > 76)
+		    outprintf("\n  "), pos = 2;
+		outprintf(" %s", dname);
+		pos += 1 + len;
+	    }
+	}
+	else {				/* new-style sorted device list */
+	    for (i = 0; (pdev = gs_getdevice(i)) != 0; i++)
+		names[i] = gs_devicename(pdev);
+	    qsort((void*)names, ndev, sizeof(const char*), cmpstr);
+	    for (i = 0; i < ndev; i++) {
+		int len = strlen(names[i]);
+
+		if (pos + 1 + len > 76)
+		    outprintf("\n  "), pos = 2;
+		outprintf(" %s", names[i]);
+		pos += 1 + len;
+	    }
+	    gs_free((char *)names, ndev * sizeof(const char*), 1, "print_devices");
 	}
     }
     outprintf("\n");
@@ -993,8 +1030,12 @@ print_paths(gs_main_instance * minst)
 private void
 print_help_trailer(const gs_main_instance *minst)
 {
-    outprintf(help_trailer, gs_doc_directory,
-	    gp_file_name_concat_string(gs_doc_directory,
-				       strlen(gs_doc_directory)),
-	    GS_BUG_MAILBOX);
+    char buffer[gp_file_name_sizeof];
+    const char *use_htm = "Use.htm", *p = buffer;
+    uint blen = sizeof(buffer);
+
+    if (gp_file_name_combine(gs_doc_directory, strlen(gs_doc_directory), 
+	    use_htm, strlen(use_htm), false, buffer, &blen) != gp_combine_success)
+	p = use_htm;
+    outprintf(help_trailer, p, GS_BUG_MAILBOX);
 }

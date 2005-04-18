@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevbit.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevbit.c,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* "Plain bits" devices to measure rendering time. */
 #include "math_.h"
 #include "gdevprn.h"
@@ -42,7 +42,6 @@
 
 /* The device descriptor */
 private dev_proc_map_rgb_color(bit_mono_map_color);
-private dev_proc_map_rgb_color(bit_forcemono_map_rgb_color);
 private dev_proc_map_color_rgb(bit_map_color_rgb);
 private dev_proc_map_cmyk_color(bit_map_cmyk_color);
 private dev_proc_get_params(bit_get_params);
@@ -158,28 +157,6 @@ bit_mono_map_color(gx_device * dev, const gx_color_value cv[])
     return (bpc == 1 ? gx_max_color_value - gray : gray) >> drop;
 }
 
-/* Map RGB to gray shade. */
-/* Only used in CMYK mode when put_params has set ForceMono=1 */
-private gx_color_index
-bit_forcemono_map_rgb_color(gx_device * dev, const gx_color_value cv[])
-{
-    gx_color_value color;
-    int bpc = dev->color_info.depth / 4;	/* This function is used in CMYK mode */
-    int drop = sizeof(gx_color_value) * 8 - bpc;
-    gx_color_value gray, red, green, blue;
-    red = cv[0]; green = cv[1]; blue = cv[2];
-    gray = red;
-    if ((red != green) || (green != blue))
-	gray = (red * (unsigned long)lum_red_weight +
-	     green * (unsigned long)lum_green_weight +
-	     blue * (unsigned long)lum_blue_weight +
-	     (lum_all_weights / 2))
-		/ lum_all_weights;
-
-    color = (gx_max_color_value - gray) >> drop;	/* color is in K channel */
-    return color;
-}
-
 /* Map color to RGB.  This has 3 separate cases, but since it is rarely */
 /* used, we do a case test rather than providing 3 separate routines. */
 private int
@@ -237,7 +214,7 @@ bit_map_cmyk_color(gx_device * dev, const gx_color_value cv[])
     int bpc = dev->color_info.depth / 4;
     int drop = sizeof(gx_color_value) * 8 - bpc;
     gx_color_index color =
-    ((((((cv[0] >> drop) << bpc) +
+    (((((((gx_color_index) cv[0] >> drop) << bpc) +
 	(cv[1] >> drop)) << bpc) +
       (cv[2] >> drop)) << bpc) +
     (cv[3] >> drop);
@@ -290,11 +267,11 @@ bit_put_params(gx_device * pdev, gs_param_list * plist)
     int v;
     int ecode = 0;
     int code;
-    static const byte depths[4][8] = {
-	{1, 2, 0, 4, 8, 0, 0, 8},
+    static const byte depths[4][16] = {
+	{1, 2, 0, 4, 8, 0, 0, 8, 0, 0, 0, 16, 0, 0, 0, 16},
 	{0},
-	{4, 8, 0, 16, 16, 0, 0, 24},
-	{4, 8, 0, 16, 32, 0, 0, 32}
+	{4, 8, 0, 16, 16, 0, 0, 24, 0, 0, 0, 40, 0, 0, 0, 48},
+	{4, 8, 0, 16, 32, 0, 0, 32, 0, 0, 0, 48, 0, 0, 0, 64}
     };
     const char *vname;
 
@@ -318,6 +295,8 @@ bit_put_params(gx_device * pdev, gs_param_list * plist)
 		case  16: bpc = 4; break;
 		case  32: bpc = 5; break;
 		case 256: bpc = 8; break;
+		case 4096: bpc = 12; break;
+		case 65536: bpc = 16; break;
 		default:
 		    param_signal_error(plist, vname,
 				       ecode = gs_error_rangecheck);

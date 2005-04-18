@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: dwimg.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: dwimg.c,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $ */
 
 /* display device image window for Windows */
 
@@ -45,6 +45,7 @@
 
 #define STRICT
 #include <windows.h>
+#include "stdio_.h"
 #include "iapi.h"
 
 #include "dwmain.h"
@@ -171,8 +172,6 @@ int
 image_size(IMAGE *img, int new_width, int new_height, int new_raster, 
     unsigned int new_format, void *pimage)
 {
-    int i;
-    int nColors;
     img->raster = new_raster;
     img->format = new_format;
     img->image = (unsigned char *)pimage;
@@ -385,9 +384,9 @@ static void
 create_window(IMAGE *img)
 {
     HMENU sysmenu;
-    HBRUSH hbrush;
     LOGBRUSH lb;
     char winposbuf[256];
+    char window_title[256];
     int len = sizeof(winposbuf);
     int x, y, cx, cy;
 
@@ -415,9 +414,38 @@ create_window(IMAGE *img)
 	    img->cy = cy;
 	}
     }
+    strcpy(window_title, (img->device != NULL ? (LPSTR)szImgName2 : (LPSTR)szTrcName2));
+    {  /*
+        *   This section is for debug purpose only.
+	*   It allows to replace window title so that user can identify window
+	*   when multiple instances of the application run in same time.
+	*   Create gs\bin\gswin32.ini or gs\bin\gswin32c.ini and
+	*   put an identifier to there like this :
+	*
+	*	[Window]
+	*	Title=Current Revision
+	*
+	*   It is useful to compare images generated with different revisions.
+	*/
+        char ini_path[MAX_PATH];
+	DWORD ini_path_length;
 
+	ini_path_length = GetModuleFileName(NULL, ini_path, sizeof(ini_path));
+	if (ini_path_length > 0) {
+	    int i = ini_path_length - 1;
+	    for (; i>=0; i--)
+		if(ini_path[i] == '.')
+		    break;
+	    if (i < sizeof(ini_path) - 4) {
+		strcpy(ini_path + i, ".ini");
+		GetPrivateProfileString("Window", "Title", 
+			(img->device != NULL ? (LPSTR)szImgName2 : (LPSTR)szTrcName2), 
+ 			window_title, sizeof(window_title), ini_path);
+	    }
+	}
+    }
     /* create window */
-    img->hwnd = CreateWindow(szImgName2, (img->device != NULL ? (LPSTR)szImgName2 : (LPSTR)szTrcName2),
+    img->hwnd = CreateWindow(szImgName2, window_title,
 	      WS_OVERLAPPEDWINDOW,
 	      img->x, img->y, img->cx, img->cy, 
 	      NULL, NULL, GetModuleHandle(NULL), (void *)img);
@@ -1195,7 +1223,7 @@ WndImg2Proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 		const char *p;
 		const char *szDragPre = "\r(";
 		const char *szDragPost = ") run\r";
-		HANDLE hdrop = (HANDLE)wParam;
+		HDROP hdrop = (HDROP)wParam;
 		cFiles = DragQueryFile(hdrop, (UINT)(-1), (LPSTR)NULL, 0);
 		for (i=0; i<cFiles; i++) {
 		    DragQueryFile(hdrop, i, szFile, 80);
@@ -1225,7 +1253,6 @@ WndImg2Proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     }
 
-not_ours:
 	return DefWindowProc(hwnd, message, wParam, lParam);
 }
 

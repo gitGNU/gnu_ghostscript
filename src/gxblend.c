@@ -24,7 +24,7 @@
 
   Author: Raph Levien <raph@artofcode.com>
 */
-/* $Id: gxblend.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxblend.c,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* PDF 1.4 blending functions */
 
 #include "memory_.h"
@@ -745,7 +745,6 @@ art_pdf_recomposite_group_8(byte *dst, byte *dst_alpha_g,
 	    tmp = (255 - *dst_alpha_g) * (255 - src_alpha_g) + 0x80;
 	    *dst_alpha_g = 255 - ((tmp + (tmp >> 8)) >> 8);
 	}
-	*dst_alpha_g = src[n_chan];
 	return;
     } else {
 	/* "interesting" blend mode */

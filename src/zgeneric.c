@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zgeneric.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: zgeneric.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Array/string/dictionary generic operators for PostScript */
 #include "memory_.h"
 #include "ghost.h"
@@ -207,6 +207,7 @@ zput(i_ctx_t *i_ctx_p)
 
     switch (r_type(op2)) {
 	case t_dictionary:
+	    if (i_ctx_p->in_superexec == 0)
 	    check_dict_write(*op2);
 	    {
 		int code = idict_put(op2, op1, op);

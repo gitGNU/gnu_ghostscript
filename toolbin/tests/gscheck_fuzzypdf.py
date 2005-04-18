@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.2
+#!/usr/bin/env python
 
 #    Copyright (C) 2001 artofcode LLC. All rights reserved.
 # 
@@ -23,7 +23,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: gscheck_fuzzypdf.py,v 1.1 2004/02/14 22:46:29 atai Exp $
+# $Id: gscheck_fuzzypdf.py,v 1.2 2005/04/18 12:06:13 Arabidopsis Exp $
 
 #
 # gscheck_fuzzypdf.py

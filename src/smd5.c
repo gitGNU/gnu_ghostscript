@@ -22,10 +22,11 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: smd5.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: smd5.c,v 1.3 2005/04/18 12:06:04 Arabidopsis Exp $ */
 /* MD5Encode filter */
 #include "memory_.h"
 #include "strimpl.h"
+#include "stream.h"
 #include "smd5.h"
 
 /* ------ MD5Encode ------ */
@@ -69,3 +70,22 @@ s_MD5E_process(stream_state * st, stream_cursor_read * pr,
 const stream_template s_MD5E_template = {
     &st_MD5E_state, s_MD5E_init, s_MD5E_process, 1, 16
 };
+
+stream *
+s_MD5E_make_stream(gs_memory_t *mem, byte *digest, int digest_size)
+{
+    stream *s = s_alloc(mem, "s_MD5E_make_stream");
+    stream_state *ss = s_alloc_state(mem, s_MD5E_template.stype, "s_MD5E_make_stream");
+
+    if (ss == NULL || s == NULL)
+	goto err;
+    ss->template = &s_MD5E_template;
+    if (s_init_filter(s, ss, digest, digest_size, NULL) < 0)
+	goto err;
+    s->strm = s;
+    return s;
+err:
+    gs_free_object(mem, ss, "s_MD5E_make_stream");
+    gs_free_object(mem, s, "s_MD5E_make_stream");
+    return NULL;
+}

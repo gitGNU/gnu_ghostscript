@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gzpath.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/*$Id: gzpath.h,v 1.3 2005/04/18 12:06:04 Arabidopsis Exp $ */
 /* Structure and internal procedure definitions for paths */
 /* Requires gxfixed.h */
 
@@ -174,7 +174,10 @@ void gx_curve_split(fixed, fixed, const curve_segment *, double,
 		    curve_segment *, curve_segment *);
 
 /* Flatten a partial curve by sampling (internal procedure). */
-int gx_flatten_sample(gx_path *, int, curve_segment *, segment_notes);
+int gx_subdivide_curve(gx_path *, int, curve_segment *, segment_notes);
+#if FLATTENED_CURVE_ITERATOR0_COMPATIBLE
+bool gx_check_nearly_collinear(fixed *x0, fixed *y0, fixed *x1, fixed *y1, fixed *x2, fixed *y2);
+#endif
 
 /* Initialize a cursor for rasterizing a monotonic curve. */
 typedef struct curve_cursor_s {
@@ -402,5 +405,39 @@ extern_st(st_path_enum);
    gx_path_add_relative_point(ppath, dx, dy) :\
    (ppath->position.x += dx, ppath->position.y += dy,\
     path_update_moveto(ppath), 0) )
+
+#if FLATTENED_CURVE_ITERATOR
+/* An iterator of flattened segments for a minotonic curve. */
+typedef struct gx_flattened_curve_iterator_s gx_flattened_curve_iterator;
+struct gx_flattened_curve_iterator_s {
+    /* private : */
+    fixed x0, y0, x3, y3;
+    fixed cx, bx, ax, cy, by, ay;
+    uint i, k;
+    uint rmask;			/* M-1 */
+    fixed idx, idy, id2x, id2y, id3x, id3y;	/* I */
+    uint rx, ry, rdx, rdy, rd2x, rd2y, rd3x, rd3y;	/* R */
+    segment_notes notes;
+#if CURVED_TRAPEZOID_FILL
+#if FLATTENED_CURVE_ITERATOR0_COMPATIBLE
+    bool reverse;
+#endif
+#endif
+    /* public : */
+    fixed lx0, ly0, lx1, ly1;
+};
+
+bool gx_flattened_curve_iterator__init(gx_flattened_curve_iterator *this, 
+	    fixed x0, fixed y0, const curve_segment *pc, int k, bool reverse, segment_notes notes);
+bool gx_flattened_curve_iterator__init_line(gx_flattened_curve_iterator *this, 
+	    fixed x0, fixed y0, const line_segment *pc, segment_notes notes);
+bool gx_flattened_curve_iterator__next(gx_flattened_curve_iterator *this);
+
+bool curve_coeffs_ranged(fixed x0, fixed x1, fixed x2, fixed x3, 
+		    fixed y0, fixed y1, fixed y2, fixed y3, 
+		    fixed *ax, fixed *bx, fixed *cx, 
+		    fixed *ay, fixed *by, fixed *cy, 
+		    int k);
+#endif
 
 #endif /* gzpath_INCLUDED */

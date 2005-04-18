@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxpath.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxpath.h,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Fixed-point path procedures */
 /* Requires gxfixed.h */
 
@@ -196,7 +196,11 @@ int gx_path_subpath_start_point(const gx_path *, gs_fixed_point *);
 bool gx_path_has_curves(const gx_path *),
     gx_path_is_void(const gx_path *),	/* no segments */
     gx_path_is_null(const gx_path *),	/* nothing at all */
-    gx_path_is_monotonic(const gx_path *);
+#if CURVED_TRAPEZOID_FILL
+    gx_path__check_curves(const gx_path * ppath, bool small_curves, fixed fixed_flat);
+#else
+    gx_path_is_monotonic(const gx_path * ppath);
+#endif
 typedef enum {
     prt_none = 0,
     prt_open = 1,		/* only 3 sides */
@@ -221,6 +225,9 @@ typedef enum {
     pco_monotonize = 1,		/* make curves monotonic */
     pco_accurate = 2,		/* flatten with accurate tangents at ends */
     pco_for_stroke = 4		/* flatten taking line width into account */
+#if CURVED_TRAPEZOID_FILL
+    , pco_small_curves = 8	/* make curves small */
+#endif
 } gx_path_copy_options;
 /* The imager state is only needed when flattening for stroke. */
 #ifndef gs_imager_state_DEFINED
@@ -339,5 +346,10 @@ int gx_cpath_enum_next(gs_cpath_enum *, gs_fixed_point[3]);		/* 0 when done */
 
 segment_notes
 gx_cpath_enum_notes(const gs_cpath_enum *);
+
+#ifdef DEBUG
+void gx_cpath_print(const gx_clip_path *);
+#endif
+
 
 #endif /* gxpath_INCLUDED */

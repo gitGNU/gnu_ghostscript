@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxht.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/*$Id: gxht.c,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Halftone rendering for imaging library */
 #include "memory_.h"
 #include "gx.h"
@@ -615,8 +615,9 @@ gx_dc_ht_binary_read(
     devc.colors.binary.b_tile = 0;
 
     /* verify the minimum amount of information */
-    if ((size -= 1) < 0)
+    if (size == 0)
         return_error(gs_error_rangecheck);
+    size --;
     flag_bits = *pdata++;
 
     /* read the other information provided */
@@ -649,8 +650,9 @@ gx_dc_ht_binary_read(
         size -= pdata - pdata_start;
     }
     if ((flag_bits & dc_ht_binary_has_index) != 0) {
-        if (--size < 0)
+        if (size == 0)
             return_error(gs_error_rangecheck);
+	--size;
         devc.colors.binary.b_index = *pdata++;
     }
 

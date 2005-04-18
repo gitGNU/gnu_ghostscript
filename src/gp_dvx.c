@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gp_dvx.c,v 1.2 2004/02/14 22:20:16 atai Exp $ */
+/* $Id: gp_dvx.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Desqview/X-specific routines for Ghostscript */
 #include "string_.h"
 #include "gx.h"
@@ -118,3 +118,24 @@ gp_close_printer(FILE * pfile, const char *fname)
     else
 	fclose(pfile);
 }
+
+/* ------ Font enumeration ------ */
+ 
+ /* This is used to query the native os for a list of font names and
+  * corresponding paths. The general idea is to save the hassle of
+  * building a custom fontmap file.
+  */
+ 
+void *gp_enumerate_fonts_init(gs_memory_t *mem)
+{
+    return NULL;
+}
+         
+int gp_enumerate_fonts_next(void *enum_state, char **fontname, char **path)
+{
+    return 0;
+}
+                         
+void gp_enumerate_fonts_free(void *enum_state)
+{
+}           

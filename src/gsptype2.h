@@ -22,13 +22,14 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsptype2.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsptype2.h,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Client interface to PatternType 2 Patterns */
 
 #ifndef gsptype2_INCLUDED
 #  define gsptype2_INCLUDED
 
 #include "gspcolor.h"
+#include "gsdcolor.h"
 #include "gxfixed.h"
 
 /* ---------------- Types and structures ---------------- */
@@ -78,6 +79,10 @@ typedef struct gx_path_s gx_path;
 #define gx_device_DEFINED
 typedef struct gx_device_s gx_device;
 #endif
+
+extern const gx_device_color_type_t gx_dc_pattern2;
+
+#define gx_dc_type_pattern2 (&gx_dc_pattern2)
 
 /* ---------------- Procedures ---------------- */
 

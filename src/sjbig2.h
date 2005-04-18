@@ -22,13 +22,14 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: sjbig2.h,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: sjbig2.h,v 1.2 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Definitions for jbig2decode filter */
 /* Requires scommon.h; strimpl.h if any templates are referenced */
 
 #ifndef sjbig2_INCLUDED
 #  define sjbig2_INCLUDED
 
+#include "stdint_.h"
 #include "scommon.h"
 #include <jbig2.h>
 

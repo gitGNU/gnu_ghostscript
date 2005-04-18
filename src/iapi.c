@@ -22,12 +22,12 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: iapi.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: iapi.c,v 1.3 2005/04/18 12:05:57 Arabidopsis Exp $ */
 
 /* Public Application Programming Interface to Ghostscript interpreter */
 
 #include "string_.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "gscdefs.h"
 #include "gstypes.h"
 #include "iapi.h"	/* Public API */
@@ -232,8 +232,7 @@ gsapi_exit(gs_main_instance *minst)
     if (minst == NULL)
 	return e_Fatal;
 
-    gs_to_exit(0);
-    return 0;
+    return gs_to_exit(0);
 }
 
 /* Visual tracer : */

@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxipixel.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxipixel.c,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Common code for ImageType 1 and 4 initialization */
 #include "gx.h"
 #include "math_.h"
@@ -265,7 +265,7 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
 	    return_error(gs_error_rangecheck);
 	}
 	/* Initialize color entries 0 and 255. */
-	color_set_pure(&penum->icolor0, gx_no_color_index);
+	set_nonclient_dev_color(&penum->icolor0, gx_no_color_index);
 	penum->icolor1 = *pdcolor;
 	memcpy(&penum->map[0].table.lookup4x1to32[0],
 	       (decode[0] < decode[1] ? lookup4x1to32_inverted :
@@ -347,7 +347,7 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
 			   lookup4x1to32_inverted, 16 * 4);
 		  rmask:	/* Fill in the remaining parameters for a mask. */
 		    penum->masked = masked = true;
-		    color_set_pure(&penum->icolor0, gx_no_color_index);
+		    set_nonclient_dev_color(&penum->icolor0, gx_no_color_index);
 		    penum->map[0].decoding = sd_none;
 		    lop = rop3_T;
 		    break;

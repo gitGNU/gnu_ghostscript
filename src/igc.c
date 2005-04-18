@@ -22,11 +22,11 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: igc.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: igc.c,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Garbage collector for Ghostscript */
 #include "memory_.h"
 #include "ghost.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "gsexit.h"
 #include "gsmdebug.h"
 #include "gsstruct.h"
@@ -1196,6 +1196,9 @@ gc_do_reloc(chunk_t * cp, gs_ref_memory_t * mem, gc_state_t * pstate)
     if_debug_chunk('6', "[6]relocating in chunk", cp);
     SCAN_CHUNK_OBJECTS(cp)
 	DO_ALL
+#ifdef DEBUG
+	pstate->container = cp;
+#endif
     /* We need to relocate the pointers in an object iff */
     /* it is o_untraced, or it is a useful object. */
     /* An object is free iff its back pointer points to */
@@ -1213,6 +1216,9 @@ gc_do_reloc(chunk_t * cp, gs_ref_memory_t * mem, gc_state_t * pstate)
 	    if (proc != 0)
 		(*proc) (pre + 1, size, pre->o_type, pstate);
 	}
+#ifdef DEBUG
+	pstate->container = 0;
+#endif
     END_OBJECTS_SCAN
 }
 
@@ -1248,10 +1254,16 @@ igc_reloc_struct_ptr(const void /*obj_header_t */ *obj, gc_state_t * gcst)
 	else {
 #ifdef DEBUG
 	    /* Do some sanity checking. */
-	    if (back > gcst->space_local->chunk_size >> obj_back_shift) {
-		lprintf2("Invalid back pointer %u at 0x%lx!\n",
-			 back, (ulong) obj);
-		gs_abort();
+	    chunk_t *cp = gcst->container;
+
+	    if (cp != 0 && cp->cbase <= (byte *)obj && (byte *)obj <cp->ctop) {
+		if (back > (cp->ctop - cp->cbase) >> obj_back_shift) {
+		    lprintf2("Invalid back pointer %u at 0x%lx!\n",
+			     back, (ulong) obj);
+		    gs_abort();
+		}
+	    } else {
+		/* Pointed to unknown chunk. Can't check it, sorry. */
 	    }
 #endif
 	    {

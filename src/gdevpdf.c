@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpdf.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevpdf.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* PDF-writing driver */
 #include "fcntl_.h"
 #include "memory_.h"
@@ -36,6 +36,9 @@
 #include "gdevpdfx.h"
 #include "gdevpdfg.h"		/* only for pdf_reset_graphics */
 #include "gdevpdfo.h"
+#include "gdevpdt.h"
+#include "smd5.h"
+#include "sarc4.h"
 
 /* Define the default language level and PDF compatibility level. */
 /* Acrobat 4 (PDF 1.3) is the default. */
@@ -52,6 +55,8 @@ gs_private_st_element(st_pdf_page_element, pdf_page_t, "pdf_page_t[]",
 		      pdf_page_elt_enum_ptrs, pdf_page_elt_reloc_ptrs,
 		      st_pdf_page);
 private_st_device_pdfwrite();
+private_st_pdf_substream_save();
+private_st_pdf_substream_save_element();
 
 /* GC procedures */
 private 
@@ -169,7 +174,20 @@ const gx_device_pdf gs_pdfwrite_device =
   NULL,				/* map_color_rgb_alpha */
   psdf_create_compositor,	/* create_compositor */
   NULL,				/* get_hardware_params */
-  gdev_pdf_text_begin
+  gdev_pdf_text_begin,
+  NULL,				/* finish_copydevice */
+  NULL,				/* begin_transparency_group */
+  NULL,				/* end_transparency_group */
+  NULL,				/* begin_transparency_mask */
+  NULL,				/* end_transparency_mask */
+  NULL,				/* discard_transparency_layer */
+  NULL,				/* get_color_mapping_procs */
+  NULL,				/* get_color_comp_index */
+  NULL,				/* encode_color */
+  NULL,				/* decode_color */
+  gdev_pdf_pattern_manage, 	/* pattern_manage */
+  gdev_pdf_fill_rectangle_hl_color, 	/* fill_rectangle_hl_color */
+  gdev_pdf_include_color_space 	/* include_color_space */
  },
  psdf_initial_values(PSDF_VERSION_INITIAL, 0 /*false */ ),  /* (!ASCII85EncodePages) */
  PDF_COMPATIBILITY_LEVEL_INITIAL,  /* CompatibilityLevel */
@@ -189,6 +207,18 @@ const gx_device_pdf gs_pdfwrite_device =
  1 /*true*/,			/* ReEncodeCharacters */
  1,				/* FirstObjectNumber */
  1 /*true*/,			/* CompressFonts */
+ 4000,				/* MaxInlineImageSize */
+ {0, 0},			/* OwnerPassword */
+ {0, 0},			/* UserPassword */
+ 0,				/* KeyLength */
+ -4,				/* Permissions */
+ 0,				/* EncryptionR */
+ {0},				/* EncryptionO */
+ {0},				/* EncryptionU */
+ {0},				/* EncryptionKey */
+ 0,				/* EncryptionV */
+ true,				/* EncryptMetadata */
+ {0, 0},			/* NoEncrypt */
  0 /*false*/,			/* is_EPS */
  {-1, -1},			/* doc_dsc_info */
  {-1, -1},			/* page_dsc_info */
@@ -201,6 +231,7 @@ const gx_device_pdf gs_pdfwrite_device =
  gs_no_id,			/* black_generation_id */
  gs_no_id,			/* undercolor_removal_id */
  pdf_compress_none,		/* compression */
+ pdf_compress_none,		/* compression_at_page_start */
  {{0}},				/* xref */
  {{0}},				/* asides */
  {{0}},				/* streams */
@@ -235,11 +266,36 @@ const gx_device_pdf gs_pdfwrite_device =
  0,				/* outlines_open */
  0,				/* articles */
  0,				/* Dests */
+ {0},				/* fileID */
  0,				/* global_named_objects */
  0,				/* local_named_objects */
  0,				/* NI_stack */
  0,				/* Namespace_stack */
- 0				/* open_graphics */
+ 0,				/* font_cache */
+ {0, 0},			/* char_width */
+ 0,				/* clip_path */
+ 0,                             /* PageLabels */
+ -1,                            /* PageLabels_current_page */
+ 0,                             /* PageLabels_current_label */
+ 0,				/* */
+ {				/* vgstack[2] */
+    {0}, {0}
+ },
+ 0,				/* vgstack_depth */
+ 0,				/* vgstack_bottom */
+ {0},				/* vg_initial */
+ false,				/* vg_initial_set */
+ 0,				/* sbstack_size */
+ 0,				/* sbstack_depth */
+ 0,				/* sbstack */
+ 0,				/* substream_Resources */
+ 1,				/* pcm_color_info_index == DeviceRGB */
+ false,				/* skip_colors */
+ false,				/* AR4_save_bug */
+ 0,				/* font3 */
+ 0,				/* accumulating_substream_resource */
+ {0,0,0,0,0,0,0,0,0},		/* charproc_ctm */
+ 0				/* charproc_just_accumulated */
 };
 
 /* ---------------- Device open/close ---------------- */
@@ -388,6 +444,180 @@ pdf_initialize_ids(gx_device_pdf * pdev)
     pdf_create_named_dict(pdev, NULL, &pdev->Pages, 0L);
 }
 
+private int
+pdf_compute_fileID(gx_device_pdf * pdev)
+{
+    /* We compute a file identifier when beginning a document
+       to allow its usage with PDF encryption. Due to that,
+       in contradiction to the Adobe recommendation, our
+       ID doesn't depend on the document size.
+    */
+    gs_memory_t *mem = pdev->pdf_memory;
+    stream *strm = pdev->strm;
+    uint ignore;
+    int code;
+    stream *s = s_MD5E_make_stream(mem, pdev->fileID, sizeof(pdev->fileID));
+    long secs_ns[2];
+    uint KeyLength = pdev->KeyLength;
+
+    if (s == NULL)
+	return_error(gs_error_VMerror);
+    pdev->KeyLength = 0; /* Disable encryption. Not so important though. */
+    gp_get_usertime(secs_ns);
+    sputs(s, (byte *)secs_ns, sizeof(secs_ns), &ignore);
+    sputs(s, (const byte *)pdev->fname, strlen(pdev->fname), &ignore);
+    pdev->strm = s;
+    code = cos_dict_elements_write(pdev->Info, pdev);
+    pdev->strm = strm;
+    pdev->KeyLength = KeyLength;
+    if (code < 0)
+	return code;
+    sclose(s);
+    gs_free_object(mem, s, "pdf_compute_fileID");
+#if 0
+    memcpy(pdev->fileID, "xxxxxxxxxxxxxxxx", sizeof(pdev->fileID)); /* Debug */
+#endif
+    return 0;
+}
+
+private const byte pad[32] = { 0x28, 0xBF, 0x4E, 0x5E, 0x4E, 0x75, 0x8A, 0x41, 
+			       0x64, 0x00, 0x4E, 0x56, 0xFF, 0xFA, 0x01, 0x08,
+			       0x2E, 0x2E, 0x00, 0xB6, 0xD0, 0x68, 0x3E, 0x80,
+			       0x2F, 0x0C, 0xA9, 0xFE, 0x64, 0x53, 0x69, 0x7A};
+
+private inline void
+copy_padded(byte buf[32], gs_const_string *str)
+{
+    memcpy(buf, str->data, min(str->size, 32));
+    if (32 > str->size)
+	memcpy(buf + str->size, pad, 32 - str->size);
+}
+
+private void
+Adobe_magic_loop_50(byte digest[16], int key_length)
+{
+    md5_state_t md5;
+    int i;
+
+    for (i = 0; i < 50; i++) {
+	md5_init(&md5);
+	md5_append(&md5, digest, key_length);
+	md5_finish(&md5, digest);
+    }
+}
+
+private void
+Adobe_magic_loop_19(byte *data, int data_size, const byte *key, int key_size)
+{
+    stream_arcfour_state sarc4;
+    byte key_buf[16];
+    int i, j;
+
+    for (i = 1; i <= 19; i++) {
+	for (j = 0; j < key_size; j++)
+	    key_buf[j] = key[j] ^ (byte)i;
+	s_arcfour_set_key(&sarc4, key_buf, key_size);
+	s_arcfour_process_buffer(&sarc4, data, data_size);
+    }
+}
+
+private int
+pdf_compute_encryption_data(gx_device_pdf * pdev)
+{
+    md5_state_t md5;
+    byte digest[16], buf[32], t;
+    stream_arcfour_state sarc4;
+
+    if (pdev->KeyLength == 0)
+	pdev->KeyLength = 40;
+    if (pdev->EncryptionV == 0 && pdev->KeyLength == 40)
+	pdev->EncryptionV = 1;	
+    if (pdev->EncryptionV == 0 && pdev->KeyLength > 40)
+	pdev->EncryptionV = 2;	
+    if (pdev->EncryptionV > 1 && pdev->CompatibilityLevel < 1.4) {
+	eprintf("PDF 1.3 only supports 40 bits keys.\n");
+	return_error(gs_error_rangecheck);
+    }
+    if (pdev->EncryptionR == 0)
+	pdev->EncryptionR = 2;
+    if (pdev->EncryptionR < 2 || pdev->EncryptionR > 3) {
+	eprintf("Encryption revisions 2 and 3 are only supported.\n");
+	return_error(gs_error_rangecheck);
+    }
+    if (pdev->EncryptionR > 2 && pdev->CompatibilityLevel < 1.4) {
+	eprintf("PDF 1.3 only supports the encryption revision 2.\n");
+	return_error(gs_error_rangecheck);
+    }
+    if (pdev->KeyLength > 128) {
+	eprintf("The maximal length of PDF encryption key is 128 bits.\n");
+	return_error(gs_error_rangecheck);
+    }
+    if (pdev->KeyLength % 8) {
+	eprintf("PDF encryption key length must be a multiple of 8.\n");
+	return_error(gs_error_rangecheck);
+    }
+    if (pdev->EncryptionR == 2 &&
+	((pdev->Permissions & (0xFFFFFFC3)) != 0xFFFFFFC0)) {
+	eprintf("Some of Permissions are not allowed with R=2.\n");
+	return_error(gs_error_rangecheck);
+    }
+    if (pdev->EncryptionV == 2 && pdev->EncryptionR == 2 && pdev->KeyLength > 40) {
+	eprintf("Encryption version 2 revision 2 with KeyLength > 40 appears incompatible to some viewers. With long keys use revision 3.\n");
+	return_error(gs_error_rangecheck);
+    }
+    /* Compute O : */
+    md5_init(&md5);
+    copy_padded(buf, &pdev->OwnerPassword);
+    md5_append(&md5, buf, sizeof(buf));
+    md5_finish(&md5, digest);
+    if (pdev->EncryptionR == 3)
+	Adobe_magic_loop_50(digest, pdev->KeyLength / 8);
+    copy_padded(buf, &pdev->UserPassword);
+    s_arcfour_set_key(&sarc4, digest, pdev->KeyLength / 8);
+    s_arcfour_process_buffer(&sarc4, buf, sizeof(buf));
+    if (pdev->EncryptionR == 3)
+	Adobe_magic_loop_19(buf, sizeof(buf), digest, pdev->KeyLength / 8);
+    memcpy(pdev->EncryptionO, buf, sizeof(pdev->EncryptionO));
+    /* Compute Key : */
+    md5_init(&md5);
+    copy_padded(buf, &pdev->UserPassword);
+    md5_append(&md5, buf, sizeof(buf));
+    md5_append(&md5, pdev->EncryptionO, sizeof(pdev->EncryptionO));
+    t = (byte)(pdev->Permissions >>  0);  md5_append(&md5, &t, 1);
+    t = (byte)(pdev->Permissions >>  8);  md5_append(&md5, &t, 1);
+    t = (byte)(pdev->Permissions >> 16);  md5_append(&md5, &t, 1);
+    t = (byte)(pdev->Permissions >> 24);  md5_append(&md5, &t, 1);
+    md5_append(&md5, pdev->fileID, sizeof(pdev->fileID));
+    if (pdev->EncryptionR == 3)
+	if (!pdev->EncryptMetadata) {
+	    const byte v[4] = {0xFF, 0xFF, 0xFF, 0xFF};
+
+	    md5_append(&md5, v, 4);
+	}
+    md5_finish(&md5, digest);
+    if (pdev->EncryptionR == 3)
+	Adobe_magic_loop_50(digest, pdev->KeyLength / 8);
+    memcpy(pdev->EncryptionKey, digest, pdev->KeyLength / 8);
+    /* Compute U : */
+    if (pdev->EncryptionR == 3) {
+	md5_init(&md5);
+	md5_append(&md5, pad, sizeof(pad));
+	md5_append(&md5, pdev->fileID, sizeof(pdev->fileID));
+	md5_finish(&md5, digest);
+	s_arcfour_set_key(&sarc4, pdev->EncryptionKey, pdev->KeyLength / 8);
+	s_arcfour_process_buffer(&sarc4, digest, sizeof(digest));
+	Adobe_magic_loop_19(digest, sizeof(digest), pdev->EncryptionKey, pdev->KeyLength / 8);
+	memcpy(pdev->EncryptionU, digest, sizeof(digest));
+	memcpy(pdev->EncryptionU + sizeof(digest), pad, 
+		sizeof(pdev->EncryptionU) - sizeof(digest));
+    } else {
+    memcpy(pdev->EncryptionU, pad, sizeof(pdev->EncryptionU));
+	s_arcfour_set_key(&sarc4, pdev->EncryptionKey, pdev->KeyLength / 8);
+	s_arcfour_process_buffer(&sarc4, pdev->EncryptionU, sizeof(pdev->EncryptionU));
+    }
+    return 0;
+}
+
 #ifdef __DECC
 /* The ansi alias rules are violated in this next routine.  Tell the compiler
    to ignore this.
@@ -395,10 +625,31 @@ pdf_initialize_ids(gx_device_pdf * pdev)
 #pragma optimize save
 #pragma optimize ansi_alias=off
 #endif
-/* Update the color mapping procedures after setting ProcessColorModel. */
+/*
+ * Update the color mapping procedures after setting ProcessColorModel.
+ *
+ * The 'index' value indicates the ProcessColorModel.
+ *	0 = DeviceGray
+ *	1 = DeviceRGB
+ *	2 = DeviceCMYK
+ *	3 = DeviceN (treat like CMYK except for color model name)
+ */
 void
-pdf_set_process_color_model(gx_device_pdf * pdev)
+pdf_set_process_color_model(gx_device_pdf * pdev, int index)
 {
+
+    const static gx_device_color_info pcm_color_info[] = {
+	dci_values(1, 8, 255, 0, 256, 0),		/* Gray */
+	dci_values(3, 24, 255, 255, 256, 256),		/* RGB */
+	dci_values(4, 32, 255, 255, 256, 256),		/* CMYK */
+	dci_values(4, 32, 255, 255, 256, 256)	/* Treat DeviceN like CMYK */
+    };
+
+    pdev->pcm_color_info_index = index;
+    pdev->color_info = pcm_color_info[index];
+    /* Set the separable and linear shift, masks, bits. */
+    set_linear_color_bits_mask_shift((gx_device *)pdev);
+    pdev->color_info.separable_and_linear = GX_CINFO_SEP_LIN;
     /*
      * The conversion from PS to PDF should be transparent as possible.
      * Particularly it should not change representation of colors.
@@ -408,56 +659,45 @@ pdf_set_process_color_model(gx_device_pdf * pdev)
      * an output color model. Here we handle some color models,
      * which were selected almost due to antique reasons.
      */
-    if (!strcmp(pdev->color_info.cm_name, "DeviceGray")) {
-	set_dev_proc(pdev, map_rgb_color, gx_default_gray_map_rgb_color);
-	set_dev_proc(pdev, map_color_rgb, gx_default_gray_map_color_rgb);
-	set_dev_proc(pdev, map_cmyk_color, NULL);
-        set_dev_proc(pdev, get_color_mapping_procs, gx_default_DevGray_get_color_mapping_procs);
-        set_dev_proc(pdev, get_color_comp_index, gx_default_DevGray_get_color_comp_index);
-        set_dev_proc(pdev, encode_color, gx_default_gray_encode);
-        set_dev_proc(pdev, decode_color, gx_default_decode_color);
-    } else if (!strcmp(pdev->color_info.cm_name, "DeviceRGB")) {
-	set_dev_proc(pdev, map_rgb_color, gx_default_rgb_map_rgb_color);
-	set_dev_proc(pdev, map_color_rgb, gx_default_rgb_map_color_rgb);
-	set_dev_proc(pdev, map_cmyk_color, NULL);
-        set_dev_proc(pdev, get_color_mapping_procs, gx_default_DevRGB_get_color_mapping_procs);
-        set_dev_proc(pdev, get_color_comp_index, gx_default_DevRGB_get_color_comp_index);
-        set_dev_proc(pdev, encode_color, gx_default_rgb_map_rgb_color);
-        set_dev_proc(pdev, decode_color, gx_default_rgb_map_color_rgb);
-    } else if (!strcmp(pdev->color_info.cm_name, "DeviceCMYK")) {
-	set_dev_proc(pdev, map_rgb_color, NULL);
-	set_dev_proc(pdev, map_color_rgb, cmyk_8bit_map_color_rgb);
-       /* possible problems with aliassing on next statement */
-	set_dev_proc(pdev, map_cmyk_color, cmyk_8bit_map_cmyk_color);
-        set_dev_proc(pdev, get_color_mapping_procs, gx_default_DevCMYK_get_color_mapping_procs);
-        set_dev_proc(pdev, get_color_comp_index, gx_default_DevCMYK_get_color_comp_index);
-        set_dev_proc(pdev, encode_color, cmyk_8bit_map_cmyk_color);
-        set_dev_proc(pdev, decode_color, cmyk_8bit_map_color_rgb);
-    } else {	/* can't happen - see the call from gdev_pdf_put_params. */
- 	DO_NOTHING;
-    }
-    /* 
-     * Set initial color value.
-     * Doing this with a model-independent algorithm.
-     */
-    {
-	int i;
-	frac cm_comps[GX_DEVICE_COLOR_MAX_COMPONENTS];
-	gx_color_value cv[GX_DEVICE_COLOR_MAX_COMPONENTS];
-	gx_color_index color;
-	frac gray = frac_0;	/* Black */
-	const gx_cm_color_map_procs *procs;
-
-	/* map Black to color model components */
-	procs = dev_proc(pdev, get_color_mapping_procs)((gx_device *)pdev);
-	procs->map_gray((gx_device *)pdev, gray, cm_comps);
-	for (i = 0; i < pdev->color_info.num_components; i++)
-		cv[i] = frac2cv(cm_comps[i]);
-	/* Encode as a color index */
-	color = dev_proc(pdev, encode_color)((gx_device *)pdev, cv);
-	/* Now set it. */
-	color_set_pure(&pdev->fill_color, color);
-	color_set_pure(&pdev->stroke_color, color);
+    switch (index) {
+	case 0:		/* DeviceGray */
+	    set_dev_proc(pdev, map_rgb_color, gx_default_gray_map_rgb_color);
+	    set_dev_proc(pdev, map_color_rgb, gx_default_gray_map_color_rgb);
+	    set_dev_proc(pdev, map_cmyk_color, NULL);
+	    set_dev_proc(pdev, get_color_mapping_procs,
+			gx_default_DevGray_get_color_mapping_procs);
+	    set_dev_proc(pdev, get_color_comp_index,
+			gx_default_DevGray_get_color_comp_index);
+	    set_dev_proc(pdev, encode_color, gx_default_gray_encode);
+	    set_dev_proc(pdev, decode_color, gx_default_decode_color);
+	    break;
+	case 1:		/* DeviceRGB */
+	    set_dev_proc(pdev, map_rgb_color, gx_default_rgb_map_rgb_color);
+	    set_dev_proc(pdev, map_color_rgb, gx_default_rgb_map_color_rgb);
+	    set_dev_proc(pdev, map_cmyk_color, NULL);
+	    set_dev_proc(pdev, get_color_mapping_procs,
+			gx_default_DevRGB_get_color_mapping_procs);
+	    set_dev_proc(pdev, get_color_comp_index,
+			gx_default_DevRGB_get_color_comp_index);
+	    set_dev_proc(pdev, encode_color, gx_default_rgb_map_rgb_color);
+	    set_dev_proc(pdev, decode_color, gx_default_rgb_map_color_rgb);
+	    break;
+	case 3:		/* DeviceN - treat like DeviceCMYK except for cm_name */
+	    pdev->color_info.cm_name = "DeviceN";
+	case 2:		/* DeviceCMYK */
+	    set_dev_proc(pdev, map_rgb_color, NULL);
+	    set_dev_proc(pdev, map_color_rgb, cmyk_8bit_map_color_rgb);
+	   /* possible problems with aliassing on next statement */
+	    set_dev_proc(pdev, map_cmyk_color, cmyk_8bit_map_cmyk_color);
+	    set_dev_proc(pdev, get_color_mapping_procs,
+			gx_default_DevCMYK_get_color_mapping_procs);
+	    set_dev_proc(pdev, get_color_comp_index,
+			gx_default_DevCMYK_get_color_comp_index);
+	    set_dev_proc(pdev, encode_color, cmyk_8bit_map_cmyk_color);
+	    set_dev_proc(pdev, decode_color, cmyk_8bit_map_color_rgb);
+	    break;
+	default:	/* can't happen - see the call from gdev_pdf_put_params. */
+	    DO_NOTHING;
     }
 }
 #ifdef __DECC
@@ -507,19 +747,37 @@ pdf_open(gx_device * dev)
     pdev->NI_stack = cos_array_alloc(pdev, "pdf_open(NI stack)");
     pdev->Namespace_stack = cos_array_alloc(pdev, "pdf_open(Namespace stack)");
     pdf_initialize_ids(pdev);
+    code = pdf_compute_fileID(pdev);
+    if (code < 0)
+	goto fail;
+    if (pdev->OwnerPassword.size > 0) {
+	code = pdf_compute_encryption_data(pdev);
+	if (code < 0)
+	    goto fail;
+    } else if(pdev->UserPassword.size > 0) {
+	eprintf("User password is specified. Need an Owner password or both.\n");
+	return_error(gs_error_rangecheck);
+    } else if (pdev->KeyLength) {
+	eprintf("Can't accept encryption options without a password.\n");
+	return_error(gs_error_rangecheck);
+    }
     /* Now create a new dictionary for the local named objects. */
     pdev->local_named_objects =
 	cos_dict_alloc(pdev, "pdf_open(local_named_objects)");
     pdev->outlines_id = 0;
     pdev->next_page = 0;
     pdev->text = pdf_text_data_alloc(mem);
+    pdev->sbstack_size = count_of(pdev->vgstack); /* Overestimated a few. */
+    pdev->sbstack = gs_alloc_struct_array(mem, pdev->sbstack_size, pdf_substream_save,
+				 &st_pdf_substream_save_element, "pdf_open");
     pdev->pages =
 	gs_alloc_struct_array(mem, initial_num_pages, pdf_page_t,
 			      &st_pdf_page_element, "pdf_open(pages)");
-    if (pdev->text == 0 || pdev->pages == 0) {
+    if (pdev->text == 0 || pdev->pages == 0 || pdev->sbstack == 0) {
 	code = gs_error_VMerror;
 	goto fail;
     }
+    memset(pdev->sbstack, 0, pdev->sbstack_size * sizeof(pdf_substream_save));
     memset(pdev->pages, 0, initial_num_pages * sizeof(pdf_page_t));
     pdev->num_pages = initial_num_pages;
     {
@@ -539,7 +797,10 @@ pdf_open(gx_device * dev)
     pdev->articles = 0;
     pdev->Dests = 0;
     /* {global,local}_named_objects was initialized above */
-    pdev->open_graphics = 0;
+    pdev->PageLabels = 0;
+    pdev->PageLabels_current_page = 0;
+    pdev->PageLabels_current_label = 0;
+    pdev->pte = NULL;
     pdf_reset_page(pdev);
     return 0;
   fail:
@@ -566,7 +827,7 @@ private int
 pdf_dominant_rotation(const pdf_text_rotation_t *ptr)
 {
     int i, imax = -1;
-    long max_count = -1;
+    long max_count = 0;
     static const int angles[] = { pdf_text_rotation_angle_values };
 
     for (i = 0; i < countof(ptr->counts); ++i) {
@@ -670,7 +931,7 @@ pdf_close_page(gx_device_pdf * pdev)
     /* Write the Functions. */
 
     pdf_write_resource_objects(pdev, resourceFunction);
-    pdf_free_resource_objects(pdev, resourceFunction);
+    /* pdf_free_resource_objects(pdev, resourceFunction); May be referred from resourceColorSpace. */
 
     /* Close use of text on the page. */
 
@@ -794,7 +1055,7 @@ pdf_close(gx_device * dev)
     long xref;
     long resource_pos;
     long Catalog_id = pdev->Catalog->id, Info_id = pdev->Info->id,
-	Pages_id = pdev->Pages->id;
+	Pages_id = pdev->Pages->id, Encrypt_id = 0;
     long Threads_id = 0;
     bool partial_page = (pdev->contents_id != 0 && pdev->next_page != 0);
     int code = 0, code1;
@@ -806,8 +1067,12 @@ pdf_close(gx_device * dev)
      * if there is at least one complete page, we discard any leftover
      * marks.
      */
-    if (pdev->next_page == 0)
-	pdf_open_document(pdev);
+    if (pdev->next_page == 0) {
+	code = pdf_open_page(pdev, PDF_IN_STREAM);
+
+	if (code < 0)
+	    return code;
+    }
     if (pdev->contents_id != 0)
 	pdf_close_page(pdev);
 
@@ -821,7 +1086,12 @@ pdf_close(gx_device * dev)
     }
 
     /* Write the font resources and related resources. */
-
+    code1 = pdf_write_resource_objects(pdev, resourceXObject);
+    if (code >= 0)
+	code = code1;
+    code1 = pdf_free_resource_objects(pdev, resourceXObject);
+    if (code >= 0)
+	code = code1;
     code1 = pdf_close_text_document(pdev);
     if (code >= 0)
 	code = code1;
@@ -880,6 +1150,12 @@ pdf_close(gx_device * dev)
     if (pdev->Dests)
 	COS_WRITE_OBJECT(pdev->Dests, pdev);
 
+    /* Write the PageLabel array */
+    pdfmark_end_pagelabels(pdev);
+    if (pdev->PageLabels) {
+	COS_WRITE_OBJECT(pdev->PageLabels, pdev);
+    }
+
     /* Write the Catalog. */
 
     /*
@@ -911,12 +1187,20 @@ pdf_close(gx_device * dev)
 	pprintld1(s, "/Threads %ld 0 R\n", Threads_id);
     if (pdev->Dests)
 	pprintld1(s, "/Dests %ld 0 R\n", pdev->Dests->id);
+    if (pdev->PageLabels)
+	pprintld1(s, "/PageLabels << /Nums  %ld 0 R >>\n", 
+                  pdev->PageLabels->id);
     cos_dict_elements_write(pdev->Catalog, pdev);
     stream_puts(s, ">>\n");
     pdf_end_obj(pdev);
     if (pdev->Dests) {
 	COS_FREE(pdev->Dests, "pdf_close(Dests)");
 	pdev->Dests = 0;
+    }
+    if (pdev->PageLabels) {
+	COS_FREE(pdev->PageLabels, "pdf_close(PageLabels)");
+	pdev->PageLabels = 0;
+        pdev->PageLabels_current_label = 0;
     }
 
     /* Prevent writing special named objects twice. */
@@ -953,7 +1237,28 @@ pdf_close(gx_device * dev)
 	long res_end = ftell(rfile);
 
 	fseek(rfile, 0L, SEEK_SET);
-	pdf_copy_data(s, rfile, res_end);
+	pdf_copy_data(s, rfile, res_end, NULL);
+    }
+
+    /* Write Encrypt. */
+    if (pdev->OwnerPassword.size > 0) {
+	Encrypt_id = pdf_obj_ref(pdev);
+
+	pdf_open_obj(pdev, Encrypt_id);
+	s = pdev->strm;
+	stream_puts(s, "<<");
+	stream_puts(s, "/Filter /Standard ");
+	pprintld1(s, "/V %ld ", pdev->EncryptionV);
+	pprintld1(s, "/Length %ld ", pdev->KeyLength);
+	pprintld1(s, "/R %ld ", pdev->EncryptionR);
+	pprintld1(s, "/P %ld ", pdev->Permissions);
+	stream_puts(s, "/O ");
+	pdf_put_string(pdev, pdev->EncryptionO, sizeof(pdev->EncryptionO));
+	stream_puts(s, "\n/U ");
+	pdf_put_string(pdev, pdev->EncryptionU, sizeof(pdev->EncryptionU));
+	stream_puts(s, ">>\n");
+	pdf_end_obj(pdev);
+	s = pdev->strm;
     }
 
     /* Write the cross-reference section. */
@@ -987,6 +1292,13 @@ pdf_close(gx_device * dev)
     stream_puts(s, "trailer\n");
     pprintld3(s, "<< /Size %ld /Root %ld 0 R /Info %ld 0 R\n",
 	      pdev->next_id, Catalog_id, Info_id);
+    stream_puts(s, "/ID [");
+    pdf_put_string(pdev, pdev->fileID, sizeof(pdev->fileID));
+    pdf_put_string(pdev, pdev->fileID, sizeof(pdev->fileID));
+    stream_puts(s, "]\n");
+    if (pdev->OwnerPassword.size > 0) {
+	pprintld1(s, "/Encrypt %ld 0 R ", Encrypt_id);
+    }
     stream_puts(s, ">>\n");
     pprintld1(s, "startxref\n%ld\n%%%%EOF\n", xref);
 
@@ -1019,5 +1331,7 @@ pdf_close(gx_device * dev)
     pdev->num_pages = 0;
 
     code1 = gdev_vector_close_file((gx_device_vector *) pdev);
-    return pdf_close_files(pdev, code1);
+    if (code >= 0)
+	code = code1;
+    return pdf_close_files(pdev, code);
 }

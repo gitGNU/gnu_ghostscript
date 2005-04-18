@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxiscale.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxiscale.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Interpolated image procedures */
 #include "gx.h"
 #include "math_.h"
@@ -77,7 +77,8 @@ gs_image_class_0_interpolate(gx_image_enum * penum)
 	return 0;
     if (penum->use_mask_color || penum->posture != image_portrait ||
     	penum->masked || penum->alpha ||
-	penum->dev->color_info.max_gray < 15 ||
+	(penum->dev->color_info.num_components == 1 &&
+	 penum->dev->color_info.max_gray < 15) ||
         (penum->dev->color_info.num_components > 1 &&
          penum->dev->color_info.max_color < 15)
        ) {

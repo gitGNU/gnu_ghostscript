@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: stdio_.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: stdio_.h,v 1.3 2005/04/18 12:06:04 Arabidopsis Exp $ */
 /* Generic substitute for stdio.h */
 
 #ifndef stdio__INCLUDED
@@ -77,7 +77,8 @@ int unlink(const char *);
 #endif
 
 #if defined(_MSC_VER)
-#define fdopen(handle,mode) _fdopen(handle,mode)
+#  define fdopen(handle,mode) _fdopen(handle,mode)
+#  define fileno(file) _fileno(file)
 #endif
 
 #endif /* stdio__INCLUDED */

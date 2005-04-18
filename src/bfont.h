@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: bfont.h,v 1.2 2004/02/14 22:20:04 atai Exp $ */
+/* $Id: bfont.h,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Interpreter internal routines and data needed for building fonts */
 /* Requires gxfont.h */
 
@@ -83,6 +83,10 @@ int build_gs_sub_font(i_ctx_t *, const ref *, gs_font **,
 		      font_type, gs_memory_type_ptr_t,
 		      const build_proc_refs *, const ref *, ref *);
 int define_gs_font(gs_font *);
+void get_font_name(ref * pfname, const ref * op);
+void copy_font_name(gs_font_name * pfstr, const ref * pfname);
 gs_glyph zfont_encode_char(gs_font *pfont, gs_char chr, gs_glyph_space_t ignored);
+gs_char gs_font_map_glyph_to_unicode(gs_font *font, gs_glyph glyph);
+const ref *zfont_get_to_unicode_map(gs_font_dir *dir);
 
 #endif /* bfont_INCLUDED */

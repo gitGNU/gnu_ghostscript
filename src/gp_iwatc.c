@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gp_iwatc.c,v 1.2 2004/02/14 22:20:16 atai Exp $ */
+/* $Id: gp_iwatc.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Intel processor, Watcom C-specific routines for Ghostscript */
 #include "dos_.h"
 #include <fcntl.h>
@@ -134,8 +134,9 @@ gp_open_scratch_file(const char *prefix, char *fname, const char *mode)
 {	      /* The -7 is for XXXXXXX */
     int prefix_length = strlen(prefix);
     int len = gp_file_name_sizeof - prefix_length - 7;
+    FILE *f;
 
-    if (gp_pathstring_not_bare(prefix, prefix_length) ||
+    if (gp_file_name_is_absolute(prefix, prefix_length) ||
 	gp_gettmpdir(fname, &len) != 0
 	)
 	*fname = 0;
@@ -153,7 +154,10 @@ gp_open_scratch_file(const char *prefix, char *fname, const char *mode)
     strcat(fname, prefix);
     strcat(fname, "XXXXXX");
     mktemp(fname);
-    return gp_fopentemp(fname, mode);
+    f = gp_fopentemp(fname, mode);
+    if (f == NULL)
+	eprintf1("**** Could not open temporary file %s\n", fname);
+    return f;
 }
 
 
@@ -163,3 +167,24 @@ gp_fopen(const char *fname, const char *mode)
 {
     return fopen(fname, mode);
 }
+
+/* ------ Font enumeration ------ */
+ 
+ /* This is used to query the native os for a list of font names and
+  * corresponding paths. The general idea is to save the hassle of
+  * building a custom fontmap file.
+  */
+ 
+void *gp_enumerate_fonts_init(gs_memory_t *mem)
+{
+    return NULL;
+}
+         
+int gp_enumerate_fonts_next(void *enum_state, char **fontname, char **path)
+{
+    return 0;
+}
+                         
+void gp_enumerate_fonts_free(void *enum_state)
+{
+}           

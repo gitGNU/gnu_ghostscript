@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxfont1.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxfont1.h,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Type 1 / Type 2 font data definition */
 
 #ifndef gxfont1_INCLUDED
@@ -59,7 +59,10 @@ typedef struct gs_font_type1_s gs_font_type1;
 #define stem_table(size)\
 	float_array(size)
 
+#ifndef gs_type1_data_DEFINED
+#define gs_type1_data_DEFINED
 typedef struct gs_type1_data_s gs_type1_data;
+#endif
 
 typedef struct gs_type1_data_procs_s {
 
@@ -81,7 +84,7 @@ typedef struct gs_type1_data_procs_s {
      */
 
     int (*seac_data)(gs_font_type1 * pfont, int ccode,
-		     gs_glyph * pglyph, gs_glyph_data_t *pgd);
+		     gs_glyph * pglyph, gs_const_string *gstr, gs_glyph_data_t *pgd);
 
     /*
      * Push (a) value(s) onto the client ('PostScript') stack during

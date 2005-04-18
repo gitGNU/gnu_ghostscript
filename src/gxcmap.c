@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxcmap.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxcmap.c,v 1.3 2005/04/18 12:05:59 Arabidopsis Exp $ */
 /* Color mapping for Ghostscript */
 #include "gx.h"
 #include "gserrors.h"
@@ -40,13 +40,12 @@
 #include "gxcdevn.h"
 #include "string_.h"
 
-
 /* Structure descriptor */
 public_st_device_color();
 private 
 ENUM_PTRS_WITH(device_color_enum_ptrs, gx_device_color *cptr)
 {
-    return ENUM_USING(*cptr->type->stype, vptr, size, index);
+	return ENUM_USING(*cptr->type->stype, vptr, size, index);
 }
 ENUM_PTRS_END
 private RELOC_PTRS_WITH(device_color_reloc_ptrs, gx_device_color *cptr)
@@ -201,7 +200,7 @@ static void
 cmyk_cs_to_gray_cm(gx_device * dev, frac c, frac m, frac y, frac k, frac out[])
 {
     out[0] = color_cmyk_to_gray(c, m, y, k, NULL);
-};
+}
 
 static void
 gray_cs_to_rgb_cm(gx_device * dev, frac gray, frac out[])
@@ -222,7 +221,7 @@ static void
 cmyk_cs_to_rgb_cm(gx_device * dev, frac c, frac m, frac y, frac k, frac out[])
 {
     color_cmyk_to_rgb(c, m, y, k, NULL, out);
-};
+}
 
 static void
 gray_cs_to_cmyk_cm(gx_device * dev, frac gray, frac out[])
@@ -270,7 +269,7 @@ cmyk_cs_to_cmyk_cm(gx_device * dev, frac c, frac m, frac y, frac k, frac out[])
     out[1] = m;
     out[2] = y;
     out[3] = k;
-};
+}
 
 
 /* The list of default color space to color model conversion routines. */
@@ -502,12 +501,20 @@ gx_default_remap_color(const gs_client_color * pcc, const gs_color_space * pcs,
 {
     frac conc[GS_CLIENT_COLOR_MAX_COMPONENTS];
     const gs_color_space *pconcs;
+    int i = pcs->type->num_components(pcs);
     int code = (*pcs->type->concretize_color)(pcc, pcs, conc, pis);
 
     if (code < 0)
 	return code;
     pconcs = cs_concrete_space(pcs, pis);
-    return (*pconcs->type->remap_concrete_color)(conc, pconcs, pdc, pis, dev, select);
+    code = (*pconcs->type->remap_concrete_color)(conc, pconcs, pdc, pis, dev, select);
+
+    /* Save original color space and color info into dev color */
+    i = any_abs(i);
+    for (i--; i >= 0; i--)
+	pdc->ccolor.paint.values[i] = pcc->paint.values[i];
+    pdc->ccolor_valid = true;
+    return code;
 }
 
 /* Color remappers for the standard color spaces. */
@@ -546,6 +553,10 @@ gx_remap_DeviceGray(const gs_client_color * pc, const gs_color_space * pcs,
 {
     float ftemp;
     frac fgray = unit_frac(pc->paint.values[0], ftemp);
+
+    /* Save original color space and color info into dev color */
+    pdc->ccolor.paint.values[0] = pc->paint.values[0];
+    pdc->ccolor_valid = true;
 
     if (pis->alpha == gx_max_color_value)
 	(*pis->cmap_procs->map_gray)
@@ -591,6 +602,12 @@ gx_remap_DeviceRGB(const gs_client_color * pc, const gs_color_space * pcs,
     frac fred = unit_frac(pc->paint.values[0], ftemp), fgreen = unit_frac(pc->paint.values[1], ftemp),
          fblue = unit_frac(pc->paint.values[2], ftemp);
 
+    /* Save original color space and color info into dev color */
+    pdc->ccolor.paint.values[0] = pc->paint.values[0];
+    pdc->ccolor.paint.values[1] = pc->paint.values[1];
+    pdc->ccolor.paint.values[2] = pc->paint.values[2];
+    pdc->ccolor_valid = true;
+
     if (pis->alpha == gx_max_color_value)
 	gx_remap_concrete_rgb(fred, fgreen, fblue,
 			      pdc, pis, dev, select);
@@ -630,6 +647,13 @@ gx_remap_DeviceCMYK(const gs_client_color * pc, const gs_color_space * pcs,
 {
 /****** IGNORE alpha ******/
     float ft0, ft1, ft2, ft3;
+
+    /* Save original color space and color info into dev color */
+    pdc->ccolor.paint.values[0] = pc->paint.values[0];
+    pdc->ccolor.paint.values[1] = pc->paint.values[1];
+    pdc->ccolor.paint.values[2] = pc->paint.values[2];
+    pdc->ccolor.paint.values[3] = pc->paint.values[3];
+    pdc->ccolor_valid = true;
 
     gx_remap_concrete_cmyk((frac)unit_frac(pc->paint.values[0], ft0),
 			   (frac)unit_frac(pc->paint.values[1], ft1),
@@ -789,7 +813,7 @@ cmap_cmyk_direct(frac c, frac m, frac y, frac k, gx_device_color * pdc,
 
     /* We make a test for direct vs. halftoned, rather than */
     /* duplicating most of the code of this procedure. */
-    if (gx_color_device_must_halftone(dev)) {
+    if (gx_device_must_halftone(dev)) {
 	if (gx_render_device_DeviceN(cm_comps, pdc, dev,
 		    pis->dev_ht, &pis->screen_phase[select], false) == 1)
 	    gx_color_load_select(pdc, pis, dev, select);
@@ -802,6 +826,12 @@ cmap_cmyk_direct(frac c, frac m, frac y, frac k, gx_device_color * pdc,
     color = dev_proc(dev, encode_color)(dev, cv);
     if (color != gx_no_color_index) 
 	color_set_pure(pdc, color);
+    else {
+	if (gx_render_device_DeviceN(cm_comps, pdc, dev,
+		    pis->dev_ht, &pis->screen_phase[select], false) == 1)
+	    gx_color_load_select(pdc, pis, dev, select);
+	return;
+    }
 }
 
 private void

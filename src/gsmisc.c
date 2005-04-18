@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsmisc.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsmisc.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Miscellaneous utilities for Ghostscript library */
 
 /*
@@ -1149,10 +1149,16 @@ gs_sincos_degrees(double ang, gs_sincos_t * psincos)
 static const int isincos[5] =
 {0, 1, 0, -1, 0};
 
+/* GCC with -ffast-math compiles ang/90. as ang*(1/90.), losing precission.
+ * This doesn't happen when the numeral is replaced with a non-const variable.
+ * So we define the variable to work around the GCC problem. 
+ */
+static double const_90_degrees = 90.;
+
 double
 gs_sin_degrees(double ang)
 {
-    double quot = ang / 90;
+    double quot = ang / const_90_degrees;
 
     if (floor(quot) == quot) {
 	/*
@@ -1167,7 +1173,7 @@ gs_sin_degrees(double ang)
 double
 gs_cos_degrees(double ang)
 {
-    double quot = ang / 90;
+    double quot = ang / const_90_degrees;
 
     if (floor(quot) == quot) {
 	/* See above re the following line. */
@@ -1179,7 +1185,7 @@ gs_cos_degrees(double ang)
 void
 gs_sincos_degrees(double ang, gs_sincos_t * psincos)
 {
-    double quot = ang / 90;
+    double quot = ang / const_90_degrees;
 
     if (floor(quot) == quot) {
 	/* See above re the following line. */

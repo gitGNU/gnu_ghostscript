@@ -1,19 +1,22 @@
 dnl Copyright (C) 2002-2004 artofcode LLC. All rights reserved.
   
 dnl This software is provided AS-IS with no warranty, either express or
-dnl implied.
-dnl  
-dnl This software is distributed under license and may not be copied,
-dnl modified or distributed except as expressly authorized under the terms
-dnl of the license contained in the file LICENSE in this distribution.
-dnl 
+dnl  implied. That is, this program is distributed in the hope that it will 
+dnl  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+dnl  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+dnl  General Public License for more details
+
+dnl You should have received a copy of the GNU General Public License along
+dnl with this program; if not, write to the Free Software Foundation, Inc.,
+dnl 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
+
 dnl For more information about licensing, please refer to
 dnl http://www.ghostscript.com/licensing/. For information on
 dnl commercial licensing, go to http://www.artifex.com/licensing/ or
 dnl contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 dnl San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-dnl $Id: configure.ac,v 1.2 2004/02/14 22:20:02 atai Exp $
+dnl $Id: configure.ac,v 1.3 2005/04/18 12:06:13 Arabidopsis Exp $
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------
@@ -45,33 +48,34 @@ dnl --------------------------------------------------
 #AC_CANONICAL_HOST
 
 if test $ac_cv_prog_gcc = yes; then
-  cflags_to_try="-Wall -Wstrict-prototypes -Wmissing-declarations \
--Wmissing-prototypes -Wcast-qual -Wwrite-strings \
+    cflags_to_try="-Wall -Wstrict-prototypes \
+-Wmissing-declarations -Wmissing-prototypes \
+-Wcast-qual -Wwrite-strings \
 -fno-builtin -fno-common"
-  optflags_to_try="-O2"
+    optflags_to_try="-O2"
 else
-  cflags_to_try=
-  optflags_to_try="-O"
+    cflags_to_try=
+    optflags_to_try="-O"
 fi
-	
+
 AC_MSG_CHECKING([supported compiler flags])
 old_cflags=$CFLAGS
 echo
 for flag in $optflags_to_try; do
-  CFLAGS="$CFLAGS $flag"
-  AC_TRY_COMPILE(, [return 0;], [
-    echo "   $flag"
-    OPT_CFLAGS="$OPT_CFLAGS $flag"
-  ])
-  CFLAGS=$old_cflags
+    CFLAGS="$CFLAGS $flag"
+    AC_TRY_COMPILE(, [return 0;], [
+	echo "   $flag"
+	OPT_CFLAGS="$OPT_CFLAGS $flag"
+    ])
+    CFLAGS=$old_cflags
 done
 for flag in $cflags_to_try; do
-  CFLAGS="$CFLAGS $flag"
-  AC_TRY_COMPILE(, [return 0;], [
-    echo "   $flag"
-    GCFLAGS="$GCFLAGS $flag"
-  ])
-  CFLAGS=$old_cflags
+	CFLAGS="$CFLAGS $flag"
+	AC_TRY_COMPILE(, [return 0;], [
+		echo "   $flag"
+		GCFLAGS="$GCFLAGS $flag"
+	])
+	CFLAGS=$old_cflags
 done
 AC_MSG_RESULT([ ...done.])
 
@@ -99,10 +103,23 @@ AC_STRUCT_ST_BLOCKS
 AC_HEADER_TIME
 AC_STRUCT_TM
 
+dnl see if we're on a system that puts the *int*_t types 
+dnl from stdint.h in sys/types.h
+if test "$ac_cv_header_stdint_h" != yes; then
+    AC_CHECK_TYPES([int8_t, int16_t, int32_t, uint8_t, uint16_t, uint32_t],,,[#include <sys/types.h>])
+    if test "$ac_cv_type_uint8_t" = yes; then
+        AC_DEFINE([SYS_TYPES_HAS_STDINT_TYPES])
+	GCFLAGS="$GCFLAGS -DSYS_TYPES_HAS_STDINT_TYPES"
+    fi
+fi
+
 dnl we aren't interested in all of DEFS, so manually insert
 dnl the flags we care about
 if test "$ac_cv_c_const" != yes; then
 	GCFLAGS="$GCFLAGS -Dconst="
+fi
+if test "$ac_cv_header_stdint_h" = yes; then
+	GCFLAGS="$GCFLAGS -DHAVE_STDINT_H"
 fi
 
 dnl try to find a 64 bit type for devicen color index
@@ -121,7 +138,7 @@ uint64_type="none"
    else
     AC_CHECK_SIZEOF(u_int64_t)
     if test $ac_cv_sizeof_u_int64_t = 8; then
-	unit64_type="u_int64_t"
+	uint64_type="u_int64_t"
     fi
    fi
   fi
@@ -146,24 +163,40 @@ dnl build, so that the D_MAX_BLOCKS_IN_MCU patch will be applied.
 dnl A more sophisticated approach would be to test the shared lib
 dnl to see whether it has already been patched.
 LIBJPEGDIR=src
-if test -d jpeg; then
-	AC_MSG_RESULT([yes])
+if test -f jpeg/jpeglib.h; then
+	AC_MSG_RESULT([jpeg])
 	SHARE_LIBJPEG=0
 	LIBJPEGDIR=jpeg
+elif test -f jpeg-6b/jpeglib.h; then
+	AC_MSG_RESULT([jpeg-6b])
+	SHARE_LIBJPEG=0
+	LIBJPEGDIR=jpeg-6b
 else
 	AC_MSG_RESULT([no])
-	AC_CHECK_LIB(jpeg, jpeg_set_defaults, [SHARE_LIBJPEG=1], [
-		AC_MSG_ERROR([I wasn't able to find a copy
+	AC_CHECK_LIB(jpeg, jpeg_set_defaults, [
+	  AC_CHECK_HEADERS([jpeglib.h], [SHARE_LIBJPEG=1])
+	])
+fi
+if test -z "$SHARE_LIBJPEG"; then
+  AC_MSG_ERROR([I wasn't able to find a copy
   of the jpeg library. This is required for compiling
   ghostscript. Please download a copy of the source,
   e.g. from http://www.ijg.org/, unpack it at the
   top level of the gs source tree, and rename
   the directory to 'jpeg'.
-		])
-	])
+  ])
 fi
 AC_SUBST(SHARE_LIBJPEG)
 AC_SUBST(LIBJPEGDIR)
+dnl check for the internal jpeg memory header
+AC_MSG_CHECKING([for jmemsys.h])
+if test -r $LIBJPEGDIR/jmemsys.h; then
+  AC_MSG_RESULT([yes])
+else
+  AC_MSG_RESULT([no])
+  AC_DEFINE([DONT_HAVE_JMEMSYS_H], 1, 
+    [define if the libjpeg memory system prototypes aren't available])
+fi
 
 dnl these are technically optional
 
@@ -178,36 +211,40 @@ if test -d zlib; then
 	ZLIBDIR=zlib
 else
 	AC_MSG_RESULT([no])
-	AC_CHECK_LIB(z, deflate, [SHARE_ZLIB=1], [
-		AC_MSG_ERROR([I did not find a copy of zlib on your system.
-Please either install it, or unpack a copy of the source in a
-local directory named 'zlib'. See http://www.gzip.org/zlib/
-for more information.
-		])
+	AC_CHECK_LIB(z, deflate, [
+	  AC_CHECK_HEADERS(zlib.h, [SHARE_ZLIB=1])
 	])
+fi
+if test -z "$SHARE_ZLIB"; then
+  AC_MSG_ERROR([I did not find a copy of zlib on your system.
+  Please either install it, or unpack a copy of the source in a
+  local directory named 'zlib'. See http://www.gzip.org/zlib/
+  for more information.
+  ])
 fi
 AC_SUBST(SHARE_ZLIB)
 AC_SUBST(ZLIBDIR)
 
 dnl png for the png output device; it also requires zlib
 LIBPNGDIR=src
+PNGDEVS=''
 AC_MSG_CHECKING([for local png library source])
-if test -d libpng; then
+if test -f libpng/pngread.c; then
 	AC_MSG_RESULT([yes])
 	SHARE_LIBPNG=0
 	LIBPNGDIR=libpng
-	PNGDEVS='$(DD)png16m.dev $(DD)pnggray.dev $(DD)pngmono.dev $(DD)png256.dev $(DD)png16.dev'
+	PNGDEVS='$(DD)png16m.dev $(DD)pnggray.dev $(DD)pngmono.dev $(DD)png256.dev $(DD)png16.dev $(DD)pngalpha.dev'
 else
 	AC_MSG_RESULT([no])
 	AC_CHECK_LIB(png, png_check_sig, [
+	  AC_CHECK_HEADERS(png.h, [
 		SHARE_LIBPNG=1
-		PNGDEVS='$(DD)png16m.dev $(DD)pnggray.dev $(DD)pngmono.dev $(DD)png256.dev $(DD)png16.dev'
-	], [
-		SHARE_LIBPNG=0
-		AC_MSG_RESULT([no])
-		AC_MSG_NOTICE([disabling png output devices])
-		PNGDEVS=''
-	], [-lz])
+		PNGDEVS='$(DD)png16m.dev $(DD)pnggray.dev $(DD)pngmono.dev $(DD)png256.dev $(DD)png16.dev $(DD)pngalpha.dev'
+	  ], [SHARE_LIBPNG=0])
+	], [SHARE_LIBPNG=0], [-lz])
+fi
+if test -z "$PNGDEVS"; then
+  AC_MSG_NOTICE([disabling png output devices])
 fi
 AC_SUBST(SHARE_LIBPNG)
 AC_SUBST(LIBPNGDIR)
@@ -231,6 +268,40 @@ fi
 AC_SUBST(IJSDIR)
 AC_SUBST(IJSDEVS)
 
+dnl look for jbig2dec
+AC_ARG_WITH(jbig2dec, AC_HELP_STRING([--with-jbig2dec],[include JBIG2 decode support]))
+JBIG2DIR=src
+SHARE_JBIG2=0
+JBIG2DEVS=''
+if test x$with_jbig2dec != xno; then
+  AC_MSG_CHECKING([for local jbig2dec library source])
+  for d in jbig2dec jbig2dec-0.2 jbig2dec-0.3; do
+    test -d "$d" && JBIG2DIR=$d && break
+  done
+  if test "x$JBIG2DIR" != xsrc; then
+    AC_MSG_RESULT([$JBIG2DIR])
+  else
+    AC_MSG_RESULT([no])
+    AC_CHECK_LIB([jbig2dec], [jbig2_page_out], [
+	SHARE_JBIG2=1
+    ], [
+	AC_MSG_WARN([disabling support for JBIG2 files])
+        with_jbig2dec=no
+    ])
+  fi
+fi
+if test x$with_jbig2dec != xno; then
+  if test x$ac_cv_header_stdint_h != xyes; then
+    AC_MSG_WARN([JBIG2 support requires stdint types which do not seem to be available.])
+  else
+    JBIG2DEVS='$(PSD)jbig2.dev'
+  fi
+fi
+
+AC_SUBST(JBIG2DIR)
+AC_SUBST(SHARE_JBIG2)
+AC_SUBST(JBIG2DEVS)
+
 dnl optional X11 for display devices
 AC_PATH_XTRA
 XLIBS=''
@@ -242,10 +313,10 @@ else
 	X11DEVS='$(DD)x11.dev $(DD)x11alpha.dev $(DD)x11cmyk.dev $(DD)x11gray2.dev $(DD)x11gray4.dev $(DD)x11mono.dev'
 	# the makefile wants a list of just the library names in XLIBS
 	for item in -lXt $X_PRE_LIBS -lXext -lX11 $X_EXTRA_LIBS; do
-                stripped=`echo "$item" | sed -e 's/-l//'`
-                if test "x$stripped" != "x$item"; then
-                        XLIBS="$XLIBS $stripped"
-	fi
+		stripped=`echo "$item" | sed -e 's/-l//'`
+		if test "x$stripped" != "x$item"; then
+			XLIBS="$XLIBS $stripped"
+		fi
 	done
 fi
 AC_SUBST(X11DEVS)
@@ -272,6 +343,9 @@ dnl --------------------------------------------------
 
 AC_CHECK_FUNCS([mkstemp], [HAVE_MKSTEMP=-DHAVE_MKSTEMP])
 AC_SUBST(HAVE_MKSTEMP)
+
+AC_CHECK_FUNCS([hypot], [HAVE_HYPOT=-DHAVE_HYPOT])
+AC_SUBST(HAVE_HYPOT)
 
 AC_FUNC_FORK
 AC_PROG_GCC_TRADITIONAL

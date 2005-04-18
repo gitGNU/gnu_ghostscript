@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxfunc.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxfunc.h,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Internal definitions for Functions */
 
 #ifndef gxfunc_INCLUDED
@@ -81,5 +81,8 @@ int fn_scale_pairs(const float **ppvalues, const float *pvalues, int npairs,
  */
 int fn_common_scale(gs_function_t *psfn, const gs_function_t *pfn,
 		    const gs_range_t *pranges, gs_memory_t *mem);
+
+/* Serialize. */
+int fn_common_serialize(const gs_function_t * pfn, stream *s);
 
 #endif /* gxfunc_INCLUDED */

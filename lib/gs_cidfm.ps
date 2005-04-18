@@ -13,7 +13,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_cidfm.ps,v 1.1 2004/02/14 22:32:07 atai Exp $
+% $Id: gs_cidfm.ps,v 1.2 2005/04/18 12:06:08 Arabidopsis Exp $
 % Redefine CIDFont category with cidfmap .
 
 languagelevel 2 .setlanguagelevel
@@ -45,11 +45,10 @@ languagelevel 2 .setlanguagelevel
 
   /GetSize   % <Name> <record> GetSize <size>
   { % We know that currentdict is the category.
-    exch pop
     /Substitute get ResourceStatus {
-      exch pop
+      exch pop exch pop
     } {
-      /GetSize cvx /undefinedresource signalerror
+      /undefinedresource signalerror
     } ifelse
   } bind def
 

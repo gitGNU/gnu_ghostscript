@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpsdi.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
+/* $Id: gdevpsdi.c,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Image compression for PostScript and PDF writers */
 #include "stdio_.h"		/* for jpeglib.h */
 #include "jpeglib_.h"		/* for sdct.h */
@@ -118,10 +118,10 @@ setup_image_compression(psdf_binary_writer *pbw, const psdf_image_params *pdip,
 	 * Disregard the requested filter.  What we should do at this point
 	 * is analyze the image to decide whether to use JPEG encoding
 	 * (DCTEncode with ACSDict) or the lossless filter.  However, since
-	 * we don't currently buffer the entire image, we don't have a way
-	 * to make a good decision.  Since it is always safe to use a
-	 * lossless filter, while using DCTEncode may produce very
-	 * bad-looking output, we always use the lossless filter.
+	 * we don't buffer the entire image, we'll make the choice on-fly,
+	 * forking the image data into 3 streams : (1) JPEG, (2) lossless,
+	 * (3) the compression chooser. In this case this function is
+	 * called 2 times with different values of the 'lossless' argument.
 	 */
         if (lossless) {
             orig_template = template = lossless_template;
@@ -133,8 +133,9 @@ setup_image_compression(psdf_binary_writer *pbw, const psdf_image_params *pdip,
     gs_c_param_list_read(dict);	/* ensure param list is in read mode */
     if (template == 0)	/* no compression */
 	return 0;
-    if (pim->Width * pim->Height * Colors * pim->BitsPerComponent <= 160)	/* not worth compressing */
-	return 0;
+    if (pim->Width < 200 && pim->Height < 200) /* Prevent a fixed overflow. */
+	if (pim->Width * pim->Height * Colors * pim->BitsPerComponent <= 160)
+	    return 0;  /* not worth compressing */
     /* Only use DCTE for 8-bit, non-Indexed data. */
     if (template == &s_DCTE_template) {
 	if (Indexed ||
@@ -367,11 +368,14 @@ psdf_setup_image_filters(gx_device_psdf * pdev, psdf_binary_writer * pbw,
 	    pis != 0 &&
 	    gs_color_space_get_index(pim->ColorSpace) ==
 	    gs_color_space_index_DeviceCMYK;
-	gs_color_space rgb_cs;
-
 	if (cmyk_to_rgb) {
-	    gs_cspace_init_DeviceRGB(&rgb_cs);  /* idempotent initialization */
-	    pim->ColorSpace = &rgb_cs;
+	    extern_st(st_color_space);
+	    gs_memory_t *mem = pdev->v_memory;
+	    gs_color_space *rgb_cs = gs_alloc_struct(mem, 
+		    gs_color_space, &st_color_space, "psdf_setup_image_filters");
+
+	    gs_cspace_init_DeviceRGB(rgb_cs);  /* idempotent initialization */
+	    pim->ColorSpace = rgb_cs;
 	}
 	if (params.Depth == -1)
 	    params.Depth = (cmyk_to_rgb ? 8 : bpc_out);

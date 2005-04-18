@@ -22,10 +22,11 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpdfg.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevpdfg.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Graphics state management for pdfwrite driver */
 #include "math_.h"
 #include "string_.h"
+#include "memory_.h"
 #include "gx.h"
 #include "gserrors.h"
 #include "gsfunc0.h"
@@ -36,6 +37,9 @@
 #include "gxfmap.h"
 #include "gxht.h"
 #include "gxistate.h"
+#include "gxdcolor.h"
+#include "gxpcolor.h"
+#include "gsptype2.h"
 #include "gzht.h"
 #include "gdevpdfx.h"
 #include "gdevpdfg.h"
@@ -44,19 +48,187 @@
 
 /* ---------------- Miscellaneous ---------------- */
 
-/* Reset the graphics state parameters to initial values. */
-void
-pdf_reset_graphics(gx_device_pdf * pdev)
+/* Save the viewer's graphic state. */
+int
+pdf_save_viewer_state(gx_device_pdf *pdev, stream *s)
 {
-    gx_color_index color = 0; /* black on DeviceGray and DeviceRGB */
-    if(pdev->color_info.num_components == 4) {
-        gx_color_value cv[4];
-        cv[0] = cv[1] = cv[2] = frac2cv(frac_0);
-        cv[3] = frac2cv(frac_1);
-        color = dev_proc(pdev, map_cmyk_color)((gx_device *)pdev, cv);
-    }
-    color_set_pure(&pdev->fill_color, color);
-    color_set_pure(&pdev->stroke_color, color);
+    const int i = pdev->vgstack_depth;
+
+    if (pdev->vgstack_depth >= count_of(pdev->vgstack))
+	return_error(gs_error_unregistered); /* Must not happen. */
+    pdev->vgstack[i].transfer_ids[0] = pdev->transfer_ids[0];
+    pdev->vgstack[i].transfer_ids[1] = pdev->transfer_ids[1];
+    pdev->vgstack[i].transfer_ids[2] = pdev->transfer_ids[2];
+    pdev->vgstack[i].transfer_ids[3] = pdev->transfer_ids[3];
+    pdev->vgstack[i].transfer_not_identity = pdev->transfer_not_identity;
+    pdev->vgstack[i].opacity_alpha = pdev->state.opacity.alpha;
+    pdev->vgstack[i].shape_alpha = pdev->state.shape.alpha;
+    pdev->vgstack[i].blend_mode = pdev->state.blend_mode;
+    pdev->vgstack[i].halftone_id = pdev->halftone_id;
+    pdev->vgstack[i].black_generation_id = pdev->black_generation_id;
+    pdev->vgstack[i].undercolor_removal_id = pdev->undercolor_removal_id;
+    pdev->vgstack[i].overprint_mode = pdev->overprint_mode;
+    pdev->vgstack[i].smoothness = pdev->state.smoothness;
+    pdev->vgstack[i].text_knockout = pdev->state.text_knockout;
+    pdev->vgstack[i].fill_overprint = pdev->fill_overprint;
+    pdev->vgstack[i].stroke_overprint = pdev->stroke_overprint;
+    pdev->vgstack[i].stroke_adjust = pdev->state.stroke_adjust;
+    pdev->vgstack[i].fill_used_process_color = pdev->fill_used_process_color;
+    pdev->vgstack[i].stroke_used_process_color = pdev->stroke_used_process_color;
+    pdev->vgstack[i].saved_fill_color = pdev->saved_fill_color;
+    pdev->vgstack[i].saved_stroke_color = pdev->saved_stroke_color;
+    pdev->vgstack[i].line_params = pdev->state.line_params;
+    pdev->vgstack[i].line_params.dash.pattern = 0; /* Use pdev->dash_pattern instead. */
+    memcpy(pdev->vgstack[i].dash_pattern, pdev->dash_pattern, 
+		sizeof(pdev->vgstack[i].dash_pattern));
+    pdev->vgstack_depth++;
+    if (s)
+    stream_puts(s, "q\n");
+    return 0;
+}
+
+/* Load the viewer's graphic state. */
+private void
+pdf_load_viewer_state(gx_device_pdf *pdev, pdf_viewer_state *s)
+{   
+    pdev->transfer_ids[0] = s->transfer_ids[0];
+    pdev->transfer_ids[1] = s->transfer_ids[1];
+    pdev->transfer_ids[2] = s->transfer_ids[2];
+    pdev->transfer_ids[3] = s->transfer_ids[3];
+    pdev->transfer_not_identity = s->transfer_not_identity;
+    pdev->state.opacity.alpha = s->opacity_alpha;
+    pdev->state.shape.alpha = s->shape_alpha;
+    pdev->state.blend_mode = s->blend_mode;
+    pdev->halftone_id = s->halftone_id;
+    pdev->black_generation_id = s->black_generation_id;
+    pdev->undercolor_removal_id = s->undercolor_removal_id;
+    pdev->overprint_mode = s->overprint_mode;
+    pdev->state.smoothness = s->smoothness;
+    pdev->state.text_knockout = s->text_knockout;
+    pdev->fill_overprint = s->fill_overprint;
+    pdev->stroke_overprint = s->stroke_overprint;
+    pdev->state.stroke_adjust = s->stroke_adjust;
+    pdev->fill_used_process_color = s->fill_used_process_color;
+    pdev->stroke_used_process_color = s->stroke_used_process_color;
+    pdev->saved_fill_color = s->saved_fill_color;
+    pdev->saved_stroke_color = s->saved_stroke_color;
+    pdev->state.line_params = s->line_params;
+    memcpy(pdev->dash_pattern, s->dash_pattern,
+		sizeof(s->dash_pattern));
+}
+
+
+/* Restore the viewer's graphic state. */
+int
+pdf_restore_viewer_state(gx_device_pdf *pdev, stream *s)
+{   const int i = --pdev->vgstack_depth;
+
+    if (i < pdev->vgstack_bottom)
+	return_error(gs_error_unregistered); /* Must not happen. */
+    if (s)
+    stream_puts(s, "Q\n");
+    pdf_load_viewer_state(pdev, pdev->vgstack + i);
+    return 0;
+}
+
+/* Set initial color. */
+void
+pdf_set_initial_color(gx_device_pdf * pdev, gx_hl_saved_color *saved_fill_color,
+		    gx_hl_saved_color *saved_stroke_color,
+		    bool *fill_used_process_color, bool *stroke_used_process_color)
+{
+    gx_device_color black;
+
+    pdev->black = gx_device_black((gx_device *)pdev);
+    pdev->white = gx_device_white((gx_device *)pdev);
+    set_nonclient_dev_color(&black, pdev->black);
+    gx_hld_save_color(NULL, &black, saved_fill_color);
+    gx_hld_save_color(NULL, &black, saved_stroke_color);
+    *fill_used_process_color = true;
+    *stroke_used_process_color = true;
+}
+
+/* Prepare intitial values for viewer's graphics state parameters. */
+private void
+pdf_viewer_state_from_imager_state_aux(pdf_viewer_state *pvs, const gs_imager_state *pis)
+{
+    pvs->transfer_not_identity = 
+	    (pis->set_transfer.red   != NULL ? pis->set_transfer.red->proc   != gs_identity_transfer : 0) * 1 +
+	    (pis->set_transfer.green != NULL ? pis->set_transfer.green->proc != gs_identity_transfer : 0) * 2 +
+	    (pis->set_transfer.blue  != NULL ? pis->set_transfer.blue->proc  != gs_identity_transfer : 0) * 4 +
+	    (pis->set_transfer.gray  != NULL ? pis->set_transfer.gray->proc  != gs_identity_transfer : 0) * 8;
+    pvs->transfer_ids[0] = (pis->set_transfer.red != NULL ? pis->set_transfer.red->id : 0);
+    pvs->transfer_ids[1] = (pis->set_transfer.green != NULL ? pis->set_transfer.green->id : 0);
+    pvs->transfer_ids[2] = (pis->set_transfer.blue != NULL ? pis->set_transfer.blue->id : 0);
+    pvs->transfer_ids[3] = (pis->set_transfer.gray != NULL ? pis->set_transfer.gray->id : 0);
+    pvs->opacity_alpha = pis->opacity.alpha;
+    pvs->shape_alpha = pis->shape.alpha;
+    pvs->blend_mode = pis->blend_mode;
+    pvs->halftone_id = (pis->dev_ht != 0 ? pis->dev_ht->id : 0);
+    pvs->black_generation_id = (pis->black_generation != 0 ? pis->black_generation->id : 0);
+    pvs->undercolor_removal_id = (pis->undercolor_removal != 0 ? pis->undercolor_removal->id : 0);
+    pvs->overprint_mode = 0;
+    pvs->smoothness = pis->smoothness;
+    pvs->text_knockout = pis->text_knockout;
+    pvs->fill_overprint = false;
+    pvs->stroke_overprint = false;
+    pvs->stroke_adjust = false;
+    pvs->line_params.half_width = 0.5;
+    pvs->line_params.cap = 0;
+    pvs->line_params.join = 0;
+    pvs->line_params.curve_join = 0;
+    pvs->line_params.miter_limit = 10.0;
+    pvs->line_params.miter_check = 0;
+    pvs->line_params.dot_length = pis->line_params.dot_length;
+    pvs->line_params.dot_length_absolute = pis->line_params.dot_length_absolute;
+    pvs->line_params.dot_orientation = pis->line_params.dot_orientation;
+    memset(&pvs->line_params.dash, 0 , sizeof(pvs->line_params.dash));
+    memset(pvs->dash_pattern, 0, sizeof(pvs->dash_pattern));
+}
+
+/* Copy viewer state from images state. */
+void
+pdf_viewer_state_from_imager_state(gx_device_pdf * pdev, 
+	const gs_imager_state *pis, const gx_device_color *pdevc)
+{
+    pdf_viewer_state vs;
+
+    pdf_viewer_state_from_imager_state_aux(&vs, pis);
+    gx_hld_save_color(pis, pdevc, &vs.saved_fill_color);
+    gx_hld_save_color(pis, pdevc, &vs.saved_stroke_color);
+    pdf_load_viewer_state(pdev, &vs);
+}
+
+/* Prepare intitial values for viewer's graphics state parameters. */
+void
+pdf_prepare_initial_viewer_state(gx_device_pdf * pdev, const gs_imager_state *pis)
+{
+    /* Parameter values, which are specified in PDF spec, are set here.
+     * Parameter values, which are specified in PDF spec as "installation dependent",
+     * are set here to intial values used with PS interpreter.
+     * This allows to write differences to the output file
+     * and skip initial values.
+     */
+
+    pdf_set_initial_color(pdev, &pdev->vg_initial.saved_fill_color, &pdev->vg_initial.saved_stroke_color,
+	    &pdev->vg_initial.fill_used_process_color, &pdev->vg_initial.stroke_used_process_color);
+    pdf_viewer_state_from_imager_state_aux(&pdev->vg_initial, pis);
+    pdev->vg_initial_set = true;
+    /*
+     * Some parameters listed in PDF spec are missed here :
+     * text state - it is initialized per page.
+     * rendering intent - not sure why, fixme.
+     */
+}
+
+/* Reset the graphics state parameters to initial values. */
+/* Used if pdf_prepare_initial_viewer_state was not callad. */
+private void
+pdf_reset_graphics_old(gx_device_pdf * pdev)
+{
+
+    pdf_set_initial_color(pdev, &pdev->saved_fill_color, &pdev->saved_stroke_color, 
+				&pdev->fill_used_process_color, &pdev->stroke_used_process_color);
     pdev->state.flatness = -1;
     {
 	static const gx_line_params lp_initial = {
@@ -70,14 +242,56 @@ pdf_reset_graphics(gx_device_pdf * pdev)
     pdf_reset_text(pdev);
 }
 
+/* Reset the graphics state parameters to initial values. */
+void
+pdf_reset_graphics(gx_device_pdf * pdev)
+{
+    if (pdev->vg_initial_set)
+	pdf_load_viewer_state(pdev, &pdev->vg_initial);
+    else
+	pdf_reset_graphics_old(pdev);
+    pdf_reset_text(pdev);
+}
+
+/* Write client color. */
+private int
+pdf_write_ccolor(gx_device_pdf * pdev, const gs_imager_state * pis, 
+	        const gs_client_color *pcc)
+{   
+    int i, n = gx_hld_get_number_color_components(pis);
+
+    pprintg1(pdev->strm, "%g", psdf_round(pcc->paint.values[0], 255, 8));
+    for (i = 1; i < n; i++) {
+	pprintg1(pdev->strm, " %g", psdf_round(pcc->paint.values[i], 255, 8));
+    }
+    return 0;
+}
+
+
 /* Set the fill or stroke color. */
 private int
-pdf_reset_color(gx_device_pdf * pdev, const gx_drawing_color *pdc,
-		gx_drawing_color * pdcolor,
+pdf_reset_color(gx_device_pdf * pdev, const gs_imager_state * pis, 
+	        const gx_drawing_color *pdc, gx_hl_saved_color * psc,
+		bool *used_process_color,
 		const psdf_set_color_commands_t *ppscc)
 {
     int code;
+    gx_hl_saved_color temp;
+    bool process_color;
+    const gs_color_space *pcs;
+    const gs_client_color *pcc; /* fixme: not needed due to gx_hld_get_color_component. */
+    cos_value_t cs_value;
+    const char *command;
 
+    if (pdev->skip_colors)
+	return 0;
+    process_color = !gx_hld_save_color(pis, pdc, &temp);
+    /* Since pdfwrite never applies halftones and patterns, but monitors
+     * halftone/pattern IDs separately, we don't need to compare
+     * halftone/pattern bodies here.
+     */
+    if (gx_hld_saved_color_equal(&temp, psc))
+	return 0;
     /*
      * In principle, we can set colors in either stream or text
      * context.  However, since we currently enclose all text
@@ -85,49 +299,102 @@ pdf_reset_color(gx_device_pdf * pdev, const gx_drawing_color *pdc,
      * track of the color when we leave text context.  Therefore,
      * we require stream context for setting colors.
      */
-#if 0
-    switch (pdev->context) {
-    case PDF_IN_STREAM:
-    case PDF_IN_TEXT:
-	break;
-    case PDF_IN_NONE:
-	code = pdf_open_page(pdev, PDF_IN_STREAM);
-	goto open;
-    case PDF_IN_STRING:
-	code = pdf_open_page(pdev, PDF_IN_TEXT);
-    open:if (code < 0)
-	    return code;
-    }
-#else
     code = pdf_open_page(pdev, PDF_IN_STREAM);
     if (code < 0)
 	return code;
-#endif
-    code = pdf_put_drawing_color(pdev, pdc, ppscc);
-    if (code >= 0)
-	*pdcolor = *pdc;
-    return code;
+    switch (gx_hld_get_color_space_and_ccolor(pis, pdc, &pcs, &pcc)) {
+	case non_pattern_color_space:
+	    switch (gs_color_space_get_index(pcs)) {
+		case gs_color_space_index_DeviceGray:
+		    command = ppscc->setgray; 
+		    break;
+		case gs_color_space_index_DeviceRGB:
+		    command = ppscc->setrgbcolor; 
+		    break;
+		case gs_color_space_index_DeviceCMYK:
+		    command = ppscc->setcmykcolor; 
+		    break;
+		default :
+		    command = ppscc->setcolorn;
+		    if (!gx_hld_saved_color_same_cspace(&temp, psc)) {
+			code = pdf_color_space(pdev, &cs_value, NULL, pcs,
+					&pdf_color_space_names, true);
+			/* fixme : creates redundant PDF objects. */
+			if (code == gs_error_rangecheck) {
+			    /* The color space can't write to PDF. */
+			    goto write_process_color;
+			}
+			if (code < 0)
+			    return code;
+			code = cos_value_write(&cs_value, pdev);
+			if (code < 0)
+			    return code;
+			pprints1(pdev->strm, " %s\n", ppscc->setcolorspace);
+		    } else if (*used_process_color)
+			goto write_process_color;
+		    break;
+	    }
+	    *used_process_color = false;
+	    code = pdf_write_ccolor(pdev, pis, pcc);
+	    if (code < 0)
+		return code;
+	    pprints1(pdev->strm, " %s\n", command);
+	    break;
+	case pattern_color_sapce:
+	    {	pdf_resource_t *pres;
+
+		if (pdc->type == gx_dc_type_pattern)
+		    code = pdf_put_colored_pattern(pdev, pdc, ppscc, &pres);
+		else if (pdc->type == &gx_dc_pure_masked) {
+		    code = pdf_put_uncolored_pattern(pdev, pdc, 
+				pcs, ppscc, &pres);
+		    if (code < 0)
+			return code;
+		    code = pdf_write_ccolor(pdev, pis, pcc);
+		} else if (pdc->type == &gx_dc_pattern2)
+		    code = pdf_put_pattern2(pdev, pdc, ppscc, &pres);
+		else
+		    return_error(gs_error_rangecheck);
+		if (code < 0)
+		    return code;
+		cos_value_write(cos_resource_value(&cs_value, pres->object), pdev);
+		pprints1(pdev->strm, " %s\n", ppscc->setcolorn);
+		code = pdf_add_resource(pdev, pdev->substream_Resources, "/Pattern", pres);
+		if (code < 0)
+		    return code;
+	    }
+	    *used_process_color = false;
+	    break;
+	default: /* must not happen. */
+	case use_process_color:
+	write_process_color:
+	    code = psdf_set_color((gx_device_vector *)pdev, pdc, ppscc);
+	    if (code < 0)
+		return code;
+	    *used_process_color = true;
+    }
+    *psc = temp;
+    return 0;
 }
 int
-pdf_set_drawing_color(gx_device_pdf * pdev, const gx_drawing_color *pdc,
-		      gx_drawing_color * pdcolor,
+pdf_set_drawing_color(gx_device_pdf * pdev, const gs_imager_state * pis,
+		      const gx_drawing_color *pdc,
+		      gx_hl_saved_color * psc,
+		      bool *used_process_color,
 		      const psdf_set_color_commands_t *ppscc)
 {
-    if (gx_device_color_equal(pdcolor, pdc))
-	return 0;
-    return pdf_reset_color(pdev, pdc, pdcolor, ppscc);
+    return pdf_reset_color(pdev, pis, pdc, psc, used_process_color, ppscc);
 }
 int
 pdf_set_pure_color(gx_device_pdf * pdev, gx_color_index color,
-		   gx_drawing_color * pdcolor,
+		   gx_hl_saved_color * psc,
+    		   bool *used_process_color,
 		   const psdf_set_color_commands_t *ppscc)
 {
     gx_drawing_color dcolor;
 
-    if (gx_dc_is_pure(pdcolor) && gx_dc_pure_color(pdcolor) == color)
-	return 0;
-    color_set_pure(&dcolor, color);
-    return pdf_reset_color(pdev, &dcolor, pdcolor, ppscc);
+    set_nonclient_dev_color(&dcolor, color);
+    return pdf_reset_color(pdev, NULL, &dcolor, psc, used_process_color, ppscc);
 }
 
 /*
@@ -146,13 +413,6 @@ pdf_string_to_cos_name(gx_device_pdf *pdev, const byte *str, uint len,
     memcpy(chars + 1, str, len);
     cos_string_value(pvalue, chars, len + 1);
     return 0;
-}
-
-/* Print a Boolean using a format. */
-private void
-pprintb1(stream *s, const char *format, bool b)
-{
-    pprints1(s, format, (b ? "true" : "false"));
 }
 
 /* ---------------- Graphics state updating ---------------- */
@@ -188,13 +448,19 @@ transfer_map_access_signed(const gs_data_source_t *psrc,
 			   ulong start, uint length,
 			   byte *buf, const byte **ptr)
 {
+    /* To prevent numeric errors, we need to map 0 to an integer. 
+     * We can't apply a general expression, because Decode isn't accessible here.
+     * Assuming this works for UCR only.
+     * Assuming the range of UCR is always [-1, 1].
+     * Assuming BitsPerSample = 8.
+     */
     const gx_transfer_map *map = (const gx_transfer_map *)psrc->data.str.data;
     uint i;
 
     *ptr = buf;
     for (i = 0; i < length; ++i)
 	buf[i] = (byte)
-	    ((frac2float(map->values[(uint)start + i]) + 1) * 127.5 + 0.5);
+	    ((frac2float(map->values[(uint)start + i]) + 1) * 127);
     return 0;
 }
 private int
@@ -206,7 +472,7 @@ pdf_write_transfer_map(gx_device_pdf *pdev, const gx_transfer_map *map,
     gs_function_Sd_params_t params;
     static const float domain01[2] = { 0, 1 };
     static const int size = transfer_map_size;
-    float range01[2];
+    float range01[2], decode[2];
     gs_function_t *pfn;
     long id;
     int code;
@@ -245,7 +511,22 @@ pdf_write_transfer_map(gx_device_pdf *pdev, const gx_transfer_map *map,
     /* DataSource */
     params.BitsPerSample = 8;	/* could be 16 */
     params.Encode = 0;
-    params.Decode = 0;
+    if (range01[0] < 0 && range01[1] > 0) {
+	/* This works for UCR only.
+	 * Map 0 to an integer. 
+	 * Rather the range of UCR is always [-1, 1], 
+	 * we prefer a general expression. 
+	 */
+	int r0 = (int)( -range01[0] * ((1 << params.BitsPerSample) - 1) 
+			/ (range01[1] - range01[0]) ); /* Round down. */
+	float r1 = r0 * range01[1] / -range01[0]; /* r0 + r1 <= (1 << params.BitsPerSample) - 1 */
+
+	decode[0] = range01[0];
+	decode[1] = range01[0] + (range01[1] - range01[0]) * ((1 << params.BitsPerSample) - 1) 
+				    / (r0 + r1);
+	params.Decode = decode;
+    } else
+    	params.Decode = 0;
     params.Size = &size;
     code = gs_function_Sd_init(&pfn, &params, mem);
     if (code < 0)
@@ -254,7 +535,7 @@ pdf_write_transfer_map(gx_device_pdf *pdev, const gx_transfer_map *map,
     gs_function_free(pfn, false, mem);
     if (code < 0)
 	return code;
-    sprintf(ids, "%s %ld 0 R", key, id);
+    sprintf(ids, "%s%s%ld 0 R", key, (key[0] && key[0] != ' ' ? " " : ""), id);
     return 0;
 }
 private int
@@ -352,9 +633,9 @@ HT_FUNC(ht_InvertedEllipseA, x * x + 0.9 * y * y - 1)
 HT_FUNC(ht_EllipseB, 1 - sqrt(x * x + 0.625 * y * y))
 HT_FUNC(ht_EllipseC, 1 - (0.9 * x * x + y * y))
 HT_FUNC(ht_InvertedEllipseC, 0.9 * x * x + y * y - 1)
-HT_FUNC(ht_Line, -fabs(y))
-HT_FUNC(ht_LineX, x)
-HT_FUNC(ht_LineY, y)
+HT_FUNC(ht_Line, -fabs((x - x) + y)) /* quiet compiler (unused variable x) */
+HT_FUNC(ht_LineX, (y - y) + x) /* quiet compiler (unused variable y) */
+HT_FUNC(ht_LineY, (x - x) + y) /* quiet compiler (unused variable x) */
 HT_FUNC(ht_Square, -max(fabs(x), fabs(y)))
 HT_FUNC(ht_Cross, -min(fabs(x), fabs(y)))
 HT_FUNC(ht_Rhomboid, (0.9 * fabs(x) + fabs(y)) / 2)
@@ -792,20 +1073,50 @@ pdf_update_halftone(gx_device_pdf *pdev, const gs_imager_state *pis,
     }
     if (code < 0)
 	return code;
-    sprintf(hts, "/HT %ld 0 R", id);
+    sprintf(hts, "%ld 0 R", id);
     pdev->halftone_id = pis->dev_ht->id;
     return code;
 }
 
 /* ------ Graphics state updating ------ */
 
+private inline cos_dict_t *
+resource_dict(pdf_resource_t *pres)
+{
+    return (cos_dict_t *)pres->object;
+}
+
 /* Open an ExtGState. */
 private int
 pdf_open_gstate(gx_device_pdf *pdev, pdf_resource_t **ppres)
 {
+    int code;
+
     if (*ppres)
 	return 0;
-    return pdf_begin_resource(pdev, resourceExtGState, gs_no_id, ppres);
+    /*
+     * We write gs command only in stream context.
+     * If we are clipped, and the clip path is about to change,
+     * the old clipping must be undone before writing gs.
+     */
+    if (pdev->context != PDF_IN_STREAM) {
+	/* We apparently use gs_error_interrupt as a request to change context. */
+	return gs_error_interrupt;
+    }
+    code = pdf_alloc_resource(pdev, resourceExtGState, gs_no_id, ppres, -1L);
+    if (code < 0)
+	return code;
+    cos_become((*ppres)->object, cos_type_dict);
+    code = cos_dict_put_c_key_string(resource_dict(*ppres), "/Type", (const byte *)"/ExtGState", 10);
+    if (code < 0)
+	return code;
+    return 0;
+}
+
+private int 
+pdf_is_same_extgstate(gx_device_pdf * pdev, pdf_resource_t *pres0, pdf_resource_t *pres1)
+{
+    return true;
 }
 
 /* Finish writing an ExtGState. */
@@ -813,17 +1124,31 @@ private int
 pdf_end_gstate(gx_device_pdf *pdev, pdf_resource_t *pres)
 {
     if (pres) {
+	pdf_resource_t *pres1 = pres;
 	int code;
 
-	stream_puts(pdev->strm, ">>\n");
-	code = pdf_end_resource(pdev);
-	pres->object->written = true; /* don't write at end of page */
+	code = pdf_find_same_resource(pdev, resourceExtGState, &pres, pdf_is_same_extgstate);
 	if (code < 0)
 	    return code;
+	if (code != 0) {
+	    code = pdf_cancel_resource(pdev, (pdf_resource_t *)pres1, resourceExtGState);
+	    if (code < 0)
+		return code;
+	} else {
+	    pdf_reserve_object_id(pdev, pres, gs_no_id);
+	    code = cos_write_object(pres->object, pdev);
+	if (code < 0)
+	    return code;
+	    pres->object->written = 1;
+	}
 	code = pdf_open_page(pdev, PDF_IN_STREAM);
 	if (code < 0)
 	    return code;
+	code = pdf_add_resource(pdev, pdev->substream_Resources, "/ExtGState", pres);
+	if (code < 0)
+	    return code;
 	pprintld1(pdev->strm, "/R%ld gs\n", pdf_resource_id(pres));
+	pres->where_used |= pdev->used_mask;
     }
     return 0;
 }
@@ -860,19 +1185,18 @@ pdf_update_transfer(gx_device_pdf *pdev, const gs_imager_state *pis,
 	int mask;
 
 	if (!multiple) {
-	    code = pdf_write_transfer(pdev, tm[pi],
-				      "/TR", trs);
+	    code = pdf_write_transfer(pdev, tm[pi], "", trs);
 	    if (code < 0)
 		return code;
 	    mask = code == 0;
 	} else {
-	    strcpy(trs, "/TR[");
+	    strcpy(trs, "[");
 	    mask = 0;
 	    for (i = 0; i < 4; ++i) 
 		if (tm[i] != NULL) {
 		    code = pdf_write_transfer_map(pdev,
 						  tm[i],
-						  0, false, "", trs + strlen(trs));
+						  0, true, " ", trs + strlen(trs));
 		    if (code < 0)
 			return code;
 		    mask |= (code == 0) << i;
@@ -892,7 +1216,7 @@ pdf_update_transfer(gx_device_pdf *pdev, const gs_imager_state *pis,
  */
 private int
 pdf_update_alpha(gx_device_pdf *pdev, const gs_imager_state *pis,
-		 const char *ca_format, pdf_resource_t **ppres)
+		 pdf_resource_t **ppres)
 {
     bool ais;
     floatp alpha;
@@ -911,9 +1235,15 @@ pdf_update_alpha(gx_device_pdf *pdev, const gs_imager_state *pis,
     code = pdf_open_gstate(pdev, ppres);
     if (code < 0)
 	return code;
-    pprintb1(pdev->strm, "/AIS %s", ais);
-    pprintg1(pdev->strm, ca_format, alpha);
-    return 0;
+    code = cos_dict_put_c_key_bool(resource_dict(*ppres), "/AIS", ais);
+    if (code < 0)
+	return code;
+    /* we never do the 'both' operations (b, B, b*, B*) so we set both */
+    /* CA and ca the same so that we stay in sync with state.*.alpha   */
+    code = cos_dict_put_c_key_real(resource_dict(*ppres), "/CA", alpha);
+    if (code < 0)
+	return code;
+    return cos_dict_put_c_key_real(resource_dict(*ppres), "/ca", alpha);
 }
 
 /*
@@ -921,21 +1251,26 @@ pdf_update_alpha(gx_device_pdf *pdev, const gs_imager_state *pis,
  */
 private int
 pdf_prepare_drawing(gx_device_pdf *pdev, const gs_imager_state *pis,
-		    const char *ca_format, pdf_resource_t **ppres)
+		    pdf_resource_t **ppres)
 {
     int code = 0;
 
     if (pdev->CompatibilityLevel >= 1.4) {
 	if (pdev->state.blend_mode != pis->blend_mode) {
 	    static const char *const bm_names[] = { GS_BLEND_MODE_NAMES };
+	    char buf[20];
 
 	    code = pdf_open_gstate(pdev, ppres);
 	    if (code < 0)
 		return code;
-	    pprints1(pdev->strm, "/BM/%s", bm_names[pis->blend_mode]);
+	    buf[0] = '/';
+	    strncpy(buf + 1, bm_names[pis->blend_mode], sizeof(buf) - 2);
+	    code = cos_dict_put_string_copy(resource_dict(*ppres), "/BM", buf);
+	    if (code < 0)
+		return code;
 	    pdev->state.blend_mode = pis->blend_mode;
 	}
-	code = pdf_update_alpha(pdev, pis, ca_format, ppres);
+	code = pdf_update_alpha(pdev, pis, ppres);
 	if (code < 0)
 	    return code;
     } else {
@@ -958,7 +1293,7 @@ pdf_prepare_drawing(gx_device_pdf *pdev, const gs_imager_state *pis,
      * removal, halftone phase, overprint mode, smoothness, blend mode, text
      * knockout.
      */
-    {
+    if (pdev->sbstack_depth == 0) {
 	gs_int_point phase, dev_phase;
 	char hts[5 + MAX_FN_CHARS + 1],
 	    trs[5 + MAX_FN_CHARS * 4 + 6 + 1],
@@ -981,14 +1316,14 @@ pdf_prepare_drawing(gx_device_pdf *pdev, const gs_imager_state *pis,
 	if (pdev->params.UCRandBGInfo == ucrbg_Preserve) {
 	    if (pdev->black_generation_id != pis->black_generation->id) {
 		code = pdf_write_transfer_map(pdev, pis->black_generation,
-					      0, false, "/BG", bgs);
+					      0, false, "", bgs);
 		if (code < 0)
 		    return code;
 		pdev->black_generation_id = pis->black_generation->id;
 	    }
 	    if (pdev->undercolor_removal_id != pis->undercolor_removal->id) {
 		code = pdf_write_transfer_map(pdev, pis->undercolor_removal,
-					      -1, false, "/UCR", ucrs);
+					      -1, false, "", ucrs);
 		if (code < 0)
 		    return code;
 		pdev->undercolor_removal_id = pis->undercolor_removal->id;
@@ -998,35 +1333,60 @@ pdf_prepare_drawing(gx_device_pdf *pdev, const gs_imager_state *pis,
 	    code = pdf_open_gstate(pdev, ppres);
 	    if (code < 0)
 		return code;
-	    stream_puts(pdev->strm, hts);
-	    stream_puts(pdev->strm, trs);
-	    stream_puts(pdev->strm, bgs);
-	    stream_puts(pdev->strm, ucrs);
 	}
-	gs_currenthalftonephase((const gs_state *)pis, &phase);
-	gs_currenthalftonephase((const gs_state *)&pdev->state, &dev_phase);
+	if (hts[0]) {
+	    code = cos_dict_put_string_copy(resource_dict(*ppres), "/HT", hts);
+	    if (code < 0)
+		return code;
+	}
+	if (trs[0]) {
+	    code = cos_dict_put_string_copy(resource_dict(*ppres), "/TR", trs);
+	    if (code < 0)
+		return code;
+	}
+	if (bgs[0]) {
+	    code = cos_dict_put_string_copy(resource_dict(*ppres), "/BG", bgs);
+	    if (code < 0)
+		return code;
+	}
+	if (ucrs[0]) {
+	    code = cos_dict_put_string_copy(resource_dict(*ppres), "/UCR", ucrs);
+	    if (code < 0)
+		return code;
+	}
+	gs_currentscreenphase_pis(pis, &phase, 0);
+	gs_currentscreenphase_pis(&pdev->state, &dev_phase, 0);
 	if (dev_phase.x != phase.x || dev_phase.y != phase.y) {
+	    char buf[sizeof(int) * 3 + 5];
+
 	    code = pdf_open_gstate(pdev, ppres);
 	    if (code < 0)
 		return code;
-	    pprintd2(pdev->strm, "/HTP[%d %d]", phase.x, phase.y);
+	    sprintf(buf, "[%d %d]", phase.x, phase.y);
+	    code = cos_dict_put_string_copy(resource_dict(*ppres), "/HTP", buf);
+	    if (code < 0)
+		return code;
 	    gx_imager_setscreenphase(&pdev->state, phase.x, phase.y,
 				     gs_color_select_all);
 	}
     }
-    if (pdev->CompatibilityLevel >= 1.3) {
+    if (pdev->CompatibilityLevel >= 1.3 && pdev->sbstack_depth == 0) {
 	if (pdev->overprint_mode != pdev->params.OPM) {
 	    code = pdf_open_gstate(pdev, ppres);
 	    if (code < 0)
 		return code;
-	    pprintd1(pdev->strm, "/OPM %d", pdev->params.OPM);
+	    code = cos_dict_put_c_key_int(resource_dict(*ppres), "/OPM", pdev->params.OPM);
+	    if (code < 0)
+		return code;
 	    pdev->overprint_mode = pdev->params.OPM;
 	}
 	if (pdev->state.smoothness != pis->smoothness) {
 	    code = pdf_open_gstate(pdev, ppres);
 	    if (code < 0)
 		return code;
-	    pprintg1(pdev->strm, "/SM %g", pis->smoothness);
+	    code = cos_dict_put_c_key_real(resource_dict(*ppres), "/SM", pis->smoothness);
+	    if (code < 0)
+		return code;
 	    pdev->state.smoothness = pis->smoothness;
 	}
 	if (pdev->CompatibilityLevel >= 1.4) {
@@ -1034,7 +1394,9 @@ pdf_prepare_drawing(gx_device_pdf *pdev, const gs_imager_state *pis,
 		code = pdf_open_gstate(pdev, ppres);
 		if (code < 0)
 		    return code;
-		pprintb1(pdev->strm, "/TK %s", pis->text_knockout);
+		code = cos_dict_put_c_key_bool(resource_dict(*ppres), "/TK", pis->text_knockout);
+		if (code < 0)
+		    return code;
 		pdev->state.text_knockout = pis->text_knockout;
 	    }
 	}
@@ -1044,62 +1406,108 @@ pdf_prepare_drawing(gx_device_pdf *pdev, const gs_imager_state *pis,
 
 /* Update the graphics state for filling. */
 int
-pdf_prepare_fill(gx_device_pdf *pdev, const gs_imager_state *pis)
+pdf_try_prepare_fill(gx_device_pdf *pdev, const gs_imager_state *pis)
 {
     pdf_resource_t *pres = 0;
-    int code = pdf_prepare_drawing(pdev, pis, "/ca %g", &pres);
+    int code = pdf_prepare_drawing(pdev, pis, &pres);
 
     if (code < 0)
 	return code;
     /* Update overprint. */
     if (pdev->params.PreserveOverprintSettings &&
-	pdev->fill_overprint != pis->overprint
+	pdev->fill_overprint != pis->overprint &&
+	!pdev->skip_colors
 	) {
 	code = pdf_open_gstate(pdev, &pres);
 	if (code < 0)
 	    return code;
 	/* PDF 1.2 only has a single overprint setting. */
 	if (pdev->CompatibilityLevel < 1.3) {
-	    pprintb1(pdev->strm, "/OP %s", pis->overprint);
+	    code = cos_dict_put_c_key_bool(resource_dict(pres), "/OP", pis->overprint);
+	    if (code < 0)
+		return code;
 	    pdev->stroke_overprint = pis->overprint;
 	} else {
-	    pprintb1(pdev->strm, "/op %s", pis->overprint);
+	    code = cos_dict_put_c_key_bool(resource_dict(pres), "/op", pis->overprint);
+	    if (code < 0)
+		return code;
 	}
 	pdev->fill_overprint = pis->overprint;
     }
     return pdf_end_gstate(pdev, pres);
 }
+int
+pdf_prepare_fill(gx_device_pdf *pdev, const gs_imager_state *pis)
+{
+    int code;
+
+    if (pdev->context != PDF_IN_STREAM) {
+	code = pdf_try_prepare_fill(pdev, pis);
+	if (code != gs_error_interrupt) /* See pdf_open_gstate */
+	    return code;
+	code = pdf_open_contents(pdev, PDF_IN_STREAM);
+	if (code < 0)
+	    return code;
+    }
+    return pdf_try_prepare_fill(pdev, pis);
+}
 
 /* Update the graphics state for stroking. */
-int
-pdf_prepare_stroke(gx_device_pdf *pdev, const gs_imager_state *pis)
+private int
+pdf_try_prepare_stroke(gx_device_pdf *pdev, const gs_imager_state *pis)
 {
     pdf_resource_t *pres = 0;
-    int code = pdf_prepare_drawing(pdev, pis, "/CA %g", &pres);
+    int code = pdf_prepare_drawing(pdev, pis, &pres);
 
     if (code < 0)
 	return code;
     /* Update overprint, stroke adjustment. */
     if (pdev->params.PreserveOverprintSettings &&
-	pdev->stroke_overprint != pis->overprint
+	pdev->stroke_overprint != pis->overprint &&
+	!pdev->skip_colors
 	) {
 	code = pdf_open_gstate(pdev, &pres);
 	if (code < 0)
 	    return code;
-	pprintb1(pdev->strm, "/OP %s", pis->overprint);
+	code = cos_dict_put_c_key_bool(resource_dict(pres), "/OP", pis->overprint);
+	if (code < 0)
+	    return code;
 	pdev->stroke_overprint = pis->overprint;
-	/* PDF 1.2 only has a single overprint setting. */
-	if (pdev->CompatibilityLevel < 1.3)
+	if (pdev->CompatibilityLevel < 1.3) {
+	    /* PDF 1.2 only has a single overprint setting. */
 	    pdev->fill_overprint = pis->overprint;
+	} else {
+	    /* According to PDF>=1.3 spec, OP also sets op,
+	       if there is no /op in same garphic state object. 
+	       We don't write /op, so monitor the viewer's state here : */
+	    pdev->fill_overprint = pis->overprint;
+	}
     }
     if (pdev->state.stroke_adjust != pis->stroke_adjust) {
 	code = pdf_open_gstate(pdev, &pres);
 	if (code < 0)
 	    return code;
-	pprintb1(pdev->strm, "/SA %s", pis->stroke_adjust);
+	code = cos_dict_put_c_key_bool(resource_dict(pres), "/SA", pis->stroke_adjust);
+	if (code < 0)
+	    return code;
 	pdev->state.stroke_adjust = pis->stroke_adjust;
     }
     return pdf_end_gstate(pdev, pres);
+}
+int
+pdf_prepare_stroke(gx_device_pdf *pdev, const gs_imager_state *pis)
+{
+    int code;
+
+    if (pdev->context != PDF_IN_STREAM) {
+	code = pdf_try_prepare_stroke(pdev, pis);
+	if (code != gs_error_interrupt) /* See pdf_open_gstate */
+	    return code;
+	code = pdf_open_contents(pdev, PDF_IN_STREAM);
+	if (code < 0)
+	    return code;
+    }
+    return pdf_try_prepare_stroke(pdev, pis);
 }
 
 /* Update the graphics state for an image other than an ImageType 1 mask. */
@@ -1122,6 +1530,8 @@ pdf_prepare_imagemask(gx_device_pdf *pdev, const gs_imager_state *pis,
 
     if (code < 0)
 	return code;
-    return pdf_set_drawing_color(pdev, pdcolor, &pdev->fill_color,
+    return pdf_set_drawing_color(pdev, pis, pdcolor, &pdev->saved_fill_color,
+				 &pdev->fill_used_process_color,
 				 &psdf_set_fill_color_commands);
 }
+

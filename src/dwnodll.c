@@ -23,7 +23,7 @@
 */
 
 /* dwnodll.c */
-/* $Id: dwnodll.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: dwnodll.c,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 
 #define STRICT
 #include <windows.h>
@@ -48,6 +48,7 @@ int load_dll(GSDLL *gsdll, char *last_error, int len)
     gsdll->init_with_args = &gsapi_init_with_args;
     gsdll->run_string = &gsapi_run_string;
     gsdll->exit = &gsapi_exit;
+    gsdll->set_visual_tracer = &gsapi_set_visual_tracer;
     return 0;
 }
 

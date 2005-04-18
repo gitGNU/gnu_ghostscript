@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zfcid0.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: zfcid0.c,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* CIDFontType 0 operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -194,24 +194,24 @@ z9_glyph_data(gs_font_base *pbfont, gs_glyph glyph, gs_glyph_data_t *pgd,
 	if (code < 0)
 	    return code;
 	/* Get the definition from GlyphDirectory. */
-	if (gdata.bits.data) {
-	    code = get_index(&gdata, pfont->cidata.FDBytes, &fidx);
-	    if (code < 0)
-		return code;
-	    if (fidx >= pfont->cidata.FDArray_size)
-		return_error(e_rangecheck);
-	    if (pgd)
-		*pgd = gdata;
-	    *pfidx = (int)fidx;
+	if (!gdata.bits.data)
+	    return_error(e_rangecheck);
+	code = get_index(&gdata, pfont->cidata.FDBytes, &fidx);
+	if (code < 0)
 	    return code;
-	}
+	if (fidx >= pfont->cidata.FDArray_size)
+	    return_error(e_rangecheck);
+	if (pgd)
+	    *pgd = gdata;
+	*pfidx = (int)fidx;
+	return code;
     }
     /* Get the definition from the binary data (GlyphData or DataSource). */
     if (glyph_index < 0 || glyph_index >= pfont->cidata.common.CIDCount) {
 	*pfidx = 0;
 	if (pgd)
 	    gs_glyph_data_from_null(pgd);
-	return_error(e_undefined);
+	return_error(e_rangecheck);
     }
     {
 	byte fd_gd[(MAX_FDBytes + MAX_GDBytes) * 2];
@@ -255,7 +255,7 @@ z9_glyph_data(gs_font_base *pbfont, gs_glyph glyph, gs_glyph_data_t *pgd,
 
 /* Get the outline of a CIDFontType 0 glyph. */
 private int
-z9_glyph_outline(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
+z9_glyph_outline(gs_font *font, int WMode, gs_glyph glyph, const gs_matrix *pmat,
 		 gx_path *ppath)
 {
     gs_font_cid0 *const pfcid = (gs_font_cid0 *)font;
@@ -268,7 +268,7 @@ z9_glyph_outline(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
     if (code < 0)
 	return code;
     glyph_ref(glyph, &gref);
-    ocode = zcharstring_outline(pfcid->cidata.FDArray[fidx], &gref, &gdata,
+    ocode = zcharstring_outline(pfcid->cidata.FDArray[fidx], WMode, &gref, &gdata,
 				pmat, ppath);
     gs_glyph_data_free(&gdata, "z9_glyph_outline");
     return ocode;
@@ -287,7 +287,7 @@ z9_FDArray_glyph_data(gs_font_type1 * pfont, gs_glyph glyph,
 }
 private int
 z9_FDArray_seac_data(gs_font_type1 *pfont, int ccode, gs_glyph *pglyph,
-		     gs_glyph_data_t *pgd)
+		     gs_const_string *gstr, gs_glyph_data_t *pgd)
 {
     return_error(e_invalidfont);
 }
@@ -368,7 +368,7 @@ zbuildfont9(i_ctx_t *i_ctx_p)
     int code = build_proc_name_refs(&build, NULL, "%Type9BuildGlyph");
     gs_font_cid_data common;
     ref GlyphDirectory, GlyphData, DataSource;
-    ref *prfda;
+    ref *prfda, cfnstr, *CIDFontName;
     gs_font_type1 **FDArray;
     uint FDArray_size;
     int FDBytes;
@@ -386,6 +386,7 @@ zbuildfont9(i_ctx_t *i_ctx_p)
     if (code < 0 ||
 	(code = cid_font_data_param(op, &common, &GlyphDirectory)) < 0 ||
 	(code = dict_find_string(op, "FDArray", &prfda)) < 0 ||
+	(code = dict_find_string(op, "CIDFontName", &CIDFontName)) <= 0 ||
 	(code = dict_int_param(op, "FDBytes", 0, MAX_FDBytes, -1, &FDBytes)) < 0
 	)
 	return code;
@@ -451,12 +452,17 @@ zbuildfont9(i_ctx_t *i_ctx_p)
     pfcid->cidata.FDBytes = FDBytes;
     pfcid->cidata.glyph_data = z9_glyph_data;
     pfcid->cidata.proc_data = 0;	/* for GC */
+    get_font_name(&cfnstr, CIDFontName);
+    copy_font_name(&pfcid->font_name, &cfnstr);
     ref_assign(&pfont_data(pfont)->u.cid0.GlyphDirectory, &GlyphDirectory);
     ref_assign(&pfont_data(pfont)->u.cid0.GlyphData, &GlyphData);
     ref_assign(&pfont_data(pfont)->u.cid0.DataSource, &DataSource);
     code = define_gs_font((gs_font *)pfont);
-    if (code >= 0)
+    if (code >= 0) {
+	for (i = 0; i < FDArray_size; ++i)
+	    FDArray[i]->dir = pfont->dir;
 	return code;
+    }
  fail:
     ifree_object(FDArray, "buildfont9(FDarray)");
     return code;

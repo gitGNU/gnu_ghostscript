@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsicc.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsicc.c,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $ */
 /* Implementation of the ICCBased color space family */
 
 #include "math_.h"
@@ -136,6 +136,7 @@ private cs_proc_restrict_color(gx_restrict_CIEICC);
 private cs_proc_concrete_space(gx_concrete_space_CIEICC);
 private cs_proc_concretize_color(gx_concretize_CIEICC);
 private cs_proc_adjust_cspace_count(gx_adjust_cspace_CIEICC);
+private cs_proc_serialize(gx_serialize_CIEICC);
 
 private const gs_color_space_type gs_color_space_type_CIEICC = {
     gs_color_space_index_CIEICC,    /* index */
@@ -153,7 +154,8 @@ private const gs_color_space_type gs_color_space_type_CIEICC = {
     gx_install_CIE,                 /* install_cpsace */
     gx_spot_colors_set_overprint,   /* set_overprint */
     gx_adjust_cspace_CIEICC,        /* adjust_cspace_count */
-    gx_no_adjust_color_count        /* adjust_color_count */
+    gx_no_adjust_color_count,       /* adjust_color_count */
+    gx_serialize_CIEICC		    /* serialize */
 };
 
 
@@ -273,6 +275,14 @@ gx_concretize_CIEICC(
     for (i = 0; i < ncomps; i++)
         inv[i] = lcc.paint.values[i];
 
+    /* For input Lab color space massage the values into Lab range */
+
+    if (picc_info->plu->e_inSpace == icSigLabData) {
+        inv[0] *= 100;
+        inv[1] = inv[1]*255 - 128;
+        inv[2] = inv[2]*255 - 128; 
+    }
+
     /*
      * Perform the lookup operation. A return value of 1 indicates that
      * clipping occurred somewhere in the operation, but the result is
@@ -335,6 +345,15 @@ gx_adjust_cspace_CIEICC(const gs_color_space * pcs, int delta)
     rc_adjust_const(picc_params->picc_info, delta, "gx_adjust_cspace_CIEICC");
     picc_params->alt_space.type->adjust_cspace_count(
                 (const gs_color_space *)&picc_params->alt_space, delta );
+}
+
+/*
+ * Increment color space reference counts.
+ */
+void
+gx_increment_cspace_count(const gs_color_space * pcs)
+{
+    pcs->type->adjust_cspace_count(pcs, 1);
 }
 
 private int
@@ -637,4 +656,46 @@ gs_cspace_build_CIEICC(
     pcs = *ppcspace;
     pcs->params.icc.picc_info = picc_info;
     return 0;
+}
+
+/* ---------------- Serialization. -------------------------------- */
+
+private int 
+gx_serialize_CIEICC(const gs_color_space * pcs, stream * s)
+{
+    const gs_icc_params * p = &pcs->params.icc;
+    gs_cie_icc *picc = p->picc_info;
+    uint n;
+    int code = gx_serialize_cspace_type(pcs, s);
+    long avail, pos, count;
+    byte buf[100];
+
+    if (code < 0)
+	return code;
+    code = gx_serialize_cie_common_elements(pcs, s);
+    if (code < 0)
+	return code;
+    code = sputs(s, (byte *)&picc->num_components, sizeof(picc->num_components), &n);
+    if (code < 0)
+	return code;
+    code = sputs(s, (byte *)&picc->Range, sizeof(picc->Range), &n);
+    if (code < 0)
+	return code;
+    if (sseek(picc->instrp, 0) < 0)
+	return_error(gs_error_unregistered); /* Unimplemented. */
+    if (savailable(picc->instrp, &avail) != 0)
+	return_error(gs_error_unregistered); /* Unimplemented. */
+    code = sputs(s, (byte *)&avail, sizeof(avail), &n);
+    if (code < 0)
+	return code;
+    for (pos = 0; pos < avail; pos += count) {
+	count = min(sizeof(buf), avail - pos);
+	code = sgets(picc->instrp, buf, count, &n);
+	if (code < 0)
+	    return code;
+	code = sputs(s, buf, count, &n);
+	if (code < 0)
+	    return code;
+    }
+    return sputs(s, (byte *)&picc->pcs_is_cielab, sizeof(picc->pcs_is_cielab), &n);
 }

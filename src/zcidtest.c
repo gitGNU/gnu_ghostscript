@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zcidtest.c,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: zcidtest.c,v 1.2 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Operators for testing CIDFont and CMap facilities */
 #include "string_.h"
 #include "ghost.h"
@@ -112,7 +112,7 @@ zwritecmap(i_ctx_t *i_ctx_p)
 	return_error(e_typecheck);
     check_write_file(s, op - 1);
     pcmap = r_ptr(pcodemap, gs_cmap_t);
-    code = psf_write_cmap(s, pcmap, zfcmap_put_name_default, NULL);
+    code = psf_write_cmap(s, pcmap, zfcmap_put_name_default, NULL, -1);
     if (code >= 0)
 	pop(2);
     return code;

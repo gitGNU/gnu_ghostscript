@@ -24,7 +24,7 @@
 
   Author: Raph Levien <raph@artofcode.com>
 */
-/* $Id: gsdfilt.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsdfilt.h,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 
 #ifndef gsdfilt_INCLUDED
 #  define gsdfilt_INCLUDED
@@ -44,8 +44,10 @@
 typedef struct gs_device_filter_stack_s gs_device_filter_stack_t;
 #endif
 
-/* This is the base structure from which device filters are derived. */
+#ifndef gs_device_filter_DEFINED
+#  define gs_device_filter_DEFINED
 typedef struct gs_device_filter_s gs_device_filter_t;
+#endif
 
 struct gs_device_filter_s {
     int (*push)(gs_device_filter_t *self, gs_memory_t *mem, gs_state *pgs,

@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsdparam.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsdparam.c,v 1.3 2005/04/18 12:05:59 Arabidopsis Exp $ */
 /* Default device parameters for Ghostscript library */
 #include "memory_.h"		/* for memcpy */
 #include "string_.h"		/* for strlen */
@@ -647,8 +647,7 @@ nce:
 	if ((code = param_check_string(plist, "ProcessColorModel", pcms, (pcms != NULL))) < 0)
 	    ecode = code;
     }
-    if ((code = param_check_int(plist, "MaxSeparations", 1, true)) < 0)
-	ecode = code;
+    IGNORE_INT_PARAM("MaxSeparations")
     if ((code = param_check_bool(plist, "Separations", false, true)) < 0)
 	ecode = code;
 

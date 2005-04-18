@@ -21,7 +21,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: msvccmd.mak,v 1.2 2004/02/14 22:20:19 atai Exp $
+# $Id: msvccmd.mak,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $
 # Command definition section for Microsoft Visual C++ 4.x/5.x,
 # Windows NT or Windows 95 platform.
 # Created 1997-05-22 by L. Peter Deutsch from msvc4/5 makefiles.
@@ -144,9 +144,14 @@ COMPILE_WITHOUT_FRAMES=    # no optimization when debugging
 !else
 CT=
 LCT=
+
+!if $(MSVC_VERSION) == 5
 # NOTE: With MSVC++ 5.0, /O2 produces a non-working executable.
 # We believe the following list of optimizations works around this bug.
 COMPILE_FULL_OPTIMIZED=/GF /Ot /Oi /Ob2 /Oy /Oa- /Ow-
+!else
+COMPILE_FULL_OPTIMIZED=/GF /O2 /Ob2
+!endif
 COMPILE_WITH_FRAMES=
 COMPILE_WITHOUT_FRAMES=/Oy
 !endif
@@ -182,7 +187,7 @@ WX=$(COMPILE_FOR_EXE)
 !endif
 
 !if $(COMPILE_INITS)
-ZM=/Zm200
+ZM=/Zm600
 !else
 ZM=
 !endif

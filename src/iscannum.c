@@ -22,11 +22,11 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: iscannum.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: iscannum.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Number scanner for Ghostscript interpreter */
 #include "math_.h"
 #include "ghost.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "scommon.h"
 #include "iscannum.h"		/* defines interface */
 #include "scanchar.h"
@@ -44,7 +44,7 @@
  */
 int
 scan_number(const byte * str, const byte * end, int sign,
-	    ref * pref, const byte ** psp, const bool PDFScanRules)
+	    ref * pref, const byte ** psp, const bool PDFScanInvNum)
 {
     const byte *sp = str;
 #define GET_NEXT(cvar, sp, end_action)\
@@ -207,9 +207,13 @@ i2l:
 		) {
 		GET_NEXT(c, sp, c = EOFC);
 		dval = -(double)min_long;
-		if (c == 'e' || c == 'E' || c == '.') {
+		if (c == 'e' || c == 'E') {
 		    exp10 = 0;
 		    goto fs;
+		} else if (c == '.') {
+                    GET_NEXT(c, sp, c = EOFC);
+		    exp10 = 0;
+		    goto fd;
 		} else if (!IS_DIGIT(d, c)) {
 		    lval = min_long;
 		    break;
@@ -283,11 +287,11 @@ i2r:
 	 * PostScript gives an error on numbers with a '-' following a '.'
 	 * Adobe Acrobat Reader (PDF) apparently doesn't treat this as an
 	 * error. Experiments show that the numbers following the '-' are
-	 * ignored, so we swallow the fractional part. PDFScanRules enables
+	 * ignored, so we swallow the fractional part. PDFScanInvNum enables
 	 * this compatibility kloodge.
 	 */
 	if (c == '-') {
-	    if (!PDFScanRules)
+	    if (!PDFScanInvNum)
 		break;
 	    do {
 		GET_NEXT(c, sp, c = EOFC);
@@ -319,7 +323,7 @@ l2r:
     while (IS_DIGIT(d, c) || c == '-') {
 	/* Handle bogus '-' following '.' as in i2r above.	*/
 	if (c == '-') {
-	    if (!PDFScanRules)
+	    if (!PDFScanInvNum)
 		break;
 	    do {
 		GET_NEXT(c, sp, c = EOFC);

@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: dwdll.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: dwdll.c,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $ */
 
 /* dwdll.c */
 
@@ -197,6 +197,7 @@ void unload_dll(GSDLL *gsdll)
     gsdll->set_stdio = NULL;
     gsdll->set_poll = NULL;
     gsdll->set_display_callback = NULL;
+    gsdll->set_visual_tracer = NULL;
 
     if (gsdll->hmodule != (HINSTANCE)NULL)
 	    FreeLibrary(gsdll->hmodule);

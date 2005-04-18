@@ -21,7 +21,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: unix-dll.mak,v 1.2 2004/02/14 22:20:19 atai Exp $
+# $Id: unix-dll.mak,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $
 # Partial makefile for Unix shared object target
 
 # Useful make commands:
@@ -82,7 +82,7 @@ $(GSSOC_XE): $(GS_SO) $(GLSRC)dxmainc.c
 
 # ------------------------- Recursive make targets ------------------------- #
 
-SODEFS=LDFLAGS='$(LDFLAGS) $(CFLAGS_SO) -shared -Wl,-soname,$(GS_SONAME_MAJOR)'\
+SODEFS=LDFLAGS='$(LDFLAGS) $(CFLAGS_SO) -shared -Wl,-soname=$(GS_SONAME_MAJOR)'\
  GS_XE=$(BINDIR)/$(SOBINRELDIR)/$(GS_SONAME_MAJOR_MINOR)\
  STDIO_IMPLEMENTATION=c\
  DISPLAY_DEV=$(DD)$(SOOBJRELDIR)/display.dev\

@@ -22,14 +22,11 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: ifont2.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: ifont2.h,v 1.3 2005/04/18 12:06:01 Arabidopsis Exp $ */
 /* Type 2 font utilities 2 */
 
 #ifndef ifont2_INCLUDED
 #  define ifont2_INCLUDED
-
-/* Declare the Type 2 interpreter. */
-extern charstring_interpret_proc(gs_type2_interpret);
 
 /* Default value of lenIV */
 #define DEFAULT_LENIV_2 (-1)

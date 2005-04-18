@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: imain.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: imain.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Common support for interpreter front ends */
 #include "memory_.h"
 #include "string_.h"
@@ -44,7 +44,8 @@ set_stdfiles(FILE * stdfiles[3])
 #include "gsutil.h"		/* for bytes_compare */
 #include "gxdevice.h"
 #include "gxalloc.h"
-#include "errors.h"
+#include "gzstate.h"
+#include "ierrors.h"
 #include "oper.h"
 #include "iconf.h"		/* for gs_init_* imports */
 #include "idebug.h"
@@ -472,7 +473,9 @@ gs_main_lib_open(gs_main_instance * minst, const char *file_name, ref * pfile)
     byte fn[maxfn];
     uint len;
 
-    return lib_file_open(file_name, strlen(file_name), fn, maxfn,
+    return lib_file_open(NULL /* Don't check permissions here, because permlist 
+                                 isn't ready running init files. */
+			 , file_name, strlen(file_name), fn, maxfn,
 			 &len, pfile, imemory);
 }
 
@@ -799,7 +802,7 @@ private char *gs_main_tempnames(gs_main_instance *minst)
 }
 
 /* Free all resources and return. */
-void
+int
 gs_main_finit(gs_main_instance * minst, int exit_status, int code)
 {
     i_ctx_t *i_ctx_p = minst->i_ctx_p;
@@ -813,10 +816,37 @@ gs_main_finit(gs_main_instance * minst, int exit_status, int code)
      * alloc_restore_all will close dynamically allocated devices.
      */
     tempnames = gs_main_tempnames(minst);
+    /* 
+     * Close the "main" device, because it may need to write out
+     * data before destruction. pdfwrite needs so.
+     */
+    if (minst->init_done >= 1) {
+	int code;
+
+	if (idmemory->reclaim != 0) {
+	    code = interp_reclaim(&minst->i_ctx_p, avm_global);
+
+	    if (code < 0) {
+		eprintf1("ERROR %d reclaiming the memory while the interpreter finalization.\n", code);
+		return e_Fatal;
+	    }
+	    i_ctx_p = minst->i_ctx_p; /* interp_reclaim could change it. */
+	}
+	if (i_ctx_p->pgs != NULL && i_ctx_p->pgs->device != NULL) {
+	    gx_device *pdev = i_ctx_p->pgs->device;
+
+	    code = gs_closedevice(pdev);
+	    if (code < 0)
+		eprintf2("ERROR %d closing the device. See gs/src/ierrors.h for code explanation.\n", code, i_ctx_p->pgs->device->dname);
+	    if (exit_status == 0 || exit_status == e_Quit)
+		exit_status = code;
+	}
+    }
     /* Flush stdout and stderr */
     if (minst->init_done >= 2)
       gs_main_run_string(minst, 
-	"(%stdout) (w) file closefile (%stderr) (w) file closefile quit",
+	"(%stdout) (w) file closefile (%stderr) (w) file closefile "
+        "serverdict /.jobsavelevel get 0 eq {/quit} {/stop} ifelse .systemvar exec",
 	0 , &exit_code, &error_object);
     gp_readline_finit(minst->readline_data);
     if (gs_debug_c(':'))
@@ -847,16 +877,17 @@ gs_main_finit(gs_main_instance * minst, int exit_status, int code)
 	free(tempnames);
     }
     gs_lib_finit(exit_status, code);
+    return exit_status;
 }
-void
+int
 gs_to_exit_with_code(int exit_status, int code)
 {
-    gs_finit(exit_status, code);
+    return gs_finit(exit_status, code);
 }
-void
+int
 gs_to_exit(int exit_status)
 {
-    gs_to_exit_with_code(exit_status, 0);
+    return gs_to_exit_with_code(exit_status, 0);
 }
 void
 gs_abort(void)

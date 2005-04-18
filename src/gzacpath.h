@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gzacpath.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gzacpath.h,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* State and interface definitions for clipping path accumulator */
 /* Requires gxdevice.h, gzcpath.h */
 
@@ -57,5 +57,9 @@ int gx_cpath_accum_end(const gx_device_cpath_accum * padev,
 
 /* Discard an accumulator in case of error. */
 void gx_cpath_accum_discard(gx_device_cpath_accum * padev);
+
+/* Intersect two clipping paths using an accumulator. */
+int gx_cpath_intersect_path_slow(gx_clip_path *, gx_path *, int,
+					gs_imager_state *);
 
 #endif /* gzacpath_INCLUDED */

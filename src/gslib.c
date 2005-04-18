@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gslib.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gslib.c,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $ */
 /* Test program for Ghostscript library */
 /* Capture stdin/out/err before gsio.h redefines them. */
 #include "stdio_.h"
@@ -561,7 +561,7 @@ test5(gs_state * pgs, gs_memory_t * mem)
      * Neither ImageType 3 nor 4 needs a current color,
      * but some intermediate code assumes it's valid.
      */
-    color_set_pure(&dcolor, 0);
+    set_nonclient_dev_color(&dcolor, 0);
 
     /* Scale everything up, and fill the background. */
     {

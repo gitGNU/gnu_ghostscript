@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>Recent changes in Ghostscript</title>
-<!-- $Id: News.htm,v 1.2 2004/02/14 22:20:03 atai Exp $ -->
+<!-- $Id: News.htm,v 1.3 2005/04/18 12:06:10 Arabidopsis Exp $ -->
 <!-- Originally: NEWS -->
 <!--
 	WARNING: do not use Pete Kaiser's emacs function "gs-toc" alone to
@@ -55,23 +55,39 @@ overview</a>.
 
 <!-- [2.0 begin contents] ================================================== -->
 
-<h3><a name="Version8.01"></a>Version 8.01 (2004-01-30)</h3>
+<h3><a name="Version8.15"></a>Version 8.15 (2004-09-22)</h3>
 
 <p>
-This is the first release of the 8.0x series under the GPL.
+This is the first release of GPL Ghostscript in the new version 8.1x 
+series, and the fifth release in that series over all. This release 
+offers a very large number of bug fixes over AFPL Ghostscript 8.14, and 
+many significant new features over the previous GPL Ghostscript 8.01. We 
+recommend upgrading to all our free users.
 
-<p>
-The most significant new
-feature since 7.0x is support for DeviceN colorspaces, up to 8
-colorants total at 8 bits per component. Also, pdfwrite has seen
-considerable improvement in font handling, and many other bug fixes.
+<p> 
+New features in this version :
 
-<h3><a name="8.01_Incompatible_changes"></a>Incompatible changes</h3>
+<ul>
+<li>
+The PDF writer now implements PDF 1.4 encryption.
+See the <a href="Ps2pdf.htm#Encryption">encryption parameter</a> documentation for more
+information.
 
-<p>No incompatible changes are expected in this release.
+<li>
+Ghostscript now better supports running as a job server, were multiple 
+files can be piped to a single instance. Just invoke 
+Ghostscript with the <tt>-dJOBSERVER</tt> and pipe jobs to stdin, 
+delimiting them with <tt>^D</tt>.
 
-<pre>
-</pre>
+<li>
+Font rendering has be improved over previous releases.
+
+</ul>
+
+
+<h3><a name="8.15_Incompatible_changes"></a>Incompatible changes</h3>
+
+<p> There are no known incompatible changes from the previous release.
 
 <!-- [2.0 end contents] ==================================================== -->
 
@@ -79,7 +95,8 @@ considerable improvement in font handling, and many other bug fixes.
 <hr>
 
 <p>
-Copyright &copy; 2004 artofcode LLC. All rights reserved.
+Copyright &copy; 2004 artofcode LLC.  All rights
+reserved.
 
 <p>
 This software is provided AS-IS with no warranty, either express or
@@ -96,7 +113,7 @@ contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
 <p>
-<small>Ghostscript version 8.01, 30 January 2004
+<small>Ghostscript version 8.15, 22 September 2004
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

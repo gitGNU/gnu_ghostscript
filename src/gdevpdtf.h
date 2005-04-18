@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpdtf.h,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: gdevpdtf.h,v 1.2 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Font and CMap resource structure and API for pdfwrite */
 
 #ifndef gdevpdtf_INCLUDED
@@ -159,17 +159,16 @@ struct pdf_font_resource_s {
     pdf_font_descriptor_t *FontDescriptor; /* (not used for Type 0, Type 3, */
 				/* or standard 14 fonts) */
     /*
-     * Currently, the base_font and copied_font members are only used for
+     * The base_font member is only used for
      * the standard 14 fonts, which do not have a FontDescriptor.
-     * Eventually we may decide to use them for other types as well.
      */
     pdf_base_font_t *base_font;	/* == FontDescriptor->base_font */
-    gs_font_base *copied_font;	/* == base_font->copied */
     uint count;			/* # of chars/CIDs */
     double *Widths;		/* [count] (not used for Type 0) */
     byte *used;			/* [ceil(count/8)] bitmap of chars/CIDs used */
 				/* (not used for Type 0 or Type 3) */
-    pdf_resource_t *ToUnicode;	/* CMap (not used for CIDFonts) */
+    pdf_resource_t *res_ToUnicode; /* CMap (not used for CIDFonts) */
+    gs_cmap_t *cmap_ToUnicode;	   /* CMap (not used for CIDFonts) */
     union {
 
 	struct /*type0*/ {
@@ -198,6 +197,9 @@ struct pdf_font_resource_s {
 	    long CIDSystemInfo_id; /* (written when font is allocated) */
 	    ushort *CIDToGIDMap; /* (CIDFontType 2 only) [count] */
  	    gs_id glyphshow_font_id;
+	    double *Widths2;	/* [count * 2] (x, y) */
+	    double *v;		/* [count] */
+	    pdf_font_resource_t *parent;
 
 	} cidfont;
 
@@ -228,8 +230,15 @@ struct pdf_font_resource_s {
 
 		struct /*type3*/ {
 		    gs_int_rect FontBBox;
+		    gs_matrix FontMatrix;
 		    pdf_char_proc_t *char_procs;
 		    int max_y_offset;
+		    bool bitmap_font;
+		    gs_id used_fonts[10]; /* IDs of fonts uzed in charproc streams.
+					     For a while restrict with 10 fonts.
+					     Should be enough for known cases (251-01.ps) */
+		    int used_fonts_count;
+		    byte *cached;
 		} type3;
 
 	    } s;
@@ -308,22 +317,32 @@ pdf_standard_font_t *pdf_standard_fonts(const gx_device_pdf *pdev);
  * Allocate specific types of font resource.
  */
 int pdf_font_type0_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
-			 gs_id rid, pdf_font_resource_t *DescendantFont);
+			 gs_id rid, pdf_font_resource_t *DescendantFont,
+			 const gs_const_string *CMapName);
 int pdf_font_type3_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
 			 pdf_font_write_contents_proc_t write_contents);
 int pdf_font_std_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
-		       gs_id rid, gs_font_base *pfont, int index);
+		   bool is_original, gs_id rid, gs_font_base *pfont, int index);
 int pdf_font_simple_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
 			  gs_id rid, pdf_font_descriptor_t *pfd);
 int pdf_font_cidfont_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
 			   gs_id rid, pdf_font_descriptor_t *pfd);
+int pdf_obtain_cidfont_widths_arrays(gx_device_pdf *pdev, pdf_font_resource_t *pdfont, 
+		    int wmode, double **w, double **v);
+int font_resource_encoded_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
+			    gs_id rid, font_type ftype,
+			    pdf_font_write_contents_proc_t write_contents);
+
+/* Resize font resource arrays. */
+int pdf_resize_resource_arrays(gx_device_pdf *pdev, pdf_font_resource_t *pfres, 
+	int chars_count);
 
 /*
- * Return the (copied, subset) font associated with a font resource.
+ * Return the (copied, subset or complete) font associated with a font resource.
  * If this font resource doesn't have a descriptor (Type 0, Type 3, or
  * standard 14), return 0.
  */
-gs_font_base *pdf_font_resource_font(const pdf_font_resource_t *pdfont);
+gs_font_base *pdf_font_resource_font(const pdf_font_resource_t *pdfont, bool complete);
 
 /*
  * Determine the embedding status of a font.  If the font is in the base
@@ -339,7 +358,7 @@ pdf_font_embed_t pdf_font_embed_status(gx_device_pdf *pdev, gs_font *font,
  * Compute the BaseFont of a font according to the algorithm described
  * above.
  */
-int pdf_compute_BaseFont(gx_device_pdf *pdev, pdf_font_resource_t *pdfont);
+int pdf_compute_BaseFont(gx_device_pdf *pdev, pdf_font_resource_t *pdfont, bool finish);
 
 /*
  * Close the text-related parts of a document, including writing out font
@@ -347,13 +366,18 @@ int pdf_compute_BaseFont(gx_device_pdf *pdev, pdf_font_resource_t *pdfont);
  */
 int pdf_close_text_document(gx_device_pdf *pdev); /* in gdevpdtw.c */
 
+/*
+ * Choose a name for embedded font.
+ */
+const gs_font_name *pdf_choose_font_name(gs_font *font, bool key_name);
+
 /* ---------------- CMap resources ---------------- */
 
 /*
  * Allocate a CMap resource.
  */
 int pdf_cmap_alloc(gx_device_pdf *pdev, const gs_cmap_t *pcmap,
-		   pdf_resource_t **ppres /* CMap */);
+		   pdf_resource_t **ppres /* CMap */, int font_index_only);
 
 /*
  * Add a CID-to-GID mapping to a CIDFontType 2 font resource.

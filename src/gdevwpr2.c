@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevwpr2.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
+/* $Id: gdevwpr2.c,v 1.3 2005/04/18 12:06:01 Arabidopsis Exp $ */
 /*
  * Microsoft Windows 3.n printer driver for Ghostscript.
  * Original version by Russell Lang and
@@ -603,7 +603,6 @@ win_pr2_print_page(gx_device_printer * pdev, FILE * file)
 	    ShowWindow(wdev->hDlgModeless, SW_HIDE);
     }
 
-  bmp_done:
     GlobalUnlock(hrow);
     GlobalFree(hrow);
 
@@ -730,7 +729,7 @@ win_pr2_get_params(gx_device * pdev, gs_param_list * plist)
 	code = param_write_bool(plist, "NoCancel",
 				&(wdev->nocancel));
     if (code >= 0)
-	code = param_write_bool(plist, "QueryUser",
+	code = param_write_int(plist, "QueryUser",
 				&(wdev->query_user));
     if (code >= 0)
 	code = win_pr2_write_user_settings(wdev, plist);

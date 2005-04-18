@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: vdtrace.c,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: vdtrace.c,v 1.2 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Visual tracer service */
 
 #include "math_.h"
@@ -88,7 +88,7 @@ void vd_impl_lineto(double x, double y)
     vd_trace1->lineto(vd_trace1, px, py);
 }
 
-void vd_impl_lineto_multi(struct gs_fixed_point_s *p, int n)
+void vd_impl_lineto_multi(const struct gs_fixed_point_s *p, int n)
 {   int i;
     NullRET;
     for (i = 0; i < n; i++) {
@@ -131,6 +131,34 @@ void vd_impl_square(double x, double y, int w, unsigned int c)
     vd_trace1->lineto(vd_trace1, SX(x) + w, SY(y) + w);
     vd_trace1->lineto(vd_trace1, SX(x) - w, SY(y) + w);
     vd_trace1->lineto(vd_trace1, SX(x) - w, SY(y) - w);
+    vd_trace1->end_path(vd_trace1);
+    vd_trace1->stroke(vd_trace1);
+}
+
+void vd_impl_rect(double x0, double y0, double x1, double y1, int w, unsigned int c)
+{   NullRET;
+    vd_trace1->setcolor(vd_trace1, c);
+    vd_trace1->setlinewidth(vd_trace1, w);
+    vd_trace1->beg_path(vd_trace1);
+    vd_trace1->moveto(vd_trace1, SX(x0), SY(y0));
+    vd_trace1->lineto(vd_trace1, SX(x0), SY(y1));
+    vd_trace1->lineto(vd_trace1, SX(x1), SY(y1));
+    vd_trace1->lineto(vd_trace1, SX(x1), SY(y0));
+    vd_trace1->lineto(vd_trace1, SX(x0), SY(y0));
+    vd_trace1->end_path(vd_trace1);
+    vd_trace1->stroke(vd_trace1);
+}
+
+void vd_impl_quad(double x0, double y0, double x1, double y1, double x2, double y2, double x3, double y3, int w, unsigned int c)
+{   NullRET;
+    vd_trace1->setcolor(vd_trace1, c);
+    vd_trace1->setlinewidth(vd_trace1, w);
+    vd_trace1->beg_path(vd_trace1);
+    vd_trace1->moveto(vd_trace1, SX(x0), SY(y0));
+    vd_trace1->lineto(vd_trace1, SX(x1), SY(y1));
+    vd_trace1->lineto(vd_trace1, SX(x2), SY(y2));
+    vd_trace1->lineto(vd_trace1, SX(x3), SY(y3));
+    vd_trace1->lineto(vd_trace1, SX(x0), SY(y0));
     vd_trace1->end_path(vd_trace1);
     vd_trace1->stroke(vd_trace1);
 }

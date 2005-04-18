@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: dxmainc.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: dxmainc.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 
 /* dxmainc.c */
 /* 
@@ -45,7 +45,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #define __PROTOTYPES__
-#include "errors.h"
+#include "ierrors.h"
 #include "iapi.h"
 
 const char start_string[] = "systemdict /start get exec\n";
@@ -86,7 +86,7 @@ gsdll_stderr(void *instance, const char *str, int len)
 int main(int argc, char *argv[])
 {
     int exit_status;
-    int code = 1;
+    int code = 1, code1;
     gs_main_instance *instance;
     int exit_code;
 
@@ -97,7 +97,9 @@ int main(int argc, char *argv[])
 
 	if (code == 0)
 	    code = gsapi_run_string(instance, start_string, 0, &exit_code);
-        gsapi_exit(instance);
+        code1 = gsapi_exit(instance);
+	if (code == 0 || code == e_Quit)
+	    code = code1;
 	if (code == e_Quit)
 	    code = 0;	/* user executed 'quit' */
 

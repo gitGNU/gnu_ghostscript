@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevjpeg.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevjpeg.c,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $ */
 /* JPEG output driver */
 #include "stdio_.h"		/* for jpeglib.h */
 #include "jpeglib_.h"
@@ -285,5 +285,4 @@ jpeg_print_page(gx_device_printer * pdev, FILE * prn_stream)
 	gs_free_object(mem, jcdp, "jpeg_print_page(jpeg_compress_data)");
     gs_free_object(mem, in, "jpeg_print_page(in)");
     return code;
-#undef jcdp
 }

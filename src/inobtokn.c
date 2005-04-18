@@ -22,10 +22,10 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: inobtokn.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: inobtokn.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Dummy scan_binary_token for Level 1 systems */
 #include "ghost.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "stream.h"
 #include "iscan.h"
 #include "iscanbin.h"

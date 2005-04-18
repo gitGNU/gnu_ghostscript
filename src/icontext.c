@@ -22,12 +22,12 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: icontext.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: icontext.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Context state operations */
 #include "ghost.h"
 #include "gsstruct.h"		/* for gxalloc.h */
 #include "gxalloc.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "stream.h"		/* for files.h */
 #include "files.h"
 #include "idict.h"
@@ -147,7 +147,7 @@ context_state_alloc(gs_context_state_t ** ppcst,
 	if (dict_find_string(system_dict, "userparams", &puserparams) >= 0)
 	    size = dict_length(puserparams);
 	else
-	    size = 24;
+	    size = 30;
 	code = dict_alloc(pcst->memory.space_local, size, &pcst->userparams);
 	if (code < 0)
 	    goto x2;
@@ -155,7 +155,7 @@ context_state_alloc(gs_context_state_t ** ppcst,
     }
     pcst->scanner_options = 0;
     pcst->LockFilePermissions = false;
-    pcst->filearg = NULL;
+    pcst->starting_arg_file = false;
     /* The initial stdio values are bogus.... */
     make_file(&pcst->stdio[0], a_readonly | avm_invalid_file_entry, 1,
 	      invalid_file_entry);

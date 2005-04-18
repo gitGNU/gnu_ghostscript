@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsovrc.c,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: gsovrc.c,v 1.2 2005/04/18 12:06:01 Arabidopsis Exp $ */
 /* overprint/overprint mode compositor implementation */
 
 #include "memory_.h"

@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: dwmain.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: dwmain.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Ghostscript DLL loader for Windows */
 
 #define STRICT
@@ -33,7 +33,7 @@
 #include <stdlib.h>
 #include "gscdefs.h"
 #define GSREVISION gs_revision
-#include "errors.h"
+#include "ierrors.h"
 #include "iapi.h"
 #include "vdtrace.h"
 
@@ -132,7 +132,6 @@ static int display_open(void *handle, void *device)
 /* Device will not be closed until this function returns. */
 static int display_preclose(void *handle, void *device)
 {
-    IMAGE *img;
 #ifdef DISPLAY_DEBUG
     char buf[256];
     sprintf(buf, "display_preclose(0x%x, 0x$x)\n", handle, device);
@@ -257,7 +256,7 @@ display_callback display = {
 /* program really starts at WinMain */
 int new_main(int argc, char *argv[])
 {
-    int code;
+    int code, code1;
     int exit_status;
     int exit_code;
     int nargc;
@@ -320,7 +319,9 @@ int new_main(int argc, char *argv[])
     code = gsdll.init_with_args(instance, nargc, nargv);
     if (code == 0)
 	code = gsdll.run_string(instance, start_string, 0, &exit_code);
-    gsdll.exit(instance);
+    code1 = gsdll.exit(instance);
+    if (code == 0 || (code == e_Quit && code1 != 0))
+	code = code1;
 
     gsdll.delete_instance(instance);
 
@@ -483,7 +484,6 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLine, int cmd
     
     if (dll_exit_status && !tw->quitnow) {
 	/* display error message in text window */
-	char buf[80];
 	MSG msg;
 	text_puts(tw, "\nClose this window with the close button on the title bar or the system menu.\n");
 	if (IsIconic(text_get_handle(tw)))

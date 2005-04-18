@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zgstate.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: zgstate.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Graphics state operators */
 #include "math_.h"
 #include "ghost.h"
@@ -76,6 +76,27 @@ zcurrent_bool(i_ctx_t *i_ctx_p, bool (*current_proc)(const gs_state *))
 
     push(1);
     make_bool(op, current_proc(igs));
+    return 0;
+}
+
+private int
+zset_uint(i_ctx_t *i_ctx_p, void (*set_proc)(gs_state *, uint))
+{
+    os_ptr op = osp;
+
+    check_type(*op, t_integer);
+    set_proc(igs, op->value.intval);
+    pop(1);
+    return 0;
+}
+
+private int
+zcurrent_uint(i_ctx_t *i_ctx_p, uint (*current_proc)(const gs_state *))
+{
+    os_ptr op = osp;
+
+    push(1);
+    make_int(op, current_proc(igs));
     return 0;
 }
 
@@ -488,6 +509,20 @@ zcurrentlimitclamp(i_ctx_t *i_ctx_p)
     return zcurrent_bool(i_ctx_p, gs_currentlimitclamp);
 }
 
+/* <int> .settextrenderingmode - */
+private int
+zsettextrenderingmode(i_ctx_t *i_ctx_p)
+{
+    return zset_uint(i_ctx_p, gs_settextrenderingmode);
+}
+
+/* - .currenttextrenderingmode <int> */
+private int
+zcurrenttextrenderingmode(i_ctx_t *i_ctx_p)
+{
+    return zcurrent_uint(i_ctx_p, gs_currenttextrenderingmode);
+}
+
 /* ------ Initialization procedure ------ */
 
 /* We need to split the table because of the 16-element limit. */
@@ -525,6 +560,11 @@ const op_def zgstate2_op_defs[] = {
     {"1.setlinejoin", zsetlinejoin},
     {"1setlinewidth", zsetlinewidth},
     {"1setmiterlimit", zsetmiterlimit},
+    op_def_end(0)
+};
+const op_def zgstate3_op_defs[] = {
+    {"0.settextrenderingmode", zsettextrenderingmode},
+    {"0.currenttextrenderingmode", zcurrenttextrenderingmode},
     op_def_end(0)
 };
 

@@ -22,13 +22,13 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: istack.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: istack.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Manager for expandable stacks of refs */
 #include "memory_.h"
 #include "ghost.h"
 #include "gsstruct.h"
 #include "gsutil.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "ialloc.h"
 #include "istack.h"
 #include "istkparm.h"

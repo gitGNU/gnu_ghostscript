@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsfcid2.c,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: gsfcid2.c,v 1.2 2005/04/18 12:05:57 Arabidopsis Exp $ */
 /* Create a CIDFontType 2 font from a Type 42 font. */
 #include "memory_.h"
 #include "gx.h"
@@ -260,7 +260,8 @@ tt_16bit_format4_enum_lookups(const gs_cmap_t *pcmap, int which,
 private const gs_cmap_procs_t tt_16bit_format4_procs = {
     tt_16bit_format4_decode_next,
     tt_16bit_format4_enum_ranges,
-    tt_16bit_format4_enum_lookups
+    tt_16bit_format4_enum_lookups,
+    gs_cmap_compute_identity
 };
 
 /*

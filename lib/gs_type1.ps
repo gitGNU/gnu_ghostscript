@@ -13,7 +13,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_type1.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
+% $Id: gs_type1.ps,v 1.3 2005/04/18 12:06:08 Arabidopsis Exp $
 % Type 1 font support code.
 
 % The standard representation for PostScript compatible fonts is described
@@ -79,6 +79,10 @@ ifelse
    DISKFONTS { end } if
    cleartomark
  } bind def
+ % container for CloseSource flag (default true to prevent buildup of file handles)
+ /closesourcedict mark
+   /CloseSource true
+ .dicttomark readonly def
 /.loadfont1 {		% <file> .loadfont1 <errorflag>
   {	% We would like to use `false /PFBDecode filter',
 	% but this occasionally produces a whitespace character as
@@ -90,7 +94,7 @@ ifelse
 	% we have to create a procedure to close the file reliably.
     dup read not { -1 } if
     2 copy unread 16#80 eq {
-	dup true /PFBDecode filter cvx
+	dup //closesourcedict //true /PFBDecode filter cvx
 	exch .currentresourcefile eq {
 	  dup /.execasresource .systemvar
 	} {
@@ -103,6 +107,8 @@ ifelse
     } ifelse
   } stopped
 } bind def
+% undefine a dict that is only used internally, and is immediately bound
+currentdict /closesourcedict .undef
 
 % Here are the BuildChar and BuildGlyph implementation for Type 1 fonts.
 % The names %Type1BuildChar and %Type1BuildGlyph are known to the interpreter.
@@ -175,7 +181,8 @@ ifelse
   dup gcheck 2 index gcheck not and {
     /setweightvector cvx /invalidaccess signalerror
   } if
-  /WeightVector exch .forceput
+  2 copy /WeightVector exch .forceput
+  .setweightvector
 } .bind executeonly def 
 end
 

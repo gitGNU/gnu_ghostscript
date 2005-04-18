@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpsdf.h,v 1.2 2004/02/14 22:20:06 atai Exp $ */
+/* $Id: gdevpsdf.h,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Common output syntax and parameters for PostScript and PDF writers */
 
 #ifndef gdevpsdf_INCLUDED
@@ -274,10 +274,6 @@ int psdf_setflat(gx_device_vector * vdev, floatp flatness);
 int psdf_setlogop(gx_device_vector * vdev, gs_logical_operation_t lop,
 		  gs_logical_operation_t diff);
 
-	/* Other state */
-int psdf_setfillcolor(gx_device_vector * vdev, const gx_drawing_color * pdc);
-int psdf_setstrokecolor(gx_device_vector * vdev, const gx_drawing_color * pdc);
-
 	/* Paths */
 #define psdf_dopath gdev_vector_dopath
 int psdf_dorect(gx_device_vector * vdev, fixed x0, fixed y0, fixed x1,
@@ -397,6 +393,8 @@ gx_color_index psdf_adjust_color_index(gx_device_vector *vdev,
 /* Set the fill or stroke color. */
 int psdf_set_color(gx_device_vector *vdev, const gx_drawing_color *pdc,
 		   const psdf_set_color_commands_t *ppscc);
+/* Round a double value to a specified precision. */
+double psdf_round(double v, int precision, int radix);
 
 /* stubs to disable get_bits, get_bits_rectangle */
 dev_proc_get_bits(psdf_get_bits);

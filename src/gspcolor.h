@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gspcolor.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gspcolor.h,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $ */
 /* Client interface to Pattern color */
 
 #ifndef gspcolor_INCLUDED
@@ -88,7 +88,8 @@ typedef struct gs_pattern_instance_s gs_pattern_instance_t;
     rc_header rc;\
     /* Following are set by makepattern */\
     const gs_pattern_type_t *type;  /* from template */\
-    gs_state *saved
+    gs_state *saved;\
+    gs_id pattern_id
 struct gs_pattern_instance_s {
     gs_pattern_instance_common;
 };

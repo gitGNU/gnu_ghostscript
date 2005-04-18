@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gzstate.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gzstate.h,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Private graphics state definition for Ghostscript library */
 
 #ifndef gzstate_INCLUDED
@@ -69,6 +69,24 @@ typedef struct gs_transparency_group_s gs_transparency_group_t;
 #  define gs_device_filter_stack_DEFINED
 typedef struct gs_device_filter_stack_s gs_device_filter_stack_t;
 #endif
+
+/* Device filter stack structure is defined here so that gstate
+   lifecycle operations can access reference count; implementation is
+   in gsdfilt.c.
+ */
+
+#ifndef gs_device_filter_DEFINED
+#  define gs_device_filter_DEFINED
+typedef struct gs_device_filter_s gs_device_filter_t;
+#endif
+
+/* This is the base structure from which device filters are derived. */
+struct gs_device_filter_stack_s {
+    gs_device_filter_stack_t *next;
+    gs_device_filter_t *df;
+    gx_device *next_device;
+    rc_header rc;
+};
 
 /* Graphics state structure. */
 

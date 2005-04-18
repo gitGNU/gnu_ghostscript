@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zfont.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: zfont.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Generic font operators */
 #include "ghost.h"
 #include "oper.h"
@@ -43,6 +43,7 @@
 /* Forward references */
 private int make_font(i_ctx_t *, const gs_matrix *);
 private void make_uint_array(os_ptr, const uint *, int);
+private int setup_unicode_decoder(i_ctx_t *i_ctx_p, ref *Decoding);
 
 /* The (global) font directory */
 gs_font_dir *ifont_dir = 0;	/* needed for buildfont */
@@ -55,12 +56,26 @@ zfont_mark_glyph_name(gs_glyph glyph, void *ignore_data)
 	    name_mark_index((uint) glyph));
 }
 
+/* Get a global glyph code.  */
+private int 
+zfont_global_glyph_code(gs_const_string *gstr, gs_glyph *pglyph)
+{
+    ref v;
+    int code = name_ref(gstr->data, gstr->size, &v, 0);
+
+    if (code < 0)
+	return code;
+    *pglyph = (gs_glyph)name_index(&v);
+    return 0;
+}
+
 /* Initialize the font operators */
 private int
 zfont_init(i_ctx_t *i_ctx_p)
 {
     ifont_dir = gs_font_dir_alloc2(imemory, &gs_memory_default);
     ifont_dir->ccache.mark_glyph = zfont_mark_glyph_name;
+    ifont_dir->global_glyph_code = zfont_global_glyph_code;
     return gs_register_struct_root(imemory, NULL, (void **)&ifont_dir,
 				   "ifont_dir");
 }
@@ -203,6 +218,22 @@ zregisterfont(i_ctx_t *i_ctx_p)
     return 0;
 }
 
+
+/* <Decoding> .setupUnicodeDecoder - */
+private int
+zsetupUnicodeDecoder(i_ctx_t *i_ctx_p)
+{   /* The allocation mode must be global. */
+    os_ptr op = osp;
+    int code;
+
+    check_type(*op, t_dictionary);
+    code = setup_unicode_decoder(i_ctx_p, op);
+    if (code < 0)
+	return code;
+    pop(1);
+    return 0;
+}
+
 /* ------ Initialization procedure ------ */
 
 const op_def zfont_op_defs[] =
@@ -216,6 +247,7 @@ const op_def zfont_op_defs[] =
     {"1setcacheparams", zsetcacheparams},
     {"0currentcacheparams", zcurrentcacheparams},
     {"1.registerfont", zregisterfont},
+    {"1.setupUnicodeDecoder", zsetupUnicodeDecoder},
     op_def_end(zfont_init)
 };
 
@@ -424,6 +456,8 @@ purge_if_name_removed(cached_char * cc, void *vsave)
 {
     return alloc_name_index_is_since_save(cc->code, vsave);
 }
+
+/* Remove entries from font and character caches. */
 void
 font_restore(const alloc_save_t * save)
 {
@@ -555,4 +589,52 @@ zfont_info(gs_font *font, const gs_point *pscale, int members,
 	zfont_info_has(pfontinfo, "FullName", &info->FullName))
 	info->members |= FONT_INFO_FULL_NAME;
     return code;
+}
+
+/* -------------------- Utilities --------------*/
+
+typedef struct gs_unicode_decoder_s {
+    ref data;
+} gs_unicode_decoder;
+
+/* GC procedures */
+private 
+CLEAR_MARKS_PROC(unicode_decoder_clear_marks)
+{   gs_unicode_decoder *const pptr = vptr;
+
+    r_clear_attrs(&pptr->data, l_mark);
+}
+private 
+ENUM_PTRS_WITH(unicode_decoder_enum_ptrs, gs_unicode_decoder *pptr) return 0;
+case 0:
+ENUM_RETURN_REF(&pptr->data);
+ENUM_PTRS_END
+private RELOC_PTRS_WITH(unicode_decoder_reloc_ptrs, gs_unicode_decoder *pptr);
+RELOC_REF_VAR(pptr->data);
+r_clear_attrs(&pptr->data, l_mark);
+RELOC_PTRS_END
+
+gs_private_st_complex_only(st_unicode_decoder, gs_unicode_decoder,\
+    "unicode_decoder", unicode_decoder_clear_marks, unicode_decoder_enum_ptrs, 
+    unicode_decoder_reloc_ptrs, 0);
+
+/* Get the Unicode value for a glyph. */
+const ref *
+zfont_get_to_unicode_map(gs_font_dir *dir)
+{
+    const gs_unicode_decoder *pud = (gs_unicode_decoder *)dir->glyph_to_unicode_table;
+    
+    return (pud == NULL ? NULL : &pud->data);
+}
+
+private int
+setup_unicode_decoder(i_ctx_t *i_ctx_p, ref *Decoding)
+{
+    gs_unicode_decoder *pud = gs_alloc_struct(imemory, gs_unicode_decoder, 
+                             &st_unicode_decoder, "setup_unicode_decoder");
+    if (pud == NULL)
+	return_error(e_VMerror);
+    ref_assign_new(&pud->data, Decoding);
+    ifont_dir->glyph_to_unicode_table = pud;
+    return 0;
 }

@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxcolor2.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxcolor2.h,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Internal definitions for Level 2 color routines */
 /* Requires gsstruct.h, gxfixed.h */
 
@@ -74,7 +74,12 @@ rc_free_proc(free_indexed_map);
  * arrange it so that all 4 transformation factors are non-negative.
  */
 
-typedef struct gs_pattern1_instance_s {
+#ifndef gs_pattern1_instance_t_DEFINED
+#  define gs_pattern1_instance_t_DEFINED
+typedef struct gs_pattern1_instance_s gs_pattern1_instance_t;
+#endif
+
+struct gs_pattern1_instance_s {
     gs_pattern_instance_common;	/* must be first */
     gs_pattern1_template_t template;
     /* Following are created by makepattern */
@@ -88,7 +93,7 @@ typedef struct gs_pattern1_instance_s {
     bool uses_mask;	        /* if true, pattern mask must be created */
     gs_int_point size;		/* in device coordinates */
     gx_bitmap_id id;		/* key for cached bitmap (= id of mask) */
-} gs_pattern1_instance_t;
+};
 
 #define private_st_pattern1_instance() /* in gsptype1.c */\
   gs_private_st_composite(st_pattern1_instance, gs_pattern1_instance_t,\

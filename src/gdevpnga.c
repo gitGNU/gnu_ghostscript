@@ -25,7 +25,7 @@
   Author: Raph Levien <raph@artofcode.com>
 */
 
-/* $Id: gdevpnga.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
+/* $Id: gdevpnga.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Test driver for PDF 1.4 transparency stuff */
 
 #include "gdevprn.h"
@@ -698,29 +698,6 @@ pnga_output_page(gx_device *dev, int num_copies, int flush)
     info_ptr->bit_depth = 8;
     info_ptr->color_type = PNG_COLOR_TYPE_RGB_ALPHA;
 
-    /* set the palette if there is one */
-    if (info_ptr->color_type == PNG_COLOR_TYPE_PALETTE) {
-	int i;
-	int num_colors = 1 << depth;
-	gx_color_value rgb[3];
-
-	info_ptr->palette =
-	    (void *)gs_alloc_bytes(mem, 256 * sizeof(png_color),
-				   "png palette");
-	if (info_ptr->palette == 0) {
-	    code = gs_note_error(gs_error_VMerror);
-	    goto done;
-	}
-	info_ptr->num_palette = num_colors;
-	info_ptr->valid |= PNG_INFO_PLTE;
-	for (i = 0; i < num_colors; i++) {
-	    (*dev_proc(dev, map_color_rgb)) ((gx_device *) dev,
-					      (gx_color_index) i, rgb);
-	    info_ptr->palette[i].red = gx_color_value_to_byte(rgb[0]);
-	    info_ptr->palette[i].green = gx_color_value_to_byte(rgb[1]);
-	    info_ptr->palette[i].blue = gx_color_value_to_byte(rgb[2]);
-	}
-    }
     /* add comment */
     sprintf(software_text, "%s %d.%02d", gs_product,
 	    (int)(gs_revision / 100), (int)(gs_revision % 100));
@@ -754,9 +731,6 @@ pnga_output_page(gx_device *dev, int num_copies, int flush)
 
     /* write the rest of the file */
     png_write_end(png_ptr, info_ptr);
-
-    /* if you alloced the palette, free it here */
-    gs_free_object(mem, info_ptr->palette, "png palette");
 
   done:
     /* free the structures */

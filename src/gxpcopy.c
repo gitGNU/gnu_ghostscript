@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxpcopy.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxpcopy.c,v 1.3 2005/04/18 12:05:59 Arabidopsis Exp $ */
 /* Path copying and flattening */
 #include "math_.h"
 #include "gx.h"
@@ -32,6 +32,7 @@
 #include "gxfarith.h"
 #include "gxistate.h"		/* for access to line params */
 #include "gzpath.h"
+#include "vdtrace.h"
 
 /* Forward declarations */
 private void adjust_point_to_tangent(segment *, const segment *,
@@ -69,12 +70,14 @@ gx_path_copy_reducing(const gx_path *ppath_old, gx_path *ppath,
 	expansion.y =
 	    float2fixed((fabs(pis->ctm.xy) + fabs(pis->ctm.yy)) * width) * 2;
     }
+    vd_setcolor(RGB(255,255,0));
     pseg = (const segment *)(ppath_old->first_subpath);
     while (pseg) {
 	switch (pseg->type) {
 	    case s_start:
 		code = gx_path_add_point(ppath,
 					 pseg->pt.x, pseg->pt.y);
+		vd_moveto(pseg->pt.x, pseg->pt.y);
 		break;
 	    case s_curve:
 		{
@@ -135,7 +138,12 @@ gx_path_copy_reducing(const gx_path *ppath_old, gx_path *ppath,
 				flat = min(flat_x, flat_y);
 			    }
 			}
-			k = gx_curve_log2_samples(x0, y0, pc, flat);
+#			if CURVED_TRAPEZOID_FILL
+			    k = (options & pco_small_curves ? -1 
+				    : gx_curve_log2_samples(x0, y0, pc, flat));
+#			else
+			    k = gx_curve_log2_samples(x0, y0, pc, flat);
+#			endif
 			if (options & pco_accurate) {
 			    segment *start;
 			    segment *end;
@@ -148,10 +156,11 @@ gx_path_copy_reducing(const gx_path *ppath_old, gx_path *ppath,
 							  notes);
 			    if (code < 0)
 				break;
+			    vd_lineto(x0, y0);
 			    start = ppath->current_subpath->last;
 			    notes |= sn_not_first;
 			    cseg = *pc;
-			    code = gx_flatten_sample(ppath, k, &cseg, notes);
+			    code = gx_subdivide_curve(ppath, k, &cseg, notes);
 			    if (code < 0)
 				break;
 			    /*
@@ -159,6 +168,7 @@ gx_path_copy_reducing(const gx_path *ppath_old, gx_path *ppath,
 			     * they line up with the tangents.
 			     */
 			    end = ppath->current_subpath->last;
+			    vd_lineto(ppath->position.x, ppath->position.y);
 			    if ((code = gx_path_add_line_notes(ppath,
 							  ppath->position.x,
 							  ppath->position.y,
@@ -170,7 +180,7 @@ gx_path_copy_reducing(const gx_path *ppath_old, gx_path *ppath,
 						    &pc->p2);
 			} else {
 			    cseg = *pc;
-			    code = gx_flatten_sample(ppath, k, &cseg, notes);
+			    code = gx_subdivide_curve(ppath, k, &cseg, notes);
 			}
 		    }
 		    break;
@@ -178,9 +188,11 @@ gx_path_copy_reducing(const gx_path *ppath_old, gx_path *ppath,
 	    case s_line:
 		code = gx_path_add_line_notes(ppath,
 				       pseg->pt.x, pseg->pt.y, pseg->notes);
+		vd_lineto(pseg->pt.x, pseg->pt.y);
 		break;
 	    case s_line_close:
 		code = gx_path_close_subpath(ppath);
+		vd_closepath;
 		break;
 	    default:		/* can't happen */
 		code = gs_note_error(gs_error_unregistered);
@@ -582,7 +594,11 @@ gx_curve_x_at_y(curve_cursor * prc, fixed y)
 
 /* Test whether a path is free of non-monotonic curves. */
 bool
+#if CURVED_TRAPEZOID_FILL
+gx_path__check_curves(const gx_path * ppath, bool small_curves, fixed fixed_flat)
+#else
 gx_path_is_monotonic(const gx_path * ppath)
+#endif
 {
     const segment *pseg = (const segment *)(ppath->first_subpath);
     gs_fixed_point pt0;
@@ -611,6 +627,17 @@ gx_path_is_monotonic(const gx_path * ppath)
 					   pc->p1.x, pc->p2.x, pc->pt.x, t);
 		    if (nz != 0)
 			return false;
+#		    if CURVED_TRAPEZOID_FILL
+			if (small_curves) {
+			    fixed ax, bx, cx, ay, by, cy; 
+			    int k = gx_curve_log2_samples(pt0.x, pt0.y, pc, fixed_flat);
+
+			    if(!curve_coeffs_ranged(pt0.x, pc->p1.x, pc->p2.x, pc->pt.x,
+				    pt0.y, pc->p1.y, pc->p2.y, pc->pt.y,
+				    &ax, &bx, &cx, &ay, &by, &cy, k))
+				return false;
+			}
+#		    endif
 		}
 		break;
 	    default:

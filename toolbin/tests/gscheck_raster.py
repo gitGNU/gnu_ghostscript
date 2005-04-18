@@ -1,6 +1,6 @@
-#!/usr/bin/env python2.2
+#!/usr/bin/env python
 
-#    Copyright (C) 2001 Artifex Software Inc.
+#    Copyright (C) 2001-2004 Artifex Software Inc.
 # 
 #  This program is free software; you can redistribute it and/or modify it
 #  under the terms of the GNU General Public License version 2
@@ -23,7 +23,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: gscheck_raster.py,v 1.1 2004/02/14 22:46:29 atai Exp $
+# $Id: gscheck_raster.py,v 1.2 2005/04/18 12:06:13 Arabidopsis Exp $
 
 #
 # gscheck_raster.py
@@ -33,7 +33,8 @@
 #
 
 
-import os, string, calendar
+import os, stat
+import string, calendar, time
 import gstestutils
 import gssum, gsconf, gstestgs, gsparamsets
 
@@ -42,9 +43,16 @@ class GSCompareTestCase(gstestgs.GhostscriptTestCase):
         file = "%s.%s.%d.%d" % (self.file[string.rindex(self.file, '/') + 1:], self.device, self.dpi, self.band)
 	rasterfilename = gsconf.rasterdbdir + file + ".gz"
 	if not os.access(rasterfilename, os.F_OK):
-		os.system("./update_baseline " + os.path.basename(self.file))	
-	ct = calendar.localtime(os.stat(rasterfilename)[9])
-	baseline_date = "%s %d, %4d %02d:%02d" % ( calendar.month_abbr[ct[1]], ct[2], ct[0], ct[3], ct[4] )
+		os.system(gsconf.codedir + "update_baseline " + os.path.basename(self.file))
+	try:
+		ct = time.localtime(os.stat(rasterfilename)[stat.ST_MTIME])
+		baseline_date = "%s %d, %4d %02d:%02d" % ( calendar.month_abbr[ct[1]], ct[2], ct[0], ct[3], ct[4] )
+	except:
+		if self.band:
+			banded = "banded"
+		else:
+			banded = "noband"
+		return "Skipping %s (%s/%ddpi/%s) [no previous raster data found]" % (os.path.basename(self.file), self.device, self.dpi, banded)
 
 	if self.band:
 	    return "Checking %s (%s/%ddpi/banded) against baseline set on %s" % (os.path.basename(self.file), self.device, self.dpi, baseline_date)
@@ -104,7 +112,6 @@ def addTests(suite, gsroot, **args):
 
     # get a list of test files
     comparefiles = os.listdir(gsconf.comparefiledir)
-
 
     for f in comparefiles:
         if f[-3:] == '.ps' or f[-4:] == '.pdf' or f[-4:] == '.eps':

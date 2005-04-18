@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: sarc4.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: sarc4.h,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Definitions for Arcfour cipher and filter */
 /* Requires scommon.h; strimpl.h if any templates are referenced */
 
@@ -36,13 +36,17 @@
  * typically be allocated on the stack, and so has no memory
  * management associated.
  */
-typedef struct stream_arcfour_state_s
+struct stream_arcfour_state_s
 {
     stream_state_common;	/* a define from scommon.h */
     unsigned int x, y;
     unsigned char S[256];
-}
-stream_arcfour_state;
+};
+
+#ifndef stream_arcfour_state_DEFINED
+#define stream_arcfour_state_DEFINED
+typedef struct stream_arcfour_state_s stream_arcfour_state;
+#endif
 
 int s_arcfour_set_key(stream_arcfour_state * state, const unsigned char *key,
 		      int keylength);
@@ -51,5 +55,10 @@ int s_arcfour_set_key(stream_arcfour_state * state, const unsigned char *key,
   gs_private_st_simple(st_arcfour_state, stream_arcfour_state,\
     "Arcfour filter state")
 extern const stream_template s_arcfour_template;
+
+/* (de)crypt a section of text in a buffer -- the procedure is the same
+ * in each direction. see strimpl.h for return codes.
+ */
+int s_arcfour_process_buffer(stream_arcfour_state *ss, byte *buf, int buf_size);
 
 #endif /* sarc4_INCLUDED */

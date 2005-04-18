@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevplnx.c,v 1.2 2004/02/14 22:20:05 atai Exp $*/
+/* $Id: gdevplnx.c,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $*/
 /* Plane extraction device */
 #include "gx.h"
 #include "gserrors.h"
@@ -166,7 +166,7 @@ reduce_drawing_color(gx_device_color *ppdc, gx_device_plane_extract *edev,
     if (gx_dc_is_pure(pdevc)) {
 	gx_color_index pixel = COLOR_PIXEL(edev, gx_dc_pure_color(pdevc));
 
-	color_set_pure(ppdc, pixel);
+	set_nonclient_dev_color(ppdc, pixel);
 	reduced = REDUCE_PURE(edev, pixel);
     } else if (gx_dc_is_binary_halftone(pdevc)) {
 	gx_color_index pixel0 =
@@ -175,7 +175,7 @@ reduce_drawing_color(gx_device_color *ppdc, gx_device_plane_extract *edev,
 	    TRANS_COLOR_PIXEL(edev, gx_dc_binary_color1(pdevc));
 
 	if (pixel0 == pixel1) {
-	    color_set_pure(ppdc, pixel0);
+	    set_nonclient_dev_color(ppdc, pixel0);
 	    reduced = REDUCE_PURE(edev, pixel0);
 	} else {
 	    *ppdc = *pdevc;
@@ -739,9 +739,9 @@ plane_strip_copy_rop(gx_device *dev,
     long sbuf[COPY_ROP_SOURCE_BUF_SIZE / sizeof(long)];
     long tbuf[COPY_ROP_TEXTURE_BUF_SIZE / sizeof(long)];
     const byte *plane_source;
-    uint plane_raster;
+    uint plane_raster = 0xbaadf00d; /* Initialize against indeterminizm. */
     gx_strip_bitmap plane_texture;
-    const gx_strip_bitmap *plane_textures;
+    const gx_strip_bitmap *plane_textures = NULL;
     int code;
 
     /* We should do better than this on transparency.... */
@@ -967,7 +967,7 @@ plane_begin_typed_image(gx_device * dev,
 	 * The drawing color won't be used, but if RasterOp is involved,
 	 * it may still be accessed in some anomalous cases.
 	 */
-	color_set_pure(&dcolor, (gx_color_index)0);
+	set_nonclient_dev_color(&dcolor, (gx_color_index)0);
     }
     info = gs_alloc_struct(memory, plane_image_enum_t, &st_plane_image_enum,
 			   "plane_image_begin_typed(info)");

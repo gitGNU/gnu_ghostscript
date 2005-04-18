@@ -13,7 +13,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: ps2epsi.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
+% $Id: ps2epsi.ps,v 1.3 2005/04/18 12:06:08 Arabidopsis Exp $
 % Convert an arbitrary PostScript file to an EPSI file.
 %
 % Please do not contact these users if you have questions.  They no longer
@@ -202,6 +202,8 @@ ps2edict begin
      /cwidth rm lm sub 1 add def
      /out cwidth string def
 
+     epsifile (%%EndComments\n\n) writestring
+     epsifile (%%BeginProlog\n) writestring
      epsifile (%%BeginPreview: ) writestring
      epsifile cwidth write==only epsifile ( ) writestring
      epsifile bm tm sub 1 add write==only epsifile ( 8 ) writestring

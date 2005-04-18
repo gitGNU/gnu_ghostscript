@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevbbox.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/*$Id: gdevbbox.c,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $ */
 /* Device for tracking bounding box */
 #include "math_.h"
 #include "memory_.h"
@@ -267,8 +267,8 @@ gx_device_bbox_init(gx_device_bbox * dev, gx_device * target)
 {
     gx_device_init((gx_device *) dev, (const gx_device *)&gs_bbox_device,
 		   (target ? target->memory : NULL), true);
-    gx_device_forward_fill_in_procs((gx_device_forward *) dev);
     if (target) {
+        gx_device_forward_fill_in_procs((gx_device_forward *) dev);
 	set_dev_proc(dev, get_initial_matrix, gx_forward_get_initial_matrix);
 	set_dev_proc(dev, map_rgb_color, gx_forward_map_rgb_color);
 	set_dev_proc(dev, map_color_rgb, gx_forward_map_color_rgb);
@@ -278,7 +278,13 @@ gx_device_bbox_init(gx_device_bbox * dev, gx_device * target)
 	set_dev_proc(dev, get_color_comp_index, gx_forward_get_color_comp_index);
 	set_dev_proc(dev, encode_color, gx_forward_encode_color);
 	set_dev_proc(dev, decode_color, gx_forward_decode_color);
+	set_dev_proc(dev, pattern_manage, gx_forward_pattern_manage);
+	set_dev_proc(dev, fill_rectangle_hl_color, gx_forward_fill_rectangle_hl_color);
+	set_dev_proc(dev, include_color_space, gx_forward_include_color_space);
 	gx_device_set_target((gx_device_forward *)dev, target);
+    } else {
+	gx_device_fill_in_procs((gx_device *)dev);
+        gx_device_forward_fill_in_procs((gx_device_forward *) dev);
     }
     dev->box_procs = box_procs_default;
     dev->box_proc_data = dev;
@@ -524,7 +530,11 @@ bbox_get_params(gx_device * dev, gs_param_list * plist)
     bbox[2] = fixed2float(fbox.q.x);
     bbox[3] = fixed2float(fbox.q.y);
     bba.data = bbox, bba.size = 4, bba.persistent = false;
-    return param_write_float_array(plist, "PageBoundingBox", &bba);
+    code = param_write_float_array(plist, "PageBoundingBox", &bba);
+    if (code < 0)
+        return code;
+    code = param_write_bool(plist, "WhiteIsOpaque", &bdev->white_is_opaque);
+    return code;
 }
 
 /* We implement put_params to ensure that we keep the important */
@@ -536,6 +546,7 @@ bbox_put_params(gx_device * dev, gs_param_list * plist)
     gx_device_bbox *const bdev = (gx_device_bbox *) dev;
     int code;
     int ecode = 0;
+    bool white_is_opaque = bdev->white_is_opaque;
     gs_param_name param_name;
     gs_param_float_array bba;
 
@@ -555,15 +566,27 @@ bbox_put_params(gx_device * dev, gs_param_list * plist)
 	    bba.data = 0;
     }
 
+    switch (code = param_read_bool(plist, (param_name = "WhiteIsOpaque"), &white_is_opaque)) {
+	default:
+	    ecode = code;
+	    param_signal_error(plist, param_name, ecode);
+	case 0:
+        case 1:
+	    break;
+    }
+
     code = gx_forward_put_params(dev, plist);
     if (ecode < 0)
 	code = ecode;
-    if (code >= 0 && bba.data != 0) {
+    if (code >= 0) {
+        if( bba.data != 0) {
 	BBOX_INIT_BOX(bdev);
 	BBOX_ADD_RECT(bdev, float2fixed(bba.data[0]), float2fixed(bba.data[1]),
 		      float2fixed(bba.data[2]), float2fixed(bba.data[3]));
     }
-    bbox_copy_params(bdev, true);
+        bdev->white_is_opaque = white_is_opaque;
+    }
+    bbox_copy_params(bdev, bdev->is_open);
     return code;
 }
 
@@ -776,7 +799,7 @@ bbox_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
 	     */
 	    gx_drawing_color devc;
 
-	    color_set_pure(&devc, bdev->black);  /* any non-white color will do */
+	    set_nonclient_dev_color(&devc, bdev->black);  /* any non-white color will do */
 	    bdev->target = NULL;
 	    code = gx_default_fill_path(dev, pis, ppath, params, &devc, pcpath);
 	    bdev->target = tdev;
@@ -838,7 +861,7 @@ bbox_stroke_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
 	    /* fill path into pieces for computing the bounding box. */
 	    gx_drawing_color devc;
 
-	    color_set_pure(&devc, bdev->black);  /* any non-white color will do */
+	    set_nonclient_dev_color(&devc, bdev->black);  /* any non-white color will do */
 	    bdev->target = NULL;
 	    gx_default_stroke_path(dev, pis, ppath, params, &devc, pcpath);
 	    bdev->target = tdev;
@@ -1064,7 +1087,7 @@ bbox_image_plane_data(gx_image_enum_common_t * info,
 	gx_make_clip_path_device(&cdev, pcpath);
 	cdev.target = dev;
 	(*dev_proc(&cdev, open_device)) ((gx_device *) & cdev);
-	color_set_pure(&devc, bdev->black);  /* any non-white color will do */
+	set_nonclient_dev_color(&devc, bdev->black);  /* any non-white color will do */
 	bdev->target = NULL;
 	gx_default_fill_triangle((gx_device *) & cdev, x0, y0,
 				 float2fixed(corners[1].x) - x0,
@@ -1172,8 +1195,12 @@ bbox_create_compositor(gx_device * dev,
 	int code = (*dev_proc(target, create_compositor))
 	    (target, &cdev, pcte, pis, memory);
 
-	if (code < 0)
-	    return code;
+	/* If the target did not create a new compositor then we are done. */
+	if (code < 0 || target == cdev) {
+	    *pcdev = dev;
+ 	    return code;
+	}
+
 	bbcdev = gs_alloc_struct_immovable(memory, gx_device_bbox,
 					   &st_device_bbox,
 					   "bbox_create_compositor");

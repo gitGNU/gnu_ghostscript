@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsfcmap1.c,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: gsfcmap1.c,v 1.2 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Adobe-based CMap character decoding */
 #include "memory_.h"
 #include "string_.h"
@@ -151,81 +151,6 @@ gs_multidim_CID_offset(const byte *key_str,
  * number of bytes in the code, or an error.  Store the decoded bytes in
  * *pchr.  For undefined characters, set *pglyph = gs_no_glyph and return 0.
  */
-private int
-code_map_decode_next(const gx_code_map_t * pcmap, const gs_const_string * pstr,
-                     uint * pindex, uint * pfidx,
-                     gs_char * pchr, gs_glyph * pglyph)
-{
-    const byte *str = pstr->data + *pindex;
-    uint ssize = pstr->size - *pindex;
-    /*
-     * The keys are not sorted due to 'usecmap'.  Possible optimization :
-     * merge and sort keys in 'zbuildcmap', then use binary search here.
-     * This would be valuable for UniJIS-UTF8-H, which contains about 7000
-     * keys.
-     */
-    int i;
-
-    for (i = pcmap->num_lookup - 1; i >= 0; --i) { /* reverse scan order due to 'usecmap' */
-        const gx_cmap_lookup_range_t *pclr = &pcmap->lookup[i];
-        int pre_size = pclr->key_prefix_size, key_size = pclr->key_size,
-            chr_size = pre_size + key_size;
-
-        if (ssize < chr_size)
-            continue;
-        if (memcmp(str, pclr->key_prefix, pre_size))
-            continue;
-        /* Search the lookup range. We could use binary search. */
-        {
-            const byte *key = pclr->keys.data;
-            int step = key_size;
-            int k;
-            const byte *pvalue;
-
-            if (pclr->key_is_range) {
-                step <<= 1;
-                for (k = 0; k < pclr->num_entries; ++k, key += step)
-                    if (memcmp(str + pre_size, key, key_size) >= 0 &&
-                        memcmp(str + pre_size, key + key_size, key_size) <= 0)
-                        break;
-            } else {
-                for (k = 0; k < pclr->num_entries; ++k, key += step)
-                    if (!memcmp(str + pre_size, key, key_size))
-                        break;
-            }
-            if (k == pclr->num_entries)
-                continue;
-            /* We have a match.  Return the result. */
-            *pchr = (*pchr << (chr_size * 8)) + bytes2int(str, chr_size);
-            *pindex += chr_size;
-            *pfidx = pclr->font_index;
-            pvalue = pclr->values.data + k * pclr->value_size;
-            switch (pclr->value_type) {
-            case CODE_VALUE_CID:
-                *pglyph = gs_min_cid_glyph +
-                    bytes2int(pvalue, pclr->value_size) +
-                    bytes2int(str + pre_size, key_size) -
-                    bytes2int(key, key_size);
-                return 0;
-            case CODE_VALUE_GLYPH:
-                *pglyph = bytes2int(pvalue, pclr->value_size);
-                return 0;
-            case CODE_VALUE_CHARS:
-                *pglyph =
-                    bytes2int(pvalue, pclr->value_size) +
-                    bytes2int(str + pre_size, key_size) -
-                    bytes2int(key, key_size);
-                return pclr->value_size;
-            default:            /* shouldn't happen */
-                return_error(gs_error_rangecheck);
-            }
-        }
-    }
-    /* No mapping. */
-    *pglyph = gs_no_glyph;
-    return 0;
-}
-
 private int
 code_map_decode_next_multidim_regime(const gx_code_map_t * pcmap,
                      const gs_const_string * pstr,
@@ -497,8 +422,6 @@ gs_cmap_adobe1_decode_next(const gs_cmap_t * pcmap_in,
             /* Undecodable string is shorter than the shortest character,
              * there's no way except to return error.
              */
-	    *pglyph = gs_no_glyph;
-	    return -1;
             if (gs_debug_c('J')) {
                 dlprintf2("[J]GCDN() left data in buffer (%d) is shorter than shortest defined character (%d)\n",
                   ssize, chr_size_shortest);
@@ -618,7 +541,8 @@ gs_cmap_adobe1_enum_lookups(const gs_cmap_t *pcmap, int which,
 private const gs_cmap_procs_t cmap_adobe1_procs = {
     gs_cmap_adobe1_decode_next,
     gs_cmap_adobe1_enum_ranges,
-    gs_cmap_adobe1_enum_lookups
+    gs_cmap_adobe1_enum_lookups,
+    gs_cmap_compute_identity
 };
 
 int
@@ -672,7 +596,8 @@ gs_cmap_adobe1_alloc(gs_cmap_adobe1_t **ppcmap, int wmode,
     }
     pcmap1->def.lookup = lookups;
     pcmap1->def.num_lookup = num_lookups;
-    /* no notdef */
+    pcmap1->notdef.lookup = 0;
+    pcmap1->notdef.num_lookup = 0;
     /* no mark_glyph, mark_glyph_data, glyph_name, glyph_name_data */
     return 0;
 }

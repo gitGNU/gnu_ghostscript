@@ -21,7 +21,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: unix-aux.mak,v 1.2 2004/02/14 22:20:19 atai Exp $
+# $Id: unix-aux.mak,v 1.3 2005/04/18 12:05:59 Arabidopsis Exp $
 # Partial makefile common to all Unix configurations.
 # This makefile contains the build rules for the auxiliary programs such as
 # echogs, and the 'platform' modules.
@@ -89,7 +89,7 @@ $(GENINIT_XE): $(GLSRC)geninit.c $(AK) $(GENINIT_DEPS)
 # traps the error with ||.
 INCLUDE=/usr/include
 $(gconfig__h): $(UNIX_AUX_MAK) $(ECHOGS_XE)
-	$(ECHOGS_XE) -w $(gconfig__h) -x 2f2a -s This file was generated automatically. -s -x 2a2f
+	$(ECHOGS_XE) -w $(gconfig__h) -x 2f2a -s This file was generated automatically by unix-aux.mak. -s -x 2a2f
 	if ( test -f $(INCLUDE)/dirent.h ); then $(ECHOGS_XE) -a $(gconfig__h) -x 23 define HAVE_DIRENT_H; else true; fi
 	if ( test -f $(INCLUDE)/ndir.h ); then $(ECHOGS_XE) -a $(gconfig__h) -x 23 define HAVE_NDIR_H; else true; fi
 	if ( test -f $(INCLUDE)/sys/dir.h ); then $(ECHOGS_XE) -a $(gconfig__h) -x 23 define HAVE_SYS_DIR_H; else true; fi

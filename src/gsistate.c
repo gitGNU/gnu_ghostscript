@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsistate.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsistate.c,v 1.3 2005/04/18 12:06:04 Arabidopsis Exp $ */
 /* Imager state housekeeping */
 #include "gx.h"
 #include "gserrors.h"
@@ -60,7 +60,13 @@ private RELOC_PTRS_WITH(line_params_reloc_ptrs, gx_line_params *plp)
 } RELOC_PTRS_END
 private_st_line_params();
 
-/* GC procedures for gs_imager_state */
+/*
+ * GC procedures for gs_imager_state
+ *
+ * See comments in gixstate.h before the definition of gs_cr_state_do_rc and
+ * st_cr_state_num_ptrs for an explanation about why the effective_transfer
+ * pointers are handled in this manner.
+ */
 public_st_imager_state();
 private 
 ENUM_PTRS_BEGIN(imager_state_enum_ptrs)

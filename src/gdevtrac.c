@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevtrac.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
+/* $Id: gdevtrac.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Tracing device (including sample high-level implementation) */
 #include "gx.h"
 #include "gserrors.h"
@@ -546,7 +546,7 @@ trace_text_begin(gx_device * dev, gs_imager_state * pis,
 	    int wmode = font->WMode;
 	    gs_glyph glyph =
 		((gs_font_base *)font)->procs.encode_char(font, ch,
-							  GLYPH_SPACE_INDEX);
+							  GLYPH_SPACE_NAME);
 	    gs_glyph_info_t info;
 
 	    if (glyph != gs_no_glyph &&

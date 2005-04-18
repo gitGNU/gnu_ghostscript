@@ -23,7 +23,7 @@
  */
 
 /* gdevdsp.c */
-/* $Id: gdevdsp.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevdsp.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 
 /*
  * DLL based display device driver.
@@ -63,8 +63,8 @@
 
 /* Initial values for width and height */
 #define INITIAL_RESOLUTION 96
-#define INITIAL_WIDTH (INITIAL_RESOLUTION * 85 / 10 + 1)
-#define INITIAL_HEIGHT (INITIAL_RESOLUTION * 11 + 1)
+#define INITIAL_WIDTH ((INITIAL_RESOLUTION * 85 + 5) / 10)
+#define INITIAL_HEIGHT ((INITIAL_RESOLUTION * 110 + 5) / 10)
 
 /* Device procedures */
 
@@ -92,8 +92,6 @@ private dev_proc_copy_color(display_copy_color);
 private dev_proc_get_bits(display_get_bits);
 private dev_proc_get_params(display_get_params);
 private dev_proc_put_params(display_put_params);
-private dev_proc_map_rgb_alpha_color(display_map_rgb_alpha_color);
-private dev_proc_map_color_rgb_alpha(display_map_color_rgb_alpha);
 private dev_proc_finish_copydevice(display_finish_copydevice);
 
 private const gx_device_procs display_procs =
@@ -158,15 +156,6 @@ ENUM_PTRS_WITH(display_enum_ptrs, gx_device_display *ddev) return 0;
     case 0: 
 	if (ddev->mdev) {
 	    return ENUM_OBJ(gx_device_enum_ptr((gx_device *)ddev->mdev));
-	}
-	return 0;	/* if mdev is NULL, then pBitmap will be also */
-    case 1: 
-        if (ddev->callback && 
-	    !ddev->callback->display_memalloc && 
-	    !ddev->callback->display_memfree &&
-	    ddev->pBitmap) {
-	    /* we allocated the bitmap */
-	    return ENUM_OBJ(ddev->pBitmap);
 	}
 	return 0;
 ENUM_PTRS_END
@@ -325,7 +314,7 @@ display_close(gx_device * dev)
 /*
  * This routine will encode a 1 Black on white color.
  */
-gx_color_index
+private gx_color_index
 gx_b_w_gray_encode(gx_device * dev, const gx_color_value cv[])
 {
     return 1 - (cv[0] >> (gx_color_value_bits - 1));
@@ -537,15 +526,15 @@ display_map_rgb_color_rgb(gx_device * dev, const gx_color_value cv[])
 	case DISPLAY_ALPHA_FIRST:
 	case DISPLAY_UNUSED_FIRST:
 	    if ((ddev->nFormat & DISPLAY_ENDIAN_MASK) == DISPLAY_BIGENDIAN)
-		return (red<<16) + (green<<8) + blue;		/* xRGB */
+		return ((gx_color_index)red<<16) + (green<<8) + blue;		/* xRGB */
 	    else
-		return (blue<<16) + (green<<8) + red;		/* xBGR */
+		return ((gx_color_index)blue<<16) + (green<<8) + red;		/* xBGR */
 	case DISPLAY_ALPHA_LAST:
 	case DISPLAY_UNUSED_LAST:
 	    if ((ddev->nFormat & DISPLAY_ENDIAN_MASK) == DISPLAY_BIGENDIAN)
-		return (red<<24) + (green<<16) + (blue<<8);	/* RGBx */
+		return ((gx_color_index)red<<24) + (green<<16) + (blue<<8);	/* RGBx */
 	    else
-		return (blue<<24) + (green<<16) + (red<<8);	/* BGRx */
+		return ((gx_color_index)blue<<24) + (green<<16) + (red<<8);	/* BGRx */
     }
     return 0;
 }
@@ -914,7 +903,7 @@ display_free_bitmap(gx_device_display * ddev)
 		ddev->pBitmap);
 	}
 	else {
-	    gs_free_object(gs_memory_stable(ddev->memory), 
+	    gs_free_object(&gs_memory_default,
 		ddev->pBitmap, "display_free_bitmap");
 	}
 	ddev->pBitmap = NULL;
@@ -945,11 +934,11 @@ display_alloc_bitmap(gx_device_display * ddev, gx_device * param_dev)
     if (mdproto == 0)
 	return_error(gs_error_rangecheck);
     
-    ccode = gs_copydevice((gx_device **)&(ddev->mdev),
-			     (const gx_device *)mdproto,
-			     gs_memory_stable(ddev->memory));
-    if (ccode < 0)
-	return ccode;
+    ddev->mdev = gs_alloc_struct(gs_memory_stable(ddev->memory), 
+	    gx_device_memory, &st_device_memory, "display_memory_device");
+    if (ddev->mdev == 0)
+        return_error(gs_error_VMerror);
+
     gs_make_mem_device(ddev->mdev, mdproto, gs_memory_stable(ddev->memory), 
 	0, (gx_device *) NULL);
     gx_device_fill_in_procs((gx_device *)(ddev->mdev));
@@ -960,17 +949,22 @@ display_alloc_bitmap(gx_device_display * ddev, gx_device * param_dev)
     
     ddev->mdev->width = param_dev->width;
     ddev->mdev->height = param_dev->height;
-    ddev->ulBitmapSize = gdev_mem_bitmap_size(ddev->mdev);
+    /* Tell the memory device to allocate the line pointers separately
+     * so we can place the bitmap in special memory.
+     */
+    ddev->mdev->line_pointer_memory = ddev->mdev->memory;
+    ddev->ulBitmapSize = gdev_mem_bits_size(ddev->mdev,
+	ddev->mdev->width, ddev->mdev->height);
 
-    /* allocate bitmap */
+    /* allocate bitmap using an allocator not subject to GC */
     if (ddev->callback->display_memalloc 
 	&& ddev->callback->display_memfree) {
         ddev->pBitmap = (*ddev->callback->display_memalloc)(ddev->pHandle, 
 	    ddev, ddev->ulBitmapSize);
     }
     else {
-	ddev->pBitmap = gs_alloc_bytes_immovable(gs_memory_stable(ddev->memory),
-		(uint)ddev->ulBitmapSize, "display_alloc_bitmap");
+	ddev->pBitmap = gs_alloc_byte_array_immovable(&gs_memory_default,
+		(uint)ddev->ulBitmapSize, 1, "display_alloc_bitmap");
     }
 
     if (ddev->pBitmap == NULL) {

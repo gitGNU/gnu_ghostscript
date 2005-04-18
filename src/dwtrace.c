@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: dwtrace.c,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: dwtrace.c,v 1.2 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Graphical trace server for Windows */
 
 /*  This module use Win32-specific API.
@@ -159,7 +159,7 @@ private void dw_gt_release_dc(vd_trace_interface *I, vd_trace_interface **I1)
 	ReleaseDC(I->host->tw->hwnd, I->host->hdc);
 	I->host->hdc = NULL;
 	delete_pen_brush(I);
-        I1 = NULL;
+        *I1 = NULL;
     } else if(I->host->count_GetDC < 0) {
         /* safety : */
 	I->host->count_GetDC = 0;

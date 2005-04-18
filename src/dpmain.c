@@ -23,7 +23,7 @@
 */
 
 
-/* $Id: dpmain.c,v 1.2 2004/02/14 22:20:04 atai Exp $ */
+/* $Id: dpmain.c,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Ghostscript DLL loader for OS/2 */
 /* For WINDOWCOMPAT (console mode) application */
 
@@ -48,7 +48,7 @@
 #include <sys/select.h>
 #include "gscdefs.h"
 #define GS_REVISION gs_revision
-#include "errors.h"
+#include "ierrors.h"
 #include "iapi.h"
 #include "gdevdsp.h"
 
@@ -993,7 +993,7 @@ display_callback display = {
 int
 main(int argc, char *argv[])
 {
-    int code;
+    int code, code1;
     int exit_code;
     int exit_status;
     int nargc;
@@ -1059,7 +1059,9 @@ main(int argc, char *argv[])
 	code = gsdll.init_with_args(instance, nargc, nargv);
 	if (code == 0) 
 	    code = gsdll.run_string(instance, start_string, 0, &exit_code);
-	gsdll.exit(instance);
+	code1 = gsdll.exit(instance);
+	if (code == 0 || (code == e_Quit && code1 != 0))
+	    code = code1;
 
 	gsdll.delete_instance(instance);
     }

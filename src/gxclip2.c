@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxclip2.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxclip2.c,v 1.3 2005/04/18 12:05:57 Arabidopsis Exp $ */
 /* Mask clipping for patterns */
 #include "memory_.h"
 #include "gx.h"
@@ -97,7 +97,10 @@ private const gx_device_tile_clip gs_tile_clip_device =
   gx_forward_get_color_mapping_procs,
   gx_forward_get_color_comp_index,
   gx_forward_encode_color,
-  gx_forward_decode_color
+  gx_forward_decode_color,
+  gx_forward_pattern_manage,
+  gx_forward_fill_rectangle_hl_color,
+  gx_forward_include_color_space
  }
 };
 

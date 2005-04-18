@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: wrfont.c,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: wrfont.c,v 1.2 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /*
 Support functions to serialize fonts as PostScript code that can
 then be passed to FreeType via the FAPI FreeType bridge.
@@ -47,16 +47,16 @@ void WRF_init(WRF_output* a_output,unsigned char* a_buffer,long a_buffer_size)
 
 void WRF_wbyte(WRF_output* a_output,unsigned char a_byte)
 	{
-	a_output->m_count++;
 	if (a_output->m_count < a_output->m_limit)
 		{
 		if (a_output->m_encrypt)
 			{
 			a_byte ^= (a_output->m_key >> 8);
-			a_output->m_key = (a_output->m_key + a_byte) * EEXEC_FACTOR + EEXEC_OFFSET;
+			a_output->m_key = (unsigned short)((a_output->m_key + a_byte) * EEXEC_FACTOR + EEXEC_OFFSET);
 			}
 		*a_output->m_pos++ = a_byte;
 		}
+	a_output->m_count++;
 	}
 
 void WRF_wtext(WRF_output* a_output,const unsigned char* a_string,long a_length)

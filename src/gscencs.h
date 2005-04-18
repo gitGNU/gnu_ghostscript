@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gscencs.h,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: gscencs.h,v 1.2 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Compact C representation of built-in encodings */
 
 #ifndef gscencs_INCLUDED
@@ -58,6 +58,11 @@ extern const gs_glyph gs_c_min_std_encoding_glyph;
  * returned by this procedure is to pass them to gs_c_glyph_name.
  */
 gs_glyph gs_c_known_encode(gs_char chr, int encoding_index);
+
+/*
+ * Decode a gs_c_glyph_name glyph with a known encoding.
+ */
+gs_char gs_c_decode(gs_glyph glyph, int ei);
 
 /*
  * Convert a glyph number returned by gs_c_known_encode to a string.

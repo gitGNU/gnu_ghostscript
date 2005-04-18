@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: dwreg.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: dwreg.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* MS Windows registry values */
 
 #include <windows.h>

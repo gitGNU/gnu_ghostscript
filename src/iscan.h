@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: iscan.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: iscan.h,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* Token scanner state and interface */
 /* Requires gsstruct.h, ostack.h, stream.h */
 
@@ -122,7 +122,8 @@ extern_st(st_scanner_state);
 #define SCAN_PROCESS_COMMENTS 4	/* return scan_Comment for comments */
 				/* (all comments or only non-DSC) */
 #define SCAN_PROCESS_DSC_COMMENTS 8  /* return scan_DSC_Comment */
-#define SCAN_PDF_RULES 16	/* Special PDF scanning rules used */
+#define SCAN_PDF_RULES 16	/* PDF scanning rules (for names) */
+#define SCAN_PDF_INV_NUM 32	/* Adobe ignores invalid numbers */
 				/* This is for compatibility with Adobe */
 				/* Acrobat Reader			*/
 void scanner_state_init_options(scanner_state *sstate, int options);

@@ -1,11 +1,11 @@
 @echo off 
-@rem $Id: ps2ps.bat,v 1.2 2004/02/14 22:20:04 atai Exp $
+@rem $Id: ps2ps.bat,v 1.3 2005/04/18 12:06:08 Arabidopsis Exp $
 @rem "Distill" PostScript.
 
 if %1/==/ goto usage
 if %2/==/ goto usage
 call gssetgs.bat
-echo -dNODISPLAY -dNOPAUSE -dSAFER -dBATCH >_.at
+echo -dNOPAUSE -dSAFER -dBATCH >_.at
 :cp
 if %3/==/ goto doit
 echo %1 >>_.at

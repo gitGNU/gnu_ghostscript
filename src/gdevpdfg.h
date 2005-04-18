@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpdfg.h,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevpdfg.h,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Internal graphics interfaces for PDF-writing driver. */
 
 #ifndef gdevpdfg_INCLUDED
@@ -66,12 +66,14 @@ typedef struct pdf_color_space_s pdf_color_space_t;
 struct pdf_color_space_s {
     pdf_resource_common(pdf_color_space_t);
     const gs_range_t *ranges;
+    uint serialized_size;
+    byte *serialized;
 };
 /* The descriptor is public because it is for a resource type. */
 #define public_st_pdf_color_space()  /* in gdevpdfc.c */\
-  gs_public_st_suffix_add1(st_pdf_color_space, pdf_color_space_t,\
+  gs_public_st_suffix_add2(st_pdf_color_space, pdf_color_space_t,\
     "pdf_color_space_t", pdf_color_space_enum_ptrs,\
-    pdf_color_space_reloc_ptrs, st_pdf_resource, ranges)
+    pdf_color_space_reloc_ptrs, st_pdf_resource, ranges, serialized)
 
 /*
  * Create a local Device{Gray,RGB,CMYK} color space corresponding to the
@@ -96,10 +98,17 @@ int pdf_color_space(gx_device_pdf *pdev, cos_value_t *pvalue,
 		    const gs_color_space *pcs,
 		    const pdf_color_space_names_t *pcsn,
 		    bool by_name);
+int pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
+		    const gs_range_t **ppranges,
+		    const gs_color_space *pcs,
+		    const pdf_color_space_names_t *pcsn,
+		    bool by_name, const byte *res_name, int name_length);
 
 /* Create colored and uncolored Pattern color spaces. */
 int pdf_cs_Pattern_colored(gx_device_pdf *pdev, cos_value_t *pvalue);
 int pdf_cs_Pattern_uncolored(gx_device_pdf *pdev, cos_value_t *pvalue);
+int pdf_cs_Pattern_uncolored_hl(gx_device_pdf *pdev, 
+	const gs_color_space *pcs, cos_value_t *pvalue);
 
 /* Set the ProcSets bits corresponding to an image color space. */
 void pdf_color_space_procsets(gx_device_pdf *pdev,
@@ -107,28 +116,45 @@ void pdf_color_space_procsets(gx_device_pdf *pdev,
 
 /* ---------------- Exported by gdevpdfg.c ---------------- */
 
+/* Copy viewer state from images state. */
+void pdf_viewer_state_from_imager_state(gx_device_pdf * pdev, 
+	const gs_imager_state *pis, const gx_device_color *pdevc);
+
+/* Prepare intitial values for viewer's graphics state parameters. */
+void pdf_prepare_initial_viewer_state(gx_device_pdf * pdev, const gs_imager_state *pis);
+
 /* Reset the graphics state parameters to initial values. */
 void pdf_reset_graphics(gx_device_pdf *pdev);
 
+/* Set initial color. */
+void pdf_set_initial_color(gx_device_pdf * pdev, gx_hl_saved_color *saved_fill_color,
+		    gx_hl_saved_color *saved_stroke_color,
+		    bool *fill_used_process_color, bool *stroke_used_process_color);
+
 /* Set the fill or stroke color. */
 /* pdecolor is &pdev->fill_color or &pdev->stroke_color. */
-int pdf_set_pure_color(gx_device_pdf *pdev, gx_color_index color,
-		       gx_drawing_color *pdcolor,
+int pdf_set_pure_color(gx_device_pdf * pdev, gx_color_index color,
+		       gx_hl_saved_color * psc,
+    		   bool *used_process_color,
 		       const psdf_set_color_commands_t *ppscc);
-int pdf_set_drawing_color(gx_device_pdf *pdev,
+int pdf_set_drawing_color(gx_device_pdf * pdev, const gs_imager_state * pis,
 			  const gx_drawing_color *pdc,
-			  gx_drawing_color *pdcolor,
+			  gx_hl_saved_color * psc,
+		      bool *used_process_color,
 			  const psdf_set_color_commands_t *ppscc);
 
 /*
  * Bring the graphics state up to date for a drawing operation.
  * (Text uses either fill or stroke.)
  */
+int pdf_try_prepare_fill(gx_device_pdf *pdev, const gs_imager_state *pis);
 int pdf_prepare_fill(gx_device_pdf *pdev, const gs_imager_state *pis);
 int pdf_prepare_stroke(gx_device_pdf *pdev, const gs_imager_state *pis);
 int pdf_prepare_image(gx_device_pdf *pdev, const gs_imager_state *pis);
 int pdf_prepare_imagemask(gx_device_pdf *pdev, const gs_imager_state *pis,
 			  const gx_drawing_color *pdcolor);
+int pdf_save_viewer_state(gx_device_pdf *pdev, stream *s);
+int pdf_restore_viewer_state(gx_device_pdf *pdev, stream *s);
 
 /*
  * Convert a string into cos name.
@@ -175,9 +201,6 @@ int pdf_put_image_filters(cos_dict_t *pcd, gx_device_pdf *pdev,
 			  const pdf_image_names_t *pin);
 
 /* ------ Image writing ------ */
-
-/* Define the maximum size of an in-line image. */
-#define MAX_INLINE_IMAGE_BYTES 4000
 
 /*
  * Fill in the image parameters for a device space bitmap.
@@ -263,8 +286,24 @@ int pdf_choose_compression(pdf_image_writer * piw, bool end_binary);
 
 /* ---------------- Exported by gdevpdfv.c ---------------- */
 
-/* Write a color value. */
-int pdf_put_drawing_color(gx_device_pdf *pdev, const gx_drawing_color *pdc,
-			  const psdf_set_color_commands_t *ppscc);
+/* Store pattern 1 parameters to cos dictionary. */
+int pdf_store_pattern1_params(gx_device_pdf *pdev, pdf_resource_t *pres, 
+			gs_pattern1_instance_t *pinst);
+
+/* Write a colored Pattern color. */
+int pdf_put_colored_pattern(gx_device_pdf *pdev, const gx_drawing_color *pdc,
+			const psdf_set_color_commands_t *ppscc,
+			pdf_resource_t **ppres);
+
+/* Write an uncolored Pattern color. */
+int pdf_put_uncolored_pattern(gx_device_pdf *pdev, const gx_drawing_color *pdc,
+			  const gs_color_space *pcs,
+			  const psdf_set_color_commands_t *ppscc,
+			  pdf_resource_t **ppres);
+
+/* Write a PatternType 2 (shading pattern) color. */
+int pdf_put_pattern2(gx_device_pdf *pdev, const gx_drawing_color *pdc,
+		 const psdf_set_color_commands_t *ppscc,
+		 pdf_resource_t **ppres);
 
 #endif /* gdevpdfg_INCLUDED */

@@ -1,7 +1,7 @@
-#!/usr/bin/env python2.2
+#!/usr/bin/env python
 # -*- Mode: python -*-
 
-#    Copyright (C) 2001 artofcode LLC. All rights reserved.
+#    Copyright (C) 2001 Artifex Software Inc.
 # 
 #  This program is free software; you can redistribute it and/or modify it
 #  under the terms of the GNU General Public License version 2
@@ -24,7 +24,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: run_nightly,v 1.1 2004/02/14 22:46:29 atai Exp $
+# $Id: run_nightly,v 1.2 2005/04/18 12:06:13 Arabidopsis Exp $
 
 import os
 import sys
@@ -62,7 +62,7 @@ def change_gsproduct(file):
             m = changere.search(line)
             if m:
                 state = 2
-                new.write("\t\"GPL Ghostscript\"\n")
+                new.write("\t\"AFPL Ghostscript\"\n")
             else:
                 new.write(line)
         elif state == 2:
@@ -79,10 +79,24 @@ def change_gsproduct(file):
     os.unlink(file)
     os.rename(tmpfile, file)
 
+def read_fnord(file):
+    if os.path.exists(file):
+        f = open(file)
+        keyword = f.readline()
+        keyword = keyword.strip()
+        f.close()
+        return keyword
+    else:
+        return ''
+
 def sendmail(frm, to, subject, text):
     import smtplib
 
-    msg = 'From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s' % (frm, to, subject, text)
+    keyword = read_fnord(gsconf.codedir + 'fnord')
+    if keyword:
+        msg = 'From: %s\r\nTo: %s\r\nSubject: %s\r\nX-Fnord: %s\r\n\r\n%s' % (frm, to, subject, keyword, text)
+    else:
+        msg = 'From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s' % (frm, to, subject, text)
 
     server = smtplib.SMTP(gsconf.mail_server)
     server.sendmail(frm, to, msg)
@@ -184,8 +198,10 @@ if p:
         diff = diff + line
     p.close()
 
-diff = diff + "\n\nThe complete list of regressions for today:\n"
-msg = diff + msg
+# include the main body only on Mondays
+if time.gmtime()[6] == 0:
+    diff = diff + "\n\nThe complete list of regressions for today:\n"
+    msg = diff + msg
 
 # Get updated baselines
 baselines = 'The following files had their baselines updated:\n'

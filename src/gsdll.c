@@ -24,7 +24,7 @@
 /* Portions Copyright (C) 1994-2000 Ghostgum Software Pty Ltd.  All rights reserved. */
 
 
-/* $Id: gsdll.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsdll.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Dynamic Link Library interface for OS/2 and MS-Windows Ghostscript */
 /* front end to gs.c */
 
@@ -43,7 +43,7 @@
 #include "stdpre.h"
 #include "iapi.h"	/* Ghostscript interpreter public interface */
 #include "string_.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "gscdefs.h"
 #include "gstypes.h"
 #include "iref.h"
@@ -62,7 +62,7 @@ extern HWND hwndtext;
 
 /****** SINGLE-INSTANCE HACK ******/
 /* GLOBAL WARNING */
-GSDLL_CALLBACK pgsdll_callback;	/* callback for messages and stdio to caller */
+GSDLL_CALLBACK pgsdll_callback = NULL;	/* callback for messages and stdio to caller */
 /****** SINGLE-INSTANCE HACK ******/
 
 
@@ -147,6 +147,7 @@ int GSDLLEXPORT GSDLLAPI
 gsdll_exit(void)
 {
     int code = gsapi_exit(gs_main_instance_default());
+
     gsapi_delete_instance(gs_main_instance_default());
     return code;
 }

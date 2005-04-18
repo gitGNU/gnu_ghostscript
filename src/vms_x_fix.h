@@ -1,13 +1,23 @@
-/***************************************************************************
- *                                                                         *
- * Author : Jouk Jansen (joukj@hrem.stm.tudelft.nl)                        *
- *                                                                         *
- * Last revision : 22 August 2000                                          *
- * $Id: vms_x_fix.h,v 1.2 2004/02/14 22:20:19 atai Exp $
- *                                                                         *
- * Repair definitions of Xlib when compileing with /name=(as_is) on VMS    *
- *                                                                         *
- ***************************************************************************/
+/* Copyright (C) 2000 artofcode LLC. All rights reserved.
+  
+  This software is provided AS-IS with no warranty, either express or
+  implied.
+  
+  This software is distributed under license and may not be copied,
+  modified or distributed except as expressly authorized under the terms
+  of the license contained in the file LICENSE in this distribution.
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+*/
+
+/* $Id: vms_x_fix.h,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
+
+/* Repair definitions of Xlib when compileing with /name=(as_is) on VMS */
+/* contributed by Jouk Jansen (joukj@hrem.stm.tudelft.nl) */
 
 #ifndef vms_x_fix_INCLUDED
 #  define vms_x_fix_INCLUDED
@@ -161,6 +171,7 @@
 #define XHeightOfScreen XHEIGHTOFSCREEN
 #define XIconifyWindow XICONIFYWINDOW
 #define XIfEvent XIFEVENT
+#define XInitImage XINITIMAGE
 #define XInstallColormap XINSTALLCOLORMAP
 #define XInternAtom XINTERNATOM
 #define XIntersectRegion XINTERSECTREGION

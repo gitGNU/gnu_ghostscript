@@ -21,7 +21,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: ugcclib.mak,v 1.2 2004/02/14 22:20:19 atai Exp $
+# $Id: ugcclib.mak,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $
 # makefile for Unix / gcc library testing.
 
 BINDIR=./libobj
@@ -39,7 +39,7 @@ include $(GLSRCDIR)/version.mak
 gsdir = /usr/local/share/ghostscript
 gsdatadir = $(gsdir)/$(GS_DOT_VERSION)
 GS_DOCDIR=$(gsdatadir)/doc
-GS_LIB_DEFAULT=$(gsdatadir)/lib:$(gsdir)/fonts
+GS_LIB_DEFAULT=$(gsdatadir)/lib:$(gsdatadir)/Resource:$(gsdir)/fonts
 SEARCH_HERE_FIRST=1
 GS_INIT=gs_init.ps
 
@@ -58,13 +58,16 @@ SHARE_JPEG=0
 JPEG_NAME=jpeg
 
 PSRCDIR=libpng
-PVERSION=10204
+PVERSION=10205
 SHARE_LIBPNG=1
 LIBPNG_NAME=png
 
 ZSRCDIR=zlib
 SHARE_ZLIB=1
 ZLIB_NAME=z
+
+SHARE_JBIG2=0
+JBIG2SRCDIR=jbig2dec
 
 # Define the directory where the icclib source are stored.
 # See icclib.mak for more information
@@ -74,7 +77,7 @@ ICCSRCDIR=icclib
 # Define the directory where the ijs source is stored,
 # and the process forking method to use for the server.
 # See ijs.mak for more information.
- 
+
 IJSSRCDIR=ijs
 IJSEXECTYPE=unix
 
@@ -156,6 +159,7 @@ include $(GLSRCDIR)/jpeg.mak
 # zlib.mak must precede libpng.mak
 include $(GLSRCDIR)/zlib.mak
 include $(GLSRCDIR)/libpng.mak
+include $(GLSRCDIR)/jbig2.mak
 include $(GLSRCDIR)/icclib.mak
 include $(GLSRCDIR)/ijs.mak
 include $(GLSRCDIR)/devs.mak

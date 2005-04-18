@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gximag3x.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gximag3x.c,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $ */
 /* ImageType 3x image implementation */
 /****** THE REAL WORK IS NYI ******/
 #include "math_.h"		/* for ceil, floor */
@@ -127,7 +127,6 @@ typedef struct image3x_channel_values_s {
     gs_int_rect rect;
     gs_image_t image;
 } image3x_channel_values_t;
-private bool is_multiple(int x, int y);
 private int check_image3x_mask(const gs_image3x_t *pim,
 			       const gs_image3x_mask_t *pimm,
 			       const image3x_channel_values_t *ppcv,
@@ -363,11 +362,6 @@ gx_begin_image3x_generic(gx_device * dev,
     return code;
 }
 private bool
-is_multiple(int x, int y)
-{
-    return (x % y == 0 || y % x == 0);
-}
-private bool
 check_image3x_extent(floatp mask_coeff, floatp data_coeff)
 {
     if (mask_coeff == 0)
@@ -393,6 +387,7 @@ check_image3x_mask(const gs_image3x_t *pim, const gs_image3x_mask_t *pimm,
 
     if (pimm->MaskDict.BitsPerComponent == 0) { /* mask missing */
 	pmcs->depth = 0;
+        pmcs->InterleaveType = 0;	/* not a valid type */
 	return 0;
     }
     if (mask_height <= 0)
@@ -409,9 +404,6 @@ check_image3x_mask(const gs_image3x_t *pim, const gs_image3x_mask_t *pimm,
 		)
 		return_error(gs_error_rangecheck);
 	    break;
-	    if (!is_multiple(mask_height, pim->Height))
-		return_error(gs_error_rangecheck);
-	    /* falls through */
 	case interleave_separate_source:
 	    switch (pimm->MaskDict.BitsPerComponent) {
 	    case 1: case 2: case 4: case 8:

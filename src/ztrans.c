@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: ztrans.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: ztrans.c,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Transparency operators */
 #include "string_.h"
 #include "memory_.h"
@@ -260,8 +260,6 @@ zbegintransparencymask(i_ctx_t *i_ctx_p)
     gs_transparency_mask_params_t params;
     ref *pparam;
     gs_rect bbox;
-    int num_components =
-	gs_color_space_num_components(gs_currentcolorspace(igs));
     int code;
     static const char *const subtype_names[] = {
 	GS_TRANSPARENCY_MASK_SUBTYPE_NAMES, 0
@@ -274,7 +272,7 @@ zbegintransparencymask(i_ctx_t *i_ctx_p)
     if ((code = enum_param(pparam, subtype_names)) < 0)
 	return code;
     gs_trans_mask_params_init(&params, code);
-    if ((code = dict_floats_param(dop, "Background", num_components,
+    if ((code = dict_floats_param(dop, "Background", 1,
 				  params.Background, NULL)) < 0
 	)
 	return code;

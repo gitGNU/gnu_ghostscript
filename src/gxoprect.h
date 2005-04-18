@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.  
 */
 
-/* $Id: gxoprect.h,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: gxoprect.h,v 1.2 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* geneic overprint fill rectangle interface */
 
 #ifndef gxoprect_INCLUDED

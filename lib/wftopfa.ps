@@ -13,7 +13,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: wftopfa.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
+% $Id: wftopfa.ps,v 1.3 2005/04/18 12:06:08 Arabidopsis Exp $
 % wftopfa.ps
 % Convert a Wadalab base font to .PFA (or .PFB) format.
 
@@ -269,11 +269,11 @@ ifelse
    /fontname exch def
    [ templates
       { wfdir (/) concatstrings exch concatstrings { copystring }
-	100 string filenameforall
+	8192 string filenameforall
       }
      forall
      wfdir (/wadalab-sym/*.ps) concatstrings { copystring }
-       100 string filenameforall
+       8192 string filenameforall
    ]
    (%!\n) print
     { /currentuserparams where

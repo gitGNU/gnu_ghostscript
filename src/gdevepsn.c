@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevepsn.c,v 1.2 2004/02/14 22:20:05 atai Exp $*/
+/* $Id: gdevepsn.c,v 1.3 2005/04/18 12:06:01 Arabidopsis Exp $*/
 /*
  * Epson (and similar) dot-matrix printer driver for Ghostscript.
  *
@@ -417,7 +417,7 @@ eps_output_run(byte *data, int count, int y_mult,
 	fputc(033, prn_stream);
 	if ( !(start_graphics & ~3) )
 	{	
-		fputc("KLYZ"[start_graphics], prn_stream);
+		fputc("KLYZ"[(int)start_graphics], prn_stream);
 	}
 	else
 	{	

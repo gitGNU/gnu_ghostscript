@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zdevice.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: zdevice.c,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Device-related operators */
 #include "string_.h"
 #include "ghost.h"
@@ -173,6 +173,8 @@ zgetbitsrect(i_ctx_t *i_ctx_p)
 	depth = (dev->color_info.num_components +
 		 (options & GB_ALPHA_NONE ? 0 : 1)) * std_depth;
     }
+    if (w == 0)
+	return_error(e_rangecheck);
     raster = (w * depth + 7) >> 3;
     check_write_type(*op, t_string);
     num_rows = r_size(op) / raster;

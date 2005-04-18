@@ -1,4 +1,4 @@
-#    Copyright (C) 1989, 1996-9, 2002 artofcode LLC.  All rights reserved.
+#    Copyright (C) 1989, 1996-2003 artofcode LLC.  All rights reserved.
 # 
 #  This program is free software; you can redistribute it and/or modify it
 #  under the terms of the GNU General Public License version 2
@@ -21,7 +21,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: gs.mak,v 1.2 2004/02/14 22:20:16 atai Exp $
+# $Id: gs.mak,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $
 # Generic makefile, common to all platforms, products, and configurations.
 # The platform-specific makefiles `include' this file.
 
@@ -62,6 +62,11 @@
 #	    and linking libgz/libz explicitly.
 #	ZLIB_NAME - the name of the shared zlib, either gz (for libgz, -lgz)
 #	    or z (for libz, -lz).
+#	SHARE_JBIG2 - normally 0; if set to 1, asks the linker to use
+#	    an existing complied libjbig2dec instead of compiling and linking
+#	    in from a local copy of the source
+#	JBIG2SRCDIR - the name of the jbig2dec library source directory
+#	    typically 'jbig2dec' or 'jbig2dec-/version/'
 #	ICCSRCDIR - the name of the ICC lib source dir, currently
 #	    always icclib (compiled in statically)
 #	DEVICE_DEVS - the devices to include in the executable.
@@ -217,6 +222,8 @@ PNGGENDIR=$(GLGENDIR)
 PNGOBJDIR=$(GLOBJDIR)
 ZGENDIR=$(GLGENDIR)
 ZOBJDIR=$(GLOBJDIR)
+JBIG2GENDIR=$(GLGENDIR)
+JBIG2OBJDIR=$(GLOBJDIR)
 ICCGENDIR=$(GLGENDIR)
 ICCOBJDIR=$(GLOBJDIR)
 IJSGENDIR=$(GLGENDIR)
@@ -268,6 +275,7 @@ mostlyclean : config-clean
 	$(RMN_) $(GSGEN)gconfig*.c $(GSGEN)gscdefs*.c $(GSGEN)iconfig*.c
 	$(RMN_) $(GSGEN)_temp_* $(GSGEN)_temp_*.* $(GSOBJ)*.map $(GSOBJ)*.sym
 	$(RMN_) $(GENARCH_XE) $(GENCONF_XE) $(GENDEV_XE) $(GENHT_XE) $(GENINIT_XE)
+	$(RMN_) $(ECHOGS_XE)
 	$(RMN_) $(GSGEN)gs_init.c $(BEGINFILES)
 
 # Remove only configuration-dependent information.
@@ -312,6 +320,8 @@ PCF_=$(D_)SHARE_LIBPNG=$(SHARE_LIBPNG)$(_D)
 ZI_=$(ZSRCDIR)
 ZF_=
 ZCF_=$(D_)SHARE_ZLIB=$(SHARE_ZLIB)$(_D)
+JB2I_=$(JBIG2SRCDIR)
+JB2CF_=
 
 ######################## How to define new 'features' #######################
 #
@@ -397,7 +407,7 @@ $(devs_tr) : $(GS_MAK) $(TOP_MAKEFILES) $(ECHOGS_XE)
 GCONFIG_EXTRAS=
 
 ld_tr=$(GLGENDIR)$(D)ld.tr
-$(gconfig_h) $(ld_tr) $(GLGENDIR)$(D)lib.tr : \
+$(gconfig_h) : \
   $(GS_MAK) $(TOP_MAKEFILES) $(GLSRCDIR)$(D)version.mak $(GENCONF_XE) $(ECHOGS_XE) $(devs_tr) $(DEVS_ALL) $(GLGENDIR)$(D)libcore.dev
 	$(EXP)$(GENCONF_XE) $(devs_tr) -h $(gconfig_h) $(CONFILES) $(CONFLDTR) $(ld_tr)
 	$(EXP)$(ECHOGS_XE) -a $(gconfig_h) -x 23 define -s -u GS_LIB_DEFAULT -x 2022 $(GS_LIB_DEFAULT) -x 22
@@ -407,6 +417,10 @@ $(gconfig_h) $(ld_tr) $(GLGENDIR)$(D)lib.tr : \
 	$(EXP)$(ECHOGS_XE) -a $(gconfig_h) -x 23 define -s -u GS_REVISION -s $(GS_REVISION)
 	$(EXP)$(ECHOGS_XE) -a $(gconfig_h) -x 23 define -s -u GS_REVISIONDATE -s $(GS_REVISIONDATE)
 	$(EXP)$(ECHOGS_XE) -a $(gconfig_h) $(GCONFIG_EXTRAS)
+
+$(ld_tr) $(GLGENDIR)$(D)lib.tr : $(gconfig_h)
+	
+# The line above is an empty command; don't delete.
 
 obj_tr=$(GLGENDIR)$(D)obj.tr
 $(obj_tr) : $(ld_tr)

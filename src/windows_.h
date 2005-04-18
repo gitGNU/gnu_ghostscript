@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: windows_.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: windows_.h,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Wrapper for windows.h */
 
 #ifndef windows__INCLUDED
@@ -32,6 +32,7 @@
 #include <windows.h>
 
 #ifdef __WATCOMC__
+typedef RGBQUAD FAR * LPRGBQUAD;
 	/* Watcom's _beginthread takes an extra stack_bottom argument. */
 #  define BEGIN_THREAD(proc, stksize, data)\
      _beginthread(proc, NULL, stksize, data)

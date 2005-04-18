@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevepsc.c,v 1.2 2004/02/14 22:20:05 atai Exp $*/
+/* $Id: gdevepsc.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $*/
 /* Epson color dot-matrix printer driver by dave@exlog.com */
 #include "gdevprn.h"
 
@@ -75,9 +75,8 @@
 **	the ESC-r n value
 */
 static char rgb_color[2][2][2] =	{
-	BLACK, VIOLET, GREEN,
-	CYAN, RED, MAGENTA,
-	YELLOW, WHITE,
+	{{BLACK, VIOLET}, {GREEN, CYAN}}, 
+	{{RED, MAGENTA}, {YELLOW, WHITE}}
 	};
 
 /* Map an RGB color to a printer color. */
@@ -267,7 +266,7 @@ epsc_print_page(gx_device_printer *pdev, FILE *prn_stream)
 
 		if (gx_device_has_color(pdev))
 			{
-			register i,j;
+			register int i,j;
 			register byte *outbuf, *realbuf;
 			byte current_color;
 			int end_next_bits = whole_bits;
@@ -441,7 +440,7 @@ epsc_output_run(byte *data, int count, int y_mult,
 {	int xcount = count / y_mult;
 	fputc(033, prn_stream);
 	if ( !(start_graphics & ~3) )
-	   {	fputc("KLYZ"[start_graphics], prn_stream);
+	   {	fputc("KLYZ"[(int)start_graphics], prn_stream);
 	   }
 	else
 	   {	fputc('*', prn_stream);

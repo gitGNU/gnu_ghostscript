@@ -22,8 +22,9 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zcolor.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: zcolor.c,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* Color operators */
+#include "memory_.h"
 #include "ghost.h"
 #include "oper.h"
 #include "estack.h"
@@ -135,15 +136,25 @@ zcurrentcolorspace(i_ctx_t * i_ctx_p)
     os_ptr  op = osp;   /* required by "push" macro */
 
     push(1);
-    if ( igs->in_cachedevice ) {
-	int code = ialloc_ref_array(op, a_all, 1, "currentcolorspace");
-	if (code < 0)
-	    return code;
-	return name_enter_string("DeviceGray", op->value.refs);
-    } else {
+    if ( gs_color_space_get_index(igs->color_space) == gs_color_space_index_DeviceGray ) {
+        ref gray, graystr;
+        ref csa = istate->colorspace.array; 
+        if (array_get(&csa, 0, &gray) >= 0 && 
+            r_has_type(&gray, t_name) && 
+	    (name_string_ref(&gray, &graystr),
+	    r_size(&graystr) == 10 &&
+	    !memcmp(graystr.value.bytes, "DeviceGray", 10))) {
+            
+            *op = istate->colorspace.array;
+        } else {
+	    int code = ialloc_ref_array(op, a_all, 1, "currentcolorspace");
+	    if (code < 0)
+	        return code;
+	    return name_enter_string("DeviceGray", op->value.refs);
+        }
+    } else
         *op = istate->colorspace.array;
-        return 0;
-    }
+    return 0;
 }
 
 /*
@@ -256,6 +267,27 @@ zsetcolorspace(i_ctx_t * i_ctx_p)
     pop(1);
     return 0;
 }
+
+/*
+ *  <name> .includecolorspace -
+ *
+ * See the comment for gs_includecolorspace in gscolor2.c .
+ */
+private int
+zincludecolorspace(i_ctx_t * i_ctx_p)
+{
+    os_ptr  op = osp;
+    ref nsref;
+    int code;
+
+    check_type(*op, t_name);
+    name_string_ref(op, &nsref);
+    code =  gs_includecolorspace(igs, nsref.value.const_bytes, r_size(&nsref));
+    if (!code)
+	pop(1);
+    return code;
+}
+
 
 /*
  *  <int>   .setdevcspace   -
@@ -472,5 +504,8 @@ const op_def    zcolor_op_defs[] =
     { "1%zcolor_remap_one_signed_finish", zcolor_remap_one_signed_finish },
     { "0%zcolor_reset_transfer", zcolor_reset_transfer },
     { "0%zcolor_remap_color", zcolor_remap_color },
+
+    /* high level device support */
+    { "0.includecolorspace", zincludecolorspace },
     op_def_end(0)
 };

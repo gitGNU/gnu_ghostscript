@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxfcmap.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxfcmap.h,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* Internal CMap structure definitions */
 
 /* This file should be called gxcmap.h, except that name is already used. */
@@ -153,6 +153,7 @@ typedef struct gs_cmap_s gs_cmap_t;
     long UIDOffset;\
     int WMode;\
     bool from_Unicode;		/* if true, characters are Unicode */\
+    bool ToUnicode;             /* if true, it is a ToUnicode CMap */\
     gs_glyph_name_proc_t glyph_name;  /* glyph name procedure for printing */\
     void *glyph_name_data;	/* closure data */\
     const gs_cmap_procs_t *procs
@@ -192,6 +193,12 @@ typedef struct gs_cmap_procs_s {
 
     void (*enum_lookups)(const gs_cmap_t *pcmap, int which,
 			 gs_cmap_lookups_enum_t *penum);
+
+    /*
+     * Check if the cmap is identity.
+     */
+
+    bool (*is_identity)(const gs_cmap_t *pcmap, int font_index_only);
 
 } gs_cmap_procs_t;
 
@@ -297,7 +304,7 @@ int gs_cmap_enum_next_entry(gs_cmap_lookups_enum_t *penum);
  * Initialize a just-allocated CMap, to ensure that all pointers are clean
  * for the GC.  Note that this only initializes the common part.
  */
-void gs_cmap_init(gs_cmap_t *pcmap);
+void gs_cmap_init(gs_cmap_t *pcmap, int num_fonts);
 
 /*
  * Allocate and initialize (the common part of) a CMap.
@@ -316,5 +323,17 @@ void gs_cmap_ranges_enum_setup(gs_cmap_ranges_enum_t *penum,
 void gs_cmap_lookups_enum_setup(gs_cmap_lookups_enum_t *penum,
 				const gs_cmap_t *pcmap,
 				const gs_cmap_lookups_enum_procs_t *procs);
+
+/* 
+ * Check for identity CMap. Uses a fast check for special cases.
+ */
+bool gs_cmap_is_identity(const gs_cmap_t *pcmap, int font_index_only);
+
+/* 
+ * For a random CMap, compute whether it is identity.
+ * It is not applicable to gs_cmap_ToUnicode_t due to
+ * different sizes of domain keys and range values.
+ */
+bool gs_cmap_compute_identity(const gs_cmap_t *pcmap, int font_index_only);
 
 #endif /* gxfcmap_INCLUDED */

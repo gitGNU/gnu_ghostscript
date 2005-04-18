@@ -1,4 +1,4 @@
-/* Copyright (C) 1989 - 1995, 2001 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1989 - 1995, 2001-2003 artofcode LLC.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
   under the terms of the GNU General Public License version 2
@@ -22,8 +22,9 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gp_mac.c,v 1.2 2004/02/14 22:20:16 atai Exp $ */
+/* $Id: gp_mac.c,v 1.3 2005/04/18 12:05:57 Arabidopsis Exp $ */
 
+#ifndef __CARBON__
 #include <Palettes.h>
 #include <Aliases.h>
 #include <Quickdraw.h>
@@ -33,6 +34,7 @@
 #include <Controls.h>
 #include <Script.h>
 #include <Timer.h>
+#include <Time.h>
 #include <Folders.h>
 #include <Resources.h>
 #include <Sound.h>
@@ -45,44 +47,34 @@
 #include <Fonts.h>
 #include <FixMath.h>
 #include <Resources.h>
-#include "math_.h"
-#include <string.h>
+#else
+#include <Carbon.h>
+#endif
+
 #include <stdlib.h>
-
-
-#include <Time.h>
-#include <sys/types.h>
+#include "math_.h"
+#include "string_.h"
 #include "time_.h"
 #include "memory_.h"
 #include "string_.h"
+
 #include "gx.h"
 #include "gp.h"
 #include "gsdll.h"
 #include "gpcheck.h"
 #include "gp_mac.h"
 #include "gdebug.h"
-#include "sys/stat.h"
-#include <stdarg.h>
 /*#include "gpgetenv.h"*/
 #include "gsexit.h"
 
 HWND hwndtext;	/* used as identifier for the dll instance */
 
 
-void
-noMemoryExit(void)
-{
-	Alert(307, NULL);
-	ExitToShell();
-}
-
 char *
 mygetenv(const char * env)
 {
 	return (NULL);	
 }
-
-
 
 void
 gp_init (void)
@@ -340,44 +332,9 @@ gp_console_puts (const char *str, uint size)
 	return;
 }
 
-/* Make the console current on the screen. */
-/*
-int
-gp_make_console_current (gx_device *dev)
-{
-	return 0;
-}
-*/
-
-/* Make the graphics current on the screen. */
-/*
-int
-gp_make_graphics_current (gx_device *dev)
-{
-	return 0;
-}
-*/
-
 const char *
 gp_getenv_display(void)
 {
 	return NULL;
-}
-
-
-int
-gp_check_interrupts(void)
-{
-	static unsigned long	lastYieldTicks = 0;
-	
-	if ((TickCount() - lastYieldTicks) > 2) {
-		lastYieldTicks = TickCount();
-		/* the hwnd parameter which is submitted in gsdll_init to the DLL */
-		/* is returned in every gsdll_poll message in the count parameter */
-		return (*pgsdll_callback) (GSDLL_POLL, 0, (long) hwndtext);
-		return 0;
-	} else {
-		return 0;
-	}
 }
 

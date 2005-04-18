@@ -1,5 +1,5 @@
 %!
-% $Id: FAPIconfig,v 1.1 2004/02/14 22:32:07 atai Exp $
+% $Id: FAPIconfig,v 1.2 2005/04/18 12:06:08 Arabidopsis Exp $
 % This is configuration file for FAPI client.
 
 /FontPath             (/Fonts)     % A default directory for FAPI-handled fonts.
@@ -8,7 +8,7 @@
 /HookEmbeddedFonts    [1 2 9 11 42]  % FontType values for embedded PS fonts to be redirected to FAPI.
 
 % Values allowed for HookDiskFonts and HookEmbeddedFonts are 1, 2, 9, 11, 42.
-% "Disk fonts" are fonts being installed to Ghostscript with 'fontmap' or with GS_FONTPATH,
+% "Disk fonts" are fonts being installed to Ghostscript with 'lib/Fontmap' or with GS_FONTPATH,
 % and CID font resource files.
 % "Embedded fonts" are fonts and CID fonts being embedded into a document.
 

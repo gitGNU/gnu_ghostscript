@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpdfb.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevpdfb.c,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* Low-level bitmap image handling for PDF-writing driver */
 #include "string_.h"
 #include "gx.h"
@@ -31,6 +31,7 @@
 #include "gdevpdfg.h"
 #include "gdevpdfo.h"		/* for data stream */
 #include "gxcspace.h"
+#include "gxhldevc.h"
 
 /* We need this color space type for constructing temporary color spaces. */
 extern const gs_color_space_type gs_color_space_type_Indexed;
@@ -77,7 +78,7 @@ pdf_copy_mask_data(gx_device_pdf * pdev, const byte * base, int sourcex,
     } else {
 	row_base = base;
 	row_step = raster;
-	in_line = nbytes <= MAX_INLINE_IMAGE_BYTES;
+	in_line = nbytes < pdev->MaxInlineImageSize;
 	pdf_put_image_matrix(pdev, &pim->ImageMatrix, 1.0);
 	/*
 	 * Check whether we've already made an XObject resource for this
@@ -133,7 +134,9 @@ pdf_copy_mono(gx_device_pdf *pdev,
 	code = pdf_open_page(pdev, PDF_IN_STREAM);
 	if (code < 0)
 	    return code;
-	pdf_put_clip_path(pdev, pcpath);
+	code = pdf_put_clip_path(pdev, pcpath);
+	if (code < 0)
+	    return code;
     }
     /* We have 3 cases: mask, inverse mask, and solid. */
     if (zero == gx_no_color_index) {
@@ -141,8 +144,6 @@ pdf_copy_mono(gx_device_pdf *pdev,
 	    return 0;
 	/* If a mask has an id, assume it's a character. */
 	if (id != gx_no_bitmap_id && sourcex == 0) {
-	    pdf_set_pure_color(pdev, one, &pdev->fill_color,
-			       &psdf_set_fill_color_commands);
 	    pres = pdf_find_resource_by_gs_id(pdev, resourceCharProc, id);
 	    if (pres == 0) {	/* Define the character in an embedded font. */
 		pdf_char_proc_t *pcp;
@@ -170,17 +171,24 @@ pdf_copy_mono(gx_device_pdf *pdev,
 		    return code;
 		pres = (pdf_resource_t *) pcp;
 		goto wr;
-	    }
+	    } else if (pdev->pte) {
+		/* We're under pdf_text_process. It set a high level color. */
+	    } else
+		pdf_set_pure_color(pdev, one, &pdev->saved_fill_color,
+				   &pdev->fill_used_process_color,
+				   &psdf_set_fill_color_commands);
 	    pdf_make_bitmap_matrix(&image.ImageMatrix, x, y, w, h, h);
 	    goto rx;
 	}
-	pdf_set_pure_color(pdev, one, &pdev->fill_color,
+	pdf_set_pure_color(pdev, one, &pdev->saved_fill_color,
+			   &pdev->fill_used_process_color,
 			   &psdf_set_fill_color_commands);
 	gs_image_t_init_mask(&image, false);
 	invert = 0xff;
     } else if (one == gx_no_color_index) {
 	gs_image_t_init_mask(&image, false);
-	pdf_set_pure_color(pdev, zero, &pdev->fill_color,
+	pdf_set_pure_color(pdev, zero, &pdev->saved_fill_color,
+			   &pdev->fill_used_process_color,
 			   &psdf_set_fill_color_commands);
     } else if (zero == pdev->black && one == pdev->white) {
 	gs_cspace_init_DeviceGray(&cs);
@@ -224,7 +232,7 @@ pdf_copy_mono(gx_device_pdf *pdev,
     {
 	ulong nbytes = (ulong) ((w + 7) >> 3) * h;
 
-	in_line = nbytes <= MAX_INLINE_IMAGE_BYTES;
+	in_line = nbytes < pdev->MaxInlineImageSize;
 	if (in_line)
 	    pdf_put_image_matrix(pdev, &image.ImageMatrix, 1.0);
 	code = pdf_open_page(pdev, PDF_IN_STREAM);
@@ -365,7 +373,7 @@ pdf_copy_color_data(gx_device_pdf * pdev, const byte * base, int sourcex,
     } else {
 	row_base = base;
 	row_step = raster;
-	in_line = nbytes <= MAX_INLINE_IMAGE_BYTES;
+	in_line = nbytes < pdev->MaxInlineImageSize;
 	pdf_put_image_matrix(pdev, &pim->ImageMatrix, 1.0);
 	/*
 	 * Check whether we've already made an XObject resource for this
@@ -419,7 +427,9 @@ gdev_pdf_copy_color(gx_device * dev, const byte * base, int sourcex,
     if (code < 0)
 	return code;
     /* Make sure we aren't being clipped. */
-    pdf_put_clip_path(pdev, NULL);
+    code = pdf_put_clip_path(pdev, NULL);
+    if (code < 0)
+	return code;
     code = pdf_copy_color_data(pdev, base, sourcex, raster, id, x, y, w, h,
 			       &image, &writer, 0);
     switch (code) {
@@ -502,7 +512,7 @@ gdev_pdf_strip_tile_rectangle(gx_device * dev, const gx_strip_bitmap * tiles,
 	gs_image_t image;
 	pdf_image_writer writer;
 	long image_bytes = ((long)tw * depth + 7) / 8 * th;
-	bool in_line = image_bytes <= MAX_INLINE_IMAGE_BYTES;
+	bool in_line = image_bytes < pdev->MaxInlineImageSize;
 	ulong tile_id =
 	    (tw == tiles->size.x && th == tiles->size.y ? tiles->id :
 	     gx_no_bitmap_id);
@@ -576,7 +586,9 @@ gdev_pdf_strip_tile_rectangle(gx_device * dev, const gx_strip_bitmap * tiles,
 	if (code < 0)
 	    goto use_default;
 	/* Make sure we aren't being clipped. */
-	pdf_put_clip_path(pdev, NULL);
+	code = pdf_put_clip_path(pdev, NULL);
+	if (code < 0)
+	    return code;
 	s = pdev->strm;
 	/*
 	 * Because of bugs in Acrobat Reader's Print function, we can't

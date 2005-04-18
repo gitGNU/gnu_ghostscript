@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxacpath.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/*$Id: gxacpath.c,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* Accumulator for clipping paths */
 #include "gx.h"
 #include "gserrors.h"
@@ -137,10 +137,15 @@ gx_cpath_accum_end(const gx_device_cpath_accum * padev, gx_clip_path * pcpath)
 	return code;
     gx_cpath_init_local(&apath, padev->list_memory);
     apath.rect_list->list = padev->list;
-    apath.path.bbox.p.x = int2fixed(padev->bbox.p.x);
-    apath.path.bbox.p.y = int2fixed(padev->bbox.p.y);
-    apath.path.bbox.q.x = int2fixed(padev->bbox.q.x);
-    apath.path.bbox.q.y = int2fixed(padev->bbox.q.y);
+    if (padev->list.count == 0)
+	apath.path.bbox.p.x = apath.path.bbox.p.y =
+	apath.path.bbox.q.x = apath.path.bbox.q.y = 0;
+    else {
+	apath.path.bbox.p.x = int2fixed(padev->bbox.p.x);
+	apath.path.bbox.p.y = int2fixed(padev->bbox.p.y);
+	apath.path.bbox.q.x = int2fixed(padev->bbox.q.x);
+	apath.path.bbox.q.y = int2fixed(padev->bbox.q.y);
+    }
     /* indicate that the bbox is accurate */
     apath.path.bbox_accurate = 1;
     /* Note that the result of the intersection might be */
@@ -180,7 +185,7 @@ gx_cpath_intersect_path_slow(gx_clip_path * pcpath, gx_path * ppath,
     int code;
 
     gx_cpath_accum_begin(&adev, pcpath->path.memory);
-    color_set_pure(&devc, 0);	/* arbitrary, but not transparent */
+    set_nonclient_dev_color(&devc, 0);	/* arbitrary, but not transparent */
     gs_set_logical_op_inline(pis, lop_default);
     params.rule = rule;
     params.adjust.x = params.adjust.y = fixed_half;

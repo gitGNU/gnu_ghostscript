@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpdti.h,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: gdevpdti.h,v 1.2 2005/04/18 12:05:57 Arabidopsis Exp $ */
 /* Bitmap font interface for pdfwrite */
 
 #ifndef gdevpdti_INCLUDED
@@ -79,5 +79,8 @@ pdf_bitmap_fonts_t *pdf_bitmap_fonts_alloc(gs_memory_t *mem);
  * Write the Encoding for bitmap fonts, if needed.
  */
 int pdf_write_bitmap_fonts_Encoding(gx_device_pdf *pdev);
+
+/* Write the contents of a Type 3 bitmap font resource. */
+int pdf_write_contents_bitmap(gx_device_pdf *pdev, pdf_font_resource_t *pdfont);
 
 #endif /* gdevpdti_INCLUDED */

@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- Mode: python -*-
+
 #    Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
 # 
 #  This program is free software; you can redistribute it and/or modify it
@@ -21,7 +24,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: gstestutils.py,v 1.1 2004/02/14 22:46:29 atai Exp $
+# $Id: gstestutils.py,v 1.2 2005/04/18 12:06:13 Arabidopsis Exp $
 
 # Utilities and documentation for Ghostscript testing using the Python
 # 'unittest' framework.
@@ -190,11 +193,17 @@ class GSTestSuite(unittest.TestSuite):
 def gsRunTestsMain(addTests):
     import sys
     import gsconf
-    args = {'gsroot': gsconf.gsroot}
+    try:
+      args = {'gsroot': gsconf.gsroot}
+    except AttributeError:
+      args = {}
     gsTestParseArgv(args, sys.argv)
     suite = GSTestSuite()
     addTests(suite, **args)
-    GSTestRunner().run(suite)
+    results = GSTestRunner().run(suite)
+    failures = len(results.failures)
+    if failures:
+      sys.exit(failures)
 
 # Parse sys.argv to extract test args.
 

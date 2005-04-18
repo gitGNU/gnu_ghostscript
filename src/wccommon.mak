@@ -21,7 +21,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: wccommon.mak,v 1.2 2004/02/14 22:20:19 atai Exp $
+# $Id: wccommon.mak,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $
 # wccommon.mak
 # Section of Watcom C/C++ makefile common to MS-DOS and MS Windows.
 # We strongly recommend that you read the Watcom section of Make.htm
@@ -51,11 +51,12 @@
 
 AK=
 
-# Note that built-in libpng and zlib aren't available.
+# Note that built-in third-party libraries aren't available.
 
 SHARE_JPEG=0
 SHARE_LIBPNG=0
 SHARE_ZLIB=0
+SHARE_JBIG2=0
 
 # Define the extensions for command, object, and executable files.
 

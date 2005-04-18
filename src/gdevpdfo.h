@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpdfo.h,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevpdfo.h,v 1.3 2005/04/18 12:05:59 Arabidopsis Exp $ */
 /* Internal definitions for "objects" for pdfwrite driver. */
 
 #ifndef gdevpdfo_INCLUDED
@@ -81,8 +81,12 @@ typedef struct cos_stream_piece_s cos_stream_piece_t;
 	cos_proc_release((*release));
 
 #define cos_proc_write(proc)\
-  int proc(const cos_object_t *pco, gx_device_pdf *pdev)
+  int proc(const cos_object_t *pco, gx_device_pdf *pdev, gs_id object_id)
 	cos_proc_write((*write));
+
+#define cos_proc_equal(proc)\
+  int proc(const cos_object_t *pco0, const cos_object_t *pco1, gx_device_pdf *pdev)
+	cos_proc_equal((*equal));
 
 } /*cos_object_procs_t*/;
 /*typedef const cos_object_procs_t *cos_type_t;*/
@@ -210,7 +214,7 @@ int cos_become(cos_object_t *, cos_type_t);
 cos_proc_release(cos_release);
 #define COS_RELEASE(pc, cname) cos_release(COS_OBJECT(pc), cname)
 cos_proc_write(cos_write);
-#define COS_WRITE(pc, pdev) cos_write(CONST_COS_OBJECT(pc), pdev)
+#define COS_WRITE(pc, pdev) cos_write(CONST_COS_OBJECT(pc), pdev, (pc)->id)
 
 /* Make a value to store into a composite object. */
 const cos_value_t *cos_string_value(cos_value_t *, const byte *, uint);
@@ -248,10 +252,12 @@ int cos_dict_put_no_copy(cos_dict_t *, const byte *, uint,
 int cos_dict_put_c_key(cos_dict_t *, const char *, const cos_value_t *);
 int cos_dict_put_c_key_string(cos_dict_t *, const char *, const byte *, uint);
 int cos_dict_put_c_key_int(cos_dict_t *, const char *, int);
+int cos_dict_put_c_key_bool(cos_dict_t *pcd, const char *key, bool value);
 int cos_dict_put_c_key_real(cos_dict_t *, const char *, floatp);
 int cos_dict_put_c_key_floats(cos_dict_t *, const char *, const float *, uint);
 int cos_dict_put_c_key_object(cos_dict_t *, const char *, cos_object_t *);
 int cos_dict_put_string(cos_dict_t *, const byte *, uint, const byte *, uint);
+int cos_dict_put_string_copy(cos_dict_t *pcd, const char *key, const char *value);
 int cos_dict_put_c_strings(cos_dict_t *, const char *, const char *);
 /* move all the elements from one dict to another */
 int cos_dict_move_all(cos_dict_t *, cos_dict_t *);
@@ -259,6 +265,7 @@ int cos_dict_move_all(cos_dict_t *, cos_dict_t *);
 int cos_stream_add(cos_stream_t *, uint);
 int cos_stream_add_bytes(cos_stream_t *, const byte *, uint);
 int cos_stream_add_stream_contents(cos_stream_t *, stream *);
+int cos_stream_release_pieces(cos_stream_t *pcs);
 cos_dict_t *cos_stream_dict(cos_stream_t *);
 
 /*
@@ -299,8 +306,9 @@ stream *cos_write_stream_alloc(cos_stream_t *pcs, gx_device_pdf *pdev,
 			       client_name_t cname);
 
 /* Get cos stream from pipeline. */
-cos_stream_t *
-cos_write_stream_from_pipeline(stream *s);
+cos_stream_t * cos_stream_from_pipeline(stream *s);
+/* Get cos write stream from pipeline. */
+stream * cos_write_stream_from_pipeline(stream *s);
 
 /* Write a Cos value on the output. */
 int cos_value_write(const cos_value_t *, gx_device_pdf *);

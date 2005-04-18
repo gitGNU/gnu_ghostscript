@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxclrast.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxclrast.c,v 1.3 2005/04/18 12:05:57 Arabidopsis Exp $ */
 /* Command list interpreter/rasterizer */
 #include "memory_.h"
 #include "gx.h"
@@ -147,7 +147,6 @@ top_up_cbuf(command_buf_t *pcb, const byte *cbp)
 	nread = 1;
     }
     set_cb_end(pcb, cb_top + nread);
-    process_interrupts();
     return pcb->data;
 }
 
@@ -371,8 +370,10 @@ in:				/* Initialize for a new page. */
     }
     while (code >= 0) {
 	int op;
-	int compress, depth, raster;
-	byte *source;
+	int compress;
+	int depth = 0x7badf00d; /* Initialize against indeterminizm. */
+	int raster = 0x7badf00d; /* Initialize against indeterminizm. */
+	byte *source = NULL;  /* Initialize against indeterminizm. */
 	gx_color_index colors[2];
 	gx_color_index *pcolor;
 	gs_logical_operation_t log_op;
@@ -1067,7 +1068,7 @@ ibegin:			if_debug0('L', "\n");
 			{
 			    uint flags;
 			    int plane;
-			    uint raster;
+			    uint raster1 = 0xbaadf00d; /* Initialize against indeterminizm. */
 
 			    cmd_getw(flags, cbp);
 			    for (plane = 0;
@@ -1079,10 +1080,10 @@ ibegin:			if_debug0('L', "\n");
 					2 * cmd_max_intsize(sizeof(uint)))
 					cbp = top_up_cbuf(&cbuf, cbp);
 				    cmd_getw(planes[plane].raster, cbp);
-				    if ((raster = planes[plane].raster) != 0)
+				    if ((raster1 = planes[plane].raster) != 0)
 					cmd_getw(data_x, cbp);
 				} else {
-				    planes[plane].raster = raster;
+				    planes[plane].raster = raster1;
 				}
 				planes[plane].data_x = data_x;
 			    }
@@ -2084,9 +2085,10 @@ read_create_compositor(
      * change the target device.
      */
     code = dev_proc(tdev, create_compositor)(tdev, &tdev, pcomp, pis, mem);
-    if (code >= 0 && tdev != *ptarget)
+    if (code >= 0 && tdev != *ptarget) {
+        rc_increment(tdev);
         *ptarget = tdev;
-
+    }
     /* free the compositor object */
     if (pcomp != 0)
         gs_free_object(mem, pcomp, "read_create_compositor");

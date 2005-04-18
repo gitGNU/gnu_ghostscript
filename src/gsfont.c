@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsfont.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsfont.c,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Font operators for Ghostscript library */
 #include "gx.h"
 #include "memory_.h"
@@ -58,6 +58,7 @@ const gs_font_procs gs_font_procs_default = {
     gs_default_font_info,
     gs_default_same_font,
     gs_no_encode_char,
+    gs_no_decode_glyph,
     gs_no_enumerate_glyph,
     gs_default_glyph_info,
     gs_no_glyph_outline,
@@ -267,6 +268,17 @@ gs_font_dir_alloc2_limits(gs_memory_t * struct_mem, gs_memory_t * bits_mem,
     pdir->scaled_fonts = 0;
     pdir->ssize = 0;
     pdir->smax = smax;
+    pdir->align_to_pixels = true;
+    pdir->glyph_to_unicode_table = NULL;
+#if NEW_TT_INTERPRETER
+    pdir->grid_fit_tt = false;
+    pdir->memory = struct_mem;
+    pdir->tti = 0;
+#if TT_GRID_FITTING
+    pdir->san = 0;
+#endif
+#endif
+    pdir->global_glyph_code = NULL;
     return pdir;
 }
 
@@ -296,6 +308,7 @@ gs_font_alloc(gs_memory_t *mem, gs_memory_type_ptr_t pstype,
     pfont->PaintType = 0;
     pfont->StrokeWidth = 0;
     pfont->procs = *procs;
+    memset(&pfont->orig_FontMatrix, 0, sizeof(pfont->orig_FontMatrix));
     /* not key_name, font_name */
     return pfont;
 }
@@ -575,6 +588,20 @@ gs_setcacheupper(gs_font_dir * pdir, uint size)
     pdir->ccache.upper = size;
     return 0;
 }
+int
+gs_setaligntopixels(gs_font_dir * pdir, uint v)
+{
+    pdir->align_to_pixels = v;
+    return 0;
+}
+#if NEW_TT_INTERPRETER
+int
+gs_setgridfittt(gs_font_dir * pdir, uint v)
+{
+    pdir->grid_fit_tt = v;
+    return 0;
+}
+#endif
 
 /* currentcacheparams */
 uint
@@ -592,6 +619,18 @@ gs_currentcacheupper(const gs_font_dir * pdir)
 {
     return pdir->ccache.upper;
 }
+uint
+gs_currentaligntopixels(const gs_font_dir * pdir)
+{
+    return pdir->align_to_pixels;
+}
+#if NEW_TT_INTERPRETER
+uint
+gs_currentgridfittt(const gs_font_dir * pdir)
+{
+    return pdir->grid_fit_tt;
+}
+#endif
 
 /* Purge a font from all font- and character-related tables. */
 /* This is only used by restore (and, someday, the GC). */
@@ -695,6 +734,13 @@ gs_default_font_info(gs_font *font, const gs_point *pscale, int members,
 	info->Flags_returned = 0;
     if (font->FontType == ft_composite)
 	return 0;		/* nothing available */
+    if (members & FONT_INFO_BBOX) {
+	info->BBox.p.x = (int)bfont->FontBBox.p.x;
+	info->BBox.p.y = (int)bfont->FontBBox.p.y;
+	info->BBox.q.x = (int)bfont->FontBBox.q.x;
+	info->BBox.q.y = (int)bfont->FontBBox.q.y;
+	info->Flags_returned |= FONT_INFO_BBOX;
+    }
     if ((members & FONT_INFO_FLAGS) &&
 	(info->Flags_requested & FONT_IS_FIXED_WIDTH)
 	) {
@@ -704,7 +750,8 @@ gs_default_font_info(gs_font *font, const gs_point *pscale, int members,
 	gs_glyph notdef = gs_no_glyph;
 	gs_glyph glyph;
 	int fixed_width = 0;
-	int index, code;
+	int index;
+	int code = 0; /* Quiet compiler. */
 
 	for (index = 0;
 	     fixed_width >= 0 &&
@@ -830,6 +877,13 @@ gs_no_encode_char(gs_font *pfont, gs_char chr, gs_glyph_space_t glyph_space)
     return gs_no_glyph;
 }
 
+/* Dummy glyph decoding procedure */
+gs_char
+gs_no_decode_glyph(gs_font *pfont, gs_glyph glyph)
+{
+    return GS_NO_CHAR;
+}
+
 /* Dummy glyph enumeration procedure */
 int
 gs_no_enumerate_glyph(gs_font *font, int *pindex, gs_glyph_space_t glyph_space,
@@ -842,16 +896,17 @@ gs_no_enumerate_glyph(gs_font *font, int *pindex, gs_glyph_space_t glyph_space,
 int
 gs_default_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
 		      int members, gs_glyph_info_t *info)
-{
+{   /* WMode may be inherited from an upper font. */
     gx_path path;
     int returned = 0;
     int code;
+    int wmode = ((members & GLYPH_INFO_WIDTH1) != 0);
 
     gx_path_init_bbox_accumulator(&path);
     code = gx_path_add_point(&path, fixed_0, fixed_0);
     if (code < 0)
 	goto out;
-    code = font->procs.glyph_outline(font, glyph, pmat, &path);
+    code = font->procs.glyph_outline(font, wmode, glyph, pmat, &path);
     if (code < 0)
 	goto out;
     if (members & GLYPH_INFO_WIDTHS) {
@@ -893,7 +948,7 @@ gs_default_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
 
 /* Dummy glyph outline procedure */
 int
-gs_no_glyph_outline(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
+gs_no_glyph_outline(gs_font *font, int WMode, gs_glyph glyph, const gs_matrix *pmat,
 		    gx_path *ppath)
 {
     return_error(gs_error_undefined);
@@ -905,3 +960,4 @@ gs_no_glyph_name(gs_font *font, gs_glyph glyph, gs_const_string *pstr)
 {
     return_error(gs_error_undefined);
 }
+

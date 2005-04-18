@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevmem.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevmem.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Generic "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"
@@ -537,12 +537,20 @@ mem_mapped_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 {
     gx_device_memory * const mdev = (gx_device_memory *)dev;
     byte br = gx_color_value_to_byte(cv[0]);
-    byte bg = gx_color_value_to_byte(cv[1]);
-    byte bb = gx_color_value_to_byte(cv[2]);
+    
     register const byte *pptr = mdev->palette.data;
     int cnt = mdev->palette.size;
     const byte *which = 0;	/* initialized only to pacify gcc */
     int best = 256 * 3;
+
+    if (mdev->color_info.num_components != 1) {
+	/* not 1 component, assume three */
+	/* The comparison is rather simplistic, treating differences in	*/
+	/* all components as equal. Better choices would be 'distance'	*/
+	/* in HLS space or other, but these would be much slower.	*/
+	/* At least exact matches will be found.			*/
+	byte bg = gx_color_value_to_byte(cv[1]);
+	byte bb = gx_color_value_to_byte(cv[2]);
 
     while ((cnt -= 3) >= 0) {
 	register int diff = *pptr - br;
@@ -563,7 +571,25 @@ mem_mapped_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 		    which = pptr, best = diff;
 	    }
 	}
+	    if (diff == 0)	/* can't get any better than 0 diff */
+		break;
 	pptr += 3;
+	}
+    } else {
+	/* Gray scale conversion. The palette is made of three equal	*/
+	/* components, so this case is simpler.				*/
+	while ((cnt -= 3) >= 0) {
+	    register int diff = *pptr - br;
+
+	    if (diff < 0)
+		diff = -diff;
+	    if (diff < best) {	/* quick rejection */
+		which = pptr, best = diff;
+	    }
+	    if (diff == 0)
+		break;
+	    pptr += 3;
+	}
     }
     return (gx_color_index) ((which - mdev->palette.data) / 3);
 }

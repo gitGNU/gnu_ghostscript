@@ -23,7 +23,7 @@
  */
 
 /* idisp.c */
-/* $Id: idisp.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: idisp.c,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 
 /*
  * This allows the interpreter to set the callback structure 
@@ -101,8 +101,10 @@ display_set_callback(gs_main_instance *minst, display_callback *callback)
 
 	if (was_open) {
 	    code = gs_opendevice(dev);
-	    if (code < 0)
+	    if (code < 0) {
+		dprintf("**** Unable to open the display device, quitting.\n");
 		return_error(code);
+	    }
 	}
 	pop(1);	/* device */
     }

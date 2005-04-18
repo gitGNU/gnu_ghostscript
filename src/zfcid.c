@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zfcid.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: zfcid.c,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $ */
 /* CID-keyed font utilities */
 #include "ghost.h"
 #include "oper.h"
@@ -73,12 +73,8 @@ cid_font_data_param(os_ptr op, gs_font_cid_data *pdata, ref *pGlyphDirectory)
     if (r_has_type(pgdir, t_dictionary) || r_is_array(pgdir)) {
 	/* GlyphDirectory, GDBytes is optional. */
 	*pGlyphDirectory = *pgdir;
-	code = dict_int_param(op, "GDBytes", 1, MAX_GDBytes, 1,
+	code = dict_int_param(op, "GDBytes", 0, MAX_GDBytes, 0,
 			      &pdata->GDBytes);
-	if (code == 1) {
-	    pdata->GDBytes = 0;
-	    code = 0;
-	}
 	return code;
     } else {
 	return_error(e_typecheck);

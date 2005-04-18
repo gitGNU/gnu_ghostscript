@@ -1,4 +1,4 @@
-/* Copyright (C) 1989, 1992, 1993, 1994, 1995, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 1989-2003 artofcode LLC. All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
   under the terms of the GNU General Public License version 2
@@ -22,8 +22,8 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: std.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
-/* Standard definitions for Aladdin Enterprises code */
+/* $Id: std.h,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
+/* Standard definitions for Ghostscript code */
 
 #ifndef std_INCLUDED
 #  define std_INCLUDED
@@ -74,9 +74,11 @@
 #define arch_align_memory_mod ARCH_ALIGN_MEMORY_MOD
 
 /* Define integer data type sizes in terms of log2s. */
+#define ARCH_SIZEOF_CHAR (1 << ARCH_LOG2_SIZEOF_CHAR)
 #define ARCH_SIZEOF_SHORT (1 << ARCH_LOG2_SIZEOF_SHORT)
 #define ARCH_SIZEOF_INT (1 << ARCH_LOG2_SIZEOF_INT)
 #define ARCH_SIZEOF_LONG (1 << ARCH_LOG2_SIZEOF_LONG)
+#define ARCH_SIZEOF_LONG_LONG (1 << ARCH_LOG2_SIZEOF_LONG_LONG)
 #define ARCH_INTS_ARE_SHORT (ARCH_SIZEOF_INT == ARCH_SIZEOF_SHORT)
 /* Backward compatibility */
 #define arch_sizeof_short ARCH_SIZEOF_SHORT

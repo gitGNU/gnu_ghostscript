@@ -1,5 +1,5 @@
-/* Copyright (C) 1992, 1995, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
-  
+/* Copyright (C) 1992, 1995-2004 artofcode LLC. All rights reserved.  
+
   This program is free software; you can redistribute it and/or modify it
   under the terms of the GNU General Public License version 2
   as published by the Free Software Foundation.
@@ -14,7 +14,7 @@
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-  
+ 
   For more information about licensing, please refer to
   http://www.ghostscript.com/licensing/. For information on
   commercial licensing, go to http://www.artifex.com/licensing/ or
@@ -22,10 +22,12 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: echogs.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: echogs.c,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $ */
 /* 'echo'-like utility */
+
 #include "stdpre.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 #if defined(__sun__) && !defined(const)
 /* Apparently, there are archaic Sun platforms which don't include
@@ -41,9 +43,6 @@ extern int fputc(int, FILE *), fputs(const char *, FILE *);
 #include <ctype.h>
 #include <string.h>
 #include <time.h>		/* for ctime */
-#ifdef VMS
-#include <stdlib.h>
-#endif
 
 /*
  * This program exists solely to get around omissions, problems, and

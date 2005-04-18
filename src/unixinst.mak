@@ -1,4 +1,4 @@
-#    Copyright (C) 1997-2002 artofcode LLC. All rights reserved.
+#    Copyright (C) 1997-2003 artofcode LLC. All rights reserved.
 # 
 #  This program is free software; you can redistribute it and/or modify it
 #  under the terms of the GNU General Public License version 2
@@ -21,7 +21,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: unixinst.mak,v 1.2 2004/02/14 22:20:19 atai Exp $
+# $Id: unixinst.mak,v 1.3 2005/04/18 12:05:57 Arabidopsis Exp $
 # Partial makefile common to all Unix and Desqview/X configurations,
 # containing the `install' targets.
 # This is the very last part of the makefile for these configurations.
@@ -35,7 +35,7 @@ install: install-exec install-scripts install-data
 # We include mkdirs for datadir, gsdir, and gsdatadir in all 3 install
 # rules, just in case bindir or scriptdir is a subdirectory of any of these.
 
-install-exec: $(GS_XE)
+install-exec: STDDIRS $(GS_XE)
 	-mkdir -p $(datadir)
 	-mkdir -p $(gsdir)
 	-mkdir -p $(gsdatadir)
@@ -49,18 +49,19 @@ install-scripts: $(PSLIBDIR)/gsnd
 	-mkdir -p $(scriptdir)
 	$(SH) -c 'for f in \
 gsbj gsdj gsdj500 gslj gslp gsnd \
-bdftops dvipdf eps2eps font2c \
+bdftops dumphints dvipdf eps2eps font2c \
 pdf2dsc pdf2ps pdfopt pf2afm pfbtopfa printafm \
 ps2ascii ps2epsi ps2pdf ps2pdf12 ps2pdf13 ps2pdf14 ps2pdfwr ps2ps wftopfa \
 fixmswrd.pl lprsetup.sh pj-gs.sh pv.sh sysvlp.sh unix-lpr.sh ;\
 	do if ( test -f $(PSLIBDIR)/$$f ); then $(INSTALL_PROGRAM) $(PSLIBDIR)/$$f $(scriptdir); fi;\
 	done'
 
+PSRESDIR=$(PSLIBDIR)/../Resource
 PSDOCDIR=$(PSLIBDIR)/../doc
 PSEXDIR=$(PSLIBDIR)/../examples
 PSMANDIR=$(PSLIBDIR)/../man
 
-install-data: install-libdata install-doc install-man install-examples
+install-data: install-libdata install-resdata install-doc install-man install-examples
 
 # There's no point in providing a complete dependency list: we include
 # one file from each subdirectory just as a sanity check.
@@ -75,7 +76,7 @@ Fontmap Fontmap.GS cidfmap \
 FAPIcidfmap FAPIconfig FAPIfontmap xlatmap \
 ht_ccsto.ps \
 acctest.ps addxchar.ps align.ps bdftops.ps \
-caption.ps cid2code.ps decrypt.ps docie.ps \
+caption.ps cid2code.ps decrypt.ps docie.ps dumphints.ps \
 errpage.ps font2c.ps font2pcl.ps gslp.ps gsnup.ps image-qa.ps impath.ps \
 jispaper.ps landscap.ps level1.ps lines.ps markhint.ps markpath.ps \
 packfile.ps pcharstr.ps pf2afm.ps pfbtopfa.ps ppath.ps prfont.ps printafm.ps \
@@ -93,6 +94,21 @@ pdf2dsc.ps pdfopt.ps ;\
 	done'
 	$(SH) -c 'for f in $(PSLIBDIR)/*.ppd $(PSLIBDIR)/*.rpd $(PSLIBDIR)/*.upp $(PSLIBDIR)/*.xbm $(PSLIBDIR)/*.xpm;\
 	do $(INSTALL_DATA) $$f $(gsdatadir)/lib ;\
+	done'
+
+# install the default resource files
+# copy in every category (directory) but CVS
+RES_CATEGORIES=`ls $(PSRESDIR) | grep -v CVS` 
+install-resdata: $(PSRESDIR)/Decoding/Unicode
+	-mkdir -p $(datadir)
+	-mkdir -p $(gsdir)
+	-mkdir -p $(gsdatadir)/Resource
+	$(SH) -c 'for dir in $(RES_CATEGORIES); do \
+	  rdir=$(gsdatadir)/Resource/$$dir ; \
+	  test -d $$rdir || mkdir -p $$rdir ; \
+	  for file in $(PSRESDIR)/$$dir/*; do \
+	    if test -f $$file; then $(INSTALL_DATA) $$file $$rdir ; fi \
+	  done \
 	done'
 
 # install html documentation

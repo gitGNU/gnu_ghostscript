@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zfilter.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: zfilter.c,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* Filter creation */
 #include "memory_.h"
 #include "ghost.h"
@@ -154,7 +154,12 @@ zSFD(i_ctx_t *i_ctx_p)
 	int code;
 
 	check_dict_read(*op);
-	if ((code = dict_int_param(op, "EODCount", 0, max_int, -1, &count)) < 0)
+	/*
+	 * The PLRM-3rd says that EODCount is a required parameter.  However
+	 * Adobe accepts files without this value and apparently defaults to
+	 * zero.  Thus we are doing the same.
+	 */
+	if ((code = dict_int_param(op, "EODCount", 0, max_int, 0, &count)) < 0)
 	    return code;
 	if (dict_find_string(op, "EODString", &sop) <= 0)
 	    return_error(e_rangecheck);
@@ -354,6 +359,28 @@ private const stream_template s_Null1D_template = {
     &st_stream_state, NULL, s_Null1D_process, 1, 1
 };
 
+/* A utility filter that returns an immediate EOF without consuming */
+/* any data from its source. Used by PDF interpreter for unknown    */
+/* filter types.                                                    */
+private int
+s_EOFD_process(stream_state * st, stream_cursor_read * pr,
+		 stream_cursor_write * pw, bool last)
+{
+    return EOFC;
+}
+private const stream_template s_EOFD_template = {
+    &st_stream_state, NULL, s_EOFD_process, 1, 1
+};
+
+/* <target> /.EOFDecode filter <file> */
+/* <target> <dict> /.EOFDecode filter <file> */
+private int
+zEOFD(i_ctx_t *i_ctx_p)
+{
+    return filter_read_simple(i_ctx_p, &s_EOFD_template);
+}
+
+
 /* Ensure a minimum buffer size for a filter. */
 /* This may require creating an intermediate stream. */
 private int
@@ -437,5 +464,6 @@ const op_def zfilter_op_defs[] = {
     {"2RunLengthEncode", zRLE},
     {"1RunLengthDecode", zRLD},
     {"3SubFileDecode", zSFD},
+    {"1.EOFDecode", zEOFD},
     op_def_end(0)
 };

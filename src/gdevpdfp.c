@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpdfp.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevpdfp.c,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* Get/put parameters for PDF-writing driver */
 #include "memory_.h"
 #include "string_.h"
@@ -30,6 +30,7 @@
 #include "gserrors.h"
 #include "gdevpdfx.h"
 #include "gdevpdfo.h"
+#include "gdevpdfg.h"
 #include "gsparamx.h"
 
 /*
@@ -81,6 +82,15 @@ private const gs_param_item_t pdf_param_items[] = {
     pi("ReEncodeCharacters", gs_param_type_bool, ReEncodeCharacters),
     pi("FirstObjectNumber", gs_param_type_long, FirstObjectNumber),
     pi("CompressFonts", gs_param_type_bool, CompressFonts),
+    pi("MaxInlineImageSize", gs_param_type_long, MaxInlineImageSize),
+
+	/* PDF Encryption */
+    pi("OwnerPassword", gs_param_type_string, OwnerPassword),
+    pi("UserPassword", gs_param_type_string, UserPassword),
+    pi("KeyLength", gs_param_type_int, KeyLength),
+    pi("Permissions", gs_param_type_int, Permissions),
+    pi("EncryptionR", gs_param_type_int, EncryptionR),
+    pi("NoEncrypt", gs_param_type_string, NoEncrypt),
 #undef pi
     gs_param_item_end
 };
@@ -346,23 +356,16 @@ gdev_pdf_put_params(gx_device * dev, gs_param_list * plist)
 	     * it.
 	     */
 	    static const char *const pcm_names[] = {
-		"DeviceGray", "DeviceRGB", "DeviceCMYK", 0
-	    };
-	    static gx_device_color_info pcm_color_info[] = {
-		dci_values(1, 8, 255, 0, 256, 0),
-		dci_values(3, 24, 255, 255, 256, 256),
-		dci_values(4, 32, 255, 255, 256, 256)
+		"DeviceGray", "DeviceRGB", "DeviceCMYK", "DeviceN", 0
 	    };
 	    int pcm = -1;
 
-	    pcm_color_info[0].separable_and_linear = GX_CINFO_SEP_LIN;
-	    pcm_color_info[1].separable_and_linear = GX_CINFO_SEP_LIN;
-	    pcm_color_info[2].separable_and_linear = GX_CINFO_SEP_LIN;
 	    ecode = param_put_enum(plist, "ProcessColorModel", &pcm,
 				   pcm_names, ecode);
 	    if (pcm >= 0) {
-		pdev->color_info = pcm_color_info[pcm];
-		pdf_set_process_color_model(pdev);
+		pdf_set_process_color_model(pdev, pcm);
+		pdf_set_initial_color(pdev, &pdev->saved_fill_color, &pdev->saved_stroke_color,
+				&pdev->fill_used_process_color, &pdev->stroke_used_process_color);
 	    }
 	}
     }
@@ -408,8 +411,9 @@ gdev_pdf_put_params(gx_device * dev, gs_param_list * plist)
  fail:
     /* Restore all the parameters to their original state. */
     pdev->version = save_dev.version;
-    pdev->color_info = save_dev.color_info;
-    pdf_set_process_color_model(pdev);
+    pdf_set_process_color_model(pdev, save_dev.pcm_color_info_index);
+    pdev->saved_fill_color = save_dev.saved_fill_color;
+    pdev->saved_stroke_color = save_dev.saved_fill_color;
     {
 	const gs_param_item_t *ppi = pdf_param_items;
 
@@ -501,7 +505,7 @@ pdf_dsc_process(gx_device_pdf * pdev, const gs_param_string_array * pma)
 		gs_rect box;
 
 		if (pdf_key_eq(pkey, "EPSF")) {
-		    pdev->is_EPS = (pkey->size >= 1 && pkey->data[0] != '0');
+		    pdev->is_EPS = (pvalue->size >= 1 && pvalue->data[0] != '0');
 		    continue;
 		}
 		/*

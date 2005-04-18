@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gscolor1.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gscolor1.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Level 1 extended color operators for Ghostscript library */
 #include "gx.h"
 #include "gserrors.h"
@@ -176,7 +176,8 @@ gs_setcolortransfer_remap(gs_state * pgs, gs_mapping_proc red_proc,
 	load_transfer_map(pgs, ptran->gray, 0.0);
 	gx_set_effective_transfer(pgs);
 	gx_unset_dev_color(pgs);
-    }
+    } else
+	gx_set_effective_transfer(pgs);
     return 0;
   fblue:
     rc_assign(ptran->green, old.green, "setcolortransfer");

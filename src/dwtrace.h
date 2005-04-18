@@ -22,13 +22,13 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: dwtrace.h,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: dwtrace.h,v 1.2 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* The interface of Graphical trace server for Windows */
 
 #ifndef dwtrace_INCLUDED
 #  define dwtrace_INCLUDED
 
-struct vd_trace_interface_s visual_tracer;
+extern struct vd_trace_interface_s visual_tracer;
 void visual_tracer_init(void);
 
 #endif /* dwtrace_INCLUDED */

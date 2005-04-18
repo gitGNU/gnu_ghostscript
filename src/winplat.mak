@@ -21,7 +21,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: winplat.mak,v 1.2 2004/02/14 22:20:19 atai Exp $
+# $Id: winplat.mak,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $
 # Common makefile section for builds on 32-bit MS Windows, including the
 # Watcom MS-DOS build.
 
@@ -36,7 +36,7 @@ $(GLD)winplat.dev : $(WINPLAT_MAK) $(ECHOGS_XE) $(winplat_)
 
 $(GLOBJ)gp_ntfs.$(OBJ): $(GLSRC)gp_ntfs.c $(AK)\
  $(dos__h) $(memory__h) $(stdio__h) $(string__h) $(windows__h)\
- $(gp_h) $(gsmemory_h) $(gsstruct_h) $(gstypes_h) $(gsutil_h)
+ $(gp_h) $(gpmisc_h) $(gsmemory_h) $(gsstruct_h) $(gstypes_h) $(gsutil_h)
 	$(GLCCWIN) $(GLO_)gp_ntfs.$(OBJ) $(C_) $(GLSRC)gp_ntfs.c
 
 $(GLOBJ)gp_win32.$(OBJ): $(GLSRC)gp_win32.c $(AK)\

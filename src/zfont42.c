@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zfont42.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: zfont42.c,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Type 42 font creation operator */
 #include "memory_.h"
 #include "ghost.h"
@@ -170,6 +170,8 @@ font_GlyphDirectory_param(os_ptr op, ref *pGlyphDirectory)
  * Access a given byte offset and length in an array of strings.
  * This is used for sfnts and for CIDMap.  The int argument is 2 for sfnts
  * (because of the strange behavior of odd-length strings), 1 for CIDMap.
+ * Return code : 0 - success, <0 - error, 
+ *               >0 - number of accessible bytes (client must cycle).
  */
 int
 string_array_access_proc(const ref *psa, int modulus, ulong offset,
@@ -178,6 +180,8 @@ string_array_access_proc(const ref *psa, int modulus, ulong offset,
     ulong left = offset;
     uint index = 0;
 
+    if (length == 0)
+        return 0;
     for (;; ++index) {
 	ref rstr;
 	int code = array_get(psa, index, &rstr);
@@ -194,9 +198,9 @@ string_array_access_proc(const ref *psa, int modulus, ulong offset,
 	 */
 	size = r_size(&rstr) & -modulus;
 	if (left < size) {
-	    if (left + length > size)
-		return_error(e_rangecheck);
 	    *pdata = rstr.value.const_bytes + left;
+	    if (left + length > size)
+		return size - left;
 	    return 0;
 	}
 	left -= size;
@@ -218,23 +222,25 @@ glyph_to_index(const gs_font *font, gs_glyph glyph)
     ref gref;
     ref *pcstr;
 
-    if (glyph >= gs_min_cid_glyph)
+    if (glyph >= GS_MIN_GLYPH_INDEX)
 	return glyph;
     name_index_ref(glyph, &gref);
     if (dict_find(&pfont_data(font)->CharStrings, &gref, &pcstr) > 0 &&
 	r_has_type(pcstr, t_integer)
 	) {
-	gs_glyph index_glyph = pcstr->value.intval + gs_min_cid_glyph;
+	gs_glyph index_glyph = pcstr->value.intval + GS_MIN_GLYPH_INDEX;
 
-	if (index_glyph >= gs_min_cid_glyph && index_glyph <= gs_max_glyph)
+	if (index_glyph >= GS_MIN_GLYPH_INDEX && index_glyph <= gs_max_glyph)
 	    return index_glyph;
     }
-    return gs_min_cid_glyph;	/* glyph 0 is notdef */
+    return GS_MIN_GLYPH_INDEX;	/* glyph 0 is notdef */
 }
 private uint
 z42_get_glyph_index(gs_font_type42 *pfont, gs_glyph glyph)
 {
-    return glyph_to_index((gs_font *)pfont, glyph) - GS_MIN_CID_GLYPH;
+    gs_glyph gid = glyph_to_index((gs_font *)pfont, glyph);
+
+    return gid - GS_MIN_GLYPH_INDEX;
 }
 
 /*
@@ -297,6 +303,7 @@ z42_gdir_enumerate_glyph(gs_font *font, int *pindex,
 			 gs_glyph_space_t glyph_space, gs_glyph *pglyph)
 {
     const ref *pgdict;
+    int code;
 
     if (glyph_space == GLYPH_SPACE_INDEX) {
 	pgdict = &pfont_data(font)->u.type42.GlyphDirectory;
@@ -309,14 +316,18 @@ z42_gdir_enumerate_glyph(gs_font *font, int *pindex,
 		    return 0;
 		}
 		if (!r_has_type(&gdef, t_null)) {
-		    *pglyph = gs_min_cid_glyph + (*pindex)++;
+		    *pglyph = GS_MIN_GLYPH_INDEX + (*pindex)++;
 		    return 0;
 		}
 	    }
 	}
     } else
 	pgdict = &pfont_data(font)->CharStrings;
-    return zchar_enumerate_glyph(pgdict, pindex, pglyph);
+    /* A trick : use zchar_enumerate_glyph to enumerate GIDs : */
+    code = zchar_enumerate_glyph(pgdict, pindex, pglyph);
+    if (*pindex != 0 && *pglyph >= gs_min_cid_glyph)
+	*pglyph	= *pglyph - gs_min_cid_glyph + GS_MIN_GLYPH_INDEX;
+    return code;
 }
 
 /*
@@ -332,10 +343,10 @@ z42_encode_char(gs_font *font, gs_char chr, gs_glyph_space_t glyph_space)
 	    glyph_to_index(font, glyph) : glyph);
 }
 private int
-z42_glyph_outline(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
+z42_glyph_outline(gs_font *font, int WMode, gs_glyph glyph, const gs_matrix *pmat,
 		  gx_path *ppath)
 {
-    return gs_type42_glyph_outline(font, glyph_to_index(font, glyph),
+    return gs_type42_glyph_outline(font, WMode, glyph_to_index(font, glyph),
 				   pmat, ppath);
 }
 private int
@@ -346,7 +357,10 @@ z42_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
 				pmat, members, info);
 }
 
-/* Procedure for accessing the sfnts array. */
+/* Procedure for accessing the sfnts array.
+ * Return code : 0 - success, <0 - error, 
+ *               >0 - number of accessible bytes (client must cycle).
+ */
 private int
 z42_string_proc(gs_font_type42 * pfont, ulong offset, uint length,
 		const byte ** pdata)

@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zimage.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: zimage.c,v 1.3 2005/04/18 12:06:01 Arabidopsis Exp $ */
 /* Image operators */
 #include "math_.h"
 #include "memory_.h"
@@ -237,7 +237,7 @@ zimagemask1(i_ctx_t *i_ctx_p)
   ((ep) - 4 - (i) * 2)
 #define ETOP_PLANE_INDEX(ep) ((ep) - 2)
 #define ETOP_NUM_SOURCES(ep) ((ep) - 1)
-int
+private int
 zimage_data_setup(i_ctx_t *i_ctx_p, const gs_pixel_image_t * pim,
 		  gx_image_enum_common_t * pie, const ref * sources, int npop)
 {
@@ -285,13 +285,19 @@ zimage_data_setup(i_ctx_t *i_ctx_p, const gs_pixel_image_t * pim,
 		}
 		/* falls through */
 	    case t_string:
-		if (r_type(pp) != r_type(sources))
+		if (r_type(pp) != r_type(sources)) {
+    		    if (pie != NULL)
+		        gx_image_end(pie, false);    /* Clean up pie */
 		    return_error(e_typecheck);
+		}
 		check_read(*pp);
 		break;
 	    default:
-		if (!r_is_proc(sources))
+		if (!r_is_proc(sources)) {
+    		    if (pie != NULL)
+		        gx_image_end(pie, false);    /* Clean up pie */
 		    return_error(e_typecheck);
+		}
 		check_proc(*pp);
 	}
 	*ep = *pp;

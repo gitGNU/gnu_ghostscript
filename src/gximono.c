@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gximono.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gximono.c,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* General mono-component image rendering */
 #include "gx.h"
 #include "memory_.h"
@@ -80,7 +80,7 @@ gs_image_class_3_mono(gx_image_enum * penum)
 	    if (penum->mask_color.values[1] >= 255)
 		color_set_null(&penum->icolor1);
 	}
-	return image_render_mono;
+	return &image_render_mono;
     }
     return 0;
 }
@@ -99,8 +99,8 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
     const gs_imager_state *pis = penum->pis;
     gs_logical_operation_t lop = penum->log_op;
     const bool masked = penum->masked;
-    const gs_color_space *pcs;	/* only set for non-masks */
-    cs_proc_remap_color((*remap_color));	/* ditto */
+    const gs_color_space *pcs = NULL;	/* only set for non-masks */
+    cs_proc_remap_color((*remap_color)) = NULL;	/* ditto */
     gs_client_color cc;
     gx_device_color *pdevc = &penum->icolor1;	/* color for masking */
     bool tiles_fit;
@@ -424,25 +424,6 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
 
 	dev_proc_fill_rectangle((*fill_proc)) =
 	    dev_proc(dev, fill_rectangle);
-	dev_proc_strip_tile_rectangle((*tile_proc)) =
-	    dev_proc(dev, strip_tile_rectangle);
-	dev_proc_copy_mono((*copy_mono_proc)) =
-	    dev_proc(dev, copy_mono);
-	/*
-	 * If each pixel is likely to fit in a single halftone tile,
-	 * determine that now (tile_offset = offset of row within tile).
-	 * Don't do this for band devices; they handle halftone fills
-	 * more efficiently than copy_mono.
-	 */
-	int bstart;
-	int phase_x;
-	int tile_offset =
-	    (pis && penum->device_color &&
-	     (*dev_proc(dev, get_band)) (dev, yt, &bstart) == 0 ?
-	     gx_check_tile_size(pis,
-				fixed2int_ceiling(any_abs(dxx) + (xa << 1)),
-				yt, iht, gs_color_select_source, &phase_x) :
-	     -1);
 	int xmin = fixed2int_pixround(penum->clip_outer.p.x);
 	int xmax = fixed2int_pixround(penum->clip_outer.q.x);
 

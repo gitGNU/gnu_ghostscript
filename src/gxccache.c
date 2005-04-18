@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxccache.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxccache.c,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Fast case character cache routines for Ghostscript library */
 #include "memory_.h"
 #include "gx.h"
@@ -49,15 +49,48 @@
 private byte *compress_alpha_bits(const cached_char *, gs_memory_t *);
 
 /* Define a scale factor of 1. */
-static const gs_log2_scale_point scale_log2_1 =
+private const gs_log2_scale_point scale_log2_1 =
 {0, 0};
 
-/* Look up, and if necessary add, a font/matrix pair in the cache */
-cached_fm_pair *
-gx_lookup_fm_pair(gs_font * pfont, register const gs_state * pgs)
+void
+gx_compute_char_matrix(const gs_matrix *char_tm, const gs_log2_scale_point *log2_scale, 
+    float *mxx, float *mxy, float *myx, float *myy)
 {
-    float mxx = pgs->char_tm.xx, mxy = pgs->char_tm.xy, myx = pgs->char_tm.yx,
-          myy = pgs->char_tm.yy;
+    int scale_x = 1 << log2_scale->x;
+    int scale_y = 1 << log2_scale->y;
+
+    *mxx = char_tm->xx * scale_x;
+    *mxy = char_tm->xy * scale_x;
+    *myx = char_tm->yx * scale_y;
+    *myy = char_tm->yy * scale_y;
+}
+
+void
+gx_compute_ccache_key(gs_font * pfont, const gs_matrix *char_tm, 
+    const gs_log2_scale_point *log2_scale, bool design_grid,
+    float *mxx, float *mxy, float *myx, float *myy)
+{
+    if (design_grid && 
+	    (pfont->FontType == ft_TrueType || pfont->FontType == ft_CID_TrueType)) {
+	/* 
+	 * We need a special face for this case, because the TT interpreter
+	 * can't generate both grid_fitted and non-grid-fitted outlines
+	 * with a same face instance. This happens due to control
+	 * values in 'cvt' must be different. 
+	 * Since a single face satisfies all font sizes,
+	 * we use a zero matrix as the cache entry key.
+	 */
+	*mxx = *mxy = *myx = *myy = 0;
+    } else
+	gx_compute_char_matrix(char_tm, log2_scale, mxx, mxy, myx, myy);
+}
+
+/* Look up, and if necessary add, a font/matrix pair in the cache */
+int
+gx_lookup_fm_pair(gs_font * pfont, const gs_matrix *char_tm, 
+    const gs_log2_scale_point *log2_scale, bool design_grid, cached_fm_pair **ppair)
+{
+    float mxx, mxy, myx, myy;
     gs_font *font = pfont;
     register gs_font_dir *dir = font->dir;
     register cached_fm_pair *pair =
@@ -65,6 +98,8 @@ gx_lookup_fm_pair(gs_font * pfont, register const gs_state * pgs)
     int count = dir->fmcache.mmax;
     gs_uid uid;
 
+    gx_compute_ccache_key(pfont, char_tm, log2_scale, design_grid,
+			    &mxx, &mxy, &myx, &myy);
     if (font->FontType == ft_composite || font->PaintType != 0) {	/* We can't cache by UID alone. */
 	uid_set_invalid(&uid);
     } else {
@@ -91,6 +126,9 @@ gx_lookup_fm_pair(gs_font * pfont, register const gs_state * pgs)
 	}
 	if (pair->mxx == mxx && pair->mxy == mxy &&
 	    pair->myx == myx && pair->myy == myy
+#if NEW_TT_INTERPRETER
+	    && pair->design_grid == design_grid
+#endif
 	    ) {
 	    if (pair->font == 0) {
 		pair->font = pfont;
@@ -100,18 +138,19 @@ gx_lookup_fm_pair(gs_font * pfont, register const gs_state * pgs)
 		if_debug2('k', "[k]found pair 0x%lx: font=0x%lx\n",
 			  (ulong) pair, (ulong) pair->font);
 	    }
-	    return pair;
+	    *ppair = pair;
+	    return 0;
 	}
     }
-    return gx_add_fm_pair(dir, pfont, &uid, pgs);
+    return gx_add_fm_pair(dir, pfont, &uid, char_tm, log2_scale, design_grid, ppair);
 }
 
-/* Look up a glyph in the cache. */
-/* The character depth must be either 1 or alt_depth. */
+/* Look up a glyph with the right depth in the cache. */
 /* Return the cached_char or 0. */
 cached_char *
 gx_lookup_cached_char(const gs_font * pfont, const cached_fm_pair * pair,
-		      gs_glyph glyph, int wmode, int alt_depth)
+		      gs_glyph glyph, int wmode, int depth, 
+		      gs_fixed_point *subpix_origin)
 {
     gs_font_dir *dir = pfont->dir;
     uint chi = chars_head_index(glyph, pair);
@@ -119,7 +158,9 @@ gx_lookup_cached_char(const gs_font * pfont, const cached_fm_pair * pair,
 
     while ((cc = dir->ccache.table[chi & dir->ccache.table_mask]) != 0) {
 	if (cc->code == glyph && cc_pair(cc) == pair &&
-	    cc->wmode == wmode && (cc_depth(cc) == 1 || cc_depth(cc) == alt_depth)
+	    cc->subpix_origin.x == subpix_origin->x && 
+	    cc->subpix_origin.y == subpix_origin->y &&
+	    cc->wmode == wmode && cc_depth(cc) == depth
 	    ) {
 	    if_debug4('K', "[K]found 0x%lx (depth=%d) for glyph=0x%lx, wmode=%d\n",
 		      (ulong) cc, cc_depth(cc), (ulong) glyph, wmode);
@@ -127,8 +168,8 @@ gx_lookup_cached_char(const gs_font * pfont, const cached_fm_pair * pair,
 	}
 	chi++;
     }
-    if_debug3('K', "[K]not found: glyph=0x%lx, wmode=%d, alt_depth=%d\n",
-	      (ulong) glyph, wmode, alt_depth);
+    if_debug3('K', "[K]not found: glyph=0x%lx, wmode=%d, depth=%d\n",
+	      (ulong) glyph, wmode, depth);
     return 0;
 }
 
@@ -199,6 +240,9 @@ gx_lookup_xfont_char(const gs_state * pgs, cached_fm_pair * pair,
     cc->wxy.y = float2fixed(wxy.y);
     cc->offset.x = int2fixed(-bbox.p.x);
     cc->offset.y = int2fixed(-bbox.p.y);
+#   if NEW_TT_INTERPRETER
+        cc_set_pair(cc, pair);
+#   endif
     if_debug5('k', "[k]xfont %s char %d/0x%x#0x%lx=>0x%lx\n",
 	      font->font_name.chars, enc_index, (int)chr,
 	      (ulong) glyph, (ulong) xg);
@@ -237,9 +281,9 @@ gx_image_cached_char(register gs_show_enum * penum, register cached_char * cc)
      * Note that if the original device implements fill_mask, we may
      * never actually use the clipping device.
      */
-    pt.x -= cc->offset.x;
+    pt.x -= cc->offset.x + cc->subpix_origin.x;
     x = fixed2int_var_rounded(pt.x) + penum->ftx;
-    pt.y -= cc->offset.y;
+    pt.y -= cc->offset.y + cc->subpix_origin.y;
     y = fixed2int_var_rounded(pt.y) + penum->fty;
     w = cc->width;
     h = cc->height;
@@ -333,7 +377,11 @@ gx_image_cached_char(register gs_show_enum * penum, register cached_char * cc)
      * by taking the high-order alpha bit.
      */
     bits = cc_bits(cc);
-    depth = cc_depth(cc);
+    /* With 4x2 scale, depth == 3. 
+     * An example is -dTextAlphaBits=4 comparefiles/fonttest.pdf .
+     * We need to map 4 bitmap bits to 2 alpha bits.
+     */
+    depth = (cc_depth(cc) == 3 ? 2 : cc_depth(cc));
     if (dev_proc(orig_dev, fill_mask) != gx_default_fill_mask ||
 	!lop_no_S_is_T(pgs->log_op)
 	) {
@@ -433,7 +481,11 @@ compress_alpha_bits(const cached_char * cc, gs_memory_t * mem)
     const byte *data = cc_const_bits(cc);
     uint width = cc->width;
     uint height = cc->height;
-    int depth = cc_depth(cc);
+    /* With 4x2 scale, depth == 3. 
+     * An example is -dTextAlphaBits=4 comparefiles/fonttest.pdf .
+     * We need to map 4 bitmap bits to 2 alpha bits.
+     */
+    int depth = (cc_depth(cc) == 3 ? 2 : cc_depth(cc));
     uint sraster = cc_raster(cc);
     uint sskip = sraster - ((width * depth + 7) >> 3);
     uint draster = bitmap_raster(width);

@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gsdcolor.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/*$Id: gsdcolor.h,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Device color representation for drivers */
 
 #ifndef gsdcolor_INCLUDED
@@ -117,9 +117,21 @@ bool gx_device_color_equal(const gx_device_color *pdevc1,
 
 #define color_is_pure(pdc) gx_dc_is_pure(pdc)
 #define color_writes_pure(pdc, lop) gx_dc_writes_pure(pdc, lop)
+/*
+ * Used to define 'pure' (solid - without halftoning or patterns) colors.
+ * This macro assumes the colorspace and client color information is already
+ * defined in the device color strucTure.  If not then see the next macro.
+ */
 #define color_set_pure(pdc, color)\
   ((pdc)->colors.pure = (color),\
    (pdc)->type = gx_dc_type_pure)
+/*
+ * Used to create special case device colors for which the colorspace
+ * and client colors are not already contained in the device color.
+ */
+#define set_nonclient_dev_color(pdc, color)\
+    color_set_pure(pdc, color);\
+    (pdc)->ccolor_valid = false
 
 /* Set the phase to an offset from the tile origin. */
 #define color_set_phase(pdc, px, py)\
@@ -302,6 +314,7 @@ struct gx_device_color_s {
 	} /*(colored) */ pattern;
     } colors;
     gs_int_point phase;
+    bool ccolor_valid;
     gs_client_color ccolor;	/* needed for remapping patterns, */
 				/* not set for non-pattern colors */
     struct _mask {
@@ -348,8 +361,12 @@ struct gx_device_color_s {
  * be passed a null pointer for the saved color operand; this will
  * ensure the the full device color information is written.
  *
- * Currently patterns cannot be passed through the command list, so
- * pattern information is not included in this structure.
+ * Currently patterns cannot be passed through the command list,
+ * however vector devices need to save a color for comparing
+ * it with another color, which appears later.
+ * We provide a minimal support, which is necessary
+ * for the current implementation of pdfwrite.
+ * It is not sufficient for restoring the pattern from the saved color.
  */
 
 struct gx_device_color_saved_s {
@@ -369,6 +386,13 @@ struct gx_device_color_saved_s {
         struct _swts {
             wts_screen_sample_t levels[GX_DEVICE_COLOR_MAX_COMPONENTS];
         }               wts;
+	struct _pattern {
+	    gs_id id;
+	    gs_int_point phase;
+	}		pattern;
+	struct _pattern2 {
+	    gs_id id;
+	}		pattern2;
     }                       colors;
     gs_int_point            phase;
 };
@@ -397,7 +421,7 @@ extern const gx_device_color_type_t *const gx_dc_type_pure;	/* gxdcolor.c */
 		 * a spurious external reference in Level 1 systems.
 		 */
 #ifndef gx_dc_type_pattern
-								    /*extern const gx_device_color_type_t * const gx_dc_type_pattern; *//* gspcolor.c */
+/*extern const gx_device_color_type_t * const gx_dc_type_pattern; *//* gspcolor.c */
 #endif
 #ifndef gx_dc_type_ht_binary
 extern const gx_device_color_type_t *const gx_dc_type_ht_binary;	/* gxht.c */

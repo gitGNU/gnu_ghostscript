@@ -22,11 +22,11 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: isave.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: isave.c,v 1.3 2005/04/18 12:06:01 Arabidopsis Exp $ */
 /* Save/restore manager for Ghostscript interpreter */
 #include "ghost.h"
 #include "memory_.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "gsexit.h"
 #include "gsstruct.h"
 #include "stream.h"		/* for linking for forgetsave */
@@ -40,8 +40,6 @@
 #include "ivmspace.h"
 #include "gsutil.h"		/* gs_next_ids prototype */
 
-/* Imported save/restore routines */
-extern void font_restore(const alloc_save_t *);
 
 /* Structure descriptor */
 private_st_alloc_save();
@@ -585,10 +583,14 @@ alloc_name_is_since_save(const ref * pnref, const alloc_save_t * save)
 bool
 alloc_name_index_is_since_save(uint nidx, const alloc_save_t * save)
 {
-    ref nref;
+    const name_string_t *pnstr;
 
-    nref.value.pname = name_index_ptr(nidx);
-    return alloc_name_is_since_save(&nref, save);
+    if (!save->restore_names)
+	return false;
+    pnstr = names_index_string_inline(the_gs_name_table, nidx);
+    if (pnstr->foreign_string)
+	return false;
+    return alloc_is_since_save(pnstr->string_bytes, save);
 }
 
 /* Check whether any names have been created since a given save */

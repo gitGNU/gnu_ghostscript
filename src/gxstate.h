@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxstate.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxstate.h,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Internal graphics state API */
 
 #ifndef gxstate_INCLUDED
@@ -83,7 +83,9 @@ void gs_state_set_client(gs_state *, void *, const gs_state_client_procs *);
 /* gzstate.h redefines the following: */
 #ifndef gs_state_client_data
 void *gs_state_client_data(const gs_state *);
-
 #endif
+
+/* Accessories. */
+gs_id gx_get_clip_path_id(gs_state *);
 
 #endif /* gxstate_INCLUDED */

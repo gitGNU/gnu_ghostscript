@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevrops.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
+/* $Id: gdevrops.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* RasterOp source device */
 #include "gx.h"
 #include "gserrors.h"
@@ -109,7 +109,10 @@ private const gx_device_rop_texture gs_rop_texture_device = {
      gx_forward_get_color_mapping_procs,
      gx_forward_get_color_comp_index,
      gx_forward_encode_color,
-     gx_forward_decode_color
+     gx_forward_decode_color,
+     gx_forward_pattern_manage,
+     gx_forward_fill_rectangle_hl_color,
+     gx_forward_include_color_space
     },
     0,				/* target */
     lop_default			/* log_op */

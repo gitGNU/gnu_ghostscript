@@ -24,7 +24,7 @@
  */
 
 
-/* $Id: gsdll.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsdll.h,v 1.3 2005/04/18 12:06:01 Arabidopsis Exp $ */
 
 /* This interface is deprecated and will be removed in future
  * ghostscript releases.  Use the interface described in
@@ -36,7 +36,7 @@
 
 #include "iapi.h"
 
-#ifdef __MACINTOSH__
+#ifdef __MACOS__
 #define HWND char *
 #include <QDOffscreen.h>
 #pragma export on
@@ -103,7 +103,7 @@ typedef int (GSDLLAPIPTR PFN_gsdll_execute_end) (void);
 typedef int (GSDLLAPIPTR PFN_gsdll_exit) (void);
 typedef int (GSDLLAPIPTR PFN_gsdll_lock_device) (unsigned char *, int);
 
-#ifdef __MACINTOSH__
+#ifdef __MACOS__
 #pragma export off
 #endif
 

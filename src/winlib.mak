@@ -21,7 +21,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: winlib.mak,v 1.2 2004/02/14 22:20:19 atai Exp $
+# $Id: winlib.mak,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $
 # Common makefile section for 32-bit MS Windows.
 
 # This makefile must be acceptable to Microsoft Visual C++, Watcom C++,
@@ -34,6 +34,7 @@
 SHARE_JPEG=0
 SHARE_LIBPNG=0
 SHARE_ZLIB=0
+SHARE_JBIG2=0
 
 # Define the platform name.
 
@@ -89,6 +90,12 @@ UFST_BRIDGE = 1
 UFST_LIB_EXT=.lib
 !endif
 
+# Define conditinal name for FreeType bridge :
+!ifdef FT_ROOT
+FT_BRIDGE = 1
+FT_LIB_EXT=.lib
+!endif
+
 # Define the files to be removed by `make clean'.
 # nmake expands macros when encountered, not when used,
 # so this must precede the !include statements.
@@ -108,6 +115,7 @@ BEGINFILES=$(GLGENDIR)\ccf32.tr\
 # zlib.mak must precede libpng.mak
 !include $(GLSRCDIR)\zlib.mak
 !include $(GLSRCDIR)\libpng.mak
+!include $(GLSRCDIR)\jbig2.mak
 !include $(GLSRCDIR)\icclib.mak
 !include $(GLSRCDIR)\ijs.mak
 !include $(GLSRCDIR)\devs.mak
@@ -127,10 +135,9 @@ GSDLL_OBJ=$(GLOBJ)$(GSDLL)
 
 # -------------------------- Auxiliary files --------------------------- #
 
-# No special gconfig_.h is needed.
-# Assume `make' supports output redirection.
+# No special gconfig_.h is needed.	/* This file deliberately left blank. */
 $(gconfig__h): $(TOP_MAKEFILES)
-	echo /* This file deliberately left blank. */ >$(gconfig__h)
+	$(ECHOGS_XE) -w $(gconfig__h) -x 2f2a20 This file deliberately left blank. -x 2a2f
 
 $(gconfigv_h): $(TOP_MAKEFILES) $(ECHOGS_XE)
 	$(ECHOGS_XE) -w $(gconfigv_h) -x 23 define USE_ASM -x 2028 -q $(USE_ASM)-0 -x 29

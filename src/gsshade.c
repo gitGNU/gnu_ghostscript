@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsshade.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsshade.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Constructors for shadings */
 #include "gx.h"
 #include "gscspace.h"
@@ -46,6 +46,28 @@
 /* GC descriptors */
 private_st_shading();
 private_st_shading_mesh();
+
+private
+ENUM_PTRS_WITH(shading_mesh_enum_ptrs, gs_shading_mesh_t *psm)
+{
+    index -= 2;
+    if (index < st_data_source_max_ptrs)
+	return ENUM_USING(st_data_source, &psm->params.DataSource,
+			  sizeof(psm->params.DataSource), index);
+    return ENUM_USING_PREFIX(st_shading, st_data_source_max_ptrs);
+}
+ENUM_PTR2(0, gs_shading_mesh_t, params.Function, params.Decode);
+ENUM_PTRS_END
+
+private
+RELOC_PTRS_WITH(shading_mesh_reloc_ptrs, gs_shading_mesh_t *psm)
+{
+    RELOC_PREFIX(st_shading);
+    RELOC_USING(st_data_source, &psm->params.DataSource,
+		sizeof(psm->params.DataSource));
+    RELOC_PTR2(gs_shading_mesh_t, params.Function, params.Decode);
+}
+RELOC_PTRS_END
 
 /* Check ColorSpace, BBox, and Function (if present). */
 /* Free variables: params. */

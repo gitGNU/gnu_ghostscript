@@ -13,7 +13,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_diskn.ps,v 1.1 2004/02/14 22:32:07 atai Exp $
+% $Id: gs_diskn.ps,v 1.2 2005/04/18 12:06:08 Arabidopsis Exp $
 % Initialization file for %disk device modifications
 % When this is run, systemdict is still writable,
 
@@ -28,7 +28,7 @@ systemdict begin
     mark (*) { 
       dup length string copy dup currentdevparams /Searchable
       .knownget { not { pop } if } { pop } ifelse
-    } 100 string /IODevice resourceforall
+    } 8192 string /IODevice resourceforall
     ]
     % now process the array into correct SearchOrder
     0 1 2 {

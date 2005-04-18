@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxdda.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxdda.h,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Definitions for DDAs */
 /* Requires gxfixed.h */
 
@@ -85,7 +85,7 @@ dda_state_struct(_a, fixed, uint) gx_dda_state_fixed;
   if ( (N) == 0 )\
     (dstep).dQ = 0, (dstep).dR = 0;\
   else if ( (D) < 0 )\
-   { (dstep).dQ = -(-(D) / (N));\
+   { (dstep).dQ = -(int)((uint)-(D) / (N));\
      if ( ((dstep).dR = -(D) % (N)) != 0 )\
        --(dstep).dQ, (dstep).dR = (N) - (dstep).dR;\
    }\

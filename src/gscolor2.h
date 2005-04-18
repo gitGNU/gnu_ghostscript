@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gscolor2.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gscolor2.h,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Client interface to Level 2 color facilities */
 /* (requires gscspace.h, gsmatrix.h) */
 
@@ -54,5 +54,8 @@ typedef struct gs_cie_render_s gs_cie_render;
 #endif
 const gs_cie_render *gs_currentcolorrendering(const gs_state *);
 int gs_setcolorrendering(gs_state *, gs_cie_render *);
+
+/* High level device support */
+int gs_includecolorspace(gs_state * pgs, const byte *res_name, int name_length);
 
 #endif /* gscolor2_INCLUDED */

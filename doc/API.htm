@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>The Ghostscript Interpreter Application Programming Interface (API)</title>
-<!-- $Id: API.htm,v 1.2 2004/02/14 22:20:02 atai Exp $ -->
+<!-- $Id: API.htm,v 1.3 2005/04/18 12:06:10 Arabidopsis Exp $ -->
 <!-- Supercedes the API in DLL.htm -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -85,7 +85,7 @@ This supercedes the old <a href="DLL.htm">DLL</a> interface.
 To provide the interface described in the 
 <a href="Use.htm">usage documentation</a>, a smaller independent 
 executable loads the DLL/shared object.
-This executable provides all the interaction with the windowing system, 
+This executable must provide all the interaction with the windowing system, 
 including image windows and, if necessary, a text window.
 
 <p>
@@ -112,13 +112,15 @@ by multiple applications at once.
 <p>
 The source for the executable is in <b><tt>dw</tt></b>*.* (Windows),
 <b><tt>dp</tt></b>*.* (OS/2) and  <b><tt>dx</tt></b>*.* (Linux).  
-See these source files for examples of how to use the DLL.
+See these source files for examples of how to use the DLL. A similar
+example for MacOS using the Carbon API is provided in <b><tt>dm</tt></b>*.*.
 
 <p>
-The source file <tt>dxmainc.c</tt> can serve as an example of how to use the 
-framework shared component on MacOS X. Just change the header includes to use 
-the Ghostscript namespace:
-<blockquote><pre><tt>#include &lt;Ghostscript/errors.h&gt;
+The source file <tt>dxmainc.c</tt> can also serve as an example of how to use the 
+framework shared component on MacOS X, providing the same command-line tool it does
+on any linux, bsd or similar operating system. Just change the header includes to 
+use the Ghostscript namespace:
+<blockquote><pre><tt>#include &lt;Ghostscript/ierrors.h&gt;
 #include &lt;Ghostscript/iapi.h&gt;</tt></pre></blockquote>
 and link with:
 <blockquote><pre><tt>cc -o gsc dxmainc.c -framework Ghostscript</tt></pre></blockquote>
@@ -305,6 +307,9 @@ This is used for handling window events or cooperative
 multitasking.  This function will only be called if
 the Ghostscript interpreter was compiled with <b><tt>CHECK_INTERRUPTS</tt></b>
 as described in <b><tt><a href="../src/gpcheck.h">gpcheck.h</a></tt></b>.
+The polling function should return zero if all is well,
+and return negative if it wants ghostscript to abort.
+The polling function must be fast.
 </blockquote>
 
 <h3><a name="set_display_callback"></a><b><tt>gsapi_set_display_callback()</tt></b></h3>
@@ -338,6 +343,12 @@ error has occured.  You must call <b><tt>gsapi_exit()</tt></b> next.
 The only exception is <b><tt>gsapi_run_string_continue()</tt></b>
 which will return <b><tt>e_NeedInput</tt></b> if all is well.
 See below for <a href="#return_codes">return codes</a>.
+<p>
+There is a 64 KB length limit on any buffer submitted to a 
+<tt>gsapi_run_*</tt> function for processing. If you have more
+than 65535 bytes of input then you must split it into smaller 
+pieces and submit each in a separate 
+<tt>gsapi_run_string_continue()</tt> call.
 </blockquote>
 
 <h3><a name="exit"></a><b><tt>gsapi_exit()</tt></b></h3>
@@ -417,28 +428,38 @@ are below.  Some more examples including other programming languages
 may be found at
 <a href="http://www.cs.wisc.edu/~ghost/doc/gsapi.htm">
 http://www.cs.wisc.edu/~ghost/doc/gsapi.htm</a>.
+
+<p>To use try out these examples in a development environment like Microsoft's
+developer tools or Metrowerks Codewarrior, create a new project, save the example
+source code as a <tt>.c</tt> file and add it, along with the Ghostscript dll or shared
+library. You will also need to make sure the Ghostscript headers are available, either
+by adding their location (the <tt>src</tt> directory in the Ghostscript source
+distribution) to the project's search path, or by copying ierrors.h and iapi.h into the
+same directory as the example source.</p>
   
 <h3>Example 1</h3>
 <pre>
 /* Example of using GS DLL as a ps2pdf converter.  */
 
+#if defined(_WIN32) && !defined(_Windows)
+# define _Windows
+#endif
 #ifdef _Windows
-/* Compile with:
- * cl -D_Windows -Isrc -Febin\ps2pdf.exe ps2pdf.c bin\gsdll32.lib
+/* add this source to a project with gsdll32.dll, or compile it directly with:
+ *   cl -D_Windows -Isrc -Febin\ps2pdf.exe ps2pdf.c bin\gsdll32.lib
  */
-#include &lt;windows.h&gt;
-#define GSDLLEXPORT __declspec(dllimport)
+# include &lt;windows.h&gt;
+# define GSDLLEXPORT __declspec(dllimport)
 #endif
 
-#include "errors.h"
+#include "ierrors.h"
 #include "iapi.h"
 
 gs_main_instance *minst;
 
 int main(int argc, char *argv[])
 {
-    int code;
-    int exit_code;
+    int code, code1;
     const char * gsargv[10];
     int gsargc;
     gsargv[0] = "ps2pdf";	/* actual value doesn't matter */
@@ -457,7 +478,9 @@ int main(int argc, char *argv[])
     if (code &lt; 0)
 	return 1;
     code = gsapi_init_with_args(minst, gsargc, gsargv);
-    gsapi_exit(minst);
+    code1 = gsapi_exit(minst);
+    if ((code == 0) || (code == e_Quit))
+	code = code1;
 
     gsapi_delete_instance(minst);
 
@@ -471,8 +494,18 @@ int main(int argc, char *argv[])
 <pre>
 /* Similar to command line gs */
 
+#if defined(_WIN32) && !defined(_Windows)
+# define _Windows
+#endif
+#ifdef _Windows
+/* Compile directly with:
+ *   cl -D_Windows -Isrc -Febin\gstest.exe gstest.c bin\gsdll32.lib
+ */
+# include &lt;windows.h&gt;
+# define GSDLLEXPORT __declspec(dllimport)
+#endif
 #include &lt;stdio.h&gt;
-#include "errors.h"
+#include "ierrors.h"
 #include "iapi.h"
 
 /* stdio functions */
@@ -514,7 +547,7 @@ const char start_string[] = "systemdict /start get exec\n";
 
 int main(int argc, char *argv[])
 {
-    int code;
+    int code, code1;
     int exit_code;
 
     code = gsapi_new_instance(&minst, NULL);
@@ -524,7 +557,9 @@ int main(int argc, char *argv[])
     code = gsapi_init_with_args(minst, argc, argv);
     if (code == 0)
 	code = gsapi_run_string(minst, start_string, 0, &exit_code);
-    gsapi_exit(minst);
+    code1 = gsapi_exit(minst);
+    if ((code == 0) || (code == e_Quit))
+	code = code1;
 
     gsapi_delete_instance(minst);
 
@@ -543,7 +578,7 @@ const char *command = "1 2 add == flush\n";
 
 int main(int argc, char *argv[])
 {
-    int code;
+    int code, code1;
     int exit_code;
 
     code = gsapi_new_instance(&minst, NULL);
@@ -559,7 +594,9 @@ int main(int argc, char *argv[])
 	gsapi_run_string_end(minst, 0, &exit_code);
     }
 
-    gsapi_exit(minst);
+    code1 = gsapi_exit(minst);
+    if ((code == 0) || (code == e_Quit))
+	code = code1;
 
     gsapi_delete_instance(minst);
 
@@ -574,6 +611,8 @@ int main(int argc, char *argv[])
 The Ghostscript library should have been compiled with a 
 thread safe run time library.
 Synchronisation of threads is entirely up to the caller.
+The exported <a href="#Exported_functions "><b><tt>gsapi_*()</tt></b></a>
+functions must be called from one thread only.
 
 <h2><a name="stdio"></a>Standard input and output</h2>
 <p>
@@ -665,7 +704,8 @@ You are then responsible for displaying this raster.
 Some examples are in 
 <b><tt><a href="../src/dwmain.c">dwmain.c</a></tt></b> (Windows),
 <b><tt><a href="../src/dpmain.c">dpmain.c</a></tt></b> (OS/2) and  
-<b><tt><a href="../src/dxmain.c">dxmain.c</a></tt></b> (X11/Linux).  
+<b><tt><a href="../src/dxmain.c">dxmain.c</a></tt></b> (X11/Linux), and  
+<b><tt><a href="../src/dmmain.c">dmmain.c</a></tt></b> (MacOS Classic or Carbon).  
 
 <p>
 
@@ -676,7 +716,7 @@ Some examples are in
 
 
 <p>
-<small>Copyright &copy; 2001 artofcode LLC.  All rights reserved.</small>
+<small>Copyright &copy; 2003 artofcode LLC.  All rights reserved.</small>
 
 <p>
 This software is provided AS-IS with no warranty, either express or
@@ -693,7 +733,7 @@ contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
 <p>
-<small>Ghostscript version 8.01, 30 January 2004
+<small>Ghostscript version 8.15, 22 September 2004
 
 
 <!-- [3.0 end visible trailer] ============================================= -->

@@ -1,4 +1,4 @@
-/* Copyright (C) 1999-2004, Ghostgum Software Pty Ltd.  All rights reserved.
+/* Copyright (C) 1999-2003, Ghostgum Software Pty Ltd.  All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
   under the terms of the GNU General Public License version 2
@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-// $Id: dwsetup.cpp,v 1.2 2004/02/14 22:20:05 atai Exp $
+// $Id: dwsetup.cpp,v 1.3 2005/04/18 12:05:57 Arabidopsis Exp $
 //
 //
 // This is the setup program for Win32 Ghostscript
@@ -45,10 +45,10 @@
 // uninstall log files are to be placed.  
 // Subsequent lines contain files to be copied (but not directories).
 // For example, filelist.txt might contain:
-//   GNU Ghostscript 8.01
-//   gs8.01
-//   gs8.01\bin\gsdll32.dll
-//   gs8.01\lib\gs_init.ps
+//   GNU Ghostscript 8.15
+//   gs8.15
+//   gs8.15\bin\gsdll32.dll
+//   gs8.15\lib\gs_init.ps
 // The file fontlist.txt might contain:
 //   GNU Ghostscript Fonts
 //   fonts
@@ -758,7 +758,11 @@ install_prog()
 	strcat(szLIB, cinst.GetMainDir());
 	strcat(szLIB, "\\lib;");
 	strcat(szLIB, g_szTargetDir);
-	strcat(szLIB, "\\fonts");
+	strcat(szLIB, "\\fonts;");
+	strcat(szLIB, g_szTargetDir);
+	strcat(szLIB, "\\");
+	strcat(szLIB, cinst.GetMainDir());
+	strcat(szLIB, "\\Resource");
 	if (!cinst.UpdateRegistryValue(regkey1, regkey2, "GS_LIB", szLIB)) {
 		gs_addmess("Failed to add registry value\n");
 		return FALSE;

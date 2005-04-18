@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gscscie.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gscscie.c,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* CIE color space management */
 #include "math_.h"
 #include "gx.h"
@@ -36,6 +36,7 @@
 #include "gxdevice.h"		/* for gxcmap.h */
 #include "gxcmap.h"
 #include "gzstate.h"
+#include "stream.h"
 
 /* ---------------- Color space definition ---------------- */
 
@@ -54,6 +55,7 @@ gs_private_st_ptrs1(st_color_space_CIEDEFG, gs_base_color_space,
      "gs_color_space(CIEDEFG)", cs_CIEDEFG_enum_ptrs, cs_CIEDEFG_reloc_ptrs,
 		    params.defg);
 private cs_proc_adjust_cspace_count(gx_adjust_cspace_CIEDEFG);
+private cs_proc_serialize(gx_serialize_CIEDEFG);
 const gs_color_space_type gs_color_space_type_CIEDEFG = {
     gs_color_space_index_CIEDEFG, true, true,
     &st_color_space_CIEDEFG, gx_num_components_4,
@@ -63,7 +65,8 @@ const gs_color_space_type gs_color_space_type_CIEDEFG = {
     gx_concretize_CIEDEFG, NULL,
     gx_default_remap_color, gx_install_CIE,
     gx_spot_colors_set_overprint,
-    gx_adjust_cspace_CIEDEFG, gx_no_adjust_color_count
+    gx_adjust_cspace_CIEDEFG, gx_no_adjust_color_count,
+    gx_serialize_CIEDEFG
 };
 
 /* CIEBasedDEF */
@@ -71,6 +74,7 @@ gs_private_st_ptrs1(st_color_space_CIEDEF, gs_base_color_space,
 	"gs_color_space(CIEDEF)", cs_CIEDEF_enum_ptrs, cs_CIEDEF_reloc_ptrs,
 		    params.def);
 private cs_proc_adjust_cspace_count(gx_adjust_cspace_CIEDEF);
+private cs_proc_serialize(gx_serialize_CIEDEF);
 const gs_color_space_type gs_color_space_type_CIEDEF = {
     gs_color_space_index_CIEDEF, true, true,
     &st_color_space_CIEDEF, gx_num_components_3,
@@ -80,7 +84,8 @@ const gs_color_space_type gs_color_space_type_CIEDEF = {
     gx_concretize_CIEDEF, NULL,
     gx_default_remap_color, gx_install_CIE,
     gx_spot_colors_set_overprint,
-    gx_adjust_cspace_CIEDEF, gx_no_adjust_color_count
+    gx_adjust_cspace_CIEDEF, gx_no_adjust_color_count,
+    gx_serialize_CIEDEF
 };
 
 /* CIEBasedABC */
@@ -88,6 +93,7 @@ gs_private_st_ptrs1(st_color_space_CIEABC, gs_base_color_space,
 	"gs_color_space(CIEABC)", cs_CIEABC_enum_ptrs, cs_CIEABC_reloc_ptrs,
 		    params.abc);
 private cs_proc_adjust_cspace_count(gx_adjust_cspace_CIEABC);
+private cs_proc_serialize(gx_serialize_CIEABC);
 const gs_color_space_type gs_color_space_type_CIEABC = {
     gs_color_space_index_CIEABC, true, true,
     &st_color_space_CIEABC, gx_num_components_3,
@@ -97,7 +103,8 @@ const gs_color_space_type gs_color_space_type_CIEABC = {
     gx_concretize_CIEABC, NULL,
     gx_remap_CIEABC, gx_install_CIE,
     gx_spot_colors_set_overprint,
-    gx_adjust_cspace_CIEABC, gx_no_adjust_color_count
+    gx_adjust_cspace_CIEABC, gx_no_adjust_color_count,
+    gx_serialize_CIEABC
 };
 
 /* CIEBasedA */
@@ -105,6 +112,7 @@ gs_private_st_ptrs1(st_color_space_CIEA, gs_base_color_space,
 	      "gs_color_space(CIEA)", cs_CIEA_enum_ptrs, cs_CIEA_reloc_ptrs,
 		    params.a);
 private cs_proc_adjust_cspace_count(gx_adjust_cspace_CIEA);
+private cs_proc_serialize(gx_serialize_CIEA);
 const gs_color_space_type gs_color_space_type_CIEA = {
     gs_color_space_index_CIEA, true, true,
     &st_color_space_CIEA, gx_num_components_1,
@@ -114,7 +122,8 @@ const gs_color_space_type gs_color_space_type_CIEA = {
     gx_concretize_CIEA, NULL,
     gx_default_remap_color, gx_install_CIE,
     gx_spot_colors_set_overprint,
-    gx_adjust_cspace_CIEA, gx_no_adjust_color_count
+    gx_adjust_cspace_CIEA, gx_no_adjust_color_count,
+    gx_serialize_CIEA
 };
 
 private gs_color_space rgb_cs, cmyk_cs;
@@ -131,7 +140,7 @@ gx_concrete_space_CIE(const gs_color_space * pcs, const gs_imager_state * pis)
 	gs_cspace_init_DeviceRGB(&rgb_cs);  /* idempotent initialization */
         return &rgb_cs;
     } else {			/* pcie->RenderTable.lookup.m == 4 */
-	gs_cspace_init_DeviceCMYK(&rgb_cs); /* idempotent initialization */
+	gs_cspace_init_DeviceCMYK(&cmyk_cs); /* idempotent initialization */
 	return &cmyk_cs;
     }
 }
@@ -364,4 +373,153 @@ gs_cie_defx_set_lookup_table(gs_color_space * pcspace, int *pdims,
     plktblp->dims[2] = pdims[2];
     plktblp->table = ptable;
     return 0;
+}
+
+/* ---------------- Serialization. -------------------------------- */
+
+private int
+gx_serialize_cie_cache(const cie_cache_floats *c, stream * s)
+{ /* p->DecodeA : */
+    const uint cache_size = count_of(c->values);
+    uint n;
+    int code;
+
+    code = sputs(s, (const byte *)&c->params.is_identity, sizeof(c->params.is_identity), &n);
+    if (c->params.is_identity)
+	return 0;
+    code = sputs(s, (const byte *)&cache_size, sizeof(cache_size), &n);
+    if (code < 0)
+	return code;
+    return sputs(s, (const byte *)c->values, sizeof(c->values), &n);
+}
+
+int 
+gx_serialize_cie_common_elements(const gs_color_space * pcs, stream * s)
+{
+    const gs_cie_a * p = pcs->params.a;
+    uint n, k;
+    int code = gx_serialize_cspace_type(pcs, s);
+
+    if (code < 0)
+	return code;
+    code = sputs(s, (const byte *)&p->common.RangeLMN, 
+			sizeof(p->common.RangeLMN), &n);
+    if (code < 0)
+	return code;
+    for (k = 0; k < 3 && code >= 0; k++)
+	code = gx_serialize_cie_cache(&p->common.caches.DecodeLMN[k].floats, s);
+    if (code < 0)
+	return code;
+    code = sputs(s, (const byte *)&p->common.MatrixLMN, 
+			sizeof(p->common.MatrixLMN), &n);
+    if (code < 0)
+	return code;
+    return sputs(s, (const byte *)&p->common.points, 
+			sizeof(p->common.points), &n);
+}
+
+private int 
+gx_serialize_CIEA(const gs_color_space * pcs, stream * s)
+{
+    const gs_cie_a * p = pcs->params.a;
+    uint n;
+    int code = gx_serialize_cie_common_elements(pcs, s);
+
+    if (code < 0)
+	return code;
+    code = sputs(s, (const byte *)&p->RangeA, sizeof(p->RangeA), &n);
+    if (code < 0)
+	return code;
+    code = gx_serialize_cie_cache(&p->caches.DecodeA.floats, s);
+    if (code < 0)
+	return code;
+    return sputs(s, (const byte *)&p->MatrixA, sizeof(p->MatrixA), &n);
+}
+
+private int 
+gx_serialize_CIEABC(const gs_color_space * pcs, stream * s)
+{
+    const gs_cie_abc * p = pcs->params.abc;
+    uint n, k;
+    int code = gx_serialize_cie_common_elements(pcs, s);
+
+    if (code < 0)
+	return code;
+    code = sputs(s, (const byte *)&p->RangeABC, sizeof(p->RangeABC), &n);
+    if (code < 0)
+	return code;
+    code = sputs(s, (const byte *)&p->caches.skipABC, sizeof(p->caches.skipABC), &n);
+    if (code < 0)
+	return code;
+    if (p->caches.skipABC)
+	return 0;
+    for (k = 0; k < 3 && code >= 0; k++)
+	code = gx_serialize_cie_cache(&p->caches.DecodeABC.caches[k].floats, s);
+    if (code < 0)
+	return code;
+    return sputs(s, (const byte *)&p->MatrixABC, sizeof(p->MatrixABC), &n);
+}
+
+private int 
+gx_serialize_lookup_table(const gx_color_lookup_table * t, stream * s)
+{
+    uint n;
+    int code = sputs(s, (const byte *)&t->n, sizeof(t->n), &n);
+
+    if (code < 0)
+	return code;
+    code = sputs(s, (const byte *)&t->dims[0], sizeof(t->dims[0]) * t->n, &n);
+    if (code < 0)
+	return code;
+    code = sputs(s, (const byte *)&t->m, sizeof(t->m), &n);
+    if (code < 0)
+	return code;
+    code = sputs(s, (const byte *)&t->table->size, sizeof(t->table->size), &n);
+    if (code < 0)
+	return code;
+    return sputs(s, (const byte *)&t->table->data, t->table->size, &n);
+}
+
+private int 
+gx_serialize_CIEDEF(const gs_color_space * pcs, stream * s)
+{
+    const gs_cie_def * p = pcs->params.def;
+    uint n, k;
+    int code = gx_serialize_cie_common_elements(pcs, s);
+
+    if (code < 0)
+	return code;
+    code = sputs(s, (const byte *)&p->RangeDEF, sizeof(p->RangeDEF), &n);
+    if (code < 0)
+	return code;
+    for (k = 0; k < 3 && code >= 0; k++)
+	code = gx_serialize_cie_cache(&p->caches_def.DecodeDEF[k].floats, s);
+    if (code < 0)
+	return code;
+    code = sputs(s, (const byte *)&p->RangeHIJ, sizeof(p->RangeHIJ), &n);
+    if (code < 0)
+	return code;
+    return gx_serialize_lookup_table(&p->Table, s);
+}
+
+private int 
+gx_serialize_CIEDEFG(const gs_color_space * pcs, stream * s)
+{
+    const gs_cie_defg * p = pcs->params.defg;
+    uint n, k;
+    int code = gx_serialize_cie_common_elements(pcs, s);
+
+    if (code < 0)
+	return code;
+    code = sputs(s, (const byte *)&p->RangeDEFG, sizeof(p->RangeDEFG), &n);
+    if (code < 0)
+	return code;
+    for (k = 0; k < 3 && code >= 0; k++)
+	code = gx_serialize_cie_cache(&p->caches_defg.DecodeDEFG[k].floats, s);
+    if (code < 0)
+	return code;
+    code = sputs(s, (const byte *)&p->RangeHIJK, sizeof(p->RangeHIJK), &n);
+    if (code < 0)
+	return code;
+    return gx_serialize_lookup_table(&p->Table, s);
 }

@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gscdevn.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gscdevn.h,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Client interface to DeviceN color */
 
 #ifndef gscdevn_INCLUDED
@@ -85,5 +85,9 @@ gs_function_t *gs_cspace_get_devn_function(const gs_color_space *pcspace);
 /* Map a DeviceN color using a Function. */
 int map_devn_using_function(const float *in, float *out,
 			const gs_imager_state *pis, void *data);
+
+/* Serialize a DeviceN map. */
+int gx_serialize_device_n_map(const gs_color_space * pcs, gs_device_n_map * m, stream * s);
+
 
 #endif /* gscdevn_INCLUDED */

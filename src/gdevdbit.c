@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gdevdbit.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/*$Id: gdevdbit.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Default device bitmap copying implementation */
 #include "gx.h"
 #include "gpcheck.h"
@@ -77,7 +77,7 @@ gx_default_copy_mono(gx_device * dev, const byte * data,
 	invert = true;
 	color = zero;
     }
-    color_set_pure(&devc, color);
+    set_nonclient_dev_color(&devc, color);
     return gx_dc_default_fill_masked
 	(&devc, data, dx, raster, id, x, y, w, h, dev, rop3_T, invert);
 }
@@ -115,6 +115,14 @@ gx_default_copy_color(gx_device * dev, const byte * data,
 	    if (depth >= 8) {
 		color = *ptr++;
 		switch (depth) {
+		    case 64:
+			color = (color << 8) + *ptr++;
+		    case 56:
+			color = (color << 8) + *ptr++;
+		    case 48:
+			color = (color << 8) + *ptr++;
+		    case 40:
+			color = (color << 8) + *ptr++;
 		    case 32:
 			color = (color << 8) + *ptr++;
 		    case 24:

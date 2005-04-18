@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gxshade.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gxshade.c,v 1.3 2005/04/18 12:05:59 Arabidopsis Exp $ */
 /* Shading rendering support */
 #include "math_.h"
 #include "gx.h"
@@ -321,6 +321,10 @@ top:
 	else
 	    /****** WRONG FOR MULTI-PLANE HALFTONES ******/
 	    num_colors *= pis->dev_ht->components[0].corder.num_levels;
+    }
+    if (psh->head.type == 2 || psh->head.type == 3) {
+	max_error *= 0.25;
+	num_colors *= 2;
     }
     if (max_error < 1.0 / num_colors)
 	max_error = 1.0 / num_colors;

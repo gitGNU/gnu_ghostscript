@@ -22,12 +22,12 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: idparam.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: idparam.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Utilities for getting parameters out of dictionaries. */
 #include "memory_.h"
 #include "string_.h"		/* for strlen */
 #include "ghost.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "gsmatrix.h"		/* for dict_matrix_param */
 #include "gsuid.h"
 #include "idict.h"

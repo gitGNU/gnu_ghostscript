@@ -13,7 +13,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gslp.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
+% $Id: gslp.ps,v 1.3 2005/04/18 12:06:08 Arabidopsis Exp $
 % gslp.ps - format and print text
 
 % This utility provides functionality approximately equivalent to the Unix
@@ -479,7 +479,7 @@ lpdict begin
    $error /recordstacks false put
 
 % Initialize for the first page.
-   /lbuf 1000 string def
+   /lbuf 64000 string def
    /pindex 1 def
    beginpage
 
@@ -643,7 +643,7 @@ lpdict begin
    ifelse
  } bind def
 
-/lpcstring 100 string def
+/lpcstring 8192 string def
 
 end
 

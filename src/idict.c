@@ -22,13 +22,13 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: idict.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: idict.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Dictionary implementation */
 #include "math_.h"		/* for frexp */
 #include "string_.h"		/* for strlen */
 #include "ghost.h"
 #include "gxalloc.h"		/* for accessing masks */
-#include "errors.h"
+#include "ierrors.h"
 #include "imemory.h"
 #include "idebug.h"		/* for debug_print_name */
 #include "inamedef.h"
@@ -321,7 +321,7 @@ dict_find(const ref * pdref, const ref * pkey,
 	 * Make sure that equal reals and integers hash the same.
 	 */
 	{
-	    int expt;
+	    int expt, i;
 	    double mant = frexp(pkey->value.realval, &expt);
 	    /*
 	     * The value is mant * 2^expt, where 0.5 <= mant < 1,
@@ -329,9 +329,10 @@ dict_find(const ref * pdref, const ref * pkey,
 	     */
 
 	    if (expt < sizeof(long) * 8 || pkey->value.realval == min_long)
-		hash = (uint)(int)pkey->value.realval * 30503;
+		i = (int)pkey->value.realval;
 	    else
-		hash = (uint)(int)(mant * min_long) * 30503;
+		i = (int)(mant * min_long); /* MSVC 6.00.8168.0 cannot compile this */
+	    hash = (uint)i * 30503;         /*   with -O2 as a single expression    */
 	}
 	goto ih;
     case t_integer:

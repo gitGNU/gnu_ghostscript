@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevsvga.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
+/* $Id: gdevsvga.c,v 1.3 2005/04/18 12:06:01 Arabidopsis Exp $ */
 /* SuperVGA display drivers */
 #include "memory_.h"
 #include "gconfigv.h"		/* for USE_ASM */
@@ -186,13 +186,13 @@ svga_close(gx_device * dev)
 /* for compatibility with the older display modes: */
 /* these are indexed as 0.0.R0.G0.B0.R1.G1.B1. */
 gx_color_index
-svga_map_rgb_color(gx_device * dev, gx_color_value r, gx_color_value g,
-		   gx_color_value b)
+svga_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 {
     ushort rgb;
+    gx_color_value r = cv[0], g = cv[1], b = cv[2];
 
     if (fb_dev->fixed_colors) {
-	gx_color_index ci = pc_8bit_map_rgb_color(dev, r, g, b);
+	gx_color_index ci = pc_8bit_map_rgb_color(dev, cv);
 
 	/* Here is where we should permute the index to match */
 	/* the old color map... but we don't yet. */

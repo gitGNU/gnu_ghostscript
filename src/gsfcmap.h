@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsfcmap.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsfcmap.h,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $ */
 /* Public interface to CMaps */
 
 #ifndef gsfcmap_INCLUDED
@@ -61,5 +61,16 @@ int gs_cmap_create_char_identity(gs_cmap_t **ppcmap, int num_bytes,
 int gs_cmap_decode_next(const gs_cmap_t *pcmap, const gs_const_string *str,
 			uint *pindex, uint *pfidx,
 			gs_char *pchr, gs_glyph *pglyph);
+
+/*
+ * Allocate and initialize a ToUnicode CMap.
+ */
+int gs_cmap_ToUnicode_alloc(gs_memory_t *mem, int id, int num_codes, int key_size, 
+			    gs_cmap_t **ppcmap);
+
+/*
+ * Write a code pair to ToUnicode CMap.
+ */
+void gs_cmap_ToUnicode_add_pair(gs_cmap_t *pcmap, int code0, int code2);
 
 #endif /* gsfcmap_INCLUDED */

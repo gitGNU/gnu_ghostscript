@@ -22,9 +22,9 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: opcheck.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: opcheck.h,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Definitions for operator operand checking */
-/* Requires ialloc.h (for imemory), iref.h, errors.h */
+/* Requires ialloc.h (for imemory), iref.h, ierrors.h */
 
 #ifndef opcheck_INCLUDED
 #  define opcheck_INCLUDED

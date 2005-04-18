@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxdevndi.c,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/*$Id: gxdevndi.c,v 1.2 2005/04/18 12:06:05 Arabidopsis Exp $ */
 #include "gx.h"
 #include "gsstruct.h"
 #include "gsdcolor.h"
@@ -175,8 +175,8 @@ gx_render_device_DeviceN(frac * pcolor,
 	    unsigned long nshades = hsize * max_value + 1;
 	    long shade = (invert ? frac_1 - pcolor[i] : pcolor[i]) *
 				nshades / (frac_1_long + 1);
-	    int_color[i] = (invert ? hsize - shade : shade) / hsize;
-	    l_color[i] = (invert ? hsize - shade : shade) % hsize;
+	    int_color[i] = (invert ? nshades - 1 - shade : shade) / hsize;
+	    l_color[i] = (invert ? nshades - 1 - shade : shade) % hsize;
 	    dither_check |= l_color[i];
 	}
     } else {

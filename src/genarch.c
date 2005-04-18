@@ -1,4 +1,4 @@
-/* Copyright (C) 1989, 1995, 1996, 1998, 1999, 2002 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 1989-2004 artofcode LLC. All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
   under the terms of the GNU General Public License version 2
@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: genarch.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
+/* $Id: genarch.c,v 1.3 2005/04/18 12:06:01 Arabidopsis Exp $ */
 /*
  * Generate a header file (arch.h) with parameters
  * reflecting the machine architecture and compiler characteristics.
@@ -173,6 +173,7 @@ main(int argc, char *argv[])
 
     section(f, "Scalar sizes");
 
+    define_int(f, "ARCH_LOG2_SIZEOF_CHAR", ilog2(size_of(char)));
     define_int(f, "ARCH_LOG2_SIZEOF_SHORT", ilog2(size_of(short)));
     define_int(f, "ARCH_LOG2_SIZEOF_INT", ilog2(size_of(int)));
     define_int(f, "ARCH_LOG2_SIZEOF_LONG", ilog2(size_of(long)));
@@ -227,6 +228,7 @@ main(int argc, char *argv[])
      */
     {
 #define MAX_BLOCK (1 << 22)	/* max 4M cache */
+#define MAX_NREPS (1 << 10)	/* limit the number of reps we try */
 	static char buf[MAX_BLOCK];
 	int bsize = 1 << 10;
 	int nreps = 1;
@@ -238,10 +240,10 @@ main(int argc, char *argv[])
 	 * long enough to exceed the likely uncertainty.
 	 */
 
-	while ((t = time_clear(buf, bsize, nreps)) == 0)
+	while (nreps < MAX_NREPS && (t = time_clear(buf, bsize, nreps)) == 0)
 	    nreps <<= 1;
 	t_eps = t;
-	while ((t = time_clear(buf, bsize, nreps)) < t_eps * 10)
+	while (nreps < MAX_NREPS && (t = time_clear(buf, bsize, nreps)) < t_eps * 10)
 	    nreps <<= 1;
 
 	/*

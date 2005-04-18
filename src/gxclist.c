@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gxclist.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/*$Id: gxclist.c,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $ */
 /* Command list document- and page-level code. */
 #include "memory_.h"
 #include "string_.h"
@@ -139,7 +139,10 @@ const gx_device_procs gs_clist_device_procs = {
     gx_forward_get_color_mapping_procs,
     gx_forward_get_color_comp_index,
     gx_forward_encode_color,
-    gx_forward_decode_color
+    gx_forward_decode_color,
+    gx_default_pattern_manage,
+    gx_default_fill_rectangle_hl_color,
+    gx_default_include_color_space
 };
 
 /* ------ Define the command set and syntax ------ */

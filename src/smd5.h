@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: smd5.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: smd5.h,v 1.3 2005/04/18 12:05:59 Arabidopsis Exp $ */
 /* Definitions for MD5Encode filter */
 /* Requires scommon.h; strimpl.h if any templates are referenced */
 
@@ -44,5 +44,7 @@ typedef struct stream_MD5E_state_s {
   gs_private_st_simple(st_MD5E_state, stream_MD5E_state,\
     "MD5Encode state")
 extern const stream_template s_MD5E_template;
+
+stream *s_MD5E_make_stream(gs_memory_t *mem, byte *digest, int digest_size);
 
 #endif /* smd5_INCLUDED */

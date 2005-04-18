@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>The interface between Ghostscript and device drivers</title>
-<!-- $Id: Drivers.htm,v 1.2 2004/02/14 22:20:03 atai Exp $ -->
+<!-- $Id: Drivers.htm,v 1.3 2005/04/18 12:06:12 Arabidopsis Exp $ -->
 <!-- Originally: drivers.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -1144,8 +1144,9 @@ The <b><tt>map_rgb_color</tt></b>, <b><tt>map_color_rgb</tt></b>, and
 in the device procedure list for backward compatibility. See the
 <b><tt>encode_color</tt></b> and <b><tt>decode_color</tt></b> procedures
 below. To insure that older device drivers are changed to use the new
-<b><tt>encode_color</tt></b> and <b><tt>decode_color</tt></b> procedures.
-The parameters for the older procedures have been changed to
+<b><tt>encode_color</tt></b> and <b><tt>decode_color</tt></b> 
+procedures,
+the parameters for the older procedures have been changed to
 match the new procedures.  To minimize changes in devices that have
 already been written, the map_rgb_color and map_cmyk_color routines
 are used as the default value for the encode_color routine.  The
@@ -1426,9 +1427,9 @@ one bit.  All the bits for each pixel are grouped together (this is
 sometimes called "chunky" or "Z" format).  For <b><tt>copy_color</tt></b>,
 the number of bits per pixel is given by the
 <b><tt>color_info.depth</tt></b> parameter in the device structure: the
-legal values are 1, 2, 4, 8, 16, 24, or 32.  The pixel values are device
-color codes (that is, whatever it is that <b><tt>encode_color</tt></b>
-returns).
+legal values are 1, 2, 4, 8, 16, 24, 32, 40, 48, 56, or 64.  The pixel
+values are device color codes (that is, whatever it is that
+<b><tt>encode_color</tt></b> returns).
 
 <dl>
 <dt><b><tt>int (*copy_color)(gx_device&nbsp;*,
@@ -2871,7 +2872,7 @@ contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
 <p>
-<small>Ghostscript version 8.01, 30 January 2004
+<small>Ghostscript version 8.15, 22 September 2004
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

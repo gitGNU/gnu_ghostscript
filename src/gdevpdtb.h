@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpdtb.h,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: gdevpdtb.h,v 1.2 2005/04/18 12:05:58 Arabidopsis Exp $ */
 /* BaseFont structure and API for pdfwrite */
 
 #ifndef gdevpdtb_INCLUDED
@@ -82,7 +82,8 @@ typedef struct pdf_base_font_s pdf_base_font_t;
  * a complete one, and adding glyphs or Encoding entries is not allowed.
  */
 int pdf_base_font_alloc(gx_device_pdf *pdev, pdf_base_font_t **ppbfont,
-			gs_font_base *font, bool complete);
+		    gs_font_base *font, const gs_matrix *orig_matrix, 
+		    bool is_standard, bool orig_name);
 
 /*
  * Return a reference to the name of a base font.  This name is guaranteed
@@ -92,10 +93,20 @@ int pdf_base_font_alloc(gx_device_pdf *pdev, pdf_base_font_t **ppbfont,
 gs_string *pdf_base_font_name(pdf_base_font_t *pbfont);
 
 /*
- * Return the (copied, subset) font associated with a base font.
+ * Return the (copied, subset or complete) font associated with a base font.
  * This procedure probably shouldn't exist....
  */
-gs_font_base *pdf_base_font_font(const pdf_base_font_t *pbfont);
+gs_font_base *pdf_base_font_font(const pdf_base_font_t *pbfont, bool complete);
+
+/*
+ * Check for subset font.
+ */
+bool pdf_base_font_is_subset(const pdf_base_font_t *pbfont);
+
+/*
+ * Drop the copied complete font associated with a base font.
+ */
+void pdf_base_font_drop_complete(pdf_base_font_t *pbfont);
 
 /*
  * Copy a glyph (presumably one that was just used) into a saved base
@@ -107,9 +118,18 @@ int pdf_base_font_copy_glyph(pdf_base_font_t *pbfont, gs_glyph glyph,
 			     gs_font_base *font);
 
 /*
- * Determine whether a copied font should be subsetted.  Note that if the
- * font is subsetted, this procedure modifies the copied font by adding the
- * XXXXXX+ font name prefix and clearing the UID.
+ * Determine whether a font is a subset font by examining the name.
+ */
+bool pdf_has_subset_prefix(const byte *str, uint size);
+
+/*
+ * Add the XXXXXX+ prefix for a subset font.
+ */
+int pdf_add_subset_prefix(const gx_device_pdf *pdev, gs_string *pstr, 
+			byte *used, int count);
+
+/*
+ * Determine whether a copied font should be subsetted.
  */
 bool pdf_do_subset_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont, 
 			gs_id rid);
@@ -135,5 +155,10 @@ int pdf_write_CharSet(gx_device_pdf *pdev, pdf_base_font_t *pbfont);
  */
 int pdf_write_CIDSet(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
 		     long *pcidset_id);
+
+/*
+ * Check whether a base font is standard.
+ */
+bool pdf_is_standard_font(pdf_base_font_t *bfont);
 
 #endif /* gdevpdtb_INCLUDED */

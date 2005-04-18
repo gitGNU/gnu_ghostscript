@@ -22,12 +22,12 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: iparam.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: iparam.c,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* Interpreter implementations of parameter dictionaries */
 #include "memory_.h"
 #include "string_.h"
 #include "ghost.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "oper.h"		/* for check_type */
 #include "opcheck.h"
 #include "ialloc.h"

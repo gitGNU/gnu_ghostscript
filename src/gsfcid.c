@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsfcid.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsfcid.c,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Support for CID-keyed fonts */
 #include "memory_.h"
 #include "gx.h"
@@ -195,5 +195,5 @@ gs_cid0_indexed_font(const gs_font *font, int fidx)
 	eprintf1("Unexpected font type: %d\n", font->FontType);
         return 0;
     }
-    return (pfont->cidata.FDArray[fidx]);
+    return (const gs_font*) (pfont->cidata.FDArray[fidx]);
 }

@@ -22,11 +22,12 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpsf2.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
+/* $Id: gdevpsf2.c,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Write an embedded CFF font with either Type 1 or Type 2 CharStrings */
 #include "math_.h"		/* for fabs */
 #include "memory_.h"
 #include "gx.h"
+#include "gxarith.h"
 #include "gscencs.h"
 #include "gserrors.h"
 #include "gsccode.h"
@@ -97,7 +98,7 @@ cff_string_table_init(cff_string_table_t *pcst, cff_string_item_t *items,
     pcst->items = items;
     pcst->count = 0;
     pcst->size = size;
-    while (size % reprobe == 0 && reprobe != 1)
+    while (reprobe != 1 && igcd(size, reprobe) != 1)
 	reprobe = (reprobe * 2 + 1) % size;
     pcst->total = 0;
     pcst->reprobe = reprobe;
@@ -126,7 +127,7 @@ cff_string_index(cff_string_table_t *pcst, const byte *data, uint size,
 {
     /****** FAILS IF TABLE FULL AND KEY MISSING ******/
     int j = (size == 0 ? 0 : data[0] * 23 + data[size - 1] * 59 + size);
-    int index;
+    int index, c = 0;
 
     while ((index = pcst->items[j %= pcst->size].index1) != 0) {
 	--index;
@@ -136,6 +137,8 @@ cff_string_index(cff_string_table_t *pcst, const byte *data, uint size,
 	    return 0;
 	}
 	j += pcst->reprobe;
+	if (++c >= pcst->size)
+	    break;
     }
     if (!enter)
 	return_error(gs_error_undefined);
@@ -936,9 +939,11 @@ cff_write_Subrs(cff_writer_t *pcw, uint subrs_count, uint subrs_size,
 private uint
 cff_Encoding_size(int num_encoded, int num_encoded_chars)
 {
-    return 2 + num_encoded +
-	(num_encoded_chars > num_encoded ?
-	 1 + (num_encoded_chars - num_encoded) * 3 : 0);
+    int n = min(num_encoded, 255);
+
+    return 2 + n +
+	(num_encoded_chars > n ?
+	 1 + (num_encoded_chars - n) * 3 : 0);
 }
 
 private int
@@ -947,21 +952,13 @@ cff_write_Encoding(cff_writer_t *pcw, cff_glyph_subset_t *pgsub)
     stream *s = pcw->strm;
     /* This procedure is only used for Type 1 / Type 2 fonts. */
     gs_font_type1 *pfont = (gs_font_type1 *)pcw->pfont;
-    int num_enc = pgsub->num_encoded, num_enc_chars = pgsub->num_encoded_chars;
-    byte used[256], index[256], supplement[256];
+    byte used[255], index[255], supplement[256];
+    int num_enc = min(pgsub->num_encoded, sizeof(index));
+    int num_enc_chars = pgsub->num_encoded_chars;
     int nsupp = 0;
     int j;
 
-    sputc(s, (byte)(num_enc_chars > num_enc ? 0x80 : 0));
     memset(used, 0, num_enc);
-    if (num_enc == 256) {
-	/*
-	 * The count of encoded characters is only a single byte, so we
-	 * have to use a supplement for the last character.
-	 */
-	/****** NYI ******/
-    }
-    sputc(s, (byte)num_enc);
     for (j = 0; j < 256; ++j) {
 	gs_glyph glyph = pfont->procs.encode_char((gs_font *)pfont,
 						  (gs_char)j,
@@ -971,14 +968,16 @@ cff_write_Encoding(cff_writer_t *pcw, cff_glyph_subset_t *pgsub)
 	if (glyph == gs_no_glyph || glyph == pgsub->glyphs.notdef)
 	    continue;
 	i = psf_sorted_glyphs_index_of(pgsub->glyphs.subset_data + 1,
-				       num_enc, glyph);
+				       pgsub->num_encoded, glyph);
 	if (i < 0)
 	    continue;		/* encoded but not in subset */
-	if (used[i])
+	if (i >= sizeof(used) || used[i])
 	    supplement[nsupp++] = j;
 	else
 	    index[i] = j, used[i] = 1;
     }
+    sputc(s, (byte)(nsupp ? 0x80 : 0));
+    sputc(s, (byte)num_enc);
 #ifdef DEBUG
     if (nsupp != num_enc_chars - num_enc)
 	lprintf3("nsupp = %d, num_enc_chars = %d, num_enc = %d\n",
@@ -1126,15 +1125,14 @@ psf_write_type2_font(stream *s, gs_font_type1 *pfont, int options,
     gs_font_base *const pbfont = (gs_font_base *)pfont;
     cff_writer_t writer;
     cff_glyph_subset_t subset;
-    cff_string_item_t std_string_items[500]; /* 391 entries used */
-    /****** HOW TO DETERMINE THE SIZE OF STRINGS? ******/
-    cff_string_item_t string_items[500 /* character names */ +
-				   40 /* misc. values */];
+    cff_string_item_t *std_string_items;
+    cff_string_item_t *string_items;
     gs_const_string font_name;
     stream poss;
     uint charstrings_count, charstrings_size;
     uint subrs_count, subrs_size;
     uint gsubrs_count, gsubrs_size, encoding_size, charset_size;
+    uint number_of_glyphs = 0, number_of_strings;
     /*
      * Set the offsets and sizes to the largest reasonable values
      * (see below).
@@ -1154,10 +1152,26 @@ psf_write_type2_font(stream *s, gs_font_type1 *pfont, int options,
     gs_glyph glyph;
     long start_pos;
     uint offset;
-    int code =
-	psf_get_type1_glyphs(&subset.glyphs, pfont, subset_glyphs,
-			      subset_size);
+    int code;
 
+    /* Allocate the string tables. */
+    psf_enumerate_glyphs_begin(&genum, (gs_font *)pfont,
+			       NULL, 0, GLYPH_SPACE_NAME);
+    while ((code = psf_enumerate_glyphs_next(&genum, &glyph)) != 1)
+	number_of_glyphs++;
+    subset.glyphs.subset_data = (gs_glyph *)gs_alloc_bytes(pfont->memory,
+		    number_of_glyphs * sizeof(glyph), "psf_write_type2_font");
+    number_of_strings = number_of_glyphs + MAX_CFF_MISC_STRINGS;
+    std_string_items = (cff_string_item_t *)gs_alloc_bytes(pfont->memory,
+		    (MAX_CFF_STD_STRINGS + number_of_strings) * sizeof(cff_string_item_t), 
+		    "psf_write_type2_font");
+    if (std_string_items == NULL || subset.glyphs.subset_data == NULL)
+	return_error(gs_error_VMerror);
+    string_items = std_string_items + MAX_CFF_STD_STRINGS;
+
+    /* Get subset glyphs. */
+    code = psf_get_type1_glyphs(&subset.glyphs, pfont, subset_glyphs,
+			      subset_size);
     if (code < 0)
 	return code;
     if (subset.glyphs.notdef == gs_no_glyph)
@@ -1211,7 +1225,7 @@ psf_write_type2_font(stream *s, gs_font_type1 *pfont, int options,
 	    psf_enumerate_glyphs_reset(&genum);
 	    while ((code = psf_enumerate_glyphs_next(&genum, &glyph)) != 1)
 		if (code == 0) {
-		    if (num_glyphs == countof(subset.glyphs.subset_data))
+		    if (num_glyphs == number_of_glyphs)
 			return_error(gs_error_limitcheck);
 		    subset.glyphs.subset_data[num_glyphs++] = glyph;
 		}
@@ -1256,7 +1270,7 @@ psf_write_type2_font(stream *s, gs_font_type1 *pfont, int options,
 
     /* Initialize the string tables. */
     cff_string_table_init(&writer.std_strings, std_string_items,
-			  countof(std_string_items));
+			  MAX_CFF_STD_STRINGS);
     for (j = 0; (glyph = gs_c_known_encode((gs_char)j,
 				ENCODING_INDEX_CFFSTRINGS)) != gs_no_glyph;
 	 ++j) {
@@ -1267,8 +1281,7 @@ psf_write_type2_font(stream *s, gs_font_type1 *pfont, int options,
 	cff_string_index(&writer.std_strings, str.data, str.size, true,
 			 &ignore);
     }
-    cff_string_table_init(&writer.strings, string_items,
-			  countof(string_items));
+    cff_string_table_init(&writer.strings, string_items, number_of_strings);
 
     /* Enter miscellaneous strings in the string table. */
     cff_write_Top_font(&writer, 0, 0, 0, 0, 0);
@@ -1320,8 +1333,10 @@ psf_write_type2_font(stream *s, gs_font_type1 *pfont, int options,
     charset_size = 1 + (subset.glyphs.subset_size - 1) * 2;
 
     /* Compute the size of the CharStrings Index. */
-    charstrings_size =
-	cff_write_CharStrings_offsets(&writer, &genum, &charstrings_count);
+    code = cff_write_CharStrings_offsets(&writer, &genum, &charstrings_count);
+    if (code < 0)
+	return code;
+    charstrings_size = (uint)code;
 
     /* Compute the size of the (local) Subrs Index. */
 #ifdef SKIP_EMPTY_SUBRS
@@ -1453,6 +1468,8 @@ psf_write_type2_font(stream *s, gs_font_type1 *pfont, int options,
     }
 
     /* All done. */
+    gs_free_object(pfont->memory, std_string_items, "psf_write_type2_font");
+    gs_free_object(pfont->memory, subset.glyphs.subset_data, "psf_write_type2_font");
     return 0;
 }
 

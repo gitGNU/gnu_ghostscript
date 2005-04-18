@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevprn.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
+/* $Id: gdevprn.c,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Generic printer driver support */
 #include "ctype_.h"
 #include "gdevprn.h"
@@ -228,9 +228,10 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
     gx_device_memory * const pmemdev = (gx_device_memory *)pdev;
     byte *the_memory = 0;
     gdev_prn_space_params save_params;
-    int save_width, save_height;
-    bool is_command_list;
-    bool save_is_command_list;
+    int save_width = 0x0badf00d; /* Quiet compiler */
+    int save_height = 0x0badf00d; /* Quiet compiler */
+    bool is_command_list = false; /* Quiet compiler */
+    bool save_is_command_list = false; /* Quiet compiler */
     int ecode = 0;
     int pass;
     gs_memory_t *buffer_memory =
@@ -990,6 +991,7 @@ gx_default_create_buf_device(gx_device **pbdev, gx_device *target,
     if (target == (gx_device *)mdev) {
 	/* The following is a special hack for setting up printer devices. */
 	assign_dev_procs(mdev, mdproto);
+	gx_device_fill_in_procs((gx_device *)mdev);
     } else
 	gs_make_mem_device(mdev, mdproto, mem, (for_band ? 1 : 0),
 			   (target == (gx_device *)mdev ? NULL : target));

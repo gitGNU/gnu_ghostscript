@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- Mode: python -*-
+
 #    Copyright (C) 2001 Artifex Software Inc.
 # 
 #  This program is free software; you can redistribute it and/or modify it
@@ -21,7 +24,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: gssum.py,v 1.1 2004/02/14 22:46:29 atai Exp $
+# $Id: gssum.py,v 1.2 2005/04/18 12:06:13 Arabidopsis Exp $
 
 # gssum.py
 #
@@ -55,7 +58,10 @@ def get_sum(file, dbname=gsconf.testdatadb):
     return sum
 
 def make_sum(file):
-    mode = os.stat(file)[ST_MODE]
+    try:
+	mode = os.stat(file)[ST_MODE]
+    except OSError:
+	return None
     if S_ISREG(mode):
 	sum = md5.new()
 	f = open(file, "r")
@@ -67,4 +73,4 @@ def make_sum(file):
 
         return sum.hexdigest()
     
-    return 0
+    return None

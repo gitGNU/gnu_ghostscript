@@ -8,6 +8,8 @@ datadir		/home/regression/regression/
 logdir		/home/regression/regression/logs/
 dailydir	/home/regression/regression/daily/
 rasterdbdir	/home/regression/regression/raster/
+fontdir		/home/regression/fonts/
+repodir		/cvs/ghostscript
 
 # programs
 

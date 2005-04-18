@@ -22,10 +22,11 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpdtb.c,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: gdevpdtb.c,v 1.2 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* BaseFont implementation for pdfwrite */
 #include "memory_.h"
 #include "ctype_.h"
+#include "string_.h"
 #include "gx.h"
 #include "gserrors.h"
 #include "gsutil.h"		/* for bytes_compare */
@@ -36,6 +37,7 @@
 #include "gdevpsf.h"
 #include "gdevpdfx.h"
 #include "gdevpdtb.h"
+#include "gdevpdtf.h"
 
 /*
  * Adobe's Distiller Parameters documentation for Acrobat Distiller 5
@@ -96,7 +98,7 @@ gs_private_st_basic(st_pdf_base_font, pdf_base_font_t, "pdf_base_font_t",
 /*
  * Determine whether a font is a subset font by examining the name.
  */
-private bool
+bool
 pdf_has_subset_prefix(const byte *str, uint size)
 {
     int i;
@@ -109,21 +111,36 @@ pdf_has_subset_prefix(const byte *str, uint size)
     return true;
 }
 
+private ulong
+hash(ulong v, int index, ulong w)
+{
+    return v * 3141592653u + w;
+}
+
 /*
  * Add the XXXXXX+ prefix for a subset font.
  */
-private int
-pdf_add_subset_prefix(const gx_device_pdf *pdev, gs_string *pstr, gs_id rid)
+int
+pdf_add_subset_prefix(const gx_device_pdf *pdev, gs_string *pstr, byte *used, int count)
 {
     uint size = pstr->size;
     byte *data = gs_resize_string(pdev->pdf_memory, pstr->data, size,
 				  size + SUBSET_PREFIX_SIZE,
 				  "pdf_add_subset_prefix");
-    ulong v = rid;
+    int len = (count + 7) / 8;
+    ulong v = 0, t = 0;
     int i;
 
     if (data == 0)
 	return_error(gs_error_VMerror);
+    /* Hash the 'used' array. */
+    for (i = 0; i < len; i += sizeof(ulong))
+	v = hash(v, i, *(ulong *)(used + i));
+    i -= sizeof(ulong);
+    if (i < len) {
+	memmove(&t, used + i, len - i);
+	v = hash(v, i, *(ulong *)(used + i));
+    }
     memmove(data + SUBSET_PREFIX_SIZE, data, size);
     for (i = 0; i < SUBSET_PREFIX_SIZE - 1; ++i, v /= 26)
 	data[i] = 'A' + (v % 26);
@@ -147,9 +164,9 @@ pdf_begin_fontfile(gx_device_pdf *pdev, long FontFile_id,
 	stream_puts(pdev->strm, entries);
     if (len1 >= 0)
 	pprintld1(pdev->strm, "/Length1 %ld", len1);
-    return pdf_begin_data_stream(pdev, pdw, DATA_STREAM_BINARY |
+    return pdf_begin_data_stream(pdev, pdw, DATA_STREAM_BINARY | DATA_STREAM_ENCRYPT |
 				 (pdev->CompressFonts ?
-				  DATA_STREAM_COMPRESS : 0));
+				  DATA_STREAM_COMPRESS : 0), FontFile_id);
 }
 
 /* Finish writing FontFile* data. */
@@ -169,7 +186,8 @@ pdf_end_fontfile(gx_device_pdf *pdev, pdf_data_writer_t *pdw)
  */
 int
 pdf_base_font_alloc(gx_device_pdf *pdev, pdf_base_font_t **ppbfont,
-		    gs_font_base *font, bool is_standard)
+		    gs_font_base *font, const gs_matrix *orig_matrix, 
+		    bool is_standard, bool orig_name)
 {
     gs_memory_t *mem = pdev->pdf_memory;
     gs_font *copied;
@@ -177,15 +195,14 @@ pdf_base_font_alloc(gx_device_pdf *pdev, pdf_base_font_t **ppbfont,
     pdf_base_font_t *pbfont =
 	gs_alloc_struct(mem, pdf_base_font_t,
 			&st_pdf_base_font, "pdf_base_font_alloc");
-    const gs_font_name *pfname =
-	(font->key_name.size != 0 ? &font->key_name : &font->font_name);
+    const gs_font_name *pfname = pdf_choose_font_name((gs_font *)font, orig_name);
     gs_const_string font_name;
     char fnbuf[3 + sizeof(long) / 3 + 1]; /* .F#######\0 */
     int code;
 
     if (pbfont == 0)
 	return_error(gs_error_VMerror);
-    code = gs_copy_font((gs_font *)font, mem, &copied);
+    code = gs_copy_font((gs_font *)font, orig_matrix, mem, &copied);
     if (code < 0)
 	goto fail;
     memset(pbfont, 0, sizeof(*pbfont));
@@ -242,7 +259,7 @@ pdf_base_font_alloc(gx_device_pdf *pdev, pdf_base_font_t **ppbfont,
 	if (is_standard)
 	    complete = copied, code = 0;
 	else
-	    code = gs_copy_font((gs_font *)font, mem, &complete);
+	    code = gs_copy_font((gs_font *)font, &font->FontMatrix, mem, &complete);
 	if (code >= 0)
 	    code = gs_copy_font_complete((gs_font *)font, complete);
 	if (pbfont->num_glyphs < 0) { /* Type 1 */
@@ -304,9 +321,27 @@ pdf_base_font_name(pdf_base_font_t *pbfont)
  * This procedure probably shouldn't exist....
  */
 gs_font_base *
-pdf_base_font_font(const pdf_base_font_t *pbfont)
+pdf_base_font_font(const pdf_base_font_t *pbfont, bool complete)
 {
-    return pbfont->copied;
+    return (complete ? pbfont->complete : pbfont->copied);
+}
+
+/*
+ * Check for subset font.
+ */
+bool
+pdf_base_font_is_subset(const pdf_base_font_t *pbfont)
+{
+    return pbfont->do_subset == DO_SUBSET_YES;
+}
+
+/*
+ * Drop the copied complete font associated with a base font.
+ */
+void
+pdf_base_font_drop_complete(pdf_base_font_t *pbfont)
+{
+    pbfont->complete = NULL;
 }
 
 /*
@@ -337,9 +372,7 @@ pdf_base_font_copy_glyph(pdf_base_font_t *pbfont, gs_glyph glyph,
 }
 
 /*
- * Determine whether a font should be subsetted.  Note that if the font is
- * subsetted, this procedure modifies the copied font by adding the XXXXXX+
- * font name prefix and clearing the UID.
+ * Determine whether a font should be subsetted.
  */
 bool
 pdf_do_subset_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont, gs_id rid)
@@ -375,21 +408,6 @@ pdf_do_subset_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont, gs_id rid)
 	    }
 	}
 	pbfont->do_subset = (do_subset ? DO_SUBSET_YES : DO_SUBSET_NO);
-    }
-    /*
-     * Adjust the FontName and UID according to the subsetting decision.
-     */
-    if (pbfont->do_subset == DO_SUBSET_YES &&
-	!pdf_has_subset_prefix(pbfont->font_name.data, pbfont->font_name.size)
-	) {
-	/*
-	 * We have no way to report an error if pdf_add_subset_prefix
-	 * doesn't have enough room to add the subset prefix, but the
-	 * output is still OK if this happens.
-	 */
-	DISCARD(pdf_add_subset_prefix(pdev, &pbfont->font_name, rid));
-	/* Don't write a UID for subset fonts. */
-	uid_set_invalid(&copied->UID);
     }
     return (pbfont->do_subset == DO_SUBSET_YES);
 }
@@ -477,7 +495,7 @@ pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
 {
     bool do_subset = pdf_do_subset_font(pdev, pbfont, rid);
     gs_font_base *out_font =
-	(do_subset ? pbfont->copied : pbfont->complete);
+	(do_subset || pbfont->complete == NULL ? pbfont->copied : pbfont->complete);
     long FontFile_id;
     gs_const_string fnstr;
     pdf_data_writer_t writer;
@@ -539,8 +557,10 @@ pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
 	const int options = TRUETYPE_OPTIONS |
 	    (pdev->CompatibilityLevel <= 1.2 ?
 	     WRITE_TRUETYPE_NO_TRIMMED_TABLE : 0) |
-	    /* Generate a cmap only for incrementally downloaded fonts. */
-	    (pfont->data.numGlyphs != pfont->data.trueNumGlyphs ?
+	    /* Generate a cmap only for incrementally downloaded fonts
+	       and for subsetted fonts. */
+	    (pfont->data.numGlyphs != pfont->data.trueNumGlyphs || 
+	     pbfont->do_subset == DO_SUBSET_YES ?
 	     WRITE_TRUETYPE_CMAP : 0);
 	stream poss;
 
@@ -577,6 +597,10 @@ pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
 				   (gs_font_cid2 *)out_font,
 				   CID2_OPTIONS, NULL, 0, &fnstr);
     finish:
+	if (code < 0) {
+	    pdf_end_fontfile(pdev, &writer);
+	    return code;
+	}
 	code = pdf_end_fontfile(pdev, &writer);
 	break;
 
@@ -644,4 +668,12 @@ pdf_write_CIDSet(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
     /* code < 0 */
     pdf_end_separate(pdev);
     return code;
+}
+
+/*
+ * Check whether a base font is standard.
+ */
+bool
+pdf_is_standard_font(pdf_base_font_t *bfont)
+{   return bfont->is_standard;
 }

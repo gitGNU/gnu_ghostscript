@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: ifapi.h,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: ifapi.h,v 1.2 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Font API interface */
 
 #ifndef ifapi_INCLUDED
@@ -71,11 +71,22 @@ typedef enum {
     FAPI_FONT_FEATURE_TT_size
 } fapi_font_feature;
 
+typedef enum {
+  FAPI_METRICS_NOTDEF,
+  FAPI_METRICS_ADD, /* Add to native glyph width. */
+  FAPI_METRICS_REPLACE_WIDTH, /* Replace the native glyph width. */
+  FAPI_METRICS_REPLACE /* Replace the native glyph width and lsb. */
+} FAPI_metrics_type;
+
 typedef struct {
     int char_code;
     bool is_glyph_index; /* true if char_code contains glyph index */
     const unsigned char *char_name; /* to be used exclusively with char_code. */
     unsigned int char_name_length;
+    FAPI_metrics_type metrics_type;
+    FracInt sb_x, sb_y, aw_x, aw_y; /* replaced PS metrics. */
+    int metrics_scale; /* Scale for replaced PS metrics. 
+		          Zero means "em box size". */
 } FAPI_char_ref;
 
 typedef struct FAPI_font_s FAPI_font;
@@ -88,6 +99,7 @@ struct FAPI_font_s {
     int subfont;
     bool is_type1; /* Only for non-disk fonts; dirty for disk fonts. */
     bool is_cid;
+    bool is_mtx_skipped; /* Ugly. UFST needs only */
     void *client_ctx_p;
     void *client_font_data;
     void *client_font_data2;
@@ -111,6 +123,13 @@ struct FAPI_path_s {
     int (*closepath)(FAPI_path *);
 };
 
+typedef struct FAPI_font_scale_s {
+    FracInt matrix[6]; 
+    FracInt HWResolution[2]; 
+    int subpixels[2];
+    bool align_to_pixels; 
+} FAPI_font_scale;
+
 typedef struct FAPI_metrics_s {
     int bbox_x0, bbox_y0, bbox_x1, bbox_y1; /* design units */
     int escapement; /* design units */
@@ -128,15 +147,22 @@ typedef struct { /* 1bit/pixel only, rows are byte-aligned. */
 typedef struct FAPI_server_s FAPI_server;
 #endif
 
+typedef int FAPI_descendant_code; /* Possible values are descendant font indices and 4 ones defined below. */
+#define FAPI_DESCENDANT_PREPARED -1 /* See FAPI_prepare_font in zfapi.c . */
+#define FAPI_TOPLEVEL_PREPARED -2
+#define FAPI_TOPLEVEL_BEGIN -3
+#define FAPI_TOPLEVEL_COMPLETE -4
+
 struct FAPI_server_s {
     i_plugin_instance ig;
     int frac_shift; /* The number of fractional bits in coordinates. */
     FAPI_retcode (*ensure_open)(FAPI_server *server);
-    FAPI_retcode (*get_scaled_font)(FAPI_server *server, FAPI_font *ff, int subfont, const FracInt matrix[6], const FracInt HWResolution[2], const char *xlatmap, bool bVertical);
+    FAPI_retcode (*get_scaled_font)(FAPI_server *server, FAPI_font *ff, int subfont, const FAPI_font_scale *scale, const char *xlatmap, bool bVertical, FAPI_descendant_code dc);
     FAPI_retcode (*get_decodingID)(FAPI_server *server, FAPI_font *ff, const char **decodingID);
     FAPI_retcode (*get_font_bbox)(FAPI_server *server, FAPI_font *ff, int BBox[4]);
     FAPI_retcode (*get_font_proportional_feature)(FAPI_server *server, FAPI_font *ff, int subfont, bool *bProportional);
     FAPI_retcode (*can_retrieve_char_by_name)(FAPI_server *server, FAPI_font *ff, FAPI_char_ref *c, int *result);
+    FAPI_retcode (*can_replace_metrics)(FAPI_server *server, FAPI_font *ff, FAPI_char_ref *c, int *result);
     FAPI_retcode (*get_char_width)(FAPI_server *server, FAPI_font *ff, FAPI_char_ref *c, FAPI_metrics *metrics);
     FAPI_retcode (*get_char_raster_metrics)(FAPI_server *server, FAPI_font *ff, FAPI_char_ref *c, FAPI_metrics *metrics);
     FAPI_retcode (*get_char_raster)(FAPI_server *server, FAPI_raster *r);

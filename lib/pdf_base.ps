@@ -1,4 +1,4 @@
-%    Copyright (C) 1994, 1996, 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
+%    Copyright (C) 1994-2003 artofcode LLC.  All rights reserved.
 % 
 % This software is provided AS-IS with no warranty, either express or
 % implied.
@@ -13,7 +13,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: pdf_base.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
+% $Id: pdf_base.ps,v 1.3 2005/04/18 12:06:08 Arabidopsis Exp $
 % pdf_base.ps
 % Basic parser for PDF reader.
 
@@ -99,18 +99,19 @@ pdfdict begin
   BXlevel 0 le {
     (   **** Unknown operator: ') pdfformaterror
     dup =string cvs pdfformaterror 
-    % Attempt a retry scan of the element after changing to PDFScanRules
-    << /PDFScanRules true >> setuserparams
+    % Attempt a retry scan of the element after changing to PDFScanInvNum
+    << /PDFScanInvNum true >> setuserparams
     =string cvs
     token pop exch pop dup type
     dup /integertype eq exch /realtype eq or {
       exch pop exch pop
       (', processed as number, value: ) pdfformaterror
       dup =string cvs pdfformaterror (\n) pdfformaterror
+     << /PDFScanInvNum null >> setuserparams    % reset to default scanning rules
       false 	% suppress any stack cleanup
     } {
       % error was non-recoverable with modified scanning rules
-      (\n) pdfformaterror
+      ('\n) pdfformaterror
       true
     } ifelse
   } {
@@ -121,7 +122,7 @@ pdfdict begin
   } if
 } bind def
 /.pdfexectoken {		% <count> <opdict> <exectoken> .pdfexectoken ?
-  DEBUG { dup == flush } if
+  PDFDEBUG { dup == flush } if
   2 copy .knownget {
     exch pop exch pop exch pop exec
   } {
@@ -151,10 +152,10 @@ pdfdict begin
 	  .pdfexectoken
 	} {
 	  .pdffixname
-	  exch pop exch pop DEBUG { dup ==only ( ) print flush } if
+	  exch pop exch pop PDFDEBUG { dup ==only ( ) print flush } if
 	} ifelse
       } {
-	exch pop exch pop DEBUG { dup ==only ( ) print flush } if
+	exch pop exch pop PDFDEBUG { dup ==only ( ) print flush } if
       } ifelse
     } {
       (%%EOF) cvn cvx .pdfexectoken
@@ -169,13 +170,13 @@ pdfdict begin
 } bind def
 
 % Execute a file, like .pdfrun, for a marking context.
-% This temporarily rebinds LocalResources and DefaultMatrix.
+% This temporarily rebinds LocalResources and DefaultQstate.
 /.pdfruncontext {		% <resdict> <file> <opdict> .pdfruncontext -
-  /.pdfrun load LocalResources DefaultMatrix
+  /.pdfrun load LocalResources DefaultQstate
   /LocalResources 7 -1 roll store
-  /DefaultMatrix matrix currentmatrix store
+  /DefaultQstate qstate store
   3 .execn
-  /DefaultMatrix exch store
+  /DefaultQstate exch store
   /LocalResources exch store
 } bind def
 
@@ -187,41 +188,6 @@ pdfdict begin
 /.pdfcount {		% - .pdfcount <count>
   count pdfemptycount sub
 } bind def
-
-% ------ File reading ------ %
-
-% Read the cross-reference entry for an (unresolved) object.
-% The caller must save and restore the PDFfile position if desired.
-% For invalid (free) objects, we return 0.
-/readxrefentry		% <object#> readxrefentry <objpos>
- { dup Objects exch lget
-   PDFfile exch setfileposition
-   PDFfile token pop		% object position
-   PDFfile token pop		% generation #
-   PDFfile token pop		% n or f
-   dup /n eq
-    { pop 1 add dup 255 gt
-       { Generations ltype /stringtype eq
-	  {		% Convert Generations from a string to an array.
-	    larray Generations llength lgrowto dup
-	    0 1 2 index llength 1 sub
-	     { Generations 1 index lget lput dup
-	     }
-	    for pop /Generations exch store
-	  }
-	 if
-       }
-      if
-    }
-    { /f eq
-       { pop 0 }
-       { /readxrefentry cvx /syntaxerror signalerror }
-      ifelse
-    }
-   ifelse
-		% Stack: obj# objpos 1+gen#
-   Generations 4 -1 roll 3 -1 roll lput
- } bind def
 
 % ================================ Objects ================================ %
 
@@ -335,21 +301,21 @@ pdfdict begin
 % whether an object has been resolved.
 /resolved? {		% <object#> resolved? <value> true
 			% <object#> resolved? false
-  Objects 1 index lget dup xcheck {
-    dup type /integertype eq {
+  Objects 1 index lget dup xcheck {	% Check if executable
+    dup type /integertype eq {		% Check if an integer
 		% Check whether the object is in GlobalObjects.
-      pop IsGlobal 1 index lget 0 eq {
-	pop false
-      } {
+      pop IsGlobal 1 index lget 0 eq {	% 0 --> Not in GlabalObjects
+	pop false			% The object is not resolved
+      } {				% The object is in GlobalObjects
 		% Update Objects from GlobalObjects
-	DEBUG { (%Global=>local: ) print dup == } if
+	PDFDEBUG { (%Global=>local: ) print dup == } if
 	GlobalObjects 1 index get dup Objects 4 1 roll lput true
       } ifelse
-    } {
-      exch pop true
+    } {				% Else object is executable but not integer
+      exch pop true		% Therefore must be executable dict. (stream)
     } ifelse
-  } {
-    exch pop true
+  } {				% Else object is not executable.
+    exch pop true		% Therefore it must have been resolved.
   } ifelse
 } bind def
 /oforce /exec load def
@@ -359,6 +325,12 @@ pdfdict begin
 		% object back into the referring slot.  In order to support
 		% PDF linearization, we no longer do this.
   get oforce
+} bind def
+/oforce_array { % <array> oforce_array <array>
+  [ exch { oforce } forall ]
+} bind def
+/oforce_elems { % <array> oforce_elems <first> ... <last>
+  { oforce } forall
 } bind def
 % A null value in a dictionary is equivalent to an omitted key;
 % we must check for this specially.
@@ -379,22 +351,25 @@ pdfdict begin
    .pdfcount 3 lt { f } { pop pop pop null } ifelse
 } bind def
 
+% Verify the generation number for a specified object
+% Note:  The values in Generations is the generation number plus 1.
+% If the value in Generations is zero then the object is free.
 /checkgeneration {  % <object#> <generation#> checkgeneration <object#> <OK>
-  Generations 2 index lget 1 sub 1 index eq {
-    pop true
-  } {
-    QUIET not {
-      Generations 2 index lget 0 eq {
+  Generations 2 index lget 1 sub 1 index eq {	% If generation # match ...
+    pop true					% Then return true
+  } {					% Else not a match ...
+    QUIET not {				% Create warning message if not QUIET
+      Generations 2 index lget 0 eq {	% Check if object is free ...
 	(   **** Warning: reference to free object: )
       } {
 	(   **** Warning: wrong generation: )
       } ifelse
-      2 index =string cvs concatstrings ( ) concatstrings
-      exch =string cvs concatstrings ( R\n) concatstrings
-      pdfformaterror
-    } {
-      pop
-    } ifelse false
+      2 index =string cvs concatstrings ( ) concatstrings	% put obj #
+      exch =string cvs concatstrings ( R\n) concatstrings	% put gen #
+      pdfformaterror			% Output warning message
+    } {					% Else QUIET ...
+      pop				% Pop generation umber
+    } ifelse false			% Return false if gen # not match
   } ifelse
 } bind def
 /R {		% <object#> <generation#> R <object>
@@ -407,25 +382,23 @@ pdfdict begin
   valueopdict { } forall
   /endobj dup cvx
 .dicttomark readonly def
+
 /obj {			% <object#> <generation#> obj <object>
   PDFfile objopdict .pdfrun
 } bind def
+
 /endobj {		% <object#> <generation#> <object> endobj <object>
   3 1 roll
 		% Read the xref entry if we haven't yet done so.
 		% This is only needed for generation # checking.
   1 index resolved? {
     pop
-  } {
-    PDFfile fileposition
-    2 index readxrefentry pop
-    PDFoffset add PDFfile exch setfileposition
-  } ifelse
+  } if
   checkgeneration {
 		% The only global objects we bother to save are
 		% (resource) dictionaries.
     1 index dup gcheck exch type /dicttype eq and {
-      DEBUG { (%Local=>global: ) print dup == } if
+      PDFDEBUG { (%Local=>global: ) print dup == } if
       GlobalObjects 1 index 3 index put
       IsGlobal 1 index 1 put
     } if
@@ -443,14 +416,15 @@ pdfdict begin
                 % objects. AR ignores this. So we have to do it too.
   /obj { pop pop endobj exit } bind
 .dicttomark readonly def
+
 /resolveR {		% <object#> <generation#> resolveR <object>
-  DEBUG { (%Resolving: ) print 2 copy 2 array astore == } if
-  1 index resolved? {
-    exch pop exch pop
-  } {
-    PDFfile fileposition 3 1 roll
-    1 index readxrefentry
-    3 1 roll checkgeneration {
+  PDFDEBUG { (%Resolving: ) print 2 copy 2 array astore == } if
+  1 index resolved? {		% If object has already been resolved ...
+    exch pop exch pop		% then clear stack and return object
+  } {				% Else if not resolved ...
+    PDFfile fileposition 3 1 roll	% Save current file position
+    1 index Objects exch lget		% Get location of object from xref
+    3 1 roll checkgeneration {		% Verify the generation number
 			% Stack: savepos objpos obj#
 	 exch PDFoffset add PDFfile exch setfileposition
 	 PDFfile token pop 2 copy ne
@@ -515,10 +489,19 @@ pdfdict begin
 	10 eq { exit } if
       } loop	% scan past \n
       dup /FilePosition PDFfile fileposition put
-      DEBUG { (%FilePosition: ) print dup /FilePosition get == } if
+      PDFDEBUG { (%FilePosition: ) print dup /FilePosition get == } if
     } if
-    PDFfile fileposition 1 index /Length oget add
-    PDFfile exch setfileposition
+    % Some (bad) PDf files have invalid stream lengths.  This causes problems
+    % if we reposition beyond the end of the file.  So we compare the given
+    % length to number of bytes left in the file.
+    dup /Length oget 
+    dup PDFfile bytesavailable lt {	% compare to to bytes left in file
+      PDFfile fileposition 		% reposition to the end of stream
+      add PDFfile exch setfileposition
+    } {
+      pop				% bad stream length - do not reposition.
+      					% This will force a length warning below
+    } ifelse
   } {
     pop
 	% We're already reading from a stream, which we can't reposition.
@@ -542,7 +525,7 @@ pdfdict begin
   } if
   /endstream ne { 
     (   **** Warning: stream Length incorrect.\n) pdfformaterror
-    exit % exit from .pdfrun now.
+    cvx endobj exit % exit from .pdfrun now.
   } if
   cvx
 } bind def
@@ -579,16 +562,45 @@ pdfdict begin
 } bind def
 /filtername {		% <filtername> filtername <filtername'>
   //unabbrevfilterdict 1 index .knownget { exch pop } if
+  dup /Filter resourcestatus { pop pop } {
+    Repaired exch	% this error is not the creator's fault	
+    (   **** ERROR: Unable to process ) pdfformaterror
+    64 string cvs pdfformaterror
+    ( data. Page will be missing data.\n) pdfformaterror
+    /Repaired exch store % restore the previous "Repaired" state
+    % provide a filter that returns EOF (no data)
+    /.EOFDecode
+  } ifelse
 } bind def
 /applyfilters {		% <parms> <source> <filternames> applyfilters <stream>
   2 index null eq {
     { filtername filter }
   } {
-    {		% Stack: parms stream filtername
-      2 index 0 oget dup null eq { pop } { exch } ifelse filtername filter
+    {		% Stack: parms source filtername
+      2 index 0 oget dup null eq { pop } {
+        exch filtername dup /JBIG2Decode eq { exch jbig2cachectx exch } if
+      } ifelse filter
       exch dup length 1 sub 1 exch getinterval exch
     }
   } ifelse forall exch pop
+} bind def
+
+% JBIG2 streams have an optional 'globals' stream obj for
+% sharing redundant data between page images. Here we resolve
+% that stream reference (if any) and run it through the decoder,
+% creating a special -jbig2globalctx- postscript object our
+% JBIG2Decode filter implementation looks for in the parm dict.
+/jbig2cachectx { % <parmdict> jbig2cachectx <parmdict>
+  dup /JBIG2Globals knownoget {
+    dup /Length oget
+    % make global ctx
+    PDFfile fileposition 3 1 roll % resolvestream is not reentrant
+    exch true resolvestream exch .bytestring
+    .readbytestring pop .jbig2makeglobalctx
+    PDFfile 3 -1 roll setfileposition
+    1 index exch
+    /.jbig2globalctx exch put
+  } if
 } bind def
 
 % Resolve a stream dictionary to a PostScript stream.

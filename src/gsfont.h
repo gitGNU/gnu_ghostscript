@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsfont.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsfont.h,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Generic font and font cache interface */
 
 #ifndef gsfont_INCLUDED
@@ -88,5 +88,11 @@ uint gs_currentcachelower(const gs_font_dir *);
 int gs_setcachelower(gs_font_dir *, uint);
 uint gs_currentcacheupper(const gs_font_dir *);
 int gs_setcacheupper(gs_font_dir *, uint);
+uint gs_currentaligntopixels(const gs_font_dir *);
+int gs_setaligntopixels(gs_font_dir *, uint);
+#if NEW_TT_INTERPRETER
+uint gs_currentgridfittt(const gs_font_dir *);
+int gs_setgridfittt(gs_font_dir *, uint);
+#endif
 
 #endif /* gsfont_INCLUDED */

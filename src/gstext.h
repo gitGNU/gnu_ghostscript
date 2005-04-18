@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/*$Id: gstext.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/*$Id: gstext.h,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Driver interface for text */
 
 #ifndef gstext_INCLUDED
@@ -274,6 +274,14 @@ int gs_text_resync(gs_text_enum_t *pte, const gs_text_enum_t *pfrom);
 	 * call gs_text_process again.
 	 */
 #define TEXT_PROCESS_INTERVENE 2
+
+	/*
+	 * The device has asked to execute CDevProc.
+	 * Obtain the current codes from gs_text_current_char/glyph,
+	 * do whatever is necessary and put CDevProc results to pte->cdevproc_result, 
+	 * and then call gs_text_process again with pte->cdevproc_result_valid=true.
+	 */
+#define TEXT_PROCESS_CDEVPROC 3
 
 /* Process text after 'begin'. */
 int gs_text_process(gs_text_enum_t *pte);

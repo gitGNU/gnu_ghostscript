@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gx.h,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gx.h,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* Common internal definitions for Ghostscript library */
 
 #ifndef gx_INCLUDED
@@ -34,6 +34,12 @@
 #include "gstypes.h"
 #include "gsmemory.h"
 #include "gdebug.h"
+
+#define NEW_TT_INTERPRETER 1
+#define TT_GRID_FITTING (NEW_TT_INTERPRETER && 0) /* old code = 0, new code = 1. */
+#define FLATTENED_CURVE_ITERATOR 1 /* Old code = 0, new code = 1. */
+#define FLATTENED_CURVE_ITERATOR0_COMPATIBLE 1 /* Temporarily used for a backward compatibility. */
+#define CURVED_TRAPEZOID_FILL (FLATTENED_CURVE_ITERATOR & 0) /* old code = 0, new code = 1. */
 
 /* Define opaque types for the graphics state. */
 /* This is used so pervasively that we define it here, */

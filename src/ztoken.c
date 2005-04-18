@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: ztoken.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: ztoken.c,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $ */
 /* Token reading operators */
 #include "string_.h"
 #include "ghost.h"
@@ -64,6 +64,7 @@ ztoken(i_ctx_t *i_ctx_p)
 	}
 	case t_string: {
 	    ref token;
+	    int orig_ostack_depth = ref_stack_count(&o_stack);
 	    int code = scan_string_token(i_ctx_p, op, &token);
 
 	    switch (code) {
@@ -71,8 +72,12 @@ ztoken(i_ctx_t *i_ctx_p)
 		make_false(op);
 		return 0;
 	    default:
-		if (code < 0)
+		if (code < 0) {
+		    /* Clear anything that may have been left on the ostack */
+	    	    if (orig_ostack_depth < ref_stack_count(&o_stack))
+	    		pop(ref_stack_count(&o_stack)- orig_ostack_depth);
 		    return code;
+		}
 	    }
 	    push(2);
 	    op[-1] = token;
@@ -346,10 +351,11 @@ ztoken_scanner_options(const ref *upref, int old_options)
 	const char *pname;
 	int option;
     } named_scanner_option_t;
-    static const named_scanner_option_t named_options[3] = {
+    static const named_scanner_option_t named_options[4] = {
 	{"ProcessComment", SCAN_PROCESS_COMMENTS},
 	{"ProcessDSCComment", SCAN_PROCESS_DSC_COMMENTS},
-	{"PDFScanRules", SCAN_PDF_RULES}
+	{"PDFScanRules", SCAN_PDF_RULES},
+	{"PDFScanInvNum", SCAN_PDF_INV_NUM}
     };
     int options = old_options;
     int i;

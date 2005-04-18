@@ -22,11 +22,20 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevmac.h,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevmac.h,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 
 #ifndef gdevmac_INCLUDED
 #  define gdevmac_INCLUDED
 
+#include <stdlib.h>
+#include "math_.h"
+#include "string_.h"
+
+#include "gdevmacpictop.h"
+
+#include <Fonts.h>
+#include <FixMath.h>
+#include <Resources.h>
 
 #include "gx.h"
 #include "gxdevice.h"
@@ -38,14 +47,6 @@
 #include "gxxfont.h"
 #include "gsstruct.h"
 #include "gserrors.h"
-
-#include "gdevmacpictop.h"
-#include <Fonts.h>
-#include <FixMath.h>
-#include <Resources.h>
-#include "math_.h"
-#include <string.h>
-#include <stdlib.h>
 
 
 

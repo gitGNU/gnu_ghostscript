@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevvec.h,v 1.2 2004/02/14 22:20:06 atai Exp $ */
+/* $Id: gdevvec.h,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Common definitions for "vector" devices */
 
 #ifndef gdevvec_INCLUDED
@@ -34,6 +34,7 @@
 #include "gdevbbox.h"
 #include "gxiparam.h"
 #include "gxistate.h"
+#include "gxhldevc.h"
 #include "stream.h"
 
 /*
@@ -117,8 +118,12 @@ typedef struct gx_device_vector_procs_s {
     int (*setlogop) (gx_device_vector * vdev, gs_logical_operation_t lop,
 		     gs_logical_operation_t diff);
     /* Other state */
-    int (*setfillcolor) (gx_device_vector * vdev, const gx_drawing_color * pdc);
-    int (*setstrokecolor) (gx_device_vector * vdev, const gx_drawing_color * pdc);
+    bool (*can_handle_hl_color) (gx_device_vector * vdev, const gs_imager_state * pis, 
+                         const gx_drawing_color * pdc);
+    int (*setfillcolor) (gx_device_vector * vdev, const gs_imager_state * pis, 
+                         const gx_drawing_color * pdc);
+    int (*setstrokecolor) (gx_device_vector * vdev, const gs_imager_state * pis,
+                           const gx_drawing_color * pdc);
     /* Paths */
     /* dopath and dorect are normally defaulted */
     int (*dopath) (gx_device_vector * vdev, const gx_path * ppath,
@@ -167,7 +172,10 @@ int gdev_vector_dorect(gx_device_vector * vdev, fixed x0, fixed y0,
 		/* Graphics state */\
 	gs_imager_state state;\
 	float dash_pattern[max_dash];\
-	gx_drawing_color fill_color, stroke_color;\
+	bool fill_used_process_color;\
+	bool stroke_used_process_color;\
+	gx_hl_saved_color saved_fill_color;\
+	gx_hl_saved_color saved_stroke_color;\
 	gs_id no_clip_path_id;	/* indicates no clipping */\
 	gs_id clip_path_id;\
 		/* Other state */\
@@ -190,6 +198,8 @@ int gdev_vector_dorect(gx_device_vector * vdev, fixed x0, fixed y0,
 	0,		/* open_options */\
 	 { 0 },		/* state */\
 	 { 0 },		/* dash_pattern */\
+	true,		/* fill_used_process_color */\
+	true,		/* stroke_used_process_color */\
 	 { 0 },		/* fill_color ****** WRONG ****** */\
 	 { 0 },		/* stroke_color ****** WRONG ****** */\
 	gs_no_id,	/* clip_path_id */\
@@ -251,6 +261,7 @@ int gdev_vector_update_log_op(gx_device_vector * vdev,
 /* Bring the fill color up to date. */
 /* May call setfillcolor. */
 int gdev_vector_update_fill_color(gx_device_vector * vdev,
+				  const gs_imager_state * pis,
 				  const gx_drawing_color * pdcolor);
 
 /* Bring state up to date for filling. */

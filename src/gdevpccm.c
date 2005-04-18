@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpccm.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevpccm.c,v 1.3 2005/04/18 12:05:59 Arabidopsis Exp $ */
 /* Support routines for PC color mapping */
 #include "gx.h"
 #include "gsmatrix.h"		/* for gxdevice.h */
@@ -128,45 +128,32 @@ pc_8bit_map_rgb_color(gx_device * dev, const gx_color_value cv[])
     gx_color_value r, g, b;
     uint rv, gv;
     r = cv[0]; g = cv[1]; b = cv[2];
-    rv = r / (gx_max_color_value / 7 + 1);
-    gv = g / (gx_max_color_value / 7 + 1);
+    rv = r / (gx_max_color_value / 6 + 1);
+    gv = g / (gx_max_color_value / 6 + 1);
 
     return (gx_color_index)
-	(rv == gv && gv == b / (gx_max_color_value / 7 + 1) ?
-	 rv + (256 - 7) :
-	 (rv * 7 + gv) * 5 + b / (gx_max_color_value / 5 + 1));
+	(rv * 6 + gv) * 6 + b / (gx_max_color_value / 6 + 1);
 }
 int
 pc_8bit_map_color_rgb(gx_device * dev, gx_color_index color,
 		      gx_color_value prgb[3])
 {
-    static const gx_color_value ramp7[8] =
+    static const gx_color_value ramp6[6] =
     {0,
-     gx_max_color_value / 6,
-     gx_max_color_value / 3,
-     gx_max_color_value / 2,
-     gx_max_color_value - (gx_max_color_value / 3),
-     gx_max_color_value - (gx_max_color_value / 6),
-     gx_max_color_value,
-    /* The 8th entry is not actually ever used, */
-    /* except to fill out the palette. */
+     gx_max_color_value / 5,
+     2 * gx_max_color_value / 5,
+     3 * gx_max_color_value / 5,
+     gx_max_color_value - (gx_max_color_value / 5),
      gx_max_color_value
     };
-    static const gx_color_value ramp5[5] =
-    {0,
-     gx_max_color_value / 4,
-     gx_max_color_value / 2,
-     gx_max_color_value - (gx_max_color_value / 4),
-     gx_max_color_value
-    };
-
+    
 #define icolor (uint)color
-    if (icolor >= 256 - 7) {
-	prgb[0] = prgb[1] = prgb[2] = ramp7[icolor - (256 - 7)];
+    if (icolor >= 216) {
+	prgb[0] = prgb[1] = prgb[2] = 0;
     } else {
-	prgb[0] = ramp7[icolor / 35];
-	prgb[1] = ramp7[(icolor / 5) % 7];
-	prgb[2] = ramp5[icolor % 5];
+	prgb[0] = ramp6[icolor / 36];
+	prgb[1] = ramp6[(icolor / 6) % 6];
+	prgb[2] = ramp6[icolor % 6];
     }
 #undef icolor
     return 0;

@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevx.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
+/* $Id: gdevx.c,v 1.3 2005/04/18 12:05:57 Arabidopsis Exp $ */
 /* X Windows driver for Ghostscript library */
 #include "gx.h"			/* for gx_bitmap; includes std.h */
 #include "math_.h"
@@ -234,7 +234,7 @@ x_device(gs_x11_device,
 				     FAKE_RES * DEFAULT_HEIGHT_10THS / 10,	/* x and y extent (nominal) */
 				     FAKE_RES, FAKE_RES,	/* x and y density (nominal) */
 				     24, 255, 256 ),
-	 0);
+	 0)
 
 x_device(gs_x11alpha_device,
 	 std_device_dci_alpha_type_body(gx_device_X, 0, "x11alpha", &st_device_X,
@@ -242,7 +242,7 @@ x_device(gs_x11alpha_device,
 					FAKE_RES * DEFAULT_HEIGHT_10THS / 10,	/* x and y extent (nominal) */
 					FAKE_RES, FAKE_RES,	/* x and y density (nominal) */
 					3, 24, 255, 255, 256, 256, 4, 4 ),
-	 50000000);
+	 50000000)
 
 /* If XPutImage doesn't work, do it ourselves. */
 private int alt_put_image(gx_device * dev, Display * dpy, Drawable win,
@@ -355,9 +355,10 @@ x_output_page(gx_device * dev, int num_copies, int flush)
 /* Fill a rectangle with a color. */
 private int
 x_fill_rectangle(gx_device * dev,
-		 int x, int y, int w, int h, gx_color_index color)
+		 int x, int y, int w, int h, gx_color_index gscolor)
 {
     gx_device_X *xdev = (gx_device_X *) dev;
+    unsigned long color = (unsigned long) gscolor;
 
     fit_fill(dev, x, y, w, h);
     flush_text(xdev);
@@ -412,10 +413,12 @@ x_copy_mono(gx_device * dev,
 {
     gx_device_X *xdev = (gx_device_X *) dev;
     int function = GXcopy;
-
+    unsigned long
+	lzero = zero,
+	lone = one;
     x_pixel
-	bc = zero,
-	fc = one;
+	bc = lzero,
+	fc = lone;
 
     fit_copy(dev, base, sourcex, raster, id, x, y, w, h);
     flush_text(xdev);
@@ -462,9 +465,9 @@ x_copy_mono(gx_device * dev,
 	XSetForeground(xdev->dpy, xdev->gc, (xdev->fore_color = fc));
     }
     if (zero != gx_no_color_index)
-	NOTE_COLOR(xdev, zero);
+	NOTE_COLOR(xdev, lzero);
     if (one != gx_no_color_index)
-	NOTE_COLOR(xdev, one);
+	NOTE_COLOR(xdev, lone);
     put_image(xdev->dpy, xdev->dest, xdev->gc, &xdev->image,
 	      sourcex, 0, x, y, w, h);
 
@@ -499,11 +502,11 @@ x_copy_mono(gx_device * dev,
     if (one == gx_no_color_index) {	/* invert */
 	XSetBackground(xdev->dpy, xdev->cp.gc, (x_pixel) 1);
 	XSetForeground(xdev->dpy, xdev->cp.gc, (x_pixel) 0);
-	X_SET_FORE_COLOR(xdev, zero);
+	X_SET_FORE_COLOR(xdev, lzero);
     } else {
 	XSetBackground(xdev->dpy, xdev->cp.gc, (x_pixel) 0);
 	XSetForeground(xdev->dpy, xdev->cp.gc, (x_pixel) 1);
-	X_SET_FORE_COLOR(xdev, one);
+	X_SET_FORE_COLOR(xdev, lone);
     }
     put_image(xdev->dpy, xdev->cp.pixmap, xdev->cp.gc,
 	      &xdev->image, sourcex, 0, 0, 0, w, h);
@@ -628,6 +631,9 @@ x_strip_tile_rectangle(gx_device * dev, const gx_strip_bitmap * tiles,
 		       int px, int py)
 {
     gx_device_X *xdev = (gx_device_X *) dev;
+    unsigned long lzero = (unsigned long) zero;
+    unsigned long lone = (unsigned long) one;
+
 
     /* Give up if one color is transparent, or if the tile is colored. */
     /* We should implement the latter someday, since X can handle it. */
@@ -660,7 +666,7 @@ x_strip_tile_rectangle(gx_device * dev, const gx_strip_bitmap * tiles,
 	    for (i = x + w; --i >= x;) {
 		uint tx = i % tiles->rep_width;
 		byte mask = 0x80 >> (tx & 7);
-		x_pixel pixel = (ptr[tx >> 3] & mask ? one : zero);
+		x_pixel pixel = (ptr[tx >> 3] & mask ? lone : lzero);
 
 		X_SET_FORE_COLOR(xdev, pixel);
 		XDrawPoint(xdev->dpy, xdev->dest, xdev->gc, i, j);
@@ -679,11 +685,11 @@ x_strip_tile_rectangle(gx_device * dev, const gx_strip_bitmap * tiles,
      * bites when using grayscale -- you may want to change
      * fg/bg but use the same halftone screen.
      */
-    if ((zero != xdev->ht.back_c) || (one != xdev->ht.fore_c))
+    if ((lzero != xdev->ht.back_c) || (lone != xdev->ht.fore_c))
 	xdev->ht.id = ~tiles->id;	/* force reload */
 
-    X_SET_BACK_COLOR(xdev, zero);
-    X_SET_FORE_COLOR(xdev, one);
+    X_SET_BACK_COLOR(xdev, lzero);
+    X_SET_FORE_COLOR(xdev, lone);
     if (!set_tile(dev, tiles)) {	/* Bad news.  Fall back to the default algorithm. */
 	return gx_default_strip_tile_rectangle(dev, tiles, x, y, w, h,
 					       zero, one, px, py);
@@ -696,7 +702,7 @@ x_strip_tile_rectangle(gx_device * dev, const gx_strip_bitmap * tiles,
 	x_update_add(xdev, x, y, w, h);
     }
     if_debug6('F', "[F] tile (%d,%d):(%d,%d) %ld,%ld\n",
-	      x, y, w, h, (long)zero, (long)one);
+	      x, y, w, h, lzero, lone);
     return 0;
 }
 

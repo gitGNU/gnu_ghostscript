@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpcx.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevpcx.c,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* PCX file format drivers */
 #include "gdevprn.h"
 #include "gdevpccm.h"
@@ -95,7 +95,7 @@ const gx_device_printer gs_pcx256_device =
 		 DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
 		 X_DPI, Y_DPI,
 		 0, 0, 0, 0,	/* margins */
-		 3, 8, 6, 6, 7, 7, pcx256_print_page)
+		 3, 8, 5, 5, 6, 6, pcx256_print_page)
 };
 
 /* 24-bit color, 3 8-bit planes. */

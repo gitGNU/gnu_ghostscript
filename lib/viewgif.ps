@@ -13,7 +13,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: viewgif.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
+% $Id: viewgif.ps,v 1.3 2005/04/18 12:06:08 Arabidopsis Exp $
 % viewgif.ps
 % Display a GIF file.
 
@@ -109,10 +109,10 @@
    /ImageOutFile where { /ImageOut ImageOutFile (w) file def } if
    F readGIFheader /Header exch def
      currentdict Header end begin begin
-   DEBUG { Header { exch == == } forall (----------------\n) print flush } if
+   VGIFDEBUG { Header { exch == == } forall (----------------\n) print flush } if
    F readGIFimageHeader /ImageHeader exch def
      currentdict ImageHeader end begin begin
-   DEBUG { ImageHeader { exch == == } forall (----------------\n) print flush } if
+   VGIFDEBUG { ImageHeader { exch == == } forall (----------------\n) print flush } if
    /D F
    <<	/InitialCodeLength F read1
 	/FirstBitLowOrder true

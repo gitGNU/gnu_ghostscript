@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevprn.h,v 1.2 2004/02/14 22:20:06 atai Exp $ */
+/* $Id: gdevprn.h,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Common header file for memory-buffered printers */
 
 #ifndef gdevprn_INCLUDED
@@ -339,6 +339,7 @@ prn_dev_proc_buffer_page(gx_default_buffer_page); /* returns an error */
 	NULL,	/* strip_copy_rop, */\
 	NULL,	/* get_clipping_box */\
 	NULL,	/* begin_typed_image */\
+	NULL,	/* get_bits_rectangle */\
 	NULL,	/* map_color_rgb_alpha */\
 	NULL,	/* create_compositor */\
 	NULL,	/* get_hardware_params */\

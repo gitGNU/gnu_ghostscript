@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpm.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevpm.c,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /*
  * OS/2 Presentation manager driver
  *
@@ -77,8 +77,8 @@
 
 /* Initial values for width and height */
 #define INITIAL_RESOLUTION 96
-#define INITIAL_WIDTH (INITIAL_RESOLUTION * 85 / 10 + 1)
-#define INITIAL_HEIGHT (INITIAL_RESOLUTION * 11 + 1)
+#define INITIAL_WIDTH ((INITIAL_RESOLUTION * 85 + 5) / 10)
+#define INITIAL_HEIGHT ((INITIAL_RESOLUTION * 110 + 5) / 10)
 
 /* A macro for casting the device argument */
 #define pmdev ((gx_device_pm *)dev)

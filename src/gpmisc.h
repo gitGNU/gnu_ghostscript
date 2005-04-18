@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gpmisc.h,v 1.2 2004/02/14 22:20:16 atai Exp $ */
+/* $Id: gpmisc.h,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Miscellaneous support for platform facilities */
 
 #ifndef gpmisc_INCLUDED
@@ -45,5 +45,36 @@ int gp_gettmpdir(char *ptr, int *plen);
  * conditions and symlink attacks.
  */
 FILE *gp_fopentemp(const char *fname, const char *mode);
+
+/*
+ * Combine a file name with a prefix.
+ * Concatenates two paths and reduce parent references and current 
+ * directory references from the concatenation when possible.
+ * The trailing zero byte is being added.
+ */
+gp_file_name_combine_result gp_file_name_combine_generic(const char *prefix, uint plen, 
+	    const char *fname, uint flen, bool no_sibling, char *buffer, uint *blen);
+
+/*
+ * Reduces parent references and current directory references when possible.
+ * The trailing zero byte is being added.
+ */
+gp_file_name_combine_result gp_file_name_reduce(const char *fname, uint flen, 
+		char *buffer, uint *blen);
+
+/* 
+ * Answers whether a file name is absolute (starts from a root). 
+ */
+bool gp_file_name_is_absolute(const char *fname, uint flen);
+
+/* 
+ * Returns length of all starting parent references.
+ */
+uint gp_file_name_parents(const char *fname, uint flen);
+
+/* 
+ * Returns length of all starting cwd references.
+ */
+uint gp_file_name_cwds(const char *fname, uint flen);
 
 #endif /* gpmisc_INCLUDED */

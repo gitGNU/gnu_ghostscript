@@ -1,4 +1,4 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 1989-2003 artofcode LLC. All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it
   under the terms of the GNU General Public License version 2
@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gp_unix.c,v 1.2 2004/02/14 22:20:16 atai Exp $ */
+/* $Id: gp_unix.c,v 1.3 2005/04/18 12:06:01 Arabidopsis Exp $ */
 /* Unix-specific routines for Ghostscript */
 #include "pipe_.h"
 #include "string_.h"
@@ -75,6 +75,16 @@ const char *
 gp_strerror(int errnum)
 {
     return NULL;
+}
+
+/* read in a MacOS 'resource' from an extended attribute. */
+/* we don't try to implemented this since it requires support */
+/* for Apple's HFS(+) filesystem */
+int
+gp_read_macresource(byte *buf, const char *filename, 
+                    const uint type, const ushort id)
+{
+    return 0;
 }
 
 /* ------ Date and time ------ */
@@ -165,3 +175,24 @@ gp_close_printer(FILE * pfile, const char *fname)
     else
 	fclose(pfile);
 }
+
+/* ------ Font enumeration ------ */
+ 
+ /* This is used to query the native os for a list of font names and
+  * corresponding paths. The general idea is to save the hassle of
+  * building a custom fontmap file.
+  */
+ 
+void *gp_enumerate_fonts_init(gs_memory_t *mem)
+{
+    return NULL;
+}
+         
+int gp_enumerate_fonts_next(void *enum_state, char **fontname, char **path)
+{
+    return 0;
+}
+                         
+void gp_enumerate_fonts_free(void *enum_state)
+{
+}           

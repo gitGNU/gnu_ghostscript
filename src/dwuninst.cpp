@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-// $Id: dwuninst.cpp,v 1.2 2004/02/14 22:20:05 atai Exp $
+// $Id: dwuninst.cpp,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $
 
 #define STRICT
 #include <windows.h>
@@ -793,7 +793,7 @@ init(void)
 	}
 	if (strlen(szLogFile) == 0) {
 		MessageBox(HWND_DESKTOP, "Usage: uninstgs logfile.txt", 
-			"Ghostscript Uninstall", MB_OK);
+			"GPL Ghostscript Uninstall", MB_OK);
 		return FALSE;
 	}
 	

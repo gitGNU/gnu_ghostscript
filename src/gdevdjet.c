@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevdjet.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevdjet.c,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* HP LaserJet/DeskJet driver for Ghostscript */
 #include "gdevprn.h"
 #include "gdevdljm.h"

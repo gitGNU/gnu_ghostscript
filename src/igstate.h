@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: igstate.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: igstate.h,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Interpreter graphics state definition */
 
 #ifndef igstate_INCLUDED
@@ -170,7 +170,7 @@ typedef struct int_gstate_s {
     /*
      * Remap_color_info is used temporarily to communicate the need for
      * Pattern or DeviceNcolor remapping to the interpreter.  See
-     * e_RemapColor in errors.h.  The extra level of indirection through a
+     * e_RemapColor in ierrors.h.  The extra level of indirection through a
      * structure is needed because the gstate passed to the PaintProc is
      * different from the current gstate in the graphics state, and because
      * the DeviceN color being remapped is not necessarily the current color

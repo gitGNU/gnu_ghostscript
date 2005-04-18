@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>How to prepare a Ghostscript release</title>
-<!-- $Id: Release.htm,v 1.2 2004/02/14 22:20:03 atai Exp $ -->
+<!-- $Id: Release.htm,v 1.3 2005/04/18 12:06:10 Arabidopsis Exp $ -->
 <!-- Originally: make.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -32,6 +32,7 @@
 <ul>
 <li><a href="#Preparing_source">Preparing the source code</a>
 <li><a href="#Testing">Testing</a>
+<li><a href="#Changelog">Updating the Changelog</a>
 <li><a href="#Making_Tarballs">Making the source distribution</a>
 <li><a href="#Testing_on_Windows">Testing on Windows</a>
 <li><a href="#Windows_distribution">Building the Windows distribution</a>
@@ -40,10 +41,10 @@
 <li><a href="#Public_releases">Public releases</a>
 </ul>
 <li><a href="#After_releasing">After releasing</a>
-<li><a href="#GNU_releases">GNU Ghostscript releases</a>
+<li><a href="#GPL_releases">GPL Ghostscript releases</a>
 <ul>
-<li><a href="#GNU_code">GNU code</a>
-<li><a href="#GNU_after_releasing">After releasing (GNU)</a>
+<li><a href="#GPL_code">GPL code</a>
+<li><a href="#GPL_after_releasing">After releasing (GPL)</a>
 </ul>
 <li><a href="#Fonts">Fonts</a>
 </ul></blockquote>
@@ -83,8 +84,8 @@ detail.
 <p>
 The release process for the GPL and AFPL branches are similar, though
 there are some differences in terms of policy and release locations. See
-the section on <a href="#GNU_releases">GNU releases</a> below for
-information specific to GNU Ghostscript.
+the section on <a href="#GPL_releases">GPL releases</a> below for
+information specific to GPL Ghostscript.
 
 <p>
 File names below that don't include an explicit subdirectory name are in the
@@ -117,7 +118,7 @@ below.
 <h2><a name="Servers"></a>Servers</h2>
 
 <p>
-The GNU and AFPL Ghostscript files are maintained on sites accessible to
+The GPL and AFPL Ghostscript files are maintained on sites accessible to
 the public.  One specific site hosts the active CVS repository for code,
 data, and documentation, and the bug report data base; several sites
 offer distributions with release numbers, intended for wider
@@ -126,7 +127,7 @@ distribution.
 <h3><a name="Development_files"></a>Development sources and bug reports</h3>
 
 <p>
-The primary repository for GNU and AFPL Ghostscript is <a
+The primary repository for GPL and AFPL Ghostscript is <a
 href="http://www.ghostscript.com/" class="offsite">ghostscript.com</a>.
 Please check there first for any news about releases or current work,
 and for information about where to download ghostscript and how to
@@ -161,8 +162,8 @@ href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/AFPL/"
 class="offsite">ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/AFPL/</a> or
 <br>
 <a
-href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/" 
-class="offsite">ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/</a>
+href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gpl/" 
+class="offsite">ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gpl/</a>
 </blockquote>
 
 <p>
@@ -256,6 +257,11 @@ freely available from Scriptics
 (<a class="offsite" href="http://www.scriptics.com"><tt>http://www.scriptics.com</tt></a>), and
 Python, freely available from <a class="offsite"
 href="http://www.python.org"><tt>http://www.python.org</tt></a>.
+
+<p>
+To update the changelogs, you'll also need a recent version of the cvs2cl perl script. If
+not already installed on your system a copy can be found at
+<a class="offsite" href="http://www.red-bean.com/cvs2cl/cvs2cl.pl">http://www.red-bean.com/cvs2cl/cvs2cl.pl</a>.
 
 <p>
 The instructions below also refer to some files that are deliberately
@@ -428,31 +434,41 @@ cvs commit
 <p>
 to ensure the repository is up to date.
 
+<h3><a name="Changelog"></a>Updating the changelog</h3>
+
 <p>
-Execute either (for the main HEAD branch)
+Create a new changelog by running either (for the main HEAD branch)
 
 <blockquote><pre>
-toolbin/cvs2hist.py -j &lt;previous_tag&gt; -r '-b' -v &lt;new_version&gt; &gt; doc/Changes.htm
+cvs2cl.pl --utc -T --follow trunk --delta &lt;prev release tag&gt;:HEAD --xml -f doc/changelog.xml
 </pre></blockquote>
+
 or (for a non-HEAD branch)
+
 <blockquote><pre>
-toolbin/cvs2hist.py -j &lt;previous_tag&gt; -r '-r&lt;branch_tag&gt;' -v &lt;new_version&gt; &gt; doc/Changes.htm
+cvs2cl.pl --utc -T --follow &lt;branch&gt; --delta &lt;prev release tag&gt;:&lt;branch tag&gt; --xml -f doc/changelog.xml
 </pre></blockquote>
 e.g.
-<blockquote><pre>toolbin/cvs2hist.py -j gs7_20 -r '-b' -v 7.21</pre>
+<blockquote>
+<pre>cvs2cl.pl --utc -T --follow trunk --delta gs8_00:HEAD --xml -f doc/changelog.xml</pre>
 </blockquote>
 
 <p>
 This consolidates all the CVS logs since the previous release in a readable
-format. Note: the cvs2hist.py tool currently in the distribution is not
-very branch-aware (nor is the 'cvs log' command it depends on) so the extra
-complication of the -j and -r options are required when generating the Changes
-for a non-HEAD branch of Ghostscript. Note that the -r option should be
-an empty '-b' when generating logs for the cvs main branch due to
-variations in naming.
+format. You may also wish to pass a file mapping cvs user names to real names
+with the <tt>-U</tt> option.
 
 <p>
-Run
+Create the html-format changes and details documents as follows:
+
+<blockquote><pre>
+cd doc
+../toolbin/split_changelog.py changelog.xml Changes.htm Details.htm
+cd ..
+</pre></blockquote>
+
+<p>
+The xml changelog file can now be deleted. Run
 
 <blockquote><pre>
 toolbin/makehist.tcl
@@ -502,6 +518,18 @@ Generate the text versions of the README and PUBLIC documents:
 <tt>lynx -dump -nolist doc/Readme.htm &gt; doc/README</tt>
 <tt>lynx -dump -nolist doc/Public.htm &gt; doc/PUBLIC</tt></pre>
 </blockquote>
+
+<p>
+Add copies of third-party libraries. Versions of the ijs and icc 
+libraries are included in Ghostscript cvs, so these are provided
+by the export. Source for zlib, libjpeg, and zlib are usually provided
+in the Windows and MacOS source releases, but not the unix tarballs.
+
+<p>
+Download and unpack the latest source release of 
+<a href="http://jbig2dec.sourceforge.net/">jbig2dec</a>, renaming the 
+directory to just <tt>jbig2dec</tt> on the top level of ghostscritp 
+source directory.
 
 <p>
 For the unix source distributions only, generate the configure
@@ -633,7 +661,7 @@ Extract the sources from <b><tt>ghostscript-N.NN.tar.gz</tt></b>
 then repackage in a zip file as follows:
 <blockquote>
 <b><tt>zip -r temp.zip gsN.NN/doc gsN.NN/examples gsN.NN/icclib 
-  gsN.NN/ijs gsN.NN/lib gsN.NN/src</tt></b>
+  gsN.NN/ijs gsN.NN/jbig2dec gsN.NN/lib gsN.NN/src gsN.NN/Resource</tt></b>
 </blockquote>
 Unzip converting the line endings to CRLF:
 <blockquote>
@@ -642,7 +670,7 @@ del temp.zip</tt></b>
 </blockquote>
 Then finally zip up the sources to the distribution file:
 <blockquote>
-<b><tt>zip -9 -r gsNNNsrc.zip gsN.NN</tt></b>
+<b><tt>zip -9 -r -X gsNNNsrc.zip gsN.NN</tt></b>
 </blockquote>
 This method is reasonably portable, and does not convert binary
 files such as
@@ -689,7 +717,7 @@ FTP to <b><tt>upload.sourceforge.net</tt></b>, directory
 <b><tt>/incoming</tt></b>), and then post it using the "File Release"
 facility in the AFPL Ghostscript project. If this is a stable AFPL
 release put it in the <b><tt>ghostscript</tt></b> module.
-If this is a GNU release, put it in the <b><tt>gnu-gs</tt></b> module.
+If this is a GPL release, put it in the <b><tt>gs-gpl</tt></b> module.
 If this is a test release or beta release, put
 it in the <b><tt>gs-devel</tt></b> or <b><tt>gs-beta</tt></b> module,
 respectively. 
@@ -799,25 +827,25 @@ In <b><tt>gscdef.c</tt></b>, edit the definition of
 Edit <b><tt>doc/News.htm</tt></b> to remove all the content.
 
 
-<h2><a name="GNU_releases"></a>GNU Ghostscript releases</h2>
+<h2><a name="GPL_releases"></a>GPL Ghostscript releases</h2>
 
 <p>
-artofcode LLC re-releases each stable AFPL Ghostscript branch under
-the GPL--as GNU Ghostscript--when the next major stable AFPL 
-release comes out, or after one calendar year, whichever comes first.
+artofcode LLC re-releases each stable AFPL Ghostscript branch as
+GPL Ghostscript (under the GNU GPL license) when the next major stable
+AFPL release comes out, or after one calendar year, whichever comes first.
 
-<h3><a name="GNU_code"></a>GNU code</h3>
+<h3><a name="GPL_code"></a>GPL code</h3>
 
 <p>
-To make a GNU Ghostscript release from AFPL Ghostscript, update the
+To make a GPL Ghostscript release from AFPL Ghostscript, update the
 LICENCE file to reflect the new status of the code. In general there
 can be no recipe for this as it depends on the niceties of ownership and
-permisison attached to each piece of code. However, a previous GNU
+permisison attached to each piece of code. However, a previous GPL
 release can serve as a guide.
 
 <p>
 There are also generally some portions of code (usually drivers) which
-are limited to GNU Ghostscript only. These may want porting to the new
+are limited to GPL Ghostscript only. These may want porting to the new
 version before release.
 
 <p>Once the license change is complete and the codebase has been
@@ -826,18 +854,7 @@ Ghostscript above to test and package the new version. The distribution
 methods are parallel to those for the AFPL, with the GPL releases
 generally going under a separate header. For example, on the wisc
 ftp site upload the file to 
-<tt>ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/gs###/</tt>.
-
-<h3><a name="GNU_after_releasing"></a>After releasing (GNU)</h3>
-
-<p>
-E-mail the full URL and the <b><tt>md5sum</tt></b> of the new archive(s) to
-<a href="mailto:ftp-upload@gnu.org"><tt>ftp-upload@gnu.org</tt></a>.
-
-<p>
-It may also be helpful to have the Free Software Foundation review the
-code before release to see whether it meets their standards for
-distribution from the gnu.org website.
+<tt>ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gpl/gs###/</tt>.
 
 
 <h2><a name="Fonts"></a>Fonts</h2>
@@ -870,8 +887,8 @@ gnu-gs-fonts-other-#.##.tar.gz
 The first two of these use the AFPL, and should be uploaded to
 <b><tt>ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/AFPL/fonts/</tt></b>.  The other two
 use the GPL, and should be uploaded to
-<b><tt>ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/fonts/</tt></b>.  For the GNU
-release, also see <a href="#GNU_after_releasing">"After releasing
+<b><tt>ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/fonts/</tt></b>.  For the GPL
+release, also see <a href="#GPL_after_releasing">"After releasing
 (GNU)"</a>.
 
 <!-- [2.0 end contents] ==================================================== -->
@@ -880,7 +897,7 @@ release, also see <a href="#GNU_after_releasing">"After releasing
 <hr>
 
 <p>
-<small>Copyright &copy; 1999-2002 artofcode LLC. All rights 
+<small>Copyright &copy; 1999-2003 artofcode LLC. All rights 
 reserved.</small>
 
 <p>
@@ -898,7 +915,7 @@ contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
 <p>
-<small>Ghostscript version 8.01, 30 January 2004
+<small>Ghostscript version 8.15, 22 September 2004
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

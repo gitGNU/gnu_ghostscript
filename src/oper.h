@@ -22,13 +22,13 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: oper.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: oper.h,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Definitions for Ghostscript operators */
 
 #ifndef oper_INCLUDED
 #  define oper_INCLUDED
 
-#include "errors.h"
+#include "ierrors.h"
 #include "ostack.h"
 #include "opdef.h"
 #include "opextern.h"

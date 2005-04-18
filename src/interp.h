@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: interp.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: interp.h,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Internal interfaces to interp.c and iinit.c */
 
 #ifndef interp_INCLUDED
@@ -60,6 +60,11 @@ extern const int gs_interp_num_special_ops;
  * assign it a special type and index.
  */
 void gs_interp_make_oper(ref * opref, op_proc_t, int index);
+
+/*
+ * Call the garbage collector, updating the context pointer properly.
+ */
+int interp_reclaim(i_ctx_t **pi_ctx_p, int space);
 
 /* Get the name corresponding to an error number. */
 int gs_errorname(i_ctx_t *, int, ref *);

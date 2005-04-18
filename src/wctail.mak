@@ -21,7 +21,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: wctail.mak,v 1.2 2004/02/14 22:20:19 atai Exp $
+# $Id: wctail.mak,v 1.3 2005/04/18 12:05:57 Arabidopsis Exp $
 # wctail.mak
 # Last part of Watcom C/C++ makefile common to MS-DOS and MS Windows.
 
@@ -40,6 +40,7 @@ WCTAIL_MAK=$(GLSRCDIR)\wctail.mak
 # zlib.mak must precede libpng.mak
 !include $(GLSRCDIR)\zlib.mak
 !include $(GLSRCDIR)\libpng.mak
+!include $(GLSRCDIR)\jbig2.mak
 !include $(GLSRCDIR)\icclib.mak
 !include $(GLSRCDIR)\ijs.mak
 

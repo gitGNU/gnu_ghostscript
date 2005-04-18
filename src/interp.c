@@ -22,14 +22,14 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: interp.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: interp.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Ghostscript language interpreter */
 #include "memory_.h"
 #include "string_.h"
 #include "ghost.h"
 #include "gsstruct.h"		/* for iastruct.h */
 #include "stream.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "estack.h"
 #include "ialloc.h"
 #include "iastruct.h"
@@ -54,6 +54,7 @@
 #include "files.h"		/* for file_check_read */
 #include "oper.h"
 #include "store.h"
+#include "gpcheck.h"
 
 /*
  * We may or may not optimize the handling of the special fast operators
@@ -413,7 +414,7 @@ gs_interp_make_oper(ref * opref, op_proc_t proc, int idx)
 /*
  * Call the garbage collector, updating the context pointer properly.
  */
-private int
+int
 interp_reclaim(i_ctx_t **pi_ctx_p, int space)
 {
     i_ctx_t *i_ctx_p = *pi_ctx_p;
@@ -1657,6 +1658,7 @@ res:
     } else
 	code = 0;
     ticks_left = gs_interp_time_slice_ticks;
+    set_code_on_interrupt(&code);
     goto sched;
 
     /* Error exits. */

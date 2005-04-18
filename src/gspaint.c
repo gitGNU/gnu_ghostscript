@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gspaint.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gspaint.c,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Painting procedures for Ghostscript library */
 #include "math_.h"		/* for fabs */
 #include "gx.h"
@@ -39,6 +39,7 @@
 #include "gxdevice.h"
 #include "gxdevmem.h"
 #include "gzcpath.h"
+#include "gxhldevc.h"
 
 /* Define the nominal size for alpha buffers. */
 #define abuf_nominal_SMALL 500
@@ -75,17 +76,28 @@ int
 gs_fillpage(gs_state * pgs)
 {
     gx_device *dev;
-    int code;
+    int code = 0;
     gs_logical_operation_t save_lop;
-
+    bool hl_color_available = gx_hld_is_hl_color_available((gs_imager_state *)pgs, 
+						    pgs->dev_color);
     gx_set_dev_color(pgs);
     dev = gs_currentdevice(pgs);
     /* Fill the page directly, ignoring clipping. */
     /* Use the default RasterOp. */
     save_lop = pgs->log_op;
     gs_init_rop(pgs);
-    code = gx_fill_rectangle(0, 0, dev->width, dev->height,
-			     pgs->dev_color, pgs);
+    if (hl_color_available) {
+	gs_fixed_rect rect;
+
+	rect.p.x = rect.p.y = 0;
+	rect.q.x = int2fixed(dev->width);
+	rect.q.y = int2fixed(dev->height);
+	code = dev_proc(pgs->device, fill_rectangle_hl_color)(pgs->device, 
+		&rect, (const gs_imager_state *)pgs, pgs->dev_color, NULL);
+    }
+    if (!hl_color_available || code == gs_error_rangecheck)
+	code = gx_fill_rectangle(0, 0, dev->width, dev->height,
+				 pgs->dev_color, pgs);
     pgs->log_op = save_lop;
     if (code < 0)
 	return code;

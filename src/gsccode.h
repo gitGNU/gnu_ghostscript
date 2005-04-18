@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsccode.h,v 1.2 2004/02/14 22:20:16 atai Exp $ */
+/* $Id: gsccode.h,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* Types for character codes */
 
 #ifndef gsccode_INCLUDED
@@ -41,13 +41,17 @@ typedef ulong gs_char;
 
 /*
  * Define a character glyph code, a.k.a. character name.  The space of
- * glyph codes is divided into four sections:
+ * glyph codes is divided into five sections:
  *
- *	- Codes >= GS_MIN_CID_GLYPH represent (non-negative) integers biased
- *	  by GS_MIN_CID_GLYPH.  Depending on the context, they may represent
- *	  either PostScript CIDs or TrueType GIDs.
+ *	- Codes >= GS_MIN_GLYPH_INDEX represent (non-negative) 
+ *	  integers biased by GS_MIN_CID_GLYPH.  They represent glyph indices
+ *	  of a specific font.
  *
- *	+ Codes < GS_MIN_CID_GLYPH represent named glyphs.  There are
+ *	- Codes within [GS_MIN_CID_GLYPH, GS_MIN_GLYPH_INDEX) represent (non-negative) 
+ *	  integers biased by GS_MIN_CID_GLYPH.  They represent PostScript CIDs
+ *        of a specific Ordering.
+ *
+ *	- Codes < GS_MIN_CID_GLYPH represent named glyphs.  There are
  *	  three sub-sections:
  *
  *	  - GS_NO_GLYPH, which means "no known glyph value".  Note that
@@ -85,6 +89,8 @@ typedef ulong gs_glyph;
 /* Avoid compiler warnings about signed/unsigned constants. */
 #  define GS_MIN_CID_GLYPH ((gs_glyph)~0x7fffffff)
 #endif
+#define GS_MIN_GLYPH_INDEX (GS_MIN_CID_GLYPH | (GS_MIN_CID_GLYPH >> 1))
+#define GS_GLYPH_TAG (gs_glyph)(GS_MIN_CID_GLYPH | GS_MIN_GLYPH_INDEX)
 #define GS_MAX_GLYPH max_ulong
 /* Backward compatibility */
 #define gs_no_glyph GS_NO_GLYPH
@@ -127,7 +133,8 @@ typedef enum {
  */
 typedef enum gs_glyph_space_s {
     GLYPH_SPACE_NAME,		/* names (if available) */
-    GLYPH_SPACE_INDEX		/* indexes (if available) */
+    GLYPH_SPACE_INDEX,		/* indexes (if available) */
+    GLYPH_SPACE_NOGEN		/* don't generate new names (Type 3 only) */
 } gs_glyph_space_t;
 
 /*

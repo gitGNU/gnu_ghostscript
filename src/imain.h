@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: imain.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: imain.h,v 1.3 2005/04/18 12:05:57 Arabidopsis Exp $ */
 /* Interface to imain.c */
 /* Requires <stdio.h>, stdpre.h, gsmemory.h, gstypes.h, iref.h */
 
@@ -268,6 +268,6 @@ int gs_main_errwrite(gs_main_instance *minst, const char *str, int len);
  * Note that calling gs_to_exit (defined in gsexit.h) automatically calls
  * gs_main_finit for the default instance.
  */
-void gs_main_finit(gs_main_instance * minst, int exit_status, int code);
+int gs_main_finit(gs_main_instance * minst, int exit_status, int code);
 
 #endif /* imain_INCLUDED */

@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- Mode: python -*-
+
 #    Copyright (C) 2001 Artifex Software Inc.
 # 
 #  This program is free software; you can redistribute it and/or modify it
@@ -21,7 +24,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: gstestgs.py,v 1.1 2004/02/14 22:46:29 atai Exp $
+# $Id: gstestgs.py,v 1.2 2005/04/18 12:06:13 Arabidopsis Exp $
 
 # gstestgs.py
 #
@@ -64,9 +67,13 @@ class Ghostscript:
 		cmd = cmd + '-sDEVICE=%s ' % (self.device,)
 		cmd = cmd + '-sOutputFile=%s ' % (self.outfile,)
 
-		# as of gs_init 1.93, job server emulation needs -dNOOUTERSAVE so
-		# that the 'exitserver' will restore global VM as expected.
-		cmd = cmd + '-dNOOUTERSAVE -c false 0 startjob pop '
+		# as of gs_init 1.93, job server emulation needs -dNOOUTERSAVE
+		# so that the 'exitserver' will restore global VM as expected.
+		# As of gs_init 1.87.2.9, released with Ghostscript 8.15,
+		# job server emulation is supported (in a backward compatible
+		# fashion) so we add -dJOBSERVER. The old options are 
+		# kept so tests will run against older releases.
+		cmd = cmd + '-dNOOUTERSAVE -dJOBSERVER -c false 0 startjob pop '
 
 		if string.lower(self.infile[-4:]) == ".pdf":
 			cmd = cmd + ' -dFirstPage=1 -dLastPage=1 '

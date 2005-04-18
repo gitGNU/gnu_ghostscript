@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: sdcparam.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: sdcparam.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* DCT filter parameter setting and reading */
 #include "memory_.h"
 #include "jpeglib_.h"
@@ -163,7 +163,7 @@ s_DCT_get_quantization_tables(gs_param_list * plist,
 	    default_table_ptrs = defaults->data.compress->cinfo.quant_tbl_ptrs;
 	}
     } else {
-	/**************** quant_tables.size NOT INITIALIZED ****************/
+	quant_tables.size = count_of(d_comp_info);
 	num_in_tables = quant_tables.size;
 	for (i = 0; i < num_in_tables; ++i)
 	    d_comp_info[i].quant_tbl_no = i;

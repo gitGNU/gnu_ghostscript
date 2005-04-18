@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpdtd.h,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: gdevpdtd.h,v 1.2 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* FontDescriptor structure and API for pdfwrite */
 
 #ifndef gdevpdtd_INCLUDED
@@ -95,16 +95,26 @@ font_type pdf_font_descriptor_FontType(const pdf_font_descriptor_t *pfd);
 bool pdf_font_descriptor_embedding(const pdf_font_descriptor_t *pfd);
 
 /*
+ * Check for subset font.
+ */
+bool pdf_font_descriptor_is_subset(const pdf_font_descriptor_t *pfd);
+
+/*
  * Return a reference to the FontName of a FontDescriptor, similar to
  * pdf_base_font_name.
  */
 gs_string *pdf_font_descriptor_name(pdf_font_descriptor_t *pfd);
 
 /*
- * Return the (copied, subset) font associated with a FontDescriptor.
+ * Return the (copied, subset or complete) font associated with a FontDescriptor.
  * This procedure probably shouldn't exist....
  */
-gs_font_base *pdf_font_descriptor_font(const pdf_font_descriptor_t *pfd);
+gs_font_base *pdf_font_descriptor_font(const pdf_font_descriptor_t *pfd, bool complete);
+
+/*
+ * Drop the copied complete font associated with a FontDescriptor.
+ */
+void pdf_font_descriptor_drop_complete_font(const pdf_font_descriptor_t *pfd);
 
 /*
  * Return a reference to the name of a FontDescriptor's base font, per

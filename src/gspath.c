@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gspath.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gspath.c,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $ */
 /* Basic path routines for Ghostscript library */
 #include "gx.h"
 #include "gserrors.h"
@@ -372,8 +372,6 @@ private void
 note_set_clip_path(const gs_state * pgs)
 {
     if (gs_debug_c('P')) {
-	extern void gx_cpath_print(const gx_clip_path *);
-
 	dlprintf("[P]Clipping path:\n");
 	gx_cpath_print(pgs->clip_path);
     }

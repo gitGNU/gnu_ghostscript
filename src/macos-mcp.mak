@@ -1,4 +1,4 @@
-#    Copyright (C) 1997-2002 artofcode LLC.  All rights reserved.
+#    Copyright (C) 1997-2003 artofcode LLC.  All rights reserved.
 # 
 #  This program is free software; you can redistribute it and/or modify it
 #  under the terms of the GNU General Public License version 2
@@ -21,7 +21,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: macos-mcp.mak,v 1.2 2004/02/14 22:20:19 atai Exp $
+# $Id: macos-mcp.mak,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $
 # Makefile for CodeWarrior XML project file creation from Darwin/MacOSX.
 
 # Run this file through make on MacOS X (or any other system with shell
@@ -55,9 +55,9 @@ PSD=$(PSGENDIR)/
 # ------ Generic options ------ #
 
 # Define the default directory/ies for the runtime
-# initialization and font files.  Separate multiple directories with a :.
+# initialization, resource and font files.  Separate multiple directories with a :.
 
-GS_LIB_DEFAULT=:,:lib,:files,:fonts,:examples
+GS_LIB_DEFAULT=:,:lib,:Resource,:files,:fonts,:examples
 
 GS_DOCDIR=:doc
 
@@ -103,6 +103,7 @@ PLATFORM=macos_
 SHARE_LIBPNG=0
 SHARE_JPEG=0
 SHARE_ZLIB=0
+SHARE_JBIG2=0
 
 # Define the directory where the IJG JPEG library sources are stored,
 # and the major version of the library that is stored there.
@@ -118,12 +119,17 @@ JVERSION=6
 # See libpng.mak for more information.
 
 PSRCDIR=libpng
-PVERSION=10204
+PVERSION=10205
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.
 
 ZSRCDIR=zlib
+
+# Define the jbig2dec library source location.
+# See jbig2.mak for more information.
+
+JBIG2SRCDIR=jbig2dec
 
 # Define the directory where the icclib source are stored.
 # See icclib.mak for more information
@@ -137,7 +143,7 @@ ICCSRCDIR=icclib
 # Define the directory where the ijs source is stored,
 # and the process forking method to use for the server.
 # See ijs.mak for more information.
- 
+
 #IJSSRCDIR=ijs
 #IJSEXECTYPE=unix
 
@@ -174,11 +180,11 @@ SYNC=nosync
 
 # Choose the language feature(s) to include.  See gs.mak for details.
 
-FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)epsf.dev $(GLD)pipe.dev
+FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)epsf.dev $(GLD)pipe.dev $(PSD)macres.dev $(PSD)macpoll.dev $(PSD)jbig2.dev
 #FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev
 #FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)rasterop.dev $(GLD)pipe.dev
 # The following is strictly for testing.
-FEATURE_DEVS_ALL=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)rasterop.dev $(PSD)double.dev $(PSD)trapping.dev $(PSD)stocht.dev $(GLD)pipe.dev
+FEATURE_DEVS_ALL=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)rasterop.dev $(PSD)double.dev $(PSD)trapping.dev $(PSD)stocht.dev $(GLD)pipe.dev $(GLD)macres.dev $(PSD)jbig2.dev $(PSD)macpoll.dev
 #FEATURE_DEVS=$(FEATURE_DEVS_ALL)
 
 # Choose whether to compile the .ps initialization files into the executable.
@@ -215,7 +221,7 @@ EXTEND_NAMES=0
 # Choose the device(s) to include.  See devs.mak for details,
 # devs.mak and contrib.mak for the list of available devices.
 
-DEVICE_DEVS=$(DD)macos.dev $(DD)macos_.dev
+DEVICE_DEVS=$(DD)macos.dev $(DD)macos_.dev $(DD)display.dev
 
 #DEVICE_DEVS1=
 #DEVICE_DEVS2=
@@ -254,7 +260,7 @@ DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev
 DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)epswrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
 
-DEVICE_DEVS16=
+DEVICE_DEVS16=$(DD)bbox.dev
 DEVICE_DEVS17=
 DEVICE_DEVS18=
 DEVICE_DEVS19=
@@ -301,6 +307,7 @@ include $(GLSRCDIR)/jpeg.mak
 # zlib.mak must precede libpng.mak
 include $(GLSRCDIR)/zlib.mak
 include $(GLSRCDIR)/libpng.mak
+include $(GLSRCDIR)/jbig2.mak
 include $(GLSRCDIR)/icclib.mak
 include $(GLSRCDIR)/devs.mak
 include $(GLSRCDIR)/contrib.mak
@@ -338,22 +345,11 @@ gconfig_h=$(GLOBJ)gconfig.h
 gconfigv_h=$(GLOBJ)gconfigv.h
 
 macsystypes_h=$(GLSRC)macsystypes.h
-macsysstat_h=$(GLSRC)macsysstat.h
-systypes_h=$(GLOBJ)sys\:types.h
-systime_h=$(GLOBJ)sys\:time.h
-sysstat_h=$(GLOBJ)sys\:stat.h
+systypes_h=$(GLOBJ)sys/types.h
 
 $(GLOBJ)gp_mac.$(OBJ): $(GLSRC)gp_mac.c
-$(GLOBJ)gp_macio.$(OBJ): $(GLSRC)gp_macio.c
+$(GLOBJ)gp_macio.$(OBJ): $(GLSRC)gp_macio.c $(gx_h) $(gp_h) $(gpmisc_h)
 $(GLOBJ)gp_stdin.$(OBJ): $(GLSRC)gp_stdin.c $(AK) $(stdio__h) $(gx_h) $(gp_h)
-
-# does not work for systime_h?!?!
-#$(systypes_h):
-#	$(CP_) $(macsystypes_h) $(systypes_h)
-#$(systime_h):
-#	echo "/* This file deliberately left blank. */" > $(systime_h)
-#$(sysstat_h):
-#	$(CP_) $(macsysstat_h) $(sysstat_h)
 
 # ------------------------------------------------------------------- #
 
@@ -363,7 +359,17 @@ MAC2=$(GLOBJ)gp_getnv.$(OBJ) $(GLOBJ)gp_nsync.$(OBJ) $(GLOBJ)gdevemap.$(OBJ) $(G
 $(GLD)macos_.dev: $(MAC1)
 	$(SETMOD) $(DD)macos_ $(MAC1) $(MAC)
 	$(ADDMOD) $(DD)macos_ -obj $(MAC2)
-	$(ADDMOD) $(DD)macos_ -iodev macstdio  # stdout does not work with MSL!!!
+	# uncomment the line below if you need the legacy macstdio device
+	#$(ADDMOD) $(DD)macos_ -iodev macstdio  # macstdio does not work with MSL!!!
+
+# Define polling as a separable feature because it is not needed by the gslib.
+macpoll_=$(GLOBJ)gp_macpoll.$(OBJ)
+$(GLD)macpoll.dev: $(ECHOGS_XE) $(macpoll_)
+	$(SETMOD) $(GLD)macpoll $(macpoll_)
+
+$(GLOBJ)gp_macpoll.$(OBJ): $(GLSRC)gp_macpoll.c $(AK)\
+ $(gx_h) $(gp_h) $(gpcheck_h) $(iapi_h) $(iref_h) $(iminst_h) $(imain_h)
+
 
 # ------------------------------------------------------------------- #
 
@@ -398,9 +404,8 @@ ldt_tr=$(PSOBJ)ldt.tr
 CWPROJ_XML=./ghostscript.mcp.xml
 
 $(CWPROJ_XML):
+	-mkdir -p obj/sys
 	$(CP_) $(macsystypes_h) $(systypes_h)
-	echo "/* This file deliberately left blank. */" > $(systime_h)
-	$(CP_) $(macsysstat_h) $(sysstat_h)
 	$(SH) $(GLSRC)macgenmcpxml.sh `$(CAT) $(ld_tr)` >  $(CWPROJ_XML)
 	$(CP_) $(GLSRC)gconf.c $(GLOBJ)gconfig.c
 	$(CP_) $(GLSRC)iconf.c $(GLOBJ)iconfig.c

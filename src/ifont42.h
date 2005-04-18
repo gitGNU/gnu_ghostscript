@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: ifont42.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: ifont42.h,v 1.3 2005/04/18 12:05:57 Arabidopsis Exp $ */
 /* Procedure for building a Type 42 or CIDFontType 2 font */
 
 #ifndef ifont42_INCLUDED
@@ -55,6 +55,8 @@ int font_gdir_get_outline(const ref *, long, gs_glyph_data_t *);
  * Access a given byte offset and length in an array of strings.
  * This is used for sfnts and for CIDMap.  The int argument is 2 for sfnts
  * (because of the strange behavior of odd-length strings), 1 for CIDMap.
+ * Return code : 0 - success, <0 - error, 
+ *               >0 - number of accessible bytes (client must cycle).
  */
 int string_array_access_proc(const ref *, int, ulong, uint, const byte **);
 

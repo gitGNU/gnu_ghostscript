@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>Ghostscript projects</title>
-<!-- $Id: Projects.htm,v 1.2 2004/02/14 22:20:03 atai Exp $ -->
+<!-- $Id: Projects.htm,v 1.3 2005/04/18 12:06:10 Arabidopsis Exp $ -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
 
@@ -289,7 +289,9 @@ of the (fully decoded) data rows.</I>
 Currently, the PDF writer has no way to emit warnings.  Users would like to
 see warnings when fonts cannot be embedded (this is actually required when
 the value of CannotEmbedFontPolicy is set to /Warning), and for some other
-questionable situations like non-existent Dests (SourceForge "bug" #480853).
+questionable situations like non-existent Dests (Feature request
+<a href="http://bugs.ghostscript.com/show_bug.cgi?id=480853"
+class="offsite">#480853</a>).
 Probably the right way to handle this is with a pseudo device parameter
 called "Warnings" that is a list of strings: the pdfwrite driver would add
 strings to this list, and the ps2pdf script (lib/gs_pdfwr.ps) would read
@@ -321,18 +323,18 @@ anomalies caused by slight misregistration of different ink layers): we
 would like to implement this.  <I>This is a complex and
 difficult area; even many Adobe RIPs don't do it.</I>
 
-<h3>Hook FreeType TrueType library into graphics library.</h3>
+<h3>Improve the font grid fitting and antialiasing.</h3>
 
 <p>
-We would like to provide an option for good integration of the FreeType font
-rasterizer into Ghostscript, since the FreeType code is better than
-Ghostscript's current rasterizers.  We understand that some users in Japan
-have done this already, but we don't know if this is a good starting point
-(the only documentation is in Japanese).  <I>Their work uses
-Ghostscript's 'xfont' interface, which is how Ghostscript interfaces to
-platform facilities such as the X and MS Windows font capabilities.  This is
-a device-level interface and not the best place to do this: we would rather
-have the graphics library interface to FreeType directly.</I>
+Ghostscript includes a reduced True Type bytecode interpreter branched from FreeType 1.
+It performs a grid fitting for True Type glyphs except ones involving
+instructions patented by Apple. A wanted improvement is to implement
+a stem recognition algorithm similar to Free Type autohinting.
+It also would help to poorly designed Type 1 fonts, which have misplaced or missed hints. 
+
+<p>
+Another useful improvement is to implement a font antialiasing with 
+<b><tt>TextAlphaBits</tt></b> other than 1,2,4.
 
 <h3>ICC profile support for output.</h3>
 
@@ -660,22 +662,6 @@ directory created in such a way as to avoid /tmp races and similar
 problems. Ghostscript should delete the subdirectory when it exits.
 </I>
 
-<h3>The PDF interpreter doesn't handle misused Widths right.</h3>
-
-<p>
-Adobe Acrobat Reader can handle PDF fonts in which the Widths array is being
-misused to override the widths in the font, even if the same character
-appears multiple places in the font's encoding.  Ghostscript's PDF
-interpreter can't do this using the PostScript Metrics dictionary, because
-PostScript provides no straightforward way to do this; the present code
-tries to hack it, but can't always succeed.  <I>We propose to add a new,
-optional, non-standard .Widths array to Type 1 and Type 42, indexed by
-character code, that the C code would access directly.  That would get rid
-of the current hacks, and would add very little code (in fact, it might not
-net add code at all, because of the code that we could remove from the PDF
-interpreter).  The character code is already being passed to .type1execchar
-and .type42execchar, so no operator definitions would have to change.</I>
-
 <!-- [2.0 end contents] ==================================================== -->
 
 <!-- [3.0 begin visible trailer] =========================================== -->
@@ -700,7 +686,7 @@ contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
 <p>
-<small>Ghostscript version 8.01, 30 January 2004
+<small>Ghostscript version 8.15, 22 September 2004
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

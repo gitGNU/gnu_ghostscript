@@ -13,7 +13,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_cidcm.ps,v 1.2 2004/02/14 22:20:04 atai Exp $
+% $Id: gs_cidcm.ps,v 1.3 2005/04/18 12:06:08 Arabidopsis Exp $
 % Extending Font resource category with CIDFont-CMap fonts.
 
 languagelevel 2 .setlanguagelevel currentglobal true setglobal
@@ -39,8 +39,8 @@ languagelevel 2 .setlanguagelevel currentglobal true setglobal
 
 /.prs_dict currentdict def       % self-reference (constant)
 /.prs_empty 0 dict readonly def  
-/path_buffer 255 string def
-/name_buffer 255 string def
+/path_buffer 8192 string def
+/name_buffer 1024 string def
 /minus (-) 0 get def             % character code constant for '-'
 /period (.) 0 get def            % character code constant for '.'
 /CMap 10 dict def                % CSI cache for CMaps

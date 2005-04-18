@@ -22,13 +22,13 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zfile1.c,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: zfile1.c,v 1.2 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Special file operators */
 
 #include "memory_.h"
 #include "ghost.h"
 #include "gp.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "oper.h"
 #include "ialloc.h"
 #include "opdef.h"
@@ -73,7 +73,6 @@ zfile_name_combine(i_ctx_t *i_ctx_p)
     return 0;
 }
 
-#if NEW_COMBINE_PATH
 /* This is compiled conditionally to let PS library to know
  * whether it works with the new gp_combine_file_name.
  */
@@ -124,18 +123,14 @@ zfile_name_parent(i_ctx_t *i_ctx_p)
 {   return push_string(i_ctx_p, gp_file_name_parent());
 }
 
-#endif
-
 const op_def zfile1_op_defs[] =
 {
     {"0.file_name_combine", zfile_name_combine},
-#if NEW_COMBINE_PATH
     {"0.file_name_is_absolute", zfile_name_is_absolute},
     {"0.file_name_separator", zfile_name_separator},
     {"0.file_name_directory_separator", zfile_name_directory_separator},
     {"0.file_name_current", zfile_name_current},
     {"0.file_name_parent", zfile_name_parent},
-#endif
     op_def_end(0)
 };
 

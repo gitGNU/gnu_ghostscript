@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsalloc.c,v 1.2 2004/02/14 22:20:16 atai Exp $ */
+/* $Id: gsalloc.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Standard memory allocator */
 #include "gx.h"
 #include "memory_.h"
@@ -640,6 +640,13 @@ i_alloc_struct_array(gs_memory_t * mem, uint num_elements,
     obj_header_t *obj;
 
     ALLOC_CHECK_SIZE(pstype);
+#ifdef DEBUG
+    if (pstype->enum_ptrs == basic_enum_ptrs) {
+	dprintf2("  i_alloc_struct_array: called with incorrect structure type (not element), struct='%s', client='%s'\n",
+		pstype->sname, cname);
+	return NULL;		/* fail */
+    }
+#endif
     obj = alloc_obj(imem,
 		    (ulong) num_elements * pstype->ssize,
 		    pstype, ALLOC_DIRECT, cname);
@@ -1073,7 +1080,7 @@ large_freelist_alloc(gs_ref_memory_t *mem, uint size)
     uint aligned_max_size =
 	aligned_min_size + obj_align_round(aligned_min_size / 8);
     obj_header_t *best_fit = 0;
-    obj_header_t **best_fit_prev;
+    obj_header_t **best_fit_prev = NULL; /* Initialize against indeteminizm. */
     uint best_fit_size = max_uint;
     obj_header_t *pfree;
     obj_header_t **ppfprev = &mem->freelists[LARGE_FREELIST_INDEX];

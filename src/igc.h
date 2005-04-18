@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: igc.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: igc.h,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Internal interfaces in Ghostscript GC */
 
 #ifndef igc_INCLUDED
@@ -75,6 +75,9 @@ struct gc_state_s {
     /* pointers from untraced spaces */
     gs_raw_memory_t *heap;	/* for extending mark stack */
     name_table *ntable;		/* (implicitly referenced by names) */
+#ifdef DEBUG
+    chunk_t *container;
+#endif
 };
 
 /* Exported by igcref.c for igc.c */

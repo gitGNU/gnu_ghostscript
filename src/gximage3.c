@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gximage3.c,v 1.2 2004/02/14 22:20:18 atai Exp $ */
+/* $Id: gximage3.c,v 1.3 2005/04/18 12:06:03 Arabidopsis Exp $ */
 /* ImageType 3 image implementation */
 #include "math_.h"		/* for ceil, floor */
 #include "memory_.h"
@@ -336,8 +336,9 @@ gx_begin_image3_generic(gx_device * dev,
 	(code = gs_bbox_transform(&mrect, &mat, &mrect)) < 0
 	)
 	return code;
-    origin.x = (int)floor(mrect.p.x);
-    origin.y = (int)floor(mrect.p.y);
+
+    origin.x = (mrect.p.x < 0) ? (int)ceil(mrect.p.x) : (int)floor(mrect.p.x);
+    origin.y = (mrect.p.y < 0) ? (int)ceil(mrect.p.y) : (int)floor(mrect.p.y);
     code = make_mid(&mdev, dev, (int)ceil(mrect.q.x) - origin.x,
 		    (int)ceil(mrect.q.y) - origin.y, mem);
     if (code < 0)
@@ -356,7 +357,7 @@ gx_begin_image3_generic(gx_device * dev,
 	gx_drawing_color dcolor;
 	gs_matrix m_mat;
 
-	color_set_pure(&dcolor, 1);
+	set_nonclient_dev_color(&dcolor, 1);
 	/*
 	 * Adjust the translation for rendering the mask to include a
 	 * negative translation by origin.{x,y} in device space.

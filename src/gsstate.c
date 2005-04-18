@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsstate.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsstate.c,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Miscellaneous graphics state operators for Ghostscript library */
 #include "gx.h"
 #include "memory_.h"
@@ -329,6 +329,7 @@ gs_gsave(gs_state * pgs)
      *	rc_increment(pnew->clip_stack);
      */
     pnew->clip_stack = 0;
+    rc_increment(pnew->dfilter_stack);
     pgs->saved = pnew;
     if (pgs->show_gstate == pgs)
 	pgs->show_gstate = pnew->show_gstate = pnew;
@@ -486,6 +487,7 @@ gs_state_copy(gs_state * pgs, gs_memory_t * mem)
     pgs->view_clip = 0;
     pnew = gstate_clone(pgs, mem, "gs_gstate", copy_for_gstate);
     rc_increment(pnew->clip_stack);
+    rc_increment(pnew->dfilter_stack);
     pgs->view_clip = view_clip;
     if (pnew == 0)
 	return 0;
@@ -761,6 +763,20 @@ gs_currentlimitclamp(const gs_state * pgs)
     return pgs->clamp_coordinates;
 }
 
+/* settextrenderingmode */
+void
+gs_settextrenderingmode(gs_state * pgs, uint trm)
+{
+    pgs->text_rendering_mode = trm;
+}
+
+/* currenttextrenderingmode */
+uint
+gs_currenttextrenderingmode(const gs_state * pgs)
+{
+    return pgs->text_rendering_mode;
+}
+
 /* ------ Internal routines ------ */
 
 /* Free the privately allocated parts of a gstate. */
@@ -919,6 +935,7 @@ gstate_free_contents(gs_state * pgs)
 
     rc_decrement(pgs->device, cname);
     rc_decrement(pgs->clip_stack, cname);
+    rc_decrement(pgs->dfilter_stack, cname);
     cs_adjust_counts(pgs, -1);
     if (pgs->client_data != 0)
 	(*pgs->client_procs.free) (pgs->client_data, mem);
@@ -975,6 +992,7 @@ gstate_copy(gs_state * pto, const gs_state * pfrom,
     rc_pre_assign(pto->element, pfrom->element, cname)
     RCCOPY(device);
     RCCOPY(clip_stack);
+    RCCOPY(dfilter_stack);
     {
 	struct gx_pattern_cache_s *pcache = pto->pattern_cache;
 	void *pdata = pto->client_data;
@@ -1002,4 +1020,10 @@ gstate_copy(gs_state * pto, const gs_state * pfrom,
     pto->show_gstate =
 	(pfrom->show_gstate == pfrom ? pto : 0);
     return 0;
+}
+
+/* Accessories. */
+gs_id gx_get_clip_path_id(gs_state *pgs)
+{
+    return pgs->clip_path->id;
 }

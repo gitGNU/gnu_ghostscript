@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpdfj.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevpdfj.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Image-writing utilities for pdfwrite driver */
 #include "memory_.h"
 #include "string_.h"
@@ -126,8 +126,14 @@ pdf_put_pixel_image_values(cos_dict_t *pcd, gx_device_pdf *pdev,
 
 	    if (pca == 0)
 		return_error(gs_error_VMerror);
-	    for (i = 0; i < num_components * 2; ++i)
-		CHECK(cos_array_add_real(pca, pim->Decode[i]));
+	    if (pcs == NULL) {
+		/* 269-01.ps sets /Decode[0 100] with a mask image. */
+		for (i = 0; i < num_components * 2; ++i)
+		    CHECK(cos_array_add_real(pca, min(pim->Decode[i], 1)));
+	    } else {
+		for (i = 0; i < num_components * 2; ++i)
+		    CHECK(cos_array_add_real(pca, pim->Decode[i]));
+	    }
 	    CHECK(cos_dict_put_c_key_object(pcd, pin->Decode,
 					    COS_OBJECT(pca)));
 	}
@@ -300,7 +306,7 @@ pdf_begin_write_image(gx_device_pdf * pdev, pdf_image_writer * piw,
 	 * while the image is being accumulated: named, and pres->object.
 	 */
 	code = pdf_alloc_resource(pdev, resourceXObject, id, &piw->pres,
-				  (named ? named->id : 0L));
+				  (named ? named->id : -1L));
 	if (code < 0)
 	    return code;
 	cos_become(piw->pres->object, cos_type_stream);
@@ -356,7 +362,7 @@ pdf_begin_image_data(gx_device_pdf * pdev, pdf_image_writer * piw,
 		     int alt_writer_index)
 {
     
-    cos_stream_t *s = cos_write_stream_from_pipeline(piw->binary[alt_writer_index].strm);
+    cos_stream_t *s = cos_stream_from_pipeline(piw->binary[alt_writer_index].strm);
     cos_dict_t *pcd = cos_stream_dict(s);
     int code = pdf_put_image_values(pcd, pdev, pim, piw->pin, pcsvalue);
 
@@ -418,6 +424,12 @@ pdf_end_image_binary(gx_device_pdf *pdev, pdf_image_writer *piw, int data_h)
     return code < 0 ? code : code1;
 }
 
+private int 
+nocheck(gx_device_pdf * pdev, pdf_resource_t *pres0, pdf_resource_t *pres1)
+{
+    return 1;
+}
+
 /*
  * Finish writing an image.  If in-line, write the BI/dict/ID/data/EI and
  * return 1; if a resource, write the resource definition and return 0.
@@ -431,6 +443,7 @@ pdf_end_write_image(gx_device_pdf * pdev, pdf_image_writer * piw)
 	cos_object_t *const pco = pres->object;
 	cos_stream_t *const pcs = (cos_stream_t *)pco;
 	cos_dict_t *named = piw->named;
+	int code;
 
 	if (named) {
 	    /*
@@ -438,8 +451,7 @@ pdf_end_write_image(gx_device_pdf * pdev, pdf_image_writer * piw)
 	     * from the named dictionary to the image stream, and then
 	     * associate the name with the stream.
 	     */
-	    int code = cos_dict_move_all(cos_stream_dict(pcs), named);
-
+	    code = cos_dict_move_all(cos_stream_dict(pcs), named);
 	    if (code < 0)
 		return code;
 	    pres->named = true;
@@ -452,19 +464,36 @@ pdf_end_write_image(gx_device_pdf * pdev, pdf_image_writer * piw)
 	     */
 	    *(cos_object_t *)named = *pco;
 	    pres->object = COS_OBJECT(named);
+	} else if (!pres->named) { /* named objects are written at the end */
+	    code = pdf_find_same_resource(pdev, resourceXObject, &piw->pres, nocheck);
+	    if (code < 0)
+		return code;
+	    if (code > 0) {
+		/*  Warning : if the image used alternate streams,
+		    its space in the pdev->streams.strm file
+		    won't be released.
+		 */
+		code = pdf_cancel_resource(pdev, pres, resourceXObject);
+		if (code < 0)
+		    return code;
+		piw->pres->where_used |= pdev->used_mask;
+	    } else if (pres->object->id < 0)
+		pdf_reserve_object_id(pdev, pres, 0);
 	}
-	else if (!pres->named) { /* named objects are written at the end */
-	    cos_write_object(pco, pdev);
-	    cos_release(pco, "pdf_end_write_image");
-	}
+	code = pdf_add_resource(pdev, pdev->substream_Resources, "/XObject", piw->pres);
+	if (code < 0)
+	    return code;
 	return 0;
     } else {			/* in-line image */
 	stream *s = pdev->strm;
+	uint KeyLength = pdev->KeyLength;
 
 	stream_puts(s, "BI\n");
 	cos_stream_elements_write(piw->data, pdev);
 	stream_puts(s, (pdev->binary_ok ? "ID " : "ID\n"));
+	pdev->KeyLength = 0; /* Disable encryption for the inline image. */
 	cos_stream_contents_write(piw->data, pdev);
+	pdev->KeyLength = KeyLength;
 	pprints1(s, "\nEI%s\n", piw->end_string);
 	COS_FREE(piw->data, "pdf_end_write_image");
 	return 1;
@@ -533,6 +562,10 @@ pdf_choose_compression_cos(pdf_image_writer *piw, cos_stream_t *s[2], bool force
 
     l0 = cos_stream_length(s[0]);
     l1 = cos_stream_length(s[1]);
+
+    if (force && l0 <= l1)
+	k0 = 1; /* Use Flate if it is not longer. */
+    else {
     k0 = s_compr_chooser__get_choice(
 	(stream_compr_chooser_state *)piw->binary[2].strm->state, force);
     if (k0 && l0 > 0 && l1 > 0)
@@ -543,6 +576,7 @@ pdf_choose_compression_cos(pdf_image_writer *piw, cos_stream_t *s[2], bool force
 	k0 = 1; 
     else
        return;
+    }
     k1 = 1 - k0;
     s_close_filters(&piw->binary[k0].strm, piw->binary[k0].target);
     s[k0]->cos_procs->release((cos_object_t *)s[k0], "pdf_image_choose_filter");
@@ -561,8 +595,8 @@ int
 pdf_choose_compression(pdf_image_writer * piw, bool end_binary)
 {
     cos_stream_t *s[2];
-    s[0] = cos_write_stream_from_pipeline(piw->binary[0].strm);
-    s[1] = cos_write_stream_from_pipeline(piw->binary[1].strm);
+    s[0] = cos_stream_from_pipeline(piw->binary[0].strm);
+    s[1] = cos_stream_from_pipeline(piw->binary[1].strm);
     if (end_binary) {
 	int status;
 

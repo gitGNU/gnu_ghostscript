@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpdtw.h,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: gdevpdtw.h,v 1.2 2005/04/18 12:05:57 Arabidopsis Exp $ */
 /* Font and CMap resource writing API for pdfwrite */
 
 #ifndef gdevpdtw_INCLUDED
@@ -47,7 +47,11 @@ int
   pdf_write_contents_std(gx_device_pdf *pdev, pdf_font_resource_t *pdfont),
   pdf_write_contents_simple(gx_device_pdf *pdev, pdf_font_resource_t *pdfont),
   pdf_write_contents_cid0(gx_device_pdf *pdev, pdf_font_resource_t *pdfont),
-  pdf_write_contents_cid2(gx_device_pdf *pdev, pdf_font_resource_t *pdfont);
+  pdf_write_contents_cid2(gx_device_pdf *pdev, pdf_font_resource_t *pdfont),
+  pdf_different_encoding_index(const pdf_font_resource_t *pdfont, int ch0),
+  pdf_write_encoding(gx_device_pdf *pdev, const pdf_font_resource_t *pdfont, long id, int ch),
+  pdf_write_encoding_ref(gx_device_pdf *pdev, const pdf_font_resource_t *pdfont, long id);
+
 
 /* ---------------- CMap resource writing ---------------- */
 
@@ -64,13 +68,13 @@ typedef struct gs_cmap_s gs_cmap_t;
  * Write the CIDSystemInfo for a CIDFont or a CMap.
  */
 int pdf_write_cid_system_info(gx_device_pdf *pdev,
-			      const gs_cid_system_info_t *pcidsi);
+			      const gs_cid_system_info_t *pcidsi, gs_id object_id);
 
 /*
  * Write a CMap resource.  We pass the CMap object as well as the resource,
  * because we write CMaps when they are created.
  */
 int pdf_write_cmap(gx_device_pdf *pdev, const gs_cmap_t *pcmap,
-		   pdf_resource_t *pres);
+		   pdf_resource_t *pres, int font_index_only);
 
 #endif /* gdevpdtw_INCLUDED */

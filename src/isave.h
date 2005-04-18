@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: isave.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: isave.h,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Procedures for save/restore */
 /* Requires imemory.h */
 
@@ -120,5 +120,8 @@ void alloc_set_in_save(gs_dual_memory_t *);
 
 /* Record that we are not in a save. */
 void alloc_set_not_in_save(gs_dual_memory_t *);
+
+/* Remove entries from font and character caches. */
+void font_restore(const alloc_save_t * save);
 
 #endif /* isave_INCLUDED */

@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gscolor.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gscolor.c,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Color and halftone operators for Ghostscript library */
 #include "gx.h"
 #include "gserrors.h"
@@ -193,7 +193,8 @@ gs_settransfer_remap(gs_state * pgs, gs_mapping_proc tproc, bool remap)
 	load_transfer_map(pgs, ptran->gray, 0.0);
 	gx_set_effective_transfer(pgs);
 	gx_unset_dev_color(pgs);
-    }
+    } else
+	gx_set_effective_transfer(pgs);
     return 0;
   fail:
     rc_increment(ptran->red);
@@ -222,7 +223,7 @@ gx_set_device_color_1(gs_state * pgs)
     gs_setoverprintmode(pgs, 0);
     gs_cspace_init_DeviceGray(&cs);
     gs_setcolorspace(pgs, &cs);
-    color_set_pure(pgs->dev_color, 1);
+    set_nonclient_dev_color(pgs->dev_color, 1);
     pgs->log_op = lop_default;
     /*
      * In the unlikely event that  overprint mode is in effect,

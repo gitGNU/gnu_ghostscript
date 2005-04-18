@@ -1,7 +1,7 @@
 #!/bin/sh
 # Run this to set up the build system: configure, makefiles, etc.
 
-# $Id: autogen.sh,v 1.2 2004/02/14 22:20:02 atai Exp $
+# $Id: autogen.sh,v 1.3 2005/04/18 12:06:13 Arabidopsis Exp $
 
 package="gnu_ghostscript"
 
@@ -21,8 +21,9 @@ cd "$srcdir"
 echo "Generating configuration files for $package, please wait...."
 
 echo "  creating links to configuration sources"
-ln -sf src/configure.ac .
-ln -sf src/Makefile.in .
+rm -f configure.ac Makefile.in
+ln -s src/configure.ac .
+ln -s src/Makefile.in .
 
 #echo "  aclocal $ACLOCAL_FLAGS"
 #aclocal $ACLOCAL_FLAGS

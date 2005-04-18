@@ -21,7 +21,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: macos-fw.mak,v 1.2 2004/02/14 22:20:19 atai Exp $
+# $Id: macos-fw.mak,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $
 # Partial makefile for MacOS X/Darwin shared object target
 
 # Useful make commands:
@@ -144,7 +144,7 @@ framework: so lib/Info-macos.plist
 	ln -s Versions/Current/doc . ;\
 	ln -s Versions/Current/$(FRAMEWORK_NAME) . )
 	pwd
-	cp src/iapi.h src/errors.h src/gdevdsp.h $(GS_FRAMEWORK)/Headers/
+	cp src/iapi.h src/ierrors.h src/gdevdsp.h $(GS_FRAMEWORK)/Headers/
 	cp lib/Info-macos.plist $(GS_FRAMEWORK)/Resources/
 	cp -r lib $(GS_FRAMEWORK)/Resources/
 	cp $(BINDIR)/$(SOBINRELDIR)/$(GS_SONAME_MAJOR_MINOR) $(GS_FRAMEWORK)/Versions/Current/$(FRAMEWORK_NAME)

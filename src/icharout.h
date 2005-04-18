@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: icharout.h,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: icharout.h,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Interface to zcharout.c */
 
 #ifndef icharout_INCLUDED
@@ -58,8 +58,7 @@ int /*metrics_present*/
 int zchar_set_cache(i_ctx_t *i_ctx_p, const gs_font_base * pbfont,
 		    const ref * pcnref, const double psb[2],
 		    const double pwidth[2], const gs_rect * pbbox,
-		    int (*cont_fill) (i_ctx_t *),
-		    int (*cont_stroke) (i_ctx_t *),
+    		    op_proc_t cont, op_proc_t *exec_cont,
 		    const double Metrics2_sbw_default[4]);
 
 /*

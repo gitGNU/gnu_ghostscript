@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpdfx.h,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevpdfx.h,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Internal definitions for PDF-writing driver. */
 
 #ifndef gdevpdfx_INCLUDED
@@ -36,6 +36,11 @@
 #include "stream.h"
 #include "spprint.h"
 #include "gdevpsdf.h"
+
+#ifndef stream_arcfour_state_DEFINED
+#define stream_arcfour_state_DEFINED
+typedef struct stream_arcfour_state_s stream_arcfour_state;
+#endif
 
 /* ---------------- Acrobat limitations ---------------- */
 
@@ -81,6 +86,11 @@ typedef struct cos_value_s cos_value_t;
 typedef struct cos_object_procs_s cos_object_procs_t;
 typedef const cos_object_procs_t *cos_type_t;
 #define cos_types_DEFINED
+
+#ifndef pdf_text_state_DEFINED
+#  define pdf_text_state_DEFINED
+typedef struct pdf_text_state_s pdf_text_state_t;
+#endif
 
 /* ---------------- Resources ---------------- */
 
@@ -176,24 +186,6 @@ typedef enum {
 typedef struct pdf_char_proc_s pdf_char_proc_t;	/* gdevpdff.h */
 typedef struct pdf_font_s pdf_font_t;  /* gdevpdff.h */
 typedef struct pdf_text_data_s pdf_text_data_t;  /* gdevpdft.h */
-
-/* ------ Named objects ------ */
-
-/* Define an element of the graphics object accumulation (BP/EP) stack. */
-typedef struct pdf_graphics_save_s pdf_graphics_save_t;
-struct pdf_graphics_save_s {
-    pdf_graphics_save_t *prev;
-    cos_stream_t *object;
-    long position;
-    pdf_context_t save_context;
-    pdf_procset_t save_procsets;
-    long save_contents_id;
-};
-
-#define private_st_pdf_graphics_save()	/* in gdevpdfm.c */\
-  gs_private_st_ptrs2(st_pdf_graphics_save, pdf_graphics_save_t,\
-    "pdf_graphics_save_t", pdf_graphics_save_enum_ptrs,\
-    pdf_graphics_save_reloc_ptrs, prev, object)
 
 /* ---------------- Other auxiliary structures ---------------- */
 
@@ -315,6 +307,7 @@ struct pdf_font_cache_elem_s {
     pdf_font_cache_elem_t *next;
     gs_id font_id;
     int num_chars;		/* safety purpose only */
+    int num_widths;		/* safety purpose only */
     struct pdf_font_resource_s *pdfont;
     byte *glyph_usage;
     double *real_widths;	/* [count] (not used for Type 0) */
@@ -325,7 +318,71 @@ struct pdf_font_cache_elem_s {
     gs_private_st_ptrs5(st_pdf_font_cache_elem, pdf_font_cache_elem_t,\
 	"pdf_font_cache_elem_t", pdf_font_cache_elem_enum,\
 	pdf_font_cache_elem_reloc, next, pdfont,\
-	glyph_usage, real_widths, pdev);\
+	glyph_usage, real_widths, pdev)
+
+/*
+ * pdf_viewer_state tracks the graphic state of a viewer,
+ * which would interpret the generated PDF file
+ * immediately when it is generated.
+ */
+typedef struct pdf_viewer_state_s {
+    int transfer_not_identity;	/* bitmask */
+    gs_id transfer_ids[4];
+    float opacity_alpha; /* state.opacity.alpha */
+    float shape_alpha; /* state.shape.alpha */
+    gs_blend_mode_t blend_mode; /* state.blend_mode */
+    gs_id halftone_id;
+    gs_id black_generation_id;
+    gs_id undercolor_removal_id;
+    int overprint_mode;
+    float smoothness; /* state.smoothness */
+    bool text_knockout; /* state.text_knockout */
+    bool fill_overprint;
+    bool stroke_overprint;
+    bool stroke_adjust; /* state.stroke_adjust */
+    bool fill_used_process_color;
+    bool stroke_used_process_color;
+    gx_hl_saved_color saved_fill_color;
+    gx_hl_saved_color saved_stroke_color;
+    gx_line_params line_params;
+    float dash_pattern[max_dash];
+} pdf_viewer_state;
+
+/*
+ * Define a structure for saving context when entering
+ * a contents stream accumulation mode (charproc, Type 1 pattern).
+ */
+typedef struct pdf_substream_save_s {
+    pdf_context_t	context;
+    pdf_text_state_t	*text_state;
+    gx_path		*clip_path;
+    gs_id		clip_path_id;
+    int			vgstack_bottom;
+    stream		*strm;
+    cos_dict_t		*substream_Resources;
+    pdf_procset_t	procsets;
+    bool		skip_colors;
+    pdf_resource_t      *font3;
+    pdf_resource_t	*accumulating_substream_resource;
+    bool		charproc_just_accumulated;
+} pdf_substream_save;
+
+#define private_st_pdf_substream_save()\
+    gs_private_st_ptrs6(st_pdf_substream_save, pdf_substream_save,\
+	"pdf_substream_save", pdf_substream_save_enum,\
+	pdf_substream_save_reloc, text_state, clip_path, strm, \
+	substream_Resources, font3, accumulating_substream_resource)
+#define private_st_pdf_substream_save_element()\
+  gs_private_st_element(st_pdf_substream_save_element, pdf_substream_save,\
+    "pdf_substream_save[]", pdf_substream_save_elt_enum_ptrs,\
+    pdf_substream_save_elt_reloc_ptrs, st_pdf_substream_save)
+
+typedef enum {
+    pdf_compress_none,
+    pdf_compress_LZW,	/* not currently used, thanks to Unisys */
+    pdf_compress_Flate
+} pdf_compression_type;
+
 
 /* Define the device structure. */
 struct gx_device_pdf_s {
@@ -350,7 +407,21 @@ struct gx_device_pdf_s {
     bool ReEncodeCharacters;
     long FirstObjectNumber;
     bool CompressFonts;
+    long MaxInlineImageSize;
+    /* Encryption parameters */
+    gs_const_string OwnerPassword;
+    gs_const_string UserPassword;
+    uint KeyLength;
+    uint Permissions;
+    uint EncryptionR;
     /* End of parameters */
+    /* Encryption data */
+    byte EncryptionO[32];
+    byte EncryptionU[32];
+    byte EncryptionKey[16];
+    uint EncryptionV;
+    bool EncryptMetadata;
+    gs_const_string NoEncrypt;
     /* Values derived from DSC comments */
     bool is_EPS;
     pdf_page_dsc_info_t doc_dsc_info; /* document default */
@@ -363,11 +434,8 @@ struct gx_device_pdf_s {
     int transfer_not_identity;	/* bitmask */
     gs_id black_generation_id, undercolor_removal_id;
     /* Following are set when device is opened. */
-    enum {
-	pdf_compress_none,
-	pdf_compress_LZW,	/* not currently used, thanks to Unisys */
-	pdf_compress_Flate
-    } compression;
+    pdf_compression_type compression;
+    pdf_compression_type compression_at_page_start;
 #define pdf_memory v_memory
     /*
      * The xref temporary file is logically an array of longs.
@@ -429,6 +497,7 @@ struct gx_device_pdf_s {
     int outlines_open;
     pdf_article_t *articles;
     cos_dict_t *Dests;
+    byte fileID[16];
     /*
      * global_named_objects holds named objects that are independent of
      * the current namespace: {Catalog}, {DocInfo}, {Page#}, {ThisPage},
@@ -452,13 +521,59 @@ struct gx_device_pdf_s {
      * but it was confirmed by them.)
      */
     cos_array_t *Namespace_stack;
-    pdf_graphics_save_t *open_graphics;
     pdf_font_cache_elem_t *font_cache;
     /* 
      * char_width is used by pdf_text_set_cache to communicate 
      * with assign_char_code around gdev_pdf_fill_mask. 
      */
     gs_point char_width; 
+    /*
+     * We need a stable copy of clipping path to prevent writing
+     * redundant clipping paths when PS document generates such ones.
+     */
+    gx_path *clip_path;
+    /*
+     * Page labels.
+     */
+    cos_array_t *PageLabels;
+    int PageLabels_current_page;
+    cos_dict_t *PageLabels_current_label;
+    /*
+     * The following is a dangerous pointer, which pdf_text_process
+     * uses to communicate with assign_char_code.
+     * It is a pointer from global memory to local memory.
+     * The garbager must not proceess this pointer, and it must
+     * not be listed in st_device_pdfwrite.
+     * It's life time terminates on garbager invocation.
+     */
+    gs_text_enum_t *pte;
+    /* 
+     * The viewer's graphic state stack.
+     * We restrict its length with the strongest PDF spec limitation.
+     * Usually 5 levels is enough, but patterns and charprocs may be nested recursively.
+     */
+    pdf_viewer_state vgstack[11];
+    int vgstack_depth;
+    int vgstack_bottom;		 /* Stack bottom for the current substream. */
+    pdf_viewer_state vg_initial; /* Initial values for viewer's graphic state */
+    bool vg_initial_set;
+
+    /* The substream context stack. */
+    int sbstack_size;
+    int sbstack_depth;
+    pdf_substream_save *sbstack;
+
+    /* Accessories */
+    cos_dict_t *substream_Resources;     /* Substream resources */
+    int pcm_color_info_index;    /* Index to pcm_color_info. */
+    bool skip_colors; /* Skip colors while a pattern/charproc accumulation. */
+    bool AR4_save_bug; /* See pdf_put_uncolored_pattern */
+    pdf_resource_t *font3; /* The owner of the accumulated charstring. */
+    pdf_resource_t *accumulating_substream_resource;
+    gs_matrix_fixed charproc_ctm;
+    bool charproc_just_accumulated; /* A flag for controlling 
+			the glyph variation recognition. 
+			Used only with uncached charprocs. */
 };
 
 #define is_in_page(pdev)\
@@ -478,8 +593,11 @@ struct gx_device_pdf_s {
  m(17,last_resource)\
  m(18,articles) m(19,Dests) m(20,global_named_objects)\
  m(21, local_named_objects) m(22,NI_stack) m(23,Namespace_stack)\
- m(24,open_graphics) m(25,font_cache)
-#define gx_device_pdf_num_ptrs 26
+ m(24,font_cache) m(25,clip_path)\
+ m(26,PageLabels) m(27,PageLabels_current_label)\
+ m(28,sbstack) m(29,substream_Resources) m(30,font3)\
+ m(31,accumulating_substream_resource)
+#define gx_device_pdf_num_ptrs 32
 #define gx_device_pdf_do_strings(m) /* do nothing */
 #define gx_device_pdf_num_strings 0
 #define st_device_pdf_max_ptrs\
@@ -512,6 +630,10 @@ dev_proc_get_params(gdev_pdf_get_params);
 dev_proc_put_params(gdev_pdf_put_params);
     /* In gdevpdft.c */
 dev_proc_text_begin(gdev_pdf_text_begin);
+dev_proc_pattern_manage(gdev_pdf_pattern_manage);
+dev_proc_fill_rectangle_hl_color(gdev_pdf_fill_rectangle_hl_color);
+    /* In gdevpdfv.c */
+dev_proc_include_color_space(gdev_pdf_include_color_space);
 
 /* ================ Utility procedures ================ */
 
@@ -521,7 +643,7 @@ dev_proc_text_begin(gdev_pdf_text_begin);
 void pdf_initialize_ids(gx_device_pdf * pdev);
 
 /* Update the color mapping procedures after setting ProcessColorModel. */
-void pdf_set_process_color_model(gx_device_pdf * pdev);
+void pdf_set_process_color_model(gx_device_pdf * pdev, int index);
 
 /* Reset the text state parameters to initial values. */
 void pdf_reset_text(gx_device_pdf *pdev);
@@ -574,6 +696,13 @@ extern const gs_memory_struct_type_t *const pdf_resource_type_structs[];
 long pdf_open_separate(gx_device_pdf * pdev, long id);
 long pdf_begin_separate(gx_device_pdf * pdev);
 
+/* Reserve object id. */
+void pdf_reserve_object_id(gx_device_pdf * pdev, pdf_resource_t *ppres, long id);
+
+/* Begin an aside (resource, annotation, ...). */
+int pdf_alloc_aside(gx_device_pdf * pdev, pdf_resource_t ** plist,
+		const gs_memory_struct_type_t * pst, pdf_resource_t **ppres,
+		long id);
 /* Begin an aside (resource, annotation, ...). */
 int pdf_begin_aside(gx_device_pdf * pdev, pdf_resource_t **plist,
 		    const gs_memory_struct_type_t * pst,
@@ -591,10 +720,19 @@ int pdf_begin_resource_body(gx_device_pdf * pdev, pdf_resource_type_t rtype,
 int pdf_alloc_resource(gx_device_pdf * pdev, pdf_resource_type_t rtype,
 		       gs_id rid, pdf_resource_t **ppres, long id);
 
+/* Find same resource. */
+int pdf_find_same_resource(gx_device_pdf * pdev, 
+	pdf_resource_type_t rtype, pdf_resource_t **ppres,
+	int (*eq)(gx_device_pdf * pdev, pdf_resource_t *pres0, pdf_resource_t *pres1));
+
 /* Find a resource of a given type by gs_id. */
 pdf_resource_t *pdf_find_resource_by_gs_id(gx_device_pdf * pdev,
 					   pdf_resource_type_t rtype,
 					   gs_id rid);
+
+/* Cancel a resource (do not write it into PDF). */
+int pdf_cancel_resource(gx_device_pdf * pdev, pdf_resource_t *pres, 
+	pdf_resource_type_t rtype);
 
 /* Get the object id of a resource. */
 long pdf_resource_id(const pdf_resource_t *pres);
@@ -625,7 +763,16 @@ int pdf_free_resource_objects(gx_device_pdf *pdev, pdf_resource_type_t rtype);
 int pdf_store_page_resources(gx_device_pdf *pdev, pdf_page_t *page);
 
 /* Copy data from a temporary file to a stream. */
-void pdf_copy_data(stream *s, FILE *file, long count);
+void pdf_copy_data(stream *s, FILE *file, long count, stream_arcfour_state *ss);
+void pdf_copy_data_safe(stream *s, FILE *file, long position, long count);
+
+/* Add the encryption filter. */
+int pdf_begin_encrypt(gx_device_pdf * pdev, stream **s, gs_id object_id);
+/* Remove the encryption filter. */
+void pdf_end_encrypt(gx_device_pdf * pdev);
+/* Initialize encryption. */
+int pdf_encrypt_init(const gx_device_pdf * pdev, gs_id object_id, stream_arcfour_state *psarc4);
+
 
 /* ------ Pages ------ */
 
@@ -642,10 +789,16 @@ cos_dict_t *pdf_current_page_dict(gx_device_pdf *pdev);
 /* Open a page for writing. */
 int pdf_open_page(gx_device_pdf * pdev, pdf_context_t context);
 
+/*  Go to the unclipped stream context. */
+int pdf_unclip(gx_device_pdf * pdev);
+
 /* Write saved page- or document-level information. */
 int pdf_write_saved_string(gx_device_pdf * pdev, gs_string * pstr);
 
 /* ------ Path drawing ------ */
+
+/* Store a copy of clipping path. */
+int pdf_remember_clip_path(gx_device_pdf * pdev, const gx_clip_path * pcpath);
 
 /* Test whether the clip path needs updating. */
 bool pdf_must_put_clip_path(gx_device_pdf * pdev, const gx_clip_path * pcpath);
@@ -694,7 +847,7 @@ void pdf_put_name(const gx_device_pdf *pdev, const byte *nstr, uint size);
 void pdf_put_string(const gx_device_pdf *pdev, const byte *str, uint size);
 
 /* Write a value, treating names specially. */
-void pdf_write_value(const gx_device_pdf *pdev, const byte *vstr, uint size);
+void pdf_write_value(const gx_device_pdf *pdev, const byte *vstr, uint size, gs_id object_id);
 
 /* Store filters for a stream. */
 int pdf_put_filters(cos_dict_t *pcd, gx_device_pdf *pdev, stream *s,
@@ -705,6 +858,7 @@ typedef struct pdf_data_writer_s {
     psdf_binary_writer binary;
     long start;
     long length_id;
+    bool encrypted;
 } pdf_data_writer_t;
 /*
  * Begin a data stream.  The client has opened the object and written
@@ -713,8 +867,10 @@ typedef struct pdf_data_writer_s {
 #define DATA_STREAM_NOT_BINARY 0  /* data are text, not binary */
 #define DATA_STREAM_BINARY 1	/* data are binary */
 #define DATA_STREAM_COMPRESS 2	/* OK to compress data */
+#define DATA_STREAM_NOLENGTH 4	/* Skip the length reference and filter names writing. */
+#define DATA_STREAM_ENCRYPT  8	/* Encrypt data. */
 int pdf_begin_data_stream(gx_device_pdf *pdev, pdf_data_writer_t *pdw,
-			  int options);
+			  int options, gs_id object_id);
 /* begin_data = begin_data_binary with both options = true. */
 int pdf_begin_data(gx_device_pdf *pdev, pdf_data_writer_t *pdw);
 
@@ -772,6 +928,9 @@ int pdfmark_process(gx_device_pdf * pdev, const gs_param_string_array * pma);
 
 /* Close the current level of the outline tree. */
 int pdfmark_close_outline(gx_device_pdf * pdev);
+
+/* Close the pagelabel numtree. */
+int pdfmark_end_pagelabels(gx_device_pdf * pdev);
 
 /* Finish writing an article. */
 int pdfmark_write_article(gx_device_pdf * pdev, const pdf_article_t * part);
@@ -874,6 +1033,8 @@ int pdf_close_text_document(gx_device_pdf *pdev);
 /* For gdevpdf.c */
 
 pdf_text_data_t *pdf_text_data_alloc(gs_memory_t *mem);
+void pdf_set_text_state_default(pdf_text_state_t *pts);
+void pdf_text_state_copy(pdf_text_state_t *pts_to, pdf_text_state_t *pts_from);
 void pdf_reset_text_page(pdf_text_data_t *ptd);
 void pdf_reset_text_state(pdf_text_data_t *ptd);
 void pdf_close_text_page(gx_device_pdf *pdev);
@@ -893,6 +1054,26 @@ int pdf_end_char_proc(gx_device_pdf * pdev, pdf_stream_position_t * ppos);
 /* Put out a reference to an image as a character in an embedded font. */
 int pdf_do_char_image(gx_device_pdf * pdev, const pdf_char_proc_t * pcp,
 		      const gs_matrix * pimat);
+
+/* Start charproc accumulation for a Type 3 font. */
+int pdf_start_charproc_accum(gx_device_pdf *pdev);
+/* Install charproc accumulator for a Type 3 font. */
+int pdf_set_charproc_attrs(gx_device_pdf *pdev, gs_font *font, const double *pw, int narg,
+		gs_text_cache_control_t control, gs_char ch, gs_const_string *gnstr);
+/* Complete charproc accumulation for aType 3 font. */
+int pdf_end_charproc_accum(gx_device_pdf *pdev, gs_font *font);
+
+/* Enter the substream accumulation mode. */
+int pdf_enter_substream(gx_device_pdf *pdev, pdf_resource_type_t rtype, 
+			gs_id id, pdf_resource_t **ppres, bool reserve_object_id);
+
+/* Exit the substream accumulation mode. */
+int pdf_exit_substream(gx_device_pdf *pdev);
+/* Add procsets to substream Resources. */
+int pdf_add_procsets(cos_dict_t *pcd, pdf_procset_t procsets);
+/* Add a resource to substream Resources. */
+int pdf_add_resource(gx_device_pdf *pdev, cos_dict_t *pcd, const char *key, pdf_resource_t *pres);
+
 
 /* For gdevpdfu.c */
 

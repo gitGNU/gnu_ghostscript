@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevpsfu.c,v 1.2 2004/02/14 22:20:06 atai Exp $ */
+/* $Id: gdevpsfu.c,v 1.3 2005/04/18 12:05:55 Arabidopsis Exp $ */
 /* PostScript/PDF font writing utilities */
 #include "memory_.h"
 #include <stdlib.h>		/* for qsort */
@@ -114,26 +114,6 @@ int
 psf_enumerate_glyphs_next(psf_glyph_enum_t *ppge, gs_glyph *pglyph)
 {
     return ppge->enumerate_next(ppge, pglyph);
-}
-
-/*
- * Get the set of referenced glyphs (indices) for writing a subset font.
- * Does not sort or remove duplicates.
- */
-int
-psf_subset_glyphs(gs_glyph glyphs[256], gs_font *font, const byte used[32])
-{
-    int i, n;
-
-    for (i = n = 0; i < 256; ++i)
-	if (used[i >> 3] & (0x80 >> (i & 7))) {
-	    gs_glyph glyph = font->procs.encode_char(font, (gs_char)i,
-						     GLYPH_SPACE_INDEX);
-
-	    if (glyph != gs_no_glyph)
-		glyphs[n++] = glyph;
-	}
-    return n;
 }
 
 /*

@@ -14,15 +14,15 @@
   You should have received a copy of the GNU General Public License along
   with this program; if not, write to the Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-   
-  For more information about licensing, please refer to
-  http://www.ghostscript.com/licensing/. For information on
-  commercial licensing, go to http://www.artifex.com/licensing/ or
-  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
-  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
-*/
+ 
+   For more information about licensing, please refer to
+   http://www.ghostscript.com/licensing/. For information on
+   commercial licensing, go to http://www.artifex.com/licensing/ or
+   contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+  */
 
-/* $Id: gdevdljm.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: gdevdljm.c,v 1.3 2005/04/18 12:06:05 Arabidopsis Exp $ */
 /* Generic monochrome H-P DeskJet/LaserJet driver */
 
 #include "gdevprn.h"
@@ -130,12 +130,12 @@ dljet_mono_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 	}
     }
     /* Put out per-page initialization. */
+    if (features & PCL_CAN_SET_PAPER_SIZE){ 
+        fprintf(prn_stream, "\033&l%dA", paper_size); 
+    } 
     fputs("\033&l0o0l0E", prn_stream);
     fputs(page_init, prn_stream);
     fprintf(prn_stream, "\033&l%dX", num_copies);	/* # of copies */
-    if (features & PCL_CAN_SET_PAPER_SIZE){ 
-        fprintf(prn_stream, "\033&|%dA", paper_size); 
-    } 
 
     /* End raster graphics, position cursor at top. */
     fputs("\033*rB\033*p0x0Y", prn_stream);

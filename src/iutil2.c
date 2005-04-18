@@ -22,12 +22,12 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: iutil2.c,v 1.2 2004/02/14 22:20:19 atai Exp $ */
+/* $Id: iutil2.c,v 1.3 2005/04/18 12:06:02 Arabidopsis Exp $ */
 /* Level 2 utilities for Ghostscript interpreter */
 #include "memory_.h"
 #include "string_.h"
 #include "ghost.h"
-#include "errors.h"
+#include "ierrors.h"
 #include "opcheck.h"
 #include "gsparam.h"
 #include "gsutil.h"		/* bytes_compare prototype */

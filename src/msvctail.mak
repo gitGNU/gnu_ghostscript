@@ -21,7 +21,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: msvctail.mak,v 1.2 2004/02/14 22:20:19 atai Exp $
+# $Id: msvctail.mak,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $
 # Common tail section for Microsoft Visual C++ 4.x/5.x,
 # Windows NT or Windows 95 platform.
 # Created 1997-05-22 by L. Peter Deutsch from msvc4/5 makefiles.
@@ -72,11 +72,11 @@ $(GENINIT_XE): $(PSSRCDIR)$(D)geninit.c $(GENINIT_DEPS)
 LIBCTR=$(GLGEN)libc32.tr
 
 $(LIBCTR): $(TOP_MAKEFILES)
-        echo shell32.lib >$(LIBCTR)
-        echo comdlg32.lib >>$(LIBCTR)
-        echo gdi32.lib >>$(LIBCTR)
-        echo user32.lib >>$(LIBCTR)
-        echo winspool.lib >>$(LIBCTR)
+	echo shell32.lib >$(LIBCTR)
+	echo comdlg32.lib >>$(LIBCTR)
+	echo gdi32.lib >>$(LIBCTR)
+	echo user32.lib >>$(LIBCTR)
+	echo winspool.lib >>$(LIBCTR)
 	echo advapi32.lib >>$(LIBCTR)
 
 # end of msvctail.mak

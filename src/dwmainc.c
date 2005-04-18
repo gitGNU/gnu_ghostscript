@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: dwmainc.c,v 1.2 2004/02/14 22:20:05 atai Exp $ */
+/* $Id: dwmainc.c,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* dwmainc.c */
 
 #include <windows.h>
@@ -30,7 +30,8 @@
 #include <stdlib.h>
 #include <io.h>
 #include <fcntl.h>
-#include "errors.h"
+#include <process.h>
+#include "ierrors.h"
 #include "iapi.h"
 #include "vdtrace.h"
 #include "gdevdsp.h"
@@ -313,7 +314,7 @@ display_callback display = {
 
 int main(int argc, char *argv[])
 {
-    int code;
+    int code, code1;
     int exit_code;
     int exit_status;
     int nargc;
@@ -398,7 +399,9 @@ int main(int argc, char *argv[])
     code = gsdll.init_with_args(instance, nargc, nargv);
     if (code == 0)
 	code = gsdll.run_string(instance, start_string, 0, &exit_code);
-    gsdll.exit(instance);
+    code1 = gsdll.exit(instance);
+    if (code == 0 || (code == e_Quit && code1 != 0))
+	code = code1;
 
     gsdll.delete_instance(instance);
 

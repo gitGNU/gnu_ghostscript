@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gscie.h,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gscie.h,v 1.3 2005/04/18 12:06:00 Arabidopsis Exp $ */
 /* Structures for CIE color algorithms */
 /* (requires gscspace.h, gscolor2.h) */
 
@@ -808,5 +808,8 @@ extern int
 extern int
     gs_cie_defx_set_lookup_table(gs_color_space * pcspace, int *pdims,
 				 const gs_const_string * ptable);
+
+/* Serialize common CIE elements. */
+int gx_serialize_cie_common_elements(const gs_color_space * pcs, stream * s);
 
 #endif /* gscie_INCLUDED */

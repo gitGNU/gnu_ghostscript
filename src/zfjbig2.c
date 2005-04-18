@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: zfjbig2.c,v 1.1 2004/02/14 22:32:08 atai Exp $ */
+/* $Id: zfjbig2.c,v 1.2 2005/04/18 12:06:00 Arabidopsis Exp $ */
 
 /* this is the ps interpreter interface to the jbig2decode filter
    used for (1bpp) scanned image compression. PDF only specifies
@@ -60,6 +60,7 @@ gs_private_st_simple_final(st_jbig2_global_data_t, jbig2_global_data_t,
 	"jbig2globalctx", jbig2_global_data_finalize);
 
 
+/* <source> /JBIG2Decode <file> */
 /* <source> <dict> /JBIG2Decode <file> */
 private int
 z_jbig2decode(i_ctx_t * i_ctx_p)
@@ -75,13 +76,13 @@ z_jbig2decode(i_ctx_t * i_ctx_p)
        z_jbig2makeglobalctx() below to create an astruct wrapping the
        global decoder context and store it under the .jbig2globalctx key
      */
-    check_type(*op, t_dictionary);
-    check_dict_read(*op);
-    if ( dict_find_string(op, ".jbig2globalctx", &sop) > 0) {
-	gref = r_ptr(sop, jbig2_global_data_t);
-	s_jbig2decode_set_global_ctx((stream_state*)&state, gref->global_ctx);
-    } else {
-	s_jbig2decode_set_global_ctx((stream_state*)&state, NULL);
+    s_jbig2decode_set_global_ctx((stream_state*)&state, NULL);
+    if (r_has_type(op, t_dictionary)) {
+        check_dict_read(*op);
+        if ( dict_find_string(op, ".jbig2globalctx", &sop) > 0) {
+	    gref = r_ptr(sop, jbig2_global_data_t);
+	    s_jbig2decode_set_global_ctx((stream_state*)&state, gref->global_ctx);
+        }
     }
     	
     /* we pass npop=0, since we've no arguments left to consume */

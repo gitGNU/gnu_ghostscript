@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gsdevmem.c,v 1.2 2004/02/14 22:20:17 atai Exp $ */
+/* $Id: gsdevmem.c,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $ */
 /* Memory device creation for Ghostscript library */
 #include "math_.h"		/* for fabs */
 #include "memory_.h"
@@ -185,8 +185,14 @@ gs_initialize_wordimagedevice(gx_device_memory * new_dev, const gs_matrix * pmat
 	    new_dev->color_info.num_components = 1;
 	    new_dev->color_info.max_color = 0;
 	    new_dev->color_info.dither_colors = 0;
+	    new_dev->color_info.gray_index = 0;
 	}
     }
+    /* Memory defice is always initialised as an internal device but */
+    /* this is an external device */
+    new_dev->retained = true;
+    rc_init(new_dev, new_dev->memory, 1);
+
     new_dev->initial_matrix = *pmat;
     new_dev->MarginsHWResolution[0] = new_dev->HWResolution[0] =
 	fabs(x_pixels_per_unit) * 72;

@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: ziodev.c,v 1.2 2004/02/14 22:20:20 atai Exp $ */
+/* $Id: ziodev.c,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $ */
 /* Standard IODevice implementation */
 #include "memory_.h"
 #include "stdio_.h"
@@ -41,7 +41,7 @@
 #include "files.h"
 #include "scanchar.h"		/* for char_EOL */
 #include "store.h"
-#include "errors.h"
+#include "ierrors.h"
 
 /* Import the dtype of the stdio IODevices. */
 extern const char iodev_dtype_stdio[];
