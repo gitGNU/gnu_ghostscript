@@ -16,7 +16,7 @@ dnl commercial licensing, go to http://www.artifex.com/licensing/ or
 dnl contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 dnl San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-dnl $Id: configure.ac,v 1.3 2005/04/18 12:05:56 Arabidopsis Exp $
+dnl $Id: configure.ac,v 1.4 2005/04/24 21:03:12 Arabidopsis Exp $
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------
@@ -25,7 +25,11 @@ dnl ------------------------------------------------
 
 AC_INIT
 AC_PREREQ(2.52)
+AC_INIT(gnu_ghostscript, 8.15, didier.link@wanadoo.fr)
 AC_CONFIG_SRCDIR(src/gs.c)
+AM_INIT_AUTOMAKE
+
+dnl TOPDIR=`pwd`
 
 dnl --------------------------------------------------  
 dnl Check for programs
@@ -39,7 +43,7 @@ AC_PROG_CPP
 CFLAGS=$save_cflags
 
 AC_PROG_RANLIB
-#AC_PROG_INSTALL
+AC_PROG_INSTALL
 
 dnl --------------------------------------------------
 dnl Set build flags based on environment
@@ -362,4 +366,5 @@ dnl --------------------------------------------------
 
 AC_SUBST(OPT_CFLAGS)
 AC_SUBST(GCFLAGS)
+dnl AC_SUBST(TOPDIR)
 AC_OUTPUT(Makefile)

@@ -21,7 +21,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: Makefile.in,v 1.3 2005/04/18 12:05:58 Arabidopsis Exp $
+# $Id: Makefile.in,v 1.4 2005/04/24 21:03:12 Arabidopsis Exp $
 # makefile template for/from the autoconf build.
 # @configure_input@
 
@@ -32,6 +32,8 @@
 # Define the directory for the final executable, and the
 # source, generated intermediate file, and object directories
 # for the graphics library (GL) and the PostScript/PDF interpreter (PS).
+
+srcdir=@srcdir@
 
 BINDIR=./bin
 GLSRCDIR=$(srcdir)/src

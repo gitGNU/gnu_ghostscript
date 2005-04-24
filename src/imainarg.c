@@ -22,7 +22,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: imainarg.c,v 1.3 2005/04/18 12:05:57 Arabidopsis Exp $ */
+/* $Id: imainarg.c,v 1.4 2005/04/24 21:03:12 Arabidopsis Exp $ */
 /* Command line parsing and dispatching */
 #include "ctype_.h"
 #include "memory_.h"
@@ -76,7 +76,7 @@ extern int zflushpage(i_ctx_t *);
 #endif
 
 #ifndef GS_BUG_MAILBOX
-#  define GS_BUG_MAILBOX "bug-gs@ghostscript.com"
+#  define GS_BUG_MAILBOX "bug-ghostscript@gnu.org"
 #endif
 
 #define MAX_BUFFERED_SIZE 1024
@@ -860,7 +860,7 @@ private const char help_usage2[] = "\
                                          embed %d or %ld for page #\n";
 private const char help_trailer[] = "\
 For more information, see %s.\n\
-Report bugs to %s, using the form in Bug-form.htm.\n";
+Report bugs to %s.\n";
 private const char help_devices[] = "Available devices:";
 private const char help_default_device[] = "Default output device:";
 private const char help_emulators[] = "Input formats:";

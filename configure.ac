@@ -1,6 +1,12 @@
 dnl Copyright (C) 2002-2004 artofcode LLC. All rights reserved.
+
+dnl This file is part of GNU ghostscript
+
+dnl GNU ghostscript is free software; you can redistribute it and/or modify it under
+dnl the terms of the GNU General Public License as published by the Free Software
+dnl Foundation; either version 2, or any later version.
   
-dnl This software is provided AS-IS with no warranty, either express or
+dnl  This software is provided AS-IS with no warranty, either express or
 dnl  implied. That is, this program is distributed in the hope that it will 
 dnl  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 dnl  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
@@ -16,7 +22,7 @@ dnl commercial licensing, go to http://www.artifex.com/licensing/ or
 dnl contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 dnl San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-dnl $Id: configure.ac,v 1.3 2005/04/18 12:06:13 Arabidopsis Exp $
+dnl $Id: configure.ac,v 1.4 2005/04/24 21:03:12 Arabidopsis Exp $
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------
