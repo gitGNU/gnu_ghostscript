@@ -1,28 +1,26 @@
 dnl Copyright (C) 2002-2004 artofcode LLC. All rights reserved.
 
 dnl This file is part of GNU ghostscript
-
+dnl 
 dnl GNU ghostscript is free software; you can redistribute it and/or modify it under
 dnl the terms of the GNU General Public License as published by the Free Software
-dnl Foundation; either version 2, or any later version.
-  
-dnl  This software is provided AS-IS with no warranty, either express or
-dnl  implied. That is, this program is distributed in the hope that it will 
-dnl  be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-dnl  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-dnl  General Public License for more details
-
-dnl You should have received a copy of the GNU General Public License along
-dnl with this program; if not, write to the Free Software Foundation, Inc.,
-dnl 59 Temple Place, Suite 330, Boston, MA, 02111-1307.
-
+dnl Foundation; either version 2, or (at your option) any later version.
+dnl 
+dnl GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+dnl ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+dnl FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+dnl 
+dnl You should have received a copy of the GNU General Public License along with
+dnl ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+dnl Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+dnl 
 dnl For more information about licensing, please refer to
 dnl http://www.ghostscript.com/licensing/. For information on
 dnl commercial licensing, go to http://www.artifex.com/licensing/ or
 dnl contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 dnl San Rafael, CA  94903, U.S.A., +1(415)492-9861.
-
-dnl $Id: configure.ac,v 1.4 2005/04/24 21:03:12 Arabidopsis Exp $
+dnl 
+dnl $Id: configure.ac,v 1.5 2005/05/02 00:03:35 Arabidopsis Exp $
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------

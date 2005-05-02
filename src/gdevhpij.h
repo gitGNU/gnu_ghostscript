@@ -17,11 +17,11 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
 /* gdevhpij.h */
-/* $Id: gdevhpij.h,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/* $Id: gdevhpij.h,v 1.2 2005/05/02 00:03:22 Arabidopsis Exp $ */
 
 #ifndef gdevhpij_INCLUDED
 #define gdevhpij_INCLUDED

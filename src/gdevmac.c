@@ -1,22 +1,22 @@
 /* Copyright (C) 1994-2003 artofcode LLC.  All rights reserved.
   
-  This file is part of Aladdin Ghostscript.
-  
-  Aladdin Ghostscript is distributed with NO WARRANTY OF ANY KIND.  No author
-  or distributor accepts any responsibility for the consequences of using it,
-  or for whether it serves any particular purpose or works at all, unless he
-  or she says so in writing.  Refer to the Aladdin Ghostscript Free Public
-  License (the "License") for full details.
-  
-  Every copy of Aladdin Ghostscript must include a copy of the License,
-  normally in a plain ASCII text file named PUBLIC.  The License grants you
-  the right to copy, modify and redistribute Aladdin Ghostscript, but only
-  under certain conditions described in the License.  Among other things, the
-  License requires that the copyright notice and this notice be preserved on
-  all copies.
+  This file is part of GNU ghostscript
+
+  GNU ghostscript is free software; you can redistribute it and/or modify it under
+  the terms of the GNU General Public License as published by the Free Software
+  Foundation; either version 2, or (at your option) any later version.
+
+  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along with
+  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
 */
 
-/* $Id: gdevmac.c,v 1.3 2005/04/18 12:06:01 Arabidopsis Exp $ */
+/* $Id: gdevmac.c,v 1.4 2005/05/02 00:03:22 Arabidopsis Exp $ */
 /* MacOS bitmap output device. This code is superceeded by
    the newer gsapi_* interface and the DISPLAY device. Please
    use that instead. See doc/API.htm for more information */
