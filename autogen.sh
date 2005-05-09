@@ -1,9 +1,9 @@
 #!/bin/sh
 # Run this to set up the build system: configure, makefiles, etc.
 
-# $Id: autogen.sh,v 1.3 2005/04/18 12:06:13 Arabidopsis Exp $
+# $Id: autogen.sh,v 1.4 2005/05/09 22:07:14 Arabidopsis Exp $
 
-package="gnu_ghostscript"
+package="gnu-ghostscript"
 
 srcdir=`dirname $0`
 test -z "$srcdir" && srcdir=.
