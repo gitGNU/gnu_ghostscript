@@ -20,7 +20,7 @@ dnl commercial licensing, go to http://www.artifex.com/licensing/ or
 dnl contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 dnl San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-dnl $Id: configure.ac,v 1.5 2005/05/02 00:03:23 Arabidopsis Exp $
+dnl $Id: configure.ac,v 1.6 2005/05/09 22:04:37 Arabidopsis Exp $
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------
@@ -29,7 +29,7 @@ dnl ------------------------------------------------
 
 AC_INIT
 AC_PREREQ(2.52)
-AC_INIT(gnu_ghostscript, 8.15, didier.link@wanadoo.fr)
+AC_INIT(gnu_ghostscript, 8.16, didier.link@wanadoo.fr)
 AC_CONFIG_SRCDIR(src/gs.c)
 AM_INIT_AUTOMAKE
 

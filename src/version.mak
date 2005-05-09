@@ -22,16 +22,16 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: version.mak,v 1.4 2005/05/02 00:03:35 Arabidopsis Exp $
+# $Id: version.mak,v 1.5 2005/05/09 22:04:37 Arabidopsis Exp $
 # Makefile fragment containing the current revision identification.
 
 # Major and minor version numbers.
 # MINOR0 is different from MINOR only if MINOR is a single digit.
 GS_VERSION_MAJOR=8
-GS_VERSION_MINOR=15
-GS_VERSION_MINOR0=15
+GS_VERSION_MINOR=16
+GS_VERSION_MINOR0=16
 # Revision date: year x 10000 + month x 100 + day.
-GS_REVISIONDATE=20040922
+GS_REVISIONDATE=20050509
 # Derived values
 GS_VERSION=$(GS_VERSION_MAJOR)$(GS_VERSION_MINOR0)
 GS_DOT_VERSION=$(GS_VERSION_MAJOR).$(GS_VERSION_MINOR0)

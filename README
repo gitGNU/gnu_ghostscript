@@ -1,5 +1,5 @@
 
-This is GNU Ghostscript version 8.15.
+This is GNU Ghostscript version 8.16.
 
 GNU Ghostscript is an interpreter for the Postscript language and the
 Adobe Portable Document Format (PDF), a set of C procedures (the
@@ -19,7 +19,7 @@ present.
 GNU Ghostscript is based on the GPLed Ghostscript made by Ralph Giles,
 artofcode LLC and Artifex Software, Inc.  Thanks to Ralph's hard work
 for making this release of Ghostscript possible. Also thanks to Andy Tai
-from the GNU project for the hard work on GNU/Ghostscript versions before 8.15.
+from the GNU project for the hard work on GNU Ghostscript versions before 8.16.
 
 GNU Ghostscript is copyrighted by artofcode LLC and released under the
 GNU General Public License.  A copy of the license is included in the

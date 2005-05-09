@@ -21,7 +21,7 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-// $Id: dwsetup.cpp,v 1.4 2005/05/02 00:03:26 Arabidopsis Exp $
+// $Id: dwsetup.cpp,v 1.5 2005/05/09 22:04:37 Arabidopsis Exp $
 //
 //
 // This is the setup program for Win32 Ghostscript
@@ -44,10 +44,10 @@
 // uninstall log files are to be placed.  
 // Subsequent lines contain files to be copied (but not directories).
 // For example, filelist.txt might contain:
-//   GNU Ghostscript 8.15
-//   gs8.15
-//   gs8.15\bin\gsdll32.dll
-//   gs8.15\lib\gs_init.ps
+//   GNU Ghostscript 8.16
+//   gs8.16
+//   gs8.16\bin\gsdll32.dll
+//   gs8.16\lib\gs_init.ps
 // The file fontlist.txt might contain:
 //   GNU Ghostscript Fonts
 //   fonts

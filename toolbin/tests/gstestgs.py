@@ -25,7 +25,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: gstestgs.py,v 1.3 2005/05/02 00:03:35 Arabidopsis Exp $
+# $Id: gstestgs.py,v 1.4 2005/05/09 22:04:37 Arabidopsis Exp $
 
 # gstestgs.py
 #
@@ -70,7 +70,7 @@ class Ghostscript:
 
 		# as of gs_init 1.93, job server emulation needs -dNOOUTERSAVE
 		# so that the 'exitserver' will restore global VM as expected.
-		# As of gs_init 1.87.2.9, released with Ghostscript 8.15,
+		# As of gs_init 1.87.2.9, released with Ghostscript 8.16,
 		# job server emulation is supported (in a backward compatible
 		# fashion) so we add -dJOBSERVER. The old options are 
 		# kept so tests will run against older releases.
