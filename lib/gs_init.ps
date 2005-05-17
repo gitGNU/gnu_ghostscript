@@ -13,7 +13,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_init.ps,v 1.3 2005/04/18 12:06:08 Arabidopsis Exp $
+% $Id: gs_init.ps,v 1.4 2005/05/17 23:23:57 Arabidopsis Exp $
 % Initialization file for the interpreter.
 % When this is run, systemdict is still writable.
 
@@ -29,7 +29,7 @@
 
 % Check the interpreter revision.  NOTE: the interpreter code requires
 % that the first non-comment token in this file be an integer.
-815
+816
 dup revision ne
  { (gs: Interpreter revision \() print revision 10 string cvs print
    (\) does not match gs_init.ps revision \() print 10 string cvs print
