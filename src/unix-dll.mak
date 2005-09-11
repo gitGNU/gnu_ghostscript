@@ -22,7 +22,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: unix-dll.mak,v 1.4 2005/05/02 00:03:34 Arabidopsis Exp $
+# $Id: unix-dll.mak,v 1.5 2005/09/11 20:14:19 Arabidopsis Exp $
 # Partial makefile for Unix shared object target
 
 # Useful make commands:
@@ -76,7 +76,7 @@ $(GS_SO_MAJOR): $(GS_SO_MAJOR_MINOR)
 # Build the small Ghostscript loaders, with Gtk+ and without
 
 $(GSSOX_XE): $(GS_SO) $(GLSRC)dxmain.c
-	$(GLCC) -g `gtk-config --cflags` -o $(GSSOX_XE) $(GLSRC)dxmain.c -L$(BINDIR) -l$(GS) `gtk-config --libs`
+	$(GLCC) -g `pkg-config --cflags gtk+-2.0` -o $(GSSOX_XE) $(GLSRC)dxmain.c -L$(BINDIR) -l$(GS) `pkg-config --libs gtk+-2.0`
 
 $(GSSOC_XE): $(GS_SO) $(GLSRC)dxmainc.c
 	$(GLCC) -g -o $(GSSOC_XE) $(GLSRC)dxmainc.c -L$(BINDIR) -l$(GS)

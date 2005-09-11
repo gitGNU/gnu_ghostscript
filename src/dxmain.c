@@ -21,14 +21,14 @@
   San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: dxmain.c,v 1.4 2005/05/02 00:03:35 Arabidopsis Exp $ */
+/* $Id: dxmain.c,v 1.5 2005/09/11 20:14:19 Arabidopsis Exp $ */
 
 /* dxmain.c */
 /* 
  * Ghostscript frontend which provides a graphical window 
  * using Gtk+.  Load time linking to libgs.so 
  * Compile using
- *    gcc `gtk-config --cflags` -o gs dxmain.c -lgs `gtk-config --libs`
+ *    gcc `pkg-config --cflags gtk+-2.0` -o gs dxmain.c -lgs `pkg-config --libs gtk+-2.0`
  *
  * The ghostscript library needs to be compiled with
  *  gcc -fPIC -g -c -Wall file.c
