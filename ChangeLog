@@ -1,0 +1,6 @@
+2005-12-08  Jose E. Marchesi  <jose.marchesi@deimos-space.com>
+
+	* doc/ghostscript.texi: New file for the GNU Ghostscript manual.
+
+	* ChangeLog: New changelog file.
+
