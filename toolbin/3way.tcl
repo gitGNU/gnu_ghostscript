@@ -19,14 +19,9 @@ exec tclsh "$0" "$@"
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
-# 
-# For more information about licensing, please refer to
-# http://www.ghostscript.com/licensing/. For information on
-# commercial licensing, go to http://www.artifex.com/licensing/ or
-# contact Artifex Software, Inc., 101 Lucas Valley Road #110,
-# San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: 3way.tcl,v 1.3 2005/05/02 00:03:35 Arabidopsis Exp $
+
+# $Id: 3way.tcl,v 1.4 2005/12/13 17:55:21 jemarch Exp $
 
 # This file is supposed to help with 3-way merges.
 # Currently there is only one function:
@@ -51,8 +46,8 @@ proc filesame {f1 f2} {
 	} {
 	    if {[regexp {Copyright} $a]} {
 		if {[regexp {Copyright} $c]} {continue}
-	    } elseif {[regexp {\$Id: 3way.tcl,v 1.3 2005/05/02 00:03:35 Arabidopsis Exp $a]} {
-		if {[regexp {\$Id: 3way.tcl,v 1.3 2005/05/02 00:03:35 Arabidopsis Exp $c]} {continue}
+	    } elseif {[regexp {\$Id: 3way.tcl,v 1.4 2005/12/13 17:55:21 jemarch Exp $a]} {
+		if {[regexp {\$Id: 3way.tcl,v 1.4 2005/12/13 17:55:21 jemarch Exp $c]} {continue}
 	    }
 	}
 	set same 0
