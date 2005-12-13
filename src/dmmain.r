@@ -14,12 +14,6 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  For more information about licensing, please refer to
-  http://www.ghostscript.com/licensing/. For information on
-  commercial licensing, go to http://www.artifex.com/licensing/ or
-  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
-  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
-
 */
 
 /* $Id: dmmain.r,v 1.1.4.1 2003/12/12 22:07:59 giles Exp $ */

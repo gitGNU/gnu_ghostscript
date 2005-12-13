@@ -14,14 +14,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  For more information about licensing, please refer to
-  http://www.ghostscript.com/licensing/. For information on
-  commercial licensing, go to http://www.artifex.com/licensing/ or
-  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
-  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevsco.c,v 1.3 2005/05/02 00:03:35 Arabidopsis Exp $ */
+/* $Id: gdevsco.c,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
 /* 17Jul91 - wb - based on gdevpcfb.c */
 /* 31Jul91 - Rick Calder rick@rick.att.com - ifdefs for AT&T UNIX 4.0 2.1 */
 /* 13Sep91 - wb - modify for gs24b2 */

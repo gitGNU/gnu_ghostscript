@@ -14,16 +14,11 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  For more information about licensing, please refer to
-  http://www.ghostscript.com/licensing/. For information on
-  commercial licensing, go to http://www.artifex.com/licensing/ or
-  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
-  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 /* Portions Copyright (C) 1994-2000 Ghostgum Software Pty Ltd.  All rights reserved. */
 
 
-/* $Id: gsdll.c,v 1.4 2005/05/02 00:03:21 Arabidopsis Exp $ */
+/* $Id: gsdll.c,v 1.5 2005/12/13 16:57:21 jemarch Exp $ */
 /* Dynamic Link Library interface for OS/2 and MS-Windows Ghostscript */
 /* front end to gs.c */
 

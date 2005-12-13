@@ -14,14 +14,10 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  For more information about licensing, please refer to
-  http://www.ghostscript.com/licensing/. For information on
-  commercial licensing, go to http://www.artifex.com/licensing/ or
-  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
-  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+  
 */
 
-/* $Id: scfdgen.c,v 1.3 2005/05/02 00:03:34 Arabidopsis Exp $ */
+/* $Id: scfdgen.c,v 1.4 2005/12/13 16:57:27 jemarch Exp $ */
 /* Generate the CCITTFaxDecode tables */
 #include "stdio_.h"		/* includes std.h */
 #include "scf.h"
@@ -42,7 +38,7 @@ main()
     cfd_node area[1 << max(cfd_white_initial_bits, cfd_black_initial_bits)];
 
     fputs("/* Copyright (C) 1992, 1993, 1998, 1999 Aladdin Enterprises.  All rights reserved. */\n\n", out);
-    fputs("/* $Id: scfdgen.c,v 1.3 2005/05/02 00:03:34 Arabidopsis Exp $ */\n", out);
+    fputs("/* $Id: scfdgen.c,v 1.4 2005/12/13 16:57:27 jemarch Exp $ */\n", out);
     fputs("/* Tables for CCITTFaxDecode filter. */\n\n", out);
     fputs("/* This file was generated automatically.  It is governed by the same terms */\n", out);
     fputs("/* as the files scfetab.c and scfdgen.c from which it was derived. */\n", out);

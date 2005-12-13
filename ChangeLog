@@ -1,3 +1,10 @@
+2005-12-13  Jose E. Marchesi  <jose.marchesi@deimos-space.com>
+
+
+	* src/all-arch.mak: Offer for propietary licensing removed
+	* src/*.[ch]: idem
+
+	
 2005-12-08  Jose E. Marchesi  <jose.marchesi@deimos-space.com>
 
 	* doc/ghostscript.texi: New file for the GNU Ghostscript manual.

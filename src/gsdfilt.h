@@ -15,15 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  For more information about licensing, please refer to
-  http://www.ghostscript.com/licensing/. For information on
-  commercial licensing, go to http://www.artifex.com/licensing/ or
-  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
-  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
-
   Author: Raph Levien <raph@artofcode.com>
 */
-/* $Id: gsdfilt.h,v 1.4 2005/05/02 00:03:22 Arabidopsis Exp $ */
+/* $Id: gsdfilt.h,v 1.5 2005/12/13 16:57:21 jemarch Exp $ */
 
 #ifndef gsdfilt_INCLUDED
 #  define gsdfilt_INCLUDED
