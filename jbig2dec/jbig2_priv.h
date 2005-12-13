@@ -8,13 +8,6 @@
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
                                                                                 
-    For information on commercial licensing, go to
-    http://www.artifex.com/licensing/ or contact
-    Artifex Software, Inc.,  101 Lucas Valley Road #110,
-    San Rafael, CA  94903, U.S.A., +1(415)492-9861.
-        
-    $Id: jbig2_priv.h,v 1.1 2005/04/18 12:06:05 Arabidopsis Exp $
-    
     shared library internals
 */
 

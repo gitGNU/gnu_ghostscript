@@ -8,12 +8,7 @@
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
                                                                                 
-    For information on commercial licensing, go to
-    http://www.artifex.com/licensing/ or contact
-    Artifex Software, Inc.,  101 Lucas Valley Road #110,
-    San Rafael, CA  94903, U.S.A., +1(415)492-9861.
-
-    $Id: config_win32.h,v 1.1 2005/04/18 12:06:07 Arabidopsis Exp $
+    $Id: config_win32.h,v 1.2 2005/12/13 18:01:32 jemarch Exp $
 */
 
 /* configuration header file for compiling under Microsoft Windows */
