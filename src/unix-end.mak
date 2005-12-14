@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: unix-end.mak,v 1.4 2005/12/13 16:57:28 jemarch Exp $
+# $Id: unix-end.mak,v 1.5 2005/12/14 00:03:46 jemarch Exp $
 # Partial makefile common to all Unix and Desqview/X configurations.
 # This is the next-to-last part of the makefile for these configurations.
 
@@ -80,4 +80,4 @@ $(gconfigv_h): $(GLSRC)unix-end.mak $(TOP_MAKEFILES) $(ECHOGS_XE)
 # Emacs tags maintenance.
 
 TAGS:
-	etags -t $(GLSRC)*.[ch] $(PSSRC)*.[ch]
+	etags $(GLSRC)*.[ch] $(PSSRC)*.[ch]

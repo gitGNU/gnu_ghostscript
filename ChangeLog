@@ -1,3 +1,8 @@
+2005-12-14  Alfred M. Szmidt  <ams@gnu.org>
+  
+	* src/unix-end.mak (TAGS): Don't pass `-t' to etags.
+
+
 2005-12-13  Jose E. Marchesi  <jose.marchesi@deimos-space.com>
 
 
