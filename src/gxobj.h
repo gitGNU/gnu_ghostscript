@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxobj.h,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxobj.h,v 1.5 2006/02/20 19:52:05 jemarch Exp $ */
 /* Memory manager implementation structures for Ghostscript */
 
 #ifndef gxobj_INCLUDED
@@ -113,20 +113,22 @@ typedef struct obj_header_data_s {
 /* The only possible values for obj_align_mod are 4, 8, or 16.... */
 #if obj_align_mod == 4
 #  define log2_obj_align_mod 2
-#else
-#if obj_align_mod == 8
+#elif obj_align_mod == 8
 #  define log2_obj_align_mod 3
-#else
-#if obj_align_mod == 16
+#elif obj_align_mod == 16
 #  define log2_obj_align_mod 4
-#endif
-#endif
+#elif obj_align_mod == 32  /* for testing, not seen yet in the wild */
+#  define log2_obj_align_mod 5
+#else
+#  error Unexpected value of obj_align_mod
 #endif
 #define obj_align_mask (obj_align_mod-1)
 #define obj_align_round(siz)\
   (uint)(((siz) + obj_align_mask) & -obj_align_mod)
 #define obj_size_round(siz)\
   obj_align_round((siz) + sizeof(obj_header_t))
+#define ptr_align_round(p)\
+  ((byte *)obj_align_round((size_t)(p)))
 
 /* Define the real object header type, taking alignment into account. */
 struct obj_header_s {		/* must be a struct because of forward reference */

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ialloc.c,v 1.5 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: ialloc.c,v 1.6 2006/02/20 19:52:05 jemarch Exp $ */
 /* Memory allocator for Ghostscript interpreter */
 #include "gx.h"
 #include "memory_.h"
@@ -160,8 +160,8 @@ gs_alloc_ref_array(gs_ref_memory_t * mem, ref * parr, uint attrs,
 
     /* If we're allocating a run of refs already, */
     /* and we aren't about to overflow the maximum run length, use it. */
-    if (mem->cc.rtop == mem->cc.cbot &&
-	num_refs < (mem->cc.ctop - mem->cc.cbot) / sizeof(ref) &&
+    if (ptr_align_round(mem->cc.rtop) == mem->cc.cbot &&
+	num_refs < (mem->cc.ctop - mem->cc.rtop) / sizeof(ref) &&
 	mem->cc.rtop - (byte *) mem->cc.rcur + num_refs * sizeof(ref) <
 	max_size_st_refs
 	) {
@@ -172,8 +172,8 @@ gs_alloc_ref_array(gs_ref_memory_t * mem, ref * parr, uint attrs,
 		  ialloc_trace_space(mem), client_name_string(cname),
 		  num_refs, (ulong) obj);
 	mem->cc.rcur[-1].o_size += num_refs * sizeof(ref);
-	end = (ref *) (mem->cc.rtop = mem->cc.cbot +=
-		       num_refs * sizeof(ref));
+	end = (ref *) (mem->cc.rtop += num_refs * sizeof(ref));
+	mem->cc.cbot = ptr_align_round(mem->cc.rtop);
 	make_mark(end - 1);
     } else {
 	/*
@@ -228,12 +228,12 @@ gs_resize_ref_array(gs_ref_memory_t * mem, ref * parr,
 	return_error(e_Fatal);
     diff = old_num_refs - new_num_refs;
     /* Check for LIFO.  See gs_free_ref_array for more details. */
-    if (mem->cc.rtop == mem->cc.cbot &&
+    if (ptr_align_round(mem->cc.rtop) == mem->cc.cbot &&
 	(byte *) (obj + (old_num_refs + 1)) == mem->cc.rtop
 	) {
 	/* Shorten the refs object. */
-	ref *end = (ref *) (mem->cc.cbot = mem->cc.rtop -=
-			    diff * sizeof(ref));
+	ref *end = (ref *) (mem->cc.rtop -= diff * sizeof(ref));
+	mem->cc.cbot = ptr_align_round(mem->cc.rtop);
 
 	if_debug4('A', "[a%d:<$ ]%s(%u) 0x%lx\n",
 		  ialloc_trace_space(mem), client_name_string(cname), diff,
@@ -267,7 +267,7 @@ gs_free_ref_array(gs_ref_memory_t * mem, ref * parr, client_name_t cname)
      */
     if (!r_has_type(parr, t_array))
 	DO_NOTHING;		/* don't look for special cases */
-    else if (mem->cc.rtop == mem->cc.cbot &&
+    else if (ptr_align_round(mem->cc.rtop) == mem->cc.cbot &&
 	     (byte *) (obj + (num_refs + 1)) == mem->cc.rtop
 	) {
 	if ((obj_header_t *) obj == mem->cc.rcur) {
@@ -281,7 +281,8 @@ gs_free_ref_array(gs_ref_memory_t * mem, ref * parr, client_name_t cname)
 		      ialloc_trace_space(mem), client_name_string(cname),
 		      num_refs, (ulong) obj);
 	    mem->cc.rcur[-1].o_size -= num_refs * sizeof(ref);
-	    mem->cc.rtop = mem->cc.cbot = (byte *) (obj + 1);
+	    mem->cc.rtop = (byte *) (obj + 1);
+	    mem->cc.cbot = ptr_align_round(mem->cc.rtop);
 	    make_mark(obj);
 	}
 	return;

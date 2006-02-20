@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: igcref.c,v 1.4 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: igcref.c,v 1.5 2006/02/20 19:52:05 jemarch Exp $ */
 /* ref garbage collector for Ghostscript */
 #include "memory_.h"
 #include "ghost.h"
@@ -717,15 +717,18 @@ refs_compact(obj_header_t * pre, obj_header_t * dpre, uint size)
 	    new_size += sizeof(ref_packed);
     /* We want to make the newly freed space into a free block, */
     /* but we can only do this if we have enough room. */
-    if (size - new_size < sizeof(obj_header_t)) {	/* Not enough room.  Pad to original size. */
+    if (size < obj_align_round(new_size) + sizeof(obj_header_t)) { /* Not enough room.  Pad to original size. */
 	while (new_size < size)
 	    *dest++ = pt_tag(pt_integer),
 		new_size += sizeof(ref_packed);
     } else {
-	obj_header_t *pfree = (obj_header_t *) ((ref *) dest + 1);
+        byte *pfree_u = (byte *)dest + sizeof(ref);
+        byte *pfree_a = ptr_align_round(pfree_u);
+        obj_header_t *pfree = (obj_header_t *)pfree_a;
+        int align = pfree_a - pfree_u;
 
 	pfree->o_alone = 0;
-	pfree->o_size = size - new_size - sizeof(obj_header_t);
+	pfree->o_size = size - new_size - sizeof(obj_header_t) - align;
 	pfree->o_type = &st_bytes;
     }
     /* Re-create the final ref. */

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxalloc.h,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxalloc.h,v 1.5 2006/02/20 19:52:05 jemarch Exp $ */
 /* Structure definitions for standard allocator */
 /* Requires gsmemory.h, gsstruct.h */
 
@@ -146,7 +146,7 @@ struct chunk_s {
     byte *cbot;			/* bottom of free area */
 				/* (top of aligned objects) */
     obj_header_t *rcur;		/* current refs object, 0 if none */
-    byte *rtop;			/* top of rcur */
+    byte *rtop;			/* top of rcur, not aligned to obj_align_mod */
     byte *ctop;			/* top of free area */
 				/* (bottom of strings) */
     byte *climit;		/* top of strings */

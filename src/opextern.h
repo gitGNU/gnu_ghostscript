@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: opextern.h,v 1.4 2005/12/13 16:57:26 jemarch Exp $ */
+/* $Id: opextern.h,v 1.5 2006/02/20 19:52:05 jemarch Exp $ */
 /* Externally accessible operator declarations */
 
 #ifndef opextern_INCLUDED
@@ -113,6 +113,11 @@ int zln(i_ctx_t *);
 int zlog(i_ctx_t *);
 int zsin(i_ctx_t *);
 int zsqrt(i_ctx_t *);
+/* zjemarch.c */
+/*****************************/
+/* int zjemzero (i_ctx_t *); */
+/* int zjemzero (i_ctx_t *); */
+/*****************************/
 /* zrelbit.c: */
 int zand(i_ctx_t *);
 int zbitshift(i_ctx_t *);
