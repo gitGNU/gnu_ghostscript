@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: ps2ascii.ps,v 1.4 2005/12/13 17:48:51 jemarch Exp $
+% $Id: ps2ascii.ps,v 1.5 2006/03/02 22:26:14 Arabidopsis Exp $
 % Extract the ASCII text from a PostScript file.  Nothing is displayed.
 % Instead, ASCII information is written to stdout.  The idea is similar to
 % Glenn Reid's `distillery', only a lot more simple-minded, and less robust.
@@ -1282,18 +1282,18 @@ userdict /start-hook {
     if                                          % string
     currentfont /FontType get 0 ne
       {
-    { % begin forall                            % c
-        dup                                     % c c
-        currentfont /Encoding get               % c c vec
-        exch get                                % c name
-        dup //.char.map exch known              % c name bool
-          { exch pop }
-          { pop OT1Encoding exch get }
-        ifelse                                  % name
-        //.char.map exch get                    % translation
-        .show.stdout exch writestring
-    }
-    forall
+          { % begin forall                          % c
+            dup                                     % c c
+            currentfont /Encoding get               % c c vec
+            exch get                                % c name
+            dup //.char.map exch known              % c name bool
+              { exch pop }
+              { pop OT1Encoding exch get }
+            ifelse                                  % name
+            //.char.map exch get                    % translation
+            .show.stdout exch writestring
+          }
+        forall
       }
       { (\0) dup 0 get 0 eq
           { 0 1 put

@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_res.ps,v 1.4 2005/12/13 17:48:51 jemarch Exp $
+% $Id: gs_res.ps,v 1.5 2006/03/02 22:26:14 Arabidopsis Exp $
 % Initialization file for Level 2 resource machinery.
 % When this is run, systemdict is still writable,
 % but (almost) everything defined here goes into level2dict.
@@ -495,6 +495,7 @@ pop pop
             3 1 roll                                    % (scr) (c) (/) (n)
 	    concatstrings concatstrings                 % (scr) (c/n)
             /GenericResourceDir getsystemparam .file_name_is_absolute not {
+              /GenericResourceDir getsystemparam exch concatstrings
 	      findlibfile
 	      {                                         % (scr) (p/c/n) file
 	        pop exch copy true                      % (p/c/n) true

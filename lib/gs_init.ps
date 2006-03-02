@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_init.ps,v 1.5 2005/12/13 17:48:51 jemarch Exp $
+% $Id: gs_init.ps,v 1.6 2006/03/02 22:26:14 Arabidopsis Exp $
 % Initialization file for the interpreter.
 % When this is run, systemdict is still writable.
 
@@ -24,7 +24,7 @@
 
 % Check the interpreter revision.  NOTE: the interpreter code requires
 % that the first non-comment token in this file be an integer.
-816
+851
 dup revision ne
  { (gs: Interpreter revision \() print revision 10 string cvs print
    (\) does not match gs_init.ps revision \() print 10 string cvs print
@@ -89,8 +89,13 @@ mark	% '[' isn't defined yet
   /TTFDEBUG		% TTF Fonts
   /VGIFDEBUG		% ViewGIF
   /VJPGDEBUG		% ViewJPEG
+  /RESMPDEBUG		% Resource map
 counttomark array astore exch pop % ']' isn't defined yet
 { dup currentdict exch known DEBUG or def } forall
+
+currentdict /PDFSTEP known /PDFSTEP exch def
+% if PDFSTEP is on, turn on PDFDEBUG
+PDFSTEP { /PDFDEBUG true def } if
 
   /VMDEBUG
     INITDEBUG {{print mark

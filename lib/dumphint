@@ -1,6 +1,11 @@
 #!/bin/sh
-# $Id: dumphint,v 1.1.4.1 2003/12/12 22:07:58 giles Exp $
+# $Id: dumphint 5212 2004-08-04 00:55:46Z giles $
 # Linearized PDF hint formatting utility.
+
+# This definition is changed on install to match the
+# executable name set in the makefile
+GS_EXECUTABLE=gs
+
 
 OPTIONS="-dSAFER -dDELAYSAFER"
 while true
@@ -17,4 +22,4 @@ if [ $# -ne 1 ]; then
 	exit 1
 fi
 
-exec gs -q -dNODISPLAY $OPTIONS -- dumphint.ps "$1"
+exec $GS_EXECUTABLE -q -dNODISPLAY $OPTIONS -- dumphint.ps "$1"

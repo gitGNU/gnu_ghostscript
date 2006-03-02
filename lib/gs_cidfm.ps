@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_cidfm.ps,v 1.3 2005/12/13 17:48:51 jemarch Exp $
+% $Id: gs_cidfm.ps,v 1.4 2006/03/02 22:26:14 Arabidopsis Exp $
 % Redefine CIDFont category with cidfmap .
 
 languagelevel 2 .setlanguagelevel
@@ -48,7 +48,12 @@ languagelevel 2 .setlanguagelevel
   } bind def
 
   /GetCSI   % <record> GetCSI null
-  { pop null
+  	    % <record> GetCSI dict
+  { % We know that currentdict is the category.
+    RESMPDEBUG { (cidfm GetCSI beg ) = } if
+    /Substitute get			% /Name
+    GetCIDSystemInfoFromMap
+    RESMPDEBUG { (cidfm GetCSI end ) print dup = } if
   } bind def
 
   /IsActive % <record> IsActive <bool>

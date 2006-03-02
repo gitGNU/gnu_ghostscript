@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: pdf_font.ps,v 1.4 2005/12/13 17:48:51 jemarch Exp $
+% $Id: pdf_font.ps,v 1.5 2006/03/02 22:26:14 Arabidopsis Exp $
 % pdf_font.ps
 % PDF font operations.
 
@@ -123,15 +123,21 @@ pdfdict begin
 } bdef
 
 /unique_name {  % <dict> </root> unique_name </unique> 
+  %
+  %  Note : this function interacts with pdf_write_encoding in src/gdevpdtw.c
+  %  and with copied_drop_extension_glyphs in src\gxfcopy.c
+  %  by adding a reserved substring (~GS~).
+  %
   .namestring       % <<>> (root)
   0 1 65535 {
     5 string cvs    % <<>> (root) (0)
-    1 index exch    % <<>> (root) (root) (0)
-    concatstrings   % <<>> (root) (root0)
-    dup             % <<>> (root) (root0) (root0)
-    3 index exch    % <<>> (root) (root0) <<>> (root0)
+    (~GS~) exch concatstrings
+    1 index exch    % <<>> (root) (root) (~GS~0)
+    concatstrings   % <<>> (root) (root~GS~0)
+    dup             % <<>> (root) (root~GS~0) (root~GS~0)
+    3 index exch    % <<>> (root) (root~GS~0) <<>> (root~GS~0)
     known not {
-      exch pop exit % <<>> (root0)
+      exch pop exit % <<>> (root~GS~0)
     } if
     pop
   } for
@@ -184,37 +190,47 @@ pdfdict begin
 		% Work around a bug in pdfTeX, which can generate Encoding
 		% vectors containing nulls :
 	   1 index //null eq { exit } if
-		% There is a hack here to deal with encodings where the
-		% same character appears more than once, because the Metrics
-		% dictionary works by character name, not by character code.
-		% We prefer to take (1) non-zero width, and (2) width for 
-		% the character name which appears in Differences. If the
-		% character name appears in Differences, use the Width that
-		% corresponds to the index in differences.
-	   dup 0 eq { exit } if
-	   Metrics 2 index .knownget not { 0 } if 0 ne {
-	     5 index /Encoding knownoget not { exit } if
-	     dup type /dicttype ne { pop exit } if
-	     /Differences knownoget not { exit } if
-	     3 index 3 index //match_in_diff exec not { exit } if
-	   } if
-                % Create a new glyph for a character that maps to an existing glyph
-                % with a different width and passes all the tests above.
            Metrics 2 index .knownget {
              1 index ne
            } {
              //false
            } ifelse {
+             % Two or more Encoding elements refer same glyph name,
+             % and Widths specify different wihts for it.
+             % Since a Postscript font can't have different 
+             % Metrics for same glyph name, 
+             % we generate an unique name, and create a new 
+             % Charstrings entry with same glyph value.
              GlyphMap //null eq {
                /Encoding Encoding dup length array copy def
                /GlyphMap 4 dict def
              } if
-             Metrics 2 index //unique_name exec
-                % Stack: font font-res mscale first-char index charname width new_name
-             Encoding 4 index 2 index put
-             GlyphMap 1 index 5 -1 roll put
-             exch
-                % Stack: font font-res mscale first-char index new_name width
+             % To prevent too many new names, check whether
+             % we can use one already created for same glyph.
+             //true
+             GlyphMap {                           % f r s c i n w b n1 n2
+               4 index eq {                       % f r s c i n w b n1
+                 dup Metrics exch get             % f r s c i n w b n1 w1
+                 3 index eq {                     % f r s c i n w b n1
+                   4 3 roll pop                   % f r s c i w b n1
+                   3 1 roll pop                   % f r s c i n1 w
+                   Encoding 3 index 3 index put
+                   //false                        % f r s c i n1 w b
+                   exit
+                 } {
+                   pop
+                 } ifelse
+               } {                                % f r s c i n w b n1
+                 pop
+               } ifelse
+             } forall                             % f r s c i n w b
+             { % Do create a new name.
+               Metrics 2 index //unique_name exec % f r s c i n w nn
+               Encoding 4 index 2 index put
+               GlyphMap 1 index 5 -1 roll put     % f r s c i w nn
+               exch
+                  % Stack: font font-res mscale first-char index new_name width
+             } if
            } if
            2 copy Metrics 3 1 roll put
 	   exit
@@ -299,6 +315,22 @@ setglobal
   } ifelse
 } bind def
 
+/.remove_font_name_prefix {  % <name>  .remove_font_name_prefix <name>
+  dup .namestring (+) search {
+    true exch
+    { dup 65 lt exch 90 gt or {
+        pop false exit
+      } if
+    } forall
+    { pop exch pop cvn
+    } {
+      pop pop
+    } ifelse
+  } {
+    pop
+  } ifelse
+} bind def
+
 % Find a font (except for embedded ones), and adjust its encoding if necessary.
 /.pdfdfndict mark
   /defaultfontname /Helvetica
@@ -323,12 +355,14 @@ setglobal
                 % /FontName key, we substitue /BaseFont for the value of /FontName.
                 % Yet another case of broken PDF's that Adobe Reader accepts.
       1 index dup /FontName known {
-        /FontName oget exch
+        /FontName oget
       } {
         (   **** FontDescriptor missing required /FontName key. BaseFont name used.\n)
         pdfformaterror
-        pop 2 index exch	% grab the BaseFont from the stack.
+        pop 2 index		% grab the BaseFont from the stack.
       } ifelse
+      .remove_font_name_prefix
+      exch
 		% Analyzes font name and extract "Narrow" property
 		% which is not described by the FontDescriptor Flags.
       0 2 index .fontnameproperties 4 and or
@@ -425,6 +459,19 @@ setglobal
     currentdict //systemdict eq { end } if
      { stop } if
   } bdef
+
+  /undef_proc_warning {
+    (   **** Embedded font uses undefined procedure ) pdfformaterror
+        .namestring pdfformaterror (\n) pdfformaterror
+  } bdef
+
+  /-| { string currentfile exch readstring pop /-| undef_proc_warning } executeonly bdef
+  /RD { string currentfile exch readstring pop /RD undef_proc_warning } executeonly bdef
+  /|- { noaccess def /|- undef_proc_warning } executeonly bdef
+  /ND { noaccess def /ND undef_proc_warning } executeonly bdef
+  /|  { noaccess put /|  undef_proc_warning } executeonly bdef
+  /NP { noaccess put /NP undef_proc_warning } executeonly bdef
+
 end readonly def
 /readtype1 {		% <font-resource> <stream-dict> readtype1 <font>
 		% Read the definition, using a procedure-based filter
@@ -878,7 +925,7 @@ readonly def
     /putMTXEntry <<
       /arraytype   {
          [
-           [Mi Mi Mi1 length add 1 sub]
+           [Mi Mi Mi1 length itemSize idiv add 1 sub]
            true
            [
              0 itemSize Mi1 length 1 sub {
@@ -915,7 +962,7 @@ readonly def
 
   exch
   {
-    {
+    { 
       dup 0 get {} forall      % Stack: <cid> <entry> <cid_0> <cid_1>
       3 index lt { pop pop false exit } if
       2 index exch sub dup 0 lt { pop pop false exit } if
@@ -932,7 +979,6 @@ readonly def
 /CIDWProc {		% <w0x> <w0y> <llx> <lly> <urx> <ury>
 			%   <w1x> <w1y> <vx> <vy> <cid> <font> CIDWproc
 			%   <w0x'> ... <vy'>
-
   begin % push <font> to currentdict
     % <w1x> <w1y> <vx> <vy> won't be used and replaced, discard now
     5 1 roll pop pop pop pop
@@ -960,7 +1006,9 @@ readonly def
       exit
     } loop
 
-    1000 div                    % <w0x'> (normalized W)
+    FontType 11 eq {
+      1000 div                  % <w0x'> (normalized W)
+    } if
     0                           % <w0y'>
 
     % Stack: <w0x> <w0y> <llx> <lly> <urx> <ury> <cid> <w0x'> <w0y'>
@@ -998,14 +1046,13 @@ readonly def
 
     exch pop                            % discard <cid>
 
-
     % Stack: <w0x'> <w0y'> <llx> <lly> <urx> <ury> <w1x'> { [<vy'> <w1y'>] | [<w1y'> <vx'> <vy'>] }
     dup length 2 eq {                   % this is DW2
-      {1000 div} forall exch
-      4 index 7 index add 2 div         % <vx'> = (<urx> + <llx>) / 2
+      FontType 11 eq {{1000 div}} {{}} ifelse forall exch
+      8 index 2 div                     % <vx'> = <w0x'> / 2
       exch
     }{                                  % assume W2
-      {1000 div} forall
+      FontType 11 eq {{1000 div}} {{}} ifelse forall
     } ifelse
   end                                   % recover currentdict
 
@@ -1073,7 +1120,7 @@ readonly def
       pop pop /CIDFont findresource
       exit
     } if
-
+    .remove_font_name_prefix
     dup dup length string cvs
     (,Bold) tailmatch {
       exch pop
@@ -1098,7 +1145,7 @@ readonly def
     concatstrings concatstrings
     cvn
     QUIET not {
-      (Substituting ) print dup ==only
+      (Substituting CID font resource) print dup ==only
       ( for ) print 1 index ==only (.\n) print
     } if
     exch pop
@@ -1125,14 +1172,14 @@ readonly def
 		% Stack: filepos fontres font mapstream
 	% Can't know the length of the decompressed stream, so allocate a big buffer...
       dup 65534 string readstring {
-	  % Length exceeded max string size, use an array of two strings
-    	1 index 65534 string readstring pop   % maybe a null string - not important.
-        2 array astore
-        	        % Stack: filepos fontres font mapstream array
-       	dup 1 get length 65534 add
+   	% Length exceeded max string size, use an array of two strings
+   	1 index 65534 string readstring pop   % maybe a null string - not important.
+      	2 array astore
+      	        % Stack: filepos fontres font mapstream array 
+      	dup 1 get length 65534 add
       } {
         dup length
-        } ifelse
+      } ifelse
       2 idiv
     	% Stack: filepos fontres font mapstream array/string CIDCount
       3 index exch /CIDCount exch put

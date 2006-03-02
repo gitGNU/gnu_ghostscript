@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_lev2.ps,v 1.4 2005/12/13 17:48:51 jemarch Exp $
+% $Id: gs_lev2.ps,v 1.5 2006/03/02 22:26:14 Arabidopsis Exp $
 % Initialization file for Level 2 functions.
 % When this is run, systemdict is still writable,
 % but (almost) everything defined here goes into level2dict.
@@ -75,7 +75,7 @@ level2dict begin
     dup length array exch dup {	% stack: destination_array original_array original_array
       dup type /arraytype eq {
 	dup 2 index ne {	% avoid recursion
-        .copyparam	% recurse to handle composite array elements
+          .copyparam	% recurse to handle composite array elements
         } {
 	  % this array self referenced, do it again (yuk!)
 	  pop 1 index		% get copy of destination array
@@ -843,7 +843,7 @@ def
 
 % The following functions emulate the actions of findcmykcustomcolor and
 % setcustomcolor.  These functions are described in Adobe's TN 5044.  That
-% same document also says "The following “operators” are not defined in the
+% same document also says "The following ï¿½operatorsï¿½ are not defined in the
 % PostScript Language Reference Manual, but should be used as pseudo-operators
 % in your PostScript language output. Separation applications from Adobe
 % Systems and other vendors will redefine these convention operators to

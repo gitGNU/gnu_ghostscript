@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: pdf_draw.ps,v 1.4 2005/12/13 17:48:51 jemarch Exp $
+% $Id: pdf_draw.ps,v 1.5 2006/03/02 22:26:14 Arabidopsis Exp $
 % pdf_draw.ps
 % PDF drawing operations (graphics, text, and images).
 
@@ -104,7 +104,7 @@ pdfdict begin
 
 /resolvefunction {	% <fndict> resolvefunction <function>
   .resolvefn
-  PDFDEBUG { (%Function: ) print dup === flush } if
+  PDFDEBUG { pdfdict /PDFSTEPcount .knownget { 1 le } { true } ifelse { (%Function: ) print dup === flush } if } if
 } bdef
 
 /resolvefnproc {	% <fndict> resolvefnproc <proc>
@@ -364,7 +364,7 @@ end
     dup /BC knownoget {
       gsave
         1 index /G oget /Group oget /CS knownoget {
-	  csresolve setgcolorspace
+	  csresolve dup setgcolorspace csput
 	} if
         aload pop setcolor [ currentgray ]
       grestore
@@ -386,7 +386,7 @@ end
   gsave PDFfile fileposition 4 1 roll
 	% We have to select the group's color space so that the
 	% background color will be interpreted correctly.
-  dup /Group oget /CS knownoget { csresolve setgcolorspace } if
+  dup /Group oget /CS knownoget { csresolve dup setgcolorspace csput } if
   exch dup /BBox get aload pop .begintransparencymask {
     dup /Resources knownoget { oforce } { 0 dict } ifelse
     exch false resolvestream
@@ -640,19 +640,20 @@ end
       resolvecolorspace
     } if
   } {
-  dup Page /ColorSpace rget {
-    exch pop resolvecolorspace
-  } {
-    //csnames 1 index known not { /undefined cvx signalerror } if
+    dup Page /ColorSpace rget {
+      exch pop resolvecolorspace
+    } {
+      //csnames 1 index known not { /undefined cvx signalerror } if
     } ifelse
   } ifelse
 } bdef
 /resolvecolorspace {	% <cspace> resolvecolorspace <cspace'>
   dup dup type /arraytype eq { 0 get } if
-  //csrdict exch .knownget {
+  //csrdict exch .knownget
+  {
     exec dup type /nametype ne { dup length 1 eq { 0 get } if } if
   } {
-    csresolve
+    dup type /nametype eq { csresolve } { csset exch pop } ifelse
   } ifelse
 } bdef
 
@@ -675,7 +676,7 @@ end
 } bdef
 
 /.pdfpaintproc {         % <patdict> <resdict> .pdfpaintproc -
-  PDFDEBUG { (%Begin PaintProc) = flush } if
+  PDFDEBUG { pdfdict /PDFSTEPcount .knownget { 1 le } { true } ifelse { (%Begin PaintProc) print dup === flush } if } if
 	% For uncolored patterns, we have to unbind the current
 	% color and color space before running the PaintProc.
 	% There's no harm in doing this for colored patterns,
@@ -691,7 +692,7 @@ end
   /pdfemptycount exch def
 
   Q
-  PDFDEBUG { (%End PaintProc) = flush } if
+  PDFDEBUG { pdfdict /PDFSTEPcount .knownget { 1 le } { true } ifelse { (%End PaintProc) print dup === flush } if } if
   PDFfile exch setfileposition
 } bdef
 
@@ -723,9 +724,7 @@ end
     2 index /Resources knownoget { oforce } { 0 dict } ifelse
     /.pdfpaintproc cvx
   ] cvx put
-  PDFDEBUG {
-    (%Pattern: ) print dup === flush
-  } if
+  PDFDEBUG { pdfdict /PDFSTEPcount .knownget { 1 le } { true } ifelse { (%Pattern: ) print dup === flush } if } if
 } bdef
 
 drawopdict begin
@@ -990,7 +989,7 @@ end
     % Adjust pdfemptycount since we have an extra dictionary on the stack
   pdfemptycount exch
   /pdfemptycount where pop count 2 sub /pdfemptycount exch put
-  q execform Q                 % gsave / grestore around the Form
+  q execform Q			% gsave / grestore around the Form
     % Restore pdfemptycount
   /pdfemptycount where pop exch /pdfemptycount exch put
 } bdef
@@ -1248,27 +1247,27 @@ end
 %  a scale factor for drawing the stamp.
 /calcstampscale {		% <annot> calcstampscale scale
   dup /Rect known {
-  dup annotrect 4 -2 roll pop pop	 % get width height size in user space
-  3 -1 roll /AP knownoget {
-    /N knownoget {
-      dup /Matrix knownoget {
-	% transform /Annot /Rect xwidth to Form space
-	4 -2 roll 3 -1 roll dtransform 3 -1 roll
-      } if
-      /BBox knownoget {
-        exch pop	% discard y height
-        aload pop pop exch pop sub	% BBox width
-	div		% scale x widths
-	dup 0 lt { neg } if		% get magnitude
+    dup annotrect 4 -2 roll pop pop	 % get width height size in user space
+    3 -1 roll /AP knownoget {
+      /N knownoget {
+	dup /Matrix knownoget {
+	  % transform /Annot /Rect xwidth to Form space
+	  4 -2 roll 3 -1 roll dtransform 3 -1 roll
+	} if
+	/BBox knownoget {
+	  exch pop	% discard y height
+	  aload pop pop exch pop sub	% BBox width
+	  div		% scale x widths
+	  dup 0 lt { neg } if		% get magnitude
+	} {
+	  pop pop 1		% default to unity scaling
+	} ifelse			% if we have /BBox
       } {
-        pop pop 1		% default to unity scaling
-      } ifelse			% if we have /BBox
+	pop pop 1
+      } ifelse			% if we have /N
     } {
       pop pop 1
-    } ifelse			% if we have /N
-  } {
-    pop pop 1
-  } ifelse			% if we have /AP
+    } ifelse			% if we have /AP
   } {
     (   **** Warning: /Annot dict is missing required /Rect entry.\n)
     pdfformaterror

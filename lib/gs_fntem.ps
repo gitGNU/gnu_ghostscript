@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_fntem.ps,v 1.3 2005/12/13 17:48:51 jemarch Exp $
+% $Id: gs_fntem.ps,v 1.4 2006/03/02 22:26:14 Arabidopsis Exp $
 % A procset for Postscript font emulation
 
 % The procedures must not depend on the presence of the
@@ -81,12 +81,14 @@ currentdict end def
 %---------------------------CIDFont---------------------------
 
 /TranslateCSI   % <record> TranslateCSI <CSI>
-{ begin
+{ RESMPDEBUG { (fntem TranslateCSI beg ) = } if
+  begin
   << /Registry (Adobe) 
      /Ordering CSI aload pop 
      /Supplement exch 
   >>
   end
+  RESMPDEBUG { (fntem TranslateCSI end ) = } if
 } bind def
 
 /CIDFontCommon
