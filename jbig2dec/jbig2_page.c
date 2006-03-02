@@ -8,7 +8,7 @@
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
                                                                                 
-    $Id: jbig2_page.c,v 1.2 2005/12/13 18:01:32 jemarch Exp $
+    $Id: jbig2_page.c,v 1.3 2006/03/02 21:27:55 Arabidopsis Exp $
 */
 
 #ifdef HAVE_CONFIG_H
@@ -22,6 +22,7 @@
 #include "jbig2_priv.h"
 
 #ifdef OUTPUT_PBM
+#include <stdio.h>
 #include "jbig2_image.h"
 #endif
 
@@ -79,7 +80,8 @@ jbig2_parse_page_info (Jbig2Ctx *ctx, Jbig2Segment *segment, const uint8_t *segm
             index++;
             if (index >= ctx->max_page_index) { /* FIXME: should also look for freed pages? */
                 /* grow the list */
-                jbig2_realloc(ctx->allocator, ctx->pages, (ctx->max_page_index <<= 2) * sizeof(Jbig2Page));
+		ctx->pages = jbig2_realloc(ctx->allocator, ctx->pages,
+			(ctx->max_page_index <<= 2) * sizeof(Jbig2Page));
                 for (j=index; j < ctx->max_page_index; j++) {
                     /* note to raph: and look, it gets worse! */
                     ctx->pages[j].state = JBIG2_PAGE_FREE;
@@ -145,6 +147,8 @@ jbig2_parse_page_info (Jbig2Ctx *ctx, Jbig2Segment *segment, const uint8_t *segm
         return jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number,
             "failed to allocate buffer for page image");
     } else {
+	/* 8.2 (3) fill the page with the default pixel value */
+	jbig2_image_clear(ctx, page->image, (page->flags & 4));
         jbig2_error(ctx, JBIG2_SEVERITY_DEBUG, segment->number,
             "allocated %dx%d page image (%d bytes)",
             page->image->width, page->image->height,

@@ -8,7 +8,7 @@
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
                                                                                 
-    $Id: os_types.h,v 1.2 2005/12/13 18:01:32 jemarch Exp $
+    $Id: os_types.h,v 1.3 2006/03/02 21:27:55 Arabidopsis Exp $
 */
 
 /*
@@ -24,6 +24,7 @@
 
 #if defined(__CYGWIN__) && !defined(HAVE_STDINT_H)
 # include <sys/types.h>
+# if defined(OLD_CYGWIN_SYS_TYPES)
   /*
    * Old versions of Cygwin have no stdint.h but define "MS types". Some of
    * them conflict with a standard type emulation provided by config_types.h
@@ -32,7 +33,8 @@
    typedef u_int8_t uint8_t;
    typedef u_int16_t uint16_t;
    typedef u_int32_t uint32_t;
-#elif HAVE_CONFIG_H
+#endif
+#elif defined(HAVE_CONFIG_H)
 # include "config_types.h"
 #elif defined(_WIN32)
 # include "config_win32.h"

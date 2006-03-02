@@ -8,7 +8,7 @@
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
                                                                                 
-    $Id: jbig2_metadata.c,v 1.2 2005/12/13 18:01:32 jemarch Exp $
+    $Id: jbig2_metadata.c,v 1.3 2006/03/02 21:27:55 Arabidopsis Exp $
 */
 
 #ifdef HAVE_CONFIG_H
@@ -44,8 +44,19 @@ Jbig2Metadata *jbig2_metadata_new(Jbig2Ctx *ctx, Jbig2Encoding encoding)
 
 void jbig2_metadata_free(Jbig2Ctx *ctx, Jbig2Metadata *md)
 {
-    if (md->keys) jbig2_free(ctx->allocator, md->keys);
-    if (md->values) jbig2_free(ctx->allocator, md->values);
+    int i;
+
+    if (md->keys) {
+      /* assume we own the pointers */
+      for (i = 0; i < md->entries; i++)
+        jbig2_free(ctx->allocator, md->keys[i]);
+      jbig2_free(ctx->allocator, md->keys);
+    }
+    if (md->values) {
+      for (i = 0; i < md->entries; i++)
+        jbig2_free(ctx->allocator, md->values[i]);
+      jbig2_free(ctx->allocator, md->values);
+    }
     jbig2_free(ctx->allocator, md);
 }
 

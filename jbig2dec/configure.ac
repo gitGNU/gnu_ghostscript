@@ -1,13 +1,13 @@
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([jbig2dec], [0.6], [jbig2-dev@ghostscript.com])
+AC_INIT([jbig2dec], [0.8], [jbig2-dev@ghostscript.com])
 AC_PREREQ(2.53)
 AC_CONFIG_SRCDIR([jbig2dec.c])
 
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([-Wall])
 AM_CONFIG_HEADER(config.h)
 
-dnl AC_REVISION([$Rev: 306 $])
+dnl AC_REVISION([$Rev: 365 $])
 
 # Checks for programs.
 AC_PROG_CC

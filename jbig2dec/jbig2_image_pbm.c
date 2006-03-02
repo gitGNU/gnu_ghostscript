@@ -8,7 +8,7 @@
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
                                                                                 
-    $Id: jbig2_image_pbm.c,v 1.2 2005/12/13 18:01:32 jemarch Exp $
+    $Id: jbig2_image_pbm.c,v 1.3 2006/03/02 21:27:55 Arabidopsis Exp $
 */
 
 #ifdef HAVE_CONFIG_H
@@ -90,8 +90,8 @@ Jbig2Image *jbig2_image_read_pbm(Jbig2Ctx *ctx, FILE *in)
         return NULL;
     }
     /* read size. we must find two decimal numbers representing
-       the image dimensions. done will index whether we're
-       looking for the width of the height and i will be our
+       the image dimensions. 'done' will index whether we're
+       looking for the width or the height and 'i' will be our
        array index for copying strings into our buffer */
     done = 0;
     i = 0;

@@ -1,7 +1,7 @@
 /*
     jbig2dec
     
-    Copyright (c) 2002-2003 artofcode LLC.
+    Copyright (c) 2002-2005 artofcode LLC.
     
     This software is provided AS-IS with no warranty,
     either express or implied.
@@ -11,7 +11,7 @@
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
    
-    $Id: jbig2.c,v 1.2 2005/12/13 18:01:32 jemarch Exp $
+    $Id: jbig2.c,v 1.3 2006/03/02 21:27:55 Arabidopsis Exp $
 */
 
 #ifdef HAVE_CONFIG_H
@@ -347,14 +347,18 @@ jbig2_ctx_free (Jbig2Ctx *ctx)
   int i;
 
   jbig2_free(ca, ctx->buf);
-  if (ctx->segments != NULL)
-    {
-      for (i = ctx->segment_index; i < ctx->n_segments; i++)
-	jbig2_free_segment(ctx, ctx->segments[i]);
-      jbig2_free(ca, ctx->segments);
-    }
+  if (ctx->segments != NULL) {
+    for (i = 0; i < ctx->n_segments; i++)
+      jbig2_free_segment(ctx, ctx->segments[i]);
+    jbig2_free(ca, ctx->segments);
+  }
 
-  /* todo: free pages */
+  if (ctx->pages != NULL) {
+    for (i = 0; i <= ctx->current_page; i++)
+      if (ctx->pages[i].image != NULL)
+	jbig2_image_release(ctx, ctx->pages[i].image);
+    jbig2_free(ca, ctx->pages);
+  }
 
   jbig2_free(ca, ctx);
 }

@@ -8,7 +8,7 @@
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
                                                                                 
-    $Id: jbig2_image.h,v 1.2 2005/12/13 18:01:32 jemarch Exp $
+    $Id: jbig2_image.h,v 1.3 2006/03/02 21:27:55 Arabidopsis Exp $
 */
 
 
@@ -27,5 +27,9 @@ Jbig2Image *jbig2_image_read_pbm(Jbig2Ctx *ctx, FILE *in);
 int jbig2_image_write_png_file(Jbig2Image *image, char *filename);
 int jbig2_image_write_png(Jbig2Image *image, FILE *out);
 #endif
+
+int jbig2_image_get_pixel(Jbig2Image *image, int x, int y);
+int jbig2_image_set_pixel(Jbig2Image *image, int x, int y, int value);
+
 
 #endif /* _JBIG2_IMAGE_H */

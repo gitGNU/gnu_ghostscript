@@ -8,7 +8,7 @@
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
                                                                                 
-    $Id: jbig2_segment.c,v 1.2 2005/12/13 18:01:32 jemarch Exp $
+    $Id: jbig2_segment.c,v 1.3 2006/03/02 21:27:55 Arabidopsis Exp $
 */
 
 #ifdef HAVE_CONFIG_H
@@ -124,7 +124,25 @@ jbig2_free_segment (Jbig2Ctx *ctx, Jbig2Segment *segment)
   if (segment->referred_to_segments != NULL) {
     jbig2_free(ctx->allocator, segment->referred_to_segments);
   }
-  /* todo: free result */
+  /* todo: we need either some separate fields or
+     a more complex result object rather than this
+     brittle special casing */
+    switch (segment->flags & 63) {
+	case 0:  /* symbol dictionary */
+	  jbig2_sd_release(ctx, segment->result);
+	  break;
+	case 4:  /* intermediate text region */
+	case 40: /* intermediate refinement region */
+	  if (segment->result != NULL)
+	    jbig2_image_release(ctx, segment->result);
+	  break;
+	case 62:
+	  jbig2_metadata_free(ctx, segment->result);
+	  break;
+	default:
+	  /* anything else is probably an undefined pointer */
+	  break;
+    }
   jbig2_free (ctx->allocator, segment);
 }
 
@@ -232,15 +250,10 @@ int jbig2_parse_segment (Jbig2Ctx *ctx, Jbig2Segment *segment,
     case 39:
       return jbig2_error(ctx, JBIG2_SEVERITY_WARNING, segment->number,
         "unhandled segment type 'immediate lossless generic region'");
-    case 40:
-      return jbig2_error(ctx, JBIG2_SEVERITY_WARNING, segment->number,
-        "unhandled segment type 'intermediate generic refinement region'");
-    case 42:
-      return jbig2_error(ctx, JBIG2_SEVERITY_WARNING, segment->number,
-        "unhandled segment type 'immediate generic refinement region'");
-    case 43:
-      return jbig2_error(ctx, JBIG2_SEVERITY_WARNING, segment->number,
-        "unhandled segment type 'immediate lossless generic refinement region'");
+    case 40: /* intermediate generic refinement region */
+    case 42: /* immediate generic refinement region */
+    case 43: /* immediate lossless generic refinement region */
+      return jbig2_refinement_region(ctx, segment, segment_data);
     case 48:
       return jbig2_parse_page_info(ctx, segment, segment_data);
     case 49:

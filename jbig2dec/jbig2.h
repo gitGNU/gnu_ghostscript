@@ -8,7 +8,7 @@
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
                                                                                 
-    $Id: jbig2.h,v 1.2 2005/12/13 18:01:32 jemarch Exp $
+    $Id: jbig2.h,v 1.3 2006/03/02 21:27:55 Arabidopsis Exp $
 */
 
 #ifdef __cplusplus
@@ -58,7 +58,7 @@ Jbig2Image*     jbig2_image_new(Jbig2Ctx *ctx, int width, int height);
 Jbig2Image*	jbig2_image_clone(Jbig2Ctx *ctx, Jbig2Image *image);
 void		jbig2_image_release(Jbig2Ctx *ctx, Jbig2Image *image);
 void            jbig2_image_free(Jbig2Ctx *ctx, Jbig2Image *image);
-
+void		jbig2_image_clear(Jbig2Ctx *ctx, Jbig2Image *image, int value);
 
 /* errors are returned from the library via a callback. If no callback
    is provided (a NULL argument is passed ot jbig2_ctx_new) a default

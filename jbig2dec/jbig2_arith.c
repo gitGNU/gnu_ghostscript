@@ -1,7 +1,7 @@
 /*
     jbig2dec
     
-    Copyright (c) 2001 artofcode LLC.
+    Copyright (c) 2001-2005 artofcode LLC.
     
     This software is provided AS-IS with no warranty,
     either express or implied.
@@ -11,7 +11,7 @@
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
                                                                                 
-    $Id: jbig2_arith.c,v 1.2 2005/12/13 18:01:32 jemarch Exp $
+    $Id: jbig2_arith.c,v 1.3 2006/03/02 21:27:55 Arabidopsis Exp $
 */
 
 #ifdef HAVE_CONFIG_H
@@ -169,10 +169,17 @@ jbig2_arith_trace (Jbig2ArithState *as, Jbig2ArithCx cx)
 }
 #endif
 
+/** Allocate and initialize a new arithmetic coding state
+ *  the returned pointer can simply be freed; this does
+ *  not affect the associated Jbig2WordStream.
+ */
 Jbig2ArithState *
 jbig2_arith_new (Jbig2Ctx *ctx, Jbig2WordStream *ws)
 {
-  Jbig2ArithState *result = (Jbig2ArithState *)malloc (sizeof(Jbig2ArithState));
+  Jbig2ArithState *result;
+
+  result = (Jbig2ArithState *)jbig2_alloc(ctx->allocator,
+	sizeof(Jbig2ArithState));
 
   result->ws = ws;
 

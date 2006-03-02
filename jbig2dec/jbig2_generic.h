@@ -1,17 +1,21 @@
 /*
     jbig2dec
     
-    Copyright (c) 2002 artofcode LLC.
+    Copyright (c) 2002-2004 artofcode LLC.
     
     This software is distributed under license and may not
     be copied, modified or distributed except as expressly
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
                                                                                 
-    $Id: jbig2_generic.h,v 1.2 2005/12/13 18:01:32 jemarch Exp $
+    $Id: jbig2_generic.h,v 1.3 2006/03/02 21:27:55 Arabidopsis Exp $
 */
 
-/* Table 2 */
+/**
+ * Headers for Generic and Generic Refinement region handling
+ **/
+
+/* 6.4 Table 2 */
 typedef struct {
   bool MMR;
   /* GBW */
@@ -20,10 +24,9 @@ typedef struct {
   bool TPGDON;
   bool USESKIP;
   /* SKIP */
-  byte gbat[8];
+  int8_t gbat[8];
 } Jbig2GenericRegionParams;
 
-/* 6.2 */
 int
 jbig2_decode_generic_region(Jbig2Ctx *ctx,
 			    Jbig2Segment *segment,
@@ -33,3 +36,21 @@ jbig2_decode_generic_region(Jbig2Ctx *ctx,
 			    Jbig2ArithCx *GB_stats);
 
 
+/* 6.3 Table 6 */
+typedef struct {
+  /* GRW */
+  /* GRH */
+  bool GRTEMPLATE;
+  Jbig2Image *reference;
+  int32_t DX, DY;
+  bool TPGRON;
+  int8_t grat[4];
+} Jbig2RefinementRegionParams;
+
+int
+jbig2_decode_refinement_region(Jbig2Ctx *ctx,
+                            Jbig2Segment *segment,
+                            const Jbig2RefinementRegionParams *params,
+                            Jbig2ArithState *as,
+                            Jbig2Image *image,
+                            Jbig2ArithCx *GB_stats);

@@ -8,7 +8,7 @@
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
                                                                                 
-    $Id: jbig2_image.c,v 1.2 2005/12/13 18:01:32 jemarch Exp $
+    $Id: jbig2_image.c,v 1.3 2006/03/02 21:27:55 Arabidopsis Exp $
 */
 
 #ifdef HAVE_CONFIG_H
@@ -51,7 +51,7 @@ Jbig2Image* jbig2_image_new(Jbig2Ctx *ctx, int width, int height)
 	image->height = height;
 	image->stride = stride;
 	image->refcount = 1;
-	
+
 	return image;
 }
 
@@ -76,6 +76,66 @@ void jbig2_image_free(Jbig2Ctx *ctx, Jbig2Image *image)
 	jbig2_free(ctx->allocator, image);
 }
 
+/* composite one jbig2_image onto another
+   slow but general version */
+int jbig2_image_compose_unopt(Jbig2Ctx *ctx,
+			Jbig2Image *dst, Jbig2Image *src,
+                        int x, int y, Jbig2ComposeOp op)
+{
+    int i, j;
+    int sw = src->width;
+    int sh = src->height;
+    int sx = 0;
+    int sy = 0;
+
+    /* clip to the dst image boundaries */
+    if (x < 0) { sx += -x; sw -= -x; x = 0; }
+    if (y < 0) { sy += -y; sh -= -y; y = 0; }
+    if (x + sw >= dst->width) sw = dst->width - x;
+    if (y + sh >= dst->height) sh = dst->height - y;
+
+    switch (op) {
+	case JBIG2_COMPOSE_OR:
+	    for (j = 0; j < sh; j++) {
+		for (i = 0; i < sw; i++) {
+		    jbig2_image_set_pixel(dst, i+x, j+y,
+			jbig2_image_get_pixel(src, i+sx, j+sy) |
+			jbig2_image_get_pixel(dst, i+x, j+y));
+		}
+    	    }
+	    break;
+	case JBIG2_COMPOSE_AND:
+	    for (j = 0; j < sh; j++) {
+		for (i = 0; i < sw; i++) {
+		    jbig2_image_set_pixel(dst, i+x, j+y,
+			jbig2_image_get_pixel(src, i+sx, j+sy) &
+			jbig2_image_get_pixel(dst, i+x, j+y));
+		}
+    	    }
+	    break;
+	case JBIG2_COMPOSE_XOR:
+	    for (j = 0; j < sh; j++) {
+		for (i = 0; i < sw; i++) {
+		    jbig2_image_set_pixel(dst, i+x, j+y,
+			jbig2_image_get_pixel(src, i+sx, j+sy) ^
+			jbig2_image_get_pixel(dst, i+x, j+y));
+		}
+    	    }
+	    break;
+	case JBIG2_COMPOSE_XNOR:
+	    for (j = 0; j < sh; j++) {
+		for (i = 0; i < sw; i++) {
+		    jbig2_image_set_pixel(dst, i+x, j+y,
+			~(jbig2_image_get_pixel(src, i+sx, j+sy) ^
+			jbig2_image_get_pixel(dst, i+x, j+y)));
+		}
+    	    }
+	    break;
+    }
+
+    return 0;
+}
+
 /* composite one jbig2_image onto another */
 int jbig2_image_compose(Jbig2Ctx *ctx, Jbig2Image *dst, Jbig2Image *src, 
 			int x, int y, Jbig2ComposeOp op)
@@ -89,8 +149,8 @@ int jbig2_image_compose(Jbig2Ctx *ctx, Jbig2Image *dst, Jbig2Image *src,
     uint8_t mask, rightmask;
     
     if (op != JBIG2_COMPOSE_OR) {
-        jbig2_error(ctx, JBIG2_SEVERITY_WARNING, -1,
-            "non-OR composition modes NYI");
+	/* hand off the the general routine */
+	return jbig2_image_compose_unopt(ctx, dst, src, x, y, op);
     }
 
     /* clip */
@@ -103,7 +163,8 @@ int jbig2_image_compose(Jbig2Ctx *ctx, Jbig2Image *dst, Jbig2Image *src,
     w = (x + w < dst->width) ? w : dst->width - x;
     h = (y + h < dst->height) ? h : dst->height - y;
 #ifdef JBIG2_DEBUG    
-    fprintf(stderr, "composting %dx%d at (%d, %d) afer clipping\n",
+    jbig2_error(ctx, JBIG2_SEVERITY_DEBUG, -1,
+      "composting %dx%d at (%d, %d) afer clipping\n",
         w, h, x, y);
 #endif
     
@@ -132,9 +193,11 @@ int jbig2_image_compose(Jbig2Ctx *ctx, Jbig2Image *dst, Jbig2Image *src,
             s += src->stride;
         }
     } else if (shift == 0) {
+	rightmask = (w & 7) ? 0x100 - (1 << (8 - (w & 7))) : 0xFF;
         for (j = 0; j < h; j++) {
-	    for (i = leftbyte; i <= rightbyte; i++)
+	    for (i = leftbyte; i < rightbyte; i++)
 		*d++ |= *s++;
+	    *d |= *s & rightmask;
             d = (dd += dst->stride);
             s = (ss += src->stride);
 	}
@@ -161,4 +224,51 @@ int jbig2_image_compose(Jbig2Ctx *ctx, Jbig2Image *dst, Jbig2Image *src,
     }
             
     return 0;
+}
+
+
+/* initialize an image bitmap to a constant value */
+void jbig2_image_clear(Jbig2Ctx *ctx, Jbig2Image *image, int value)
+{
+    const uint8_t fill = value ? 0xFF : 0x00;
+
+    memset(image->data, fill, image->stride*image->height);
+}
+
+/* look up a pixel value in an image.
+   returns 0 outside the image frame for the convenience of
+   the template code
+*/
+int jbig2_image_get_pixel(Jbig2Image *image, int x, int y)
+{
+  const int w = image->width;
+  const int h = image->height;
+  const int byte = (x >> 3) + y*image->stride;
+  const int bit = 7 - (x & 7);
+
+  if ((x < 0) || (x >= w)) return 0;
+  if ((y < 0) || (y >= h)) return 0;
+  
+  return ((image->data[byte]>>bit) & 1);
+}
+
+/* set an individual pixel value in an image */
+int jbig2_image_set_pixel(Jbig2Image *image, int x, int y, bool value)
+{
+  const int w = image->width;
+  const int h = image->height;
+  int i, scratch, mask;
+  int bit, byte;
+
+  if ((x < 0) || (x >= w)) return 0;
+  if ((y < 0) || (y >= h)) return 0;
+
+  byte = (x >> 3) + y*image->stride;
+  bit = 7 - (x & 7);
+  mask = (1 << bit) ^ 0xff;
+
+  scratch = image->data[byte] & mask;
+  image->data[byte] = scratch | (value << bit);
+
+  return 1;
 }

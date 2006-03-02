@@ -8,7 +8,7 @@
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
                                                                                 
-    $Id: jbig2_text.c,v 1.2 2005/12/13 18:01:32 jemarch Exp $
+    $Id: jbig2_text.c,v 1.3 2006/03/02 21:27:55 Arabidopsis Exp $
 */
 
 #ifdef HAVE_CONFIG_H
@@ -85,7 +85,8 @@ jbig2_decode_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment,
                              const Jbig2TextRegionParams *params,
                              const Jbig2SymbolDict * const *dicts, const int n_dicts,
                              Jbig2Image *image,
-                             const byte *data, const size_t size)
+                             const byte *data, const size_t size,
+			     Jbig2ArithCx *GR_stats)
 {
     /* relevent bits of 6.4.4 */
     uint32_t NINSTANCES;
@@ -102,13 +103,20 @@ jbig2_decode_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment,
     bool first_symbol;
     uint32_t index, max_id;
     Jbig2Image *IB;
-    Jbig2ArithState *as;
+    Jbig2WordStream *ws = NULL;
+    Jbig2ArithState *as = NULL;
     Jbig2ArithIntCtx *IADT = NULL;
     Jbig2ArithIntCtx *IAFS = NULL;
     Jbig2ArithIntCtx *IADS = NULL;
     Jbig2ArithIntCtx *IAIT = NULL;
     Jbig2ArithIaidCtx *IAID = NULL;
-    int code;
+    Jbig2ArithIntCtx *IARI = NULL;
+    Jbig2ArithIntCtx *IARDW = NULL;
+    Jbig2ArithIntCtx *IARDH = NULL;
+    Jbig2ArithIntCtx *IARDX = NULL;
+    Jbig2ArithIntCtx *IARDY = NULL;
+    int code = 0;
+    int RI;
     
     max_id = 0;
     for (index = 0; index < n_dicts; index++) {
@@ -117,15 +125,10 @@ jbig2_decode_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment,
     jbig2_error(ctx, JBIG2_SEVERITY_DEBUG, segment->number,
         "symbol list contains %d glyphs in %d dictionaries", max_id, n_dicts);
     
-    if (params->SBREFINE) {
-        return jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number,
-            "text regions with refinement bitmaps NYI");
-    }
-    
     if (!params->SBHUFF) {
 	int SBSYMCODELEN;
 
-        Jbig2WordStream *ws = jbig2_word_stream_buf_new(ctx, data, size);
+	ws = jbig2_word_stream_buf_new(ctx, data, size);
         as = jbig2_arith_new(ctx, ws);
         IADT = jbig2_arith_int_ctx_new(ctx);
         IAFS = jbig2_arith_int_ctx_new(ctx);
@@ -134,10 +137,15 @@ jbig2_decode_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment,
 	/* Table 31 */
 	for (SBSYMCODELEN = 0; (1 << SBSYMCODELEN) < max_id; SBSYMCODELEN++);
         IAID = jbig2_arith_iaid_ctx_new(ctx, SBSYMCODELEN);
+	IARI = jbig2_arith_int_ctx_new(ctx);
+	IARDW = jbig2_arith_int_ctx_new(ctx);
+	IARDH = jbig2_arith_int_ctx_new(ctx);
+	IARDX = jbig2_arith_int_ctx_new(ctx);
+	IARDY = jbig2_arith_int_ctx_new(ctx);
     }
     
     /* 6.4.5 (1) */
-    memset(image->data, image->stride*image->height, params->SBDEFPIXEL ? 0xFF: 0x00);
+    jbig2_image_clear(ctx, image, params->SBDEFPIXEL);
     
     /* 6.4.6 */
     if (params->SBHUFF) {
@@ -211,14 +219,49 @@ jbig2_decode_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment,
                     "symbol id out of range! (%d/%d)", ID, max_id);
 	    }
 
-	    /* (3c.v) look up the symbol bitmap IB */
+	    /* (3c.v / 6.4.11) look up the symbol bitmap IB */
 	    {
 		uint32_t id = ID;
 
 		index = 0;
 		while (id >= dicts[index]->n_symbols)
 		    id -= dicts[index++]->n_symbols;
-		IB = dicts[index]->glyphs[id];
+		IB = jbig2_image_clone(ctx, dicts[index]->glyphs[id]);
+	    }
+	    if (params->SBREFINE) {
+		code = jbig2_arith_int_decode(IARI, as, &RI);
+	    } else {
+		RI = 0;
+	    }
+	    if (RI) {
+		Jbig2RefinementRegionParams rparams;
+		Jbig2Image *IBO;
+		int32_t RDW, RDH, RDX, RDY;
+		Jbig2Image *image;
+
+		/* (6.4.11 (1, 2, 3, 4)) */
+		code = jbig2_arith_int_decode(IARDW, as, &RDW);
+		code = jbig2_arith_int_decode(IARDH, as, &RDH);
+		code = jbig2_arith_int_decode(IARDX, as, &RDX);
+		code = jbig2_arith_int_decode(IARDY, as, &RDY);
+
+		/* (6.4.11 (6)) */
+		IBO = IB;
+		image = jbig2_image_new(ctx, IBO->width + RDW,
+					     IBO->height + RDH);
+
+		/* Table 12 */
+		rparams.GRTEMPLATE = params->SBRTEMPLATE;
+		rparams.reference = IBO;
+		rparams.DX = (RDW >> 1) + RDX;
+		rparams.DY = (RDH >> 1) + RDY;
+		rparams.TPGRON = 0;
+		memcpy(rparams.grat, params->sbrat, 4);
+		jbig2_decode_refinement_region(ctx, segment,
+		    &rparams, as, image, GR_stats);
+		IB = image;
+
+		jbig2_image_release(ctx, IBO);
 	    }
         
 	    /* (3c.vi) */
@@ -266,10 +309,27 @@ jbig2_decode_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment,
         
 	    /* (3c.xi) */
 	    NINSTANCES++;
+
+	    jbig2_image_release(ctx, IB);
 	}
         /* end strip */
     }
     /* 6.4.5 (4) */
+
+    if (!params->SBHUFF) {
+	jbig2_arith_int_ctx_free(ctx, IADT);
+	jbig2_arith_int_ctx_free(ctx, IAFS);
+	jbig2_arith_int_ctx_free(ctx, IADS);
+	jbig2_arith_int_ctx_free(ctx, IAIT);
+	jbig2_arith_iaid_ctx_free(ctx, IAID);
+	jbig2_arith_int_ctx_free(ctx, IARI);
+	jbig2_arith_int_ctx_free(ctx, IARDW);
+	jbig2_arith_int_ctx_free(ctx, IARDH);
+	jbig2_arith_int_ctx_free(ctx, IARDX);
+	jbig2_arith_int_ctx_free(ctx, IARDY);
+	jbig2_free(ctx->allocator, as);
+	jbig2_word_stream_buf_free(ctx, ws);
+    }
     
     return 0;
 }
@@ -283,13 +343,13 @@ jbig2_parse_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment, const byte *segmen
     int offset = 0;
     Jbig2RegionSegmentInfo region_info;
     Jbig2TextRegionParams params;
-    Jbig2Image *image, *page_image;
+    Jbig2Image *image;
     Jbig2SymbolDict **dicts;
     int n_dicts;
     uint16_t flags;
     uint16_t huffman_flags = 0;
-    int8_t sbrat[4];
-    int code;
+    Jbig2ArithCx *GR_stats = NULL;
+    int code = 0;
     
     /* 7.4.1 */
     if (segment->data_length < 17)
@@ -326,11 +386,12 @@ jbig2_parse_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment, const byte *segmen
         /* 7.4.3.1.3 */
         if ((params.SBREFINE) && !(params.SBRTEMPLATE))
           {
-            sbrat[0] = segment_data[offset];
-            sbrat[0] = segment_data[offset + 1];
-            sbrat[0] = segment_data[offset + 2];
-            sbrat[0] = segment_data[offset + 3];
+            params.sbrat[0] = segment_data[offset];
+            params.sbrat[1] = segment_data[offset + 1];
+            params.sbrat[2] = segment_data[offset + 2];
+            params.sbrat[3] = segment_data[offset + 3];
             offset += 4;
+	  }
       }
     
     /* 7.4.3.1.4 */
@@ -358,12 +419,18 @@ jbig2_parse_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment, const byte *segmen
         /* 7.4.3.1.7 */
         /* todo: symbol ID huffman table decoding */
     }
-    
+
+    /* 7.4.3.2 (3) */
+    if (!params.SBHUFF && params.SBREFINE) {
+	int stats_size = params.SBRTEMPLATE ? 1 << 10 : 1 << 13;
+	GR_stats = jbig2_alloc(ctx->allocator, stats_size);
+	memset(GR_stats, 0, stats_size);
+    }
+
     jbig2_error(ctx, JBIG2_SEVERITY_INFO, segment->number,
         "text region: %d x %d @ (%d,%d) %d symbols",
         region_info.width, region_info.height,
         region_info.x, region_info.y, params.SBNUMINSTANCES);
-    }
     
     /* compose the list of symbol dictionaries */
     n_dicts = jbig2_sd_count_referred(ctx, segment);
@@ -392,12 +459,18 @@ jbig2_parse_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment, const byte *segmen
 	}
     }
 
-    page_image = ctx->pages[ctx->current_page].image;
     image = jbig2_image_new(ctx, region_info.width, region_info.height);
 
     code = jbig2_decode_text_region(ctx, segment, &params,
                 (const Jbig2SymbolDict * const *)dicts, n_dicts, image,
-                segment_data + offset, segment->data_length - offset);
+                segment_data + offset, segment->data_length - offset,
+		GR_stats);
+
+    if (!params.SBHUFF && params.SBREFINE) {
+	jbig2_free(ctx->allocator, GR_stats);
+    }
+
+    jbig2_free(ctx->allocator, dicts);
 
     /* todo: check errors */
 
@@ -406,12 +479,12 @@ jbig2_parse_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment, const byte *segmen
         segment->result = image;
     } else {
         /* otherwise composite onto the page */
+	Jbig2Image *page_image = ctx->pages[ctx->current_page].image;
         jbig2_error(ctx, JBIG2_SEVERITY_DEBUG, segment->number, 
             "composing %dx%d decoded text region onto page at (%d, %d)",
             region_info.width, region_info.height, region_info.x, region_info.y);
         jbig2_image_compose(ctx, page_image, image, region_info.x, region_info.y, JBIG2_COMPOSE_OR);
-        if (image != page_image)
-            jbig2_image_release(ctx, image);
+        jbig2_image_release(ctx, image);
     }
     
     /* success */            
