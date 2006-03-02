@@ -20,7 +20,7 @@ dnl ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 dnl CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 dnl SOFTWARE.
 
-dnl $Id: configure.ac,v 1.1 2005/04/18 12:06:09 Arabidopsis Exp $
+dnl $Id: configure.ac,v 1.2 2006/03/02 21:08:33 Arabidopsis Exp $
 
 dnl Process this file with autoconf to produce a configure script.
 
@@ -53,7 +53,7 @@ pushdef([IJS_VERSION], IJS_MAJOR_VERSION.IJS_MINOR_VERSION[]IJS_EXTRA_VERSION)
 AC_INIT(IJS_NAME, IJS_VERSION, [inkjet-list@linuxprinting.org])
 AC_PREREQ(2.53)
 AC_CONFIG_SRCDIR(ijs.c)
-AC_REVISION($Revision: 1.1 $)
+AC_REVISION($Revision: 1.2 $)
 
 dnl In the following script, there are a the following variants
 dnl of ijs cflags and libs variables

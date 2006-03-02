@@ -46,7 +46,7 @@ VERSIONGREP="sed -e s/.*[^0-9\.]\([0-9]\.[0-9]\).*/\1/"
     fi
   echo
   else
-    echo -n "checking for automake $AM_NEEDED... "
+    echo -n "checking for automake $AM_NEEDED or later... "
     for am in automake-$AM_NEEDED automake$AM_NEEDED automake; do
       ($am --version < /dev/null > /dev/null 2>&1) || continue
       ver=`$am --version < /dev/null | head -1 | $VERSIONGREP`
@@ -57,7 +57,7 @@ VERSIONGREP="sed -e s/.*[^0-9\.]\([0-9]\.[0-9]\).*/\1/"
       fi
     done
     test -z $AUTOMAKE &&  echo "no"
-    echo -n "checking for aclocal $AM_NEEDED... "
+    echo -n "checking for aclocal $AM_NEEDED or later... "
     for ac in aclocal-$AM_NEEDED aclocal$AM_NEEDED aclocal; do
       ($ac --version < /dev/null > /dev/null 2>&1) || continue
       ver=`$ac --version < /dev/null | head -1 | $VERSIONGREP`
@@ -70,19 +70,11 @@ VERSIONGREP="sed -e s/.*[^0-9\.]\([0-9]\.[0-9]\).*/\1/"
   test -z $ACLOCAL && echo "no"
   fi
   test -z $AUTOMAKE || test -z $ACLOCAL && {
-    echo "WARNING: didn't find a matching automake version."
-    AUTOMAKE=automake
-    ACLOCAL=aclocal
-    if ($AUTOMAKE --version) < /dev/null > /dev/null 2>&1; then
-      echo "Proceeding with the default automake. This may not"
-      echo "work if it's older than $AM_NEEDED."
-    else
         echo
         echo "You must have automake installed to compile $package."
         echo "Download the appropriate package for your distribution,"
         echo "or get the source tarball at ftp://ftp.gnu.org/pub/gnu/"
         exit 1
-    fi
   }
 }
 
