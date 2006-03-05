@@ -16,24 +16,21 @@
 % with this program; if not, write to the Free Software Foundation, Inc.,
 % 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
-
-% $Id: DefaultCMYK,v 1.4 2006/03/05 13:16:11 Arabidopsis Exp $
-% DefaultCMYK color space resource.
+% $Id: TrivialCMYK,v 1.1 2006/03/05 13:16:11 Arabidopsis Exp $
+% Color space that simulates appearance of the standard CMYK to RGB conversion.
 
 currentglobal true setglobal
 
-/DefaultCMYK
+/TrivialCMYK
 [ /CIEBasedDEFG
   4 dict begin
      /WhitePoint [ 0.9505 1.0 1.089 ] def
      /Table [ 2 2 2 2
-            % AcrobatReader-compatible table :
               [
                 [ < FFFFFF 000000 FFFF00 000000>
-                  < EA007F 000000 FC000F 000000> ]
-
-                [ < 00A0C8 000000 008436 000000>
-                  < 00007C 000000 000000 000000> ]
+                  < FF00FF 000000 FF0000 000000> ]
+                [ < 00FFFF 000000 00FF00 000000>
+                  < 0000FF 000000 000000 000000> ]
               ]
             ] def
      /DecodeLMN [ { 1.8 exp } bind dup dup ] def

@@ -17,7 +17,7 @@
 % 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-% $Id: DefaultRGB,v 1.3 2005/12/13 17:52:35 jemarch Exp $
+% $Id: DefaultRGB,v 1.4 2006/03/05 13:16:11 Arabidopsis Exp $
 % DefaultRGB color space resource.
 
 currentglobal true setglobal
@@ -26,7 +26,7 @@ currentglobal true setglobal
 [ /CIEBasedABC
   3 dict begin
      /WhitePoint [ 0.9505 1.0 1.089 ] def
-     /DecodeLMN  [ { 1.8 exp } bind dup dup ] bind def
+     /DecodeLMN  [ { 1.8 exp } bind dup dup ] def
      /MatrixLMN  [ 0.4439 0.2522 0.0436 0.3341 0.6371 0.1387 0.1725 0.1107 0.9067 ] def
   currentdict end
 ]
