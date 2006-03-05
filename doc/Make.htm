@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>How to build Ghostscript from source code</title>
-<!-- $Id: Make.htm,v 1.5 2005/12/13 17:10:04 jemarch Exp $ -->
+<!-- $Id: Make.htm,v 1.6 2006/03/05 13:04:28 Arabidopsis Exp $ -->
 <!-- Originally: make.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -76,7 +76,7 @@
 <li><a href="#386_Unix">386 Unix</a>
 <li><a href="#BSDI">BSDI</a>
 <li><a href="#Digital_Unix">Digital Unix (Alpha)</a>
-<li><a href="#Linux">GNU/Linux</a>
+<li><a href="#Linux">Linux</a>
 <li><a href="#NeXTSTEP">NeXTSTEP / OpenSTEP</a>
 <li><a href="#SCO">SCO Unix/Xenix</a>
 <li><a href="#SVR4">SVR4 Unix</a>
@@ -226,9 +226,9 @@ will tell you if it cannot find the appropriate libraries.
 Here are authoritative distribution points for these libraries, should you need
 to obtain the source yourself. As elsewhere, "#" is used for version
 numbers.  The JPEG source code is quite stable, so the reference
-here includes the latest version number. Versions of the zlib source are
-not compatible between the 1.1.x and 1.2.x series; if you wish to
-compile in zlib (as opposed to linking to a separately build dynamic
+here includes the latest version number. Versions of the zlib source are 
+not compatible between the 1.1.x and 1.2.x series; if you wish to 
+compile in zlib (as opposed to linking to a separately build dynamic 
 library) you must use a 1.2.x version.
 
 <blockquote><table cellpadding=0 cellspacing=0>
@@ -254,15 +254,14 @@ class="offsite">ftp://swrinde.nde.swri.edu/pub/png/src/</a>libpng-#.#.#.tar.gz<b
 	<a href="ftp://swrinde.nde.swri.edu/pub/png/src/" 
 class="offsite">ftp://swrinde.nde.swri.edu/pub/png/src/</a>lpng###.zip
 
-<tr>	<td valign=top>zlib (1.2.1 or later)
+<tr>	<td valign=top>zlib (latest)
 	<td>&nbsp;
 	<td>	<a href="http://www.gzip.org/zlib/zlib-1.2.1.tar.gz" 
 class="offsite">http://www.gzip.org/zlib/zlib-1.2.1.tar.gz</a><br>
 	<a href="http://www.gzip.org/zlib/zlib121.zip" 
 class="offsite">http://www.gzip.org/zlib/zlib121.zip</a><br>
-	<a href="ftp://swrinde.nde.swri.edu/pub/png/src/" class="offsite">ftp://swrinde.nde.swri.edu/pub/png/src/zlib-1.2.1.tar.gz</a><br>
-	<a href="ftp://swrinde.nde.swri.edu/pub/png/src/" class="offsite">ftp://swrinde.nde.swri.edu/pub/png/src/zlib121.zip</a>
-
+	See the <a href="http://www.gzip.org/zlib/">official website</a> 
+for a list of mirrors.
 <tr>	<td valign=top>jbig2dec
 	<td>&nbsp;
 	<td>	<a href="http://sourceforge.net/project/showfiles.php?group_id=28301" 
@@ -549,6 +548,12 @@ listing. Note that the configuration option is only available with the
 unix .tar distributions of the source.
 
 <p>
+Note that if you're building Ghostscript from development source out of
+a repository instead of from a released source package, you should run
+'<tt>./autogen.sh</tt>' instead of <tt>./configure.</tt> This script 
+takes all the same options that configure does.
+
+<p>
 If your system doesn't support the configure script or you don't wish to
 use it, you can use the traditional ghostscript makefile system, editing
 the options by hand to match your system as described below.
@@ -789,14 +794,59 @@ alone.
 
 <h4><a name="GNU_readline"></a>GNU readline</h4>
 
-
-<h4><a name="GNU_readline"></a>GNU readline</h4>
+<p>
+Ghostscript does not include an interface to GNU readline.  A user
+contributed code for this purpose, which we spent significant time debugging
+and then updating to track internal architectural changes in Ghostscript.
+The contributor was willing to assign the copyright to Aladdin Enterprises
+(the copyright holder of Ghostscript at the time), and to allow the code to
+be distributed with the Aladdin Free Public License (AFPL) as well as the
+GNU License (GPL).  However, even though the GPL allows linking GPLed code
+(such as the GNU readline library package) with non-GPLed code (such as all
+the rest of AFPL Ghostscript) if one doesn't distribute the result, the Free
+Software Foundation, creators of the GPL, have told us that in their
+opinion, the GPL forbids distributing non-GPLed code that is merely
+<em>intended</em> to be linked with GPLed code.  We understand that FSF
+takes this position in order to prevent the construction of software that is
+partly GPLed and partly not GPLed, even though the text of the GPL does not
+actually forbid this (it only forbids <em>distribution</em> of such
+software).  We think that FSF's position is legally questionable and not in
+the best interest of users, but we do not have the resources to challenge
+it, especially since FSF's attorney apparently supports it.  Therefore, even
+though we added the user-contributed interface to GNU readline in internal
+Aladdin Ghostscript version 5.71 and had it working in version 5.93 (one of
+the last beta versions before the 6.0 release), we removed it from the
+Aladdin Ghostscript 6.0 distribution.
 
 <p>
-GNU Ghostscript distributions include support for GNU readline, but this
-is not officially supported at this time. We will, however, welcome bug
-fixes or updates, and distribute them with subsequent releases.
+GPL Ghostscript distributions will include support for GNU readline.  As
+with other GPL Ghostscript components that are not included in AFPL
+Ghostscript, the maintainers of Ghostscript will not attempt to run, link,
+or even compile this code, or keep it current across changes in the rest of
+Ghostscript.  We will, however, welcome bug fixes or updates, and distribute
+them with subsequent releases of GPL Ghostscript.
 
+<p>
+The first Ghostscript distribution to include GPL readline
+support was GNU Ghostscript 6.0. Support has unfortunately
+been spotty since then.
+
+<p>
+We put considerable work into making it possible for Ghostscript to use GNU
+readline, including the creation and adjustment of internal software
+interfaces specifically to serve this purpose.  In principle, we should have
+undone this work in AFPL Ghostscript, lest FSF object to it too as
+intended to facilitate linking AFPL Ghostscript with GNU readline (as the
+U.S. government has been said to do for code that merely provides APIs where
+encryption may be added).  However, we are willing to take this risk rather
+than spend the time to undo the interface changes.
+
+<p>
+If you have comments or questions about this situation, please feel free to
+contact the Free Software Foundation, authors of the GPL and copyright
+holders of GNU readline, at <a href="mailto:gnu@gnu.org">gnu@gnu.org</a>,
+and/or artofcode LLC, copyright holder of Ghostscript, at <a
+href="mailto:raph@artofcode.com">raph@artofcode.com</a>.
 
 <h3><a name="Makefile_setup"></a>Setting up "makefile"</h3>
 
@@ -951,7 +1001,7 @@ All Ghostscript builds in PC (DOS and MS Windows) environments are 32- or
 	<td valign=top>32-bit MS Windows 3.1 + Win32s, 95, 98, NT
 <tr>	<td valign=top><b><tt>msvc32.mak</tt></b>
 	<td>&nbsp;
-	<td valign=top><a href="#Microsoft_build">Microsoft Visual C++ 4 to 7</a>
+	<td valign=top><a href="#Microsoft_build">Microsoft Visual C++ 4 to 8</a>
 	<td>&nbsp;
 	<td valign=top>MS Windows 32-bit
 <tr>	<td valign=top><b><tt>watcw32.mak</tt></b>
@@ -1186,25 +1236,52 @@ the top level directory using the following command:</li>
   it is simpler to use a build batch command file rather than retyping the build 
   command line for each new project. Here is an example used by one of Artifex's 
   staff members. This file is one line:
-<blockquote><b><tt> nmake -f src/msvc32.mak DEVSTUDIO= DEBUG=1 GS_LIB_DEFAULT="./lib/;./font;$(GSROOTDIR)/lib;$(AROOTDIR)/fonts" 
+<blockquote><b><tt> nmake -f src/msvc32.mak DEVSTUDIO= DEBUG=1 TDEBUG=1 GS_LIB_DEFAULT="./lib/;./font;$(GSROOTDIR)/lib;$(AROOTDIR)/fonts" 
   </tt></b></blockquote>
-<p> The <b><tt>DEBUG=1</tt></b> enables many debugging features built into Ghostscript. 
-  Please note the double quotes around the value for <b><tt>GS_LIB_DEFAULT</tt></b> 
-  and the addition of <b><tt>./lib;./fonts;</tt></b> to its definition. This uses 
-  the local (within the project) copy of the <b><tt>lib</tt></b> and <b><tt>fonts</tt></b> 
-  directories. This is convenient if any changes need to be made in these directories. 
+<p>Please note the double quotes around the value for <b><tt>GS_LIB_DEFAULT</tt></b>
+  and the addition of <b><tt>./lib;./fonts;</tt></b> to its definition. This uses
+  the local (within the project) copy of the <b><tt>lib</tt></b> and <b><tt>fonts</tt></b>
+  directories. This is convenient if any changes need to be made in these directories.
+
+<p> Setting <b><tt>DEBUG=1</tt></b> includes debugging features in the build:
+<ul>
+<li> It defines the C preprocessor symbol <b><tt>DEBUG</tt></b>. The latter includes
+   tracing and self-validation code fragments into compilation.
+   Particularly it enables the <b><tt>-Z</tt></b> and <b><tt>-T</tt></b>
+   switches in Ghostscript.
+<li> It compiles code fragments for the C stack overflow checks.
+</ul>
+   Code produced with this option is somewhat larger and runs
+   somewhat slower.
+
+<p>Setting <b><tt>TDEBUG=1</tt></b> disables code optimization in the C compiler and
+includes symbol table information for the debugger.
+Code becomes substantially slower and larger.
+
+<p> An optional setting <b><tt>DEBUGSYM=1</tt></b> is only useful with <b><tt>TDEBUG=0</tt></b>
+for advanced developers. It includes symbol table information for the debugger
+in an optimized (release) build.
+<em>
+NOTE: The debug information generated for the optimized code may be
+significantly misleading. For general MSVC users we recommend TDEBUG=1.
+</em>
+
 <h4><a name="Using_the_command_line"></a>Using the command line</h4>
 <p>Ghostscript can be made using either the DOS shell or one one of the various 
   command line shells made for Windows.
 <p>In order for the makefiles to work properly, two items may have to be changed. 
+  An attempt is made to select the correct version of Microsoft Visual C++
+  based on the version of nmake.  If this doesn't work it will default
+  to version 6.x.  
   If you are not using version 6.x then before building, in <b><tt>src\msvc32.mak</tt></b> 
-  find the line "<b><tt>MSVC_VERSION=6</tt></b>" and change it to "<b><tt>MSVC_VERSION=4</tt></b>", 
-  "<b><tt>MSVC_VERSION=5</tt></b>" or "<b><tt>MSVC_VERSION=7</tt></b>". 
+  find the line "<b><tt>#MSVC_VERSION=6</tt></b>" and change it to "<b><tt>MSVC_VERSION=4</tt></b>", 
+  "<b><tt>MSVC_VERSION=5</tt></b>", "<b><tt>MSVC_VERSION=7</tt></b>"
+  or "<b><tt>MSVC_VERSION=8</tt></b>". . 
 <p>In some cases the location of the Microsoft Developer Studio, needs to be changed. 
   The location of Microsoft Developer Studio is defined by the value of <b><tt>DEVSTUDIO</tt></b>. 
-  There are four different definitions of <b><tt>DEVSTUDIO</tt></b> in src\msvc32.mak. 
+  There are several different definitions of <b><tt>DEVSTUDIO</tt></b> in src\msvc32.mak. 
   There is one for each of the currently supported versions of Microsoft Visual 
-  C++ (4, 5, 6 and 7). 
+  C++ (4, 5, 6, 7, 7.1 and 8). 
 <p>The normal installation process for Microsoft Visual C++ includes setting the 
   location of the Microsoft Visual C++ executables (cl.exe, link.exe, nmake.exe, 
   rc.exe) in your PATH definition and the LIB and INCLUDE environment variables 
@@ -1387,12 +1464,6 @@ compiler from Intel's Software Performance Tools web site:
 
 <h3><a name="MacOS"></a>Traditional MacOS</h3>
 
-<hr>
-
-<h2><a name="Mac_build"></a>How to build Ghostscript from source (MacOS version)</h2>
-
-<h3><a name="MacOS"></a>Traditional MacOS</h3>
-
 <p>
 The Macintosh version of Ghostscript requires the <a href="http://www.metrowerks.com/"
 class="offsite">Metrowerks Codewarrior</a> development suite. Download the 
@@ -1401,15 +1472,9 @@ below. This includes a Codewarrior .mcp project file than can be used to build b
 Carbon and CFM versions of the ghostscript shared library component.
 
 <blockquote>
-<a href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/current/"
-
-class="offsite">ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/current/</a>
+<a href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/currenti/"
+ class="offsite">ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/current/</a>
 </blockquote>
-
-<p>
-If your system doesn't automatically unpack the source archive, you can
-download the gratis <a href="http://stuffit.com/download.html"
-class="offsite">Stuffit Expander</a> to open it.
 
 <p>
 If your system doesn't automatically unpack the source archive, you can
@@ -2339,7 +2404,7 @@ search path.
 
 <p>
 <em>Note: This section was contributed by a user: please e-mail Hermann
-Ulrichskötter &lt;<a
+Ulrichskï¿½tter &lt;<a
 href="mailto:ulrichsk@t-online.de">ulrichsk@t-online.de</a>&gt; if you have
 questions or problems.</em>
 
@@ -2366,8 +2431,8 @@ work.
 <li>Make sure you followed the instructions in "How to unpack the source
 code" and "How to unpack the third-party libraries".
 
-<li>Use jpegsrc_v6b.tar.gz, zlib.tar.gz and libpng-1.0.3.tar.gz.  Earlier
-versions may not work.
+<li>Use jpegsrc_v6b.tar.gz, zlib-1.2.x.tar.gz and libpng-1.2.x.tar.gz.  
+Earlier versions may not work.
 
 <li>If you wish to include support for XFree86, edit the makefile
 to change <b>BUILD_X11=0</b> to <b>BUILD_X11=1</b>.  
@@ -2800,9 +2865,8 @@ modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
 
-
 <p>
-<small>Ghostscript version 8.16, 9 May 2005
+<small>Ghostscript version 8.51, 31 December 2005
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

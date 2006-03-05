@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>The interface between Ghostscript and device drivers</title>
-<!-- $Id: Drivers.htm,v 1.5 2005/12/13 17:10:04 jemarch Exp $ -->
+<!-- $Id: Drivers.htm,v 1.6 2006/03/05 13:04:27 Arabidopsis Exp $ -->
 <!-- Originally: drivers.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -58,11 +58,13 @@
    <a href="#Compositing_notes">Notes</a>]
 </ul>
 <li><a href="#Polygon_level_drawing">Polygon-level drawing</a>
+<li><a href="#Linear_color_drawing">Linear color drawing</a>
 <li><a href="#High_level_drawing">High-level drawing</a>
 <ul>
 <li><a href="#Paths">Paths</a>
 <li><a href="#Images">Images</a> [<a href="#Images_notes">Notes</a>]
 <li><a href="#Text">Text</a> [<a href="#Text_notes">Notes</a>]
+<li><a href="#Unicode">Unicode support for high level devices</a>
 </ul>
 <li><a href="#Reading_bits_back">Reading bits back</a>
 <li><a href="#Parameters">Parameters</a>
@@ -700,10 +702,13 @@ many Ghostscript operators.
 <a href="../src/gxcindex.h">gxcindex.h</a>)
 <dd>This is meant to be whatever the driver uses to represent a device
 color.  For example, it might be an index in a color map, or it might be R,
-G, and B values packed into a single integer.  Ghostscript doesn't ever do
-any computations with <b><tt>gx_color_index</tt></b> values: it gets them
-from <b><tt>encode_color</tt></b> and
-hands them back as arguments to several other procedures.
+G, and B values packed into a single integer.  The Ghostscript graphics library
+gets <b><tt>gx_color_index</tt></b> values from the device's
+<b><tt>encode_color</tt></b> and hands them back as arguments to several other
+procedures. If the <b><tt>separable_and_linear</tt></b> field in the device's
+<b><tt>color_info</tt></b> structure is not set to
+<b><tt>GX_CINFO_SEP_LIN</tt></b> then Ghostscript does not do
+any computations with <b><tt>gx_color_index</tt></b> values.
 
 <p>
 The special
@@ -1310,6 +1315,18 @@ graphic_object_type&nbsp;type)</tt></b> <b><em>[OPTIONAL] [OBSOLETE]</em></b>
 color_info.anti_alias member of the driver structure.  However, it still
 appears in the driver procedure vector for backward compatibility.  It
 should never be called, and drivers should not implement it.
+</dl>
+
+<dl>
+<dt><b><tt>void (*update_spot_equivalent_colors)(gx_device&nbsp;*,
+const gs_state *)</tt></b>
+<b><em>[OPTIONAL]</em></b>
+<dd>This routine provides a method for the device to gather an equivalent
+color for spot colorants. This routine is called when a Separation or DeviceN
+color space is installed.  See comments at the start of
+<a href="../src/gsequivc.c">gsequivc.c</a>. Note: This procedure is only needed
+for devices that support spot colorants and also need to have an equivalent
+color for simulating the appearance of the spot colorants.
 </dl>
 
 <h3><a name="Pixel_level_drawing"></a>Pixel-level drawing</h3>
@@ -1965,6 +1982,176 @@ backward compatibility.  It should never be called, and drivers should not
 implement it.
 </dl>
 
+<h3><a name="Linear_color_drawing"></a>Linear color drawing</h3>
+
+<p>
+Linear color functions allow fast high quality rendering of 
+shadings on continuous tone devices. They implement filling simple areas
+with a lineary varying color. These functions are not called if the device applies halftones,
+or uses a non-separable or a non-linear color model.
+
+<dl>
+<dt><b><tt> int (*fill_linear_color_triangle)
+  (dev_t *dev, const gs_fill_attributes *fa,
+	const gs_fixed_point *p0, const gs_fixed_point *p1,
+	const gs_fixed_point *p2,
+	const frac31 *c0, const frac31 *c1, const frac31 *c2)
+</tt></b>
+<b><em>[OPTIONAL]</em></b>
+<dd>This function is the highest level one within the linear color function group.
+It fills a triangle with a linearly varying color.
+Arguments specify 3 points in the device space - vertices of a triangle, and their colors.
+The colors are represented as vectors of positive fractional numbers, each of which
+represents a color component value in the interval <b><tt>[0,1]</tt></b>.
+The number of components in a vector in the number of color
+components in the device (process) color model.
+<dd>
+The implementation fills entire triangle.
+The filling rule is same as for <a href="#Polygon_level_drawing">Polygon-level drawing</a>.
+A color for each pixel within the triangle to be computed as a linear interpolation
+of vertex colors.
+<dd>
+The implementation may reject the request if the area or the color appears too complex
+for filling in a single action. For doing that the implementation returns 0 and must not 
+paint any pixel. In this case the graphics library will perform a subdivision of the area
+into smaller triangles and call the function again with smaller areas.
+<dd>
+<b><em>Important note :</em></b> Do not try to decompose the area within
+the implementation of <b><tt> fill_linear_color_triangle </tt></b>, because
+it can break the plane coverage contiguity and cause a dropout.
+Instead that request graphics library to perform the decomposition.
+The graphics libary is smart enough to do that properly.
+<dd>
+<b><em>Important note :</em></b>
+The implementation must handle a special case, when only 2 colors are specified.
+It happens if <b><tt>p3</tt></b> one is <b><tt>NULL</tt></b>. 
+This means that the color does not depend on the X coordinate,
+i.e. it forms a linear gradient along the Y axis.
+The implementation must not reject (return 0) such cases.
+<dd>
+<b><em>Important note :</em></b>The device color component
+value 1 may be represented with several hexadecimal values :
+<b><tt>0x7FFF0000</tt></b>, <b><tt>0x7FFFF000</tt></b>, <b><tt>0x7FFFFF00</tt></b>, etc.,
+because the precision here exceeds the color precision of the device.
+To convert a <b><tt>frac31</tt></b> value into a device color component value,
+fist drop (ignore) the sign bit, then drop least significant bits -
+so many ones as you need to fit the device color precision.
+<dd>
+<b><em>Important note :</em></b> The <b><tt>fa</tt></b> argument may contain
+the <b><tt>swap_axes</tt></b> bit set. In this case the implementation must swap (transpoze)
+<b><tt>X</tt></b> and <b><tt>Y</tt></b> axes.
+<dd>
+<b><em>Important note :</em></b> The implementation must not paint outside the
+clipping rectangle specified in the <b><tt>fa</tt></b> argument.
+If <b><tt>fa->swap_axes</tt></b> is true, the clipping rectangle is transposed.
+<dd>
+See <b><tt> gx_default_fill_linear_color_triangle </tt></b>
+in <b><tt>gdevddrw.c</tt></b> as a sample code.
+</dl>
+
+
+<dl>
+<dt><b><tt> int (*fill_linear_color_trapezoid)
+  (dev_t *dev, const gs_fill_attributes *fa,
+	const gs_fixed_point *p0, const gs_fixed_point *p1,
+	const gs_fixed_point *p2, const gs_fixed_point *p3,
+	const frac31 *c0, const frac31 *c1,
+	const frac31 *c2, const frac31 *c2)
+</tt></b>
+<b><em>[OPTIONAL]</em></b>
+<dd>This function is a lower level one within the linear color function group.
+The default implementation of <b><tt> fill_linear_color_triangle </tt></b>
+calls this function 1-2 times per triangle. Besides that,
+this function may be called by the graphics library for other special cases,
+when a decomposition into triangles appears undiserable.
+<dd>
+Rather the prototype can specify a bilinear color,
+we assume that the implementation handles linear colors only.
+This means that the implementation can ignore any of <b><tt> c0, c1, c2, c3 </tt></b>.
+The graphics library takes a special care of the color linearity 
+when calling this function. The reason for passing all 4 color arguments
+is to avoid color precision problems.
+<dd>
+Similarly to <b><tt> fill_linear_color_triangle </tt></b>,
+this function may be called with only 2 colors, and may reject too comple areas.
+All those important notes are applicable here.
+<dd>
+A sample code may be found in in <b><tt>gxdtfill.h</tt></b>, rather it's a kind of complicated.
+A linear color function is generated from it as <b><tt> gx_fill_trapezoid_ns_lc </tt></b>
+with the following template parametres :
+
+<pre>
+#define LINEAR_COLOR 1 
+#define EDGE_TYPE gs_linear_color_edge
+#define FILL_ATTRS const gs_fill_attributes *
+#define CONTIGUOUS_FILL 0
+#define SWAP_AXES 0
+#define FILL_DIRECT 1
+</pre>
+See the helplers <b><tt>init_gradient</tt></b>,
+<b><tt>step_gradient</tt></b> (defined in in <b><tt>gdevddrw.c</tt></b>), how to manage colors.
+See <b><tt>check_gradient_overflow</tt></b>
+(defined in in <b><tt>gdevddrw.c</tt></b>), as an example of an area
+that can't be painted paint in a single action due to 64-bits fixed overflows.
+
+</dl>
+
+<dl>
+<dt><b><tt> int (*fill_linear_color_scanline)
+  int proc(dev_t *dev, const gs_fill_attributes *fa,
+	int i, int j, int w,
+	const frac31 *c0,
+	const int32_t *c0_f,
+	const int32_t *cg_num,
+	int32_t cg_den)
+</tt></b>
+<b><em>[OPTIONAL]</em></b>
+<dd>This function is the lowest level one within the linear color function group.
+It implements filling a scanline with a linearly varying color.
+The default implementation for <b><tt> fill_linear_color_trapezoid </tt></b>
+calls this function, and there are no other calls to it from the graphics libary.
+Thus if the device implements <b><tt> fill_linear_color_triangle </tt></b> and
+<b><tt> fill_linear_color_trapezoid </tt></b> by own means,
+this function may be left unimplemented.
+<dd>
+<b><tt>i</tt></b> and <b><tt>j</tt></b> specify device coordinates (indices)
+of the starting pixel of the scanline, <b><tt>w</tt></b> specifies the 
+width of the scanline, i.e. the number of pixels to be painted to the right from
+the starting pixel, including the starting pixel.
+<dd>
+<b><tt>c0</tt></b> specifies the color for the starting pixel
+as a vector of fraction values, each of which represents 
+a color value in the interval <b><tt>[0,1]</tt></b>.
+<dd>
+<b><tt>c0_f</tt></b> specify a fraction part of the color for the starting pixel.
+See the formula below about using it.
+<dd>
+<b><tt>cg_num</tt></b> specify a numerator for the color gradient -
+a vector of values in <b><tt>[-1,1]</tt></b>, each of which correspond to a color component.
+<dd>
+<b><tt>cg_den</tt></b> specify the denominator for the color gradient -
+a vector of values in <b><tt>[-1,1]</tt></b>, each of which correspond to a color component.
+<dd>
+The color for the pixel <b><tt>[i + k, j]</tt></b> to be computed like this :
+<pre><b><tt>
+         (double)(c0[n] + (c0_f[n] + cg_num[n] * k) / cg_den) / (1 ^ 31 - 1)
+</tt></b></pre>
+<dd>where <b><tt>0 <= k <= w </tt></b>, and <b><tt>n</tt></b> is a device color component index.
+
+<dd>
+<b><em>Important note :</em></b> The <b><tt>fa</tt></b> argument may contain
+the <b><tt>swap_axes</tt></b> bit set. In this case the implementation must swap (transpose)
+<b><tt>X</tt></b> and <b><tt>Y</tt></b> axes.
+<dd>
+<b><em>Important note :</em></b> The implementation must not paint outside the
+clipping rectangle specified in the <b><tt>fa</tt></b> argument.
+If <b><tt>fa->swap_axes</tt></b> is true, the clipping rectangle is transposed.
+<dd>
+See <b><tt> gx_default_fill_linear_color_scanline</tt></b>
+in <b><tt>gdevdsha.c</tt></b> as a sample code.
+</dl>
+
+
 <h3><a name="High_level_drawing"></a>High-level drawing</h3>
 
 <p>
@@ -2537,6 +2724,28 @@ return an enumerator.  Furthermore, the implementation of the
 anything, even if it doesn't want to draw anything on the output.  See the
 comments in <a href="../src/gxtext.h">gxtext.h</a> for details.
 
+<h4><a name="Unicode"></a>Unicode support for high level devices</h4>
+
+<p>
+<p>Implementing a new high level device, one may need to translate <b><tt>Postscript</tt></b>
+character codes into <b><tt>Unicode</tt></b>. This can be done pretty simply.
+
+<p>For translating a <b><tt>Postscript</tt></b> text you need to inplement the device
+virtual function <b><tt>text_begin</tt></b>. It should create a new instance of
+<b><tt>gs_text_enum_t</tt></b> in the heap (let its pointer be <b><tt>pte</tt></b>),
+and assign a special function to <b><tt>gs_text_enum_t::procs.process</tt></b>.
+The function will receive <b><tt>pte</tt></b>. It should take the top level font from
+<b><tt>pte->orig_font</tt></b>,
+and iterate with <b><tt>font->procs.next_char_glyph(pte, ..., &glyph)</tt></b>.
+The last argument receives a <b><tt>gs_glyph</tt></b> value, which encodes a
+<b><tt>Postscript</tt></b> character name or CID (and also stores it into
+<b><tt>pte->returned.current_glyph</tt></b>).
+Then obtain the current subfont with <b><tt>gs_text_current_font(pte)</tt></b>
+(it can differ from the font)
+and call <b><tt>subfont->procs.decode_glyph(subfont, glyph)</tt></b>.
+The return value will be an <b><tt>Unicode</tt></b> code, or <b><tt>GS_NO_CHAR</tt></b>
+if the glyph can't be translated to Unicode.
+
 <h3><a name="Reading_bits_back"></a>Reading bits back</h3>
 
 <dl>
@@ -2866,9 +3075,8 @@ modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
 
-
 <p>
-<small>Ghostscript version 8.16, 9 May 2005
+<small>Ghostscript version 8.51, 31 December 2005
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

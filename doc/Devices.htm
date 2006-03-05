@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>Details of Ghostscript output devices</title>
-<!-- $Id: Devices.htm,v 1.5 2005/12/13 17:10:04 jemarch Exp $ -->
+<!-- $Id: Devices.htm,v 1.6 2006/03/05 13:04:27 Arabidopsis Exp $ -->
 <!-- Originally: devices.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -39,13 +39,14 @@
 <li><a href="#PS">PostScript file output</a>
 <li><a href="#EPS">EPS file output</a>
 <li><a href="#PXL">PCL-XL file output</a>
-<li><a href="#Unicode">Unicode support for high level devices</a>
 </ul>
 <li><a href="#Display_devices">Display devices</a>
 <ul>
 <li><a href="#x11_devices">X Window System</a>
+<li><a href="#display_device">display device (MS Windows, OS/2, gtk+)</a>
 </ul>
 <li><a href="#IJS">IJS - Inkjet and other raster devices</a>
+<li><a href="#Rinkj">Rinkj - Resplendent inkjet driver</a>
 <li><a href="#HP_ijs">HP Deskjet official drivers</a>
 <li><a href="#gimp-print">Gimp-Print driver collection</a>
 <li><a href="#Win">MS Windows printers</a>
@@ -319,15 +320,85 @@ file format is described in the
 published by Adobe Systems Incorporated.</p>
 
 <p>
-There are two unrelated sets of TIFF drivers.  There are two color TIFF
+There are two unrelated sets of TIFF drivers.  There are five color TIFF
 drivers that produce uncompressed output:
 
 <blockquote>
 <dl>
-<dt><b><tt>tiff24nc</tt></b>
-<dd>Produces 24-bit RGB output (8 bits per component).
+<dt><b><tt>tiffgray</tt></b>
+<dd>Produces 8-bit gray output.
 <dt><b><tt>tiff12nc</tt></b>
 <dd>Produces 12-bit RGB output (4 bits per component).
+<dt><b><tt>tiff24nc</tt></b>
+<dd>Produces 24-bit RGB output (8 bits per component).
+<dt><b><tt>tiff32nc</tt></b>
+<dd>Produces 32-bit CMYK output (8 bits per component).
+<dt><b><tt>tiffsep</tt></b>
+<dd>
+The tiffsep device creates multiple output files.  The device creates a single
+32 bit composite CMYK file (tiff32nc format) and multiple tiffgray files.
+A tiffgray file is created for each separation.
+
+<p>
+The file specified via the OutputFile command line parameter will contain 
+CMYK data. This data is based upon the CMYK data within the file plus 
+an equivalent CMYK color for each spot colors which is present. The equivalent
+CMYK color for each spot colors is determined using the alternate tint transform
+function specified in Separation and DeviceN color spaces. Since 
+this file is created based upon having color planes for each colorant, the
+file will correctly represent the appearance of overprinting with spot colors.
+
+<p>
+File names for the separations for the
+CMYK colorants are created by appending '.Cyan.tif', '.Magenta.tif'
+'.Yellow.tif' or '.Black.tif' to the to the end of the file name
+specified via the OutputFile parameter.  File names for the spot
+color separation files are created by appending '.sn.tif' (where n
+is the spot color number, see below) to the end of the file name specified via
+the OutputFile parameter.
+
+<p>
+Internally each spot color is assigned a spot color number.  These
+numbers start with 0 for the first spot color.  The spot color
+numbers are assigned in the same order as the names are printed to
+stderr (see below).  This order also matches the ordering in the
+SeparationColorNames list, if this parameter is specified.  The
+spot color numbers are not affected by the SeparationOrder parameter.
+
+<p>
+The names of spot colors may be specified via the SeparationColorNames device
+parameters.  Or the tiffsep device will automatically recognize spot color
+names if <b><tt>-dMaxSeparations=8</tt></b> is specified on the
+command line.
+
+<p>
+If only a subset of the colorants for a file is desired then the separations
+to be output can be selected via the SeparationOrder
+device parameter.  When colorants are selected via the
+SeparationOrder parameter, the composite CMYK output contains
+the equivalent CMYK data only for the selected colorants.  
+
+<p>
+The tiffsep device also prints the names of any spot colors
+detected within a document to stderr.  (stderr is also use for the
+output from the bbox device.)  For each spot color the name of
+the color is printed preceded by '%%SeparationName:  '.  This
+provides a simple mechanism for users and external applications to be informed about
+the names of spot colors with a document.
+
+<p>
+Ghostscript currently limits the size of a pixel to 64 bits.
+Since the tiffsep device uses 8 bits per colorant,  the device can handle
+a maximum of 8 colorants per pass.  However it is possible to
+handle more than 8 colorants by doing multiple passes.  For each
+pass after the first one, the names of all of the separations need
+to be specified via the SeparationColorNames parameter and the
+names of the desired separations need to be specified via the
+SeparationOrder parameter.  It is
+possible to create an overall CMYK composite for more than 8
+colorants by then adding together (via an external application like
+imagemagick) the composite CMYK output files from the individual
+Ghostscript passes.
 </dl>
 </blockquote>
 
@@ -452,7 +523,9 @@ resolution independence, and editability.</p>
 
 <h3><a name="PDF"></a>PDF writer</h3>
 
-<p>The <tt>pdfwrite</tt> device outputs PDF.</p>
+<p>The <tt>pdfwrite</tt> device outputs PDF.  Please refer to
+<a href="Ps2pdf.htm">Ps2pdf.htm</a> for the extensive <tt>pdfwrite</tt>
+device options.</p>
 
 <h3><a name="PS"></a>PS writer</h3>
 
@@ -485,28 +558,7 @@ Currently language level 3 generates the same PostScript as 2.
 <h3><a name="PXL"></a>PXL</h3>
 
 <p>The <tt>pxlmono</tt> and <tt>pxlcolor</tt> devices output HP PCL-XL,
-a graphic language understood by many recent laser printers.</p>
-
-<h3><a name="Unicode"></a>Unicode support for high level devices</h3>
-
-<p>Implementing a new high level device, one may need to translate <b><tt>Postscript</b></tt>
-character codes into <b><tt>Unicode</b></tt>. This can be done pretty simply.
-
-<p>For translating a <b><tt>Postscript</b></tt> text you need to inplement the device
-virtual function <b><tt>text_begin</b></tt>. It should create a new instance of
-<b><tt>gs_text_enum_t</b></tt> in the heap (let its pointer be <b><tt>pte</b></tt>),
-and assign a special function to <b><tt>gs_text_enum_t::procs.process</b></tt>.
-The function will receive <b><tt>pte</b></tt>. It should take the top level font from
-<b><tt>pte->orig_font</b></tt>,
-and iterate with <b><tt>font->procs.next_char_glyph(pte, ..., &glyph)</b></tt>.
-The last argument receives a <b><tt>gs_glyph</b></tt> value, which encodes a
-<b><tt>Postscript</b></tt> character name or CID (and also stores it into
-<b><tt>pte->returned.current_glyph</b></tt>).
-Then obtain the current subfont with <b><tt>gs_text_current_font(pte)</b></tt>
-(it can differ from the font)
-and call <b><tt>subfont->procs.decode_glyph(subfont, glyph)</b></tt>.
-The return value will be an <b><tt>Unicode</b></tt> code, or <b><tt>GS_NO_CHAR</b></tt>
-if the glyph can't be translated to Unicode.
+a graphic language understood by many recent laser printers.
 
 <p>
 
@@ -557,6 +609,58 @@ it to RGB for display. It's intended for testing only.
 <dt><b>x11gray4</b>
 <dd>This is a device for 4 bpp (16-level) monochrome displays.
 </dl>
+
+<h3><a name="display_device"></a>display device (MS Windows, OS/2, gtk+)</h3>
+<p>
+The <b><tt>display</tt></b> device is used by the MS Windows, 
+OS/2 and the gtk+ versions of ghostscript.
+</p>
+
+<h4>Options</h4>
+
+<p>The display device has several user settable options.</p>
+
+<blockquote>
+<dl>
+<dt><b><tt>-dDisplayFormat=</tt></b><b><em>N</em></b> (integer bit-field)
+<dd>Some common values are 16#30804 for Windows RGB, 16#804 for gtk+ RGB,
+16#20101 for Windows monochrome, 16#102 for gtk+ monochrome, 
+16#20802 grayscale, 16#20808 for CMYK, 16#a0800 for separations.
+The bit fields are
+<ul>
+<li> native (1), gray (2), RGB (4), CMYK (8), or separation (80000) 
+  color spaces.
+<li> unused first byte (40) or last byte (80).
+<li> 1 (100), 4 (400), or 8 (800) bits/component.
+<li> bigendian (00000 = RGB) or littleendian (10000 = BGR) order.
+<li> top first (20000) or bottom first (00000) raster.
+<li> 16 bits/pixel with 555 (00000) or 565 (40000) bitfields.
+</ul>
+For more details, see the <a href="API.htm#display">Ghostscript 
+Interpreter API.</a>
+<dt><b><tt>-dDisplayResolution=</tt></b><b><em>DPI</em></b>
+<dd>Set the initial resolution resolution for the display device.
+This is used by the Windows clients to set the display device
+resolution to the Windows display logical resolution.
+This can be overriden by the command line option 
+<b><tt>-r</tt><em>DPI</em></b>.
+</dl>
+
+</blockquote>
+
+When using the separation color space, the following options may be set
+using setpagedevice, as described in the PostScript Language Reference:
+
+<blockquote>
+<dl>
+<dt><b><tt>SeparationColorNames</tt></b>
+<dd>An array giving the names of the spot colors
+
+<dt><b><tt>SeparationOrder</tt></b>
+<dd>An array giving the names and order of the colorants 
+to be output.
+</dl>
+</blockquote>
 
 
 <hr>
@@ -702,6 +806,108 @@ It should be present right after the include of icclib.mak.
 in taking patches from people who have ported it to non-mainstream
 platforms. And once it's built, you won't have to recompile Ghostscript
 to support new drivers!
+
+<h2><a name="Rinkj"></a>Rinkj - Resplendent inkjet driver</h2>
+
+<p>The Rinkj driver is an experimental new driver, capable of driving
+some Epson printers at a very high level of quality. It is not
+currently recommended for the faint of heart.</p>
+
+<p>You will need to add the following line to your makefile:
+
+<blockquote>
+DEVICE_DEVS2=$(DD)rinkj.dev
+</blockquote>
+
+<p>Most of the configuration parameters, including resolution, choice
+of printer model, and linearization curves, are in a separate setup
+file. In addition, we rely heavily on an ICC profile for mapping
+document colors to actual device colors.</p>
+
+<p>A typical command line invocation is:</p>
+
+<blockquote><tt>
+gs -r1440x720 -sDEVICE=rinkj -sOutputFile=/dev/usb/lp0
+  -sSetupFile=lib/rinkj-2200-setup -sProfileOut=2200-cmyk.icm
+  -dNOPAUSE -dBATCH file.ps
+</tt></blockquote>
+
+<p>
+Individual Rinkj command line parameters are as follows:
+</p>
+
+<dl>
+<dt><b><tt>-sSetupFile=</tt></b><em>{path}</em>
+<dd>Specifies the path for the setup file.
+
+<dt><b><tt>-sProfileOut=</tt></b><em>{path}</em>
+<dd>Specifies the path for the output ICC profile. This profile should
+be a <i>link</i> profile, mapping the ProcessColorModel (DeviceCMYK by
+default) to the device color space.
+</dl>
+
+<p>For 6- and 7-color devices, the target color space for the output
+profile is currently a 4-component space. The conversion from this
+into the 6- or 7-color space (the "ink split") is done by lookup
+tables in the setup file.</p>
+
+<p>Setup files are in a simple "Key: value" text format. Relevant keys
+are:</p>
+
+<dl>
+<dt><b><tt>Manufacturer:</tt></b><em>{name}</em>
+<dt><b><tt>Model:</tt></b><em>{name}</em>
+<dd>The manufacturer and model of the individual device, using the
+same syntax as IEEE printer identification strings. Currently, the
+only supported manufacturer string is "EPSON", and the only supported
+model strings are "Stylus Photo 2200" and "Stylus Photo 7600".
+
+<dt><b><tt>Resolution:</tt></b><em>{x-dpi}</em>x<em>{y-dpi}</em>
+<dd>The resolution in dpi. Usually, this should match the
+Ghostscript resolution set with the <tt>-r</tt> switch. Otherwise,
+the page image will be scaled.
+
+<dt><b><tt>Dither:</tt></b><em>{int}</em>
+<dd>Selects among variant dither options. Currently, the choices are
+<tt>1</tt> for one-bit dither, and <tt>2</tt>, for a 2-bit variable
+dot dither.
+
+<dt><b><tt>Aspect:</tt></b><em>{int}</em>
+<dd>Controls the aspect ratio for highlight dot placement. Valid
+values are <tt>1</tt>, <tt>2</tt>, and <tt>4</tt>. For best results,
+choose a value near the x resolution divided by the y resolution. For
+example, if resolution is 1440x720, aspect should be 2.
+
+<dt><b><tt>Microdot:</tt></b><em>{int}</em>
+<dd>Chooses a microdot size. On EPSON devices, this value is passed
+directly through to the "ESC ( e" command. See EPSON documentation
+for further details (see, I <em>told</em> you this wasn't for the
+faint of heart).
+
+<dt><b><tt>Unidirectional:</tt></b><em>{int}</em>
+<dd>Enables (1) or disables (0) unidirectional printing, which is
+slower but possibly higher quality.
+
+<dt><b><tt>AddLut:</tt></b><em>{plane}</em>
+<dd>Adds a linearization look-up table. The plane is one of
+"CcMmYKk". The lookup table data follows. The line immediately
+following AddLut is the number of data points. Then, for each data
+point is a line consisting of two space-separated floats - the output
+value and the input value. If more than one LUT is specified for a
+single plane, they are applied in sequence.
+</dl>
+
+<p>A typical setup file is supplied in <tt>lib/rinkj-2200-setup</tt>.
+It is configured for the 2200, but can be adapted to the 7600 just by
+changing the "Model" line.
+
+<p>In addition, sample profiles are available at <a href="http://artofcode.com/rinkj/profiles/">artofcode.com/rinkj/profiles/</a>.
+
+<p>A known issue with this driver is poor support for margins and
+page size. In some cases, this will cause an additional page to be
+ejected at the end of a job. You may be able to work around this by
+supplying a cut-down value for <tt>-dDEVICEHEIGHTPOINTS</tt>, for
+example 755 for an 8.5x11 inch page on the EPSON 2200.</p>
 
 <h2><a name="HP_ijs"></a>HP Deskjet official drivers</h2>
 
@@ -1337,9 +1543,8 @@ modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
 
-
 <p>
-<small>Ghostscript version 8.16, 9 May 2005
+<small>Ghostscript version 8.51, 31 December 2005
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

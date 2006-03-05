@@ -3,7 +3,7 @@
 <head>
 <title>Information for Ghostscript developers</title>
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
-<!-- $Id: Develop.htm,v 1.5 2005/12/13 17:10:04 jemarch Exp $ -->
+<!-- $Id: Develop.htm,v 1.6 2006/03/05 13:04:27 Arabidopsis Exp $ -->
 </head>
 
 <body>
@@ -418,6 +418,17 @@ source files.
 
 <h3><a name="Substrate"></a>Substrate</h3>
 
+<h4>Runtime Context</h4>
+
+<dl>
+<dt>
+The libctx provides pointers to memory, stdio, and various other runtime 
+portablility services.
+<dd>
+<a href="../src/gslibctx.h">src/gslibctx.h</a>,
+<a href="../src/gslibctx.c">src/gslibctx.c</a>.
+</dl>
+
 <h4>Memory manager</h4>
 
 <p>
@@ -482,11 +493,15 @@ JBIG2:
 <a href="../src/sjbig2.c">src/sjbig2.c</a>.
 
 <dt>
+JPX (JPEG 2000):
+<a href="../src/sjpx.h">src/sjpx.h</a>,
+<a href="../src/sjpx.c">src/sjpx.c</a>.
+<dt>
 Other compression/decompression:
 <dd>
 <a href="../src/slzwc.c">src/slzwc.c</a>,
-<a href="../src/slzwce.c">src/slzwce.c</a>,
 <a href="../src/slzwd.c">src/slzwd.c</a>,
+<a href="../src/slzwe.c">src/slzwe.c</a>,
 <a href="../src/slzwx.h">src/slzwx.h</a>,
 <a href="../src/srld.c">src/srld.c</a>,
 <a href="../src/srle.c">src/srle.c</a>,
@@ -725,6 +740,9 @@ Path rendering:
 <a href="../src/gspenum.h">src/gspenum.h</a>,
 <a href="../src/gxfill.c">src/gxfill.c</a>,
 <a href="../src/gxfill.h">src/gxfill.h</a>,
+<a href="../src/gxfillsl.h">src/gxfills1.h</a>,
+<a href="../src/gxfilltr.h">src/gxfilltr.h</a>,
+<a href="../src/gxfillts.h">src/gxfillts.h</a>,
 <a href="../src/gxfdrop.c">src/gxdrop.c</a>,
 <a href="../src/gxfdrop.h">src/gxdrop.h</a>,
 <a href="../src/gxpaint.c">src/gxpaint.c</a>,
@@ -855,11 +873,13 @@ Setup:
 Rendering:
 <dd>
 <a href="../src/gxi12bit.c">src/gxi12bit.c</a>,
+<a href="../src/gxi16bit.c">src/gxi16bit.c</a>,
 <a href="../src/gxicolor.c">src/gxicolor.c</a>,
 <a href="../src/gxidata.c">src/gxidata.c</a>,
 <a href="../src/gxifast.c">src/gxifast.c</a>,
 <a href="../src/gximono.c">src/gximono.c</a>,
 <a href="../src/gxino12b.c">src/gxino12b.c</a>,
+<a href="../src/gxino16b.c">src/gxino16b.c</a>,
 <a href="../src/gxipixel.c">src/gxipixel.c</a>,
 <a href="../src/gxiscale.c">src/gxiscale.c</a>.
 
@@ -1404,6 +1424,7 @@ Generic driver support:
 <dd>
 <a href="../src/gdevdcrd.c">src/gdevdcrd.c</a>,
 <a href="../src/gdevdcrd.h">src/gdevdcrd.h</a>,
+<a href="../src/gdevdsha.c">src/gdevdsha.c</a>,
 <a href="../src/gdevemap.c">src/gdevemap.c</a>,
 <a href="../src/gsdevice.c">src/gsdevice.c</a>,
 <a href="../src/gsdevice.h">src/gsdevice.h</a>,
@@ -1831,6 +1852,7 @@ Fax and TIFF:
 <a href="../src/gdevtifs.c">src/gdevtifs.c</a>,
 <a href="../src/gdevtifs.h">src/gdevtifs.h</a>,
 <a href="../src/gdevtfnx.c">src/gdevtfnx.c</a>.
+<a href="../src/gdevtsep.c">src/gdevtsep.c</a>.
 
 <dt>
 (Low-level) CGM:
@@ -1977,6 +1999,28 @@ Printer drivers:
 <a href="../src/gdevstc4.c">src/gdevstc4.c</a>,
 <a href="../src/gdevtknk.c">src/gdevtknk.c</a>,
 <a href="../src/gdevupd.c">src/gdevupd.c</a>.
+
+<dt>
+The special <tt>rinkj</tt> high-quality inkjet driver:
+<dd>
+<a href="../src/gdevrinkj.c">src/gdevrinkj.c</a>,
+<a href="../src/gsequivc.c">src/gsequivc.c</a>,
+<a href="../src/gsequivc.h">src/gsequivc.h</a>,
+<a href="../src/rinkj/evenbetter-rll.c">src/rinkj/evenbetter-rll.c</a>,
+<a href="../src/rinkj/evenbetter-rll.h">src/rinkj/evenbetter-rll.h</a>,
+<a href="../src/rinkj/rinkj-byte-stream.c">src/rinkj/rinkj-byte-stream.c</a>,
+<a href="../src/rinkj/rinkj-byte-stream.h">src/rinkj/rinkj-byte-stream.h</a>,
+<a href="../src/rinkj/rinkj-config.c">src/rinkj/rinkj-config.c</a>,
+<a href="../src/rinkj/rinkj-config.h">src/rinkj/rinkj-config.h</a>,
+<a href="../src/rinkj/rinkj-device.c">src/rinkj/rinkj-device.c</a>,
+<a href="../src/rinkj/rinkj-device.h">src/rinkj/rinkj-device.h</a>,
+<a href="../src/rinkj/rinkj-dither.c">src/rinkj/rinkj-dither.c</a>,
+<a href="../src/rinkj/rinkj-dither.h">src/rinkj/rinkj-dither.h</a>,
+<a href="../src/rinkj/rinkj-epson870.c">src/rinkj/rinkj-epson870.c</a>,
+<a href="../src/rinkj/rinkj-epson870.h">src/rinkj/rinkj-epson870.h</a>,
+<a href="../src/rinkj/rinkj-screen-eb.c">src/rinkj/rinkj-screen-eb.c</a>,
+<a href="../src/rinkj/rinkj-screen-eb.h">src/rinkj/rinkj-screen-eb.h</a>,
+<a href="../lib/rinkj-2200-setup">lib/rinkj-2200-setup</a>.
 
 </dl>
 
@@ -2262,6 +2306,7 @@ Filters:
 <a href="../src/zfilter2.c">src/zfilter2.c</a>,
 <a href="../src/zfilterx.c">src/zfilterx.c</a>,
 <a href="../src/zfjbig2.c">src/zfjbig2.c</a>,
+<a href="../src/zfjpx.c">src/zfjpx.c</a>,
 <a href="../src/zfmd5.c">src/zfmd5.c</a>,
 <a href="../src/zfarc4.c">src/zfarc4.c</a>,
 <a href="../src/zfproc.c">src/zfproc.c</a>,
@@ -4149,6 +4194,7 @@ Platform-specific implementation files:
 <a href="../src/gp_mswin.h">src/gp_mswin.h</a>,
 <a href="../src/gp_ntfs.c">src/gp_ntfs.c</a>,
 <a href="../src/gp_os2.c">src/gp_os2.c</a>,
+<a href="../src/gp_os2.h">src/gp_os2.h</a>,
 <a href="../src/gp_os9.c">src/gp_os9.c</a>,
 <a href="../src/gp_stdia.c">src/gp_stdia.c</a>,
 <a href="../src/gp_stdin.c">src/gp_stdin.c</a>,
@@ -4156,10 +4202,12 @@ Platform-specific implementation files:
 <a href="../src/gp_unifn.c">src/gp_unifn.c</a>,
 <a href="../src/gp_unifs.c">src/gp_unifs.c</a>,
 <a href="../src/gp_unix.c">src/gp_unix.c</a>,
+<a href="../src/gp_unix_cache.c">src/gp_unix_cache.c</a>,
 <a href="../src/gp_vms.c">src/gp_vms.c</a>,
 <a href="../src/gp_wgetv.c">src/gp_wgetv.c</a>,
 <a href="../src/gp_win32.c">src/gp_win32.c</a>,
-<a href="../src/gp_wsync.c">src/gp_wsync.c</a>.
+<a href="../src/gp_wsync.c">src/gp_wsync.c</a>,
+<a href="../src/gs_dll_call.h">src/gs_dll_call.h</a>.
 
 </dl>
 
@@ -4314,6 +4362,7 @@ Third-party libraries:
 <dd>
 <a href="../src/icclib.mak">src/icclib.mak</a>,
 <a href="../src/ijs.mak">src/ijs.mak</a>,
+<a href="../src/jasper.mak">src/jasper.mak</a>,
 <a href="../src/jbig2.mak">src/jbig2.mak</a>,
 <a href="../src/jpeg.mak">src/jpeg.mak</a>,
 <a href="../src/libpng.mak">src/libpng.mak</a>,
@@ -4485,6 +4534,7 @@ MS Windows files:
 <dt>
 OS/2 files:
 <dd>
+<a href="../src/gp_os2pr.c">src/gp_os2pr.c</a>,
 <a href="../src/gsdllos2.h">src/gsdllos2.h</a>.
 
 <dt>
@@ -4598,7 +4648,7 @@ of the license contained in the file LICENSE in this distribution.
 
 
 <p>
-<small>Ghostscript version 8.16, 9 May 2005
+<small>Ghostscript version 8.51, 31 December 2005
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

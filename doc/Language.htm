@@ -3,7 +3,7 @@
 <html>
 <head>
 <title>Ghostscript and the PostScript language</title>
-<!-- $Id: Language.htm,v 1.5 2005/12/13 17:10:04 jemarch Exp $ -->
+<!-- $Id: Language.htm,v 1.6 2006/03/05 13:04:27 Arabidopsis Exp $ -->
 <!-- Originally: language.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -1318,6 +1318,35 @@ See also <a href="#LockSafetyParams">.LockSafetyParams</a> and
 <p>
 </dl>
 
+<dl><a name=".setpdfwrite"></a>
+<dt><b><tt>.setpdfwrite</tt></b></dt>
+<dd>This operator conditions the environment for the <tt>pdfwrite</tt> output device.
+It is a shorthand for setting parameters that have been deemed benificial. While not strictly necessary, it is usually helpful to set call this when using the pdfwrite device.
+For example, this is how the ps2pdf script calls Ghostscript:
+<blockquote><b><tt>
+gs -q -dSAFER -dNOPAUSE -dBATCH -sOutputFile=file.pdf </tt></b><em>[more options]</em><b><tt> \<br>
+&nbsp;&nbsp;-sDEVICE=pdfwrite -c .setpdfwrite -f </b></tt><em>source1.ps [more files]</em>
+</blockquote>
+<p>Currently, the operator just sets a minimum 3&nbsp;MB vmthreshold to allow for
+accumulating shared object data and to reduce the incidence of garbage
+collection as a performance improvement. Additional settings may be added in the future.
+</dl>
+
+<dl>
+<dt><b><tt>.color_test</tt></b> and <b><tt>.color_test_all</tt></b></dt>
+<dd>These operators are used for the verification of device encode_color and
+decode_color routines. They are for internal use only. Their function
+can, and probably will, change as Artifex's requirements change.
+<p>
+<dd>Currently these operators loop through a set of possible values for the inputs
+to the encode_color routine and then veify that the decode_color routines produce
+values that match the input set to within a tolerance which is based upon the number
+of bits used to encode a pixel. The operators also verify that if the device
+is 'separable' then that the values produced by gx_default_encode_color and
+gx_default_decode_color (the default encode/decode color handlers for a separable
+device) are consistent to within the same tolerance.
+</dl>
+
 <h4><a name="Device"></a>Device operators</h4>
 
 <dl>
@@ -1994,25 +2023,52 @@ may be overridden by the command line argument
 
 
 <dl>
+<a name="GridFitTT"></a>
 <dt><b><tt>GridFitTT &lt;integer&gt;</tt></b>
 <dd>Control the use of True Type grid fitting.
 Ghostscript implements a reduced True Type bytecode interpreter,
 which can interpret the subset of True Type glyph instructions  
-not covered by Apple's patents. This allows the Dynalab fonts to 
-rasterize properly.
-Fonts with patented instructions can't be properly grid fitted.
-This parameter controls the action of the reduced interpreter:
-a value of 0 disables grid fitting for all fonts;
-a value of 1 enables the grid fitting for glyphs that don't involve 
-patented instructions.
-When set to 1 a warning is printed to stderr when a patented 
-instruction is encountered, and the glyph is rendered ignoring the 
-entire grid fitting program. This parameter defaults to 0, but this
-may be overridden on the command line with
-<b><tt>-dGridFitTT=1</tt></b>.
+not covered by Apple's patents. This allows proper rasterization
+of the Dynalab fonts.
 <p>
-The bytecode interpreter is based in part of the work of the 
-<a href="http://freetype.org/">Freetype</a> Team.
+The reduced interpreter can't properly grid fit 
+fonts with patented instructions. Therefore Ghostscript implements
+another grid fitting method for True Type fonts, based on a spot topology analysis.
+<p>
+This parameter controls the action of the reduced interpreter and the grid fitter:
+<ul>
+<li>
+A value of 0 disables grid fitting for all True Type fonts. This is a backward compatibility mode.
+</li>
+
+<li>
+A value of 1 enables the grid fitting for glyphs that don't involve 
+patented instructions, using the reduced True Type bytecode interpreter.
+When a patented instruction is encountered, a warning is printed to stderr,
+and the glyph is rendered ignoring the entire grid fitting program.
+</li>
+
+<li>
+A value of 2 invokes the topological grid fitter. This value is recommended
+for common use.
+</li>
+
+<li>
+A value of 3 specifies that the bytecode interpreter to be used
+to grid fit glyphs that have no patented instructions,
+and other glyphs are grid fitted topologically. This mode may
+improve the rendering of some fonts, but in general the best result
+is not guaranteed.
+</li>
+</ul>
+<p>
+This parameter defaults to 2, but this
+may be overridden on the command line with
+<b><tt>-dGridFitTT=n</tt></b>.
+<p>
+The reduced bytecode interpreter is based in part of the work of the 
+<a href="http://freetype.org/">FreeType</a> Team.
+The topological grid fitting is a new original Ghostscript method.
 </dl>
 
 <dl>
@@ -2192,9 +2248,8 @@ modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
 
-
 <p>
-<small>Ghostscript version 8.16, 9 May 2005
+<small>Ghostscript version 8.51, 31 December 2005
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

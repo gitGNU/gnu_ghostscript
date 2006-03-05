@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>.ps files distributed with Ghostscript</title>
-<!-- $Id: Psfiles.htm,v 1.5 2005/12/13 17:10:04 jemarch Exp $ -->
+<!-- $Id: Psfiles.htm,v 1.6 2006/03/05 13:04:27 Arabidopsis Exp $ -->
 <!-- Originally: psfiles.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -515,6 +515,12 @@ are used in the PDF interpreter, as ICC profiles may be embedded in
 PDF files.
 </dl>
 
+<dl>
+<dt><a href="../lib/opdfread.ps"><tt>opdfread.ps</tt></a>
+<dd>Postscript procset for reading an ordered PDF file. This
+is used by the second-generation pswrite device.
+</dl>
+
 <hr>
 
 <h2><a name="DPS_specific"></a>Display PostScript-specific system files</h2>
@@ -724,6 +730,12 @@ in landscape mode.
 <dl>
 <dt><a href="../lib/level1.ps"><tt>level1.ps</tt></a>
 <dd>A file that turns off any Level 2 features.
+</dl>
+
+<dl>
+<dt><a href="../lib/mkcidfm.ps"><tt>mkcidfm.ps</tt></a>
+<dd>A utility for creating a CID font mapping table <b><tt>cidfmap</tt></b>
+from fonts found in a specified directory.
 </dl>
 
 <dl>
@@ -999,9 +1011,8 @@ modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
 
-
 <p>
-<small>Ghostscript version 8.16, 9 May 2005
+<small>Ghostscript version 8.51, 31 December 2005
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

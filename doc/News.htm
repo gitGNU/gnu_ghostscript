@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>Recent changes in Ghostscript</title>
-<!-- $Id: News.htm,v 1.5 2005/12/13 17:10:04 jemarch Exp $ -->
+<!-- $Id: News.htm,v 1.6 2006/03/05 13:04:27 Arabidopsis Exp $ -->
 <!-- Originally: NEWS -->
 <!--
 	WARNING: do not use Pete Kaiser's emacs function "gs-toc" alone to
@@ -55,39 +55,291 @@ overview</a>.
 
 <!-- [2.0 begin contents] ================================================== -->
 
-<h3><a name="Version8.15"></a>Version 8.15 (2004-09-22)</h3>
+<h3><a name="Version8.50"></a>Version 8.50 (2005-12-31)</h3>
 
-<p>
-This is the first release of GPL Ghostscript in the new version 8.1x 
-series, and the fifth release in that series over all. This release 
-offers a very large number of bug fixes over AFPL Ghostscript 8.14, and 
-many significant new features over the previous GPL Ghostscript 8.01. We 
-recommend upgrading to all our free users.
+<p>This is the first release in the 8.5x stable series of Ghostscript.
+In addition to many bug fixes it contains numerous new features. Most
+obvious will be improved font handling and rasterization, and better
+support for PDF 1.4 and 1.5 documents.
+
+<p>This program was originally released 2004-12-10 as AFPL Ghostscript 
+8.50. This version is the same code released under the GNU GPL license.
 
 <p> 
-New features in this version :
+New features since the 8.1x releases:
 
 <ul>
-<li>
+<li><p>
+Topological grid fitting,
+an original method developed for Ghostscript by Dr. Igor V. Melichev, improves 
+the rendering of True Type fonts at small resolutions.
+See the documentation for <a href="Language.htm#GridFitTT">GridFitTT</a> for information on this
+feature.
+
+<li><p>
 The PDF writer now implements PDF 1.4 encryption.
 See the <a href="Ps2pdf.htm#Encryption">encryption parameter</a> documentation for more
 information.
 
-<li>
-Ghostscript now better supports running as a job server, were multiple 
-files can be piped to a single instance. Just invoke 
-Ghostscript with the <tt>-dJOBSERVER</tt> and pipe jobs to stdin, 
-delimiting them with <tt>^D</tt>.
+<li><p>
+A new rendering method for shadings, developed for Ghostscript by 
+Dr. Igor V. Melichev, improves the quality and performance of 
+rasterization on continuous tone devices.
+The new method allows hardware or software acceleration with help of
+customizable routines for filling areas with a linearly varying color.
+functions.
 
-<li>
-Font rendering has be improved over previous releases.
+<li><p>
+Better support for running Ghostscript in "Job Server" mode as a daemon
+to continually accept and convert a series of independent files.
+
+<li><p>
+Also new is the Rinkj deivce, an
+experimental new driver for some inkjet printers using ETS screening
+and color profiles to achieve very high quality output for tuned output.
+See the <a href="Devices.htm#Rinkj">Rinkj</a> section for more information.
+
+<li><p>
+We now support PDF 1.5 files, including the new compression
+and encryption modes.
+
+<li><p>
+We have beta support for JPEG 2000 compressed images, using the JasPer
+compression library. In this release this support is only enabled as in 
+the default autoconf (POSIX) and MSVC builds.
 
 </ul>
 
+<p>
+This release also has major internal improvements toward thread safety, 
+although we have not yet reached this goal. Nevertheless Ghostscript  
+should be more robust when used as a library, and these changes were
+an important precursor to complete virtualization.
 
-<h3><a name="8.15_Incompatible_changes"></a>Incompatible changes</h3>
 
-<p> There are no known incompatible changes from the previous release.
+<p> The following <a href="http://bugs.ghostscript.com/">bug</a> numbers
+were open at the time of this release: <blockquote>
+405501,
+430175,
+446344,
+458780,
+463688,
+465936,
+487953,
+493348,
+526099,
+526491,
+530011,
+535366,
+535932,
+578865,
+592160,
+603934,
+610478,
+614298,
+626295,
+674418,
+677324,
+685335,
+686747,
+686750,
+686816,
+686819,
+686824,
+686841,
+686842,
+686843,
+686853,
+686865,
+686867,
+686919,
+686980,
+686996,
+687011,
+687012,
+687013,
+687039,
+687059,
+687063,
+687084,
+687086,
+687095,
+687105,
+687108,
+687110,
+687122,
+687125,
+687146,
+687168,
+687174,
+687193,
+687196,
+687203,
+687219,
+687221,
+687229,
+687231,
+687243,
+687251,
+687257,
+687259,
+687271,
+687280,
+687295,
+687297,
+687298,
+687303,
+687314,
+687316,
+687324,
+687327,
+687341,
+687342,
+687345,
+687346,
+687360,
+687373,
+687375,
+687394,
+687397,
+687399,
+687401,
+687410,
+687414,
+687434,
+687435,
+687445,
+687460,
+687468,
+687473,
+687474,
+687475,
+687480,
+687484,
+687485,
+687492,
+687497,
+687498,
+687514,
+687518,
+687520,
+687523,
+687525,
+687529,
+687531,
+687535,
+687536,
+687537,
+687539,
+687541,
+687545,
+687551,
+687558,
+687559,
+687560,
+687561,
+687583,
+687593,
+687595,
+687600,
+687608,
+687611,
+687621,
+687622,
+687628,
+687630,
+687633,
+687642,
+687643,
+687644,
+687650,
+687654,
+687657,
+687661,
+687663,
+687666,
+687669,
+687674,
+687676,
+687677,
+687678,
+687679,
+687680,
+687682,
+687684,
+687686,
+687694,
+687695,
+687696,
+687697,
+687702,
+687707,
+687712,
+687715,
+687717,
+687721,
+687727,
+687728,
+687729,
+687731,
+687735,
+687738,
+687754,
+687756,
+687769,
+687772,
+687775,
+687778,
+687780,
+687782,
+687783,
+687786,
+687791,
+687793,
+687795,
+687796,
+687800,
+687802,
+687803,
+687805,
+687806,
+687808,
+687809,
+687813,
+687814,
+687815,
+687816,
+687820,
+687822,
+687823,
+687825,
+687826,
+687827,
+687828,
+687830,
+687831,
+687832,
+687834,
+687835,
+687836,
+687837,
+687838,
+687840,
+687842,
+687843,
+687844,
+687845,
+687846,
+687847,
+687848,
+687849.
+</blockquote>
+
+<h3><a name="8.50_Incompatible_changes"></a>Incompatible changes</h3>
+
+<p>
+No incompatible changes at this point
+
 
 <!-- [2.0 end contents] ==================================================== -->
 
@@ -95,7 +347,7 @@ Font rendering has be improved over previous releases.
 <hr>
 
 <p>
-Copyright &copy; 2004 artofcode LLC.  All rights
+Copyright &copy; 2005 artofcode LLC.  All rights
 reserved.
 
 <p>
@@ -107,9 +359,8 @@ modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
 
-
 <p>
-<small>Ghostscript version 8.16, 9 May 2005
+<small>Ghostscript version 8.51, 31 December 2005
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

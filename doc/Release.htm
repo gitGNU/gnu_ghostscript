@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>How to prepare a Ghostscript release</title>
-<!-- $Id: Release.htm,v 1.6 2005/12/13 17:10:04 jemarch Exp $ -->
+<!-- $Id: Release.htm,v 1.7 2006/03/05 13:04:27 Arabidopsis Exp $ -->
 <!-- Originally: make.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -290,6 +290,9 @@ Update references to the date for release:
 line. That is, in parentheses after the <tt>VERSION X.YY</tt> heading,
 and in the copyright footer both the year and the release date.
 
+<li>In <b><tt>src/dwsetup.rc</tt></b> and <b><tt>src/winint.mak</tt></b>,
+update the year in the embedded copyright notice.
+
 </ul>
 
 <p>
@@ -528,7 +531,7 @@ in the Windows and MacOS source releases, but not the unix tarballs.
 <p>
 Download and unpack the latest source release of 
 <a href="http://jbig2dec.sourceforge.net/">jbig2dec</a>, renaming the 
-directory to just <tt>jbig2dec</tt> on the top level of ghostscritp 
+directory to just <tt>jbig2dec</tt> on the top level of ghostscript 
 source directory.
 
 <p>
@@ -830,9 +833,9 @@ Edit <b><tt>doc/News.htm</tt></b> to remove all the content.
 <h2><a name="GNU_releases"></a>GNU Ghostscript releases</h2>
 
 <p>
-artofcode LLC re-releases each stable AFPL Ghostscript branch under
-the GPL--as GNU Ghostscript--when the next major stable AFPL 
-release comes out, or after one calendar year, whichever comes first.
+artofcode LLC re-releases each stable AFPL Ghostscript branch as
+GPL Ghostscript (under the GNU GPL license) when the next major stable
+AFPL release comes out, or after one calendar year, whichever comes first.
 
 <h3><a name="GNU_code"></a>GNU code</h3>
 
@@ -920,9 +923,8 @@ modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
 
-
 <p>
-<small>Ghostscript version 8.16, 9 May 2005
+<small>Ghostscript version 8.51, 31 December 2005
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

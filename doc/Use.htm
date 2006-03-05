@@ -3,7 +3,7 @@
 <html>
 <head>
 <title>How to use Ghostscript</title>
-<!-- $Id: Use.htm,v 1.5 2005/12/13 17:10:04 jemarch Exp $ -->
+<!-- $Id: Use.htm,v 1.6 2006/03/05 13:04:28 Arabidopsis Exp $ -->
 <!-- Originally: use.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -45,13 +45,15 @@
 </ul>
 
 <li><a href="#EPS">Using Ghostscript with EPS files</a>
+<li><a href="#SPOT">Using Ghostscript with overprinting and spot colors</a>
 <li><a href="#Finding_files">How Ghostscript finds files</a>
 <ul>
 <li><a href="#PS_resources">Finding PostScript Level 2 resources</a>
 <li><a href="#Font_lookup">Font lookup</a>
+<li><a href="#CIDFonts">CID fonts</a>
+<li><a href="#CIDFontSubstitution">CID font substitution</a>
 <li><a href="#Temp_files">Temporary files</a>
 </ul>
-<li><a href="#CIDFontSubstitution">CID font substitution</a>
 
 <li><a href="#Platforms">Notes on specific platforms</a>
 <ul>
@@ -144,7 +146,7 @@ program itself may differ among systems.  For instance, to invoke
 Ghostscript on unix-like systems type:
 
 <blockquote>
-	<pre><b><tt>gs</tt></b> [options] {filename 1} ... [options] {filename <em>N</em>} ...
+        <pre><b><tt>gs</tt></b> [options] {filename 1} ... [options] {filename <em>N</em>} ...
 </pre></blockquote>
 
 <p>Here are some basic examples. The details of how these work are described below.
@@ -159,7 +161,7 @@ You'll be prompted to press <em>return</em> between pages.
 
 <p>To render the same image at 300 dpi:
 <blockquote><pre>gs -dSAFER -dBATCH -dNOPAUSE -sDEVICE=png16m -r300 \
-		-sOutputFile=tiger_300.png tiger.eps
+                -sOutputFile=tiger_300.png tiger.eps
 </pre></blockquote>
 
 <p>To render a figure in grayscale:
@@ -168,7 +170,7 @@ You'll be prompted to press <em>return</em> between pages.
 
 <p>To rasterize a whole document:
 <blockquote><pre>gs -dSAFER -dBATCH -dNOPAUSE -sDEVICE=pgmraw -r150 \
-		-dTextAlphaBits=4 -sOutputFile='paper-%00d.pgm' paper.ps</pre></blockquote>
+                -dTextAlphaBits=4 -sOutputFile='paper-%00d.pgm' paper.ps</pre></blockquote>
 
 <p>There are also a number of utility scripts for common
 
@@ -220,19 +222,19 @@ On other systems the executable may have a different name:
 
 <blockquote><table cellpadding=0 cellspacing=0>
 <tr bgcolor="#CCCC00">
-	<th align=left>System
-	<th>&nbsp;&nbsp;
-	<th align=left>invocation name
-<tr>	<td>Unix
-	<td>&nbsp;<td><b><tt>gs</tt></b>
-<tr>	<td>VMS
-	<td>&nbsp;<td><b><tt>gs</tt></b>
-<tr>	<td>MS Windows 95 and later
-	<td>&nbsp;<td><b><tt>gswin32c</tt></b>
-<tr>	<td>MS Windows 3.1/Win32s
-	<td>&nbsp;<td><b><tt>gswin32</tt></b>
-<tr>	<td>OS/2
-	<td>&nbsp;<td><b><tt>gsos2</tt></b>
+        <th align=left>System
+        <th>&nbsp;&nbsp;
+        <th align=left>invocation name
+<tr>    <td>Unix
+        <td>&nbsp;<td><b><tt>gs</tt></b>
+<tr>    <td>VMS
+        <td>&nbsp;<td><b><tt>gs</tt></b>
+<tr>    <td>MS Windows 95 and later
+        <td>&nbsp;<td><b><tt>gswin32c</tt></b>
+<tr>    <td>MS Windows 3.1/Win32s
+        <td>&nbsp;<td><b><tt>gswin32</tt></b>
+<tr>    <td>OS/2
+        <td>&nbsp;<td><b><tt>gsos2</tt></b>
 </table></blockquote>
 
  
@@ -252,7 +254,7 @@ configuration that includes an Epson printer driver, instead of just
 <tt>'gs&nbsp;myfile.ps'</tt> you might use
 
 <blockquote>
-	<b><tt>gs -sDEVICE=epson myfile.ps</tt></b>
+        <b><tt>gs -sDEVICE=epson myfile.ps</tt></b>
 </blockquote>
 
 <p><a name="GS_DEVICE"></a>
@@ -288,7 +290,7 @@ balance resolution against printing speed.  To select the resolution on
 such a printer, use the <b><tt>-r</tt></b> switch:
 
 <blockquote>
-	<b><tt>gs -sDEVICE=</tt></b><em>printer</em><b><tt> -r</tt></b><em>XRES</em><b><tt>x</tt></b><em>YRES</em>
+        <b><tt>gs -sDEVICE=</tt></b><em>printer</em><b><tt> -r</tt></b><em>XRES</em><b><tt>x</tt></b><em>YRES</em>
 </blockquote>
 
 where <em>XRES</em> and <em>YRES</em> are the requested number of dots (or pixels) per inch. Where the two resolutions are same, as is the common case, you can simply use <tt>-r</tt><em>res</em>.
@@ -486,7 +488,7 @@ going into interactive mode.  Because of this, options and files after the '<tt>
 On Unix and MS Windows systems you can send output to a pipe in the same way.  For example, to pipe the output to <tt>lpr</tt>, use the command
 
 <blockquote><tt>
-	<b>gs -q -sOutputFile=- |</b> lpr
+        <b>gs -q -sOutputFile=- |</b> lpr
 </tt></blockquote>
 
 <p>
@@ -498,11 +500,11 @@ which become mixed with the intended output stream.
 Similar results can be obtained with the <tt>%stdout</tt> and <tt>%pipe%</tt> filedevices. The example above would become
 
 <blockquote><tt>
-	<b>gs -sOutputFile=%stdout -q |</b> lpr
+        <b>gs -sOutputFile=%stdout -q |</b> lpr
 </tt></blockquote>
 or
 <blockquote><tt>
-	<b>gs -sOutputFile=%pipe%</b>lpr
+        <b>gs -sOutputFile=%pipe%</b>lpr
 </tt></blockquote>
 
 (again, doubling the <b><tt>%</tt></b> character on MS Windows systems.)
@@ -625,6 +627,79 @@ is available from:
 class="offsite">
 http://partners.adobe.com/asn/developer/technotes/postscript.html</a>
 
+<h2><a name="SPOT"></a>Using Ghostscript with overprinting and spot colors</h2>
+
+<p>
+In general with PostScript and PDF interpreters, the handling of
+<b>overprinting</b> and <b>spot colors</b> depends upon the
+process color model of the <a href="#Output_device">output device</a>. Devices
+that produce gray or RGB output have an <b>additive</b> process color model.
+Devices which produce CMYK output have a <b>subtractive</b> process color model.
+Devices may, or may not, have support for spot colors.
+
+<blockquote><i>
+Note: The differences in appearance of files with overprinting and spot colors
+caused by the differences in the color model of the output device are part of the
+PostScript and PDF specifications. They are not due to a limitation in the
+implementation of Ghostscript or its output devices.
+</i></blockquote>
+
+<p>
+With devices which use a subtractive process color model, both PostScript 
+and PDF allow the drawing of objects using colorants (inks) for one or more planes 
+without affecting the data for the remaining colorants. Thus the inks for one 
+object may <b><tt>overprint</tt></b> the inks for another object. In some cases 
+this produces a transparency like effect. (The effects of overprinting should 
+not be confused with the PDF 1.4 blending operations which are supported for
+all output devices.) Overprinting is not allowed for devices with an additive 
+process color model. With files that use overprinting, the appearance of the 
+resulting image can differ between devices which produce RGB output versus devices 
+which produce CMYK output. Ghostscript automatically overprints (if needed) 
+when the output device uses a subtractive process color model. For example, 
+if the file is using overprinting, differences can be seen in the appearance 
+of the output from the <a href="Devices.htm#TIFF">tiff24nc and tiff32nc devices</a>
+which use an RGB and a CMYK process color models. 
+
+<p>
+Most of the Ghostscript <a href="Devices.htm">output devices</a> do not have 
+file formats which support spot colors. Instead spot colors are converted using 
+the tint transform function contained within the color space definition.. However 
+there are several devices which have support for spot colors. The PSD format 
+(Adobe Photoshop) produced by the <a href="Devices.htm#PSD">psdcmyk device</a> 
+contains both the raster data plus an equivalent CMYK color for each spot color. 
+This allows Photoshop to simulate the appearance of the spot colors. The <a href="Devices.htm#display_device">display 
+device (MS Windows, OS/2, gtk+)</a> can be used with different color models: 
+Gray, RGB, CMYK only, or CMYK plus spot colors (separation). The display device, 
+when using its CMYK plus spot color (separation) mode, also uses an equivalent 
+CMYK color to simulate the appearance of the spot color. The
+<a href="Devices.htm#TIFF">tiffsep 
+device</a> creates output files for each separation (CMYK and any spot colors 
+present). It also creates a composite CMYK file using an equivalent CMYK color 
+to simulate the appearance of spot colors. The
+<a href="Devices.htm#XCF">xcfcmyk device</a> 
+creates output files with spot colors placed in separate alpha channels. (The 
+XCF file format does not currently directly support spot colors.)
+
+<p>
+Overprinting with spot colors is not allowed if the tint transform function 
+is being used to convert spot colors. Thus if spot colors are used with overprinting, 
+then the appearance of the result can differ between output devices. One result 
+would be obtained with a CMYK only device and another would be obtained with 
+a CMYK plus spot color device. In a worst case situation where a file has overprinting 
+with both process (CMYK) and spot colors, it is possible to get three different 
+appearances for the same input file using the
+<a href="Devices.htm#TIFF">tiff24nc</a> (RGB),
+<a href="Devices.htm#TIFF">tiff32nc</a> (CMYK), and
+<a href="Devices.htm#TIFF">tiffsep</a> (CMYK plus spot colors) devices.
+
+<blockquote><i>
+In Adobe Acrobat, viewing of the effects of overprinting is enabled by the
+'Overprint Preview' item in the 'Advanced' menu. This feature is not available
+in the free Acrobat Reader. The free Acrobat Reader also uses the tint transform
+functions to convert spot colors to the appropriate alternate color space.
+</i></blockquote>
+
+
 <hr>
 
 <h2><a name="Finding_files"></a>How Ghostscript finds files</h2>
@@ -637,21 +712,21 @@ file name specifies an absolute path.
 
 <blockquote><table cellpadding=0 cellspacing=0>
 <tr><th colspan=3 bgcolor="#CCCC00"><hr><font size="+1">Testing a file name for an absolute path</font><hr>
-<tr>	<th align=left>System
-	<td>&nbsp;&nbsp;
-	<th align=left>Does the name ...
-<tr>	<td colspan=3><hr>
-<tr>	<td valign=top>Unix
-	<td>&nbsp;
-	<td>Begin with <b><tt><u>/</u></tt></b> ?
-<tr>	<td valign=top>MS Windows
-	<td>&nbsp;
-	<td>Have <b><tt><u>:</u></tt></b> as its second character, or
-		begin with <b><tt><u>/</u></tt></b>, <b><tt><u>\</u></tt></b>,
-		or <b><tt><u>//servername/share/</u></tt></b> ?
-<tr>	<td valign=top>VMS
-	<td>&nbsp;
-	<td>Contain a node, device, or root specification?
+<tr>    <th align=left>System
+        <td>&nbsp;&nbsp;
+        <th align=left>Does the name ...
+<tr>    <td colspan=3><hr>
+<tr>    <td valign=top>Unix
+        <td>&nbsp;
+        <td>Begin with <b><tt><u>/</u></tt></b> ?
+<tr>    <td valign=top>MS Windows
+        <td>&nbsp;
+        <td>Have <b><tt><u>:</u></tt></b> as its second character, or
+                begin with <b><tt><u>/</u></tt></b>, <b><tt><u>\</u></tt></b>,
+                or <b><tt><u>//servername/share/</u></tt></b> ?
+<tr>    <td valign=top>VMS
+        <td>&nbsp;
+        <td>Contain a node, device, or root specification?
 </table></blockquote>
 
 <p>If the test succeeds, Ghostscript tries to open the file
@@ -699,25 +774,81 @@ given.  To run a file using the searching algorithm, use
 
 <p>
 Adobe specifies that resources are installed in a single directory.
-Instead that, Ghostscript maintains a list of resource directories,
+Ghostscript instead maintains a list of resource directories,
 and uses an extended method for finding resource files.
 
 <p>
-To find a resource file, Ghostscript concatenates together
+The search for a resource file depends on whether
+the value of the system parameter <b><tt>GenericResourceDir</tt></b>
+specifies an absolute path. The user may set it as explained in
+<a href="#Resource_related_parameters">Resource-related parameters</a>.
+
+<p>
+If the user doesn't set the system parameter <b><tt>GenericResourceDir</tt></b>,
+Ghostscript creates a default value for it with
+attaching the string <b><tt>../Resource</tt></b>
+to directory paths explained in 
+<a href="#Finding_files">How Ghostscript finds files</a>,
+except the current directory.
+The first successful combination is used.
+
+<p>
+If the value of the system parameter <b><tt>GenericResourceDir</tt></b>
+is an absolute path (the default), 
+Ghostscript assumes a single resource directory.
+It concatenates :
 
 <ol>
-
-<li>the name of the resource category (for instance, <b><tt>ProcSet</tt></b>)
-
-<li>the value of the system parameter
-<b><tt>GenericResourcePathSep</tt></b> (initially
-"<b><tt>/</tt></b>" on Unix and Windows, "<b><tt>:</tt></b>" on MacOS, "<b><tt>]</tt></b>" on OpenVMS)
-
-<li>the name of the resource instance (for instance, <b><tt>CIDInit</tt></b>)
+<li>The value of the system parameter <b><tt>GenericResourceDir</tt></b>;
+<li>The name of the resource category (for instance, <b><tt>CMap</tt></b>);
+<li>The name of the resource instance (for instance, <b><tt>Identity-H</tt></b>).
 </ol>
 
-Then the result is combined with search directories as explained in
+<p>If the value of the system parameter <b><tt>GenericResourceDir</tt></b>
+is not an absolute path,
+Ghostscript assumes multiple resource directories.
+In this case it concatenates :
+
+<ol>
+<li>A directory listed in the section
+<a href="#Finding_files">How Ghostscript finds files</a>,
+except the current directory;
+
+<li>The value of the system parameter <b><tt>GenericResourceDir</tt></b>;
+
+<li>The name of the resource category (for instance, <b><tt>CMap</tt></b>);
+
+<li>The name of the resource instance (for instance, <b><tt>Identity-H</tt></b>)
+</ol>
+
+Due to possible variety of the part 1, the first successful combination is used.
+For example, if the value of the system parameter <b><tt>GenericResourceDir</tt></b>
+is the string  <b><tt>../Resource/</tt></b>
+(or its equivalent in the file path syntax of the underlying platform),
+Ghostscript searches for <b><tt>../Resource/CMap/Identity-H</tt></b>
+from all directories listed in 
 <a href="#Finding_files">How Ghostscript finds files</a>.
+So in this example, if the user on a Windows platform specifies
+the command line option <b><tt>-I.;../gs/lib;c:/gs8.50/lib</tt></b>,
+Ghostscript searches for <b><tt>../gs/Resource/CMap/Identity-H</tt></b> and
+then for <tt><b>c:/gs8.50/Resource/CMap/Identity-H</tt></b>.
+
+<p>
+To get a proper platform dependent syntax Ghostscript inserts 
+the value of the system parameter
+<b><tt>GenericResourcePathSep</tt></b> (initially
+"<b><tt>/</tt></b>" on Unix and Windows, "<b><tt>:</tt></b>" on MacOS,
+"<b><tt>.</tt></b>" or "<b><tt>]</tt></b>" on OpenVMS).
+The string <b><tt>../Resource</tt></b> is replaced with a
+platform dependent equivalent. 
+
+<p>
+In the case of multiple resource directories,
+the default <b><tt>ResourceFileName</b></tt> procedure retrieves either a path 
+to the first avaliable resource, or if the resource is not available it
+returns a path starting with <b><tt>GenericResourceDir</tt></b>.
+Consequently Postscript installers of Postscript resources
+will overwrite an existing resource or add a new one to the first resource directory.
 
 <p>
 To look up fonts, after exhausting the search method described in <a href="#Font_lookup">the
@@ -732,7 +863,7 @@ next section</a>, it concatenates together
 </ol>
 
 <p>
-Note that even though the system parameters are named "somethingDir", they
+Note that even although the system parameters are named "somethingDir", they
 are not just plain directory names: they have "<b><tt>/</tt></b>" on the
 end, so that they can be concatenated with the category name or font name.
 
@@ -742,7 +873,7 @@ end, so that they can be concatenated with the category name or font name.
 Ghostscript has a slightly different way to find the file containing a font
 with a given name.  This rule uses not only the search path defined by
 <b><tt>-I</tt></b>, <b><tt>GS_LIB</tt></b>, and
-<b><tt>GS_LIB_DEFAULT</tt></b> <a href="#General_search_path">as described
+<b><tt>GS_LIB_DEFAULT</tt></b> <a href="#Finding_files">as described
 above</a>, but also the directory that is the value of the
 <b><tt>FontResourceDir</tt></b> system parameter, and an additional list of
 directories that is the value of the <b><tt>GS_FONTPATH</tt></b> environment
@@ -806,44 +937,43 @@ from among the standard 35 fonts.
 </ul>
 
 <p>
-Loading truetype fonts directly from <tt>/Resource/CIDFont/</tt> is not
-supported. A <a href="#CIDFontSubstitution"><tt>cidfmap</tt></a> entry
-must be created instead to provide a proper character ordering for the font.
+<a href="#CIDFonts">CID fonts</a> (e.g. Chinese, Japanese and Korean) 
+are found using a different method.
 
 <blockquote><table cellpadding=0 cellspacing=0>
 <tr><th colspan=3 bgcolor="#CCCC00"><hr><font size="+1">Differences between search path and font path</font><hr>
-<tr>	<th>Search path
-	<td>&nbsp;&nbsp;&nbsp;
-	<th>Font path
-<tr>	<td colspan=3><hr>
-<tr>	<td><b><tt>-I</tt></b> switch
-	<td>&nbsp;
-	<td><b><tt>-sFONTPATH=</tt></b> switch
-<tr>	<td>&nbsp;
-<tr>	<td><b><tt>GS_LIB</tt></b> and <b><tt>GS_LIB_DEFAULT</tt></b>
-	    environment variables
-	<td>&nbsp;
-	<td><b><tt>GS_FONTPATH</tt></b> environment variable
-<tr>	<td>&nbsp;
-<tr>	<td valign=top>Consulted first
-	<td>&nbsp;
-	<td valign=top>Consulted only if search path and
-	<b><tt>FontResourceDir</tt></b> don't provide the file.
-<tr>	<td>&nbsp;
-<tr>	<td valign=top>Font-name-to-file-name mapping given in Fontmap
-	    files; aliases are possible, and there need not be any relation
-	    between the font name in the Fontmap and the
-	    <b><tt>FontName</tt></b> in the file.
-	<td>&nbsp; <td valign=top>Font-name-to-file-name mapping is
-	    implicit -- the <b><tt>FontName</tt></b> in the file is
-	    used. Aliases are not possible.
-<tr>	<td>&nbsp;
-<tr>	<td valign=top>Only fonts and files named in Fontmap are used.
-	<td>&nbsp;
-	<td valign=top>Every Type 1 font file in each directory is
-	    available; if TrueType fonts are supported (the
-	    <b><tt>ttfont.dev</tt></b> feature was included when the
-	    executable was built), they are also available.
+<tr>    <th>Search path
+        <td>&nbsp;&nbsp;&nbsp;
+        <th>Font path
+<tr>    <td colspan=3><hr>
+<tr>    <td><b><tt>-I</tt></b> switch
+        <td>&nbsp;
+        <td><b><tt>-sFONTPATH=</tt></b> switch
+<tr>    <td>&nbsp;
+<tr>    <td><b><tt>GS_LIB</tt></b> and <b><tt>GS_LIB_DEFAULT</tt></b>
+            environment variables
+        <td>&nbsp;
+        <td><b><tt>GS_FONTPATH</tt></b> environment variable
+<tr>    <td>&nbsp;
+<tr>    <td valign=top>Consulted first
+        <td>&nbsp;
+        <td valign=top>Consulted only if search path and
+        <b><tt>FontResourceDir</tt></b> don't provide the file.
+<tr>    <td>&nbsp;
+<tr>    <td valign=top>Font-name-to-file-name mapping given in Fontmap
+            files; aliases are possible, and there need not be any relation
+            between the font name in the Fontmap and the
+            <b><tt>FontName</tt></b> in the file.
+        <td>&nbsp; <td valign=top>Font-name-to-file-name mapping is
+            implicit -- the <b><tt>FontName</tt></b> in the file is
+            used. Aliases are not possible.
+<tr>    <td>&nbsp;
+<tr>    <td valign=top>Only fonts and files named in Fontmap are used.
+        <td>&nbsp;
+        <td valign=top>Every Type 1 font file in each directory is
+            available; if TrueType fonts are supported (the
+            <b><tt>ttfont.dev</tt></b> feature was included when the
+            executable was built), they are also available.
 </table></blockquote>
 
 <p>
@@ -855,65 +985,65 @@ notes on systems marked with "*"):
 
 <blockquote><table cellpadding=0 cellspacing=0>
 <tr><th colspan=5 bgcolor="#CCCC00"><hr><font size="+1">Suggested <b><tt>GS_FONTPATH</tt></b> for different systems</font><hr>
-<tr>	<td>&nbsp;
-	<td>&nbsp;&nbsp;
-	<th align=left>System type
-	<td>&nbsp;&nbsp;
-	<th valign=bottom align=left><b><tt>GS_FONTPATH</tt></b>
-<tr>	<td colspan=5><hr>
-<tr>	<td>&nbsp;
-	<td>&nbsp;
-	<td valign=top>Digital Unix
-	<td>&nbsp;
-	<td><b><tt>/usr/lib/X11/fonts/Type1Adobe</tt></b>
-<tr>	<td>&nbsp;
-	<td>&nbsp;
-	<td valign=top>Ultrix
-	<td>&nbsp;
-	<td><b><tt>/usr/lib/DPS/outline/decwin</tt></b>
-<tr>	<td>&nbsp;
-	<td>&nbsp;
-	<td valign=top>HP-UX 9
-	<td>&nbsp;
-	<td><b><tt>/usr/lib/X11/fonts/type1.st/typefaces</tt></b>
-<tr>	<td>&nbsp;
-	<td>&nbsp;
-	<td valign=top>IBM AIX
-	<td>&nbsp;
-	<td><b><tt>/usr/lpp/DPS/fonts/outlines
-		<br>/usr/lpp/X11/lib/X11/fonts/Type1
-		<br>/usr/lpp/X11/lib/X11/fonts/Type1/DPS</tt></b>
-<tr>	<td>&nbsp;
-	<td>&nbsp;
-	<td valign=top>NeXT
-	<td>&nbsp;
-	<td><b><tt>/NextLibrary/Fonts/outline</tt></b>
-<tr>	<td>*
-	<td>&nbsp;
-	<td valign=top>SGI IRIX
-	<td>&nbsp;
-	<td><b><tt>/usr/lib/DPS/outline/base
-		<br>/usr/lib/X11/fonts/Type1</tt></b>
-<tr>	<td>&nbsp;
-	<td>&nbsp;
-	<td valign=top>SunOS 4.x<br>(NeWSprint only)
-	<td>&nbsp;
-	<td valign=top><b><tt>newsprint_2.5/SUNWsteNP/reloc/$BASEDIR/NeWSprint/<br>&nbsp;&nbsp;&nbsp;&nbsp;small_openwin/lib/fonts</tt></b>
-<tr>	<td>**
-	<td>&nbsp;
-	<td valign=top>SunOS 4.x
-	<td>&nbsp;
-	<td><b><tt>/usr/openwin/lib/X11/fonts/Type1/outline</tt></b>
-<tr>	<td>**
-	<td>&nbsp;
-	<td valign=top>Solaris 2.x
-	<td>&nbsp;
-	<td><b><tt>/usr/openwin/lib/X11/fonts/Type1/outline</tt></b>
-<tr>	<td>&nbsp;
-	<td>&nbsp;
-	<td valign=top>VMS
-	<td>&nbsp;
-	<td><b><tt>SYS$COMMON:[SYSFONT.XDPS.OUTLINE]</tt></b>
+<tr>    <td>&nbsp;
+        <td>&nbsp;&nbsp;
+        <th align=left>System type
+        <td>&nbsp;&nbsp;
+        <th valign=bottom align=left><b><tt>GS_FONTPATH</tt></b>
+<tr>    <td colspan=5><hr>
+<tr>    <td>&nbsp;
+        <td>&nbsp;
+        <td valign=top>Digital Unix
+        <td>&nbsp;
+        <td><b><tt>/usr/lib/X11/fonts/Type1Adobe</tt></b>
+<tr>    <td>&nbsp;
+        <td>&nbsp;
+        <td valign=top>Ultrix
+        <td>&nbsp;
+        <td><b><tt>/usr/lib/DPS/outline/decwin</tt></b>
+<tr>    <td>&nbsp;
+        <td>&nbsp;
+        <td valign=top>HP-UX 9
+        <td>&nbsp;
+        <td><b><tt>/usr/lib/X11/fonts/type1.st/typefaces</tt></b>
+<tr>    <td>&nbsp;
+        <td>&nbsp;
+        <td valign=top>IBM AIX
+        <td>&nbsp;
+        <td><b><tt>/usr/lpp/DPS/fonts/outlines
+                <br>/usr/lpp/X11/lib/X11/fonts/Type1
+                <br>/usr/lpp/X11/lib/X11/fonts/Type1/DPS</tt></b>
+<tr>    <td>&nbsp;
+        <td>&nbsp;
+        <td valign=top>NeXT
+        <td>&nbsp;
+        <td><b><tt>/NextLibrary/Fonts/outline</tt></b>
+<tr>    <td>*
+        <td>&nbsp;
+        <td valign=top>SGI IRIX
+        <td>&nbsp;
+        <td><b><tt>/usr/lib/DPS/outline/base
+                <br>/usr/lib/X11/fonts/Type1</tt></b>
+<tr>    <td>&nbsp;
+        <td>&nbsp;
+        <td valign=top>SunOS 4.x<br>(NeWSprint only)
+        <td>&nbsp;
+        <td valign=top><b><tt>newsprint_2.5/SUNWsteNP/reloc/$BASEDIR/NeWSprint/<br>&nbsp;&nbsp;&nbsp;&nbsp;small_openwin/lib/fonts</tt></b>
+<tr>    <td>**
+        <td>&nbsp;
+        <td valign=top>SunOS 4.x
+        <td>&nbsp;
+        <td><b><tt>/usr/openwin/lib/X11/fonts/Type1/outline</tt></b>
+<tr>    <td>**
+        <td>&nbsp;
+        <td valign=top>Solaris 2.x
+        <td>&nbsp;
+        <td><b><tt>/usr/openwin/lib/X11/fonts/Type1/outline</tt></b>
+<tr>    <td>&nbsp;
+        <td>&nbsp;
+        <td valign=top>VMS
+        <td>&nbsp;
+        <td><b><tt>SYS$COMMON:[SYSFONT.XDPS.OUTLINE]</tt></b>
 </table>
 
 <hr align=left width="25%">
@@ -936,8 +1066,8 @@ reproduce it.)  See <b><tt>Fontmap.Sol</tt></b> instead.  Also, on Solaris
 and Fontmap.  The fonts Sun distributes on Solaris 2.x in the directories
 
 <blockquote><b><tt>
-	/usr/openwin/lib/X11/fonts/Type1<br>
-	/usr/openwin/lib/X11/fonts/Type1/outline
+        /usr/openwin/lib/X11/fonts/Type1<br>
+        /usr/openwin/lib/X11/fonts/Type1/outline
 </tt></b></blockquote>
 
 <p>
@@ -961,54 +1091,19 @@ Ghostscript distribution (which are of just as good quality), except to save
 about a megabyte of disk space, but the installation documentation explains
 how to do it <a href="Install.htm#Use_Acrobat_fonts_Unix">on Unix</a>.
 
-<h3><a name="Temp_files"></a>Temporary files</h3>
-
-<blockquote><table cellpadding=0 cellspacing=0>
-<tr><th colspan=5 bgcolor="#CCCC00"><hr><font size="+1">Where Ghostscript puts temporary files</font><hr>
-<tr valign=bottom>
-	<th align=left>Platform
-	<td>&nbsp;&nbsp;&nbsp;
-	<th align=left>Filename
-	<td>&nbsp;&nbsp;&nbsp;
-	<th align=left>Location
-<tr>	<td colspan=5><hr>
-<tr valign=top>	<td>MS Windows and OpenVMS
-	<td>&nbsp;
-	<td><b><tt>_temp_</tt></b>XX.XXX
-	<td>&nbsp;
-	<td>Current directory
-<tr valign=top>	<td>OS/2
-	<td>&nbsp;
-	<td><b><tt>gs</tt></b>XXXXXX
-	<td>&nbsp;
-	<td>Current directory
-<tr valign=top>	<td>Unix
-	<td>&nbsp;
-	<td><b><tt>gs_</tt></b>XXXXX
-	<td>&nbsp;
-	<td><b><tt>/tmp</tt></b>
-</table></blockquote>
+<h3><a name="CIDFonts"></a>CID fonts</h2>
 
 <p>
-You can change in which directory Ghostscript creates temporary files by
-setting the <b><tt>TMPDIR</tt></b> or <b><tt>TEMP</tt></b> environment
-variable to the name of the directory you want used.  Ghostscript currently
-doesn't do a very good job of deleting temporary files if it exits because
-of an error; you may have to delete them manually from time to time.
-
-<h2><a name="CIDFontSubstitution"></a>CID font substitution</h2>
-
-<p>
-CID fonts are PostScript resources containing
-large number of glyphs (e.g. glyphs for Far East languages).
+CID fonts are PostScript resources containing a
+large number of glyphs (e.g. glyphs for Far East languages,
+Chinese, Japanese and Korean).
 Please refer to the PostScript Language Reference,
 third edition, for details.
 
-
 <p>
-CID font resources are a different kind of PostScript resources from fonts.
-Particularly they cannot be used as regular fonts.
-CID font resources must first to be combined with a CMap resource, which
+CID font resources are a different kind of PostScript resource from fonts.
+In particular, they cannot be used as regular fonts.
+CID font resources must first be combined with a CMap resource, which
 defines specific codes for glyphs, before it can be used as a font. This 
 allows the reuse of a collection of glyphs with different encodings.
 
@@ -1025,13 +1120,23 @@ the font automatically from the specified CID font and CMap resources.
 Another method is possible using the <b><tt>composefont</tt></b> operator.
 
 <p>
-For substituting CID font resources Ghostscript provides the control file
-<b><tt>lib/cidfmap</tt></b>, which defines a CID font resource map.
-The file forms a table of records, each of which should use one of two formats,
-explained below.
+CID fonts must be placed in the <b><tt>/Resource/CIDFont/</tt></b> directory.
+They are not found using <a href="#Font_lookup">Font lookup</a>
+on the search path or font path.
 
-<p> For substituting a CID font resource to another CID font resource
-a record is a simple pair of names:
+<h3><a name="CIDFontSubstitution"></a>CID font substitution</h3>
+
+<p>
+
+<p>
+Substitution of CID font resources is controlled by the Ghostscript
+configuration file <b><tt>lib/cidfmap</tt></b>, 
+which defines a CID font resource map.
+The file forms a table of records, each of which should use one of two formats,
+explained below. Users may modify <b><tt>lib/cidfmap</tt></b> to configure
+Ghostscript for a specific need.
+
+<p> To substitute a CID font resource with another CID font resource, add a record like this :
 
 <blockquote><b><tt>
 /Substituted /Original ;
@@ -1040,38 +1145,41 @@ where <b><tt>Substituted</tt></b> is a name of CID font resource being used
 by a document, and <b><tt>Original</tt></b> is a name of an available
 CID font resource. Please pay attention that both them must be
 designed for same character collection. In other words, you
-cannot substitute Japanese CID font resource to Korean CID font resource,
+cannot substitute a Japanese CID font resource with a Korean CID font resource,
 etc. CMap resource names must not appear in
 <b><tt>lib/cidfmap</tt></b>. The trailing semicolon and the space before it
 are both required.
 
 <p>
 
-For substituting a TrueType font to a CID font one should use format like this :
+To substitute (emulate) a CID font resource with a TrueType font file, add a record like this :
 
 <blockquote><b><tt>
-/Substituted << keys&values >> ;
+/Substituted &lt;&lt; keys&amp;values &gt;&gt; ;
 </tt></b></blockquote>
 
-Where <b><tt>keys&values</tt></b> are explained in the table below.
+Where <b><tt>keys&amp;values</tt></b> are explained in the table below.
 
 <table cellpadding=0 cellspacing=10>
 
-<tr>	<th>Key
-	<th>Type
-	<th>Description
-<tr>	<td><tt>/Path</tt>
+<tr valign="top">       <th>Key
+        <th>Type
+        <th>Description
+<tr valign="top">       <td><b><tt>/Path</tt></b>
         <td>string
-        <td>A path to a TrueType font file.
-<tr>	<td><tt>/FileType</tt>
+        <td>A path to a TrueType font file.  This must be an absolute path.
+        If using <b><tt><a href="#Safer">-dSAFER</a></b></tt>, the directory 
+        containing the font file must be on one of the permitted paths.
+<tr valign="top">       <td><b><tt>/FileType</tt></b>
         <td>name
         <td>Must be <b><tt>/TrueType</tt></b>.
-<tr>	<td><tt>/SubfontID</tt>
+<tr valign="top">       <td><b><tt>/SubfontID</tt></b>
         <td>integer
         <td>(optional) Index of the font in font collection, such as TTC.
-            This is ignored if Path doesn't specify a collection.
+            This is ignored if <b><tt>Path</tt></b> doesn't specify a collection.
+            The first font in a collection is 0.
             Default value is 0.
-<tr>	<td><tt>/CSI</tt>
+<tr valign="top">       <td><b><tt>/CSI</tt></b>
         <td>array of 2 elements
         <td>(required) Information for building <b><tt>CIDSystemInfo</tt></b>.
             The first element is a string, which specifies <b><tt>Ordering</tt></b>.
@@ -1080,26 +1188,113 @@ Where <b><tt>keys&values</tt></b> are explained in the table below.
 
 <p>
 Currently only CIDFontType 2 can be emulated with a TrueType font.
-The TrueType font must contain enough charasters to cover an
-Adobe character collection, which is specified in <b><tt>Ordering</tt></b>.
+The TrueType font must contain enough characters to cover an
+Adobe character collection, which is specified in <b><tt>Ordering</tt></b> and used in documents.
 
 <p>
 Examples :
 
 
 <blockquote><b><tt>
-/Ryumin-Medium  /ShinGo-Bold ;
-</tt></b></blockquote>
-<blockquote><b><tt>
-/Ryumin-Light   << /FileType /TrueType /Path (F:/WIN2000/Fonts/ARIALUNI.TTF) /SubfontID 3 /CSI [(Japan1) 2] >> ;
+/Ryumin-Medium  /ShinGo-Bold ;<br>
+/MS-Mincho &lt;&lt; /FileType /TrueType /Path (C:/WINDOWS/fonts/msmincho.ttc) /SubfontID 0 /CSI [(Japan1) 3] &gt;&gt; ;<br>
+/Ryumin-Light /MS-Mincho ;<br>
+<br>
+/Batang &lt;&lt; /FileType /TrueType /Path (C:/WINDOWS/fonts/batang.ttc) /SubfontID 0 /CSI [(Korea1) 3] &gt;&gt; ;<br>
+/Gulim &lt;&lt; /FileType /TrueType /Path (C:/WINDOWS/fonts/gulim.ttc) /SubfontID 0 /CSI [(Korea1) 3] &gt;&gt; ;<br>
+/Dotum &lt;&lt; /FileType /TrueType /Path (C:/WINDOWS/fonts/gulim.ttc) /SubfontID 2 /CSI [(Korea1) 3] &gt;&gt; ;<br>
+/HYSMyeongJo-Medium /Batang ;<br>
+/HYRGoThic-Medium /Gulim ;<br>
+/HYGoThic-Medium /Dotum ;<br>
+<br>
+/SimSun &lt;&lt; /FileType /TrueType /Path (C:/WINDOWS/fonts/simsun.ttc) /SubfontID 0 /CSI [(GB1) 2] &gt;&gt; ;<br>
+/SimHei &lt;&lt; /FileType /TrueType /Path (C:/WINDOWS/fonts/simhei.ttf) /SubfontID 0 /CSI [(GB1) 2] &gt;&gt; ;<br>
+/STSong-Light /SimSun ;<br>
+/STHeiti-Regular /SimHei ;<br>
 </tt></b></blockquote>
 
 <p>
-Note that loading truetype fonts directly from /Resources/CIDFont is no longer
-supported. There is no reliable way to generate a character ordering for truetype
+Note that the font file path uses Postscript syntax for strings.
+Due to that backslashes must be represented as a double backslash each.
+
+<p>
+Note that loading truetype fonts directly from 
+<b>><tt>/Resources/CIDFont</tt></b> is no longer supported. 
+There is no reliable way to generate a character ordering for truetype
 fonts. The 7.0x versions of Ghostscript supported this by assuming a Japanese
 character ordering. This is replaced in the 8.0x and later releases with the more
 general <b><tt>cidfmap</tt></b> mechanism.
+
+<p>
+The PDF specification requires CID font files to be embedded,
+however some documents omit them. As a workaround
+the PDF interpreter applies an additional substitution method when 
+a requested CID font resource is not embedded and it is not available.
+It takes values of the keys <b><tt>Registry</b></tt> and <b><tt>Ordering</b></tt>
+from the <b><tt>CIDFontSystem</b></tt> dictionary,
+and concatenates them with a dash inserted.
+For example, if a PDF CID font resource specifies 
+<blockquote><b><tt>
+/CIDSystemInfo &lt;&lt; /Registry (Adobe) /Ordering (CNS1) /Supplement 1 &gt;&gt;
+</tt></b></blockquote>
+the generated subsitituite name is <b><tt>Adobe-CNS1</b></tt>.
+The latter may look some confusing for a font name,
+but we keep it for compatibility with older Ghostscript versions,
+which do so due to a historical reason.
+Add a proper record to <b><tt>lib/cidfmap</b></tt> to provide it.
+
+<p>
+Please note that when a PDF font resource specifies
+<blockquote><b><tt> 
+/Registry (Adobe) /Ordering (Identity)
+</tt></b></blockquote>
+there is no way to determine the language properly.
+If the CID font file is not embedded, the <b><tt>Adobe-Identity</b></tt> 
+record depends on the document and a correct record isn't possible when
+a document refers to multiple Far East languages.
+In the latter case add individual records for specific CID font names used in the document.
+
+<p>
+Consequently, if you want to handle any PDF document with 
+non-embedded CID fonts (which isn't a correct PDF),
+you need to create a suitable <b><tt>lib/cidfmap</tt></b> by hand,
+possibly a specific one for each document.
+
+<h3><a name="Temp_files"></a>Temporary files</h3>
+
+<blockquote><table cellpadding=0 cellspacing=0>
+<tr><th colspan=5 bgcolor="#CCCC00"><hr><font size="+1">Where Ghostscript puts temporary files</font><hr>
+<tr valign=bottom>
+        <th align=left>Platform
+        <td>&nbsp;&nbsp;&nbsp;
+        <th align=left>Filename
+        <td>&nbsp;&nbsp;&nbsp;
+        <th align=left>Location
+<tr>    <td colspan=5><hr>
+<tr valign=top> <td>MS Windows and OpenVMS
+        <td>&nbsp;
+        <td><b><tt>_temp_</tt></b>XX.XXX
+        <td>&nbsp;
+        <td>Current directory
+<tr valign=top> <td>OS/2
+        <td>&nbsp;
+        <td><b><tt>gs</tt></b>XXXXXX
+        <td>&nbsp;
+        <td>Current directory
+<tr valign=top> <td>Unix
+        <td>&nbsp;
+        <td><b><tt>gs_</tt></b>XXXXX
+        <td>&nbsp;
+        <td><b><tt>/tmp</tt></b>
+</table></blockquote>
+
+<p>
+You can change in which directory Ghostscript creates temporary files by
+setting the <b><tt>TMPDIR</tt></b> or <b><tt>TEMP</tt></b> environment
+variable to the name of the directory you want used.  Ghostscript currently
+doesn't do a very good job of deleting temporary files if it exits because
+of an error; you may have to delete them manually from time to time.
+
 
 <hr>
 
@@ -1254,7 +1449,7 @@ If you are using on an X Windows display, you can set it up with the node
 name and network transport, for instance
 
 <blockquote><b><tt>
-	$ set display/create/node="doof.city.com"/transport=tcpip
+        $ set display/create/node="doof.city.com"/transport=tcpip
 </tt></b></blockquote>
 
 <p>
@@ -1314,117 +1509,117 @@ calculated from display metrics:
 
 <blockquote><table cellpadding=0 cellspacing=0>
 <tr><th colspan=5 bgcolor="#CCCC00"><hr><font size="+1">X Windows resources</font><hr>
-<tr>	<th align=left>Name
-	<td>&nbsp;&nbsp;
-	<th align=left>Class
-	<td>&nbsp;&nbsp;
-	<th align=left>Default
-<tr>	<td colspan=5><hr>
-<tr>	<td><b><tt>background</tt></b>
-	<td>&nbsp;
-	<td><b><tt>Background</tt></b>
-	<td>&nbsp;
-	<td><b><tt>white</tt></b>
-<tr>	<td><b><tt>foreground</tt></b>
-	<td>&nbsp;
-	<td><b><tt>Foreground</tt></b>
-	<td>&nbsp;
-	<td><b><tt>black</tt></b>
-<tr>	<td><b><tt>borderColor</tt></b>
-	<td>&nbsp;
-	<td><b><tt>BorderColor</tt></b>
-	<td>&nbsp;
-	<td><b><tt>black</tt></b>
-<tr>	<td><b><tt>borderWidth</tt></b>
-	<td>&nbsp;
-	<td><b><tt>BorderWidth</tt></b>
-	<td>&nbsp;
-	<td><b><tt>1</tt></b>
-<tr>	<td><b><tt>geometry</tt></b>
-	<td>&nbsp;
-	<td><b><tt>Geometry</tt></b>
-	<td>&nbsp;
-	<td><b><tt>NULL</tt></b>
-<tr>	<td><b><tt>xResolution</tt></b>
-	<td>&nbsp;
-	<td><b><tt>Resolution</tt></b>
-	<td>&nbsp;
-	<td>**
-<tr>	<td><b><tt>yResolution</tt></b>
-	<td>&nbsp;
-	<td><b><tt>Resolution</tt></b>
-	<td>&nbsp;
-	<td>**
-<tr>	<td><b><tt>useExternalFonts</tt></b>
-	<td>&nbsp;
-	<td><b><tt>UseExternalFonts</tt></b>
-	<td>&nbsp;
-	<td><b><tt>true</tt></b>
-<tr>	<td><b><tt>useScalableFonts</tt></b>
-	<td>&nbsp;
-	<td><b><tt>UseScalableFonts</tt></b>
-	<td>&nbsp;
-	<td><b><tt>true</tt></b>
-<tr>	<td><b><tt>logExternalFonts</tt></b>
-	<td>&nbsp;
-	<td><b><tt>LogExternalFonts</tt></b>
-	<td>&nbsp;
-	<td><b><tt>false</tt></b>
-<tr>	<td><b><tt>externalFontTolerance</tt></b>
-	<td>&nbsp;
-	<td><b><tt>ExternalFontTolerance</tt></b>
-	<td>&nbsp;
-	<td><b><tt>10.0</tt></b>
-<tr>	<td><b><tt>palette</tt></b>
-	<td>&nbsp;
-	<td><b><tt>Palette</tt></b>
-	<td>&nbsp;
-	<td><b><tt>Color</tt></b>
-<tr>	<td><b><tt>maxGrayRamp</tt></b>
-	<td>&nbsp;
-	<td><b><tt>MaxGrayRamp</tt></b>
-	<td>&nbsp;
-	<td><b><tt>128</tt></b>
-<tr>	<td><b><tt>maxRGBRamp</tt></b>
-	<td>&nbsp;
-	<td><b><tt>MaxRGBRamp</tt></b>
-	<td>&nbsp;
-	<td><b><tt>5</tt></b>
-<tr>	<td><b><tt>maxDynamicColors</tt></b>
-	<td>&nbsp;
-	<td><b><tt>MaxDynamicColors</tt></b>
-	<td>&nbsp;
-	<td><b><tt>256</tt></b>
-<tr>	<td><b><tt>useBackingPixmap</tt></b>
-	<td>&nbsp;
-	<td><b><tt>UseBackingPixmap</tt></b>
-	<td>&nbsp;
-	<td><b><tt>true</tt></b>
-<tr>	<td><b><tt>useXPutImage</tt></b>
-	<td>&nbsp;
-	<td><b><tt>UseXPutImage</tt></b>
-	<td>&nbsp;
-	<td><b><tt>true</tt></b>
-<tr>	<td><b><tt>useXSetTile</tt></b>
-	<td>&nbsp;
-	<td><b><tt>UseXSetTile</tt></b>
-	<td>&nbsp;
-	<td><b><tt>true</tt></b>
-<tr>	<td><b><tt>regularFonts</tt></b>
-	<td>&nbsp;
-	<td><b><tt>RegularFonts</tt></b>
-	<td>&nbsp;
-	<td>See "<a href="#X_fonts">X fonts</a>"
-<tr>	<td><b><tt>symbolFonts</tt></b>
-	<td>&nbsp;
-	<td><b><tt>SymbolFonts</tt></b>
-	<td>&nbsp;
-	<td>See "<a href="#X_fonts">X fonts</a>"
-<tr>	<td><b><tt>dingbatFonts</tt></b>
-	<td>&nbsp;
-	<td><b><tt>DingbatFonts</tt></b>
-	<td>&nbsp;
-	<td>See "<a href="#X_fonts">X fonts</a>"
+<tr>    <th align=left>Name
+        <td>&nbsp;&nbsp;
+        <th align=left>Class
+        <td>&nbsp;&nbsp;
+        <th align=left>Default
+<tr>    <td colspan=5><hr>
+<tr>    <td><b><tt>background</tt></b>
+        <td>&nbsp;
+        <td><b><tt>Background</tt></b>
+        <td>&nbsp;
+        <td><b><tt>white</tt></b>
+<tr>    <td><b><tt>foreground</tt></b>
+        <td>&nbsp;
+        <td><b><tt>Foreground</tt></b>
+        <td>&nbsp;
+        <td><b><tt>black</tt></b>
+<tr>    <td><b><tt>borderColor</tt></b>
+        <td>&nbsp;
+        <td><b><tt>BorderColor</tt></b>
+        <td>&nbsp;
+        <td><b><tt>black</tt></b>
+<tr>    <td><b><tt>borderWidth</tt></b>
+        <td>&nbsp;
+        <td><b><tt>BorderWidth</tt></b>
+        <td>&nbsp;
+        <td><b><tt>1</tt></b>
+<tr>    <td><b><tt>geometry</tt></b>
+        <td>&nbsp;
+        <td><b><tt>Geometry</tt></b>
+        <td>&nbsp;
+        <td><b><tt>NULL</tt></b>
+<tr>    <td><b><tt>xResolution</tt></b>
+        <td>&nbsp;
+        <td><b><tt>Resolution</tt></b>
+        <td>&nbsp;
+        <td>**
+<tr>    <td><b><tt>yResolution</tt></b>
+        <td>&nbsp;
+        <td><b><tt>Resolution</tt></b>
+        <td>&nbsp;
+        <td>**
+<tr>    <td><b><tt>useExternalFonts</tt></b>
+        <td>&nbsp;
+        <td><b><tt>UseExternalFonts</tt></b>
+        <td>&nbsp;
+        <td><b><tt>true</tt></b>
+<tr>    <td><b><tt>useScalableFonts</tt></b>
+        <td>&nbsp;
+        <td><b><tt>UseScalableFonts</tt></b>
+        <td>&nbsp;
+        <td><b><tt>true</tt></b>
+<tr>    <td><b><tt>logExternalFonts</tt></b>
+        <td>&nbsp;
+        <td><b><tt>LogExternalFonts</tt></b>
+        <td>&nbsp;
+        <td><b><tt>false</tt></b>
+<tr>    <td><b><tt>externalFontTolerance</tt></b>
+        <td>&nbsp;
+        <td><b><tt>ExternalFontTolerance</tt></b>
+        <td>&nbsp;
+        <td><b><tt>10.0</tt></b>
+<tr>    <td><b><tt>palette</tt></b>
+        <td>&nbsp;
+        <td><b><tt>Palette</tt></b>
+        <td>&nbsp;
+        <td><b><tt>Color</tt></b>
+<tr>    <td><b><tt>maxGrayRamp</tt></b>
+        <td>&nbsp;
+        <td><b><tt>MaxGrayRamp</tt></b>
+        <td>&nbsp;
+        <td><b><tt>128</tt></b>
+<tr>    <td><b><tt>maxRGBRamp</tt></b>
+        <td>&nbsp;
+        <td><b><tt>MaxRGBRamp</tt></b>
+        <td>&nbsp;
+        <td><b><tt>5</tt></b>
+<tr>    <td><b><tt>maxDynamicColors</tt></b>
+        <td>&nbsp;
+        <td><b><tt>MaxDynamicColors</tt></b>
+        <td>&nbsp;
+        <td><b><tt>256</tt></b>
+<tr>    <td><b><tt>useBackingPixmap</tt></b>
+        <td>&nbsp;
+        <td><b><tt>UseBackingPixmap</tt></b>
+        <td>&nbsp;
+        <td><b><tt>true</tt></b>
+<tr>    <td><b><tt>useXPutImage</tt></b>
+        <td>&nbsp;
+        <td><b><tt>UseXPutImage</tt></b>
+        <td>&nbsp;
+        <td><b><tt>true</tt></b>
+<tr>    <td><b><tt>useXSetTile</tt></b>
+        <td>&nbsp;
+        <td><b><tt>UseXSetTile</tt></b>
+        <td>&nbsp;
+        <td><b><tt>true</tt></b>
+<tr>    <td><b><tt>regularFonts</tt></b>
+        <td>&nbsp;
+        <td><b><tt>RegularFonts</tt></b>
+        <td>&nbsp;
+        <td>See "<a href="#X_fonts">X fonts</a>"
+<tr>    <td><b><tt>symbolFonts</tt></b>
+        <td>&nbsp;
+        <td><b><tt>SymbolFonts</tt></b>
+        <td>&nbsp;
+        <td>See "<a href="#X_fonts">X fonts</a>"
+<tr>    <td><b><tt>dingbatFonts</tt></b>
+        <td>&nbsp;
+        <td><b><tt>DingbatFonts</tt></b>
+        <td>&nbsp;
+        <td>See "<a href="#X_fonts">X fonts</a>"
 </table></blockquote>
 
 <h4><a name="X_resources"></a>X resources</h4>
@@ -1444,7 +1639,7 @@ To set X resources, put them in a file (such as
 Then merge these resources into the X server's resource database:
 
 <blockquote><b><tt>
-	xrdb -merge ~/.Xdefaults
+        xrdb -merge ~/.Xdefaults
 </tt></b></blockquote>
 
 <li>
@@ -1485,30 +1680,30 @@ The "<b><tt>use</tt></b>..." resources exist primarily to work around bugs
 in X servers.
 
 <ul>
-<li>	Old versions of DEC's X server (DECwindows) have bugs that
-	require setting <b><tt>useXPutImage</tt></b> or
-	<b><tt>useXSetTile</tt></b> to
-	<b><tt>false</tt></b>.
+<li>    Old versions of DEC's X server (DECwindows) have bugs that
+        require setting <b><tt>useXPutImage</tt></b> or
+        <b><tt>useXSetTile</tt></b> to
+        <b><tt>false</tt></b>.
 
-<li>	Some servers do not implement backing pixmaps properly, or do not
-	have enough memory for them.  If you get strange behavior or "out
-	of memory" messages, try setting
-	<b><tt>useBackingPixmap</tt></b> to
-	<b><tt>false</tt></b>.
+<li>    Some servers do not implement backing pixmaps properly, or do not
+        have enough memory for them.  If you get strange behavior or "out
+        of memory" messages, try setting
+        <b><tt>useBackingPixmap</tt></b> to
+        <b><tt>false</tt></b>.
 
-<li>	Some servers do not implement tiling properly.  This appears
-	as broad bands of color where dither patterns should appear.  If
-	this happens, try setting
-	<b><tt>useXSetTile</tt></b> to
-	<b><tt>false</tt></b>.
+<li>    Some servers do not implement tiling properly.  This appears
+        as broad bands of color where dither patterns should appear.  If
+        this happens, try setting
+        <b><tt>useXSetTile</tt></b> to
+        <b><tt>false</tt></b>.
 
-<li>	Some servers do not implement bitmap or pixmap displaying properly.
-	This may appear as white or black rectangles where characters
-	should appear; or characters may appear in "inverse video" (for
-	instance, white on a black rectangle rather than black on white).
-	If this happens, try setting
-	<b><tt>useXPutImage</tt></b> to
-	<b><tt>false</tt></b>.
+<li>    Some servers do not implement bitmap or pixmap displaying properly.
+        This may appear as white or black rectangles where characters
+        should appear; or characters may appear in "inverse video" (for
+        instance, white on a black rectangle rather than black on white).
+        If this happens, try setting
+        <b><tt>useXPutImage</tt></b> to
+        <b><tt>false</tt></b>.
 </ul>
 
 <h4><a name="X_fonts"></a>X fonts</h4>
@@ -1833,6 +2028,12 @@ both are specified.
 <dt><b><tt>-dGraphicsAlphaBits=</tt></b><em>n</em>
 <dd>These options control the use of subsample antialiasing. Their use is highly recommended for producing high quality rasterizations. The subsampling box size <em>n</em> should be 4 for optimum output, but smaller values can be used for faster rendering. Antialiasing is enabled separately for text and graphics content.
 Allowed values are 1, 2 or 4.
+<p>
+Note that because of the way antialiasing blends the edges of shapes into the background when
+they are drawn some files that rely on joining separate filled polygons together to cover
+an area may not render as expected with <tt>GraphicsAlphaBits</tt> at 2 or 4. If you encounter
+strange lines within solid areas, try rendering that file again with
+<tt>-dGraphicsAlphaBits=1</tt>.
 </dl>
 
 <dl>
@@ -1846,7 +2047,7 @@ in character cache.
 
 <p>
 The parameter has no effect if <b><tt>-dTextAlphaBits=1</tt></b>.
-Default value is 1.
+Default value is 0.
 
 <p>
 Setting <b><tt>-dAlignToPixels=0</tt></b> can improve rendering
@@ -1856,22 +2057,15 @@ of poorly hinted fonts, but may impair the appearance of well-hinted fonts.
 <dl>
 <dt><b><tt>-dGridFitTT=</tt></b><em>n</em>
 <dd> This specifies the initial value for the implementation specific
-user parameter <b><tt>GridFitTT</tt></b>.
-It controls a grid fitting of True Type fonts
-(Some people call it "hinting", but stronly speaking
-the latter is a Type 1 feature).
-Setting this to 1 enables grid fitting for True Type glyphs
-that don't involve patented instructions. The value 0 disables grid 
-fitting for all True Type fonts. The default value is 0.
+user parameter <a href="Language.htm#GridFitTT">GridFitTT</a>.
+It controls grid fitting of True Type fonts
+(Sometimes referred to as "hinting", but strictly speaking
+the latter is a feature of Type 1 fonts).
+Setting this to 2 enables automatic grid fitting for True Type glyphs.
+The value 0 disables grid fitting. The default value is 2.
+For more information see the description of the user parameter
+<a href="Language.htm#GridFitTT">GridFitTT</a>.
 
-<p>
-Setting <b><tt>-dGridFitTT=1</tt></b> may improve rendering
-of True Type fonts. In particular, some fonts rely on the grid fitting 
-instructions for proper rasterization.
-Ghostscript only supports the freely-implementable subset of grid 
-fitting instructions. If a patented instruction is encountered, a 
-warning is printed to <tt>stderr</tt> and the glyph is rendered with no 
-grid fitting.
 </dl>
 
 <dl>
@@ -2059,7 +2253,7 @@ rendering.
 The value is platform dependent. It must end with a directory separator.
 <p>
 Adobe specifies <b><tt>GenericResourceDir</tt></b> to be an absolute path
-to a single resource directory. Instead that, Ghostscript maintains
+to a single resource directory. Ghostscript instead maintains
 multiple resource directories and uses an extended method for finding
 resources, which is explained in  
 <a href="PS_resources">"Finding PostScript Level 2 resources"</a>.
@@ -2450,82 +2644,82 @@ usage.
 
 <table cellpadding=0 cellspacing=0>
 <tr><th colspan=5 bgcolor="#CCCC00"><hr><font size="+1">Switches used in debugging</font><hr>
-<tr>	<th align=left>Switch
-	<td>&nbsp;&nbsp;
-	<th align=left>Equivalent
-	<td>&nbsp;&nbsp;
-	<th>&nbsp;
-<tr>	<td colspan=5><hr>
-<tr>	<td valign=top><b><tt>-A</tt></b>
-	<td>&nbsp;
-	<td valign=top><b><tt>-Z@</tt></b>
-	<td>&nbsp;
-	<td>Fill empty storage with a distinctive bit pattern for debugging
+<tr>    <th align=left>Switch
+        <td>&nbsp;&nbsp;
+        <th align=left>Equivalent
+        <td>&nbsp;&nbsp;
+        <th>&nbsp;
+<tr>    <td colspan=5><hr>
+<tr>    <td valign=top><b><tt>-A</tt></b>
+        <td>&nbsp;
+        <td valign=top><b><tt>-Z@</tt></b>
+        <td>&nbsp;
+        <td>Fill empty storage with a distinctive bit pattern for debugging
 
-<tr>	<td valign=top><b><tt>-A-</tt></b>
-	<td>&nbsp;
-	<td valign=top><b><tt>-Z-@</tt></b>
-	<td>&nbsp;
-	<td>Turn off <b><tt>-A</tt></b>
-<tr>	<td valign=top><b><tt>-B</tt></b><em>size</em>
-	<td>&nbsp;
-	<td>&nbsp;
-	<td>&nbsp;
-	<td>Run all subsequent files named on the command line (except for
-	    <b><tt>-F</tt></b>) through the run_string interface, using a
-	    buffer of <em>size</em> bytes
-<tr>	<td valign=top><b><tt>-B-</tt></b>
-	<td>&nbsp;
-	<td>&nbsp;
-	<td>&nbsp;
-	<td>Turn off <b><tt>-B</tt></b>: run subsequent files (except for
-	    <b><tt>-F</tt></b>) directly in the normal way
-<tr>	<td valign=top><b><tt>-E</tt></b>
-	<td>&nbsp;
-	<td valign=top><b><tt>-Z#</tt></b>
-	<td>&nbsp;
-	<td>Turn on tracing of error returns from operators
-<tr>	<td valign=top><b><tt>-E-</tt></b>
-	<td>&nbsp;
-	<td valign=top><b><tt>-Z-#</tt></b>
-	<td>&nbsp;
-	<td>Turn off <b><tt>-E</tt></b>
-<tr>	<td valign=top><b><tt>-F</tt></b><em>file</em>
-	<td>&nbsp;
-	<td>&nbsp;
-	<td>&nbsp;
-	<td>Execute the file with <b><tt>-B1</tt></b> temporarily in effect
-<tr>	<td valign=top><b><tt>-K</tt></b><em>n</em>
-	<td>&nbsp;
-	<td>&nbsp;
-	<td>&nbsp;
-	<td>Limit the total amount of memory that the interpreter can have
-	    allocated at any one time to <b><em>n</em></b>K bytes.
-	    <b><em>n</em></b> is a positive decimal integer.
-<tr>	<td valign=top><b><tt>-M</tt></b><em>n</em>
-	<td>&nbsp;
-	<td>&nbsp;
-	<td>&nbsp;
-	<td>Force the interpreter's allocator to acquire additional memory
-	    in units of <b><em>n</em></b>K bytes, rather than the default
-	    (currently 20K on DOS systems, 50K on Unix). <b><em>n</em></b>
-	    is a positive decimal integer, on DOS systems no greater than
-	    63.
-<tr>	<td valign=top><b><tt>-N</tt></b><em>n</em>
-	<td>&nbsp;
-	<td>&nbsp;
-	<td>&nbsp;
-	<td>Allocate space for <b><em>n</em></b>K names, rather than the
-	    default (normally 64K).  <b><em>n</em></b> may be greater than
-	    64 only if <b><tt>EXTEND_NAMES</tt></b> was defined when the
-	    interpreter was compiled .
-<tr>	<td valign=top><b><tt>-Z</tt></b><em>xxx</em><br><b><tt>-Z-</tt></b><em>xxx</em>
-	<td>&nbsp;
-	<td>&nbsp;
-	<td>&nbsp;
-	<td>Turn debugging printout on (off). Each of the <em>xxx</em>
-	    characters selects an option.  Case is significant: "a" and
-	    "A" have different meanings.
+<tr>    <td valign=top><b><tt>-A-</tt></b>
+        <td>&nbsp;
+        <td valign=top><b><tt>-Z-@</tt></b>
+        <td>&nbsp;
+        <td>Turn off <b><tt>-A</tt></b>
+<tr>    <td valign=top><b><tt>-B</tt></b><em>size</em>
+        <td>&nbsp;
+        <td>&nbsp;
+        <td>&nbsp;
+        <td>Run all subsequent files named on the command line (except for
+            <b><tt>-F</tt></b>) through the run_string interface, using a
+            buffer of <em>size</em> bytes
+<tr>    <td valign=top><b><tt>-B-</tt></b>
+        <td>&nbsp;
+        <td>&nbsp;
+        <td>&nbsp;
+        <td>Turn off <b><tt>-B</tt></b>: run subsequent files (except for
+            <b><tt>-F</tt></b>) directly in the normal way
+<tr>    <td valign=top><b><tt>-E</tt></b>
+        <td>&nbsp;
+        <td valign=top><b><tt>-Z#</tt></b>
+        <td>&nbsp;
+        <td>Turn on tracing of error returns from operators
+<tr>    <td valign=top><b><tt>-E-</tt></b>
+        <td>&nbsp;
+        <td valign=top><b><tt>-Z-#</tt></b>
+        <td>&nbsp;
+        <td>Turn off <b><tt>-E</tt></b>
+<tr>    <td valign=top><b><tt>-F</tt></b><em>file</em>
+        <td>&nbsp;
+        <td>&nbsp;
+        <td>&nbsp;
+        <td>Execute the file with <b><tt>-B1</tt></b> temporarily in effect
+<tr>    <td valign=top><b><tt>-K</tt></b><em>n</em>
+        <td>&nbsp;
+        <td>&nbsp;
+        <td>&nbsp;
+        <td>Limit the total amount of memory that the interpreter can have
+            allocated at any one time to <b><em>n</em></b>K bytes.
+            <b><em>n</em></b> is a positive decimal integer.
+<tr>    <td valign=top><b><tt>-M</tt></b><em>n</em>
+        <td>&nbsp;
+        <td>&nbsp;
+        <td>&nbsp;
+        <td>Force the interpreter's allocator to acquire additional memory
+            in units of <b><em>n</em></b>K bytes, rather than the default
+            (currently 20K on DOS systems, 50K on Unix). <b><em>n</em></b>
+            is a positive decimal integer, on DOS systems no greater than
+            63.
+<tr>    <td valign=top><b><tt>-N</tt></b><em>n</em>
+        <td>&nbsp;
+        <td>&nbsp;
+        <td>&nbsp;
+        <td>Allocate space for <b><em>n</em></b>K names, rather than the
+            default (normally 64K).  <b><em>n</em></b> may be greater than
+            64 only if <b><tt>EXTEND_NAMES</tt></b> was defined when the
+            interpreter was compiled .
+<tr>    <td valign=top><b><tt>-Z</tt></b><em>xxx</em><br><b><tt>-Z-</tt></b><em>xxx</em>
+        <td>&nbsp;
+        <td>&nbsp;
+        <td>&nbsp;
+        <td>Turn debugging printout on (off). Each of the <em>xxx</em>
+            characters selects an option.  Case is significant: "a" and
+            "A" have different meanings.
 
 <dl compact>
 <dt><b><tt>0</tt></b><dd>garbage collector, minimal detail
@@ -2617,16 +2811,20 @@ storage with a marker (a1, c1, and f1 respectively)
 </dl>
 
 <p>
-<tr>	<td valign=top><b><tt>-T</tt></b><em>xxx</em><br><b><tt>-T-</tt></b><em>xxx</em>
-	<td>&nbsp;
-	<td>&nbsp;
-	<td>&nbsp;
-	<td>Turn <a href="#Visual_trace">Visual Trace</a> on (off). Each of the <em>xxx</em>
-	    characters selects an option.  Case is significant: "f" and
-	    "F" have different meanings.
+<tr>    <td valign=top><b><tt>-T</tt></b><em>xxx</em><br><b><tt>-T-</tt></b><em>xxx</em>
+        <td>&nbsp;
+        <td>&nbsp;
+        <td>&nbsp;
+        <td>Turn <a href="#Visual_trace">Visual Trace</a> on (off). Each of the <em>xxx</em>
+            characters selects an option.  Case is significant: "f" and
+            "F" have different meanings.
 
 <dl compact>
-<dt><b><tt>f</tt></b><dd>filling algorithm
+<dt><b><tt>f</tt></b><dd>the filling algorithm with characters
+<dt><b><tt>F</tt></b><dd>the filling algorithm with non-character paths
+<dt><b><tt>h</tt></b><dd>the Type 1 hinter
+<dt><b><tt>s</tt></b><dd>the shading algorithm
+<dt><b><tt>S</tt></b><dd>the stroking algorithm
 </dl>
 </table>
   
@@ -2675,141 +2873,141 @@ guide to international paper sizes can be found at
 <table cellpadding=0 cellspacing=0>
 <tr><th colspan=13 bgcolor="#CCCC00"><hr><font size="+1">Paper sizes known to Ghostscript</font><hr>
 <tr><th colspan=13>U.S. standard
-<tr>	<td>&nbsp;
-	<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<th colspan=3>Inches
-	<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<th colspan=3>mm
-	<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<th colspan=3>Points
-	<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<td>&nbsp;
-<tr>	<th align=left>Name
-	<td>&nbsp;
-	<th>&nbsp;W&nbsp;
-	<td>&times;
-	<th>&nbsp;H&nbsp;
-	<td>&nbsp;
-	<th>&nbsp;W&nbsp;
-	<td>&times;
-	<th>&nbsp;H&nbsp;
-	<td>&nbsp;
-	<th>&nbsp;W&nbsp;
-	<td>&times;
-	<th>&nbsp;H&nbsp;
-	<td>&nbsp;
-	<td>&nbsp;
-<tr>	<td colspan=13><hr>
-<tr>	<td>11x17
-	<td>&nbsp;&nbsp;<td align=right>11.0<td>&nbsp;&nbsp;<td align=right>17.0<td>&nbsp;&nbsp;<td align=right>279<td>&nbsp;&nbsp;<td align=right>432<td>&nbsp;&nbsp;<td align=right>792<td>&nbsp;&nbsp;<td align=right>1224<td>&nbsp;&nbsp;<td>11&times;17in portrait
-<tr>	<td>ledger
-	<td>&nbsp;<td align=right>17.0<td>&nbsp;<td align=right>11.0<td>&nbsp;<td align=right>432<td>&nbsp;<td align=right>279<td>&nbsp;<td align=right>1224<td>&nbsp;<td align=right>792<td>&nbsp;<td>11&times;17in landscape
-<tr>	<td>legal
-	<td>&nbsp;<td align=right>8.5<td>&nbsp;<td align=right>14.0<td>&nbsp;<td align=right>216<td>&nbsp;<td align=right>356<td>&nbsp;<td align=right>612<td>&nbsp;<td align=right>1008<td>&nbsp;<td>&nbsp;
-<tr>	<td>letter
-	<td>&nbsp;<td align=right>8.5<td>&nbsp;<td align=right>11.0<td>&nbsp;<td align=right>216<td>&nbsp;<td align=right>279<td>&nbsp;<td align=right>612<td>&nbsp;<td align=right>792<td>&nbsp;<td>&nbsp;
-<tr>	<td>lettersmall
-	<td>&nbsp;<td align=right>8.5<td>&nbsp;<td align=right>11.0<td>&nbsp;<td align=right>216<td>&nbsp;<td align=right>279<td>&nbsp;<td align=right>612<td>&nbsp;<td align=right>792<td>&nbsp;<td>&nbsp;
-<tr>	<td>archE
-	<td>&nbsp;<td align=right>36.0<td>&nbsp;<td align=right>48.0<td>&nbsp;<td align=right>914<td>&nbsp;<td align=right>1219<td>&nbsp;<td align=right>2592<td>&nbsp;<td align=right>3456<td>&nbsp;<td>&nbsp;
-<tr>	<td>archD
-	<td>&nbsp;<td align=right>24.0<td>&nbsp;<td align=right>36.0<td>&nbsp;<td align=right>610<td>&nbsp;<td align=right>914<td>&nbsp;<td align=right>1728<td>&nbsp;<td align=right>2592<td>&nbsp;<td>&nbsp;
-<tr>	<td>archC
-	<td>&nbsp;<td align=right>18.0<td>&nbsp;<td align=right>24.0<td>&nbsp;<td align=right>457<td>&nbsp;<td align=right>610<td>&nbsp;<td align=right>1296<td>&nbsp;<td align=right>1728<td>&nbsp;<td>&nbsp;
-<tr>	<td>archB
-	<td>&nbsp;<td align=right>12.0<td>&nbsp;<td align=right>18.0<td>&nbsp;<td align=right>305<td>&nbsp;<td align=right>457<td>&nbsp;<td align=right>864<td>&nbsp;<td align=right>1296<td>&nbsp;<td>&nbsp;
-<tr>	<td>archA
-	<td>&nbsp;<td align=right>9.0<td>&nbsp;<td align=right>12.0<td>&nbsp;<td align=right>229<td>&nbsp;<td align=right>305<td>&nbsp;<td align=right>648<td>&nbsp;<td align=right>864<td>&nbsp;<td>&nbsp;
-<tr>	<td colspan=13><hr>
+<tr>    <td>&nbsp;
+        <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <th colspan=3>Inches
+        <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <th colspan=3>mm
+        <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <th colspan=3>Points
+        <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <td>&nbsp;
+<tr>    <th align=left>Name
+        <td>&nbsp;
+        <th>&nbsp;W&nbsp;
+        <td>&times;
+        <th>&nbsp;H&nbsp;
+        <td>&nbsp;
+        <th>&nbsp;W&nbsp;
+        <td>&times;
+        <th>&nbsp;H&nbsp;
+        <td>&nbsp;
+        <th>&nbsp;W&nbsp;
+        <td>&times;
+        <th>&nbsp;H&nbsp;
+        <td>&nbsp;
+        <td>&nbsp;
+<tr>    <td colspan=13><hr>
+<tr>    <td>11x17
+        <td>&nbsp;&nbsp;<td align=right>11.0<td>&nbsp;&nbsp;<td align=right>17.0<td>&nbsp;&nbsp;<td align=right>279<td>&nbsp;&nbsp;<td align=right>432<td>&nbsp;&nbsp;<td align=right>792<td>&nbsp;&nbsp;<td align=right>1224<td>&nbsp;&nbsp;<td>11&times;17in portrait
+<tr>    <td>ledger
+        <td>&nbsp;<td align=right>17.0<td>&nbsp;<td align=right>11.0<td>&nbsp;<td align=right>432<td>&nbsp;<td align=right>279<td>&nbsp;<td align=right>1224<td>&nbsp;<td align=right>792<td>&nbsp;<td>11&times;17in landscape
+<tr>    <td>legal
+        <td>&nbsp;<td align=right>8.5<td>&nbsp;<td align=right>14.0<td>&nbsp;<td align=right>216<td>&nbsp;<td align=right>356<td>&nbsp;<td align=right>612<td>&nbsp;<td align=right>1008<td>&nbsp;<td>&nbsp;
+<tr>    <td>letter
+        <td>&nbsp;<td align=right>8.5<td>&nbsp;<td align=right>11.0<td>&nbsp;<td align=right>216<td>&nbsp;<td align=right>279<td>&nbsp;<td align=right>612<td>&nbsp;<td align=right>792<td>&nbsp;<td>&nbsp;
+<tr>    <td>lettersmall
+        <td>&nbsp;<td align=right>8.5<td>&nbsp;<td align=right>11.0<td>&nbsp;<td align=right>216<td>&nbsp;<td align=right>279<td>&nbsp;<td align=right>612<td>&nbsp;<td align=right>792<td>&nbsp;<td>&nbsp;
+<tr>    <td>archE
+        <td>&nbsp;<td align=right>36.0<td>&nbsp;<td align=right>48.0<td>&nbsp;<td align=right>914<td>&nbsp;<td align=right>1219<td>&nbsp;<td align=right>2592<td>&nbsp;<td align=right>3456<td>&nbsp;<td>&nbsp;
+<tr>    <td>archD
+        <td>&nbsp;<td align=right>24.0<td>&nbsp;<td align=right>36.0<td>&nbsp;<td align=right>610<td>&nbsp;<td align=right>914<td>&nbsp;<td align=right>1728<td>&nbsp;<td align=right>2592<td>&nbsp;<td>&nbsp;
+<tr>    <td>archC
+        <td>&nbsp;<td align=right>18.0<td>&nbsp;<td align=right>24.0<td>&nbsp;<td align=right>457<td>&nbsp;<td align=right>610<td>&nbsp;<td align=right>1296<td>&nbsp;<td align=right>1728<td>&nbsp;<td>&nbsp;
+<tr>    <td>archB
+        <td>&nbsp;<td align=right>12.0<td>&nbsp;<td align=right>18.0<td>&nbsp;<td align=right>305<td>&nbsp;<td align=right>457<td>&nbsp;<td align=right>864<td>&nbsp;<td align=right>1296<td>&nbsp;<td>&nbsp;
+<tr>    <td>archA
+        <td>&nbsp;<td align=right>9.0<td>&nbsp;<td align=right>12.0<td>&nbsp;<td align=right>229<td>&nbsp;<td align=right>305<td>&nbsp;<td align=right>648<td>&nbsp;<td align=right>864<td>&nbsp;<td>&nbsp;
+<tr>    <td colspan=13><hr>
 <tr><th colspan=13>ISO standard
-<tr>	<td colspan=13><hr>
-<tr>	<td>a0
-	<td>&nbsp;<td align=right>33.1<td>&nbsp;<td align=right>46.8<td>&nbsp;<td align=right>841<td>&nbsp;<td align=right>1189<td>&nbsp;<td align=right>2384<td>&nbsp;<td align=right>3370<td>&nbsp;<td>&nbsp;
-<tr>	<td>a1
-	<td>&nbsp;<td align=right>23.4<td>&nbsp;<td align=right>33.1<td>&nbsp;<td align=right>594<td>&nbsp;<td align=right>841<td>&nbsp;<td align=right>1684<td>&nbsp;<td align=right>2384<td>&nbsp;<td>&nbsp;
-<tr>	<td>a2
-	<td>&nbsp;<td align=right>16.5<td>&nbsp;<td align=right>23.4<td>&nbsp;<td align=right>420<td>&nbsp;<td align=right>594<td>&nbsp;<td align=right>1191<td>&nbsp;<td align=right>1684<td>&nbsp;<td>&nbsp;
-<tr>	<td>a3
-	<td>&nbsp;<td align=right>11.7<td>&nbsp;<td align=right>16.5<td>&nbsp;<td align=right>297<td>&nbsp;<td align=right>420<td>&nbsp;<td align=right>842<td>&nbsp;<td align=right>1191<td>&nbsp;<td>&nbsp;
-<tr>	<td>a4
-	<td>&nbsp;<td align=right>8.3<td>&nbsp;<td align=right>11.7<td>&nbsp;<td align=right>210<td>&nbsp;<td align=right>297<td>&nbsp;<td align=right>595<td>&nbsp;<td align=right>842<td>&nbsp;<td>&nbsp;
-<tr>	<td>a4small
-	<td>&nbsp;<td align=right>8.3<td>&nbsp;<td align=right>11.7<td>&nbsp;<td align=right>210<td>&nbsp;<td align=right>297<td>&nbsp;<td align=right>595<td>&nbsp;<td align=right>842<td>&nbsp;<td>&nbsp;
-<tr>	<td>a5
-	<td>&nbsp;<td align=right>5.8<td>&nbsp;<td align=right>8.3<td>&nbsp;<td align=right>148<td>&nbsp;<td align=right>210<td>&nbsp;<td align=right>420<td>&nbsp;<td align=right>595<td>&nbsp;<td>&nbsp;
-<tr>	<td>a6
-	<td>&nbsp;<td align=right>4.1<td>&nbsp;<td align=right>5.8<td>&nbsp;<td align=right>105<td>&nbsp;<td align=right>148<td>&nbsp;<td align=right>297<td>&nbsp;<td align=right>420<td>&nbsp;<td>&nbsp;
-<tr>	<td>a7
-	<td>&nbsp;<td align=right>2.9<td>&nbsp;<td align=right>4.1<td>&nbsp;<td align=right>74<td>&nbsp;<td align=right>105<td>&nbsp;<td align=right>210<td>&nbsp;<td align=right>297<td>&nbsp;<td>&nbsp;
-<tr>	<td>a8
-	<td>&nbsp;<td align=right>2.1<td>&nbsp;<td align=right>2.9<td>&nbsp;<td align=right>52<td>&nbsp;<td align=right>74<td>&nbsp;<td align=right>148<td>&nbsp;<td align=right>210<td>&nbsp;<td>&nbsp;
-<tr>	<td>a9
-	<td>&nbsp;<td align=right>1.5<td>&nbsp;<td align=right>2.1<td>&nbsp;<td align=right>37<td>&nbsp;<td align=right>52<td>&nbsp;<td align=right>105<td>&nbsp;<td align=right>148<td>&nbsp;<td>&nbsp;
-<tr>	<td>a10
-	<td>&nbsp;<td align=right>1.0<td>&nbsp;<td align=right>1.5<td>&nbsp;<td align=right>26<td>&nbsp;<td align=right>37<td>&nbsp;<td align=right>73<td>&nbsp;<td align=right>105<td>&nbsp;<td>&nbsp;
-<tr>	<td>isob0
-	<td>&nbsp;<td align=right>39.4<td>&nbsp;<td align=right>55.7<td>&nbsp;<td align=right>1000<td>&nbsp;<td align=right>1414<td>&nbsp;<td align=right>2835<td>&nbsp;<td align=right>4008<td>&nbsp;<td>&nbsp;
-<tr>	<td>isob1
-	<td>&nbsp;<td align=right>27.8<td>&nbsp;<td align=right>39.4<td>&nbsp;<td align=right>707<td>&nbsp;<td align=right>1000<td>&nbsp;<td align=right>2004<td>&nbsp;<td align=right>2835<td>&nbsp;<td>&nbsp;
-<tr>	<td>isob2
-	<td>&nbsp;<td align=right>19.7<td>&nbsp;<td align=right>27.8<td>&nbsp;<td align=right>500<td>&nbsp;<td align=right>707<td>&nbsp;<td align=right>1417<td>&nbsp;<td align=right>2004<td>&nbsp;<td>&nbsp;
-<tr>	<td>isob3
-	<td>&nbsp;<td align=right>13.9<td>&nbsp;<td align=right>19.7<td>&nbsp;<td align=right>353<td>&nbsp;<td align=right>500<td>&nbsp;<td align=right>1001<td>&nbsp;<td align=right>1417<td>&nbsp;<td>&nbsp;
-<tr>	<td>isob4
-	<td>&nbsp;<td align=right>9.8<td>&nbsp;<td align=right>13.9<td>&nbsp;<td align=right>250<td>&nbsp;<td align=right>353<td>&nbsp;<td align=right>709<td>&nbsp;<td align=right>1001<td>&nbsp;<td>&nbsp;
-<tr>	<td>isob5
-	<td>&nbsp;<td align=right>6.9<td>&nbsp;<td align=right>9.8<td>&nbsp;<td align=right>176<td>&nbsp;<td align=right>250<td>&nbsp;<td align=right>499<td>&nbsp;<td align=right>709<td>&nbsp;<td>&nbsp;
-<tr>	<td>isob6
-	<td>&nbsp;<td align=right>4.9<td>&nbsp;<td align=right>6.9<td>&nbsp;<td align=right>125<td>&nbsp;<td align=right>176<td>&nbsp;<td align=right>354<td>&nbsp;<td align=right>499<td>&nbsp;<td>&nbsp;
-<tr>	<td>c0
-	<td>&nbsp;<td align=right>36.1<td>&nbsp;<td align=right>51.1<td>&nbsp;<td align=right>917<td>&nbsp;<td align=right>1297<td>&nbsp;<td align=right>2599<td>&nbsp;<td align=right>3677<td>&nbsp;<td>&nbsp;
-<tr>	<td>c1
-	<td>&nbsp;<td align=right>25.5<td>&nbsp;<td align=right>36.1<td>&nbsp;<td align=right>648<td>&nbsp;<td align=right>917<td>&nbsp;<td align=right>1837<td>&nbsp;<td align=right>2599<td>&nbsp;<td>&nbsp;
-<tr>	<td>c2
-	<td>&nbsp;<td align=right>18.0<td>&nbsp;<td align=right>25.5<td>&nbsp;<td align=right>458<td>&nbsp;<td align=right>648<td>&nbsp;<td align=right>1298<td>&nbsp;<td align=right>1837<td>&nbsp;<td>&nbsp;
-<tr>	<td>c3
-	<td>&nbsp;<td align=right>12.8<td>&nbsp;<td align=right>18.0<td>&nbsp;<td align=right>324<td>&nbsp;<td align=right>458<td>&nbsp;<td align=right>918<td>&nbsp;<td align=right>1298<td>&nbsp;<td>&nbsp;
-<tr>	<td>c4
-	<td>&nbsp;<td align=right>9.0<td>&nbsp;<td align=right>12.8<td>&nbsp;<td align=right>229<td>&nbsp;<td align=right>324<td>&nbsp;<td align=right>649<td>&nbsp;<td align=right>918<td>&nbsp;<td>&nbsp;
-<tr>	<td>c5
-	<td>&nbsp;<td align=right>6.4<td>&nbsp;<td align=right>9.0<td>&nbsp;<td align=right>162<td>&nbsp;<td align=right>229<td>&nbsp;<td align=right>459<td>&nbsp;<td align=right>649<td>&nbsp;<td>&nbsp;
-<tr>	<td>c6
-	<td>&nbsp;<td align=right>4.5<td>&nbsp;<td align=right>6.4<td>&nbsp;<td align=right>114<td>&nbsp;<td align=right>162<td>&nbsp;<td align=right>323<td>&nbsp;<td align=right>459<td>&nbsp;<td>&nbsp;
-<tr>	<td colspan=13><hr>
+<tr>    <td colspan=13><hr>
+<tr>    <td>a0
+        <td>&nbsp;<td align=right>33.1<td>&nbsp;<td align=right>46.8<td>&nbsp;<td align=right>841<td>&nbsp;<td align=right>1189<td>&nbsp;<td align=right>2384<td>&nbsp;<td align=right>3370<td>&nbsp;<td>&nbsp;
+<tr>    <td>a1
+        <td>&nbsp;<td align=right>23.4<td>&nbsp;<td align=right>33.1<td>&nbsp;<td align=right>594<td>&nbsp;<td align=right>841<td>&nbsp;<td align=right>1684<td>&nbsp;<td align=right>2384<td>&nbsp;<td>&nbsp;
+<tr>    <td>a2
+        <td>&nbsp;<td align=right>16.5<td>&nbsp;<td align=right>23.4<td>&nbsp;<td align=right>420<td>&nbsp;<td align=right>594<td>&nbsp;<td align=right>1191<td>&nbsp;<td align=right>1684<td>&nbsp;<td>&nbsp;
+<tr>    <td>a3
+        <td>&nbsp;<td align=right>11.7<td>&nbsp;<td align=right>16.5<td>&nbsp;<td align=right>297<td>&nbsp;<td align=right>420<td>&nbsp;<td align=right>842<td>&nbsp;<td align=right>1191<td>&nbsp;<td>&nbsp;
+<tr>    <td>a4
+        <td>&nbsp;<td align=right>8.3<td>&nbsp;<td align=right>11.7<td>&nbsp;<td align=right>210<td>&nbsp;<td align=right>297<td>&nbsp;<td align=right>595<td>&nbsp;<td align=right>842<td>&nbsp;<td>&nbsp;
+<tr>    <td>a4small
+        <td>&nbsp;<td align=right>8.3<td>&nbsp;<td align=right>11.7<td>&nbsp;<td align=right>210<td>&nbsp;<td align=right>297<td>&nbsp;<td align=right>595<td>&nbsp;<td align=right>842<td>&nbsp;<td>&nbsp;
+<tr>    <td>a5
+        <td>&nbsp;<td align=right>5.8<td>&nbsp;<td align=right>8.3<td>&nbsp;<td align=right>148<td>&nbsp;<td align=right>210<td>&nbsp;<td align=right>420<td>&nbsp;<td align=right>595<td>&nbsp;<td>&nbsp;
+<tr>    <td>a6
+        <td>&nbsp;<td align=right>4.1<td>&nbsp;<td align=right>5.8<td>&nbsp;<td align=right>105<td>&nbsp;<td align=right>148<td>&nbsp;<td align=right>297<td>&nbsp;<td align=right>420<td>&nbsp;<td>&nbsp;
+<tr>    <td>a7
+        <td>&nbsp;<td align=right>2.9<td>&nbsp;<td align=right>4.1<td>&nbsp;<td align=right>74<td>&nbsp;<td align=right>105<td>&nbsp;<td align=right>210<td>&nbsp;<td align=right>297<td>&nbsp;<td>&nbsp;
+<tr>    <td>a8
+        <td>&nbsp;<td align=right>2.1<td>&nbsp;<td align=right>2.9<td>&nbsp;<td align=right>52<td>&nbsp;<td align=right>74<td>&nbsp;<td align=right>148<td>&nbsp;<td align=right>210<td>&nbsp;<td>&nbsp;
+<tr>    <td>a9
+        <td>&nbsp;<td align=right>1.5<td>&nbsp;<td align=right>2.1<td>&nbsp;<td align=right>37<td>&nbsp;<td align=right>52<td>&nbsp;<td align=right>105<td>&nbsp;<td align=right>148<td>&nbsp;<td>&nbsp;
+<tr>    <td>a10
+        <td>&nbsp;<td align=right>1.0<td>&nbsp;<td align=right>1.5<td>&nbsp;<td align=right>26<td>&nbsp;<td align=right>37<td>&nbsp;<td align=right>73<td>&nbsp;<td align=right>105<td>&nbsp;<td>&nbsp;
+<tr>    <td>isob0
+        <td>&nbsp;<td align=right>39.4<td>&nbsp;<td align=right>55.7<td>&nbsp;<td align=right>1000<td>&nbsp;<td align=right>1414<td>&nbsp;<td align=right>2835<td>&nbsp;<td align=right>4008<td>&nbsp;<td>&nbsp;
+<tr>    <td>isob1
+        <td>&nbsp;<td align=right>27.8<td>&nbsp;<td align=right>39.4<td>&nbsp;<td align=right>707<td>&nbsp;<td align=right>1000<td>&nbsp;<td align=right>2004<td>&nbsp;<td align=right>2835<td>&nbsp;<td>&nbsp;
+<tr>    <td>isob2
+        <td>&nbsp;<td align=right>19.7<td>&nbsp;<td align=right>27.8<td>&nbsp;<td align=right>500<td>&nbsp;<td align=right>707<td>&nbsp;<td align=right>1417<td>&nbsp;<td align=right>2004<td>&nbsp;<td>&nbsp;
+<tr>    <td>isob3
+        <td>&nbsp;<td align=right>13.9<td>&nbsp;<td align=right>19.7<td>&nbsp;<td align=right>353<td>&nbsp;<td align=right>500<td>&nbsp;<td align=right>1001<td>&nbsp;<td align=right>1417<td>&nbsp;<td>&nbsp;
+<tr>    <td>isob4
+        <td>&nbsp;<td align=right>9.8<td>&nbsp;<td align=right>13.9<td>&nbsp;<td align=right>250<td>&nbsp;<td align=right>353<td>&nbsp;<td align=right>709<td>&nbsp;<td align=right>1001<td>&nbsp;<td>&nbsp;
+<tr>    <td>isob5
+        <td>&nbsp;<td align=right>6.9<td>&nbsp;<td align=right>9.8<td>&nbsp;<td align=right>176<td>&nbsp;<td align=right>250<td>&nbsp;<td align=right>499<td>&nbsp;<td align=right>709<td>&nbsp;<td>&nbsp;
+<tr>    <td>isob6
+        <td>&nbsp;<td align=right>4.9<td>&nbsp;<td align=right>6.9<td>&nbsp;<td align=right>125<td>&nbsp;<td align=right>176<td>&nbsp;<td align=right>354<td>&nbsp;<td align=right>499<td>&nbsp;<td>&nbsp;
+<tr>    <td>c0
+        <td>&nbsp;<td align=right>36.1<td>&nbsp;<td align=right>51.1<td>&nbsp;<td align=right>917<td>&nbsp;<td align=right>1297<td>&nbsp;<td align=right>2599<td>&nbsp;<td align=right>3677<td>&nbsp;<td>&nbsp;
+<tr>    <td>c1
+        <td>&nbsp;<td align=right>25.5<td>&nbsp;<td align=right>36.1<td>&nbsp;<td align=right>648<td>&nbsp;<td align=right>917<td>&nbsp;<td align=right>1837<td>&nbsp;<td align=right>2599<td>&nbsp;<td>&nbsp;
+<tr>    <td>c2
+        <td>&nbsp;<td align=right>18.0<td>&nbsp;<td align=right>25.5<td>&nbsp;<td align=right>458<td>&nbsp;<td align=right>648<td>&nbsp;<td align=right>1298<td>&nbsp;<td align=right>1837<td>&nbsp;<td>&nbsp;
+<tr>    <td>c3
+        <td>&nbsp;<td align=right>12.8<td>&nbsp;<td align=right>18.0<td>&nbsp;<td align=right>324<td>&nbsp;<td align=right>458<td>&nbsp;<td align=right>918<td>&nbsp;<td align=right>1298<td>&nbsp;<td>&nbsp;
+<tr>    <td>c4
+        <td>&nbsp;<td align=right>9.0<td>&nbsp;<td align=right>12.8<td>&nbsp;<td align=right>229<td>&nbsp;<td align=right>324<td>&nbsp;<td align=right>649<td>&nbsp;<td align=right>918<td>&nbsp;<td>&nbsp;
+<tr>    <td>c5
+        <td>&nbsp;<td align=right>6.4<td>&nbsp;<td align=right>9.0<td>&nbsp;<td align=right>162<td>&nbsp;<td align=right>229<td>&nbsp;<td align=right>459<td>&nbsp;<td align=right>649<td>&nbsp;<td>&nbsp;
+<tr>    <td>c6
+        <td>&nbsp;<td align=right>4.5<td>&nbsp;<td align=right>6.4<td>&nbsp;<td align=right>114<td>&nbsp;<td align=right>162<td>&nbsp;<td align=right>323<td>&nbsp;<td align=right>459<td>&nbsp;<td>&nbsp;
+<tr>    <td colspan=13><hr>
 <tr><th colspan=13>JIS standard
-<tr>	<td colspan=13><hr>
-<tr>	<td>jisb0
-	<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td align=right>1030<td>&nbsp;<td align=right>1456<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td>&nbsp;
-<tr>	<td>jisb1
-	<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td align=right>728<td>&nbsp;<td align=right>1030<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td>&nbsp;
-<tr>	<td>jisb2
-	<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td align=right>515<td>&nbsp;<td align=right>728<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td>&nbsp;
-<tr>	<td>jisb3
-	<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td align=right>364<td>&nbsp;<td align=right>515<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td>&nbsp;
-<tr>	<td>jisb4
-	<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td align=right>257<td>&nbsp;<td align=right>364<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td>&nbsp;
-<tr>	<td>jisb5
-	<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td align=right>182<td>&nbsp;<td align=right>257<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td>&nbsp;
-<tr>	<td>jisb6
-	<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td align=right>128<td>&nbsp;<td align=right>182<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td>&nbsp;
-<tr>	<td colspan=13><hr>
+<tr>    <td colspan=13><hr>
+<tr>    <td>jisb0
+        <td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td align=right>1030<td>&nbsp;<td align=right>1456<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td>&nbsp;
+<tr>    <td>jisb1
+        <td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td align=right>728<td>&nbsp;<td align=right>1030<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td>&nbsp;
+<tr>    <td>jisb2
+        <td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td align=right>515<td>&nbsp;<td align=right>728<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td>&nbsp;
+<tr>    <td>jisb3
+        <td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td align=right>364<td>&nbsp;<td align=right>515<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td>&nbsp;
+<tr>    <td>jisb4
+        <td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td align=right>257<td>&nbsp;<td align=right>364<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td>&nbsp;
+<tr>    <td>jisb5
+        <td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td align=right>182<td>&nbsp;<td align=right>257<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td>&nbsp;
+<tr>    <td>jisb6
+        <td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td align=right>128<td>&nbsp;<td align=right>182<td>&nbsp;<td align=right><td>&nbsp;<td align=right><td>&nbsp;<td>&nbsp;
+<tr>    <td colspan=13><hr>
 <tr><th colspan=13>ISO/JIS switchable
-<tr>	<td colspan=13><hr>
-<tr>	<td>b0 (see * below)
-<tr>	<td>b1 (see * below)
-<tr>	<td>b2 (see * below)
-<tr>	<td>b3 (see * below)
-<tr>	<td>b4 (see * below)
-<tr>	<td>b5 (see * below)
-<tr>	<td colspan=13><hr>
+<tr>    <td colspan=13><hr>
+<tr>    <td>b0 (see * below)
+<tr>    <td>b1 (see * below)
+<tr>    <td>b2 (see * below)
+<tr>    <td>b3 (see * below)
+<tr>    <td>b4 (see * below)
+<tr>    <td>b5 (see * below)
+<tr>    <td colspan=13><hr>
 <tr><th colspan=13>Other
-<tr>	<td colspan=13><hr>
-<tr>	<td>flsa
-	<td>&nbsp;<td align=right>8.5<td>&nbsp;<td align=right>13.0<td>&nbsp;<td align=right>216<td>&nbsp;<td align=right>330<td>&nbsp;<td align=right>612<td>&nbsp;<td align=right>936<td>&nbsp;<td>U.S. foolscap
-<tr>	<td>flse
-	<td>&nbsp;<td align=right>8.5<td>&nbsp;<td align=right>13.0<td>&nbsp;<td align=right>216<td>&nbsp;<td align=right>330<td>&nbsp;<td align=right>612<td>&nbsp;<td align=right>936<td>&nbsp;<td>European foolscap
-<tr>	<td>halfletter
-	<td>&nbsp;<td align=right>5.5<td>&nbsp;<td align=right>8.5<td>&nbsp;<td align=right>140<td>&nbsp;<td align=right>216<td>&nbsp;<td align=right>396<td>&nbsp;<td align=right>612<td>&nbsp;<td>&nbsp;
+<tr>    <td colspan=13><hr>
+<tr>    <td>flsa
+        <td>&nbsp;<td align=right>8.5<td>&nbsp;<td align=right>13.0<td>&nbsp;<td align=right>216<td>&nbsp;<td align=right>330<td>&nbsp;<td align=right>612<td>&nbsp;<td align=right>936<td>&nbsp;<td>U.S. foolscap
+<tr>    <td>flse
+        <td>&nbsp;<td align=right>8.5<td>&nbsp;<td align=right>13.0<td>&nbsp;<td align=right>216<td>&nbsp;<td align=right>330<td>&nbsp;<td align=right>612<td>&nbsp;<td align=right>936<td>&nbsp;<td>European foolscap
+<tr>    <td>halfletter
+        <td>&nbsp;<td align=right>5.5<td>&nbsp;<td align=right>8.5<td>&nbsp;<td align=right>140<td>&nbsp;<td align=right>216<td>&nbsp;<td align=right>396<td>&nbsp;<td align=right>612<td>&nbsp;<td>&nbsp;
 </table>
 
 <p>
@@ -3010,10 +3208,10 @@ The second element is a dictionary with entries :
 
 <table cellpadding=0 cellspacing=10>
 
-<tr>	<th>Key
-	<th>Type
-	<th>Description
-<tr>	<td>Path
+<tr>    <th>Key
+        <th>Type
+        <th>Description
+<tr>    <td>Path
         <td>string
         <td>Absolute path to font file, or relative path to font file from the FontPath value,
             being specified in <b><tt>lib/FAPIconfig</tt></b>.
@@ -3022,17 +3220,17 @@ The second element is a dictionary with entries :
         <td>PostScript type for this font. Only 1 and 42 are currently allowed.
             Note that this is unrelated to the real type of the font file -
             the bridge will perform a format conversion.
-<tr>	<td>FAPI
+<tr>    <td>FAPI
         <td>name
         <td>Name of the renderer to be used with the font.
             Only <b><tt>/AgfaUFST</tt></b> and <b><tt>/FreeType</tt></b> are now allowed.
-<tr>	<td>SubfontId
+<tr>    <td>SubfontId
         <td>integer
         <td>(optional) Index of the font in font collection, such as FCO or TTC.
             It is being ignored if Path doesn't specify a collection.
             Note that Free Type can't handle FCO.
             Default value is 0.
-<tr>	<td>Decoding
+<tr>    <td>Decoding
         <td>name
         <td>(optional) The name of a Decoding resource to be used with the font.
             If specified, <b><tt>lib/xlatmap</tt></b> (see below) doesn't work for this font.
@@ -3058,10 +3256,10 @@ but dictionaries must contain few different entries :
 
 <table cellpadding=0 cellspacing=10>
 
-<tr>	<th>Key
-	<th>Type
-	<th>Description
-<tr>	<td>Path
+<tr>    <th>Key
+        <th>Type
+        <th>Description
+<tr>    <td>Path
         <td>string
         <td>Absolute path to font file, or relative path to font file from the CIDFontPath value,
             being specified in <b><tt>lib/FAPIconfig</tt></b>.
@@ -3070,16 +3268,16 @@ but dictionaries must contain few different entries :
         <td>PostScript type for this CID font. Only 0, 1 and 2 are currently allowed.
             Note that this is unrelated to the real type of the font file -
             the bridge will perform format conversion.
-<tr>	<td>FAPI
+<tr>    <td>FAPI
         <td>name
         <td>Name of the renderer to be used with the font.
             Only <b><tt>/AgfaUFST</tt></b> and <b><tt>/FreeType</tt></b> are now allowed.
-<tr>	<td>SubfontId
+<tr>    <td>SubfontId
         <td>integer
         <td>(optional) Index of the font in font collection, such as FCO or TTC.
             It is being ignored if Path doesn't specify a collection.
             Default value is 0.
-<tr>	<td>CSI
+<tr>    <td>CSI
         <td>array of 2 elements
         <td>(required) Information for building <b><tt>CIDSystemInfo</tt></b>.
             The first element is a string, which specifies <b><tt>Ordering</tt></b>.
@@ -3101,19 +3299,19 @@ Example of FAPI CID font map record :
 The control file <b><tt>lib/FAPIconfig</tt></b> defines 4 entries :
 
 <table cellpadding=0 cellspacing=10>
-<tr>	<th>Key
-	<th>Type
-	<th>Description
-<tr>	<td>FontPath
+<tr>    <th>Key
+        <th>Type
+        <th>Description
+<tr>    <td>FontPath
         <td>string
         <td>Absolute path to a directory, which contains fonts. Used to resolve
             relative paths in <b><tt>lib/FAPIfontmap</tt></b>.
-<tr>	<td>CIDFontPath
+<tr>    <td>CIDFontPath
         <td>string
         <td>Absolute path to a directory, which contains fonts to substitute to CID fonts.
             Used to resolve relative paths in <b><tt>lib/FAPIcidfmap</tt></b>.
             It may be same or different than FontPath.
-<tr>	<td>HookDiskFonts
+<tr>    <td>HookDiskFonts
         <td>array of integers.
         <td>List of PS font types to be handled with FAPI.
             This controls other fonts that ones listed in <b><tt>lib/FAPIfontmap</tt></b>
@@ -3123,7 +3321,7 @@ The control file <b><tt>lib/FAPIconfig</tt></b> defines 4 entries :
             rendered with the native Ghostscript font renderer.
             Only allowed values now are 1,9,11,42. Note that 9 and 11
             correspond to CIDFontType 0 and 2.
-<tr>	<td>HookEmbeddedFonts
+<tr>    <td>HookEmbeddedFonts
         <td>array of integers.
         <td>List of PS font types to be handled with FAPI.
             This controls fonts being embedded into a document -
@@ -3166,9 +3364,8 @@ modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
 
-
 <p>
-<small>Ghostscript version 8.16, 9 May 2005
+<small>Ghostscript version 8.51, 31 December 2005
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

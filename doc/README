@@ -190,21 +190,16 @@ Presence on the World Wide Web
    Web, including the PostScript Language Reference Manual (Third
    Edition); the Encapsulated PostScript (EPS) Format Specification
    version 3, including Encapsulated PostScript Interchange (EPSI)
-   format; the PDF 1.3 specification; and the pdfmark, transparency and
-   Acrobat Distiller parameters documentation. Some of these documents
-   are also available at Adobe's ftp site, but not necessarily under the
-   same filenames.
+   format; the PDF 1.3 specification; and the PDF 1.5 specification. The
+   Acrobat SDK contains pdfmark and Acrobat Distiller parameters
+   documentation. Some of these documents are also available at Adobe's
+   ftp site, but not necessarily under the same filenames.
 
   Other material on the WWW
 
    Much other material about Ghostscript is available on the World Wide
    Web, both as web pages and as archived Usenet and mailing list
    discussions. Use the well-known search engines to find such material.
-
-   There is a good manual for Ghostscript available in PDF form, in
-   English and German (and soon in Japanese), at:
-
-     http://www.pdflib.com/gsmanual
 
    There is a translation of the Ghostscript 'man' pages into Czech at:
 
@@ -386,7 +381,7 @@ Which document contains what?
           font-rendering mechanism, for developers.
      _________________________________________________________________
 
-   Copyright © 1996-2002 artofcode LLC. All rights reserved.
+   Copyright ï¿½ 1996-2002 artofcode LLC. All rights reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied. This software is distributed under license and may not be
@@ -398,4 +393,4 @@ Which document contains what?
    Software, Inc., 101 Lucas Valley Road #110, San Rafael, CA 94903,
    U.S.A., +1(415)492-9861.
 
-   Ghostscript version 8.16, 9 May 2005
+   Ghostscript version 8.51, 31 December 2005

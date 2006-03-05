@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>Ghostscript Open Issues.</title>
-<!-- $Id: Issues.htm,v 1.5 2005/12/13 17:10:04 jemarch Exp $ -->
+<!-- $Id: Issues.htm,v 1.6 2006/03/05 13:04:27 Arabidopsis Exp $ -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
 
@@ -104,21 +104,6 @@ Bug <a href="http://bugs.ghostscript.com/show_bug.cgi?id=615165"
 class="offsite">#615165</a>, September 26, 2002.
 <hr>
 <h2><a name="Minor_bugs"></a>Minor Bugs.</h2>
-
-<h3> Multiple encode filters in a pipeline fail.</h3>
-The following code fragment should output "3E>". It outputs nothing. 
-<blockquote><pre>
-%!PS 
-(%stdout) (w) file 
-/ASCIIHexEncode filter 
-/ASCIIHexEncode filter 
-closefile 
-</pre></blockquote>
-Bug <a href="http://bugs.ghostscript.com/show_bug.cgi?id=224134"
-class="offsite">#224134</a>, December 2, 2000.
-<p>
-<i>LPD reports that this behavior is in fact according to spec and 
-programs cannot rely on this behavior.</i>
 
 <h3> Bad JPEG stream in PDF generated when source ends prematurely</h3>
 When GS converts the source image to JPEG stream in PDF file and the
@@ -564,15 +549,6 @@ Such fonts cannot load into global VM due to internal usage of <I>save/restore</
 Hybrid fonts can be recognized by the appearance of the word 'hires' with
 a pre-scan over the font, the same way that .findfontvalue works now.
 
-<h3>Job server loop isn't implemented.</h3>
-
-Rather <I>startjob</I> and <I>exitserver</I> are stubbed in lib/gs_lev2.ps,
-it appears insufficietly compartible with Adobe interpreters.
-Particularly the outermost <I>restore</I> unwinds global VM while interpreting a
-document specified in command line argument. Perhaps global VM should not unwind
-during a document interpretation. A compatible change should introduce a new command
-line option for etablishing a job server loop around douments.
-
 <!-- [2.0 end contents] ==================================================== -->
 
 <!-- [3.0 begin visible trailer] =========================================== -->
@@ -590,11 +566,10 @@ This software is distributed under license and may not be copied,
 modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 
-
 </small>
 
 <p>
-<small>Ghostscript version 8.16, 9 May 2005
+<small>Ghostscript version 8.51, 31 December 2005
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

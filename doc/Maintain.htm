@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>Ghostscript maintenance procedures</title>
-<!-- $Id: Maintain.htm,v 1.3 2005/05/09 22:04:36 Arabidopsis Exp $ -->
+<!-- $Id: Maintain.htm,v 1.4 2006/03/05 13:04:27 Arabidopsis Exp $ -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
 
@@ -21,6 +21,10 @@
 
 <blockquote><ul>
 <li><a href="#Introduction">Introduction</a>
+<li><a href="#Problem_reporting">Problem reporting</a>
+<ul>
+<li><a href="#Uploading_test_data">Uploading test data</a>
+</ul>
 <li><a href="#CVS">Rules for CVS commits</a>
 <li><a href="#Adding_or_removing_files">Adding or Removing Files</a>
 </ul></blockquote>
@@ -45,24 +49,37 @@ Ghostscript</a>.
 
 <p>
 This document describes various maintenance procedures associated with
-development version
-Ghostscript.  It is only meant for developers actively working on 
-Ghostscript.
+Ghostscript.  It is only meant for developers actively working on
+Ghostscript; some parts of it are only relevant to developers who have 
+commit access to the source repository.
+
+<hr>
+
+<h2><a name="Problem_reporting"></a>Problem reporting</h2>
+
+<h3><a name="#Uploading_test_data"></a>Uploading test data</h3>
+
+<p>
+If a test file can't be attached to the report in the public 
+bug tracking system, put it in <tt>casper:/home/support/<bug number>/</tt>.
+This is a good place to collect test files of all kinds.
 
 <hr>
 
 <h2><a name="CVS"></a>Rules for CVS Commits</h2>
 
 <p>
-This section describes a few rules intended to make life easier for people
-working with this code base.
+The primary repository for Ghostscript code is
+<a href="http://cvs.ghostscript.com" class="offsite">cvs.ghostscript.com</a>
+This section describes a few rules intended to make life easier
+for people working with this code base.
 
 <p>
 At any given time, there are usually two active branches: a stable
 branch and a development branch. The development branch is HEAD, which
-is the default when doing a checkout without a -r flag. At the time of
-this writing (7 October 2002), the stable branch is tagged
-GS_7_0x.
+is the default when doing a checkout without a -r flag. The stable 
+branch is tagged after the previous major release. For example:
+GS_8_0x, GS_7_0x, GS_6_5.
 
 <p>
 A concise and useful document for working with CVS branches is Jeff
@@ -78,10 +95,7 @@ merging</a> section from the CVS documentation by Pascal Molli.
 For new development commits, you can basically ignore the
 branches. Just commit to the HEAD branch. For bug fixes for the stable
 branch, it is your responsibility to commit to both the stable branch
-and, if appropriate, HEAD. Commits to HEAD are appropriate if they are
-in an area not being actively reworked, if the development version
-exhibits the same bug symptoms, and if the patch fixes these
-symptoms.
+and, if appropriate, HEAD.
 
 <p>
 When modifying a number of files for a single issue, please group them
@@ -99,7 +113,7 @@ changes.
 Always supply a descriptive log message for your commits. These log
 messages are used to automatically generate the <a
 href="News.htm">News.htm</a> file and History changelogs, and are also
-crucial for navigating CVS using the CVSweb gateway. Please try to
+crucial for navigating the change history. Please try to
 keep the style of the descriptions similar to those in the current
 History#.htm files.
 
@@ -134,12 +148,15 @@ relevant History file, and the News collection in cvs will be wiped clean
 for the next version.
 
 <p>
-All patches must be reviewed before being committed. Please email your
+All patches should be reviewed before being committed. Please email your
 patch to <a
 href="mailto:gs-code-review@ghostscript.com">gs-code-review@ghostscript.com</a>.
 Make sure to include your commit comment and any other information
 that would be helpful for the review. Also, please identify which
-branches the patch is intended for.
+branches the patch is intended for. The code review list is also
+a good place to put extensive documentation on changes (motivation and
+associated reasoning for example) that are too verbose for the cvs
+changelog.
 
 <p>
 If you are not an employee or consultant of Artifex or artofcode, then
@@ -190,7 +207,7 @@ remove from Ghostscript.
 <hr>
 
 <p>
-<small>Copyright &copy; 2000 artofcode LLC.
+<small>Copyright &copy; 2000-2002 artofcode LLC.
 All rights reserved.</small>
 
 <p>
@@ -201,7 +218,7 @@ This software is distributed under license and may not be copied,
 modified or distributed except as expressly authorized under the terms
 of the license contained in the file LICENSE in this distribution.
 <p>
-<small>Ghostscript version 8.16, 9 May 2005
+<small>Ghostscript version 8.51, 31 December 2005
 
 <!-- [3.0 end visible trailer] ============================================= -->
 
