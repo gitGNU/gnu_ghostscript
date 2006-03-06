@@ -19,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: check_docrefs.py,v 1.4 2005/12/13 17:58:03 jemarch Exp $
+# $Id: check_docrefs.py,v 1.5 2006/03/06 11:16:03 Arabidopsis Exp $
 
 # Check that the hrefs in an HTML document mention all of a set of files.
 # The requirement is that the union of all the docfiles must somewhere
@@ -33,7 +33,7 @@
 SRC_LIST = [
     '+from', 'doc/Develop.htm',
     '+to', 'lib', 'src',
-    '-to', 'lib/CVS', 'src/CVS',
+    '-to', '*/CVS', 'src/rinkj/CVS',
     '-to', 'src/*.mak.tcl',
     '-to', 'lib/*.upp',
     '-to', 'lib/*.ps',

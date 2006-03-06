@@ -19,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: check_source.py,v 1.4 2005/12/13 17:58:03 jemarch Exp $
+# $Id: check_source.py,v 1.5 2006/03/06 11:16:03 Arabidopsis Exp $
 
 # Check basic hygiene of source code.
 
@@ -134,7 +134,10 @@ gsSourceSets = [
     ]
 gsDoubleInclusionOK = [
     'src/gconf.h',
-    'src/gxdtfill.h'
+    'src/gxdtfill.h',
+    'src/gxfillsl.h',
+    'src/gxfilltr.h',
+    'src/gxfillts.h'
     ]
 
 # Add the tests defined in this file to a suite.

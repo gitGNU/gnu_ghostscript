@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-# -*- Mode: python -*-
-
-#    Copyright (C) 2001 Artifex Software Inc.
+#    Copyright (C) 2004 Artifex Software Inc.
 # 
 # This file is part of GNU ghostscript
 #
@@ -18,37 +15,19 @@
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
+# 
 
+# $Id: gsutil.py,v 1.1 2006/03/06 11:16:03 Arabidopsis Exp $
 
-# $Id: dump_testdb,v 1.5 2006/03/06 11:16:03 Arabidopsis Exp $
-
+# gsutil.py
 #
-# dump_testdb [<dbfile>]
-#
-# dumps (prints out) the contents of the testdatadb
+# this module contains utility routines used by the regression test scripts
 
-import string, sys, anydbm, gsconf
+import string
 
-def compare_field_2(s1, s2):
-    if string.split(s1,' ')[1] < string.split(s2,' ')[1]:
-    	return -1
-    else:
-    	return 1
-
-if len(sys.argv) == 2:
-    print "opening ", sys.argv[1]
-    db = anydbm.open(sys.argv[1])
-else:
-    db = anydbm.open(gsconf.testdatadb)
-
-# collect the database as strings
-dump = []
-for k in db.keys():
-    dump.append('%s %s' % (db[k], k))
-
-# Sort on field 2 (the file name)
-dump.sort(compare_field_2)
-
-# Print the sorted list
-for line in dump:
-    print line
+def check_extension(fn):
+    f = string.lower(fn)
+    if f[-3:] == '.ps' or f[-4:] == '.pdf' or f[-4:] == '.eps' \
+       or f[-3:] == '.ai':
+        return 1
+    return 0

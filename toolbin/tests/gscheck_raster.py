@@ -19,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gscheck_raster.py,v 1.4 2005/12/13 17:58:03 jemarch Exp $
+# $Id: gscheck_raster.py,v 1.5 2006/03/06 11:16:03 Arabidopsis Exp $
 
 #
 # gscheck_raster.py
@@ -32,14 +32,15 @@
 import os, stat
 import string, calendar, time
 import gstestutils
-import gssum, gsconf, gstestgs, gsparamsets
+import gssum, gsconf, gstestgs, gsparamsets, gsutil
 
 class GSCompareTestCase(gstestgs.GhostscriptTestCase):
     def shortDescription(self):
         file = "%s.%s.%d.%d" % (self.file[string.rindex(self.file, '/') + 1:], self.device, self.dpi, self.band)
 	rasterfilename = gsconf.rasterdbdir + file + ".gz"
 	if not os.access(rasterfilename, os.F_OK):
-		os.system(gsconf.codedir + "update_baseline " + os.path.basename(self.file))
+		os.system(gsconf.codedir + "update_baseline '%s'" %
+                          (os.path.basename(self.file),))
 	try:
 		ct = time.localtime(os.stat(rasterfilename)[stat.ST_MTIME])
 		baseline_date = "%s %d, %4d %02d:%02d" % ( calendar.month_abbr[ct[1]], ct[2], ct[0], ct[3], ct[4] )
@@ -110,7 +111,7 @@ def addTests(suite, gsroot, **args):
     comparefiles = os.listdir(gsconf.comparefiledir)
 
     for f in comparefiles:
-        if f[-3:] == '.ps' or f[-4:] == '.pdf' or f[-4:] == '.eps':
+        if gsutil.check_extension(f):
 	    for params in gsparamsets.testparamsets:
 	        add_compare_test(suite, f, params.device,
 				 params.resolution, params.banding, track)

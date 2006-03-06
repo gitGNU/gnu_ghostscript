@@ -20,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: run_nightly,v 1.4 2005/12/13 17:58:03 jemarch Exp $
+# $Id: run_nightly,v 1.5 2006/03/06 11:16:03 Arabidopsis Exp $
 
 import os
 import sys
@@ -137,6 +137,9 @@ def get_file(f):
     file.close()
     return string.join(lines, '')
 
+# set umask
+os.umask(0002)
+
 err, starttime, endtime = update_ghostscript()
 if err != 0:
     if err == 1:
@@ -163,25 +166,44 @@ if err != 0:
     else:
         die("Unknown error updating Ghostscript")
 
-# start new log files
+# rotate and start new log files
 try:
+    for i in range(int(gsconf.rotate) - 1, 0, -1):
+        if os.path.isfile(gsconf.log_stdout + ".%d" % (i,)):
+            os.rename(gsconf.log_stdout + ".%d" % (i,),
+                      gsconf.log_stdout + ".%d" % (i + 1,))
+	if os.path.isfile(gsconf.log_stderr + ".%d" % (i,)):
+	    os.rename(gsconf.log_stderr + ".%d" % (i,),
+		      gsconf.log_stderr + ".%d" % (i + 1,))
+	if os.path.isfile(gsconf.log_regression + ".%d" % (i,)):
+	    os.rename(gsconf.log_regression + ".%d" % (i,),
+		      gsconf.log_regression + ".%d" % (i + 1,))
+
+    if os.path.isfile(gsconf.log_stdout):
+        os.rename(gsconf.log_stdout, gsconf.log_stdout + ".1")
+    if os.path.isfile(gsconf.log_stderr):
+        os.rename(gsconf.log_stderr, gsconf.log_stderr + ".1")
+    if os.path.isfile(gsconf.log_regression):
+        os.rename(gsconf.log_regression, gsconf.log_regression + ".1")
+
     log = open(gsconf.log_stdout, "w")
     log.close()
     log = open(gsconf.log_stderr, "w")
     log.close()
 except:
-    die("The log files were not able to be restarted")
+    die("The log files were not able to be rotated and opened")
 
 p = os.popen(gsconf.regression_script + " --track 2>&1")
 if p == None:
     die("Could not open and run the regression script.")
 
+regout = '\n\nThe complete list of regressions for today:\n'
 pattern = 'ok$'
 msg = ''
 for line in p.readlines():
     if re.search(pattern, line):
         continue
-    msg = msg + line
+    regout += line
 	
 p.close()
 
@@ -194,11 +216,6 @@ if p:
         diff = diff + line
     p.close()
 
-# include the main body only on Mondays
-if time.gmtime()[6] == 0:
-    diff = diff + "\n\nThe complete list of regressions for today:\n"
-    msg = diff + msg
-
 # Get updated baselines
 baselines = 'The following files had their baselines updated:\n'
 p = Popen4(gsconf.get_baselines + " '" + YESTERDAY_CTIME + "'", 1)
@@ -207,14 +224,22 @@ if p:
         baselines = baselines + line
     p.wait()
 
-baselines = baselines + "\n\n"
-msg = baselines + msg
-  
+baselines += "\n\n"
+
 # Prepend checkout times
 times = "CVS checkout for this report started at " + time.strftime("%a, %d %b %Y %H:%M:%S %Z", time.localtime(starttime)) + "\n"
 times = times + "CVS checkout ended at " + time.strftime("%a, %d %b %Y %H:%M:%S %Z", time.localtime(endtime)) + "\n\n"
 
-msg = times + msg
+# Build the report and capture it in a rotating log file
+log = open(gsconf.log_regression, "w")
+msg = times + baselines + diff
+log.write(msg)
+log.write(regout)
+log.close()
+
+# Only include the main body in the email on Mondays
+if time.gmtime()[6] == 0:
+    msg += regout
 
 retry = 1
 while retry:

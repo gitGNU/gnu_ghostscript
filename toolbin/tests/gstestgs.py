@@ -20,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gstestgs.py,v 1.5 2005/12/13 17:58:03 jemarch Exp $
+# $Id: gstestgs.py,v 1.6 2006/03/06 11:16:03 Arabidopsis Exp $
 
 # gstestgs.py
 #
@@ -61,22 +61,21 @@ class Ghostscript:
 			cmd = cmd + '-r%d ' % (self.dpi,)
 		cmd = cmd + '-dMaxBitmap=%d ' % (bandsize,)
 		cmd = cmd + '-sDEVICE=%s ' % (self.device,)
-		cmd = cmd + '-sOutputFile=%s ' % (self.outfile,)
+		cmd = cmd + '-sOutputFile=\'%s\' ' % (self.outfile,)
 
-		# as of gs_init 1.93, job server emulation needs -dNOOUTERSAVE
-		# so that the 'exitserver' will restore global VM as expected.
-		# As of gs_init 1.87.2.9, released with Ghostscript 8.16,
-		# job server emulation is supported (in a backward compatible
-		# fashion) so we add -dJOBSERVER. The old options are 
-		# kept so tests will run against older releases.
+		# as of gs_init 1.93, job server emulation needs -dNOOUTERSAVE so
+		# that the 'exitserver' will restore global VM as expected.
+		# As of gs_init 1.111, job server emulation is supported (in a
+		# backward compatible fashion) so we add -dJOBSERVER.
 		cmd = cmd + '-dNOOUTERSAVE -dJOBSERVER -c false 0 startjob pop '
 
-		if string.lower(self.infile[-4:]) == ".pdf":
+		if string.lower(self.infile[-4:]) == ".pdf" or \
+		   string.lower(self.infile[-3:]) == ".ai":
 			cmd = cmd + ' -dFirstPage=1 -dLastPage=1 '
 		else:
 			cmd = cmd + '- < '
 
-		cmd = cmd + ' %s >> %s 2>> %s' % (self.infile, self.log_stdout, self.log_stderr)
+		cmd = cmd + ' \'%s\' >> %s 2>> %s' % (self.infile, self.log_stdout, self.log_stderr)
 
 
 		# before we execute the command which might append to the log
