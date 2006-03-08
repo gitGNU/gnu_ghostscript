@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: watclib.mak,v 1.5 2005/12/13 16:57:28 jemarch Exp $
+# $Id: watclib.mak,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $
 # makefile for MS-DOS / Watcom C/C++ library testing.
 
 libdefault: $(GLOBJ)gslib.exe
@@ -72,7 +72,7 @@ JVERSION=6
 PSRCDIR=libpng
 !endif
 !ifndef PVERSION
-PVERSION=10205
+PVERSION=10208
 !endif
 
 !ifndef ZSRCDIR

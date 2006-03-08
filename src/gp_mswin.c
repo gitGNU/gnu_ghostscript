@@ -1,4 +1,4 @@
-/* Copyright (C) 1992, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 1992, 2000-2003 artofcode LLC.  All rights reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gp_mswin.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_mswin.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /*
  * Microsoft Windows platform support for Ghostscript.
  *
@@ -93,6 +93,23 @@ void
 gp_do_exit(int exit_status)
 {
     exit(exit_status);
+}
+
+/* ------ Persistent data cache ------*/
+
+/* insert a buffer under a (type, key) pair */
+int gp_cache_insert(int type, byte *key, int keylen, void *buffer, int buflen)
+{
+    /* not yet implemented */
+    return 0;
+}
+
+/* look up a (type, key) in the cache */
+int gp_cache_query(int type, byte* key, int keylen, void **buffer,
+    gp_cache_alloc alloc, void *userdata)
+{
+    /* not yet implemented */
+    return -1;
 }
 
 /* ------ Printer accessing ------ */
@@ -549,7 +566,7 @@ gp_printfile_gs16spl(const char *filename, const char *port)
     hwndspl = FindWindow(NULL, "GS Win32s/Win16 spooler");
 
     while (IsWindow(hwndspl)) {
-	gp_check_interrupts();
+	gp_check_interrupts(NULL);
     }
 
     return 0;

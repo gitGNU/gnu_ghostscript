@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdte.c,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdte.c,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Encoding-based (Type 1/2/42) text processing for pdfwrite. */
 
 #include "math_.h"
@@ -43,7 +43,7 @@ private int pdf_char_widths(gx_device_pdf *const pdev,
 			    pdf_font_resource_t *pdfont, int ch,
 			    gs_font_base *font,
 			    pdf_glyph_widths_t *pwidths /* may be NULL */);
-private int pdf_encode_string(gx_device_pdf *pdev, const pdf_text_enum_t *penum,
+private int pdf_encode_string(gx_device_pdf *pdev, pdf_text_enum_t *penum,
 		  const gs_string *pstr, const gs_glyph *gdata,
 		  pdf_font_resource_t **ppdfont);
 private int pdf_process_string(pdf_text_enum_t *penum, gs_string *pstr,
@@ -176,7 +176,7 @@ pdf_used_charproc_fonts(gx_device_pdf *pdev, pdf_font_resource_t *pdfont)
  * Sets *ppdfont.
  */
 private int
-pdf_encode_string(gx_device_pdf *pdev, const pdf_text_enum_t *penum,
+pdf_encode_string(gx_device_pdf *pdev, pdf_text_enum_t *penum,
 		  const gs_string *pstr, const gs_glyph *gdata,
 		  pdf_font_resource_t **ppdfont)
 {
@@ -189,7 +189,7 @@ pdf_encode_string(gx_device_pdf *pdev, const pdf_text_enum_t *penum,
      * In contradiction with pre-7.20 versions of pdfwrite,
      * we never re-encode texts due to possible encoding conflict while font merging.
      */
-    code = pdf_obtain_font_resource((const gs_text_enum_t *)penum, pstr, &pdfont);
+    code = pdf_obtain_font_resource(penum, pstr, &pdfont);
     if (code < 0)
 	return code;
     code = pdf_add_resource(pdev, pdev->substream_Resources, "/Font", (pdf_resource_t *)pdfont);
@@ -382,6 +382,22 @@ adjust_first_last_char(pdf_font_resource_t *pdfont, byte *str, int size)
     }
 }
 
+int
+pdf_shift_text_currentpoint(pdf_text_enum_t *penum, gs_point *wpt)
+{
+    gs_state *pgs;
+    extern_st(st_gs_state);
+
+    if (gs_object_type(penum->dev->memory, penum->pis) != &st_gs_state) {
+	/* Probably never happens. Not sure though. */
+	return_error(gs_error_unregistered);
+    }
+    pgs = (gs_state *)penum->pis;
+    return gs_moveto_aux(penum->pis, gx_current_path(pgs),
+			      fixed2float(penum->origin.x) + wpt->x, 
+			      fixed2float(penum->origin.y) + wpt->y);
+}
+
 /*
  * Internal procedure to process a string in a non-composite font.
  * Doesn't use or set pte->{data,size,index}; may use/set pte->xy_index;
@@ -540,9 +556,7 @@ finish:
 	penum->returned.total_width.y += p.y;
     } else
 	penum->returned.total_width = width_pt;
-    return gx_path_add_point(penum->path,
-			     penum->origin.x + float2fixed(width_pt.x),
-			     penum->origin.y + float2fixed(width_pt.y));
+    return pdf_shift_text_currentpoint(penum, &width_pt);
 }
 
 /*
@@ -608,7 +622,7 @@ pdf_char_widths(gx_device_pdf *const pdev,
 		!(pdfont->u.simple.s.type3.cached[ch >> 3] & 0x80 >> (ch & 7))) {
 		 /* The charproc uses setcharwidth. 
 		    Need to accumulate again to check for a glyph variation. */
-	    return gs_error_undefined;
+		return gs_error_undefined;
 	    }
 	}
 	pwidths->Width.w = pdfont->Widths[ch];
@@ -656,7 +670,7 @@ process_text_return_width(const pdf_text_enum_t *pte, gs_font_base *font,
 	(pte->text.operation & TEXT_ADD_TO_SPACE_WIDTH ?
 	 pte->text.space.s_char : -1);
     int widths_differ = 0, code;
-	gx_device_pdf *pdev = (gx_device_pdf *)pte->dev;
+    gx_device_pdf *pdev = (gx_device_pdf *)pte->dev;
     pdf_font_resource_t *pdfont;
 
     code = pdf_attached_font_resource(pdev, (gs_font *)font, &pdfont, NULL, NULL, NULL, NULL);
@@ -676,7 +690,7 @@ process_text_return_width(const pdf_text_enum_t *pte, gs_font_base *font,
 	    !(pdfont->u.simple.s.type3.cached[ch >> 3] & (0x80 >> (ch & 7))))
 	    code = gs_error_undefined;
 	else 
-	code = pdf_char_widths((gx_device_pdf *)pte->dev,
+	    code = pdf_char_widths((gx_device_pdf *)pte->dev,
 	                           ppts->values.pdfont, ch, font,
 				   &cw);
 	if (code < 0) {
@@ -793,6 +807,10 @@ process_text_modify_width(pdf_text_enum_t *pte, gs_font *font,
 	int code, index = pte->index;
 	gs_text_enum_t pte1 = *(gs_text_enum_t *)pte;
 	int FontType;
+#define RIGHT_SBW 1 /* Old code = 0, new code = 1. */
+#if RIGHT_SBW
+	bool use_cached_v = true;
+#endif
 
 	code = pte1.orig_font->procs.next_char_glyph(&pte1, &chr, &glyph);
 	if (code == 2) { /* end of string */
@@ -813,6 +831,7 @@ process_text_modify_width(pdf_text_enum_t *pte, gs_font *font,
 	    if (chr == GS_NO_CHAR && glyph != GS_NO_GLYPH) {
 		/* glyphshow, we have no char code. Bug 686988.*/
 		code = pdf_glyph_widths(ppts->values.pdfont, font->WMode, glyph, font, &cw, NULL);
+		use_cached_v = false; /* Since we have no chr and don't call pdf_char_widths. */
 	    } else 
 		code = pdf_char_widths((gx_device_pdf *)pte->dev,
 				       ppts->values.pdfont, chr, (gs_font_base *)font,
@@ -824,16 +843,36 @@ process_text_modify_width(pdf_text_enum_t *pte, gs_font *font,
 	    return code;
 	}
 	gs_text_enum_copy_dynamic((gs_text_enum_t *)pte, &pte1, true);
+#if RIGHT_SBW
+	if (composite || !use_cached_v) {
+	    if (cw.replaced_v) {
+		v.x = cw.real_width.v.x - cw.Width.v.x;
+		v.y = cw.real_width.v.y - cw.Width.v.y;
+	    }
+	} else
+	    v = ppts->values.pdfont->u.simple.v[chr];
+	if (font->WMode) {
+	    /* With WMode 1 v-vector is (WMode 1 origin) - (WMode 0 origin).
+	       The glyph shifts in the opposite direction.  */
+	    v.x = - v.x;
+	    v.y = - v.y;
+	} else {
+	    /* With WMode 0 v-vector is (Metrics sb) - (native sb).
+	       The glyph shifts in same direction.  */
+	}
+	/* pdf_glyph_origin is not longer used. */
+#else
 	if ((pte->text.operation & TEXT_FROM_SINGLE_GLYPH) ||
 	    (pte->text.operation & TEXT_FROM_GLYPHS)) {
 	    v.x = v.y = 0;
 	} else if (composite) {
 	    if (cw.replaced_v) {
-		v.x = cw.Width.v.x - cw.real_width.v.x;
-		v.y = cw.Width.v.y - cw.real_width.v.y;
+		v.x = cw.real_width.v.x - cw.Width.v.x;
+		v.y = cw.real_width.v.y - cw.Width.v.y;
 	    }
 	} else
 	    pdf_glyph_origin(ppts->values.pdfont, chr, font->WMode, &v);
+#endif
 	if (v.x != 0 || v.y != 0) {
 	    gs_point glyph_origin_shift;
 	    double scale0;
@@ -842,16 +881,21 @@ process_text_modify_width(pdf_text_enum_t *pte, gs_font *font,
 		scale0 = (float)0.001;
 	    else
 		scale0 = 1;
-	    glyph_origin_shift.x = -v.x * scale0;
-	    glyph_origin_shift.y = -v.y * scale0;
-	    gs_distance_transform(glyph_origin_shift.x, glyph_origin_shift.y,
-				  &font->FontMatrix, &glyph_origin_shift);
+#if RIGHT_SBW
+	    glyph_origin_shift.x = v.x * scale0;
+	    glyph_origin_shift.y = v.y * scale0;
+#else
+	    glyph_origin_shift.x = - v.x * scale0;
+	    glyph_origin_shift.y = - v.y * scale0;
+#endif
 	    if (composite) {
 		gs_font *subfont = pte->fstack.items[pte->fstack.depth].font;
 
 		gs_distance_transform(glyph_origin_shift.x, glyph_origin_shift.y,
 				      &subfont->FontMatrix, &glyph_origin_shift);
 	    }
+	    gs_distance_transform(glyph_origin_shift.x, glyph_origin_shift.y,
+				  &font->FontMatrix, &glyph_origin_shift);
 	    gs_distance_transform(glyph_origin_shift.x, glyph_origin_shift.y,
 				  &ctm_only(pte->pis), &glyph_origin_shift);
 	    if (glyph_origin_shift.x != 0 || glyph_origin_shift.y != 0) {
@@ -960,7 +1004,7 @@ process_plain_text(gs_text_enum_t *pte, void *vbuf, uint bsize)
     byte *const buf = vbuf;
     uint count;
     uint operation = pte->text.operation;
-    pdf_text_enum_t *const penum = (pdf_text_enum_t *)pte;
+    pdf_text_enum_t *penum = (pdf_text_enum_t *)pte;
     int code;
     gs_string str;
     pdf_text_process_state_t text_state;
@@ -1040,7 +1084,7 @@ process_plain_text(gs_text_enum_t *pte, void *vbuf, uint bsize)
 
 	    str.data = buf;
 	    str.size = size;
-	    if (pdf_obtain_font_resource_unencoded(pte, &str, &pdfont, gdata) != 0) {
+	    if (pdf_obtain_font_resource_unencoded(penum, &str, &pdfont, gdata) != 0) {
 		/* 
 		 * pdf_text_process will fall back 
 		 * to default implementation.

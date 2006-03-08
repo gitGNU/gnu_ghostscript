@@ -2,7 +2,7 @@
  * Copyright (C) 2002 artofcode LLC.  All rights reserved.
  * See toolbin/encs2c.ps for the complete license notice.
  *
- * $Id: gscedata.h,v 1.1 2004/02/14 22:32:08 atai Exp $
+ * $Id: gscedata.h,v 1.2 2006/03/08 12:30:25 Arabidopsis Exp $
  *
  * This file contains substantial parts of toolbin/encs2c.ps,
  * which generated the remainder of the file mechanically from
@@ -26,6 +26,8 @@ extern const int gs_c_known_encoding_max_length;
 extern const ushort gs_c_known_encoding_offsets[];
 extern const int gs_c_known_encoding_count;
 extern const ushort *const gs_c_known_encodings[];
+extern const ushort *const gs_c_known_encodings_reverse[];
 extern const ushort gs_c_known_encoding_lengths[];
+extern const ushort gs_c_known_encoding_reverse_lengths[];
 
 #endif /* gscedata_INCLUDED */

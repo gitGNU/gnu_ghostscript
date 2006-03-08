@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: iutil.c,v 1.5 2005/12/13 16:57:26 jemarch Exp $ */
+/* $Id: iutil.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Utilities for Ghostscript interpreter */
 #include "math_.h"		/* for fabs */
 #include "memory_.h"
@@ -90,7 +90,7 @@ refset_null_new(ref * to, uint size, uint new_mask)
 
 /* Compare two objects for equality. */
 bool
-obj_eq(const ref * pref1, const ref * pref2)
+obj_eq(const gs_memory_t *mem, const ref * pref1, const ref * pref2)
 {
     ref nref;
 
@@ -110,13 +110,13 @@ obj_eq(const ref * pref1, const ref * pref2)
 	    case t_name:
 		if (!r_has_type(pref2, t_string))
 		    return false;
-		name_string_ref(pref1, &nref);
+		name_string_ref(mem, pref1, &nref);
 		pref1 = &nref;
 		break;
 	    case t_string:
 		if (!r_has_type(pref2, t_name))
 		    return false;
-		name_string_ref(pref2, &nref);
+		name_string_ref(mem, pref2, &nref);
 		pref2 = &nref;
 		break;
 
@@ -194,14 +194,14 @@ obj_eq(const ref * pref1, const ref * pref2)
 
 /* Compare two objects for identity. */
 bool
-obj_ident_eq(const ref * pref1, const ref * pref2)
+obj_ident_eq(const gs_memory_t *mem, const ref * pref1, const ref * pref2)
 {
     if (r_type(pref1) != r_type(pref2))
 	return false;
     if (r_has_type(pref1, t_string))
 	return (pref1->value.bytes == pref2->value.bytes &&
 		r_size(pref1) == r_size(pref2));
-    return obj_eq(pref1, pref2);
+    return obj_eq(mem, pref1, pref2);
 }
 
 /*
@@ -210,13 +210,13 @@ obj_ident_eq(const ref * pref1, const ref * pref2)
  * If the object is a string without read access, return e_invalidaccess.
  */
 int
-obj_string_data(const ref *op, const byte **pchars, uint *plen)
+obj_string_data(const gs_memory_t *mem, const ref *op, const byte **pchars, uint *plen)
 {
     switch (r_type(op)) {
     case t_name: {
 	ref nref;
 
-	name_string_ref(op, &nref);
+	name_string_ref(mem, op, &nref);
 	*pchars = nref.value.bytes;
 	*plen = r_size(&nref);
 	return 0;
@@ -250,7 +250,7 @@ obj_string_data(const ref *op, const byte **pchars, uint *plen)
 private void ensure_dot(char *);
 int
 obj_cvp(const ref * op, byte * str, uint len, uint * prlen,
-	int full_print, uint start_pos, gs_memory_t *mem)
+	int full_print, uint start_pos, const gs_memory_t *mem)
 {
     char buf[50];  /* big enough for any float, double, or struct name */
     const byte *data = (const byte *)buf;
@@ -301,7 +301,7 @@ obj_cvp(const ref * op, byte * str, uint len, uint * prlen,
 	    goto nl;
 	case t_name:	 
 	    if (r_has_attr(op, a_executable)) {
-		code = obj_string_data(op, &data, &size);
+		code = obj_string_data(mem, op, &data, &size);
 		if (code < 0)
 		    return code;
 		goto nl;
@@ -405,8 +405,8 @@ obj_cvp(const ref * op, byte * str, uint len, uint * prlen,
 	    }
 	    data = (const byte *)
 		gs_struct_type_name_string(
-			gs_object_type(mem,
-			       (const obj_header_t *)op->value.pstruct));
+		     gs_object_type((gs_memory_t *)mem,
+				    (const obj_header_t *)op->value.pstruct));
 	    size = strlen((const char *)data);
 	    if (size > 4 && !memcmp(data + size - 4, "type", 4))
 		size -= 4;
@@ -444,7 +444,7 @@ other:
 	check_read(*op);
 	/* falls through */
     case t_name:
-	code = obj_string_data(op, &data, &size);
+	code = obj_string_data(mem, op, &data, &size);
 	if (code < 0)
 	    return code;
 	goto nl;
@@ -452,9 +452,9 @@ other:
 	uint index = op_index(op);
 	const op_array_table *opt = op_index_op_array_table(index);
 
-	name_index_ref(opt->nx_table[index - opt->base_index], &nref);
-	name_string_ref(&nref, &nref);
-	code = obj_string_data(&nref, &data, &size);
+	name_index_ref(mem, opt->nx_table[index - opt->base_index], &nref);
+	name_string_ref(mem, &nref, &nref);
+	code = obj_string_data(mem, &nref, &data, &size);
 	if (code < 0)
 	    return code;
 	goto nl;
@@ -523,16 +523,16 @@ ensure_dot(char *buf)
  * str.  In any case, store the length in *prlen.
  */
 int
-obj_cvs(const ref * op, byte * str, uint len, uint * prlen,
+obj_cvs(const gs_memory_t *mem, const ref * op, byte * str, uint len, uint * prlen,
 	const byte ** pchars)
 {
-    int code = obj_cvp(op, str, len, prlen, 0, 0, NULL);
+    int code = obj_cvp(op, str, len, prlen, 0, 0, mem);  /* NB: NULL memptr */
 
     if (code != 1 && pchars) {
 	*pchars = str;
 	return code;
     }
-    obj_string_data(op, pchars, prlen);
+    obj_string_data(mem, op, pchars, prlen);
     return gs_note_error(e_rangecheck);
 }
 
@@ -579,7 +579,7 @@ op_index_ref(uint index, ref * pref)
 /* This is also used to index into Encoding vectors, */
 /* the error name vector, etc. */
 int
-array_get(const ref * aref, long index_long, ref * pref)
+array_get(const gs_memory_t *mem, const ref * aref, long index_long, ref * pref)
 {
     if ((ulong)index_long >= r_size(aref))
 	return_error(e_rangecheck);
@@ -598,14 +598,14 @@ array_get(const ref * aref, long index_long, ref * pref)
 
 		for (; index--;)
 		    packed = packed_next(packed);
-		packed_get(packed, pref);
+		packed_get(mem, packed, pref);
 	    }
 	    break;
 	case t_shortarray:
 	    {
 		const ref_packed *packed = aref->value.packed + index_long;
 
-		packed_get(packed, pref);
+		packed_get(mem, packed, pref);
 	    }
 	    break;
 	default:
@@ -619,7 +619,7 @@ array_get(const ref * aref, long index_long, ref * pref)
 /* Source and destination are allowed to overlap if the source is packed, */
 /* or if they are identical. */
 void
-packed_get(const ref_packed * packed, ref * pref)
+packed_get(const gs_memory_t *mem, const ref_packed * packed, ref * pref)
 {
     const ref_packed elt = *packed;
     uint value = elt & packed_value_mask;
@@ -635,10 +635,10 @@ packed_get(const ref_packed * packed, ref * pref)
 	    make_int(pref, (int)value + packed_min_intval);
 	    break;
 	case pt_literal_name:
-	    name_index_ref(value, pref);
+	    name_index_ref(mem, value, pref);
 	    break;
 	case pt_executable_name:
-	    name_index_ref(value, pref);
+	    name_index_ref(mem, value, pref);
 	    r_set_attrs(pref, a_executable);
 	    break;
 	case pt_full_ref:
@@ -747,7 +747,7 @@ float_params(const ref * op, int count, float *pval)
 
 /* Get N numeric parameters (as floating point numbers) from an array */
 int
-process_float_array(const ref * parray, int count, float * pval)
+process_float_array(const gs_memory_t *mem, const ref * parray, int count, float * pval)
 {
     int         code = 0, indx0 = 0;
 
@@ -762,7 +762,7 @@ process_float_array(const ref * parray, int count, float * pval)
 
         subcount = (count > countof(ref_buff) ? countof(ref_buff) : count);
         for (i = 0; i < subcount && code >= 0; i++)
-            code = array_get(parray, (long)(i + indx0), &ref_buff[i]);
+            code = array_get(mem, parray, (long)(i + indx0), &ref_buff[i]);
         if (code >= 0)
             code = float_params(ref_buff + subcount - 1, subcount, pval);
         count -= subcount;
@@ -854,7 +854,7 @@ check_type_failed(const ref * op)
 /* Read a matrix operand. */
 /* Return 0 if OK, error code if not. */
 int
-read_matrix(const ref * op, gs_matrix * pmat)
+read_matrix(const gs_memory_t *mem, const ref * op, gs_matrix * pmat)
 {
     int code;
     ref values[6];
@@ -866,7 +866,7 @@ read_matrix(const ref * op, gs_matrix * pmat)
 	int i;
 
 	for (i = 0; i < 6; ++i) {
-	    code = array_get(op, (long)i, &values[i]);
+	    code = array_get(mem, op, (long)i, &values[i]);
 	    if (code < 0)
 		return code;
 	}

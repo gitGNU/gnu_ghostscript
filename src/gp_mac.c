@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gp_mac.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_mac.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 
 #ifndef __CARBON__
 #include <Palettes.h>
@@ -90,7 +90,7 @@ gp_init (void)
 		{
 			GetIndString (string, MACSTRS_RES_ID, i);
 			(void) PtoCstr (string);
-			*p = gs_malloc (1, (size_t) (strlen ((char *) string) + 1), "gp_init");
+			*p = malloc ((size_t) (strlen ((char *) string) + 1));
 			strcpy (*p, (char *) string);
 		}
 	}
@@ -143,7 +143,7 @@ gp_get_realtime(long *pdt)
 
 	if (gettimeofday(&tp) == -1) {
 	    lprintf("Ghostscript: gettimeofday failed!\n");
-	    gs_abort();
+	    gs_abort(NULL);
 	}
 
     /* tp.tv_sec is #secs since Jan 1, 1970 */
@@ -304,6 +304,24 @@ void
 gpp_get_usertime(long *pdt)
 {
 	gp_get_realtime(pdt);	/* Use an approximation for now.  */
+}
+
+
+/* ------ Persistent data cache ------*/
+
+/* insert a buffer under a (type, key) pair */
+int gp_cache_insert(int type, byte *key, int keylen, void *buffer, int buflen)
+{
+    /* not yet implemented */
+    return 0;
+}
+
+/* look up a (type, key) in the cache */
+int gp_cache_query(int type, byte* key, int keylen, void **buffer,
+    gp_cache_alloc alloc, void *userdata)
+{
+    /* not yet implemented */
+    return -1;
 }
 
 

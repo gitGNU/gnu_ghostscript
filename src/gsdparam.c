@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsdparam.c,v 1.5 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsdparam.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Default device parameters for Ghostscript library */
 #include "memory_.h"		/* for memcpy */
 #include "string_.h"		/* for strlen */
@@ -75,7 +75,6 @@ gx_default_get_params(gx_device * dev, gs_param_list * plist)
 
     /* Standard page device parameters: */
 
-    int mns = 1;
     bool seprs = false;
     gs_param_string dns, pcms;
     gs_param_float_array msa, ibba, hwra, ma;
@@ -87,6 +86,7 @@ gx_default_get_params(gx_device * dev, gs_param_list * plist)
     /* Non-standard parameters: */
 
     int colors = dev->color_info.num_components;
+    int mns = colors;
     int depth = dev->color_info.depth;
     int GrayValues = dev->color_info.max_gray + 1;
     int HWSize[2];
@@ -171,7 +171,8 @@ gx_default_get_params(gx_device * dev, gs_param_list * plist)
 
     if (colors > 1) {
 	int RGBValues = dev->color_info.max_color + 1;
-	long ColorValues = (depth >= 32 ? -1 : 1L << depth);
+	long ColorValues = (depth >= (8 * sizeof(gx_color_index)) ? -1
+							: 1L << depth);
 
 	if ((code = param_write_int(plist, "RedValues", &RGBValues)) < 0 ||
 	    (code = param_write_int(plist, "GreenValues", &RGBValues)) < 0 ||
@@ -663,13 +664,13 @@ nce:
 	ecode = code;
     if ((code = param_check_long(plist, "PageCount", dev->PageCount, true)) < 0)
 	ecode = code;
-    if ((code = param_check_int(plist, "RedValues", RGBValues, colors > 1)) < 0)
+    if ((code = param_check_int(plist, "RedValues", RGBValues, true)) < 0)
 	ecode = code;
-    if ((code = param_check_int(plist, "GreenValues", RGBValues, colors > 1)) < 0)
+    if ((code = param_check_int(plist, "GreenValues", RGBValues, true)) < 0)
 	ecode = code;
-    if ((code = param_check_int(plist, "BlueValues", RGBValues, colors > 1)) < 0)
+    if ((code = param_check_int(plist, "BlueValues", RGBValues, true)) < 0)
 	ecode = code;
-    if ((code = param_check_long(plist, "ColorValues", ColorValues, colors > 1)) < 0)
+    if ((code = param_check_long(plist, "ColorValues", ColorValues, true)) < 0)
 	ecode = code;
     if (param_read_string(plist, "HWColorMap", &cms) != 1) {
 	byte palette[3 << 8];

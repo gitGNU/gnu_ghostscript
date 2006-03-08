@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdtb.c,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdtb.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* BaseFont implementation for pdfwrite */
 #include "memory_.h"
 #include "ctype_.h"
@@ -30,6 +30,7 @@
 #include "gxfont42.h"
 #include "gdevpsf.h"
 #include "gdevpdfx.h"
+#include "gdevpdfo.h"
 #include "gdevpdtb.h"
 #include "gdevpdtf.h"
 
@@ -72,14 +73,22 @@ struct pdf_base_font_s {
      */
     int num_glyphs;
     byte *CIDSet;		/* for CIDFonts */
+#if !PDFW_DELAYED_STREAMS
     long FontFile_id;		/* non-0 iff the font is embedded */
+#endif
     gs_string font_name;
     bool written;
+#if PDFW_DELAYED_STREAMS
+    cos_dict_t *FontFile;
+#endif
 };
 BASIC_PTRS(pdf_base_font_ptrs) {
     GC_OBJ_ELT(pdf_base_font_t, copied),
     GC_OBJ_ELT(pdf_base_font_t, complete),
     GC_OBJ_ELT(pdf_base_font_t, CIDSet),
+#if PDFW_DELAYED_STREAMS
+    GC_OBJ_ELT(pdf_base_font_t, FontFile),
+#endif
     GC_STRING_ELT(pdf_base_font_t, font_name)
 };
 gs_private_st_basic(st_pdf_base_font, pdf_base_font_t, "pdf_base_font_t",
@@ -149,6 +158,8 @@ private int
 pdf_begin_fontfile(gx_device_pdf *pdev, long FontFile_id,
 		   const char *entries, long len1, pdf_data_writer_t *pdw)
 {
+    int code;
+#if !PDFW_DELAYED_STREAMS
     stream *s;
 
     pdf_open_separate(pdev, FontFile_id);
@@ -158,16 +169,40 @@ pdf_begin_fontfile(gx_device_pdf *pdev, long FontFile_id,
 	stream_puts(pdev->strm, entries);
     if (len1 >= 0)
 	pprintld1(pdev->strm, "/Length1 %ld", len1);
-    return pdf_begin_data_stream(pdev, pdw, DATA_STREAM_BINARY | DATA_STREAM_ENCRYPT |
+#endif
+    code = pdf_begin_data_stream(pdev, pdw, DATA_STREAM_BINARY | DATA_STREAM_ENCRYPT |
 				 (pdev->CompressFonts ?
 				  DATA_STREAM_COMPRESS : 0), FontFile_id);
+#if PDFW_DELAYED_STREAMS
+    if (len1 >= 0) {
+	code = cos_dict_put_c_key_int((cos_dict_t *)pdw->pres->object, "/Length1", len1);
+	if (code < 0)
+	    return code;
+    }
+    if (entries != NULL) {
+	const char *p = strchr(entries + 1, '/');
+
+	code = cos_dict_put_string((cos_dict_t *)pdw->pres->object, 
+		    (const byte *)entries, p - entries,
+		    (const byte *)p, strlen(p));
+	if (code < 0)
+	    return code;
+    }
+#endif
+    return code;
 }
 
 /* Finish writing FontFile* data. */
 private int
 pdf_end_fontfile(gx_device_pdf *pdev, pdf_data_writer_t *pdw)
 {
+#if !PDFW_DELAYED_STREAMS
     return pdf_end_data(pdw);
+#else
+    /* We would like to call pdf_end_data,
+       but we don't want to write the object to the output file now. */
+    return pdf_close_aside(pdw->pdev);
+#endif
 }
 
 /* ---------------- Public ---------------- */
@@ -421,12 +456,25 @@ pdf_write_FontFile_entry(gx_device_pdf *pdev, pdf_base_font_t *pbfont)
 	FontFile_key = "/FontFile2";
 	break;
     default:			/* Type 1/2, CIDFontType 0 */
-	FontFile_key = "/FontFile3";
+	/* Hack : assuming OrderResources == true 
+	   iff we generate a ps2write output. */
+#	if PS2WRITE
+	    if (pdev->OrderResources)
+		FontFile_key = "/FontFile";
+	    else
+#	endif
+	    FontFile_key = "/FontFile3";
     }
+#if !PDFW_DELAYED_STREAMS
     if (pbfont->FontFile_id == 0)
 	pbfont->FontFile_id = pdf_obj_ref(pdev);
+#endif
     stream_puts(s, FontFile_key);
+#if !PDFW_DELAYED_STREAMS
     pprintld1(s, " %ld 0 R", pbfont->FontFile_id);
+#else
+    pprintld1(s, " %ld 0 R", pbfont->FontFile->id);
+#endif
     return 0;
 }
 
@@ -483,9 +531,15 @@ pdf_adjust_font_name(gx_device_pdf *pdev, long id, pdf_base_font_t *pbfont)
 /*
  * Write an embedded font.
  */
+#if PDFW_DELAYED_STREAMS
+int
+pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
+			gs_int_rect *FontBBox, gs_id rid, cos_dict_t **ppcd)
+#else
 int
 pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
 			gs_int_rect *FontBBox, gs_id rid)
+#endif
 {
     bool do_subset = pdf_do_subset_font(pdev, pbfont, rid);
     gs_font_base *out_font =
@@ -497,9 +551,17 @@ pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
 
     if (pbfont->written)
 	return 0;		/* already written */
+#if !PDFW_DELAYED_STREAMS
     if (pbfont->FontFile_id == 0)
 	pbfont->FontFile_id = pdf_obj_ref(pdev);
     FontFile_id = pbfont->FontFile_id;
+#else
+    FontFile_id = -1; /* A stub for old code compatibility. */
+    /* We write the font data to a delayed stream
+       to provide it to be written after the font descriptor 
+       for ps2write needs.
+     */
+#endif
     if (pdev->CompatibilityLevel == 1.2 &&
 	!do_subset && !pbfont->is_standard ) {
 	/*
@@ -524,24 +586,71 @@ pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
 	code = 0;
 	break;
 
-    case ft_encrypted:
     case ft_encrypted2:
-	/*
-	 * Since we only support PDF 1.2 and later, always write Type 1
-	 * fonts as Type1C (Type 2).  Acrobat Reader apparently doesn't
-	 * accept CFF fonts with Type 1 CharStrings, so we need to convert
-	 * them.  Also remove lenIV, so Type 2 fonts will compress better.
-	 */
-#define TYPE2_OPTIONS (WRITE_TYPE2_NO_LENIV | WRITE_TYPE2_CHARSTRINGS)
-	code = pdf_begin_fontfile(pdev, FontFile_id, "/Subtype/Type1C", -1L,
-				  &writer);
+#	if PS2WRITE && CONVERT_CFF_TO_TYPE1
+	    /* Hack : assuming OrderResources == true 
+	       iff we generate a ps2write output. */
+	    if (pdev->OrderResources) {
+		/* Must convert to Type 1 charstrings. */
+		return_error(gs_error_unregistered); /* Not implemented yet. */
+	    }
+#	endif
+    case ft_encrypted:
+	code = copied_drop_extension_glyphs((gs_font *)out_font);
 	if (code < 0)
 	    return code;
-	code = psf_write_type2_font(writer.binary.strm,
+#	if PS2WRITE
+	    /* Hack : assuming OrderResources == true 
+	       iff we generate a ps2write output. */
+	    if (pdev->OrderResources) {
+		int lengths[3];
+
+		code = pdf_begin_fontfile(pdev, FontFile_id, NULL, -1L,
+					  &writer);
+		if (code < 0)
+		    return code;
+		code = psf_write_type1_font(writer.binary.strm,
 				    (gs_font_type1 *)out_font,
-				    TYPE2_OPTIONS |
-			(pdev->CompatibilityLevel < 1.3 ? WRITE_TYPE2_AR3 : 0),
-				    NULL, 0, &fnstr, FontBBox);
+				    WRITE_TYPE1_WITH_LENIV || 
+				    WRITE_TYPE1_EEXEC || 
+				    WRITE_TYPE1_EEXEC_PAD,
+				    NULL, 0, &fnstr, lengths);
+		if (lengths[0] > 0) {
+		    if (code < 0)
+			return code;
+		    code = cos_dict_put_c_key_int((cos_dict_t *)writer.pres->object, 
+				"/Length1", lengths[0]);
+		}
+		if (lengths[1] > 0) {
+		    if (code < 0)
+			return code;
+		    code = cos_dict_put_c_key_int((cos_dict_t *)writer.pres->object, 
+				"/Length2", lengths[1]);
+		    if (code < 0)
+			return code;
+		    code = cos_dict_put_c_key_int((cos_dict_t *)writer.pres->object, 
+				"/Length3", lengths[2]);
+		}
+	    } else
+#	endif
+	{
+	    /*
+	     * Since we only support PDF 1.2 and later, always write Type 1
+	     * fonts as Type1C (Type 2).  Acrobat Reader apparently doesn't
+	     * accept CFF fonts with Type 1 CharStrings, so we need to convert
+	     * them.  Also remove lenIV, so Type 2 fonts will compress better.
+	     */
+#define TYPE2_OPTIONS (WRITE_TYPE2_NO_LENIV | WRITE_TYPE2_CHARSTRINGS)
+	    code = pdf_begin_fontfile(pdev, FontFile_id, "/Subtype/Type1C", -1L,
+				      &writer);
+	    if (code < 0)
+		return code;
+	    code = psf_write_type2_font(writer.binary.strm,
+					(gs_font_type1 *)out_font,
+					TYPE2_OPTIONS |
+			    (pdev->CompatibilityLevel < 1.3 ? WRITE_TYPE2_AR3 : 0),
+					NULL, 0, &fnstr, FontBBox);
+	}
 	goto finish;
 
     case ft_TrueType: {
@@ -558,6 +667,10 @@ pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
 	     WRITE_TRUETYPE_CMAP : 0);
 	stream poss;
 
+	code = copied_drop_extension_glyphs((gs_font *)out_font);
+	if (code < 0)
+	    return code;
+	s_init(&poss, pdev->memory);
 	swrite_position_only(&poss);
 	code = psf_write_truetype_font(&poss, pfont, options, NULL, 0, &fnstr);
 	if (code < 0)
@@ -591,6 +704,10 @@ pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
 				   (gs_font_cid2 *)out_font,
 				   CID2_OPTIONS, NULL, 0, &fnstr);
     finish:
+#	if PDFW_DELAYED_STREAMS
+	    pdf_reserve_object_id(pdev, writer.pres, gs_no_id);
+	    *ppcd = (cos_dict_t *)writer.pres->object;
+#	endif
 	if (code < 0) {
 	    pdf_end_fontfile(pdev, &writer);
 	    return code;
@@ -639,6 +756,29 @@ pdf_write_CharSet(gx_device_pdf *pdev, pdf_base_font_t *pbfont)
 /*
  * Write the CIDSet object for a subsetted CIDFont.
  */
+#if PDFW_DELAYED_STREAMS
+int
+pdf_write_CIDSet(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
+		 long *pcidset_id)
+{
+    pdf_data_writer_t writer;
+    int code;
+
+    code = pdf_begin_data_stream(pdev, &writer,
+		      DATA_STREAM_BINARY | 
+		      (pdev->CompressFonts ? DATA_STREAM_COMPRESS : 0), 
+		      gs_no_id);
+    if (code < 0)
+	return code;
+    stream_write(writer.binary.strm, pbfont->CIDSet,
+		 (pbfont->num_glyphs + 7) / 8);
+    code = pdf_end_data(&writer);
+    if (code < 0)
+	return code;
+    *pcidset_id = pdf_resource_id(writer.pres);
+    return 0;
+}
+#else
 int
 pdf_write_CIDSet(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
 		 long *pcidset_id)
@@ -663,6 +803,7 @@ pdf_write_CIDSet(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
     pdf_end_separate(pdev);
     return code;
 }
+#endif
 
 /*
  * Check whether a base font is standard.
@@ -671,3 +812,16 @@ bool
 pdf_is_standard_font(pdf_base_font_t *bfont)
 {   return bfont->is_standard;
 }
+
+#if PDFW_DELAYED_STREAMS
+void
+pdf_set_FontFile_object(pdf_base_font_t *bfont, cos_dict_t *pcd)
+{
+    bfont->FontFile = pcd;
+}
+const cos_dict_t *
+pdf_get_FontFile_object(pdf_base_font_t *bfont)
+{
+    return bfont->FontFile;
+}
+#endif

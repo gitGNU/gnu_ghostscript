@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: stdint_.h,v 1.3 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: stdint_.h,v 1.4 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Generic substitute for stdint.h */
 
 #ifndef stdint__INCLUDED
@@ -119,6 +119,13 @@ typedef unsigned int uint64_t;
 #  if ARCH_SIZEOF_LONG == 8
 typedef signed long int64_t;
 typedef unsigned long uint64_t;
+#  else
+#   ifdef ARCH_SIZEOF_LONG_LONG
+#    if ARCH_SIZEOF_LONG_LONG == 8
+typedef signed long long int64_t;
+typedef unsigned long long uint64_t;
+#    endif
+#   endif
 #  endif
 # endif
 #  define STDINT_TYPES_DEFINED

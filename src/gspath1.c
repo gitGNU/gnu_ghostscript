@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gspath1.c,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gspath1.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Additional PostScript Level 1 path routines for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -63,6 +63,30 @@ typedef struct arc_curve_params_s {
 
 /* Forward declarations */
 private int arc_add(const arc_curve_params_t *arc, bool is_quadrant);
+
+
+int
+gx_setcurrentpoint_from_path(gs_imager_state *pis, gx_path *path)
+{
+    gs_point pt;
+
+    pt.x = fixed2float(path->position.x);
+    pt.y = fixed2float(path->position.y);
+    gx_setcurrentpoint(pis, pt.x, pt.y);
+    pis->current_point_valid = true;
+    return 0;
+}
+
+private inline int
+gs_arc_add_inline(gs_state *pgs, bool cw, floatp xc, floatp yc, floatp rad, 
+		    floatp a1, floatp a2, bool add)
+{
+    int code = gs_imager_arc_add(pgs->path, (gs_imager_state *)pgs, cw, xc, yc, rad, a1, a2, add);
+
+    if (code < 0)
+	return code;
+    return gx_setcurrentpoint_from_path((gs_imager_state *)pgs, pgs->path);
+}
 
 int
 gs_arc(gs_state * pgs,
@@ -324,6 +348,8 @@ floatp ax1, floatp ay1, floatp ax2, floatp ay2, floatp arad, float retxy[4])
 	    arc.pt.x = ax1;
 	    arc.pt.y = ay1;
 	    code = arc_add(&arc, false);
+	    if (code == 0)
+		code = gx_setcurrentpoint_from_path((gs_imager_state *)pgs, pgs->path);
 	}
     }
     if (retxy != 0) {
@@ -348,9 +374,15 @@ arc_add(const arc_curve_params_t * arc, bool is_quadrant)
     int code;
 
     if ((arc->action != arc_nothing &&
+#if !PRECISE_CURRENTPOINT
 	 (code = gs_point_transform2fixed(&pis->ctm, x0, y0, &p0)) < 0) ||
 	(code = gs_point_transform2fixed(&pis->ctm, xt, yt, &pt)) < 0 ||
 	(code = gs_point_transform2fixed(&pis->ctm, arc->p3.x, arc->p3.y, &p3)) < 0 ||
+#else
+	 (code = gs_point_transform2fixed_rounding(&pis->ctm, x0, y0, &p0)) < 0) ||
+	(code = gs_point_transform2fixed_rounding(&pis->ctm, xt, yt, &pt)) < 0 ||
+	(code = gs_point_transform2fixed_rounding(&pis->ctm, arc->p3.x, arc->p3.y, &p3)) < 0 ||
+#endif
 	(code =
 	 (arc->action == arc_nothing ?
 	  (p0.x = path->position.x, p0.y = path->position.y, 0) :
@@ -407,6 +439,21 @@ add:
     return gx_path_add_curve_notes(path, p0.x, p0.y, p2.x, p2.y, p3.x, p3.y,
 				   arc->notes | sn_from_arc);
 }
+
+void
+make_quadrant_arc(gs_point *p, const gs_point *c, 
+	const gs_point *p0, const gs_point *p1, double r)
+{
+    p[0].x = c->x + p0->x * r;
+    p[0].y = c->y + p0->y * r;
+    p[1].x = c->x + p0->x * r + p1->x * r * quarter_arc_fraction;
+    p[1].y = c->y + p0->y * r + p1->y * r * quarter_arc_fraction;
+    p[2].x = c->x + p0->x * r * quarter_arc_fraction + p1->x * r;
+    p[2].y = c->y + p0->y * r * quarter_arc_fraction + p1->y * r;
+    p[3].x = c->x + p1->x * r;
+    p[3].y = c->y + p1->y * r;
+}
+
 
 /* ------ Path transformers ------ */
 
@@ -465,6 +512,13 @@ gs_reversepath(gs_state * pgs)
     if (code < 0) {
 	gx_path_free(&rpath, "gs_reversepath");
 	return code;
+    }
+    if (pgs->current_point_valid) {
+	/* Not empty. */
+	gx_setcurrentpoint(pgs, fixed2float(rpath.position.x), 
+				fixed2float(rpath.position.y));
+	pgs->subpath_start.x = fixed2float(rpath.segments->contents.subpath_current->pt.x);
+	pgs->subpath_start.y = fixed2float(rpath.segments->contents.subpath_current->pt.y);
     }
     gx_path_assign_free(ppath, &rpath);
     return 0;

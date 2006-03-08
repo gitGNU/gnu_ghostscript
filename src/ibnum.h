@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ibnum.h,v 1.4 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: ibnum.h,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Encoded number definitions and support */
 /* Requires stream.h */
 
@@ -72,7 +72,7 @@ extern const byte enc_num_bytes[];	/* in ibnum.c */
 /* Read from an array or encoded number string. */
 int num_array_format(const ref *);	/* returns format or error */
 uint num_array_size(const ref *, int);
-int num_array_get(const ref *, int, uint, ref *);
+int num_array_get(const gs_memory_t *mem, const ref *, int, uint, ref *);
 
 /* Decode a number from a string with appropriate byte swapping. */
 int sdecode_number(const byte *, int, ref *);

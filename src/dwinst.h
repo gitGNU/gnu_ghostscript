@@ -16,7 +16,7 @@
 
 */
 
-// $Id: dwinst.h,v 1.4 2005/12/13 16:57:18 jemarch Exp $
+// $Id: dwinst.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $
 
 #ifndef dwinst_INCLUDED
 #  define dwinst_INCLUDED
@@ -64,6 +64,8 @@ public:
 	BOOL MakeLog(void);
 
 	void CleanUp(void);
+
+        void AppendFileNew(const char *filename);
 
 private:
 	BOOL m_bNoCopy;

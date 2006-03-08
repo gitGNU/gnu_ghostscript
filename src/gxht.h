@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxht.h,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxht.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Rest of (client) halftone definitions */
 
 #ifndef gxht_INCLUDED
@@ -169,7 +169,7 @@ extern_st(st_ht_component_element);
 typedef struct gs_multiple_halftone_s {
     gs_halftone_component *components;
     uint num_comp;
-    int (*get_colorname_string)(gs_separation_name colorname_index,
+    int (*get_colorname_string)(const gs_memory_t *mem, gs_separation_name colorname_index,
 		unsigned char **ppstr, unsigned int *pname_size);
 } gs_multiple_halftone;
 

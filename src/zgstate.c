@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zgstate.c,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zgstate.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Graphics state operators */
 #include "math_.h"
 #include "ghost.h"
@@ -140,7 +140,7 @@ int_gstate_alloc(const gs_dual_memory_t * dmem)
 			   "int_gstate_alloc(remap color info)");
     make_struct(&iigs->remap_color_info, imemory_space(gmem), prci);
     clear_pagedevice(iigs);
-    gs_state_set_client(pgs, iigs, &istate_procs);
+    gs_state_set_client(pgs, iigs, &istate_procs, true);
     /* PostScript code wants limit clamping enabled. */
     gs_setlimitclamp(pgs, true);
     /*
@@ -314,7 +314,7 @@ zsetdash(i_ctx_t *i_ctx_p)
     for (i = 0, code = 0; i < n && code >= 0; ++i) {
 	ref element;
 
-	array_get(op1, (long)i, &element);
+	array_get(mem, op1, (long)i, &element);
 	code = float_param(&element, &pattern[i]);
     }
     if (code >= 0)

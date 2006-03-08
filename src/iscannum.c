@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: iscannum.c,v 1.5 2005/12/13 16:57:26 jemarch Exp $ */
+/* $Id: iscannum.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Number scanner for Ghostscript interpreter */
 #include "math_.h"
 #include "ghost.h"
@@ -209,7 +209,7 @@ i2l:
                     GET_NEXT(c, sp, c = EOFC);
 		    exp10 = 0;
 		    goto fd;
-		} else if (!IS_DIGIT(d, c)) {
+                } else if (!IS_DIGIT(d, c)) {
 		    lval = min_long;
 		    break;
 		}

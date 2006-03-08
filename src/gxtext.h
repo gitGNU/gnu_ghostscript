@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxtext.h,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxtext.h,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Driver text interface implementation support */
 
 #ifndef gxtext_INCLUDED
@@ -112,14 +112,9 @@ rc_free_proc(rc_free_text_enum);
     /* The following are used to return information to the client. */\
     gs_text_returned_t returned
 /* The typedef is in gstext.h. */
-/*typedef*/ struct gs_text_enum_s {
+struct gs_text_enum_s {
     gs_text_enum_common;
-} /*gs_text_enum_t*/;
-
-#if NEW_TT_INTERPRETER
-    /* The 'pair' field is added to the macro above. */
-    /* A definition of cached_fm_pair is added above */
-#endif
+};
 
 /*
  * Notes on the imaging_dev field of device enumeration structures:
@@ -157,7 +152,7 @@ rc_free_proc(rc_free_text_enum);
  * approach will fail.
  */
 
-#define st_gs_text_enum_max_ptrs (st_gs_text_params_max_ptrs + 7)
+#define st_gs_text_enum_max_ptrs (st_gs_text_params_max_ptrs + 8)
 /*extern_st(st_gs_text_enum); */
 #define public_st_gs_text_enum()	/* in gstext.c */\
   gs_public_st_composite(st_gs_text_enum, gs_text_enum_t, "gs_text_enum_t",\

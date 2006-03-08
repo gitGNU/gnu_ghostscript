@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gximage.c,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gximage.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Generic image support */
 #include "memory_.h"
 #include "gx.h"
@@ -90,7 +90,7 @@ gx_image_enum_common_init(gx_image_enum_common_t * piec,
     piec->image_type = pic->type;
     piec->procs = piep;
     piec->dev = dev;
-    piec->id = gs_next_ids(1);
+    piec->id = gs_next_ids(dev->memory, 1);
     switch (format) {
 	case gs_image_format_chunky:
 	    piec->num_planes = 1;

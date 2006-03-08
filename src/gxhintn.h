@@ -14,18 +14,30 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxhintn.h,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
-/* Type 1 hinter, a new algorithm, prototypes */
+/* $Id: gxhintn.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* Type 1 hinter, prototypes */
 
 #ifndef gxhintn_INCLUDED
 #  define gxhintn_INCLUDED
 
+#include "stdint_.h"
+
+#define FINE_STEM_COMPLEXES 1		/* A temporary development purpose. */
+#define ALIGN_BY_STEM_MIDDLE 1		/* A temporary development purpose. */
+#define OPPOSITE_STEM_COORD_BUG_FIX 1	/* A temporary development purpose. */
+#define TT_AUTOHINT_TOPZONE_BUG_FIX 1	/* A temporary development purpose. */
+
+
 #ifndef gs_type1_data_DEFINED
 #define gs_type1_data_DEFINED
 typedef struct gs_type1_data_s gs_type1_data;
+#endif
+
+#ifndef gs_type42_data_DEFINED
+#define gs_type42_data_DEFINED
+typedef struct gs_type42_data_s gs_type42_data;
 #endif
 
 #ifndef gx_path_DEFINED
@@ -33,17 +45,15 @@ typedef struct gs_type1_data_s gs_type1_data;
 typedef struct gx_path_s gx_path;
 #endif
 
-
 #define T1_MAX_STEM_SNAPS 12
 #define T1_MAX_ALIGNMENT_ZONES 6
 #define T1_MAX_CONTOURS 10
 #define T1_MAX_POLES (100 + T1_MAX_CONTOURS) /* Must be grater than 8 for 'flex'. */
 #define T1_MAX_HINTS 30
 
-typedef int int32;
 typedef fixed t1_glyph_space_coord; /* measured in original glyph space units */
-typedef int32 t1_hinter_space_coord; /* measured in internal outliner's space units */
-typedef int32 int19;
+typedef int32_t t1_hinter_space_coord; /* measured in internal outliner's space units */
+typedef int32_t int19;
 
 enum t1_hint_type
 {   hstem, vstem, dot
@@ -58,7 +68,10 @@ enum t1_zone_type
 };
 
 enum t1_align_type
-{   unaligned, aligned, topzn, botzn
+{   unaligned, weak, aligned, topzn, botzn
+#if !FINE_STEM_COMPLEXES
+    /* 'weak' is never used. Defined to simplify a compatibility testing. */
+#endif
 };
 
 typedef struct {
@@ -67,7 +80,7 @@ typedef struct {
 
 typedef struct {
     int19 xx, xy, yx, yy;
-    int32 denominator;
+    int32_t denominator;
     unsigned int bitshift;
 } fraction_matrix;
 
@@ -84,9 +97,14 @@ typedef struct t1_hint_s
 {   enum t1_hint_type type;
     t1_glyph_space_coord g0, g1; /* starting and ending transversal coord of the stem */
     t1_glyph_space_coord ag0, ag1; /* starting and ending transversal aligned coord of the stem */
+    bool b0, b1;  /* g0, g1 correspond to a real stem. */
+#if !FINE_STEM_COMPLEXES
+    /* b0, b1 are unused. Defined to simplify a compatibility testing. */
+#endif
     enum t1_align_type aligned0, aligned1; /* ag0, ag1 is aligned */
     unsigned int stem3_index; /* 1,2,3 for stem3 (not used yet), 0 for other types */
     int range_index; /* type 2 only */
+    int side_mask;
 } t1_hint;
 
 typedef struct t1_hint_range_s
@@ -106,7 +124,7 @@ typedef struct t1_hinter_s
     fraction_matrix ctmi;
     unsigned int g2o_fraction_bits;
     unsigned int max_import_coord;
-    int32 g2o_fraction;
+    int32_t g2o_fraction;
     t1_glyph_space_coord orig_gx, orig_gy; /* glyph origin in glyph space */
     t1_glyph_space_coord subglyph_orig_gx, subglyph_orig_gy; /* glyph origin in glyph space */
     fixed orig_dx, orig_dy; /* glyph origin in device space */
@@ -122,6 +140,7 @@ typedef struct t1_hinter_s
     bool grid_fit_x, grid_fit_y;
     bool charpath_flag;
     bool path_opened;
+    bool autohinting;
     t1_glyph_space_coord blue_shift, blue_fuzz;
     t1_pole pole0[T1_MAX_POLES], *pole;
     t1_hint hint0[T1_MAX_HINTS], *hint;
@@ -167,6 +186,8 @@ int  t1_hinter__set_mapping(t1_hinter * this, gs_matrix_fixed * ctm,
 			fixed origin_x, fixed origin_y, bool align_to_pixels);
 int  t1_hinter__set_font_data(t1_hinter * this, int FontType, gs_type1_data *pdata, 
 			bool no_grid_fitting);
+int  t1_hinter__set_font42_data(t1_hinter * this, int FontType, gs_type42_data *pdata, 
+			bool no_grid_fitting);
 
 int  t1_hinter__sbw(t1_hinter * this, fixed sbx, fixed sby, fixed wx,  fixed wy);
 int  t1_hinter__sbw_seac(t1_hinter * this, fixed sbx, fixed sby);
@@ -185,6 +206,7 @@ int  t1_hinter__drop_hints(t1_hinter * this);
 int  t1_hinter__dotsection(t1_hinter * this);
 int  t1_hinter__hstem(t1_hinter * this, fixed x0, fixed x1);
 int  t1_hinter__vstem(t1_hinter * this, fixed y0, fixed y1);
+int  t1_hinter__overall_hstem(t1_hinter * this, fixed x0, fixed x1, int side_mask);
 int  t1_hinter__hstem3(t1_hinter * this, fixed x0, fixed y1, fixed x2, fixed y3, fixed x4, fixed y5);
 int  t1_hinter__vstem3(t1_hinter * this, fixed y0, fixed y1, fixed y2, fixed y3, fixed y4, fixed y5);
 

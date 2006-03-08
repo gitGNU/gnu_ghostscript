@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevxalt.c,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gdevxalt.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Alternative X Windows drivers for help in driver debugging */
 #include "gx.h"			/* for gx_bitmap; includes std.h */
 #include "math_.h"
@@ -408,6 +408,7 @@ get_dev_target(gx_device ** ptdev, gx_device * dev)
 
 	if (code < 0)
 	    return 0;
+        check_device_separable(tdev);
 	gx_device_fill_in_procs(tdev);
 	gx_device_set_target((gx_device_forward *)dev, tdev);
 	x_clear_color_cache(dev);

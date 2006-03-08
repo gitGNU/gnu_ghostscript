@@ -16,7 +16,7 @@
 
 */
 
-/*$Id: gsht.c,v 1.5 2005/12/13 16:57:21 jemarch Exp $ */
+/*$Id: gsht.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* setscreen operator for Ghostscript library */
 #include "memory_.h"
 #include "string_.h"
@@ -645,16 +645,16 @@ gx_device_halftone_release(gx_device_halftone * pdht, gs_memory_t * mem)
  * A negative value is returned if the color name is not found.
  */
 int
-gs_color_name_component_number(const gx_device * dev, const char * pname,
+gs_color_name_component_number(gx_device * dev, const char * pname,
 				int name_size, int halftonetype)
 {
     int num_colorant;
 
 #define check_colorant_name(dev, name) \
-    ((*dev_proc(dev, get_color_comp_index)) (dev, name, strlen(name), 0))
+    ((*dev_proc(dev, get_color_comp_index)) (dev, name, strlen(name), NO_COMP_NAME_TYPE))
 
 #define check_colorant_name_length(dev, name, length) \
-    ((*dev_proc(dev, get_color_comp_index)) (dev, name, length, 0))
+    ((*dev_proc(dev, get_color_comp_index)) (dev, name, length, NO_COMP_NAME_TYPE))
 
 #define check_name(str, pname, length) \
     ((strlen(str) == length) && (strncmp(pname, str, length) == 0))
@@ -714,7 +714,7 @@ int
 gs_cname_to_colorant_number(gs_state * pgs, byte * pname, uint name_size,
 		int halftonetype)
 {
-    const gx_device * dev = pgs->device;
+    gx_device * dev = pgs->device;
 
     return gs_color_name_component_number(dev, (char *)pname, name_size,
 		    halftonetype);
@@ -964,7 +964,7 @@ gx_imager_dev_ht_install(
     /* construct the new device halftone structure */
     memset(&dht.order, 0, sizeof(dht.order));
     /* the rc field is filled in later */
-    dht.id = gs_next_ids(1);
+    dht.id = gs_next_ids(pis->memory, 1);
     dht.type = type;
     dht.components =  gs_alloc_struct_array(
                           pis->memory,
@@ -1106,7 +1106,7 @@ gx_imager_dev_ht_install(
                     code = gs_error_VMerror;
                 else {
                     porder->cache = pcache;
-                    gx_ht_init_cache(pcache, porder);
+                    gx_ht_init_cache(pis->memory, pcache, porder);
                 }
             }
         }
@@ -1266,7 +1266,7 @@ gx_ht_install(gs_state * pgs, const gs_halftone * pht,
  * A value of -1 indicates that the name is not valid.
  */
 #define check_colorant_name(name, dev) \
-   ((*dev_proc(dev, get_color_comp_index)) (dev, name, strlen(name), 0))
+   ((*dev_proc(dev, get_color_comp_index)) (dev, name, strlen(name), NO_NAME_TYPE))
 
 /* Reestablish the effective transfer functions, taking into account */
 /* any overrides from halftone dictionaries. */

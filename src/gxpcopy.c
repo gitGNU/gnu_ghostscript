@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxpcopy.c,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxpcopy.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Path copying and flattening */
 #include "math_.h"
 #include "gx.h"
@@ -32,8 +32,6 @@
 /* Forward declarations */
 private void adjust_point_to_tangent(segment *, const segment *,
 				     const gs_fixed_point *);
-private int monotonize_internal(gx_path *, const curve_segment *);
-
 /* Copy a path, optionally flattening or monotonizing it. */
 /* If the copy fails, free the new path. */
 int
@@ -80,7 +78,7 @@ gx_path_copy_reducing(const gx_path *ppath_old, gx_path *ppath,
 
 		    if (fixed_flatness == max_fixed) {	/* don't flatten */
 			if (options & pco_monotonize)
-			    code = monotonize_internal(ppath, pc);
+			    code = gx_curve_monotonize(ppath, pc);
 			else
 			    code = gx_path_add_curve_notes(ppath,
 				     pc->p1.x, pc->p1.y, pc->p2.x, pc->p2.y,
@@ -122,7 +120,7 @@ gx_path_copy_reducing(const gx_path *ppath_old, gx_path *ppath,
 			     * to avoid a division by zero.
 			     */
 			    if (ex == 0 || ey == 0)
-				flat = 0;
+				k = 0;
 			    else {
 				flat_x =
 				    fixed_mult_quo(fixed_flatness, ex,
@@ -131,14 +129,10 @@ gx_path_copy_reducing(const gx_path *ppath_old, gx_path *ppath,
 				    fixed_mult_quo(fixed_flatness, ey,
 						   ey + expansion.y);
 				flat = min(flat_x, flat_y);
+				k = gx_curve_log2_samples(x0, y0, pc, flat);
 			    }
-			}
-#			if CURVED_TRAPEZOID_FILL
-			    k = (options & pco_small_curves ? -1 
-				    : gx_curve_log2_samples(x0, y0, pc, flat));
-#			else
+			} else
 			    k = gx_curve_log2_samples(x0, y0, pc, flat);
-#			endif
 			if (options & pco_accurate) {
 			    segment *start;
 			    segment *end;
@@ -169,10 +163,18 @@ gx_path_copy_reducing(const gx_path *ppath_old, gx_path *ppath,
 							  ppath->position.y,
 					    pseg->notes | sn_not_first)) < 0)
 				break;
-			    adjust_point_to_tangent(start, start->next,
-						    &pc->p1);
-			    adjust_point_to_tangent(end, end->prev,
-						    &pc->p2);
+			    if (start->next->pt.x != pc->p1.x || start->next->pt.y != pc->p1.y)
+				adjust_point_to_tangent(start, start->next, &pc->p1);
+			    else if (start->next->pt.x != pc->p2.x || start->next->pt.y != pc->p2.y)
+				adjust_point_to_tangent(start, start->next, &pc->p2);
+			    else
+				adjust_point_to_tangent(start, start->next, &end->prev->pt);
+			    if (end->prev->pt.x != pc->p2.x || end->prev->pt.y != pc->p2.y)
+				adjust_point_to_tangent(end, end->prev, &pc->p2);
+			    else if (end->prev->pt.x != pc->p1.x || end->prev->pt.y != pc->p1.y)
+				adjust_point_to_tangent(end, end->prev, &pc->p1);
+			    else
+				adjust_point_to_tangent(end, end->prev, &start->pt);
 			} else {
 			    cseg = *pc;
 			    code = gx_subdivide_curve(ppath, k, &cseg, notes);
@@ -263,337 +265,27 @@ adjust_point_to_tangent(segment * pseg, const segment * next,
     } else {
 	/* General case. */
 	const double C = fC, D = fD;
-	const double T = (C * (next->pt.x - x0) + D * (next->pt.y - y0)) /
+	double T = (C * (next->pt.x - x0) + D * (next->pt.y - y0)) /
 	(C * C + D * D);
 
 	if_debug3('2', "[2]adjusting: C = %g, D = %g, T = %g\n",
 		  C, D, T);
 	if (T > 0) {
+	    if (T > 1) {
+		/* Don't go outside the curve bounding box. */
+		T = 1;
+	    }
 	    pseg->pt.x = arith_rshift((fixed) (C * T), 2) + x0;
 	    pseg->pt.y = arith_rshift((fixed) (D * T), 2) + y0;
 	}
     }
 }
 
-/* ---------------- Curve flattening ---------------- */
-
-#define x1 pc->p1.x
-#define y1 pc->p1.y
-#define x2 pc->p2.x
-#define y2 pc->p2.y
-#define x3 pc->pt.x
-#define y3 pc->pt.y
-
-#ifdef DEBUG
-private void
-dprint_curve(const char *str, fixed x0, fixed y0, const curve_segment * pc)
-{
-    dlprintf9("%s p0=(%g,%g) p1=(%g,%g) p2=(%g,%g) p3=(%g,%g)\n",
-	      str, fixed2float(x0), fixed2float(y0),
-	      fixed2float(pc->p1.x), fixed2float(pc->p1.y),
-	      fixed2float(pc->p2.x), fixed2float(pc->p2.y),
-	      fixed2float(pc->pt.x), fixed2float(pc->pt.y));
-}
-#endif
-
-/* Initialize a cursor for rasterizing a monotonic curve. */
-void
-gx_curve_cursor_init(curve_cursor * prc, fixed x0, fixed y0,
-		     const curve_segment * pc, int k)
-{
-    fixed v01, v12;
-    int k2 = k + k, k3 = k2 + k;
-
-#define bits_fit(v, n)\
-  (any_abs(v) <= max_fixed >> (n))
-/* The +2s are because of t3d and t2d, see below. */
-#define coeffs_fit(a, b, c)\
-  (k3 <= sizeof(fixed) * 8 - 3 &&\
-   bits_fit(a, k3 + 2) && bits_fit(b, k2 + 2) && bits_fit(c, k + 1))
-
-    prc->k = k;
-    prc->p0.x = x0, prc->p0.y = y0;
-    prc->pc = pc;
-    /* Compute prc->a..c taking into account reversal of xy0/3 */
-    /* in curve_x_at_y. */
-    {
-	fixed w0, w1, w2, w3;
-
-	if (y0 < y3)
-	    w0 = x0, w1 = x1, w2 = x2, w3 = x3;
-	else
-	    w0 = x3, w1 = x2, w2 = x1, w3 = x0;
-	curve_points_to_coefficients(w0, w1, w2, w3,
-				     prc->a, prc->b, prc->c, v01, v12);
-    }
-    prc->double_set = false;
-    prc->fixed_limit =
-	(coeffs_fit(prc->a, prc->b, prc->c) ? (1 << k) - 1 : -1);
-    /* Initialize the cache. */
-    prc->cache.ky0 = prc->cache.ky3 = y0;
-    prc->cache.xl = x0;
-    prc->cache.xd = 0;
-}
-
-/*
- * Determine the X value on a monotonic curve at a given Y value.  It turns
- * out that we use so few points on the curve that it's actually faster to
- * locate the desired point by recursive subdivision each time than to try
- * to keep a cursor that we move incrementally.  What's even more surprising
- * is that if floating point arithmetic is reasonably fast, it's faster to
- * compute the X value at the desired point explicitly than to do the
- * recursive subdivision on X as well as Y.
- */
-#define SUBDIVIDE_X USE_FPU_FIXED
-fixed
-gx_curve_x_at_y(curve_cursor * prc, fixed y)
-{
-    fixed xl, xd;
-    fixed yd, yrel;
-
-    /* Check the cache before doing anything else. */
-    if (y >= prc->cache.ky0 && y <= prc->cache.ky3) {
-	yd = prc->cache.ky3 - prc->cache.ky0;
-	yrel = y - prc->cache.ky0;
-	xl = prc->cache.xl;
-	xd = prc->cache.xd;
-	goto done;
-    } {
-#define x0 prc->p0.x
-#define y0 prc->p0.y
-	const curve_segment *pc = prc->pc;
-
-	/* Reduce case testing by ensuring y3 >= y0. */
-	fixed cy0 = y0, cy1, cy2, cy3 = y3;
-	fixed cx0;
-
-#if SUBDIVIDE_X
-	fixed cx1, cx2, cx3;
-
-#else
-	int t = 0;
-
-#endif
-	int k, i;
-
-	if (cy0 > cy3)
-	    cx0 = x3,
-#if SUBDIVIDE_X
-		cx1 = x2, cx2 = x1, cx3 = x0,
-#endif
-		cy0 = y3, cy1 = y2, cy2 = y1, cy3 = y0;
-	else
-	    cx0 = x0,
-#if SUBDIVIDE_X
-		cx1 = x1, cx2 = x2, cx3 = x3,
-#endif
-		cy1 = y1, cy2 = y2;
-#define midpoint_fast(a,b)\
-  arith_rshift_1((a) + (b) + 1)
-	for (i = k = prc->k; i > 0; --i) {
-	    fixed ym = midpoint_fast(cy1, cy2);
-	    fixed yn = ym + arith_rshift(cy0 - cy1 - cy2 + cy3 + 4, 3);
-
-#if SUBDIVIDE_X
-	    fixed xm = midpoint_fast(cx1, cx2);
-	    fixed xn = xm + arith_rshift(cx0 - cx1 - cx2 + cx3 + 4, 3);
-
-#else
-	    t <<= 1;
-#endif
-
-	    if (y < yn)
-#if SUBDIVIDE_X
-		cx1 = midpoint_fast(cx0, cx1),
-		    cx2 = midpoint_fast(cx1, xm),
-		    cx3 = xn,
-#endif
-		    cy1 = midpoint_fast(cy0, cy1),
-		    cy2 = midpoint_fast(cy1, ym),
-		    cy3 = yn;
-	    else
-#if SUBDIVIDE_X
-		cx2 = midpoint_fast(cx2, cx3),
-		    cx1 = midpoint_fast(xm, cx2),
-		    cx0 = xn,
-#else
-		t++,
-#endif
-		    cy2 = midpoint_fast(cy2, cy3),
-		    cy1 = midpoint_fast(ym, cy2),
-		    cy0 = yn;
-	}
-#if SUBDIVIDE_X
-	xl = cx0;
-	xd = cx3 - cx0;
-#else
-	{
-	    fixed a = prc->a, b = prc->b, c = prc->c;
-
-/* We must use (1 << k) >> 1 instead of 1 << (k - 1) in case k == 0. */
-#define compute_fixed(a, b, c)\
-  arith_rshift(arith_rshift(arith_rshift(a * t3, k) + b * t2, k)\
-	       + c * t + ((1 << k) >> 1), k)
-#define compute_diff_fixed(a, b, c)\
-  arith_rshift(arith_rshift(arith_rshift(a * t3d, k) + b * t2d, k)\
-	       + c, k)
-
-	    /* use multiply if possible */
-#define np2(n) (1.0 / (1L << (n)))
-	    static const double k_denom[11] =
-	    {np2(0), np2(1), np2(2), np2(3), np2(4),
-	     np2(5), np2(6), np2(7), np2(8), np2(9), np2(10)
-	    };
-	    static const double k2_denom[11] =
-	    {np2(0), np2(2), np2(4), np2(6), np2(8),
-	     np2(10), np2(12), np2(14), np2(16), np2(18), np2(20)
-	    };
-	    static const double k3_denom[11] =
-	    {np2(0), np2(3), np2(6), np2(9), np2(12),
-	     np2(15), np2(18), np2(21), np2(24), np2(27), np2(30)
-	    };
-	    double den1, den2;
-
-#undef np2
-
-#define setup_floating(da, db, dc, a, b, c)\
-  (k >= countof(k_denom) ?\
-   (den1 = ldexp(1.0, -k),\
-    den2 = den1 * den1,\
-    da = (den2 * den1) * a,\
-    db = den2 * b,\
-    dc = den1 * c) :\
-   (da = k3_denom[k] * a,\
-    db = k2_denom[k] * b,\
-    dc = k_denom[k] * c))
-#define compute_floating(da, db, dc)\
-  ((fixed)(da * t3 + db * t2 + dc * t + 0.5))
-#define compute_diff_floating(da, db, dc)\
-  ((fixed)(da * t3d + db * t2d + dc))
-
-	    if (t <= prc->fixed_limit) {	/* We can do everything in integer/fixed point. */
-		int t2 = t * t, t3 = t2 * t;
-		int t3d = (t2 + t) * 3 + 1, t2d = t + t + 1;
-
-		xl = compute_fixed(a, b, c) + cx0;
-		xd = compute_diff_fixed(a, b, c);
-#ifdef DEBUG
-		{
-		    double fa, fb, fc;
-		    fixed xlf, xdf;
-
-		    setup_floating(fa, fb, fc, a, b, c);
-		    xlf = compute_floating(fa, fb, fc) + cx0;
-		    xdf = compute_diff_floating(fa, fb, fc);
-		    if (any_abs(xlf - xl) > fixed_epsilon ||
-			any_abs(xdf - xd) > fixed_epsilon
-			)
-			dlprintf9("Curve points differ: k=%d t=%d a,b,c=%g,%g,%g\n   xl,xd fixed=%g,%g floating=%g,%g\n",
-				  k, t,
-			     fixed2float(a), fixed2float(b), fixed2float(c),
-				  fixed2float(xl), fixed2float(xd),
-				  fixed2float(xlf), fixed2float(xdf));
-/*xl = xlf, xd = xdf; */
-		}
-#endif
-	    } else {		/*
-				 * Either t3 (and maybe t2) won't fit in an int, or more
-				 * likely the result of the multiplies won't fit.
-				 */
-#define fa prc->da
-#define fb prc->db
-#define fc prc->dc
-		if (!prc->double_set) {
-		    setup_floating(fa, fb, fc, a, b, c);
-		    prc->double_set = true;
-		}
-		if (t < 1L << ((sizeof(long) * 8 - 1) / 3)) {	/*
-								 * t3 (and maybe t2) might not fit in an int, but they
-								 * will fit in a long.  If we have slow floating point,
-								 * do the computation in double-precision fixed point,
-								 * otherwise do it in fixed point.
-								 */
-		    long t2 = (long)t * t, t3 = t2 * t;
-		    long t3d = (t2 + t) * 3 + 1, t2d = t + t + 1;
-
-		    xl = compute_floating(fa, fb, fc) + cx0;
-		    xd = compute_diff_floating(fa, fb, fc);
-		} else {	/*
-				 * t3 (and maybe t2) don't even fit in a long.
-				 * Do the entire computation in floating point.
-				 */
-		    double t2 = (double)t * t, t3 = t2 * t;
-		    double t3d = (t2 + t) * 3 + 1, t2d = t + t + 1;
-
-		    xl = compute_floating(fa, fb, fc) + cx0;
-		    xd = compute_diff_floating(fa, fb, fc);
-		}
-#undef fa
-#undef fb
-#undef fc
-	    }
-	}
-#endif /* (!)SUBDIVIDE_X */
-
-	/* Update the cache. */
-	prc->cache.ky0 = cy0;
-	prc->cache.ky3 = cy3;
-	prc->cache.xl = xl;
-	prc->cache.xd = xd;
-	yd = cy3 - cy0;
-	yrel = y - cy0;
-#undef x0
-#undef y0
-    }
-  done:
-    /*
-     * Now interpolate linearly between current and next.
-     * We know that 0 <= yrel < yd.
-     * It's unlikely but possible that cy0 = y = cy3:
-     * handle this case specially.
-     */
-    if (yrel == 0)
-	return xl;
-    /*
-     * Compute in fixed point if possible.
-     */
-#define HALF_FIXED_BITS ((fixed)1 << (sizeof(fixed) * 4))
-    if (yrel < HALF_FIXED_BITS) {
-	if (xd >= 0) {
-	    if (xd < HALF_FIXED_BITS)
-		return (ufixed)xd * (ufixed)yrel / (ufixed)yd + xl;
-	} else {
-	    if (xd > -(fixed)HALF_FIXED_BITS) {
-		/* Be careful to take the floor of the result. */
-		ufixed num = (ufixed)(-xd) * (ufixed)yrel;
-		ufixed quo = num / (ufixed)yd;
-
-		if (quo * (ufixed)yd != num)
-		    quo += fixed_epsilon;
-		return xl - (fixed)quo;
-	    }
-	}
-    }
-#undef HALF_FIXED_BITS
-    return fixed_mult_quo(xd, yrel, yd) + xl;
-}
-
-#undef x1
-#undef y1
-#undef x2
-#undef y2
-#undef x3
-#undef y3
-
 /* ---------------- Monotonic curves ---------------- */
 
 /* Test whether a path is free of non-monotonic curves. */
 bool
-#if CURVED_TRAPEZOID_FILL
-gx_path__check_curves(const gx_path * ppath, bool small_curves, fixed fixed_flat)
-#else
-gx_path_is_monotonic(const gx_path * ppath)
-#endif
+gx_path__check_curves(const gx_path * ppath, gx_path_copy_options options, fixed fixed_flat)
 {
     const segment *pseg = (const segment *)(ppath->first_subpath);
     gs_fixed_point pt0;
@@ -612,27 +304,28 @@ gx_path_is_monotonic(const gx_path * ppath)
 	    case s_curve:
 		{
 		    const curve_segment *pc = (const curve_segment *)pseg;
-		    double t[2];
-		    int nz = gx_curve_monotonic_points(pt0.y,
-					   pc->p1.y, pc->p2.y, pc->pt.y, t);
 
-		    if (nz != 0)
-			return false;
-		    nz = gx_curve_monotonic_points(pt0.x,
-					   pc->p1.x, pc->p2.x, pc->pt.x, t);
-		    if (nz != 0)
-			return false;
-#		    if CURVED_TRAPEZOID_FILL
-			if (small_curves) {
-			    fixed ax, bx, cx, ay, by, cy; 
-			    int k = gx_curve_log2_samples(pt0.x, pt0.y, pc, fixed_flat);
+		    if (options & pco_monotonize) {
+			double t[2];
+			int nz = gx_curve_monotonic_points(pt0.y,
+					       pc->p1.y, pc->p2.y, pc->pt.y, t);
 
-			    if(!curve_coeffs_ranged(pt0.x, pc->p1.x, pc->p2.x, pc->pt.x,
-				    pt0.y, pc->p1.y, pc->p2.y, pc->pt.y,
-				    &ax, &bx, &cx, &ay, &by, &cy, k))
-				return false;
-			}
-#		    endif
+			if (nz != 0)
+			    return false;
+			nz = gx_curve_monotonic_points(pt0.x,
+					       pc->p1.x, pc->p2.x, pc->pt.x, t);
+			if (nz != 0)
+			    return false;
+		    }
+		    if (options & pco_small_curves) {
+			fixed ax, bx, cx, ay, by, cy; 
+			int k = gx_curve_log2_samples(pt0.x, pt0.y, pc, fixed_flat);
+
+			if(!curve_coeffs_ranged(pt0.x, pc->p1.x, pc->p2.x, pc->pt.x,
+				pt0.y, pc->p1.y, pc->p2.y, pc->pt.y,
+				&ax, &bx, &cx, &ay, &by, &cy, k))
+			    return false;
+		    }
 		}
 		break;
 	    default:
@@ -646,86 +339,111 @@ gx_path_is_monotonic(const gx_path * ppath)
 
 /* Monotonize a curve, by splitting it if necessary. */
 /* In the worst case, this could split the curve into 9 pieces. */
-private int
-monotonize_internal(gx_path * ppath, const curve_segment * pc)
+int
+gx_curve_monotonize(gx_path * ppath, const curve_segment * pc)
 {
     fixed x0 = ppath->position.x, y0 = ppath->position.y;
     segment_notes notes = pc->notes;
-    double t[2];
+    double t[4], tt = 1, tp;
+    int c[4];
+    int n0, n1, n, i, j, k = 0;
+    fixed ax, bx, cx, ay, by, cy, v01, v12;
+    fixed px, py, qx, qy, rx, ry, sx, sy;
+    const double delta = 0.0000001;
 
-#define max_segs 9
-    curve_segment cs[max_segs];
-    const curve_segment *pcs;
-    curve_segment *pcd;
-    int i, j, nseg;
-    int nz;
-
-    /* Monotonize in Y. */
-    nz = gx_curve_monotonic_points(y0, pc->p1.y, pc->p2.y, pc->pt.y, t);
-    nseg = max_segs - 1 - nz;
-    pcd = cs + nseg;
-    if (nz == 0)
-	*pcd = *pc;
-    else {
-	gx_curve_split(x0, y0, pc, t[0], pcd, pcd + 1);
-	if (nz == 2)
-	    gx_curve_split(pcd->pt.x, pcd->pt.y, pcd + 1,
-			   (t[1] - t[0]) / (1 - t[0]),
-			   pcd + 1, pcd + 2);
-    }
-
-    /* Monotonize in X. */
-    for (pcs = pcd, pcd = cs, j = nseg; j < max_segs; ++pcs, ++j) {
-	nz = gx_curve_monotonic_points(x0, pcs->p1.x, pcs->p2.x,
-				       pcs->pt.x, t);
-
-	if (nz == 0)
-	    *pcd = *pcs;
-	else {
-	    gx_curve_split(x0, y0, pcs, t[0], pcd, pcd + 1);
-	    if (nz == 2)
-		gx_curve_split(pcd->pt.x, pcd->pt.y, pcd + 1,
-			       (t[1] - t[0]) / (1 - t[0]),
-			       pcd + 1, pcd + 2);
-	}
-	pcd += nz + 1;
-	x0 = pcd[-1].pt.x;
-	y0 = pcd[-1].pt.y;
-    }
-    nseg = pcd - cs;
-
-    /* Add the segment(s) to the output. */
-#ifdef DEBUG
-    if (gs_debug_c('2')) {
-	int pi;
-	gs_fixed_point pp0;
-
-	pp0 = ppath->position;
-	if (nseg == 1)
-	    dprint_curve("[2]No split", pp0.x, pp0.y, pc);
-	else {
-	    dlprintf1("[2]Split into %d segments:\n", nseg);
-	    dprint_curve("[2]Original", pp0.x, pp0.y, pc);
-	    for (pi = 0; pi < nseg; ++pi) {
-		dprint_curve("[2] =>", pp0.x, pp0.y, cs + pi);
-		pp0 = cs[pi].pt;
+    /* Roots of the derivative : */
+    n0 = gx_curve_monotonic_points(x0, pc->p1.x, pc->p2.x, pc->pt.x, t);
+    n1 = gx_curve_monotonic_points(y0, pc->p1.y, pc->p2.y, pc->pt.y, t + n0);
+    n = n0 + n1;
+    if (n == 0)
+	return gx_path_add_curve_notes(ppath, pc->p1.x, pc->p1.y,
+		pc->p2.x, pc->p2.y, pc->pt.x, pc->pt.y, notes);
+    if (n0 > 0)
+	c[0] = 1;
+    if (n0 > 1)
+	c[1] = 1;
+    if (n1 > 0)
+	c[n0] = 2;
+    if (n1 > 1)
+	c[n0 + 1] = 2;
+    /* Order roots : */
+    for (i = 0; i < n; i++)
+	for (j = i + 1; j < n; j++)
+	    if (t[i] > t[j]) {
+		int w;
+		double v = t[i]; t[i] = t[j]; t[j] = v;
+		w = c[i]; c[i] = c[j]; c[j] = w;
 	    }
+    /* Drop roots near zero : */
+    for (k = 0; k < n; k++)
+	if (t[k] >= delta)
+	    break;
+    /* Merge close roots, and drop roots at 1 : */
+    if (t[n - 1] > 1 - delta)
+	n--;
+    for (i = k + 1, j = k; i < n && t[k] < 1 - delta; i++)
+	if (any_abs(t[i] - t[j]) < delta) {
+	    t[j] = (t[j] + t[i]) / 2; /* Unlikely 3 roots are close. */
+	    c[j] |= c[i];
+	} else {
+	    j++;
+	    t[j] = t[i];
+	    c[j] = c[i];
 	}
-    }
-#endif
-    for (pcs = cs, i = 0; i < nseg; ++pcs, ++i) {
-	int code = gx_path_add_curve_notes(ppath, pcs->p1.x, pcs->p1.y,
-					   pcs->p2.x, pcs->p2.y,
-					   pcs->pt.x, pcs->pt.y,
-					   notes |
-					   (i > 0 ? sn_not_first :
-					    sn_none));
+    n = j + 1;
+    /* Do split : */
+    curve_points_to_coefficients(x0, pc->p1.x, pc->p2.x, pc->pt.x, ax, bx, cx, v01, v12);
+    curve_points_to_coefficients(y0, pc->p1.y, pc->p2.y, pc->pt.y, ay, by, cy, v01, v12);
+    ax *= 3, bx *= 2; /* Coefficients of the derivative. */
+    ay *= 3, by *= 2;
+    px = x0;
+    py = y0;
+    qx = (fixed)((pc->p1.x - px) * t[0] + 0.5);
+    qy = (fixed)((pc->p1.y - py) * t[0] + 0.5);
+    tp = 0;
+    for (i = k; i < n; i++) {
+	double ti = t[i];
+	double t2 = ti * ti, t3 = t2 * ti;
+	double omt = 1 - ti, omt2 = omt * omt, omt3 = omt2 * omt;
+	double x = x0 * omt3 + 3 * pc->p1.x * omt2 * ti + 3 * pc->p2.x * omt * t2 + pc->pt.x * t3;
+	double y = y0 * omt3 + 3 * pc->p1.y * omt2 * ti + 3 * pc->p2.y * omt * t2 + pc->pt.y * t3;
+	double ddx = (c[i] & 1 ? 0 : ax * t2 + bx * ti + cx); /* Suppress noize. */
+	double ddy = (c[i] & 2 ? 0 : ay * t2 + by * ti + cy);
+	fixed dx = (fixed)(ddx + 0.5);
+	fixed dy = (fixed)(ddy + 0.5);
+	int code;
 
+	tt = (i + 1 < n ? t[i + 1] : 1) - ti;
+	rx = (fixed)(dx * (t[i] - tp) / 3 + 0.5);
+	ry = (fixed)(dy * (t[i] - tp) / 3 + 0.5);
+	sx = (fixed)(x + 0.5);
+	sy = (fixed)(y + 0.5);
+	/* Suppress the derivative sign noize near a beak : */
+	if ((double)(sx - px) * qx + (double)(sy - py) * qy < 0)
+	    qx = -qx, qy = -qy;
+	if ((double)(sx - px) * rx + (double)(sy - py) * ry < 0)
+	    rx = -rx, ry = -qy;
+	/* Do add : */
+	code = gx_path_add_curve_notes(ppath, px + qx, py + qy, sx - rx, sy - ry, sx, sy, notes);
 	if (code < 0)
 	    return code;
+	notes |= sn_not_first;
+	px = sx;
+	py = sy;
+	qx = (fixed)(dx * tt / 3 + 0.5);
+	qy = (fixed)(dy * tt / 3 + 0.5);
+	tp = t[i];
     }
-
-    return 0;
+    sx = pc->pt.x;
+    sy = pc->pt.y;
+    rx = (fixed)((pc->pt.x - pc->p2.x) * tt + 0.5);
+    ry = (fixed)((pc->pt.y - pc->p2.y) * tt + 0.5);
+    /* Suppress the derivative sign noize near peaks : */
+    if ((double)(sx - px) * qx + (double)(sy - py) * qy < 0)
+	qx = -qx, qy = -qy;
+    if ((double)(sx - px) * rx + (double)(sy - py) * ry < 0)
+	rx = -rx, ry = -qy;
+    return gx_path_add_curve_notes(ppath, px + qx, py + qy, sx - rx, sy - ry, sx, sy, notes);
 }
 
 /*
@@ -872,52 +590,3 @@ gx_curve_monotonic_points(fixed v0, fixed v1, fixed v2, fixed v3,
     }
 }
 
-/*
- * Split a curve at an arbitrary point t.  The above midpoint split is a
- * special case of this with t = 0.5.
- */
-void
-gx_curve_split(fixed x0, fixed y0, const curve_segment * pc, double t,
-	       curve_segment * pc1, curve_segment * pc2)
-{				/*
-				 * If the original function was v(t), we want to compute the points
-				 * for the functions v1(T) = v(t * T) and v2(T) = v(t + (1 - t) * T).
-				 * Straightforwardly,
-				 *      v1(T) = a*t^3*T^3 + b*t^2*T^2 + c*t*T + d
-				 * i.e.
-				 *      a1 = a*t^3, b1 = b*t^2, c1 = c*t, d1 = d.
-				 * Similarly,
-				 *      v2(T) = a*[t + (1-t)*T]^3 + b*[t + (1-t)*T]^2 +
-				 *              c*[t + (1-t)*T] + d
-				 *            = a*[(1-t)^3*T^3 + 3*t*(1-t)^2*T^2 + 3*t^2*(1-t)*T +
-				 *                 t^3] + b*[(1-t)^2*T^2 + 2*t*(1-t)*T + t^2] +
-				 *                 c*[(1-t)*T + t] + d
-				 *            = a*(1-t)^3*T^3 + [a*3*t + b]*(1-t)^2*T^2 +
-				 *                 [a*3*t^2 + b*2*t + c]*(1-t)*T +
-				 *                 a*t^3 + b*t^2 + c*t + d
-				 * We do this in the simplest way, namely, we convert the points to
-				 * coefficients, do the arithmetic, and convert back.  It would
-				 * obviously be faster to do the arithmetic directly on the points,
-				 * as the midpoint code does; this is just an implementation issue
-				 * that we can revisit if necessary.
-				 */
-    double t2 = t * t, t3 = t2 * t;
-    double omt = 1 - t, omt2 = omt * omt, omt3 = omt2 * omt;
-    fixed v01, v12, a, b, c, na, nb, nc;
-
-    if_debug1('2', "[2]splitting at t = %g\n", t);
-#define compute_seg(v0, v)\
-	curve_points_to_coefficients(v0, pc->p1.v, pc->p2.v, pc->pt.v,\
-				     a, b, c, v01, v12);\
-	na = (fixed)(a * t3), nb = (fixed)(b * t2), nc = (fixed)(c * t);\
-	curve_coefficients_to_points(na, nb, nc, v0,\
-				     pc1->p1.v, pc1->p2.v, pc1->pt.v);\
-	na = (fixed)(a * omt3);\
-	nb = (fixed)((a * t * 3 + b) * omt2);\
-	nc = (fixed)((a * t2 * 3 + b * 2 * t + c) * omt);\
-	curve_coefficients_to_points(na, nb, nc, pc1->pt.v,\
-				     pc2->p1.v, pc2->p2.v, pc2->pt.v)
-    compute_seg(x0, x);
-    compute_seg(y0, y);
-#undef compute_seg
-}

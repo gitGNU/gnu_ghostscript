@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ialloc.c,v 1.6 2006/02/20 19:52:05 jemarch Exp $ */
+/* $Id: ialloc.c,v 1.7 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Memory allocator for Ghostscript interpreter */
 #include "gx.h"
 #include "memory_.h"
@@ -38,7 +38,7 @@ public_st_gs_dual_memory();
 
 /* Initialize the allocator */
 int
-ialloc_init(gs_dual_memory_t *dmem, gs_raw_memory_t * rmem, uint chunk_size,
+ialloc_init(gs_dual_memory_t *dmem, gs_memory_t * rmem, uint chunk_size,
 	    bool level2)
 {
     gs_ref_memory_t *ilmem = ialloc_alloc_state(rmem, chunk_size);

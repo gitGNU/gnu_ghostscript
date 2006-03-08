@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zfont0.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zfont0.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Composite font creation operator */
 #include "ghost.h"
 #include "oper.h"
@@ -94,7 +94,7 @@ zbuildfont0(i_ctx_t *i_ctx_p)
 	ref fdep;
 	gs_font *psub;
 
-	array_get(&fdepvector, i, &fdep);
+	array_get(imemory, &fdepvector, i, &fdep);
 	if ((code = font_param(&fdep, &psub)) < 0)
 	    return code;
 	/*
@@ -168,7 +168,7 @@ zbuildfont0(i_ctx_t *i_ctx_p)
     {
 	build_proc_refs build;
 
-	code = build_proc_name_refs(&build,
+	code = build_proc_name_refs(imemory, &build,
 				    "%Type0BuildChar", "%Type0BuildGlyph");
 	if (code < 0)
 	    return code;
@@ -205,7 +205,7 @@ zbuildfont0(i_ctx_t *i_ctx_p)
     for (i = 0; i < data.encoding_size; i++) {
 	ref enc;
 
-	array_get(&pdata->Encoding, i, &enc);
+	array_get(imemory, &pdata->Encoding, i, &enc);
 	if (!r_has_type(&enc, t_integer)) {
 	    code = gs_note_error(e_typecheck);
 	    goto fail;
@@ -228,7 +228,7 @@ zbuildfont0(i_ctx_t *i_ctx_p)
 	ref fdep;
 	ref *pfid;
 
-	array_get(&fdepvector, i, &fdep);
+	array_get(pfont->memory, &fdepvector, i, &fdep);
 	/* The lookup can't fail, because of the pre-check above. */
 	dict_find_string(&fdep, "FID", &pfid);
 	data.FDepVector[i] = r_ptr(pfid, gs_font);
@@ -242,7 +242,7 @@ fail:
     if (r_has_type(&save_FID, t_null)) {
 	ref rnfid;
 
-	name_enter_string("FID", &rnfid);
+	name_enter_string(pfont->memory, "FID", &rnfid);
 	idict_undef(op, &rnfid);
     } else
 	idict_put_string(op, "FID", &save_FID);

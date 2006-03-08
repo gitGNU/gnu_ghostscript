@@ -16,7 +16,7 @@
 
 */
 
-/*$Id: gsdcolor.h,v 1.5 2005/12/13 16:57:21 jemarch Exp $ */
+/*$Id: gsdcolor.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Device color representation for drivers */
 
 #ifndef gsdcolor_INCLUDED
@@ -308,9 +308,22 @@ struct gx_device_color_s {
 	} /*(colored) */ pattern;
     } colors;
     gs_int_point phase;
+    /*
+     * This flag indicates if the paint values in ccolor are valid.  They
+     * are valid for most cases.  However there are some special cases
+     * in which a device color is initialized to specific values (usually
+     * black or white) instead of being created from a color space and
+     * color values.
+     */
     bool ccolor_valid;
-    gs_client_color ccolor;	/* needed for remapping patterns, */
-				/* not set for non-pattern colors */
+    /*
+     * 'ccolor' (a "client color") is valid iff 'ccolor_valid' is true.
+     * For non-pattern colors, it contains the original paint values.
+     * For pattern colors, it contains information required for remapping
+     * the pattern.
+     */
+    gs_client_color ccolor;
+
     struct _mask {
 	struct mp_ {
 	    short x, y;

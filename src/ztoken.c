@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ztoken.c,v 1.5 2005/12/13 16:57:29 jemarch Exp $ */
+/* $Id: ztoken.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Token reading operators */
 #include "string_.h"
 #include "ghost.h"
@@ -285,7 +285,7 @@ ztoken_handle_comment(i_ctx_t *i_ctx_p, const ref *fop, scanner_state *sstate,
 	    return code;
     }
     check_estack(4);
-    code = name_enter_string(proc_name, esp + 4);
+    code = name_enter_string(imemory, proc_name, esp + 4);
     if (code < 0)
 	return code;
     if (save) {

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxshade4.c,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxshade4.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Rendering for Gouraud triangle shadings */
 #include "math_.h"
 #include "memory_.h"
@@ -32,11 +32,22 @@
 #include "gxpath.h"
 #include "gxshade.h"
 #include "gxshade4.h"
+#include "vdtrace.h"
+
+#define VD_TRACE_TRIANGLE_PATCH 1
 
 /* ---------------- Triangle mesh filling ---------------- */
 
+#if !NEW_SHADINGS 
+private void 
+patch_set_color_values(const mesh_fill_state_t * pfs, float *cc, const patch_color_t *c)
+{
+    memcpy(cc, c->cc.paint.values, sizeof(c->cc.paint.values[0]) * pfs->num_components);
+}
+#endif
+
 /* Initialize the fill state for triangle shading. */
-void
+int
 mesh_init_fill_state(mesh_fill_state_t * pfs, const gs_shading_mesh_t * psh,
 		     const gs_rect * rect, gx_device * dev,
 		     gs_imager_state * pis)
@@ -44,10 +55,25 @@ mesh_init_fill_state(mesh_fill_state_t * pfs, const gs_shading_mesh_t * psh,
     shade_init_fill_state((shading_fill_state_t *) pfs,
 			  (const gs_shading_t *)psh, dev, pis);
     pfs->pshm = psh;
-    shade_bbox_transform2fixed(rect, pis, &pfs->rect);
+    return shade_bbox_transform2fixed(rect, pis, &pfs->rect);
 }
 
 /* Initialize the recursion state for filling one triangle. */
+#if !NEW_SHADINGS 
+private void
+shading_init_fill_triangle(mesh_fill_state_t * pfs,
+  const shading_vertex_t *va, const shading_vertex_t *vb, const shading_vertex_t *vc,
+  bool check_clipping)
+{
+    pfs->depth = 1;
+    pfs->frames[0].va.p = va->p;
+    patch_set_color_values(pfs, pfs->frames[0].va.cc, &va->c);
+    pfs->frames[0].vb.p = vb->p;
+    patch_set_color_values(pfs, pfs->frames[0].vb.cc, &vb->c);
+    pfs->frames[0].vc.p = vc->p;
+    patch_set_color_values(pfs, pfs->frames[0].vc.cc, &vc->c);
+    pfs->frames[0].check_clipping = check_clipping;
+}
 void
 mesh_init_fill_triangle(mesh_fill_state_t * pfs,
   const mesh_vertex_t *va, const mesh_vertex_t *vb, const mesh_vertex_t *vc,
@@ -252,12 +278,20 @@ mesh_fill_triangle(mesh_fill_state_t *pfs)
 	     */
 	    if (pis->fill_adjust.x != 0 || pis->fill_adjust.y != 0) {
 		gx_path *ppath = gx_path_alloc(pis->memory, "Gt_fill");
+		vd_save;
 
 		gx_path_add_point(ppath, fp->va.p.x, fp->va.p.y);
 		gx_path_add_line(ppath, fp->vb.p.x, fp->vb.p.y);
 		gx_path_add_line(ppath, fp->vc.p.x, fp->vc.p.y);
+		vd_quad(fp->va.p.x, fp->va.p.y,
+			fp->va.p.x, fp->va.p.y,
+			fp->vb.p.x, fp->vb.p.y,
+			fp->vc.p.x, fp->vc.p.y, 0, RGB(255, 0, 0));
+		if (!VD_TRACE_DOWN)
+		    vd_disable;
 		code = shade_fill_path((const shading_fill_state_t *)pfs,
-				       ppath, &dev_color);
+				       ppath, &dev_color, &pfs->pis->fill_adjust);
+		vd_restore;
 		gx_path_free(ppath, "Gt_fill");
 	    } else {
 		code = (*dev_proc(pfs->dev, fill_triangle))
@@ -306,29 +340,57 @@ mesh_fill_triangle(mesh_fill_state_t *pfs)
 	fp = mesh_subdivide_triangle(pfs, fp);
     }
 }
+#endif
 
 /* ---------------- Gouraud triangle shadings ---------------- */
 
 private int
 Gt_next_vertex(const gs_shading_mesh_t * psh, shade_coord_stream_t * cs,
-	       mesh_vertex_t * vertex)
+	       shading_vertex_t * vertex)
 {
     int code = shade_next_vertex(cs, vertex);
 
     if (code >= 0 && psh->params.Function) {
+#	if NEW_SHADINGS
+	    vertex->c.t[0] = vertex->c.cc.paint.values[0];
+	    vertex->c.t[1] = 0;
+#	endif
 	/* Decode the color with the function. */
-	code = gs_function_evaluate(psh->params.Function, vertex->cc,
-				    vertex->cc);
+	code = gs_function_evaluate(psh->params.Function, vertex->c.t,
+				    vertex->c.cc.paint.values);
     }
     return code;
 }
 
 inline private int
-Gt_fill_triangle(mesh_fill_state_t * pfs, const mesh_vertex_t * va,
-		 const mesh_vertex_t * vb, const mesh_vertex_t * vc)
+Gt_fill_triangle(mesh_fill_state_t * pfs, const shading_vertex_t * va,
+		 const shading_vertex_t * vb, const shading_vertex_t * vc)
 {
-    mesh_init_fill_triangle(pfs, va, vb, vc, true);
-    return mesh_fill_triangle(pfs);
+#   if !NEW_SHADINGS
+	shading_init_fill_triangle(pfs, va, vb, vc, true);
+	return mesh_fill_triangle(pfs);
+#   else
+	patch_fill_state_t pfs1;
+	int code = 0;
+
+ 	memcpy(&pfs1, (shading_fill_state_t *)pfs, sizeof(shading_fill_state_t));
+	pfs1.Function = pfs->pshm->params.Function;
+	pfs1.rect = pfs->rect;
+	code = init_patch_fill_state(&pfs1);
+	if (code < 0)
+	    return code;
+	if (INTERPATCH_PADDING) {
+	    code = mesh_padding(&pfs1, &va->p, &vb->p, &va->c, &vb->c);
+	    if (code >= 0)
+		code = mesh_padding(&pfs1, &vb->p, &vc->p, &vb->c, &vc->c);
+	    if (code >= 0)
+		code = mesh_padding(&pfs1, &vc->p, &va->p, &vc->c, &va->c);
+	}
+	if (code >= 0)
+	    code = mesh_triangle(&pfs1, va, vb, vc);
+	term_patch_fill_state(&pfs1);
+	return code;
+#   endif
 }
 
 int
@@ -340,15 +402,22 @@ gs_shading_FfGt_fill_rectangle(const gs_shading_t * psh0, const gs_rect * rect,
     shade_coord_stream_t cs;
     int num_bits = psh->params.BitsPerFlag;
     int flag;
-    mesh_vertex_t va, vb, vc;
+    shading_vertex_t va, vb, vc;
+    int code;
 
-    mesh_init_fill_state(&state, (const gs_shading_mesh_t *)psh, rect,
+    if (VD_TRACE_TRIANGLE_PATCH && vd_allowed('s')) {
+	vd_get_dc('s');
+	vd_set_shift(0, 0);
+	vd_set_scale(0.01);
+	vd_set_origin(0, 0);
+    }
+    code = mesh_init_fill_state(&state, (const gs_shading_mesh_t *)psh, rect,
 			 dev, pis);
+    if (code < 0)
+	return code;
     shade_next_init(&cs, (const gs_shading_mesh_params_t *)&psh->params,
 		    pis);
     while ((flag = shade_next_flag(&cs, num_bits)) >= 0) {
-	int code;
-
 	switch (flag) {
 	    default:
 		return_error(gs_error_rangecheck);
@@ -364,12 +433,16 @@ gs_shading_FfGt_fill_rectangle(const gs_shading_t * psh0, const gs_rect * rect,
 		va = vb;
 	    case 2:
 		vb = vc;
-v2:		if ((code = Gt_next_vertex(state.pshm, &cs, &vc)) < 0 ||
-		    (code = Gt_fill_triangle(&state, &va, &vb, &vc)) < 0
-		    )
+v2:		if ((code = Gt_next_vertex(state.pshm, &cs, &vc)) < 0)
+		    return code;
+		if ((code = Gt_fill_triangle(&state, &va, &vb, &vc)) < 0)
 		    return code;
 	}
     }
+    if (VD_TRACE_TRIANGLE_PATCH && vd_allowed('s'))
+	vd_release_dc;
+    if (!cs.is_eod(&cs))
+	return_error(gs_error_rangecheck);
     return 0;
 }
 
@@ -380,16 +453,24 @@ gs_shading_LfGt_fill_rectangle(const gs_shading_t * psh0, const gs_rect * rect,
     const gs_shading_LfGt_t * const psh = (const gs_shading_LfGt_t *)psh0;
     mesh_fill_state_t state;
     shade_coord_stream_t cs;
-    mesh_vertex_t *vertex;
-    mesh_vertex_t next;
+    shading_vertex_t *vertex;
+    shading_vertex_t next;
     int per_row = psh->params.VerticesPerRow;
-    int i, code = 0;
+    int i, code;
 
-    mesh_init_fill_state(&state, (const gs_shading_mesh_t *)psh, rect,
+    if (VD_TRACE_TRIANGLE_PATCH && vd_allowed('s')) {
+	vd_get_dc('s');
+	vd_set_shift(0, 0);
+	vd_set_scale(0.01);
+	vd_set_origin(0, 0);
+    }
+    code = mesh_init_fill_state(&state, (const gs_shading_mesh_t *)psh, rect,
 			 dev, pis);
+    if (code < 0)
+	return code;
     shade_next_init(&cs, (const gs_shading_mesh_params_t *)&psh->params,
 		    pis);
-    vertex = (mesh_vertex_t *)
+    vertex = (shading_vertex_t *)
 	gs_alloc_byte_array(pis->memory, per_row, sizeof(*vertex),
 			    "gs_shading_LfGt_render");
     if (vertex == 0)
@@ -416,6 +497,8 @@ gs_shading_LfGt_fill_rectangle(const gs_shading_t * psh0, const gs_rect * rect,
 	vertex[per_row - 1] = next;
     }
 out:
+    if (VD_TRACE_TRIANGLE_PATCH && vd_allowed('s'))
+	vd_release_dc;
     gs_free_object(pis->memory, vertex, "gs_shading_LfGt_render");
     return code;
 }

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zmedia2.c,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zmedia2.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Media matching for setpagedevice */
 #include "math_.h"
 #include "memory_.h"
@@ -32,7 +32,8 @@
 /* <pagedict> <attrdict> <policydict> <keys> .matchmedia <key> true */
 /* <pagedict> <attrdict> <policydict> <keys> .matchmedia false */
 /* <pagedict> null <policydict> <keys> .matchmedia null true */
-private int zmatch_page_size(const ref * pvreq, const ref * pvmed,
+private int zmatch_page_size(const gs_memory_t *mem,
+			     const ref * pvreq, const ref * pvmed,
 			     int policy, int orient, bool roll,
 			     float *best_mismatch, gs_matrix * pmat,
 			     gs_point * pmsize);
@@ -140,7 +141,7 @@ zmatchmedia(i_ctx_t *i_ctx_p)
 		ref *ppvalue;
 		int policy;
 
-		array_get(pkeys, ki, &key);
+		array_get(imemory, pkeys, ki, &key);
 		if (dict_find(&aelt.dict, &key, &pmvalue) <= 0)
 		    continue;
 		if (dict_find(preq, &key, &prvalue) <= 0 ||
@@ -164,21 +165,21 @@ zmatchmedia(i_ctx_t *i_ctx_p)
 	 * below.
 	 */
 		if (r_has_type(&key, t_name) &&
-		    (name_string_ref(&key, &kstr),
+		    (name_string_ref(imemory, &key, &kstr),
 		     r_size(&kstr) == 8 &&
 		     !memcmp(kstr.value.bytes, "PageSize", 8))
 		    ) {
 		    gs_matrix ignore_mat;
 		    gs_point ignore_msize;
 
-		    if (zmatch_page_size(prvalue, pmvalue,
+		    if (zmatch_page_size(imemory, prvalue, pmvalue,
 					 policy, orient, roll,
 					 &best_mismatch,
 					 &ignore_mat,
 					 &ignore_msize)
 			<= 0)
 			goto no;
-		} else if (!obj_eq(prvalue, pmvalue))
+		} else if (!obj_eq(imemory, prvalue, pmvalue))
 		    goto no;
 	    }
 	    /* We have a match. Save the match in case no better match is found */
@@ -193,18 +194,18 @@ zmatchmedia(i_ctx_t *i_ctx_p)
 		if (best_mismatch < mbest  ||
 		    (r_has_type(&match.match_key, t_integer) &&
 		     match.match_key.value.intval > aelt.key.value.intval)) {
-		reset_match(&match);
+		    reset_match(&match);
 		    match.match_key = aelt.key;
 		    mbest = best_mismatch;
-	    }
+		}
 	    }
 	    /* In case of a tie, see if the new match has priority. */
 	    for (pi = match.priority; pi > 0;) {
 		ref pri;
 
 		pi--;
-		array_get(ppriority, pi, &pri);
-		if (obj_eq(&aelt.key, &pri)) {	/* Yes, higher priority. */
+		array_get(imemory, ppriority, pi, &pri);
+		if (obj_eq(imemory, &aelt.key, &pri)) {	/* Yes, higher priority. */
 		    match.best_key = aelt.key;
 		    match.priority = pi;
 		    break;
@@ -251,7 +252,8 @@ zmatchpagesize(i_ctx_t *i_ctx_p)
     }
     check_type(op[-1], t_boolean);
     roll = op[-1].value.boolval;
-    code = zmatch_page_size(op - 5, op - 4, (int)op[-3].value.intval,
+    code = zmatch_page_size(imemory, 
+			    op - 5, op - 4, (int)op[-3].value.intval,
 			    orient, roll,
 			    &ignore_mismatch, &mat, &media_size);
     switch (code) {
@@ -282,7 +284,7 @@ match_page_size(const gs_point * request,
 			     float *best_mismatch, gs_matrix * pmat,
 			     gs_point * pmsize);
 private int
-zmatch_page_size(const ref * pvreq, const ref * pvmed,
+zmatch_page_size(const gs_memory_t *mem, const ref * pvreq, const ref * pvmed,
 		 int policy, int orient, bool roll,
 		 float *best_mismatch, gs_matrix * pmat, gs_point * pmsize)
 {
@@ -292,10 +294,10 @@ zmatch_page_size(const ref * pvreq, const ref * pvmed,
 
     /* array_get checks array types and size. */
     /* This allows normal or packed arrays to be used */
-    if ((code = array_get(pvreq, 1, &rv[1])) < 0)
+    if ((code = array_get(mem, pvreq, 1, &rv[1])) < 0)
         return_error(code);
     nr = r_size(pvreq);
-    if ((code = array_get(pvmed, 1, &rv[3])) < 0)
+    if ((code = array_get(mem, pvmed, 1, &rv[3])) < 0)
         return_error(code);
     nm = r_size(pvmed);
     if (!((nm == 2 || nm == 4) && (nr == 2 || nr == nm)))
@@ -305,9 +307,9 @@ zmatch_page_size(const ref * pvreq, const ref * pvmed,
 	double v[6];
 	int code;
 
-	array_get(pvreq, 0, &rv[0]);
+	array_get(mem, pvreq, 0, &rv[0]);
 	for (i = 0; i < 4; ++i)
-	    array_get(pvmed, i % nm, &rv[i + 2]);
+	    array_get(mem,pvmed, i % nm, &rv[i + 2]);
 	if ((code = num_params(rv + 5, 6, v)) < 0)
 	    return code;
 	{

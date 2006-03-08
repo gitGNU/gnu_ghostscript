@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: msvccmd.mak,v 1.5 2005/12/13 16:57:26 jemarch Exp $
+# $Id: msvccmd.mak,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $
 # Command definition section for Microsoft Visual C++ 4.x/5.x,
 # Windows NT or Windows 95 platform.
 # Created 1997-05-22 by L. Peter Deutsch from msvc4/5 makefiles.
@@ -75,17 +75,34 @@ PCFBASM=
 # Make sure we get the right default target for make.
 
 dosdefault: default
+	@attrib -H dosdefault > nul:
+	@echo Done. > dosdefault
+	@attrib +H dosdefault
 
 # Define the compilation flags.
 
+# MSVC 8 (2005) warns about deprecated unsafe common functions like strcpy.
+!if $(MSVC_VERSION) == 8
+VC8WARN=/wd4996 /wd4224
+!else
+VC8WARN=
+!endif
+
 !if "$(CPU_FAMILY)"=="i386"
 
+!if $(MSVC_VERSION) >= 8
+# MSVC 8 (2005) attempts to produce code good for all processors.
+# and doesn't used /G5 or /GB.
+# MSVC 8 (2005) avoids buggy 0F instructions.
+CPFLAGS=
+!else
 !if $(CPU_TYPE)>500
 CPFLAGS=/G5 $(QI0f)
 !else if $(CPU_TYPE)>400
 CPFLAGS=/GB $(QI0f)
 !else
 CPFLAGS=/GB $(QI0f)
+!endif
 !endif
 
 !if $(FPU_TYPE)>0 && $(MSVC_VERSION)<5
@@ -130,18 +147,32 @@ CD=/DDEBUG
 CD=
 !endif
 
+# Precompiled headers
+!if $(MSVC_VERSION) >= 8
+CPCH=/Fp$(GLOBJDIR)\gs.pch
+!else
+CPCH=/YX /Fp$(GLOBJDIR)\gs.pch
+!endif
+
 !if $(TDEBUG)!=0
 # /Fd designates the directory for the .pdb file.
 # Note that it must be followed by a space.
-CT=/Zi /Od /Fd$(GLOBJDIR) $(NULL)
-LCT=/DEBUG
+CT=/ZI /Od /Fd$(GLOBJDIR) $(NULL) /Gi $(CPCH)
+LCT=/DEBUG /INCREMENTAL:YES
 COMPILE_FULL_OPTIMIZED=    # no optimization when debugging
 COMPILE_WITH_FRAMES=    # no optimization when debugging
 COMPILE_WITHOUT_FRAMES=    # no optimization when debugging
+CMT=/MTd
 !else
+!if $(DEBUGSYM)==0
 CT=
 LCT=
-
+CMT=/MT
+!else
+CT=/Zi /Fd$(GLOBJDIR) $(NULL)
+LCT=/DEBUG
+CMT=/MTd
+!endif
 !if $(MSVC_VERSION) == 5
 # NOTE: With MSVC++ 5.0, /O2 produces a non-working executable.
 # We believe the following list of optimizations works around this bug.
@@ -153,10 +184,15 @@ COMPILE_WITH_FRAMES=
 COMPILE_WITHOUT_FRAMES=/Oy
 !endif
 
+!if $(MSVC_VERSION) >= 8
+# MSVC 8 (2005) always does stack probes and checking.
+CS=
+!else
 !if $(DEBUG)!=0 || $(TDEBUG)!=0
 CS=/Ge
 !else
 CS=/Gs
+!endif
 !endif
 
 # Specify output object name
@@ -167,12 +203,9 @@ COMPILE_FOR_DLL=
 COMPILE_FOR_EXE=
 COMPILE_FOR_CONSOLE_EXE=
 
-# Specify warning message level
-WARNOPT=/W2
-
 # The /MT is for multi-threading.  We would like to make this an option,
 # but it's too much work right now.
-GENOPT=$(CP) $(CD) $(CT) $(CS) $(WARNOPT) /nologo /MT
+GENOPT=$(CP) $(CD) $(CT) $(CS) $(WARNOPT) $(VC8WARN) /nologo $(CMT)
 
 CCFLAGS=$(PLATOPT) $(FPFLAGS) $(CPFLAGS) $(CFLAGS) $(XCFLAGS)
 CC=$(COMP) /c $(CCFLAGS) @$(GLGENDIR)\ccf32.tr
@@ -195,16 +228,13 @@ CC_WX=$(CC) $(WX)
 CC_=$(CC_WX) $(COMPILE_FULL_OPTIMIZED) /Za $(ZM)
 CC_D=$(CC_WX) $(COMPILE_WITH_FRAMES)
 CC_INT=$(CC_)
-CC_LEAF=$(CC_) $(COMPILE_WITHOUT_FRAMES)
 CC_NO_WARN=$(CC_)
 
 # Compiler for auxiliary programs
 
-CCAUX=$(COMPAUX) /O
+CCAUX=$(COMPAUX) $(VC8WARN)
 
 # Compiler for Windows programs.
-# /Ze enables MS-specific extensions (this is also the default).
-
-CCWINFLAGS=$(COMPILE_FULL_OPTIMIZED) /Ze
+CCWINFLAGS=$(COMPILE_FULL_OPTIMIZED)
 
 #end msvccmd.mak

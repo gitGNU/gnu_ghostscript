@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gscparam.c,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gscparam.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Default implementation of parameter lists */
 #include "memory_.h"
 #include "string_.h"
@@ -75,7 +75,7 @@ ENUM_PTRS_WITH(c_param_enum_ptrs, gs_c_param *param) {
 
 	value.value = *(const gs_param_value *)&param->value;
 	value.type = param->type;
-	return gs_param_typed_value_enum_ptrs(&value, sizeof(value), index,
+	return gs_param_typed_value_enum_ptrs(mem, &value, sizeof(value), index,
 					      pep, NULL, gcst);
     }
     }

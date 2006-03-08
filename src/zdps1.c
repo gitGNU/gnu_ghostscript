@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zdps1.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zdps1.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Level 2 / Display PostScript graphics extensions */
 #include "ghost.h"
 #include "oper.h"
@@ -317,7 +317,7 @@ zrectstroke(i_ctx_t *i_ctx_p)
     local_rects_t lr;
     int npop, code;
 
-    if (read_matrix(op, &mat) >= 0) {
+    if (read_matrix(imemory, op, &mat) >= 0) {
 	/* Concatenate the matrix to the CTM just before stroking the path. */
 	npop = rect_get(&lr, op - 1, imemory);
 	if (npop < 0)
@@ -389,7 +389,7 @@ rect_get(local_rects_t * plr, os_ptr op, gs_memory_t *mem)
 	int i;
 
 	for (i = 0; i < 4; i++) {
-	    code = num_array_get((const ref *)op, format,
+	    code = num_array_get(mem, (const ref *)op, format,
 				 (n << 2) + i, &rnum);
 	    switch (code) {
 		case t_integer:

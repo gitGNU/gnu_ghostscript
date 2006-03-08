@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsmemraw.h,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsmemraw.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Client interface for "raw memory" allocator */
 
 /* Initial version 02/03/1998 by John Desrosiers (soho@crl.com) */
@@ -24,6 +24,15 @@
 
 #ifndef gsmemraw_INCLUDED
 #  define gsmemraw_INCLUDED
+
+#if 0
+
+/* gsmemraw was an abstract base class.  
+ * it is no longer in use, instead use the concrete base class is gs_memory_t 
+ * since gs_memory_t contains interfaces that must be availiable throughout the system
+ * is is unadvisable to have a class below it without these.
+ */
+
 
 /*
  * This interface provides minimal memory allocation and freeing capability.
@@ -216,9 +225,13 @@ typedef struct gs_raw_memory_s gs_raw_memory_t;
 typedef struct gs_raw_memory_procs_s {
     gs_raw_memory_procs(gs_raw_memory_t);
 } gs_raw_memory_procs_t;
+
+
+
 struct gs_raw_memory_s {
     gs_raw_memory_t *stable_memory;	/* cache the stable allocator */
-    gs_raw_memory_procs_t procs;
+    gs_raw_memory_procs_t procs;        
 };
 
+#endif /* 0 */
 #endif /* gsmemraw_INCLUDED */

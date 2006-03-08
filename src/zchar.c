@@ -17,7 +17,7 @@
   
 */
 
-/*$Id: zchar.c,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/*$Id: zchar.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Character operators */
 #include "ghost.h"
 #include "oper.h"
@@ -44,7 +44,8 @@
 #include "zchar42.h"
 
 /* Forward references */
-private bool map_glyph_to_char(const ref *, const ref *, ref *);
+private bool map_glyph_to_char(const gs_memory_t *mem, 
+			       const ref *, const ref *, ref *);
 private int finish_show(i_ctx_t *);
 private int op_show_cleanup(i_ctx_t *);
 private int op_show_return_width(i_ctx_t *, uint, double *);
@@ -322,7 +323,7 @@ zfontbbox(i_ctx_t *i_ctx_p)
 
     check_type(*op, t_dictionary);
     check_dict_read(*op);
-    code = font_bbox_param(op, bbox);
+    code = font_bbox_param(imemory, op, bbox);
     if (code < 0)
 	return code;
     if (bbox[0] < bbox[2] && bbox[1] < bbox[3]) {
@@ -365,10 +366,10 @@ const op_def zchar_op_defs[] =
 
 /* Convert a glyph to a ref. */
 void
-glyph_ref(gs_glyph glyph, ref * gref)
+glyph_ref(const gs_memory_t *mem, gs_glyph glyph, ref * gref)
 {
     if (glyph < gs_min_cid_glyph)
-	name_index_ref(glyph, gref);
+        name_index_ref(mem, glyph, gref);
     else
 	make_int(gref, glyph - gs_min_cid_glyph);
 }
@@ -519,7 +520,7 @@ op_show_continue_dispatch(i_ctx_t *i_ctx_p, int npop, int code)
 		    !r_has_type(&pfdata->BuildGlyph, t_null) &&
 		    glyph != gs_no_glyph
 		    ) {
-		    glyph_ref(glyph, op);
+		    glyph_ref(imemory, glyph, op);
 		    esp[2] = pfdata->BuildGlyph;
 		} else if (r_has_type(&pfdata->BuildChar, t_null))
 		    goto err;
@@ -529,12 +530,12 @@ op_show_continue_dispatch(i_ctx_t *i_ctx_p, int npop, int code)
 		    ref gref;
 		    const ref *pencoding = &pfdata->Encoding;
 
-		    glyph_ref(glyph, &gref);
-		    if (!map_glyph_to_char(&gref, pencoding,
+		    glyph_ref(imemory, glyph, &gref);
+		    if (!map_glyph_to_char(imemory, &gref, pencoding,
 					   (ref *) op)
 			) {	/* Not found, try .notdef */
-			name_enter_string(".notdef", &gref);
-			if (!map_glyph_to_char(&gref,
+		        name_enter_string(imemory, ".notdef", &gref);
+			if (!map_glyph_to_char(imemory, &gref,
 					       pencoding,
 					       (ref *) op)
 			    )
@@ -557,8 +558,8 @@ op_show_continue_dispatch(i_ctx_t *i_ctx_p, int npop, int code)
 		if (chr != gs_no_char &&
 		    !r_has_type(&pfdata->BuildChar, t_null) &&
 		    (glyph == gs_no_glyph ||
-		     (array_get(&pfdata->Encoding, (long)(chr & 0xff), &eref) >= 0 &&
-		      (glyph_ref(glyph, &gref), obj_eq(&gref, &eref))))
+		     (array_get(imemory, &pfdata->Encoding, (long)(chr & 0xff), &eref) >= 0 &&
+		      (glyph_ref(imemory, glyph, &gref), obj_eq(imemory, &gref, &eref))))
 		    ) {
 		    make_int(op, chr & 0xff);
 		    esp[2] = pfdata->BuildChar;
@@ -567,7 +568,7 @@ op_show_continue_dispatch(i_ctx_t *i_ctx_p, int npop, int code)
 		    if (glyph == gs_no_glyph)
 			make_int(op, 0);
 		    else
-			glyph_ref(glyph, op);
+		        glyph_ref(imemory, glyph, op);
 		    esp[2] = pfdata->BuildGlyph;
 		}
 	    }
@@ -587,14 +588,17 @@ op_show_continue_dispatch(i_ctx_t *i_ctx_p, int npop, int code)
     
 		pop(npop);
 		op = osp;
-		glyph_ref(glyph, &cnref);
+		glyph_ref(imemory, glyph, &cnref);
 		if (pfont->FontType == ft_CID_TrueType) {
 		    gs_font_type42 *pfont42 = (gs_font_type42 *)pfont;
 		    uint glyph_index = pfont42->data.get_glyph_index(pfont42, glyph);
 
 		    code = zchar42_set_cache(i_ctx_p, (gs_font_base *)pfont42, 
 				    &cnref, glyph_index, cont, &exec_cont, false);
-		} else
+		} else if (pfont->FontType == ft_CID_encrypted)
+		    code = z1_set_cache(i_ctx_p, (gs_font_base *)pfont, 
+				    &cnref, glyph, cont, &exec_cont);
+		else
 		    return_error(e_unregistered); /* Unimplemented. */
 		if (exec_cont != 0)
 		    return_error(e_unregistered); /* Must not happen. */
@@ -609,15 +613,15 @@ err:
 }
 /* Reverse-map a glyph name to a character code for glyphshow. */
 private bool
-map_glyph_to_char(const ref * pgref, const ref * pencoding, ref * pch)
+map_glyph_to_char(const gs_memory_t *mem, const ref * pgref, const ref * pencoding, ref * pch)
 {
     uint esize = r_size(pencoding);
     uint ch;
     ref eref;
 
     for (ch = 0; ch < esize; ch++) {
-	array_get(pencoding, (long)ch, &eref);
-	if (obj_eq(pgref, &eref)) {
+        array_get(mem, pencoding, (long)ch, &eref);
+	if (obj_eq(mem, pgref, &eref)) {
 	    make_int(pch, ch);
 	    return true;
 	}
@@ -785,7 +789,7 @@ op_show_free(i_ctx_t *i_ctx_p, int code)
 
 /* Get a FontBBox parameter from a font dictionary. */
 int
-font_bbox_param(const ref * pfdict, double bbox[4])
+font_bbox_param(const gs_memory_t *mem, const ref * pfdict, double bbox[4])
 {
     ref *pbbox;
 
@@ -810,7 +814,7 @@ font_bbox_param(const ref * pfdict, double bbox[4])
 	    const float max_ratio = 12; /* From the bug 687594. */
 
 	    for (i = 0; i < 4; i++) {
-		packed_get(pbe, rbe + i);
+		packed_get(mem, pbe, rbe + i);
 		pbe = packed_next(pbe);
 	    }
 	    if ((code = num_params(rbe + 3, 4, bbox)) < 0)

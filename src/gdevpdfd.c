@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdfd.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdfd.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Path drawing procedures for pdfwrite driver */
 #include "math_.h"
 #include "gx.h"
@@ -470,6 +470,7 @@ gdev_pdf_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath
 	pdf_reset_graphics(pdev);
 	return 0;
     }
+
     code = prepare_fill_with_clip(pdev, pis, &box, have_path, pdcolor, pcpath);
     if (code == gs_error_rangecheck) {
 	/* Fallback to the default implermentation for handling 
@@ -480,9 +481,14 @@ gdev_pdf_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath
 	return code;
     if (code == 1)
 	return 0; /* Nothing to paint. */
-    if (pdf_setfillcolor((gx_device_vector *)pdev, pis, pdcolor) < 0)
-	return gx_default_fill_path(dev, pis, ppath, params, pdcolor,
-				    pcpath);
+    code = pdf_setfillcolor((gx_device_vector *)pdev, pis, pdcolor);
+    if (code == gs_error_rangecheck) {
+	/* Fallback to the default implermentation for handling 
+	   a shading with CompatibilityLevel<=1.2 . */
+	return gx_default_fill_path((gx_device *)pdev, pis, ppath, params, pdcolor, pcpath);
+    }
+    if (code < 0)
+	return code;
     if (have_path) {
 	stream *s = pdev->strm;
 	double scale;

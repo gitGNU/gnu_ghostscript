@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zcontext.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zcontext.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Display PostScript context operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -115,7 +115,7 @@ CLEAR_MARKS_PROC(context_clear_marks)
     gs_context_t *const pctx = vptr;
 
     (*st_context_state.clear_marks)
-	(&pctx->state, sizeof(pctx->state), &st_context_state);
+        (cmem, &pctx->state, sizeof(pctx->state), &st_context_state);
 }
 private 
 ENUM_PTRS_WITH(context_enum_ptrs, gs_context_t *pctx)
@@ -281,7 +281,7 @@ context_reclaim(vm_spaces * pspaces, bool global)
 #ifdef DEBUG
     if (!psched->current->visible) {
 	lprintf("Current context is invisible!\n");
-	gs_abort();
+	gs_abort((gs_memory_t *)lmem);
     }
 #endif
 
@@ -373,7 +373,7 @@ ctx_initialize(i_ctx_t **pi_ctx_p)
     /* Create an initial context. */
     if (context_create(psched, &psched->current, &gs_imemory, *pi_ctx_p, true) < 0) {
 	lprintf("Can't create initial context!");
-	gs_abort();
+	gs_abort(imemory);
     }
     psched->current->scheduler = psched;
     /* Hook into the interpreter. */
@@ -604,7 +604,7 @@ do_fork(i_ctx_t *i_ctx_p, os_ptr op, const ref * pstdin, const ref * pstdout,
 	/* Share global VM, private local VM. */
 	ref *puserdict;
 	uint userdict_size;
-	gs_raw_memory_t *parent = iimemory_local->parent;
+	gs_memory_t *parent = iimemory_local->non_gc_memory;
 	gs_ref_memory_t *lmem;
 	gs_ref_memory_t *lmem_stable;
 
@@ -698,7 +698,7 @@ do_fork(i_ctx_t *i_ctx_p, os_ptr op, const ref * pstdin, const ref * pstdout,
 	    for (i = 0; i < copy; ++i) {
 		ref *pdref = ref_stack_index(dstack, i);
 
-		if (obj_eq(pdref, &old_userdict))
+		if (obj_eq(imemory, pdref, &old_userdict))
 		    *pdref = new_userdict;
 	    }
 	}
@@ -1168,7 +1168,7 @@ context_create(gs_scheduler_t * psched, gs_context_t ** ppctx,
 	    return code;
 	}
     }
-    ctx_index = gs_next_ids(1);
+    ctx_index = gs_next_ids(mem, 1);
     pctx->scheduler = psched;
     pctx->status = cs_active;
     pctx->index = ctx_index;

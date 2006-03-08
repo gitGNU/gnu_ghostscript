@@ -17,7 +17,7 @@
   
 */
 
-/*$Id: gxclpath.c,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/*$Id: gxclpath.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Higher-level path operations for band lists */
 #include "math_.h"
 #include "memory_.h"
@@ -381,6 +381,7 @@ cmd_write_unknown(gx_device_clist_writer * cldev, gx_clist_state * pcls,
 	stream s;
 	uint len;
 
+	s_init(&s, cldev->memory);
 	swrite_position_only(&s);
 	sput_matrix(&s, (const gs_matrix *)&cldev->imager_state.ctm);
 	len = (uint)stell(&s);

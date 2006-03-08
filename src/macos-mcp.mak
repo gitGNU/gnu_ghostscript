@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: macos-mcp.mak,v 1.5 2005/12/13 16:57:26 jemarch Exp $
+# $Id: macos-mcp.mak,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $
 # Makefile for CodeWarrior XML project file creation from Darwin/MacOSX.
 
 # Run this file through make on MacOS X (or any other system with shell
@@ -95,12 +95,13 @@ BUILD_TIME_GS=gs
 PLATFORM=macos_
 
 
-# don't share any libraries, they are compiled into the Ghostscript Lib
+# don't use any shared libraries, they are compiled into the Ghostscript Lib
 
 SHARE_LIBPNG=0
 SHARE_JPEG=0
 SHARE_ZLIB=0
 SHARE_JBIG2=0
+SHARE_JASPER=0
 
 # Define the directory where the IJG JPEG library sources are stored,
 # and the major version of the library that is stored there.
@@ -116,7 +117,7 @@ JVERSION=6
 # See libpng.mak for more information.
 
 PSRCDIR=libpng
-PVERSION=10205
+PVERSION=10208
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.
@@ -127,6 +128,11 @@ ZSRCDIR=zlib
 # See jbig2.mak for more information.
 
 JBIG2SRCDIR=jbig2dec
+
+# Define the japser library source location.
+# See jasper.mak for more information.
+
+JASPERSRCDIR=jasper
 
 # Define the directory where the icclib source are stored.
 # See icclib.mak for more information
@@ -181,7 +187,7 @@ FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(P
 #FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev
 #FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)rasterop.dev $(GLD)pipe.dev
 # The following is strictly for testing.
-FEATURE_DEVS_ALL=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)rasterop.dev $(PSD)double.dev $(PSD)trapping.dev $(PSD)stocht.dev $(GLD)pipe.dev $(GLD)macres.dev $(PSD)jbig2.dev $(PSD)macpoll.dev
+FEATURE_DEVS_ALL=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)rasterop.dev $(PSD)double.dev $(PSD)trapping.dev $(PSD)stocht.dev $(GLD)pipe.dev $(GLD)macres.dev $(PSD)jbig2.dev $(PSD)jpx.dev $(PSD)macpoll.dev
 #FEATURE_DEVS=$(FEATURE_DEVS_ALL)
 
 # Choose whether to compile the .ps initialization files into the executable.
@@ -195,8 +201,7 @@ COMPILE_INITS=0
 BAND_LIST_STORAGE=file
 
 # Choose which compression method to use when storing band lists in memory.
-# The choices are 'lzw' or 'zlib'.  lzw is not recommended, because the
-# LZW-compatible code in Ghostscript doesn't actually compress its input.
+# The choices are 'lzw' or 'zlib'.  
 
 BAND_LIST_COMPRESSOR=zlib
 
@@ -251,7 +256,7 @@ DEVICE_DEVS7=$(DD)faxg3.dev $(DD)faxg32d.dev $(DD)faxg4.dev
 DEVICE_DEVS8=$(DD)pcxmono.dev $(DD)pcxgray.dev $(DD)pcx16.dev $(DD)pcx256.dev $(DD)pcx24b.dev $(DD)pcxcmyk.dev
 DEVICE_DEVS9=$(DD)pbm.dev $(DD)pbmraw.dev $(DD)pgm.dev $(DD)pgmraw.dev $(DD)pgnm.dev $(DD)pgnmraw.dev $(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev $(DD)pkm.dev $(DD)pkmraw.dev $(DD)pksm.dev $(DD)pksmraw.dev
 DEVICE_DEVS10=$(DD)tiffcrle.dev $(DD)tiffg3.dev $(DD)tiffg32d.dev $(DD)tiffg4.dev $(DD)tifflzw.dev $(DD)tiffpack.dev
-DEVICE_DEVS11=$(DD)tiff12nc.dev $(DD)tiff24nc.dev
+DEVICE_DEVS11=$(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiffsep.dev
 DEVICE_DEVS12=$(DD)psmono.dev $(DD)psgray.dev $(DD)psrgb.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
 DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev
@@ -282,9 +287,6 @@ CCFLAGS=$(GENOPT) $(CFLAGS)
 CC_=$(CC) $(CCFLAGS)
 # define CCAUX as the real cc compiler, we use this to build the code generation tools
 CCAUX=cc
-CC_LEAF=$(CC_) -fomit-frame-pointer
-# gcc can't use -fomit-frame-pointer with -pg.
-CC_LEAF_PG=$(CC_)
 # These are the specific warnings we have to turn off to compile those
 # specific few files that need this.  We may turn off others in the future.
 CC_NO_WARN=$(CC_) -Wno-cast-qual -Wno-traditional
@@ -305,6 +307,7 @@ include $(GLSRCDIR)/jpeg.mak
 include $(GLSRCDIR)/zlib.mak
 include $(GLSRCDIR)/libpng.mak
 include $(GLSRCDIR)/jbig2.mak
+include $(GLSRCDIR)/jasper.mak
 include $(GLSRCDIR)/icclib.mak
 include $(GLSRCDIR)/devs.mak
 include $(GLSRCDIR)/contrib.mak
@@ -400,7 +403,7 @@ $(GENINIT_XE): $(GLSRC)geninit.c $(AK) $(GENINIT_DEPS)
 ldt_tr=$(PSOBJ)ldt.tr
 CWPROJ_XML=./ghostscript.mcp.xml
 
-$(CWPROJ_XML):
+$(CWPROJ_XML): $(gconfigd_h)
 	-mkdir -p obj/sys
 	$(CP_) $(macsystypes_h) $(systypes_h)
 	$(SH) $(GLSRC)macgenmcpxml.sh `$(CAT) $(ld_tr)` >  $(CWPROJ_XML)
@@ -408,12 +411,6 @@ $(CWPROJ_XML):
 	$(CP_) $(GLSRC)iconf.c $(GLOBJ)iconfig.c
 	$(CP_) $(GLSRC)gscdef.c $(GLOBJ)gscdefs.c
 	/Developer/Tools/SetFile -c CWIE -t TEXT $(CWPROJ_XML)
-	/Developer/Tools/SetFile -c CWIE -t TEXT $(ZSRCDIR)/*
-	/Developer/Tools/SetFile -c CWIE -t TEXT $(PSRCDIR)/*
-	/Developer/Tools/SetFile -c CWIE -t TEXT $(JSRCDIR)/*
-	/Developer/Tools/SetFile -c CWIE -t TEXT $(ICCSRCDIR)/*
-	/Developer/Tools/SetFile -c CWIE -t TEXT $(GLOBJDIR)/*
-	/Developer/Tools/SetFile -c CWIE -t TEXT $(GLSRCDIR)/*
 
 $(GS_XE): $(ld_tr) $(ECHOGS_XE) $(XE_ALL) $(CWPROJ_XML)
 

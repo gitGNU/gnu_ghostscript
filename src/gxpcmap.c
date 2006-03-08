@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxpcmap.c,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxpcmap.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Pattern color mapping for Ghostscript library */
 #include "math_.h"
 #include "memory_.h"
@@ -156,6 +156,7 @@ gx_pattern_accum_alloc(gs_memory_t * mem, client_name_t cname)
     gx_device_init((gx_device *)adev,
 		   (const gx_device *)&gs_pattern_accum_device,
 		   mem, true);
+    check_device_separable((gx_device *)adev);
     gx_device_forward_fill_in_procs((gx_device_forward *)adev);
     return adev;
 }
@@ -544,7 +545,7 @@ gx_pattern_cache_add_entry(gs_imager_state * pis,
     ctile->is_simple = pinst->is_simple;
     ctile->is_dummy = false;
     if (mbits != 0) {
-	make_bitmap(&ctile->tbits, mbits, gs_next_ids(1));
+	make_bitmap(&ctile->tbits, mbits, gs_next_ids(pis->memory, 1));
 	mbits->bitmap_memory = 0;	/* don't free the bits */
     } else
 	ctile->tbits.data = 0;

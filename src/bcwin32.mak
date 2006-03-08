@@ -16,7 +16,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
-# $Id: bcwin32.mak,v 1.5 2005/12/13 16:57:18 jemarch Exp $
+# $Id: bcwin32.mak,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $
 # makefile for (MS-Windows 3.1/Win32s / Windows 95 / Windows NT) +
 #   Borland C++ 4.5 platform.
 #   Borland C++Builder 3 platform (need BC++ 4.5 for 16-bit code)
@@ -46,7 +46,9 @@ PSOBJDIR=obj
 AROOTDIR=c:/gs
 !endif
 
+!ifndef GSROOTDIR
 GSROOTDIR=$(AROOTDIR)/gs$(GS_DOT_VERSION)
+!endif
 
 # Define the directory that will hold documentation at runtime.
 
@@ -56,7 +58,9 @@ GS_DOCDIR=$(GSROOTDIR)/doc
 # initialization, resource and font files.  Separate multiple directories with \;.
 # Use / to indicate directories, not a single \.
 
+!ifndef GS_LIB_DEFAULT
 GS_LIB_DEFAULT=$(GSROOTDIR)/lib\;$(GSROOTDIR)/Resource\;$(AROOTDIR)/fonts
+!endif
 
 # Define whether or not searching for initialization files should always
 # look in the current directory first.  This leads to well-known security
@@ -72,7 +76,9 @@ SEARCH_HERE_FIRST=1
 # Define the name of the interpreter initialization file.
 # (There is no reason to change this.)
 
+!ifndef GS_INIT
 GS_INIT=gs_init.ps
+!endif
 
 # Choose generic configuration options.
 
@@ -136,33 +142,43 @@ MULTITHREAD=1
 # You may need to change this if the IJG library version changes.
 # See jpeg.mak for more information.
 
+!ifndef JSRCDIR
 JSRCDIR=jpeg
 JVERSION=6
+!endif
 
 # Define the directory where the PNG library sources are stored,
 # and the version of the library that is stored there.
 # You may need to change this if the libpng version changes.
 # See libpng.mak for more information.
 
+!ifndef PSRCDIR
 PSRCDIR=libpng
-PVERSION=10205
+PVERSION=10208
+!endif
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.
 
+!ifndef ZSRCDIR
 ZSRCDIR=zlib
+!endif
 
 # Define the directory where the icclib source are stored.
 # See icclib.mak for more information
 
+!ifndef ICCSRCDIR
 ICCSRCDIR=icclib
+!endif
 
 # Define the directory where the ijs source is stored,
 # and the process forking method to use for the server.
 # See ijs.mak for more information.
 
+!ifndef IJSSRCDIR
 IJSSRCDIR=ijs
 IJSEXECTYPE=win
+!endif
 
 # Define any other compilation flags.
 
@@ -205,7 +221,9 @@ PSD=$(PSGENDIR)\$(NUL)
 # C++Builder 4 and above all use Make Version 5.2 so point we can no 
 # longer tell the Compiler version from the __MAKE__ version number.
 
+!ifndef BUILDER_VERSION
 BUILDER_VERSION=5
+!endif
 
 !ifndef BUILDER_VERSION
 !if $(__MAKE__) >= 0x520
@@ -310,8 +328,7 @@ COMPILE_INITS=0
 BAND_LIST_STORAGE=file
 
 # Choose which compression method to use when storing band lists in memory.
-# The choices are 'lzw' or 'zlib'.  lzw is not recommended, because the
-# LZW-compatible code in Ghostscript doesn't actually compress its input.
+# The choices are 'lzw' or 'zlib'.
 
 BAND_LIST_COMPRESSOR=zlib
 
@@ -473,7 +490,6 @@ CC_WX=$(CC) $(WX)
 CC_=$(CC_WX) $(CO)
 CC_D=$(CC_WX)
 CC_INT=$(CC_WX)
-CC_LEAF=$(CC_)
 CC_NO_WARN=$(CC_)
 
 # No additional flags are needed for Windows compilation.

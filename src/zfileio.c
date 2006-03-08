@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zfileio.c,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zfileio.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* File I/O operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -765,7 +765,7 @@ zwritecvp_at(i_ctx_t *i_ctx_p, os_ptr op, uint start, bool first)
     code = obj_cvp(op - 1, str, sizeof(str), &len, (int)op->value.intval,
 		   start, imemory);
     if (code == e_rangecheck) {
-	code = obj_string_data(op - 1, &data, &len);
+        code = obj_string_data(imemory, op - 1, &data, &len);
 	if (len < start)
 	    return_error(e_rangecheck);
 	data += start;

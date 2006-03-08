@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevlxm.c,v 1.4 2005/12/13 16:57:18 jemarch Exp $*/
+/* $Id: gdevlxm.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $*/
 /*
  * Lexmark 5700 ink-jet printer driver for Ghostscript
  *
@@ -156,18 +156,18 @@ lxm5700m_print_page(gx_device_printer *pdev, FILE *prn_stream)
     /* Note that in_size is a multiple of 8. */
     int in_size = line_size * (swipeHeight);
     int swipeBuf_size = in_size;
-    byte *buf1 = (byte *)gs_malloc(in_size, 1, "lxm_print_page(buf1)");
+    byte *buf1 = (byte *)gs_malloc(pdev->memory, in_size, 1, "lxm_print_page(buf1)");
     byte *swipeBuf =
-	(byte *)gs_malloc(swipeBuf_size, 1, "lxm_print_page(swipeBuf)");
+	(byte *)gs_malloc(pdev->memory, swipeBuf_size, 1, "lxm_print_page(swipeBuf)");
     byte *in = buf1;
 
     /* Check allocations */
     if ( buf1 == 0 || swipeBuf == 0 ) {
 	if ( buf1 ) 
 quit_ignomiously: /* and a goto into an if statement is pretty ignomious! */
-	gs_free((char *)buf1, in_size, 1, "lxm_print_page(buf1)");
+	gs_free(pdev->memory, (char *)buf1, in_size, 1, "lxm_print_page(buf1)");
 	if ( swipeBuf ) 
-	    gs_free((char *)swipeBuf, swipeBuf_size, 1, "lxm_print_page(swipeBuf)");
+	    gs_free(pdev->memory, (char *)swipeBuf, swipeBuf_size, 1, "lxm_print_page(swipeBuf)");
 	return_error(gs_error_VMerror);
     }
 
@@ -252,9 +252,9 @@ quit_ignomiously: /* and a goto into an if statement is pretty ignomious! */
 
 	/* macro, not fcn call.  Space penalty is modest, speed helps */
 #define buffer_store(x) if(outp-swipeBuf>=swipeBuf_size) {\
-	    gs_free((char *)swipeBuf, swipeBuf_size, 1, "lxm_print_page(swipeBuf)");\
+	    gs_free(pdev->memory, (char *)swipeBuf, swipeBuf_size, 1, "lxm_print_page(swipeBuf)");\
 	    swipeBuf_size*=2;\
-	    swipeBuf = (byte *)gs_malloc(swipeBuf_size, 1, "lxm_print_page(swipeBuf)");\
+	    swipeBuf = (byte *)gs_malloc(pdev->memory, swipeBuf_size, 1, "lxm_print_page(swipeBuf)");\
 	    if (swipeBuf == 0) goto quit_ignomiously;\
 	    break;}\
 	else *outp++ = (x)
@@ -361,8 +361,8 @@ quit_ignomiously: /* and a goto into an if statement is pretty ignomious! */
     }
     fflush(prn_stream);
 
-    gs_free((char *)swipeBuf, swipeBuf_size, 1, "lxm_print_page(swipeBuf)");
-    gs_free((char *)buf1, in_size, 1, "lxm_print_page(buf1)");
+    gs_free(pdev->memory, (char *)swipeBuf, swipeBuf_size, 1, "lxm_print_page(swipeBuf)");
+    gs_free(pdev->memory, (char *)buf1, in_size, 1, "lxm_print_page(buf1)");
     return 0;
 }
 

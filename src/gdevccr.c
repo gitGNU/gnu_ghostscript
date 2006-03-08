@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevccr.c,v 1.4 2005/12/13 16:57:18 jemarch Exp $*/
+/* $Id: gdevccr.c,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $*/
 /* CalComp Raster Format driver */
 #include "gdevprn.h"
 
@@ -59,11 +59,11 @@ typedef struct cmyrow_s
 #define ybuf _cmybuf[YPASS]
 #define cmybuf _cmybuf
 
-private int alloc_rb( cmyrow **rb, int rows);
-private int alloc_line( cmyrow *row, int cols);
+private int alloc_rb( gs_memory_t *mem, cmyrow **rb, int rows);
+private int alloc_line( gs_memory_t *mem, cmyrow *row, int cols);
 private void add_cmy8(cmyrow *rb, char c, char m, char y);
 private void write_cpass(cmyrow *buf, int rows, int pass, FILE * pstream);
-private void free_rb_line( cmyrow *rbuf, int rows, int cols);
+private void free_rb_line( gs_memory_t *mem, cmyrow *rbuf, int rows, int cols);
 
 struct gx_device_ccr_s {
 	gx_device_common;
@@ -149,21 +149,21 @@ ccr_print_page(gx_device_printer *pdev, FILE *pstream)
   byte *in;
   byte *data;
 
-  if((in = (byte *)gs_malloc(line_size, 1, "gsline")) == NULL)
+  if((in = (byte *)gs_malloc(pdev->memory, line_size, 1, "gsline")) == NULL)
      return_error(gs_error_VMerror);
     
-  if(alloc_rb( &linebuf, lnum))
+  if(alloc_rb( pdev->memory, &linebuf, lnum))
     {
-      gs_free(in, line_size, 1, "gsline");
+      gs_free(pdev->memory, in, line_size, 1, "gsline");
       return_error(gs_error_VMerror);
     }
 
   for ( l = 0; l < lnum; l++ )
      {	gdev_prn_get_bits(pdev, l, in, &data);
-        if(alloc_line(&linebuf[l], pixnum))
+        if(alloc_line(pdev->memory, &linebuf[l], pixnum))
 	  {
-	    gs_free(in, line_size, 1, "gsline");
-	    free_rb_line( linebuf, lnum, pixnum );
+	    gs_free(pdev->memory, in, line_size, 1, "gsline");
+	    free_rb_line( pdev->memory, linebuf, lnum, pixnum );
 	    return_error(gs_error_VMerror);
 	  }
         for ( p=0; p< pixnum; p+=8)
@@ -194,8 +194,8 @@ write_cpass(linebuf, lnum, CPASS, pstream);
 CCFILEEND(pstream);		 
 
 /* clean up */	      
-gs_free(in, line_size, 1, "gsline");
-free_rb_line( linebuf, lnum, pixnum );
+gs_free(pdev->memory, in, line_size, 1, "gsline");
+free_rb_line( pdev->memory, linebuf, lnum, pixnum );
 return 0;
 }
 
@@ -203,9 +203,9 @@ return 0;
 /* ------ Internal routines ------ */
 
 
-private int alloc_rb( cmyrow **rb, int rows)
+private int alloc_rb( gs_memory_t *mem, cmyrow **rb, int rows)
   {
-  *rb = (cmyrow*) gs_malloc(rows, sizeof(cmyrow), "rb");
+  *rb = (cmyrow*) gs_malloc(mem, rows, sizeof(cmyrow), "rb");
   if( *rb == 0)
     return_error(gs_error_VMerror);
   else
@@ -222,17 +222,17 @@ private int alloc_rb( cmyrow **rb, int rows)
     }
 }
 
-private int alloc_line( cmyrow *row, int cols)
+private int alloc_line( gs_memory_t *mem, cmyrow *row, int cols)
 {
   int suc;
-  suc=((row->cbuf = (unsigned char *) gs_malloc(cols,1, row->cname)) &&
-       (row->mbuf = (unsigned char *) gs_malloc(cols,1, row->mname)) &&
-       (row->ybuf = (unsigned char *) gs_malloc(cols,1, row->yname)));
+  suc=((row->cbuf = (unsigned char *) gs_malloc(mem, cols,1, row->cname)) &&
+       (row->mbuf = (unsigned char *) gs_malloc(mem, cols,1, row->mname)) &&
+       (row->ybuf = (unsigned char *) gs_malloc(mem, cols,1, row->yname)));
   if(suc == 0)
        {
-       gs_free(row->cbuf, cols,1, row->cname);
-       gs_free(row->mbuf, cols,1, row->mname);
-       gs_free(row->ybuf, cols,1, row->yname);
+       gs_free(mem, row->cbuf, cols,1, row->cname);
+       gs_free(mem, row->mbuf, cols,1, row->mname);
+       gs_free(mem, row->ybuf, cols,1, row->yname);
 
        return_error(gs_error_VMerror);
      }
@@ -274,21 +274,21 @@ private void write_cpass(cmyrow *buf, int rows, int pass, FILE * pstream)
   return;
 }
 
-private void free_rb_line( cmyrow *rbuf, int rows, int cols)
+private void free_rb_line( gs_memory_t *mem, cmyrow *rbuf, int rows, int cols)
 {
   int i;
   for(i=0; i<rows; i++)
     {
       if(rbuf[i].is_used)
 	{
-	  gs_free(rbuf[i].cbuf, cols, 1, rbuf[i].cname);
-	  gs_free(rbuf[i].mbuf, cols, 1, rbuf[i].mname);
-	  gs_free(rbuf[i].ybuf, cols, 1, rbuf[i].yname);
+          gs_free(mem, rbuf[i].cbuf, cols, 1, rbuf[i].cname);
+	  gs_free(mem, rbuf[i].mbuf, cols, 1, rbuf[i].mname);
+	  gs_free(mem, rbuf[i].ybuf, cols, 1, rbuf[i].yname);
 	  rbuf[i].is_used = 0;
 	}
       else
 	break;
     }
-  gs_free( rbuf, rows, sizeof(cmyrow),  "rb");
+  gs_free( mem, rbuf, rows, sizeof(cmyrow),  "rb");
   return;
 }

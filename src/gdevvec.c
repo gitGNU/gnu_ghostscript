@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevvec.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gdevvec.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Utilities for "vector" devices */
 #include "math_.h"
 #include "memory_.h"
@@ -257,7 +257,7 @@ gdev_vector_reset(gx_device_vector * vdev)
     gx_hld_saved_color_init(&vdev->saved_fill_color);
     gx_hld_saved_color_init(&vdev->saved_stroke_color);
     vdev->clip_path_id =
-	vdev->no_clip_path_id = gs_next_ids(1);
+	vdev->no_clip_path_id = gs_next_ids(vdev->memory, 1);
 }
 
 /* Open the output file and stream. */
@@ -318,7 +318,8 @@ gdev_vector_open_file_options(gx_device_vector * vdev, uint strmbuf_size,
      */
     vdev->strm->procs.close = vdev->strm->procs.flush;
     if (vdev->bbox_device) {
-	gx_device_bbox_init(vdev->bbox_device, NULL);
+	gx_device_bbox_init(vdev->bbox_device, NULL, vdev->v_memory);
+        rc_increment(vdev->bbox_device);
 	gx_device_set_resolution((gx_device *) vdev->bbox_device,
 				 vdev->HWResolution[0],
 				 vdev->HWResolution[1]);

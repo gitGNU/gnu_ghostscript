@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: wccommon.mak,v 1.5 2005/12/13 16:57:28 jemarch Exp $
+# $Id: wccommon.mak,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $
 # wccommon.mak
 # Section of Watcom C/C++ makefile common to MS-DOS and MS Windows.
 # We strongly recommend that you read the Watcom section of Make.htm
@@ -232,5 +232,4 @@ CCAUX=$(COMP) -oi $(CCOPT) $(FPFLAGS)
 CC_=$(CC)
 CC_D=$(CC)
 CC_INT=$(COMP) -oit $(CCFLAGS)
-CC_LEAF=$(CC_) -s
 CC_NO_WARN=$(CC_)

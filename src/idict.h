@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: idict.h,v 1.4 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: idict.h,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Interfaces for Ghostscript dictionary package */
 
 #ifndef idict_INCLUDED
@@ -41,6 +41,7 @@ struct dict_s {
     ref memory;			/* foreign t_struct, the allocator that */
     /* created this dictionary */
 #define dict_memory(pdict) r_ptr(&(pdict)->memory, gs_ref_memory_t)
+#define dict_mem(pdict) r_ptr(&(pdict)->memory, gs_memory_t)
 };
 
 /*

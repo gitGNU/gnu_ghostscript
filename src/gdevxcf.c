@@ -16,7 +16,7 @@
 
 */
 
-/*$Id: gdevxcf.c,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/*$Id: gdevxcf.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Gimp (XCF) export device, supporting DeviceN color models. */
 
 #include "math_.h"
@@ -219,8 +219,8 @@ const xcf_device gs_xcf_device =
     	 GX_DEVICE_COLOR_MAX_COMPONENTS, 3,	/* MaxComponents, NumComp */
 	 GX_CINFO_POLARITY_ADDITIVE,		/* Polarity */
 	 24, 0,			/* Depth, Gray_index, */
-	 255, 255, 1, 1,	/* MaxGray, MaxColor, DitherGray, DitherColor */
-	 GX_CINFO_SEP_LIN,      /* Linear & Seperable */
+	 255, 255, 256, 256,	/* MaxGray, MaxColor, DitherGray, DitherColor */
+	 GX_CINFO_UNKNOWN_SEP_LIN, /* Let check_device_separable set up values */
 	 "DeviceN",		/* Process color model name */
 	 xcf_print_page),	/* Printer page print routine */
     /* DeviceN device specific parameters */
@@ -243,8 +243,8 @@ const xcf_device gs_xcfcmyk_device =
     	 GX_DEVICE_COLOR_MAX_COMPONENTS, 4,	/* MaxComponents, NumComp */
 	 GX_CINFO_POLARITY_SUBTRACTIVE,		/* Polarity */
 	 32, 0,			/* Depth, Gray_index, */
-	 255, 255, 1, 1,	/* MaxGray, MaxColor, DitherGray, DitherColor */
-	 GX_CINFO_SEP_LIN,      /* Linear & Separable */
+	 255, 255, 256, 256,	/* MaxGray, MaxColor, DitherGray, DitherColor */
+	 GX_CINFO_UNKNOWN_SEP_LIN, /* Let check_device_separable set up values */
 	 "DeviceN",		/* Process color model name */
 	 xcf_print_page),	/* Printer page print routine */
     /* DeviceN device specific parameters */
@@ -935,7 +935,8 @@ xcf_put_params(gx_device * pdev, gs_param_list * plist)
  * number if the name is found.  It returns a negative value if not found.
  */
 private int
-xcf_get_color_comp_index(const gx_device * dev, const char * pname, int name_size, int src_index)
+xcf_get_color_comp_index(gx_device * dev, const char * pname, int name_size,
+					int component_type)
 {
 /* TO_DO_DEVICEN  This routine needs to include the effects of the SeparationOrder array */
     const fixed_colorant_names_list * list = ((const xcf_device *)dev)->std_colorant_names;

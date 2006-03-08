@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zstring.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zstring.c,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* String operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -74,7 +74,7 @@ znamestring(i_ctx_t *i_ctx_p)
     os_ptr op = osp;
 
     check_type(*op, t_name);
-    name_string_ref(op, op);
+    name_string_ref(imemory, op, op);
     return 0;
 }
 
@@ -186,7 +186,7 @@ zstringmatch(i_ctx_t *i_ctx_p)
 	    check_read(*op1);
 	    goto cmp;
 	case t_name:
-	    name_string_ref(op1, op1);	/* can't fail */
+	    name_string_ref(imemory, op1, op1);	/* can't fail */
 cmp:
 	    result = string_match(op1->value.const_bytes, r_size(op1),
 				  op->value.const_bytes, r_size(op),

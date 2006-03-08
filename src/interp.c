@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: interp.c,v 1.5 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: interp.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Ghostscript language interpreter */
 #include "memory_.h"
 #include "string_.h"
@@ -30,6 +30,7 @@
 #include "iastruct.h"
 #include "icontext.h"
 #include "icremap.h"
+#include "idebug.h"
 #include "igstate.h"		/* for handling e_RemapColor */
 #include "inamedef.h"
 #include "iname.h"		/* for the_name_table */
@@ -699,7 +700,7 @@ gs_errorname(i_ctx_t *i_ctx_p, int code, ref * perror_name)
 	dict_find_string(systemdict, "ErrorNames", &pErrorNames) <= 0
 	)
 	return_error(e_undefined);	/* errordict or ErrorNames not found?! */
-    return array_get(pErrorNames, (long)(-code - 1), perror_name);
+    return array_get(imemory, pErrorNames, (long)(-code - 1), perror_name);
 }
 
 /* Store an error string in $error.errorinfo. */
@@ -784,7 +785,7 @@ interp(i_ctx_t **pi_ctx_p /* context for execution, updated if resched */,
      * Get a pointer to the name table so that we can use the
      * inline version of name_index_ref.
      */
-    const name_table *const int_nt = the_name_table();
+    const name_table *const int_nt = imemory->gs_lib_ctx->gs_name_table;
 
 #define set_error(ecode)\
   { ierror.code = ecode; ierror.line = __LINE__; }
@@ -803,7 +804,7 @@ interp(i_ctx_t **pi_ctx_p /* context for execution, updated if resched */,
     int ticks_left = gs_interp_time_slice_ticks;
 
     /*
-     * If we exceed the VMThreshold, set ticks_left to -1
+     * If we exceed the VMThreshold, set ticks_left to -100
      * to alert the interpreter that we need to garbage collect.
      */
     set_gc_signal(i_ctx_p, &ticks_left, -100);
@@ -872,7 +873,6 @@ interp(i_ctx_t **pi_ctx_p /* context for execution, updated if resched */,
 	  r_packed_is_name(iref_packed) :
 	  r_has_type(IREF, t_name)))
 	) {
-	void debug_print_ref(const ref *);
 	os_ptr save_osp = osp;	/* avoid side-effects */
 	es_ptr save_esp = esp;
 
@@ -881,10 +881,10 @@ interp(i_ctx_t **pi_ctx_p /* context for execution, updated if resched */,
 	dlprintf5("d%u,e%u<%u>0x%lx(%d): ",
 		  ref_stack_count(&d_stack), ref_stack_count(&e_stack),
 		  ref_stack_count(&o_stack), (ulong)IREF, icount);
-	debug_print_ref(IREF);
+	debug_print_ref(imemory, IREF);
 	if (iosp >= osbot) {
 	    dputs(" // ");
-	    debug_print_ref(iosp);
+	    debug_print_ref(imemory, iosp);
 	}
 	dputc('\n');
 	osp = save_osp;
@@ -1152,7 +1152,7 @@ remap:		    if (iesp + 2 >= estop) {
 			    return_with_error_iref(code);
 			iesp = esp;
 		    }
-		    packed_get(iref_packed, iesp + 1);
+		    packed_get(imemory, iref_packed, iesp + 1);
 		    make_oper(iesp + 2, 0,
 			      r_ptr(&istate->remap_color_info,
 				    int_remap_color_info_t)->proc);
@@ -1653,7 +1653,7 @@ res:
     } else
 	code = 0;
     ticks_left = gs_interp_time_slice_ticks;
-    set_code_on_interrupt(&code);
+    set_code_on_interrupt(imemory, &code);
     goto sched;
 
     /* Error exits. */
@@ -1670,7 +1670,7 @@ res:
 	 * We need a real object to return as the error object.
 	 * (It only has to last long enough to store in *perror_object.)
 	 */
-	packed_get((const ref_packed *)ierror.obj, &ierror.full);
+	packed_get(imemory, (const ref_packed *)ierror.obj, &ierror.full);
 	store_state_short(iesp);
 	if (IREF == ierror.obj)
 	    SET_IREF(&ierror.full);

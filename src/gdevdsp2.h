@@ -1,4 +1,4 @@
-/* Copyright (C) 2001, Ghostgum Software Pty Ltd.  All rights reserved.
+/* Copyright (C) 2001-2004, Ghostgum Software Pty Ltd.  All rights reserved.
 
   This file is part of GNU ghostscript
 
@@ -15,8 +15,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-
-/* $Id: gdevdsp2.h,v 1.4 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevdsp2.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* gdevdsp2.c */
 
 #ifndef gdevdsp2_INCLUDED
@@ -30,7 +29,10 @@ typedef struct gx_device_display_s gx_device_display;
 	void *pHandle;\
 	int nFormat;\
 	void *pBitmap;\
-	unsigned long ulBitmapSize
+	unsigned long ulBitmapSize;\
+	int HWResolution_set;\
+        gs_devn_params devn_params;\
+        equivalent_cmyk_color_params equiv_cmyk_colors
 
 /* The device descriptor */
 struct gx_device_display_s {

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxcmap.c,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxcmap.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Color mapping for Ghostscript */
 #include "gx.h"
 #include "gserrors.h"
@@ -53,8 +53,9 @@ gx_color_index
 gx_default_encode_color(gx_device * dev, const gx_color_value cv[])
 {
     int             ncomps = dev->color_info.num_components;
-    int             i, i_gray = dev->color_info.gray_index;
+    int             i;
     const byte *    comp_shift = dev->color_info.comp_shift;
+    const byte *    comp_bits = dev->color_info.comp_bits;
     gx_color_index  color = 0;
 
 #ifdef DEBUG
@@ -64,22 +65,26 @@ gx_default_encode_color(gx_device * dev, const gx_color_value cv[])
     }
 #endif
     for (i = 0; i < ncomps; i++) {
-        ulong   cbits = cv[i] * ((i == i_gray ?
-                                 dev->color_info.max_gray :
-                                 dev->color_info.max_color ) + 1);
+	color |= (gx_color_index)(cv[i] >> (gx_color_value_bits - comp_bits[i]))
+		<< comp_shift[i];
 
-        color |= (cbits / (gx_max_color_value + 1)) << comp_shift[i];
     }
     return color;
 }
 
+/* 
+ * This routine is only used if the device is 'separable'.  See
+ * separable_and_linear in gxdevcli.h for more information.
+ */
 int
 gx_default_decode_color(gx_device * dev, gx_color_index color, gx_color_value cv[])
 {
     int                     ncomps = dev->color_info.num_components;
     int                     i;
     const byte *            comp_shift = dev->color_info.comp_shift;
+    const byte *            comp_bits = dev->color_info.comp_bits;
     const gx_color_index *  comp_mask = dev->color_info.comp_mask;
+    uint shift, ivalue, nbits, scale;
 
 #ifdef DEBUG
     if ( dev->color_info.separable_and_linear != GX_CINFO_SEP_LIN ) {
@@ -89,12 +94,23 @@ gx_default_decode_color(gx_device * dev, gx_color_index color, gx_color_value cv
 #endif
 
     for (i = 0; i < ncomps; i++) {
-        gx_color_index  div = ( i == dev->color_info.gray_index ? 
-                                dev->color_info.max_gray : 
-                                dev->color_info.max_color ) + 1;
-
-        cv[i] = (gx_color_value)(((color & comp_mask[i]) >> comp_shift[i]) * 
-            (gx_max_color_value + 1) / div);
+	/*
+	 * Convert from the gx_color_index bits to a gx_color_value.
+	 * Split the conversion into an integer and a fraction calculation
+	 * so we can do integer arthmetic.  The calculation is equivalent
+	 * to floor(0xffff.fffff * ivalue / ((1 << nbits) - 1))
+	 */
+	nbits = comp_bits[i];
+	scale = gx_max_color_value / ((1 << nbits) - 1);
+	ivalue = (color & comp_mask[i]) >> comp_shift[i];
+	cv[i] = ivalue * scale;
+	/*
+	 * Since our scaling factor is an integer, we lost the fraction.
+	 * Determine what part of the ivalue that the faction would have 
+	 * added into the result.
+	 */
+	shift = nbits - (gx_color_value_bits % nbits);
+	cv[i] += ivalue >> shift;
     }
     return 0;
 }
@@ -219,6 +235,43 @@ cmyk_cs_to_rgb_cm(gx_device * dev, frac c, frac m, frac y, frac k, frac out[])
 }
 
 static void
+gray_cs_to_rgbk_cm(gx_device * dev, frac gray, frac out[])
+{
+    out[0] = out[1] = out[2] = frac_0;
+    out[3] = gray;
+}
+
+static void
+rgb_cs_to_rgbk_cm(gx_device * dev, const gs_imager_state *pis,
+				  frac r, frac g, frac b, frac out[])
+{
+    if ((r == g) && (g == b)) {
+	out[0] = out[1] = out[2] = frac_0;
+	out[3] = r;
+    }
+    else {
+	out[0] = r;
+	out[1] = g;
+	out[2] = b;
+	out[3] = frac_0;
+    }
+}
+
+static void
+cmyk_cs_to_rgbk_cm(gx_device * dev, frac c, frac m, frac y, frac k, frac out[])
+{
+    frac rgb[3];
+    if ((c == frac_0) && (m == frac_0) && (y == frac_0)) {
+	out[0] = out[1] = out[2] = frac_0;
+	out[3] = frac_1 - k;
+    }
+    else {
+	color_cmyk_to_rgb(c, m, y, k, NULL, rgb);
+	rgb_cs_to_rgbk_cm(dev, NULL, rgb[0], rgb[1], rgb[2], out);
+    }
+}
+
+static void
 gray_cs_to_cmyk_cm(gx_device * dev, frac gray, frac out[])
 {
     out[0] = out[1] = out[2] = frac_0;
@@ -281,6 +334,10 @@ static const gx_cm_color_map_procs DeviceCMYK_procs = {
     gray_cs_to_cmyk_cm, rgb_cs_to_cmyk_cm, cmyk_cs_to_cmyk_cm
 };
 
+static const gx_cm_color_map_procs DeviceRGBK_procs = {
+    gray_cs_to_rgbk_cm, rgb_cs_to_rgbk_cm, cmyk_cs_to_rgbk_cm
+};
+
 /*
  * These are the default handlers for returning the list of color space
  * to color model conversion routines.
@@ -304,6 +361,12 @@ gx_default_DevCMYK_get_color_mapping_procs(const gx_device * dev)
 }
 
 const gx_cm_color_map_procs *
+gx_default_DevRGBK_get_color_mapping_procs(const gx_device * dev)
+{
+    return &DeviceRGBK_procs;
+}
+
+const gx_cm_color_map_procs *
 gx_error_get_color_mapping_procs(const gx_device * dev)
 {
     /*
@@ -323,8 +386,8 @@ gx_error_get_color_mapping_procs(const gx_device * dev)
 
 /* Default color component to index for a DeviceGray color model */
 int
-gx_default_DevGray_get_color_comp_index(const gx_device * dev, const char * pname,
-						int name_size, int src_index)
+gx_default_DevGray_get_color_comp_index(gx_device * dev, const char * pname,
+					  int name_size, int component_type)
 {
     if (compare_color_names(pname, name_size, "Gray") ||
 	compare_color_names(pname, name_size, "Grey")) 
@@ -335,8 +398,8 @@ gx_default_DevGray_get_color_comp_index(const gx_device * dev, const char * pnam
 
 /* Default color component to index for a DeviceRGB color model */
 int
-gx_default_DevRGB_get_color_comp_index(const gx_device * dev, const char * pname,
-						int name_size, int src_index)
+gx_default_DevRGB_get_color_comp_index(gx_device * dev, const char * pname,
+					   int name_size, int component_type)
 {
     if (compare_color_names(pname, name_size, "Red"))
         return 0;
@@ -350,8 +413,8 @@ gx_default_DevRGB_get_color_comp_index(const gx_device * dev, const char * pname
 
 /* Default color component to index for a DeviceCMYK color model */
 int
-gx_default_DevCMYK_get_color_comp_index(const gx_device * dev, const char * pname,
-						int name_size, int src_index)
+gx_default_DevCMYK_get_color_comp_index(gx_device * dev, const char * pname,
+					    int name_size, int component_type)
 {
     if (compare_color_names(pname, name_size, "Cyan"))
         return 0;
@@ -365,10 +428,27 @@ gx_default_DevCMYK_get_color_comp_index(const gx_device * dev, const char * pnam
         return -1;		    /* Indicate that the component name is "unknown" */
 }
 
+/* Default color component to index for a DeviceRGBK color model */
+int
+gx_default_DevRGBK_get_color_comp_index(gx_device * dev, const char * pname,
+					    int name_size, int component_type)
+{
+    if (compare_color_names(pname, name_size, "Red"))
+        return 0;
+    if (compare_color_names(pname, name_size, "Green"))
+        return 1;
+    if (compare_color_names(pname, name_size, "Blue"))
+        return 2;
+    if (compare_color_names(pname, name_size, "Black"))
+        return 3;
+    else
+        return -1;		    /* Indicate that the component name is "unknown" */
+}
+
 /* Default color component to index for an unknown color model */
 int
-gx_error_get_color_comp_index(const gx_device * dev, const char * pname,
-						int name_size, int src_index)
+gx_error_get_color_comp_index(gx_device * dev, const char * pname,
+					int name_size, int component_type)
 {
     /*
      * We should never get here.  If we do then we do not have a "get_color_comp_index"
@@ -406,13 +486,17 @@ private cmap_proc_separation(cmap_separation_direct);
 private cmap_proc_devicen(cmap_devicen_halftoned);
 private cmap_proc_devicen(cmap_devicen_direct);
 
+private cmap_proc_is_halftoned(cmap_halftoned_is_halftoned);
+private cmap_proc_is_halftoned(cmap_direct_is_halftoned);
+
 private const gx_color_map_procs cmap_few = {
      cmap_gray_halftoned, 
      cmap_rgb_halftoned, 
      cmap_cmyk_halftoned,
      cmap_rgb_alpha_halftoned,
      cmap_separation_halftoned,
-     cmap_devicen_halftoned
+     cmap_devicen_halftoned,
+     cmap_halftoned_is_halftoned
     };
 private const gx_color_map_procs cmap_many = {
      cmap_gray_direct,
@@ -420,7 +504,8 @@ private const gx_color_map_procs cmap_many = {
      cmap_cmyk_direct,
      cmap_rgb_alpha_direct,
      cmap_separation_direct,
-     cmap_devicen_direct
+     cmap_devicen_direct,
+     cmap_direct_is_halftoned
     };
 
 const gx_color_map_procs *const cmap_procs_default = &cmap_many;
@@ -1114,6 +1199,19 @@ cmap_devicen_direct(const frac * pcc,
         cmap_devicen_halftoned(pcc, pdc, pis, dev, select);
 }
 
+/* ------ Halftoning check ----- */
+
+private bool
+cmap_halftoned_is_halftoned(const gs_imager_state * pis, gx_device * dev)
+{
+    return true;
+}
+
+private bool
+cmap_direct_is_halftoned(const gs_imager_state * pis, gx_device * dev)
+{
+    return false;
+}
 
 /* ------ Transfer function mapping ------ */
 

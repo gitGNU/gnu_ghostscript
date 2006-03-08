@@ -17,13 +17,17 @@
   
 */
 
-/* $Id: gxmatrix.h,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxmatrix.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Internal matrix routines for Ghostscript library */
 
 #ifndef gxmatrix_INCLUDED
 #  define gxmatrix_INCLUDED
 
 #include "gsmatrix.h"
+
+/* The following switch is for developmenty purpose only. 
+   PRECISE_CURRENTPOINT 0 must not go to production due to no clamping. */
+#define PRECISE_CURRENTPOINT 1 /* Old code compatible with dropped clamping = 0, new code = 1 */
 
 /*
  * Define a matrix with a cached fixed-point copy of the translation.
@@ -32,11 +36,16 @@
  * tx/ty values may be too large to fit in a fixed values; txy_fixed_valid
  * is false if this is the case, and true otherwise.
  */
-typedef struct gs_matrix_fixed_s {
+struct gs_matrix_fixed_s {
     _matrix_body;
     fixed tx_fixed, ty_fixed;
     bool txy_fixed_valid;
-} gs_matrix_fixed;
+};
+
+#ifndef gs_matrix_fixed_DEFINED
+#define gs_matrix_fixed_DEFINED
+typedef struct gs_matrix_fixed_s gs_matrix_fixed;
+#endif
 
 /* Make a gs_matrix_fixed from a gs_matrix. */
 int gs_matrix_fixed_from_matrix(gs_matrix_fixed *, const gs_matrix *);
@@ -46,6 +55,10 @@ int gs_point_transform2fixed(const gs_matrix_fixed *, floatp, floatp,
 			     gs_fixed_point *);
 int gs_distance_transform2fixed(const gs_matrix_fixed *, floatp, floatp,
 				gs_fixed_point *);
+#if PRECISE_CURRENTPOINT
+int gs_point_transform2fixed_rounding(const gs_matrix_fixed * pmat,
+			 floatp x, floatp y, gs_fixed_point * ppt);
+#endif
 
 /*
  * Define the fixed-point coefficient structure for avoiding

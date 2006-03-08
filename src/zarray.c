@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zarray.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zarray.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Array operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -67,7 +67,7 @@ zaload(i_ctx_t *i_ctx_p)
 	if (code < 0)
 	    return code;
 	for (i = asize; i > 0; i--, packed = packed_next(packed))
-	    packed_get(packed, ref_stack_index(&o_stack, i));
+	    packed_get(imemory, packed, ref_stack_index(&o_stack, i));
 	*osp = aref;
 	return 0;
     }
@@ -79,7 +79,7 @@ zaload(i_ctx_t *i_ctx_p)
 	os_ptr pdest = op;
 
 	for (i = 0; i < asize; i++, pdest++, packed = packed_next(packed))
-	    packed_get(packed, pdest);
+	    packed_get(imemory, packed, pdest);
     }
     push(asize);
     ref_assign(op, &aref);

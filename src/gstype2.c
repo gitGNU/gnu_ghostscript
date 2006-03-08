@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gstype2.c,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gstype2.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Adobe Type 2 charstring interpreter */
 #include "math_.h"
 #include "memory_.h"
@@ -60,8 +60,8 @@ private int
 type2_sbw(gs_type1_state * pcis, cs_ptr csp, cs_ptr cstack, ip_state_t * ipsp,
 	  bool explicit_width)
 {
-    fixed wx;
     t1_hinter *h = &pcis->h;
+    fixed sbx = fixed_0, sby = fixed_0, wx, wy = fixed_0;
     int code;
 
     if (explicit_width) {
@@ -70,7 +70,17 @@ type2_sbw(gs_type1_state * pcis, cs_ptr csp, cs_ptr cstack, ip_state_t * ipsp,
 	--csp;
     } else
 	wx = pcis->pfont->data.defaultWidthX;
-    code = t1_hinter__sbw(h, fixed_0, fixed_0, wx, fixed_0);
+    if (pcis->seac_accent < 0) {
+	if (pcis->sb_set) {
+	    sbx = pcis->lsb.x;
+	    sby = pcis->lsb.y;
+	}
+	if (pcis->width_set) {
+	    wx = pcis->width.x;
+	    wy = pcis->width.y;
+	}
+    }
+    code = t1_hinter__sbw(h, sbx, sby, wx, wy);
     if (code < 0)
 	return code;
     gs_type1_sbw(pcis, fixed_0, fixed_0, wx, fixed_0);
@@ -327,6 +337,9 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 		    return code;
 		if (pcis->seac_accent < 0) {
 		    code = t1_hinter__endglyph(h);
+		    if (code < 0)
+			return code;
+		    code = gx_setcurrentpoint_from_path(pcis->pis, pcis->path);
 		    if (code < 0)
 			return code;
 		} else

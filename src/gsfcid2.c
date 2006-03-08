@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsfcid2.c,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsfcid2.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Create a CIDFontType 2 font from a Type 42 font. */
 #include "memory_.h"
 #include "gx.h"
@@ -57,7 +57,7 @@ gs_font_cid2_from_type42(gs_font_cid2 **ppfcid, gs_font_type42 *pfont42,
     pfcid->next = pfcid->prev = 0; /* probably not necessary */
     pfcid->is_resource = 0;
     gs_font_notify_init((gs_font *)pfcid);
-    pfcid->id = gs_next_ids(1);
+    pfcid->id = gs_next_ids(mem, 1);
     pfcid->base = (gs_font *)pfcid;
     pfcid->FontType = ft_CID_TrueType;
     /* Fill in the rest of the CIDFont data. */

@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdti.c,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdti.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Bitmap font implementation for pdfwrite */
 #include "memory_.h"
 #include "string_.h"
@@ -387,7 +387,8 @@ pdf_start_charproc_accum(gx_device_pdf *pdev)
 {
     pdf_char_proc_t *pcp;
     pdf_resource_t *pres;
-    int code = pdf_enter_substream(pdev, resourceCharProc, gs_next_ids(1), &pres, false);
+    int code = pdf_enter_substream(pdev, resourceCharProc, gs_next_ids(pdev->memory, 1), 
+				   &pres, false, pdev->CompressFonts);
 
     if (code < 0)
        return code;
@@ -444,23 +445,22 @@ pdf_set_charproc_attrs(gx_device_pdf *pdev, gs_font *font, const double *pw, int
 }
 
 /*
- * Enter the substream accumulation mode.
+ * Open a stream object in the temporary file.
  */
+
 int
-pdf_enter_substream(gx_device_pdf *pdev, pdf_resource_type_t rtype, 
-			    gs_id id, pdf_resource_t **ppres, bool reserve_object_id) 
+pdf_open_aside(gx_device_pdf *pdev, pdf_resource_type_t rtype, 
+	gs_id id, pdf_resource_t **ppres, bool reserve_object_id, bool compress) 
 {
-    int sbstack_ptr = pdev->sbstack_depth;
-    stream *s, *save_strm = pdev->strm;
-    pdf_resource_t *pres;
-    pdf_data_writer_t writer;
     int code;
+    pdf_resource_t *pres;
+    stream *s, *save_strm = pdev->strm;
+    pdf_data_writer_t writer;
     static const pdf_filter_names_t fnames = {
 	PDF_FILTER_NAMES
     };
 
-    if (pdev->sbstack_depth >= pdev->sbstack_size)
-	return_error(gs_error_unregistered); /* Must not happen. */
+    pdev->streams.save_strm = pdev->strm;
     code = pdf_alloc_aside(pdev, PDF_RESOURCE_CHAIN(pdev, rtype, id),
 		pdf_resource_type_structs[rtype], &pres, reserve_object_id ? 0 : -1);
     if (code < 0)
@@ -469,15 +469,16 @@ pdf_enter_substream(gx_device_pdf *pdev, pdf_resource_type_t rtype,
     s = cos_write_stream_alloc((cos_stream_t *)pres->object, pdev, "pdf_enter_substream");
     if (s == 0)
 	return_error(gs_error_VMerror);
-    if (pdev->sbstack[sbstack_ptr].text_state == 0) {
-	pdev->sbstack[sbstack_ptr].text_state = pdf_text_state_alloc(pdev->pdf_memory);
-	if (pdev->sbstack[sbstack_ptr].text_state == 0)
-	    return_error(gs_error_VMerror);
-    }
     pdev->strm = s;
+#if PDFW_DELAYED_STREAMS
+    code = pdf_append_data_stream_filters(pdev, &writer,
+			     DATA_STREAM_NOT_BINARY | DATA_STREAM_NOLENGTH |
+			     (compress ? DATA_STREAM_COMPRESS : 0), 0);
+#else
     code = pdf_begin_data_stream(pdev, &writer,
 			     DATA_STREAM_NOT_BINARY | DATA_STREAM_NOLENGTH |
-			     (pdev->CompressFonts ? DATA_STREAM_COMPRESS : 0), 0);
+			     (compress ? DATA_STREAM_COMPRESS : 0), 0);
+#endif
     if (code < 0) {
 	pdev->strm = save_strm;
 	return code;
@@ -487,10 +488,60 @@ pdf_enter_substream(gx_device_pdf *pdev, pdf_resource_type_t rtype,
 	pdev->strm = save_strm;
 	return code;
     }
-    code = pdf_save_viewer_state(pdev, NULL);
+    pdev->strm = writer.binary.strm;
+    *ppres = pres;
+    return 0;
+}
+
+/*
+ * Close a stream object in the temporary file.
+ */
+int
+pdf_close_aside(gx_device_pdf *pdev) 
+{
+    /* We should call pdf_end_data here, but we don't want to put pdf_data_writer_t
+       into pdf_substream_save stack to simplify garbager descriptors. 
+       Use a lower level functions instead that. */
+    stream *s = pdev->strm;
+    int status = s_close_filters(&s, cos_write_stream_from_pipeline(s));
+    cos_stream_t *pcs = cos_stream_from_pipeline(s);
+    int code = 0;
+
+    if (status < 0)
+	 code = gs_note_error(gs_error_ioerror);
+    pcs->is_open = false;
+    sclose(s);
+    pdev->strm = pdev->streams.save_strm;
+    return code;
+}
+
+/*
+ * Enter the substream accumulation mode.
+ */
+int
+pdf_enter_substream(gx_device_pdf *pdev, pdf_resource_type_t rtype, 
+	gs_id id, pdf_resource_t **ppres, bool reserve_object_id, bool compress) 
+{
+    int sbstack_ptr = pdev->sbstack_depth;
+    pdf_resource_t *pres;
+    stream *save_strm = pdev->strm;
+    int code;
+
+    if (pdev->sbstack_depth >= pdev->sbstack_size)
+	return_error(gs_error_unregistered); /* Must not happen. */
+    if (pdev->sbstack[sbstack_ptr].text_state == 0) {
+	pdev->sbstack[sbstack_ptr].text_state = pdf_text_state_alloc(pdev->pdf_memory);
+	if (pdev->sbstack[sbstack_ptr].text_state == 0)
+	    return_error(gs_error_VMerror);
+    }
+    code = pdf_open_aside(pdev, rtype, id, &pres, reserve_object_id, compress);
     if (code < 0)
 	return code;
-    pdev->strm = writer.binary.strm;
+    code = pdf_save_viewer_state(pdev, NULL);
+    if (code < 0) {
+	pdev->strm = save_strm;
+	return code;
+    }
     pdev->sbstack[sbstack_ptr].context = pdev->context;
     pdf_text_state_copy(pdev->sbstack[sbstack_ptr].text_state, pdev->text->text_state);
     pdf_set_text_state_default(pdev->text->text_state);
@@ -525,33 +576,23 @@ pdf_enter_substream(gx_device_pdf *pdev, pdf_resource_type_t rtype,
 int
 pdf_exit_substream(gx_device_pdf *pdev) 
 {
-    int code = pdf_open_contents(pdev, PDF_IN_STREAM), code1;
+    int code, code1;
     int sbstack_ptr;
-    stream *s = pdev->strm;
-    pdf_procset_t procsets;
 
     if (pdev->sbstack_depth <= 0)
 	return_error(gs_error_unregistered); /* Must not happen. */
+    code = pdf_open_contents(pdev, PDF_IN_STREAM);
     sbstack_ptr = pdev->sbstack_depth - 1;
     while (pdev->vgstack_depth > pdev->vgstack_bottom) {
-	code1 = pdf_restore_viewer_state(pdev, s);
+	code1 = pdf_restore_viewer_state(pdev, pdev->strm);
 	if (code >= 0)
 	    code = code1;
     }
     if (pdev->clip_path != 0)
 	gx_path_free(pdev->clip_path, "pdf_end_charproc_accum");
-    {	/* We should call pdf_end_data here, but we don't want to put pdf_data_writer_t
-	   into pdf_substream_save stack to simplify garbager descriptors. 
-	   Use a lower level functions instead that. */
-	int status = s_close_filters(&s, cos_write_stream_from_pipeline(s));
-	cos_stream_t *pcs = cos_stream_from_pipeline(s);
-
-
-	if (status < 0 && code >=0)
-	     code = gs_note_error(gs_error_ioerror);
-	pcs->is_open = false;
-    }
-    sclose(s);
+    code1 = pdf_close_aside(pdev);
+    if (code1 < 0 && code >= 0)
+	code = code1;
     pdev->context = pdev->sbstack[sbstack_ptr].context;
     pdf_text_state_copy(pdev->text->text_state, pdev->sbstack[sbstack_ptr].text_state);
     pdev->clip_path = pdev->sbstack[sbstack_ptr].clip_path;
@@ -560,7 +601,6 @@ pdf_exit_substream(gx_device_pdf *pdev)
     pdev->vgstack_bottom = pdev->sbstack[sbstack_ptr].vgstack_bottom;
     pdev->strm = pdev->sbstack[sbstack_ptr].strm;
     pdev->sbstack[sbstack_ptr].strm = 0;
-    procsets = pdev->procsets;
     pdev->procsets = pdev->sbstack[sbstack_ptr].procsets;
     pdev->substream_Resources = pdev->sbstack[sbstack_ptr].substream_Resources;
     pdev->sbstack[sbstack_ptr].substream_Resources = 0;
@@ -571,16 +611,19 @@ pdf_exit_substream(gx_device_pdf *pdev)
     pdev->sbstack[sbstack_ptr].accumulating_substream_resource = 0;
     pdev->charproc_just_accumulated = pdev->sbstack[sbstack_ptr].charproc_just_accumulated;
     pdev->sbstack_depth = sbstack_ptr;
-    code = pdf_restore_viewer_state(pdev, NULL);
-    if (code < 0)
-	return code;
+    code1 = pdf_restore_viewer_state(pdev, NULL);
+    if (code1 < 0 && code >= 0)
+	code = code1;
     return code;
 }
 
-private int 
+private bool 
 pdf_is_same_charproc1(gx_device_pdf * pdev, pdf_char_proc_t *pcp0, pdf_char_proc_t *pcp1)
 {
     if (pcp0->char_code != pcp1->char_code)
+	return false; /* We need same encoding. */
+    if (pcp0->font->u.simple.Encoding[pcp0->char_code].glyph !=
+	pcp1->font->u.simple.Encoding[pcp1->char_code].glyph)
 	return false; /* We need same encoding. */
     if (bytes_compare(pcp0->char_name.data, pcp0->char_name.size, 
 		      pcp1->char_name.data, pcp1->char_name.size))
@@ -598,7 +641,7 @@ pdf_is_same_charproc1(gx_device_pdf * pdev, pdf_char_proc_t *pcp0, pdf_char_proc
     if (memcmp(&pcp0->font->u.simple.s.type3.FontMatrix, &pcp1->font->u.simple.s.type3.FontMatrix,
 		sizeof(pcp0->font->u.simple.s.type3.FontMatrix)))
 	return false;
-    return true;
+    return pdf_check_encoding_compatibility(pcp1->font, pdev->cgp->s, pdev->cgp->num_all_chars);
 }
 
 private int 
@@ -609,19 +652,23 @@ pdf_is_same_charproc(gx_device_pdf * pdev, pdf_resource_t *pres0, pdf_resource_t
 
 private int 
 pdf_find_same_charproc(gx_device_pdf *pdev, 
-	    pdf_font_resource_t *pdfont, pdf_char_proc_t **ppcp)
+	    pdf_font_resource_t *pdfont, const pdf_char_glyph_pairs_t *cgp, 
+	    pdf_char_proc_t **ppcp)
 {
     pdf_char_proc_t *pcp;
     int code;
 
+    pdev->cgp = cgp;
     for (pcp = pdfont->u.simple.s.type3.char_procs; pcp != NULL; pcp = pcp->char_next) {
-	if (*ppcp != pcp && pdf_is_same_charproc1(pdev, pcp, *ppcp)) {
+	if (*ppcp != pcp && pdf_is_same_charproc1(pdev, *ppcp, pcp)) {
 	    *ppcp = pcp;
+	    pdev->cgp = NULL;
 	    return 1;
 	}
     }
     pcp = *ppcp;
     code = pdf_find_same_resource(pdev, resourceCharProc, (pdf_resource_t **)ppcp, pdf_is_same_charproc);
+    pdev->cgp = NULL;
     if (code <= 0)
 	return code;
     /* fixme : do we need more checks here ? */
@@ -645,7 +692,7 @@ pdf_is_charproc_defined(gx_device_pdf *pdev, pdf_font_resource_t *pdfont, gs_cha
  * Complete charproc accumulation for a Type 3 font.
  */
 int
-pdf_end_charproc_accum(gx_device_pdf *pdev, gs_font *font) 
+pdf_end_charproc_accum(gx_device_pdf *pdev, gs_font *font, const pdf_char_glyph_pairs_t *cgp) 
 {
     int code;
     pdf_resource_t *pres = (pdf_resource_t *)pdev->accumulating_substream_resource;
@@ -677,13 +724,14 @@ pdf_end_charproc_accum(gx_device_pdf *pdev, gs_font *font)
     if (pdfont->used[ch >> 3] & (0x80 >> (ch & 7))) {
 	if (!(pdfont->u.simple.s.type3.cached[ch >> 3] & (0x80 >> (ch & 7)))) {
 	    checking_glyph_variation = true;
-	    code = pdf_find_same_charproc(pdev, pdfont, &pcp);
+	    code = pdf_find_same_charproc(pdev, pdfont, cgp, &pcp);
 	    if (code < 0)
 		return code;
 	    if (code != 0) {
-		code = pdf_cancel_resource(pdev, (pdf_resource_t *)pres, resourceCharProc);
+		code = pdf_cancel_resource(pdev, pres, resourceCharProc);
 		if (code < 0)
 		    return code;
+		pdf_forget_resource(pdev, pres, resourceCharProc);
 		if (pcp->font != pdfont) {
 		    code = pdf_attach_font_resource(pdev, font, pcp->font);
 		    if (code < 0)
@@ -701,7 +749,7 @@ pdf_end_charproc_accum(gx_device_pdf *pdev, gs_font *font)
 		    return code;
 	    }
 	}
-    }
+    } 
     pdf_reserve_object_id(pdev, pres, 0);
     code = pdf_attached_font_resource(pdev, font, &pdfont,
 		&glyph_usage, &real_widths, &char_cache_size, &width_cache_size);

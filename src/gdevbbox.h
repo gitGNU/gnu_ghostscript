@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevbbox.h,v 1.4 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevbbox.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Definitions and interface for bbox (bounding box accumulator) device */
 /* Requires gxdevice.h */
 
@@ -127,7 +127,7 @@ extern_st(st_device_bbox);
     gx_device_finalize, st_device_forward, box_proc_data)
 
 /* Initialize a bounding box device. */
-void gx_device_bbox_init(gx_device_bbox * dev, gx_device * target);
+void gx_device_bbox_init(gx_device_bbox * dev, gx_device * target, gs_memory_t *mem);
 
 /* Set whether a bounding box device propagates open/close to its target. */
 void gx_device_bbox_fwd_open_close(gx_device_bbox * dev,

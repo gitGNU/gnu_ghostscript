@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsfunc0.h,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsfunc0.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Definitions for FunctionType 0 (Sampled) Functions */
 
 #ifndef gsfunc0_INCLUDED
@@ -39,6 +39,9 @@ typedef struct gs_function_Sd_params_s {
     const float *Encode;	/* 2 x m, optional */
     const float *Decode;	/* 2 x n, optional */
     const int *Size;		/* m */
+    double *pole;               /* cached poles (internal data) */
+    int *array_step;			/* pole array element step by dimensions */
+    int *stream_step;			/* sample stream element step by dimensions */
 } gs_function_Sd_params_t;
 
 #define private_st_function_Sd()	/* in gsfunc.c */\

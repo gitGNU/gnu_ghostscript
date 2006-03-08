@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpx.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpx.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* H-P PCL XL driver */
 #include "math_.h"
 #include "memory_.h"
@@ -248,7 +248,7 @@ pclxl_set_color(gx_device_pclxl * xdev, const gx_drawing_color * pdc,
 	    spputc(s, (byte) color);
 	    px_put_a(s, pxaRGBColor);
 	}
-    } else if (gx_dc_is_null(pdc))
+    } else if (gx_dc_is_null(pdc) || !color_is_set(pdc))
 	px_put_uba(s, 0, null_source);
     else
 	return_error(gs_error_rangecheck);
@@ -282,7 +282,9 @@ pclxl_set_paints(gx_device_pclxl * xdev, gx_path_type_t type)
     gx_path_type_t rule = type & gx_path_type_rule;
 
     if (!(type & gx_path_type_fill) &&
-	!gx_dc_is_null(&xdev->saved_fill_color.saved_dev_color)
+	(color_is_set(&xdev->saved_fill_color.saved_dev_color) ||
+	!gx_dc_is_null(&xdev->saved_fill_color.saved_dev_color) 
+	)
 	) {
 	static const byte nac_[] = {
 	    DUB(0), DA(pxaNullBrush), pxtSetBrushSource
@@ -298,7 +300,9 @@ pclxl_set_paints(gx_device_pclxl * xdev, gx_path_type_t type)
 	}
     }
     if (!(type & gx_path_type_stroke) &&
-	!gx_dc_is_null(&xdev->saved_stroke_color.saved_dev_color)
+	(color_is_set(&xdev->saved_stroke_color.saved_dev_color) ||
+	!gx_dc_is_null(&xdev->saved_fill_color.saved_dev_color)
+	 )
 	) {
 	static const byte nac_[] = {
 	    DUB(0), DA(pxaNullPen), pxtSetPenSource

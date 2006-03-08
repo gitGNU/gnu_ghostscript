@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsmemlok.c,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsmemlok.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Monitor-locked heap memory allocator */
 
 /* Initial version 2/1/98 by John Desrosiers (soho@crl.com) */
@@ -96,6 +96,7 @@ gs_memory_locked_init(
     lmem->procs = locked_procs;
 
     lmem->target = target;
+    lmem->gs_lib_ctx = target->gs_lib_ctx;
 
     /* Allocate a monitor to serialize access to structures within */
     lmem->monitor = gx_monitor_alloc(target);

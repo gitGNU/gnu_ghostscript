@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ifont.h,v 1.5 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: ifont.h,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Interpreter internal font representation */
 
 #ifndef ifont_INCLUDED
@@ -81,7 +81,7 @@ extern_st(st_font_data);
  * Get the FontBBox from a font dictionary, if any; if none, or if invalid,
  * return 4 zeros.
  */
-int font_bbox_param(const ref * pfdict, double bbox[4]);
+int font_bbox_param(const gs_memory_t *mem, const ref *pfdict, double bbox[4]);
 
 /* ---------------- Exported by zfont.c ---------------- */
 
@@ -101,7 +101,7 @@ int font_param(const ref * pfdict, gs_font ** ppfont);
  * collector.  Return true if a mark was just added.  This procedure is
  * intended to be used as the mark_glyph procedure in the character cache.
  */
-bool zfont_mark_glyph_name(gs_glyph glyph, void *ignore_data);
+bool zfont_mark_glyph_name(const gs_memory_t *mem, gs_glyph glyph, void *ignore_data);
 
 /*
  * Return information about a font, including information from the FontInfo

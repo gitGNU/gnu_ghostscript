@@ -17,7 +17,7 @@
 */
 
 
-/* $Id: dpmain.c,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: dpmain.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Ghostscript DLL loader for OS/2 */
 /* For WINDOWCOMPAT (console mode) application */
 
@@ -994,7 +994,7 @@ main(int argc, char *argv[])
     char **nargv;
     char dformat[64];
     ULONG version[3];
-    gs_main_instance *instance;
+    void *instance;
 
     if (DosQuerySysInfo(QSV_VERSION_MAJOR, QSV_VERSION_REVISION, 
 	    &version, sizeof(version)))

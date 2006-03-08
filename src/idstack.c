@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: idstack.c,v 1.4 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: idstack.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Implementation of dictionary stacks */
 #include "ghost.h"
 #include "idict.h"
@@ -113,14 +113,14 @@ dstack_find_name_by_index(dict_stack_t * pds, uint nidx)
     do {
 	dict *pdict = pdref->value.pdict;
 	uint size = npairs(pdict);
-
+	const gs_memory_t *mem = dict_mem(pdict);
 #ifdef DEBUG
 	if (gs_debug_c('D')) {
 	    ref dnref;
 
-	    name_index_ref(nidx, &dnref);
+	    name_index_ref(mem, nidx, &dnref);
 	    dlputs("[D]lookup ");
-	    debug_print_name(&dnref);
+	    debug_print_name(mem, &dnref);
 	    dprintf3(" in 0x%lx(%u/%u)\n",
 		     (ulong) pdict, dict_length(pdref),
 		     dict_maxlength(pdref));
@@ -145,7 +145,7 @@ dstack_find_name_by_index(dict_stack_t * pds, uint nidx)
 	    for (kp = kbot + dict_hash_mod(hash, size) + 2;;) {
 		--kp;
 		if (r_has_type(kp, t_name)) {
-		    if (name_index(kp) == nidx) {
+		    if (name_index(mem, kp) == nidx) {
 			INCR_DEPTH(pdref);
 			return pdict->values.value.refs + (kp - kbot);
 		    }
@@ -173,9 +173,12 @@ dstack_find_name_by_index(dict_stack_t * pds, uint nidx)
 	ref key;
 	uint i = pds->stack.p + 1 - pds->stack.bot;
 	uint size = ref_stack_count(&pds->stack);
-	ref *pvalue;
+	ref *pvalue;	
+	
+	dict *pdict = pds->stack.p->value.pdict;
+	const gs_memory_t *mem = dict_mem(pdict);
 
-	name_index_ref(nidx, &key);
+	name_index_ref(mem, nidx, &key);
 	for (; i < size; i++) {
 	    if (dict_find(ref_stack_index(&pds->stack, i),
 			  &key, &pvalue) > 0
@@ -236,7 +239,7 @@ dstack_gc_cleanup(dict_stack_t * pds)
 	    ref key;
 	    ref *old_pvalue;
 
-	    array_get(&pdict->keys, (long)i, &key);
+	    array_get(dict_mem(pdict), &pdict->keys, (long)i, &key);
 	    if (r_has_type(&key, t_name) &&
 		pv_valid(old_pvalue = key.value.pname->pvalue)
 		) {		/*

@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gscscie.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gscscie.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* CIE color space management */
 #include "math_.h"
 #include "gx.h"
@@ -60,7 +60,8 @@ const gs_color_space_type gs_color_space_type_CIEDEFG = {
     gx_default_remap_color, gx_install_CIE,
     gx_spot_colors_set_overprint,
     gx_adjust_cspace_CIEDEFG, gx_no_adjust_color_count,
-    gx_serialize_CIEDEFG
+    gx_serialize_CIEDEFG,
+    gx_cspace_is_linear_default
 };
 
 /* CIEBasedDEF */
@@ -79,7 +80,8 @@ const gs_color_space_type gs_color_space_type_CIEDEF = {
     gx_default_remap_color, gx_install_CIE,
     gx_spot_colors_set_overprint,
     gx_adjust_cspace_CIEDEF, gx_no_adjust_color_count,
-    gx_serialize_CIEDEF
+    gx_serialize_CIEDEF,
+    gx_cspace_is_linear_default
 };
 
 /* CIEBasedABC */
@@ -98,7 +100,8 @@ const gs_color_space_type gs_color_space_type_CIEABC = {
     gx_remap_CIEABC, gx_install_CIE,
     gx_spot_colors_set_overprint,
     gx_adjust_cspace_CIEABC, gx_no_adjust_color_count,
-    gx_serialize_CIEABC
+    gx_serialize_CIEABC,
+    gx_cspace_is_linear_default
 };
 
 /* CIEBasedA */
@@ -117,7 +120,8 @@ const gs_color_space_type gs_color_space_type_CIEA = {
     gx_default_remap_color, gx_install_CIE,
     gx_spot_colors_set_overprint,
     gx_adjust_cspace_CIEA, gx_no_adjust_color_count,
-    gx_serialize_CIEA
+    gx_serialize_CIEA,
+    gx_cspace_is_linear_default
 };
 
 private gs_color_space rgb_cs, cmyk_cs;
@@ -131,10 +135,10 @@ gx_concrete_space_CIE(const gs_color_space * pcs, const gs_imager_state * pis)
     if (pcie == 0 || pcie->RenderTable.lookup.table == 0 ||
 	pcie->RenderTable.lookup.m == 3
 	) {
-	gs_cspace_init_DeviceRGB(&rgb_cs);  /* idempotent initialization */
+	gs_cspace_init_DeviceRGB(pis->memory, &rgb_cs);  /* idempotent initialization */
         return &rgb_cs;
     } else {			/* pcie->RenderTable.lookup.m == 4 */
-	gs_cspace_init_DeviceCMYK(&cmyk_cs); /* idempotent initialization */
+	gs_cspace_init_DeviceCMYK(pis->memory, &cmyk_cs); /* idempotent initialization */
 	return &cmyk_cs;
     }
 }

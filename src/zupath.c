@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zupath.c,v 1.5 2005/12/13 16:57:29 jemarch Exp $ */
+/* $Id: zupath.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Operators related to user paths */
 #include "ghost.h"
 #include "oper.h"
@@ -450,7 +450,7 @@ make_upath(i_ctx_t *i_ctx_p, ref *rupath, gs_state *pgs, gx_path *ppath,
     /* Construct the path. */
     next = rupath->value.refs;
     if (with_ucache) {
-	if ((code = name_enter_string("ucache", next)) < 0)
+        if ((code = name_enter_string(pgs->memory, "ucache", next)) < 0)
 	    return code;
 	r_set_attrs(next, a_executable | l_new);
 	++next;
@@ -472,7 +472,7 @@ make_upath(i_ctx_t *i_ctx_p, ref *rupath, gs_state *pgs, gx_path *ppath,
 	make_real_new(next + 2, bbox.q.x);
 	make_real_new(next + 3, bbox.q.y);
 	next += 4;
-	if ((code = name_enter_string("setbbox", next)) < 0)
+	if ((code = name_enter_string(pgs->memory, "setbbox", next)) < 0)
 	    return code;
 	r_set_attrs(next, a_executable | l_new);
 	++next;
@@ -515,7 +515,7 @@ make_upath(i_ctx_t *i_ctx_p, ref *rupath, gs_state *pgs, gx_path *ppath,
 		default:
 		    return_error(e_unregistered);
 	    }
-	    if ((code = name_enter_string(opstr, next)) < 0)
+	    if ((code = name_enter_string(pgs->memory, opstr, next)) < 0)
 		return code;
 	    r_set_attrs(next, a_executable);
 	    ++next;
@@ -527,8 +527,8 @@ make_upath(i_ctx_t *i_ctx_p, ref *rupath, gs_state *pgs, gx_path *ppath,
 /* ------ Internal routines ------ */
 
 /* Append a user path to the current path. */
-private int
-upath_append(os_ptr oppath, i_ctx_t *i_ctx_p)
+private inline int
+upath_append_aux(os_ptr oppath, i_ctx_t *i_ctx_p)
 {
     ref opcodes;
     check_read(*oppath);
@@ -538,7 +538,7 @@ upath_append(os_ptr oppath, i_ctx_t *i_ctx_p)
 	return_error(e_typecheck);
     
     if ( r_size(oppath) == 2 &&
-	 array_get(oppath, 1, &opcodes) >= 0 &&
+	 array_get(imemory, oppath, 1, &opcodes) >= 0 &&
          r_has_type(&opcodes, t_string)
 	) {			/* 1st element is operands, 2nd is operators */
 	ref operands;
@@ -547,7 +547,7 @@ upath_append(os_ptr oppath, i_ctx_t *i_ctx_p)
 	const byte *opp;
 	uint ocount, i = 0;
 
-        array_get(oppath, 0, &operands);
+        array_get(imemory, oppath, 0, &operands);
         code = num_array_format(&operands);
 	if (code < 0)
 	    return code;
@@ -568,7 +568,7 @@ upath_append(os_ptr oppath, i_ctx_t *i_ctx_p)
 
 		    while (opargs--) {
 			push(1);
-			code = num_array_get(&operands, format, i++, op);
+			code = num_array_get(imemory, &operands, format, i++, op);
 			switch (code) {
 			    case t_integer:
 				r_set_type_attrs(op, t_integer, 0);
@@ -601,7 +601,7 @@ upath_append(os_ptr oppath, i_ctx_t *i_ctx_p)
 	    ref *defp;
 	    os_ptr op = osp;
 
-	    array_get(arp, index, &rup);
+	    array_get(imemory, arp, index, &rup);
 	    switch (r_type(&rup)) {
 		case t_integer:
 		case t_real:
@@ -641,6 +641,17 @@ upath_append(os_ptr oppath, i_ctx_t *i_ctx_p)
     }
     return 0;
 }
+private int
+upath_append(os_ptr oppath, i_ctx_t *i_ctx_p)
+{
+    int code = upath_append_aux(oppath, i_ctx_p);
+
+    if (code < 0)
+	return code;
+    igs->current_point.x = fixed2float(igs->path->position.x);
+    igs->current_point.y = fixed2float(igs->path->position.y);
+    return 0;
+}
 
 /* Append a user path to the current path, and then apply or return */
 /* a transformation if one is supplied. */
@@ -651,7 +662,7 @@ upath_stroke(i_ctx_t *i_ctx_p, gs_matrix *pmat)
     int code, npop;
     gs_matrix mat;
 
-    if ((code = read_matrix(op, &mat)) >= 0) {
+    if ((code = read_matrix(imemory, op, &mat)) >= 0) {
 	if ((code = upath_append(op - 1, i_ctx_p)) >= 0) {
 	    if (pmat)
 		*pmat = mat;

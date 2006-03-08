@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gp_mslib.c,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_mslib.c,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /*
  * Microsoft Windows platform support for Graphics Library
  *
@@ -31,7 +31,7 @@
  */
 #ifdef CHECK_INTERRUPTS
 int
-gp_check_interrupts(void)
+gp_check_interrupts(const gs_memory_t *mem)
 {
     return 0;
 }

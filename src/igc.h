@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: igc.h,v 1.5 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: igc.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Internal interfaces in Ghostscript GC */
 
 #ifndef igc_INCLUDED
@@ -50,7 +50,7 @@ struct struct_shared_procs_s {
     /* Compact an object. */
 
 #define gc_proc_compact(proc)\
-  void proc(obj_header_t *pre, obj_header_t *dpre, uint size)
+  void proc(const gs_memory_t *cmem, obj_header_t *pre, obj_header_t *dpre, uint size)
     gc_proc_compact((*compact));
 
 };
@@ -68,7 +68,7 @@ struct gc_state_s {
     int min_collect;		/* avm_space */
     bool relocating_untraced;	/* if true, we're relocating */
     /* pointers from untraced spaces */
-    gs_raw_memory_t *heap;	/* for extending mark stack */
+    gs_memory_t *heap;	/* for extending mark stack */
     name_table *ntable;		/* (implicitly referenced by names) */
 #ifdef DEBUG
     chunk_t *container;
@@ -85,6 +85,9 @@ void ialloc_validate_memory(const gs_ref_memory_t *, gc_state_t *);
 void ialloc_validate_chunk(const chunk_t *, gc_state_t *);
 void ialloc_validate_object(const obj_header_t *, const chunk_t *,
 			    gc_state_t *);
+
+/* Exported by igc.c for ilocate.c */
+const gs_memory_t * gcst_get_memory_ptr(gc_state_t *gcst);
 
 /* Macro for returning a relocated pointer */
 const void *print_reloc_proc(const void *obj, const char *cname,

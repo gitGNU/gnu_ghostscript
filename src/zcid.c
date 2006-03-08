@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zcid.c,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zcid.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* CMap and CID-keyed font services */
 #include "ghost.h"
 #include "ierrors.h"
@@ -55,13 +55,14 @@ cid_system_info_param(gs_cid_system_info_t *pcidsi, const ref *prcidsi)
 
 /* Convert a CID into TT char code or to TT glyph index. */
 private bool 
-TT_char_code_from_CID_no_subst(const ref *Decoding, const ref *TT_cmap, uint nCID, uint *c)
+TT_char_code_from_CID_no_subst(const gs_memory_t *mem, 
+			       const ref *Decoding, const ref *TT_cmap, uint nCID, uint *c)
 {   ref *DecodingArray, char_code, ih, glyph_index;
 
     make_int(&ih, nCID / 256);
     if (dict_find(Decoding, &ih, &DecodingArray) <= 0 || 
 	    !r_has_type(DecodingArray, t_array) ||
-	    array_get(DecodingArray, nCID % 256, &char_code) < 0 || 
+	    array_get(mem, DecodingArray, nCID % 256, &char_code) < 0 || 
 	    !r_has_type(&char_code, t_integer)) {
 	/* fixme : Generally, a single char_code can be insufficient. 
 	   It could be an array. Fix lib/gs_ciddc.ps as well.  */
@@ -71,7 +72,7 @@ TT_char_code_from_CID_no_subst(const ref *Decoding, const ref *TT_cmap, uint nCI
 	*c = char_code.value.intval;
 	return true;
     }
-    if (array_get(TT_cmap, char_code.value.intval, &glyph_index) < 0 ||
+    if (array_get(mem, TT_cmap, char_code.value.intval, &glyph_index) < 0 ||
 	    !r_has_type(&glyph_index, t_integer))
 	return false;
     *c = glyph_index.value.intval;
@@ -81,12 +82,13 @@ TT_char_code_from_CID_no_subst(const ref *Decoding, const ref *TT_cmap, uint nCI
 /* Convert a CID into a TT char code or into a TT glyph index, using SubstNWP. */
 /* Returns 1 if a glyph presents, 0 if not, <0 if error. */
 int
-cid_to_TT_charcode(const ref *Decoding, const ref *TT_cmap, const ref *SubstNWP, 
+cid_to_TT_charcode(const gs_memory_t *mem, 
+		   const ref *Decoding, const ref *TT_cmap, const ref *SubstNWP, 
                    uint nCID, uint *c, ref *src_type, ref *dst_type)
 {
     int SubstNWP_length = r_size(SubstNWP), i, code;
 
-    if (TT_char_code_from_CID_no_subst(Decoding, TT_cmap, nCID, c)) {
+    if (TT_char_code_from_CID_no_subst(mem, Decoding, TT_cmap, nCID, c)) {
 	make_null(src_type);
 	/* Leaving dst_type uninitialized. */
 	return 1;
@@ -95,28 +97,28 @@ cid_to_TT_charcode(const ref *Decoding, const ref *TT_cmap, const ref *SubstNWP,
         ref rb, re, rs;
         int nb, ne, ns;
         
-	if ((code = array_get(SubstNWP, i + 1, &rb)) < 0)
+	if ((code = array_get(mem, SubstNWP, i + 1, &rb)) < 0)
 	    return code;
-        if ((code = array_get(SubstNWP, i + 2, &re)) < 0)
+        if ((code = array_get(mem, SubstNWP, i + 2, &re)) < 0)
 	    return code;
-        if ((code = array_get(SubstNWP, i + 3, &rs)) < 0)
+        if ((code = array_get(mem, SubstNWP, i + 3, &rs)) < 0)
 	    return code;
         nb = rb.value.intval;
         ne = re.value.intval;
         ns = rs.value.intval;
         if (nCID >= nb && nCID <= ne)
-            if (TT_char_code_from_CID_no_subst(Decoding, TT_cmap, ns + (nCID - nb), c)) {
-		if ((code = array_get(SubstNWP, i + 0, src_type)) < 0)
+            if (TT_char_code_from_CID_no_subst(mem, Decoding, TT_cmap, ns + (nCID - nb), c)) {
+		if ((code = array_get(mem, SubstNWP, i + 0, src_type)) < 0)
 		    return code;
-		if ((code = array_get(SubstNWP, i + 4, dst_type)) < 0)
+		if ((code = array_get(mem, SubstNWP, i + 4, dst_type)) < 0)
 		    return code;
                 return 1;
 	    }
         if (nCID >= ns && nCID <= ns + (ne - nb))
-            if (TT_char_code_from_CID_no_subst(Decoding, TT_cmap, nb + (nCID - ns), c)) {
-		if ((code = array_get(SubstNWP, i + 0, dst_type)) < 0)
+            if (TT_char_code_from_CID_no_subst(mem, Decoding, TT_cmap, nb + (nCID - ns), c)) {
+		if ((code = array_get(mem, SubstNWP, i + 0, dst_type)) < 0)
 		    return code;
-		if ((code = array_get(SubstNWP, i + 4, src_type)) < 0)
+		if ((code = array_get(mem, SubstNWP, i + 4, src_type)) < 0)
 		    return code;
                 return 1;
 	    }
@@ -127,7 +129,7 @@ cid_to_TT_charcode(const ref *Decoding, const ref *TT_cmap, const ref *SubstNWP,
 
 /* Set a CIDMap element. */
 private int 
-set_CIDMap_element(ref *CIDMap, uint cid, uint glyph_index)
+set_CIDMap_element(const gs_memory_t *mem, ref *CIDMap, uint cid, uint glyph_index)
 {   /* Assuming the CIDMap is already type-checked. */
     /* Assuming GDBytes == 2. */
     int offset = cid * 2;
@@ -138,7 +140,7 @@ set_CIDMap_element(ref *CIDMap, uint cid, uint glyph_index)
     if (glyph_index >= 65536)
 	return_error(e_rangecheck); /* Can't store with GDBytes == 2. */
     for (i = 0; i < count; i++) {
-	array_get(CIDMap, i, &s);
+	array_get(mem, CIDMap, i, &s);
 	size = r_size(&s) & ~1;
 	if (offset < size) {
 	    c = s.value.bytes + offset;
@@ -155,7 +157,8 @@ set_CIDMap_element(ref *CIDMap, uint cid, uint glyph_index)
 
 /* Create a CIDMap from a True Type cmap array, Decoding and SubstNWP. */
 int
-cid_fill_CIDMap(const ref *Decoding, const ref *TT_cmap, const ref *SubstNWP, int GDBytes, 
+cid_fill_CIDMap(const gs_memory_t *mem, 
+		const ref *Decoding, const ref *TT_cmap, const ref *SubstNWP, int GDBytes, 
                 ref *CIDMap)
 {   int dict_enum;
     ref el[2];
@@ -169,7 +172,7 @@ cid_fill_CIDMap(const ref *Decoding, const ref *TT_cmap, const ref *SubstNWP, in
     /* Checking the CIDMap structure correctness : */
     for (i = 0; i < count; i++) {
 	ref s;
-	int code = array_get(CIDMap, i, &s);
+	int code = array_get(mem, CIDMap, i, &s);
 
 	if (code < 0)
 	    return code;
@@ -191,13 +194,13 @@ cid_fill_CIDMap(const ref *Decoding, const ref *TT_cmap, const ref *SubstNWP, in
 	for (i = 0; i < count; i++) {
 	    uint cid = index * 256 + i, glyph_index;
 	    ref src_type, dst_type;
-	    int code = cid_to_TT_charcode(Decoding, TT_cmap, SubstNWP, 
+	    int code = cid_to_TT_charcode(mem, Decoding, TT_cmap, SubstNWP, 
                                 cid, &glyph_index, &src_type, &dst_type);
 
 	    if (code < 0)
 		return code;
 	    if (code > 0) {
-		code = set_CIDMap_element(CIDMap, cid, glyph_index);
+	        code = set_CIDMap_element(mem, CIDMap, cid, glyph_index);
 		if (code < 0)
 		    return code;
 	    }

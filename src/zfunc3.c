@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zfunc3.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zfunc3.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* PostScript language interface to LL3 Functions */
 #include "memory_.h"
 #include "ghost.h"
@@ -96,7 +96,7 @@ gs_build_function_3(i_ctx_t *i_ctx_p, const ref *op, const gs_function_params_t 
 	for (i = 0; i < params.k; ++i) {
 	    ref subfn;
 
-	    array_get(pFunctions, (long)i, &subfn);
+	    array_get(mem, pFunctions, (long)i, &subfn);
 	    code = fn_build_sub_function(i_ctx_p, &subfn, &ptr[i], depth, mem);
 	    if (code < 0)
 		goto fail;

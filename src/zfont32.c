@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zfont32.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zfont32.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Type 32 font operators */
 #include "ghost.h"
 #include "oper.h"
@@ -46,7 +46,7 @@ zbuildfont32(i_ctx_t *i_ctx_p)
     gs_font_base *pfont;
 
     check_type(*op, t_dictionary);
-    code = build_proc_name_refs(&build, NULL, "%Type32BuildGlyph");
+    code = build_proc_name_refs(imemory, &build, NULL, "%Type32BuildGlyph");
     if (code < 0)
 	return code;
     code = build_gs_simple_font(i_ctx_p, op, &pfont, ft_CID_bitmap,

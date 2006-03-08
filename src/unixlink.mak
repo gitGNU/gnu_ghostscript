@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: unixlink.mak,v 1.4 2005/12/13 16:57:28 jemarch Exp $
+# $Id: unixlink.mak,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $
 # Partial makefile common to all Unix configurations.
 # This part of the makefile contains the linking steps.
 
@@ -69,4 +69,5 @@ $(GS_XE): $(ld_tr) $(ECHOGS_XE) $(XE_ALL)
 	DEVICE_DEVS9= DEVICE_DEVS10= DEVICE_DEVS11= DEVICE_DEVS12= \
 	DEVICE_DEVS13= DEVICE_DEVS14= DEVICE_DEVS15= DEVICE_DEVS16= \
 	DEVICE_DEVS17= DEVICE_DEVS18= DEVICE_DEVS19= DEVICE_DEVS20= \
+	DEVICE_DEVS_EXTRA= \
 	$(SH) <$(ldt_tr)

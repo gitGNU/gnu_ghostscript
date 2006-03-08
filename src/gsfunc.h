@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsfunc.h,v 1.5 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsfunc.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Generic definitions for Functions */
 
 #ifndef gsfunc_INCLUDED
@@ -48,13 +48,6 @@ typedef int gs_function_type_t;
     const float *Domain;	/* 2 x m */\
     int n;			/* # of outputs */\
     const float *Range		/* 2 x n, optional except for type 0 */
-
-/* Define calculation effort values (currently only used for monotonicity). */
-typedef enum {
-    EFFORT_EASY = 0,
-    EFFORT_MODERATE = 1,
-    EFFORT_ESSENTIAL = 2
-} gs_function_effort_t;
 
 /* Define abstract types. */
 #ifndef gs_data_source_DEFINED
@@ -89,7 +82,7 @@ typedef FN_EVALUATE_PROC((*fn_evaluate_proc_t));
 /* Test whether a function is monotonic. */
 #define FN_IS_MONOTONIC_PROC(proc)\
   int proc(const gs_function_t * pfn, const float *lower,\
-	   const float *upper, gs_function_effort_t effort)
+	   const float *upper)
 typedef FN_IS_MONOTONIC_PROC((*fn_is_monotonic_proc_t));
 
 /* Get function information. */
@@ -198,21 +191,14 @@ int alloc_function_array(uint count, gs_function_t *** pFunctions,
   ((pfn)->head.procs.evaluate)(pfn, in, out)
 
 /*
- * Test whether a function is monotonic on a given (closed) interval.  If
- * the test requires too much effort, the procedure may return
- * gs_error_undefined; normally, it returns 0 for false, >0 for true,
- * gs_error_rangecheck if any part of the interval is outside the function's
- * domain.  If lower[i] > upper[i], the result is not defined.
+ * Test whether a function is monotonic on a given (closed) interval.
+ * return 1 if true, 0 if don't know, <0 on error.
+ * If lower[i] > upper[i], the result is not defined.
+ * NOTE : currently it is underimplemented for cubic interpolation functions.
+ *        Need to find the cubic surface extremes.
  */
-#define gs_function_is_monotonic(pfn, lower, upper, effort)\
-  ((pfn)->head.procs.is_monotonic)(pfn, lower, upper, effort)
-/*
- * If the function is monotonic, is_monotonic returns the direction of
- * monotonicity for output value N in bits 2N and 2N+1.  (Functions with
- * more than sizeof(int) * 4 - 1 outputs are never identified as monotonic.)
- */
-#define FN_MONOTONIC_INCREASING 1
-#define FN_MONOTONIC_DECREASING 2
+#define gs_function_is_monotonic(pfn, lower, upper)\
+  ((pfn)->head.procs.is_monotonic)(pfn, lower, upper)
 
 /* Get function information. */
 #define gs_function_get_info(pfn, pfi)\

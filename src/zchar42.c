@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zchar42.c,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zchar42.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Type 42 character display operator */
 #include "ghost.h"
 #include "oper.h"
@@ -159,7 +159,7 @@ type42_fill(i_ctx_t *i_ctx_p)
     int code;
     gs_fixed_point fa = i_ctx_p->pgs->fill_adjust;
 
-    i_ctx_p->pgs->fill_adjust.x = i_ctx_p->pgs->fill_adjust.y = 0;
+    i_ctx_p->pgs->fill_adjust.x = i_ctx_p->pgs->fill_adjust.y = -1;
     code = type42_finish(i_ctx_p, gs_fill);
     i_ctx_p->pgs->fill_adjust = fa; /* Not sure whether we need to restore it,
                                        but this isn't harmful. */
@@ -207,17 +207,10 @@ type42_finish(i_ctx_t *i_ctx_p, int (*cont) (gs_state *))
      * the current gstate and path.  This is a design bug that we will
      * have to address someday!
      */
-#if NEW_TT_INTERPRETER
     code = gs_type42_append((uint)opc->value.intval, (gs_imager_state *)igs,
 			    igs->path, &penum->log2_scale,
 			    (penum->text.operation & TEXT_DO_ANY_CHARPATH) != 0,
 			    pfont->PaintType, penum->pair);
-#else
-    code = gs_type42_append((uint)opc->value.intval, (gs_imager_state *)igs,
-			    igs->path, &penum->log2_scale,
-			    (penum->text.operation & TEXT_DO_ANY_CHARPATH) != 0,
-			    pfont->PaintType, (gs_font_type42 *)pfont);
-#endif
     if (code < 0)
 	return code;
     pop((psbpt == 0 ? 4 : 6));

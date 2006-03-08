@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zchar32.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zchar32.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Type 32 font glyph operators */
 #include "ghost.h"
 #include "oper.h"
@@ -117,7 +117,7 @@ typedef struct {
     gs_font *font;
 } font_cid_range_t;
 private bool
-select_cid_range(cached_char * cc, void *range_ptr)
+select_cid_range(const gs_memory_t *mem, cached_char * cc, void *range_ptr)
 {
     const font_cid_range_t *range = range_ptr;
 

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: sdctc.c,v 1.4 2005/12/13 16:57:27 jemarch Exp $ */
+/* $Id: sdctc.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Code common to DCT encoding and decoding streams */
 #include "stdio_.h"
 #include "jpeglib_.h"
@@ -34,7 +34,7 @@ s_DCT_set_defaults(stream_state * st)
 {
     stream_DCT_state *const ss = (stream_DCT_state *) st;
 
-    ss->jpeg_memory = &gs_memory_default;
+    ss->jpeg_memory = (gs_memory_t *)gs_lib_ctx_get_non_gc_memory_t(); /* cast away const */
     ss->data.common = 0;
 	/****************
 	  ss->data.common->Picky = 0;

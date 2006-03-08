@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdtf.c,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdtf.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Font and CMap resource implementation for pdfwrite text */
 #include "memory_.h"
 #include "string_.h"
@@ -45,7 +45,7 @@ private_st_pdf_outline_fonts();
 
 private
 ENUM_PTRS_WITH(pdf_font_resource_enum_ptrs, pdf_font_resource_t *pdfont)
-ENUM_PREFIX(st_pdf_resource, 10);
+ENUM_PREFIX(st_pdf_resource, 12);
 case 0: return ENUM_STRING(&pdfont->BaseFont);
 case 1: ENUM_RETURN(pdfont->FontDescriptor);
 case 2: ENUM_RETURN(pdfont->base_font);
@@ -95,6 +95,13 @@ case 10: switch (pdfont->FontType) {
  default:
      ENUM_RETURN(0);
 }
+case 11: switch (pdfont->FontType) {
+ case ft_CID_encrypted:
+ case ft_CID_TrueType:
+     ENUM_RETURN(pdfont->u.cidfont.used2);
+ default:
+     ENUM_RETURN(0);
+}
 ENUM_PTRS_END
 private
 RELOC_PTRS_WITH(pdf_font_resource_reloc_ptrs, pdf_font_resource_t *pdfont)
@@ -125,6 +132,7 @@ RELOC_PTRS_WITH(pdf_font_resource_reloc_ptrs, pdf_font_resource_t *pdfont)
 	RELOC_VAR(pdfont->u.cidfont.v);
 	RELOC_VAR(pdfont->u.cidfont.CIDToGIDMap);
 	RELOC_VAR(pdfont->u.cidfont.parent);
+	RELOC_VAR(pdfont->u.cidfont.used2);
 	break;
     default:
 	RELOC_VAR(pdfont->u.simple.Encoding);
@@ -185,7 +193,7 @@ pdf_find_standard_font_name(const byte *str, uint size)
  */
 private int
 find_std_appearance(const gx_device_pdf *pdev, gs_font_base *bfont,
-		    int mask, gs_glyph *glyphs, int num_glyphs)
+		    int mask, pdf_char_glyph_pair_t *pairs, int num_glyphs)
 {
     bool has_uid = uid_is_UniqueID(&bfont->UID) && bfont->UID.id != 0;
     const pdf_standard_font_t *psf = pdf_standard_fonts(pdev);
@@ -221,7 +229,8 @@ find_std_appearance(const gx_device_pdf *pdev, gs_font_base *bfont,
 	 */
 	code = gs_copied_can_copy_glyphs((const gs_font *)cfont,
 					 (const gs_font *)bfont,
-					 glyphs, num_glyphs, true);
+					 &pairs[0].glyph, num_glyphs, 
+					 sizeof(pdf_char_glyph_pair_t), true);
 	if (code == gs_error_unregistered) /* Debug purpose only. */
 	    return code;
 	/* Note: code < 0 means an error. Skip it here. */
@@ -497,6 +506,15 @@ pdf_resize_resource_arrays(gx_device_pdf *pdev, pdf_font_resource_t *pfres, int 
 		return code;
 	}
     }
+    if (pfres->FontType == ft_CID_encrypted || pfres->FontType == ft_CID_TrueType) {
+	if (pfres->u.cidfont.used2 != NULL) {
+	    code = pdf_resize_array(mem, (void **)&pfres->u.cidfont.used2, 
+		    sizeof(*pfres->u.cidfont.used2), 
+		    (pfres->count + 7) / 8, (chars_count + 7) / 8);
+	    if (code < 0)
+		return code;
+	}
+    }
     pfres->count = chars_count;
     return 0;
 }
@@ -555,18 +573,18 @@ embed_list_includes(const gs_param_string_array *psa, const byte *chars,
 }
 private bool
 embed_as_standard(gx_device_pdf *pdev, gs_font *font, int index,
-		  gs_glyph *glyphs, int num_glyphs)
+		  pdf_char_glyph_pair_t *pairs, int num_glyphs)
 {
     if (font->is_resource) {
 	return true;
     }
     if (find_std_appearance(pdev, (gs_font_base *)font, -1,
-			    glyphs, num_glyphs) == index)
+			    pairs, num_glyphs) == index)
 	return true;
     if (!scan_for_standard_fonts(pdev, font->dir))
 	return false;
     return (find_std_appearance(pdev, (gs_font_base *)font, -1,
-				glyphs, num_glyphs) == index);
+				pairs, num_glyphs) == index);
 }
 /*
  * Choose a name for embedded font.
@@ -578,7 +596,7 @@ const gs_font_name *pdf_choose_font_name(gs_font *font, bool key_name)
 }
 pdf_font_embed_t
 pdf_font_embed_status(gx_device_pdf *pdev, gs_font *font, int *pindex,
-		      gs_glyph *glyphs, int num_glyphs)
+		      pdf_char_glyph_pair_t *pairs, int num_glyphs)
 {
     const gs_font_name *fn = pdf_choose_font_name(font, false);
     const byte *chars = fn->chars;
@@ -599,7 +617,7 @@ pdf_font_embed_status(gx_device_pdf *pdev, gs_font *font, int *pindex,
     if (pdev->CompatibilityLevel < 1.3) {
 	if (index >= 0 && 
 	    (embed_as_standard_called = true,
-	     do_embed_as_standard = embed_as_standard(pdev, font, index, glyphs, num_glyphs)))
+	     do_embed_as_standard = embed_as_standard(pdev, font, index, pairs, num_glyphs)))
 	    return FONT_EMBED_STANDARD;
     }
     /* Check the Embed lists. */
@@ -607,7 +625,7 @@ pdf_font_embed_status(gx_device_pdf *pdev, gs_font *font, int *pindex,
  	(index >= 0 && 
 	    !(embed_as_standard_called ? do_embed_as_standard :
 	     (embed_as_standard_called = true,
-	      (do_embed_as_standard = embed_as_standard(pdev, font, index, glyphs, num_glyphs)))))
+	      (do_embed_as_standard = embed_as_standard(pdev, font, index, pairs, num_glyphs)))))
  	/* Ignore NeverEmbed for a non-standard font with a standard name */
  	) {
 	if (pdev->params.EmbedAllFonts || font_is_symbolic(font) ||
@@ -616,7 +634,7 @@ pdf_font_embed_status(gx_device_pdf *pdev, gs_font *font, int *pindex,
     }
     if (index >= 0 && 
 	(embed_as_standard_called ? do_embed_as_standard :
-	 embed_as_standard(pdev, font, index, glyphs, num_glyphs)))
+	 embed_as_standard(pdev, font, index, pairs, num_glyphs)))
 	return FONT_EMBED_STANDARD;
     return FONT_EMBED_NO;
 }
@@ -840,6 +858,13 @@ pdf_font_cidfont_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
     pdfont->u.cidfont.Widths2 = NULL;
     pdfont->u.cidfont.v = NULL;
     pdfont->u.cidfont.parent = NULL;
+    /* Don' know whether the font will use WMode 1,
+       so reserve it now. */
+    pdfont->u.cidfont.used2 = gs_alloc_bytes(pdev->pdf_memory, 
+		(chars_count + 7) / 8, "pdf_font_cidfont_alloc");
+    if (pdfont->u.cidfont.used2 == NULL)
+        return_error(gs_error_VMerror);
+    memset(pdfont->u.cidfont.used2, 0, (chars_count + 7) / 8);
     /*
      * Write the CIDSystemInfo now, so we don't try to access it after
      * the font may no longer be available.
@@ -859,35 +884,46 @@ pdf_font_cidfont_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
 
 int
 pdf_obtain_cidfont_widths_arrays(gx_device_pdf *pdev, pdf_font_resource_t *pdfont, 
-                                 int wmode, double **w, double **v)
+                                 int wmode, double **w, double **w0, double **v)
 {
     gs_memory_t *mem = pdev->pdf_memory;
-    double *ww, *vv = 0;
+    double *ww, *vv = 0, *ww0 = 0;
     int chars_count = pdfont->count;
 
+    *w0 = (wmode ? pdfont->Widths : NULL);
     *v = (wmode ? pdfont->u.cidfont.v : NULL);
     *w = (wmode ? pdfont->u.cidfont.Widths2 : pdfont->Widths);
-    if (*w != NULL)
-	return 0;
-    ww = (double *)gs_alloc_byte_array(mem, chars_count, sizeof(*ww),
-						"pdf_obtain_cidfont_widths_arrays");
-    if (wmode)
-	vv = (double *)gs_alloc_byte_array(mem, chars_count, sizeof(*vv) * 2,
-						"pdf_obtain_cidfont_widths_arrays");
-    if (ww == 0 || (wmode && vv == 0)) {
-	gs_free_object(mem, ww, "pdf_obtain_cidfont_widths_arrays");
-	gs_free_object(mem, vv, "pdf_obtain_cidfont_widths_arrays");
-	return_error(gs_error_VMerror);
-    }
-    if (wmode)
-	memset(vv, 0, chars_count * 2 * sizeof(*vv));
-    memset(ww, 0, chars_count * sizeof(*ww));
-    if (wmode) {
-	pdfont->u.cidfont.Widths2 = *w = ww;	
-	pdfont->u.cidfont.v = *v = vv;	
-    } else {
-	pdfont->Widths = *w = ww;
-	*v = NULL;
+    if (*w == NULL) {
+	ww = (double *)gs_alloc_byte_array(mem, chars_count, sizeof(*ww),
+						    "pdf_obtain_cidfont_widths_arrays");
+	if (wmode) {
+	    vv = (double *)gs_alloc_byte_array(mem, chars_count, sizeof(*vv) * 2,
+						    "pdf_obtain_cidfont_widths_arrays");
+	    if (pdfont->Widths == 0) {
+		ww0 = (double *)gs_alloc_byte_array(mem, chars_count, sizeof(*ww0),
+						    "pdf_obtain_cidfont_widths_arrays");
+		pdfont->Widths = *w0 = ww0;
+		if (ww0 != 0)
+		    memset(ww0, 0, chars_count * sizeof(*ww));
+	    } else
+		*w0 = ww0 = pdfont->Widths;
+	}
+	if (ww == 0 || (wmode && vv == 0) || (wmode && ww0 == 0)) {
+	    gs_free_object(mem, ww, "pdf_obtain_cidfont_widths_arrays");
+	    gs_free_object(mem, vv, "pdf_obtain_cidfont_widths_arrays");
+	    gs_free_object(mem, ww0, "pdf_obtain_cidfont_widths_arrays");
+	    return_error(gs_error_VMerror);
+	}
+	if (wmode)
+	    memset(vv, 0, chars_count * 2 * sizeof(*vv));
+	memset(ww, 0, chars_count * sizeof(*ww));
+	if (wmode) {
+	    pdfont->u.cidfont.Widths2 = *w = ww;	
+	    pdfont->u.cidfont.v = *v = vv;	
+	} else {
+	    pdfont->Widths = *w = ww;
+	    *v = NULL;
+	}
     }
     return 0;
 }
@@ -901,6 +937,9 @@ int
 pdf_cmap_alloc(gx_device_pdf *pdev, const gs_cmap_t *pcmap,
 	       pdf_resource_t **ppres, int font_index_only)
 {
+#if PDFW_DELAYED_STREAMS
+    return pdf_write_cmap(pdev, pcmap, ppres, font_index_only);
+#else
     /*
      * We don't store any of the contents of the CMap: instead, we write
      * it out immediately and just save the id.  Since some CMaps are very
@@ -913,4 +952,5 @@ pdf_cmap_alloc(gx_device_pdf *pdev, const gs_cmap_t *pcmap,
     if (code < 0)
 	return code;
     return pdf_write_cmap(pdev, pcmap, *ppres, font_index_only);
+#endif
 }

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gx.h,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gx.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Common internal definitions for Ghostscript library */
 
 #ifndef gx_INCLUDED
@@ -29,12 +29,6 @@
 #include "gstypes.h"
 #include "gsmemory.h"
 #include "gdebug.h"
-
-#define NEW_TT_INTERPRETER 1
-#define TT_GRID_FITTING (NEW_TT_INTERPRETER && 0) /* old code = 0, new code = 1. */
-#define FLATTENED_CURVE_ITERATOR 1 /* Old code = 0, new code = 1. */
-#define FLATTENED_CURVE_ITERATOR0_COMPATIBLE 1 /* Temporarily used for a backward compatibility. */
-#define CURVED_TRAPEZOID_FILL (FLATTENED_CURVE_ITERATOR & 0) /* old code = 0, new code = 1. */
 
 /* Define opaque types for the graphics state. */
 /* This is used so pervasively that we define it here, */

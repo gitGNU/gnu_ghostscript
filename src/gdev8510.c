@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdev8510.c,v 1.4 2005/12/13 16:57:18 jemarch Exp $*/
+/* $Id: gdev8510.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $*/
 /*
  * C.Itoh M8510 printer driver for ghostscript.
  *
@@ -48,9 +48,9 @@ private int
 m8510_print_page(gx_device_printer *pdev, FILE *prn_stream)
 {
 	int line_size = gdev_mem_bytes_per_scan_line((gx_device *)pdev);
-	byte *in1 = (byte *) gs_malloc(8, line_size, "m8510_print_page(in1)");
-	byte *in2 = (byte *) gs_malloc(8, line_size, "m8510_print_page(in2)");
-	byte *out = (byte *) gs_malloc(8, line_size, "m8510_print_page(out)");
+	byte *in1 = (byte *) gs_malloc(pdev->memory, 8, line_size, "m8510_print_page(in1)");
+	byte *in2 = (byte *) gs_malloc(pdev->memory, 8, line_size, "m8510_print_page(in2)");
+	byte *out = (byte *) gs_malloc(pdev->memory, 8, line_size, "m8510_print_page(out)");
 	int lnum = 0;
 	int code = 0;
 	byte *inp, *in_end, *outp;
@@ -101,9 +101,9 @@ m8510_print_page(gx_device_printer *pdev, FILE *prn_stream)
 	fflush(prn_stream);
 
 out:;
-	if (out) gs_free((char *) out, 8, line_size, "m8510_print_page(out)");
-	if (in2) gs_free((char *) in2, 8, line_size, "m8510_print_page(in2)");
-	if (in1) gs_free((char *) in1, 8, line_size, "m8510_print_page(in1)");
+	if (out) gs_free(pdev->memory, (char *) out, 8, line_size, "m8510_print_page(out)");
+	if (in2) gs_free(pdev->memory, (char *) in2, 8, line_size, "m8510_print_page(in2)");
+	if (in1) gs_free(pdev->memory, (char *) in1, 8, line_size, "m8510_print_page(in1)");
 
 	return code;
 }

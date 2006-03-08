@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ttobjs.h,v 1.3 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: ttobjs.h,v 1.4 2006/03/08 12:30:25 Arabidopsis Exp $ */
 
 /* Changes after FreeType: cut out the TrueType instruction interpreter. */
 
@@ -580,6 +580,8 @@ typedef struct _TExecution_Context TExecution_Context;
 
     Int              numIDefs;  /* number of instruction definitions */
     PDefArray        IDefs;     /* table of IDefs entries            */
+    Int		     countIDefs;/* The number of defined IDefs (igorm). */
+    Byte	     IDefPtr[256]; /* Map opcodes to indices of IDefs (igorm). */
 
     TCodeRangeTable  codeRangeTable;
 
@@ -625,6 +627,8 @@ typedef struct _TExecution_Context TExecution_Context;
   
     Int             numIDefs;  /* number of instruction defs */
     PDefRecord      IDefs;     /* table of IDefs entries     */
+    Int		    countIDefs;/* The number of defined IDefs (igorm). */
+    Byte	    IDefPtr[256]; /* Map opcodes to indices of IDefs (igorm). */
 
     PByte           glyphIns;  /* glyph instructions buffer */
     Int             glyphSize; /* glyph instructions buffer size */

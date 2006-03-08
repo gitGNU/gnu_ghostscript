@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdfc.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdfc.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Color space management and writing for pdfwrite driver */
 #include "math_.h"
 #include "memory_.h"
@@ -323,12 +323,12 @@ const pdf_color_space_names_t pdf_color_space_names_short = {
  * given number of components.
  */
 int
-pdf_cspace_init_Device(gs_color_space *pcs, int num_components)
+pdf_cspace_init_Device(const gs_memory_t *mem, gs_color_space *pcs, int num_components)
 {
     switch (num_components) {
-    case 1: gs_cspace_init_DeviceGray(pcs); break;
-    case 3: gs_cspace_init_DeviceRGB(pcs); break;
-    case 4: gs_cspace_init_DeviceCMYK(pcs); break;
+    case 1: gs_cspace_init_DeviceGray(mem, pcs); break;
+    case 3: gs_cspace_init_DeviceRGB(mem, pcs); break;
+    case 4: gs_cspace_init_DeviceCMYK(mem, pcs); break;
     default: return_error(gs_error_rangecheck);
     }
     return 0;
@@ -404,7 +404,7 @@ pdf_indexed_color_space(gx_device_pdf *pdev, cos_value_t *pvalue,
 	return_error(gs_error_VMerror);
     }
     swrite_string(&s, table, string_size);
-    s_init(&es, NULL);
+    s_init(&es, mem);
     s_init_state((stream_state *)&st, &s_AXE_template, NULL);
     s_init_filter(&es, (stream_state *)&st, buf, sizeof(buf), &s);
     sputc(&s, '<');
@@ -452,7 +452,7 @@ pdf_indexed_color_space(gx_device_pdf *pdev, cos_value_t *pvalue,
 	    for (i = 0; i < num_entries; ++i)
 		palette[i] = palette[i * 3];
 	    table_size = num_entries;
-	    gs_cspace_init_DeviceGray(&cs_gray);
+	    gs_cspace_init_DeviceGray(mem, &cs_gray);
 	    base_space = &cs_gray;
 	}
     }
@@ -589,6 +589,7 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
     if (pres == NULL) {
 	stream s;
 
+	s_init(&s, pdev->memory);
 	swrite_position_only(&s);
 	code = cs_serialize(pcs, &s);
 	if (code < 0)
@@ -773,6 +774,8 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
 	break;
 
     case gs_color_space_index_DeviceN:
+        if (pdev->CompatibilityLevel < 1.3)
+	    return_error(gs_error_rangecheck);
 	pfn = gs_cspace_get_devn_function(pcs);
 	/****** CURRENTLY WE ONLY HANDLE Functions ******/
 	if (pfn == 0)
@@ -788,7 +791,8 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
 		return_error(gs_error_VMerror);
 	    for (i = 0; i < pcs->params.device_n.num_components; ++i) {
 	 	if ((code = pcs->params.device_n.get_colorname_string(
-		                  pcs->params.device_n.names[i], &name_string, 
+				  pdev->memory,
+				  pcs->params.device_n.names[i], &name_string, 
 				  &name_string_length)) < 0 ||
 		    (code = pdf_string_to_cos_name(pdev, name_string, 
 				  name_string_length, &v)) < 0 ||
@@ -813,6 +817,7 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
 	    byte *name_string;
 	    uint name_string_length;
 	    if ((code = pcs->params.separation.get_colorname_string(
+				  pdev->memory, 
 				  pcs->params.separation.sep_name, &name_string, 
 				  &name_string_length)) < 0 ||
 		(code = pdf_string_to_cos_name(pdev, name_string, 

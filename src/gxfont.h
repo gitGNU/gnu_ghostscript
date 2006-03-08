@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxfont.h,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxfont.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Font object structure */
 /* Requires gsmatrix.h, gxdevice.h */
 
@@ -282,10 +282,11 @@ typedef struct gs_font_procs_s {
      * because for font descendents it is inherited from an upper font.
      * This is especially important for Type 42 fonts with hmtx and vmtx.
      */
+    /* Currently glyph_outline retrieves sbw only with type 1,2,9 fonts. */
 
 #define font_proc_glyph_outline(proc)\
   int proc(gs_font *font, int WMode, gs_glyph glyph, const gs_matrix *pmat,\
-	   gx_path *ppath)
+	   gx_path *ppath, double sbw[4])
     font_proc_glyph_outline((*glyph_outline));
 
     /*
@@ -476,10 +477,19 @@ gs_font_base *
 		     const gs_font_procs *procs, gs_font_dir *dir,
 		     client_name_t cname);
 
+/* Define a string to interact with unique_name in lib/pdf_font.ps .
+   The string is used to resolve glyph name conflict while
+   converting PDF Widths into Metrics.
+ */
+extern const char gx_extendeg_glyph_name_separator[];
+
 /*
  * Test whether a glyph is the notdef glyph for a base font.
  * The test is somewhat adhoc: perhaps this should be a virtual procedure.
  */
 bool gs_font_glyph_is_notdef(gs_font_base *bfont, gs_glyph glyph);
+
+/* Get font parent (a Type 9 font). */
+const gs_font_base *gs_font_parent(const gs_font_base *pbfont);
 
 #endif /* gxfont_INCLUDED */

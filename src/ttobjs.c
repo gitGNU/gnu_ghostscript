@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ttobjs.c,v 1.3 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: ttobjs.c,v 1.4 2006/03/08 12:30:26 Arabidopsis Exp $ */
 
 /* Changes after FreeType: cut out the TrueType instruction interpreter. */
 
@@ -376,6 +376,8 @@ static int free_aux(ttfMemory *mem, void *ptr)
    exec->numIDefs = ins->numIDefs;
    exec->FDefs    = ins->FDefs;
    exec->IDefs    = ins->IDefs;
+   exec->countIDefs = ins->countIDefs;
+   memcpy(exec->IDefPtr, ins->IDefPtr, sizeof(exec->IDefPtr));
 
    exec->metrics  = ins->metrics;
 
@@ -418,6 +420,9 @@ static int free_aux(ttfMemory *mem, void *ptr)
    }
    exec->numFDefs = 0;
    exec->numIDefs = 0;
+   memcpy(ins->IDefPtr, exec->IDefPtr, sizeof(ins->IDefPtr));
+   ins->countIDefs = exec->countIDefs;
+   exec->countIDefs = 0;
    exec->FDefs    = 0;
    exec->IDefs    = 0;
    exec->cvtSize = 0;
@@ -572,6 +577,10 @@ static int free_aux(ttfMemory *mem, void *ptr)
 
     ins->numFDefs = maxp->maxFunctionDefs;
     ins->numIDefs = maxp->maxInstructionDefs;
+    ins->countIDefs = 0;
+    if (maxp->maxInstructionDefs > 255)
+	goto Fail_Memory;
+    memset(ins->IDefPtr, (Byte)ins->numIDefs, sizeof(ins->IDefPtr));
     ins->cvtSize  = face->cvtSize;
 
     ins->metrics.pointSize    = 10 * 64;     /* default pointsize  = 10pts */

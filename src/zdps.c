@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zdps.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zdps.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Display PostScript extensions */
 #include "ghost.h"
 #include "oper.h"
@@ -105,7 +105,7 @@ zimage2(i_ctx_t *i_ctx_p)
 	ref *pDataSource;
 
 	gs_image2_t_init(&image);
-	if ((code = dict_matrix_param(op, "ImageMatrix",
+	if ((code = dict_matrix_param(imemory, op, "ImageMatrix",
 				      &image.ImageMatrix)) < 0 ||
 	    (code = dict_find_string(op, "DataSource", &pDataSource)) < 0 ||
 	    (code = dict_float_param(op, "XOrigin", 0.0,
@@ -208,7 +208,8 @@ zdefineusername(i_ctx_t *i_ctx_p)
 	if (code < 0)
 	    return code;
     }
-    if (array_get(user_names_p, op[-1].value.intval, &uname) >= 0) {
+    if (array_get(imemory, user_names_p, 
+		  op[-1].value.intval, &uname) >= 0) {
 	switch (r_type(&uname)) {
 	    case t_null:
 		break;

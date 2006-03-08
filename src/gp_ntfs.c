@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gp_ntfs.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_ntfs.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* file system stuff for MS-Windows WIN32 and MS-Windows NT */
 /* hacked from gp_dosfs.c by Russell Lang */
 
@@ -114,10 +114,8 @@ gp_enumerate_files_init(const char *pat, uint patlen, gs_memory_t * mem)
 
     if (pfen == 0)
 	return 0;
-
     /* pattern could be allocated as a string, */
     /* but it's simpler for GC and freeing to allocate it as bytes. */
-
     pattern = (char *)gs_alloc_bytes(mem, pat_size,
 				     "gp_enumerate_files(pattern)");
     if (pattern == 0)
@@ -127,7 +125,7 @@ gp_enumerate_files_init(const char *pat, uint patlen, gs_memory_t * mem)
     /* a final '\' in the string is also discarded.		    */
     for (i = 0, j=0; i < patlen; i++) {
 	if (pat[i] == '\\') {
-		    i++;
+	    i++;
 	    if (i == patlen)
 		break;		/* '\' at end ignored */
 	}

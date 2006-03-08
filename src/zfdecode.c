@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zfdecode.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zfdecode.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Additional decoding filter creation */
 #include "memory_.h"
 #include "ghost.h"
@@ -251,7 +251,7 @@ zpd_setup(os_ptr op, stream_PDiff_state * ppds)
     check_dict_read(*op);
     if ((code = dict_int_param(op, "Colors", 1, s_PDiff_max_Colors, 1,
 			       &ppds->Colors)) < 0 ||
-	(code = dict_int_param(op, "BitsPerComponent", 1, 8, 8,
+	(code = dict_int_param(op, "BitsPerComponent", 1, 16, 8,
 			       &bpc)) < 0 ||
 	(bpc & (bpc - 1)) != 0 ||
 	(code = dict_int_param(op, "Columns", 1, max_int, 1,

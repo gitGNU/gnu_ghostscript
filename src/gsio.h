@@ -16,20 +16,11 @@
 
 */
 
-/* $Id: gsio.h,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsio.h,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* stdio redirection */
 
 #ifndef gsio_INCLUDED
 #  define gsio_INCLUDED
-
-/*
- * Define substitutes for stdin/out/err.  Eventually these will always be
- * referenced through an instance structure.
- */
-extern FILE *gs_stdio[3];
-#define gs_stdin (gs_stdio[0])
-#define gs_stdout (gs_stdio[1])
-#define gs_stderr (gs_stdio[2])
 
 /*
  * The library and interpreter must never use stdin/out/err directly.

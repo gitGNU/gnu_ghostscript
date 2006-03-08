@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsccode.h,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gsccode.h,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Types for character codes */
 
 #ifndef gsccode_INCLUDED
@@ -92,7 +92,7 @@ typedef ulong gs_glyph;
 #define gs_max_glyph GS_MAX_GLYPH
 
 /* Define a procedure for marking a gs_glyph during garbage collection. */
-typedef bool (*gs_glyph_mark_proc_t)(gs_glyph glyph, void *proc_data);
+typedef bool (*gs_glyph_mark_proc_t)(const gs_memory_t *mem, gs_glyph glyph, void *proc_data);
 
 /* Define the indices for known encodings. */
 typedef enum {
@@ -136,7 +136,8 @@ typedef enum gs_glyph_space_s {
  * currently used only for CMaps: it is *not* the same as the glyph_name
  * procedure in fonts.
  */
-typedef int (*gs_glyph_name_proc_t)(gs_glyph glyph, gs_const_string *pstr,
+typedef int (*gs_glyph_name_proc_t)(const gs_memory_t *mem, 
+				    gs_glyph glyph, gs_const_string *pstr,
 				    void *proc_data);
 
 #endif /* gsccode_INCLUDED */

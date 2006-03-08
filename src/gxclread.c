@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxclread.c,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxclread.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Command list reading for Ghostscript. */
 #include "memory_.h"
 #include "gx.h"
@@ -96,7 +96,7 @@ s_band_read_process(stream_state * st, stream_cursor_read * ignore_pr,
 	    }
 	    q += count;
 	    left -= count;
-	    process_interrupts();
+	    process_interrupts(st->memory);
 	    continue;
 	}
 rb:
@@ -477,8 +477,7 @@ clist_playback_file_bands(clist_playback_action action,
     bool opened_cfile = false;
 
     /* We have to pick some allocator for rendering.... */
-    gs_memory_t *mem =
-	(cdev->memory != 0 ? cdev->memory : &gs_memory_default);
+    gs_memory_t *mem =cdev->memory;
  
     stream_band_read_state rs;
 
@@ -511,6 +510,8 @@ clist_playback_file_bands(clist_playback_action action,
 	};
 
 	s_band_read_init((stream_state *)&rs);
+	  /* The stream doesn't need a memory, but we'll need to access s.memory->gs_lib_ctx. */
+	s_init(&s, mem);
 	s_std_init(&s, sbuf, cbuf_size, &no_procs, s_mode_read);
 	s.foreign = 1;
 	s.state = (stream_state *)&rs;

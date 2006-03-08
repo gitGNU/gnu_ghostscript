@@ -16,11 +16,13 @@
 
 */
 
-/* $Id: dmmain.r,v 1.1.4.1 2003/12/12 22:07:59 giles Exp $ */
+/* $Id: dmmain.r 5572 2004-12-09 08:24:28Z giles $ */
 
 /* Resource data (Rez format) for the MacOS Ghostscript shlib example wrapper
    contributed by Nigel Hathaway. See dmmain.c for rest of this code.
  */
+
+#include "Types.r"
 
 resource 'BNDL' (128) {
 	'MCGS',
@@ -60,10 +62,10 @@ data 'MWBB' (1008) {
 };
 
 data 'MPSR' (1005) {
-	$"0009 4D6F 6E61 636F 0000 0000 0000 0000"            /* .ÆMonaco........ */
+	$"0009 4D6F 6E61 636F 0000 0000 0000 0000"            /* .ï¿½Monaco........ */
 	$"0000 0000 0000 0000 0000 0000 0000 0000"            /* ................ */
-	$"0000 0003 0004 0030 0004 01CA 027B 0030"            /* .......0...Ê.{.0 */
-	$"0004 01CA 027B BA5E B2EF 0000 0000 0000"            /* ...Ê.{º^²ï...... */
+	$"0000 0003 0004 0030 0004 01CA 027B 0030"            /* .......0...ï¿½.{.0 */
+	$"0004 01CA 027B BA5E B2EF 0000 0000 0000"            /* ...ï¿½.{ï¿½^ï¿½ï¿½...... */
 	$"0000 0000 0000 0100"                                /* ........ */
 };
 

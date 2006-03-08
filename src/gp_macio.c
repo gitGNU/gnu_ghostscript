@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gp_macio.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_macio.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 
 #ifndef __CARBON__
 //#include "MacHeaders"
@@ -166,7 +166,7 @@ getenv(const char * env) {
 //		FSMakeFSSpec(pFile.vRefNum, pFile.parID,thepfname, &pfile);
 		convertSpecToPath(&pFile, fpath, 256);
 //		sprintf(fpath,"%s",fpath);
-		p = (char*)gs_malloc(1, (size_t) ( 4*strlen(fpath) + 40), "getenv");
+		p = (char*)malloc((size_t) ( 4*strlen(fpath) + 40));
 		sprintf(p,"%s,%sGhostscript:lib,%sGhostscript:fonts",
 						(char *)&fpath[0],(char *)&fpath[0],
 						(char *)&fpath[0] );
@@ -323,43 +323,6 @@ mac_std_available(register stream * s, long *pl)
     return 0;		// OK
 }
 
-/* ====== Substitute for stdio ====== */
-
-/* These are used instead of the stdio version. */
-/* The declarations must be identical to that in <stdio.h>. */
-int
-fprintf(FILE *file, const char *fmt, ...)
-{
-	int		count;
-	va_list	args;
-	char	buf[1024];
-	
-	va_start(args,fmt);
-	
-	if (file != stdout  &&  file != stderr) {
-		count = vfprintf(file, fmt, args);
-	}
-	else {
-		count = vsprintf(buf, fmt, args);
-		return fwrite(buf, strlen(buf), 1, file);
-	}
-	
-	va_end(args);
-	return count;
-}
-
-int
-fputs(const char *string, FILE *file)
-{
-	if (file != stdout  &&  file != stderr) {
-		return fwrite(string, strlen(string), 1, file);
-	}
-	else {
-		return fwrite(string, strlen(string), 1, file);
-	}
-}
-
-
 /* ------ Printer accessing ------ */
 
 /* These should NEVER be called. */
@@ -372,12 +335,10 @@ fputs(const char *string, FILE *file)
 FILE *
 gp_open_printer (char *fname, int binary_mode)
 {
-	if (strlen(fname) == 1  &&  fname[0] == '-')
-		return stdout;
-	else if (strlen(fname) == 0)
-		return gp_open_scratch_file(gp_scratch_file_name_prefix, fname, binary_mode ? "wb" : "w");
-	else
-		return gp_fopen(fname, binary_mode ? "wb" : "b");
+    if (strlen(fname) == 0)
+        return gp_open_scratch_file(gp_scratch_file_name_prefix, fname, binary_mode ? "wb" : "w");
+    else
+        return gp_fopen(fname, binary_mode ? "wb" : "b");
 }
 
 /* Close the connection to the printer. */
@@ -385,9 +346,8 @@ gp_open_printer (char *fname, int binary_mode)
 void
 gp_close_printer (FILE *pfile, const char *fname)
 {
-	fclose(pfile);
+    fclose(pfile);
 }
-
 
 
 /* Define whether case is insignificant in file names. */
@@ -443,7 +403,7 @@ gp_open_scratch_file (const char *prefix, char fname[gp_file_name_sizeof], const
 		myErr = FindFolder(kOnSystemDisk,kTemporaryFolderType,kCreateFolder,
 			&foundVRefNum, &foundDirID);
 		if ( myErr != noErr ) {
-			fprintf(stderr,"Can't find temp folder.\n");
+			eprintf("Can't find temp folder.\n");
 			return (NULL);
 		}
 		FSMakeFSSpec(foundVRefNum, foundDirID,thepfname, &fSpec);
@@ -958,7 +918,7 @@ void gp_enumerate_fonts_free(void *enum_state)
 	
 	FMDisposeFontIterator(Iterator);
 	
-    /* free any gs_malloc() stuff here */
+    /* free any malloc'd stuff here */
     if (state->name) free(state->name);
     if (state->path) free(state->path);
     if (state->last_container_path) free(state->last_container_path);
@@ -1049,7 +1009,7 @@ int gp_enumerate_fonts_next(void *enum_state, char **fontname, char **path)
     	state->path = malloc(len);
     	snprintf(state->path, len, "%%macresource%%%s#POST", fontpath);
     }
-#if DEBUG
+#ifdef DEBUG
     dlprintf2("fontenum: returning '%s' in '%s'\n", state->name, state->path);
 #endif
     *fontname = state->name;

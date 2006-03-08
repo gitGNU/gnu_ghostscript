@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevphex.c,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevphex.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 
 /****************************************************************************/
 /*	Ghostscript printer driver for Epson Color Photo, Photo EX, Photo 700	*/
@@ -34,14 +34,14 @@
 HISTORY
 ~~~~~~~
 
-8 June 1999 Zoltán Kócsi (aka Kocsonya) zoltan@bendor.com.au
+8 June 1999 Zoltï¿½n Kï¿½csi (aka Kocsonya) zoltan@bendor.com.au
 
 	Initial revision. 
 	No shingling, depletion.
 	Colour only.
 	Dither matrix is blatantly copied from gslib.c.
 
-17 April 2000 Zoltán Kócsi
+17 April 2000 Zoltï¿½n Kï¿½csi
 
 	After much play worked out a reasonably simple colour mapping
 	that gives fairly good results. It has some very hairy things 
@@ -52,7 +52,7 @@ HISTORY
 LEGALISE
 ~~~~~~~~
 
-The usual disclaimer applies, neither me (Zoltán Kócsi) nor 
+The usual disclaimer applies, neither me (Zoltï¿½n Kï¿½csi) nor 
 Bendor Research Pty. Ltd. assume any liability whatsoever in 
 relation to events arising out of or related to the use of 
 the software or the included documentation in any form, way 
@@ -1734,14 +1734,14 @@ double		psize;
 	   we need error buffers and stuff. All in all, we'll request
 	   about 1.5 ~ 2M. */
 		
-	if ( ! ( render = (RENDER *) gs_malloc( 1, sizeof( RENDER ), "PhotoEX" )))
+	if ( ! ( render = (RENDER *) gs_malloc( dev->memory, 1, sizeof( RENDER ), "PhotoEX" )))
 		
 		return_error( gs_error_VMerror );
 	
-	if ( ! ( render->dbuff = (byte *) gs_malloc( pixels, sizeof( long ), 
+	if ( ! ( render->dbuff = (byte *) gs_malloc( dev->memory, pixels, sizeof( long ), 
 			"PhotoEX" ) ) ) {
 			
-		gs_free( render, 1, sizeof( RENDER ), "PhotoEX" );
+		gs_free( dev->memory, render, 1, sizeof( RENDER ), "PhotoEX" );
 		return_error( gs_error_VMerror );
 	}
 	
@@ -1798,8 +1798,8 @@ double		psize;
 	
 	/* Release the memory and return */
 	
-	gs_free( render->dbuff, pixels, sizeof( long ), "PhotoEX" );
-	gs_free( render, 1, sizeof( RENDER ), "PhotoEX" );
+	gs_free( dev->memory, render->dbuff, pixels, sizeof( long ), "PhotoEX" );
+	gs_free( dev->memory, render, 1, sizeof( RENDER ), "PhotoEX" );
 	return( 0 );
 }
 

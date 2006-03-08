@@ -1,4 +1,4 @@
-#    Copyright (C) 1989, 1996-2003 artofcode LLC.  All rights reserved.
+#    Copyright (C) 1989, 1996-2004 artofcode LLC.  All rights reserved.
 # 
 # This file is part of GNU ghostscript
 #
@@ -17,7 +17,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gs.mak,v 1.5 2005/12/13 16:57:20 jemarch Exp $
+# $Id: gs.mak,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $
 # Generic makefile, common to all platforms, products, and configurations.
 # The platform-specific makefiles `include' this file.
 
@@ -33,6 +33,8 @@
 #	GS - the name of the executable (without the extension, if any).
 #	GS_LIB_DEFAULT - the default directory/ies for searching for the
 #	    initialization and font files at run time.
+#	GS_CACHE_DIR - the default directory for caching data between
+#	    ghostscript invocations.
 #	SEARCH_HERE_FIRST - the default setting of -P (whether or not to
 #	    look for files in the current directory first).
 #	GS_DOCDIR - the directory where documentation will be available
@@ -63,6 +65,13 @@
 #	    in from a local copy of the source
 #	JBIG2SRCDIR - the name of the jbig2dec library source directory
 #	    typically 'jbig2dec' or 'jbig2dec-/version/'
+#	SHARE_JASPER - if set to 1, asks the linker to use an existing
+#	    complied libjasper. if set to 0, asks to compile and linking
+#	    in using our custom makefile from a local copy of the source
+#	JASPERSRCDIR - the name of the jasper library source directory
+#	    typically 'jasper' or 'jasper-/version/'
+#	JASPERCFLAGS - any platform-specific flags that are required
+#	    to properly compile in the jasper library source
 #	ICCSRCDIR - the name of the ICC lib source dir, currently
 #	    always icclib (compiled in statically)
 #	DEVICE_DEVS - the devices to include in the executable.
@@ -178,10 +187,6 @@
 #		normally the same as CC_: this is needed because the
 #		Borland compiler generates *worse* code for this module
 #		(but only this module) when optimization (-O) is turned on.
-#	CCLEAF - the C invocation for compiling modules that contain only
-#		leaf procedures, which don't need to build stack frames.
-#		This is needed only because many compilers aren't able to
-#		recognize leaf procedures on their own.
 #	AK - if a particular platform requires any programs or data files
 #		to be built before compiling the source code, AK must list
 #		them.
@@ -210,6 +215,8 @@
 #	gconfigv.h - this indicates the status of certain machine-
 #	    and configuration-specific features derived from definitions
 #	    in the platform-specific makefile.
+#	gconfigd.h - this is used for configuration-specific definitions
+#	    such as paths that must be defined by all top-level makefiles.
 
 #**************** PATCHES
 JGENDIR=$(GLGENDIR)
@@ -220,6 +227,8 @@ ZGENDIR=$(GLGENDIR)
 ZOBJDIR=$(GLOBJDIR)
 JBIG2GENDIR=$(GLGENDIR)
 JBIG2OBJDIR=$(GLOBJDIR)
+JASPERGENDIR=$(GLGENDIR)
+JASPEROBJDIR=$(GLOBJDIR)
 ICCGENDIR=$(GLGENDIR)
 ICCOBJDIR=$(GLOBJDIR)
 IJSGENDIR=$(GLGENDIR)
@@ -249,6 +258,7 @@ GENINIT_XE=$(AUXGEN)geninit$(XEAUX)
 # gconfig*.h and gconfx*.h are generated dynamically.
 gconfig_h=$(GLGENDIR)$(D)gconfxx.h
 gconfigf_h=$(GLGENDIR)$(D)gconfxc.h
+gconfigd_h=$(GLGENDIR)$(D)gconfigd.h
 
 all default : $(GS_XE)
 	$(NO_OP)
@@ -318,6 +328,8 @@ ZF_=
 ZCF_=$(D_)SHARE_ZLIB=$(SHARE_ZLIB)$(_D)
 JB2I_=$(JBIG2SRCDIR)
 JB2CF_=
+JASI_=$(JASPERSRCDIR)$(D)src$(D)libjasper$(D)include
+JASCF_=$(JASPERCFLAGS)
 
 ######################## How to define new 'features' #######################
 #
@@ -406,17 +418,21 @@ ld_tr=$(GLGENDIR)$(D)ld.tr
 $(gconfig_h) : \
   $(GS_MAK) $(TOP_MAKEFILES) $(GLSRCDIR)$(D)version.mak $(GENCONF_XE) $(ECHOGS_XE) $(devs_tr) $(DEVS_ALL) $(GLGENDIR)$(D)libcore.dev
 	$(EXP)$(GENCONF_XE) $(devs_tr) -h $(gconfig_h) $(CONFILES) $(CONFLDTR) $(ld_tr)
-	$(EXP)$(ECHOGS_XE) -a $(gconfig_h) -x 23 define -s -u GS_LIB_DEFAULT -x 2022 $(GS_LIB_DEFAULT) -x 22
-	$(EXP)$(ECHOGS_XE) -a $(gconfig_h) -x 23 define -s -u SEARCH_HERE_FIRST -s $(SEARCH_HERE_FIRST)
-	$(EXP)$(ECHOGS_XE) -a $(gconfig_h) -x 23 define -s -u GS_DOCDIR -x 2022 $(GS_DOCDIR) -x 22
-	$(EXP)$(ECHOGS_XE) -a $(gconfig_h) -x 23 define -s -u GS_INIT -x 2022 $(GS_INIT) -x 22
-	$(EXP)$(ECHOGS_XE) -a $(gconfig_h) -x 23 define -s -u GS_REVISION -s $(GS_REVISION)
-	$(EXP)$(ECHOGS_XE) -a $(gconfig_h) -x 23 define -s -u GS_REVISIONDATE -s $(GS_REVISIONDATE)
 	$(EXP)$(ECHOGS_XE) -a $(gconfig_h) $(GCONFIG_EXTRAS)
 
 $(ld_tr) $(GLGENDIR)$(D)lib.tr : $(gconfig_h)
 	
 # The line above is an empty command; don't delete.
+
+# save our set of makefile variables that are defined in every build (paths, etc.)
+$(gconfigd_h) : $(ECHOGS_XE) $(GS_MAK) $(TOP_MAKEFILES) $(GLSRCDIR)/version.mak
+	$(EXP)$(ECHOGS_XE) -w $(gconfigd_h) -x 23 define -s -u GS_LIB_DEFAULT -x 2022 $(GS_LIB_DEFAULT) -x 22
+	$(EXP)$(ECHOGS_XE) -a $(gconfigd_h) -x 23 define -s -u GS_CACHE_DIR -x 2022 $(GS_CACHE_DIR) -x 22
+	$(EXP)$(ECHOGS_XE) -a $(gconfigd_h) -x 23 define -s -u SEARCH_HERE_FIRST -s $(SEARCH_HERE_FIRST)
+	$(EXP)$(ECHOGS_XE) -a $(gconfigd_h) -x 23 define -s -u GS_DOCDIR -x 2022 $(GS_DOCDIR) -x 22
+	$(EXP)$(ECHOGS_XE) -a $(gconfigd_h) -x 23 define -s -u GS_INIT -x 2022 $(GS_INIT) -x 22
+	$(EXP)$(ECHOGS_XE) -a $(gconfigd_h) -x 23 define -s -u GS_REVISION -s $(GS_REVISION)
+	$(EXP)$(ECHOGS_XE) -a $(gconfigd_h) -x 23 define -s -u GS_REVISIONDATE -s $(GS_REVISIONDATE)
 
 obj_tr=$(GLGENDIR)$(D)obj.tr
 $(obj_tr) : $(ld_tr)

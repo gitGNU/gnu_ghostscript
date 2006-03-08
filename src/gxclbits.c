@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxclbits.c,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxclbits.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Halftone and bitmap writing for command lists */
 #include "memory_.h"
 #include "gx.h"
@@ -130,7 +130,7 @@ cmd_put_bits(gx_device_clist_writer * cldev, gx_clist_state * pcls,
     clist_bitmap_bytes(width_bits, height, compression_mask,
 		       &uncompressed_raster, &full_raster);
     uint max_size = cbuf_size - op_size;
-    gs_memory_t *mem = (cldev->memory ? cldev->memory : &gs_memory_default);
+    gs_memory_t *mem = cldev->memory;
     byte *dp;
     int compress = 0;
 

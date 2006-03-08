@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxfdrop.c,v 1.3 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxfdrop.c,v 1.4 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Dropout prevention for a character rasterization. */
 
 #include <assert.h>
@@ -31,6 +31,11 @@
 #include "gxfdrop.h"
 #include "gxfill.h"
 #include "vdtrace.h"
+
+#define INTERTRAP_STEM_BUG 0 /* We're not sure that 1 gives a 
+                                better painting with neighbour serifs.
+				Need more testing.
+				0 is compatible to the old code. */
 
 /*
  * Rather some margins are placed in virtual memory,
@@ -55,7 +60,7 @@ void init_section(section *sect, int i0, int i1)
 private margin * alloc_margin(line_list * ll)
 {   margin *m;
 
-    assert(ll->pseudo_rasterization);
+    assert(ll->fo->pseudo_rasterization);
     if (ll->free_margin_list != 0) {
 	m = ll->free_margin_list;
 	ll->free_margin_list = ll->free_margin_list->next;
@@ -218,7 +223,7 @@ private inline fixed Y_AT_X(active_line *alp, fixed xp)
 }
 
 private int margin_boundary(line_list * ll, margin_set * set, active_line * alp, 
-			    fixed xx0, fixed xx1, fixed yy0, fixed yy1, int dir)
+			    fixed xx0, fixed xx1, fixed yy0, fixed yy1, int dir, fixed y0, fixed y1)
 {   section *sect = set->sect;
     fixed x0, x1, xmin, xmax;
     int xp0, xp;
@@ -233,8 +238,10 @@ private int margin_boundary(line_list * ll, margin_set * set, active_line * alp,
 
     if (alp == 0)
 	x0 = xx0, x1 = xx1;
-    else
-	x0 = AL_X_AT_Y(alp, yy0), x1 = AL_X_AT_Y(alp, yy1);
+    else {
+	x0 = (yy0 == y0 ? alp->x_current : AL_X_AT_Y(alp, yy0));
+	x1 = (yy1 == y1 ? alp->x_next : AL_X_AT_Y(alp, yy1));
+    }
     xmin = min(x0, x1);
     xmax = max(x0, x1);
 #   if !CHECK_SPOT_CONTIGUITY
@@ -253,7 +260,7 @@ private int margin_boundary(line_list * ll, margin_set * set, active_line * alp,
 	    section *s = &sect[i];
 
 	    if (dy < 0)
-		dy = 0; /* fix rounding errors in AL_X_AT_Y */
+		dy = 0; /* fix rounding errors in Y_AT_X */
 	    if (dy >= fixed_1)
 		dy = fixed_1; /* safety */
 	    vd_circle(xp, y, 2, 0);
@@ -278,7 +285,7 @@ private int margin_boundary(line_list * ll, margin_set * set, active_line * alp,
 	    short *b, h;
 
 	    if (dy < 0)
-		dy = 0; /* fix rounding errors in AL_X_AT_Y */
+		dy = 0; /* fix rounding errors in Y_AT_X */
 	    if (dy >= fixed_1)
 		dy = fixed_1; /* safety */
 	    vd_circle(xp, y, 2, 0);
@@ -303,8 +310,10 @@ int continue_margin_common(line_list * ll, margin_set * set, active_line * flp, 
     fixed yy1 = min(min(y1, alp->end.y), set->y + fixed_1);
 
     if (yy0 <= yy1) {
-	fixed x00 = AL_X_AT_Y(flp, yy0), x10 = AL_X_AT_Y(alp, yy0);
-	fixed x01 = AL_X_AT_Y(flp, yy1), x11 = AL_X_AT_Y(alp, yy1);
+	fixed x00 = (yy0 == y0 ? flp->x_current : AL_X_AT_Y(flp, yy0));
+	fixed x10 = (yy0 == y0 ? alp->x_current : AL_X_AT_Y(alp, yy0));
+	fixed x01 = (yy1 == y1 ? flp->x_next : AL_X_AT_Y(flp, yy1));
+	fixed x11 = (yy1 == y1 ? alp->x_next : AL_X_AT_Y(alp, yy1));
 	fixed xmin = min(x00, x01), xmax = max(x10, x11);
 
 	int i0 = fixed2int(xmin) - ll->bbox_left, i;
@@ -320,7 +329,7 @@ int continue_margin_common(line_list * ll, margin_set * set, active_line * flp, 
 	    s->x1 = max(s->x1, xu);
 	    x_pixel+=0; /* Just a place for breakpoint */
 	}
-	code = store_margin(ll, &ll->margin_set1, i0, i1);
+	code = store_margin(ll, set, i0, i1);
 	if (code < 0)
 	    return code;
 	/* fixme : after ADJUST_SERIF becames permanent,
@@ -329,16 +338,17 @@ int continue_margin_common(line_list * ll, margin_set * set, active_line * flp, 
     }
 #   endif
 
-    code = margin_boundary(ll, set, flp, 0, 0, yy0, yy1, 1);
+    code = margin_boundary(ll, set, flp, 0, 0, yy0, yy1, 1, y0, y1);
     if (code < 0)
 	return code;
-    return margin_boundary(ll, set, alp, 0, 0, yy0, yy1, -1);
+    return margin_boundary(ll, set, alp, 0, 0, yy0, yy1, -1, y0, y1);
 }
 
-private inline int mark_margin_interior(line_list * ll, margin_set * set, active_line * flp, active_line * alp, fixed y)
+private inline int mark_margin_interior(line_list * ll, margin_set * set, active_line * flp, active_line * alp, fixed y, fixed y0, fixed y1)
 {
     section *sect = set->sect;
-    fixed x0 = AL_X_AT_Y(flp, y), x1 = AL_X_AT_Y(alp, y);
+    fixed x0 = (y == y0 ? flp->x_current : y == y1 ? flp->x_next : AL_X_AT_Y(flp, y));
+    fixed x1 = (y == y0 ? alp->x_current : y == y1 ? alp->x_next : AL_X_AT_Y(alp, y));
     int i0 = fixed2int(x0), ii0, ii1, i, code;
 
     if (int2fixed(i0) + fixed_half < x0)
@@ -364,25 +374,28 @@ int margin_interior(line_list * ll, active_line * flp, active_line * alp, fixed 
 
     yy0 = ll->margin_set0.y;
     if (y0 <= yy0 && yy0 <= y1) {
-	code = mark_margin_interior(ll, &ll->margin_set0, flp, alp, yy0);
+	code = mark_margin_interior(ll, &ll->margin_set0, flp, alp, yy0, y0, y1);
 	if (code < 0)
 	    return code;
     }
     yy1 = ll->margin_set1.y + fixed_1;
     if (y0 <= yy1 && yy1 <= y1) {
-	code = mark_margin_interior(ll, &ll->margin_set1, flp, alp, yy1);
+	code = mark_margin_interior(ll, &ll->margin_set1, flp, alp, yy1, y0, y1);
 	if (code < 0)
 	    return code;
     }
     return 0;
 }
 
-private inline int process_h_sect(line_list * ll, margin_set * set, active_line * hlp0, active_line * plp, active_line * flp, int side)
+private inline int process_h_sect(line_list * ll, margin_set * set, active_line * hlp0, 
+    active_line * plp, active_line * flp, int side, fixed y0, fixed y1)
 {
     active_line *hlp = hlp0;
     fixed y = hlp->start.y;
-    fixed x0 = (plp != 0 ? AL_X_AT_Y(plp, y) : int2fixed(ll->bbox_left));
-    fixed x1 = (flp != 0 ? AL_X_AT_Y(flp, y) : int2fixed(ll->bbox_left + ll->bbox_width));
+    fixed x0 = (plp != 0 ? (y == y0 ? plp->x_current : y == y1 ? plp->x_next : AL_X_AT_Y(plp, y)) 
+			 : int2fixed(ll->bbox_left));
+    fixed x1 = (flp != 0 ? (y == y0 ? flp->x_current : y == y1 ? flp->x_next : AL_X_AT_Y(flp, y))
+                         : int2fixed(ll->bbox_left + ll->bbox_width));
     int code;
 
     for (; hlp != 0; hlp = hlp->next) {
@@ -391,7 +404,7 @@ private inline int process_h_sect(line_list * ll, margin_set * set, active_line 
 
 	if (xx0 < xx1) {
 	    vd_bar(xx0, y, xx1, y, 1, RGB(255, 0, 255));
-	    code =  margin_boundary(ll, set, 0, xx0, xx1, y, y, side);
+	    code =  margin_boundary(ll, set, 0, xx0, xx1, y, y, side, 0, 0);
 	    if (code < 0)
 		return code;
 	}
@@ -399,18 +412,19 @@ private inline int process_h_sect(line_list * ll, margin_set * set, active_line 
     return 0;	
 }
 
-private inline int process_h_side(line_list * ll, margin_set * set, active_line * hlp, active_line * plp, active_line * flp, active_line * alp, int side)
+private inline int process_h_side(line_list * ll, margin_set * set, active_line * hlp, 
+    active_line * plp, active_line * flp, active_line * alp, int side, fixed y0, fixed y1)
 {   if (plp != 0 || flp != 0 || (plp == 0 && flp == 0 && alp == 0)) {
 	/* We don't know here, whether the opposite (-) side is painted with
 	 * a trapezoid. mark_margin_interior may rewrite it later.
 	 */
-	int code = process_h_sect(ll, set, hlp, plp, flp, -side);
+	int code = process_h_sect(ll, set, hlp, plp, flp, -side, y0, y1);
 
 	if (code < 0)
 	    return code;
     }
     if (flp != 0 && alp != 0) {
-	int code = process_h_sect(ll, set, hlp, flp, alp, side);
+	int code = process_h_sect(ll, set, hlp, flp, alp, side, y0, y1);
 
 	if (code < 0)
 	    return code;
@@ -418,17 +432,18 @@ private inline int process_h_side(line_list * ll, margin_set * set, active_line 
     return 0;
 }
 
-private inline int process_h_list(line_list * ll, active_line * hlp, active_line * plp, active_line * flp, active_line * alp, int side)
+private inline int process_h_list(line_list * ll, active_line * hlp, active_line * plp, 
+    active_line * flp, active_line * alp, int side, fixed y0, fixed y1)
 {   fixed y = hlp->start.y;
 
     if (ll->margin_set0.y <= y && y <= ll->margin_set0.y + fixed_1) {
-	int code = process_h_side(ll, &ll->margin_set0, hlp, plp, flp, alp, side);
+	int code = process_h_side(ll, &ll->margin_set0, hlp, plp, flp, alp, side, y0, y1);
 
 	if (code < 0)
 	    return code;
     }
     if (ll->margin_set1.y <= y && y <= ll->margin_set1.y + fixed_1) {
-	int code = process_h_side(ll, &ll->margin_set1, hlp, plp, flp, alp, side);
+	int code = process_h_side(ll, &ll->margin_set1, hlp, plp, flp, alp, side, y0, y1);
 
 	if (code < 0)
 	    return code;
@@ -439,24 +454,18 @@ private inline int process_h_list(line_list * ll, active_line * hlp, active_line
 int process_h_lists(line_list * ll, active_line * plp, active_line * flp, active_line * alp,
 		    fixed y0, fixed y1)
 {   
-#   if CURVED_TRAPEZOID_FILL
-	if (y0 == y1) {
-	    /*  fixme :
-		This may happen with CURVED_TRAPEZOID_FILL, when a curve piece is horizontal.
-		Currently we skip such pieces from the H list processing.
-		A complete algorithm should move such pieces to H-list.
-	     */
-	    return 0;
-	}
-#   endif
+    if (y0 == y1) {
+	/*  fixme : Must not happen. Remove. */
+	return 0;
+    }
     if (ll->h_list0 != 0) {
-	int code = process_h_list(ll, ll->h_list0, plp, flp, alp, 1);
+	int code = process_h_list(ll, ll->h_list0, plp, flp, alp, 1, y0, y1);
 
 	if (code < 0)
 	    return code;
     }
     if (ll->h_list1 != 0) {
-	int code = process_h_list(ll, ll->h_list1, plp, flp, alp, -1);
+	int code = process_h_list(ll, ll->h_list1, plp, flp, alp, -1, y0, y1);
 
 	if (code < 0)
 	    return code;
@@ -472,15 +481,13 @@ private inline int compute_padding(section *s)
 	    fixed_half - s->y0 < s->y1 - fixed_half ? 1 : 0);
 }
 
-private int fill_margin(gx_device * dev, line_list * ll, margin_set *ms, int i0, int i1)
+private int fill_margin(gx_device * dev, const line_list * ll, margin_set *ms, int i0, int i1)
 {   /* Returns the new index (positive) or return code (negative). */
     section *sect = ms->sect;
     int iy = fixed2int_var_pixround(ms->y);
     int i, ir, h = -2, code;
-    dev_proc_fill_rectangle((*fill_rect)) = dev_proc(dev, fill_rectangle);
-    const gx_device_color * pdevc = ll->pdevc;
-    gs_logical_operation_t lop = ll->lop;
-    bool fill_direct = ll->fill_direct;
+    const fill_options * const fo = ll->fo;
+    const bool FILL_DIRECT = fo->fill_direct;
 
     assert(i0 >= 0 && i1 <= ll->bbox_width);
     ir = i0;
@@ -506,19 +513,50 @@ private int fill_margin(gx_device * dev, line_list * ll, margin_set *ms, int i0,
 		     */
 #		else
 		    if (sect[i].x0 > 0 && sect[i].x1 == fixed_1 && i + 1 < i1) {
+#			if INTERTRAP_STEM_BUG
+			int hhh = hh;
+#			endif
 			hh = (i + 1 < i1 ? compute_padding(&sect[i + 1]) : -2);
 			/* We could cache hh.
 			 * Delaying the optimization until the code is well tested.
 			 */
-		    } else if (sect[i].x0 == 0 && sect[i].x1 < fixed_1)
+#			if INTERTRAP_STEM_BUG
+			/* A bug in the old code. */
+			if (i > i0 && i + 1 < i1 && hh == -2 && 
+				compute_padding(&sect[i - 1]) == -2) {
+			    /* It can be either a thin stem going from left to up or down
+			       (See 'r' in 01-001.ps in 'General', ppmraw, 72dpi),
+			       or a serif from the left.
+			       Since it is between 2 trapezoids, it is better to paint it
+			       against a dropout. */
+			    hh = hhh;
+			}
+#			endif
+		    } else if (sect[i].x0 == 0 && sect[i].x1 < fixed_1) {
+#			if INTERTRAP_STEM_BUG
+			int hhh = hh;
+#			endif
 			hh = h;
+#			if INTERTRAP_STEM_BUG
+			/* A bug in the old code. */
+			if (i > i0 && i + 1 < i1 && hh == -2 && 
+				compute_padding(&sect[i - 1]) == -2) {
+			    /* It can be either a thin stem going from right to up or down
+			       (See 'r' in 01-001.ps in 'General', ppmraw, 72dpi),
+			       or a serif from the right.
+			       Since it is between 2 trapezoids, it is better to paint it. 
+			       against a dropout. */
+			    DO_NOTHING;
+			}
+#			endif
+		    }
 #		endif
 	    }
 #	endif
 	if (h != hh) {
 	    if (h >= 0) {
 		VD_RECT(ir + ll->bbox_left, iy + h, i - ir, 1, VD_MARG_COLOR);
-		code = LOOP_FILL_RECTANGLE_DIRECT(ir + ll->bbox_left, iy + h, i - ir, 1);
+		code = LOOP_FILL_RECTANGLE_DIRECT(fo, ir + ll->bbox_left, iy + h, i - ir, 1);
 		if (code < 0)
 		    return code;
 	    }
@@ -528,7 +566,7 @@ private int fill_margin(gx_device * dev, line_list * ll, margin_set *ms, int i0,
     }
     if (h >= 0) {
 	VD_RECT(ir + ll->bbox_left, iy + h, i - ir, 1, VD_MARG_COLOR);
-	code = LOOP_FILL_RECTANGLE_DIRECT(ir + ll->bbox_left, iy + h, i - ir, 1);
+	code = LOOP_FILL_RECTANGLE_DIRECT(fo, ir + ll->bbox_left, iy + h, i - ir, 1);
 	if (code < 0)
 	    return code;
     }

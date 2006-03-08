@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpxat.h,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpxat.h,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Attribute ID definitions for PCL XL */
 
 #ifndef gdevpxat_INCLUDED
@@ -45,7 +45,11 @@ typedef enum {
     pxaCRGBMinMax,		/* 2.0 */
     pxaGammaGain,		/* 2.0 */
 
-    pxaDeviceMatrix = 33,
+    pxaAllObjectTypes = 29,     /* 3.0 */
+    pxaTextObjects,             /* 3.0 */
+    pxaVectorObjects,           /* 3.0 */
+    pxaRasterObjects,           /* 3.0 */
+    pxaDeviceMatrix,
     pxaDitherMatrixDataType,
     pxaDitherOrigin,
     pxaMediaDestination,
@@ -106,6 +110,8 @@ typedef enum {
 
     pxaNumberOfScanLines = 115,
 
+    pxaColorTreatment = 120,
+
     pxaCommentData = 129,
     pxaDataOrg,
 
@@ -118,6 +124,8 @@ typedef enum {
     pxaStreamDataLength,
 
     pxaErrorReport = 143,
+    pxaVUExtension = 145,
+    pxaVUAttr1 = 147,
 
     pxaCharAngle = 161,
     pxaCharCode,
@@ -131,8 +139,7 @@ typedef enum {
     pxaSymbolSet,
     pxaTextData,
     pxaCharSubModeArray,
-    pxaWritingMode,		/* 2.0 */
-
+    pxaWritingMode,
     pxaXSpacingData = 175,
     pxaYSpacingData,
     pxaCharBoldValue,

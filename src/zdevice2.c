@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zdevice2.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zdevice2.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Level 2 device operators */
 #include "math_.h"
 #include "memory_.h"
@@ -257,7 +257,7 @@ restore_page_device(const gs_state * pgs_old, const gs_state * pgs_new)
     gx_device *dev_new;
     gx_device *dev_t1;
     gx_device *dev_t2;
-    bool samepagedevice = obj_eq(&gs_int_gstate(pgs_old)->pagedevice,
+    bool samepagedevice = obj_eq(dev_old->memory, &gs_int_gstate(pgs_old)->pagedevice,
     	&gs_int_gstate(pgs_new)->pagedevice);
 
     if ((dev_t1 = (*dev_proc(dev_old, get_page_device)) (dev_old)) == 0)
@@ -370,7 +370,7 @@ push_callout(i_ctx_t *i_ctx_p, const char *callout_name)
     int code;
 
     check_estack(1);
-    code = name_enter_string(callout_name, esp + 1);
+    code = name_enter_string(imemory, callout_name, esp + 1);
     if (code < 0)
 	return code;
     ++esp;

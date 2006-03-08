@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsalphac.c,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gsalphac.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Alpha-compositing implementation */
 #include "memory_.h"
 #include "gx.h"
@@ -126,7 +126,7 @@ gs_create_composite_alpha(gs_composite_t ** ppcte,
 		      mem, return_error(gs_error_VMerror),
 		      "gs_create_composite_alpha");
     pcte->type = &gs_composite_alpha_type;
-    pcte->id = gs_next_ids(1);
+    pcte->id = gs_next_ids(mem, 1);
     pcte->params = *params;
     *ppcte = (gs_composite_t *) pcte;
     return 0;

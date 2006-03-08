@@ -17,7 +17,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: devs.mak,v 1.5 2005/12/13 16:57:18 jemarch Exp $
+# $Id: devs.mak,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $
 # makefile for Aladdin's device drivers.
 
 # Define the name of this makefile.
@@ -180,8 +180,11 @@ GDEV=$(AK) $(ECHOGS_XE) $(GDEVH)
 #	psmono	PostScript (Level 1) monochrome image
 #	psgray	PostScript (Level 1) 8-bit gray image
 #	psrgb	PostScript (Level 2) 24-bit color image
+#	tiffgray  TIFF 8-bit gray, no compression
 #	tiff12nc  TIFF 12-bit RGB, no compression
 #	tiff24nc  TIFF 24-bit RGB, no compression (NeXT standard format)
+#	tiff32nc  TIFF 32-bit CMYK
+#	tiffsep   Creates tiffgray for each colorant plus a CMYK composite
 #	tifflzw  TIFF LZW (tag = 5) (monochrome)
 #	tiffpack  TIFF PackBits (tag = 32773) (monochrome)
 
@@ -244,7 +247,8 @@ PDEVH=$(AK) $(gdevprn_h)
 gdev8bcm_h=$(GLSRC)gdev8bcm.h
 gdevcbjc_h=$(GLSRC)gdevcbjc.h $(stream_h)
 gdevdcrd_h=$(GLSRC)gdevdcrd.h
-gdevdevn_h=$(GLSRC)gdevdevn.h
+gsequivc_h=$(GLSRC)gsequivc.h
+gdevdevn_h=$(GLSRC)gdevdevn.h $(gsequivc_h)
 gdevpccm_h=$(GLSRC)gdevpccm.h
 gdevpcfb_h=$(GLSRC)gdevpcfb.h $(dos__h)
 gdevpcl_h=$(GLSRC)gdevpcl.h
@@ -652,6 +656,53 @@ $(GLOBJ)gdevijs.$(OBJ) : $(GLSRC)gdevijs.c $(PDEVH) $(unistd__h) $(gp_h)\
 # library.
 
 
+### -------------------------- The rinkj device ------------------------ ###
+
+RINKJ_SRCDIR=$(GLSRC)rinkj
+RINKJ_SRC=$(RINKJ_SRCDIR)$(D)
+RINKJ_OBJ=$(GLOBJ)
+RINKJ_O_=$(O_)$(RINKJ_OBJ)
+
+RINKJ_INCL=$(I_)$(RINKJ_SRCDIR)$(_I)
+RINKJ_CC=$(CC_) $(RINKJ_INCL)
+
+rinkj_core=$(RINKJ_OBJ)evenbetter-rll.$(OBJ) \
+ $(RINKJ_OBJ)rinkj-byte-stream.$(OBJ) $(RINKJ_OBJ)rinkj-device.$(OBJ) \
+ $(RINKJ_OBJ)rinkj-config.$(OBJ) $(RINKJ_OBJ)rinkj-dither.$(OBJ) \
+ $(RINKJ_OBJ)rinkj-epson870.$(OBJ) $(RINKJ_OBJ)rinkj-screen-eb.$(OBJ)
+
+$(RINKJ_OBJ)evenbetter-rll.$(OBJ): $(RINKJ_SRC)evenbetter-rll.c
+	$(RINKJ_CC) $(RINKJ_O_)evenbetter-rll.$(OBJ) $(C_) $(RINKJ_SRC)evenbetter-rll.c
+
+$(RINKJ_OBJ)rinkj-byte-stream.$(OBJ): $(RINKJ_SRC)rinkj-byte-stream.c
+	$(RINKJ_CC) $(RINKJ_O_)rinkj-byte-stream.$(OBJ) $(C_) $(RINKJ_SRC)rinkj-byte-stream.c
+
+$(RINKJ_OBJ)rinkj-device.$(OBJ): $(RINKJ_SRC)rinkj-device.c
+	$(RINKJ_CC) $(RINKJ_O_)rinkj-device.$(OBJ) $(C_) $(RINKJ_SRC)rinkj-device.c
+
+$(RINKJ_OBJ)rinkj-config.$(OBJ): $(RINKJ_SRC)rinkj-config.c
+	$(RINKJ_CC) $(RINKJ_O_)rinkj-config.$(OBJ) $(C_) $(RINKJ_SRC)rinkj-config.c
+
+$(RINKJ_OBJ)rinkj-dither.$(OBJ): $(RINKJ_SRC)rinkj-dither.c
+	$(RINKJ_CC) $(RINKJ_O_)rinkj-dither.$(OBJ) $(C_) $(RINKJ_SRC)rinkj-dither.c
+
+$(RINKJ_OBJ)rinkj-epson870.$(OBJ): $(RINKJ_SRC)rinkj-epson870.c
+	$(RINKJ_CC) $(RINKJ_O_)rinkj-epson870.$(OBJ) $(C_) $(RINKJ_SRC)rinkj-epson870.c
+
+$(RINKJ_OBJ)rinkj-screen-eb.$(OBJ): $(RINKJ_SRC)rinkj-screen-eb.c
+	$(RINKJ_CC) $(RINKJ_O_)rinkj-screen-eb.$(OBJ) $(C_) $(RINKJ_SRC)rinkj-screen-eb.c
+
+rinkj_=$(GLOBJ)gdevrinkj.$(OBJ) $(rinkj_core)
+
+$(DD)rinkj.dev : $(DEVS_MAK) $(rinkj_) $(GLD)page.dev
+	$(SETDEV) $(DD)rinkj $(rinkj_)
+
+$(GLOBJ)gdevrinkj.$(OBJ) : $(GLSRC)gdevrinkj.c $(PDEVH) $(math__h)\
+ $(gdevdcrd_h) $(gscrd_h) $(gscrdp_h) $(gsparam_h) $(gxlum_h) $(icc_h)\
+ $(gxdcconv_h)
+	$(GLICCCC) $(GLO_)gdevrinkj.$(OBJ) $(C_) $(GLSRC)gdevrinkj.c
+
+
 ###### ------------------- High-level file formats ------------------- ######
 
 # Support for PostScript and PDF
@@ -714,7 +765,7 @@ $(DD)pswrite.dev : $(DEVS_MAK) $(ECHOGS_XE) $(pswrite_) $(GLD)psdf.dev
 	$(ADDMOD) $(DD)pswrite -include $(GLD)psdf
 
 $(GLOBJ)gdevps.$(OBJ) : $(GLSRC)gdevps.c $(GDEV)\
- $(math__h) $(memory__h) $(time__h)\
+ $(math__h) $(memory__h) $(string__h) $(time__h)\
  $(gscdefs_h) $(gscspace_h) $(gsline_h) $(gsparam_h) $(gsiparam_h) $(gsmatrix_h)\
  $(gxdcolor_h) $(gxpath_h)\
  $(sa85x_h) $(sstring_h) $(strimpl_h)\
@@ -742,12 +793,15 @@ pdfwrite11_=$(GLOBJ)scantab.$(OBJ) $(GLOBJ)sfilter2.$(OBJ)
 pdfwrite_=$(pdfwrite1_) $(pdfwrite2_) $(pdfwrite3_) $(pdfwrite4_)\
  $(pdfwrite5_) $(pdfwrite6_) $(pdfwrite7_) $(pdfwrite8_) $(pdfwrite9_)\
  $(pdfwrite10_) $(pdfwrite11_)
-# Including the DSC parser here is clearly wrong: it requires a PostScript
-# interpreter.  We aren't sure what to do about this yet.
+
+# Note that for ps2pdf operation, we need to parse DSC comments to set
+# the Orientation (Page dict /Rotate value). This is not part of the
+# pdfwrite device, but part of the PS interpreter so that the pdfwrite
+# device can be used with other top level interpreters (such as PCL).
 $(DD)pdfwrite.dev : $(DEVS_MAK) $(ECHOGS_XE) $(pdfwrite_)\
  $(GLD)cmyklib.dev $(GLD)cfe.dev $(GLD)lzwe.dev\
  $(GLD)rle.dev $(GLD)sdcte.dev $(GLD)sdeparam.dev $(GLD)smd5.dev\
- $(GLD)szlibe.dev $(GLD)psdf.dev $(PSD)dscparse.dev\
+ $(GLD)szlibe.dev $(GLD)psdf.dev \
  $(DD)pdtext.dev
 	$(SETDEV2) $(DD)pdfwrite $(pdfwrite1_)
 	$(ADDMOD) $(DD)pdfwrite $(pdfwrite2_)
@@ -765,7 +819,6 @@ $(DD)pdfwrite.dev : $(DEVS_MAK) $(ECHOGS_XE) $(pdfwrite_)\
 	$(ADDMOD) $(DD)pdfwrite -include $(GLD)rle $(GLD)sdcte $(GLD)sdeparam
 	$(ADDMOD) $(DD)pdfwrite -include $(GLD)smd5 $(GLD)szlibe
 	$(ADDMOD) $(DD)pdfwrite -include $(GLD)psdf
-	$(ADDMOD) $(DD)pdfwrite -include $(PSD)dscparse
 	$(ADDMOD) $(DD)pdfwrite -include $(DD)pdtext
 
 gdevpdfc_h=$(GLSRC)gdevpdfc.h
@@ -1016,6 +1069,10 @@ $(DD)bitcmyk.dev : $(DEVS_MAK) $(bit_) $(GLD)page.dev $(GLD)cielib.dev
 	$(SETPDEV2) $(DD)bitcmyk $(bit_)
 	$(ADDMOD) $(DD)bitcmyk -include $(GLD)cielib
 
+$(DD)bitrgbtags.dev : $(DEVS_MAK) $(bit_) $(GLD)page.dev $(GLD)cielib.dev
+	$(SETPDEV2) $(DD)bitrgbtags $(bit_)
+	$(ADDMOD) $(DD)bitrgbtags -include $(GLD)cielib
+
 $(GLOBJ)gdevbit.$(OBJ) : $(GLSRC)gdevbit.c $(PDEVH) $(math__h)\
  $(gdevdcrd_h) $(gscrd_h) $(gscrdp_h) $(gsparam_h) $(gxlum_h)
 	$(GLCC) $(GLO_)gdevbit.$(OBJ) $(C_) $(GLSRC)gdevbit.c
@@ -1132,7 +1189,7 @@ $(DD)devicen.dev : $(DEVS_MAK) $(devn_) $(GLD)page.dev
 
 $(GLOBJ)gdevdevn.$(OBJ) : $(GLSRC)gdevdevn.c $(PDEVH) $(math__h) $(string__h)\
  $(gdevprn_h) $(gsparam_h) $(gscrd_h) $(gscrdp_h) $(gxlum_h) $(gdevdcrd_h)\
- $(gstypes_h) $(gxdcconv_h) $(gdevdevn_h)
+ $(gstypes_h) $(gxdcconv_h) $(gdevdevn_h) $(gsequivc_h)
 	$(GLCC) $(GLO_)gdevdevn.$(OBJ) $(C_) $(GLSRC)gdevdevn.c
 
 ### --------------------------- The XCF device ------------------------- ###
@@ -1152,7 +1209,7 @@ $(GLOBJ)gdevxcf.$(OBJ) : $(GLSRC)gdevxcf.c $(PDEVH) $(math__h)\
 
 ### --------------------------- The PSD device ------------------------- ###
 
-psd_=$(GLOBJ)gdevpsd.$(OBJ)
+psd_=$(GLOBJ)gdevpsd.$(OBJ) $(GLOBJ)gdevdevn.$(OBJ) $(GLOBJ)gsequivc.$(OBJ)
 
 $(DD)psdrgb.dev : $(DEVS_MAK) $(psd_) $(GLD)page.dev
 	$(SETDEV) $(DD)psdrgb $(psd_)
@@ -1162,8 +1219,13 @@ $(DD)psdcmyk.dev : $(DEVS_MAK) $(psd_) $(GLD)page.dev
 
 $(GLOBJ)gdevpsd.$(OBJ) : $(GLSRC)gdevpsd.c $(PDEVH) $(math__h)\
  $(gdevdcrd_h) $(gscrd_h) $(gscrdp_h) $(gsparam_h) $(gxlum_h) $(icc_h)\
- $(gstypes_h) $(gxdcconv_h) $(gdevdevn_h)
+ $(gstypes_h) $(gxdcconv_h) $(gdevdevn_h) $(gsequivc_h)
 	$(GLICCCC) $(GLO_)gdevpsd.$(OBJ) $(C_) $(GLSRC)gdevpsd.c
+
+$(GLOBJ)gsequivc.$(OBJ) : $(GLSRC)gsequivc.c $(math__h)\
+ $(PDEVH) $(gsparam_h) $(gstypes_h) $(gxdconv_h) $(gdevdevn_h)\
+ $(gsequivc_h) $(gzstate_h) $(gsstate_h) $(gscspace_h) $(gxcspace_h)
+	$(GLICCCC) $(GLO_)gsequivc.$(OBJ) $(C_) $(GLSRC)gsequivc.c
 
 ### ----------------------- The permutation device --------------------- ###
 
@@ -1476,7 +1538,19 @@ $(DD)tifflzw.dev : $(DEVS_MAK) $(DD)tfax.dev
 $(DD)tiffpack.dev : $(DEVS_MAK) $(DD)tfax.dev
 	$(SETDEV2) $(DD)tiffpack -include $(DD)tfax
 
-# RGB, no compression
+# TIFF Gray, no compression
+
+tiffgray_=$(GLOBJ)gdevtsep.$(OBJ)
+
+$(DD)tiffgray.dev : $(DEVS_MAK) $(tiffgray_) $(DD)tiffs.dev
+	$(SETPDEV2) $(DD)tiffgray $(tiffgray_)
+	$(ADDMOD) $(DD)tiffgray -include $(DD)tiffs
+
+$(GLOBJ)gdevtsep.$(OBJ) : $(GLSRC)gdevtsep.c $(PDEVH) $(gdevtifs_h)\
+	$(gdevdevn_h) $(gsequivc_h)
+	$(GLCC) $(GLO_)gdevtsep.$(OBJ) $(C_) $(GLSRC)gdevtsep.c
+
+# TIFF RGB, no compression
 
 tiffrgb_=$(GLOBJ)gdevtfnx.$(OBJ)
 
@@ -1490,3 +1564,18 @@ $(DD)tiff24nc.dev : $(DEVS_MAK) $(tiffrgb_) $(DD)tiffs.dev
 
 $(GLOBJ)gdevtfnx.$(OBJ) : $(GLSRC)gdevtfnx.c $(PDEVH) $(gdevtifs_h)
 	$(GLCC) $(GLO_)gdevtfnx.$(OBJ) $(C_) $(GLSRC)gdevtfnx.c
+
+# TIFF CMYK, no compression
+
+$(DD)tiff32nc.dev : $(DEVS_MAK) $(tiffgray_) $(DD)tiffs.dev
+	$(SETPDEV2) $(DD)tiff32nc $(tiffgray_)
+	$(ADDMOD) $(DD)tiff32nc -include $(DD)tiffs
+#
+# Create separation files (tiffgray) plus CMYK composite (tiff32nc)
+
+tiffsep_=$(tiffgray_) $(GLOBJ)gdevdevn.$(OBJ) $(GLOBJ)gsequivc.$(OBJ)
+
+$(DD)tiffsep.dev : $(DEVS_MAK) $(tiffgray_) $(DD)tiffs.dev
+	$(SETPDEV2) $(DD)tiffsep $(tiffsep_)
+	$(ADDMOD) $(DD)tiffsep -include $(DD)tiffs
+

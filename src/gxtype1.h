@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxtype1.h,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxtype1.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Private Adobe Type 1 / Type 2 charstring interpreter definitions */
 
 #ifndef gxtype1_INCLUDED
@@ -249,5 +249,8 @@ int gs_type1_seac(gs_type1_state * pcis, const fixed * cstack,
 		  fixed asb_diff, ip_state_t * ipsp);
 
 int gs_type1_endchar(gs_type1_state * pcis);
+
+/* Get the metrics (l.s.b. and width) from the Type 1 interpreter. */
+void type1_cis_get_metrics(const gs_type1_state * pcis, double psbw[4]);
 
 #endif /* gxtype1_INCLUDED */

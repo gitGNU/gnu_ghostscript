@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevrops.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevrops.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* RasterOp source device */
 #include "gx.h"
 #include "gserrors.h"
@@ -106,7 +106,11 @@ private const gx_device_rop_texture gs_rop_texture_device = {
      gx_forward_decode_color,
      gx_forward_pattern_manage,
      gx_forward_fill_rectangle_hl_color,
-     gx_forward_include_color_space
+     gx_forward_include_color_space,
+     gx_forward_fill_linear_color_scanline,
+     gx_forward_fill_linear_color_trapezoid,
+     gx_forward_fill_linear_color_triangle,
+     gx_forward_update_spot_equivalent_colors
     },
     0,				/* target */
     lop_default			/* log_op */
@@ -133,6 +137,7 @@ gx_make_rop_texture_device(gx_device_rop_texture * dev, gx_device * target,
 		   NULL, true);
     gx_device_set_target((gx_device_forward *)dev, target);
     /* Drawing operations are defaulted, non-drawing are forwarded. */
+    check_device_separable((gx_device *) dev);
     gx_device_fill_in_procs((gx_device *) dev);
     gx_device_copy_params((gx_device *)dev, target);
     dev->log_op = log_op;

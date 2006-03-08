@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdf.c,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevpdf.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* PDF-writing driver */
 #include "fcntl_.h"
 #include "memory_.h"
@@ -201,6 +201,7 @@ const gx_device_pdf gs_pdfwrite_device =
  1 /*true*/,			/* ReEncodeCharacters */
  1,				/* FirstObjectNumber */
  1 /*true*/,			/* CompressFonts */
+ 0 /*false*/,			/* PrintStatistics */
  4000,				/* MaxInlineImageSize */
  {0, 0},			/* OwnerPassword */
  {0, 0},			/* UserPassword */
@@ -236,6 +237,7 @@ const gx_device_pdf gs_pdfwrite_device =
  0,				/* Pages */
  0,				/* outlines_id */
  0,				/* next_page */
+ -1,				/* max_referred_page */
  0,				/* contents_id */
  PDF_IN_NONE,			/* context */
  0,				/* contents_length_id */
@@ -289,7 +291,10 @@ const gx_device_pdf gs_pdfwrite_device =
  0,				/* font3 */
  0,				/* accumulating_substream_resource */
  {0,0,0,0,0,0,0,0,0},		/* charproc_ctm */
- 0				/* charproc_just_accumulated */
+ 0,				/* charproc_just_accumulated */
+ 0,				/* cgp */
+ 0,				/* substituted_pattern_count */
+ 0				/* substituted_pattern_drop_page */
 };
 
 /* ---------------- Device open/close ---------------- */
@@ -444,7 +449,7 @@ pdf_compute_fileID(gx_device_pdf * pdev)
     /* We compute a file identifier when beginning a document
        to allow its usage with PDF encryption. Due to that,
        in contradiction to the Adobe recommendation, our
-       ID doesn't depend on the document size.
+       ID doesn't depend on the document size. 
     */
     gs_memory_t *mem = pdev->pdf_memory;
     stream *strm = pdev->strm;
@@ -605,7 +610,7 @@ pdf_compute_encryption_data(gx_device_pdf * pdev)
 	memcpy(pdev->EncryptionU + sizeof(digest), pad, 
 		sizeof(pdev->EncryptionU) - sizeof(digest));
     } else {
-    memcpy(pdev->EncryptionU, pad, sizeof(pdev->EncryptionU));
+	memcpy(pdev->EncryptionU, pad, sizeof(pdev->EncryptionU));
 	s_arcfour_set_key(&sarc4, pdev->EncryptionKey, pdev->KeyLength / 8);
 	s_arcfour_process_buffer(&sarc4, pdev->EncryptionU, sizeof(pdev->EncryptionU));
     }
@@ -993,7 +998,7 @@ pdf_write_page(gx_device_pdf *pdev, int page_num)
 	int i;
 
 	for (i = 0; i < countof(page->resource_ids); ++i)
-	    if (page->resource_ids[i]) {
+	    if (page->resource_ids[i] && pdf_resource_type_names[i]) {
 		stream_puts(s, pdf_resource_type_names[i]);
 		pprintld1(s, " %ld 0 R\n", page->resource_ids[i]);
 	    }
@@ -1079,6 +1084,9 @@ pdf_close(gx_device * dev)
 	    pdf_write_page(pdev, i);
     }
 
+    if (pdev->PrintStatistics)
+	pdf_print_resource_statistics(pdev);
+
     /* Write the font resources and related resources. */
     code1 = pdf_write_resource_objects(pdev, resourceXObject);
     if (code >= 0)
@@ -1095,6 +1103,20 @@ pdf_close(gx_device * dev)
     code1 = pdf_free_resource_objects(pdev, resourceCMap);
     if (code >= 0)
 	code = code1;
+#if PS2WRITE
+    code1 = pdf_write_resource_objects(pdev, resourcePage);
+    if (code >= 0)
+	code = code1;
+    code1 = pdf_free_resource_objects(pdev, resourcePage);
+    if (code >= 0)
+	code = code1;
+#endif
+#if PDFW_DELAYED_STREAMS
+    code1 = pdf_free_resource_objects(pdev, resourceOther);
+    if (code >= 0)
+	code = code1;
+#endif
+
 
     /* Create the Pages tree. */
 
@@ -1287,8 +1309,8 @@ pdf_close(gx_device * dev)
     pprintld3(s, "<< /Size %ld /Root %ld 0 R /Info %ld 0 R\n",
 	      pdev->next_id, Catalog_id, Info_id);
     stream_puts(s, "/ID [");
-    pdf_put_string(pdev, pdev->fileID, sizeof(pdev->fileID));
-    pdf_put_string(pdev, pdev->fileID, sizeof(pdev->fileID));
+    psdf_write_string(pdev->strm, pdev->fileID, sizeof(pdev->fileID), 0);
+    psdf_write_string(pdev->strm, pdev->fileID, sizeof(pdev->fileID), 0);
     stream_puts(s, "]\n");
     if (pdev->OwnerPassword.size > 0) {
 	pprintld1(s, "/Encrypt %ld 0 R ", Encrypt_id);
@@ -1327,5 +1349,15 @@ pdf_close(gx_device * dev)
     code1 = gdev_vector_close_file((gx_device_vector *) pdev);
     if (code >= 0)
 	code = code1;
+    if (pdev->max_referred_page >= pdev->next_page + 1) {
+        /* Note : pdev->max_referred_page counts from 1, 
+	   and pdev->next_page counts from 0. */
+	eprintf2("ERROR: A pdfmark destination page %d points beyond the last page %d.\n",
+		pdev->max_referred_page, pdev->next_page);
+#if 0 /* Temporary disabled due to Bug 687686. */
+	if (code >= 0)
+	    code = gs_note_error(gs_error_rangecheck);
+#endif
+    }
     return pdf_close_files(pdev, code);
 }

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gximage.h,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gximage.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Default image rendering state structure */
 /* Requires gxcpath.h, gxdevmem.h, gxdcolor.h, gzpath.h */
 
@@ -121,6 +121,12 @@ typedef struct sample_map_s {
  * if 12-bit samples are supported, 0 otherwise.
  */
 extern const sample_unpack_proc_t sample_unpack_12_proc;
+
+/*
+ * Declare the pointer that holds the 16-bit unpacking procedure
+ * if 16-bit samples are supported, 0 otherwise.
+ */
+extern const sample_unpack_proc_t sample_unpack_16_proc;
 
 /* Define the distinct postures of an image. */
 /* Each posture includes its reflected variant. */

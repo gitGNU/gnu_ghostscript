@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdfb.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdfb.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Low-level bitmap image handling for PDF-writing driver */
 #include "string_.h"
 #include "gx.h"
@@ -185,10 +185,10 @@ pdf_copy_mono(gx_device_pdf *pdev,
 			   &pdev->fill_used_process_color,
 			   &psdf_set_fill_color_commands);
     } else if (zero == pdev->black && one == pdev->white) {
-	gs_cspace_init_DeviceGray(&cs);
+	gs_cspace_init_DeviceGray(pdev->memory, &cs);
 	gs_image_t_init(&image, &cs);
     } else if (zero == pdev->white && one == pdev->black) {
-	gs_cspace_init_DeviceGray(&cs);
+	gs_cspace_init_DeviceGray(pdev->memory, &cs);
 	gs_image_t_init(&image, &cs);
 	invert = 0xff;
     } else {
@@ -204,12 +204,12 @@ pdf_copy_mono(gx_device_pdf *pdev,
 	int ncomp = pdev->color_info.num_components;
 	byte *p;
 
-	code = pdf_cspace_init_Device(&cs_base, ncomp);
+	code = pdf_cspace_init_Device(pdev->memory, &cs_base, ncomp);
 	if (code < 0)
 	    return code;
 	c[0] = psdf_adjust_color_index((gx_device_vector *)pdev, zero);
 	c[1] = psdf_adjust_color_index((gx_device_vector *)pdev, one);
-	gs_cspace_init(&cs, &gs_color_space_type_Indexed, NULL);
+	gs_cspace_init(&cs, &gs_color_space_type_Indexed, pdev->memory, false);
 	cs.params.indexed.base_space = *(gs_direct_color_space *)&cs_base;
 	cs.params.indexed.hival = 1;
 	p = palette;
@@ -344,7 +344,7 @@ pdf_copy_color_data(gx_device_pdf * pdev, const byte * base, int sourcex,
     gs_color_space cs;
     cos_value_t cs_value;
     ulong nbytes;
-    int code = pdf_cspace_init_Device(&cs, bytes_per_pixel);
+    int code = pdf_cspace_init_Device(pdev->memory, &cs, bytes_per_pixel);
     const byte *row_base;
     int row_step;
     bool in_line;

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ifont1.h,v 1.4 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: ifont1.h,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Type 1 font utilities shared with Type 2 */
 
 #ifndef ifont1_INCLUDED
@@ -48,7 +48,8 @@ int charstring_font_get_refs(const_os_ptr op, charstring_font_refs_t *pfr);
  * CIDFontType 0 font.  The client has filled in pdata1->interpret,
  * subroutineNumberBias, lenIV, and (if applicable) the Type 2 elements.
  */
-int charstring_font_params(const_os_ptr op, charstring_font_refs_t *pfr,
+int charstring_font_params(const gs_memory_t *mem, 
+			   const_os_ptr op, charstring_font_refs_t *pfr,
 			   gs_type1_data *pdata1);
 
 /*

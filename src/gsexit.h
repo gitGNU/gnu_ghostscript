@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsexit.h,v 1.5 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsexit.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Declarations for exits */
 
 #ifndef gsexit_INCLUDED
@@ -27,17 +27,17 @@
  *  normally they do exit cleanup and error messaging
  *  without calling system exit() returning to the caller.
  */
-int gs_to_exit(int exit_status);
+int gs_to_exit(const gs_memory_t *mem, int exit_status);
 
 /** some clients prefer this to return the postscript error code
  * to the caller otherwise the same as gs_to_exit()
  */
-int gs_to_exit_with_code(int exit_status, int code);
+int gs_to_exit_with_code(const gs_memory_t *mem, int exit_status, int code);
 
 /** The client must provide this.  
  * After possible cleanup it may call gp_do_exit() which calls exit() in a platform
  * independent way.  This is a fatal error so returning is not a good idea.
  */
-void gs_abort(void);
+void gs_abort(const gs_memory_t *mem);
 
 #endif /* gsexit_INCLUDED */

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ilocate.c,v 1.5 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: ilocate.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Object locating and validating for Ghostscript memory manager */
 #include "ghost.h"
 #include "memory_.h"
@@ -26,12 +26,12 @@
 #include "gsstruct.h"
 #include "iastate.h"
 #include "idict.h"
-#include "igc.h"		/* for gc_state_t */
-#include "igcstr.h"		/* for prototype */
+#include "igc.h"	/* for gc_state_t and gcst_get_memory_ptr() */
+#include "igcstr.h"	/* for prototype */
 #include "iname.h"
 #include "ipacked.h"
 #include "isstate.h"
-#include "iutil.h"		/* for packed_get */
+#include "iutil.h"	/* for packed_get */
 #include "ivmspace.h"
 #include "store.h"
 
@@ -320,7 +320,9 @@ ialloc_validate_chunk(const chunk_t * cp, gc_state_t * gcst)
 	gs_ptr_type_t ptype;
 
 	if (proc != gs_no_struct_enum_ptrs)
-	    for (; (ptype = (*proc) (pre + 1, size, index, &eptr, pre->o_type, NULL)) != 0; ++index) {
+	    for (; (ptype = (*proc) (gcst_get_memory_ptr(gcst), 
+				     pre + 1, size, index, &eptr, 
+				     pre->o_type, gcst)) != 0; ++index) {
 		if (eptr.ptr == 0)
 		    DO_NOTHING;
 		else if (ptype == ptr_struct_type)
@@ -335,10 +337,12 @@ ialloc_validate_chunk(const chunk_t * cp, gc_state_t * gcst)
 private void
 ialloc_validate_ref_packed(const ref_packed * rp, gc_state_t * gcst)
 {
+    const gs_memory_t *cmem = gcst->spaces.memories.named.system->stable_memory;
+
     if (r_is_packed(rp)) {
 	ref unpacked;
 
-	packed_get(rp, &unpacked);
+	packed_get(cmem, rp, &unpacked);
 	ialloc_validate_ref(&unpacked, gcst);
     } else {
 	ialloc_validate_ref((const ref *)rp, gcst);
@@ -351,6 +355,7 @@ ialloc_validate_ref(const ref * pref, gc_state_t * gcst)
     const ref *rptr;
     const char *tname;
     uint size;
+    const gs_memory_t *cmem = gcst->spaces.memories.named.system->stable_memory;
 
     if (!gs_debug_c('?'))
 	return;			/* no check */
@@ -371,15 +376,15 @@ cks:	    if (optr != 0)
 		ialloc_validate_object(optr, NULL, gcst);
 	    break;
 	case t_name:
-	    if (name_index_ptr(name_index(pref)) != pref->value.pname) {
+	    if (name_index_ptr(cmem, name_index(cmem, pref)) != pref->value.pname) {
 		lprintf3("At 0x%lx, bad name %u, pname = 0x%lx\n",
-			 (ulong) pref, (uint)name_index(pref),
+			 (ulong) pref, (uint)name_index(cmem, pref),
 			 (ulong) pref->value.pname);
 		break;
 	    } {
 		ref sref;
 
-		name_string_ref(pref, &sref);
+		name_string_ref(cmem, pref, &sref);
 		if (r_space(&sref) != avm_foreign &&
 		    !gc_locate(sref.value.const_bytes, gcst)
 		    ) {
@@ -471,7 +476,7 @@ ialloc_validate_object(const obj_header_t * ptr, const chunk_t * cp,
     if (otype == &st_free) {
 	lprintf3("Reference to free object 0x%lx(%lu), in chunk 0x%lx!\n",
 		 (ulong) ptr, (ulong) size, (ulong) cp);
-	gs_abort();
+	gs_abort(gcst->heap);
     }
     if ((cp != 0 && !object_size_valid(pre, size, cp)) ||
 	otype->ssize == 0 ||
@@ -483,7 +488,7 @@ ialloc_validate_object(const obj_header_t * ptr, const chunk_t * cp,
 		 (ulong) ptr, (ulong) size);
 	dprintf2(" ssize = %u, in chunk 0x%lx!\n",
 		 otype->ssize, (ulong) cp);
-	gs_abort();
+	gs_abort(gcst->heap);
     }
 }
 

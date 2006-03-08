@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpsim.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpsim.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* PostScript image output device */
 #include "gdevprn.h"
 #include "gdevpsu.h"
@@ -64,6 +64,7 @@ ps_image_write_headers(FILE *f, gx_device_printer *pdev,
 	byte buf[100];		/* arbitrary */
 	stream s;
 
+	s_init(&s, pdev->memory);
 	swrite_file(&s, f, buf, sizeof(buf));
 	psw_write_page_header(&s, (gx_device *)pdev, pdpc, true, pdev->PageCount + 1, 10);
 	sflush(&s);
@@ -362,11 +363,13 @@ psrgb_print_page(gx_device_printer * pdev, FILE * prn_stream)
 	return_error(gs_error_VMerror);
     ps_image_write_headers(prn_stream, pdev, psrgb_setup, &pswrite_common);
     fprintf(prn_stream, "%d %d rgbimage\n", width, pdev->height);
+    s_init(&fs, mem);
     swrite_file(&fs, prn_stream, fsbuf, sizeof(fsbuf));
     fs.memory = 0;
 
     if (s_A85E_template.set_defaults)
 	(*s_A85E_template.set_defaults) ((stream_state *) & a85state);
+    s_init(&a85s, mem);
     s_std_init(&a85s, a85sbuf, sizeof(a85sbuf), &s_filter_write_procs,
 	       s_mode_write);
     a85s.memory = 0;
@@ -378,6 +381,7 @@ psrgb_print_page(gx_device_printer * pdev, FILE * prn_stream)
     a85s.strm = &fs;
 
     (*s_RLE_template.set_defaults) ((stream_state *) & rlstate);
+    s_init(&rls, mem);
     s_std_init(&rls, rlsbuf, sizeof(rlsbuf), &s_filter_write_procs,
 	       s_mode_write);
     rls.memory = 0;

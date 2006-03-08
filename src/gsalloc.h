@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsalloc.h,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gsalloc.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Memory allocator extensions for standard allocator */
 
 #ifndef gsalloc_INCLUDED
@@ -54,7 +54,7 @@ void gs_memory_set_vm_reclaim(gs_ref_memory_t * mem, bool enabled);
  * Allocate and mostly initialize the state of an allocator (system, global,
  * or local).  Does not initialize global or space.
  */
-gs_ref_memory_t *ialloc_alloc_state(gs_raw_memory_t *, uint);
+gs_ref_memory_t *ialloc_alloc_state(gs_memory_t *, uint);
 
 /*
  * Add a chunk to an externally controlled allocator.  Such allocators

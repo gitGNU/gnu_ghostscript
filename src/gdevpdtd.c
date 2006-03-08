@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdtd.c,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdtd.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* FontDescriptor implementation for pdfwrite */
 #include "math_.h"
 #include "memory_.h"
@@ -218,7 +218,9 @@ pdf_font_descriptor_alloc(gx_device_pdf *pdev, pdf_font_descriptor_t **ppfd,
 {
     pdf_font_descriptor_t *pfd;
     pdf_base_font_t *pbfont;
-    int code = pdf_base_font_alloc(pdev, &pbfont, font, &font->FontMatrix, false, !embed);
+    int code = pdf_base_font_alloc(pdev, &pbfont, font, 
+		(font->orig_FontMatrix.xx == 0 && font->orig_FontMatrix.xy == 0 
+		    ? &font->FontMatrix : &font->orig_FontMatrix), false, !embed);
 
     if (code < 0)
 	return code;
@@ -552,14 +554,23 @@ int
 pdf_finish_FontDescriptor(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
 {
     int code = 0;
+    cos_dict_t *pcd;
 
     if (!pfd->common.object->written &&
 	(code = pdf_compute_font_descriptor(pfd)) >= 0 &&
 	(!pfd->embed ||
 	 (code = pdf_write_embedded_font(pdev, pfd->base_font, 
-				&pfd->common.values.FontBBox, pfd->common.rid)) >= 0)
-	)
-	DO_NOTHING;
+				&pfd->common.values.FontBBox, 
+				pfd->common.rid
+#				if PDFW_DELAYED_STREAMS
+				    , &pcd
+#				endif
+				)) >= 0)
+	) {
+#	if PDFW_DELAYED_STREAMS
+	    pdf_set_FontFile_object(pfd->base_font, pcd);
+#	endif
+    }
     return code;
 }
 
@@ -635,5 +646,10 @@ pdf_write_FontDescriptor(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
     stream_puts(s, ">>\n");
     pdf_end_separate(pdev);
     pfd->common.object->written = true;
+#   if PDFW_DELAYED_STREAMS
+	code = COS_WRITE_OBJECT(pdf_get_FontFile_object(pfd->base_font), pdev);
+	if (code < 0)
+	    return code;
+#   endif
     return 0;
 }

@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: unix-end.mak,v 1.5 2005/12/14 00:03:46 jemarch Exp $
+# $Id: unix-end.mak,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $
 # Partial makefile common to all Unix and Desqview/X configurations.
 # This is the next-to-last part of the makefile for these configurations.
 
@@ -39,7 +39,7 @@ PGDIRS: STDDIRS
 	@if test ! -d $(PSOBJDIR)/$(PGRELDIR); then mkdir $(PSOBJDIR)/$(PGRELDIR); fi
 
 PGDEFS=GENOPT='-DPROFILE' CFLAGS='$(CFLAGS_PROFILE) $(GCFLAGS) $(XCFLAGS)'\
- LDFLAGS='$(XLDFLAGS) -pg' XLIBS='Xt SM ICE Xext X11' CC_LEAF="$(CC_LEAF_PG)"\
+ LDFLAGS='$(XLDFLAGS) -pg' XLIBS='Xt SM ICE Xext X11'\
  BINDIR=$(BINDIR)/$(PGRELDIR)\
  GLGENDIR=$(GLGENDIR)/$(PGRELDIR) GLOBJDIR=$(GLOBJDIR)/$(PGRELDIR)\
  PSGENDIR=$(PSGENDIR)/$(PGRELDIR) PSOBJDIR=$(PSOBJDIR)/$(PGRELDIR)

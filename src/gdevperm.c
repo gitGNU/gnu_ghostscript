@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevperm.c,v 1.3 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevperm.c,v 1.4 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Device which permutes color components, for testing DeviceN. */
 #include "gdevprn.h"
 #include "gxdcconv.h"
@@ -291,7 +291,8 @@ perm_get_color_mapping_procs(const gx_device *dev)
 	(strncmp((const char *)name, (const char *)str, name_size) == 0))
 
 private int
-perm_get_color_comp_index(const gx_device *pdev, const char *pname, int name_size, int src_index)
+perm_get_color_comp_index(const gx_device *pdev, const char *pname,
+					int name_size, int component_type)
 {
     const gx_device_perm_t * const dev = (const gx_device_perm_t *)pdev;
     int n_separation_names = dev->num_std_colorant_names;

@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdev4081.c,v 1.4 2005/12/13 16:57:18 jemarch Exp $*/
+/* $Id: gdev4081.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $*/
 /* Ricoh 4081 laser printer driver */
 #include "gdevprn.h"
 
@@ -42,14 +42,14 @@ r4081_print_page(gx_device_printer *pdev, FILE *prn_stream)
 {	
 	int line_size = gdev_mem_bytes_per_scan_line((gx_device *)pdev);
 	int out_size = ((pdev->width + 7) & -8) ;
-	byte *out = (byte *)gs_malloc(out_size, 1, "r4081_print_page(out)");
+	byte *out = (byte *)gs_malloc(pdev->memory, out_size, 1, "r4081_print_page(out)");
 	int lnum = 0;
 	int last = pdev->height;
 
 	/* Check allocations */
 	if ( out == 0 )
 	{	if ( out )
-			gs_free((char *)out, out_size, 1,
+			gs_free(pdev->memory, (char *)out, out_size, 1,
 				"r4081_print_page(out)");
 		return -1;
 	}
@@ -90,6 +90,6 @@ r4081_print_page(gx_device_printer *pdev, FILE *prn_stream)
 	/* Eject the page and reinitialize the printer */
 	fputs("\f\033\rP", prn_stream);
 
-	gs_free((char *)out, out_size, 1, "r4081_print_page(out)");
+	gs_free(pdev->memory, (char *)out, out_size, 1, "r4081_print_page(out)");
 	return 0;
 }

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zfcid0.c,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zfcid0.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* CIDFontType 0 operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -102,7 +102,7 @@ cid0_read_bytes(gs_font_cid0 *pfont, ulong base, uint count, byte *buf,
 	    uint size;
 
 	    for (;; skip -= size, ++index) {
-		int code = array_get(pgdata, index, &rstr);
+		int code = array_get(pfont->memory, pgdata, index, &rstr);
 
 		if (code < 0)
 		    return code;
@@ -126,7 +126,7 @@ cid0_read_bytes(gs_font_cid0 *pfont, ulong base, uint count, byte *buf,
 		memcpy(data, rstr.value.bytes + skip, size);
 		copied = size;
 		while (copied < count) {
-		    int code = array_get(pgdata, ++index, &rstr);
+		    int code = array_get(pfont->memory, pgdata, ++index, &rstr);
 
 		    if (code < 0)
 			goto err;
@@ -183,8 +183,10 @@ z9_glyph_data(gs_font_base *pbfont, gs_glyph glyph, gs_glyph_data_t *pgd,
     ulong fidx;
     int code;
 
+    gdata.memory = pfont->memory;
     if (!r_has_type(&pfdata->u.cid0.GlyphDirectory, t_null)) {
-	code = font_gdir_get_outline(&pfdata->u.cid0.GlyphDirectory,
+        code = font_gdir_get_outline(pfont->memory,
+				     &pfdata->u.cid0.GlyphDirectory,
 				     glyph_index, &gdata);
 	if (code < 0)
 	    return code;
@@ -251,23 +253,35 @@ z9_glyph_data(gs_font_base *pbfont, gs_glyph glyph, gs_glyph_data_t *pgd,
 /* Get the outline of a CIDFontType 0 glyph. */
 private int
 z9_glyph_outline(gs_font *font, int WMode, gs_glyph glyph, const gs_matrix *pmat,
-		 gx_path *ppath)
+		 gx_path *ppath, double sbw[4])
 {
     gs_font_cid0 *const pfcid = (gs_font_cid0 *)font;
     ref gref;
     gs_glyph_data_t gdata;
     int code, fidx, ocode;
 
+    gdata.memory = font->memory;
     code = pfcid->cidata.glyph_data((gs_font_base *)pfcid, glyph, &gdata,
 				    &fidx);
     if (code < 0)
 	return code;
-    glyph_ref(glyph, &gref);
+    glyph_ref(font->memory, glyph, &gref);
     ocode = zcharstring_outline(pfcid->cidata.FDArray[fidx], WMode, &gref, &gdata,
-				pmat, ppath);
+				pmat, ppath, sbw);
     gs_glyph_data_free(&gdata, "z9_glyph_outline");
     return ocode;
 }
+
+private int
+z9_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
+		     int members, gs_glyph_info_t *info)
+{   /* fixme : same as z11_glyph_info. */
+    int wmode = (members & GLYPH_INFO_WIDTH0 ? 0 : 1);
+
+    return z1_glyph_info_generic(font, glyph, pmat, members, info, 
+				    &gs_default_glyph_info, wmode);
+}
+
 
 /*
  * The "fonts" in the FDArray don't have access to their outlines -- the
@@ -319,20 +333,20 @@ fd_array_element(i_ctx_t *i_ctx_p, gs_font_type1 **ppfont, ref *prfd)
 	data1.interpret = gs_type1_interpret;
 	data1.subroutineNumberBias = 0;
 	data1.lenIV = DEFAULT_LENIV_1;
-	code = charstring_font_params(prfd, &refs, &data1);
+	code = charstring_font_params(imemory, prfd, &refs, &data1);
 	if (code < 0)
 	    return code;
-	code = build_proc_name_refs(&build,
+	code = build_proc_name_refs(imemory, &build,
 				    "%Type1BuildChar", "%Type1BuildGlyph");
 	break;
     case 2:
 	code = type2_font_params(prfd, &refs, &data1);
 	if (code < 0)
 	    return code;
-	code = charstring_font_params(prfd, &refs, &data1);
+	code = charstring_font_params(imemory, prfd, &refs, &data1);
 	if (code < 0)
 	    return code;
-	code = build_proc_name_refs(&build,
+	code = build_proc_name_refs(imemory, &build,
 				    "%Type2BuildChar", "%Type2BuildGlyph");
 	break;
     default:			/* can't happen */
@@ -354,16 +368,37 @@ fd_array_element(i_ctx_t *i_ctx_p, gs_font_type1 **ppfont, ref *prfd)
     return 0;
 }
 
+
+
+private int 
+notify_remove_font_type9(void *proc_data, void *event_data)
+{  /* Likely type 9 font descendents are never released explicitly.
+      So releaseing a type 9 font we must reset pointers in descendents.
+    */
+    /* gs_font_finalize passes event_data == NULL, so check it here. */
+    if (event_data == NULL) {
+        gs_font_cid0 *pfcid = proc_data;
+	int i;
+
+	for (i = 0; i < pfcid->cidata.FDArray_size; ++i) {
+	    if (pfcid->cidata.FDArray[i]->data.parent == (gs_font_base *)pfcid)
+		pfcid->cidata.FDArray[i]->data.parent = NULL;
+	}
+    }
+    return 0;
+}
+
 /* <string|name> <font_dict> .buildfont9 <string|name> <font> */
 private int
 zbuildfont9(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
     build_proc_refs build;
-    int code = build_proc_name_refs(&build, NULL, "%Type9BuildGlyph");
+    int code = build_proc_name_refs(imemory, &build, NULL, "%Type9BuildGlyph");
     gs_font_cid_data common;
     ref GlyphDirectory, GlyphData, DataSource;
-    ref *prfda, cfnstr, *CIDFontName;
+    ref *prfda, cfnstr;
+    ref *pCIDFontName, CIDFontName;
     gs_font_type1 **FDArray;
     uint FDArray_size;
     int FDBytes;
@@ -381,10 +416,15 @@ zbuildfont9(i_ctx_t *i_ctx_p)
     if (code < 0 ||
 	(code = cid_font_data_param(op, &common, &GlyphDirectory)) < 0 ||
 	(code = dict_find_string(op, "FDArray", &prfda)) < 0 ||
-	(code = dict_find_string(op, "CIDFontName", &CIDFontName)) <= 0 ||
+	(code = dict_find_string(op, "CIDFontName", &pCIDFontName)) <= 0 ||
 	(code = dict_int_param(op, "FDBytes", 0, MAX_FDBytes, -1, &FDBytes)) < 0
 	)
 	return code;
+    /*
+     * Since build_gs_simple_font may resize the dictionary and cause
+     * pointers to become invalid, save CIDFontName
+     */
+    CIDFontName = *pCIDFontName;
     if (r_has_type(&GlyphDirectory, t_null)) {
 	/* Standard CIDFont, require GlyphData and CIDMapOffset. */
 	ref *pGlyphData;
@@ -426,7 +466,7 @@ zbuildfont9(i_ctx_t *i_ctx_p)
     for (i = 0; i < FDArray_size; ++i) {
 	ref rfd;
 
-	array_get(prfda, (long)i, &rfd);
+	array_get(imemory, prfda, (long)i, &rfd);
 	code = fd_array_element(i_ctx_p, &FDArray[i], &rfd);
 	if (code < 0)
 	    goto fail;
@@ -439,6 +479,7 @@ zbuildfont9(i_ctx_t *i_ctx_p)
 	goto fail;
     pfont->procs.enumerate_glyph = gs_font_cid0_enumerate_glyph;
     pfont->procs.glyph_outline = z9_glyph_outline;
+    pfont->procs.glyph_info = z9_glyph_info;
     pfcid = (gs_font_cid0 *)pfont;
     pfcid->cidata.common = common;
     pfcid->cidata.CIDMapOffset = CIDMapOffset;
@@ -447,15 +488,19 @@ zbuildfont9(i_ctx_t *i_ctx_p)
     pfcid->cidata.FDBytes = FDBytes;
     pfcid->cidata.glyph_data = z9_glyph_data;
     pfcid->cidata.proc_data = 0;	/* for GC */
-    get_font_name(&cfnstr, CIDFontName);
+    get_font_name(imemory, &cfnstr, &CIDFontName);
     copy_font_name(&pfcid->font_name, &cfnstr);
     ref_assign(&pfont_data(pfont)->u.cid0.GlyphDirectory, &GlyphDirectory);
     ref_assign(&pfont_data(pfont)->u.cid0.GlyphData, &GlyphData);
     ref_assign(&pfont_data(pfont)->u.cid0.DataSource, &DataSource);
     code = define_gs_font((gs_font *)pfont);
+    if (code >= 0)
+       code = gs_notify_register(&pfont->notify_list, notify_remove_font_type9, pfont);
     if (code >= 0) {
-	for (i = 0; i < FDArray_size; ++i)
+	for (i = 0; i < FDArray_size; ++i) {
 	    FDArray[i]->dir = pfont->dir;
+	    FDArray[i]->data.parent = pfont;
+	}
 	return code;
     }
  fail:
@@ -480,6 +525,7 @@ ztype9mapcid(i_ctx_t *i_ctx_p)
 	return_error(e_invalidfont);
     check_type(*op, t_integer);
     pfcid = (gs_font_cid0 *)pfont;
+    gdata.memory = pfont->memory;
     code = pfcid->cidata.glyph_data((gs_font_base *)pfcid,
 			(gs_glyph)(gs_min_cid_glyph + op->value.intval),
 				    &gdata, &fidx);

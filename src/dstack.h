@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: dstack.h,v 1.4 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: dstack.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Definitions for the interpreter's dictionary stack */
 
 #ifndef dstack_INCLUDED
@@ -66,7 +66,7 @@
 /* Name lookup */
 #define dict_find_name_by_index(nidx)\
   dstack_find_name_by_index(&idict_stack, nidx)
-#define dict_find_name(pnref) dict_find_name_by_index(name_index(pnref))
+#define dict_find_name(pnref) dict_find_name_by_index(name_index(imemory, pnref))
 #define dict_find_name_by_index_inline(nidx, htemp)\
   dstack_find_name_by_index_inline(&idict_stack, nidx, htemp)
 #define if_dict_find_name_by_index_top(nidx, htemp, pvslot)\

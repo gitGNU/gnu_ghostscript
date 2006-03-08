@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gzspotan.h,v 1.3 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: gzspotan.h,v 1.4 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* State and interface definitions for a spot analyzer device. */
 
 /*
@@ -59,6 +59,8 @@ struct gx_san_trap_s {
     gx_san_trap_contact *upper; /* Neighbours of the upper band. */
     const segment *l; /* Outline pointer : left boundary. */
     const segment *r; /* Outline pointer : right boundary. */
+    int dir_l, dir_r; /* Outline direction : left, right. */
+    bool leftmost, rightmost;
     /* The topology reconstrustor work data : */
     gx_san_trap *next; /* Next with same ytop. */
     gx_san_trap *prev; /* Prev with same ytop. */
@@ -86,8 +88,9 @@ struct gx_san_trap_contact_s {
 /* A stem section. */
 typedef struct gx_san_sect_s gx_san_sect;
 struct gx_san_sect_s {
-    fixed y, xl, xr;
+    fixed xl, yl, xr, yr;
     const segment *l, *r;
+    int side_mask;
 };
 
 /* A spot analyzer device. */
@@ -104,6 +107,7 @@ struct gx_device_spot_analyzer_s {
     gx_san_trap *top_band;
     gx_san_trap *bot_current;
     /* The stem recognizer work data (no GC invocations) : */
+    fixed xmin, xmax;
 };
 
 extern_st(st_device_spot_analyzer);
@@ -111,7 +115,7 @@ extern_st(st_device_spot_analyzer);
     gs_public_st_suffix_add4_final(st_device_spot_analyzer, gx_device_spot_analyzer,\
 	    "gx_device_spot_analyzer", device_spot_analyzer_enum_ptrs,\
 	    device_spot_analyzer_reloc_ptrs, gx_device_finalize, st_device,\
-	    trap_buffer, cont_buffer_last, cont_buffer, cont_buffer_last)
+	    trap_buffer, trap_buffer_last, cont_buffer, cont_buffer_last)
 
 /* -------------- Interface methods ----------------------------- */
 
@@ -128,14 +132,14 @@ void gx_san_begin(gx_device_spot_analyzer *padev);
 /* Assumes an Y-band scanning order with increasing X inside a band. */
 int gx_san_trap_store(gx_device_spot_analyzer *padev, 
     fixed ybot, fixed ytop, fixed xlbot, fixed xrbot, fixed xltop, fixed xrtop,
-    const segment *r, const segment *l);
+    const segment *l, const segment *r, int dir_l, int dir_r);
 
 /* Finish accumulating a path. */
 void gx_san_end(const gx_device_spot_analyzer *padev);
 
 /* Generate stems. */
 int gx_san_generate_stems(gx_device_spot_analyzer *padev, 
-		void *client_data,
+		bool overall_hints, void *client_data,
 		int (*handler)(void *client_data, gx_san_sect *ss));
 
 #endif /* gzspotan_INCLUDED */

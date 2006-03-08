@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zcharout.c,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zcharout.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Common code for outline (Type 1 / 4 / 42) fonts */
 #include "memory_.h"
 #include "ghost.h"
@@ -81,7 +81,7 @@ int				/*metrics_present*/
 zchar_get_metrics(const gs_font_base * pbfont, const ref * pcnref,
 		  double psbw[4])
 {
-    const ref *pfdict = &pfont_data(pbfont)->dict;
+    const ref *pfdict = &pfont_data(gs_font_parent(pbfont))->dict;
     ref *pmdict;
 
     if (dict_find_string(pfdict, "Metrics", &pmdict) > 0) {
@@ -125,7 +125,7 @@ int
 zchar_get_metrics2(const gs_font_base * pbfont, const ref * pcnref,
 		   double pwv[4])
 {
-    const ref *pfdict = &pfont_data(pbfont)->dict;
+    const ref *pfdict = &pfont_data(gs_font_parent(pbfont))->dict;
     ref *pmdict;
 
     if (dict_find_string(pfdict, "Metrics2", &pmdict) > 0) {
@@ -146,6 +146,17 @@ zchar_get_metrics2(const gs_font_base * pbfont, const ref * pcnref,
 }
 
 /*
+ * Get CDevProc.
+ */
+bool
+zchar_get_CDevProc(const gs_font_base * pbfont, ref **ppcdevproc)
+{
+    const ref *pfdict = &pfont_data(gs_font_parent(pbfont))->dict;
+
+    return dict_find_string(pfdict, "CDevProc", ppcdevproc) > 0;
+}
+
+/*
  * Consult Metrics2 and CDevProc, and call setcachedevice[2].  Return
  * o_push_estack if we had to call a CDevProc, or if we are skipping the
  * rendering process (only getting the metrics).
@@ -159,7 +170,6 @@ zchar_set_cache(i_ctx_t *i_ctx_p, const gs_font_base * pbfont,
 		const double Metrics2_sbw_default[4])
 {
     os_ptr op = osp;
-    const ref *pfdict = &pfont_data(pbfont)->dict;
     ref *pcdevproc;
     int have_cdevproc;
     ref rpop;
@@ -207,7 +217,7 @@ zchar_set_cache(i_ctx_t *i_ctx_p, const gs_font_base * pbfont,
 
     /* Check for CDevProc or "short-circuiting". */
 
-    have_cdevproc = dict_find_string(pfdict, "CDevProc", &pcdevproc) > 0;
+    have_cdevproc = zchar_get_CDevProc(pbfont, &pcdevproc);
     if (have_cdevproc || zchar_show_width_only(penum)) {
 	int i;
 	op_proc_t zsetc;
@@ -277,7 +287,7 @@ zchar_set_cache(i_ctx_t *i_ctx_p, const gs_font_base * pbfont,
  * Get the CharString data corresponding to a glyph.  Return typecheck
  * if it isn't a string.
  */
-private bool charstring_is_notdef_proc(const ref *);
+private bool charstring_is_notdef_proc(const gs_memory_t *mem, const ref *);
 private int charstring_make_notdef(gs_glyph_data_t *, gs_font *);
 int
 zchar_charstring_data(gs_font *font, const ref *pgref, gs_glyph_data_t *pgd)
@@ -297,7 +307,7 @@ zchar_charstring_data(gs_font *font, const ref *pgref, gs_glyph_data_t *pgd)
 	 *	0 0 hsbw endchar
 	 */
 	if (font->FontType == ft_encrypted &&
-	    charstring_is_notdef_proc(pcstr)
+	    charstring_is_notdef_proc(font->memory, pcstr)
 	    )
 	    return charstring_make_notdef(pgd, font);
 	else
@@ -308,14 +318,14 @@ zchar_charstring_data(gs_font *font, const ref *pgref, gs_glyph_data_t *pgd)
     return 0;
 }
 private bool
-charstring_is_notdef_proc(const ref *pcstr)
+charstring_is_notdef_proc(const gs_memory_t *mem, const ref *pcstr)
 {
     if (r_is_array(pcstr) && r_size(pcstr) == 4) {
 	ref elts[4];
 	long i;
 
 	for (i = 0; i < 4; ++i)
-	    array_get(pcstr, i, &elts[i]);
+	    array_get(mem, pcstr, i, &elts[i]);
 	if (r_has_type(&elts[0], t_name) &&
 	    r_has_type(&elts[1], t_integer) && elts[1].value.intval == 0 &&
 	    r_has_type(&elts[2], t_integer) && elts[2].value.intval == 0 &&
@@ -323,9 +333,9 @@ charstring_is_notdef_proc(const ref *pcstr)
 	    ) {
 	    ref nref;
 
-	    name_enter_string("pop", &nref);
+	    name_enter_string(mem, "pop", &nref);
 	    if (name_eq(&elts[0], &nref)) {
-		name_enter_string("setcharwidth", &nref);
+	        name_enter_string(mem, "setcharwidth", &nref);
 		if (name_eq(&elts[3], &nref))
 		    return true;
 	    }
@@ -369,7 +379,7 @@ charstring_make_notdef(gs_glyph_data_t *pgd, gs_font *font)
  * CIDFontType 0 CIDFont.
  */
 int
-zchar_enumerate_glyph(const ref *prdict, int *pindex, gs_glyph *pglyph)
+zchar_enumerate_glyph(const gs_memory_t *mem, const ref *prdict, int *pindex, gs_glyph *pglyph)
 {
     int index = *pindex - 1;
     ref elt[2];
@@ -387,7 +397,7 @@ next:
 		*pglyph = gs_min_cid_glyph + elt[0].value.intval;
 		break;
 	    case t_name:
-		*pglyph = name_index(elt);
+	        *pglyph = name_index(mem, elt);
 		break;
 	    default:		/* can't handle it */
 		goto next;

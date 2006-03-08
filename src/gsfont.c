@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsfont.c,v 1.5 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsfont.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Font operators for Ghostscript library */
 #include "gx.h"
 #include "memory_.h"
@@ -111,7 +111,7 @@ ENUM_PTRS_WITH(font_dir_enum_ptrs, gs_font_dir *dir)
 
 	if (cc != 0 && !--count) {
 	    (*dir->ccache.mark_glyph)
-		(cc->code, dir->ccache.mark_glyph_data);
+		(mem, cc->code, dir->ccache.mark_glyph_data);
 	    /****** HACK: break const.  We'll fix this someday. ******/
 	    ((gs_font_dir *)dir)->enum_index = cci;
 	    ((gs_font_dir *)dir)->enum_offset = offset;
@@ -211,7 +211,7 @@ RELOC_PTRS_END
 
 /* Allocate a font directory */
 private bool
-cc_no_mark_glyph(gs_glyph glyph, void *ignore_data)
+cc_no_mark_glyph(const gs_memory_t *mem, gs_glyph glyph, void *ignore_data)
 {
     return false;
 }
@@ -262,16 +262,12 @@ gs_font_dir_alloc2_limits(gs_memory_t * struct_mem, gs_memory_t * bits_mem,
     pdir->scaled_fonts = 0;
     pdir->ssize = 0;
     pdir->smax = smax;
-    pdir->align_to_pixels = true;
+    pdir->align_to_pixels = false;
     pdir->glyph_to_unicode_table = NULL;
-#if NEW_TT_INTERPRETER
-    pdir->grid_fit_tt = false;
+    pdir->grid_fit_tt = 2;
     pdir->memory = struct_mem;
     pdir->tti = 0;
-#if TT_GRID_FITTING
     pdir->san = 0;
-#endif
-#endif
     pdir->global_glyph_code = NULL;
     return pdir;
 }
@@ -291,7 +287,7 @@ gs_font_alloc(gs_memory_t *mem, gs_memory_type_ptr_t pstype,
     pfont->dir = dir;
     pfont->is_resource = false;
     gs_font_notify_init(pfont);
-    pfont->id = gs_next_ids(1);
+    pfont->id = gs_next_ids(mem, 1);
     pfont->base = pfont;
     pfont->client_data = 0;
     /* not FontMatrix, FontType */
@@ -588,14 +584,12 @@ gs_setaligntopixels(gs_font_dir * pdir, uint v)
     pdir->align_to_pixels = v;
     return 0;
 }
-#if NEW_TT_INTERPRETER
 int
 gs_setgridfittt(gs_font_dir * pdir, uint v)
 {
     pdir->grid_fit_tt = v;
     return 0;
 }
-#endif
 
 /* currentcacheparams */
 uint
@@ -618,13 +612,11 @@ gs_currentaligntopixels(const gs_font_dir * pdir)
 {
     return pdir->align_to_pixels;
 }
-#if NEW_TT_INTERPRETER
 uint
 gs_currentgridfittt(const gs_font_dir * pdir)
 {
     return pdir->grid_fit_tt;
 }
-#endif
 
 /* Purge a font from all font- and character-related tables. */
 /* This is only used by restore (and, someday, the GC). */
@@ -895,12 +887,17 @@ gs_default_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
     int returned = 0;
     int code;
     int wmode = ((members & GLYPH_INFO_WIDTH1) != 0);
+    double sbw[4] = {0, 0, 0, 0};
+    /* Currently glyph_outline retrieves sbw only with type 1,2,9 fonts. */
+    bool charstrings_font = (font->FontType == ft_encrypted || 
+			     font->FontType == ft_encrypted2 || 
+			     font->FontType == ft_CID_encrypted);
 
     gx_path_init_bbox_accumulator(&path);
     code = gx_path_add_point(&path, fixed_0, fixed_0);
     if (code < 0)
 	goto out;
-    code = font->procs.glyph_outline(font, wmode, glyph, pmat, &path);
+    code = font->procs.glyph_outline(font, wmode, glyph, pmat, &path, sbw);
     if (code < 0)
 	goto out;
     if (members & GLYPH_INFO_WIDTHS) {
@@ -930,6 +927,28 @@ gs_default_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
 	info->bbox.q.y = fixed2float(bbox.q.y);
 	returned |= GLYPH_INFO_BBOX;
     }
+    if (members & (GLYPH_INFO_WIDTH0 << wmode) && charstrings_font) {
+	if (pmat == 0) {
+	    info->width[wmode].x = sbw[2];
+	    info->width[wmode].y = sbw[3];
+	} else {
+	    code = gs_distance_transform(sbw[2], sbw[3], pmat, &info->width[wmode]);
+	    if (code < 0)
+		return code;
+	}
+	returned |= GLYPH_INFO_WIDTH0 << wmode;
+    }
+    if (members & (GLYPH_INFO_VVECTOR0 << wmode) && charstrings_font) {
+	if (pmat == 0) {
+	    info->v.x = sbw[0];
+	    info->v.y = sbw[1];
+	} else {
+	    gs_distance_transform(sbw[0], sbw[1], pmat, &info->v);
+	    if (code < 0)
+		return code;
+	}
+	returned |= GLYPH_INFO_VVECTOR0 << wmode;
+    }
     if (members & GLYPH_INFO_NUM_PIECES) {
 	info->num_pieces = 0;
 	returned |= GLYPH_INFO_NUM_PIECES;
@@ -943,7 +962,7 @@ gs_default_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
 /* Dummy glyph outline procedure */
 int
 gs_no_glyph_outline(gs_font *font, int WMode, gs_glyph glyph, const gs_matrix *pmat,
-		    gx_path *ppath)
+		    gx_path *ppath, double sbw[4])
 {
     return_error(gs_error_undefined);
 }

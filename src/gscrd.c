@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gscrd.c,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gscrd.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* CIE color rendering dictionary creation */
 #include "math_.h"
 #include "memory_.h"
@@ -257,7 +257,7 @@ gs_cie_render1_build(gs_cie_render ** ppcrd, gs_memory_t * mem,
 
     rc_alloc_struct_1(pcrd, gs_cie_render, &st_cie_render1, mem,
 		      return_error(gs_error_VMerror), cname);
-    pcrd->id = gs_next_ids(1);
+    pcrd->id = gs_next_ids(mem, 1);
     /* Initialize pointers for the GC. */
     pcrd->client_data = 0;
     pcrd->RenderTable.lookup.table = 0;
@@ -281,7 +281,9 @@ gs_cie_render1_build(gs_cie_render ** ppcrd, gs_memory_t * mem,
  * default values.
  */
 int
-gs_cie_render1_init_from(gs_cie_render * pcrd, void *client_data,
+gs_cie_render1_init_from(const gs_memory_t *mem,
+			 gs_cie_render * pcrd, 
+			 void *client_data,
 			 const gs_cie_render * pfrom_crd,
 			 const gs_vector3 * WhitePoint,
 			 const gs_vector3 * BlackPoint,
@@ -296,7 +298,7 @@ gs_cie_render1_init_from(gs_cie_render * pcrd, void *client_data,
 			 const gs_range3 * RangeABC,
 			 const gs_cie_render_table_t * RenderTable)
 {
-    pcrd->id = gs_next_ids(1);
+    pcrd->id = gs_next_ids(mem, 1);
     pcrd->client_data = client_data;
     pcrd->points.WhitePoint = *WhitePoint;
     pcrd->points.BlackPoint =
@@ -345,7 +347,8 @@ gs_cie_render1_init_from(gs_cie_render * pcrd, void *client_data,
  * Initialize a CRD without the option of copying cached values.
  */
 int
-gs_cie_render1_initialize(gs_cie_render * pcrd, void *client_data,
+gs_cie_render1_initialize(const gs_memory_t *mem,
+			  gs_cie_render * pcrd, void *client_data,
 			  const gs_vector3 * WhitePoint,
 			  const gs_vector3 * BlackPoint,
 			  const gs_matrix3 * MatrixPQR,
@@ -359,7 +362,7 @@ gs_cie_render1_initialize(gs_cie_render * pcrd, void *client_data,
 			  const gs_range3 * RangeABC,
 			  const gs_cie_render_table_t * RenderTable)
 {
-    return gs_cie_render1_init_from(pcrd, client_data, NULL,
+    return gs_cie_render1_init_from(mem, pcrd, client_data, NULL,
 				    WhitePoint, BlackPoint,
 				    MatrixPQR, RangePQR, TransformPQR,
 				    MatrixLMN, EncodeLMN, RangeLMN,

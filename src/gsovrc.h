@@ -1,4 +1,4 @@
-/* Copyright (C) 2002 artofcode LLC. All rights reserved.
+/* Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
 
   This file is part of GNU ghostscript
 
@@ -17,14 +17,14 @@
 
 */
 
-/* $Id: gsovrc.h,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gsovrc.h,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* overprint/overprint mode compositor interface */
 
 #ifndef gsovrc_INCLUDED
 #  define gsovrc_INCLUDED
 
 #include "gsstype.h"
-#include "gscompt.h"
+#include "gxcomp.h"
 
 /*
  * Overprint compositor.
@@ -275,6 +275,28 @@ struct gs_overprint_params_s {
      */
     gx_color_index  drawn_comps;
 };
+
+/*
+ * The overprint compositor structure. This is exactly analogous to other
+ * compositor structures, consisting of a the compositor common elements
+ * and the overprint-specific parameters.
+ */
+typedef struct gs_overprint_s {
+    gs_composite_common;
+    gs_overprint_params_t   params;
+} gs_overprint_t;
+
+/*
+ * In a modest violation of good coding practice, the gs_composite_common
+ * fields are "known" to be simple (contain no pointers to garbage
+ * collected memory), and we also know the gs_overprint_params_t structure
+ * to be simple, so we just create a trivial structure descriptor for the
+ * entire gs_overprint_s structure.
+ */
+#define private_st_gs_overprint_t()	/* In gsovrc.c */\
+  gs_private_st_simple(st_overprint, gs_overprint_t, "gs_overprint_t");
+
+
 
 /* some elementary macros for manipulating drawn_comps */
 #define gs_overprint_set_drawn_comp(drawn_comps, i) \

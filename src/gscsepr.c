@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gscsepr.c,v 1.5 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gscsepr.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Separation color space and operation definition */
 #include "memory_.h"
 #include "gx.h"
@@ -63,7 +63,8 @@ const gs_color_space_type gs_color_space_type_Separation = {
     gx_remap_Separation, gx_install_Separation,
     gx_set_overprint_Separation,
     gx_adjust_cspace_Separation, gx_no_adjust_color_count,
-    gx_serialize_Separation
+    gx_serialize_Separation,
+    gx_cspace_is_linear_default
 };
 
 /* GC procedures */
@@ -137,9 +138,16 @@ gx_install_Separation(const gs_color_space * pcs, gs_state * pgs)
     pgs->color_space->params.separation.use_alt_cspace =
 	using_alt_color_space(pgs);
     if (pgs->color_space->params.separation.use_alt_cspace)
-        return (*pcs->params.separation.alt_space.type->install_cspace)
+        code = (*pcs->params.separation.alt_space.type->install_cspace)
 	((const gs_color_space *) & pcs->params.separation.alt_space, pgs);
-    return 0;
+    /*
+     * Give the device an opportunity to capture equivalent colors for any
+     * spot colors which might be present in the color space.
+     */
+    if (code >= 0)
+        code = dev_proc(pgs->device, update_spot_equivalent_colors)
+							(pgs->device, pgs);
+    return code;
 }
 
 /* Set the overprint information appropriate to a separation color space */
@@ -413,7 +421,7 @@ check_Separation_component_name(const gs_color_space * pcs, gs_state * pgs)
     uint name_size;
     gs_devicen_color_map * pcolor_component_map
 	= &pgs->color_component_map;
-    const gx_device * dev = pgs->device;
+    gx_device * dev = pgs->device;
 
     pcolor_component_map->num_components = 1;
     pcolor_component_map->cspace_id = pcs->id;
@@ -439,7 +447,7 @@ check_Separation_component_name(const gs_color_space * pcs, gs_state * pgs)
     /*
      * Get the character string and length for the component name.
      */
-    pcs->params.separation.get_colorname_string(name, &pname, &name_size);
+    pcs->params.separation.get_colorname_string(dev->memory, name, &pname, &name_size);
     /*
      * Compare the colorant name to the device's.  If the device's
      * compare routine returns GX_DEVICE_COLOR_MAX_COMPONENTS then the
@@ -447,7 +455,7 @@ check_Separation_component_name(const gs_color_space * pcs, gs_state * pgs)
      * SeparationOrder list.
      */
     colorant_number = (*dev_proc(dev, get_color_comp_index))
-				    (dev, (const char *)pname, name_size, 0);
+		(dev, (const char *)pname, name_size, SEPARATION_NAME);
     if (colorant_number >= 0) {		/* If valid colorant name */
 	pcolor_component_map->color_map[0] =
 		    (colorant_number == GX_DEVICE_COLOR_MAX_COMPONENTS) ? -1
@@ -504,7 +512,7 @@ gx_serialize_Separation(const gs_color_space * pcs, stream * s)
 
     if (code < 0)
 	return code;
-    code = sputs(s, (byte *)&p->sep_name, sizeof(p->sep_name), &n);
+    code = sputs(s, (const byte *)&p->sep_name, sizeof(p->sep_name), &n);
     if (code < 0)
 	return code;
     code = cs_serialize((const gs_color_space *)&p->alt_space, s);
@@ -513,6 +521,6 @@ gx_serialize_Separation(const gs_color_space * pcs, stream * s)
     code = gx_serialize_device_n_map(pcs, p->map, s);
     if (code < 0)
 	return code;
-    return sputs(s, (byte *)&p->sep_type, sizeof(p->sep_type), &n);
+    return sputs(s, (const byte *)&p->sep_type, sizeof(p->sep_type), &n);
     /* p->use_alt_cspace isn't a property of the space. */
 }

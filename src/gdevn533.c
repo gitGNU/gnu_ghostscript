@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevn533.c,v 1.4 2005/12/13 16:57:18 jemarch Exp $*/
+/* $Id: gdevn533.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $*/
 /* Sony NWP-533 driver for GhostScript */
 #include "gdevprn.h"
 #define prn_dev ((gx_device_printer *)dev) /* needed in 5.31 et seq */
@@ -176,7 +176,7 @@ nwp533_print_page(gx_device_printer *dev, FILE *prn_stream)
     {
       line_size += 4 - (line_size % 4);
     }
-  in = (byte *) gs_malloc(line_size, 1, "nwp533_output_page(in)");
+  in = (byte *) gs_malloc(dev->memory, line_size, 1, "nwp533_output_page(in)");
  restart:
   if(ioctl(printer_file, LBIOCSTOP, 0) < 0)
     {
@@ -204,7 +204,7 @@ nwp533_print_page(gx_device_printer *dev, FILE *prn_stream)
       perror("Starting print");
       return_error(gs_error_ioerror);
     }
-  gs_free(in, line_size, 1, "nwp533_output_page(in)");
+  gs_free(dev->memory, in, line_size, 1, "nwp533_output_page(in)");
 
   return 0;
 }

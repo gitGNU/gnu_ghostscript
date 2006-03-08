@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevwdib.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gdevwdib.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* MS Windows 3.n driver for Ghostscript using a DIB for buffering. */
 #include "gdevmswn.h"
 #include "gxdevmem.h"
@@ -548,7 +548,7 @@ win_dib_alloc_bitmap(gx_device_win * dev, gx_device * param_dev)
     ulong data_size;
 
 #if USE_SEGMENTS
-    byte FAR *ptr_base;
+   byte FAR *ptr_base;
 #endif
 
 #ifdef __WIN32__

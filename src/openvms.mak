@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: openvms.mak,v 1.5 2005/12/13 16:57:26 jemarch Exp $
+# $Id: openvms.mak,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $
 # makefile for OpenVMS VAX and Alpha
 #
 # Please contact Jim Dunham (dunham@omtool.com) if you have questions.
@@ -131,18 +131,18 @@ JVERSION=6
 # You may need to change this if the libpng version changes.
 # See libpng.mak for more information.
 
-PSRCDIR=[.libpng-1_2_5]
-PVERSION=10205
+PSRCDIR=[.libpng-1_2_8]
+PVERSION=10208
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.
 
-ZSRCDIR=[.zlib-1_1_4]
+ZSRCDIR=[.zlib-1_2_1]
 
 # Define the jbig2dec library source location.
 # See jbig2.mak for more information.
 
-JBIG2SRCDIR=[.jbig2dec-0_2]
+JBIG2SRCDIR=[.jbig2dec-0_7]
 
 # Define the directory where the icclib source are stored.
 # See icclib.mak for more information
@@ -234,7 +234,7 @@ DEVICE_DEVS7=$(DD)faxg3.dev $(DD)faxg32d.dev $(DD)faxg4.dev
 DEVICE_DEVS8=$(DD)pcxmono.dev $(DD)pcxgray.dev $(DD)pcx16.dev $(DD)pcx256.dev $(DD)pcx24b.dev $(DD)pcxcmyk.dev
 DEVICE_DEVS9=$(DD)pbm.dev $(DD)pbmraw.dev $(DD)pgm.dev $(DD)pgmraw.dev $(DD)pgnm.dev $(DD)pgnmraw.dev
 DEVICE_DEVS10=$(DD)tiffcrle.dev $(DD)tiffg3.dev $(DD)tiffg32d.dev $(DD)tiffg4.dev $(DD)tifflzw.dev $(DD)tiffpack.dev
-DEVICE_DEVS11=$(DD)tiff12nc.dev $(DD)tiff24nc.dev
+DEVICE_DEVS11=$(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiffsep.dev
 DEVICE_DEVS12=$(DD)psmono.dev $(DD)psgray.dev $(DD)psrgb.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
 DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev
@@ -262,8 +262,7 @@ COMPILE_INITS=0
 BAND_LIST_STORAGE=file
 
 # Choose which compression method to use when storing band lists in memory.
-# The choices are 'lzw' or 'zlib'.  lzw is not recommended, because the
-# LZW-compatible code in Ghostscript doesn't actually compress its input.
+# The choices are 'lzw' or 'zlib'.
 
 BAND_LIST_COMPRESSOR=zlib
 
@@ -440,7 +439,6 @@ include $(GLSRCDIR)contrib.mak
 
 CC_=$(COMP)
 CC_INT=$(CC_)
-CC_LEAF=$(CC_)
 CC_NO_WARN=$(CC_)
 
 # ----------------------------- Main program ------------------------------ #

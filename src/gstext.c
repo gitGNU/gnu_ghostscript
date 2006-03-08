@@ -17,7 +17,7 @@
   
 */
 
-/*$Id: gstext.c,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/*$Id: gstext.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Driver text interface support */
 #include "memory_.h"
 #include "gstypes.h"
@@ -83,7 +83,6 @@ RELOC_PTRS_END
 
 private ENUM_PTRS_WITH(text_enum_enum_ptrs, gs_text_enum_t *eptr)
 {
-#if NEW_TT_INTERPRETER
     if (index == 8) {
 	if (eptr->pair != 0)
 	    ENUM_RETURN(eptr->pair - eptr->pair->index);
@@ -91,9 +90,6 @@ private ENUM_PTRS_WITH(text_enum_enum_ptrs, gs_text_enum_t *eptr)
 	    ENUM_RETURN(0);
     }
     index -= 9;
-#else
-    index -= 8;
-#endif
     if (index <= eptr->fstack.depth)
 	ENUM_RETURN(eptr->fstack.items[index].font);
     index -= eptr->fstack.depth + 1;
@@ -114,11 +110,9 @@ private RELOC_PTRS_WITH(text_enum_reloc_ptrs, gs_text_enum_t *eptr)
     eptr->imaging_dev = gx_device_reloc_ptr(eptr->imaging_dev, gcst);
     RELOC_PTR3(gs_text_enum_t, pis, orig_font, path);
     RELOC_PTR3(gs_text_enum_t, pdcolor, pcpath, current_font);
-#if NEW_TT_INTERPRETER
     if (eptr->pair != NULL)
 	eptr->pair = (cached_fm_pair *)RELOC_OBJ(eptr->pair - eptr->pair->index) +
 			     eptr->pair->index;
-#endif
     for (i = 0; i <= eptr->fstack.depth; i++)
 	RELOC_PTR(gs_text_enum_t, fstack.items[i].font);
 }
@@ -240,10 +234,10 @@ gs_text_begin(gs_state * pgs, const gs_text_params_t * text,
        of a Type 3 font while stringwidth. 
        Unfortunately we can't effectively know a leaf font type here,
        so we load the color unconditionally . */
-	gx_set_dev_color(pgs);
-	code = gs_state_color_load(pgs);
-	if (code < 0)
-	    return code;
+    gx_set_dev_color(pgs);
+    code = gs_state_color_load(pgs);
+    if (code < 0)
+	return code;
     return gx_device_text_begin(pgs->device, (gs_imager_state *) pgs,
 				text, pgs->font, pgs->path, pgs->dev_color,
 				pcpath, mem, ppte);

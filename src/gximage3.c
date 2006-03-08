@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gximage3.c,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gximage3.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* ImageType 3 image implementation */
 #include "math_.h"		/* for ceil, floor */
 #include "memory_.h"
@@ -113,6 +113,7 @@ make_mid_default(gx_device **pmidev, gx_device *dev, int width, int height,
     midev->bitmap_memory = mem;
     midev->width = width;
     midev->height = height;
+    check_device_separable((gx_device *)midev);
     gx_device_fill_in_procs((gx_device *)midev);
     code = dev_proc(midev, open_device)((gx_device *)midev);
     if (code < 0) {

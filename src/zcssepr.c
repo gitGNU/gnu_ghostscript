@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zcssepr.c,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zcssepr.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Separation color space support */
 #include "memory_.h"
 #include "ghost.h"
@@ -69,6 +69,7 @@ zsetseparationspace(i_ctx_t *i_ctx_p)
     gs_function_t *pfn = NULL;
     separation_type sep_type;
     int code;
+    const gs_memory_t * mem = imemory;
 
     /* Verify that we have an array as our input parameter */
     check_read_type(*op, t_array);
@@ -92,7 +93,7 @@ zsetseparationspace(i_ctx_t *i_ctx_p)
 	default:
 	    return_error(e_typecheck);
 	case t_string:
-	    code = name_from_string(&sname, &sname);
+	    code = name_from_string(mem, &sname, &sname);
 	    if (code < 0)
 		return code;
 	    /* falls through */
@@ -100,9 +101,9 @@ zsetseparationspace(i_ctx_t *i_ctx_p)
 	    break;
     }
 
-    if ((code = name_ref((const byte *)"All", 3, &name_all, 0)) < 0)
+    if ((code = name_ref(mem, (const byte *)"All", 3, &name_all, 0)) < 0)
 	return code;
-    if ((code = name_ref((const byte *)"None", 4, &name_none, 0)) < 0)
+    if ((code = name_ref(mem, (const byte *)"None", 4, &name_none, 0)) < 0)
 	return code;
     sep_type = ( name_eq(&sname, &name_all) ? SEP_ALL :
 	         name_eq(&sname, &name_none) ? SEP_NONE : SEP_OTHER);
@@ -123,9 +124,9 @@ zsetseparationspace(i_ctx_t *i_ctx_p)
     if (code < 0)
 	return code;
     pmap = cs.params.separation.map;
-    gs_cspace_init(&cs, &gs_color_space_type_Separation, NULL);
+    gs_cspace_init(&cs, &gs_color_space_type_Separation, imemory, false);
     cs.params.separation.sep_type = sep_type;
-    cs.params.separation.sep_name = name_index(&sname);
+    cs.params.separation.sep_name = name_index(mem, &sname);
     cs.params.separation.get_colorname_string = gs_get_colorname_string;
     istate->colorspace.procs.special.separation.layer_name = pcsa[0];
     istate->colorspace.procs.special.separation.tint_transform = pcsa[2];

@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdtc.c,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdtc.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Composite and CID-based text processing for pdfwrite. */
 #include "memory_.h"
 #include "string_.h"
@@ -149,6 +149,7 @@ process_composite_text(gs_text_enum_t *pte, void *vbuf, uint bsize)
 		pte->returned.total_width.y = total_width.y +=
 		    out.returned.total_width.y;
 	    }
+	    pdf_text_release_cgp(penum);
 	}
 	if (font_code == 2)
 	    break;
@@ -160,9 +161,7 @@ process_composite_text(gs_text_enum_t *pte, void *vbuf, uint bsize)
     }
     if (!return_width)
 	return 0;
-    return gx_path_add_point(penum->path,
-			     penum->origin.x + float2fixed(total_width.x),
-			     penum->origin.y + float2fixed(total_width.y));
+    return pdf_shift_text_currentpoint(penum, &total_width);
 }
 
 /* ---------------- CMap-based composite font ---------------- */
@@ -314,7 +313,11 @@ scan_cmap_text(pdf_text_enum_t *pte)
     uint index = scan.index, xy_index = scan.xy_index;
     uint font_index0 = 0x7badf00d;
     bool done = false;
+    pdf_char_glyph_pairs_t p;
 
+    p.num_all_chars = 1;
+    p.num_unused_chars = 1;
+    p.unused_offset = 0;
     pte->returned.total_width.x = pte->returned.total_width.y = 0;;
     for (;;) {
 	uint break_index, break_xy_index;
@@ -334,7 +337,7 @@ scan_cmap_text(pdf_text_enum_t *pte)
 	    gs_glyph glyph;
 	    pdf_font_descriptor_t *pfd;
 	    byte *glyph_usage;
-	    double *real_widths, *w, *v;
+	    double *real_widths, *w, *v, *w0;
 	    int char_cache_size, width_cache_size;
 	    uint cid;
 	    gs_char unicode_char;
@@ -362,7 +365,9 @@ scan_cmap_text(pdf_text_enum_t *pte)
 	    if (glyph == GS_NO_GLYPH)
 		glyph = GS_MIN_CID_GLYPH;
 	    cid = glyph - GS_MIN_CID_GLYPH;
-	    code = pdf_obtain_cidfont_resource(pdev, subfont, &pdsubf, &glyph, 1);
+	    p.s[0].glyph = glyph;
+	    p.s[0].chr = cid;
+	    code = pdf_obtain_cidfont_resource(pdev, subfont, &pdsubf, &p);
 	    if (code < 0)
 		return code;
 	    font_change = (pdsubf != pdsubf0 && pdsubf0 != NULL);
@@ -379,7 +384,7 @@ scan_cmap_text(pdf_text_enum_t *pte)
 	    code = pdf_resize_resource_arrays(pdev, pdsubf, cid + 1);
 	    if (code < 0)
 		return code;
-	    code = pdf_obtain_cidfont_widths_arrays(pdev, pdsubf, wmode, &w, &v);
+	    code = pdf_obtain_cidfont_widths_arrays(pdev, pdsubf, wmode, &w, &w0, &v);
 	    if (code < 0)
 		return code;
 	    unicode_char = subfont->procs.decode_glyph(subfont, glyph);
@@ -437,6 +442,16 @@ scan_cmap_text(pdf_text_enum_t *pte)
 		    }
 		    real_widths[cid] = widths.real_width.w;
 		}
+		if (wmode) {
+		    /* Since AR5 use W or DW to compute the x-coordinate of
+		       v-vector, comupte and store the glyph width for WMode 0. */
+		    /* fixme : skip computing real_width here. */
+		    code = pdf_glyph_widths(pdsubf, 0, glyph, (gs_font *)subfont, &widths,
+				    pte->cdevproc_callout ? pte->cdevproc_result : NULL);
+		    if (code < 0)
+			return code;
+		    w0[cid] = widths.Width.w;
+		}
 		if (pdsubf->u.cidfont.CIDToGIDMap != 0) {
 		    gs_font_cid2 *subfont2 = (gs_font_cid2 *)subfont;
 
@@ -445,6 +460,8 @@ scan_cmap_text(pdf_text_enum_t *pte)
 		}
 	    }
 	    pdsubf->used[cid >> 3] |= 0x80 >> (cid & 7);
+	    if (wmode)
+		pdsubf->u.cidfont.used2[cid >> 3] |= 0x80 >> (cid & 7);
 	    if (pte->cdevproc_callout) {
 		 /* Only handle a single character because its width is stored 
 		    into pte->cdevproc_result, and process_text_modify_width neds it. 
@@ -518,13 +535,11 @@ scan_cmap_text(pdf_text_enum_t *pte)
 	    }
 	    pte->index = break_index;
 	    pte->xy_index = break_xy_index;
-
-	    code = gx_path_add_point(pte->path,
-				 pte->origin.x + float2fixed(wxy.x),
-				 pte->origin.y + float2fixed(wxy.y));
+	    code = pdf_shift_text_currentpoint(pte, &wxy);
 	    if (code < 0)
 		return code;
 	} 
+	pdf_text_release_cgp(pte);
 	index = break_index;
 	xy_index = break_xy_index;
 	if (done || rcode != 0)
@@ -568,6 +583,7 @@ process_cmap_text(gs_text_enum_t *penum, void *vbuf, uint bsize)
 int
 process_cid_text(gs_text_enum_t *pte, void *vbuf, uint bsize)
 {
+    pdf_text_enum_t *penum = (pdf_text_enum_t *)pte;
     uint operation = pte->text.operation;
     gs_text_enum_t save;
     gs_font *scaled_font = pte->current_font; /* CIDFont */
@@ -605,7 +621,7 @@ process_cid_text(gs_text_enum_t *pte, void *vbuf, uint bsize)
 
 	    if (gnum & ~0xffffL)
 		return_error(gs_error_rangecheck);
-	    *pchars++ = (byte)(gnum >> 8);
+	    *pchars++ = (byte)(gnum >> 8);  
 	    *pchars++ = (byte)gnum;
 	}
     }
@@ -620,7 +636,7 @@ process_cid_text(gs_text_enum_t *pte, void *vbuf, uint bsize)
 
     /* Find or create the CIDFont resource. */
 
-    code = pdf_obtain_font_resource(pte, NULL, &pdsubf);
+    code = pdf_obtain_font_resource(penum, NULL, &pdsubf);
     if (code < 0)
 	return code;
 

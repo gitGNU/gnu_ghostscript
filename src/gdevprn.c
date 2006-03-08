@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevprn.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevprn.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Generic printer driver support */
 #include "ctype_.h"
 #include "gdevprn.h"
@@ -143,7 +143,7 @@ open_c:
     clist_init_params(pclist_dev, base, space, pdev,
 		      ppdev->printer_procs.buf_procs,
 		      space_params->band, ppdev->is_async_renderer,
-		      (ppdev->bandlist_memory == 0 ? &gs_memory_default :
+		      (ppdev->bandlist_memory == 0 ? pdev->memory->non_gc_memory:
 		       ppdev->bandlist_memory),
 		      ppdev->free_up_bandlist_memory,
 		      ppdev->clist_disable_mask);
@@ -229,7 +229,7 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
     int ecode = 0;
     int pass;
     gs_memory_t *buffer_memory =
-	(ppdev->buffer_memory == 0 ? &gs_memory_default :
+	(ppdev->buffer_memory == 0 ? pdev->memory->non_gc_memory :
 	 ppdev->buffer_memory);
 
     /* If reallocate, find allocated memory & tear down buffer device */
@@ -309,7 +309,7 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
 		the_memory = base;
 	}
 	if (!is_command_list && pass == 1 && PRN_MIN_MEMORY_LEFT != 0
-	    && buffer_memory == &gs_memory_default) {
+	    && buffer_memory == pdev->memory->non_gc_memory) {
 	    /* before using full memory buffer, ensure enough working mem left */
 	    byte * left = gs_alloc_bytes( buffer_memory,
 					  PRN_MIN_MEMORY_LEFT, "printer mem left");
@@ -392,6 +392,12 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
 	COPY_PROC(get_color_comp_index);
 	COPY_PROC(encode_color);
 	COPY_PROC(decode_color);
+	COPY_PROC(begin_image);
+	COPY_PROC(text_begin);
+	COPY_PROC(fill_path);
+	COPY_PROC(stroke_path);
+	COPY_PROC(fill_rectangle_hl_color);
+	COPY_PROC(update_spot_equivalent_colors);
 #undef COPY_PROC
 	/* If using a command list, already opened the device. */
 	if (is_command_list)
@@ -429,7 +435,7 @@ gdev_prn_free_memory(gx_device *pdev)
     gx_device_printer * const ppdev = (gx_device_printer *)pdev;
     byte *the_memory = 0;
     gs_memory_t *buffer_memory =
-	(ppdev->buffer_memory == 0 ? &gs_memory_default :
+	(ppdev->buffer_memory == 0 ? pdev->memory->non_gc_memory :
 	 ppdev->buffer_memory);
 
     gdev_prn_tear_down(pdev, &the_memory);
@@ -985,6 +991,7 @@ gx_default_create_buf_device(gx_device **pbdev, gx_device *target,
     if (target == (gx_device *)mdev) {
 	/* The following is a special hack for setting up printer devices. */
 	assign_dev_procs(mdev, mdproto);
+        check_device_separable((gx_device *)mdev);
 	gx_device_fill_in_procs((gx_device *)mdev);
     } else
 	gs_make_mem_device(mdev, mdproto, mem, (for_band ? 1 : 0),

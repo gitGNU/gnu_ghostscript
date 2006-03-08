@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gspath.h,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gspath.h,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Graphics state path procedures */
 /* Requires gsstate.h */
 
@@ -45,7 +45,6 @@ int gs_newpath(gs_state *),
     gs_rcurveto(gs_state *, floatp, floatp, floatp, floatp, floatp, floatp),
     gs_closepath(gs_state *);
 
-/* Imager-level procedures */
 #ifndef gs_imager_state_DEFINED
 #  define gs_imager_state_DEFINED
 typedef struct gs_imager_state_s gs_imager_state;
@@ -54,14 +53,18 @@ typedef struct gs_imager_state_s gs_imager_state;
 #  define gx_path_DEFINED
 typedef struct gx_path_s gx_path;
 #endif
+#ifndef gs_matrix_fixed_DEFINED
+#define gs_matrix_fixed_DEFINED
+typedef struct gs_matrix_fixed_s gs_matrix_fixed;
+#endif
+
+/* Imager-level procedures */
 int gs_imager_arc_add(gx_path * ppath, gs_imager_state * pis,
 		      bool clockwise, floatp axc, floatp ayc,
 		      floatp arad, floatp aang1, floatp aang2,
 		      bool add_line);
-
-#define gs_arc_add_inline(pgs, cw, axc, ayc, arad, aa1, aa2, add)\
-  gs_imager_arc_add((pgs)->path, (gs_imager_state *)(pgs),\
-		    cw, axc, ayc, arad, aa1, aa2, add)
+void make_quadrant_arc(gs_point *p, const gs_point *c, 
+	const gs_point *p0, const gs_point *p1, double r);
 
 /* Add the current path to the path in the previous graphics state. */
 int gs_upmergepath(gs_state *);

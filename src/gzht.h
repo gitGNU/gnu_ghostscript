@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gzht.h,v 1.4 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: gzht.h,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Internal procedures for halftones */
 /* Requires gxdevice.h, gxdcolor.h */
 
@@ -180,7 +180,7 @@ void gx_ht_free_cache(gs_memory_t *, gx_ht_cache *);
    (pcache)->ht_tiles[0].tiles.data = 0)
 
 /* Initialize a halftone cache with a given order. */
-void gx_ht_init_cache(gx_ht_cache *, const gx_ht_order *);
+void gx_ht_init_cache(const gs_memory_t *mem, gx_ht_cache *, const gx_ht_order *);
 
 /* Check whether the tile cache corresponds to the current order */
 bool gx_check_tile_cache_current(const gs_imager_state * pis);
@@ -244,7 +244,7 @@ void gx_set_effective_transfer(gs_state * pgs);
  *
  * A negative value is returned if the color name is not found.
  */
-int gs_color_name_component_number(const gx_device * dev, const char * pname,
+int gs_color_name_component_number(gx_device * dev, const char * pname,
 				int name_size, int halftonetype);
 /*
  * See gs_color_name_component_number for main description.

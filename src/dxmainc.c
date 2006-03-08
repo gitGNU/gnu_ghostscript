@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: dxmainc.c,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: dxmainc.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 
 /* dxmainc.c */
 /* 
@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 {
     int exit_status;
     int code = 1, code1;
-    gs_main_instance *instance;
+    void *instance;
     int exit_code;
 
     /* run Ghostscript */

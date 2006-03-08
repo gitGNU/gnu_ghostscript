@@ -1,4 +1,4 @@
-/* Copyright (C) 1994, 1995 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2000-2004 artofcode LLC.  All rights reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,23 +14,10 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: macsysstat.h,v 1.4 2005/12/13 16:57:26 jemarch Exp $ */
+/*$Id: rinkj-epson870.h,v 1.1 2006/03/08 12:30:41 Arabidopsis Exp $ */
+/* A Rinkj driver for a number of variable-dot Epson devices. */
 
-#ifndef __sys_stat_h__
-#define __sys_stat_h__
-
-#include "unix.mac.h"
-
-//struct stat {
-//	unsigned long	st_blocks;		// number of blocks allocated
-//	unsigned long	st_size;		// total size in bytes
-//	unsigned long	st_mtime;		// mod time
-//	unsigned long	st_ctime;		// create time
-//};
-
-//int stat(const char * file_name, struct stat *buf);
-
-#endif /* __sys_stat_h__ */
+RinkjDevice *
+rinkj_epson870_new (RinkjByteStream *out);

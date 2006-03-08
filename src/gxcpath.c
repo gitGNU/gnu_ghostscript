@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxcpath.c,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxcpath.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Implementation of clipping paths, other than actual clipping */
 #include "gx.h"
 #include "gserrors.h"
@@ -115,7 +115,7 @@ cpath_init_rectangle(gx_clip_path * pcpath, gs_fixed_rect * pbox)
     pcpath->path_valid = false;
     pcpath->path.bbox = *pbox;
     gx_cpath_set_outer_box(pcpath);
-    pcpath->id = gs_next_ids(1);	/* path changed => change id */
+    pcpath->id = gs_next_ids(pcpath->path.memory, 1);	/* path changed => change id */
 }
 private void
 cpath_init_own_contents(gx_clip_path * pcpath)
@@ -365,8 +365,10 @@ gx_cpath_path_list_new(gs_memory_t *mem, gx_clip_path *pcpath, int rule,
 	if (code < 0)
 	    return code;
 	code = gx_cpath_to_path(pcpath, &pcplist->path);
-    } else 
-	code = gx_path_init_contained_shared(&pcplist->path, ppfrom, mem, cname);
+    } else {
+	gx_path_init_local(&pcplist->path, mem);
+	code = gx_path_assign_preserve(&pcplist->path, ppfrom);
+    }
     if (code < 0)
 	return code;
     pcplist->next = next;
@@ -668,7 +670,7 @@ gx_cpath_scale_exp2_shared(gx_clip_path * pcpath, int log2_scale_x,
 #undef SCALE_V
 	    }
     }
-    pcpath->id = gs_next_ids(1);	/* path changed => change id */
+    pcpath->id = gs_next_ids(pcpath->path.memory, 1);	/* path changed => change id */
     return 0;
 }
 

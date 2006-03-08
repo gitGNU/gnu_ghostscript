@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpsf2.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpsf2.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Write an embedded CFF font with either Type 1 or Type 2 CharStrings */
 #include "math_.h"		/* for fabs */
 #include "memory_.h"
@@ -385,6 +385,7 @@ cff_put_CharString(cff_writer_t *pcw, const byte *data, uint size,
 	gs_glyph_data_t gdata;
 	int code;
 
+	gdata.memory = pfont->memory;
 	gs_glyph_data_from_string(&gdata, data, size, NULL);
 	code = psf_convert_type1_to_type2(s, &gdata, pfont);
 	if (code < 0)
@@ -819,6 +820,7 @@ cff_write_CharStrings_offsets(cff_writer_t *pcw, psf_glyph_enum_t *penum,
     stream poss;
     int code;
 
+    s_init(&poss, NULL);
     psf_enumerate_glyphs_reset(penum);
     for (glyph = gs_no_glyph, count = 0, offset = 1;
 	 (code = psf_enumerate_glyphs_next(penum, &glyph)) != 1;
@@ -827,6 +829,7 @@ cff_write_CharStrings_offsets(cff_writer_t *pcw, psf_glyph_enum_t *penum,
 	gs_font_type1 *pfd;
 	int gcode;
 
+	gdata.memory = pfont->memory;
 	if (code == 0 &&
 	    (gcode = pcw->glyph_data(pfont, glyph, &gdata, &pfd)) >= 0
 	    ) {
@@ -867,6 +870,7 @@ cff_write_CharStrings(cff_writer_t *pcw, psf_glyph_enum_t *penum,
 	gs_glyph_data_t gdata;
 	gs_font_type1 *pfd;
 
+	gdata.memory = pfont->memory;
 	if (code == 0 &&
 	    (code = pcw->glyph_data(pfont, glyph, &gdata, &pfd)) >= 0
 	    ) {
@@ -892,6 +896,7 @@ cff_write_Subrs_offsets(cff_writer_t *pcw, uint *pcount, gs_font_type1 *pfont,
     int code;
     gs_glyph_data_t gdata;
 
+    gdata.memory = pfont->memory;
     for (j = 0, offset = 1;
 	 (code = pfont->data.procs.subr_data(pfont, j, global, &gdata)) !=
 	     gs_error_rangecheck;
@@ -915,6 +920,7 @@ cff_write_Subrs(cff_writer_t *pcw, uint subrs_count, uint subrs_size,
     gs_glyph_data_t gdata;
     int code;
 
+    gdata.memory = pfont->memory;
     cff_put_Index_header(pcw, subrs_count, subrs_size);
     cff_write_Subrs_offsets(pcw, &ignore_count, pfont, global);
     for (j = 0;
@@ -1178,6 +1184,7 @@ psf_write_type2_font(stream *s, gs_font_type1 *pfont, int options,
 	    pfont->data.defaultWidthX = pfont->data.nominalWidthX = 0;
     }
     writer.options = options;
+    s_init(&poss, NULL);
     swrite_position_only(&poss);
     writer.strm = &poss;
     writer.pfont = pbfont;
@@ -1558,6 +1565,7 @@ psf_write_cid0_font(stream *s, gs_font_cid0 *pfont, int options,
 	return_error(gs_error_rangecheck);
 
     writer.options = options;
+    s_init(&poss, NULL);
     swrite_position_only(&poss);
     writer.strm = &poss;
     writer.pfont = pbfont;

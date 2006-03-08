@@ -17,7 +17,7 @@
   
 */
 
-/*$Id: gxacpath.c,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/*$Id: gxacpath.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Accumulator for clipping paths */
 #include "gx.h"
 #include "gserrors.h"
@@ -156,7 +156,7 @@ gx_cpath_accum_end(const gx_device_cpath_accum * padev, gx_clip_path * pcpath)
     }
     gx_cpath_set_outer_box(&apath);
     apath.path_valid = false;
-    apath.id = gs_next_ids(1);	/* path changed => change id */
+    apath.id = gs_next_ids(padev->list_memory, 1);	/* path changed => change id */
     gx_cpath_assign_free(pcpath, &apath);
     return 0;
 }

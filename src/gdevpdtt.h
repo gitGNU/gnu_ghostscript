@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdtt.h,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdtt.h,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Internal text processing interface for pdfwrite */
 
 #ifndef gdevpdtt_INCLUDED
@@ -85,6 +85,25 @@
 
 /* ---------------- Types and structures ---------------- */
 
+#ifndef pdf_char_glyph_pair_DEFINED
+#  define pdf_char_glyph_pair_DEFINED
+typedef struct pdf_char_glyph_pair_s pdf_char_glyph_pair_t;
+#endif
+
+#ifndef pdf_char_glyph_pairs_DEFINED
+#  define pdf_char_glyph_pairs_DEFINED
+typedef struct pdf_char_glyph_pairs_s pdf_char_glyph_pairs_t;
+#endif
+
+/* Define a structure for a text characters list. */
+/* It must not contain pointers due to variable length. */
+struct pdf_char_glyph_pairs_s {
+    int num_all_chars;
+    int num_unused_chars;
+    int unused_offset;  /* The origin of the unused character table.*/
+    pdf_char_glyph_pair_t s[1];  /* Variable length. */
+};
+
 /* Define the text enumerator. */
 typedef struct pdf_text_enum_s {
     gs_text_enum_common;
@@ -93,12 +112,13 @@ typedef struct pdf_text_enum_s {
     bool charproc_accum;
     bool cdevproc_callout;
     double cdevproc_result[10];
+    pdf_char_glyph_pairs_t *cgp;
 } pdf_text_enum_t;
 #define private_st_pdf_text_enum()\
   extern_st(st_gs_text_enum);\
-  gs_private_st_suffix_add1(st_pdf_text_enum, pdf_text_enum_t,\
+  gs_private_st_suffix_add2(st_pdf_text_enum, pdf_text_enum_t,\
     "pdf_text_enum_t", pdf_text_enum_enum_ptrs, pdf_text_enum_reloc_ptrs,\
-    st_gs_text_enum, pte_default)
+    st_gs_text_enum, pte_default, cgp)
 
 /*
  * Define quantities derived from the current font and CTM, used within
@@ -147,17 +167,23 @@ typedef struct pdf_glyph_widths_s {
 int pdf_font_orig_matrix(const gs_font *font, gs_matrix *pmat);
 int font_orig_scale(const gs_font *font, double *sx);
 
+/* 
+ * Check the Encoding compatibility 
+ */
+bool pdf_check_encoding_compatibility(const pdf_font_resource_t *pdfont, 
+		const pdf_char_glyph_pair_t *pairs, int num_chars);
+
 /*
  * Create or find a font resource object for a text.
  */
 int
-pdf_obtain_font_resource(const gs_text_enum_t *penum, 
+pdf_obtain_font_resource(pdf_text_enum_t *penum, 
 		const gs_string *pstr, pdf_font_resource_t **ppdfont);
 
 /*
  * Create or find a font resource object for a glyphshow text.
  */
-int pdf_obtain_font_resource_unencoded(const gs_text_enum_t *penum, 
+int pdf_obtain_font_resource_unencoded(pdf_text_enum_t *penum, 
 	    const gs_string *pstr, pdf_font_resource_t **ppdfont, const gs_glyph *gdata);
 
 /*
@@ -165,7 +191,7 @@ int pdf_obtain_font_resource_unencoded(const gs_text_enum_t *penum,
  */
 int pdf_obtain_cidfont_resource(gx_device_pdf *pdev, gs_font *subfont, 
 			    pdf_font_resource_t **ppdsubf, 
-			    gs_glyph *glyphs, int num_glyphs);
+			    pdf_char_glyph_pairs_t *cgp);
 
 /*
  * Create or find a parent Type 0 font resource object for a CID font resource.
@@ -245,6 +271,9 @@ bool pdf_is_CID_font(gs_font *font);
 /* Get a synthesized Type 3 font scale. */
 void pdf_font3_scale(gx_device_pdf *pdev, gs_font *font, double *scale);
 
+/* Release a text characters colloction. */
+void pdf_text_release_cgp(pdf_text_enum_t *penum);
+
 
 /* ------ gdevpdtc.c ------ */
 
@@ -288,5 +317,7 @@ pdf_add_ToUnicode(gx_device_pdf *pdev, gs_font *font, pdf_font_resource_t *pdfon
  */
 int pdf_encode_glyph(gs_font_base *bfont, gs_glyph glyph0,
 	    byte *buf, int buf_size, int *char_code_length);
+
+int pdf_shift_text_currentpoint(pdf_text_enum_t *penum, gs_point *wpt);
 
 #endif /* gdevpdtt_INCLUDED */

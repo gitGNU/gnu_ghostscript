@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxchar.c,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxchar.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Default implementation of text writing */
 #include "gx.h"
 #include "memory_.h"
@@ -431,9 +431,9 @@ compute_glyph_raster_params(gs_show_enum *penum, bool in_setcachedevice, int *al
 	    subpix_origin->y = 0;
 #	else
 	    int scy = -1L << (_fixed_shift - log2_scale->y);
-	int rdy =  1L << (_fixed_shift - 1 - log2_scale->y);
+	    int rdy =  1L << (_fixed_shift - 1 - log2_scale->y);
 
-	subpix_origin->y = ((penum->origin.y + rdy) & scy) & (fixed_1 - 1);
+	    subpix_origin->y = ((penum->origin.y + rdy) & scy) & (fixed_1 - 1);
 #	endif
 	subpix_origin->x = ((penum->origin.x + rdx) & scx) & (fixed_1 - 1);
     } else
@@ -586,12 +586,10 @@ set_cache_device(gs_show_enum * penum, gs_state * pgs, floatp llx, floatp lly,
 	cc->wmode = gs_rootfont(pgs)->WMode;
 	cc->wxy = penum->wxy;
 	cc->subpix_origin = subpix_origin;
-#	if NEW_TT_INTERPRETER
-	    if (penum->pair != 0)
-		cc_set_pair(cc, penum->pair);
-	    else
-		cc->pair = 0;
-#	endif
+	if (penum->pair != 0)
+	    cc_set_pair(cc, penum->pair);
+	else
+	    cc->pair = 0;
 	/* Install the device */
 	gx_set_device_only(pgs, (gx_device *) penum->dev_cache);
 	pgs->ctm_default_set = false;
@@ -782,12 +780,9 @@ show_update(gs_show_enum * penum)
 private int
 show_fast_move(gs_state * pgs, gs_fixed_point * pwxy)
 {
-    int code = gx_path_add_rel_point_inline(pgs->path, pwxy->x, pwxy->y);
-
-    /* If the current position is out of range, don't try to move. */
-    if (code == gs_error_limitcheck && pgs->clamp_coordinates)
-	code = 0;
-    return code;
+    return gs_moveto_aux((gs_imager_state *)pgs, pgs->path,
+			      pgs->current_point.x + fixed2float(pwxy->x), 
+			      pgs->current_point.y + fixed2float(pwxy->y));
 }
 
 /* Get the current character code. */
@@ -888,6 +883,7 @@ show_proceed(gs_show_enum * penum)
     gs_glyph glyph;
     int code;
     cached_char *cc;
+    gs_log2_scale_point log2_scale;
 
     if (penum->charpath_flag == cpm_show && SHOW_USES_OUTLINE(penum)) {
 	code = gs_state_color_load(pgs);
@@ -916,9 +912,7 @@ show_proceed(gs_show_enum * penum)
 		    pgs->char_tm_valid = false;
 		    show_state_setup(penum);
 		    pair = 0;
-#		    if NEW_TT_INTERPRETER
-			penum->pair = 0;
-#		    endif
+		    penum->pair = 0;
 		    /* falls through */
 		case 0:	/* plain char */
 		    /*
@@ -950,7 +944,6 @@ show_proceed(gs_show_enum * penum)
 				 */
 		    {
 			int alpha_bits, depth;
-			gs_log2_scale_point log2_scale;
 			gs_fixed_point subpix_origin;
 
 			code = compute_glyph_raster_params(penum, false, 
@@ -963,9 +956,7 @@ show_proceed(gs_show_enum * penum)
 			    if (code < 0)
 				return code;
 			}
-#			if NEW_TT_INTERPRETER
-			    penum->pair = pair;
-#			endif
+			penum->pair = pair;
 			cc = gx_lookup_cached_char(pfont, pair, glyph, wmode,
 						   depth, &subpix_origin);
 		    }
@@ -973,6 +964,10 @@ show_proceed(gs_show_enum * penum)
 			/* Character is not in cache. */
 			/* If possible, try for an xfont before */
 			/* rendering from the outline. */
+
+		        /* If antialiasing is in effect, don't use xfont */
+		        if (log2_scale.x + log2_scale.y > 0)
+			    goto no_cache;
 			if (pfont->ExactSize == fbit_use_outlines ||
 			    pfont->PaintType == 2
 			    )
@@ -1072,29 +1067,23 @@ show_proceed(gs_show_enum * penum)
 		pfont = penum->fstack.items[penum->fstack.depth].font;
 		penum->current_font = pfont;
 		show_state_setup(penum);
-#		if NEW_TT_INTERPRETER
-		    pair = 0;
-#		endif
+		pair = 0;
 	    case 0:
-#		if NEW_TT_INTERPRETER
-		    {
-			int alpha_bits, depth;
-			gs_log2_scale_point log2_scale;
-			gs_fixed_point subpix_origin;
+		{   int alpha_bits, depth;
+		    gs_log2_scale_point log2_scale;
+		    gs_fixed_point subpix_origin;
 
-			code = compute_glyph_raster_params(penum, false, &alpha_bits, &depth, &subpix_origin, &log2_scale);
+		    code = compute_glyph_raster_params(penum, false, &alpha_bits, &depth, &subpix_origin, &log2_scale);
+		    if (code < 0)
+			return code;
+		    if (pair == 0) {
+			code = gx_lookup_fm_pair(pfont, &char_tm_only(pgs), &log2_scale,
+				penum->charpath_flag != cpm_show, &pair);
 			if (code < 0)
 			    return code;
-			if (pair == 0) {
-			    code = gx_lookup_fm_pair(pfont, &char_tm_only(pgs), &log2_scale,
-				    penum->charpath_flag != cpm_show, &pair);
-			    if (code < 0)
-				return code;
-			}
-			penum->pair = pair;
 		    }
-#		endif
-		;
+		    penum->pair = pair;
+		}
 	}
 	SET_CURRENT_CHAR(penum, chr);
 	if (glyph == gs_no_glyph) {

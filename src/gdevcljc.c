@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevcljc.c,v 1.4 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevcljc.c,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /*
  * H-P Color LaserJet 5/5M contone device; based on the gdevclj.c.
  */
@@ -98,6 +98,6 @@ const gx_device_printer gs_cljet5c_device =
 		    85, 110, X_DPI, Y_DPI,
 		    0.167, 0.167,
 		    0.167, 0.167,
-		    3, 24, 255, 255, 5, 5,
+		    3, 24, 255, 255, 256, 256,
 		    cljc_print_page)
 };

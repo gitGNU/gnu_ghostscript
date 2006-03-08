@@ -1,4 +1,4 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 1989, 2000-2003 artofcode LLC.  All rights reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,8 +16,9 @@
 
 */
 
-/* $Id: gp_os9.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_os9.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* OSK-specific routines for Ghostscript */
+
 #include "pipe_.h"
 #include "string_.h"
 #include "time_.h"
@@ -103,6 +104,24 @@ void
 gp_get_usertime(long *pdt)
 {
     return gp_get_realtime(pdt);	/* not yet implemented */
+}
+
+
+/* ------ Persistent data cache ------*/
+
+/* insert a buffer under a (type, key) pair */
+int gp_cache_insert(int type, byte *key, int keylen, void *buffer, int buflen)
+{
+    /* not yet implemented */
+    return 0;
+}
+
+/* look up a (type, key) in the cache */
+int gp_cache_query(int type, byte* key, int keylen, void **buffer,
+    gp_cache_alloc alloc, void *userdata)
+{
+    /* not yet implemented */
+    return -1;
 }
 
 /* ------ Printer accessing ------ */

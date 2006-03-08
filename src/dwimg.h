@@ -1,4 +1,4 @@
-/* Copyright (C) 1996, 2001, Ghostgum Software Pty Ltd.  All rights reserved.
+/* Copyright (C) 1996-2004, Ghostgum Software Pty Ltd.  All rights reserved.
 
   This file is part of GNU ghostscript
 
@@ -16,13 +16,26 @@
 
  */
 
-/* $Id: dwimg.h,v 1.4 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: dwimg.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 
 #ifndef dwimg_INCLUDED
 #  define dwimg_INCLUDED
 
 
 /* Windows Image Window structure */
+
+typedef struct IMAGE_DEVICEN_S IMAGE_DEVICEN;
+struct IMAGE_DEVICEN_S {
+    int used;		/* non-zero if in use */
+    int visible;	/* show on window */
+    char name[64];
+    int cyan;
+    int magenta;
+    int yellow;
+    int black;
+    int menu;		/* non-zero if menu item added to system menu */
+};
+#define IMAGE_DEVICEN_MAX 8
 
 typedef struct IMAGE_S IMAGE;
 struct IMAGE_S {
@@ -36,11 +49,16 @@ struct IMAGE_S {
     BITMAPINFOHEADER bmih;
     HPALETTE palette;
     int bytewidth;
-    int sep;		/* CMYK separations to display */
+    int devicen_gray;	/* true if a single separation should be shown gray */
+    IMAGE_DEVICEN devicen[IMAGE_DEVICEN_MAX];
 
     /* periodic redrawing */
-    SYSTEMTIME update_time;
-    int update_interval;
+    UINT update_timer;		/* identifier */
+    int update_tick;		/* timer duration in milliseconds */
+    int update_count;		/* Number of WM_TIMER messages received */
+    int update_interval;	/* Number of WM_TIMER until refresh */
+    int pending_update;		/* We have asked for periodic updates */
+    int pending_sync;		/* We have asked for a SYNC */
 
     /* Window scrolling stuff */
     int cxClient, cyClient;
@@ -75,6 +93,7 @@ void image_page(IMAGE *img);
 void image_presize(IMAGE *img, int new_width, int new_height, int new_raster, 
    unsigned int new_format);
 void image_poll(IMAGE *img);
+void image_updatesize(IMAGE *img);
 
 
 #endif /* dwimg_INCLUDED */

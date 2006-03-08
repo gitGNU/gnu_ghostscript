@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gspaint.c,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gspaint.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Painting procedures for Ghostscript library */
 #include "math_.h"		/* for fabs */
 #include "gx.h"
@@ -398,5 +398,9 @@ gs_strokepath(gs_state * pgs)
 	gx_path_free(&spath, "gs_strokepath");
 	return code;
     }
-    return gx_path_assign_free(pgs->path, &spath);
+    code = gx_path_assign_free(pgs->path, &spath);
+    if (code < 0)
+	return code;
+    gx_setcurrentpoint(pgs, fixed2float(spath.position.x), fixed2float(spath.position.y));
+    return 0;
 }

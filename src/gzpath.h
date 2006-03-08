@@ -17,7 +17,7 @@
   
 */
 
-/*$Id: gzpath.h,v 1.5 2005/12/13 16:57:25 jemarch Exp $ */
+/*$Id: gzpath.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Structure and internal procedure definitions for paths */
 /* Requires gxfixed.h */
 
@@ -164,38 +164,18 @@ int gx_curve_log2_samples(fixed, fixed, const curve_segment *, fixed);
  */
 int gx_curve_monotonic_points(fixed, fixed, fixed, fixed, double[2]);
 
-/* Split a curve at an arbitrary value of t. */
-void gx_curve_split(fixed, fixed, const curve_segment *, double,
-		    curve_segment *, curve_segment *);
+/* Monotonize a curve, by splitting it if necessary. */
+int gx_curve_monotonize(gx_path * ppath, const curve_segment * pc);
 
 /* Flatten a partial curve by sampling (internal procedure). */
 int gx_subdivide_curve(gx_path *, int, curve_segment *, segment_notes);
-#if FLATTENED_CURVE_ITERATOR0_COMPATIBLE
-bool gx_check_nearly_collinear(fixed *x0, fixed *y0, fixed *x1, fixed *y1, fixed *x2, fixed *y2);
-#endif
+/*
+ * Define the maximum number of points for sampling if we want accurate
+ * rasterizing.  2^(k_sample_max*3)-1 must fit into a uint with a bit
+ * to spare; also, we must be able to compute 1/2^(3*k) by table lookup.
+ */
+#define k_sample_max min((size_of(int) * 8 - 1) / 3, 10)
 
-/* Initialize a cursor for rasterizing a monotonic curve. */
-typedef struct curve_cursor_s {
-    /* Following are set at initialization */
-    int k;			/* 2^k segments */
-    gs_fixed_point p0;		/* starting point */
-    const curve_segment *pc;	/* other points */
-    fixed a, b, c;		/* curve coefficients */
-    double da, db, dc;		/* scaled double versions of a, b, c */
-    bool double_set;		/* true if da/b/c set */
-    int fixed_limit;		/* can do in fixed point if t <= limit */
-    /* Following are updated dynamically. */
-    struct ccc_ {		/* one-element cache */
-	fixed ky0, ky3;		/* key (range) */
-	fixed xl, xd;		/* value */
-    } cache;
-} curve_cursor;
-void gx_curve_cursor_init(curve_cursor * prc, fixed x0, fixed y0,
-			  const curve_segment * pc, int k);
-
-/* Return the value of X at a given Y value on a monotonic curve. */
-/* y must lie between prc->p0.y and prc->pt.y. */
-fixed gx_curve_x_at_y(curve_cursor * prc, fixed y);
 
 /*
  * The path state flags reflect the most recent operation on the path
@@ -258,10 +238,6 @@ typedef enum {
   ((ppath)->state_flags = psf_last_draw)
 #define path_update_closepath(ppath)\
   ((ppath)->state_flags = psf_last_closepath)
-#define path_set_outside_position(ppath, px, py)\
-  ((ppath)->outside_position.x = (px),\
-   (ppath)->outside_position.y = (py),\
-   (ppath)->state_flags |= psf_outside_range)
 
 /*
  * In order to be able to reclaim path segments at the right time, we need
@@ -343,8 +319,6 @@ struct gx_path_s {
     int subpath_count;
     int curve_count;
     gs_fixed_point position;	/* current position */
-    gs_point outside_position;	/* position if outside_range is set */
-    gs_point outside_start;	/* outside_position of last moveto */
     gx_path_procs *procs;
 };
 
@@ -393,46 +367,35 @@ extern_st(st_path_enum);
 #define gx_path_current_point_inline(ppath,ppt)\
  ( !path_position_valid(ppath) ? gs_note_error(gs_error_nocurrentpoint) :\
    ((ppt)->x = ppath->position.x, (ppt)->y = ppath->position.y, 0) )
-/* ...rel_point rather than ...relative_point is because */
-/* some compilers dislike identifiers of >31 characters. */
-#define gx_path_add_rel_point_inline(ppath,dx,dy)\
- ( !path_position_in_range(ppath) || ppath->bbox_set ?\
-   gx_path_add_relative_point(ppath, dx, dy) :\
-   (ppath->position.x += dx, ppath->position.y += dy,\
-    path_update_moveto(ppath), 0) )
 
-#if FLATTENED_CURVE_ITERATOR
 /* An iterator of flattened segments for a minotonic curve. */
-typedef struct gx_flattened_curve_iterator_s gx_flattened_curve_iterator;
-struct gx_flattened_curve_iterator_s {
+typedef struct gx_flattened_iterator_s gx_flattened_iterator;
+struct gx_flattened_iterator_s {
     /* private : */
     fixed x0, y0, x3, y3;
     fixed cx, bx, ax, cy, by, ay;
+    fixed x, y;
     uint i, k;
     uint rmask;			/* M-1 */
     fixed idx, idy, id2x, id2y, id3x, id3y;	/* I */
     uint rx, ry, rdx, rdy, rd2x, rd2y, rd3x, rd3y;	/* R */
-    segment_notes notes;
-#if CURVED_TRAPEZOID_FILL
-#if FLATTENED_CURVE_ITERATOR0_COMPATIBLE
-    bool reverse;
-#endif
-#endif
     /* public : */
+    bool curve;
     fixed lx0, ly0, lx1, ly1;
 };
 
-bool gx_flattened_curve_iterator__init(gx_flattened_curve_iterator *this, 
-	    fixed x0, fixed y0, const curve_segment *pc, int k, bool reverse, segment_notes notes);
-bool gx_flattened_curve_iterator__init_line(gx_flattened_curve_iterator *this, 
-	    fixed x0, fixed y0, const line_segment *pc, segment_notes notes);
-bool gx_flattened_curve_iterator__next(gx_flattened_curve_iterator *this);
+bool gx_flattened_iterator__init(gx_flattened_iterator *this, 
+	    fixed x0, fixed y0, const curve_segment *pc, int k);
+bool gx_flattened_iterator__init_line(gx_flattened_iterator *this, 
+	    fixed x0, fixed y0, fixed x1, fixed y1);
+void gx_flattened_iterator__switch_to_backscan(gx_flattened_iterator *this, bool not_first);
+bool gx_flattened_iterator__next(gx_flattened_iterator *this);
+bool gx_flattened_iterator__prev(gx_flattened_iterator *this);
 
 bool curve_coeffs_ranged(fixed x0, fixed x1, fixed x2, fixed x3, 
 		    fixed y0, fixed y1, fixed y2, fixed y3, 
 		    fixed *ax, fixed *bx, fixed *cx, 
 		    fixed *ay, fixed *by, fixed *cy, 
 		    int k);
-#endif
 
 #endif /* gzpath_INCLUDED */

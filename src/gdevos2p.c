@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevos2p.c,v 1.4 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevos2p.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /*
  * OS/2 printer device
  *
@@ -83,8 +83,8 @@ private dev_proc_put_params(os2prn_put_params);
 private dev_proc_get_params(os2prn_get_params);
 
 private void os2prn_set_bpp(gx_device * dev, int depth);
-private int os2prn_get_queue_list(OS2QL * ql);
-private void os2prn_free_queue_list(OS2QL * ql);
+private int os2prn_get_queue_list(gs_memory_t *mem, OS2QL * ql);
+private void os2prn_free_queue_list(gs_memory_t *mem, OS2QL * ql);
 int os2prn_get_printer(OS2QL * ql);
 
 private gx_device_procs os2prn_procs =
@@ -160,7 +160,7 @@ os2prn_open(gx_device * dev)
     opdev->hab = WinQueryAnchorBlock(hwndtext);
     opdev->newframe = 0;
 
-    if (os2prn_get_queue_list(&opdev->ql))
+    if (os2prn_get_queue_list(dev->memory, &opdev->ql))
 	return gs_error_limitcheck;
 
     if (opdev->queue_name[0] == '\0') {
@@ -213,7 +213,7 @@ os2prn_open(gx_device * dev)
 	errprintf("DevOpenDC for printer error 0x%x\n", eid);
 	return gs_error_limitcheck;
     }
-    os2prn_free_queue_list(&opdev->ql);
+    os2prn_free_queue_list(dev->memory, &opdev->ql);
 
     /* find out resolution of printer */
     /* this is returned in pixels/metre */
@@ -445,7 +445,7 @@ os2prn_print_page(gx_device_printer * pdev, FILE * file)
 
     yslice = 65535 / bmp_raster;
     bmp_raster_multi = bmp_raster * yslice;
-    row = (byte *) gs_malloc(bmp_raster_multi, 1, "bmp file buffer");
+    row = (byte *) gs_malloc(pdev->memory, bmp_raster_multi, 1, "bmp file buffer");
     if (row == 0)		/* can't allocate row buffer */
 	return_error(gs_error_VMerror);
 
@@ -553,7 +553,7 @@ os2prn_print_page(gx_device_printer * pdev, FILE * file)
 
   bmp_done:
     if (row)
-	gs_free((char *)row, bmp_raster_multi, 1, "bmp file buffer");
+	gs_free(pdev->memory, (char *)row, bmp_raster_multi, 1, "bmp file buffer");
 
     return code;
 }
@@ -619,7 +619,7 @@ os2prn_set_bpp(gx_device * dev, int depth)
 /* Get list of queues from SplEnumQueue */
 /* returns 0 if OK, non-zero for error */
 private int
-os2prn_get_queue_list(OS2QL * ql)
+os2prn_get_queue_list(gs_memory_t *mem, OS2QL * ql)
 {
     SPLERR splerr;
     USHORT jobCount;
@@ -639,7 +639,7 @@ os2prn_get_queue_list(OS2QL * ql)
 			  &cReturned, &cTotal,
 			  &cbNeeded, NULL);
     if (splerr == ERROR_MORE_DATA || splerr == NERR_BufTooSmall) {
-	pBuf = gs_malloc(cbNeeded, 1, "OS/2 printer device info buffer");
+	pBuf = gs_malloc(mem, cbNeeded, 1, "OS/2 printer device info buffer");
 	ql->prq = (PRQINFO3 *) pBuf;
 	if (ql->prq != (PRQINFO3 *) NULL) {
 	    ql->len = cbNeeded;
@@ -672,9 +672,9 @@ os2prn_get_queue_list(OS2QL * ql)
 
 
 private void
-os2prn_free_queue_list(OS2QL * ql)
+os2prn_free_queue_list(gs_memory_t *mem, OS2QL * ql)
 {
-    gs_free((char *)ql->prq, ql->len, 1, "os2prn queue list");
+    gs_free(mem, (char *)ql->prq, ql->len, 1, "os2prn queue list");
     ql->prq = NULL;
     ql->len = 0;
     ql->defqueue = 0;

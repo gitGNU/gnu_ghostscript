@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdfg.h,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdfg.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Internal graphics interfaces for PDF-writing driver. */
 
 #ifndef gdevpdfg_INCLUDED
@@ -73,7 +73,7 @@ struct pdf_color_space_s {
  * Create a local Device{Gray,RGB,CMYK} color space corresponding to the
  * given number of components.
  */
-int pdf_cspace_init_Device(gs_color_space *pcs, int num_components);
+int pdf_cspace_init_Device(const gs_memory_t *mem, gs_color_space *pcs, int num_components);
 
 /*
  * Create a PDF color space corresponding to a PostScript color space.
@@ -128,14 +128,14 @@ void pdf_set_initial_color(gx_device_pdf * pdev, gx_hl_saved_color *saved_fill_c
 /* Set the fill or stroke color. */
 /* pdecolor is &pdev->fill_color or &pdev->stroke_color. */
 int pdf_set_pure_color(gx_device_pdf * pdev, gx_color_index color,
-		       gx_hl_saved_color * psc,
+		   gx_hl_saved_color * psc,
     		   bool *used_process_color,
-		       const psdf_set_color_commands_t *ppscc);
+		   const psdf_set_color_commands_t *ppscc);
 int pdf_set_drawing_color(gx_device_pdf * pdev, const gs_imager_state * pis,
-			  const gx_drawing_color *pdc,
-			  gx_hl_saved_color * psc,
+		      const gx_drawing_color *pdc,
+		      gx_hl_saved_color * psc,
 		      bool *used_process_color,
-			  const psdf_set_color_commands_t *ppscc);
+		      const psdf_set_color_commands_t *ppscc);
 
 /*
  * Bring the graphics state up to date for a drawing operation.
@@ -155,6 +155,21 @@ int pdf_restore_viewer_state(gx_device_pdf *pdev, stream *s);
  */
 int pdf_string_to_cos_name(gx_device_pdf *pdev, const byte *str, uint len, 
 		       cos_value_t *pvalue);
+
+/* ---------------- Exported by gdevpdfi.c ---------------- */
+
+typedef struct pdf_pattern_s pdf_pattern_t;
+struct pdf_pattern_s {
+    pdf_resource_common(pdf_pattern_t);
+    pdf_pattern_t *substitute;
+};
+/* The descriptor is public because it is for a resource type. */
+#define private_st_pdf_pattern()  /* in gdevpdfc.c */\
+  gs_private_st_suffix_add1(st_pdf_pattern, pdf_pattern_t,\
+    "pdf_pattern_t", pdf_pattern_enum_ptrs,\
+    pdf_pattern_reloc_ptrs, st_pdf_resource, substitute)
+
+pdf_resource_t *pdf_substitute_pattern(pdf_resource_t *pres);
 
 /* ---------------- Exported by gdevpdfj.c ---------------- */
 
@@ -286,14 +301,15 @@ int pdf_store_pattern1_params(gx_device_pdf *pdev, pdf_resource_t *pres,
 
 /* Write a colored Pattern color. */
 int pdf_put_colored_pattern(gx_device_pdf *pdev, const gx_drawing_color *pdc,
+			const gs_color_space *pcs,
 			const psdf_set_color_commands_t *ppscc,
-			pdf_resource_t **ppres);
+			bool have_pattern_streams, pdf_resource_t **ppres);
 
 /* Write an uncolored Pattern color. */
 int pdf_put_uncolored_pattern(gx_device_pdf *pdev, const gx_drawing_color *pdc,
 			  const gs_color_space *pcs,
 			  const psdf_set_color_commands_t *ppscc,
-			  pdf_resource_t **ppres);
+			  bool have_pattern_streams, pdf_resource_t **ppres);
 
 /* Write a PatternType 2 (shading pattern) color. */
 int pdf_put_pattern2(gx_device_pdf *pdev, const gx_drawing_color *pdc,

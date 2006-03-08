@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxfixed.h,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxfixed.h,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Fixed-point arithmetic for Ghostscript */
 
 #ifndef gxfixed_INCLUDED
@@ -108,6 +108,8 @@ typedef ulong ufixed;		/* only used in a very few places */
 #define fixed2long_ceiling(x) ((long)_fixed_rshift((x)+_fixed_fraction_v))
 #define fixed2long_pixround(x) ((long)_fixed_rshift((x)+_fixed_pixround_v))
 #define float2fixed(f) ((fixed)((f)*(float)fixed_scale))
+#define float2fixed_rounded(f) ((fixed)floor((f)*(float)fixed_scale + 0.5))
+
 /* Note that fixed2float actually produces a double result. */
 #define fixed2float(x) ((x)*(1.0/fixed_scale))
 

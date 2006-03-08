@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gp_mspol.c,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_mspol.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /*
  * Microsoft Windows platform polling support for Ghostscript.
  *
@@ -37,11 +37,14 @@
  */
 #ifdef CHECK_INTERRUPTS
 int
-gp_check_interrupts(void)
+gp_check_interrupts(const gs_memory_t *mem)
 {
-    gs_main_instance *minst = gs_main_instance_default();
-    if (minst && minst->poll_fn)
-	return (*minst->poll_fn)(minst->caller_handle);
+    if(mem == NULL) {
+	/* MAJOR HACK will NOT work in multithreaded environment */
+	mem = gs_lib_ctx_get_non_gc_memory_t();
+    }
+    if (mem && mem->gs_lib_ctx && mem->gs_lib_ctx->poll_fn)
+	return (*mem->gs_lib_ctx->poll_fn)(mem->gs_lib_ctx->caller_handle);
     return 0;
 }
 #endif

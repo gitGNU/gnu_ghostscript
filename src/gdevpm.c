@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpm.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpm.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /*
  * OS/2 Presentation manager driver
  *
@@ -619,9 +619,6 @@ pm_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 		return (gx_no_color_index);	/* not found - dither instead */
 	    }
 	case 4:
-	    if ((r == g) && (g == b) && (r >= gx_max_color_value / 3 * 2 - 1)
-		&& (r < gx_max_color_value / 4 * 3))
-		return ((gx_color_index) 8);	/* light gray */
 	    return pc_4bit_map_rgb_color(dev, cv);
     }
     return (gx_default_map_rgb_color(dev, cv));
@@ -654,10 +651,7 @@ pm_map_color_rgb(gx_device * dev, gx_color_index color,
 	    }
 	    break;
 	case 4:
-	    if (color == 8)	/* VGA light gray */
-		prgb[0] = prgb[1] = prgb[2] = (gx_max_color_value / 4 * 3);
-	    else
-		pc_4bit_map_color_rgb(dev, color, prgb);
+	    pc_4bit_map_color_rgb(dev, color, prgb);
 	    break;
 	default:
 	    prgb[0] = prgb[1] = prgb[2] =
@@ -1233,7 +1227,7 @@ pm_set_bits_per_pixel(gx_device_pm * pmdev, int bpp)
 	    pmdev->nColors = 64;
 	    break;
 	case 4:
-	    set_color_info(&dci, 3, 4, 3, 2);
+	    set_color_info(&dci, 3, 4, 1, 1);
 	    set_rgb_color_procs(pdev, pm_map_rgb_color, pm_map_color_rgb);
 	    pmdev->nColors = 16;
 	    break;

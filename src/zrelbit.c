@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zrelbit.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zrelbit.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Relational, boolean, and bit operators */
 #include "ghost.h"
 #include "oper.h"
@@ -52,7 +52,7 @@ zeq(i_ctx_t *i_ctx_p)
     os_ptr op = osp;
     EQ_CHECK_READ(op - 1, check_op(2));
     EQ_CHECK_READ(op, DO_NOTHING);
-    make_bool(op - 1, (obj_eq(op - 1, op) ? 1 : 0));
+    make_bool(op - 1, (obj_eq(imemory, op - 1, op) ? 1 : 0));
     pop(1);
     return 0;
 }
@@ -282,7 +282,7 @@ zidenteq(i_ctx_t *i_ctx_p)
 
     EQ_CHECK_READ(op - 1, check_op(2));
     EQ_CHECK_READ(op, DO_NOTHING);
-    make_bool(op - 1, (obj_ident_eq(op - 1, op) ? 1 : 0));
+    make_bool(op - 1, (obj_ident_eq(imemory, op - 1, op) ? 1 : 0));
     pop(1);
     return 0;
 

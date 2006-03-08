@@ -17,7 +17,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: cfonts.mak,v 1.4 2005/12/13 16:57:18 jemarch Exp $
+# $Id: cfonts.mak,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $
 # Makefile for compiling PostScript Type 1 fonts into C.
 # For more information about fonts, consult the Fontmap file,
 # and also Fonts.htm.
@@ -39,7 +39,7 @@ CFOBJDIR=$(PSOBJDIR)
 CFGEN=$(CFGENDIR)$(D)
 CFOBJ=$(CFOBJDIR)$(D)
 
-CFCC=$(CC_) $(I_)$(PSSRCDIR)$(_I)
+CFCC=$(CC_) $(I_)$(PSSRCDIR)$(_I) $(I_)$(PSOBJDIR)$(_I)
 CFO_=$(O_)$(CFOBJ)
 
 # Define how to invoke the font2c program.

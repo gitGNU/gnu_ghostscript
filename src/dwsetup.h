@@ -17,7 +17,7 @@
 */
 
 
-// $Id: dwsetup.h,v 1.4 2005/12/13 16:57:18 jemarch Exp $
+// $Id: dwsetup.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $
 
 #ifndef dwsetup_INCLUDED
 #  define dwsetup_INCLUDED
@@ -50,6 +50,7 @@
 #define IDC_TARGET                      1008
 #define IDC_ALLUSERS                    1009
 #define IDC_COPYRIGHT                   1010
+#define IDC_CJK_FONTS			1011
 
 
 #endif /* dwsetup_INCLUDED */

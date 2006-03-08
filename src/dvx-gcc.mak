@@ -17,7 +17,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: dvx-gcc.mak,v 1.5 2005/12/13 16:57:18 jemarch Exp $
+# $Id: dvx-gcc.mak,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $
 # makefile for DesqView/X/gcc/X11 configuration.
 
 #include $(COMMONDIR)/gccdefs.mak
@@ -130,7 +130,7 @@ JPEG_NAME=jpeg
 # See libpng.mak for more information.
 
 PSRCDIR=libpng
-PVERSION=10205
+PVERSION=10208
 
 # Choose whether to use a shared version of the PNG library (-lpng).
 # See gs.mak and Make.htm for more information.
@@ -281,8 +281,7 @@ COMPILE_INITS=0
 BAND_LIST_STORAGE=file
 
 # Choose which compression method to use when storing band lists in memory.
-# The choices are 'lzw' or 'zlib'.  lzw is not recommended, because the
-# LZW-compatible code in Ghostscript doesn't actually compress its input.
+# The choices are 'lzw' or 'zlib'. 
 
 BAND_LIST_COMPRESSOR=zlib
 
@@ -310,7 +309,7 @@ DEVICE_DEVS7=
 DEVICE_DEVS8=
 DEVICE_DEVS9=pbm.dev pbmraw.dev pgm.dev pgmraw.dev pgnm.dev pgnmraw.dev pnm.dev pnmraw.dev ppm.dev ppmraw.dev
 DEVICE_DEVS10=tiffcrle.dev tiffg3.dev tiffg32d.dev tiffg4.dev tifflzw.dev tiffpack.dev
-DEVICE_DEVS11=tiff12nc.dev tiff24nc.dev
+DEVICE_DEVS11=tiff12nc.dev tiff24nc.dev tiffgray.dev tiff32nc.dev tiffsep.dev
 DEVICE_DEVS12=psmono.dev psgray.dev bit.dev bitrgb.dev bitcmyk.dev
 DEVICE_DEVS13=
 DEVICE_DEVS14=
@@ -337,7 +336,6 @@ AK=
 
 CCFLAGS=$(GENOPT) $(CFLAGS)
 CC_=$(CC) $(CCFLAGS)
-CC_LEAF=$(CC_) -fomit-frame-pointer
 CC_NO_WARN=$(CC_)
 
 # ---------------- End of platform-specific section ---------------- #

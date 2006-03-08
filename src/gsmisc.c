@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsmisc.c,v 1.5 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsmisc.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Miscellaneous utilities for Ghostscript library */
 
 /*
@@ -51,16 +51,12 @@ orig_sqrt(double x)
 #include "gxfarith.h"
 #include "gxfixed.h"
 
-/* Define private replacements for stdin, stdout, and stderr. */
-FILE *gs_stdio[3];
-
-
 /* ------ Redirected stdout and stderr  ------ */
 
 #include <stdarg.h>
 #define PRINTF_BUF_LENGTH 1024
 
-int outprintf(const char *fmt, ...)
+int outprintf(const gs_memory_t *mem, const char *fmt, ...)
 {
     int count;
     char buf[PRINTF_BUF_LENGTH];
@@ -69,12 +65,12 @@ int outprintf(const char *fmt, ...)
     va_start(args, fmt);
 
     count = vsprintf(buf, fmt, args);
-    outwrite(buf, count);
+    outwrite(mem, buf, count);
     if (count >= PRINTF_BUF_LENGTH) {
 	count = sprintf(buf, 
 	    "PANIC: printf exceeded %d bytes.  Stack has been corrupted.\n", 
 	    PRINTF_BUF_LENGTH);
-	outwrite(buf, count);
+	outwrite(mem, buf, count);
     }
     va_end(args);
     return count;
@@ -160,14 +156,14 @@ dprintf_file_only(const char *file)
 }
 #endif
 void
-printf_program_ident(const char *program_name, long revision_number)
+printf_program_ident(const gs_memory_t *mem, const char *program_name, long revision_number)
 {
     if (program_name)
-	outprintf((revision_number ? "%s " : "%s"), program_name);
+        outprintf(mem, (revision_number ? "%s " : "%s"), program_name);
     if (revision_number) {
 	int fpart = revision_number % 100;
 
-	outprintf("%d.%02d", (int)(revision_number / 100), fpart);
+	outprintf(mem, "%d.%02d", (int)(revision_number / 100), fpart);
     }
 }
 void
@@ -216,12 +212,12 @@ gs_log_error(int err, const char *file, int line)
 
 /* Check for interrupts before a return. */
 int
-gs_return_check_interrupt(int code)
+gs_return_check_interrupt(const gs_memory_t *mem, int code)
 {
     if (code < 0)
 	return code;
     {
-	int icode = gp_check_interrupts();
+	int icode = gp_check_interrupts(mem);
 
 	return (icode == 0 ? code :
 		gs_note_error((icode > 0 ? gs_error_interrupt : icode)));

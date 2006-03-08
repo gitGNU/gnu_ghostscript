@@ -14,15 +14,14 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: iconf.c,v 1.4 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: iconf.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Configuration-dependent tables and initialization for interpreter */
 #include "stdio_.h"		/* stdio for stream.h */
 #include "gstypes.h"
 #include "gsmemory.h"		/* for iminst.h */
-#include "gconf.h"
+#include "gconfigd.h"
 #include "iref.h"
 #include "ivmspace.h"
 #include "opdef.h"

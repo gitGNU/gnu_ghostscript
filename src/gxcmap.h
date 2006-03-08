@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxcmap.h,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxcmap.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Color mapping procedures */
 /* Requires gxdcolor.h. */
 
@@ -56,6 +56,8 @@ typedef struct gx_device_color_s gx_device_color;
 #define cmap_proc_devicen(proc)\
   void proc(const frac *, gx_device_color *, const gs_imager_state *, \
 	       gx_device *, gs_color_select_t)
+#define cmap_proc_is_halftoned(proc)\
+  bool proc(const gs_imager_state *, gx_device *)
 
 /*
  * List of mapping functions from the standard color spaces to the
@@ -120,6 +122,7 @@ struct gx_color_map_procs_s {
     cmap_proc_rgb_alpha((*map_rgb_alpha));
     cmap_proc_separation((*map_separation));
     cmap_proc_devicen((*map_devicen));
+    cmap_proc_is_halftoned((*is_halftoned));
 };
 typedef struct gx_color_map_procs_s gx_color_map_procs;
 
@@ -195,10 +198,20 @@ extern cm_map_proc_cmyk(gx_error_cmyk_cs_to_cmyk_cm);
     dev_t_proc_get_color_mapping_procs(proc, gx_device)
 
 /*
+  Define the options for the component_type parameter to get_color_comp_index
+  routines.  Note:  This information is currently being used by the routines
+  for identifying when they are being given a separation name.  Some devices
+  automaticaly add separations to the device's components if the separation
+  is not previously known and there is room in the device.
+*/
+#define NO_COMP_NAME_TYPE	0
+#define SEPARATION_NAME		1
+
+/*
   Convert a color component name into a colorant index.
 */
 #define dev_t_proc_get_color_comp_index(proc, dev_t) \
-    int (proc)(const dev_t * dev, const char * pname, int name_size, int src_index)
+    int (proc)(dev_t * dev, const char * pname, int name_size, int component_type)
 
 #define dev_proc_get_color_comp_index(proc) \
     dev_t_proc_get_color_comp_index(proc, gx_device)
@@ -232,6 +245,7 @@ dev_proc_get_color_comp_index(gx_error_get_color_comp_index);
 dev_proc_get_color_comp_index(gx_default_DevGray_get_color_comp_index);
 dev_proc_get_color_comp_index(gx_default_DevRGB_get_color_comp_index);
 dev_proc_get_color_comp_index(gx_default_DevCMYK_get_color_comp_index);
+dev_proc_get_color_comp_index(gx_default_DevRGBK_get_color_comp_index);
 
 /*
  * These are the default routines for getting the color space conversion
@@ -241,6 +255,7 @@ dev_proc_get_color_mapping_procs(gx_error_get_color_mapping_procs);
 dev_proc_get_color_mapping_procs(gx_default_DevGray_get_color_mapping_procs);
 dev_proc_get_color_mapping_procs(gx_default_DevRGB_get_color_mapping_procs);
 dev_proc_get_color_mapping_procs(gx_default_DevCMYK_get_color_mapping_procs);
+dev_proc_get_color_mapping_procs(gx_default_DevRGBK_get_color_mapping_procs);
 
 /*
  * These are the default routines for converting a colorant value list

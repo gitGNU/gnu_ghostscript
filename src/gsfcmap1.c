@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsfcmap1.c,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsfcmap1.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Adobe-based CMap character decoding */
 #include "memory_.h"
 #include "string_.h"
@@ -55,7 +55,7 @@ case 0:
         for (k = 0; k < pclr->num_entries; ++k, pv += size) {
             gs_glyph glyph = bytes2int(pv, size);
 
-            pclr->cmap->mark_glyph(glyph, pclr->cmap->mark_glyph_data);
+            pclr->cmap->mark_glyph(mem, glyph, pclr->cmap->mark_glyph_data);
         }
     }
     return ENUM_OBJ(pclr->cmap);

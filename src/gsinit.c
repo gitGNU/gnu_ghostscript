@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsinit.c,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsinit.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Initialization for the imager */
 #include "stdio_.h"
 #include "memory_.h"
@@ -26,9 +26,6 @@
 #include "gsmalloc.h"
 #include "gp.h"
 #include "gslib.h"		/* interface definition */
-
-/* Imported from gsmisc.c */
-extern FILE *gs_debug_out;
 
 /* Configuration information from gconfig.c. */
 extern_gx_init_table();
@@ -44,8 +41,8 @@ gs_lib_init0(FILE * debug_out)
 {
     gs_memory_t *mem;
 
-    gs_debug_out = debug_out;
-    mem = (gs_memory_t *) gs_malloc_init();
+    mem = (gs_memory_t *) gs_malloc_init(NULL);
+
     /* Reset debugging flags */
     memset(gs_debug, 0, 128);
     gs_log_errors = 0;
@@ -66,9 +63,16 @@ gs_lib_init1(gs_memory_t * mem)
 
 /* Clean up after execution. */
 void
-gs_lib_finit(int exit_status, int code)
+gs_lib_finit(int exit_status, int code, gs_memory_t *mem)
 {
     /* Do platform-specific cleanup. */
     gp_exit(exit_status, code);
-    gs_malloc_release();
+
+    /* NB: interface problem.
+     * if gs_lib_init0 was called the we should
+     *    gs_malloc_release(mem);
+     * else
+     *    someone else has control of mem so we can't free it.
+     *    gs_view and iapi.h interface 
+     */
 }

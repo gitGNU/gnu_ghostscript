@@ -16,9 +16,10 @@
 
 */
 
-/*$Id: gsht1.c,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/*$Id: gsht1.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Extended halftone operators for Ghostscript library */
 #include "memory_.h"
+#include "string_.h"
 #include "gx.h"
 #include "gserrors.h"
 #include "gsstruct.h"
@@ -347,7 +348,7 @@ process_transfer(gx_ht_order * porder, gs_state * pgs,
 		      "process_transfer");
     pmap->proc = proc;		/* 0 => use closure */
     pmap->closure = *pmc;
-    pmap->id = gs_next_ids(1);
+    pmap->id = gs_next_ids(mem, 1);
     load_transfer_map(pgs, pmap, 0.0);
     porder->transfer = pmap;
     return 0;

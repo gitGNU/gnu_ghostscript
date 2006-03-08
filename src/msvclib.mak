@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: msvclib.mak,v 1.5 2005/12/13 16:57:26 jemarch Exp $
+# $Id: msvclib.mak,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $
 # makefile for Microsoft Visual C++ 4.1 or later, Windows NT or Windows 95 LIBRARY.
 #
 # All configurable options are surrounded by !ifndef/!endif to allow 
@@ -144,7 +144,7 @@ JVERSION=6
 
 !ifndef PSRCDIR
 PSRCDIR=libpng
-PVERSION=10205
+PVERSION=10208
 !endif
 
 # Define the directory where the zlib sources are stored.
@@ -394,8 +394,7 @@ BAND_LIST_STORAGE=file
 !endif
 
 # Choose which compression method to use when storing band lists in memory.
-# The choices are 'lzw' or 'zlib'.  lzw is not recommended, because the
-# LZW-compatible code in Ghostscript doesn't actually compress its input.
+# The choices are 'lzw' or 'zlib'.
 
 !ifndef BAND_LIST_COMPRESSOR
 BAND_LIST_COMPRESSOR=zlib

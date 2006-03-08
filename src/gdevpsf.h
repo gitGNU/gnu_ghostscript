@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpsf.h,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpsf.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* PostScript/PDF font writing interface */
 
 #ifndef gdevpsf_INCLUDED
@@ -226,7 +226,7 @@ int psf_write_cid0_font(stream *s, gs_font_cid0 *pfont, int options,
 typedef struct gs_cmap_s gs_cmap_t;
 #endif
 typedef int (*psf_put_name_chars_proc_t)(stream *, const byte *, uint);
-int psf_write_cmap(stream *s, const gs_cmap_t *pcmap,
+int psf_write_cmap(const gs_memory_t *mem, stream *s, const gs_cmap_t *pcmap,
 		   psf_put_name_chars_proc_t put_name_chars,
 		   const gs_const_string *alt_cmap_name, int font_index_only);
 /* ------ Exported by gdevpsft.c ------ */

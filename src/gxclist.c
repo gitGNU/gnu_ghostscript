@@ -17,7 +17,7 @@
   
 */
 
-/*$Id: gxclist.c,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/*$Id: gxclist.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Command list document- and page-level code. */
 #include "memory_.h"
 #include "string_.h"
@@ -137,7 +137,11 @@ const gx_device_procs gs_clist_device_procs = {
     gx_forward_decode_color,
     gx_default_pattern_manage,
     gx_default_fill_rectangle_hl_color,
-    gx_default_include_color_space
+    gx_default_include_color_space,
+    gx_default_fill_linear_color_scanline,
+    gx_default_fill_linear_color_trapezoid, /* fixme : write to clist. */
+    gx_default_fill_linear_color_triangle,
+    gx_forward_update_spot_equivalent_colors
 };
 
 /* ------ Define the command set and syntax ------ */

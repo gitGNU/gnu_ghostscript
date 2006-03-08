@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxshade.h,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxshade.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Internal definitions for shading rendering */
 
 #ifndef gxshade_INCLUDED
@@ -117,11 +117,13 @@ struct shade_coord_stream_s {
     stream *s;			/* DataSource or &ds */
     uint bits;			/* shifted bits of current byte */
     int left;			/* # of bits left in bits */
+    bool ds_EOF;                /* The 'ds' stream reached EOF. */
     const gs_shading_mesh_params_t *params;
     const gs_matrix_fixed *pctm;
     int (*get_value)(shade_coord_stream_t *cs, int num_bits, uint *pvalue);
     int (*get_decoded)(shade_coord_stream_t *cs, int num_bits,
 		       const float decode[2], float *pvalue);
+    bool (*is_eod)(const shade_coord_stream_t *cs);
 };
 
 /* Define one vertex of a mesh. */
@@ -129,6 +131,9 @@ typedef struct mesh_vertex_s {
     gs_fixed_point p;
     float cc[GS_CLIENT_COLOR_MAX_COMPONENTS];
 } mesh_vertex_t;
+
+/* Define a structure for mesh or patch vertex. */
+typedef struct shading_vertex_s shading_vertex_t;
 
 /* Initialize a packed value stream. */
 void shade_next_init(shade_coord_stream_t * cs,
@@ -146,7 +151,7 @@ int shade_next_coords(shade_coord_stream_t * cs, gs_fixed_point * ppt,
 int shade_next_color(shade_coord_stream_t * cs, float *pc);
 
 /* Get the next vertex for a mesh element. */
-int shade_next_vertex(shade_coord_stream_t * cs, mesh_vertex_t * vertex);
+int shade_next_vertex(shade_coord_stream_t * cs, shading_vertex_t * vertex);
 
 /*
    Currently, all shading fill procedures follow the same algorithm:
@@ -210,6 +215,6 @@ int shade_bbox_transform2fixed(const gs_rect * rect,
 typedef struct gx_device_color_s gx_device_color;
 #endif
 int shade_fill_path(const shading_fill_state_t * pfs, gx_path * ppath,
-		    gx_device_color * pdevc);
+		    gx_device_color * pdevc, const gs_fixed_point *fill_adjust);
 
 #endif /* gxshade_INCLUDED */

@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpsfu.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpsfu.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* PostScript/PDF font writing utilities */
 #include "memory_.h"
 #include <stdlib.h>		/* for qsort */
@@ -220,6 +220,7 @@ psf_check_outline_glyphs(gs_font_base *pfont, psf_glyph_enum_t *ppge,
 
 	if (code < 0)
 	    return code;
+	gdata.memory = pfont->memory;
 	code = glyph_data(pfont, glyph, &gdata, &ignore_font);
 	/*
 	 * If the glyph isn't defined by a CharString, glyph_data will

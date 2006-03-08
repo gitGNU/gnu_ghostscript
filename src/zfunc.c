@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zfunc.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zfunc.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Generic PostScript language interface to Functions */
 #include "memory_.h"
 #include "ghost.h"
@@ -274,7 +274,8 @@ fn_build_float_array(const ref * op, const char *kstr, bool required,
 
 	if (ptr == 0)
 	    return_error(e_VMerror);
-	code = dict_float_array_check_param(op, kstr, size, ptr, NULL,
+	code = dict_float_array_check_param(mem, op, kstr, size, 
+					    ptr, NULL,
 					    0, e_rangecheck);
 	if (code < 0 || (even && (code & 1) != 0)) {
 	    gs_free_object(mem, ptr, kstr);
@@ -314,7 +315,8 @@ fn_build_float_array_forced(const ref * op, const char *kstr, bool required,
     if (ptr == 0)
         return_error(e_VMerror);
     if(r_is_array(par) )    
-        code = dict_float_array_check_param(op, kstr, size, ptr, NULL,
+        code = dict_float_array_check_param(mem, op, kstr, 
+					    size, ptr, NULL,
 					    0, e_rangecheck);
     else {
         code = dict_float_param(op, kstr, 0., ptr); /* defailt cannot happen */

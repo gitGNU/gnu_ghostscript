@@ -18,7 +18,7 @@
   Author: Raph Levien <raph@artofcode.com>
 */
 
-/* $Id: gdevpnga.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpnga.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Test driver for PDF 1.4 transparency stuff */
 
 #include "gdevprn.h"
@@ -765,6 +765,7 @@ pnga_get_marking_device(gx_device *dev, const gs_imager_state *pis)
     if (code < 0)
 	return NULL;
 
+    check_device_separable((gx_device *)mdev);
     gx_device_fill_in_procs((gx_device *)mdev);
     mdev->pnga_dev = pdev;
     mdev->opacity = pis->opacity.alpha;

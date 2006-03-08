@@ -14,16 +14,16 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxdevcli.h,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxdevcli.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Definitions for device clients */
 
 #ifndef gxdevcli_INCLUDED
 #  define gxdevcli_INCLUDED
 
 #include "std.h"		/* for FILE */
+#include "stdint_.h"
 #include "gscompt.h"
 #include "gsdcolor.h"
 #include "gsmatrix.h"
@@ -189,6 +189,18 @@ typedef struct gx_device_anti_alias_info_s {
     int graphics_bits;		/* ditto */
 } gx_device_anti_alias_info;
 
+typedef int32_t frac31; /* A fraction value in [-1,1]. 
+    Represents a color (in [0,1]) 
+    or a color difference (in [-1,1]) in shadings. */
+
+/* Define an edge of a linear color trapezoid.  Requirement: end.y >= start.y. */
+typedef struct gs_linear_color_edge_s {
+    gs_fixed_point start;
+    gs_fixed_point end;
+    const frac31 *c0, *c1;
+    fixed clip_x;
+} gs_linear_color_edge;
+
 
 /*
  * Possible values for the separable_and_linear flag in the
@@ -318,31 +330,49 @@ typedef struct gx_device_color_info_s {
      * Index of the gray color component, if any. The max_gray and
      * dither_gray values apply to this component only; all other
      * components use the max_color and dither_color values.
+     * 
+     * Note:  This field refers to a 'gray' colorant because of the
+     * past use of the max_gray/color and dither_grays/colors fields.
+     * Prior to 8.00, the 'gray' values were used for monochrome
+     * devices and the 'color' values for RGB and CMYK devices.
+     * Ideally we would like to have the flexibiiity of allowing
+     * different numbers of intensity levels for each colorant.
+     * However this is not compatible with the pre 8.00 devices.
+     * With post 8.00 devices, we can have two different numbers of
+     * intensity levels.  For one colorant (which is specified by
+     * the gray_index) we will use the max_gray/dither_grays values.
+     * The remaining colorants will use the max_color/dither_colors
+     * values.  The colorant which is specified by the gray_index
+     * value does not have to be gray or black.  For example if we
+     * have an RGB device and we want 32 intensity levels for red and
+     * blue and 64 levels for green, then we can set gray_index to
+     * 1 (the green colorant), set max_gray to 63 and dither_grays to
+     * 64, and set max_color to 31 and dither_colors to 32.
      *
-     * This will be GX_CINFO_COMP_NO_INDEX if there is no gray 
+     * This will be GX_CINFO_COMP_NO_INDEX if there is no 'gray' 
      * component.
      */
     byte gray_index;
 
     /*
      * max_gray and max_color are the number of distinct native
-     * intensity levels, less 1, for the gray and all other color
+     * intensity levels, less 1, for the 'gray' and all other color
      * components, respectively. For nearly all current devices
-     * that support both gray and non-gray components, the two
-     * parameters have the same value.
+     * that support both 'gray' and non-'gray' components, the two
+     * parameters have the same value.  (See comment for gray_index.)
      *
      * dither_grays and dither_colors are the number of intensity
-     * levels between which halftoning can occur, for the gray and
+     * levels between which halftoning can occur, for the 'gra'y and
      * all other color components, respectively. This is
      * essentially redundant information: in all reasonable cases,
      * dither_grays = max_gray + 1 and dither_colors = max_color + 1.
      * These parameters are, however, extensively used in the
      * current code, and thus have been retained.
      *
-     * Note that the non-gray values may now be relevant even if
+     * Note that the non-'gray' values may now be relevant even if
      * num_components == 1. This simplifies the handling of devices
      * with configurable color models which may be set for a single
-     * non-gray color model.
+     * non-'gray' color model.
      */
     gx_color_value max_gray;	/* # of distinct color levels -1 */
     gx_color_value max_color;
@@ -481,14 +511,13 @@ typedef struct gx_device_color_info_s {
 #define dci_std_gray_index(nc)    \
     ((nc) == 3 ? GX_CINFO_COMP_NO_INDEX : (nc) - 1)
 
-#define dci_alpha_values(nc, depth, mg, mc, dg, dc, ta, ga)             \
-    dci_extended_alpha_values(nc, nc,			                \
-                              dci_std_polarity(nc),                     \
-                              depth,                                    \
-                              dci_std_gray_index(nc),                   \
-                              mg, mc, dg, dc, ta, ga,                   \
-                              (depth >= 16 ? GX_CINFO_SEP_LIN           \
-                                           : GX_CINFO_UNKNOWN_SEP_LIN), \
+#define dci_alpha_values(nc, depth, mg, mc, dg, dc, ta, ga) \
+    dci_extended_alpha_values(nc, nc,			    \
+                              dci_std_polarity(nc),         \
+                              depth,                        \
+                              dci_std_gray_index(nc),       \
+                              mg, mc, dg, dc, ta, ga,       \
+                              GX_CINFO_UNKNOWN_SEP_LIN,     \
 			      dci_std_cm_name(nc) )
 
 
@@ -665,6 +694,7 @@ typedef struct gx_device_cached_colors_s {
 	gx_device_cached_colors_t cached_colors;\
 	int width;			/* width in pixels */\
 	int height;			/* height in pixels */\
+        int TrayOrientation;            /* default 0 ( 90 180 270 ) if device supports */\
 	float MediaSize[2];		/* media dimensions in points */\
 	float ImagingBBox[4];		/* imageable region in points */\
 	  bool ImagingBBox_set;\
@@ -1223,6 +1253,81 @@ typedef enum {
 #define dev_proc_include_color_space(proc)\
   dev_t_proc_include_color_space(proc, gx_device)
 
+		/* Shading support. */
+
+typedef struct gs_fill_attributes_s {
+      const gs_fixed_rect *clip;
+      bool swap_axes;
+      const gx_device_halftone *ht; /* Reserved for possible use in future. */
+      gs_logical_operation_t lop; /* Reserved for possible use in future. */
+      fixed ystart, yend; /* Only for X-independent gradients. Base coordinates of the gradient. */
+} gs_fill_attributes;
+
+/* Fill a linear color scanline. */
+
+#define dev_t_proc_fill_linear_color_scanline(proc, dev_t)\
+  int proc(dev_t *dev, const gs_fill_attributes *fa,\
+	int i, int j, int w, /* scanline coordinates and width */\
+	const frac31 *c0, /* initial color for the pixel (i,j), the integer part */\
+	const int32_t *c0_f, /* initial color for the pixel (i,j), the fraction part numerator */\
+	const int32_t *cg_num, /* color gradient numerator */\
+	int32_t cg_den /* color gradient denominator */)
+#define dev_proc_fill_linear_color_scanline(proc)\
+  dev_t_proc_fill_linear_color_scanline(proc, gx_device)
+
+/* Fill a linear color trapezoid. */
+/* The server assumes a strongly linear color, 
+   i.e. it can ignore any of c0, c1, c2, c3. */
+/* [p0 : p1] - left edge, from bottom to top.
+   [p2 : p3] - right edge, from bottom to top.
+   The filled area is within Y-spans of both edges. */
+/* If either (c0 and c1) or (c2 and c3) may be NULL.
+   In this case the color doesn't depend on X (on Y if fa->swap_axes).
+   In this case the base coordinates for the color gradient
+   may be unequal to p0, p1, p2, p3, and must be provided/taken
+   in/from fa->ystart, fa->yend. 
+   The rerurn value 0 is not allowed in this case. */
+/* Return values : 
+  1 - success;
+  0 - Too big. The area isn't filled. The client must decompose the area.
+  <0 - error.
+ */
+
+#define dev_t_proc_fill_linear_color_trapezoid(proc, dev_t)\
+  int proc(dev_t *dev, const gs_fill_attributes *fa,\
+	const gs_fixed_point *p0, const gs_fixed_point *p1,\
+	const gs_fixed_point *p2, const gs_fixed_point *p3,\
+	const frac31 *c0, const frac31 *c1,\
+	const frac31 *c2, const frac31 *c3)
+#define dev_proc_fill_linear_color_trapezoid(proc)\
+  dev_t_proc_fill_linear_color_trapezoid(proc, gx_device)
+
+/* Fill a linear color triangle. */
+/* Return values : 
+  1 - success;
+  0 - Too big. The area isn't filled. The client must decompose the area.
+  <0 - error.
+ */
+
+#define dev_t_proc_fill_linear_color_triangle(proc, dev_t)\
+  int proc(dev_t *dev, const gs_fill_attributes *fa,\
+	const gs_fixed_point *p0, const gs_fixed_point *p1,\
+	const gs_fixed_point *p2,\
+	const frac31 *c0, const frac31 *c1, const frac31 *c2)
+#define dev_proc_fill_linear_color_triangle(proc)\
+  dev_t_proc_fill_linear_color_triangle(proc, gx_device)
+
+/*
+ * Update the equivalent colors for spot colors in a color space.  The default
+ * procedure does nothing.  However this routine provides a method for devices
+ * to determine an equivalent color for a spot color.  See comments at the
+ * start of src/gsequivc.c.
+ */
+#define dev_t_proc_update_spot_equivalent_colors(proc, dev_t)\
+  int proc(dev_t *dev, const gs_state * pgs)
+#define dev_proc_update_spot_equivalent_colors(proc)\
+  dev_t_proc_update_spot_equivalent_colors(proc, gx_device)
+
 /* Define the device procedure vector template proper. */
 
 #define gx_device_proc_struct(dev_t)\
@@ -1282,6 +1387,10 @@ typedef enum {
 	dev_t_proc_pattern_manage((*pattern_manage), dev_t); \
 	dev_t_proc_fill_rectangle_hl_color((*fill_rectangle_hl_color), dev_t); \
 	dev_t_proc_include_color_space((*include_color_space), dev_t); \
+	dev_t_proc_fill_linear_color_scanline((*fill_linear_color_scanline), dev_t); \
+	dev_t_proc_fill_linear_color_trapezoid((*fill_linear_color_trapezoid), dev_t); \
+	dev_t_proc_fill_linear_color_triangle((*fill_linear_color_triangle), dev_t); \
+	dev_t_proc_update_spot_equivalent_colors((*update_spot_equivalent_colors), dev_t); \
 }
 
 

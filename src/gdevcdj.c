@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevcdj.c,v 1.4 2005/12/13 16:57:18 jemarch Exp $*/
+/* $Id: gdevcdj.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $*/
 /* HP and Canon colour printer drivers */
 
 /****************************************************************
@@ -402,7 +402,7 @@ typedef struct {
     DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS, x_dpi, y_dpi, 0, 0, 0, 0,\
     (bpp == 32 ? 4 : (bpp == 1 || bpp == 8) ? 1 : 3), bpp,\
     (bpp >= 8 ? 255 : 1), (bpp >= 8 ? 255 : bpp > 1 ? 1 : 0),\
-    (bpp >= 8 ? 5 : 2), (bpp >= 8 ? 5 : bpp > 1 ? 2 : 0),\
+    (bpp >= 8 ? 256 : 2), (bpp >= 8 ? 256 : bpp > 1 ? 2 : 0),\
     print_page, 0 /* cmyk */, correct)
 
 #define prn_cmyk_colour_device(dtype, procs, dev_name, x_dpi, y_dpi, bpp, print_page, correct)\
@@ -410,7 +410,7 @@ typedef struct {
     DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS, x_dpi, y_dpi, 0, 0, 0, 0,\
     ((bpp == 1 || bpp == 4) ? 1 : 4), bpp,\
     (bpp > 8 ? 255 : 1), (1 << (bpp >> 2)) - 1, /* max_gray, max_color */\
-    (bpp > 8 ? 5 : 2), (bpp > 8 ? 5 : bpp > 1 ? 2 : 0),\
+    (bpp > 8 ? 256 : 2), (bpp > 8 ? 256 : bpp > 1 ? 2 : 0),\
     print_page, 1 /* cmyk */, correct)
 
 #define bjc_device(dtype, p, d, x, y, b, pp, c) \
@@ -2049,10 +2049,10 @@ hp_colour_print_page(gx_device_printer * pdev, FILE * prn_stream, int ptype)
   storage_size_words = ((plane_size + plane_size) * num_comps +
 			databuff_size + errbuff_size + outbuff_size) / W;
 
-  storage = (ulong *) gs_malloc(storage_size_words, W, "hp_colour_print_page");
+  storage = (ulong *) gs_malloc(pdev->memory, storage_size_words, W, "hp_colour_print_page");
   ep_storage_size_words = (plane_size * (num_comps + 1)) / W * img_rows
       + 16;			/* Redundant space for sentinel and aligning. */
-  ep_storage = (word *) gs_malloc(ep_storage_size_words, W, "ep_print_buffer");
+  ep_storage = (word *) gs_malloc(pdev->memory, ep_storage_size_words, W, "ep_print_buffer");
 
   /*
    * The principal data pointers are stored as pairs of values, with
@@ -2662,8 +2662,8 @@ hp_colour_print_page(gx_device_printer * pdev, FILE * prn_stream, int ptype)
     fputs("\033&l0H", prn_stream);
 
   /* free temporary storage */
-  gs_free((char *) ep_storage, ep_storage_size_words, W, "ep_print_buffer");
-  gs_free((char *) storage, storage_size_words, W, "hp_colour_print_page");
+  gs_free(pdev->memory, (char *) ep_storage, ep_storage_size_words, W, "ep_print_buffer");
+  gs_free(pdev->memory, (char *) storage, storage_size_words, W, "hp_colour_print_page");
 
   return 0;
 }
@@ -2739,20 +2739,6 @@ gdev_cmyk_map_cmyk_color(gx_device* pdev, const gx_color_value cv[])
 
 	default: {
 	    int nbits = pdev->color_info.depth;
-
-            if (cyan == magenta && magenta == yellow) {
-
-	        /* Convert CMYK to gray -- Red Book 6.2.2 */
-
-	        float bpart = ((float) cyan) * (lum_red_weight / 100.) +
-		    ((float) magenta) * (lum_green_weight / 100.) +
-		    ((float) yellow) * (lum_blue_weight / 100.) +
-		    (float) black;
-
-		cyan = magenta = yellow = (gx_color_index) 0;
-		black = (gx_color_index) (bpart > gx_max_color_value ?
-		    gx_max_color_value : bpart);
-	    }
 
 	    color = gx_cmyk_value_bits(cyan, magenta, yellow, black,
 	        nbits >> 2);
@@ -2958,10 +2944,10 @@ gdev_pcl_map_color_rgb(gx_device *pdev, gx_color_index color,
     }
     break;
   case 24:
-    { gx_color_value c = (gx_color_value)color ^ 0xffffff;
-      prgb[0] = gx_color_value_from_byte(c >> 16);
-      prgb[1] = gx_color_value_from_byte((c >> 8) & 0xff);
-      prgb[2] = gx_color_value_from_byte(c & 0xff);
+    { gx_color_index c = color ^ 0xffffff;
+      prgb[0] = gx_color_value_from_byte((gx_color_value)(c >> 16));
+      prgb[1] = gx_color_value_from_byte((gx_color_value)((c >> 8) & 0xff));
+      prgb[2] = gx_color_value_from_byte((gx_color_value)(c & 0xff));
     }
     break;
   case 32:
@@ -3274,18 +3260,18 @@ cce:  default: return gs_error_rangecheck;
       ci->max_gray = (bpp >= 8 ? 255 : 1);
 
       if (ci->num_components == 1) {
-	  ci->dither_grays = (bpp >= 8 ? 5 : 2);
-	  ci->dither_colors = (bpp >= 8 ? 5 : bpp > 1 ? 2 : 0);
+	  ci->dither_grays = (bpp >= 8 ? 256 : 2);
+	  ci->dither_colors = (bpp >= 8 ? 256 : bpp > 1 ? 2 : 0);
       } else {
-	  ci->dither_grays = (bpp > 8 ? 5 : 2);
-	  ci->dither_colors = (bpp > 8 ? 5 : bpp > 1 ? 2 : 0);
+	  ci->dither_grays = (bpp > 8 ? 256 : 2);
+	  ci->dither_colors = (bpp > 8 ? 256 : bpp > 1 ? 2 : 0);
       }
   } else {
       ci->num_components = (bpp == 1 || bpp == 8 ? 1 : 3);
       ci->max_color = (bpp >= 8 ? 255 : bpp > 1 ? 1 : 0);
       ci->max_gray = (bpp >= 8 ? 255 : 1);
-      ci->dither_grays = (bpp >= 8 ? 5 : 2);
-      ci->dither_colors = (bpp >= 8 ? 5 : bpp > 1 ? 2 : 0);
+      ci->dither_grays = (bpp >= 8 ? 256 : 2);
+      ci->dither_colors = (bpp >= 8 ? 256 : bpp > 1 ? 2 : 0);
   }
 
   ci->depth = ((bpp > 1) && (bpp < 8) ? 8 : bpp);

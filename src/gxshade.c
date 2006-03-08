@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxshade.c,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxshade.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Shading rendering support */
 #include "math_.h"
 #include "gx.h"
@@ -31,6 +31,7 @@
 #include "gxdht.h"		/* for computing # of different colors */
 #include "gxpaint.h"
 #include "gxshade.h"
+#include "gxshade4.h"
 #include "gsicc.h"
 
 /* Define a maximum smoothness value. */
@@ -46,6 +47,7 @@ private int cs_next_packed_decoded(shade_coord_stream_t *, int,
 				   const float[2], float *);
 private int cs_next_array_decoded(shade_coord_stream_t *, int,
 				  const float[2], float *);
+private bool cs_eod(const shade_coord_stream_t * cs);
 
 /* Initialize a packed value stream. */
 void
@@ -78,7 +80,16 @@ shade_next_init(shade_coord_stream_t * cs,
 	cs->get_value = cs_next_packed_value;
 	cs->get_decoded = cs_next_packed_decoded;
     }
+    cs->is_eod = cs_eod;
     cs->left = 0;
+    cs->ds_EOF = false;
+}
+
+/* Check for the End-Of-Data state form a stream. */
+private bool
+cs_eod(const shade_coord_stream_t * cs)
+{
+    return cs->ds_EOF;
 }
 
 /* Get the next (integer) value from a packed value stream. */
@@ -101,8 +112,10 @@ cs_next_packed_value(shade_coord_stream_t * cs, int num_bits, uint * pvalue)
 	for (; needed >= 8; needed -= 8) {
 	    int b = sgetc(cs->s);
 
-	    if (b < 0)
+	    if (b < 0) {
+	        cs->ds_EOF = true;
 		return_error(gs_error_rangecheck);
+	    }
 	    value = (value << 8) + b;
 	}
 	if (needed == 0) {
@@ -111,8 +124,10 @@ cs_next_packed_value(shade_coord_stream_t * cs, int num_bits, uint * pvalue)
 	} else {
 	    int b = sgetc(cs->s);
 
-	    if (b < 0)
+	    if (b < 0) {
+	        cs->ds_EOF = true;
 		return_error(gs_error_rangecheck);
+	    }
 	    cs->bits = b;
 	    cs->left = left = 8 - needed;
 	    *pvalue = (value << needed) + (b >> left);
@@ -132,8 +147,11 @@ cs_next_array_value(shade_coord_stream_t * cs, int num_bits, uint * pvalue)
     uint read;
 
     if (sgets(cs->s, (byte *)&value, sizeof(float), &read) < 0 ||
-	read != sizeof(float) || value < 0 ||
-	(num_bits != 0 && num_bits < sizeof(uint) * 8 &&
+	read != sizeof(float)) {
+	cs->ds_EOF = true;
+	return_error(gs_error_rangecheck);
+    }
+    if (value < 0 || (num_bits != 0 && num_bits < sizeof(uint) * 8 &&
 	 value >= (1 << num_bits)) ||
 	value != (uint)value
 	)
@@ -174,8 +192,10 @@ cs_next_array_decoded(shade_coord_stream_t * cs, int num_bits,
 
     if (sgets(cs->s, (byte *)&value, sizeof(float), &read) < 0 ||
 	read != sizeof(float)
-    )
+    ) {
+	cs->ds_EOF = true;
 	return_error(gs_error_rangecheck);
+    }
     *pvalue = value;
     return 0;
 }
@@ -254,12 +274,13 @@ shade_next_color(shade_coord_stream_t * cs, float *pc)
 
 /* Get the next vertex for a mesh element. */
 int
-shade_next_vertex(shade_coord_stream_t * cs, mesh_vertex_t * vertex)
+shade_next_vertex(shade_coord_stream_t * cs, shading_vertex_t * vertex)
 {
     int code = shade_next_coords(cs, &vertex->p, 1);
 
+    vertex->c.cc.paint.values[1] = 0; /* safety. (patch_fill may assume 2 arguments) */
     if (code >= 0)
-	code = shade_next_color(cs, vertex->cc);
+	code = shade_next_color(cs, vertex->c.cc.paint.values);
     return code;
 }
 
@@ -349,12 +370,12 @@ shade_bbox_transform2fixed(const gs_rect * rect, const gs_imager_state * pis,
 /* Fill one piece of a shading. */
 int
 shade_fill_path(const shading_fill_state_t * pfs, gx_path * ppath,
-		gx_device_color * pdevc)
+		gx_device_color * pdevc, const gs_fixed_point *fill_adjust)
 {
     gx_fill_params params;
 
     params.rule = -1;		/* irrelevant */
-    params.adjust = pfs->pis->fill_adjust;
+    params.adjust = *fill_adjust;
     params.flatness = 0;	/* irrelevant */
     params.fill_zero_width = false;
     return (*dev_proc(pfs->dev, fill_path)) (pfs->dev, pfs->pis, ppath,

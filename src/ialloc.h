@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ialloc.h,v 1.4 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: ialloc.h,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Interface to Ghostscript interpreter memory allocator */
 
 #ifndef ialloc_INCLUDED
@@ -64,7 +64,7 @@
   gs_free_const_string(imemory, data, nbytes, cname)
 
 /* Initialize the interpreter's allocator. */
-int ialloc_init(gs_dual_memory_t *, gs_raw_memory_t *, uint, bool);
+int ialloc_init(gs_dual_memory_t *, gs_memory_t *, uint, bool);
 
 /* ------ Internal routines ------ */
 

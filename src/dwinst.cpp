@@ -16,7 +16,7 @@
 
 */
 
-// $Id: dwinst.cpp,v 1.4 2005/12/13 16:57:18 jemarch Exp $
+// $Id: dwinst.cpp,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $
 
 #define STRICT
 #include <windows.h>
@@ -246,6 +246,16 @@ BOOL CInstall::InstallFiles(BOOL bNoCopy, BOOL *pbQuit)
 }
 
 
+void CInstall::AppendFileNew(const char *filename)
+{
+    FILE *f;
+    /* mark backup file for uninstall */
+    if ((f = fopen(m_szFileNew, "a")) != (FILE *)NULL) {
+	fputs(filename, f);
+	fputs("\n", f);
+	fclose(f);
+    }
+}
 
 // recursive mkdir
 // requires a full path to be specified, so ignores root \ 

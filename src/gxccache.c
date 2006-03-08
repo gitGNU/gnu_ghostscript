@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxccache.c,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxccache.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Fast case character cache routines for Ghostscript library */
 #include "memory_.h"
 #include "gx.h"
@@ -121,10 +121,7 @@ gx_lookup_fm_pair(gs_font * pfont, const gs_matrix *char_tm,
 	}
 	if (pair->mxx == mxx && pair->mxy == mxy &&
 	    pair->myx == myx && pair->myy == myy
-#if NEW_TT_INTERPRETER
-	    && pair->design_grid == design_grid
-#endif
-	    ) {
+	    && pair->design_grid == design_grid) {
 	    if (pair->font == 0) {
 		pair->font = pfont;
 		if_debug2('k', "[k]updating pair 0x%lx with font 0x%lx\n",
@@ -235,9 +232,7 @@ gx_lookup_xfont_char(const gs_state * pgs, cached_fm_pair * pair,
     cc->wxy.y = float2fixed(wxy.y);
     cc->offset.x = int2fixed(-bbox.p.x);
     cc->offset.y = int2fixed(-bbox.p.y);
-#   if NEW_TT_INTERPRETER
-        cc_set_pair(cc, pair);
-#   endif
+    cc_set_pair(cc, pair);
     if_debug5('k', "[k]xfont %s char %d/0x%x#0x%lx=>0x%lx\n",
 	      font->font_name.chars, enc_index, (int)chr,
 	      (ulong) glyph, (ulong) xg);
@@ -338,7 +333,7 @@ gx_image_cached_char(register gs_show_enum * penum, register cached_char * cc)
 		      imaging_dev->dname, cx, cy,
 		      (ulong) pdevc->colors.pure, code);
 	    if (code == 0)
-		return_check_interrupt(0);
+		return_check_interrupt(penum->memory, 0);
 	}
 	/* Can't render directly.  If we don't have a bitmap yet, */
 	/* get it from the xfont now. */
@@ -354,7 +349,7 @@ gx_image_cached_char(register gs_show_enum * penum, register cached_char * cc)
 		      (ulong) xf, (ulong) xg, (ulong) & mdev,
 		      mdev.dname, cx - x, cy - y, code);
 	    if (code != 0)
-		return_check_interrupt(1);
+		return_check_interrupt(penum->memory, 1);
 	    gx_add_char_bits(cc_pair(cc)->font->dir,
 			     cc, &scale_log2_1);
 	    /* gx_add_char_bits may change width, height, */
@@ -398,9 +393,9 @@ gx_image_cached_char(register gs_show_enum * penum, register cached_char * cc)
 		(imaging_dev, bits, 0, cc_raster(cc), cc->id,
 		 x, y, w, h, color, depth);
 	    if (code >= 0)
-		return_check_interrupt(0);
+		return_check_interrupt(penum->memory, 0);
 	    /* copy_alpha failed, construct a monobit mask. */
-	    bits = compress_alpha_bits(cc, &gs_memory_default);
+	    bits = compress_alpha_bits(cc, penum->memory->non_gc_memory);
 	    if (bits == 0)
 		return 1;	/* VMerror, but recoverable */
 	}
@@ -411,12 +406,12 @@ gx_image_cached_char(register gs_show_enum * penum, register cached_char * cc)
     }
     if (depth > 1) {		/* Complex color or fill_mask / copy_alpha failed, */
 	/* construct a monobit mask. */
-	bits = compress_alpha_bits(cc, &gs_memory_default);
+	bits = compress_alpha_bits(cc, penum->memory->non_gc_memory);
 	if (bits == 0)
 	    return 1;		/* VMerror, but recoverable */
 
     } {				/* Use imagemask to render the character. */
-	gs_memory_t *mem = &gs_memory_default;
+	gs_memory_t *mem = penum->memory->non_gc_memory;
 	gs_image_enum *pie =
 	    gs_image_enum_alloc(mem, "image_char(image_enum)");
 	gs_image_t image;
@@ -427,7 +422,7 @@ gx_image_cached_char(register gs_show_enum * penum, register cached_char * cc)
 
 	if (pie == 0) {
 	    if (bits != cc_bits(cc))
-		gs_free_object(&gs_memory_default, bits,
+		gs_free_object(mem, bits,
 			       "compress_alpha_bits");
 	    return 1;		/* VMerror, but recoverable */
 	}
@@ -458,10 +453,10 @@ gx_image_cached_char(register gs_show_enum * penum, register cached_char * cc)
 	gs_free_object(mem, pie, "image_char(image_enum)");
     }
   done:if (bits != cc_bits(cc))
-	gs_free_object(&gs_memory_default, bits, "compress_alpha_bits");
+	gs_free_object(penum->memory->non_gc_memory, bits, "compress_alpha_bits");
     if (code > 0)
 	code = 0;
-    return_check_interrupt(code);
+    return_check_interrupt(penum->memory, code);
 }
 
 /* ------ Image manipulation ------ */

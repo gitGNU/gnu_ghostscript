@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gzstate.h,v 1.5 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: gzstate.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Private graphics state definition for Ghostscript library */
 
 #ifndef gzstate_INCLUDED
@@ -96,16 +96,13 @@ struct gs_state_s {
     gs_matrix ctm_default;
     bool ctm_default_set;	/* if true, use ctm_default; */
 				/* if false, ask device */
-
     /* Paths: */
 
     gx_path *path;
     gx_clip_path *clip_path;
     gx_clip_stack_t *clip_stack;  /* (LanguageLevel 3 only) */
     gx_clip_path *view_clip;	/* (may be 0, or have rule = 0) */
-    bool clamp_coordinates;	/* if true, clamp out-of-range */
-				/* coordinates; if false, */
-				/* report a limitcheck */
+
     /* Effective clip path cache */
     gs_id effective_clip_id;	/* (key) clip path id */
     gs_id effective_view_clip_id;	/* (key) view clip path id */
@@ -166,5 +163,11 @@ struct gs_state_s {
   m(9,font) m(10,root_font) m(11,show_gstate) /*m(---,device)*/\
   m(12,transparency_group_stack)
 #define gs_state_num_ptrs 13
+
+/* The following macro is used for development purpose for designating places 
+   where current point is changed. Clients must not use it. */
+#define gx_setcurrentpoint(pgs, xx, yy)\
+    (pgs)->current_point.x = xx;\
+    (pgs)->current_point.y = yy;
 
 #endif /* gzstate_INCLUDED */

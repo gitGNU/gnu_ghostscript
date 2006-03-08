@@ -17,7 +17,7 @@
   
  */
 
-/* $Id: zdscpars.c,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zdscpars.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* C language interface routines to DSC parser */
 
 /*
@@ -475,7 +475,7 @@ zparse_dsc_comments(i_ctx_t *i_ctx_p)
 
     /* Put DSC comment name onto operand stack (replace string). */
 
-    return name_enter_string(pCmdList->comment_name, opString);
+    return name_enter_string(imemory, pCmdList->comment_name, opString);
 }
 
 /* ------ Initialization procedure ------ */

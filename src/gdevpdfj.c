@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdfj.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdfj.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Image-writing utilities for pdfwrite driver */
 #include "memory_.h"
 #include "string_.h"
@@ -470,6 +470,7 @@ pdf_end_write_image(gx_device_pdf * pdev, pdf_image_writer * piw)
 		code = pdf_cancel_resource(pdev, pres, resourceXObject);
 		if (code < 0)
 		    return code;
+		pdf_forget_resource(pdev, pres, resourceXObject);
 		piw->pres->where_used |= pdev->used_mask;
 	    } else if (pres->object->id < 0)
 		pdf_reserve_object_id(pdev, pres, 0);
@@ -560,16 +561,16 @@ pdf_choose_compression_cos(pdf_image_writer *piw, cos_stream_t *s[2], bool force
     if (force && l0 <= l1)
 	k0 = 1; /* Use Flate if it is not longer. */
     else {
-    k0 = s_compr_chooser__get_choice(
-	(stream_compr_chooser_state *)piw->binary[2].strm->state, force);
-    if (k0 && l0 > 0 && l1 > 0)
-	k0--;
-    else if (much_bigger__DL(l0, l1))
-	k0 = 0; 
-    else if (much_bigger__DL(l1, l0) || force)
-	k0 = 1; 
-    else
-       return;
+	k0 = s_compr_chooser__get_choice(
+	    (stream_compr_chooser_state *)piw->binary[2].strm->state, force);
+	if (k0 && l0 > 0 && l1 > 0)
+	    k0--;
+	else if (much_bigger__DL(l0, l1))
+	    k0 = 0; 
+	else if (much_bigger__DL(l1, l0) || force)
+	    k0 = 1; 
+	else
+	   return;
     }
     k1 = 1 - k0;
     s_close_filters(&piw->binary[k0].strm, piw->binary[k0].target);

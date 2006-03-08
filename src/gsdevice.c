@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsdevice.c,v 1.5 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsdevice.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Device operators for Ghostscript library */
 #include "ctype_.h"
 #include "memory_.h"		/* for memchr, memcpy */
@@ -55,7 +55,7 @@ gx_device_finalize(void *vptr)
 	dev->finalize(dev);
     discard(gs_closedevice(dev));
     if (dev->stype_is_dynamic)
-	gs_free_const_object(&gs_memory_default, dev->stype,
+	gs_free_const_object(dev->memory->non_gc_memory, dev->stype,
 			     "gx_device_finalize");
 }
 
@@ -253,7 +253,7 @@ gs_copydevice2(gx_device ** pnew_dev, const gx_device * dev, bool keep_open,
 	 * Just allocate a new stype and copy the old one into it.
 	 */
 	a_std = (gs_memory_struct_type_t *)
-	    gs_alloc_bytes_immovable(&gs_memory_default, sizeof(*std),
+	    gs_alloc_bytes_immovable(mem->non_gc_memory, sizeof(*std),
 				     "gs_copydevice(stype)");
 	if (!a_std)
 	    return_error(gs_error_VMerror);
@@ -265,7 +265,7 @@ gs_copydevice2(gx_device ** pnew_dev, const gx_device * dev, bool keep_open,
     } else {
 	/* We need to figure out or adjust the stype. */
 	a_std = (gs_memory_struct_type_t *)
-	    gs_alloc_bytes_immovable(&gs_memory_default, sizeof(*std),
+	    gs_alloc_bytes_immovable(mem->non_gc_memory, sizeof(*std),
 				     "gs_copydevice(stype)");
 	if (!a_std)
 	    return_error(gs_error_VMerror);
@@ -297,7 +297,7 @@ gs_copydevice2(gx_device ** pnew_dev, const gx_device * dev, bool keep_open,
     if (code < 0) {
 	gs_free_object(mem, new_dev, "gs_copydevice(device)");
 	if (a_std)
-	    gs_free_object(&gs_memory_default, a_std, "gs_copydevice(stype)");
+	    gs_free_object(dev->memory->non_gc_memory, a_std, "gs_copydevice(stype)");
 	return code;
     }
     *pnew_dev = new_dev;
@@ -316,6 +316,7 @@ gs_opendevice(gx_device *dev)
 {
     if (dev->is_open)
 	return 0;
+    check_device_separable(dev);
     gx_device_fill_in_procs(dev);
     {
 	int code = (*dev_proc(dev, open_device))(dev);
@@ -442,8 +443,20 @@ gs_make_null_device(gx_device_null *dev_null, gx_device *dev,
     gx_device_init((gx_device *)dev_null, (const gx_device *)&gs_null_device,
 		   mem, true);
     gx_device_set_target((gx_device_forward *)dev_null, dev);
-    if (dev)
-	gx_device_copy_color_params((gx_device *)dev_null, dev);
+    if (dev) {
+	/* The gx_device_copy_color_params() call below should
+	   probably copy over these new-style color mapping procs, as
+	   well as the old-style (map_rgb_color and friends). However,
+	   the change was made here instead, to minimize the potential
+	   impact of the patch.
+	*/
+	gx_device *dn = (gx_device *)dev_null;
+	set_dev_proc(dn, get_color_mapping_procs, gx_forward_get_color_mapping_procs);
+	set_dev_proc(dn, get_color_comp_index, gx_forward_get_color_comp_index);
+	set_dev_proc(dn, encode_color, gx_forward_encode_color);
+	set_dev_proc(dn, decode_color, gx_forward_decode_color);
+	gx_device_copy_color_params(dn, dev);
+    }
 }
 
 /* Mark a device as retained or not retained. */
@@ -552,6 +565,24 @@ gx_device_set_margins(gx_device * dev, const float *margins /*[4] */ ,
     }
 }
 
+
+/* Handle 90 and 270 degree rotation of the Tray
+ * Device must support TrayOrientation in its InitialMatrix and get/put params
+ */
+private void
+gx_device_TrayOrientationRotate(gx_device *dev)
+{
+  if ( dev->TrayOrientation == 90 || dev->TrayOrientation == 270) {
+    /* page sizes don't rotate, height and width do rotate 
+     * HWResolution, HWSize, and MediaSize parameters interact, 
+     * and must be set before TrayOrientation
+     */
+    int tmp = dev->height;
+    dev->height = dev->width;
+    dev->width = tmp;
+  }
+}
+
 /* Set the width and height, updating MediaSize to remain consistent. */
 void
 gx_device_set_width_height(gx_device * dev, int width, int height)
@@ -560,6 +591,7 @@ gx_device_set_width_height(gx_device * dev, int width, int height)
     dev->height = height;
     dev->MediaSize[0] = width * 72.0 / dev->HWResolution[0];
     dev->MediaSize[1] = height * 72.0 / dev->HWResolution[1];
+    gx_device_TrayOrientationRotate(dev);
 }
 
 /* Set the resolution, updating width and height to remain consistent. */
@@ -570,6 +602,7 @@ gx_device_set_resolution(gx_device * dev, floatp x_dpi, floatp y_dpi)
     dev->HWResolution[1] = y_dpi;
     dev->width = (int)(dev->MediaSize[0] * x_dpi / 72.0 + 0.5);
     dev->height = (int)(dev->MediaSize[1] * y_dpi / 72.0 + 0.5);
+    gx_device_TrayOrientationRotate(dev);
 }
 
 /* Set the MediaSize, updating width and height to remain consistent. */
@@ -580,6 +613,7 @@ gx_device_set_media_size(gx_device * dev, floatp media_width, floatp media_heigh
     dev->MediaSize[1] = media_height;
     dev->width = (int)(media_width * dev->HWResolution[0] / 72.0 + 0.499);
     dev->height = (int)(media_height * dev->HWResolution[1] / 72.0 + 0.499);
+    gx_device_TrayOrientationRotate(dev);
 }
 
 /*
@@ -596,6 +630,11 @@ gx_device_copy_color_procs(gx_device *dev, const gx_device *target)
     dev_proc_map_color_rgb((*to_rgb)) =
 	dev_proc(dev, map_color_rgb);
 
+    /* The logic in this function seems a bit stale; it sets the
+       old-style color procs, but not the new ones
+       (get_color_mapping_procs, get_color_comp_index, encode_color,
+       and decode_color). It should probably copy those as well.
+    */
     if (from_cmyk == gx_forward_map_cmyk_color ||
 	from_cmyk == cmyk_1bit_map_cmyk_color ||
 	from_cmyk == cmyk_8bit_map_cmyk_color) {
@@ -791,7 +830,7 @@ gx_device_open_output_file(const gx_device * dev, char *fname,
     if (parsed.iodev && !strcmp(parsed.iodev->dname, "%stdout%")) {
 	if (parsed.fname)
 	    return_error(gs_error_undefinedfilename);
-	*pfile = gs_stdout;
+	*pfile = dev->memory->gs_lib_ctx->fstdout;
 	/* Force stdout to binary. */
 	return gp_setmode_binary(*pfile, true);
     }

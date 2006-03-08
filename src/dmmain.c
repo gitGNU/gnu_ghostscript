@@ -1,4 +1,4 @@
-/* Copyright (C) 2003 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2003-2004 artofcode LLC.  All rights reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: dmmain.c,v 1.3 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: dmmain.c,v 1.4 2006/03/08 12:30:25 Arabidopsis Exp $ */
 
 /* Ghostscript shlib example wrapper for Macintosh (Classic/Carbon) contributed
    by Nigel Hathaway. Uses the Metrowerks CodeWarrior SIOUX command-line library.
@@ -57,7 +57,7 @@ Boolean   gDone;
 ControlActionUPP gActionFunctionScrollUPP;
 
 const char start_string[] = "systemdict /start get exec\n";
-gs_main_instance *instance;
+void *instance;
 
 const unsigned int display_format = DISPLAY_COLORS_RGB | DISPLAY_UNUSED_FIRST |
                                     DISPLAY_DEPTH_8 | DISPLAY_BIGENDIAN |
@@ -110,7 +110,7 @@ void    doUpdate                  (EventRecord *);
 void    doUpdateWindow            (EventRecord *);
 void    doOSEvent                 (EventRecord *);
 void    doInContent               (EventRecord *,WindowRef);
-void    actionFunctionScroll      (ControlRef,ControlPartCode);
+pascal void    actionFunctionScroll      (ControlRef,ControlPartCode);
 
 /*********************************************************************/
 /* stdio functions */
@@ -260,7 +260,7 @@ static int display_size(void *handle, void *device, int width, int height,
         img->pixmapHdl = NewPixMap();
 
     pixmap = *(img->pixmapHdl);
-    pixmap->baseAddr = pimage;
+    pixmap->baseAddr = (char*)pimage;
     pixmap->rowBytes = (((SInt16)raster) & 0x3fff) | 0x8000;
     pixmap->bounds.right = width;
     pixmap->bounds.bottom = height;
@@ -348,7 +348,8 @@ display_callback display = {
     display_page,
     display_update,
     NULL,    /* memalloc */
-    NULL    /* memfree */
+    NULL,    /* memfree */
+    NULL	 /* display_separation */
 };
 
 static IMAGE * image_find(void *handle, void *device)
@@ -609,7 +610,7 @@ void main(void)
                               0L,false) != noErr)
         ExitToShell();
 
-    gActionFunctionScrollUPP  = NewControlActionUPP(actionFunctionScroll);
+	gActionFunctionScrollUPP = NewControlActionUPP(&actionFunctionScroll);
 
     Gestalt(gestaltMenuMgrAttr,&response);
     if(response & gestaltMenuMgrAquaLayoutMask)
@@ -926,7 +927,7 @@ void doInContent(EventRecord *eventStrucPtr,WindowRef windowRef)
     }
 }
 
-void actionFunctionScroll(ControlRef controlRef,ControlPartCode controlPartCode)
+pascal void actionFunctionScroll(ControlRef controlRef,ControlPartCode controlPartCode)
 {
     SInt32 scrollDistance, controlValue, oldControlValue, controlMax;
 

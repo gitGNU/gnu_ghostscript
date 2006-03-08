@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevlj56.c,v 1.4 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevlj56.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* H-P LaserJet 5 & 6 drivers for Ghostscript */
 #include "gdevprn.h"
 #include "stream.h"
@@ -85,6 +85,7 @@ ljet5_open(gx_device * pdev)
 	stream *const s = &fs;
 	byte buf[50];		/* arbitrary */
 
+	s_init(s, pdev->memory);
 	swrite_file(s, ppdev->file, buf, sizeof(buf));
 	px_write_file_header(s, pdev);
 	sflush(s);		/* don't close */
@@ -125,6 +126,7 @@ ljet5_print_page(gx_device_printer * pdev, FILE * prn_stream)
 	code = gs_note_error(gs_error_VMerror);
 	goto done;
     }
+    s_init(s, mem);
     swrite_file(s, prn_stream, buf, sizeof(buf));
 
     /* Write the page header. */

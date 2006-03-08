@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevp2up.c,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevp2up.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* A "2-up" PCX device for testing page objects. */
 #include "gdevprn.h"
 #include "gdevpccm.h"
@@ -119,6 +119,7 @@ pcx2up_print_page(gx_device_printer * pdev, FILE * file)
 	if (prdev == 0)
 	    return_error(gs_error_VMerror);
 	memcpy(prdev, prdev_template, prdev_size);
+        check_device_separable((gx_device *)rdev);
 	gx_device_fill_in_procs(rdev);
 	set_dev_proc(prdev, open_device,
 		     dev_proc(&gs_pcx256_device, open_device));

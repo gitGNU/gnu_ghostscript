@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpccm.h,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevpccm.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* PC color mapping support */
 /* Requires gxdevice.h */
 
@@ -26,7 +26,7 @@
 /* Color mapping routines for EGA/VGA-style color. */
 dev_proc_map_rgb_color(pc_4bit_map_rgb_color);
 dev_proc_map_color_rgb(pc_4bit_map_color_rgb);
-#define dci_pc_4bit dci_values(3, 4, 3, 2, 4, 3)
+#define dci_pc_4bit dci_values(3, 4, 1, 1, 2, 2)
 
 /* Color mapping routines for 8-bit color (with a fixed palette). */
 dev_proc_map_rgb_color(pc_8bit_map_rgb_color);

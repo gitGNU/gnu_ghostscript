@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gscolor2.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gscolor2.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Level 2 color operators for Ghostscript library */
 #include "memory_.h"
 #include "gx.h"
@@ -173,7 +173,8 @@ const gs_color_space_type gs_color_space_type_Indexed = {
     gx_default_remap_color, gx_install_Indexed,
     gx_set_overprint_Indexed,
     gx_adjust_cspace_Indexed, gx_no_adjust_color_count,
-    gx_serialize_Indexed
+    gx_serialize_Indexed,
+    gx_cspace_is_linear_default
 };
 
 /* GC procedures. */

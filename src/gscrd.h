@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gscrd.h,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gscrd.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Interface for CIE color rendering dictionary creation */
 
 #ifndef gscrd_INCLUDED
@@ -52,7 +52,9 @@ int
  * default values.
  */
 int
-    gs_cie_render1_init_from(gs_cie_render * pcrd, void *client_data,
+    gs_cie_render1_init_from(const gs_memory_t  *mem,
+	    		     gs_cie_render *pcrd, 
+			     void *client_data,
 			     const gs_cie_render * pfrom_crd,
 			     const gs_vector3 * WhitePoint,
 			     const gs_vector3 * BlackPoint,
@@ -70,7 +72,9 @@ int
  * Initialize a CRD without the option of copying cached values.
  */
 int
-    gs_cie_render1_initialize(gs_cie_render * pcrd, void *client_data,
+    gs_cie_render1_initialize(const gs_memory_t *mem, 
+			      gs_cie_render *pcrd, 
+			      void *client_data,
 			      const gs_vector3 * WhitePoint,
 			      const gs_vector3 * BlackPoint,
 			      const gs_matrix3 * MatrixPQR,

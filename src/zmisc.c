@@ -1,4 +1,4 @@
-/* Copyright (C) 1989, 1995, 1997, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 1989, 1995-2004 artofcode LLC. All rights reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,11 +14,11 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zmisc.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zmisc.c,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Miscellaneous operators */
+
 #include "errno_.h"
 #include "memory_.h"
 #include "string_.h"
@@ -86,7 +86,7 @@ zbind(i_ctx_t *i_ctx_p)
 		    ref nref;
 		    ref *pvalue;
 
-		    name_index_ref(packed_name_index(&elt),
+		    name_index_ref(imemory, packed_name_index(&elt),
 				   &nref);
 		    if ((pvalue = dict_find_name(&nref)) != 0 &&
 			r_is_ex_oper(pvalue)
@@ -281,7 +281,7 @@ zmakeoperator(i_ctx_t *i_ctx_p)
     if (count == r_size(&opt->table))
 	return_error(e_limitcheck);
     ref_assign_old(&opt->table, &tab[count], op, "makeoperator");
-    opt->nx_table[count] = name_index(op - 1);
+    opt->nx_table[count] = name_index(imemory, op - 1);
     op_index_ref(opt->base_index + count, op - 1);
     opt->count = count + 1;
     pop(1);
@@ -360,6 +360,81 @@ zsetdebug(i_ctx_t *i_ctx_p)
     return 0;
 }
 
+/* ------ gs persistent cache operators ------ */
+/* these are for testing only. they're disabled in the normal build
+ * to prevent access to the cache by malicious postscript files
+ *
+ * use something like this:
+ *   (value) (key) .pcacheinsert
+ *   (key) .pcachequery { (\n) concatstrings print } if
+ */
+ 
+#ifdef DEBUG_CACHE
+
+/* <string> <string> .pcacheinsert */
+private int
+zpcacheinsert(i_ctx_t *i_ctx_p)
+{
+    os_ptr op = osp;
+    char *key, *buffer;
+    int keylen, buflen;
+    int code = 0;
+	
+    check_read_type(*op, t_string);
+    keylen = r_size(op);
+    key = op->value.bytes;
+    check_read_type(*(op - 1), t_string);
+    buflen = r_size(op - 1);
+    buffer = (op - 1)->value.bytes;
+    
+    code = gp_cache_insert(0, key, keylen, buffer, buflen);
+    if (code < 0)
+		return code;
+	
+	pop(2);
+	
+    return code;
+}
+
+/* allocation callback for query result */
+private void *
+pcache_alloc_callback(void *userdata, int bytes)
+{
+    i_ctx_t *i_ctx_p = (i_ctx_t*)userdata;    
+    return ialloc_string(bytes, "pcache buffer");
+}
+
+/* <string> .pcachequery <string> true */
+/* <string> .pcachequery false */
+private int
+zpcachequery(i_ctx_t *i_ctx_p)
+{
+	os_ptr op = osp;
+	int len;
+	char *key;
+	byte *string;
+	int code = 0;
+	
+	check_read_type(*op, t_string);
+	len = r_size(op);
+	key = op->value.bytes;
+	len = gp_cache_query(GP_CACHE_TYPE_TEST, key, len, (void**)&string, &pcache_alloc_callback, i_ctx_p);
+	if (len < 0) {
+		make_false(op);
+		return 0;
+	}
+	if (string == NULL)
+		return_error(e_VMerror);
+	make_string(op, a_all | icurrent_space, len, string);
+	
+	push(1);
+	make_true(op);
+	
+	return code;
+}
+
+#endif /* DEBUG_CACHE */
+
 /* ------ Initialization procedure ------ */
 
 const op_def zmisc_op_defs[] =
@@ -374,5 +449,10 @@ const op_def zmisc_op_defs[] =
     {"2.setdebug", zsetdebug},
     {"1.setoserrno", zsetoserrno},
     {"0usertime", zusertime},
+#ifdef DEBUG_CACHE
+	/* pcache test */
+    {"2.pcacheinsert", zpcacheinsert},
+    {"1.pcachequery", zpcachequery},
+#endif
     op_def_end(zmisc_init_realtime)
 };

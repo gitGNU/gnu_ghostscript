@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpng.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpng.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* PNG (Portable Network Graphics) Format.  Pronounced "ping". */
 /* lpd 1999-09-24: changes PNG_NO_STDIO to PNG_NO_CONSOLE_IO for libpng
    versions 1.0.3 and later. */
@@ -95,7 +95,7 @@ const gx_device_printer gs_png16_device = {
 	   DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
 	   X_DPI, Y_DPI,
 	   0, 0, 0, 0,		/* margins */
-	   3, 4, 3, 2, 4, 3, png_print_page)
+	   3, 4, 1, 1, 2, 2, png_print_page)
 };
 
 /* 8-bit (SuperVGA-style) color. */
@@ -638,7 +638,5 @@ pngalpha_copy_alpha(gx_device * dev, const byte * data, int data_x,
 	gs_free_object(mem, lin, "copy_alpha(lin)");
 	return code;
     }
-
-    /* should not be reached */
 }
 

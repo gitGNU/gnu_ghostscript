@@ -14,13 +14,13 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zfile1.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zfile1.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Special file operators */
 
 #include "memory_.h"
+#include "string_.h"
 #include "ghost.h"
 #include "gp.h"
 #include "ierrors.h"

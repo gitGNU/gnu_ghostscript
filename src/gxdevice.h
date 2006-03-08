@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxdevice.h,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxdevice.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Definitions for device implementors */
 
 #ifndef gxdevice_INCLUDED
@@ -97,7 +97,8 @@
  * unless we use the +/- workaround in the next macro.
  */
 #define std_device_part2_(width, height, x_dpi, y_dpi)\
-	{ gx_no_color_index, gx_no_color_index }, width, height,\
+	{ gx_no_color_index, gx_no_color_index },\
+          width, height, 0/*TrayOrientation*/,\
 	{ (float)((((width) * 72.0 + 0.5) - 0.5) / (x_dpi))/*MediaSize[0]*/,\
 	  (float)((((height) * 72.0 + 0.5) - 0.5) / (y_dpi))/*MediaSize[1]*/},\
 	{ 0, 0, 0, 0 }/*ImagingBBox*/, 0/*ImagingBBox_set*/,\
@@ -274,6 +275,10 @@ dev_proc_finish_copydevice(gx_default_finish_copydevice);
 dev_proc_pattern_manage(gx_default_pattern_manage);
 dev_proc_fill_rectangle_hl_color(gx_default_fill_rectangle_hl_color);
 dev_proc_include_color_space(gx_default_include_color_space);
+dev_proc_fill_linear_color_scanline(gx_default_fill_linear_color_scanline);
+dev_proc_fill_linear_color_trapezoid(gx_default_fill_linear_color_trapezoid);
+dev_proc_fill_linear_color_triangle(gx_default_fill_linear_color_triangle);
+dev_proc_update_spot_equivalent_colors(gx_default_update_spot_equivalent_colors);
 /* BACKWARD COMPATIBILITY */
 #define gx_non_imaging_create_compositor gx_null_create_compositor
 
@@ -346,6 +351,10 @@ dev_proc_decode_color(gx_forward_decode_color);
 dev_proc_pattern_manage(gx_forward_pattern_manage);
 dev_proc_fill_rectangle_hl_color(gx_forward_fill_rectangle_hl_color);
 dev_proc_include_color_space(gx_forward_include_color_space);
+dev_proc_fill_linear_color_scanline(gx_forward_fill_linear_color_scanline);
+dev_proc_fill_linear_color_trapezoid(gx_forward_fill_linear_color_trapezoid);
+dev_proc_fill_linear_color_triangle(gx_forward_fill_linear_color_triangle);
+dev_proc_update_spot_equivalent_colors(gx_forward_update_spot_equivalent_colors);
 
 /* ---------------- Implementation utilities ---------------- */
 
@@ -359,6 +368,11 @@ void gx_device_forward_fill_in_procs(gx_device_forward *);
 /* Forward the color mapping procedures from a device to its target. */
 void gx_device_forward_color_procs(gx_device_forward *);
 
+/*
+ * Check if the device's encode_color routine uses 'separable' bit encodings
+ * for each colorant.  For more info see the routine's header.
+ */
+void check_device_separable(gx_device * dev);
 /*
  * If a device has a linear and separable encode color function then
  * set up the comp_bits, comp_mask, and comp_shift fields.
@@ -420,12 +434,17 @@ int gx_device_close_output_file(const gx_device * dev, const char *fname,
 				FILE *file);
 
 /*
+ * Define the number of levels for a colorant above which we do not halftone.
+ */
+#define MIN_CONTONE_LEVELS 31
+
+/*
  * Determine whether a given device needs to halftone.  Eventually this
  * should take an imager state as an additional argument.
  */
 #define gx_device_must_halftone(dev)\
   ((gx_device_has_color(dev) ? (dev)->color_info.max_color :\
-    (dev)->color_info.max_gray) < 31)
+    (dev)->color_info.max_gray) < MIN_CONTONE_LEVELS)
 
 /*
  * Do generic work for output_page.  All output_page procedures must call

@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpsfm.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpsfm.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Write a CMap */
 #include "gx.h"
 #include "gserrors.h"
@@ -101,7 +101,8 @@ cmap_put_system_info(stream *s, const gs_cid_system_info_t *pcidsi)
 
 /* Write one code map. */
 private int
-cmap_put_code_map(stream *s, int which, const gs_cmap_t *pcmap,
+cmap_put_code_map(const gs_memory_t *mem,
+		  stream *s, int which, const gs_cmap_t *pcmap,
 		  const cmap_operators_t *pcmo,
 		  psf_put_name_chars_proc_t put_name_chars, 
 		  int font_index_only)
@@ -175,7 +176,7 @@ cmap_put_code_map(stream *s, int which, const gs_cmap_t *pcmap,
 		    break;
 		case CODE_VALUE_GLYPH: {
 		    gs_const_string str;
-		    int code = pcmap->glyph_name((gs_glyph)value, &str,
+		    int code = pcmap->glyph_name(mem, (gs_glyph)value, &str,
 						 pcmap->glyph_name_data);
 
 		    if (code < 0)
@@ -201,7 +202,8 @@ cmap_put_code_map(stream *s, int which, const gs_cmap_t *pcmap,
 
 /* Write a CMap in its standard (source) format. */
 int
-psf_write_cmap(stream *s, const gs_cmap_t *pcmap,
+psf_write_cmap(const gs_memory_t *mem, 
+	       stream *s, const gs_cmap_t *pcmap,
 	       psf_put_name_chars_proc_t put_name_chars,
 	       const gs_const_string *alt_cmap_name, int font_index_only)
 {
@@ -297,11 +299,11 @@ psf_write_cmap(stream *s, const gs_cmap_t *pcmap,
     {
 	int code;
 
-	code = cmap_put_code_map(s, 1, pcmap, &cmap_notdef_operators,
+	code = cmap_put_code_map(mem, s, 1, pcmap, &cmap_notdef_operators,
 			         put_name_chars, font_index_only);
 	if (code < 0)
 	    return code;
-	code = cmap_put_code_map(s, 0, pcmap, &cmap_cid_operators,
+	code = cmap_put_code_map(mem, s, 0, pcmap, &cmap_cid_operators,
 			         put_name_chars, font_index_only);
 	if (code < 0)
 	    return code;

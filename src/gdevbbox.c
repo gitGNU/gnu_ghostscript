@@ -16,7 +16,7 @@
 
 */
 
-/*$Id: gdevbbox.c,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/*$Id: gdevbbox.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Device for tracking bounding box */
 #include "math_.h"
 #include "memory_.h"
@@ -257,10 +257,10 @@ bbox_close_device(gx_device * dev)
 
 /* Initialize a bounding box device. */
 void
-gx_device_bbox_init(gx_device_bbox * dev, gx_device * target)
+gx_device_bbox_init(gx_device_bbox * dev, gx_device * target, gs_memory_t *mem)
 {
     gx_device_init((gx_device *) dev, (const gx_device *)&gs_bbox_device,
-		   (target ? target->memory : NULL), true);
+		   (target ? target->memory : mem), true);
     if (target) {
         gx_device_forward_fill_in_procs((gx_device_forward *) dev);
 	set_dev_proc(dev, get_initial_matrix, gx_forward_get_initial_matrix);
@@ -275,6 +275,9 @@ gx_device_bbox_init(gx_device_bbox * dev, gx_device * target)
 	set_dev_proc(dev, pattern_manage, gx_forward_pattern_manage);
 	set_dev_proc(dev, fill_rectangle_hl_color, gx_forward_fill_rectangle_hl_color);
 	set_dev_proc(dev, include_color_space, gx_forward_include_color_space);
+	set_dev_proc(dev, update_spot_equivalent_colors,
+				gx_forward_update_spot_equivalent_colors);
+	set_dev_proc(dev, get_page_device, gx_forward_get_page_device);
 	gx_device_set_target((gx_device_forward *)dev, target);
     } else {
 	gx_device_fill_in_procs((gx_device *)dev);
@@ -555,7 +558,7 @@ bbox_put_params(gx_device * dev, gs_param_list * plist)
 	    break;
 	default:
 	    ecode = code;
-	  e:param_signal_error(plist, param_name, ecode);
+	    e:param_signal_error(plist, param_name, ecode);
 	case 1:
 	    bba.data = 0;
     }
@@ -574,10 +577,10 @@ bbox_put_params(gx_device * dev, gs_param_list * plist)
 	code = ecode;
     if (code >= 0) {
         if( bba.data != 0) {
-	BBOX_INIT_BOX(bdev);
-	BBOX_ADD_RECT(bdev, float2fixed(bba.data[0]), float2fixed(bba.data[1]),
-		      float2fixed(bba.data[2]), float2fixed(bba.data[3]));
-    }
+	    BBOX_INIT_BOX(bdev);
+	    BBOX_ADD_RECT(bdev, float2fixed(bba.data[0]), float2fixed(bba.data[1]),
+	    	          float2fixed(bba.data[2]), float2fixed(bba.data[3]));
+        }
         bdev->white_is_opaque = white_is_opaque;
     }
     bbox_copy_params(bdev, bdev->is_open);
@@ -1192,9 +1195,8 @@ bbox_create_compositor(gx_device * dev,
 	/* If the target did not create a new compositor then we are done. */
 	if (code < 0 || target == cdev) {
 	    *pcdev = dev;
- 	    return code;
+	    return code;
 	}
-
 	bbcdev = gs_alloc_struct_immovable(memory, gx_device_bbox,
 					   &st_device_bbox,
 					   "bbox_create_compositor");
@@ -1202,7 +1204,7 @@ bbox_create_compositor(gx_device * dev,
 	    (*dev_proc(cdev, close_device)) (cdev);
 	    return_error(gs_error_VMerror);
 	}
-	gx_device_bbox_init(bbcdev, target);
+	gx_device_bbox_init(bbcdev, target, memory);
 	gx_device_set_target((gx_device_forward *)bbcdev, cdev);
 	bbcdev->box_procs = box_procs_forward;
 	bbcdev->box_proc_data = bdev;

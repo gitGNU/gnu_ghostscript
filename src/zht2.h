@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zht2.h,v 1.3 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zht2.h,v 1.4 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Level 2 sethalftone support */
 
 #ifndef zht2_INCLUDED
@@ -29,7 +29,9 @@
  * This routine translates a gs_separation_name value into a character string
  * pointer and a string length.
  */
-int gs_get_colorname_string(gs_separation_name colorname_index,
-			unsigned char **ppstr, unsigned int *pname_size);
+int gs_get_colorname_string(const gs_memory_t *mem, 
+			    gs_separation_name colorname_index,
+			    unsigned char **ppstr, 
+			    unsigned int *pname_size);
 
 #endif /* zht2_INCLUDED */

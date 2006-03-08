@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxclrast.c,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxclrast.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Command list interpreter/rasterizer */
 #include "memory_.h"
 #include "gx.h"
@@ -142,6 +142,7 @@ top_up_cbuf(command_buf_t *pcb, const byte *cbp)
 	nread = 1;
     }
     set_cb_end(pcb, cb_top + nread);
+    process_interrupts(pcb->s->memory);
     return pcb->data;
 }
 
@@ -352,7 +353,7 @@ in:				/* Initialize for a new page. */
     gx_imager_setscreenphase(&imager_state, -x0, -y0, gs_color_select_all);
     halftone_type = ht_type_none;
     fill_params.fill_zero_width = false;
-    gs_cspace_init_DeviceGray(&cs);
+    gs_cspace_init_DeviceGray(mem, &cs);
     pcs = &cs;
     color_unset(&dev_color);
     color_space.params.indexed.use_proc = 0;
@@ -1864,15 +1865,15 @@ read_set_color_space(command_buf_t *pcb, gs_imager_state *pis,
 	      (b & 4 ? "(proc)" : ""));
     switch (index) {
     case gs_color_space_index_DeviceGray:
-        gs_cspace_init_DeviceGray(&gray_cs);
+        gs_cspace_init_DeviceGray(mem, &gray_cs);
         pcs = &gray_cs;
 	break;
     case gs_color_space_index_DeviceRGB:
-        gs_cspace_init_DeviceRGB(&rgb_cs);
+        gs_cspace_init_DeviceRGB(mem, &rgb_cs);
         pcs = &rgb_cs;
 	break;
     case gs_color_space_index_DeviceCMYK:
-        gs_cspace_init_DeviceCMYK(&cmyk_cs);
+        gs_cspace_init_DeviceCMYK(mem, &cmyk_cs);
         pcs = &cmyk_cs;
 	break;
     default:
@@ -1954,6 +1955,7 @@ read_begin_image(command_buf_t *pcb, gs_image_common_t *pic,
 
     /* This is sloppy, but we don't have enough information to do better. */
     pcb->ptr = top_up_cbuf(pcb, pcb->ptr);
+    s_init(&s, NULL);
     sread_string(&s, pcb->ptr, pcb->end - pcb->ptr);
     code = image_type->sget(pic, &s, pcs);
     pcb->ptr = sbufptr(&s);
@@ -2152,6 +2154,7 @@ cmd_read_matrix(gs_matrix * pmat, const byte * cbp)
 {
     stream s;
 
+    s_init(&s, NULL);
     sread_string(&s, cbp, 1 + sizeof(*pmat));
     sget_matrix(&s, pmat);
     return cbp + stell(&s);

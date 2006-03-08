@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevsppr.c,v 1.4 2005/12/13 16:57:19 jemarch Exp $*/
+/* $Id: gdevsppr.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $*/
 /* SPARCprinter driver for Ghostscript */
 #include "gdevprn.h"
 #include <stdio.h>
@@ -129,17 +129,17 @@ sparc_print_page(gx_device_printer *pdev, FILE *prn)
   lpvipage.resolution = (pdev->x_pixels_per_inch == 300 ? DPI300 : DPI400);
   if (ioctl(fileno(prn),LPVIIOC_SETPAGE,&lpvipage)!=0)
     {
-    errprintf(sparc_print_page: LPVIIOC_SETPAGE failed\n");
+    errprintf("sparc_print_page: LPVIIOC_SETPAGE failed\n");
     return -1;
     }
   out_size=lpvipage.bitmap_width*lpvipage.page_length;
-  out_buf=gs_malloc(out_size,1,"sparc_print_page: out_buf");
+  out_buf=gs_malloc(pdev->memory, out_size,1,"sparc_print_page: out_buf");
   gdev_prn_copy_scan_lines(pdev,0,out_buf,out_size);
   while (write(fileno(prn),out_buf,out_size)!=out_size)
     {
     if (ioctl(fileno(prn),LPVIIOC_GETERR,&lpvierr)!=0)
       {
-      errprintf(sparc_print_page: LPVIIOC_GETERR failed\n");
+      errprintf("sparc_print_page: LPVIIOC_GETERR failed\n");
       return -1;
       }
     switch (lpvierr.err_type)
@@ -184,6 +184,6 @@ sparc_print_page(gx_device_printer *pdev, FILE *prn)
     errprintf("OK.\n");
     warning=0;
     }
-  gs_free(out_buf,out_size,1,"sparc_print_page: out_buf");
+  gs_free(pdev->memory, out_buf,out_size,1,"sparc_print_page: out_buf");
   return 0;
   }

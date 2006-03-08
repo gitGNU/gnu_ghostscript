@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: windows_.h,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: windows_.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Wrapper for windows.h */
 
 #ifndef windows__INCLUDED
@@ -47,6 +47,10 @@ typedef RGBQUAD FAR * LPRGBQUAD;
 #ifdef __WIN32__
 #  undef _fstrtok
 #  define _fstrtok(str, set) strtok(str, set)
+#endif
+
+#if defined(__BORLANDC__)
+#  define exception_code() __exception_code  
 #endif
 
 #endif /* windows__INCLUDED */

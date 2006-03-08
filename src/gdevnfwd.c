@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevnfwd.c,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevnfwd.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Null and forwarding device implementation */
 #include "gx.h"
 #include "gserrors.h"
@@ -106,6 +106,10 @@ gx_device_forward_fill_in_procs(register gx_device_forward * dev)
     fill_dev_proc(dev, pattern_manage, gx_forward_pattern_manage);
     fill_dev_proc(dev, fill_rectangle_hl_color, gx_forward_fill_rectangle_hl_color);
     fill_dev_proc(dev, include_color_space, gx_forward_include_color_space);
+    fill_dev_proc(dev, fill_linear_color_scanline, gx_forward_fill_linear_color_scanline);
+    fill_dev_proc(dev, fill_linear_color_trapezoid, gx_forward_fill_linear_color_trapezoid);
+    fill_dev_proc(dev, fill_linear_color_triangle, gx_forward_fill_linear_color_triangle);
+    fill_dev_proc(dev, update_spot_equivalent_colors, gx_forward_update_spot_equivalent_colors);
     gx_device_fill_in_procs((gx_device *) dev);
 }
 
@@ -323,7 +327,7 @@ gx_forward_get_page_device(gx_device * dev)
     if (tdev == 0)
 	return gx_default_get_page_device(dev);
     pdev = dev_proc(tdev, get_page_device)(tdev);
-    return (pdev == tdev ? dev : pdev);
+    return pdev;
 }
 
 int
@@ -683,15 +687,17 @@ gx_forward_get_color_mapping_procs(const gx_device * dev)
 }
 
 int
-gx_forward_get_color_comp_index(const gx_device * dev, const char * pname,
-						int name_size, int src_index)
+gx_forward_get_color_comp_index(gx_device * dev, const char * pname,
+					int name_size, int component_type)
 {
     const gx_device_forward * fdev = (const gx_device_forward *)dev;
     gx_device *tdev = fdev->target;
 
     return (tdev == 0 
-	? gx_error_get_color_comp_index(dev, pname, name_size, src_index)
-	: dev_proc(tdev, get_color_comp_index)(tdev, pname, name_size, src_index));
+	? gx_error_get_color_comp_index(dev, pname,
+				name_size, component_type)
+	: dev_proc(tdev, get_color_comp_index)(tdev, pname,
+				name_size, component_type));
 }
 
 gx_color_index
@@ -765,6 +771,61 @@ gx_forward_include_color_space(gx_device *dev, gs_color_space *cspace,
     else
 	return dev_proc(tdev, include_color_space)(tdev, cspace, res_name, name_length);
 }
+
+int 
+gx_forward_fill_linear_color_scanline(gx_device *dev, const gs_fill_attributes *fa,
+	int i, int j, int w,
+	const frac31 *c, const int32_t *addx, const int32_t *mulx, int32_t divx)
+{
+    gx_device_forward * const fdev = (gx_device_forward *)dev;
+    gx_device *tdev = fdev->target;
+    dev_proc_fill_linear_color_scanline((*proc)) =
+	(tdev == 0 ? (tdev = dev, gx_default_fill_linear_color_scanline) :
+	 dev_proc(tdev, fill_linear_color_scanline));
+    return proc(tdev, fa, i, j, w, c, addx, mulx, divx);
+}
+
+int 
+gx_forward_fill_linear_color_trapezoid(gx_device *dev, const gs_fill_attributes *fa,
+	const gs_fixed_point *p0, const gs_fixed_point *p1,
+	const gs_fixed_point *p2, const gs_fixed_point *p3,
+	const frac31 *c0, const frac31 *c1,
+	const frac31 *c2, const frac31 *c3)
+{
+    gx_device_forward * const fdev = (gx_device_forward *)dev;
+    gx_device *tdev = fdev->target;
+    dev_proc_fill_linear_color_trapezoid((*proc)) =
+	(tdev == 0 ? (tdev = dev, gx_default_fill_linear_color_trapezoid) :
+	 dev_proc(tdev, fill_linear_color_trapezoid));
+    return proc(tdev, fa, p0, p1, p2, p3, c0, c1, c2, c3);
+}
+
+int 
+gx_forward_fill_linear_color_triangle(gx_device *dev, const gs_fill_attributes *fa,
+	const gs_fixed_point *p0, const gs_fixed_point *p1,
+	const gs_fixed_point *p2,
+	const frac31 *c0, const frac31 *c1, const frac31 *c2)
+{
+    gx_device_forward * const fdev = (gx_device_forward *)dev;
+    gx_device *tdev = fdev->target;
+    dev_proc_fill_linear_color_triangle((*proc)) =
+	(tdev == 0 ? (tdev = dev, gx_default_fill_linear_color_triangle) :
+	 dev_proc(tdev, fill_linear_color_triangle));
+    return proc(tdev, fa, p0, p1, p2, c0, c1, c2);
+}
+
+int 
+gx_forward_update_spot_equivalent_colors(gx_device *dev, const gs_state * pgs)
+{
+    gx_device_forward * const fdev = (gx_device_forward *)dev;
+    gx_device *tdev = fdev->target;
+    int code = 0;
+
+    if (tdev != NULL)
+	code = dev_proc(tdev, update_spot_equivalent_colors)(tdev, pgs);
+    return code;
+}
+
 
 /* ---------------- The null device(s) ---------------- */
 

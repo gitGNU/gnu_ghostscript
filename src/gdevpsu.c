@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpsu.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpsu.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* PostScript-writing utilities */
 #include "math_.h"
 #include "time_.h"
@@ -39,7 +39,7 @@ psw_print_lines(FILE *f, const char *const lines[])
     int i;
     for (i = 0; lines[i] != 0; ++i) {
 	if (fprintf(f, "%s\n", lines[i]) < 0)
-	    return_error(gs_error_ioerror);
+            return_error(gs_error_ioerror);
     }
     return 0;
 }
@@ -62,6 +62,7 @@ psw_print_procset_name(FILE *f, const gx_device *dev,
     byte buf[100];		/* arbitrary */
     stream s;
 
+    s_init(&s, dev->memory);
     swrite_file(&s, f, buf, sizeof(buf));
     psw_put_procset_name(&s, dev, pdpc);
     sflush(&s);
@@ -153,7 +154,7 @@ private const char *const psw_end_prolog[] = {
  */
 private bool
 is_seekable(FILE *f)
-{
+{ 
     struct stat buf;
 
     if(fstat(fileno(f), &buf))

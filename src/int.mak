@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: int.mak,v 1.6 2006/02/20 19:52:05 jemarch Exp $
+# $Id: int.mak,v 1.7 2006/03/08 12:30:25 Arabidopsis Exp $
 # (Platform-independent) makefile for PostScript and PDF language
 # interpreters.
 # Users of this makefile must define the following:
@@ -36,7 +36,6 @@ PSO_=$(O_)$(PSOBJ)
 PSI_=$(PSSRCDIR) $(II)$(PSGENDIR) $(II)$(GLI_)
 PSF_=
 PSCC=$(CC_) $(I_)$(PSI_)$(_I) $(PSF_)
-PSCCLEAF=$(CC_LEAF) $(I_)$(PSI_)$(_I) $(PSF_)
 PSJBIG2CC=$(CC_) $(I_)$(PSI_) $(II)$(JB2I_)$(_I) $(JB2CF_) $(PSF_)
 # All top-level makefiles define PSD.
 #PSD=$(PSGEN)
@@ -265,7 +264,7 @@ ibnum_h=$(PSSRC)ibnum.h
 ### Initialization and scanning
 
 $(PSOBJ)iconfig.$(OBJ) : $(PSSRC)iconf.c $(stdio__h)\
- $(gconf_h) $(gsmemory_h) $(gstypes_h)\
+ $(gconf_h) $(gconfigd_h) $(gsmemory_h) $(gstypes_h)\
  $(iminst_h) $(iref_h) $(ivmspace_h) $(opdef_h) $(iplugin_h)
 	$(RM_) $(PSGEN)iconfig.c
 	$(CP_) $(gconfig_h) $(PSGEN)gconfig.h
@@ -328,8 +327,8 @@ $(PSOBJ)zfile.$(OBJ) : $(PSSRC)zfile.c $(OP)\
  $(isave_h) $(main_h) $(sfilter_h) $(stream_h) $(strimpl_h) $(store_h)
 	$(PSCC) $(PSO_)zfile.$(OBJ) $(C_) $(PSSRC)zfile.c
 
-$(PSOBJ)zfile1.$(OBJ) : $(PSSRC)zfile1.c $(OP) $(memory__h) $(gp_h)\
- $(ierrors_h) $(oper_h) $(opcheck_h) $(ialloc_h) $(opdef_h) $(store_h)
+$(PSOBJ)zfile1.$(OBJ) : $(PSSRC)zfile1.c $(OP) $(memory__h) $(string__h)\
+ $(gp_h) $(ierrors_h) $(oper_h) $(opcheck_h) $(ialloc_h) $(opdef_h) $(store_h)
 	$(PSCC) $(PSO_)zfile1.$(OBJ) $(C_) $(PSSRC)zfile1.c
 
 $(PSOBJ)zfileio.$(OBJ) : $(PSSRC)zfileio.c $(OP) $(memory__h) $(gp_h)\
@@ -550,9 +549,12 @@ INT_ALL=$(INT_OBJS) $(INT_CONFIG)
 # dependency requirements and are added to the link list at the very end.
 # zfilter.c shouldn't include the RLE and RLD filters, but we don't want to
 # change this now.
+#
+# We add dscparse.dev here since it can be used with any PS level even
+# though we don't strictly need it unless we have the pdfwrite device.
 $(PSD)psbase.dev : $(INT_MAK) $(ECHOGS_XE) $(INT_OBJS)\
  $(PSD)isupport.dev $(PSD)nobtoken.dev $(PSD)nousparm.dev\
- $(GLD)rld.dev $(GLD)rle.dev $(GLD)sfile.dev
+ $(GLD)rld.dev $(GLD)rle.dev $(GLD)sfile.dev $(PSD)dscparse.dev
 	$(SETMOD) $(PSD)psbase $(INT_MAIN)
 	$(ADDMOD) $(PSD)psbase -obj $(INT_CONFIG)
 	$(ADDMOD) $(PSD)psbase -obj $(INT1)
@@ -583,7 +585,7 @@ $(PSD)psbase.dev : $(INT_MAK) $(ECHOGS_XE) $(INT_OBJS)\
 	$(ADDMOD) $(PSD)psbase -oper $(Z11OPS)
 	$(ADDMOD) $(PSD)psbase -iodev stdin stdout stderr lineedit statementedit
 	$(ADDMOD) $(PSD)psbase -include $(PSD)isupport $(PSD)nobtoken $(PSD)nousparm
-	$(ADDMOD) $(PSD)psbase -include $(GLD)rld $(GLD)rle $(GLD)sfile
+	$(ADDMOD) $(PSD)psbase -include $(GLD)rld $(GLD)rle $(GLD)sfile $(PSD)dscparse
 	$(ADDMOD) $(PSD)psbase -replace $(GLD)gsiodevs
 
 # -------------------------- Feature definitions -------------------------- #
@@ -1316,6 +1318,21 @@ $(PSOBJ)zfjbig2.$(OBJ) : $(PSSRC)zfjbig2.c $(OP) $(memory__h)\
  $(store_h) $(stream_h) $(strimpl_h) $(sjbig2_h)
 	$(PSJBIG2CC) $(PSO_)zfjbig2.$(OBJ) $(C_) $(PSSRC)zfjbig2.c
 
+# JPX (jpeg 2000) compression filter
+# this can be turned on and off with a FEATURE_DEV
+
+fjpx_=$(PSOBJ)zfjpx.$(OBJ)
+$(PSD)jpx.dev : $(INT_MAK) $(ECHOGS_XE) $(fjpx_) $(GLD)sjpx.dev
+	$(SETMOD) $(PSD)jpx $(fjpx_)
+	$(ADDMOD) $(PSD)jpx -include $(GLD)sjpx
+	$(ADDMOD) $(PSD)jpx -include $(GLD)libjasper
+	$(ADDMOD) $(PSD)jpx -oper zfjpx
+
+$(PSOBJ)zfjpx.$(OBJ) : $(PSSRC)zfjpx.c $(OP) $(memory__h)\
+ $(gsstruct_h) $(gstypes_h) $(ialloc_h) $(idict_h) $(ifilter_h)\
+ $(store_h) $(stream_h) $(strimpl_h) $(sjpx_h)
+	$(PSCC) $(I_)$(JASI_)$(_I) $(JASCF_) $(PSO_)zfjpx.$(OBJ) $(C_) $(PSSRC)zfjpx.c
+
 
 # ---------------- Binary tokens ---------------- #
 
@@ -1538,7 +1555,7 @@ $(PSOBJ)zpcolor.$(OBJ) : $(PSSRC)zpcolor.c $(OP)\
  $(estack_h)\
  $(ialloc_h) $(icremap_h) $(idict_h) $(idparam_h) $(igstate_h)\
  $(ipcolor_h) $(istruct_h)\
- $(store_h) $(memory__h)
+ $(store_h) $(gzstate_h) $(memory__h)
 	$(PSCC) $(PSO_)zpcolor.$(OBJ) $(C_) $(PSSRC)zpcolor.c
 
 # ---------------- Separation color ---------------- #
@@ -1817,10 +1834,12 @@ $(PSD)pdf.dev : $(INT_MAK) $(ECHOGS_XE)\
 $(PSD)pdffonts.dev : $(INT_MAK) $(ECHOGS_XE)
 	$(SETMOD) $(PSD)pdffonts -ps gs_mex_e gs_mro_e gs_pdf_e gs_wan_e
 
-$(PSD)pdfread.dev : $(INT_MAK) $(ECHOGS_XE)\
+$(PSD)pdfread.dev : $(INT_MAK) $(ECHOGS_XE) $(GLOBJ)gxi16bit.$(OBJ)\
  $(PSD)frsd.dev $(PSD)func4.dev $(PSD)fzlib.dev $(PSD)transpar.dev
-	$(SETMOD) $(PSD)pdfread -include $(PSD)frsd $(PSD)func4 $(PSD)fzlib
-	$(SETMOD) $(PSD)pdfread -include $(PSD)transpar
+	$(SETMOD) $(GLD)pdfread $(GLOBJ)gxi16bit.$(OBJ)
+	$(ADDMOD) $(GLD)pdfread -replace $(GLD)no16bit
+	$(ADDMOD) $(PSD)pdfread -include $(PSD)frsd $(PSD)func4 $(PSD)fzlib
+	$(ADDMOD) $(PSD)pdfread -include $(PSD)transpar
 	$(ADDMOD) $(PSD)pdfread -ps pdf_ops gs_l2img
 	$(ADDMOD) $(PSD)pdfread -ps pdf_rbld
 	$(ADDMOD) $(PSD)pdfread -ps pdf_base pdf_draw pdf_font pdf_main pdf_sec
@@ -1932,12 +1951,12 @@ GENINIT_DEPS=$(stdpre_h)
 # ============================= Main program ============================== #
 
 $(PSOBJ)gs.$(OBJ) : $(PSSRC)gs.c $(GH)\
- $(ierrors_h) $(iapi_h) $(imain_h) $(imainarg_h) $(iminst_h)
+ $(ierrors_h) $(iapi_h) $(imain_h) $(imainarg_h) $(iminst_h) $(gsmalloc_h)
 	$(PSCC) $(PSO_)gs.$(OBJ) $(C_) $(PSSRC)gs.c
 
 $(PSOBJ)iapi.$(OBJ) : $(PSSRC)iapi.c $(AK)\
  $(string__h) $(ierrors_h) $(gscdefs_h) $(gstypes_h) $(iapi_h)\
- $(iref_h) $(imain_h) $(imainarg_h) $(iminst_h)
+ $(iref_h) $(imain_h) $(imainarg_h) $(iminst_h) $(gslibctx_h)
 	$(PSCC) $(PSO_)iapi.$(OBJ) $(C_) $(PSSRC)iapi.c
 
 $(PSOBJ)icontext.$(OBJ) : $(PSSRC)icontext.c $(GH)\
@@ -1981,7 +2000,7 @@ $(PSOBJ)imain.$(OBJ) : $(PSSRC)imain.c $(GH) $(memory__h) $(string__h)\
 
 #****** $(CCINT) interp.c
 $(PSOBJ)interp.$(OBJ) : $(PSSRC)interp.c $(GH) $(memory__h) $(string__h)\
- $(gsstruct_h)\
+ $(gsstruct_h) $(idebug_h)\
  $(dstack_h) $(ierrors_h) $(estack_h) $(files_h)\
  $(ialloc_h) $(iastruct_h) $(icontext_h) $(icremap_h) $(iddict_h) $(igstate_h)\
  $(iname_h) $(inamedef_h) $(interp_h) $(ipacked_h)\

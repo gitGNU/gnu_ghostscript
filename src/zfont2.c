@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zfont2.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zfont2.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Type 2 font creation operators */
 #include "ghost.h"
 #include "oper.h"
@@ -30,6 +30,7 @@
 #include "idparam.h"
 #include "ifont1.h"
 #include "ifont2.h"
+#include "ialloc.h"
 
 /* Private utilities */
 private uint
@@ -95,7 +96,7 @@ zbuildfont2(i_ctx_t *i_ctx_p)
     os_ptr op = osp;
     charstring_font_refs_t refs;
     build_proc_refs build;
-    int code = build_proc_name_refs(&build,
+    int code = build_proc_name_refs(imemory, &build,
 				    "%Type2BuildChar", "%Type2BuildGlyph");
     gs_type1_data data1;
 

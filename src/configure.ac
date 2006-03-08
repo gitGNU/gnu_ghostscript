@@ -15,7 +15,7 @@ dnl ghostscript; see the file COPYING. If not, write to the Free Software Founda
 dnl Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 
-dnl $Id: configure.ac,v 1.8 2005/12/13 16:57:18 jemarch Exp $
+dnl $Id: configure.ac,v 1.9 2006/03/08 12:30:24 Arabidopsis Exp $
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------
@@ -108,7 +108,7 @@ AC_STRUCT_TM
 
 dnl see if we're on a system that puts the *int*_t types 
 dnl from stdint.h in sys/types.h
-if test "$ac_cv_header_stdint_h" != yes; then
+if test "x$ac_cv_header_stdint_h" != xyes; then
     AC_CHECK_TYPES([int8_t, int16_t, int32_t, uint8_t, uint16_t, uint32_t],,,[#include <sys/types.h>])
     if test "$ac_cv_type_uint8_t" = yes; then
         AC_DEFINE([SYS_TYPES_HAS_STDINT_TYPES])
@@ -121,7 +121,7 @@ dnl the flags we care about
 if test "$ac_cv_c_const" != yes; then
 	GCFLAGS="$GCFLAGS -Dconst="
 fi
-if test "$ac_cv_header_stdint_h" = yes; then
+if test "x$ac_cv_header_stdint_h" = xyes; then
 	GCFLAGS="$GCFLAGS -DHAVE_STDINT_H"
 fi
 
@@ -304,6 +304,76 @@ fi
 AC_SUBST(JBIG2DIR)
 AC_SUBST(SHARE_JBIG2)
 AC_SUBST(JBIG2DEVS)
+
+dnl look for the jasper JPEG 2000 library
+AC_ARG_WITH(jasper, AC_HELP_STRING([--with-jasper],[link to the JasPer library for JPEG 2000]))
+JASPERDIR=src
+SHARE_JASPER=0
+JPXDEVS=''
+if test x$with_jasper != xno; then
+  AC_MSG_CHECKING([for local jasper library source])
+  for d in jasper jasper-1.7*; do
+    test -d "$d" && JASPERDIR=$d && break
+  done
+  if test "x$JASPERDIR" != xsrc; then
+    AC_MSG_RESULT([$JASPERDIR])
+    AC_MSG_CHECKING([for local jasper config header])
+    if test -r $JASPERDIR/src/libjasper/include/jasper/jas_config_ac.h; then
+      AC_MSG_RESULT([yes])
+    else
+      AC_MSG_RESULT([no])
+      AC_MSG_CHECKING([for local jasper configure script])
+      if test -x $JASPERDIR/configure; then
+        AC_MSG_RESULT([yes])
+        echo
+        echo "Running jasper configure script..."
+	olddir=`pwd`
+        cd $JASPERDIR && ./configure
+        cd $olddir
+        echo
+        echo "Continuing with Ghostscript configuration..."
+      else
+        AC_MSG_RESULT([no])
+        AC_MSG_CHECKING([for local jasper autogen.sh script])
+        if test -x $JASPERDIR/autogen.sh; then
+          AC_MSG_RESULT([yes])
+          echo
+          echo "Running jasper autogen script..."
+	  olddir=`pwd`
+          cd $JASPERDIR && ./autogen.sh
+          cd $olddir
+          echo
+          echo "Continuing with Ghostscript configuration..."
+        else
+          AC_MSG_ERROR([
+Unable to find $JASPERDIR/src/libjasper/include/jas_config.h,
+or generate generate such a file for this system. You will
+have to build one by hand, or configure, build and install
+the jasper library separately.
+
+You can also pass --without-jasper to configure to disable
+JPEG 2000 PDF image support entirely.
+])
+        fi
+      fi
+    fi
+  else
+    AC_MSG_RESULT([no])
+    AC_CHECK_LIB([jasper], [jas_image_create], [
+	SHARE_JASPER=1
+    ], [
+	AC_MSG_WARN([disabling support for JPEG 2000 images])
+        with_jasper=no
+    ])
+  fi
+fi
+if test x$with_jasper != xno; then
+  JPXDEVS='$(PSD)jpx.dev'
+fi
+
+AC_SUBST(JASPERDIR)
+AC_SUBST(SHARE_JASPER)
+AC_SUBST(JPXDEVS)
 
 dnl optional X11 for display devices
 AC_PATH_XTRA

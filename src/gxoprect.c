@@ -1,4 +1,4 @@
-/* Copyright (C) 2002 artofcode LLC. All rights reserved.
+/* Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
 
   This file is part of GNU ghostscript
 
@@ -14,10 +14,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-    
 */
 
-/* $Id: gxoprect.c,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxoprect.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* generic (very slow) overprint fill rectangle implementation */
 
 #include "memory_.h"

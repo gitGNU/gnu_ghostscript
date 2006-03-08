@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zicc.c,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zicc.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* ICCBased color operators */
 
 #include "math_.h"
@@ -35,7 +35,7 @@
 #include "idparam.h"
 #include "igstate.h"
 #include "icie.h"
-
+#include "ialloc.h"
 
 /*
  *   <dict>  .seticcspace  -
@@ -114,7 +114,8 @@ zseticcspace(i_ctx_t * i_ctx_p)
      * space, we use the range values only to restrict the set of input
      * values; they are not used for normalization.
      */
-    code = dict_floats_param( op,
+    code = dict_floats_param( imemory, 
+			      op,
                               "Range",
                               2 * ncomps,
                               range_buff,

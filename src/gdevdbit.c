@@ -16,7 +16,7 @@
 
 */
 
-/*$Id: gdevdbit.c,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/*$Id: gdevdbit.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Default device bitmap copying implementation */
 #include "gx.h"
 #include "gpcheck.h"
@@ -419,7 +419,7 @@ gx_default_strip_tile_rectangle(gx_device * dev, const gx_strip_bitmap * tiles,
      (*proc_color)(dev, row, srcx, raster, id, tx, ty, tw, th) :\
      (*proc_mono)(dev, row, srcx, raster, id, tx, ty, tw, th, color0, color1));\
   if (code < 0) return_error(code);\
-  return_if_interrupt()
+  return_if_interrupt(dev->memory)
 #ifdef DEBUG
 #define copy_tile(srcx, tx, ty, tw, th, tid)\
   if_debug6('t', "   copy id=%lu sx=%d => x=%d y=%d w=%d h=%d\n",\

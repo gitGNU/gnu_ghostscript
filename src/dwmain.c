@@ -16,11 +16,10 @@
 
 */
 
-/* $Id: dwmain.c,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: dwmain.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Ghostscript DLL loader for Windows */
 
-#define STRICT
-#include <windows.h>
+#include "windows_.h"
 #include <shellapi.h>
 #include <stdio.h>
 #include <string.h>
@@ -53,7 +52,7 @@ const LPSTR szIniSection = "Text";
 
 
 GSDLL gsdll;
-gs_main_instance *instance;
+void *instance;
 HWND hwndtext;
 
 char start_string[] = "systemdict /start get exec\n";
@@ -228,6 +227,22 @@ static int display_update(void *handle, void *device,
     return poll();
 }
 
+int display_separation(void *handle, void *device, 
+   int comp_num, const char *name,
+   unsigned short c, unsigned short m,
+   unsigned short y, unsigned short k)
+{
+    IMAGE *img;
+#ifdef DISPLAY_DEBUG
+    fprintf(stdout, "display_separation(0x%x, 0x%x, %d '%s' %d,%d,%d,%d)\n", 
+	handle, device, comp_num, name, (int)c, (int)m, (int)y, (int)k);
+#endif
+    img = image_find(handle, device);
+    if (img)
+        image_separation(img, comp_num, name, c, m, y, k);
+    return 0;
+}
+
 display_callback display = { 
     sizeof(display_callback),
     DISPLAY_VERSION_MAJOR,
@@ -241,7 +256,8 @@ display_callback display = {
     display_page,
     display_update,
     NULL,	/* memalloc */
-    NULL	/* memfree */
+    NULL,	/* memfree */
+    display_separation
 };
 
 
@@ -256,6 +272,7 @@ int new_main(int argc, char *argv[])
     int nargc;
     char **nargv;
     char dformat[64];
+    char ddpi[64];
     char buf[256];
 
     memset(buf, 0, sizeof(buf));
@@ -285,6 +302,7 @@ int new_main(int argc, char *argv[])
 		DISPLAY_DEPTH_1 | DISPLAY_LITTLEENDIAN | DISPLAY_BOTTOMFIRST;
 	HDC hdc = GetDC(NULL);	/* get hdc for desktop */
 	int depth = GetDeviceCaps(hdc, PLANES) * GetDeviceCaps(hdc, BITSPIXEL);
+	sprintf(ddpi, "-dDisplayResolution=%d", GetDeviceCaps(hdc, LOGPIXELSY));
         ReleaseDC(NULL, hdc);
 	if (depth == 32)
  	    format = DISPLAY_COLORS_RGB | DISPLAY_UNUSED_LAST | 
@@ -304,18 +322,28 @@ int new_main(int argc, char *argv[])
 		DISPLAY_DEPTH_4 | DISPLAY_LITTLEENDIAN | DISPLAY_BOTTOMFIRST;
         sprintf(dformat, "-dDisplayFormat=%d", format);
     }
-    nargc = argc + 1;
+    nargc = argc + 2;
     nargv = (char **)malloc((nargc + 1) * sizeof(char *));
     nargv[0] = argv[0];
     nargv[1] = dformat;
-    memcpy(&nargv[2], &argv[1], argc * sizeof(char *));
+    nargv[2] = ddpi;
+    memcpy(&nargv[3], &argv[1], argc * sizeof(char *));
 
+#if defined(_MSC_VER) || defined(__BORLANDC__)
+    __try {
+#endif
     code = gsdll.init_with_args(instance, nargc, nargv);
     if (code == 0)
 	code = gsdll.run_string(instance, start_string, 0, &exit_code);
     code1 = gsdll.exit(instance);
     if (code == 0 || (code == e_Quit && code1 != 0))
 	code = code1;
+#if defined(_MSC_VER) || defined(__BORLANDC__)
+    } __except(exception_code() == EXCEPTION_STACK_OVERFLOW) {
+        code = e_Fatal;
+        text_puts(tw, "*** C stack overflow. Quiting...\n");
+    }
+#endif
 
     gsdll.delete_instance(instance);
 

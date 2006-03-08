@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gsstate.c,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gsstate.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Miscellaneous graphics state operators for Ghostscript library */
 #include "gx.h"
 #include "memory_.h"
@@ -254,7 +254,7 @@ gs_state_alloc(gs_memory_t * mem)
     pgs->effective_clip_path = pgs->clip_path;
     pgs->effective_clip_shared = true;
     /* Initialize things so that gx_remap_color won't crash. */
-    gs_cspace_init_DeviceGray(pgs->color_space);
+    gs_cspace_init_DeviceGray(pgs->memory, pgs->color_space);
     pgs->in_cachedevice = 0;
     gx_set_device_color_1(pgs); /* sets colorspace and client color */
     pgs->device = 0;		/* setting device adjusts refcts */
@@ -285,10 +285,11 @@ fail:
 /* This should only be done to a newly created state. */
 void
 gs_state_set_client(gs_state * pgs, void *pdata,
-		    const gs_state_client_procs * pprocs)
+		    const gs_state_client_procs * pprocs, bool client_has_pattern_streams)
 {
     pgs->client_data = pdata;
     pgs->client_procs = *pprocs;
+    pgs->have_pattern_streams = client_has_pattern_streams;
 }
 
 /* Get the client data from a graphics state. */

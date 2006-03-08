@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxistate.h,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxistate.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Imager state definition */
 
 #ifndef gxistate_INCLUDED
@@ -214,6 +214,10 @@ typedef struct gs_transparency_source_s {
 	void *client_data;\
 	gx_line_params line_params;\
 	gs_matrix_fixed ctm;\
+	bool current_point_valid;\
+	gs_point current_point;\
+	gs_point subpath_start;\
+	bool clamp_coordinates;\
 	gs_logical_operation_t log_op;\
 	gx_color_value alpha;\
 	gs_blend_mode_t blend_mode;\
@@ -225,9 +229,10 @@ typedef struct gs_transparency_source_s {
 	int overprint_mode;\
 	int effective_overprint_mode;\
 	float flatness;\
-	gs_fixed_point fill_adjust;	/* fattening for fill */\
+	gs_fixed_point fill_adjust; /* A path expansion for fill; -1 = dropout prevention*/\
 	bool stroke_adjust;\
 	bool accurate_curves;\
+	bool have_pattern_streams;\
 	float smoothness;\
 	const gx_color_map_procs *\
 	  (*get_cmap_procs)(const gs_imager_state *, const gx_device *);\
@@ -257,9 +262,10 @@ struct gs_imager_state_s {
 #define gs_imager_state_initial(scale)\
   0, 0, { gx_line_params_initial },\
    { (float)(scale), 0.0, 0.0, (float)(-(scale)), 0.0, 0.0 },\
+  false, {0, 0}, {0, 0}, false, \
   lop_default, gx_max_color_value, BLEND_MODE_Compatible,\
    { 1.0, 0 }, { 1.0, 0 }, 0/*false*/, 0, 0, 0/*false*/, 0, 0, 1.0,\
-   { fixed_half, fixed_half }, 0/*false*/, 0/*false*/, 1.0,\
+   { fixed_half, fixed_half }, 0/*false*/, 0/*false*/, 0/*false*/, 1.0,\
   gx_default_get_cmap_procs
 
 /* The imager state structure is public only for subclassing. */

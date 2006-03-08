@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevtfax.c,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gdevtfax.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* TIFF and TIFF/fax devices */
 #include "gdevprn.h"
 #include "gdevtifs.h"
@@ -313,7 +313,7 @@ tifflzw_print_page(gx_device_printer * dev, FILE * prn_stream)
     state.InitialCodeLength = 8;
     state.FirstBitLowOrder = false;
     state.BlockData = false;
-    state.EarlyChange = 0;	/****** CHECK THIS ******/
+    state.EarlyChange = 1;	/* PLRM is sort of confusing, but this is correct */
     code = gdev_stream_print_page(dev, prn_stream, &s_LZWE_template,
 				  (stream_state *) & state);
     gdev_tiff_end_page(&tfdev->tiff, prn_stream);

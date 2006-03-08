@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zimage3.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zimage3.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* LanguageLevel 3 ImageTypes (3 & 4 - masked images) */
 #include "memory_.h"
 #include "ghost.h"
@@ -31,6 +31,7 @@
 #include "idparam.h"
 #include "igstate.h"
 #include "iimage.h"
+#include "ialloc.h"
 
 /* <dict> .image3 - */
 private int
@@ -59,7 +60,7 @@ zimage3(i_ctx_t *i_ctx_p)
     if ((code = pixel_image_params(i_ctx_p, pDataDict,
 				   (gs_pixel_image_t *)&image, &ip_data,
 				   12, false)) < 0 ||
-	(mcode = code = data_image_params(pMaskDict, &image.MaskDict,
+	(mcode = code = data_image_params(imemory, pMaskDict, &image.MaskDict,
 				   &ip_mask, false, 1, 12, false)) < 0 ||
 	(code = dict_int_param(pDataDict, "ImageType", 1, 1, 0, &ignored)) < 0 ||
 	(code = dict_int_param(pMaskDict, "ImageType", 1, 1, 0, &ignored)) < 0

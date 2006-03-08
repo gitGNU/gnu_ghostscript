@@ -17,7 +17,7 @@
   
 */
 
-/*$Id: gxcht.c,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/*$Id: gxcht.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Color halftone rendering for Ghostscript imaging library */
 #include <assert.h>
 #include "memory_.h"
@@ -672,7 +672,7 @@ gx_dc_ht_colored_fill_rectangle(const gx_device_color * pdevc,
 	    tiles.raster = raster;
 	    tiles.rep_width = tiles.size.x = lw;
 	    tiles.rep_height = tiles.size.y = lh;
-	    tiles.id = gs_next_ids(1);
+	    tiles.id = gs_next_ids(dev->memory, 1);
 	    tiles.rep_shift = tiles.shift = 0;
 	    set_color_ht((byte *)tbits, raster, 0, 0, lw, lh, depth,
 			 special, nplanes, pdevc->colors.colored.plane_mask,

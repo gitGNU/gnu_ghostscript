@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevplnx.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $*/
+/* $Id: gdevplnx.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $*/
 /* Plane extraction device */
 #include "gx.h"
 #include "gserrors.h"
@@ -397,6 +397,7 @@ plane_device_init(gx_device_plane_extract *edev, gx_device *target,
     gx_device_init((gx_device *)edev,
 		   (const gx_device *)&gs_plane_extract_device,
 		   edev->memory, true);
+    check_device_separable((gx_device *)edev);
     gx_device_forward_fill_in_procs((gx_device_forward *)edev);
     gx_device_set_target((gx_device_forward *)edev, target);
     gx_device_copy_params((gx_device *)edev, target);
@@ -893,8 +894,15 @@ plane_cmap_rgb_alpha(frac r, frac g, frac b, frac alpha, gx_device_color * pdc,
 				(gx_device *)edev, select);
     reduce_drawing_color(pdc, edev, &dcolor, &lop);
 }
+private bool
+plane_cmap_is_halftoned(const gs_imager_state *pis_image, gx_device *dev)
+{
+    return false;
+}
+
 private const gx_color_map_procs plane_color_map_procs = {
-    plane_cmap_gray, plane_cmap_rgb, plane_cmap_cmyk, plane_cmap_rgb_alpha
+    plane_cmap_gray, plane_cmap_rgb, plane_cmap_cmyk, plane_cmap_rgb_alpha,
+    NULL, NULL, plane_cmap_is_halftoned
 };
 private const gx_color_map_procs *
 plane_get_cmap_procs(const gs_imager_state *pis, const gx_device *dev)
@@ -979,7 +987,7 @@ plane_begin_typed_image(gx_device * dev,
     *((gx_image_enum_common_t *)info) = *info->info;
     info->procs = &plane_image_enum_procs;
     info->dev = (gx_device *)edev;
-    info->id = gs_next_ids(1);
+    info->id = gs_next_ids(memory, 1);
     info->memory = memory;
     info->pis = pis;
     info->pis_image = pis_image;

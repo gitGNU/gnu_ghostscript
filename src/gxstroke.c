@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxstroke.c,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxstroke.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Path stroking procedures for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -36,6 +36,7 @@
 #include "gzpath.h"
 #include "gzcpath.h"
 #include "gxpaint.h"
+#include "vdtrace.h"
 
 /*
  * We don't really know whether it's a good idea to take fill adjustment
@@ -231,8 +232,22 @@ gx_default_stroke_path(gx_device * dev, const gs_imager_state * pis,
 		       const gx_drawing_color * pdcolor,
 		       const gx_clip_path * pcpath)
 {
-    return gx_stroke_path_only(ppath, (gx_path *) 0, dev, pis, params,
+    int code;
+
+    if (vd_allowed('S')) {
+	vd_get_dc('S');
+	if (vd_enabled) {
+	    vd_set_shift(0, 100);
+	    vd_set_scale(0.03);
+	    vd_set_origin(0, 0);
+	    vd_erase(RGB(192, 192, 192));
+	}
+    }
+    code = gx_stroke_path_only(ppath, (gx_path *) 0, dev, pis, params,
 			       pdcolor, pcpath);
+    if (vd_allowed('S'))
+	vd_release_dc;
+    return code;
 }
 
 /* Fill a partial stroked path.  Free variables: */
@@ -565,6 +580,13 @@ gx_stroke_path_only(gx_path * ppath, gx_path * to_path, gx_device * pdev,
 		 */
 		if (pgs_lp->dot_length != 0)
 		    break;
+		if (pgs_lp->cap != gs_cap_round) {
+		    /* From PLRM, stroke operator :
+		       If a subpath is degenerate (consists of a single-point closed path 
+		       or of two or more points at the same coordinates), 
+		       stroke paints it only if round line caps have been specified */
+		    break;
+		}
 		/*
 		 * Orient the dot according to the previous segment if
 		 * any, or else the next segment if any, or else
@@ -1064,6 +1086,7 @@ stroke_add(gx_path * ppath, int first, pl_ptr plp, pl_ptr nplp,
   done:
     if (code < 0)
 	return code;
+    vd_closepath;
     return gx_path_close_subpath(ppath);
 }
 
@@ -1072,14 +1095,20 @@ private int
 add_points(gx_path * ppath, const gs_fixed_point * points, int npoints,
 	   bool moveto_first)
 {
+    vd_setcolor(0);
+    vd_setlinewidth(0);
     if (moveto_first) {
 	int code = gx_path_add_point(ppath, points[0].x, points[0].y);
 
+	vd_moveto(points[0].x, points[0].y);
 	if (code < 0)
 	    return code;
+	vd_lineto_multi(points + 1, npoints - 1);
 	return gx_path_add_lines(ppath, points + 1, npoints - 1);
-    } else
+    } else {
+	vd_lineto_multi(points, npoints);
 	return gx_path_add_lines(ppath, points, npoints);
+    }
 }
 
 /* ---------------- Join computation ---------------- */

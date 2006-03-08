@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdfk.c,v 1.3 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdfk.c,v 1.4 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Lab and ICCBased color space writing */
 #include "math_.h"
 #include "memory_.h"
@@ -614,7 +614,7 @@ pdf_convert_cie_to_iccbased(gx_device_pdf *pdev, cos_array_t *pca,
     profile_table_t tables[MAX_NUM_TABLES];
     profile_table_t *next_table = tables;
 
-    pdf_cspace_init_Device(&alt_space, ncomps);	/* can't fail */
+    pdf_cspace_init_Device(pdev->memory, &alt_space, ncomps);	/* can't fail */
     code = pdf_make_iccbased(pdev, pca, ncomps, prange, &alt_space,
 			     &pcstrm, pprange);
     if (code < 0)

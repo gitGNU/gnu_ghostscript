@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevddrw.h,v 1.4 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevddrw.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Prototypes of some polygon and image drawing procedures */
 
 #ifndef gdevddrw_INCLUDED
@@ -28,8 +28,10 @@ enum fill_trap_flags {
     ftf_pseudo_rasterization = 4
 };
 
-int
-gx_fill_trapezoid_narrow(gx_device * dev, const gs_fixed_edge * left,
+int gx_fill_trapezoid_cf_fd(gx_device * dev, const gs_fixed_edge * left,
+    const gs_fixed_edge * right, fixed ybot, fixed ytop, int flags,
+    const gx_device_color * pdevc, gs_logical_operation_t lop);
+int gx_fill_trapezoid_cf_nd(gx_device * dev, const gs_fixed_edge * left,
     const gs_fixed_edge * right, fixed ybot, fixed ytop, int flags,
     const gx_device_color * pdevc, gs_logical_operation_t lop);
 

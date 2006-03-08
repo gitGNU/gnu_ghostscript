@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdfx.h,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdfx.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Internal definitions for PDF-writing driver. */
 
 #ifndef gdevpdfx_INCLUDED
@@ -30,6 +30,9 @@
 #include "stream.h"
 #include "spprint.h"
 #include "gdevpsdf.h"
+
+#define PDFW_DELAYED_STREAMS (PS2WRITE & 1) /* Old code = 0, new code = 1 */
+#define CONVERT_CFF_TO_TYPE1 (PS2WRITE & 0) /* Old code = 0, new code = 1 */
 
 #ifndef stream_arcfour_state_DEFINED
 #define stream_arcfour_state_DEFINED
@@ -86,6 +89,12 @@ typedef const cos_object_procs_t *cos_type_t;
 typedef struct pdf_text_state_s pdf_text_state_t;
 #endif
 
+#ifndef pdf_char_glyph_pairs_DEFINED
+#  define pdf_char_glyph_pairs_DEFINED
+typedef struct pdf_char_glyph_pairs_s pdf_char_glyph_pairs_t;
+#endif
+
+
 /* ---------------- Resources ---------------- */
 
 typedef enum {
@@ -98,6 +107,11 @@ typedef enum {
     resourcePattern,
     resourceShading,
     resourceXObject,
+#if PS2WRITE
+#if PDFW_DELAYED_STREAMS
+    resourceOther, /* Anything else that needs to be stored for a time. */
+#endif
+#endif
     resourceFont,
     /*
      * Internally used (pseudo-)resources.
@@ -107,16 +121,56 @@ typedef enum {
     resourceCMap,
     resourceFontDescriptor,
     resourceFunction,
+#if PS2WRITE
+    resourcePage,
+#endif
     NUM_RESOURCE_TYPES
 } pdf_resource_type_t;
 
+#if PS2WRITE
+#if PDFW_DELAYED_STREAMS
 #define PDF_RESOURCE_TYPE_NAMES\
+  "/ColorSpace", "/ExtGState", "/Pattern", "/Shading", "/XObject", 0, "/Font",\
+  0, "/Font", "/CMap", "/FontDescriptor", 0
+#define PDF_RESOURCE_TYPE_STRUCTS\
+  &st_pdf_color_space,		/* gdevpdfg.h / gdevpdfc.c */\
+  &st_pdf_resource,		/* see below */\
+  &st_pdf_pattern,\
+  &st_pdf_resource,\
+  &st_pdf_x_object,		/* see below */\
+  &st_pdf_resource,\
+  &st_pdf_font_resource,	/* gdevpdff.h / gdevpdff.c */\
+  &st_pdf_char_proc,		/* gdevpdff.h / gdevpdff.c */\
+  &st_pdf_font_resource,	/* gdevpdff.h / gdevpdff.c */\
+  &st_pdf_resource,\
+  &st_pdf_font_descriptor,	/* gdevpdff.h / gdevpdff.c */\
+  &st_pdf_resource,\
+  &st_pdf_resource
+#else /* PDFW_DELAYED_STREAMS */
   "/ColorSpace", "/ExtGState", "/Pattern", "/Shading", "/XObject", "/Font",\
   0, "/Font", "/CMap", "/FontDescriptor", 0
 #define PDF_RESOURCE_TYPE_STRUCTS\
   &st_pdf_color_space,		/* gdevpdfg.h / gdevpdfc.c */\
   &st_pdf_resource,		/* see below */\
+  &st_pdf_pattern,\
   &st_pdf_resource,\
+  &st_pdf_x_object,		/* see below */\
+  &st_pdf_font_resource,	/* gdevpdff.h / gdevpdff.c */\
+  &st_pdf_char_proc,		/* gdevpdff.h / gdevpdff.c */\
+  &st_pdf_font_resource,	/* gdevpdff.h / gdevpdff.c */\
+  &st_pdf_resource,\
+  &st_pdf_font_descriptor,	/* gdevpdff.h / gdevpdff.c */\
+  &st_pdf_resource,\
+  &st_pdf_resource
+#endif /* PDFW_DELAYED_STREAMS */
+#else /* PS2WRITE */
+#define PDF_RESOURCE_TYPE_NAMES\
+  "/ColorSpace", "/ExtGState", "/Pattern", "/Shading", "/XObject", "/Font",\
+  0, "/Font", "/CMap", "/FontDescriptor", 0, 0
+#define PDF_RESOURCE_TYPE_STRUCTS\
+  &st_pdf_color_space,		/* gdevpdfg.h / gdevpdfc.c */\
+  &st_pdf_resource,		/* see below */\
+  &st_pdf_pattern,\
   &st_pdf_resource,\
   &st_pdf_x_object,		/* see below */\
   &st_pdf_font_resource,	/* gdevpdff.h / gdevpdff.c */\
@@ -125,6 +179,7 @@ typedef enum {
   &st_pdf_resource,\
   &st_pdf_font_descriptor,	/* gdevpdff.h / gdevpdff.c */\
   &st_pdf_resource
+#endif /* PS2WRITE */
 
 /*
  * rname is currently R<id> for all resources other than synthesized fonts;
@@ -401,6 +456,7 @@ struct gx_device_pdf_s {
     bool ReEncodeCharacters;
     long FirstObjectNumber;
     bool CompressFonts;
+    bool PrintStatistics;
     long MaxInlineImageSize;
     /* Encryption parameters */
     gs_const_string OwnerPassword;
@@ -469,6 +525,7 @@ struct gx_device_pdf_s {
 #define pdf_num_initial_ids 3
     long outlines_id;
     int next_page;
+    int max_referred_page;
     long contents_id;
     pdf_context_t context;
     long contents_length_id;
@@ -568,6 +625,12 @@ struct gx_device_pdf_s {
     bool charproc_just_accumulated; /* A flag for controlling 
 			the glyph variation recognition. 
 			Used only with uncached charprocs. */
+    const pdf_char_glyph_pairs_t *cgp; /* A temporary pointer 
+			for pdf_is_same_charproc1.
+			Must be NULL when the garbager is invoked, 
+			because it points from global to local memory. */
+    int substituted_pattern_count;
+    int substituted_pattern_drop_page;
 };
 
 #define is_in_page(pdev)\
@@ -724,8 +787,19 @@ pdf_resource_t *pdf_find_resource_by_gs_id(gx_device_pdf * pdev,
 					   pdf_resource_type_t rtype,
 					   gs_id rid);
 
+void pdf_drop_resources(gx_device_pdf * pdev, pdf_resource_type_t rtype, 
+	int (*cond)(gx_device_pdf * pdev, pdf_resource_t *pres));
+
+/* Print resource statistics. */
+void pdf_print_resource_statistics(gx_device_pdf * pdev);
+
+
 /* Cancel a resource (do not write it into PDF). */
 int pdf_cancel_resource(gx_device_pdf * pdev, pdf_resource_t *pres, 
+	pdf_resource_type_t rtype);
+
+/* Remove a resource. */
+void pdf_forget_resource(gx_device_pdf * pdev, pdf_resource_t *pres1, 
 	pdf_resource_type_t rtype);
 
 /* Get the object id of a resource. */
@@ -851,6 +925,13 @@ int pdf_put_filters(cos_dict_t *pcd, gx_device_pdf *pdev, stream *s,
 typedef struct pdf_data_writer_s {
     psdf_binary_writer binary;
     long start;
+#if PS2WRITE
+    long length_pos;
+#endif
+#if PDFW_DELAYED_STREAMS
+    pdf_resource_t *pres;
+    gx_device_pdf *pdev; /* temporary for backward compatibility of pdf_end_data prototype. */
+#endif
     long length_id;
     bool encrypted;
 } pdf_data_writer_t;
@@ -865,6 +946,10 @@ typedef struct pdf_data_writer_s {
 #define DATA_STREAM_ENCRYPT  8	/* Encrypt data. */
 int pdf_begin_data_stream(gx_device_pdf *pdev, pdf_data_writer_t *pdw,
 			  int options, gs_id object_id);
+#if PDFW_DELAYED_STREAMS
+int pdf_append_data_stream_filters(gx_device_pdf *pdev, pdf_data_writer_t *pdw,
+		      int orig_options, gs_id object_id);
+#endif
 /* begin_data = begin_data_binary with both options = true. */
 int pdf_begin_data(gx_device_pdf *pdev, pdf_data_writer_t *pdw);
 
@@ -1055,11 +1140,19 @@ int pdf_start_charproc_accum(gx_device_pdf *pdev);
 int pdf_set_charproc_attrs(gx_device_pdf *pdev, gs_font *font, const double *pw, int narg,
 		gs_text_cache_control_t control, gs_char ch, gs_const_string *gnstr);
 /* Complete charproc accumulation for aType 3 font. */
-int pdf_end_charproc_accum(gx_device_pdf *pdev, gs_font *font);
+int pdf_end_charproc_accum(gx_device_pdf *pdev, gs_font *font, 
+		const pdf_char_glyph_pairs_t *cgp);
+
+/* Open a stream object in the temporary file. */
+int pdf_open_aside(gx_device_pdf *pdev, pdf_resource_type_t rtype, 
+	gs_id id, pdf_resource_t **ppres, bool reserve_object_id, bool compress);
+
+/* Close a stream object in the temporary file. */
+int pdf_close_aside(gx_device_pdf *pdev);
 
 /* Enter the substream accumulation mode. */
 int pdf_enter_substream(gx_device_pdf *pdev, pdf_resource_type_t rtype, 
-			gs_id id, pdf_resource_t **ppres, bool reserve_object_id);
+		gs_id id, pdf_resource_t **ppres, bool reserve_object_id, bool compress);
 
 /* Exit the substream accumulation mode. */
 int pdf_exit_substream(gx_device_pdf *pdev);

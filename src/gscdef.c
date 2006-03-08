@@ -16,11 +16,12 @@
 
 */
 
-/* $Id: gscdef.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gscdef.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Configuration scalars */
+
 #include "std.h"
 #include "gscdefs.h"		/* interface */
-#include "gconf.h"		/* for #defines */
+#include "gconfigd.h"		/* for #defines */
 
 /* ---------------- Miscellaneous system parameters ---------------- */
 
@@ -35,7 +36,7 @@ CONFIG_CONST long gs_buildtime = GS_BUILDTIME;
 
 #ifndef GS_COPYRIGHT
 #  define GS_COPYRIGHT\
-	"Copyright (C) 2004 artofcode LLC, Benicia, CA.  All rights reserved."
+	"Copyright (C) 2005 artofcode LLC, Benicia, CA.  All rights reserved."
 #endif
 const char *CONFIG_CONST gs_copyright = GS_COPYRIGHT;
 

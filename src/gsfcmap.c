@@ -16,10 +16,11 @@
 
 */
 
-/* $Id: gsfcmap.c,v 1.5 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsfcmap.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* CMap character decoding */
 #include <assert.h>
 #include "memory_.h"
+#include "string_.h"
 #include "gx.h"
 #include "gserrors.h"
 #include "gsstruct.h"
@@ -288,13 +289,13 @@ gs_cmap_enum_next_entry(gs_cmap_lookups_enum_t *penum)
  * for the GC.  Note that this only initializes the common part.
  */
 void
-gs_cmap_init(gs_cmap_t *pcmap, int num_fonts)
+gs_cmap_init(const gs_memory_t *mem, gs_cmap_t *pcmap, int num_fonts)
 {
     memset(pcmap, 0, sizeof(*pcmap));
     /* We reserve a range of IDs for pdfwrite needs,
        to allow an identification of submaps for a particular subfont.
      */
-    pcmap->id = gs_next_ids(num_fonts);
+    pcmap->id = gs_next_ids(mem, num_fonts);
     pcmap->num_fonts = num_fonts;
     uid_set_invalid(&pcmap->uid);
 }
@@ -320,7 +321,7 @@ gs_cmap_alloc(gs_cmap_t **ppcmap, const gs_memory_struct_type_t *pstype,
 	gs_free_object(mem, pcmap, "gs_cmap_alloc(CMap)");
 	return_error(gs_error_VMerror);
     }
-    gs_cmap_init(pcmap, num_fonts);	/* id, uid, num_fonts */
+    gs_cmap_init(mem, pcmap, num_fonts);	/* id, uid, num_fonts */
     pcmap->CMapType = 1;
     pcmap->CMapName.data = map_name;
     pcmap->CMapName.size = name_size;
@@ -478,8 +479,7 @@ gs_cmap_ToUnicode_next_entry(gs_cmap_lookups_enum_t *penum)
     const uchar *map = cmap->glyph_name_data;
     const int num_codes = cmap->num_codes;
     uint index = penum->index[1], i, j;
-    uchar c0, c1;
-    ushort c2;
+    uchar c0, c1, c2;
 
     /* Warning : this hardcodes gs_cmap_ToUnicode_num_code_bytes = 2 */
     for (i = index; i < num_codes; i++)
@@ -489,9 +489,16 @@ gs_cmap_ToUnicode_next_entry(gs_cmap_lookups_enum_t *penum)
 	return 1;
     c0 = map[i + i + 0];
     c1 = map[i + i + 1];
-    for (j = i + 1, c2 = c1 + 1; j < num_codes; j++, c2++)
-	if (map[j + j + 0] != c0 || (ushort)map[j + j + 1] != c2)
+    for (j = i + 1, c2 = c1 + 1; j < num_codes; j++, c2++) {
+	/* Due to PDF spec, *bfrange boundaries may differ 
+	   in the last byte only. */
+	if (j % 256 == 0)
 	    break;
+	if ((uchar)c2 == 0)
+	    break;
+	if (map[j + j + 0] != c0 || map[j + j + 1] != c2)
+	    break;
+    }
     penum->index[1] = j;
     penum->entry.key[0][0] = (uchar)(i >> 8);
     penum->entry.key[0][cmap->key_size - 1] = (uchar)(i & 0xFF);

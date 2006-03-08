@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: vdtrace.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: vdtrace.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Visual tracer service */
 
 #include "math_.h"
@@ -52,7 +52,9 @@ private inline double bezier_point(double p0, double p1, double p2, double p3, d
 }
 
 private void vd_flatten(double p0x, double p0y, double p1x, double p1y, double p2x, double p2y, double p3x, double p3y)
-{   double flat = 0.5;
+{   
+#ifdef DEBUG
+    double flat = 0.5;
     double d2x0 = (p0x - 2 * p1x + p2x), d2y0 = (p0y - 2 * p1y + p2y);
     double d2x1 = (p1x - 2 * p2x + p3x), d2y1 = (p1y - 2 * p2y + p3y);
     double d2norm0 = hypot(d2x0, d2y0);
@@ -62,13 +64,16 @@ private void vd_flatten(double p0x, double p0y, double p1x, double p1y, double p
     int i;
     int N = max(NN, 1); /* safety (if the curve degenerates to line) */
     double e = 0.5 / N;
+
     for (i = 0; i < N; i++) {
 	double t = (double)i / N + e;
 	double px = bezier_point(p0x, p1x, p2x, p3x, t);
 	double py = bezier_point(p0y, p1y, p2y, p3y, t);
+
 	vd_lineto(px, py);
     }
     vd_lineto(p3x, p3y);
+#endif
 }
 
 void vd_impl_moveto(double x, double y)
@@ -94,6 +99,7 @@ void vd_impl_lineto_multi(const struct gs_fixed_point_s *p, int n)
 
 void vd_impl_curveto(double x1, double y1, double x2, double y2, double x3, double y3)
 {   double p1x, p1y, p2x, p2y, p3x, p3y;
+
     NullRET;
     p1x = SX(x1), p1y = SY(y1);
     p2x = SX(x2), p2y = SY(y2);

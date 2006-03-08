@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ichar.h,v 1.4 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: ichar.h,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Character rendering operator definitions and support procedures */
 /* Requires gstext.h */
 
@@ -67,7 +67,7 @@ int op_show_continue(i_ctx_t *);
 int op_show_continue_pop(i_ctx_t *, int);
 int op_show_continue_dispatch(i_ctx_t *, int, int);
 int op_show_free(i_ctx_t *, int);
-void glyph_ref(gs_glyph, ref *);
+void glyph_ref(const gs_memory_t *mem, gs_glyph, ref *);
 int finish_stringwidth(i_ctx_t *);
 
 /* Exported by zchar.c for zcharout.c */

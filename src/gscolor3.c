@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gscolor3.c,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gscolor3.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* "Operators" for LanguageLevel 3 color facilities */
 #include "gx.h"
 #include "gserrors.h"
@@ -76,7 +76,10 @@ gs_shfill(gs_state * pgs, const gs_shading_t * psh)
 			   pgs->memory);
     if (code < 0)
 	return code;
-    gs_cspace_init(&cs, &gs_color_space_type_Pattern, NULL);
+    code = gs_pattern2_set_shfill(&cc);
+    if (code < 0)
+	return code;
+    gs_cspace_init(&cs, &gs_color_space_type_Pattern, pgs->memory, false);
     cs.params.pattern.has_base_space = false;
     code = cs.type->remap_color(&cc, &cs, &devc, (gs_imager_state *)pgs,
 				pgs->device, gs_color_select_texture);

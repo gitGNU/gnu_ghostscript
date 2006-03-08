@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: dwtrace.h,v 1.4 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: dwtrace.h,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* The interface of Graphical trace server for Windows */
 
 #ifndef dwtrace_INCLUDED
@@ -24,5 +24,6 @@
 
 extern struct vd_trace_interface_s visual_tracer;
 void visual_tracer_init(void);
+void visual_tracer_close(void);
 
 #endif /* dwtrace_INCLUDED */

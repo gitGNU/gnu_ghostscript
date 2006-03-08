@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpsf1.c,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpsf1.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Write an embedded Type 1 font */
 #include "memory_.h"
 #include <assert.h>
@@ -247,6 +247,7 @@ write_Private(stream *s, gs_font_type1 *pfont,
 	gs_glyph_data_t gdata;
 	int code;
 
+	gdata.memory = pfont->memory;
 	for (n = 0;
 	     (code = pdata->procs.subr_data(pfont, n, false, &gdata)) !=
 		 gs_error_rangecheck;
@@ -280,6 +281,7 @@ write_Private(stream *s, gs_font_type1 *pfont,
 	gs_glyph_data_t gdata;
 	int code;
 
+	gdata.memory = pfont->memory;
 	psf_enumerate_glyphs_begin(&genum, (gs_font *)pfont, subset_glyphs,
 				    (subset_glyphs ? subset_size : 0),
 				    GLYPH_SPACE_NAME);
@@ -469,14 +471,14 @@ psf_write_type1_font(stream *s, gs_font_type1 *pfont, int options,
 	lengths[0] = stell(s) - start;
 	start = stell(s);
 	if (options & WRITE_TYPE1_ASCIIHEX) {
-	    s_init(&AXE_stream, NULL);
+	    s_init(&AXE_stream, s->memory);
 	    s_init_state((stream_state *)&AXE_state, &s_AXE_template, NULL);
 	    AXE_state.EndOfData = false;
 	    s_init_filter(&AXE_stream, (stream_state *)&AXE_state,
 			  AXE_buf, sizeof(AXE_buf), es);
 	    es = &AXE_stream;
 	}
-	s_init(&exE_stream, NULL);
+	s_init(&exE_stream, s->memory);
 	s_init_state((stream_state *)&exE_state, &s_exE_template, NULL);
 	exE_state.cstate = 55665;
 	s_init_filter(&exE_stream, (stream_state *)&exE_state,

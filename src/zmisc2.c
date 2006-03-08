@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zmisc2.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zmisc2.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Miscellaneous Level 2 operators */
 #include "memory_.h"
 #include "string_.h"
@@ -128,7 +128,7 @@ set_language_level(i_ctx_t *i_ctx_p, int new_level)
 		    *pgdict = *pdict;
 		}
 		/* Set other flags for Level 2 operation. */
-		dict_auto_expand = true;
+		imemory->gs_lib_ctx->dict_auto_expand = true;
 		}
 		code = swap_level_dict(i_ctx_p, "level2dict");
 		if (code < 0)
@@ -156,11 +156,11 @@ set_language_level(i_ctx_t *i_ctx_p, int new_level)
 
 		while ((index = dict_next(pgdict, index, &elt[0])) >= 0)
 		    if (r_has_type(&elt[0], t_name))
-			name_invalidate_value_cache(&elt[0]);
+		        name_invalidate_value_cache(imemory, &elt[0]);
 		/* Overwrite globaldict in the dictionary stack. */
 		*pgdict = *systemdict;
 		/* Set other flags for Level 1 operation. */
-		dict_auto_expand = false;
+		imemory->gs_lib_ctx->dict_auto_expand = false;
 		}
 		code = swap_level_dict(i_ctx_p, "level2dict");
 		break;
@@ -203,7 +203,7 @@ swap_level_dict(i_ctx_t *i_ctx_p, const char *dict_name)
     while ((index = dict_next(&rleveldict, index, &elt[0])) >= 0)
 	if (r_has_type(&elt[1], t_dictionary) &&
 	    dict_find(&elt[1], &elt[0], &psubdict) > 0 &&
-	    obj_eq(&elt[1], psubdict)
+	    obj_eq(imemory, &elt[1], psubdict)
 	    ) {
 	    /* elt[1] is the 2nd-level sub-dictionary */
 	    int isub = dict_first(&elt[1]);
@@ -215,7 +215,7 @@ swap_level_dict(i_ctx_t *i_ctx_p, const char *dict_name)
 		continue;
 	    rsubdict = *psubdict;
 	    while ((isub = dict_next(&elt[1], isub, &subelt[0])) >= 0)
-		if (!obj_eq(&subelt[0], &elt[0])) {
+	        if (!obj_eq(imemory, &subelt[0], &elt[0])) {
 		    /* don't swap dict itself */
 		    int code = swap_entry(i_ctx_p, subelt, &rsubdict, &elt[1]);
 

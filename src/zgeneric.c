@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zgeneric.c,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zgeneric.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Array/string/dictionary generic operators for PostScript */
 #include "memory_.h"
 #include "ghost.h"
@@ -134,7 +134,7 @@ zlength(i_ctx_t *i_ctx_p)
 	case t_name: {
 	    ref str;
 
-	    name_string_ref(op, &str);
+	    name_string_ref(imemory, op, &str);
 	    make_int(op, r_size(&str));
 	    return 0;
 	}
@@ -175,7 +175,7 @@ zget(i_ctx_t *i_ctx_p)
 
 	    check_type(*op, t_integer);
 	    check_read(*op1);
-	    code = array_get(op1, op->value.intval, op1);
+	    code = array_get(imemory, op1, op->value.intval, op1);
 	    if (code < 0) {	/* Might be a stackunderflow reported as typecheck. */
 		if (code == e_typecheck)
 		    return_op_typecheck(op1);
@@ -519,7 +519,7 @@ packedarray_continue(i_ctx_t *i_ctx_p)
 
 	r_dec_size(obj, 1);
 	push(1);
-	packed_get(packed, op);
+	packed_get(imemory, packed, op);
 	obj->value.packed = packed_next(packed);
 	esp += 2;
 	*esp = obj[1];
@@ -603,7 +603,7 @@ copy_interval(i_ctx_t *i_ctx_p /* for ref_assign_old */, os_ptr prto,
 		ref elt;
 
 		for (i = 0; i < fromsize; i++, pdest++) {
-		    packed_get(packed, &elt);
+		    packed_get(imemory, packed, &elt);
 		    ref_assign_old(prto, pdest, &elt, cname);
 		    packed = packed_next(packed);
 		}

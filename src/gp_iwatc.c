@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gp_iwatc.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_iwatc.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Intel processor, Watcom C-specific routines for Ghostscript */
 #include "dos_.h"
 #include <fcntl.h>
@@ -66,6 +66,23 @@ void
 gp_do_exit(int exit_status)
 {
     exit(exit_status);
+}
+
+/* ------ Persistent data cache ------*/
+  
+/* insert a buffer under a (type, key) pair */
+int gp_cache_insert(int type, byte *key, int keylen, void *buffer, int buflen)
+{ 
+    /* not yet implemented */
+    return 0;
+} 
+ 
+/* look up a (type, key) in the cache */
+int gp_cache_query(int type, byte* key, int keylen, void **buffer,
+    gp_cache_alloc alloc, void *userdata)
+{
+    /* not yet implemented */
+    return -1;
 }
 
 /* ------ Printer accessing ------ */

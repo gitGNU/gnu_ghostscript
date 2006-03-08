@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: fapiufst.c,v 1.4 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: fapiufst.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Agfa UFST plugin */
 
 /* GS includes : */
@@ -734,7 +734,7 @@ private FAPI_retcode get_scaled_font(FAPI_server *server, FAPI_font *ff, int sub
     fc->yspot     = F_ONE;
     fc->fc_type   = FC_MAT2_TYPE;
     /* Round towards zero for a better view of mirrored characters : */
-    fc->s.m2.m[0] = (int)((double)font_scale->matrix[0] / hx + 0.5);
+    fc->s.m2.m[0] = (int)((double)font_scale->matrix[0] / hx + 0.5); 
     fc->s.m2.m[1] = (int)((double)font_scale->matrix[1] / hx + 0.5);
     fc->s.m2.m[2] = (int)((double)font_scale->matrix[2] / hy + 0.5);
     fc->s.m2.m[3] = (int)((double)font_scale->matrix[3] / hy + 0.5);

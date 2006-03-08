@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsfont.h,v 1.5 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsfont.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Generic font and font cache interface */
 
 #ifndef gsfont_INCLUDED
@@ -84,9 +84,7 @@ uint gs_currentcacheupper(const gs_font_dir *);
 int gs_setcacheupper(gs_font_dir *, uint);
 uint gs_currentaligntopixels(const gs_font_dir *);
 int gs_setaligntopixels(gs_font_dir *, uint);
-#if NEW_TT_INTERPRETER
 uint gs_currentgridfittt(const gs_font_dir *);
 int gs_setgridfittt(gs_font_dir *, uint);
-#endif
 
 #endif /* gsfont_INCLUDED */

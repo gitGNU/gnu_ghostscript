@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: main.h,v 1.4 2005/12/13 16:57:26 jemarch Exp $ */
+/* $Id: main.h,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Backward-compatible interface to gsmain.c */
 
 #ifndef main_INCLUDED
@@ -32,6 +32,10 @@
  * data elements that assume there is only a single instance of
  * the interpreter.
  */
+
+/* conditional out the entire file */
+#if 0 
+
 
 /* ================ Data elements ================ */
 
@@ -103,7 +107,7 @@ void gs_debug_dump_stack(int code, ref * perror_object);
 
 /* ---------------- Termination ---------------- */
 
-#define gs_finit(status, code)\
-  gs_main_finit(gs_main_instance_default(), status, code)
+
+#endif /* full file conditional */
 
 #endif /* main_INCLUDED */

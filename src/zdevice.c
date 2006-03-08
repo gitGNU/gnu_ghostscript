@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zdevice.c,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zdevice.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Device-related operators */
 #include "string_.h"
 #include "ghost.h"
@@ -290,7 +290,7 @@ zmakewordimagedevice(i_ctx_t *i_ctx_p)
 	colors = op1->value.bytes;
 	colors_size = r_size(op1);
     }
-    if ((code = read_matrix(op - 4, &imat)) < 0)
+    if ((code = read_matrix(imemory, op - 4, &imat)) < 0)
 	return code;
     /* Everything OK, create device */
     code = gs_makewordimagedevice(&new_dev, &imat,

@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdtf.h,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdtf.h,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Font and CMap resource structure and API for pdfwrite */
 
 #ifndef gdevpdtf_INCLUDED
@@ -106,6 +106,16 @@ typedef struct pdf_base_font_s pdf_base_font_t;
 typedef struct pdf_font_descriptor_s pdf_font_descriptor_t;
 #endif
 
+#ifndef pdf_char_glyph_pair_DEFINED
+#  define pdf_char_glyph_pair_DEFINED
+typedef struct pdf_char_glyph_pair_s pdf_char_glyph_pair_t;
+#endif
+
+struct pdf_char_glyph_pair_s {
+    gs_char chr;
+    gs_glyph glyph;
+};
+
 /*
  * The write_contents procedure is set by the implementation when the
  * font resource is created.  It is called after generic code has opened
@@ -193,6 +203,7 @@ struct pdf_font_resource_s {
  	    gs_id glyphshow_font_id;
 	    double *Widths2;	/* [count * 2] (x, y) */
 	    double *v;		/* [count] */
+	    byte *used2;	/* [(count + 7) / 8] */
 	    pdf_font_resource_t *parent;
 
 	} cidfont;
@@ -322,7 +333,7 @@ int pdf_font_simple_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
 int pdf_font_cidfont_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
 			   gs_id rid, pdf_font_descriptor_t *pfd);
 int pdf_obtain_cidfont_widths_arrays(gx_device_pdf *pdev, pdf_font_resource_t *pdfont, 
-		    int wmode, double **w, double **v);
+		    int wmode, double **w, double **w0, double **v);
 int font_resource_encoded_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
 			    gs_id rid, font_type ftype,
 			    pdf_font_write_contents_proc_t write_contents);
@@ -346,7 +357,7 @@ gs_font_base *pdf_font_resource_font(const pdf_font_resource_t *pdfont, bool com
  */
 pdf_font_embed_t pdf_font_embed_status(gx_device_pdf *pdev, gs_font *font,
 				       int *pindex,
-				       gs_glyph *glyphs, int num_glyphs);
+				       pdf_char_glyph_pair_t *pairs, int num_glyphs);
 
 /*
  * Compute the BaseFont of a font according to the algorithm described

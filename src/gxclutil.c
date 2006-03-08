@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxclutil.c,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxclutil.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Command list writing utilities. */
 
 #include "memory_.h"
@@ -170,7 +170,7 @@ cmd_write_band(gx_device_clist_writer * cldev, int band_min, int band_max,
 	    pcl->head = pcl->tail = 0;
 	}
 	clist_fwrite_chars(&end, 1, cfile);
-	process_interrupts();
+	process_interrupts(cldev->memory);
 	code_b = clist_ferror_code(bfile);
 	code_c = clist_ferror_code(cfile);
 	if (code_b < 0)
@@ -208,7 +208,7 @@ cmd_write_buffer(gx_device_clist_writer * cldev, byte cmd_end)
     if (gs_debug_c('l'))
 	cmd_print_stats();
 #endif
-    return_check_interrupt(code != 0 ? code : warning);
+    return_check_interrupt(cldev->memory, code != 0 ? code : warning);
 }
 
 /*

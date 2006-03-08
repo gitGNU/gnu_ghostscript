@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdfm.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdfm.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* pdfmark processing for PDF-writing driver */
 #include "math_.h"
 #include "memory_.h"
@@ -121,6 +121,8 @@ pdfmark_page_number(gx_device_pdf * pdev, const gs_param_string * pnstr)
 	--page;
     else if (pdfmark_scan_int(pnstr, &page) < 0)
 	page = 0;
+    if (pdev->max_referred_page < page)
+	pdev->max_referred_page = page;
     return page;
 }
 
@@ -227,11 +229,12 @@ pdfmark_make_rect(char str[MAX_RECT_STRING], const gs_rect * prect)
 {
     /*
      * We have to use a stream and pprintf, rather than sprintf,
-     * because printf formats can't express the PDF restriction son
+     * because printf formats can't express the PDF restrictions on
      * the form of the output.
      */
     stream s;
 
+    s_init(&s, NULL);
     swrite_string(&s, (byte *)str, MAX_RECT_STRING - 1);
     pprintg4(&s, "[%g %g %g %g]",
 	     prect->p.x, prect->p.y, prect->q.x, prect->q.y);
@@ -483,6 +486,7 @@ pdfmark_put_ao_pairs(gx_device_pdf * pdev, cos_dict_t *pcd,
 	    char bstr[MAX_BORDER_STRING + 1];
 	    int code;
 
+	    s_init(&s, NULL);
 	    swrite_string(&s, (byte *)bstr, MAX_BORDER_STRING + 1);
 	    code = pdfmark_write_border(&s, pair + 1, pctm);
 	    if (code < 0)
@@ -1042,6 +1046,37 @@ pdfmark_write_ps(stream *s, const gs_param_string * psource)
     return size + 1;
 }
 
+/* Start a XObject. */
+private int
+start_XObject(gx_device_pdf * pdev, bool compress, cos_stream_t **ppcs,
+		const gs_param_string * objname)
+{   pdf_resource_t *pres;
+    cos_stream_t *pcs;
+    cos_value_t value;
+    int code;
+
+    code = pdf_open_page(pdev, PDF_IN_STREAM);
+    if (code < 0)
+	return code;
+    code = pdf_enter_substream(pdev, resourceXObject, gs_no_id, &pres, true, 
+		pdev->CompressFonts /* Have no better switch*/);
+    if (code < 0)
+	return code;
+    pcs = (cos_stream_t *)pres->object;
+    pdev->substream_Resources = cos_dict_alloc(pdev, "start_XObject");
+    if (!pdev->substream_Resources)
+	return_error(gs_error_VMerror);
+    code = cos_dict_put(pdev->local_named_objects, objname->data,
+			    objname->size, cos_object_value(&value, pres->object));
+    if (code < 0)
+	return code;
+    pres->named = true;
+    pres->where_used = 0;	/* initially not used */
+    pcs->pres = pres;
+    *ppcs = pcs;
+    return 0;
+}
+
 /* PS pdfmark */
 #define MAX_PS_INLINE 100
 private int
@@ -1069,54 +1104,56 @@ pdfmark_PS(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	stream_puts(s, " PS\n");
     } else {
 	/* Put the PostScript code in a resource. */
-	pdf_resource_t *pres;
 	cos_stream_t *pcs;
-	uint size;
 	int code;
+	gs_id level1_id = gs_no_id;
 
-	code = pdf_make_named(pdev, objname, cos_type_stream,
-			      (cos_object_t **)&pcs, true);
+	if (level1.data != 0) {
+	    pdf_resource_t *pres;
+
+	    code = pdf_enter_substream(pdev, 
+			resourceXObject /* A stub. Actually it's not a resource. */, 
+			gs_no_id, &pres, true, 
+			pdev->CompressFonts /* Have no better switch*/);
+	    if (code < 0)
+		return code;
+	    pcs = (cos_stream_t *)pres->object;
+	    pres->named = (objname != 0);
+	    pres->where_used = 0;
+	    pcs->pres = pres;
+	    DISCARD(pdfmark_write_ps(pdev->strm, &level1));
+	    code = pdf_exit_substream(pdev);
+	    if (code < 0)
+		return code;
+	    code = cos_write_object(pres->object, pdev);
+	    if (code < 0)
+		return code;
+	    level1_id = pres->object->id;
+	}
+	code = start_XObject(pdev, pdev->params.CompressPages /* Have no better switch*/, 
+			    &pcs, objname);
 	if (code < 0)
 	    return code;
-	code = pdf_alloc_resource(pdev, resourceXObject, gs_no_id, &pres,
-				  pcs->id);
-	if (code < 0)
-	    return code;
-	pres->object = COS_OBJECT(pcs);
 	code = cos_stream_put_c_strings(pcs, "/Type", "/XObject");
 	if (code < 0)
 	    return code;
 	code = cos_stream_put_c_strings(pcs, "/Subtype", "/PS");
 	if (code < 0)
 	    return code;
-	if (level1.data != 0) {
-	    long level1_id = pdf_obj_ref(pdev);
-	    char r[10 + 5];	/* %ld 0 R\0 */
-	    stream *s;
-	    long length_id = pdf_obj_ref(pdev);
+	if (level1_id != gs_no_id) {
+	    char r[MAX_DEST_STRING];
 
 	    sprintf(r, "%ld 0 R", level1_id);
 	    code = cos_dict_put_c_key_string(cos_stream_dict(pcs), "/Level1",
 					     (byte *)r, strlen(r));
 	    if (code < 0)
 		return code;
-	    pdf_open_separate(pdev, level1_id);
-	    s = pdev->strm;
-	    pprintld1(s, "<</Length %ld 0 R>>stream\n", length_id);
-	    size = pdfmark_write_ps(s, &level1);
-	    stream_puts(s, "endstream\n");
-	    pdf_end_separate(pdev);
-	    pdf_open_separate(pdev, length_id);
-	    pprintld1(s, "%ld\n", (long)size);
-	    pdf_end_separate(pdev);
 	}
-	size = pdfmark_write_ps(pdev->streams.strm, &source);
-	code = cos_stream_add(pcs, size);
+	DISCARD(pdfmark_write_ps(pdev->strm, &source));
+	code = pdf_exit_substream(pdev);
 	if (code < 0)
 	    return code;
-	if (objname)
-	    pres->named = true;
-	else {
+	if (!objname) {
 	    /* Write the resource now, since it won't be written later. */
 	    COS_WRITE_OBJECT(pcs, pdev);
 	    COS_RELEASE(pcs, "pdfmark_PS");
@@ -1124,6 +1161,7 @@ pdfmark_PS(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	code = pdf_open_contents(pdev, PDF_IN_STREAM);
 	if (code < 0)
 	    return code;
+        pcs->pres->where_used |= pdev->used_mask;
 	pprintld1(pdev->strm, "/R%ld Do\n", pcs->id);
     }
     return 0;
@@ -1392,36 +1430,20 @@ pdfmark_BP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	return_error(gs_error_rangecheck);
     if ((pdev->used_mask << 1) == 0)
 	return_error(gs_error_limitcheck);
-    {	pdf_resource_t *pres;
-	cos_value_t value;
-
-	code = pdf_open_page(pdev, PDF_IN_STREAM);
-	if (code < 0)
-	    return code;
-	code = pdf_enter_substream(pdev, resourceXObject, gs_no_id, &pres, true);
-	if (code < 0)
-	    return code;
-	pcs = (cos_stream_t *)pres->object;
- 	pdev->substream_Resources = cos_dict_alloc(pdev, "pdfmark_BP");
- 	if (!pdev->substream_Resources)
-	    return_error(gs_error_VMerror);
-	code = cos_dict_put(pdev->local_named_objects, objname->data,
-				objname->size, cos_object_value(&value, pres->object));
-	if (code < 0)
-	    return code;
-	pres->named = true;
-	pres->where_used = 0;	/* initially not used */
-	pcs->pres = pres;
-    }
+    code = start_XObject(pdev, pdev->params.CompressPages /* Have no better switch*/, 
+			    &pcs, objname);
+    if (code < 0)
+	return code;
     pcs->is_graphics = true;
     gs_bbox_transform(&bbox, pctm, &bbox);
+    s_init(&s, NULL);
     swrite_string(&s, bbox_str, sizeof(bbox_str));
     pprintg4(&s, "[%g %g %g %g]",
 	    bbox.p.x, bbox.p.y, bbox.q.x, bbox.q.y);
     bbox_str_len = stell(&s);
     swrite_string(&s, matrix_str, sizeof(bbox_str));
     pprintg6(&s, "[%g %g %g %g %g %g]",
-	    ictm.xx, ictm.xy, ictm.yx, ictm.yy, ictm.tx, ictm.tx);
+	    ictm.xx, ictm.xy, ictm.yx, ictm.yy, ictm.tx, ictm.ty);
     matrix_str_len = stell(&s);
     if ((code = cos_stream_put_c_strings(pcs, "/Type", "/XObject")) < 0 ||
 	(code = cos_stream_put_c_strings(pcs, "/Subtype", "/Form")) < 0 ||
@@ -1914,20 +1936,20 @@ pdfmark_process(gx_device_pdf * pdev, const gs_param_string_array * pma)
 	    gs_param_string *pairs;
 	    int j;
 
-    /*
-     * Our coordinate system is scaled so that user space is always
+	    /*
+	     * Our coordinate system is scaled so that user space is always
 	     * default user space.  Adjust the CTM to match this, except if this
 	     * particular pdfmark requires the "true" CTM.
-     */
+	     */
 	    if (pmn->options & PDFMARK_TRUECTM)
 		DO_NOTHING;
 	    else {
-	double xscale = 72.0 / pdev->HWResolution[0],
-	    yscale = 72.0 / pdev->HWResolution[1];
-	ctm.xx *= xscale, ctm.xy *= yscale;
-	ctm.yx *= xscale, ctm.yy *= yscale;
-	ctm.tx *= xscale, ctm.ty *= yscale;
-    }
+		double xscale = 72.0 / pdev->HWResolution[0],
+		       yscale = 72.0 / pdev->HWResolution[1];
+		ctm.xx *= xscale, ctm.xy *= yscale;
+		ctm.yx *= xscale, ctm.yy *= yscale;
+		ctm.tx *= xscale, ctm.ty *= yscale;
+	    }
 	    if (size & !odd_ok)
 		return_error(gs_error_rangecheck);
 	    if (pmn->options & PDFMARK_NAMEABLE) {

@@ -16,9 +16,11 @@
 
 */
 
-/* $Id: gscdevn.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gscdevn.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* DeviceN color space and operation definition */
+
 #include "memory_.h"
+#include "string_.h"
 #include "gx.h"
 #include "gserrors.h"
 #include "gscdevn.h"
@@ -67,7 +69,8 @@ const gs_color_space_type gs_color_space_type_DeviceN = {
     gx_default_remap_color, gx_install_DeviceN,
     gx_set_overprint_DeviceN,
     gx_adjust_cspace_DeviceN, gx_no_adjust_color_count,
-    gx_serialize_DeviceN
+    gx_serialize_DeviceN,
+    gx_cspace_is_linear_default
 };
 
 /* GC procedures */
@@ -429,7 +432,7 @@ check_DeviceN_component_names(const gs_color_space * pcs, gs_state * pgs)
     uint name_size;
     gs_devicen_color_map * pcolor_component_map
 	= &pgs->color_component_map;
-    const gx_device * dev = pgs->device;
+    gx_device * dev = pgs->device;
     const char none_str[] = "None";
     const uint none_size = strlen(none_str);
     bool non_match = false;
@@ -454,7 +457,7 @@ check_DeviceN_component_names(const gs_color_space * pcs, gs_state * pgs)
 	/*
 	 * Get the character string and length for the component name.
 	 */
-	pcs->params.device_n.get_colorname_string(names[i], &pname, &name_size);
+	pcs->params.device_n.get_colorname_string(dev->memory, names[i], &pname, &name_size);
 	/*
          * Postscript does not accept /None as a color component but it is
          * allowed in PDF so we accept it.  It is also accepted as a
@@ -480,7 +483,7 @@ check_DeviceN_component_names(const gs_color_space * pcs, gs_state * pgs)
 	     * SeparationOrder list.
 	     */
 	    colorant_number = (*dev_proc(dev, get_color_comp_index))
-				    (dev, (const char *)pname, name_size, i);
+		    (dev, (const char *)pname, name_size, SEPARATION_NAME);
 	    if (colorant_number >= 0) {		/* If valid colorant name */
 		pcolor_component_map->color_map[i] =
 		    (colorant_number == GX_DEVICE_COLOR_MAX_COMPONENTS) ? -1
@@ -505,9 +508,16 @@ gx_install_DeviceN(const gs_color_space * pcs, gs_state * pgs)
     pgs->color_space->params.device_n.use_alt_cspace =
 	using_alt_color_space(pgs);
     if (pgs->color_space->params.device_n.use_alt_cspace)
-        return (*pcs->params.device_n.alt_space.type->install_cspace)
+        code = (*pcs->params.device_n.alt_space.type->install_cspace)
 	((const gs_color_space *) & pcs->params.device_n.alt_space, pgs);
-    return 0;
+    /*
+     * Give the device an opportunity to capture equivalent colors for any
+     * spot colors which might be present in the color space.
+     */
+    if (code >= 0)
+        code = dev_proc(pgs->device, update_spot_equivalent_colors)
+							(pgs->device, pgs);
+    return code;
 }
 
 /* Set overprint information for a DeviceN color space */

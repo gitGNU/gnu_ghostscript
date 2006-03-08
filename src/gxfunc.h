@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxfunc.h,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxfunc.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Internal definitions for Functions */
 
 #ifndef gxfunc_INCLUDED
@@ -46,8 +46,7 @@ void fn_common_free(gs_function_t * pfn, bool free_params, gs_memory_t * mem);
 int fn_check_mnDR(const gs_function_params_t * params, int m, int n);
 
 /* Get the monotonicity of a function over its Domain. */
-int fn_domain_is_monotonic(const gs_function_t *pfn,
-			   gs_function_effort_t effort);
+int fn_domain_is_monotonic(const gs_function_t *pfn);
 
 /* Generic get_info implementation (no Functions or DataSource). */
 FN_GET_INFO_PROC(gs_function_get_info_default);

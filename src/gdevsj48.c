@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevsj48.c,v 1.4 2005/12/13 16:57:19 jemarch Exp $*/
+/* $Id: gdevsj48.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $*/
 /*
  * StarJet SJ48 printer driver.
  *
@@ -94,8 +94,8 @@ sj48_print_page(gx_device_printer *pdev, FILE *prn_stream)
 	int bytes_per_column = (yres == 180) ? 3 : 6;
 	int bits_per_column = bytes_per_column * 8;
 	int skip_unit = bytes_per_column * (xres == 180 ? 1 : 2); /* Skips in step of 1/180" */
-	byte *in = (byte *)gs_malloc(8, line_size, "sj48_print_page(in)");
-	byte *out = (byte *)gs_malloc(bits_per_column, line_size, "sj48_print_page(out)");
+	byte *in = (byte *)gs_malloc(pdev->memory, 8, line_size, "sj48_print_page(in)");
+	byte *out = (byte *)gs_malloc(pdev->memory, bits_per_column, line_size, "sj48_print_page(out)");
 	int lnum = 0;
 	int skip = 0;
 	int skips;
@@ -284,9 +284,9 @@ notz:			;
 xit:	fputc(014, prn_stream);	/* form feed */
 	fflush(prn_stream);
 fin:	if ( out != 0 )
-		gs_free((char *)out, bits_per_column, line_size,
+		gs_free(pdev->memory, (char *)out, bits_per_column, line_size,
 			"sj48_print_page(out)");
 	if ( in != 0 )
-		gs_free((char *)in, 8, line_size, "sj48_print_page(in)");
+		gs_free(pdev->memory, (char *)in, 8, line_size, "sj48_print_page(in)");
 	return code;
 }

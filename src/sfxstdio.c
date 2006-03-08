@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: sfxstdio.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: sfxstdio.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* File stream implementation using stdio */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"
@@ -171,7 +171,7 @@ s_file_read_process(stream_state * st, stream_cursor_read * ignore_pr,
     if (count < 0)
 	count = 0;
     pw->ptr += count;
-    process_interrupts();
+    process_interrupts(s->memory);
     return (ferror(file) ? ERRC : feof(file) ? EOFC : status);
 }
 
@@ -255,10 +255,10 @@ s_file_write_process(stream_state * st, stream_cursor_read * pr,
 	if (written < 0)
 	    written = 0;
 	pr->ptr += written;
-	process_interrupts();
+	process_interrupts(NULL);
 	return (ferror(file) ? ERRC : 0);
     } else {
-	process_interrupts();
+	process_interrupts(NULL);
 	return 0;
     }
 }

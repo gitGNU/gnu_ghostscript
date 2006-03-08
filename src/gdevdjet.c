@@ -1,4 +1,4 @@
-/* Copyright (C) 1989, 2000 artofcode LLC. All rights reserved.
+/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
 
   This file is part of GNU ghostscript
 
@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevdjet.c,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevdjet.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* HP LaserJet/DeskJet driver for Ghostscript */
 #include "gdevprn.h"
 #include "gdevdljm.h"

@@ -18,7 +18,7 @@
 */
 
 /* idisp.c */
-/* $Id: idisp.c,v 1.5 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: idisp.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 
 /*
  * This allows the interpreter to set the callback structure 
@@ -47,6 +47,8 @@
 #include "gxdevice.h"
 #include "gxdevmem.h"
 #include "idisp.h"
+#include "gdevdevn.h"
+#include "gsequivc.h"
 #include "gdevdsp.h"
 #include "gdevdsp2.h"
 

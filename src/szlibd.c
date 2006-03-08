@@ -14,15 +14,14 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: szlibd.c,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: szlibd.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* zlib decoding (decompression) filter stream */
 #include "memory_.h"
 #include "std.h"
 #include "gsmemory.h"
-#include "gsmalloc.h"	/* for gs_memory_default */
+#include "gsmalloc.h"	    /* for gs_memory_default */
 #include "strimpl.h"
 #include "szlibxx.h"
 
@@ -81,7 +80,7 @@ s_zlibD_process(stream_state * st, stream_cursor_read * pr,
     if (zs->total_in == 0 && zs->avail_in >= 10 && !memcmp(zs->next_in, jaws_empty, 10)) {
         /* JAWS PDF generator encodes empty stream as jaws_empty[].
          * The stream declares that the data block length is zero
-         * but zlib routines regard a zero length data block to be an error.
+         * but zlib routines regard a zero length data block to be an error. 
          */
         pr->ptr += 10;
         return EOFC;

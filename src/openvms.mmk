@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: openvms.mmk,v 1.5 2005/12/13 16:57:26 jemarch Exp $
+# $Id: openvms.mmk,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $
 # makefile for OpenVMS VAX and Alpha using MMK
 #
 # Please contact Jim Dunham (dunham@omtool.com) if you have questions.
@@ -143,9 +143,9 @@ JVERSION=6
 .ifdef SYSLIB
 PSRCDIR=sys$library:
 .else
-PSRCDIR=[--.libpng-1_2_5]
+PSRCDIR=[--.libpng-1_2_8]
 .endif
-PVERSION=10205
+PVERSION=10208
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.
@@ -153,7 +153,7 @@ PVERSION=10205
 .ifdef SYSLIB
 ZSRCDIR=sys$library:
 .else
-ZSRCDIR=[--.zlib-1_1_4]
+ZSRCDIR=[--.zlib-1_2_1]
 .endif
 
 # Define the directory where the jbig2dec library sources are stored.
@@ -161,7 +161,7 @@ ZSRCDIR=[--.zlib-1_1_4]
 .ifdef SYSLIB
 JBIG2SRCDIR=sys$library:
 .else
-JBIG2SRCDIR=[--.jbig2dec-0_2]
+JBIG2SRCDIR=[--.jbig2dec-0_7]
 .endif
 
 # Define the directory where the icclib source are stored.
@@ -291,8 +291,7 @@ COMPILE_INITS=0
 BAND_LIST_STORAGE=file
 
 # Choose which compression method to use when storing band lists in memory.
-# The choices are 'lzw' or 'zlib'.  lzw is not recommended, because the
-# LZW-compatible code in Ghostscript doesn't actually compress its input.
+# The choices are 'lzw' or 'zlib'.
 
 BAND_LIST_COMPRESSOR=zlib
 
@@ -440,7 +439,6 @@ CONFLDTR=-o
 
 CC_=$(COMP)
 CC_INT=$(CC_)
-CC_LEAF=$(CC_)
 CC_NO_WARN=$(CC_)
 
 # ------------------- Include the generic makefiles ---------------------- #

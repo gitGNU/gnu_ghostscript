@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ibnum.c,v 1.5 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: ibnum.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Level 2 encoded number reading utilities for Ghostscript */
 #include "math_.h"
 #include "memory_.h"
@@ -79,10 +79,10 @@ num_array_size(const ref * op, int format)
 /* Return t_int if integer, t_real if real, t_null if end of stream, */
 /* or an error if the format is invalid. */
 int
-num_array_get(const ref * op, int format, uint index, ref * np)
+num_array_get(const gs_memory_t *mem, const ref * op, int format, uint index, ref * np)
 {
     if (format == num_array) {
-	int code = array_get(op, (long)index, np);
+	int code = array_get(mem, op, (long)index, np);
 
 	if (code < 0)
 	    return t_null;

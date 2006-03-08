@@ -1,4 +1,4 @@
-/* Copyright (C) 1993, 2000-2004 artofcode LLC.  All rights reserved.
+/* Copyright (C) 1993, 2000-2004 artofcode LLC. All rights reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,12 +16,12 @@
 
 */
 
-/* $Id: gp_unifs.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_unifs.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* "Unix-like" file system platform routines for Ghostscript */
 
 #include "memory_.h"
 #include "string_.h"
-#include "stdio_.h"
+#include "stdio_.h"		/* for FILENAME_MAX */
 #include "gx.h"
 #include "gp.h"
 #include "gpmisc.h"
@@ -90,10 +90,10 @@ gp_open_scratch_file(const char *prefix, char fname[gp_file_name_sizeof],
     {
 	    int file;
 	    char ofname[gp_file_name_sizeof];
-	
+
 	    /* save the old filename template in case mkstemp fails */
 	    memcpy(ofname, fname, gp_file_name_sizeof);
- 
+
 	    file = mkstemp(fname);
 	    if (file < -1) {
 		    eprintf1("**** Could not open temporary file %s\n", ofname);

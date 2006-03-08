@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevmem.c,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevmem.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Generic "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"
@@ -177,6 +177,7 @@ gs_make_mem_device(gx_device_memory * dev, const gx_device_memory * mdproto,
 				   (target == 0 || 
                                     dev->color_info.polarity == GX_CINFO_POLARITY_SUBTRACTIVE));
     }
+    check_device_separable((gx_device *)dev);
     gx_device_fill_in_procs((gx_device *)dev);
 }
 /* Make a monobit memory device.  This is never a page device. */
@@ -190,6 +191,7 @@ gs_make_mem_mono_device(gx_device_memory * dev, gs_memory_t * mem,
     set_dev_proc(dev, get_page_device, gx_default_get_page_device);
     gx_device_set_target((gx_device_forward *)dev, target);
     gdev_mem_mono_set_inverted(dev, true);
+    check_device_separable((gx_device *)dev);
     gx_device_fill_in_procs((gx_device *)dev);
 }
 
@@ -546,28 +548,28 @@ mem_mapped_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 	byte bg = gx_color_value_to_byte(cv[1]);
 	byte bb = gx_color_value_to_byte(cv[2]);
 
-    while ((cnt -= 3) >= 0) {
-	register int diff = *pptr - br;
+	while ((cnt -= 3) >= 0) {
+	    register int diff = *pptr - br;
 
-	if (diff < 0)
-	    diff = -diff;
-	if (diff < best) {	/* quick rejection */
-	    int dg = pptr[1] - bg;
+	    if (diff < 0)
+		diff = -diff;
+	    if (diff < best) {	/* quick rejection */
+		    int dg = pptr[1] - bg;
 
-	    if (dg < 0)
-		dg = -dg;
-	    if ((diff += dg) < best) {	/* quick rejection */
-		int db = pptr[2] - bb;
+		if (dg < 0)
+		    dg = -dg;
+		if ((diff += dg) < best) {	/* quick rejection */
+		    int db = pptr[2] - bb;
 
-		if (db < 0)
-		    db = -db;
-		if ((diff += db) < best)
-		    which = pptr, best = diff;
+		    if (db < 0)
+			db = -db;
+		    if ((diff += db) < best)
+			which = pptr, best = diff;
+		}
 	    }
-	}
 	    if (diff == 0)	/* can't get any better than 0 diff */
 		break;
-	pptr += 3;
+	    pptr += 3;
 	}
     } else {
 	/* Gray scale conversion. The palette is made of three equal	*/

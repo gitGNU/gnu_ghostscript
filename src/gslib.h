@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gslib.h,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gslib.h,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Library initialization and finalization interface */
 /* Requires stdio.h, gsmemory.h */
 
@@ -34,6 +34,6 @@ gs_memory_t *gs_lib_init0(FILE * debug_out);
 int gs_lib_init1(gs_memory_t *);
 
 /* Clean up after execution. */
-void gs_lib_finit(int exit_status, int code);
+void gs_lib_finit(int exit_status, int code, gs_memory_t *);
 
 #endif /* gslib_INCLUDED */

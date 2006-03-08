@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: stream.c,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: stream.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Stream package for Ghostscript interpreter */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"
@@ -328,16 +328,29 @@ s_filter_write_flush(register stream * s)
 }
 
 /* Close a filter.  If this is an encoding filter, flush it first. */
+/* If CloseTarget was specified (close_strm), then propagate the sclose */
 int
 s_filter_close(register stream * s)
 {
+    int status;
+    bool close = s->close_strm;
+    stream *stemp = s->strm;
+
     if (s_is_writing(s)) {
 	int status = s_process_write_buf(s, true);
 
 	if (status != 0 && status != EOFC)
 	    return status;
+        status = sflush(stemp);
+	if (status != 0 && status != EOFC)
+	    return status;
     }
-    return s_std_close(s);
+    status = s_std_close(s);
+    if (status != 0 && status != EOFC)
+	return status;
+    if (close && stemp != 0)
+	return sclose(stemp);
+    return status;
 }
 
 /* Disregard a stream error message. */

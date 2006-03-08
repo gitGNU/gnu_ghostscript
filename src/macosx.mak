@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: macosx.mak,v 1.5 2005/12/13 16:57:26 jemarch Exp $
+# $Id: macosx.mak,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $
 # makefile for MacOS X/darwin/gcc/framework configuration.
 
 # ------------------------------- Options ------------------------------- #
@@ -159,7 +159,7 @@ JPEG_NAME=jpeg
 # See libpng.mak for more information.
 
 PSRCDIR=libpng
-PVERSION=10205
+PVERSION=10208
 
 # Choose whether to use a shared version of the PNG library, and if so,
 # what its name is.
@@ -209,7 +209,7 @@ RANLIB=ranlib
 
 # Define the name of the C compiler.
 
-CC=gcc
+CC=cc
 
 # Define the name of the linker for the final link step.
 # Normally this is the same as the C compiler.
@@ -221,12 +221,13 @@ CCLD=$(CC)
 # the 2.7.0-2.7.2 optimizer bug, either "-Dconst=" or
 # "-Wcast-qual -Wwrite-strings" is automatically included.
 
-GCFLAGS=-Wall -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -fno-builtin -fno-common
+GCFLAGS=-Wall -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes \
+	-fno-builtin -fno-common -DHAVE_STDINT_H
 
 # Define the added flags for standard, debugging, profiling 
 # and shared object builds.
 
-CFLAGS_STANDARD=-O2 -traditional-cpp
+CFLAGS_STANDARD=
 CFLAGS_DEBUG=-g -O
 CFLAGS_PROFILE=-pg -O2
 CFLAGS_SO=-dynamic
@@ -348,8 +349,7 @@ COMPILE_INITS=0
 BAND_LIST_STORAGE=file
 
 # Choose which compression method to use when storing band lists in memory.
-# The choices are 'lzw' or 'zlib'.  lzw is not recommended, because the
-# LZW-compatible code in Ghostscript doesn't actually compress its input.
+# The choices are 'lzw' or 'zlib'.
 
 BAND_LIST_COMPRESSOR=zlib
 
@@ -420,9 +420,6 @@ AK=
 CCFLAGS=$(GENOPT) $(CAPOPT) $(CFLAGS)
 CC_=$(CC) $(CCFLAGS)
 CCAUX=$(CC)
-CC_LEAF=$(CC_) -fomit-frame-pointer
-# gcc can't use -fomit-frame-pointer with -pg.
-CC_LEAF_PG=$(CC_)
 # These are the specific warnings we have to turn off to compile those
 # specific few files that need this.  We may turn off others in the future.
 CC_NO_WARN=$(CC_) -Wno-cast-qual -Wno-traditional

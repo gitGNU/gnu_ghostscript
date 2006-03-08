@@ -1,4 +1,4 @@
-#    Copyright (C) 1991-2003 Aladdin Enterprises.  All rights reserved.
+#    Copyright (C) 1991-2004 artofcode LLC.  All rights reserved.
 # 
 # This file is part of GNU ghostscript
 #
@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: msvc32.mak,v 1.5 2005/12/13 16:57:26 jemarch Exp $
+# $Id: msvc32.mak,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $
 # makefile for 32-bit Microsoft Visual C++, Windows NT or Windows 95 platform.
 #
 # All configurable options are surrounded by !ifndef/!endif to allow 
@@ -114,23 +114,40 @@ GS_INIT=gs_init.ps
 
 # Choose generic configuration options.
 
-# Setting DEBUG=1 includes debugging features (-Z switch) in the code.
-# Code runs substantially slower even if no debugging switches are set,
-# and is also substantially larger.
+# Setting DEBUG=1 includes debugging features in the build:
+# 1. It defines the C preprocessor symbol DEBUG. The latter includes
+#    tracing and self-validation code fragments into compilation.
+#    Particularly it enables the -Z and -T switches in Ghostscript.
+# 2. It compiles code fragments for C stack overflow checks.
+# Code produced with this option is somewhat larger and runs 
+# somewhat slower.
 
 !ifndef DEBUG
 DEBUG=0
 !endif
 
-# Setting TDEBUG=1 includes symbol table information for the debugger,
-# and also enables stack checking.  Code is substantially slower and larger.
+# Setting TDEBUG=1 disables code optimization in the C compiler and
+# includes symbol table information for the debugger.
+# Code is substantially larger and slower.
 
 # NOTE: The MSVC++ 5.0 compiler produces incorrect output code with TDEBUG=0.
 # Also MSVC 6 must be service pack >= 3 to prevent INTERNAL COMPILER ERROR
+
 # Default to 0 anyway since the execution times are so much better.
 !ifndef TDEBUG
 TDEBUG=0
 !endif
+
+# Setting DEBUGSYM=1 is only useful with TDEBUG=0.
+# This option is for advanced developers. It includes symbol table
+# information for the debugger with in an optimized (release) build.
+# NOTE: The debugging information generated for the optimized code may be
+# significantly misleading. For general MSVC users we recommend TDEBUG=1.
+
+!ifndef DEBUGSYM
+DEBUGSYM=0
+!endif
+
 
 # Setting NOPRIVATE=1 makes private (static) procedures and variables public,
 # so they are visible to the debugger and profiler.
@@ -188,7 +205,7 @@ JVERSION=6
 
 !ifndef PSRCDIR
 PSRCDIR=libpng
-PVERSION=10205
+PVERSION=10208
 !endif
 
 # Define the directory where the zlib sources are stored.
@@ -203,6 +220,16 @@ ZSRCDIR=zlib
 
 !ifndef JBIG2SRCDIR
 JBIG2SRCDIR=jbig2dec
+!endif
+
+# Define the jasper library source location.
+# See jasper.mak for more information.
+
+# Alternatively, you can build a separate DLL
+# and define SHARE_JASPER=1 in src/winlib.mak
+
+!ifndef JASPERSRCDIR
+JASPERSRCDIR=jasper
 !endif
 
 # Define the directory where the icclib source are stored.
@@ -221,6 +248,12 @@ IJSSRCDIR=ijs
 IJSEXECTYPE=win
 !endif
 
+# Define any other compilation flags.
+
+!ifndef CFLAGS
+CFLAGS=
+!endif
+
 # 1 --> Use 64 bits for gx_color_index.  This is required only for
 # non standard devices or DeviceN process color model devices.
 USE_LARGE_COLOR_INDEX=1
@@ -230,13 +263,12 @@ USE_LARGE_COLOR_INDEX=1
 LARGEST_UINTEGER_TYPE=unsigned __int64
 GX_COLOR_INDEX_TYPE=$(LARGEST_UINTEGER_TYPE)
 
-CFLAGS=/DGX_COLOR_INDEX_TYPE="$(GX_COLOR_INDEX_TYPE)"
+CFLAGS=$(CFLAGS) /DGX_COLOR_INDEX_TYPE="$(GX_COLOR_INDEX_TYPE)"
 !endif
 
-# Define any other compilation flags.
-
-!ifndef CFLAGS
-CFLAGS=
+# -W3 generates too much noise.
+!ifndef WARNOPT
+WARNOPT=-W2
 !endif
 
 #
@@ -256,10 +288,40 @@ PSD=$(PSGENDIR)\$(NUL)
 # ------ Platform-specific options ------ #
 
 # Define which major version of MSVC is being used
-# (currently, 4, 5, and 6 are supported).
+# (currently, 4, 5, 6, 7, and 8 are supported).
+# Define the minor version of MSVC, currently only
+# used for Microsoft Visual Studio .NET 2003 (7.1)
 
-!ifndef MSVC_VERSION 
+#MSVC_VERSION=6
+#MSVC_MINOR_VERSION=0
+
+# Make a guess at the version of MSVC in use
+# This will not work if service packs change the version numbers.
+
+!if defined(_NMAKE_VER) && !defined(MSVC_VERSION)
+!if "$(_NMAKE_VER)" == "162"
+MSVC_VERSION=5
+!endif
+!if "$(_NMAKE_VER)" == "6.00.8168.0"
 MSVC_VERSION=6
+!endif
+!if "$(_NMAKE_VER)" == "7.00.9466"
+MSVC_VERSION=7
+!endif
+!if "$(_NMAKE_VER)" == "7.10.3077"
+MSVC_VERSION=7
+MSVC_MINOR_VERSION=1
+!endif
+!if "$(_NMAKE_VER)" == "8.00.40607.16"
+MSVC_VERSION=8
+!endif
+!endif
+
+!ifndef MSVC_VERSION
+MSVC_VERSION=6
+!endif
+!ifndef MSVC_MINOR_VERSION
+MSVC_MINOR_VERSION=0
 !endif
 
 # Define the drive, directory, and compiler name for the Microsoft C files.
@@ -310,7 +372,11 @@ SHAREDBASE=$(DEVSTUDIO)\Common\MSDev98
 
 !if $(MSVC_VERSION) == 7
 ! ifndef DEVSTUDIO
+!if $(MSVC_MINOR_VERSION) == 0
 DEVSTUDIO=C:\Program Files\Microsoft Visual Studio .NET
+!else
+DEVSTUDIO=C:\Program Files\Microsoft Visual Studio .NET 2003
+!endif
 ! endif
 !if "$(DEVSTUDIO)"==""
 COMPBASE=
@@ -318,6 +384,19 @@ SHAREDBASE=
 !else
 COMPBASE=$(DEVSTUDIO)\Vc7
 SHAREDBASE=$(DEVSTUDIO)\Vc7\
+!endif
+!endif
+
+!if $(MSVC_VERSION) == 8
+! ifndef DEVSTUDIO
+DEVSTUDIO=C:\Program Files\Microsoft Visual Studio 8
+! endif
+!if "$(DEVSTUDIO)"==""
+COMPBASE=
+SHAREDBASE=
+!else
+COMPBASE=$(DEVSTUDIO)\VC
+SHAREDBASE=$(DEVSTUDIO)\VC\
 !endif
 !endif
 
@@ -469,7 +548,7 @@ SYNC=winsync
 # Choose the language feature(s) to include.  See gs.mak for details.
 
 !ifndef FEATURE_DEVS
-FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)epsf.dev $(PSD)mshandle.dev $(PSD)msprinter.dev $(PSD)mspoll.dev $(GLD)pipe.dev $(PSD)fapi.dev $(PSD)jbig2.dev
+FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)epsf.dev $(PSD)mshandle.dev $(PSD)msprinter.dev $(PSD)mspoll.dev $(GLD)pipe.dev $(PSD)fapi.dev $(PSD)jbig2.dev $(PSD)jpx.dev
 !endif
 
 # Choose whether to compile the .ps initialization files into the executable.
@@ -487,8 +566,7 @@ BAND_LIST_STORAGE=file
 !endif
 
 # Choose which compression method to use when storing band lists in memory.
-# The choices are 'lzw' or 'zlib'.  lzw is not recommended, because the
-# LZW-compatible code in Ghostscript doesn't actually compress its input.
+# The choices are 'lzw' or 'zlib'.
 
 !ifndef BAND_LIST_COMPRESSOR
 BAND_LIST_COMPRESSOR=zlib
@@ -522,7 +600,7 @@ DEVICE_DEVS7=$(DD)t4693d2.dev $(DD)t4693d4.dev $(DD)t4693d8.dev $(DD)tek4696.dev
 DEVICE_DEVS8=$(DD)pcxmono.dev $(DD)pcxgray.dev $(DD)pcx16.dev $(DD)pcx256.dev $(DD)pcx24b.dev $(DD)pcxcmyk.dev
 DEVICE_DEVS9=$(DD)pbm.dev $(DD)pbmraw.dev $(DD)pgm.dev $(DD)pgmraw.dev $(DD)pgnm.dev $(DD)pgnmraw.dev $(DD)pkmraw.dev
 DEVICE_DEVS10=$(DD)tiffcrle.dev $(DD)tiffg3.dev $(DD)tiffg32d.dev $(DD)tiffg4.dev $(DD)tifflzw.dev $(DD)tiffpack.dev
-DEVICE_DEVS11=$(DD)bmpmono.dev $(DD)bmpgray.dev $(DD)bmp16.dev $(DD)bmp256.dev $(DD)bmp16m.dev $(DD)tiff12nc.dev $(DD)tiff24nc.dev
+DEVICE_DEVS11=$(DD)bmpmono.dev $(DD)bmpgray.dev $(DD)bmp16.dev $(DD)bmp256.dev $(DD)bmp16m.dev $(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiffsep.dev
 DEVICE_DEVS12=$(DD)psmono.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
 DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev
@@ -567,7 +645,8 @@ TOP_MAKEFILES=$(MAKEFILE) $(GLSRCDIR)\msvccmd.mak $(GLSRCDIR)\msvctail.mak $(GLS
 
 BEGINFILES2=$(GLGENDIR)\lib32.rsp\
  $(GLOBJDIR)\*.exp $(GLOBJDIR)\*.ilk $(GLOBJDIR)\*.pdb $(GLOBJDIR)\*.lib\
- $(BINDIR)\*.exp $(BINDIR)\*.ilk $(BINDIR)\*.pdb $(BINDIR)\*.lib obj.pdb
+ $(BINDIR)\*.exp $(BINDIR)\*.ilk $(BINDIR)\*.pdb $(BINDIR)\*.lib obj.pdb\
+ obj.idb $(GLOBJDIR)\gs.pch
 
 !include $(GLSRCDIR)\msvccmd.mak
 !include $(GLSRCDIR)\winlib.mak

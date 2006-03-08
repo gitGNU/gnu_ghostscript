@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevjpeg.c,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevjpeg.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* JPEG output driver */
 #include "stdio_.h"		/* for jpeglib.h */
 #include "jpeglib_.h"
@@ -244,10 +244,11 @@ jpeg_print_page(gx_device_printer * pdev, FILE * prn_stream)
 	code = gs_note_error(gs_error_VMerror);
 	goto done;
     }
+    s_init(&fstrm, mem);
     swrite_file(&fstrm, prn_stream, fbuf, fbuf_size);
+    s_init(&jstrm, mem);
     s_std_init(&jstrm, jbuf, jbuf_size, &s_filter_write_procs,
 	       s_mode_write);
-    jstrm.memory = mem;
     jstrm.state = (stream_state *) & state;
     jstrm.procs.process = state.template->process;
     jstrm.strm = &fstrm;

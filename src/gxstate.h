@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxstate.h,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxstate.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Internal graphics state API */
 
 #ifndef gxstate_INCLUDED
@@ -73,7 +73,8 @@ typedef struct gs_state_client_procs_s {
     gs_state_free_proc_t free;
     gs_state_copy_for_proc_t copy_for;
 } gs_state_client_procs;
-void gs_state_set_client(gs_state *, void *, const gs_state_client_procs *);
+void gs_state_set_client(gs_state *, void *, const gs_state_client_procs *, 
+			    bool client_has_pattern_streams);
 
 /* gzstate.h redefines the following: */
 #ifndef gs_state_client_data

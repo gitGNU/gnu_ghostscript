@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: ugcclib.mak,v 1.5 2005/12/13 16:57:28 jemarch Exp $
+# $Id: ugcclib.mak,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $
 # makefile for Unix / gcc library testing.
 
 BINDIR=./libobj
@@ -55,7 +55,7 @@ SHARE_JPEG=0
 JPEG_NAME=jpeg
 
 PSRCDIR=libpng
-PVERSION=10205
+PVERSION=10208
 SHARE_LIBPNG=1
 LIBPNG_NAME=png
 
@@ -146,7 +146,6 @@ AK=
 CCFLAGS=$(GENOPT) $(CFLAGS)
 CC_=$(CC) $(CCFLAGS)
 CCAUX=$(CC)
-CC_LEAF=$(CC_)
 CC_NO_WARN=$(CC_) -Wno-cast-qual -Wno-traditional
 
 include $(GLSRCDIR)/unixhead.mak

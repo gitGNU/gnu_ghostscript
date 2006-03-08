@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: iscan.c,v 1.5 2005/12/13 16:57:26 jemarch Exp $ */
+/* $Id: iscan.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Token scanner for Ghostscript interpreter */
 #include "ghost.h"
 #include "memory_.h"
@@ -506,10 +506,11 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
 	case char_EOL:
 	case char_NULL:
 	    goto top;
+        case 0x4:	/* ^D is a self-delimiting token */
 	case '[':
 	case ']':
 	    s1[0] = (byte) c;
-	    retcode = name_ref(s1, 1, myref, 1);	/* can't fail */
+	    retcode = name_ref(imemory, s1, 1, myref, 1);	/* can't fail */
 	    r_set_attrs(myref, a_executable);
 	    break;
 	case '<':
@@ -809,7 +810,7 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
 
 		if (c1 == c) {
 		    s1[0] = s1[1] = c;
-		    name_ref(s1, 2, myref, 1);	/* can't fail */
+		    name_ref(imemory, s1, 2, myref, 1);	/* can't fail */
 		    goto have_name;
 		}
 		scan_putback();
@@ -875,7 +876,7 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
 	    /* The default is a name. */
 	default:
 	    if (c < 0) {
-		dynamic_init(&da, name_memory());	/* da state must be clean */
+		dynamic_init(&da, name_memory(imemory));	/* da state must be clean */
 		scan_type = scanning_none;
 		goto pause;
 	    }
@@ -983,7 +984,7 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
 	    /* We have to do this before the next */
 	    /* sgetc, which will overwrite the buffer. */
 	    da.limit = (byte *)++ sptr;
-	    da.memory = name_memory();
+	    da.memory = name_memory(imemory);
 	    retcode = dynamic_grow(&da, da.limit, name_max_string);
 	    if (retcode < 0) {
 		dynamic_save(&da);
@@ -1061,7 +1062,7 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
 	    if (da.is_dynamic) {	/* We've already allocated the string on the heap. */
 		uint size = daptr - da.base;
 
-		retcode = name_ref(da.base, size, myref, -1);
+		retcode = name_ref(imemory, da.base, size, myref, -1);
 		if (retcode >= 0) {
 		    dynamic_free(&da);
 		} else {
@@ -1072,10 +1073,10 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
 			scan_type = scanning_name;
 			goto pause_ret;
 		    }
-		    retcode = name_ref(da.base, size, myref, 2);
+		    retcode = name_ref(imemory, da.base, size, myref, 2);
 		}
 	    } else {
-		retcode = name_ref(da.base, (uint) (daptr - da.base),
+		retcode = name_ref(imemory, da.base, (uint) (daptr - da.base),
 				   myref, !s->foreign);
 	    }
 	    /* Done scanning.  Check for preceding /'s. */

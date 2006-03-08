@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevwprn.c,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gdevwprn.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /*
  * Microsoft Windows 3.n printer driver for Ghostscript.
  *
@@ -650,10 +650,10 @@ win_prn_maketools(gx_device_win_prn * wdev, HDC hdc)
     int i;
 
     wdev->hpensize = (1 << (wdev->color_info.depth)) * sizeof(HPEN);
-    wdev->hpens = (HPEN *) gs_malloc(1, wdev->hpensize,
+    wdev->hpens = (HPEN *) gs_malloc(wdev->memory, 1, wdev->hpensize,
 				     "win_prn_maketools(pens)");
     wdev->hbrushsize = (1 << (wdev->color_info.depth)) * sizeof(HBRUSH);
-    wdev->hbrushs = (HBRUSH *) gs_malloc(1, wdev->hbrushsize,
+    wdev->hbrushs = (HBRUSH *) gs_malloc(wdev->memory, 1, wdev->hbrushsize,
 					 "win_prn_maketools(brushes)");
     if (wdev->hpens && wdev->hbrushs) {
 	for (i = 0; i < wdev->nColors; i++)
@@ -677,16 +677,16 @@ win_prn_destroytools(gx_device_win_prn * wdev)
 	DeleteObject(wdev->hpens[i]);
 	DeleteObject(wdev->hbrushs[i]);
     }
-    gs_free((char *)wdev->hbrushs, 1, wdev->hbrushsize,
+    gs_free(wdev->memory, (char *)wdev->hbrushs, 1, wdev->hbrushsize,
 	    "win_prn_destroytools(brushes)");
-    gs_free((char *)wdev->hpens, 1, wdev->hpensize,
+    gs_free(wdev->memory, (char *)wdev->hpens, 1, wdev->hpensize,
 	    "win_prn_destroytools(pens)");
 }
 
 BOOL CALLBACK _export
 AbortProc(HDC hdcPrn, int code)
 {
-    process_interrupts();
+    process_interrupts(NULL);
     if (code == SP_OUTOFDISK)
 	return (FALSE);		/* cancel job */
     return (TRUE);

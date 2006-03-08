@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gximag3x.c,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gximag3x.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* ImageType 3x image implementation */
 /****** THE REAL WORK IS NYI ******/
 #include "math_.h"		/* for ceil, floor */
@@ -223,7 +223,7 @@ gx_begin_image3x_generic(gx_device * dev,
 				"gx_begin_image3x_generic");
 	if (pmcs == 0)
 	    return_error(gs_error_VMerror);
-	gs_cspace_init_DevicePixel(pmcs, penum->mask[i].depth);
+	gs_cspace_init_DevicePixel(mem, pmcs, penum->mask[i].depth);
 	mrect.p.x = mrect.p.y = 0;
 	mrect.q.x = penum->mask[i].width;
 	mrect.q.y = penum->mask[i].height;
@@ -504,6 +504,7 @@ make_midx_default(gx_device **pmidev, gx_device *dev, int width, int height,
     midev->bitmap_memory = mem;
     midev->width = width;
     midev->height = height;
+    check_device_separable((gx_device *)midev);
     gx_device_fill_in_procs((gx_device *)midev);
     code = dev_proc(midev, open_device)((gx_device *)midev);
     if (code < 0) {
@@ -544,7 +545,7 @@ make_mcdex_default(gx_device *dev, const gs_imager_state *pis,
 
     if (bbdev == 0)
 	return_error(gs_error_VMerror);
-    gx_device_bbox_init(bbdev, dev);
+    gx_device_bbox_init(bbdev, dev, mem);
     gx_device_bbox_fwd_open_close(bbdev, false);
     code = dev_proc(bbdev, begin_typed_image)
 	((gx_device *)bbdev, pis, pmat, pic, prect, pdcolor, pcpath, mem,

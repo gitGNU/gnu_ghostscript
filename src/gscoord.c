@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gscoord.c,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gscoord.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Coordinate system operators for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -386,6 +386,8 @@ gx_translate_to_fixed(register gs_state * pgs, fixed px, fixed py)
 	trace_matrix_fixed(&pgs->char_tm);
     }
 #endif
+    gx_setcurrentpoint(pgs, fixed2float(pgs->ctm.tx_fixed), fixed2float(pgs->ctm.ty_fixed));
+    pgs->current_point_valid = true;
     return 0;
 }
 

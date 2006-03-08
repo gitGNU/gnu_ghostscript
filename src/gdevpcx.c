@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpcx.c,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevpcx.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* PCX file format drivers */
 #include "gdevprn.h"
 #include "gdevpccm.h"
@@ -60,7 +60,7 @@ const gx_device_printer gs_pcxgray_device =
 		 DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
 		 X_DPI, Y_DPI,
 		 0, 0, 0, 0,	/* margins */
-		 1, 8, 255, 0, 256, 0, pcx256_print_page)
+		 1, 8, 255, 255, 256, 256, pcx256_print_page)
 };
 
 /* 4-bit planar (EGA/VGA-style) color. */
@@ -75,7 +75,7 @@ const gx_device_printer gs_pcx16_device =
 		 DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
 		 X_DPI, Y_DPI,
 		 0, 0, 0, 0,	/* margins */
-		 3, 4, 3, 2, 4, 3, pcx16_print_page)
+		 3, 4, 1, 1, 2, 2, pcx16_print_page)
 };
 
 /* Chunky 8-bit (SuperVGA-style) color. */

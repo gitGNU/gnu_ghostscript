@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: winint.mak,v 1.5 2005/12/13 16:57:28 jemarch Exp $
+# $Id: winint.mak,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $
 # Common interpreter makefile section for 32-bit MS Windows.
 
 # This makefile must be acceptable to Microsoft Visual C++, Watcom C++,
@@ -144,7 +144,7 @@ $(GLOBJ)dwimg.obj $(DWTRACE) $(GLOBJ)dwreg.obj
 
 OBJCNO=$(PSOBJ)dwmainc.obj $(PSOBJ)dwnodllc.obj $(GLOBJ)dwimg.obj $(DWTRACE) $(GLOBJ)dwreg.obj
 
-$(PSOBJ)dwmainc.obj: $(PSSRC)dwmainc.c $(AK) $(fcntl__h) $(unistd__h) \
+$(PSOBJ)dwmainc.obj: $(PSSRC)dwmainc.c $(AK) $(windows__h) $(fcntl__h) $(unistd__h) \
   $(iapi_h) $(vdtrace_h) $(gdevdsp_h) $(dwdll_h) $(dwimg_h) $(dwtrace_h)
 	$(PSCCWIN) $(COMPILE_FOR_CONSOLE_EXE) $(PSO_)dwmainc.obj $(C_) $(PSSRC)dwmainc.c
 
@@ -174,7 +174,7 @@ $(GLOBJ)dwtrace.obj: $(GLSRC)dwtrace.c $(AK)\
  $(gscdefs_h) $(stdpre_h) $(gsdll_h) $(vdtrace_h)
 	$(GLCPP) $(COMPILE_FOR_EXE) $(GLO_)dwtrace.obj $(C_) $(GLSRC)dwtrace.c
 
-$(PSOBJ)dwmain.obj: $(PSSRC)dwmain.c $(AK)\
+$(PSOBJ)dwmain.obj: $(PSSRC)dwmain.c $(AK)  $(windows__h) \
  $(iapi_h) $(vdtrace_h) $(dwmain_h) $(dwdll_h) $(dwtext_h) $(dwimg_h) $(dwtrace_h) \
  $(dwreg_h) $(gdevdsp_h)
 	$(PSCCWIN) $(COMPILE_FOR_EXE) $(PSO_)dwmain.obj $(C_) $(PSSRC)dwmain.c
@@ -252,8 +252,8 @@ zip: $(SETUP_XE) $(UNINSTALL_XE)
 	echo $(ZIPPROGFILE7) >> $(ZIPTEMPFILE)
 	echo $(ZIPPROGFILE8) >> $(ZIPTEMPFILE)
 	echo $(ZIPPROGFILE9) >> $(ZIPTEMPFILE)
-	$(SETUP_XE_NAME) -title "GNU Ghostscript $(GS_DOT_VERSION)" -dir "gs$(GS_DOT_VERSION)" -list "$(FILELIST_TXT)" @$(ZIPTEMPFILE)
-	$(SETUP_XE_NAME) -title "GNU Ghostscript Fonts" -dir "fonts" -list "$(FONTLIST_TXT)" $(ZIPFONTFILES)
+	$(SETUP_XE_NAME) -title "GPL Ghostscript $(GS_DOT_VERSION)" -dir "gs$(GS_DOT_VERSION)" -list "$(FILELIST_TXT)" @$(ZIPTEMPFILE)
+	$(SETUP_XE_NAME) -title "GPL Ghostscript Fonts" -dir "fonts" -list "$(FONTLIST_TXT)" $(ZIPFONTFILES)
 	-del gs$(GS_VERSION)w32.zip
 	$(ZIP_XE) -9 gs$(GS_VERSION)w32.zip $(SETUP_XE_NAME) $(UNINSTALL_XE_NAME) $(FILELIST_TXT) $(FONTLIST_TXT)
 	$(ZIP_XE) -9 -r gs$(GS_VERSION)w32.zip $(ZIPFONTDIR)
@@ -286,16 +286,16 @@ ZIP_RSP = $(PSOBJ)setupgs.rsp
 # as used by Windows XP.
 archive: zip $(PSOBJ)gswin16.ico $(ECHOGS_XE)
 	$(ECHOGS_XE) -w $(ZIP_RSP) -q "-win32 -setup"
-	$(ECHOGS_XE) -a $(ZIP_RSP) -q -st -x 22 GNU Ghostscript $(GS_DOT_VERSION) for Win32 -x 22
+	$(ECHOGS_XE) -a $(ZIP_RSP) -q -st -x 22 GPL Ghostscript $(GS_DOT_VERSION) for Win32 -x 22
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -i -s $(PSOBJ)gswin16.ico
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -a -s $(PSOBJ)about.txt
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -t -s $(PSOBJ)dialog.txt
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -c -s $(SETUP_XE_NAME)
-	$(ECHOGS_XE) -w $(PSOBJ)about.txt "GNU Ghostscript is Copyright " -x A9 " 2004 artofcode LLC."
-	$(ECHOGS_XE) -a $(PSOBJ)about.txt See license in gs$(GS_DOT_VERSION)\doc\PUBLIC.
+	$(ECHOGS_XE) -w $(PSOBJ)about.txt "GPL Ghostscript is Copyright " -x A9 " 2005 artofcode LLC."
+	$(ECHOGS_XE) -a $(PSOBJ)about.txt See license in gs$(GS_DOT_VERSION)\doc\Public.htm.
 	$(ECHOGS_XE) -a $(PSOBJ)about.txt See gs$(GS_DOT_VERSION)\doc\Commprod.htm regarding commercial distribution.
-	$(ECHOGS_XE) -w $(PSOBJ)dialog.txt This installs GNU Ghostscript $(GS_DOT_VERSION).
-	$(ECHOGS_XE) -a $(PSOBJ)dialog.txt GNU Ghostscript displays, prints and converts PostScript and PDF files.
+	$(ECHOGS_XE) -w $(PSOBJ)dialog.txt This installs GPL Ghostscript $(GS_DOT_VERSION).
+	$(ECHOGS_XE) -a $(PSOBJ)dialog.txt GPL Ghostscript displays, prints and converts PostScript and PDF files.
 	$(WINZIPSE_XE) ..\gs$(GS_VERSION)w32 @$(PSOBJ)setupgs.rsp
 # Don't delete temporary files, because make continues
 # before these files are used.

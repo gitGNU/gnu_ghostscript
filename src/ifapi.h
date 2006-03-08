@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ifapi.h,v 1.4 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: ifapi.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Font API interface */
 
 #ifndef ifapi_INCLUDED
@@ -90,6 +90,7 @@ struct FAPI_font_s {
     void *server_font_data;
     bool need_decrypt;
     /* client's data : */
+    const gs_memory_t *memory;
     const char *font_file_path;
     int subfont;
     bool is_type1; /* Only for non-disk fonts; dirty for disk fonts. */

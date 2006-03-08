@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gs.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gs.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* 'main' program for Ghostscript */
 #include "ghost.h"
 #include "imain.h"
@@ -24,6 +24,7 @@
 #include "iapi.h"
 #include "iminst.h"
 #include "ierrors.h"
+#include "gsmalloc.h"
 
 /* Define an optional array of strings for testing. */
 /*#define RUN_STRINGS */
@@ -43,7 +44,8 @@ int
 main(int argc, char *argv[])
 {
     int exit_status = 0;
-    gs_main_instance *minst = gs_main_instance_default();
+    gs_main_instance *minst = gs_main_alloc_instance(gs_malloc_init(NULL));
+
     int code = gs_main_init_with_args(minst, argc, argv);
 
 #ifdef RUN_STRINGS
@@ -86,7 +88,7 @@ main(int argc, char *argv[])
 	    exit_status = 255;
     }
 
-    gs_to_exit_with_code(exit_status, code);
+    gs_to_exit_with_code(minst->heap, exit_status, code);
 
     switch (exit_status) {
 	case 0:

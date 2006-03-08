@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: icharout.h,v 1.5 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: icharout.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Interface to zcharout.c */
 
 #ifndef icharout_INCLUDED
@@ -44,6 +44,8 @@ int /*metrics_present*/
 int /*metrics_present*/
   zchar_get_metrics2(const gs_font_base * pbfont, const ref * pcnref,
 		     double pwv[4]);
+/*  Get CDevProc. */
+bool zchar_get_CDevProc(const gs_font_base * pbfont, ref **ppcdevproc);
 
 /*
  * Consult Metrics2 and CDevProc, and call setcachedevice[2].  Return
@@ -68,6 +70,6 @@ int zchar_charstring_data(gs_font *font, const ref *pgref,
  * wrapper around dict_first/dict_next to implement the enumerate_glyph
  * font procedure.
  */
-int zchar_enumerate_glyph(const ref *prdict, int *pindex, gs_glyph *pglyph);
+int zchar_enumerate_glyph(const gs_memory_t *mem, const ref *prdict, int *pindex, gs_glyph *pglyph);
 
 #endif /* icharout_INCLUDED */

@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevbmp.c,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevbmp.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* .BMP file format output drivers */
 #include "gdevprn.h"
 #include "gdevpccm.h"
@@ -92,7 +92,7 @@ const gx_device_printer gs_bmp16_device = {
 	   DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
 	   X_DPI, Y_DPI,
 	   0, 0, 0, 0,		/* margins */
-	   3, 4, 3, 2, 4, 3, bmp_print_page)
+	   3, 4, 1, 1, 2, 2, bmp_print_page)
 };
 
 /* 8-bit (SuperVGA-style) color. */

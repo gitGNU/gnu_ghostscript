@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gp_unix.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_unix.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Unix-specific routines for Ghostscript */
 #include "pipe_.h"
 #include "string_.h"
@@ -38,7 +38,6 @@
 #else
 extern void exit(int);
 extern char *getenv(const char *);
-
 #endif
 
 /* Do platform-dependent initialization. */

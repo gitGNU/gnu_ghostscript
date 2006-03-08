@@ -1,4 +1,4 @@
-/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 1997, 2000-2004 artofcode LLC. All rights reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,10 +16,11 @@
 
 */
 
-/* $Id: gdevps.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevps.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* PostScript-writing driver */
 #include "math_.h"
 #include "memory_.h"
+#include "string_.h"
 #include "time_.h"
 #include "gx.h"
 #include "gserrors.h"
@@ -591,6 +592,7 @@ psw_image_write(gx_device_pswrite * pdev, const char *imagestr,
 	 */
 	stream poss;
 
+	s_init(s, pdev->memory);
 	swrite_position_only(&poss);
 	pdev->strm = &poss;
 	code = psw_put_image(pdev, op, encode, data, data_x, raster,

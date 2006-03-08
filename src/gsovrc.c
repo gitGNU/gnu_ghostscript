@@ -1,4 +1,4 @@
-/* Copyright (C) 2002 artofcode LLC. All rights reserved.
+/* Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsovrc.c,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gsovrc.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* overprint/overprint mode compositor implementation */
 
 #include "memory_.h"
@@ -34,25 +34,8 @@
 #include "gxistate.h"
 
 
-
-/*
- * The overprint compositor structure. This is exactly analogous to other
- * compositor structures, consisting of a the compositor common elements
- * and the overprint-specific parameters.
- *
- * In a modest violation of good coding practice, the gs_composite_common
- * fields are "known" to be simple (contain no pointers to garbage
- * collected memory), and we also know the gs_overprint_params_t structure
- * to be simple, so we just create a trivial structure descriptor for the
- * entire gs_overprint_s structure.
- */
-typedef struct gs_overprint_s {
-    gs_composite_common;
-    gs_overprint_params_t   params;
-} gs_overprint_t;
-
-gs_private_st_simple(st_overprint, gs_overprint_t, "gs_overprint_t");
-
+/* GC descriptor for gs_overprint_t */
+private_st_gs_overprint_t();
 
 /*
  * Utility routine for encoding or decoding a color index. We cannot use
@@ -253,7 +236,7 @@ gs_create_overprint(
                        return_error(gs_error_VMerror),
                        "gs_create_overprint" );
     pct->type = &gs_composite_overprint_type;
-    pct->id = gs_next_ids(1);
+    pct->id = gs_next_ids(mem, 1);
     pct->params = *pparams;
     *ppct = (gs_composite_t *)pct;
     return 0;
@@ -787,11 +770,9 @@ overprint_put_params(gx_device * dev, gs_param_list * plist)
 }
 
 /*
- * The overprint device must never be confused with a page device. The
- * default procedure for forwarding devices, gx_forward_get_page_device,
- * will masquerade as a page device if its immediate target is a page
- * device. We are not certain why this is so, and it looks like an error
- * (see, for example, zcallinstall in zdevice2.c).
+ * The overprint device must never be confused with a page device.
+ * Thus, we always forward the request for the page device to the
+ * target, as should all forwarding devices.
  */
 private gx_device *
 overprint_get_page_device(gx_device * dev)
@@ -932,6 +913,11 @@ fill_in_procs(gx_device_procs * pprocs)
     memcpy( &tmpdev.color_info,
             &gs_overprint_device.color_info,
             sizeof(tmpdev.color_info) );
+    /*
+     * Prevent the check_device_separable routine from executing while we
+     * fill in the procs.  Our tmpdev is not complete enough for it.
+     */
+    tmpdev.color_info.separable_and_linear = GX_CINFO_SEP_LIN_NONE;
     tmpdev.static_procs = 0;
     memcpy(&tmpdev.procs, pprocs, sizeof(tmpdev.procs));
     gx_device_forward_fill_in_procs(&tmpdev);

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zpcolor.c,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zpcolor.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Pattern color */
 #include "ghost.h"
 #include "oper.h"
@@ -42,6 +42,7 @@
 #include "igstate.h"
 #include "ipcolor.h"
 #include "store.h"
+#include "gzstate.h"
 #include "memory_.h"
 
 /* Imported from gspcolor.c */
@@ -97,11 +98,11 @@ zbuildpattern1(i_ctx_t *i_ctx_p)
     check_type(*op1, t_dictionary);
     check_dict_read(*op1);
     gs_pattern1_init(&template);
-    if ((code = read_matrix(op, &mat)) < 0 ||
+    if ((code = read_matrix(imemory, op, &mat)) < 0 ||
 	(code = dict_uid_param(op1, &template.uid, 1, imemory, i_ctx_p)) != 1 ||
 	(code = dict_int_param(op1, "PaintType", 1, 2, 0, &template.PaintType)) < 0 ||
 	(code = dict_int_param(op1, "TilingType", 1, 3, 0, &template.TilingType)) < 0 ||
-	(code = dict_floats_param(op1, "BBox", 4, BBox, NULL)) < 0 ||
+	(code = dict_floats_param(imemory, op1, "BBox", 4, BBox, NULL)) < 0 ||
 	(code = dict_float_param(op1, "XStep", 0.0, &template.XStep)) != 0 ||
 	(code = dict_float_param(op1, "YStep", 0.0, &template.YStep)) != 0 ||
 	(code = dict_find_string(op1, "PaintProc", &pPaintProc)) <= 0
@@ -159,7 +160,7 @@ zsetpatternspace(i_ctx_t *i_ctx_p)
 	    }
 	    cs.params.pattern.has_base_space = true;
     }
-    gs_cspace_init(&cs, &gs_color_space_type_Pattern, NULL);
+    gs_cspace_init(&cs, &gs_color_space_type_Pattern, imemory, false);
     code = gs_setcolorspace(igs, &cs);
     if (code < 0) {
 	ref_stack_pop_to(&e_stack, edepth);
@@ -211,11 +212,13 @@ pattern_paint_prepare(i_ctx_t *i_ctx_p)
     bool internal_accum = true;
 
     check_estack(6);
-    code = dev_proc(cdev, pattern_manage)(cdev, pinst->id, pinst, 
-			    pattern_manage__can_accum);
-    if (code < 0)
-	return code;
-    internal_accum = (code == 0);
+    if (pgs->have_pattern_streams) {
+	code = dev_proc(cdev, pattern_manage)(cdev, pinst->id, pinst, 
+				pattern_manage__can_accum);
+	if (code < 0)
+	    return code;
+	internal_accum = (code == 0);
+    }
     if (internal_accum) {
 	pdev = gx_pattern_accum_alloc(imemory, "pattern_paint_prepare");
 	if (pdev == 0)

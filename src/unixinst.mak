@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: unixinst.mak,v 1.5 2005/12/13 16:57:28 jemarch Exp $
+# $Id: unixinst.mak,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $
 # Partial makefile common to all Unix and Desqview/X configurations,
 # containing the `install' targets.
 # This is the very last part of the makefile for these configurations.
@@ -50,7 +50,10 @@ bdftops dumphints dvipdf eps2eps font2c \
 pdf2dsc pdf2ps pdfopt pf2afm pfbtopfa printafm \
 ps2ascii ps2epsi ps2pdf ps2pdf12 ps2pdf13 ps2pdf14 ps2pdfwr ps2ps wftopfa \
 fixmswrd.pl lprsetup.sh pj-gs.sh pv.sh sysvlp.sh unix-lpr.sh ;\
-	do if ( test -f $(PSLIBDIR)/$$f ); then $(INSTALL_PROGRAM) $(PSLIBDIR)/$$f $(scriptdir); fi;\
+	do if ( test -f $(PSLIBDIR)/$$f ); then \
+	  (cat $(PSLIBDIR)/$$f | sed -e "s/GS_EXECUTABLE=[^ \t]*/GS_EXECUTABLE=$(GS)/" > $(PSOBJDIR)/$$f); \
+	  $(INSTALL_PROGRAM) $(PSOBJDIR)/$$f $(scriptdir)/$$f; \
+	fi;\
 	done'
 
 PSRESDIR=$(PSLIBDIR)/../Resource

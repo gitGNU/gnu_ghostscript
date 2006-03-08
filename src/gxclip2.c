@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxclip2.c,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxclip2.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Mask clipping for patterns */
 #include "memory_.h"
 #include "gx.h"
@@ -95,7 +95,11 @@ private const gx_device_tile_clip gs_tile_clip_device =
   gx_forward_decode_color,
   gx_forward_pattern_manage,
   gx_forward_fill_rectangle_hl_color,
-  gx_forward_include_color_space
+  gx_forward_include_color_space,
+  gx_forward_fill_linear_color_scanline,
+  gx_forward_fill_linear_color_trapezoid,
+  gx_forward_fill_linear_color_triangle,
+  gx_forward_update_spot_equivalent_colors
  }
 };
 

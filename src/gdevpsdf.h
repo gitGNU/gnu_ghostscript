@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpsdf.h,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpsdf.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Common output syntax and parameters for PostScript and PDF writers */
 
 #ifndef gdevpsdf_INCLUDED
@@ -208,15 +208,38 @@ typedef enum {
 } psdf_version;
 
 /* Define the extended device structure. */
+#if PS2WRITE
+#define gx_device_psdf_common\
+	gx_device_vector_common;\
+	psdf_version version;\
+	bool binary_ok;		/* derived from ASCII85EncodePages */\
+	bool OrderResources;\
+	psdf_distiller_params params
+#else
 #define gx_device_psdf_common\
 	gx_device_vector_common;\
 	psdf_version version;\
 	bool binary_ok;		/* derived from ASCII85EncodePages */\
 	psdf_distiller_params params
+#endif
+
 typedef struct gx_device_psdf_s {
     gx_device_psdf_common;
 } gx_device_psdf;
 
+#if PS2WRITE
+#define psdf_initial_values(version, ascii)\
+	vector_initial_values,\
+	version,\
+	!(ascii),\
+	false,\
+	 { psdf_general_param_defaults(ascii),\
+	   psdf_color_image_param_defaults,\
+	   psdf_gray_image_param_defaults,\
+	   psdf_mono_image_param_defaults,\
+	   psdf_font_param_defaults\
+	 }
+#else
 #define psdf_initial_values(version, ascii)\
 	vector_initial_values,\
 	version,\
@@ -227,6 +250,7 @@ typedef struct gx_device_psdf_s {
 	   psdf_mono_image_param_defaults,\
 	   psdf_font_param_defaults\
 	 }
+#endif
 
 /* st_device_psdf is never instantiated per se, but we still need to */
 /* extern its descriptor for the sake of subclasses. */

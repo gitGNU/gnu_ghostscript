@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: iimage.h,v 1.4 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: iimage.h,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Image operator entry points */
 /* Requires gscspace.h, gxiparam.h */
 
@@ -37,7 +37,8 @@ typedef struct image_params_s {
 } image_params;
 
 /* Extract and check parameters for an image. */
-int data_image_params(const ref *op, gs_data_image_t *pim,
+int data_image_params(const gs_memory_t *mem, 
+		      const ref *op, gs_data_image_t *pim,
                       image_params *pip, bool require_DataSource,
                       int num_components, int max_bits_per_component,
                       bool has_alpha);

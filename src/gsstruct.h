@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gsstruct.h,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gsstruct.h,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Definitions for Ghostscript modules that define allocatable structures */
 /* Requires gstypes.h */
 
@@ -339,7 +339,7 @@ struct_proc_reloc_ptrs(basic_reloc_ptrs);
      /* Begin enumeration */
 
 #define ENUM_PTRS_BEGIN_PROC(proc)\
-  gs_ptr_type_t proc(EV_CONST void *vptr, uint size, int index, enum_ptr_t *pep, const gs_memory_struct_type_t *pstype, gc_state_t *gcst)
+  gs_ptr_type_t proc(const gs_memory_t *mem, EV_CONST void *vptr, uint size, int index, enum_ptr_t *pep, const gs_memory_struct_type_t *pstype, gc_state_t *gcst)
 #define ENUM_PTRS_BEGIN(proc)\
   ENUM_PTRS_BEGIN_PROC(proc)\
   { switch ( index ) { default:
@@ -460,7 +460,7 @@ extern void reloc_const_bytestring(gs_const_bytestring *pbs, gc_state_t *gcst);
     /* Subclass support */
 
 #define ENUM_USING(supst, ptr, size, index)\
-  (*(supst).enum_ptrs)(ptr, size, index, pep, &(supst), gcst)
+  (*(supst).enum_ptrs)(mem, ptr, size, index, pep, &(supst), gcst)
 
 #define RELOC_USING(supst, ptr, size)\
   (*(supst).reloc_ptrs)(ptr, size, &(supst), gcst)
@@ -523,7 +523,7 @@ extern void reloc_const_bytestring(gs_const_bytestring *pbs, gc_state_t *gcst);
  * Boilerplate for clear_marks procedures.
  */
 #define CLEAR_MARKS_PROC(proc)\
-  void proc(void *vptr, uint size, const gs_memory_struct_type_t *pstype)
+  void proc(const gs_memory_t *cmem, void *vptr, uint size, const gs_memory_struct_type_t *pstype)
 
 	/* Complex structures with their own clear_marks, */
 	/* enum, reloc, and finalize procedures. */

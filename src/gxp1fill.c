@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxp1fill.c,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxp1fill.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* PatternType 1 filling algorithms */
 #include "math_.h"
 #include "gx.h"
@@ -91,7 +91,8 @@ tile_fill_init(tile_fill_state_t * ptfs, const gx_device_color * pdevc,
 		  m_tile->tmask.rep_height);
     } else
 	px = py = 0;
-    return tile_clip_initialize(&ptfs->cdev, ptfs->tmask, dev, px, py, NULL);
+    return tile_clip_initialize(&ptfs->cdev, ptfs->tmask, dev, px, py, dev->memory); 
+    /* leak ? was NULL memoryptr */
 }
 
 /*

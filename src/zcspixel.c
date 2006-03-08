@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zcspixel.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zcspixel.c,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* DevicePixel color space support */
 #include "ghost.h"
 #include "oper.h"
@@ -26,6 +26,7 @@
 #include "gsmatrix.h"		/* for gscolor2.h */
 #include "gscolor2.h"
 #include "gscpixel.h"
+#include "ialloc.h"
 
 /* <array> .setdevicepixelspace - */
 private int
@@ -39,9 +40,9 @@ zsetdevicepixelspace(i_ctx_t *i_ctx_p)
     check_read_type(*op, t_array);
     if (r_size(op) != 2)
 	return_error(e_rangecheck);
-    array_get(op, 1L, &depth);
+    array_get(imemory, op, 1L, &depth);
     check_type_only(depth, t_integer);
-    code = gs_cspace_init_DevicePixel(&cs, (int)depth.value.intval);
+    code = gs_cspace_init_DevicePixel(imemory, &cs, (int)depth.value.intval);
     if (code < 0)
 	return code;
     code = gs_setcolorspace(igs, &cs);

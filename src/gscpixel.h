@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gscpixel.h,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gscpixel.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Interface to DevicePixel color space */
 /* Requires gscspace.h */
 
@@ -24,6 +24,6 @@
 #  define gscpixel_INCLUDED
 
 /* Initialize a DevicePixel color space. */
-int gs_cspace_init_DevicePixel(gs_color_space * pcs, int depth);
+int gs_cspace_init_DevicePixel(gs_memory_t *mem, gs_color_space * pcs, int depth);
 
 #endif /* gscpixel_INCLUDED */

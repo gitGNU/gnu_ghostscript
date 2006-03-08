@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ifont42.h,v 1.5 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: ifont42.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Procedure for building a Type 42 or CIDFontType 2 font */
 
 #ifndef ifont42_INCLUDED
@@ -32,7 +32,7 @@ int build_gs_TrueType_font(i_ctx_t *, os_ptr, gs_font_type42 **, font_type,
  * Check a parameter for being an array of strings.  Return the parameter
  * value even if it is of the wrong type.
  */
-int font_string_array_param(os_ptr, const char *, ref *);
+int font_string_array_param(const gs_memory_t *mem, os_ptr, const char *, ref *);
 
 /*
  * Get a GlyphDirectory if present.  Return 0 if present, 1 if absent,
@@ -44,7 +44,7 @@ int font_GlyphDirectory_param(os_ptr, ref *);
  * Get a glyph outline from GlyphDirectory.  Return an empty string if
  * the glyph is missing or out of range.
  */
-int font_gdir_get_outline(const ref *, long, gs_glyph_data_t *);
+int font_gdir_get_outline(const gs_memory_t *mem, const ref *, long, gs_glyph_data_t *);
 
 /*
  * Access a given byte offset and length in an array of strings.
@@ -53,6 +53,6 @@ int font_gdir_get_outline(const ref *, long, gs_glyph_data_t *);
  * Return code : 0 - success, <0 - error, 
  *               >0 - number of accessible bytes (client must cycle).
  */
-int string_array_access_proc(const ref *, int, ulong, uint, const byte **);
+int string_array_access_proc(const gs_memory_t *mem, const ref *, int, ulong, uint, const byte **);
 
 #endif /* ifont42_INCLUDED */

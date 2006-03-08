@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsfunc4.c,v 1.5 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsfunc4.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Implementation of FunctionType 4 (PostScript Calculator) Functions */
 #include "math_.h"
 #include "memory_.h"
@@ -547,8 +547,7 @@ fn_PtCr_evaluate(const gs_function_t *pfn_common, const float *in, float *out)
 /* Test whether a PostScript Calculator function is monotonic. */
 private int
 fn_PtCr_is_monotonic(const gs_function_t * pfn_common,
-		     const float *lower, const float *upper,
-		     gs_function_effort_t effort)
+		     const float *lower, const float *upper)
 {
     /*
      * No reasonable way to tell.  Eventually we should check for
@@ -692,6 +691,7 @@ fn_PtCr_get_info(const gs_function_t *pfn_common, gs_function_info_t *pfi)
     {
 	stream s;
 
+	s_init(&s, NULL);
 	swrite_position_only(&s);
 	calc_put(&s, pfn);
 	pfi->data_size = stell(&s);
@@ -856,7 +856,7 @@ gs_function_PtCr_init(gs_function_t ** ppfn,
 	pfn->data_source.access = calc_access;
 	pfn->head = function_PtCr_head;
 	pfn->head.is_monotonic =
-	    fn_domain_is_monotonic((gs_function_t *)pfn, EFFORT_MODERATE);
+	    fn_domain_is_monotonic((gs_function_t *)pfn);
 	*ppfn = (gs_function_t *) pfn;
     }
     return 0;

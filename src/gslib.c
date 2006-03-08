@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gslib.c,v 1.5 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gslib.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Test program for Ghostscript library */
 /* Capture stdin/out/err before gsio.h redefines them. */
 #include "stdio_.h"
@@ -91,30 +91,6 @@ extern_gs_lib_device_list();
 /* Forward references */
 private float odsf(floatp, floatp);
 
-/* Provide a single point for all "C" stdout and stderr.
- * Eventually these will always be referenced through an instance structure. 
- */
-
-int outwrite(const char *str, int len)
-{
-    return fwrite(str, 1, len, gs_stdout);
-}
-
-int errwrite(const char *str, int len)
-{
-    return fwrite(str, 1, len, gs_stderr);
-}
-
-void outflush()
-{
-    fflush(gs_stdout);
-}
-
-void errflush()
-{
-    fflush(gs_stderr);
-}
-
 
 int
 main(int argc, const char *argv[])
@@ -155,11 +131,12 @@ main(int argc, const char *argv[])
 /****** WRONG ******/
     gs_lib_device_list(&list, NULL);
     gs_copydevice(&dev, list[0], mem);
+    check_device_separable(dev);
     gx_device_fill_in_procs(dev);
     bbdev =
 	gs_alloc_struct_immovable(mem, gx_device_bbox, &st_device_bbox,
 				  "bbox");
-    gx_device_bbox_init(bbdev, dev);
+    gx_device_bbox_init(bbdev, dev, mem);
     /* Print out the device name just to test the gsparam.c API. */
     {
 	gs_c_param_list list;
@@ -304,15 +281,15 @@ gs_reloc_const_string(gs_const_string * sptr, gc_state_t * gcst)
 
 /* Other stubs */
 void
-gs_to_exit(int exit_status)
+gs_to_exit(const gs_memory_t *mem, int exit_status)
 {
-    gs_lib_finit(exit_status, 0);
+    gs_lib_finit(mem, exit_status, 0);
 }
 
 void
-gs_abort(void)
+gs_abort(const gs_memory_t *mem)
 {
-    gs_to_exit(1); /* cleanup */
+    gs_to_exit(mem, 1); /* cleanup */
     gp_do_exit(1); /* system independent exit() */	
 }
 

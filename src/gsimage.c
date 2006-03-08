@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsimage.c,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsimage.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Image setup procedures for Ghostscript library */
 #include "memory_.h"
 #include "gx.h"
@@ -221,7 +221,7 @@ gs_image_init(gs_image_enum * penum, const gs_image_t * pim, bool multi,
              * non-current color space is potentially incorrect, but
              * it appears this case doesn't arise.
              */
-            gs_cspace_init_DeviceGray(&cs);
+            gs_cspace_init_DeviceGray(pgs->memory, &cs);
 	    image.ColorSpace = &cs;
         }
     }

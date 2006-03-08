@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxfarith.h,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxfarith.h,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Floating point arithmetic macros for Ghostscript library */
 
 #ifndef gxfarith_INCLUDED
@@ -57,8 +57,8 @@ typedef ulong _f_uint_t;
 #   endif
 #  endif
 #  define _d_uint_t unsigned _d_int_t
-#  define _d_as_int(f) *(const _d_int_t *)(&(d))
-#  define _d_as_uint(f) *(const _d_uint_t *)(&(d))
+#  define _d_as_int(f) *(const _d_int_t *)(&(f))
+#  define _d_as_uint(f) *(const _d_uint_t *)(&(f))
 
 #  define _ftest(v,f,n)\
      (sizeof(v)==sizeof(float)?(f):(n))

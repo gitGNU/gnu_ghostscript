@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxtype1.c,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxtype1.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Adobe Type 1 font interpreter support */
 #include "math_.h"
 #include "memory_.h"
@@ -86,6 +86,13 @@ private RELOC_PTRS_WITH(gs_type1_state_reloc_ptrs, gs_type1_state *pcis)
 	ipsp->ip = ipsp->cs_data.bits.data + diff;
     }
 } RELOC_PTRS_END
+
+/* Define a string to interact with unique_name in lib/pdf_font.ps .
+   The string is used to resolve glyph name conflict while
+   converting PDF Widths into Metrics.
+ */
+const char gx_extendeg_glyph_name_separator[] = "~GS~";
+
 
 /* ------ Interpreter services ------ */
 
@@ -280,6 +287,7 @@ gs_type1_endchar(gs_type1_state * pcis)
 	gs_const_string gstr;
 	int code;
 
+	agdata.memory = pfont->memory;
 	pcis->seac_accent = -1;
 	/* Reset the coordinate system origin */
 	pcis->asb_diff = pcis->save_asb - pcis->save_lsb.x;
@@ -314,11 +322,22 @@ gs_type1_endchar(gs_type1_state * pcis)
 	pcis->ipstack[0].cs_data = agdata;
 	return 1;
     }
-    pis->fill_adjust.x = pis->fill_adjust.y = fixed_0;
+    if (pcis->pfont->PaintType == 0)
+	pis->fill_adjust.x = pis->fill_adjust.y = -1;
     /* Set the flatness for curve rendering. */
     if (!pcis->no_grid_fitting)
 	gs_imager_setflat(pis, pcis->flatness);
     return 0;
+}
+
+/* Get the metrics (l.s.b. and width) from the Type 1 interpreter. */
+void
+type1_cis_get_metrics(const gs_type1_state * pcis, double psbw[4])
+{
+    psbw[0] = fixed2float(pcis->lsb.x);
+    psbw[1] = fixed2float(pcis->lsb.y);
+    psbw[2] = fixed2float(pcis->width.x);
+    psbw[3] = fixed2float(pcis->width.y);
 }
 
 /* ------ Font procedures ------ */
@@ -517,6 +536,7 @@ gs_type1_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
     if (default_members == members)
 	return code;		/* all done */
 
+    gdata.memory = pfont->memory;
     if ((code = pdata->procs.glyph_data(pfont, glyph, &gdata)) < 0)
 	return code;		/* non-existent glyph */
 
@@ -570,4 +590,17 @@ gs_type1_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
 
     gs_glyph_data_free(&gdata, "gs_type1_glyph_info");
     return code;
+}
+
+/* Get font parent (a Type 9 font). */
+const gs_font_base *
+gs_font_parent(const gs_font_base *pbfont)
+{
+    if (pbfont->FontType == ft_encrypted || pbfont->FontType == ft_encrypted2) {
+	const gs_font_type1 *pfont1 = (const gs_font_type1 *)pbfont;
+
+	if (pfont1->data.parent != NULL)
+	    return pfont1->data.parent;
+    }
+    return pbfont;
 }

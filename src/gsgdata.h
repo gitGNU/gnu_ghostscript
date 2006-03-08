@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsgdata.h,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsgdata.h,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Interface for glyph data access */
 
 #ifndef gsgdata_INCLUDED
@@ -64,6 +64,7 @@ struct gs_glyph_data_s {
     gs_const_bytestring bits;	/* pointer to actual data returned here */
     const gs_glyph_data_procs_t *procs;
     void *proc_data;
+    gs_memory_t *memory;	/* allocator to use (may be different than font) */
 };
 extern_st(st_glyph_data);
 #define ST_GLYPH_DATA_NUM_PTRS 2

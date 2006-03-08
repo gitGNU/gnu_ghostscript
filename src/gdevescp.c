@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevescp.c,v 1.4 2005/12/13 16:57:18 jemarch Exp $*/
+/* $Id: gdevescp.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $*/
 /*
  * Epson 'ESC/P 2' language printer driver.
  *
@@ -117,8 +117,8 @@ escp2_print_page(gx_device_printer *pdev, FILE *prn_stream)
 	int band_size = 24;	/* 1, 8, or 24 */
 	int in_size = line_size * band_size;
 
-	byte *buf1 = (byte *)gs_malloc(in_size, 1, "escp2_print_page(buf1)");
-	byte *buf2 = (byte *)gs_malloc(in_size, 1, "escp2_print_page(buf2)");
+	byte *buf1 = (byte *)gs_malloc(pdev->memory, in_size, 1, "escp2_print_page(buf1)");
+	byte *buf2 = (byte *)gs_malloc(pdev->memory, in_size, 1, "escp2_print_page(buf2)");
 	byte *in = buf1;
 	byte *out = buf2;
 
@@ -148,9 +148,9 @@ escp2_print_page(gx_device_printer *pdev, FILE *prn_stream)
 
 	if ( buf1 == 0 || buf2 == 0 )
 	{	if ( buf1 ) 
-		  gs_free((char *)buf1, in_size, 1, "escp2_print_page(buf1)");
+		  gs_free(pdev->memory, (char *)buf1, in_size, 1, "escp2_print_page(buf1)");
 		if ( buf2 ) 
-		  gs_free((char *)buf2, in_size, 1, "escp2_print_page(buf2)");
+		  gs_free(pdev->memory, (char *)buf2, in_size, 1, "escp2_print_page(buf2)");
 		return_error(gs_error_VMerror);
 	}
 
@@ -410,7 +410,7 @@ escp2_print_page(gx_device_printer *pdev, FILE *prn_stream)
 	fputs("\f\033@", prn_stream);
 	fflush(prn_stream);
 
-	gs_free((char *)buf2, in_size, 1, "escp2_print_page(buf2)");
-	gs_free((char *)buf1, in_size, 1, "escp2_print_page(buf1)");
+	gs_free(pdev->memory, (char *)buf2, in_size, 1, "escp2_print_page(buf2)");
+	gs_free(pdev->memory, (char *)buf1, in_size, 1, "escp2_print_page(buf1)");
 	return 0;
 }

@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpsdi.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpsdi.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Image compression for PostScript and PDF writers */
 #include "stdio_.h"		/* for jpeglib.h */
 #include "jpeglib_.h"		/* for sdct.h */
@@ -123,8 +123,10 @@ setup_image_compression(psdf_binary_writer *pbw, const psdf_image_params *pdip,
             orig_template = template = &s_DCTE_template;
         }
 	dict = pdip->ACSDict;
-    }
-    gs_c_param_list_read(dict);	/* ensure param list is in read mode */
+    } else if (!lossless)
+	return gs_error_rangecheck; /* Reject the alternative stream. */   
+    if (dict) /* NB: rather than dereference NULL lets continue on without a dict */
+	gs_c_param_list_read(dict);	/* ensure param list is in read mode */
     if (template == 0)	/* no compression */
 	return 0;
     if (pim->Width < 200 && pim->Height < 200) /* Prevent a fixed overflow. */
@@ -368,7 +370,7 @@ psdf_setup_image_filters(gx_device_psdf * pdev, psdf_binary_writer * pbw,
 	    gs_color_space *rgb_cs = gs_alloc_struct(mem, 
 		    gs_color_space, &st_color_space, "psdf_setup_image_filters");
 
-	    gs_cspace_init_DeviceRGB(rgb_cs);  /* idempotent initialization */
+	    gs_cspace_init_DeviceRGB(mem, rgb_cs);  /* idempotent initialization */
 	    pim->ColorSpace = rgb_cs;
 	}
 	if (params.Depth == -1)

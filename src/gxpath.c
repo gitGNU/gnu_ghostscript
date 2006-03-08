@@ -17,7 +17,7 @@
   
 */
 
-/*$Id: gxpath.c,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/*$Id: gxpath.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Internal path management routines for Ghostscript library */
 #include "gx.h"
 #include "gserrors.h"
@@ -523,8 +523,6 @@ gz_path_add_point(gx_path * ppath, fixed x, fixed y)
 private int
 gz_path_bbox_add_point(gx_path * ppath, fixed x, fixed y)
 {
-    ppath->outside_start.x = x;
-    ppath->outside_start.y = y;
     gz_path_bbox_move(ppath, x, y);
     return 0;
 }
@@ -774,7 +772,6 @@ gx_path_add_path(gx_path * ppath, gx_path * ppfrom)
     }
     /* Transfer the remaining state. */
     ppath->position = ppfrom->position;
-    ppath->outside_position = ppfrom->outside_position;
     ppath->state_flags = ppfrom->state_flags;
     /* Reset the source path. */
     gx_path_init_contents(ppfrom);
@@ -858,8 +855,6 @@ gz_path_close_subpath_notes(gx_path * ppath, segment_notes notes)
 private int
 gz_path_bbox_close_subpath_notes(gx_path * ppath, segment_notes notes)
 {
-    gz_path_bbox_move(ppath, (fixed)ppath->outside_start.x, 
-			     (fixed)ppath->outside_start.y);
     return 0;
 }
 

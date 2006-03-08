@@ -1,4 +1,4 @@
-/* Copyright (C) 2000 artofcode LLC. All rights reserved.
+/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
 
   This file is part of GNU ghostscript
 
@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevdljm.h,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevdljm.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Interface to generic monochrome H-P DeskJet/LaserJet driver */
 
 #ifndef gdevdljm_INCLUDED

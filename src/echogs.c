@@ -1,4 +1,4 @@
-/* Copyright (C) 1992, 1995-2004 artofcode LLC. All rights reserved.  
+/* Copyright (C) 1992, 1995-2004 artofcode LLC. All rights reserved.
 
   This file is part of GNU ghostscript
 
@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: echogs.c,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: echogs.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* 'echo'-like utility */
 
 #include "stdpre.h"

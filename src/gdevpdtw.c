@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdtw.c,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdtw.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Font resource writing for pdfwrite text */
 #include "memory_.h"
 #include "gx.h"
@@ -139,8 +139,10 @@ pdf_simple_font_needs_ToUnicode(const pdf_font_resource_t *pdfont)
 int 
 pdf_write_encoding(gx_device_pdf *pdev, const pdf_font_resource_t *pdfont, long id, int ch)
 {
+    /* Note : this truncates extended glyph names to original names. */
     stream *s;
     gs_encoding_index_t base_encoding = pdfont->u.simple.BaseEncoding;
+    const int sl = strlen(gx_extendeg_glyph_name_separator);
     int prev = 256, code;
 
     pdf_open_separate(pdev, id);
@@ -163,10 +165,17 @@ pdf_write_encoding(gx_device_pdf *pdev, const pdf_font_resource_t *pdfont, long 
 		    code = 1;
 	}
 	if (code) {
+	    const byte *d = pdfont->u.simple.Encoding[ch].str.data;
+	    int i, l = pdfont->u.simple.Encoding[ch].str.size;
+
+	    for (i = 0; i + sl < l; i++)
+		if (!memcmp(d + i, gx_extendeg_glyph_name_separator, sl)) {
+		    l = i;
+		    break;
+		}
 	    if (ch != prev + 1)
 		pprintd1(s, "\n%d", ch);
-	    pdf_put_name(pdev, pdfont->u.simple.Encoding[ch].str.data,
-			 pdfont->u.simple.Encoding[ch].str.size);
+	    pdf_put_name(pdev, d, l);
 	    prev = ch;
 	}
     }
@@ -239,8 +248,9 @@ pdf_compute_CIDFont_default_widths(const pdf_font_resource_t *pdfont, int wmode,
      * and use the corresponding sign.
      * fixme : implement 2 hystograms.
      */
-    psf_enumerate_bits_begin(&genum, NULL, pdfont->used, pdfont->count,
-			     GLYPH_SPACE_INDEX);
+    psf_enumerate_bits_begin(&genum, NULL, 
+			     wmode ? pdfont->u.cidfont.used2 : pdfont->used, 
+			     pdfont->count, GLYPH_SPACE_INDEX);
     memset(counts, 0, sizeof(counts));
     while (!psf_enumerate_glyphs_next(&genum, &glyph)) {
         int i = glyph - GS_MIN_CID_GLYPH;
@@ -249,10 +259,13 @@ pdf_compute_CIDFont_default_widths(const pdf_font_resource_t *pdfont, int wmode,
 	    int width = (int)(w[i] + 0.5);
 
 	    counts[min(any_abs(width), countof(counts) - 1)]++;
-	    (*(width < 0 ? &neg_count : &pos_count))++;
+	    if (width > 0)
+		pos_count++;
+	    else if (width < 0)
+		neg_count++;
 	}
     }
-    for (i = 0; i < countof(counts); ++i)
+    for (i = 1; i < countof(counts); ++i)
 	if (counts[i] > dw_count)
 	    dwi = i, dw_count = counts[i];
     *pdw = (neg_count > pos_count ? -dwi : dwi);
@@ -272,7 +285,7 @@ pdf_compute_CIDFont_default_widths(const pdf_font_resource_t *pdfont, int wmode,
 	    }
 	}
     }
-    return (dw_count > 0);
+    return (dw_count + counts[0] > 0);
 }
 
 /*
@@ -309,16 +322,30 @@ pdf_write_CIDFont_widths(gx_device_pdf *pdev,
      * Now write all widths different from the default one.  Currently we make no
      * attempt to optimize this: we write every width individually.
      */
-    psf_enumerate_bits_begin(&genum, NULL, pdfont->used, pdfont->count,
-			     GLYPH_SPACE_INDEX);
+    psf_enumerate_bits_begin(&genum, NULL, 
+			     wmode ? pdfont->u.cidfont.used2 : pdfont->used, 
+			     pdfont->count, GLYPH_SPACE_INDEX);
     {
-
 	while (!psf_enumerate_glyphs_next(&genum, &glyph)) {
 	    int cid = glyph - GS_MIN_CID_GLYPH;
 	    int width = (int)(w[cid] + 0.5);
 
+#if 0 /* Must write zero widths - see test file of the bug Bug 687681.
+	 We don't enumerate unused glyphs here due to pdfont->used. */
 	    if (width == 0)
 		continue; /* Don't write for unused glyphs. */
+#else
+	    {	/* Check whether copied font really have this glyph.
+	           debugged with 401-01.ps, which uses undefined CIDs. */
+		gs_font_base *pfont = pdf_font_resource_font(pdfont, false);
+		gs_glyph_info_t info;
+
+		if (pdfont != NULL) {
+		    if (pfont->procs.glyph_info((gs_font *)pfont, glyph, NULL, 0, &info) < 0)
+			continue;
+		}
+	    }
+#endif
 	    if (cid == prev + 1) {
 		if (wmode) {
 		    int vx = (int)(pdfont->u.cidfont.v[cid * 2 + 0] + 0.5);
@@ -327,7 +354,10 @@ pdf_write_CIDFont_widths(gx_device_pdf *pdev,
 		    pprintd3(s, "\n%d %d %d", width, vx, vy);
 		} else
 		    pprintd1(s, "\n%d", width);
-	    } else if (width == dw)
+	    } else if (width == dw && 
+		    (!wmode || (int)(pdfont->u.cidfont.v[cid * 2 + 0] + 0.5) == 
+				(int)(pdfont->Widths[cid] / 2 + 0.5)) &&
+		    (!wmode || (int)(pdfont->u.cidfont.v[cid * 2 + 1] + 0.5) == dv))
 		continue;
 	    else {
 		if (prev >= 0)
@@ -421,6 +451,10 @@ write_contents_cid_common(gx_device_pdf *pdev, pdf_font_resource_t *pdfont,
 	code = pdf_write_CIDFont_widths(pdev, pdfont, 0);
 	if (code < 0)
 	    return code;
+    } else {
+	/* With a vertical font, the viewer uses /DW 
+	   to determine glyph width to compute its v-vector. */
+	stream_puts(s, "/DW 0\n");
     }
     if (pdfont->u.cidfont.Widths2 != 0) {
 	code = pdf_write_CIDFont_widths(pdev, pdfont, 1);
@@ -470,8 +504,10 @@ pdf_write_contents_cid2(gx_device_pdf *pdev, pdf_font_resource_t *pdfont)
 	pdf_data_writer_t writer;
 	int i;
 
+#if !PDFW_DELAYED_STREAMS
 	pdf_open_separate(pdev, map_id);
 	stream_puts(pdev->strm, "<<");
+#endif
 	pdf_begin_data_stream(pdev, &writer,
 	    DATA_STREAM_BINARY | DATA_STREAM_COMPRESS | DATA_STREAM_ENCRYPT, map_id);
 	for (i = 0; i < count; ++i) {
@@ -596,11 +632,10 @@ pdf_close_text_document(gx_device_pdf *pdev)
 /*
  * Write the CIDSystemInfo for a CIDFont or a CMap.
  */
-int
-pdf_write_cid_system_info(gx_device_pdf *pdev,
+private int
+pdf_write_cid_system_info_to_stream(gx_device_pdf *pdev, stream *s,
 			  const gs_cid_system_info_t *pcidsi, gs_id object_id)
 {
-    stream *s = pdev->strm;
     byte Registry[32], Ordering[32];
 
     if (pcidsi->Registry.size > sizeof(Registry))
@@ -630,10 +665,68 @@ pdf_write_cid_system_info(gx_device_pdf *pdev,
     return 0;
 }
 
+int
+pdf_write_cid_system_info(gx_device_pdf *pdev,
+			  const gs_cid_system_info_t *pcidsi, gs_id object_id)
+{
+    return pdf_write_cid_system_info_to_stream(pdev, pdev->strm, pcidsi, object_id);
+}
+
+
 /*
  * Write a CMap resource.  We pass the CMap object as well as the resource,
  * because we write CMaps when they are created.
  */
+#if PDFW_DELAYED_STREAMS
+int
+pdf_write_cmap(gx_device_pdf *pdev, const gs_cmap_t *pcmap,
+	       pdf_resource_t **ppres /*CMap*/, int font_index_only)
+{
+    int code;
+    pdf_data_writer_t writer;
+
+    code = pdf_begin_data_stream(pdev, &writer,
+				 DATA_STREAM_NOT_BINARY | DATA_STREAM_ENCRYPT |
+				 (pdev->CompressFonts ? 
+				  DATA_STREAM_COMPRESS : 0), gs_no_id);
+    if (code < 0)
+	return code;
+    *ppres = writer.pres;
+    if (!pcmap->ToUnicode) {
+	byte buf[200];
+	cos_dict_t *pcd = (cos_dict_t *)writer.pres->object;
+	stream s;
+
+	code = cos_dict_put_c_key_int(pcd, "/WMode", pcmap->WMode);
+	if (code < 0)
+	    return code;
+	buf[0] = '/';
+	memcpy(buf + 1, pcmap->CMapName.data, pcmap->CMapName.size);
+	code = cos_dict_put_c_key_string(pcd, "/CMapName", 
+			buf, pcmap->CMapName.size + 1);
+	if (code < 0)
+	    return code;
+	s_init(&s, pdev->memory);
+	swrite_string(&s, buf, sizeof(buf));
+	code = pdf_write_cid_system_info_to_stream(pdev, &s, pcmap->CIDSystemInfo, 
+		writer.pres->object->id);
+	if (code < 0)
+	    return code;
+	code = cos_dict_put_c_key_string(pcd, "/CIDSystemInfo", 
+			buf, stell(&s));
+	if (code < 0)
+	    return code;
+    }
+    code = psf_write_cmap(pdev->memory, writer.binary.strm, pcmap,
+			  pdf_put_name_chars_proc(pdev), NULL, font_index_only);
+    if (code < 0)
+	return code;
+    code = pdf_end_data(&writer);
+    if (code < 0)
+	return code;
+    return code;
+}
+#else
 int
 pdf_write_cmap(gx_device_pdf *pdev, const gs_cmap_t *pcmap,
 	       pdf_resource_t *pres /*CMap*/, int font_index_only)
@@ -657,7 +750,7 @@ pdf_write_cmap(gx_device_pdf *pdev, const gs_cmap_t *pcmap,
     }
     code = pdf_begin_data_stream(pdev, &writer,
 				 DATA_STREAM_NOT_BINARY | DATA_STREAM_ENCRYPT |
-				 (pdev->CompressFonts ?
+				 (pdev->CompressFonts ? 
 				  DATA_STREAM_COMPRESS : 0), pres->object->id);
     if (code < 0)
 	return code;
@@ -671,3 +764,4 @@ pdf_write_cmap(gx_device_pdf *pdev, const gs_cmap_t *pcmap,
     pres->object->written = true;
     return 0;
 }
+#endif

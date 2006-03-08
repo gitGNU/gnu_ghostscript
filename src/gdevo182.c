@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevo182.c,v 1.4 2005/12/13 16:57:18 jemarch Exp $*/
+/* $Id: gdevo182.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $*/
 /* Okidata Microline 182 printer driver */
 
 /* Contributed by Maarten Koning (smeg@bnr.ca) April 4, 1993 */
@@ -192,10 +192,10 @@ oki_print_page(gx_device_printer *pdev, FILE *prn_stream)
 
 	int line_size = gdev_prn_raster((gx_device_printer *)pdev);
 
-	byte *in = (byte *)gs_malloc(16, line_size, "oki_print_page(in)");
+	byte *in = (byte *)gs_malloc(pdev->memory, 16, line_size, "oki_print_page(in)");
 
-	byte *out1 = (byte *)gs_malloc(8, line_size, "oki_print_page(out1)");
-	byte *out2 = (byte *)gs_malloc(8, line_size, "oki_print_page(out2)");
+	byte *out1 = (byte *)gs_malloc(pdev->memory, 8, line_size, "oki_print_page(out1)");
+	byte *out2 = (byte *)gs_malloc(pdev->memory, 8, line_size, "oki_print_page(out2)");
 
 	byte *out3;
 
@@ -299,13 +299,13 @@ xit:
 
 bail:
 	if ( out1 != 0 )
-		gs_free((char *)out1, 8, line_size, "oki_print_page(out1)");
+		gs_free(pdev->memory, (char *)out1, 8, line_size, "oki_print_page(out1)");
 
 	if ( out2 != 0 )
-		gs_free((char *)out2, 8, line_size, "oki_print_page(out2)");
+		gs_free(pdev->memory, (char *)out2, 8, line_size, "oki_print_page(out2)");
 
 	if ( in != 0 )
-		gs_free((char *)in, 16, line_size, "oki_print_page(in)");
+		gs_free(pdev->memory, (char *)in, 16, line_size, "oki_print_page(in)");
 
 	return code;
 }

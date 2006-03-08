@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsgcache.h,v 1.3 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsgcache.h,v 1.4 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Glyph data cache definition. */
 
 #ifndef gxgcache_INCLUDED
@@ -54,7 +54,7 @@ typedef int (*get_glyph_data_from_file)(gs_font_type42 *pfont, stream *s, uint g
 
 gs_glyph_cache *gs_glyph_cache__alloc(gs_font_type42 *pfont, stream *s,
 			get_glyph_data_from_file read_data);
-void gs_glyph_cache__release(gs_glyph_cache *this);
+int gs_glyph_cache__release(void /* gs_glyph_cache */ *data, void*);
 int gs_get_glyph_data_cached(gs_font_type42 *pfont, uint glyph_index, gs_glyph_data_t *pgd);
 
 #endif /* gxgcache_INCLUDED */

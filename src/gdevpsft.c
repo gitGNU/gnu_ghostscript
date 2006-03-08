@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpsft.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpsft.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Write an embedded TrueType font */
 #include "memory_.h"
 #include <assert.h>
@@ -387,6 +387,7 @@ size_cmap(gs_font *font, uint first_code, int num_glyphs, gs_glyph max_glyph,
 {
     stream poss;
 
+    s_init(&poss, NULL);
     swrite_position_only(&poss);
     write_cmap(&poss, font, first_code, num_glyphs, max_glyph, options, 0);
     return stell(&poss);
@@ -790,6 +791,7 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 	    return_error(gs_error_invalidfont);
 	glyph_index = glyph  & ~GS_GLYPH_TAG;
 	if_debug1('L', "[L]glyph_index %u\n", glyph_index);
+	glyph_data.memory = pfont->memory;
 	if ((code = pfont->data.get_outline(pfont, glyph_index, &glyph_data)) >= 0) {
 	    /* Since indexToLocFormat==0 assumes even glyph lengths,
 	       round it up here. If later we choose indexToLocFormat==1,
@@ -1019,6 +1021,7 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 	for (offset = 0; psf_enumerate_glyphs_next(penum, &glyph) != 1; ) {
 	    gs_glyph_data_t glyph_data;
 
+	    glyph_data.memory = pfont->memory;
 	    if ((code = pfont->data.get_outline(pfont,
 						glyph & ~GS_GLYPH_TAG,
 						&glyph_data)) >= 0
@@ -1052,6 +1055,7 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 
 	    for (; glyph_prev <= glyph_index; ++glyph_prev)
 		put_loca(s, offset, indexToLocFormat);
+	    glyph_data.memory = pfont->memory;
 	    if ((code = pfont->data.get_outline(pfont, glyph_index,
 						&glyph_data)) >= 0
 		) {

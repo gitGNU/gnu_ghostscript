@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdfp.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdfp.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Get/put parameters for PDF-writing driver */
 #include "memory_.h"
 #include "string_.h"
@@ -76,6 +76,7 @@ private const gs_param_item_t pdf_param_items[] = {
     pi("ReEncodeCharacters", gs_param_type_bool, ReEncodeCharacters),
     pi("FirstObjectNumber", gs_param_type_long, FirstObjectNumber),
     pi("CompressFonts", gs_param_type_bool, CompressFonts),
+    pi("PrintStatistics", gs_param_type_bool, PrintStatistics),
     pi("MaxInlineImageSize", gs_param_type_long, MaxInlineImageSize),
 
 	/* PDF Encryption */
@@ -85,6 +86,9 @@ private const gs_param_item_t pdf_param_items[] = {
     pi("Permissions", gs_param_type_int, Permissions),
     pi("EncryptionR", gs_param_type_int, EncryptionR),
     pi("NoEncrypt", gs_param_type_string, NoEncrypt),
+#if PS2WRITE
+    pi("OrderResources", gs_param_type_bool, OrderResources), /* A temporary development purpose. */
+#endif
 #undef pi
     gs_param_item_end
 };

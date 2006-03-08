@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gp_os2.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_os2.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Common platform-specific routines for OS/2 and MS-DOS */
 /* compiled with GCC/EMX */
 
@@ -56,6 +56,7 @@
 #include "stdlib.h"		/* need _osmode, exit */
 #include "time_.h"
 #include <time.h>		/* should this be in time_.h? */
+#include "gp_os2.h"
 #include "gdevpm.h"
 #ifdef __EMX__
 #include <sys/emxload.h>
@@ -154,9 +155,26 @@ gp_file_is_console(FILE * f)
 	return ((regs.h.dl & 0x80) != 0 && (regs.h.dl & 3) != 0);
     }
 #endif
-    if ((f == gs_stdin) || (f == gs_stdout) || (f == gs_stderr))
+    if (fileno(f) <= 2)
 	return true;
     return false;
+}
+
+/* ------ Persistent data cache ------*/
+  
+/* insert a buffer under a (type, key) pair */
+int gp_cache_insert(int type, byte *key, int keylen, void *buffer, int buflen)
+{ 
+    /* not yet implemented */
+    return 0;
+} 
+ 
+/* look up a (type, key) in the cache */
+int gp_cache_query(int type, byte* key, int keylen, void **buffer,
+    gp_cache_alloc alloc, void *userdata)
+{
+    /* not yet implemented */
+    return -1;
 }
 
 /* ------ File naming and accessing ------ */
@@ -382,9 +400,7 @@ gp_do_exit(int exit_status)
 }
 
 /* ------ Printer accessing ------ */
-private int pm_find_queue(char *queue_name, char *driver_name);
 private int is_os2_spool(const char *queue);
-private int pm_spool(char *filename, const char *queue);
 
 /* Put a printer file (which might be stdout) into binary or text mode. */
 /* This is not a standard gp procedure, */
@@ -485,7 +501,7 @@ gp_setmode_binary(FILE * pfile, bool binary)
 /* If strlen(queue_name)==0, return default queue and driver name */
 /* If queue_name supplied, return driver_name */
 /* returns 0 if OK, non-zero for error */
-private int
+int
 pm_find_queue(char *queue_name, char *driver_name)
 {
     SPLERR splerr;
@@ -538,9 +554,9 @@ pm_find_queue(char *queue_name, char *driver_name)
 		    } else {
 			/* list queue details */
 			if (prq->fsType & PRQ3_TYPE_APPDEFAULT)
-			    eprintf1("  %s  (DEFAULT)\n", prq->pszName);
+			    eprintf1("  \042%s\042  (DEFAULT)\n", prq->pszName);
 			else
-			    eprintf1("  %s\n", prq->pszName);
+			    eprintf1("  \042%s\042\n", prq->pszName);
 		    }
 		    prq++;
 		}		/*endfor cReturned */
@@ -585,7 +601,7 @@ is_os2_spool(const char *queue)
 /* Spool file to queue */
 /* return 0 if successful, non-zero if error */
 /* if filename is NULL, return 0 if spool queue is valid, non-zero if error */
-private int
+int
 pm_spool(char *filename, const char *queue)
 {
     HSPL hspl;

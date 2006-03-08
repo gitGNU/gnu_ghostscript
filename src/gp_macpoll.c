@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gp_macpoll.c,v 1.3 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_macpoll.c,v 1.4 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /*
  * Macintosh platform polling support for Ghostscript.
  *
@@ -46,8 +46,9 @@ extern HWND hwndtext;
  * Check messages and interrupts; return true if interrupted.
  * This is called frequently - it must be quick!
  */
-int gp_check_interrupts(void)
+int gp_check_interrupts(const gs_memory_t *mem)
 {
+	/* static variables need to go away for thread safety */
 	static unsigned long	lastYieldTicks = 0;
 	int iRetVal = 0;
 	
@@ -64,11 +65,13 @@ int gp_check_interrupts(void)
 		 * in the count parameter
 		 */
 		iRetVal = (*pgsdll_callback)(GSDLL_POLL, 0, (long) hwndtext);
-	    } 
-	    else {
-		gs_main_instance *minst = gs_main_instance_default();
-		if (minst && minst->poll_fn)
-		    iRetVal = (*minst->poll_fn)(minst->caller_handle);
+	    } else {
+	    	if (mem == NULL) {
+	    		/* this is not thread safe */
+	    		mem = gs_lib_ctx_get_non_gc_memory_t();
+	    	}
+		if (mem && mem->gs_lib_ctx && mem->gs_lib_ctx->poll_fn)
+		    iRetVal = (*mem->gs_lib_ctx->poll_fn)(mem->gs_lib_ctx->caller_handle);
 	    }
 	}
 	return iRetVal;

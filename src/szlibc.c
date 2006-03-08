@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: szlibc.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: szlibc.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Code common to zlib encoding and decoding streams */
 #include "std.h"
 #include "gserror.h"
@@ -55,7 +55,7 @@ s_zlib_set_defaults(stream_state * st)
 int
 s_zlib_alloc_dynamic_state(stream_zlib_state *ss)
 {
-    gs_memory_t *mem = (ss->memory ? ss->memory : &gs_memory_default);
+    gs_memory_t *mem = ss->memory; 
     zlib_dynamic_state_t *zds =
 	gs_alloc_struct_immovable(mem, zlib_dynamic_state_t,
 				  &st_zlib_dynamic_state,

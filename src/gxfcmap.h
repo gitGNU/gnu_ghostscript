@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxfcmap.h,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxfcmap.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Internal CMap structure definitions */
 
 /* This file should be called gxcmap.h, except that name is already used. */
@@ -299,7 +299,7 @@ int gs_cmap_enum_next_entry(gs_cmap_lookups_enum_t *penum);
  * Initialize a just-allocated CMap, to ensure that all pointers are clean
  * for the GC.  Note that this only initializes the common part.
  */
-void gs_cmap_init(gs_cmap_t *pcmap, int num_fonts);
+void gs_cmap_init(const gs_memory_t *mem, gs_cmap_t *pcmap, int num_fonts);
 
 /*
  * Allocate and initialize (the common part of) a CMap.

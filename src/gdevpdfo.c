@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdfo.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdfo.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
 /* Cos object support */
 #include "memory_.h"
 #include "string_.h"
@@ -1053,7 +1053,7 @@ cos_dict_equal(const cos_object_t *pco0, const cos_object_t *pco1, gx_device_pdf
 	if (code < 0)
 	    return code;
 	if (!code)
-		    return false;
+	    return false;
     }
     return true;
 }

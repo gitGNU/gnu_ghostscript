@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gscpixel.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gscpixel.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* DevicePixel color space and operation definition */
 #include "gx.h"
 #include "gserrors.h"
@@ -46,12 +46,13 @@ private const gs_color_space_type gs_color_space_type_DevicePixel = {
     gx_default_remap_color, gx_no_install_cspace,
     gx_set_overprint_DevicePixel,
     gx_no_adjust_cspace_count, gx_no_adjust_color_count,
-    gx_serialize_DevicePixel
+    gx_serialize_DevicePixel,
+    gx_cspace_is_linear_default
 };
 
 /* Initialize a DevicePixel color space. */
 int
-gs_cspace_init_DevicePixel(gs_color_space * pcs, int depth)
+gs_cspace_init_DevicePixel(gs_memory_t *mem, gs_color_space * pcs, int depth)
 {
     switch (depth) {
 	case 1:
@@ -65,7 +66,7 @@ gs_cspace_init_DevicePixel(gs_color_space * pcs, int depth)
 	default:
 	    return_error(gs_error_rangecheck);
     }
-    gs_cspace_init(pcs, &gs_color_space_type_DevicePixel, NULL);
+    gs_cspace_init(pcs, &gs_color_space_type_DevicePixel, mem, false);
     pcs->params.pixel.depth = depth;
     return 0;
 }

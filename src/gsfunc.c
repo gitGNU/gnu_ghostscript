@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsfunc.c,v 1.5 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsfunc.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Generic Function support */
 #include "memory_.h"
 #include "gx.h"
@@ -88,7 +88,7 @@ fn_check_mnDR(const gs_function_params_t * params, int m, int n)
 
 /* Get the monotonicity of a function over its Domain. */
 int
-fn_domain_is_monotonic(const gs_function_t *pfn, gs_function_effort_t effort)
+fn_domain_is_monotonic(const gs_function_t *pfn)
 {
 #define MAX_M 16		/* arbitrary */
     float lower[MAX_M], upper[MAX_M];
@@ -100,7 +100,7 @@ fn_domain_is_monotonic(const gs_function_t *pfn, gs_function_effort_t effort)
 	lower[i] = pfn->params.Domain[2 * i];
 	upper[i] = pfn->params.Domain[2 * i + 1];
     }
-    return gs_function_is_monotonic(pfn, lower, upper, effort);
+    return gs_function_is_monotonic(pfn, lower, upper);
 }
 
 /* Return default function information. */

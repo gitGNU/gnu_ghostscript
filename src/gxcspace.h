@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxcspace.h,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxcspace.h,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
 /* Implementation of color spaces */
 /* Requires gsstruct.h */
 
@@ -215,6 +215,18 @@ struct gs_color_space_type_s {
 #define cs_serialize(pcs, s)\
   (*(pcs)->type->serialize)(pcs, s)
 	cs_proc_serialize((*serialize));
+
+    /* A color mapping linearity check. */
+
+#define cs_proc_is_linear(proc)\
+  int proc(gs_direct_color_space *cs, const gs_imager_state * pis,\
+		gx_device *dev,\
+		const gs_client_color *c0, const gs_client_color *c1,\
+		const gs_client_color *c2, const gs_client_color *c3,\
+		float smoothness)
+#define cs_is_linear(pcs, pis, dev, c0, c1, c2, c3, smoothness)\
+  (*(pcs)->type->is_linear)(pcs, pis, dev, c0, c1, c2, c3, smoothness)
+	cs_proc_is_linear((*is_linear));
 };
 
 /* Standard color space structure types */
@@ -244,6 +256,8 @@ cs_proc_set_overprint(gx_spot_colors_set_overprint);
 cs_proc_adjust_cspace_count(gx_no_adjust_cspace_count);
 cs_proc_adjust_color_count(gx_no_adjust_color_count);
 cs_proc_serialize(gx_serialize_cspace_type);
+cs_proc_is_linear(gx_cspace_no_linear);
+cs_proc_is_linear(gx_cspace_is_linear_default);
 
 /*
  * Define the implementation procedures for the standard device color
@@ -268,7 +282,7 @@ extern_st(st_color_space);
  */
 void gs_cspace_init(gs_color_space *pcs,
 		    const gs_color_space_type *pcstype,
-		    gs_memory_t *mem);
+		    gs_memory_t *mem, bool isheap);
 int gs_cspace_alloc(gs_color_space **ppcspace,
 		    const gs_color_space_type *pcstype,
 		    gs_memory_t *mem);

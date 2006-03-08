@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxdhtserial.c,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxdhtserial.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
 /* Serialization and de-serialization for (traditional) halftones */
 
 #include "memory_.h"
@@ -139,7 +139,7 @@ gx_ht_read_tf(
                        return_error(gs_error_VMerror),
                        "gx_ht_read_tf" );
 
-    pmap->id = gs_next_ids(1);
+    pmap->id = gs_next_ids(mem, 1);
     pmap->closure.proc = 0;
     pmap->closure.data = 0;
     if (tf_type == gx_ht_tf_identity) {

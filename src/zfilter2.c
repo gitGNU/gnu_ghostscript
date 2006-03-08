@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zfilter2.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zfilter2.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
 /* Additional filter creation */
 #include "memory_.h"
 #include "ghost.h"
@@ -133,11 +133,6 @@ filter_write_predictor(i_ctx_t *i_ctx_p, int npop,
 
 /* <target> LZWEncode/filter <file> */
 /* <target> <dict> LZWEncode/filter <file> */
-/*
- * Note: the default implementation of this filter, in slzwce.c,
- * does not use any algorithms that could reasonably be claimed
- * to be subject to Unisys' Welch Patent.
- */
 private int
 zLZWE(i_ctx_t *i_ctx_p)
 {

@@ -16,7 +16,7 @@
 
 */
 
-// $Id: dwuninst.cpp,v 1.5 2005/12/13 16:57:18 jemarch Exp $
+// $Id: dwuninst.cpp,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $
 
 #define STRICT
 #include <windows.h>
@@ -36,7 +36,7 @@
 #define mkdir(x) _mkdir(x)
 #endif
 #define DELAY_STEP 500
-#define DELAY_FILE 5
+#define DELAY_FILE 0
 #define MAXSTR 256
 #define UNINSTALLKEY TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall")
 
