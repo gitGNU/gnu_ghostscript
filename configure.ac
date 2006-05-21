@@ -14,7 +14,7 @@ dnl You should have received a copy of the GNU General Public License along with
 dnl ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 dnl Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 dnl 
-dnl $Id: configure.ac,v 1.7 2006/03/02 20:48:31 Arabidopsis Exp $
+dnl $Id: configure.ac,v 1.8 2006/05/21 08:09:27 Arabidopsis Exp $
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------
@@ -37,7 +37,7 @@ AC_PROG_CPP
 CFLAGS=$save_cflags
 
 AC_PROG_RANLIB
-#AC_PROG_INSTALL
+AC_PROG_INSTALL
 
 dnl --------------------------------------------------
 dnl Set build flags based on environment
@@ -340,7 +340,7 @@ if test x$with_jasper != xno; then
           echo
           echo "Continuing with Ghostscript configuration..."
         else
-          AC_MSG_ERROR([
+          AC_MSG_WARN ([
 Unable to find $JASPERDIR/src/libjasper/include/jas_config.h,
 or generate generate such a file for this system. You will
 have to build one by hand, or configure, build and install
@@ -349,6 +349,7 @@ the jasper library separately.
 You can also pass --without-jasper to configure to disable
 JPEG 2000 PDF image support entirely.
 ])
+		with_jasper=no
         fi
       fi
     fi
