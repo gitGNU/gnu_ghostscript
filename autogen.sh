@@ -1,7 +1,7 @@
 #!/bin/sh
 # Run this to set up the build system: configure, makefiles, etc.
 
-# $Id: autogen.sh,v 1.6 2006/05/21 08:09:27 Arabidopsis Exp $
+# $Id: autogen.sh,v 1.7 2006/06/16 16:03:35 Arabidopsis Exp $
 
 package="gnu-ghostscript"
 
@@ -20,17 +20,10 @@ cd "$srcdir"
 
 echo "Generating configuration files for $package, please wait...."
 
-#echo "  creating links to configuration sources"
-#rm -f configure.ac Makefile.in
-#ln -s src/configure.ac .
-#ln -s src/Makefile.in .
-
-#echo "  aclocal $ACLOCAL_FLAGS"
-#aclocal $ACLOCAL_FLAGS
-#echo "  autoheader"
-#autoheader
-#echo "  automake --add-missing $AUTOMAKE_FLAGS"
-#automake --add-missing $AUTOMAKE_FLAGS 
+echo "  libtoolize"
+libtoolize -c -f
+echo "  aclocal $ACLOCAL_FLAGS"
+aclocal $ACLOCAL_FLAGS
 echo "  running autoconf"
 autoconf
 

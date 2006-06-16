@@ -14,16 +14,17 @@ dnl You should have received a copy of the GNU General Public License along with
 dnl ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 dnl Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 dnl 
-dnl $Id: configure.ac,v 1.9 2006/06/16 12:55:34 Arabidopsis Exp $
+dnl $Id: configure.ac,v 1.10 2006/06/16 16:03:35 Arabidopsis Exp $
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------
 dnl Initialization and Versioning
 dnl ------------------------------------------------
 
+AC_PREREQ(2.59)
 AC_INIT
-AC_PREREQ(2.52)
 AC_CONFIG_SRCDIR(src/gs.c)
+AM_INIT_AUTOMAKE
 
 dnl --------------------------------------------------  
 dnl Check for programs
@@ -36,7 +37,7 @@ AC_PROG_CC
 AC_PROG_CPP
 CFLAGS=$save_cflags
 
-AC_PROG_RANLIB
+AC_PROG_LIBTOOL
 AC_PROG_INSTALL
 
 dnl --------------------------------------------------
@@ -45,7 +46,7 @@ dnl --------------------------------------------------
 
 #AC_CANONICAL_HOST
 
-if test $ac_cv_prog_gcc = yes; then
+if test $ac_cv_c_compiler_gnu = yes; then
     cflags_to_try="-Wall -Wstrict-prototypes \
 -Wmissing-declarations -Wmissing-prototypes \
 -Wcast-qual -Wwrite-strings \
@@ -61,18 +62,18 @@ old_cflags=$CFLAGS
 echo
 for flag in $optflags_to_try; do
     CFLAGS="$CFLAGS $flag"
-    AC_TRY_COMPILE(, [return 0;], [
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[return 0;]])],[
 	echo "   $flag"
 	OPT_CFLAGS="$OPT_CFLAGS $flag"
-    ])
+    ],[])
     CFLAGS=$old_cflags
 done
 for flag in $cflags_to_try; do
 	CFLAGS="$CFLAGS $flag"
-	AC_TRY_COMPILE(, [return 0;], [
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[return 0;]])],[
 		echo "   $flag"
 		GCFLAGS="$GCFLAGS $flag"
-	])
+	],[])
 	CFLAGS=$old_cflags
 done
 AC_MSG_RESULT([ ...done.])
@@ -250,7 +251,7 @@ AC_SUBST(LIBPNGDIR)
 AC_SUBST(PNGDEVS)
 
 dnl look for IJS implementation
-AC_ARG_WITH(ijs, AC_HELP_STRING([--with-ijs],[include IJS driver support]))
+AC_ARG_WITH(ijs, AS_HELP_STRING(--with-ijs,include IJS driver support))
 dnl set safe defaults
     IJSDIR=src
     IJSDEVS=''
@@ -268,7 +269,7 @@ AC_SUBST(IJSDIR)
 AC_SUBST(IJSDEVS)
 
 dnl look for jbig2dec
-AC_ARG_WITH(jbig2dec, AC_HELP_STRING([--with-jbig2dec],[include JBIG2 decode support]))
+AC_ARG_WITH(jbig2dec, AS_HELP_STRING(--with-jbig2dec,include JBIG2 decode support))
 JBIG2DIR=src
 SHARE_JBIG2=0
 JBIG2DEVS=''
@@ -302,7 +303,7 @@ AC_SUBST(SHARE_JBIG2)
 AC_SUBST(JBIG2DEVS)
 
 dnl look for the jasper JPEG 2000 library
-AC_ARG_WITH(jasper, AC_HELP_STRING([--with-jasper],[link to the JasPer library for JPEG 2000]))
+AC_ARG_WITH(jasper, AS_HELP_STRING(--with-jasper,link to the JasPer library for JPEG 2000))
 JASPERDIR=src
 SHARE_JASPER=0
 JPXDEVS=''
@@ -319,12 +320,12 @@ if test x$with_jasper != xno; then
     else
       AC_MSG_RESULT([no])
       AC_MSG_CHECKING([for local jasper configure script])
-      if test -x $JASPERDIR/configure; then
+      if test -r $JASPERDIR/configure; then
         AC_MSG_RESULT([yes])
         echo
         echo "Running jasper configure script..."
 	olddir=`pwd`
-        cd $JASPERDIR && ./configure
+        cd $JASPERDIR && sh ./configure
         cd $olddir
         echo
         echo "Continuing with Ghostscript configuration..."
@@ -341,9 +342,9 @@ if test x$with_jasper != xno; then
           echo
           echo "Continuing with Ghostscript configuration..."
         else
-          AC_MSG_WARN ([
+          AC_MSG_WARN([
 Unable to find $JASPERDIR/src/libjasper/include/jas_config.h,
-or generate generate such a file for this system. You will
+or generate such a file for this system. You will
 have to build one by hand, or configure, build and install
 the jasper library separately.
 
@@ -393,15 +394,13 @@ AC_SUBST(X11DEVS)
 AC_SUBST(XLIBS)
 
 dnl executible name
-AC_ARG_WITH(gs, AC_HELP_STRING([--with-gs=NAME],
-	[name of the ghostscript executible [[gs]]]),
+AC_ARG_WITH(gs, AS_HELP_STRING(--with-gs=NAME,name of the ghostscript executible [[gs]]),
 	[GS="$with_gs"],[GS='gs'])
 AC_SUBST(GS)
 
 dnl do we compile the postscript initialization files into Ghostscript?
 COMPILE_INITS="0"
-AC_ARG_ENABLE(compile-inits, AC_HELP_STRING([--enable-compile-inits],
-       [compile initialization files into Ghostscript]),[
+AC_ARG_ENABLE(compile-inits, AS_HELP_STRING(--enable-compile-inits,compile initialization files into Ghostscript),[
                if test x$enable_compile_inits = xyes; then
                        COMPILE_INITS="1"
                fi])
@@ -432,4 +431,5 @@ dnl --------------------------------------------------
 
 AC_SUBST(OPT_CFLAGS)
 AC_SUBST(GCFLAGS)
-AC_OUTPUT(Makefile)
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
