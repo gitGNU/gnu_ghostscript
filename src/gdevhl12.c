@@ -15,7 +15,7 @@
    (Legalese borrowed from the Mingw32 runtime libraries.)
  */
 
-/*$Id: gdevhl12.c,v 1.2 2006/06/16 19:37:41 Arabidopsis Exp $ */
+/*$Id: gdevhl12.c,v 1.3 2006/06/16 19:58:22 Arabidopsis Exp $ */
 /* gdevhl12.c - Brother HL-1250 driver for Ghostscript */
 
 /*
@@ -641,6 +641,7 @@ hl1250_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 	    tray_pcl = "\033&l2H";
 	    break;
 	default:
+		break;
     }
     if (pdev->PageCount == 0) {
 	/* initialize printer */
