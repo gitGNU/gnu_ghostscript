@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: wccommon.mak,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $
+# $Id: wccommon.mak,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $
 # wccommon.mak
 # Section of Watcom C/C++ makefile common to MS-DOS and MS Windows.
 # We strongly recommend that you read the Watcom section of Make.htm
@@ -54,6 +54,7 @@ SHARE_JPEG=0
 SHARE_LIBPNG=0
 SHARE_ZLIB=0
 SHARE_JBIG2=0
+SHARE_JPX=0
 
 # Define the extensions for command, object, and executable files.
 

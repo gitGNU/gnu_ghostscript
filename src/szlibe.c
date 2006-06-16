@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 1996, 1997, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,14 +15,11 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: szlibe.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: szlibe.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* zlib encoding (compression) filter stream */
 #include "std.h"
-#include "gsmemory.h"
-#include "gsmalloc.h"		/* for gs_memory_default */
 #include "strimpl.h"
 #include "szlibxx.h"
 

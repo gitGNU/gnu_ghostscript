@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpsdu.c,v 1.5 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpsdu.c,v 1.6 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Common utilities for PostScript and PDF writers */
 #include "stdio_.h"		/* for FILE for jpeglib.h */
 #include "jpeglib_.h"		/* for sdct.h */
@@ -149,7 +149,9 @@ psdf_curveto(gx_device_vector * vdev, floatp x0, floatp y0,
 	   floatp x1, floatp y1, floatp x2, floatp y2, floatp x3, floatp y3,
 	     gx_path_type_t type)
 {
-    if (x1 == x0 && y1 == y0)
+    if (x1 == x0 && y1 == y0 && x2 == x3 && y2 == y3)
+	pprintg2(gdev_vector_stream(vdev), "%g %g l\n", x3, y3);
+    else if (x1 == x0 && y1 == y0)
 	pprintg4(gdev_vector_stream(vdev), "%g %g %g %g v\n",
 		 x2, y2, x3, y3);
     else if (x3 == x2 && y3 == y2)
@@ -355,7 +357,9 @@ psdf_DCT_filter(gs_param_list *plist /* may be NULL */,
 	if ((code = gs_jpeg_create_compress(ss)) < 0)
 	    goto dcte_fail;	/* correct to do jpeg_destroy here */
 	/* Read parameters from dictionary */
-	s_DCTE_put_params((gs_param_list *)&rcc_list, ss); /* ignore errors */
+	code = s_DCTE_put_params((gs_param_list *)&rcc_list, ss);
+	if (code < 0)
+	    return code;
 	/* Create the filter. */
 	jcdp->template = s_DCTE_template;
 	/* Make sure we get at least a full scan line of input. */
@@ -424,6 +428,9 @@ psdf_end_binary(psdf_binary_writer * pbw)
 int
 psdf_get_bits(gx_device * dev, int y, byte * data, byte ** actual_data)
 {
+    if (dev_proc(dev, get_alpha_bits)(dev, go_graphics) > 1)
+	eprintf1("Can't set GraphicsAlphaBits > 1 with a vector device %s.\n",
+	    dev->dname);
     return_error(gs_error_unregistered);
 }
 
@@ -449,7 +456,7 @@ psdf_create_compositor(
     gx_device *             dev,
     gx_device **            pcdev,
     const gs_composite_t *  pct,
-    const gs_imager_state * pis,
+    gs_imager_state * pis,
     gs_memory_t *           mem )
 {
     if (gs_is_overprint_compositor(pct)) {

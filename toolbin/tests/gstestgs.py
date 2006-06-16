@@ -20,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gstestgs.py,v 1.6 2006/03/06 11:16:03 Arabidopsis Exp $
+# $Id: gstestgs.py,v 1.7 2006/06/16 12:55:32 Arabidopsis Exp $
 
 # gstestgs.py
 #
@@ -56,6 +56,8 @@ class Ghostscript:
 		if (self.band): bandsize = 10000
 		
 		cmd = self.command
+		if gsconf.fontdir:
+			cmd = cmd + ' -I' + gsconf.fontdir
 		cmd = cmd + ' -dQUIET -dNOPAUSE -dBATCH -K1000000 '
 		if self.dpi:
 			cmd = cmd + '-r%d ' % (self.dpi,)
@@ -67,13 +69,13 @@ class Ghostscript:
 		# that the 'exitserver' will restore global VM as expected.
 		# As of gs_init 1.111, job server emulation is supported (in a
 		# backward compatible fashion) so we add -dJOBSERVER.
-		cmd = cmd + '-dNOOUTERSAVE -dJOBSERVER -c false 0 startjob pop '
+		cmd = cmd + '-dNOOUTERSAVE -dJOBSERVER -c false 0 startjob pop -f'
 
 		if string.lower(self.infile[-4:]) == ".pdf" or \
 		   string.lower(self.infile[-3:]) == ".ai":
 			cmd = cmd + ' -dFirstPage=1 -dLastPage=1 '
 		else:
-			cmd = cmd + '- < '
+			cmd = cmd + ' - < '
 
 		cmd = cmd + ' \'%s\' >> %s 2>> %s' % (self.infile, self.log_stdout, self.log_stderr)
 

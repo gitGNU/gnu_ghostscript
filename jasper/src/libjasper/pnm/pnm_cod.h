@@ -64,7 +64,7 @@
 /*
  * Portable Pixmap/Graymap Format Support
  *
- * $Id: pnm_cod.h,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: pnm_cod.h,v 1.2 2006/06/16 12:55:32 Arabidopsis Exp $
  */
 
 #ifndef PNM_COD_H
@@ -133,7 +133,7 @@ typedef struct {
 	int tupletype;
 #endif
 
-	bool sgnd;
+	jas_bool sgnd;
 	/* The sample data is signed. */
 
 } pnm_hdr_t;

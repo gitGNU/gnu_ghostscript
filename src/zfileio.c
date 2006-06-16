@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zfileio.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: zfileio.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* File I/O operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -700,17 +700,17 @@ zpeekstring(i_ctx_t *i_ctx_p)
     while ((rlen = sbufavailable(s)) < len) {
 	int status = s->end_status;
 
-	/*
-	 * The following is a HACK.  It should reallocate the buffer to hold
-	 * at least len bytes.  However, this raises messy problems about
-	 * which allocator to use and how it should interact with restore.
-	 */
-	if (len >= s->bsize)
-	    return_error(e_rangecheck);
 	switch (status) {
 	case EOFC:
 	    break;
 	case 0:
+	    /*
+	     * The following is a HACK.  It should reallocate the buffer to hold
+	     * at least len bytes.  However, this raises messy problems about
+	     * which allocator to use and how it should interact with restore.
+	     */
+	    if (len >= s->bsize)
+		return_error(e_rangecheck);
 	    s_process_read_buf(s);
 	    continue;
 	default:

@@ -17,7 +17,7 @@
   
 */
 
-/*$Id: gxcldev.h,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/*$Id: gxcldev.h,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Internal definitions for Ghostscript command lists. */
 
 #ifndef gxcldev_INCLUDED
@@ -711,6 +711,11 @@ int clist_change_bits(gx_device_clist_writer * cldev, gx_clist_state * pcls,
 
 /* ------ Exported by gxclimag.c ------ */
 
+/*
+ * Write out any necessary color mapping data.
+ */
+int cmd_put_color_mapping(gx_device_clist_writer * cldev,
+				  const gs_imager_state * pis);
 /*
  * Add commands to represent a full (device) halftone.
  * (This routine should probably be in some other module.)

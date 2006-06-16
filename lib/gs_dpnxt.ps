@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_dpnxt.ps,v 1.3 2005/12/13 17:48:51 jemarch Exp $
+% $Id: gs_dpnxt.ps,v 1.4 2006/06/16 12:55:13 Arabidopsis Exp $
 % gs_dpnxt.ps
 % NeXT Display PostScript extensions
 
@@ -110,7 +110,7 @@ img_utils_dict begin
         //true
           //.colorimage
         stopped
-          { /alphaimage load $error /errorname get signalerror }
+          { /alphaimage .systemvar $error /errorname get signalerror }
         if
       }
     .bind systemdict begin odef end

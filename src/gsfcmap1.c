@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsfcmap1.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gsfcmap1.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Adobe-based CMap character decoding */
 #include "memory_.h"
 #include "string_.h"
@@ -178,7 +178,7 @@ code_map_decode_next_multidim_regime(const gx_code_map_t * pcmap,
         dlprintf("[J]CMDNmr() is called: str=(");
         debug_print_string_hex(str, ssize);
         dlprintf3(") @ 0x%lx ssize=%d, %d ranges to check\n",
-                       str, ssize, pcmap->num_lookup);
+		  (ulong)str, ssize, pcmap->num_lookup);
     }
  
     for (i = pcmap->num_lookup - 1; i >= 0; --i) {
@@ -414,14 +414,15 @@ gs_cmap_adobe1_decode_next(const gs_cmap_t * pcmap_in,
 	}
 	else {
             /* Undecodable string is shorter than the shortest character,
-             * there's no way except to return error.
+             * return 'gs_no_glyph' and update index to end-of-string 
              */
             if (gs_debug_c('J')) {
                 dlprintf2("[J]GCDN() left data in buffer (%d) is shorter than shortest defined character (%d)\n",
                   ssize, chr_size_shortest);
             }
             *pglyph = gs_no_glyph;
-            return_error(gs_error_rangecheck);
+	    *pindex += ssize;
+            return 0;			/* fixme: should return a code != 0 if caller needs to know */
 	}
     }
 }

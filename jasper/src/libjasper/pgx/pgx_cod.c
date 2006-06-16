@@ -64,14 +64,15 @@
 \******************************************************************************/
 
 #include "pgx_cod.h"
+#include "jasper/jas_debug.h"
 
 /******************************************************************************\
 *
 \******************************************************************************/
 
-void pgx_dumphdr(FILE *out, pgx_hdr_t *hdr)
+void pgx_dumphdr(pgx_hdr_t *hdr)
 {
-	fprintf(out, "byteorder=%s sgnd=%s prec=%d width=%d height=%d\n",
+	jas_eprintf("byteorder=%s sgnd=%s prec=%d width=%d height=%d\n",
 	  hdr->bigendian ? "bigendian" : "littleendian",
 	  hdr->sgnd ? "signed" : "unsigned",
 	  hdr->prec, hdr->width, hdr->height);

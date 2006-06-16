@@ -64,7 +64,7 @@
 /*
  * JPEG-2000 Code Stream Library
  *
- * $Id: jpc_cs.h,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jpc_cs.h,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 #ifndef JPC_CS_H
@@ -740,7 +740,6 @@ int jpc_getdata(jas_stream_t *in, jas_stream_t *out, long n);
 int jpc_putdata(jas_stream_t *out, jas_stream_t *in, long n);
 
 /* Dump a marker segment (for debugging). */
-void jpc_ms_dump(jpc_ms_t *ms, FILE *out);
 
 /* Read a 8-bit unsigned integer from a stream. */
 int jpc_getuint8(jas_stream_t *in, uint_fast8_t *val);

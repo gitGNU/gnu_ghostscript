@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gscdevn.h,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gscdevn.h,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Client interface to DeviceN color */
 
 #ifndef gscdevn_INCLUDED
@@ -83,5 +83,16 @@ int map_devn_using_function(const float *in, float *out,
 /* Serialize a DeviceN map. */
 int gx_serialize_device_n_map(const gs_color_space * pcs, gs_device_n_map * m, stream * s);
 
+/*
+ * DeviceN and NChannel color spaces can have an attributes dict.  In the
+ * attribute dict can be a Colorants dict which contains Separation color
+ * spaces.  If the Colorant dict is present, the PS logic will build each of
+ * the Separation color spaces in a temp gstate and then call this procedure
+ * to attach the Separation color space to the DeviceN color space.
+ * The parameter to this procedure is a colorant name.  The Separation
+ * color space is in the current (temp) gstate.  The DeviceN color space is
+ * in the next gstate down in the gstate list (pgs->saved).
+ */
+int gs_attachattributecolorspace(gs_separation_name sep_name, gs_state * pgs);
 
 #endif /* gscdevn_INCLUDED */

@@ -16,7 +16,7 @@
 
 */
 
-/*$Id: gdevbbox.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/*$Id: gdevbbox.c,v 1.7 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Device for tracking bounding box */
 #include "math_.h"
 #include "memory_.h"
@@ -1168,7 +1168,7 @@ private const gx_device_bbox_procs_t box_procs_forward = {
 private int
 bbox_create_compositor(gx_device * dev,
 		       gx_device ** pcdev, const gs_composite_t * pcte,
-		       const gs_imager_state * pis, gs_memory_t * memory)
+		       gs_imager_state * pis, gs_memory_t * memory)
 {
     gx_device_bbox *const bdev = (gx_device_bbox *) dev;
     gx_device *target = bdev->target;

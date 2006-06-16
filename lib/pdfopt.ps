@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: pdfopt.ps,v 1.4 2005/12/13 17:48:51 jemarch Exp $
+% $Id: pdfopt.ps,v 1.5 2006/06/16 12:55:14 Arabidopsis Exp $
 % PDF linearizer ("optimizer").
 
 .currentglobal true .setglobal
@@ -418,6 +418,7 @@ userdict /clostreams 20 dict put	% stream -> [data endproc]
   pdffindpageref
   dup 0 get 3 1 roll
   4 dict begin
+  /filter_params 10 darray def
   /images 10 darray def
   /fontfiles 10 darray def
   {
@@ -444,6 +445,15 @@ userdict /clostreams 20 dict put	% stream -> [data endproc]
 	exch dup /XObject eq {
 	  pop oforce {
 	    dup oforce /Subtype get /Image eq {
+              dup oforce /DecodeParms .knownget {
+                oforce {
+                  exch /JBIG2Globals eq {
+                    filter_params exch dadd
+                  } {
+                    pop
+                  } ifelse
+                } forall
+              } if
 	      images exch dadd
 	    } {
 	      omvisit
@@ -462,6 +472,7 @@ userdict /clostreams 20 dict put	% stream -> [data endproc]
     dup /Contents .knownget { omvisit } if
 		% Visit Image XObjects.  We don't try to visit them in
 		% reference order.
+    filter_params { omvisit } daforall
     images { omvisit } daforall
 		% Visit FontFile streams.  We don't try to visit them in
 		% reference order.
@@ -996,6 +1007,7 @@ userdict /clostreams 20 dict put	% stream -> [data endproc]
   /IDict exch def
   /OFile exch def
   /starttime exch def
+  /ToWrite 100 dict def
   /now {
     QUIET { pop } { print (, t = ) print realtime starttime sub = flush } ifelse
   } def

@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsistate.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gsistate.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Imager state housekeeping */
 #include "gx.h"
 #include "gserrors.h"
@@ -30,6 +30,7 @@
 #include "gxistate.h"
 #include "gzht.h"
 #include "gzline.h"
+#include "gxfmap.h"
 
 /******************************************************************************
  * See gsstate.c for a discussion of graphics/imager state memory management. *
@@ -94,12 +95,6 @@ private RELOC_PTRS_BEGIN(imager_state_reloc_ptrs)
 
 /* Initialize an imager state, other than the parts covered by */
 /* gs_imager_state_initial. */
-private float
-imager_null_transfer(floatp gray, const gx_transfer_map * pmap)
-{
-    return gray;
-}
-
 int
 gs_imager_state_initialize(gs_imager_state * pis, gs_memory_t * mem)
 {
@@ -126,7 +121,7 @@ gs_imager_state_initialize(gs_imager_state * pis, gs_memory_t * mem)
 		      gx_transfer_map, &st_transfer_map,
 		      mem, return_error(gs_error_VMerror),
 		      "gs_imager_state_init(transfer)", 1);
-    pis->set_transfer.gray->proc = imager_null_transfer;
+    pis->set_transfer.gray->proc = gs_identity_transfer;
     pis->set_transfer.gray->id = gs_next_ids(pis->memory, 1);
     pis->set_transfer.gray->values[0] = frac_0;
     pis->set_transfer.red =

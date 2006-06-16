@@ -79,12 +79,12 @@
 
 static int pgx_gethdr(jas_stream_t *in, pgx_hdr_t *hdr);
 static int pgx_getdata(jas_stream_t *in, pgx_hdr_t *hdr, jas_image_t *image);
-static int_fast32_t pgx_getword(jas_stream_t *in, bool bigendian, int prec);
-static int pgx_getsgnd(jas_stream_t *in, bool *sgnd);
-static int pgx_getbyteorder(jas_stream_t *in, bool *bigendian);
+static int_fast32_t pgx_getword(jas_stream_t *in, jas_bool bigendian, int prec);
+static int pgx_getsgnd(jas_stream_t *in, jas_bool *sgnd);
+static int pgx_getbyteorder(jas_stream_t *in, jas_bool *bigendian);
 static int pgx_getc(jas_stream_t *in);
 static int pgx_getuint32(jas_stream_t *in, uint_fast32_t *val);
-static jas_seqent_t pgx_wordtoint(uint_fast32_t word, int prec, bool sgnd);
+static jas_seqent_t pgx_wordtoint(uint_fast32_t word, int prec, jas_bool sgnd);
 
 /******************************************************************************\
 * Code for load operation.
@@ -108,7 +108,7 @@ jas_image_t *pgx_decode(jas_stream_t *in, char *optstr)
 	}
 
 #ifdef PGX_DEBUG
-	pgx_dumphdr(stderr, &hdr);
+	pgx_dumphdr(&hdr);
 #endif
 
 	if (!(image = jas_image_create0())) {
@@ -267,7 +267,7 @@ error:
 	return -1;
 }
 
-static int_fast32_t pgx_getword(jas_stream_t *in, bool bigendian, int prec)
+static int_fast32_t pgx_getword(jas_stream_t *in, jas_bool bigendian, int prec)
 {
 	uint_fast32_t val;
 	int i;
@@ -314,7 +314,7 @@ static int pgx_getc(jas_stream_t *in)
 	}
 }
 
-static int pgx_getbyteorder(jas_stream_t *in, bool *bigendian)
+static int pgx_getbyteorder(jas_stream_t *in, jas_bool *bigendian)
 {
 	int c;
 	char buf[2];
@@ -331,9 +331,9 @@ static int pgx_getbyteorder(jas_stream_t *in, bool *bigendian)
 	}
 	buf[1] = c;
 	if (buf[0] == 'M' && buf[1] == 'L') {
-		*bigendian = true;
+		*bigendian = jas_true;
 	} else if (buf[0] == 'L' && buf[1] == 'M') {
-		*bigendian = false;
+		*bigendian = jas_false;
 	} else {
 		goto error;
 	}
@@ -350,7 +350,7 @@ error:
 	return -1;
 }
 
-static int pgx_getsgnd(jas_stream_t *in, bool *sgnd)
+static int pgx_getsgnd(jas_stream_t *in, jas_bool *sgnd)
 {
 	int c;
 
@@ -361,9 +361,9 @@ static int pgx_getsgnd(jas_stream_t *in, bool *sgnd)
 	} while (isspace(c));
 
 	if (c == '+') {
-		*sgnd = false;
+		*sgnd = jas_false;
 	} else if (c == '-') {
-		*sgnd = true;
+		*sgnd = jas_true;
 	} else {
 		goto error;
 	}
@@ -405,7 +405,7 @@ static int pgx_getuint32(jas_stream_t *in, uint_fast32_t *val)
 	return 0;
 }
 
-static jas_seqent_t pgx_wordtoint(uint_fast32_t v, int prec, bool sgnd)
+static jas_seqent_t pgx_wordtoint(uint_fast32_t v, int prec, jas_bool sgnd)
 {
 	jas_seqent_t ret;
 	v &= (1 << prec) - 1;

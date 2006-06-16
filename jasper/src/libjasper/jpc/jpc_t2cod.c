@@ -64,7 +64,7 @@
 /*
  * Tier-2 Coding Library
  *
- * $Id: jpc_t2cod.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jpc_t2cod.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 #include "jasper/jas_math.h"
@@ -89,7 +89,7 @@ int jpc_pi_next(jpc_pi_t *pi)
 
 	for (;;) {
 
-		pi->valid = false;
+		pi->valid = jas_false;
 
 		if (!pi->pchg) {
 			++pi->pchgno;
@@ -97,7 +97,7 @@ int jpc_pi_next(jpc_pi_t *pi)
 			pi->rlvlno = 0;
 			pi->prcno = 0;
 			pi->lyrno = 0;
-			pi->prgvolfirst = true;
+			pi->prgvolfirst = jas_true;
 			if (pi->pchgno < jpc_pchglist_numpchgs(pi->pchglist)) {
 				pi->pchg = jpc_pchglist_get(pi->pchglist, pi->pchgno);
 			} else if (pi->pchgno == jpc_pchglist_numpchgs(pi->pchglist)) {
@@ -129,7 +129,7 @@ int jpc_pi_next(jpc_pi_t *pi)
 			break;
 		}
 		if (!ret) {
-			pi->valid = true;
+			pi->valid = jas_true;
 			++pi->pktno;
 			return 0;
 		}
@@ -147,7 +147,7 @@ static int jpc_pi_nextlrcp(register jpc_pi_t *pi)
 		prclyrno = &pi->pirlvl->prclyrnos[pi->prcno];
 		goto skip;
 	} else {
-		pi->prgvolfirst = false;
+		pi->prgvolfirst = jas_false;
 	}
 
 	for (pi->lyrno = 0; pi->lyrno < pi->numlyrs && pi->lyrno <

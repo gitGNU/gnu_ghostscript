@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: write_t1.c,v 1.3 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: write_t1.c,v 1.4 2006/06/16 12:55:03 Arabidopsis Exp $ */
 
 /*
 Functions to serialize a type 1 font as PostScript code that can then be
@@ -27,8 +27,6 @@ Started by Graham Asher, 26th July 2002.
 
 #include "wrfont.h"
 #include "write_t1.h"
-
-#include <assert.h>
 
 /*
 Public structures and functions in this file are prefixed with FF_ because they are part of
@@ -53,8 +51,7 @@ static void write_array_entry_with_count(FAPI_font* a_fapi_font,WRF_output* a_ou
 	{
 	int i;
 
-	assert(a_count >= 0);
-	if (a_count == 0)
+	if (a_count <= 0)
 		return;
 
 	WRF_wbyte(a_output,'/');
@@ -84,8 +81,7 @@ static void write_subrs(FAPI_font* a_fapi_font,WRF_output* a_output)
 	{
 	int i;
 	int count = a_fapi_font->get_word(a_fapi_font,FAPI_FONT_FEATURE_Subrs_count,0);
-	assert(count >= 0);
-	if (count == 0)
+	if (count <= 0)
 		return;
 
 	WRF_wstring(a_output,"/Subrs ");
@@ -120,7 +116,6 @@ static void write_subrs(FAPI_font* a_fapi_font,WRF_output* a_output)
 
 static void write_private_dictionary(FAPI_font* a_fapi_font,WRF_output* a_output)
 	{
-	assert(!a_output->m_encrypt);
 	a_output->m_encrypt = true;
 
 	/* Write 4 bytes that must encrypt to at least one character that cannot be a valid hexadecimal character. */

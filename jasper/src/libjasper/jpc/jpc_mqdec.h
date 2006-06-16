@@ -64,7 +64,7 @@
 /*
  * MQ Arithmetic Decoder
  *
- * $Id: jpc_mqdec.h,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jpc_mqdec.h,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 #ifndef JPC_MQDEC_H
@@ -155,22 +155,12 @@ void jpc_mqdec_setctxs(jpc_mqdec_t *dec, int numctxs, jpc_mqctx_t *ctxs);
 \******************************************************************************/
 
 /* Decode a symbol. */
-#if !defined(DEBUG)
 #define	jpc_mqdec_getbit(dec) \
 	jpc_mqdec_getbit_macro(dec)
-#else
-#define	jpc_mqdec_getbit(dec) \
-	jpc_mqdec_getbit_func(dec)
-#endif
 
 /* Decode a symbol (assuming an unskewed probability distribution). */
-#if !defined(DEBUG)
 #define	jpc_mqdec_getbitnoskew(dec) \
 	jpc_mqdec_getbit_macro(dec)
-#else
-#define	jpc_mqdec_getbitnoskew(dec) \
-	jpc_mqdec_getbit_func(dec)
-#endif
 
 /******************************************************************************\
 * Functions/macros for debugging.
@@ -264,7 +254,6 @@ void jpc_mqdec_dump(jpc_mqdec_t *dec, FILE *out);
 	} \
 }
 
-int jpc_mqdec_getbit_func(jpc_mqdec_t *dec);
 int jpc_mqdec_mpsexchrenormd(jpc_mqdec_t *dec);
 int jpc_mqdec_lpsexchrenormd(jpc_mqdec_t *dec);
 

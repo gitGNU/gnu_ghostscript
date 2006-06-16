@@ -17,13 +17,19 @@
   
 */
 
-/* $Id: gxobj.h,v 1.5 2006/02/20 19:52:05 jemarch Exp $ */
+/* $Id: gxobj.h,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Memory manager implementation structures for Ghostscript */
 
 #ifndef gxobj_INCLUDED
 #  define gxobj_INCLUDED
 
 #include "gxbitmap.h"
+
+#ifdef DEBUG
+#define IGC_PTR_STABILITY_CHECK 0
+#else
+#define IGC_PTR_STABILITY_CHECK 0
+#endif
 
 /* ================ Objects ================ */
 
@@ -94,6 +100,9 @@ typedef struct obj_header_data_s {
 	gs_memory_type_ptr_t type;
 	uint reloc;
     } t;
+#   if IGC_PTR_STABILITY_CHECK
+    unsigned space_id:3; /* r_space_bits + 1 bit for "instability". */
+#   endif
 } obj_header_data_t;
 
 /*
@@ -107,7 +116,7 @@ typedef struct obj_header_data_s {
  * See gsmemraw.h for more information about this.
  */
 #define obj_align_mod\
-  (((arch_align_memory_mod - 1) |\
+  (((ARCH_ALIGN_MEMORY_MOD - 1) |\
     (align_bitmap_mod - 1) |\
     (obj_back_scale - 1)) + 1)
 /* The only possible values for obj_align_mod are 4, 8, or 16.... */

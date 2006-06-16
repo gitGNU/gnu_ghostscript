@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: slzwd.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: slzwd.c,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* LZW decoding filter */
 #include "stdio_.h"		/* includes std.h */
 #include "gdebug.h"
@@ -342,9 +342,10 @@ reset:
 		if (bits_left + ((rlimit - p) << 3) < code_size) {
 		    /*
 		     * We need more data to decide whether a reset is next.
-		     ****** PUNT ******
-		     */
-		    status = ERRC;
+		     * Return an error if we cannot get more.
+                     */
+		    if (last)
+                        status = ERRC;
 		    goto out;
 		}
 		if (low_order) {

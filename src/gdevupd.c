@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevupd.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gdevupd.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* gdevupd.c Revision: 1.88 */
 /* "uniprint" -- Ugly Printer Driver by Gunther Hess (ghess@elmos.de) */
 
@@ -975,7 +975,7 @@ Here are several Macros, named "UPD_MM_*" to deal with that.
 
 /** Version-String */
 
-static const char rcsid[] = "$Revision: 1.6 $";
+static const char rcsid[] = "$Revision: 1.7 $";
 
 /** Default-Transfer-curve */
 
@@ -1201,13 +1201,19 @@ upd_print_page(gx_device_printer *pdev, FILE *out)
 /*
  * If necessary, write the close-sequence
  */
-   if((NULL != udev->fname  ) && strchr(udev->fname,'%')) {
+    {
+	gs_parsed_file_name_t parsed;
+	const char *fmt;
 
-      if(0  <   upd->strings[S_CLOSE].size)
-         fwrite(upd->strings[S_CLOSE].data,1,upd->strings[S_CLOSE].size,out);
-
-      upd->flags &= ~B_OPEN;
-   }
+	if (NULL != udev->fname &&
+	    0 <= gx_parse_output_file_name(&parsed, &fmt, udev->fname, strlen(udev->fname)) &&
+	    fmt
+	    ) {
+	    if (0 < upd->strings[S_CLOSE].size)
+		fwrite(upd->strings[S_CLOSE].data,1,upd->strings[S_CLOSE].size,out);
+	    upd->flags &= ~B_OPEN;
+	}
+    }
 
 /*
  * clean up, and return status

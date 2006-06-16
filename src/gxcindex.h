@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxcindex.h,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxcindex.h,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Define the device color index type and macros */
 
 #ifndef gxcindex_INCLUDED
@@ -28,10 +28,10 @@
 /*
  * Define the maximum number of components in a device color.
  * The minimum value is 4, to handle CMYK; the maximum value is
- * sizeof(gx_color_index) * 8, since for larger values, there aren't enough
+ * arch_sizeof_color_index * 8, since for larger values, there aren't enough
  * bits in a gx_color_index to have even 1 bit per component.
  */
-#define GX_DEVICE_COLOR_MAX_COMPONENTS 16
+#define GX_DEVICE_COLOR_MAX_COMPONENTS (ARCH_SIZEOF_GX_COLOR_INDEX * 8)
 
 /*
  * We might change gx_color_index to a pointer or a structure in the
@@ -60,6 +60,8 @@ typedef struct { ulong value[2]; } gx_color_index_data;
 #ifdef GX_COLOR_INDEX_TYPE
 typedef GX_COLOR_INDEX_TYPE gx_color_index_data;
 #else
+/* this default must be kept in sync with the one in genarch.c
+   or ARCH_SIZEOF_GX_COLOR_INDEX will be incorrect */
 typedef ulong gx_color_index_data;
 #endif
 
@@ -77,9 +79,10 @@ extern const gx_color_index_data gx_no_color_index_data;
 
 #else  /* !TEST_CINDEX_POINTER */
 
+#define arch_sizeof_color_index sizeof(gx_color_index_data)
+
 /* Define the type for device color indices (pixel values). */
 typedef gx_color_index_data gx_color_index;
-#define arch_sizeof_color_index arch_sizeof_long
 
 /*
  * Define the 'transparent' or 'undefined' color index.

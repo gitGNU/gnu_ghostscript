@@ -20,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: make_two_versions,v 1.4 2005/12/13 17:58:03 jemarch Exp $
+# $Id: make_two_versions,v 1.5 2006/06/16 12:55:32 Arabidopsis Exp $
 
 #
 # make_two_versions <filename> [<device> [<res> [<banding>]]]
@@ -34,6 +34,10 @@ import gsconf
 import rasterdb
 import os, sys
 import string
+
+if len(sys.argv) < 2:
+    print "\n    usage: make_two_versions filename [ device:ppmraw [ res:72 [ banding:0 ] ] ]\n"
+    sys.exit()
 
 file = os.path.basename(sys.argv[1])
 if len(sys.argv) > 2:

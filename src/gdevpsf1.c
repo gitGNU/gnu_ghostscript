@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,10 +17,9 @@
 
 */
 
-/* $Id: gdevpsf1.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gdevpsf1.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Write an embedded Type 1 font */
 #include "memory_.h"
-#include <assert.h>
 #include "gx.h"
 #include "gserrors.h"
 #include "gsccode.h"
@@ -261,10 +261,12 @@ write_Private(stream *s, gs_font_type1 *pfont,
 	    if ((code = pdata->procs.subr_data(pfont, i, false, &gdata)) >= 0) {
 		char buf[50];
 
-		sprintf(buf, "dup %d %u -| ", i, gdata.bits.size);
-		stream_puts(s, buf);
-		write_CharString(s, gdata.bits.data, gdata.bits.size);
-		stream_puts(s, " |\n");
+		if (gdata.bits.size) {
+		    sprintf(buf, "dup %d %u -| ", i, gdata.bits.size);
+		    stream_puts(s, buf);
+		    write_CharString(s, gdata.bits.data, gdata.bits.size);
+		    stream_puts(s, " |\n");
+		}
 		gs_glyph_data_free(&gdata, "write_Private(Subrs)");
 	    }
 	stream_puts(s, "|-\n");
@@ -306,7 +308,8 @@ write_Private(stream *s, gs_font_type1 *pfont,
 		int code;
 
 		code = pfont->procs.glyph_name((gs_font *)pfont, glyph, &gstr);
-		assert(code >= 0);
+		if (code < 0)
+		    return code;
 		stream_puts(s, "/");
 		stream_write(s, gstr.data, gstr.size);
 		pprintd1(s, " %d -| ", gdata.bits.size);

@@ -270,7 +270,7 @@ int jpg_encode(jas_image_t *image, jas_stream_t *out, char *optstr)
 		  jas_image_cmpthstep(image, enc->cmpts[cmptno]) != 1 ||
 		  jas_image_cmptvstep(image, enc->cmpts[cmptno]) != 1 ||
 		  jas_image_cmptprec(image, enc->cmpts[cmptno]) != 8 ||
-		  jas_image_cmptsgnd(image, enc->cmpts[cmptno]) != false) {
+		  jas_image_cmptsgnd(image, enc->cmpts[cmptno]) != jas_false) {
 			jas_eprintf("error: The JPG encoder cannot handle an image with this geometry.\n");
 			goto error;
 		}
@@ -306,14 +306,14 @@ int jpg_encode(jas_image_t *image, jas_stream_t *out, char *optstr)
 	jpg_start_input(&cinfo, src_mgr);
 
 	if (encopts.qual >= 0) {
-		jpeg_set_quality(&cinfo, encopts.qual, TRUE);
+		jpeg_set_quality(&cinfo, encopts.qual, jas_true);
 	}
 
 	/* Now that we know input colorspace, fix colorspace-dependent defaults */
 	jpeg_default_colorspace(&cinfo);
 
 	/* Start compressor */
-	jpeg_start_compress(&cinfo, TRUE);
+	jpeg_start_compress(&cinfo, jas_true );
 
 	/* Process data */
 	while (cinfo.next_scanline < cinfo.image_height) {
@@ -355,7 +355,10 @@ static int tojpgcs(int colorspace)
 		return JCS_GRAYSCALE;
 		break;
 	default:
-		abort();
+			jas_error(	JAS_ERR_INVALID_CLRSPACE_TOJPGCS,
+						"JAS_ERR_INVALID_CLRSPACE_TOJPGCS"
+					);
+			return -1;
 		break;
 	}
 }
@@ -384,14 +387,13 @@ static int jpg_parseencopts(char *optstr, jpg_encopts_t *encopts)
 		case OPT_QUAL:
 			qual_str = jas_tvparser_getval(tvp);
 			if (sscanf(qual_str, "%d", &encopts->qual) != 1) {
-				fprintf(stderr,
-					"ignoring bad quality specifier %s\n",
+				jas_eprintf( 					"ignoring bad quality specifier %s\n",
 					jas_tvparser_getval(tvp));
 				encopts->qual = -1;
 			}
 			break;
 		default:
-			fprintf(stderr, "warning: ignoring invalid option %s\n",
+			jas_eprintf("warning: ignoring invalid option %s\n",
 			  jas_tvparser_gettag(tvp));
 			break;
 		}

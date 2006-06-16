@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: winlib.mak,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $
+# $Id: winlib.mak,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $
 # Common makefile section for 32-bit MS Windows.
 
 # This makefile must be acceptable to Microsoft Visual C++, Watcom C++,
@@ -32,7 +32,7 @@ SHARE_JPEG=0
 SHARE_LIBPNG=0
 SHARE_ZLIB=0
 SHARE_JBIG2=0
-SHARE_JASPER=0
+SHARE_JPX=0
 
 # Define the platform name.
 
@@ -115,6 +115,8 @@ BEGINFILES=$(GLGENDIR)\ccf32.tr\
 !include $(GLSRCDIR)\libpng.mak
 !include $(GLSRCDIR)\jbig2.mak
 !include $(GLSRCDIR)\jasper.mak
+!include $(GLSRCDIR)\ldf_jb2.mak
+!include $(GLSRCDIR)\lwf_jp2.mak
 !include $(GLSRCDIR)\icclib.mak
 !include $(GLSRCDIR)\ijs.mak
 !include $(GLSRCDIR)\devs.mak

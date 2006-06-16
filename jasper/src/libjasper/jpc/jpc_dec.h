@@ -64,7 +64,7 @@
 /*
  * JPEG-2000 Decoder
  *
- * $Id: jpc_dec.h,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jpc_dec.h,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 #ifndef JPC_DEC_H
@@ -554,7 +554,7 @@ typedef struct {
 	uint_fast16_t prec;
 
 	/* The signedness of the sample data. */
-	bool sgnd;
+	jas_bool sgnd;
 
 	/* The sample alignment horizontal offset. */
 	uint_fast32_t hsubstep;

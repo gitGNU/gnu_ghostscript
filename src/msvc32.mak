@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: msvc32.mak,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $
+# $Id: msvc32.mak,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $
 # makefile for 32-bit Microsoft Visual C++, Windows NT or Windows 95 platform.
 #
 # All configurable options are surrounded by !ifndef/!endif to allow 
@@ -140,7 +140,7 @@ TDEBUG=0
 
 # Setting DEBUGSYM=1 is only useful with TDEBUG=0.
 # This option is for advanced developers. It includes symbol table
-# information for the debugger with in an optimized (release) build.
+# information for the debugger in an optimized (release) build.
 # NOTE: The debugging information generated for the optimized code may be
 # significantly misleading. For general MSVC users we recommend TDEBUG=1.
 
@@ -155,6 +155,12 @@ DEBUGSYM=0
 
 !ifndef NOPRIVATE
 NOPRIVATE=0
+!endif
+
+# We can compile for a 32-bit or 64-bit target
+# WIN32 and WIN64 are mutually exclusive.  WIN32 is the default.
+!if !defined(WIN32) && !defined(Win64)
+WIN32=0
 !endif
 
 # Define the name of the executable file.
@@ -205,7 +211,7 @@ JVERSION=6
 
 !ifndef PSRCDIR
 PSRCDIR=libpng
-PVERSION=10208
+PVERSION=10210
 !endif
 
 # Define the directory where the zlib sources are stored.
@@ -215,22 +221,56 @@ PVERSION=10208
 ZSRCDIR=zlib
 !endif
 
-# Define the jbig2dec library source location.
-# See jbig2.mak for more information.
+# Define which jbig2 library to use
+!ifndef JBIG2_LIB
+JBIG2_LIB=jbig2dec
+!endif
 
+!if "$(JBIG2_LIB)" == "luratech" || "$(JBIG2_LIB)" == "ldf_jb2"
+# Set defaults for using the Luratech JB2 implementation
 !ifndef JBIG2SRCDIR
+# CSDK source code location
+JBIG2SRCDIR=ldf_jb2
+!endif
+!ifndef JBIG2_CFLAGS
+# required compiler flags
+JBIG2_CFLAGS=-DUSE_LDF_JB2 -DWIN32
+!endif
+!else
+# Use jbig2dec by default. See jbig2.mak for more information.
+!ifndef JBIG2SRCDIR
+# location of included jbig2dec library source
 JBIG2SRCDIR=jbig2dec
 !endif
-
-# Define the jasper library source location.
-# See jasper.mak for more information.
+!endif
 
 # Alternatively, you can build a separate DLL
-# and define SHARE_JASPER=1 in src/winlib.mak
+# and define SHARE_JBIG2=1 in src/winlib.mak
 
-!ifndef JASPERSRCDIR
-JASPERSRCDIR=jasper
+# Define which jpeg2k library to use
+!ifndef JPX_LIB
+JPX_LIB=jasper
 !endif
+
+!if "$(JPX_LIB)" == "luratech" || "$(JPX_LIB)" == "lwf_jp2"
+# Set defaults for using the Luratech JP2 implementation
+!ifndef JPXSRCDIR
+# CSDK source code location
+JPXSRCDIR=lwf_jp2
+!endif
+!ifndef JPX_CFLAGS
+# required compiler flags
+JPX_CFLAGS=-DUSE_LWF_JP2 -DWIN32
+!endif
+!else
+# Use jasper by default. See jasper.mak for more information.
+!ifndef JPXSRCDIR
+JPXSRCDIR=jasper
+!endif
+!endif
+
+# Alternatively, you can build a separate DLL
+# and define SHARE_JPX=1 in src/winlib.mak
 
 # Define the directory where the icclib source are stored.
 # See icclib.mak for more information
@@ -312,7 +352,7 @@ MSVC_VERSION=7
 MSVC_VERSION=7
 MSVC_MINOR_VERSION=1
 !endif
-!if "$(_NMAKE_VER)" == "8.00.40607.16"
+!if "$(_NMAKE_VER)" == "8.00.50727.42"
 MSVC_VERSION=8
 !endif
 !endif
@@ -383,20 +423,37 @@ COMPBASE=
 SHAREDBASE=
 !else
 COMPBASE=$(DEVSTUDIO)\Vc7
-SHAREDBASE=$(DEVSTUDIO)\Vc7\
+SHAREDBASE=$(DEVSTUDIO)\Vc7
+!ifdef WIN64
+# Windows Server 2003 DDK is needed for the 64-bit compiler
+# but it won't install on Windows XP 64-bit.
+DDKBASE=c:\winddk\3790
+COMPDIR64=$(DDKBASE)\bin\win64\x86\amd64
+LINKLIBPATH=/LIBPATH:"$(DDKBASE)\lib\wnet\amd64"
+INCDIR64A=$(DDKBASE)\inc\wnet
+INCDIR64B=$(DDKBASE)\inc\crt
+!endif
 !endif
 !endif
 
 !if $(MSVC_VERSION) == 8
 ! ifndef DEVSTUDIO
+!ifdef WIN64
+DEVSTUDIO=C:\Program Files (x86)\Microsoft Visual Studio 8
+!else
 DEVSTUDIO=C:\Program Files\Microsoft Visual Studio 8
+!endif
 ! endif
 !if "$(DEVSTUDIO)"==""
 COMPBASE=
 SHAREDBASE=
 !else
 COMPBASE=$(DEVSTUDIO)\VC
-SHAREDBASE=$(DEVSTUDIO)\VC\
+SHAREDBASE=$(DEVSTUDIO)\VC
+!ifdef WIN64
+COMPDIR64=$(COMPBASE)\bin\x86_amd64
+LINKLIBPATH=/LIBPATH:"$(COMPBASE)\lib\amd64" /LIBPATH:"$(COMPBASE)\PlatformSDK\Lib\AMD64"
+!endif
 !endif
 !endif
 
@@ -410,7 +467,11 @@ SHAREDBASE=$(DEVSTUDIO)\VC\
 !if "$(COMPBASE)"==""
 COMPDIR=
 !else
+!ifdef WIN64
+COMPDIR=$(COMPDIR64)
+!else
 COMPDIR=$(COMPBASE)\bin
+!endif
 !endif
 !endif
 
@@ -418,7 +479,11 @@ COMPDIR=$(COMPBASE)\bin
 !if "$(COMPBASE)"==""
 LINKDIR=
 !else
+!ifdef WIN64
+LINKDIR=$(COMPDIR64)
+!else
 LINKDIR=$(COMPBASE)\bin
+!endif
 !endif
 !endif
 
@@ -457,7 +522,11 @@ COMP="$(COMPDIR)\cl"
 COMPCPP=$(COMP)
 !endif
 !ifndef COMPAUX
+!ifdef WIN64
+COMPAUX="$(COMPBASE)\bin\cl"
+!else
 COMPAUX=$(COMP)
+!endif
 !endif
 
 !ifndef RCOMP
@@ -494,6 +563,10 @@ LINK="$(LINKDIR)\link"
 !if [set LIB=$(LIBDIR)]==0
 !endif
 !endif
+!endif
+
+!ifndef LINKLIBPATH
+LINKLIBPATH=
 !endif
 
 # Define the processor architecture. (i386, ppc, alpha)
@@ -558,6 +631,9 @@ FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(P
 COMPILE_INITS=0
 !endif
 
+# This is in the top level makefile since it is platform dependent
+RESOURCE_LIST=Resource/CMap/ Resource/ColorSpace/ Resource/Decoding/ Resource/Fonts/ Resource/Procset/ Resource/IdiomSet/ Resource/CIDFont/
+
 # Choose whether to store band lists on files or in memory.
 # The choices are 'file' or 'memory'.
 
@@ -603,8 +679,8 @@ DEVICE_DEVS10=$(DD)tiffcrle.dev $(DD)tiffg3.dev $(DD)tiffg32d.dev $(DD)tiffg4.de
 DEVICE_DEVS11=$(DD)bmpmono.dev $(DD)bmpgray.dev $(DD)bmp16.dev $(DD)bmp256.dev $(DD)bmp16m.dev $(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiffsep.dev
 DEVICE_DEVS12=$(DD)psmono.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
 DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
-DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev
-DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)epswrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
+DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev $(DD)jpegcmyk.dev
+DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
 DEVICE_DEVS16=$(DD)bbox.dev
 # Overflow for DEVS3,4,5,6,9
 DEVICE_DEVS17=$(DD)ljet3.dev $(DD)ljet3d.dev $(DD)ljet4.dev $(DD)ljet4d.dev 
@@ -659,29 +735,38 @@ GSCONSOLE_XE=$(BINDIR)\$(GSCONSOLE).exe
 GSDLL_DLL=$(BINDIR)\$(GSDLL).dll
 GSDLL_OBJS=$(PSOBJ)gsdll.$(OBJ) $(GLOBJ)gp_msdll.$(OBJ)
 
+!if $(TDEBUG) != 0
 $(PSGEN)lib32.rsp: $(TOP_MAKEFILES)
 	echo /NODEFAULTLIB:LIBC.lib > $(PSGEN)lib32.rsp
-	echo libcmt.lib >> $(PSGEN)lib32.rsp
+	echo /NODEFAULTLIB:LIBCMT.lib >> $(PSGEN)lib32.rsp
+	echo LIBCMTD.lib >> $(PSGEN)lib32.rsp
+!else
+$(PSGEN)lib32.rsp: $(TOP_MAKEFILES)
+	echo /NODEFAULTLIB:LIBC.lib > $(PSGEN)lib32.rsp
+	echo /NODEFAULTLIB:LIBCMTD.lib >> $(PSGEN)lib32.rsp
+	echo LIBCMT.lib >> $(PSGEN)lib32.rsp
+!endif
+
 
 !if $(MAKEDLL)
 # The graphical small EXE loader
 $(GS_XE): $(GSDLL_DLL)  $(DWOBJ) $(GSCONSOLE_XE) $(SETUP_XE) $(UNINSTALL_XE)
 	echo /SUBSYSTEM:WINDOWS > $(PSGEN)gswin32.rsp
 	echo /DEF:$(PSSRCDIR)\dwmain32.def /OUT:$(GS_XE) >> $(PSGEN)gswin32.rsp
-	$(LINK) $(LCT) @$(PSGEN)gswin32.rsp $(DWOBJ) @$(LIBCTR) $(GS_OBJ).res
+	$(LINK) $(LCT) @$(PSGEN)gswin32.rsp $(DWOBJ) $(LINKLIBPATH) @$(LIBCTR) $(GS_OBJ).res
 	del $(PSGEN)gswin32.rsp
 
 # The console mode small EXE loader
 $(GSCONSOLE_XE): $(OBJC) $(GS_OBJ).res $(PSSRCDIR)\dw32c.def
 	echo /SUBSYSTEM:CONSOLE > $(PSGEN)gswin32.rsp
 	echo  /DEF:$(PSSRCDIR)\dw32c.def /OUT:$(GSCONSOLE_XE) >> $(PSGEN)gswin32.rsp
-	$(LINK) $(LCT) @$(PSGEN)gswin32.rsp $(OBJC) @$(LIBCTR) $(GS_OBJ).res
+	$(LINK) $(LCT) @$(PSGEN)gswin32.rsp $(OBJC) $(LINKLIBPATH) @$(LIBCTR) $(GS_OBJ).res
 	del $(PSGEN)gswin32.rsp
 
 # The big DLL
 $(GSDLL_DLL): $(GS_ALL) $(DEVS_ALL) $(GSDLL_OBJS) $(GSDLL_OBJ).res $(PSGEN)lib32.rsp
 	echo /DLL /DEF:$(PSSRCDIR)\gsdll32.def /OUT:$(GSDLL_DLL) > $(PSGEN)gswin32.rsp
-	$(LINK) $(LCT) @$(PSGEN)gswin32.rsp $(GSDLL_OBJS) @$(ld_tr) $(INTASM) @$(GLGEN)lib.tr @$(PSGEN)lib32.rsp @$(LIBCTR) $(GSDLL_OBJ).res
+	$(LINK) $(LCT) @$(PSGEN)gswin32.rsp $(GSDLL_OBJS) @$(ld_tr) $(INTASM) @$(PSGEN)lib32.rsp $(LINKLIBPATH) @$(LIBCTR) $(GSDLL_OBJ).res
 	del $(PSGEN)gswin32.rsp
 
 !else
@@ -694,7 +779,7 @@ $(GS_XE): $(GSCONSOLE_XE) $(GS_ALL) $(DEVS_ALL) $(GSDLL_OBJS) $(DWOBJNO) $(GSDLL
 	echo $(GLOBJ)dwtext.obj >> $(PSGEN)gswin32.tr
 	echo $(GLOBJ)dwreg.obj >> $(PSGEN)gswin32.tr
 	echo /DEF:$(PSSRCDIR)\dwmain32.def /OUT:$(GS_XE) > $(PSGEN)gswin32.rsp
-	$(LINK) $(LCT) @$(PSGEN)gswin32.rsp $(GLOBJ)gsdll @$(PSGEN)gswin32.tr @$(LIBCTR) $(INTASM) @$(GLGEN)lib.tr @$(PSGEN)lib32.rsp $(GSDLL_OBJ).res $(DWTRACE)
+	$(LINK) $(LCT) @$(PSGEN)gswin32.rsp $(GLOBJ)gsdll @$(PSGEN)gswin32.tr $(LINKLIBPATH) @$(LIBCTR) $(INTASM) @$(PSGEN)lib32.rsp $(GSDLL_OBJ).res $(DWTRACE)
 	del $(PSGEN)gswin32.tr
 	del $(PSGEN)gswin32.rsp
 
@@ -707,7 +792,7 @@ $(GSCONSOLE_XE): $(GS_ALL) $(DEVS_ALL) $(GSDLL_OBJS) $(OBJCNO) $(GS_OBJ).res $(P
 	echo $(PSOBJ)dwreg.obj >> $(PSGEN)gswin32c.tr
 	echo /SUBSYSTEM:CONSOLE > $(PSGEN)gswin32.rsp
 	echo /DEF:$(PSSRCDIR)\dw32c.def /OUT:$(GSCONSOLE_XE) >> $(PSGEN)gswin32.rsp
-	$(LINK) $(LCT) @$(PSGEN)gswin32.rsp $(GLOBJ)gsdll @$(PSGEN)gswin32c.tr @$(LIBCTR) $(INTASM) @$(GLGEN)lib.tr @$(PSGEN)lib32.rsp $(GS_OBJ).res $(DWTRACE)
+	$(LINK) $(LCT) @$(PSGEN)gswin32.rsp $(GLOBJ)gsdll @$(PSGEN)gswin32c.tr $(LINKLIBPATH) @$(LIBCTR) $(INTASM) @$(PSGEN)lib32.rsp $(GS_OBJ).res $(DWTRACE)
 	del $(PSGEN)gswin32.rsp
 	del $(PSGEN)gswin32c.tr
 !endif
@@ -722,7 +807,7 @@ $(SETUP_XE): $(PSOBJ)dwsetup.obj $(PSOBJ)dwinst.obj $(PSOBJ)dwsetup.res $(PSSRC)
 	copy $(LIBCTR) $(PSGEN)dwsetup.tr
 	echo ole32.lib >> $(PSGEN)dwsetup.tr
 	echo uuid.lib >> $(PSGEN)dwsetup.tr
-	$(LINK) $(LCT) @$(PSGEN)dwsetup.rsp @$(PSGEN)dwsetup.tr $(PSOBJ)dwsetup.res
+	$(LINK) $(LCT) @$(PSGEN)dwsetup.rsp $(LINKLIBPATH) @$(PSGEN)dwsetup.tr $(PSOBJ)dwsetup.res
 	del $(PSGEN)dwsetup.rsp
 	del $(PSGEN)dwsetup.tr
 
@@ -732,7 +817,7 @@ $(UNINSTALL_XE): $(PSOBJ)dwuninst.obj $(PSOBJ)dwuninst.res $(PSSRC)dwuninst.def
 	copy $(LIBCTR) $(PSGEN)dwuninst.tr
 	echo ole32.lib >> $(PSGEN)dwuninst.tr
 	echo uuid.lib >> $(PSGEN)dwuninst.tr
-	$(LINK) $(LCT) @$(PSGEN)dwuninst.rsp @$(PSGEN)dwuninst.tr $(PSOBJ)dwuninst.res
+	$(LINK) $(LCT) @$(PSGEN)dwuninst.rsp $(LINKLIBPATH) @$(PSGEN)dwuninst.tr $(PSOBJ)dwuninst.res
 	del $(PSGEN)dwuninst.rsp
 	del $(PSGEN)dwuninst.tr
 

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: sstring.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: sstring.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* String and hexstring streams (filters) */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"
@@ -56,7 +56,7 @@ s_AXE_process(stream_state * st, stream_cursor_read * pr,
 
     if (last && ss->EndOfData)
 	wcount--;		/* leave room for '>' */
-    wcount -= (wcount + 64) / 65;	/* leave room for \n */
+    wcount -= (wcount + pos * 2) / 65; /* leave room for \n */
     wcount >>= 1;		/* 2 chars per input byte */
     count = (wcount < rcount ? (status = 1, wcount) : rcount);
     while (--count >= 0) {
@@ -225,12 +225,13 @@ const stream_template s_PSSE_template =
 private_st_PSSD_state();
 
 /* Initialize the state */
-private int
+int
 s_PSSD_init(stream_state * st)
 {
     stream_PSSD_state *const ss = (stream_PSSD_state *) st;
 
-    return s_PSSD_init_inline(ss);
+    ss->from_string = false;
+    return s_PSSD_partially_init_inline(ss);
 }
 
 /* Process a buffer */

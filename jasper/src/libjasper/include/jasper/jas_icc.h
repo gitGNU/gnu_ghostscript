@@ -380,7 +380,6 @@ jas_iccattrval_t *jas_iccprof_getattr(jas_iccprof_t *prof,
   jas_iccattrname_t name);
 int jas_iccprof_setattr(jas_iccprof_t *prof, jas_iccattrname_t name,
   jas_iccattrval_t *val);
-void jas_iccprof_dump(jas_iccprof_t *prof, FILE *out);
 jas_iccprof_t *jas_iccprof_copy(jas_iccprof_t *prof);
 int jas_iccprof_gethdr(jas_iccprof_t *prof, jas_icchdr_t *hdr);
 int jas_iccprof_sethdr(jas_iccprof_t *prof, jas_icchdr_t *hdr);

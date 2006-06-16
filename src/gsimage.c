@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsimage.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gsimage.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Image setup procedures for Ghostscript library */
 #include "memory_.h"
 #include "gx.h"
@@ -286,19 +286,15 @@ begin_planes(gs_image_enum *penum)
     next_plane(penum);
 }
 
-/* Start processing a general image. */
-int
-gs_image_enum_init(gs_image_enum * penum, gx_image_enum_common_t * pie,
-		   const gs_data_image_t * pim, gs_state *pgs)
-{
-    return gs_image_common_init(penum, pie, pim, pgs->memory,
-				(pgs->in_charpath ? NULL :
-				 gs_currentdevice_inline(pgs)));
-}
-int
+private int
 gs_image_common_init(gs_image_enum * penum, gx_image_enum_common_t * pie,
-	    const gs_data_image_t * pim, gs_memory_t * mem, gx_device * dev)
+	    const gs_data_image_t * pim, gx_device * dev)
 {
+    /*
+     * HACK : For a compatibility with gs_image_cleanup_and_free_enum,
+     * penum->memory must be initialized in advance 
+     * with the memory heap that owns *penum.
+     */
     int i;
 
     if (pim->Width == 0 || pim->Height == 0) {
@@ -306,7 +302,6 @@ gs_image_common_init(gs_image_enum * penum, gx_image_enum_common_t * pie,
 	return 1;
     }
     image_enum_init(penum);
-    penum->memory = mem;
     penum->dev = dev;
     penum->info = pie;
     penum->num_planes = pie->num_planes;
@@ -332,6 +327,18 @@ gs_image_common_init(gs_image_enum * penum, gx_image_enum_common_t * pie,
     penum->wanted_varies = true;
     begin_planes(penum);
     return 0;
+}
+
+/* Initialize an enumerator for a general image. 
+   penum->memory must be initialized in advance.
+*/
+int
+gs_image_enum_init(gs_image_enum * penum, gx_image_enum_common_t * pie,
+		   const gs_data_image_t * pim, gs_state *pgs)
+{
+    return gs_image_common_init(penum, pie, pim,
+				(pgs->in_charpath ? NULL :
+				 gs_currentdevice_inline(pgs)));
 }
 
 /* Return the set of planes wanted. */
@@ -558,5 +565,15 @@ gs_image_cleanup(gs_image_enum * penum)
     if (penum->info != 0)
         code = gx_image_end(penum->info, !penum->error);
     /* Don't free the local enumerator -- the client does that. */
+    return code;
+}
+
+/* Clean up after processing an image and free the enumerator. */
+int
+gs_image_cleanup_and_free_enum(gs_image_enum * penum)
+{
+    int code = gs_image_cleanup(penum);
+
+    gs_free_object(penum->memory, penum, "gs_image_cleanup_and_free_enum");
     return code;
 }

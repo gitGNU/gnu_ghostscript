@@ -1,5 +1,6 @@
 dnl ****************************************************************************
 dnl Copyright (c) 2001-2003 Michael David Adams.
+dnl Copyright (c) 2004-2006 artofcode LLC.
 dnl All rights reserved.
 dnl
 dnl The complete licensing terms for this software can be found in the file
@@ -16,7 +17,7 @@ dnl ************************************************************
 dnl The major, minor, and micro version numbers of the package.
 define(AC_JAS_MAJOR_VERSION, 1)
 define(AC_JAS_MINOR_VERSION, 701)
-define(AC_JAS_MICRO_VERSION, 0-gs4)
+define(AC_JAS_MICRO_VERSION, 0-gs5)
 
 dnl The package version.
 define(AC_JAS_VERSION,

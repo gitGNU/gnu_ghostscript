@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_lev2.ps,v 1.5 2006/03/02 22:26:14 Arabidopsis Exp $
+% $Id: gs_lev2.ps,v 1.6 2006/06/16 12:55:14 Arabidopsis Exp $
 % Initialization file for Level 2 functions.
 % When this is run, systemdict is still writable,
 % but (almost) everything defined here goes into level2dict.
@@ -138,8 +138,11 @@ end
       .copyparam
       % special protection for the security related parameters
       [ /PermitFileReading /PermitFileWriting /PermitFileControl ]
-      { 2 index eq { % force all strings to readonly
-	  dup length array exch { readonly exch } forall astore
+      { 2 index eq { % force all strings to readonly but make sure the
+		     % array is in the correct VM space (local/global).
+	currentglobal exch dup gcheck setglobal
+	dup length array exch { readonly exch } forall astore
+	exch setglobal
         } if
       } forall
       % protect top level of parameters that we copied
@@ -493,7 +496,7 @@ systemdict begin
 /quit {				% - quit -
   //systemdict begin serverdict /.jobsave get null eq
    { end //quit }
-   { /quit load /invalidaccess /signalerror load end exec }
+   { /quit .systemvar /invalidaccess /signalerror load end exec }
   ifelse
 } bind odef
 end
@@ -831,7 +834,9 @@ def
 		% Stack: proto matrix global buildproc
   3 index dup length 1 add dict .copydict
   3 index 3 -1 roll exec 3 -1 roll .setglobal
-  1 index /Implementation 3 -1 roll put
+  % Hide the gs_pattern?_instance_t inside an array to match CPSI and make CET run
+  1 index /Implementation 3 -1 roll
+  2 array dup 3 -1 roll 0 exch put put
   readonly exch pop exch pop
 } odef
 
@@ -853,6 +858,9 @@ def
 % We are providing these functions because we have found files created by
 % "QuarkXPress: pictwpstops filter 1.0" which produce bad shading dictionaries
 % if these operators are not defined. 
+
+% Conditionally disable the TN 5044 psuedo-ops if NO_TN5044 specified
+/NO_TN5044 where { pop (%END TN 5044 psuedo-ops) .skipeof } if
 
 % TN 5044 does not define the contents of the array.  We are simply putting
 % the values given into an array.  This is consistent with what we see when
@@ -878,14 +886,21 @@ def
 % Set a custom color based upon a tint and array which describes the custom
 % color.  See findcmykcustomcolor.  First we create and then set a Separation
 % colorspace.  Then we set the specified color.
+% Note that older Adobe ProcSets apparently allow for 'null' as the tint
+% for some reason, so an alternate operational mode is tolerated:
+% 					    null setcustomcolor -
 /setcustomcolor			% <array> <tint> setcustomcolor -
-{ % Start building Separation colorspace
-  [ /Separation 3 index 4 get	% Get separation name from array's key
-  /DeviceCMYK
-  5 index buildcustomtinttransform ]	% build the tint transform function
-  setcolorspace			% Set the Separation color space as current
-  setcolor			% Set the tint as the current color
-  pop				% Remove the input array
+{ dup //null ne {
+    % Start building Separation colorspace
+    [ /Separation 3 index 4 get	% Get separation name from array's key
+    /DeviceCMYK
+    5 index //buildcustomtinttransform exec] % build the tint transform function
+    setcolorspace			% Set the Separation color space as current
+    setcolor			% Set the tint as the current color
+    pop				% Remove the input array
+  }
+  { pop }	% 'null' as the tint is ignored
+  ifelse
 } bind def
 
 % This proc is supposed to implement a version of overprinting. TN 5044 says
@@ -898,5 +913,47 @@ def
 /setcmykoverprint {
   4 { dup -1 eq { pop 0 } if 4 1 roll } repeat setcmykcolor
 } bind def
+
+/separation_all [/Separation /All /DeviceCMYK { dup dup dup } bind ] readonly def
+
+% Collect the arguments into the image dictionary
+% <width> <height> <bits/sample> <matrix> <proc> args2dict <dict>
+/args2dict {
+  10 dict begin
+  {1 0} 1
+  { /ImageType /Decode /DataSource /ImageMatrix /BitsPerComponent /Height /Width
+  } { exch def } forall
+  currentdict end
+} bind def
+
+% Prints (1-gray) on all separations.
+% <gray> setseparationgray -
+/setseparationgray {
+  //separation_all setcolorspace
+  1 exch sub setcolor
+} bind def
+
+% Renders an image whose sample values specify the amount of the custom color.
+% <width> <height> <bits/sample> <matrix> <proc> <array> customcolorimage -
+/customcolorimage {
+  gsave
+  [ /Separation 2 index 4 get /DeviceCMYK 4 index //buildcustomtinttransform exec] setcolorspace
+  //args2dict exec image
+  grestore
+} bind def
+
+% Renders an image on all process and custom color plates.
+% <width> <height> <bits/sample> <matrix> <proc>
+/separationimage {
+  gsave
+  //separation_all setcolorspace
+  //args2dict exec image
+  grestore
+} bind def
+
+{ /buildcustomtinttransform /separation_all /args2dict }
+{ currentdict exch undef } forall
+
+%END TN 5044 psuedo-ops
 
 end				% level2dict

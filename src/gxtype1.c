@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxtype1.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gxtype1.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Adobe Type 1 font interpreter support */
 #include "math_.h"
 #include "memory_.h"
@@ -127,6 +127,7 @@ gs_type1_interp_init(register gs_type1_state * pcis, gs_imager_state * pis,
     pcis->init_done = -1;
     pcis->sb_set = false;
     pcis->width_set = false;
+    pcis->seac_flag = false;
     pcis->num_hints = 0;
     pcis->seac_accent = -1;
     pcis->log2_subpixels = *plog2_subpixels;

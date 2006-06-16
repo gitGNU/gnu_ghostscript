@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: write_t2.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: write_t2.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 
 /*
 Functions to serialize a type 1 font so that it can then be
@@ -30,8 +30,6 @@ Started by Graham Asher, 9th August 2002.
 #include "ghost.h"
 #include "gxfont.h"
 #include "gxfont1.h"
-
-#include <assert.h>
 
 /*
 Public structures and functions in this file are prefixed with FF_ because they are part of
@@ -276,12 +274,11 @@ static void write_subrs_index(FAPI_font* a_fapi_font,WRF_output* a_output)
 	unsigned char* data_start = 0;
 	int i;
 	int count = a_fapi_font->get_word(a_fapi_font,FAPI_FONT_FEATURE_Subrs_count,0);
-	assert(count >= 0);
 
 	WRF_wbyte(a_output,(unsigned char)(count >> 8));
 	WRF_wbyte(a_output,(unsigned char)(count & 0xFF));
 
-	if (count == 0)
+	if (count <= 0)
 		return;
 
 	WRF_wbyte(a_output,4); /* offset size = 4 bytes */

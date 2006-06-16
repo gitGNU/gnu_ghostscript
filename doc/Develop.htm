@@ -3,7 +3,7 @@
 <head>
 <title>Information for Ghostscript developers</title>
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
-<!-- $Id: Develop.htm,v 1.6 2006/03/05 13:04:27 Arabidopsis Exp $ -->
+<!-- $Id: Develop.htm,v 1.7 2006/06/16 12:55:14 Arabidopsis Exp $ -->
 </head>
 
 <body>
@@ -490,12 +490,18 @@ DCT (JPEG):
 <dt>
 JBIG2:
 <a href="../src/sjbig2.h">src/sjbig2.h</a>,
-<a href="../src/sjbig2.c">src/sjbig2.c</a>.
+<a href="../src/sjbig2.c">src/sjbig2.c</a>
+or
+<a href="../src/sjbig2_luratech.h">src/sjbig2_luratech.h</a>,
+<a href="../src/sjbig2_luratech.c">src/sjbig2_luratech.c</a>.
 
 <dt>
 JPX (JPEG 2000):
 <a href="../src/sjpx.h">src/sjpx.h</a>,
-<a href="../src/sjpx.c">src/sjpx.c</a>.
+<a href="../src/sjpx.c">src/sjpx.c</a>
+or
+<a href="../src/sjpx_luratech.h">src/sjpx_luratech.h</a>,
+<a href="../src/sjpx_luratech.c">src/sjpx_luratech.c</a>.
 <dt>
 Other compression/decompression:
 <dd>
@@ -658,6 +664,7 @@ Bitmap processing:
 <a href="../src/gxbitops.h">src/gxbitops.h</a>,
 <a href="../src/gxsample.c">src/gxsample.c</a>,
 <a href="../src/gxsample.h">src/gxsample.h</a>.
+<a href="../src/gxsamplp.h">src/gxsamplp.h</a>.
 
 <dt>
 Functions:
@@ -694,6 +701,8 @@ I/O-related:
 <a href="../src/gsiodev.c">src/gsiodev.c</a>,
 <a href="../src/gsiodevs.c">src/gsiodevs.c</a>,
 <a href="../src/gsiodisk.c">src/gsiodisk.c</a>,
+<a href="../src/gsiorom.c">src/gsiorom.c</a>.
+<a href="../src/gsiorom.h">src/gsiorom.h</a>.
 <a href="../src/gxiodev.h">src/gxiodev.h</a>.
 
 </dl>
@@ -1081,10 +1090,20 @@ ICC profiles are in some ways a special case of color mapping, but are
 not standard in PostScript.
 
 <dt>
-Color mapping:
 <dd>
 <a href="../src/gsicc.c">src/gsicc.c</a>,
 <a href="../src/gsicc.h">src/gsicc.h</a>,
+
+<p>
+The following files provide a callback mechanism to allow a client program 
+to specify a special case alternate tint transforms for Separation and DeviceN 
+color spaces. Among other uses this can be used to provide special handling for
+PANTONE colors 
+<dt>
+<dd>
+<a href="../src/gsnamecl.c">src/gsnamecl.c</a>,
+<a href="../src/gsnamecl.h">src/gsnamecl.h</a>,
+<a href="../src/gsncdemo.c">src/gsncdemo.c</a>,
 
 </dl>
 
@@ -1726,6 +1745,7 @@ Graphics:
 <a href="../src/gdevpdfg.c">src/gdevpdfg.c</a>,
 <a href="../src/gdevpdfg.h">src/gdevpdfg.h</a>,
 <a href="../src/gdevpdfk.c">src/gdevpdfk.c</a>,
+<a href="../src/gdevpdft.c">src/gdevpdft.c</a>.
 <a href="../src/gdevpdfv.c">src/gdevpdfv.c</a>.
 
 <dt>
@@ -1742,6 +1762,7 @@ Other:
 <a href="../src/gdevpdfm.c">src/gdevpdfm.c</a>,
 <a href="../src/gdevpdfp.c">src/gdevpdfp.c</a>,
 <a href="../src/gdevpdfx.h">src/gdevpdfx.h</a>.
+<a href="../src/gdevpdfb.h">src/gdevpdfb.h</a>.
 
 </dl>
 
@@ -1947,7 +1968,9 @@ Raster file output drivers:
 <a href="../src/gdevmgr.h">src/gdevmgr.h</a>,
 <a href="../src/gdevsgi.c">src/gdevsgi.c</a>,
 <a href="../src/gdevsgi.h">src/gdevsgi.h</a>,
-<a href="../src/gdevsunr.c">src/gdevsunr.c</a>.
+<a href="../src/gdevsunr.c">src/gdevsunr.c</a>,
+<a href="../src/gdevjbig2.c">src/gdevjbig2.c</a>,
+<a href="../src/gdevjpx.c">src/gdevjpx.c</a>.
 
 <dt>
 Printer drivers:
@@ -2100,7 +2123,8 @@ Files:
 <dd>
 <a href="../src/gs.c">src/gs.c</a>,
 <a href="../src/gserver.c">src/gserver.c</a>,
-<a href="../src/iccinit0.c">src/iccinit0.c</a>,
+<a href="../src/iccinit0.c">src/iccinit0.c</a>(COMPILE_INITS=0),
+<a href="../src/iccinit1.c">src/iccinit1.c</a>(COMPILE_INITS=1),
 <a href="../src/iinit.c">src/iinit.c</a>,
 <a href="../src/iinit.h">src/iinit.h</a>,
 <a href="../src/imain.c">src/imain.c</a>,
@@ -2848,6 +2872,11 @@ X Windows icon bitmaps:
 <a href="../lib/gs_t_m.xbm">lib/gs_t_m.xbm</a>.
 
 <dt>
+PDF/X-3 definition file sample :
+<dd>
+<a href="../lib/PDFX_def.ps">lib/PDFX_def.ps</a>,
+
+<dt>
 Not currently used:
 <dd>
 <a href="../lib/gs_cmdl.ps">lib/gs_cmdl.ps</a>,
@@ -3168,10 +3197,22 @@ such halftones are included in the build.
 <dt>
 <a href="../src/geninit.c">src/geninit.c</a>
 <dd>
-Converts PostScript initialization files to C data structures that can be
+Converts PostScript initialization files to a single PostScript file that
+has comments removed and optionally, a C data structure that can be
 compiled into an executable.  Only used when building a PostScript
 interpreter, and only if <b><tt>COMPILE_INITS</tt></b> was set to 1 in the
 makefile.
+
+<dt>
+<a href="../src/mkromfs.c">src/mkromfs.c</a>
+<dd>
+Takes a set of directories, and creates a compressed filesystem
+image that can be compiled into the executable as static data and accessed
+through the %rom% iodevice prefix. This is used to implement the
+<b><tt>COMPILE_INITS=1</tt></b> feature (a compressed init fileset is more
+efficient than the current 'gsinit.c' produced by 'geninit.c'). This IODevice
+is more versatile since other files can be encapsulated such as fonts, helper
+PostScript files and Resources.
 
 </dl>
 
@@ -3321,6 +3362,11 @@ Script files with PC versions:
 <a href="../lib/eps2eps">lib/eps2eps</a>,
 <a href="../lib/eps2eps.bat">lib/eps2eps.bat</a>,
 <a href="../lib/eps2eps.cmd">lib/eps2eps.cmd</a>,
+<a href="../lib/ps2write.bat">lib/ps2write.bat</a>,
+<a href="../lib/ps2write.cmd">lib/ps2write.cmd</a>,
+<a href="../lib/ps2ps2">lib/ps2ps2</a>,
+<a href="../lib/ps2ps2.bat">lib/ps2ps2.bat</a>,
+<a href="../lib/ps2ps2.cmd">lib/ps2ps2.cmd</a>,
 <a href="../lib/font2c">lib/font2c</a>,
 <a href="../lib/font2c.bat">lib/font2c.bat</a>,
 <a href="../lib/font2c.cmd">lib/font2c.cmd</a>,
@@ -4128,6 +4174,7 @@ Files:
 <a href="../src/memory_.h">src/memory_.h</a>,
 <a href="../src/pipe_.h">src/pipe_.h</a>,
 <a href="../src/png_.h">src/png_.h</a>,
+<a href="../src/setjmp_.h">src/setjmp_.h</a>,
 <a href="../src/stat_.h">src/stat_.h</a>,
 <a href="../src/stdint_.h">src/stdint_.h</a>,
 <a href="../src/stdio_.h">src/stdio_.h</a>,
@@ -4364,6 +4411,8 @@ Third-party libraries:
 <a href="../src/ijs.mak">src/ijs.mak</a>,
 <a href="../src/jasper.mak">src/jasper.mak</a>,
 <a href="../src/jbig2.mak">src/jbig2.mak</a>,
+<a href="../src/ldf_jb2.mak">src/ldf_jb2.mak</a>,
+<a href="../src/lwf_jp2.mak">src/lwf_jp2.mak</a>,
 <a href="../src/jpeg.mak">src/jpeg.mak</a>,
 <a href="../src/libpng.mak">src/libpng.mak</a>,
 <a href="../src/zlib.mak">src/zlib.mak</a>.

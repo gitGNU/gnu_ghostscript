@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: tttypes.h,v 1.3 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: tttypes.h,v 1.4 2006/06/16 12:55:04 Arabidopsis Exp $ */
 
 /* Changes after FreeType: cut out the TrueType instruction interpreter. */
 
@@ -68,20 +68,6 @@
   typedef unsigned long   ULong;
   typedef signed   long   Long;
 
-#if SIZEOF_INT == 4
-
-  typedef long int        Fixed;    /* signed fixed 16.16 float */
-
-#elif SIZEOF_LONG == 4
-
-  typedef long            Fixed;    /* signed fixed 16.16 float */
-
-#else
-
-#error "no 32bit type found"
-
-#endif
-
   typedef int             Int;
 
   typedef long            Integer;
@@ -93,8 +79,6 @@
   typedef Short*   PShort;
   typedef ULong*   PULong;
   typedef Long*    PLong;
-
-  typedef Fixed*   PFixed;
 
   typedef Int*     PInt;
 
@@ -120,7 +104,7 @@
 #define NULL  (void*)0
 #endif
 
-  typedef long*  PStorage;
+  typedef Long*    PStorage;
 
 
 /* Rounding mode constants */

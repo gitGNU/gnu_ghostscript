@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zdevice2.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: zdevice2.c,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Level 2 device operators */
 #include "math_.h"
 #include "memory_.h"
@@ -33,6 +33,9 @@
 #include "store.h"
 #include "gxdevice.h"
 #include "gsstate.h"
+
+/* Exported for zfunc4.c */
+int z2copy(i_ctx_t *);
 
 /* Forward references */
 private int z2copy_gstate(i_ctx_t *);

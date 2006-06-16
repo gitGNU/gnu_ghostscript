@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxband.h,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxband.h,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Band-processing parameters for Ghostscript */
 
 #ifndef gxband_INCLUDED
@@ -29,6 +29,7 @@
  * Define the parameters controlling banding.
  */
 typedef struct gx_band_params_s {
+    bool page_uses_transparency; /* PDF 1.4 transparency is used on the page */
     int BandWidth;		/* (optional) band width in pixels */
     int BandHeight;		/* (optional) */
     long BandBufferSpace;	/* (optional) */

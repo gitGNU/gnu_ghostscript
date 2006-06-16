@@ -62,7 +62,7 @@
 /*
  * Image Information Program
  *
- * $Id: imginfo.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: imginfo.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -160,24 +160,24 @@ int main(int argc, char **argv)
 	if (infile) {
 		/* The image is to be read from a file. */
 		if (!(instream = jas_stream_fopen(infile, "rb"))) {
-			fprintf(stderr, "cannot open input image file %s\n", infile);
+			jas_eprintf("cannot open input image file %s\n", infile);
 			exit(EXIT_FAILURE);
 		}
 	} else {
 		/* The image is to be read from standard input. */
 		if (!(instream = jas_stream_fdopen(0, "rb"))) {
-			fprintf(stderr, "cannot open standard input\n");
+			jas_eprintf("cannot open standard input\n");
 			exit(EXIT_FAILURE);
 		}
 	}
 
 	if ((fmtid = jas_image_getfmt(instream)) < 0) {
-		fprintf(stderr, "unknown image format\n");
+		jas_eprintf("unknown image format\n");
 	}
 
 	/* Decode the image. */
 	if (!(image = jas_image_decode(instream, fmtid, 0))) {
-		fprintf(stderr, "cannot load image\n");
+		jas_eprintf("cannot load image\n");
 		return EXIT_FAILURE;
 	}
 
@@ -191,7 +191,7 @@ int main(int argc, char **argv)
 	if (!(fmtname = jas_image_fmttostr(fmtid))) {
 		abort();
 	}
-	printf("%s %d %d %d %d %ld\n", fmtname, numcmpts, width, height, depth, (long) jas_image_rawsize(image));
+	jas_eprintf("%s %d %d %d %d %ld\n", fmtname, numcmpts, width, height, depth, (long) jas_image_rawsize(image));
 
 	jas_image_destroy(image);
 	jas_image_clearfmts();
@@ -205,9 +205,9 @@ int main(int argc, char **argv)
 
 static void cmdinfo()
 {
-	fprintf(stderr, "Image Information Utility (Version %s).\n",
+	jas_eprintf("Image Information Utility (Version %s).\n",
 	  JAS_VERSION);
-	fprintf(stderr,
+	jas_eprintf(
 	  "Copyright (c) 2001 Michael David Adams.\n"
 	  "All rights reserved.\n"
 	  );
@@ -216,8 +216,8 @@ static void cmdinfo()
 static void usage()
 {
 	cmdinfo();
-	fprintf(stderr, "usage:\n");
-	fprintf(stderr,"%s ", cmdname);
-	fprintf(stderr, "[-f image_file]\n");
+	jas_eprintf("usage:\n");
+	jas_eprintf("%s ", cmdname);
+	jas_eprintf("[-f image_file]\n");
 	exit(EXIT_FAILURE);
 }

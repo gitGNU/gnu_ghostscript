@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gxdtfill.h,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: gxdtfill.h,v 1.6 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Configurable algorithm for filling a trapezoid */
 
 /*
@@ -325,8 +325,12 @@ GX_FILL_TRAPEZOID (gx_device * dev, const EDGE_TYPE * left,
 	    xg.c = xgc;
 	    xg.f = xgf;
 	    xg.num = xgnum;
-	    init_gradient(&lg, fa, left, right, &l, ymin, num_components);
-	    init_gradient(&rg, fa, right, left, &r, ymin, num_components);
+	    code = init_gradient(&lg, fa, left, right, &l, ymin, num_components);
+	    if (code < 0)
+		return code;
+	    code = init_gradient(&rg, fa, right, left, &r, ymin, num_components);
+	    if (code < 0)
+		return code;
 
 #	endif
 

@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: openvms.mak,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $
+# $Id: openvms.mak,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $
 # makefile for OpenVMS VAX and Alpha
 #
 # Please contact Jim Dunham (dunham@omtool.com) if you have questions.
@@ -123,7 +123,7 @@ BUILD_TIME_GS=GS
 # You may need to change this if the IJG library version changes.
 # See jpeg.mak for more information.
 
-JSRCDIR=[.jpeg-6b]
+JSRCDIR=[.jpeg]
 JVERSION=6
 
 # Define the directory where the PNG library sources are stored,
@@ -131,18 +131,24 @@ JVERSION=6
 # You may need to change this if the libpng version changes.
 # See libpng.mak for more information.
 
-PSRCDIR=[.libpng-1_2_8]
-PVERSION=10208
+PSRCDIR=[.libpng]
+PVERSION=10210
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.
 
-ZSRCDIR=[.zlib-1_2_1]
+ZSRCDIR=[.zlib]
 
-# Define the jbig2dec library source location.
+# Define the jbig2 library and source location.
 # See jbig2.mak for more information.
 
-JBIG2SRCDIR=[.jbig2dec-0_7]
+JBIG2_LIB=jbig2dec
+JBIG2SRCDIR=[.jbig2dec]
+
+# Define the jpeg2k library and source location.
+
+JPX_LIB=jasper
+JPXSRCDIR=jasper
 
 # Define the directory where the icclib source are stored.
 # See icclib.mak for more information
@@ -166,6 +172,7 @@ SHARE_JPEG=0
 SHARE_LIBPNG=0
 SHARE_ZLIB=0
 SHARE_JBIG2=0
+SHARE_JPX=0
 
 # Define the path to X11 include files
 
@@ -237,8 +244,8 @@ DEVICE_DEVS10=$(DD)tiffcrle.dev $(DD)tiffg3.dev $(DD)tiffg32d.dev $(DD)tiffg4.de
 DEVICE_DEVS11=$(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiffsep.dev
 DEVICE_DEVS12=$(DD)psmono.dev $(DD)psgray.dev $(DD)psrgb.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
 DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
-DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev
-DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)epswrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
+DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev $(DD)jpegcmyk.dev
+DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
 DEVICE_DEVS16=$(DD)bbox.dev
 # Overflow from DEVS9
 DEVICE_DEVS17=$(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev $(DD)pkm.dev $(DD)pkmraw.dev $(DD)pksm.dev $(DD)pksmraw.dev
@@ -250,6 +257,17 @@ DEVICE_DEVS21=
 # Choose the language feature(s) to include.  See gs.mak for details.
 
 FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)epsf.dev $(PSD)fapi.dev
+
+# ***********************************************************************************
+#
+#    The following probably won't work without code changes to src/mkromfs.c to
+#    change the VMS style of directory references to PostScript style, but we
+#    have it here in case it works.
+#
+# ***********************************************************************************
+# The list of resources to be included in the %rom% file system.
+# This is in the top makefile since the file descriptors are platform specific
+RESOURCE_LIST=[Resource.CMap] [Resource.ColorSpace] [Resource.Decoding] [Resource.Fonts] [Resource.Procset] [Resource.IdiomSet] [Resource.CIDFont]
 
 # Choose whether to compile the .ps initialization files into the executable.
 # See gs.mak for details.
@@ -495,6 +513,13 @@ $(GENINIT_XE) : $(GLOBJDIR)geninit.$(OBJ)
 
 $(GLOBJ)geninit.$(OBJ) :  $(GLSRC)geninit.c $(GENINIT_DEPS)
 	$(CCAUX)/obj=$(GLOBJ)geninit.$(OBJ)  $(GLSRC)geninit.c
+
+$(GLOBJ)mkromfs.$(OBJ) :  $(GLSRC)mkromfs.c $(MKROMFS_COMMON_DEPS)
+	$(CCAUX)/obj=$(GLOBJ)mkromfs.$(OBJ) $(I_)$(GLI_) $(II)$(ZI_)$(_I) $(GLSRC)mkromfs.c
+
+MKROMFS_OBJS=$(MKROMFS_ZLIB_OBJS) $(GLOBJ)gp_vms.$(OBJ)
+$(MKROMFS_XE): $(GLSRC)mkromfs.c $(MKROMFS_OBJS)
+	LINK/EXE=$@ $(GLOBJ)mkromfs.$(OBJ) $(MKROMFS_OBJS)
 
 # Preliminary definitions
 

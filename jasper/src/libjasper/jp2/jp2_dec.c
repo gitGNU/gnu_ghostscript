@@ -64,7 +64,7 @@
 /*
  * JP2 Library
  *
- * $Id: jp2_dec.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jp2_dec.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -99,7 +99,7 @@ jas_image_t *jp2_decode(jas_stream_t *in, char *optstr)
 	int found;
 	jas_image_t *image;
 	jp2_dec_t *dec;
-	bool samedtype;
+	jas_bool samedtype;
 	int dtype;
 	unsigned int i;
 	jp2_cmap_t *cmapd;
@@ -155,7 +155,7 @@ jas_image_t *jp2_decode(jas_stream_t *in, char *optstr)
 	found = 0;
 	while ((box = jp2_box_get(in))) {
 		if (jas_getdbglevel() >= 1) {
-			fprintf(stderr, "box type %s\n", box->info->name);
+			jas_eprintf("box type %s\n", box->info->name);
 		}
 		switch (box->type) {
 		case JP2_BOX_JP2C:
@@ -236,11 +236,11 @@ jas_image_t *jp2_decode(jas_stream_t *in, char *optstr)
 	}
 
 	/* Determine if all components have the same data type. */
-	samedtype = true;
+	samedtype = jas_true;
 	dtype = jas_image_cmptdtype(dec->image, 0);
 	for (i = 1; i < JAS_CAST(uint, jas_image_numcmpts(dec->image)); ++i) {
 		if (jas_image_cmptdtype(dec->image, i) != dtype) {
-			samedtype = false;
+			samedtype = jas_false;
 			break;
 		}
 	}
@@ -366,7 +366,6 @@ jas_image_t *jp2_decode(jas_stream_t *in, char *optstr)
 				if (dec->cdef) {
 					cdefent = jp2_cdef_lookup(cdefd, channo);
 					if (!cdefent) {
-						abort();
 					}
 				jas_image_setcmpttype(dec->image, newcmptno, jp2_getct(jas_image_clrspc(dec->image), cdefent->type, cdefent->assoc));
 				} else {
@@ -411,7 +410,7 @@ jas_image_t *jp2_decode(jas_stream_t *in, char *optstr)
 		goto error;
 	}
 #if 0
-fprintf(stderr, "no of components is %d\n", jas_image_numcmpts(dec->image));
+jas_eprintf("no of components is %d\n", jas_image_numcmpts(dec->image));
 #endif
 
 	/* Prevent the image from being destroyed later. */

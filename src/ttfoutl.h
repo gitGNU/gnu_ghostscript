@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ttfoutl.h,v 1.4 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: ttfoutl.h,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* The TrueType instruction interpreter interface definition. */
 
 #ifndef incl_ttfoutl
@@ -55,7 +55,13 @@ typedef struct {
     double x, y;
 } FloatPoint;
 
+#if   ARCH_LOG2_SIZEOF_LONG == 2
 typedef signed long F26Dot6;
+#elif ARCH_LOG2_SIZEOF_INT  == 2
+typedef signed int  F26Dot6;
+#else
+#error "No appropriate type for Fixed 26.6 Floats"
+#endif
 
 typedef struct { 
     F26Dot6 x;
@@ -147,12 +153,12 @@ struct ttfFont_s {
     TExecution_Context  *exec;
     ttfInterpreter *tti;
     void (*DebugRepaint)(ttfFont *);
-    void (*DebugPrint)(ttfFont *, const char *s, ...);
+    int (*DebugPrint)(ttfFont *, const char *s, ...);
 };
 
 void ttfFont__init(ttfFont *this, ttfMemory *mem, 
 		    void (*DebugRepaint)(ttfFont *),
-		    void (*DebugPrint)(ttfFont *, const char *s, ...));
+		    int (*DebugPrint)(ttfFont *, const char *s, ...));
 void ttfFont__finit(ttfFont *this);
 FontError ttfFont__Open(ttfInterpreter *, ttfFont *, ttfReader *r, 
 			unsigned int nTTC, float w, float h, 

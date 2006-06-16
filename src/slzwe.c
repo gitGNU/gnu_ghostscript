@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: slzwe.c,v 1.1 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: slzwe.c,v 1.2 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* LZW encoding filter */
 #include "stdio_.h"	/* includes std.h */
 #include "gdebug.h"
@@ -203,5 +203,6 @@ out:	ss->prev_code = code;
 
 /* Stream template */
 const stream_template s_LZWE_template =
-{	&st_LZW_state, s_LZWE_init, s_LZWE_process, 1, 4, s_LZW_release
+{	&st_LZW_state, s_LZWE_init, s_LZWE_process, 1, 4, s_LZW_release,
+	s_LZW_set_defaults
 };

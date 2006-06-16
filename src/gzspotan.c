@@ -16,7 +16,7 @@
 
 */
 
-/*$Id: gzspotan.c,v 1.4 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/*$Id: gzspotan.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* A spot analyzer device implementation. */
 /*
     This implements a spot topology analyzis and 
@@ -33,7 +33,6 @@
 #include "memory_.h"
 #include "math_.h"
 #include "vdtrace.h"
-#include <assert.h>
 
 #define VD_TRAP_N_COLOR RGB(128, 128, 0)
 #define VD_TRAP_U_COLOR RGB(0, 0, 255)
@@ -86,7 +85,7 @@ trap_reserve(gx_device_spot_analyzer *padev)
     if (t != NULL) {
 	padev->trap_free = t->link;
     } else {
-	if (padev->trap_buffer_count > 1000)
+	if (padev->trap_buffer_count > 10000)
 	    return NULL;
 	t = gs_alloc_struct(padev->memory, gx_san_trap, 
 		&st_san_trap, "trap_reserve");
@@ -111,7 +110,7 @@ cont_reserve(gx_device_spot_analyzer *padev)
     if (t != NULL) {
 	padev->cont_free = t->link;
     } else {
-	if (padev->cont_buffer_count > 1000)
+	if (padev->cont_buffer_count > 10000)
 	    return NULL;
 	t = gs_alloc_struct(padev->memory, gx_san_trap_contact, 
 		&st_san_trap_contact, "cont_reserve");
@@ -128,20 +127,24 @@ cont_reserve(gx_device_spot_analyzer *padev)
     return t;
 }
 
-private inline void
+private inline int
 trap_unreserve(gx_device_spot_analyzer *padev, gx_san_trap *t)
 {
     /* Assuming the last reserved one. */
-    assert(t->link == padev->trap_free);
+    if (t->link != padev->trap_free)
+	return_error(gs_error_unregistered); /* Must not happen. */
     padev->trap_free = t;
+    return 0;
 }
 
-private inline void
+private inline int
 cont_unreserve(gx_device_spot_analyzer *padev, gx_san_trap_contact *t)
 {
     /* Assuming the last reserved one. */
-    assert(t->link == padev->cont_free);
+    if (t->link != padev->cont_free)
+	return_error(gs_error_unregistered); /* Must not happen. */
     padev->cont_free = t;
+    return 0;
 }
 
 private inline gx_san_trap *
@@ -312,7 +315,7 @@ san_get_clipping_box(gx_device * dev, gs_fixed_rect * pbox)
 
 /* --------------------- Utilities ------------------------- */
 
-private inline void
+private inline int
 check_band_list(const gx_san_trap *list)
 {
 #ifdef DEBUG
@@ -320,14 +323,16 @@ check_band_list(const gx_san_trap *list)
 	const gx_san_trap *t = list;
 
 	while (t->next != list) {
-	    assert(t->xrtop <= t->next->xltop);
+	    if (t->xrtop > t->next->xltop)
+		return_error(gs_error_unregistered); /* Must not happen. */
 	    t = t->next;
 	}
     }
 #endif
+    return 0;
 }
 
-private void
+private int
 try_unite_last_trap(gx_device_spot_analyzer *padev, fixed xlbot)
 {
     if (padev->bot_band != NULL && padev->top_band != NULL) {
@@ -337,10 +342,15 @@ try_unite_last_trap(gx_device_spot_analyzer *padev, fixed xlbot)
 	   unite it and release the last trapezoid and the last contact. */
 	if (t != NULL && t->upper != NULL && last->xrbot < xlbot && 
 		(last->prev == last || last->prev->xrbot < last->xlbot)) {
-	    if (t->upper->next == t->upper &&
-		    t->l == last->l && t->r == last->r) {
+	    if ((t->next == NULL || t->xrtop < t->next->xltop) &&
+	        (t->upper->next == t->upper &&
+		    t->l == last->l && t->r == last->r)) {
+		int code;
+
 		if (padev->bot_current == t)
 		    padev->bot_current = (t == band_list_last(padev->bot_band) ? NULL : t->next);
+		if (t->upper->upper != last)
+		    return_error(gs_error_unregistered); /* Must not happen. */
 		band_list_remove(&padev->top_band, last);
 		band_list_remove(&padev->bot_band, t);
 		band_list_insert_last(&padev->top_band, t);
@@ -351,12 +361,17 @@ try_unite_last_trap(gx_device_spot_analyzer *padev, fixed xlbot)
 		t->leftmost &= last->leftmost;
 		vd_quad(t->xlbot, t->ybot, t->xrbot, t->ybot, 
 			t->xrtop, t->ytop, t->xltop, t->ytop, 1, VD_TRAP_U_COLOR);
-		trap_unreserve(padev, last);
-		cont_unreserve(padev, t->upper);
+		code = trap_unreserve(padev, last);
+		if (code < 0)
+		    return code;
+		code = cont_unreserve(padev, t->upper);
+		if (code < 0)
+		    return code;
 		t->upper = NULL;
 	    }
 	}
     }
+    return 0;
 }
 
 private inline double 
@@ -465,9 +480,12 @@ gx_san_trap_store(gx_device_spot_analyzer *padev,
     const segment *l, const segment *r, int dir_l, int dir_r)
 {
     gx_san_trap *last;
+    int code;
 
     if (padev->top_band != NULL && padev->top_band->ytop != ytop) {
-	try_unite_last_trap(padev, max_int);
+	code = try_unite_last_trap(padev, max_int);
+	if (code < 0)
+	    return code;
 	/* Step to a new band. */
 	padev->bot_band = padev->bot_current = padev->top_band;
 	padev->top_band = NULL;
@@ -476,10 +494,17 @@ gx_san_trap_store(gx_device_spot_analyzer *padev,
 	/* The Y-projection of the spot is not contiguous. */
 	padev->top_band = NULL;
     }
-    if (padev->top_band != NULL)
-	try_unite_last_trap(padev, xlbot);
-    check_band_list(padev->bot_band);
-    check_band_list(padev->top_band);
+    if (padev->top_band != NULL) {
+	code = try_unite_last_trap(padev, xlbot);
+	if (code < 0)
+	    return code;
+    }
+    code = check_band_list(padev->bot_band);
+    if (code < 0)
+	return code;
+    code =check_band_list(padev->top_band);
+    if (code < 0)
+	return code;
     /* Make new trapezoid. */
     last = trap_reserve(padev);
     if (last == NULL)
@@ -505,7 +530,9 @@ gx_san_trap_store(gx_device_spot_analyzer *padev,
 	last->leftmost = false;
     }
     band_list_insert_last(&padev->top_band, last);
-    check_band_list(padev->top_band);
+    code = check_band_list(padev->top_band);
+    if (code < 0)
+	return code;
     while (padev->bot_current != NULL && padev->bot_current->xrtop < xlbot)
 	padev->bot_current = (trap_is_last(padev->bot_band, padev->bot_current)
 				    ? NULL : padev->bot_current->next);
@@ -805,12 +832,24 @@ gx_san_generate_stems(gx_device_spot_analyzer *padev,
 		int (*handler)(void *client_data, gx_san_sect *ss))
 {
     int code;
+    bool got_dc = false;
+    vd_save;
 
-    vd_get_dc('h');
-    vd_set_shift(0, 0);
-    vd_set_scale(VD_SCALE);
-    vd_set_origin(0, 0);
+    if (vd_allowed('F') || vd_allowed('f')) {
+	if (!vd_enabled) {
+	    vd_get_dc('f');
+	    got_dc = vd_enabled;
+	}
+	if (vd_enabled) {
+	    vd_set_shift(0, 0);
+	    vd_set_scale(VD_SCALE);
+	    vd_set_origin(0, 0);
+	}
+    } else
+	vd_disable;
     code = gx_san_generate_stems_aux(padev, overall_hints, client_data, handler);
-    vd_release_dc;
+    if (got_dc)
+	vd_release_dc;
+    vd_restore;
     return code;
 }

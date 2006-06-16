@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevlj56.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gdevlj56.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* H-P LaserJet 5 & 6 drivers for Ghostscript */
 #include "gdevprn.h"
 #include "stream.h"
@@ -148,7 +148,7 @@ ljet5_print_page(gx_device_printer * pdev, FILE * prn_stream)
 	};
 
 	px_write_page_header(s, (gx_device *)pdev);
-	px_write_select_media(s, (gx_device *)pdev, NULL);
+	px_write_select_media(s, (gx_device *)pdev, NULL, NULL);
 	PX_PUT_LIT(s, page_header);
 	if (pdev->color_info.depth == 1)
 	    PX_PUT_LIT(s, mono_header);

@@ -64,7 +64,7 @@
 /*
  * JP2 Library
  *
- * $Id: jp2_cod.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jp2_cod.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -242,7 +242,7 @@ jp2_box_t *jp2_box_get(jas_stream_t *in)
 	jas_stream_t *tmpstream;
 	uint_fast32_t len;
 	uint_fast64_t extlen;
-	bool dataflag;
+	jas_bool dataflag;
 
 	box = 0;
 	tmpstream = 0;
@@ -287,12 +287,7 @@ jp2_box_t *jp2_box_get(jas_stream_t *in)
 		jas_stream_close(tmpstream);
 	}
 
-#if 0
-	jp2_box_dump(box, stderr);
-#endif
-
 	return box;
-	abort();
 
 error:
 	if (box) {
@@ -311,8 +306,13 @@ void jp2_box_dump(jp2_box_t *box, FILE *out)
 	assert(boxinfo);
 
 	fprintf(out, "JP2 box: ");
-	fprintf(out, "type=%c%s%c (0x%08x); length=%d\n", '"', boxinfo->name,
-	  '"', box->type, box->len);
+#ifdef _WIN32
+	fprintf(out, "type=%c%s%c (0x%08x); length=%I64d\n", 
+	  '"', boxinfo->name, '"', box->type, box->len);
+#else
+	fprintf(out, "type=%c%s%c (0x%08x); length=%lld\n", 
+	  '"', boxinfo->name, '"', box->type, box->len);
+#endif
 	if (box->ops->dumpdata) {
 		(*box->ops->dumpdata)(box, out);
 	}
@@ -464,8 +464,8 @@ static int jp2_cdef_getdata(jp2_box_t *box, jas_stream_t *in)
 int jp2_box_put(jp2_box_t *box, jas_stream_t *out)
 {
 	jas_stream_t *tmpstream;
-	bool extlen;
-	bool dataflag;
+	jas_bool extlen;
+	jas_bool dataflag;
 
 	tmpstream = 0;
 
@@ -502,7 +502,6 @@ int jp2_box_put(jp2_box_t *box, jas_stream_t *out)
 	}
 
 	return 0;
-	abort();
 
 error:
 
@@ -667,9 +666,14 @@ static int jp2_getuint64(jas_stream_t *in, uint_fast64_t *val)
 {
 	in = 0;
 	val = 0;
-	abort();
+
+	jas_error(	JAS_ERR_CALL_TO_INVALID_STUB_JP2_GETUINT64,
+				"JAS_ERR_CALL_TO_INVALID_STUB_JP2_GETUINT64"
+			);
+
 	/* avoid compiler warnings about return value */
-	return 0;
+	return -1;	/*0;  Assume any actual call of this function should create an error
+				as it used to abort. */
 }
 
 /******************************************************************************\
@@ -706,8 +710,9 @@ static int jp2_putuint32(jas_stream_t *out, uint_fast32_t val)
 
 static int jp2_putuint64(jas_stream_t *out, uint_fast64_t val)
 {
-	if (jp2_putuint32(out, (val >> 32) & 0xffffffffUL) ||
-	  jp2_putuint32(out, val & 0xffffffffUL)) {
+	if(		jp2_putuint32(out, (uint_fast32_t)((val >> 32) & 0xffffffffUL))
+		||	jp2_putuint32(out, (uint_fast32_t)(val & 0xffffffffUL))) 
+	{
 		return -1;
 	}
 	return 0;

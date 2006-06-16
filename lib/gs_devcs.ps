@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_devcs.ps,v 1.3 2005/12/13 17:48:51 jemarch Exp $
+% $Id: gs_devcs.ps,v 1.4 2006/06/16 12:55:14 Arabidopsis Exp $
 % Device-specific color space method dictionaries.
 
 %
@@ -77,6 +77,20 @@ systemdict /..page_default_spaces 3 dict put
 }
 bind def
 
+% <color_space> <color_space_name> cs_substitute_DeviceRGB_for_PDFX <color_space1> <color_space2>
+/cs_substitute_DeviceRGB_for_PDFX
+{ systemdict /PDFX .knownget not { false } if {
+    dup /ColorSpace resourcestatus {
+      pop pop
+    } {
+      (Error: Need a /DefaultRGB /ColorSpace resource for generating a PDF/X document.) =
+      /cs_substitute_DeviceRGB_for_PDFX cvx /undefined signalerror
+    } ifelse
+    /ColorSpace findresource
+  } {
+    //cs_substitute_generic exec
+  } ifelse   
+} bind def
 
 colorspacedict
 
@@ -155,7 +169,7 @@ put
     /cs_validate {}
 
     /cs_substitute
-      { /DefaultRGB //cs_substitute_generic exec
+      { /DefaultRGB //cs_substitute_DeviceRGB_for_PDFX exec
       }
     bind
 

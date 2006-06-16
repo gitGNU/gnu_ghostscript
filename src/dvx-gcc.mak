@@ -17,7 +17,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: dvx-gcc.mak,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $
+# $Id: dvx-gcc.mak,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $
 # makefile for DesqView/X/gcc/X11 configuration.
 
 #include $(COMMONDIR)/gccdefs.mak
@@ -130,7 +130,7 @@ JPEG_NAME=jpeg
 # See libpng.mak for more information.
 
 PSRCDIR=libpng
-PVERSION=10208
+PVERSION=10210
 
 # Choose whether to use a shared version of the PNG library (-lpng).
 # See gs.mak and Make.htm for more information.
@@ -150,6 +150,7 @@ ZLIB_NAME=gz
 
 # Choose shared or compiled in libjbig2dec and source location
 
+JBIG2_LIB=jbig2dec
 SHARE_JBIG2=0
 JBIG2SRCDIR=jbig2dec
 
@@ -269,6 +270,10 @@ SYNC=posync
 # Choose the language feature(s) to include.  See gs.mak for details.
 
 FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)epsf.dev $(GLD)pipe.dev $(PSD)fapi.dev
+
+# The list of resources to be included in the %rom% file system.
+# This is in the top makefile since the file descriptors are platform specific
+RESOURCE_LIST=Resource/CMap/ Resource/ColorSpace/ Resource/Decoding/ Resource/Fonts/ Resource/Procset/ Resource/IdiomSet/ Resource/CIDFont/
 
 # Choose whether to compile the .ps initialization files into the executable.
 # See gs.mak for details.

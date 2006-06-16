@@ -64,7 +64,7 @@
 /*
  * MQ Arithmetic Encoder
  *
- * $Id: jpc_mqenc.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jpc_mqenc.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -364,7 +364,11 @@ int jpc_mqenc_flush(jpc_mqenc_t *mqenc, int termmode)
 		}
 		break;
 	default:
-		abort();
+
+		jas_error(	JAS_ERR_UNSUPPORTED_TERMMODE_JPC_MQENC_FLUSH,
+					"JAS_ERR_UNSUPPORTED_TERMMODE_JPC_MQENC_FLUSH"
+				);
+		return -1;	/*none of the calling functions actually check the return code.*/
 		break;
 	}
 	return 0;

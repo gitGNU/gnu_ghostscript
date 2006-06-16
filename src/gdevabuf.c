@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevabuf.c,v 1.4 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevabuf.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Alpha-buffering memory devices */
 #include "memory_.h"
 #include "gx.h"
@@ -283,7 +283,7 @@ y_transfer_init(y_transfer * pyt, gx_device * dev, int ty, int th)
     pyt->transfer_height = 0;
 }
 /* while ( yt.height_left > 0 ) { y_transfer_next(&yt, mdev); ... } */
-private void
+private int
 y_transfer_next(y_transfer * pyt, gx_device * dev)
 {
     gx_device_memory * const mdev = (gx_device_memory *)dev;
@@ -298,7 +298,10 @@ y_transfer_next(y_transfer * pyt, gx_device * dev)
 
     if (ty == my + mh) {	/* Add a new block at my1. */
 	if (mh == mdev->height) {
-	    abuf_flush_block(mdev, my);
+	    int code = abuf_flush_block(mdev, my);
+
+	    if (code < 0)
+		return code;
 	    mdev->mapped_y = my += bh;
 	    if ((mdev->mapped_start = ms += bh) == mh)
 		mdev->mapped_start = ms = 0;
@@ -328,6 +331,7 @@ y_transfer_next(y_transfer * pyt, gx_device * dev)
     pyt->height_left = th - tbh;
     pyt->transfer_y = tby;
     pyt->transfer_height = tbh;
+    return 0;
 }
 
 /* Copy a monobit image. */
@@ -348,7 +352,10 @@ mem_abuf_copy_mono(gx_device * dev,
     mdev->save_color = one;
     y_transfer_init(&yt, dev, y, h);
     while (yt.height_left > 0) {
-	y_transfer_next(&yt, dev);
+	int code = y_transfer_next(&yt, dev);
+
+	if (code < 0)
+	    return code;
 	(*dev_proc(&mem_mono_device, copy_mono)) (dev,
 					   base + (yt.y_next - y) * sraster,
 					  sourcex, sraster, gx_no_bitmap_id,
@@ -373,7 +380,10 @@ mem_abuf_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
     mdev->save_color = color;
     y_transfer_init(&yt, dev, y, h);
     while (yt.height_left > 0) {
-	y_transfer_next(&yt, dev);
+	int code = y_transfer_next(&yt, dev);
+
+	if (code < 0)
+	    return code;
 	(*dev_proc(&mem_mono_device, fill_rectangle)) (dev,
 				    x, yt.transfer_y, w, yt.transfer_height,
 						       (gx_color_index) 1);

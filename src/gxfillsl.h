@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gxfillsl.h,v 1.1 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: gxfillsl.h,v 1.2 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Configurable algorithm for filling a path by scanlines. */
 
 /*
@@ -33,7 +33,7 @@ TEMPLATE_spot_into_scanlines (line_list *ll, fixed band_mask)
 {
     const fill_options fo = *ll->fo;
     active_line *yll = ll->y_list;
-    fixed y_limit = fo.pbox->q.y;
+    fixed y_limit = fo.ymax;
     /*
      * The meaning of adjust_below (B) and adjust_above (A) is that the
      * pixels that would normally be painted at coordinate Y get "smeared"
@@ -61,14 +61,16 @@ TEMPLATE_spot_into_scanlines (line_list *ll, fixed band_mask)
     range_list_init(&rlist, rlocal, countof(rlocal), ll->memory);
     ll->x_list = 0;
     ll->x_head.x_current = min_fixed;	/* stop backward scan */
-    while (code >= 0) {
+    do {
 	active_line *alp, *nlp;
 	fixed x;
 	bool new_band;
 
 	INCR(iter);
 
-	move_al_by_y(ll, y); /* Skip horizontal pieces. */
+	code = move_al_by_y(ll, y); /* Skip horizontal pieces. */
+	if (code < 0)
+	    return code;
 	/*
 	 * Find the next sampling point, either the bottom of a sampling
 	 * band or a line start.
@@ -111,8 +113,11 @@ TEMPLATE_spot_into_scanlines (line_list *ll, fixed band_mask)
 		if (end_x_line(alp, ll, true))
 		    continue;
 		if (alp->more_flattened)
-		    if (alp->end.y <= y || alp->start.y == alp->end.y)
-			step_al(alp, true);
+		    if (alp->end.y <= y || alp->start.y == alp->end.y) {
+			code = step_al(alp, true);
+			if (code < 0)
+			    return code;
+		    }
 		goto e;
 	    }
 	    nx = alp->x_current = (alp->start.y >= y ? alp->start.x : AL_X_AT_Y(alp, y));
@@ -218,7 +223,7 @@ TEMPLATE_spot_into_scanlines (line_list *ll, fixed band_mask)
 		y_min = y;
 	    code = merge_ranges(&rlist, ll, y_min, y_top);
 	} /* else y < y_bot + 1, do nothing */
-    }
+    } while (code >= 0);
  done:
     range_list_free(&rlist);
     return code;

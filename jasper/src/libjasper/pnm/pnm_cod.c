@@ -64,7 +64,7 @@
 /*
  * Portable Pixmap/Graymap Format Support
  *
- * $Id: pnm_cod.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: pnm_cod.c,v 1.2 2006/06/16 12:55:32 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -77,6 +77,7 @@
 #include <assert.h>
 
 #include "jasper/jas_math.h"
+#include "jasper/jas_debug.h"
 
 #include "pnm_cod.h"
 
@@ -103,7 +104,11 @@ int pnm_type(uint_fast16_t magic)
 		break;
 	default:
 		/* This should not happen. */
-		abort();
+
+		jas_error(	JAS_ERR_INVALID_MAGIC_PARAM_PNM_TYPE,
+					"JAS_ERR_INVALID_MAGIC_PARAM_PNM_TYPE"
+				);
+		type = -1;
 		break;
 	}
 	return type;
@@ -126,7 +131,10 @@ int pnm_fmt(uint_fast16_t magic)
 		break;
 	default:
 		/* This should not happen. */
-		abort();
+		jas_error(	JAS_ERR_INVALID_MAGIC_PARAM_PNM_FMT,
+					"JAS_ERR_INVALID_MAGIC_PARAM_PNM_FMT"
+				);
+		fmt = -1;
 		break;
 	}
 	return fmt;

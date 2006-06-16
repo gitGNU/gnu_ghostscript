@@ -2,6 +2,7 @@
  * Copyright (c) 1999-2000 Image Power, Inc. and the University of
  *   British Columbia.
  * Copyright (c) 2001-2003 Michael David Adams.
+ * Copyright (c) 2004-2006 artofcode LLC.
  * All rights reserved.
  */
 
@@ -64,13 +65,19 @@
 /*
  * Primitive Types
  *
- * $Id: jas_types.h,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jas_types.h,v 1.2 2006/06/16 12:55:32 Arabidopsis Exp $
  */
 
 #ifndef JAS_TYPES_H
 #define JAS_TYPES_H
 
 #include <jasper/jas_config.h>
+
+/* define our own boolean type -- should be bool on C++? */
+typedef int	jas_bool;
+
+#define	jas_false	0
+#define	jas_true	1
 
 #if !defined(JAS_CONFIGURE)
 
@@ -82,17 +89,25 @@
    In particular, it does not define the "long long" and "unsigned long
    long" types. We therefore must make our own defines.
  */
-#ifdef _MSC_VER
+# ifdef _MSC_VER
 /* 
    We use the intrinsics rather than the windows.h types because
    that header is large, slow to compile, and incompatibile with
    the MSVC /Za ANSI compliance option.
  */
-#undef longlong
-#define	longlong	__int64
-#undef ulonglong
-#define	ulonglong	unsigned __int64
-#endif
+#  undef longlong
+#  define longlong	__int64
+#  undef ulonglong
+#  define ulonglong	unsigned __int64
+# else
+/*  Obtain the 64-bit types from the header file "windows.h".  */
+#  include <windows.h>
+#  undef longlong
+#  define longlong	INT64
+#  undef ulonglong
+#  define ulonglong	UINT64
+# endif /* _MSC_VER */
+
 /* Microsoft defines some things with slightly different names */
 # define O_RDWR _O_RDWR
 # define O_RDONLY _O_RDONLY
@@ -101,52 +116,19 @@
 # define O_TRUNC _O_TRUNC
 # define O_APPEND _O_APPEND
 # define O_EXCL _O_EXCL
-#else
-/*  Obtain the 64-bit types from the header file "windows.h".  */
-# include <windows.h>
-# undef longlong
-# define       longlong        INT64
-# undef ulonglong
-# define       ulonglong       UINT64
-#endif
 
-#endif
+#endif /* WIN32 */
+
+#endif /* !JAS_CONFIGURE */
 
 #if defined(HAVE_STDLIB_H)
-#include <stdlib.h>
+# include <stdlib.h>
 #endif
 #if defined(HAVE_STDDEF_H)
-#include <stddef.h>
+# include <stddef.h>
 #endif
 #if defined(HAVE_SYS_TYPES_H)
-#include <sys/types.h>
-#endif
-
-#ifndef __cplusplus
-#if defined(HAVE_STDBOOL_H)
-/*
- * The C language implementation does correctly provide the standard header
- * file "stdbool.h".
- */
-#include <stdbool.h>
-#else
-
-/*
- * The C language implementation does not provide the standard header file
- * "stdbool.h" as required by ISO/IEC 9899:1999.  Try to compensate for this
- * braindamage below.
- */
-#if !defined(bool)
-#define	bool	int
-#endif
-#if !defined(true)
-#define true	1
-#endif
-#if !defined(false)
-#define	false	0
-#endif
-#endif
-
+# include <sys/types.h>
 #endif
 
 #if defined(HAVE_STDINT_H)
@@ -154,60 +136,60 @@
  * The C language implementation does correctly provide the standard header
  * file "stdint.h".
  */
-#include <stdint.h>
+# include <stdint.h>
 #else
 /*
  * The C language implementation does not provide the standard header file
  * "stdint.h" as required by ISO/IEC 9899:1999.  Try to compensate for this
  * braindamage below.
  */
-#include <limits.h>
+# include <limits.h>
 /**********/
-#if !defined(INT_FAST8_MIN)
-typedef signed char int_fast8_t;
-#define INT_FAST8_MIN	(-127)
-#define INT_FAST8_MAX	128
-#endif
+# if !defined(INT_FAST8_MIN)
+   typedef signed char int_fast8_t;
+#  define INT_FAST8_MIN	(-127)
+#  define INT_FAST8_MAX	128
+# endif
 /**********/
-#if !defined(UINT_FAST8_MAX)
-typedef unsigned char uint_fast8_t;
-#define UINT_FAST8_MAX	255
-#endif
+# if !defined(UINT_FAST8_MAX)
+   typedef unsigned char uint_fast8_t;
+#  define UINT_FAST8_MAX	255
+# endif
 /**********/
-#if !defined(INT_FAST16_MIN)
-typedef short int_fast16_t;
-#define INT_FAST16_MIN	SHRT_MIN
-#define INT_FAST16_MAX	SHRT_MAX
-#endif
+# if !defined(INT_FAST16_MIN)
+   typedef short int_fast16_t;
+#  define INT_FAST16_MIN	SHRT_MIN
+#  define INT_FAST16_MAX	SHRT_MAX
+# endif
 /**********/
-#if !defined(UINT_FAST16_MAX)
-typedef unsigned short uint_fast16_t;
-#define UINT_FAST16_MAX	USHRT_MAX
-#endif
+# if !defined(UINT_FAST16_MAX)
+   typedef unsigned short uint_fast16_t;
+#  define UINT_FAST16_MAX	USHRT_MAX
+# endif
 /**********/
-#if !defined(INT_FAST32_MIN)
-typedef int int_fast32_t;
-#define INT_FAST32_MIN	INT_MIN
-#define INT_FAST32_MAX	INT_MAX
-#endif
+# if !defined(INT_FAST32_MIN)
+   typedef int int_fast32_t;
+#  define INT_FAST32_MIN	INT_MIN
+#  define INT_FAST32_MAX	INT_MAX
+# endif
 /**********/
-#if !defined(UINT_FAST32_MAX)
-typedef unsigned int uint_fast32_t;
-#define UINT_FAST32_MAX	UINT_MAX
-#endif
+# if !defined(UINT_FAST32_MAX)
+   typedef unsigned int uint_fast32_t;
+#  define UINT_FAST32_MAX	UINT_MAX
+# endif
 /**********/
-#if !defined(INT_FAST64_MIN)
-typedef longlong int_fast64_t;
-#define INT_FAST64_MIN	LLONG_MIN
-#define INT_FAST64_MAX	LLONG_MAX
-#endif
+# if !defined(INT_FAST64_MIN)
+   typedef longlong int_fast64_t;
+#  define INT_FAST64_MIN	LLONG_MIN
+#  define INT_FAST64_MAX	LLONG_MAX
+# endif
 /**********/
-#if !defined(UINT_FAST64_MAX)
-typedef ulonglong uint_fast64_t;
-#define UINT_FAST64_MAX	ULLONG_MAX
-#endif
+# if !defined(UINT_FAST64_MAX)
+   typedef ulonglong uint_fast64_t;
+#  define UINT_FAST64_MAX	ULLONG_MAX
+# endif
 /**********/
-#endif
+#endif /* HAVE_STDINT_H */
 
 /* The below macro is intended to be used for type casts.  By using this
   macro, type casts can be easily located in the source code with
@@ -215,12 +197,4 @@ typedef ulonglong uint_fast64_t;
 #define	JAS_CAST(t, e) \
 	((t) (e))
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+#endif /* JAS_TYPES_H */

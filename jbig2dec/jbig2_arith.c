@@ -11,7 +11,7 @@
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
                                                                                 
-    $Id: jbig2_arith.c,v 1.3 2006/03/02 21:27:55 Arabidopsis Exp $
+    $Id: jbig2_arith.c,v 1.4 2006/06/16 12:55:32 Arabidopsis Exp $
 */
 
 #ifdef HAVE_CONFIG_H
@@ -79,8 +79,8 @@ jbig2_arith_bytein (Jbig2ArithState *as)
 	  B1 = (byte)((as->next_word >> 24) & 0xFF);
 	  if (B1 > 0x8F)
 	    {
-#ifdef JBIG2_DEBUG
-	      printf ("read %02x (aa)\n", B);
+#ifdef JBIG2_DEBUG_ARITH
+	      fprintf(stderr, "read %02x (aa)\n", B);
 #endif
 #ifndef SOFTWARE_CONVENTION
 	      as->C += 0xFF00;
@@ -91,8 +91,8 @@ jbig2_arith_bytein (Jbig2ArithState *as)
 	    }
 	  else
 	    {
-#ifdef JBIG2_DEBUG
-	      printf ("read %02x (a)\n", B);
+#ifdef JBIG2_DEBUG_ARITH
+	      fprintf(stderr, "read %02x (a)\n", B);
 #endif
 #ifdef SOFTWARE_CONVENTION
 	      as->C += 0xFE00 - (B1 << 9);
@@ -108,8 +108,8 @@ jbig2_arith_bytein (Jbig2ArithState *as)
 	  B1 = (byte)((as->next_word >> 16) & 0xFF);
 	  if (B1 > 0x8F)
 	    {
-#ifdef JBIG2_DEBUG
-	      printf ("read %02x (ba)\n", B);
+#ifdef JBIG2_DEBUG_ARITH
+	      fprintf(stderr, "read %02x (ba)\n", B);
 #endif
 #ifndef SOFTWARE_CONVENTION
 	      as->C += 0xFF00;
@@ -120,8 +120,8 @@ jbig2_arith_bytein (Jbig2ArithState *as)
 	    {
 	      as->next_word_bytes--;
 	      as->next_word <<= 8;
-#ifdef JBIG2_DEBUG
-	      printf ("read %02x (b)\n", B);
+#ifdef JBIG2_DEBUG_ARITH
+	      fprintf(stderr, "read %02x (b)\n", B);
 #endif
 
 #ifdef SOFTWARE_CONVENTION
@@ -135,8 +135,8 @@ jbig2_arith_bytein (Jbig2ArithState *as)
     }
   else
     {
-#ifdef JBIG2_DEBUG
-      printf ("read %02x\n", B);
+#ifdef JBIG2_DEBUG_ARITH
+      fprintf(stderr, "read %02x\n", B);
 #endif
       as->CT = 8;
       as->next_word <<= 8;
@@ -158,13 +158,13 @@ jbig2_arith_bytein (Jbig2ArithState *as)
     }
 }
 
-#ifdef JBIG2_DEBUG
+#if defined(JBIG2_DEBUG) || defined(JBIG2_DEBUG_ARITH)
 #include <stdio.h>
 
 static void
 jbig2_arith_trace (Jbig2ArithState *as, Jbig2ArithCx cx)
 {
-  printf ("I = %2d, MPS = %d, A = %04x, CT = %2d, C = %08x\n",
+  fprintf(stderr, "I = %2d, MPS = %d, A = %04x, CT = %2d, C = %08x\n",
 	  cx & 0x7f, cx >> 7, as->A, as->CT, as->C);
 }
 #endif
@@ -339,7 +339,7 @@ jbig2_arith_decode (Jbig2ArithState *as, Jbig2ArithCx *pcx)
 
 #ifdef TEST
 
-static int32_t
+static uint32_t
 test_get_word (Jbig2WordStream *self, int offset)
 {
   byte stream[] = {
@@ -358,24 +358,35 @@ test_get_word (Jbig2WordStream *self, int offset)
 int
 main (int argc, char **argv)
 {
+  Jbig2Ctx *ctx;
   Jbig2WordStream ws;
   Jbig2ArithState *as;
   int i;
   Jbig2ArithCx cx = 0;
 
+  ctx = jbig2_ctx_new(NULL, 0, NULL, NULL, NULL);
+
   ws.get_next_word = test_get_word;
-  as = jbig2_arith_new (NULL, &ws);
+  as = jbig2_arith_new (ctx, &ws);
+#ifdef JBIG2_DEBUG_ARITH
   jbig2_arith_trace (as, cx);
+#endif
 
   for (i = 0; i < 256; i++)
     {
       bool D;
 
       D = jbig2_arith_decode (as, &cx);
-      printf ("%3d: D = %d, ", i, D);
+#ifdef JBIG2_DEBUG_ARITH
+      fprintf(stderr, "%3d: D = %d, ", i, D);
       jbig2_arith_trace (as, cx);
-      
+#endif      
     }
+
+  jbig2_free(ctx->allocator, as);
+
+  jbig2_ctx_free(ctx);
+
   return 0;
 }
 #endif

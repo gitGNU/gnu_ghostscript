@@ -64,7 +64,7 @@
 /*
  * JP2 Library
  *
- * $Id: jp2_cod.h,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jp2_cod.h,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 #ifndef JP2_COD_H
@@ -241,7 +241,7 @@ typedef struct {
 	struct jp2_boxinfo_s *info;
 
 	uint_fast32_t type;
-	uint_fast32_t len;
+	uint_fast64_t len;
 
 	union {
 		jp2_jp_t jp;

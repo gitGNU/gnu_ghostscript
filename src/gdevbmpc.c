@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevbmpc.c,v 1.4 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevbmpc.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* .BMP file format driver utilities */
 #include "gdevprn.h"
 #include "gdevbmp.h"
@@ -209,7 +209,7 @@ write_bmp_separated_header(gx_device_printer *pdev, FILE *file)
     }
     return write_bmp_depth_header(pdev, file, plane_depth,
 				  (const byte *)palette,
-				  bitmap_raster(pdev->width * plane_depth));
+				  (pdev->width*plane_depth + 7) >> 3);
 }
 
 /* 24-bit color mappers (taken from gdevmem2.c). */

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxclrast.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gxclrast.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Command list interpreter/rasterizer */
 #include "memory_.h"
 #include "gx.h"
@@ -88,6 +88,7 @@ cmd_print_bits(const byte * data, int width, int height, int raster)
     if ( *p < 0x80 ) var = *p++;\
     else { const byte *_cbp; var = cmd_get_w(p, &_cbp); p = _cbp; }\
   END
+
 private long
 cmd_get_w(const byte * p, const byte ** rp)
 {
@@ -246,11 +247,10 @@ clist_playback_band(clist_playback_action playback_action,
 #define data_bits_size cbuf_size
     byte *data_bits = 0;
     register const byte *cbp;
-    int dev_depth = cdev->color_info.depth;
-    int dev_depth_bytes = (dev_depth + 7) >> 3;
-    int odd_delta_shift = (dev_depth_bytes - 3) * 8;
+    int dev_depth;		/* May vary due to compositing devices */
+    int dev_depth_bytes;
+    int odd_delta_shift;
     int num_zero_bytes;
-    gx_color_index delta_offset = cmd_delta_offsets[dev_depth_bytes];
     gx_device *tdev;
     gx_clist_state state;
     gx_color_index *set_colors;
@@ -556,6 +556,8 @@ in:				/* Initialize for a new page. */
 			    gx_color_index delta = 0;
 			    uint data;
 
+			    dev_depth = cdev->color_info.depth;
+			    dev_depth_bytes = (dev_depth + 7) >> 3;
 		            switch (dev_depth_bytes) {
 				/* For cases with an even number of bytes */
 			        case 8:
@@ -586,15 +588,20 @@ in:				/* Initialize for a new page. */
 				        ((data & 0xf0) << 4) + (data & 0x0f));
 			        case 3:
 			            data = *cbp++;
+				    odd_delta_shift = (dev_depth_bytes - 3) * 8;
 			            delta |= ((gx_color_index)
 				        ((data & 0xe0) << 3) + (data & 0x1f)) << odd_delta_shift;
 				    data = *cbp++;
 			            delta |= ((gx_color_index) ((data & 0xf8) << 2) + (data & 0x07))
 				    			<< (odd_delta_shift + 11);
 		            }
-		            *pcolor += delta - delta_offset;;
+		            *pcolor += delta - cmd_delta_offsets[dev_depth_bytes];
 			}
-			if_debug1('L', " 0x%lx\n", *pcolor);
+			if (sizeof(*pcolor) <= sizeof(ulong))
+			    if_debug1('L', " 0x%lx\n", (ulong)*pcolor);
+			else
+			    if_debug2('L', " 0x%8lx%08lx\n", 
+				(ulong)(*pcolor >> 8*(sizeof(*pcolor) - sizeof(ulong))), (ulong)*pcolor);
 			continue;
 		    case cmd_opv_set_copy_color:
 			state.color_is_alpha = 0;
@@ -628,6 +635,8 @@ in:				/* Initialize for a new page. */
 		else {
 		    gx_color_index color = 0;
 
+		    dev_depth = cdev->color_info.depth;
+		    dev_depth_bytes = (dev_depth + 7) >> 3;
 		    switch (dev_depth_bytes - num_zero_bytes) {
 			case 8:
 			    color = (gx_color_index) * cbp++;
@@ -651,7 +660,11 @@ in:				/* Initialize for a new page. */
 		    color <<= num_zero_bytes * 8;
 		    *pcolor = color;
 		}
-	        if_debug1('L', " 0x%lx\n", *pcolor);
+		if (sizeof(*pcolor) <= sizeof(ulong))
+		    if_debug1('L', " 0x%lx\n", (ulong)*pcolor);
+		else
+		    if_debug2('L', " 0x%8lx%08lx\n", 
+			(ulong)(*pcolor >> 8*(sizeof(*pcolor) - sizeof(ulong))), (ulong)*pcolor);
 		continue;
 	    case cmd_op_fill_rect >> 4:
 	    case cmd_op_tile_rect >> 4:
@@ -689,8 +702,8 @@ in:				/* Initialize for a new page. */
 		if (state.color_is_alpha) {
 		    if (!(op & 8))
 			depth = *cbp++;
-		} else
-		    depth = dev_depth;
+		} else 
+		    depth = cdev->color_info.depth;
 	      copy:cmd_getw(state.rect.x, cbp);
 		cmd_getw(state.rect.y, cbp);
 		if (op & 8) {	/* Use the current "tile". */
@@ -1202,6 +1215,12 @@ idata:			data_size = 0;
 				break;
 			    case cmd_opv_ext_create_compositor:
 				cbuf.ptr = cbp;
+				/*
+				 * The screen phase may have been changed during
+				 * the processing of masked images.
+				 */
+				gx_imager_setscreenphase(&imager_state,
+					    -x0, -y0, gs_color_select_all);
 				code = read_create_compositor(&cbuf, &imager_state,
 							      cdev, mem, &target);
 				cbp = cbuf.ptr;
@@ -1508,6 +1527,11 @@ idata:			data_size = 0;
     ht_buff.ht_size = 0;
     ht_buff.read_size = 0;
 
+    if (color_space.params.indexed.lookup.table.size)
+        gs_free_const_string(mem,
+			     color_space.params.indexed.lookup.table.data,
+			     color_space.params.indexed.lookup.table.size,
+			     "color_space indexed table");
     gx_cpath_free(&clip_path, "clist_render_band exit");
     gx_path_free(&path, "clist_render_band exit");
     gs_imager_state_release(&imager_state);
@@ -1748,7 +1772,7 @@ read_ht_segment(
             pbuff = pht_buff->pbuff;
     }
 
-    /* if everything has be read, covert back to a halftone */
+    /* if everything has been read, convert back to a halftone */
     if (pbuff != 0) {
         code = gx_ht_read_and_install(pis, dev, pbuff, ht_size, mem);
 
@@ -1893,9 +1917,9 @@ read_set_color_space(command_buf_t *pcb, gs_imager_state *pis,
     } else {
 	if (pcolor_space->params.indexed.lookup.table.size)
 	    gs_free_const_string(mem,
-			pcolor_space->params.indexed.lookup.table.data,
-			pcolor_space->params.indexed.lookup.table.size,
-				 "old indexed table");
+				 pcolor_space->params.indexed.lookup.table.data,
+				 pcolor_space->params.indexed.lookup.table.size,
+				 "color_spapce indexed table");
 	pcolor_space->params.indexed.lookup.table.size = 0;
     }
     if (b & 8) {
@@ -1918,7 +1942,7 @@ read_set_color_space(command_buf_t *pcb, gs_imager_state *pis,
 	    data = (byte *)map->values;
 	    data_size = num_values * sizeof(map->values[0]);
 	} else {
-	    byte *table = gs_alloc_string(mem, num_values, "indexed table");
+	    byte *table = gs_alloc_string(mem, num_values, "color_space indexed table");
 
 	    if (table == 0) {
 		code = gs_note_error(gs_error_VMerror);
@@ -2086,6 +2110,13 @@ read_create_compositor(
         rc_increment(tdev);
         *ptarget = tdev;
     }
+
+    /* Perform any updates for the clist device required */
+    code = pcomp->type->procs.clist_compositor_read_update(pcomp,
+		    			(gx_device *)cdev, tdev, pis, mem);
+    if (code < 0)
+        return code;
+
     /* free the compositor object */
     if (pcomp != 0)
         gs_free_object(mem, pcomp, "read_create_compositor");

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gsptype2.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gsptype2.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* PatternType 2 implementation */
 #include "gx.h"
 #include "gserrors.h"
@@ -264,6 +264,82 @@ gx_dc_pattern2_save_dc(
 
     psdc->type = pdevc->type;
     psdc->colors.pattern2.id = pinst->pattern_id;
+    psdc->colors.pattern2.shfill = pinst->shfill;
+}
+
+/* Transform a shading bounding box into device space. */
+/* This is just a bridge to an old code. */
+int
+gx_dc_pattern2_shade_bbox_transform2fixed(const gs_rect * rect, const gs_imager_state * pis,
+			   gs_fixed_rect * rfixed)
+{
+    gs_rect dev_rect;
+    int code = gs_bbox_transform(rect, &ctm_only(pis), &dev_rect);
+
+    if (code >= 0) {
+	rfixed->p.x = float2fixed(dev_rect.p.x);
+	rfixed->p.y = float2fixed(dev_rect.p.y);
+	rfixed->q.x = float2fixed(dev_rect.q.x);
+	rfixed->q.y = float2fixed(dev_rect.q.y);
+    }
+    return code;
+}
+
+/* Get a shading bbox. Returns 1 on success. */
+int
+gx_dc_pattern2_get_bbox(const gx_device_color * pdevc, gs_fixed_rect *bbox)
+{
+    gs_pattern2_instance_t *pinst =
+        (gs_pattern2_instance_t *)pdevc->ccolor.pattern;
+    int code;
+
+    if (!pinst->template.Shading->params.have_BBox)
+	return 0;
+    code = gx_dc_pattern2_shade_bbox_transform2fixed(
+		&pinst->template.Shading->params.BBox, (gs_imager_state *)pinst->saved, bbox);
+    if (code < 0)
+	return code;
+    return 1;
+}
+
+/* Get a shading color space. */
+const gs_color_space *
+gx_dc_pattern2_get_color_space(const gx_device_color * pdevc)
+{
+    gs_pattern2_instance_t *pinst =
+        (gs_pattern2_instance_t *)pdevc->ccolor.pattern;
+    const gs_shading_t *psh = pinst->template.Shading;
+
+    return psh->params.ColorSpace;
 }
 
 
+/* Check device color for a possibly self-overlapping shading. */
+bool
+gx_dc_pattern2_can_overlap(const gx_device_color *pdevc)
+{
+    gs_pattern2_instance_t * pinst;
+
+    if (pdevc->type != &gx_dc_pattern2)
+	return false;
+    pinst = (gs_pattern2_instance_t *)pdevc->ccolor.pattern;
+    switch (pinst->template.Shading->head.type) {
+	case 3: case 6: case 7:
+	    return true;
+	default:
+	    return false;
+    }
+}
+
+/* Check whether a pattern color has a background. */
+bool gx_dc_pattern2_has_background(const gx_device_color *pdevc)
+{
+    gs_pattern2_instance_t * pinst;
+    const gs_shading_t *Shading;
+
+    if (pdevc->type != &gx_dc_pattern2)
+	return false;
+    pinst = (gs_pattern2_instance_t *)pdevc->ccolor.pattern;
+    Shading = pinst->template.Shading;
+    return !pinst->shfill && Shading->params.Background != NULL;
+}

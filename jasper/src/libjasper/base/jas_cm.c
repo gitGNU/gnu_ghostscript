@@ -62,7 +62,7 @@
 /*
  * Color Management
  *
- * $Id: jas_cm.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jas_cm.c,v 1.2 2006/06/16 12:55:32 Arabidopsis Exp $
  */
 
 #include <jasper/jas_config.h>
@@ -140,6 +140,41 @@ static jas_cmprof_t *jas_cmprof_createsycc(void);
 /******************************************************************************\
 * Color profile class.
 \******************************************************************************/
+/*
+  jas_cmprof_t *jas_cmprof_createfromclrspc(int clrspc)
+{
+	jas_iccprof_t *iccprof;
+	jas_cmprof_t *prof;
+
+	iccprof = 0;
+	prof = 0;
+	switch (clrspc) {
+	case JAS_CLRSPC_SYCBCR:
+		if (!(prof = jas_cmprof_createsycc()))
+			goto error;
+		break;
+	default:
+		if (!(iccprof = jas_iccprof_createfromclrspc(clrspc)))
+			goto error;
+		if (!(prof = jas_cmprof_createfromiccprof(iccprof)))
+			goto error;
+#if 0
+		jas_iccprof_destroy(iccprof);
+#else
+		prof->iccprof = iccprof;
+#endif
+		if (!jas_clrspc_isgeneric(clrspc))
+			prof->clrspc = clrspc;
+		break;
+	}
+	return prof;
+error:
+	if (iccprof)
+		jas_iccprof_destroy(iccprof);
+	return 0;
+}
+*/
+
 
 jas_cmprof_t *jas_cmprof_createfromclrspc(int clrspc)
 {
@@ -243,6 +278,69 @@ error:
 	return 0;
 }
 
+
+/*
+jas_cmprof_t *jas_cmprof_createfromiccprof(jas_iccprof_t *iccprof)
+{
+	jas_cmprof_t *prof;
+	jas_icchdr_t icchdr;
+	jas_cmpxformseq_t *fwdpxformseq;
+	jas_cmpxformseq_t *revpxformseq;
+
+	if (!(prof = jas_cmprof_create()))
+		goto error;
+	jas_iccprof_gethdr(iccprof, &icchdr);
+	if (!(prof->iccprof = jas_iccprof_copy(iccprof)))
+		goto error;
+	if( ( prof->clrspc = icctoclrspc(icchdr.colorspc, 0) == JAS_CLRSPC_UNKNOWN ) )
+		goto error;
+
+	if( ( prof->refclrspc = icctoclrspc(icchdr.refcolorspc, 1) ) == JAS_CLRSPC_UNKNOWN )
+		goto error;
+
+	prof->numchans = jas_clrspc_numchans(prof->clrspc);
+	prof->numrefchans = jas_clrspc_numchans(prof->refclrspc);
+
+	if( prof->numchans == 0 || prof->numrefchans == 0 )
+		goto error;
+
+	if (prof->numchans == 1) {
+		if (mono(prof->iccprof, 0, &fwdpxformseq))
+			goto error;
+		if (mono(prof->iccprof, 1, &revpxformseq))
+			goto error;
+	} else if (prof->numchans == 3) {
+		if (triclr(prof->iccprof, 0, &fwdpxformseq))
+			goto error;
+		if (triclr(prof->iccprof, 1, &revpxformseq))
+			goto error;
+	}
+	prof->pxformseqs[SEQFWD(0)] = fwdpxformseq;
+	prof->pxformseqs[SEQREV(0)] = revpxformseq;
+
+#if 0
+	if (prof->numchans > 1) {
+		lut(prof->iccprof, 0, PER, &pxformseq);
+		pxformseqs_set(prof, SEQFWD(PER), pxformseq);
+		lut(prof->iccprof, 1, PER, &pxformseq);
+		pxformseqs_set(prof, SEQREV(PER), pxformseq);
+		lut(prof->iccprof, 0, CLR, &pxformseq);
+		pxformseqs_set(prof, SEQREV(CLR), pxformseq);
+		lut(prof->iccprof, 1, CLR, &pxformseq);
+		pxformseqs_set(prof, SEQREV(CLR), pxformseq);
+		lut(prof->iccprof, 0, SAT, &pxformseq);
+		pxformseqs_set(prof, SEQREV(SAT), pxformseq);
+		lut(prof->iccprof, 1, SAT, &pxformseq);
+		pxformseqs_set(prof, SEQREV(SAT), pxformseq);
+	}
+#endif
+
+	return prof;
+error:
+	return 0;
+}
+*/
+
 jas_cmprof_t *jas_cmprof_createfromiccprof(jas_iccprof_t *iccprof)
 {
 	jas_cmprof_t *prof;
@@ -295,6 +393,9 @@ jas_cmprof_t *jas_cmprof_createfromiccprof(jas_iccprof_t *iccprof)
 error:
 	return 0;
 }
+
+
+
 
 static jas_cmprof_t *jas_cmprof_create()
 {
@@ -383,6 +484,9 @@ jas_cmxform_t *jas_cmxform_create(jas_cmprof_t *inprof, jas_cmprof_t *outprof,
 			goto error;
 		xform->numinchans = jas_clrspc_numchans(inprof->clrspc);
 		xform->numoutchans = jas_clrspc_numchans(outprof->clrspc);
+
+		if( xform->numinchans == 0 || xform->numoutchans == 0 )
+			goto error;
 		break;
 	case JAS_CMXFORM_OP_REV:
 		outpxformseq = fwdpxformseq(outprof, intent);
@@ -396,7 +500,11 @@ jas_cmxform_t *jas_cmxform_create(jas_cmprof_t *inprof, jas_cmprof_t *outprof,
 			goto error;
 		xform->numinchans = jas_clrspc_numchans(outprof->clrspc);
 		xform->numoutchans = jas_clrspc_numchans(inprof->clrspc);
+
+		if( xform->numinchans == 0 || xform->numoutchans == 0 )
+			goto error;
 		break;
+
 	case JAS_CMXFORM_OP_PROOF:
 		assert(prfprof);
 		inpxformseq = fwdpxformseq(inprof, intent);
@@ -429,6 +537,9 @@ jas_cmxform_t *jas_cmxform_create(jas_cmprof_t *inprof, jas_cmprof_t *outprof,
 			goto error;
 		xform->numinchans = jas_clrspc_numchans(inprof->clrspc);
 		xform->numoutchans = jas_clrspc_numchans(prfprof->clrspc);
+
+		if( xform->numinchans == 0 || xform->numoutchans == 0 )
+			goto error;
 		break;
 	case JAS_CMXFORM_OP_GAMUT:
 		inpxformseq = fwdpxformseq(inprof, intent);
@@ -441,6 +552,8 @@ jas_cmxform_t *jas_cmxform_create(jas_cmprof_t *inprof, jas_cmprof_t *outprof,
 		  jas_cmpxformseq_append(xform->pxformseq, outpxformseq))
 			goto error;
 		xform->numinchans = jas_clrspc_numchans(inprof->clrspc);
+		if( xform->numinchans == 0 )
+			goto error;
 		xform->numoutchans = 1;
 		break;
 	}
@@ -614,11 +727,9 @@ static void jas_cmpxformseq_destroy(jas_cmpxformseq_t *pxformseq)
 	jas_free(pxformseq);
 }
 
+/* Currently called by 1 function with i == pxformseq->numpxforms - 1 */
 static int jas_cmpxformseq_delete(jas_cmpxformseq_t *pxformseq, int i)
 {
-	assert(i >= 0 && i < pxformseq->numpxforms);
-	if (i != pxformseq->numpxforms - 1)
-		abort();
 	jas_cmpxform_destroy(pxformseq->pxforms[i]);
 	pxformseq->pxforms[i] = 0;
 	--pxformseq->numpxforms;
@@ -630,7 +741,11 @@ static int jas_cmpxformseq_appendcnvt(jas_cmpxformseq_t *pxformseq,
 {
 	if (dstclrspc == srcclrspc)
 		return 0;
-	abort();
+
+	jas_error(	JAS_ERR_UNEQUAL_PARMS_IN_JAS_CMPXFORMSEQ_APPENDCNVT,
+				"JAS_ERR_UNEQUAL_PARMS_IN_JAS_CMPXFORMSEQ_APPENDCNVT"
+			);
+
 	/* Avoid compiler warnings about unused parameters. */
 	pxformseq = 0;
 	return -1;
@@ -981,9 +1096,9 @@ assert(0);
 	}
 #if 0
 for (i=0;i<lut->size;++i)
-	fprintf(stderr, "lut[%d]=%f ", i, lut->data[i]);
+	jas_eprintf("lut[%d]=%f ", i, lut->data[i]);
 for (i=0;i<invlut->size;++i)
-	fprintf(stderr, "invlut[%d]=%f ", i, invlut->data[i]);
+	jas_eprintf("invlut[%d]=%f ", i, invlut->data[i]);
 #endif
 	return 0;
 }
@@ -995,7 +1110,7 @@ static int jas_cmshapmat_invmat(jas_cmreal_t out[3][4], jas_cmreal_t in[3][4])
 	  - in[0][1] * (in[1][0] * in[2][2] - in[1][2] * in[2][0])
 	  + in[0][2] * (in[1][0] * in[2][1] - in[1][1] * in[2][0]);
 #if 0
-fprintf(stderr, "delta=%f\n", d);
+jas_eprintf("delta=%f\n", d);
 #endif
 	if (JAS_ABS(d) < 1e-6)
 		return -1;
@@ -1012,11 +1127,11 @@ fprintf(stderr, "delta=%f\n", d);
 	out[1][3] = -in[1][3];
 	out[2][3] = -in[2][3];
 #if 0
-fprintf(stderr, "[ %f %f %f %f ]\n[ %f %f %f %f ]\n[ %f %f %f %f ]\n",
+jas_eprintf("[ %f %f %f %f ]\n[ %f %f %f %f ]\n[ %f %f %f %f ]\n",
 in[0][0], in[0][1], in[0][2], in[0][3],
 in[1][0], in[1][1], in[1][2], in[1][3],
 in[2][0], in[2][1], in[2][2], in[2][3]);
-fprintf(stderr, "[ %f %f %f %f ]\n[ %f %f %f %f ]\n[ %f %f %f %f ]\n",
+jas_eprintf("[ %f %f %f %f ]\n[ %f %f %f %f ]\n[ %f %f %f %f ]\n",
 out[0][0], out[0][1], out[0][2], out[0][3],
 out[1][0], out[1][1], out[1][2], out[1][3],
 out[2][0], out[2][1], out[2][2], out[2][3]);
@@ -1037,7 +1152,9 @@ static int icctoclrspc(int iccclrspc, int refflag)
 		case JAS_ICC_COLORSPC_LAB:
 			return JAS_CLRSPC_CIELAB;
 		default:
-			abort();
+			jas_error(	JAS_ERR_CLR_SPACE_UNKNOWN_IN_ICCTOCLRSPC,
+						"JAS_ERROR_CLR_SPACE_UNKNOWN_IN_ICCTOCLRSPC"
+					);
 			break;
 		}
 	} else {
@@ -1049,7 +1166,9 @@ static int icctoclrspc(int iccclrspc, int refflag)
 		case JAS_ICC_COLORSPC_GRAY:
 			return JAS_CLRSPC_GENGRAY;
 		default:
-			abort();
+			jas_error(	JAS_ERR_CLR_SPACE_UNKNOWN_IN_ICCTOCLRSPC,
+						"JAS_ERROR_CLR_SPACE_UNKNOWN_IN_ICCTOCLRSPC"
+					);
 			break;
 		}
 	}
@@ -1239,7 +1358,7 @@ int jas_clrspc_numchans(int clrspc)
 		return 1;
 		break;
 	default:
-		abort();
+		jas_error( JAS_ERR_UNSUPPORTED_COLOR_SPACE_IN_JAS_CLRSPC_NUMCHANS, "JAS_ERR_UNSUPPORTED_COLOR_SPACE_IN_JAS_CLRSPC_NUMCHANS" );
 		break;
 	}
         return 0;

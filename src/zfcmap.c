@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zfcmap.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: zfcmap.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* CMap creation operator */
 #include "memory_.h"
 #include "ghost.h"
@@ -34,6 +34,10 @@
 #include "ifont.h"		/* for zfont_mark_glyph_name */
 #include "iname.h"
 #include "store.h"
+
+/* Exported for zfont0.c */
+int ztype0_get_cmap(const gs_cmap_t ** ppcmap, const ref * pfdepvector,
+		    const ref * op, gs_memory_t *imem);
 
 /*
  * Define whether to check the compatibility of CIDSystemInfo between the

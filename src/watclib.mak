@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: watclib.mak,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $
+# $Id: watclib.mak,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $
 # makefile for MS-DOS / Watcom C/C++ library testing.
 
 libdefault: $(GLOBJ)gslib.exe
@@ -72,15 +72,19 @@ JVERSION=6
 PSRCDIR=libpng
 !endif
 !ifndef PVERSION
-PVERSION=10208
+PVERSION=10210
 !endif
 
 !ifndef ZSRCDIR
 ZSRCDIR=zlib
 !endif
 
-# Define the jbig2dec library source location.
+# Define the jbig2dec library and source location.
 # See jbig2.mak for more information.
+
+!ifndef JBIG2_LIB
+JBIG2_LIB=jbig2dec
+!endif
 
 !ifndef JBIG2SRCDIR
 JBIG2SRCDIR=jbig2dec
@@ -134,6 +138,11 @@ FEATURE_DEVS=$(GLD)patlib.dev $(GLD)path1lib.dev
 !ifndef DEVICE_DEVS
 DEVICE_DEVS=$(DD)vga.dev
 !endif
+
+# The list of resources to be included in the %rom% file system.
+# This is in the top makefile since the file descriptors are platform specific
+RESOURCE_LIST=Resource/CMap/ Resource/ColorSpace/ Resource/Decoding/ Resource/Fonts/ Resource/Procset/ Resource/IdiomSet/ Resource/CIDFont/
+
 !ifndef COMPILE_INITS
 COMPILE_INITS=0
 !endif

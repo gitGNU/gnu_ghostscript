@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_l2img.ps,v 1.3 2005/12/13 17:48:51 jemarch Exp $
+% $Id: gs_l2img.ps,v 1.4 2006/06/16 12:55:14 Arabidopsis Exp $
 % Emulate the Level 2 dictionary-based image operator in Level 1,
 % except for Interpolate (ignored) and MultipleDataSources = true;
 % also, we require that the data source be either a procedure of a
@@ -158,7 +158,7 @@ currentdict end def
 ] def
 /colorimage		% <width> <height> <bits/comp> <matrix>
 			%   <datasrc> false <ncomp> colorimage -
- { 1 index { /colorimage load /rangecheck signalerror } if exch pop
+ { 1 index { /colorimage .systemvar /rangecheck signalerror } if exch pop
    //.cincompdict exch get exec
    7 dict begin /ColorSpace exch cvlit def
    .imagekeys { exch cvlit def } forall

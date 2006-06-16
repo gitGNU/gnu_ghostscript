@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>ps2pdf: PostScript-to-PDF converter</title>
-<!-- $Id: Ps2pdf.htm,v 1.6 2006/03/05 13:04:27 Arabidopsis Exp $ -->
+<!-- $Id: Ps2pdf.htm,v 1.7 2006/06/16 12:55:14 Arabidopsis Exp $ -->
 <!-- Originally: ps2pdf.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -25,6 +25,8 @@
 <li><a href="#Usage">Usage</a>
 <li><a href="#Orientation">Setting page orientation</a>
 <li><a href="#Options">Options</a>
+<li><a href="#PDFX">Creating a PDF/X-3 document</a>
+<li><a href="#PDFA">Creating a PDF/A document</a>
 <li><a href="#Limitations">Limitations</a>
 <li><a href="#PPD">Ghostscript PDF Printer Description</a>
 <li><a href="#Problems">Known problems</a>
@@ -115,7 +117,7 @@ line.
 
 <p>
 Note that if you specify a value for <b><tt>PDFSETTINGS</tt></b>, this
-chooses PDF 1.2 or 1.3 output depending on the value of
+chooses PDF 1.3 or 1.4 output depending on the value of
 <b><tt>PDFSETTINGS</tt></b>: this overrides the output format specified by
 the script name.  You can still specify the output format by using
 <b><tt>-dCompatibilityLevel=</tt></b> <em>after</em>
@@ -203,7 +205,7 @@ running <b><tt>ps2pdf</tt></b>, and provide an equivalent way to set these
 parameters from within the PostScript input file.
 
 <p>
-<b><tt>ps2pdf</tt></b> also recognizes the following switches:
+<b><tt>ps2pdf</tt></b> also recognizes the following options:
 
 <dl>
 
@@ -246,6 +248,108 @@ wide variety of uses, possibly at the expense of a larger output file.
 
 </dl>
 
+<p>
+The following option controls a conversion into PDF/X-3:
+<p>
+
+<dl>
+<dt><b><tt>-dPDFX=</tt></b><em>boolean</em>
+<dd>Specifies the generated document to follow the PDF/X-3 standard.
+When true, a <b><tt>DefaultRGB</b></tt> <b><tt>ColorSpace</b></tt> resource must be defined, and
+options <b><tt>NOSUBSTDEVICECOLORS</b></tt>, <b><tt>NOCIE</b></tt> must not be specified.
+Default value is <b><tt>false</b></tt>. 
+</dl>
+
+<p>
+
+When generating a PDF/X-3 document, Ghostscript performs the following 
+special actions to satisfy the PDF/X-3 standard :
+<ul>
+<li> All fonts are being embedded.
+<li> <b><tt>DeviceRGB</b></tt> color space is being substituted with <b><tt>DefaultRGB</b></tt> color space,
+which must be defined in the <b><tt>ColorSpace</b></tt> category.
+The easiest way is to provide it in the <b><tt>DefaultRGB</b></tt> file in the resource directory. 
+<li> <b><tt>DeviceRGB</b></tt> color values are being passed unchanged.
+If an user needs an untrivial color adjustment, an untrivial <b><tt>DefaultRGB</b></tt> color space to be 
+defined.
+<li> Transfer functions and halftone phases are being skipped.
+<li> <b><tt>/PS pdfmark</b></tt> interpretes the <b><tt>DataSource</b></tt> stream or file.
+<li><b><tt>TrimBox</b></tt> and <b><tt>BleedBox</b></tt> entries
+are generated in page descriptions.
+Their values can be changed using the
+<b><tt>PDFXTrimBoxToMediaBoxOffset</b></tt>,
+<b><tt>PDFXSetBleedBoxToMediaBox</b></tt>, and
+<b><tt>PDFXBleedBoxToTrimBoxOffset</b></tt>
+distiller parameters (see below).
+</ul>    
+
+
+<p>
+The following options control a conversion into PDF 1.2:
+<p>
+
+<dl>
+
+<dt><b><tt>-dPatternImagemask=</tt></b><em>boolean</em>
+<dd>With <b><tt>CompatibilityLevel &LT 1.3 </b></tt> it specifies whether the target viewer
+handles <b><tt>ImageMask</b></tt> with a pattern color. Some old viewers,
+such as Ghostscript 3.30 fail with such constructs.
+Seting this option to false, one can get more compatibility,
+but the mask interpolation is lost.
+With <b><tt>CompatibilityLevel &GT= 1.3 </b></tt> this option is being ignored.
+Default value is <b><tt>false</b></tt>.
+
+<dt><b><tt>-dMaxClipPathSize=</tt></b><em>integer</em>
+<dd>Specifies the maximum number of elements in the clipping path
+that the target viewer can handle. This option is used only with 
+<b><tt>CompatibilityLevel &LT 1.3 </b></tt> and <b><tt>PatternImagemask=false</tt></b>,
+and only when converting a mask into a clipping path.
+If the clipping path exceeds the specified size,
+the masked image and the clipping path is being decomposed into smaller images.
+The value of the option counts straight path segments
+(curved segments are not used for representing a mask).
+Default value is <b><tt>12000</b></tt>.
+
+<dt><b><tt>-dMaxShadingBitmapSize=</tt></b><em>integer</em>
+<dd>With <b><tt>CompatibilityLevel &LT 1.3 </b></tt> it specifies 
+the maximum number of bytes allowed for representing a shading as a bitmap.
+If a shading exceeds this value, the resolution of the output bitmap
+is being reduces to fit into the specified frame.
+Note that the number of bytes depends on the number of color components
+in <b><tt>ProcessColorModel</b></tt>, assumes 8 bits per sample,
+and doesn't account an image compression or filtering.
+Also note that reducing the resolution results unsmooth shading boundaries.
+
+With <b><tt>CompatibilityLevel &GT= 1.3 </b></tt> this option is being ignored.
+Default value is <b><tt>256000</b></tt>.
+For the best quality one can set the maximal integer value,
+but the output file size may dramatically increase.
+Therefore the user should choose a compromise value.
+
+<dt><b><tt>-dHaveTrueTypes=</tt></b><em>boolean</em>
+<dd>With <b><tt>CompatibilityLevel &LT 1.3 </b></tt> it specifies 
+whether the target viewer can handle TrueType fonts.
+If not, TrueType fonts are being converted into raster fonts
+with resolution specified in </b></tt>HWResolution</b></tt>.
+With <b><tt>CompatibilityLevel &GT= 1.3 </b></tt> this option is being ignored.
+Default value is <b><tt>true</b></tt>.
+
+</dl>
+
+<p>
+The following option controls a conversion into PDF 1.3:
+<p>
+
+<dl>
+
+<dt><b><tt>-dHaveTransparency=</tt></b><em>boolean</em>
+<dd>With <b><tt>CompatibilityLevel &GT= 1.4 </b></tt> it specifies 
+whether the target viewer can handle PDF 1.4 transparency objects.
+If not, transparency objects are being converted into plain images.
+Default value is <b><tt>true</b></tt>.
+
+</dl>
+
 <a name="Encryption"></a>
 The following switches are used for creating encrypted documents :
 
@@ -282,10 +386,57 @@ If the length isn't 40, <b><tt>-dEncryptionR</tt></b> must be 3.
 </dl>
 
 
+<a name="Encryption"></a>
+The following switches are used for generating metadata according to Adobe XMP specification :
+
+<dl>
+<dt><b><tt>-sDocumentUUID=</tt></b><em>string</em>
+<dd>Defines a DocumentID to be included into the document Metadata.
+If not specified, Ghostscript generates an UUID automatically.
+Otherwise the specified string is being copyed into the document without 
+checking its syntax or consistence.
+<p>
+Note that Adobe XMP specification requires DocumentID must be same
+for all versions of a document. Since Ghostscript does not provide
+a maintenance of document versions, users are responsible to provide
+a correct UUID through this parameter.
+<p>
+Note that Ghostscript has no assess to the host node ID
+due to a minimization of platform dependent modules.
+Therefore it uses an MD5 hash of the document contents for generating UUIDs.
+</dl>
+
+<dl>
+<dt><b><tt>-sInstanceUUID=</tt></b><em>string</em>
+<dd>Defines a instance ID to be included into the document Metadata.
+If not specified, Ghostscript generates an UUID automatically.
+Otherwise the specified string is being copyed into the document without
+checking its syntax or consistence.
+<p>
+Note that Adobe XMP specification requires instance ID must be inique
+for all versions of document. This parameter may be used to disable
+an unique ID generation for a debug purpose.
+
+<p>
+When none of <b><tt>DocumentUUID</tt></b>
+and <b><tt>InstanceUUID</tt></b> are specified,
+the generated DocumentID appears same as instance ID.
+</dl>
+
+<dl>
+<dt><b><tt>-sDocumentTimeSeq=</tt></b><em>integer</em>
+<dd>Defines an integer to be used as a deconflictor for generating
+UUIDs, when several invokations of Ghostscript create
+several PDF documents within same clock quantum (tick).
+Mainly reserved for very fast computers and/or multhithreading applications,
+which may appear in future. If both <b><tt>DocumentUUID</tt></b>
+and <b><tt>InstanceUUID</tt></b> are specified, <b><tt>DocumentTimeSeq</tt></b> is being ignored.
+</dl>
+
 <p>
 <b><tt>ps2pdf</tt></b> recognizes all of the Acrobat Distiller 5 parameters
 defined in the DistillerParameters document included in the 
-<a href="http://partners.adobe.com/asn/tech/pdf/">Acrobat SDK</a>.
+<a href="http://partners.adobe.com/public/developer/acrobat/sdk/index.html">Acrobat SDK</a>.
 Cells in the table
 containing '=' mean that the value of the parameter is the same as in the
 "default" column.
@@ -306,7 +457,7 @@ containing '=' mean that the value of the parameter is the same as in the
 	<td>&nbsp;&nbsp;
 	<th align=left>prepress
 <tr>	<td colspan=13><hr>
-<tr valign=top><td><b><tt>AlwaysEmbed</tt></b><td><td><td><td>[]<td><td>=<td><td>=<td><td>=<td><td>=
+<tr valign=top><td><b><tt>AlwaysEmbed</tt></b><td><td><a href="#note_13">(13)</a><td><td>[ ]<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>AntiAliasColorImages</tt></b><td><td><a href="#note_0">(0)</a><td><td>false<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>AntiAliasGrayImages</tt></b><td><td><a href="#note_0">(0)</a><td><td>false<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>AntiAliasMonoImages</tt></b><td><td><a href="#note_0">(0)</a><td><td>false<td><td>=<td><td>=<td><td>=<td><td>=
@@ -320,18 +471,18 @@ containing '=' mean that the value of the parameter is the same as in the
 <tr valign=top><td><b><tt>CalGrayProfile</tt></b><td><td><a href="#note_0">(0)</a><td><td>()<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>CalRGBProfile</tt></b><td><td><a href="#note_0">(0)</a><td><td>()<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>CannotEmbedFontPolicy</tt></b><td><td><a href="#note_0">(0)</a><td><td>/Warning<td><td>/Warning<td><td>/Warning<td><td>/Warning<td><td>/Error
-<tr valign=top><td><b><tt>ColorACSImageDict</tt></b><td><td><td><td><a href="#note_7">(note 7)</a><td><td><a href="#note_10">(note 10)</a><td><td><a href="#note_10">(note 10)</a><td><td><a href="#note_8">(note 8)</a><td><td><a href="#note_9">(note 9)</a>
+<tr valign=top><td><b><tt>ColorACSImageDict</tt></b><td><td><a href="#note_13">(13)</a><td><td><a href="#note_7">(note 7)</a><td><td><a href="#note_10">(note 10)</a><td><td><a href="#note_10">(note 10)</a><td><td><a href="#note_8">(note 8)</a><td><td><a href="#note_9">(note 9)</a>
 <tr valign=top><td><b><tt>ColorConversionStrategy</tt></b><td><td><a href="#note_0">(0</a>,<a href="#note_6">6)</a><td><td>/LeaveColorUnchanged<td><td>/sRGB<td><td>/sRGB<td><td>/UseDeviceIndependentColor<td><td>/LeaveColorUnchanged
 <tr valign=top><td><b><tt>ColorImageDepth</tt></b><td><td><td><td>-1<td><td>=<td><td>=<td><td>=<td><td>=
-<tr valign=top><td><b><tt>ColorImageDict</tt></b><td><td><td><td><a href="#note_7">(note 7)</a><td><td>=<td><td>=<td><td>=<td><td>=
+<tr valign=top><td><b><tt>ColorImageDict</tt></b><td><td><a href="#note_13">(13)</a><td><td><a href="#note_7">(note 7)</a><td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>ColorImageFilter</tt></b><td><td><td><td>/DCTEncode<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>ColorImageDownsampleThreshold</tt></b><td><td><td><td>1.5<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>ColorImageDownsampleType</tt></b><td><td><a href="#note_3">(3)</a><td><td>/Subsample<td><td>/Average<td><td>/Bicubic<td><td>/Bicubic<td><td>/Bicubic
 <tr valign=top><td><b><tt>ColorImageResolution</tt></b><td><td><td><td>72<td><td>72<td><td>150<td><td>300<td><td>300
-<tr valign=top><td><b><tt>CompatibilityLevel</tt></b><td><td><td><td>1.3<td><td>1.2<td><td>1.3<td><td>1.3<td><td>1.3
+<tr valign=top><td><b><tt>CompatibilityLevel</tt></b><td><td><td><td>1.4<td><td>1.3<td><td>1.4<td><td>1.4<td><td>1.4
 <tr valign=top><td><b><tt>CompressPages</tt></b><td><td><td><td>true<td><td>=<td><td>=<td><td>=<td><td>=
-<tr valign=top><td><b><tt>ConvertCMYKImagesToRGB</tt></b><td><td><td><td>true<td><td>=<td><td>=<td><td>=<td><td>=
-<tr valign=top><td><b><tt>ConvertImagesToIndexed</tt></b><td><td><a href="#note_0">(0)</a><td><td>true<td><td>=<td><td>=<td><td>=<td><td>=
+<tr valign=top><td><b><tt>ConvertCMYKImagesToRGB</tt></b><td><td><td><td>false<td><td>=<td><td>=<td><td>=<td><td>=
+<tr valign=top><td><b><tt>ConvertImagesToIndexed</tt></b><td><td><a href="#note_0">(0)</a><td><td>false<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>CoreDistVersion</tt></b><td><td><td><td>4000<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>CreateJobTicket</tt></b><td><td><a href="#note_0">(0)</a><td><td>false<td><td>false<td><td>false<td><td>true<td><td>true
 <tr valign=top><td><b><tt>DefaultRenderingIntent</tt></b><td><td><td><td>/Default<td><td>=<td><td>=<td><td>=<td><td>=
@@ -346,9 +497,9 @@ containing '=' mean that the value of the parameter is the same as in the
 <tr valign=top><td><b><tt>EncodeGrayImages</tt></b><td><td><td><td>true<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>EncodeMonoImages</tt></b><td><td><td><td>true<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>EndPage</tt></b><td><td><a href="#note_0">(0)</a><td><td>-1<td><td>=<td><td>=<td><td>=<td><td>=
-<tr valign=top><td><b><tt>GrayACSImageDict</tt></b><td><td><td><td><a href="#note_7">(note 7)</a><td><td><a href="#note_7">(note 7)</a><td><td><a href="#note_10">(note 10)</a><td><td><a href="#note_8">(note 8)</a><td><td><a href="#note_9">(note 9)</a>
+<tr valign=top><td><b><tt>GrayACSImageDict</tt></b><td><td><a href="#note_13">(13)</a><td><td><a href="#note_7">(note 7)</a><td><td><a href="#note_7">(note 7)</a><td><td><a href="#note_10">(note 10)</a><td><td><a href="#note_8">(note 8)</a><td><td><a href="#note_9">(note 9)</a>
 <tr valign=top><td><b><tt>GrayImageDepth</tt></b><td><td><td><td>-1<td><td>=<td><td>=<td><td>=<td><td>=
-<tr valign=top><td><b><tt>GrayImageDict</tt></b><td><td><td><td><a href="#note_7">(note 7)</a><td><td>=<td><td>=<td><td>=<td><td>=
+<tr valign=top><td><b><tt>GrayImageDict</tt></b><td><td><a href="#note_13">(13)</a><td><td><a href="#note_7">(note 7)</a><td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>GrayImageDownsampleThreshold</tt></b><td><td><td><td>1.5<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>GrayImageDownsampleType</tt></b><td><td><a href="#note_3">(3)</a><td><td>/Subsample<td><td>/Average<td><td>/Bicubic<td><td>/Bicubic<td><td>/Bicubic
 <tr valign=top><td><b><tt>GrayImageFilter</tt></b><td><td><td><td>/DCTEncode<td><td>=<td><td>=<td><td>=<td><td>=
@@ -358,12 +509,12 @@ containing '=' mean that the value of the parameter is the same as in the
 <tr valign=top><td><b><tt>LZWEncodePages</tt></b><td><td><a href="#note_2">(2)</a><td><td>false<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>MaxSubsetPct</tt></b><td><td><td><td>100<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>MonoImageDepth</tt></b><td><td><td><td>-1<td><td>=<td><td>=<td><td>=<td><td>=
-<tr valign=top><td><b><tt>MonoImageDict</tt></b><td><td><td><td><<K -1>><td><td>=<td><td>=<td><td>=<td><td>=
+<tr valign=top><td><b><tt>MonoImageDict</tt></b><td><td><a href="#note_13">(13)</a><td><td>&lt;&lt;K -1&gt;&gt;<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>MonoImageDownsampleThreshold</tt></b><td><td><td><td>1.5<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>MonoImageDownsampleType</tt></b><td><td><td><td>/Subsample<td><td>/Average<td><td>/Bicubic<td><td>/Bicubic<td><td>/Bicubic
 <tr valign=top><td><b><tt>MonoImageFilter</tt></b><td><td><td><td>/CCITTFaxEncode<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>MonoImageResolution</tt></b><td><td><td><td>300<td><td>300<td><td>300<td><td>1200<td><td>1200
-<tr valign=top><td><b><tt>NeverEmbed</tt></b><td><td><td><td><a href="#note_11">(note 11)</a><a href="#note_12">(note 12)</a><td><td><a href="#note_11">(note 11)</a><a href="#note_12">(note 12)</a><td><td><a href="#note_11">(note 11)</a><a href="#note_12">(note 12)</a><td><td>[]<a href="#note_12">(note 12)</a><td><td>[]<a href="#note_12">(note 12)</a>
+<tr valign=top><td><b><tt>NeverEmbed</tt></b><td><td><a href="#note_13">(13)</a><td><td><a href="#note_11">(note 11)</a><a href="#note_12">(note 12)</a><td><td><a href="#note_11">(note 11)</a><a href="#note_12">(note 12)</a><td><td><a href="#note_11">(note 11)</a><a href="#note_12">(note 12)</a><td><td>[ ]<a href="#note_12">(note 12)</a><td><td>[ ]<a href="#note_12">(note 12)</a>
 <tr valign=top><td><b><tt>OffOptimizations</tt></b><td><td><td><td>0<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>OPM</tt></b><td><td><td><td>1<td><td>=<td><td>=<td><td>=<td><td>=
 <tr valign=top><td><b><tt>Optimize</tt></b><td><td><a href="#note_0">(0</a>,<a href="#note_5">5)</a><td><td>false<td><td>true<td><td>true<td><td>true<td><td>true
@@ -423,43 +574,47 @@ Optimization (linearization) is implemented with a separate program,
 
 <p>
 <a name="note_6">(note 6)</a>
-Currently, colors for images and shadings are left in the color space
-specified in the PostScript input, except for
-<b><tt>ConvertCMYKImagesToRGB</tt></b>; the current color in the graphics
-state (used for fill, stroke, text, and imagemask) is always converted to
-the color space specified by the current value of
-<b><tt>ProcessColorModel</tt></b>. The intended behavior is the same as for
-Acrobat Distiller, except that if <b><tt>ColorConversionStrategy</tt></b> is
-set to <b><tt>/UseDeviceDependentColor</tt></b>, colors are converted to the
-color space specified by <b><tt>ProcessColorModel</tt></b> rather than
-always to <b><tt>/DeviceRGB</tt></b>.
 
+Ghostscript specifics : The value <tt><b>UseDeviceIndependentColor</tt></b>
+requires the device parameter <tt><b>UseCIEColor</tt></b> to be set to <tt><b>true</tt></b>.
+The value <tt><b>UseDeviceIndependentColorForImages</tt></b> works same as <tt><b>UseDeviceIndependentColor</tt></b>.
+The value <tt><b>CMYK</tt></b> works with any <tt><b>CompatibilityLevel</tt></b> and
+requires the device parameter <tt><b>ProcessColorModel</tt></b> to be set to <tt><b>DeviceCMYK</tt></b>.
+The value <tt><b>sRGB</tt></b>
+requires the device parameter <tt><b>ProcessColorModel</tt></b> to be set to <tt><b>DeviceRGB</tt></b>,
+and actually converts to RGB with the default Ghostscript conversion.
+The new Ghostscript-specific value <tt><b>Gray</tt></b>
+requires the device parameter <tt><b>ProcessColorModel</tt></b> to be set to <tt><b>DeviceGray</tt></b>,
+and converts all colors to DeviceGray.
+The old Ghostscript-specific value <tt><b>UseDeviceDependentColor</tt></b> 
+is now depricated. It is automaticly replaced with <tt><b>sRGB</tt></b>,
+<tt><b>CMYK</tt></b>, or <tt><b>Gray</tt></b>.
 <p>
 <a name="note_7">(note 7)</a>
  The default image parameter dictionary is
 <blockquote><b><tt>
-<< /QFactor 0.9 /Blend 1 /HSamples [2 1 1 2] /VSamples [2 1 1 2] >>
+&lt;&lt; /QFactor 0.9 /Blend 1 /HSamples [2 1 1 2] /VSamples [2 1 1 2] &gt;&gt;
 </tt></b></blockquote>
 
 <p>
 <a name="note_8">(note 8)</a>
 The printer ACS image parameter dictionary is
 <blockquote><b><tt>
-<< /QFactor 0.4 /Blend 1 /ColorTransform 1 /HSamples [1 1 1 1] /VSamples [1 1 1 1] >>
+&lt;&lt; /QFactor 0.4 /Blend 1 /ColorTransform 1 /HSamples [1 1 1 1] /VSamples [1 1 1 1] &gt;&gt;
 </tt></b></blockquote>
 
 <p>
 <a name="note_9">(note 9)</a>
 The prepress ACS image parameter dictionary is
 <blockquote><b><tt>
-<< /QFactor 0.15 /Blend 1 /ColorTransform 1 /HSamples [1 1 1 1] /VSamples [1 1 1 1] >>
+&lt;&lt; /QFactor 0.15 /Blend 1 /ColorTransform 1 /HSamples [1 1 1 1] /VSamples [1 1 1 1] &gt;&gt;
 </tt></b></blockquote>
 
 <p>
 <a name="note_10">(note 10)</a>
 The screen and ebook ACS image parameter dictionary is
 <blockquote><b><tt>
-<< /QFactor 0.76 /Blend 1 /ColorTransform 1 /HSamples [2 1 1 2] /VSamples [2 1 1 2] >>
+&lt;&lt; /QFactor 0.76 /Blend 1 /ColorTransform 1 /HSamples [2 1 1 2] /VSamples [2 1 1 2] &gt;&gt;
 </tt></b></blockquote>
 
 <p>
@@ -469,11 +624,39 @@ The default, screen, and ebook settings never embed the 14 standard fonts
 
 <p>
 <a name="note_12">(note 12)</a>
-<b><tt>NeverEnbed</tt></b> can include CID font names.
+<b><tt>NeverEmbed</tt></b> can include CID font names.
 If a CID font is substituted in <b><tt>lib/cidfmap</tt></b>,
 the substitute font name is used when the CID font is embedded,
 and the original CID font name is used when it is not embedded.
-<b><tt>NeverEnbed</tt></b> should always specify the original CID font name.
+<b><tt>NeverEmbed</tt></b> should always specify the original CID font 
+name.
+
+<p>
+<a name="note_13">(note 13)</A>
+The arrays <b><tt>AlwaysEmbed</tt></b> and <b><tt>NeverEmbed</tt></b> and
+image parameter dictionaries <b><tt>ColorACSImageDict</tt></b>,
+<b><tt>ColorACSImageDict</tt></b>, <b><tt>ColorImageDict</tt></b>,
+
+<b><tt>GrayACSImageDict</tt></b>, <b><tt>GrayImageDict</tt></b>,
+<b><tt>MonoImageDict</tt></b> cannot be specified on the ps2pdf command line.
+To specify these, you must use PostScript, either by including it in the PostScript source
+or by passing the <tt><b>-c</tt></b> command-line parameter to ghostscript as described in <a href="#Limitations">Limitations</A> below.
+For example, including the PostScript string in your file <tt>in.ps</tt>:
+<blockquote><tt>&lt;&lt;/AlwaysEmbed [/Helvetica /Times-Roman]&gt;&gt; setdistillerparams</tt></blockquote>
+is equivalent to invoking:
+
+<blockquote><b><tt>gs -dBATCH -dSAFER -DNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=out.pdf -c
+'.setpdfwrite &lt;&lt;/AlwaysEmbed [/Helvetica /Times-Roman]&gt;&gt; setdistillerparams' -f
+in.ps</tt></b></blockquote>
+
+or using <b><tt>ps2pdf</tt></b> with the extra parameters in a file:
+
+<blockquote><b><tt>ps2pdf @params.in out.pdf</tt></b></blockquote>
+
+where the file <b>params.in</b> contains:
+
+<blockquote><b><tt>-c '&lt;&lt;/AlwaysEmbed [/Helvetica /Times-Roman]&gt;&gt; setdistillerparams' -f
+in.ps</tt></b></blockquote>
 
 <hr>
 
@@ -509,6 +692,165 @@ To set distiller parameters, select the "Ghostscript PDF"
 Printing Preferences, then the Advanced button.
 The PDF settings are under "Printer Features".
 
+<hr>
+
+<h2><a name="PDFX"></a>Creating a PDF/X-3 document</h2>
+
+<p>
+
+To create a PDF/X-3 document from a Postscript or a PDF file, you should :
+
+<ul>
+<li> Specify the <b><tt>pdfwrite</b></tt> device or use the <b><tt>ps2pdf</b></tt> script.
+<li> Specify the <b><tt>-dPDFX</b></tt> option. It provides the document conformity 
+     and forces <b><tt>-dCompatibilityLevel=1.3</b></tt>.
+<li> Specify <b><tt>-sProcessColorModel=DeviceGray</b></tt> or <b><tt>-sProcessColorModel=DeviceCMYK</b></tt>
+     (<b><tt>DeviceRGB</b></tt> is not allowed).
+<li> Specify the <b><tt>-dUseCIEColor</b></tt> option if necessary (see below).
+<li> Specify a PDF/X definition file before running the input document.
+     It provides additional information to be included into the output document.
+     A sample PDF/X definition file may be found in <b><tt>gs/lib/PDFX_def.ps</b></tt>.
+<li> If a registered printing condition is applicable, specify its identifier 
+     in the PDF/X definition file. Otherwise provide an ICC profile and 
+     specify it in the PDF/X definition file as explained below. 
+<li> Provide a <b><tt>DefaultRGB</b></tt> resource file in the ColorSpace resource category.
+     Either define it in the PDF/X definition file, or provide
+     a definition of <b><tt>gs/Resource/ColorSpace/DefaultRGB</b></tt> .
+     Rather <b><tt>gs/Resource/ColorSpace/DefaultRGB</b></tt> is usually 
+     distributed with Ghostscript, its contents is not necessarily satisfy your needs, see below.
+</ul>
+
+<p>
+As mentioned above, the PDF/X definition file provides a special information,
+which the PDF/X-3 standard requires. You can find a sample file in
+<b><tt>gs/lib/PDFX_def.ps</b></tt>, and edit it according to your needs.
+The file follows Postscript syntax and uses the operator <b><tt>pdfmark</b></tt>
+to pass the special information. For your comfort 
+we marked editable lines in the sample file with the comment <b><tt>% Customize</b></tt>.
+They are explained below.
+
+<dl>
+<dt><b><tt>OutputCondition</tt></b> <em>string</em>
+<dd>Defines an <b><tt>OutputCondition</tt></b> value for the output intent dictionary.
+</dl>
+
+
+<dl>
+<dt><b><tt>OutputConditionIdentifier</tt></b> <em>string</em>
+<dd>Defines an <b><tt>OutputConditionIdentifier</tt></b> value for the output intent dictionary.
+</dl>
+
+<dl>
+<dt><b><tt>ICCProfile</tt></b> <em>string</em>
+<dd> May be omited if <b><tt>OutputConditionIdentifier</tt></b>
+specifies a registed identifier of characterized printing condition
+(see http://www.color.org/IPA_2003-11_PDFX.pdf).
+Defines a file name of an ICC profile file to be included into the output document. 
+You may specify either an absolute file name, or a relative
+path from the working directory. 
+</dl>
+
+<dl>
+<dt><b><tt>Title</tt></b> <em>string</em>
+<dd>Defines the document title. Only useful if the source Postscript file doesnt
+define a title with DSC comments. Otherwise remove entire line from definition file.
+</dl>
+
+<dl>
+<dt><b><tt>Info</tt></b> <em>string</em>
+<dd>Defines an <b><tt>Info</tt></b> value for the output intent dictionary.
+</dl>
+
+<p>
+Rather the PDF/X-3 standard requires colors to be adjusted at the
+document generation time, Ghostscript <em>does not</em> perform any
+special color conversion. Either colors to be adjusted in advance,
+or a proper color conversion to be specified in <b><tt>/DefaultGray</b></tt>,
+<b><tt>DefaultRGB</b></tt>,  <b><tt>DefaultCMYK</b></tt> resources of the  
+<b><tt>ColorSpace</b></tt> resource category,
+and the <b><tt>-dUseCIEColor</b></tt> option to be specified
+to remap device colors into CIE colors. 
+The choice of the ICC profile is also the user's responsibility.
+
+<p>Please note that if a graphic object can't embed into the output format,
+Ghostscript converts it into low level objects, using a device color space
+specified in the <b><tt>ProcessColorModel</b></tt> option.
+If you need to adjust those resulting colors, you may substitute
+them with CIE colors, <em>running Ghostscript at second time </em>.
+Performing both actions in a single pass is a subject of further improvements.
+
+<p>Ghostscript distribution does not contain an ICC profile to be used
+for creating a PDF/X-3 document. Users should either create an appropriate one themselves,
+or use one from a public domain, or create one with the PDF/X-3 inspector freeware.
+
+<p>The PDF/X-3 standard requires a <b><tt>TrimBox</b></tt> entry
+to be written for all page descriptions.
+This is an array of four offsets
+that specify how the page is to be trimmed
+after it has been printed.
+It is set to the same as <b><tt>MediaBox</b></tt> by default
+unless the <b><tt>PDFXTrimBoxToMediaBoxOffset</b></tt>
+distiller parameter is present.
+It accepts offsets to the <b><tt>MediaBox</b></tt> as an array
+[<i>left&nbsp;right&nbsp;top&nbsp;bottom</i>],
+e.g., the PostScript input code
+<b><tt>&lt;&lt;&nbsp;/PDFXTrimBoxToMediaBoxOffset
+[10&nbsp;20&nbsp;30&nbsp;40]&nbsp;&gt;&gt;&nbsp;setdistillerparams</b></tt>
+specifies that 10 points will be trimmed at the left,
+20 points at the right,
+30 points at the top,
+and 40 points at the bottom.
+
+<p>Another page entry is the <b><tt>BleedBox</b></tt>.
+It gives the area of the page
+to which actual output items may extend;
+cut marks, color bars etc.
+must be positioned in the area between the <b><tt>BleedBox</b></tt>
+and the <b><tt>MediaBox</b></tt>.
+The <b><tt>TrimBox</b></tt> is always contained within the
+<b><tt>BleedBox</b></tt>.
+By default,
+the <b><tt>PDFXSetBleedBoxToMediaBox</b></tt> distiller parameter
+is <b><tt>true</b></tt>,
+and the <b><tt>BleedBox</b></tt> is set to the same values
+as the <b><tt>MediaBox</b></tt>.
+If it is set to <b><tt>false</b></tt>,
+the <b><tt>PDFXBleedBoxToTrimBoxOffset</b></tt>
+parameter gives offset to the <b><tt>TrimBox</b></tt>.
+It accepts a four-value array in the same format as the
+<b><tt>PDFXTrimBoxToMediaBoxOffset</b></tt> parameter.
+
+<p>
+
+Here is a sample command line to invoke Ghostscript for generating a PDF/X-3 document :
+<blockquote><b><tt>
+gs -dPDFX -dBATCH -dNOPAUSE -dNOOUTERSAVE -dUseCIEColor -sDEVICE=pdfwrite -sOutputFile=out-x3.pdf PDFX_def.ps input.ps
+</tt></b></blockquote>
+
+
+<p>
+<hr>
+<h2><a name="PDFA"></a>Creating a PDF/A document</h2>
+
+<p>
+To create a PDF/A document, please follow instructions about <a href="#PDFX">creating a PDF/X-3 document</a>,
+with the following exceptions :
+
+<ul>
+<li> Specify the <b><tt>-dPDFA</b></tt> option.
+<li> A sample PDF/A definition file may be found in <b><tt>gs/lib/PDFA_def.ps</b></tt>.
+<li> <b><tt>Info</tt></b>, <b><tt>OutputCondition</tt></b>, <b><tt>OutputConditionIdentifier</tt></b> 
+are not required in the PDF/A definition file.
+</ul>
+
+
+Here is a sample command line to invoke Ghostscript for generating a PDF/A document :
+<blockquote><b><tt>
+gs -dPDFA -dBATCH -dNOPAUSE -dNOOUTERSAVE -dUseCIEColor -sDEVICE=pdfwrite -sOutputFile=out-a.pdf PDFA_def.ps input.ps
+</tt></b></blockquote>
+
+
+<p>
 <hr>
 
 <h2><a name="Limitations"></a>Limitations</h2>
@@ -551,15 +893,27 @@ there is no standard way to specify any of these things in PostScript, so
 these statements only apply when the input file is already a PDF 1.4 file.)
 
 <p>
-<b><tt>ps2pdf</tt></b> provides simplified interface to Ghostscript
-command line. It is not possible to use <tt><b>-c</tt></b> option or pass
+<b><tt>ps2pdf</tt></b> provides a simplified interface to the Ghostscript
+command line. It is not possible to use <tt><b>-c</tt></b> option directly or pass
 multiple source files. For the unrestricted access to the command line
-parameters, use Ghostscript directly.
+parameters, use Ghostscript directly as in:
 
 <blockquote><b><tt>
 gs -q -dSAFER -dNOPAUSE -dBATCH -sOutputFile=file.pdf </tt></b><em>[more options]</em><b><tt> \<br>
 &nbsp;&nbsp;-sDEVICE=pdfwrite -c .setpdfwrite -f </b></tt><em>source1.ps [more files]</em>
 </blockquote>
+
+or create a parameter file with the <b><tt>-c</tt></b> option and/or the multiple input files:
+
+<blockquote><b><tt>
+ps2pdf @params.in out.pdf
+</tt></b></blockquote>
+
+where the file <b>params.in</b> contains:
+
+<blockquote><b><tt>-c </b><em>Postscript commands</em><b> -f </b></tt><em>source1.ps [more files]</em>
+</tt></b></blockquote>
+
 
 See <a href="Language.htm#.setpdfwrite">Language.htm</a> for details 
 of the <tt>.setpdfwrite</tt> operator.
@@ -576,6 +930,12 @@ restored by <b><tt>restore</tt></b>, but they are also saved by
 Changing the value of the <b><tt>CompressPages</tt></b> parameter after any
 marks have been made on the page may cause a crash.
 
+<p>
+Ghostscript has been writing incorrect <b><tt>ToUnicode CMap</tt></b> without
+<tt><b>CMapName</tt></b> into the PDF since version 8.10 (rev. 3611) . This bug
+is fixed in version 8.54 (rev. 6201). We recommend to re-generate PDF files
+created by the affected Ghostscript versions. Since version 8.54 (rev. 6590)
+Ghostscript can read the incorrect PDF files.
 <hr>
 
 <h2><a name="Ps2pdf_vs_AD"></a>Comparison of <b><tt>ps2pdf</tt></b> and

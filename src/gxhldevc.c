@@ -16,7 +16,7 @@
 
   
 */
-/* $Id: gxhldevc.c,v 1.3 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxhldevc.c,v 1.4 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* High level device color save/compare procedures */
 
 /*
@@ -93,13 +93,16 @@ gx_hld_save_color(const gs_imager_state * pis, const gx_device_color * pdevc,
 
         psc->color_space_id = pcs->id;
         pdevc->type->save_dc(pdevc, &(psc->saved_dev_color));
-        i = any_abs(i);
+	if (pdevc->type == gx_dc_type_pattern2)
+	    i = 0;
+        else if (i < 0)
+	    i = -i - 1; /* See gx_num_components_Pattern. */
         for (i--; i >= 0; i--)
 	    psc->ccolor.paint.values[i] = pdevc->ccolor.paint.values[i];
 
 	/* Save the pattern id - if present */
-	if (pdevc->type == gx_dc_type_pattern 
-	   || pdevc->type == gx_dc_type_pattern2)
+	if ((pdevc->type == gx_dc_type_pattern 
+	   || pdevc->type == gx_dc_type_pattern2) && pdevc->ccolor_valid)
             psc->pattern_id = pdevc->ccolor.pattern->pattern_id;
 	else
             psc->pattern_id = gs_no_id;

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zht2.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: zht2.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Level 2 sethalftone operator */
 #include "ghost.h"
 #include "oper.h"
@@ -91,8 +91,9 @@ zsethalftone5(i_ctx_t *i_ctx_p)
     uint name_size;
     int halftonetype, type = 0;
     gs_state *pgs = igs;
+    int space_index = r_space_index(op - 1);
 
-    mem = (gs_memory_t *) idmemory->spaces_indexed[r_space_index(op - 1)];
+    mem = (gs_memory_t *) idmemory->spaces_indexed[space_index];
 
     check_type(*op, t_dictionary);
     check_dict_read(*op);
@@ -286,15 +287,27 @@ zsethalftone5(i_ctx_t *i_ctx_p)
 	make_istruct(esp - 1, 0, pdht);
 	make_op_estack(esp, sethalftone_finish);
 	for (j = 0; j < count; j++) {
-	    gx_ht_order *porder =
-		(pdht->components == 0 ? &pdht->order :
-		 &pdht->components[j].corder);
+	    gx_ht_order *porder = NULL;
 
+	    if (pdht->components == 0)
+		porder = &pdht->order;
+	    else {
+		/* Find the component in pdht that matches component j in
+		   the pht; gs_sethalftone_prepare() may permute these. */
+		int k;
+		int comp_number = phtc[j].comp_number;
+		for (k = 0; k < count; k++) {
+		    if (pdht->components[k].comp_number == comp_number) {
+			porder = &pdht->components[k].corder;
+			break;
+		    }
+		}
+	    }
 	    switch (phtc[j].type) {
 	    case ht_type_spot:
 		code = zscreen_enum_init(i_ctx_p, porder,
 					 &phtc[j].params.spot.screen,
-					 &sprocs[j], 0, 0, mem);
+					 &sprocs[j], 0, 0, space_index);
 		if (code < 0)
 		    break;
 		/* falls through */

@@ -64,7 +64,7 @@
 /*
  * MQ Arithmetic Decoder
  *
- * $Id: jpc_mqdec.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jpc_mqdec.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -220,6 +220,7 @@ void jpc_mqdec_setctx(jpc_mqdec_t *mqdec, int ctxno, jpc_mqctx_t *ctx)
 
 /* Decode a bit. */
 
+/*
 int jpc_mqdec_getbit_func(register jpc_mqdec_t *mqdec)
 {
 	int bit;
@@ -231,6 +232,7 @@ int jpc_mqdec_getbit_func(register jpc_mqdec_t *mqdec)
 	  mqdec->ctxs, bit));
 	return bit;
 }
+*/
 
 /* Apply MPS_EXCHANGE algorithm (with RENORMD). */
 int jpc_mqdec_mpsexchrenormd(register jpc_mqdec_t *mqdec)

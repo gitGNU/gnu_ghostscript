@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdti.h,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdti.h,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Bitmap font interface for pdfwrite */
 
 #ifndef gdevpdti_INCLUDED
@@ -76,5 +76,8 @@ int pdf_write_bitmap_fonts_Encoding(gx_device_pdf *pdev);
 
 /* Write the contents of a Type 3 bitmap font resource. */
 int pdf_write_contents_bitmap(gx_device_pdf *pdev, pdf_font_resource_t *pdfont);
+
+/* Mark glyph names for garbager. */
+void pdf_mark_glyph_names(const pdf_font_resource_t *pdfont, const gs_memory_t *memory);
 
 #endif /* gdevpdti_INCLUDED */

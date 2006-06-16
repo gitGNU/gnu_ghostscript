@@ -16,7 +16,7 @@
 
   
 */
-/*$Id: gswts.h,v 1.3 2005/12/13 16:57:23 jemarch Exp $ */
+/*$Id: gswts.h,v 1.4 2006/06/16 12:55:03 Arabidopsis Exp $ */
 #ifndef gswts_INCLUDED
 #  define gswts_INCLUDED
 
@@ -51,9 +51,6 @@ int
 gs_wts_screen_enum_next(gs_wts_screen_enum_t *wse, floatp value);
 
 int
-wts_sort_blue(gs_wts_screen_enum_t *wse);
-
-int
 wts_sort_cell(gs_wts_screen_enum_t *wse);
 
 wts_screen_t *
@@ -65,7 +62,10 @@ gs_wts_free_enum(gs_wts_screen_enum_t *wse);
 void
 gs_wts_free_screen(wts_screen_t *wts);
 
+int
+wts_size(const wts_screen_t *ws);
+
+wts_screen_t *
+gs_wts_from_buf(const byte *buf);
+
 #endif
-
-
-

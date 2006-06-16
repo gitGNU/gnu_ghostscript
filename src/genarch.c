@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: genarch.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: genarch.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /*
  * Generate a header file (arch.h) with parameters
  * reflecting the machine architecture and compiler characteristics.
@@ -26,13 +26,19 @@
 #include <ctype.h>
 #include <stdio.h>
 /*
- * In theory, not all systems provide <string.h> or <setjmp.h>, or declare
- * memset in <string.h>, but at this point I don't think we care about any
- * that don't.
+ * In theory, not all systems provide <string.h> or declare memset 
+ * there, but at this point we don't think we care about any that don't.
  */
 #include <string.h>
 #include <time.h>
-#include <setjmp.h>
+
+/* We provide a _SIZEOF_ macro for GX_COLOR_INDEX_TYPE
+   fallback to a generic int if no such type is defined.
+   This default must be kept in sync with the one in gxcindex.h
+   or ARCH_SIZEOF_GX_COLOR_INDEX will be incorrect for such builds. */
+#ifndef GX_COLOR_INDEX_TYPE
+#define GX_COLOR_INDEX_TYPE ulong
+#endif
 
 /* We should write the result on stdout, but the original Turbo C 'make' */
 /* can't handle output redirection (sigh). */
@@ -41,17 +47,6 @@ private void
 section(FILE * f, const char *str)
 {
     fprintf(f, "\n\t /* ---------------- %s ---------------- */\n\n", str);
-}
-
-private clock_t
-time_clear(char *buf, int bsize, int nreps)
-{
-    clock_t t = clock();
-    int i;
-
-    for (i = 0; i < nreps; ++i)
-	memset(buf, 0, bsize);
-    return clock() - t;
 }
 
 private void
@@ -114,11 +109,6 @@ main(int argc, char *argv[])
 	char c;
 	double d;
     } sd;
-    /* Some architectures have special alignment requirements for jmpbuf. */
-    struct {
-	char c;
-	jmp_buf j;
-    } sj;
     long lm1 = -1;
     long lr1 = lm1 >> 1, lr2 = lm1 >> 2;
     unsigned long um1 = ~(unsigned long)0;
@@ -162,8 +152,12 @@ main(int argc, char *argv[])
     define_int(f, "ARCH_ALIGN_PTR_MOD", OFFSET_IN(sp, p));
     define_int(f, "ARCH_ALIGN_FLOAT_MOD", OFFSET_IN(sf, f));
     define_int(f, "ARCH_ALIGN_DOUBLE_MOD", OFFSET_IN(sd, d));
-    define_int(f, "ARCH_ALIGN_STRUCT_MOD", OFFSET_IN(sj, j));
 #undef OFFSET_IN
+
+    /* Some architectures have special alignment requirements for   */
+    /* jmp_buf, and we used to provide ALIGN_STRUCT_MOD for that.   */
+    /* We've now dropped that in favor of aligning jmp_buf by hand. */
+    /* See setjmp_.h for the implementation of this.                */
 
     section(f, "Scalar sizes");
 
@@ -174,6 +168,7 @@ main(int argc, char *argv[])
 #ifdef HAVE_LONG_LONG
     define_int(f, "ARCH_LOG2_SIZEOF_LONG_LONG", ilog2(size_of(long long)));
 #endif
+    define_int(f, "ARCH_SIZEOF_GX_COLOR_INDEX", sizeof(GX_COLOR_INDEX_TYPE));
     define_int(f, "ARCH_SIZEOF_PTR", size_of(char *));
     define_int(f, "ARCH_SIZEOF_FLOAT", size_of(float));
     define_int(f, "ARCH_SIZEOF_DOUBLE", size_of(double));
@@ -216,68 +211,6 @@ main(int argc, char *argv[])
     define(f, "ARCH_MAX_ULONG");
     fprintf(f, "((unsigned long)~0L + (unsigned long)0)\n");
 #undef PRINT_MAX
-
-    section(f, "Cache sizes");
-
-    /*
-     * Determine the primary and secondary cache sizes by looking for a
-     * non-linearity in the time required to fill blocks with memset.
-     */
-    {
-#define MAX_BLOCK (1 << 22)	/* max 4M cache */
-#define MAX_NREPS (1 << 10)	/* limit the number of reps we try */
-	static char buf[MAX_BLOCK];
-	int bsize = 1 << 10;
-	int nreps = 1;
-	clock_t t = 0;
-	clock_t t_eps;
-
-	/*
-	 * Increase the number of repetitions until the time is
-	 * long enough to exceed the likely uncertainty.
-	 */
-
-	while (nreps < MAX_NREPS && (t = time_clear(buf, bsize, nreps)) == 0)
-	    nreps <<= 1;
-	t_eps = t;
-	while (nreps < MAX_NREPS && (t = time_clear(buf, bsize, nreps)) < t_eps * 10)
-	    nreps <<= 1;
-
-	/*
-	 * Increase the block size until the time jumps non-linearly.
-	 */
-	for (; bsize <= MAX_BLOCK;) {
-	    clock_t dt = time_clear(buf, bsize, nreps);
-
-	    if (dt > t + (t >> 1)) {
-		t = dt;
-		break;
-	    }
-	    bsize <<= 1;
-	    nreps >>= 1;
-	    if (nreps == 0)
-		nreps = 1, t <<= 1;
-	}
-	define_int(f, "ARCH_CACHE1_SIZE", bsize >> 1);
-	/*
-	 * Do the same thing a second time for the secondary cache.
-	 */
-	if (nreps > 1)
-	    nreps >>= 1, t >>= 1;
-	for (; bsize <= MAX_BLOCK;) {
-	    clock_t dt = time_clear(buf, bsize, nreps);
-
-	    if (dt > t * 1.25) {
-		t = dt;
-		break;
-	    }
-	    bsize <<= 1;
-	    nreps >>= 1;
-	    if (nreps == 0)
-		nreps = 1, t <<= 1;
-	}
-	define_int(f, "ARCH_CACHE2_SIZE", bsize >> 1);
-    }
 
     section(f, "Miscellaneous");
 

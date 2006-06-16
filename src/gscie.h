@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gscie.h,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gscie.h,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Structures for CIE color algorithms */
 /* (requires gscspace.h, gscolor2.h) */
 
@@ -64,7 +64,7 @@
  * Define the threshold for interpolating.
  * This is computationally expensive.
  */
-#define CIE_INTERPOLATE_THRESHOLD 0.01
+#define CIE_INTERPOLATE_THRESHOLD 0.001
 
 /*
  * Define whether to interpolate in the RenderTable.  Currently this is a

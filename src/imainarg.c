@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: imainarg.c,v 1.7 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: imainarg.c,v 1.8 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Command line parsing and dispatching */
 #include "ctype_.h"
 #include "memory_.h"
@@ -460,7 +460,7 @@ run_stdin:
 		unsigned msize = 0;
 
 		sscanf((const char *)arg, "%u", &msize);
-#if arch_ints_are_short
+#if ARCH_INTS_ARE_SHORT
 		if (msize <= 0 || msize >= 64) {
 		    puts(minst->heap, "-M must be between 1 and 63");
 		    return e_Fatal;
@@ -474,13 +474,38 @@ run_stdin:
 		unsigned nsize = 0;
 
 		sscanf((const char *)arg, "%d", &nsize);
-#if arch_ints_are_short
+#if ARCH_INTS_ARE_SHORT
 		if (nsize < 2 || nsize > 64) {
 		    puts(minst->heap, "-N must be between 2 and 64");
 		    return e_Fatal;
 		}
 #endif
 		minst->name_table_size = (ulong) nsize << 10;
+	    }
+	    break;
+	case 'o':		/* set output file name and batch mode */
+	    {
+		const char *adef;
+		char *str;
+		ref value;
+		int len;
+
+		if (arg[0] == 0) {
+		    adef = arg_next(pal, &code);
+		    if (code < 0)
+			return code;
+		} else
+		    adef = arg;
+		if ((code = gs_main_init1(minst)) < 0)
+		    return code;
+		len = strlen(adef);
+		str = (char *)gs_alloc_bytes(minst->heap, (uint)len, "-o");
+		memcpy(str, adef, len);
+		make_const_string(&value, a_readonly | avm_foreign,
+				  len, (const byte *)str);
+		initial_enter_name("OutputFile", &value);
+		initial_enter_name("NOPAUSE", &vtrue);
+		initial_enter_name("BATCH", &vtrue);
 	    }
 	    break;
 	case 'P':		/* choose whether search '.' first */

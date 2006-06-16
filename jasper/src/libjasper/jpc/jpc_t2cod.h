@@ -64,7 +64,7 @@
 /*
  * Tier-2 Coding Library
  *
- * $Id: jpc_t2cod.h,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jpc_t2cod.h,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 #ifndef JPC_T2COD_H
@@ -211,10 +211,10 @@ typedef struct {
 	int pchgno;
 
 	/* Is this the first time in the current progression volume? */
-	bool prgvolfirst;
+	jas_bool prgvolfirst;
 
 	/* Is the current iterator value valid? */
-	bool valid;
+	jas_bool valid;
 
 	/* The current packet number. */
 	int pktno;

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: scfx.h,v 1.4 2005/12/13 16:57:27 jemarch Exp $ */
+/* $Id: scfx.h,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* CCITTFax filter state definition */
 /* Requires strimpl.h */
 
@@ -96,6 +96,7 @@ typedef struct stream_CFD_state_s {
     int cbit;			/* bits left to fill in current decoded */
     /* byte at lbuf[wpos] (0..7) */
     int rows_left;		/* number of rows left */
+    int row;			/* current row, first is 0 */
     int rpos;			/* rptr for copying lbuf to client */
     int wpos;			/* rlimit/wptr for filling lbuf or */
     /* copying to client */

@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpxut.c,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpxut.c,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Utilities for PCL XL generation */
 #include "math_.h"
 #include "string_.h"
@@ -34,9 +34,13 @@
 int
 px_write_file_header(stream *s, const gx_device *dev)
 {
+    static const char *const enter_pjl_header =
+        "\033%-12345X@PJL SET RENDERMODE=";
+    static const char *const rendermode_gray = "GRAYSCALE";
+    static const char *const rendermode_color = "COLOR";
     static const char *const file_header =
-	"\033%-12345X@PJL ENTER LANGUAGE = PCLXL\n\
-) HP-PCL XL;1;1;Comment Copyright Aladdin Enterprises 1996\000\n";
+	"\n@PJL ENTER LANGUAGE = PCLXL\n\
+) HP-PCL XL;1;1;Comment Copyright artofcode LLC 2005\000\n";
     static const byte stream_header[] = {
 	DA(pxaUnitsPerMeasure),
 	DUB(0), DA(pxaMeasure),
@@ -46,6 +50,16 @@ px_write_file_header(stream *s, const gx_device *dev)
 	DUB(eBinaryLowByteFirst), DA(pxaDataOrg),
 	pxtOpenDataSource
     };
+
+    px_put_bytes(s, (const byte *)enter_pjl_header,
+		 strlen(enter_pjl_header));
+
+    if (dev->color_info.num_components == 1)
+	px_put_bytes(s, (const byte *)rendermode_gray,
+		     strlen(rendermode_gray));
+    else
+	px_put_bytes(s, (const byte *)rendermode_color,
+		     strlen(rendermode_color));
 
     /* We have to add 2 to the strlen because the next-to-last */
     /* character is a null. */
@@ -71,7 +85,8 @@ px_write_page_header(stream *s, const gx_device *dev)
 
 /* Write the media selection command if needed, updating the media size. */
 int
-px_write_select_media(stream *s, const gx_device *dev, pxeMediaSize_t *pms)
+px_write_select_media(stream *s, const gx_device *dev, 
+		      pxeMediaSize_t *pms, byte *media_source)
 {
 #define MSD(ms, res, w, h)\
   { ms, (float)((w) * 1.0 / (res)), (float)((h) * 1.0 / res) },
@@ -87,6 +102,7 @@ px_write_select_media(stream *s, const gx_device *dev, pxeMediaSize_t *pms)
 	h = dev->height / dev->HWResolution[1];
     int i;
     pxeMediaSize_t size;
+    byte tray = eAutoSelect;
 
     /* The default is eLetterPaper, media size 0. */
     for (i = countof(media_sizes) - 2; i > 0; --i)
@@ -100,15 +116,13 @@ px_write_select_media(stream *s, const gx_device *dev, pxeMediaSize_t *pms)
      * be specified, but MediaSource is optional.
      */
     px_put_uba(s, (byte)size, pxaMediaSize);
-    if (!pms || size != *pms) {
-	static const byte page_header_2[] = {
-	    DUB(eAutoSelect), DA(pxaMediaSource)
-	};
 
-	PX_PUT_LIT(s, page_header_2);
-	if (pms)
-	    *pms = size;
-    }
+    if (media_source != NULL)
+	tray = *media_source;
+    px_put_uba(s, tray, pxaMediaSource);
+    if (pms)
+	*pms = size;
+
     return 0;
 }
 

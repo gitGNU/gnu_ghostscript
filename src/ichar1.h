@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,14 +15,18 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: ichar1.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: ichar1.h,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Type 1 / Type 2 character rendering operator procedures */
 
 #ifndef ichar1_INCLUDED
 #  define ichar1_INCLUDED
+
+#ifndef gs_font_type1_DEFINED
+#  define gs_font_type1_DEFINED
+typedef struct gs_font_type1_s gs_font_type1;
+#endif
 
 /* ---------------- Public ---------------- */
 

@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpxut.h,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpxut.h,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Utilities for PCL XL generation */
 /* Requires gdevpxat.h, gdevpxen.h, gdevpxop.h */
 
@@ -33,7 +33,8 @@ int px_write_page_header(stream *s, const gx_device *dev);
 
 /* Write the media selection command if needed, updating the media size. */
 int px_write_select_media(stream *s, const gx_device *dev,
-			  pxeMediaSize_t *pms);
+			  pxeMediaSize_t *pms,
+			  byte *media_source);
 
 /*
  * Write the file trailer.  Note that this takes a FILE *, not a stream *,

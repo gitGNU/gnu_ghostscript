@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevijs.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gdevijs.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /*
  * IJS device for Ghostscript.
  * Intended to work with any IJS compliant inkjet driver, including
@@ -42,7 +42,8 @@
    acquire an API for changing resolution. */
 int gdev_prn_maybe_realloc_memory(gx_device_printer *pdev,
 				  gdev_prn_space_params *old_space,
-				  int old_width, int old_height);
+			          int old_width, int old_height,
+			          bool old_page_uses_transparency);
 
 /* Device procedures */
 
@@ -52,11 +53,54 @@ private dev_proc_close_device(gsijs_close);
 private dev_proc_output_page(gsijs_output_page);
 private dev_proc_get_params(gsijs_get_params);
 private dev_proc_put_params(gsijs_put_params);
+private dev_proc_finish_copydevice(gsijs_finish_copydevice);
 
-private const gx_device_procs gsijs_procs =
-prn_color_params_procs(gsijs_open, gsijs_output_page, gsijs_close,
-		   gx_default_rgb_map_rgb_color, gx_default_rgb_map_color_rgb,
-		   gsijs_get_params, gsijs_put_params);
+private const gx_device_procs gsijs_procs = {
+	gsijs_open,
+	NULL,	/* get_initial_matrix */
+	NULL,	/* sync_output */
+	gsijs_output_page,
+	gsijs_close,
+	gx_default_rgb_map_rgb_color,
+	gx_default_rgb_map_color_rgb,
+	NULL,	/* fill_rectangle */
+	NULL,	/* tile_rectangle */
+	NULL,	/* copy_mono */
+	NULL,	/* copy_color */
+	NULL,	/* draw_line */
+	NULL,	/* get_bits */
+	gsijs_get_params,
+	gsijs_put_params,
+	NULL,	/* map_cmyk_color */
+	NULL,	/* get_xfont_procs */
+	NULL,	/* get_xfont_device */
+	NULL,	/* map_rgb_alpha_color */
+	gx_page_device_get_page_device,
+	NULL,	/* get_alpha_bits */
+	NULL,	/* copy_alpha */
+	NULL,	/* get_band */
+	NULL,	/* copy_rop */
+	NULL,	/* fill_path */
+	NULL,	/* stroke_path */
+	NULL,	/* fill_mask */
+	NULL,	/* fill_trapezoid */
+	NULL,	/* fill_parallelogram */
+	NULL,	/* fill_triangle */
+	NULL,	/* draw_thin_line */
+	NULL,	/* begin_image */
+	NULL,	/* image_data */
+	NULL,	/* end_image */
+	NULL,	/* strip_tile_rectangle */
+	NULL,	/* strip_copy_rop, */
+	NULL,	/* get_clipping_box */
+	NULL,	/* begin_typed_image */
+	NULL,	/* get_bits_rectangle */
+	NULL,	/* map_color_rgb_alpha */
+	NULL,	/* create_compositor */
+	NULL,	/* get_hardware_params */
+	NULL,	/* text_begin */
+	gsijs_finish_copydevice
+};
 
 typedef struct gx_device_ijs_s gx_device_ijs;
 
@@ -478,8 +522,8 @@ gsijs_set_resolution(gx_device_ijs *ijsdev)
 
     ijsdev->is_open = true;
     code = gdev_prn_maybe_realloc_memory((gx_device_printer *)ijsdev,
-					 &ijsdev->space_params,
-					 width, height);
+					 &ijsdev->space_params, width, height,
+					 ijsdev->page_uses_transparency);
     ijsdev->is_open = save_is_open;
     return code;
 }
@@ -575,6 +619,29 @@ gsijs_open(gx_device *dev)
     return code;
 }
 
+/* Finish device initialization. */
+private int
+gsijs_finish_copydevice(gx_device *dev, const gx_device *from_dev)
+{
+    int code;
+    static const char rgb[] = "DeviceRGB";
+    gx_device_ijs *ijsdev = (gx_device_ijs *)dev;
+
+    code = gx_default_finish_copydevice(dev, from_dev);
+    if(code < 0)
+        return code;
+ 
+    if (!ijsdev->ColorSpace) {
+	ijsdev->ColorSpace = gs_malloc(ijsdev->memory, sizeof(rgb), 1, 
+		"gsijs_finish_copydevice");
+        if (!ijsdev->ColorSpace)
+ 	    return gs_note_error(gs_error_VMerror);
+        ijsdev->ColorSpace_size = sizeof(rgb);
+        memcpy(ijsdev->ColorSpace, rgb, sizeof(rgb));
+    }
+    return code;
+}
+
 /* Close the gsijs driver */
 private int
 gsijs_close(gx_device *dev)
@@ -590,19 +657,17 @@ gsijs_close(gx_device *dev)
 
     code = gdev_prn_close(dev);
     if (ijsdev->IjsParams)
-	gs_free(dev->memory, ijsdev->IjsParams, ijsdev->IjsParams_size, 1, 
-	    "gsijs_read_string_malloc");
+	gs_free(dev->memory, ijsdev->IjsParams,
+		ijsdev->IjsParams_size, 1, "gsijs_read_string_malloc");
     if (ijsdev->ColorSpace)
 	gs_free(dev->memory, ijsdev->ColorSpace,
-		ijsdev->ColorSpace_size, 1, 
-		"gsijs_read_string_malloc");
+		ijsdev->ColorSpace_size, 1, "gsijs_read_string_malloc");
     if (ijsdev->DeviceManufacturer)
 	gs_free(dev->memory, ijsdev->DeviceManufacturer,
-		ijsdev->DeviceManufacturer_size, 1, 
-		"gsijs_read_string_malloc");
+		ijsdev->DeviceManufacturer_size, 1, "gsijs_read_string_malloc");
     if (ijsdev->DeviceModel)
-	gs_free(dev->memory, ijsdev->DeviceModel, ijsdev->DeviceModel_size, 1, 
-		"gsijs_read_string_malloc");
+	gs_free(dev->memory, ijsdev->DeviceModel,
+		ijsdev->DeviceModel_size, 1, "gsijs_read_string_malloc");
     ijsdev->IjsParams = NULL;
     ijsdev->IjsParams_size = 0;
     ijsdev->DeviceManufacturer = NULL;
@@ -916,14 +981,16 @@ gsijs_read_string_malloc(gs_param_list *plist, gs_param_name pname, char **str,
 		code = gs_error_rangecheck;
 		goto e;
 	    }
-	    if (new_value.size >= *size) {
+	    if (new_value.size + 1 != *size) {
 	        if (*str)
-		    gs_free(plist->memory, str, *size, 1, "gsijs_read_string_malloc");
+		    gs_free(plist->memory, *str, *size, 1,
+					"gsijs_read_string_malloc");
 		*str = NULL;
 		*size = 0;
 	    }
-	    *str = gs_malloc(plist->memory, new_value.size + 1, 1, 
-		"gsijs_read_string_malloc");
+	    if (*str == NULL)
+	        *str = gs_malloc(plist->memory, new_value.size + 1, 1, 
+					"gsijs_read_string_malloc");
 	    if (*str == NULL) {
                 code = gs_note_error(gs_error_VMerror);
                 goto e;

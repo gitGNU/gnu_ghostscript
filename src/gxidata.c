@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxidata.c,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxidata.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Generic image enumeration and cleanup */
 #include "gx.h"
 #include "memory_.h"
@@ -46,6 +46,7 @@ gx_image1_plane_data(gx_image_enum_common_t * info,
     int y_end = min(y + height, penum->rect.h);
     int width_spp = penum->rect.w * penum->spp;
     int num_planes = penum->num_planes;
+    int num_components_per_plane = 1;
 
 #define BCOUNT(plane)		/* bytes per data row */\
   (((penum->rect.w + (plane).data_x) * penum->spp * penum->bps / num_planes\
@@ -77,6 +78,10 @@ gx_image1_plane_data(gx_image_enum_common_t * info,
 	penum->used.y = 0;
     } else
 	memset(offsets, 0, num_planes * sizeof(offsets[0]));
+    if (num_planes == 1 && penum->plane_depths[0] != penum->bps) {
+	/* A single plane with multiple components. */
+	num_components_per_plane = penum->plane_depths[0] / penum->bps;
+    }
     for (; penum->y < y_end; penum->y++) {
 	int px;
 	const byte *buffer;
@@ -90,7 +95,7 @@ gx_image1_plane_data(gx_image_enum_common_t * info,
 	    sourcex = 0;
 	    for (px = 0; px < num_planes; px += penum->bps)
 		repack_bit_planes(planes, offsets, penum->bps, penum->buffer,
-				  penum->rect.w, &penum->map[0].table,
+				  penum->rect.w, &penum->map[px].table,
 				  penum->spread);
 	    for (px = 0; px < num_planes; ++px)
 		offsets[px] += planes[px].raster;
@@ -105,7 +110,7 @@ gx_image1_plane_data(gx_image_enum_common_t * info,
 		(*penum->unpack)(penum->buffer, &sourcex,
 				 planes[0].data + offsets[0],
 				 planes[0].data_x, BCOUNT(planes[0]),
-				 &penum->map[0].table, penum->spread);
+				 &penum->map[0], penum->spread, num_components_per_plane);
 
 	    offsets[0] += planes[0].raster;
 	    for (px = 1; px < num_planes; ++px) {
@@ -113,7 +118,7 @@ gx_image1_plane_data(gx_image_enum_common_t * info,
 				 &ignore_data_x,
 				 planes[px].data + offsets[px],
 				 planes[px].data_x, BCOUNT(planes[px]),
-				 &penum->map[px].table, penum->spread);
+				 &penum->map[px], penum->spread, 1);
 		offsets[px] += planes[px].raster;
 	    }
 	}

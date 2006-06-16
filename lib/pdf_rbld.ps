@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: pdf_rbld.ps,v 1.3 2006/03/02 22:26:14 Arabidopsis Exp $
+% $Id: pdf_rbld.ps,v 1.4 2006/06/16 12:55:13 Arabidopsis Exp $
 % pdf_rbld.ps - Rebuilding of broken PDF files (xref errors)
 
 % This module contains routines that are used if we detect an error
@@ -233,8 +233,10 @@
   /post_eof_count determine_post_eof_count def
   % Start at the beginning of the file
   PDFfile 0 setfileposition
-  % Create a working string (and also store its length on stack)
-  1024 dup string
+  % Create a working string (and also store its length on stack).  We are
+  % using a maximum size string size the logic below wants a recovered object
+  % to fit into our working string.
+  65535 dup string
   { % Now loop through the entire file lloking for objects
     PDFfile fileposition		% save current file position
     % When we get near the end of the file, we use a smaller interval of

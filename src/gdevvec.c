@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevvec.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gdevvec.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Utilities for "vector" devices */
 #include "math_.h"
 #include "memory_.h"
@@ -76,7 +76,7 @@ gdev_vector_dopath(gx_device_vector *vdev, const gx_path * ppath,
      * which requires (untransformed) device coordinates.
      */
     if (rtype != prt_none &&
-	!((type & gx_path_type_stroke) && rtype == prt_open) &&
+	(!(type & gx_path_type_stroke) || rtype == prt_closed) &&
 	(pmat == 0 || is_xxyy(pmat) || is_xyyx(pmat)) &&
 	(state.scale_mat.xx == 1.0 && state.scale_mat.yy == 1.0 &&
 	 is_xxyy(&state.scale_mat) &&
@@ -624,8 +624,10 @@ gdev_vector_dopath_segment(gdev_vector_dopath_state_t *state, int pe_op,
 
     switch (pe_op) {
 	case gs_pe_moveto:
-	    gs_point_transform_inverse(fixed2float(vs[0].x),
+	    code = gs_point_transform_inverse(fixed2float(vs[0].x),
 				       fixed2float(vs[0].y), pmat, &vp[0]);
+	    if (code < 0)
+		return code;
 	    if (state->first)
 		state->start = vp[0], state->first = false;
 	    code = vdev_proc(vdev, moveto)
@@ -634,18 +636,24 @@ gdev_vector_dopath_segment(gdev_vector_dopath_state_t *state, int pe_op,
 	    state->prev = vp[0];
 	    break;
 	case gs_pe_lineto:
-	    gs_point_transform_inverse(fixed2float(vs[0].x),
+	    code = gs_point_transform_inverse(fixed2float(vs[0].x),
 				       fixed2float(vs[0].y), pmat, &vp[0]);
+	    if (code < 0)
+		return code;
 	    code = vdev_proc(vdev, lineto)
 		(vdev, state->prev.x, state->prev.y, vp[0].x, vp[0].y,
 		 state->type);
 	    state->prev = vp[0];
 	    break;
 	case gs_pe_curveto:
-	    gs_point_transform_inverse(fixed2float(vs[0].x),
+	    code = gs_point_transform_inverse(fixed2float(vs[0].x),
 				       fixed2float(vs[0].y), pmat, &vp[0]);
-	    gs_point_transform_inverse(fixed2float(vs[1].x),
+	    if (code < 0)
+		return code;
+	    code = gs_point_transform_inverse(fixed2float(vs[1].x),
 				       fixed2float(vs[1].y), pmat, &vp[1]);
+	    if (code < 0)
+		return code;
 	    gs_point_transform_inverse(fixed2float(vs[2].x),
 				       fixed2float(vs[2].y), pmat, &vp[2]);
 	    code = vdev_proc(vdev, curveto)
@@ -800,17 +808,21 @@ gdev_vector_close_file(gx_device_vector * vdev)
     gs_free_object(vdev->v_memory, vdev->bbox_device,
 		   "vector_close(bbox_device)");
     vdev->bbox_device = 0;
-    sclose(vdev->strm);
-    gs_free_object(vdev->v_memory, vdev->strm, "vector_close(strm)");
-    vdev->strm = 0;
-    gs_free_object(vdev->v_memory, vdev->strmbuf, "vector_close(strmbuf)");
-    vdev->strmbuf = 0;
+    if (vdev->strm) {
+	sclose(vdev->strm);
+	gs_free_object(vdev->v_memory, vdev->strm, "vector_close(strm)");
+	vdev->strm = 0;
+	gs_free_object(vdev->v_memory, vdev->strmbuf, "vector_close(strmbuf)");
+	vdev->strmbuf = 0;
+    }
     vdev->file = 0;
-    err = ferror(f);
-    /* We prevented sclose from closing the file. */
-    if (gx_device_close_output_file((gx_device *)vdev, vdev->fname, f) != 0 
-	|| err != 0)
-	return_error(gs_error_ioerror);
+    if (f) {
+	err = ferror(f);
+	/* We prevented sclose from closing the file. */
+	if (gx_device_close_output_file((gx_device *)vdev, vdev->fname, f) != 0 
+		|| err != 0)
+	    return_error(gs_error_ioerror);
+    }
     return 0;
 }
 

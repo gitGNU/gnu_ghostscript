@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gstype1.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gstype1.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Adobe Type 1 charstring interpreter */
 #include "math_.h"
 #include "memory_.h"
@@ -253,9 +253,6 @@ gs_type1_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
                 code = t1_hinter__rcurveto(h, cs0, cs1, cs2, cs3, cs4, cs5);
 		goto cc;
 	    case cx_endchar:
-                code = t1_hinter__endchar(h, (pcis->seac_accent >= 0));
-		if (code < 0)
-		    return code;
                 if (pcis->seac_accent < 0) {
                     code = t1_hinter__endglyph(h);
 		    if (code < 0)
@@ -263,7 +260,8 @@ gs_type1_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 		    code = gx_setcurrentpoint_from_path(pcis->pis, pcis->path);
 		    if (code < 0)
 			return code;
-		}
+		} else
+		    pcis->seac_flag = true;
 		code = gs_type1_endchar(pcis);
 		if (code == 1) {
 		    /* do accent of seac */
@@ -291,16 +289,18 @@ gs_type1_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
                 code = t1_hinter__closepath(h);
 		goto cc;
 	    case c1_hsbw:
-                if (!h->seac_flag) {
+                if (!pcis->seac_flag) {
 		    fixed sbx = cs0, sby = fixed_0, wx = cs1, wy = fixed_0;
 
-		    if (pcis->sb_set) {
-			sbx = pcis->lsb.x;
-			sby = pcis->lsb.y;
-		    }
-		    if (pcis->width_set) {
-			wx = pcis->width.x;
-			wy = pcis->width.y;
+		    if (pcis->seac_accent < 0) {
+			if (pcis->sb_set) {
+			    sbx = pcis->lsb.x;
+			    sby = pcis->lsb.y;
+			}
+			if (pcis->width_set) {
+			    wx = pcis->width.x;
+			    wy = pcis->width.y;
+			}
 		    }
 		    code = t1_hinter__sbw(h, sbx, sby, wx, wy);
                 } else
@@ -385,7 +385,7 @@ rsbw:		/* Give the caller the opportunity to intervene. */
 			cip = ipsp->cs_data.bits.data;
 			goto call;
 		    case ce1_sbw:
-                        if (!h->seac_flag)
+                        if (!pcis->seac_flag)
                             code = t1_hinter__sbw(h, cs0, cs1, cs2, cs3);
                         else
                             code = t1_hinter__sbw_seac(h, cs0 + pcis->adxy.x , cs1 + pcis->adxy.y);
@@ -516,9 +516,9 @@ rsbw:		/* Give the caller the opportunity to intervene. */
 			    return_error(code);
 			goto pushed;
 		    case ce1_setcurrentpoint:
-			t1_hinter__setcurrentpoint(h, cs0, cs1);
 			cs0 += pcis->adxy.x;
 			cs1 += pcis->adxy.y;
+			t1_hinter__setcurrentpoint(h, cs0, cs1);
 			cnext;
 		    default:
 			return_error(gs_error_invalidfont);

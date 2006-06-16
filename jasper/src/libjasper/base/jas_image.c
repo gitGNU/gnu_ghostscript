@@ -64,7 +64,7 @@
 /*
  * Image Library
  *
- * $Id: jas_image.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jas_image.c,v 1.2 2006/06/16 12:55:32 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -81,6 +81,7 @@
 #include "jasper/jas_image.h"
 #include "jasper/jas_malloc.h"
 #include "jasper/jas_string.h"
+#include "jasper/jas_debug.h"
 
 /******************************************************************************\
 * Types.
@@ -96,12 +97,12 @@ static jas_image_cmpt_t *jas_image_cmpt_create0(void);
 static void jas_image_cmpt_destroy(jas_image_cmpt_t *cmpt);
 static jas_image_cmpt_t *jas_image_cmpt_create(uint_fast32_t tlx, uint_fast32_t tly,
   uint_fast32_t hstep, uint_fast32_t vstep, uint_fast32_t width, uint_fast32_t
-  height, uint_fast16_t depth, bool sgnd, uint_fast32_t inmem);
+  height, uint_fast16_t depth, jas_bool sgnd, uint_fast32_t inmem);
 static void jas_image_setbbox(jas_image_t *image);
 static jas_image_cmpt_t *jas_image_cmpt_copy(jas_image_cmpt_t *cmpt);
 static int jas_image_growcmpts(jas_image_t *image, int maxcmpts);
-static uint_fast32_t inttobits(jas_seqent_t v, int prec, bool sgnd);
-static jas_seqent_t bitstoint(uint_fast32_t v, int prec, bool sgnd);
+static uint_fast32_t inttobits(jas_seqent_t v, int prec, jas_bool sgnd);
+static jas_seqent_t bitstoint(uint_fast32_t v, int prec, jas_bool sgnd);
 static int putint(jas_stream_t *out, int sgnd, int prec, long val);
 static int getint(jas_stream_t *in, int sgnd, int prec, long *val);
 static void jas_image_calcbbox2(jas_image_t *image, jas_image_coord_t *tlx,
@@ -139,7 +140,7 @@ jas_image_t *jas_image_create(int numcmpts, jas_image_cmptparm_t *cmptparms,
 
 	image->clrspc_ = clrspc;
 	image->maxcmpts_ = numcmpts;
-	image->inmem_ = true;
+	image->inmem_ = jas_true;
 
 	/* Allocate memory for the per-component information. */
 	if (!(image->cmpts_ = jas_malloc(image->maxcmpts_ *
@@ -166,10 +167,17 @@ jas_image_t *jas_image_create(int numcmpts, jas_image_cmptparm_t *cmptparms,
 	/* Create the individual image components. */
 	for (cmptno = 0, cmptparm = cmptparms; cmptno < numcmpts; ++cmptno,
 	  ++cmptparm) {
-		if (!(image->cmpts_[cmptno] = jas_image_cmpt_create(cmptparm->tlx,
-		  cmptparm->tly, cmptparm->hstep, cmptparm->vstep,
-		  cmptparm->width, cmptparm->height, cmptparm->prec,
-		  cmptparm->sgnd, inmem))) {
+		if (!(image->cmpts_[cmptno] = jas_image_cmpt_create(	cmptparm->tlx,
+																cmptparm->tly, 
+																cmptparm->hstep, 
+																cmptparm->vstep,
+																cmptparm->width, 
+																cmptparm->height, 
+																(uint_fast16_t)cmptparm->prec,
+																cmptparm->sgnd, 
+																inmem
+															)))
+		{
 			jas_image_destroy(image);
 			return 0;
 		}
@@ -199,7 +207,7 @@ jas_image_t *jas_image_create0()
 	image->numcmpts_ = 0;
 	image->maxcmpts_ = 0;
 	image->cmpts_ = 0;
-	image->inmem_ = true;
+	image->inmem_ = jas_true;
 	image->cmprof_ = 0;
 
 	return image;
@@ -297,7 +305,7 @@ void jas_image_destroy(jas_image_t *image)
 
 static jas_image_cmpt_t *jas_image_cmpt_create(uint_fast32_t tlx, uint_fast32_t tly,
   uint_fast32_t hstep, uint_fast32_t vstep, uint_fast32_t width, uint_fast32_t
-  height, uint_fast16_t depth, bool sgnd, uint_fast32_t inmem)
+  height, uint_fast16_t depth, jas_bool sgnd, uint_fast32_t inmem)
 {
 	jas_image_cmpt_t *cmpt;
 	long size;
@@ -354,6 +362,7 @@ jas_image_t *jas_image_decode(jas_stream_t *in, int fmt, char *optstr)
 	jas_image_t *image;
 
 	image = 0;
+
 
 	/* If possible, try to determine the format of the input data. */
 	if (fmt < 0) {
@@ -665,10 +674,17 @@ int jas_image_addcmpt(jas_image_t *image, int cmptno,
 			return -1;
 		}
 	}
-	if (!(newcmpt = jas_image_cmpt_create(cmptparm->tlx,
-	  cmptparm->tly, cmptparm->hstep, cmptparm->vstep,
-	  cmptparm->width, cmptparm->height, cmptparm->prec,
-	  cmptparm->sgnd, 1))) {
+	if (!(newcmpt = jas_image_cmpt_create(	cmptparm->tlx,
+											cmptparm->tly, 
+											cmptparm->hstep, 
+											cmptparm->vstep,
+											cmptparm->width, 
+											cmptparm->height, 
+											(uint_fast16_t)cmptparm->prec,
+											cmptparm->sgnd, 
+											1
+										))) 
+	{
 		return -1;
 	}
 	if (cmptno < image->numcmpts_) {
@@ -713,14 +729,14 @@ jas_image_fmtinfo_t *jas_image_lookupfmtbyname(const char *name)
 
 
 
-static uint_fast32_t inttobits(jas_seqent_t v, int prec, bool sgnd)
+static uint_fast32_t inttobits(jas_seqent_t v, int prec, jas_bool sgnd)
 {
 	uint_fast32_t ret;
 	ret = ((sgnd && v < 0) ? ((1 << prec) + v) : v) & JAS_ONES(prec);
 	return ret;
 }
 
-static jas_seqent_t bitstoint(uint_fast32_t v, int prec, bool sgnd)
+static jas_seqent_t bitstoint(uint_fast32_t v, int prec, jas_bool sgnd)
 {
 	jas_seqent_t ret;
 	v &= JAS_ONES(prec);
@@ -825,15 +841,22 @@ void jas_image_dump(jas_image_t *image, FILE *out)
 		width = jas_image_cmptwidth(image, cmptno);
 		height = jas_image_cmptheight(image, cmptno);
 		n = JAS_MIN(16, width);
-		if (jas_image_readcmpt2(image, cmptno, 0, 0, n, 1, buf)) {
-			abort();
+		if (jas_image_readcmpt2(image, cmptno, 0, 0, n, 1, buf)) 
+		{
+			jas_error(	JAS_ERR_JAS_IMAGE_DUMP_FAILS,
+						"JAS_ERR_JAS_IMAGE_DUMP_FAILS"
+					);
+			return;
 		}
 		for (i = 0; i < n; ++i) {
 			fprintf(out, " f(%d,%d)=%ld", i, 0, buf[i]);
 		}
 		fprintf(out, "\n");
 		if (jas_image_readcmpt2(image, cmptno, width - n, height - 1, n, 1, buf)) {
-			abort();
+			jas_error(	JAS_ERR_JAS_IMAGE_DUMP_FAILS,
+						"JAS_ERR_JAS_IMAGE_DUMP_FAILS"
+					);
+			return;
 		}
 		for (i = 0; i < n; ++i) {
 			fprintf(out, " f(%d,%d)=%ld", width - n + i, height - 1, buf[i]);
@@ -841,6 +864,7 @@ void jas_image_dump(jas_image_t *image, FILE *out)
 		fprintf(out, "\n");
 	}
 }
+
 
 int jas_image_depalettize(jas_image_t *image, int cmptno, int numlutents,
   int_fast32_t *lutents, int dtype, int newcmptno)
@@ -1214,7 +1238,10 @@ static int getint(jas_stream_t *in, int sgnd, int prec, long *val)
 	v &= ((1 << prec) - 1);
 	if (sgnd) {
 		/* XXX - Do something here. */
-		abort();
+		jas_error(	JAS_ERR_INVALID_PARAM_GETINT,
+					"JAS_ERR_INVALID_PARAM_GETINT"
+				);
+		return -1;
 	} else {
 		*val = v;
 	}
@@ -1227,7 +1254,11 @@ static int putint(jas_stream_t *out, int sgnd, int prec, long val)
 	int c;
 	if (sgnd) {
 		/* XXX - Do something here. */
-		abort();
+
+		jas_error(	JAS_ERR_INVALID_PARAM_PUTINT,
+					"JAS_ERR_INVALID_PARAM_PUTINT"
+				);
+		return -1;
 	}
 	val &= (1 << prec) - 1;
 	n = (prec + 7) / 8;
@@ -1297,11 +1328,6 @@ jas_image_t *jas_image_chclrspc(jas_image_t *image, jas_cmprof_t *outprof,
 	jas_cmcmptfmt_t *incmptfmts;
 	jas_cmcmptfmt_t *outcmptfmts;
 
-#if 0
-fprintf(stderr, "IMAGE\n");
-jas_image_dump(image, stderr);
-#endif
-
 	if (!(inimage = jas_image_copy(image)))
 		goto error;
 	image = 0;
@@ -1337,6 +1363,10 @@ jas_image_dump(image, stderr);
 	numinclrchans = jas_clrspc_numchans(jas_cmprof_clrspc(inprof));
 	numinauxchans = jas_image_numcmpts(inimage) - numinclrchans;
 	numoutclrchans = jas_clrspc_numchans(jas_cmprof_clrspc(outprof));
+
+	if( numinclrchans == 0 || numoutclrchans == 0 )
+		goto error;
+
 	numoutauxchans = 0;
 	numoutchans = numoutclrchans + numoutauxchans;
 	prec = 8;
@@ -1432,12 +1462,6 @@ jas_image_dump(image, stderr);
 	jas_cmxform_destroy(xform);
 	jas_image_destroy(inimage);
 
-#if 0
-fprintf(stderr, "INIMAGE\n");
-jas_image_dump(inimage, stderr);
-fprintf(stderr, "OUTIMAGE\n");
-jas_image_dump(outimage, stderr);
-#endif
 	return outimage;
 error:
 	return 0;

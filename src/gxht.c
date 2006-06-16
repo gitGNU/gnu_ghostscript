@@ -17,7 +17,7 @@
   
 */
 
-/*$Id: gxht.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/*$Id: gxht.c,v 1.7 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Halftone rendering for imaging library */
 #include "memory_.h"
 #include "gx.h"
@@ -694,7 +694,7 @@ gx_dc_ht_binary_get_nonzero_comps(
         int     mask = 0x1, comp_bits = 0;
 
         for (i = 0; i < ncomps; i++, mask <<= 1) {
-            if (cvals_0[i] != cvals_1[i])
+            if (cvals_0[i] != 0 || cvals_1[i] != 0)
                 comp_bits |= mask;
         }
         *pcomp_bits = comp_bits;

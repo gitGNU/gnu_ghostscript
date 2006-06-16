@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdtf.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gdevpdtf.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Font and CMap resource implementation for pdfwrite text */
 #include "memory_.h"
 #include "string_.h"
@@ -29,11 +29,13 @@
 #include "gxfcopy.h"
 #include "gxfont.h"
 #include "gxfont1.h"
+#include "gdevpsf.h"
 #include "gdevpdfx.h"
 #include "gdevpdtb.h"
 #include "gdevpdtd.h"
 #include "gdevpdtf.h"
 #include "gdevpdtw.h"
+#include "gdevpdti.h"
 
 /* GC descriptors */
 public_st_pdf_font_resource();
@@ -60,6 +62,7 @@ case 7: switch (pdfont->FontType) {
  case ft_CID_TrueType:
      ENUM_RETURN(pdfont->u.cidfont.Widths2);
  default:
+     pdf_mark_glyph_names(pdfont, mem);
      ENUM_RETURN(pdfont->u.simple.Encoding);
 }
 case 8: switch (pdfont->FontType) {
@@ -96,6 +99,8 @@ case 10: switch (pdfont->FontType) {
      ENUM_RETURN(0);
 }
 case 11: switch (pdfont->FontType) {
+ case ft_user_defined:
+     ENUM_RETURN(pdfont->u.simple.s.type3.Resources);
  case ft_CID_encrypted:
  case ft_CID_TrueType:
      ENUM_RETURN(pdfont->u.cidfont.used2);
@@ -125,6 +130,7 @@ RELOC_PTRS_WITH(pdf_font_resource_reloc_ptrs, pdf_font_resource_t *pdfont)
 	RELOC_VAR(pdfont->u.simple.v);
 	RELOC_VAR(pdfont->u.simple.s.type3.char_procs);
 	RELOC_VAR(pdfont->u.simple.s.type3.cached);
+	RELOC_VAR(pdfont->u.simple.s.type3.Resources);
 	break;
     case ft_CID_encrypted:
     case ft_CID_TrueType:
@@ -310,12 +316,25 @@ pdf_standard_fonts(const gx_device_pdf *pdev)
     return pdev->text->outline_fonts->standard_fonts;
 }
 
+/*
+ * Clean the standard fonts array.
+ */
+void
+pdf_clean_standard_fonts(const gx_device_pdf *pdev)
+{
+    pdf_standard_font_t *ppsf = pdf_standard_fonts(pdev);
+
+    memset(ppsf, 0, PDF_NUM_STANDARD_FONTS * sizeof(*ppsf));
+}
+
+
 /* ---------------- Font resources ---------------- */
 
 /* ------ Private ------ */
 
 
-private int pdf_resize_array(gs_memory_t *mem, void **p, int elem_size, int old_size, int new_size)
+private int 
+pdf_resize_array(gs_memory_t *mem, void **p, int elem_size, int old_size, int new_size)
 {
     void *q = gs_alloc_byte_array(mem, new_size, elem_size, "pdf_resize_array");
 
@@ -362,7 +381,7 @@ font_resource_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
 	    memset(widths, 0, chars_count * sizeof(*widths));
 	memset(used, 0, size);
     }
-    code = pdf_alloc_resource(pdev, rtype, rid, (pdf_resource_t **)&pfres, 0L);
+    code = pdf_alloc_resource(pdev, rtype, rid, (pdf_resource_t **)&pfres, -1L);
     if (code < 0)
 	goto fail;
     memset((byte *)pfres + sizeof(pdf_resource_t), 0,
@@ -374,6 +393,8 @@ font_resource_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
     pfres->write_contents = write_contents;
     pfres->res_ToUnicode = NULL;
     pfres->cmap_ToUnicode = NULL;
+    pfres->mark_glyph = 0;
+    pfres->mark_glyph_data = 0;
     *ppfres = pfres;
     return 0;
  fail:
@@ -381,6 +402,29 @@ font_resource_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
     gs_free_object(mem, widths, "font_resource_alloc(Widths)");
     return code;
 }
+
+int
+pdf_assign_font_object_id(gx_device_pdf *pdev, pdf_font_resource_t *pdfont)
+{
+    if (pdf_resource_id((pdf_resource_t *)pdfont) == -1) {
+	int code;
+
+	pdf_reserve_object_id(pdev, (pdf_resource_t *)pdfont, 0);
+	code = pdf_mark_font_descriptor_used(pdev, pdfont->FontDescriptor);
+	if (code < 0)
+	    return code;
+	if (pdfont->FontType == 0) {
+	    pdf_font_resource_t *pdfont1 = pdfont->u.type0.DescendantFont;
+
+	    pdf_reserve_object_id(pdev, (pdf_resource_t *)pdfont1, 0);
+	    code = pdf_mark_font_descriptor_used(pdev, pdfont1->FontDescriptor);
+	    if (code < 0)
+		return code;
+	}
+    }
+    return 0;
+}
+
 private int
 font_resource_simple_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
 			   gs_id rid, font_type ftype, int chars_count,
@@ -586,6 +630,29 @@ embed_as_standard(gx_device_pdf *pdev, gs_font *font, int index,
     return (find_std_appearance(pdev, (gs_font_base *)font, -1,
 				pairs, num_glyphs) == index);
 }
+private bool
+has_extension_glyphs(gs_font *pfont)
+{
+    psf_glyph_enum_t genum;
+    gs_glyph glyph;
+    gs_const_string str;
+    int code, j, l;
+    const int sl = strlen(gx_extendeg_glyph_name_separator);
+
+    psf_enumerate_glyphs_begin(&genum, (gs_font *)pfont, NULL, 0, GLYPH_SPACE_NAME);
+    for (glyph = gs_no_glyph; (code = psf_enumerate_glyphs_next(&genum, &glyph)) != 1; ) {
+	code = pfont->procs.glyph_name(pfont, glyph, &str);
+	if (code < 0)
+	    return code;
+	l = str.size - sl, j;
+	for (j = 0; j < l; j ++)
+	    if (!memcmp(gx_extendeg_glyph_name_separator, str.data + j, sl))
+		return true;
+    }
+    psf_enumerate_glyphs_reset(&genum);
+    return false;
+}
+
 /*
  * Choose a name for embedded font.
  */
@@ -614,11 +681,16 @@ pdf_font_embed_status(gx_device_pdf *pdev, gs_font *font, int *pindex,
      */
     if (pindex)
 	*pindex = index;
+    if (pdev->PDFX)
+	return FONT_EMBED_YES;
     if (pdev->CompatibilityLevel < 1.3) {
 	if (index >= 0 && 
 	    (embed_as_standard_called = true,
-	     do_embed_as_standard = embed_as_standard(pdev, font, index, pairs, num_glyphs)))
+		do_embed_as_standard = embed_as_standard(pdev, font, index, pairs, num_glyphs))) {
+	    if (pdev->ForOPDFRead && has_extension_glyphs(font))
+		return FONT_EMBED_YES;
 	    return FONT_EMBED_STANDARD;
+	}
     }
     /* Check the Embed lists. */
     if (!embed_list_includes(&pdev->params.NeverEmbed, chars, size) ||
@@ -781,6 +853,7 @@ pdf_font_std_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
 	return code;
     pdfont->BaseFont.data = (byte *)psfi->fname; /* break const */
     pdfont->BaseFont.size = strlen(psfi->fname);
+    pdfont->mark_glyph = pfont->dir->ccache.mark_glyph;
     set_is_MM_instance(pdfont, pfont);
     if (is_original) {
 	psf->pdfont = pdfont;
@@ -937,20 +1010,5 @@ int
 pdf_cmap_alloc(gx_device_pdf *pdev, const gs_cmap_t *pcmap,
 	       pdf_resource_t **ppres, int font_index_only)
 {
-#if PDFW_DELAYED_STREAMS
     return pdf_write_cmap(pdev, pcmap, ppres, font_index_only);
-#else
-    /*
-     * We don't store any of the contents of the CMap: instead, we write
-     * it out immediately and just save the id.  Since some CMaps are very
-     * large, we should wait, and only write the entries actually used.
-     * This is a project for some future date....
-     */
-    int code = pdf_alloc_resource(pdev, resourceCMap, 
-		    pcmap->id + max(font_index_only, 0), ppres, 0L);
-
-    if (code < 0)
-	return code;
-    return pdf_write_cmap(pdev, pcmap, *ppres, font_index_only);
-#endif
 }

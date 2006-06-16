@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zdps1.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: zdps1.c,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Level 2 / Display PostScript graphics extensions */
 #include "ghost.h"
 #include "oper.h"
@@ -34,6 +34,9 @@
 
 /* Forward references */
 private int gstate_unshare(i_ctx_t *);
+
+/* Declare exported procedures (for zupath.c) */
+int zsetbbox(i_ctx_t *);
 
 /* Structure descriptors */
 public_st_igstate_obj();

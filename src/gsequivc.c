@@ -16,7 +16,7 @@
   
 */
 
-/*$Id: gsequivc.c,v 1.1 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/*$Id: gsequivc.c,v 1.2 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Routines for determining equivalent color for spot colors */
 
 #include "math_.h"
@@ -130,8 +130,8 @@ update_Separation_spot_equivalent_cmyk_colors(gx_device * pdev,
      */
     for (i = 0; i < pdevn_params->separations.num_separations; i++) {
 	if (pparams->color[i].color_info_valid == false) {
-	    const gs_param_string * dev_sep_name =
-			    pdevn_params->separations.names[i];
+	    const devn_separation_name * dev_sep_name =
+			    &(pdevn_params->separations.names[i]);
 	    unsigned int cs_sep_name_size;
 	    unsigned char * pcs_sep_name;
 
@@ -191,8 +191,8 @@ update_DeviceN_spot_equivalent_cmyk_colors(gx_device * pdev,
      */
     for (i = 0; i < pdevn_params->separations.num_separations; i++) {
 	if (pparams->color[i].color_info_valid == false) {
-	    const gs_param_string * dev_sep_name =
-			    pdevn_params->separations.names[i];
+	    const devn_separation_name * dev_sep_name =
+			    &(pdevn_params->separations.names[i]);
 
 	    for (j = 0; j < pcs->params.device_n.num_components; j++) {
 	        pcs->params.device_n.get_colorname_string

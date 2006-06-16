@@ -19,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: check_source.py,v 1.5 2006/03/06 11:16:03 Arabidopsis Exp $
+# $Id: check_source.py,v 1.6 2006/06/16 12:55:32 Arabidopsis Exp $
 
 # Check basic hygiene of source code.
 
@@ -43,7 +43,7 @@ class GSCheckForIdLines(GSTestCase):
 
     def runTest(self):
         import re, glob
-        pattern = re.compile("[$][ ]*(Id|RCSfile):[ ]*([^,]+),v")
+        pattern = re.compile("[$][ ]*(Id|RCSfile):[ ]*([^, \t\$]+)")
         d, extns, omit = self.root + self.dirName, self.extensions, self.skip
         omit = map((lambda o,d=d: d+'/'+o), omit)
         missing = []
@@ -137,7 +137,9 @@ gsDoubleInclusionOK = [
     'src/gxdtfill.h',
     'src/gxfillsl.h',
     'src/gxfilltr.h',
-    'src/gxfillts.h'
+    'src/gxfillts.h',
+    'src/gxsamplp.h',
+    'src/gdevpdfb.h'
     ]
 
 # Add the tests defined in this file to a suite.

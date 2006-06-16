@@ -16,7 +16,7 @@
 
 */
 
-// $Id: dwuninst.cpp,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $
+// $Id: dwuninst.cpp,v 1.7 2006/06/16 12:55:05 Arabidopsis Exp $
 
 #define STRICT
 #include <windows.h>
@@ -39,6 +39,13 @@
 #define DELAY_FILE 0
 #define MAXSTR 256
 #define UNINSTALLKEY TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall")
+
+#ifdef _WIN64
+#define DLGRETURN INT_PTR
+#else
+#define DLGRETURN BOOL
+#endif
+
 
 HWND hDlgModeless;
 HWND hText1;
@@ -675,7 +682,7 @@ BOOL shell_old(void)
 #ifdef __BORLANDC__
 #pragma argsused
 #endif
-BOOL CALLBACK _export
+DLGRETURN CALLBACK _export
 RemoveDlgProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
   switch(message) {
@@ -787,7 +794,7 @@ init(void)
 	}
 	if (strlen(szLogFile) == 0) {
 		MessageBox(HWND_DESKTOP, "Usage: uninstgs logfile.txt", 
-			"GPL Ghostscript Uninstall", MB_OK);
+			"AFPL Ghostscript Uninstall", MB_OK);
 		return FALSE;
 	}
 	

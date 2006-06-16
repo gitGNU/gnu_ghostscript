@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: sjpx.c,v 1.1 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: sjpx.c,v 1.2 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* JPXDecode filter implementation -- hooks in libjasper */
 
 #include "memory_.h"
@@ -71,7 +71,7 @@ s_jpxd_init(stream_state * ss)
     return status;
 }
 
-#ifdef JPX_DEBUG
+#ifdef DEBUG
 /* dump information from a jasper image struct for debugging */
 private int
 dump_jas_image(jas_image_t *image)
@@ -82,7 +82,7 @@ dump_jas_image(jas_image_t *image)
 
     if (image == NULL) return 1;
 
-    dprintf2("JPX image is %d x %d\n",
+    if_debug2('w', "[w]JPX image is %d x %d\n",
 	jas_image_width(image), jas_image_height(image));
 
     /* sort the colorspace */
@@ -97,7 +97,7 @@ dump_jas_image(jas_image_t *image)
 	case JAS_CLRSPC_GENRGB: csname = "generic RGB"; break;
 	case JAS_CLRSPC_GENYCBCR: csname = "generic YCbCr"; break;
     }
-    dprintf3("  colorspace is %s (family %d, member %d)\n", 
+    if_debug3('w',"[w]  colorspace is %s (family %d, member %d)\n", 
 	csname, jas_clrspc_fam(clrspc), jas_clrspc_mbr(clrspc));
 
     for (i = 0; i < numcmpts; i++) {
@@ -127,16 +127,16 @@ dump_jas_image(jas_image_t *image)
 	    }
 	if (jas_image_cmptsgnd(image, i))
 	    issigned = ", signed";
-	dprintf6("  component %d: type %d '%s%s' (%d bits%s)",
+	if_debug6('w', "[w]  component %d: type %d '%s%s' (%d bits%s)",
 	    i, type, name, opacity, jas_image_cmptprec(image, i), issigned);
-	dprintf4(" grid step (%d,%d) offset (%d,%d)\n",
+	if_debug4('w', " grid step (%d,%d) offset (%d,%d)\n",
 	    jas_image_cmpthstep(image, i), jas_image_cmptvstep(image, i),
 	    jas_image_cmpttlx(image, i), jas_image_cmpttly(image, i));
     }
 
     return 0;
 }
-#endif /* JPX_DEBUG */
+#endif /* DEBUG */
 
 private int
 copy_row_gray(unsigned char *dest, jas_image_t *image,
@@ -216,9 +216,9 @@ copy_row_yuv(unsigned char *dest, jas_image_t *image,
 	q[0] = p[1] + q[1];
 	q[2] = p[2] + q[1]; 
 #else
-	q[0] = ((double)p[0] + 1.402 * p[2]);
-	q[1] = ((double)p[0] - 0.34413 * p[1] - 0.71414 * p[2]);
-	q[2] = ((double)p[0] + 1.772 * p[1]);
+	q[0] = (int)((double)p[0] + 1.402 * p[2]);
+	q[1] = (int)((double)p[0] - 0.34413 * p[1] - 0.71414 * p[2]);
+	q[2] = (int)((double)p[0] + 1.772 * p[1]);
 #endif
 	/* clamp */
 	for (j = 0; j < 3; j++){
@@ -315,7 +315,7 @@ s_jpxd_decode_image(stream_jpxd_state * state)
         jas_stream_close(stream);
         state->stream = NULL;
 
-#ifdef JPX_DEBUG
+#ifdef DEBUG
 	dump_jas_image(image);
 #endif
 

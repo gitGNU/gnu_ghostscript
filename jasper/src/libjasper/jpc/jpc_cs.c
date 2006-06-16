@@ -64,7 +64,7 @@
 /*
  * JPEG-2000 Code Stream Library
  *
- * $Id: jpc_cs.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jpc_cs.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -284,12 +284,12 @@ jpc_ms_t *jpc_getms(jas_stream_t *in, jpc_cstate_t *cstate)
 			return 0;
 		}
 
-		if (jas_getdbglevel() > 0) {
+/*		if (jas_getdbglevel() > 0) {
 			jpc_ms_dump(ms, stderr);
-		}
+		}	*/
 
 		if (JAS_CAST(ulong, jas_stream_tell(tmpstream)) != ms->len) {
-			fprintf(stderr,
+			jas_eprintf(
 			  "warning: trailing garbage in marker segment (%ld bytes)\n",
 			  ms->len - jas_stream_tell(tmpstream));
 		}
@@ -301,9 +301,9 @@ jpc_ms_t *jpc_getms(jas_stream_t *in, jpc_cstate_t *cstate)
 		/* There are no marker segment parameters. */
 		ms->len = 0;
 
-		if (jas_getdbglevel() > 0) {
+/*		if (jas_getdbglevel() > 0) {
 			jpc_ms_dump(ms, stderr);
-		}
+		}	*/
 	}
 
 	/* Update the code stream state information based on the type of
@@ -347,9 +347,11 @@ int jpc_putms(jas_stream_t *out, jpc_cstate_t *cstate, jpc_ms_t *ms)
 		ms->len = len;
 		/* Write the marker segment length and parameter data to
 		  the output stream. */
+
 		if (jas_stream_seek(tmpstream, 0, SEEK_SET) < 0 ||
-		  jpc_putuint16(out, ms->len + 2) ||
-		  jas_stream_copy(out, tmpstream, ms->len) < 0) {
+		  jpc_putuint16(out, (uint_fast16_t)(ms->len + 2)) ||
+		  jas_stream_copy(out, tmpstream, ms->len) < 0)
+		{
 			jas_stream_close(tmpstream);
 			return -1;
 		}
@@ -363,9 +365,9 @@ int jpc_putms(jas_stream_t *out, jpc_cstate_t *cstate, jpc_ms_t *ms)
 		cstate->numcomps = ms->parms.siz.numcomps;
 	}
 
-	if (jas_getdbglevel() > 0) {
+/*	if (jas_getdbglevel() > 0) {
 		jpc_ms_dump(ms, stderr);
-	}
+	}	*/
 
 	return 0;
 }
@@ -401,6 +403,7 @@ void jpc_ms_destroy(jpc_ms_t *ms)
 }
 
 /* Dump a marker segment to a stream for debugging. */
+/*
 void jpc_ms_dump(jpc_ms_t *ms, FILE *out)
 {
 	jpc_mstabent_t *mstabent;
@@ -417,6 +420,7 @@ void jpc_ms_dump(jpc_ms_t *ms, FILE *out)
 		fprintf(out, "\n");
 	}
 }
+*/
 
 /******************************************************************************\
 * SOT marker segment operations.
@@ -546,8 +550,8 @@ static int jpc_siz_putparms(jpc_ms_t *ms, jpc_cstate_t *cstate, jas_stream_t *ou
 		return -1;
 	}
 	for (i = 0; i < siz->numcomps; ++i) {
-		if (jpc_putuint8(out, ((siz->comps[i].sgnd & 1) << 7) |
-		  ((siz->comps[i].prec - 1) & 0x7f)) ||
+		if (jpc_putuint8(out, (uint_fast8_t)(((siz->comps[i].sgnd & 1) << 7) |
+		  ((siz->comps[i].prec - 1) & 0x7f))) ||
 		  jpc_putuint8(out, siz->comps[i].hsamp) ||
 		  jpc_putuint8(out, siz->comps[i].vsamp)) {
 			return -1;
@@ -639,7 +643,7 @@ static int jpc_cod_dumpparms(jpc_ms_t *ms, FILE *out)
 	  cod->compparms.cblksty);
 	if (cod->csty & JPC_COX_PRT) {
 		for (i = 0; i < cod->compparms.numrlvls; ++i) {
-			fprintf(stderr, "prcwidth[%d] = %d, prcheight[%d] = %d\n",
+			jas_eprintf("prcwidth[%d] = %d, prcheight[%d] = %d\n",
 			  i, cod->compparms.rlvls[i].parwidthval,
 			  i, cod->compparms.rlvls[i].parheightval);
 		}
@@ -689,7 +693,8 @@ static int jpc_coc_putparms(jpc_ms_t *ms, jpc_cstate_t *cstate, jas_stream_t *ou
 	jpc_coc_t *coc = &ms->parms.coc;
 	assert(coc->compparms.numdlvls <= 32);
 	if (cstate->numcomps <= 256) {
-		if (jpc_putuint8(out, coc->compno)) {
+		if (jpc_putuint8(out, (uint_fast8_t)coc->compno))
+		{
 			return -1;
 		}
 	} else {
@@ -785,8 +790,9 @@ static int jpc_cox_putcompparms(jpc_ms_t *ms, jpc_cstate_t *cstate,
 	if (prtflag) {
 		for (i = 0; i < compparms->numrlvls; ++i) {
 			if (jpc_putuint8(out,
-			  ((compparms->rlvls[i].parheightval & 0xf) << 4) |
-			  (compparms->rlvls[i].parwidthval & 0xf))) {
+			  (uint_fast8_t)(((compparms->rlvls[i].parheightval & 0xf) << 4) |
+			  (compparms->rlvls[i].parwidthval & 0xf))))
+			{
 				return -1;
 			}
 		}
@@ -823,7 +829,8 @@ static int jpc_rgn_putparms(jpc_ms_t *ms, jpc_cstate_t *cstate, jas_stream_t *ou
 {
 	jpc_rgn_t *rgn = &ms->parms.rgn;
 	if (cstate->numcomps <= 256) {
-		if (jpc_putuint8(out, rgn->compno)) {
+		if (jpc_putuint8(out, (uint_fast8_t)rgn->compno))
+		{
 			return -1;
 		}
 	} else {
@@ -906,7 +913,8 @@ static int jpc_qcc_getparms(jpc_ms_t *ms, jpc_cstate_t *cstate, jas_stream_t *in
 		jpc_getuint16(in, &qcc->compno);
 		len -= 2;
 	}
-	if (jpc_qcx_getcompparms(&qcc->compparms, cstate, in, len)) {
+	if (jpc_qcx_getcompparms(&qcc->compparms, cstate, in, (uint_fast16_t)len))
+	{
 		return -1;
 	}
 	if (jas_stream_eof(in)) {
@@ -920,7 +928,7 @@ static int jpc_qcc_putparms(jpc_ms_t *ms, jpc_cstate_t *cstate, jas_stream_t *ou
 {
 	jpc_qcc_t *qcc = &ms->parms.qcc;
 	if (cstate->numcomps <= 256) {
-		jpc_putuint8(out, qcc->compno);
+		jpc_putuint8(out, (uint_fast8_t)qcc->compno);
 	} else {
 		jpc_putuint16(out, qcc->compno);
 	}
@@ -1013,11 +1021,11 @@ static int jpc_qcx_putcompparms(jpc_qcxcp_t *compparms, jpc_cstate_t *cstate,
 	/* Eliminate compiler warning about unused variables. */
 	cstate = 0;
 
-	jpc_putuint8(out, ((compparms->numguard & 7) << 5) | compparms->qntsty);
+	jpc_putuint8(out, (uint_fast8_t)(((compparms->numguard & 7) << 5) | compparms->qntsty));
 	for (i = 0; i < compparms->numstepsizes; ++i) {
 		if (compparms->qntsty == JPC_QCX_NOQNT) {
-			jpc_putuint8(out, JPC_QCX_GETEXPN(
-			  compparms->stepsizes[i]) << 3);
+			jpc_putuint8(out, (uint_fast8_t)(JPC_QCX_GETEXPN(
+			  compparms->stepsizes[i]) << 3));
 		} else {
 			jpc_putuint16(out, compparms->stepsizes[i]);
 		}
@@ -1281,12 +1289,12 @@ static int jpc_poc_putparms(jpc_ms_t *ms, jpc_cstate_t *cstate, jas_stream_t *ou
 		if (jpc_putuint8(out, pchg->rlvlnostart) ||
 		  ((cstate->numcomps > 256) ?
 		  jpc_putuint16(out, pchg->compnostart) :
-		  jpc_putuint8(out, pchg->compnostart)) ||
+		  jpc_putuint8(out, (uint_fast8_t)pchg->compnostart)) ||
 		  jpc_putuint16(out, pchg->lyrnoend) ||
 		  jpc_putuint8(out, pchg->rlvlnoend) ||
 		  ((cstate->numcomps > 256) ?
 		  jpc_putuint16(out, pchg->compnoend) :
-		  jpc_putuint8(out, pchg->compnoend)) ||
+		  jpc_putuint8(out, (uint_fast8_t)pchg->compnoend)) ||
 		  jpc_putuint8(out, pchg->prgord)) {
 			return -1;
 		}

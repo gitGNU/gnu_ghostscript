@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,10 +17,11 @@
 
 */
 
-/* $Id: gxpflat.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gxpflat.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Path flattening algorithms */
 #include "string_.h"
 #include "gx.h"
+#include "gserrors.h"
 #include "gxarith.h"
 #include "gxfixed.h"
 #include "gzpath.h"
@@ -147,7 +149,7 @@ print_points(const gs_fixed_point *points, int count)
     if (!gs_debug_c('3'))
 	return;
     for (i = 0; i < count; i++)
-	if_debug2('3', "[3]out x=%d y=%d\n", points[i].x, points[i].y);
+	if_debug2('3', "[3]out x=%ld y=%ld\n", points[i].x, points[i].y);
 #endif
 }
 
@@ -270,17 +272,46 @@ gx_flattened_iterator__init(gx_flattened_iterator *this,
     return true;
 }
 
+private inline bool 
+check_diff_overflow(fixed v0, fixed v1)
+{
+    if (v0 < v1) {
+	if (v1 - v0 < 0)
+	    return true;
+    } else {
+	if (v0 - v1 < 0)
+	    return true;
+    }
+    return false;
+}
+
 /*  Initialize the iterator with a line. */
 bool
 gx_flattened_iterator__init_line(gx_flattened_iterator *this, 
 	    fixed x0, fixed y0, fixed x1, fixed y1)
 {
+    bool ox = check_diff_overflow(x0, x1);
+    bool oy = check_diff_overflow(y0, y1);
+
     this->x0 = this->lx0 = this->lx1 = x0;
     this->y0 = this->ly0 = this->ly1 = y0;
     this->x3 = x1;
     this->y3 = y1;
-    this->k = 0;
-    this->i = 1;
+    if (ox || oy) {
+	/* Subdivide a long line into 2 segments, because the filling algorithm 
+	   and the stroking algorithm need to compute differences 
+	   of coordinates of end points. */
+	/* Note : the result of subdivision may be not strongly colinear. */
+	this->ax = this->bx = 0;
+	this->ay = this->by = 0;
+	this->cx = (ox ? (x1 >> 1) - (x0 >> 1) : (x1 - x0) / 2);
+	this->cy = (oy ? (y1 >> 1) - (y0 >> 1) : (y1 - y0) / 2);
+	this->k = 1;
+	this->i = 2;
+    } else {
+	this->k = 0;
+	this->i = 1;
+    }
     this->curve = false;
     return true;
 }
@@ -306,7 +337,7 @@ gx_flattened_iterator__print_state(gx_flattened_iterator *this)
 /* Move to the next segment and store it to this->lx0, this->ly0, this->lx1, this->ly1 .
  * Return true iff there exist more segments.
  */
-bool
+int
 gx_flattened_iterator__next(gx_flattened_iterator *this)
 {
     /*
@@ -345,6 +376,8 @@ gx_flattened_iterator__next(gx_flattened_iterator *this)
      * variables, we don't actually compute M, only M-1 (rmask).  */
     fixed x = this->lx1, y = this->ly1;
 
+    if (this->i <= 0)
+	return_error(gs_error_unregistered); /* Must not happen. */
     this->lx0 = this->lx1;
     this->ly0 = this->ly1;
     /* Fast check for N == 3, a common special case for small characters. */
@@ -358,7 +391,7 @@ gx_flattened_iterator__next(gx_flattened_iterator *this)
 #	undef poly2
 	if_debug2('3', "[3]dx=%f, dy=%f\n",
 		  fixed2float(x - this->x0), fixed2float(y - this->y0));
-	if_debug5('3', "[3]%s x=%g, y=%g x=%d y=%d\n",
+	if_debug5('3', "[3]%s x=%g, y=%g x=%ld y=%ld\n",
 		  (((x ^ this->x0) | (y ^ this->y0)) & float2fixed(-0.5) ?
 		   "add" : "skip"),
 		  fixed2float(x), fixed2float(y), x, y);
@@ -381,7 +414,7 @@ gx_flattened_iterator__next(gx_flattened_iterator *this)
 	accum(this->idy, this->rdy, this->id2y, this->rd2y, this->rmask);
 	accum(this->id2x, this->rd2x, this->id3x, this->rd3x, this->rmask);
 	accum(this->id2y, this->rd2y, this->id3y, this->rd3y, this->rmask);
-	if_debug5('3', "[3]%s x=%g, y=%g x=%d y=%d\n",
+	if_debug5('3', "[3]%s x=%g, y=%g x=%ld y=%ld\n",
 		  (((x ^ this->lx0) | (y ^ this->ly0)) & float2fixed(-0.5) ?
 		   "add" : "skip"),
 		  fixed2float(x), fixed2float(y), x, y);
@@ -394,7 +427,7 @@ gx_flattened_iterator__next(gx_flattened_iterator *this)
 last:
     this->lx1 = this->x3;
     this->ly1 = this->y3;
-    if_debug4('3', "[3]last x=%g, y=%g x=%d y=%d\n",
+    if_debug4('3', "[3]last x=%g, y=%g x=%ld y=%ld\n",
 	      fixed2float(this->lx1), fixed2float(this->ly1), this->lx1, this->ly1);
     vd_bar(this->lx0, this->ly0, this->lx1, this->ly1, 1, RGB(0, 255, 0));
     return false;
@@ -419,12 +452,13 @@ gx_flattened_iterator__unaccum(gx_flattened_iterator *this)
  * This only works for states reached with gx_flattened_iterator__next.
  * Return true iff there exist more segments.
  */
-bool
+int
 gx_flattened_iterator__prev(gx_flattened_iterator *this)
 {
     bool last; /* i.e. the first one in the forth order. */
 
-    assert(this->i < 1 << this->k);
+    if (this->i >= 1 << this->k)
+	return_error(gs_error_unregistered); /* Must not happen. */
     this->lx1 = this->lx0;
     this->ly1 = this->ly0;
     if (this->k <= 1) {
@@ -443,7 +477,7 @@ gx_flattened_iterator__prev(gx_flattened_iterator *this)
     gx_flattened_iterator__unaccum(this);
     this->i++;
 #   ifdef DEBUG
-    if_debug5('3', "[3]%s x=%g, y=%g x=%d y=%d\n",
+    if_debug5('3', "[3]%s x=%g, y=%g x=%ld y=%ld\n",
 	      (((this->x ^ this->lx1) | (this->y ^ this->ly1)) & float2fixed(-0.5) ?
 	       "add" : "skip"),
 	      fixed2float(this->x), fixed2float(this->y), this->x, this->y);
@@ -454,7 +488,8 @@ gx_flattened_iterator__prev(gx_flattened_iterator *this)
     this->ly0 = this->y;
     vd_bar(this->lx0, this->ly0, this->lx1, this->ly1, 1, RGB(0, 0, 255));
     if (last)
-	assert(this->lx0 == this->x0 && this->ly0 == this->y0);
+	if (this->lx0 != this->x0 || this->ly0 != this->y0)
+	    return_error(gs_error_unregistered); /* Must not happen. */
     return !last;
 }
 
@@ -465,7 +500,7 @@ gx_flattened_iterator__switch_to_backscan(gx_flattened_iterator *this, bool not_
     /*	When scanning forth, the accumulator stands on the end of a segment,
 	except for the last segment.
 	When scanning back, the accumulator should stand on the beginning of a segment.
-	Asuuming that at least one forward step is done.
+	Assuming at least one forward step is done.
     */
     if (not_first)
 	if (this->i > 0 && this->k != 1 /* This case doesn't use the accumulator. */)
@@ -526,7 +561,11 @@ top :
 	bool more;
 
 	for(;;) {
-	    more = gx_flattened_iterator__next(this);
+	    code = gx_flattened_iterator__next(this);
+
+	    if (code < 0)
+		return code;
+	    more = code;
 	    ppt->x = this->lx1;
 	    ppt->y = this->ly1;
 	    ppt++;

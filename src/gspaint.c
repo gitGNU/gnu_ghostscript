@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gspaint.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gspaint.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Painting procedures for Ghostscript library */
 #include "math_.h"		/* for fabs */
 #include "gx.h"
@@ -240,17 +240,19 @@ alpha_buffer_init(gs_state * pgs, fixed extra_x, fixed extra_y, int alpha_bits)
 }
 
 /* Release an alpha buffer. */
-private void
+private int
 alpha_buffer_release(gs_state * pgs, bool newpath)
 {
     gx_device_memory *mdev =
-    (gx_device_memory *) gs_currentdevice_inline(pgs);
+	(gx_device_memory *) gs_currentdevice_inline(pgs);
+    int code = (*dev_proc(mdev, close_device)) ((gx_device *) mdev);
 
-    (*dev_proc(mdev, close_device)) ((gx_device *) mdev);
-    scale_paths(pgs, -mdev->log2_scale.x, -mdev->log2_scale.y,
+    if (code >= 0)
+	scale_paths(pgs, -mdev->log2_scale.x, -mdev->log2_scale.y,
 		!(newpath && !gx_path_is_shared(pgs->path)));
     /* Reference counting will free mdev. */
     gx_set_device_only(pgs, mdev->target);
+    return code;
 }
 
 /* Fill the current path using a specified rule. */
@@ -264,8 +266,12 @@ fill_with_rule(gs_state * pgs, int rule)
     if (pgs->in_charpath)
 	code = gx_path_add_char_path(pgs->show_gstate->path, pgs->path,
 				     pgs->in_charpath);
-    else {
-	int abits, acode;
+    else if (gs_is_null_device(pgs->device)) {
+	/* Handle separately to prevent gs_state_color_load - bug 688308. */
+	gs_newpath(pgs);
+	code = 0;
+    } else {
+	int abits, acode, rcode = 0;
 
 	gx_set_dev_color(pgs);
 	code = gs_state_color_load(pgs);
@@ -282,9 +288,11 @@ fill_with_rule(gs_state * pgs, int rule)
 	code = gx_fill_path(pgs->path, pgs->dev_color, pgs, rule,
 			    pgs->fill_adjust.x, pgs->fill_adjust.y);
 	if (acode > 0)
-	    alpha_buffer_release(pgs, code >= 0);
+	    rcode = alpha_buffer_release(pgs, code >= 0);
 	if (code >= 0)
 	    gs_newpath(pgs);
+	if (code >= 0 && rcode < 0)
+	    code = rcode;
 
     }
     return code;
@@ -324,8 +332,12 @@ gs_stroke(gs_state * pgs)
 	}
 	code = gx_path_add_char_path(pgs->show_gstate->path, pgs->path,
 				     pgs->in_charpath);
+    } else if (gs_is_null_device(pgs->device)) {
+	/* Handle separately to prevent gs_state_color_load. */
+	gs_newpath(pgs);
+	code = 0;
     } else {
-	int abits, acode;
+	int abits, acode, rcode = 0;
 
 	gx_set_dev_color(pgs);
 	code = gs_state_color_load(pgs);
@@ -376,11 +388,13 @@ gs_stroke(gs_state * pgs)
 	    gs_setflat(pgs, orig_flatness);
 	    gx_path_free(&spath, "gs_stroke");
 	    if (acode > 0)
-		alpha_buffer_release(pgs, code >= 0);
+		rcode = alpha_buffer_release(pgs, code >= 0);
 	} else
 	    code = gx_stroke_fill(pgs->path, pgs);
 	if (code >= 0)
 	    gs_newpath(pgs);
+	if (code >= 0 && rcode < 0)
+	    code = rcode;
     }
     return code;
 }

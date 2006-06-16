@@ -11,7 +11,7 @@
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
    
-    $Id: jbig2.c,v 1.3 2006/03/02 21:27:55 Arabidopsis Exp $
+    $Id: jbig2.c,v 1.4 2006/06/16 12:55:32 Arabidopsis Exp $
 */
 
 #ifdef HAVE_CONFIG_H
@@ -395,6 +395,8 @@ jbig2_word_stream_buf_get_next_word(Jbig2WordStream *self, int offset)
   if (offset + 4 < z->size)
     result = (data[offset] << 24) | (data[offset + 1] << 16) |
       (data[offset + 2] << 8) | data[offset + 3];
+  else if (offset >= z->size)
+    return 0;
   else
     {
       int i;

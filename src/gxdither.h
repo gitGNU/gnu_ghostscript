@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxdither.h,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxdither.h,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Interface to gxdither.c */
 
 #ifndef gxdither_INCLUDED
@@ -37,13 +37,11 @@ typedef struct gx_device_halftone_s gx_device_halftone;
  *  dev = pointer to device data structure
  *  pht = pointer to halftone data structure
  *  ht_phase  = halftone phase
- *  gray_colorspace = true -> current color space is DeviceGray.
  *  This is part of a kludge to minimize differences in the
  *  regression testing.
  */
 int gx_render_device_DeviceN(frac * pcolor, gx_device_color * pdevc,
-	gx_device * dev, gx_device_halftone * pdht,
-	const gs_int_point * ht_phase, bool gray_colorspace);
+    gx_device * dev, gx_device_halftone * pdht, const gs_int_point * ht_phase);
 /*
  * Reduce a colored halftone with 0 or 1 varying plane(s) to a pure color
  * or a binary halftone.

@@ -17,7 +17,7 @@
   
 */
 
-/*$Id: gxclpath.h,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/*$Id: gxclpath.h,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Definitions and support procedures for higher-level band list commands */
 /* Extends (requires) gxcldev.h */
 
@@ -248,6 +248,11 @@ int cmd_put_drawing_color(gx_device_clist_writer * cldev,
 /* Clear (a) specific 'known' flag(s) for all bands. */
 /* We must do this whenever the value of a 'known' parameter changes. */
 void cmd_clear_known(gx_device_clist_writer * cldev, uint known);
+
+/* Compute the written CTM length. */
+int cmd_write_ctm_return_length(gx_device_clist_writer * cldev, const gs_matrix *m);
+/* Write out CTM. */
+int cmd_write_ctm(const gs_matrix *m, byte *dp, int len);
 
 /* Write out values of any unknown parameters. */
 #define cmd_do_write_unknown(cldev, pcls, must_know)\

@@ -17,7 +17,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: Makefile.in,v 1.7 2006/03/02 20:48:31 Arabidopsis Exp $
+# $Id: Makefile.in,v 1.8 2006/06/16 12:55:34 Arabidopsis Exp $
 # makefile template for/from the autoconf build.
 # @configure_input@
 
@@ -112,8 +112,10 @@ GENOPT=
 
 # -DHAVE_MKSTEMP
 #	uses mkstemp instead of mktemp
-#		This gets rid of several security warnings that look
-#		ominous.  Enable this if you wish to get rid of them.
+#		This uses the more secure temporary file creation call
+#		Enable this if it is available on your platform.
+# -DHAVE_HYPOT
+#	use the system hypot() call
 
 CAPOPT= @HAVE_MKSTEMP@ @HAVE_HYPOT@
 
@@ -171,13 +173,29 @@ ZSRCDIR=@ZLIBDIR@
 ZLIB_NAME=z
 
 # Choose shared or compiled in libjbig2dec and source location
+JBIG2_LIB=jbig2dec
 SHARE_JBIG2=@SHARE_JBIG2@
 JBIG2SRCDIR=@JBIG2DIR@
 
-# Choose shared of compiled in libjasper (JPXDecode support) and source location
-SHARE_JASPER=@SHARE_JASPER@
-JASPERSRCDIR=@JASPERDIR@
-JASPERCFLAGS=-DJAS_CONFIGURE
+# uncomment the following to compile in the Luratech ldf_jb2 codec
+#JBIG2_LIB=luratech
+#SHARE_JBIG2=0
+#JBIG2SRCDIR=ldf_jb2
+#JBIG2_CFLAGS=-DUSE_LDF_JB2
+
+# Choose the library to use for (JPXDecode support)
+# whether to link to an external build or compile in from source
+# and source location and configuration flags for compiling in
+JPX_LIB=jasper
+SHARE_JPX=@SHARE_JASPER@
+JPXSRCDIR=@JASPERDIR@
+JPX_CFLAGS=-DJAS_CONFIGURE
+
+# uncomment the following to compile in the Luratech lwf_jp2 codec
+#JPX_LIB=luratech
+#SHARE_JPX=0
+#JPXSRCDIR=lwf_jp2
+#JPX_CFLAGS=-DUSE_LWF_JP2 -DLINUX
 
 # Define the directory where the icclib source are stored.
 # See icclib.mak for more information
@@ -325,8 +343,12 @@ FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(P
 #FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev
 #FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)rasterop.dev $(GLD)pipe.dev
 # The following is strictly for testing.
-FEATURE_DEVS_ALL=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)rasterop.dev $(PSD)double.dev $(PSD)trapping.dev $(PSD)stocht.dev $(GLD)pipe.dev @JBIG2DEVS@ @JPXDEVS@
+FEATURE_DEVS_ALL=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)rasterop.dev $(PSD)double.dev $(PSD)trapping.dev $(PSD)stocht.dev $(GLD)pipe.dev $(GLD)romfs.dev @JBIG2DEVS@ @JPXDEVS@
 #FEATURE_DEVS=$(FEATURE_DEVS_ALL)
+
+# The list of resources to be included in the %rom% file system.
+# This is in the top makefile since the file descriptors are platform specific
+RESOURCE_LIST=Resource/CMap/ Resource/ColorSpace/ Resource/Decoding/ Resource/Fonts/ Resource/Procset/ Resource/IdiomSet/ Resource/CIDFont/
 
 # Choose whether to compile the .ps initialization files into the executable.
 # See gs.mak for details.
@@ -369,7 +391,7 @@ EXTEND_NAMES=0
 DEVICE_DEVS=$(DISPLAY_DEV) @X11DEVS@
 
 DEVICE_DEVS1=$(DD)bmpmono.dev $(DD)bmpgray.dev $(DD)bmpsep1.dev $(DD)bmpsep8.dev $(DD)bmp16.dev $(DD)bmp256.dev $(DD)bmp16m.dev $(DD)bmp32b.dev
-DEVICE_DEVS2=#$(DD)rinkj.dev
+DEVICE_DEVS2=#$(DD)gdevjbig2.dev $(DD)gdevjpx.dev #$(DD)rinkj.dev
 DEVICE_DEVS3=$(DD)deskjet.dev $(DD)djet500.dev $(DD)laserjet.dev $(DD)ljetplus.dev $(DD)ljet2p.dev $(DD)ljet3.dev $(DD)ljet3d.dev $(DD)ljet4.dev $(DD)ljet4d.dev $(DD)lj5mono.dev $(DD)lj5gray.dev
 DEVICE_DEVS4=$(DD)cdeskjet.dev $(DD)cdjcolor.dev $(DD)cdjmono.dev $(DD)cdj550.dev $(DD)pj.dev $(DD)pjxl.dev $(DD)pjxl300.dev
 DEVICE_DEVS5=$(DD)uniprint.dev @IJSDEVS@
@@ -383,7 +405,7 @@ DEVICE_DEVS12=$(DD)psmono.dev $(DD)psgray.dev $(DD)psrgb.dev $(DD)bit.dev $(DD)b
 #DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev
 DEVICE_DEVS13=@PNGDEVS@
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev
-DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)epswrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
+DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
 DEVICE_DEVS16=$(DD)bbox.dev
 
 DEVICE_DEVS17=
@@ -426,6 +448,8 @@ include $(GLSRCDIR)/zlib.mak
 include $(GLSRCDIR)/libpng.mak
 include $(GLSRCDIR)/jbig2.mak
 include $(GLSRCDIR)/jasper.mak
+include $(GLSRCDIR)/ldf_jb2.mak
+include $(GLSRCDIR)/lwf_jp2.mak
 include $(GLSRCDIR)/icclib.mak
 include $(GLSRCDIR)/ijs.mak
 include $(GLSRCDIR)/devs.mak

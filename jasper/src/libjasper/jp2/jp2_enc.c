@@ -64,7 +64,7 @@
 /*
  * JP2 Library
  *
- * $Id: jp2_enc.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jp2_enc.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -77,6 +77,8 @@
 #include "jasper/jas_stream.h"
 #include "jasper/jas_cm.h"
 #include "jasper/jas_icc.h"
+#include "jasper/jas_debug.h"
+
 #include "jp2_cod.h"
 
 static uint_fast32_t jp2_gettypeasoc(int colorspace, int ctype);
@@ -230,15 +232,30 @@ int sgnd;
 		iccstream = jas_stream_memopen(0, 0);
 		assert(iccstream);
 		if (jas_iccprof_save(iccprof, iccstream))
-			abort();
+		{
+			jas_error(	JAS_ERR_ICCPROF_SAVE_ERROR_JP2_ENCODE,
+						"JAS_ERR_ICCPROF_SAVE_ERROR_JP2_ENCODE"
+					);
+			goto error;
+		}
 		if ((pos = jas_stream_tell(iccstream)) < 0)
-			abort();
+		{
+			jas_error(	JAS_ERR_STREAM_TELL_FAILURE_JP2_ENCODE,
+						"JAS_ERR_STREAM_TELL_FAILURE_JP2_ENCODE"
+					);
+			goto error;
+		}
 		colr->iccplen = pos;
 		colr->iccp = jas_malloc(pos);
 		assert(colr->iccp);
 		jas_stream_rewind(iccstream);
 		if (jas_stream_read(iccstream, colr->iccp, colr->iccplen) != colr->iccplen)
-			abort();
+		{
+			jas_error(	JAS_ERR_STREAM_READ_FAILURE_JP2_ENCODE,
+						"JAS_ERR_STREAM_READ_FAILURE_JP2_ENCODE"
+					);
+			goto error;
+		}
 		jas_stream_close(iccstream);
 		jas_iccprof_destroy(iccprof);
 		break;
@@ -275,7 +292,10 @@ int sgnd;
 			needcdef = 0;
 		break;
 	default:
-		abort();
+		jas_error(	JAS_ERR_UNSUPPORTED_COLOR_SPACE_JP2_ENCODE,
+					"JAS_ERR_UNSUPPORTED_COLOR_SPACE_JP2_ENCODE"
+				);
+		goto error;
 		break;
 	}
 
@@ -351,8 +371,6 @@ int sgnd;
 	}
 
 	return 0;
-	abort();
-
 error:
 
 	if (box) {
@@ -430,7 +448,9 @@ static int clrspctojp2(jas_clrspc_t clrspc)
 	case JAS_CLRSPC_SGRAY:
 		return JP2_COLR_SGRAY;
 	default:
-		abort();
+		jas_error(	JAS_ERR_UNSUPPORTED_COLOR_SPACE_CLRSPCTOJP2,
+					"JAS_ERR_UNSUPPORTED_COLOR_SPACE_CLRSPCTOJP2"
+				);
 		break;
 	}
 	return JAS_CLRSPC_UNKNOWN;

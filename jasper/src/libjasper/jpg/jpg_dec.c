@@ -162,7 +162,7 @@ jas_image_t *jpg_decode(jas_stream_t *in, char *optstr)
 	jpeg_stdio_src(&cinfo, input_file);
 
 	/* Read the file header to obtain the image information. */
-	jpeg_read_header(&cinfo, TRUE);
+	jpeg_read_header(&cinfo, jas_true);
 
 	/* Start the decompressor. */
 	jpeg_start_decompress(&cinfo);
@@ -243,7 +243,7 @@ static jas_image_t *jpg_mkimage(j_decompress_ptr cinfo)
 		cmptparm.width = cinfo->image_width;
 		cmptparm.height = cinfo->image_height;
 		cmptparm.prec = 8;
-		cmptparm.sgnd = false;
+		cmptparm.sgnd = jas_false;
 		if (jas_image_addcmpt(image, cmptno, &cmptparm)) {
 			goto error;
 		}

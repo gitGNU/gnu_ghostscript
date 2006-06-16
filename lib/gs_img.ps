@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_img.ps,v 1.2 2005/12/13 17:48:51 jemarch Exp $
+% $Id: gs_img.ps,v 1.3 2006/06/16 12:55:13 Arabidopsis Exp $
 % image, colorimage, and imagemask implementation
 
 %
@@ -411,12 +411,12 @@ def
   {
     % check for proper number of operands
     count 5 lt
-      { /imagemask load /stackunderflow signalerror }
+      { /imagemask .systemvar /stackunderflow signalerror }
     if
 
     % verify that polarity is a boolean
     2 index type /booleantype ne
-      { /imagemask load /typecheck signalerror }
+      { /imagemask .systemvar /typecheck signalerror }
     if
 
     % the imagemask dictionary can be built; do so
@@ -525,7 +525,7 @@ systemdict /setcolorscreen .knownget
              //false
                //.colorimage
              stopped
-               { /colorimage load  $error /errorname get signalerror }
+               { /colorimage .systemvar  $error /errorname get signalerror }
              if
           }
         .bind systemdict begin odef end
@@ -546,7 +546,7 @@ if
 %
 /image
   {
-    dup type /dicttype eq languagelevel 2 ge and
+    dup type /dicttype eq .languagelevel 2 ge and
       { 
         dup /ImageType get dup 2 eq
           {
@@ -594,10 +594,10 @@ if
                 //.imagetypes 2 get
                 stopped
                 grestore
-                  { /image load $error /errorname get signalerror }
+                  { /image .systemvar $error /errorname get signalerror }
                 if
               }
-              { /image load /undefined signalerror }
+              { /image .systemvar /undefined signalerror }
             ifelse
           }
           {
@@ -606,7 +606,7 @@ if
             //.imagetypes exch get
             stopped
             grestore
-              { /image load $error /errorname get signalerror }
+              { /image .systemvar $error /errorname get signalerror }
             if
           }
         ifelse
@@ -615,7 +615,7 @@ if
         //false 1 //false
           //.colorimage
         stopped
-          { /image load $error /errorname get signalerror }
+          { /image .systemvar $error /errorname get signalerror }
         if
       }
     ifelse
@@ -631,7 +631,7 @@ if
 %
 /imagemask
   {
-    dup type /dicttype eq languagelevel 2 ge and
+    dup type /dicttype eq .languagelevel 2 ge and
       { dup /ImageType get //.imagemasktypes exch get exec }
       {
         //img_build_imagemask_dict exec
@@ -639,7 +639,7 @@ if
         stopped
           {
             //img_unbuild_imagemask_dict exec
-            /imagemask load $error /errorname get signalerror
+            /imagemask .systemvar $error /errorname get signalerror
           }
         if
       }

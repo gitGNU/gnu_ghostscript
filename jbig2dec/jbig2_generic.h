@@ -8,7 +8,7 @@
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
                                                                                 
-    $Id: jbig2_generic.h,v 1.3 2006/03/02 21:27:55 Arabidopsis Exp $
+    $Id: jbig2_generic.h,v 1.4 2006/06/16 12:55:32 Arabidopsis Exp $
 */
 
 /**
@@ -26,6 +26,10 @@ typedef struct {
   /* SKIP */
   int8_t gbat[8];
 } Jbig2GenericRegionParams;
+
+/* return the appropriate context size for the given template */
+int
+jbig2_generic_stats_size(Jbig2Ctx *ctx, int template);
 
 int
 jbig2_decode_generic_region(Jbig2Ctx *ctx,

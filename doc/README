@@ -1,23 +1,11 @@
 
                             Overview of Ghostscript
 
-   If this is your first contact with Ghostscript, before continuing here
-   you should read the documentation for new users, where you'll find
-     * what Ghostscript does (PostScript and PDF previewing, conversion,
-       and printing);
-     * its licensing terms (free for ordinary use);
-     * what platforms it runs on (every platform you're likely to be
-       interested in);
-     * where to find some useful programs that enhance Ghostscript (like
-       user-friendly previewers for Unix, VMS, MS Windows, DOS, and
-       Macintosh); and
-     * what to do if you need help.
-
-   The rest of this document is a roadmap to the Ghostscript
-   documentation. After looking through it, if you want to install
-   Ghostscript and not only use it, we recommend you read how to install
-   Ghostscript, and how to compile Ghostscript from source code (which is
-   necessary before installing it on Unix and VMS systems).
+   This document is a roadmap to the Ghostscript documentation. After
+   looking through it, if you want to install Ghostscript and not only
+   use it, we recommend you read how to install Ghostscript, and how to
+   compile Ghostscript from source code (which is necessary before
+   installing it on Unix and VMS systems).
      _________________________________________________________________
 
 Table of contents
@@ -190,10 +178,10 @@ Presence on the World Wide Web
    Web, including the PostScript Language Reference Manual (Third
    Edition); the Encapsulated PostScript (EPS) Format Specification
    version 3, including Encapsulated PostScript Interchange (EPSI)
-   format; the PDF 1.3 specification; and the PDF 1.5 specification. The
-   Acrobat SDK contains pdfmark and Acrobat Distiller parameters
-   documentation. Some of these documents are also available at Adobe's
-   ftp site, but not necessarily under the same filenames.
+   format; the PDF Reference manuals. The Acrobat SDK contains pdfmark
+   and Acrobat Distiller parameters documentation. Some of these
+   documents are also available at Adobe's ftp site, but not necessarily
+   under the same filenames.
 
   Other material on the WWW
 
@@ -319,9 +307,6 @@ Which document contains what?
           experienced developer to build or install Ghostscript, but some
           experience is needed.
 
-   New-user.htm
-          Essential information for new users of Ghostscript.
-
    News.htm
           A brief description of the latest release or pre-release of
           Ghostscript, and a list of any incompatible changes in it.
@@ -348,6 +333,11 @@ Which document contains what?
    Ps2pdf.htm
           Detailed information on how to use Ghostscript through ps2pdf
           to convert PostScript to Adobe Portable Document Format (PDF).
+
+   Ps2ps2.htm
+          Detailed information on how to use Ghostscript through ps2ps2
+          to convert Adobe Portable Document Format (PDF) or Adobe
+          Postscript Level 3 into Adobe Postscript Level 2.
 
    Psfiles.htm
           A description of the PostScript files (other than font files)

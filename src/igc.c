@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: igc.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: igc.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Garbage collector for Ghostscript */
 #include "memory_.h"
 #include "ghost.h"
@@ -99,7 +99,7 @@ refs_proc_reloc(igc_reloc_refs);	/* in igcref.c */
 /* Define this GC's procedure vector. */
 private const gc_procs_with_refs_t igc_procs = {
     igc_reloc_struct_ptr, igc_reloc_string, igc_reloc_const_string,
-    igc_reloc_ref_ptr, igc_reloc_refs
+    igc_reloc_param_string, igc_reloc_ref_ptr, igc_reloc_refs
 };
 
 /* Pointer type descriptors. */
@@ -154,6 +154,7 @@ gc_validate_spaces(gs_ref_memory_t **spaces, int max_space, gc_state_t *gcst)
 #else  /* !DEBUG */
 #  define end_phase(str) DO_NOTHING
 #endif /* DEBUG */
+
 void
 gs_gc_reclaim(vm_spaces * pspaces, bool global)
 {
@@ -377,6 +378,20 @@ gs_gc_reclaim(vm_spaces * pspaces, bool global)
 
 	end_phase("finish trace");
     }
+
+#if NO_INVISIBLE_LEVELS
+    /* Filter save change lists with removing elements,
+       which point to unmarked blocks of refs. */
+    {
+	int i;
+
+	for_collected_spaces(i) {
+	    gs_ref_memory_t *mem = space_memories[i];
+
+	    alloc_save__filter_changes(mem);
+	}
+    }
+#endif
     /* Clear marks and relocation in spaces that are only being traced. */
     /* We have to clear the marks first, because we want the */
     /* relocation to wind up as o_untraced, not o_unmarked. */

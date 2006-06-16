@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gzacpath.h,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gzacpath.h,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* State and interface definitions for clipping path accumulator */
 /* Requires gxdevice.h, gzcpath.h */
 
@@ -55,6 +55,6 @@ void gx_cpath_accum_discard(gx_device_cpath_accum * padev);
 
 /* Intersect two clipping paths using an accumulator. */
 int gx_cpath_intersect_path_slow(gx_clip_path *, gx_path *, int,
-					gs_imager_state *);
+			gs_imager_state *, const gx_fill_params *);
 
 #endif /* gzacpath_INCLUDED */

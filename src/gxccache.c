@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxccache.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: gxccache.c,v 1.7 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Fast case character cache routines for Ghostscript library */
 #include "memory_.h"
 #include "gx.h"
@@ -88,9 +88,8 @@ gx_lookup_fm_pair(gs_font * pfont, const gs_matrix *char_tm,
     float mxx, mxy, myx, myy;
     gs_font *font = pfont;
     register gs_font_dir *dir = font->dir;
-    register cached_fm_pair *pair =
-    dir->fmcache.mdata + dir->fmcache.mnext;
-    int count = dir->fmcache.mmax;
+    register cached_fm_pair *pair = dir->fmcache.mdata + dir->fmcache.used;
+    int count = dir->fmcache.msize;
     gs_uid uid;
 
     gx_compute_ccache_key(pfont, char_tm, log2_scale, design_grid,
@@ -102,10 +101,7 @@ gx_lookup_fm_pair(gs_font * pfont, const gs_matrix *char_tm,
 	if (uid_is_valid(&uid))
 	    font = 0;
     }
-    while (count--) {
-	if (pair == dir->fmcache.mdata)
-	    pair += dir->fmcache.mmax;
-	pair--;
+    for (;count--; pair = dir->fmcache.mdata + pair->next) {
 	/* We have either a non-zero font and an invalid UID, */
 	/* or a zero font and a valid UID. */
 	/* We have to break up the test */
@@ -122,6 +118,8 @@ gx_lookup_fm_pair(gs_font * pfont, const gs_matrix *char_tm,
 	if (pair->mxx == mxx && pair->mxy == mxy &&
 	    pair->myx == myx && pair->myy == myy
 	    && pair->design_grid == design_grid) {
+	    int code; 
+
 	    if (pair->font == 0) {
 		pair->font = pfont;
 		if_debug2('k', "[k]updating pair 0x%lx with font 0x%lx\n",
@@ -130,6 +128,9 @@ gx_lookup_fm_pair(gs_font * pfont, const gs_matrix *char_tm,
 		if_debug2('k', "[k]found pair 0x%lx: font=0x%lx\n",
 			  (ulong) pair, (ulong) pair->font);
 	    }
+	    code = gx_touch_fm_pair(dir, pair);
+	    if (code < 0)
+		return code;
 	    *ppair = pair;
 	    return 0;
 	}
@@ -166,10 +167,12 @@ gx_lookup_cached_char(const gs_font * pfont, const cached_fm_pair * pair,
 }
 
 /* Look up a character in an external font. */
-/* Return the cached_char or 0. */
-cached_char *
+/* If found, stores a pointer to the cached_char into *pcc and returns 1 */
+/* Otherwise stores NULL into *pcc and returns 0 or error. */
+/* Note it must initialise *pcc in any case. */
+int
 gx_lookup_xfont_char(const gs_state * pgs, cached_fm_pair * pair,
-		     gs_char chr, gs_glyph glyph, int wmode)
+		     gs_char chr, gs_glyph glyph, int wmode, cached_char **pcc)
 {
     gs_font *font = pair->font;
     int enc_index;
@@ -179,9 +182,11 @@ gx_lookup_xfont_char(const gs_state * pgs, cached_fm_pair * pair,
     gs_point wxy;
     gs_int_rect bbox;
     cached_char *cc;
+    int code;
 
+    *pcc = NULL;
     if (font == 0)
-	return NULL;
+	return 0;
     enc_index =
 	(font->FontType == ft_composite ? -1 :
 	 ((gs_font_base *) font)->nearest_encoding_index);
@@ -191,14 +196,14 @@ gx_lookup_xfont_char(const gs_state * pgs, cached_fm_pair * pair,
     }
     xf = pair->xfont;
     if (xf == 0)
-	return NULL;
+	return 0;
     {
 	const gx_xfont_procs *procs = xf->common.procs;
 	gs_const_string gstr;
 	int code = font->procs.glyph_name(font, glyph, &gstr);
 
 	if (code < 0)
-	    return NULL;
+	    return 0;
 	if (enc_index >= 0 && ((gs_font_base *)font)->encoding_index < 0) {
 	    /*
 	     * Use the registered encoding only if this glyph
@@ -214,16 +219,16 @@ gx_lookup_xfont_char(const gs_state * pgs, cached_fm_pair * pair,
 	}
 	xg = procs->char_xglyph(xf, chr, enc_index, glyph, &gstr);
 	if (xg == gx_no_xglyph)
-	    return NULL;
+	    return 0;
 	if ((*procs->char_metrics) (xf, xg, wmode, &wxy, &bbox) < 0)
-	    return NULL;
+	    return 0;
     }
     log2_scale.x = log2_scale.y = 1;
     cc = gx_alloc_char_bits(font->dir, NULL, NULL, 
 		(ushort)(bbox.q.x - bbox.p.x), (ushort)(bbox.q.y - bbox.p.y), 
 		&log2_scale, 1);
     if (cc == 0)
-	return NULL;
+	return 0;
     /* Success.  Make the cache entry. */
     cc->code = glyph;
     cc->wmode = wmode;
@@ -238,8 +243,11 @@ gx_lookup_xfont_char(const gs_state * pgs, cached_fm_pair * pair,
 	      (ulong) glyph, (ulong) xg);
     if_debug6('k', "     wxy=(%g,%g) bbox=(%d,%d),(%d,%d)\n",
 	      wxy.x, wxy.y, bbox.p.x, bbox.p.y, bbox.q.x, bbox.q.y);
-    gx_add_cached_char(font->dir, NULL, cc, pair, &scale_log2_1);
-    return cc;
+    code = gx_add_cached_char(font->dir, NULL, cc, pair, &scale_log2_1);
+    if (code < 0)
+	return code;
+    *pcc = cc;
+    return 1;
 }
 
 /* Copy a cached character to the screen. */
@@ -340,7 +348,7 @@ gx_image_cached_char(register gs_show_enum * penum, register cached_char * cc)
 	if (!cc_has_bits(cc)) {
 	    gx_device_memory mdev;
 
-	    gs_make_mem_mono_device(&mdev, 0, imaging_dev);
+	    gs_make_mem_mono_device(&mdev, dev->memory, imaging_dev);
 	    gx_open_cache_device(&mdev, cc);
 	    code = (*xf->common.procs->render_char) (xf, xg,
 				       (gx_device *) & mdev, cx - x, cy - y,
@@ -446,11 +454,10 @@ gx_image_cached_char(register gs_show_enum * penum, register cached_char * cc)
 		for (iy = 0; iy < h && code >= 0; iy++)
 		    code = gs_image_next(pie, bits + iy * raster,
 					 (w + 7) >> 3, &used);
-		code1 = gs_image_cleanup(pie);
-		if (code >= 0 && code1 < 0)
-		    code = code1;
 	}
-	gs_free_object(mem, pie, "image_char(image_enum)");
+	code1 = gs_image_cleanup_and_free_enum(pie);
+	if (code >= 0 && code1 < 0)
+	    code = code1;
     }
   done:if (bits != cc_bits(cc))
 	gs_free_object(penum->memory->non_gc_memory, bits, "compress_alpha_bits");

@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: msvctail.mak,v 1.5 2005/12/13 16:57:26 jemarch Exp $
+# $Id: msvctail.mak,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $
 # Common tail section for Microsoft Visual C++ 4.x/5.x,
 # Windows NT or Windows 95 platform.
 # Created 1997-05-22 by L. Peter Deutsch from msvc4/5 makefiles.
@@ -43,8 +43,14 @@ $(ECHOGS_XE): $(GLSRC)echogs.c
 
 # Don't create genarch if it's not needed
 !ifdef GENARCH_XE
+!ifdef WIN64
+$(GENARCH_XE): $(GLSRC)genarch.c $(GENARCH_DEPS) $(GLGENDIR)\ccf32.tr
+	$(CC) @$(GLGENDIR)\ccf32.tr /Fo$(GLOBJ)genarch.obj $(GLSRC)genarch.c
+	$(LINK) $(LCT) $(LINKLIBPATH) $(GLOBJ)genarch.obj /OUT:$(GENARCH_XE)
+!else
 $(GENARCH_XE): $(GLSRC)genarch.c $(GENARCH_DEPS) $(GLGENDIR)\ccf32.tr
 	$(CCAUX) @$(GLGENDIR)\ccf32.tr /Fo$(GLOBJ)genarch.obj /Fe$(GENARCH_XE) $(GLSRC)genarch.c $(CCAUX_TAIL)
+!endif
 !endif
 
 $(GENCONF_XE): $(GLSRC)genconf.c $(GENCONF_DEPS)
@@ -55,6 +61,10 @@ $(GENDEV_XE): $(GLSRC)gendev.c $(GENDEV_DEPS)
 
 $(GENHT_XE): $(GLSRC)genht.c $(GENHT_DEPS)
 	$(CCAUX) $(GENHT_CFLAGS) $(GLSRC)genht.c /Fo$(GLOBJ)genht.obj /Fe$(GENHT_XE) $(CCAUX_TAIL)
+
+MKROMFS_OBJS=$(MKROMFS_ZLIB_OBJS) $(winplat_) $(GLOBJ)gpmisc.$(OBJ) $(GLOBJ)gp_getnv.$(OBJ)
+$(MKROMFS_XE): $(GLSRC)mkromfs.c $(MKROMFS_COMMON_DEPS) $(MKROMFS_OBJS)
+	$(CCAUX) -I$(GLOBJ) -I$(ZSRCDIR) @$(GLGENDIR)\ccf32.tr $(GLSRC)mkromfs.c /Fo$(GLOBJ)mkromfs.obj /Fe$(MKROMFS_XE) $(MKROMFS_OBJS) $(CCAUX_TAIL) /DEBUG
 
 # PSSRC and PSOBJ aren't defined yet, so we spell out the definitions.
 $(GENINIT_XE): $(PSSRCDIR)$(D)geninit.c $(GENINIT_DEPS)

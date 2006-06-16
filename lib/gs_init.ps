@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_init.ps,v 1.6 2006/03/02 22:26:14 Arabidopsis Exp $
+% $Id: gs_init.ps,v 1.7 2006/06/16 12:55:14 Arabidopsis Exp $
 % Initialization file for the interpreter.
 % When this is run, systemdict is still writable.
 
@@ -24,7 +24,7 @@
 
 % Check the interpreter revision.  NOTE: the interpreter code requires
 % that the first non-comment token in this file be an integer.
-851
+854
 dup revision ne
  { (gs: Interpreter revision \() print revision 10 string cvs print
    (\) does not match gs_init.ps revision \() print 10 string cvs print
@@ -59,7 +59,15 @@ ifelse
 systemdict /.languagelevel known not { /.languagelevel 1 def } if
 
 % Optionally choose a default paper size other than U.S. letter.
-% (a4) /PAPERSIZE where { pop pop } { /PAPERSIZE exch def } ifelse
+% The default page size for many devices is set at compile time to 
+% letter, but this can be changed to A4 although this is rarely done.  
+% Some devices such as bbox have a different default page size,
+% and should not be set to A4 or letter.
+% When ghostscript is used in countries that use the international
+% standard page size A4 rather than US letter, the page size of 
+% devices that default to letter or A4 can be changed by setting
+% DEFAULTPAPERSIZE.
+% /DEFAULTPAPERSIZE (a4) def
 
 % Turn on array packing for the rest of initialization.
 true setpacking
@@ -85,7 +93,6 @@ mark	% '[' isn't defined yet
   /PDFOPTDEBUG		% PDF Optimizer (Linearizer)
   /PDFWRDEBUG		% PDF Writer
   /SETPDDEBUG		% setpagedevice
-  /STRESDEBUG		% Static Resources
   /TTFDEBUG		% TTF Fonts
   /VGIFDEBUG		% ViewGIF
   /VJPGDEBUG		% ViewJPEG
@@ -303,7 +310,7 @@ currentdict /hwsizedict .undef
    dup type /booleantype ne
     { dup mark eq { /unknown /rangecheck } if
       counttomark 4 add 1 roll cleartomark pop pop pop
-      /.putdeviceprops load exch signalerror
+      /.putdeviceprops .systemvar exch signalerror
     }
    if
  } bind odef
@@ -427,7 +434,7 @@ userdict /.echo.mode true put
 	     { (%statementedit) (r) file } stopped
 	     { pop pop $error /errorname get /undefinedfilename eq
 		{ .clearerror exit } if		% EOF
-	       handleerror //null		% ioerror??
+	       /handleerror .systemvar exec //null		% ioerror??
 	     }
 	    if
 	    cvx { .runexec } execute
@@ -436,14 +443,21 @@ userdict /.echo.mode true put
 /filter
 	{ //filterdict 1 index .knownget
 	   { exch pop exec }
-	   { /filter load /undefined signalerror }
+	   { /filter .systemvar /undefined signalerror }
 	  ifelse
 	} odef
+% handleerror procedure as mentioned in the "Operators" section of the PLRM Section 8.2
+% This invokes the handleerror procedure from errordict (unless we are running under a
+% JOBSERVER where we want to always use a defined error handler (many error handlers in
+% 'wild' PostScript files are broken and don't indicate the error in any useful fashion).
+%
+% We run the handleerror procedure using .internalstopped so that broken error handlers
+% won't cause nested errors (Unexpected Error conditions).
 /handleerror
 	JOBSERVER {
-	  { /errordict .systemvar /.GShandleerror get exec } bind %%% MODIFIED to always use .GShandleerror.
+	  { /errordict .systemvar /.GShandleerror get .internalstopped pop } bind % always use .GShandleerror.
 	} {
-	  { /errordict .systemvar /handleerror get exec } bind %%% original errorhandling
+	  { /errordict .systemvar /handleerror get .internalstopped pop } bind % PLRM standard errorhandling
 	} ifelse def
 /identmatrix [1.0 0.0 0.0 1.0 0.0 0.0] readonly def
 /identmatrix
@@ -499,7 +513,7 @@ userdict /.echo.mode true put
 } bind def
 % The following is only for compatibility with Adobe interpreters.
 /setdash {
-	1 index length 11 gt { /setdash load /limitcheck signalerror } if
+	1 index length 11 gt { /setdash .systemvar /limitcheck signalerror } if
 	//setdash
 } odef
 /setdevice
@@ -522,11 +536,11 @@ userdict /.echo.mode true put
   }
 odef
 /setlinecap {
-	dup 2 gt { /setlinecap load /rangecheck signalerror } if
+	dup 2 gt { /setlinecap .systemvar /rangecheck signalerror } if
 	.setlinecap
 } odef
 /setlinejoin {
-	dup 2 gt { /setlinejoin load /rangecheck signalerror } if
+	dup 2 gt { /setlinejoin .systemvar /rangecheck signalerror } if
 	.setlinejoin
 } odef
 /setmatrix {
@@ -764,7 +778,7 @@ userdict /.currentresourcefile //null put
 % This is called with a procedure or executable file on the operand stack.
 /.execute {		% <obj> .execute <stopped>
   stopped $error /newerror get and
-   { handleerror flush true } { false } ifelse
+   { /handleerror .systemvar exec flush true } { false } ifelse
 } bind def
 /execute {		% <obj> execute -
   .execute pop
@@ -810,7 +824,7 @@ userdict /.currentresourcefile //null put
 	   } if
 	  exch pop cvx stopped
 	   { (While reading ) print .currentfilename print (:\n) print flush
-	     handleerror /runlibfile0 1 .quit
+	     /handleerror .systemvar exec /runlibfile0 1 .quit
 	   } if
 	} bind def
 % Temporarily substitute it for the real runlibfile.
@@ -923,10 +937,10 @@ userdict /.currentresourcefile //null put
        % Genoa issue of setting /handleerror, and then calling it, without an error
        % being set.  We were erroring in this case, due to /command load failing.
 
-       errordict dup /handleerror get  exch
+       /errordict .systemvar dup /handleerror get exch
          //JOBSERVER { /.GShandleerror } { /handleerror } ifelse
          get ne
-         { errordict begin handleerror end
+         { /errordict .systemvar begin /handleerror load .internalstopped pop end
          }
          if
      }
@@ -942,7 +956,7 @@ userdict /.currentresourcefile //null put
 	 currentdict exch .knownget	% stackname defined in $error?
 	 {
 	   4 1 roll			% stack: <stack> <head> <==flag> <over>
-	   errordict exch .knownget	% overridename defined?
+	   /errordict .systemvar exch .knownget	% overridename defined?
 	   { 
 	     exch pop exch pop exec	% call override with <stack>
 	   }
@@ -1612,10 +1626,6 @@ if
 
 (END INITFILES) VMDEBUG
 
-%% Replace 1 (gs_stres.ps)
-(gs_stres.ps) dup runlibfile VMDEBUG
-(END STATIC RESOURCES) VMDEBUG
-
 % Create a null font.  This is the initial font.
 8 dict dup begin
   /FontMatrix [ 1 0 0 1 0 0 ] readonly def
@@ -1673,6 +1683,28 @@ defaultdevice
 % and it is a bad idea because it prevents setting the resolution in this
 % situation, which pstoedit (among other programs) relies on.
 %DISPLAYING not { setdevice (%END DISPLAYING) .skipeof } if
+
+% If the paper size is not specifed and the device defaults to 
+% letter or A4 paper, select the DEFAULTPAPERSIZE.
+systemdict /DEFAULTPAPERSIZE known
+systemdict /PAPERSIZE known not and
+systemdict /DEVICEWIDTH known not and
+systemdict /DEVICEHEIGHT known not and
+systemdict /DEVICEWIDTHPOINTS known not and
+systemdict /DEVICEHEIGHTPOINTS known not and
+ {
+   defaultdevice mark /PageSize //null .dicttomark .getdeviceparams 
+   .dicttomark /PageSize get
+   dup 0 get 0.5 add cvi 612 eq 1 index 1 get 0.5 add cvi 792 eq and
+   1 index 0 get 0.5 add cvi 595 eq 2 index 1 get 0.5 add cvi 842 eq and
+   or exch pop
+   {
+     % the default paper size was letter, so replace it with DEFAULTPAPERSIZE
+     /PAPERSIZE DEFAULTPAPERSIZE def
+   } if
+ }
+if
+
 systemdict /DEVICEWIDTH known
 systemdict /DEVICEHEIGHT known or
 systemdict /DEVICEWIDTHPOINTS known or
@@ -2033,7 +2065,7 @@ currentdict /INTERPOLATE known not { (%END INTERPOLATE) .skipeof } if
     dup /Interpolate /INTERPOLATE .systemvar put
     exch .setglobal
   } if
-} bind odef
+} .bind odef
 
 /colorimage
   { /INTERPOLATE .systemvar
@@ -2065,7 +2097,7 @@ currentdict /INTERPOLATE known not { (%END INTERPOLATE) .skipeof } if
       { colorimage
       }
     ifelse
-  } bind odef
+  } .bind odef
 
 /image
   { dup type /dicttype eq
@@ -2101,7 +2133,7 @@ currentdict /INTERPOLATE known not { (%END INTERPOLATE) .skipeof } if
         ifelse
       }
     ifelse
-  } bind odef
+  } .bind odef
 
 /imagemask {
   dup type /dicttype eq {
@@ -2123,7 +2155,7 @@ currentdict /INTERPOLATE known not { (%END INTERPOLATE) .skipeof } if
       imagemask
     } ifelse
   } ifelse
-} bind odef
+} .bind odef
 
 currentdict /.interpolate undef
 

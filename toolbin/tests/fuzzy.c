@@ -495,7 +495,7 @@ fuzzy_diff_images (Image *image1, Image *image2, const FuzzyParams *fparams,
 		      out_buf[x * 3 + 2] = abs(rowmid1[x * 3 + 2]- rowmid2[x * 3 + 2]);
 		    }
 		    if (fparams->report_coordinates && 
-			(abs(x - x0) > 1 && y == y0 || y - y0 > 1))
+			(((abs(x - x0) > 1) && y == y0) || (y - y0 > 1)))
 		      {
 		        /* fixme : a contiguity test wanted. */
 			x0 = x; y0 = y;
@@ -517,7 +517,7 @@ fuzzy_diff_images (Image *image1, Image *image2, const FuzzyParams *fparams,
       if (out_buf) {
         if (image_out->super.seek(&image_out->super, y))
 	  {
-	    printf ("I/O Error seeking to the output image position.");
+	    printf ("I/O Error seeking to the output image position.\n");
 	    free(out_buf);
 	    out_buf = NULL;
 	  }
@@ -635,12 +635,12 @@ main (int argc, char **argv)
   { 
     if (image1->feof_(image1)) 
     {
-      printf ("Extra data (maybe pages) in the image file 2.");
+      printf ("Extra data (maybe pages) in the image file 2.\n");
       return 1;
     }
     if (image2->feof_(image2)) 
     {
-      printf ("Extra data (maybe pages) in the image file 1.");
+      printf ("Extra data (maybe pages) in the image file 1..\n");
       return 1;
     }
     fuzzy_diff_images (image1, image2, &fparams, &freport, image_out);
@@ -652,10 +652,10 @@ main (int argc, char **argv)
       printf ("%s: page %d: %d different, %d out of tolerance, %d out of window\n",
  	      fn[0], page, freport.n_diff, freport.n_outof_tolerance,
 	      freport.n_outof_window);
-      rcode = max(rcode, 1);
+      rcode = MAX(rcode, 1);
     }
     if (freport.n_outof_window > 0)
-      rcode = max(rcode, 2);
+      rcode = MAX(rcode, 2);
     page++;
   }
 

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zfproc.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zfproc.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Procedure-based filter stream support */
 #include "memory_.h"
 #include "ghost.h"
@@ -282,7 +282,8 @@ s_proc_write_process(stream_state * st, stream_cursor_read * pr,
     stream_proc_state *const ss = (stream_proc_state *) st;
     uint rcount = pr->limit - pr->ptr;
 
-    if (rcount > 0) {
+    /* if 'last' return CALLC even when rcount == 0. ss->eof terminates */
+    if (rcount > 0 || (last && !ss->eof)) {
 	uint wcount = r_size(&ss->data) - ss->index;
 	uint count = min(rcount, wcount);
 

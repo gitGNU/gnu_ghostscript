@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: spprint.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: spprint.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Print values in ASCII form on a stream */
 #include "math_.h"		/* for fabs */
 #include "stdio_.h"		/* for stream.h */
@@ -113,7 +113,7 @@ const char *
 pprintg1(stream * s, const char *format, floatp v)
 {
     const char *fp = pprintf_scan(s, format);
-    char str[50];
+    char str[150];
 
 #ifdef DEBUG
     if (*fp == 0 || fp[1] != 'g')	/* shouldn't happen! */

@@ -62,7 +62,7 @@
 /*
  * PGX Format Library
  *
- * $Id: pgx_cod.h,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: pgx_cod.h,v 1.2 2006/06/16 12:55:32 Arabidopsis Exp $
  */
 
 #ifndef PGX_COD_H
@@ -92,10 +92,10 @@ typedef struct {
 	uint_fast16_t magic;
 	/* The signature. */
 
-	bool bigendian;
+	jas_bool bigendian;
 	/* The byte ordering used. */
 
-	bool sgnd;
+	jas_bool sgnd;
 	/* The signedness of the samples. */
 
 	uint_fast32_t prec;
@@ -113,6 +113,6 @@ typedef struct {
 * Functions.
 \******************************************************************************/
 
-void pgx_dumphdr(FILE *out, pgx_hdr_t *hdr);
+void pgx_dumphdr(pgx_hdr_t *hdr);
 
 #endif

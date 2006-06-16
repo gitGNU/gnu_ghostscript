@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdtt.h,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gdevpdtt.h,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Internal text processing interface for pdfwrite */
 
 #ifndef gdevpdtt_INCLUDED
@@ -113,6 +113,7 @@ typedef struct pdf_text_enum_s {
     bool cdevproc_callout;
     double cdevproc_result[10];
     pdf_char_glyph_pairs_t *cgp;
+    gs_char output_char_code;
 } pdf_text_enum_t;
 #define private_st_pdf_text_enum()\
   extern_st(st_gs_text_enum);\
@@ -214,6 +215,12 @@ int pdf_attach_font_resource(gx_device_pdf *pdev, gs_font *font,
 			 pdf_font_resource_t *pdfont); 
 
 /*
+ * Locate a font cache element.
+ */
+pdf_font_cache_elem_t **
+pdf_locate_font_cache_elem(gx_device_pdf *pdev, gs_font *font);
+
+/*
  * Create a font resource object for a gs_font of Type 3.
  */
 int pdf_make_font3_resource(gx_device_pdf *pdev, gs_font *font,
@@ -274,6 +281,8 @@ void pdf_font3_scale(gx_device_pdf *pdev, gs_font *font, double *scale);
 /* Release a text characters colloction. */
 void pdf_text_release_cgp(pdf_text_enum_t *penum);
 
+/* Return char code by glyph. */
+gs_char pdf_find_glyph(pdf_font_resource_t *pdfont, gs_glyph glyph);
 
 /* ------ gdevpdtc.c ------ */
 
@@ -286,9 +295,9 @@ PROCESS_TEXT_PROC(process_cid_text);
 PROCESS_TEXT_PROC(process_plain_text);
 
 /*
- * Encode and process a string with a simple gs_font.
+ * Process a string with a simple gs_font.
  */
-int pdf_encode_process_string(pdf_text_enum_t *penum, gs_string *pstr,
+int pdf_process_string_aux(pdf_text_enum_t *penum, gs_string *pstr,
 			      const gs_glyph *gdata, const gs_matrix *pfmat,
 			      pdf_text_process_state_t *ppts);
 
@@ -300,7 +309,7 @@ int pdf_encode_process_string(pdf_text_enum_t *penum, gs_string *pstr,
 int process_text_modify_width(pdf_text_enum_t *pte, gs_font *font,
 			  pdf_text_process_state_t *ppts,
 			  const gs_const_string *pstr,
-			  gs_point *pdpt);
+			  gs_point *pdpt, const gs_glyph *gdata, bool composite);
 
 /* 
  * Add char code pair to ToUnicode CMap,
@@ -308,7 +317,7 @@ int process_text_modify_width(pdf_text_enum_t *pte, gs_font *font,
  */
 int
 pdf_add_ToUnicode(gx_device_pdf *pdev, gs_font *font, pdf_font_resource_t *pdfont, 
-		  gs_glyph glyph, gs_char ch);
+		  gs_glyph glyph, gs_char ch, const gs_const_string *gnstr);
 
 /*
  * Get character code from a glyph code.

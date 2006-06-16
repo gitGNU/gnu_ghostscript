@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gscspace.h,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: gscspace.h,v 1.6 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Client interface to color spaces */
 
 #ifndef gscspace_INCLUDED
@@ -24,6 +24,7 @@
 
 #include "gsmemory.h"
 #include "gsiparam.h"
+#include "gsnamecl.h"
 
 /*
  * The handling of color spaces in the graphic library is somewhat
@@ -275,6 +276,11 @@ typedef struct gs_base_color_space_s {
 typedef struct gs_device_n_map_s gs_device_n_map;
 #endif
 
+#ifndef gs_device_n_attributes_DEFINED
+#  define gs_device_n_attributes_DEFINED
+typedef struct gs_device_n_attributes_s gs_device_n_attributes;
+#endif
+
 /*
  * Non-base direct color spaces: Separation and DeviceN.
  * These include a base alternative color space.
@@ -300,6 +306,9 @@ typedef struct gs_separation_params_s {
     separation_type sep_type;
     bool use_alt_cspace;
     gs_callback_func_get_colorname_string *get_colorname_string;
+#if ENABLE_NAMED_COLOR_CALLBACK
+    named_color_params_t named_color_params;
+#endif
 } gs_separation_params;
 
 typedef struct gs_device_n_params_s {
@@ -307,8 +316,12 @@ typedef struct gs_device_n_params_s {
     uint num_components;
     gs_base_color_space alt_space;
     gs_device_n_map *map;
+    gs_device_n_attributes *colorants;
     bool use_alt_cspace;
     gs_callback_func_get_colorname_string *get_colorname_string;
+#if ENABLE_NAMED_COLOR_CALLBACK
+    named_color_params_t named_color_params;
+#endif
 } gs_device_n_params;
 
 #define gs_direct_cspace_params         \

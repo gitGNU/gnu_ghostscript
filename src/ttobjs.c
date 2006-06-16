@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ttobjs.c,v 1.4 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: ttobjs.c,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
 
 /* Changes after FreeType: cut out the TrueType instruction interpreter. */
 
@@ -581,6 +581,8 @@ static int free_aux(ttfMemory *mem, void *ptr)
     if (maxp->maxInstructionDefs > 255)
 	goto Fail_Memory;
     memset(ins->IDefPtr, (Byte)ins->numIDefs, sizeof(ins->IDefPtr));
+    if (ins->numFDefs < 50)
+	ins->numFDefs = 50; /* Bug 687858 */
     ins->cvtSize  = face->cvtSize;
 
     ins->metrics.pointSize    = 10 * 64;     /* default pointsize  = 10pts */

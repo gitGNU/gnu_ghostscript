@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gslib.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gslib.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Test program for Ghostscript library */
 /* Capture stdin/out/err before gsio.h redefines them. */
 #include "stdio_.h"
@@ -526,7 +526,7 @@ test5(gs_state * pgs, gs_memory_t * mem)
     };
     gs_color_space gray_cs;
 
-    gs_cspace_init_DeviceGray(&gray_cs);
+    gs_cspace_init_DeviceGray(mem, &gray_cs);
 
     /*
      * Neither ImageType 3 nor 4 needs a current color,
@@ -580,7 +580,7 @@ test5(gs_state * pgs, gs_memory_t * mem)
 	void *info1;
         gs_color_space cs;
 
-        gs_cspace_init_DeviceGray(&cs);
+        gs_cspace_init_DeviceGray(mem, &cs);
 	gs_image_t_init(&image1, &cs);
 	/* image */
 	image1.ImageMatrix.xx = W;
@@ -1073,7 +1073,7 @@ test10(gs_state * pgs, gs_memory_t * mem)
     {
         gs_color_space cs;
 
-        gs_cspace_init_DeviceGray(&cs);
+        gs_cspace_init_DeviceGray(mem, &cs);
         gs_setcolorspace(pgs, &cs);
     }
     

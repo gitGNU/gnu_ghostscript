@@ -64,7 +64,7 @@
 /*
  * Memory Allocator
  *
- * $Id: jas_malloc.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jas_malloc.c,v 1.2 2006/06/16 12:55:32 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -88,19 +88,104 @@
 
 #if !defined(DEBUG_MEMALLOC)
 
+static	int		init, mem_size;
+static	int		**mem;
+
+#define	INITIAL_TRACKER_SIZE	(20)
+#define	GROW_TRACKER_SIZE		(10)
+
+static void initializeMemTracker( void )
+{
+	#define	SIZE	INITIAL_TRACKER_SIZE * sizeof(int*)
+
+	mem = malloc( SIZE );
+	mem_size = INITIAL_TRACKER_SIZE;
+	memset( mem, 0, SIZE );
+	init = 1;
+}
+
+static void resizeMem( void )
+{
+	mem_size += GROW_TRACKER_SIZE;
+	mem = realloc( mem, mem_size );
+}
+
+
+static void addMem( void *p )
+{
+	int	i;
+
+	return;
+
+	if( !init )
+		initializeMemTracker();
+
+	for( i=0; i<mem_size; i++ )
+		if( !mem[i] )
+			break;
+
+	if( i == mem_size )
+		resizeMem();
+
+	mem[i] = (int*)p;
+}
+
+static void removeMem( void *p )
+{
+	int	i;
+
+	return;
+
+	for( i=0; i<mem_size; i++ )
+		if( mem[i] == p )
+		{
+			mem[i] = NULL;
+			return;
+		}
+}
+
+
+/* this should be exported to the client for pool cleanup on error */
+static void releaseAllMem( void )
+{
+	int	i;
+
+	return;
+
+	if( mem )
+	{
+		for( i=0; i<mem_size; i++ )
+			if( mem[i] )
+				free( mem[i] );
+		free(mem);
+	}
+}
+
+
+
 void *jas_malloc(size_t size)
 {
-	return malloc(size);
+	void	*p;
+
+	p = malloc(size);
+	addMem(p);
+	return p;
 }
 
 void jas_free(void *ptr)
 {
 	free(ptr);
+	removeMem(ptr);
 }
 
 void *jas_realloc(void *ptr, size_t size)
 {
-	return realloc(ptr, size);
+	void	*p;
+
+	removeMem(ptr);
+	p = realloc(ptr, size);
+	addMem(p);
+	return p;
 }
 
 void *jas_calloc(size_t nmemb, size_t size)
@@ -115,4 +200,5 @@ void *jas_calloc(size_t nmemb, size_t size)
 	return ptr;
 }
 
-#endif
+#endif /* !defined(DEBUG_MEMALLOC) */
+

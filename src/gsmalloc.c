@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsmalloc.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gsmalloc.c,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* C heap allocator */
 #include "malloc_.h"
 #include "gdebug.h"
@@ -102,8 +102,8 @@ struct gs_malloc_block_s {
     malloc_block_data;
 /* ANSI C does not allow zero-size arrays, so we need the following */
 /* unnecessary and wasteful workaround: */
-#define _npad (-size_of(struct malloc_block_data_s) & (arch_align_memory_mod - 1))
-    byte _pad[(_npad == 0 ? arch_align_memory_mod : _npad)];
+#define _npad (-size_of(struct malloc_block_data_s) & (ARCH_ALIGN_MEMORY_MOD - 1))
+    byte _pad[(_npad == 0 ? ARCH_ALIGN_MEMORY_MOD : _npad)];
 #undef _npad
 };
 
@@ -183,7 +183,7 @@ gs_heap_alloc_bytes(gs_memory_t * mem, uint size, client_name_t cname)
 
 	    /*
 	     * We would like to check that malloc aligns blocks at least as
-	     * strictly as the compiler (as defined by arch_align_memory_mod).
+	     * strictly as the compiler (as defined by ARCH_ALIGN_MEMORY_MOD).
 	     * However, Microsoft VC 6 does not satisfy this requirement.
 	     * See gsmemory.h for more explanation.
 	     */

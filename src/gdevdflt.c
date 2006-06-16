@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevdflt.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gdevdflt.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Default device implementation */
 #include "math_.h"
 #include "gx.h"
@@ -100,8 +100,7 @@ private gx_color_index
                 encode_proc = gx_default_encode_color;
             else
                 encode_proc = gx_default_encode_color;
-        } else
-            dprintf("get_encode_color: no color encoding information");
+        }
     }
 
     return encode_proc;
@@ -789,14 +788,14 @@ gx_get_largest_clipping_box(gx_device * dev, gs_fixed_rect * pbox)
 int
 gx_no_create_compositor(gx_device * dev, gx_device ** pcdev,
 			const gs_composite_t * pcte,
-			const gs_imager_state * pis, gs_memory_t * memory)
+			gs_imager_state * pis, gs_memory_t * memory)
 {
     return_error(gs_error_unknownerror);	/* not implemented */
 }
 int
 gx_default_create_compositor(gx_device * dev, gx_device ** pcdev,
 			     const gs_composite_t * pcte,
-			     const gs_imager_state * pis, gs_memory_t * memory)
+			     gs_imager_state * pis, gs_memory_t * memory)
 {
     return pcte->type->procs.create_default_compositor
 	(pcte, pcdev, dev, pis, memory);
@@ -804,10 +803,31 @@ gx_default_create_compositor(gx_device * dev, gx_device ** pcdev,
 int
 gx_null_create_compositor(gx_device * dev, gx_device ** pcdev,
 			  const gs_composite_t * pcte,
-			  const gs_imager_state * pis, gs_memory_t * memory)
+			  gs_imager_state * pis, gs_memory_t * memory)
 {
     *pcdev = dev;
     return 0;
+}
+
+/*
+ * Default handler for creating a compositor device when writing the clist. */
+int
+gx_default_composite_clist_write_update(const gs_composite_t *pcte, gx_device * dev,
+		gx_device ** pcdev, gs_imager_state * pis, gs_memory_t * mem)
+{
+    *pcdev = dev;		/* Do nothing -> return the same device */
+    return 0;
+}
+
+/*
+ * Default handler for updating the clist device when reading a compositing
+ * device.
+ */
+int
+gx_default_composite_clist_read_update(gs_composite_t *pxcte, gx_device * cdev,
+		gx_device * tdev, gs_imager_state * pis, gs_memory_t * mem)
+{
+    return 0;			/* Do nothing */
 }
 
 int

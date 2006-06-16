@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ialloc.c,v 1.7 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: ialloc.c,v 1.8 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Memory allocator for Ghostscript interpreter */
 #include "gx.h"
 #include "memory_.h"
@@ -72,6 +72,13 @@ ialloc_init(gs_dual_memory_t *dmem, gs_memory_t * rmem, uint chunk_size,
     ilmem->space = avm_local;	/* overrides if ilmem == igmem */
     ilmem_stable->space = avm_local; /* ditto */
     ismem->space = avm_system;
+#   if IGC_PTR_STABILITY_CHECK
+    igmem->space_id = (i_vm_global << 1) + 1;
+    igmem_stable->space_id = i_vm_global << 1;
+    ilmem->space_id = (i_vm_local << 1) + 1;	/* overrides if ilmem == igmem */
+    ilmem_stable->space_id = i_vm_local << 1; /* ditto */
+    ismem->space_id = (i_vm_system << 1);
+#   endif
     ialloc_set_space(dmem, avm_global);
     return 0;
  fail:
@@ -184,7 +191,16 @@ gs_alloc_ref_array(gs_ref_memory_t * mem, ref * parr, uint attrs,
 	 */
 	chunk_t *pcc = mem->pcc;
 	ref *end;
+#if NO_INVISIBLE_LEVELS
+	ref_packed **ppr = 0;
+	int code = 0;
 
+	if ((gs_memory_t *)mem != mem->stable_memory) {
+	    code = alloc_save_change_alloc(mem, "gs_alloc_ref_array", &ppr);
+	    if (code < 0)
+		return code;
+	}
+#endif
 	obj = gs_alloc_struct_array((gs_memory_t *) mem, num_refs + 1,
 				    ref, &st_refs, cname);
 	if (obj == 0)
@@ -209,6 +225,10 @@ gs_alloc_ref_array(gs_ref_memory_t * mem, ref * parr, uint attrs,
 	    chunk_locate_ptr(obj, &cl);
 	    cl.cp->has_refs = true;
 	}
+#if NO_INVISIBLE_LEVELS
+	if (ppr)
+	    *ppr = (ref_packed *)obj;
+#endif
     }
     make_array(parr, attrs | mem->space, num_refs, obj);
     return 0;
@@ -272,6 +292,10 @@ gs_free_ref_array(gs_ref_memory_t * mem, ref * parr, client_name_t cname)
 	) {
 	if ((obj_header_t *) obj == mem->cc.rcur) {
 	    /* Deallocate the entire refs object. */
+#if NO_INVISIBLE_LEVELS
+	    if ((gs_memory_t *)mem != mem->stable_memory)
+		alloc_save_remove(mem, (ref_packed *)obj, "gs_free_ref_array");
+#endif
 	    gs_free_object((gs_memory_t *) mem, obj, cname);
 	    mem->cc.rcur = 0;
 	    mem->cc.rtop = 0;
@@ -302,6 +326,10 @@ gs_free_ref_array(gs_ref_memory_t * mem, ref * parr, client_name_t cname)
 	    if_debug4('a', "[a%d:-$L]%s(%u) 0x%lx\n",
 		      ialloc_trace_space(mem), client_name_string(cname),
 		      num_refs, (ulong) obj);
+#if NO_INVISIBLE_LEVELS
+	if ((gs_memory_t *)mem != mem->stable_memory)
+	    alloc_save_remove(mem, (ref_packed *)obj, "gs_free_ref_array");
+#endif
 	    alloc_free_chunk(cl.cp, mem);
 	    return;
 	}

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxchar.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gxchar.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Default implementation of text writing */
 #include "gx.h"
 #include "memory_.h"
@@ -338,7 +338,36 @@ set_char_width(gs_show_enum *penum, gs_state *pgs, floatp wx, floatp wy)
 
     if (penum->width_status != sws_none && penum->width_status != sws_retry)
 	return_error(gs_error_undefined);
-    if ((code = gs_distance_transform2fixed(&pgs->ctm, wx, wy, &penum->wxy)) < 0)
+    if (penum->fstack.depth > 0 && 
+	penum->fstack.items[penum->fstack.depth].font->FontType == ft_CID_encrypted) {
+    	/* We must not convert advance width with a CID font leaf's FontMatrix,
+	   because CDevProc is attached to the CID font rather than to its leaf.
+	   But show_state_setup sets CTM with the leaf's matrix.
+	   Compensate it here with inverse FontMatrix of the leaf.
+	   ( We would like to do without an inverse transform, but 
+	     we don't like to extend general gs_state or gs_show_enum
+	     for this particular reason. ) */
+	const gx_font_stack_item_t *pfsi = &penum->fstack.items[penum->fstack.depth];
+	gs_point p;
+
+	code = gs_distance_transform_inverse(wx, wy,
+		&gs_cid0_indexed_font(pfsi->font, pfsi->index)->FontMatrix, &p);
+	if (code < 0)
+	    return code;
+	wx = p.x; 
+	wy = p.y;
+    }
+    code = gs_distance_transform2fixed(&pgs->ctm, wx, wy, &penum->wxy);
+    if (code < 0 && penum->cc == 0) {
+	/* Can't represent in 'fixed', use floats. */
+	code = gs_distance_transform(wx, wy, &ctm_only(pgs), &penum->wxy_float);
+	penum->wxy.x = penum->wxy.y = 0;
+	penum->use_wxy_float = true;
+    } else {
+	penum->use_wxy_float = false;
+	penum->wxy_float.x = penum->wxy_float.y = 0;
+    }
+    if (code < 0)
 	return code;
     /* Check whether we're setting the scalable width */
     /* for a cached xfont character. */
@@ -565,8 +594,33 @@ set_cache_device(gs_show_enum * penum, gs_state * pgs, floatp llx, floatp lly,
 				 log2_scale.x + log2_scale.y > alpha_bits ?
 				 penum->dev_cache2 : NULL),
 				iwidth, iheight, &log2_scale, depth);
-	if (cc == 0)
-	    return 0;		/* too big for cache */
+	if (cc == 0) {
+	    /* too big for cache or no cache */
+	    gx_path box_path;
+
+	    if (penum->current_font->FontType != ft_user_defined && 
+		penum->current_font->FontType != ft_CID_user_defined) {
+		/* Most fonts don't paint outside bbox,
+		   so render with no clipping. */
+		return 0;
+	    }
+	    /* Render with a clip. */
+	    /* show_proceed already did gsave. */
+	    pgs->in_cachedevice = CACHE_DEVICE_NONE; /* Provide a correct grestore on error. */
+	    clip_box.p.x = penum->origin.x - fixed_ceiling(-cll.x);
+	    clip_box.p.y = penum->origin.y - fixed_ceiling(-cll.y);
+	    clip_box.q.x = clip_box.p.x + int2fixed(iwidth);
+	    clip_box.q.y = clip_box.p.y + int2fixed(iheight);
+	    gx_path_init_local(&box_path, pgs->memory);
+	    code = gx_path_add_rectangle(&box_path, clip_box.p.x, clip_box.p.y,
+						    clip_box.q.x, clip_box.q.y);
+	    if (code < 0)
+		return code;
+	    code = gx_cpath_clip(pgs, pgs->clip_path, &box_path, gx_rule_winding_number);
+	    gx_path_free(&box_path, "set_cache_device");
+	    pgs->in_cachedevice = CACHE_DEVICE_NONE_AND_CLIP;
+	    return 0;		
+	}
 	/* The mins handle transposed coordinate systems.... */
 	/* Truncate the offsets to avoid artifacts later. */
 	cc->offset.x = fixed_ceiling(-cll.x);
@@ -723,6 +777,8 @@ show_update(gs_show_enum * penum)
 	    /* Adobe interpreters assume a character width of 0, */
 	    /* even though the documentation says this is an error.... */
 	    penum->wxy.x = penum->wxy.y = 0;
+	    penum->wxy_float.x = penum->wxy_float.y = 0;
+	    penum->use_wxy_float = false;
 	    break;
 	case sws_cache:
 	    /* Finish installing the cache entry. */
@@ -745,8 +801,10 @@ show_update(gs_show_enum * penum)
 			    &penum->log2_scale, penum->charpath_flag != cpm_show, &pair);
 		if (code < 0)
 		    return code;
-		gx_add_cached_char(pgs->font->dir, penum->dev_cache,
+		code = gx_add_cached_char(pgs->font->dir, penum->dev_cache,
 			       cc, pair, &penum->log2_scale);
+		if (code < 0)
+		    return code;
 	    }
 	    if (!SHOW_USES_OUTLINE(penum) ||
 		penum->charpath_flag != cpm_show
@@ -777,7 +835,7 @@ show_update(gs_show_enum * penum)
 }
 
 /* Move to next character */
-private int
+private inline int
 show_fast_move(gs_state * pgs, gs_fixed_point * pwxy)
 {
     return gs_moveto_aux((gs_imager_state *)pgs, pgs->path,
@@ -853,8 +911,14 @@ show_move(gs_show_enum * penum)
     }
     /* wxy is in device coordinates */
     {
-	int code = show_fast_move(pgs, &penum->wxy);
+	int code;
 
+	if (penum->use_wxy_float)
+	    code = gs_moveto_aux((gs_imager_state *)pgs, pgs->path,
+		    pgs->current_point.x + penum->wxy_float.x + fixed2float(penum->wxy.x), 
+		    pgs->current_point.y + penum->wxy_float.y + fixed2float(penum->wxy.y));
+	else
+	    code = show_fast_move(pgs, &penum->wxy);
 	if (code < 0)
 	    return code;
     }
@@ -930,10 +994,6 @@ show_proceed(gs_show_enum * penum)
 			glyph = (*penum->encode_char)(pfont, chr,
 						      GLYPH_SPACE_NAME);
 			SET_CURRENT_GLYPH(penum, glyph);
-			if (glyph == gs_no_glyph) {
-			    cc = 0;
-			    goto no_cache;
-			}
 		    } else
     			SET_CURRENT_GLYPH(penum, glyph);
 		    penum->is_pure_color = gs_color_writes_pure(penum->pgs); /* Save
@@ -957,6 +1017,10 @@ show_proceed(gs_show_enum * penum)
 				return code;
 			}
 			penum->pair = pair;
+			if (glyph == gs_no_glyph) {
+			    cc = 0;
+			    goto no_cache;
+			}
 			cc = gx_lookup_cached_char(pfont, pair, glyph, wmode,
 						   depth, &subpix_origin);
 		    }
@@ -973,9 +1037,11 @@ show_proceed(gs_show_enum * penum)
 			    )
 			    goto no_cache;
 			if (pfont->BitmapWidths) {
-			    cc = gx_lookup_xfont_char(pgs, pair, chr,
-				     glyph, wmode);
-			    if (cc == 0)
+			    code = gx_lookup_xfont_char(pgs, pair, chr,
+				     glyph, wmode, &cc);
+			    if (code < 0)
+				return code;
+			    if (code == 0)
 				goto no_cache;
 			} else {
 			    if (!SHOW_USES_OUTLINE(penum) ||
@@ -985,8 +1051,10 @@ show_proceed(gs_show_enum * penum)
 				goto no_cache;
 			    /* We might have an xfont, but we still */
 			    /* want the scalable widths. */
-			    cc = gx_lookup_xfont_char(pgs, pair, chr,
-				     glyph, wmode);
+			    code = gx_lookup_xfont_char(pgs, pair, chr,
+				     glyph, wmode, &cc);
+			    if (code < 0)
+				return code;
 			    /* Render up to the point of */
 			    /* setcharwidth or setcachedevice, */
 			    /* just as for stringwidth. */
@@ -1040,6 +1108,8 @@ show_proceed(gs_show_enum * penum)
 			    goto no_cache;
 			}
 		    }
+		    penum->use_wxy_float = false;
+		    penum->wxy_float.x = penum->wxy_float.y = 0;
 		    if (SHOW_IS_SLOW(penum)) {
 			/* Split up the assignment so that the */
 			/* Watcom compiler won't reserve esi/edi. */
@@ -1461,7 +1531,7 @@ private int
 show_cache_setup(gs_show_enum * penum)
 {
     gs_state *pgs = penum->pgs;
-    gs_memory_t *mem = pgs->memory;
+    gs_memory_t *mem = penum->memory;
     gx_device_memory *dev =
 	gs_alloc_struct(mem, gx_device_memory, &st_device_memory,
 			"show_cache_setup(dev_cache)");

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: sstring.h,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: sstring.h,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* String and hexstring streams (filters) */
 
 #ifndef sstring_INCLUDED
@@ -64,9 +64,14 @@ typedef struct stream_PSSD_state_s {
 #define private_st_PSSD_state()	/* in sstring.c */\
   gs_private_st_simple(st_PSSD_state, stream_PSSD_state,\
     "PSStringDecode state")
-/* We define the initialization procedure here, so that the scanner */
+
+/* Initialize the state */
+int s_PSSD_init(stream_state * st);
+
+/* A special initialization procedure for the scanner */
 /* can avoid a procedure call. */
-#define s_PSSD_init_inline(ss)\
+/* Note : it doesn't initialize ss->from_string. */
+#define s_PSSD_partially_init_inline(ss)\
   ((ss)->depth = 0)
 extern const stream_template s_PSSD_template;
 

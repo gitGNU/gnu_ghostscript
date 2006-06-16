@@ -16,7 +16,7 @@
 
   
 */
-/*$Id: gxwts.h,v 1.3 2005/12/13 16:57:24 jemarch Exp $ */
+/*$Id: gxwts.h,v 1.4 2006/06/16 12:55:03 Arabidopsis Exp $ */
 #ifndef gxwts_INCLUDED
 #  define gxwts_INCLUDED
 
@@ -74,8 +74,7 @@ typedef struct {
     int y1;
 } wts_screen_h_t;
 
-int
-wts_get_samples(const wts_screen_t *ws, int x, int y,
+int wts_get_samples(const wts_screen_t *ws, int x, int y,
 		wts_screen_sample_t **samples, int *p_nsamples);
 
 #endif

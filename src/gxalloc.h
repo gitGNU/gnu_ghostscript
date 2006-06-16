@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxalloc.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gxalloc.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Structure definitions for standard allocator */
 /* Requires gsmemory.h, gsstruct.h */
 
@@ -31,6 +31,8 @@ typedef struct gs_ref_memory_s gs_ref_memory_t;
 
 #include "gsalloc.h"
 #include "gxobj.h"
+
+#define NO_INVISIBLE_LEVELS 1 /* old code = 0, new code = 1 */
 
 /* ================ Chunks ================ */
 
@@ -341,6 +343,9 @@ struct gs_ref_memory_s {
 				/* its own chunk: must be */
 				/* 1 mod obj_align_mod */
     uint space;			/* a_local, a_global, a_system */
+#   if IGC_PTR_STABILITY_CHECK
+    unsigned space_id:3; /* r_space_bits + 1 bit for "instability". */
+#   endif
     /* Callers can change the following dynamically */
     /* (through a procedural interface). */
     gs_memory_gc_status_t gc_status;
@@ -383,6 +388,9 @@ struct gs_ref_memory_s {
     /* Sharing / saved state information */
     int num_contexts;		/* # of contexts sharing this VM */
     struct alloc_change_s *changes;
+#if NO_INVISIBLE_LEVELS
+    struct alloc_change_s *scan_limit;
+#endif
     struct alloc_save_s *saved;
     long total_scanned;
     struct alloc_save_s *reloc_saved;	/* for GC */
@@ -399,7 +407,7 @@ extern_st(st_ref_memory);
 #define public_st_ref_memory()	/* in gsalloc.c */\
   gs_public_st_composite(st_ref_memory, gs_ref_memory_t,\
     "gs_ref_memory", ref_memory_enum_ptrs, ref_memory_reloc_ptrs)
-#define st_ref_memory_max_ptrs 4  /* streams, names_array, changes, saved */
+#define st_ref_memory_max_ptrs 5  /* streams, names_array, changes, scan_limit, saved */
 
 /* Define the procedures for the standard allocator. */
 /* We export this for subclasses. */

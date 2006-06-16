@@ -64,7 +64,7 @@
 /*
  * Image Class
  *
- * $Id: jas_image.h,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jas_image.h,v 1.2 2006/06/16 12:55:32 Arabidopsis Exp $
  */
 
 #ifndef JAS_IMAGE_H
@@ -75,6 +75,7 @@
 \******************************************************************************/
 
 #include <jasper/jas_config.h>
+#include <jasper/jas_types.h>
 #include <jasper/jas_stream.h>
 #include <jasper/jas_seq.h>
 #include <jasper/jas_cm.h>
@@ -210,7 +211,7 @@ typedef struct {
 
 	jas_cmprof_t *cmprof_;
 
-	bool inmem_;
+	jas_bool inmem_;
 
 } jas_image_t;
 
@@ -495,7 +496,6 @@ int jas_image_readcmpt2(jas_image_t *image, int cmptno, jas_image_coord_t x,
 #define	jas_image_setcmprof(image, cmprof) ((image)->cmprof_ = cmprof)
 jas_image_t *jas_image_chclrspc(jas_image_t *image, jas_cmprof_t *outprof,
   int intent);
-void jas_image_dump(jas_image_t *image, FILE *out);
 
 /******************************************************************************\
 * Image format-dependent operations.

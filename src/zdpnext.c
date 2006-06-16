@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zdpnext.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zdpnext.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* NeXT Display PostScript extensions */
 #include "math_.h"
 #include "ghost.h"
@@ -373,8 +373,7 @@ begin_composite(i_ctx_t *i_ctx_p, alpha_composite_state_t * pcp)
 	return code;
     pcp->orig_dev = pcp->cdev = dev;	/* for end_composite */
     code = (*dev_proc(dev, create_compositor))
-	(dev, &pcp->cdev, pcp->pcte, (const gs_imager_state *)igs,
-	 imemory);
+	(dev, &pcp->cdev, pcp->pcte, (gs_imager_state *)igs, imemory);
     if (code < 0) {
 	end_composite(i_ctx_p, pcp);
 	return code;

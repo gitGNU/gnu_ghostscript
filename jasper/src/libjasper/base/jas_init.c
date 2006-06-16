@@ -63,6 +63,10 @@
 * Includes.
 \******************************************************************************/
 
+#include <stdlib.h>
+#include <stddef.h>
+#include <sys/types.h>
+
 #include "jasper/jas_types.h"
 #include "jasper/jas_image.h"
 #include "jasper/jas_init.h"

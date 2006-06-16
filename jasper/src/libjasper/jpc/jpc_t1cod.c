@@ -62,7 +62,7 @@
  */
 
 /*
- * $Id: jpc_t1cod.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jpc_t1cod.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -76,6 +76,7 @@
 
 #include "jasper/jas_types.h"
 #include "jasper/jas_math.h"
+#include "jasper/jas_debug.h"
 
 #include "jpc_bs.h"
 #include "jpc_dec.h"
@@ -156,8 +157,10 @@ if (qmfbid == JPC_COX_INS) {
 			break;
 		}
 	}
-	abort();
 
+	jas_error(	JAS_ERR_UNSUPPORTED_PARAM_COMBINATION_JPC_NOMINALGAIN,
+				"JAS_ERR_UNSUPPORTED_PARAM_COMBINATION_JPC_NOMINALGAIN"
+			);
 	/* avoid compiler warnings about return value */
 	return 1;
 }
@@ -267,17 +270,17 @@ jpc_initmqctxs();
 	}
 
 	for (i = 0; i < (1 << JPC_NMSEDEC_BITS); ++i) {
-		t = i * jpc_pow2i(-JPC_NMSEDEC_FRACBITS);
+		t = (float)(i * jpc_pow2i(-JPC_NMSEDEC_FRACBITS));
 		u = t;
-		v = t - 1.5;
+		v = (float)(t - 1.5);
 		jpc_signmsedec[i] = jpc_dbltofix(floor((u * u - v * v) * jpc_pow2i(JPC_NMSEDEC_FRACBITS) + 0.5) / jpc_pow2i(JPC_NMSEDEC_FRACBITS));
 /* XXX - this calc is not correct */
 		jpc_signmsedec0[i] = jpc_dbltofix(floor((u * u) * jpc_pow2i(JPC_NMSEDEC_FRACBITS) + 0.5) / jpc_pow2i(JPC_NMSEDEC_FRACBITS));
-		u = t - 1.0;
+		u = (float)(t - 1.0);
 		if (i & (1 << (JPC_NMSEDEC_BITS - 1))) {
-			v = t - 1.5;
+			v = (float)(t - 1.5);
 		} else {
-			v = t - 0.5;
+			v = (float)(t - 0.5);
 		}
 		jpc_refnmsedec[i] = jpc_dbltofix(floor((u * u - v * v) * jpc_pow2i(JPC_NMSEDEC_FRACBITS) + 0.5) / jpc_pow2i(JPC_NMSEDEC_FRACBITS));
 /* XXX - this calc is not correct */

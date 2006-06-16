@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdfo.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: gdevpdfo.c,v 1.7 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Cos object support */
 #include "memory_.h"
 #include "string_.h"
@@ -295,8 +295,9 @@ cos_value_free(const cos_value_t *pcv, const cos_object_t *pco,
 	break;
     case COS_VALUE_OBJECT:
 	/* Free the object if this is the only reference to it. */
-	if (!pcv->contents.object->id)
-	    cos_free(pcv->contents.object, cname);
+	if (pcv->contents.object != NULL) /* see cos_dict_objects_delete. */
+	    if (!pcv->contents.object->id)
+		cos_free(pcv->contents.object, cname);
     case COS_VALUE_RESOURCE:
 	break;
     }
@@ -317,9 +318,8 @@ cos_value_write_spaced(const cos_value_t *pcv, gx_device_pdf *pdev,
 	    case '/': case '(': case '<': break;
 	    default: stream_putc(s, ' ');
 	    }
-	pdf_write_value(pdev, pcv->contents.chars.data,
+	return pdf_write_value(pdev, pcv->contents.chars.data,
 			pcv->contents.chars.size, object_id);
-	break;
     case COS_VALUE_RESOURCE:
 	pprintld1(s, "/R%ld", pcv->contents.object->id);
 	break;
@@ -525,7 +525,7 @@ cos_array_write(const cos_object_t *pco, gx_device_pdf *pdev, gs_id object_id)
 	    stream_putc(s, '\n');
 	for (; pcae->index > last_index; ++last_index)
 	    stream_puts(s, "null\n");
-	cos_value_write(&pcae->value, pdev);
+	cos_value_write_spaced(&pcae->value, pdev, false, object_id);
     }
     DISCARD(cos_array_reorder(pca, first));
     stream_puts(s, "]");
@@ -639,6 +639,7 @@ cos_array_add_real(cos_array_t *pca, floatp r)
     stream s;
     cos_value_t v;
 
+    s_init(&s, NULL);
     swrite_string(&s, str, sizeof(str));
     pprintg1(&s, "%g", r);
     return cos_array_add(pca, cos_string_value(&v, str, stell(&s)));
@@ -806,7 +807,8 @@ cos_dict_objects_write(const cos_dict_t *pcd, gx_device_pdf *pdev)
 
     for (; pcde; pcde = pcde->next)
 	if (COS_VALUE_IS_OBJECT(&pcde->value) &&
-	    pcde->value.contents.object->id)
+	    pcde->value.contents.object->id  &&
+	    !pcde->value.contents.object->written /* ForOPDFRead only. */)
 	    cos_write_object(pcde->value.contents.object, pdev);
     return 0;
 }
@@ -816,11 +818,20 @@ cos_dict_objects_delete(cos_dict_t *pcd)
     cos_dict_element_t *pcde = pcd->elements;
 
     /*
+     * Delete duplicate references to prevent a dual object freeing.
      * Delete the objects' IDs so that freeing the dictionary will
      * free them.
      */
-    for (; pcde; pcde = pcde->next)
-	pcde->value.contents.object->id = 0;
+    for (; pcde; pcde = pcde->next) {
+	if (pcde->value.contents.object) {
+	    cos_dict_element_t *pcde1 = pcde->next;
+	
+	    for (; pcde1; pcde1 = pcde1->next)
+		if (pcde->value.contents.object == pcde1->value.contents.object)
+		    pcde1->value.contents.object = NULL;
+	    pcde->value.contents.object->id = 0;
+	}
+    }	
     return 0;
 }
 
@@ -846,6 +857,17 @@ cos_dict_put_copy(cos_dict_t *pcd, const byte *key_data, uint key_size,
 	ppcde = &next->next;
     if (next) {
 	/* We're replacing an existing element. */
+	if ((pvalue->value_type == COS_VALUE_SCALAR ||
+	     pvalue->value_type == COS_VALUE_CONST) &&
+	    pvalue->value_type == next->value.value_type &&
+	    !bytes_compare(pvalue->contents.chars.data, pvalue->contents.chars.size, 
+		next->value.contents.chars.data, next->value.contents.chars.size))
+	    return 0; /* Same as old value. */
+	if ((pvalue->value_type == COS_VALUE_OBJECT ||
+	     pvalue->value_type == COS_VALUE_RESOURCE) &&
+	    pvalue->value_type == next->value.value_type &&
+	    pvalue->contents.object == next->value.contents.object)
+	    return 0; /* Same as old value. */
 	code = cos_copy_element_value(&value, mem, pvalue,
 				      (flags & DICT_COPY_VALUE) != 0);
 	if (code < 0)
@@ -940,6 +962,7 @@ cos_dict_put_c_key_real(cos_dict_t *pcd, const char *key, floatp value)
     byte str[50];		/****** ADHOC ******/
     stream s;
 
+    s_init(&s, NULL);
     swrite_string(&s, str, sizeof(str));
     pprintg1(&s, "%g", value);
     return cos_dict_put_c_key_string(pcd, key, str, stell(&s));
@@ -1058,6 +1081,22 @@ cos_dict_equal(const cos_object_t *pco0, const cos_object_t *pco1, gx_device_pdf
     return true;
 }
 
+/* Process all entries in a dictionary. */
+int
+cos_dict_forall(const cos_dict_t *pcd, void *client_data, 
+		int (*proc)(void *client_data, const byte *key_data, uint key_size, const cos_value_t *v))
+{
+    cos_dict_element_t *pcde = pcd->elements;
+
+    for (; pcde; pcde = pcde->next) {
+	int code = proc(client_data, pcde->key.data, pcde->key.size, &pcde->value);
+
+	if (code != 0)
+	    return code;
+    }
+    return 0;
+}
+
 /* Set up a parameter list that writes into a Cos dictionary. */
 
 /* We'll implement the other printers later if we have to. */
@@ -1094,7 +1133,8 @@ cos_param_put_typed(gs_param_list * plist, gs_param_name pkey,
 	int len, skip;
 	byte *str;
 
-	ppp = param_printer_params_default;
+	s_init(&s, NULL);
+        ppp = param_printer_params_default;
 	ppp.prefix = ppp.suffix = ppp.item_prefix = ppp.item_suffix = 0;
 	ppp.print_ok = pclist->print_ok;
 	s_init_param_printer(&pplist, &ppp, &s);

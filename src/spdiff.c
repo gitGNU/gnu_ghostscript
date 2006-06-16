@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: spdiff.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: spdiff.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Pixel differencing filters */
 #include "stdio_.h"		/* should be std.h, but needs NULL */
 #include "memory_.h"
@@ -421,7 +421,7 @@ row:
 
 	    LOOP_BY(3, (ENCODE8(s0, -2), ENCODE8(s1, -1),
 			ENCODE8(s2, 0)));
-	    ss->prev[1] = s1, ss->prev[2] = s2;
+	    ss->prev[0] = s0, ss->prev[1] = s1, ss->prev[2] = s2;
 	    goto enc8;
 	}
 
@@ -430,7 +430,7 @@ row:
 
 	    LOOP_BY(3, (DECODE8(s0, -2), DECODE8(s1, -1),
 			DECODE8(s2, 0)));
-	    ss->prev[1] = s1, ss->prev[2] = s2;
+	    ss->prev[0] = s0, ss->prev[1] = s1, ss->prev[2] = s2;
 	    goto dec8;
 	} break;
 
@@ -439,7 +439,7 @@ row:
 
 	    LOOP_BY(4, (ENCODE8(s0, -3), ENCODE8(s1, -2),
 			ENCODE8(s2, -1), ENCODE8(s3, 0)));
-	    ss->prev[1] = s1, ss->prev[2] = s2, ss->prev[3] = s3;
+	    ss->prev[0] = s0, ss->prev[1] = s1, ss->prev[2] = s2, ss->prev[3] = s3;
 	    goto enc8;
 	} break;
 
@@ -448,7 +448,7 @@ row:
 
 	    LOOP_BY(4, (DECODE8(s0, -3), DECODE8(s1, -2),
 			DECODE8(s2, -1), DECODE8(s3, 0)));
-	    ss->prev[1] = s1, ss->prev[2] = s2, ss->prev[3] = s3;
+	    ss->prev[0] = s0, ss->prev[1] = s1, ss->prev[2] = s2, ss->prev[3] = s3;
 	    goto dec8;
 	} break;
 
@@ -457,19 +457,22 @@ row:
 
 	    /* 16 bits per component */
 
-#define ENCODE16(s, d) (ti = ((p[d-1] << 8) + p[d]) - s, \
-	    q[d-1] = ti >> 8, q[d] = t & 0xff, s = ti)
+#define ENCODE16(s, d) (ti = ((p[d-1] << 8) + p[d]), s = ti - s,\
+	    q[d-1] = s >> 8, q[d] = s & 0xff, s = ti)
 #define DECODE16(s, d) (s = 0xffff & (s + ((p[d-1] << 8) + p[d])), \
-	    q[d-1] = s >> 8, q[d] = s && 0xff)
+	    q[d-1] = s >> 8, q[d] = s & 0xff)
 
 	case cEncode + cBits16 + 0:
 	case cEncode + cBits16 + 2:
 	    ss->prev[0] = s0;
-	    for (; count >= colors; count -= colors)
+	    for (; count >= colors*2; count -= colors*2)
 		for (ci = 0; ci < colors; ++ci) {
-		    ti = *++p << 8;
-		    ti = (ti + *++p) - ss->prev[ci];
-		    *++q = ti >> 8; *++q = ti & 0xff;
+		    uint k;
+                    ti =  (int)*++p << 8;
+		    ti += (int)*++p;
+                    k = ti - ss->prev[ci];
+		    *++q = k >> 8;
+                    *++q = k & 0xff;
 		    ss->prev[ci] = ti;
 		}
 	    s0 = ss->prev[0];
@@ -483,9 +486,9 @@ row:
 	case cDecode + cBits16 + 0:
 	case cDecode + cBits16 + 2:
 	    ss->prev[0] = s0;
-	    for (; count >= colors; count -= colors)
+	    for (; count >= colors*2; count -= colors*2)
 		for (ci = 0; ci < colors; ++ci) {
-		    ti = *++p >> 8;
+		    ti = (int)*++p << 8;
 		    ss->prev[ci] += ti + *++p;
 		    *++q = ss->prev[ci] >> 8;
 		    *++q = ss->prev[ci] & 0xff;
@@ -495,19 +498,19 @@ row:
 	    break;
 
 	case cEncode + cBits16 + 1:
-	    LOOP_BY(2, ENCODE16(s0, 0));
-	    break;
+           LOOP_BY(2, ENCODE16(s0, 0));
+           break;
 
 	case cDecode + cBits16 + 1:
-	    LOOP_BY(2, DECODE16(s0, 0));
-	    break;
+           LOOP_BY(2, DECODE16(s0, 0));
+           break;
 
 	case cEncode + cBits16 + 3: {
 	    uint s1 = ss->prev[1], s2 = ss->prev[2];
 
 	    LOOP_BY(6, (ENCODE16(s0, -4), ENCODE16(s1, -2),
 			ENCODE16(s2, 0)));
-	    ss->prev[1] = s1, ss->prev[2] = s2;
+	    ss->prev[0] = s0, ss->prev[1] = s1, ss->prev[2] = s2;
 	    goto enc16;
 	}
 
@@ -516,7 +519,7 @@ row:
 
 	    LOOP_BY(6, (DECODE16(s0, -4), DECODE16(s1, -2),
 			DECODE16(s2, 0)));
-	    ss->prev[1] = s1, ss->prev[2] = s2;
+	    ss->prev[0] = s0, ss->prev[1] = s1, ss->prev[2] = s2;
 	    goto dec16;
 	} break;
 
@@ -525,7 +528,7 @@ row:
 
 	    LOOP_BY(8, (ENCODE16(s0, -6), ENCODE16(s1, -4),
 			ENCODE16(s2, -2), ENCODE16(s3, 0)));
-	    ss->prev[1] = s1, ss->prev[2] = s2, ss->prev[3] = s3;
+	    ss->prev[0] = s0, ss->prev[1] = s1, ss->prev[2] = s2, ss->prev[3] = s3;
 	    goto enc16;
 	} break;
 
@@ -534,7 +537,7 @@ row:
 
 	    LOOP_BY(8, (DECODE16(s0, -6), DECODE16(s1, -4),
 			DECODE16(s2, -2), DECODE16(s3, 0)));
-	    ss->prev[1] = s1, ss->prev[2] = s2, ss->prev[3] = s3;
+	    ss->prev[0] = s0, ss->prev[1] = s1, ss->prev[2] = s2, ss->prev[3] = s3;
 	    goto dec16;
 	} break;
 

@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevbit.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gdevbit.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* "Plain bits" devices to measure rendering time. */
 #include "math_.h"
 #include "gdevprn.h"
@@ -41,6 +41,7 @@ private dev_proc_map_cmyk_color(bit_map_cmyk_color);
 private dev_proc_get_params(bit_get_params);
 private dev_proc_put_params(bit_put_params);
 private dev_proc_print_page(bit_print_page);
+private dev_proc_decode_color(bit_decode_color);
 
 #define bit_procs(encode_color)\
 {	gdev_prn_open,\
@@ -95,7 +96,7 @@ private dev_proc_print_page(bit_print_page);
 	NULL,	/* get_color_mapping_procs */\
 	NULL,	/* get_color_comp_index */\
 	encode_color,		/* encode_color */\
-	bit_map_color_rgb	/* decode_color */\
+	bit_decode_color	/* decode_color */\
 }
 
 /*
@@ -195,6 +196,51 @@ bit_map_color_rgb(gx_device * dev, gx_color_index color, gx_color_value cv[4])
 		cv[0] = cvalue((mask - c) * (mask - k) / mask);
 		cv[1] = cvalue((mask - m) * (mask - k) / mask);
 		cv[2] = cvalue((mask - y) * (mask - k) / mask);
+	    }
+	    break;
+    }
+    return 0;
+}
+
+/* 
+ * Decode a gx_color_index back to the original color values.  This has 3
+ * separate cases, but since it is rarely  used, we do a case test rather
+ * than providing 3 separate routines.
+ */
+private int
+bit_decode_color(gx_device * dev, gx_color_index color, gx_color_value * cv)
+{
+    int depth = dev->color_info.depth;
+    int ncomp = REAL_NUM_COMPONENTS(dev);
+    int bpc = depth / ncomp;
+    uint mask = (1 << bpc) - 1;
+
+    switch (ncomp) {
+	case 1:		/* gray */
+	    cv[0] =
+		(depth == 1 ? (color ? 0 : gx_max_color_value) :
+		 cvalue(color));
+	    break;
+	case 3:		/* RGB */
+	    {
+		gx_color_index cshift = color;
+
+		cv[2] = cvalue(cshift & mask);
+		cshift >>= bpc;
+		cv[1] = cvalue(cshift & mask);
+		cv[0] = cvalue(cshift >> bpc);
+	    }
+	    break;
+	case 4:		/* CMYK */
+	    {
+		gx_color_index cshift = color;
+
+		cv[3] = cvalue(cshift & mask);
+		cshift >>= bpc;
+		cv[2] = cvalue(cshift & mask);
+		cshift >>= bpc;
+		cv[1] = cvalue(cshift & mask);
+		cv[0] = cvalue(cshift >> bpc);
 	    }
 	    break;
     }

@@ -64,7 +64,7 @@
 /*
  * Windows Bitmap File Library
  *
- * $Id: bmp_cod.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: bmp_cod.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -76,6 +76,7 @@
 #include "jasper/jas_types.h"
 #include "jasper/jas_image.h"
 #include "jasper/jas_malloc.h"
+#include "jasper/jas_debug.h"
 
 #include "bmp_cod.h"
 
@@ -129,7 +130,11 @@ int bmp_numcmpts(bmp_info_t *info)
 		  1 : 3;
 	} else {
 		numcmpts = 0;
-		abort();
+
+		jas_error(	JAS_ERR_UNSUPPORTED_BIT_DEPTH_BMP_NUMCPTS,
+					"JAS_ERR_UNSUPPORTED_BIT_DEPTH_BMP_NUMCPTS"
+				);
+		return 0;
 	}
 	return numcmpts;
 }

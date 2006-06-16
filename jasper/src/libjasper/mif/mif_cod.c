@@ -70,6 +70,7 @@
 #include "jasper/jas_image.h"
 #include "jasper/jas_string.h"
 #include "jasper/jas_malloc.h"
+#include "jasper/jas_debug.h"
 
 #include "mif_cod.h"
 
@@ -279,11 +280,11 @@ int mif_encode(jas_image_t *image, jas_stream_t *out, char *optstr)
 	data = 0;
 
 	if (optstr && *optstr != '\0') {
-		fprintf(stderr, "warning: ignoring unsupported options\n");
+		jas_eprintf("warning: ignoring unsupported options\n");
 	}
 
 	if ((fmt = jas_image_strtofmt("pnm")) < 0) {
-		fprintf(stderr, "error: PNM support required\n");
+		jas_eprintf( "error: PNM support required\n");
 		goto error;
 	}
 
@@ -308,7 +309,7 @@ int mif_encode(jas_image_t *image, jas_stream_t *out, char *optstr)
 			cmptparm.width = cmpt->width;
 			cmptparm.height = cmpt->height;
 			cmptparm.prec = cmpt->prec;
-			cmptparm.sgnd = false;
+			cmptparm.sgnd = jas_false;
 			if (jas_image_addcmpt(tmpimage, jas_image_numcmpts(tmpimage), &cmptparm)) {
 				goto error;
 			}
@@ -456,7 +457,7 @@ static mif_hdr_t *mif_hdr_get(jas_stream_t *in)
 	uchar magicbuf[MIF_MAGICLEN];
 	char buf[4096];
 	mif_hdr_t *hdr;
-	bool done;
+	jas_bool done;
 	jas_tvparser_t *tvp;
 	int id;
 
@@ -468,7 +469,7 @@ static mif_hdr_t *mif_hdr_get(jas_stream_t *in)
 	if (magicbuf[0] != (MIF_MAGIC >> 24) || magicbuf[1] != ((MIF_MAGIC >> 16) &
 	  0xff) || magicbuf[2] != ((MIF_MAGIC >> 8) & 0xff) || magicbuf[3] !=
 	  (MIF_MAGIC & 0xff)) {
-		fprintf(stderr, "error: bad signature\n");
+		jas_eprintf("error: bad signature\n");
 		goto error;
 	}
 
@@ -476,7 +477,7 @@ static mif_hdr_t *mif_hdr_get(jas_stream_t *in)
 		goto error;
 	}
 
-	done = false;
+	done = jas_false;
 	do {
 		if (!mif_getline(in, buf, sizeof(buf))) {
 			goto error;
@@ -488,7 +489,10 @@ static mif_hdr_t *mif_hdr_get(jas_stream_t *in)
 			goto error;
 		}
 		if (jas_tvparser_next(tvp)) {
-			abort();
+			jas_error(	JAS_ERR_JAS_TVPARSER_NEXT_ERR_MIF_HDR_GET,
+						"JAS_ERR_JAS_TVPARSER_NEXT_ERR_MIF_HDR_GET"
+					);
+			goto error;
 		}
 		id = jas_taginfo_nonull(jas_taginfos_lookup(mif_tags2, jas_tvparser_gettag(tvp)))->id;
 		jas_tvparser_destroy(tvp);
@@ -686,9 +690,9 @@ static char *mif_getline(jas_stream_t *stream, char *buf, int bufsize)
 static int mif_getc(jas_stream_t *in)
 {
 	int c;
-	bool done;
+	jas_bool done;
 
-	done = false;
+	done = jas_false;
 	do {
 		switch (c = jas_stream_getc(in)) {
 		case EOF:

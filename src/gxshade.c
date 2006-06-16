@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxshade.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gxshade.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Shading rendering support */
 #include "math_.h"
 #include "gx.h"
@@ -69,7 +69,8 @@ shade_next_init(shade_coord_stream_t * cs,
 	    )
 	    sreset(s);
     } else {
-	sread_string(&cs->ds, params->DataSource.data.str.data,
+	s_init(&cs->ds, NULL);
+        sread_string(&cs->ds, params->DataSource.data.str.data,
 		     params->DataSource.data.str.size);
 	cs->s = &cs->ds;
     }
@@ -348,23 +349,6 @@ top:
 	pfs->cc_max_error[ci] =
 	    (ranges == 0 ? max_error :
 	     max_error * (ranges[ci].rmax - ranges[ci].rmin));
-}
-
-/* Transform a bounding box into device space. */
-int
-shade_bbox_transform2fixed(const gs_rect * rect, const gs_imager_state * pis,
-			   gs_fixed_rect * rfixed)
-{
-    gs_rect dev_rect;
-    int code = gs_bbox_transform(rect, &ctm_only(pis), &dev_rect);
-
-    if (code >= 0) {
-	rfixed->p.x = float2fixed(dev_rect.p.x);
-	rfixed->p.y = float2fixed(dev_rect.p.y);
-	rfixed->q.x = float2fixed(dev_rect.q.x);
-	rfixed->q.y = float2fixed(dev_rect.q.y);
-    }
-    return code;
 }
 
 /* Fill one piece of a shading. */

@@ -16,13 +16,18 @@
 
 */
 
-/* $Id: gdevpdfg.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gdevpdfg.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Internal graphics interfaces for PDF-writing driver. */
 
 #ifndef gdevpdfg_INCLUDED
 #  define gdevpdfg_INCLUDED
 
 #include "gscspace.h"		/* for gs_separation_name */
+
+#ifndef pdf_base_font_DEFINED
+#  define pdf_base_font_DEFINED
+typedef struct pdf_base_font_s pdf_base_font_t;
+#endif
 
 /* ---------------- Exported by gdevpdfc.c ---------------- */
 
@@ -136,12 +141,12 @@ int pdf_set_drawing_color(gx_device_pdf * pdev, const gs_imager_state * pis,
 		      gx_hl_saved_color * psc,
 		      bool *used_process_color,
 		      const psdf_set_color_commands_t *ppscc);
-
 /*
  * Bring the graphics state up to date for a drawing operation.
  * (Text uses either fill or stroke.)
  */
 int pdf_try_prepare_fill(gx_device_pdf *pdev, const gs_imager_state *pis);
+int pdf_prepare_drawing(gx_device_pdf *pdev, const gs_imager_state *pis, pdf_resource_t **ppres);
 int pdf_prepare_fill(gx_device_pdf *pdev, const gs_imager_state *pis);
 int pdf_prepare_stroke(gx_device_pdf *pdev, const gs_imager_state *pis);
 int pdf_prepare_image(gx_device_pdf *pdev, const gs_imager_state *pis);
@@ -149,6 +154,7 @@ int pdf_prepare_imagemask(gx_device_pdf *pdev, const gs_imager_state *pis,
 			  const gx_drawing_color *pdcolor);
 int pdf_save_viewer_state(gx_device_pdf *pdev, stream *s);
 int pdf_restore_viewer_state(gx_device_pdf *pdev, stream *s);
+int pdf_end_gstate(gx_device_pdf *pdev, pdf_resource_t *pres);
 
 /*
  * Convert a string into cos name.
@@ -224,12 +230,16 @@ void pdf_put_image_matrix(gx_device_pdf * pdev, const gs_matrix * pmat,
 			  floatp y_scale);
 
 /* Put out a reference to an image resource. */
+int pdf_do_image_by_id(gx_device_pdf * pdev, double scale,
+	     const gs_matrix * pimat, bool in_contents, gs_id id);
 int pdf_do_image(gx_device_pdf * pdev, const pdf_resource_t * pres,
 		 const gs_matrix * pimat, bool in_contents);
 
+#define pdf_image_writer_num_alt_streams 4
+
 /* Define the structure for writing an image. */
 typedef struct pdf_image_writer_s {
-    psdf_binary_writer binary[3];
+    psdf_binary_writer binary[pdf_image_writer_num_alt_streams];
     int alt_writer_count; /* no. of active elements in writer[] (1,2,3) */
     const pdf_image_names_t *pin;
     pdf_resource_t *pres;	/* XObject resource iff not in-line */
@@ -237,12 +247,16 @@ typedef struct pdf_image_writer_s {
     cos_stream_t *data;
     const char *end_string;	/* string to write after EI if in-line */
     cos_dict_t *named;		/* named dictionary from NI */
+    pdf_resource_t *pres_mask;	/* PS2WRITE only : XObject resource for mask */
 } pdf_image_writer;
 extern_st(st_pdf_image_writer);	/* public for gdevpdfi.c */
 #define public_st_pdf_image_writer() /* in gdevpdfj.c */\
   gs_public_st_composite(st_pdf_image_writer, pdf_image_writer,\
     "pdf_image_writer", pdf_image_writer_enum_ptrs, pdf_image_writer_reloc_ptrs)
-#define pdf_image_writer_max_ptrs (psdf_binary_writer_max_ptrs * 3 + 3)
+#define pdf_image_writer_max_ptrs (psdf_binary_writer_max_ptrs * pdf_image_writer_num_alt_streams + 4)
+
+/* Initialize image writer. */
+void pdf_image_writer_init(pdf_image_writer * piw);
 
 /*
  * Begin writing an image, creating the resource if not in-line, and setting
@@ -251,8 +265,7 @@ extern_st(st_pdf_image_writer);	/* public for gdevpdfi.c */
  */
 int pdf_begin_write_image(gx_device_pdf * pdev, pdf_image_writer * piw,
 			  gx_bitmap_id id, int w, int h,
-			  cos_dict_t *pnamed, bool in_line,
-			  int alt_writer_count);
+			  cos_dict_t *pnamed, bool in_line);
 
 /* Begin writing the image data, setting up the dictionary and filters. */
 int pdf_begin_image_data(gx_device_pdf * pdev, pdf_image_writer * piw,
@@ -293,6 +306,9 @@ int pdf_make_alt_stream(gx_device_pdf * pdev, psdf_binary_writer * piw);
  */
 int pdf_choose_compression(pdf_image_writer * piw, bool end_binary);
 
+/* If the current substream is a charproc, register a font used in it. */
+int pdf_register_charproc_resource(gx_device_pdf *pdev, gs_id id, pdf_resource_type_t type);
+
 /* ---------------- Exported by gdevpdfv.c ---------------- */
 
 /* Store pattern 1 parameters to cos dictionary. */
@@ -316,4 +332,20 @@ int pdf_put_pattern2(gx_device_pdf *pdev, const gx_drawing_color *pdc,
 		 const psdf_set_color_commands_t *ppscc,
 		 pdf_resource_t **ppres);
 
+/* ---------------- Exported by gdevpdfb.c ---------------- */
+
+/* Copy a color bitmap.  for_pattern = -1 means put the image in-line, */
+/* 1 means put the image in a resource. */
+int pdf_copy_color_data(gx_device_pdf * pdev, const byte * base, int sourcex,
+		    int raster, gx_bitmap_id id, int x, int y, int w, int h,
+		    gs_image_t *pim, pdf_image_writer *piw,
+		    int for_pattern);
+
 #endif /* gdevpdfg_INCLUDED */
+
+/* ---------------- Exported by gdevpdfe.c ---------------- */
+
+/* Write metadata */
+int pdf_document_metadata(gx_device_pdf *pdev);
+int pdf_font_metadata(gx_device_pdf *pdev, const pdf_base_font_t *pbfont, 
+		  const byte *digest, int digest_length, gs_id *metadata_object_id);

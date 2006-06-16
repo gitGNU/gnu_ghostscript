@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxclist.h,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxclist.h,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Command list definitions for Ghostscript. */
 /* Requires gxdevice.h and gxdevmem.h */
 
@@ -169,6 +169,7 @@ typedef struct gx_clist_state_s gx_clist_state;
 	uint data_size;			/* size of buffer */\
 	gx_band_params_t band_params;	/* band buffering parameters */\
 	bool do_not_open_or_close_bandfiles;	/* if true, do not open/close bandfiles */\
+	bool page_uses_transparency;	/* if true then page uses PDF 1.4 transparency */\
 		/* Following are used for both writing and reading. */\
 	gx_bits_cache_chunk chunk;	/* the only chunk of bits */\
 	gx_bits_cache bits;\
@@ -283,7 +284,7 @@ extern_st(st_device_clist);
   (st_device_forward_max_ptrs + st_imager_state_num_ptrs + 1)
 
 /* setup before opening clist device */
-#define clist_init_params(xclist, xdata, xdata_size, xtarget, xbuf_procs, xband_params, xexternal, xmemory, xfree_bandlist, xdisable)\
+#define clist_init_params(xclist, xdata, xdata_size, xtarget, xbuf_procs, xband_params, xexternal, xmemory, xfree_bandlist, xdisable, pageusestransparency)\
     BEGIN\
 	(xclist)->common.data = (xdata);\
 	(xclist)->common.data_size = (xdata_size);\
@@ -294,6 +295,7 @@ extern_st(st_device_clist);
 	(xclist)->common.bandlist_memory = (xmemory);\
 	(xclist)->writer.free_up_bandlist_memory = (xfree_bandlist);\
 	(xclist)->writer.disable_mask = (xdisable);\
+	(xclist)->writer.page_uses_transparency = (pageusestransparency);\
     END
 
 /* Determine whether this clist device is able to recover VMerrors */

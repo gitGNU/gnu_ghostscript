@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 1995, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,18 +15,16 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: sdctd.c,v 1.4 2005/12/13 16:57:27 jemarch Exp $ */
+/* $Id: sdctd.c,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* DCT decoding filter stream */
 #include "memory_.h"
 #include "stdio_.h"
 #include "jpeglib_.h"
 #include "jerror_.h"
 #include "gdebug.h"
-#include "gsmemory.h"		/* for gsmalloc.h */
-#include "gsmalloc.h"		/* for gs_memory_default */
+#include "gsmemory.h"
 #include "strimpl.h"
 #include "sdct.h"
 #include "sjpeg.h"

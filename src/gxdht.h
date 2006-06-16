@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxdht.h,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxdht.h,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Definition of device halftones */
 
 #ifndef gxdht_INCLUDED
@@ -296,7 +296,9 @@ typedef struct gx_device_halftone_s gx_device_halftone;
 #endif
 
 /*
- * Device Halftone Structure definition
+ * Device Halftone Structure definition.  See comments before
+ * gx_imager_dev_ht_install() for more information on this structure and its
+ * fields.
  */
 struct gx_device_halftone_s {
     gx_ht_order order;		/* must be first, for subclassing */
@@ -309,7 +311,8 @@ struct gx_device_halftone_s {
     gs_halftone_type type;
     gx_ht_order_component *components;
 
-    uint num_comp;
+    uint num_comp;		/* Number of components in the halftone */
+    uint num_dev_comp;		/* Number of process color model components */
     /* The following are computed from the above. */
     int lcm_width, lcm_height;	/* LCM of primary color tile sizes, */
     /* max_int if overflowed */

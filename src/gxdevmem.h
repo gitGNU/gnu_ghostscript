@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxdevmem.h,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxdevmem.h,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Structure and procedures for memory devices */
 /* Requires gxdevice.h */
 
@@ -199,7 +199,8 @@ ulong gdev_mem_data_size(const gx_device_memory *mdev, int width,
  * Do the inverse computation: given the device width and a buffer size,
  * compute the maximum height.
  */
-int gdev_mem_max_height(const gx_device_memory *, int, ulong);
+int gdev_mem_max_height(const gx_device_memory * dev, int width, ulong size,
+		bool page_uses_transparency);
 
 /*
  * Compute the standard raster (data bytes per line) similarly.

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxfunc.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gxfunc.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Internal definitions for Functions */
 
 #ifndef gxfunc_INCLUDED
@@ -44,9 +44,6 @@ void fn_common_free(gs_function_t * pfn, bool free_params, gs_memory_t * mem);
 
 /* Check the values of m, n, Domain, and (if supplied) Range. */
 int fn_check_mnDR(const gs_function_params_t * params, int m, int n);
-
-/* Get the monotonicity of a function over its Domain. */
-int fn_domain_is_monotonic(const gs_function_t *pfn);
 
 /* Generic get_info implementation (no Functions or DataSource). */
 FN_GET_INFO_PROC(gs_function_get_info_default);

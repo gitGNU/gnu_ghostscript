@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdtd.h,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdtd.h,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* FontDescriptor structure and API for pdfwrite */
 
 #ifndef gdevpdtd_INCLUDED
@@ -135,10 +135,24 @@ int pdf_compute_font_descriptor(pdf_font_descriptor_t *pfd);
 int pdf_finish_FontDescriptor(gx_device_pdf *pdev,
 			      pdf_font_descriptor_t *pfd);
 
+int pdf_finish_font_descriptors(gx_device_pdf *pdev,
+			int (*finish_proc)(gx_device_pdf *,
+					   pdf_font_descriptor_t *));
 /*
  * Write a FontDescriptor.
  */
 int pdf_write_FontDescriptor(gx_device_pdf *pdev,
 			     pdf_font_descriptor_t *pfd);
+
+/*
+ * Release a FontDescriptor components.
+ */
+int pdf_release_FontDescriptor_components(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd);
+
+/*
+ * Mark a FontDescriptor used in a text.
+ */
+int pdf_mark_font_descriptor_used(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd);
+
 
 #endif /* gdevpdtd_INCLUDED */

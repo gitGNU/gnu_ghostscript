@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_devpxl.ps,v 1.2 2005/12/13 17:48:51 jemarch Exp $
+% $Id: gs_devpxl.ps,v 1.3 2006/06/16 12:55:14 Arabidopsis Exp $
 % DevicePixel color space method dictionaries.
 
 %
@@ -56,7 +56,7 @@ colorspacedict
           //setcspace_rangecheck
         if
         31 gt   % 31 bits is an implementation limit
-          { /setcolorspace cvx /limitcheck signalerror }
+          { /setcolorspace .systemvar /limitcheck signalerror }
         if
       }
     bind

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gstypes.h,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gstypes.h,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Miscellaneous common types for Ghostscript library */
 
 #ifndef gstypes_INCLUDED
@@ -55,6 +55,10 @@ typedef struct gs_string_s {
 typedef struct gs_const_string_s {
     GS_CONST_STRING_COMMON;
 } gs_const_string;
+typedef struct gs_param_string_s {
+    GS_CONST_STRING_COMMON;
+    bool persistent;
+} gs_param_string;
 
 /*
  * Since strings are allocated differently from ordinary objects, define a

@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: zlib.mak,v 1.5 2005/12/13 16:57:28 jemarch Exp $
+# $Id: zlib.mak,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $
 # makefile for zlib library code.
 # Users of this makefile must define the following:
 #	GSSRCDIR - the GS library source directory
@@ -91,7 +91,7 @@ $(ZGEN)zlibe_1.dev : $(TOP_MAKEFILES) $(ZLIB_MAK) $(ECHOGS_XE)
 	$(SETMOD) $(ZGEN)zlibe_1 -lib $(ZLIB_NAME)
 
 zlibe_=$(ZOBJ)adler32.$(OBJ) $(ZOBJ)deflate.$(OBJ) \
-	$(ZOBJ)compress.$(OBJ) $(ZOBJ)trees.$(OBJ)
+	$(ZOBJ)compress.$(OBJ) $(ZOBJ)trees.$(OBJ) $(ZOBJ)crc32.$(OBJ)
 $(ZGEN)zlibe_0.dev : $(ZLIB_MAK) $(ECHOGS_XE) $(ZGEN)zlibc.dev $(zlibe_)
 	$(SETMOD) $(ZGEN)zlibe_0 $(zlibe_)
 	$(ADDMOD) $(ZGEN)zlibe_0 -include $(ZGEN)zlibc.dev
@@ -136,10 +136,11 @@ $(ZGEN)zlibd_1.dev : $(TOP_MAKEFILES) $(ZLIB_MAK) $(ECHOGS_XE)
 
 # zlibd[12]_ list the decompression source files for zlib 1.4.x
 zlibd1_=$(ZOBJ)infblock.$(OBJ) $(ZOBJ)infcodes.$(OBJ) $(ZOBJ)inffast.$(OBJ)
-zlibd2_=$(ZOBJ)inflate.$(OBJ) $(ZOBJ)inftrees.$(OBJ) $(ZOBJ)infutil.$(OBJ)
+zlibd2_=$(ZOBJ)inflate.$(OBJ) $(ZOBJ)inftrees.$(OBJ) $(ZOBJ)infutil.$(OBJ) $(ZOBJ)crc32.$(OBJ)
 
 # shorter list of files for zlib 1.2.x
-zlibd_=$(ZOBJ)inffast.$(OBJ) $(ZOBJ)inflate.$(OBJ) $(ZOBJ)inftrees.$(OBJ)
+zlibd_=$(ZOBJ)inffast.$(OBJ) $(ZOBJ)inflate.$(OBJ) $(ZOBJ)inftrees.$(OBJ) $(ZOBJ)uncompr.$(OBJ)
+
 
 $(ZGEN)zlibd_0.dev : $(ZLIB_MAK) $(ECHOGS_XE) $(ZGEN)zlibc.dev $(zlibd_)
 	$(SETMOD) $(ZGEN)zlibd_0 $(zlibd_)
@@ -162,3 +163,8 @@ $(ZOBJ)inftrees.$(OBJ) : $(ZSRC)inftrees.c $(ZDEP)
 
 $(ZOBJ)infutil.$(OBJ) : $(ZSRC)infutil.c $(ZDEP)
 	$(ZCC) $(ZO_)infutil.$(OBJ) $(C_) $(ZSRC)infutil.c
+
+# new file in zlib 1.2.x
+$(ZOBJ)uncompr.$(OBJ) : $(ZSRC)uncompr.c $(ZDEP)
+	$(ZCC) $(ZO_)uncompr.$(OBJ) $(C_) $(ZSRC)uncompr.c
+

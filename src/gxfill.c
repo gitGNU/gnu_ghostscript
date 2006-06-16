@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gxfill.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gxfill.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* A topological spot decomposition algorithm with dropout prevention. */
 /* 
    This is a dramaticly reorganized and improved revision of the 
@@ -184,8 +184,8 @@ private int add_y_list(gx_path *, line_list *);
 private int add_y_line_aux(const segment * prev_lp, const segment * lp, 
 	    const gs_fixed_point *curr, const gs_fixed_point *prev, int dir, line_list *ll);
 private void insert_x_new(active_line *, line_list *);
-private bool end_x_line(active_line *, const line_list *, bool);
-private void step_al(active_line *alp, bool move_iterator);
+private int  end_x_line(active_line *, const line_list *, bool);
+private int step_al(active_line *alp, bool move_iterator);
 
 
 #define FILL_LOOP_PROC(proc) int proc(line_list *, fixed band_mask)
@@ -292,7 +292,7 @@ gx_general_fill_path(gx_device * pdev, const gs_imager_state * pis,
 {
     gs_fixed_point adjust;
     gs_logical_operation_t lop = pis->log_op;
-    gs_fixed_rect ibox, bbox;
+    gs_fixed_rect ibox, bbox, sbox;
     gx_device_clip cdev;
     gx_device *dev = pdev;
     gx_device *save_dev = dev;
@@ -304,6 +304,7 @@ gx_general_fill_path(gx_device * pdev, const gs_imager_state * pis,
     const bool is_character = params->adjust.x == -1; /* See gxistate.h */
     bool fill_by_trapezoids;
     bool pseudo_rasterization;
+    bool big_path = ppath->subpath_count > 50;
     fill_options fo;
     line_list lst;
 
@@ -406,6 +407,10 @@ gx_general_fill_path(gx_device * pdev, const gs_imager_state * pis,
 	fo.adjust_below = fo.adjust_above = adjust.y;
     /* Initialize the active line list. */
     init_line_list(&lst, ppath->memory);
+    sbox.p.x = ibox.p.x - adjust.x;
+    sbox.p.y = ibox.p.y - adjust.y;
+    sbox.q.x = ibox.q.x + adjust.x;
+    sbox.q.y = ibox.q.y + adjust.y;
     fo.pseudo_rasterization = pseudo_rasterization;
     fo.pdevc = pdevc;
     fo.lop = lop;
@@ -414,7 +419,7 @@ gx_general_fill_path(gx_device * pdev, const gs_imager_state * pis,
     fo.ymax = ibox.q.y;
     fo.dev = dev;
     fo.lop = lop;
-    fo.pbox = &ibox;
+    fo.pbox = &sbox;
     fo.rule = params->rule;
     fo.is_spotan = is_spotan_device(dev);
     fo.fill_direct = color_writes_pure(pdevc, lop);
@@ -456,19 +461,23 @@ gx_general_fill_path(gx_device * pdev, const gs_imager_state * pis,
 	    fill_by_trapezoids = false; /* avoid double writing pixels */
     }
     gx_path_init_local(&ffpath, ppath->memory);
-    if (!gx_path_has_curves(ppath))	/* don't need to flatten */
+    if (!big_path && !gx_path_has_curves(ppath))	/* don't need to flatten */
 	pfpath = ppath;
-    else if (gx_path__check_curves(ppath, pco_small_curves, fo.fixed_flat))
+    else if (is_spotan_device(dev))
+	pfpath = ppath;
+    else if (!big_path && gx_path__check_curves(ppath, pco_small_curves, fo.fixed_flat))
 	pfpath = ppath;
     else {
-	if (is_spotan_device(dev))
-	    return_error(gs_error_unregistered); /* Must not happen. */
-	gx_path_init_local(&ffpath, ppath->memory);
 	code = gx_path_copy_reducing(ppath, &ffpath, fo.fixed_flat, NULL, 
 			    pco_small_curves);
 	if (code < 0)
 	    return code;
 	pfpath = &ffpath;
+	if (big_path) {
+	    code = gx_path_merge_contacting_contours(pfpath);
+	    if (code < 0)
+		return code;
+	}
     }
     fo.fill_by_trapezoids = fill_by_trapezoids;
     if ((code = add_y_list(pfpath, &lst)) < 0)
@@ -545,38 +554,57 @@ gx_default_fill_path(gx_device * pdev, const gs_imager_state * pis,
 {
     int code;
 
-    if (gx_dc_is_pattern2_color(pdevc)) {
-	/*  Optimization for shading fill :
-	    The general path filling algorithm subdivides fill region with 
+    if (gx_dc_is_pattern2_color(pdevc) || pdevc->type == &gx_dc_type_data_ht_colored) {
+	/*  Optimization for shading and halftone fill :
+	    The general filling algorithm subdivides the fill region into 
 	    trapezoid or rectangle subregions and then paints each subregion 
-	    with given color. If the color is shading, each subregion to be 
-	    subdivided into areas of constant color. But with radial 
-	    shading each area is a high order polygon, being 
-	    subdivided into smaller subregions, so as total number of
-	    subregions grows huge. Faster processing is done here by changing 
-	    the order of subdivision cycles : we first subdivide the shading into 
-	    areas of constant color, then apply the general path filling algorithm 
-	    (i.e. subdivide each area into trapezoids or rectangles), using the 
-	    filling path as clip mask.
+	    with given color. If the color is complex, it also needs to be subdivided
+	    into constant color rectangles. In the worst case it gives
+	    a multiple of numbers of rectangles, which may be too slow.
+	    A faster processing may be obtained with installing a clipper
+	    device with the filling path, and then render the complex color 
+	    through it. The speeding up happens due to the clipper device
+	    is optimised for fast scans through neighbour clipping rectangles.
 	*/
-
+	/*  We need a single clipping path here, because shadings and
+	    halftones don't take 2 paths. Compute the clipping path intersection.
+	*/
 	gx_clip_path cpath_intersection;
 	gx_path path_intersection;
 
-	/*  Shading fill algorithm uses "current path" parameter of the general
-	    path filling algorithm as boundary of constant color area,
-	    so we need to intersect the filling path with the clip path now,
-	    reducing the number of pathes passed to it :
-	*/
 	gx_path_init_local(&path_intersection, pdev->memory);
 	gx_cpath_init_local_shared(&cpath_intersection, pcpath, pdev->memory);
-	if ((code = gx_cpath_intersect(&cpath_intersection, ppath, params->rule, (gs_imager_state *)pis)) >= 0)
-	    code = gx_cpath_to_path(&cpath_intersection, &path_intersection);
-
+	code = gx_cpath_intersect_with_params(&cpath_intersection, ppath, params->rule, 
+		    (gs_imager_state *)pis, params);
 	/* Do fill : */
-	if (code >= 0)
-	    code = gx_dc_pattern2_fill_path(pdevc, &path_intersection, NULL,  pdev);
+	if (code >= 0) {
+	    if (pdevc->type == &gx_dc_type_data_ht_colored) {
+		const gx_rop_source_t *rs = NULL;
+		gx_device *dev;
+		gx_device_clip cdev;
+		gs_fixed_rect clip_box;
+		gs_int_rect cb;
 
+		gx_cpath_outer_box(&cpath_intersection, &clip_box);
+		gx_make_clip_path_device(&cdev, &cpath_intersection);
+		cdev.target = pdev;
+		dev = (gx_device *)&cdev;
+		(*dev_proc(dev, open_device))(dev);
+		cb.p.x = fixed2int_pixround(clip_box.p.x);
+		cb.p.y = fixed2int_pixround(clip_box.p.y);
+		cb.q.x = fixed2int_pixround(clip_box.q.x);
+		cb.q.y = fixed2int_pixround(clip_box.q.y);
+		code = pdevc->type->fill_rectangle(pdevc,
+			    cb.p.x, cb.p.y, cb.q.x - cb.p.x, cb.q.y - cb.p.y,
+			    dev, pis->log_op, rs);
+	    } else {
+		/* Shading fill algorithm fills an area restricted with a path,
+		   so we need to convert cpath into path .*/
+		code = gx_cpath_to_path(&cpath_intersection, &path_intersection);
+		if (code >= 0)
+		    code = gx_dc_pattern2_fill_path(pdevc, &path_intersection, NULL,  pdev);
+	    }
+	}
 	/* Destruct local data and return :*/
 	gx_path_free(&path_intersection, "shading_fill_path_intersection");
 	gx_cpath_free(&cpath_intersection, "shading_fill_cpath_intersection");
@@ -708,6 +736,7 @@ add_y_curve_part(line_list *ll, segment *s0, segment *s1, int dir,
     gx_flattened_iterator *fi, bool more1, bool step_back, bool monotonic_x)
 {
     active_line *alp = make_al(ll);
+    int code;
 
     if (alp == NULL)
 	return_error(gs_error_VMerror);
@@ -719,12 +748,17 @@ add_y_curve_part(line_list *ll, segment *s0, segment *s1, int dir,
 	gx_flattened_iterator__switch_to_backscan(&alp->fi, more1);
     if (step_back) {
 	do {
-	    alp->more_flattened = gx_flattened_iterator__prev(&alp->fi);
+	    code = gx_flattened_iterator__prev(&alp->fi);
+	    if (code < 0)
+		return code;
+	    alp->more_flattened = code;
 	    if (compute_dir(ll->fo, alp->fi.ly0, alp->fi.ly1) != 2)
 		break;
 	} while (alp->more_flattened);
     }
-    step_al(alp, false);
+    code = step_al(alp, false);
+    if (code < 0)
+	return code;
     alp->monotonic_y = false;
     alp->monotonic_x = monotonic_x;
     insert_y_line(ll, alp);
@@ -766,7 +800,10 @@ start_al_pair_from_min(line_list *ll, contour_cursor *q)
 
     /* q stands at the first segment, which isn't last. */
     do {
-	q->more_flattened = gx_flattened_iterator__next(q->fi);
+	code = gx_flattened_iterator__next(q->fi);
+	if (code < 0)
+	    return code;
+	q->more_flattened = code;
 	dir = compute_dir(fo, q->fi->ly0, q->fi->ly1);
 	if (q->fi->ly0 > fo->ymax && ll->y_break > q->fi->y0)
 	    ll->y_break = q->fi->ly0;
@@ -805,7 +842,7 @@ start_al_pair_from_min(line_list *ll, contour_cursor *q)
        which may vary due to arithmetic errors. */
 }
 
-private inline void
+private inline int
 init_contour_cursor(line_list *ll, contour_cursor *q) 
 {
     const fill_options * const fo = ll->fo;
@@ -829,7 +866,8 @@ init_contour_cursor(line_list *ll, contour_cursor *q)
 	curve_segment *s = (curve_segment *)q->pseg;
 	int k = gx_curve_log2_samples(q->prev->pt.x, q->prev->pt.y, s, fo->fixed_flat);
 
-	gx_flattened_iterator__init(q->fi, q->prev->pt.x, q->prev->pt.y, s, k);
+	if (!gx_flattened_iterator__init(q->fi, q->prev->pt.x, q->prev->pt.y, s, k))
+	    return_error(gs_error_rangecheck);
     } else {
 	q->dir = compute_dir(fo, q->prev->pt.y, q->pseg->pt.y);
 	gx_flattened_iterator__init_line(q->fi, 
@@ -837,6 +875,7 @@ init_contour_cursor(line_list *ll, contour_cursor *q)
 	vd_bar(q->prev->pt.x, q->prev->pt.y, q->pseg->pt.x, q->pseg->pt.y, 1, RGB(0, 0, 255));
     }
     q->first_flattened = true;
+    return 0;
 }
 
 private int
@@ -854,8 +893,15 @@ scan_contour(line_list *ll, contour_cursor *q)
     save_q.dir = 2;
     ll->main_dir = DIR_HORIZONTAL;
     for (; ; q->pseg = q->prev, q->prev = q->prev->prev) {
-	init_contour_cursor(ll, q);
-	while(gx_flattened_iterator__next(q->fi)) {
+	code = init_contour_cursor(ll, q);
+	if (code < 0)
+	    return code;
+	for (;;) {
+	    code = gx_flattened_iterator__next(q->fi);
+	    if (code < 0)
+		return code;
+	    if (!code)
+		break;
 	    q->first_flattened = false;
 	    q->dir = compute_dir(fo, q->fi->ly0, q->fi->ly1);
 	    ll->main_dir = (q->dir == DIR_DOWN ? DIR_DOWN : 
@@ -887,8 +933,13 @@ scan_contour(line_list *ll, contour_cursor *q)
 	if (!fo->pseudo_rasterization || only_horizontal
 		|| p.prev->pt.x != p.pseg->pt.x || p.prev->pt.y != p.pseg->pt.y 
 		|| p.pseg->type == s_curve) {
-	    init_contour_cursor(ll, &p);
-	    p.more_flattened = gx_flattened_iterator__next(p.fi);
+	    code = init_contour_cursor(ll, &p);
+	    if (code < 0)
+		return code;
+	    code = gx_flattened_iterator__next(p.fi);
+	    if (code < 0)
+		return code;
+	    p.more_flattened = code;
 	    p.dir = compute_dir(fo, p.fi->ly0, p.fi->ly1);
 	    if (p.fi->ly0 > fo->ymax && ll->y_break > p.fi->ly0)
 		ll->y_break = p.fi->ly0;
@@ -1014,16 +1065,21 @@ add_y_list(gx_path * ppath, line_list *ll)
 }
 
 
-private void 
+private int
 step_al(active_line *alp, bool move_iterator)
 {
     bool forth = (alp->direction == DIR_UP || !alp->fi.curve);
 
     if (move_iterator) {
+	int code;
+
 	if (forth)
-	    alp->more_flattened = gx_flattened_iterator__next(&alp->fi);
+	    code = gx_flattened_iterator__next(&alp->fi);
 	else
-	    alp->more_flattened = gx_flattened_iterator__prev(&alp->fi);
+	    code = gx_flattened_iterator__prev(&alp->fi);
+	if (code < 0)
+	    return code;
+	alp->more_flattened = code;
     } else
 	vd_bar(alp->fi.lx0, alp->fi.ly0, alp->fi.lx1, alp->fi.ly1, 1, RGB(0, 0, 255));
     /* Note that we can get alp->fi.ly0 == alp->fi.ly1 
@@ -1037,14 +1093,16 @@ step_al(active_line *alp, bool move_iterator)
     SET_NUM_ADJUST(alp);
     (alp)->y_fast_max = MAX_MINUS_NUM_ADJUST(alp) /
       ((alp->diff.x >= 0 ? alp->diff.x : -alp->diff.x) | 1) + alp->start.y;
+    return 0;
 }
 
-private void
+private int
 init_al(active_line *alp, const segment *s0, const segment *s1, const line_list *ll)
 {
     const segment *ss = (alp->direction == DIR_UP ? s1 : s0);
     /* Warning : p0 may be equal to &alp->end. */
     bool curve = (ss != NULL && ss->type == s_curve);
+    int code;
 
     if (curve) {
 	if (alp->direction == DIR_UP) {
@@ -1053,7 +1111,9 @@ init_al(active_line *alp, const segment *s0, const segment *s1, const line_list 
 
 	    gx_flattened_iterator__init(&alp->fi, 
 		s0->pt.x, s0->pt.y, (const curve_segment *)s1, k);
-	    step_al(alp, true);
+	    code = step_al(alp, true);
+	    if (code < 0)
+		return code;
 	    if (!ll->fo->fill_by_trapezoids) {
 		alp->monotonic_y = (s0->pt.y <= cs->p1.y && cs->p1.y <= cs->p2.y && cs->p2.y <= cs->pt.y);
 		alp->monotonic_x = (s0->pt.x <= cs->p1.x && cs->p1.x <= cs->p2.x && cs->p2.x <= cs->pt.x) ||
@@ -1068,11 +1128,16 @@ init_al(active_line *alp, const segment *s0, const segment *s1, const line_list 
 		s1->pt.x, s1->pt.y, (const curve_segment *)s0, k);
 	    alp->more_flattened = false;
 	    do {
-		more = gx_flattened_iterator__next(&alp->fi);
+		code = gx_flattened_iterator__next(&alp->fi);
+		if (code < 0)
+		    return code;
+		more = code;
 		alp->more_flattened |= more;
 	    } while(more);
 	    gx_flattened_iterator__switch_to_backscan(&alp->fi, alp->more_flattened);
-	    step_al(alp, false);
+	    code = step_al(alp, false);
+	    if (code < 0)
+		return code;
 	    if (!ll->fo->fill_by_trapezoids) {
 		alp->monotonic_y = (s0->pt.y >= cs->p1.y && cs->p1.y >= cs->p2.y && cs->p2.y >= cs->pt.y);
 		alp->monotonic_x = (s0->pt.x <= cs->p1.x && cs->p1.x <= cs->p2.x && cs->p2.x <= cs->pt.x) ||
@@ -1082,10 +1147,13 @@ init_al(active_line *alp, const segment *s0, const segment *s1, const line_list 
     } else {
 	gx_flattened_iterator__init_line(&alp->fi, 
 		s0->pt.x, s0->pt.y, s1->pt.x, s1->pt.y);
-	step_al(alp, true);
+	code = step_al(alp, true);
+	if (code < 0)
+	    return code;
 	alp->monotonic_x = alp->monotonic_y = true;
     }
     alp->pseg = s1;
+    return 0;
 }
 /*
  * Internal routine to test a segment and add it to the pending list if
@@ -1095,16 +1163,22 @@ private int
 add_y_line_aux(const segment * prev_lp, const segment * lp, 
 	    const gs_fixed_point *curr, const gs_fixed_point *prev, int dir, line_list *ll)
 {
+    int code; 
+
     active_line *alp = make_al(ll);
     if (alp == NULL)
 	return_error(gs_error_VMerror);
     alp->more_flattened = false;
     switch ((alp->direction = dir)) {
 	case DIR_UP:
-	    init_al(alp, prev_lp, lp, ll);
+	    code = init_al(alp, prev_lp, lp, ll);
+	    if (code < 0)
+		return code;
 	    break;
 	case DIR_DOWN:
-	    init_al(alp, lp, prev_lp, ll);
+	    code = init_al(alp, lp, prev_lp, ll);
+	    if (code < 0)
+		return code;
 	    break;
 	case DIR_HORIZONTAL:
 	    alp->start = *prev;
@@ -1183,7 +1257,7 @@ remove_al(const line_list *ll, active_line *alp)
  * Handle a line segment that just ended.  Return true iff this was
  * the end of a line sequence.
  */
-private bool
+private int
 end_x_line(active_line *alp, const line_list *ll, bool update)
 {
     const segment *pseg = alp->pseg;
@@ -1204,6 +1278,7 @@ end_x_line(active_line *alp, const line_list *ll, bool update)
 	  ((const subpath *)pseg)->last->prev :
 	  pseg->prev)
 	);
+    int code;
 
     if (alp->end.y < alp->start.y) {
 	/* fixme: The condition above causes a horizontal
@@ -1219,7 +1294,9 @@ end_x_line(active_line *alp, const line_list *ll, bool update)
 	return true;
     } else if (alp->more_flattened)
 	return false;
-    init_al(alp, pseg, next, ll);
+    code = init_al(alp, pseg, next, ll);
+    if (code < 0)
+	return code;
     if (alp->start.y > alp->end.y) {
 	/* See comment above. */
 	remove_al(ll, alp);
@@ -1389,11 +1466,12 @@ resort_x_line(active_line * alp)
 }
 
 /* Move active lines by Y. */
-private inline void
+private inline int
 move_al_by_y(line_list *ll, fixed y1)
 {
     fixed x;
     active_line *alp, *nlp;
+    int code;
 
     for (x = min_fixed, alp = ll->x_list; alp != 0; alp = nlp) {
 	bool notend = false;
@@ -1401,15 +1479,27 @@ move_al_by_y(line_list *ll, fixed y1)
 
 	nlp = alp->next;
 	if (alp->end.y == y1 && alp->more_flattened) {
-	    step_al(alp, true);
+	    code = step_al(alp, true);
+	    if (code < 0)
+		return code;
 	    alp->x_current = alp->x_next = alp->start.x;
 	    notend = (alp->end.y >= alp->start.y);
 	}
-	if (alp->end.y > y1 || notend || !end_x_line(alp, ll, true)) {
+	if (alp->end.y > y1 || notend) {
 	    if (alp->x_next <= x)
 		resort_x_line(alp);
 	    else
 		x = alp->x_next;
+	} else {
+	    code = end_x_line(alp, ll, true);
+	    if (code < 0)
+		return code;
+	    if (!code) {
+		if (alp->x_next <= x)
+		    resort_x_line(alp);
+		else
+		    x = alp->x_next;
+	    }
 	}
     }
     if (ll->x_list != 0 && ll->fo->pseudo_rasterization) {
@@ -1442,6 +1532,7 @@ move_al_by_y(line_list *ll, fixed y1)
 		alp = alp->next;
 	}
     }
+    return 0;
 }
 
 /* Process horizontal segment of curves. */
@@ -2085,13 +2176,16 @@ merge_ranges(coord_range_list_t *pcrl, const line_list *ll, fixed y_min, fixed y
     range_list_rescan(pcrl);
     for (alp = ll->x_list; alp != 0 && code >= 0; alp = nlp) {
 	fixed x0 = alp->x_current, x1, xt;
+	bool forth = (alp->direction == DIR_UP || !alp->fi.curve);
+	fixed xe = (forth ? alp->fi.x3 : alp->fi.x0);
+	fixed ye = (forth ? alp->fi.y3 : alp->fi.y0);
 
 	nlp = alp->next;
 	if (alp->start.y < y_min)
 	    continue;
-	if (alp->monotonic_x && alp->monotonic_y && alp->fi.y3 <= y_top) {
+	if (alp->monotonic_x && alp->monotonic_y && ye <= y_top) {
     	    vd_bar(alp->start.x, alp->start.y, alp->end.x, alp->end.y, 0, RGB(255, 0, 0));
-	    x1 = alp->fi.x3;
+	    x1 = xe;
 	    if (x0 > x1)
 		xt = x0, x0 = x1, x1 = xt;
 	    code = range_list_add(pcrl,
@@ -2109,7 +2203,9 @@ merge_ranges(coord_range_list_t *pcrl, const line_list *ll, fixed y_min, fixed y
 		x1 = max(x1, xt);
 		if (!alp->more_flattened || alp->end.y > y_top)
 		    break;
-		step_al(alp, true);
+		code = step_al(alp, true);
+		if (code < 0)
+		    return code;
 		if (alp->end.y < alp->start.y) {
 		    remove_al(ll, alp); /* End of a monotonic part of a curve. */
 		    break;

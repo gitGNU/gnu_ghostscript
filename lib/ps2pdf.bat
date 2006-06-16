@@ -1,12 +1,12 @@
 @echo off
-@rem $Id: ps2pdf.bat,v 1.2 2004/02/14 22:20:04 atai Exp $
+@rem $Id: ps2pdf.bat,v 1.3 2006/06/16 12:55:13 Arabidopsis Exp $
 
-rem Convert PostScript to PDF 1.2 (Acrobat 3-and-later compatible).
+rem Convert PostScript to PDF 1.4 (Acrobat 4-and-later compatible).
 rem The default PDF compatibility level may change in the future:
 rem use ps2pdf12 or ps2pdf13 if you want a specific level.
 
-rem The current default compatibility level is PDF 1.2.
-echo -dCompatibilityLevel#1.2 >_.at
+rem The current default compatibility level is PDF 1.4.
+echo -dCompatibilityLevel#1.4 >_.at
 goto bot
 
 rem Pass arguments through a file to avoid overflowing the command line.

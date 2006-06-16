@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gstype42.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gstype42.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Type 42 (TrueType) font library routines */
 #include "memory_.h"
 #include "gx.h"
@@ -48,6 +48,8 @@ private int append_outline_fitted(uint glyph_index, const gs_matrix * pmat,
 private uint default_get_glyph_index(gs_font_type42 *pfont, gs_glyph glyph);
 private int default_get_outline(gs_font_type42 *pfont, uint glyph_index,
 				gs_glyph_data_t *pgd);
+font_proc_font_info(gs_type42_font_info); /* Type check. */
+font_proc_font_info(gs_truetype_font_info); /* Type check. */
 
 /* Set up a pointer to a substring of the font data. */
 /* Free variables: pfont, string_proc. */
@@ -67,6 +69,28 @@ private int default_get_outline(gs_font_type42 *pfont, uint glyph_index,
 
 /* ---------------- Font level ---------------- */
 
+GS_NOTIFY_PROC(gs_len_glyphs_release);
+
+/* Get the offset to a glyph using the loca table */
+private inline ulong
+get_glyph_offset(gs_font_type42 *pfont, uint glyph_index) 
+{
+    int (*string_proc)(gs_font_type42 *, ulong, uint, const byte **) =
+	pfont->data.string_proc;
+    const byte *ploca;
+    ulong result;
+    int code;		/* hidden variable used by ACCESS */
+
+    if (pfont->data.indexToLocFormat) {
+	ACCESS(pfont->data.loca + glyph_index * 4, 4, ploca);
+	result = u32(ploca);
+    } else {
+	ACCESS(pfont->data.loca + glyph_index * 2, 2, ploca);
+	result = (ulong) U16(ploca) << 1;
+    }
+    return result;
+}
+
 /*
  * Initialize the cached values in a Type 42 font.
  * Note that this initializes the type42_data procedures other than
@@ -84,6 +108,7 @@ gs_type42_font_init(gs_font_type42 * pfont)
     int code;
     byte head_box[8];
     ulong loca_size = 0;
+    ulong glyph_start, glyph_offset, glyph_length;
 
     ACCESS(0, 12, OffsetTable);
     {
@@ -135,6 +160,8 @@ gs_type42_font_init(gs_font_type42 * pfont)
 
 	    ACCESS(offset, 30, maxp);
 	    pfont->data.trueNumGlyphs = U16(maxp + 4);
+	} else if (!memcmp(tab, "name", 4)) {
+	    pfont->data.name_offset = offset;
 	} else if (!memcmp(tab, "vhea", 4)) {
 	    const byte *vhea;
 
@@ -147,6 +174,69 @@ gs_type42_font_init(gs_font_type42 * pfont)
     }
     loca_size >>= pfont->data.indexToLocFormat + 1;
     pfont->data.numGlyphs = (loca_size == 0 ? 0 : loca_size - 1);
+    if (pfont->data.numGlyphs > pfont->data.trueNumGlyphs) {
+	/* Some fonts have excessive data at end of 'loca' table -
+	   see bug 688467.
+	   We're not sure why old versions of Ghostscript maintain
+	   two different fileds - numGlyphs and trueNumGlyphs.
+	   (A related comment in gxfont42.h isn't explanatory about important cases.)
+	   Our reading of TrueType specification and FreeType experience
+	   is that only trueNumGlyphs should be used.
+	   Maybe (I guess) sometimes somebody observed a font,
+	   in which trueNumGlyphs counts real glyphs, 
+	   and numGlyphs counts all subglyphs ?
+	   Continue using trueNumGlyphs since the document of
+	   the bug 688467 fails otherwise.
+	 */
+#	ifdef DEBUG
+	    /* pfont->key_name.chars is ASCIIZ due to copy_font_name. */
+	eprintf3("Warning: 'loca' length %d is greater than numGlyphs %d in the font %s.\n", 
+		pfont->data.numGlyphs + 1, pfont->data.trueNumGlyphs, pfont->key_name.chars);
+#	endif
+	pfont->data.numGlyphs = pfont->data.trueNumGlyphs;
+	loca_size = pfont->data.numGlyphs + 1;
+    }
+    /* Now build the len_glyphs array since 'loca' may not be properly sorted */
+    pfont->data.len_glyphs = (uint *)gs_alloc_bytes(pfont->memory, pfont->data.numGlyphs * sizeof(uint),
+	    "gs_type42_font");
+    if (pfont->data.len_glyphs == 0)
+	return_error(gs_error_VMerror);
+    gs_font_notify_register((gs_font *)pfont, gs_len_glyphs_release, (void *)pfont);
+ 
+    /* The 'loca' may not be in order, so we construct a glyph length array */
+    /* Since 'loca' is usually sorted, first try the simple linear scan to  */
+    /* avoid the need to perform the more expensive process. */
+    glyph_start = get_glyph_offset(pfont, 0);
+    for (i = 1; i < loca_size; i++) {
+	glyph_offset = get_glyph_offset(pfont, i);
+	glyph_length = glyph_offset - glyph_start;
+	if (glyph_length > 0x80000000)
+	    break;				/* out of order loca */
+	pfont->data.len_glyphs[i - 1] = glyph_length;
+	glyph_start = glyph_offset;
+    }
+    if (i < loca_size) {
+        uint j;
+	ulong trial_glyph_length;
+        /*
+         * loca was out of order, build the len_glyphs the hard way      
+	 * Assume that some of the len_glyphs built so far may be wrong 
+	 * For each starting offset, find the next higher ending offset
+	 * Note that doing this means that there can only be zero length
+	 * glyphs that have loca table offset equal to the last 'dummy'
+         * entry. Otherwise we assume that it is a duplicated entry.
+	 */
+	for (i = 0; i < loca_size - 1; i++) {
+	    glyph_start = get_glyph_offset(pfont, i);
+	    for (j = 1, glyph_length = 0x80000000; j < loca_size; j++) {
+		glyph_offset = get_glyph_offset(pfont, j);
+		trial_glyph_length = glyph_offset - glyph_start;
+		if ((trial_glyph_length > 0) && (trial_glyph_length < glyph_length))
+		    glyph_length = trial_glyph_length;
+	    }
+	    pfont->data.len_glyphs[i] = glyph_length < 0x80000000 ? glyph_length : 0;
+	}
+    }
     /*
      * If the font doesn't have a valid FontBBox, compute one from the
      * 'head' information.  Since the Adobe PostScript driver sometimes
@@ -173,6 +263,17 @@ gs_type42_font_init(gs_font_type42 * pfont)
     pfont->procs.glyph_outline = gs_type42_glyph_outline;
     pfont->procs.glyph_info = gs_type42_glyph_info;
     pfont->procs.enumerate_glyph = gs_type42_enumerate_glyph;
+    pfont->procs.font_info = gs_type42_font_info;
+    return 0;
+}
+
+int
+gs_len_glyphs_release(void *data, void *event)
+{   
+    gs_font_type42 *pfont = (gs_font_type42 *)data;
+
+    gs_font_notify_unregister((gs_font *)pfont, gs_len_glyphs_release, (void *)data);
+    gs_free_object(pfont->memory, pfont->data.len_glyphs, "gs_len_glyphs_release");
     return 0;
 }
 
@@ -323,27 +424,12 @@ default_get_outline(gs_font_type42 * pfont, uint glyph_index,
 {
     int (*string_proc) (gs_font_type42 *, ulong, uint, const byte **) =
 	pfont->data.string_proc;
-    const byte *ploca;
     ulong glyph_start;
     uint glyph_length;
     int code;
 
-    /*
-     * We can't assume that consecutive loca entries are stored
-     * contiguously in memory: we have to access each entry
-     * individually.
-     */
-    if (pfont->data.indexToLocFormat) {
-	ACCESS(pfont->data.loca + glyph_index * 4, 4, ploca);
-	glyph_start = u32(ploca);
-	ACCESS(pfont->data.loca + glyph_index * 4 + 4, 4, ploca);
-	glyph_length = u32(ploca) - glyph_start;
-    } else {
-	ACCESS(pfont->data.loca + glyph_index * 2, 2, ploca);
-	glyph_start = (ulong) U16(ploca) << 1;
-	ACCESS(pfont->data.loca + glyph_index * 2 + 2, 2, ploca);
-	glyph_length = ((ulong) U16(ploca) << 1) - glyph_start;
-    }
+    glyph_start = get_glyph_offset(pfont, glyph_index);
+    glyph_length = pfont->data.len_glyphs[glyph_index];
     if (glyph_length == 0)
 	gs_glyph_data_from_null(pgd);
     else {
@@ -1046,5 +1132,87 @@ append_outline_fitted(uint glyph_index, const gs_matrix * pmat,
 	pmat, pscale, ppath, design_grid);
     gx_ttfReader__set_font(pair->ttr, NULL);
     return code;
+}
+
+/* ---------------------------------------------- */
+
+private int get_from_names_table(gs_font_type42 *pfont, gs_font_info_t *info,  
+			   gs_const_string *pmember, int member, uint name_id)
+{
+    int (*string_proc)(gs_font_type42 *, ulong, uint, const byte **) =
+	pfont->data.string_proc;
+    const byte *t;
+    ushort num_records, strings_offset, i, language_id = 0xffff, length0 = 0, offset0 = 0;
+    int code;
+
+    ACCESS(pfont->data.name_offset + 2, 4, t);
+    num_records = U16(t);
+    strings_offset = U16(t + 2);
+    for (i = 0; i < num_records; i++) {
+	ushort platformID, specificID, languageID, nameID, length, offset;
+
+	ACCESS(pfont->data.name_offset + 6 + i * 12, 12, t);
+	platformID = U16(t + 0);
+	specificID = U16(t + 2);
+	languageID = U16(t + 4);
+	nameID = U16(t + 6);
+	length = U16(t + 8);
+	offset = U16(t + 10);
+	if (nameID == name_id) {
+	    DISCARD(platformID);
+	    DISCARD(specificID);
+	    /* Hack : choose the minimal language id. */
+	    if (language_id > languageID) {
+		language_id = languageID;
+		length0 = length;
+		offset0 = offset;
+	    }
+	}
+    }
+    if (language_id == 0xffff)
+	return 0;
+    ACCESS(pfont->data.name_offset + strings_offset + offset0, length0, t);
+    pmember->data = t;
+    pmember->size = length0;
+    info->members |= member;
+    return 0;
+}
+
+int
+gs_truetype_font_info(gs_font *font, const gs_point *pscale, int members,
+	   gs_font_info_t *info)
+{
+    gs_font_type42 *pfont = (gs_font_type42 *)font;
+    int code;
+
+    if (pfont->data.name_offset == 0)
+	return 0;
+    if (!(info->members & FONT_INFO_COPYRIGHT) && (members & FONT_INFO_COPYRIGHT)) {
+	code = get_from_names_table(pfont, info, &info->Copyright, FONT_INFO_COPYRIGHT, 0);
+	if (code < 0)
+	    return code;
+    }
+    if (!(info->members & FONT_INFO_FAMILY_NAME) && (members & FONT_INFO_FAMILY_NAME)) {
+	code = get_from_names_table(pfont, info, &info->FamilyName, FONT_INFO_FAMILY_NAME, 1);
+	if (code < 0)
+	    return code;
+    }
+    if (!(info->members & FONT_INFO_FULL_NAME) && (members & FONT_INFO_FULL_NAME)) {
+	code = get_from_names_table(pfont, info, &info->FullName, FONT_INFO_FULL_NAME, 4);
+	if (code < 0)
+	    return code;
+    }
+    return 0;
+}
+
+int
+gs_type42_font_info(gs_font *font, const gs_point *pscale, int members,
+	   gs_font_info_t *info)
+{
+    int code = gs_default_font_info(font, pscale, members, info);
+
+    if (code < 0)
+	return code;
+    return gs_truetype_font_info(font, pscale, members, info);
 }
 

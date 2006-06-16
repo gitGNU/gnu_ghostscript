@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_ttf.ps,v 1.4 2005/12/13 17:48:51 jemarch Exp $
+% $Id: gs_ttf.ps,v 1.5 2006/06/16 12:55:13 Arabidopsis Exp $
 % Support code for direct use of TrueType fonts.
 % (Not needed for Type 42 fonts.)
 
@@ -39,7 +39,8 @@
 /.findfontvalue {
   1 index read {
     2 index 1 index unread
-    dup 0 eq exch (t) 0 get eq or {
+    % beginning with binary 0 or 't' (TrueType), or 'O' (OpenType)
+    dup 0 eq 1 index (O) 0 get eq or exch (t) 0 get eq or {
 		% If this is a font at all, it's a TrueType font.
       dup /FontType eq {
         pop closefile 42 true
@@ -61,7 +62,13 @@
   tabdict /name .knownget {
     dup 8 getu32 f exch setfileposition
     12 getu32 string f exch readstring pop
-    6 findname
+    dup
+    6 findname not {
+      4 findname	% Try FullName
+    } {
+      exch pop true
+    }
+    ifelse
   } {
     false
   } ifelse
@@ -131,6 +138,7 @@
 
 % Define remapping for misnamed glyphs in TrueType 'post' tables.
 % There are probably a lot more than this!
+% Also see /postalias table below.
 /postremap mark
   /Cdot /Cdotaccent
   /Edot /Edotaccent
@@ -210,29 +218,33 @@
 % <nametable> <nameid> findname false
 /findname {
   TTFDEBUG { (findname: ) print dup =only  } if
-  false 3 1 roll 0 1 3 index 2 getu16 1 sub {
+  false 3 1 roll
+  1 index length 0 gt {	% check for zero length name table 
+    0 1 3 index 2 getu16 1 sub {
 		% Stack: false table id index
-    12 mul 6 add 2 index exch 12 getinterval
-    dup 6 getu16 2 index eq {
-		% We found the name we want.
-      exch pop
-		% Stack: false table record
-      dup 10 getu16 2 index 4 getu16 add
-      1 index 8 getu16 4 -1 roll 3 1 roll
-	  3 copy add 1 index length
-	  le {
-	    pop
-	    getinterval exch
-		% Stack: false string record
-		% Check for 8- vs. 16-bit characters.
-        is2byte { string2to1 } if true null 4 -1 roll exit
-	  } {
-	    pop pop pop pop
-	    false
-		exit
-	  } ifelse
-    } if pop
-  } for pop pop
+      12 mul 6 add 2 index exch 12 getinterval
+      dup 6 getu16 2 index eq {
+		  % We found the name we want.
+	exch pop
+		  % Stack: false table record
+	dup 10 getu16 2 index 4 getu16 add
+	1 index 8 getu16 4 -1 roll 3 1 roll
+	    3 copy add 1 index length
+	    le {
+	      pop
+	      getinterval exch
+		  % Stack: false string record
+		  % Check for 8- vs. 16-bit characters.
+	  is2byte { string2to1 } if true null 4 -1 roll exit
+	    } {
+	      pop pop pop pop
+	      false
+		  exit
+	    } ifelse
+      } if pop
+    } for
+  } if
+  pop pop
   TTFDEBUG {
     dup { ( = ) print 1 index == } { ( not found) = } ifelse
   } if
@@ -444,6 +456,62 @@
   } if
 } bind def
 
+/get_from_stringarray % <array|string> <offset> get_from_stringarray <int>
+{ 1 index type /stringtype eq {
+    get
+  } {
+    exch {                % o ()
+      2 copy length gt {
+        length sub
+      } {
+        exch get exit
+      } ifelse
+    } forall
+  } ifelse
+} bind def
+
+/getinterval_from_stringarray % <array|string> <offset> <length> getinterval_from_stringarray <string>
+{ % May allocate a string in VM.
+  2 index type /stringtype eq {
+    getinterval
+  } {
+    string exch 0                                 % [] s o p
+    4 3 roll {                                    % s o p Si
+      dup length                                  % s o p Si lSi
+      dup 4 index lt {
+        3 index exch sub                          % s o p Si o'
+        exch pop 3 1 roll exch pop                % s o' p
+      } {                                         % s o p Si lSi
+        dup 3 1 roll                              % s o p lSi Si lSi
+        4 index sub                               % s o p lSi Si lSi-o
+        5 index length 4 index sub                % s o p lSi Si lSi-o ls-p
+        2 copy gt { exch } if pop                 % s o p lSi Si minl
+        dup 3 1 roll                              % s o p lSi minl Si minl
+        5 index exch getinterval                  % s o p lSi minl from
+        5 index 4 index 3 index                   % s o p lSi minl from s p minl
+        getinterval                               % s o p lSi minl from to
+        copy pop                                  % s o p lSi minl
+        3 1 roll                                  % s o minl p lSi
+        sub                                       % s o minl p'
+        3 1 roll add                              % s p' o'
+        dup 3 index length ge {
+          exch exit                               % s o p'
+        } if
+        exch                                      % s o' p'
+      } ifelse
+    } forall
+    pop pop                                       % s
+  } ifelse
+} bind def
+
+/string_array_size  % <array|string> string_array_size <int>
+{ dup type /stringtype eq {
+    length
+  } { 
+    0 exch { length add } forall
+  } ifelse
+} bind def
+
 % Each procedure in this dictionary is called as follows:
 %       posttable <<proc>> glyphencoding
 /postformats mark
@@ -451,26 +519,28 @@
     pop MacGlyphEncoding
   }
   16#00020000  {	% Detailed map, required by Microsoft fonts.
-    dup length 36 lt {
+    dup dup type /arraytype  eq { 0 get } if length 36 lt {
       TTFDEBUG { (post format 2.0 invalid.) = flush } if
       pop [ ]
     } {
-    /postglyphs exch def
-      postglyphs 32 getu16 /numglyphs exch def
+      /postglyphs exch def
+      /post_first postglyphs dup type /arraytype eq { 0 get } if def
+      post_first 32 getu16 /numglyphs exch def
       /glyphnames numglyphs 2 mul 34 add def
       % Build names array in the order they occur in the 'post' table
       /postpos glyphnames def
+      /total_length postglyphs //string_array_size exec def
       [ numglyphs 1 sub {
-	postpos postglyphs length ge { exit } if
+	postpos total_length ge { exit } if
 	% No name available, /postnames will be defined as an empty
 	% array and the glyph won't get a name attached.
-	postglyphs postpos get 
-        postglyphs postpos 1 add 2 index getinterval cvn
+	postglyphs postpos //get_from_stringarray exec
+        postglyphs postpos 1 add 2 index //getinterval_from_stringarray exec cvn
 	exch postpos add 1 add /postpos exch def
       } repeat
       ] /postnames exch def
       [ 0 1 numglyphs 1 sub {
-	2 mul 34 add postglyphs exch getu16
+	2 mul 34 add post_first exch getu16
 	dup 258 lt {
 	  MacGlyphEncoding exch get
 	} {
@@ -484,6 +554,7 @@
 	    % Get the name for this glyph
 	    258 sub dup postnames length ge {
 	      TTFDEBUG { (   *** warning: glyph index past end of 'post' table) = flush } if
+	      pop
 	      exit
 	    } if
 	    postnames exch get
@@ -502,27 +573,34 @@
   } bind
 .dicttomark readonly def                % postformats
 
+/call.readtable
+{ .readtable
+} bind def
+/call.readbigtable
+{ .readbigtable
+} bind def
+
 % Each procedure in this dictionary is called as follows:
 %	<file> <length> -proc- <string|array_of_strings>
 % Note that each table must have an even length, because of a strange
 % Adobe requirement that each sfnts entry have even length.
 /readtables mark
 	% Ordinary tables
-  (cmap) { .readtable }
+  (cmap) //call.readtable
   (head) 1 index
   (hhea) 1 index
   (maxp) 1 index
   (name) 1 index
   (OS/2) 1 index
-  (post) 1 index
-  (vhea) 1 index
+  (post) //call.readbigtable
+  (vhea) //call.readtable
 	% Big tables
-  (glyf) { .readbigtable }
+  (glyf) //call.readbigtable
   (loca) 1 index
   (hmtx) 1 index
   (vmtx) 1 index
 	% Tables only needed for embedding in PDF files
-  (cvt ) { .readtable }
+  (cvt ) //call.readtable
   (fpgm) 1 index
   (prep) 1 index
 .dicttomark
@@ -584,7 +662,7 @@ end readonly def                % .loadttfontdict
 % <file> <bool> <SubfontID> .loadttfonttables -
 % Pushes .loadttfontdict & scratch dict on d-stack.
 % Defines f, offsets, tables, tabdict, tabs.
-% Skips loca nd glyf if <bool> is true.
+% Skips loca and glyf if <bool> is true.
 /.loadttfonttables {
   .loadttfontdict begin
   40 dict begin
@@ -620,11 +698,9 @@ end readonly def                % .loadttfontdict
     tables exch 16 getinterval
     TTFDEBUG { dup .printtab } if
     dup 0 4 getinterval readtables_ 1 index known {
-      1 index 12 4 getinterval (\0\0\0\0) eq {
-        pop pop    % Ignore zero-length table
-      } {
-        tabdict exch 2 index put
-      } ifelse
+      % put all 0 length tables at 0 to avoid overlap
+      1 index 12 getu32 0 eq { 1 index 8 0 putu32 } if
+      tabdict exch 2 index put
     } {
       pop pop
     } ifelse
@@ -700,10 +776,16 @@ mark
 
 % - .makesfnts -
 % Defines checksum, getloca, head, locatable, numloca, post, sfnts, upem
+% Note that the 'loca' table may be out of order. This is handled when
+% needed in .dividesfnts
 /.makesfnts {
   .readttdata
   /head tabdict /head get def
-  /post tabdict /post .knownget not { null } if def
+  /post tabdict /post .knownget { 
+    dup 0 get /post_first_part exch def 
+  } { 
+    null 
+  } ifelse def
   load_stripped not {
     /locatable tabdict /loca get def
     /numloca
@@ -750,33 +832,49 @@ mark
 /.dividesfnts {
   /glyfs exch def
   /len1 0 glyfs { length add } forall def
-		% Determine where to split the glyfs by scanning loca.
-		% The very last entry in loca may be bogus.
-		% Note that some loca entries may be odd, but we can only
-		% split at even positions.
-		%
-		% Construct splitarray, the array of final lengths of
-		% the sfnts entries covering the glyfs (i.e., all but
-		% the first and last sfnts entries).
+	% Determine where to split the glyfs by scanning the sorted locatable
+	% The very last entry in loca may be bogus.
+	% Note that some loca entries may be odd, but we can only
+	% split at even positions.
+	%
+	% Construct splitarray, the array of final lengths of
+	% the sfnts entries covering the glyfs (i.e., all but
+	% the first and last sfnts entries).
     /prevsplit 0 def
     /prevboundary 0 def
+    % sort the locatable in case it is out of order
+    % Note the 'loca' table remains unchanged
+    /needsort false def
+    numloca array	% the array of 'loca' entries (may be out of order)
+    -1	% initial values for in order check
+    0 1 numloca 1 sub {
+      dup getloca dup
+      4 -1 roll lt { /needsort true def } if 
+      3 copy put exch pop
+    } for pop		% discard inorder check value
+    needsort {
+      { lt } bind .sort	 % stack: locatable_array
+    } if
     /splitarray [
-      0 1 numloca 1 sub {
-	getloca dup prevsplit maxstring add gt {
+      3 -1 roll 0 1 numloca 1 sub {
+	% stack: /splitarray -mark- { splitlen splitlen ... } locatable_array index
+	1 index exch get dup prevsplit maxstring add gt {
 	  prevboundary prevsplit sub exch
 	  /prevsplit prevboundary def
 	} if
 	dup 1 and 0 eq { /prevboundary exch def } { pop } ifelse
+	dup type /arraytype ne { exch } if	% keep locatable_array on top
       } for
       len1 prevsplit sub
+      exch pop		% discard locatable_array
     ] def
     currentuserparams /VMReclaim get -2 vmreclaim
     [
-		% Re-split the sfnts glyfs strings according to splitarray.
-		% We do this by iterating over the final segments defined
-		% by splitarray, and constructing them from pieces of the
-		% current glyfs strings.  We recycle the current strings
-		% when possible, to avoid stressing the allocator.
+	% Re-split the sfnts glyfs strings according to splitarray.
+	% We do this by iterating over the final segments defined
+	% by splitarray, and constructing them from pieces of the
+	% current glyfs strings.  We recycle the current strings
+	% when possible, to avoid stressing the allocator.
       /sfnt_idx 0 def
       /strpos 0 def
       /avail () def
@@ -810,22 +908,30 @@ mark
     exch vmreclaim
 } bind def
 
+/first_post_string % - first_post_string <string>
+{
+  post dup type /arraytype eq { 0 get } if
+} bind def
+
 % - .getpost -
 % Uses post, defines glyphencoding
 /.getpost {
   /glyphencoding post null eq {
     TTFDEBUG { (post missing) = flush } if [ ]
   } {
-    postformats post 0 getu32 .knownget {
+    postformats first_post_string 0 getu32 .knownget {
       TTFDEBUG {
 	(post: format ) print
-	post 0 getu16 =only (,) print post 2 getu16 = flush
+	first_post_string
+	dup 0 getu16 =only (,) print 2 getu16 = flush
       } if
       post exch exec
     } {
       TTFDEBUG { (post: unknown format ) print post 0 getu32 = flush } if [ ]
     } ifelse
-  } ifelse def
+  } ifelse
+  TTFDEBUG { (post=) print dup == } if
+  def
 } bind def
 
 % - .ttkeys <key> <value> ...
@@ -838,7 +944,7 @@ mark
   tabdict /name .knownget {
 		% Find the names from the 'name' table.
     /names exch def
-    /FontName names 6 findname not { curxuid 16 8 string cvrs } if
+    /FontName names 6 findname not { names 4 findname not { curxuid 16 8 string cvrs } if } if
       /fontname 1 index def
     /FontInfo mark
       names 0 findname { /Notice exch } if
@@ -853,10 +959,10 @@ mark
   } ifelse
 		% Stack: ... /FontInfo mark key1 value1 ...
   post null ne {
-    /ItalicAngle post 4 gets32 65536.0 div
-    /isFixedPitch post 12 getu32 0 ne
-    /UnderlinePosition post 8 gets16 upem div
-    /UnderlineThickness post 10 gets16 upem div
+    /ItalicAngle first_post_string 4 gets32 65536.0 div
+    /isFixedPitch first_post_string 12 getu32 0 ne
+    /UnderlinePosition first_post_string 8 gets16 upem div
+    /UnderlineThickness first_post_string 10 gets16 upem div
   } if
   counttomark 0 ne { .dicttomark } { pop pop } ifelse
   /XUID [orgXUID 42 curxuid]
@@ -975,6 +1081,14 @@ mark
   =string cvs (_) exch concatstrings cvn
 } bind def
 
+% Provide alternative backward-compatible names for new TTF glyphs.
+/postalias mark
+  /mu1  /mu   % micro symbol -> greek letter
+  /pi1  /pi   % 3.14 symbol  -> greek letter
+  /plusinus /plusminus
+  /overscore /macron
+.dicttomark readonly def
+
 % - .charkeys /CharStrings <charstrings> /Encoding <encoding>
 % Resets glyphencoding
 /.charkeys {
@@ -983,8 +1097,14 @@ mark
   } if
 		% Hack: if there is no usable post table but the cmap uses
 		% the Microsoft Unicode encoding, use ISOLatin1Encoding.
-  glyphencoding length 0 eq cmapsub 0 4 getinterval <00030001> eq and {
-    /glyphencoding ISOLatin1Encoding dup length array copy def
+  glyphencoding length 0 eq {
+    cmapsub 0 4 getinterval <00030001> eq {
+    PDFDEBUG { (No post but have cmap 3.1, so use ISOLatin1Encoding) = } if
+      /glyphencoding ISOLatin1Encoding dup length array copy def
+    } {
+      PDFDEBUG { (No encoding info, use .GS_extended_SymbolEncoding) = } if
+      /glyphencoding /.GS_extended_SymbolEncoding findencoding dup length array copy def
+    } ifelse
   } if
 		% If necessary, fabricate additional glyphencoding entries
 		% to cover all of loca, or truncate glyphencoding.
@@ -1019,6 +1139,18 @@ mark
     } for exch pop
 		% If there is no .notdef entry, map it to glyph 0.
   dup /.notdef known not { dup /.notdef 0 put } if
+  //postalias {
+    2 index 1 index known {
+      pop pop
+    } {
+      2 index 2 index .knownget {
+        % Stack: <<>> /mu1 /mu val
+        3 index 3 1 roll put pop % <<>>
+      } {
+        pop pop
+      } ifelse
+    } ifelse  
+  } forall
   readonly
   /Encoding
     [ cmaptab cmaparray dup length 256 gt { 0 256 getinterval } if
@@ -1026,6 +1158,8 @@ mark
     counttomark 256 exch sub { /.notdef } repeat ]
   TTFDEBUG { (Encoding: ) print dup === flush } if
 } bind def
+
+currentdict /postalias undef
 
 % -mark- <key> <value> ... .definettfont <font>
 /.definettfont {
@@ -1240,6 +1374,7 @@ mark
       %
       (   **** Warning: Embedded symbolic TT fonts should not contain a cmap for Platform=3 Encoding=1.\n)
         pdfformaterror
+      TTFDEBUG { (Using cmap 3.1) = } if
       AdobeGlyphList .pdfmapchars 
       /Encoding /WinAnsiEncoding .findencoding
     } {
@@ -1260,11 +1395,16 @@ mark
       %
       <00010000> .findcmap {
         prebuilt_encoding null ne {
+          TTFDEBUG { (Using cmap 1.0 with prebuilt_encoding.) = } if
           prebuilt_encoding .invert_encoding .pdfmapchars
           /Encoding prebuilt_encoding
         } {
-          .symbol_list .pdfmapchars
-          /Encoding /.GS_extended_SymbolEncoding .findencoding
+          % This is a case, in which an obsolete software could stupidly specify Macintosh Roman
+          % for a random encoding. Particulatrly GPL Ghostscript 7.06 does so.
+          % Trying to recover with 'post'.
+          pop  % The table itself doesn't contain useful data.
+          TTFDEBUG { (Using cmap 1.0 with post or .GS_extended_SymbolEncoding) = } if
+          .charkeys
         } ifelse
       } {
         % This is illegal with PDF spec.
@@ -1272,6 +1412,7 @@ mark
         pdfformaterror
         % Try to map Unicode to SymbolEncoding
         <00030001> .findcmap {
+          TTFDEBUG { (Using cmap 3.1) = } if
           AdobeGlyphList .pdfmapchars
           /Encoding /SymbolEncoding .findencoding
         } {
@@ -1289,6 +1430,7 @@ mark
 	      % Try another cmap format 3,0 -- Adobe doesn't mention it, but does
 	      % use it apparently (empirically determined).
 	      <00030000> .findcmap {
+	        TTFDEBUG { (Adding cmap 3.0) = } if
    		5 1 roll pop pop pop pop             
 		prebuilt_encoding null ne {
 		  prebuilt_encoding .invert_encoding .pdfmapchars
@@ -1305,6 +1447,7 @@ mark
     } ifelse
   } {
     <00030001> .findcmap {
+      TTFDEBUG { (Using cmap 3.1 for non-symbolic.) = } if
       AdobeGlyphList .pdfmapchars 
       /Encoding /WinAnsiEncoding .findencoding
         % WinAnsiEncoding is just a stub here. 
@@ -1312,6 +1455,7 @@ mark
         % because PDF spec requires it.
     } {
       <00010000> .findcmap {
+        TTFDEBUG { (Using cmap 1.0 for non-symbolic.) = } if
 	.romanmacdict .pdfmapchars 
         /Encoding /MacRomanEncoding .findencoding
       } {
@@ -1324,8 +1468,8 @@ mark
 
 % <file> <is_symbolic> <Encoding|null> .loadpdfttfont <type42font>
 /.loadpdfttfont {
-  /prebuilt_encoding exch def     % for .pdfcharkeys
-  /is_symbolic exch def
+  /prebuilt_encoding gput     % for .pdfcharkeys
+  /is_symbolic gput
   //false 0 .loadttfonttables
   .makesfnts
   .getpost

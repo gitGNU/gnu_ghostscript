@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_pfile.ps,v 1.4 2005/12/13 17:48:51 jemarch Exp $
+% $Id: gs_pfile.ps,v 1.5 2006/06/16 12:55:14 Arabidopsis Exp $
 % Runtime support for minimum-space fonts and packed files.
 
 % ****** NOTE: This file must be kept consistent with
@@ -53,7 +53,7 @@
       currentobjectformat exch 1 setobjectformat run
       setobjectformat closefile
     }
-    { 5 1 roll /findlibfile load /undefinedfilename signalerror
+    { 5 1 roll /findlibfile .systemvar /undefinedfilename signalerror
     }
    ifelse
  } bind def

@@ -1,9 +1,11 @@
 /* Jasper-based sdl image display utility
 
-   Copyright (C) 2004 Artifex Software, Inc.
+   Copyright (C) 2004-2005 Artifex Software, Inc.
 
    Licensed under the GNU GPL
 */
+
+/** includes **/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,6 +14,19 @@
 #include <SDL.h>
 
 #define MAX(x,y) (((x)>(y))?(x):(y))
+
+/** prototypes **/
+
+int open_image(const char * filename);
+
+int dump_jas_image(jas_image_t *image);
+int copy_jas_image(jas_image_t * image, SDL_Surface * window);
+int display_jas_image(jas_image_t * image);
+
+void wait_close(void);
+
+
+/** implementation **/
 
 int
 dump_jas_image(jas_image_t *image)
@@ -77,7 +92,7 @@ dump_jas_image(jas_image_t *image)
     return 0;
 }
 
-int copy_jas_image(const jas_image_t * image, const SDL_Surface * window)
+int copy_jas_image(jas_image_t * image, SDL_Surface * window)
 {
     int i,j;
     unsigned char *pixels;
@@ -115,7 +130,7 @@ int copy_jas_image(const jas_image_t * image, const SDL_Surface * window)
             SDL_UpdateRects(window, 1, &rect);
             if (SDL_MUSTLOCK(window)) {
                 if (SDL_LockSurface(window) < 0) {
-                    fprintf(stderr, "Can't lock drawing surface: %s\n", SDL_GetError());
+                    jas_eprintf("Can't lock drawing surface: %s\n", SDL_GetError());
                     return -1;
                 }
             }
@@ -138,7 +153,7 @@ void wait_close(void)
     }
 }
 
-int display_jas_image(const jas_image_t * image)
+int display_jas_image(jas_image_t * image)
 {
     int width, height;
     SDL_Surface *window;
@@ -148,7 +163,7 @@ int display_jas_image(const jas_image_t * image)
     height = jas_image_height(image);
     window = SDL_SetVideoMode(width, height, 32, SDL_SWSURFACE);
     if (window == NULL) {
-        fprintf(stderr, "Unable to open %dx%d image window: %s\n",
+        jas_eprintf("Unable to open %dx%d image window: %s\n",
             width, height, SDL_GetError());
         return -1;
     }
@@ -160,7 +175,7 @@ int display_jas_image(const jas_image_t * image)
 
     if (SDL_MUSTLOCK(window)) {
         if (SDL_LockSurface(window) < 0) {
-            fprintf(stderr, "Can't lock drawing surface: %s\n", SDL_GetError());
+            jas_eprintf("Can't lock drawing surface: %s\n", SDL_GetError());
             return -1;
         }
     }
@@ -185,7 +200,7 @@ int open_image(const char * filename)
 
     stream  = jas_stream_fopen(filename, "rb");
     if (stream == NULL) {
-        fprintf(stderr, "error: could not open '%s'\n", filename);
+        jas_eprintf("error: could not open '%s'\n", filename);
         return -1;
     }
     image = jas_image_decode(stream, -1, NULL);
@@ -193,7 +208,7 @@ int open_image(const char * filename)
     jas_stream_close(stream);
 
     if (image == NULL) {
-        fprintf(stderr, "error: could not decode image data from '%s'\n", filename);
+        jas_eprintf("error: could not decode image data from '%s'\n", filename);
         return -2;
     }
 
@@ -211,11 +226,11 @@ int main(int argc, char *argv[])
     int i;
 
     if (jas_init()) {
-        fprintf(stderr, "error: unable to initialize jasper library\n");
+        jas_eprintf("error: unable to initialize jasper library\n");
         exit(1);
     }
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        fprintf(stderr, "error: unable to initialize SDL: %s\n", SDL_GetError());
+        jas_eprintf("error: unable to initialize SDL: %s\n", SDL_GetError());
         exit(2);
     }
 

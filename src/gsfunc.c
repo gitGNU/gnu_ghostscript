@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsfunc.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gsfunc.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Generic Function support */
 #include "memory_.h"
 #include "gx.h"
@@ -84,23 +84,6 @@ fn_check_mnDR(const gs_function_params_t * params, int m, int n)
 	    if (params->Range[2 * i] > params->Range[2 * i + 1])
 		return_error(gs_error_rangecheck);
     return 0;
-}
-
-/* Get the monotonicity of a function over its Domain. */
-int
-fn_domain_is_monotonic(const gs_function_t *pfn)
-{
-#define MAX_M 16		/* arbitrary */
-    float lower[MAX_M], upper[MAX_M];
-    int i;
-
-    if (pfn->params.m > MAX_M)
-	return gs_error_undefined;
-    for (i = 0; i < pfn->params.m; ++i) {
-	lower[i] = pfn->params.Domain[2 * i];
-	upper[i] = pfn->params.Domain[2 * i + 1];
-    }
-    return gs_function_is_monotonic(pfn, lower, upper);
 }
 
 /* Return default function information. */
@@ -214,9 +197,6 @@ fn_common_serialize(const gs_function_t * pfn, stream *s)
     int code = sputs(s, (const byte *)&pfn->head.type, sizeof(pfn->head.type), &n);
     const float dummy[8] = {0, 0, 0, 0,  0, 0, 0, 0};
 
-    if (code < 0)
-	return code;
-    code = sputs(s, (const byte *)&pfn->head.is_monotonic, sizeof(pfn->head.is_monotonic), &n);
     if (code < 0)
 	return code;
     code = sputs(s, (const byte *)&p->m, sizeof(p->m), &n);

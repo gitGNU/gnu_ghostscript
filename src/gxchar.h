@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxchar.h,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxchar.h,v 1.6 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Internal character definition for Ghostscript library */
 /* Requires gsmatrix.h, gxfixed.h */
 
@@ -98,8 +98,9 @@ struct gs_show_enum_s {
     /*uint xy_index;*/		/* index within X/Y widths */
     /*gs_char returned.current_char;*/	/* current char for render or move */
     /*gs_glyph returned.current_glyph;*/	/* current glyph ditto */
-    gs_fixed_point wxy;		/* width of current char */
-				/* in device coords */
+    gs_fixed_point wxy;		/* width of current char in device coords */
+    gs_point wxy_float;		/* same for huge characters */
+    bool use_wxy_float;
     gs_fixed_point origin;	/* unrounded origin of current char */
 				/* in device coords, needed for */
 				/* charpath and WMode=1 */
@@ -128,12 +129,12 @@ cached_char *
             gx_alloc_char_bits(gs_font_dir *, gx_device_memory *, gx_device_memory *, ushort, ushort, const gs_log2_scale_point *, int);
 void gx_open_cache_device(gx_device_memory *, cached_char *);
 void gx_free_cached_char(gs_font_dir *, cached_char *);
-void gx_add_cached_char(gs_font_dir *, gx_device_memory *, cached_char *, cached_fm_pair *, const gs_log2_scale_point *);
+int  gx_add_cached_char(gs_font_dir *, gx_device_memory *, cached_char *, cached_fm_pair *, const gs_log2_scale_point *);
 void gx_add_char_bits(gs_font_dir *, cached_char *, const gs_log2_scale_point *);
 cached_char *
             gx_lookup_cached_char(const gs_font *, const cached_fm_pair *, gs_glyph, int, int, gs_fixed_point *);
-cached_char *
-            gx_lookup_xfont_char(const gs_state *, cached_fm_pair *, gs_char, gs_glyph, int);
+int gx_lookup_xfont_char(const gs_state * pgs, cached_fm_pair * pair,
+		     gs_char chr, gs_glyph glyph, int wmode, cached_char **pcc);
 int gx_image_cached_char(gs_show_enum *, cached_char *);
 void gx_compute_text_oversampling(const gs_show_enum * penum, const gs_font *pfont,
 				  int alpha_bits, gs_log2_scale_point *p_log2_scale);

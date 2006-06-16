@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxi12bit.c,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxi12bit.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* 12-bit image procedures */
 #include "gx.h"
 #include "memory_.h"
@@ -41,9 +41,10 @@
 
 private const byte *
 sample_unpack_12(byte * bptr, int *pdata_x, const byte * data,
-		 int data_x, uint dsize, const sample_lookup_t * ignore_ptab,
-		 int spread)
+		 int data_x, uint dsize, const sample_map *ignore_smap, int spread,
+		 int ignore_num_components_per_plane)
 {
+    /* Assuming an identity map for all components. */
     register frac *bufp = (frac *) bptr;
     uint dskip = (data_x >> 1) * 3;
     const byte *psrc = data + dskip;
@@ -319,11 +320,25 @@ image_render_frac(gx_image_enum * penum, const byte * buffer, int data_x,
 	if (mcode < 0)
 	    goto fill;
 f:
-	if_debug7('B', "[B]0x%x,0x%x,0x%x,0x%x -> %ld,%ld,0x%lx\n",
+	if (sizeof(pdevc_next->colors.binary.color[0]) <= sizeof(ulong))
+	    if_debug7('B', "[B]0x%x,0x%x,0x%x,0x%x -> 0x%lx,0x%lx,0x%lx\n",
 		  next.v[0], next.v[1], next.v[2], next.v[3],
-		  pdevc_next->colors.binary.color[0],
-		  pdevc_next->colors.binary.color[1],
-		  (ulong) pdevc_next->type);
+		  (ulong)pdevc_next->colors.binary.color[0],
+		  (ulong)pdevc_next->colors.binary.color[1],
+		  (ulong)pdevc_next->type);
+	else
+	    if_debug9('B', "[B]0x%x,0x%x,0x%x,0x%x -> 0x%08lx%08lx,0x%08lx%08lx,0x%lx\n",
+		  next.v[0], next.v[1], next.v[2], next.v[3],
+		  (ulong)(pdevc_next->colors.binary.color[0] >> 
+			8 * (sizeof(pdevc_next->colors.binary.color[0]) - sizeof(ulong))),
+		  (ulong)pdevc_next->colors.binary.color[0],
+		  (ulong)(pdevc_next->colors.binary.color[1] >> 
+			8 * (sizeof(pdevc_next->colors.binary.color[1]) - sizeof(ulong))),
+		  (ulong)pdevc_next->colors.binary.color[1],
+		  (ulong)pdevc_next->type);
+/* NB: sizeof gx_color_index is 4 or 8 bytes! */
+
+
 	/* Even though the supplied colors don't match, */
 	/* the device colors might. */
 	if (!dev_color_eq(devc1, devc2)) {

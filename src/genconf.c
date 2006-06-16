@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: genconf.c,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: genconf.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Generate configuration files */
 #include "stdpre.h"
 #include <assert.h>
@@ -211,7 +211,8 @@
  *
  *	Writes the list of library paths, links, and library file names
  *	on <lib.tr>.  -lo also writes the list of object file names,
- *	as for -o.
+ *	as for -o. This feature is obsolete and is not longer in use.
+ *      Use -ol instead.
  *
  *    -o[l] <obj.tr>
  *

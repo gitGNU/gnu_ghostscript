@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevprn.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gdevprn.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Generic printer driver support */
 #include "ctype_.h"
 #include "gdevprn.h"
@@ -27,6 +27,7 @@
 #include "gxclio.h"
 #include "gxgetbit.h"
 #include "gdevplnx.h"
+#include "gstrans.h"
 
 /*#define DEBUGGING_HACKS*/
 
@@ -58,7 +59,8 @@ const gx_device_procs prn_std_procs =
 /* Forward references */
 int gdev_prn_maybe_realloc_memory(gx_device_printer *pdev, 
 				  gdev_prn_space_params *old_space,
-				  int old_width, int old_height);
+			          int old_width, int old_height,
+			          bool old_page_uses_transparency);
 
 /* ------ Open/close ------ */
 
@@ -146,7 +148,8 @@ open_c:
 		      (ppdev->bandlist_memory == 0 ? pdev->memory->non_gc_memory:
 		       ppdev->bandlist_memory),
 		      ppdev->free_up_bandlist_memory,
-		      ppdev->clist_disable_mask);
+		      ppdev->clist_disable_mask,
+		      ppdev->page_uses_transparency);
     code = (*gs_clist_device_procs.open_device)( (gx_device *)pcldev );
     if (code < 0) {
 	/* If there wasn't enough room, and we haven't */
@@ -240,6 +243,7 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
     ppdev->orig_procs = pdev->procs;
     for ( pass = 1; pass <= (reallocate ? 2 : 1); ++pass ) {
 	ulong mem_space;
+	ulong pdf14_trans_buffer_size = 0;
 	byte *base = 0;
 	bool bufferSpace_is_default = false;
 	gdev_prn_space_params space_params;
@@ -269,7 +273,11 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
 	memset(ppdev->skip, 0, sizeof(ppdev->skip));
 	ppdev->printer_procs.buf_procs.size_buf_device
 	    (&buf_space, pdev, NULL, pdev->height, false);
-	mem_space = buf_space.bits + buf_space.line_ptrs;
+	if (ppdev->page_uses_transparency)
+	    pdf14_trans_buffer_size = new_height
+		* (ESTIMATED_PDF14_ROW_SPACE(new_width) >> 3);
+	mem_space = buf_space.bits + buf_space.line_ptrs
+		    + pdf14_trans_buffer_size;
 
 	/* Compute desired space params: never use the space_params as-is. */
 	/* Rather, give the dev-specific driver a chance to adjust them. */
@@ -485,6 +493,8 @@ gdev_prn_get_params(gx_device * pdev, gs_param_list * plist)
 	(code = param_write_long(plist, "BandBufferSpace", &ppdev->space_params.band.BandBufferSpace)) < 0 ||
 	(code = param_write_bool(plist, "OpenOutputFile", &ppdev->OpenOutputFile)) < 0 ||
 	(code = param_write_bool(plist, "ReopenPerPage", &ppdev->ReopenPerPage)) < 0 ||
+	(code = param_write_bool(plist, "PageUsesTransparency",
+			 	&ppdev->page_uses_transparency)) < 0 ||
 	(ppdev->Duplex_set >= 0 &&
 	 (code = (ppdev->Duplex_set ?
 		  param_write_bool(plist, "Duplex", &ppdev->Duplex) :
@@ -520,6 +530,8 @@ gdev_prn_put_params(gx_device * pdev, gs_param_list * plist)
     bool is_open = pdev->is_open;
     bool oof = ppdev->OpenOutputFile;
     bool rpp = ppdev->ReopenPerPage;
+    bool page_uses_transparency = ppdev->page_uses_transparency;
+    bool old_page_uses_transparency = ppdev->page_uses_transparency;
     bool duplex;
     int duplex_set = -1;
     int width = pdev->width;
@@ -541,6 +553,16 @@ gdev_prn_put_params(gx_device * pdev, gs_param_list * plist)
     }
 
     switch (code = param_read_bool(plist, (param_name = "ReopenPerPage"), &rpp)) {
+	default:
+	    ecode = code;
+	    param_signal_error(plist, param_name, ecode);
+	case 0:
+	case 1:
+	    break;
+    }
+
+    switch (code = param_read_bool(plist, (param_name = "PageUsesTransparency"),
+			    				&page_uses_transparency)) {
 	default:
 	    ecode = code;
 	    param_signal_error(plist, param_name, ecode);
@@ -648,6 +670,7 @@ label:\
 
     ppdev->OpenOutputFile = oof;
     ppdev->ReopenPerPage = rpp;
+    ppdev->page_uses_transparency = page_uses_transparency;
     if (duplex_set >= 0) {
 	ppdev->Duplex = duplex;
 	ppdev->Duplex_set = duplex_set;
@@ -657,7 +680,8 @@ label:\
     /* If necessary, free and reallocate the printer memory. */
     /* Formerly, would not reallocate if device is not open: */
     /* we had to patch this out (see News for 5.50). */
-    code = gdev_prn_maybe_realloc_memory(ppdev, &save_sp, width, height);
+    code = gdev_prn_maybe_realloc_memory(ppdev, &save_sp, width, height,
+		    				old_page_uses_transparency);
     if (code < 0)
 	return code;
 
@@ -1219,7 +1243,8 @@ gdev_prn_close_printer(gx_device * pdev)
 int
 gdev_prn_maybe_realloc_memory(gx_device_printer *prdev, 
 			      gdev_prn_space_params *old_sp,
-			      int old_width, int old_height)
+			      int old_width, int old_height,
+			      bool old_page_uses_transparency)
 {
     int code = 0;
     gx_device *const pdev = (gx_device *)prdev;
@@ -1235,7 +1260,8 @@ gdev_prn_maybe_realloc_memory(gx_device_printer *prdev,
      */
     if (prdev->is_open &&
 	(memcmp(&prdev->space_params, old_sp, sizeof(*old_sp)) != 0 ||
-	 prdev->width != old_width || prdev->height != old_height )
+	 prdev->width != old_width || prdev->height != old_height ||
+	 prdev->page_uses_transparency != old_page_uses_transparency)
 	) {
 	int new_width = prdev->width;
 	int new_height = prdev->height;

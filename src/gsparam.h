@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gsparam.h,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gsparam.h,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Client interface to parameter dictionaries */
 
 #ifndef gsparam_INCLUDED
@@ -76,7 +76,6 @@ typedef enum {
 
 #define _param_array_struct(sname,etype)\
   struct sname { const etype *data; uint size; bool persistent; }
-typedef _param_array_struct(gs_param_string_s, byte) gs_param_string;
 typedef _param_array_struct(gs_param_int_array_s, int) gs_param_int_array;
 typedef _param_array_struct(gs_param_float_array_s, float) gs_param_float_array;
 typedef _param_array_struct(gs_param_string_array_s, gs_param_string) gs_param_string_array;

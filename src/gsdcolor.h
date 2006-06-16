@@ -16,7 +16,7 @@
 
 */
 
-/*$Id: gsdcolor.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/*$Id: gsdcolor.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Device color representation for drivers */
 
 #ifndef gsdcolor_INCLUDED
@@ -399,6 +399,7 @@ struct gx_device_color_saved_s {
 	}		pattern;
 	struct _pattern2 {
 	    gs_id id;
+	    bool shfill;
 	}		pattern2;
     }                       colors;
     gs_int_point            phase;

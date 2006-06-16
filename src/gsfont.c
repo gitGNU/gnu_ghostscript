@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsfont.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gsfont.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Font operators for Ghostscript library */
 #include "gx.h"
 #include "memory_.h"
@@ -269,6 +269,7 @@ gs_font_dir_alloc2_limits(gs_memory_t * struct_mem, gs_memory_t * bits_mem,
     pdir->tti = 0;
     pdir->san = 0;
     pdir->global_glyph_code = NULL;
+    pdir->text_enum_id = 0;
     return pdir;
 }
 
@@ -282,6 +283,20 @@ gs_font_alloc(gs_memory_t *mem, gs_memory_type_ptr_t pstype,
 
     if (pfont == 0)
 	return 0;
+#if 1 /* Clear entire structure to avoid unitialized pointers 
+         when the initialization exits prematurely by error. */
+    memset(pfont, 0, pstype->ssize);
+    pfont->memory = mem;
+    pfont->dir = dir;
+    gs_font_notify_init(pfont);
+    pfont->id = gs_next_ids(mem, 1);
+    pfont->base = pfont;
+    pfont->ExactSize = pfont->InBetweenSize = pfont->TransformedChar =
+	fbit_use_outlines;
+    pfont->procs = *procs;
+#else
+    /* For clarity we leave old initializations here
+       to know which fields needs to be initialized. */
     pfont->next = pfont->prev = 0;
     pfont->memory = mem;
     pfont->dir = dir;
@@ -299,6 +314,7 @@ gs_font_alloc(gs_memory_t *mem, gs_memory_type_ptr_t pstype,
     pfont->StrokeWidth = 0;
     pfont->procs = *procs;
     memset(&pfont->orig_FontMatrix, 0, sizeof(pfont->orig_FontMatrix));
+#endif
     /* not key_name, font_name */
     return pfont;
 }
@@ -390,6 +406,26 @@ gs_definefont(gs_font_dir * pdir, gs_font * pfont)
     font_link_first(&pdir->orig_fonts, pfont);
     if_debug2('m', "[m]defining font 0x%lx, next=0x%lx\n",
 	      (ulong) pfont, (ulong) pfont->next);
+    return 0;
+}
+
+/* Find a sililar registered font of same type. */
+int
+gs_font_find_similar(const gs_font_dir * pdir, const gs_font **ppfont, 
+		       int (*similar)(const gs_font *, const gs_font *))
+{
+    const gs_font *pfont0 = *ppfont;
+    const gs_font *pfont1 = pdir->orig_fonts;
+
+    for (; pfont1 != NULL; pfont1 = pfont1->next) {
+	if (pfont1 != pfont0 && pfont1->FontType == pfont0->FontType) {
+	    int code = similar(pfont0, pfont1);
+	    if (code != 0) {
+		*ppfont = pfont1;
+		return code;
+	    }
+	}
+    }
     return 0;
 }
 
@@ -494,6 +530,40 @@ gs_makefont(gs_font_dir * pdir, const gs_font * pfont,
 		pdir->scaled_fonts = 0;
 	    pdir->ssize--;
 	    prev->prev = 0;
+	    /* This comment is a relatively new reconstruction of old assumptions,
+	       which were done 5+ years ago (see gsfont.c revision 1.1). 
+	       Here the font is only removed from the pdir->scaled_fonts list
+	       to prevent the latter to grow huge. Thus the list is used only to
+	       merge scaled font duplicates by the 'for' loop in the beginning 
+	       of this function. We do not discard related character rasters 
+	       from character cache due to 3 reasons :
+	       1. At this point a cached_char instance may be referred
+	          by one or more gs_show_enum instances, which may exist on the 
+		  PS estack while execution of a Type 3 BuildChar or BuildGlyph.
+		  Such event really happens while rendering a re-distilled tpc2.ps .
+		  We must not remove those isntances, but currently there is no
+		  mechanizm for distinguishing them from othgers.
+	       2. If the font has an UID, another scaled font may use same fm_pair
+	          instance due to different CTMs. Therefore same character rasters 
+		  may be useful for another scaled font.
+	       3. We don't know whether the font will be used again in nearest
+	          future. Maybe it will be used again in the next 'show' operation.
+		  Therefore we delay the decision about discarding character
+		  rasters untill we need to release memory from them.
+	       4. Also note that the last created font, rather than the last used one,
+	          is being discarded. An useful improvement would be
+		  to move a font t the beginning of the list whenever it
+		  appears in a show-like operation.
+	     */
+#if 0	    /* We disabled this code portion due to Bug 688392.
+	       The problem was dangling pointers, which appear in fm_pair instances
+	       after uid_free is applied to applied to a font's UID,
+	       because they share same xvalues array. We're unable to guess 
+	       for which reason uid_free was applied to the font's UID here 
+	       5+ years ago (see gsfont.c revision 1.1).
+	       We do not remove this code portion until we get 
+	       a complete understanding. 
+	     */
 	    if (prev->FontType != ft_composite) {
 		if_debug1('m', "[m]discarding UID 0x%lx\n",
 			  (ulong) ((gs_font_base *) prev)->
@@ -503,6 +573,7 @@ gs_makefont(gs_font_dir * pdir, const gs_font * pfont,
 			 "gs_makefont(discarding)");
 		uid_set_invalid(&((gs_font_base *) prev)->UID);
 	    }
+#endif
 	}
 	pdir->ssize++;
 	font_link_first(&pdir->scaled_fonts, pf_out);
@@ -620,7 +691,7 @@ gs_currentgridfittt(const gs_font_dir * pdir)
 
 /* Purge a font from all font- and character-related tables. */
 /* This is only used by restore (and, someday, the GC). */
-void
+int
 gs_purge_font(gs_font * pfont)
 {
     gs_font_dir *pdir = pfont->dir;
@@ -645,7 +716,10 @@ gs_purge_font(gs_font * pfont)
     /* Purge the font from the scaled font cache. */
     for (pf = pdir->scaled_fonts; pf != 0;) {
 	if (pf->base == pfont) {
-	    gs_purge_font(pf);
+	    int code = gs_purge_font(pf);
+
+	    if (code < 0)
+		return code;
 	    pf = pdir->scaled_fonts;	/* start over */
 	} else
 	    pf = pf->next;
@@ -653,18 +727,18 @@ gs_purge_font(gs_font * pfont)
 
     /* Purge the font from the font/matrix pair cache, */
     /* including all cached characters rendered with that font. */
-    gs_purge_font_from_char_caches(pdir, pfont);
-
+    return gs_purge_font_from_char_caches(pdir, pfont);
 }
 
 /* Locate a gs_font by gs_id. */
 gs_font *
-gs_find_font_by_id(gs_font_dir *pdir, gs_id id)
+gs_find_font_by_id(gs_font_dir *pdir, gs_id id, gs_matrix *FontMatrix)
  {
     gs_font *pfont = pdir->orig_fonts;
 
     for(; pfont != NULL; pfont = pfont->next)
-	if(pfont->id == id)
+	if(pfont->id == id &&
+	    !memcmp(&pfont->FontMatrix, FontMatrix, sizeof(pfont->FontMatrix)))
 	    return pfont;
     return NULL;
  }
@@ -974,3 +1048,10 @@ gs_no_glyph_name(gs_font *font, gs_glyph glyph, gs_const_string *pstr)
     return_error(gs_error_undefined);
 }
 
+#ifdef DEBUG
+/* Reserve a text enumerator instance id. */
+ulong gs_next_text_enum_id(const gs_font *font)
+{
+    return ++font->dir->text_enum_id;
+}
+#endif

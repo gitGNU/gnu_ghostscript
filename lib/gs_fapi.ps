@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_fapi.ps,v 1.3 2005/12/13 17:48:51 jemarch Exp $
+% $Id: gs_fapi.ps,v 1.4 2006/06/16 12:55:14 Arabidopsis Exp $
 % Redefine Font and CIDFont categories with FAPI-handeled fonts.
 
 systemdict /.FAPIavailable known { .FAPIavailable } { false } ifelse not {
@@ -71,7 +71,7 @@ currentdict /super.complete_instance currentdict /complete_instance get put
   Path false .file_name_combine not {
     exch
     (Can't combine paths ) print print ( and ) print =
-    /RefinePath /configurationerror signalerror
+    /RefinePath cvx /configurationerror signalerror
   } if
   def
   currentdict end

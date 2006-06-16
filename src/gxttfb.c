@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxttfb.c,v 1.4 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gxttfb.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* A bridge to True Type interpreter. */
 
 #include "gx.h"
@@ -209,7 +209,7 @@ private void DebugRepaint(ttfFont *ttf)
 {
 }
 
-private void DebugPrint(ttfFont *ttf, const char *fmt, ...)
+private int DebugPrint(ttfFont *ttf, const char *fmt, ...)
 {
     char buf[500];
     va_list args;
@@ -223,6 +223,7 @@ private void DebugPrint(ttfFont *ttf, const char *fmt, ...)
 	errwrite(buf, count);
 	va_end(args);
     }
+    return 0;
 }
 
 private void WarnBadInstruction(gs_font_type42 *pfont, int glyph_index)
@@ -238,11 +239,11 @@ private void WarnBadInstruction(gs_font_type42 *pfont, int glyph_index)
 	memcpy(buf, base_font->font_name.chars, l);
 	buf[l] = 0;
 	if (glyph_index >= 0)
-	    eprintf2("Failed to interpret TT instructions of fhe glyph index %d of the font %s. "
+	    eprintf2("Failed to interpret TT instructions for glyph index %d of font %s. "
 			"Continue ignoring instructions of the font.\n", 
 			glyph_index, buf);
 	else
-	    eprintf1("Failed to interpret TT instructions of the font %s. "
+	    eprintf1("Failed to interpret TT instructions in font %s. "
 			"Continue ignoring instructions of the font.\n", 	    
 			buf);
 	base_font->data.warning_bad_instruction = true;
@@ -364,7 +365,7 @@ ttfFont *ttfFont__create(gs_font_dir *dir)
     ttf = gs_alloc_struct(mem, ttfFont, &st_ttfFont, "ttfFont__create");
     if (ttf == NULL)
 	return 0;
-    ttfFont__init(ttf, &m->super, DebugRepaint, DebugPrint);
+    ttfFont__init(ttf, &m->super, DebugRepaint, (gs_debug_c('Y') ? DebugPrint : NULL));
     return ttf;
 }
 

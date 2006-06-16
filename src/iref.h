@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: iref.h,v 1.4 2005/12/13 16:57:26 jemarch Exp $ */
+/* $Id: iref.h,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Object structure and type definitions for Ghostscript */
 
 #ifndef iref_INCLUDED
@@ -558,9 +558,9 @@ struct ref_s {
 #define arch_sizeof_ref sizeof(ref)
 /* Define the required alignment for refs. */
 /* We assume all alignment values are powers of 2. */
-#define arch_align_ref_mod\
- (((arch_align_long_mod - 1) | (arch_align_float_mod - 1) |\
-   (arch_align_ptr_mod - 1)) + 1)
+#define ARCH_ALIGN_REF_MOD\
+ (((ARCH_ALIGN_LONG_MOD - 1) | (ARCH_ALIGN_FLOAT_MOD - 1) |\
+   (ARCH_ALIGN_PTR_MOD - 1)) + 1)
 
 /* Define the maximum size of an array or a string. */
 /* The maximum array size is determined by the fact that */

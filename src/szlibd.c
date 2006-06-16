@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 1996, 1997, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,12 +17,10 @@
 
 */
 
-/* $Id: szlibd.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: szlibd.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* zlib decoding (decompression) filter stream */
 #include "memory_.h"
 #include "std.h"
-#include "gsmemory.h"
-#include "gsmalloc.h"	    /* for gs_memory_default */
 #include "strimpl.h"
 #include "szlibxx.h"
 

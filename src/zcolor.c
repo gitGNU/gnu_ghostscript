@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zcolor.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: zcolor.c,v 1.7 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Color operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -41,6 +41,7 @@
 #include "icolor.h"
 #include "idparam.h"
 #include "iname.h"
+#include "iutil.h"
 
 /* imported from gsht.c */
 extern  void    gx_set_effective_transfer(gs_state *);
@@ -209,11 +210,12 @@ zsetcolor(i_ctx_t * i_ctx_p)
     if ((n_comps = cs_num_components(pcs)) < 0) {
         n_comps = -n_comps;
         if (r_has_type(op, t_dictionary)) {
-            ref *   pImpl;
+            ref     *pImpl, pPatInst;
             int     ptype;
 
-            dict_find_string(op, "Implementation", &pImpl);
-            cc.pattern = r_ptr(pImpl, gs_pattern_instance_t);
+	    dict_find_string(op, "Implementation", &pImpl);
+	    code = array_get(imemory, pImpl, 0, &pPatInst);
+	    cc.pattern = r_ptr(&pPatInst, gs_pattern_instance_t);
             n_numeric_comps = ( pattern_instance_uses_base_space(cc.pattern)
                                   ? n_comps - 1
                                   : 0 );
@@ -567,7 +569,11 @@ zcolor_test_all(i_ctx_t *i_ctx_p)
     for (i = 0; i < ncomp; i++)
 	cv[i] = 0;
     color = (*dev_proc(dev, encode_color)) (dev, cv);
-    dprintf1("Zero color index:  %8x\n", color);
+    if (sizeof(color) <= sizeof(ulong))
+        dprintf1("Zero color index:  %8lx\n", (ulong)color);
+    else
+        dprintf2("Zero color index:  %8lx%08lx\n",
+            (ulong)(color >> 8*(sizeof(color) - sizeof(ulong))), (ulong)color);
 
     dprintf1("separable_and_linear = %s\n", 
       linsep == GX_CINFO_SEP_LIN_NONE ? "No" :

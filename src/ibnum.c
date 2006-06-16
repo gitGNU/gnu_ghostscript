@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ibnum.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: ibnum.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Level 2 encoded number reading utilities for Ghostscript */
 #include "math_.h"
 #include "memory_.h"
@@ -203,7 +203,7 @@ sdecodefloat(const byte * p, int format)
 	fnum = *(float *)&lnum;
     } else {
 	lnum = (bits32) sdecodelong(p, format);
-#if !arch_floats_are_IEEE
+#if !ARCH_FLOATS_ARE_IEEE
 	{
 	    /* We know IEEE floats take 32 bits. */
 	    /* Convert IEEE float to native float. */

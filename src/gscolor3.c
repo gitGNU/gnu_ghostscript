@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gscolor3.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gscolor3.c,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* "Operators" for LanguageLevel 3 color facilities */
 #include "gx.h"
 #include "gserrors.h"
@@ -88,7 +88,7 @@ gs_shfill(gs_state * pgs, const gs_shading_t * psh)
 	code = gx_cpath_to_path(pgs->clip_path, &cpath);
 	if (code >= 0)
 	    code = gx_fill_path(&cpath, &devc, pgs, gx_rule_winding_number,
-				fixed_0, fixed_0);
+				pgs->fill_adjust.x, pgs->fill_adjust.y);
 	gx_path_free(&cpath, "gs_shfill");
     }
     gs_pattern_reference(&cc, -1);

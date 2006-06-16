@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxtext.h,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gxtext.h,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Driver text interface implementation support */
 
 #ifndef gxtext_INCLUDED
@@ -98,6 +98,7 @@ rc_free_proc(rc_free_text_enum);
     /* knows the entire list of dynamically changing elements. */\
     rc_header rc;\
     gs_font *current_font; /* changes for composite fonts */\
+    gs_glyph outer_CID; /* When a Type 3 is a FMapType 9 descendent. */\
     bool is_pure_color; /* The text is painted with a pure color. */\
     gs_log2_scale_point log2_scale;	/* for oversampling */\
     cached_fm_pair *pair; /* corresponds to the current_font and CTM*(1<<log2_scale) */\
@@ -107,6 +108,7 @@ rc_free_proc(rc_free_text_enum);
     int cmap_code;		/* hack for FMapType 9 composite fonts, */\
 				/* the value returned by decode_next */\
     gs_point FontBBox_as_Metrics2;  /* used with FontType 9,11 && WMode 1 */\
+    ulong text_enum_id; /* debug purpose only - not used by algorythm. */\
     /* The following is controlled by a device. */\
     bool device_disabled_grid_fitting;\
     /* The following are used to return information to the client. */\

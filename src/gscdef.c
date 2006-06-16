@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gscdef.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gscdef.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Configuration scalars */
 
 #include "std.h"
@@ -36,7 +36,7 @@ CONFIG_CONST long gs_buildtime = GS_BUILDTIME;
 
 #ifndef GS_COPYRIGHT
 #  define GS_COPYRIGHT\
-	"Copyright (C) 2005 artofcode LLC, Benicia, CA.  All rights reserved."
+	"Copyright (C) 2006 artofcode LLC, Benicia, CA.  All rights reserved."
 #endif
 const char *CONFIG_CONST gs_copyright = GS_COPYRIGHT;
 

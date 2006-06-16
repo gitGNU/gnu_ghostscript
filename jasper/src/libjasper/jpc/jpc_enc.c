@@ -62,7 +62,7 @@
  */
 
 /*
- * $Id: jpc_enc.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jpc_enc.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -172,7 +172,10 @@ static uint_fast32_t jpc_abstorelstepsize(jpc_fix_t absdelta, int scaleexpn)
 	int n;
 
 	if (absdelta < 0) {
-		abort();
+		jas_error(	JAS_ERR_BAD_PARAM_JPC_ABSTORELSTEPSIZE,
+					"JAS_ERR_BAD_PARAM_JPC_ABSTORELSTEPSIZE"
+				);
+		return 0;
 	}
 
 	p = jpc_firstone(absdelta) - JPC_FIX_FRACBITS;
@@ -180,7 +183,10 @@ static uint_fast32_t jpc_abstorelstepsize(jpc_fix_t absdelta, int scaleexpn)
 	mant = ((n < 0) ? (absdelta >> (-n)) : (absdelta << n)) & 0x7ff;
 	expn = scaleexpn - p;
 	if (scaleexpn < p) {
-		abort();
+		jas_error(	JAS_ERR_BAD_PARAM_JPC_ABSTORELSTEPSIZE,
+					"JAS_ERR_BAD_PARAM_JPC_ABSTORELSTEPSIZE"
+				);
+		return 0;
 	}
 	return JPC_QCX_EXPN(expn) | JPC_QCX_MANT(mant);
 }
@@ -287,7 +293,7 @@ int jpc_encode(jas_image_t *image, jas_stream_t *out, char *optstr)
 	jpc_initluts();
 
 	if (!(cp = cp_create(optstr, image))) {
-		fprintf(stderr, "invalid JP encoder options\n");
+		jas_eprintf("invalid JP encoder options\n");
 		goto error;
 	}
 
@@ -311,7 +317,7 @@ int jpc_encode(jas_image_t *image, jas_stream_t *out, char *optstr)
 		goto error;
 	}
 	if (jpc_putms(enc->out, enc->cstate, enc->mrk)) {
-		fprintf(stderr, "cannot write EOI marker\n");
+		jas_eprintf("cannot write EOI marker\n");
 		goto error;
 	}
 	jpc_ms_destroy(enc->mrk);
@@ -355,12 +361,12 @@ static jpc_enc_cp_t *cp_create(char *optstr, jas_image_t *image)
 	uint_fast16_t rlvlno;
 	uint_fast16_t prcwidthexpn;
 	uint_fast16_t prcheightexpn;
-	bool enablemct;
+	jas_bool enablemct;
 	uint_fast32_t jp2overhead;
 	uint_fast16_t lyrno;
 	uint_fast32_t hsteplcm;
 	uint_fast32_t vsteplcm;
-	bool mctvalid;
+	jas_bool mctvalid;
 
 	tvp = 0;
 	cp = 0;
@@ -373,7 +379,7 @@ static jpc_enc_cp_t *cp_create(char *optstr, jas_image_t *image)
 
 	prcwidthexpn = 15;
 	prcheightexpn = 15;
-	enablemct = true;
+	enablemct = jas_true;
 	jp2overhead = 0;
 
 	cp->ccps = 0;
@@ -394,7 +400,7 @@ static jpc_enc_cp_t *cp_create(char *optstr, jas_image_t *image)
 		if (jas_image_cmptbrx(image, cmptno) + jas_image_cmpthstep(image, cmptno) <=
 		  jas_image_brx(image) || jas_image_cmptbry(image, cmptno) +
 		  jas_image_cmptvstep(image, cmptno) <= jas_image_bry(image)) {
-			fprintf(stderr, "unsupported image type\n");
+			jas_eprintf("unsupported image type\n");
 			goto error;
 		}
 		/* Note: We ought to be calculating the LCMs here.  Fix some day. */
@@ -423,7 +429,7 @@ static jpc_enc_cp_t *cp_create(char *optstr, jas_image_t *image)
 
 	tcp = &cp->tcp;
 	tcp->csty = 0;
-	tcp->intmode = true;
+	tcp->intmode = jas_true;
 	tcp->prg = JPC_COD_LRCPPRG;
 	tcp->numlyrs = 1;
 	tcp->ilyrrates = 0;
@@ -481,7 +487,7 @@ static jpc_enc_cp_t *cp_create(char *optstr, jas_image_t *image)
 		case OPT_MODE:
 			if ((tagid = jas_taginfo_nonull(jas_taginfos_lookup(modetab,
 			  jas_tvparser_getval(tvp)))->id) < 0) {
-				fprintf(stderr,
+				jas_eprintf(
 				  "ignoring invalid mode %s\n",
 				  jas_tvparser_getval(tvp));
 			} else {
@@ -491,7 +497,7 @@ static jpc_enc_cp_t *cp_create(char *optstr, jas_image_t *image)
 		case OPT_PRG:
 			if ((tagid = jas_taginfo_nonull(jas_taginfos_lookup(prgordtab,
 			  jas_tvparser_getval(tvp)))->id) < 0) {
-				fprintf(stderr,
+				jas_eprintf(
 				  "ignoring invalid progression order %s\n",
 				  jas_tvparser_getval(tvp));
 			} else {
@@ -499,7 +505,7 @@ static jpc_enc_cp_t *cp_create(char *optstr, jas_image_t *image)
 			}
 			break;
 		case OPT_NOMCT:
-			enablemct = false;
+			enablemct = jas_false;
 			break;
 		case OPT_MAXRLVLS:
 			tccp->maxrlvls = atoi(jas_tvparser_getval(tvp));
@@ -534,7 +540,7 @@ static jpc_enc_cp_t *cp_create(char *optstr, jas_image_t *image)
 		case OPT_RATE:
 			if (ratestrtosize(jas_tvparser_getval(tvp), cp->rawsize,
 			  &cp->totalsize)) {
-				fprintf(stderr,
+				jas_eprintf(
 				  "ignoring bad rate specifier %s\n",
 				  jas_tvparser_getval(tvp));
 			}
@@ -542,7 +548,7 @@ static jpc_enc_cp_t *cp_create(char *optstr, jas_image_t *image)
 		case OPT_ILYRRATES:
 			if (jpc_atoaf(jas_tvparser_getval(tvp), &numilyrrates,
 			  &ilyrrates)) {
-				fprintf(stderr,
+				jas_eprintf(
 				  "warning: invalid intermediate layer rates specifier ignored (%s)\n",
 				  jas_tvparser_getval(tvp));
 			}
@@ -552,7 +558,7 @@ static jpc_enc_cp_t *cp_create(char *optstr, jas_image_t *image)
 			jp2overhead = atoi(jas_tvparser_getval(tvp));
 			break;
 		default:
-			fprintf(stderr, "warning: ignoring invalid option %s\n",
+			jas_eprintf("warning: ignoring invalid option %s\n",
 			 jas_tvparser_gettag(tvp));
 			break;
 		}
@@ -570,7 +576,7 @@ static jpc_enc_cp_t *cp_create(char *optstr, jas_image_t *image)
 		cp->imgareatlx = 0;
 	} else {
 		if (hsteplcm != 1) {
-			fprintf(stderr, "warning: overriding imgareatlx value\n");
+			jas_eprintf("warning: overriding imgareatlx value\n");
 		}
 		cp->imgareatlx *= hsteplcm;
 	}
@@ -578,7 +584,7 @@ static jpc_enc_cp_t *cp_create(char *optstr, jas_image_t *image)
 		cp->imgareatly = 0;
 	} else {
 		if (vsteplcm != 1) {
-			fprintf(stderr, "warning: overriding imgareatly value\n");
+			jas_eprintf("warning: overriding imgareatly value\n");
 		}
 		cp->imgareatly *= vsteplcm;
 	}
@@ -598,20 +604,20 @@ static jpc_enc_cp_t *cp_create(char *optstr, jas_image_t *image)
 	}
 
 	if (cp->numcmpts == 3) {
-		mctvalid = true;
+		mctvalid = jas_true;
 		for (cmptno = 0; cmptno < jas_image_numcmpts(image); ++cmptno) {
 			if (jas_image_cmptprec(image, cmptno) != jas_image_cmptprec(image, 0) ||
 			  jas_image_cmptsgnd(image, cmptno) != jas_image_cmptsgnd(image, 0) ||
 			  jas_image_cmptwidth(image, cmptno) != jas_image_cmptwidth(image, 0) ||
 			  jas_image_cmptheight(image, cmptno) != jas_image_cmptheight(image, 0)) {
-				mctvalid = false;
+				mctvalid = jas_false;
 			}
 		}
 	} else {
-		mctvalid = false;
+		mctvalid = jas_false;
 	}
 	if (mctvalid && enablemct && jas_clrspc_fam(jas_image_clrspc(image)) != JAS_CLRSPC_FAM_RGB) {
-		fprintf(stderr, "warning: color space apparently not RGB\n");
+		jas_eprintf("warning: color space apparently not RGB\n");
 	}
 	if (mctvalid && enablemct && jas_clrspc_fam(jas_image_clrspc(image)) == JAS_CLRSPC_FAM_RGB) {
 		tcp->mctid = (tcp->intmode) ? (JPC_MCT_RCT) : (JPC_MCT_ICT);
@@ -630,12 +636,12 @@ static jpc_enc_cp_t *cp_create(char *optstr, jas_image_t *image)
 
 	/* Ensure that the tile width and height is valid. */
 	if (!cp->tilewidth) {
-		fprintf(stderr, "invalid tile width %lu\n", (unsigned long)
+		jas_eprintf("invalid tile width %lu\n", (unsigned long)
 		  cp->tilewidth);
 		goto error;
 	}
 	if (!cp->tileheight) {
-		fprintf(stderr, "invalid tile height %lu\n", (unsigned long)
+		jas_eprintf("invalid tile height %lu\n", (unsigned long)
 		  cp->tileheight);
 		goto error;
 	}
@@ -645,7 +651,7 @@ static jpc_enc_cp_t *cp_create(char *optstr, jas_image_t *image)
 	  cp->tilegrdoffy > cp->imgareatly ||
 	  cp->tilegrdoffx + cp->tilewidth < cp->imgareatlx ||
 	  cp->tilegrdoffy + cp->tileheight < cp->imgareatly) {
-		fprintf(stderr, "invalid tile grid offset (%lu, %lu)\n",
+		jas_eprintf("invalid tile grid offset (%lu, %lu)\n",
 		  (unsigned long) cp->tilegrdoffx, (unsigned long)
 		  cp->tilegrdoffy);
 		goto error;
@@ -671,63 +677,63 @@ static jpc_enc_cp_t *cp_create(char *optstr, jas_image_t *image)
 	/* Ensure that the integer mode is used in the case of lossless
 	  coding. */
 	if (cp->totalsize == UINT_FAST32_MAX && (!cp->tcp.intmode)) {
-		fprintf(stderr, "cannot use real mode for lossless coding\n");
+		jas_eprintf("cannot use real mode for lossless coding\n");
 		goto error;
 	}
 
 	/* Ensure that the precinct width is valid. */
 	if (prcwidthexpn > 15) {
-		fprintf(stderr, "invalid precinct width\n");
+		jas_eprintf("invalid precinct width\n");
 		goto error;
 	}
 
 	/* Ensure that the precinct height is valid. */
 	if (prcheightexpn > 15) {
-		fprintf(stderr, "invalid precinct height\n");
+		jas_eprintf("invalid precinct height\n");
 		goto error;
 	}
 
 	/* Ensure that the code block width is valid. */
 	if (cp->tccp.cblkwidthexpn < 2 || cp->tccp.cblkwidthexpn > 12) {
-		fprintf(stderr, "invalid code block width %d\n",
+		jas_eprintf("invalid code block width %d\n",
 		  JPC_POW2(cp->tccp.cblkwidthexpn));
 		goto error;
 	}
 
 	/* Ensure that the code block height is valid. */
 	if (cp->tccp.cblkheightexpn < 2 || cp->tccp.cblkheightexpn > 12) {
-		fprintf(stderr, "invalid code block height %d\n",
+		jas_eprintf("invalid code block height %d\n",
 		  JPC_POW2(cp->tccp.cblkheightexpn));
 		goto error;
 	}
 
 	/* Ensure that the code block size is not too large. */
 	if (cp->tccp.cblkwidthexpn + cp->tccp.cblkheightexpn > 12) {
-		fprintf(stderr, "code block size too large\n");
+		jas_eprintf("code block size too large\n");
 		goto error;
 	}
 
 	/* Ensure that the number of layers is valid. */
 	if (cp->tcp.numlyrs > 16384) {
-		fprintf(stderr, "too many layers\n");
+		jas_eprintf("too many layers\n");
 		goto error;
 	}
 
 	/* There must be at least one resolution level. */
 	if (cp->tccp.maxrlvls < 1) {
-		fprintf(stderr, "must be at least one resolution level\n");
+		jas_eprintf("must be at least one resolution level\n");
 		goto error;
 	}
 
 	/* Ensure that the number of guard bits is valid. */
 	if (cp->tccp.numgbits > 8) {
-		fprintf(stderr, "invalid number of guard bits\n");
+		jas_eprintf("invalid number of guard bits\n");
 		goto error;
 	}
 
 	/* Ensure that the rate is within the legal range. */
 	if (cp->totalsize != UINT_FAST32_MAX && cp->totalsize > cp->rawsize) {
-		fprintf(stderr, "warning: specified rate is unreasonably large (%lu > %lu)\n", (unsigned long) cp->totalsize, (unsigned long) cp->rawsize);
+		jas_eprintf("warning: specified rate is unreasonably large (%lu > %lu)\n", (unsigned long) cp->totalsize, (unsigned long) cp->rawsize);
 	}
 
 	/* Ensure that the intermediate layer rates are valid. */
@@ -735,7 +741,7 @@ static jpc_enc_cp_t *cp_create(char *optstr, jas_image_t *image)
 		/* The intermediate layers rates must increase monotonically. */
 		for (lyrno = 0; lyrno + 2 < tcp->numlyrs; ++lyrno) {
 			if (tcp->ilyrrates[lyrno] >= tcp->ilyrrates[lyrno + 1]) {
-				fprintf(stderr, "intermediate layer rates must increase monotonically\n");
+				jas_eprintf("intermediate layer rates must increase monotonically\n");
 				goto error;
 			}
 		}
@@ -744,7 +750,7 @@ static jpc_enc_cp_t *cp_create(char *optstr, jas_image_t *image)
 			for (lyrno = 0; lyrno < tcp->numlyrs - 1; ++lyrno) {
 				if (jpc_fixtodbl(tcp->ilyrrates[lyrno]) > ((double) cp->totalsize)
 				  / cp->rawsize) {
-					fprintf(stderr, "warning: intermediate layer rates must be less than overall rate\n");
+					jas_eprintf("warning: intermediate layer rates must be less than overall rate\n");
 					goto error;
 				}
 			}
@@ -922,7 +928,7 @@ startoff = jas_stream_getrwcount(enc->out);
 		return -1;
 	}
 	if (jpc_putms(enc->out, enc->cstate, enc->mrk)) {
-		fprintf(stderr, "cannot write SOC marker\n");
+		jas_eprintf("cannot write SOC marker\n");
 		return -1;
 	}
 	jpc_ms_destroy(enc->mrk);
@@ -952,7 +958,7 @@ startoff = jas_stream_getrwcount(enc->out);
 		siz->comps[i].vsamp = cp->ccps[i].sampgrdstepy;
 	}
 	if (jpc_putms(enc->out, enc->cstate, enc->mrk)) {
-		fprintf(stderr, "cannot write SIZ marker\n");
+		jas_eprintf("cannot write SIZ marker\n");
 		return -1;
 	}
 	jpc_ms_destroy(enc->mrk);
@@ -966,10 +972,14 @@ startoff = jas_stream_getrwcount(enc->out);
 	com->len = strlen(buf);
 	com->regid = JPC_COM_LATIN;
 	if (!(com->data = JAS_CAST(uchar *, jas_strdup(buf)))) {
-		abort();
+
+		jas_error(	JAS_ERR_NULL_DATA_PTR_JPC_ENC_ENCODEMAINHDR,
+					"JAS_ERR_NULL_DATA_PTR_JPC_ENC_ENCODEMAINHDR"
+				);
+		return -1;
 	}
 	if (jpc_putms(enc->out, enc->cstate, enc->mrk)) {
-		fprintf(stderr, "cannot write COM marker\n");
+		jas_eprintf("cannot write COM marker\n");
 		return -1;
 	}
 	jpc_ms_destroy(enc->mrk);
@@ -982,7 +992,7 @@ startoff = jas_stream_getrwcount(enc->out);
 	crg = &enc->mrk->parms.crg;
 	crg->comps = jas_malloc(crg->numcomps * sizeof(jpc_crgcomp_t));
 	if (jpc_putms(enc->out, enc->cstate, enc->mrk)) {
-		fprintf(stderr, "cannot write CRG marker\n");
+		jas_eprintf("cannot write CRG marker\n");
 		return -1;
 	}
 	jpc_ms_destroy(enc->mrk);
@@ -1009,9 +1019,10 @@ startoff = jas_stream_getrwcount(enc->out);
 			} else {
 				absstepsize = jpc_inttofix(1);
 			}	
-			cp->ccps[cmptno].stepsizes[bandno] =
+			if( ( cp->ccps[cmptno].stepsizes[bandno] =
 			  jpc_abstorelstepsize(absstepsize,
-			  cp->ccps[cmptno].prec + analgain);
+			  cp->ccps[cmptno].prec + analgain) ) == 0 )
+			  return -1;
 		}
 		cp->ccps[cmptno].numstepsizes = numbands;
 	}
@@ -1033,12 +1044,12 @@ startoff = jas_stream_getrwcount(enc->out);
 	cod->mctrans = (cp->tcp.mctid != JPC_MCT_NONE);
 	if (tccp->csty & JPC_COX_PRT) {
 		for (rlvlno = 0; rlvlno < tccp->maxrlvls; ++rlvlno) {
-			cod->compparms.rlvls[rlvlno].parwidthval = tccp->prcwidthexpns[rlvlno];
-			cod->compparms.rlvls[rlvlno].parheightval = tccp->prcheightexpns[rlvlno];
+			cod->compparms.rlvls[rlvlno].parwidthval = (uint_fast8_t)tccp->prcwidthexpns[rlvlno];
+			cod->compparms.rlvls[rlvlno].parheightval = (uint_fast8_t)tccp->prcheightexpns[rlvlno];
 		}
 	}
 	if (jpc_putms(enc->out, enc->cstate, enc->mrk)) {
-		fprintf(stderr, "cannot write COD marker\n");
+		jas_eprintf("cannot write COD marker\n");
 		return -1;
 	}
 	jpc_ms_destroy(enc->mrk);
@@ -1145,7 +1156,11 @@ int numgbits;
 		tiley = tileno / cp->numhtiles;
 
 		if (!(enc->curtile = jpc_enc_tile_create(enc->cp, enc->image, tileno))) {
-			abort();
+
+			jas_error(	JAS_ERR_TILE_CREATION_ERROR_JPC_ENC_ENCODEMAINBODY,
+						"JAS_ERR_TILE_CREATION_ERROR_JPC_ENC_ENCODEMAINBODY"
+					);
+			return -1;
 		}
 
 		tile = enc->curtile;
@@ -1233,7 +1248,7 @@ assert(jas_image_numcmpts(enc->image) == 3);
 					numgbits = actualnumbps - (cp->ccps[cmptno].prec - 1 +
 					  band->analgain);
 #if 0
-fprintf(stderr, "%d %d mag=%d actual=%d numgbits=%d\n", cp->ccps[cmptno].prec, band->analgain, mxmag, actualnumbps, numgbits);
+jas_eprintf("%d %d mag=%d actual=%d numgbits=%d\n", cp->ccps[cmptno].prec, band->analgain, mxmag, actualnumbps, numgbits);
 #endif
 					if (numgbits > mingbits) {
 						mingbits = numgbits;
@@ -1245,9 +1260,11 @@ fprintf(stderr, "%d %d mag=%d actual=%d numgbits=%d\n", cp->ccps[cmptno].prec, b
 					} else {
 						band->absstepsize = jpc_inttofix(1);
 					}
-					band->stepsize = jpc_abstorelstepsize(
+					if( ( band->stepsize = jpc_abstorelstepsize(
 					  band->absstepsize, cp->ccps[cmptno].prec +
-					  band->analgain);
+					  band->analgain) ) == 0 )
+					  return -1;
+
 					band->numbps = cp->tccp.numgbits +
 					  JPC_QCX_GETEXPN(band->stepsize) - 1;
 
@@ -1268,17 +1285,17 @@ fprintf(stderr, "%d %d mag=%d actual=%d numgbits=%d\n", cp->ccps[cmptno].prec, b
 			}
 
 #if 0
-fprintf(stderr, "mingbits %d\n", mingbits);
+jas_eprintf("mingbits %d\n", mingbits);
 #endif
 			if (mingbits > cp->tccp.numgbits) {
-				fprintf(stderr, "error: too few guard bits (need at least %d)\n",
+				jas_eprintf("error: too few guard bits (need at least %d)\n",
 				  mingbits);
 				return -1;
 			}
 		}
 
 		if (!(enc->tmpstream = jas_stream_memopen(0, 0))) {
-			fprintf(stderr, "cannot open tmp file\n");
+			jas_eprintf("cannot open tmp file\n");
 			return -1;
 		}
 
@@ -1292,7 +1309,7 @@ fprintf(stderr, "mingbits %d\n", mingbits);
 		sot->partno = 0;
 		sot->numparts = 1;
 		if (jpc_putms(enc->tmpstream, enc->cstate, enc->mrk)) {
-			fprintf(stderr, "cannot write SOT marker\n");
+			jas_eprintf("cannot write SOT marker\n");
 			return -1;
 		}
 		jpc_ms_destroy(enc->mrk);
@@ -1372,7 +1389,7 @@ and other characteristics */
 			return -1;
 		}
 		if (jpc_putms(enc->tmpstream, enc->cstate, enc->mrk)) {
-			fprintf(stderr, "cannot write SOD marker\n");
+			jas_eprintf("cannot write SOD marker\n");
 			return -1;
 		}
 		jpc_ms_destroy(enc->mrk);
@@ -1384,7 +1401,11 @@ tilehdrlen = jas_stream_getrwcount(enc->tmpstream);
 /************************************************************************/
 
 if (jpc_enc_enccblks(enc)) {
-	abort();
+
+
+	jas_error(	JAS_ERR_FAILURE_TO_ENCODE_BLOCKS_ASSOCIATED_WITH_TILE,
+				"JAS_ERR_FAILURE_TO_ENCODE_BLOCKS_ASSOCIATED_WITH_TILE"
+			);
 	return -1;
 }
 
@@ -1415,10 +1436,10 @@ if (jpc_enc_enccblks(enc)) {
 		}
 
 #if 0
-fprintf(stderr, "ENCODE TILE DATA\n");
+jas_eprintf("ENCODE TILE DATA\n");
 #endif
 		if (jpc_enc_encodetiledata(enc)) {
-			fprintf(stderr, "dotile failed\n");
+			jas_eprintf("dotile failed\n");
 			return -1;
 		}
 
@@ -1475,11 +1496,11 @@ int dump_passes(jpc_enc_pass_t *passes, int numpasses, jpc_enc_cblk_t *cblk)
 
 	pass = passes;
 	for (i = 0; i < numpasses; ++i) {
-		fprintf(stderr, "start=%d end=%d type=%d term=%d lyrno=%d firstchar=%02x size=%ld pos=%ld\n",
+		jas_eprintf("start=%d end=%d type=%d term=%d lyrno=%d firstchar=%02x size=%ld pos=%ld\n",
 		  (int)pass->start, (int)pass->end, (int)pass->type, (int)pass->term, (int)pass->lyrno,
 		  smo->buf_[pass->start], (long)smo->len_, (long)smo->pos_);
 #if 0
-		jas_memdump(stderr, &smo->buf_[pass->start], pass->end - pass->start);
+/*		jas_memdump(stderr, &smo->buf_[pass->start], pass->end - pass->start);	*/
 #endif
 		++pass;
 	}
@@ -1568,7 +1589,7 @@ void calcrdslopes(jpc_enc_cblk_t *cblk)
 #if 0
 	for (pass0 = cblk->passes; pass0 != endpasses; ++pass0) {
 if (pass0->rdslope > 0.0) {
-		fprintf(stderr, "pass %02d nmsedec=%lf dec=%lf end=%d %lf\n", pass0 - cblk->passes,
+		jas_eprintf("pass %02d nmsedec=%lf dec=%lf end=%d %lf\n", pass0 - cblk->passes,
 		  fixtodbl(pass0->nmsedec), pass0->wmsedec, pass0->end, pass0->rdslope);
 }
 	}
@@ -1596,7 +1617,7 @@ void dump_layeringinfo(jpc_enc_t *enc)
 	tile = enc->curtile;
 
 	for (lyrno = 0; lyrno < tile->numlyrs; ++lyrno) {
-		fprintf(stderr, "lyrno = %02d\n", lyrno);
+		jas_eprintf("lyrno = %02d\n", lyrno);
 		for (tcmptno = 0, tcmpt = tile->tcmpts; tcmptno < tile->numtcmpts;
 		  ++tcmptno, ++tcmpt) {
 			for (rlvlno = 0, rlvl = tcmpt->rlvls; rlvlno < tcmpt->numrlvls;
@@ -1619,7 +1640,7 @@ void dump_layeringinfo(jpc_enc_t *enc)
 							for (passno = 0, pass = cblk->passes; passno <
 							  cblk->numpasses && pass->lyrno == lyrno;
 							  ++passno, ++pass) {
-								fprintf(stderr, "lyrno=%02d cmptno=%02d rlvlno=%02d bandno=%02d prcno=%02d cblkno=%03d passno=%03d\n", lyrno, tcmptno, rlvlno, bandno, prcno, cblkno, passno);
+								jas_eprintf("lyrno=%02d cmptno=%02d rlvlno=%02d bandno=%02d prcno=%02d cblkno=%03d passno=%03d\n", lyrno, tcmptno, rlvlno, bandno, prcno, cblkno, passno);
 							}
 						}
 					}
@@ -1664,7 +1685,11 @@ int rateallocate(jpc_enc_t *enc, int numlyrs, uint_fast32_t *cumlens)
 
 	for (lyrno = 1; lyrno < numlyrs - 1; ++lyrno) {
 		if (cumlens[lyrno - 1] > cumlens[lyrno]) {
-			abort();
+
+			jas_error(	JAS_ERR_FAILURE_RATEALLOCATE,
+						"JAS_ERR_FAILURE_RATEALLOCATE"
+					);
+			return -1;
 		}
 	}
 
@@ -1712,7 +1737,7 @@ int rateallocate(jpc_enc_t *enc, int numlyrs, uint_fast32_t *cumlens)
 		}
 	}
 if (jas_getdbglevel()) {
-	fprintf(stderr, "min rdslope = %f max rdslope = %f\n", mnrdslope, mxrdslope);
+	jas_eprintf("min rdslope = %f max rdslope = %f\n", mnrdslope, mxrdslope);
 }
 
 	jpc_init_t2state(enc, 1);
@@ -1821,22 +1846,28 @@ if (jas_getdbglevel()) {
 			/* Save the tier 2 coding state. */
 			jpc_restore_t2state(enc);
 			if (jas_stream_seek(out, oldpos, SEEK_SET) < 0) {
-				abort();
+
+				jas_error(	JAS_ERR_STREAM_SEEK_FAILURE_RATEALLOCATE,
+							"JAS_ERR_STREAM_SEEK_FAILURE_RATEALLOCATE"
+						);
+
+				jas_stream_close(out);
+				return -1;
 			}
 
 if (jas_getdbglevel()) {
-fprintf(stderr, "maxlen=%08ld actuallen=%08ld thresh=%f\n", cumlen, pos, thresh);
+jas_eprintf("maxlen=%08ld actuallen=%08ld thresh=%f\n", cumlen, pos, thresh);
 }
 
 			++numiters;
 		} while (lo < hi - 1e-3 && numiters < 32);
 
 		if (!success) {
-			fprintf(stderr, "warning: empty layer generated\n");
+			jas_eprintf("warning: empty layer generated\n");
 		}
 
 if (jas_getdbglevel()) {
-fprintf(stderr, "success %d goodthresh %f\n", success, goodthresh);
+jas_eprintf("success %d goodthresh %f\n", success, goodthresh);
 }
 
 		/* Assign all passes with R-D slopes greater than or
@@ -1907,7 +1938,7 @@ if (!lvl->bands) {
 
 	JAS_DBGLOG(10, ("done doing rateallocation\n"));
 #if 0
-fprintf(stderr, "DONE RATE ALLOCATE\n");
+jas_eprintf("DONE RATE ALLOCATE\n");
 #endif
 
 	return 0;
@@ -2261,7 +2292,7 @@ static jpc_enc_band_t *band_create(jpc_enc_band_t *band, jpc_enc_cp_t *cp,
 	uint_fast16_t rlvlno;
 	jpc_tsfb_band_t *bandinfo;
 	jpc_enc_tcmpt_t *tcmpt;
-	uint_fast32_t prcno;
+	int_fast32_t prcno;
 	jpc_enc_prc_t *prc;
 
 	tcmpt = rlvl->tcmpt;
@@ -2324,7 +2355,7 @@ static void band_destroy(jpc_enc_band_t *band)
 {
 	jpc_enc_prc_t *prc;
 	jpc_enc_rlvl_t *rlvl;
-	uint_fast32_t prcno;
+	int_fast32_t prcno;
 
 	if (band->prcs) {
 		rlvl = band->rlvl;
@@ -2388,11 +2419,11 @@ if (!rlvlno) {
 	  corners of the precinct. */
 	cbgtlx = tlcbgtlx + (prcxind << rlvl->cbgwidthexpn);
 	cbgtly = tlcbgtly + (prcyind << rlvl->cbgheightexpn);
-	prc->tlx = JAS_MAX(jas_seq2d_xstart(band->data), cbgtlx);
-	prc->tly = JAS_MAX(jas_seq2d_ystart(band->data), cbgtly);
-	prc->brx = JAS_MIN(jas_seq2d_xend(band->data), cbgtlx +
+	prc->tlx = JAS_MAX((uint_fast32_t)jas_seq2d_xstart(band->data), cbgtlx);
+	prc->tly = JAS_MAX((uint_fast32_t)jas_seq2d_ystart(band->data), cbgtly);
+	prc->brx = JAS_MIN((uint_fast32_t)jas_seq2d_xend(band->data), cbgtlx +
 	  (1 << rlvl->cbgwidthexpn));
-	prc->bry = JAS_MIN(jas_seq2d_yend(band->data), cbgtly +
+	prc->bry = JAS_MIN((uint_fast32_t)jas_seq2d_yend(band->data), cbgtly +
 	  (1 << rlvl->cbgheightexpn));
 
 	if (prc->tlx < prc->brx && prc->tly < prc->bry) {
@@ -2428,7 +2459,7 @@ if (!rlvlno) {
 		if (!(prc->cblks = jas_malloc(prc->numcblks * sizeof(jpc_enc_cblk_t)))) {
 			goto error;
 		}
-		for (cblkno = 0, cblk = prc->cblks; cblkno < prc->numcblks;
+		for (cblkno = 0, cblk = prc->cblks; cblkno < (uint_fast32_t)prc->numcblks;
 		  ++cblkno, ++cblk) {
 			cblk->passes = 0;
 			cblk->stream = 0;
@@ -2437,7 +2468,7 @@ if (!rlvlno) {
 			cblk->flags = 0;
 			cblk->prc = prc;
 		}
-		for (cblkno = 0, cblk = prc->cblks; cblkno < prc->numcblks;
+		for (cblkno = 0, cblk = prc->cblks; cblkno < (uint_fast32_t)prc->numcblks;
 		  ++cblkno, ++cblk) {
 			if (!cblk_create(cblk, cp, prc)) {
 				goto error;
@@ -2470,7 +2501,7 @@ static void prc_destroy(jpc_enc_prc_t *prc)
 	uint_fast32_t cblkno;
 
 	if (prc->cblks) {
-		for (cblkno = 0, cblk = prc->cblks; cblkno < prc->numcblks;
+		for (cblkno = 0, cblk = prc->cblks; cblkno < (uint_fast32_t)prc->numcblks;
 		  ++cblkno, ++cblk) {
 			cblk_destroy(cblk);
 		}
@@ -2596,25 +2627,25 @@ void jpc_enc_dump(jpc_enc_t *enc)
 
 	for (cmptno = 0, tcmpt = tile->tcmpts; cmptno < tile->numtcmpts; ++cmptno,
 	  ++tcmpt) {
-		fprintf(stderr, "  tcmpt %5d %5d %5d %5d\n", jas_seq2d_xstart(tcmpt->data), jas_seq2d_ystart(tcmpt->data), jas_seq2d_xend(tcmpt->data), jas_seq2d_yend(tcmpt->data));
+		jas_eprintf("  tcmpt %5d %5d %5d %5d\n", jas_seq2d_xstart(tcmpt->data), jas_seq2d_ystart(tcmpt->data), jas_seq2d_xend(tcmpt->data), jas_seq2d_yend(tcmpt->data));
 		for (rlvlno = 0, rlvl = tcmpt->rlvls; rlvlno < tcmpt->numrlvls;
 		  ++rlvlno, ++rlvl) {
-			fprintf(stderr, "    rlvl %5d %5d %5d %5d\n", rlvl->tlx, rlvl->tly, rlvl->brx, rlvl->bry);
+			jas_eprintf("    rlvl %5d %5d %5d %5d\n", rlvl->tlx, rlvl->tly, rlvl->brx, rlvl->bry);
 			for (bandno = 0, band = rlvl->bands; bandno < rlvl->numbands;
 			  ++bandno, ++band) {
 				if (!band->data) {
 					continue;
 				}
-				fprintf(stderr, "      band %5d %5d %5d %5d\n", jas_seq2d_xstart(band->data), jas_seq2d_ystart(band->data), jas_seq2d_xend(band->data), jas_seq2d_yend(band->data));
-				for (prcno = 0, prc = band->prcs; prcno < rlvl->numprcs;
+				jas_eprintf("      band %5d %5d %5d %5d\n", jas_seq2d_xstart(band->data), jas_seq2d_ystart(band->data), jas_seq2d_xend(band->data), jas_seq2d_yend(band->data));
+				for (prcno = 0, prc = band->prcs; prcno < (uint_fast32_t)rlvl->numprcs;
 				  ++prcno, ++prc) {
-					fprintf(stderr, "        prc %5d %5d %5d %5d (%5d %5d)\n", prc->tlx, prc->tly, prc->brx, prc->bry, prc->brx - prc->tlx, prc->bry - prc->tly);
+					jas_eprintf( "        prc %5d %5d %5d %5d (%5d %5d)\n", prc->tlx, prc->tly, prc->brx, prc->bry, prc->brx - prc->tlx, prc->bry - prc->tly);
 					if (!prc->cblks) {
 						continue;
 					}
-					for (cblkno = 0, cblk = prc->cblks; cblkno < prc->numcblks;
+					for (cblkno = 0, cblk = prc->cblks; cblkno < (uint_fast32_t)prc->numcblks;
 					  ++cblkno, ++cblk) {
-						fprintf(stderr, "         cblk %5d %5d %5d %5d\n", jas_seq2d_xstart(cblk->data), jas_seq2d_ystart(cblk->data), jas_seq2d_xend(cblk->data), jas_seq2d_yend(cblk->data));
+						jas_eprintf("         cblk %5d %5d %5d %5d\n", jas_seq2d_xstart(cblk->data), jas_seq2d_ystart(cblk->data), jas_seq2d_xend(cblk->data), jas_seq2d_yend(cblk->data));
 					}
 				}
 			}

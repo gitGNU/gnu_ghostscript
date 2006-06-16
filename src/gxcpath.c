@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxcpath.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gxcpath.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Implementation of clipping paths, other than actual clipping */
 #include "gx.h"
 #include "gserrors.h"
@@ -26,6 +26,7 @@
 #include "gsline.h"
 #include "gxdevice.h"
 #include "gxfixed.h"
+#include "gxpaint.h"
 #include "gscoord.h"		/* needs gsmatrix.h */
 #include "gxistate.h"
 #include "gzpath.h"
@@ -304,6 +305,7 @@ gx_cpath_assign_preserve(gx_clip_path * pcpto, gx_clip_path * pcpfrom)
 	rc_increment(fromlist);
 	rc_decrement(pcpto->rect_list, "gx_cpath_assign");
     }
+    rc_increment(pcpfrom->path_list);
     path = pcpto->path, *pcpto = *pcpfrom, pcpto->path = path;
     return 0;
 }
@@ -526,6 +528,20 @@ gx_cpath_reset(gx_clip_path * pcpath)
     return gx_cpath_from_rectangle(pcpath, &null_rect);
 }
 
+/* If a clipping path is a rectangle, return the rectangle. */
+const gs_fixed_rect *
+cpath_is_rectangle(const gx_clip_path * pcpath)
+{
+    if (pcpath->path_valid)
+	return NULL;
+    if (pcpath->inner_box.p.x != pcpath->path.bbox.p.x ||
+	pcpath->inner_box.p.y != pcpath->path.bbox.p.y ||
+	pcpath->inner_box.q.x != pcpath->path.bbox.q.x ||
+	pcpath->inner_box.q.y != pcpath->path.bbox.q.y)
+	return NULL;
+    return &pcpath->inner_box;
+}
+
 /* Intersect a new clipping path with an old one. */
 /* Flatten the new path first (in a copy) if necessary. */
 int
@@ -535,9 +551,10 @@ gx_cpath_clip(gs_state *pgs, gx_clip_path *pcpath,
     return gx_cpath_intersect(pcpath, ppath_orig, rule,
 			      (gs_imager_state *)pgs);
 }
+
 int
-gx_cpath_intersect(gx_clip_path *pcpath, /*const*/ gx_path *ppath_orig,
-		   int rule, gs_imager_state *pis)
+gx_cpath_intersect_with_params(gx_clip_path *pcpath, /*const*/ gx_path *ppath_orig,
+		   int rule, gs_imager_state *pis, const gx_fill_params * params)
 {
     gx_path fpath;
     /*const*/ gx_path *ppath = ppath_orig;
@@ -571,6 +588,28 @@ gx_cpath_intersect(gx_clip_path *pcpath, /*const*/ gx_path *ppath_orig,
 	    new_box.q = new_box.p;
 	    changed = 1;
 	} else {
+	    if (params != NULL) {
+		/* Called from gx_default_fill_path for converting 
+		   a filling path into a clipping path.  
+		   Apply same adjustment as for filling the path. */
+		gs_fixed_point adjust = params->adjust;
+		fixed adjust_xl, adjust_xu, adjust_yl, adjust_yu;
+
+		if (adjust.x == -1)
+		    adjust_xl = adjust_xu = adjust_yl = adjust_yu = 0;
+		else {
+		    if (params->fill_zero_width)
+			gx_adjust_if_empty(&new_box, &adjust);
+		    adjust_xl = (adjust.x == fixed_half ? fixed_half - fixed_epsilon : adjust.x);
+		    adjust_yl = (adjust.y == fixed_half ? fixed_half - fixed_epsilon : adjust.y);
+		    adjust_xu = adjust.x;
+		    adjust_yu = adjust.y;
+		}
+		new_box.p.x = int2fixed(fixed2int_pixround(new_box.p.x - adjust_xl));
+		new_box.p.y = int2fixed(fixed2int_pixround(new_box.p.y - adjust_yl));
+		new_box.q.x = int2fixed(fixed2int_pixround(new_box.q.x + adjust_xu));
+		new_box.q.y = int2fixed(fixed2int_pixround(new_box.q.y + adjust_yu));
+	    }
 	    /* Intersect the two rectangles if necessary. */
 	    if (old_box.p.x > new_box.p.x)
 		new_box.p.x = old_box.p.x, ++changed;
@@ -615,7 +654,8 @@ gx_cpath_intersect(gx_clip_path *pcpath, /*const*/ gx_path *ppath_orig,
 	    if (code < 0)
 		goto ex;
 	}
-	code = gx_cpath_intersect_path_slow(pcpath, ppath, rule, pis);
+	code = gx_cpath_intersect_path_slow(pcpath, (params != NULL ? ppath_orig : ppath), 
+			    rule, pis, params);
 	if (code < 0)
 	    goto ex;
 	if (path_valid) {
@@ -631,6 +671,14 @@ ex:
 	gx_path_free(ppath, "gx_cpath_clip");
     return code;
 }
+int
+gx_cpath_intersect(gx_clip_path *pcpath, /*const*/ gx_path *ppath_orig,
+		   int rule, gs_imager_state *pis)
+{
+    return gx_cpath_intersect_with_params(pcpath, ppath_orig,
+		   rule, pis, NULL);
+}
+
 
 /* Scale a clipping path by a power of 2. */
 int

@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>How to prepare a Ghostscript release</title>
-<!-- $Id: Release.htm,v 1.7 2006/03/05 13:04:27 Arabidopsis Exp $ -->
+<!-- $Id: Release.htm,v 1.8 2006/06/16 12:55:14 Arabidopsis Exp $ -->
 <!-- Originally: make.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -663,8 +663,9 @@ href="#Preparing_source">"Preparing the source code."</a>
 Extract the sources from <b><tt>ghostscript-N.NN.tar.gz</tt></b>
 then repackage in a zip file as follows:
 <blockquote>
-<b><tt>zip -r temp.zip gsN.NN/doc gsN.NN/examples gsN.NN/icclib 
-  gsN.NN/ijs gsN.NN/jbig2dec gsN.NN/lib gsN.NN/src gsN.NN/Resource</tt></b>
+<b><tt>zip -r temp.zip gsN.NN/LICENSE gsN.NN/doc gsN.NN/examples 
+  gsN.NN/icclib gsN.NN/ijs gsN.NN/jasper gsN.NN/jbig2dec gsN.NN/jpeg
+  gsN.NN/lib gsN.NN/libpng gsN.NN/src gsN.NN/Resource gsN.NN/zlib</tt></b>
 </blockquote>
 Unzip converting the line endings to CRLF:
 <blockquote>

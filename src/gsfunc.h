@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsfunc.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gsfunc.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Generic definitions for Functions */
 
 #ifndef gsfunc_INCLUDED
@@ -82,7 +82,7 @@ typedef FN_EVALUATE_PROC((*fn_evaluate_proc_t));
 /* Test whether a function is monotonic. */
 #define FN_IS_MONOTONIC_PROC(proc)\
   int proc(const gs_function_t * pfn, const float *lower,\
-	   const float *upper)
+	   const float *upper, uint *mask)
 typedef FN_IS_MONOTONIC_PROC((*fn_is_monotonic_proc_t));
 
 /* Get function information. */
@@ -139,7 +139,6 @@ typedef struct gs_function_procs_s {
 typedef struct gs_function_head_s {
     gs_function_type_t type;
     gs_function_procs_t procs;
-    int is_monotonic;		/* cached when function is created */
 } gs_function_head_t;
 struct gs_function_s {
     gs_function_head_t head;
@@ -192,13 +191,14 @@ int alloc_function_array(uint count, gs_function_t *** pFunctions,
 
 /*
  * Test whether a function is monotonic on a given (closed) interval.
- * return 1 if true, 0 if don't know, <0 on error.
- * If lower[i] > upper[i], the result is not defined.
- * NOTE : currently it is underimplemented for cubic interpolation functions.
- *        Need to find the cubic surface extremes.
+ * return 1 = monotonic, 0 = not or don't know, <0 = error..
+ * Sets mask : 1 bit per dimension : 
+ *    1 - non-monotonic or don't know, 
+ *    0 - monotonic.
+ * If lower[i] > upper[i], the result may be not defined.
  */
-#define gs_function_is_monotonic(pfn, lower, upper)\
-  ((pfn)->head.procs.is_monotonic)(pfn, lower, upper)
+#define gs_function_is_monotonic(pfn, lower, upper, mask)\
+  ((pfn)->head.procs.is_monotonic)(pfn, lower, upper, mask)
 
 /* Get function information. */
 #define gs_function_get_info(pfn, pfi)\

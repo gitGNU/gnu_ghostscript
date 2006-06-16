@@ -64,7 +64,7 @@
 /*
  * Windows Bitmap File Library
  *
- * $Id: bmp_dec.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: bmp_dec.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -77,6 +77,7 @@
 #include "jasper/jas_stream.h"
 #include "jasper/jas_image.h"
 #include "jasper/jas_malloc.h"
+#include "jasper/jas_debug.h"
 
 #include "bmp_cod.h"
 
@@ -107,10 +108,10 @@ jas_image_t *bmp_decode(jas_stream_t *in, char *optstr)
 	long n;
 
 	if (optstr) {
-		fprintf(stderr, "warning: ignoring BMP decoder options\n");
+		jas_eprintf("warning: ignoring BMP decoder options\n");
 	}
 
-	fprintf(stderr,
+	jas_eprintf(
 	  "THE BMP FORMAT IS NOT FULLY SUPPORTED!\n"
 	  "THAT IS, THE JASPER SOFTWARE CANNOT DECODE ALL TYPES OF BMP DATA.\n"
 	  "IF YOU HAVE ANY PROBLEMS, PLEASE TRY CONVERTING YOUR IMAGE DATA\n"
@@ -119,19 +120,19 @@ jas_image_t *bmp_decode(jas_stream_t *in, char *optstr)
 
 	/* Read the bitmap header. */
 	if (bmp_gethdr(in, &hdr)) {
-		fprintf(stderr, "cannot get header\n");
+		jas_eprintf("cannot get header\n");
 		return 0;
 	}
 
 	/* Read the bitmap information. */
 	if (!(info = bmp_getinfo(in))) {
-		fprintf(stderr, "cannot get info\n");
+		jas_eprintf("cannot get info\n");
 		return 0;
 	}
 
 	/* Ensure that we support this type of BMP file. */
 	if (!bmp_issupported(&hdr, info)) {
-		fprintf(stderr, "error: unsupported BMP encoding\n");
+		jas_eprintf("error: unsupported BMP encoding\n");
 		bmp_info_destroy(info);
 		return 0;
 	}
@@ -139,11 +140,11 @@ jas_image_t *bmp_decode(jas_stream_t *in, char *optstr)
 	/* Skip over any useless data between the end of the palette
 	  and start of the bitmap data. */
 	if ((n = hdr.off - (BMP_HDRLEN + BMP_INFOLEN + BMP_PALLEN(info))) < 0) {
-		fprintf(stderr, "error: possibly bad bitmap offset?\n");
+		jas_eprintf("error: possibly bad bitmap offset?\n");
 		return 0;
 	}
 	if (n > 0) {
-		fprintf(stderr, "skipping unknown data in BMP file\n");
+		jas_eprintf("skipping unknown data in BMP file\n");
 		if (bmp_gobble(in, n)) {
 			bmp_info_destroy(info);
 			return 0;
@@ -162,7 +163,7 @@ jas_image_t *bmp_decode(jas_stream_t *in, char *optstr)
 		cmptparm->width = info->width;
 		cmptparm->height = info->height;
 		cmptparm->prec = 8;
-		cmptparm->sgnd = false;
+		cmptparm->sgnd = jas_false;
 	}
 
 	/* Create image object. */
@@ -277,7 +278,7 @@ static bmp_info_t *bmp_getinfo(jas_stream_t *in)
 	}
 
 	if (info->enctype != BMP_ENC_RGB) {
-		fprintf(stderr, "unsupported BMP encoding\n");
+		jas_eprintf("unsupported BMP encoding\n");
 		bmp_info_destroy(info);
 		return 0;
 	}

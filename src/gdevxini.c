@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevxini.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gdevxini.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* X Windows driver initialization/finalization */
 #include "memory_.h"
 #include "x_.h"
@@ -98,7 +98,7 @@ gdev_x_open(gx_device_X * xdev)
     Display *dpy;
     XColor xc;
     int zero = 0;
-    int xid_height, xid_width;
+    int xid_height = 0, xid_width = 0;
     int code;
 
 #ifdef DEBUG

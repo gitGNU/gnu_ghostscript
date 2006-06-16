@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_pdfwr.ps,v 1.4 2005/12/13 17:48:51 jemarch Exp $
+% $Id: gs_pdfwr.ps,v 1.5 2006/06/16 12:55:13 Arabidopsis Exp $
 % PDF writer additions to systemdict.
 
 % This file should be included iff the pdfwrite "device" is included
@@ -81,6 +81,9 @@
   /Optimize true
   /ParseDSCComments true
   /ParseDSCCommentsForDocInfo true
+  /PDFXTrimBoxToMediaBoxOffset [0 0 0 0]
+  /PDFXSetBleedBoxToMediaBox true
+  /PDFXBleedBoxToTrimBoxOffset [0 0 0 0]
   /PreserveCopyPage true
   /PreserveHalftoneInfo false
   /sRGBProfile (None)			% (sRGB IEC61966-2.1)
@@ -132,7 +135,7 @@
   /ColorConversionStrategy /sRGB
   /ColorImageDownsampleType /Average
   /ColorImageResolution 72
-  /CompatibilityLevel 1.2
+  /CompatibilityLevel 1.3
   /CreateJobTicket false
   /DoThumbnails false
   /EmbedAllFonts true
@@ -156,7 +159,7 @@
   /ColorConversionStrategy /sRGB
   /ColorImageDownsampleType /Bicubic
   /ColorImageResolution 150
-  /CompatibilityLevel 1.3
+  /CompatibilityLevel 1.4
   /CreateJobTicket false
   /DoThumbnails false
   /EmbedAllFonts true
@@ -184,7 +187,7 @@
   /ColorConversionStrategy /UseDeviceIndependentColor
   /ColorImageDownsampleType /Bicubic
   /ColorImageResolution 300
-  /CompatibilityLevel 1.3
+  /CompatibilityLevel 1.4
   /CreateJobTicket true
   /DoThumbnails false
   /EmbedAllFonts true
@@ -211,7 +214,7 @@
   /ColorConversionStrategy /LeaveColorUnchanged
   /ColorImageDownsampleType /Bicubic
   /ColorImageResolution 300
-  /CompatibilityLevel 1.3
+  /CompatibilityLevel 1.4
   /CreateJobTicket true
   /DoThumbnails true
   /EmbedAllFonts true
@@ -227,6 +230,37 @@
   /UCRandBGInfo /Preserve
 .dicttomark readonly
 
+% Define distiller settings for the ps2write device and for the ps2ps2 script :
+/PSL2Printer mark
+  /AutoRotatePages /None
+  /CannotEmbedFontPolicy /Error
+  /ColorACSImageDict .prepressACSImageDict
+  /ColorConversionStrategy /LeaveColorUnchanged
+  /ColorImageDownsampleType /Bicubic
+  /ColorImageResolution 600
+  /CompatibilityLevel 1.2 % Always 1.2 with ps2write.
+  % /CreateJobTicket true % Not sure
+  /DoThumbnails false
+  /EmbedAllFonts true
+  /GrayACSImageDict .prepressACSImageDict
+  /GrayImageDownsampleType /Bicubic
+  /GrayImageResolution 600
+  /MonoImageDownsampleType /Bicubic
+  /MonoImageResolution 1200
+  /NeverEmbed []
+  /PreserveEPSInfo true
+  /PreserveOPIComments true
+  /PreserveOverprintSettings true
+  /UCRandBGInfo /Preserve
+
+  /PreserveHalftoneInfo true 
+  /TransferFunctionInfo /Preserve 
+  /MaxViewerMemorySize 8000000 
+  /CompressPages false 
+  /CompressFonts false 
+  /ASCII85EncodePages true 
+.dicttomark readonly
+
 .dicttomark readonly def
 
 % ---------------- End of predefined configurations ---------------- %
@@ -239,6 +273,59 @@
 } bind def
 
 % ---------------- pdfmark and DSC processing ---------------- %
+
+/.write_small_positive_real  % <file> <real> .write_small_positive_real -
+{ % The argument must be grater than 0 and must be strongly samller than 0.1.
+  % The conversion isn't simple due to the low (24 bits) precision 
+  % of the floating point arithmetics in Postscript.
+  % For best result we first use the 1e8 factor since its binary 
+  % representation 101111101011110000100000000 well rounds into 14 significant
+  % bits :         101111101011110000000000000 .
+  1 index (.) writestring
+  { dup 100000000 mul 
+    dup 10 mul 1 ge {
+      % Will need not greater than 0.1 due to a rounding below.
+      pop exit
+    } if
+    exch pop
+    1 index (00000000) writestring
+  } loop
+  % Now it is not smaller than 1e-9, use simple digitizing.
+  { dup 10 mul 
+    dup 10 mul 1 ge { 
+      pop exit 
+    } if
+    exch pop
+    1 index (0) writestring
+  } loop
+  % Now 0.01 <= n < 0.1, but rounding may give 0.1 .
+  % Convert to integer with 7 digits precision :
+  100000000 % precision factor 1e8       % f n r
+  dup 10 idiv 3 1 roll mul 0.5 add cvi   % f r' N
+  2 copy le {
+    % The rounding overflows, suppress it.
+    % Note it carries out an additional digit,
+    % that's why we needed <0.1 above.
+    pop pop (1) writestring
+  } {
+    % Didn't cary out, put 0.
+    2 index (0) writestring
+    exch                                 % f N r
+    % Continue the simple digitizing :
+    { 10 idiv dup                        % f N r' r'
+      2 index exch idiv                  % f N r' d
+      (0123456789) exch 1 getinterval    % f N r' (d)
+      3 index exch writestring           % f N r'
+      dup 3 2 roll exch mod              % f r' N'
+      dup 0 eq { 
+        % Don't write trailing zeros.
+        exit 
+      } if
+      exch                               % f N' r'
+    } loop
+    pop pop pop
+  } ifelse
+} bind def
 
 % Encode values to pass for the /pdfmark or /DSC pseudo-parameter.
 /.pdf===dict mark
@@ -273,6 +360,21 @@
 	/rangecheck signalerror
       } if
       1 index <0000> writestring 1 index exch write===only 0 write
+    } {
+      write===only
+    } ifelse
+  } bind
+  /realtype {
+    % Prevent using floating point format - see Bug 688167.
+    dup dup 0 lt { neg } if 0.01 lt {
+      dup 0 eq {
+        pop (0) writestring
+      } {
+        dup 0 lt {
+          1 index (-) writestring neg
+        } if
+        .write_small_positive_real
+      } ifelse
     } {
       write===only
     } ifelse
@@ -360,12 +462,35 @@ userdict /.pdfcvstring () put
     .systemvar exch signalerror
 } bind def
 /pdfmark {		% -mark- <key> <value> ... <markname> pdfmark -
-  counttomark 1 add copy
-  //.pdfmarkparams 1 index .knownget { exec } { .pdfcvsall } ifelse
-  mark /pdfmark 3 -1 roll .pdfputparams
-  dup type /booleantype ne {
-    /pdfmark .pdfparamerror
-  } if cleartomark
+  dup /SP eq {
+    % A hack for synchronizing the clipping path.
+    gsave 
+    [1 0 0 1 0 0] setmatrix 0 setlinewidth
+    newpath -3 -3 moveto closepath stroke % Paints outside the device bbox.
+    grestore
+  } if
+  dup /PS eq systemdict /PDFX .knownget not { false } if 
+             systemdict /PDFA .knownget not { false } if or and {
+    % Execute it since PDF/X doesn't allow to embed it.
+    pop
+    { dup mark eq {
+        pop exit
+      } if
+      1 index /DataSource eq {
+        exch pop
+        cvx exec
+      } {
+        pop pop
+      } ifelse
+    } loop
+  } {
+    counttomark 1 add copy
+    //.pdfmarkparams 1 index .knownget { exec } { .pdfcvsall } ifelse
+    mark /pdfmark 3 -1 roll .pdfputparams
+    dup type /booleantype ne {
+      /pdfmark .pdfparamerror
+    } if cleartomark
+  } ifelse
 } odef
 userdict /pdfmark .undef
 currentdict /.pdfmarkparams .undef
@@ -486,6 +611,10 @@ currentdict /.pdf_hook_DSC_Creator undef
   /PreserveCopyPage { }
   /UsePrologue { }
   /OffOptimizations { }
+  		% PDF/X parameters
+  /PDFXTrimBoxToMediaBoxOffset { }
+  /PDFXSetBleedBoxToMediaBox { }
+  /PDFXBleedBoxToTrimBoxOffset { }
 		% Color sampled image parameters
   /ColorACSImageDict { }
   /AntiAliasColorImages { }
@@ -549,7 +678,7 @@ currentdict /.pdf_hook_DSC_Creator undef
   /SubsetFonts { }
 .dicttomark readonly def
 /.distillerdevice
- { currentdevice .devicename /pdfwrite eq
+ { currentdevice .devicename dup /pdfwrite eq exch /ps2write eq or
     { currentdevice }
     { /pdfwrite finddevice }
    ifelse
@@ -581,13 +710,13 @@ currentdict /.pdf_hook_DSC_Creator undef
 %  def def currentdict end
 } odef
 /setdistillerparams {
-  currentdevice .devicename /pdfwrite ne {
+  currentdevice .devicename dup /pdfwrite ne exch /ps2write ne and {
     /setdistillerparams /undefined signalerror
   } if
   .setdistillerparams
 } bind odef
 /currentdistillerparams {
-  currentdevice .devicename /pdfwrite ne {
+  currentdevice .devicename dup /pdfwrite ne exch /ps2write ne and {
     /currentdistillerparams /undefined signalerror
   } if
   .currentdistillerparams
@@ -595,7 +724,7 @@ currentdict /.pdf_hook_DSC_Creator undef
 
 % Patch 'where' so that the distiller operators are only visible
 % if the pdfwrite device is the current one.
-{ currentdevice .devicename /pdfwrite eq {
+{ currentdevice .devicename dup /pdfwrite eq exch /ps2write eq or{
     .where
   } {
     .where pop dup //systemdict eq { pop false } { true } ifelse
@@ -610,10 +739,10 @@ currentdict /.pdf_hook_DSC_Creator undef
   /currentdistillerparams 1 index eq /setdistillerparams 2 index eq or 
   /pdfmark 2 index eq or {
     systemdict 2 index eq {	% only mask the operator in systemdict
-      known currentdevice .devicename /pdfwrite ne { pop false } if
-  } {
-    known
-  } ifelse
+      known currentdevice .devicename dup /pdfwrite ne exch /ps2write ne and { pop false } if
+    } {
+      known
+    } ifelse
   } {
     known
   } ifelse
@@ -644,7 +773,11 @@ currentdict /.pdf_hook_DSC_Creator undef
 1010 % priority
 {
     % Set a predefined configuration in the distiller device (pdfwrite)
-    /PDFSETTINGS where { pop /PDFSETTINGS load } { /default } ifelse
+    /PDFSETTINGS where { 
+      pop /PDFSETTINGS load 
+    } { 
+      currentdevice .devicename /ps2write eq { /PSL2Printer } { /default } ifelse
+    } ifelse
     .distillersettings exch get
     % Don't override parameters defined on the command line.
     dup length .distillercommon length add dict begin
@@ -658,11 +791,30 @@ currentdict /.pdf_hook_DSC_Creator undef
     dup type /booleantype eq not { cleartomark pop } if pop pop
 } bind .schedule_init
 
+1011 % priority
+{
+    % Set a path to library files (ps2write)
+    currentdevice .devicename /ps2write eq {
+      mark
+      systemdict /OPDFReadProcsetPath .knownget not {
+        (gs_mgl_e.ps) (gs_mro_e.ps) (gs_agl.ps) (opdfread.ps) % Reverse order !
+        () counttomark 1 sub {
+          exch
+          .libfile { .filename } { false } ifelse not {
+            (Configuration error : library file opdfread.ps not found !) =
+            (opdfread.ps) /undefinedfilename signalerror
+          } if
+          .filenamelistseparator concatstrings concatstrings
+        } repeat
+      } if
+      /OPDFReadProcsetPath exch .dicttomark setpagedevice
+   } if
+} bind .schedule_init
+
 2000 % priority
 { % Note, this may not work if the initial device is not pdfwrite
-  currentdevice .devicename /pdfwrite eq {
+  currentdevice .devicename dup /pdfwrite eq exch /ps2write eq or {
     % Inform the device with initial graphic state. See gdev_pdf_fill_path.
     newpath fill
   } if
 } bind .schedule_init
-

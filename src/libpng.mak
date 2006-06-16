@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: libpng.mak,v 1.5 2005/12/13 16:57:26 jemarch Exp $
+# $Id: libpng.mak,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $
 # makefile for PNG (Portable Network Graphics) code.
 # Users of this makefile must define the following:
 #	ZSRCDIR - the zlib source directory
@@ -74,7 +74,7 @@ PNGO_=$(O_)$(PNGOBJ)
 PZGEN=$(ZGENDIR)$(D)
 
 # PI_ and PF_ are defined in gs.mak.
-PNGCC=$(CC_) $(I_)$(PI_)$(_I) $(PF_)
+PNGCC=$(CC_) $(I_)$(PI_)$(_I) $(PF_) -DPNG_NO_ASSEMBLER_CODE
 
 # Define the name of this makefile.
 LIBPNG_MAK=$(GLSRC)libpng.mak

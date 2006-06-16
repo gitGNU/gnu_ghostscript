@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxpath.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gxpath.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Fixed-point path procedures */
 /* Requires gxfixed.h */
 
@@ -264,6 +264,9 @@ bool gx_path_enum_backup(gs_path_enum *);
 int gs_moveto_aux(gs_imager_state *pis, gx_path *ppath, floatp x, floatp y);
 int gx_setcurrentpoint_from_path(gs_imager_state *pis, gx_path *path);
 
+/* Path optimization for the filling algorithm. */
+
+int gx_path_merge_contacting_contours(gx_path *ppath);
 
 /* ------ Clipping paths ------ */
 
@@ -284,6 +287,13 @@ int gx_effective_clip_path(gs_state *, gx_clip_path **);
 #  define gx_clip_list_DEFINED
 typedef struct gx_clip_list_s gx_clip_list;
 #endif
+
+/* Opaque type for fill parameters. */
+#ifndef gx_fill_params_DEFINED
+#  define gx_fill_params_DEFINED
+typedef struct gx_fill_params_s gx_fill_params;
+#endif
+
 
 /* Opaque type for a clipping path enumerator. */
 typedef struct gs_cpath_enum_s gs_cpath_enum;
@@ -323,6 +333,8 @@ int
     gx_cpath_clip(gs_state *, gx_clip_path *, /*const*/ gx_path *, int),
     gx_cpath_intersect(gx_clip_path *, /*const*/ gx_path *, int,
 		       gs_imager_state *),
+    gx_cpath_intersect_with_params(gx_clip_path *pcpath, /*const*/ gx_path *ppath_orig,
+		   int rule, gs_imager_state *pis, const gx_fill_params * params),
     gx_cpath_scale_exp2_shared(gx_clip_path *pcpath, int log2_scale_x,
 			       int log2_scale_y, bool list_shared,
 			       bool segments_shared),
@@ -332,6 +344,7 @@ bool
     gx_cpath_outer_box(const gx_clip_path *, gs_fixed_rect *),
     gx_cpath_includes_rectangle(const gx_clip_path *, fixed, fixed,
 				fixed, fixed);
+const gs_fixed_rect *cpath_is_rectangle(const gx_clip_path * pcpath);
 
 /* Enumerate a clipping path.  This interface does not copy the path. */
 /* However, it does write into the path's "visited" flags. */

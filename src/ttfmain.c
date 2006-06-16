@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ttfmain.c,v 1.4 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: ttfmain.c,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* A Free Type interface adapter. */
 /* Uses code fragments from the FreeType project. */
 
@@ -34,7 +34,7 @@
 private const bool skip_instructions = 0; /* Debug purpose only. */
 
 typedef struct { 
-    Fixed a, b, c, d, tx, ty;
+    TT_Fixed a, b, c, d, tx, ty;
 } FixMatrix;
 
 struct ttfSubGlyphUsage_s { 
@@ -46,7 +46,7 @@ struct ttfSubGlyphUsage_s {
 
 /*------------------------------------------------------------------- */
 
-private Fixed AVE(F26Dot6 a, F26Dot6 b)
+private TT_Fixed AVE(F26Dot6 a, F26Dot6 b)
 {   return (a + b) / 2;
 }
 
@@ -58,7 +58,7 @@ private F26Dot6 floatToF26Dot6(float a)
 {   return (F26Dot6)(a * (1 << 6) + 0.5);
 }
 
-private Fixed floatToF16Dot16(float a)
+private TT_Fixed floatToF16Dot16(float a)
 {   return (F26Dot6)(a * (1 << 16) + 0.5);
 }
 
@@ -187,7 +187,7 @@ void ttfInterpreter__release(ttfInterpreter **ptti)
 
 void ttfFont__init(ttfFont *this, ttfMemory *mem, 
 		    void (*DebugRepaint)(ttfFont *),
-		    void (*DebugPrint)(ttfFont *, const char *s, ...))
+		    int (*DebugPrint)(ttfFont *, const char *s, ...))
 {
     memset(this, 0, sizeof(*this));
     this->DebugRepaint = DebugRepaint;
@@ -326,6 +326,8 @@ FontError ttfFont__Open(ttfInterpreter *tti, ttfFont *this, ttfReader *r,
     code = Instance_Init(this->inst);
     if (code == TT_Err_Out_Of_Memory)
 	return fMemoryError;
+    if (code >= TT_Err_Invalid_Opcode && code <= TT_Err_Invalid_Displacement)
+	return fBadInstruction;
     if (code)
 	return fBadFontData;
     I.z = this->inst;
@@ -342,6 +344,8 @@ FontError ttfFont__Open(ttfInterpreter *tti, ttfFont *this, ttfReader *r,
 	return fPatented;
     if (code == TT_Err_Out_Of_Memory)
 	return fMemoryError;
+    if (code >= TT_Err_Invalid_Opcode && code <= TT_Err_Invalid_Displacement)
+	return fBadInstruction;
     if (code)
 	return fBadFontData;
     return code;
@@ -593,15 +597,15 @@ private FontError ttfOutliner__BuildGlyphOutlineAux(ttfOutliner *this, int glyph
             }
 	    m.b = m.c = m.tx = m.ty = 0;
 	    if (flags & WE_HAVE_A_SCALE)
-		m.a = m.d = (Fixed)ttfReader__Short(r) << 2;
+		m.a = m.d = (TT_Fixed)ttfReader__Short(r) << 2;
 	    else if (flags & WE_HAVE_AN_X_AND_Y_SCALE) {
-		m.a = (Fixed)ttfReader__Short(r) << 2;
-		m.d = (Fixed)ttfReader__Short(r) << 2;
+		m.a = (TT_Fixed)ttfReader__Short(r) << 2;
+		m.d = (TT_Fixed)ttfReader__Short(r) << 2;
 	    } else if (flags & WE_HAVE_A_TWO_BY_TWO) {
-		m.a = (Fixed)ttfReader__Short(r)<<2;
-		m.b = (Fixed)ttfReader__Short(r)<<2;
-		m.c = (Fixed)ttfReader__Short(r)<<2;
-		m.d = (Fixed)ttfReader__Short(r)<<2;
+		m.a = (TT_Fixed)ttfReader__Short(r)<<2;
+		m.b = (TT_Fixed)ttfReader__Short(r)<<2;
+		m.c = (TT_Fixed)ttfReader__Short(r)<<2;
+		m.d = (TT_Fixed)ttfReader__Short(r)<<2;
             } else 
 		m.a = m.d = 65536;
 	    e = &usage[nUsage];
@@ -625,7 +629,7 @@ private FontError ttfOutliner__BuildGlyphOutlineAux(ttfOutliner *this, int glyph
 	    ttfSubGlyphUsage *e = &usage[i];
 	    int j;
 	    TT_Error code;
-	    int nPointsStored = this->nPointsTotal, nContoursStored = this->nContoursTotal;
+	    int nPointsStored = gOutline->pointCount, nContoursStored = gOutline->contourCount;
 
 	    out.contourCount = 0;
 	    out.pointCount = 0;

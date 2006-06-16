@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: stream.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: stream.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Stream package for Ghostscript interpreter */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"
@@ -810,7 +810,7 @@ sreadbuf(stream * s, stream_cursor_write * pbuf)
 	    oldpos = pw->ptr;
 	    status = (*curr->procs.process) (curr->state, pr, pw, eof);
 	    pr->limit += left;
-	    if_debug5('s', "[s]after read 0x%lx, nr=%u, nw=%u, status=%d, position=%d\n",
+	    if_debug5('s', "[s]after read 0x%lx, nr=%u, nw=%u, status=%d, position=%ld\n",
 		      (ulong) curr, (uint) (pr->limit - pr->ptr),
 		      (uint) (pw->limit - pw->ptr), status, s->position);
 	    if (strm == 0 || status != 0)

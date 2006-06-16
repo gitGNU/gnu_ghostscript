@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gximage.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gximage.h,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Default image rendering state structure */
 /* Requires gxcpath.h, gxdevmem.h, gxdcolor.h, gzpath.h */
 
@@ -56,7 +56,7 @@ typedef enum {
     sd_lookup,			/* use lookup_decode table */
     sd_compute			/* compute using base and factor */
 } sample_decoding;
-typedef struct sample_map_s {
+struct sample_map_s {
 
     sample_lookup_t table;
 
@@ -92,7 +92,12 @@ typedef struct sample_map_s {
 
     bool inverted;
 
-} sample_map;
+};
+
+#ifndef sample_map_DEFINED
+#define sample_map_DEFINED
+typedef struct sample_map_s sample_map;
+#endif
 
 /* Decode an 8-bit sample into a floating point color component. */
 /* penum points to the gx_image_enum structure. */

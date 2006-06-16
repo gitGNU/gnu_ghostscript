@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gsutil.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gsutil.c,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Utilities for Ghostscript library */
 #include "string_.h"
 #include "memory_.h"
@@ -67,7 +67,7 @@ memflip8x8(const byte * inp, int line_size, byte * outp, int dist)
     /* Check for all 8 bytes being the same. */
     /* This is especially worth doing for the case where all are zero. */
     if (aceg == bdfh && (aceg >> 8) == (aceg & 0xffffff)) {
-	if (aceg == 0)
+	if (aceg == 0 || aceg == 0xffffffff)
 	    goto store;
 	*outp = (byte)-(int)((aceg >> 7) & 1);
 	outp[dist] = (byte)-(int)((aceg >> 6) & 1);

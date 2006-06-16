@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zmedia2.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: zmedia2.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Media matching for setpagedevice */
 #include "math_.h"
 #include "memory_.h"
@@ -58,6 +58,7 @@ zmatchmedia(i_ctx_t *i_ctx_p)
     os_ptr pkeys = op;		/* *const */
     int policy_default;
     float best_mismatch = (float)max_long;	/* adhoc */
+    float mepos_penalty;
     float mbest = best_mismatch;
     match_record_t match;
     ref no_priority;
@@ -123,8 +124,7 @@ zmatchmedia(i_ctx_t *i_ctx_p)
 	 ) {
 	if (r_has_type(&aelt.dict, t_dictionary) &&
 	    r_has_attr(dict_access_ref(&aelt.dict), a_read) &&
-	    r_has_type(&aelt.key, t_integer) &&
-	    (mepos < 0 || aelt.key.value.intval == mepos)
+	    r_has_type(&aelt.key, t_integer)
 	    ) {
 	    bool match_all;
 	    uint ki, pi;
@@ -182,6 +182,10 @@ zmatchmedia(i_ctx_t *i_ctx_p)
 		} else if (!obj_eq(imemory, prvalue, pmvalue))
 		    goto no;
 	    }
+
+	    mepos_penalty = (mepos < 0 || aelt.key.value.intval == mepos) ?
+		0 : .001;
+
 	    /* We have a match. Save the match in case no better match is found */
 	    if (r_has_type(&match.match_key, t_null)) 
 		match.match_key = aelt.key;
@@ -190,13 +194,13 @@ zmatchmedia(i_ctx_t *i_ctx_p)
 	     * regardless of priority. If the match is the same, then update 
 	     * to the current only if the key value is lower.
 	     */
-	    if (best_mismatch <= mbest) {
-		if (best_mismatch < mbest  ||
+	    if (best_mismatch + mepos_penalty <= mbest) {
+		if (best_mismatch + mepos_penalty < mbest  ||
 		    (r_has_type(&match.match_key, t_integer) &&
 		     match.match_key.value.intval > aelt.key.value.intval)) {
 		    reset_match(&match);
 		    match.match_key = aelt.key;
-		    mbest = best_mismatch;
+		    mbest = best_mismatch + mepos_penalty;
 		}
 	    }
 	    /* In case of a tie, see if the new match has priority. */
@@ -452,7 +456,6 @@ match_page_size(const gs_point * request, const gs_rect * medium, int policy,
  * we must adjust its size in that dimension to match the request.
  * We recognize this by an unreasonably small medium->p.{x,y}.
  */
-#define MIN_MEDIA_SIZE 9
 private void 
 make_adjustment_matrix(const gs_point * request, const gs_rect * medium,
 		       gs_matrix * pmat, bool scale, int rotate)
@@ -466,11 +469,23 @@ make_adjustment_matrix(const gs_point * request, const gs_rect * medium,
 
 	rx = ry, ry = temp;
     }
-    /* Adjust the medium size if flexible. */ 
-    if (medium->p.x < MIN_MEDIA_SIZE && mx > rx)
-	mx = rx;
-    if (medium->p.y < MIN_MEDIA_SIZE && my > ry)
-	my = ry;
+    /* If 'medium' is flexible, adjust 'mx' and 'my' towards 'rx' and 'ry',
+       respectively. Note that 'mx' and 'my' have just acquired the largest
+       permissible value, medium->q. */
+    if (medium->p.x < mx) {	/* non-empty width range */
+	if (rx < medium->p.x)
+	    mx = medium->p.x;	/* use minimum of the range */
+	else if (rx < mx)
+	    mx = rx;		/* fits */
+		/* else leave mx == medium->q.x, i.e., the maximum */
+    }
+    if (medium->p.y < my) {	/* non-empty height range */
+	if (ry < medium->p.y)
+	    my = medium->p.y;	/* use minimum of the range */
+	else if (ry < my)
+	    my = ry;		/* fits */
+	    /* else leave my == medium->q.y, i.e., the maximum */
+    }
 
     /* Translate to align the centers. */ 
     gs_make_translation(mx / 2, my / 2, pmat);

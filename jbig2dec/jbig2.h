@@ -1,14 +1,14 @@
 /*
     jbig2dec
     
-    Copyright (c) 2002-2003 artofcode LLC.
+    Copyright (c) 2002-2005 artofcode LLC.
     
     This software is distributed under license and may not
     be copied, modified or distributed except as expressly
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
                                                                                 
-    $Id: jbig2.h,v 1.3 2006/03/02 21:27:55 Arabidopsis Exp $
+    $Id: jbig2.h,v 1.4 2006/06/16 12:55:32 Arabidopsis Exp $
 */
 
 #ifdef __cplusplus
@@ -59,6 +59,8 @@ Jbig2Image*	jbig2_image_clone(Jbig2Ctx *ctx, Jbig2Image *image);
 void		jbig2_image_release(Jbig2Ctx *ctx, Jbig2Image *image);
 void            jbig2_image_free(Jbig2Ctx *ctx, Jbig2Image *image);
 void		jbig2_image_clear(Jbig2Ctx *ctx, Jbig2Image *image, int value);
+Jbig2Image	*jbig2_image_resize(Jbig2Ctx *ctx, Jbig2Image *image,
+                                int width, int height);
 
 /* errors are returned from the library via a callback. If no callback
    is provided (a NULL argument is passed ot jbig2_ctx_new) a default

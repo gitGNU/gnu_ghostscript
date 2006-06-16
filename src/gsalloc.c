@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsalloc.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gsalloc.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Standard memory allocator */
 #include "gx.h"
 #include "memory_.h"
@@ -90,12 +90,18 @@ private
 ENUM_PTRS_BEGIN(ref_memory_enum_ptrs) return 0;
 ENUM_PTR3(0, gs_ref_memory_t, streams, names_array, changes);
 ENUM_PTR(3, gs_ref_memory_t, saved);
+#if NO_INVISIBLE_LEVELS
+ENUM_PTR(4, gs_ref_memory_t, scan_limit);
+#endif
 ENUM_PTRS_END
 private RELOC_PTRS_WITH(ref_memory_reloc_ptrs, gs_ref_memory_t *mptr)
 {
     RELOC_PTR(gs_ref_memory_t, streams);
     RELOC_PTR(gs_ref_memory_t, names_array);
     RELOC_PTR(gs_ref_memory_t, changes);
+#if NO_INVISIBLE_LEVELS
+    RELOC_PTR(gs_ref_memory_t, scan_limit);
+#endif
     /* Don't relocate the saved pointer now -- see igc.c for details. */
     mptr->reloc_saved = RELOC_OBJ(mptr->saved);
 }
@@ -327,6 +333,10 @@ ialloc_reset(gs_ref_memory_t * mem)
     mem->allocated = 0;
     mem->inherited = 0;
     mem->changes = 0;
+#if NO_INVISIBLE_LEVELS
+    mem->scan_limit = 0;
+    mem->total_scanned = 0;
+#endif
     ialloc_reset_free(mem);
 }
 
@@ -1260,6 +1270,9 @@ alloc_obj(gs_ref_memory_t *mem, ulong lsize, gs_memory_type_ptr_t pstype,
     }
 done:
     ptr->o_type = pstype;
+#   if IGC_PTR_STABILITY_CHECK
+	ptr->d.o.space_id = mem->space_id;
+#   endif
     ptr++;
     gs_alloc_fill(ptr, gs_alloc_fill_alloc, lsize);
     return ptr;
@@ -1654,7 +1667,7 @@ alloc_acquire_chunk(gs_ref_memory_t * mem, ulong csize, bool has_strings,
 
     if( mem->gc_status.psignal != 0) {  
 	/* we have a garbage collector */
-	if ((ulong) (mem->allocated + mem->inherited) >= mem->limit) {
+	if ((ulong) (mem->allocated) >= mem->limit) {
 	    mem->gc_status.requested += csize;
 	    if (mem->limit >= mem->gc_status.max_vm) {
 		gs_free_object(parent, cp, cname);

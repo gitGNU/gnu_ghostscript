@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdtw.h,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gdevpdtw.h,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Font and CMap resource writing API for pdfwrite */
 
 #ifndef gdevpdtw_INCLUDED
@@ -68,12 +68,7 @@ int pdf_write_cid_system_info(gx_device_pdf *pdev,
  * Write a CMap resource.  We pass the CMap object as well as the resource,
  * because we write CMaps when they are created.
  */
-#if PDFW_DELAYED_STREAMS
 int pdf_write_cmap(gx_device_pdf *pdev, const gs_cmap_t *pcmap,
 		   pdf_resource_t **ppres, int font_index_only);
-#else
-int pdf_write_cmap(gx_device_pdf *pdev, const gs_cmap_t *pcmap,
-		   pdf_resource_t *pres, int font_index_only);
-#endif
 
 #endif /* gdevpdtw_INCLUDED */

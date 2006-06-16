@@ -19,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: check_comments.py,v 1.4 2005/12/13 17:58:03 jemarch Exp $
+# $Id: check_comments.py,v 1.5 2006/06/16 12:55:32 Arabidopsis Exp $
 
 # Check for C++ style comments
 
@@ -55,24 +55,33 @@ class GSCheckForComments(GSTestCase):
                 text_code = fp.read()
                 fp.close()
 
-                pattern = re.compile("(\")|(/\*)|(\*/)|(//)")
+                pattern = re.compile("(\\\\.)|(\")|(')|(/\*)|(\*/)|(//)")
                 mi = pattern.finditer(text_code)
                 try:
-                    startComment = 0
-                    inString = 0
+                    inComment = 0
+		    inString = 0
+                    inStringSq = 0	# single quoted string
+                    inStringDq = 0	# double quoted string
                     while 1:
                         m = mi.next()
                         mstr = m.group()
-                        if mstr == '"' and not startComment:
-                            inString = not inString
+			if mstr[0] == '\\':		# skip quoted characters (may be ' or ")
+			    continue
+                        if mstr == '"' and not inComment and not inStringSq:
+                            inStringDq = not inStringDq
+			    inString = inStringDq
+                            continue
+                        if mstr == "'" and not inComment and not inStringDq:
+                            inStringSq = not inStringSq
+			    inString = inStringSq
                             continue
                         if not inString and mstr == '/*':
-                            startComment = 1
+                            inComment = 1
                             continue
-                        if startComment and mstr == '*/':
-                            startComment = 0
+                        if inComment and mstr == '*/':
+                            inComment = 0
                             continue
-                        if not inString and not startComment and mstr == '//':
+                        if not inString and not inComment and mstr == '//':
                             incorrect.append(f)
                             break
                 except StopIteration:
@@ -98,12 +107,9 @@ checkDirs = [
       'dmmain.c',
       'gdevmac.c',
       'gdevmacxf.c',
-      'gdevphex.c',
       'gdevwdib.c',
       'gp_mac.c',
       'gp_macio.c',
-      'gp_msio.c',
-      'gxchar.c',
       'macsysstat.h'
      ])
     ]

@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_setpd.ps,v 1.5 2006/03/02 22:26:14 Arabidopsis Exp $
+% $Id: gs_setpd.ps,v 1.6 2006/06/16 12:55:13 Arabidopsis Exp $
 % The current implementation of setpagedevice has the following limitations:
 %	- It doesn't attempt to "interact with the user" for Policy = 2.
 
@@ -368,13 +368,11 @@ level2dict begin
        { dup length dict }
       ifelse copy readonly
     } bind
-  % Ignore MediaPostition when merging (Adobe CPSI does).
-  /MediaPosition { dup //null ne { pop //null } if } bind
 .dicttomark readonly def
 
 % Define the keys used in input attribute matching.
 /.inputattrkeys [
-  /PageSize /MediaColor /MediaWeight /MediaType /InsertSheet
+  /PageSize /MediaColor /MediaWeight /MediaType /InsertSheet /ManualFeed
 	% The following are documented in Adobe's supplement for v2017.
   /LeadingEdge /MediaClass
 ] readonly def
@@ -500,7 +498,7 @@ level2dict begin
 	pop dup 4 index exch get 2 array astore
 	$error /errorinfo 3 -1 roll put
 	cleartomark
-	/setpagedevice load /configurationerror signalerror
+	/setpagedevice .systemvar /configurationerror signalerror
   } bind
   1 {		% Roll back the failed request to its previous status.
 SETPDDEBUG { (Rolling back.) = pstack flush } if
@@ -593,7 +591,7 @@ SETPDDEBUG { (Result of putting.) = pstack flush } if
    4 index /RollFedMedia .knownget not { //false } if
    matrix .matchpagesize not {
 		% This is a "can't happen" condition!
-     /setpagedevice load /rangecheck signalerror
+     /setpagedevice .systemvar /rangecheck signalerror
    } if
    2 array astore
  } bind def
@@ -733,7 +731,7 @@ SETPDDEBUG { (Recovering.) = pstack flush } if
       .trysetparams		% shouldn't fail!
       dup type /booleantype ne
        { 2 { counttomark 1 add 1 roll cleartomark } repeat
-         /setpagedevice load exch signalerror
+         /setpagedevice .systemvar exch signalerror
        }
       if
     }

@@ -64,7 +64,7 @@
 /*
  * Tree-Structured Filter Bank (TSFB) Library
  *
- * $Id: jpc_tsfb.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jpc_tsfb.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -75,6 +75,7 @@
 
 #include "jasper/jas_malloc.h"
 #include "jasper/jas_seq.h"
+#include "jasper/jas_debug.h"
 
 #include "jpc_tsfb.h"
 #include "jpc_cod.h"
@@ -231,6 +232,71 @@ void jpc_tsfb_synthesize(jpc_tsfb_t *tsfb, int flags, jas_seq2d_t *x)
 	}
 }
 
+
+static void jpc_tsfbnode_synthesize(jpc_tsfbnode_t *node, int flags, jas_seq2d_t *x)
+{
+	jpc_tsfbnodeband_t nodebands[JPC_TSFB_MAXBANDSPERNODE];
+	int numbands;
+	jas_seq2d_t *y;
+	int bandno;
+	jpc_tsfbnodeband_t *band;
+
+	if (node->numchildren > 0) 
+	{
+		jas_matrix_t	org;
+
+		qmfb2d_getbands(	node->hqmfb, node->vqmfb, 
+							jas_seq2d_xstart(x),
+							jas_seq2d_ystart(x), 
+							jas_seq2d_xend(x), 
+							jas_seq2d_yend(x),
+							JPC_TSFB_MAXBANDSPERNODE, 
+							&numbands, 
+							nodebands
+						);
+
+		y = &org;
+		memset( y, 0, sizeof(org));
+
+		for (bandno = 0, band = nodebands; bandno < numbands; ++bandno, ++band) 
+		{
+			if (node->children[bandno]) 
+			{
+				if (band->xstart != band->xend && band->ystart != band->yend) 
+				{
+					jas_seq2d_bindsub(	y,
+										x, 
+										band->locxstart, 
+										band->locystart,
+										band->locxend, 
+										band->locyend
+									);
+
+					jas_seq2d_setshift(	y, 
+										band->xstart, 
+										band->ystart
+									);
+					jpc_tsfbnode_synthesize(	node->children[bandno], 
+												flags, 
+												y
+											);
+				}
+			}
+		}
+	}
+
+	if (node->hqmfb) 
+	{
+		(*(node->hqmfb)->ops->synthesize)(node->hqmfb, flags, x);
+	}
+	if (node->vqmfb) 
+	{
+		(*(node->vqmfb)->ops->synthesize)(node->vqmfb, flags | JPC_QMFB1D_VERT, x);
+	}
+}
+
+
+/*
 static void jpc_tsfbnode_synthesize(jpc_tsfbnode_t *node, int flags, jas_seq2d_t *x)
 {
 	jpc_tsfbnodeband_t nodebands[JPC_TSFB_MAXBANDSPERNODE];
@@ -263,6 +329,9 @@ static void jpc_tsfbnode_synthesize(jpc_tsfbnode_t *node, int flags, jas_seq2d_t
 		jpc_qmfb1d_synthesize(node->vqmfb, flags | JPC_QMFB1D_VERT, x);
 	}
 }
+
+*/
+
 
 /******************************************************************************\
 *
@@ -353,7 +422,10 @@ assert(numnodebands == 4 || numnodebands == 3);
 					band->orient = JPC_TSFB_HH;
 					break;
 				default:
-					abort();
+					jas_error(	JAS_ERR_INVALID_NODEBANDNO_JPC_TSFBNODE_GETBANDSTREE,
+								"JAS_ERR_INVALID_NODEBANDNO_JPC_TSFBNODE_GETBANDSTREE"
+							);
+					return;
 					break;
 				}
 			} else {
@@ -368,7 +440,10 @@ assert(numnodebands == 4 || numnodebands == 3);
 					band->orient = JPC_TSFB_HH;
 					break;
 				default:
-					abort();
+					jas_error(	JAS_ERR_INVALID_NODEBANDNO_JPC_TSFBNODE_GETBANDSTREE,
+								"JAS_ERR_INVALID_NODEBANDNO_JPC_TSFBNODE_GETBANDSTREE"
+							);
+					return;
 					break;
 				}
 			}
@@ -517,6 +592,10 @@ static int jpc_tsfbnode_getequivfilters(jpc_tsfbnode_t *tsfbnode, int cldind,
 		if (node->hqmfb) {
 			numhchans = jpc_qmfb1d_getnumchans(node->hqmfb);
 			if (jpc_qmfb1d_getsynfilters(node->hqmfb, width, hfilters)) {
+					jas_error(	JAS_ERR_JPC_QMFB1D_GETSYNFILTERS,
+								"JAS_ERR_JPC_QMFB1D_GETSYNFILTERS"
+
+							);
 				goto error;
 			}
 			if (!(tmpseq = jpc_seq_upsample(hseq, numhchans))) {
@@ -534,8 +613,9 @@ static int jpc_tsfbnode_getequivfilters(jpc_tsfbnode_t *tsfbnode, int cldind,
 		}
 		if (node->vqmfb) {
 			numvchans = jpc_qmfb1d_getnumchans(node->vqmfb);
-			if (jpc_qmfb1d_getsynfilters(node->vqmfb, height, vfilters)) {
-				abort();
+			if (jpc_qmfb1d_getsynfilters(node->vqmfb, height, vfilters)) 
+			{
+				goto error;
 			}
 			if (!(tmpseq = jpc_seq_upsample(vseq, numvchans))) {
 				goto error;

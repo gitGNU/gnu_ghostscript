@@ -2,6 +2,8 @@
  * Copyright (c) 1999-2000 Image Power, Inc. and the University of
  *   British Columbia.
  * Copyright (c) 2001-2003 Michael David Adams.
+ * Copyright (c) 2005-2006 artofcode LLC.
+ *
  * All rights reserved.
  */
 
@@ -64,7 +66,7 @@
 /*
  * Quadrature Mirror-Image Filter Bank (QMFB) Library
  *
- * $Id: jpc_qmfb.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jpc_qmfb.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -76,10 +78,17 @@
 #include "jasper/jas_fix.h"
 #include "jasper/jas_malloc.h"
 #include "jasper/jas_math.h"
+#include "jasper/jas_debug.h"
 
 #include "jpc_qmfb.h"
 #include "jpc_tsfb.h"
 #include "jpc_math.h"
+
+#ifndef USE_ASM_WIN32
+# if defined(_WIN32) && !defined(_WIN64)
+#  define USE_ASM_WIN32
+# endif
+#endif
 
 /******************************************************************************\
 *
@@ -97,7 +106,13 @@ static int jpc_ns_getnumchans(jpc_qmfb1d_t *qmfb);
 static int jpc_ns_getanalfilters(jpc_qmfb1d_t *qmfb, int len, jas_seq2d_t **filters);
 static int jpc_ns_getsynfilters(jpc_qmfb1d_t *qmfb, int len, jas_seq2d_t **filters);
 static void jpc_ns_analyze(jpc_qmfb1d_t *qmfb, int flags, jas_seq2d_t *x);
+
+
 static void jpc_ns_synthesize(jpc_qmfb1d_t *qmfb, int flags, jas_seq2d_t *x);
+
+#ifdef USE_ASM_WIN32
+static void jpc_win32_ns_synthesize( jpc_qmfb1d_t *qmfb, int flags, jas_seq2d_t *x);
+#endif
 
 /******************************************************************************\
 *
@@ -116,7 +131,11 @@ jpc_qmfb1dops_t jpc_ns_ops = {
 	jpc_ns_getanalfilters,
 	jpc_ns_getsynfilters,
 	jpc_ns_analyze,
+#ifdef USE_ASM_WIN32
+	jpc_win32_ns_synthesize
+#else
 	jpc_ns_synthesize
+#endif
 };
 
 /******************************************************************************\
@@ -166,7 +185,10 @@ static void jpc_qmfb1d_split(jpc_fix_t *startptr, int startind, int endind,
 	if (bufsize > QMFB_SPLITBUFSIZE) {
 		if (!(buf = jas_malloc(bufsize * sizeof(jpc_fix_t)))) {
 			/* We have no choice but to commit suicide in this case. */
-			abort();
+			jas_error(	JAS_ERR_MALLOC_FAILURE_JPC_QMFB1D_SPLIT,
+						"JAS_ERR_MALLOC_FAILURE_JPC_QMFB1D_SPLIT"
+					);
+			return;
 		}
 	}
 #endif
@@ -286,7 +308,10 @@ static void jpc_qmfb1d_join(jpc_fix_t *startptr, int startind, int endind,
 	if (bufsize > QMFB_JOINBUFSIZE) {
 		if (!(buf = jas_malloc(bufsize * sizeof(jpc_fix_t)))) {
 			/* We have no choice but to commit suicide. */
-			abort();
+			jas_error(	JAS_ERR_MALLOC_FAILURE_JPC_QMFB1D_JOIN,
+						"JAS_ERR_MALLOC_FAILURE_JPC_QMFB1D_JOIN"
+					);
+			return;
 		}
 	}
 #endif
@@ -402,7 +427,10 @@ static int jpc_ft_getanalfilters(jpc_qmfb1d_t *qmfb, int len, jas_seq2d_t **filt
 	qmfb = 0;
 	len = 0;
 	filters = 0;
-	abort();
+
+	jas_error(	JAS_ERR_INCOMPLETE_STUB_INVOKED_JPC_FT_GETANALFILTERS,
+				"JAS_ERR_INCOMPLETE_STUB_INVOKED_JPC_FT_GETANALFILTERS"
+			);
 	return -1;
 }
 
@@ -442,7 +470,10 @@ static int jpc_ft_getsynfilters(jpc_qmfb1d_t *qmfb, int len, jas_seq2d_t **filte
 		}
 		jas_seq_set(hf, 0, jpc_dbltofix(2.0));
 	} else {
-		abort();
+		jas_error(	JAS_ERR_INVALID_LEN_PARAM_JPC_FT_GETSYNFILTERS,
+					"JAS_ERR_INVALID_LEN_PARAM_JPC_FT_GETSYNFILTERS"
+				);
+		goto error;
 	}
 
 	filters[0] = lf;
@@ -731,7 +762,9 @@ static int jpc_ns_getanalfilters(jpc_qmfb1d_t *qmfb, int len, jas_seq2d_t **filt
 	len = 0;
 	filters = 0;
 
-	abort();
+	jas_error(	JAS_ERR_INCOMPLETE_STUB_INVOKED_JPC_NS_GETANALFILTERS,
+				"JAS_ERR_INCOMPLETE_STUB_INVOKED_JPC_NS_GETANALFILTERS"
+			);
 	return -1;
 }
 
@@ -779,7 +812,10 @@ static int jpc_ns_getsynfilters(jpc_qmfb1d_t *qmfb, int len, jas_seq2d_t **filte
 		}
 		jas_seq_set(hf, 0, jpc_dbltofix(2.0));
 	} else {
-		abort();
+		jas_error(	JAS_ERR_INVALID_LEN_PARAM_JPC_NS_GETSYNFILTERS,
+					"JAS_ERR_INVALID_LEN_PARAM_JPC_NS_GETSYNFILTERS"
+				);
+		goto error;
 	}
 
 	filters[0] = lf;
@@ -927,11 +963,33 @@ static void jpc_ns_analyze(jpc_qmfb1d_t *qmfb, int flags, jas_seq2d_t *x)
 	} else {
 		/* The reversible integer-to-integer mode is not supported
 		  for this transform. */
-		abort();
+		jas_error(	JAS_ERR_UNSUPPORTED_MODE_JPC_NS_ANALYZE,
+					"JAS_ERR_UNSUPPORTED_MODE_JPC_NS_ANALYZE"
+				);
 	}
 }
 
-static void jpc_ns_synthesize(jpc_qmfb1d_t *qmfb, int flags, jas_seq2d_t *x)
+
+#ifdef USE_ASM_WIN32
+
+#define	DBL_FIX_A	(0x0000275d)
+#define	DBL_FIX_B	(0x00003406)
+#define	DBL_FIX_C	(0xfffff1cf)
+#define	DBL_FIX_D	(0xffffe3c0)
+#define	DBL_FIX_E	(0x000001b2)
+#define	DBL_FIX_F	(0x000032c1)
+
+#define	twoalpha_C	(0xffffe39e)
+#define	twoalpha_D	(0xffffc780)
+#define	twoalpha_E	(0x00000364)
+#define	twoalpha_F	(0x00006582)
+
+#endif
+
+
+
+
+void jpc_ns_synthesize(jpc_qmfb1d_t *qmfb, int flags, jas_seq2d_t *x)
 {
 	jpc_fix_t *startptr;
 	int startind;
@@ -1003,9 +1061,485 @@ static void jpc_ns_synthesize(jpc_qmfb1d_t *qmfb, int flags, jas_seq2d_t *x)
 	} else {
 		/* The reversible integer-to-integer mode is not supported
 		  for this transform. */
-		abort();
+		jas_error(	JAS_ERR_UNSUPPORTED_MODE_JPC_NS_SYNTHESIZE,
+					"JAS_ERR_UNSUPPORTED_MODE_JPC_NS_SYNTHESIZE"
+				);
 	}
 }
+
+
+
+#ifdef USE_ASM_WIN32
+
+
+#define	USE_LF_ASM
+
+void jpc_win32_ns_synthesize(	jpc_qmfb1d_t *qmfb, 
+								int flags, 
+								jas_seq2d_t *x
+							)
+{
+	jpc_fix_t *startptr;
+	int startind;
+	int endind;
+	jpc_fix_t *lstartptr;
+	int lstartind;
+	int lendind;
+	jpc_fix_t *hstartptr;
+	int hstartind;
+	int hendind;
+	int interstep;
+	int intrastep;
+	int numseq;
+
+	/* Avoid compiler warnings about unused parameters. */
+	qmfb = 0;
+
+	if (flags & JPC_QMFB1D_VERT) 
+	{
+		interstep = 1;
+		intrastep = jas_seq2d_rowstep(x);
+		numseq = jas_seq2d_width(x);
+		startind = jas_seq2d_ystart(x);
+		endind = jas_seq2d_yend(x);
+	} 
+	else 
+	{
+		interstep = jas_seq2d_rowstep(x);
+		intrastep = 1;
+		numseq = jas_seq2d_height(x);
+		startind = jas_seq2d_xstart(x);
+		endind = jas_seq2d_xend(x);
+	}
+
+	assert(startind < endind);
+
+	startptr = jas_seq2d_getref(x, jas_seq2d_xstart(x), jas_seq2d_ystart(x));
+
+	if (!(flags & JPC_QMFB1D_RITIMODE)) 
+	{
+		while (numseq-- > 0) 
+		{
+			jpc_qmfb1d_setup(	startptr, 
+								startind, 
+								endind, 
+								intrastep,
+								&lstartptr, 
+								&lstartind, 
+								&lendind, 
+								&hstartptr,
+								&hstartind, 
+								&hendind
+							);
+
+			if (endind - startind > 1) 
+			{
+#if !defined(USE_LF_ASM)
+				NNS_SCALE(	lstartptr, 
+							lstartind, 
+							lendind,
+							intrastep, 
+							DBL_FIX_A
+						);
+#else
+
+	__asm	mov	esi,	lstartptr
+	__asm	mov	eax,	lstartind
+	__asm	mov ebx,	lendind
+	__asm	sub ebx,	eax
+	__asm	mov			ecx, intrastep
+	__asm	shl			ecx, 2
+
+scale_lp0:	;
+	__asm	test	ebx, ebx
+	__asm	je		skip_scale0
+
+	__asm	mov		eax, [esi]
+	__asm	test	eax, eax
+	__asm	je		skip_mul0
+	__asm	mov		edx, DBL_FIX_A
+	__asm	imul	edx
+	__asm	shrd	eax, edx, JPC_FIX_FRACBITS
+	__asm	mov		[esi], eax
+skip_mul0:	;
+	__asm	add		esi, ecx
+	__asm	sub		ebx, 1
+	__asm	jmp		scale_lp0
+skip_scale0:	;
+
+#endif
+
+#if !defined(USE_LF_ASM)
+				NNS_SCALE(	hstartptr, 
+							hstartind, 
+							hendind,
+							intrastep, 
+							DBL_FIX_B
+						);
+#else
+
+	__asm	mov	esi,	hstartptr
+	__asm	mov	eax,	hstartind
+	__asm	mov ebx,	hendind
+	__asm	sub ebx,	eax
+
+scale_lp1:	;
+	__asm	test	ebx, ebx
+	__asm	je		skip_scale1
+
+	__asm	mov		eax, [esi]
+	__asm	test	eax, eax
+	__asm	je		skip_mul1
+	__asm	mov		edx, DBL_FIX_B
+	__asm	imul	edx
+	__asm	shrd	eax, edx, JPC_FIX_FRACBITS
+	__asm	mov		[esi], eax
+skip_mul1:	;
+	__asm	add		esi, ecx
+	__asm	sub		ebx, 1
+	__asm	jmp		scale_lp1
+skip_scale1:	;
+
+#endif
+
+#if !defined(USE_LF_ASM)
+				RA_NNS_LIFT1(	lstartptr, 
+								lstartind, 
+								lendind,
+								hstartptr, 
+								hstartind, 
+								hendind, 
+								intrastep,
+								DBL_FIX_C,
+								twoalpha_C
+							);
+#else
+
+	__asm	mov	esi,	lstartptr
+	__asm	mov	edi,	hstartptr
+	__asm	mov	eax,	lstartind
+	__asm	mov ebx,	lendind
+	__asm	sub ebx,	eax
+
+	__asm	mov	eax,	hstartind
+	__asm	cmp	eax,	lstartind
+	__asm	jl			no_1C
+	
+	__asm	mov			eax, [edi]
+	__asm	test		eax, eax
+	__asm	je			skip_slow1C
+	__asm	mov			edx, twoalpha_C
+	__asm	imul		edx
+	__asm	shrd		eax, edx, JPC_FIX_FRACBITS
+	__asm	add			dword ptr[esi], eax
+skip_slow1C:
+
+	__asm	add			esi, ecx
+	__asm	sub			ebx, 1
+no_1C:
+	__asm	mov	eax,	lendind
+	__asm	cmp	eax,	hendind
+	__asm	jle			lpC
+	__asm	sub			ebx, 1
+
+lpC:
+	__asm	test	ebx, ebx
+	__asm	jle		done_lpC
+lpaC:
+	__asm	mov		eax, dword ptr[edi]
+	__asm	sub		ebx, 1
+	__asm	add		eax, dword ptr[edi + ecx ]
+	__asm	test	eax, eax
+	__asm	je		skip_slowC
+
+	__asm	mov		edx, DBL_FIX_C
+	__asm	imul	edx
+	__asm	shrd	eax, edx, JPC_FIX_FRACBITS
+	__asm	add		dword ptr[esi], eax
+
+skip_slowC:
+	__asm	add		esi, ecx
+	__asm	add		edi, ecx
+	__asm	test	ebx, ebx
+	__asm	jg		lpaC
+done_lpC:					;
+
+	__asm	mov	eax,	lendind
+	__asm	cmp	eax,	hendind
+	__asm	jle			no_3C
+	__asm	mov			eax, dword ptr[edi]
+	__asm	test		eax, eax
+	__asm	je			no_3C
+	__asm	mov			edx, dword ptr[twoalpha_C]
+	__asm	imul		edx
+	__asm	shrd		eax, edx, JPC_FIX_FRACBITS
+	__asm	add			dword ptr[esi],eax
+no_3C:		;
+
+#endif
+
+
+#if !defined(USE_LF_ASM)
+				NNS_LIFT0(	lstartptr, 
+							lstartind, 
+							lendind,
+							hstartptr, 
+							hstartind, 
+							hendind, 
+							intrastep,
+							DBL_FIX_D
+						);
+#else
+
+	__asm	mov	esi,	lstartptr
+	__asm	mov	edi,	hstartptr
+	__asm	mov	eax,	hstartind
+	__asm	mov ebx,	hendind
+	__asm	sub ebx,	eax
+
+	__asm	mov	eax,	hstartind
+	__asm	cmp	eax,	lstartind
+	__asm	jge			no_lift0a
+	
+	__asm	mov			eax, [edi]
+	__asm	test		eax, eax
+	__asm	je			skip_slow_lift0
+	__asm	mov			edx, twoalpha_D
+	__asm	imul		edx
+	__asm	shrd		eax, edx, JPC_FIX_FRACBITS
+	__asm	add			dword ptr[esi], eax
+skip_slow_lift0:
+
+	__asm	add			esi, ecx
+	__asm	sub			ebx, 1
+no_lift0a:
+
+	__asm	mov	eax,	hendind
+	__asm	cmp	eax,	lendind
+	__asm	jl			lpa_lift0
+	__asm	dec			ebx
+
+lpa_lift0:	;
+	__asm	test	ebx, ebx
+	__asm	jle		done_lpa_lift0
+lpb_lift0:
+	__asm	mov		eax, dword ptr[esi]
+	__asm	sub		ebx, 1
+	__asm	add		eax, dword ptr[esi + ecx ]
+	__asm	test	eax, eax
+	__asm	je		skip_slowa_lift0
+
+	__asm	mov		edx, DBL_FIX_D
+	__asm	imul	edx
+	__asm	shrd	eax, edx, JPC_FIX_FRACBITS
+	__asm	add		dword ptr[edi], eax
+
+skip_slowa_lift0:
+	__asm	add		esi, ecx
+	__asm	add		edi, ecx
+	__asm	test	ebx, ebx
+	__asm	jg		lpb_lift0
+done_lpa_lift0:	;
+
+	__asm	mov	eax,	hendind
+	__asm	cmp	eax,	lendind
+	__asm	jl			no_3b_lift0
+	__asm	mov			eax, dword ptr[esi]
+	__asm	test		eax, eax
+	__asm	je			no_3b_lift0
+	__asm	mov			edx, twoalpha_D
+	__asm	imul		edx
+	__asm	shrd		eax, edx, JPC_FIX_FRACBITS
+	__asm	add			dword ptr[edi],eax
+no_3b_lift0:		;
+
+
+#endif
+
+#if !defined(USE_LF_ASM)
+				NNS_LIFT1(	lstartptr, 
+							lstartind, 
+							lendind,
+							hstartptr, 
+							hstartind, 
+							hendind, 
+							intrastep,
+							DBL_FIX_E
+						);
+#else
+
+	__asm	mov	esi,	lstartptr
+	__asm	mov	edi,	hstartptr
+	__asm	mov	eax,	lstartind
+	__asm	mov ebx,	lendind
+	__asm	sub ebx,	eax
+
+	__asm	mov	eax,	hstartind
+	__asm	cmp	eax,	lstartind
+	__asm	jl			no_1a
+	
+	__asm	mov			eax, [edi]
+	__asm	test		eax, eax
+	__asm	je			skip_slow1
+	__asm	mov			edx, twoalpha_E
+	__asm	imul		edx
+	__asm	shrd		eax, edx, JPC_FIX_FRACBITS
+	__asm	add			dword ptr[esi], eax
+skip_slow1:
+
+	__asm	add			esi, ecx
+	__asm	sub			ebx, 1
+no_1a:
+	__asm	mov	eax,	lendind
+	__asm	cmp	eax,	hendind
+	__asm	jle			lpa
+	__asm	sub			ebx, 1
+
+lpa:
+	__asm	test	ebx, ebx
+	__asm	jle		done_lpa
+lpaa:
+	__asm	mov		eax, dword ptr[edi]
+	__asm	sub		ebx, 1
+	__asm	add		eax, dword ptr[edi + ecx ]
+	__asm	test	eax, eax
+	__asm	je		skip_slow
+
+	__asm	mov		edx, DBL_FIX_E
+	__asm	imul	edx
+	__asm	shrd	eax, edx, JPC_FIX_FRACBITS
+	__asm	add		dword ptr[esi], eax
+
+skip_slow:
+	__asm	add		esi, ecx
+	__asm	add		edi, ecx
+	__asm	test	ebx, ebx
+	__asm	jg		lpaa
+done_lpa:							;
+
+	__asm	mov	eax,	lendind
+	__asm	cmp	eax,	hendind
+	__asm	jle			no_3a
+	__asm	mov			eax, dword ptr[edi]
+	__asm	test		eax, eax
+	__asm	je			no_3a
+	__asm	mov			edx, dword ptr[twoalpha_E]
+	__asm	imul		edx
+	__asm	shrd		eax, edx, JPC_FIX_FRACBITS
+	__asm	add			dword ptr[esi],eax
+no_3a:		;
+#endif
+
+
+
+#if !defined(USE_LF_ASM)
+				NNS_LIFT0(	lstartptr, 
+							lstartind, 
+	  						lendind,
+							hstartptr, 
+							hstartind, 
+							hendind, 
+							intrastep,
+							DBL_FIX_F
+						);
+#else
+
+	__asm	mov	esi,	lstartptr
+	__asm	mov	edi,	hstartptr
+	__asm	mov	eax,	hstartind
+	__asm	mov ebx,	hendind
+	__asm	sub ebx,	eax
+
+	__asm	mov	eax,	hstartind
+	__asm	cmp	eax,	lstartind
+	__asm	jge			no_1d
+	
+	__asm	mov			eax, [edi]
+	__asm	test		eax, eax
+	__asm	je			skip_slow4
+	__asm	mov			edx, twoalpha_F
+	__asm	imul		edx
+	__asm	shrd		eax, edx, JPC_FIX_FRACBITS
+	__asm	add			dword ptr[esi], eax
+skip_slow4:
+
+	__asm	add			esi, ecx
+	__asm	sub			ebx, 1
+no_1d:
+
+	__asm	mov	eax,	hendind
+	__asm	cmp	eax,	lendind
+	__asm	jl			lpd
+	__asm	dec			ebx
+
+lpd:	;
+	__asm	test	ebx, ebx
+	__asm	jle		done_lpd
+lpad:
+	__asm	mov		eax, dword ptr[esi]
+	__asm	sub		ebx, 1
+	__asm	add		eax, dword ptr[esi + ecx ]
+	__asm	test	eax, eax
+	__asm	je		skip_slowd
+
+	__asm	mov		edx, DBL_FIX_F
+	__asm	imul	edx
+	__asm	shrd	eax, edx, JPC_FIX_FRACBITS
+	__asm	add		dword ptr[edi], eax
+
+skip_slowd:
+	__asm	add		esi, ecx
+	__asm	add		edi, ecx
+	__asm	test	ebx, ebx
+	__asm	jg		lpad
+done_lpd:	;
+
+	__asm	mov	eax,	hendind
+	__asm	cmp	eax,	lendind
+	__asm	jl			no_3d
+	__asm	mov			eax, dword ptr[esi]
+	__asm	test		eax, eax
+	__asm	je			no_3d
+	__asm	mov			edx, twoalpha_F
+	__asm	imul		edx
+	__asm	shrd		eax, edx, JPC_FIX_FRACBITS
+	__asm	add			dword ptr[edi],eax
+no_3d:		;
+#endif
+
+
+				jpc_qmfb1d_join(	startptr, 
+									startind, 
+									endind,
+									intrastep, 
+									lstartptr, 
+									lstartind, 
+									lendind,
+									hstartptr, 
+									hstartind, 
+									hendind
+								);
+			} else 
+			{
+#if !defined(USE_LF_ASM)
+				if (lstartind == lendind) {
+					*startptr = jpc_fix_asr(*startptr, 1);
+				}
+#endif
+			}
+			startptr += interstep;
+		}
+	} else {
+		/* The reversible integer-to-integer mode is not supported
+		  for this transform. */
+		jas_error(	JAS_ERR_UNSUPPORTED_MODE_JPC_NS_SYNTHESIZE,
+					"JAS_ERR_UNSUPPORTED_MODE_JPC_NS_SYNTHESIZE"
+				);
+	}
+}
+
+#endif
+
 
 /******************************************************************************\
 *
@@ -1078,7 +1612,7 @@ void jpc_qmfb1d_getbands(jpc_qmfb1d_t *qmfb, int flags, uint_fast32_t xstart,
 		start = xstart;
 		end = xend;
 	}
-	assert(jpc_qmfb1d_getnumchans(qmfb) == 2);
+/*	assert(jpc_qmfb1d_getnumchans(qmfb) == 2);	*/
 	assert(start <= end);
 	bands[0].start = JPC_CEILDIVPOW2(start, 1);
 	bands[0].end = JPC_CEILDIVPOW2(end, 1);

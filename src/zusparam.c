@@ -18,7 +18,7 @@
   
 */
 
-/* $Id: zusparam.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: zusparam.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* User and system parameter operators */
 #include "memory_.h"
 #include "string_.h"
@@ -201,7 +201,7 @@ private const bool_param_def_t system_bool_params[] =
 private void
 current_RealFormat(i_ctx_t *i_ctx_p, gs_param_string * pval)
 {
-#if arch_floats_are_IEEE
+#if ARCH_FLOATS_ARE_IEEE
     static const char *const rfs = "IEEE";
 #else
     static const char *const rfs = "not IEEE";

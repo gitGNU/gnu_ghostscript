@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpsf2.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gdevpsf2.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Write an embedded CFF font with either Type 1 or Type 2 CharStrings */
 #include "math_.h"		/* for fabs */
 #include "memory_.h"
@@ -288,7 +288,9 @@ cff_put_real(cff_writer_t *pcw, floatp f)
 		goto done;
 	    case '.':
 		digit = 0xa; break;
-	    case '-':
+	    case '+':
+                continue;
+            case '-':
 		digit = 0xe; break;
 	    case 'e': case 'E':
 		if (p[1] == '-')
@@ -1726,7 +1728,7 @@ psf_write_cid0_font(stream *s, gs_font_cid0 *pfont, int options,
 			pfont->cidata.FDArray[0], true);
 
     /* Write the charset. */
-    if_debug1('l', "[l]charset = %u\n", stell(writer.strm) - start_pos);
+    if_debug1('l', "[l]charset = %lu\n", stell(writer.strm) - start_pos);
     cff_write_cidset(&writer, &genum);
 
     /* Write the FDSelect structure, checking the offset. */

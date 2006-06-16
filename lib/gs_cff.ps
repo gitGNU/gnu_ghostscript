@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_cff.ps,v 1.4 2005/12/13 17:48:51 jemarch Exp $
+% $Id: gs_cff.ps,v 1.5 2006/06/16 12:55:14 Arabidopsis Exp $
 % Loader for CFF (compressed) fonts, including OpenType CFFs.
 % The following are not implemented yet:
 %	Deleted entries in the Name Index
@@ -269,15 +269,16 @@ def
   } loop
 } bind def
 /tokenbuf 100 string def
-/tokenput {	% <index> <char> tokenput <index+1>
-  tokenbuf 2 index 3 -1 roll put 1 add
+/tokenput {	% <index> <str> tokenput <index+length>
+  dup length 3 1 roll
+  tokenbuf 2 index 3 -1 roll putinterval add
 } bind def
 /tokenrealarray [
- (0123456789.E) { } forall
- [(E) 0 get /tokenput cvx (-) 0 get] cvx
- null		% will give an error
- (-) 0 get
- { exit }
+ (0)(1)(2)(3)(4)(5)(6)(7)(8)(9)(.)(E)
+ (E-)
+ ()		% ignore the invalid value
+ (-)
+ { exit } bind
 ] readonly def
 /tokenreal {	% - tokenreal <float>
   0 {
@@ -309,9 +310,14 @@ def
 % ------ Top dictionary ------ %
 
 /offput {	% <offset> <proc> offput -
-  CFFDEBUG { (queued: ) print 1 index =only ( ) print dup === } if
-  currentdict exch aload length 1 add packedarray cvx
-  offsets 3 1 roll put
+  1 index 0 le
+  CFFDEBUG { dup { (not ) print } if (queued: ) print 2 index =only ( ) print 1 index === } if
+  { pop pop
+  }
+  { currentdict exch aload length 1 add packedarray cvx
+      offsets 3 1 roll put
+  }
+  ifelse
 } bind def
 /queueput {	% <font> <proc> queueput -
   16#7fffffff offsets { pop .min } forall
@@ -395,7 +401,8 @@ def
   68 { { readFDArray } offput }
   69 { { readFDSelect } offput }
 	% This operator only appears in a FDArray element.
-  70 { idstring /FontName pxdef }
+	% We don't really need it, so ignore an error.
+  70 { { idstring } .internalstopped { pop pop } { /FontName pxdef } ifelse }
 .dicttomark readonly def
 
 % readcharset and readFDSelect may require the length of CharStringArray,
@@ -700,21 +707,21 @@ dup							% Format 2
   } forall ] def
 
 	% Read other tables with queued offsets.
-
-  CFFDEBUG { (offsets: ) print [ offsets { pop } forall ] == } if
-  { /f cff def
-    CFFDEBUG { (pos=) print pos = } if
-    offsets pos 2 copy .knownget not { pop pop exit } if
-    3 1 roll undef
-    CFFDEBUG { (exec queued: ) print dup == } if
-    exec
+        % We process these in order so we can advance if needed.
+	% The CFF file may not be positionable.
+  {		% outer loop since offsets may be updated when processing
+    CFFDEBUG { (offsets: ) print [ offsets { pop } forall ] == } if
+    [ offsets { pop } forall ] { lt } .sort	% process in order of appearance
+    { 
+      /f cff def
+      CFFDEBUG { (queued offset: ) print dup =print flush (, current pos=) print pos = } if
+      dup pos ne { dup pos sub nextstring pop } if	% negative advance will cause error
+      offsets exch 2 copy get 3 1 roll undef
+      CFFDEBUG { (exec queued: ) print dup == } if
+      exec
+    } forall
+    offsets length 0 eq { exit } if
   } loop
-  offsets length 0 ne {
-    QUIET not {
-      (Error reading the CFF font ) print resname =string cvs print ( : missing tables at ) print [ offsets { pop } forall ] ==
-      (Current position is ) print pos ==
-    } if
-  } if
 
 	% Process out-of-order tables.
 

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gsropc.c,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gsropc.c,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* RasterOp-compositing implementation */
 #include "gx.h"
 #include "gserrors.h"
@@ -40,7 +40,9 @@ private const gs_composite_type_t gs_composite_rop_type =
 	c_rop_create_default_compositor,
 	c_rop_equal,
 	c_rop_write,
-	c_rop_read
+	c_rop_read,
+	gx_default_composite_clist_write_update,
+	gx_default_composite_clist_read_update
     }
 };
 
@@ -161,8 +163,8 @@ private const gx_device_composite_rop gs_composite_rop_device =
 /* Create a RasterOp compositor. */
 int
 c_rop_create_default_compositor(const gs_composite_t * pcte,
-	   gx_device ** pcdev, gx_device * dev, const gs_imager_state * pis,
-				gs_memory_t * mem)
+	gx_device ** pcdev, gx_device * dev, gs_imager_state * pis,
+	gs_memory_t * mem)
 {
     gs_logical_operation_t log_op = prcte->params.log_op;
     const gx_device_color *texture = prcte->params.texture;

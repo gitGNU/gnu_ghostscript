@@ -64,7 +64,7 @@
 /*
  * Fixed-Point Number Class
  *
- * $Id: jas_fix.h,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jas_fix.h,v 1.2 2006/06/16 12:55:32 Arabidopsis Exp $
  */
 
 #ifndef JAS_FIX_H
@@ -161,6 +161,8 @@ extern "C" {
 #define	JAS_FIX_MUL_FAST(fix_t, fracbits, bigfix_t, x, y) \
 	JAS_CAST(fix_t, (JAS_CAST(bigfix_t, x) * JAS_CAST(bigfix_t, y)) >> \
 	  (fracbits))
+
+
 
 /* Calculate the product of two fixed-point numbers with overflow
   checking. */
@@ -345,11 +347,11 @@ extern "C" {
 
 /* Handle overflow. */
 #define	JAS_FIX_OFLOW() \
-	fprintf(stderr, "overflow error: file %s, line %d\n", __FILE__, __LINE__)
+	jas_eprintf("overflow error: file %s, line %d\n", __FILE__, __LINE__)
 
 /* Handle underflow. */
 #define	JAS_FIX_UFLOW() \
-	fprintf(stderr, "underflow error: file %s, line %d\n", __FILE__, __LINE__)
+	jas_eprintf("underflow error: file %s, line %d\n", __FILE__, __LINE__)
 
 #ifdef __cplusplus
 }

@@ -8,7 +8,7 @@
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
                                                                                 
-    $Id: jbig2_arith.h,v 1.2 2005/12/13 18:01:32 jemarch Exp $
+    $Id: jbig2_arith.h,v 1.3 2006/06/16 12:55:32 Arabidopsis Exp $
 */
 
 typedef struct _Jbig2ArithState Jbig2ArithState;
@@ -18,8 +18,12 @@ typedef struct _Jbig2ArithState Jbig2ArithState;
    MPS in the top bit. */
 typedef unsigned char Jbig2ArithCx;
 
+/* allocate and initialize a new arithmetic coding state */
 Jbig2ArithState *
 jbig2_arith_new (Jbig2Ctx *ctx, Jbig2WordStream *ws);
 
+/* decode a bit */
 bool
 jbig2_arith_decode (Jbig2ArithState *as, Jbig2ArithCx *pcx);
+
+

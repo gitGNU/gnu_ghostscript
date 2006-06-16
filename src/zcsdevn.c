@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zcsdevn.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: zcsdevn.c,v 1.6 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* DeviceN color space support */
 #include "memory_.h"
 #include "ghost.h"
@@ -55,7 +55,7 @@ zsetdevicenspace(i_ctx_t *i_ctx_p)
 
     /* Verify that we have an array as our input parameter */
     check_read_type(*op, t_array);
-    if (r_size(op) != 4)
+    if (r_size(op) < 4 || r_size(op) > 5)
 	return_error(e_rangecheck);
 
     /* pcsa is a pointer to the color names array (element 1 in input array) */
@@ -144,6 +144,42 @@ zsetdevicenspace(i_ctx_t *i_ctx_p)
     return 0;
 }
 
+/* <name> .attachdevicenattributespace - */
+/*
+ * DeviceN and NChannel color spaces can have an attributes dict.  In the
+ * attribute dict can be a Colorants dict which contains Separation color
+ * spaces.  If the Colorant dict is present, the PS logic will build each of
+ * the Separation color spaces in a temp gstate and then call this procedure
+ * to attach the Separation color space to the DeviceN color space.
+ * The parameter to this procedure is a colorant name.  The Separation
+ * color space is in the current (temp) gstate.  The DeviceN color space is
+ * in the next gstate down in the gstate list (pgs->saved).
+ */
+private int
+zattachdevicenattributespace(i_ctx_t *i_ctx_p)
+{
+    os_ptr op = osp;
+    gs_separation_name sep_name;
+    int code;
+
+    /* Pick up the names of the component */
+    switch (r_type(op)) {
+	case t_string:
+	    code = name_from_string(imemory, op, op);
+	    if (code < 0) 
+		return code;
+	    /* falls through */
+	case t_name:
+	    sep_name = name_index(imemory, op);
+	    break;
+	default:
+	    return_error(e_typecheck);
+    }
+    code = gs_attachattributecolorspace(sep_name, igs);
+    pop(1);
+    return code;
+}
+
 
 /* ------ Initialization procedure ------ */
 
@@ -151,5 +187,6 @@ const op_def zcsdevn_op_defs[] =
 {
     op_def_begin_ll3(),
     {"1.setdevicenspace", zsetdevicenspace},
+    {"1.attachdevicenattributespace", zattachdevicenattributespace},
     op_def_end(0)
 };

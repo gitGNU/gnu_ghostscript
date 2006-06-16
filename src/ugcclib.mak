@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: ugcclib.mak,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $
+# $Id: ugcclib.mak,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $
 # makefile for Unix / gcc library testing.
 
 BINDIR=./libobj
@@ -55,7 +55,7 @@ SHARE_JPEG=0
 JPEG_NAME=jpeg
 
 PSRCDIR=libpng
-PVERSION=10208
+PVERSION=10210
 SHARE_LIBPNG=1
 LIBPNG_NAME=png
 
@@ -64,6 +64,7 @@ SHARE_ZLIB=1
 ZLIB_NAME=z
 
 SHARE_JBIG2=0
+JBIG2_LIB=jbig2dec
 JBIG2SRCDIR=jbig2dec
 
 # Define the directory where the icclib source are stored.
@@ -110,6 +111,11 @@ SYNC=posync
 FEATURE_DEVS=$(GLD)dps2lib.dev $(GLD)psl2cs.dev $(GLD)cielib.dev\
  $(GLD)psl3lib.dev $(GLD)path1lib.dev $(GLD)patlib.dev $(GLD)htxlib.dev \
  $(GLD)roplib.dev $(GLD)devcmap.dev
+
+# The list of resources to be included in the %rom% file system.
+# This is in the top makefile since the file descriptors are platform specific
+RESOURCE_LIST=Resource/CMap/ Resource/ColorSpace/ Resource/Decoding/ Resource/Fonts/ Resource/Procset/ Resource/IdiomSet/ Resource/CIDFont/
+
 COMPILE_INITS=0
 BAND_LIST_STORAGE=file
 BAND_LIST_COMPRESSOR=zlib

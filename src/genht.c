@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: genht.c,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: genht.c,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Generate C code for compiling halftones into ROM. */
 #include "malloc_.h"
 #include "stdio_.h"
@@ -107,7 +107,7 @@ top:
     *pstr = str + 1;
     return true;
 }
-int
+private int
 parse_halftone(gx_device_halftone_resource_t *phtr, byte **pThresholds,
 	       char **pprefix, char **pcont)
 {
@@ -235,7 +235,7 @@ parse_halftone(gx_device_halftone_resource_t *phtr, byte **pThresholds,
 }
 
 /* Write a halftone as a C procedure. */
-int
+private int
 write_halftone(FILE *out, gx_device_halftone_resource_t *phtr,
 	       const char *prefix, int index)
 {
@@ -271,9 +271,12 @@ write_halftone(FILE *out, gx_device_halftone_resource_t *phtr,
 	    index, phtr->rname, phtr->HalftoneType, phtr->Width, phtr->Height,
 	    phtr->num_levels, index, index,
 	    ht_order_procs_short.bit_data_elt_size);
+
+    return 0;
 }
 
 /* Main program */
+int
 main(int argc, char *argv[])
 {
     char *iname;

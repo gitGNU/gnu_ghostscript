@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxshade.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gxshade.h,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Internal definitions for shading rendering */
 
 #ifndef gxshade_INCLUDED
@@ -203,11 +203,6 @@ typedef struct shading_fill_state_s {
 void shade_init_fill_state(shading_fill_state_t * pfs,
 			   const gs_shading_t * psh, gx_device * dev,
 			   gs_imager_state * pis);
-
-/* Transform a bounding box into device space. */
-int shade_bbox_transform2fixed(const gs_rect * rect,
-			       const gs_imager_state * pis,
-			       gs_fixed_rect * rfixed);
 
 /* Fill one piece of a shading. */
 #ifndef gx_device_color_DEFINED

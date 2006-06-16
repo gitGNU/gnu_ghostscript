@@ -1,4 +1,5 @@
-#Copyright (C) 2004 artofcode LLC.  All rights reserved.
+#  Copyright (C) 2004-2006 artofcode LLC.
+#  All Rights Reserved.
 # 
 # This file is part of GNU ghostscript
 #
@@ -16,19 +17,20 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
-# $Id: jasper.mak,v 1.1 2006/03/08 12:30:23 Arabidopsis Exp $
+# $Id: jasper.mak,v 1.2 2006/06/16 12:55:03 Arabidopsis Exp $
 
 # makefile for jasper JPEG 2000 support library
 # Users of this makefile must define the following:
-#	SHARE_JASPER - whether to compile in or link to the library
-#	JASPERSRCDIR - the top-level library source directory
+#	SHARE_JPX - whether to compile in or link to the library
+#	JPXSRCDIR - the top-level library source directory
 #
 # gs.mak and friends define the following:
-#	JASPEROBJDIR - the output obj directory
-#	JASPERGENDIR - generated (.dev) file directory
-#	JASI_ and JASCF_ - include dir and cflags
-# and the usual gs portability stuff.
-
+#	JPXOBJDIR - the output obj directory
+#	JPXGENDIR - generated (.dev) file directory
+#	JPXI_ and JPXCF_ - include and cflags for building the library
+#
+# We define the jasper.dev target and its dependencies
+#
 # This partial makefile compiles a portion of the jasper library for use in
 # Ghostscript. You're better off just linking to the library's native build
 # but this supports the library on all our platforms.
@@ -36,9 +38,9 @@
 # Define the name of this makefile
 JASPER_MAK=$(GLSRC)jasper.mak
 
-JASSRC=$(JASPERSRCDIR)$(D)src$(D)libjasper$(D)
-JASGEN=$(JASPERGENDIR)$(D)
-JASOBJ=$(JASPEROBJDIR)$(D)
+JASSRC=$(JPXSRCDIR)$(D)src$(D)libjasper$(D)
+JASGEN=$(JPXGENDIR)$(D)
+JASOBJ=$(JPXOBJDIR)$(D)
 
 # our required files from jasper 1.701.x
 
@@ -88,7 +90,7 @@ libjasper_OBJS=$(libjasper_OBJS_base) $(libjasper_OBJS_jpc) $(libjasper_OBJS_jp2
 libjasper_HDRS_base=\
 	$(JASSRC)include$(D)jasper$(D)jasper.h \
 	$(JASSRC)include$(D)jasper$(D)jas_config.h \
-	$(JASSRC)include$(D)jasper$(D)jas_config2.h \
+	$(JASSRC)include$(D)jasper$(D)jas_config_win32.h \
 	$(JASSRC)include$(D)jasper$(D)jas_cm.h \
 	$(JASSRC)include$(D)jasper$(D)jas_fix.h \
 	$(JASSRC)include$(D)jasper$(D)jas_debug.h \
@@ -133,7 +135,7 @@ libjasper_HDRS_jp2=\
 	$(JASSRC)jp2$(D)jp2_cod.h \
 	$(JASSRC)jp2$(D)jp2_dec.h
 
-libjasjper_HDRS=$(libjasper_HDRS_base) $(libjasper_HDRS_jpc) $(libjasper_HDRS_jp2)
+libjasper_HDRS=$(libjasper_HDRS_base) $(libjasper_HDRS_jpc) $(libjasper_HDRS_jp2)
 
 jasper.clean : jasper.config-clean jasper.clean-not-config-clean
 
@@ -143,8 +145,8 @@ jasper.clean-not-config-clean :
 	$(RM_) $(JASOBJ)*.$(OBJ)
 
 jasper.config-clean :
-	$(RMN_) $(JASGEN)$(D)libjasper*.dev
-	
+	$(RMN_) $(JASGEN)$(D)jasper*.dev
+
 JASDEP=$(AK) $(JASPER_MAK)
 
 # hack: jasper uses EXCLUDE_fmt_SUPPORT defines to turn off unwanted
@@ -161,24 +163,25 @@ JAS_EXCF_=\
 	$(D_)EXCLUDE_PGX_SUPPORT$(_D_)1$(_D)\
         $(D_)EXCLUDE_PNM_SUPPORT$(_D_)1$(_D)\
         $(D_)EXCLUDE_RAS_SUPPORT$(_D_)1$(_D)\
-        $(D_)EXCLUDE_PNG_SUPPORT$(_D_)1$(_D)\
+        $(D_)EXCLUDE_PNG_SUPPORT$(_D_)1$(_D)
 
-JAS_CC=$(CC_) $(CFLAGS) $(I_)$(JASGEN) $(II)$(JASI_)$(_I) $(JASCF_) $(JAS_EXCF_)
+# define our specific compiler
+JAS_CC=$(CC_) $(CFLAGS) $(I_)$(JASGEN) $(II)$(JPXI_)$(_I) $(JPXCF_) $(JAS_EXCF_)
 JASO_=$(O_)$(JASOBJ)
 
 # switch in the selected .dev
-$(JASGEN)libjasper.dev : $(TOP_MAKEFILES) $(JASGEN)libjasper_$(SHARE_JASPER).dev
-	$(CP_) $(JASGEN)libjasper_$(SHARE_JASPER).dev $(JASGEN)libjasper.dev
+$(JASGEN)jasper.dev : $(TOP_MAKEFILES) $(JASGEN)jasper_$(SHARE_JPX).dev
+	$(CP_) $(JASGEN)jasper_$(SHARE_JPX).dev $(JASGEN)jasper.dev
 
 # external link .dev
-$(GLOBJ)libjasper_1.dev : $(TOP_MAKEFILES) $(JASPER_MAK) $(ECHOGS_XE)
-	$(SETMOD) $(GLOBJ)libjasper_1 -lib jasper
+$(GLOBJ)jasper_1.dev : $(TOP_MAKEFILES) $(JASPER_MAK) $(ECHOGS_XE)
+	$(SETMOD) $(GLOBJ)jasper_1 -lib jasper
 
 # compile in .dev
-$(GLOBJ)libjasper_0.dev : $(TOP_MAKEFILES) $(JASPER_MAK) $(ECHOGS_XE) $(libjasper_OBJS)
-	$(SETMOD) $(JASGEN)libjasper_0 $(libjasper_OBJS_base)
-	$(ADDMOD) $(JASGEN)libjasper_0 $(libjasper_OBJS_jpc)
-	$(ADDMOD) $(JASGEN)libjasper_0 $(libjasper_OBJS_jp2)
+$(GLOBJ)jasper_0.dev : $(TOP_MAKEFILES) $(JASPER_MAK) $(ECHOGS_XE) $(libjasper_OBJS)
+	$(SETMOD) $(JASGEN)jasper_0 $(libjasper_OBJS_base)
+	$(ADDMOD) $(JASGEN)jasper_0 $(libjasper_OBJS_jpc)
+	$(ADDMOD) $(JASGEN)jasper_0 $(libjasper_OBJS_jp2)
 
 # explicit rules for building the source files
 # for simplicity we have every source file depend on all headers

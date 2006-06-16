@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxfont.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gxfont.h,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Font object structure */
 /* Requires gsmatrix.h, gxdevice.h */
 
@@ -491,5 +491,10 @@ bool gs_font_glyph_is_notdef(gs_font_base *bfont, gs_glyph glyph);
 
 /* Get font parent (a Type 9 font). */
 const gs_font_base *gs_font_parent(const gs_font_base *pbfont);
+
+#ifdef DEBUG
+/* Reserve a text enumerator instance id. */
+ulong gs_next_text_enum_id(const gs_font *font);
+#endif
 
 #endif /* gxfont_INCLUDED */

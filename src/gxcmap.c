@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxcmap.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gxcmap.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Color mapping for Ghostscript */
 #include "gx.h"
 #include "gserrors.h"
@@ -767,7 +767,7 @@ cmap_gray_halftoned(frac gray, gx_device_color * pdc,
 	    		(frac)(frac_1 - cm_comps[i]), effective_transfer[i]);
 
     if (gx_render_device_DeviceN(cm_comps, pdc, dev, pis->dev_ht,
-    				&pis->screen_phase[select], true) == 1)
+	    				&pis->screen_phase[select]) == 1)
 	gx_color_load_select(pdc, pis, dev, select);
 }
 
@@ -812,7 +812,6 @@ cmap_rgb_halftoned(frac r, frac g, frac b, gx_device_color * pdc,
 {
     int i, ncomps = dev->color_info.num_components;
     frac cm_comps[GX_DEVICE_COLOR_MAX_COMPONENTS];
-    bool gray_color = false;
 
     /* map to the color model */
     dev_proc(dev, get_color_mapping_procs)(dev)->map_rgb(dev, pis, r, g, b, cm_comps);
@@ -827,10 +826,8 @@ cmap_rgb_halftoned(frac r, frac g, frac b, gx_device_color * pdc,
             cm_comps[i] = frac_1 - gx_map_color_frac(pis,
 	    		(frac)(frac_1 - cm_comps[i]), effective_transfer[i]);
 
-    if (ncomps == 3 && cm_comps[0] == cm_comps[1] && cm_comps[1] == cm_comps[2])
-	gray_color = true;
     if (gx_render_device_DeviceN(cm_comps, pdc, dev, pis->dev_ht,
-    				&pis->screen_phase[select], gray_color) == 1)
+	    				&pis->screen_phase[select]) == 1)
 	gx_color_load_select(pdc, pis, dev, select);
 }
 
@@ -895,7 +892,7 @@ cmap_cmyk_direct(frac c, frac m, frac y, frac k, gx_device_color * pdc,
     /* duplicating most of the code of this procedure. */
     if (gx_device_must_halftone(dev)) {
 	if (gx_render_device_DeviceN(cm_comps, pdc, dev,
-		    pis->dev_ht, &pis->screen_phase[select], false) == 1)
+		    pis->dev_ht, &pis->screen_phase[select]) == 1)
 	    gx_color_load_select(pdc, pis, dev, select);
 	return;
     }
@@ -908,7 +905,7 @@ cmap_cmyk_direct(frac c, frac m, frac y, frac k, gx_device_color * pdc,
 	color_set_pure(pdc, color);
     else {
 	if (gx_render_device_DeviceN(cm_comps, pdc, dev,
-		    pis->dev_ht, &pis->screen_phase[select], false) == 1)
+		    pis->dev_ht, &pis->screen_phase[select]) == 1)
 	    gx_color_load_select(pdc, pis, dev, select);
 	return;
     }
@@ -948,7 +945,7 @@ cmap_rgb_alpha_halftoned(frac r, frac g, frac b, frac alpha,
 	    		(frac)(frac_1 - cm_comps[i]), effective_transfer[i]);
 
     if (gx_render_device_DeviceN(cm_comps, pdc, dev, pis->dev_ht,
-    				&pis->screen_phase[select], false) == 1)
+	    				&pis->screen_phase[select]) == 1)
 	gx_color_load_select(pdc, pis, dev, select);
 }
 
@@ -1074,7 +1071,7 @@ cmap_separation_halftoned(frac all, gx_device_color * pdc,
 	    		(frac)(frac_1 - cm_comps[i]), effective_transfer[i]);
 
     if (gx_render_device_DeviceN(cm_comps, pdc, dev, pis->dev_ht,
-    				&pis->screen_phase[select], false) == 1)
+    					&pis->screen_phase[select]) == 1)
 	gx_color_load_select(pdc, pis, dev, select);
 }
 
@@ -1158,7 +1155,7 @@ cmap_devicen_halftoned(const frac * pcc,
     /* We need to finish halftoning */
 
     if (gx_render_device_DeviceN(cm_comps, pdc, dev, pis->dev_ht,
-    				&pis->screen_phase[select], false) == 1)
+    					&pis->screen_phase[select]) == 1)
 	gx_color_load_select(pdc, pis, dev, select);
 }
 
@@ -1259,7 +1256,7 @@ gx_color_frac_map(frac cv, const frac * values)
     if (rem == 0)
 	return mv;
     mdv = values[cmi + 1] - mv;
-#if arch_ints_are_short
+#if ARCH_INTS_ARE_SHORT
     /* Only use long multiplication if necessary. */
     if (mdv < -1 << (16 - cp_frac_bits) ||
 	mdv > 1 << (16 - cp_frac_bits)
@@ -1345,6 +1342,22 @@ gx_default_gray_map_color_rgb(gx_device * dev, gx_color_index color,
     return 0;
 }
 
+gx_color_index
+gx_default_8bit_map_gray_color(gx_device * dev, const gx_color_value cv[])
+{
+    gx_color_index color = gx_color_value_to_byte(cv[0]);
+
+    return (color == gx_no_color_index ? color ^ 1 : color);
+}
+
+int
+gx_default_8bit_map_color_gray(gx_device * dev, gx_color_index color,
+			      gx_color_value pgray[1])
+{
+    pgray[0] = (gx_color_value)(color * gx_max_color_value / 255);
+    return 0;
+}
+
 /* RGB mapping for 24-bit true (RGB) color devices */
 
 gx_color_index
@@ -1357,8 +1370,9 @@ gx_default_rgb_map_rgb_color(gx_device * dev, const gx_color_value cv[])
     else {
 	int bpc = dev->color_info.depth / 3;
 	int drop = sizeof(gx_color_value) * 8 - bpc;
-
-	return ((((cv[0] >> drop) << bpc) + (cv[1] >> drop)) << bpc) + (cv[2] >> drop);
+	return ( ( (((gx_color_index)cv[0] >> drop) << bpc) +
+		    ((gx_color_index)cv[1] >> drop)         ) << bpc) + 
+	       ((gx_color_index)cv[2] >> drop);
     }
 }
 

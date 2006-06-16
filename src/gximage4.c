@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gximage4.c,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gximage4.c,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* ImageType 4 image implementation */
 #include "memory_.h"
 #include "gx.h"
@@ -93,8 +93,10 @@ gx_begin_image4(gx_device * dev,
 	    else
 		c0 = c1 = pim->MaskColor[i >> 1];
 
-	    if ((c0 | c1) > max_value)
+	    if ((c0 | c1) > max_value) {
+		gs_free_object(mem, penum, "gx_begin_image4");
 		return_error(gs_error_rangecheck);
+	    }
 	    if (c0 > c1) {
 		opaque = true;	/* pixel can never match mask color */
 		break;

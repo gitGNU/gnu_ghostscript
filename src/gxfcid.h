@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxfcid.h,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxfcid.h,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Definitions for CID-keyed fonts */
 
 #ifndef gxfcid_INCLUDED
@@ -171,4 +171,8 @@ bool gs_is_CIDSystemInfo_compatible(const gs_cid_system_info_t *info0,
 
 /* Return the font from the FDArray at the given index */
 const gs_font *gs_cid0_indexed_font(const gs_font *, int);
+
+/* Check whether a CID font has a Type 2 subfont. */
+bool gs_cid0_has_type2(const gs_font *font);
+
 #endif /* gxfcid_INCLUDED */

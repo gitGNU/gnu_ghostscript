@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpsfm.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gdevpsfm.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Write a CMap */
 #include "gx.h"
 #include "gserrors.h"
@@ -237,11 +237,11 @@ psf_write_cmap(const gs_memory_t *mem,
     /* Write the fixed entries. */
 
     pprintd1(s, "/CMapType %d def\n", pcmap->CMapType);
+    stream_puts(s, "/CMapName/");
+    put_name_chars(s, cmap_name->data, cmap_name->size);
+    stream_puts(s, " def\n");
     if (!pcmap->ToUnicode) {
 	pprintg1(s, "/CMapVersion %g def\n", pcmap->CMapVersion);
-	stream_puts(s, "/CMapName/");
-	put_name_chars(s, cmap_name->data, cmap_name->size);
-	stream_puts(s, " def\n");
 	stream_puts(s, "/CIDSystemInfo");
 	if (font_index_only >= 0 && font_index_only < pcmap->num_fonts) {
 	    cmap_put_system_info(s, pcidsi + font_index_only);

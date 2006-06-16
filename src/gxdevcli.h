@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gxdevcli.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gxdevcli.h,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Definitions for device clients */
 
 #ifndef gxdevcli_INCLUDED
@@ -39,6 +39,7 @@
 #include "gxfixed.h"
 #include "gxtext.h"
 #include "gxcmap.h"
+#include "gsnamecl.h"
 
 /* See Drivers.htm for documentation of the driver interface. */
 
@@ -322,7 +323,7 @@ typedef struct gx_device_color_info_s {
 
     /*
      * The number of bits of gx_color_index actually used. 
-     * This must be <= sizeof(gx_color_index), which is usually 64.
+     * This must be <= arch_sizeof_color_index, which is usually 64.
      */
     byte depth;
 
@@ -374,11 +375,11 @@ typedef struct gx_device_color_info_s {
      * with configurable color models which may be set for a single
      * non-'gray' color model.
      */
-    gx_color_value max_gray;	/* # of distinct color levels -1 */
-    gx_color_value max_color;
+    uint max_gray;		/* # of distinct color levels -1 */
+    uint max_color;
 
-    gx_color_value dither_grays;
-    gx_color_value dither_colors;
+    uint dither_grays;
+    uint dither_colors;
 
     /*
      * Information to control super-sampling of objects to support
@@ -571,16 +572,12 @@ typedef struct gx_device_color_info_s {
 #define dci_std_color_max_gray(nc, color_bits)            \
     ( (nc) == 3                                           \
         ? 0                                               \
-        : ( dci_std_gray_bits(nc, color_bits) >= 8        \
-            ? 255                                         \
-            : (1 << dci_std_gray_bits(nc, color_bits)) - 1 ) )
+        : (1 << dci_std_gray_bits(nc, color_bits)) - 1 ) 
 
 #define dci_std_color_max_color(nc, color_bits)               \
     ( (nc) == 1                                               \
         ? 0                                                   \
-        : ( dci_std_color_bits(nc, color_bits) >= 8           \
-            ? 255                                             \
-            : (1 << dci_std_color_bits(nc, color_bits)) - 1 ) )
+        : (1 << dci_std_color_bits(nc, color_bits)) - 1 )
 
 
 /*
@@ -639,6 +636,15 @@ typedef struct gx_page_device_procs_s {
 dev_page_proc_install(gx_default_install);
 dev_page_proc_begin_page(gx_default_begin_page);
 dev_page_proc_end_page(gx_default_end_page);
+
+#if ENABLE_NAMED_COLOR_CALLBACK
+/* Ptr to named color callback struct */
+#define NAMED_COLOR_PTR void * named_color_callback;
+#define INIT_NAMED_COLOR_PTR   NULL,		/* Initial value */
+#else
+#define NAMED_COLOR_PTR
+#define INIT_NAMED_COLOR_PTR
+#endif
 
 /* ---------------- Device structure ---------------- */
 
@@ -712,6 +718,7 @@ typedef struct gx_device_cached_colors_s {
 	bool IgnoreNumCopies;		/* if true, force num_copies = 1 */\
 	bool UseCIEColor;		/* for PS LL3 */\
 	bool LockSafetyParams;		/* If true, prevent unsafe changes */\
+	NAMED_COLOR_PTR			/* Pointer to named color callback struct */\
 	gx_page_device_procs page_procs;	/* must be last */\
 		/* end of std_device_body */\
 	gx_device_procs procs	/* object procedures */
@@ -1082,7 +1089,7 @@ typedef struct gs_param_list_s gs_param_list;
 #define dev_t_proc_create_compositor(proc, dev_t)\
   int proc(dev_t *dev,\
     gx_device **pcdev, const gs_composite_t *pcte,\
-    const gs_imager_state *pis, gs_memory_t *memory)
+    gs_imager_state *pis, gs_memory_t *memory)
 #define dev_proc_create_compositor(proc)\
   dev_t_proc_create_compositor(proc, gx_device)\
 
@@ -1150,7 +1157,7 @@ typedef struct gs_param_list_s gs_param_list;
 */
 #define dev_t_proc_begin_transparency_mask(proc, dev_t)\
   int proc(gx_device *dev,\
-    const gs_transparency_mask_params_t *ptmp,\
+    const gx_transparency_mask_params_t *ptmp,\
     const gs_rect *pbbox,\
     gs_imager_state *pis,\
     gs_transparency_state_t **ppts,\
@@ -1212,7 +1219,8 @@ typedef enum {
     pattern_manage__can_accum,
     pattern_manage__start_accum,
     pattern_manage__finish_accum,
-    pattern_manage__load
+    pattern_manage__load,
+    pattern_manage__shading_area
 } pattern_manage_t;
 
 #define dev_t_proc_pattern_manage(proc, dev_t)\
@@ -1549,6 +1557,8 @@ void gx_device_init(gx_device * dev, const gx_device * proto,
 /* or the allocator that was used to allocate it if it is a real object. */
 void gs_make_null_device(gx_device_null *dev_null, gx_device *target,
 			 gs_memory_t *mem);
+/* Is a null device ? */
+bool gs_is_null_device(gx_device *dev);
 
 /* Set the target of a (forwarding) device. */
 void gx_device_set_target(gx_device_forward *fdev, gx_device *target);

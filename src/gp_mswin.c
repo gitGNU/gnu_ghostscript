@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gp_mswin.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gp_mswin.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /*
  * Microsoft Windows platform support for Ghostscript.
  *
@@ -151,7 +151,7 @@ gp_close_printer(FILE * pfile, const char *fname)
 
 
 /* Dialog box to select printer port */
-BOOL CALLBACK
+DLGRETURN CALLBACK
 SpoolDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     LPSTR entry;

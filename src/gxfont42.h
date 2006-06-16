@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxfont42.h,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gxfont42.h,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Type 42 font data definition */
 
 #ifndef gxfont42_INCLUDED
@@ -68,6 +68,7 @@ struct gs_type42_data_s {
     uint indexToLocFormat;	/* from head */
     gs_type42_mtx_t metrics[2];	/* hhea/hmtx, vhea/vmtx (indexed by WMode) */
     ulong loca;			/* offset to loca table */
+    ulong name_offset;		/* offset to name table */		
     /*
      * TrueType fonts specify the number of glyphs in two different ways:
      * the size of the loca table, and an explicit value in maxp.  Currently
@@ -82,6 +83,7 @@ struct gs_type42_data_s {
      */
     uint numGlyphs;		/* from size of loca */
     uint trueNumGlyphs;		/* from maxp */
+    uint *len_glyphs;		/* built from the loca table */
     gs_glyph_cache *gdcache;
     bool warning_patented;
     bool warning_bad_instruction;
@@ -95,9 +97,10 @@ struct gs_font_type42_s {
 
 extern_st(st_gs_font_type42);
 #define public_st_gs_font_type42()	/* in gstype42.c */\
-  gs_public_st_suffix_add2_final(st_gs_font_type42, gs_font_type42,\
+  gs_public_st_suffix_add3_final(st_gs_font_type42, gs_font_type42,\
     "gs_font_type42", font_type42_enum_ptrs, font_type42_reloc_ptrs,\
-    gs_font_finalize, st_gs_font_base, data.proc_data, data.gdcache)
+    gs_font_finalize, st_gs_font_base, data.proc_data, data.len_glyphs, \
+    data.gdcache)
 
 /*
  * Because a Type 42 font contains so many cached values,
@@ -132,5 +135,10 @@ font_proc_glyph_outline(gs_type42_glyph_outline);
 /* Get glyph info by glyph index. */
 int gs_type42_glyph_info_by_gid(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
 		     int members, gs_glyph_info_t *info, uint glyph_index);
+
+int gs_type42_font_info(gs_font *font, const gs_point *pscale, int members,
+	   gs_font_info_t *info);
+int gs_truetype_font_info(gs_font *font, const gs_point *pscale, int members,
+	   gs_font_info_t *info);
 
 #endif /* gxfont42_INCLUDED */

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: iscan.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: iscan.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Token scanner for Ghostscript interpreter */
 #include "ghost.h"
 #include "memory_.h"
@@ -596,7 +596,7 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
 	    sstate.s_ss.pssd.from_string =
 		((pstate->s_options & SCAN_FROM_STRING) != 0) &&
 		!scan_enable_level2;
-	    s_PSSD_init_inline(&sstate.s_ss.pssd);
+	    s_PSSD_partially_init_inline(&sstate.s_ss.pssd);
 	    sstate.s_ss.st.template = &s_PSSD_template;
 	    goto str;
 	case '{':

@@ -62,7 +62,7 @@
 /*
  * Image Comparison Program
  *
- * $Id: imgcmp.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: imgcmp.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -76,6 +76,7 @@
 #include <assert.h>
 
 #include <jasper/jasper.h>
+
 
 /******************************************************************************\
 *
@@ -248,25 +249,25 @@ int main(int argc, char **argv)
 
 	/* Open the original image file. */
 	if (!(origstream = jas_stream_fopen(origpath, "rb"))) {
-		fprintf(stderr, "cannot open %s\n", origpath);
+		jas_eprintf("cannot open %s\n", origpath);
 		return EXIT_FAILURE;
 	}
 
 	/* Open the reconstructed image file. */
 	if (!(reconstream = jas_stream_fopen(reconpath, "rb"))) {
-		fprintf(stderr, "cannot open %s\n", reconpath);
+		jas_eprintf("cannot open %s\n", reconpath);
 		return EXIT_FAILURE;
 	}
 
 	/* Decode the original image. */
 	if (!(origimage = jas_image_decode(origstream, -1, 0))) {
-		fprintf(stderr, "cannot load original image\n");
+		jas_eprintf("cannot load original image\n");
 		return EXIT_FAILURE;
 	}
 
 	/* Decoder the reconstructed image. */
 	if (!(reconimage = jas_image_decode(reconstream, -1, 0))) {
-		fprintf(stderr, "cannot load reconstructed image\n");
+		jas_eprintf("cannot load reconstructed image\n");
 		return EXIT_FAILURE;
 	}
 
@@ -279,7 +280,7 @@ int main(int argc, char **argv)
 	/* Ensure that both images have the same number of components. */
 	numcomps = jas_image_numcmpts(origimage);
 	if (jas_image_numcmpts(reconimage) != numcomps) {
-		fprintf(stderr, "number of components differ\n");
+		jas_eprintf("number of components differ\n");
 		return EXIT_FAILURE;
 	}
 
@@ -292,45 +293,45 @@ int main(int argc, char **argv)
 		depth = jas_image_cmptprec(origimage, compno);
 		if (jas_image_cmptwidth(reconimage, compno) != width ||
 		 jas_image_cmptheight(reconimage, compno) != height) {
-			fprintf(stderr, "image dimensions differ\n");
+			jas_eprintf("image dimensions differ\n");
 			return EXIT_FAILURE;
 		}
 		if (jas_image_cmptprec(reconimage, compno) != depth) {
-			fprintf(stderr, "precisions differ\n");
+			jas_eprintf("precisions differ\n");
 			return EXIT_FAILURE;
 		}
 
 		if (!(origdata = jas_matrix_create(height, width))) {
-			fprintf(stderr, "internal error\n");
+			jas_eprintf("internal error\n");
 			return EXIT_FAILURE;
 		}
 		if (!(recondata = jas_matrix_create(height, width))) {
-			fprintf(stderr, "internal error\n");
+			jas_eprintf("internal error\n");
 			return EXIT_FAILURE;
 		}
 		if (jas_image_readcmpt(origimage, compno, 0, 0, width, height,
 		  origdata)) {
-			fprintf(stderr, "cannot read component data\n");
+			jas_eprintf("cannot read component data\n");
 			return EXIT_FAILURE;
 		}
 		if (jas_image_readcmpt(reconimage, compno, 0, 0, width, height,
 		  recondata)) {
-			fprintf(stderr, "cannot read component data\n");
+			jas_eprintf("cannot read component data\n");
 			return EXIT_FAILURE;
 		}
 
 		if (diffpath) {
 			if (!(diffstream = jas_stream_fopen(diffpath, "rwb"))) {
-				fprintf(stderr, "cannot open diff stream\n");
+				jas_eprintf("cannot open diff stream\n");
 				return EXIT_FAILURE;
 			}
 			if (!(diffimage = makediffimage(origdata, recondata))) {
-				fprintf(stderr, "cannot make diff image\n");
+				jas_eprintf("cannot make diff image\n");
 				return EXIT_FAILURE;
 			}
 			fmtid = jas_image_strtofmt("pnm");
 			if (jas_image_encode(diffimage, diffstream, fmtid, 0)) {
-				fprintf(stderr, "cannot save\n");
+				jas_eprintf("cannot save\n");
 				return EXIT_FAILURE;
 			}
 			jas_stream_close(diffstream);
@@ -367,9 +368,9 @@ int main(int argc, char **argv)
 		}
 		
 		if (metric == metricid_pae || metric == metricid_equal) {
-			printf("%ld\n", (long) ceil(d));
+			jas_eprintf("%ld\n", (long) ceil(d));
 		} else {
-			printf("%f\n", d);
+			jas_eprintf("%f\n", d);
 		}
 	}
 
@@ -499,7 +500,7 @@ jas_image_t *makediffimage(jas_matrix_t *origdata, jas_matrix_t *recondata)
 		compparms[i].width = width;
 		compparms[i].height = height;
 		compparms[i].prec = 8;
-		compparms[i].sgnd = false;
+		compparms[i].sgnd = jas_false;
 	}
 	if (!(diffimage = jas_image_create(3, compparms, JAS_CLRSPC_SRGB))) {
 		abort();
@@ -507,7 +508,7 @@ jas_image_t *makediffimage(jas_matrix_t *origdata, jas_matrix_t *recondata)
 
 	for (i = 0; i < 3; ++i) {
 		if (!(diffdata[i] = jas_matrix_create(height, width))) {
-			fprintf(stderr, "internal error\n");
+			jas_eprintf("internal error\n");
 			return 0;
 		}
 	}
@@ -547,9 +548,9 @@ jas_image_t *makediffimage(jas_matrix_t *origdata, jas_matrix_t *recondata)
 
 void cmdinfo()
 {
-	fprintf(stderr, "Image Comparison Utility (Version %s).\n",
+	jas_eprintf("Image Comparison Utility (Version %s).\n",
 	  JAS_VERSION);
-	fprintf(stderr,
+	jas_eprintf(
 	  "Copyright (c) 2001 Michael David Adams.\n"
 	  "All rights reserved.\n"
 	  );
@@ -558,12 +559,12 @@ void cmdinfo()
 void usage()
 {
 	cmdinfo();
-	fprintf(stderr, "usage:\n");
-	fprintf(stderr,"%s ", cmdname);
-	fprintf(stderr,
+	jas_eprintf("usage:\n");
+	jas_eprintf("%s ", cmdname);
+	jas_eprintf(
 	  "-f reference_image_file -F other_image_file [-m metric]\n"
 	  );
-	fprintf(stderr,
+	jas_eprintf(
 	  "The metric argument may assume one of the following values:\n"
 	  "    psnr .... peak signal to noise ratio\n"
 	  "    mse ..... mean squared error\n"

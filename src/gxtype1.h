@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxtype1.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gxtype1.h,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Private Adobe Type 1 / Type 2 charstring interpreter definitions */
 
 #ifndef gxtype1_INCLUDED
@@ -118,6 +118,7 @@ struct gs_type1_state_s {
 				/* 0 if not done & needed, 1 if done */
     bool sb_set;		/* true if lsb is preset */
     bool width_set;		/* true if width is set (for seac parts) */
+    bool seac_flag;		/* true if executing the accent */
     /* (Type 2 charstrings only) */
     int num_hints;		/* number of hints (Type 2 only) */
     gs_fixed_point lsb;		/* left side bearing (char coords) */

@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,15 +15,13 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: siscale.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: siscale.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Image scaling filters */
 #include "math_.h"
 #include "memory_.h"
 #include "stdio_.h"
-#include <assert.h>
 #include "gconfigv.h"
 #include "gdebug.h"
 #include "strimpl.h"
@@ -42,7 +41,7 @@
 
 typedef int PixelWeight;
 
-#  if arch_ints_are_short
+#  if ARCH_INTS_ARE_SHORT
 typedef long AccumTmp;
 #  else
 typedef int AccumTmp;
@@ -346,7 +345,7 @@ zoom_x(PixelTmp * tmp, const void /*PixelIn */ *src, int sizeofPixelIn,
 	if (sizeofPixelIn == 1) {
 	    zoom_x_loop(byte, int)
 	} else {		/* sizeofPixelIn == 2 */
-#if arch_ints_are_short
+#if ARCH_INTS_ARE_SHORT
 	    zoom_x_loop(bits16, long)
 #else
 	    zoom_x_loop(bits16, int)
@@ -573,9 +572,8 @@ s_IScale_process(stream_state * st, stream_cursor_read * pr,
 
 	if (rleft == 0)
 	    return 0;		/* need more input */
-#ifdef DEBUG
-	assert(ss->src_y < ss->params.HeightIn);
-#endif
+	if (ss->src_y >= ss->params.HeightIn)
+	    return ERRC;
 	if (rleft >= rcount) {	/* We're going to fill up a row. */
 	    const byte *row;
 

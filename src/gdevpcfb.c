@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpcfb.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gdevpcfb.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* IBM PC frame buffer (EGA/VGA) drivers */
 #include "memory_.h"
 #include "gconfigv.h"		/* for USE_ASM */
@@ -180,7 +180,6 @@ svga16_put_params(gx_device * dev, gs_param_list * plist)
 }
 
 /* Map a r-g-b color to an EGA color code. */
-#define Nb gx_color_value_bits
 private gx_color_index
 ega0_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 {
@@ -189,10 +188,13 @@ ega0_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 private gx_color_index
 ega1_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 {
-#define cvtop (gx_color_value)(1 << (Nb - 1))
-    return pc_4bit_map_rgb_color(dev, cv[0] & cvtop, cv[1] & cvtop, cv[2] & cvtop);
+    const gx_color_value cvtop = (1 << (gx_color_value_bits - 1));
+    gx_color_value cvt[3];
+    cvt[0] = cv[0] & cvtop;
+    cvt[1] = cv[1] & cvtop;
+    cvt[2] = cv[2] & cvtop;
+    return pc_4bit_map_rgb_color(dev, cvt);
 }
-#undef Nb
 
 /* Map a color code to r-g-b. */
 #define icolor (int)color

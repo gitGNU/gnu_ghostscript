@@ -64,7 +64,7 @@
 /*
  * Bit Stream Class
  *
- * $Id: jpc_bs.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jpc_bs.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -95,10 +95,15 @@ static jpc_bitstream_t *jpc_bitstream_alloc(void);
 jpc_bitstream_t *jpc_bitstream_sopen(jas_stream_t *stream, char *mode)
 {
 	jpc_bitstream_t *bitstream;
+        int code[4];
 
-	/* Ensure that the open mode is valid. */
-	assert(!strcmp(mode, "r") || !strcmp(mode, "w") || !strcmp(mode, "r+")
-	  || !strcmp(mode, "w+"));
+	/* Ensure that the open mode is valid.
+	   the indirection works around a gcc+glibc warning bug */
+        code[0] = !strcmp(mode, "r");
+	code[1] = !strcmp(mode, "w");
+	code[2] = !strcmp(mode, "r+");
+	code[3] = !strcmp(mode, "w+");
+	assert(code[0] || code[1] || code[2] || code[3]);
 
 	if (!(bitstream = jpc_bitstream_alloc())) {
 		return 0;
@@ -330,7 +335,10 @@ int jpc_bitstream_align(jpc_bitstream_t *bitstream)
 	} else if (bitstream->openmode_ & JPC_BITSTREAM_WRITE) {
 		ret = jpc_bitstream_outalign(bitstream, 0);
 	} else {
-		abort();
+		jas_error(	JAS_ERR_UNSUPPORTED_BITSTREAM_MODE_JPC_BITSTREAM_ALIGN,
+					"JAS_ERR_UNSUPPORTED_BITSTREAM_MODE_JPC_BITSTREAM_ALIGN"
+				);
+		ret = -1;
 	}
 	return ret;
 }

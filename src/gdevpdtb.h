@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdtb.h,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gdevpdtb.h,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* BaseFont structure and API for pdfwrite */
 
 #ifndef gdevpdtb_INCLUDED
@@ -136,13 +136,8 @@ int pdf_write_FontFile_entry(gx_device_pdf *pdev, pdf_base_font_t *pbfont);
 /*
  * Write an embedded font, possibly subsetted.
  */
-#if PDFW_DELAYED_STREAMS
 int pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
 			gs_int_rect *FontBBox, gs_id rid, cos_dict_t **ppcd);
-#else
-int pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
-			gs_int_rect *FontBBox, gs_id rid);
-#endif
 
 /*
  * Write the CharSet data for a subsetted font, as a PDF string.
@@ -160,11 +155,7 @@ int pdf_write_CIDSet(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
  */
 bool pdf_is_standard_font(pdf_base_font_t *bfont);
 
-#if PDFW_DELAYED_STREAMS
-void
-pdf_set_FontFile_object(pdf_base_font_t *bfont, cos_dict_t *pcd);
-const cos_dict_t *
-pdf_get_FontFile_object(pdf_base_font_t *bfont);
-#endif
+void pdf_set_FontFile_object(pdf_base_font_t *bfont, cos_dict_t *pcd);
+const cos_dict_t * pdf_get_FontFile_object(pdf_base_font_t *bfont);
 
 #endif /* gdevpdtb_INCLUDED */

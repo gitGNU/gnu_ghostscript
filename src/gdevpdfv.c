@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdfv.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gdevpdfv.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Color value writing for pdfwrite driver */
 #include "math_.h"
 #include "string_.h"
@@ -268,7 +268,8 @@ pdf_put_pattern_mask(gx_device_pdf *pdev, const gx_color_tile *m_tile,
 
     gs_image_t_init_mask_adjust(&image, true, false);
     pdf_set_pattern_image((gs_data_image_t *)&image, &m_tile->tmask);
-    if ((code = pdf_begin_write_image(pdev, &writer, gs_no_id, w, h, NULL, false, 1)) < 0 ||
+    pdf_image_writer_init(&writer);
+    if ((code = pdf_begin_write_image(pdev, &writer, gs_no_id, w, h, NULL, false)) < 0 ||
 	(pdev->params.MonoImage.Encode &&
 	 (code = psdf_CFE_binary(&writer.binary[0], w, h, true)) < 0) ||
 	(code = pdf_begin_image_data(pdev, &writer, (const gs_pixel_image_t *)&image, NULL, 0)) < 0
@@ -371,7 +372,7 @@ pdf_put_colored_pattern(gx_device_pdf *pdev, const gx_drawing_color *pdc,
 	 */
 	m_tile = pdc->mask.m_tile;
 	if (m_tile) {
-	    if (p_tile && !(p_tile->depth & 7) && p_tile->depth <= sizeof(gx_color_index) * 8) {
+	    if (p_tile && !(p_tile->depth & 7) && p_tile->depth <= arch_sizeof_color_index * 8) {
 		int depth_bytes = p_tile->depth >> 3;
 		int width = p_tile->tbits.rep_width;
 		int skip = p_tile->tbits.raster -
@@ -444,10 +445,12 @@ pdf_put_colored_pattern(gx_device_pdf *pdev, const gx_drawing_color *pdc,
 	    if ((code = pdf_put_pattern_mask(pdev, m_tile, &pcs_mask)) < 0)
 		return code;
 	}
-	if ((code = pdf_begin_write_image(pdev, &writer, gs_no_id, w, h, NULL, false, 1)) < 0 ||
+	pdf_image_writer_init(&writer);
+	pdev->ParamCompatibilityLevel = pdev->CompatibilityLevel;
+	if ((code = pdf_begin_write_image(pdev, &writer, gs_no_id, w, h, NULL, false)) < 0 ||
 	    (code = psdf_setup_lossless_filters((gx_device_psdf *)pdev,
 						&writer.binary[0],
-						(gs_pixel_image_t *)&image)) < 0 ||
+						(gs_pixel_image_t *)&image, false)) < 0 ||
 	    (code = pdf_begin_image_data(pdev, &writer, (const gs_pixel_image_t *)&image, &cs_value, 0)) < 0
 	    )
 	    return code;
@@ -482,7 +485,7 @@ pdf_put_colored_pattern(gx_device_pdf *pdev, const gx_drawing_color *pdc,
 /* Write parameters common to all Shadings. */
 private int
 pdf_put_shading_common(cos_dict_t *pscd, const gs_shading_t *psh,
-		       const gs_range_t **ppranges)
+		       bool shfill, const gs_range_t **ppranges)
 {
     gs_shading_type_t type = ShadingType(psh);
     const gs_color_space *pcs = psh->params.ColorSpace;
@@ -497,7 +500,7 @@ pdf_put_shading_common(cos_dict_t *pscd, const gs_shading_t *psh,
 	(code = cos_dict_put_c_key(pscd, "/ColorSpace", &cs_value)) < 0
 	)
 	return code;
-    if (psh->params.Background) {
+    if (psh->params.Background && !shfill) {
 	/****** SCALE Background ******/
 	code = cos_dict_put_c_key_floats(pscd, "/Background",
 				   psh->params.Background->paint.values,
@@ -911,12 +914,12 @@ pdf_put_pattern2(gx_device_pdf *pdev, const gx_drawing_color *pdc,
 	/* Shading has an associated data stream. */
 	cos_become(psco, cos_type_stream);
 	code = pdf_put_shading_common(cos_stream_dict((cos_stream_t *)psco),
-				      psh, &pranges);
+				      psh, pinst->shfill, &pranges);
 	if (code >= 0)
 	    code1 = pdf_put_mesh_shading((cos_stream_t *)psco, psh, pranges);
     } else {
 	cos_become(psco, cos_type_dict);
-	code = pdf_put_shading_common((cos_dict_t *)psco, psh, &pranges);
+	code = pdf_put_shading_common((cos_dict_t *)psco, psh, pinst->shfill, &pranges);
 	if (code >= 0)
 	    code = pdf_put_scalar_shading((cos_dict_t *)psco, psh, pranges);
     }

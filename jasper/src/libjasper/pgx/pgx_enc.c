@@ -80,9 +80,9 @@
 
 static int pgx_puthdr(jas_stream_t *out, pgx_hdr_t *hdr);
 static int pgx_putdata(jas_stream_t *out, pgx_hdr_t *hdr, jas_image_t *image, int cmpt);
-static int pgx_putword(jas_stream_t *out, bool bigendian, int prec,
+static int pgx_putword(jas_stream_t *out, jas_bool bigendian, int prec,
   uint_fast32_t val);
-static uint_fast32_t pgx_inttoword(int_fast32_t val, int prec, bool sgnd);
+static uint_fast32_t pgx_inttoword(int_fast32_t val, int prec, jas_bool sgnd);
 
 /******************************************************************************\
 * Code for save operation.
@@ -95,7 +95,7 @@ int pgx_encode(jas_image_t *image, jas_stream_t *out, char *optstr)
 	pgx_hdr_t hdr;
 	uint_fast32_t width;
 	uint_fast32_t height;
-	bool sgnd;
+	jas_bool sgnd;
 	int prec;
 	pgx_enc_t encbuf;
 	pgx_enc_t *enc = &encbuf;
@@ -128,19 +128,19 @@ int pgx_encode(jas_image_t *image, jas_stream_t *out, char *optstr)
 	  PGX format. */
 	/* There must be exactly one component. */
 	if (jas_image_numcmpts(image) > 1 || prec > 16) {
-		fprintf(stderr, "The PNM format cannot be used to represent an image with this geometry.\n");
+		jas_eprintf("The PNM format cannot be used to represent an image with this geometry.\n");
 		return -1;
 	}
 
 	hdr.magic = PGX_MAGIC;
-	hdr.bigendian = true;
+	hdr.bigendian = jas_true;
 	hdr.sgnd = sgnd;
 	hdr.prec = prec;
 	hdr.width = width;
 	hdr.height = height;
 
 #ifdef PGX_DEBUG
-	pgx_dumphdr(stderr, &hdr);
+	pgx_dumphdr(&hdr);
 #endif
 
 	if (pgx_puthdr(out, &hdr)) {
@@ -204,7 +204,7 @@ error:
 	return -1;
 }
 
-static int pgx_putword(jas_stream_t *out, bool bigendian, int prec,
+static int pgx_putword(jas_stream_t *out, jas_bool bigendian, int prec,
   uint_fast32_t val)
 {
 	int i;
@@ -222,7 +222,7 @@ static int pgx_putword(jas_stream_t *out, bool bigendian, int prec,
 	return 0;
 }
 
-static uint_fast32_t pgx_inttoword(jas_seqent_t v, int prec, bool sgnd)
+static uint_fast32_t pgx_inttoword(jas_seqent_t v, int prec, jas_bool sgnd)
 {
 	uint_fast32_t ret;
 	ret = ((sgnd && v < 0) ? ((1 << prec) + v) : v) & ((1 << prec) - 1);

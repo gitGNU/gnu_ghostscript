@@ -19,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gscheck_raster.py,v 1.5 2006/03/06 11:16:03 Arabidopsis Exp $
+# $Id: gscheck_raster.py,v 1.6 2006/06/16 12:55:32 Arabidopsis Exp $
 
 #
 # gscheck_raster.py
@@ -49,6 +49,7 @@ class GSCompareTestCase(gstestgs.GhostscriptTestCase):
 			banded = "banded"
 		else:
 			banded = "noband"
+		self.skip = 1
 		return "Skipping %s (%s/%ddpi/%s) [no previous raster data found]" % (os.path.basename(self.file), self.device, self.dpi, banded)
 
 	if self.band:
@@ -57,6 +58,10 @@ class GSCompareTestCase(gstestgs.GhostscriptTestCase):
 	    return "Checking %s (%s/%ddpi/noband) against baseline set on %s" % (os.path.basename(self.file), self.device, self.dpi, baseline_date)
 
     def runTest(self):
+        if hasattr(self, "skip") and self.skip == 1:
+	    self.assert_(True)
+	    return
+
 	file = "%s.%s.%d.%d" % (self.file[string.rindex(self.file, '/') + 1:], self.device, self.dpi, self.band)
 
 	gs = gstestgs.Ghostscript()

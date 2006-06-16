@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevvec.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gdevvec.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Common definitions for "vector" devices */
 
 #ifndef gdevvec_INCLUDED
@@ -60,9 +60,6 @@
  * We expect to add more elements and procedures as we gain more experience
  * with this kind of driver.
  */
-
-/* A configuration switch for development purpose (please don't modify) : */
-#define PS2WRITE 1 /* Old code = 0, new code = 1 */
 
 /* ================ Types and structures ================ */
 

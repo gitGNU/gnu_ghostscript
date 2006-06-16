@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: watcw32.mak,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $
+# $Id: watcw32.mak,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $
 # watcw32.mak
 # makefile for Watcom C++ v??, Windows NT or Windows 95 platform.
 #   Does NOT build gs16spl.exe, which is 16-bit and is used under Win32s.
@@ -129,7 +129,7 @@ JVERSION=6
 # See libpng.mak for more information.
 
 PSRCDIR=libpng
-PVERSION=10208
+PVERSION=10210
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.
@@ -138,6 +138,10 @@ ZSRCDIR=zlib
 
 # Define the jbig2dec library source location.
 # See jbig2.mak for more information.
+
+!ifndef JBIG2_LIB
+JBIG2_LIB=jbig2dec
+!endif
 
 !ifndef JBIG2SRCDIR
 JBIG2SRCDIR=jbig2dec
@@ -220,6 +224,10 @@ PSD=$(PSGENDIR)\$(NUL)
 
 FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)epsf.dev
 
+# The list of resources to be included in the %rom% file system.
+# This is in the top makefile since the file descriptors are platform specific
+RESOURCE_LIST=Resource/CMap/ Resource/ColorSpace/ Resource/Decoding/ Resource/Fonts/ Resource/Procset/ Resource/IdiomSet/ Resource/CIDFont/
+
 # Choose whether to compile the .ps initialization files into the executable.
 # See gs.mak for details.
 
@@ -261,8 +269,8 @@ DEVICE_DEVS10=$(DD)tiffcrle.dev $(DD)tiffg3.dev $(DD)tiffg32d.dev $(DD)tiffg4.de
 DEVICE_DEVS11=$(DD)bmpmono.dev $(DD)bmp16.dev $(DD)bmp256.dev $(DD)bmp16m.dev $(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiffsep.dev
 DEVICE_DEVS12=$(DD)psmono.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
 DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
-DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev
-DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)epswrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
+DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev $(DD)jpegcmyk.dev
+DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
 # Overflow for DEVS3,4,5,6,9
 DEVICE_DEVS16=$(DD)ljet3.dev $(DD)ljet3d.dev $(DD)ljet4.dev $(DD)ljet4d.dev
 DEVICE_DEVS17=$(DD)pj.dev $(DD)pjxl.dev $(DD)pjxl300.dev
@@ -454,7 +462,6 @@ $(GENINIT_XE): $(PSSRCDIR)$(D)geninit.c $(GENINIT_DEPS)
 	@if not exist $(PSGENDIR) mkdir $(PSGENDIR)
 	@if not exist $(PSOBJDIR) mkdir $(PSOBJDIR)
 	@if not exist $(BINDIR) mkdir $(BINDIR)
-	@if not exist $(GLGENDIR)\lib.tr copy nul: $(GLGENDIR)\lib.tr
 
 # See winlib.mak
 

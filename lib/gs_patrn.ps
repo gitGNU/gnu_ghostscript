@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_patrn.ps,v 1.2 2005/12/13 17:48:51 jemarch Exp $
+% $Id: gs_patrn.ps,v 1.3 2006/06/16 12:55:13 Arabidopsis Exp $
 % Pattern color space method dictionary.
 
 
@@ -237,6 +237,7 @@ colorspacedict
     % implementations are gs_pattern1_instance_t and
     % gs_pattern2_instance_t. It is unfortunate to have to expose such
     % internal names at this level, but not easily avoided.
+    % For CPSI/CET compatibility we 'hide' this inside an array
     %
     /cs_prepare_color
       {
@@ -250,8 +251,7 @@ colorspacedict
           }
           {
             dup /Implementation .knownget
-              {
-                type dup dup
+              { 0 get type dup dup
                 /gs_pattern1_instance_t ne exch /gs_pattern2_instance_t ne and
                 exch xcheck not
                 or

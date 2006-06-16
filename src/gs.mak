@@ -17,7 +17,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gs.mak,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $
+# $Id: gs.mak,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $
 # Generic makefile, common to all platforms, products, and configurations.
 # The platform-specific makefiles `include' this file.
 
@@ -60,18 +60,21 @@
 #	    and linking libgz/libz explicitly.
 #	ZLIB_NAME - the name of the shared zlib, either gz (for libgz, -lgz)
 #	    or z (for libz, -lz).
+#	JBIG2_LIB - choice of which jbig2 implementation to use
 #	SHARE_JBIG2 - normally 0; if set to 1, asks the linker to use
 #	    an existing complied libjbig2dec instead of compiling and linking
 #	    in from a local copy of the source
 #	JBIG2SRCDIR - the name of the jbig2dec library source directory
 #	    typically 'jbig2dec' or 'jbig2dec-/version/'
-#	SHARE_JASPER - if set to 1, asks the linker to use an existing
-#	    complied libjasper. if set to 0, asks to compile and linking
-#	    in using our custom makefile from a local copy of the source
-#	JASPERSRCDIR - the name of the jasper library source directory
-#	    typically 'jasper' or 'jasper-/version/'
-#	JASPERCFLAGS - any platform-specific flags that are required
-#	    to properly compile in the jasper library source
+#	JPX_LIB - choice of which jpeg2k implementation to use
+#	SHARE_JPX - if set to 1, asks the linker to use an existing
+#	    complied jpeg2k library. if set to 0, asks to compile and 
+#	    link from a local copy of the source using our custom 
+#	    makefile.
+#	JPXSRCDIR - the name of the jpeg2k library source directory
+#	    e.g. 'jasper' or 'jasper-/version/'
+#	JPX_CFLAGS - any platform-specific flags that are required
+#	    to properly compile in the jpeg2k library source
 #	ICCSRCDIR - the name of the ICC lib source dir, currently
 #	    always icclib (compiled in statically)
 #	DEVICE_DEVS - the devices to include in the executable.
@@ -136,7 +139,8 @@
 #	COMPILE_INITS - normally 0; if set to 1, compiles the PostScript
 #	    language initialization files (gs_init.ps et al) into the
 #	    executable, eliminating the need for these files to be present
-#	    at run time.
+#	    at run time. Files will be placed in the %rom% device as files.
+#	    Also the 'Resource/*' files will be built into the %rom% device.
 #	BAND_LIST_STORAGE - normally file; if set to memory, stores band
 #	    lists in memory (with compression if needed).
 #	BAND_LIST_COMPRESSOR - normally zlib: selects the compression method
@@ -227,8 +231,8 @@ ZGENDIR=$(GLGENDIR)
 ZOBJDIR=$(GLOBJDIR)
 JBIG2GENDIR=$(GLGENDIR)
 JBIG2OBJDIR=$(GLOBJDIR)
-JASPERGENDIR=$(GLGENDIR)
-JASPEROBJDIR=$(GLOBJDIR)
+JPXGENDIR=$(GLGENDIR)
+JPXOBJDIR=$(GLOBJDIR)
 ICCGENDIR=$(GLGENDIR)
 ICCOBJDIR=$(GLOBJDIR)
 IJSGENDIR=$(GLGENDIR)
@@ -253,6 +257,7 @@ GENCONF_XE=$(AUXGEN)genconf$(XEAUX)
 GENDEV_XE=$(AUXGEN)gendev$(XEAUX)
 GENHT_XE=$(AUXGEN)genht$(XEAUX)
 GENINIT_XE=$(AUXGEN)geninit$(XEAUX)
+MKROMFS_XE=$(AUXGEN)mkromfs$(XEAUX)
 
 # Define the names of the generated header files.
 # gconfig*.h and gconfx*.h are generated dynamically.
@@ -327,9 +332,11 @@ ZI_=$(ZSRCDIR)
 ZF_=
 ZCF_=$(D_)SHARE_ZLIB=$(SHARE_ZLIB)$(_D)
 JB2I_=$(JBIG2SRCDIR)
-JB2CF_=
-JASI_=$(JASPERSRCDIR)$(D)src$(D)libjasper$(D)include
-JASCF_=$(JASPERCFLAGS)
+JB2CF_=$(JBIG2_CFLAGS)
+LDF_JB2I_=$(JBIG2SRCDIR)$(D)source$(D)libraries
+JPXI_=$(JPXSRCDIR)$(D)src$(D)libjasper$(D)include
+LWF_JPXI_=$(JPXSRCDIR)$(D)library$(D)source
+JPXCF_=$(JPX_CFLAGS)
 
 ######################## How to define new 'features' #######################
 #
@@ -377,7 +384,7 @@ DEVS_ALL=$(GLGENDIR)$(D)$(PLATFORM).dev\
  $(DEVICE_DEVS10) $(DEVICE_DEVS11) $(DEVICE_DEVS12) $(DEVICE_DEVS13) \
  $(DEVICE_DEVS14) $(DEVICE_DEVS15) $(DEVICE_DEVS16) $(DEVICE_DEVS17) \
  $(DEVICE_DEVS18) $(DEVICE_DEVS19) $(DEVICE_DEVS20) $(DEVICE_DEVS21) \
- $(DEVICE_DEVS_EXTRA)
+ $(DEVICE_DEVS_EXTRA) $(PSD)romfs$(COMPILE_INITS).dev 
 
 devs_tr=$(GLGENDIR)$(D)devs.tr
 $(devs_tr) : $(GS_MAK) $(TOP_MAKEFILES) $(ECHOGS_XE)
@@ -407,6 +414,7 @@ $(devs_tr) : $(GS_MAK) $(TOP_MAKEFILES) $(ECHOGS_XE)
 	$(EXP)$(ECHOGS_XE) -a $(devs_tr) -+ $(DEVICE_DEVS20)
 	$(EXP)$(ECHOGS_XE) -a $(devs_tr) -+ $(DEVICE_DEVS21)
 	$(EXP)$(ECHOGS_XE) -a $(devs_tr) -+ $(DEVICE_DEVS_EXTRA)
+	$(EXP)$(ECHOGS_XE) -a $(devs_tr) -+ $(PSD)romfs$(COMPILE_INITS).dev
 	$(EXP)$(ECHOGS_XE) -a $(devs_tr) - $(GLGENDIR)$(D)libcore
 
 # GCONFIG_EXTRAS can be set on the command line.
@@ -415,12 +423,13 @@ $(devs_tr) : $(GS_MAK) $(TOP_MAKEFILES) $(ECHOGS_XE)
 GCONFIG_EXTRAS=
 
 ld_tr=$(GLGENDIR)$(D)ld.tr
-$(gconfig_h) : \
+$(ld_tr) : \
   $(GS_MAK) $(TOP_MAKEFILES) $(GLSRCDIR)$(D)version.mak $(GENCONF_XE) $(ECHOGS_XE) $(devs_tr) $(DEVS_ALL) $(GLGENDIR)$(D)libcore.dev
 	$(EXP)$(GENCONF_XE) $(devs_tr) -h $(gconfig_h) $(CONFILES) $(CONFLDTR) $(ld_tr)
 	$(EXP)$(ECHOGS_XE) -a $(gconfig_h) $(GCONFIG_EXTRAS)
 
-$(ld_tr) $(GLGENDIR)$(D)lib.tr : $(gconfig_h)
+$(gconfig_h) : $(ld_tr)
+	$(NO_OP)
 	
 # The line above is an empty command; don't delete.
 

@@ -64,7 +64,7 @@
 /*
  * Windows Bitmap File Library
  *
- * $Id: bmp_enc.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: bmp_enc.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -110,7 +110,7 @@ int bmp_encode(jas_image_t *image, jas_stream_t *out, char *optstr)
 	jas_clrspc_t clrspc;
 
 	if (optstr) {
-		fprintf(stderr, "warning: ignoring BMP encoder options\n");
+		jas_eprintf("warning: ignoring BMP encoder options\n");
 	}
 
 	clrspc = jas_image_clrspc(image);
@@ -151,7 +151,10 @@ int bmp_encode(jas_image_t *image, jas_stream_t *out, char *optstr)
 		}
 		break;
 	default:
-		abort();
+			jas_error(	JAS_ERR_UNSUPPORTED_CLRSPC_BMP_ENCODE,
+						"JAS_ERR_UNSUPPORTED_CLRSPC_BMP_ENCODE"
+					);
+			return -1;
 		break;
 	}
 
@@ -165,10 +168,10 @@ int bmp_encode(jas_image_t *image, jas_stream_t *out, char *optstr)
 		if (jas_image_cmptwidth(image, enc->cmpts[cmptno]) != width ||
 		  jas_image_cmptheight(image, enc->cmpts[cmptno]) != height ||
 		  jas_image_cmptprec(image, enc->cmpts[cmptno]) != depth ||
-		  jas_image_cmptsgnd(image, enc->cmpts[cmptno]) != false ||
+		  jas_image_cmptsgnd(image, enc->cmpts[cmptno]) != jas_false ||
 		  jas_image_cmpttlx(image, enc->cmpts[cmptno]) != 0 ||
 		  jas_image_cmpttly(image, enc->cmpts[cmptno]) != 0) {
-			fprintf(stderr, "The BMP format cannot be used to represent an image with this geometry.\n");
+			jas_eprintf("The BMP format cannot be used to represent an image with this geometry.\n");
 			return -1;
 		}
 	}
@@ -289,7 +292,7 @@ static int bmp_putdata(jas_stream_t *out, bmp_info_t *info, jas_image_t *image,
 
 	/* We do not support palettized images. */
 	if (BMP_HASPAL(info) && numcmpts == 3) {
-		fprintf(stderr, "no palettized image support for BMP format\n");
+		jas_eprintf("no palettized image support for BMP format\n");
 		return -1;
 	}
 
@@ -339,7 +342,10 @@ static int bmp_putdata(jas_stream_t *out, bmp_info_t *info, jas_image_t *image,
 					goto bmp_putdata_done;
 				}
 			} else {
-				abort();
+				jas_error(	JAS_ERR_UNSUPPORTED_NUMCMPTS_BMP_PUTDATA,
+							"JAS_ERR_UNSUPPORTED_NUMCMPTS_BMP_PUTDATA"
+						);
+				return -1;
 			}
 		}
 		for (j = numpad; j > 0; --j) {

@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,16 +17,14 @@
 
 */
 
-/* $Id: gxshade4.h,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gxshade4.h,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Internal definitions for triangle shading rendering */
 
 #ifndef gxshade4_INCLUDED
 #  define gxshade4_INCLUDED
 
 /* Configuration flags for development needs only. Users should not modify them. */
-#define NEW_SHADINGS 1 /* Old code = 0, new code = 1. */
 #define USE_LINEAR_COLOR_PROCS 1 /* Old code = 0, new code = 1. */
-#define NEW_RADIAL_SHADINGS 1 /* Old code = 0, new code = 1. */
 
 #define QUADRANGLES 0 /* 0 = decompose by triangles, 1 = by quadrangles. */
 /* The code QUADRANGLES 1 appears unuseful.
@@ -57,12 +56,11 @@
    dramatically reduces, causing a significant speedup.
    The LAZY_WEDGES 0 mode was not systematically tested.
  */
-#define VD_TRACE_DOWN 0 /* Developer's needs, not important for production. */
+#define VD_TRACE_DOWN 1 /* Developer's needs, not important for production. */
 #define NOFILL_TEST 0 /* Developer's needs, must be off for production. */
 #define SKIP_TEST 0 /* Developer's needs, must be off for production. */
 /* End of configuration flags (we don't mean that users should modify the rest). */
 
-#define mesh_max_depth (16 * 3 + 1)	/* each recursion adds 3 entries */
 typedef struct mesh_frame_s {	/* recursion frame */
     mesh_vertex_t va, vb, vc;	/* current vertices */
     bool check_clipping;
@@ -80,15 +78,12 @@ typedef struct mesh_frame_s {	/* recursion frame */
 #define mesh_fill_state_common\
   shading_fill_state_common;\
   const gs_shading_mesh_t *pshm;\
-  gs_fixed_rect rect;\
-  int depth;\
-  mesh_frame_t frames[mesh_max_depth]
+  gs_fixed_rect rect
 typedef struct mesh_fill_state_s {
     mesh_fill_state_common;
 } mesh_fill_state_t;
 /****** NEED GC DESCRIPTOR ******/
 
-#if NEW_SHADINGS
 typedef struct wedge_vertex_list_elem_s wedge_vertex_list_elem_t;
 struct wedge_vertex_list_elem_s {
     gs_fixed_point p;
@@ -108,7 +103,6 @@ typedef struct {
 typedef struct patch_fill_state_s {
     mesh_fill_state_common;
     const gs_function_t *Function;
-#if NEW_SHADINGS
     bool vectorization;
     int n_color_args;
     fixed max_small_coord; /* Length restriction for intersection_of_small_bars. */
@@ -121,11 +115,10 @@ typedef struct patch_fill_state_s {
     double smoothness;
     bool maybe_self_intersecting;
     bool monotonic_color;
+    bool linear_color;
     bool unlinear;
     bool inside;
-#endif
 } patch_fill_state_t;
-#endif
 /* Define a color to be used in curve rendering. */
 /* This may be a real client color, or a parametric function argument. */
 typedef struct patch_color_s {
@@ -143,24 +136,15 @@ struct shading_vertex_s {
 typedef struct patch_curve_s {
     mesh_vertex_t vertex;
     gs_fixed_point control[2];
+    bool straight;
 } patch_curve_t;
 
 /* Initialize the fill state for triangle shading. */
 int mesh_init_fill_state(mesh_fill_state_t * pfs,
 			  const gs_shading_mesh_t * psh,
-			  const gs_rect * rect,
+			  const gs_fixed_rect * rect_clip,
 			  gx_device * dev, gs_imager_state * pis);
 
-#if !NEW_SHADINGS
-/* Fill one triangle in a mesh. */
-void mesh_init_fill_triangle(mesh_fill_state_t * pfs,
-			     const mesh_vertex_t *va,
-			     const mesh_vertex_t *vb,
-			     const mesh_vertex_t *vc, bool check_clipping);
-int mesh_fill_triangle(mesh_fill_state_t * pfs);
-#endif
-
-#if NEW_SHADINGS
 int init_patch_fill_state(patch_fill_state_t *pfs);
 void term_patch_fill_state(patch_fill_state_t *pfs);
 
@@ -182,7 +166,5 @@ void patch_resolve_color(patch_color_t * ppcr, const patch_fill_state_t *pfs);
 
 int gx_shade_background(gx_device *pdev, const gs_fixed_rect *rect, 
 	const gx_device_color *pdevc, gs_logical_operation_t log_op);
-
-#endif
 
 #endif /* gxshade4_INCLUDED */

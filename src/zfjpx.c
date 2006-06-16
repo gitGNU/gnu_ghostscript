@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: zfjpx.c,v 1.1 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: zfjpx.c,v 1.2 2006/06/16 12:55:04 Arabidopsis Exp $ */
 
 /* this is the ps interpreter interface to the jbig2decode filter
    used for (1bpp) scanned image compression. PDF only specifies
@@ -33,8 +33,12 @@
 #include "stream.h"
 #include "strimpl.h"
 #include "ifilter.h"
-#include "sjpx.h"
 
+#ifdef USE_LWF_JP2
+#include "sjpx_luratech.h"
+#else
+#include "sjpx.h"
+#endif
 
 /* <source> /JPXDecode <file> */
 /* <source> <dict> /JPXDecode <file> */

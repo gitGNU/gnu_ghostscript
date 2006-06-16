@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxicolor.c,v 1.5 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxicolor.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Color image rendering */
 #include "gx.h"
 #include "memory_.h"
@@ -194,7 +194,7 @@ image_render_color(gx_image_enum *penum_orig, const byte *buffer, int data_x,
 	    next.v[2] = psrc[2];
 	    next.v[3] = psrc[3];
 	    psrc += 4;
-map4:	    if (next.all[0] == run.all[0])
+map4:	    if (posture != image_skewed && next.all[0] == run.all[0])
 		goto inc;
 	    if (use_cache) {
 		pic_next = CLUE_HASH4(penum, next);
@@ -259,7 +259,7 @@ do3:	    decode_sample(next.v[0], cc, 0);
 	    next.v[1] = psrc[1];
 	    next.v[2] = psrc[2];
 	    psrc += 3;
-	    if (next.all[0] == run.all[0])
+	    if (posture != image_skewed && next.all[0] == run.all[0])
 		goto inc;
 	    if (use_cache) {
 		pic_next = CLUE_HASH3(penum, next);
@@ -324,7 +324,7 @@ do3:	    decode_sample(next.v[0], cc, 0);
 	    int i;
 
 	    use_cache = false;	/* should do in initialization */
-	    if (!memcmp(psrc, run.v, spp)) {
+	    if (posture != image_skewed && !memcmp(psrc, run.v, spp)) {
 		psrc += spp;
 		goto inc;
 	    }
@@ -355,14 +355,27 @@ do3:	    decode_sample(next.v[0], cc, 0);
 	    goto fill;
 mapped:	if (pic == pic_next)
 	    goto fill;
-f:	if_debug7('B', "[B]0x%x,0x%x,0x%x,0x%x -> %ld,%ld,0x%lx\n",
+f:	if (sizeof(pdevc_next->colors.binary.color[0]) <= sizeof(ulong))
+	    if_debug7('B', "[B]0x%x,0x%x,0x%x,0x%x -> 0x%lx,0x%lx,0x%lx\n",
 		  next.v[0], next.v[1], next.v[2], next.v[3],
-		  pdevc_next->colors.binary.color[0],
-		  pdevc_next->colors.binary.color[1],
+		  (ulong)pdevc_next->colors.binary.color[0],
+		  (ulong)pdevc_next->colors.binary.color[1],
 		  (ulong) pdevc_next->type);
+	else
+	    if_debug9('B', "[B]0x%x,0x%x,0x%x,0x%x -> 0x%08lx%08lx,0x%08lx%08lx,0x%lx\n",
+		  next.v[0], next.v[1], next.v[2], next.v[3],
+		  (ulong)(pdevc_next->colors.binary.color[0] >> 
+			8 * (sizeof(pdevc_next->colors.binary.color[0]) - sizeof(ulong))),
+		  (ulong)pdevc_next->colors.binary.color[0],
+		  (ulong)(pdevc_next->colors.binary.color[1] >> 
+			8 * (sizeof(pdevc_next->colors.binary.color[1]) - sizeof(ulong))),
+		  (ulong)pdevc_next->colors.binary.color[1],
+		  (ulong) pdevc_next->type);
+	/* NB: printf above fails to account for sizeof gx_color_index 4 or 8 bytes */
+
 	/* Even though the supplied colors don't match, */
 	/* the device colors might. */
-	if (dev_color_eq(*pdevc, *pdevc_next))
+	if (posture != image_skewed && dev_color_eq(*pdevc, *pdevc_next))
 	    goto set;
 fill:	/* Fill the region between */
 	/* xrun/irun and xprev */

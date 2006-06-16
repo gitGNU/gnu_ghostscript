@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxclutil.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gxclutil.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Command list writing utilities. */
 
 #include "memory_.h"
@@ -216,7 +216,7 @@ cmd_write_buffer(gx_device_clist_writer * cldev, byte cmd_end)
  * data.  Return the pointer to the data area.  If an error or (low-memory
  * warning) occurs, set cldev->error_code and return 0.
  */
-#define cmd_headroom (sizeof(cmd_prefix) + arch_align_ptr_mod)
+#define cmd_headroom (sizeof(cmd_prefix) + ARCH_ALIGN_PTR_MOD)
 byte *
 cmd_put_list_op(gx_device_clist_writer * cldev, cmd_list * pcl, uint size)
 {
@@ -251,7 +251,7 @@ cmd_put_list_op(gx_device_clist_writer * cldev, cmd_list * pcl, uint size)
 	/* Skip to an appropriate alignment boundary. */
 	/* (We assume the command buffer itself is aligned.) */
 	cmd_prefix *cp = (cmd_prefix *)
-	    (dp + ((cldev->cbuf - dp) & (arch_align_ptr_mod - 1)));
+	    (dp + ((cldev->cbuf - dp) & (ARCH_ALIGN_PTR_MOD - 1)));
 
 	cmd_count_add1(stats_cmd.other_band);
 	dp = (byte *) (cp + 1);
@@ -280,7 +280,7 @@ cmd_put_op(gx_device_clist_writer * cldev, gx_clist_state * pcls, uint size)
 {
     if_debug3('L', "[L]band %d: size=%u, left=%u",
 	      (int)(pcls - cldev->states),
-	      size, (uint) (cldev->cend - cldev->cnext));
+	      size, 0);
     return cmd_put_list_op(cldev, &pcls->list, size);
 }
 #endif
@@ -291,8 +291,7 @@ cmd_put_range_op(gx_device_clist_writer * cldev, int band_min, int band_max,
 		 uint size)
 {
     if_debug4('L', "[L]band range(%d,%d): size=%u, left=%u",
-	      band_min, band_max, size,
-	      (uint)(cldev->cend - cldev->cnext));
+	      band_min, band_max, size, 0);
     if (cldev->ccl != 0 && 
 	(cldev->ccl != &cldev->band_range_list ||
 	 band_min != cldev->band_range_min ||

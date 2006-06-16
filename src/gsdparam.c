@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsdparam.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gsdparam.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Default device parameters for Ghostscript library */
 #include "memory_.h"		/* for memcpy */
 #include "string_.h"		/* for strlen */
@@ -122,6 +122,12 @@ gx_default_get_params(gx_device * dev, gs_param_list * plist)
 
     /* Transmit the values. */
 
+#if ENABLE_NAMED_COLOR_CALLBACK
+    /* The named color callback pointer */
+    code = named_color_callback_get_params(dev, plist);
+    if (code < 0)
+	return code;
+#endif
     if (
 
 	/* Standard parameters */
@@ -171,7 +177,7 @@ gx_default_get_params(gx_device * dev, gs_param_list * plist)
 
     if (colors > 1) {
 	int RGBValues = dev->color_info.max_color + 1;
-	long ColorValues = (depth >= (8 * sizeof(gx_color_index)) ? -1
+	long ColorValues = (depth >= (8 * arch_sizeof_color_index) ? -1
 							: 1L << depth);
 
 	if ((code = param_write_int(plist, "RedValues", &RGBValues)) < 0 ||
@@ -471,6 +477,12 @@ e:	param_signal_error(plist, param_name, ecode);\
     }\
     END
 
+#if ENABLE_NAMED_COLOR_CALLBACK
+    /* The named_color callback pointer */
+    code = named_color_callback_put_params(dev, plist);
+    if (code < 0)
+	ecode = code;
+#endif
     /*
      * The HWResolution, HWSize, and MediaSize parameters interact in
      * the following way:

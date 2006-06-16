@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zht1.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zht1.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* setcolorscreen operator */
 #include "ghost.h"
 #include "memory_.h"
@@ -95,7 +95,7 @@ zsetcolorscreen(i_ctx_t *i_ctx_p)
 	    code = zscreen_enum_init(i_ctx_p,
 				     &pdht->components[(i + 1) & 3].corder,
 				&pht->params.colorscreen.screens.indexed[i],
-				     &sprocs[i], 0, 0, mem);
+				     &sprocs[i], 0, 0, space);
 	    if (code < 0) {
 		esp = esp0;
 		break;

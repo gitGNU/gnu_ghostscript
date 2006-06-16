@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,9 +17,8 @@
 
 */
 
-/* $Id: gsfcmap.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gsfcmap.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* CMap character decoding */
-#include <assert.h>
 #include "memory_.h"
 #include "string_.h"
 #include "gx.h"
@@ -446,8 +446,7 @@ gs_cmap_ToUnicode_decode_next(const gs_cmap_t *pcmap, const gs_const_string *str
 		     uint *pindex, uint *pfidx,
 		     gs_char *pchr, gs_glyph *pglyph)
 {
-    assert(0); /* Unsupported, because never used. */
-    return 0;
+    return_error(gs_error_unregistered);
 }
 
 private void

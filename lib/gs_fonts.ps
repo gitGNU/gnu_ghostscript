@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_fonts.ps,v 1.5 2006/03/02 22:26:14 Arabidopsis Exp $
+% $Id: gs_fonts.ps,v 1.6 2006/06/16 12:55:14 Arabidopsis Exp $
 % Font initialization and management code.
 
 % Define the default font.
@@ -116,24 +116,29 @@ userdict /Fontmap .FontDirectory maxlength dict put
    % If the fontname contains Unicode (first byte == \000) and
    % this is not an alias definition, define an alias using ASCII
    % (stripping out the high \000 bytes). Observed with some TT fonts.
-   1 index 100 string cvs 0 get 0 eq 1 index type /nametype ne and {
-     1 index 100 string cvs dup length 2 div cvi string true exch
-     0 1 2 index length 1 sub {
-       % stack: fontname filename fontnamestring addflag newstring index
-       dup 4 index exch 2 mul get 0 ne {
-	 % High byte of pair is not \000
-	 pop pop false exch
-         exit
-       } if
-       dup 4 index exch 2 mul 1 add get 2 index 3 1 roll put
-     } for
-     exch {
-       DEBUG { (\nAdding alias for: ) print 1 index ==only ( as: ) print dup == flush } if
-         cvn exch cvn .definefontmap	% recurse with an alias
-     } {
-       pop pop	% discard the name
-     } ifelse
-   } if
+   1 index 100 string cvs
+   dup length 0 gt {
+     0 get 0 eq 1 index type /nametype ne and {
+       1 index 100 string cvs dup length 2 div cvi string true exch
+       0 1 2 index length 1 sub {
+         % stack: fontname filename fontnamestring addflag newstring index
+         dup 4 index exch 2 mul get 0 ne {
+	   % High byte of pair is not \000
+	   pop pop false exch
+           exit
+         } if
+         dup 4 index exch 2 mul 1 add get 2 index 3 1 roll put
+       } for
+       exch {
+         DEBUG { (\nAdding alias for: ) print 1 index ==only ( as: ) print dup == flush } if
+           cvn exch cvn .definefontmap	% recurse with an alias
+       } {
+         pop pop	% discard the name
+       } ifelse
+     } if
+   } {
+     pop
+   } ifelse
    .currentglobal 3 1 roll true .setglobal
    dup type /stringtype eq
     { dup .gcheck not { dup length string copy } if

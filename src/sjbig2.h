@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: sjbig2.h,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: sjbig2.h,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Definitions for jbig2decode filter */
 /* Requires scommon.h; strimpl.h if any templates are referenced */
 
@@ -28,11 +28,7 @@
 #include "scommon.h"
 #include <jbig2.h>
 
-/* Arcfour is a symmetric cipher whose state is maintained
- * in two indices into an accompanying 8x8 S box. this will
- * typically be allocated on the stack, and so has no memory
- * management associated.
- */
+/* JBIG2Decode internal stream state */
 typedef struct stream_jbig2decode_state_s
 {
     stream_state_common;	/* a define from scommon.h */
@@ -40,18 +36,21 @@ typedef struct stream_jbig2decode_state_s
     Jbig2Ctx *decode_ctx;
     Jbig2Image *image;
     long offset; /* offset into the image bitmap of the next byte to be returned */
+    int error;
 }
 stream_jbig2decode_state;
-
-/* call in to process the JBIG2Globals parameter */
-public int
-s_jbig2decode_make_global_ctx(byte *data, uint length, Jbig2GlobalCtx **global_ctx);
-public int
-s_jbig2decode_set_global_ctx(stream_state *ss, Jbig2GlobalCtx *global_ctx);
 
 #define private_st_jbig2decode_state()	\
   gs_private_st_simple(st_jbig2decode_state, stream_jbig2decode_state,\
     "jbig2decode filter state")
 extern const stream_template s_jbig2decode_template;
 
+/* call ins to process the JBIG2Globals parameter */
+public int
+s_jbig2decode_make_global_data(byte *data, uint length, void **result);
+public int
+s_jbig2decode_set_global_data(stream_state *ss, void *data);
+public void
+s_jbig2decode_free_global_data(void *data);
+	
 #endif /* sjbig2_INCLUDED */

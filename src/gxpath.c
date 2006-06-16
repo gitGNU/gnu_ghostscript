@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -17,13 +18,14 @@
   
 */
 
-/*$Id: gxpath.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/*$Id: gxpath.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Internal path management routines for Ghostscript library */
 #include "gx.h"
 #include "gserrors.h"
 #include "gsstruct.h"
 #include "gxfixed.h"
 #include "gzpath.h"
+#include "vdtrace.h"
 
 /* These routines all assume that all points are */
 /* already in device coordinates, and in fixed representation. */
@@ -740,6 +742,11 @@ fixed x3, fixed y3, fixed xt, fixed yt, floatp fraction, segment_notes notes)
 {
     fixed x0 = ppath->position.x, y0 = ppath->position.y;
 
+    vd_curveto(x0 + (fixed) ((xt - x0) * fraction),
+				   y0 + (fixed) ((yt - y0) * fraction),
+				   x3 + (fixed) ((xt - x3) * fraction),
+				   y3 + (fixed) ((yt - y3) * fraction),
+				   x3, y3);
     return gx_path_add_curve_notes(ppath,
 				   x0 + (fixed) ((xt - x0) * fraction),
 				   y0 + (fixed) ((yt - y0) * fraction),

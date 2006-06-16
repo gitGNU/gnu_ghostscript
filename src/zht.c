@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zht.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zht.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Halftone definition operators */
 #include "ghost.h"
 #include "memory_.h"
@@ -134,10 +134,11 @@ zsetscreen(i_ctx_t *i_ctx_p)
     gx_ht_order order;
     int code = zscreen_params(op, &screen);
     gs_memory_t *mem;
+    int space_index = r_space_index(op);
 
     if (code < 0)
 	return code;
-    mem = (gs_memory_t *)idmemory->spaces_indexed[r_space_index(op)];
+    mem = (gs_memory_t *)idmemory->spaces_indexed[space_index];
     /*
      * Allocate the halftone in the same VM space as the procedure.
      * This keeps the space relationships consistent.
@@ -147,23 +148,24 @@ zsetscreen(i_ctx_t *i_ctx_p)
     if (code < 0)
 	return code;
     return zscreen_enum_init(i_ctx_p, &order, &screen, op, 3,
-			     setscreen_finish, mem);
+			     setscreen_finish, space_index);
 }
 /* We break out the body of this operator so it can be shared with */
 /* the code for Type 1 halftones in sethalftone. */
 int
 zscreen_enum_init(i_ctx_t *i_ctx_p, const gx_ht_order * porder,
 		  gs_screen_halftone * psp, ref * pproc, int npop,
-		  int (*finish_proc)(i_ctx_t *), gs_memory_t * mem)
+		  int (*finish_proc)(i_ctx_t *), int space_index)
 {
     gs_screen_enum *penum;
+    gs_memory_t * mem = (gs_memory_t *)idmemory->spaces_indexed[space_index]; 
     int code;
 
     check_estack(snumpush + 1);
-    penum = gs_screen_enum_alloc(imemory, "setscreen");
+    penum = gs_screen_enum_alloc(mem, "setscreen");
     if (penum == 0)
 	return_error(e_VMerror);
-    make_istruct(esp + snumpush, 0, penum);	/* do early for screen_cleanup in case of error */
+    make_struct(esp + snumpush, space_index << r_space_shift, penum);	/* do early for screen_cleanup in case of error */
     code = gs_screen_enum_init_memory(penum, porder, igs, psp, mem);
     if (code < 0) {
 	screen_cleanup(i_ctx_p);
@@ -241,7 +243,9 @@ setscreen_finish(i_ctx_t *i_ctx_p)
 private int
 screen_cleanup(i_ctx_t *i_ctx_p)
 {
-    ifree_object(esp[snumpush].value.pstruct, "screen_cleanup");
+    gs_screen_enum *penum = r_ptr(esp + snumpush, gs_screen_enum);
+
+    gs_free_object(penum->halftone.rc.memory, penum, "screen_cleanup");
     return 0;
 }
 

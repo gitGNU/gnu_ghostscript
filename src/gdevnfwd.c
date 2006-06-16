@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevnfwd.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gdevnfwd.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Null and forwarding device implementation */
 #include "gx.h"
 #include "gserrors.h"
@@ -127,6 +127,16 @@ gx_device_forward_color_procs(gx_device_forward * dev)
     set_dev_proc(dev, decode_color, gx_forward_decode_color);
 }
 
+int
+gx_forward_close_device(gx_device * dev)
+{
+    gx_device_forward * const fdev = (gx_device_forward *)dev;
+    gx_device *tdev = fdev->target;
+
+    return (tdev == 0) ? gx_default_close_device(dev)
+		       : dev_proc(tdev, close_device)(tdev);
+}
+
 void
 gx_forward_get_initial_matrix(gx_device * dev, gs_matrix * pmat)
 {
@@ -223,6 +233,20 @@ gx_forward_copy_mono(gx_device * dev, const byte * data,
 	return_error(gs_error_Fatal);
     return dev_proc(tdev, copy_mono)
 	(tdev, data, dx, raster, id, x, y, w, h, zero, one);
+}
+
+int
+gx_forward_copy_alpha(gx_device * dev, const byte * data, int data_x,
+	   int raster, gx_bitmap_id id, int x, int y, int width, int height,
+		      gx_color_index color, int depth)
+{
+    gx_device_forward * const fdev = (gx_device_forward *)dev;
+    gx_device *tdev = fdev->target;
+
+    if (tdev == 0)
+	return_error(gs_error_Fatal);
+    return dev_proc(tdev, copy_mono)
+	(tdev, data, data_x, raster, id, x, y, width, height, color, depth);
 }
 
 int
@@ -735,8 +759,7 @@ gx_forward_pattern_manage(gx_device * dev, gx_bitmap_id id,
     if (tdev == 0)
 	return 0;
     else
-	dev_proc(tdev, pattern_manage)(tdev, id, pinst, function);
-    return 0;
+	return dev_proc(tdev, pattern_manage)(tdev, id, pinst, function);
 }
 
 int

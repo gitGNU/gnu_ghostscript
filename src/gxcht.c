@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -17,9 +18,8 @@
   
 */
 
-/*$Id: gxcht.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/*$Id: gxcht.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Color halftone rendering for Ghostscript imaging library */
-#include <assert.h>
 #include "memory_.h"
 #include "gx.h"
 #include "gserrors.h"
@@ -205,7 +205,8 @@ gx_dc_ht_colored_write(
     byte *                          pdata0 = pdata;
 
     /* sanity check */
-    assert(pdevc->colors.colored.num_components == num_comps);
+    if (pdevc->colors.colored.num_components != num_comps)
+	return_error(gs_error_unregistered); /* Must not happen. */
 
     /* check if saved color is of the same type */
     if (psdc != 0 && psdc->type != pdevc->type)
@@ -517,7 +518,7 @@ typedef struct color_values_pair_s {
 #define SET_HT_COLORS_PROC(proc)\
   int proc(\
 	      color_values_pair_t *pvp,\
-	      gx_color_index colors[1 << MAX_DCC],\
+	      gx_color_index colors[MAX_DCC_16],\
 	      const gx_const_strip_bitmap *sbits[MAX_DCC],\
 	      const gx_device_color *pdevc,\
 	      gx_device *dev,\
@@ -836,7 +837,7 @@ private const gx_const_strip_bitmap ht_no_bitmap = {
 /* Set up the colors and the individual plane halftone bitmaps. */
 private int
 set_ht_colors_le_4(color_values_pair_t *pvp /* only used internally */,
-		   gx_color_index colors[MAX_DCC_16],
+		   gx_color_index colors[MAX_DCC_16] /* 16 used */,
 		   const gx_const_strip_bitmap * sbits[MAX_DCC],
 		   const gx_device_color * pdc, gx_device * dev,
 		   gx_ht_cache * caches[MAX_DCC], int nplanes)
@@ -960,7 +961,7 @@ c2:	    case 2:
 /* Set up colors using the standard 1-bit CMYK mapping. */
 private int
 set_cmyk_1bit_colors(color_values_pair_t *ignore_pvp,
-		     gx_color_index colors[MAX_DCC_16 /*16 used*/],
+		     gx_color_index colors[MAX_DCC_16] /*2 used*/,
 		     const gx_const_strip_bitmap * sbits[MAX_DCC /*4 used*/],
 		     const gx_device_color * pdc, gx_device * dev,
 		     gx_ht_cache * caches[MAX_DCC /*4 used*/],
@@ -1024,7 +1025,7 @@ set_cmyk_1bit_colors(color_values_pair_t *ignore_pvp,
  */
 private int
 set_ht_colors_gt_4(color_values_pair_t *pvp,
-		   gx_color_index colors[MAX_DCC_16],
+		   gx_color_index colors[MAX_DCC_16 /* 2 * nplanes */],
 		   const gx_const_strip_bitmap * sbits[MAX_DCC],
 		   const gx_device_color * pdc, gx_device * dev,
 		   gx_ht_cache * caches[MAX_DCC], int nplanes)
@@ -1098,7 +1099,7 @@ init_tile_cursor(int i, tile_cursor_t *ptc, const gx_const_strip_bitmap *btile,
     ptc->xbits = ((tw - 1) & 7) + 1;
     ptc->tdata = btile->data;
     ptc->raster = btile->raster;
-    ptc->row = ptc->tdata + by * ptc->raster;
+    ptc->row = ptc->tdata + by * (int)ptc->raster;
     ptc->data = ptc->row + ptc->xoffset;
     ptc->bit_shift = ptc->xshift;
     if_debug6('h', "[h]plane %d: size=%d,%d shift=%d bx=%d by=%d\n",

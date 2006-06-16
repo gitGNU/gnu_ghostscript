@@ -16,7 +16,7 @@
 
 */
 
-/*$Id: gdevxcf.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/*$Id: gdevxcf.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Gimp (XCF) export device, supporting DeviceN color models. */
 
 #include "math_.h"
@@ -348,7 +348,7 @@ cmyk_cs_to_spotn_cm(gx_device * dev, frac c, frac m, frac y, frac k, frac out[])
     int i;
 
     if (luo != NULL) {
-	double in[3];
+	double in[4];
 	double tmp[MAX_CHAN];
 	int outn = xdev->lu_cmyk_outn;
 
@@ -1345,7 +1345,7 @@ xcf_write_footer(xcf_write_ctx *xc, xcf_device *pdev)
 	int offset;
 	int tile_idx;
 
-	dlprintf2("actual tile offset: %d %d\n", xc->offset, sizeof(gx_color_index));
+	dlprintf2("actual tile offset: %d %d\n", xc->offset, (int)arch_sizeof_color_index);
 	xcf_write_32(xc, xc->width);
 	xcf_write_32(xc, xc->height);
 	xcf_write_32(xc, separation_name->size + 1);

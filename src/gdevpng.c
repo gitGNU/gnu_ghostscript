@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpng.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: gdevpng.c,v 1.7 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* PNG (Portable Network Graphics) Format.  Pronounced "ping". */
 /* lpd 1999-09-24: changes PNG_NO_STDIO to PNG_NO_CONSOLE_IO for libpng
    versions 1.0.3 and later. */
@@ -136,6 +136,19 @@ prn_device(png16m_procs, "png16m",
 	   X_DPI, Y_DPI,
 	   0, 0, 0, 0,		/* margins */
 	   24, png_print_page);
+
+/* 48 bit color. */
+
+private const gx_device_procs png48_procs =
+prn_color_procs(gdev_prn_open, gdev_prn_output_page, gdev_prn_close,
+		gx_default_rgb_map_rgb_color, gx_default_rgb_map_color_rgb);
+const gx_device_printer gs_png48_device =
+prn_device(png48_procs, "png48",
+	   DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
+	   X_DPI, Y_DPI,
+	   0, 0, 0, 0,		/* margins */
+	   48, png_print_page);
+
 
 /* 32-bit RGBA */
 /* pngalpha device is 32-bit RGBA, with the alpha channel
@@ -305,6 +318,13 @@ png_print_page(gx_device_printer * pdev, FILE * file)
 		background.gray = 0;
 		png_set_bKGD(png_ptr, info_ptr, &background);
 	    }
+	    break;
+	case 48:
+	    info_ptr->bit_depth = 16;
+	    info_ptr->color_type = PNG_COLOR_TYPE_RGB;
+#if defined(ARCH_IS_BIG_ENDIAN) && (!ARCH_IS_BIG_ENDIAN) 
+	    png_set_swap(png_ptr);
+#endif
 	    break;
 	case 24:
 	    info_ptr->bit_depth = 8;

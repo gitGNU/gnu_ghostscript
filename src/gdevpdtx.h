@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdtx.h,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdtx.h,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Shared implementation definitions for pdfwrite text and fonts */
 
 #ifndef gdevpdtx_INCLUDED
@@ -94,6 +94,6 @@ typedef struct pdf_font_resource_s pdf_font_resource_t;
 /* Get the object ID of a font resource. */
 long pdf_font_id(const pdf_font_resource_t *pdfont);
 /* Register charproc fonts with the page or substream. */
-int pdf_used_charproc_fonts(gx_device_pdf *pdev, pdf_font_resource_t *pdfont);
+int pdf_used_charproc_resources(gx_device_pdf *pdev, pdf_font_resource_t *pdfont);
 
 #endif /* gdevpdtx_INCLUDED */

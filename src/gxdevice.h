@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxdevice.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gxdevice.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Definitions for device implementors */
 
 #ifndef gxdevice_INCLUDED
@@ -108,6 +108,7 @@
 #define std_device_part3_()\
 	0/*PageCount*/, 0/*ShowpageCount*/, 1/*NumCopies*/, 0/*NumCopies_set*/,\
 	0/*IgnoreNumCopies*/, 0/*UseCIEColor*/, 0/*LockSafetyParams*/,\
+	INIT_NAMED_COLOR_PTR	/* 'Named color' callback pointer */\
 	{ gx_default_install, gx_default_begin_page, gx_default_end_page }
 /*
  * We need a number of different variants of the std_device_ macro simply
@@ -302,8 +303,11 @@ dev_proc_decode_color(cmyk_1bit_map_color_cmyk);
 dev_proc_map_cmyk_color(cmyk_8bit_map_cmyk_color);
 dev_proc_map_color_rgb(cmyk_8bit_map_color_rgb);
 dev_proc_decode_color(cmyk_8bit_map_color_cmyk);
+dev_proc_encode_color(gx_default_8bit_map_gray_color);
+dev_proc_decode_color(gx_default_8bit_map_color_gray);
 
 /* Default implementations for forwarding devices */
+dev_proc_close_device(gx_forward_close_device);
 dev_proc_get_initial_matrix(gx_forward_get_initial_matrix);
 dev_proc_sync_output(gx_forward_sync_output);
 dev_proc_output_page(gx_forward_output_page);

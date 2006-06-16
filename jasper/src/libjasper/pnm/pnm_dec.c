@@ -64,7 +64,7 @@
 /*
  * Portable Pixmap/Graymap Format Support
  *
- * $Id: pnm_dec.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: pnm_dec.c,v 1.2 2006/06/16 12:55:32 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -79,6 +79,7 @@
 #include "jasper/jas_types.h"
 #include "jasper/jas_stream.h"
 #include "jasper/jas_image.h"
+#include "jasper/jas_debug.h"
 
 #include "pnm_cod.h"
 
@@ -118,7 +119,7 @@ jas_image_t *pnm_decode(jas_stream_t *in, char *opts)
 	int i;
 
 	if (opts) {
-		fprintf(stderr, "warning: ignoring options\n");
+		jas_eprintf("warning: ignoring options\n");
 	}
 
 	/* Read the file header. */
@@ -208,7 +209,7 @@ static int pnm_gethdr(jas_stream_t *in, pnm_hdr_t *hdr)
 	  pnm_getsintstr(in, &hdr->height)) {
 		return -1;
 	}
-	if (pnm_type(hdr->magic) != PNM_TYPE_PBM) {
+	if (pnm_type((uint_fast16_t)hdr->magic) != PNM_TYPE_PBM) {
 		if (pnm_getsintstr(in, &maxval)) {
 			return -1;
 		}
@@ -217,13 +218,13 @@ static int pnm_gethdr(jas_stream_t *in, pnm_hdr_t *hdr)
 	}
 	if (maxval < 0) {
 		hdr->maxval = -maxval;
-		hdr->sgnd = true;
+		hdr->sgnd = jas_true;
 	} else {
 		hdr->maxval = maxval;
-		hdr->sgnd = false;
+		hdr->sgnd = jas_false;
 	}
 
-	switch (pnm_type(hdr->magic)) {
+	switch (pnm_type((uint_fast16_t)hdr->magic)) {
 	case PNM_TYPE_PBM:
 	case PNM_TYPE_PGM:
 		hdr->numcmpts = 1;
@@ -232,7 +233,10 @@ static int pnm_gethdr(jas_stream_t *in, pnm_hdr_t *hdr)
 		hdr->numcmpts = 3;
 		break;
 	default:
-		abort();
+		jas_error(	JAS_ERR_INVALID_MAGIC_PARAM_PNM_GETHDR,
+					"JAS_ERR_INVALID_MAGIC_PARAM_PNM_GETHDR"
+				);
+		return -1;
 		break;
 	}
 
@@ -265,8 +269,8 @@ static int pnm_getdata(jas_stream_t *in, pnm_hdr_t *hdr, jas_image_t *image)
 #if 0
 	numcmpts = jas_image_numcmpts(image);
 #endif
-	fmt = pnm_fmt(hdr->magic);
-	type = pnm_type(hdr->magic);
+	fmt = pnm_fmt((uint_fast16_t)hdr->magic);
+	type = pnm_type((uint_fast16_t)hdr->magic);
 	depth = pnm_maxvaltodepth(hdr->maxval);
 
 	data[0] = 0;
@@ -352,7 +356,7 @@ static int pnm_getdata(jas_stream_t *in, pnm_hdr_t *hdr, jas_image_t *image)
 							v = uv;
 						}
 					}
-					jas_matrix_set(data[cmptno], 0, x, v);
+					jas_matrix_set(data[cmptno], 0, x, (int)v);
 				}
 			}
 		}

@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ipacked.h,v 1.4 2005/12/13 16:57:26 jemarch Exp $ */
+/* $Id: ipacked.h,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Packed array format for Ghostscript */
 
 #ifndef ipacked_INCLUDED
@@ -101,7 +101,7 @@ typedef enum {
 
 #define packed_per_ref (sizeof(ref) / sizeof(ref_packed))
 #define align_packed_per_ref\
-  (arch_align_ref_mod / arch_align_short_mod)
+  (ARCH_ALIGN_REF_MOD / ARCH_ALIGN_SHORT_MOD)
 #define pt_tag(pt) ((ref_packed)(pt) << r_packed_type_shift)
 #define packed_value_mask ((1 << r_packed_value_bits) - 1)
 #define packed_max_value packed_value_mask

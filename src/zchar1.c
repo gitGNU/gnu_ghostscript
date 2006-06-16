@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zchar1.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: zchar1.c,v 1.7 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Type 1 character display operator */
 #include "memory_.h"
 #include "ghost.h"
@@ -294,12 +294,8 @@ charstring_execchar(i_ctx_t *i_ctx_p, int font_type_mask)
 		return type1_call_OtherSubr(i_ctx_p, &cxs, nobbox_continue,
 					    &other_subr);
 	    case type1_result_sbw:	/* [h]sbw, just continue */
-		if (cxs.present != metricsSideBearingAndWidth) {
-		    if (!cxs.use_FontBBox_as_Metrics2)
- 		        type1_cis_get_metrics(pcis, cxs.sbw);
-	            else
-			cxs.present = metricsSideBearingAndWidth;
-		}
+		if (cxs.present != metricsSideBearingAndWidth)
+		    type1_cis_get_metrics(pcis, cxs.sbw);
 		opstr = 0;
 		goto icont;
 	}
@@ -1052,12 +1048,13 @@ zcharstring_outline(gs_font_type1 *pfont1, int WMode, const ref *pgref,
     switch (WMode) {
     default:
 	code = zchar_get_metrics2((gs_font_base *)pfont1, pgref, wv);
-	sbw[0] = wv[2];
-	sbw[1] = wv[3];
-	sbw[2] = wv[0];
-	sbw[3] = wv[1];
-	if (code)
+	if (code) {
+	    sbw[0] = wv[2];
+	    sbw[1] = wv[3];
+	    sbw[2] = wv[0];
+	    sbw[3] = wv[1];
 	    break;
+	}
 	/* falls through */
     case 0:
 	code = zchar_get_metrics((gs_font_base *)pfont1, pgref, sbw);
@@ -1214,8 +1211,9 @@ z1_set_cache(i_ctx_t *i_ctx_p, gs_font_base *pbfont, ref *cnref,
     gs_glyph_info_t info;
     int wmode = gs_rootfont(igs)->WMode;
     int code;
+    gs_matrix id_matrix = { identity_matrix_body };
 
-    code = gs_default_glyph_info((gs_font *)pbfont, glyph, &pbfont->FontMatrix,
+    code = gs_default_glyph_info((gs_font *)pbfont, glyph, &id_matrix,
 		((GLYPH_INFO_WIDTH0 | GLYPH_INFO_VVECTOR0) << wmode) | GLYPH_INFO_BBOX,
 	        &info);
     if (code < 0)

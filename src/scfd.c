@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: scfd.c,v 1.4 2005/12/13 16:57:27 jemarch Exp $ */
+/* $Id: scfd.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* CCITTFax decoding filter */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"
@@ -73,6 +73,7 @@ s_CFD_init(stream_state * st)
     ss->cbit = 0;
     ss->uncomp_run = 0;
     ss->rows_left = (ss->Rows <= 0 || ss->EndOfBlock ? -1 : ss->Rows + 1);
+    ss->row = 0;
     ss->rpos = ss->wpos = raster - 1;
     ss->eol_count = 0;
     ss->invert = white;
@@ -227,9 +228,8 @@ s_CFD_process(stream_state * st, stream_cursor_read * pr,
     {
 	hcd_declare_state;
 	hcd_load_state();
-	if_debug8('w', "\
-[w]CFD_process top: eol_count=%d, k_left=%d, rows_left=%d\n\
-    bits=0x%lx, bits_left=%d, read %u, wrote %u%s\n",
+	if_debug8('w', "[w]CFD_process top: eol_count=%d, k_left=%d, rows_left=%d\n"
+    		"    bits=0x%lx, bits_left=%d, read %u, wrote %u%s\n",
 		  eol_count, k_left, rows_left,
 		  (ulong) bits, bits_left,
 		  (uint) (p - rstart), (uint) (pw->ptr - wstart),
@@ -285,10 +285,9 @@ s_CFD_process(stream_state * st, stream_cursor_read * pr,
 	    if (status)
 		goto out;
 	}
-	if (rows_left > 0 && --rows_left == 0) {
-	    status = EOFC;
-	    goto out;
-	}
+	ss->row++;
+	if (rows_left > 0 && --rows_left == 0) 
+	    goto ck_eol;	/* handle EOD if it is present */
 	if (ss->K != 0) {
 	    byte *prev_bits = ss->lprev;
 
@@ -313,6 +312,12 @@ s_CFD_process(stream_state * st, stream_cursor_read * pr,
     }
     /* If we're between scan lines, scan for EOLs. */
     if (ss->wpos < 0) {
+	    /*
+	     * According to Adobe, the decoder should always check for
+	     * the EOD sequence, regardless of EndOfBlock: the Red Book's
+	     * documentation of EndOfBlock is wrong.
+	     */
+ck_eol:
 	while ((status = cf_decode_eol(ss, pr)) > 0) {
 	    if_debug0('w', "[w]EOL\n");
 	    /* If we are in a Group 3 mixed regime, */
@@ -326,15 +331,14 @@ s_CFD_process(stream_state * st, stream_cursor_read * pr,
 		hcd_store_state();
 	    }
 	    ++eol_count;
-	    /*
-	     * According to Adobe, the decoder should always check for
-	     * the EOD sequence, regardless of EndOfBlock: the Red Book's
-	     * documentation of EndOfBlock is wrong.
-	     */
 	    if (eol_count == (ss->K < 0 ? 2 : 6)) {
 		status = EOFC;
 		goto out;
 	    }
+	}
+	if (rows_left == 0) {
+	    status = EOFC;
+	    goto out;
 	}
 	if (status == 0)	/* input empty while scanning EOLs */
 	    goto out;
@@ -710,6 +714,10 @@ v0:	    skip_bits(1);
     /* falls through */
   out:cfd_store_state();
     ss->invert = invert;
+    /* Ignore an error (missing EOFB/RTC when EndOfBlock == true) */
+    /* if we have finished all rows. */
+    if (status == ERRC && ss->Rows > 0 && ss->row > ss->Rows)
+	status = EOFC;
     return status;
     /*
      * We handle horizontal decoding here, so that we can

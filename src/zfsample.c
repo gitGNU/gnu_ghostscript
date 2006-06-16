@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zfsample.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zfsample.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Sample data to create a type 0 function */
 #include "memory_.h"
 #include "ghost.h"
@@ -31,6 +31,7 @@
 #include "ostack.h"
 #include "store.h"
 #include "gsfunc0.h"
+#include "gscdevn.h"
 
 /*
  * We store the data in a string.  Since the max size for a string is 64k,

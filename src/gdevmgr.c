@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevmgr.c,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $*/
+/* $Id: gdevmgr.c,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $*/
 /* MGR device driver */
 #include "gdevprn.h"
 #include "gdevpccm.h"
@@ -109,7 +109,7 @@ mgr_begin_page(gx_device_mgr *bdev, FILE *pstream, mgr_cursor *pcur)
 {	struct b_header head;
 	uint line_size =
 		gdev_prn_raster((gx_device_printer *)bdev) + 3;
-	byte *data = (byte *)gs_malloc(bdev, line_size, 1, "mgr_begin_page");
+	byte *data = (byte *)gs_malloc(bdev->memory, line_size, 1, "mgr_begin_page");
 	if ( data == 0 )
 		return_error(gs_error_VMerror);
 
@@ -133,7 +133,7 @@ mgr_begin_page(gx_device_mgr *bdev, FILE *pstream, mgr_cursor *pcur)
 private int
 mgr_next_row(mgr_cursor *pcur)
 {	if ( pcur->lnum >= pcur->dev->height )
-	{	gs_free((gx_device_printer *)pcur->dev->memory,
+	{	gs_free(((gx_device_printer *)pcur->dev)->memory,
 			(char *)pcur->data, pcur->line_size, 1,
 			"mgr_next_row(done)");
 		return 1;
@@ -367,11 +367,11 @@ cmgrN_print_page(gx_device_printer *pdev, FILE *pstream)
 /* (1/6, 1/2, and 5/6), instead of the obvious 8x8x4. */
 
 gx_color_index
-mgr_8bit_map_rgb_color(gx_device *dev, gx_color_value r, gx_color_value g,
-  gx_color_value b)
-{	uint rv = r / (gx_max_color_value / 7 + 1);
-	uint gv = g / (gx_max_color_value / 7 + 1);
-	uint bv = b / (gx_max_color_value / 7 + 1);
+mgr_8bit_map_rgb_color(gx_device *dev, const gx_color_value cv[])
+{
+	uint rv = cv[0] / (gx_max_color_value / 7 + 1);
+	uint gv = cv[1] / (gx_max_color_value / 7 + 1);
+	uint bv = cv[2] / (gx_max_color_value / 7 + 1);
 	return (gx_color_index)
 		(rv == gv && gv == bv ? rv + (256-7) :
 		 (rv << 5) + (gv << 2) + (bv >> 1));

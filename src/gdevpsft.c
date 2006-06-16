@@ -1,4 +1,5 @@
-/* Copyright (C) 1999, 2000, 2002 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,10 +17,9 @@
 
 */
 
-/* $Id: gdevpsft.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gdevpsft.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Write an embedded TrueType font */
 #include "memory_.h"
-#include <assert.h>
 #include <stdlib.h>		/* for qsort */
 #include "gx.h"
 #include "gscencs.h"
@@ -137,26 +137,22 @@ put_table(byte tab[16], const char *tname, ulong checksum, ulong offset,
 private int
 write_range(stream *s, gs_font_type42 *pfont, ulong start, uint length)
 {
-    ulong base = start;
-    ulong limit = base + length;
+    ulong base = start, size = length;
 
     if_debug3('l', "[l]write_range pos = %ld, start = %lu, length = %u\n",
 	      stell(s), start, length);
-    while (base < limit) {
-	uint size = limit - base;
+    while (size > 0) {
 	const byte *ptr;
 	int code;
 
-	/* Write the largest block we can access consecutively. */
-	while ((code = pfont->data.string_proc(pfont, base, size, &ptr)) < 0) {
-	    if (size <= 1)
-		return code;
-	    size >>= 1;
-	}
-	if (code > 0 && size > code)
-	    size = code; /* Segmented data - see z42_string_proc. */
-	stream_write(s, ptr, size);
-	base += size;
+	code = pfont->data.string_proc(pfont, base, size, &ptr);
+	if (code < 0)
+	    return code;
+	if (!code)
+	    code = size;
+	stream_write(s, ptr, code);
+	base += code;
+	size -= code;
     }
     return 0;
 }
@@ -166,16 +162,19 @@ write_range(stream *s, gs_font_type42 *pfont, ulong start, uint length)
  * If no glyph can be found, return -1 and store the name in *pstr.
  */
 private int
-mac_glyph_index(gs_font *font, int ch, gs_const_string *pstr)
+mac_glyph_index(gs_font *font, int ch, gs_const_string *pstr, int *index)
 {
     gs_glyph glyph = font->procs.encode_char(font, (gs_char)ch,
 					     GLYPH_SPACE_NAME);
     int code;
 
-    if (glyph == gs_no_glyph)
+    if (glyph == gs_no_glyph) {
+	*index = 0;
 	return 0;		/* .notdef */
+    }
     code = font->procs.glyph_name(font, glyph, pstr);
-    assert(code >= 0);
+    if (code < 0)
+	return code;
     if (glyph < gs_min_cid_glyph) {
 	gs_char mac_char;
 	gs_glyph mac_glyph;
@@ -186,17 +185,25 @@ mac_glyph_index(gs_font *font, int ch, gs_const_string *pstr)
 	    mac_char = ch - 29;
 	else if (ch >= 128 && ch <= 255)
 	    mac_char = ch - 30;
-	else
-	    return -1;
+	else {
+	    *index = -1;
+	    return 0;
+	}
 	mac_glyph = gs_c_known_encode(mac_char, ENCODING_INDEX_MACGLYPH);
-	if (mac_glyph == gs_no_glyph)
-	    return -1;
+	if (mac_glyph == gs_no_glyph) {
+	    *index = -1;
+	    return 0;
+	}
 	code = gs_c_glyph_name(mac_glyph, &mstr);
-	assert(code >= 0);
-	if (!bytes_compare(pstr->data, pstr->size, mstr.data, mstr.size))
-	    return (int)mac_char;
+	if (code < 0)
+	    return code;
+	if (!bytes_compare(pstr->data, pstr->size, mstr.data, mstr.size)) {
+	    *index = (int)mac_char;
+	    return 0;
+	}
     }
-    return -1;
+    *index = -1;
+    return 0;
 }
 
 /* ---------------- Individual tables ---------------- */
@@ -401,7 +408,7 @@ write_mtx(stream *s, gs_font_type42 *pfont, const gs_type42_mtx_t *pmtx,
 {
     uint num_metrics = pmtx->numMetrics;
     uint len = num_metrics * 4;
-    double factor = pfont->data.unitsPerEm * (wmode ? -1 : 1);
+    double factor = (double)pfont->data.unitsPerEm * (wmode ? -1 : 1);
     float sbw[4];
     uint i;
 
@@ -540,7 +547,7 @@ typedef struct post_s {
  * If necessary, compute the length of the post table.  Note that we
  * only generate post entries for characters in the Encoding.
  */
-private void
+private int
 compute_post(gs_font *font, post_t *post)
 {
     int i;
@@ -549,8 +556,11 @@ compute_post(gs_font *font, post_t *post)
 	gs_const_string str;
 	gs_glyph glyph = font->procs.encode_char(font, (gs_char)i,
 						 GLYPH_SPACE_INDEX);
-	int mac_index = mac_glyph_index(font, i, &str);
+	int mac_index;
 
+	int code = mac_glyph_index(font, i, &str, &mac_index);
+	if (code < 0)
+	    return code;
 	if (mac_index != 0) {
 	    post->glyphs[post->count].char_index = i;
 	    post->glyphs[post->count].size =
@@ -578,10 +588,11 @@ compute_post(gs_font *font, post_t *post)
 	post->glyph_count = post->glyphs[post->count - 1].glyph_index + 1;
     }
     post->length += post->glyph_count * 2;
+    return 0;
 }
 
 /* Write the post table */
-private void
+private int
 write_post(stream *s, gs_font *font, post_t *post)
 {
     byte post_initial[32 + 2];
@@ -599,8 +610,11 @@ write_post(stream *s, gs_font *font, post_t *post)
     for (i = 0, name_index = 258, glyph_index = 0; i < post->count; ++i) {
 	gs_const_string str;
 	int ch = post->glyphs[i].char_index;
-	int mac_index = mac_glyph_index(font, ch, &str);
+	int mac_index;
+	int code = mac_glyph_index(font, ch, &str, &mac_index);
 
+	if (code < 0)
+	    return code;
 	for (; glyph_index < post->glyphs[i].glyph_index; ++glyph_index)
 	    put_ushort(s, 0);
 	glyph_index++;
@@ -617,14 +631,18 @@ write_post(stream *s, gs_font *font, post_t *post)
     for (i = 0; i < post->count; ++i) {
 	gs_const_string str;
 	int ch = post->glyphs[i].char_index;
-	int mac_index = mac_glyph_index(font, ch, &str);
+	int mac_index;
+	int code = mac_glyph_index(font, ch, &str, &mac_index);
 
+	if (code < 0)
+	    return code;
 	if (mac_index < 0) {
 	    spputc(s, (byte)str.size);
 	    stream_write(s, str.data, str.size);
 	}
     }
     put_pad(s, post->length);
+    return 0;
 }
 
 /* ---------------- Main program ---------------- */
@@ -713,8 +731,9 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 
 	switch (u32(tab)) {
 	case W('h','e','a','d'):
-	    if (length != 54)
+	    if (length < 54)
 		return_error(gs_error_invalidfont);
+	    length = 54; /* bug 688409 fig2.eps has length=56. */
 	    ACCESS(start, length, data);
 	    memcpy(head, data, length);
 	    continue;
@@ -837,9 +856,11 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 
     if (!have_post) {
 	memset(&post, 0, sizeof(post));
-	if (options & WRITE_TRUETYPE_POST)
-	    compute_post(font, &post);
-	else
+	if (options & WRITE_TRUETYPE_POST) {
+	    code = compute_post(font, &post);
+	    if (code < 0)
+		return code;
+	} else
 	    post.length = 32;	/* dummy table */
     }
 
@@ -1095,9 +1116,11 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 	/* If necessary, write post. */
 
 	if (!have_post) {
-	    if (options & WRITE_TRUETYPE_POST)
-		write_post(s, font, &post);
-	    else {
+	    if (options & WRITE_TRUETYPE_POST) {
+		code = write_post(s, font, &post);
+		if (code < 0)
+		    return code;
+	    } else {
 		byte post_initial[32 + 2];
 
 		memset(post_initial, 0, 32);

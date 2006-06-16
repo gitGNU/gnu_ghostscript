@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: isave.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: isave.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Procedures for save/restore */
 /* Requires imemory.h */
 
@@ -81,7 +81,7 @@ bool alloc_any_names_since_save(const alloc_save_t *);
  * Assume the caller obtained the argument by calling alloc_find_save;
  * if this is the case, the operation cannot fail.
  */
-bool alloc_restore_step_in(gs_dual_memory_t *, alloc_save_t *);
+int alloc_restore_step_in(gs_dual_memory_t *, alloc_save_t *);
 /* Backward compatibility */
 #define alloc_restore_state_step(save) alloc_restore_step_in(idmemory, save)
 
@@ -96,7 +96,11 @@ void alloc_forget_save_in(gs_dual_memory_t *, alloc_save_t *);
 #define alloc_forget_save(save) alloc_forget_save_in(idmemory, save)
 
 /* Release all memory -- like doing a restore "past the bottom". */
-void alloc_restore_all(gs_dual_memory_t *);
+int alloc_restore_all(gs_dual_memory_t *);
+#if NO_INVISIBLE_LEVELS
+/* Filter save change lists. */
+void alloc_save__filter_changes(gs_ref_memory_t *mem);
+#endif
 
 /* ------ Internals ------ */
 
@@ -117,6 +121,6 @@ void alloc_set_in_save(gs_dual_memory_t *);
 void alloc_set_not_in_save(gs_dual_memory_t *);
 
 /* Remove entries from font and character caches. */
-void font_restore(const alloc_save_t * save);
+int  font_restore(const alloc_save_t * save);
 
 #endif /* isave_INCLUDED */

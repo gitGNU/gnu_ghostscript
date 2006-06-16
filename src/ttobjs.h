@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ttobjs.h,v 1.4 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: ttobjs.h,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
 
 /* Changes after FreeType: cut out the TrueType instruction interpreter. */
 
@@ -45,7 +45,7 @@
 #include "ttcommon.h"
 #include "tttypes.h"
 #include "tttables.h"
-#include <setjmp.h>
+#include "setjmp_.h"
 
 #ifdef __cplusplus
   extern "C" {
@@ -696,7 +696,7 @@ typedef struct _TExecution_Context TExecution_Context;
     TSet_CVT_Function  func_write_cvt; /* write a cvt entry (in pixels) */
     TSet_CVT_Function  func_move_cvt;  /* incr a cvt entry (in pixels)  */
     /* GS extension */
-    jmp_buf            trap;           /* Error throw trap. */ 
+    gsfix_jmp_buf      trap;           /* Error throw trap. */ 
     Int                n_contours;
     Int                n_points;
     Int                maxGlyphSize;

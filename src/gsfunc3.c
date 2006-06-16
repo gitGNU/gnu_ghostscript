@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsfunc3.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: gsfunc3.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Implementation of LL3 Functions */
 #include "math_.h"
 #include "memory_.h"
@@ -25,6 +25,7 @@
 #include "gsfunc3.h"
 #include "gsparam.h"
 #include "gxfunc.h"
+#include "gxarith.h"
 #include "stream.h"
 
 /* ---------------- Utilities ---------------- */
@@ -126,7 +127,7 @@ fn_ElIn_evaluate(const gs_function_t * pfn_common, const float *in, float *out)
 /* Test whether an Exponential function is monotonic.  (They always are.) */
 private int
 fn_ElIn_is_monotonic(const gs_function_t * pfn_common,
-		     const float *lower, const float *upper)
+		     const float *lower, const float *upper, uint *mask)
 {
     const gs_function_ElIn_t *const pfn =
 	(const gs_function_ElIn_t *)pfn_common;
@@ -135,6 +136,7 @@ fn_ElIn_is_monotonic(const gs_function_t * pfn_common,
 	upper[0] < pfn->params.Domain[0]
 	)
 	return_error(gs_error_rangecheck);
+    *mask = 0;
     return 1;
 }
 
@@ -276,8 +278,6 @@ gs_function_ElIn_init(gs_function_t ** ppfn,
 	pfn->params = *params;
 	pfn->params.m = 1;
 	pfn->head = function_ElIn_head;
-	pfn->head.is_monotonic =
-	    fn_domain_is_monotonic((gs_function_t *)pfn);
 	*ppfn = (gs_function_t *) pfn;
     }
     return 0;
@@ -328,7 +328,7 @@ fn_1ItSg_evaluate(const gs_function_t * pfn_common, const float *in, float *out)
 /* Test whether a 1-Input Stitching function is monotonic. */
 private int
 fn_1ItSg_is_monotonic(const gs_function_t * pfn_common,
-		      const float *lower, const float *upper)
+		      const float *lower, const float *upper, uint *mask)
 {
     const gs_function_1ItSg_t *const pfn =
 	(const gs_function_1ItSg_t *)pfn_common;
@@ -337,6 +337,7 @@ fn_1ItSg_is_monotonic(const gs_function_t * pfn_common,
     int k = pfn->params.k;
     int i;
 
+    *mask = 0;
     if (v0 > v1) {
 	v0 = v1; v1 = lower[0];
     }
@@ -349,36 +350,53 @@ fn_1ItSg_is_monotonic(const gs_function_t * pfn_common,
     for (i = 0; i < pfn->params.k; ++i) {
 	float b0 = (i == 0 ? d0 : pfn->params.Bounds[i - 1]);
 	float b1 = (i == k - 1 ? d1 : pfn->params.Bounds[i]);
-	const float small = 0.0000001 * (b1 - b0);
+	const float bsmall = (float)1e-6 * (b1 - b0);
+	float esmall;
 	float e0, e1;
 	float w0, w1;
 	float vv0, vv1;
+	double vb0, vb1;
 
 	if (v0 >= b1)
 	    continue;
-	if (v0 >= b1 - small)
-	    continue; /* Ignore a small noize */
+	if (v0 >= b1 - bsmall)
+	    continue; /* Ignore a small noise */
 	vv0 = max(b0, v0);
 	vv1 = v1;
-	if (vv1 > b1 && v1 < b1 + small)
-	    vv1 = b1; /* Ignore a small noize */
+	if (vv1 > b1 && v1 < b1 + bsmall)
+	    vv1 = b1; /* Ignore a small noise */
 	if (vv0 == vv1)
 	    return 1;
 	if (vv0 < b1 && vv1 > b1)
 	    return 0; /* Consider stitches as monotonity beraks. */
 	e0 = pfn->params.Encode[2 * i];
 	e1 = pfn->params.Encode[2 * i + 1];
-	w0 = (max(vv0, b0) - b0) * (e1 - e0) / (b1 - b0) + e0;
-	w1 = (min(vv1, b1) - b0) * (e1 - e0) / (b1 - b0) + e0;
+	esmall = (float)1e-6 * any_abs(e1 - e0);
+	vb0 = max(vv0, b0);
+	vb1 = min(vv1, b1);
+	w0 = (float)(vb0 - b0) * (e1 - e0) / (b1 - b0) + e0;
+	w1 = (float)(vb1 - b0) * (e1 - e0) / (b1 - b0) + e0;
 	/* Note that w0 > w1 is now possible if e0 > e1. */
+	if (e0 > e1) {
+	    if (w0 > e0 && w0 - esmall <= e0)
+		w0 = e0; /* Suppress a small noise */
+	    if (w1 < e1 && w1 + esmall >= e1)
+		w1 = e1; /* Suppress a small noise */
+	} else {
+	    if (w0 < e0 && w0 + esmall >= e0)
+		w0 = e0; /* Suppress a small noise */
+	    if (w1 > e1 && w1 - esmall <= e1)
+		w1 = e1; /* Suppress a small noise */
+	}
 	if (w0 > w1)
 	    return gs_function_is_monotonic(pfn->params.Functions[i],
-					    &w1, &w0);
+					    &w1, &w0, mask);
 	else
 	    return gs_function_is_monotonic(pfn->params.Functions[i],
-					    &w0, &w1);
+					    &w0, &w1, mask);
     }
     /* v0 is equal to the range end. */
+    *mask = 0;
     return 1; 
 }
 
@@ -537,8 +555,6 @@ gs_function_1ItSg_init(gs_function_t ** ppfn,
 	pfn->params.m = 1;
 	pfn->params.n = n;
 	pfn->head = function_1ItSg_head;
-	pfn->head.is_monotonic =
-	    fn_domain_is_monotonic((gs_function_t *)pfn);
 	*ppfn = (gs_function_t *) pfn;
     }
     return 0;
@@ -589,7 +605,7 @@ fn_AdOt_evaluate(const gs_function_t *pfn_common, const float *in0, float *out)
 /* Test whether an Arrayed Output function is monotonic. */
 private int
 fn_AdOt_is_monotonic(const gs_function_t * pfn_common,
-		     const float *lower, const float *upper)
+		     const float *lower, const float *upper, uint *mask)
 {
     const gs_function_AdOt_t *const pfn =
 	(const gs_function_AdOt_t *)pfn_common;
@@ -597,7 +613,7 @@ fn_AdOt_is_monotonic(const gs_function_t * pfn_common,
 
     for (i = 0; i < pfn->params.n; ++i) {
 	int code =
-	    gs_function_is_monotonic(pfn->params.Functions[i], lower, upper);
+	    gs_function_is_monotonic(pfn->params.Functions[i], lower, upper, mask);
 
 	if (code <= 0)
 	    return code;
@@ -687,24 +703,10 @@ gs_function_AdOt_init(gs_function_t ** ppfn,
 	}
     };
     int m = params->m, n = params->n;
-    int i;
-    int is_monotonic = 0;	/* initialize to pacify compiler */
 
     *ppfn = 0;			/* in case of error */
     if (m <= 0 || n <= 0)
 	return_error(gs_error_rangecheck);
-    for (i = 0; i < n; ++i) {
-	const gs_function_t *psubfn = params->Functions[i];
-	int sub_mono;
-
-	if (psubfn->params.m != m || psubfn->params.n != 1)
-	    return_error(gs_error_rangecheck);
-	sub_mono = fn_domain_is_monotonic(psubfn);
-	if (i == 0 || sub_mono < 0)
-	    is_monotonic = sub_mono;
-	else if (is_monotonic >= 0)
-	    is_monotonic &= sub_mono;
-    }
     {
 	gs_function_AdOt_t *pfn =
 	    gs_alloc_struct(mem, gs_function_AdOt_t, &st_function_AdOt,
@@ -720,7 +722,6 @@ gs_function_AdOt_init(gs_function_t ** ppfn,
 	pfn->params.Domain = domain;
 	pfn->params.Range = 0;
 	pfn->head = function_AdOt_head;
-	pfn->head.is_monotonic = is_monotonic;
 	if (domain == 0) {
 	    gs_function_free((gs_function_t *)pfn, true, mem);
 	    return_error(gs_error_VMerror);

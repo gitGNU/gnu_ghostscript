@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevdgbr.c,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevdgbr.c,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Default implementation of device get_bits[_rectangle] */
 #include "memory_.h"
 #include "gx.h"
@@ -671,11 +671,13 @@ gx_default_get_bits_rectangle(gx_device * dev, const gs_int_rect * prect,
 		goto ret;
 	    }
 	}
-	code = (*dev_proc(dev, get_bits))
-	    (dev, prect->p.y, row, &params->data[0]);
+	code = (*dev_proc(dev, get_bits)) (dev, prect->p.y, row,
+		(params->options & GB_RETURN_POINTER) ? &params->data[0]
+						      : NULL );
 	if (code >= 0) {
 	    if (row != data) {
-		if (prect->p.x == 0 && params->data[0] != row) {
+		if (prect->p.x == 0 && params->data[0] != row
+		    && params->options & GB_RETURN_POINTER) {
 		    /*
 		     * get_bits returned an appropriate pointer: we can
 		     * avoid doing any copying.
@@ -691,7 +693,7 @@ gx_default_get_bits_rectangle(gx_device * dev, const gs_int_rect * prect,
 		    tdev.line_ptrs = &tdev.base;
 		    tdev.base = data;
 		    code = (*dev_proc(&mem_mono_device, copy_mono))
-			((gx_device *) & tdev, params->data[0], prect->p.x * depth,
+			((gx_device *) & tdev, row, prect->p.x * depth,
 			 min_raster, gx_no_bitmap_id, 0, 0, width_bits, 1,
 			 (gx_color_index) 0, (gx_color_index) 1);
 		    params->data[0] = data;

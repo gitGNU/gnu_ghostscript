@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevccr.c,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $*/
+/* $Id: gdevccr.c,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $*/
 /* CalComp Raster Format driver */
 #include "gdevprn.h"
 
@@ -114,9 +114,12 @@ gx_device_ccr far_data gs_ccr_device =
 /* ------ Color mapping routines ------ */
 /* map an rgb color to a ccr cmy bitmap */
 private gx_color_index
-ccr_map_rgb_color(gx_device *pdev, ushort r, ushort g, ushort b)
+ccr_map_rgb_color(gx_device *pdev, const ushort cv[])
 {
+  ushort r, g, b;
   register int shift = gx_color_value_bits - 1;
+
+  r = cv[0]; g = cv[1]; b = cv[2];
   r>>=shift;
   g>>=shift;
   b>>=shift;

@@ -62,7 +62,7 @@
  */
 
 /*
- * $Id: jpc_enc.h,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jpc_enc.h,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 #ifndef JPC_ENC_H
@@ -116,7 +116,7 @@ typedef struct {
 	uint_fast8_t prec;
 
 	/* The signedness of the samples. */
-	bool sgnd;
+	jas_bool sgnd;
 
 	/* The number of step sizes. */
 	uint_fast16_t numstepsizes;
@@ -131,7 +131,7 @@ typedef struct {
 typedef struct {
 
 	/* The coding mode. */
-	bool intmode;
+	jas_bool intmode;
 
 	/* The coding style (i.e., SOP, EPH). */
 	uint_fast8_t csty;
@@ -592,7 +592,7 @@ typedef struct jpc_enc_tile_s {
 	jpc_pi_t *pi;
 
 	/* The coding mode (i.e., integer or real). */
-	bool intmode;
+	jas_bool intmode;
 
 	/* The number of bytes to allocate to the various layers. */
 	uint_fast32_t *lyrsizes;

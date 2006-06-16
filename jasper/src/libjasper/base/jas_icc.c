@@ -60,14 +60,14 @@
  */
 
 #include <assert.h>
-#include <jasper/jas_config.h>
-#include <jasper/jas_types.h>
-#include <jasper/jas_malloc.h>
-#include <jasper/jas_string.h>
-#include <jasper/jas_debug.h>
-#include <jasper/jas_icc.h>
-#include <jasper/jas_cm.h>
-#include <jasper/jas_stream.h>
+#include "jasper/jas_config.h"
+#include "jasper/jas_types.h"
+#include "jasper/jas_malloc.h"
+#include "jasper/jas_string.h"
+#include "jasper/jas_debug.h"
+#include "jasper/jas_icc.h"
+#include "jasper/jas_cm.h"
+#include "jasper/jas_stream.h"
 
 #include <stdlib.h>
 #include <ctype.h>
@@ -315,7 +315,10 @@ jas_iccprof_t *jas_iccprof_load(jas_stream_t *in)
 		} else if (reloff < 0) {
 			/* This should never happen since we read the tagged
 			element data in a single pass. */
-			abort();
+			jas_error(	JAS_ERR_UNEXPECTED_DATA_IN_JAS_ICCPROF_LOAD,
+						"JAS_ERR_UNEXPECTED_DATA_IN_JAS_ICCPROF_LOAD"
+					);
+			goto error;
 		}
 		prevoff = curoff;
 		if (jas_iccgetuint32(in, &type)) {
@@ -713,6 +716,7 @@ static void jas_iccattrtab_destroy(jas_iccattrtab_t *tab)
 	jas_free(tab);
 }
 
+
 void jas_iccattrtab_dump(jas_iccattrtab_t *attrtab, FILE *out)
 {
 	int i;
@@ -726,18 +730,21 @@ void jas_iccattrtab_dump(jas_iccattrtab_t *attrtab, FILE *out)
 		attr = &attrtab->attrs[i];
 		attrval = attr->val;
 		info = jas_iccattrvalinfo_lookup(attrval->type);
-		if (!info) abort();
+		if (!info)
+			return;
+
 		fprintf(out, "attrno=%d; attrname=\"%s\"(0x%08x); attrtype=\"%s\"(0x%08x)\n",
-		  i,
-		  jas_iccsigtostr(attr->name, &buf[0]),
-		  attr->name,
-		  jas_iccsigtostr(attrval->type, &buf[8]),
-		  attrval->type
-		  );
-		jas_iccattrval_dump(attrval, out);
-		fprintf(out, "---\n");
+			  i,
+			  jas_iccsigtostr(attr->name, &buf[0]),
+			  attr->name,
+			  jas_iccsigtostr(attrval->type, &buf[8]),
+			  attrval->type
+			  );
+			jas_iccattrval_dump(attrval, out);
+			fprintf(out, "---\n");
 	}
 }
+
 
 static int jas_iccattrtab_resize(jas_iccattrtab_t *tab, int maxents)
 {
@@ -870,7 +877,7 @@ jas_iccattrval_t *jas_iccattrval_clone(jas_iccattrval_t *attrval)
 void jas_iccattrval_destroy(jas_iccattrval_t *attrval)
 {
 #if 0
-fprintf(stderr, "refcnt=%d\n", attrval->refcnt);
+jas_eprintf("refcnt=%d\n", attrval->refcnt);
 #endif
 	if (--attrval->refcnt <= 0) {
 		if (attrval->ops->destroy)
@@ -937,7 +944,11 @@ static jas_iccattrval_t *jas_iccattrval_create0()
 static int jas_iccxyz_input(jas_iccattrval_t *attrval, jas_stream_t *in,
   int len)
 {
-	if (len != 4 * 3) abort();
+	if (len != 4 * 3)
+	{
+		jas_error( JAS_ERR_LEN_NOT_12_IN_JAS_ICCXYZ_INPUT, "JAS_ERR_LEN_NOT_12_IN_JAS_ICCXYZ_INPUT" );
+		return 0;
+	}
 	return jas_iccgetxyz(in, &attrval->data.xyz);
 }
 
@@ -983,8 +994,10 @@ static int jas_icccurv_copy(jas_iccattrval_t *attrval,
 	attrval = 0;
 	othattrval = 0;
 
+	jas_error(	JAS_ERR_INCOMPLETE_STUB_INVOKED_JAS_ICCCURV_COPY, 
+				"JAS_ERR_INCOMPLETE_STUB_INVOKED_JAS_ICCCURV_COPY" 
+			);
 	/* Not yet implemented. */
-	abort();
 	return -1;
 }
 
@@ -1077,7 +1090,9 @@ static int jas_icctxtdesc_copy(jas_iccattrval_t *attrval,
 	txtdesc = 0;
 
 	/* Not yet implemented. */
-	abort();
+	jas_error(	JAS_ERR_INCOMPLETE_STUB_INVOKED_JAS_ICCTXTDESC_COPY, 
+				"JAS_ERR_INCOMPLETE_STUB_INVOKED_JAS_ICCTXTDESC_COPY"
+			);
 	return -1;
 }
 
@@ -1253,6 +1268,7 @@ static void jas_icclut8_destroy(jas_iccattrval_t *attrval)
 		jas_free(lut8->outtabsbuf);
 }
 
+
 static int jas_icclut8_copy(jas_iccattrval_t *attrval,
   jas_iccattrval_t *othattrval)
 {
@@ -1261,7 +1277,10 @@ static int jas_icclut8_copy(jas_iccattrval_t *attrval,
 	attrval = 0;
 	othattrval = 0;
 	lut8 = 0;
-	abort();
+	jas_error(	JAS_ERR_INCOMPLETE_STUB_INVOKED_JAS_ICCLUT8_COPY, 
+				"JAS_ERR_INCOMPLETE_STUB_INVOKED_JAS_ICCLUT8_COPY"
+			);
+
 	return -1;
 }
 
@@ -1430,7 +1449,9 @@ static int jas_icclut16_copy(jas_iccattrval_t *attrval,
 	attrval = 0;
 	othattrval = 0;
 	/* Not yet implemented. */
-	abort();
+	jas_error(	JAS_ERR_INCOMPLETE_STUB_INVOKED_JAS_ICCLUT16_COPY,
+				"JAS_ERR_INCOMPLETE_STUB_INVOKED_JAS_ICCLUT16_COPY"
+			);
 	return -1;
 }
 
@@ -1601,7 +1622,7 @@ static int jas_iccgetuint16(jas_stream_t *in, jas_iccuint16_t *val)
 	ulonglong tmp;
 	if (jas_iccgetuint(in, 2, &tmp))
 		return -1;
-	*val = tmp;
+	*val = (jas_iccuint16_t)tmp;
 	return 0;
 }
 
@@ -1610,8 +1631,8 @@ static int jas_iccgetsint32(jas_stream_t *in, jas_iccsint32_t *val)
 	ulonglong tmp;
 	if (jas_iccgetuint(in, 4, &tmp))
 		return -1;
-	*val = (tmp & 0x80000000) ? (-JAS_CAST(longlong, (((~tmp) &
-	  0x7fffffff) + 1))) : JAS_CAST(longlong, tmp);
+	*val = (jas_iccsint32_t)((tmp & 0x80000000) ? (-JAS_CAST(longlong, (((~tmp) &
+	  0x7fffffff) + 1))) : JAS_CAST(longlong, tmp));
 	return 0;
 }
 
@@ -1620,7 +1641,7 @@ static int jas_iccgetuint32(jas_stream_t *in, jas_iccuint32_t *val)
 	ulonglong tmp;
 	if (jas_iccgetuint(in, 4, &tmp))
 		return -1;
-	*val = tmp;
+	*val = (jas_iccuint32_t)tmp;
 	return 0;
 }
 
@@ -1637,8 +1658,10 @@ static int jas_iccputuint(jas_stream_t *out, int n, ulonglong val)
 {
 	int i;
 	int c;
-	for (i = n; i > 0; --i) {
-		c = (val >> (8 * (i - 1))) & 0xff;
+
+	for (i = n; i > 0; --i) 
+	{
+		c = (int)((val >> (8 * (i - 1))) & 0xff);
 		if (jas_stream_putc(out, c) == EOF)
 			return -1;
 	}
@@ -1648,7 +1671,15 @@ static int jas_iccputuint(jas_stream_t *out, int n, ulonglong val)
 static int jas_iccputsint(jas_stream_t *out, int n, longlong val)
 {
 	ulonglong tmp;
-	tmp = (val < 0) ? (abort(), 0) : val;
+	if( val < 0 )
+	{
+		tmp = 0;
+		jas_error(	JAS_ERR_BAD_PARAM_JAS_ICCPUTSINT,
+					"JAS_ERR_BAD_PARAM_JAS_ICCPUTSINT"
+				);
+	}
+	else tmp = val;
+
 	return jas_iccputuint(out, n, tmp);
 }
 

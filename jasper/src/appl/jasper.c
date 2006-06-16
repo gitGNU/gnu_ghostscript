@@ -64,7 +64,7 @@
 /*
  * JasPer Transcoder Program
  *
- * $Id: jasper.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jasper.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -169,13 +169,13 @@ int main(int argc, char **argv)
 
 	/* Parse the command line options. */
 	if (!(cmdopts = cmdopts_parse(argc, argv))) {
-		fprintf(stderr, "error: cannot parse command line\n");
+		jas_eprintf("error: cannot parse command line\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (cmdopts->version) {
-		printf("%s\n", JAS_VERSION);
-		fprintf(stderr, "libjasper %s\n", jas_getversion());
+		jas_eprintf("%s\n", JAS_VERSION);
+		jas_eprintf("libjasper %s\n", jas_getversion());
 		exit(EXIT_SUCCESS);
 	}
 
@@ -189,14 +189,14 @@ int main(int argc, char **argv)
 	if (cmdopts->infile) {
 		/* The input image is to be read from a file. */
 		if (!(in = jas_stream_fopen(cmdopts->infile, "rb"))) {
-			fprintf(stderr, "error: cannot open input image file %s\n",
+			jas_eprintf("error: cannot open input image file %s\n",
 			  cmdopts->infile);
 			exit(EXIT_FAILURE);
 		}
 	} else {
 		/* The input image is to be read from standard input. */
 		if (!(in = jas_stream_fdopen(0, "rb"))) {
-			fprintf(stderr, "error: cannot open standard input\n");
+			jas_eprintf("error: cannot open standard input\n");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -205,21 +205,21 @@ int main(int argc, char **argv)
 	if (cmdopts->outfile) {
 		/* The output image is to be written to a file. */
 		if (!(out = jas_stream_fopen(cmdopts->outfile, "w+b"))) {
-			fprintf(stderr, "error: cannot open output image file %s\n",
+			jas_eprintf("error: cannot open output image file %s\n",
 			  cmdopts->outfile);
 			exit(EXIT_FAILURE);
 		}
 	} else {
 		/* The output image is to be written to standard output. */
 		if (!(out = jas_stream_fdopen(1, "w+b"))) {
-			fprintf(stderr, "error: cannot open standard output\n");
+			jas_eprintf("error: cannot open standard output\n");
 			exit(EXIT_FAILURE);
 		}
 	}
 
 	if (cmdopts->infmt < 0) {
 		if ((cmdopts->infmt = jas_image_getfmt(in)) < 0) {
-			fprintf(stderr, "error: input image has unknown format\n");
+			jas_eprintf("error: input image has unknown format\n");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -227,7 +227,7 @@ int main(int argc, char **argv)
 	/* Get the input image data. */
 	startclk = clock();
 	if (!(image = jas_image_decode(in, cmdopts->infmt, cmdopts->inopts))) {
-		fprintf(stderr, "error: cannot load image data\n");
+		jas_eprintf("error: cannot load image data\n");
 		exit(EXIT_FAILURE);
 	}
 	endclk = clock();
@@ -268,7 +268,7 @@ int main(int argc, char **argv)
 	/* Generate the output image data. */
 	startclk = clock();
 	if (jas_image_encode(image, out, cmdopts->outfmt, cmdopts->outopts)) {
-		fprintf(stderr, "error: cannot encode image\n");
+		jas_eprintf("error: cannot encode image\n");
 		exit(EXIT_FAILURE);
 	}
 	jas_stream_flush(out);
@@ -276,9 +276,9 @@ int main(int argc, char **argv)
 	enctime = endclk - startclk;
 
 	if (cmdopts->verbose) {
-		fprintf(stderr, "decoding time = %f\n", dectime / (double)
+		jas_eprintf("decoding time = %f\n", dectime / (double)
 		  CLOCKS_PER_SEC);
-		fprintf(stderr, "encoding time = %f\n", enctime / (double)
+		jas_eprintf("encoding time = %f\n", enctime / (double)
 		  CLOCKS_PER_SEC);
 	}
 
@@ -287,7 +287,7 @@ int main(int argc, char **argv)
 
 	/* Close the output image stream. */
 	if (jas_stream_close(out)) {
-		fprintf(stderr, "error: cannot close output image file\n");
+		jas_eprintf("error: cannot close output image file\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -344,7 +344,7 @@ cmdopts_t *cmdopts_parse(int argc, char **argv)
 	int c;
 
 	if (!(cmdopts = malloc(sizeof(cmdopts_t)))) {
-		fprintf(stderr, "error: insufficient memory\n");
+		jas_eprintf("error: insufficient memory\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -381,7 +381,7 @@ cmdopts_t *cmdopts_parse(int argc, char **argv)
 			break;
 		case CMDOPT_INFMT:
 			if ((cmdopts->infmt = jas_image_strtofmt(jas_optarg)) < 0) {
-				fprintf(stderr, "warning: ignoring invalid input format %s\n",
+				jas_eprintf("warning: ignoring invalid input format %s\n",
 				  jas_optarg);
 				cmdopts->infmt = -1;
 			}
@@ -395,7 +395,7 @@ cmdopts_t *cmdopts_parse(int argc, char **argv)
 			break;
 		case CMDOPT_OUTFMT:
 			if ((cmdopts->outfmt = jas_image_strtofmt(jas_optarg)) < 0) {
-				fprintf(stderr, "error: invalid output format %s\n", jas_optarg);
+				jas_eprintf("error: invalid output format %s\n", jas_optarg);
 				badusage();
 			}
 			break;
@@ -416,7 +416,7 @@ cmdopts_t *cmdopts_parse(int argc, char **argv)
 	}
 
 	while (jas_optind < argc) {
-		fprintf(stderr,
+		jas_eprintf(
 		  "warning: ignoring bogus command line argument %s\n",
 		  argv[jas_optind]);
 		++jas_optind;
@@ -428,13 +428,13 @@ cmdopts_t *cmdopts_parse(int argc, char **argv)
 
 	if (cmdopts->outfmt < 0 && cmdopts->outfile) {
 		if ((cmdopts->outfmt = jas_image_fmtfromname(cmdopts->outfile)) < 0) {
-			fprintf(stderr,
+			jas_eprintf(
 			  "error: cannot guess image format from output file name\n");
 		}
 	}
 
 	if (cmdopts->outfmt < 0) {
-		fprintf(stderr, "error: no output format specified\n");
+		jas_eprintf("error: no output format specified\n");
 		badusage();
 	}
 
@@ -466,10 +466,10 @@ int addopt(char *optstr, int maxlen, char *s)
 
 void cmdinfo()
 {
-	fprintf(stderr, "JasPer Transcoder (Version %s).\n",
+	jas_eprintf("JasPer Transcoder (Version %s).\n",
 	  JAS_VERSION);
-	fprintf(stderr, "%s\n", JAS_COPYRIGHT);
-	fprintf(stderr, "%s\n", JAS_NOTES);
+	jas_eprintf("%s\n", JAS_COPYRIGHT);
+	jas_eprintf("%s\n", JAS_NOTES);
 }
 
 static char *helpinfo[] = {
@@ -502,16 +502,16 @@ void cmdusage()
 	char *s;
 	int i;
 	cmdinfo();
-	fprintf(stderr, "usage: %s [options]\n", cmdname);
+	jas_eprintf("usage: %s [options]\n", cmdname);
 	for (i = 0, s = helpinfo[i]; s; ++i, s = helpinfo[i]) {
-		fprintf(stderr, "%s", s);
+		jas_eprintf("%s", s);
 	}
-	fprintf(stderr, "The following formats are supported:\n");
+	jas_eprintf("The following formats are supported:\n");
 	for (fmtid = 0;; ++fmtid) {
 		if (!(fmtinfo = jas_image_lookupfmtbyid(fmtid))) {
 			break;
 		}
-		fprintf(stderr, "    %-5s    %s\n", fmtinfo->name,
+		jas_eprintf("    %-5s    %s\n", fmtinfo->name,
 		  fmtinfo->desc);
 	}
 	exit(EXIT_FAILURE);
@@ -519,9 +519,9 @@ void cmdusage()
 
 void badusage()
 {
-	fprintf(stderr,
+	jas_eprintf(
 	  "For more information on how to use this command, type:\n");
-	fprintf(stderr, "    %s --help\n", cmdname);
+	jas_eprintf("    %s --help\n", cmdname);
 	exit(EXIT_FAILURE);
 }
 

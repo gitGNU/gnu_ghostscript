@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: msvclib.mak,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $
+# $Id: msvclib.mak,v 1.7 2006/06/16 12:55:05 Arabidopsis Exp $
 # makefile for Microsoft Visual C++ 4.1 or later, Windows NT or Windows 95 LIBRARY.
 #
 # All configurable options are surrounded by !ifndef/!endif to allow 
@@ -144,7 +144,7 @@ JVERSION=6
 
 !ifndef PSRCDIR
 PSRCDIR=libpng
-PVERSION=10208
+PVERSION=10210
 !endif
 
 # Define the directory where the zlib sources are stored.
@@ -154,11 +154,29 @@ PVERSION=10208
 ZSRCDIR=zlib
 !endif
 
-# Define the jbig2dec library source location.
+# Define the jbig2 library and source location.
 # See jbig2.mak for more information.
+
+!ifndef JBIG2_LIB
+JBIG2_LIB=jbig2dec
+!endif
 
 !ifndef JBIG2SRCDIR
 JBIG2SRCDIR=jbig2dec
+!endif
+
+# Define the jasper library source location.
+# See jasper.mak for more information.
+
+!ifndef JPX_LIB
+JPX_LIB=jasper
+!endif
+
+# Alternatively, you can build a separate DLL
+# and define SHARE_JPX=1 in src/winlib.mak
+
+!ifndef JPXSRCDIR
+JPXSRCDIR=jasper
 !endif
 
 # Define the directory where the icclib source are stored.
@@ -379,6 +397,10 @@ SYNC=winsync
 FEATURE_DEVS=$(GLD)psl3lib.dev $(GLD)path1lib.dev $(GLD)dps2lib.dev $(GLD)psl2cs.dev $(GLD)cielib.dev $(GLD)imasklib.dev $(GLD)patlib.dev $(GLD)htxlib.dev $(GLD)roplib.dev $(GLD)devcmap.dev $(GLD)bbox.dev $(GLD)pipe.dev
 !endif
 
+# The list of resources to be included in the %rom% file system.
+# This is in the top makefile since the file descriptors are platform specific
+RESOURCE_LIST=Resource/CMap/ Resource/ColorSpace/ Resource/Decoding/ Resource/Fonts/ Resource/Procset/ Resource/IdiomSet/ Resource/CIDFont/
+
 # Choose whether to compile the .ps initialization files into the executable.
 # See gs.mak for details.
 
@@ -503,6 +525,6 @@ $(GS_XE):  $(GS_ALL) $(DEVS_ALL) $(LIB_ONLY) $(LIBCTR)
 	echo $(GLOBJ)gscdefs.obj >> $(GLGENDIR)\gslib32.tr
 	echo  /SUBSYSTEM:CONSOLE > $(GLGENDIR)\gslib32.rsp
 	echo  /OUT:$(GS_XE) >> $(GLGENDIR)\gslib32.rsp
-	$(LINK) $(LCT) @$(GLGENDIR)\gslib32.rsp $(GLOBJ)gslib @$(GLGENDIR)\gslib32.tr @$(LIBCTR) $(INTASM) @$(GLGENDIR)\lib.tr
+	$(LINK) $(LCT) @$(GLGENDIR)\gslib32.rsp $(GLOBJ)gslib @$(GLGENDIR)\gslib32.tr @$(LIBCTR) $(INTASM)
 	-del $(GLGENDIR)\gslib32.rsp
 	-del $(GLGENDIR)\gslib32.tr

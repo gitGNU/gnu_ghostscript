@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gspath1.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gspath1.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Additional PostScript Level 1 path routines for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -517,8 +517,10 @@ gs_reversepath(gs_state * pgs)
 	/* Not empty. */
 	gx_setcurrentpoint(pgs, fixed2float(rpath.position.x), 
 				fixed2float(rpath.position.y));
-	pgs->subpath_start.x = fixed2float(rpath.segments->contents.subpath_current->pt.x);
-	pgs->subpath_start.y = fixed2float(rpath.segments->contents.subpath_current->pt.y);
+	if (rpath.first_subpath != 0) {
+	    pgs->subpath_start.x = fixed2float(rpath.segments->contents.subpath_current->pt.x);
+	    pgs->subpath_start.y = fixed2float(rpath.segments->contents.subpath_current->pt.y);
+	}
     }
     gx_path_assign_free(ppath, &rpath);
     return 0;

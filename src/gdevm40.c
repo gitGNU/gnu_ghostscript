@@ -16,7 +16,7 @@
 
 */
 
-/*$Id: gdevm40.c,v 1.4 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/*$Id: gdevm40.c,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* 40-bit-per-pixel "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"
@@ -32,7 +32,7 @@ struct stats_mem40_s {
 	fprevc[257];
     double ftotal;
 } stats_mem40;
-static int prev_count;
+static int prev_count = 0;
 static gx_color_index prev_colors[256];
 # define INCR(v) (++(stats_mem40.v))
 #else

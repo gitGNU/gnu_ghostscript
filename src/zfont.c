@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zfont.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: zfont.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Generic font operators */
 #include "ghost.h"
 #include "oper.h"
@@ -34,6 +34,7 @@
 #include "isave.h"
 #include "store.h"
 #include "ivmspace.h"
+#include "gscencs.h"
 
 /* Forward references */
 private int make_font(i_ctx_t *, const gs_matrix *);
@@ -47,7 +48,7 @@ gs_font_dir *ifont_dir = 0;	/* needed for buildfont */
 bool
 zfont_mark_glyph_name(const gs_memory_t *mem, gs_glyph glyph, void *ignore_data)
 {
-    return (glyph >= gs_min_cid_glyph || glyph == gs_no_glyph ? false :
+    return (glyph >= gs_c_min_std_encoding_glyph || glyph == gs_no_glyph ? false :
 	    name_mark_index(mem, (uint) glyph));
 }
 
@@ -453,14 +454,15 @@ purge_if_name_removed(const gs_memory_t *mem, cached_char * cc, void *vsave)
 }
 
 /* Remove entries from font and character caches. */
-void
+int 
 font_restore(const alloc_save_t * save)
 {
     gs_font_dir *pdir = ifont_dir;
     const gs_memory_t *mem = 0;
+    int code;
 
     if (pdir == 0)		/* not initialized yet */
-	return;
+	return 0;
 
     /* Purge original (unscaled) fonts. */
 
@@ -473,7 +475,9 @@ otop:
 	    ) {
 	    mem = pfont->memory;
 	    if (alloc_is_since_save((char *)pfont, save)) {
-		gs_purge_font(pfont);
+		code = gs_purge_font(pfont);
+		if (code < 0)
+		    return code;
 		goto otop;
 	    }
 	}
@@ -489,7 +493,9 @@ top:
 	     pfont = pfont->next
 	    ) {
 	    if (alloc_is_since_save((char *)pfont, save)) {
-		gs_purge_font(pfont);
+		code = gs_purge_font(pfont);
+		if (code < 0)
+		    return code;
 		goto top;
 	    }
 	}
@@ -509,14 +515,18 @@ top:
 		     alloc_is_since_save((char *)pair->UID.xvalues,
 					 save))
 		    ) {
-		    gs_purge_fm_pair(pdir, pair, 0);
+		    code = gs_purge_fm_pair(pdir, pair, 0);
+		    if (code < 0)
+			return code;
 		    continue;
 		}
 		if (pair->font != 0 &&
 		    alloc_is_since_save((char *)pair->font, save)
 		    ) {
 		    if (!uid_is_valid(&pair->UID)) {
-			gs_purge_fm_pair(pdir, pair, 0);
+			code = gs_purge_fm_pair(pdir, pair, 0);
+			if (code < 0)
+			    return code;
 			continue;
 		    }
 		    /* Don't discard pairs with a surviving UID. */
@@ -524,8 +534,11 @@ top:
 		}
 		if (pair->xfont != 0 &&
 		    alloc_is_since_save((char *)pair->xfont, save)
-		    )
-		    gs_purge_fm_pair(pdir, pair, 1);
+		    ) {
+		    code = gs_purge_fm_pair(pdir, pair, 1);
+		    if (code < 0)
+			return code;
+		}
 	    }
     }
 
@@ -536,7 +549,7 @@ top:
     if (alloc_any_names_since_save(save))
 	gx_purge_selected_cached_chars(pdir, purge_if_name_removed,
 				       (void *)save);
-
+    return 0;
 }
 
 /* ------ Font procedures for PostScript fonts ------ */

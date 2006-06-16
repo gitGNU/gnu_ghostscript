@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxline.h,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxline.h,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Private line parameter definitions */
 
 #ifndef gxline_INCLUDED
@@ -73,7 +73,7 @@ int gx_set_dot_length(gx_line_params *, floatp, bool);
 
 /* See gsline.c for the computation of miter_check. */
 #define gx_line_params_initial\
- 0.0, gs_cap_butt, gs_join_miter, gs_join_bevel /* for Adobe compatibility */,\
+ 0.0, gs_cap_butt, gs_join_miter, -1,\
  10.0, (float)0.20305866, 0.0, 0/*false*/,\
   { identity_matrix_body }, { gx_dash_params_initial }
 

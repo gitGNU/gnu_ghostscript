@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxbcache.h,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxbcache.h,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Bitmap cache structures */
 
 #ifndef gxbcache_INCLUDED
@@ -65,7 +65,7 @@ typedef struct gx_cached_bits_s {
  * that an immediately following bitmap will be properly aligned.
  */
 #define align_cached_bits_mod\
-  (max(align_bitmap_mod, max(arch_align_ptr_mod, arch_align_long_mod)))
+  (max(align_bitmap_mod, max(ARCH_ALIGN_PTR_MOD, ARCH_ALIGN_LONG_MOD)))
 
 /*
  * We may allocate a bitmap cache in chunks, so as not to tie up memory

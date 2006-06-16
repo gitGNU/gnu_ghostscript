@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,13 +17,14 @@
 
 */
 
-/* $Id: gdevpsds.h,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpsds.h,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Image processing stream interface for PostScript and PDF writers */
 
 #ifndef gdevpsds_INCLUDED
 #  define gdevpsds_INCLUDED
 
 #include "strimpl.h"
+#include "gsiparam.h"
 
 /* ---------------- Depth conversion ---------------- */
 
@@ -176,5 +178,58 @@ s_compr_chooser_set_dimensions(stream_compr_chooser_state * st, int width,
 
 /* Get choice */
 uint s_compr_chooser__get_choice(stream_compr_chooser_state *st, bool force);
+
+/* ---------------- Am image color conversion filter ---------------- */
+
+#ifndef gx_device_DEFINED
+#  define gx_device_DEFINED
+typedef struct gx_device_s gx_device;
+#endif
+
+typedef struct stream_image_colors_state_s stream_image_colors_state;
+
+struct stream_image_colors_state_s {
+    stream_state_common;
+    uint width, height, depth, bits_per_sample;
+    byte output_bits_buffer;
+    uint output_bits_buffered;
+    uint output_component_bits_written;
+    uint output_component_index;
+    uint output_depth, output_bits_per_sample;
+    uint raster;
+    uint row_bits;
+    uint row_bits_passed;
+    uint row_alignment_bytes;
+    uint row_alignment_bytes_left;
+    uint input_component_index;
+    uint input_bits_buffer;
+    uint input_bits_buffered;
+    uint input_color[GS_IMAGE_MAX_COLOR_COMPONENTS];
+    uint output_color[GS_IMAGE_MAX_COLOR_COMPONENTS];
+    uint MaskColor[GS_IMAGE_MAX_COLOR_COMPONENTS * 2];
+    float Decode[GS_IMAGE_MAX_COLOR_COMPONENTS * 2];
+    const gs_color_space *pcs;
+    gx_device *pdev;
+    const gs_imager_state *pis;
+    int (*convert_color)(stream_image_colors_state *);
+};
+
+#define private_st_image_colors_state()	/* in gdevpsds.c */\
+  gs_private_st_ptrs3(st_stream_image_colors_state, stream_image_colors_state,\
+    "stream_image_colors_state", stream_image_colors_enum_ptrs,\
+    stream_image_colors_reloc_ptrs, pcs, pdev, pis)
+
+extern const stream_template s_image_colors_template;
+
+void s_image_colors_set_dimensions(stream_image_colors_state * st, 
+			       int width, int height, int depth, int bits_per_sample);
+
+void s_image_colors_set_mask_colors(stream_image_colors_state * ss, uint *MaskColor);
+
+void s_image_colors_set_color_space(stream_image_colors_state * ss, gx_device *pdev,
+			       const gs_color_space *pcs, const gs_imager_state *pis,
+			       float *Decode);
+
+extern const stream_template s__image_colors_template;
 
 #endif /* gdevpsds_INCLUDED */

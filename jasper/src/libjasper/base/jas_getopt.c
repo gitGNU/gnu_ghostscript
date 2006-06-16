@@ -64,7 +64,7 @@
 /*
  * Command Line Option Parsing Library
  *
- * $Id: jas_getopt.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jas_getopt.c,v 1.2 2006/06/16 12:55:32 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -76,6 +76,7 @@
 
 #include "jasper/jas_getopt.h"
 #include "jasper/jas_math.h"
+#include "jasper/jas_debug.h"
 
 /******************************************************************************\
 * Global data.
@@ -126,7 +127,7 @@ int jas_getopt(int argc, char **argv, jas_opt_t *opts)
 				}
 				if (!(opt = jas_optlookup(opts, cp))) {
 					if (jas_opterr) {
-						fprintf(stderr, "unknown long option %s\n", s);
+						jas_eprintf("unknown long option %s\n", s);
 					}
 					return JAS_GETOPT_ERR;
 				}
@@ -137,7 +138,7 @@ int jas_getopt(int argc, char **argv, jas_opt_t *opts)
 				if (strlen(cp) != 1 ||
 				  !(opt = jas_optlookup(opts, cp))) {
 					if (jas_opterr) {
-						fprintf(stderr, "unknown short option %s\n", s);
+						jas_eprintf("unknown short option %s\n", s);
 					}
 					return JAS_GETOPT_ERR;
 				}
@@ -148,7 +149,7 @@ int jas_getopt(int argc, char **argv, jas_opt_t *opts)
 				/* The option has an argument. */
 				if (jas_optind >= argc) {
 					if (jas_opterr) {
-						fprintf(stderr, "missing argument for option %s\n", s);
+						jas_eprintf("missing argument for option %s\n", s);
 					}
 					return JAS_GETOPT_ERR;
 				}

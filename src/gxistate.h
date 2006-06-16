@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxistate.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gxistate.h,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Imager state definition */
 
 #ifndef gxistate_INCLUDED
@@ -34,6 +34,8 @@
 #include "gxmatrix.h"
 #include "gxtmap.h"
 #include "gscspace.h"
+#include "gstrans.h"
+#include "gsnamecl.h"
 
 /*
   Define the subset of the PostScript graphics state that the imager library
@@ -190,6 +192,9 @@ typedef struct gx_transfer_s {
 
 typedef struct gs_devicen_color_map_s {
     bool use_alt_cspace;
+#if ENABLE_NAMED_COLOR_CALLBACK
+    bool use_named_color_callback;
+#endif
     separation_type sep_type;
     uint num_components;	/* Input - Duplicate of value in gs_device_n_params */
     uint num_colorants;		/* Number of colorants - output */ 
@@ -199,10 +204,6 @@ typedef struct gs_devicen_color_map_s {
 
 
 /* Define the imager state structure itself. */
-typedef struct gs_transparency_source_s {
-    float alpha;		/* constant alpha */
-    gs_transparency_mask_t *mask;
-} gs_transparency_source_t;
 /*
  * Note that the ctm member is a gs_matrix_fixed.  As such, it cannot be
  * used directly as the argument for procedures like gs_point_transform.
@@ -222,6 +223,7 @@ typedef struct gs_transparency_source_s {
 	gx_color_value alpha;\
 	gs_blend_mode_t blend_mode;\
 	gs_transparency_source_t opacity, shape;\
+	gs_id soft_mask_id;\
 	bool text_knockout;\
 	uint text_rendering_mode;\
 	gs_transparency_state_t *transparency_stack;\
@@ -264,7 +266,7 @@ struct gs_imager_state_s {
    { (float)(scale), 0.0, 0.0, (float)(-(scale)), 0.0, 0.0 },\
   false, {0, 0}, {0, 0}, false, \
   lop_default, gx_max_color_value, BLEND_MODE_Compatible,\
-   { 1.0, 0 }, { 1.0, 0 }, 0/*false*/, 0, 0, 0/*false*/, 0, 0, 1.0,\
+   { 1.0, 0 }, { 1.0, 0 }, 0, 0/*false*/, 0, 0, 0/*false*/, 0, 0, 1.0,\
    { fixed_half, fixed_half }, 0/*false*/, 0/*false*/, 0/*false*/, 1.0,\
   gx_default_get_cmap_procs
 

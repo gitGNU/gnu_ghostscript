@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gxcllzw.c,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxcllzw.c,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* LZW filter initialization for RAM-based band lists */
 #include "std.h"
 #include "gstypes.h"
@@ -29,13 +29,14 @@ private stream_LZW_state cl_LZWE_state;
 private stream_LZW_state cl_LZWD_state;
 
 /* Initialize the states to be copied. */
-void
+int
 gs_cl_lzw_init(gs_memory_t * mem)
 {
     s_LZW_set_defaults((stream_state *) & cl_LZWE_state);
     cl_LZWE_state.template = &s_LZWE_template;
     s_LZW_set_defaults((stream_state *) & cl_LZWD_state);
     cl_LZWD_state.template = &s_LZWD_template;
+    return 0;
 }
 
 /* Return the prototypes for compressing/decompressing the band list. */

@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdfr.c,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdfr.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Named object pdfmark processing */
 #include "memory_.h"
 #include "string_.h"
@@ -311,7 +311,7 @@ pdf_scan_token(const byte **pscan, const byte * end, const byte **ptoken)
 	stream_PSSD_state ss;
 	int status;
 
-	s_PSSD_init_inline(&ss);
+	s_PSSD_init((stream_state *)&ss);
 	r.ptr = p;		/* skip the '(' */
 	r.limit = end - 1;
 	w.limit = buf + sizeof(buf) - 1;

@@ -17,7 +17,7 @@
   
 */
 
-/*$Id: zchar.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/*$Id: zchar.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Character operators */
 #include "ghost.h"
 #include "oper.h"
@@ -29,11 +29,13 @@
 #include "gxdevice.h"		/* for gxfont.h */
 #include "gxfont.h"
 #include "gxfont42.h"
+#include "gxfont0.h"
 #include "gzstate.h"
 #include "dstack.h"		/* for stack depth */
 #include "estack.h"
 #include "ialloc.h"
 #include "ichar.h"
+#include "ichar1.h"
 #include "idict.h"
 #include "ifont.h"
 #include "igstate.h"
@@ -430,6 +432,12 @@ op_show_finish_setup(i_ctx_t *i_ctx_p, gs_text_enum_t * penum, int npop,
 	text.data.d_glyph = glyph;
 	text.size = 1;
 	gs_text_restart(penum, &text);
+    }
+    if (osenum && osenum->current_font->FontType == ft_user_defined &&
+	osenum->orig_font->FontType == ft_composite &&
+	((const gs_font_type0 *)osenum->orig_font)->data.FMapType == fmap_CMap) {
+	/* A special behavior defined in PLRM3 section 5.11 page 389. */
+	penum->outer_CID = osenum->returned.current_glyph;
     }
     make_mark_estack(ep - (snumpush - 1), es_show, op_show_cleanup);
     if (endproc == NULL)

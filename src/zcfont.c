@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zcfont.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zcfont.c,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Composite font-related character operators */
 #include "ghost.h"
 #include "oper.h"
@@ -106,7 +106,7 @@ cshow_continue(i_ctx_t *i_ctx_p)
 	     from the immediate parent of current font. 
 	     (The font matrix of root font is not good for the purpose
 	     in some case.) 
-	     assert (penum->fstack.items[fdepth].font == font
+	     assert_(penum->fstack.items[fdepth].font == font
 	             && penum->fstack.items[0].font == root_font); */
 	  uint save_space = idmemory->current_space;
 	  gs_font * immediate_parent = penum->fstack.items[fdepth - 1].font;

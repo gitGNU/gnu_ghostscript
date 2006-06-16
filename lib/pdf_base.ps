@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: pdf_base.ps,v 1.5 2006/03/02 22:26:14 Arabidopsis Exp $
+% $Id: pdf_base.ps,v 1.6 2006/06/16 12:55:13 Arabidopsis Exp $
 % pdf_base.ps
 % Basic parser for PDF reader.
 
@@ -81,9 +81,14 @@ pdfdict begin
 { exch pop
   1 index 2 () /SubFileDecode filter dup (x) readhexstring
 		% Stack: post pre stream char t/f
-  not { /.pdftoken cvx /syntaxerror signalerror } if
-  exch closefile concatstrings
-  exch 2 1 index length 2 sub getinterval
+  not {	% tolerate, but complain about bad syntax
+    pop closefile (#) concatstrings exch
+    (   **** Warning: Invalid hex following '#' name escape, using literal '#' in name.\n)
+    pdfformaterror
+  } {
+    exch closefile concatstrings
+    exch 2 1 index length 2 sub getinterval
+  } ifelse
   (#) search { name#escape } if concatstrings
 } bind def
 
@@ -369,15 +374,25 @@ pdfdict begin
 /oforce_elems { % <array> oforce_elems <first> ... <last>
   { oforce } forall
 } bind def
+/oforce_recursive { % <any> oforce_recursive <any>
+  oforce dup type dup /arraytype eq {
+    pop [ exch { oforce_recursive } forall ]
+  } {
+    /dicttype eq {
+     << exch { oforce_recursive exch oforce exch } forall >> 
+    } if
+  } ifelse
+} bind def
+
 % A null value in a dictionary is equivalent to an omitted key;
 % we must check for this specially.
 /knownoget {	% <dict> <key> knownoget <value> true
 		% <dict> <key> knownoget false
 		% See oget above regarding this procedure.
   .knownget {
-    oforce dup null eq { pop false } { true } ifelse
+    oforce dup //null eq { pop //false } { //true } ifelse
   } {
-    false
+    //false
   } ifelse
 } bind def
 
@@ -591,9 +606,10 @@ pdfdict begin
   pop pop pop pop		% Remove objstream, N, (obj#], and [objects]
 } bind def
 
-% When resolving an object reference, we stop at the endobj.
+% When resolving an object reference, we stop at the endobj or endstream.
 /resolveopdict mark
   valueopdict { } forall
+  /endstream { endobj exit } bind
   /endobj { endobj exit } bind
                 % OmniForm generates PDF file with endobj missing in some
                 % objects. AR ignores this. So we have to do it too.
@@ -729,7 +745,8 @@ pdfdict begin
   } if
   /endstream ne { 
     (   **** Warning: stream Length incorrect.\n) pdfformaterror
-    cvx endobj exit % exit from .pdfrun now.
+    dup /Length 0 put	% prevent the use of the incorrect length.
+    cvx endobj exit   % exit from .pdfrun now.
   } if
   cvx
 } bind def
@@ -749,19 +766,22 @@ pdfdict begin
 /filterparms {		% <dict> <DPkey> <Fkey> filterparms
 			%   <dict> <parms> <filternames>
   2 index exch knownoget {
+    oforce_recursive
     exch 2 index exch knownoget {
 		% Both filters and parameters.
+      oforce_recursive
       exch dup type /nametype eq {
-	1 array astore exch 1 array astore exch
+	1 array astore exch
+	dup type /arraytype ne { 1 array astore } if exch
       } if
     } {
 		% Filters, but no parameters.
-      null exch
+      //null exch
       dup type /nametype eq { 1 array astore } if
     } ifelse
   } {
 		% No filters: ignore parameters, if any.
-    pop null { }
+    pop //null { }
   } ifelse
 } bind def
 /filtername {		% <filtername> filtername <filtername'>
@@ -846,6 +866,10 @@ pdfdict begin
       } ifelse
       2 index /IDFlag known { pop } { () /SubFileDecode filter } ifelse
     } {
+                % Stack: readdata? dict parms source filternames
+      exch 3 index /Length knownoget {
+        dup 0 ne { () /SubFileDecode filter } { pop } ifelse
+      } if exch
       applyfilters
     } ifelse
   } ifelse

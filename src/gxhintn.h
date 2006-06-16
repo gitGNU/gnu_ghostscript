@@ -16,19 +16,13 @@
 
 */
 
-/* $Id: gxhintn.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gxhintn.h,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Type 1 hinter, prototypes */
 
 #ifndef gxhintn_INCLUDED
 #  define gxhintn_INCLUDED
 
 #include "stdint_.h"
-
-#define FINE_STEM_COMPLEXES 1		/* A temporary development purpose. */
-#define ALIGN_BY_STEM_MIDDLE 1		/* A temporary development purpose. */
-#define OPPOSITE_STEM_COORD_BUG_FIX 1	/* A temporary development purpose. */
-#define TT_AUTOHINT_TOPZONE_BUG_FIX 1	/* A temporary development purpose. */
-
 
 #ifndef gs_type1_data_DEFINED
 #define gs_type1_data_DEFINED
@@ -69,9 +63,6 @@ enum t1_zone_type
 
 enum t1_align_type
 {   unaligned, weak, aligned, topzn, botzn
-#if !FINE_STEM_COMPLEXES
-    /* 'weak' is never used. Defined to simplify a compatibility testing. */
-#endif
 };
 
 typedef struct {
@@ -91,6 +82,7 @@ typedef struct t1_pole_s /* a pole of outline */
     enum t1_pole_type type;
     int contour_index;
     enum t1_align_type aligned_x, aligned_y;
+    t1_glyph_space_coord boundary_length_x, boundary_length_y;
 } t1_pole;
 
 typedef struct t1_hint_s
@@ -98,20 +90,25 @@ typedef struct t1_hint_s
     t1_glyph_space_coord g0, g1; /* starting and ending transversal coord of the stem */
     t1_glyph_space_coord ag0, ag1; /* starting and ending transversal aligned coord of the stem */
     bool b0, b1;  /* g0, g1 correspond to a real stem. */
-#if !FINE_STEM_COMPLEXES
-    /* b0, b1 are unused. Defined to simplify a compatibility testing. */
-#endif
     enum t1_align_type aligned0, aligned1; /* ag0, ag1 is aligned */
+    int q0, q1; /* Stem quality tangent. */
     unsigned int stem3_index; /* 1,2,3 for stem3 (not used yet), 0 for other types */
     int range_index; /* type 2 only */
     int side_mask;
+    short stem_snap_index0, stem_snap_index1; /* Applicable StemSnap* index range. */
+    t1_glyph_space_coord boundary_length0, boundary_length1;
 } t1_hint;
 
 typedef struct t1_hint_range_s
 {   short beg_pole, end_pole;
-    int contour_index;
     int next;
-} t1_hint_range; /* type 2 only */
+} t1_hint_range;
+
+typedef struct t1_hint_applying_s
+{   int pole;
+    int opposite;
+    int next;
+} t1_hint_applying;
 
 typedef struct t1_zone_s /* alignment zone */
 {   enum t1_zone_type type;
@@ -148,18 +145,23 @@ typedef struct t1_hinter_s
     int contour0[T1_MAX_CONTOURS], *contour;
     t1_glyph_space_coord stem_snap0[2][T1_MAX_STEM_SNAPS + 1]; /* StdWH + StemSnapH, StdWV + StemSnapV */
     t1_glyph_space_coord *stem_snap[2];
+    int stem_snap_vote0[T1_MAX_STEM_SNAPS + 1];
+    int *stem_snap_vote;
     t1_hint_range hint_range0[T1_MAX_HINTS], *hint_range;
+    t1_hint_applying hint_applying0[T1_MAX_HINTS * 4], *hint_applying;
     int stem_snap_count[2], max_stem_snap_count[2]; /* H, V */
+    int stem_snap_vote_count, max_stem_snap_vote_count;
     int contour_count, max_contour_count;
     int zone_count, max_zone_count;
     int pole_count, max_pole_count;
     int hint_count, max_hint_count;
     int hint_range_count, max_hint_range_count;
+    int hint_applying_count, max_hint_applying_count;
     int primary_hint_count;
     int flex_count;
     int FontType; /* 1 or 2 */
+    bool have_flex;
     bool ForceBold;
-    bool seac_flag;
     bool keep_stem_width;
     bool suppress_overshoots;
     double BlueScale;
@@ -172,6 +174,8 @@ typedef struct t1_hinter_s
     int19 heigt_transform_coef_rat;
     int19 width_transform_coef_inv;
     int19 heigt_transform_coef_inv;
+    int32_t pixel_o_x, pixel_o_y; /* pixel size in the outline space. */
+    t1_glyph_space_coord pixel_gw, pixel_gh; /* pixel size in the glyph space (maybe transpozed). */
     t1_glyph_space_coord overshoot_threshold;
     t1_glyph_space_coord ymin, ymax, ymid;
     gx_path *output_path;
@@ -210,7 +214,6 @@ int  t1_hinter__overall_hstem(t1_hinter * this, fixed x0, fixed x1, int side_mas
 int  t1_hinter__hstem3(t1_hinter * this, fixed x0, fixed y1, fixed x2, fixed y3, fixed x4, fixed y5);
 int  t1_hinter__vstem3(t1_hinter * this, fixed y0, fixed y1, fixed y2, fixed y3, fixed y4, fixed y5);
 
-int  t1_hinter__endchar(t1_hinter * this, bool seac_flag);
 int  t1_hinter__endglyph(t1_hinter * this);
 int  t1_hinter__is_x_fitting(t1_hinter * this);
 

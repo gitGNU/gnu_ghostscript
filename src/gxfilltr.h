@@ -15,7 +15,7 @@
 
 */
 
-/* $Id: gxfilltr.h,v 1.1 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gxfilltr.h,v 1.2 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Configurable algorithm for decomposing a spot into trapezoids. */
 
 /*
@@ -40,7 +40,7 @@ TEMPLATE_spot_into_trapezoids (line_list *ll, fixed band_mask)
 {
     const fill_options fo = *ll->fo;
     int rule = fo.rule;
-    const fixed y_limit = fo.pbox->q.y;
+    const fixed y_limit = fo.ymax;
     active_line *yll = ll->y_list;
     fixed y;
     int code;
@@ -136,7 +136,10 @@ TEMPLATE_spot_into_trapezoids (line_list *ll, fixed band_mask)
 	    code = process_h_segments(ll, y);
 	    if (code < 0)
 		return code;
-	    move_al_by_y(ll, y1);
+	    {	int code1 = move_al_by_y(ll, y1);
+		if (code1 < 0)
+		    return code1;
+	    }
 	    if (code > 0) {
 		yll = ll->y_list; /* add_y_line_aux in process_h_segments changes it. */
 		continue;
@@ -165,8 +168,6 @@ TEMPLATE_spot_into_trapezoids (line_list *ll, fixed band_mask)
 	if (covering_pixel_centers || all_bands) {
 	    int inside = 0;
 	    active_line *flp = NULL;
-	    fixed ybot = max(y, fo.pbox->p.y);
-	    fixed ytop = min(y1, fo.pbox->q.y);
 
 	    INCR(band);
 	    /* Generate trapezoids */
@@ -217,6 +218,9 @@ TEMPLATE_spot_into_trapezoids (line_list *ll, fixed band_mask)
 		    else
 			code = slant_into_trapezoids__nd(ll, flp, alp, y, y1);
 		} else {
+		    fixed ybot = max(y, fo.pbox->p.y);
+		    fixed ytop = min(y1, fo.pbox->q.y);
+
 		    if (IS_SPOTAN) {
 			/* We can't pass data through the device interface because 
 			   we need to pass segment pointers. We're unhappy of that. */
@@ -225,26 +229,33 @@ TEMPLATE_spot_into_trapezoids (line_list *ll, fixed band_mask)
 			    flp->pseg, alp->pseg, flp->direction, alp->direction);
 		    } else {
 			if (flp->end.x == flp->start.x && alp->end.x == alp->start.x) {
-			    int yi = fixed2int_pixround(y - (!FILL_ADJUST ? 0 : fo.adjust_below));
-			    int hi = fixed2int_pixround(y1 + (!FILL_ADJUST ? 0 : fo.adjust_above)) - yi;
-			    int xli = fixed2int_var_pixround(flp->end.x - (!FILL_ADJUST ? 0 : fo.adjust_left));
-			    int xi = fixed2int_var_pixround(alp->end.x + (!FILL_ADJUST ? 0 : fo.adjust_right));
-
-			    if (PSEUDO_RASTERIZATION && xli == xi) {
-				/*
-				 * The scan is empty but we should paint something 
-				 * against a dropout. Choose one of two pixels which 
-				 * is closer to the "axis".
-				 */
-				fixed xx = int2fixed(xli);
-
-				if (xx - flp->end.x < alp->end.x - xx)
-				    ++xi;
-				else
-				    --xli;
+			    if (FILL_ADJUST) {
+				ybot = max(y  - fo.adjust_below, fo.pbox->p.y);
+				ytop = min(y1 + fo.adjust_above, fo.pbox->q.y);
 			    }
-			    vd_rect(flp->end.x, y, alp->end.x, y1, 1, VD_TRAP_COLOR);
-			    code = LOOP_FILL_RECTANGLE_DIRECT(&fo, xli, yi, xi - xli, hi);
+			    if (ytop > ybot) {
+				int yi = fixed2int_pixround(ybot);
+				int hi = fixed2int_pixround(ytop) - yi;
+				int xli = fixed2int_var_pixround(flp->end.x - (!FILL_ADJUST ? 0 : fo.adjust_left));
+				int xi  = fixed2int_var_pixround(alp->end.x + (!FILL_ADJUST ? 0 : fo.adjust_right));
+
+				if (PSEUDO_RASTERIZATION && xli == xi) {
+				    /*
+				    * The scan is empty but we should paint something 
+				    * against a dropout. Choose one of two pixels which 
+				    * is closer to the "axis".
+				    */
+				    fixed xx = int2fixed(xli);
+
+				    if (xx - flp->end.x < alp->end.x - xx)
+					++xi;
+				    else
+					--xli;
+				}
+				vd_rect(flp->end.x, y, alp->end.x, y1, 1, VD_TRAP_COLOR);
+				code = LOOP_FILL_RECTANGLE_DIRECT(&fo, xli, yi, xi - xli, hi);
+			    } else
+				code = 0;
 			} else if (ybot < ytop) {
 			    gs_fixed_edge le, re;
 
@@ -322,7 +333,9 @@ TEMPLATE_spot_into_trapezoids (line_list *ll, fixed band_mask)
 	    if (code < 0)
 		return code;
 	}
-	move_al_by_y(ll, y1);
+	code = move_al_by_y(ll, y1);
+	if (code < 0)
+	    return code;
 	ll->h_list1 = ll->h_list0;
 	ll->h_list0 = 0;
 	y = y1;

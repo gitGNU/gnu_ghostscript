@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdfg.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gdevpdfg.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Graphics state management for pdfwrite driver */
 #include "math_.h"
 #include "string_.h"
@@ -63,6 +63,7 @@ pdf_save_viewer_state(gx_device_pdf *pdev, stream *s)
     pdev->vgstack[i].undercolor_removal_id = pdev->undercolor_removal_id;
     pdev->vgstack[i].overprint_mode = pdev->overprint_mode;
     pdev->vgstack[i].smoothness = pdev->state.smoothness;
+    pdev->vgstack[i].flatness = pdev->state.flatness;
     pdev->vgstack[i].text_knockout = pdev->state.text_knockout;
     pdev->vgstack[i].fill_overprint = pdev->fill_overprint;
     pdev->vgstack[i].stroke_overprint = pdev->stroke_overprint;
@@ -98,6 +99,7 @@ pdf_load_viewer_state(gx_device_pdf *pdev, pdf_viewer_state *s)
     pdev->undercolor_removal_id = s->undercolor_removal_id;
     pdev->overprint_mode = s->overprint_mode;
     pdev->state.smoothness = s->smoothness;
+    pdev->state.flatness = s->flatness;
     pdev->state.text_knockout = s->text_knockout;
     pdev->fill_overprint = s->fill_overprint;
     pdev->stroke_overprint = s->stroke_overprint;
@@ -162,6 +164,7 @@ pdf_viewer_state_from_imager_state_aux(pdf_viewer_state *pvs, const gs_imager_st
     pvs->black_generation_id = (pis->black_generation != 0 ? pis->black_generation->id : 0);
     pvs->undercolor_removal_id = (pis->undercolor_removal != 0 ? pis->undercolor_removal->id : 0);
     pvs->overprint_mode = 0;
+    pvs->flatness = pis->flatness;
     pvs->smoothness = pis->smoothness;
     pvs->text_knockout = pis->text_knockout;
     pvs->fill_overprint = false;
@@ -261,6 +264,33 @@ pdf_write_ccolor(gx_device_pdf * pdev, const gs_imager_state * pis,
     return 0;
 }
 
+private inline bool
+is_cspace_allowed_in_strategy(gx_device_pdf * pdev, gs_color_space_index csi)
+{
+    if (pdev->params.ColorConversionStrategy == ccs_CMYK && 
+	    csi != gs_color_space_index_DeviceCMYK &&
+	    csi != gs_color_space_index_DeviceGray)
+	return false;
+    if (pdev->params.ColorConversionStrategy == ccs_sRGB && 
+	    csi != gs_color_space_index_DeviceRGB && 
+	    csi != gs_color_space_index_DeviceGray)
+	return false;
+    if (pdev->params.ColorConversionStrategy == ccs_Gray && 
+	    csi != gs_color_space_index_DeviceGray)
+	return false;
+    return true;
+}
+
+private inline bool
+is_pattern2_allowed_in_strategy(gx_device_pdf * pdev, const gx_drawing_color *pdc)
+{
+    const gs_pattern2_instance_t *pinst =
+	    (gs_pattern2_instance_t *)pdc->ccolor.pattern;
+    const gs_color_space *pcs2 = gx_dc_pattern2_get_color_space(pdc);
+    gs_color_space_index csi = gs_color_space_get_index(pcs2);
+
+    return is_cspace_allowed_in_strategy(pdev, csi);
+}
 
 /* Set the fill or stroke color. */
 private int
@@ -305,15 +335,25 @@ pdf_reset_color(gx_device_pdf * pdev, const gs_imager_state * pis,
 		    command = ppscc->setgray; 
 		    break;
 		case gs_color_space_index_DeviceRGB:
+		    if (pdev->params.ColorConversionStrategy == ccs_CMYK)
+			goto write_process_color;
+		    if (pdev->params.ColorConversionStrategy == ccs_Gray)
+			goto write_process_color;
 		    command = ppscc->setrgbcolor; 
 		    break;
 		case gs_color_space_index_DeviceCMYK:
+		    if (pdev->params.ColorConversionStrategy == ccs_sRGB)
+			goto write_process_color;
+		    if (pdev->params.ColorConversionStrategy == ccs_Gray)
+			goto write_process_color;
 		    command = ppscc->setcmykcolor; 
 		    break;
 		case gs_color_space_index_Indexed:
 		    if (pdev->CompatibilityLevel <= 1.2) {
 			pcs2 = (const gs_color_space *)&pcs->params.indexed.base_space;
 			csi = gs_color_space_get_index(pcs2);
+			if (!is_cspace_allowed_in_strategy(pdev, csi))
+			    goto write_process_color;
 			if (csi == gs_color_space_index_Separation) {
 			    pcs2 = (const gs_color_space *)&pcs2->params.separation.alt_space;
 			    goto check_pcs2;
@@ -326,6 +366,8 @@ pdf_reset_color(gx_device_pdf * pdev, const gs_imager_state * pis,
 			pcs2 = (const gs_color_space *)&pcs->params.separation.alt_space;
 			check_pcs2:
 			csi = gs_color_space_get_index(pcs2);
+			if (!is_cspace_allowed_in_strategy(pdev, csi))
+			    goto write_process_color;
 			switch(gs_color_space_get_index(pcs2)) {
 			    case gs_color_space_index_DevicePixel :
 			    case gs_color_space_index_DeviceN:
@@ -343,6 +385,12 @@ pdf_reset_color(gx_device_pdf * pdev, const gs_imager_state * pis,
 	    		goto write_process_color;
 		    goto scn;
 		default :
+		    if (pdev->params.ColorConversionStrategy == ccs_CMYK)
+			goto write_process_color;
+		    if (pdev->params.ColorConversionStrategy == ccs_sRGB)
+			goto write_process_color;
+		    if (pdev->params.ColorConversionStrategy == ccs_Gray)
+			goto write_process_color;
 	        scn:
 		    command = ppscc->setcolorn;
 		    if (!gx_hld_saved_color_same_cspace(&temp, psc)) {
@@ -378,12 +426,14 @@ pdf_reset_color(gx_device_pdf * pdev, const gs_imager_state * pis,
 		else if (pdc->type == &gx_dc_pure_masked) {
 		    code = pdf_put_uncolored_pattern(pdev, pdc, pcs, 
 				ppscc, pis->have_pattern_streams, &pres);
-		    if (code < 0)
+		    if (code < 0 || pres == 0)
 			return code;
 		    if (pis->have_pattern_streams)
 			code = pdf_write_ccolor(pdev, pis, pcc);
 		} else if (pdc->type == &gx_dc_pattern2) {
 		    if (pdev->CompatibilityLevel <= 1.2)
+	    		return_error(gs_error_rangecheck);
+		    if (!is_pattern2_allowed_in_strategy(pdev, pdc))
 	    		return_error(gs_error_rangecheck);
 		    code1 = pdf_put_pattern2(pdev, pdc, ppscc, &pres);
 		} else
@@ -867,7 +917,7 @@ pdf_write_colorscreen_halftone(gx_device_pdf *pdev,
     stream *s;
     long ht_ids[4];
 
-    for (i = 0; i < 4; ++i) {
+    for (i = 0; i < pdht->num_comp ; ++i) {
 	int code = pdf_write_screen_halftone(pdev, &pcsht->screens.indexed[i],
 					     &pdht->components[i].corder,
 					     &ht_ids[i]);
@@ -876,35 +926,49 @@ pdf_write_colorscreen_halftone(gx_device_pdf *pdev,
     }
     *pid = pdf_begin_separate(pdev);
     s = pdev->strm;
+    /* Use Black, Gray as the Default unless we are in RGB colormodel */
+    /* (num_comp < 4) in which case we use Green (arbitrarily) */
     pprintld1(s, "<</Type/Halftone/HalftoneType 5/Default %ld 0 R\n",
-	      ht_ids[3]);
+	      pdht->num_comp > 3 ? ht_ids[3] : ht_ids[1]);
     pprintld2(s, "/Red %ld 0 R/Cyan %ld 0 R", ht_ids[0], ht_ids[0]);
     pprintld2(s, "/Green %ld 0 R/Magenta %ld 0 R", ht_ids[1], ht_ids[1]);
     pprintld2(s, "/Blue %ld 0 R/Yellow %ld 0 R", ht_ids[2], ht_ids[2]);
+    if (pdht->num_comp > 3)
     pprintld2(s, "/Gray %ld 0 R/Black %ld 0 R", ht_ids[3], ht_ids[3]);
+    stream_puts(s, ">>\n");
     return pdf_end_separate(pdev);
 }
+
+#define CHECK(expr)\
+  BEGIN if ((code = (expr)) < 0) return code; END
+
 private int
 pdf_write_threshold_halftone(gx_device_pdf *pdev,
 			     const gs_threshold_halftone *ptht,
 			     const gx_ht_order *porder, long *pid)
 {
     char trs[17 + MAX_FN_CHARS + 1];
-    int code = pdf_write_transfer(pdev, porder->transfer, "/TransferFunction",
-				  trs);
-    long id = pdf_begin_separate(pdev);
-    stream *s = pdev->strm;
+    stream *s;
     pdf_data_writer_t writer;
+    int code = pdf_write_transfer(pdev, porder->transfer, "",
+				  trs);
 
     if (code < 0)
 	return code;
-    *pid = id;
-    pprintd2(s, "<</Type/Halftone/HalftoneType 6/Width %d/Height %d",
-	     ptht->width, ptht->height);
-    stream_puts(s, trs);
-    code = pdf_begin_data(pdev, &writer);
-    if (code < 0)
-	return code;
+    CHECK(pdf_begin_data(pdev, &writer)); 
+    s = pdev->strm;
+    *pid = writer.pres->object->id;
+    CHECK(cos_dict_put_c_strings((cos_dict_t *)writer.pres->object,
+	"/Type", "/Halftone"));
+    CHECK(cos_dict_put_c_strings((cos_dict_t *)writer.pres->object,
+	"/HalftoneType", "6"));
+    CHECK(cos_dict_put_c_key_int((cos_dict_t *)writer.pres->object,
+	"/Width", ptht->width));
+    CHECK(cos_dict_put_c_key_int((cos_dict_t *)writer.pres->object,
+	"/Height", ptht->height));
+    if (*trs != 0)
+	CHECK(cos_dict_put_c_strings((cos_dict_t *)writer.pres->object,
+	    "/TransferFunction", trs));
     stream_write(writer.binary.strm, ptht->thresholds.data, ptht->thresholds.size);
     return pdf_end_data(&writer);
 }
@@ -914,23 +978,33 @@ pdf_write_threshold2_halftone(gx_device_pdf *pdev,
 			      const gx_ht_order *porder, long *pid)
 {
     char trs[17 + MAX_FN_CHARS + 1];
+    stream *s;
+    pdf_data_writer_t writer;
     int code = pdf_write_transfer(pdev, porder->transfer, "/TransferFunction",
 				  trs);
-    long id = pdf_begin_separate(pdev);
-    stream *s = pdev->strm;
-    pdf_data_writer_t writer;
 
     if (code < 0)
 	return code;
-    *pid = id;
-    pprintd2(s, "<</Type/Halftone/HalftoneType 16/Width %d/Height %d",
-	     ptht->width, ptht->height);
-    if (ptht->width2 && ptht->height2)
-	pprintd2(s, "/Width2 %d/Height2 %d", ptht->width2, ptht->height2);
-    stream_puts(s, trs);
-    code = pdf_begin_data(pdev, &writer);
-    if (code < 0)
-	return code;
+    CHECK(pdf_begin_data(pdev, &writer)); 
+    s = pdev->strm;
+    *pid = writer.pres->object->id;
+    CHECK(cos_dict_put_c_strings((cos_dict_t *)writer.pres->object,
+	"/Type", "/Halftone"));
+    CHECK(cos_dict_put_c_strings((cos_dict_t *)writer.pres->object,
+	"/HalftoneType", "16"));
+    CHECK(cos_dict_put_c_key_int((cos_dict_t *)writer.pres->object,
+	"/Width", ptht->width));
+    CHECK(cos_dict_put_c_key_int((cos_dict_t *)writer.pres->object,
+	"/Height", ptht->height));
+    if (ptht->width2 && ptht->height2) {
+	CHECK(cos_dict_put_c_key_int((cos_dict_t *)writer.pres->object,
+	    "/Width2", ptht->width2));
+	CHECK(cos_dict_put_c_key_int((cos_dict_t *)writer.pres->object,
+	    "/Height2", ptht->height2));
+    }
+    if (*trs != 0)
+	CHECK(cos_dict_put_c_strings((cos_dict_t *)writer.pres->object,
+	    "/TransferFunction", trs));
     s = writer.binary.strm;
     if (ptht->bytes_per_sample == 2)
 	stream_write(s, ptht->thresholds.data, ptht->thresholds.size);
@@ -1146,35 +1220,15 @@ pdf_open_gstate(gx_device_pdf *pdev, pdf_resource_t **ppres)
     return 0;
 }
 
-private int 
-pdf_is_same_extgstate(gx_device_pdf * pdev, pdf_resource_t *pres0, pdf_resource_t *pres1)
-{
-    return true;
-}
-
 /* Finish writing an ExtGState. */
-private int
+int
 pdf_end_gstate(gx_device_pdf *pdev, pdf_resource_t *pres)
 {
     if (pres) {
-	pdf_resource_t *pres1 = pres;
-	int code;
-
-	code = pdf_find_same_resource(pdev, resourceExtGState, &pres, pdf_is_same_extgstate);
+	int code = pdf_substitute_resource(pdev, &pres, resourceExtGState, NULL, true);
+	
 	if (code < 0)
 	    return code;
-	if (code != 0) {
-	    code = pdf_cancel_resource(pdev, (pdf_resource_t *)pres1, resourceExtGState);
-	    if (code < 0)
-		return code;
-	    pdf_forget_resource(pdev, pres1, resourceExtGState);
-	} else {
-	    pdf_reserve_object_id(pdev, pres, gs_no_id);
-	    code = cos_write_object(pres->object, pdev);
-	    if (code < 0)
-		return code;
-	    pres->object->written = 1;
-	}
 	code = pdf_open_page(pdev, PDF_IN_STREAM);
 	if (code < 0)
 	    return code;
@@ -1256,6 +1310,19 @@ pdf_update_alpha(gx_device_pdf *pdev, const gs_imager_state *pis,
     floatp alpha;
     int code;
 
+    if (pdev->state.soft_mask_id != pis->soft_mask_id) {
+	char buf[20];
+
+	sprintf(buf, "%ld 0 R", pis->soft_mask_id);
+	code = pdf_open_gstate(pdev, ppres);
+	if (code < 0)
+	    return code;
+	code = cos_dict_put_c_key_string(resource_dict(*ppres), 
+		    "/SMask", (byte *)buf, strlen(buf));
+	if (code < 0)
+	    return code;
+	pdev->state.soft_mask_id = pis->soft_mask_id;
+    }
     if (pdev->state.opacity.alpha != pis->opacity.alpha) {
 	if (pdev->state.shape.alpha != pis->shape.alpha)
 	    return_error(gs_error_rangecheck);
@@ -1283,11 +1350,12 @@ pdf_update_alpha(gx_device_pdf *pdev, const gs_imager_state *pis,
 /*
  * Update the graphics subset common to all high-level drawing operations.
  */
-private int
+int
 pdf_prepare_drawing(gx_device_pdf *pdev, const gs_imager_state *pis,
 		    pdf_resource_t **ppres)
 {
     int code = 0;
+    int bottom;
 
     if (pdev->CompatibilityLevel >= 1.4) {
 	if (pdev->state.blend_mode != pis->blend_mode) {
@@ -1327,7 +1395,10 @@ pdf_prepare_drawing(gx_device_pdf *pdev, const gs_imager_state *pis,
      * removal, halftone phase, overprint mode, smoothness, blend mode, text
      * knockout.
      */
-    if (pdev->sbstack_depth == 0) {
+    bottom = (pdev->ResourcesBeforeUsage ? 1 : 0);
+    /* When ResourcesBeforeUsage != 0, one sbstack element 
+       appears from the page contents stream. */
+    if (pdev->sbstack_depth == bottom) {
 	gs_int_point phase, dev_phase;
 	char hts[5 + MAX_FN_CHARS + 1],
 	    trs[5 + MAX_FN_CHARS * 4 + 6 + 1],
@@ -1336,13 +1407,16 @@ pdf_prepare_drawing(gx_device_pdf *pdev, const gs_imager_state *pis,
 
 	hts[0] = trs[0] = bgs[0] = ucrs[0] = 0;
 	if (pdev->params.PreserveHalftoneInfo &&
-	    pdev->halftone_id != pis->dev_ht->id
+	    pdev->halftone_id != pis->dev_ht->id &&
+	    !pdev->PDFX
 	    ) {
 	    code = pdf_update_halftone(pdev, pis, hts);
 	    if (code < 0)
 		return code;
 	}
-	if (pdev->params.TransferFunctionInfo == tfi_Preserve) {
+	if (pdev->params.TransferFunctionInfo == tfi_Preserve &&
+	    !pdev->PDFX && !pdev->PDFA
+	    ) {
 	    code = pdf_update_transfer(pdev, pis, trs);
 	    if (code < 0)
 		return code;
@@ -1388,23 +1462,25 @@ pdf_prepare_drawing(gx_device_pdf *pdev, const gs_imager_state *pis,
 	    if (code < 0)
 		return code;
 	}
-	gs_currentscreenphase_pis(pis, &phase, 0);
-	gs_currentscreenphase_pis(&pdev->state, &dev_phase, 0);
-	if (dev_phase.x != phase.x || dev_phase.y != phase.y) {
-	    char buf[sizeof(int) * 3 + 5];
+	if (!pdev->PDFX) {
+	    gs_currentscreenphase_pis(pis, &phase, 0);
+	    gs_currentscreenphase_pis(&pdev->state, &dev_phase, 0);
+	    if (dev_phase.x != phase.x || dev_phase.y != phase.y) {
+		char buf[sizeof(int) * 3 + 5];
 
-	    code = pdf_open_gstate(pdev, ppres);
-	    if (code < 0)
-		return code;
-	    sprintf(buf, "[%d %d]", phase.x, phase.y);
-	    code = cos_dict_put_string_copy(resource_dict(*ppres), "/HTP", buf);
-	    if (code < 0)
-		return code;
-	    gx_imager_setscreenphase(&pdev->state, phase.x, phase.y,
-				     gs_color_select_all);
+		code = pdf_open_gstate(pdev, ppres);
+		if (code < 0)
+		    return code;
+		sprintf(buf, "[%d %d]", phase.x, phase.y);
+		code = cos_dict_put_string_copy(resource_dict(*ppres), "/HTP", buf);
+		if (code < 0)
+		    return code;
+		gx_imager_setscreenphase(&pdev->state, phase.x, phase.y,
+					 gs_color_select_all);
+	    }
 	}
     }
-    if (pdev->CompatibilityLevel >= 1.3 && pdev->sbstack_depth == 0) {
+    if (pdev->CompatibilityLevel >= 1.3 && pdev->sbstack_depth == bottom) {
 	if (pdev->overprint_mode != pdev->params.OPM) {
 	    code = pdf_open_gstate(pdev, ppres);
 	    if (code < 0)

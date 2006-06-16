@@ -20,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gstestutils.py,v 1.4 2005/12/13 17:58:03 jemarch Exp $
+# $Id: gstestutils.py,v 1.5 2006/06/16 12:55:32 Arabidopsis Exp $
 
 # Utilities and documentation for Ghostscript testing using the Python
 # 'unittest' framework.
@@ -146,7 +146,11 @@ class _GSTextTestResult(unittest._TextTestResult):
     def addFailure(self, test, err):
         self.failures.append((test, err))
         if self.showAll:
-            self.stream.writeln("DIFFER")
+	    lines = err[1].args[0]
+	    if (len(lines) > 18) & (lines[0:18] == "non-zero exit code"):
+		self.stream.writeln("ERROR")
+	    else:
+		self.stream.writeln("DIFFER")
         elif self.dots:
             self.stream.write("D")
     

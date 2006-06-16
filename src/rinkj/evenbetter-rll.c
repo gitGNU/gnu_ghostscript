@@ -16,7 +16,7 @@
 
 */
 
-/*$Id: evenbetter-rll.c,v 1.1 2006/03/08 12:30:41 Arabidopsis Exp $ */
+/*$Id: evenbetter-rll.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $ */
 /* Testbed implementation of Even Better Screening. */
 
 /*
@@ -24,7 +24,7 @@
  * 5,917,614, and corresponding international patents.  This version
  * of ETS is for commercial licensees and is governed by the licensing
  * agreement between artofcode LLC and the licensee. Please see
- * http://www.artofcode.com/eventone/ for information on licensing.
+ * http://www.levien.com/artofcode/eventone/ for information on licensing.
 */
 
 #include <stdio.h>

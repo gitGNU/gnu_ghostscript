@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gxoprect.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gxoprect.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* generic (very slow) overprint fill rectangle implementation */
 
 #include "memory_.h"
@@ -235,7 +235,7 @@ gx_overprint_generic_fill_rectangle(
     /* allocate space for a scanline of color indices */
     pcolor_buff = (gx_color_index *)
                       gs_alloc_bytes( mem,
-                                      w * sizeof(gx_color_index),
+                                      w *  arch_sizeof_color_index,
                                       "overprint generic fill rectangle" );
     if (pcolor_buff == 0)
         return gs_note_error(gs_error_VMerror);
@@ -557,8 +557,8 @@ gx_overprint_sep_fill_rectangle_2(
     pcolor = (byte *)&color;
     pmask = (byte *)&retain_mask;
 #if arch_is_big_endian
-    pcolor += sizeof(gx_color_index) - byte_depth;
-    pmask += sizeof(gx_color_index) - byte_depth;
+    pcolor += arch_sizeof_color_index - byte_depth;
+    pmask += arch_sizeof_color_index - byte_depth;
 #endif
 
     /* allocate a buffer for the returned data */

@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_cmap.ps,v 1.5 2006/03/02 22:26:14 Arabidopsis Exp $
+% $Id: gs_cmap.ps,v 1.6 2006/06/16 12:55:13 Arabidopsis Exp $
 % ProcSet for implementing CMap resources.
 % When this is run, systemdict is still writable.
 
@@ -49,6 +49,7 @@
     /CMap 2 index dup type /dicttype ne { /CMap findresource } if def
     /FDepVector 1 index cvlit def	% temporarily
     /Encoding [ 0 1 FDepVector length 1 sub { } for ] def
+    /FontInfo 1 dict def % for .processToUnicode in pdf_font.ps .
     /FDepVector [ 0 1 FDepVector length 1 sub {
 		% Stack: name cmap[name] fonts /FDepVector [ fonts... i
       FDepVector 1 index get
@@ -431,7 +432,7 @@
 				% cid_base code_lo code_hi prefix range_len
     dup 255 gt {
        (too long coderange specification for current GS\n) print
-       signalerror
+       /.endmapranges cvx /rangecheck signalerror
     } if
     <00 01 00 02> 4 string copy	% create initialized param
     dup 0 4 -1 roll put		% put range_len into param

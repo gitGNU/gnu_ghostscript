@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_devn.ps,v 1.2 2005/12/13 17:48:51 jemarch Exp $
+% $Id: gs_devn.ps,v 1.3 2006/06/16 12:55:13 Arabidopsis Exp $
 % DeviceN color space method dictionary; this depends on gs_sepr.ps
 
 
@@ -143,8 +143,34 @@ colorspacedict
             dup 0 /Separation put
             dup 1 /All put
               { .setseparationspace }
+          } {
+	    {
+	      dup .setdevicenspace 
+	      % Check if the DeviceN color space includes an 'attributes'
+	      % dict with a Colorants dict.  If present then we want to
+	      % attach the separation colorspace in the Colorants dict to
+	      % the DeviceN color space description within the graphics
+	      % library.  To do this we are creating a temp gstate, building
+	      % each of the Colorants color spaces in the temp gstate and
+	      % then attaching the temp color space to the DeviceN color
+	      % space.  This round about procedure is done to create
+	      % descriptions of the Colorants color spaces which are
+	      % equivalent to any other color space (i.e. with color space
+	      % substitution performed on the alternate color space and the
+	      % tint transform function sampled).
+	      dup length 4 gt {
+		dup 4 get /Colorants .knownget {
+	          { gsave
+		    { % Ignore any problems with the Colorants color spaces
+		      //forcesetcolorspace .attachdevicenattributespace
+	     	    } stopped pop
+	   	    grestore
+	   	  } forall
+	        } if
+	      } if
+	      pop
+  	    }
           }
-          { { .setdevicenspace } }
         ifelse
         stopped
           { cleartomark setcolorspace stop }

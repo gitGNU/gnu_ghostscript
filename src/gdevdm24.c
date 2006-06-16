@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 1996, 1997 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,16 +17,15 @@
 
 */
 
-#include "gdevprn.h"
-
-
-/* $Id: gdevdm24.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $*/
+/* $Id: gdevdm24.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $*/
 /* High-res 24Dot-matrix printer driver */
 
 /* Supported printers 
  *  NEC P6 and similar, implemented by Andreas Schwab (schwab@ls5.informatik.uni-dortmund.de)
  *  Epson LQ850, implemented by Christian Felsch (felsch@tu-harburg.d400.de)
  */
+
+#include "gdevprn.h"
 
 /* Driver for NEC P6 */
 private dev_proc_print_page (necp6_print_page);

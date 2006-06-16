@@ -17,7 +17,7 @@
   
 */
 
-/*$Id: gxclist.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/*$Id: gxclist.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Command list document- and page-level code. */
 #include "memory_.h"
 #include "string_.h"
@@ -294,6 +294,7 @@ clist_init_data(gx_device * dev, byte * init_data, uint data_size)
 	(cdev->band_params.BandWidth ? cdev->band_params.BandWidth :
 	 target->width);
     int band_height = cdev->band_params.BandHeight;
+    bool page_uses_transparency = cdev->page_uses_transparency;
     const uint band_space =
     cdev->page_info.band_params.BandBufferSpace =
 	(cdev->band_params.BandBufferSpace ?
@@ -330,7 +331,7 @@ clist_init_data(gx_device * dev, byte * init_data, uint data_size)
 	bits_size = clist_tile_cache_size(target, band_space);
 	bits_size = min(bits_size, data_size >> 1);
 	band_height = gdev_mem_max_height(&bdev, band_width,
-					  band_space - bits_size);
+			  band_space - bits_size, page_uses_transparency);
 	if (band_height == 0)
 	    return_error(gs_error_rangecheck);
     }

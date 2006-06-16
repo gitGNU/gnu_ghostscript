@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gp_mswin.h,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_mswin.h,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* (used by both C code and Windows 'resource') */
 
 #ifndef gp_mswin_INCLUDED
@@ -51,6 +51,12 @@ extern HINSTANCE phInstance;
 extern const LPSTR szAppName;
 extern BOOL is_win32s;
 extern int is_spool(const char *queue);
+
+#ifdef _WIN64
+#define DLGRETURN INT_PTR
+#else
+#define DLGRETURN BOOL
+#endif
 
 #endif /* !defined(RC_INVOKED) */
 

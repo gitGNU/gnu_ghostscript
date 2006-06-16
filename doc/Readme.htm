@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>Overview of Ghostscript</title>
-<!-- $Id: Readme.htm,v 1.6 2006/03/05 13:04:28 Arabidopsis Exp $ -->
+<!-- $Id: Readme.htm,v 1.7 2006/06/16 12:55:14 Arabidopsis Exp $ -->
 <!-- Originally: README -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -19,29 +19,7 @@
 <!-- [1.3 begin hint] ====================================================== -->
 
 <p>
-If this is your first contact with Ghostscript, before continuing here you
-should read the <a href="New-user.htm">documentation for new users</a>,
-where you'll find
-
-<ul>
-<li><a href="New-user.htm#Overview">what Ghostscript does</a> (PostScript
-and PDF previewing, conversion, and printing);
-
-<li>its <a href="New-user.htm#Find_Ghostscript">licensing terms</a> (free
-for ordinary use);
-
-<li>what <a href="New-user.htm#Platforms">platforms it runs on</a> (every
-platform you're likely to be interested in);
-
-<li>where to find some <a href="New-user.htm#Previewers">useful
-programs</a> that enhance Ghostscript (like user-friendly previewers for
-Unix, VMS, MS Windows, DOS, and Macintosh); and
-
-<li>what to do <a href="New-user.htm#Need_help">if you need help</a>.
-</ul>
-
-<p>
-The rest of this document is a roadmap to the Ghostscript documentation.
+This document is a roadmap to the Ghostscript documentation.
 After looking through it, if you want to install Ghostscript and not only
 use it, we recommend you read <a href="Install.htm">how to install
 Ghostscript</a>, and <a href="Make.htm">how to compile Ghostscript</a> from
@@ -77,17 +55,15 @@ PostScript, and PDF reference documentation</a>
 <li>Primarily for users:
 <blockquote><table cellpadding=0 cellspacing=0>
 <tr><td valign=top>
-<a href="#Bug-form">Bug-form.htm</a><br>
-<a href="#Bug-info">Bug-info.htm</a><br>
 <a href="#Deprecated">Deprecated.htm</a><br>
 <a href="#Devices">Devices.htm</a><br>
 <td>&nbsp;&nbsp;&nbsp;<td valign=top>
 <a href="#Helpers">Helpers.htm</a><br>
 <a href="#Humor">Humor.htm</a><br>
-<a href="#New-user">New-user.htm</a><br>
 <a href="#Ps2epsi">Ps2epsi.htm</a><br>
 <td>&nbsp;&nbsp;&nbsp;<td valign=top>
 <a href="#Ps2pdf">Ps2pdf.htm</a><br>
+<a href="#Ps2ps2">Ps2ps2.htm</a><br>
 <a href="#Readme">Readme.htm</a><br>
 <a href="#Unix-lpr">Unix-lpr.htm</a><br>
 <a href="#Use">Use.htm</a><br>
@@ -143,11 +119,6 @@ PostScript, and PDF reference documentation</a>
 <h2><a name="Theme_roadmap"></a>Document roadmap by theme</h2>
 
 <h3><a name="New_users"></a>What should I read if I'm a new user?</h3>
-
-<p>
-A new user of Ghostscript should begin by reading the material
-<a href="New-user.htm">specifically for new users</a>, then as many of
-these documents as seem useful:
 
 <ul>
 
@@ -321,33 +292,21 @@ More material about Ghostscript can be found at
 PostScript, and PDF reference documentation</h3>
 
 <p>
-Adobe makes a wealth of
-<a href="http://partners.adobe.com/asn/tech/ps/specifications.jsp"
-class="offsite">
-technical documentation</a> available over the Web, including the
-<a href="http://partners.adobe.com/asn/developer/pdfs/tn/PLRM.pdf"
+Adobe makes a wealth of technical documentation available over the Web,
+ including the
+<a href="http://partners.adobe.com/public/developer/en/ps/PLRM.pdf"
 class="offsite">
 PostScript Language Reference Manual (Third Edition)</a>; the
-<a
-href="http://partners.adobe.com/asn/developer/pdfs/tn/5002.EPSF_Spec.pdf" 
+<a href="http://partners.adobe.com/public/developer/en/ps/5002.EPSF_Spec.pdf" 
 class="offsite">
 Encapsulated PostScript</a> (EPS) Format Specification version 3, including
 <a href="#Ps2epsi">Encapsulated PostScript Interchange (EPSI)</a>
-format; 
-the
-<a
-href="http://partners.adobe.com/asn/acrobat/docs/File_Format_Specifications/PDFReference13.pdf"
-class="offsite">
-PDF 1.3 specification</a>; 
-and the
-<a
-href="http://partners.adobe.com/asn/acrobat/sdk/public/docs/PDFReference15_v5.pdf"
-class="offsite">
-PDF 1.5 specification</a>. 
-The <a href="http://partners.adobe.com/asn/tech/pdf/acrobatsdks.jsp" 
-class="offsite">Acrobat SDK</a> 
-contains
-<a href="http://partners.adobe.com/asn/acrobat/docs.jsp" class="offset">
+ format; the
+<a href="http://partners.adobe.com/public/developer/pdf/index_reference.html"
+class="offsite">PDF Reference manuals</a>.
+The <a href="http://partners.adobe.com/public/developer/acrobat/sdk/index.html" 
+class="offsite">Acrobat SDK</a> contains
+<a href="http://partners.adobe.com/public/developer/acrobat/sdk/index_doc.html" class="offset">
 pdfmark and Acrobat Distiller parameters</a> documentation.  
 Some of these documents
 are also available at <a href="ftp://ftp.adobe.com/pub/adobe/"
@@ -538,11 +497,6 @@ is needed.
 </dl>
 
 <dl>
-<dt><a name="New-user"></a><a href="New-user.htm"><b>New-user.htm</b></a>
-<dd> Essential information for new users of Ghostscript.
-</dl>
-
-<dl>
 <dt><a name="News"></a><a href="News.htm"><b>News.htm</b></a>
 <dd> A brief description of the latest release or pre-release of
 Ghostscript, and a list of any incompatible changes in it.  Changes in older
@@ -579,6 +533,14 @@ Encapsulated PostScript Interchange (EPSI) format.
 <dd> Detailed information on how to use Ghostscript through
 <tt><b>ps2pdf</b></tt> to convert PostScript to Adobe
 Portable Document Format (PDF).
+</dl>
+
+<dl>
+<dt><a name="Ps2ps2"></a><a href="Ps2ps2.htm"><b>Ps2ps2.htm</b></a>
+<dd> Detailed information on how to use Ghostscript through
+<tt><b>ps2ps2</b></tt> to convert Adobe
+Portable Document Format (PDF) or Adobe Postscript Level 3
+into Adobe Postscript Level 2.
 </dl>
 
 <dl>

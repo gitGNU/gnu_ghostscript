@@ -16,7 +16,7 @@
 
 */
 
-/*$Id: gdevdbit.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/*$Id: gdevdbit.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Default device bitmap copying implementation */
 #include "gx.h"
 #include "gpcheck.h"
@@ -262,7 +262,7 @@ gx_default_copy_alpha(gx_device * dev, const byte * data, int data_x,
 			int i;
 
 			(*dev_proc(dev, decode_color)) (dev, previous, cv);
-#if arch_ints_are_short
+#if ARCH_INTS_ARE_SHORT
 #  define b_int long
 #else
 #  define b_int int

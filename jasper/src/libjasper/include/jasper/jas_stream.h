@@ -64,7 +64,7 @@
 /*
  * I/O Stream Class
  *
- * $Id: jas_stream.h,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jas_stream.h,v 1.2 2006/06/16 12:55:32 Arabidopsis Exp $
  */
 
 #ifndef JAS_STREAM_H
@@ -297,7 +297,7 @@ jas_stream_t *jas_stream_memopen(char *buf, int bufsize);
 jas_stream_t *jas_stream_fdopen(int fd, const char *mode);
 
 /* Open a stdio stream as a stream. */
-jas_stream_t *jas_stream_reopen(const char *path, const char *mode, FILE *fp);
+jas_stream_t *jas_stream_freopen(const char *path, const char *mode, FILE *fp);
 
 /* Open a temporary file as a stream. */
 jas_stream_t *jas_stream_tmpfile(void);

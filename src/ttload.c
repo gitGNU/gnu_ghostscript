@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ttload.c,v 1.4 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: ttload.c,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
 
 /* Changes after FreeType: cut out the TrueType instruction interpreter. */
 
@@ -47,8 +47,13 @@
 #include "ttload.h"
 #include "ttfinp.h"
 
-#define DebugTrace( font, fmt )  font->DebugPrint(font, fmt)
-#define DebugTrace1( font, fmt, x)  font->DebugPrint(font, fmt, x)
+#ifdef DEBUG
+#  define DebugTrace( font, fmt )  (void)(!font->DebugPrint ? 0 : font->DebugPrint(font, fmt))
+#  define DebugTrace1( font, fmt, x)  (void)(!font->DebugPrint ? 0 : font->DebugPrint(font, fmt, x))
+#else
+#  define DebugTrace( font, fmt )
+#  define DebugTrace1( font, fmt, x)
+#endif
 
 /*******************************************************************
  *

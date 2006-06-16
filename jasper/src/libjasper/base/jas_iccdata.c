@@ -59,8 +59,8 @@
  * __END_OF_JASPER_LICENSE__
  */
 
-#include <jasper/jas_config.h>
-#include <jasper/jas_types.h>
+#include "jasper/jas_config.h"
+#include "jasper/jas_types.h"
 
 uchar jas_iccprofdata_srgb[] =
 {

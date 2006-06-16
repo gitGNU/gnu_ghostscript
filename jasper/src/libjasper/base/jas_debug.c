@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2001-2002 Michael David Adams.
+ * Copyright (c) 2005-2006 artofcode LLC.
  * All rights reserved.
  */
 
@@ -66,18 +67,26 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#if defined(_MSC_VER) || defined(JAS_WIN_MSVC_BUILD)
+/* MS Windows requires mangling some unix functions */
+#define vsnprintf _vsnprintf
+#endif
+
 #include "jasper/jas_types.h"
 #include "jasper/jas_debug.h"
 
 /******************************************************************************\
-* Local data.
+* Static data. These must be globals since we have no library context.
 \******************************************************************************/
 
-static int jas_dbglevel = 0;
 /* The debug level. */
+static int jas_dbglevel = 0;
+
+/* The callback for out-of-band error reporting */
+static void(*jas_errorp_cb) (jas_error_t, char *) = NULL;
 
 /******************************************************************************\
-* Code for getting/setting the debug level.
+* Code for getting/setting the debug level and callback.
 \******************************************************************************/
 
 /* Set the library debug level. */
@@ -101,20 +110,37 @@ int jas_getdbglevel()
 	return jas_dbglevel;
 }
 
+/* Set the library error callback. */
+void jas_set_error_cb( void(*cb) ( jas_error_t, char *) )
+{
+	jas_errorp_cb = cb;
+}
+
 /******************************************************************************\
 * Code.
 \******************************************************************************/
 
-/* Perform formatted output to standard error. */
+/* call an error callback if one is set */
+void jas_error(jas_error_t err, char *err_str)
+{
+	if( jas_errorp_cb )
+		jas_errorp_cb( err, err_str );
+}
+
+/* Perform formatted output to our error stream. */
 int jas_eprintf(const char *fmt, ...)
 {
-	int ret;
 	va_list ap;
+	char	tmp[256];
 
 	va_start(ap, fmt);
-	ret = vfprintf(stderr, fmt, ap);
+	vsnprintf( tmp, 255, fmt, ap);
+	jas_error(	JAS_ERR_STD_ERR_WARNING,
+				tmp
+			);
 	va_end(ap);
-	return ret;
+
+	return 0;
 }
 
 /* Dump memory to a stream. */

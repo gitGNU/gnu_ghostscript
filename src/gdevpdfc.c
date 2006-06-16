@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdfc.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gdevpdfc.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Color space management and writing for pdfwrite driver */
 #include "math_.h"
 #include "memory_.h"
@@ -36,8 +36,7 @@
 #include "strimpl.h"
 #include "sstring.h"
 #include "gxcspace.h"
-#include "sarc4.h"
-#include <assert.h>
+#include "gxcdevn.h"
 
 /*
  * PDF doesn't have general CIEBased color spaces.  However, it provides
@@ -341,7 +340,8 @@ pdf_separation_color_space(gx_device_pdf *pdev,
 			   const cos_value_t *snames,
 			   const gs_color_space *alt_space,
 			   const gs_function_t *pfn,
-			   const pdf_color_space_names_t *pcsn)
+			   const pdf_color_space_names_t *pcsn,
+			   const cos_value_t *v_attributes)
 {
     cos_value_t v;
     const gs_range_t *ranges;
@@ -352,7 +352,8 @@ pdf_separation_color_space(gx_device_pdf *pdev,
 	(code = pdf_color_space(pdev, &v, &ranges, alt_space, pcsn, false)) < 0 ||
 	(code = cos_array_add(pca, &v)) < 0 ||
 	(code = pdf_function_scaled(pdev, pfn, ranges, &v)) < 0 ||
-	(code = cos_array_add(pca, &v)) < 0
+	(code = cos_array_add(pca, &v)) < 0 ||
+	(v_attributes != NULL ? code = cos_array_add(pca, v_attributes) : 0) < 0
 	)
 	return code;
     return 0;
@@ -372,8 +373,8 @@ pdf_indexed_color_space(gx_device_pdf *pdev, cos_value_t *pvalue,
     int num_entries = pip->hival + 1;
     int num_components = gs_color_space_num_components(base_space);
     uint table_size = num_entries * num_components;
-    /* Guess at the extra space needed for ASCII85 encoding. */
-    uint string_size = 1 + table_size * 2 + table_size / 30 + 2;
+    /* Guess at the extra space needed for PS string encoding. */
+    uint string_size = 2 + table_size * 4;
     uint string_used;
     byte buf[100];		/* arbitrary */
     stream_AXE_state st;
@@ -384,16 +385,21 @@ pdf_indexed_color_space(gx_device_pdf *pdev, cos_value_t *pvalue,
     gs_color_space cs_gray;
     cos_value_t v;
     int code;
-    stream_arcfour_state sarc4;
 
-    if (pdev->KeyLength) {
-	code = pdf_encrypt_init(pdev, pca->id, &sarc4);
-	if (code < 0)
-	    return code;
-    }
     /* PDF doesn't support Indexed color spaces with more than 256 entries. */
     if (num_entries > 256)
 	return_error(gs_error_rangecheck);
+    if (pdev->CompatibilityLevel < 1.3) {
+	switch (gs_color_space_get_index(pcs)) {
+	    case gs_color_space_index_Pattern:
+	    case gs_color_space_index_Separation:
+	    case gs_color_space_index_Indexed:
+	    case gs_color_space_index_DeviceN:
+		return_error(gs_error_rangecheck);
+	    default: DO_NOTHING; 
+	}
+
+    }
     table = gs_alloc_string(mem, string_size, "pdf_color_space(table)");
     palette = gs_alloc_string(mem, table_size, "pdf_color_space(palette)");
     if (table == 0 || palette == 0) {
@@ -403,11 +409,12 @@ pdf_indexed_color_space(gx_device_pdf *pdev, cos_value_t *pvalue,
 		       "pdf_color_space(table)");
 	return_error(gs_error_VMerror);
     }
+    s_init(&s, mem);
     swrite_string(&s, table, string_size);
     s_init(&es, mem);
-    s_init_state((stream_state *)&st, &s_AXE_template, NULL);
+    s_init_state((stream_state *)&st, &s_PSSE_template, NULL);
     s_init_filter(&es, (stream_state *)&st, buf, sizeof(buf), &s);
-    sputc(&s, '<');
+    sputc(&s, '(');
     if (pcs->params.indexed.use_proc) {
 	gs_client_color cmin, cmax;
 	byte *pnext = palette;
@@ -439,7 +446,7 @@ pdf_indexed_color_space(gx_device_pdf *pdev, cos_value_t *pvalue,
     if (gs_color_space_get_index(base_space) ==
 	gs_color_space_index_DeviceRGB
 	) {
-	/* Check for an all-gray palette. */
+	/* Check for an all-gray palette3. */
 	int i;
 
 	for (i = table_size; (i -= 3) >= 0; )
@@ -456,8 +463,6 @@ pdf_indexed_color_space(gx_device_pdf *pdev, cos_value_t *pvalue,
 	    base_space = &cs_gray;
 	}
     }
-    if (pdev->KeyLength)
-	s_arcfour_process_buffer(&sarc4, palette, table_size);
     stream_write(&es, palette, table_size);
     gs_free_string(mem, palette, table_size, "pdf_color_space(palette)");
     sclose(&es);
@@ -582,7 +587,20 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
     default:
 	break;
     }
-
+    if (pdev->params.ColorConversionStrategy == ccs_CMYK && 
+	    csi != gs_color_space_index_DeviceCMYK &&
+	    csi != gs_color_space_index_DeviceGray &&
+	    csi != gs_color_space_index_Pattern)
+	return_error(gs_error_rangecheck);
+    if (pdev->params.ColorConversionStrategy == ccs_sRGB && 
+	    csi != gs_color_space_index_DeviceRGB && 
+	    csi != gs_color_space_index_DeviceGray &&
+	    csi != gs_color_space_index_Pattern)
+	return_error(gs_error_rangecheck);
+    if (pdev->params.ColorConversionStrategy == ccs_Gray && 
+	    csi != gs_color_space_index_DeviceGray &&
+	    csi != gs_color_space_index_Pattern)
+	return_error(gs_error_rangecheck);
     /* Check whether we already have a PDF object for this color space. */
     if (pcs->id != gs_no_id)
 	pres = pdf_find_resource_by_gs_id(pdev, resourceColorSpace, pcs->id);
@@ -631,7 +649,6 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
     pca = cos_array_alloc(pdev, "pdf_color_space");
     if (pca == 0)
 	return_error(gs_error_VMerror);
-    pca->id = pdf_obj_ref(pdev);
 
     switch (csi) {
 
@@ -786,6 +803,7 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
 	    int i;
 	    byte *name_string;
 	    uint name_string_length;
+	    cos_value_t v_attriburtes, *va = NULL;
 
 	    if (psna == 0)
 		return_error(gs_error_VMerror);
@@ -800,10 +818,49 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
 		    return code;
 	    }
 	    COS_OBJECT_VALUE(&v, psna);
+	    if (pcs->params.device_n.colorants != NULL) {
+		cos_dict_t *colorants  = cos_dict_alloc(pdev, "pdf_color_space(DeviceN)");
+		cos_value_t v_colorants, v_separation, v_colorant_name;
+		const gs_device_n_attributes *csa;
+		pdf_resource_t *pres_attributes;
+
+		if (colorants == NULL)
+		    return_error(gs_error_VMerror);
+		code = pdf_alloc_resource(pdev, resourceOther, 0, &pres_attributes, -1);
+		if (code < 0)
+		    return code;
+		cos_become(pres_attributes->object, cos_type_dict);
+		COS_OBJECT_VALUE(&v_colorants, colorants);
+		code = cos_dict_put((cos_dict_t *)pres_attributes->object, 
+		    (const byte *)"/Colorants", 10, &v_colorants);
+		if (code < 0)
+		    return code;
+		for (csa = pcs->params.device_n.colorants; csa != NULL; csa = csa->next) {
+	 	    code = pcs->params.device_n.get_colorname_string(pdev->memory,
+				  csa->colorant_name, &name_string, &name_string_length);
+		    if (code < 0)
+			return code;
+		    code = pdf_color_space(pdev, &v_separation, NULL, &csa->cspace, pcsn, false);
+		    if (code < 0)
+			return code;
+		    code = pdf_string_to_cos_name(pdev, name_string, name_string_length, &v_colorant_name);
+		    if (code < 0)
+			return code;
+		    code = cos_dict_put(colorants, v_colorant_name.contents.chars.data, 
+					v_colorant_name.contents.chars.size, &v_separation);
+		    if (code < 0)
+			return code;
+		}
+    		code = pdf_substitute_resource(pdev, &pres_attributes, resourceOther, NULL, true);
+		if (code < 0)
+		    return code;
+		va = &v_attriburtes;
+		COS_OBJECT_VALUE(va, pres_attributes->object);
+	    }
 	    if ((code = pdf_separation_color_space(pdev, pca, "/DeviceN", &v,
 						   (const gs_color_space *)
 					&pcs->params.device_n.alt_space,
-					pfn, &pdf_color_space_names)) < 0)
+					pfn, &pdf_color_space_names, va)) < 0)
 		return code;
 	}
 	break;
@@ -825,7 +882,7 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
 		(code = pdf_separation_color_space(pdev, pca, "/Separation", &v,
 						   (const gs_color_space *)
 					    &pcs->params.separation.alt_space,
-					    pfn, &pdf_color_space_names)) < 0)
+					    pfn, &pdf_color_space_names, NULL)) < 0)
 		return code;
 	}
 	break;
@@ -854,13 +911,15 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
 
 	if (code < 0 ||
 	    (code = pdf_alloc_resource(pdev, resourceColorSpace, pcs->id,
-				       &pres, pca->id)) < 0
+				       &pres, -1)) < 0
 	    ) {
 	    COS_FREE(pca, "pdf_color_space");
 	    return code;
 	}
+	pdf_reserve_object_id(pdev, pres, 0);
 	if (res_name != NULL) {
 	    int l = min(name_length, sizeof(pres->rname) - 1);
+	    
 	    memcpy(pres->rname, res_name, l);
 	    pres->rname[l] = 0;
 	}
@@ -889,7 +948,7 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
 		*ppranges = copy_ranges;
 	} else
 	    ppcs->ranges = 0;
-	assert(pca->id == pres->object->id);
+	pca->id = pres->object->id;
 	COS_FREE(pres->object, "pdf_color_space");
 	pres->object = (cos_object_t *)pca;
 	cos_write_object(COS_OBJECT(pca), pdev);

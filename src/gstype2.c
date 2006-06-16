@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: gstype2.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gstype2.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Adobe Type 2 charstring interpreter */
 #include "math_.h"
 #include "memory_.h"
@@ -332,9 +332,6 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 		 * In this case, there might be a width on the stack.
 		 */
 		check_first_operator(csp >= cstack);
-		code = t1_hinter__endchar(h, (pcis->seac_accent >= 0));
-		if (code < 0)
-		    return code;
 		if (pcis->seac_accent < 0) {
 		    code = t1_hinter__endglyph(h);
 		    if (code < 0)

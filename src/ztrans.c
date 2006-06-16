@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: ztrans.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: ztrans.c,v 1.7 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* Transparency operators */
 #include "string_.h"
 #include "memory_.h"
@@ -28,6 +28,7 @@
 #include "gsipar3x.h"
 #include "gstrans.h"
 #include "gxiparam.h"		/* for image enumerator */
+#include "gxcspace.h"
 #include "idict.h"
 #include "idparam.h"
 #include "ifunc.h"
@@ -246,10 +247,10 @@ zendtransparencygroup(i_ctx_t *i_ctx_p)
     return gs_end_transparency_group(igs);
 }
 
-/* <paramdict> <llx> <lly> <urx> <ury> .begintransparencymask - */
+/* <paramdict> <llx> <lly> <urx> <ury> .begintransparencymaskgroup - */
 private int tf_using_function(floatp, float *, void *);
 private int
-zbegintransparencymask(i_ctx_t *i_ctx_p)
+zbegintransparencymaskgroup(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
     os_ptr dop = op - 4;
@@ -268,12 +269,17 @@ zbegintransparencymask(i_ctx_t *i_ctx_p)
     if ((code = enum_param(imemory, pparam, subtype_names)) < 0)
 	return code;
     gs_trans_mask_params_init(&params, code);
-    if ((code = dict_floats_param(imemory, dop, "Background", 1,
+    if ((code = dict_floats_param(imemory, dop, "Background", 
+		    cs_num_components(gs_currentcolorspace(i_ctx_p->pgs)),
 				  params.Background, NULL)) < 0
 	)
 	return code;
     else if (code > 0)
-	params.has_Background = true;
+	params.Background_components = code;
+    if ((code = dict_floats_param(imemory, dop, "GrayBackground", 
+		    1, &params.GrayBackground, NULL)) < 0
+	)
+	return code;
     if (dict_find_string(dop, "TransferFunction", &pparam) >0) {
 	gs_function_t *pfn = ref_function(pparam);
 
@@ -285,12 +291,28 @@ zbegintransparencymask(i_ctx_t *i_ctx_p)
     code = rect_param(&bbox, op);
     if (code < 0)
 	return code;
-    code = gs_begin_transparency_mask(igs, &params, &bbox);
+    code = gs_begin_transparency_mask(igs, &params, &bbox, false);
     if (code < 0)
 	return code;
     pop(5);
     return code;
 }
+
+/* - .begintransparencymaskimage - */
+private int
+zbegintransparencymaskimage(i_ctx_t *i_ctx_p)
+{
+    gs_transparency_mask_params_t params;
+    gs_rect bbox = { { 0, 0} , { 1, 1} };
+    int code;
+
+    gs_trans_mask_params_init(&params, TRANSPARENCY_MASK_Luminosity);
+    code = gs_begin_transparency_mask(igs, &params, &bbox, true);
+    if (code < 0)
+	return code;
+    return code;
+}
+
 /* Implement the TransferFunction using a Function. */
 private int
 tf_using_function(floatp in_val, float *out, void *proc_data)
@@ -349,7 +371,7 @@ zimage3x(i_ctx_t *i_ctx_p)
 	return_error(e_rangecheck);
     if ((code = pixel_image_params(i_ctx_p, pDataDict,
 				   (gs_pixel_image_t *)&image, &ip_data,
-				   12, false)) < 0 ||
+				   16, false)) < 0 ||
 	(code = dict_int_param(pDataDict, "ImageType", 1, 1, 0, &ignored)) < 0
 	)
 	return code;
@@ -384,7 +406,7 @@ image_params *pip_data, const char *dict_name,
     if (dict_find_string(op, dict_name, &pMaskDict) <= 0)
 	return 1;
     if ((mcode = code = data_image_params(mem, pMaskDict, &pixm->MaskDict,
-					  &ip_mask, false, 1, 12, false)) < 0 ||
+					  &ip_mask, false, 1, 16, false)) < 0 ||
 	(code = dict_int_param(pMaskDict, "ImageType", 1, 1, 0, &ignored)) < 0 ||
 	(code = dict_int_param(pMaskDict, "InterleaveType", 1, 3, -1,
 			       &pixm->InterleaveType)) < 0 ||
@@ -417,20 +439,23 @@ image_params *pip_data, const char *dict_name,
 private int
 zpushpdf14devicefilter(i_ctx_t *i_ctx_p)
 {
-    gs_device_filter_t *df;
     int code;
-    gs_memory_t *mem = gs_memory_stable(imemory);
     os_ptr op = osp;
 
     check_type(*op, t_integer);
-    code = gs_pdf14_device_filter(&df, op->value.intval, mem);
-    if (code < 0)
-        return code;
-    code = gs_push_device_filter(mem, igs, df); 
+    code = gs_push_pdf14trans_device(igs); 
     if (code < 0)
         return code;
     pop(1);
     return 0;
+}
+
+/* this is a filter operator, but we include it here to maintain
+   modularity of the pdf14 transparency support */
+private int
+zpoppdf14devicefilter(i_ctx_t *i_ctx_p)
+{
+    return gs_pop_pdf14trans_device(igs); 
 }
 
 /* ------ Initialization procedure ------ */
@@ -451,11 +476,13 @@ const op_def ztrans2_op_defs[] = {
     {"5.begintransparencygroup", zbegintransparencygroup},
     {"0.discardtransparencygroup", zdiscardtransparencygroup},
     {"0.endtransparencygroup", zendtransparencygroup},
-    {"5.begintransparencymask", zbegintransparencymask},
+    {"5.begintransparencymaskgroup", zbegintransparencymaskgroup},
+    {"5.begintransparencymaskimage", zbegintransparencymaskimage},
     {"0.discardtransparencymask", zdiscardtransparencymask},
     {"1.endtransparencymask", zendtransparencymask},
     {"1.inittransparencymask", zinittransparencymask},
     {"1.image3x", zimage3x},
     {"1.pushpdf14devicefilter", zpushpdf14devicefilter},
+    {"0.poppdf14devicefilter", zpoppdf14devicefilter},
     op_def_end(0)
 };

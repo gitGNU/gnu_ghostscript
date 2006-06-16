@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gsiodev.c,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsiodev.c,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
 /* IODevice implementation for Ghostscript */
 #include "errno_.h"
 #include "string_.h"
@@ -191,7 +191,7 @@ iodev_os_fopen(gx_io_device * iodev, const char *fname, const char *access,
     *pfile = gp_fopen(fname, access);
     if (*pfile == NULL)
 	return_error(gs_fopen_errno_to_code(errno));
-    if (rfname != NULL)
+    if (rfname != NULL && rfname != fname)
 	strcpy(rfname, fname);
     return 0;
 }

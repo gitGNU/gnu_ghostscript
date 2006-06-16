@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gp.h,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gp.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Interface to platform-specific routines */
 /* Requires gsmemory.h */
 
@@ -316,7 +316,8 @@ int gp_cache_query(int type, byte* key, int keylen, void **buffer,
 /* cache data types */
 #define GP_CACHE_TYPE_TEST 0
 #define GP_CACHE_TYPE_FONTMAP 1
-#define GP_CACHE_TYPE_WTS 2
+#define GP_CACHE_TYPE_WTS_SIZE 2
+#define GP_CACHE_TYPE_WTS_CELL 3
 
 
 /* ------ Printer accessing ------ */

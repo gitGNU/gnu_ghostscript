@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: imain.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: imain.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Common support for interpreter front ends */
 #include "malloc_.h"
 #include "memory_.h"
@@ -29,6 +29,7 @@
 #include "gsutil.h"		/* for bytes_compare */
 #include "gxdevice.h"
 #include "gxalloc.h"
+#include "gxiodev.h"		/* for iodev struct */
 #include "gzstate.h"
 #include "ierrors.h"
 #include "oper.h"
@@ -93,7 +94,7 @@ gs_main_alloc_instance(gs_memory_t *mem)
 /* ------ Forward references ------ */
 
 private int gs_run_init_file(gs_main_instance *, int *, ref *);
-private void print_resource_usage(const gs_main_instance *,
+void print_resource_usage(const gs_main_instance *,
 				  gs_dual_memory_t *, const char *);
 
 /* ------ Initialization ------ */
@@ -145,6 +146,9 @@ gs_main_init0(gs_main_instance * minst, FILE * in, FILE * out, FILE * err,
 int
 gs_main_init1(gs_main_instance * minst)
 {
+    i_ctx_t *i_ctx_p;
+    extern init_proc(gs_iodev_init);
+
     if (minst->init_done < 1) {
 	gs_dual_memory_t idmem;
 	int code =
@@ -175,6 +179,10 @@ gs_main_init1(gs_main_instance * minst)
 	if (code < 0)
 	    return code;
         code = i_plugin_init(minst->i_ctx_p);
+	if (code < 0)
+	    return code;
+	i_ctx_p = minst->i_ctx_p;
+	code = gs_iodev_init(imemory);
 	if (code < 0)
 	    return code;
 	minst->init_done = 1;
@@ -324,19 +332,6 @@ gs_main_init2(gs_main_instance * minst)
 	code = zop_init(i_ctx_p);
 	if (code < 0)
 	    return code;
-	{
-	    /*
-	     * gs_iodev_init has to be called here (late), rather than
-	     * with the rest of the library init procedures, because of
-	     * some hacks specific to MS Windows for patching the
-	     * stdxxx IODevices.
-	     */
-	    extern init_proc(gs_iodev_init);
-
-	    code = gs_iodev_init(imemory);
-	    if (code < 0)
-		return code;
-	}
 	code = op_init(i_ctx_p);	/* requires obj_init */
 	if (code < 0)
 	    return code;
@@ -427,9 +422,11 @@ gs_main_add_lib_path(gs_main_instance * minst, const char *lpath)
 
 /* ------ Execution ------ */
 
+extern_gx_io_device_table();
+
 /* Complete the list of library search paths. */
-/* This may involve adding or removing the current directory */
-/* as the first element. */
+/* This may involve adding the %rom%lib/ device path (for COMPILE_INITS) as well */
+/* as adding or removing the current directory as the first element. */
 int
 gs_main_set_lib_paths(gs_main_instance * minst)
 {
@@ -437,8 +434,9 @@ gs_main_set_lib_paths(gs_main_instance * minst)
     int first_is_here =
 	(r_size(&minst->lib_path.list) != 0 &&
 	 paths[0].value.bytes == (const byte *)gp_current_directory_name ? 1 : 0);
-    int count = minst->lib_path.count;
     int code = 0;
+    int count = minst->lib_path.count;
+    int i, have_rom_device = 0;
 
     if (minst->search_here_first) {
 	if (!(first_is_here ||
@@ -461,6 +459,18 @@ gs_main_set_lib_paths(gs_main_instance * minst)
 	       count + (minst->search_here_first ? 1 : 0));
     if (minst->lib_path.env != 0)
 	code = file_path_add(&minst->lib_path, minst->lib_path.env);
+    /* now put the %rom%lib/ device path before the gs_lib_default_path on the list */
+    for (i = 0; i < gx_io_device_table_count; i++) {
+	const gx_io_device *iodev = gx_io_device_table[i];
+	const char *dname = iodev->dname;
+
+	if (dname && strlen(dname) == 5 && !memcmp("%rom%", dname, 5)) {
+	    have_rom_device = 1;
+	    break;
+	}
+    }
+    if (have_rom_device && code >= 0)
+	code = file_path_add(&minst->lib_path, "%rom%lib/");
     if (minst->lib_path.final != 0 && code >= 0)
 	code = file_path_add(&minst->lib_path, minst->lib_path.final);
     return code;
@@ -473,15 +483,14 @@ gs_main_lib_open(gs_main_instance * minst, const char *file_name, ref * pfile)
     /* This is a separate procedure only to avoid tying up */
     /* extra stack space while running the file. */
     i_ctx_t *i_ctx_p = minst->i_ctx_p;
-#define maxfn 200
-    byte fn[maxfn];
+#define maxfn 2048
+    char fn[maxfn];
     uint len;
 
-    return lib_file_open( &minst->lib_path,
-			  NULL /* Don't check permissions here, because permlist 
+    return lib_file_open(&minst->lib_path, imemory,
+			 NULL, /* Don't check permissions here, because permlist 
 				  isn't ready running init files. */
-			  , file_name, strlen(file_name), fn, maxfn,
-			  &len, pfile, imemory);
+			  file_name, strlen(file_name), fn, maxfn, &len, pfile);
 }
 
 /* Open and execute a file. */
@@ -830,7 +839,7 @@ gs_main_finit(gs_main_instance * minst, int exit_status, int code)
      * data before destruction. pdfwrite needs so.
      */
     if (minst->init_done >= 1) {
-	int code;
+	int code = 0;
 
 	if (idmemory->reclaim != 0) {
 	    code = interp_reclaim(&minst->i_ctx_p, avm_global);
@@ -844,14 +853,19 @@ gs_main_finit(gs_main_instance * minst, int exit_status, int code)
 	if (i_ctx_p->pgs != NULL && i_ctx_p->pgs->device != NULL) {
 	    gx_device *pdev = i_ctx_p->pgs->device;
 
+	    /* make sure device doesn't isn't freed by .uninstalldevice */
+	    rc_adjust(pdev, 1, "gs_main_finit");	
 	    /* deactivate the device just before we close it for the last time */
 	    gs_main_run_string(minst, 
+		/* we need to do the 'quit' so we don't loop for input (double quit) */
 		".uninstallpagedevice "
 		"serverdict /.jobsavelevel get 0 eq {/quit} {/stop} ifelse .systemvar exec",
 		0 , &exit_code, &error_object);
 	    code = gs_closedevice(pdev);
 	    if (code < 0)
-		eprintf2("ERROR %d closing the device. See gs/src/ierrors.h for code explanation.\n", code, i_ctx_p->pgs->device->dname);
+		eprintf2("ERROR %d closing %s device. See gs/src/ierrors.h for code explanation.\n",
+		    code, i_ctx_p->pgs->device->dname);
+	    rc_decrement(pdev, "gs_main_finit");		/* device might be freed */
 	    if (exit_status == 0 || exit_status == e_Quit)
 		exit_status = code;
 	}
@@ -870,7 +884,9 @@ gs_main_finit(gs_main_instance * minst, int exit_status, int code)
     if (minst->init_done >= 1) {
         gs_memory_t *mem_raw = i_ctx_p->memory.current->non_gc_memory;
         i_plugin_holder *h = i_ctx_p->plugin_list;
-        alloc_restore_all(idmemory);
+        code = alloc_restore_all(idmemory);
+	if (code < 0)
+	    eprintf1("ERROR %d while the final restore. See gs/src/ierrors.h for code explanation.\n", code);
         i_plugin_finit(mem_raw, h);
     }
     /* clean up redirected stdout */
@@ -907,15 +923,17 @@ gs_to_exit(const gs_memory_t *mem, int exit_status)
 void
 gs_abort(const gs_memory_t *mem)
 {
-    gs_to_exit(mem, 1);
-    /* it's fatal calling OS independent exit() */
+    /* In previous versions, we tried to do a cleanup (using gs_to_exit),
+     * but more often than not, that will trip another abort and create
+     * an infinite recursion. So just abort without trying to cleanup.
+     */
     gp_do_exit(1);	
 }
 
 /* ------ Debugging ------ */
 
 /* Print resource usage statistics. */
-private void
+void
 print_resource_usage(const gs_main_instance * minst, gs_dual_memory_t * dmem,
 		     const char *msg)
 {

@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdtd.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gdevpdtd.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* FontDescriptor implementation for pdfwrite */
 #include "math_.h"
 #include "memory_.h"
@@ -225,7 +225,7 @@ pdf_font_descriptor_alloc(gx_device_pdf *pdev, pdf_font_descriptor_t **ppfd,
     if (code < 0)
 	return code;
     code = pdf_alloc_resource(pdev, resourceFontDescriptor,
-			      font->id, (pdf_resource_t **)&pfd, 0L);
+			      font->id, (pdf_resource_t **)&pfd, -1L);
     if (code < 0) {
 	gs_free_object(pdev->pdf_memory, pbfont,
 		       "pdf_font_descriptor_alloc(base_font)");
@@ -353,7 +353,7 @@ pdf_compute_font_descriptor(pdf_font_descriptor_t *pfd)
 
 	desc.FontBBox.p.x = (int)(bfont->FontBBox.p.x * scale);
 	desc.FontBBox.p.y = (int)(bfont->FontBBox.p.y * scale);
-	desc.FontBBox.p.x = (int)(bfont->FontBBox.p.x * scale);
+	desc.FontBBox.q.x = (int)(bfont->FontBBox.q.x * scale);
 	desc.FontBBox.q.y = (int)(bfont->FontBBox.q.y * scale);
 	desc.Ascent = desc.FontBBox.q.y;
 	members &= ~GLYPH_INFO_BBOX;
@@ -554,22 +554,16 @@ int
 pdf_finish_FontDescriptor(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
 {
     int code = 0;
-    cos_dict_t *pcd;
+    cos_dict_t *pcd = 0;
 
     if (!pfd->common.object->written &&
 	(code = pdf_compute_font_descriptor(pfd)) >= 0 &&
 	(!pfd->embed ||
 	 (code = pdf_write_embedded_font(pdev, pfd->base_font, 
 				&pfd->common.values.FontBBox, 
-				pfd->common.rid
-#				if PDFW_DELAYED_STREAMS
-				    , &pcd
-#				endif
-				)) >= 0)
+				pfd->common.rid, &pcd)) >= 0)
 	) {
-#	if PDFW_DELAYED_STREAMS
-	    pdf_set_FontFile_object(pfd->base_font, pcd);
-#	endif
+        pdf_set_FontFile_object(pfd->base_font, pcd);
     }
     return code;
 }
@@ -584,6 +578,8 @@ pdf_write_FontDescriptor(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
     stream *s;
 
     if (pfd->common.object->written)
+	return 0;
+    if (pfd->common.object->id == -1)
 	return 0;
 
     /* If this is a CIDFont subset, write the CIDSet now. */
@@ -646,10 +642,35 @@ pdf_write_FontDescriptor(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
     stream_puts(s, ">>\n");
     pdf_end_separate(pdev);
     pfd->common.object->written = true;
-#   if PDFW_DELAYED_STREAMS
-	code = COS_WRITE_OBJECT(pdf_get_FontFile_object(pfd->base_font), pdev);
-	if (code < 0)
-	    return code;
-#   endif
+    {	const cos_object_t *pco = (const cos_object_t *)pdf_get_FontFile_object(pfd->base_font);
+	if (pco != NULL) {
+	    code = COS_WRITE_OBJECT(pco, pdev);
+	    if (code < 0)
+		return code;
+	}
+    }
+    return 0;
+}
+
+/*
+ * Release a FontDescriptor components.
+ */
+int
+pdf_release_FontDescriptor_components(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
+{
+    gs_free_object(pdev->pdf_memory, pfd->base_font, "pdf_release_FontDescriptor_components");
+    pfd->base_font = NULL;
+    /* fixme: underimplemented. */
+    return 0;
+}
+
+/*
+ * Mark a FontDescriptor used in a text.
+ */
+int 
+pdf_mark_font_descriptor_used(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
+{
+    if (pfd != NULL && pfd->common.object->id == -1)
+	pdf_reserve_object_id(pdev, (pdf_resource_t *)&pfd->common, 0);
     return 0;
 }

@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdf.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gdevpdf.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* PDF-writing driver */
 #include "fcntl_.h"
 #include "memory_.h"
@@ -37,7 +37,7 @@
 /* Define the default language level and PDF compatibility level. */
 /* Acrobat 4 (PDF 1.3) is the default. */
 #define PSDF_VERSION_INITIAL psdf_version_ll3
-#define PDF_COMPATIBILITY_LEVEL_INITIAL 1.3
+#define PDF_COMPATIBILITY_LEVEL_INITIAL 1.4
 
 /* Define the size of internal stream buffers. */
 /* (This is not a limitation, it only affects performance.) */
@@ -56,7 +56,7 @@ private_st_pdf_substream_save_element();
 private 
 ENUM_PTRS_WITH(device_pdfwrite_enum_ptrs, gx_device_pdf *pdev)
 {
-    index -= gx_device_pdf_num_ptrs + gx_device_pdf_num_strings;
+    index -= gx_device_pdf_num_ptrs + gx_device_pdf_num_param_strings;
     if (index < NUM_RESOURCE_TYPES * NUM_RESOURCE_CHAINS)
 	ENUM_RETURN(pdev->resources[index / NUM_RESOURCE_CHAINS].chains[index % NUM_RESOURCE_CHAINS]);
     index -= NUM_RESOURCE_TYPES * NUM_RESOURCE_CHAINS;
@@ -71,8 +71,12 @@ ENUM_PTRS_WITH(device_pdfwrite_enum_ptrs, gx_device_pdf *pdev)
 #define e1(i,elt) ENUM_PTR(i, gx_device_pdf, elt);
 gx_device_pdf_do_ptrs(e1)
 #undef e1
-#define e1(i,elt) ENUM_STRING_PTR(i + gx_device_pdf_num_ptrs, gx_device_pdf, elt);
-gx_device_pdf_do_strings(e1)
+#define e1(i,elt) ENUM_PARAM_STRING_PTR(i + gx_device_pdf_num_ptrs, gx_device_pdf, elt);
+gx_device_pdf_do_param_strings(e1)
+#undef e1
+#define e1(i,elt) ENUM_STRING_PTR(i + gx_device_pdf_num_ptrs + gx_device_pdf_num_param_strings,\
+				 gx_device_pdf, elt);
+gx_device_pdf_do_const_strings(e1)
 #undef e1
 ENUM_PTRS_END
 private RELOC_PTRS_WITH(device_pdfwrite_reloc_ptrs, gx_device_pdf *pdev)
@@ -81,8 +85,11 @@ private RELOC_PTRS_WITH(device_pdfwrite_reloc_ptrs, gx_device_pdf *pdev)
 #define r1(i,elt) RELOC_PTR(gx_device_pdf,elt);
     gx_device_pdf_do_ptrs(r1)
 #undef r1
-#define r1(i,elt) RELOC_STRING_PTR(gx_device_pdf,elt);
-	gx_device_pdf_do_strings(r1)
+#define r1(i,elt) RELOC_PARAM_STRING_PTR(gx_device_pdf,elt);
+	gx_device_pdf_do_param_strings(r1)
+#undef r1
+#define r1(i,elt) RELOC_CONST_STRING_PTR(gx_device_pdf,elt);
+	gx_device_pdf_do_const_strings(r1)
 #undef r1
     {
 	int i, j;
@@ -119,184 +126,31 @@ private dev_proc_close_device(pdf_close);
 #  define Y_DPI 720
 #endif
 
-const gx_device_pdf gs_pdfwrite_device =
-{std_device_dci_type_body(gx_device_pdf, 0, "pdfwrite",
-			  &st_device_pdfwrite,
-			  DEFAULT_WIDTH_10THS * X_DPI / 10,
-			  DEFAULT_HEIGHT_10THS * Y_DPI / 10,
-			  X_DPI, Y_DPI,
-			  3, 24, 255, 255, 256, 256),
- {pdf_open,
-  gx_upright_get_initial_matrix,
-  NULL,				/* sync_output */
-  pdf_output_page,
-  pdf_close,
-  gx_default_rgb_map_rgb_color,
-  gx_default_rgb_map_color_rgb,
-  gdev_pdf_fill_rectangle,
-  NULL,				/* tile_rectangle */
-  gdev_pdf_copy_mono,
-  gdev_pdf_copy_color,
-  NULL,				/* draw_line */
-  psdf_get_bits,		/* get_bits */
-  gdev_pdf_get_params,
-  gdev_pdf_put_params,
-  NULL,				/* map_cmyk_color */
-  NULL,				/* get_xfont_procs */
-  NULL,				/* get_xfont_device */
-  NULL,				/* map_rgb_alpha_color */
-  gx_page_device_get_page_device,
-  NULL,				/* get_alpha_bits */
-  NULL,				/* copy_alpha */
-  NULL,				/* get_band */
-  NULL,				/* copy_rop */
-  gdev_pdf_fill_path,
-  gdev_pdf_stroke_path,
-  gdev_pdf_fill_mask,
-  NULL,				/* fill_trapezoid */
-  NULL,				/* fill_parallelogram */
-  NULL,				/* fill_triangle */
-  NULL,				/* draw_thin_line */
-  NULL,				/* begin_image */
-  NULL,				/* image_data */
-  NULL,				/* end_image */
-  gdev_pdf_strip_tile_rectangle,
-  NULL,				/* strip_copy_rop */
-  NULL,				/* get_clipping_box */
-  gdev_pdf_begin_typed_image,
-  psdf_get_bits_rectangle,	/* get_bits_rectangle */
-  NULL,				/* map_color_rgb_alpha */
-  psdf_create_compositor,	/* create_compositor */
-  NULL,				/* get_hardware_params */
-  gdev_pdf_text_begin,
-  NULL,				/* finish_copydevice */
-  NULL,				/* begin_transparency_group */
-  NULL,				/* end_transparency_group */
-  NULL,				/* begin_transparency_mask */
-  NULL,				/* end_transparency_mask */
-  NULL,				/* discard_transparency_layer */
-  NULL,				/* get_color_mapping_procs */
-  NULL,				/* get_color_comp_index */
-  NULL,				/* encode_color */
-  NULL,				/* decode_color */
-  gdev_pdf_pattern_manage, 	/* pattern_manage */
-  gdev_pdf_fill_rectangle_hl_color, 	/* fill_rectangle_hl_color */
-  gdev_pdf_include_color_space 	/* include_color_space */
- },
- psdf_initial_values(PSDF_VERSION_INITIAL, 0 /*false */ ),  /* (!ASCII85EncodePages) */
- PDF_COMPATIBILITY_LEVEL_INITIAL,  /* CompatibilityLevel */
- -1,				/* EndPage */
- 1,				/* StartPage */
- 1 /*true*/,			/* Optimize */
- 0 /*false*/,			/* ParseDSCCommentsForDocInfo */
- 1 /*true*/,			/* ParseDSCComments */
- 0 /*false*/,			/* EmitDSCWarnings */
- 0 /*false*/,			/* CreateJobTicket */
- 0 /*false*/,			/* PreserveEPSInfo */
- 1 /*true*/,			/* AutoPositionEPSFiles */
- 1 /*true*/,			/* PreserveCopyPage */
- 0 /*false*/,			/* UsePrologue */
- 0,				/* OffOptimizations */
- 1 /*true*/,			/* ReAssignCharacters */
- 1 /*true*/,			/* ReEncodeCharacters */
- 1,				/* FirstObjectNumber */
- 1 /*true*/,			/* CompressFonts */
- 0 /*false*/,			/* PrintStatistics */
- 4000,				/* MaxInlineImageSize */
- {0, 0},			/* OwnerPassword */
- {0, 0},			/* UserPassword */
- 0,				/* KeyLength */
- -4,				/* Permissions */
- 0,				/* EncryptionR */
- {0},				/* EncryptionO */
- {0},				/* EncryptionU */
- {0},				/* EncryptionKey */
- 0,				/* EncryptionV */
- true,				/* EncryptMetadata */
- {0, 0},			/* NoEncrypt */
- 0 /*false*/,			/* is_EPS */
- {-1, -1},			/* doc_dsc_info */
- {-1, -1},			/* page_dsc_info */
- 0 /*false*/,			/* fill_overprint */
- 0 /*false*/,			/* stroke_overprint */
- 0,				/* overprint_mode */
- gs_no_id,			/* halftone_id */
- {gs_no_id, gs_no_id, gs_no_id, gs_no_id}, /* transfer_ids */
- 0,				/* transfer_not_identity */
- gs_no_id,			/* black_generation_id */
- gs_no_id,			/* undercolor_removal_id */
- pdf_compress_none,		/* compression */
- pdf_compress_none,		/* compression_at_page_start */
- {{0}},				/* xref */
- {{0}},				/* asides */
- {{0}},				/* streams */
- {{0}},				/* pictures */
- 0,				/* next_id */
- 0,				/* Catalog */
- 0,				/* Info */
- 0,				/* Pages */
- 0,				/* outlines_id */
- 0,				/* next_page */
- -1,				/* max_referred_page */
- 0,				/* contents_id */
- PDF_IN_NONE,			/* context */
- 0,				/* contents_length_id */
- 0,				/* contents_pos */
- NoMarks,			/* procsets */
- 0,				/* text */
- {{0}},				/* text_rotation */
- 0,				/* pages */
- 0,				/* num_pages */
- 1,				/* used_mask */
- {
-     {
-	 {0}}},			/* resources */
- {0},				/* cs_Patterns */
- {0},				/* Identity_ToUnicode_CMaps */
- 0,				/* last_resource */
- {
-     {
-	 {0}}},			/* outline_levels */
- 0,				/* outline_depth */
- 0,				/* closed_outline_depth */
- 0,				/* outlines_open */
- 0,				/* articles */
- 0,				/* Dests */
- {0},				/* fileID */
- 0,				/* global_named_objects */
- 0,				/* local_named_objects */
- 0,				/* NI_stack */
- 0,				/* Namespace_stack */
- 0,				/* font_cache */
- {0, 0},			/* char_width */
- 0,				/* clip_path */
- 0,                             /* PageLabels */
- -1,                            /* PageLabels_current_page */
- 0,                             /* PageLabels_current_label */
- 0,				/* */
- {				/* vgstack[2] */
-    {0}, {0}
- },
- 0,				/* vgstack_depth */
- 0,				/* vgstack_bottom */
- {0},				/* vg_initial */
- false,				/* vg_initial_set */
- 0,				/* sbstack_size */
- 0,				/* sbstack_depth */
- 0,				/* sbstack */
- 0,				/* substream_Resources */
- 1,				/* pcm_color_info_index == DeviceRGB */
- false,				/* skip_colors */
- false,				/* AR4_save_bug */
- 0,				/* font3 */
- 0,				/* accumulating_substream_resource */
- {0,0,0,0,0,0,0,0,0},		/* charproc_ctm */
- 0,				/* charproc_just_accumulated */
- 0,				/* cgp */
- 0,				/* substituted_pattern_count */
- 0				/* substituted_pattern_drop_page */
-};
+/* ---------------- Device prototype ---------------- */
 
+#define PDF_DEVICE_NAME "pdfwrite"
+#define PDF_DEVICE_IDENT gs_pdfwrite_device
+#define PDF_DEVICE_MaxInlineImageSize 4000
+#define PDF_FOR_OPDFREAD 0
+
+#include "gdevpdfb.h"
+
+#undef PDF_DEVICE_NAME
+#undef PDF_DEVICE_IDENT
+#undef PDF_DEVICE_MaxInlineImageSize
+#undef PDF_FOR_OPDFREAD
+
+#define PDF_DEVICE_NAME "ps2write"
+#define PDF_DEVICE_IDENT gs_ps2write_device
+#define PDF_DEVICE_MaxInlineImageSize max_long
+#define PDF_FOR_OPDFREAD 1
+
+#include "gdevpdfb.h"
+
+#undef PDF_DEVICE_NAME
+#undef PDF_DEVICE_IDENT
+#undef PDF_DEVICE_MaxInlineImageSize
+#undef PDF_FOR_OPDFREAD
 /* ---------------- Device open/close ---------------- */
 
 /* Close and remove temporary files. */
@@ -353,6 +207,8 @@ pdf_reset_page(gx_device_pdf * pdev)
     pdev->procsets = NoMarks;
     memset(pdev->cs_Patterns, 0, sizeof(pdev->cs_Patterns));	/* simplest to create for each page */
     pdf_reset_text_page(pdev->text);
+    pdf_remember_clip_path(pdev, 0);
+    pdev->clip_path_id = pdev->no_clip_path_id;
 }
 
 /* Open a temporary file, with or without a stream. */
@@ -485,7 +341,7 @@ private const byte pad[32] = { 0x28, 0xBF, 0x4E, 0x5E, 0x4E, 0x75, 0x8A, 0x41,
 			       0x2F, 0x0C, 0xA9, 0xFE, 0x64, 0x53, 0x69, 0x7A};
 
 private inline void
-copy_padded(byte buf[32], gs_const_string *str)
+copy_padded(byte buf[32], gs_param_string *str)
 {
     memcpy(buf, str->data, min(str->size, 32));
     if (32 > str->size)
@@ -527,6 +383,10 @@ pdf_compute_encryption_data(gx_device_pdf * pdev)
     byte digest[16], buf[32], t;
     stream_arcfour_state sarc4;
 
+    if (pdev->PDFX && pdev->KeyLength != 0) {
+	eprintf("Encryption is not allowed in a PDF/X doucment.\n");
+	return_error(gs_error_rangecheck);
+    }
     if (pdev->KeyLength == 0)
 	pdev->KeyLength = 40;
     if (pdev->EncryptionV == 0 && pdev->KeyLength == 40)
@@ -729,7 +589,15 @@ pdf_open(gx_device * dev)
     code = gdev_vector_open_file((gx_device_vector *) pdev, sbuf_size);
     if (code < 0)
 	goto fail;
+    if (pdev->ComputeDocumentDigest) {
+	stream *s = s_MD5C_make_stream(pdev->pdf_memory, pdev->strm);
+
+	if (s == NULL)
+	    return_error(gs_error_VMerror);
+	pdev->strm = s;
+    }
     gdev_vector_init((gx_device_vector *) pdev);
+    gp_get_realtime(pdev->uuid_time);
     pdev->vec_procs = &pdf_vector_procs;
     pdev->fill_options = pdev->stroke_options = gx_path_type_optimize;
     /* Set in_page so the vector routines won't try to call */
@@ -803,6 +671,7 @@ pdf_open(gx_device * dev)
     pdf_reset_page(pdev);
     return 0;
   fail:
+    gdev_vector_close_file((gx_device_vector *) pdev);
     return pdf_close_files(pdev, code);
 }
 
@@ -862,12 +731,16 @@ pdf_print_orientation(gx_device_pdf * pdev, pdf_page_t *page)
         const pdf_text_rotation_t *ptr = 
 	    (page != NULL ? &page->text_rotation : &pdev->text_rotation);
 	int angle = -1;
+
+#define  Bug687800
+#ifndef Bug687800 	/* Bug 687800 together with Bug687489.ps . */
 	const gs_point *pbox = &(page != NULL ? page : &pdev->pages[0])->MediaBox;
 
 	if (dsc_orientation >= 0 && pbox->x > pbox->y) {
 	    /* The page is in landscape format. Adjust the rotation accordingly. */
 	    dsc_orientation ^= 1;
 	}
+#endif
 
 	/* Combine DSC rotation with text rotation : */
 	if (dsc_orientation == 0) {
@@ -876,14 +749,18 @@ pdf_print_orientation(gx_device_pdf * pdev, pdf_page_t *page)
 	} else if (dsc_orientation == 1) {
 	    if (ptr->Rotate == 90 || ptr->Rotate == 270)
 		angle = ptr->Rotate;
+	    else 
+		angle = 90;
 	}
 
 	/* If not combinable, prefer text rotation : */
 	if (angle < 0) {
 	    if (ptr->Rotate >= 0)
 		angle = ptr->Rotate;
+#ifdef Bug687800
 	    else
 		angle = dsc_orientation * 90;
+#endif
 	}
 
 	/* If got some, write it out : */
@@ -906,7 +783,15 @@ pdf_close_page(gx_device_pdf * pdev)
      * before doing anything else.
      */
 
-    pdf_open_document(pdev);
+    code = pdf_open_document(pdev);
+    if (code < 0)
+	return code;
+    if (pdev->ForOPDFRead && pdev->context == PDF_IN_NONE) {
+	/* Must create a context stream for empty pages. */
+	code = pdf_open_contents(pdev, PDF_IN_STREAM);
+	if (code < 0)
+	    return code;
+    }
     pdf_close_contents(pdev, true);
 
     /*
@@ -922,6 +807,8 @@ pdf_close_page(gx_device_pdf * pdev)
     page->MediaBox.x = pdev->MediaSize[0];
     page->MediaBox.y = pdev->MediaSize[1];
     page->contents_id = pdev->contents_id;
+    page->NumCopies_set = pdev->NumCopies_set;
+    page->NumCopies = pdev->NumCopies;
     /* pdf_store_page_resources sets procsets, resource_ids[]. */
     code = pdf_store_page_resources(pdev, page);
     if (code < 0)
@@ -930,7 +817,30 @@ pdf_close_page(gx_device_pdf * pdev)
     /* Write the Functions. */
 
     pdf_write_resource_objects(pdev, resourceFunction);
-    /* pdf_free_resource_objects(pdev, resourceFunction); May be referred from resourceColorSpace. */
+
+    /* Save viewer's memory with cleaning resources. */
+
+    if (pdev->MaxViewerMemorySize < 10000000) {
+	/* fixme: the condition above and the cleaning algorithm
+	   may be improved with counting stored resource size
+	   and creating multiple streams per page. */
+
+	if (pdev->ForOPDFRead) {
+	    pdf_resource_t *pres = pdf_find_resource_by_resource_id(pdev, resourcePage, pdev->contents_id);
+	    
+	    if (pres != NULL) {
+		code = cos_dict_put_c_strings((cos_dict_t *)pres->object, "/.CleanResources", "/All");
+		if (code < 0)
+		    return code;
+	    }
+	}
+	code = pdf_close_text_document(pdev);
+	if (code < 0)
+	    return code;
+	code = pdf_write_and_free_all_resource_objects(pdev);
+	if (code < 0)
+	    return code;
+    }
 
     /* Close use of text on the page. */
 
@@ -975,15 +885,80 @@ pdf_write_page(gx_device_pdf *pdev, int page_num)
 {
     long page_id = pdf_page_id(pdev, page_num);
     pdf_page_t *page = &pdev->pages[page_num - 1];
+    floatp mediabox[4] = {0, 0};
     stream *s;
 
+    mediabox[2] = round_box_coord(page->MediaBox.x);
+    mediabox[3] = round_box_coord(page->MediaBox.y);
     pdf_open_obj(pdev, page_id);
     s = pdev->strm;
     pprintg2(s, "<</Type/Page/MediaBox [0 0 %g %g]\n",
-	     round_box_coord(page->MediaBox.x),
-	     round_box_coord(page->MediaBox.y));
+		mediabox[2], mediabox[3]);
+    if (pdev->PDFX) {
+	const cos_value_t *v_trimbox = cos_dict_find_c_key(page->Page, "/TrimBox");
+	floatp trimbox[4] = {0, 0}, bleedbox[4] = {0, 0};
+	bool print_bleedbox = false;
+
+	trimbox[2] = bleedbox[2] = mediabox[2];
+	trimbox[3] = bleedbox[3] = mediabox[3];
+	/* Offsets are [left right top bottom] according to the Acrobat 7.0 
+	   distiller parameters manual, 12/7/2004, pp. 102-103. */
+	if (v_trimbox != NULL && v_trimbox->value_type == COS_VALUE_SCALAR) {
+	    const byte *p = v_trimbox->contents.chars.data;
+	    char buf[100];
+	    int l = min (v_trimbox->contents.chars.size, sizeof(buf) - 1);
+	    float temp[4]; /* the type is float for sscanf. */
+
+	    memcpy(buf, p, l);
+	    buf[l] = 0;
+	    if (sscanf(buf, "[ %g %g %g %g ]", 
+		    &temp[0], &temp[1], &temp[2], &temp[3]) == 4) {
+		trimbox[0] = temp[0];
+		trimbox[1] = temp[1];
+		trimbox[2] = temp[2];
+		trimbox[3] = temp[3];
+	    }
+	} else if (pdev->PDFXTrimBoxToMediaBoxOffset.size >= 4 &&
+		pdev->PDFXTrimBoxToMediaBoxOffset.data[0] >= 0 &&
+		pdev->PDFXTrimBoxToMediaBoxOffset.data[1] >= 0 &&
+		pdev->PDFXTrimBoxToMediaBoxOffset.data[2] >= 0 &&
+		pdev->PDFXTrimBoxToMediaBoxOffset.data[3] >= 0) {
+	    trimbox[0] = mediabox[0] + pdev->PDFXTrimBoxToMediaBoxOffset.data[0];
+	    trimbox[1] = mediabox[1] + pdev->PDFXTrimBoxToMediaBoxOffset.data[3];
+	    trimbox[2] = mediabox[2] + pdev->PDFXTrimBoxToMediaBoxOffset.data[1];
+	    trimbox[3] = mediabox[3] + pdev->PDFXTrimBoxToMediaBoxOffset.data[2];
+	}
+	if (pdev->PDFXSetBleedBoxToMediaBox)
+	    print_bleedbox = true;
+	else if (pdev->PDFXBleedBoxToTrimBoxOffset.size >= 4 &&
+		pdev->PDFXBleedBoxToTrimBoxOffset.data[0] >= 0 &&
+		pdev->PDFXBleedBoxToTrimBoxOffset.data[1] >= 0 &&
+		pdev->PDFXBleedBoxToTrimBoxOffset.data[2] >= 0 &&
+		pdev->PDFXBleedBoxToTrimBoxOffset.data[3] >= 0) {
+	    bleedbox[0] = trimbox[0] - pdev->PDFXBleedBoxToTrimBoxOffset.data[0];
+	    bleedbox[1] = trimbox[1] - pdev->PDFXBleedBoxToTrimBoxOffset.data[3];
+	    bleedbox[2] = trimbox[2] + pdev->PDFXBleedBoxToTrimBoxOffset.data[1];
+	    bleedbox[3] = trimbox[3] + pdev->PDFXBleedBoxToTrimBoxOffset.data[2];
+	    print_bleedbox = true;
+	}
+	if (cos_dict_find_c_key(page->Page, "/TrimBox") == NULL &&
+	    cos_dict_find_c_key(page->Page, "/ArtBox") == NULL)
+	    pprintg4(s, "/TrimBox [%g %g %g %g]\n",
+	        trimbox[0], trimbox[1], trimbox[2], trimbox[3]);
+	if (print_bleedbox &&
+	    cos_dict_find_c_key(page->Page, "/BleedBox") == NULL)
+	    pprintg4(s, "/BleedBox [%g %g %g %g]\n",
+	        bleedbox[0], bleedbox[1], bleedbox[2], bleedbox[3]);
+    }
     pdf_print_orientation(pdev, page);
     pprintld1(s, "/Parent %ld 0 R\n", pdev->Pages->id);
+    if (pdev->ForOPDFRead) {
+	if (page->NumCopies_set)
+	    pprintld1(s, "/NumCopies %ld\n", page->NumCopies);
+    }
+    if (page->group_id > 0) {
+	pprintld1(s, "/Group %ld 0 R\n", page->group_id);
+    }
     stream_puts(s, "/Resources<</ProcSet[/PDF");
     if (page->procsets & ImageB)
 	stream_puts(s, " /ImageB");
@@ -1094,6 +1069,18 @@ pdf_close(gx_device * dev)
     code1 = pdf_free_resource_objects(pdev, resourceXObject);
     if (code >= 0)
 	code = code1;
+    code1 = pdf_write_resource_objects(pdev, resourceGroup);
+    if (code >= 0)
+	code = code1;
+    code1 = pdf_free_resource_objects(pdev, resourceGroup);
+    if (code >= 0)
+	code = code1;
+    code1 = pdf_write_resource_objects(pdev, resourceSoftMaskDict);
+    if (code >= 0)
+	code = code1;
+    code1 = pdf_free_resource_objects(pdev, resourceSoftMaskDict);
+    if (code >= 0)
+	code = code1;
     code1 = pdf_close_text_document(pdev);
     if (code >= 0)
 	code = code1;
@@ -1103,19 +1090,18 @@ pdf_close(gx_device * dev)
     code1 = pdf_free_resource_objects(pdev, resourceCMap);
     if (code >= 0)
 	code = code1;
-#if PS2WRITE
+    if (pdev->ResourcesBeforeUsage)
+	pdf_reverse_resource_chain(pdev, resourcePage);
     code1 = pdf_write_resource_objects(pdev, resourcePage);
     if (code >= 0)
 	code = code1;
     code1 = pdf_free_resource_objects(pdev, resourcePage);
     if (code >= 0)
 	code = code1;
-#endif
-#if PDFW_DELAYED_STREAMS
+
     code1 = pdf_free_resource_objects(pdev, resourceOther);
     if (code >= 0)
 	code = code1;
-#endif
 
 
     /* Create the Pages tree. */
@@ -1171,6 +1157,11 @@ pdf_close(gx_device * dev)
     if (pdev->PageLabels) {
 	COS_WRITE_OBJECT(pdev->PageLabels, pdev);
     }
+
+    /* Write the document metadata. */
+    code1 = pdf_document_metadata(pdev);
+    if (code >= 0)
+	code = code1;
 
     /* Write the Catalog. */
 
@@ -1279,7 +1270,7 @@ pdf_close(gx_device * dev)
 
     /* Write the cross-reference section. */
 
-    xref = pdf_stell(pdev);
+    xref = pdf_stell(pdev) - pdev->OPDFRead_procset_length;
     if (pdev->FirstObjectNumber == 1)
 	pprintld1(s, "xref\n0 %ld\n0000000000 65535 f \n",
 		  pdev->next_id);
@@ -1298,6 +1289,7 @@ pdf_close(gx_device * dev)
 	    fread(&pos, sizeof(pos), 1, tfile);
 	    if (pos & ASIDES_BASE_POSITION)
 		pos += resource_pos - ASIDES_BASE_POSITION;
+	    pos -= pdev->OPDFRead_procset_length;
 	    sprintf(str, "%010ld 00000 n \n", pos);
 	    stream_puts(s, str);
 	}
@@ -1346,6 +1338,19 @@ pdf_close(gx_device * dev)
     pdev->pages = 0;
     pdev->num_pages = 0;
 
+    if (pdev->ForOPDFRead && pdev->OPDFReadProcsetPath.size) {
+        /* pdf_open_dcument could set up filters for entire document.
+           Removing them now. */
+	int status;
+    
+	stream_putc(s, 0x04);
+	while (s->strm) {
+	    s = s->strm;
+	}
+	status = s_close_filters(&pdev->strm, s);
+	if (status < 0 && code == 0)
+	    code = gs_error_ioerror;
+    }
     code1 = gdev_vector_close_file((gx_device_vector *) pdev);
     if (code >= 0)
 	code = code1;

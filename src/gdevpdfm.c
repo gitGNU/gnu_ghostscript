@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevpdfm.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gdevpdfm.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* pdfmark processing for PDF-writing driver */
 #include "math_.h"
 #include "memory_.h"
@@ -343,6 +343,58 @@ setup_pdfmark_stream_compression(gx_device_psdf *pdev0,
     return pdf_put_filters(cos_stream_dict(pco), pdev, pco->input_strm, &fnames);
 }
 
+private int
+pdfmark_bind_named_object(gx_device_pdf *pdev, const gs_const_string *objname, 
+			  pdf_resource_t **pres)
+{
+    int code; 
+
+    if (objname != NULL && objname->size) {
+	const cos_value_t *v = cos_dict_find(pdev->local_named_objects, objname->data, objname->size);
+
+	if (v != NULL) {
+	    if (v->value_type == COS_VALUE_OBJECT) {
+		if (cos_type(v->contents.object) == &cos_generic_procs) {
+		    /* The object was referred but not defined. 
+		       Use the old object id.
+		       The old object stub to be dropped. */
+		    pdf_reserve_object_id(pdev, *pres, v->contents.object->id);
+		} else if (!v->contents.object->written) {
+		    /* We can't know whether the old object was referred or not.
+		       Write it out for a consistent result in any case. */
+		    code = cos_write_object(v->contents.object, pdev);
+
+		    if (code < 0)
+			return code;
+		    v->contents.object->written = true;
+		}
+	    } else 
+		return_error(gs_error_rangecheck); /* Must not happen. */
+	}
+    }
+    if ((*pres)->object->id == -1) {
+	code = pdf_substitute_resource(pdev, pres, resourceXObject, NULL, true);
+	if (code < 0)
+	    return code;
+    } else {
+	/* Unfortunately we can't apply pdf_substitute_resource,
+	   because the object may already be referred by its id.
+	   Redundant objects may happen in this case.
+	   For better results users should define objects before usage.
+	 */
+    }
+    if (objname != NULL && objname->size) {
+	cos_value_t value;
+
+	code = cos_dict_put(pdev->local_named_objects, objname->data,
+			    objname->size, cos_object_value(&value, (cos_object_t *)(*pres)->object));
+	if (code < 0)
+	    return code;
+    }
+    return 0;
+}
+
+
 /* ---------------- Miscellaneous pdfmarks ---------------- */
 
 /*
@@ -390,6 +442,7 @@ pdfmark_put_ao_pairs(gx_device_pdf * pdev, cos_dict_t *pcd,
 {
     const gs_param_string *Action = 0;
     const gs_param_string *File = 0;
+    const gs_param_string *URI = 0;
     gs_param_string Dest;
     gs_param_string Subtype;
     uint i;
@@ -421,6 +474,9 @@ pdfmark_put_ao_pairs(gx_device_pdf * pdev, cos_dict_t *pcd,
 	else if (pdf_key_eq(pair, "/Dest")) {
 	    Dest = pair[1];
 	    coerce_dest = true;
+	}
+	else if (pdf_key_eq(pair, "/URI")) {
+	    URI = pair;		/* save it for placing into the Action dict */
 	}
 	else if (pdf_key_eq(pair, "/Page") || pdf_key_eq(pair, "/View")) {
 	    /* Make a destination even if this is for an outline. */
@@ -518,7 +574,7 @@ pdfmark_put_ao_pairs(gx_device_pdf * pdev, cos_dict_t *pcd,
 	const byte *astr = Action[1].data;
 	const uint asize = Action[1].size;
 
-	if ((File != 0 || Dest.data != 0) &&
+	if ((File != 0 || Dest.data != 0 || URI != 0) &&
 	    (pdf_key_eq(Action + 1, "/Launch") ||
 	     (pdf_key_eq(Action + 1, "/GoToR") && File) ||
 	     pdf_key_eq(Action + 1, "/Article"))
@@ -548,6 +604,12 @@ pdfmark_put_ao_pairs(gx_device_pdf * pdev, cos_dict_t *pcd,
 		pdfmark_put_c_pair(adict, "/F", File + 1);
 		File = 0;	/* so we don't write it again */
 	    }
+	    if (URI) {
+		/* Adobe Distiller puts a /URI key from pdfmark into the */
+		/* Action dict with /S /URI as Subtype */
+		pdfmark_put_pair(adict, URI);
+		cos_dict_put_c_strings(adict, "/S", "/URI");
+	    }
 	    cos_dict_put(pcd, (const byte *)"/A", 2,
 			 COS_OBJECT_VALUE(&avalue, adict));
 	} else if (asize >= 4 && !memcmp(astr, "<<", 2)) {
@@ -561,6 +623,12 @@ pdfmark_put_ao_pairs(gx_device_pdf * pdev, cos_dict_t *pcd,
 
 	    if (adict == 0)
 		return_error(gs_error_VMerror);
+	    if (URI) {
+		/* Adobe Distiller puts a /URI key from pdfmark into the */
+		/* Action dict with /S /URI as Subtype */
+		pdfmark_put_pair(adict, URI);
+		cos_dict_put_c_strings(adict, "/S", "/URI");
+	    }
 	    while ((code = pdf_scan_token(&scan, end, &key.data)) > 0) {
 		key.size = scan - key.data;
 		if (key.data[0] != '/' ||
@@ -1048,28 +1116,28 @@ pdfmark_write_ps(stream *s, const gs_param_string * psource)
 
 /* Start a XObject. */
 private int
-start_XObject(gx_device_pdf * pdev, bool compress, cos_stream_t **ppcs,
-		const gs_param_string * objname)
+start_XObject(gx_device_pdf * pdev, bool compress, cos_stream_t **ppcs)
 {   pdf_resource_t *pres;
     cos_stream_t *pcs;
-    cos_value_t value;
     int code;
 
     code = pdf_open_page(pdev, PDF_IN_STREAM);
     if (code < 0)
 	return code;
-    code = pdf_enter_substream(pdev, resourceXObject, gs_no_id, &pres, true, 
+    code = pdf_enter_substream(pdev, resourceXObject, gs_no_id, &pres, false, 
 		pdev->CompressFonts /* Have no better switch*/);
     if (code < 0)
 	return code;
+    pdev->accumulating_a_global_object = true;
     pcs = (cos_stream_t *)pres->object;
     pdev->substream_Resources = cos_dict_alloc(pdev, "start_XObject");
     if (!pdev->substream_Resources)
 	return_error(gs_error_VMerror);
-    code = cos_dict_put(pdev->local_named_objects, objname->data,
-			    objname->size, cos_object_value(&value, pres->object));
-    if (code < 0)
-	return code;
+    if (pdev->ForOPDFRead) {
+	code = cos_dict_put_c_key_bool((cos_dict_t *)pres->object, "/.Global", true);
+	if (code < 0)
+	    return code;
+    }
     pres->named = true;
     pres->where_used = 0;	/* initially not used */
     pcs->pres = pres;
@@ -1107,17 +1175,23 @@ pdfmark_PS(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	cos_stream_t *pcs;
 	int code;
 	gs_id level1_id = gs_no_id;
+	pdf_resource_t *pres;
 
 	if (level1.data != 0) {
 	    pdf_resource_t *pres;
 
 	    code = pdf_enter_substream(pdev, 
-			resourceXObject /* A stub. Actually it's not a resource. */, 
+			resourceXObject, 
 			gs_no_id, &pres, true, 
 			pdev->CompressFonts /* Have no better switch*/);
 	    if (code < 0)
 		return code;
 	    pcs = (cos_stream_t *)pres->object;
+	    if (pdev->ForOPDFRead && objname != 0) {
+		code = cos_dict_put_c_key_bool((cos_dict_t *)pres->object, "/.Global", true);
+		if (code < 0)
+		    return code;
+	    }
 	    pres->named = (objname != 0);
 	    pres->where_used = 0;
 	    pcs->pres = pres;
@@ -1130,10 +1204,10 @@ pdfmark_PS(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 		return code;
 	    level1_id = pres->object->id;
 	}
-	code = start_XObject(pdev, pdev->params.CompressPages /* Have no better switch*/, 
-			    &pcs, objname);
+	code = start_XObject(pdev, pdev->params.CompressPages, &pcs);
 	if (code < 0)
 	    return code;
+	pres = pdev->accumulating_substream_resource;
 	code = cos_stream_put_c_strings(pcs, "/Type", "/XObject");
 	if (code < 0)
 	    return code;
@@ -1153,10 +1227,16 @@ pdfmark_PS(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	code = pdf_exit_substream(pdev);
 	if (code < 0)
 	    return code;
-	if (!objname) {
-	    /* Write the resource now, since it won't be written later. */
-	    COS_WRITE_OBJECT(pcs, pdev);
-	    COS_RELEASE(pcs, "pdfmark_PS");
+	{   gs_const_string objname1, *pon = NULL;
+
+	    if (objname != NULL) {
+		objname1.data = objname->data;
+		objname1.size = objname->size;
+		pon = &objname1;
+	    }
+	    code = pdfmark_bind_named_object(pdev, pon, &pres);
+	    if (code < 0)
+    		return code;
 	}
 	code = pdf_open_contents(pdev, PDF_IN_STREAM);
 	if (code < 0)
@@ -1430,10 +1510,17 @@ pdfmark_BP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	return_error(gs_error_rangecheck);
     if ((pdev->used_mask << 1) == 0)
 	return_error(gs_error_limitcheck);
-    code = start_XObject(pdev, pdev->params.CompressPages /* Have no better switch*/, 
-			    &pcs, objname);
+    code = start_XObject(pdev, pdev->params.CompressPages, &pcs);
     if (code < 0)
 	return code;
+    {	byte *s = gs_alloc_string(pdev->memory, objname->size, "pdfmark_PS");
+	
+	if (s == NULL)
+	    return_error(gs_error_VMerror);
+	memcpy(s, objname->data, objname->size);
+	pdev->objname.data = s;
+	pdev->objname.size = objname->size;
+    }
     pcs->is_graphics = true;
     gs_bbox_transform(&bbox, pctm, &bbox);
     s_init(&s, NULL);
@@ -1456,6 +1543,11 @@ pdfmark_BP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
  					  COS_OBJECT(pdev->substream_Resources))) < 0
 	)
 	return code;
+    /* Don't add to local_named_objects untill the object is created
+       to prevent pending references, which may appear
+       if /PUT pdfmark executes before pdf_substitute_resource in pdfmark_EP 
+       drops this object.
+    */
     return 0;
 }
 
@@ -1465,11 +1557,19 @@ pdfmark_EP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	   const gs_matrix * pctm, const gs_param_string * no_objname)
 {
     int code;
+    pdf_resource_t *pres = pdev->accumulating_substream_resource;
+    gs_const_string objname = pdev->objname;
 
     code = pdf_add_procsets(pdev->substream_Resources, pdev->procsets);
     if (code < 0)
 	return code;
     code = pdf_exit_substream(pdev);
+    if (code < 0)
+	return code;
+    code = pdfmark_bind_named_object(pdev, &objname, &pres);
+    if (code < 0)
+	return 0;
+    gs_free_const_string(pdev->memory, objname.data, objname.size, "pdfmark_EP");
     if (code < 0)
 	return code;
     return 0;
@@ -1558,6 +1658,8 @@ pdfmark_PUT(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	return code;
     if (index < 0)
 	return_error(gs_error_rangecheck);
+    if (pco->written)
+	return_error(gs_error_rangecheck);
     return cos_array_put((cos_array_t *)pco, index,
 		cos_string_value(&value, pairs[2].data, pairs[2].size));
 }
@@ -1580,6 +1682,8 @@ pdfmark_PUTDICT(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	return code;
     if (cos_type(pco) != cos_type_dict && cos_type(pco) != cos_type_stream)
 	return_error(gs_error_typecheck);
+    if (pco->written)
+	return_error(gs_error_rangecheck);
     return pdfmark_put_pairs((cos_dict_t *)pco, pairs + 1, count - 1);
 }
 
@@ -1601,6 +1705,8 @@ pdfmark_PUTSTREAM(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
     for (i = 1; i < count; ++i)
 	if (sputs(pco->input_strm, pairs[i].data, pairs[i].size, &l) != 0)
 	    return_error(gs_error_ioerror);
+    if (pco->written)
+	return_error(gs_error_rangecheck);
     return code;
 }
 

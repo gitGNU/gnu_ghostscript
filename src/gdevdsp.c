@@ -17,7 +17,7 @@
 */
 
 /* gdevdsp.c */
-/* $Id: gdevdsp.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gdevdsp.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 
 /*
  * DLL based display device driver.
@@ -35,7 +35,7 @@
  * caller when the device is opened, closed, resized, showpage etc.
  * The structure is defined in gdevdsp.h.
  *
- * Not all combinatinos of display formats have been tested.
+ * Not all combinations of display formats have been tested.
  * At the end of this file is some example code showing which
  * formats have been tested.
  */
@@ -174,7 +174,7 @@ ENUM_PTRS_WITH(display_enum_ptrs, gx_device_display *ddev)
 	return 0;
     }
     else if (index-1 < ddev->devn_params.separations.num_separations)
-        ENUM_RETURN(ddev->devn_params.separations.names[index-1]);
+        ENUM_RETURN(ddev->devn_params.separations.names[index-1].data);
     else
 	return 0;
 ENUM_PTRS_END
@@ -187,7 +187,7 @@ RELOC_PTRS_WITH(display_reloc_ptrs, gx_device_display *ddev)
     }
     {   int i;
         for (i = 0; i < ddev->devn_params.separations.num_separations; ++i) {
-            RELOC_PTR(gx_device_display, devn_params.separations.names[i]);
+            RELOC_PTR(gx_device_display, devn_params.separations.names[i].data);
         }
     }
 RELOC_PTRS_END
@@ -214,7 +214,7 @@ const gx_device_display gs_display_device =
       4,                        /* Number of colorants for CMYK */
       0,                        /* MaxSeparations has not been specified */
       {0},                      /* SeparationNames */
-      {0},                      /* SeparationOrder names */
+      0,                        /* SeparationOrder */
       {0, 1, 2, 3, 4, 5, 6, 7 } /* Initial component SeparationOrder */
     },
     { true }                   /* equivalent CMYK colors for spot colors */
@@ -767,17 +767,42 @@ display_get_params(gx_device * dev, gs_param_list * plist)
 {
     gx_device_display *ddev = (gx_device_display *) dev;
     int code;
+    gs_param_string dhandle;
+    int idx;
+    int val;
+    int i = 0;
+    size_t dptr;
+    char buf[64];
+   
+    idx = ((int)sizeof(size_t)) * 8 - 4;
+    buf[i++] = '1';
+    buf[i++] = '6';
+    buf[i++] = '#';
+    dptr = (size_t)(ddev->pHandle);
+    while (idx >= 0) {
+	val = (int)(dptr >> idx) & 0xf;
+        if (val <= 9)
+	    buf[i++] = '0' + val;
+	else
+	    buf[i++] = 'a' - 10 + val;
+	idx -= 4;
+    }
+    buf[i] = '\0';
+     
+    param_string_from_transient_string(dhandle, buf);
 
     code = gx_default_get_params(dev, plist);
     (void)(code < 0 ||
-	(code = param_write_long(plist, 
-	    "DisplayHandle", (long *)(&ddev->pHandle))) < 0 ||
+	(code = param_write_string(plist, 
+	    "DisplayHandle", &dhandle)) < 0 ||
 	(code = param_write_int(plist, 
 	    "DisplayFormat", &ddev->nFormat)) < 0 ||
 	(code = param_write_float(plist, 
-	    "DisplayResolution", &ddev->HWResolution[1])) < 0 ||
-	(code = devn_get_params(dev, plist, &ddev->devn_params, 
-		&ddev->equiv_cmyk_colors)) < 0);
+	    "DisplayResolution", &ddev->HWResolution[1])) < 0);
+    if (code >= 0 &&
+	(ddev->nFormat & DISPLAY_COLORS_MASK) == DISPLAY_COLORS_SEPARATION)
+	code = devn_get_params(dev, plist, &ddev->devn_params, 
+		&ddev->equiv_cmyk_colors);
     return code;
 }
 
@@ -808,6 +833,8 @@ display_put_params(gx_device * dev, gs_param_list * plist)
 
     int format;
     void *handle;
+    int found_string_handle = 0;
+    gs_param_string dh = { 0 };
 
     /* Handle extra parameters */
 
@@ -834,23 +861,97 @@ display_put_params(gx_device * dev, gs_param_list * plist)
 	    break;
     }
 
-    switch (code = param_read_long(plist, "DisplayHandle", (long *)(&handle))) {
+    /* 64-bit systems need to use DisplayHandle as a string */
+    switch (code = param_read_string(plist, "DisplayHandle", &dh)) {
 	case 0:
-	    if (dev->is_open) {
-		if (ddev->pHandle != handle)
-		    ecode = gs_error_rangecheck;
-		else
+    	    found_string_handle = 1;
+	    break;
+	default:
+	    if ((code == gs_error_typecheck) && (sizeof(size_t) <= 4)) {
+		/* 32-bit systems can use the older long type */
+		switch (code = param_read_long(plist, "DisplayHandle", 
+		    (long *)(&handle))) {
+		    case 0:
+			if (dev->is_open) {
+			    if (ddev->pHandle != handle)
+				ecode = gs_error_rangecheck;
+			    else
+				break;
+			}
+			else {
+			    ddev->pHandle = handle;
+			    break;
+			}
+			goto hdle;
+		    default:
+			ecode = code;
+		      hdle:param_signal_error(plist, "DisplayHandle", ecode);
+		    case 1:
+			break;
+		}
+		break;
+	    }
+	    ecode = code;
+	    param_signal_error(plist, "DisplayHandle", ecode);
+	    /* fall through */
+	case 1:
+	    dh.data = 0;
+	    break;
+    }
+    if (found_string_handle) {
+	/* 
+	 * Convert from a string to a pointer.  
+	 * It is assumed that size_t has the same size as a pointer.
+	 * Allow formats (1234), (10#1234) or (16#04d2).
+	 */
+	size_t ptr = 0;
+ 	int i;
+	int base = 10;
+ 	int val;
+	code = 0;
+	for (i=0; i<dh.size; i++) {
+	    val = dh.data[i];
+	    if ((val >= '0') && (val <= '9'))
+		val = val - '0';
+	    else if ((val >= 'A') && (val <= 'F'))
+		val = val - 'A' + 10;
+	    else if ((val >= 'a') && (val <= 'f'))
+		val = val - 'a' + 10;
+	    else if (val == '#') {
+		base = (int)ptr;
+		ptr = 0;
+		if ((base != 10) && (base != 16)) {
+		    code = gs_error_rangecheck;
 		    break;
+		}
+		continue;
+	    }
+	    else {
+		code = gs_error_rangecheck;
+		break;
+	    }
+
+	    if (base == 10)
+		ptr = ptr * 10 + val;
+	    else if (base == 16)
+		ptr = ptr * 16 + val;
+	    else {
+		code = gs_error_rangecheck;
+		break;
+	    }
+	}
+	if (code == 0) {
+	    if (dev->is_open) {
+		if (ddev->pHandle != (void *)ptr)
+		    code = gs_error_rangecheck;
 	    }
 	    else
-		ddev->pHandle = handle;
-		break;
-	    goto hdle;
-	default:
+		ddev->pHandle = (void *)ptr;
+	}
+	if (code < 0) {
 	    ecode = code;
-	  hdle:param_signal_error(plist, "DisplayHandle", ecode);
-	case 1:
-	    break;
+	    param_signal_error(plist, "DisplayHandle", ecode);
+	}
     }
 
     /* 
@@ -878,7 +979,8 @@ display_put_params(gx_device * dev, gs_param_list * plist)
 	    break;
     }
 
-    if (ecode >= 0) {
+    if (ecode >= 0 &&
+	    (ddev->nFormat & DISPLAY_COLORS_MASK) == DISPLAY_COLORS_SEPARATION) {
 	/* Use utility routine to handle devn parameters */
 	ecode = devn_put_params(dev, plist, pdevn_params, pequiv_colors);
         /* 
@@ -886,8 +988,7 @@ display_put_params(gx_device * dev, gs_param_list * plist)
 	 * devn_put_params, but we always use 64bpp,
 	 * so reset it to the the correct value.
 	 */
-	if ((ddev->nFormat & DISPLAY_COLORS_MASK) == DISPLAY_COLORS_SEPARATION)
-	    dev->color_info.depth = sizeof(gx_color_index)*8;
+	dev->color_info.depth = arch_sizeof_color_index * 8;
     }
 
     if (ecode >= 0) {
@@ -1029,8 +1130,8 @@ display_separation_encode_color(gx_device *dev, const gx_color_value colors[])
 	color <<= bpc;
 	color |= (colors[i] >> drop);
     }
-    if (bpc*ncomp < sizeof(gx_color_index)*8)
-	color <<= (sizeof(gx_color_index)*8 - ncomp*bpc);
+    if (bpc*ncomp < arch_sizeof_color_index * 8)
+	color <<= (arch_sizeof_color_index * 8 - ncomp * bpc);
     return (color == gx_no_color_index ? color ^ 1 : color);
 }
 
@@ -1047,8 +1148,8 @@ display_separation_decode_color(gx_device * dev, gx_color_index color,
     int i = 0;
     int ncomp = dev->color_info.num_components;
 
-    if (bpc*ncomp < sizeof(gx_color_index)*8)
-	color >>= (sizeof(gx_color_index)*8 - ncomp*bpc);
+    if (bpc*ncomp < arch_sizeof_color_index * 8)
+	color >>= (arch_sizeof_color_index * 8 - ncomp * bpc);
     for (; i<ncomp; i++) {
 	out[ncomp - i - 1] = (gx_color_value) ((color & mask) << drop);
 	color >>= bpc;
@@ -1174,7 +1275,7 @@ display_free_bitmap(gx_device_display * ddev)
 private int 
 display_raster(gx_device_display *dev)
 {
-    int align = 4;
+    int align = 0;
     int bytewidth = dev->width * dev->color_info.depth/8;
     switch (dev->nFormat & DISPLAY_ROW_ALIGN_MASK) {
 	case DISPLAY_ROW_ALIGN_4:
@@ -1193,6 +1294,8 @@ display_raster(gx_device_display *dev)
 	    align = 64;
 	    break;
     }
+    if (align < ARCH_ALIGN_PTR_MOD)
+	align = ARCH_ALIGN_PTR_MOD;
     align -= 1;
     bytewidth = (bytewidth + align) & (~align);
     return bytewidth;
@@ -1329,10 +1432,10 @@ display_set_separations(gx_device_display *dev)
 	    else {
 		sep_num -= dev->devn_params.num_std_colorant_names;
 		sep_name_size = 
-		    dev->devn_params.separations.names[sep_num]->size;
+		    dev->devn_params.separations.names[sep_num].size;
 		if (sep_name_size > sizeof(name)-2)
 		    sep_name_size = sizeof(name)-1;
-		memcpy(name, dev->devn_params.separations.names[sep_num]->data, 
+		memcpy(name, dev->devn_params.separations.names[sep_num].data, 
 		    sep_name_size);
 		name[sep_name_size] = '\0';
 		if (dev->equiv_cmyk_colors.color[sep_num].color_info_valid) {
@@ -1496,6 +1599,7 @@ display_set_color_format(gx_device_display *ddev, int nFormat)
     int bpc;	/* bits per component */
     int bpp;	/* bits per pixel */
     int maxvalue;
+    int align;
 
     switch (nFormat & DISPLAY_DEPTH_MASK) {
 	case DISPLAY_DEPTH_1:
@@ -1521,6 +1625,31 @@ display_set_color_format(gx_device_display *ddev, int nFormat)
     }
     maxvalue = (1 << bpc) - 1;
     ddev->devn_params.bitspercomponent = bpc;
+
+    switch (ddev->nFormat & DISPLAY_ROW_ALIGN_MASK) {
+	case DISPLAY_ROW_ALIGN_DEFAULT:
+	    align = ARCH_ALIGN_PTR_MOD;
+	    break;
+	case DISPLAY_ROW_ALIGN_4:
+	    align = 4;
+	    break;
+	case DISPLAY_ROW_ALIGN_8:
+	    align = 8;
+	    break;
+	case DISPLAY_ROW_ALIGN_16:
+	    align = 16;
+	    break;
+	case DISPLAY_ROW_ALIGN_32:
+	    align = 32;
+	    break;
+	case DISPLAY_ROW_ALIGN_64:
+	    align = 64;
+	    break;
+	default:
+	    align = 0;	/* not permitted */
+    }
+    if (align < ARCH_ALIGN_PTR_MOD)
+	return_error(gs_error_rangecheck);
 
     switch (ddev->nFormat & DISPLAY_ALPHA_MASK) {
 	case DISPLAY_ALPHA_FIRST:
@@ -1621,7 +1750,7 @@ display_set_color_format(gx_device_display *ddev, int nFormat)
 	case DISPLAY_COLORS_SEPARATION:
 	    if ((nFormat & DISPLAY_ENDIAN_MASK) != DISPLAY_BIGENDIAN)
 		return_error(gs_error_rangecheck);
-	    bpp = sizeof(gx_color_index)*8;
+	    bpp = arch_sizeof_color_index * 8;
 	    set_color_info(&dci, DISPLAY_MODEL_SEP, bpp/bpc, bpp, 
 		maxvalue, maxvalue);
 	    if ((nFormat & DISPLAY_DEPTH_MASK) == DISPLAY_DEPTH_8) {

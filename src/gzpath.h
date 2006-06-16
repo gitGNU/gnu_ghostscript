@@ -17,7 +17,7 @@
   
 */
 
-/*$Id: gzpath.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/*$Id: gzpath.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Structure and internal procedure definitions for paths */
 /* Requires gxfixed.h */
 
@@ -389,8 +389,8 @@ bool gx_flattened_iterator__init(gx_flattened_iterator *this,
 bool gx_flattened_iterator__init_line(gx_flattened_iterator *this, 
 	    fixed x0, fixed y0, fixed x1, fixed y1);
 void gx_flattened_iterator__switch_to_backscan(gx_flattened_iterator *this, bool not_first);
-bool gx_flattened_iterator__next(gx_flattened_iterator *this);
-bool gx_flattened_iterator__prev(gx_flattened_iterator *this);
+int  gx_flattened_iterator__next(gx_flattened_iterator *this);
+int  gx_flattened_iterator__prev(gx_flattened_iterator *this);
 
 bool curve_coeffs_ranged(fixed x0, fixed x1, fixed x2, fixed x3, 
 		    fixed y0, fixed y1, fixed y2, fixed y3, 

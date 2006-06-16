@@ -252,8 +252,8 @@ int main(int argc, char **argv)
 			cmdopts.verbose = 1;
 			break;
 		case 'V':
-			printf("%s\n", JAS_VERSION);
-			fprintf(stderr, "libjasper %s\n", jas_getversion());
+			jas_eprintf("%s\n", JAS_VERSION);
+			jas_eprintf("libjasper %s\n", jas_getversion());
 			cleanupandexit(EXIT_SUCCESS);
 			break;
 		default:
@@ -292,11 +292,11 @@ int main(int argc, char **argv)
 
 static void cmdinfo()
 {
-	fprintf(stderr, "JasPer Image Viewer (Version %s).\n",
+	jas_eprintf("JasPer Image Viewer (Version %s).\n",
 	  JAS_VERSION);
-	fprintf(stderr, "Copyright (c) 2002-2003 Michael David Adams.\n"
+	jas_eprintf("Copyright (c) 2002-2003 Michael David Adams.\n"
 	  "All rights reserved.\n");
-	fprintf(stderr, "%s\n", JAS_NOTES);
+	jas_eprintf("%s\n", JAS_NOTES);
 }
 
 static char *helpinfo[] = {
@@ -313,9 +313,9 @@ static void usage()
 	char *s;
 	int i;
 	cmdinfo();
-	fprintf(stderr, "usage: %s [options] [file1 file2 ...]\n", cmdname);
+	jas_eprintf("usage: %s [options] [file1 file2 ...]\n", cmdname);
 	for (i = 0, s = helpinfo[i]; s; ++i, s = helpinfo[i]) {
-		fprintf(stderr, "%s", s);
+		jas_eprintf("%s", s);
 	}
 	cleanupandexit(EXIT_FAILURE);
 }
@@ -332,7 +332,7 @@ static void display()
 	float vtly;
 
 	if (cmdopts.verbose) {
-		fprintf(stderr, "display()\n");
+		jas_eprintf("display()\n");
 		dumpstate();
 	}
 
@@ -353,18 +353,18 @@ static void display()
 	vtlx = gs.vcx - 0.5 * gs.sx * gs.vp.width;
 	vtly = gs.vcy - 0.5 * gs.sy * gs.vp.height;
 	if (cmdopts.verbose) {
-		fprintf(stderr, "vtlx=%f, vtly=%f, vsx=%f, vsy=%f\n",
+		jas_eprintf("vtlx=%f, vtly=%f, vsx=%f, vsy=%f\n",
 		  vtlx, vtly, gs.sx, gs.sy);
 	}
 	if (gs.monomode) {
 		if (cmdopts.verbose) {
-			fprintf(stderr, "component %d\n", gs.cmptno);
+			jas_eprintf("component %d\n", gs.cmptno);
 		}
 		jas_image_render2(gs.image, gs.cmptno, vtlx, vtly,
 		  gs.sx, gs.sy, gs.vp.width, gs.vp.height, gs.vp.data);
 	} else {
 		if (cmdopts.verbose) {
-			fprintf(stderr, "color\n");
+			jas_eprintf("color\n");
 		}
 		jas_image_render(gs.altimage, vtlx, vtly, gs.sx, gs.sy,
 		  gs.vp.width, gs.vp.height, gs.vp.data);
@@ -381,7 +381,7 @@ static void display()
 static void reshape(int w, int h)
 {
 	if (cmdopts.verbose) {
-		fprintf(stderr, "reshape(%d, %d)\n", w, h);
+		jas_eprintf("reshape(%d, %d)\n", w, h);
 		dumpstate();
 	}
 
@@ -392,7 +392,8 @@ static void reshape(int w, int h)
 	glViewport(0, 0, w, h);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluOrtho2D(0, w, 0, h);
+	glOrtho( 0, w, 0, h, 0.f, 1.f );
+
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glTranslatef(0, 0, 0);
@@ -412,7 +413,7 @@ static void reshape(int w, int h)
 static void keyboard(unsigned char key, int x, int y)
 {
 	if (cmdopts.verbose) {
-		fprintf(stderr, "keyboard(%d, %d, %d)\n", key, x, y);
+		jas_eprintf("keyboard(%d, %d, %d)\n", key, x, y);
 	}
 
 	switch (key) {
@@ -465,7 +466,7 @@ static void keyboard(unsigned char key, int x, int y)
 static void special(int key, int x, int y)
 {
 	if (cmdopts.verbose) {
-		fprintf(stderr, "special(%d, %d, %d)\n", key, x, y);
+		jas_eprintf("special(%d, %d, %d)\n", key, x, y);
 	}
 
 	switch (key) {
@@ -555,7 +556,7 @@ static void special(int key, int x, int y)
 static void timer(int value)
 {
 	if (cmdopts.verbose) {
-		fprintf(stderr, "timer(%d)\n", value);
+		jas_eprintf("timer(%d)\n", value);
 	}
 	if (value == gs.activetmid) {
 		nextimage();
@@ -618,7 +619,7 @@ static void nextimage()
 		if (!loadimage()) {
 			return;
 		}
-		fprintf(stderr, "cannot load image\n");
+		jas_eprintf("cannot load image\n");
 	}
 	cleanupandexit(EXIT_SUCCESS);
 }
@@ -664,11 +665,11 @@ static int loadimage()
 
 	if (pathname && pathname[0] != '\0') {
 #if 1
-	fprintf(stderr, "opening %s\n", pathname);
+	jas_eprintf("opening %s\n", pathname);
 #endif
 		/* The input image is to be read from a file. */
 		if (!(in = jas_stream_fopen(pathname, "rb"))) {
-			fprintf(stderr, "error: cannot open file %s\n", pathname);
+			jas_eprintf("error: cannot open file %s\n", pathname);
 			goto error;
 		}
 	} else {
@@ -678,7 +679,7 @@ static int loadimage()
 
 	/* Get the input image data. */
 	if (!(gs.image = jas_image_decode(in, -1, 0))) {
-		fprintf(stderr, "error: cannot load image data\n");
+		jas_eprintf("error: cannot load image data\n");
 		goto error;
 	}
 
@@ -714,7 +715,7 @@ static int loadimage()
 	}
 
 #if 1
-	fprintf(stderr, "num of components %d\n", jas_image_numcmpts(gs.image));
+	jas_eprintf("num of components %d\n", jas_image_numcmpts(gs.image));
 #endif
 
 	if (vw < jas_image_width(gs.image)) {
@@ -912,7 +913,7 @@ int jas_image_render2(jas_image_t *image, int cmptno, float vtlx, float vtly,
 	GLshort *vdatap;
 
 	if (cmptno < 0 || cmptno >= image->numcmpts_) {
-		fprintf(stderr, "bad parameter\n");
+		jas_eprintf("bad parameter\n");
 		goto error;
 	}
 	for (i = 0; i < vh; ++i) {

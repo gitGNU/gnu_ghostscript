@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zvmem.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: zvmem.c,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* "Virtual memory" operators */
 #include "ghost.h"
 #include "gsstruct.h"
@@ -155,7 +155,10 @@ zrestore(i_ctx_t *i_ctx_p)
 	 */
 	vmsave->gsave = 0;
 	/* Now it's safe to restore the state of memory. */
-	last = alloc_restore_state_step(asave);
+	code = alloc_restore_state_step(asave);
+	if (code < 0)
+	    return code;
+	last = code;
     }
     while (!last);
     {

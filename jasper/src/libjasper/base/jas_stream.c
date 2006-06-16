@@ -64,7 +64,7 @@
 /*
  * I/O Stream Library
  *
- * $Id: jas_stream.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jas_stream.c,v 1.2 2006/06/16 12:55:32 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -90,6 +90,7 @@
 #include "jasper/jas_stream.h"
 #include "jasper/jas_malloc.h"
 #include "jasper/jas_math.h"
+#include "jasper/jas_debug.h"
 
 /******************************************************************************\
 * Local function prototypes.
@@ -937,7 +938,9 @@ int jas_stream_display(jas_stream_t *stream, FILE *fp, int n)
 		m = JAS_MIN(n - i, 16);
 		for (j = 0; j < m; ++j) {
 			if ((c = jas_stream_getc(stream)) == EOF) {
-				abort();
+				jas_error(	JAS_ERR_EOF_ENCOUNTERED_JAS_STREAM_DISPLAY,
+							"JAS_ERR_EOF_ENCOUNTERED_JAS_STREAM_DISPLAY"
+						);
 				return -1;
 			}
 			buf[j] = c;
@@ -994,6 +997,7 @@ static int mem_read(jas_stream_obj_t *obj, char *buf, int cnt)
 	jas_stream_memobj_t *m = (jas_stream_memobj_t *)obj;
 	n = m->len_ - m->pos_;
 	cnt = JAS_MIN(n, cnt);
+	if (cnt < 0) cnt = 0;
 	memcpy(buf, &m->buf_[m->pos_], cnt);
 	m->pos_ += cnt;
 	return cnt;
@@ -1073,7 +1077,10 @@ static long mem_seek(jas_stream_obj_t *obj, long offset, int origin)
 		newpos = m->pos_ + offset;
 		break;
 	default:
-		abort();
+			jas_error(	JAS_ERR_INVALID_PARAM_MEM_SEEK,
+						"JAS_ERR_INVALID_PARAM_MEM_SEEK"
+					);
+			return 0;
 		break;
 	}
 	if (newpos < 0) {

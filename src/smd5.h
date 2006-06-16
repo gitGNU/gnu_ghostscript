@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: smd5.h,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: smd5.h,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* Definitions for MD5Encode filter */
 /* Requires scommon.h; strimpl.h if any templates are referenced */
 
@@ -41,5 +41,14 @@ typedef struct stream_MD5E_state_s {
 extern const stream_template s_MD5E_template;
 
 stream *s_MD5E_make_stream(gs_memory_t *mem, byte *digest, int digest_size);
+
+/*
+ * The MD5Counter filter accepts an arbitrary amount of input data, 
+ * and copies them to output. It also computes an MD5 digest of the data,
+ * which may be gathered at any time by s_MD5C_get_digest;
+ */
+stream *s_MD5C_make_stream(gs_memory_t *mem, stream *strm);
+/* Get a digest. Apply 'flush' before calling. */
+int s_MD5C_get_digest(stream *s, byte *buf, int buf_length);
 
 #endif /* smd5_INCLUDED */

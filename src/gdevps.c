@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevps.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gdevps.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
 /* PostScript-writing driver */
 #include "math_.h"
 #include "memory_.h"
@@ -1505,6 +1505,7 @@ psw_begin_image(gx_device * dev,
 	buffer = gs_alloc_bytes(mem, bsize, "psw_begin_image(buffer)");
 	bs = s_alloc(mem, "psw_begin_image(buffer stream)");
 	if (buffer && bs) {
+            s_init(bs, mem);
 	    swrite_string(bs, buffer, bsize);
 	} else {
 	    /* An allocation failed. */

@@ -19,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gscheck_pdfwrite.py,v 1.5 2006/03/06 11:16:03 Arabidopsis Exp $
+# $Id: gscheck_pdfwrite.py,v 1.6 2006/06/16 12:55:32 Arabidopsis Exp $
 
 #
 # gscheck_pdfwrite.py
@@ -39,9 +39,17 @@ class GSPDFWriteCompareTestCase(gstestgs.GhostscriptTestCase):
 	rasterfilename = gsconf.rasterdbdir + file + ".gz"
 	if not os.access(rasterfilename, os.F_OK):
 		os.system(gsconf.codedir + "update_pdfbaseline '%s'" %
-                          (os.path.basename(self.file),))	
-	ct = time.localtime(os.stat(rasterfilename)[stat.ST_MTIME])
-	baseline_date = "%s %d, %4d %02d:%02d" % ( calendar.month_abbr[ct[1]], ct[2], ct[0], ct[3], ct[4] )
+                          (os.path.basename(self.file),))
+        try:
+            ct = time.localtime(os.stat(rasterfilename)[stat.ST_MTIME])
+            baseline_date = "%s %d, %4d %02d:%02d" % (
+                calendar.month_abbr[ct[1]], ct[2], ct[0], ct[3], ct[4])
+        except:
+            if self.band: banded = "banded"
+            else: banded = "noband"
+            self.skip = 1
+
+      	    return "Skipping pdfwrite %s (%s/%ddpi/%s) [no previous raster data found]" % (os.path.basename(self.file), self.device, self.dpi, banded)
 
 	if self.band:
 	    return "Checking pdfwrite of %s (%s/%ddpi/banded) against baseline set on %s" % (os.path.basename(self.file), self.device, self.dpi, baseline_date)
@@ -50,6 +58,10 @@ class GSPDFWriteCompareTestCase(gstestgs.GhostscriptTestCase):
 
 	
     def runTest(self):
+        if hasattr(self, "skip") and self.skip:
+	    self.assert_(True)
+	    return
+
         file1 = '%s.%s.%d.%d.pdf' % (self.file[string.rindex(self.file, '/') + 1:], 'pdf', self.dpi, self.band)
 	file2 = '%s.pdf.%s.%d.%d' % (self.file[string.rindex(self.file, '/') + 1:], self.device, self.dpi, self.band)
 

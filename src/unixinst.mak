@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: unixinst.mak,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $
+# $Id: unixinst.mak,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $
 # Partial makefile common to all Unix and Desqview/X configurations,
 # containing the `install' targets.
 # This is the very last part of the makefile for these configurations.
@@ -46,7 +46,7 @@ install-scripts: $(PSLIBDIR)/gsnd
 	-mkdir -p $(scriptdir)
 	$(SH) -c 'for f in \
 gsbj gsdj gsdj500 gslj gslp gsnd \
-bdftops dumphints dvipdf eps2eps font2c \
+bdftops dumphint dvipdf eps2eps font2c \
 pdf2dsc pdf2ps pdfopt pf2afm pfbtopfa printafm \
 ps2ascii ps2epsi ps2pdf ps2pdf12 ps2pdf13 ps2pdf14 ps2pdfwr ps2ps wftopfa \
 fixmswrd.pl lprsetup.sh pj-gs.sh pv.sh sysvlp.sh unix-lpr.sh ;\
@@ -72,11 +72,10 @@ install-libdata:
 	-mkdir -p $(gsdatadir)
 	-mkdir -p $(gsdatadir)/lib
 	$(SH) -c 'for f in \
-Fontmap Fontmap.GS cidfmap \
-FAPIcidfmap FAPIconfig FAPIfontmap xlatmap \
+$(EXTRA_INIT_FILES) Fontmap.GS \
 ht_ccsto.ps \
 acctest.ps addxchar.ps align.ps bdftops.ps \
-caption.ps cid2code.ps decrypt.ps docie.ps dumphints.ps \
+caption.ps cid2code.ps decrypt.ps docie.ps dumphint.ps \
 errpage.ps font2c.ps font2pcl.ps gslp.ps gsnup.ps image-qa.ps impath.ps \
 jispaper.ps landscap.ps level1.ps lines.ps markhint.ps markpath.ps \
 packfile.ps pcharstr.ps pf2afm.ps pfbtopfa.ps ppath.ps prfont.ps printafm.ps \
@@ -115,15 +114,18 @@ install-resdata: $(PSRESDIR)/Decoding/Unicode
 DOC_PAGES=PUBLIC README index.html gs.css \
 	   API.htm Bug-form.htm Bug-info.htm \
 	   C-style.htm Changes.htm Commprod.htm Copying.htm \
-	   Current.htm DLL.htm Develop.htm Devices.htm Drivers.htm \
+	   Current.htm Deprecated.htm \
+	   DLL.htm Deprecated.htm Develop.htm Devices.htm Drivers.htm \
 	   Fonts.htm Helpers.htm Hershey.htm \
 	   History1.htm History2.htm History3.htm History4.htm \
-	   History5.htm History6.htm \
-	   Htmstyle.htm Humor.htm Install.htm Language.htm \
+	   History5.htm History6.htm History7.htm History8.htm \
+	   Details.htm Details8.htm \
+	   Htmstyle.htm Humor.htm Issues.htm Install.htm Language.htm \
 	   Lib.htm Maintain.htm Make.htm New-user.htm \
 	   News.htm Projects.htm Ps-style.htm Ps2epsi.htm Ps2pdf.htm \
 	   Psfiles.htm Public.htm Readme.htm Release.htm \
-	   Source.htm Tester.htm Unix-lpr.htm Use.htm Xfonts.htm
+	   Source.htm Testing.htm Unix-lpr.htm \
+	   Use.htm Xfonts.htm
 install-doc: $(PSDOCDIR)/News.htm
 	-mkdir -p $(docdir)
 	$(SH) -c 'for f in $(DOC_PAGES) ;\
@@ -154,7 +156,7 @@ install-man: $(PSMANDIR)/gs.1
 			  ln -s ps2pdf.$(man1ext) $$f.$(man1ext) ) ;\
 	      done ;\
 	    fi ;\
-	    if ( test -f $$man1dir/ps2ps.$(man1ext) ) ;\
+	    if ( test -f $$man1dir/ps2lp.$(man1ext) ) ;\
 	      then for f in $(MAN1_LINKS_GSLP) ;\
 	        do ( cd $$man1dir; rm -f $$f.$(man1ext) ;\
 			  ln -s gslp.$(man1ext) $$f.$(man1ext) ) ;\
@@ -167,7 +169,7 @@ install-man: $(PSMANDIR)/gs.1
 install-examples:
 	-mkdir -p $(exdir)
 	for f in \
-alphabet.ps chess.ps colorcir.ps doretree.ps escher.ps \
+alphabet.ps annots.pdf chess.ps colorcir.ps doretree.ps escher.ps \
 golfer.eps grayalph.ps snowflak.ps tiger.eps vasarely.ps waterfal.ps \
 ridt91.eps ;\
 	do $(INSTALL_DATA) $(PSEXDIR)/$$f $(exdir) ;\

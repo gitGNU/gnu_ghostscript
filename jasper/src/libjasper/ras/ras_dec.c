@@ -64,7 +64,7 @@
 /*
  * Sun Rasterfile Library
  *
- * $Id: ras_dec.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: ras_dec.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -109,7 +109,7 @@ jas_image_t *ras_decode(jas_stream_t *in, char *optstr)
 	int i;
 
 	if (optstr) {
-		fprintf(stderr, "warning: ignoring RAS decoder options\n");
+		jas_eprintf("warning: ignoring RAS decoder options\n");
 	}
 
 	/* Read the header. */
@@ -146,7 +146,7 @@ jas_image_t *ras_decode(jas_stream_t *in, char *optstr)
 		cmptparm->width = hdr.width;
 		cmptparm->height = hdr.height;
 		cmptparm->prec = RAS_ISRGB(&hdr) ? 8 : hdr.depth;
-		cmptparm->sgnd = false;
+		cmptparm->sgnd = jas_false;
 	}
 	/* Create the image object. */
 	if (!(image = jas_image_create(numcmpts, cmptparms, JAS_CLRSPC_UNKNOWN))) {
@@ -322,12 +322,12 @@ static int ras_getcmap(jas_stream_t *in, ras_hdr_t *hdr, ras_cmap_t *cmap)
 		break;
 	case RAS_MT_EQUALRGB:
 		{
-fprintf(stderr, "warning: palettized images not fully supported\n");
-		numcolors = 1 << hdr->depth;
-		assert(numcolors <= RAS_CMAP_MAXSIZ);
-		actualnumcolors = hdr->maplength / 3;
-		for (i = 0; i < numcolors; i++) {
-			cmap->data[i] = 0;
+			jas_eprintf( "warning: palettized images not fully supported\n");
+			numcolors = 1 << hdr->depth;
+			assert(numcolors <= RAS_CMAP_MAXSIZ);
+			actualnumcolors = hdr->maplength / 3;
+			for (i = 0; i < numcolors; i++) {
+				cmap->data[i] = 0;
 		}
 		if ((hdr->maplength % 3) || hdr->maplength < 0 ||
 		  hdr->maplength > 3 * numcolors) {

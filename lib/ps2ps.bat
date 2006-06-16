@@ -1,5 +1,5 @@
 @echo off 
-@rem $Id: ps2ps.bat,v 1.3 2005/04/18 12:06:08 Arabidopsis Exp $
+@rem $Id: ps2ps.bat,v 1.4 2006/06/16 12:55:13 Arabidopsis Exp $
 @rem "Distill" PostScript.
 
 if %1/==/ goto usage
@@ -15,6 +15,7 @@ goto cp
 :doit
 rem Watcom C deletes = signs, so use # instead.
 %GSC% -q -sDEVICE#pswrite -sOutputFile#%2 @_.at %1
+if exist _.at erase _.at
 goto end
 
 :usage

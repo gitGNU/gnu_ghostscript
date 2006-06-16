@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 1997, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,17 +15,16 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: sdct.h,v 1.4 2005/12/13 16:57:27 jemarch Exp $ */
+/* $Id: sdct.h,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Definitions for DCT filters */
 /* Requires stream.h, strimpl.h, jpeg/jpeglib.h */
 
 #ifndef sdct_INCLUDED
 #  define sdct_INCLUDED
 
-#include <setjmp.h>		/* for jmp_buf */
+#include "setjmp_.h"		/* for jmp_buf */
 
 /* ------ DCT filters ------ */
 
@@ -53,7 +53,7 @@ struct jpeg_block_s {
 		/* the minimum buffer sizes depend on the image parameters. */\
 	stream_template template;\
 	struct jpeg_error_mgr err;\
-	jmp_buf exit_jmpbuf;\
+	gsfix_jmp_buf exit_jmpbuf;\
 	gs_memory_t *memory;	/* heap for library allocations */\
         jpeg_block_t *blocks;   /* ptr to allocated data block list */\
 		/* The following are documented in Adobe TN 5116. */\

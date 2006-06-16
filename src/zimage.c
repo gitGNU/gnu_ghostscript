@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: zimage.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: zimage.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Image operators */
 #include "math_.h"
 #include "memory_.h"
@@ -298,13 +298,16 @@ zimage_data_setup(i_ctx_t *i_ctx_p, const gs_pixel_image_t * pim,
 	}
 	*ep = *pp;
     }
-    if ((penum = gs_image_enum_alloc(imemory, "image_setup")) == 0)
+    /* Always place the image enumerator into local memory,
+       because pie may have local objects inherited from igs,
+       which may be local when the current allocation mode is global. 
+       Bug 688140. */
+    if ((penum = gs_image_enum_alloc(imemory_local, "image_setup")) == 0)
 	return_error(e_VMerror);
     code = gs_image_enum_init(penum, pie, (const gs_data_image_t *)pim, igs);
     if (code != 0) {		/* error, or empty image */
-	int code1 = gs_image_cleanup(penum);
+	int code1 = gs_image_cleanup_and_free_enum(penum);
 
-	ifree_object(penum, "image_setup");
 	if (code >= 0)		/* empty image */
 	    pop(npop);
 	if (code >= 0 && code1 < 0)
@@ -315,7 +318,7 @@ zimage_data_setup(i_ctx_t *i_ctx_p, const gs_pixel_image_t * pim,
     esp += inumpush - 1;
     make_int(ETOP_PLANE_INDEX(esp), 0);
     make_int(ETOP_NUM_SOURCES(esp), num_sources);
-    make_istruct(esp, 0, penum);
+    make_struct(esp, avm_local, penum);
     switch (r_type(sources)) {
 	case t_file:
 	    push_op_estack(image_file_continue);
@@ -554,10 +557,8 @@ image_cleanup(i_ctx_t *i_ctx_p)
 {
     es_ptr ep_top = esp + NUM_PUSH(EBOT_NUM_SOURCES(esp)->value.intval);
     gs_image_enum *penum = r_ptr(ep_top, gs_image_enum);
-    int code = gs_image_cleanup(penum);
-
-    ifree_object(penum, "image_cleanup");
-    return code;
+    
+    return gs_image_cleanup_and_free_enum(penum);
 }
 
 /* ------ Initialization procedure ------ */

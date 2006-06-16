@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: igcstr.h,v 1.4 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: igcstr.h,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* Internal interface to string garbage collector */
 
 #ifndef igcstr_INCLUDED
@@ -34,5 +34,6 @@ void gc_strings_set_reloc(chunk_t *);
 void gc_strings_compact(chunk_t *);
 string_proc_reloc(igc_reloc_string);
 const_string_proc_reloc(igc_reloc_const_string);
+param_string_proc_reloc(igc_reloc_param_string);
 
 #endif /* igcstr_INCLUDED */

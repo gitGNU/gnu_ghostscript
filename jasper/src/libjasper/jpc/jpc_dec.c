@@ -62,7 +62,7 @@
  */
 
 /*
- * $Id: jpc_dec.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jpc_dec.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -72,6 +72,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+
 
 #include "jasper/jas_types.h"
 #include "jasper/jas_math.h"
@@ -134,8 +135,6 @@ typedef struct {
 /******************************************************************************\
 * Local function prototypes.
 \******************************************************************************/
-
-static int jpc_dec_dump(jpc_dec_t *dec, FILE *out);
 
 jpc_ppxstab_t *jpc_ppxstab_create(void);
 void jpc_ppxstab_destroy(jpc_ppxstab_t *tab);
@@ -206,25 +205,25 @@ static jpc_dec_mstabent_t *jpc_dec_mstab_lookup(uint_fast16_t id);
 \******************************************************************************/
 
 jpc_dec_mstabent_t jpc_dec_mstab[] = {
-	{JPC_MS_SOC, JPC_MHSOC, jpc_dec_process_soc},
-	{JPC_MS_SOT, JPC_MH | JPC_TPHSOT, jpc_dec_process_sot},
-	{JPC_MS_SOD, JPC_TPH, jpc_dec_process_sod},
-	{JPC_MS_EOC, JPC_TPHSOT, jpc_dec_process_eoc},
-	{JPC_MS_SIZ, JPC_MHSIZ, jpc_dec_process_siz},
-	{JPC_MS_COD, JPC_MH | JPC_TPH, jpc_dec_process_cod},
-	{JPC_MS_COC, JPC_MH | JPC_TPH, jpc_dec_process_coc},
-	{JPC_MS_RGN, JPC_MH | JPC_TPH, jpc_dec_process_rgn},
-	{JPC_MS_QCD, JPC_MH | JPC_TPH, jpc_dec_process_qcd},
-	{JPC_MS_QCC, JPC_MH | JPC_TPH, jpc_dec_process_qcc},
-	{JPC_MS_POC, JPC_MH | JPC_TPH, jpc_dec_process_poc},
-	{JPC_MS_TLM, JPC_MH, 0},
-	{JPC_MS_PLM, JPC_MH, 0},
-	{JPC_MS_PLT, JPC_TPH, 0},
-	{JPC_MS_PPM, JPC_MH, jpc_dec_process_ppm},
-	{JPC_MS_PPT, JPC_TPH, jpc_dec_process_ppt},
-	{JPC_MS_SOP, 0, 0},
-	{JPC_MS_CRG, JPC_MH, jpc_dec_process_crg},
-	{JPC_MS_COM, JPC_MH | JPC_TPH, jpc_dec_process_com},
+	{JPC_MS_SOC, JPC_MHSOC, jpc_dec_process_soc },
+	{JPC_MS_SOT, JPC_MH | JPC_TPHSOT, jpc_dec_process_sot },
+	{JPC_MS_SOD, JPC_TPH, jpc_dec_process_sod,  },
+	{JPC_MS_EOC, JPC_TPHSOT, jpc_dec_process_eoc, },
+	{JPC_MS_SIZ, JPC_MHSIZ, jpc_dec_process_siz, },
+	{JPC_MS_COD, JPC_MH | JPC_TPH, jpc_dec_process_cod },
+	{JPC_MS_COC, JPC_MH | JPC_TPH, jpc_dec_process_coc },
+	{JPC_MS_RGN, JPC_MH | JPC_TPH, jpc_dec_process_rgn },
+	{JPC_MS_QCD, JPC_MH | JPC_TPH, jpc_dec_process_qcd },
+	{JPC_MS_QCC, JPC_MH | JPC_TPH, jpc_dec_process_qcc },
+	{JPC_MS_POC, JPC_MH | JPC_TPH, jpc_dec_process_poc },
+	{JPC_MS_TLM, JPC_MH, 0   },
+	{JPC_MS_PLM, JPC_MH, 0   },
+	{JPC_MS_PLT, JPC_TPH, 0  },
+	{JPC_MS_PPM, JPC_MH, jpc_dec_process_ppm },
+	{JPC_MS_PPT, JPC_TPH, jpc_dec_process_ppt },
+	{JPC_MS_SOP, 0, 0 },
+	{JPC_MS_CRG, JPC_MH, jpc_dec_process_crg },
+	{JPC_MS_COM, JPC_MH | JPC_TPH, jpc_dec_process_com },
 	{0, JPC_MH | JPC_TPH, jpc_dec_process_unk}
 };
 
@@ -325,7 +324,7 @@ static int jpc_dec_parseopts(char *optstr, jpc_dec_importopts_t *opts)
 			opts->maxpkts = atoi(jas_tvparser_getval(tvp));
 			break;
 		default:
-			fprintf(stderr, "warning: ignoring invalid option %s\n",
+			jas_eprintf("warning: ignoring invalid option %s\n",
 			  jas_tvparser_gettag(tvp));
 			break;
 		}
@@ -361,16 +360,18 @@ static int jpc_dec_decode(jpc_dec_t *dec)
 	if (!(cstate = jpc_cstate_create())) {
 		return -1;
 	}
+
 	dec->cstate = cstate;
 
 	/* Initially, we should expect to encounter a SOC marker segment. */
 	dec->state = JPC_MHSOC;
 
+
 	for (;;) {
 
 		/* Get the next marker segment in the code stream. */
 		if (!(ms = jpc_getms(dec->in, cstate))) {
-			fprintf(stderr, "cannot get marker segment\n");
+			jas_eprintf("cannot get marker segment\n");
 			return -1;
 		}
 
@@ -380,7 +381,7 @@ static int jpc_dec_decode(jpc_dec_t *dec)
 		/* Ensure that this type of marker segment is permitted
 		  at this point in the code stream. */
 		if (!(dec->state & mstabent->validstates)) {
-			fprintf(stderr, "unexpected marker segment type\n");
+			jas_eprintf("unexpected marker segment type\n");
 			jpc_ms_destroy(ms);
 			return -1;
 		}
@@ -401,7 +402,6 @@ static int jpc_dec_decode(jpc_dec_t *dec)
 		} else if (ret > 0) {
 			break;
 		}
-
 	}
 
 	return 0;
@@ -475,7 +475,10 @@ static int jpc_dec_process_sot(jpc_dec_t *dec, jpc_ms_t *ms)
 			/* Convert the PPM marker segment data into a collection of streams
 			  (one stream per tile-part). */
 			if (!(dec->pkthdrstreams = jpc_ppmstabtostreams(dec->ppmstab))) {
-				abort();
+				jas_error(	JAS_ERR_FAILED_PPM_MARKER_SEGMENT_CONVERSION,
+							"JAS_ERR_FAILED_PPM_MARKER_SEGMENT_CONVERSION"
+						);
+				return -1;
 			}
 			jpc_ppxstab_destroy(dec->ppmstab);
 			dec->ppmstab = 0;
@@ -490,7 +493,7 @@ static int jpc_dec_process_sot(jpc_dec_t *dec, jpc_ms_t *ms)
 	}
 
 	if (JAS_CAST(int, sot->tileno) > dec->numtiles) {
-		fprintf(stderr, "invalid tile number in SOT marker segment\n");
+		jas_eprintf("invalid tile number in SOT marker segment\n");
 		return -1;
 	}
 	/* Set the current tile. */
@@ -585,13 +588,13 @@ static int jpc_dec_process_sod(jpc_dec_t *dec, jpc_ms_t *ms)
 		tile->pptstab = 0;
 	}
 
-	if (jas_getdbglevel() >= 10) {
+/*	if (jas_getdbglevel() >= 10) {
 		jpc_dec_dump(dec, stderr);
-	}
+	}	*/
 
 	if (jpc_dec_decodepkts(dec, (tile->pkthdrstream) ? tile->pkthdrstream :
 	  dec->in, dec->in)) {
-		fprintf(stderr, "jpc_dec_decodepkts failed\n");
+		jas_eprintf("jpc_dec_decodepkts failed\n");
 		return -1;
 	}
 
@@ -602,18 +605,18 @@ static int jpc_dec_process_sod(jpc_dec_t *dec, jpc_ms_t *ms)
 		curoff = jas_stream_getrwcount(dec->in);
 		if (curoff < dec->curtileendoff) {
 			n = dec->curtileendoff - curoff;
-			fprintf(stderr,
+			jas_eprintf(
 			  "warning: ignoring trailing garbage (%lu bytes)\n",
 			  (unsigned long) n);
 
 			while (n-- > 0) {
 				if (jas_stream_getc(dec->in) == EOF) {
-					fprintf(stderr, "read error\n");
+					jas_eprintf("read error\n");
 					return -1;
 				}
 			}
 		} else if (curoff > dec->curtileendoff) {
-			fprintf(stderr,
+			jas_eprintf(
 			  "warning: not enough tile data (%lu bytes)\n",
 			  (unsigned long) curoff - dec->curtileendoff);
 		}
@@ -1017,6 +1020,8 @@ if (!prc->cblks) {
 	return 0;
 }
 
+
+
 static int jpc_dec_tiledecode(jpc_dec_t *dec, jpc_dec_tile_t *tile)
 {
 	int i;
@@ -1033,7 +1038,7 @@ static int jpc_dec_tiledecode(jpc_dec_t *dec, jpc_dec_tile_t *tile)
 	jpc_dec_cmpt_t *cmpt;
 
 	if (jpc_dec_decodecblks(dec, tile)) {
-		fprintf(stderr, "jpc_dec_decodecblks failed\n");
+		jas_eprintf("jpc_dec_decodecblks failed\n");
 		return -1;
 	}
 
@@ -1070,16 +1075,15 @@ static int jpc_dec_tiledecode(jpc_dec_t *dec, jpc_dec_tile_t *tile)
 		  JPC_COX_RFT) ? JPC_TSFB_RITIMODE : 0), tcomp->data);
 	}
 
-
 	/* Apply an inverse intercomponent transform if necessary. */
 	switch (tile->cp->mctid) {
 	case JPC_MCT_RCT:
-		assert(dec->numcomps == 3);
+		assert(dec->numcomps >= 3);
 		jpc_irct(tile->tcomps[0].data, tile->tcomps[1].data,
 		  tile->tcomps[2].data);
 		break;
 	case JPC_MCT_ICT:
-		assert(dec->numcomps == 3);
+		assert(dec->numcomps >= 3);
 		jpc_iict(tile->tcomps[0].data, tile->tcomps[1].data,
 		  tile->tcomps[2].data);
 		break;
@@ -1122,7 +1126,6 @@ static int jpc_dec_tiledecode(jpc_dec_t *dec, jpc_dec_tile_t *tile)
 	}
 
 	/* XXX need to free tsfb struct */
-
 	/* Write the data for each component of the image. */
 	for (compno = 0, tcomp = tile->tcomps, cmpt = dec->cmpts; compno <
 	  dec->numcomps; ++compno, ++tcomp, ++cmpt) {
@@ -1130,7 +1133,7 @@ static int jpc_dec_tiledecode(jpc_dec_t *dec, jpc_dec_tile_t *tile)
 		  JPC_CEILDIV(dec->xstart, cmpt->hstep), tcomp->ystart -
 		  JPC_CEILDIV(dec->ystart, cmpt->vstep), jas_matrix_numcols(
 		  tcomp->data), jas_matrix_numrows(tcomp->data), tcomp->data)) {
-			fprintf(stderr, "write component failed\n");
+			jas_eprintf("write component failed\n");
 			return -4;
 		}
 	}
@@ -1183,7 +1186,8 @@ static int jpc_dec_process_siz(jpc_dec_t *dec, jpc_ms_t *ms)
 	dec->tilexoff = siz->tilexoff;
 	dec->tileyoff = siz->tileyoff;
 	dec->numcomps = siz->numcomps;
-	if (!(dec->cp = jpc_dec_cp_create(dec->numcomps))) {
+
+	if (!(dec->cp = jpc_dec_cp_create((uint_fast16_t)dec->numcomps))) {
 		return -1;
 	}
 
@@ -1287,7 +1291,7 @@ static int jpc_dec_process_coc(jpc_dec_t *dec, jpc_ms_t *ms)
 	jpc_dec_tile_t *tile;
 
 	if (JAS_CAST(int, coc->compno) > dec->numcomps) {
-		fprintf(stderr,
+		jas_eprintf(
 		  "invalid component number in COC marker segment\n");
 		return -1;
 	}
@@ -1314,7 +1318,7 @@ static int jpc_dec_process_rgn(jpc_dec_t *dec, jpc_ms_t *ms)
 	jpc_dec_tile_t *tile;
 
 	if (JAS_CAST(int, rgn->compno) > dec->numcomps) {
-		fprintf(stderr,
+		jas_eprintf(
 		  "invalid component number in RGN marker segment\n");
 		return -1;
 	}
@@ -1364,7 +1368,7 @@ static int jpc_dec_process_qcc(jpc_dec_t *dec, jpc_ms_t *ms)
 	jpc_dec_tile_t *tile;
 
 	if (JAS_CAST(int, qcc->compno) > dec->numcomps) {
-		fprintf(stderr,
+		jas_eprintf(
 		  "invalid component number in QCC marker segment\n");
 		return -1;
 	}
@@ -1474,8 +1478,8 @@ static int jpc_dec_process_unk(jpc_dec_t *dec, jpc_ms_t *ms)
 	/* Eliminate compiler warnings about unused variables. */
 	dec = 0;
 
-	fprintf(stderr, "warning: ignoring unknown marker segment\n");
-	jpc_ms_dump(ms, stderr);
+	jas_eprintf("warning: ignoring unknown marker segment\n");
+/*	jpc_ms_dump(ms, stderr);	*/
 	return 0;
 }
 
@@ -1527,7 +1531,7 @@ static jpc_dec_cp_t *jpc_dec_cp_copy(jpc_dec_cp_t *cp)
 	jpc_dec_ccp_t *ccp;
 	int compno;
 
-	if (!(newcp = jpc_dec_cp_create(cp->numcomps))) {
+	if (!(newcp = jpc_dec_cp_create((uint_fast16_t)cp->numcomps))) {
 		return 0;
 	}
 	newcp->flags = cp->flags;
@@ -1809,7 +1813,7 @@ static void jpc_undo_roi(jas_matrix_t *x, int roishift, int bgshift, int numbps)
 	int thresh;
 	jpc_fix_t val;
 	jpc_fix_t mag;
-	bool warn;
+	jas_bool warn;
 	uint_fast32_t mask;
 
 	if (roishift == 0 && bgshift == 0) {
@@ -1817,7 +1821,7 @@ static void jpc_undo_roi(jas_matrix_t *x, int roishift, int bgshift, int numbps)
 	}
 	thresh = 1 << roishift;
 
-	warn = false;
+	warn = jas_false;
 	for (i = 0; i < jas_matrix_numrows(x); ++i) {
 		for (j = 0; j < jas_matrix_numcols(x); ++j) {
 			val = jas_matrix_get(x, i, j);
@@ -1837,9 +1841,8 @@ static void jpc_undo_roi(jas_matrix_t *x, int roishift, int bgshift, int numbps)
 				  Here we ensure that any such bits are masked off. */
 				if (mag & (~mask)) {
 					if (!warn) {
-						fprintf(stderr,
-						  "warning: possibly corrupt code stream\n");
-						warn = true;
+						jas_eprintf("warning: possibly corrupt code stream\n");
+						warn = jas_true;
 					}
 					mag &= mask;
 				}
@@ -1990,6 +1993,8 @@ void jpc_seg_destroy(jpc_dec_seg_t *seg)
 	jas_free(seg);
 }
 
+
+/*
 static int jpc_dec_dump(jpc_dec_t *dec, FILE *out)
 {
 	jpc_dec_tile_t *tile;
@@ -2047,6 +2052,9 @@ fprintf(out, "xs =%d, ys = %d, xe = %d, ye = %d, w = %d, h = %d\n",
 
 	return 0;
 }
+*/
+
+
 
 jpc_streamlist_t *jpc_streamlist_create()
 {
@@ -2102,7 +2110,11 @@ jas_stream_t *jpc_streamlist_remove(jpc_streamlist_t *streamlist, int streamno)
 	jas_stream_t *stream;
 	int i;
 	if (streamno >= streamlist->numstreams) {
-		abort();
+
+		jas_error(	JAS_ERR_INVALID_STREAM_DELETE,
+					"JAS_ERR_INVALID_STREAM_DELETE"
+				);
+		return 0;
 	}
 	stream = streamlist->streams[streamno];
 	for (i = streamno + 1; i < streamlist->numstreams; ++i) {

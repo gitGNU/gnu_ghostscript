@@ -64,7 +64,7 @@
 /*
  * Tier 1 Encoder
  *
- * $Id: jpc_t1enc.c,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jpc_t1enc.c,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -78,6 +78,7 @@
 #include "jasper/jas_fix.h"
 #include "jasper/jas_malloc.h"
 #include "jasper/jas_math.h"
+#include "jasper/jas_debug.h"
 
 #include "jpc_t1enc.h"
 #include "jpc_t1cod.h"
@@ -138,7 +139,7 @@ int jpc_enc_enccblks(jpc_enc_t *enc)
 				if (!band->data) {
 					continue;
 				}
-				for (prcno = 0, prc = band->prcs; prcno < lvl->numprcs; ++prcno, ++prc) {
+				for (prcno = 0, prc = band->prcs; prcno < (uint_fast32_t)lvl->numprcs; ++prcno, ++prc) {
 					if (!prc->cblks) {
 						continue;
 					}
@@ -379,7 +380,10 @@ dump_passes(cblk->passes, cblk->numpasses, cblk);
 				pass->end = termpass->end;
 			}
 			if ((c = getthebyte(cblk->stream, pass->end - 1)) == EOF) {
-				abort();
+				jas_error(	JAS_ERR_UNEXPECTED_EOF_JPC_ENC_ENCCBLK,
+							"JAS_ERR_UNEXPECTED_EOF_JPC_ENC_ENCCBLK"
+						);
+				return -1;
 			}
 			if (c == 0xff) {
 				++pass->end;

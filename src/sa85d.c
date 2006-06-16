@@ -17,7 +17,7 @@
   
 */
 
-/* $Id: sa85d.c,v 1.5 2005/12/13 16:57:27 jemarch Exp $ */
+/* $Id: sa85d.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
 /* ASCII85Decode filter */
 #include "std.h"
 #include "strimpl.h"
@@ -46,12 +46,29 @@ s_A85D_process(stream_state * st, stream_cursor_read * pr,
     stream_A85D_state *const ss = (stream_A85D_state *) st;
     register const byte *p = pr->ptr;
     register byte *q = pw->ptr;
-    const byte *rlimit = pr->limit;
+    /* stop processing early unless the target is empty (last == true)  */
+    /* to make sure we consume the EOD marker correctly. The EOD marker */
+    /* might be as many as 6 characters after the last valid data char  */
+    /* D <cr> <lf> '~' <cr> <lf> '>' where 'D' is a data character.     */
+    const byte *rlimit = pr->limit - (last ? 0 : 7); /* max EOD len + 1 */
+    const byte *r = rlimit;
     byte *wlimit = pw->limit;
     int ccount = ss->odd;
     ulong word = ss->word;
     int status = 0;
 
+    /* scan to make sure that an EOD isn't fully contained in the */
+    /* last part of the buffer (between rlimit and pr->limit).    */
+    while (r < pr->limit) {
+	if (*++r == '~') 
+	    while (r < pr->limit)
+		if (*++r == '>') {
+		    /* we have both characters of a complete EOD. */
+		    rlimit = pr->limit; /* go ahead and process everything */
+		    r = rlimit;		/* break out of the while loops */
+		    break;
+		}
+    }
     while (p < rlimit) {
 	int ch = *++p;
 	uint ccode = ch - '!';
@@ -97,6 +114,7 @@ s_A85D_process(stream_state * st, stream_cursor_read * pr,
 	else if (ch == '~') {
 	    int i = 1;
 
+	    rlimit = pr->limit;		/* Here we use the real "limit" */
 	    /* Handle odd bytes. */
 	    if (p == rlimit) {
 		if (last)
