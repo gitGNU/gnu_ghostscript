@@ -62,19 +62,22 @@
 /*
  * Color Management
  *
- * $Id: jas_cm.c,v 1.2 2006/06/16 12:55:32 Arabidopsis Exp $
+ * $Id: jas_cm.c,v 1.3 2006/06/16 18:21:39 Arabidopsis Exp $
  */
 
-#include <jasper/jas_config.h>
+#include "jasper/jas_config.h"
+
 #include <math.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <jasper/jas_cm.h>
-#include <jasper/jas_icc.h>
-#include <jasper/jas_init.h>
-#include <jasper/jas_stream.h>
-#include <jasper/jas_malloc.h>
-#include <jasper/jas_math.h>
+
+#include "jasper/jas_cm.h"
+#include "jasper/jas_icc.h"
+#include "jasper/jas_init.h"
+#include "jasper/jas_stream.h"
+#include "jasper/jas_malloc.h"
+#include "jasper/jas_math.h"
+#include "jasper/jas_debug.h"
 
 static jas_cmprof_t *jas_cmprof_create(void);
 static void jas_cmshapmatlut_cleanup(jas_cmshapmatlut_t *);

@@ -62,7 +62,7 @@
 /*
  * Color Management
  *
- * $Id: jas_cm.h,v 1.1 2006/03/08 12:43:36 Arabidopsis Exp $
+ * $Id: jas_cm.h,v 1.2 2006/06/16 18:21:39 Arabidopsis Exp $
  */
 
 #ifndef JAS_CM_H

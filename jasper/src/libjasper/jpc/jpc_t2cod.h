@@ -64,7 +64,7 @@
 /*
  * Tier-2 Coding Library
  *
- * $Id: jpc_t2cod.h,v 1.2 2006/06/16 12:55:34 Arabidopsis Exp $
+ * $Id: jpc_t2cod.h,v 1.3 2006/06/16 18:21:39 Arabidopsis Exp $
  */
 
 #ifndef JPC_T2COD_H
