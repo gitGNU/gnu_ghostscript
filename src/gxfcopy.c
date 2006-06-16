@@ -18,7 +18,7 @@
   
 */
 
-/* $Id: gxfcopy.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gxfcopy.c,v 1.7 2006/06/16 18:54:58 Arabidopsis Exp $ */
 /* Font copying for high-level output */
 #include "memory_.h"
 #include "gx.h"
@@ -2398,7 +2398,7 @@ order_font_data(gs_copied_font_data_t *cfdata, gs_memory_t *memory)
 	    a[j++] = &cfdata->names[i];
 	}
     }
-    qsort(a, cfdata->num_glyphs, sizeof(int), compare_glyph_names);
+    qsort(a, cfdata->num_glyphs, sizeof(*a), compare_glyph_names);
     for (; j >= 0; j--)
 	cfdata->glyphs[j].order_index = a[j] - cfdata->names;    
     gs_free_object(memory, a, "order_font_data");

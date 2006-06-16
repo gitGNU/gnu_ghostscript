@@ -17,7 +17,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: contrib.mak,v 1.4 2005/12/13 16:57:18 jemarch Exp $
+# $Id: contrib.mak,v 1.5 2006/06/16 18:54:58 Arabidopsis Exp $
 # makefile for contributed device drivers.
 
 # Define the name of this makefile.
@@ -853,4 +853,20 @@ $(DD)sunhmono.dev : $(sunr_) $(DD)page.dev
 
 $(GLOBJ)gdevsunr.$(OBJ) : $(GLSRC)gdevsunr.c $(PDEVH)
 	$(GLCC) $(GLO_)gdevsunr.$(OBJ) $(C_) $(GLSRC)gdevsunr.c
+
+### -------------------- The Brother HL-1250 printer -------------------- ###
+### This printer is ljet4-compatible, plus support for source tray        ###
+### selection and special 1200x600 dpi mode.                              ###
+
+hl1250_=$(GLOBJ)gdevhl12.$(OBJ) $(HPDLJM)
+$(DD)hl1250.dev : $(hl1250_) $(DD)page.dev
+	$(SETPDEV) $(DD)hl1250 $(hl1250_)
+
+$(DD)hl1240.dev : $(hl1250_) $(DD)page.dev
+	$(SETPDEV) $(DD)hl1240 $(hl1250_)
+
+# Author: Marek Michalkiewicz <marekm@linux.org.pl>
+# Printer: Brother HL-1250 (may work with some other models too)
+$(GLOBJ)gdevhl12.$(OBJ) : $(GLSRC)gdevhl12.c $(PDEVH) $(gdevdljm_h)
+	$(GLCC) $(GLO_)gdevhl12.$(OBJ) $(C_) $(GLSRC)gdevhl12.c
 

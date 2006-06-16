@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: macos-fw.mak,v 1.5 2005/12/13 16:57:26 jemarch Exp $
+# $Id: macos-fw.mak,v 1.6 2006/06/16 18:54:58 Arabidopsis Exp $
 # Partial makefile for MacOS X/Darwin shared object target
 
 # Useful make commands:
@@ -108,19 +108,19 @@ sodebug: SODIRS
 	$(MAKE) $(SODEFS) GENOPT='-DDEBUG' CFLAGS='$(CFLAGS_DEBUG) $(CFLAGS_SO) $(GCFLAGS) $(XCFLAGS)' $(GSSOC) $(GSSOX)
 
 install-so: so
-	-mkdir $(prefix)
-	-mkdir $(datadir)
-	-mkdir $(gsdir)
-	-mkdir $(gsdatadir)
-	-mkdir $(bindir)
-	-mkdir $(libdir)
-	$(INSTALL_PROGRAM) $(GSSOC) $(bindir)/$(GSSOC_XENAME)
-	$(INSTALL_PROGRAM) $(GSSOX) $(bindir)/$(GSSOX_XENAME)
-	$(INSTALL_PROGRAM) $(BINDIR)/$(SOBINRELDIR)/$(GS_SONAME_MAJOR_MINOR) $(libdir)/$(GS_SONAME_MAJOR_MINOR)
-	$(RM_) $(libdir)/$(GS_SONAME)
-	ln -s $(GS_SONAME_MAJOR_MINOR) $(libdir)/$(GS_SONAME)
-	$(RM_) $(libdir)/$(GS_SONAME_MAJOR)
-	ln -s $(GS_SONAME_MAJOR_MINOR) $(libdir)/$(GS_SONAME_MAJOR)
+	-mkdir $(DESTDIR)$(prefix)
+	-mkdir $(DESTDIR)$(datadir)
+	-mkdir $(DESTDIR)$(gsdir)
+	-mkdir $(DESTDIR)$(gsdatadir)
+	-mkdir $(DESTDIR)$(bindir)
+	-mkdir $(DESTDIR)$(libdir)
+	$(INSTALL_PROGRAM) $(GSSOC) $(DESTDIR)$(bindir)/$(GSSOC_XENAME)
+	$(INSTALL_PROGRAM) $(GSSOX) $(DESTDIR)$(bindir)/$(GSSOX_XENAME)
+	$(INSTALL_PROGRAM) $(BINDIR)/$(SOBINRELDIR)/$(GS_SONAME_MAJOR_MINOR) $(DESTDIR)$(libdir)/$(GS_SONAME_MAJOR_MINOR)
+	$(RM_) $(DESTDIR)$(libdir)/$(GS_SONAME)
+	ln -s $(GS_SONAME_MAJOR_MINOR) $(DESTDIR)$(libdir)/$(GS_SONAME)
+	$(RM_) $(DESTDIR)$(libdir)/$(GS_SONAME_MAJOR)
+	ln -s $(GS_SONAME_MAJOR_MINOR) $(DESTDIR)$(libdir)/$(GS_SONAME_MAJOR)
 
 soinstall: install-so install-scripts install-data
 
@@ -149,8 +149,8 @@ framework: so lib/Info-macos.plist
 	cp -r doc $(GS_FRAMEWORK)/Versions/Current
 
 framework_install : framework
-	rm -rf $(prefix)
-	cp -r $(GS_FRAMEWORK) $(prefix)
+	rm -rf $(DESTDIR)$(prefix)
+	cp -r $(GS_FRAMEWORK) $(DESTDIR)$(prefix)
 
 # Make the build directories
 SODIRS: STDDIRS

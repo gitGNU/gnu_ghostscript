@@ -8,7 +8,7 @@
 % of the license contained in the file LICENSE in this distribution.
 
 
-% $Id: gs_init.ps,v 1.7 2006/06/16 12:55:14 Arabidopsis Exp $
+% $Id: gs_init.ps,v 1.8 2006/06/16 18:54:58 Arabidopsis Exp $
 % Initialization file for the interpreter.
 % When this is run, systemdict is still writable.
 
@@ -147,6 +147,7 @@ currentdict /NOFONTMAP known   /NOFONTMAP exch def
 currentdict /NOFONTPATH known   /NOFONTPATH exch def
 currentdict /NOGC known   /NOGC exch def
 currentdict /NOINTERPOLATE .knownget { /INTERPOLATE exch not def } if
+currentdict /NOMEDIAATTRS known /NOMEDIAATTRS exch def
 currentdict /NOOUTERSAVE known   /NOOUTERSAVE exch def
 currentdict /NOPAGEPROMPT known   /NOPAGEPROMPT exch def
 currentdict /NOPAUSE known   /NOPAUSE exch def
