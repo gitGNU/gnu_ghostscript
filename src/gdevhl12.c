@@ -15,7 +15,7 @@
    (Legalese borrowed from the Mingw32 runtime libraries.)
  */
 
-/*$Id: gdevhl12.c,v 1.1 2004/01/14 16:59:48 atai Exp $ */
+/*$Id: gdevhl12.c,v 1.2 2006/06/16 19:37:41 Arabidopsis Exp $ */
 /* gdevhl12.c - Brother HL-1250 driver for Ghostscript */
 
 /*
@@ -472,7 +472,7 @@ hl1250_compress_band(FILE * prn_stream, hl1250_state_t * s, unsigned int band)
     for (y = ytop; y < ybottom; y++) {
 	if (hl1250_compress_line(s, y))
 	    continue;
-#if 1
+#if 0
 	/* XXX - please report if you ever see this, then change to #if 0 */
 	fprintf(stderr,
 		"hl1250: compression failed (y=%u), doing 1200x300 dpi\n",
