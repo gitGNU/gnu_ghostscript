@@ -30,11 +30,12 @@ the GNU General Public License by writing to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301 or
 on the World Wide Web at http://www.gnu.org/licenses/gpl.txt
 
-GNU Ghostscript is maintained by Jose E. Marchesi, jemarch@gnu.org.
-For bugs or issues regarding the GNU version of Ghostscript, please
-send them to bug-ghostscript@gnu.org.  Please do not contact artofcode
-LLC or Ralph Giles for bugs or support issues in this version of
-Ghostscript as they are not responsible for it.
+GNU Ghostscript is maintained by Didier Link (didier.link@wanadoo.fr)
+and Jose E. Marchesi (jemarch@gnu.org).  For bugs or issues regarding
+the GNU version of Ghostscript, please send them to
+bug-ghostscript@gnu.org.  Please do not contact artofcode LLC or Ralph
+Giles for bugs or support issues in this version of Ghostscript as
+they are not responsible for it.
 
 GNU Ghostscript is available from
 
