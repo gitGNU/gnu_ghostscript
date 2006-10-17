@@ -14,17 +14,17 @@ dnl You should have received a copy of the GNU General Public License along with
 dnl ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 dnl Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 dnl 
-dnl $Id: configure.ac,v 1.10 2006/06/16 16:03:35 Arabidopsis Exp $
+dnl $Id: configure.ac,v 1.11 2006/10/17 20:15:04 Arabidopsis Exp $
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------
 dnl Initialization and Versioning
 dnl ------------------------------------------------
 
-AC_PREREQ(2.59)
-AC_INIT
+AC_PREREQ(2.60)
+AC_INIT([gnu-ghostscript], [8.55], [gnu-ghostscript-bug@gnu.org])
 AC_CONFIG_SRCDIR(src/gs.c)
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([-Wall])
 
 dnl --------------------------------------------------  
 dnl Check for programs
@@ -199,52 +199,59 @@ fi
 
 dnl these are technically optional
 
-AC_MSG_CHECKING([for local zlib source])
 dnl zlib is needed for language level 3, and libpng
+AC_ARG_WITH(zlib, AC_HELP_STRING([--with-zlib],[include zlib support (local, shared, no) (required for PNG and language level 3)]))
 # we must define ZLIBDIR regardless because libpng.mak does a -I$(ZLIBDIR)
 # this seems a harmless default
 ZLIBDIR=src
-if test -d zlib; then
-	AC_MSG_RESULT([yes])
-	SHARE_ZLIB=0
-	ZLIBDIR=zlib
-else
-	AC_MSG_RESULT([no])
-	AC_CHECK_LIB(z, deflate, [
-	  AC_CHECK_HEADERS(zlib.h, [SHARE_ZLIB=1])
-	])
-fi
-if test -z "$SHARE_ZLIB"; then
-  AC_MSG_ERROR([I did not find a copy of zlib on your system.
-  Please either install it, or unpack a copy of the source in a
-  local directory named 'zlib'. See http://www.gzip.org/zlib/
-  for more information.
-  ])
+if test x$with_zlib != xno; then
+	AC_MSG_CHECKING([for local zlib source])
+	if test x$with_zlib != xshared && test -d zlib; then
+		AC_MSG_RESULT([yes])
+		SHARE_ZLIB=0
+		ZLIBDIR=zlib
+	else
+		AC_MSG_RESULT([shared])
+		AC_CHECK_LIB(z, deflate, [
+		  AC_CHECK_HEADERS(zlib.h, [SHARE_ZLIB=1])
+		])
+	fi
+	if test -z "$SHARE_ZLIB"; then
+	  AC_MSG_ERROR([I did not find a copy of zlib on your system.
+	  Please either install it, or unpack a copy of the source in a
+	  local directory named 'zlib'. See http://www.gzip.org/zlib/
+	  for more information.
+	  ])
+	fi
 fi
 AC_SUBST(SHARE_ZLIB)
 AC_SUBST(ZLIBDIR)
 
 dnl png for the png output device; it also requires zlib
-LIBPNGDIR=src
-PNGDEVS=''
-PNGDEVS_ALL='$(DD)png48.dev $(DD)png16m.dev $(DD)pnggray.dev $(DD)pngmono.dev $(DD)png256.dev $(DD)png16.dev $(DD)pngalpha.dev'
-AC_MSG_CHECKING([for local png library source])
-if test -f libpng/pngread.c; then
-	AC_MSG_RESULT([yes])
-	SHARE_LIBPNG=0
-	LIBPNGDIR=libpng
-	PNGDEVS="$PNGDEVS_ALL"
-else
-	AC_MSG_RESULT([no])
-	AC_CHECK_LIB(png, png_check_sig, [
-	  AC_CHECK_HEADERS(png.h, [
-		SHARE_LIBPNG=1
+AC_ARG_WITH(png, AC_HELP_STRING([--with-png],[include PNG support (local, shared, no)]))
+dnl set safe defaults
+	LIBPNGDIR=src
+	PNGDEVS=''
+if test x$with_png != xno; then
+	PNGDEVS_ALL='$(DD)png48.dev $(DD)png16m.dev $(DD)pnggray.dev $(DD)pngmono.dev $(DD)png256.dev $(DD)png16.dev $(DD)pngalpha.dev'
+	AC_MSG_CHECKING([for local png library source])
+	if test x$with_png != xshared && test -f libpng/pngread.c; then
+		AC_MSG_RESULT([yes])
+		SHARE_LIBPNG=0
+		LIBPNGDIR=libpng
 		PNGDEVS="$PNGDEVS_ALL"
-	  ], [SHARE_LIBPNG=0])
-	], [SHARE_LIBPNG=0], [-lz])
-fi
-if test -z "$PNGDEVS"; then
-  AC_MSG_NOTICE([disabling png output devices])
+	else
+		AC_MSG_RESULT([shared])
+		AC_CHECK_LIB(png, png_check_sig, [
+		  AC_CHECK_HEADERS(png.h, [
+			SHARE_LIBPNG=1
+			PNGDEVS="$PNGDEVS_ALL"
+		  ], [SHARE_LIBPNG=0])
+		], [SHARE_LIBPNG=0], [-lz])
+	fi
+	if test -z "$PNGDEVS"; then
+	  AC_MSG_NOTICE([disabling png output devices])
+	fi
 fi
 AC_SUBST(SHARE_LIBPNG)
 AC_SUBST(LIBPNGDIR)
@@ -324,7 +331,7 @@ if test x$with_jasper != xno; then
         AC_MSG_RESULT([yes])
         echo
         echo "Running jasper configure script..."
-	olddir=`pwd`
+		olddir=`pwd`
         cd $JASPERDIR && sh ./configure
         cd $olddir
         echo
@@ -336,7 +343,7 @@ if test x$with_jasper != xno; then
           AC_MSG_RESULT([yes])
           echo
           echo "Running jasper autogen script..."
-	  olddir=`pwd`
+		  olddir=`pwd`
           cd $JASPERDIR && ./autogen.sh
           cd $olddir
           echo

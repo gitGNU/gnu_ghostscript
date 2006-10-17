@@ -16,3 +16,12 @@
 
 	* ChangeLog: New changelog file.
 
+2006-10-17 Didier LINK <didier.link@wanadoo.fr>
+
+	* all files : updates from gpl-ghostscript 8.54
+	* src/gdevhl12, Makefile.in : include gdevhl12 driver
+	* configure.ac : updates to properly configure jasper, ijs, zlib, 
+	libpng and jbig2dec
+	* Makefile.in : introduce datarootdir value
+	* new GNU version : 8.55
+	
