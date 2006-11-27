@@ -17,7 +17,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: Makefile.in,v 1.11 2006/10/17 20:15:04 Arabidopsis Exp $
+# $Id: Makefile.in,v 1.12 2006/11/27 10:16:31 Arabidopsis Exp $
 # makefile template for/from the autoconf build.
 # @configure_input@
 
@@ -392,7 +392,7 @@ EXTEND_NAMES=0
 DEVICE_DEVS=$(DISPLAY_DEV) @X11DEVS@
 
 DEVICE_DEVS1=$(DD)bmpmono.dev $(DD)bmpgray.dev $(DD)bmpsep1.dev $(DD)bmpsep8.dev $(DD)bmp16.dev $(DD)bmp256.dev $(DD)bmp16m.dev $(DD)bmp32b.dev
-DEVICE_DEVS2=#$(DD)gdevjbig2.dev $(DD)gdevjpx.dev #$(DD)rinkj.dev
+DEVICE_DEVS2=$(DD)wep24pin.dev $(DD)wep9pin.dev #$(DD)gdevjbig2.dev $(DD)gdevjpx.dev #$(DD)rinkj.dev  
 DEVICE_DEVS3=$(DD)deskjet.dev $(DD)djet500.dev $(DD)laserjet.dev $(DD)ljetplus.dev $(DD)ljet2p.dev $(DD)ljet3.dev $(DD)ljet3d.dev $(DD)ljet4.dev $(DD)ljet4d.dev $(DD)lj5mono.dev $(DD)lj5gray.dev
 DEVICE_DEVS4=$(DD)cdeskjet.dev $(DD)cdjcolor.dev $(DD)cdjmono.dev $(DD)cdj550.dev $(DD)pj.dev $(DD)pjxl.dev $(DD)pjxl300.dev
 DEVICE_DEVS5=$(DD)uniprint.dev @IJSDEVS@
@@ -462,8 +462,6 @@ include $(GLSRCDIR)/unix-end.mak
 include $(GLSRCDIR)/unixinst.mak
 
 # Clean up after the autotools scripts
-# configure.ac and Makefile.in are symlinks from a subdir 
-# (created by autogen.sh) and so are safe to remove
 distclean : clean config-clean
 	-$(RM_) -r $(BINDIR) $(GLOBJDIR) $(PSOBJDIR)
 	-$(RM_) -r autom4te.cache
@@ -471,9 +469,7 @@ distclean : clean config-clean
 	-$(RM_) Makefile
 
 maintainer-clean : distclean
-	-$(RM_) configure.ac
 	-$(RM_) configure
-	-$(RM_) Makefile.in
 
 check : default
 	$(NO_OP)

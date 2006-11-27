@@ -17,7 +17,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: contrib.mak,v 1.5 2006/06/16 18:54:58 Arabidopsis Exp $
+# $Id: contrib.mak,v 1.6 2006/11/27 10:16:31 Arabidopsis Exp $
 # makefile for contributed device drivers.
 
 # Define the name of this makefile.
@@ -869,4 +869,26 @@ $(DD)hl1240.dev : $(hl1250_) $(DD)page.dev
 # Printer: Brother HL-1250 (may work with some other models too)
 $(GLOBJ)gdevhl12.$(OBJ) : $(GLSRC)gdevhl12.c $(PDEVH) $(gdevdljm_h)
 	$(GLCC) $(GLO_)gdevhl12.$(OBJ) $(C_) $(GLSRC)gdevhl12.c
+
+#     WeP     WeP-compatible dot matrix printers (9- or 24-pin)
+
+### ----------------- WeP 9-pin Ghostscript Driver ---------------------- ###
+
+wep9_=  $(GLOBJ)gdevwep9pin.$(OBJ)
+
+$(DD)wep9pin.dev:  $(wep9_) $(GLD)page.dev
+	$(SETPDEV2) $(DD)wep9pin $(wep9_)
+
+$(GLOBJ)gdevwep9pin.$(OBJ): $(GLSRC)gdevwep9pin.c $(PDEVH)
+	$(GLCC) $(GLO_)gdevwep9pin.$(OBJ) $(C_) $(GLSRC)gdevwep9pin.c
+
+### ----------------- WeP 24-pin Ghostscript Driver ---------------------- ###
+
+wep_=  $(GLOBJ)gdevwep24pin.$(OBJ)
+
+$(DD)wep24pin.dev:  $(wep_) $(GLD)page.dev
+	$(SETPDEV2) $(DD)wep24pin $(wep_)
+
+$(GLOBJ)gdevwep24pin.$(OBJ): $(GLSRC)gdevwep24pin.c $(PDEVH)
+	$(GLCC) $(GLO_)gdevwep24pin.$(OBJ) $(C_) $(GLSRC)gdevwep24pin.c
 

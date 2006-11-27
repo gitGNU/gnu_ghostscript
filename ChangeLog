@@ -24,4 +24,6 @@
 	libpng and jbig2dec
 	* Makefile.in : introduce datarootdir value
 	* new GNU version : 8.55
-	
+
+2006-11-27 Didier LINK <didier.link@wanadoo.fr>
+	* add DMP printer drivers and ppds, thanks to Sahaya Darcius
