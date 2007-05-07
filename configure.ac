@@ -14,7 +14,7 @@ dnl You should have received a copy of the GNU General Public License along with
 dnl ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 dnl Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 dnl 
-dnl $Id: configure.ac,v 1.12 2007/05/07 11:22:12 Arabidopsis Exp $
+dnl $Id: configure.ac,v 1.13 2007/05/07 21:45:07 Arabidopsis Exp $
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------
@@ -29,7 +29,7 @@ AM_INIT_AUTOMAKE([-Wall])
 GS_VERSION_MAJOR=8
 GS_VERSION_MINOR=56
 GS_VERSION_PATCH=0
-GS_REVISIONDATE=20070414
+GS_REVISIONDATE=20070508
 
 GS_VERSION=`expr $GS_VERSION_MAJOR \* 10000 + $GS_VERSION_MINOR \* 100 + $GS_VERSION_PATCH`
 
@@ -39,12 +39,15 @@ else
 	GS_VERSION_MINOR0=$GS_VERSION_MINOR
 fi
 
+GS_REVISION=`expr $GS_VERSION_MAJOR \* 100 + $GS_VERSION_MINOR0`
+
 AC_SUBST(GS_REVISIONDATE, $GS_REVISIONDATE)
 AC_SUBST(GS_VERSION_MAJOR, $GS_VERSION_MAJOR)
 AC_SUBST(GS_VERSION_MINOR, $GS_VERSION_MINOR)
 AC_SUBST(GS_VERSION_MINOR0, $GS_VERSION_MINOR0)
 AC_SUBST(GS_VERSION_PATCH, $GS_VERSION_PATCH)
 AC_SUBST(GS_VERSION, $GS_VERSION)
+AC_SUBST(GS_REVISION, $GS_REVISION)
 
 dnl --------------------------------------------------  
 dnl Check for programs

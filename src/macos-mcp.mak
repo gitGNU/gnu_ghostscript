@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: macos-mcp.mak,v 1.8 2007/05/07 11:21:42 Arabidopsis Exp $
+# $Id: macos-mcp.mak,v 1.9 2007/05/07 21:45:07 Arabidopsis Exp $
 # Makefile for CodeWarrior XML project file creation from Darwin/MacOSX.
 
 # Run this file through make on MacOS X (or any other system with shell
@@ -42,7 +42,6 @@ PSOBJDIR=./obj
 
 # Do not edit the next group of lines.
 
-include $(GLSRCDIR)/version.mak
 DD=$(GLGENDIR)/
 GLD=$(GLGENDIR)/
 PSD=$(PSGENDIR)/

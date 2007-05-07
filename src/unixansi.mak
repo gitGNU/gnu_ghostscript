@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: unixansi.mak,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $
+# $Id: unixansi.mak,v 1.9 2007/05/07 21:45:07 Arabidopsis Exp $
 # makefile for Unix/ANSI C/X11 configuration.
 
 # ------------------------------- Options ------------------------------- #
@@ -41,7 +41,6 @@ PSOBJDIR=./obj
 #include $(COMMONDIR)/ansidefs.mak
 #include $(COMMONDIR)/unixdefs.mak
 #include $(COMMONDIR)/generic.mak
-include $(GLSRCDIR)/version.mak
 DD=$(GLGENDIR)/
 GLD=$(GLGENDIR)/
 PSD=$(PSGENDIR)/

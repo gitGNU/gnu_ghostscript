@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: unix-gcc.mak,v 1.9 2007/05/07 11:21:47 Arabidopsis Exp $
+# $Id: unix-gcc.mak,v 1.10 2007/05/07 21:45:07 Arabidopsis Exp $
 # makefile for Unix/gcc/X11 configuration.
 
 # ------------------------------- Options ------------------------------- #
@@ -44,7 +44,6 @@ PSOBJDIR=./obj
 #include $(COMMONDIR)/gccdefs.mak
 #include $(COMMONDIR)/unixdefs.mak
 #include $(COMMONDIR)/generic.mak
-include $(GLSRCDIR)/version.mak
 DD=$(GLGENDIR)/
 GLD=$(GLGENDIR)/
 PSD=$(PSGENDIR)/

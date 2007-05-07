@@ -19,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: precheck.tcl,v 1.4 2005/12/13 17:55:21 jemarch Exp $
+# $Id: precheck.tcl,v 1.5 2007/05/07 21:45:07 Arabidopsis Exp $
 
 # Check various aspects of an about-to-be-released source fileset.
 
@@ -161,7 +161,7 @@ puts "[array size CHANGED] files with ~ or .orig,\
 
 # We'd like to handle gs_init.ps properly, but its embedded version number
 # changes in every fileset.  **** SPECIAL HACK FOR GS ****
-foreach f "$NEWS lib/gs_init.ps src/version.mak" {catch {unset CHANGED($f)}}
+foreach f "$NEWS lib/gs_init.ps" {catch {unset CHANGED($f)}}
 foreach f {lib/gs_init.ps} {catch {unset NEWSCHANGED($f)}}
 set c_n {}
 foreach f [array names CHANGED] {if {![info exists NEWSCHANGED($f)]} {lappend c_n $f}}

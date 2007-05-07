@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfu.c,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
+/* $Id: gdevpdfu.c,v 1.9 2007/05/07 21:45:07 Arabidopsis Exp $ */
 /* Output utilities for PDF-writing driver */
 #include "memory_.h"
 #include "jpeglib_.h"		/* for sdct.h */
@@ -1402,8 +1402,8 @@ pdf_unclip(gx_device_pdf * pdev)
 void
 pdf_store_default_Producer(char buf[PDF_MAX_PRODUCER])
 {
-    sprintf(buf, ((gs_revision % 10000) == 0 ? "(%s %1.1f)" : "(%s %1.2f)"),
-	    gs_product, gs_revision / 10000.0);
+    sprintf(buf, ((gs_revision % 100) == 0 ? "(%s %1.1f)" : "(%s %1.2f)"),
+	    gs_product, gs_revision / 100.0);
 }
 
 /* Write matrix values. */

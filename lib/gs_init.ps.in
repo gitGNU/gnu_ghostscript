@@ -16,7 +16,7 @@
 %
 
 
-% $Id: gs_init.ps.in,v 1.1 2007/05/07 11:22:07 Arabidopsis Exp $
+% $Id: gs_init.ps.in,v 1.2 2007/05/07 21:45:07 Arabidopsis Exp $
 % Initialization file for the interpreter.
 % When this is run, systemdict is still writable.
 
@@ -32,7 +32,7 @@
 
 % Check the interpreter revision.  NOTE: the interpreter code requires
 % that the first non-comment token in this file be an integer.
-@GS_VERSION@
+@GS_REVISION@
 dup revision ne
  { (gs: Interpreter revision \() print revision 10 string cvs print
    (\) does not match gs_init.ps revision \() print 10 string cvs print

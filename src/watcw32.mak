@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: watcw32.mak,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $
+# $Id: watcw32.mak,v 1.9 2007/05/07 21:45:07 Arabidopsis Exp $
 # watcw32.mak
 # makefile for Watcom C++ v??, Windows NT or Windows 95 platform.
 # Created 1997-02-23 by Russell Lang from MSVC++ 4.0 makefile.
@@ -405,7 +405,6 @@ RO_=$(O_)
 
 # Include the generic makefiles.
 
-!include $(GLSRCDIR)\version.mak
 !include $(GLSRCDIR)\winlib.mak
 !include $(PSSRCDIR)\winint.mak
 

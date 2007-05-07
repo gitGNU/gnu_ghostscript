@@ -19,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: makegnu.tcl,v 1.4 2005/12/13 17:55:21 jemarch Exp $
+# $Id: makegnu.tcl,v 1.5 2007/05/07 21:45:07 Arabidopsis Exp $
 
 # This file makes a GNU-licensed GS distribution from an AFPL Ghostscript
 # distribution.  Usage:
@@ -335,7 +335,7 @@ proc make_changes {} {
 	set News [/ doc News.htm]
     }
     set news $News
-    foreach f [list [/ man gs.1] [/ src version.mak] [/ doc gs-vms.hlp] $News] {
+    foreach f [list [/ man gs.1] [/ doc gs-vms.hlp] $News] {
 	if {[file exists $f]} {
 	    change_notices $f 1
 	    set found 0

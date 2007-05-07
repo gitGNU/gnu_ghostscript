@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gp_wgetv.c,v 1.6 2007/05/07 11:21:45 Arabidopsis Exp $ */
+/* $Id: gp_wgetv.c,v 1.7 2007/05/07 21:45:07 Arabidopsis Exp $ */
 /* MS Windows implementation of gp_getenv */
 
 #include <windows.h>
@@ -72,8 +72,8 @@ gp_getenv(const char *name, char *ptr, int *plen)
 	    char key[256];
 	    char dotversion[16];
 	    
-	    sprintf(dotversion, "%d.%02d.%d", (int)(gs_revision / 10000),
-		    (int)((gs_revision % 10000) / 100), (int)((gs_revision % 10000) % 100);
+	    sprintf(dotversion, "%d.%02d", (int)(gs_revision / 100),
+		    (int)(gs_revision % 100));
 	    sprintf(key, "Software\\%s\\%s", gs_productfamily, dotversion);
 
 	    code = gp_getenv_registry(HKEY_CURRENT_USER, key, name, ptr, plen);

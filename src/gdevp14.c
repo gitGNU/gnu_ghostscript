@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevp14.c,v 1.8 2007/05/07 11:21:45 Arabidopsis Exp $	*/
+/* $Id: gdevp14.c,v 1.9 2007/05/07 21:45:07 Arabidopsis Exp $	*/
 /* Compositing devices for implementing	PDF 1.4	imaging	model */
 
 #include "math_.h"
@@ -750,7 +750,7 @@ dump_planar_rgba(gs_memory_t *mem, const pdf14_buf *pbuf)
 
     /* add comment */
     sprintf(software_text, "%s %d.%02d", gs_product,
-	    (int)(gs_revision / 10000), (int)(gs_revision % 10000));
+	    (int)(gs_revision / 100), (int)(gs_revision % 100));
     text_png.compression = -1;	/* uncompressed */
     text_png.key = (char *)software_key;	/* not const, unfortunately */
     text_png.text = software_text;

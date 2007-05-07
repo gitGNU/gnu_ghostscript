@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: msvclib.mak,v 1.8 2007/05/07 11:21:45 Arabidopsis Exp $
+# $Id: msvclib.mak,v 1.9 2007/05/07 21:45:07 Arabidopsis Exp $
 # makefile for Microsoft Visual C++ 4.1 or later, Windows NT or Windows 95 LIBRARY.
 #
 # All configurable options are surrounded by !ifndef/!endif to allow 
@@ -491,7 +491,6 @@ LIB_ONLY=$(GLOBJDIR)\gslib.obj $(GLOBJDIR)\gsnogc.obj $(GLOBJDIR)\gconfig.obj $(
 MAKEDLL=0
 PLATFORM=mslib32_
 
-!include $(GLSRCDIR)\version.mak
 !include $(GLSRCDIR)\msvccmd.mak
 !include $(GLSRCDIR)\winlib.mak
 !include $(GLSRCDIR)\msvctail.mak

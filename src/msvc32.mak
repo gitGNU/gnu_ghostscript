@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: msvc32.mak,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $
+# $Id: msvc32.mak,v 1.9 2007/05/07 21:45:07 Arabidopsis Exp $
 # makefile for 32-bit Microsoft Visual C++, Windows NT or Windows 95 platform.
 #
 # All configurable options are surrounded by !ifndef/!endif to allow 
@@ -317,7 +317,6 @@ WARNOPT=-W2
 #!include $(COMMONDIR)\msvcdefs.mak
 #!include $(COMMONDIR)\pcdefs.mak
 #!include $(COMMONDIR)\generic.mak
-!include $(GLSRCDIR)\version.mak
 # The following is a hack to get around the special treatment of \ at
 # the end of a line.
 NUL=

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: std.h,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $ */
+/* $Id: std.h,v 1.9 2007/05/07 21:45:07 Arabidopsis Exp $ */
 /* Standard definitions for Ghostscript code */
 
 #ifndef std_INCLUDED
@@ -261,6 +261,7 @@ void dflush(void);		/* flush stderr */
 void printf_program_ident(const gs_memory_t *mem, const char *program_name, long revision_number);
 void eprintf_program_ident(const char *program_name, long revision_number);
 const char *gs_program_name(void);
+long gs_version_number(void);
 long gs_revision_number(void);
 
 #define _epi eprintf_program_ident(gs_program_name(), gs_revision_number()),

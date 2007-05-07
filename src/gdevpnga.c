@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpnga.c,v 1.7 2007/05/07 11:21:47 Arabidopsis Exp $ */
+/* $Id: gdevpnga.c,v 1.8 2007/05/07 21:45:07 Arabidopsis Exp $ */
 /* Test driver for PDF 1.4 transparency stuff */
 
 #include "gdevprn.h"
@@ -692,7 +692,7 @@ pnga_output_page(gx_device *dev, int num_copies, int flush)
 
     /* add comment */
     sprintf(software_text, "%s %d.%02d", gs_product,
-	    (int)(gs_revision / 10000), (int)(gs_revision % 10000));
+	    (int)(gs_revision / 100), (int)(gs_revision % 100));
     text_png.compression = -1;	/* uncompressed */
     text_png.key = (char *)software_key;	/* not const, unfortunately */
     text_png.text = software_text;

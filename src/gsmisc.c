@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsmisc.c,v 1.8 2007/05/07 11:21:43 Arabidopsis Exp $ */
+/* $Id: gsmisc.c,v 1.9 2007/05/07 21:45:07 Arabidopsis Exp $ */
 /* Miscellaneous utilities for Ghostscript library */
 
 
@@ -173,9 +173,9 @@ printf_program_ident(const gs_memory_t *mem, const char *program_name, long revi
     if (program_name)
         outprintf(mem, (revision_number ? "%s " : "%s"), program_name);
     if (revision_number) {
-	int fpart = revision_number % 10000;
+	int fpart = revision_number % 100;
 
-	outprintf(mem, "%d.%02d.%d", (int)(revision_number / 10000), (fpart / 100), (fpart %100));
+	outprintf(mem, "%d.%02d", (int)(revision_number / 100), fpart);
     }
 }
 void
@@ -185,9 +185,9 @@ eprintf_program_ident(const char *program_name,
     if (program_name) {
 	epf((revision_number ? "%s " : "%s"), program_name);
 	if (revision_number) {
-	    int fpart = revision_number % 10000;
+	    int fpart = revision_number % 100;
 
-	    epf("%d.%02d.%d", (int)(revision_number / 10000), (fpart / 100), (fpart % 100));
+	    epf("%d.%02d", (int)(revision_number / 100), fpart);
 	}
 	epf(": ");
     }

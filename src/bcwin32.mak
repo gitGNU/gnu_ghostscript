@@ -16,7 +16,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
-# $Id: bcwin32.mak,v 1.8 2007/05/07 11:21:45 Arabidopsis Exp $
+# $Id: bcwin32.mak,v 1.9 2007/05/07 21:45:07 Arabidopsis Exp $
 # makefile for (MS-Windows 3.1/Win32s / Windows 95 / Windows NT) +
 #   Borland C++ 4.5 platform.
 #   Borland C++Builder 3 platform (need BC++ 4.5 for 16-bit code)
@@ -192,7 +192,6 @@ CFLAGS=
 #!include $(COMMONDIR)\bcdefs.mak
 #!include $(COMMONDIR)\pcdefs.mak
 #!include $(COMMONDIR)\generic.mak
-!include $(GLSRCDIR)\version.mak
 # The following is a hack to get around the special treatment of \ at
 # the end of a line.
 NUL=

@@ -17,7 +17,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: Makefile.in,v 1.13 2007/05/07 11:22:12 Arabidopsis Exp $
+# $Id: Makefile.in,v 1.14 2007/05/07 21:45:07 Arabidopsis Exp $
 # makefile template for/from the autoconf build.
 # @configure_input@
 
@@ -40,13 +40,10 @@ PSOBJDIR=./obj
 
 # Do not edit the next group of lines.
 
-include $(GLSRCDIR)/version.mak
 DD=$(GLGENDIR)/
 GLD=$(GLGENDIR)/
 PSD=$(PSGENDIR)/
 
-#### The following comes from the version.mak file, but we substitute
-#### the values from the configure script...
 # Major and minor version numbers.
 # MINOR0 is different from MINOR only if MINOR is a single digit.
 GS_VERSION_MAJOR=@GS_VERSION_MAJOR@
@@ -58,7 +55,7 @@ GS_REVISIONDATE=@GS_REVISIONDATE@
 # Derived values
 GS_VERSION=@GS_VERSION@
 GS_DOT_VERSION=$(GS_VERSION_MAJOR).$(GS_VERSION_MINOR0)
-GS_REVISION=$(GS_VERSION)
+GS_REVISION=$(GS_VERSION_MAJOR)$(GS_VERSION_MINOR0)
 
 # ------ Generic options ------ #
 

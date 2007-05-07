@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gscdefs.h,v 1.5 2007/05/07 11:21:47 Arabidopsis Exp $ */
+/*$Id: gscdefs.h,v 1.6 2007/05/07 21:45:07 Arabidopsis Exp $ */
 /* Prototypes for configuration definitions in gconfig.c. */
 
 #ifndef gscdefs_INCLUDED
@@ -46,6 +46,7 @@ extern CONFIG_CONST long gs_buildtime;
 extern const char *CONFIG_CONST gs_copyright;
 extern const char *CONFIG_CONST gs_product;
 extern const char *CONFIG_CONST gs_productfamily;
+extern CONFIG_CONST long gs_version;
 extern CONFIG_CONST long gs_revision;
 extern CONFIG_CONST long gs_revisiondate;
 extern CONFIG_CONST long gs_serialnumber;

@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: wctail.mak,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $
+# $Id: wctail.mak,v 1.7 2007/05/07 21:45:07 Arabidopsis Exp $
 # wctail.mak
 # Last part of Watcom C/C++ makefile common to MS-DOS and MS Windows.
 
@@ -27,7 +27,6 @@ WCTAIL_MAK=$(GLSRCDIR)\wctail.mak
 #!include $(COMMONDIR)/watcdefs.mak
 #!include $(COMMONDIR)/pcdefs.mak
 #!include $(COMMONDIR)/generic.mak
-!include $(GLSRCDIR)\version.mak
 !include $(GLSRCDIR)\gs.mak
 !include $(GLSRCDIR)\lib.mak
 !include $(GLSRCDIR)\jpeg.mak

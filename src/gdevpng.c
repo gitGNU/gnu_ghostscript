@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpng.c,v 1.8 2007/05/07 11:21:42 Arabidopsis Exp $ */
+/* $Id: gdevpng.c,v 1.9 2007/05/07 21:45:07 Arabidopsis Exp $ */
 /* PNG (Portable Network Graphics) Format.  Pronounced "ping". */
 /* lpd 1999-09-24: changes PNG_NO_STDIO to PNG_NO_CONSOLE_IO for libpng
    versions 1.0.3 and later. */
@@ -376,7 +376,7 @@ png_print_page(gx_device_printer * pdev, FILE * file)
     /* add comment */
     strncpy(software_key, "Software", sizeof(software_key));
     sprintf(software_text, "%s %d.%02d", gs_product,
-	    (int)(gs_revision / 10000), (int)(gs_revision % 10000));
+	    (int)(gs_revision / 100), (int)(gs_revision % 100));
     text_png.compression = -1;	/* uncompressed */
     text_png.key = software_key;
     text_png.text = software_text;

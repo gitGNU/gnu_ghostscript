@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: imainarg.c,v 1.9 2007/05/07 11:21:44 Arabidopsis Exp $ */
+/* $Id: imainarg.c,v 1.10 2007/05/07 21:45:07 Arabidopsis Exp $ */
 /* Command line parsing and dispatching */
 #include "ctype_.h"
 #include "memory_.h"
@@ -71,7 +71,7 @@ extern int zflushpage(i_ctx_t *);
 #endif
 
 #ifndef GS_BUG_MAILBOX
-#  define GS_BUG_MAILBOX "bug-gs@ghostscript.com"
+#  define GS_BUG_MAILBOX "bug-ghostscript@gnu.org"
 #endif
 
 #define MAX_BUFFERED_SIZE 1024
@@ -926,7 +926,10 @@ print_revision(const gs_main_instance *minst)
 private void
 print_version(const gs_main_instance *minst)
 {
-    printf_program_ident(minst->heap, NULL, gs_revision);
+	outprintf(minst->heap, "%d.%02d.%d",
+		(int)(gs_version / 10000),
+		(int)(gs_version / 100 % 100),
+		(int)(gs_version % 100));
 }
 
 /* Print usage information. */

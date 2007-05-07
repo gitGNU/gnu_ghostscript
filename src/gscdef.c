@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscdef.c,v 1.8 2007/05/07 11:21:43 Arabidopsis Exp $ */
+/* $Id: gscdef.c,v 1.9 2007/05/07 21:45:07 Arabidopsis Exp $ */
 /* Configuration scalars */
 
 #include "std.h"
@@ -57,6 +57,14 @@ const char *
 gs_program_name(void)
 {
     return gs_product;
+}
+
+/* GS_VERSION must be defined in the Makefile. */
+CONFIG_CONST long gs_version = GS_VERSION;
+
+long gs_version_number(void)
+{
+	return gs_version;
 }
 
 /* GS_REVISION must be defined in the makefile. */

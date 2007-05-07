@@ -15,13 +15,12 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: dvx-gcc.mak,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $
+# $Id: dvx-gcc.mak,v 1.9 2007/05/07 21:45:07 Arabidopsis Exp $
 # makefile for DesqView/X/gcc/X11 configuration.
 
 #include $(COMMONDIR)/gccdefs.mak
 #include $(COMMONDIR)/dvxdefs.mak
 #include $(COMMONDIR)/generic.mak
-include $(GLSRCDIR)/version.mak
 
 # ------------------------------- Options ------------------------------- #
 
