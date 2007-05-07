@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 2000, 2002 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsccode.h,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gsccode.h,v 1.7 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Types for character codes */
 
 #ifndef gsccode_INCLUDED

@@ -1,4 +1,4 @@
-@rem $Id: cp.bat,v 1.2 2004/02/14 22:20:04 atai Exp $
+@rem $Id: cp.bat,v 1.3 2007/05/07 11:21:45 Arabidopsis Exp $
 @echo off
 if "%2"=="." goto ne
 if exist _.tmp erase _.tmp

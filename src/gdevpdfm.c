@@ -1,4 +1,5 @@
-/* Copyright (C) 1996, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfm.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gdevpdfm.c,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* pdfmark processing for PDF-writing driver */
 #include "math_.h"
 #include "memory_.h"
@@ -760,12 +761,19 @@ pdfmark_write_outline(gx_device_pdf * pdev, pdf_outline_node_t * pnode,
 		      long next_id)
 {
     stream *s;
+    int code = 0;
 
     pdf_open_separate(pdev, pnode->id);
-    pnode->action->id = pnode->id;
+    if (pnode->action != NULL)
+	pnode->action->id = pnode->id;
+    else {
+	eprintf1("pdfmark error: Outline node %ld has no action or destination.\n", pnode->id);
+	code = gs_note_error(gs_error_undefined);
+    }
     s = pdev->strm;
     stream_puts(s, "<< ");
-    cos_dict_elements_write(pnode->action, pdev);
+    if (pnode->action != NULL)
+	cos_dict_elements_write(pnode->action, pdev);
     if (pnode->count)
 	pprintd1(s, "/Count %d ", pnode->count);
     pprintld1(s, "/Parent %ld 0 R\n", pnode->parent_id);
@@ -778,9 +786,10 @@ pdfmark_write_outline(gx_device_pdf * pdev, pdf_outline_node_t * pnode,
 		  pnode->first_id, pnode->last_id);
     stream_puts(s, ">>\n");
     pdf_end_separate(pdev);
-    COS_FREE(pnode->action, "pdfmark_write_outline");
+    if (pnode->action != NULL)
+	COS_FREE(pnode->action, "pdfmark_write_outline");
     pnode->action = 0;
-    return 0;
+    return code;
 }
 
 /* Adjust the parent's count when writing an outline node. */
@@ -808,12 +817,10 @@ pdfmark_close_outline(gx_device_pdf * pdev)
 {
     int depth = pdev->outline_depth;
     pdf_outline_level_t *plevel = &pdev->outline_levels[depth];
-    int code;
+    int code = 0;
 
     if (plevel->last.id) {	/* check for incomplete tree */
 	code = pdfmark_write_outline(pdev, &plevel->last, 0);
-	if (code < 0)
-	    return code;
     }
     if (depth > 0) {
 	plevel[-1].last.last_id = plevel->last.id;
@@ -823,7 +830,7 @@ pdfmark_close_outline(gx_device_pdf * pdev)
 	    pdev->closed_outline_depth--;
 	pdev->outline_depth--;
     }
-    return 0;
+    return code;
 }
 
 /* OUT pdfmark */
@@ -2028,12 +2035,19 @@ pdfmark_process(gx_device_pdf * pdev, const gs_param_string_array * pma)
     gs_matrix ctm;
     const pdfmark_name *pmn;
     int code = 0;
+    
+    {	int cnt, len = pts[-1].size;
+	char buf[200]; /* 6 doubles should fit (%g == -0.14285714285714285e-101 = 25 chars) */
 
-    if (size < 2 ||
-	sscanf((const char *)pts[-1].data, "[%g %g %g %g %g %g]",
-	       &ctm.xx, &ctm.xy, &ctm.yx, &ctm.yy, &ctm.tx, &ctm.ty) != 6
-	)
-	return_error(gs_error_rangecheck);
+	if (len > sizeof(buf) - 1)
+	    return_error(gs_error_rangecheck);
+	memcpy(buf, pts[-1].data, len);
+	buf[len] = 0;
+	cnt = sscanf(buf, "[%g %g %g %g %g %g]",
+		   &ctm.xx, &ctm.xy, &ctm.yx, &ctm.yy, &ctm.tx, &ctm.ty);
+	if (cnt != 6)
+	    return_error(gs_error_rangecheck);
+    }
     size -= 2;			/* remove CTM & pdfmark name */
     for (pmn = mark_names; pmn->mname != 0; ++pmn)
 	if (pdf_key_eq(pts, pmn->mname)) {

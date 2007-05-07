@@ -1,5 +1,6 @@
-/* Copyright (C) 1996-2004, Ghostgum Software Pty Ltd.  All rights reserved.
-
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
+  
   This file is part of GNU ghostscript
 
   GNU ghostscript is free software; you can redistribute it and/or modify it under
@@ -14,9 +15,8 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
- */
-
-/* $Id: dwimg.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+*/
+/* $Id: dwimg.h,v 1.6 2007/05/07 11:21:42 Arabidopsis Exp $ */
 
 #ifndef dwimg_INCLUDED
 #  define dwimg_INCLUDED

@@ -1,4 +1,5 @@
-/* Copyright (C) 2004 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -13,10 +14,9 @@
   You should have received a copy of the GNU General Public License along with
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-  
-*/
 
-/* $Id: gdevdsha.c,v 1.1 2006/03/08 12:30:23 Arabidopsis Exp $ */
+*/
+/* $Id: gdevdsha.c,v 1.2 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Default shading drawing device procedures. */
 
 #include "gx.h"

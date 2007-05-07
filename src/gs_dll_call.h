@@ -1,14 +1,22 @@
-/* Portions Copyright (C) 2003 artofcode LLC.
-   Portions Copyright (C) 2003 Artifex Software Inc.
-   This software is based in part on the work of the Independent JPEG Group.
+/* Copyright (C) 2001-2006 artofcode LLC.
    All Rights Reserved.
+  
+  This file is part of GNU ghostscript
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/ or
-   contact Artifex Software, Inc., 101 Lucas Valley Road #110,
-   San Rafael, CA  94903, (415)492-9861, for further information. */
-/*$Id: gs_dll_call.h,v 1.1 2006/03/08 12:30:24 Arabidopsis Exp $ */
+  GNU ghostscript is free software; you can redistribute it and/or modify it under
+  the terms of the GNU General Public License as published by the Free Software
+  Foundation; either version 2, or (at your option) any later version.
+
+  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along with
+  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+*/
+/*$Id: gs_dll_call.h,v 1.2 2007/05/07 11:21:45 Arabidopsis Exp $ */
 
 /* calling convention macros for windows style dlls.
  */ 

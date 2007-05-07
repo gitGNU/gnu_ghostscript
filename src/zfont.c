@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zfont.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: zfont.c,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Generic font operators */
 #include "ghost.h"
 #include "oper.h"
@@ -511,6 +511,11 @@ top:
 	     n > 0; pair++, n--
 	    )
 	    if (!fm_pair_is_free(pair)) {
+#if 0
+		/* We disabled this code portion because
+		   gx_add_fm_pair now copied xvalues
+		   into a stable memory. 
+		 */
 		if ((uid_is_XUID(&pair->UID) &&
 		     alloc_is_since_save((char *)pair->UID.xvalues,
 					 save))
@@ -520,15 +525,12 @@ top:
 			return code;
 		    continue;
 		}
+#endif
 		if (pair->font != 0 &&
 		    alloc_is_since_save((char *)pair->font, save)
 		    ) {
-		    if (!uid_is_valid(&pair->UID)) {
-			code = gs_purge_fm_pair(pdir, pair, 0);
-			if (code < 0)
-			    return code;
-			continue;
-		    }
+		    if (!uid_is_valid(&pair->UID))
+			gs_clean_fm_pair(pdir, pair);
 		    /* Don't discard pairs with a surviving UID. */
 		    pair->font = 0;
 		}

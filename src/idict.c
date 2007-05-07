@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1996, 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: idict.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: idict.c,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Dictionary implementation */
 #include "math_.h"		/* for frexp */
 #include "string_.h"		/* for strlen */
@@ -269,9 +269,7 @@ dict_unpack(ref * pdref, dict_stack_t *pds)
 /*
  * Look up a key in a dictionary.  Store a pointer to the value slot
  * where found, or to the (value) slot for inserting.
- * Return 1 if found, 0 if not and there is room for a new entry,
- * or e_dictfull if the dictionary is full and the key is missing.
- * The caller is responsible for ensuring key is not a null.
+ * See idict.h for the possible return values.
  */
 int
 dict_find(const ref * pdref, const ref * pkey,
@@ -559,9 +557,17 @@ dict_undef(ref * pdref, const ref * pkey, dict_stack_t *pds)
     ref *pvslot;
     dict *pdict;
     uint index;
+    int code = dict_find(pdref, pkey, &pvslot);
 
-    if (dict_find(pdref, pkey, &pvslot) <= 0)
-	return (e_undefined);
+    switch (code) {
+    case 0:
+    case e_dictfull:
+	return_error(e_undefined);
+    case 1:
+	break;
+    default:			/* other error */
+	return code;
+    }
     /* Remove the entry from the dictionary. */
     pdict = pdref->value.pdict;
     index = pvslot - pdict->values.value.refs;
@@ -790,8 +796,14 @@ dict_grow(ref * pdref, dict_stack_t *pds)
     dict *pdict = pdref->value.pdict;
     /* We might have maxlength < npairs, if */
     /* dict_round_size increased the size. */
-    ulong new_size = (ulong) d_maxlength(pdict) * 3 / 2 + 2;
-
+    ulong new_size = (ulong) d_maxlength(pdict);
+    /* Adobe does this */
+    if (new_size < 20)       
+        new_size += 10;
+    else if (new_size < 200)
+        new_size *= 2;
+    else
+        new_size += new_size / 2;
 #if arch_sizeof_int < arch_sizeof_long
     if (new_size > max_uint)
 	new_size = max_uint;

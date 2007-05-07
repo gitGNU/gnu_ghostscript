@@ -1,4 +1,5 @@
-/* Copyright (C) 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gsptype2.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gsptype2.c,v 1.8 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* PatternType 2 implementation */
 #include "gx.h"
 #include "gserrors.h"
@@ -230,12 +230,19 @@ gx_dc_pattern2_fill_rectangle(const gx_device_color * pdevc, int x, int y,
                               gs_logical_operation_t lop,
                               const gx_rop_source_t * source)
 {
-    gs_fixed_rect rect;
-    rect.p.x = int2fixed(x);
-    rect.p.y = int2fixed(y);
-    rect.q.x = int2fixed(x + w);
-    rect.q.y = int2fixed(y + h);
-    return gx_dc_pattern2_fill_path(pdevc, NULL, &rect,  dev);
+    if (dev_proc(dev, pattern_manage)(dev, gs_no_id, NULL, pattern_manage__is_cpath_accum)) {
+	/* Performing a conversion of imagemask into a clipping path.
+	   Fall back to the device procedure. */
+	return dev_proc(dev, fill_rectangle)(dev, x, y, w, h, (gx_color_index)0/*any*/);
+    } else {
+	gs_fixed_rect rect;
+
+	rect.p.x = int2fixed(x);
+	rect.p.y = int2fixed(y);
+	rect.q.x = int2fixed(x + w);
+	rect.q.y = int2fixed(y + h);
+	return gx_dc_pattern2_fill_path(pdevc, NULL, &rect,  dev);
+    }
 }
 
 /* Compare two PatternType 2 colors for equality. */

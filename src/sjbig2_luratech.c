@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sjbig2_luratech.c,v 1.1 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: sjbig2_luratech.c,v 1.2 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* jbig2decode filter implementation -- hooks in luratech JBIG2 */
 
 #include "memory_.h"

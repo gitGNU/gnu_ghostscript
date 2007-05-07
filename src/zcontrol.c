@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zcontrol.c,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: zcontrol.c,v 1.6 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Control operators */
 #include "string_.h"
 #include "ghost.h"
@@ -30,6 +30,7 @@
 #include "store.h"
 
 /* Forward references */
+private int check_for_exec(const_os_ptr);
 private int no_cleanup(i_ctx_t *);
 private uint count_exec_stack(i_ctx_t *, bool);
 private uint count_to_stopped(i_ctx_t *, long);
@@ -105,10 +106,16 @@ int
 zexec(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
+    int code;
 
     check_op(1);
-    if (!r_has_attr(op, a_executable))
-	return 0;		/* literal object just gets pushed back */
+    code = check_for_exec(op);
+    if (code < 0) {
+	return code;
+    }
+    if (!r_has_attr(op, a_executable)) {
+	return 0;	/* shortcut, literal object just gets pushed back */
+    }
     check_estack(1);
     ++esp;
     ref_assign(esp, op);
@@ -259,8 +266,8 @@ zif(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
 
-    check_type(op[-1], t_boolean);
     check_proc(*op);
+    check_type(op[-1], t_boolean);
     if (op[-1].value.boolval) {
 	check_estack(1);
 	++esp;
@@ -277,9 +284,9 @@ zifelse(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
 
-    check_type(op[-2], t_boolean);
-    check_proc(op[-1]);
     check_proc(*op);
+    check_proc(op[-1]);
+    check_type(op[-2], t_boolean);
     check_estack(1);
     ++esp;
     if (op[-2].value.boolval) {
@@ -302,7 +309,18 @@ zfor(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
     register es_ptr ep;
+    int code;
+    float params[3];
 
+ 	/* Mostly undocumented, and somewhat bizarre Adobe behavior discovered	*/
+	/* with the CET (28-05) and FTS (124-01) is that the proc is not run	*/
+	/* if BOTH the initial value and increment are zero.			*/
+    if ((code = float_params(op - 1, 3, params)) < 0)
+	return code;
+    if ( params[0] == 0.0 && params[1] == 0.0 ) {
+	pop(4);		/* don't run the proc */
+	return 0;
+    }
     check_estack(7);
     ep = esp + 6;
     check_proc(*op);
@@ -329,11 +347,6 @@ zfor(i_ctx_t *i_ctx_p)
 	else
 	    make_op_estack(ep, for_neg_int_continue);
     } else {
-	float params[3];
-	int code;
-
-	if ((code = float_params(op - 1, 3, params)) < 0)
-	    return code;
 	make_real(ep - 4, params[0]);
 	make_real(ep - 3, params[1]);
 	make_real(ep - 2, params[2]);
@@ -466,12 +479,12 @@ for_samples_continue(i_ctx_t *i_ctx_p)
 
 /* <int> <proc> repeat - */
 private int repeat_continue(i_ctx_t *);
-private int
+int
 zrepeat(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
-    check_type(op[-1], t_integer);
     check_proc(*op);
+    check_type(op[-1], t_integer);
     if (op[-1].value.intval < 0)
 	return_error(e_rangecheck);
     check_estack(5);
@@ -645,6 +658,7 @@ private int
 zstopped(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
+
     check_op(1);
     /* Mark the execution stack, and push the default result */
     /* in case control returns normally. */
@@ -655,9 +669,7 @@ zstopped(i_ctx_t *i_ctx_p)
     ++esp;
     make_int(esp, 1);		/* save the signal mask */
     push_op_estack(stopped_push);
-    *++esp = *op;		/* execute the operand */
-    esfile_check_cache();
-    pop(1);
+    push_op_estack(zexec);	/* execute the operand */
     return o_push_estack;
 }
 
@@ -675,9 +687,8 @@ zzstopped(i_ctx_t *i_ctx_p)
     *++esp = op[-1];		/* save the result */
     *++esp = *op;		/* save the signal mask */
     push_op_estack(stopped_push);
-    *++esp = op[-2];		/* execute the operand */
-    esfile_check_cache();
-    pop(3);
+    push_op_estack(zexec);	/* execute the operand */
+    pop(2);
     return o_push_estack;
 }
 
@@ -741,11 +752,14 @@ push_execstack(i_ctx_t *i_ctx_p, os_ptr op1, bool include_marks,
      */
     uint depth;
 
-    check_write_type(*op1, t_array);
+    if (!r_is_array(op1))
+	return_op_typecheck(op1);
+    /* Check the length before the write access per CET 28-03 */
     size = r_size(op1);
     depth = count_exec_stack(i_ctx_p, include_marks);
     if (depth > size)
 	return_error(e_rangecheck);
+    check_write(*op1);
     {
 	int code = ref_stack_store_check(&e_stack, op1, size, 0);
 
@@ -960,6 +974,27 @@ const op_def zcontrol3_op_defs[] = {
 
 /* ------ Internal routines ------ */
 
+/*
+ * Check the operand of exec or stopped.  Return 0 if OK to execute, or a
+ * negative error code.  We emulate an apparent bug in Adobe interpreters,
+ * which cause an invalidaccess error when 'exec'ing a noaccess literal
+ * (other than dictionaries).  We also match the Adobe interpreters in that
+ * we catch noaccess executable objects here, rather than waiting for the
+ * interpreter to catch them, so that we can signal the error with the
+ * object still on the operand stack.
+ */
+private bool
+check_for_exec(const_os_ptr op)
+{
+    if (!r_has_attr(op, a_execute) && /* only true if noaccess */
+	ref_type_uses_access(r_type(op)) &&
+	(r_has_attr(op, a_executable) || !r_has_type(op, t_dictionary))
+	) {
+	return_error(e_invalidaccess);
+    }
+    return 0;
+}
+
 /* Vacuous cleanup routine */
 private int
 no_cleanup(i_ctx_t *i_ctx_p)
@@ -1004,12 +1039,13 @@ count_to_stopped(i_ctx_t *i_ctx_p, long mask)
 	es_ptr ep = rsenum.ptr + used - 1;
 	uint count = used;
 
-	for (; count; count--, ep--)
-	    if (r_is_estack_mark(ep) &&
-		estack_mark_index(ep) == es_stopped &&
-		(ep[2].value.intval & mask) != 0
-		)
-		return scanned + (used - count + 1);
+	for (; count; count--, ep--) {
+	    if (r_is_estack_mark(ep)) {
+		if (estack_mark_index(ep) == es_stopped &&
+		  (ep[2].value.intval & mask) != 0)
+		    return scanned + (used - count + 1);
+	    }
+	}	
 	scanned += used;
     } while (ref_stack_enum_next(&rsenum));
     return 0;

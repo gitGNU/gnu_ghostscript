@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: ierrors.h,v 1.3 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: ierrors.h,v 1.4 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Definition of error codes */
 
 #ifndef ierrors_INCLUDED
@@ -68,7 +68,7 @@ extern const char *const gs_error_names[];
 #define e_undefinedfilename (-22)
 #define e_undefinedresult (-23)
 #define e_unmatchedmark (-24)
-#define e_VMerror (-25)
+#define e_VMerror (-25)		/* must be the last Level 1 error */
 
 #define LEVEL1_ERROR_NAMES\
  "unknownerror", "dictfull", "dictstackoverflow", "dictstackunderflow",\
@@ -78,22 +78,28 @@ extern const char *const gs_error_names[];
  "stackunderflow", "syntaxerror", "timeout", "typecheck", "undefined",\
  "undefinedfilename", "undefinedresult", "unmatchedmark", "VMerror"
 
-		/* ------ Additional Level 2 and DPS errors ------ */
+	/* ------ Additional Level 2 errors (also in DPS) ------ */
 
 #define e_configurationerror (-26)
-#define e_invalidcontext (-27)
-#define e_undefinedresource (-28)
-#define e_unregistered (-29)
+#define e_undefinedresource (-27)
+#define e_unregistered (-28)
+
+#define LEVEL2_ERROR_NAMES\
+ "configurationerror", "undefinedresource", "unregistered"
+
+	/* ------ Additional DPS errors ------ */
+
+#define e_invalidcontext (-29)
 /* invalidid is for the NeXT DPS extension. */
 #define e_invalidid (-30)
 
-#define LEVEL2_ERROR_NAMES\
- "configurationerror", "invalidcontext", "undefinedresource",\
- "unregistered", "invalidid"
+#define DPS_ERROR_NAMES\
+ "invalidcontext", "invalidid"
 
-#define ERROR_NAMES   LEVEL1_ERROR_NAMES, LEVEL2_ERROR_NAMES
+#define ERROR_NAMES\
+ LEVEL1_ERROR_NAMES, LEVEL2_ERROR_NAMES, DPS_ERROR_NAMES
 
-		/* ------ Pseudo-errors used internally ------ */
+	/* ------ Pseudo-errors used internally ------ */
 
 /*
  * Internal code for a fatal error.
@@ -139,21 +145,6 @@ extern const char *const gs_error_names[];
  * Internal code for requesting more input from run_string.
  */
 #define e_NeedInput (-106)
-
-/*
- * Internal code for stdin callout.
- */
-#define e_NeedStdin (-107)
-
-/*
- * Internal code for stdout callout.
- */
-#define e_NeedStdout (-108)
-
-/*
- * Internal code for stderr callout.
- */
-#define e_NeedStderr (-109)
 
 /*
  * Internal code for a normal exit when usage info is displayed.

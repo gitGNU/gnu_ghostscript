@@ -1,4 +1,5 @@
-/* Copyright (C) 1993 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: slzwe.c,v 1.2 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: slzwe.c,v 1.3 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* LZW encoding filter */
 #include "stdio_.h"	/* includes std.h */
 #include "gdebug.h"

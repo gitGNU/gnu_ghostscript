@@ -1,4 +1,5 @@
-/* Copyright (C) 1989 - 1995, 2001-2003 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,8 @@
 
 */
 
-/* $Id: gp_mac.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gp_mac.c,v 1.7 2007/05/07 11:21:47 Arabidopsis Exp $ */
+/* platform-specific routines for MacOS */
 
 #ifndef __CARBON__
 #include <Palettes.h>

@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1992, 1993, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zarray.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: zarray.c,v 1.6 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Array operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -37,7 +37,11 @@ zarray(i_ctx_t *i_ctx_p)
     uint size;
     int code;
 
-    check_int_leu(*op, max_array_size);
+    check_type(*op, t_integer);
+    if (op->value.intval < 0)
+	return_error(e_rangecheck);
+    if (op->value.intval > max_array_size)
+	return_error(e_limitcheck);
     size = op->value.intval;
     code = ialloc_ref_array((ref *)op, a_all, size, "array");
     if (code < 0)
@@ -94,8 +98,14 @@ zastore(i_ctx_t *i_ctx_p)
     uint size;
     int code;
 
-    check_write_type(*op, t_array);
+    if (!r_is_array(op))
+	return_op_typecheck(op);
     size = r_size(op);
+    /* Amazingly, the following is valid: 0 array noaccess astore */
+    if (size == 0)
+        return 0;
+    if (!r_has_type_attrs(op, t_array, a_write)) 
+        return_error(e_invalidaccess);
     if (size > op - osbot) {
 	/* The store operation might involve other stack segments. */
 	ref arr;

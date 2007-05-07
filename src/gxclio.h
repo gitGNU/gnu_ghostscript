@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 1997, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxclio.h,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxclio.h,v 1.5 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* I/O interface for command lists */
 
 #ifndef gxclio_INCLUDED
@@ -83,7 +83,7 @@ int clist_set_memory_warning(clist_file_ptr cf, int bytes_left);
  */
 int clist_ferror_code(clist_file_ptr cf);
 
-long clist_ftell(clist_file_ptr cf);
+int64_t clist_ftell(clist_file_ptr cf);
 
 /*
  * We pass the file name to clist_rewind and clist_fseek in case the
@@ -92,6 +92,6 @@ long clist_ftell(clist_file_ptr cf);
  */
 void clist_rewind(clist_file_ptr cf, bool discard_data, const char *fname);
 
-int clist_fseek(clist_file_ptr cf, long offset, int mode, const char *fname);
+int clist_fseek(clist_file_ptr cf, int64_t offset, int mode, const char *fname);
 
 #endif /* gxclio_INCLUDED */

@@ -1,4 +1,5 @@
-/* Copyright (C) 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/*$Id: gxclimag.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/*$Id: gxclimag.c,v 1.7 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Higher-level image operations for band lists */
 #include "math_.h"
 #include "memory_.h"
@@ -381,6 +381,9 @@ clist_begin_typed_image(gx_device * dev,
 	varying_depths ||
 	(code = gs_matrix_invert(&pim->ImageMatrix, &mat)) < 0 ||
 	(code = gs_matrix_multiply(&mat, &ctm_only(pis), &mat)) < 0 ||
+	/****** CAN'T HANDLE SOME TRANSFORMS ******/
+	(mat.tx != cdev->imager_state.ctm.tx) ||  
+	(mat.ty != cdev->imager_state.ctm.ty) ||  
 	!(cdev->disable_mask & clist_disable_nonrect_hl_image ?
 	  (is_xxyy(&mat) || is_xyyx(&mat)) :
 	  image_matrix_ok_to_band(&mat))
@@ -999,8 +1002,8 @@ cmd_put_color_mapping(gx_device_clist_writer * cldev,
     int code;
     const gx_device_halftone *pdht = pis->dev_ht;
 
-    /* Put out the halftone. */
-    if (pdht->id != cldev->device_halftone_id) {
+    /* Put out the halftone, if present. */
+    if (pdht && pdht->id != cldev->device_halftone_id) {
 	code = cmd_put_halftone(cldev, pdht);
 	if (code < 0)
 	    return code;

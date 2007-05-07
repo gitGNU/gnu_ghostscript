@@ -1,4 +1,5 @@
-/* Copyright (C) 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxfcid.h,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gxfcid.h,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Definitions for CID-keyed fonts */
 
 #ifndef gxfcid_INCLUDED
@@ -133,7 +133,8 @@ typedef struct gs_font_cid2_data_s {
      */
     struct o_ {
 	int (*get_outline)(gs_font_type42 *, uint, gs_glyph_data_t *);
-	int (*get_metrics)(gs_font_type42 *, uint, int, float [4]);
+	int (*get_metrics)(gs_font_type42 *, uint, gs_type42_metrics_options_t, 
+		float * /* See comment for gs_type42_default_get_metrics. */);
     } orig_procs;
 } gs_font_cid2_data;
 struct gs_font_cid2_s {

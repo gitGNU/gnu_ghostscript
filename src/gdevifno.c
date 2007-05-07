@@ -11,7 +11,7 @@
  * OF THIS SOFTWARE OR ITS FITNESS FOR ANY PARTICULAR PURPOSE.
  */
 
-/* $Id: gdevifno.c,v 1.3 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gdevifno.c,v 1.4 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /*
  * gs device to generate inferno bitmaps
  *

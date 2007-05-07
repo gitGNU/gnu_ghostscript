@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,14 +17,15 @@
 
 */
 
-/* $Id: gscpixel.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gscpixel.h,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Interface to DevicePixel color space */
 /* Requires gscspace.h */
 
 #ifndef gscpixel_INCLUDED
 #  define gscpixel_INCLUDED
 
-/* Initialize a DevicePixel color space. */
-int gs_cspace_init_DevicePixel(gs_memory_t *mem, gs_color_space * pcs, int depth);
+/* Construct a new DevicePixel color space. */
+int gs_cspace_new_DevicePixel(gs_memory_t *mem, gs_color_space **ppcs,
+			      int depth);
 
 #endif /* gscpixel_INCLUDED */

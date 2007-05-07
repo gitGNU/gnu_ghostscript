@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: isave.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: isave.c,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Save/restore manager for Ghostscript interpreter */
 #include "ghost.h"
 #include "memory_.h"
@@ -33,9 +33,7 @@
 #include "isstate.h"
 #include "store.h"		/* for ref_assign */
 #include "ivmspace.h"
-#if NO_INVISIBLE_LEVELS
 #include "igc.h"
-#endif
 #include "gsutil.h"		/* gs_next_ids prototype */
 
 /* Structure descriptor */
@@ -161,10 +159,8 @@ print_save(const char *str, uint spacen, const alloc_save_t *sav)
 	    str, spacen, (ulong)sav, (ulong)sav->client_data, (ulong)sav->id);
 }
 
-#if NO_INVISIBLE_LEVELS
 /* A link to igcref.c . */
 ptr_proc_reloc(igc_reloc_ref_ptr_nocheck, ref_packed);
-#endif
 
 /*
  * Structure for saved change chain for save/restore.  Because of the
@@ -178,9 +174,7 @@ struct alloc_change_s {
     ref contents;
 #define AC_OFFSET_STATIC (-2)	/* static object */
 #define AC_OFFSET_REF (-1)	/* dynamic ref */
-#if NO_INVISIBLE_LEVELS
 #define AC_OFFSET_ALLOCATED (-3) /* a newly allocated ref array */
-#endif
     short offset;		/* if >= 0, offset within struct */
 };
 
@@ -201,7 +195,6 @@ case 1:
     if (ptr->offset >= 0)
 	ENUM_RETURN((byte *) ptr->where - ptr->offset);
     else
-#if NO_INVISIBLE_LEVELS
 	if (ptr->offset != AC_OFFSET_ALLOCATED)
 	    ENUM_RETURN_REF(ptr->where);
 	else {
@@ -210,9 +203,6 @@ case 1:
 	       alloc_save__filter_changes. */
     	    ENUM_RETURN(0);
 	}
-#else
-	ENUM_RETURN_REF(ptr->where);
-#endif
 case 2:
     ENUM_RETURN_REF(&ptr->contents);
 ENUM_PTRS_END
@@ -225,7 +215,6 @@ private RELOC_PTRS_WITH(change_reloc_ptrs, alloc_change_t *ptr)
 	case AC_OFFSET_REF:
 	    RELOC_REF_PTR_VAR(ptr->where);
 	    break;
-#if NO_INVISIBLE_LEVELS
 	case AC_OFFSET_ALLOCATED:
 	    /* We know that ptr->where may point to an unmarked object
 	       because change_enum_ptrs skipped it,
@@ -244,7 +233,6 @@ private RELOC_PTRS_WITH(change_reloc_ptrs, alloc_change_t *ptr)
 	    if (ptr->where != 0 && !gcst->relocating_untraced)
 		ptr->where = igc_reloc_ref_ptr_nocheck(ptr->where, gcst);
 	    break;
-#endif
 	default:
 	    {
 		byte *obj = (byte *) ptr->where - ptr->offset;
@@ -296,11 +284,9 @@ alloc_save_print(alloc_change_t * cp, bool print_current)
 /* Forward references */
 private int  restore_resources(alloc_save_t *, gs_ref_memory_t *);
 private void restore_free(gs_ref_memory_t *);
-private long save_set_new(gs_ref_memory_t *, bool, bool);
-private void save_set_new_changes(gs_ref_memory_t *, bool, bool);
-#if NO_INVISIBLE_LEVELS
+private int  save_set_new(gs_ref_memory_t * mem, bool to_new, bool set_limit, ulong *pscanned);
+private int  save_set_new_changes(gs_ref_memory_t *, bool, bool);
 private bool check_l_mark(void *obj);
-#endif
 
 /* Initialize the save/restore machinery. */
 void
@@ -351,8 +337,8 @@ alloc_free_save(gs_ref_memory_t *mem, alloc_save_t *save, const char *scn)
     /* Free any inner chunk structures.  This is the easiest way to do it. */
     restore_free(mem);
 }
-ulong
-alloc_save_state(gs_dual_memory_t * dmem, void *cdata)
+int
+alloc_save_state(gs_dual_memory_t * dmem, void *cdata, ulong *psid)
 {
     gs_ref_memory_t *lmem = dmem->space_local;
     gs_ref_memory_t *gmem = dmem->space_global;
@@ -385,9 +371,11 @@ alloc_save_state(gs_dual_memory_t * dmem, void *cdata)
     /* can have the attribute set are the ones on the changes chain, */
     /* and ones in objects allocated since the last save. */
     if (lmem->save_level > 1) {
-	long scanned = save_set_new(&lsave->state, false, true);
+	ulong scanned;
+	int code = save_set_new(&lsave->state, false, true, &scanned);
 
-#if !NO_INVISIBLE_LEVELS
+	if (code < 0)
+	    return code;
 	if ((lsave->state.total_scanned += scanned) > max_repeated_scan) {
 	    /* Do a second, invisible save. */
 	    alloc_save_t *rsave;
@@ -415,12 +403,10 @@ alloc_save_state(gs_dual_memory_t * dmem, void *cdata)
 		print_save("save", lmem->space, lsave);
 	    }
 	}
-#else
-	(void)scanned;
-#endif
     }
     alloc_set_in_save(dmem);
-    return sid;
+    *psid = sid;
+    return 0;
 }
 /* Save the state of one space (global or local). */
 private alloc_save_t *
@@ -537,7 +523,6 @@ alloc_save_change(gs_dual_memory_t * dmem, const ref * pcont,
     return alloc_save_change_in(mem, pcont, where, cname);
 }
 
-#if NO_INVISIBLE_LEVELS
 /* Allocate a structure for recording an allocation event. */
 int
 alloc_save_change_alloc(gs_ref_memory_t *mem, client_name_t cname, ref_packed ***ppr)
@@ -613,8 +598,6 @@ alloc_save__filter_changes(gs_ref_memory_t *memory)
     for  (; mem; mem = &mem->saved->state)
 	alloc_save__filter_changes_in_space(mem);
 }
-
-#endif
 
 /* Return (the id of) the innermost externally visible save object, */
 /* i.e., the innermost save with a non-zero ID. */
@@ -826,7 +809,11 @@ alloc_restore_step_in(gs_dual_memory_t *dmem, alloc_save_t * save)
 	}
 	alloc_set_not_in_save(dmem);
     } else {			/* Set the l_new attribute in all slots that are now new. */
-	save_set_new(mem, true, false);
+	ulong scanned;
+
+	code = save_set_new(mem, true, false, &scanned);
+	if (code < 0)
+	    return code;
     }
 
     return sprev == save;
@@ -852,11 +839,9 @@ restore_space(gs_ref_memory_t * mem, gs_dual_memory_t *dmem)
 		alloc_save_print(cp, true);
 	    }
 #endif
-#if NO_INVISIBLE_LEVELS
 	    if (cp->offset == AC_OFFSET_ALLOCATED)
 		DO_NOTHING;
 	    else
-#endif
 	    if (r_is_packed(&cp->contents))
 		*cp->where = *(ref_packed *) & cp->contents;
 	    else
@@ -1012,11 +997,13 @@ restore_free(gs_ref_memory_t * mem)
 private void file_forget_save(gs_ref_memory_t *);
 private void combine_space(gs_ref_memory_t *);
 private void forget_changes(gs_ref_memory_t *);
-void
+int
 alloc_forget_save_in(gs_dual_memory_t *dmem, alloc_save_t * save)
 {
     gs_ref_memory_t *mem = save->space_local;
     alloc_save_t *sprev;
+    ulong scanned;
+    int code;
 
     print_save("forget_save", mem->space, save);
 
@@ -1028,7 +1015,9 @@ alloc_forget_save_in(gs_dual_memory_t *dmem, alloc_save_t * save)
 	if (mem->save_level != 0) {
 	    alloc_change_t *chp = mem->changes;
 
-	    save_set_new(&sprev->state, true, false);
+	    code = save_set_new(&sprev->state, true, false, &scanned);
+	    if (code < 0)
+		return code;
 	    /* Concatenate the changes chains. */
 	    if (chp == 0)
 		mem->changes = sprev->state.changes;
@@ -1041,7 +1030,9 @@ alloc_forget_save_in(gs_dual_memory_t *dmem, alloc_save_t * save)
 	    combine_space(mem);	/* combine memory */
 	} else {
 	    forget_changes(mem);
-	    save_set_new(mem, false, false);
+	    code = save_set_new(mem, false, false, &scanned);
+	    if (code < 0)
+		return code;
 	    file_forget_save(mem);
 	    combine_space(mem);	/* combine memory */
 	    /* This is the outermost save, which might also */
@@ -1049,7 +1040,9 @@ alloc_forget_save_in(gs_dual_memory_t *dmem, alloc_save_t * save)
 	    mem = save->space_global;
 	    if (mem != save->space_local && mem->saved != 0) {
 		forget_changes(mem);
-		save_set_new(mem, false, false);
+		code = save_set_new(mem, false, false, &scanned);
+		if (code < 0)
+		    return code;
 		file_forget_save(mem);
 		combine_space(mem);
 	    }
@@ -1058,6 +1051,7 @@ alloc_forget_save_in(gs_dual_memory_t *dmem, alloc_save_t * save)
 	}
     }
     while (sprev != save);
+    return 0;
 }
 /* Combine the chunks of the next outer level with those of the current one, */
 /* and free the bookkeeping structures. */
@@ -1152,11 +1146,9 @@ forget_changes(gs_ref_memory_t * mem)
 	ref_packed *prp = chp->where;
 
 	if_debug1('U', "[U]forgetting change 0x%lx\n", (ulong) chp);
-#if NO_INVISIBLE_LEVELS
 	if (chp->offset == AC_OFFSET_ALLOCATED)
 	    DO_NOTHING;
 	else
-#endif
 	if (!r_is_packed(prp))
 	    r_clear_attrs((ref *) prp, l_new);
 	next = chp->next;
@@ -1185,8 +1177,8 @@ file_forget_save(gs_ref_memory_t * mem)
     }
 }
 
-private inline uint
-mark_allocated(void *obj, bool to_new)
+private inline int
+mark_allocated(void *obj, bool to_new, uint *psize)
 {   
     obj_header_t *pre = (obj_header_t *)obj - 1;
     uint size = pre_obj_contents_size(pre);
@@ -1200,11 +1192,9 @@ mark_allocated(void *obj, bool to_new)
 #endif
 
     if (pre->o_type != &st_refs) {
-	/* Must not happen. Can't continue. Emit a crash. */
-	int i = *(int *)0;
-
-	mark_allocated((void *)i, false); /* an untrivial use of i 
-					     against code optimization. */
+	/* Must not happen. */
+	if_debug0('u', "Wrong object type when expected a ref.\n");
+	return_error(e_Fatal);
     }
     /* We know that every block of refs ends with */
     /* a full-size ref, so we only need the end check */
@@ -1231,10 +1221,10 @@ mark_allocated(void *obj, bool to_new)
 	    }
 	}
 #undef RP_REF
-    return size;
+    *psize = size;
+    return 0;
 }
 
-#if NO_INVISIBLE_LEVELS
 /* Check if a block contains refs marked by garbager. */
 private bool
 check_l_mark(void *obj)
@@ -1268,21 +1258,22 @@ check_l_mark(void *obj)
     }
 #undef RP_REF
 }
-#endif
 
 /* Set or reset the l_new attribute in every relevant slot. */
 /* This includes every slot on the current change chain, */
 /* and every (ref) slot allocated at this save level. */
 /* Return the number of bytes of data scanned. */
-private long
-save_set_new(gs_ref_memory_t * mem, bool to_new, bool set_limit)
+private int
+save_set_new(gs_ref_memory_t * mem, bool to_new, bool set_limit, ulong *pscanned)
 {
-    long scanned = 0;
+    ulong scanned = 0;
+    int code;
 
     /* Handle the change chain. */
-    save_set_new_changes(mem, to_new, set_limit);
+    code = save_set_new_changes(mem, to_new, set_limit);
+    if (code < 0)
+	return code;
 
-#if !NO_INVISIBLE_LEVELS
     /* Handle newly allocated ref objects. */
     SCAN_MEM_CHUNKS(mem, cp) {
 	if (cp->has_refs) {
@@ -1295,8 +1286,12 @@ save_set_new(gs_ref_memory_t * mem, bool to_new, bool set_limit)
 	    if (pre->o_type == &st_refs) {
 		/* These are refs, scan them. */
 		ref_packed *prp = (ref_packed *) (pre + 1);
-
-		scanned += mark_allocated(prp, to_new);
+		uint size;
+		
+		code = mark_allocated(prp, to_new, &size);
+		if (code < 0)
+		    return code;
+		scanned += size;
 	    } else
 		scanned += sizeof(obj_header_t);
 	    END_OBJECTS_SCAN
@@ -1306,28 +1301,29 @@ save_set_new(gs_ref_memory_t * mem, bool to_new, bool set_limit)
     END_CHUNKS_SCAN
 	if_debug2('u', "[u]set_new (%s) scanned %ld\n",
 		  (to_new ? "restore" : "save"), scanned);
-#endif
-    return scanned;
+    *pscanned = scanned;
+    return 0;
 }
 
 /* Set or reset the l_new attribute on the changes chain. */
-private void
+private int
 save_set_new_changes(gs_ref_memory_t * mem, bool to_new, bool set_limit)
 {
     register alloc_change_t *chp = mem->changes;
     register uint new = (to_new ? l_new : 0);
-#if NO_INVISIBLE_LEVELS
-    long scanned = mem->total_scanned;
-#endif
+    ulong scanned = mem->total_scanned;
 
     for (; chp; chp = chp->next) {
-#if NO_INVISIBLE_LEVELS
 	if (chp->offset == AC_OFFSET_ALLOCATED) {
-	    if (chp->where != 0)
-		scanned += mark_allocated((void *)chp->where, to_new);
-	} else
-#endif
-	{
+	    if (chp->where != 0) {
+		uint size;
+		int code = mark_allocated((void *)chp->where, to_new, &size);
+
+		if (code < 0)
+		    return code;
+		scanned += size;
+	    }
+	} else {
 	    ref_packed *prp = chp->where;
 
 	    if_debug3('U', "[U]set_new 0x%lx: (0x%lx, %d)\n",
@@ -1339,12 +1335,9 @@ save_set_new_changes(gs_ref_memory_t * mem, bool to_new, bool set_limit)
 		    (rp->tas.type_attrs & ~l_new) + new;
 	    }
 	}
-#if NO_INVISIBLE_LEVELS
 	if (mem->scan_limit == chp)
 	    break;
-#endif
     }
-#if NO_INVISIBLE_LEVELS
     if (set_limit) {
 	if (scanned >= max_repeated_scan) {
 	    mem->scan_limit = mem->changes;
@@ -1352,5 +1345,5 @@ save_set_new_changes(gs_ref_memory_t * mem, bool to_new, bool set_limit)
 	} else
 	    mem->total_scanned = scanned;
     }
-#endif
+    return 0;
 }

@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zcrd.c,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: zcrd.c,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* CIE color rendering operators */
 #include "math_.h"
 #include "ghost.h"
@@ -181,11 +181,17 @@ zcrd1_proc_params(const gs_memory_t *mem,
     int code;
     ref *pRT;
 
-    if ((code = dict_proc3_param(mem, op, "EncodeLMN", &pcprocs->EncodeLMN)) < 0 ||
-      (code = dict_proc3_param(mem, op, "EncodeABC", &pcprocs->EncodeABC)) < 0 ||
-    (code = dict_proc3_param(mem, op, "TransformPQR", &pcprocs->TransformPQR)) < 0
-	)
-	return (code < 0 ? code : gs_note_error(e_rangecheck));
+    code = dict_proc3_param(mem, op, "EncodeLMN", &pcprocs->EncodeLMN);
+    if (code < 0)
+        return code;  
+    code = dict_proc3_param(mem, op, "EncodeABC", &pcprocs->EncodeABC);
+    if (code < 0)
+        return code;  
+    code = dict_proc3_param(mem, op, "TransformPQR", &pcprocs->TransformPQR);
+    if (code < 0)
+        return code;  
+    if (code == 1)
+	return gs_note_error(e_undefined);
     if (dict_find_string(op, "RenderTable", &pRT) > 0) {
 	const ref *prte;
 	int size;

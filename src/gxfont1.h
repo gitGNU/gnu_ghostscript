@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxfont1.h,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: gxfont1.h,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Type 1 / Type 2 font data definition */
 
 #ifndef gxfont1_INCLUDED

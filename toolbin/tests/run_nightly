@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- Mode: python -*-
 
-#    Copyright (C) 2001 Artifex Software Inc.
+#    Copyright (C) 2001-2006 Artifex Software Inc.
 # 
 # This file is part of GNU ghostscript
 #
@@ -20,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: run_nightly,v 1.6 2006/06/16 12:55:32 Arabidopsis Exp $
+# $Id: run_nightly,v 1.7 2007/05/07 11:22:21 Arabidopsis Exp $
 
 import os
 import sys
@@ -33,8 +33,9 @@ from popen2 import Popen4
 
 # configuration variables
 
-YESTERDAY = time.strftime("%Y%m%d", time.localtime(time.time() - (24*60*60)))
-YESTERDAY_CTIME = time.ctime(time.time() - (24*60*60))
+NOW = time.time()
+YESTERDAY = time.strftime("%Y%m%d", time.localtime(NOW - (24*60*60)))
+YESTERDAY_CTIME = time.ctime(NOW - (24*60*60))
 
 def change_gsproduct(file):
     tmpfile = "%s.tmp" % (file,)
@@ -251,6 +252,8 @@ if p:
     for line in p.readlines():
         diff = diff + line
     p.close()
+else:
+    diff = diff + 'no changes\n'
 
 # Get updated baselines
 baselines = 'The following files had their baselines updated:\n'
@@ -259,18 +262,34 @@ if p:
     for line in p.fromchild.readlines():
         baselines = baselines + line
     p.wait()
-
+else:
+    baselines = baselines + 'no updates\n'
 baselines += "\n\n"
 
 # Prepend checkout times
 times = "SVN checkout for this report started at " + time.strftime("%a, %d %b %Y %H:%M:%S %Z", time.localtime(starttime)) + "\n"
 times += "SVN checkout ended at " + time.strftime("%a, %d %b %Y %H:%M:%S %Z", time.localtime(endtime)) + "\n"
+times += "complete regression run took %.0f seconds.\n" % (time.time()-NOW)
 times += "Testing revision " + revision + "\n"
 times += "\n"
 
+# Prepend host information
+p = os.popen('hostname -f')
+if p:
+    hostname = string.strip(p.readline())
+    p.close()
+else:
+    hostname = 'unknown host'
+host = "Running regression test on " + hostname + " ("
+p = os.popen('uname -m -o')
+if p:
+    host += string.strip(p.readline())
+    p.close()
+host += ')\n\n'
+
 # Build the report and capture it in a rotating log file
 log = open(gsconf.log_regression, "w")
-msg = times + baselines + diff
+msg = host + times + baselines + diff
 log.write(msg)
 log.write(regout)
 log.close()

@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# $Id: bughunt.sh,v 1.2 2004/02/14 22:20:20 atai Exp $
+# $Id: bughunt.sh,v 1.3 2007/05/07 11:22:11 Arabidopsis Exp $
 # NB: If your sh does not support functions, then try
 # /usr/local/bin/bash or /bin/ksh, if you have them.
 

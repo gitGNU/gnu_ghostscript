@@ -1,4 +1,5 @@
-/* Copyright (C) 2003-2004 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,14 +17,10 @@
 
 */
 
-/* $Id: sjpx.c,v 1.2 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: sjpx.c,v 1.3 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* JPXDecode filter implementation -- hooks in libjasper */
 
 #include "memory_.h"
-#ifdef JPX_DEBUG
-#include "stdio_.h"
-#endif
-
 #include "gserrors.h"
 #include "gserror.h"
 #include "gdebug.h"
@@ -40,6 +37,14 @@
 
 private_st_jpxd_state(); /* creates a gc object for our state,
 			    defined in sjpx.h */
+
+/* error reporting callback for the jpx library */
+private void
+s_jpx_jas_error_cb(jas_error_t err, char *msg)
+{
+  dprintf2("jasper (code %d) %s", (int)err, msg);
+}
+
 
 /* initialize the steam.
    this involves allocating the stream and image structures, and
@@ -60,6 +65,11 @@ s_jpxd_init(stream_state * ss)
     state->jpx_memory = ss->memory ? ss->memory->non_gc_memory : gs_lib_ctx_get_non_gc_memory_t();
             
     status = jas_init();
+    jas_set_error_cb(s_jpx_jas_error_cb);
+#ifdef JPX_DEBUG
+    /* raise the error reporting threshold from the default (0) */
+    jas_setdbglevel(1);
+#endif
 
     if (!status) {
 	state->buffer = gs_malloc(state->jpx_memory, 4096, 1, "JPXDecode temp buffer");
@@ -83,7 +93,7 @@ dump_jas_image(jas_image_t *image)
     if (image == NULL) return 1;
 
     if_debug2('w', "[w]JPX image is %d x %d\n",
-	jas_image_width(image), jas_image_height(image));
+	(int)jas_image_width(image), (int)jas_image_height(image));
 
     /* sort the colorspace */
     if jas_clrspc_isunknown(clrspc) csname = "unknown";
@@ -130,8 +140,8 @@ dump_jas_image(jas_image_t *image)
 	if_debug6('w', "[w]  component %d: type %d '%s%s' (%d bits%s)",
 	    i, type, name, opacity, jas_image_cmptprec(image, i), issigned);
 	if_debug4('w', " grid step (%d,%d) offset (%d,%d)\n",
-	    jas_image_cmpthstep(image, i), jas_image_cmptvstep(image, i),
-	    jas_image_cmpttlx(image, i), jas_image_cmpttly(image, i));
+	    (int)jas_image_cmpthstep(image, i), (int)jas_image_cmptvstep(image, i),
+	    (int)jas_image_cmpttlx(image, i), (int)jas_image_cmpttly(image, i));
     }
 
     return 0;
@@ -287,10 +297,17 @@ s_jpxd_decode_image(stream_jpxd_state * state)
 {
     jas_stream_t *stream = state->stream;
     jas_image_t *image = NULL;
+    char *optstr = NULL;
 
+    /* if the external Colorspace key is indexed, we need to ask
+       for raw index values so the external palette can be applied */
+    if (state->colorspace == gs_jpx_cs_indexed) {
+	if_debug0('w', "[w] got indexed colorspace in s_jpxd_decode_image\n");
+	optstr = (char *)"raw";
+    }
     /* see if an image is available */
     if (stream != NULL) {
-	image = jas_image_decode(stream, -1, 0);
+	image = jas_image_decode(stream, -1, optstr);
 	if (image == NULL) {
 	    dprintf("unable to decode JPX image data.\n");
 	    return ERRC;
@@ -373,15 +390,21 @@ s_jpxd_process(stream_state * ss, stream_cursor_read * pr,
 	    x = x/numcmpts;               /* now samples */
 	    /* copy data out of the decoded image data */
 	    /* be lazy and only write the rest of the current row */
+	    if (state->colorspace == gs_jpx_cs_indexed) {
+		/* we've passed 'raw' but the palette is the same pixel
+		   format as a grayscale image. The PDF interpreter will
+		   know to handle it differently. */
+		done = copy_row_gray(pw->ptr, image, x, y, usable);
+	    } else /* use the stream's colorspace */
 	    switch (jas_clrspc_fam(clrspc)) {
+		case JAS_CLRSPC_FAM_GRAY:
+		    done = copy_row_gray(pw->ptr, image, x, y, usable);
+		    break;
 		case JAS_CLRSPC_FAM_RGB:
 		    done = copy_row_rgb(pw->ptr, image, x, y, usable);
 		    break;
 		case JAS_CLRSPC_FAM_YCBCR:
 		    done = copy_row_yuv(pw->ptr, image, x, y, usable);
-		    break;
-		case JAS_CLRSPC_FAM_GRAY:
-		    done = copy_row_gray(pw->ptr, image, x, y, usable);
 		    break;
 		case JAS_CLRSPC_FAM_XYZ:
 		case JAS_CLRSPC_FAM_LAB:
@@ -431,6 +454,7 @@ s_jpxd_set_defaults(stream_state *ss)
     state->buffer = NULL;
     state->bufsize = 0;
     state->buffill = 0;
+    state->colorspace = gs_jpx_cs_unset;
 }
 
 

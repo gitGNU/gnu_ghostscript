@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zcharx.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: zcharx.c,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Level 2 character operators */
 #include "ghost.h"
 #include "oper.h"
@@ -25,11 +25,13 @@
 #include "gstext.h"
 #include "gxfixed.h"		/* for gxfont.h */
 #include "gxfont.h"
+#include "gxtext.h"
 #include "ialloc.h"
 #include "ichar.h"
 #include "igstate.h"
 #include "iname.h"
 #include "ibnum.h"
+#include "memory_.h"
 
 /* Common setup for glyphshow and .glyphwidth. */
 private int
@@ -63,6 +65,7 @@ zglyphshow(i_ctx_t *i_ctx_p)
     if ((code = glyph_show_setup(i_ctx_p, &glyph)) != 0 ||
 	(code = gs_glyphshow_begin(igs, glyph, imemory, &penum)) < 0)
 	return code;
+    *(op_proc_t *)&penum->enum_client_data = zglyphshow;
     if ((code = op_show_finish_setup(i_ctx_p, penum, 1, NULL)) < 0) {
 	ifree_object(penum, "zglyphshow");
 	return code;
@@ -98,8 +101,9 @@ moveshow(i_ctx_t *i_ctx_p, bool have_x, bool have_y)
     gs_text_enum_t *penum;
     int code = op_show_setup(i_ctx_p, op - 1);
     int format;
-    uint i, size;
+    uint i, size, widths_needed;
     float *values;
+    extern bool CPSI_mode;
 
     if (code != 0)
 	return code;
@@ -110,7 +114,29 @@ moveshow(i_ctx_t *i_ctx_p, bool have_x, bool have_y)
     values = (float *)ialloc_byte_array(size, sizeof(float), "moveshow");
     if (values == 0)
 	return_error(e_VMerror);
-    for (i = 0; i < size; ++i) {
+    if (CPSI_mode)
+	memset(values, 0, size * sizeof(values[0])); /* Safety. */
+    if ((code = gs_xyshow_begin(igs, op[-1].value.bytes, r_size(op - 1),
+				(have_x ? values : (float *)0),
+				(have_y ? values : (float *)0),
+				size, imemory, &penum)) < 0) {
+	ifree_object(values, "moveshow");
+	return code;
+    }
+    if (CPSI_mode) {
+	/* CET 13-29.PS page 2 defines a longer width array
+	   then the text requires, and CPSI silently ignores extra elements.
+	   So we need to compute exact number of characters 
+	   to know how many elements to load and type check. */
+	code = gs_text_count_chars(igs, gs_get_text_params(penum), imemory);
+	if (code < 0)
+	    return code;
+	widths_needed = code;
+	if (have_x && have_y)
+	    widths_needed <<= 1;
+    } else
+	widths_needed = size;
+    for (i = 0; i < widths_needed; ++i) {
 	ref value;
 
 	switch (code = num_array_get(imemory, op, format, i, &value)) {
@@ -126,11 +152,7 @@ moveshow(i_ctx_t *i_ctx_p, bool have_x, bool have_y)
 	    return code;
 	}
     }
-    if ((code = gs_xyshow_begin(igs, op[-1].value.bytes, r_size(op - 1),
-				(have_x ? values : (float *)0),
-				(have_y ? values : (float *)0),
-				size, imemory, &penum)) < 0 ||
-	(code = op_show_finish_setup(i_ctx_p, penum, 2, NULL)) < 0) {
+    if ((code = op_show_finish_setup(i_ctx_p, penum, 2, NULL)) < 0) {
 	ifree_object(values, "moveshow");
 	return code;
     }

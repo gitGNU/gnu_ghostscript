@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zfunc3.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: zfunc3.c,v 1.6 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* PostScript language interface to LL3 Functions */
 #include "memory_.h"
 #include "ghost.h"
@@ -75,6 +75,7 @@ gs_build_function_3(i_ctx_t *i_ctx_p, const ref *op, const gs_function_params_t 
 {
     gs_function_1ItSg_params_t params;
     int code;
+    extern bool CPSI_mode;
 
     *(gs_function_params_t *) & params = *mnDR;
     params.Functions = 0;
@@ -97,14 +98,41 @@ gs_build_function_3(i_ctx_t *i_ctx_p, const ref *op, const gs_function_params_t 
 	    ref subfn;
 
 	    array_get(mem, pFunctions, (long)i, &subfn);
-	    code = fn_build_sub_function(i_ctx_p, &subfn, &ptr[i], depth, mem);
+	    code = fn_build_sub_function(i_ctx_p, &subfn, &ptr[i], depth, mem, 0, 0);
 	    if (code < 0)
 		goto fail;
 	}
     }
-    if ((code = fn_build_float_array(op, "Bounds", true, false, &params.Bounds, mem)) != params.k - 1 ||
-	(code = fn_build_float_array(op, "Encode", true, true, &params.Encode, mem)) != 2 * params.k
-	)
+    if ((code = fn_build_float_array(op, "Bounds", true, false, &params.Bounds, mem)) != params.k - 1)
+	goto fail;
+    if (CPSI_mode) {
+	/* Adobe implementation doesn't check the Encode length. */
+	/* Extra elements are ignored; missing elements are filled with 0. */
+	/* CET 12-14m.ps depends on this bug */
+	uint sz, k2 = 2 * params.k;
+	ref *encode;
+	float *p = (float *)gs_alloc_byte_array(mem, k2, sizeof(float), "Encode");
+
+	params.Encode = p;
+	if (p == 0) {
+	    code = gs_note_error(e_VMerror);
+	    goto fail;
+	}
+	if (dict_find_string(op, "Encode", &encode) <= 0) {
+	    code = gs_note_error(e_undefined);
+	    goto fail;
+	}
+	if (!r_is_array(encode)) {
+	    code = gs_note_error(e_typecheck);
+	    goto fail;
+	}
+	sz =  min(k2, r_size(encode));
+	code = process_float_array(mem, encode, sz, p);
+	if (code < 0)
+	    goto fail;
+	while (sz < k2)
+	    p[sz++] = 0.0;
+    } else if ((code = fn_build_float_array(op, "Encode", true, true, &params.Encode, mem)) != 2 * params.k)
 	goto fail;
     if (params.Range == 0)
 	params.n = params.Functions[0]->params.n;

@@ -1,4 +1,5 @@
-/* Copyright (C) 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: ifont42.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: ifont42.h,v 1.7 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Procedure for building a Type 42 or CIDFontType 2 font */
 
 #ifndef ifont42_INCLUDED

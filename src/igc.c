@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: igc.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: igc.c,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Garbage collector for Ghostscript */
 #include "memory_.h"
 #include "ghost.h"
@@ -379,7 +379,6 @@ gs_gc_reclaim(vm_spaces * pspaces, bool global)
 	end_phase("finish trace");
     }
 
-#if NO_INVISIBLE_LEVELS
     /* Filter save change lists with removing elements,
        which point to unmarked blocks of refs. */
     {
@@ -391,7 +390,6 @@ gs_gc_reclaim(vm_spaces * pspaces, bool global)
 	    alloc_save__filter_changes(mem);
 	}
     }
-#endif
     /* Clear marks and relocation in spaces that are only being traced. */
     /* We have to clear the marks first, because we want the */
     /* relocation to wind up as o_untraced, not o_unmarked. */

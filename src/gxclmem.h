@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 1996, 1997, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxclmem.h,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxclmem.h,v 1.5 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Definitions and declarations for clist implementation in memory. */
 
 #ifndef gxclmem_INCLUDED
@@ -94,12 +94,12 @@ typedef struct MEMFILE {
     /* logical file properties */
     LOG_MEMFILE_BLK *log_head;
     LOG_MEMFILE_BLK *log_curr_blk;
-    long log_length;		/* updated during write             */
-    long log_curr_pos;		/* updated during seek, close, read */
+    int64_t log_length;		/* updated during write             */
+    int64_t log_curr_pos;	/* updated during seek, close, read */
     char *pdata;		/* raw data */
     char *pdata_end;
     /* physical file properties */
-    long total_space;		/* so we know when to start compress */
+    int64_t total_space;	/* so we know when to start compress */
     PHYS_MEMFILE_BLK *phys_curr;	/* NULL if not compressing      */
     RAW_BUFFER *raw_head, *raw_tail;
     int error_code;		/* used by CLIST_ferror         */

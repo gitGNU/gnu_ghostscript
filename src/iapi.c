@@ -1,4 +1,5 @@
-/* Copyright (C) 1996-2001 Ghostgum Software Pty Ltd.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: iapi.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: iapi.c,v 1.7 2007/05/07 11:21:45 Arabidopsis Exp $ */
 
 /* Public Application Programming Interface to Ghostscript interpreter */
 
@@ -105,19 +105,19 @@ gsapi_delete_instance(void *lib)
 {
     gs_lib_ctx_t *ctx = (gs_lib_ctx_t *)lib;
     if ((ctx != NULL)) {
+   	gs_main_instance *minst = get_minst_from_memory(ctx->memory);
+
 	ctx->caller_handle = NULL;
 	ctx->stdin_fn = NULL;
 	ctx->stdout_fn = NULL;
 	ctx->stderr_fn = NULL;
 	ctx->poll_fn = NULL;
-	get_minst_from_memory(ctx->memory)->display = NULL;
+	minst->display = NULL;
 	
-	/* NB: notice how no deletions are occuring, good bet this isn't thread ready
-	 */
+	/* Release the memory (frees up everything) */
+        gs_malloc_release(minst->heap);
 	
 	--gsapi_instance_counter;
-
-	
     }
 }
 

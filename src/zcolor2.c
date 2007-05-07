@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zcolor2.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zcolor2.c,v 1.5 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Level 2 color operators */
 #include "ghost.h"
 #include "string_.h"
@@ -44,7 +44,7 @@ zusealternate(i_ctx_t * i_ctx_p)
     const gs_color_space *  pcs = gs_currentcolorspace(igs);
 
     push(1);
-    make_bool(op, cs_base_space(pcs) != 0);
+    make_bool(op, pcs->base_space != 0);
     return 0;
 }
 

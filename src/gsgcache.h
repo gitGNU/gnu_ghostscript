@@ -1,4 +1,5 @@
-/* Copyright (C) 1996, 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsgcache.h,v 1.4 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gsgcache.h,v 1.5 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Glyph data cache definition. */
 
 #ifndef gxgcache_INCLUDED

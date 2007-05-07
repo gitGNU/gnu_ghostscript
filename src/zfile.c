@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000-2004, artofcode LLC.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zfile.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: zfile.c,v 1.8 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Non-I/O file operators */
 #include "memory_.h"
 #include "string_.h"
@@ -35,7 +35,6 @@
 #include "estack.h"		/* for filenameforall, .execfile */
 #include "ialloc.h"
 #include "ilevel.h"		/* %names only work in Level 2 */
-#include "interp.h"		/* gs_errorinfo_put_string prototype */
 #include "iname.h"
 #include "isave.h"		/* for restore */
 #include "idict.h"
@@ -69,8 +68,6 @@ private int zopen_file(i_ctx_t *, const gs_parsed_file_name_t *pfn,
 		       const char *file_access, stream **ps,
 		       gs_memory_t *mem);
 private iodev_proc_open_file(iodev_os_open_file);
-private void file_init_stream(stream *s, FILE *file, const char *fmode,
-			      byte *buffer, uint buffer_size);
 stream_proc_report_error(filter_report_error);
 
 /*
@@ -115,7 +112,7 @@ stream_proc_report_error(filter_report_error);
  * causing many aborted roundtrips through the JPEG filter code.
  */
 #define DEFAULT_BUFFER_SIZE 2048
-const uint file_default_buffer_size = DEFAULT_BUFFER_SIZE;
+extern const uint file_default_buffer_size;
 
 /* An invalid file object */
 private stream invalid_file_stream;
@@ -226,7 +223,7 @@ check_file_permissions(i_ctx_t *i_ctx_p, const char *fname, int len,
 }
 
 /* <name_string> <access_string> file <file> */
-private int
+int				/* exported for zsysvm.c */
 zfile(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -429,15 +426,16 @@ file_cleanup(i_ctx_t *i_ctx_p)
 private int
 zrenamefile(i_ctx_t *i_ctx_p)
 {
+    int code;
     os_ptr op = osp;
     gs_parsed_file_name_t pname1, pname2;
-    int code = parse_real_file_name(op - 1, &pname1, imemory,
-				    "renamefile(from)");
 
+    code = parse_real_file_name(op, &pname2, imemory, "renamefile(to)");
     if (code < 0)
 	return code;
-    pname2.fname = 0;
-    code = parse_real_file_name(op, &pname2, imemory, "renamefile(to)");
+
+    pname1.fname = 0;
+    code = parse_real_file_name(op - 1, &pname1, imemory, "renamefile(from)");
     if (code >= 0) {
 	if (pname1.iodev != pname2.iodev ) {
 	    if (pname1.iodev == iodev_default)
@@ -601,7 +599,7 @@ zfilenamesplit(i_ctx_t *i_ctx_p)
 
 /* <string> .libfile <file> true */
 /* <string> .libfile <string> false */
-private int
+int				/* exported for zsysvm.c */
 zlibfile(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -893,52 +891,6 @@ make_stream_file(ref * pfile, stream * s, const char *access)
     }
 }
 
-private gp_file_name_combine_result 
-gp_file_name_combine_patch(const char *prefix, uint plen, const char *fname, uint flen, 
-			    bool no_sibling, char *buffer, uint *blen)
-{
-    return gp_file_name_combine(prefix, plen, fname, flen, no_sibling, buffer, blen);
-}
-
-/* Prepare a stream with a file name. */
-/* Return 0 if successful, error code if not. */
-/* On a successful return, the C file name is in the stream buffer. */
-/* If fname==0, set up stream, and buffer. */
-private int
-file_prepare_stream(const char *fname, uint len, const char *file_access, 
-		 uint buffer_size, stream ** ps, char fmode[4], 
-		 gx_io_device *iodev, gs_memory_t *mem)
-{
-    byte *buffer;
-    register stream *s;
-
-    /* Open the file, always in binary mode. */
-    strcpy(fmode, file_access);
-    strcat(fmode, gp_fmode_binary_suffix);
-    if (buffer_size == 0)
-	buffer_size = file_default_buffer_size;
-    if (len >= buffer_size)    /* we copy the file name into the buffer */
-	return_error(e_limitcheck);
-    /* Allocate the stream first, since it persists */
-    /* even after the file has been closed. */
-    s = file_alloc_stream(mem, "file_prepare_stream");
-    if (s == 0)
-	return_error(e_VMerror);
-    /* Allocate the buffer. */
-    buffer = gs_alloc_bytes(mem, buffer_size, "file_prepare_stream(buffer)");
-    if (buffer == 0)
-	return_error(e_VMerror);
-    if (fname != 0) {
-	memcpy(buffer, fname, len);
-	buffer[len] = 0;	/* terminate string */
-    } else
-	buffer[0] = 0;	/* safety */
-    s->cbuf = buffer;
-    s->bsize = s->cbsize = buffer_size;
-    *ps = s;
-    return 0;
-}
-
 private int
 check_file_permissions_aux(i_ctx_t *i_ctx_p, char *fname, uint flen)
 {   /* i_ctx_p is NULL running init files. */
@@ -966,7 +918,12 @@ lib_file_open(gs_file_path_ptr  lib_path, const gs_memory_t *mem, i_ctx_t *i_ctx
     bool search_with_combine = false;
     char fmode[4] = { 'r', 0, 0, 0 };		/* room for binary suffix */
     stream *s;
+    gx_io_device *iodev = iodev_default;
 
+    /* when starting arg files (@ files) iodev_default is not yet set */
+    if (iodev == 0)
+        iodev = (gx_io_device *)gx_io_device_table[0];
+    
     strcat(fmode, gp_fmode_binary_suffix);
     if (gp_file_name_is_absolute(fname, flen)) {
        search_with_no_combine = true;
@@ -980,8 +937,7 @@ lib_file_open(gs_file_path_ptr  lib_path, const gs_memory_t *mem, i_ctx_t *i_ctx
 
 	if (gp_file_name_reduce(fname, flen, buffer, &blen1) != gp_combine_success)
 	    goto skip;
-	/* when starting arg files (@ files) iodev_default is not yet set */
-	if (iodev_os_open_file((gx_io_device *)gx_io_device_table[0], (const char *)buffer, blen1,
+	if (iodev_os_open_file(iodev, (const char *)buffer, blen1,
 				(const char *)fmode, &s, (gs_memory_t *)mem) == 0) {
 	    if (starting_arg_file ||
 			check_file_permissions_aux(i_ctx_p, buffer, blen1) >= 0) {
@@ -989,7 +945,7 @@ lib_file_open(gs_file_path_ptr  lib_path, const gs_memory_t *mem, i_ctx_t *i_ctx
 		make_stream_file(pfile, s, "r");
 		return 0;
 	    }
-	    iodev_os_fclose(iodev_default, s->file);
+	    iodev_os_fclose(iodev, s->file);
 	    return_error(e_invalidfileaccess);
 	}
 	skip:;
@@ -1002,7 +958,6 @@ lib_file_open(gs_file_path_ptr  lib_path, const gs_memory_t *mem, i_ctx_t *i_ctx
 	    const ref *prdir = pfpath->list.value.refs + pi;
 	    const char *pstr = (const char *)prdir->value.const_bytes;
 	    uint plen = r_size(prdir), blen1 = blen;
-	    gx_io_device *iodev;
     	    gs_parsed_file_name_t pname;
 	    gp_file_name_combine_result r;
 
@@ -1016,10 +971,9 @@ lib_file_open(gs_file_path_ptr  lib_path, const gs_memory_t *mem, i_ctx_t *i_ctx
 		if (i_ctx_p == NULL)
 		    continue;		/* devices not yet initialized */
 		gs_parse_file_name(&pname, pstr, plen);
-		iodev = pname.iodev;
 		memcpy(buffer, pname.fname, pname.len);
 		memcpy(buffer+pname.len, fname, flen);
-		code = iodev->procs.open_file(iodev, buffer, pname.len + flen, fmode,
+		code = pname.iodev->procs.open_file(pname.iodev, buffer, pname.len + flen, fmode,
 					      &s, (gs_memory_t *)mem);
 		if (code < 0)
 		    continue;
@@ -1030,12 +984,11 @@ lib_file_open(gs_file_path_ptr  lib_path, const gs_memory_t *mem, i_ctx_t *i_ctx
 		*pclen = plen + flen;
 		return 0;
 	    } else {
-		iodev = iodev_default;
-		r = gp_file_name_combine_patch(pstr, plen, 
+		r = gp_file_name_combine(pstr, plen, 
 			fname, flen, false, buffer, &blen1);
 		if (r != gp_combine_success)
 		    continue;
-		if (iodev_os_open_file(iodev_default, (const char *)buffer, blen1, (const char *)fmode,
+		if (iodev_os_open_file(iodev, (const char *)buffer, blen1, (const char *)fmode,
 					&s, (gs_memory_t *)mem) == 0) {
 		    if (starting_arg_file ||
 			check_file_permissions_aux(i_ctx_p, buffer, blen1) >= 0) {
@@ -1043,7 +996,7 @@ lib_file_open(gs_file_path_ptr  lib_path, const gs_memory_t *mem, i_ctx_t *i_ctx
 			make_stream_file(pfile, s, "r");
 			return 0;
 		    }
-		    iodev_os_fclose(iodev_default, s->file);
+		    iodev_os_fclose(iodev, s->file);
 		    return_error(e_invalidfileaccess);
 		}
 	    }
@@ -1089,67 +1042,6 @@ file_read_string(const byte *str, uint len, ref *pfile, gs_ref_memory_t *imem)
     make_file(pfile, a_readonly | imemory_space(imem), s->read_id, s);
     s->save_close = s->procs.close;
     s->procs.close = file_close_disable;
-    return 0;
-}
-
-/*
- * Set up a file stream on an OS file.  The caller has allocated the
- * stream and buffer.
- */
-private void
-file_init_stream(stream *s, FILE *file, const char *fmode, byte *buffer,
-		 uint buffer_size)
-{
-    switch (fmode[0]) {
-    case 'a':
-	sappend_file(s, file, buffer, buffer_size);
-	break;
-    case 'r':
-	/* Defeat buffering for terminals. */
-	{
-	    struct stat rstat;
-
-	    fstat(fileno(file), &rstat);
-	    sread_file(s, file, buffer,
-		       (S_ISCHR(rstat.st_mode) ? 1 : buffer_size));
-	}
-	break;
-    case 'w':
-	swrite_file(s, file, buffer, buffer_size);
-    }
-    if (fmode[1] == '+')
-	s->file_modes |= s_mode_read | s_mode_write;
-    s->save_close = s->procs.close;
-    s->procs.close = file_close_file;
-}
-
-/* Open a file stream, optionally on an OS file. */
-/* Return 0 if successful, error code if not. */
-/* On a successful return, the C file name is in the stream buffer. */
-/* If fname==0, set up the file entry, stream, and buffer, */
-/* but don't open an OS file or initialize the stream. */
-int
-file_open_stream(const char *fname, uint len, const char *file_access,
-		 uint buffer_size, stream ** ps, gx_io_device *iodev,
-		 iodev_proc_fopen_t fopen_proc, gs_memory_t *mem)
-{
-    int code;
-    FILE *file;
-    char fmode[4];  /* r/w/a, [+], [b], null */
-
-    if (!iodev)
-	iodev = iodev_default;
-    code = file_prepare_stream(fname, len, file_access, buffer_size, ps, fmode, 
-			    (!iodev ? iodev_default : iodev), mem);
-    if (code < 0)
-	return code;
-    if (fname == 0)
-	return 0;
-    code = (*fopen_proc)(iodev, (char *)(*ps)->cbuf, fmode, &file,
-			 (char *)(*ps)->cbuf, (*ps)->bsize);
-    if (code < 0)
-	return code;
-    file_init_stream(*ps, file, fmode, (*ps)->cbuf, (*ps)->bsize);
     return 0;
 }
 
@@ -1210,130 +1102,6 @@ filter_open(const char *file_access, uint buffer_size, ref * pfile,
 	}
     }
     make_stream_file(pfile, s, file_access);
-    return 0;
-}
-
-/* Allocate and return a file stream. */
-/* Return 0 if the allocation failed. */
-/* The stream is initialized to an invalid state, so the caller need not */
-/* worry about cleaning up if a later step in opening the stream fails. */
-stream *
-file_alloc_stream(gs_memory_t * mem, client_name_t cname)
-{
-    stream *s;
-    gs_ref_memory_t *imem = 0;
-
-    /*
-     * HACK: Figure out whether this is a gs_ref_memory_t.
-     * Avoiding this hack would require rippling a change
-     * from gs_memory_t to gs_ref_memory_t into the open_file and
-     * open_device procedures of gx_io_device, which in turn would
-     * impact other things we don't want to change.
-     */
-    if (mem->procs.free_object == gs_ref_memory_procs.free_object)
-	imem = (gs_ref_memory_t *) mem;
-
-    if (imem) {
-	/* Look first for a free stream allocated at this level. */
-	s = imem->streams;
-	while (s != 0) {
-	    if (!s_is_valid(s) && s->read_id != 0 /* i.e. !overflowed */ ) {
-		s->is_temp = 0;	/* not a temp stream */
-		return s;
-	    }
-	    s = s->next;
-	}
-    }
-    s = s_alloc(mem, cname);
-    if (s == 0)
-	return 0;
-    s_init_ids(s);
-    s->is_temp = 0;		/* not a temp stream */
-    /*
-     * Disable the stream now (in case we can't open the file,
-     * or a filter init procedure fails) so that `restore' won't
-     * crash when it tries to close open files.
-     */
-    s_disable(s);
-    if (imem) {
-	/* Add s to the list of files. */
-	if (imem->streams != 0)
-	    imem->streams->prev = s;
-	s->next = imem->streams;
-	imem->streams = s;
-    } else {
-	s->next = 0;
-    }
-    s->prev = 0;
-    return s;
-}
-
-/* ------ Stream closing ------ */
-
-/*
- * Finish closing a file stream.  This used to check whether it was
- * currentfile, but we don't have to do this any longer.  This replaces the
- * close procedure for the std* streams, which cannot actually be closed.
- *
- * This is exported for ziodev.c.  */
-int
-file_close_finish(stream * s)
-{
-    return 0;
-}
-
-/*
- * Close a file stream, but don't deallocate the buffer.  This replaces the
- * close procedure for %lineedit and %statementedit.  (This is WRONG: these
- * streams should allocate a new buffer each time they are opened, but that
- * would overstress the allocator right now.)  This is exported for ziodev.c.
- * This also replaces the close procedure for the string-reading stream
- * created for gs_run_string.
- */
-int
-file_close_disable(stream * s)
-{
-    int code = (*s->save_close)(s);
-
-    if (code)
-	return code;
-    /* Increment the IDs to prevent further access. */
-    s->read_id = s->write_id = (s->read_id | s->write_id) + 1;
-    return file_close_finish(s);
-}
-
-/* Close a file stream.  This replaces the close procedure in the stream */
-/* for normal (OS) files and for filters. */
-int
-file_close_file(stream * s)
-{
-    stream *stemp = s->strm;
-    gs_memory_t *mem;
-    int code = file_close_disable(s);
-
-    if (code)
-	return code;
-    /*
-     * Check for temporary streams created for filters.
-     * There may be more than one in the case of a procedure-based filter,
-     * or if we created an intermediate stream to ensure
-     * a large enough buffer.  Note that these streams may have been
-     * allocated by file_alloc_stream, so we mustn't free them.
-     */
-    while (stemp != 0 && stemp->is_temp != 0) {
-	stream *snext = stemp->strm;
-
-	mem = stemp->memory;
-	if (stemp->is_temp > 1)
-	    gs_free_object(mem, stemp->cbuf,
-			   "file_close(temp stream buffer)");
-	s_disable(stemp);
-	stemp = snext;
-    }
-    mem = s->memory;
-    gs_free_object(mem, s->cbuf, "file_close(buffer)");
-    if (s->close_strm && stemp != 0)
-	return sclose(stemp);
     return 0;
 }
 

@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxshade.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gxshade.c,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Shading rendering support */
 #include "math_.h"
 #include "gx.h"
@@ -47,6 +47,8 @@ private int cs_next_packed_decoded(shade_coord_stream_t *, int,
 				   const float[2], float *);
 private int cs_next_array_decoded(shade_coord_stream_t *, int,
 				  const float[2], float *);
+private void cs_packed_align(shade_coord_stream_t *cs, int radix);
+private void cs_array_align(shade_coord_stream_t *cs, int radix);
 private bool cs_eod(const shade_coord_stream_t * cs);
 
 /* Initialize a packed value stream. */
@@ -77,9 +79,11 @@ shade_next_init(shade_coord_stream_t * cs,
     if (data_source_is_array(params->DataSource)) {
 	cs->get_value = cs_next_array_value;
 	cs->get_decoded = cs_next_array_decoded;
+	cs->align = cs_array_align;
     } else {
 	cs->get_value = cs_next_packed_value;
 	cs->get_decoded = cs_next_packed_decoded;
+	cs->align = cs_packed_align;
     }
     cs->is_eod = cs_eod;
     cs->left = 0;
@@ -201,6 +205,17 @@ cs_next_array_decoded(shade_coord_stream_t * cs, int num_bits,
     return 0;
 }
 
+private void
+cs_packed_align(shade_coord_stream_t *cs, int radix)
+{
+    cs->left = cs->left / radix * radix;
+}
+
+private void
+cs_array_align(shade_coord_stream_t *cs, int radix)
+{
+}
+
 /* Get the next flag value. */
 /* Note that this always starts a new data byte. */
 int
@@ -247,16 +262,20 @@ shade_next_color(shade_coord_stream_t * cs, float *pc)
 
     if (index == gs_color_space_index_Indexed) {
 	int ncomp = gs_color_space_num_components(gs_cspace_base_space(pcs));
-	uint ci;
-	int code = cs->get_value(cs, num_bits, &ci);
-	gs_client_color cc;
+	int ci;
+        float cf;
+	int code = cs->get_decoded(cs, num_bits, decode, &cf);
+        gs_client_color cc;
 	int i;
 
 	if (code < 0)
 	    return code;
-	if (ci >= gs_cspace_indexed_num_entries(pcs))
+	if (cf < 0)
 	    return_error(gs_error_rangecheck);
-	code = gs_cspace_indexed_lookup(&pcs->params.indexed, (int)ci, &cc);
+	ci = (int)cf;
+        if (ci >= gs_cspace_indexed_num_entries(pcs))
+	    return_error(gs_error_rangecheck);
+	code = gs_cspace_indexed_lookup(pcs, ci, &cc);
 	if (code < 0)
 	    return code;
 	for (i = 0; i < ncomp; ++i)
@@ -266,22 +285,32 @@ shade_next_color(shade_coord_stream_t * cs, float *pc)
 	int ncomp = (cs->params->Function != 0 ? 1 :
 		     gs_color_space_num_components(pcs));
 
-	for (i = 0; i < ncomp; ++i)
+	for (i = 0; i < ncomp; ++i) {
 	    if ((code = cs->get_decoded(cs, num_bits, decode + i * 2, &pc[i])) < 0)
 		return code;
+	    if (cs->params->Function) {
+		gs_function_params_t *params = &cs->params->Function->params;
+
+		if (pc[i] < params->Domain[i + i])
+		    pc[i] = params->Domain[i + i];
+		else if (pc[i] > params->Domain[i + i + 1])
+		    pc[i] = params->Domain[i + i + 1];
+	    }
+	}
     }
     return 0;
 }
 
 /* Get the next vertex for a mesh element. */
 int
-shade_next_vertex(shade_coord_stream_t * cs, shading_vertex_t * vertex)
-{
+shade_next_vertex(shade_coord_stream_t * cs, shading_vertex_t * vertex, patch_color_t *c)
+{   /* Assuming p->c == c, provides a non-const access. */
     int code = shade_next_coords(cs, &vertex->p, 1);
 
-    vertex->c.cc.paint.values[1] = 0; /* safety. (patch_fill may assume 2 arguments) */
     if (code >= 0)
-	code = shade_next_color(cs, vertex->c.cc.paint.values);
+	code = shade_next_color(cs, c->cc.paint.values);
+    if (code >= 0)
+	cs->align(cs, 8); /* CET 09-47J.PS SpecialTestI04Test01. */
     return code;
 }
 

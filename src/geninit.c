@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: geninit.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: geninit.c,v 1.6 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /*
  * Utility for merging all the Ghostscript initialization files (gs_*.ps)
  * into a single file, optionally converting them to C data.  Usage:
@@ -183,7 +184,6 @@ private void
 wsc(FILE * out, const byte *str, int len)
 {
     int n = 0;
-    const byte *p = str;
     int i;
 
     for (i = 0; i < len; ++i) {
@@ -295,7 +295,7 @@ hex_string_to_binary(FILE *out, FILE *in, bool to_c)
 #define MAX_STR 0xffff	/* longest possible PostScript string token */
     byte *strbuf = (byte *)malloc(MAX_STR);
     byte *q = strbuf;
-    int c, digit;
+    int c;
     bool which = false;
     int len;
     byte prefix[3];

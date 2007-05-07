@@ -1,4 +1,5 @@
-/* Copyright (C) 1996-2000 Ghostgum Software Pty Ltd.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -17,7 +18,7 @@
 */
 
 /* dwnodll.c */
-/* $Id: dwnodll.c,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: dwnodll.c,v 1.6 2007/05/07 11:21:43 Arabidopsis Exp $ */
 
 #define STRICT
 #include <windows.h>

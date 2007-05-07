@@ -1,4 +1,5 @@
-/* Copyright (C) 2000-2003 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gpmisc.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gpmisc.c,v 1.6 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Miscellaneous support for platform facilities */
 
 #include "unistd_.h"
@@ -50,8 +51,8 @@ gp_gettmpdir(char *ptr, int *plen)
  * Open a temporary file, using O_EXCL and S_I*USR to prevent race
  * conditions and symlink attacks.
  */
-FILE *
-gp_fopentemp(const char *fname, const char *mode)
+private FILE *
+gp_fopentemp_generic(const char *fname, const char *mode, bool b64)
 {
     int flags = O_EXCL;
     /* Scan the mode to construct the flags. */
@@ -59,6 +60,14 @@ gp_fopentemp(const char *fname, const char *mode)
     int fildes;
     FILE *file;
 
+#if defined (O_LARGEFILE)
+    /* It works for Linux/gcc. */
+    if (b64)
+	flags |= O_LARGEFILE;
+#else
+    /* fixme : Not sure what to do. Unimplemented. */
+    /* MSVC has no O_LARGEFILE, but MSVC build never calls this function. */
+#endif
     while (*p)
 	switch (*p++) {
 	case 'a':
@@ -90,10 +99,24 @@ gp_fopentemp(const char *fname, const char *mode)
      * fdopen as (char *), rather than following the POSIX.1 standard,
      * which defines it as (const char *).  Patch this here.
      */
+#if defined (O_LARGEFILE)
+    file = (b64 ? fdopen64 : fdopen)(fildes, (char *)mode); /* still really const */
+#else
     file = fdopen(fildes, (char *)mode); /* still really const */
+#endif
     if (file == 0)
 	close(fildes);
     return file;
+}
+
+FILE *gp_fopentemp_64(const char *fname, const char *mode)
+{
+    return gp_fopentemp_generic(fname, mode, true);
+}
+
+FILE *gp_fopentemp(const char *fname, const char *mode)
+{
+    return gp_fopentemp_generic(fname, mode, false);
 }
 
 /* Append a string to buffer. */
@@ -125,6 +148,14 @@ search_separator(const char **ip, const char *ipe, const char *item, int directi
  * directory references from the concatenation when possible.
  * The trailing zero byte is being added.
  *
+ * Returns "gp_combine_success" if OK and sets '*blen' to the length of
+ * the combined string. If the combined string is too small for the buffer
+ * length passed in (as defined by the initial value of *blen), then the
+ * "gp_combine_small_buffer" code is returned.
+ *
+ * Also tolerates/skips leading IODevice specifiers such as %os% or %rom%
+ * When there is a leading '%' in the 'fname' no other processing is done.
+ *
  * Examples : 
  *	"/gs/lib" + "../Resource/CMap/H" --> "/gs/Resource/CMap/H"
  *	"C:/gs/lib" + "../Resource/CMap/H" --> "C:/gs/Resource/CMap/H"
@@ -134,6 +165,8 @@ search_separator(const char **ip, const char *ipe, const char *item, int directi
  *		"DUA1:[GHOSTSCRIPT.RESOURCE.CMAP]H"
  *      "\\server\share/a/b///c/../d.e/./" + "../x.e/././/../../y.z/v.v" --> 
  *		"\\server\share/a/y.z/v.v"
+ *	"%rom%lib/" + "gs_init.ps" --> "%rom%lib/gs_init.ps
+ *	"" + "%rom%lib/gs_init.ps" --> "%rom%lib/gs_init.ps"
  */
 gp_file_name_combine_result
 gp_file_name_combine_generic(const char *prefix, uint plen, const char *fname, uint flen, 
@@ -152,6 +185,16 @@ gp_file_name_combine_generic(const char *prefix, uint plen, const char *fname, u
     uint rlen = gp_file_name_root(fname, flen);
     /* We need a special handling of infixes only immediately after a drive. */
 
+    if ( flen > 0 && fname[0] == '%') {
+    	/* IoDevice -- just return the fname as-is since this */
+	/* function only handles the default file system */
+	/* NOTE: %os% will subvert the normal processing of prefix and fname */
+	ip = fname;
+	*blen = flen;
+	if (!append(&bp, bpe, &ip, flen))
+	    return gp_combine_small_buffer;
+	return gp_combine_success;
+    }
     if (rlen != 0) {
         /* 'fname' is absolute, ignore the prefix. */
 	ip = fname;

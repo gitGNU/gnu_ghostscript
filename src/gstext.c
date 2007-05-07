@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,11 +15,11 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/*$Id: gstext.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gstext.c,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Driver text interface support */
+
 #include "memory_.h"
 #include "gstypes.h"
 #include "gdebug.h"
@@ -34,6 +35,7 @@
 #include "gxpath.h"
 #include "gxtext.h"
 #include "gzstate.h"
+#include "gsutil.h"
 
 /* GC descriptors */
 public_st_gs_text_params();
@@ -185,6 +187,7 @@ gs_text_enum_init(gs_text_enum_t *pte, const gs_text_enum_procs_t *procs,
 #else
     pte->text_enum_id = 0;
 #endif
+    pte->enum_client_data = NULL;
     /* text_begin procedure sets rc */
     /* init_dynamic sets current_font */
 
@@ -232,8 +235,25 @@ gs_text_begin(gs_state * pgs, const gs_text_params_t * text,
     gx_clip_path *pcpath = 0;
     int code;
 
+    /*
+     * Detect nocurrentpoint now, even if the string is empty, for Adobe
+     * compatibility.
+     */
+    if (text->operation & (TEXT_DO_DRAW | TEXT_DO_ANY_CHARPATH)) {
+	if (!pgs->current_point_valid)
+	    return_error(gs_error_nocurrentpoint);
+    }
+    /* Detect zero FontNatrix now for Adobe compatibility with CET tests.
+       Note that matrixe\\ces like [1 0 0 0 0 0] are used in comparefiles
+       to compute a text width. 
+       Note : FontType 3 throws error in setcachedevice. */
+    if (pgs->font->FontType != ft_user_defined &&
+	pgs->font->FontMatrix.xx == 0 && pgs->font->FontMatrix.xy == 0 &&
+	pgs->font->FontMatrix.yx == 0 && pgs->font->FontMatrix.yy == 0)
+	return_error(gs_error_undefinedresult); /* sic! : CPSI compatibility */
     if (text->operation & TEXT_DO_DRAW) {
 	code = gx_effective_clip_path(pgs, &pcpath);
+        gs_set_object_tag(pgs, GS_TEXT_TAG);
 	if (code < 0)
 	    return code;
     }
@@ -339,17 +359,30 @@ gs_kshow_begin(gs_state * pgs, const byte * str, uint size,
 {
     gs_text_params_t text;
 
+    /* Detect degenerate CTM now for Adobe compatibility with CET 13-12-4. */
+    if (pgs->ctm.xx * pgs->ctm.yy - pgs->ctm.yx * pgs->ctm.xy == 0)
+	return_error(gs_error_undefinedresult); /* sic! : CPSI compatibility */
     text.operation = TEXT_FROM_STRING | text_do_draw(pgs) | TEXT_INTERVENE |
 	TEXT_RETURN_WIDTH;
     text.data.bytes = str, text.size = size;
     return gs_text_begin(pgs, &text, mem, ppte);
 }
+
+/* Retrieve text params from enumerator. */
+gs_text_params_t *
+gs_get_text_params(gs_text_enum_t *pte)
+{
+    return &pte->text;
+}
+
 int
 gs_xyshow_begin(gs_state * pgs, const byte * str, uint size,
 		const float *x_widths, const float *y_widths,
 		uint widths_size, gs_memory_t * mem, gs_text_enum_t ** ppte)
 {
     gs_text_params_t text;
+    uint widths_needed;
+    int code;
 
     text.operation = TEXT_FROM_STRING | TEXT_REPLACE_WIDTHS |
 	text_do_draw(pgs) | TEXT_RETURN_WIDTH;
@@ -357,6 +390,23 @@ gs_xyshow_begin(gs_state * pgs, const byte * str, uint size,
     text.x_widths = x_widths;
     text.y_widths = y_widths;
     text.widths_size = widths_size;
+
+    /*
+     * Check that the widths array is large enough.  gs_text_replaced_width
+     * checks this step-by-step, but Adobe's interpreters check it ahead of
+     * time, and for CET compliance, we must also.  This is very easy for
+     * font types that always have 8-bit characters, but for others, we
+     * must use the font's next_char_glyph procedure to determine how many
+     * characters there are in the string.
+     */
+    code = gs_text_count_chars(pgs, &text, mem);
+    if (code < 0)
+	return code;
+    widths_needed = code;
+    if (x_widths && y_widths)
+	widths_needed <<= 1;
+    if (widths_size < widths_needed)
+	return_error(gs_error_rangecheck);
     return gs_text_begin(pgs, &text, mem, ppte);
 }
 
@@ -537,17 +587,19 @@ gs_text_replaced_width(const gs_text_params_t *text, uint index,
     const float *x_widths = text->x_widths;
     const float *y_widths = text->y_widths;
 
-    if (index > text->size)
-	return_error(gs_error_rangecheck);
     if (x_widths == y_widths) {
 	if (x_widths) {
 	    index *= 2;
+	    if (index + 1 >= text->widths_size)
+		return_error(gs_error_rangecheck);
 	    pwidth->x = x_widths[index];
 	    pwidth->y = x_widths[index + 1];
 	}
 	else
 	    pwidth->x = pwidth->y = 0;
     } else {
+	if (index >= text->widths_size)
+	    return_error(gs_error_rangecheck);
 	pwidth->x = (x_widths ? x_widths[index] : 0.0);
 	pwidth->y = (y_widths ? y_widths[index] : 0.0);
     }
@@ -663,7 +715,7 @@ gs_default_next_char_glyph(gs_text_enum_t *pte, gs_char *pchr, gs_glyph *pglyph)
 
 /* Dummy (ineffective) BuildChar/BuildGlyph procedure */
 int
-gs_no_build_char(gs_text_enum_t *pte, gs_state *pgs, gs_font *pfont,
+gs_no_build_char(gs_show_enum *pte, gs_state *pgs, gs_font *pfont,
 		 gs_char chr, gs_glyph glyph)
 {
     return 1;			/* failure, but not error */

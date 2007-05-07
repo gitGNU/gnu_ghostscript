@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 1996 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gslib.h,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: gslib.h,v 1.6 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Library initialization and finalization interface */
 /* Requires stdio.h, gsmemory.h */
 

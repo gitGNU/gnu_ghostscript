@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: spdiff.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: spdiff.c,v 1.7 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Pixel differencing filters */
 #include "stdio_.h"		/* should be std.h, but needs NULL */
 #include "memory_.h"
@@ -130,9 +130,9 @@ row:
      * Nevertheless, the loop structures are similar enough that
      * we put the code for both functions in the same place.
      *
-     * We only optimize BitsPerComponent = 1, 3, and 4, which
-     * correspond to the common color spaces.  (In some cases, it's still
-     * simpler to provide a separate loop for BPC = 2.)
+     * We only optimize Colors = 1, 3, and 4, which correspond to the common
+     * color spaces.  (In some cases, it's still simpler to provide a
+     * separate loop for Colors = 2.)
      */
 
 #define LOOP_BY(n, body)\

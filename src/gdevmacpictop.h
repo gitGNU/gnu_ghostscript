@@ -1,5 +1,6 @@
-/* Copyright (C) 1997-2002 artofcode LLC.  All rights reserved.                     
-
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
+  
   This file is part of GNU ghostscript
 
   GNU ghostscript is free software; you can redistribute it and/or modify it under
@@ -15,8 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-
-/* $Id: gdevmacpictop.h,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevmacpictop.h,v 1.6 2007/05/07 11:21:42 Arabidopsis Exp $ */
 
 /* Helpers for working with Classic MacOS Quickdraw pictures */
 /* (obsoleted by the DISPLAY device) */

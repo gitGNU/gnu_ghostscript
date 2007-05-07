@@ -1,4 +1,5 @@
-/* Copyright (C) 2003 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gzspotan.h,v 1.4 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gzspotan.h,v 1.5 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* State and interface definitions for a spot analyzer device. */
 
 /*
@@ -141,5 +141,11 @@ void gx_san_end(const gx_device_spot_analyzer *padev);
 int gx_san_generate_stems(gx_device_spot_analyzer *padev, 
 		bool overall_hints, void *client_data,
 		int (*handler)(void *client_data, gx_san_sect *ss));
+
+/* -------------- Other external symbols ------------------------ */
+
+/* is_spotan_device() in gxfill.c uses san_open */
+/* to identify the spot analyzer device         */
+dev_proc_open_device(san_open);
 
 #endif /* gzspotan_INCLUDED */

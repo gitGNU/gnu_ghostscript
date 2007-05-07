@@ -1,4 +1,5 @@
-/* Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: stdpn.h,v 1.3 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: stdpn.h,v 1.4 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Pn macros for pre-ANSI compiler compatibility */
 
 #ifndef stdpn_INCLUDED

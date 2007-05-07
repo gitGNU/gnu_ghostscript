@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxdevice.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gxdevice.h,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Definitions for device implementors */
 
 #ifndef gxdevice_INCLUDED
@@ -582,5 +582,7 @@ int gdev_write_output_media(int index, gs_param_dict * pdict,
 			    const gdev_output_media_t * pom);
 
 int gdev_end_output_media(gs_param_list * mlist, gs_param_dict * pdict);
+
+void gx_device_request_leadingedge(gx_device *dev, int le_req);
 
 #endif /* gxdevice_INCLUDED */

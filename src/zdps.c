@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zdps.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: zdps.c,v 1.6 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Display PostScript extensions */
 #include "ghost.h"
 #include "oper.h"

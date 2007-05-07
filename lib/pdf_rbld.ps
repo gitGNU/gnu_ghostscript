@@ -1,14 +1,20 @@
 %    Copyright (C) 2002 artofcode LLC.  All rights reserved.
 % 
-% This software is provided AS-IS with no warranty, either express or
-% implied.
-% 
-% This software is distributed under license and may not be copied,
-% modified or distributed except as expressly authorized under the terms
-% of the license contained in the file LICENSE in this distribution.
-
-
-% $Id: pdf_rbld.ps,v 1.4 2006/06/16 12:55:13 Arabidopsis Exp $
+%  This file is part of GNU ghostscript
+%
+%  GNU ghostscript is free software; you can redistribute it and/or modify it under
+%  the terms of the GNU General Public License as published by the Free Software
+%  Foundation; either version 2, or (at your option) any later version.
+%
+%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+%
+%  You should have received a copy of the GNU General Public License along with
+%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+%
+% $Id: pdf_rbld.ps,v 1.5 2007/05/07 11:22:07 Arabidopsis Exp $
 % pdf_rbld.ps - Rebuilding of broken PDF files (xref errors)
 
 % This module contains routines that are used if we detect an error
@@ -24,7 +30,7 @@
 % if true --> we have an object with duplicate object and generation numbers.
 /dup_obj_gen_num false def
 
-% Note:  This routine is also used by non-rebuild code.
+% Note:  This procedure is also used by non-rebuild code.
 % Store a line in the xref array (Actually Objects and Generations arrays)
 % <obj num> (strm num> <obj loc> <gen num>  setxrefentry <obj num> strm num>
 % 						 	 <obj loc> <gen num>
@@ -68,10 +74,10 @@
   } ifelse
 } bind def
 
-% Print the contents of the xref array.  This actually consists of two
-% arrays (Objects and Generations).  Both are larrays.  larrays are a
-% special Ghostscript object which can be arrays with more than 64k
-% elements.
+% Print the contents of the xref array.  This actually consists of three
+% arrays (Objects, Generations, and ObjectStream).  All three are larrays.
+% larrays are a special Ghostscript object which can be arrays with more
+% than 64k elements.
 /print_xref				% - print_xref -
 { 0 1 Objects llength 1 sub		% stack: 0 1 <number of objects - 1>
   { dup =only				% print object number
@@ -84,14 +90,6 @@
   } for
   flush
 } bind def
-
-% This is the same as the postscript token operator except that
-% errors are ignored.
-/token_nofail
-{
-  { token } .internalstopped
-  { pop false } if
-} bind odef
 
 % Get token from string and check its type
 %   <string> <type> typed_token <false>		% no token or not match
@@ -121,7 +119,10 @@
 /search_start_trailer		% - search_start_trailer <trailer loc>
 { % Read the first 300 bytes and check for xref
   PDFfile 0 setfileposition
-  300 string 0 1 299 { 2 copy PDFfile read pop put pop } for
+  PDFfile bytesavailable post_eof_count sub	% location of end of data
+  300 .min			% block size to read
+  dup string 0 1 4 -1 roll 1 sub
+  { 2 copy PDFfile read pop put pop } for
   (xref) search {
     % found 'xref'
     exch pop exch pop length 4 add PDFfile exch setfileposition
@@ -137,7 +138,7 @@
       PDFfile fileposition	% get file position
     } if
   } {
-    pop 0			% no xref - should not happen
+    pop search_end_trailer	% no xref, should not happen, search end of file
   } ifelse
 } bind def
 
@@ -149,7 +150,7 @@
   % anything past the last %%EOF since this is not PDF data.
   PDFfile 0 setfileposition
   PDFfile bytesavailable post_eof_count sub	% location of end of data
-  dup 4096 .min			% block size to read
+  dup 65535 .min		% block size to read
 				% stack: <file end pos> <block size>
   % move file position to the start of the block
   2 copy sub PDFfile exch setfileposition
@@ -186,13 +187,23 @@
   % read block of data
   dup string 0 1 4 -1 roll 1 sub { 2 copy PDFfile read pop put pop } for
   % search for last occurance of 'startxref'
-  (startxref) { search not { exit } if pop } loop
-  % determine where the trailer is in the file
-  %   trailer loc = end loc - remaing string length
-  length sub 9 sub
-  % move the file to this position and read startxref and position
-  PDFfile exch setfileposition
-  PDFfile token pop pop PDFfile token pop
+  false				% Assume that startxref not present
+  exch (startxref) { 
+     search not { exit } if	% Exit loop when no more startxref's
+     pop 3 -1 roll pop true 3 1 roll	% Idicate that we have found starxref
+  } loop
+  exch				% Exch last string and 'found' flag
+  { 
+     % determine where the startxref is in the file
+     %   'startxref' loc = end loc - remaing string length - 9 bytes
+     length sub 9 sub
+     % move the file to this position and read startxref and position
+     PDFfile exch setfileposition PDFfile token
+     pop pop PDFfile token pop
+  } {
+     % startxref not found.  We will search the end of the file for trailer.
+     pop pop PDFfilelen
+  } ifelse
   % compare xref position to 1/2 the length of the file and search for trailer
   exch 2 div lt { search_start_trailer } { search_end_trailer } ifelse
   % get the trailer
@@ -207,8 +218,7 @@
 % stuff when we are scanning for objects.
 /determine_post_eof_count		% - determine_post_eof_count <count>
 { % Position to read block of data from the end of the file. 
-  PDFfile 0 setfileposition
-  PDFfile bytesavailable	% size of file
+  PDFfilelen			% size of file
   dup 4096 .min			% block size to read
   % stack: <file size> <file size> <block size>
   % move file position to the start of the block
@@ -263,7 +273,8 @@
 	      1 index 20 add 20 idiv 20 mul
 	      growPDFobjects
 	      % save xref parameters into ObjectStream, Objects and Generations
-	      1 index 0 4 index 3 index	% rearrange parms for setxrefentry
+	      1 index 0			% rearrange parms for setxrefentry
+	      4 index PDFoffset sub 3 index
 	      setxrefentry		% save parameters
 	      pop pop pop pop		% clear parameters
 	    } if			% check if name is 'obj'

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: szlibc.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: szlibc.c,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Code common to zlib encoding and decoding streams */
 #include "std.h"
 #include "gserror.h"

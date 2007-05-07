@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zgeneric.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: zgeneric.c,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Array/string/dictionary generic operators for PostScript */
 #include "memory_.h"
 #include "ghost.h"
@@ -77,9 +77,14 @@ zcopy_integer(i_ctx_t *i_ctx_p)
     int count, i;
     int code;
 
-    if ((ulong) op->value.intval > op - osbot) {
+    if ((ulong) op->value.intval > (ulong)(op - osbot)) {
 	/* There might be enough elements in other blocks. */
-	check_int_ltu(*op, ref_stack_count(&o_stack));
+	check_type(*op, t_integer);
+        if (op->value.intval >= (int)ref_stack_count(&o_stack)) 
+            return_error(e_stackunderflow);
+        if (op->value.intval < 0) 
+            return_error(e_rangecheck);
+        check_int_ltu(*op, ref_stack_count(&o_stack));
 	count = op->value.intval;
     } else if (op1 + (count = op->value.intval) <= ostop) {
 	/* Fast case. */
@@ -154,6 +159,7 @@ zlength(i_ctx_t *i_ctx_p)
 private int
 zget(i_ctx_t *i_ctx_p)
 {
+    int code;
     os_ptr op = osp;
     os_ptr op1 = op - 1;
     ref *pvalue;
@@ -170,19 +176,19 @@ zget(i_ctx_t *i_ctx_p)
 	    check_int_ltu(*op, r_size(op1));
 	    make_int(op1, op1->value.bytes[(uint) op->value.intval]);
 	    break;
-	default: {
-	    int code;
-
+	case t_array:
+	case t_mixedarray:
+	case t_shortarray:
 	    check_type(*op, t_integer);
 	    check_read(*op1);
 	    code = array_get(imemory, op1, op->value.intval, op1);
-	    if (code < 0) {	/* Might be a stackunderflow reported as typecheck. */
-		if (code == e_typecheck)
-		    return_op_typecheck(op1);
-		else
-		    return code;
-	    }
-	}
+	    if (code < 0) 
+	        return code;
+	    break;
+        case t__invalid:
+            return_error(e_stackunderflow);
+        default:
+            return_error(e_typecheck); 
     }
     pop(1);
     return 0;
@@ -203,7 +209,7 @@ zput(i_ctx_t *i_ctx_p)
     switch (r_type(op2)) {
 	case t_dictionary:
 	    if (i_ctx_p->in_superexec == 0)
-	    check_dict_write(*op2);
+		check_dict_write(*op2);
 	    {
 		int code = idict_put(op2, op1, op);
 
@@ -357,7 +363,12 @@ zputinterval(i_ctx_t *i_ctx_p)
 
     switch (r_type(opto)) {
 	default:
-	    return_op_typecheck(opto);
+            return_error(e_typecheck);
+        case t__invalid:
+            if (r_type(op) != t_array && r_type(op) != t_string && r_type(op) != t__invalid)
+                return_error(e_typecheck); /* to match Distiller */
+            else
+                return_error(e_stackunderflow);
 	case t_mixedarray:
 	case t_shortarray:
 	    return_error(e_invalidaccess);
@@ -408,6 +419,7 @@ zforall(i_ctx_t *i_ctx_p)
     es_ptr cproc = ep + 4;
 
     check_estack(6);
+    check_proc(*op);
     switch (r_type(obj)) {
 	default:
 	    return_op_typecheck(obj);
@@ -431,7 +443,6 @@ zforall(i_ctx_t *i_ctx_p)
 	    make_op_estack(cproc, packedarray_continue);
 	    break;
     }
-    check_proc(*op);
     /*
      * Push:
      *   - a mark;
@@ -597,7 +608,7 @@ copy_interval(i_ctx_t *i_ctx_p /* for ref_assign_old */, os_ptr prto,
 	    {	/* We don't have to worry about aliasing, because */
 		/* packed arrays are read-only and hence the destination */
 		/* can't be a packed array. */
-		int i;
+		uint i;
 		const ref_packed *packed = prfrom->value.packed;
 		ref *pdest = prto->value.refs + index;
 		ref elt;

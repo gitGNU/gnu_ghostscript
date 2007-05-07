@@ -20,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gsconf.py,v 1.4 2005/12/13 17:58:03 jemarch Exp $
+# $Id: gsconf.py,v 1.5 2007/05/07 11:22:21 Arabidopsis Exp $
 
 # gsconf.py
 #
@@ -61,4 +61,11 @@ def parse_config(file=configdir+"testing.cfg"):
 def get_dailydb_name():
     return dailydir + time.strftime("%Y%m%d", time.localtime()) + ".db"
 
-parse_config()
+try:
+  # MPI version - node specific config
+  node=os.environ["PBS_NODENUM"]
+  parse_config(configdir+"testing.cfg."+node)
+except KeyError:
+  # normal version
+  parse_config()
+

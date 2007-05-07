@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gximage1.c,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gximage1.c,v 1.5 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* ImageType 1 initialization */
 #include "gx.h"
 #include "gserrors.h"
@@ -53,7 +53,7 @@ const gx_image_type_t gs_image_type_mask1 = {
 
 /* Define the procedures for initializing gs_image_ts to default values. */
 void
-gs_image_t_init_adjust(gs_image_t * pim, const gs_color_space * color_space,
+gs_image_t_init_adjust(gs_image_t * pim, gs_color_space * color_space,
 		       bool adjust)
 {
     gs_pixel_image_t_init((gs_pixel_image_t *) pim, color_space);
@@ -117,7 +117,7 @@ gx_image1_sput(const gs_image_common_t *pic, stream *s,
 
 private int
 gx_image1_sget(gs_image_common_t *pic, stream *s,
-	       const gs_color_space *pcs)
+	       gs_color_space *pcs)
 {
     gs_image1_t *const pim = (gs_image1_t *)pic;
     int code = gx_pixel_image_sget((gs_pixel_image_t *)pim, s, pcs);
@@ -177,7 +177,7 @@ gx_image1_mask_sput(const gs_image_common_t *pic, stream *s,
 
 private int
 gx_image1_mask_sget(gs_image_common_t *pic, stream *s,
-		    const gs_color_space *ignore_pcs)
+		    gs_color_space *ignore_pcs)
 {
     gs_image1_t *const pim = (gs_image1_t *)pic;
     int code;

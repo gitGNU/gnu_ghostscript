@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpcfb.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevpcfb.c,v 1.7 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* IBM PC frame buffer (EGA/VGA) drivers */
 #include "memory_.h"
 #include "gconfigv.h"		/* for USE_ASM */

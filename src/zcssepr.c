@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zcssepr.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: zcssepr.c,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Separation color space support */
 #include "memory_.h"
 #include "ghost.h"
@@ -61,11 +61,10 @@ zsetseparationspace(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
     const ref *pcsa;
-    gs_color_space cs;
-    const gs_color_space * pacs;
+    gs_color_space *pcs;
+    gs_color_space * pacs;
     ref_colorspace cspace_old;
     ref sname, name_none, name_all;
-    gs_device_n_map *pmap = NULL;
     gs_function_t *pfn = NULL;
     separation_type sep_type;
     int code;
@@ -78,8 +77,7 @@ zsetseparationspace(i_ctx_t *i_ctx_p)
 
     /* The alternate color space has been selected as the current color space */
     pacs = gs_currentcolorspace(igs);
-    cs = *pacs;
-    if (!cs.type->can_be_alt_space)
+    if (!pacs->type->can_be_alt_space)
 	return_error(e_rangecheck);
 
     /*
@@ -116,30 +114,25 @@ zsetseparationspace(i_ctx_t *i_ctx_p)
 	return_error(e_rangecheck);
 
     cspace_old = istate->colorspace;
-    /* See zcsindex.c for why we use memmove here. */
-    memmove(&cs.params.separation.alt_space, &cs,
-	        sizeof(cs.params.separation.alt_space));
     /* Now set the current color space as Separation */
-    code = gs_build_Separation(&cs, pacs, imemory);
+    code = gs_cspace_new_Separation(&pcs, pacs, imemory);
     if (code < 0)
 	return code;
-    pmap = cs.params.separation.map;
-    gs_cspace_init(&cs, &gs_color_space_type_Separation, imemory, false);
-    cs.params.separation.sep_type = sep_type;
-    cs.params.separation.sep_name = name_index(mem, &sname);
-    cs.params.separation.get_colorname_string = gs_get_colorname_string;
+    pcs->params.separation.sep_type = sep_type;
+    pcs->params.separation.sep_name = name_index(mem, &sname);
+    pcs->params.separation.get_colorname_string = gs_get_colorname_string;
     istate->colorspace.procs.special.separation.layer_name = pcsa[0];
     istate->colorspace.procs.special.separation.tint_transform = pcsa[2];
     if (code >= 0)
-        code = gs_cspace_set_sepr_function(&cs, pfn);
+        code = gs_cspace_set_sepr_function(pcs, pfn);
     if (code >= 0)
-	code = gs_setcolorspace(igs, &cs);
+	code = gs_setcolorspace(igs, pcs);
+    /* release reference from construction */
+    rc_decrement_only(pcs, "zsetseparationspace");
     if (code < 0) {
 	istate->colorspace = cspace_old;
-	ifree_object(pmap, ".setseparationspace(pmap)");
 	return code;
     }
-    rc_decrement(pmap, ".setseparationspace(pmap)");  /* build sets rc = 1 */
     pop(1);
     return 0;
 }

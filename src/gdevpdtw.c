@@ -1,4 +1,5 @@
-/* Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,13 +17,14 @@
 
 */
 
-/* $Id: gdevpdtw.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevpdtw.c,v 1.7 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Font resource writing for pdfwrite text */
 #include "memory_.h"
 #include "gx.h"
 #include "gserrors.h"
 #include "gxfcmap.h"
 #include "gxfont.h"
+#include "gxfcopy.h"
 #include "gscencs.h"
 #include "gdevpsf.h"
 #include "gdevpdfx.h"
@@ -348,7 +350,20 @@ pdf_write_CIDFont_widths(gx_device_pdf *pdev,
 		gs_glyph_info_t info;
 
 		if (pdfont != NULL) {
-		    if (pfont->procs.glyph_info((gs_font *)pfont, glyph, NULL, 0, &info) < 0)
+		    if (pfont->FontType == ft_TrueType) {
+			/* We're converting a Type 42 into CIDFontType2. */
+			/* We know that CIDs equal to char codes. */
+			gs_glyph glyph1;
+			int ch = glyph & 0xff;
+
+			glyph1 = pfont->procs.encode_char((gs_font *)pfont, ch, GLYPH_SPACE_NAME);
+			if (cid == 0 && glyph1 == GS_NO_GLYPH)
+			    glyph1 = copied_get_notdef((gs_font *)pdf_font_resource_font(pdfont, false));
+			if (glyph1 == GS_NO_GLYPH)
+			    continue;
+			if (pfont->procs.glyph_info((gs_font *)pfont, glyph1, NULL, 0, &info) < 0)
+			    continue;
+		    } else if (pfont->procs.glyph_info((gs_font *)pfont, glyph, NULL, 0, &info) < 0)
 			continue;
 		}
 	    }
@@ -361,7 +376,7 @@ pdf_write_CIDFont_widths(gx_device_pdf *pdev,
 		    pprintd3(s, "\n%d %d %d", width, vx, vy);
 		} else
 		    pprintd1(s, "\n%d", width);
-	    } else if (width == dw && 
+	    } else if (!pdev->PDFA && width == dw && 
 		    (!wmode || (int)(pdfont->u.cidfont.v[cid * 2 + 0] + 0.5) == 
 				(int)(pdfont->Widths[cid] / 2 + 0.5)) &&
 		    (!wmode || (int)(pdfont->u.cidfont.v[cid * 2 + 1] + 0.5) == dv))
@@ -512,7 +527,7 @@ pdf_write_contents_cid2(gx_device_pdf *pdev, pdf_font_resource_t *pdfont)
 	int i;
 
 	pdf_begin_data_stream(pdev, &writer,
-	    DATA_STREAM_BINARY | DATA_STREAM_COMPRESS,
+	    DATA_STREAM_BINARY | (pdev->CompressFonts ? DATA_STREAM_COMPRESS : 0),
 		    /* Don't set DATA_STREAM_ENCRYPT since we write to a temporary file.
 		       See comment in pdf_begin_encrypt. */
 		    map_id);
@@ -615,18 +630,18 @@ write_font_resources(gx_device_pdf *pdev, pdf_resource_list_t *prlist)
     return 0;
 }
 int
-pdf_finish_font_descriptors(gx_device_pdf *pdev,
+pdf_finish_resources(gx_device_pdf *pdev, pdf_resource_type_t type,
 			int (*finish_proc)(gx_device_pdf *,
-					   pdf_font_descriptor_t *))
+					   pdf_resource_t *))
 {
     int j;
     pdf_resource_t *pres;
 
     for (j = 0; j < NUM_RESOURCE_CHAINS; ++j)
-	for (pres = pdev->resources[resourceFontDescriptor].chains[j];
+	for (pres = pdev->resources[type].chains[j];
 	     pres != 0; pres = pres->next
 	     ) {
-	    int code = finish_proc(pdev, (pdf_font_descriptor_t *)pres);
+	    int code = finish_proc(pdev, pres);
 
 	    if (code < 0)
 		return code;
@@ -647,10 +662,11 @@ pdf_close_text_document(gx_device_pdf *pdev)
     pdf_clean_standard_fonts(pdev);
     if ((code = pdf_free_font_cache(pdev)) < 0 ||
 	(code = pdf_write_resource_objects(pdev, resourceCharProc)) < 0 ||
- 	(code = pdf_finish_font_descriptors(pdev, pdf_finish_FontDescriptor)) < 0 ||
+ 	(code = pdf_finish_resources(pdev, resourceFont, pdf_convert_truetype_font)) < 0 ||
+ 	(code = pdf_finish_resources(pdev, resourceFontDescriptor, pdf_finish_FontDescriptor)) < 0 ||
   	(code = write_font_resources(pdev, &pdev->resources[resourceCIDFont])) < 0 ||
 	(code = write_font_resources(pdev, &pdev->resources[resourceFont])) < 0 ||
-	(code = pdf_finish_font_descriptors(pdev, pdf_write_FontDescriptor)) < 0
+	(code = pdf_finish_resources(pdev, resourceFontDescriptor, pdf_write_FontDescriptor)) < 0
 	)
 	return code;
 
@@ -704,6 +720,16 @@ pdf_write_cid_system_info(gx_device_pdf *pdev,
     return pdf_write_cid_system_info_to_stream(pdev, pdev->strm, pcidsi, object_id);
 }
 
+int
+pdf_write_cid_systemInfo_separate(gx_device_pdf *pdev, const gs_cid_system_info_t *pcidsi, long *id)
+{   
+    int code;
+
+    *id = pdf_begin_separate(pdev);
+    code = pdf_write_cid_system_info(pdev, pcidsi, *id);
+    pdf_end_separate(pdev);
+    return code;
+}
 
 /*
  * Write a CMap resource.  We pass the CMap object as well as the resource,
@@ -770,4 +796,79 @@ pdf_write_cmap(gx_device_pdf *pdev, const gs_cmap_t *pcmap,
     if (code < 0)
 	return code;
     return code;
+}
+
+static const char *OneByteIdentityH[] = {
+    "/CIDInit /ProcSet findresource begin",
+    "12 dict begin",
+    "begincmap",
+    "/CIDSystemInfo 3 dict dup begin",
+      "/Registry (Adobe) def",
+      "/Ordering (Identity) def",
+      "/Supplement 0 def",
+    "end def",
+    "/CMapName /OneByteIdentityH def",
+    "/CMapVersion 1.000 def",
+    "/CMapType 1 def",
+    "/UIDOffset 0 def",
+    "/XUID [1 10 25404 9999] def",
+    "/WMode 0 def",
+    "1 begincodespacerange",
+    "<00> <FF>",
+    "endcodespacerange",
+    "1 begincidrange",
+    "<00> <FF> 0",
+    "endcidrange",
+    "endcmap",
+    "CMapName currentdict /CMap defineresource pop",
+    "end",
+    "end",
+NULL};
+
+/* 
+ * Write OneByteIdentityH CMap. 
+ */
+int
+pdf_write_OneByteIdentityH(gx_device_pdf *pdev)
+{ 
+    int code, i;
+    pdf_data_writer_t writer;
+    cos_dict_t *pcd;
+    char buf[200];
+    static const gs_cid_system_info_t cidsi = {{(const byte *)"Adobe", 5}, {(const byte *)"Identity", 8}, 0};
+    long id;
+
+    if (pdev->IdentityCIDSystemInfo_id == gs_no_id) {
+	code = pdf_write_cid_systemInfo_separate(pdev, &cidsi, &id);
+	if (code < 0)
+	    return code;
+	pdev->IdentityCIDSystemInfo_id = id;
+    }
+    if (pdev->OneByteIdentityH != NULL)
+	return 0;
+    code = pdf_begin_data_stream(pdev, &writer,
+				 DATA_STREAM_NOT_BINARY |
+			    /* Don't set DATA_STREAM_ENCRYPT since we write to a temporary file.
+			       See comment in pdf_begin_encrypt. */
+				 (pdev->CompressFonts ? 
+				  DATA_STREAM_COMPRESS : 0), gs_no_id);
+    if (code < 0)
+	return code;
+    pdev->OneByteIdentityH = writer.pres;
+    pcd = (cos_dict_t *)writer.pres->object;
+    code = cos_dict_put_string_copy(pcd, "/CMapName", "/OneByteIdentityH");
+    if (code < 0)
+	return code;
+    sprintf(buf, "%ld 0 R", pdev->IdentityCIDSystemInfo_id);
+    code = cos_dict_put_string_copy(pcd, "/CIDSystemInfo", buf);
+    if (code < 0)
+	return code;
+    code = cos_dict_put_string_copy(pcd, "/Type", "/CMap");
+    if (code < 0)
+	return code;
+    for (i = 0; OneByteIdentityH[i]; i++) {
+	stream_puts(pdev->strm, OneByteIdentityH[i]);
+	stream_putc(pdev->strm, '\n');
+    }
+    return pdf_end_data(&writer);
 }

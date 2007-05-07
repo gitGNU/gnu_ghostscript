@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 1996, 1997, 1998, 1999, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -15,8 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-
-/* $Id: fapi_ft.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: fapi_ft.c,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 
 /*
 GhostScript Font API plug-in that allows fonts to be rendered by FreeType.
@@ -30,6 +30,7 @@ Started by Graham Asher, 6th June 2002.
 #include "write_t1.h"
 #include "write_t2.h"
 #include "math_.h"
+#include "gserror.h"
 
 /* FreeType headers */
 #include "freetype/freetype.h"
@@ -183,8 +184,9 @@ static void free_fapi_glyph_data(FT_Incremental a_info,FT_Data* a_data)
 	}
 
 static FT_Error get_fapi_glyph_metrics(FT_Incremental a_info,FT_UInt a_glyph_index,
-									   FT_Bool a_vertical,FT_Incremental_MetricsRec* a_metrics)
+									   FT_Bool bVertical, FT_Incremental_MetricsRec* a_metrics)
 	{
+	    /* fixme : bVertical is not implemented. */
 	if (a_info->m_glyph_metrics_index == a_glyph_index)
 		{
 		switch (a_info->m_metrics_type)
@@ -344,7 +346,7 @@ Ensure that the rasterizer is open.
 
 In the case of FreeType this means creating the FreeType library object.
 */
-static FAPI_retcode ensure_open(FAPI_server* a_server)
+static FAPI_retcode ensure_open(FAPI_server* a_server, const byte *server_param, int server_param_size)
 	{
 	FF_server* s = (FF_server*)a_server;
 	if (!s->m_freetype_library)
@@ -442,17 +444,17 @@ static void transform_decompose(FT_Matrix* a_transform,
 /**
 Open a font and set its size.
 */
-static FAPI_retcode get_scaled_font(FAPI_server* a_server,FAPI_font* a_font,int a_subfont,
+static FAPI_retcode get_scaled_font(FAPI_server* a_server,FAPI_font* a_font,
 									const FAPI_font_scale* a_font_scale,
-									const char* a_map,bool a_vertical,
+									const char* a_map,
 									FAPI_descendant_code a_descendant_code)
 	{
 	FF_server* s = (FF_server*)a_server;
 	FF_face* face = (FF_face*)a_font->server_font_data;
 	FT_Error ft_error = 0;
 
-	/* dpf("get_scaled_font enter: is_type1=%d is_cid=%d font_file_path='%s' a_subfont=%d a_descendant_code=%d\n",
-		a_font->is_type1,a_font->is_cid,a_font->font_file_path ? a_font->font_file_path : "",a_subfont,a_descendant_code); */
+	/* dpf("get_scaled_font enter: is_type1=%d is_cid=%d font_file_path='%s' a_descendant_code=%d\n",
+		a_font->is_type1,a_font->is_cid,a_font->font_file_path ? a_font->font_file_path : "",a_descendant_code); */
 
 	/*
 	If this font is the top level font of an embedded CID type 0 font (font type 9)
@@ -480,7 +482,7 @@ static FAPI_retcode get_scaled_font(FAPI_server* a_server,FAPI_font* a_font,int 
 		/* Load a typeface from a file. */
 		if (a_font->font_file_path)
 			{
-			ft_error = FT_New_Face(s->m_freetype_library,a_font->font_file_path,a_subfont,&ft_face);
+			ft_error = FT_New_Face(s->m_freetype_library,a_font->font_file_path,a_font->subfont,&ft_face);
 			if (!ft_error && ft_face)
 				ft_error = FT_Select_Charmap(ft_face,ft_encoding_unicode);
 			}
@@ -515,7 +517,7 @@ static FAPI_retcode get_scaled_font(FAPI_server* a_server,FAPI_font* a_font,int 
 				else
 					open_args.memory_size = FF_serialize_type2_font(a_font,own_font_data,length);
 				if (open_args.memory_size != length)
-				    return_error(gs_error_unregistered); /* Must not happen. */
+				    return_error(e_unregistered); /* Must not happen. */
 				ft_inc_int = new_inc_int(a_font);
 				if (!ft_inc_int)
 					{
@@ -556,7 +558,7 @@ static FAPI_retcode get_scaled_font(FAPI_server* a_server,FAPI_font* a_font,int 
 				open_args.num_params = 1;
 				open_args.params = &ft_param;
 				}
-			ft_error = FT_Open_Face(s->m_freetype_library,&open_args,a_subfont,&ft_face);
+			ft_error = FT_Open_Face(s->m_freetype_library,&open_args,a_font->subfont,&ft_face);
 			}
 
 		if (ft_face)
@@ -657,8 +659,7 @@ static FAPI_retcode get_font_bbox(FAPI_server* a_server,FAPI_font* a_font,int a_
 Return a boolean value in a_proportional stating whether the font is proportional
 or fixed-width.
 */
-static FAPI_retcode get_font_proportional_feature(FAPI_server* a_server,FAPI_font* a_font,int a_subfont,
-												  bool* a_proportional)
+static FAPI_retcode get_font_proportional_feature(FAPI_server* a_server,FAPI_font* a_font,bool* a_proportional)
 	{
 	*a_proportional = true;
 	return 0;
@@ -726,7 +727,7 @@ static FAPI_retcode get_char_raster(FAPI_server *a_server,FAPI_raster *a_raster)
 	{
 	FF_server* s = (FF_server*)a_server;
 	if (!s->m_bitmap_glyph)
-		return_error(gs_error_unregistered); /* Must not happen. */
+		return_error(e_unregistered); /* Must not happen. */
 	a_raster->p = s->m_bitmap_glyph->bitmap.buffer;
 	a_raster->width = s->m_bitmap_glyph->bitmap.width;
 	a_raster->height = s->m_bitmap_glyph->bitmap.rows;
@@ -852,6 +853,8 @@ static const FAPI_server TheFreeTypeServer =
 	{
     { &TheFreeTypeDescriptor },
     16, /* frac_shift */
+    {gs_no_id},
+    {0},
     ensure_open,
     get_scaled_font,
     get_decodingID,
@@ -870,8 +873,7 @@ static const FAPI_server TheFreeTypeServer =
 
 plugin_instantiation_proc(gs_fapi_ft_instantiate);
 
-int gs_fapi_ft_instantiate(i_ctx_t *a_context,
-						   i_plugin_client_memory *a_memory,
+int gs_fapi_ft_instantiate( i_plugin_client_memory *a_memory,
 						   i_plugin_instance **a_plugin_instance)
 	{
 	FF_server *server = (FF_server *)a_memory->alloc(a_memory,

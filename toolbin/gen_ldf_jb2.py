@@ -3,7 +3,7 @@
 # script to generate ldf_jb2.mak
 # whose source sometimes changes
 
-# $Id: gen_ldf_jb2.py,v 1.1 2006/06/16 12:55:34 Arabidopsis Exp $
+# $Id: gen_ldf_jb2.py,v 1.2 2007/05/07 11:22:11 Arabidopsis Exp $
 
 import time, glob
 import os.path
@@ -11,21 +11,24 @@ import os.path
 outfile="ldf_jb2.mak"
 
 license = """#    Copyright (C) %d artofcode LLC.  All rights reserved.
+# This file is part of GNU ghostscript
+#
+# GNU ghostscript is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2, or (at your option) any later version.
 #
 # This software is provided AS-IS with no warranty, either express or
-# implied.
+# implied. That is, this program is distributed in the hope that it will 
+# be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details
 #
-# This software is distributed under license and may not be copied,
-# modified or distributed except as expressly authorized under the terms
-# of the license contained in the file LICENSE in this distribution.
-#
-# For more information about licensing, please refer to
-# http://www.ghostscript.com/licensing/. For information on
-# commercial licensing, go to http://www.artifex.com/licensing/ or
-# contact Artifex Software, Inc., 101 Lucas Valley Road #110,
-# San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
+# 
 
-# $Id: gen_ldf_jb2.py,v 1.1 2006/06/16 12:55:34 Arabidopsis Exp $
+# $Id: gen_ldf_jb2.py,v 1.2 2007/05/07 11:22:11 Arabidopsis Exp $
 """ % time.gmtime().tm_year
 
 comment = """

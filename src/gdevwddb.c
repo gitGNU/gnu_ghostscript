@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1997 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevwddb.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gdevwddb.c,v 1.6 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /*
  * Microsoft Windows 3.n driver for Ghostscript,
  * using device-dependent bitmap.

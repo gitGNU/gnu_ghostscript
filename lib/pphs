@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: pphs,v 1.3 2006/03/02 22:26:14 Arabidopsis Exp $
+# $Id: pphs,v 1.4 2007/05/07 11:22:07 Arabidopsis Exp $
 # Print the Primary Hint Stream from a linearized PDF file.  Usage:
 #	pphs filename.pdf
 # Output goes to stdout.

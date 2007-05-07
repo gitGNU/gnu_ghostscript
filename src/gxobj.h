@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 1996, 1999, 2002 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxobj.h,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gxobj.h,v 1.7 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Memory manager implementation structures for Ghostscript */
 
 #ifndef gxobj_INCLUDED
@@ -122,22 +122,20 @@ typedef struct obj_header_data_s {
 /* The only possible values for obj_align_mod are 4, 8, or 16.... */
 #if obj_align_mod == 4
 #  define log2_obj_align_mod 2
-#elif obj_align_mod == 8
-#  define log2_obj_align_mod 3
-#elif obj_align_mod == 16
-#  define log2_obj_align_mod 4
-#elif obj_align_mod == 32  /* for testing, not seen yet in the wild */
-#  define log2_obj_align_mod 5
 #else
-#  error Unexpected value of obj_align_mod
+#if obj_align_mod == 8
+#  define log2_obj_align_mod 3
+#else
+#if obj_align_mod == 16
+#  define log2_obj_align_mod 4
+#endif
+#endif
 #endif
 #define obj_align_mask (obj_align_mod-1)
 #define obj_align_round(siz)\
   (uint)(((siz) + obj_align_mask) & -obj_align_mod)
 #define obj_size_round(siz)\
   obj_align_round((siz) + sizeof(obj_header_t))
-#define ptr_align_round(p)\
-  ((byte *)obj_align_round((size_t)(p)))
 
 /* Define the real object header type, taking alignment into account. */
 struct obj_header_s {		/* must be a struct because of forward reference */

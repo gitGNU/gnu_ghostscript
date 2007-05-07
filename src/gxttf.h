@@ -1,4 +1,5 @@
-/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxttf.h,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxttf.h,v 1.5 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Table definitions for TrueType fonts */
 
 #ifndef gxttf_INCLUDED
@@ -140,7 +140,13 @@ typedef struct ttf_OS_2_s {
 	sTypoLineGap[2],
 	usWinAscent[2],
 	usWinDescent[2],
-	ulCodePageRanges[8];
+	ulCodePageRanges[8],
+
+        sxHeight[2],            /* version 2 */
+      	sCapHeight[2],
+       	usDefaultChar[2],
+       	usBreakChar[2],
+        usMaxContext[2];
 } ttf_OS_2_t;
 
 /* ------ vhea ------ */

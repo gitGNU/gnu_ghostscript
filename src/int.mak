@@ -1,24 +1,16 @@
-#    Copyright (C) 1995-2003 artofcode LLC.  All rights reserved.
-# 
-# This file is part of GNU ghostscript
+#  Copyright (C) 2001-2006 artofcode LLC.
+#  All Rights Reserved.
 #
-# GNU ghostscript is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2, or (at your option) any later version.
+#  This software is provided AS-IS with no warranty, either express or
+#  implied.
 #
-# This software is provided AS-IS with no warranty, either express or
-# implied. That is, this program is distributed in the hope that it will 
-# be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details
+#  This software is distributed under license and may not be copied, modified
+#  or distributed except as expressly authorized under the terms of that
+#  license.  Refer to licensing information at http://www.artifex.com/
+#  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+#  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
-# 
-# 
-
-# $Id: int.mak,v 1.9 2006/06/16 12:55:04 Arabidopsis Exp $
+# $Id: int.mak,v 1.10 2007/05/07 11:21:45 Arabidopsis Exp $
 # (Platform-independent) makefile for PostScript and PDF language
 # interpreters.
 # Users of this makefile must define the following:
@@ -36,8 +28,11 @@ PSO_=$(O_)$(PSOBJ)
 PSI_=$(PSSRCDIR) $(II)$(PSGENDIR) $(II)$(GLI_)
 PSF_=
 PSCC=$(CC_) $(I_)$(PSI_)$(_I) $(PSF_)
-PSJBIG2CC=$(CC_) $(I_)$(PSI_) $(II)$(JB2I_)$(_I) $(JB2CF_) $(PSF_)
-PSLDFJB2CC=$(CC_) $(I_)$(PSI_) $(II)$(LDF_JB2I_)$(_I) $(JB2CF_) $(PSF_)
+PSJBIG2CC=$(CC_) $(I_)$(JB2I_) $(II)$(PSI_)$(_I) $(JB2CF_) $(PSF_)
+PSJASCC=$(CC_) $(I_)$(JPXI_) $(II)$(PSI_)$(_I) $(JPXCF_) $(PSF)
+PSLDFJB2CC=$(CC_) $(I_)$(LDF_JB2I_) $(II)$(LDF_JB2I_) $(II)$(PSI_)$(_I) $(JB2CF_) $(PSF_)
+PSLWFJPXCC=$(CC_) $(I_)$(LWF_JPXI_) $(II)$(PSI_)$(_I) $(JPXCF_) $(PSF)
+
 # All top-level makefiles define PSD.
 #PSD=$(PSGEN)
 
@@ -82,7 +77,7 @@ inamedef_h=$(PSSRC)inamedef.h\
  $(gsstruct_h) $(inameidx_h) $(inames_h) $(inamestr_h)
 store_h=$(PSSRC)store.h $(ialloc_h) $(idosave_h)
 iplugin_h=$(PSSRC)iplugin.h
-ifapi_h=$(PSSRC)ifapi.h $(iplugin_h)
+ifapi_h=$(PSSRC)ifapi.h $(iplugin_h) $(gstypes_h) $(gsmatrix_h)
 zht2_h=$(PSSRC)zht2.h $(gscspace_h)
 zchar42_h=$(PSSRC)zchar42.h
 
@@ -179,8 +174,8 @@ $(PSOBJ)idict.$(OBJ) : $(PSSRC)idict.c $(GH) $(math__h) $(string__h)\
 	$(PSCC) $(PSO_)idict.$(OBJ) $(C_) $(PSSRC)idict.c
 
 $(PSOBJ)idparam.$(OBJ) : $(PSSRC)idparam.c $(GH) $(memory__h) $(string__h) $(ierrors_h)\
- $(gsmatrix_h) $(gsuid_h)\
- $(idict_h) $(idparam_h) $(ilevel_h) $(imemory_h) $(iname_h) $(iutil_h)\
+ $(gsmatrix_h) $(gsuid_h) $(dstack_h)\
+ $(idict_h) $(iddict_h) $(idparam_h) $(ilevel_h) $(imemory_h) $(iname_h) $(iutil_h)\
  $(oper_h) $(store_h)
 	$(PSCC) $(PSO_)idparam.$(OBJ) $(C_) $(PSSRC)idparam.c
 
@@ -324,12 +319,13 @@ $(PSOBJ)zfile.$(OBJ) : $(PSSRC)zfile.c $(OP)\
  $(memory__h) $(string__h) $(unistd__h) $(gp_h) $(gpmisc_h)\
  $(gscdefs_h) $(gsfname_h) $(gsstruct_h) $(gsutil_h) $(gxalloc_h) $(gxiodev_h)\
  $(dstack_h) $(estack_h) $(files_h)\
- $(ialloc_h) $(idict_h) $(ilevel_h) $(iname_h) $(interp_h) $(iutil_h)\
+ $(ialloc_h) $(idict_h) $(ilevel_h) $(iname_h) $(iutil_h)\
  $(isave_h) $(main_h) $(sfilter_h) $(stream_h) $(strimpl_h) $(store_h)
 	$(PSCC) $(PSO_)zfile.$(OBJ) $(C_) $(PSSRC)zfile.c
 
 $(PSOBJ)zfile1.$(OBJ) : $(PSSRC)zfile1.c $(OP) $(memory__h) $(string__h)\
- $(gp_h) $(ierrors_h) $(oper_h) $(opcheck_h) $(ialloc_h) $(opdef_h) $(store_h)
+ $(gp_h) $(ierrors_h) $(oper_h) $(opcheck_h) $(ialloc_h) $(opdef_h) $(store_h)\
+ $(gpmisc_h)
 	$(PSCC) $(PSO_)zfile1.$(OBJ) $(C_) $(PSSRC)zfile1.c
 
 $(PSOBJ)zfileio.$(OBJ) : $(PSSRC)zfileio.c $(OP) $(memory__h) $(gp_h)\
@@ -372,7 +368,6 @@ $(PSOBJ)ziodevs$(STDIO_IMPLEMENTATION).$(OBJ) : $(PSSRC)ziodevs$(STDIO_IMPLEMENT
 
 $(PSOBJ)zmath.$(OBJ) : $(PSSRC)zmath.c $(OP) $(math__h) $(gxfarith_h) $(store_h)
 	$(PSCC) $(PSO_)zmath.$(OBJ) $(C_) $(PSSRC)zmath.c
-
 
 $(PSOBJ)zmisc.$(OBJ) : $(PSSRC)zmisc.c $(OP) $(gscdefs_h) $(gp_h)\
  $(errno__h) $(memory__h) $(string__h)\
@@ -486,7 +481,7 @@ $(PSOBJ)zimage.$(OBJ) : $(PSSRC)zimage.c $(OP) $(memory__h)\
  $(gscspace_h) $(gscssub_h) $(gsimage_h) $(gsmatrix_h) $(gsstruct_h)\
  $(gxiparam_h)\
  $(estack_h) $(ialloc_h) $(ifilter_h) $(igstate_h) $(iimage_h) $(ilevel_h)\
- $(store_h) $(stream_h)
+ $(store_h) $(stream_h) $(gxcspace_h)
 	$(PSCC) $(PSO_)zimage.$(OBJ) $(C_) $(PSSRC)zimage.c
 
 $(PSOBJ)zmatrix.$(OBJ) : $(PSSRC)zmatrix.c $(OP)\
@@ -733,7 +728,7 @@ $(PSD)psf1read.dev : $(INT_MAK) $(ECHOGS_XE) $(psf1read_) $(GLD)seexec.dev
 $(PSOBJ)zchar1.$(OBJ) : $(PSSRC)zchar1.c $(OP) $(memory__h)\
  $(gscencs_h) $(gspaint_h) $(gspath_h) $(gsrect_h) $(gsstruct_h)\
  $(gxdevice_h) $(gxfixed_h) $(gxmatrix_h)\
- $(gxfont_h) $(gxfont1_h) $(gxtype1_h) $(gzstate_h)\
+ $(gxfont_h) $(gxfont1_h) $(gxtype1_h) $(gxchar_h) $(gzstate_h)\
  $(estack_h) $(ialloc_h) $(ichar_h) $(ichar1_h) $(icharout_h)\
  $(idict_h) $(ifont_h) $(igstate_h) $(iname_h) $(iutil_h) $(store_h)
 	$(PSCC) $(PSO_)zchar1.$(OBJ) $(C_) $(PSSRC)zchar1.c
@@ -782,8 +777,8 @@ $(PSOBJ)zchar32.$(OBJ) : $(PSSRC)zchar32.c $(OP)\
 	$(PSCC) $(PSO_)zchar32.$(OBJ) $(C_) $(PSSRC)zchar32.c
 
 $(PSOBJ)zfont32.$(OBJ) : $(PSSRC)zfont32.c $(OP)\
- $(gsccode_h) $(gsmatrix_h) $(gsutil_h) $(gxfont_h)\
- $(bfont_h) $(store_h)
+ $(gsccode_h) $(gsmatrix_h) $(gsutil_h) $(gxfont_h) $(gxtext_h)\
+ $(bfont_h) $(store_h) $(ichar_h)
 	$(PSCC) $(PSO_)zfont32.$(OBJ) $(C_) $(PSSRC)zfont32.c
 
 type32_=$(PSOBJ)zchar32.$(OBJ) $(PSOBJ)zfont32.$(OBJ)
@@ -985,12 +980,18 @@ $(PSGEN)gs_init.ps : $(PSLIB)$(GS_INIT) $(GENINIT_XE) $(gconfig_h)
 # This changes infrequently, but is a potential point of bitrot, but since
 # unix-inst.mak uses this macro, problems should surface when testing installed
 # versions.
-EXTRA_INIT_FILES= Fontmap cidfmap xlatmap FAPIcidfmap FAPIconfig FAPIfontmap
+#		Note: gs_cet.ps is only needed to match Adobe CPSI defaults
+EXTRA_INIT_FILES= Fontmap cidfmap xlatmap FAPI FCOfontmap-PCLPS2 gs_cet.ps
 
-# Note: RESOURCE_LIST is first since those are CWD relative. Later files use -P prefix paths
 #	The init files are put in the lib/ directory (gs_init.ps + EXTRA_INIT_FILES)
+#	Resource files go into Resource/...
+
+RESOURCE_LIST=ColorSpace/ Decoding/ Font/ Procset/ IdiomSet/ CIDFont/ CMap/
+
+# PCLXL_ PJL and XPS hooks are for other parsers that may be built with a PS
+# language switch build.
 $(GLOBJ)gsromfs.c : $(MKROMFS_XE) $(PSGEN)gs_init.ps $(arch_h)
-	$(EXP)$(MKROMFS_XE) -o $(GLOBJ)gsromfs.c -c -X .svn $(RESOURCE_LIST) -d lib/ -P $(PSGEN) gs_init.ps -P $(PSLIB) $(EXTRA_INIT_FILES)
+	$(EXP)$(MKROMFS_XE) -o $(GLOBJ)gsromfs.c -X .svn $(UFST_ROMFS_ARGS) $(PCLXL_ROMFS_ARGS) $(PJL_ROMFS_ARGS) $(XPS_ROMFS_ARGS) $(UFST_ROMGS_ARGS) -c -P $(PSRESDIR)$(D) -d Resource/ $(RESOURCE_LIST) -d lib/ -P $(PSGEN) gs_init.ps -P $(PSLIB) $(EXTRA_INIT_FILES) 
 
 # ---------------- Stochastic halftone ---------------- #
 
@@ -1085,12 +1086,14 @@ $(PSD)psl2.dev : $(INT_MAK) $(ECHOGS_XE)\
  $(PSD)dct.dev $(PSD)dpsand2.dev\
  $(PSD)filter.dev $(PSD)iodevice.dev $(PSD)pagedev.dev $(PSD)pattern.dev\
  $(PSD)psl1.dev $(GLD)psl2lib.dev $(PSD)psl2read.dev\
- $(PSD)sepr.dev $(PSD)type32.dev $(PSD)type42.dev
+ $(PSD)sepr.dev $(PSD)type32.dev $(PSD)type42.dev\
+ $(PSD)fimscale.dev
 	$(SETMOD) $(PSD)psl2 -include $(PSD)dpsand2
 	$(ADDMOD) $(PSD)psl2 -include $(PSD)cidfont $(PSD)cie $(PSD)cmapread $(PSD)compfont
 	$(ADDMOD) $(PSD)psl2 -include $(PSD)dct $(PSD)filter $(PSD)iodevice
 	$(ADDMOD) $(PSD)psl2 -include $(PSD)pagedev $(PSD)pattern $(PSD)psl1 $(GLD)psl2lib $(PSD)psl2read
 	$(ADDMOD) $(PSD)psl2 -include $(PSD)sepr $(PSD)type32 $(PSD)type42
+	$(ADDMOD) $(PSD)psl2 -include $(PSD)fimscale
 	$(ADDMOD) $(PSD)psl2 -emulator PostScript PostScriptLevel2
 
 # Define basic Level 2 language support.
@@ -1197,11 +1200,11 @@ $(PSOBJ)zmedia2.$(OBJ) : $(PSSRC)zmedia2.c $(OP) $(math__h) $(memory__h)\
 
 # ---------------- IODevices ---------------- #
 
-iodevice_=$(PSOBJ)ziodev2.$(OBJ) $(PSOBJ)zdevcal.$(OBJ) $(PSOBJ)ziodevst.$(OBJ)
+iodevice_=$(PSOBJ)ziodev2.$(OBJ) $(PSOBJ)zdevcal.$(OBJ)
 $(PSD)iodevice.dev : $(INT_MAK) $(ECHOGS_XE) $(iodevice_)
 	$(SETMOD) $(PSD)iodevice $(iodevice_)
-	$(ADDMOD) $(PSD)iodevice -oper ziodev2_l2 ziodevst
-	$(ADDMOD) $(PSD)iodevice -iodev null calendar static
+	$(ADDMOD) $(PSD)iodevice -oper ziodev2_l2
+	$(ADDMOD) $(PSD)iodevice -iodev null calendar
 
 $(PSOBJ)ziodev2.$(OBJ) : $(PSSRC)ziodev2.c $(OP) $(string__h) $(gp_h)\
  $(gxiodev_h) $(stream_h)\
@@ -1211,12 +1214,6 @@ $(PSOBJ)ziodev2.$(OBJ) : $(PSSRC)ziodev2.c $(OP) $(string__h) $(gp_h)\
 $(PSOBJ)zdevcal.$(OBJ) : $(PSSRC)zdevcal.c $(GH) $(time__h)\
  $(gxiodev_h) $(iparam_h) $(istack_h)
 	$(PSCC) $(PSO_)zdevcal.$(OBJ) $(C_) $(PSSRC)zdevcal.c
-
-$(PSOBJ)ziodevst.$(OBJ) : $(PSSRC)ziodevst.c $(GH)\
-  $(gserror_h) $(gsstruct_h) $(gxiodev_h) $(istruct_h) $(idict_h)\
- $(iconf_h) $(oper_h) $(store_h) $(stream_h) $(files_h)\
- $(string__h) $(memory_h)
-	$(PSCC) $(PSO_)ziodevst.$(OBJ) $(C_) $(PSSRC)ziodevst.c
 
 # ---------------- Filters other than the ones in sfilter.c ---------------- #
 
@@ -1344,9 +1341,9 @@ fjpx_luratech=$(PSOBJ)zfjpx_luratech.$(OBJ)
 
 $(PSOBJ)zfjpx.$(OBJ) : $(PSSRC)zfjpx.c $(OP) $(memory__h)\
  $(gsstruct_h) $(gstypes_h) $(ialloc_h) $(idict_h) $(ifilter_h)\
- $(store_h) $(stream_h) $(strimpl_h) $(sjpx_h)
-	$(PSCC) $(I_)$(JPXI_)$(_I) $(JPXCF_) $(PSO_)zfjpx.$(OBJ) \
-		$(C_) $(PSSRC)zfjpx.c
+ $(store_h) $(stream_h) $(strimpl_h) $(ialloc_h) $(iname_h)\
+ $(gdebug_h) $(sjpx_h)
+	$(PSJASCC) $(PSO_)zfjpx.$(OBJ) $(C_) $(PSSRC)zfjpx.c
 
 $(PSD)jpx_luratech.dev : $(INT_MAK) $(ECHOGS_XE) $(fjpx_luratech) $(GLD)sjpx.dev
 	$(SETMOD) $(PSD)jpx_luratech $(fjpx_luratech)
@@ -1357,8 +1354,21 @@ $(PSD)jpx_luratech.dev : $(INT_MAK) $(ECHOGS_XE) $(fjpx_luratech) $(GLD)sjpx.dev
 $(PSOBJ)zfjpx_luratech.$(OBJ) : $(PSSRC)zfjpx.c $(OP) $(memory__h)\
  $(gsstruct_h) $(gstypes_h) $(ialloc_h) $(idict_h) $(ifilter_h)\
  $(store_h) $(stream_h) $(strimpl_h) $(sjpx_luratech_h)
-	$(PSCC) $(I_)$(LWF_JPXI_)$(_I) $(JPXCF_) \
-		$(PSO_)zfjpx_luratech.$(OBJ) $(C_) $(PSSRC)zfjpx.c
+	$(PSLWFJPXCC) $(PSO_)zfjpx_luratech.$(OBJ) \
+		$(C_) $(PSSRC)zfjpx.c
+
+
+# imagemask scaling filter
+fimscale_=$(PSOBJ)zfimscale.$(OBJ)
+$(PSD)fimscale.dev : $(INT_MAK) $(ECHOGS_XE) $(fimscale_) $(GLD)simscale.dev
+	$(SETMOD) $(PSD)fimscale $(fimscale_)
+	$(ADDMOD) $(PSD)fimscale -include $(GLD)simscale
+	$(ADDMOD) $(PSD)fimscale -oper zfimscale
+
+$(PSOBJ)zfimscale.$(OBJ) : $(PSSRC)zfimscale.c $(OP) $(memory__h)\
+ $(gsstruct_h) $(ialloc_h) $(idict_h) $(ifilter_h)\
+ $(simscale_h) $(stream_h) $(strimpl_h)
+	$(PSCC) $(PSO_)zfimscale.$(OBJ) $(C_) $(PSSRC)zfimscale.c
 
 # ---------------- Binary tokens ---------------- #
 
@@ -1428,8 +1438,8 @@ $(PSOBJ)ibnum.$(OBJ) : $(PSSRC)ibnum.c $(GH) $(math__h) $(memory__h)\
 	$(PSCC) $(PSO_)ibnum.$(OBJ) $(C_) $(PSSRC)ibnum.c
 
 $(PSOBJ)zcharx.$(OBJ) : $(PSSRC)zcharx.c $(OP)\
- $(gsmatrix_h) $(gstext_h) $(gxfixed_h) $(gxfont_h)\
- $(ialloc_h) $(ibnum_h) $(ichar_h) $(iname_h) $(igstate_h)
+ $(gsmatrix_h) $(gstext_h) $(gxfixed_h) $(gxfont_h) $(gxtext_h)\
+ $(ialloc_h) $(ibnum_h) $(ichar_h) $(iname_h) $(igstate_h) $(memory__h)
 	$(PSCC) $(PSO_)zcharx.$(OBJ) $(C_) $(PSSRC)zcharx.c
 
 $(PSOBJ)zdps1.$(OBJ) : $(PSSRC)zdps1.c $(OP)\
@@ -1723,10 +1733,12 @@ $(PSD)func4.dev : $(INT_MAK) $(ECHOGS_XE) $(func4read_)\
 	$(ADDMOD) $(PSD)func4 -functiontype 4
 	$(ADDMOD) $(PSD)func4 -include $(PSD)func $(GLD)func4lib
 
-$(PSOBJ)zfunc4.$(OBJ) : $(PSSRC)zfunc4.c $(memory__h) $(OP)\
+# Note: opextern.h is included from oper.h and is a dependency of oper.h
+$(PSOBJ)zfunc4.$(OBJ) : $(PSSRC)zfunc4.c $(memory__h) $(string__h)\
+ $(OP) $(opextern_h)\
  $(gsfunc_h) $(gsfunc4_h) $(gsutil_h)\
- $(idict_h) $(ifunc_h) $(iname_h)\
- $(opextern_h) $(dstack_h)
+ $(idict_h) $(ifunc_h) $(iname_h) $(ialloc_h)\
+ $(dstack_h) $(gzstate_h) $(gxdevcli_h) $(string__h)
 	$(PSCC) $(PSO_)zfunc4.$(OBJ) $(C_) $(PSSRC)zfunc4.c
 
 $(PSOBJ)zimage3.$(OBJ) : $(PSSRC)zimage3.c $(OP) $(memory__h)\
@@ -1880,7 +1892,7 @@ $(PSD)fapi.dev : $(INT_MAK) $(ECHOGS_XE) $(PSOBJ)zfapi.$(OBJ)\
 
 $(PSOBJ)zfapi.$(OBJ) : $(PSSRC)zfapi.c $(OP) $(math__h) $(memory__h) $(string__h)\
  $(gp_h) $(gscoord_h) $(gscrypt1_h) $(gsfont_h) $(gspaint_h) $(gspath_h)\
- $(gxchar_h) $(gxchrout_h) $(gxdevice_h) $(gxfcache_h) $(gxfcid_h)\
+ $(gxchar_h) $(gxchrout_h) $(gximask_h) $(gxdevice_h) $(gxfcache_h) $(gxfcid_h)\
  $(gxfont_h) $(gxfont1_h) $(gxpath_h) $(gzstate_h) $(gdevpsf_h)\
  $(bfont_h) $(dstack_h) $(files_h) \
  $(ichar_h) $(idict_h) $(iddict_h) $(idparam_h) $(iname_h) $(ifont_h)\
@@ -1907,8 +1919,8 @@ $(PSD)fapiu1.dev : $(INT_MAK) $(ECHOGS_XE) \
 	$(ADDMOD) $(PSD)fapiu1 -link $(UFST_LIB)tt_lib$(UFST_LIB_EXT) $(UFST_LIB)psi_lib$(UFST_LIB_EXT)
 
 $(PSOBJ)fapiufst.$(OBJ) : $(PSSRC)fapiufst.c $(AK)\
- $(memory__h) $(stdio__h) $(math__h)\
- $(ierrors_h) $(iplugin_h) $(ifapi_h) $(gxfapi_h) \
+ $(memory__h) $(stdio__h) $(math__h) $(strmio_h)\
+ $(ierrors_h) $(iplugin_h) $(ifapi_h) $(gxfapi_h) $(gp_h) $(gxfapiu_h) \
  $(UFST_ROOT)$(D)rts$(D)inc$(D)cgconfig.h\
  $(UFST_ROOT)$(D)rts$(D)inc$(D)shareinc.h\
  $(UFST_ROOT)$(D)sys$(D)inc$(D)ufstport.h\
@@ -1942,7 +1954,7 @@ $(PSD)fapif1.dev : $(INT_MAK) $(ECHOGS_XE) \
 	$(ADDMOD) $(PSD)fapif1 -link $(FT_LIB)$(FT_LIB_EXT)
 
 $(PSOBJ)fapi_ft.$(OBJ) : $(PSSRC)fapi_ft.c $(AK)\
- $(stdio__h) $(math__h) $(ifapi_h)\
+ $(stdio__h) $(math__h) $(ifapi_h) $(gserror_h)\
  $(FT_ROOT)$(D)include$(D)freetype$(D)freetype.h\
  $(FT_ROOT)$(D)include$(D)freetype$(D)ftincrem.h\
  $(FT_ROOT)$(D)include$(D)freetype$(D)ftglyph.h\

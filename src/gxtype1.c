@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxtype1.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gxtype1.c,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Adobe Type 1 font interpreter support */
 #include "math_.h"
 #include "memory_.h"
@@ -131,6 +131,7 @@ gs_type1_interp_init(register gs_type1_state * pcis, gs_imager_state * pis,
     pcis->num_hints = 0;
     pcis->seac_accent = -1;
     pcis->log2_subpixels = *plog2_subpixels;
+    pcis->origin_offset.x = pcis->origin_offset.y = 0;
 
     /* Set the sampling scale. */
     set_pixel_scale(&pcis->scale.x, plog2_scale->x);
@@ -180,6 +181,7 @@ gs_type1_finish_init(gs_type1_state * pcis)
 
     /* Initialize hint-related scalars. */
     pcis->asb_diff = pcis->adxy.x = pcis->adxy.y = 0;
+    pcis->base_lsb = 0;
     pcis->flex_count = flex_max;	/* not in Flex */
     pcis->vs_offset.x = pcis->vs_offset.y = 0;
 
@@ -253,8 +255,8 @@ gs_type1_seac(gs_type1_state * pcis, const fixed * cstack, fixed asb,
 
     /* Save away all the operands. */
     pcis->seac_accent = fixed2int_var(cstack[3]);
-    pcis->save_asb = asb;
-    pcis->save_lsb = pcis->lsb;
+    pcis->asb = asb;
+    pcis->compound_lsb = pcis->lsb;
     pcis->save_adxy.x = cstack[0];
     pcis->save_adxy.y = cstack[1];
     pcis->os_count = 0;		/* clear */
@@ -291,7 +293,7 @@ gs_type1_endchar(gs_type1_state * pcis)
 	agdata.memory = pfont->memory;
 	pcis->seac_accent = -1;
 	/* Reset the coordinate system origin */
-	pcis->asb_diff = pcis->save_asb - pcis->save_lsb.x;
+	pcis->asb_diff = pcis->asb - pcis->compound_lsb.x;
 	pcis->adxy = pcis->save_adxy;
 	pcis->os_count = 0;	/* clear */
 	/* Clear the ipstack, in case the base character */

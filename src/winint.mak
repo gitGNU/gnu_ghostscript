@@ -1,24 +1,21 @@
-#    Copyright (C) 1997-2004 Aladdin Enterprises.  All rights reserved.
-# 
-# This file is part of GNU ghostscript
+#  Copyright (C) 2001-2007 artofcode LLC.
+#  All Rights Reserved.
 #
-# GNU ghostscript is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2, or (at your option) any later version.
+#  This file is part of GNU ghostscript
 #
-# This software is provided AS-IS with no warranty, either express or
-# implied. That is, this program is distributed in the hope that it will 
-# be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details
+#  GNU ghostscript is free software; you can redistribute it and/or modify it under
+#  the terms of the GNU General Public License as published by the Free Software
+#  Foundation; either version 2, or (at your option) any later version.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
-# 
-# 
-
-# $Id: winint.mak,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $
+#  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+#  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+#  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License along with
+#  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# $Id: winint.mak,v 1.8 2007/05/07 11:21:45 Arabidopsis Exp $
 # Common interpreter makefile section for 32-bit MS Windows.
 
 # This makefile must be acceptable to Microsoft Visual C++, Watcom C++,
@@ -232,11 +229,10 @@ ZIPPROGFILE1=gs$(GS_DOT_VERSION)\bin\gsdll32.dll
 ZIPPROGFILE2=gs$(GS_DOT_VERSION)\bin\gsdll32.lib
 ZIPPROGFILE3=gs$(GS_DOT_VERSION)\bin\gswin32.exe
 ZIPPROGFILE4=gs$(GS_DOT_VERSION)\bin\gswin32c.exe
-ZIPPROGFILE5=gs$(GS_DOT_VERSION)\bin\gs16spl.exe
-ZIPPROGFILE6=gs$(GS_DOT_VERSION)\doc
-ZIPPROGFILE7=gs$(GS_DOT_VERSION)\examples
-ZIPPROGFILE8=gs$(GS_DOT_VERSION)\lib
-ZIPPROGFILE9=gs$(GS_DOT_VERSION)\Resource
+ZIPPROGFILE5=gs$(GS_DOT_VERSION)\doc
+ZIPPROGFILE6=gs$(GS_DOT_VERSION)\examples
+ZIPPROGFILE7=gs$(GS_DOT_VERSION)\lib
+ZIPPROGFILE8=gs$(GS_DOT_VERSION)\Resource
 ZIPFONTDIR=fonts
 ZIPFONTFILES=$(ZIPFONTDIR)\*.*
 
@@ -260,9 +256,8 @@ zip: $(SETUP_XE) $(UNINSTALL_XE)
 	echo $(ZIPPROGFILE6) >> $(ZIPTEMPFILE)
 	echo $(ZIPPROGFILE7) >> $(ZIPTEMPFILE)
 	echo $(ZIPPROGFILE8) >> $(ZIPTEMPFILE)
-	echo $(ZIPPROGFILE9) >> $(ZIPTEMPFILE)
-	$(SETUP_XE_NAME) -title "AFPL Ghostscript $(GS_DOT_VERSION)" -dir "gs$(GS_DOT_VERSION)" -list "$(FILELIST_TXT)" @$(ZIPTEMPFILE)
-	$(SETUP_XE_NAME) -title "AFPL Ghostscript Fonts" -dir "fonts" -list "$(FONTLIST_TXT)" $(ZIPFONTFILES)
+	$(SETUP_XE_NAME) -title "GNU Ghostscript $(GS_DOT_VERSION)" -dir "gs$(GS_DOT_VERSION)" -list "$(FILELIST_TXT)" @$(ZIPTEMPFILE)
+	$(SETUP_XE_NAME) -title "GNU Ghostscript Fonts" -dir "fonts" -list "$(FONTLIST_TXT)" $(ZIPFONTFILES)
 	-del $(ZIPTARGET).zip
 	$(ZIP_XE) -9 $(ZIPTARGET).zip $(SETUP_XE_NAME) $(UNINSTALL_XE_NAME) $(FILELIST_TXT) $(FONTLIST_TXT)
 	$(ZIP_XE) -9 -r $(ZIPTARGET).zip $(ZIPFONTDIR)
@@ -270,15 +265,10 @@ zip: $(SETUP_XE) $(UNINSTALL_XE)
 	$(ZIP_XE) -9 -r $(ZIPTARGET).zip $(ZIPPROGFILE2)
 	$(ZIP_XE) -9 -r $(ZIPTARGET).zip $(ZIPPROGFILE3)
 	$(ZIP_XE) -9 -r $(ZIPTARGET).zip $(ZIPPROGFILE4)
-	rem
-	rem	Don't flag error if Win32s spooler file is missing.
-	rem	This occurs when using MSVC++.
-	rem
-	-$(ZIP_XE) -9 -r $(ZIPTARGET).zip $(ZIPPROGFILE5)
+	$(ZIP_XE) -9 -r $(ZIPTARGET).zip $(ZIPPROGFILE5)
 	$(ZIP_XE) -9 -r $(ZIPTARGET).zip $(ZIPPROGFILE6)
 	$(ZIP_XE) -9 -r $(ZIPTARGET).zip $(ZIPPROGFILE7)
 	$(ZIP_XE) -9 -r $(ZIPTARGET).zip $(ZIPPROGFILE8)
-	$(ZIP_XE) -9 -r $(ZIPTARGET).zip $(ZIPPROGFILE9)
 	-del $(ZIPTEMPFILE)
 	-del $(SETUP_XE_NAME)
 	-del $(UNINSTALL_XE_NAME)
@@ -295,16 +285,16 @@ ZIP_RSP = $(PSOBJ)setupgs.rsp
 # as used by Windows XP.
 archive: zip $(PSOBJ)gswin16.ico $(ECHOGS_XE)
 	$(ECHOGS_XE) -w $(ZIP_RSP) -q "-win32 -setup"
-	$(ECHOGS_XE) -a $(ZIP_RSP) -q -st -x 22 AFPL Ghostscript $(GS_DOT_VERSION) for Win32 -x 22
+	$(ECHOGS_XE) -a $(ZIP_RSP) -q -st -x 22 GNU Ghostscript $(GS_DOT_VERSION) for Win32 -x 22
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -i -s $(PSOBJ)gswin16.ico
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -a -s $(PSOBJ)about.txt
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -t -s $(PSOBJ)dialog.txt
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -c -s $(SETUP_XE_NAME)
-	$(ECHOGS_XE) -w $(PSOBJ)about.txt "AFPL Ghostscript is Copyright " -x A9 " 2006 artofcode LLC."
+	$(ECHOGS_XE) -w $(PSOBJ)about.txt "GNU Ghostscript is Copyright " -x A9 " 2007 artofcode LLC."
 	$(ECHOGS_XE) -a $(PSOBJ)about.txt See license in gs$(GS_DOT_VERSION)\doc\Public.htm.
 	$(ECHOGS_XE) -a $(PSOBJ)about.txt See gs$(GS_DOT_VERSION)\doc\Commprod.htm regarding commercial distribution.
-	$(ECHOGS_XE) -w $(PSOBJ)dialog.txt This installs AFPL Ghostscript $(GS_DOT_VERSION).
-	$(ECHOGS_XE) -a $(PSOBJ)dialog.txt AFPL Ghostscript displays, prints and converts PostScript and PDF files.
+	$(ECHOGS_XE) -w $(PSOBJ)dialog.txt This installs GNU Ghostscript $(GS_DOT_VERSION).
+	$(ECHOGS_XE) -a $(PSOBJ)dialog.txt GNU Ghostscript displays, prints and converts PostScript and PDF files.
 	$(WINZIPSE_XE) ..\$(ZIPTARGET) @$(PSOBJ)setupgs.rsp
 # Don't delete temporary files, because make continues
 # before these files are used.

@@ -1,24 +1,21 @@
-#    Copyright (C) 1991, 1995, 1996, 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
-# 
-# This file is part of GNU ghostscript
+#  Copyright (C) 2001-2006 artofcode LLC.
+#  All Rights Reserved.
 #
-# GNU ghostscript is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2, or (at your option) any later version.
+#  This file is part of GNU ghostscript
 #
-# This software is provided AS-IS with no warranty, either express or
-# implied. That is, this program is distributed in the hope that it will 
-# be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details
+#  GNU ghostscript is free software; you can redistribute it and/or modify it under
+#  the terms of the GNU General Public License as published by the Free Software
+#  Foundation; either version 2, or (at your option) any later version.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
-# 
-# 
-
-# $Id: watclib.mak,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $
+#  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+#  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+#  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License along with
+#  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# $Id: watclib.mak,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $
 # makefile for MS-DOS / Watcom C/C++ library testing.
 
 libdefault: $(GLOBJ)gslib.exe
@@ -27,7 +24,7 @@ libdefault: $(GLOBJ)gslib.exe
 AROOTDIR=c:/gs
 GSROOTDIR=$(AROOTDIR)/gs$(GS_DOT_VERSION)
 GS_DOCDIR=$(GSROOTDIR)/doc
-GS_LIB_DEFAULT=$(GSROOTDIR)/lib\;$(GSROOTDIR)/resource\;$(AROOTDIR)/fonts
+GS_LIB_DEFAULT=$(GSROOTDIR)/lib\;$(GSROOTDIR)/Resource/Font\;$(AROOTDIR)/fonts
 SEARCH_HERE_FIRST=1
 GS_INIT=gs_init.ps
 
@@ -48,6 +45,9 @@ BINDIR=.\debugobj
 !endif
 !ifndef GLSRCDIR
 GLSRCDIR=.\src
+!endif
+!ifndef PSRESDIR
+PSRESDIR=.\Resource
 !endif
 !ifndef GLGENDIR
 GLGENDIR=.\debugobj
@@ -72,7 +72,7 @@ JVERSION=6
 PSRCDIR=libpng
 !endif
 !ifndef PVERSION
-PVERSION=10210
+PVERSION=10208
 !endif
 
 !ifndef ZSRCDIR
@@ -138,10 +138,6 @@ FEATURE_DEVS=$(GLD)patlib.dev $(GLD)path1lib.dev
 !ifndef DEVICE_DEVS
 DEVICE_DEVS=$(DD)vga.dev
 !endif
-
-# The list of resources to be included in the %rom% file system.
-# This is in the top makefile since the file descriptors are platform specific
-RESOURCE_LIST=Resource/CMap/ Resource/ColorSpace/ Resource/Decoding/ Resource/Fonts/ Resource/Procset/ Resource/IdiomSet/ Resource/CIDFont/
 
 !ifndef COMPILE_INITS
 COMPILE_INITS=0

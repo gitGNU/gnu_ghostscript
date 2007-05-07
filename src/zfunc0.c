@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zfunc0.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zfunc0.c,v 1.5 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* PostScript language interface to FunctionType 0 (Sampled) Functions */
 #include "memory_.h"
 #include "ghost.h"
@@ -45,9 +45,9 @@ gs_build_function_0(i_ctx_t *i_ctx_p, const ref *op, const gs_function_params_t 
     int code;
 
     *(gs_function_params_t *) & params = *mnDR;
-    params.Encode = 0;
-    params.Decode = 0;
-    params.Size = 0;
+    params.Encode = params.Decode = NULL;
+    params.pole = NULL;
+    params.Size = params.array_step = params.stream_step = NULL;
     if ((code = dict_find_string(op, "DataSource", &pDataSource)) <= 0)
 	return (code < 0 ? code : gs_note_error(e_rangecheck));
     switch (r_type(pDataSource)) {
@@ -85,7 +85,7 @@ gs_build_function_0(i_ctx_t *i_ctx_p, const ref *op, const gs_function_params_t 
 	    goto fail;
 	}
 	params.Size = ptr;
-	code = dict_ints_param(op, "Size", params.m, ptr);
+	code = dict_ints_param(mem, op, "Size", params.m, ptr);
 	if (code != params.m)
 	    goto fail;
     }

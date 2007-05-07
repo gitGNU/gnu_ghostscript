@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpsds.h,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
+/* $Id: gdevpsds.h,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Image processing stream interface for PostScript and PDF writers */
 
 #ifndef gdevpsds_INCLUDED

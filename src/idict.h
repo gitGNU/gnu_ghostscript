@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1997, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: idict.h,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: idict.h,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Interfaces for Ghostscript dictionary package */
 
 #ifndef idict_INCLUDED
@@ -130,7 +130,8 @@ int dict_put_string(ref * pdref, const char *kstr, const ref * pvalue,
 
 /*
  * Remove a key-value pair from a dictionary.
- * Return 0 or e_undefined.
+ * Return any of the same values as dict_put, except for 0 and e_dictfull
+ * which are converted to e_undefined.
  */
 int dict_undef(ref * pdref, const ref * key, dict_stack_t *pds);
 

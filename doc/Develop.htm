@@ -3,7 +3,7 @@
 <head>
 <title>Information for Ghostscript developers</title>
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
-<!-- $Id: Develop.htm,v 1.7 2006/06/16 12:55:14 Arabidopsis Exp $ -->
+<!-- $Id: Develop.htm,v 1.8 2007/05/07 11:22:12 Arabidopsis Exp $ -->
 </head>
 
 <body>
@@ -444,6 +444,8 @@ Framework, file and string streams:
 <a href="../src/gsdsrc.c">src/gsdsrc.c</a>,
 <a href="../src/gsdsrc.h">src/gsdsrc.h</a>,
 <a href="../src/scommon.h">src/scommon.h</a>,
+<a href="../src/strmio.c">src/strmio.c</a>,
+<a href="../src/strmio.h">src/strmio.h</a>,
 <a href="../src/sfxboth.c">src/sfxboth.c</a>,
 <a href="../src/sfxfd.c">src/sfxfd.c</a>,
 <a href="../src/sfxstdio.c">src/sfxstdio.c</a>,
@@ -565,7 +567,7 @@ Non-standard filters:
 <dt>
 Internal filters:
 <dd>
-a<a href="../src/siinterp.c">src/siinterp.c</a>,
+<a href="../src/siinterp.c">src/siinterp.c</a>,
 <a href="../src/siinterp.h">src/siinterp.h</a>,
 <a href="../src/siscale.c">src/siscale.c</a>,
 <a href="../src/siscale.h">src/siscale.h</a>,
@@ -752,6 +754,8 @@ Path rendering:
 <a href="../src/gxfillsl.h">src/gxfills1.h</a>,
 <a href="../src/gxfilltr.h">src/gxfilltr.h</a>,
 <a href="../src/gxfillts.h">src/gxfillts.h</a>,
+<a href="../src/gximask.c">src/gximask.c</a>,
+<a href="../src/gximask.h">src/gximask.h</a>,
 <a href="../src/gxfdrop.c">src/gxdrop.c</a>,
 <a href="../src/gxfdrop.h">src/gxdrop.h</a>,
 <a href="../src/gxpaint.c">src/gxpaint.c</a>,
@@ -840,6 +844,7 @@ Character rendering, specific FontTypes:
 <a href="../src/gxhint3.c">src/gxhint3.c</a>,
 <a href="../src/gxhintn.h">src/gxhintn.h</a>,
 <a href="../src/gxhintn.c">src/gxhintn.c</a>,
+<a href="../src/gxhintn1.c">src/gxhintn1.c</a>,
 <a href="../src/gxop1.h">src/gxop1.h</a>,
 <a href="../src/gxtype1.c">src/gxtype1.c</a>,
 <a href="../src/gxtype1.h">src/gxtype1.h</a>.
@@ -913,7 +918,10 @@ Type 3 images:
 <dt>
 Other:
 <dd>
-<a href="../src/gsimpath.c">src/gsimpath.c</a>.
+<a href="../src/gsimpath.c">src/gsimpath.c</a>,
+<a href="../src/simscale.c">src/simscale.c</a>,
+<a href="../src/simscale.h">src/simscale.h</a>.
+.
 
 </dl>
 
@@ -1181,8 +1189,8 @@ Well tempered screening:
 <a href="../src/gswts.h">src/gswts.h</a>,
 <a href="../src/gswts.c">src/gswts.c</a>,
 <a href="../src/gxwts.h">src/gxwts.h</a>,
-<a href="../src/gxwts.c">src/gxwts.c</a>.
-
+<a href="../src/gxwts.c">src/gxwts.c</a>,
+<a href="../src/wtsimdi.c">src/wtsimdi.c</a>.
 </dl>
 
 <p>
@@ -1429,8 +1437,8 @@ Miscellaneous graphics state:
 <dt>
 UFST bridge:
 <dd>
-<a href="../src/gxfapi.c">src/gxfapi.c</a>,
-<a href="../src/gxfapi.h">src/gxfapi.h</a>.
+<a href="../src/gxfapiu.c">src/gxfapiu.c</a>,
+<a href="../src/gxfapiu.h">src/gxfapiu.h</a>.
 </dl>
 
 
@@ -1512,6 +1520,11 @@ Banding:
 <a href="../src/gxdhtserial.h">src/gxdhtserial.h</a>,
 <a href="../src/gsserial.c">src/gsserial.c</a>,
 <a href="../src/gsserial.h">src/gsserial.h</a>.
+
+<dt>
+Color mapping:
+<dd>
+<a href="../src/gdevimdi.c">src/gdevimdi.c</a>.
 
 </dl>
 
@@ -2520,7 +2533,8 @@ Images:
 <a href="../src/iimage2.h">src/iimage2.h</a>,
 <a href="../src/zimage.c">src/zimage.c</a>,
 <a href="../src/zimage2.c">src/zimage2.c</a>,
-<a href="../src/zimage3.c">src/zimage3.c</a>.
+<a href="../src/zimage3.c">src/zimage3.c</a>,
+<a href="../src/zfimscale.c">src/zfimscale.c</a>.
 
 <dt>
 Other graphics:
@@ -2695,6 +2709,11 @@ Display PostScript:
 <a href="../lib/gs_dpnxt.ps">lib/gs_dpnxt.ps</a>,
 <a href="../lib/gs_dps.ps">lib/gs_dps.ps</a>.
 
+<dt>
+Emulation of other interpreters:
+<dd>
+<a href="../lib/gs_cet.ps">lib/gs_cet.ps</a> (Adobe CPSI).
+
 </dl>
 
 <dt>
@@ -2744,7 +2763,8 @@ Font name mapping:
 <a href="../lib/Fontmap.VMS">lib/Fontmap.VMS</a>,
 <a href="../lib/cidfmap">lib/cidfmap</a>,
 <a href="../lib/FAPIcidfmap">lib/FAPIcidfmap</a>,
-<a href="../lib/FAPIfontmap">lib/FAPIfontmap</a>.
+<a href="../lib/FAPIfontmap">lib/FAPIfontmap</a>,
+<a href="../lib/FCOfontmap">lib/FCOfontmap</a>.
 
 <dt>
 Generic:
@@ -2781,7 +2801,11 @@ Font API:
 <dd>
 <a href="../lib/gs_fapi.ps">lib/gs_fapi.ps</a>,
 <a href="../lib/FAPIconfig">lib/FAPIconfig</a>,
+<a href="../lib/FAPIconfig-FCO">lib/FAPIconfig-FCO</a>,
 <a href="../lib/xlatmap">lib/xlatmap</a>.
+<a href="../lib/FCOfontmap-PCLPS2">lib/FCOfontmap-PCLPS2</a>.
+<a href="../lib/FCOfontmap-PCLPS3">lib/FCOfontmap-PCLPS3</a>.
+<a href="../lib/FCOfontmap-PS3">lib/FCOfontmap-PS3</a>.
 
 <dt>
 Other:
@@ -3261,14 +3285,11 @@ Files for PC environments:
 <a href="../src/cp.cmd">src/cp.cmd</a>,
 <a href="../src/dw32c.def">src/dw32c.def</a>,
 <a href="../src/dwmain.rc">src/dwmain.rc</a>,
-<a href="../src/dwmain16.def">src/dwmain16.def</a>,
 <a href="../src/dwmain32.def">src/dwmain32.def</a>,
 <a href="../src/dwsetup.def">src/dwsetup.def</a>,
 <a href="../src/dwsetup.rc">src/dwsetup.rc</a>,
 <a href="../src/dwuninst.def">src/dwuninst.def</a>,
 <a href="../src/dwuninst.rc">src/dwuninst.rc</a>,
-<a href="../src/gs16spl.def">src/gs16spl.def</a>,
-<a href="../src/gs16spl.rc">src/gs16spl.rc</a>,
 <a href="../src/gsdll2.def">src/gsdll2.def</a>,
 <a href="../src/gsdll2.rc">src/gsdll2.rc</a>,
 <a href="../src/gsdll32.def">src/gsdll32.def</a>,
@@ -3282,7 +3303,6 @@ Files for PC environments:
 <a href="../src/gspmdrv.rc">src/gspmdrv.rc</a>,
 <a href="../src/gswin.rc">src/gswin.rc</a>,
 <a href="../src/gswin32.rc">src/gswin32.rc</a>,
-<a href="../src/gswin386.rc">src/gswin386.rc</a>,
 <a href="../src/mv.bat">src/mv.bat</a>,
 <a href="../src/mv.cmd">src/mv.cmd</a>,
 <a href="../src/rm.bat">src/rm.bat</a>,
@@ -4577,7 +4597,6 @@ MS Windows files:
 <a href="../src/gp_msdll.c">src/gp_msdll.c</a>,
 <a href="../src/gp_mspol.c">src/gp_mspol.c</a>,
 <a href="../src/gp_msprn.c">src/gp_msprn.c</a>,
-<a href="../src/gs16spl.c">src/gs16spl.c</a>,
 <a href="../src/gsdllwin.h">src/gsdllwin.h</a>.
 
 <dt>
@@ -4684,20 +4703,20 @@ Files:
 <hr>
 
 <p>
-<small>Copyright &copy; 2001 artofcode LLC.
-All rights reserved.</small>
+<small>Copyright &copy; 2001-2006 artofcode LLC.  All rights reserved.</small>
 
 <p>
 This software is provided AS-IS with no warranty, either express or
 implied.
 
-This software is distributed under license and may not be copied,
-modified or distributed except as expressly authorized under the terms
-of the license contained in the file LICENSE in this distribution.
-
+This software is distributed under license and may not be copied, modified
+or distributed except as expressly authorized under the terms of that
+license.  Refer to licensing information at http://www.artifex.com/
+or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.51, 31 December 2005
+<small>Ghostscript version 8.56, 14 March 2007
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

@@ -1,4 +1,5 @@
-/* Copyright (C) 1996, 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfp.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevpdfp.c,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Get/put parameters for PDF-writing driver */
 #include "memory_.h"
 #include "string_.h"
@@ -541,7 +542,7 @@ pdf_dsc_process(gx_device_pdf * pdev, const gs_param_string_array * pma)
      * the ones that we see how to map directly to obvious PDF constructs.
      */
     int code = 0;
-    int i;
+    uint i;
 
     /*
      * If ParseDSCComments is false, all DSC comments are ignored, even if
@@ -574,6 +575,7 @@ pdf_dsc_process(gx_device_pdf * pdev, const gs_param_string_array * pma)
 	    key = "/Author";
 	else {
 	    pdf_page_dsc_info_t *ppdi;
+            char scan_buf[200]; /* arbitrary */
 
 	    if ((ppdi = &pdev->doc_dsc_info,
 		 pdf_key_eq(pkey, "Orientation")) ||
@@ -594,7 +596,11 @@ pdf_dsc_process(gx_device_pdf * pdev, const gs_param_string_array * pma)
 		gs_matrix mat;
 		int orient;
 
-		if (sscanf((const char *)pvalue->data, "[%g %g %g %g]",
+		if(pvalue->size >= sizeof(scan_buf) - 1)
+		    continue;	/* error */
+                memcpy(scan_buf, pvalue->data, pvalue->size);
+                scan_buf[pvalue->size] = 0;
+                if (sscanf(scan_buf, "[%g %g %g %g]",
 			   &mat.xx, &mat.xy, &mat.yx, &mat.yy) != 4
 		    )
 		    continue;	/* error */
@@ -623,7 +629,11 @@ pdf_dsc_process(gx_device_pdf * pdev, const gs_param_string_array * pma)
 		    ppdi = &pdev->page_dsc_info;
 		else
 		    continue;
-		if (sscanf((const char *)pvalue->data, "[%lg %lg %lg %lg]",
+		if(pvalue->size >= sizeof(scan_buf) - 1)
+		    continue;	/* error */
+                memcpy(scan_buf, pvalue->data, pvalue->size);
+                scan_buf[pvalue->size] = 0;
+		if (sscanf(scan_buf, "[%lg %lg %lg %lg]",
 			   &box.p.x, &box.p.y, &box.q.x, &box.q.y) != 4
 		    )
 		    continue;	/* error */

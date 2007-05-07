@@ -1,4 +1,5 @@
-/* Copyright (C) 2002 artofcode LLC. All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: vdtrace.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: vdtrace.c,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Visual tracer service */
 
 #include "math_.h"
@@ -168,7 +168,6 @@ void vd_impl_curve(double x0, double y0, double x1, double y1, double x2, double
 {   NullRET;
     vd_trace1->setcolor(vd_trace1, c);
     vd_trace1->setlinewidth(vd_trace1, w);
-    vd_trace1->beg_path(vd_trace1);
     vd_trace1->beg_path(vd_trace1);
     vd_trace1->moveto(vd_trace1, SX(x0), SY(y0));
     vd_impl_curveto(x1, y1, x2, y2, x3, y3);

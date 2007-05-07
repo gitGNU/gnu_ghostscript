@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 2000-2004 artofcode LLC. All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,12 +17,12 @@
 
 */
 
-/* $Id: gp_unifs.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gp_unifs.c,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* "Unix-like" file system platform routines for Ghostscript */
 
+#include "stdio_.h"		/* for FILENAME_MAX */
 #include "memory_.h"
 #include "string_.h"
-#include "stdio_.h"		/* for FILENAME_MAX */
 #include "gx.h"
 #include "gp.h"
 #include "gpmisc.h"
@@ -62,9 +63,9 @@ const char gp_current_directory_name[] = ".";
 
 /* Create and open a scratch file with a given name prefix. */
 /* Write the actual file name at fname. */
-FILE *
-gp_open_scratch_file(const char *prefix, char fname[gp_file_name_sizeof],
-		     const char *mode)
+private FILE *
+gp_open_scratch_file_generic(const char *prefix, char fname[gp_file_name_sizeof],
+		     const char *mode, bool b64)
 {	/* The -8 is for XXXXXX plus a possible final / and -. */
     int prefix_length = strlen(prefix);
     int len = gp_file_name_sizeof - prefix_length - 8;
@@ -88,28 +89,40 @@ gp_open_scratch_file(const char *prefix, char fname[gp_file_name_sizeof],
 
 #ifdef HAVE_MKSTEMP
     {
-	    int file;
-	    char ofname[gp_file_name_sizeof];
+	int file;
+	char ofname[gp_file_name_sizeof];
 
-	    /* save the old filename template in case mkstemp fails */
-	    memcpy(ofname, fname, gp_file_name_sizeof);
-
+	/* save the old filename template in case mkstemp fails */
+	memcpy(ofname, fname, gp_file_name_sizeof);
+#if defined(HAVE_FILE64) && !defined(_LARGEFILE64_SOURCE)
+	if (b64)
+	    file = mkstemp64(fname);
+	else
+#endif
 	    file = mkstemp(fname);
-	    if (file < -1) {
-		    eprintf1("**** Could not open temporary file %s\n", ofname);
-		    return NULL;
-	    }
-	    fp = fdopen(file, mode);
- 	    if (fp == NULL)
- 		    close(file);
+
+	/* Fixme : what to do with b64 and 32-bit mkstemp? Unimplemented. */
+	if (file < -1) {
+	    eprintf1("**** Could not open temporary file %s\n", ofname);
+	    return NULL;
+	}
+	fp = fdopen(file, mode);
+	if (fp == NULL)
+	    close(file);
     }
 #else
     mktemp(fname);
-    fp = gp_fopentemp(fname, mode);
+    fp = (b64 ? gp_fopentemp : gp_fopentemp_64)(fname, mode);
 #endif
     if (fp == NULL)
 	eprintf1("**** Could not open temporary file %s\n", fname);
     return fp;
+}
+FILE *
+gp_open_scratch_file(const char *prefix, char fname[gp_file_name_sizeof],
+		     const char *mode)
+{
+    return gp_open_scratch_file_generic(prefix, fname, mode, false);
 }
 
 /* Open a file with the given name, as a stream of uninterpreted bytes. */
@@ -467,3 +480,45 @@ gp_enumerate_files_close(file_enum * pfen)
    (../?*r*?/) {==} 100 string filenameforall
    (/t*?/?*.ps) {==} 100 string filenameforall
  */
+
+/* --------- 64 bit file access ----------- */
+
+FILE *gp_fopen_64(const char *filename, const char *mode)
+{
+#if defined(_LARGEFILE64_SOURCE) || !defined(HAVE_FILE64)
+    return fopen(filename, mode);
+#else
+    return fopen64(filename, mode);
+#endif
+}
+
+FILE *gp_open_scratch_file_64(const char *prefix,
+			   char fname[gp_file_name_sizeof],
+			   const char *mode)
+{
+    return gp_open_scratch_file_generic(prefix, fname, mode, true);
+}
+
+/* gp_open_printer_64 is defined in gp_unix.h */
+
+int64_t gp_ftell_64(FILE *strm)
+{
+#if defined(_LARGEFILE64_SOURCE) || !defined(HAVE_FILE64)
+    return ftello(strm);
+#else
+    return ftello64(strm);
+#endif
+}
+
+int gp_fseek_64(FILE *strm, int64_t offset, int origin)
+{
+#if defined(_LARGEFILE64_SOURCE) || !defined(HAVE_FILE64)
+    off_t offset1 = (off_t)offset;
+    
+    if (offset != offset1)
+	return -1;
+    return fseeko(strm, offset1, origin);
+#else
+    return fseeko64(strm, offset, origin);
+#endif
+}

@@ -1,4 +1,5 @@
-/* Copyright (C) 2002 artofcode LLC. All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -15,8 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-
-/* $Id: gdevddrw.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gdevddrw.h,v 1.6 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Prototypes of some polygon and image drawing procedures */
 
 #ifndef gdevddrw_INCLUDED

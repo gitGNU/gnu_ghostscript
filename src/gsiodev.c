@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsiodev.c,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
+/* $Id: gsiodev.c,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* IODevice implementation for Ghostscript */
 #include "errno_.h"
 #include "string_.h"
@@ -269,7 +270,7 @@ os_get_params(gx_io_device * iodev, gs_param_list * plist)
 gx_io_device *
 gs_getiodevice(int index)
 {
-    if (index < 0 || index >= gx_io_device_table_count)
+    if (!io_device_table || index < 0 || index >= gx_io_device_table_count)
 	return 0;		/* index out of range */
     return io_device_table[index];
 }

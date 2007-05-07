@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsfont.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gsfont.c,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Font operators for Ghostscript library */
 #include "gx.h"
 #include "memory_.h"
@@ -44,6 +45,8 @@
 #define mmax_SMALL 40		/* mmax - # of cached font/matrix pairs */
 #define cmax_SMALL 500		/* cmax - # of cached chars */
 #define blimit_SMALL 100	/* blimit/upper - max size of a single cached char */
+
+extern bool CPSI_mode;
 
 /* Define a default procedure vector for fonts. */
 const gs_font_procs gs_font_procs_default = {
@@ -166,6 +169,7 @@ gs_font_finalize(void *vptr)
 	    (ulong) pfont, (ulong) pfont->base, (ulong) prev, (ulong) next);
     /* Notify clients that the font is being freed. */
     gs_notify_all(&pfont->notify_list, NULL);
+    gs_purge_font_from_char_caches(pfont);
     if (pfont->dir == 0)
 	ppfirst = 0;
     else if (pfont->base == pfont)
@@ -267,6 +271,7 @@ gs_font_dir_alloc2_limits(gs_memory_t * struct_mem, gs_memory_t * bits_mem,
     pdir->grid_fit_tt = 2;
     pdir->memory = struct_mem;
     pdir->tti = 0;
+    pdir->ttm = 0;
     pdir->san = 0;
     pdir->global_glyph_code = NULL;
     pdir->text_enum_id = 0;
@@ -312,6 +317,7 @@ gs_font_alloc(gs_memory_t *mem, gs_memory_type_ptr_t pstype,
     pfont->WMode = 0;
     pfont->PaintType = 0;
     pfont->StrokeWidth = 0;
+    pfont->is_cached = false;
     pfont->procs = *procs;
     memset(&pfont->orig_FontMatrix, 0, sizeof(pfont->orig_FontMatrix));
 #endif
@@ -557,7 +563,7 @@ gs_makefont(gs_font_dir * pdir, const gs_font * pfont,
 	     */
 #if 0	    /* We disabled this code portion due to Bug 688392.
 	       The problem was dangling pointers, which appear in fm_pair instances
-	       after uid_free is applied to applied to a font's UID,
+	       after uid_free is applied to a font's UID,
 	       because they share same xvalues array. We're unable to guess 
 	       for which reason uid_free was applied to the font's UID here 
 	       5+ years ago (see gsfont.c revision 1.1).
@@ -633,20 +639,26 @@ gs_cachestatus(register const gs_font_dir * pdir, register uint pstat[7])
 /* setcacheparams */
 int
 gs_setcachesize(gs_font_dir * pdir, uint size)
-{				/* This doesn't delete anything from the cache yet. */
+{   /* This doesn't delete anything from the cache yet. */
+    if (CPSI_mode) {
+        if (size < 100000)             /* for CET 27-07 */
+            size = 100000;
+        else if (size > 100000000)     /* for CET 27-02-01 */
+            size = 100000000;
+    }
     pdir->ccache.bmax = size;
     return 0;
 }
 int
 gs_setcachelower(gs_font_dir * pdir, uint size)
 {
-    pdir->ccache.lower = size;
+    pdir->ccache.lower = ((int)size < 0) ? 0 : size; /* ?: for CET 27-07 */
     return 0;
 }
 int
 gs_setcacheupper(gs_font_dir * pdir, uint size)
-{
-    pdir->ccache.upper = size;
+{ 
+    pdir->ccache.upper = ((int)size < 0) ? 0 : size; /* ?: for CET 27-06 */
     return 0;
 }
 int
@@ -727,7 +739,7 @@ gs_purge_font(gs_font * pfont)
 
     /* Purge the font from the font/matrix pair cache, */
     /* including all cached characters rendered with that font. */
-    return gs_purge_font_from_char_caches(pdir, pfont);
+    return gs_purge_font_from_char_caches(pfont);
 }
 
 /* Locate a gs_font by gs_id. */

@@ -1,4 +1,5 @@
-/* Copyright (C) 1991, 1995, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: iutil.h,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: iutil.h,v 1.6 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Interface to interpreter utilities */
 /* Requires imemory.h, ostack.h */
 
@@ -68,7 +68,7 @@ int obj_string_data(const gs_memory_t *mem, const ref *op, const byte **pchars, 
  */
 #define CVP_MAX_STRING 200  /* strings are truncated here if full_print = 1 */
 int obj_cvp(const ref * op, byte *str, uint len, uint * prlen,
-	    int full_print, uint start_pos, const gs_memory_t *mem);
+	int full_print, uint start_pos, const gs_memory_t *mem, bool restart);
 
 /*
  * Create a printable representation of an object, a la cvs and =.  Return 0

@@ -1,5 +1,5 @@
 @echo off
-@rem $Id: ps2pdfxx.bat,v 1.2 2004/02/14 22:20:04 atai Exp $
+@rem $Id: ps2pdfxx.bat,v 1.3 2007/05/07 11:22:07 Arabidopsis Exp $
 rem Internal batch file for calling pdfwrite driver.
 
 rem The files that call this one (ps2pdf*.bat) write the command-line

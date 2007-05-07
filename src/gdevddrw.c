@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -15,10 +16,8 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-
-/* $Id: gdevddrw.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevddrw.c,v 1.8 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Default polygon and image drawing device procedures */
-#include <assert.h>
 #include "math_.h"
 #include "memory_.h"
 #include "stdint_.h"
@@ -263,14 +262,24 @@ set_x_gradient_nowedge(trap_gradient *xg, const trap_gradient *lg, const trap_gr
     int32_t xr = r->x - (r->xf == -r->h ? 1 : 0) - fixed_half; /* Revert the GX_FILL_TRAPEZOID shift. */
     /* The pixel span boundaries : */
     int32_t x0 = int2fixed(il) + fixed_half; /* Shift to the pixel center. */
-    int32_t x1 = int2fixed(ir) + fixed_half; /* Shift to the pixel center. */
+    int32_t x1 = int2fixed(ir) - fixed_half; /* The center of the last pixel to paint. */
     int i;
 
 #   ifdef DEBUG
 	if (arith_rshift_1(xr) - arith_rshift_1(xl) >= 0x3FFFFFFE) /* Can overflow ? */
 	    return_error(gs_error_unregistered); /* Must not happen. */
 #   endif
+    /* We cannot compute the color of the 'ir' pixel 
+       because it can overflow 'c1' due to the pixel ir center
+       may be greater that r->x .
+       Therefore we base the proportion on the pixel index ir-1 (see comment to 'x1').
+       Debugged with CET 12-14O.PS SpecialTestJ02Test12.
+     */
     xg->den = fixed2int(x1 - x0);
+    if (xg->den <= 0) {
+	/* The span contains a single pixel, will construct a degenerate gradient. */
+	xg->den = 1; /* Safety (against zerodivide). */
+    }
     for (i = 0; i < num_components; i++) {
 	/* Ignoring the ending colors fractions, 
 	   so the color gets a slightly smaller value

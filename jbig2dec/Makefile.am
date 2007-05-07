@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.3 2006/06/16 12:55:32 Arabidopsis Exp $
+# $Id: Makefile.am,v 1.4 2007/05/07 11:22:12 Arabidopsis Exp $
 ## process this file with automake to generate Makefile.in
 
 # require automake 1.7

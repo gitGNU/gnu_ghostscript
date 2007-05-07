@@ -15,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxsamplp.h,v 1.1 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gxsamplp.h,v 1.2 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Templates for sample lookup and expansion */
 
 /* This module is allowed to include several times into a single .c file. 

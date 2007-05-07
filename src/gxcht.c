@@ -15,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/*$Id: gxcht.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/*$Id: gxcht.c,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Color halftone rendering for Ghostscript imaging library */
 #include "memory_.h"
 #include "gx.h"

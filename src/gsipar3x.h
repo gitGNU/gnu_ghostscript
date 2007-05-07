@@ -1,4 +1,5 @@
-/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsipar3x.h,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsipar3x.h,v 1.5 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Extended ImageType 3 ("3x") image parameter definition */
 
 #ifndef gsipar3x_INCLUDED
@@ -68,6 +69,6 @@ typedef struct gs_image3x_s {
 /*
  * Initialize an ImageType 3x image.
  */
-void gs_image3x_t_init(gs_image3x_t *pim, const gs_color_space *color_space);
+void gs_image3x_t_init(gs_image3x_t *pim, gs_color_space *color_space);
 
 #endif /* gsipar3x_INCLUDED */

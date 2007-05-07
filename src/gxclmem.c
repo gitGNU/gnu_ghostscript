@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 1996, 1997, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxclmem.c,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxclmem.c,v 1.5 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* RAM-based command list implementation */
 #include "memory_.h"
 #include "gx.h"
@@ -869,7 +869,7 @@ memfile_ferror_code(clist_file_ptr cf)
     return (((MEMFILE *) cf)->error_code);	/* errors stored here */
 }
 
-long
+int64_t
 memfile_ftell(clist_file_ptr cf)
 {
     return (((MEMFILE *) cf)->log_curr_pos);
@@ -892,7 +892,7 @@ memfile_rewind(clist_file_ptr cf, bool discard_data, const char *ignore_fname)
 }
 
 int
-memfile_fseek(clist_file_ptr cf, long offset, int mode, const char *ignore_fname)
+memfile_fseek(clist_file_ptr cf, int64_t offset, int mode, const char *ignore_fname)
 {
     MEMFILE *f = (MEMFILE *) cf;
     long i, block_num, new_pos;

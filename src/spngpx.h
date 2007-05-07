@@ -1,4 +1,5 @@
-/* Copyright (C) 1996, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,21 +15,27 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: spngpx.h,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: spngpx.h,v 1.5 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Definitions for PNGPredictor filters */
 /* Requires strimpl.h */
 
 #ifndef spngpx_INCLUDED
 #  define spngpx_INCLUDED
 
+/*
+ * Define the maximum value for Colors.  The PNG specification probably
+ * defines this as 16, but some PS3 CET files require it to be as large as
+ * 53.  The only cost of larger values is a larger stream state structure.
+ */
+#define s_PNG_max_Colors 60
+
 /* PNGPredictorDecode / PNGPredictorEncode */
 typedef struct stream_PNGP_state_s {
     stream_state_common;
     /* The client sets the following before initialization. */
-    int Colors;			/* # of colors, 1..16 */
+    int Colors;			/* # of colors, 1..s_PNG_max_Colors */
     int BitsPerComponent;	/* 1, 2, 4, 8, 16 */
     uint Columns;		/* >0 */
     int Predictor;		/* 10-15, only relevant for Encode */
@@ -41,7 +48,7 @@ typedef struct stream_PNGP_state_s {
 				/* set dynamically when decoding */
     /* The following are updated dynamically. */
     long row_left;		/* # of bytes left in row */
-    byte prev[32];		/* previous samples */
+    byte prev[2 * s_PNG_max_Colors]; /* previous samples */
 } stream_PNGP_state;
 
 #define private_st_PNGP_state()	/* in sPNGP.c */\

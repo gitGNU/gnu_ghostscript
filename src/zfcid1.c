@@ -1,4 +1,5 @@
-/* Copyright (C) 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zfcid1.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: zfcid1.c,v 1.7 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* CIDFontType 1 and 2 operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -110,6 +110,8 @@ z11_CIDMap_proc(gs_font_cid2 *pfont, gs_glyph glyph)
     }
     for (i = 0; i < gdbytes; ++i)
 	gnum = (gnum << 8) + data[i];
+    if (gnum >= pfont->data.trueNumGlyphs)
+	return_error(e_invalidfont);
     return gnum;
 }
 
@@ -139,8 +141,8 @@ z11_get_outline(gs_font_type42 * pfont, uint glyph_index,
 #define GET_S16_MSB(p) (int)((GET_U16_MSB(p) ^ 0x8000) - 0x8000)
 
 private int
-z11_get_metrics(gs_font_type42 * pfont, uint glyph_index, int wmode,
-		float sbw[4])
+z11_get_metrics(gs_font_type42 * pfont, uint glyph_index, 
+		gs_type42_metrics_options_t options, float sbw[4])
 {
     gs_font_cid2 *const pfcid = (gs_font_cid2 *)pfont;
     int skip = pfcid->cidata.MetricsCount << 1;
@@ -148,26 +150,34 @@ z11_get_metrics(gs_font_type42 * pfont, uint glyph_index, int wmode,
     const byte *pmetrics;
     int lsb, width;
     int code = 0;
+    int wmode = gs_type42_metrics_options_wmode(options);
 
     gdata.memory = pfont->memory;
     if (wmode >= skip >> 2 ||
 	(code = pfcid->cidata.orig_procs.get_outline(pfont, glyph_index, &gdata)) < 0 ||
 	gdata.bits.size < skip
 	)
-	return pfcid->cidata.orig_procs.get_metrics(pfont, glyph_index, wmode,
-						    sbw);
-    pmetrics = gdata.bits.data + skip - 4 - (wmode << 2);
-    lsb = GET_S16_MSB(pmetrics + 2);
-    width = GET_U16_MSB(pmetrics + 0);
-    {
-	double factor = 1.0 / pfont->data.unitsPerEm;
+	return pfcid->cidata.orig_procs.get_metrics(pfont, glyph_index, options, sbw);
+    if(gs_type42_metrics_options_bbox_requested(options)) {
+	code = pfcid->cidata.orig_procs.get_metrics(pfont, glyph_index, 
+			gs_type42_metrics_options_BBOX, sbw);;
+	if (code < 0)
+	    return code;
+    }
+    if (gs_type42_metrics_options_sbw_requested(options)) {
+	pmetrics = gdata.bits.data + skip - 4 - (wmode << 2);
+	lsb = GET_S16_MSB(pmetrics + 2);
+	width = GET_U16_MSB(pmetrics + 0);
+	{
+	    double factor = 1.0 / pfont->data.unitsPerEm;
 
-	if (wmode) {
-	    sbw[0] = 0, sbw[1] = -lsb * factor;
-	    sbw[2] = 0, sbw[3] = -width * factor;
-	} else {
-	    sbw[0] = lsb * factor, sbw[1] = 0;
-	    sbw[2] = width * factor, sbw[3] = 0;
+	    if (wmode) {
+		sbw[0] = 0, sbw[1] = -lsb * factor;
+		sbw[2] = 0, sbw[3] = -width * factor;
+	    } else {
+		sbw[0] = lsb * factor, sbw[1] = 0;
+		sbw[2] = width * factor, sbw[3] = 0;
+	    }
 	}
     }
     gs_glyph_data_free(&gdata, "z11_get_metrics");

@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>Details of Ghostscript output devices</title>
-<!-- $Id: Devices.htm,v 1.7 2006/06/16 12:55:14 Arabidopsis Exp $ -->
+<!-- $Id: Devices.htm,v 1.8 2007/05/07 11:22:13 Arabidopsis Exp $ -->
 <!-- Originally: devices.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -444,8 +444,10 @@ set:
 <dt><b><tt>-dMaxStripSize=</tt><em>N</em></b> (non-negative integer; default = 0)
 <dd>Set the maximum (uncompressed) size of a strip.
 
-<dt><b><tt>-dAdjustWidth</tt><em>state</em></b> (0 or 1; default = 1)
-<dd>If this option set then if the requested page width is close to either A4 (1728 columns) or B4 (2048 columns), set the page width to A4 or B4 respectively.
+<dt><b><tt>-dAdjustWidth=</tt><em>state</em></b> (0 or 1; default = 1)
+<dd>If this option set then if the requested page width is in the range of either
+1680..1736 or 2000..2056 columns, set the page width to A4 (1728 columns)
+or B4 (2048 columns) respectively.
 This behavior is the default. Pass -dAdjustWidth=0 to turn off this behavior.
 </dl></blockquote>
 
@@ -1543,20 +1545,20 @@ spot colors.
 <hr>
 
 <p>
-<small>Copyright &copy; 1996-2002 artofcode LLC.
-All rights reserved.</small>
+<small>Copyright &copy; 2000-2006 artofcode LLC.  All rights reserved.</small>
 
 <p>
 This software is provided AS-IS with no warranty, either express or
 implied.
 
-This software is distributed under license and may not be copied,
-modified or distributed except as expressly authorized under the terms
-of the license contained in the file LICENSE in this distribution.
-
+This software is distributed under license and may not be copied, modified
+or distributed except as expressly authorized under the terms of that
+license.  Refer to licensing information at http://www.artifex.com/
+or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.51, 31 December 2005
+<small>Ghostscript version 8.56, 14 March 2007
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

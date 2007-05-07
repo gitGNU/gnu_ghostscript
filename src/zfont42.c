@@ -1,4 +1,5 @@
-/* Copyright (C) 1996, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zfont42.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: zfont42.c,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Type 42 font creation operator */
 #include "memory_.h"
 #include "ghost.h"
@@ -83,7 +83,7 @@ build_gs_TrueType_font(i_ctx_t *i_ctx_p, os_ptr op, gs_font_type42 **ppfont,
     ref_assign(&pdata->u.type42.GlyphDirectory, &GlyphDirectory);
     pfont->data.string_proc = z42_string_proc;
     pfont->data.proc_data = (char *)pdata;
-    code = gs_type42_font_init(pfont);
+    code = gs_type42_font_init(pfont, 0);
     if (code < 0)
 	return code;
     pfont->procs.font_info = z42_font_info;

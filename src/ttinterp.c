@@ -1,4 +1,5 @@
-/* Copyright (C) 2003 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: ttinterp.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: ttinterp.c,v 1.6 2007/05/07 11:21:43 Arabidopsis Exp $ */
 
 /* Changes after FreeType: cut out the TrueType instruction interpreter. */
 /* Patented algorithms are replaced with THROW_PATENTED. */
@@ -636,6 +636,7 @@ static int nInstrCount=0;
   static void  Write_CVT( EXEC_OPS Int  index, TT_F26Dot6  value )
   {
     int ov=CUR.cvt[index];
+    (void)ov; /* Quiet compiler warning in release build. */
     CUR.cvt[index] = value;
     DBG_PRINT3(" cvt[%d]%d:=%d", index, ov, CUR.cvt[index]);
 }
@@ -643,6 +644,7 @@ static int nInstrCount=0;
   static void  Write_CVT_Stretched( EXEC_OPS Int  index, TT_F26Dot6  value )
   {
     int ov=CUR.cvt[index];
+    (void)ov; /* Quiet compiler warning in release build. */
     CUR.cvt[index] = MulDiv_Round( value, 0x10000, CURRENT_Ratio() );
     DBG_PRINT3(" cvt[%d]%d:=%d", index, ov, CUR.cvt[index]);
   }
@@ -651,6 +653,7 @@ static int nInstrCount=0;
   static void  Move_CVT( EXEC_OPS  Int index, TT_F26Dot6 value )
   {
     int ov=CUR.cvt[index];
+    (void)ov; /* Quiet compiler warning in release build. */
     CUR.cvt[index] += value;
     DBG_PRINT3(" cvt[%d]%d:=%d", index, ov, CUR.cvt[index]);
   }
@@ -658,6 +661,7 @@ static int nInstrCount=0;
   static void  Move_CVT_Stretched( EXEC_OPS  Int index, TT_F26Dot6  value )
   {
     int ov=CUR.cvt[index];
+    (void)ov; /* Quiet compiler warning in release build. */
     CUR.cvt[index] += MulDiv_Round( value, 0x10000, CURRENT_Ratio() );
     DBG_PRINT3(" cvt[%d]%d:=%d", index, ov, CUR.cvt[index]);
   }
@@ -5122,6 +5126,8 @@ static int nInstrCount=0;
 
 	DBG_PRINT("\n%% *** Entering RunIns ***");
 #   endif
+
+    (void)dbg_prt; /* Quiet compiler warning in release build. */
 
     /* set CVT functions */
     CUR.metrics.ratio = 0;

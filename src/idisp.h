@@ -1,5 +1,6 @@
-/* Copyright (C) 2001, Ghostgum Software Pty Ltd.  All rights reserved.
-
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
+  
   This file is part of GNU ghostscript
 
   GNU ghostscript is free software; you can redistribute it and/or modify it under
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: idisp.h,v 1.4 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: idisp.h,v 1.5 2007/05/07 11:21:46 Arabidopsis Exp $ */
 
 #ifndef idisp_INCLUDED
 #  define idisp_INCLUDED

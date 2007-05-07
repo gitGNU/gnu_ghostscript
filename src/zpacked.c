@@ -1,4 +1,5 @@
-/* Copyright (C) 1990, 1992, 1993, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zpacked.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: zpacked.c,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Packed array operators */
 #include "ghost.h"
 #include "ialloc.h"
@@ -51,11 +51,12 @@ zpackedarray(i_ctx_t *i_ctx_p)
     ref parr;
 
     check_type(*op, t_integer);
-    if (op->value.intval < 0 ||
-	(op->value.intval > op - osbot &&
-	 op->value.intval >= ref_stack_count(&o_stack))
-	)
+    if (op->value.intval < 0)
 	return_error(e_rangecheck);
+    if (op->value.intval > op - osbot &&
+	op->value.intval >= ref_stack_count(&o_stack)
+	)
+	return_error(e_stackunderflow);
     osp--;
     code = make_packed_array(&parr, &o_stack, (uint) op->value.intval,
 			     idmemory, "packedarray");

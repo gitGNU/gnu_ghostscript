@@ -1,5 +1,6 @@
-/* Copyright (C) 2003 artofcode LLC.  All rights reserved.
-  
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
+ 
   This file is part of GNU ghostscript
 
   GNU ghostscript is free software; you can redistribute it and/or modify it under
@@ -15,8 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-
-/* $Id: dmmain.r 5572 2004-12-09 08:24:28Z giles $ */
+/* $Id: dmmain.r 6651 2006-03-13 16:18:19Z stefan $ */
 
 /* Resource data (Rez format) for the MacOS Ghostscript shlib example wrapper
    contributed by Nigel Hathaway. See dmmain.c for rest of this code.

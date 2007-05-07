@@ -62,7 +62,7 @@
  */
 
 /*
- * $Id: jpc_dec.c,v 1.3 2006/06/16 18:21:39 Arabidopsis Exp $
+ * $Id: jpc_dec.c,v 1.4 2007/05/07 11:22:21 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -289,13 +289,15 @@ error:
 typedef enum {
 	OPT_MAXLYRS,
 	OPT_MAXPKTS,
-	OPT_DEBUG
+	OPT_DEBUG,
+	OPT_RAW_PALETTE
 } optid_t;
 
 jas_taginfo_t decopts[] = {
 	{OPT_MAXLYRS, "maxlyrs"},
 	{OPT_MAXPKTS, "maxpkts"},
 	{OPT_DEBUG, "debug"},
+	{OPT_RAW_PALETTE, "raw"},
 	{-1, 0}
 };
 
@@ -322,6 +324,9 @@ static int jpc_dec_parseopts(char *optstr, jpc_dec_importopts_t *opts)
 			break;
 		case OPT_MAXPKTS:
 			opts->maxpkts = atoi(jas_tvparser_getval(tvp));
+			break;
+		case OPT_RAW_PALETTE:
+			/* this is just for passthrough from jp2_decode */
 			break;
 		default:
 			jas_eprintf("warning: ignoring invalid option %s\n",

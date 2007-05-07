@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxpath.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gxpath.h,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Fixed-point path procedures */
 /* Requires gxfixed.h */
 
@@ -143,6 +143,7 @@ int gx_path_new(gx_path *),
     gx_path_add_point(gx_path *, fixed, fixed),
     gx_path_add_relative_point(gx_path *, fixed, fixed),
     gx_path_add_line_notes(gx_path *, fixed, fixed, segment_notes),
+    gx_path_add_dash_notes(gx_path * ppath, fixed x, fixed y, fixed dx, fixed dy, segment_notes notes),
     gx_path_add_lines_notes(gx_path *, const gs_fixed_point *, int, segment_notes),
     gx_path_add_rectangle(gx_path *, fixed, fixed, fixed, fixed),
     gx_path_add_char_path(gx_path *, gx_path *, gs_char_path_mode),
@@ -199,7 +200,8 @@ int gx_path_subpath_start_point(const gx_path *, gs_fixed_point *);
 bool gx_path_has_curves(const gx_path *),
     gx_path_is_void(const gx_path *),	/* no segments */
     gx_path_is_null(const gx_path *),	/* nothing at all */
-    gx_path__check_curves(const gx_path * ppath, gx_path_copy_options options, fixed fixed_flat);
+    gx_path__check_curves(const gx_path * ppath, gx_path_copy_options options, fixed fixed_flat),
+    gx_path_has_long_segments(const gx_path * ppath);
 typedef enum {
     prt_none = 0,
     prt_open = 1,		/* only 3 sides */
@@ -345,6 +347,7 @@ bool
     gx_cpath_includes_rectangle(const gx_clip_path *, fixed, fixed,
 				fixed, fixed);
 const gs_fixed_rect *cpath_is_rectangle(const gx_clip_path * pcpath);
+bool gx_cpath_rect_visible(gx_clip_path * pcpath, gs_int_rect *prect);
 
 /* Enumerate a clipping path.  This interface does not copy the path. */
 /* However, it does write into the path's "visited" flags. */

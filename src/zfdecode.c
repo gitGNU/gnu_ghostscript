@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zfdecode.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: zfdecode.c,v 1.6 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Additional decoding filter creation */
 #include "memory_.h"
 #include "ghost.h"
@@ -298,7 +298,7 @@ zpp_setup(os_ptr op, stream_PNGP_state * ppps)
 
     check_type(*op, t_dictionary);
     check_dict_read(*op);
-    if ((code = dict_int_param(op, "Colors", 1, 16, 1,
+    if ((code = dict_int_param(op, "Colors", 1, s_PNG_max_Colors, 1,
 			       &ppps->Colors)) < 0 ||
 	(code = dict_int_param(op, "BitsPerComponent", 1, 16, 8,
 			       &bpc)) < 0 ||

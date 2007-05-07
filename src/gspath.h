@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gspath.h,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gspath.h,v 1.6 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Graphics state path procedures */
 /* Requires gsstate.h */
 
@@ -59,10 +59,6 @@ typedef struct gs_matrix_fixed_s gs_matrix_fixed;
 #endif
 
 /* Imager-level procedures */
-int gs_imager_arc_add(gx_path * ppath, gs_imager_state * pis,
-		      bool clockwise, floatp axc, floatp ayc,
-		      floatp arad, floatp aang1, floatp aang2,
-		      bool add_line);
 void make_quadrant_arc(gs_point *p, const gs_point *c, 
 	const gs_point *p0, const gs_point *p1, double r);
 

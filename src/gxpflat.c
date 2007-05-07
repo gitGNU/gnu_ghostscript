@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxpflat.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gxpflat.c,v 1.8 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Path flattening algorithms */
 #include "string_.h"
 #include "gx.h"
@@ -27,7 +27,6 @@
 #include "gzpath.h"
 #include "memory_.h"
 #include "vdtrace.h"
-#include <assert.h>
 
 /* ---------------- Curve flattening ---------------- */
 
@@ -285,6 +284,20 @@ check_diff_overflow(fixed v0, fixed v1)
     return false;
 }
 
+bool
+gx_check_fixed_diff_overflow(fixed v0, fixed v1)
+{
+    return check_diff_overflow(v0, v1);
+}
+bool
+gx_check_fixed_sum_overflow(fixed v0, fixed v1)
+{
+    /* We assume that clamp_point_aux have been applied to v1,
+       thus -v alweays exists.
+     */
+    return check_diff_overflow(v0, -v1);
+}
+
 /*  Initialize the iterator with a line. */
 bool
 gx_flattened_iterator__init_line(gx_flattened_iterator *this, 
@@ -298,16 +311,27 @@ gx_flattened_iterator__init_line(gx_flattened_iterator *this,
     this->x3 = x1;
     this->y3 = y1;
     if (ox || oy) {
-	/* Subdivide a long line into 2 segments, because the filling algorithm 
+	/* Subdivide a long line into 4 segments, because the filling algorithm 
 	   and the stroking algorithm need to compute differences 
-	   of coordinates of end points. */
+	   of coordinates of end points. 
+	   We can't use 2 segments, because gx_flattened_iterator__next
+	   implements a special code for that case, 
+	   which requires differences of coordinates as well.
+	 */
 	/* Note : the result of subdivision may be not strongly colinear. */
 	this->ax = this->bx = 0;
 	this->ay = this->by = 0;
-	this->cx = (ox ? (x1 >> 1) - (x0 >> 1) : (x1 - x0) / 2);
-	this->cy = (oy ? (y1 >> 1) - (y0 >> 1) : (y1 - y0) / 2);
-	this->k = 1;
-	this->i = 2;
+	this->cx = ((ox ? (x1 >> 1) - (x0 >> 1) : (x1 - x0) >> 1) + 1) >> 1;
+	this->cy = ((oy ? (y1 >> 1) - (y0 >> 1) : (y1 - y0) >> 1) + 1) >> 1;
+	this->rd3x = this->rd3y = this->id3x = this->id3y = 0;
+	this->rd2x = this->rd2y = this->id2x = this->id2y = 0;
+	this->idx = this->cx; 
+	this->idy = this->cy;
+	this->rdx = this->rdy = 0;
+	this->rx = this->ry = 0;
+	this->rmask = 0;
+	this->k = 2;
+	this->i = 4;
     } else {
 	this->k = 0;
 	this->i = 1;

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- Mode: python -*-
 
-#    Copyright (C) 2001 Artifex Software Inc.
+#    Copyright (C) 2001-2006 Artifex Software Inc.
 # 
 # This file is part of GNU ghostscript
 #
@@ -20,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: make_two_versions,v 1.5 2006/06/16 12:55:32 Arabidopsis Exp $
+# $Id: make_two_versions,v 1.6 2007/05/07 11:22:21 Arabidopsis Exp $
 
 #
 # make_two_versions <filename> [<device> [<res> [<banding>]]]

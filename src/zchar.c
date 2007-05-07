@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/*$Id: zchar.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/*$Id: zchar.c,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Character operators */
 #include "ghost.h"
 #include "oper.h"
@@ -63,6 +63,7 @@ zshow(i_ctx_t *i_ctx_p)
     if (code != 0 ||
 	(code = gs_show_begin(igs, op->value.bytes, r_size(op), imemory, &penum)) < 0)
 	return code;
+    *(op_proc_t *)&penum->enum_client_data = zshow;
     if ((code = op_show_finish_setup(i_ctx_p, penum, 1, finish_show)) < 0) {
 	ifree_object(penum, "op_show_enum_setup");
 	return code;
@@ -83,6 +84,7 @@ zashow(i_ctx_t *i_ctx_p)
 	(code = op_show_setup(i_ctx_p, op)) != 0 ||
 	(code = gs_ashow_begin(igs, axy[0], axy[1], op->value.bytes, r_size(op), imemory, &penum)) < 0)
 	return code;
+    *(op_proc_t *)&penum->enum_client_data = zashow;
     if ((code = op_show_finish_setup(i_ctx_p, penum, 3, finish_show)) < 0) {
 	ifree_object(penum, "op_show_enum_setup");
 	return code;
@@ -99,16 +101,24 @@ zwidthshow(i_ctx_t *i_ctx_p)
     double cxy[2];
     int code;
 
+    if ((code = op_show_setup(i_ctx_p, op)) != 0 )
+	return code;
     check_type(op[-1], t_integer);
-    if ((gs_char) (op[-1].value.intval) != op[-1].value.intval)
-	return_error(e_rangecheck);
-    if ((code = num_params(op - 2, 2, cxy)) < 0 ||
-	(code = op_show_setup(i_ctx_p, op)) != 0 ||
-	(code = gs_widthshow_begin(igs, cxy[0], cxy[1],
+    if (gs_currentfont(igs)->FontType == ft_composite) {
+        if ((gs_char) (op[-1].value.intval) != op[-1].value.intval)
+	    return_error(e_rangecheck);
+    } else {
+        if (op[-1].value.intval < 0 || op[-1].value.intval > 255)
+	    return_error(e_rangecheck); /* per PLRM and CET 13-26 */
+    }
+    if ((code = num_params(op - 2, 2, cxy)) < 0 )
+        return code;
+    if ((code = gs_widthshow_begin(igs, cxy[0], cxy[1],
 				   (gs_char) op[-1].value.intval,
 				   op->value.bytes, r_size(op),
 				   imemory, &penum)) < 0)
 	return code;
+    *(op_proc_t *)&penum->enum_client_data = zwidthshow;
     if ((code = op_show_finish_setup(i_ctx_p, penum, 4, finish_show)) < 0) {
 	ifree_object(penum, "op_show_enum_setup");
 	return code;
@@ -125,18 +135,27 @@ zawidthshow(i_ctx_t *i_ctx_p)
     double cxy[2], axy[2];
     int code;
 
+    if ((code = op_show_setup(i_ctx_p, op)) != 0 )
+	return code;
+    if ((code = num_params(op - 1, 2, axy)) < 0 )
+	return code;
     check_type(op[-3], t_integer);
-    if ((gs_char) (op[-3].value.intval) != op[-3].value.intval)
-	return_error(e_rangecheck);
-    if ((code = num_params(op - 4, 2, cxy)) < 0 ||
-	(code = num_params(op - 1, 2, axy)) < 0 ||
-	(code = op_show_setup(i_ctx_p, op)) != 0 ||
-	(code = gs_awidthshow_begin(igs, cxy[0], cxy[1],
+    if (gs_currentfont(igs)->FontType == ft_composite) {
+        if ((gs_char) (op[-3].value.intval) != op[-3].value.intval)
+	    return_error(e_rangecheck);
+    } else {
+        if (op[-3].value.intval < 0 || op[-3].value.intval > 255)
+	    return_error(e_rangecheck); /* per PLRM and CET 13-02 */
+    }
+    if ((code = num_params(op - 4, 2, cxy)) < 0 )
+	return code;
+    if ((code = gs_awidthshow_begin(igs, cxy[0], cxy[1],
 				    (gs_char) op[-3].value.intval,
 				    axy[0], axy[1],
 				    op->value.bytes, r_size(op),
 				    imemory, &penum)) < 0)
 	return code;
+    *(op_proc_t *)&penum->enum_client_data = zawidthshow;
     if ((code = op_show_finish_setup(i_ctx_p, penum, 6, finish_show)) < 0) {
 	ifree_object(penum, "op_show_enum_setup");
 	return code;
@@ -152,11 +171,20 @@ zkshow(i_ctx_t *i_ctx_p)
     gs_text_enum_t *penum;
     int code;
 
+    check_read_type(*op, t_string);
     check_proc(op[-1]);
+    /*
+     * Per PLRM Section xx.x, kshow is illegal if the current font is a
+     * composite font.  The graphics library does not have this limitation,
+     * so we check for it here.
+     */
+    if (gs_currentfont(igs)->FontType == ft_composite)
+	return_error(e_invalidfont);
     if ((code = op_show_setup(i_ctx_p, op)) != 0 ||
 	(code = gs_kshow_begin(igs, op->value.bytes, r_size(op),
 			       imemory, &penum)) < 0)
 	return code;
+    *(op_proc_t *)&penum->enum_client_data = zkshow;
     if ((code = op_show_finish_setup(i_ctx_p, penum, 2, finish_show)) < 0) {
 	ifree_object(penum, "op_show_enum_setup");
 	return code;
@@ -185,6 +213,7 @@ zstringwidth(i_ctx_t *i_ctx_p)
 	(code = gs_stringwidth_begin(igs, op->value.bytes, r_size(op),
 				     imemory, &penum)) < 0)
 	return code;
+    *(op_proc_t *)&penum->enum_client_data = zstringwidth;
     if ((code = op_show_finish_setup(i_ctx_p, penum, 1, finish_stringwidth)) < 0) {
 	ifree_object(penum, "op_show_enum_setup");
 	return code;
@@ -209,7 +238,7 @@ finish_stringwidth(i_ctx_t *i_ctx_p)
 
 /* Common code for charpath and .charboxpath. */
 private int
-zchar_path(i_ctx_t *i_ctx_p,
+zchar_path(i_ctx_t *i_ctx_p, op_proc_t proc, 
 	   int (*begin)(gs_state *, const byte *, uint,
 			bool, gs_memory_t *, gs_text_enum_t **))
 {
@@ -223,6 +252,7 @@ zchar_path(i_ctx_t *i_ctx_p,
 	(code = begin(igs, op[-1].value.bytes, r_size(op - 1),
 		      op->value.boolval, imemory, &penum)) < 0)
 	return code;
+    *(op_proc_t *)&penum->enum_client_data = proc;
     if ((code = op_show_finish_setup(i_ctx_p, penum, 2, finish_show)) < 0) {
 	ifree_object(penum, "op_show_enum_setup");
 	return code;
@@ -233,13 +263,13 @@ zchar_path(i_ctx_t *i_ctx_p,
 private int
 zcharpath(i_ctx_t *i_ctx_p)
 {
-    return zchar_path(i_ctx_p, gs_charpath_begin);
+    return zchar_path(i_ctx_p, zcharpath, gs_charpath_begin);
 }
 /* <string> <box_bool> .charboxpath - */
 private int
 zcharboxpath(i_ctx_t *i_ctx_p)
 {
-    return zchar_path(i_ctx_p, gs_charboxpath_begin);
+    return zchar_path(i_ctx_p, zcharboxpath, gs_charboxpath_begin);
 }
 
 /* <wx> <wy> <llx> <lly> <urx> <ury> setcachedevice - */
@@ -399,7 +429,17 @@ op_show_finish_setup(i_ctx_t *i_ctx_p, gs_text_enum_t * penum, int npop,
     gs_text_enum_t *osenum = op_show_find(i_ctx_p);
     es_ptr ep = esp + snumpush;
     gs_glyph glyph;
+    extern bool CPSI_mode;
 
+    if (CPSI_mode) {
+	/* CET 14-03.PS page 2 emits rangecheck before rendering a character.
+	   Early check the text to font compatibility 
+	   with decomposing the text into characters.*/
+	int code = gs_text_count_chars(igs, gs_get_text_params(penum), imemory);
+
+	if (code < 0)
+	    return code;
+    }
     /*
      * If we are in the procedure of a cshow for a CID font and this is
      * a show operator, do something special, per the Red Book.
@@ -438,6 +478,12 @@ op_show_finish_setup(i_ctx_t *i_ctx_p, gs_text_enum_t * penum, int npop,
 	((const gs_font_type0 *)osenum->orig_font)->data.FMapType == fmap_CMap) {
 	/* A special behavior defined in PLRM3 section 5.11 page 389. */
 	penum->outer_CID = osenum->returned.current_glyph;
+    }
+    if (osenum == NULL && !(penum->text.operation & (TEXT_FROM_GLYPHS | TEXT_FROM_SINGLE_GLYPH))) {
+        int ft = igs->root_font->FontType;
+ 
+        if (ft >= ft_CID_encrypted && ft <= ft_CID_TrueType || ft == ft_CID_bitmap)
+            return_error(e_typecheck);
     }
     make_mark_estack(ep - (snumpush - 1), es_show, op_show_cleanup);
     if (endproc == NULL)
@@ -742,11 +788,21 @@ op_show_restore(i_ctx_t *i_ctx_p, bool for_error)
     int code = 0;
 
     if (for_error) {
+#if 0 /* Disabled for CPSI compatibility for 13-12-4. 
+         CPSI doesn't remove cshow, kshow proc operands. */
 	uint saved_count = esodepth(ep).value.intval;
 	uint count = ref_stack_count(&o_stack);
 
 	if (count > saved_count)	/* if <, we're in trouble */
 	    ref_stack_pop(&o_stack, count - saved_count);
+#endif
+	if (ep[1].value.opproc == op_show_continue && penum->enum_client_data != NULL) {
+	    /* Replace the continuation operaton on estack with the right operator : */
+	    op_proc_t proc;
+
+	    *(void **)&proc = penum->enum_client_data;
+	    make_op_estack(ep + 1, proc);
+	}
     }
     if (SHOW_IS_STRINGWIDTH(penum) && igs->text_rendering_mode != 3) {	
 	/* stringwidth does an extra gsave */

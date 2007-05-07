@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1992, 1993, 1994, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gscolor.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gscolor.c,v 1.7 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Color and halftone operators for Ghostscript library */
 #include "gx.h"
 #include "gserrors.h"
@@ -108,11 +109,13 @@ void load_transfer_map(gs_state *, gx_transfer_map *, floatp);
 int
 gs_setgray(gs_state * pgs, floatp gray)
 {
-    gs_color_space      cs;
+    gs_color_space      *pcs;
     int                 code;
 
-    gs_cspace_init_DeviceGray(pgs->memory, &cs);
-    if ((code = gs_setcolorspace(pgs, &cs)) >= 0) {
+    pcs = gs_cspace_new_DeviceGray(pgs->memory);
+    if (pcs == NULL)
+	return_error(gs_error_VMerror);
+    if ((code = gs_setcolorspace(pgs, pcs)) >= 0) {
         gs_client_color *   pcc = pgs->ccolor;
 
         cs_adjust_color_count(pgs, -1); /* not strictly necessary */
@@ -120,6 +123,7 @@ gs_setgray(gs_state * pgs, floatp gray)
         pcc->pattern = 0;		/* for GC */
         gx_unset_dev_color(pgs);
     }
+    rc_decrement(pcs, "gs_setgray");
     return code;
 }
 
@@ -127,11 +131,13 @@ gs_setgray(gs_state * pgs, floatp gray)
 int
 gs_setrgbcolor(gs_state * pgs, floatp r, floatp g, floatp b)
 {
-    gs_color_space      cs;
+    gs_color_space      *pcs;
     int                 code;
 
-    gs_cspace_init_DeviceRGB(pgs->memory, &cs);
-    if ((code = gs_setcolorspace(pgs, &cs)) >= 0) {
+    pcs = gs_cspace_new_DeviceRGB(pgs->memory);
+    if (pcs == NULL)
+	return_error(gs_error_VMerror);
+    if ((code = gs_setcolorspace(pgs, pcs)) >= 0) {
        gs_client_color *    pcc = pgs->ccolor;
 
         cs_adjust_color_count(pgs, -1); /* not strictly necessary */
@@ -141,6 +147,7 @@ gs_setrgbcolor(gs_state * pgs, floatp r, floatp g, floatp b)
         pcc->pattern = 0;		/* for GC */
         gx_unset_dev_color(pgs);
     }
+    rc_decrement(pcs, "gs_setrgbcolor");
     return code;
 }
 
@@ -211,12 +218,17 @@ gs_currenttransfer(const gs_state * pgs)
 void
 gx_set_device_color_1(gs_state * pgs)
 {
-    gs_color_space  cs;
+    gs_color_space  *pcs;
 
     gs_setoverprint(pgs, false);
     gs_setoverprintmode(pgs, 0);
-    gs_cspace_init_DeviceGray(pgs->memory, &cs);
-    gs_setcolorspace(pgs, &cs);
+    pcs = gs_cspace_new_DeviceGray(pgs->memory);
+    if (pcs) {
+	gs_setcolorspace(pgs, pcs);
+	rc_decrement_only(pcs, "gx_set_device_color_1");
+    } else {
+	/* {csrc} really need to signal an error here */
+    }
     set_nonclient_dev_color(pgs->dev_color, 1);
     pgs->log_op = lop_default;
     /*

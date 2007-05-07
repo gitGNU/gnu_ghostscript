@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gsstate.h,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gsstate.h,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Public graphics state API */
 
 #ifndef gsstate_INCLUDED
@@ -38,6 +38,7 @@ typedef struct gs_overprint_params_s    gs_overprint_params_t;
 /* Initial allocation and freeing */
 gs_state *gs_state_alloc(gs_memory_t *);	/* 0 if fails */
 int gs_state_free(gs_state *);
+int gs_state_free_chain(gs_state *);
 
 /* Initialization, saving, restoring, and copying */
 int gs_gsave(gs_state *), gs_grestore(gs_state *), gs_grestoreall(gs_state *);

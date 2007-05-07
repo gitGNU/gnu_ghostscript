@@ -1,14 +1,20 @@
 %    Copyright (C) 1994, 1996, 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-% This software is provided AS-IS with no warranty, either express or
-% implied.
-% 
-% This software is distributed under license and may not be copied,
-% modified or distributed except as expressly authorized under the terms
-% of the license contained in the file LICENSE in this distribution.
-
-
-% $Id: gs_res.ps,v 1.6 2006/06/16 12:55:14 Arabidopsis Exp $
+%  This file is part of GNU ghostscript
+%
+%  GNU ghostscript is free software; you can redistribute it and/or modify it under
+%  the terms of the GNU General Public License as published by the Free Software
+%  Foundation; either version 2, or (at your option) any later version.
+%
+%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+%
+%  You should have received a copy of the GNU General Public License along with
+%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+%
+% $Id: gs_res.ps,v 1.7 2007/05/07 11:22:07 Arabidopsis Exp $
 % Initialization file for Level 2 resource machinery.
 % When this is run, systemdict is still writable,
 % but (almost) everything defined here goes into level2dict.
@@ -90,12 +96,31 @@ setglobal
 % category definition dictionary.
 
 % .findcategory and .resourceexec are only called from within the
-% implementation of the resource 'operators', so they doesn't have to worry
+% implementation of the resource 'operators', so they don't have to worry
 % about cleaning up the stack if they fail (the interpreter's stack
 % protection machinery for pseudo-operators takes care of this).
+% Note that all places that look up categories must use .findcategory
+% so that the command in case of error will be correct rather than an
+% internal invocation of findresource.
 /.findcategory {	% <name> .findcategory -
 			%   (pushes the category on the dstack)
-  /Category findresource begin
+    /Category .findresource begin	% note: *not* findresource
+} bind def
+
+% If an error occurs within the logic of a resource operator (after operand
+% acquisition and checking), the Adobe interpreters report the operator name,
+% not the operator object, as the command in $error.  For this reason, and
+% this reason only, all resource operators must wrap their logic code in
+%	/<opername> cvx { ...logic... } .errorexec
+
+% The Category resource signals /undefined rather than /undefinedresource,
+% both when referenced implicitly (to look up the category for a general
+% resource operation) and when it is accessed directly (/Category /xxx
+% findresource).  Because of this, all resource operators must use
+% .undefinedresource rather than signalling undefinedresource directly.
+/.undefinedresource {	% <command> .undefinedresource -
+    /Category dup load eq { /undefined } { /undefinedresource } ifelse
+    signaloperror
 } bind def
 
 /.resourceexec {	% <key> /xxxResource .resourceexec -
@@ -130,7 +155,7 @@ setglobal
 		% empty .Instances dictionary with the real one later.
 	  readonly
 	} {
-	  /defineresource .systemvar /typecheck signalerror
+	  /defineresource cvx /typecheck signaloperror
 	} ifelse
 } bind def
 /FindResource		% (redefined below)
@@ -152,7 +177,7 @@ setglobal
 	     /UndefineResource }
 	   { 2 index exch known and }
 	  forall
-	  not { /defineresource .systemvar /invalidaccess signalerror } if
+	  not { /defineresource cvx /invalidaccess signaloperror } if
 	  true
 	} bind def
 
@@ -169,24 +194,40 @@ setglobal
 % the others.
 
 % findresource is the only operator that needs to bind //Category.
-/findresource {		% <key> <category> findresource <instance>
+% We define its contents as a separate procedure so that .findcategory
+% can use it without entering another level of pseudo-operator.
+/.findresource {		% <key> <category> findresource <instance>
 	2 copy dup /Category eq
 	  { pop //Category 0 get begin } { .findcategory } ifelse
 	/FindResource .resourceexec exch pop exch pop
 } bind
 end		% .Instances of Category
-odef
+def
+/findresource {
+    % See above re .errorexec.
+    1 .argindex 	% also catch stackunderflow
+    dup type /stringtype eq { cvn } if  % for CET 23-13-04
+    3 1 roll exch pop
+    dup type /nametype ne {
+      /findresource .systemvar /typecheck signalerror
+    } if
+    /findresource cvx //.findresource .errorexec
+} odef
 
 /defineresource {	% <key> <instance> <category> defineresource <instance>
-	3 copy .findcategory
+    2 .argindex 2 index 2 index	% catch stackunderflow
+    % See above re .errorexec.
+    /defineresource cvx {
+	.findcategory
 	currentdict /InstanceType known {
 	  dup type InstanceType ne {
 	    dup type /packedarraytype eq InstanceType /arraytype eq and
-	    not { /defineresource .systemvar /typecheck signalerror } if
+	    not { /defineresource cvx /typecheck signaloperror } if
 	  } if
 	} if
 	/DefineResource .resourceexec
 	4 1 roll pop pop pop
+    } .errorexec
 } bind odef
 % We must prevent resourceforall from automatically restoring the stacks,
 % because we don't want the stacks restored if proc causes an error or
@@ -196,7 +237,7 @@ odef
 % calls, so stack protection doesn't apply to the very last token of an
 % operator procedure.
 /resourceforall1 {	% <template> <proc> <scratch> <category> resourceforall1 -
-	dup /Category findresource begin
+	dup .findcategory
 	/ResourceForAll load
 	% Stack: <template> <proc> <scratch> <category> proc
 	exch pop		% pop the category
@@ -207,11 +248,32 @@ odef
 } bind odef
 /resourcestatus {	% <key> <category> resourcestatus <status> <size> true
 			% <key> <category> resourcestatus false
-	2 copy .findcategory /ResourceStatus .resourceexec
-	 { 4 2 roll pop pop true } { pop pop false } ifelse
+  {
+    0 .argindex type /nametype ne {
+      % CET 23-26 wants typecheck here, not undefineresource that happens
+      % without the check.
+      /resourcestatus cvx /typecheck signalerror
+    } if
+    2 copy .findcategory /ResourceStatus .resourceexec
+    { 4 2 roll pop pop true } { pop pop false } ifelse
+  } stopped {
+    % Although resourcestatus is an operator, Adobe uses executable name
+    % for error reporting. CET 23-26
+    /resourcestatus cvx $error /errorname get signalerror
+  } if
 } bind odef
 /undefineresource {	% <key> <category> undefineresource -
-	2 copy .findcategory /UndefineResource .resourceexec pop pop
+  0 .argindex type /nametype ne {
+    /undefinedresource cvx /typecheck signaloperror
+  } if
+  1 .argindex 1 index		% catch stackunderflow
+
+  { .findcategory /UndefineResource .resourceexec pop pop
+  } stopped {
+    % Although undefineresource is an operator, Adobe uses executable name
+    % here but uses operator for the errors above. CET 23-33
+    /undefineresource cvx $error /errorname get signalerror
+  } if
 } bind odef
 
 % Define the system parameters used for the Generic implementation of
@@ -246,7 +308,7 @@ systemdict begin
     } if
     2 index exch false .file_name_combine not {
       (Error: .default_resource_dir returned ) print exch print ( that can't combine with ) print =
-      /.default_resource_dir cvx /configurationerror .signalerror
+      /.default_resource_dir cvx /configurationerror signalerror
     } if
   } ifelse
 } bind def
@@ -279,13 +341,13 @@ pssystemparams /GenericResourceDir get dup length exch  % (x]y) l1 l2 (dir)
 3 index true .file_name_combine not {
   exch
   (File name ) print print ( cant combine with ) print =
-  /GenericResourceDir cvx /configurationerror signalerror
+  /GenericResourceDir cvx /configurationerror signaloperror
 } if
 dup length                                              % (x]y) l1 l2 (dir.x]y) l
 4 2 roll add                                            % (x]y) (dir.x]y) l ll
 ne {
   (GenericResourceDir value does not end with directory separator.\n) =
-  /GenericResourceDir cvx /configurationerror signalerror
+  /GenericResourceDir cvx /configurationerror signaloperror
 } if
 pop pop
 
@@ -294,12 +356,6 @@ pop pop
 /.genericrfn		% <key> <scratch> <prefix> .genericrfn <filename>
  { 3 -1 roll //.rfnstring cvs concatstrings exch copy
  } bind def
-
-% Define a procedure for making a packed array in local VM.
-/.localpackedarray {	% <obj1> ... <objn> <n> .localpackedarray <packedarray>
-  .currentglobal false .setglobal 1 index 2 add 1 roll
-  packedarray exch .setglobal
-} bind def
 
 % Define the Generic category.
 
@@ -374,7 +430,7 @@ pop pop
 	     0 2 copy get { readonly } .internalstopped pop
 	     dup 4 1 roll put exch pop exch pop
 	   }
-	   { /defineresource .systemvar /typecheck signalerror
+	   { /defineresource cvx /typecheck signaloperror
 	   }
 	ifelse
 } .bind executeonly		% executeonly to prevent access to .forcedef
@@ -399,19 +455,24 @@ pop pop
 % other, the default FindResource must not call ResourceStatus if there is
 % an instance of the desired name already defined in VM.
 /FindResource {
+	dup //null eq {
+          % CET 13-06 wants /typecheck for "null findencoding" but
+          % .knownget doesn't fail on null
+          /findresource cvx /typecheck signaloperror
+        } if
 	dup .getvminstance {
 	  exch pop 0 get
 	} {
 	  dup ResourceStatus {
 	    pop 1 gt {
 	      .DoLoadResource .getvminstance not {
-		/findresource .systemvar /undefinedresource signalerror
+		/findresource cvx .undefinedresource
 	      } if 0 get
 	    } {
 	      .GetInstance pop 0 get
 	    } ifelse
 	  } {
-	   /findresource .systemvar /undefinedresource signalerror
+	   /findresource cvx .undefinedresource
 	  } ifelse
 	} ifelse
 } bind
@@ -432,19 +493,19 @@ pop pop
 		% Construct a new procedure to hold the arguments.
 		% All objects constructed here must be in local VM to avoid
 		% a possible invalidaccess.
-	currentdict 4 .localpackedarray	% [template proc scratch resdict]
+	currentdict 4 .localvmpackedarray	% [template proc scratch resdict]
 		% We must pop the resource dictionary off the dict stack
 		% when doing the actual iteration, and restore it afterwards.
 	.currentglobal not {
 	  .LocalInstances length 0 ne {
 		% We must do local instances, and do them first.
-	    //.localresourceforall {exec} 0 get 3 .localpackedarray cvx
+	    //.localresourceforall {exec} 0 get 3 .localvmpackedarray cvx
 	    .LocalInstances exch {forall} 0 get 1 index 0 get
 	    currentdict end 3 .execn begin
 	  } if
 	} if
 		% Do global instances next.
-	//.globalresourceforall {exec} 0 get 3 .localpackedarray cvx
+	//.globalresourceforall {exec} 0 get 3 .localvmpackedarray cvx
 	.Instances exch cvx {forall} 0 get 1 index 0 get
 	currentdict end 3 .execn begin
         mark                                             % args [
@@ -453,40 +514,52 @@ pop pop
         dup length 3 1 roll                              % args [ l (c/) (t)
         concatstrings                                    % args [ l (c/t)
 	[ 
-	  /LIBPATH .systemvar 2 index
-	  .generate_dir_list_templates                   % args (t) [ l [(pt)]
+	  true /LIBPATH .systemvar 3 index
+	  .generate_dir_list_templates_with_length       % args (t) [ l [(pt) Lp ...]
 	    % also add on the Resources as specified by the GenericResourceDir
-          [ currentsystemparams /GenericResourceDir get]
-	  counttomark 1 add index .generate_dir_list_templates
-            % Resource files on OpenVMS requires a separate template (gs:[dir.*]*)
-          [ currentsystemparams /GenericResourceDir get]
+          true [ currentsystemparams /GenericResourceDir get]
+	  counttomark 1 add index .generate_dir_list_templates_with_length
+            % Resource files on OpenVMS require a separate template (gs:[dir.*]*)
+          true [ currentsystemparams /GenericResourceDir get]
 	  counttomark 1 add index .file_name_separator (*)
-          concatstrings concatstrings .generate_dir_list_templates
+          concatstrings concatstrings .generate_dir_list_templates_with_length
 	  ] exch pop
-	{                                                % args [ l (pt)
-	  dup length 2 index sub exch                    % args [ l Lp (pt)
+	dup length 1 sub 0 exch 2 exch {                 % args [ l [] i
+	  2 copy get                                     % args [ l [] i (pt)
+	  exch 2 index exch 1 add get                    % args [ l [] (pt) Lp
+	  exch                                           % args [ l [] Lp (pt)
 
-	  {                                              % args [ l Lp (pf)
-	    dup length                                   % args [ l Lp (pf) Lpf
-	    2 index sub                                  % args [ l Lp (pf) Lf
-	    2 index exch                                 % args [ l Lp (pf) Lp Lf
-	    getinterval cvn dup                          % args [ l Lp /n /n
-	    4 2 roll                                     % args [ /n /n l Lp
+	  {                                              % args [ l [] Lp (pf)
+	    dup length                                   % args [ l [] Lp (pf) Lpf
+	    2 index sub                                  % args [ l [] Lp (pf) Lf
+	    2 index exch                                 % args [ l [] Lp (pf) Lp Lf
+	    getinterval cvn dup                          % args [ l [] Lp /n /n
+	    5 2 roll                                     % args [ /n /n l [] Lp
 	  } //.rfnstring filenameforall
-	  pop                                            % args [ l /n1 /n1 ... /nN /nN l
-	} forall                                         % args [ l /n1 /n1 ... /nN /nN
-	pop
+	  pop                                            % args [ /n1 /n1 ... /nN /nN l []
+	} for                                            % args [ /n1 /n1 ... /nN /nN l []
+	pop pop
 	.dicttomark % An easy way to exclude duplicates. % args <</n/n>>
 	  % {
 	  { pop } 0 get
           2 index 2 get { cvs 0 } aload pop 5 index
           //.externalresourceforall {exec} 0 get
           % }
-        7 .localpackedarray cvx
+        7 .localvmpackedarray cvx
         3 2 roll pop % args
 	{ forall } 0 get
   	currentdict end 2 .execn begin
 } bind
+/.file_name_is_iodevice_or_absolute
+{ {
+    dup length 0 gt {
+      dup 0 get (%) 0 get eq {
+        pop true exit
+      } if
+    } if
+    .file_name_is_absolute exit
+  } loop
+} bind def
 /ResourceFileName
 	  {                                             % /in (scr)
 	    exch //.rfnstring cvs                       % (scr) (n)
@@ -494,7 +567,7 @@ pop pop
             Category .namestring                        % (scr) (/) (n) (c)
             3 1 roll                                    % (scr) (c) (/) (n)
 	    concatstrings concatstrings                 % (scr) (c/n)
-            /GenericResourceDir getsystemparam .file_name_is_absolute not {
+            /GenericResourceDir getsystemparam //.file_name_is_iodevice_or_absolute exec not {
               /GenericResourceDir getsystemparam exch concatstrings
 	      findlibfile
 	      {                                         % (scr) (p/c/n) file
@@ -564,7 +637,7 @@ pop pop
 		% Stack: ... count key memused
 	.vmused exch sub
 	1 index .getvminstance not {
-	  pop dup /undefinedresource signalerror	% didn't load
+	  pop dup .undefinedresource	% didn't load
 	} if
 	dup 1 1 put
 	2 3 -1 roll put
@@ -578,7 +651,7 @@ pop pop
 	      { true setglobal { .runresource } stopped false setglobal { stop } if }
 	     ifelse
 	   }
-	   { dup /undefinedresource signalerror
+	   { dup .undefinedresource
 	   }
 	 ifelse
 	} bind
@@ -677,26 +750,26 @@ counttomark 2 idiv
 		% We can at least require that the key and value match.
    /DefineResource
 	{ currentglobal not
-	   { /defineresource .systemvar /invalidaccess signalerror }
+	   { /defineresource cvx /invalidaccess signaloperror }
 	   { 2 copy ne
-	      { /defineresource .systemvar /rangecheck signalerror }
+	      { /defineresource cvx /rangecheck signaloperror }
 	      { dup .Instances 4 -2 roll .growput }
 	     ifelse
 	   }
 	  ifelse
 	} bind
    /UndefineResource
-	{ /undefineresource .systemvar /invalidaccess signalerror } bind
+	{ /undefineresource cvx /invalidaccess signaloperror } bind
    /FindResource
 	{ .Instances 1 index .knownget
 	   { exch pop }
-	   { /findresource .systemvar /undefinedresource signalerror }
+	   { /findresource cvx .undefinedresource }
 	  ifelse
 	} bind
    /ResourceStatus
 	{ .Instances exch known { 0 0 true } { false } ifelse } bind
    /ResourceForAll
-	/Generic /Category findresource /ResourceForAll get
+	/Generic .findcategory /ResourceForAll load end
 
 		% Additional entries
 
@@ -954,7 +1027,9 @@ systemdict begin
   /.origfindfont /findfont load def
 end
 /definefont {
-  /Font defineresource
+  { /Font defineresource } stopped {
+      /definefont cvx $error /errorname get signalerror
+  } if
 } bind odef
 /undefinefont {
   /Font undefineresource
@@ -962,7 +1037,9 @@ end
 % The Red Book requires that findfont be a procedure, not an operator,
 % but it still needs to restore the stacks reliably if it fails.
 /.findfontop {
-  /Font findresource
+  { /Font findresource } stopped {
+    pop /findfont $error /errorname get signalerror
+  } if
 } bind odef
 /findfont {
   .findfontop
@@ -984,7 +1061,11 @@ end				% level2dict
       { pop pop }
      ifelse
    } forall
-  /.findencoding { /Encoding findresource } bind def
+  /.findencoding {
+    { /Encoding findresource } stopped {
+      pop /findencoding $error /errorname get signalerror
+    } if
+  } bind def
   /findencoding /.findencoding load def		% must be a procedure
   /.defineencoding { /Encoding defineresource pop } bind def
 	% ColorRendering resources and ProcSet

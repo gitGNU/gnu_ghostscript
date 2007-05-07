@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 2000 Aladdin Enterprises, 2004 Artifex Software Inc.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevtsep.c,v 1.2 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevtsep.c,v 1.3 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* tiffgray device:  8-bit Gray uncompressed TIFF device */
 /* tiff32nc device:  32-bit CMYK uncompressed TIFF device */
 /* tiffsep device: Generate individual TIFF gray files for each separation. */

@@ -1,4 +1,5 @@
-/* Copyright (C) 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gp_strdl.c,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_strdl.c,v 1.5 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Default, stream-based readline implementation */
 #include "std.h"
 #include "gstypes.h"

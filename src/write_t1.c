@@ -1,5 +1,6 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
-
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
+  
   This file is part of GNU ghostscript
 
   GNU ghostscript is free software; you can redistribute it and/or modify it under
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: write_t1.c,v 1.4 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: write_t1.c,v 1.5 2007/05/07 11:21:47 Arabidopsis Exp $ */
 
 /*
 Functions to serialize a type 1 font as PostScript code that can then be

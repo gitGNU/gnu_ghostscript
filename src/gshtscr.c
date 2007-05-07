@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gshtscr.c,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gshtscr.c,v 1.7 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Screen (Type 1) halftone processing for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -486,7 +487,8 @@ gs_screen_enum_init_memory(gs_screen_enum * penum, const gx_ht_order * porder,
                            gs_memory_t * mem)
 {
     penum->pgs = pgs;           /* ensure clean for GC */
-    penum->order = *porder;
+    if (&penum->order != porder) /* Pacify Valgrind */
+        penum->order = *porder;
     penum->halftone.rc.memory = mem;
     penum->halftone.type = ht_type_screen;
     penum->halftone.params.screen = *phsp;

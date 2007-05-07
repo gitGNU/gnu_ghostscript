@@ -15,9 +15,8 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  Author: Raph Levien <raph@artofcode.com>
 */
-/* $Id: gdevp14.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevp14.c,v 1.8 2007/05/07 11:21:45 Arabidopsis Exp $	*/
 /* Compositing devices for implementing	PDF 1.4	imaging	model */
 
 #include "math_.h"
@@ -400,30 +399,34 @@ pdf14_push_transparency_group(pdf14_ctx	*ctx, gs_int_rect *rect,
 						 (buf->has_shape ? 1 : 0)));
     } else {
 	/* make copy of backdrop for compositing */
-	byte *buf_plane = buf->data;
-	byte *tos_plane = tos->data + buf->rect.p.x - tos->rect.p.x +
-	    (buf->rect.p.y - tos->rect.p.y) * tos->rowstride;
-	int width = buf->rect.q.x - buf->rect.p.x;
-	int y0 = buf->rect.p.y;
-	int y1 = buf->rect.q.y;
-	int i;
-	int n_chan_copy = buf->n_chan + (tos->has_shape ? 1 : 0);
+	int x0 = max(buf->rect.p.x, tos->rect.p.x);
+	int x1 = min(buf->rect.q.x, tos->rect.q.x);
+	int y0 = max(buf->rect.p.y, tos->rect.p.y);
+	int y1 = min(buf->rect.q.y, tos->rect.q.y);
 
-	for (i = 0; i < n_chan_copy; i++) {
-	    byte *buf_ptr = buf_plane;
-	    byte *tos_ptr = tos_plane;
-	    int y;
+	if (x0 < x1 && y0 < y1) {
+	    int width = x1 - x0;
+	    byte *buf_plane = buf->data + x0 - buf->rect.p.x + (y0 - buf->rect.p.y) * buf->rowstride;
+	    byte *tos_plane = tos->data + x0 - tos->rect.p.x + (y0 - tos->rect.p.y) * tos->rowstride;
+	    int i;
+	    int n_chan_copy = buf->n_chan + (tos->has_shape ? 1 : 0);
 
-	    for (y = y0; y < y1; ++y) {
-		memcpy (buf_ptr, tos_ptr, width); 
-		buf_ptr += buf->rowstride;
-		tos_ptr += tos->rowstride;
+	    for (i = 0; i < n_chan_copy; i++) {
+		byte *buf_ptr = buf_plane;
+		byte *tos_ptr = tos_plane;
+		int y;
+
+		for (y = y0; y < y1; ++y) {
+		    memcpy (buf_ptr, tos_ptr, width); 
+		    buf_ptr += buf->rowstride;
+		    tos_ptr += tos->rowstride;
+		}
+		buf_plane += buf->planestride;
+		tos_plane += tos->planestride;
 	    }
-	    buf_plane += buf->planestride;
-	    tos_plane += tos->planestride;
+	    if (has_shape && !tos->has_shape)
+		memset (buf_plane, 0, buf->planestride);
 	}
-	if (has_shape && !tos->has_shape)
-	    memset (buf_plane, 0, buf->planestride);
     }
 
     return 0;
@@ -435,17 +438,18 @@ pdf14_pop_transparency_group(pdf14_ctx *ctx)
     pdf14_buf *tos = ctx->stack;
     pdf14_buf *nos = tos->saved;
     pdf14_buf *maskbuf = ctx->maskbuf;
-    int y0 = tos->rect.p.y;
-    int y1 = tos->rect.q.y;
-    if (y0 < y1) {
-	int x0 = tos->rect.p.x;
-	int x1 = tos->rect.q.x;
+    int y0 = max(tos->rect.p.y, nos->rect.p.y);
+    int y1 = min(tos->rect.q.y, nos->rect.q.y);
+    int x0 = max(tos->rect.p.x, nos->rect.p.x);
+    int x1 = min(tos->rect.q.x, nos->rect.q.x);
+    if (x0 < x1 && y0 < y1) {
 	int n_chan = ctx->n_chan;
 	int num_comp = n_chan - 1;
 	byte alpha = tos->alpha;
 	byte shape = tos->shape;
 	byte blend_mode = tos->blend_mode;
-	byte *tos_ptr = tos->data;
+	byte *tos_ptr = tos->data + x0 - tos->rect.p.x +
+	    (y0 - tos->rect.p.y) * tos->rowstride;
 	byte *nos_ptr = nos->data + x0 - nos->rect.p.x +
 	    (y0 - nos->rect.p.y) * nos->rowstride;
 	byte *mask_ptr = NULL;
@@ -690,10 +694,13 @@ pdf14_decode_color(gx_device * dev, gx_color_index color, gx_color_value * out)
 #ifdef DUMP_TO_PNG
 /* Dumps a planar RGBA image to	a PNG file. */
 private	int
-dump_planar_rgba(gs_memory_t *mem, 
+dump_planar_rgba(gs_memory_t *mem, const pdf14_buf *pbuf)
 		 const byte *buf, int width, int height, int rowstride, int planestride)
 {
+    int rowstride = pbuf->rowstride, planestride = pbuf->planestride;
     int rowbytes = width << 2;
+    int width = pbuf->rect.q.x - pbuf->rect.p.x;
+    int height = pbuf->rect.q.y - pbuf->rect.p.y;
     byte *row = gs_malloc(mem, rowbytes, 1, "png raster buffer");
     png_struct *png_ptr =
     png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
@@ -702,7 +709,7 @@ dump_planar_rgba(gs_memory_t *mem,
     const char *software_key = "Software";
     char software_text[256];
     png_text text_png;
-    const byte *buf_ptr = buf;
+    const byte *buf_ptr = pbuf->data + pbuf->rect.p.y * pbuf->rowstride + pbuf->rect.p.x;;
     FILE *file;
     int code;
     int y;
@@ -743,7 +750,7 @@ dump_planar_rgba(gs_memory_t *mem,
 
     /* add comment */
     sprintf(software_text, "%s %d.%02d", gs_product,
-	    (int)(gs_revision / 100), (int)(gs_revision % 100));
+	    (int)(gs_revision / 10000), (int)(gs_revision % 10000));
     text_png.compression = -1;	/* uncompressed */
     text_png.key = (char *)software_key;	/* not const, unfortunately */
     text_png.text = software_text;
@@ -804,21 +811,25 @@ pdf14_put_image(pdf14_device *pdev, gs_imager_state *pis, gx_device *target)
     gs_image1_t image;
     gs_matrix pmat;
     gx_image_enum_common_t *info;
-    int width = pdev->width;
-    int height = pdev->height;
-    int y;
     pdf14_buf *buf = pdev->ctx->stack;
+    int x1 = min(pdev->width, buf->rect.q.x);
+    int y1 = min(pdev->height, buf->rect.q.y);
+    int width = x1 - buf->rect.p.x;
+    int height = y1 - buf->rect.p.y;
+    int y;
     int planestride = buf->planestride;
     int num_comp = buf->n_chan - 1;
-    byte *buf_ptr = buf->data;
+    byte *buf_ptr = buf->data + buf->rect.p.y * buf->rowstride + buf->rect.p.x;
     byte *linebuf;
-    gs_color_space cs;
+    gs_color_space *pcs;
     const byte bg = pdev->ctx->additive ? 255 : 0;
 
 #ifdef DUMP_TO_PNG
-    dump_planar_rgba(pdev->memory, buf_ptr, width, height,
-		     buf->rowstride, buf->planestride);
+    dump_planar_rgba(pdev->memory, buf);
 #endif
+
+    if (width <= 0 || height <= 0)
+	return 0;
 
 #if 0
     /* Set graphics state device to target, so that image can set up
@@ -834,19 +845,21 @@ pdf14_put_image(pdf14_device *pdev, gs_imager_state *pis, gx_device *target)
      */
     switch (num_comp) {
 	case 1:				/* DeviceGray */
-	    gs_cspace_init_DeviceGray(pis->memory, &cs);
+	    pcs = gs_cspace_new_DeviceGray(pis->memory);
 	    break;
 	case 3:				/* DeviceRGB */
-	    gs_cspace_init_DeviceRGB(pis->memory, &cs);
+	    pcs = gs_cspace_new_DeviceRGB(pis->memory);
 	    break;
 	case 4:				/* DeviceCMYK */
-	    gs_cspace_init_DeviceCMYK(pis->memory, &cs);
+	    pcs = gs_cspace_new_DeviceCMYK(pis->memory);
 	    break;
 	default:			/* Should never occur */
 	    return_error(gs_error_rangecheck);
 	    break;
     }
-    gs_image_t_init_adjust(&image, &cs, false);
+    if (pcs == NULL)
+	return_error(gs_error_VMerror);
+    gs_image_t_init_adjust(&image, pcs, false);
     image.ImageMatrix.xx = (float)width;
     image.ImageMatrix.yy = (float)height;
     image.Width = width;
@@ -856,15 +869,17 @@ pdf14_put_image(pdf14_device *pdev, gs_imager_state *pis, gx_device *target)
     pmat.xy = 0;
     pmat.yx = 0;
     pmat.yy = (float)height;
-    pmat.tx = 0;
-    pmat.ty = 0;
+    pmat.tx = (float)buf->rect.p.x;
+    pmat.ty = (float)buf->rect.p.y;
     code = dev_proc(target, begin_typed_image) (target,
 						pis, &pmat,
 						(gs_image_common_t *)&image,
 						NULL, NULL, NULL,
 						pis->memory, &info);
-    if (code < 0)
+    if (code < 0) {
+	rc_decrement_only(pcs, "pdf14_put_image");
 	return code;
+    }
 
     linebuf = gs_alloc_bytes(pdev->memory, width * num_comp, "pdf14_put_image");
     for (y = 0; y < height; y++) {
@@ -916,6 +931,8 @@ pdf14_put_image(pdf14_device *pdev, gs_imager_state *pis, gx_device *target)
     gs_setdevice_no_init(pgs, (gx_device*) pdev);
     rc_decrement_only(pdev, "pdf_14_put_image");
 #endif
+
+    rc_decrement_only(pcs, "pdf14_put_image");
 
     return code;
 }

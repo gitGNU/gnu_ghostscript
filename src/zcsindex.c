@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zcsindex.c,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: zcsindex.c,v 1.7 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Indexed color space support */
 #include "memory_.h"
 #include "ghost.h"
@@ -49,7 +49,8 @@ zsetindexedspace(i_ctx_t *i_ctx_p)
     os_ptr op = osp;
     ref *pproc = &istate->colorspace.procs.special.index_proc;
     const ref *pcsa;
-    gs_color_space cs;
+    gs_color_space *pcs;
+    gs_color_space *pcs_base;
     ref_colorspace cspace_old;
     uint edepth = ref_stack_count(&e_stack);
     int num_entries;
@@ -63,23 +64,13 @@ zsetindexedspace(i_ctx_t *i_ctx_p)
     if (pcsa[1].value.intval < 0 || pcsa[1].value.intval > 4095)
 	return_error(e_rangecheck);
     num_entries = (int)pcsa[1].value.intval + 1;
-    cs = *gs_currentcolorspace(igs);
-    if (!cs.type->can_be_base_space)
+    pcs_base = gs_currentcolorspace(igs);
+    if (!pcs_base->type->can_be_base_space)
 	return_error(e_rangecheck);
     cspace_old = istate->colorspace;
-    /*
-     * We can't count on C compilers to recognize the aliasing
-     * that would be involved in a direct assignment.
-     * Formerly, we used the following code:
-	 cs_base = *(gs_direct_color_space *)&cs;
-	 cs.params.indexed.base_space = cs_base;
-     * But the Watcom C 10.0 compiler is too smart: it turns this into
-     * a direct assignment (and compiles incorrect code for it),
-     * defeating our purpose.  Instead, we have to do it by brute force
-     * using memmove.
-     */
+
     if (r_has_type(&pcsa[2], t_string)) {
-	int num_values = num_entries * cs_num_components(&cs);
+	int num_values = num_entries * cs_num_components(pcs_base);
 
 	check_read(pcsa[2]);
 	/*
@@ -90,12 +81,12 @@ zsetindexedspace(i_ctx_t *i_ctx_p)
 	 */
 	if (r_size(&pcsa[2]) < num_values)
 	    return_error(e_rangecheck);
-	memmove(&cs.params.indexed.base_space, &cs,
-		sizeof(cs.params.indexed.base_space));
-	gs_cspace_init(&cs, &gs_color_space_type_Indexed, imemory, false);
-	cs.params.indexed.lookup.table.data = pcsa[2].value.const_bytes;
-	cs.params.indexed.lookup.table.size = num_values;
-	cs.params.indexed.use_proc = 0;
+	pcs = gs_cspace_alloc(imemory, &gs_color_space_type_Indexed);
+	pcs->base_space = pcs_base;
+	rc_increment(pcs_base);
+	pcs->params.indexed.lookup.table.data = pcsa[2].value.const_bytes;
+	pcs->params.indexed.lookup.table.size = num_values;
+	pcs->params.indexed.use_proc = 0;
 	make_null(pproc);
 	code = 0;
     } else {
@@ -108,20 +99,22 @@ zsetindexedspace(i_ctx_t *i_ctx_p)
 	 * the memmove will overwrite its parameters.
 	 */
 	code = zcs_begin_map(i_ctx_p, &map, &pcsa[2], num_entries,
-			     (const gs_direct_color_space *)&cs,
-			     indexed_map1);
+			     pcs_base, indexed_map1);
 	if (code < 0)
 	    return code;
-	memmove(&cs.params.indexed.base_space, &cs,
-		sizeof(cs.params.indexed.base_space));
-	gs_cspace_init(&cs, &gs_color_space_type_Indexed, imemory, false);
-	cs.params.indexed.use_proc = 1;
+	pcs = gs_cspace_alloc(imemory, &gs_color_space_type_Indexed);
+	pcs->base_space = pcs_base;
+	rc_increment(pcs_base);
+	pcs->params.indexed.use_proc = 1;
 	*pproc = pcsa[2];
 	map->proc.lookup_index = lookup_indexed_map;
-	cs.params.indexed.lookup.map = map;
+	pcs->params.indexed.lookup.map = map;
     }
-    cs.params.indexed.hival = num_entries - 1;
-    code = gs_setcolorspace(igs, &cs);
+    pcs->params.indexed.hival = num_entries - 1;
+    pcs->params.indexed.n_comps = cs_num_components(pcs_base);
+    code = gs_setcolorspace(igs, pcs);
+    /* release reference from construction */
+    rc_decrement_only(pcs, "zsetindexedspace");
     if (code < 0) {
 	istate->colorspace = cspace_old;
 	ref_stack_pop_to(&e_stack, edepth);
@@ -177,13 +170,12 @@ const op_def zcsindex_l2_op_defs[] =
 /* Allocate, and prepare to load, the index or tint map. */
 int
 zcs_begin_map(i_ctx_t *i_ctx_p, gs_indexed_map ** pmap, const ref * pproc,
-	      int num_entries,  const gs_direct_color_space * base_space,
+	      int num_entries,  const gs_color_space * base_space,
 	      op_proc_t map1)
 {
     gs_memory_t *mem = gs_state_memory(igs);
     int space = imemory_space((gs_ref_memory_t *)mem);
-    int num_components =
-	cs_num_components((const gs_color_space *)base_space);
+    int num_components = cs_num_components(base_space);
     int num_values = num_entries * num_components;
     gs_indexed_map *map;
     int code = alloc_indexed_map(&map, num_values, mem,
@@ -192,8 +184,6 @@ zcs_begin_map(i_ctx_t *i_ctx_p, gs_indexed_map ** pmap, const ref * pproc,
 
     if (code < 0)
 	return code;
-    /* Set the reference count to 0 rather than 1. */
-    rc_init_free(map, mem, 0, free_indexed_map);
     *pmap = map;
     /* Map the entire set of color indices.  Since the */
     /* o-stack may not be able to hold N*4096 values, we have */

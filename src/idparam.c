@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 1995, 1997, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: idparam.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: idparam.c,v 1.7 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Utilities for getting parameters out of dictionaries. */
 #include "memory_.h"
 #include "string_.h"		/* for strlen */
@@ -25,7 +25,9 @@
 #include "ierrors.h"
 #include "gsmatrix.h"		/* for dict_matrix_param */
 #include "gsuid.h"
+#include "dstack.h"             /* for systemdict */
 #include "idict.h"
+#include "iddict.h"
 #include "idparam.h"		/* interface definition */
 #include "ilevel.h"
 #include "imemory.h"		/* for iutil.h */
@@ -56,7 +58,7 @@ dict_bool_param(const ref * pdict, const char *kstr,
 /* Return 0 if found, 1 if defaulted, <0 if invalid. */
 /* If the parameter is null, return 2 without setting *pvalue. */
 /* Note that the default value may be out of range, in which case */
-/* a missing value will return e_rangecheck rather than 1. */
+/* a missing value will return e_undefined rather than 1. */
 int
 dict_int_null_param(const ref * pdict, const char *kstr, int minval,
 		    int maxval, int defaultval, int *pvalue)
@@ -91,8 +93,12 @@ dict_int_null_param(const ref * pdict, const char *kstr, int minval,
 	}
 	code = 0;
     }
-    if (ival < minval || ival > maxval)
-	return_error(e_rangecheck);
+    if (ival < minval || ival > maxval) {
+	if (code == 1)
+            return_error(e_undefined);
+        else
+            return_error(e_rangecheck);
+    }
     *pvalue = (int)ival;
     return code;
 }
@@ -111,7 +117,7 @@ dict_int_param(const ref * pdict, const char *kstr, int minval, int maxval,
 /* Get an unsigned integer parameter from a dictionary. */
 /* Return 0 if found, 1 if defaulted, <0 if invalid. */
 /* Note that the default value may be out of range, in which case */
-/* a missing value will return e_rangecheck rather than 1. */
+/* a missing value will return e_undefined rather than 1. */
 int
 dict_uint_param(const ref * pdict, const char *kstr,
 		uint minval, uint maxval, uint defaultval, uint * pvalue)
@@ -130,8 +136,12 @@ dict_uint_param(const ref * pdict, const char *kstr,
 	ival = (uint) pdval->value.intval;
 	code = 0;
     }
-    if (ival < minval || ival > maxval)
-	return_error(e_rangecheck);
+    if (ival < minval || ival > maxval) {
+	if (code == 1)
+            return_error(e_undefined);
+        else
+            return_error(e_rangecheck);
+    }
     *pvalue = ival;
     return code;
 }
@@ -162,38 +172,38 @@ dict_float_param(const ref * pdict, const char *kstr,
 /* Get an integer array from a dictionary. */
 /* See idparam.h for specification. */
 int
-dict_int_array_check_param(const ref * pdict, const char *kstr, uint len,
-			   int *ivec, int under_error, int over_error)
+dict_int_array_check_param(const gs_memory_t *mem, const ref * pdict,
+   const char *kstr, uint len, int *ivec, int under_error, int over_error)
 {
-    ref *pdval;
-    const ref *pa;
-    int *pi = ivec;
+    ref pa, *pdval;
     uint size;
-    int i;
+    int i, code;
 
     if (pdict == 0 || dict_find_string(pdict, kstr, &pdval) <= 0)
 	return 0;
-    if (!r_has_type(pdval, t_array))
+    if (!r_is_array(pdval))
 	return_error(e_typecheck);
     size = r_size(pdval);
     if (size > len)
 	return_error(over_error);
-    pa = pdval->value.const_refs;
-    for (i = 0; i < size; i++, pa++, pi++) {
-	/* See dict_int_param above for why we allow reals here. */
-	switch (r_type(pa)) {
+    for (i = 0; i < size; i++) {
+	code = array_get(mem, pdval, i, &pa);
+        if (code < 0)
+            return code;
+        /* See dict_int_param above for why we allow reals here. */
+	switch (r_type(&pa)) {
 	    case t_integer:
-		if (pa->value.intval != (int)pa->value.intval)
+		if (pa.value.intval != (int)pa.value.intval)
 		    return_error(e_rangecheck);
-		*pi = (int)pa->value.intval;
+		ivec[i] = (int)pa.value.intval;
 		break;
 	    case t_real:
-		if (pa->value.realval < min_int ||
-		    pa->value.realval > max_int ||
-		    pa->value.realval != (int)pa->value.realval
+		if (pa.value.realval < min_int ||
+		    pa.value.realval > max_int ||
+		    pa.value.realval != (int)pa.value.realval
 		    )
 		    return_error(e_rangecheck);
-		*pi = (int)pa->value.realval;
+		ivec[i] = (int)pa.value.realval;
 		break;
 	    default:
 		return_error(e_typecheck);
@@ -203,17 +213,17 @@ dict_int_array_check_param(const ref * pdict, const char *kstr, uint len,
 	    gs_note_error(under_error));
 }
 int
-dict_int_array_param(const ref * pdict, const char *kstr,
-		     uint maxlen, int *ivec)
+dict_int_array_param(const gs_memory_t *mem, const ref * pdict,
+   const char *kstr, uint maxlen, int *ivec)
 {
-    return dict_int_array_check_param(pdict, kstr, maxlen, ivec,
+    return dict_int_array_check_param(mem, pdict, kstr, maxlen, ivec,
 				      0, e_limitcheck);
 }
 int
-dict_ints_param(const ref * pdict, const char *kstr,
-		uint len, int *ivec)
+dict_ints_param(const gs_memory_t *mem, const ref * pdict,
+   const char *kstr, uint len, int *ivec)
 {
-    return dict_int_array_check_param(pdict, kstr, len, ivec,
+    return dict_int_array_check_param(mem, pdict, kstr, len, ivec,
 				      e_rangecheck, e_rangecheck);
 }
 
@@ -266,6 +276,26 @@ dict_floats_param(const gs_memory_t *mem,
 					fvec, defaultvec, 
 					e_rangecheck, e_rangecheck);
 }
+
+
+/* Do dict_floats_param() and store [/key any] array in $error.errorinfo
+ * on failure. The key must be a permanently allocated C string.
+ */
+int
+dict_floats_param_errorinfo(i_ctx_t *i_ctx_p,
+		  const ref * pdict, const char *kstr,
+		  uint maxlen, float *fvec, const float *defaultvec)
+{
+    ref *val;
+    int code = dict_float_array_check_param(imemory, pdict, kstr, maxlen, 
+	                      fvec, defaultvec, e_rangecheck, e_rangecheck);
+    if (code < 0) {
+       if (dict_find_string(pdict, kstr, &val) > 0)
+          gs_errorinfo_put_pair(i_ctx_p, kstr, strlen(kstr), val);
+    }
+    return code;
+}
+
 
 /*
  * Get a procedure from a dictionary.  If the key is missing,
@@ -352,11 +382,10 @@ dict_uid_param(const ref * pdict, gs_uid * puid, int defaultval,
 	uid_set_invalid(puid);
 	return defaultval;
     } else {
-	if (!r_has_type(puniqueid, t_integer) ||
-	    puniqueid->value.intval < 0 ||
-	    puniqueid->value.intval > 0xffffffL
-	    )
-	    return_error(e_rangecheck);
+	if (!r_has_type(puniqueid, t_integer))
+	   return_error(e_typecheck);
+ 	if (puniqueid->value.intval < 0 || puniqueid->value.intval > 0xffffffL)
+	   return_error(e_rangecheck);
 	/* Apparently fonts created by Fontographer often have */
 	/* a UniqueID of 0, contrary to Adobe's specifications. */
 	/* Treat 0 as equivalent to -1 (no UniqueID). */
@@ -400,4 +429,45 @@ dict_check_uid_param(const ref * pdict, const gs_uid * puid)
 	return (r_has_type(puniqueid, t_integer) &&
 		puniqueid->value.intval == puid->id);
     }
+}
+
+/* Create and store [/key any] array in $error.errorinfo.
+ * The key must be a permanently allocated C string.
+ * This routine is here because it is often used with parameter dictionaries.
+ */
+int
+gs_errorinfo_put_pair(i_ctx_t *i_ctx_p, const char *key, int len, const ref *any)
+{
+    int code;
+    ref pair, *aptr, key_name, *pderror;
+
+    code = name_ref(imemory_local, (const byte *)key, len, &key_name, 0);
+    if (code < 0)
+        return code;
+    code = gs_alloc_ref_array(iimemory_local, &pair, a_readonly, 2, "gs_errorinfo_put_pair");
+    if (code < 0)
+        return code;
+    aptr = pair.value.refs;
+    ref_assign_new(aptr, &key_name);
+    ref_assign_new(aptr+1, any);
+    if (dict_find_string(systemdict, "$error", &pderror) <= 0 ||
+	!r_has_type(pderror, t_dictionary) ||
+	idict_put_string(pderror, "errorinfo", &pair) < 0
+	)
+	return_error(e_Fatal);
+    return 0;
+}
+
+/* Take a key's value from a given dictionary, create [/key any] array,
+ * and store it in $error.errorinfo.
+ * The key must be a permanently allocated C string.
+ */
+void
+gs_errorinfo_put_pair_from_dict(i_ctx_t *i_ctx_p, const ref *op, const char *key)
+{   ref *val, n;
+    if (dict_find_string(op, key, &val) <= 0) {
+        make_null(&n);
+        val = &n;
+    }
+    gs_errorinfo_put_pair(i_ctx_p, key, strlen(key), val);
 }

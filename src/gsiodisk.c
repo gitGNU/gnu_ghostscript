@@ -1,5 +1,6 @@
-/* Copyright (C) 2001 artofcode LLC  All rights reserved.
-
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
+  
   This file is part of GNU ghostscript
 
   GNU ghostscript is free software; you can redistribute it and/or modify it under
@@ -16,7 +17,7 @@
 
 */
 
-/*$Id: gsiodisk.c,v 1.3 2005/12/13 16:57:21 jemarch Exp $ */
+/*$Id: gsiodisk.c,v 1.4 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* %disk*% IODevice implementation for Ghostscript */
 
 /*

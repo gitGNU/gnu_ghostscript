@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 1993 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpm.h,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpm.h,v 1.5 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Defines common to gdevpm.c, gspmdrv.c and PM GSview */
 
 #ifndef gdevpm_INCLUDED

@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxi12bit.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gxi12bit.c,v 1.7 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* 12-bit image procedures */
 #include "gx.h"
 #include "memory_.h"
@@ -134,7 +134,7 @@ typedef union {
     long all[LONGS_PER_COLOR_FRACS];	/* for fast comparison */
 } color_fracs;
 
-#define LONGS_PER_4_FRACS ((FRACS_PER_LONG + 3) / 4)
+#define LONGS_PER_4_FRACS ((arch_sizeof_frac * 4 + arch_sizeof_long - 1) / arch_sizeof_long)
 #if LONGS_PER_4_FRACS == 1
 #  define COLOR_FRACS_4_EQ(f1, f2)\
      ((f1).all[0] == (f2).all[0])

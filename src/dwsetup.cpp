@@ -1,4 +1,5 @@
-/* Copyright (C) 1999-2003, Ghostgum Software Pty Ltd.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-// $Id: dwsetup.cpp,v 1.8 2006/06/16 12:55:04 Arabidopsis Exp $
+// $Id: dwsetup.cpp,v 1.9 2007/05/07 11:21:46 Arabidopsis Exp $
 //
 //
 // This is the setup program for Win32 GNU Ghostscript
@@ -39,10 +40,10 @@
 // uninstall log files are to be placed.  
 // Subsequent lines contain files to be copied (but not directories).
 // For example, filelist.txt might contain:
-//   GNU Ghostscript 8.16
-//   gs8.16
-//   gs8.16\bin\gsdll32.dll
-//   gs8.16\lib\gs_init.ps
+//   GNU Ghostscript 8.55
+//   gs8.55
+//   gs8.55\bin\gsdll32.dll
+//   gs8.55\lib\gs_init.ps
 // The file fontlist.txt might contain:
 //   GNU Ghostscript Fonts
 //   fonts
@@ -719,7 +720,7 @@ install_all()
 BOOL
 install_prog()
 {
-	char *regkey1 = "AFPL Ghostscript";
+	char *regkey1 = "GPL Ghostscript";
 	char regkey2[16];
 	char szDLL[MAXSTR];
 	char szLIB[MAXSTR+MAXSTR];
@@ -1187,7 +1188,7 @@ BOOL make_filelist(int argc, char *argv[])
 		    if ((title == NULL) || (strlen(title) == 0) ||
 			(dir == NULL) || (strlen(dir) == 0) ||
 			(list == NULL) || (strlen(list) == 0)) {
-			message_box("Usage: setupgs -title \042GNU Ghostscript #.##\042 -dir \042gs#.##\042 -list \042filelist.txt\042 spec1 spec2 specn\n");
+			message_box("Usage: setupgs -title \042GPL Ghostscript #.##\042 -dir \042gs#.##\042 -list \042filelist.txt\042 spec1 spec2 specn\n");
 			return FALSE;
 		    }
 		    if (fList == (FILE *)NULL) {

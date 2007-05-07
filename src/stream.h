@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: stream.h,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: stream.h,v 1.5 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Definitions for Ghostscript stream package */
 /* Requires stdio.h */
 
@@ -25,6 +25,7 @@
 #  define stream_INCLUDED
 
 #include "scommon.h"
+#include "gxiodev.h"
 #include "srdline.h"
 
 /* See scommon.h for documentation on the design of streams. */
@@ -339,6 +340,44 @@ stream_state *s_alloc_state(gs_memory_t *, gs_memory_type_ptr_t, client_name_t);
 void s_init(stream *, gs_memory_t *);
 void s_init_state(stream_state *, const stream_template *, gs_memory_t *);
 
+/* create a stream for a file object */
+int file_prepare_stream(const char *, uint, const char *,
+		 uint, stream **, char[4], gs_memory_t *);
+
+/* Set up a file stream on an OS file.  */
+void file_init_stream(stream *, FILE *, const char *, byte *, uint);
+
+/* Open a file stream, optionally on an OS file. */
+int file_open_stream(const char *, uint, const char *,
+		 uint, stream **, gx_io_device *,
+		 iodev_proc_fopen_t, gs_memory_t *);
+
+/* Allocate and return a file stream. */
+stream * file_alloc_stream(gs_memory_t *, client_name_t);
+
+/*
+ * Macros for checking file validity.
+ * NOTE: in order to work around a bug in the Borland 5.0 compiler,
+ * you must use file_is_invalid rather than !file_is_valid.
+ */
+#define file_is_valid(svar,op)\
+  (svar = fptr(op), (svar->read_id | svar->write_id) == r_size(op))
+#define file_is_invalid(svar,op)\
+  (svar = fptr(op), (svar->read_id | svar->write_id) != r_size(op))
+#define check_file(svar,op)\
+  BEGIN\
+    check_type(*(op), t_file);\
+    if ( file_is_invalid(svar, op) ) return_error(e_invalidaccess);\
+  END
+
+/* Close a file stream. */
+int file_close_file(stream *);
+
+int file_close_finish(stream *);
+
+/* Disable further access on the stream by mangling the id's */
+int file_close_disable(stream *);
+
 /* Create a stream on a string or a file. */
 void sread_string(stream *, const byte *, uint),
     sread_string_reusable(stream *, const byte *, uint),
@@ -403,5 +442,9 @@ int s_close_filters(stream **ps, stream *target);
 /* They have no state. */
 extern const stream_template s_NullE_template;
 extern const stream_template s_NullD_template;
+
+	/* for ziodev.c */
+int file_close_finish(stream *);
+int file_close_disable(stream *);
 
 #endif /* stream_INCLUDED */

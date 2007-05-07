@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 1998, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpxen.h,v 1.6 2006/06/16 12:55:05 Arabidopsis Exp $ */
+/* $Id: gdevpxen.h,v 1.7 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Enumerated attribute value definitions for PCL XL */
 
 #ifndef gdevpxen_INCLUDED
@@ -314,6 +315,9 @@ typedef enum {
     eNoTreatment = 0,
     eScreenMatch,
     eVivid,
+    eUnknown1,
+    eUnknown2,
+    eUnknown3,
     pxeColorTreatment_next
 } pxeColorTreatment;
     

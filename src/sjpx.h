@@ -1,4 +1,5 @@
-/* Copyright (C) 2003-2004 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: sjpx.h,v 1.2 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: sjpx.h,v 1.3 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Definitions for JPXDecode filter (JPEG 2000) */
 /* we link to the JasPer library for the actual decoding */
 
@@ -27,6 +28,15 @@
 
 #include "scommon.h"
 #include <jasper/jasper.h>
+
+/* define colorspace enumeration for the input image data */
+typedef enum {
+  gs_jpx_cs_unset,  /* colorspace hasn't been set */
+  gs_jpx_cs_gray,   /* single component grayscale image */ 
+  gs_jpx_cs_rgb,    /* three component (s)RGB image */
+  gs_jpx_cs_cmyk,   /* four component CMYK image */
+  gs_jpx_cs_indexed /* PDF image wants raw index values */
+} gs_jpx_cs;
 
 /* Our local state consists of pointers to the JasPer library's
  * stream and image structs for sending and retrieving the
@@ -47,6 +57,7 @@ typedef struct stream_jpxd_state_s
     unsigned char *buffer; /* temporary buffer for compressed data */
     long bufsize; /* total size of the buffer */
     long buffill; /* number of bytes written into the buffer */
+    gs_jpx_cs colorspace; /* external colorspace setting */
 }
 stream_jpxd_state;
 

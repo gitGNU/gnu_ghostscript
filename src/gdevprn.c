@@ -1,4 +1,5 @@
-/* Copyright (C) 1990, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevprn.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevprn.c,v 1.8 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Generic printer driver support */
 #include "ctype_.h"
 #include "gdevprn.h"
@@ -1044,7 +1045,8 @@ gx_default_create_buf_device(gx_device **pbdev, gx_device *target,
     } else
 	bdev = (gx_device *)mdev;
     /****** QUESTIONABLE, BUT BETTER THAN OMITTING ******/
-    bdev->color_info = target->color_info;
+    if (&bdev->color_info != &target->color_info) /* Pacify Valgrind */
+        bdev->color_info = target->color_info;
     *pbdev = bdev;
     return 0;
 }
@@ -1085,6 +1087,13 @@ gx_default_setup_buf_device(gx_device *bdev, byte *buffer, int bytes_per_line,
     if ((gx_device *)mdev == bdev && mdev->num_planes)
 	raster = bitmap_raster(mdev->planes[0].depth * mdev->width);
     if (ptrs == 0) {
+	/* 
+	 * Before allocating a new line pointer array, if there is a previous
+	 * array, free it to prevent leaks.
+	 */
+	if (mdev->line_ptrs != NULL)
+	    gs_free_object(mdev->line_pointer_memory, mdev->line_ptrs,
+		       "mem_close");
 	/*
 	 * Allocate line pointers now; free them when we close the device.
 	 * Note that for multi-planar devices, we have to allocate using

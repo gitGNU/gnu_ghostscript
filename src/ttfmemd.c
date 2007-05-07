@@ -1,4 +1,5 @@
-/* Copyright (C) 2003 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: ttfmemd.c,v 1.3 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: ttfmemd.c,v 1.4 2007/05/07 11:21:45 Arabidopsis Exp $ */
 
 /* Memory structure descriptors for the TrueType instruction interpreter. */
 
@@ -90,6 +90,7 @@ ENUM_PTRS_BEGIN(TExecution_Context_enum_ptrs) return 0;
     ENUM_PTR(19, TExecution_Context, twilight.touch);
     ENUM_PTR(20, TExecution_Context, twilight.contours);
     ENUM_PTR(21, TExecution_Context, cvt);
+    ENUM_PTR(22, TExecution_Context, memory);
 ENUM_PTRS_END
 
 private RELOC_PTRS_WITH(TExecution_Context_reloc_ptrs, TExecution_Context *mptr)
@@ -121,6 +122,7 @@ private RELOC_PTRS_WITH(TExecution_Context_reloc_ptrs, TExecution_Context *mptr)
     RELOC_PTR(TExecution_Context, twilight.touch);
     RELOC_PTR(TExecution_Context, twilight.contours);
     RELOC_PTR(TExecution_Context, cvt);
+    RELOC_PTR(TExecution_Context, memory);
     DISCARD(mptr);
 }
 RELOC_PTRS_END

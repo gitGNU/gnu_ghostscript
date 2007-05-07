@@ -1,4 +1,5 @@
-/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gstparam.h,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gstparam.h,v 1.6 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Transparency parameter definitions */
 
 #ifndef gstparam_INCLUDED
@@ -88,6 +88,7 @@ typedef struct gs_transparency_group_params_s {
     const gs_color_space *ColorSpace;
     bool Isolated;
     bool Knockout;
+    bool image_with_SMask;
 } gs_transparency_group_params_t;
 
 /* Define the parameter structure for a transparency mask. */

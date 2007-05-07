@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxfixed.h,v 1.7 2006/06/16 12:55:05 Arabidopsis Exp $ */
+/* $Id: gxfixed.h,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Fixed-point arithmetic for Ghostscript */
 
 #ifndef gxfixed_INCLUDED
@@ -172,6 +172,19 @@ fixed fixed_mult_quo(fixed A, fixed B, fixed C);
  * floating point hardware.  The implementation may be in either C or
  * assembler.
  */
+
+/*
+ * Define a function for finding intersection of small bars.
+ * Coordinates must be so small that their cubes fit into 60 bits.
+ * This function doesn't check intersections at end of bars,
+ * so  the caller must care of them on necessity.
+ * Returns : *ry is the Y-coordinate of the intersection
+ * truncated to 'fixed'; *ey is 1 iff the precise Y coordinate of
+ * the intersection is greater than *ry (used by the shading algorithm).
+ */
+bool 
+gx_intersect_small_bars(fixed q0x, fixed q0y, fixed q1x, fixed q1y, fixed q2x, fixed q2y, 
+			fixed q3x, fixed q3y, fixed *ry, fixed *ey);
 
 /*
  * The macros all use R for the (fixed) result, FB for the second (float)

@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsalloc.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gsalloc.c,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Standard memory allocator */
 #include "gx.h"
 #include "memory_.h"
@@ -90,18 +91,14 @@ private
 ENUM_PTRS_BEGIN(ref_memory_enum_ptrs) return 0;
 ENUM_PTR3(0, gs_ref_memory_t, streams, names_array, changes);
 ENUM_PTR(3, gs_ref_memory_t, saved);
-#if NO_INVISIBLE_LEVELS
 ENUM_PTR(4, gs_ref_memory_t, scan_limit);
-#endif
 ENUM_PTRS_END
 private RELOC_PTRS_WITH(ref_memory_reloc_ptrs, gs_ref_memory_t *mptr)
 {
     RELOC_PTR(gs_ref_memory_t, streams);
     RELOC_PTR(gs_ref_memory_t, names_array);
     RELOC_PTR(gs_ref_memory_t, changes);
-#if NO_INVISIBLE_LEVELS
     RELOC_PTR(gs_ref_memory_t, scan_limit);
-#endif
     /* Don't relocate the saved pointer now -- see igc.c for details. */
     mptr->reloc_saved = RELOC_OBJ(mptr->saved);
 }
@@ -333,10 +330,8 @@ ialloc_reset(gs_ref_memory_t * mem)
     mem->allocated = 0;
     mem->inherited = 0;
     mem->changes = 0;
-#if NO_INVISIBLE_LEVELS
     mem->scan_limit = 0;
     mem->total_scanned = 0;
-#endif
     ialloc_reset_free(mem);
 }
 
@@ -443,7 +438,7 @@ i_object_size(gs_memory_t * mem, const void /*obj_header_t */ *obj)
 
 /* Get the type of a structure from the header. */
 private gs_memory_type_ptr_t
-i_object_type(gs_memory_t * mem, const void /*obj_header_t */ *obj)
+i_object_type(const gs_memory_t * mem, const void /*obj_header_t */ *obj)
 {
     return ((const obj_header_t *)obj - 1)->o_type;
 }

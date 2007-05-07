@@ -1,5 +1,6 @@
-/* Copyright (C) 2000-2004 artofcode LLC.  All rights reserved.
-
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
+  
   This file is part of GNU ghostscript
 
   GNU ghostscript is free software; you can redistribute it and/or modify it under
@@ -16,7 +17,7 @@
 
 */
 
-/*$Id: rinkj-byte-stream.h,v 1.1 2006/03/08 12:30:41 Arabidopsis Exp $ */
+/*$Id: rinkj-byte-stream.h,v 1.2 2007/05/07 11:22:22 Arabidopsis Exp $ */
 /* Bytestream abstraction for Rinkj driver. */
 
 typedef struct _RinkjByteStream RinkjByteStream;

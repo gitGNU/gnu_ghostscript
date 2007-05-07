@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 1996, 1997 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevs3ga.c,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevs3ga.c,v 1.5 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* S3 86C911 driver */
 #include "gx.h"
 #include "gserrors.h"

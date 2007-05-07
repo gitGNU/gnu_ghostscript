@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxshade4.h,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gxshade4.h,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Internal definitions for triangle shading rendering */
 
 #ifndef gxshade4_INCLUDED
@@ -99,6 +99,27 @@ typedef struct {
 #define LAZY_WEDGES_MAX_LEVEL 9 /* memory consumption is 
     sizeof(wedge_vertex_list_elem_t) * LAZY_WEDGES_MAX_LEVEL * (1 << LAZY_WEDGES_MAX_LEVEL) */
 
+#define SHADING_COLOR_STACK_SIZE 200; /* Should be enough for max 64 decomposition levels. */
+
+/* Define a color to be used in curve rendering. */
+/* This may be a real client color, or a parametric function argument. */
+struct patch_color_s {
+    float t[2];			/* parametric value */
+    gs_client_color cc;
+    /* NOTE : The structure gs_client_color ends with a big array, but only few elements
+       are used in most cases. Therefore sometimes we allocate a shorter area,
+       so that ending elements are not allocated and must not be accessed/modified.
+       The number of allocated elements are known from the shading color space
+       and from patch_fill_state_s::num_components. */
+};
+
+#ifndef patch_color_t_DEFINED
+#  define patch_color_t_DEFINED
+typedef struct patch_color_s patch_color_t;
+#endif
+
+
+
 /* Define the common state for rendering Coons and tensor patches. */
 typedef struct patch_fill_state_s {
     mesh_fill_state_common;
@@ -118,18 +139,18 @@ typedef struct patch_fill_state_s {
     bool linear_color;
     bool unlinear;
     bool inside;
+    int color_stack_size;
+    int color_stack_step;
+    byte *color_stack_ptr;
+    byte *color_stack; /* A storage for shortened patch_color_t structures. */
+    byte *color_stack_limit;
+    gs_memory_t *memory; /* Where color_buffer is allocated. */
 } patch_fill_state_t;
-/* Define a color to be used in curve rendering. */
-/* This may be a real client color, or a parametric function argument. */
-typedef struct patch_color_s {
-    float t[2];			/* parametric value */
-    gs_client_color cc;
-} patch_color_t;
 
 /* Define a structure for mesh or patch vertex. */
 struct shading_vertex_s {
     gs_fixed_point p;
-    patch_color_t c;
+    const patch_color_t *c;
 };
 
 /* Define one segment (vertex and next control points) of a curve. */
@@ -146,7 +167,7 @@ int mesh_init_fill_state(mesh_fill_state_t * pfs,
 			  gx_device * dev, gs_imager_state * pis);
 
 int init_patch_fill_state(patch_fill_state_t *pfs);
-void term_patch_fill_state(patch_fill_state_t *pfs);
+bool term_patch_fill_state(patch_fill_state_t *pfs);
 
 int mesh_triangle(patch_fill_state_t *pfs, 
     const shading_vertex_t *p0, const shading_vertex_t *p1, const shading_vertex_t *p2);
@@ -166,5 +187,8 @@ void patch_resolve_color(patch_color_t * ppcr, const patch_fill_state_t *pfs);
 
 int gx_shade_background(gx_device *pdev, const gs_fixed_rect *rect, 
 	const gx_device_color *pdevc, gs_logical_operation_t log_op);
+
+byte *reserve_colors(patch_fill_state_t *pfs, patch_color_t *c0[], int n);
+void release_colors(patch_fill_state_t *pfs, byte *ptr, int n);
 
 #endif /* gxshade4_INCLUDED */

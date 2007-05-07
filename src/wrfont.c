@@ -1,5 +1,6 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
-
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
+  
   This file is part of GNU ghostscript
 
   GNU ghostscript is free software; you can redistribute it and/or modify it under
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: wrfont.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: wrfont.c,v 1.5 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /*
 Support functions to serialize fonts as PostScript code that can
 then be passed to FreeType via the FAPI FreeType bridge.

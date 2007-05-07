@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gximage3.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gximage3.c,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* ImageType 3 image implementation */
 #include "math_.h"		/* for ceil, floor */
 #include "memory_.h"
@@ -54,7 +54,7 @@ private const gx_image_enum_procs_t image3_enum_procs = {
 
 /* Initialize an ImageType 3 image. */
 void
-gs_image3_t_init(gs_image3_t * pim, const gs_color_space * color_space,
+gs_image3_t_init(gs_image3_t * pim, gs_color_space * color_space,
 		 gs_image3_interleave_type_t interleave_type)
 {
     gs_pixel_image_t_init((gs_pixel_image_t *) pim, color_space);
@@ -383,14 +383,8 @@ gx_begin_image3_generic(gx_device * dev,
     gs_image_t_init(&i_pixel, pim->ColorSpace);
     {
 	const gx_image_type_t *type1 = i_pixel.type;
-        const bool mask = i_pixel.ImageMask;
 
-        /* On gcc 2.95.4 for Alpha all structures are padded to 8 byte
-         * boundary but sizeof(bool) == 4. First member of the subclass
-         * is restored because it is overwritten by padding data.
-         */
 	*(gs_pixel_image_t *)&i_pixel = *(const gs_pixel_image_t *)pim;
-	i_pixel.ImageMask = mask;
 	i_pixel.type = type1;
     }
     code = make_mcde(dev, pis, pmat, (const gs_image_common_t *)&i_pixel,

@@ -1,4 +1,5 @@
-/* Copyright (C) 1990, 1991, 1993 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -15,8 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-
-/* $Id: gdevherc.c,v 1.4 2005/12/13 16:57:18 jemarch Exp $*/
+/* $Id: gdevherc.c,v 1.5 2007/05/07 11:21:45 Arabidopsis Exp $*/
 /* IBM PC-compatible Hercules Graphics display driver */
 /* using direct access to frame buffer */
 

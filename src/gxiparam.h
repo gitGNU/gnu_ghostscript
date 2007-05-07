@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxiparam.h,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/* $Id: gxiparam.h,v 1.5 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Definitions for implementors of image types */
 
 #ifndef gxiparam_INCLUDED
@@ -81,7 +81,7 @@ struct gx_image_type_s {
      * use pcs.
      */
 #define image_proc_sget(proc)\
-  int proc(gs_image_common_t *pic, stream *s, const gs_color_space *pcs)
+  int proc(gs_image_common_t *pic, stream *s, gs_color_space *pcs)
 
     image_proc_sget((*sget));
 
@@ -120,7 +120,7 @@ image_proc_release(gx_image_default_release); /* just free the params */
 int gx_pixel_image_sput(const gs_pixel_image_t *pic, stream *s,
 			const gs_color_space **ppcs, int extra);
 int gx_pixel_image_sget(gs_pixel_image_t *pic, stream *s,
-			const gs_color_space *pcs);
+			gs_color_space *pcs);
 void gx_pixel_image_release(gs_pixel_image_t *pic, gs_memory_t *mem);
 
 /* Internal procedures for use in sput/sget implementations. */
@@ -220,6 +220,7 @@ typedef struct gx_image_enum_procs_s {
 	const gx_image_enum_procs_t *procs;\
 	gx_device *dev;\
 	gs_id id;\
+	bool skipping; /* don't render, just consume image streams. */\
 	int num_planes;\
 	int plane_depths[gs_image_max_planes];	/* [num_planes] */\
 	int plane_widths[gs_image_max_planes]	/* [num_planes] */

@@ -1,4 +1,5 @@
-/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gscdevn.h,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gscdevn.h,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Client interface to DeviceN color */
 
 #ifndef gscdevn_INCLUDED
@@ -25,29 +26,19 @@
 #include "gscspace.h"
 
 /*
- * Fill in a DeviceN color space.  Does not include allocation
- * and initialization of the color space.
+ * Construct a new a DeviceN color space.
+ *
  * Note that the client is responsible for memory management of the
  * tint transform Function.
  */
-int gs_build_DeviceN(
-			gs_color_space *pcspace,
-			uint num_components,
-			const gs_color_space *palt_cspace,
-			gs_memory_t *pmem
-			);
-/*
- * Allocate and fill in a DeviceN color space.
- * Note that the client is responsible for memory management of the
- * tint transform Function.
- */
-int gs_cspace_build_DeviceN(
-			       gs_color_space **ppcspace,
-			       gs_separation_name *psnames,
-			       uint num_components,
-			       const gs_color_space *palt_cspace,
-			       gs_memory_t *pmem
-			       );
+int
+gs_cspace_new_DeviceN(
+    gs_color_space **ppcs,
+    uint num_components,
+    gs_color_space *palt_cspace,
+    gs_memory_t *pmem
+    );
+
 
 /* Set the tint transformation procedure for a DeviceN color space. */
 /* VMS limits procedure names to 31 characters, and some systems only */

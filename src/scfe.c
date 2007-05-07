@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 1995, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: scfe.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: scfe.c,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* CCITTFax encoding filter */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"
@@ -272,10 +272,10 @@ s_CFE_process(stream_state * st, stream_cursor_read * pr,
 	}
 #ifdef DEBUG
 	if (ss->K > 0) {
-	    if_debug1('w', "[w]new row, k_left=%d\n",
-		      ss->k_left);
+	    if_debug2('w', "[w2]new %d-D row, k_left=%d\n",
+		      (ss->k_left == 1 ? 1 : 2), ss->k_left);
 	} else {
-	    if_debug0('w', "[w]new row\n");
+	    if_debug1('w', "[w%d]new row\n", (ss->K < 0 ? 2 : 1));
 	}
 #endif
 	/*

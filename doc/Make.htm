@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>How to build Ghostscript from source code</title>
-<!-- $Id: Make.htm,v 1.7 2006/06/16 12:55:14 Arabidopsis Exp $ -->
+<!-- $Id: Make.htm,v 1.8 2007/05/07 11:22:13 Arabidopsis Exp $ -->
 <!-- Originally: make.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -168,13 +168,24 @@ the source code for some third-party libraries that Ghostscript uses.
 <h3><a name="Ghostscript_source"></a>Ghostscript source code</h3>
 
 <p><a name="Authoritative_distribution_site"></a>
-There are two kinds of Ghostscript distributions available.
- GNU Ghostscript should be
-available on all GNU sites, such as
+There are two kinds of Ghostscript distributions available, called "AFPL
+Ghostscript" and "GPL Ghostscript"; the distinction between them is
+explained in the <a href="Commprod.htm">conditions for distributing
+Ghostscript</a>.  The authoritative distribution site for AFPL
+Ghostscript is
 
 <blockquote>
-<a href="ftp://ftp.gnu.org/pub/gnu/"
-class="offsite">ftp://ftp.gnu.org/pub/gnu/</a>
+<a href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/AFPL/" 
+class="offsite">ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/AFPL/</a>gs###
+</blockquote>
+
+<p>
+where "###" is the unpunctuated version number. GPL Ghostscript is 
+available from the same site at 
+
+<blockquote>
+<a href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/GPL/"
+class="offsite">ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/GPL/</a>
 </blockquote>
 
 <p>
@@ -278,9 +289,9 @@ libraries has <b><em>its own version number</em></b> that has
 <b><em>nothing to do with Ghostscript's version number</em></b>; you should
 get the highest numbered version.  (If you encounter difficulties in the
 build process you might have to use a lower-numbered version, but don't
-worry about this yet.)  If you're running GNU/Linux, you might check whether
+worry about this yet.)  If you're running Linux, you might check whether
 these libraries are already available in source form on your system, since
-many GNU/Linux distributors include them; but we advise you to get the highest
+many Linux distributors include them; but we advise you to get the highest
 version from the Net if you can.
 
 <hr>
@@ -813,7 +824,7 @@ alone.
 <h4><a name="GNU_readline"></a>GNU readline</h4>
 
 <p>
-Ghostscript does not include an interface to GNU readline.  A user
+AFPL Ghostscript does not include an interface to GNU readline.  A user
 contributed code for this purpose, which we spent significant time debugging
 and then updating to track internal architectural changes in Ghostscript.
 The contributor was willing to assign the copyright to Aladdin Enterprises
@@ -1016,7 +1027,7 @@ All Ghostscript builds in PC (DOS and MS Windows) environments are 32- or
 	<td>&nbsp;
 	<td valign=top><a href="#Borland_build">Borland/Inprise C++ 4.x</a>
 	<td>&nbsp;
-	<td valign=top>32-bit MS Windows 3.1 + Win32s, 95, 98, NT
+	<td valign=top>Windows 95, 98, NT and later
 <tr>	<td valign=top><b><tt>msvc32.mak</tt></b>
 	<td>&nbsp;
 	<td valign=top><a href="#Microsoft_build">Microsoft Visual C++ 4 to 8</a>
@@ -1178,12 +1189,6 @@ this bug to Borland, send them the result of compiling
 <b><tt>file_is_valid()</tt></b> and <b><tt>!file_is_valid()</tt></b>.  We
 don't know whether Borland C++ 5.02 still has this problem. The problem 
 does not appear to exist in Borland C++Builder 4 or 5.</li>
-
-<li>When building for the MS Windows Win32s environment, the make
-process will stop after it has created <b><tt>genarch.exe</tt></b>.
-You should then run "<b><tt>_genarch.bat</tt></b>", wait until
-<b><tt>genarch</tt></b> has finished and then exit MS Windows.  Then type
-"<b><tt>make</tt></b>" again to restart the make process.
 
 <li>Borland C++Builder 5 and above require <strong><tt>BUILDER_VERSION</tt></strong>
 to be set explicitly&nbsp; to 5 in the make file because the version of MAKE which ships
@@ -1562,8 +1567,8 @@ below. This includes a Codewarrior .mcp project file than can be used to build b
 Carbon and CFM versions of the ghostscript shared library component.
 
 <blockquote>
-<a href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/currenti/"
- class="offsite">ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/gnu/current/</a>
+<a href="ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/AFPL/currenti/"
+ class="offsite">ftp://mirror.cs.wisc.edu/pub/mirrors/ghost/AFPL/current/</a>
 </blockquote>
 
 <p>
@@ -1606,9 +1611,7 @@ can use it. You may need to create the Frameworks/ directory on some systems.
 <p>
 Finally, there is a <tt>macos-mcp.mak</tt> makefile that can be
 used to set up the Codewarrior shared library component build described
-in the section on <a href="#MacOS">Classic MacOS</a> above. Currently
-this makefile is distributed only with the MacOS-specific <tt>.sit</tt>
-source archive, but with be included generally in future releases.
+in the section on <a href="#MacOS">Classic MacOS</a> above.
 
 <p>
 To set up the shlib build, download and uncompress the Ghostscript source.
@@ -1940,10 +1943,10 @@ see the section about <a href="#VMS_build">building under OpenVMS</a> below.
 
 </ul>
 
-<h4><a name="Linux"></a>GNU/Linux</h4>
+<h4><a name="Linux"></a>Linux</h4>
 
 <ul>
-<li>If you build on GNU/Linux with X11 R6 or later, you may get link-time error
+<li>If you build on Linux with X11 R6 or later, you may get link-time error
 messages about undefined references to various functions beginning with
 "SMC" and "ICE".  If this happens, make sure that <b><tt>XLIBS</tt></b> in
 the makefile is set to
@@ -1962,7 +1965,7 @@ If this happens, edit your top-level makefile to add the switches
 "<b><tt>-b i486-linuxaout</tt></b>" to both <b><tt>CFLAGS</tt></b> and
 <b><tt>LDFLAGS</tt></b>, then "<b><tt>make clean</tt></b>" followed by
 "<b><tt>make</tt></b>").  If this doesn't help, or if other strange things
-happen, contact your GNU/Linux supplier or support resource.
+happen, contact your Linux supplier or support resource.
 
 <li>A few of Ghostscript's drivers are multi-threaded. None of them are
 in the default build. Currently the only ones are the "bmpa" series.
@@ -2860,17 +2863,17 @@ to begin
 <h2><a name="UFST_build"></a>How to build Ghostscript with UFST</h2>
 
 <p>
-<em>Note: This section is only for customers who have licensed Agfa's UFST.
+<em>Note: This section is only for customers who have licensed UFST from Monotype Imaging.
 Other users please skip this section.
 </em>
 
 <p>
-Ghostscript sources do not include UFST sources. You need to obtain them from Agfa.
+Ghostscript sources do not include UFST sources. You need to obtain them from Monotype Imaging.
 Ghostscript includes only some source modules that provide a bridge to UFST.
 
 <p>
 Ghostscript makefiles do not include any script for building UFST libraries.
-Refer to Agfa's manual how to build them. UFST object libraries must be built
+Refer to UFST manual how to build them. UFST object libraries must be built
 before building Ghostscript with the UFST bridge.
 
 <p>
@@ -2884,7 +2887,7 @@ To build Ghostscript with UFST, specify additional options for "make":
 <dd>specifies the path to UFST root directory or folder.
 
 <dt><b><tt>UFST_CFLAGS=options</tt></b>
-<dd>specifies C compiler options for UFST library. Refer to Agfa's manual for information about them.
+<dd>specifies C compiler options for UFST library. Refer to UFST manual for information about them.
 
 <dt><b><tt>UFST_LIB_EXT=extension</tt></b>
 <dd>sets the file name extension for object libraries. You must use the appropriate one for your platform and linker.
@@ -2892,7 +2895,7 @@ To build Ghostscript with UFST, specify additional options for "make":
 
 <p>An example for Unix/GCC :
 <blockquote>
-<tt>UFST_BRIDGE=1 UFST_ROOT=../Agfa UFST_CFLAGS=-DGCCx86 UFST_LIB_EXT=.a</tt>
+<tt>UFST_BRIDGE=1 UFST_ROOT=../ufst UFST_CFLAGS=-DGCCx86 UFST_LIB_EXT=.a</tt>
 </blockquote>
 
 <p>For Windows/MSVC you need only specify UFST_ROOT.
@@ -2949,20 +2952,20 @@ msvc32.mak sets the other options automatically.
 <hr>
 
 <p>
-<small>Copyright &copy; 1996, 2000 Aladdin Enterprises.
-All rights  reserved.</small>
+<small>Copyright &copy; 2000-2006 artofcode LLC.  All rights reserved.</small>
 
 <p>
 This software is provided AS-IS with no warranty, either express or
 implied.
 
-This software is distributed under license and may not be copied,
-modified or distributed except as expressly authorized under the terms
-of the license contained in the file LICENSE in this distribution.
-
+This software is distributed under license and may not be copied, modified
+or distributed except as expressly authorized under the terms of that
+license.  Refer to licensing information at http://www.artifex.com/
+or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.51, 31 December 2005
+<small>Ghostscript version 8.56, 14 March 2007
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

@@ -1,4 +1,5 @@
-/* Copyright (C) 2002 Artifex Software Inc.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zfsample.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: zfsample.c,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Sample data to create a type 0 function */
 #include "memory_.h"
 #include "ghost.h"
@@ -319,7 +319,7 @@ cube_build_func0(const ref * pdict, gs_function_Sd_params_t * params,
 	    goto fail;
 	}
 	params->Size = ptr;
-	code = dict_ints_param(pdict, "Size", params->m, ptr);
+	code = dict_ints_param(mem, pdict, "Size", params->m, ptr);
         if (code < 0)
 	    goto fail;
         if (code == 0) {

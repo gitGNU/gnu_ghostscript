@@ -1,5 +1,5 @@
 @echo off
-@rem $Id: ps2ps2.bat,v 1.1 2006/06/16 12:55:13 Arabidopsis Exp $
+@rem $Id: ps2ps2.bat,v 1.2 2007/05/07 11:22:07 Arabidopsis Exp $
 @rem Converting Postscript 3 or PDF into PostScript 2.
 
 if %1/==/ goto usage

@@ -1,4 +1,5 @@
-/* Copyright (C) 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfk.c,v 1.4 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gdevpdfk.c,v 1.5 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Lab and ICCBased color space writing */
 #include "math_.h"
 #include "memory_.h"
@@ -556,7 +557,7 @@ pdf_convert_cie_to_iccbased(gx_device_pdf *pdev, cos_array_t *pca,
      */
     int code;
     int ncomps = gs_color_space_num_components(pcs);
-    gs_color_space alt_space;
+    gs_color_space *alt_space;
     cos_stream_t *pcstrm;
 
     /*
@@ -615,8 +616,9 @@ pdf_convert_cie_to_iccbased(gx_device_pdf *pdev, cos_array_t *pca,
     profile_table_t *next_table = tables;
 
     pdf_cspace_init_Device(pdev->memory, &alt_space, ncomps);	/* can't fail */
-    code = pdf_make_iccbased(pdev, pca, ncomps, prange, &alt_space,
+    code = pdf_make_iccbased(pdev, pca, ncomps, prange, alt_space,
 			     &pcstrm, pprange);
+    rc_decrement(alt_space, "pdf_convert_cie_to_iccbased");
     if (code < 0)
 	return code;
 
@@ -725,7 +727,7 @@ pdf_iccbased_color_space(gx_device_pdf *pdev, cos_value_t *pvalue,
     int code =
 	pdf_make_iccbased(pdev, pca, picc_info->num_components,
 			  picc_info->Range.ranges,
-			  (const gs_color_space *)&picc_params->alt_space,
+			  pcs->base_space,
 			  &pcstrm, NULL);
 
     if (code < 0)

@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxband.h,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gxband.h,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Band-processing parameters for Ghostscript */
 
 #ifndef gxband_INCLUDED
@@ -68,7 +68,7 @@ typedef struct gx_band_page_info_s {
     char bfname[gp_file_name_sizeof];	/* block file name */
     clist_file_ptr bfile;	/* block file, normally 0 */
     uint tile_cache_size;	/* size of tile cache */
-    long bfile_end_pos;		/* ftell at end of bfile */
+    int64_t bfile_end_pos;		/* ftell at end of bfile */
     gx_band_params_t band_params;  /* parameters used when writing band list */
 				/* (actual values, no 0s) */
     int scan_lines_per_colors_used; /* number of scan lines per colors_used */

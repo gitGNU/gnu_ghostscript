@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: iutil.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: iutil.c,v 1.7 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Utilities for Ghostscript interpreter */
 #include "math_.h"		/* for fabs */
 #include "memory_.h"
@@ -31,6 +31,7 @@
 #include "strimpl.h"
 #include "sstring.h"
 #include "idict.h"
+#include "ifont.h"		/* for FontID equality */
 #include "imemory.h"
 #include "iname.h"
 #include "ipacked.h"		/* for array_get */
@@ -89,6 +90,8 @@ refset_null_new(ref * to, uint size, uint new_mask)
 }
 
 /* Compare two objects for equality. */
+private bool fid_eq(const gs_memory_t *mem, const gs_font *pfont1,
+		    const gs_font *pfont2);
 bool
 obj_eq(const gs_memory_t *mem, const ref * pref1, const ref * pref2)
 {
@@ -119,13 +122,20 @@ obj_eq(const gs_memory_t *mem, const ref * pref1, const ref * pref2)
 		name_string_ref(mem, pref2, &nref);
 		pref2 = &nref;
 		break;
-
-		/* differing array types can match if length is 0 */
-	    case t_array:
+		/*
+		 * Differing implementations of packedarray can be eq,
+		 * if the length is zero, but an array is never eq to a
+		 * packedarray.
+		 */
 	    case t_mixedarray:
 	    case t_shortarray:
-		return r_is_array(pref2) &&
-		       r_size(pref1) == 0 && r_size(pref2) == 0;
+		/*
+		 * Since r_type(pref1) is one of the above, this is a
+		 * clever fast check for r_type(pref2) being the other.
+		 */
+		return ((int)r_type(pref1) + (int)r_type(pref2) ==
+			t_mixedarray + t_shortarray) &&
+		    r_size(pref1) == 0 && r_size(pref2) == 0;
 	    default:
 		if (r_btype(pref1) != r_btype(pref2))
 		    return false;
@@ -175,21 +185,66 @@ obj_eq(const gs_memory_t *mem, const ref * pref1, const ref * pref2)
 	case t_astruct:
 	    return (pref1->value.pstruct == pref2->value.pstruct);
 	case t_fontID:
-	    {	/*
-		 * In the Adobe implementations, different scalings of a
-		 * font have "equal" FIDs, so we do the same.
-		 */
-		const gs_font *pfont1 = r_ptr(pref1, gs_font);
-		const gs_font *pfont2 = r_ptr(pref2, gs_font);
-
-		while (pfont1->base != pfont1)
-		    pfont1 = pfont1->base;
-		while (pfont2->base != pfont2)
-		    pfont2 = pfont2->base;
-		return (pfont1 == pfont2);
-	    }
+	    /* This is complicated enough to deserve a separate procedure. */
+	    return fid_eq(mem, r_ptr(pref1, gs_font), r_ptr(pref2, gs_font));
     }
     return false;		/* shouldn't happen! */
+}
+
+/*
+ * Compare two FontIDs for equality.  In the Adobe implementations,
+ * different scalings of a font have "equal" FIDs, so we do the same.
+ * Furthermore, in more recent Adobe interpreters, different *copies* of a
+ * font have equal FIDs -- at least for Type 1 and Type 3 fonts -- as long
+ * as the "contents" of the font are the same.  We aren't sure that the
+ * following matches the Adobe algorithm, but it's close enough to pass the
+ * Genoa CET.
+ */
+/* (This is a single-use procedure, for clearer code.) */
+private bool
+fid_eq(const gs_memory_t *mem, const gs_font *pfont1, const gs_font *pfont2)
+{
+    while (pfont1->base != pfont1)
+	pfont1 = pfont1->base;
+    while (pfont2->base != pfont2)
+	pfont2 = pfont2->base;
+    if (pfont1 == pfont2)
+	return true;
+    switch (pfont1->FontType) {
+    case 1: case 3:
+	if (pfont1->FontType == pfont2->FontType)
+	    break;
+    default:
+	return false;
+    }
+    /* The following, while peculiar, appears to match CPSI. */
+    {
+	const gs_uid *puid1 = &((const gs_font_base *)pfont1)->UID;
+	const gs_uid *puid2 = &((const gs_font_base *)pfont2)->UID;
+    if (uid_is_UniqueID(puid1) || uid_is_UniqueID(puid2) ||
+	((uid_is_XUID(puid1) || uid_is_XUID(puid2)) &&
+	 !uid_equal(puid1, puid2)))
+	return false;
+    }
+    {
+	const font_data *pfd1 = (const font_data *)pfont1->client_data;
+	const font_data *pfd2 = (const font_data *)pfont2->client_data;
+
+	if (!(obj_eq(mem, &pfd1->BuildChar, &pfd2->BuildChar) &&
+	      obj_eq(mem, &pfd1->BuildGlyph, &pfd2->BuildGlyph) &&
+	      obj_eq(mem, &pfd1->Encoding, &pfd2->Encoding) &&
+	      obj_eq(mem, &pfd1->CharStrings, &pfd2->CharStrings)))
+	    return false;
+	if (pfont1->FontType == 1) {
+	    ref *ppd1, *ppd2;
+
+	    if (dict_find_string(&pfd1->dict, "Private", &ppd1) > 0 &&
+		dict_find_string(&pfd2->dict, "Private", &ppd2) > 0 &&
+		!obj_eq(mem, ppd1, ppd2))
+		return false;
+	}
+    }
+    return true;	    
 }
 
 /* Compare two objects for identity. */
@@ -239,6 +294,11 @@ obj_string_data(const gs_memory_t *mem, const ref *op, const byte **pchars, uint
  * *prlen contains the amount of data returned.  start_pos is the starting
  * output position -- the first start_pos bytes of output are discarded.
  *
+ * When (restart = false) return e_rangecheck the when destination wasn't
+ * large enough without modifying the destination. This is needed for 
+ * compatibility with Adobe implementation of cvs and cvrs, which don't
+ * change the destination string on failure.
+ *
  * The mem argument is only used for getting the type of structures,
  * not for allocating; if it is NULL and full_print != 0, structures will
  * print as --(struct)--.
@@ -250,7 +310,7 @@ obj_string_data(const gs_memory_t *mem, const ref *op, const byte **pchars, uint
 private void ensure_dot(char *);
 int
 obj_cvp(const ref * op, byte * str, uint len, uint * prlen,
-	int full_print, uint start_pos, const gs_memory_t *mem)
+	int full_print, uint start_pos, const gs_memory_t *mem, bool restart)
 {
     char buf[50];  /* big enough for any float, double, or struct name */
     const byte *data = (const byte *)buf;
@@ -293,7 +353,7 @@ obj_cvp(const ref * op, byte * str, uint len, uint * prlen,
 	}
 	case t_operator:
 	case t_oparray:  
-	    code = obj_cvp(op, (byte *)buf + 2, sizeof(buf) - 4, &size, 0, 0, mem);
+	    code = obj_cvp(op, (byte *)buf + 2, sizeof(buf) - 4, &size, 0, 0, mem, restart);
 	    if (code < 0) 
 		return code;
 	    buf[0] = buf[1] = buf[size + 2] = buf[size + 3] = '-';
@@ -307,10 +367,10 @@ obj_cvp(const ref * op, byte * str, uint len, uint * prlen,
 		goto nl;
 	    }
 	    if (start_pos > 0)
-		return obj_cvp(op, str, len, prlen, 0, start_pos - 1, mem);
+		return obj_cvp(op, str, len, prlen, 0, start_pos - 1, mem, restart);
 	    if (len < 1)
 		return_error(e_rangecheck);
-	    code = obj_cvp(op, str + 1, len - 1, prlen, 0, 0, mem);
+	    code = obj_cvp(op, str + 1, len - 1, prlen, 0, 0, mem, restart);
 	    if (code < 0)
 		return code;
 	    str[0] = '/';
@@ -405,7 +465,7 @@ obj_cvp(const ref * op, byte * str, uint len, uint * prlen,
 	    }
 	    data = (const byte *)
 		gs_struct_type_name_string(
-		     gs_object_type((gs_memory_t *)mem,
+				gs_object_type(mem,
 				    (const obj_header_t *)op->value.pstruct));
 	    size = strlen((const char *)data);
 	    if (size > 4 && !memcmp(data + size - 4, "type", 4))
@@ -477,7 +537,17 @@ other:
 	break;
     }
     case t_real:
-	sprintf(buf, "%g", op->value.realval);
+	/*
+	 * The value 0.0001 is a boundary case that the Adobe interpreters
+	 * print in f-format but at least some gs versions print in
+	 * e-format, presumably because of differences in the underlying C
+	 * library implementation.  Work around this here.
+	 */
+	if (op->value.realval == (float)0.0001) {
+	    strcpy(buf, "0.0001");
+	} else {
+	    sprintf(buf, "%g", op->value.realval);
+	}
 	ensure_dot(buf);
 	break;
     default:
@@ -486,31 +556,32 @@ other:
 rs: size = strlen((const char *)data);
 nl: if (size < start_pos)
 	return_error(e_rangecheck);
+    if (!restart && size > len)
+	return_error(e_rangecheck);
     size -= start_pos;
     *prlen = min(size, len);
     memmove(str, data + start_pos, *prlen);
     return (size > len);
 }
 /*
- * Make sure the converted form of a real number has a decimal point.  This
- * is needed for compatibility with Adobe (and other) interpreters.
+ * Make sure the converted form of a real number has at least one of an 'e'
+ * or a decimal point, so it won't be mistaken for an integer.
+ * Re-format the exponent to satisfy Genoa CET test.
  */
 private void
 ensure_dot(char *buf)
 {
-    if (strchr(buf, '.') == NULL) {
-	char *ept = strchr(buf, 'e');
-
-	if (ept == NULL)
-	    strcat(buf, ".0");
-	else {
-	    /* Insert the .0 before the exponent.  What a nuisance! */
-	    char buf1[30];
-
-	    strcpy(buf1, ept);
-	    strcpy(ept, ".0");
-	    strcat(ept, buf1);
-	}
+    char *pe = strchr(buf, 'e');
+    if (pe) {
+        int i;
+        sscanf(pe + 1, "%d", &i);
+        /* MSVC .net 2005 express doesn't support "%+02d" */
+        if (i >= 0)
+            sprintf(pe + 1, "+%02d", i);
+        else
+            sprintf(pe + 1, "-%02d", -i);
+    } else if (strchr(buf, '.') == NULL) {
+	strcat(buf, ".0");
     }
 }
 
@@ -526,7 +597,7 @@ int
 obj_cvs(const gs_memory_t *mem, const ref * op, byte * str, uint len, uint * prlen,
 	const byte ** pchars)
 {
-    int code = obj_cvp(op, str, len, prlen, 0, 0, mem);  /* NB: NULL memptr */
+    int code = obj_cvp(op, str, len, prlen, 0, 0, mem, false);  /* NB: NULL memptr */
 
     if (code != 1 && pchars) {
 	*pchars = str;
@@ -774,7 +845,7 @@ process_float_array(const gs_memory_t *mem, const ref * parray, int count, float
 }
 
 /* Get a single real parameter. */
-/* The only possible error is e_typecheck. */
+/* The only possible errors are e_typecheck and e_stackunderflow. */
 /* If an error is returned, the return value is not updated. */
 int
 real_param(const ref * op, double *pparam)
@@ -786,6 +857,8 @@ real_param(const ref * op, double *pparam)
 	case t_real:
 	    *pparam = op->value.realval;
 	    break;
+        case t__invalid:
+	    return_error(e_stackunderflow);
 	default:
 	    return_error(e_typecheck);
     }
@@ -836,9 +909,17 @@ make_floats(ref * op, const float *pval, int count)
 int
 check_proc_failed(const ref * pref)
 {
-    return (r_is_array(pref) ? e_invalidaccess :
-	    r_has_type(pref, t__invalid) ? e_stackunderflow :
-	    e_typecheck);
+    if (r_is_array(pref)) {
+        if (r_has_attr(pref, a_executable))
+            return e_invalidaccess;
+        else
+            return e_typecheck;
+    } else {
+        if (r_has_type(pref, t__invalid))
+            return e_stackunderflow;
+        else
+            return e_typecheck;
+    }
 }
 
 /* Compute the error code when a type check on the stack fails. */
@@ -860,17 +941,25 @@ read_matrix(const gs_memory_t *mem, const ref * op, gs_matrix * pmat)
     ref values[6];
     const ref *pvalues;
 
-    if (r_has_type(op, t_array))
-	pvalues = op->value.refs;
-    else {
-	int i;
+    switch (r_type(op)) {
+	case t_array:
+	    pvalues = op->value.refs;
+	    break;
+	case t_mixedarray:
+	case t_shortarray:
+	    {
+		int i;
 
-	for (i = 0; i < 6; ++i) {
-	    code = array_get(mem, op, (long)i, &values[i]);
-	    if (code < 0)
-		return code;
-	}
-	pvalues = values;
+		for (i = 0; i < 6; ++i) {
+		    code = array_get(mem, op, (long)i, &values[i]);
+		    if (code < 0)
+			return code;
+		}
+		pvalues = values;
+	    }
+	    break;
+	default:
+	    return_op_typecheck(op);
     }
     check_read(*op);
     if (r_size(op) != 6)

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfdcte.c,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
+/* $Id: zfdcte.c,v 1.6 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* DCTEncode filter creation */
 #include "memory_.h"
 #include "stdio_.h"		/* for jpeglib.h */

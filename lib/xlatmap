@@ -9,7 +9,7 @@
 % obvious format of this file. Strings and names must not be empty
 % and must not contain null ('\0') characters.
 
-% $Id: xlatmap,v 1.1 2004/02/14 22:32:08 atai Exp $
+% $Id: xlatmap,v 1.2 2007/05/07 11:22:07 Arabidopsis Exp $
 
 % The map contains entries for each kind of font being handled by
 % any font rendering plugin. The key of an entry is the font type
@@ -37,13 +37,13 @@
 
 /PostScript
 [ % Since PostScript fonts were designed especially for PostScript,
-  (*) /Latin1 % fixme : other charsets
+  (*) /Unicode % fixme : other charsets
 ]
 
 /Intellifont
-[ (*) /Latin1 % fixme : other charsets
+[ (*) /FCO_Unicode % fixme : other charsets
 ]
 
 /Microtype
-[ (*) /Latin1 % fixme : other charsets
+[ (*) /FCO_Unicode % FCOfontmap may may overwrite this for a specific font.
 ]

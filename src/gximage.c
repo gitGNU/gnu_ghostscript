@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gximage.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: gximage.c,v 1.6 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Generic image support */
 #include "memory_.h"
 #include "gx.h"
@@ -61,7 +61,7 @@ gs_data_image_t_init(gs_data_image_t * pim, int num_components)
 }
 void
 gs_pixel_image_t_init(gs_pixel_image_t * pim,
-		      const gs_color_space * color_space)
+		      gs_color_space * color_space)
 {
     int num_components;
 
@@ -91,6 +91,7 @@ gx_image_enum_common_init(gx_image_enum_common_t * piec,
     piec->procs = piep;
     piec->dev = dev;
     piec->id = gs_next_ids(dev->memory, 1);
+    piec->skipping = false;
     switch (format) {
 	case gs_image_format_chunky:
 	    piec->num_planes = 1;
@@ -230,7 +231,7 @@ gx_image_no_sput(const gs_image_common_t *pic, stream *s,
 
 int
 gx_image_no_sget(gs_image_common_t *pic, stream *s,
-		 const gs_color_space *pcs)
+		 gs_color_space *pcs)
 {
     return_error(gs_error_rangecheck);
 }
@@ -444,7 +445,7 @@ sget_variable_uint(stream *s, uint *pw)
  */
 int
 gx_pixel_image_sget(gs_pixel_image_t *pim, stream *s,
-		    const gs_color_space *pcs)
+		    gs_color_space *pcs)
 {
     uint control;
     float decode_default_1 = 1;

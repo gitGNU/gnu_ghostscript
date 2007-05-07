@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: siscale.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: siscale.c,v 1.6 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Image scaling filters */
 #include "math_.h"
 #include "memory_.h"

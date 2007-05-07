@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
-
-# $Id: all-arch.mak,v 1.8 2006/06/16 18:54:58 Arabidopsis Exp $
+#
+# $Id: all-arch.mak,v 1.9 2007/05/07 11:21:46 Arabidopsis Exp $
 #
 # Author:
 # 	Nelson H. F. Beebe
@@ -187,7 +187,7 @@ COMMON_ARGS		= DEVICE_DEVS_EXTRA='$(DEVICE_DEVS_EXTRA)' \
 			  JSRCDIR='$(JSRCDIR)' \
 			  PNGSRCDIR='$(PNGSRCDIR)' \
 			  PSRCDIR='$(PNGSRCDIR)' \
-			  PVERSION=10210 \
+			  PVERSION=10208 \
 			  SHARE_LIBPNG='$(SHARE_LIBPNG)' \
 			  SHARE_ZLIB='$(SHARE_ZLIB)' \
 			  XCFLAGS='$(XCFLAGS)' \
@@ -301,24 +301,24 @@ install-gnu-readline:	install-binary-gnu-readline install-fontmap install-pdfsec
 # Remove the old gs binary first, so as to preserve the previous
 # gs-x.yy version, if any.
 install-binary:
-	-$(RM) $(DESTDIR)$(BINDIR)/$(GS)
+	-$(RM) $(BINDIR)/$(GS)
 	@$(MAKE) $(ARGS) install GS=$(GS) XLIBDIRS=$(XLIBDIRSALL) ; \
 	d=`pwd` ; \
 	d=`basename $$d` ; \
 	d=`echo $$d | sed -e s/gs/gs-/` ; \
-	$(RM) $(DESTDIR)$(BINDIR)/$$d ; \
-	ln $(DESTDIR)$(BINDIR)/$(GS) $(DESTDIR)$(BINDIR)/$$d ; \
-	ls -l $(DESTDIR)$(BINDIR)/$(GS) $(DESTDIR)$(BINDIR)/$$d
+	$(RM) $(BINDIR)/$$d ; \
+	ln $(BINDIR)/$(GS) $(BINDIR)/$$d ; \
+	ls -l $(BINDIR)/$(GS) $(BINDIR)/$$d
 
 install-binary-gnu-readline:
-	-$(RM) $(DESTDIR)$(BINDIR)/$(GS)
+	-$(RM) $(BINDIR)/$(GS)
 	@$(MAKE) $(ARGS) install GS=$(GS)  XLIBDIRS=$(XLIBDIRSALL) $(GNU_READLINE_ARGS) ; \
 	d=`pwd` ; \
 	d=`basename $$d` ; \
 	d=`echo $$d | sed -e s/gs/gs-/` ; \
-	$(RM) $(DESTDIR)$(BINDIR)/$$d ; \
-	ln $(DESTDIR)$(BINDIR)/$(GS) $(DESTDIR)$(BINDIR)/$$d ; \
-	ls -l $(DESTDIR)$(BINDIR)/$(GS) $(DESTDIR)$(BINDIR)/$$d
+	$(RM) $(BINDIR)/$$d ; \
+	ln $(BINDIR)/$(GS) $(BINDIR)/$$d ; \
+	ls -l $(BINDIR)/$(GS) $(BINDIR)/$$d
 
 install-fontmap:
 	@d=`pwd` ; \
@@ -326,14 +326,14 @@ install-fontmap:
 	d=`echo $$d | sed -e s/gs//` ; \
 	if test -f $(GS_SRC_DIR)/Fontmap.new ; \
 	then \
-		if test -f $(DESTDIR)$(GS_SHARE_DIR)/$$d/lib/Fontmap.org ; \
+		if test -f $(GS_SHARE_DIR)/$$d/lib/Fontmap.org ; \
 		then \
 			true ; \
 		else \
-			mv $(DESTDIR)$(GS_SHARE_DIR)/$$d/lib/Fontmap $(DESTDIR)$(GS_SHARE_DIR)/$$d/lib/Fontmap.org ; \
+			mv $(GS_SHARE_DIR)/$$d/lib/Fontmap $(GS_SHARE_DIR)/$$d/lib/Fontmap.org ; \
 		fi ; \
-		$(CP) $(GS_SRC_DIR)/Fontmap.new $(DESTDIR)$(GS_SHARE_DIR)/$$d/lib/Fontmap ; \
-		ls -l $(DESTDIR)$(GS_SHARE_DIR)/$$d/lib/Fontmap* ; \
+		$(CP) $(GS_SRC_DIR)/Fontmap.new $(GS_SHARE_DIR)/$$d/lib/Fontmap ; \
+		ls -l $(GS_SHARE_DIR)/$$d/lib/Fontmap* ; \
 	fi
 
 install-pdfsec:
@@ -342,9 +342,9 @@ install-pdfsec:
 	d=`echo $$d | sed -e s/gs//` ; \
 	if test -f $(GS_SRC_DIR)/lib/pdf_sec.ps ; \
 	then \
-		$(MV) $(DESTDIR)$(GS_SHARE_DIR)/$$d/lib/pdf_sec.ps $(DESTDIR)$(GS_SHARE_DIR)/$$d/lib/pdf_sec.ps.org ; \
-		$(CP) lib/pdf_sec.ps $(DESTDIR)$(GS_SHARE_DIR)/$$d/lib/pdf_sec.ps ; \
-		$(CHMOD) 664 $(DESTDIR)$(GS_SHARE_DIR)/$$d/lib/pdf_sec.ps ; \
+		$(MV) $(GS_SHARE_DIR)/$$d/lib/pdf_sec.ps $(GS_SHARE_DIR)/$$d/lib/pdf_sec.ps.org ; \
+		$(CP) lib/pdf_sec.ps $(GS_SHARE_DIR)/$$d/lib/pdf_sec.ps ; \
+		$(CHMOD) 664 $(GS_SHARE_DIR)/$$d/lib/pdf_sec.ps ; \
 	fi
 
 #=======================================================================

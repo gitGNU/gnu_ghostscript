@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: ziodev2.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: ziodev2.c,v 1.5 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* (Level 2) IODevice operators */
 #include "string_.h"
 #include "ghost.h"
@@ -74,7 +74,7 @@ zgetdevparams(i_ctx_t *i_ctx_p)
     check_read_type(*op, t_string);
     iodev = gs_findiodevice(op->value.bytes, r_size(op));
     if (iodev == 0)
-	return_error(e_undefinedfilename);
+	return_error(e_undefined);
     stack_param_list_write(&list, &o_stack, NULL, iimemory);
     if ((code = gs_getdevparams(iodev, plist)) < 0) {
 	ref_stack_pop(&o_stack, list.count * 2);
@@ -99,7 +99,7 @@ zputdevparams(i_ctx_t *i_ctx_p)
     check_read_type(*op, t_string);
     iodev = gs_findiodevice(op->value.bytes, r_size(op));
     if (iodev == 0)
-	return_error(e_undefinedfilename);
+	return_error(e_undefined);
     code = stack_param_list_read(&list, &o_stack, 1, NULL, false, iimemory);
     if (code < 0)
 	return code;

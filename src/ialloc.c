@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 1995, 1996, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: ialloc.c,v 1.8 2006/06/16 12:55:05 Arabidopsis Exp $ */
+/* $Id: ialloc.c,v 1.9 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Memory allocator for Ghostscript interpreter */
 #include "gx.h"
 #include "memory_.h"
@@ -167,8 +167,8 @@ gs_alloc_ref_array(gs_ref_memory_t * mem, ref * parr, uint attrs,
 
     /* If we're allocating a run of refs already, */
     /* and we aren't about to overflow the maximum run length, use it. */
-    if (ptr_align_round(mem->cc.rtop) == mem->cc.cbot &&
-	num_refs < (mem->cc.ctop - mem->cc.rtop) / sizeof(ref) &&
+    if (mem->cc.rtop == mem->cc.cbot &&
+	num_refs < (mem->cc.ctop - mem->cc.cbot) / sizeof(ref) &&
 	mem->cc.rtop - (byte *) mem->cc.rcur + num_refs * sizeof(ref) <
 	max_size_st_refs
 	) {
@@ -179,8 +179,8 @@ gs_alloc_ref_array(gs_ref_memory_t * mem, ref * parr, uint attrs,
 		  ialloc_trace_space(mem), client_name_string(cname),
 		  num_refs, (ulong) obj);
 	mem->cc.rcur[-1].o_size += num_refs * sizeof(ref);
-	end = (ref *) (mem->cc.rtop += num_refs * sizeof(ref));
-	mem->cc.cbot = ptr_align_round(mem->cc.rtop);
+	end = (ref *) (mem->cc.rtop = mem->cc.cbot +=
+		       num_refs * sizeof(ref));
 	make_mark(end - 1);
     } else {
 	/*
@@ -191,16 +191,7 @@ gs_alloc_ref_array(gs_ref_memory_t * mem, ref * parr, uint attrs,
 	 */
 	chunk_t *pcc = mem->pcc;
 	ref *end;
-#if NO_INVISIBLE_LEVELS
-	ref_packed **ppr = 0;
-	int code = 0;
 
-	if ((gs_memory_t *)mem != mem->stable_memory) {
-	    code = alloc_save_change_alloc(mem, "gs_alloc_ref_array", &ppr);
-	    if (code < 0)
-		return code;
-	}
-#endif
 	obj = gs_alloc_struct_array((gs_memory_t *) mem, num_refs + 1,
 				    ref, &st_refs, cname);
 	if (obj == 0)
@@ -225,10 +216,14 @@ gs_alloc_ref_array(gs_ref_memory_t * mem, ref * parr, uint attrs,
 	    chunk_locate_ptr(obj, &cl);
 	    cl.cp->has_refs = true;
 	}
-#if NO_INVISIBLE_LEVELS
-	if (ppr)
-	    *ppr = (ref_packed *)obj;
-#endif
+	if ((gs_memory_t *)mem != mem->stable_memory) {
+	    ref_packed **ppr = 0;
+	    int code = alloc_save_change_alloc(mem, "gs_alloc_ref_array", &ppr);
+	    if (code < 0)
+		return code;
+            if (ppr)
+	        *ppr = (ref_packed *)obj;
+	}
     }
     make_array(parr, attrs | mem->space, num_refs, obj);
     return 0;
@@ -248,12 +243,12 @@ gs_resize_ref_array(gs_ref_memory_t * mem, ref * parr,
 	return_error(e_Fatal);
     diff = old_num_refs - new_num_refs;
     /* Check for LIFO.  See gs_free_ref_array for more details. */
-    if (ptr_align_round(mem->cc.rtop) == mem->cc.cbot &&
+    if (mem->cc.rtop == mem->cc.cbot &&
 	(byte *) (obj + (old_num_refs + 1)) == mem->cc.rtop
 	) {
 	/* Shorten the refs object. */
-	ref *end = (ref *) (mem->cc.rtop -= diff * sizeof(ref));
-	mem->cc.cbot = ptr_align_round(mem->cc.rtop);
+	ref *end = (ref *) (mem->cc.cbot = mem->cc.rtop -=
+			    diff * sizeof(ref));
 
 	if_debug4('A', "[a%d:<$ ]%s(%u) 0x%lx\n",
 		  ialloc_trace_space(mem), client_name_string(cname), diff,
@@ -287,15 +282,13 @@ gs_free_ref_array(gs_ref_memory_t * mem, ref * parr, client_name_t cname)
      */
     if (!r_has_type(parr, t_array))
 	DO_NOTHING;		/* don't look for special cases */
-    else if (ptr_align_round(mem->cc.rtop) == mem->cc.cbot &&
+    else if (mem->cc.rtop == mem->cc.cbot &&
 	     (byte *) (obj + (num_refs + 1)) == mem->cc.rtop
 	) {
 	if ((obj_header_t *) obj == mem->cc.rcur) {
 	    /* Deallocate the entire refs object. */
-#if NO_INVISIBLE_LEVELS
 	    if ((gs_memory_t *)mem != mem->stable_memory)
 		alloc_save_remove(mem, (ref_packed *)obj, "gs_free_ref_array");
-#endif
 	    gs_free_object((gs_memory_t *) mem, obj, cname);
 	    mem->cc.rcur = 0;
 	    mem->cc.rtop = 0;
@@ -305,8 +298,7 @@ gs_free_ref_array(gs_ref_memory_t * mem, ref * parr, client_name_t cname)
 		      ialloc_trace_space(mem), client_name_string(cname),
 		      num_refs, (ulong) obj);
 	    mem->cc.rcur[-1].o_size -= num_refs * sizeof(ref);
-	    mem->cc.rtop = (byte *) (obj + 1);
-	    mem->cc.cbot = ptr_align_round(mem->cc.rtop);
+	    mem->cc.rtop = mem->cc.cbot = (byte *) (obj + 1);
 	    make_mark(obj);
 	}
 	return;
@@ -326,10 +318,8 @@ gs_free_ref_array(gs_ref_memory_t * mem, ref * parr, client_name_t cname)
 	    if_debug4('a', "[a%d:-$L]%s(%u) 0x%lx\n",
 		      ialloc_trace_space(mem), client_name_string(cname),
 		      num_refs, (ulong) obj);
-#if NO_INVISIBLE_LEVELS
 	if ((gs_memory_t *)mem != mem->stable_memory)
 	    alloc_save_remove(mem, (ref_packed *)obj, "gs_free_ref_array");
-#endif
 	    alloc_free_chunk(cl.cp, mem);
 	    return;
 	}

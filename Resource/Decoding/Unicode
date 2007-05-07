@@ -16,7 +16,7 @@
 % with this program; if not, write to the Free Software Foundation, Inc.,
 % 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 %
-% $Id: Unicode,v 1.4 2005/12/13 17:52:35 jemarch Exp $
+% $Id: Unicode,v 1.5 2007/05/07 11:22:22 Arabidopsis Exp $
 % Unicode Decoding
 % Maps PS and TT names to Unicode UTF-16.
 
@@ -56,7 +56,7 @@
 16#001D IGS GS 
 16#001E IRS RS 
 16#001F IUS US 
-16#0020 SP010000
+16#0020 SP010000 space
 16#0021 SP020000 exclam 
 16#0022 SP040000 quotedbl 
 16#0023 SM010000 numbersign 

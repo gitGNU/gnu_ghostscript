@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zcsdevn.c,v 1.6 2006/06/16 12:55:05 Arabidopsis Exp $ */
+/* $Id: zcsdevn.c,v 1.7 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* DeviceN color space support */
 #include "memory_.h"
 #include "ghost.h"
@@ -47,8 +47,8 @@ zsetdevicenspace(i_ctx_t *i_ctx_p)
     gs_separation_name *names;
     gs_device_n_map *pmap;
     uint num_components;
-    gs_color_space cs;
-    const gs_color_space * pacs;
+    gs_color_space *pcs;
+    gs_color_space *pacs;
     ref_colorspace cspace_old;
     gs_function_t *pfn;
     int code;
@@ -74,17 +74,13 @@ zsetdevicenspace(i_ctx_t *i_ctx_p)
     
     /* The alternate color space has been selected as the current color space */
     pacs = gs_currentcolorspace(igs);
-    cs = *pacs;
-    /* See zcsindex.c for why we use memmove here. */
-    memmove(&cs.params.device_n.alt_space, &cs,
-	    sizeof(cs.params.device_n.alt_space));
-    gs_cspace_init(&cs, &gs_color_space_type_DeviceN, imemory, false);
-    code = gs_build_DeviceN(&cs, num_components, pacs, imemory);
+
+    code = gs_cspace_new_DeviceN(&pcs, num_components, pacs, imemory);
     if (code < 0)
 	return code;
-    names = cs.params.device_n.names;
-    pmap = cs.params.device_n.map;
-    cs.params.device_n.get_colorname_string = gs_get_colorname_string;
+    names = pcs->params.device_n.names;
+    pmap = pcs->params.device_n.map;
+    pcs->params.device_n.get_colorname_string = gs_get_colorname_string;
 
     /* Pick up the names of the components */
     {
@@ -97,8 +93,7 @@ zsetdevicenspace(i_ctx_t *i_ctx_p)
 		case t_string:
 		    code = name_from_string(imemory, &sname, &sname);
 		    if (code < 0) {
-			ifree_object(names, ".setdevicenspace(names)");
-			ifree_object(pmap, ".setdevicenspace(map)");
+			rc_decrement(pcs, ".setdevicenspace");
 			return code;
 		    }
 		    /* falls through */
@@ -106,8 +101,7 @@ zsetdevicenspace(i_ctx_t *i_ctx_p)
 		    names[i] = name_index(imemory, &sname);
 		    break;
 		default:
-		    ifree_object(names, ".setdevicenspace(names)");
-		    ifree_object(pmap, ".setdevicenspace(map)");
+		    rc_decrement(pcs, ".setdevicenspace");
 		    return_error(e_typecheck);
 	    }
 	}
@@ -129,17 +123,17 @@ zsetdevicenspace(i_ctx_t *i_ctx_p)
 
     if (code < 0) {
 	istate->colorspace = cspace_old;
-	ifree_object(names, ".setdevicenspace(names)");
-	ifree_object(pmap, ".setdevicenspace(map)");
+	rc_decrement_only(pcs, "zsetdevicenspace");
 	return code;
     }
-    gs_cspace_set_devn_function(&cs, pfn);
-    code = gs_setcolorspace(igs, &cs);
+    gs_cspace_set_devn_function(pcs, pfn);
+    code = gs_setcolorspace(igs, pcs);
+    /* release reference from construction */
+    rc_decrement_only(pcs, "zsetdevicenspace");
     if (code < 0) {
 	istate->colorspace = cspace_old;
 	return code;
     }
-    rc_decrement(pmap, ".setdevicenspace(map)");  /* build sets rc = 1 */
     pop(1);
     return 0;
 }

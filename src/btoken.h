@@ -1,4 +1,5 @@
-/* Copyright (C) 1990, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: btoken.h,v 1.4 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: btoken.h,v 1.5 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Definitions for Level 2 binary tokens */
 
 #ifndef btoken_INCLUDED

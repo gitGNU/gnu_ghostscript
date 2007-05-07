@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: iref.h,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
+/* $Id: iref.h,v 1.6 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Object structure and type definitions for Ghostscript */
 
 #ifndef iref_INCLUDED

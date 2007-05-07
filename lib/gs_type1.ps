@@ -1,14 +1,20 @@
 %    Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-% This software is provided AS-IS with no warranty, either express or
-% implied.
-% 
-% This software is distributed under license and may not be copied,
-% modified or distributed except as expressly authorized under the terms
-% of the license contained in the file LICENSE in this distribution.
-
-
-% $Id: gs_type1.ps,v 1.5 2006/06/16 12:55:13 Arabidopsis Exp $
+%  This file is part of GNU ghostscript
+%
+%  GNU ghostscript is free software; you can redistribute it and/or modify it under
+%  the terms of the GNU General Public License as published by the Free Software
+%  Foundation; either version 2, or (at your option) any later version.
+%
+%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+%
+%  You should have received a copy of the GNU General Public License along with
+%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+%
+% $Id: gs_type1.ps,v 1.6 2007/05/07 11:22:07 Arabidopsis Exp $
 % Type 1 font support code.
 
 % The standard representation for PostScript compatible fonts is described
@@ -21,6 +27,8 @@
 % that these entries are present in the built-in fonts.)
 /.buildfont1
  {
+   currentglobal 3 1 roll
+   dup gcheck setglobal
    dup .fontbbox {
      pop pop pop pop
      dup /FontInfo known not
@@ -47,6 +55,7 @@
      ifelse
    } if
    //.buildfont1
+   3 2 roll setglobal
  } bind def
 % If the diskfont feature isn't included, define a dummy .loadfontdict.
 /.loadfontdict where

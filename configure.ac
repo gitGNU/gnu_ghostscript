@@ -14,7 +14,7 @@ dnl You should have received a copy of the GNU General Public License along with
 dnl ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 dnl Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 dnl 
-dnl $Id: configure.ac,v 1.11 2006/10/17 20:15:04 Arabidopsis Exp $
+dnl $Id: configure.ac,v 1.12 2007/05/07 11:22:12 Arabidopsis Exp $
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------
@@ -22,9 +22,29 @@ dnl Initialization and Versioning
 dnl ------------------------------------------------
 
 AC_PREREQ(2.60)
-AC_INIT([gnu-ghostscript], [8.55], [gnu-ghostscript-bug@gnu.org])
+AC_INIT([gnu-ghostscript], [8.56.0], [gnu-ghostscript-bug@gnu.org])
 AC_CONFIG_SRCDIR(src/gs.c)
 AM_INIT_AUTOMAKE([-Wall])
+
+GS_VERSION_MAJOR=8
+GS_VERSION_MINOR=56
+GS_VERSION_PATCH=0
+GS_REVISIONDATE=20070414
+
+GS_VERSION=`expr $GS_VERSION_MAJOR \* 10000 + $GS_VERSION_MINOR \* 100 + $GS_VERSION_PATCH`
+
+if test $GS_VERSION_MINOR -lt 10; then
+	GS_VERSION_MINOR0=0$GS_VERSION_MINOR
+else
+	GS_VERSION_MINOR0=$GS_VERSION_MINOR
+fi
+
+AC_SUBST(GS_REVISIONDATE, $GS_REVISIONDATE)
+AC_SUBST(GS_VERSION_MAJOR, $GS_VERSION_MAJOR)
+AC_SUBST(GS_VERSION_MINOR, $GS_VERSION_MINOR)
+AC_SUBST(GS_VERSION_MINOR0, $GS_VERSION_MINOR0)
+AC_SUBST(GS_VERSION_PATCH, $GS_VERSION_PATCH)
+AC_SUBST(GS_VERSION, $GS_VERSION)
 
 dnl --------------------------------------------------  
 dnl Check for programs
@@ -46,10 +66,10 @@ dnl --------------------------------------------------
 
 #AC_CANONICAL_HOST
 
-if test $ac_cv_c_compiler_gnu = yes; then
+if test $ac_cv_prog_gcc = yes; then
     cflags_to_try="-Wall -Wstrict-prototypes \
--Wmissing-declarations -Wmissing-prototypes \
--Wcast-qual -Wwrite-strings \
+-Wmissing-declarations -Wmissing-prototypes -Wwrite-strings \
+-Wno-strict-aliasing \
 -fno-builtin -fno-common"
     optflags_to_try="-O2"
 else
@@ -276,7 +296,7 @@ AC_SUBST(IJSDIR)
 AC_SUBST(IJSDEVS)
 
 dnl look for jbig2dec
-AC_ARG_WITH(jbig2dec, AS_HELP_STRING(--with-jbig2dec,include JBIG2 decode support))
+AC_ARG_WITH(jbig2dec, AC_HELP_STRING([--with-jbig2dec],[include JBIG2 decode support]))
 JBIG2DIR=src
 SHARE_JBIG2=0
 JBIG2DEVS=''
@@ -310,7 +330,7 @@ AC_SUBST(SHARE_JBIG2)
 AC_SUBST(JBIG2DEVS)
 
 dnl look for the jasper JPEG 2000 library
-AC_ARG_WITH(jasper, AS_HELP_STRING(--with-jasper,link to the JasPer library for JPEG 2000))
+AC_ARG_WITH(jasper, AC_HELP_STRING([--with-jasper],[link to the JasPer library for JPEG 2000]))
 JASPERDIR=src
 SHARE_JASPER=0
 JPXDEVS=''
@@ -401,15 +421,17 @@ AC_SUBST(X11DEVS)
 AC_SUBST(XLIBS)
 
 dnl executible name
-AC_ARG_WITH(gs, AS_HELP_STRING(--with-gs=NAME,name of the ghostscript executible [[gs]]),
+AC_ARG_WITH(gs, AC_HELP_STRING([--with-gs=NAME],
+	[name of the ghostscript executible [[gs]]]),
 	[GS="$with_gs"],[GS='gs'])
 AC_SUBST(GS)
 
 dnl do we compile the postscript initialization files into Ghostscript?
-COMPILE_INITS="0"
-AC_ARG_ENABLE(compile-inits, AS_HELP_STRING(--enable-compile-inits,compile initialization files into Ghostscript),[
-               if test x$enable_compile_inits = xyes; then
-                       COMPILE_INITS="1"
+COMPILE_INITS="1"
+AC_ARG_ENABLE(compile-inits, AC_HELP_STRING([--disable-compile-inits],
+       [don't compile in initialization files]),[
+               if test "x$enable_compile_inits" = xno; then
+                       COMPILE_INITS="0"
                fi])
 AC_SUBST(COMPILE_INITS)
 
@@ -422,6 +444,9 @@ AC_SUBST(HAVE_MKSTEMP)
 
 AC_CHECK_FUNCS([hypot], [HAVE_HYPOT=-DHAVE_HYPOT])
 AC_SUBST(HAVE_HYPOT)
+
+AC_CHECK_FUNCS([fopen64], [HAVE_FILE64=-DHAVE_FILE64])
+AC_SUBST(HAVE_FILE64)
 
 AC_FUNC_FORK
 AC_PROG_GCC_TRADITIONAL
@@ -438,5 +463,5 @@ dnl --------------------------------------------------
 
 AC_SUBST(OPT_CFLAGS)
 AC_SUBST(GCFLAGS)
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile lib/gs_init.ps doc/version.texi])
 AC_OUTPUT

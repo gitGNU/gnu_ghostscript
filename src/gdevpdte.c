@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdte.c,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gdevpdte.c,v 1.7 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Encoding-based (Type 1/2/42) text processing for pdfwrite. */
 
 #include "math_.h"
@@ -526,22 +526,25 @@ pdf_process_string(pdf_text_enum_t *penum, gs_string *pstr,
 	/* process_text_modify_width destroys text parameters, save them now. */
         int index0 = penum->index, xy_index = penum->xy_index;
 	gs_text_params_t text = penum->text;
-	int xy_index_step = (penum->text.x_widths != NULL && /* see gs_text_replaced_width */
+	int xy_index_step = (!(penum->text.operation & TEXT_REPLACE_WIDTHS) ? 0 :
 			     penum->text.x_widths == penum->text.y_widths ? 2 : 1);
 	
-	if (penum->text.x_widths != NULL) {
-	    penum->text.x_widths += xy_index * xy_index_step;
+	if (penum->text.operation & TEXT_REPLACE_WIDTHS) {
+	    if (penum->text.x_widths != NULL)
+		penum->text.x_widths += xy_index * xy_index_step;
+	    if (penum->text.y_widths != NULL)
+		penum->text.y_widths += xy_index * xy_index_step;
 	}
-	if (penum->text.y_widths != NULL)
-	    penum->text.y_widths += xy_index * xy_index_step;
 	penum->xy_index = 0;
 	code = process_text_modify_width(penum, (gs_font *)font, ppts,
 					 (gs_const_string *)pstr,
 					 &width_pt, gdata, false);
-	if (penum->text.x_widths != NULL)
-	    penum->text.x_widths -= xy_index * xy_index_step;
-	if (penum->text.y_widths != NULL)
-	    penum->text.y_widths -= xy_index * xy_index_step;
+	if (penum->text.operation & TEXT_REPLACE_WIDTHS) {
+	    if (penum->text.x_widths != NULL)
+		penum->text.x_widths -= xy_index * xy_index_step;
+	    if (penum->text.y_widths != NULL)
+		penum->text.y_widths -= xy_index * xy_index_step;
+	}
 	penum->xy_index += xy_index;
 	adjust_first_last_char(pdfont, pstr->data, penum->index);
 	penum->text = text;
@@ -1126,7 +1129,8 @@ process_plain_text(gs_text_enum_t *pte, void *vbuf, uint bsize)
 
 	    str.data = buf;
 	    str.size = size;
-	    if (pdf_obtain_font_resource_unencoded(penum, &str, &pdfont, gdata) != 0) {
+	    code = pdf_obtain_font_resource_unencoded(penum, &str, &pdfont, gdata);
+	    if (code < 0) {
 		/* 
 		 * pdf_text_process will fall back 
 		 * to default implementation.

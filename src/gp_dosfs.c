@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 1993, 1996, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gp_dosfs.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_dosfs.c,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Common routines for MS-DOS (any compiler) and DesqView/X, */
 /* which has a MS-DOS-like file system. */
 #include "dos_.h"

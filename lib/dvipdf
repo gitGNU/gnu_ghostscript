@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: dvipdf,v 1.3 2006/03/02 22:26:14 Arabidopsis Exp $
+# $Id: dvipdf,v 1.4 2007/05/07 11:22:07 Arabidopsis Exp $
 # Convert DVI to PDF.
 #
 # Please contact Andrew Ford <A.Ford@ford-mason.co.uk> with any questions

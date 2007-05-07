@@ -1,4 +1,5 @@
-/* Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdtb.c,v 1.6 2006/06/16 12:55:05 Arabidopsis Exp $ */
+/* $Id: gdevpdtb.c,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* BaseFont implementation for pdfwrite */
 #include "memory_.h"
 #include "ctype_.h"
@@ -67,7 +68,7 @@ pdf_has_subset_prefix(const byte *str, uint size)
     return true;
 }
 
-private ulong
+private inline ulong
 hash(ulong v, int index, ushort w)
 {
     return v * 3141592653u + w;
@@ -84,20 +85,19 @@ pdf_add_subset_prefix(const gx_device_pdf *pdev, gs_string *pstr, byte *used, in
 				  size + SUBSET_PREFIX_SIZE,
 				  "pdf_add_subset_prefix");
     int len = (count + 7) / 8;
+    int len0 = len & ~(sizeof(ushort) - 1);
     ulong v = 0;
-    ushort t = 0;
     int i;
 
     if (data == 0)
 	return_error(gs_error_VMerror);
+    
     /* Hash the 'used' array. */
-    for (i = 0; i < len; i += sizeof(ushort))
+    for (i = 0; i < len0; i += sizeof(ushort))
 	v = hash(v, i, *(ushort *)(used + i));
-    if (i < len) {
-	i -= sizeof(ushort);
-	memmove(&t, used + i, len - i);
-	v = hash(v, i, *(ushort *)(used + i));
-    }
+    for (; i < len; i++)
+        v = hash(v, i, used[i]);
+
     memmove(data + SUBSET_PREFIX_SIZE, data, size);
     for (i = 0; i < SUBSET_PREFIX_SIZE - 1; ++i, v /= 26)
 	data[i] = 'A' + (v % 26);
@@ -435,7 +435,7 @@ pdf_adjust_font_name(gx_device_pdf *pdev, long id, pdf_base_font_t *pbfont)
  * Write an embedded font.
  */
 int
-pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
+pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont, font_type FontType,
 			gs_int_rect *FontBBox, gs_id rid, cos_dict_t **ppcd)
 {
     bool do_subset = pdf_do_subset_font(pdev, pbfont, rid);
@@ -482,7 +482,7 @@ pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont,
     fnstr.data = pbfont->font_name.data;
     fnstr.size = pbfont->font_name.size;
     /* Now write the font (or subset). */
-    switch (out_font->FontType) {
+    switch (FontType) {
 
     case ft_composite:
 	/* Nothing to embed -- the descendant fonts do it all. */

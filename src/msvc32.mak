@@ -1,24 +1,21 @@
-#    Copyright (C) 1991-2004 artofcode LLC.  All rights reserved.
-# 
-# This file is part of GNU ghostscript
+#  Copyright (C) 2001-2006 artofcode LLC.
+#  All Rights Reserved.
 #
-# GNU ghostscript is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2, or (at your option) any later version.
+#  This file is part of GNU ghostscript
 #
-# This software is provided AS-IS with no warranty, either express or
-# implied. That is, this program is distributed in the hope that it will 
-# be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details
+#  GNU ghostscript is free software; you can redistribute it and/or modify it under
+#  the terms of the GNU General Public License as published by the Free Software
+#  Foundation; either version 2, or (at your option) any later version.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
-# 
-# 
-
-# $Id: msvc32.mak,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $
+#  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+#  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+#  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License along with
+#  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# $Id: msvc32.mak,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $
 # makefile for 32-bit Microsoft Visual C++, Windows NT or Windows 95 platform.
 #
 # All configurable options are surrounded by !ifndef/!endif to allow 
@@ -62,6 +59,9 @@ PSSRCDIR=.\src
 !ifndef PSLIBDIR
 PSLIBDIR=.\lib
 !endif
+!ifndef PSRESDIR
+PSRESDIR=.\Resource
+!endif
 !ifndef PSGENDIR
 PSGENDIR=.\obj
 !endif
@@ -91,7 +91,7 @@ GS_DOCDIR=$(GSROOTDIR)/doc
 # illegal escape.
 
 !ifndef GS_LIB_DEFAULT
-GS_LIB_DEFAULT=$(GSROOTDIR)/lib;$(GSROOTDIR)/Resource;$(AROOTDIR)/fonts
+GS_LIB_DEFAULT=$(GSROOTDIR)/lib;$(GSROOTDIR)/Resource/Font;$(AROOTDIR)/fonts
 !endif
 
 # Define whether or not searching for initialization files should always
@@ -211,7 +211,7 @@ JVERSION=6
 
 !ifndef PSRCDIR
 PSRCDIR=libpng
-PVERSION=10210
+PVERSION=10208
 !endif
 
 # Define the directory where the zlib sources are stored.
@@ -352,7 +352,7 @@ MSVC_VERSION=7
 MSVC_VERSION=7
 MSVC_MINOR_VERSION=1
 !endif
-!if "$(_NMAKE_VER)" == "8.00.50727.42"
+!if "$(_NMAKE_VER)" == "8.00.40607.16"
 MSVC_VERSION=8
 !endif
 !endif
@@ -630,9 +630,6 @@ FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(P
 !ifndef COMPILE_INITS
 COMPILE_INITS=0
 !endif
-
-# This is in the top level makefile since it is platform dependent
-RESOURCE_LIST=Resource/CMap/ Resource/ColorSpace/ Resource/Decoding/ Resource/Fonts/ Resource/Procset/ Resource/IdiomSet/ Resource/CIDFont/
 
 # Choose whether to store band lists on files or in memory.
 # The choices are 'file' or 'memory'.

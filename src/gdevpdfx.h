@@ -1,4 +1,5 @@
-/* Copyright (C) 1996, 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfx.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevpdfx.h,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Internal definitions for PDF-writing driver. */
 
 #ifndef gdevpdfx_INCLUDED
@@ -539,6 +540,8 @@ struct gx_device_pdf_s {
     pdf_resource_t *cs_Patterns[5];
     pdf_resource_t *Identity_ToUnicode_CMaps[2]; /* WMode = 0,1 */
     pdf_resource_t *last_resource;
+    pdf_resource_t *OneByteIdentityH;
+    gs_id IdentityCIDSystemInfo_id;
     pdf_outline_level_t outline_levels[MAX_OUTLINE_DEPTH];
     int outline_depth;
     int closed_outline_depth;
@@ -642,6 +645,7 @@ struct gx_device_pdf_s {
     gs_id     image_mask_id;
     bool      image_mask_is_SMask;
     bool      image_mask_skip; /* A flag for pdf_begin_transparency_mask */
+    bool      image_with_SMask; /* A flag for pdf_begin_transparency_group. */
     gs_matrix converting_image_matrix;
     double    image_mask_scale;
     /* Temporary data for soft mask form. */
@@ -937,6 +941,7 @@ typedef struct pdf_lcvd_s {
     gx_device_pdf *pdev;
     dev_t_proc_fill_rectangle((*std_fill_rectangle), gx_device);
     dev_t_proc_close_device((*std_close_device), gx_device);
+    dev_t_proc_get_clipping_box((*std_get_clipping_box), gx_device);
     bool mask_is_empty;
     bool path_is_empty;
     bool mask_is_clean;

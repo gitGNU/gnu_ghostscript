@@ -1,4 +1,5 @@
-/* Copyright (C) 1991, 1992, 1994, 1996, 1997, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsdps1.c,v 1.5 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsdps1.c,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Display PostScript graphics additions for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -83,7 +84,7 @@ gs_setbbox(gs_state * pgs, floatp llx, floatp lly, floatp urx, floatp ury)
 	(fixed) ceil(dbox.q.x * fixed_scale) + box_rounding_slop_fixed;
     bbox.q.y =
 	(fixed) ceil(dbox.q.y * fixed_scale) + box_rounding_slop_fixed;
-    if (gx_path_bbox(ppath, &obox) >= 0) {	/* Take the union of the bboxes. */
+    if (gx_path_bbox_set(ppath, &obox) >= 0) {	/* Take the union of the bboxes. */
 	ppath->bbox.p.x = min(obox.p.x, bbox.p.x);
 	ppath->bbox.p.y = min(obox.p.y, bbox.p.y);
 	ppath->bbox.q.x = max(obox.q.x, bbox.q.x);
@@ -98,25 +99,68 @@ gs_setbbox(gs_state * pgs, floatp llx, floatp lly, floatp urx, floatp ury)
 /* ------ Rectangles ------ */
 
 /* Append a list of rectangles to a path. */
-int
-gs_rectappend(gs_state * pgs, const gs_rect * pr, uint count)
+private int
+gs_rectappend_compat(gs_state * pgs, const gs_rect * pr, uint count, bool clip)
 {
+    extern bool CPSI_mode;
+
     for (; count != 0; count--, pr++) {
 	floatp px = pr->p.x, py = pr->p.y, qx = pr->q.x, qy = pr->q.y;
 	int code;
 
-	/* Ensure counter-clockwise drawing. */
-	if ((qx >= px) != (qy >= py))
-	    qx = px, px = pr->q.x;	/* swap x values */
-	if ((code = gs_moveto(pgs, px, py)) < 0 ||
-	    (code = gs_lineto(pgs, qx, py)) < 0 ||
-	    (code = gs_lineto(pgs, qx, qy)) < 0 ||
-	    (code = gs_lineto(pgs, px, qy)) < 0 ||
-	    (code = gs_closepath(pgs)) < 0
-	    )
-	    return code;
+	if (CPSI_mode) {
+	    /* We believe that the result must be independent
+	       on the device initial matrix. 
+	       Particularly for the correct dashing 
+	       the starting point and the contour direction 
+	       must be same with any device initial matrix.
+	       Only way to provide it is to choose the starting point 
+	       and the direction in the user space. */
+	    if (clip) {
+		/* CPSI starts a clippath with the upper right corner. */
+		/* Debugged with CET 11-11.PS page 6 item much13.*/
+		if ((code = gs_moveto(pgs, qx, qy)) < 0 ||
+		    (code = gs_lineto(pgs, qx, py)) < 0 ||
+		    (code = gs_lineto(pgs, px, py)) < 0 ||
+		    (code = gs_lineto(pgs, px, qy)) < 0 ||
+		    (code = gs_closepath(pgs)) < 0
+		    )
+		    return code;
+	    } else {
+		/* Debugged with CET 12-12.PS page 10 item more20.*/
+		if (px > qx) {
+		    px = qx; qx = pr->p.x;
+		}
+		if (py > qy) {
+		    py = qy; qy = pr->p.y;
+		}
+		if ((code = gs_moveto(pgs, px, py)) < 0 ||
+		    (code = gs_lineto(pgs, qx, py)) < 0 ||
+		    (code = gs_lineto(pgs, qx, qy)) < 0 ||
+		    (code = gs_lineto(pgs, px, qy)) < 0 ||
+		    (code = gs_closepath(pgs)) < 0
+		    )
+		    return code;
+	    }
+	} else {
+	    /* Ensure counter-clockwise drawing. */
+	    if ((qx >= px) != (qy >= py))
+		qx = px, px = pr->q.x;	/* swap x values */
+	    if ((code = gs_moveto(pgs, px, py)) < 0 ||
+		(code = gs_lineto(pgs, qx, py)) < 0 ||
+		(code = gs_lineto(pgs, qx, qy)) < 0 ||
+		(code = gs_lineto(pgs, px, qy)) < 0 ||
+		(code = gs_closepath(pgs)) < 0
+		)
+		return code;
+	}
     }
     return 0;
+}
+int
+gs_rectappend(gs_state * pgs, const gs_rect * pr, uint count)
+{
+    return gs_rectappend_compat(pgs, pr, count, false);
 }
 
 /* Clip to a list of rectangles. */
@@ -129,7 +173,7 @@ gs_rectclip(gs_state * pgs, const gs_rect * pr, uint count)
     gx_path_init_local(&save, pgs->memory);
     gx_path_assign_preserve(&save, pgs->path);
     gs_newpath(pgs);
-    if ((code = gs_rectappend(pgs, pr, count)) < 0 ||
+    if ((code = gs_rectappend_compat(pgs, pr, count, true)) < 0 ||
 	(code = gs_clip(pgs)) < 0
 	) {
 	gx_path_assign_free(pgs->path, &save);

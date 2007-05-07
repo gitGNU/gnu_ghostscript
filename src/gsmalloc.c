@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 2000, 2002 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsmalloc.c,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gsmalloc.c,v 1.7 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* C heap allocator */
 #include "malloc_.h"
 #include "gdebug.h"
@@ -284,7 +285,7 @@ gs_heap_object_size(gs_memory_t * mem, const void *ptr)
     return ((const gs_malloc_block_t *)ptr)[-1].size;
 }
 private gs_memory_type_ptr_t
-gs_heap_object_type(gs_memory_t * mem, const void *ptr)
+gs_heap_object_type(const gs_memory_t * mem, const void *ptr)
 {
     return ((const gs_malloc_block_t *)ptr)[-1].type;
 }
@@ -292,7 +293,7 @@ private void
 gs_heap_free_object(gs_memory_t * mem, void *ptr, client_name_t cname)
 {
     gs_malloc_memory_t *mmem = (gs_malloc_memory_t *) mem;
-    gs_malloc_block_t *bp = mmem->allocated;
+    gs_malloc_block_t *bp;
     gs_memory_type_ptr_t pstype;
     struct_proc_finalize((*finalize));
 
@@ -309,6 +310,9 @@ gs_heap_free_object(gs_memory_t * mem, void *ptr, client_name_t cname)
 		  (ulong) ptr, client_name_string(cname));
 	(*finalize) (ptr);
     }
+    bp = mmem->allocated; /* If 'finalize' releases a memory,
+			     this function could be called recursively and
+			     change mmem->allocated. */
     if (ptr == bp + 1) {
 	mmem->allocated = bp->next;
 	mmem->used -= bp->size + sizeof(gs_malloc_block_t);
@@ -429,6 +433,7 @@ gs_heap_free_all(gs_memory_t * mem, uint free_mask, client_name_t cname)
 int
 gs_malloc_wrap(gs_memory_t **wrapped, gs_malloc_memory_t *contents)
 {
+#ifdef USE_RETRY_AND_LOCKING_MEMORY_WRAPPERS
     gs_memory_t *cmem = (gs_memory_t *)contents;
     gs_memory_locked_t *lmem = (gs_memory_locked_t *)
 	gs_alloc_bytes_immovable(cmem, sizeof(gs_memory_locked_t),
@@ -462,6 +467,7 @@ gs_malloc_wrap(gs_memory_t **wrapped, gs_malloc_memory_t *contents)
     }
 
     *wrapped = (gs_memory_t *)rmem;
+#endif 
     return 0;
 }
 
@@ -469,18 +475,23 @@ gs_malloc_wrap(gs_memory_t **wrapped, gs_malloc_memory_t *contents)
 gs_malloc_memory_t *
 gs_malloc_wrapped_contents(gs_memory_t *wrapped)
 {
+#ifdef USE_RETRY_AND_LOCKING_MEMORY_WRAPPERS
     gs_memory_retrying_t *rmem = (gs_memory_retrying_t *)wrapped;
     gs_memory_locked_t *lmem =
 	(gs_memory_locked_t *)gs_memory_retrying_target(rmem);
     if (lmem) 
 	return (gs_malloc_memory_t *)gs_memory_locked_target(lmem);
     return (gs_malloc_memory_t *) wrapped;
+#else
+    return (gs_malloc_memory_t *)wrapped;
+#endif 
 }
 
 /* Free the wrapper, and return the wrapped contents. */
 gs_malloc_memory_t *
 gs_malloc_unwrap(gs_memory_t *wrapped)
 {
+#ifdef USE_RETRY_AND_LOCKING_MEMORY_WRAPPERS
     gs_memory_retrying_t *rmem = (gs_memory_retrying_t *)wrapped;
     gs_memory_locked_t *lmem =
 	(gs_memory_locked_t *)gs_memory_retrying_target(rmem);
@@ -490,6 +501,9 @@ gs_malloc_unwrap(gs_memory_t *wrapped)
     gs_memory_locked_release(lmem);
     gs_free_object(contents, lmem, "gs_malloc_unwrap(locked)");
     return (gs_malloc_memory_t *)contents;
+#else
+    return (gs_malloc_memory_t *)wrapped;
+#endif 
 }
 
 
@@ -505,7 +519,11 @@ gs_malloc_init(const gs_memory_t *parent)
     else 
         gs_lib_ctx_init((gs_memory_t *)malloc_memory_default);
 
+#ifdef USE_RETRY_AND_LOCKING_MEMORY_WRAPPERS
     gs_malloc_wrap(&memory_t_default, malloc_memory_default);
+#else
+    memory_t_default = (gs_memory_t *)malloc_memory_default;
+#endif
     memory_t_default->stable_memory = memory_t_default;
     return memory_t_default;
 }
@@ -514,6 +532,11 @@ gs_malloc_init(const gs_memory_t *parent)
 void
 gs_malloc_release(gs_memory_t *mem)
 {
+#ifdef USE_RETRY_AND_LOCKING_MEMORY_WRAPPERS
     gs_malloc_memory_t * malloc_memory_default = gs_malloc_unwrap(mem);
+#else
+    gs_malloc_memory_t * malloc_memory_default = (gs_malloc_memory_t *)mem;
+#endif
+
     gs_malloc_memory_release(malloc_memory_default);
 }

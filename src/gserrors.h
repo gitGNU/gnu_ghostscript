@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1993, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gserrors.h,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gserrors.h,v 1.5 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Error code definitions */
 
 #ifndef gserrors_INCLUDED
@@ -41,7 +42,7 @@
 #define gs_error_undefinedfilename (-22)
 #define gs_error_undefinedresult (-23)
 #define gs_error_VMerror (-25)
-#define gs_error_unregistered (-29)
+#define gs_error_unregistered (-28)
 
 #define gs_error_hit_detected (-99)
 

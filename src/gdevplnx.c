@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevplnx.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $*/
+/* $Id: gdevplnx.c,v 1.7 2007/05/07 11:21:47 Arabidopsis Exp $*/
 /* Plane extraction device */
 #include "gx.h"
 #include "gserrors.h"

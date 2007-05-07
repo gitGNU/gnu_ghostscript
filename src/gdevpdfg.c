@@ -1,4 +1,5 @@
-/* Copyright (C) 1999, 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfg.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gdevpdfg.c,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Graphics state management for pdfwrite driver */
 #include "math_.h"
 #include "string_.h"
@@ -284,8 +285,6 @@ is_cspace_allowed_in_strategy(gx_device_pdf * pdev, gs_color_space_index csi)
 private inline bool
 is_pattern2_allowed_in_strategy(gx_device_pdf * pdev, const gx_drawing_color *pdc)
 {
-    const gs_pattern2_instance_t *pinst =
-	    (gs_pattern2_instance_t *)pdc->ccolor.pattern;
     const gs_color_space *pcs2 = gx_dc_pattern2_get_color_space(pdc);
     gs_color_space_index csi = gs_color_space_get_index(pcs2);
 
@@ -350,12 +349,12 @@ pdf_reset_color(gx_device_pdf * pdev, const gs_imager_state * pis,
 		    break;
 		case gs_color_space_index_Indexed:
 		    if (pdev->CompatibilityLevel <= 1.2) {
-			pcs2 = (const gs_color_space *)&pcs->params.indexed.base_space;
+			pcs2 = pcs->base_space;
 			csi = gs_color_space_get_index(pcs2);
 			if (!is_cspace_allowed_in_strategy(pdev, csi))
 			    goto write_process_color;
 			if (csi == gs_color_space_index_Separation) {
-			    pcs2 = (const gs_color_space *)&pcs2->params.separation.alt_space;
+			    pcs2 = pcs->base_space;
 			    goto check_pcs2;
 			}
 			goto check_pcs2;
@@ -363,7 +362,7 @@ pdf_reset_color(gx_device_pdf * pdev, const gs_imager_state * pis,
 		    goto scn;
 		case gs_color_space_index_Separation:
 		    if (pdev->CompatibilityLevel <= 1.2) {
-			pcs2 = (const gs_color_space *)&pcs->params.separation.alt_space;
+			pcs2 = pcs->base_space;
 			check_pcs2:
 			csi = gs_color_space_get_index(pcs2);
 			if (!is_cspace_allowed_in_strategy(pdev, csi))
@@ -1313,7 +1312,10 @@ pdf_update_alpha(gx_device_pdf *pdev, const gs_imager_state *pis,
     if (pdev->state.soft_mask_id != pis->soft_mask_id) {
 	char buf[20];
 
-	sprintf(buf, "%ld 0 R", pis->soft_mask_id);
+	if (pis->soft_mask_id == 0)
+	    strcpy(buf, "/None");
+	else
+	    sprintf(buf, "%ld 0 R", pis->soft_mask_id);
 	code = pdf_open_gstate(pdev, ppres);
 	if (code < 0)
 	    return code;

@@ -1,4 +1,5 @@
-/* Copyright (C) 2000-2003, Ghostgum Software Pty Ltd.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: dscparse.c,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: dscparse.c,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 
 /*
  * This is a DSC parser, based on the DSC 3.0 spec, 
@@ -3704,13 +3705,13 @@ dsc_get_real(const char *line, unsigned int len, unsigned int *offset)
 int
 dsc_stricmp(const char *s, const char *t)
 {
-    while (toupper(*s) == toupper(*t)) {
+    while (toupper((unsigned char)*s) == toupper((unsigned char)*t)) {
 	if (*s == '\0')
 	    return 0;
    	s++;
 	t++; 
     }
-    return (toupper(*s) - toupper(*t));
+    return (toupper((unsigned char)*s) - toupper((unsigned char)*t));
 }
 
 

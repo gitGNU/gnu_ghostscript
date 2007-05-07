@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zmisc3.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: zmisc3.c,v 1.6 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Miscellaneous LanguageLevel 3 operators */
 #include "ghost.h"
 #include "gscspace.h"		/* for gscolor2.h */
@@ -47,7 +47,9 @@ zcliprestore(i_ctx_t *i_ctx_p)
  * Test whether two procedures are equal to depth 10.
  * This is the equality test used by idiom recognition in 'bind'.
  */
-#define MAX_DEPTH 10		/* depth is per Adobe specification */
+/* Adobe specifies maximum depth of 10 but 12 is needed */
+/* to reproduce the observed behavior. CET 31-01-05 */
+#define MAX_DEPTH 12 
 typedef struct ref2_s {
     ref proc1, proc2;
 } ref2_t;

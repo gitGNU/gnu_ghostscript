@@ -1,5 +1,5 @@
 %!
-% $Id: PDFA_def.ps,v 1.1 2006/06/16 12:55:14 Arabidopsis Exp $
+% $Id: PDFA_def.ps,v 1.2 2007/05/07 11:22:07 Arabidopsis Exp $
 % This is a sample prefix file for creating a PDF/A document.
 % Feel free to modify entries marked with "Customize".
 
@@ -38,5 +38,6 @@ def
   /Type /OutputIntent             % Must be so (the standard requires).
   /S /GTS_PDFA1                   % Must be so (the standard requires).
   /DestOutputProfile {icc_PDFA}            % Must be so (see above).
+  /OutputConditionIdentifier (CGATS TR001)      % Customize
 >> /PUT pdfmark
 [{Catalog} <</OutputIntents [ {OutputIntent_PDFA} ]>> /PUT pdfmark

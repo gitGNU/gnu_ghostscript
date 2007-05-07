@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: mkromfs.c,v 1.1 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: mkromfs.c,v 1.2 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Generate source data for the %rom% IODevice */
 /*
  * For reasons of convenience and footprint reduction, the various postscript
@@ -267,11 +267,11 @@ inode_write(FILE *out, romfs_inode *node, int compression, int inode_count, int 
     put_uint32(out, node->length | (compression ? 0x80000000 : 0));
     fprintf(out, "\t/* compression_flag_bit + file length */\n\t");
     
-    printf("writing node '%s' len=%ld\n", node->name, node->length);
+    printf("writing node '%s' len=%ld", node->name, node->length);
 #ifdef DEBUG
-    printf(" blocks %ld\n", blocks);
-    printf(" compression %d\n", compression);
+    printf(" %ld blocks %s", blocks, compression ? "compressed" : "binary");
 #endif
+    printf("\n");
     
     /* write out data block structures */
     offset = 4 + (8*blocks) + ((namelen+3) & ~3);
@@ -377,8 +377,8 @@ void process_path(char *path, const char *prefix, const char *add_prefix, Xlist_
 	fseek(in, 0, SEEK_END);
 	node->length = ftell(in);
 	blocks = (node->length+ROMFS_BLOCKSIZE-1) / ROMFS_BLOCKSIZE + 1;
-	node->data_lengths = calloc(blocks, sizeof(unsigned int));
-	node->data = calloc(blocks, sizeof(unsigned char *));
+	node->data_lengths = calloc(blocks, sizeof(*node->data_lengths));
+	node->data = calloc(blocks, sizeof(*node->data));
 	fclose(in);
 	in = fopen(found_path, "rb");
 	block = 0;
@@ -438,9 +438,9 @@ main(int argc, char *argv[])
  		"	    options and paths can be interspersed and are processed in order\n"
  		"	    options:\n"
  		"		-o outputfile	default: obj/gsromfs.c if this option present, must be first.\n"
- 		"		-P prefix	use prefix to find path. prefix not included in %rom%\n"
+ 		"		-P prefix	use prefix to find path. prefix not included in %%rom%%\n"
  		"		-X path		exclude the path from further processing.\n"
- 		"		-d string       directory in %rom file system (really just a prefix string on filename)\n"
+ 		"		-d string       directory in %%rom file system (just a prefix string on filename)\n"
  		"		-c		compression on\n"
  		"		-b		compression off (binary).\n"
  		"\n"

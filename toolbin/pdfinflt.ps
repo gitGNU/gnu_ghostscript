@@ -17,7 +17,7 @@
 % 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-% $Id: pdfinflt.ps,v 1.6 2006/03/06 11:16:03 Arabidopsis Exp $
+% $Id: pdfinflt.ps,v 1.7 2007/05/07 11:22:11 Arabidopsis Exp $
 % pdfinflt.ps
 % 
 % Try to decompress any FlateDecode streams in the input file.
@@ -84,7 +84,10 @@
 			    null
 			} ifelse
 		    } forall
-		    %stack: <file> <decode|null> <filter>
+		    %stack: <file> <decode|null> <filter|null>
+		    dup null eq {
+		      pop pop exit
+		    } if
 		    filterstoremove 1 index known {
 			% apply the filter
 			exch dup null eq { pop } { exch } ifelse

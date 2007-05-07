@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpsdi.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gdevpsdi.c,v 1.8 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Image compression for PostScript and PDF writers */
 #include "stdio_.h"		/* for jpeglib.h */
 #include "jpeglib_.h"		/* for sdct.h */
@@ -234,7 +235,7 @@ setup_image_compression(psdf_binary_writer *pbw, const psdf_image_params *pdip,
     int code;
 
 #   ifdef USE_LWF_JP2
-    if (lossless && template == &s_jpxe_template)
+    if (lossless && template == &s_jpxe_template && !Indexed)
 	lossless_template = &s_jpxe_template;
 #   endif
     if (!pdip->Encode)		/* no compression */
@@ -469,6 +470,7 @@ adjust_auto_filter_strategy(gx_device_psdf *pdev,
 #ifdef USE_LWF_JP2
     if (!in_line && params->Depth > 1 && pdev->ParamCompatibilityLevel >= 1.5 &&
 	    pim->ColorSpace->type->index != gs_color_space_index_Indexed &&
+	    params->AutoFilter &&
 	    !strcmp(params->AutoFilterStrategy, "/JPEG2000")) {
 	params->Filter = "/JPXEncode";
 	params->filter_template = &s_jpxe_template;
@@ -484,6 +486,7 @@ adjust_auto_filter_strategy_mono(gx_device_psdf *pdev,
 {
 #ifdef USE_LDF_JB2
     if (!in_line && pdev->ParamCompatibilityLevel >= 1.5 &&
+	    params->AutoFilter &&
 	    pim->ColorSpace->type->index != gs_color_space_index_Indexed) {
 	params->Filter = "/JBIG2Encode";
 	params->filter_template = &s_jbig2encode_template;
@@ -588,11 +591,10 @@ psdf_setup_image_filters(gx_device_psdf * pdev, psdf_binary_writer * pbw,
 	if (cmyk_to_rgb) {
 	    extern_st(st_color_space);
 	    gs_memory_t *mem = pdev->v_memory;
-	    gs_color_space *rgb_cs = gs_alloc_struct(mem, 
-		    gs_color_space, &st_color_space, "psdf_setup_image_filters");
 
-	    gs_cspace_init_DeviceRGB(mem, rgb_cs);  /* idempotent initialization */
-	    pim->ColorSpace = rgb_cs;
+	    /* {csrc} decref old colorspace? */
+	    rc_decrement_only(pim->ColorSpace, "psdf_setup_image_filters");
+	    pim->ColorSpace = gs_cspace_new_DeviceRGB(mem);
 	}
 	if (params.Depth == -1)
 	    params.Depth = (cmyk_to_rgb ? 8 : bpc_out);

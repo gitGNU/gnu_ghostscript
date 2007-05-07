@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: ifunc.h,v 1.4 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: ifunc.h,v 1.5 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Internal interpreter interfaces for Functions */
 
 #ifndef ifunc_INCLUDED
@@ -41,9 +41,9 @@ extern const uint build_function_type_table_count;
 
 /* Build a function structure from a PostScript dictionary. */
 int fn_build_function(i_ctx_t *i_ctx_p, const ref * op, gs_function_t ** ppfn,
-		      gs_memory_t *mem);
+      gs_memory_t *mem, const float *shading_domain, const int num_inputs);
 int fn_build_sub_function(i_ctx_t *i_ctx_p, const ref * op, gs_function_t ** ppfn,
-			  int depth, gs_memory_t *mem);
+  int depth, gs_memory_t *mem, const float *shading_domain, const int num_inputs);
 
 /*
  * Collect a heap-allocated array of floats.  If the key is missing, set

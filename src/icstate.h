@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: icstate.h,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: icstate.h,v 1.7 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Externally visible context state */
 
 #ifndef icstate_INCLUDED
@@ -57,6 +57,7 @@ struct gs_context_state_s {
     bool keep_usertime;		/* true if context ever executed usertime */
     int in_superexec;		/* # of levels of superexec */
     /* View clipping is handled in the graphics state. */
+    ref error_object;		/* t__invalid or error object from operator */
     ref userparams;		/* t_dictionary */
     int scanner_options;	/* derived from userparams */
     bool LockFilePermissions;	/* accessed from userparams */

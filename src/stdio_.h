@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 1993, 1994, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: stdio_.h,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: stdio_.h,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Generic substitute for stdio.h */
 
 #ifndef stdio__INCLUDED
@@ -74,6 +74,8 @@ int unlink(const char *);
 #if defined(_MSC_VER)
 #  define fdopen(handle,mode) _fdopen(handle,mode)
 #  define fileno(file) _fileno(file)
+/* Microsoft Visual C++ 2005  doesn't properly define snprintf  */
+int snprintf(char *buffer, size_t count, const char *format , ...);
 #endif
 
 #endif /* stdio__INCLUDED */

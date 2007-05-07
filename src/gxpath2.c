@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/*$Id: gxpath2.c,v 1.4 2005/12/13 16:57:24 jemarch Exp $ */
+/*$Id: gxpath2.c,v 1.5 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Path tracing procedures for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -325,11 +325,14 @@ gx_path_scale_exp2_shared(gx_path * ppath, int log2_scale_x, int log2_scale_y,
  * 5.02, the code follows the Adobe implementation (and LanguageLevel 3
  * specification), in which this line becomes the *last* segment of the
  * reversed path.  This can produce some quite unintuitive results.
+ *
+ * The order of the subpaths is unspecified in the PLRM, but the CPSI
+ * reverses the subpaths, and the CET (11-05 p6, test 3) tests for it.
  */
 int
 gx_path_copy_reversed(const gx_path * ppath_old, gx_path * ppath)
 {
-    const subpath *psub = ppath_old->first_subpath;
+    const subpath *psub = ppath_old->current_subpath;
 
 #ifdef DEBUG
     if (gs_debug_c('P'))
@@ -373,7 +376,9 @@ gx_path_copy_reversed(const gx_path * ppath_old, gx_path * ppath)
 			if (code < 0)
 			    return code;
 		    }
-		    psub = (const subpath *)psub->last->next;
+		    do {
+			psub = (const subpath *)psub->prev;
+		    } while (psub && psub->type != s_start);
 		    goto nsp;
 		case s_curve:
 		    {

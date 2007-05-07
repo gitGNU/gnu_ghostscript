@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 1996, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zfilterx.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zfilterx.c,v 1.5 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Extended (non-standard) filter creation */
 #include "memory_.h"
 #include "ghost.h"
@@ -63,7 +63,7 @@ bhc_setup(os_ptr op, stream_BHC_state * pbhcs)
 				256, &pbhcs->EncodeZeroRuns)) < 0 ||
     /* Note: the code returned from the following call */
     /* is actually the number of elements in the array. */
-	(code = dict_int_array_param(op, "Tables", countof(data),
+	(code = dict_int_array_param(imemory, op, "Tables", countof(data),
 				     data)) <= 0
 	)
 	return (code < 0 ? code : gs_note_error(e_rangecheck));

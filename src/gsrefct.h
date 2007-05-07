@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 1994, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gsrefct.h,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gsrefct.h,v 1.5 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Reference counting definitions */
 
 #ifndef gsrefct_INCLUDED
@@ -60,7 +60,12 @@ void rc_trace_adjust(const void *vp, const rc_header *prc, int delta);
 /* ------ Allocate/free ------ */
 
 rc_free_proc(rc_free_struct_only);
-/* rc_init[_free] is only used to initialize stack-allocated structures. */
+/*
+ * rc_init[_free] really should be used only to initialize
+ * stack-allocated structures; with heap-allocated structures, it's
+ * better to use a finalize method so that the garbage collector can
+ * clean them up if the refcount fails to reach zero. 
+ */
 #define rc_init_free(vp, mem, rcinit, proc)\
   BEGIN\
     (vp)->rc.ref_count = rcinit;\

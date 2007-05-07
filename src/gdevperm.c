@@ -1,4 +1,5 @@
-/* Copyright (C) 2002 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevperm.c,v 1.4 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: gdevperm.c,v 1.5 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Device which permutes color components, for testing DeviceN. */
 #include "gdevprn.h"
 #include "gxdcconv.h"

@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises, 2001 Artifex Software.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -15,8 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-
-/*$Id: gdevm64.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/*$Id: gdevm64.c,v 1.7 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* 64-bit-per-pixel "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"

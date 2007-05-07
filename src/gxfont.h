@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1999, 2000, 2002 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxfont.h,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gxfont.h,v 1.8 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Font object structure */
 /* Requires gsmatrix.h, gxdevice.h */
 
@@ -39,6 +39,11 @@
 #ifndef gs_text_enum_DEFINED
 #  define gs_text_enum_DEFINED
 typedef struct gs_text_enum_s gs_text_enum_t;
+#endif
+
+#ifndef gs_show_enum_DEFINED
+#  define gs_show_enum_DEFINED
+typedef struct gs_show_enum_s gs_show_enum;
 #endif
 
 #ifndef gx_path_DEFINED
@@ -332,7 +337,7 @@ typedef struct gs_font_procs_s {
      */
 
 #define font_proc_build_char(proc)\
-  int proc(gs_text_enum_t *, gs_state *, gs_font *, gs_char, gs_glyph)
+  int proc(gs_show_enum *, gs_state *, gs_font *, gs_char, gs_glyph)
     font_proc_build_char((*build_char));
 
 } gs_font_procs;
@@ -394,6 +399,10 @@ typedef struct gs_font_name_s {
 					/* 0 for others */\
 	float StrokeWidth;		/* StrokeWidth for Type 1/4/42 */\
 					/* fonts (if present), 0 for others */\
+	bool is_cached;			/* Prevents redundant executions of */\
+					/* gs_purge_font_from_char_caches, */\
+					/* when it is called from 'font_restore' */\
+					/* and from gx_font_finalize. */\
 	gs_font_procs procs;\
 	/* We store both the FontDirectory key (key_name) and, */\
 	/* if present, the FontName (font_name). */\

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-#    Copyright (C) 2001-2004 Artifex Software Inc.
+#    Copyright (C) 2001-2007 Artifex Software Inc.
 # 
 # This file is part of GNU ghostscript
 #
@@ -19,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gscheck_raster.py,v 1.6 2006/06/16 12:55:32 Arabidopsis Exp $
+# $Id: gscheck_raster.py,v 1.7 2007/05/07 11:22:21 Arabidopsis Exp $
 
 #
 # gscheck_raster.py
@@ -29,40 +29,42 @@
 #
 
 
-import os, stat
+import os
 import string, calendar, time
 import gstestutils
 import gssum, gsconf, gstestgs, gsparamsets, gsutil
+import rasterdb
 
 class GSCompareTestCase(gstestgs.GhostscriptTestCase):
-    def shortDescription(self):
+    def makefilename(self):
         file = "%s.%s.%d.%d" % (self.file[string.rindex(self.file, '/') + 1:], self.device, self.dpi, self.band)
-	rasterfilename = gsconf.rasterdbdir + file + ".gz"
-	if not os.access(rasterfilename, os.F_OK):
+	return file
+
+    def shortDescription(self):
+	file = self.makefilename()
+	if not rasterdb.exists(file):
 		os.system(gsconf.codedir + "update_baseline '%s'" %
                           (os.path.basename(self.file),))
+		self.skip = 1
 	try:
-		ct = time.localtime(os.stat(rasterfilename)[stat.ST_MTIME])
+		ct = time.localtime(rasterdb.mtime(file))
 		baseline_date = "%s %d, %4d %02d:%02d" % ( calendar.month_abbr[ct[1]], ct[2], ct[0], ct[3], ct[4] )
 	except:
-		if self.band:
-			banded = "banded"
-		else:
-			banded = "noband"
 		self.skip = 1
-		return "Skipping %s (%s/%ddpi/%s) [no previous raster data found]" % (os.path.basename(self.file), self.device, self.dpi, banded)
 
-	if self.band:
-	    return "Checking %s (%s/%ddpi/banded) against baseline set on %s" % (os.path.basename(self.file), self.device, self.dpi, baseline_date)
-        else:
-	    return "Checking %s (%s/%ddpi/noband) against baseline set on %s" % (os.path.basename(self.file), self.device, self.dpi, baseline_date)
+	if self.band: banded = "banded"
+	else: banded = "noband"
+	if hasattr(self, "skip") and self.skip:
+		return "Skipping %s (%s/%ddpi/%s) [no previous raster data found]" % (os.path.basename(self.file), self.device, self.dpi, banded)
+	else:
+		return "Checking %s (%s/%ddpi/%s) against baseline set on %s" % (os.path.basename(self.file), self.device, self.dpi, banded, baseline_date)
 
     def runTest(self):
         if hasattr(self, "skip") and self.skip == 1:
 	    self.assert_(True)
 	    return
 
-	file = "%s.%s.%d.%d" % (self.file[string.rindex(self.file, '/') + 1:], self.device, self.dpi, self.band)
+	file = self.makefilename()
 
 	gs = gstestgs.Ghostscript()
 	gs.command = self.gs
@@ -70,17 +72,17 @@ class GSCompareTestCase(gstestgs.GhostscriptTestCase):
 	gs.dpi = self.dpi
 	gs.band = self.band
 	gs.infile = self.file
-	gs.outfile = file
+	gs.outfile = gsconf.scratchdir+file
 	if self.log_stdout:
 	    gs.log_stdout = self.log_stdout
 	if self.log_stderr:
 	    gs.log_stderr = self.log_stderr
 
 	if gs.process():
-	    sum = gssum.make_sum(file)
+	    sum = gssum.make_sum(gsconf.scratchdir+file)
         else:
 	    sum = ''
-	os.unlink(file)
+	os.unlink(gsconf.scratchdir+file)
 
 	# add test result to daily database
 	if self.track_daily:

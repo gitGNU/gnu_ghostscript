@@ -1,8 +1,6 @@
-/* Portions Copyright (C) 2003 artofcode LLC.
-   Portions Copyright (C) 2003 Artifex Software Inc.
-   This software is based in part on the work of the Independent JPEG Group.
+/* Copyright (C) 2001-2006 artofcode LLC.
    All Rights Reserved.
-
+  
   This file is part of GNU ghostscript
 
   GNU ghostscript is free software; you can redistribute it and/or modify it under
@@ -19,7 +17,7 @@
 
 */
 
-/*$Id: gslibctx.c,v 1.1 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/*$Id: gslibctx.c,v 1.2 2007/05/07 11:21:44 Arabidopsis Exp $ */
 
 /* library context functionality for ghostscript 
  * api callers get a gs_main_instance 
@@ -43,7 +41,7 @@ gs_lib_ctx_get_real_stdio(FILE **in, FILE **out, FILE **err)
 static gs_memory_t *mem_err_print = NULL;
 
 
-const gs_memory_t *
+gs_memory_t *
 gs_lib_ctx_get_non_gc_memory_t() 
 {
     return mem_err_print ? mem_err_print->non_gc_memory : NULL;
@@ -81,7 +79,8 @@ int gs_lib_ctx_init( gs_memory_t *mem )
     pio->stderr_fn = 0;
     pio->poll_fn = 0;
 
-    pio->gs_next_id = 1;  /* this implies that each thread has its own complete state */
+    /* id's 1 through 4 are reserved for Device color spaces; see gscspace.h */
+    pio->gs_next_id = 5;  /* this implies that each thread has its own complete state */
 
     pio->dict_auto_expand = false;
     return 0;

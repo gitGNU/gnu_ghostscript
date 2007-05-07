@@ -1,4 +1,5 @@
-/* Copyright (C) 1991, 1995, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: isave.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: isave.h,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Procedures for save/restore */
 /* Requires imemory.h */
 
@@ -27,15 +27,20 @@
 #include "idosave.h"
 
 /*
- * According to the PostScript language definition, save objects are simple,
- * not composite.  Consequently, we cannot use their natural representation,
- * namely a t_struct pointing to an alloc_save_t, since we aren't willing to
- * allocate them all in global VM and rely on garbage collection to clean
- * them up.  Instead, we assign each one a unique "save ID", and store this
- * in the alloc_save_t object.  Mapping the number to the object requires
- * at most searching the local save chain for the current gs_dual_memory_t,
- * and this approach means we don't have to do anything to invalidate
- * save objects when we do a restore.
+ * In PLRM2, save objects are simple, not composite.  Consequently, we
+ * cannot use their natural representation, namely a t_struct pointing to an
+ * alloc_save_t, since we aren't willing to allocate them all in global VM
+ * and rely on garbage collection to clean them up.  Instead, we assign each
+ * one a unique "save ID", and store this in the alloc_save_t object.
+ * Mapping the number to the object requires at most searching the local
+ * save chain for the current gs_dual_memory_t, and this approach means we
+ * don't have to do anything to invalidate save objects when we do a
+ * restore.
+ *
+ * In PLRM3, Adobe did the reasonable thing and changed save objects to
+ * composite.  However, this means that 'restore' must treat save objects on
+ * the stack differently in LL2 vs. LL3 (yes, the Genoa LL2 and LL3 tests
+ * require this!).  See zvmem.c:restore_check_stack.
  */
 #ifndef alloc_save_t_DEFINED	/* also in inamedef.h */
 typedef struct alloc_save_s alloc_save_t;
@@ -53,7 +58,7 @@ alloc_save_t *alloc_find_save(const gs_dual_memory_t *, ulong);
  * otherwise return the save ID.  The second argument is a client data
  * pointer, assumed to point to an object.
  */
-ulong alloc_save_state(gs_dual_memory_t *, void *);
+int alloc_save_state(gs_dual_memory_t * dmem, void *cdata, ulong *psid);
 
 /* Get the client pointer passed to alloc_saved_state. */
 void *alloc_save_client_data(const alloc_save_t *);
@@ -82,8 +87,6 @@ bool alloc_any_names_since_save(const alloc_save_t *);
  * if this is the case, the operation cannot fail.
  */
 int alloc_restore_step_in(gs_dual_memory_t *, alloc_save_t *);
-/* Backward compatibility */
-#define alloc_restore_state_step(save) alloc_restore_step_in(idmemory, save)
 
 /*
  * Forget a save -- like committing a transaction (restore is like
@@ -91,16 +94,12 @@ int alloc_restore_step_in(gs_dual_memory_t *, alloc_save_t *);
  * by calling alloc_find_save.  Note that forgetting a save does not
  * require checking pointers for recency.
  */
-void alloc_forget_save_in(gs_dual_memory_t *, alloc_save_t *);
-/* Backward compatibility */
-#define alloc_forget_save(save) alloc_forget_save_in(idmemory, save)
+int alloc_forget_save_in(gs_dual_memory_t *, alloc_save_t *);
 
 /* Release all memory -- like doing a restore "past the bottom". */
 int alloc_restore_all(gs_dual_memory_t *);
-#if NO_INVISIBLE_LEVELS
 /* Filter save change lists. */
 void alloc_save__filter_changes(gs_ref_memory_t *mem);
-#endif
 
 /* ------ Internals ------ */
 

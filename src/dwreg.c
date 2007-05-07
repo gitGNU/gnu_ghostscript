@@ -1,4 +1,5 @@
-/* Copyright (C) 2001, Ghostgum Software Pty Ltd.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: dwreg.c,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: dwreg.c,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* MS Windows registry values */
 
 #include <windows.h>

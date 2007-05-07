@@ -17,9 +17,9 @@
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
+# 
 
-
-# $Id: makeset.tcl,v 1.5 2006/06/16 12:55:34 Arabidopsis Exp $
+# $Id: makeset.tcl,v 1.6 2007/05/07 11:22:11 Arabidopsis Exp $
 
 # Make various Ghostscript filesets.  Assumes the current directory is gs.
 #   maketars

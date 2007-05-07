@@ -1,4 +1,5 @@
-/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gpmisc.h,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gpmisc.h,v 1.6 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Miscellaneous support for platform facilities */
 
 #ifndef gpmisc_INCLUDED
@@ -39,6 +40,7 @@ int gp_gettmpdir(char *ptr, int *plen);
  * conditions and symlink attacks.
  */
 FILE *gp_fopentemp(const char *fname, const char *mode);
+FILE *gp_fopentemp_64(const char *fname, const char *mode);
 
 /*
  * Combine a file name with a prefix.

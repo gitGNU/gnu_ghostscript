@@ -4,7 +4,7 @@
  * public domain.
  */
 
-/* $Id: gdevsgi.c,v 1.4 2006/03/08 12:30:23 Arabidopsis Exp $*/
+/* $Id: gdevsgi.c,v 1.5 2007/05/07 11:21:46 Arabidopsis Exp $*/
 /* SGI raster file driver */
 #include "gdevprn.h"
 #include "gdevsgi.h"

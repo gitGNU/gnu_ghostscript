@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 2000-2004 artofcode LLC. All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevps.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gdevps.c,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* PostScript-writing driver */
 #include "math_.h"
 #include "memory_.h"
@@ -1453,7 +1454,7 @@ psw_begin_image(gx_device * dev,
 		) {
 		goto fail;
 	    }
-	    pbcs = (const gs_color_space *)&pcs->params.indexed.base_space;
+	    pbcs = pcs->base_space;
 	    switch (gs_color_space_get_index(pbcs)) {
 	    case gs_color_space_index_DeviceGray:
 		base_name = "DeviceGray"; break;

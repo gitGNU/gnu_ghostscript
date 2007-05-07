@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gp_ntfs.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gp_ntfs.c,v 1.7 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* file system stuff for MS-Windows WIN32 and MS-Windows NT */
 /* hacked from gp_dosfs.c by Russell Lang */
 

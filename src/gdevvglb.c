@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 1993, 1994, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevvglb.c,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gdevvglb.c,v 1.5 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /*
  * This is a driver for 386 PCs using vgalib for graphics on the console
  * display.  Note that this driver only works with 16-color modes.

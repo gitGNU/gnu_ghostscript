@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxccache.c,v 1.7 2006/06/16 12:55:05 Arabidopsis Exp $ */
+/* $Id: gxccache.c,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Fast case character cache routines for Ghostscript library */
 #include "memory_.h"
 #include "gx.h"
@@ -36,6 +36,7 @@
 #include "gxfont.h"
 #include "gxfcache.h"
 #include "gxxfont.h"
+#include "gximask.h"
 #include "gscspace.h"		/* for gsimage.h */
 #include "gsimage.h"
 #include "gxhttile.h"
@@ -129,6 +130,10 @@ gx_lookup_fm_pair(gs_font * pfont, const gs_matrix *char_tm,
 			  (ulong) pair, (ulong) pair->font);
 	    }
 	    code = gx_touch_fm_pair(dir, pair);
+	    if (code < 0)
+		return code;
+	    code = gx_provide_fm_pair_attributes(dir, pfont, pair,
+				char_tm, log2_scale, design_grid);
 	    if (code < 0)
 		return code;
 	    *ppair = pair;
@@ -387,7 +392,7 @@ gx_image_cached_char(register gs_show_enum * penum, register cached_char * cc)
 
 	code = gx_effective_clip_path(pgs, &pcpath);
 	if (code >= 0) {
-	    code = (*dev_proc(orig_dev, fill_mask))
+	    code = gx_image_fill_masked
 		(orig_dev, bits, 0, cc_raster(cc), cc->id,
 		 x, y, w, h, pdevc, depth, pgs->log_op, pcpath);
 	    if (code >= 0)
@@ -455,7 +460,7 @@ gx_image_cached_char(register gs_show_enum * penum, register cached_char * cc)
 		    code = gs_image_next(pie, bits + iy * raster,
 					 (w + 7) >> 3, &used);
 	}
-	code1 = gs_image_cleanup_and_free_enum(pie);
+	code1 = gs_image_cleanup_and_free_enum(pie, pgs);
 	if (code >= 0 && code1 < 0)
 	    code = code1;
     }

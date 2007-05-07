@@ -1,4 +1,5 @@
-/* Copyright (C) 1989-2003 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gp_vms.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gp_vms.c,v 1.7 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* VAX/VMS specific routines for Ghostscript */
 
 #include "string_.h"
@@ -259,7 +260,7 @@ gp_open_scratch_file(const char *prefix, char fname[gp_file_name_sizeof],
     if (strlen(fname) + 6 >= gp_file_name_sizeof)
 	return 0;		/* file name too long */
     strcat(fname, "XXXXXX");
-   mktemp(fname);
+    mktemp(fname);
     f = fopen(fname, mode);
    
     if (f == NULL)
@@ -656,3 +657,38 @@ void gp_enumerate_fonts_free(void *enum_state)
 {
 }
 
+/* --------- 64 bit file access ----------- */
+/* fixme: Not implemented yet.
+ * Currently we stub it with 32 bits access. 
+ */
+
+FILE *gp_fopen_64(const char *filename, const char *mode)
+{
+    return fopen(filename, mode);
+}
+
+FILE *gp_open_scratch_file_64(const char *prefix,
+			   char fname[gp_file_name_sizeof],
+			   const char *mode)
+{
+    return gp_open_scratch_file(prefix, fname, mode);
+}
+
+FILE *gp_open_printer_64(char fname[gp_file_name_sizeof], int binary_mode)
+{
+    return gp_open_printer(fname, binary_mode);
+}
+
+int64_t gp_ftell_64(FILE *strm)
+{
+    return ftell(strm);
+}
+
+int gp_fseek_64(FILE *strm, int64_t offset, int origin)
+{
+    long offset1 = (long)offset;
+    
+    if (offset != offset1)
+	return -1;
+    return fseek(strm, offset1, origin);
+}

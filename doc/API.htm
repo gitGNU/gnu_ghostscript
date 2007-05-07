@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>The Ghostscript Interpreter Application Programming Interface (API)</title>
-<!-- $Id: API.htm,v 1.7 2006/06/16 12:55:14 Arabidopsis Exp $ -->
+<!-- $Id: API.htm,v 1.8 2007/05/07 11:22:13 Arabidopsis Exp $ -->
 <!-- Supercedes the API in DLL.htm -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -93,10 +93,9 @@ The Ghostscript interpreter library's name and characteristics differ
 for each platform:
 
 <ul>
-<li>The Win32 DLL <b><tt>gsdll32.dll</tt></b> has
-MULTIPLE NONSHARED data segments.  Under Win32s it can be used by only one
-program at a time, but under Windows 95/98 or Windows NT it can be called by
-multiple programs simultaneously.
+<li>The Win32 DLL <b><tt>gsdll32.dll</tt></b>
+can be used by multiple programs simultaneously, but only once 
+within each process.
 
 <li>The OS/2 DLL <b><tt>gsdll2.dll</tt></b> has
 MULTIPLE NONSHARED data segments and can be called by multiple programs
@@ -344,19 +343,22 @@ The only exception is <b><tt>gsapi_run_string_continue()</tt></b>
 which will return <b><tt>e_NeedInput</tt></b> if all is well.
 See below for <a href="#return_codes">return codes</a>.
 <p>
-The address passed in <tt>pexit_code</tt> will be used to return the 
+The address passed in <b><tt>pexit_code</tt></b> will be used to return the 
 exit code for the interpreter in case of a quit or fatal error. The 
-<tt>user_errors</tt>  argument is normally set to zero to indicate that 
+<b><tt>user_errors</tt></b>  argument is normally set to zero to indicate that 
 errors should be handled through the normal mechanisms within the 
 interpreted code. If set to a negative value, the functions will return 
 an error code directly to the caller, bypassing the interpreted 
-language. A positive <tt>user_errors</tt> is treated the same as zero.
+language. The interpreted language's error handler is bypassed, regardless of 
+<b><tt>user_errors</tt></b> parameter, for the <b><tt>e_interrupt</tt></b> 
+generated when <a href="#set_poll">the polling callback</a> returns a negative 
+value. A positive <b><tt>user_errors</tt></b> is treated the same as zero.
 <p>
 There is a 64 KB length limit on any buffer submitted to a 
-<tt>gsapi_run_*</tt> function for processing. If you have more
+<b><tt>gsapi_run_*</tt></b> function for processing. If you have more
 than 65535 bytes of input then you must split it into smaller 
 pieces and submit each in a separate 
-<tt>gsapi_run_string_continue()</tt> call.
+<b><tt>gsapi_run_string_continue()</tt></b> call.
 </blockquote>
 
 <h3><a name="exit"></a><b><tt>gsapi_exit()</tt></b></h3>
@@ -397,6 +399,10 @@ The <b><tt>gsapi_init_with_args</tt></b>, <b><tt>gsapi_run_*</tt></b> and
 	<td>"<b><tt>quit</tt></b>" has been executed.
 	This is not an error.
 	<b><tt>gsapi_exit()</tt></b> must be called next.
+<tr valign=top>	<td align=left>e_interrupt
+	<td>&nbsp;
+	<td><a href="#set_poll">The polling callback function</a> 
+	returned a negative value, requesting Ghostscript to abort.
 <tr valign=top>	<td align=left>e_NeedInput
 	<td>&nbsp;
 	<td>More input is needed by
@@ -743,19 +749,20 @@ functions in <a href="../src/iapi.h"><b><tt>iapi.h</tt></b></a>.
 
 
 <p>
-<small>Copyright &copy; 2000-2004 artofcode LLC.  All rights reserved.</small>
+<small>Copyright &copy; 2000-2006 artofcode LLC.  All rights reserved.</small>
 
 <p>
 This software is provided AS-IS with no warranty, either express or
 implied.
 
-This software is distributed under license and may not be copied,
-modified or distributed except as expressly authorized under the terms
-of the license contained in the file LICENSE in this distribution.
-
+This software is distributed under license and may not be copied, modified
+or distributed except as expressly authorized under the terms of that
+license.  Refer to licensing information at http://www.artifex.com/
+or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.51, 31 December 2005
+<small>Ghostscript version 8.56, 14 March 2007
 
 
 <!-- [3.0 end visible trailer] ============================================= -->

@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsiparm4.h,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsiparm4.h,v 1.5 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* ImageType 4 image parameter definition */
 
 #ifndef gsiparm4_INCLUDED
@@ -53,6 +54,6 @@ typedef struct gs_image4_s {
  * Initialize an ImageType 4 image.  Defaults:
  *      MaskColor_is_range = false
  */
-void gs_image4_t_init(gs_image4_t * pim, const gs_color_space * color_space);
+void gs_image4_t_init(gs_image4_t * pim, gs_color_space * color_space);
 
 #endif /* gsiparm4_INCLUDED */

@@ -1,5 +1,5 @@
-/*
-  Copyright (C) 2001-2004 artofcode LLC. All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -15,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  Author: Raph Levien <raph@artofcode.com>
 */
 
-/* $Id: gdevpnga.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gdevpnga.c,v 1.7 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Test driver for PDF 1.4 transparency stuff */
 
 #include "gdevprn.h"
@@ -693,7 +692,7 @@ pnga_output_page(gx_device *dev, int num_copies, int flush)
 
     /* add comment */
     sprintf(software_text, "%s %d.%02d", gs_product,
-	    (int)(gs_revision / 100), (int)(gs_revision % 100));
+	    (int)(gs_revision / 10000), (int)(gs_revision % 10000));
     text_png.compression = -1;	/* uncompressed */
     text_png.key = (char *)software_key;	/* not const, unfortunately */
     text_png.text = software_text;

@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxistate.h,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gxistate.h,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Imager state definition */
 
 #ifndef gxistate_INCLUDED
@@ -99,6 +99,10 @@ typedef struct gx_device_color_s gx_device_color;
 #  define gx_device_halftone_DEFINED
 typedef struct gx_device_halftone_s gx_device_halftone;
 #endif
+#ifndef gs_color_space_DEFINED
+#  define gs_color_space_DEFINED
+typedef struct gs_color_space_s gs_color_space;
+#endif
 
 /*
  * We need some special memory management for the components of a
@@ -157,7 +161,12 @@ typedef struct gx_transfer_s {
 		/* The contents of pattern_cache depend on the */\
 		/* the color space and the device's color_info and */\
 		/* resolution. */\
-	struct gx_pattern_cache_s *pattern_cache	/* (Shared) by all gstates */
+	struct gx_pattern_cache_s *pattern_cache;	/* (Shared) by all gstates */\
+\
+	/* Simple color spaces, stored here for easy access from */ 	\
+	/* gx_concrete_space_CIE */ \
+	gs_color_space *devicergb_cs;\
+	gs_color_space *devicecmyk_cs
 
 /*
  * Enumerate the reference-counted pointers in a c.r. state.  Note that
@@ -170,7 +179,8 @@ typedef struct gx_transfer_s {
   m(black_generation) m(undercolor_removal)\
   m(set_transfer.red) m(set_transfer.green)\
   m(set_transfer.blue) m(set_transfer.gray)\
-  m(cie_joint_caches)
+  m(cie_joint_caches)\
+  m(devicergb_cs) m(devicecmyk_cs)
 
 /* Enumerate the pointers in a c.r. state. */
 #define gs_cr_state_do_ptrs(m)\
@@ -178,7 +188,8 @@ typedef struct gx_transfer_s {
   m(2,cie_render) m(3,black_generation) m(4,undercolor_removal)\
   m(5,set_transfer.red) m(6,set_transfer.green)\
   m(7,set_transfer.blue) m(8,set_transfer.gray)\
-  m(9,cie_joint_caches) m(10,pattern_cache)
+  m(9,cie_joint_caches) m(10,pattern_cache)\
+  m(11,devicergb_cs) m(12,devicecmyk_cs)
   /*
    * We handle effective_transfer specially in gsistate.c since its pointers
    * are not enumerated for garbage collection but they are are relocated.
@@ -187,7 +198,7 @@ typedef struct gx_transfer_s {
  * This count does not include the effective_transfer pointers since they
  * are not enumerated for GC.
  */
-#define st_cr_state_num_ptrs 11
+#define st_cr_state_num_ptrs 13
 
 
 typedef struct gs_devicen_color_map_s {

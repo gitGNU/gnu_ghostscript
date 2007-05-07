@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpccm.h,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gdevpccm.h,v 1.7 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* PC color mapping support */
 /* Requires gxdevice.h */
 

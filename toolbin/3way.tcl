@@ -21,7 +21,7 @@ exec tclsh "$0" "$@"
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: 3way.tcl,v 1.5 2006/03/06 11:16:03 Arabidopsis Exp $
+# $Id: 3way.tcl,v 1.6 2007/05/07 11:22:11 Arabidopsis Exp $
 
 # This file is supposed to help with 3-way merges.
 # Currently there is only one function:
@@ -46,8 +46,8 @@ proc filesame {f1 f2} {
 	} {
 	    if {[regexp {Copyright} $a]} {
 		if {[regexp {Copyright} $c]} {continue}
-	    } elseif {[regexp {\$Id: 3way.tcl,v 1.5 2006/03/06 11:16:03 Arabidopsis Exp $a]} {
-		if {[regexp {\$Id: 3way.tcl,v 1.5 2006/03/06 11:16:03 Arabidopsis Exp $c]} {continue}
+	    } elseif {[regexp {\$Id: 3way.tcl,v 1.6 2007/05/07 11:22:11 Arabidopsis Exp $a]} {
+		if {[regexp {\$Id: 3way.tcl,v 1.6 2007/05/07 11:22:11 Arabidopsis Exp $c]} {continue}
 	    }
 	}
 	set same 0

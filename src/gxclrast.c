@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxclrast.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/*$Id: gxclrast.c,v 1.8 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Command list interpreter/rasterizer */
 #include "memory_.h"
 #include "gx.h"
@@ -44,6 +44,7 @@
 #include "gxpaint.h"		/* for gx_fill/stroke_params */
 #include "gxhttile.h"
 #include "gxiparam.h"
+#include "gximask.h"
 #include "gzpath.h"
 #include "gzcpath.h"
 #include "gzacpath.h"
@@ -200,11 +201,10 @@ private int read_set_bits(command_buf_t *pcb, tile_slot *bits,
 private int read_set_misc2(command_buf_t *pcb, gs_imager_state *pis,
                            segment_notes *pnotes);
 private int read_set_color_space(command_buf_t *pcb, gs_imager_state *pis,
-                                 const gs_color_space **ppcs,
-                                 gs_color_space *pcolor_space,
+                                 gs_color_space **ppcs,
                                  gs_memory_t *mem);
 private int read_begin_image(command_buf_t *pcb, gs_image_common_t *pic,
-                             const gs_color_space *pcs);
+                             gs_color_space *pcs);
 private int read_put_params(command_buf_t *pcb, gs_imager_state *pis,
                             gx_device_clist_reader *cdev,
                             gs_memory_t *mem);
@@ -285,9 +285,7 @@ clist_playback_band(clist_playback_action playback_action,
 	gs_image4_t i4;
     } image;
     gs_int_rect image_rect;
-    gs_color_space color_space;	/* only used for indexed spaces */
-    const gs_color_space *pcs;
-    gs_color_space cs;
+    gs_color_space *pcs;
     gx_image_enum_common_t *image_info;
     gx_image_plane_t planes[32];
     uint data_height;
@@ -353,11 +351,8 @@ in:				/* Initialize for a new page. */
     gx_imager_setscreenphase(&imager_state, -x0, -y0, gs_color_select_all);
     halftone_type = ht_type_none;
     fill_params.fill_zero_width = false;
-    gs_cspace_init_DeviceGray(mem, &cs);
-    pcs = &cs;
+    pcs = gs_cspace_new_DeviceGray(mem);
     color_unset(&dev_color);
-    color_space.params.indexed.use_proc = 0;
-    color_space.params.indexed.lookup.table.size = 0;
     data_bits = gs_alloc_bytes(mem, data_bits_size,
 			       "clist_playback_band(data_bits)");
     if (data_bits == 0) {
@@ -1014,7 +1009,7 @@ set_phase:	/*
 		    case cmd_opv_set_color_space:
 			cbuf.ptr = cbp;
 			code = read_set_color_space(&cbuf, &imager_state,
-						    &pcs, &color_space, mem);
+						    &pcs, mem);
 			cbp = cbuf.ptr;
 			if (code < 0) {
 			    if (code == gs_error_rangecheck)
@@ -1479,7 +1474,7 @@ idata:			data_size = 0;
 									 * This call of copy_mono originated as a call
 									 * of fill_mask.
 									 */
-		    code = (*dev_proc(tdev, fill_mask))
+		    code = gx_image_fill_masked
 			(tdev, source, data_x, raster, gx_no_bitmap_id,
 			 state.rect.x - x0, state.rect.y - y0,
 			 state.rect.width - data_x, state.rect.height,
@@ -1527,11 +1522,7 @@ idata:			data_size = 0;
     ht_buff.ht_size = 0;
     ht_buff.read_size = 0;
 
-    if (color_space.params.indexed.lookup.table.size)
-        gs_free_const_string(mem,
-			     color_space.params.indexed.lookup.table.data,
-			     color_space.params.indexed.lookup.table.size,
-			     "color_space indexed table");
+    rc_decrement(pcs, "clist_playback_band");
     gx_cpath_free(&clip_path, "clist_render_band exit");
     gx_path_free(&path, "clist_render_band exit");
     gs_imager_state_release(&imager_state);
@@ -1869,76 +1860,64 @@ read_set_misc2(command_buf_t *pcb, gs_imager_state *pis, segment_notes *pnotes)
 
 private int
 read_set_color_space(command_buf_t *pcb, gs_imager_state *pis,
-		     const gs_color_space **ppcs, gs_color_space *pcolor_space,
-		     gs_memory_t *mem)
+		     gs_color_space **ppcs, gs_memory_t *mem)
 {
     const byte *cbp = pcb->ptr;
     byte b = *cbp++;
     int index = b >> 4;
-    const gs_color_space *pcs;
+    gs_color_space *pcs;
     int code = 0;
-
-    /*
-     * The following are used only for a single, parameterless color space,
-     * so they do not introduce any re-entrancy problems.
-     */
-    static gs_color_space gray_cs, rgb_cs, cmyk_cs;
 
     if_debug3('L', " %d%s%s\n", index,
 	      (b & 8 ? " (indexed)" : ""),
 	      (b & 4 ? "(proc)" : ""));
     switch (index) {
     case gs_color_space_index_DeviceGray:
-        gs_cspace_init_DeviceGray(mem, &gray_cs);
-        pcs = &gray_cs;
+        pcs = gs_cspace_new_DeviceGray(mem);
 	break;
     case gs_color_space_index_DeviceRGB:
-        gs_cspace_init_DeviceRGB(mem, &rgb_cs);
-        pcs = &rgb_cs;
+        pcs = gs_cspace_new_DeviceRGB(mem);
 	break;
     case gs_color_space_index_DeviceCMYK:
-        gs_cspace_init_DeviceCMYK(mem, &cmyk_cs);
-        pcs = &cmyk_cs;
+        pcs = gs_cspace_new_DeviceCMYK(mem);
 	break;
     default:
 	code = gs_note_error(gs_error_rangecheck);	/* others are NYI */
 	goto out;
     }
 
-    /* Free any old indexed color space data. */
-    if (pcolor_space->params.indexed.use_proc) {
-	if (pcolor_space->params.indexed.lookup.map)
-	    gs_free_object(mem,
-			   pcolor_space->params.indexed.lookup.map->values,
-			   "old indexed map values");
-	    gs_free_object(mem, pcolor_space->params.indexed.lookup.map,
-			   "old indexed map");
-	pcolor_space->params.indexed.lookup.map = 0;
-    } else {
-	if (pcolor_space->params.indexed.lookup.table.size)
-	    gs_free_const_string(mem,
-				 pcolor_space->params.indexed.lookup.table.data,
-				 pcolor_space->params.indexed.lookup.table.size,
-				 "color_spapce indexed table");
-	pcolor_space->params.indexed.lookup.table.size = 0;
-    }
     if (b & 8) {
 	bool use_proc = (b & 4) != 0;
 	int hival;
 	int num_values;
 	byte *data;
 	uint data_size;
+	gs_color_space *pcs_indexed;
 
+	pcs_indexed = gs_cspace_alloc(mem, &gs_color_space_type_Indexed);
+	if (pcs_indexed == 0) {
+	    rc_decrement(pcs, "read_set_color_space");
+	    code = gs_note_error(gs_error_VMerror);
+	    goto out;
+	}
+	pcs_indexed->base_space = pcs;
+	pcs = pcs_indexed;
+	pcs->params.indexed.use_proc = 0;
+	pcs->params.indexed.lookup.table.data = 0;
+	pcs->params.indexed.lookup.table.size = 0;
 	cmd_getw(hival, cbp);
-	num_values = (hival + 1) * gs_color_space_num_components(pcs);
+	pcs->params.indexed.n_comps = gs_color_space_num_components(pcs->base_space);
+	num_values = (hival + 1) * pcs->params.indexed.n_comps;
 	if (use_proc) {
 	    gs_indexed_map *map;
 
 	    code = alloc_indexed_map(&map, num_values, mem, "indexed map");
-	    if (code < 0)
+	    if (code < 0) {
+		rc_decrement(pcs, "read_set_color_space");
 		goto out;
+	    }
 	    map->proc.lookup_index = lookup_indexed_map;
-	    pcolor_space->params.indexed.lookup.map = map;
+	    pcs->params.indexed.lookup.map = map;
 	    data = (byte *)map->values;
 	    data_size = num_values * sizeof(map->values[0]);
 	} else {
@@ -1946,22 +1925,20 @@ read_set_color_space(command_buf_t *pcb, gs_imager_state *pis,
 
 	    if (table == 0) {
 		code = gs_note_error(gs_error_VMerror);
+		rc_decrement(pcs, "read_set_color_space");
 		goto out;
 	    }
-	    pcolor_space->params.indexed.lookup.table.data = table;
-	    pcolor_space->params.indexed.lookup.table.size = num_values;
+	    pcs->params.indexed.lookup.table.data = table;
+	    pcs->params.indexed.lookup.table.size = num_values;
 	    data = table;
 	    data_size = num_values;
 	}
 	cbp = cmd_read_data(pcb, data, data_size, cbp);
-	pcolor_space->type =
-	    &gs_color_space_type_Indexed;
-	memmove(&pcolor_space->params.indexed.base_space, pcs,
-		sizeof(pcolor_space->params.indexed.base_space));
-	pcolor_space->params.indexed.hival = hival;
-	pcolor_space->params.indexed.use_proc = use_proc;
-	pcs = pcolor_space;
+	pcs->params.indexed.hival = hival;
+	pcs->params.indexed.use_proc = use_proc;
     }
+    /* Release reference to old color space before installing new one. */
+    rc_decrement_only(*ppcs, "read_set_color_space");
     *ppcs = pcs;
 out:
     pcb->ptr = cbp;
@@ -1970,7 +1947,7 @@ out:
 
 private int
 read_begin_image(command_buf_t *pcb, gs_image_common_t *pic,
-		 const gs_color_space *pcs)
+		 gs_color_space *pcs)
 {
     uint index = *(pcb->ptr)++;
     const gx_image_type_t *image_type = gx_image_type_table[index];
@@ -2245,11 +2222,7 @@ cmd_select_map(cmd_map_index map_index, cmd_map_contents cont,
 	case cmd_map_transfer_3:
 	    pmap = &pis->set_transfer.gray;
 	    *pcomp_num = &pis->set_transfer.gray_component_num;
-transfer1:  {
-		int i = map_index - cmd_map_transfer_0;
-
-	        if_debug1('L', " transfer[%d]", i);
-	    }
+transfer1:  if_debug1('L', " transfer[%d]", (int)(map_index - cmd_map_transfer_0));
 	    rc_unshare_struct(*pmap, gx_transfer_map, &st_transfer_map, mem,
 		return_error(gs_error_VMerror), "cmd_select_map(transfer)");
 	    map = *pmap;
@@ -2521,7 +2494,9 @@ clist_do_polyfill(gx_device *dev, gx_path *ppath,
 	 */
 	dev_proc_fill_parallelogram((*fill));
 
-	if (pseg2->next) {
+	/* close_path of 3 point triangle adds 4th point, detected here.*/
+	/* close_path on parallelogram adds 5th point also ignored. */
+	if (pseg2->next && !(px == pseg2->next->pt.x && py == pseg2->next->pt.y)) {
 	    /* Parallelogram */
 	    fill = dev_proc(dev, fill_parallelogram);
 	    bx = pseg2->pt.x - pseg1->pt.x;

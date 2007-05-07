@@ -1,4 +1,5 @@
-/* Copyright (C) 1991, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxcpath.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gxcpath.c,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Implementation of clipping paths, other than actual clipping */
 #include "gx.h"
 #include "gserrors.h"
@@ -38,7 +38,7 @@ private void gx_clip_list_from_rectangle(gx_clip_list *, gs_fixed_rect *);
 
 /* Other structure types */
 public_st_clip_rect();
-private_st_clip_list();
+public_st_clip_list();
 public_st_clip_path();
 private_st_clip_rect_list();
 public_st_device_clip();
@@ -661,6 +661,7 @@ gx_cpath_intersect_with_params(gx_clip_path *pcpath, /*const*/ gx_path *ppath_or
 	if (path_valid) {
 	    gx_path_assign_preserve(&pcpath->path, ppath_orig);
 	    pcpath->path_valid = true;
+	    pcpath->rule = rule;
 	} else {
 	    code = gx_cpath_path_list_new(pcpath->path.memory, NULL, rule, 
 					    ppath_orig, next, &pcpath->path_list);
@@ -987,6 +988,36 @@ gx_clip_list_free(gx_clip_list * clp, gs_memory_t * mem)
 	rp = prev;
     }
     gx_clip_list_init(clp);
+}
+
+/* Check whether a rectangle has a non-empty intersection with a clipping patch. */
+bool 
+gx_cpath_rect_visible(gx_clip_path * pcpath, gs_int_rect *prect)
+{
+    const gx_clip_rect *pr;
+    const gx_clip_list *list = &pcpath->rect_list->list;
+
+    switch (list->count) {
+	case 0:
+	    return false;
+	case 1:
+	    pr = &list->single;
+	    break;
+	default:
+	    pr = list->head;
+    }
+    for (; pr != 0; pr = pr->next) {
+	if (pr->xmin > prect->q.x)
+	    continue;
+	if (pr->xmax < prect->p.x)
+	    continue;
+	if (pr->ymin > prect->q.y)
+	    continue;
+	if (pr->ymax < prect->p.y)
+	    continue;
+	return true;
+    }
+    return false;
 }
 
 /* ------ Debugging printout ------ */

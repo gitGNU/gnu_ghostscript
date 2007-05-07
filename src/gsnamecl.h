@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gsnamecl.h,v 1.1 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gsnamecl.h,v 1.2 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Global definitions for the 'Named Color' callback handling. */
 
 #ifndef gsnamecl_INCLUDED

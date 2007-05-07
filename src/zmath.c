@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zmath.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zmath.c,v 1.5 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Mathematical operators */
 #include "math_.h"
 #include "ghost.h"
@@ -153,11 +153,12 @@ zexp(i_ctx_t *i_ctx_p)
 
     if (code < 0)
 	return code;
-    if (args[0] == 0.0 && args[1] == 0.0)
-	return_error(e_undefinedresult);
     if (args[0] < 0.0 && modf(args[1], &ipart) != 0.0)
 	return_error(e_undefinedresult);
-    result = pow(args[0], args[1]);
+    if (args[0] == 0.0 && args[1] == 0.0)
+	result = 1.0;		/* match Adobe; can't rely on C library */
+    else
+	result = pow(args[0], args[1]);
     make_real(op - 1, result);
     pop(1);
     return 0;

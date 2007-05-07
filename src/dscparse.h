@@ -1,4 +1,5 @@
-/* Copyright (C) 2000-2003, Ghostgum Software Pty Ltd.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: dscparse.h,v 1.5 2005/12/13 16:57:18 jemarch Exp $*/
+/* $Id: dscparse.h,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $*/
 /* Interface for the DSC parser. */
 
 #ifndef dscparse_INCLUDED

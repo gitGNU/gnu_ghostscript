@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpsf1.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevpsf1.c,v 1.7 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Write an embedded Type 1 font */
 #include "memory_.h"
 #include "gx.h"

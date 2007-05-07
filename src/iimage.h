@@ -1,4 +1,5 @@
-/* Copyright (C) 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: iimage.h,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: iimage.h,v 1.6 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Image operator entry points */
 /* Requires gscspace.h, gxiparam.h */
 
@@ -44,7 +44,8 @@ int data_image_params(const gs_memory_t *mem,
                       bool has_alpha);
 int pixel_image_params(i_ctx_t *i_ctx_p, const ref *op,
                        gs_pixel_image_t *pim, image_params * pip,
-                       int max_bits_per_component, bool has_alpha);
+                       int max_bits_per_component, bool has_alpha,
+                       gs_color_space *csp);
 
 /* Exported for zimage3.c and ztrans.c */
 int zimage_setup(i_ctx_t *i_ctx_p, const gs_pixel_image_t * pim,

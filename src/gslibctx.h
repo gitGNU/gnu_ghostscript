@@ -1,8 +1,6 @@
-/* Portions Copyright (C) 2003 artofcode LLC.
-   Portions Copyright (C) 2003 Artifex Software Inc.
-   This software is based in part on the work of the Independent JPEG Group.
+/* Copyright (C) 2001-2006 artofcode LLC.
    All Rights Reserved.
-
+  
   This file is part of GNU ghostscript
 
   GNU ghostscript is free software; you can redistribute it and/or modify it under
@@ -19,7 +17,7 @@
 
 */
 
-/*$Id: gslibctx.h,v 1.1 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/*$Id: gslibctx.h,v 1.2 2007/05/07 11:21:44 Arabidopsis Exp $ */
 #ifndef GSLIBCTX_H 
 #define GSLIBCTX_H 
 
@@ -67,6 +65,6 @@ void *gs_lib_ctx_get_interp_instance( gs_memory_t *mem );
 /* HACK to get at non garbage collection memory pointer 
  * 
  */
-const gs_memory_t * gs_lib_ctx_get_non_gc_memory_t(void);
+gs_memory_t * gs_lib_ctx_get_non_gc_memory_t(void);
  
 #endif /* GSLIBCTX_H */

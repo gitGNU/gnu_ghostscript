@@ -1,4 +1,5 @@
-/* Copyright (C) 1991, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/*$Id: gxclist.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/*$Id: gxclist.c,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Command list document- and page-level code. */
 #include "memory_.h"
 #include "string_.h"
@@ -522,7 +522,7 @@ clist_open_output_file(gx_device *dev)
 			    true)) < 0 ||
 	(code = clist_fopen(cdev->page_bfname, fmode, &cdev->page_bfile,
 			    cdev->bandlist_memory, cdev->bandlist_memory,
-			    true)) < 0 ||
+			    false)) < 0 ||
 	(code = clist_reinit_output_file(dev)) < 0
 	) {
 	clist_close_output_file(dev);
@@ -663,7 +663,7 @@ clist_end_page(gx_device_clist_writer * cldev)
 #ifdef DEBUG
     if (gs_debug_c('l') | gs_debug_c(':'))
 	dlprintf2("[:]clist_end_page at cfile=%ld, bfile=%ld\n",
-		  cb.pos, cldev->page_bfile_end_pos);
+		  (long)cb.pos, (long)cldev->page_bfile_end_pos);
 #endif
     return 0;
 }

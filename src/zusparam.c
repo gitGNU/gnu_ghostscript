@@ -1,5 +1,5 @@
-
-/* Copyright (C) 1996, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -15,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zusparam.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: zusparam.c,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* User and system parameter operators */
 #include "memory_.h"
 #include "string_.h"
@@ -63,8 +62,10 @@ typedef struct long_param_def_s {
 
 #if arch_sizeof_long > arch_sizeof_int
 #  define MAX_UINT_PARAM max_uint
+#  define MIN_INT_PARAM min_int
 #else
 #  define MAX_UINT_PARAM max_long
+#  define MIN_INT_PARAM min_long
 #endif
 
 typedef struct bool_param_def_s {
@@ -441,9 +442,9 @@ private const long_param_def_t user_long_params[] =
 {
     {"JobTimeout", 0, MAX_UINT_PARAM,
      current_JobTimeout, set_JobTimeout},
-    {"MaxFontItem", 0, MAX_UINT_PARAM,
+    {"MaxFontItem", MIN_INT_PARAM, MAX_UINT_PARAM,
      current_MaxFontItem, set_MaxFontItem},
-    {"MinFontCompress", 0, MAX_UINT_PARAM,
+    {"MinFontCompress", MIN_INT_PARAM, MAX_UINT_PARAM,
      current_MinFontCompress, set_MinFontCompress},
     {"MaxOpStack", 0, MAX_UINT_PARAM,
      current_MaxOpStack, set_MaxOpStack},

@@ -1,5 +1,6 @@
-/* Copyright (C) 1999 Aladdin Enterprises.  All rights reserved.
-
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
+  
   This file is part of GNU ghostscript
 
   GNU ghostscript is free software; you can redistribute it and/or modify it under
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gxino16b.c,v 1.1 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gxino16b.c,v 1.2 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Dummy 16-bit image procedure */
 #include "std.h"
 #include "gstypes.h"

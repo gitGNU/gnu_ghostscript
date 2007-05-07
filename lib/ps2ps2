@@ -1,6 +1,8 @@
 #!/bin/sh
-# $Id: ps2ps2,v 1.1 2006/06/16 12:55:13 Arabidopsis Exp $
-# "Distill" PostScript.
+# $Id: ps2ps2,v 1.2 2007/05/07 11:22:07 Arabidopsis Exp $
+# "Distill" PostScript with the Ghostscript 'ps2write' device
+# this generates a PDF-style stream with an attached 
+# PostScript program to interpret it.
 
 # This definition is changed on install to match the
 # executable name set in the makefile

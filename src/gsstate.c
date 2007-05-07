@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gsstate.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: gsstate.c,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Miscellaneous graphics state operators for Ghostscript library */
 #include "gx.h"
 #include "memory_.h"
@@ -145,7 +145,6 @@ typedef struct gs_state_parts_s {
     gx_path *path;
     gx_clip_path *clip_path;
     gx_clip_path *effective_clip_path;
-    gs_color_space *color_space;
     gs_client_color *ccolor;
     gx_device_color *dev_color;
 } gs_state_parts;
@@ -153,7 +152,6 @@ typedef struct gs_state_parts_s {
 #define GSTATE_ASSIGN_PARTS(pto, pfrom)\
   ((pto)->path = (pfrom)->path, (pto)->clip_path = (pfrom)->clip_path,\
    (pto)->effective_clip_path = (pfrom)->effective_clip_path,\
-   (pto)->color_space = (pfrom)->color_space,\
    (pto)->ccolor = (pfrom)->ccolor, (pto)->dev_color = (pfrom)->dev_color)
 
 /* GC descriptors */
@@ -254,7 +252,7 @@ gs_state_alloc(gs_memory_t * mem)
     pgs->effective_clip_path = pgs->clip_path;
     pgs->effective_clip_shared = true;
     /* Initialize things so that gx_remap_color won't crash. */
-    gs_cspace_init_DeviceGray(pgs->memory, pgs->color_space);
+    pgs->color_space = gs_cspace_new_DeviceGray(pgs->memory);
     pgs->in_cachedevice = 0;
     gx_set_device_color_1(pgs); /* sets colorspace and client color */
     pgs->device = 0;		/* setting device adjusts refcts */
@@ -300,6 +298,20 @@ gs_state_client_data(const gs_state * pgs)
     return pgs->client_data;
 }
 
+/* Free the chain of gstates.*/
+int
+gs_state_free_chain(gs_state * pgs)
+{
+   gs_state *saved = pgs, *tmp; 
+
+   while(saved != 0) {
+       tmp = saved->saved;
+       gs_state_free(saved);
+       saved = tmp;
+   }
+   return 0;
+}
+
 /* Free a graphics state. */
 int
 gs_state_free(gs_state * pgs)
@@ -318,13 +330,15 @@ gs_gsave(gs_state * pgs)
 
     if (pnew == 0)
 	return_error(gs_error_VMerror);
-    /*
-     * It isn't clear from the Adobe documentation whether gsave retains
-     * the current clip stack or clears it.  The following statement
-     * bets on the latter.  If it's the former, this should become
-     *	rc_increment(pnew->clip_stack);
+    /* As of PLRM3, the interaction between gsave and the clip stack is
+     * now clear. gsave stores the clip stack into the saved graphics
+     * state, but then clears it in the current graphics state.
+     *
+     * Ordinarily, reference count rules would indicate an rc_decrement()
+     * on pgs->clip_stack, but gstate_clone() has an exception for
+     * the clip_stack and dfilter_stack fields.
      */
-    pnew->clip_stack = 0;
+    pgs->clip_stack = 0;
     rc_increment(pnew->dfilter_stack);
     pgs->saved = pnew;
     if (pgs->show_gstate == pgs)
@@ -781,7 +795,6 @@ gstate_free_parts(const gs_state * parts, gs_memory_t * mem, client_name_t cname
 {
     gs_free_object(mem, parts->dev_color, cname);
     gs_free_object(mem, parts->ccolor, cname);
-    gs_free_object(mem, parts->color_space, cname);
     if (!parts->effective_clip_shared)
 	gx_cpath_free(parts->effective_clip_path, cname);
     gx_cpath_free(parts->clip_path, cname);
@@ -814,16 +827,14 @@ gstate_alloc_parts(gs_state * parts, const gs_state * shared,
 				  "gstate_alloc_parts(effective_clip_path)");
 	parts->effective_clip_shared = false;
     }
-    parts->color_space =
-	gs_alloc_struct(mem, gs_color_space, &st_color_space, cname);
+    parts->color_space = NULL;
     parts->ccolor =
 	gs_alloc_struct(mem, gs_client_color, &st_client_color, cname);
     parts->dev_color =
 	gs_alloc_struct(mem, gx_device_color, &st_device_color, cname);
     if (parts->path == 0 || parts->clip_path == 0 ||
 	parts->effective_clip_path == 0 ||
-	parts->color_space == 0 || parts->ccolor == 0 ||
-	parts->dev_color == 0
+	parts->ccolor == 0 || parts->dev_color == 0
 	) {
 	gstate_free_parts(parts, mem, cname);
 	return_error(gs_error_VMerror);
@@ -898,7 +909,6 @@ gstate_clone(gs_state * pfrom, gs_memory_t * mem, client_name_t cname,
     gs_imager_state_copied((gs_imager_state *)pgs);
     /* Don't do anything to clip_stack. */
     rc_increment(pgs->device);
-    *parts.color_space = *pfrom->color_space;
     *parts.ccolor = *pfrom->ccolor;
     *parts.dev_color = *pfrom->dev_color;
     if (reason == copy_for_gsave) {
@@ -979,10 +989,8 @@ gstate_copy(gs_state * pto, const gs_state * pfrom,
     } else
 	gx_cpath_assign_preserve(pto->effective_clip_path,
 				 pfrom->effective_clip_path);
-    *parts.color_space = *pfrom->color_space;
     *parts.ccolor = *pfrom->ccolor;
     *parts.dev_color = *pfrom->dev_color;
-    cs_adjust_counts(pto, 1);
     /* Handle references from gstate object. */
 #define RCCOPY(element)\
     rc_pre_assign(pto->element, pfrom->element, cname)
@@ -1012,6 +1020,7 @@ gstate_copy(gs_state * pto, const gs_state * pfrom,
 	}
     }
     GSTATE_ASSIGN_PARTS(pto, &parts);
+    cs_adjust_counts(pto, 1);
 #undef RCCOPY
     pto->show_gstate =
 	(pfrom->show_gstate == pfrom ? pto : 0);

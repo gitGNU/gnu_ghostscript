@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zpcolor.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: zpcolor.c,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Pattern color */
 #include "ghost.h"
 #include "oper.h"
@@ -95,20 +95,58 @@ zbuildpattern1(i_ctx_t *i_ctx_p)
     gs_client_color cc_instance;
     ref *pPaintProc;
 
+    code = read_matrix(imemory, op, &mat);
+    if (code < 0)
+        return code;
     check_type(*op1, t_dictionary);
     check_dict_read(*op1);
     gs_pattern1_init(&template);
-    if ((code = read_matrix(imemory, op, &mat)) < 0 ||
-	(code = dict_uid_param(op1, &template.uid, 1, imemory, i_ctx_p)) != 1 ||
-	(code = dict_int_param(op1, "PaintType", 1, 2, 0, &template.PaintType)) < 0 ||
-	(code = dict_int_param(op1, "TilingType", 1, 3, 0, &template.TilingType)) < 0 ||
-	(code = dict_floats_param(imemory, op1, "BBox", 4, BBox, NULL)) < 0 ||
-	(code = dict_float_param(op1, "XStep", 0.0, &template.XStep)) != 0 ||
-	(code = dict_float_param(op1, "YStep", 0.0, &template.YStep)) != 0 ||
-	(code = dict_find_string(op1, "PaintProc", &pPaintProc)) <= 0
-	)
-	return_error((code < 0 ? code : e_rangecheck));
+
+    code = dict_uid_param(op1, &template.uid, 1, imemory, i_ctx_p);
+    if (code < 0)
+        return code;
+    if (code != 1)
+        return_error(e_rangecheck);
+
+    code = dict_int_param(op1, "PaintType", 1, 2, 0, &template.PaintType);
+    if (code < 0)
+        return code;
+
+    code = dict_int_param(op1, "TilingType", 1, 3, 0, &template.TilingType);
+    if (code < 0)
+        return code;
+    
+    code = dict_floats_param(imemory, op1, "BBox", 4, BBox, NULL);
+    if (code < 0)
+        return code;
+    if (code == 0)
+       return_error(e_undefined); 
+
+    code = dict_float_param(op1, "XStep", 0.0, &template.XStep);
+    if (code < 0)
+        return code;
+    if (code == 1)
+       return_error(e_undefined); 
+    
+    code = dict_float_param(op1, "YStep", 0.0, &template.YStep);
+    if (code < 0)
+        return code;
+    if (code == 1)
+       return_error(e_undefined); 
+    
+    code = dict_find_string(op1, "PaintProc", &pPaintProc);
+    if (code < 0)
+        return code;
+    if (code == 0)
+       return_error(e_undefined); 
+
     check_proc(*pPaintProc);
+
+    if (mat.xx * mat.yy == mat.xy * mat.yx)
+        return_error(e_undefinedresult);
+    if (BBox[0] >= BBox[2] ||  BBox[1] >= BBox[3])
+        return_error(e_rangecheck);
+
     template.BBox.p.x = BBox[0];
     template.BBox.p.y = BBox[1];
     template.BBox.q.x = BBox[2];
@@ -134,34 +172,32 @@ private int
 zsetpatternspace(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
-    gs_color_space cs;
+    gs_color_space *pcs;
+    gs_color_space *pcs_base;
     uint edepth = ref_stack_count(&e_stack);
-    int code;
+    int code = 0;
 
     if (!r_is_array(op))
         return_error(e_typecheck);
     check_read(*op);
     switch (r_size(op)) {
 	case 1:		/* no base space */
-	    cs.params.pattern.has_base_space = false;
+	    pcs_base = NULL;
 	    break;
 	default:
 	    return_error(e_rangecheck);
 	case 2:
-	    cs = *gs_currentcolorspace(igs);
-	    if (cs_num_components(&cs) < 0)	/* i.e., Pattern space */
+	    pcs_base = gs_currentcolorspace(igs);
+	    if (cs_num_components(pcs_base) < 0)       /* i.e., Pattern space */
 		return_error(e_rangecheck);
-	    {
-		/* We can't count on C compilers to recognize the aliasing */
-		/* that would be involved in a direct assignment */
-		/* cs.params.pattern.base_space = *(gs_paint_color_space *)&cs; */
-		/* At least MSVC7 chocks with it. */
-		memmove(&cs.params.pattern.base_space, &cs, sizeof(gs_paint_color_space));
-	    }
-	    cs.params.pattern.has_base_space = true;
     }
-    gs_cspace_init(&cs, &gs_color_space_type_Pattern, imemory, false);
-    code = gs_setcolorspace(igs, &cs);
+    pcs = gs_cspace_alloc(imemory, &gs_color_space_type_Pattern);
+    pcs->base_space = pcs_base;
+    pcs->params.pattern.has_base_space = (pcs_base != NULL);
+    rc_increment(pcs_base);
+    code = gs_setcolorspace(igs, pcs);
+    /* release reference from construction */
+    rc_decrement_only(pcs, "zsetpatternspace");
     if (code < 0) {
 	ref_stack_pop_to(&e_stack, edepth);
 	return code;

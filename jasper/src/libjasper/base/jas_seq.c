@@ -64,7 +64,7 @@
 /*
  * Sequence/Matrix Library
  *
- * $Id: jas_seq.c,v 1.2 2006/06/16 18:21:39 Arabidopsis Exp $
+ * $Id: jas_seq.c,v 1.3 2007/05/07 11:22:24 Arabidopsis Exp $
  */
 
 /******************************************************************************\

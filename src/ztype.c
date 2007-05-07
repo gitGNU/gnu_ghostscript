@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: ztype.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: ztype.c,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Type, attribute, and conversion operators */
 #include "math_.h"
 #include "memory_.h"
@@ -190,15 +190,19 @@ znoaccess(i_ctx_t *i_ctx_p)
 
     check_op(1);
     if (r_has_type(op, t_dictionary)) {
-	/*
-	 * Setting noaccess on a read-only dictionary is an attempt to
-	 * change its value, which is forbidden (this is a subtle
-	 * point confirmed with Adobe).  Also, don't allow removing
-	 * read access to permanent dictionaries.
-	 */
-	if (dict_is_permanent_on_dstack(op) ||
-	    !r_has_attr(dict_access_ref(op), a_write)
-	    )
+	ref *aop = dict_access_ref(op);
+	
+	/* CPSI throws invalidaccess when seting noaccess to a readonly dictionary (CET 13-13-6) : */
+	if (!r_has_attrs(aop, a_write)) {
+	    if (!r_has_attrs(aop, a_read) && !r_has_attrs(aop, a_execute)) {
+		/* Already noaccess - do nothing (CET 24-09-1). */
+		return 0;
+	    }
+	    return_error(e_invalidaccess);
+	}
+
+	/* Don't allow removing read access to permanent dictionaries. */
+	if (dict_is_permanent_on_dstack(op))
 	    return_error(e_invalidaccess);
     }
     return access_check(i_ctx_p, 0, true);
@@ -353,8 +357,10 @@ zcvrs(i_ctx_t *i_ctx_p)
 		    pop(2);
 		    return 0;
 		}
+            case t__invalid:
+                return_error(e_stackunderflow);
 	    default:
-		return_op_typecheck(op - 2);
+		return_error(e_rangecheck); /* CET 24-05 wants rangecheck */
 	}
     } else {
 	ulong ival;
@@ -374,8 +380,10 @@ zcvrs(i_ctx_t *i_ctx_p)
 			return_error(e_rangecheck);
 		    ival = (ulong) (long)fval;
 		} break;
+            case t__invalid:
+                return_error(e_stackunderflow);
 	    default:
-		return_op_typecheck(op - 2);
+		return_error(e_rangecheck); /* CET 24-05 wants rangecheck */
 	}
 	do {
 	    int dit = ival % radix;
@@ -401,8 +409,8 @@ zcvs(i_ctx_t *i_ctx_p)
     os_ptr op = osp;
     int code;
 
-    check_op(2);
     check_write_type(*op, t_string);
+    check_op(2);
     code = convert_to_string(imemory, op - 1, op);
     if (code >= 0)
 	pop(1);

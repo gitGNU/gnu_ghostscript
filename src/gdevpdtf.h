@@ -1,4 +1,5 @@
-/* Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdtf.h,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevpdtf.h,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Font and CMap resource structure and API for pdfwrite */
 
 #ifndef gdevpdtf_INCLUDED
@@ -268,8 +269,11 @@ struct pdf_font_resource_s {
 	     * ENCODING_INDEX_MACROMAN, ENCODING_INDEX_MACEXPERT, or -1.
 	     */
 	    gs_encoding_index_t BaseEncoding;
+	    gs_encoding_index_t preferred_encoding_index;
 	    pdf_encoding_element_t *Encoding; /* [256], not for Type 3 */
 	    gs_point *v; /* [256], glyph origin for WMode 1 */
+	    int last_reserved_char; /* Except for synthesised Type 3, 
+					   which stores such data in LastChar */
 
 	    union {
 
@@ -433,6 +437,16 @@ int pdf_close_text_document(gx_device_pdf *pdev); /* in gdevpdtw.c */
  * Choose a name for embedded font.
  */
 const gs_font_name *pdf_choose_font_name(gs_font *font, bool key_name);
+
+/*
+ * Convert True Type fonts into CID fonts for PDF/A.
+ */
+int pdf_convert_truetype_font(gx_device_pdf *pdev,  pdf_resource_t *pres);
+
+/*
+ * Convert True Type font descriptor into CID font descriptor for PDF/A.
+ */
+int pdf_convert_truetype_font_descriptor(gx_device_pdf *pdev, pdf_font_resource_t *pdfont);
 
 /* ---------------- CMap resources ---------------- */
 

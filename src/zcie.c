@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zcie.c,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: zcie.c,v 1.7 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* CIE color operators */
 #include "math_.h"
 #include "memory_.h"
@@ -87,10 +87,12 @@ dict_proc_array_param(const gs_memory_t *mem,
 	    check_proc_only(proc);
 	}
 	*pparray = *pvalue;
-    } else
+        return 0;
+    } else {
 	make_const_array(pparray, a_readonly | avm_foreign,
 			 count, &empty_procs[0]);
-    return 0;
+        return 1;
+    }
 }
 
 /* Get 3 ranges from a dictionary. */
@@ -283,9 +285,7 @@ cie_set_finish(i_ctx_t *i_ctx_p, gs_color_space * pcs,
     if (code >= 0)
 	code = gs_setcolorspace(igs, pcs);
     /* Delete the extra reference to the parameter tables. */
-    gs_cspace_release(pcs);
-    /* Free the top-level object, which was copied by gs_setcolorspace. */
-    gs_free_object(gs_state_memory(igs), pcs, "cie_set_finish");
+    rc_decrement_only(pcs, "cie_set_finish");
     if (code < 0) {
 	ref_stack_pop_to(&e_stack, edepth);
 	return code;

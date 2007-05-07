@@ -1,4 +1,5 @@
-/* Copyright (C) 1999, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zfunc4.c,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: zfunc4.c,v 1.7 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* PostScript language support for FunctionType 4 (PS Calculator) Functions */
 #include "memory_.h"
 #include "ghost.h"
@@ -31,6 +31,9 @@
 #include "iname.h"
 #include "dstack.h"
 #include "ialloc.h"
+#include "gzstate.h"	    /* these are needed to check if device is pdfwrite */
+#include "gxdevcli.h"	    /* these are needed to check if device is pdfwrite */
+#include "string_.h"	    /* these are needed to check if device is pdfwrite */
 /*
  * FunctionType 4 functions are not defined in the PostScript language.  We
  * provide support for them because they are needed for PDF 1.3.  In
@@ -154,7 +157,6 @@ resolves_to_oper(i_ctx_t *i_ctx_p, const ref *pref, const op_proc_t proc)
  * Note that we arbitrarily limit the depth of procedure nesting.  pref is
  * known to be a procedure.
  */
-#define MAX_PSC_FUNCTION_NESTING 10
 private int
 check_psc_function(i_ctx_t *i_ctx_p, const ref *pref, int depth, byte *ops, int *psize)
 {
@@ -247,8 +249,19 @@ check_psc_function(i_ctx_t *i_ctx_p, const ref *pref, int depth, byte *ops, int 
 	    code = check_psc_function(i_ctx_p, &elt, depth + 1, ops, psize);
 	    if (code < 0)
 		return code;
-	    /* Check for {proc} if | {proc1} {proc2} ifelse */
-	    if (resolves_to_oper(i_ctx_p, &elt2, zif)) {
+	    /* Check for { proc } repeat | {proc} if | {proc1} {proc2} ifelse */
+	    if (resolves_to_oper(i_ctx_p, &elt2, zrepeat)) {
+		/* We can't handle 'repeat' with pdfwrite since it emits FunctionType 4 */
+		if (strcmp(i_ctx_p->pgs->device->dname, "pdfwrite") == 0)
+		    return_error(e_rangecheck);
+		if (ops) {
+		    *p = PtCr_repeat;
+		    psc_fixup(p, ops + *psize);
+		    p = ops + *psize;
+		    *p++ = PtCr_repeat_end;
+		}
+		*psize += 1;	/* extra room for repeat_end */
+	    } else if (resolves_to_oper(i_ctx_p, &elt2, zif)) {
 		if (ops) {
 		    *p = PtCr_if;
 		    psc_fixup(p, ops + *psize);
@@ -270,9 +283,9 @@ check_psc_function(i_ctx_t *i_ctx_p, const ref *pref, int depth, byte *ops, int 
 		    return code;
 		if (ops)
 		    psc_fixup(p, ops + *psize);
-	    } else
+	    } else 
 		return_error(e_rangecheck);
-	}
+	    }	 /* end 'default' */
 	}
     next:
 	DO_NOTHING;

@@ -1,4 +1,5 @@
-/* Copyright (C) 2003 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,13 +15,11 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxhintn.c,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gxhintn.c,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Type 1 hinter, a new algorithm */
 
-#include <assert.h>
 #include "memory_.h"
 #include "math_.h"
 #include "gx.h"
@@ -143,6 +142,7 @@ static const char *s_pole_array = "t1_hinter pole array";
 static const char *s_zone_array = "t1_hinter zone array";
 static const char *s_hint_array = "t1_hinter hint array";
 static const char *s_contour_array = "t1_hinter contour array";
+static const char *s_subglyph_array = "t1_hinter subglyph array";
 static const char *s_hint_range_array = "t1_hinter hint_range array";
 static const char *s_hint_applying_array = "t1_hinter hint_applying array";
 static const char *s_stem_snap_array = "t1_hinter stem_snap array";
@@ -216,7 +216,7 @@ private inline void double_matrix__set(double_matrix * this, const gs_matrix_fix
 private inline int double_matrix__invert_to(const double_matrix * this, double_matrix * m)
 {   double det = this->xx * this->yy - this->xy * this->yx;
 
-    if (fabs(det) * 1000000 < fabs(this->xx) + fabs(this->xy) + fabs(this->yx) + fabs(this->yy))
+    if (fabs(det) * 1000000 <= fabs(this->xx) + fabs(this->xy) + fabs(this->yx) + fabs(this->yy))
 	return_error(gs_error_rangecheck);
     m->xx =  this->yy / det;
     m->xy = -this->xy / det;
@@ -236,22 +236,27 @@ private void fraction_matrix__drop_bits(fraction_matrix * this, unsigned int bit
 
 private void fraction_matrix__set(fraction_matrix * this, const double_matrix * pmat)
 {   double axx = fabs(pmat->xx), axy = fabs(pmat->xy);
-    double ayx = fabs(pmat->xx), ayy = fabs(pmat->xy);
+    double ayx = fabs(pmat->yx), ayy = fabs(pmat->yy);
     double scale = max(axx + axy, ayx + ayy);
     int matrix_exp, m;
     double unused = frexp(scale, &matrix_exp);
 
     this->bitshift = matrix_bits - matrix_exp;
-    this->denominator = 1 << this->bitshift;
-    /* Round towards zero for a better view of mirrored characters : */
-    this->xx = (int32_t)(pmat->xx * this->denominator + 0.5);
-    this->xy = (int32_t)(pmat->xy * this->denominator + 0.5);
-    this->yx = (int32_t)(pmat->yx * this->denominator + 0.5);
-    this->yy = (int32_t)(pmat->yy * this->denominator + 0.5);
-    m = Max(Max(any_abs(this->xx), any_abs(this->xy)), Max(any_abs(this->yx), any_abs(this->yy)));
-    unused = frexp(m, &matrix_exp);
-    if (matrix_exp > matrix_bits)
-        fraction_matrix__drop_bits(this, matrix_exp - matrix_bits);
+    if (this->bitshift >= sizeof( this->denominator) * 8) {
+	this->denominator = 0;
+	this->xx = this->xy = this->yx = this->yy = 0;
+    } else {
+	this->denominator = 1 << this->bitshift;
+	/* Round towards zero for a better view of mirrored characters : */
+	this->xx = (int32_t)(pmat->xx * this->denominator + 0.5);
+	this->xy = (int32_t)(pmat->xy * this->denominator + 0.5);
+	this->yx = (int32_t)(pmat->yx * this->denominator + 0.5);
+	this->yy = (int32_t)(pmat->yy * this->denominator + 0.5);
+	m = Max(Max(any_abs(this->xx), any_abs(this->xy)), Max(any_abs(this->yx), any_abs(this->yy)));
+	unused = frexp(m, &matrix_exp);
+	if (matrix_exp > matrix_bits)
+	    fraction_matrix__drop_bits(this, matrix_exp - matrix_bits);
+    }
 }
 
 private inline int fraction_matrix__to_double(const fraction_matrix * this, double_matrix * pmat)
@@ -370,7 +375,7 @@ private void t1_hint__set_aligned_coord(t1_hint * this, t1_glyph_space_coord gc,
 
 private void t1_hinter__paint_glyph(t1_hinter * this, bool aligned)
 {
-#ifdef VD_TRACE
+#if VD_TRACE
 #define X(j) *member_prt(t1_glyph_space_coord, &this->pole[j], offset_x)
 #define Y(j) *member_prt(t1_glyph_space_coord, &this->pole[j], offset_y)
     t1_glyph_space_coord *p_x = (aligned ? &this->pole[0].ax : &this->pole[0].gx);
@@ -420,7 +425,7 @@ private void t1_hinter__paint_glyph(t1_hinter * this, bool aligned)
 
 private void  t1_hinter__paint_raster_grid(t1_hinter * this)
 {
-#ifdef VD_TRACE
+#if VD_TRACE
     int i;
     double j; /* 'long' can overflow */
     unsigned long c0 = RGB(192, 192, 192), c1 = RGB(64, 64, 64);
@@ -481,10 +486,12 @@ void t1_hinter__init(t1_hinter * this, gx_path *output_path)
     this->pole_count = 0;
     this->hint_count = 0;
     this->contour_count = 0;
+    this->subglyph_count = 0;
     this->hint_range_count = 0;
     this->flex_count = 0;
     this->have_flex = false;
 
+    this->max_subglyph_count = count_of(this->subglyph0);
     this->max_contour_count = count_of(this->contour0);
     this->max_zone_count = count_of(this->zone0);
     this->max_pole_count = count_of(this->pole0);
@@ -499,6 +506,7 @@ void t1_hinter__init(t1_hinter * this, gx_path *output_path)
     this->hint = this->hint0;
     this->zone = this->zone0;
     this->contour = this->contour0;
+    this->subglyph = this->subglyph0;
     this->hint_range = this->hint_range0;
     this->hint_applying = this->hint_applying0;
     this->stem_snap[0] = this->stem_snap0[0];
@@ -514,13 +522,16 @@ void t1_hinter__init(t1_hinter * this, gx_path *output_path)
     this->heigt_transform_coef_inv = this->width_transform_coef_inv = 0;
     this->cx = this->cy = 0;
     this->contour[0] = 0;
+    this->subglyph[0] = 0;
     this->keep_stem_width = false;
     this->charpath_flag = false;
     this->grid_fit_x = this->grid_fit_y = true;
     this->output_path = output_path;
     this->memory = (output_path == 0 ? 0 : output_path->memory);
     this->disable_hinting = (this->memory == NULL);
+    this->pass_through = this->disable_hinting;
     this->autohinting = false;
+    this->fix_contour_sign = false;
 
     this->stem_snap[0][0] = this->stem_snap[1][0] = 100; /* default */
 }
@@ -534,6 +545,8 @@ private inline void t1_hinter__free_arrays(t1_hinter * this)
 	gs_free_object(this->memory, this->zone, s_zone_array);
     if (this->contour != this->contour0)
 	gs_free_object(this->memory, this->contour, s_contour_array);
+    if (this->subglyph != this->subglyph0)
+	gs_free_object(this->memory, this->subglyph, s_subglyph_array);
     if (this->hint_range != this->hint_range0)
 	gs_free_object(this->memory, this->hint_range, s_hint_range_array);
     if (this->hint_applying != this->hint_applying0)
@@ -632,6 +645,7 @@ int t1_hinter__set_mapping(t1_hinter * this, gs_matrix_fixed * ctm,
     int code;
 
     this->disable_hinting |= (scale < 1/1024. || scale > 4);
+    this->pass_through |= this->disable_hinting;
     this->log2_pixels_x = log2_pixels_x;
     this->log2_pixels_y = log2_pixels_y;
     this->log2_subpixels_x = log2_subpixels_x;
@@ -645,8 +659,12 @@ int t1_hinter__set_mapping(t1_hinter * this, gs_matrix_fixed * ctm,
     }
     if (this->ctmf.denominator != 0) {
 	code = fraction_matrix__invert_to(&this->ctmf, &this->ctmi); /* Note: ctmi is inversion of ctmf, not ctm. */
-	if (code < 0)
+	if (code == gs_error_rangecheck)
+	    this->ctmf.denominator = 0;
+	else if (code < 0)
 	    return code;
+    }
+    if (this->ctmf.denominator != 0) {
 	this->g2o_fraction = 1 << this->g2o_fraction_bits;
 	/* Note : possibly we'll adjust the matrix precision dynamically 
 	   with adjust_matrix_precision while importing the glyph. */
@@ -656,6 +674,7 @@ int t1_hinter__set_mapping(t1_hinter * this, gs_matrix_fixed * ctm,
     if (this->ctmf.denominator == 0 || this->ctmi.denominator == 0) {
 	/* ctmf should be degenerate. */
     	this->disable_hinting = true;
+	this->pass_through = true;
 	this->ctmf.denominator = 1;
     }
     this->transposed = (any_abs(this->ctmf.xy) * 10 > any_abs(this->ctmf.xx));
@@ -712,7 +731,7 @@ int t1_hinter__set_mapping(t1_hinter * this, gs_matrix_fixed * ctm,
 	 * The ADOBE_OVERSHOOT_COMPATIBILIY build needs to fix them.
 	 */
     }
-    if (1 || /* Doesn't work - see comment above. Using this->disable_hinting instead. */
+    if (1 || /* Doesn't work - see comment above. */
 	    this->resolution * this->font_size >= 2) {	
 	/* Enable the grid fitting separately for axes : */
 	this->grid_fit_y = (any_abs(this->ctmf.xy) * 10 < any_abs(this->ctmf.xx) ||
@@ -805,7 +824,7 @@ private int t1_hinter__set_stem_snap(t1_hinter * this, float * value, int count,
 	                                sizeof(this->stem_snap_vote0) / count_of(this->stem_snap_vote0), 
 					max(T1_MAX_STEM_SNAPS, count), s_stem_snap_vote_array))
     	    return_error(gs_error_VMerror);
-    if (count == 1 || float2fixed(value[count - 1] - value[0]) > pixel_g) {
+    if (count == 1 || (count > 0 && float2fixed(value[count - 1] - value[0]) > pixel_g)) {
 	for (i = 0; i < count; i++)
 	    this->stem_snap[hv][i] = float2fixed(value[i]);
 	this->stem_snap_count[hv] = count;
@@ -858,7 +877,7 @@ private void enable_draw_import(void)
     vd_setlinewidth(0);
 }
 
-int t1_hinter__set_font_data(t1_hinter * this, int FontType, gs_type1_data *pdata, bool no_grid_fitting)
+int t1_hinter__set_font_data(t1_hinter * this, int FontType, gs_type1_data *pdata, bool no_grid_fitting, bool is_resource)
 {   int code;
 
     t1_hinter__init_outline(this);
@@ -870,10 +889,14 @@ int t1_hinter__set_font_data(t1_hinter * this, int FontType, gs_type1_data *pdat
     this->overshoot_threshold = (this->heigt_transform_coef != 0 ? (t1_glyph_space_coord)(fixed_half * (1 << this->log2_pixels_y) / this->heigt_transform_coef) : 0);
     this->ForceBold = pdata->ForceBold;
     this->disable_hinting |= no_grid_fitting;
+    this->pass_through |= no_grid_fitting;
     this->charpath_flag = no_grid_fitting;
-    if (!vd_enabled && (VD_DRAW_IMPORT || this->disable_hinting))
+    this->fix_contour_sign = (!is_resource && this->memory != NULL);
+    if (this->fix_contour_sign)
+	this->pass_through = false;
+    if (!vd_enabled && (VD_DRAW_IMPORT || this->pass_through))
 	enable_draw_import();
-    if (this->disable_hinting)
+    if (this->pass_through)
 	return 0;
     code = t1_hinter__set_alignment_zones(this, pdata->OtherBlues.values, pdata->OtherBlues.count, botzone, false);
     if (code >= 0)
@@ -907,12 +930,12 @@ int t1_hinter__set_font42_data(t1_hinter * this, int FontType, gs_type42_data *p
     this->suppress_overshoots = (this->BlueScale > this->heigt_transform_coef / (1 << this->log2_pixels_y) - 0.00020417);
     this->overshoot_threshold = (this->heigt_transform_coef != 0 ? (t1_glyph_space_coord)(fixed_half * (1 << this->log2_pixels_y) / this->heigt_transform_coef) : 0);
     this->ForceBold = false;
-    this->disable_hinting |= no_grid_fitting;
+    this->pass_through |= no_grid_fitting;
     this->charpath_flag = no_grid_fitting;
     this->autohinting = true;
-    if (!vd_enabled && (VD_DRAW_IMPORT || this->disable_hinting))
+    if (!vd_enabled && (VD_DRAW_IMPORT || this->pass_through))
 	enable_draw_import();
-    if (this->disable_hinting)
+    if (this->pass_through)
 	return 0;
     /* Currently we don't provice alignments zones or stem snap. */
     return 0;
@@ -945,9 +968,7 @@ private inline int t1_hinter__add_pole(t1_hinter * this, t1_glyph_space_coord xx
 }
 
 int t1_hinter__sbw(t1_hinter * this, fixed sbx, fixed sby, fixed wx,  fixed wy)
-{   t1_hinter__adjust_matrix_precision(this, sbx, sby);
-    t1_hinter__adjust_matrix_precision(this, wx, wy);
-    this->cx = this->orig_gx = this->subglyph_orig_gx = sbx;
+{   this->cx = this->orig_gx = this->subglyph_orig_gx = sbx;
     this->cy = this->orig_gy = this->subglyph_orig_gy = sby;
     this->width_gx = wx;
     this->width_gy = wy;
@@ -1052,7 +1073,7 @@ private bool t1_hinter__find_flex(t1_hinter * this, int k, int contour_beg, int 
 		}
 	    }
 	}
-	/* Leave the loop here because t1_hinter_fix_missed_flex
+	/* Leave the loop here because t1_hinter__fix_missed_flex
 	   will try the interval starting with the next pole. 
 	   We reserve the 'i' cycle for fonding a "best" flex
 	   within the interval. */
@@ -1125,7 +1146,7 @@ private void t1_hinter__adjust_stem_hints_by_missed_flex(t1_hinter * this, t1_gl
 	}
 }
 
-private void t1_hinter_fix_missed_flex(t1_hinter * this)
+private void t1_hinter__fix_missed_flex(t1_hinter * this)
 {
     int contour_beg, contour_end;
     int i, j, k, pj, n, j0, j1;
@@ -1134,7 +1155,7 @@ private void t1_hinter_fix_missed_flex(t1_hinter * this)
 	return;
     contour_beg = this->contour[this->contour_count -1];
     contour_end = this->pole_count - 1; /* the last contour's 'closepath'. */
-    if (contour_beg >= contour_end)
+    if (contour_beg + 8 >= contour_end)
 	return;
     for (k = 0; k < 2; k++) {
         t1_glyph_space_coord *p_gc = (!k ? &this->pole[0].gx : &this->pole[0].gy);
@@ -1209,7 +1230,7 @@ int t1_hinter__rmoveto(t1_hinter * this, fixed xx, fixed yy)
 
     t1_hinter__adjust_matrix_precision(this, xx, yy);
     if (this->flex_count == 0) {
-	if (this->disable_hinting) {
+	if (this->pass_through) {
 	    t1_glyph_space_coord gx = this->cx += xx;
 	    t1_glyph_space_coord gy = this->cy += yy;
 	    fixed fx, fy;
@@ -1238,7 +1259,7 @@ int t1_hinter__rmoveto(t1_hinter * this, fixed xx, fixed yy)
 		return code;
 	}
 	if (!this->have_flex)
-	    t1_hinter_fix_missed_flex(this);
+	    t1_hinter__fix_missed_flex(this);
     }
     code = t1_hinter__add_pole(this, xx, yy, moveto);
     if (this->flex_count == 0) {
@@ -1265,7 +1286,7 @@ private inline void t1_hinter__skip_degenerate_segnment(t1_hinter * this, int np
 int t1_hinter__rlineto(t1_hinter * this, fixed xx, fixed yy)
 {   
     t1_hinter__adjust_matrix_precision(this, xx, yy);
-    if (this->disable_hinting) {
+    if (this->pass_through) {
 	t1_glyph_space_coord gx = this->cx += xx;
 	t1_glyph_space_coord gy = this->cy += yy;
 	fixed fx, fy;
@@ -1290,7 +1311,7 @@ int t1_hinter__rcurveto(t1_hinter * this, fixed xx0, fixed yy0, fixed xx1, fixed
     t1_hinter__adjust_matrix_precision(this, xx0, yy0);
     t1_hinter__adjust_matrix_precision(this, xx1, yy1);
     t1_hinter__adjust_matrix_precision(this, xx2, yy2);
-    if (this->disable_hinting) {
+    if (this->pass_through) {
 	t1_glyph_space_coord gx0 = this->cx += xx0;
 	t1_glyph_space_coord gy0 = this->cy += yy0;
 	t1_glyph_space_coord gx1 = this->cx += xx1;
@@ -1349,7 +1370,7 @@ void t1_hinter__setcurrentpoint(t1_hinter * this, fixed xx, fixed yy)
 }
 
 int t1_hinter__closepath(t1_hinter * this)
-{   if (this->disable_hinting) {
+{   if (this->pass_through) {
 	vd_lineto(this->bx, this->by);
 	this->path_opened = false;
         return gx_path_close_subpath(this->output_path);
@@ -1358,7 +1379,7 @@ int t1_hinter__closepath(t1_hinter * this)
 
 	if (contour_beg == this->pole_count)
 	    return 0; /* maybe a single trailing moveto */
-	if (vd_enabled && (VD_DRAW_IMPORT || this->disable_hinting)) {
+	if (vd_enabled && (VD_DRAW_IMPORT || this->pass_through)) {
 	    vd_setcolor(VD_IMPORT_COLOR);
 	    vd_setlinewidth(0);
 	    vd_lineto(this->bx, this->by);
@@ -1387,6 +1408,19 @@ int t1_hinter__closepath(t1_hinter * this)
     }
 }
 
+int t1_hinter__end_subglyph(t1_hinter * this)
+{
+    if (this->pass_through)
+	return 0;
+    this->subglyph_count++;
+    if (this->subglyph_count >= this->max_subglyph_count)
+	if(t1_hinter__realloc_array(this->memory, (void **)&this->subglyph, this->subglyph0, &this->max_subglyph_count, 
+				    sizeof(this->subglyph0) / count_of(this->subglyph0), T1_MAX_SUBGLYPHS, s_subglyph_array))
+	    return_error(gs_error_VMerror);
+    this->subglyph[this->subglyph_count] = this->contour_count;
+    return 0;
+}
+
 private inline int t1_hinter__can_add_hint(t1_hinter * this, t1_hint **hint)
 {   if (this->hint_count >= this->max_hint_count)
         if(t1_hinter__realloc_array(this->memory, (void **)&this->hint, this->hint0, &this->max_hint_count, 
@@ -1401,7 +1435,7 @@ int t1_hinter__flex_beg(t1_hinter * this)
 	return_error(gs_error_invalidfont);
     this->flex_count++;
     this->have_flex = true;
-    if (this->disable_hinting)
+    if (this->pass_through)
 	return t1_hinter__rmoveto(this, 0, 0);
     return 0;
 }
@@ -1432,7 +1466,7 @@ int t1_hinter__flex_end(t1_hinter * this, fixed flex_height)
 	vd_moveto (pole0[0].gx, pole0[0].gy);
 	vd_curveto(pole0[2].gx, pole0[2].gy, pole0[3].gx, pole0[3].gy, pole0[4].gx, pole0[4].gy);
 	vd_curveto(pole0[5].gx, pole0[5].gy, pole0[6].gx, pole0[6].gy, pole0[7].gx, pole0[7].gy);
-	if (this->disable_hinting) {
+	if (this->pass_through) {
 	    fixed fx0, fy0, fx1, fy1, fx2, fy2;
 	    int code;
 
@@ -1460,7 +1494,7 @@ int t1_hinter__flex_end(t1_hinter * this, fixed flex_height)
 	/* do with line */
 	vd_moveto(pole0[0].gx, pole0[0].gy);
 	vd_lineto(pole0[7].gx, pole0[7].gy);
-	if (this->disable_hinting) {
+	if (this->pass_through) {
 	    fixed fx, fy;
 
 	    g2d(this, pole0[7].gx, pole0[7].gy, &fx, &fy);
@@ -2372,6 +2406,10 @@ private void t1_hinter__align_stem_commands(t1_hinter * this)
 			continue;
 		}
 		for (j = beg_range_pole; j <= end_range_pole;) {
+		    if (this->pole[j].type == closepath) {
+			j++;
+			continue;
+		    }
 		    if (t1_hinter__is_stem_hint_applicable(this, &this->hint[i], j, &quality)) {
 			fixed t; /* Type 1 spec implies that it is 0 for curves, 0.5 for bars */
 			int segment_index = t1_hinter__find_stem_middle(this, &t, j, horiz);
@@ -2970,7 +3008,11 @@ int t1_hinter__endglyph(t1_hinter * this)
     code = t1_hinter__add_trailing_moveto(this);
     if (code < 0)
 	goto exit;
+    code = t1_hinter__end_subglyph(this);
+    if (code < 0)
+	goto exit;
     t1_hinter__paint_glyph(this, false);
+    t1_hinter__adjust_matrix_precision(this, this->orig_gx, this->orig_gy);
     t1_hinter__compute_y_span(this);
     t1_hinter__simplify_representation(this);
     if (!this->disable_hinting && (this->grid_fit_x || this->grid_fit_y)) {
@@ -2991,18 +3033,23 @@ int t1_hinter__endglyph(t1_hinter * this)
         t1_hinter__interpolate_other_poles(this);
         t1_hinter__paint_glyph(this, true);
     }
-    if (vd_enabled) {
-        double_matrix m;
+    if (this->pole_count) {
+	if (this->fix_contour_sign) {
+	    t1_hinter__fix_contour_signs(this);
+	    t1_hinter__paint_glyph(this, true);
+	}
+	if (vd_enabled) {
+	    double_matrix m;
 
-        fraction_matrix__to_double(&this->ctmi, &m);
-        vd_set_scaleXY(vd_get_scale_x * m.xx, vd_get_scale_y * m.yy);
-        vd_set_origin(this->orig_dx, this->orig_dy);
-        /*  fixme : general transform requires changes to vdtrace.
-	    Current implementation paints exported rotated glyph in wrong coordinates.
-	*/
-    }
-    if (this->pole_count)
+	    fraction_matrix__to_double(&this->ctmi, &m);
+	    vd_set_scaleXY(vd_get_scale_x * m.xx, vd_get_scale_y * m.yy);
+	    vd_set_origin(this->orig_dx, this->orig_dy);
+	    /*  fixme : general transform requires changes to vdtrace.
+		Current implementation paints exported rotated glyph in wrong coordinates.
+	    */
+	}
 	code = t1_hinter__export(this);
+    }
 exit:
     t1_hinter__free_arrays(this);
     vd_release_dc;

@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gspcolor.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gspcolor.c,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Pattern color operators and procedures for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -48,28 +48,26 @@ public_st_pattern_template();
 public_st_pattern_instance();
 
 /* Define the Pattern color space. */
-gs_private_st_composite(st_color_space_Pattern, gs_paint_color_space,
+gs_private_st_composite(st_color_space_Pattern, gs_color_space,
      "gs_color_space_Pattern", cs_Pattern_enum_ptrs, cs_Pattern_reloc_ptrs);
 private cs_proc_num_components(gx_num_components_Pattern);
-private cs_proc_base_space(gx_base_space_Pattern);
 private cs_proc_remap_color(gx_remap_Pattern);
 private cs_proc_init_color(gx_init_Pattern);
 private cs_proc_restrict_color(gx_restrict_Pattern);
 private cs_proc_install_cspace(gx_install_Pattern);
 private cs_proc_set_overprint(gx_set_overprint_Pattern);
-private cs_proc_adjust_cspace_count(gx_adjust_cspace_Pattern);
+private cs_proc_final(gx_final_Pattern);
 private cs_proc_adjust_color_count(gx_adjust_color_Pattern);
 private cs_proc_serialize(gx_serialize_Pattern);
 const gs_color_space_type gs_color_space_type_Pattern = {
     gs_color_space_index_Pattern, false, false,
     &st_color_space_Pattern, gx_num_components_Pattern,
-    gx_base_space_Pattern,
     gx_init_Pattern, gx_restrict_Pattern,
     gx_no_concrete_space,
     gx_no_concretize_color, NULL,
     gx_remap_Pattern, gx_install_Pattern,
     gx_set_overprint_Pattern,
-    gx_adjust_cspace_Pattern, gx_adjust_color_Pattern,
+    gx_final_Pattern, gx_adjust_color_Pattern,
     gx_serialize_Pattern,
     gx_cspace_no_linear
 };
@@ -158,15 +156,16 @@ gs_setpatternspace(gs_state * pgs)
     if (pgs->in_cachedevice)
 	return_error(gs_error_undefined);
     if (pgs->color_space->type->index != gs_color_space_index_Pattern) {
-	gs_color_space cs;
+	gs_color_space *pcs;
 
-	gs_cspace_init(&cs, &gs_color_space_type_Pattern, pgs->memory, false);
-	/**************** base_space SETTING IS WRONG ****************/
-	cs.params.pattern.base_space =
-	    *(gs_paint_color_space *) pgs->color_space;
-	cs.params.pattern.has_base_space = true;
-	*pgs->color_space = cs;
-	cs_full_init_color(pgs->ccolor, &cs);
+	pcs = gs_cspace_alloc(pgs->memory, &gs_color_space_type_Pattern);
+	if (pcs == NULL)
+	    return_error(gs_error_VMerror);
+	/* reference to base space shifts from pgs to pcs with no net change */
+	pcs->base_space = pgs->color_space;
+	pcs->params.pattern.has_base_space = true;
+	pgs->color_space = pcs;
+	cs_full_init_color(pgs->ccolor, pcs);
 	gx_unset_dev_color(pgs);
     }
     return code;
@@ -206,19 +205,8 @@ gx_num_components_Pattern(const gs_color_space * pcs)
 {
     return
 	(pcs->params.pattern.has_base_space ?
-	 -1 - cs_num_components((const gs_color_space *)
-				&(pcs->params.pattern.base_space)) :
+	 -1 - cs_num_components(pcs->base_space) :
 	 -1 /* Pattern dictionary only */ );
-}
-
-/* Get the base space of a Pattern color space. */
-private const gs_color_space *
-gx_base_space_Pattern(const gs_color_space * pcs)
-{
-    return
-	(pcs->params.pattern.has_base_space ?
-	 (const gs_color_space *)&(pcs->params.pattern.base_space) :
-	 NULL);
 }
 
 /* Remap a Pattern color. */
@@ -241,8 +229,7 @@ private void
 gx_init_Pattern(gs_client_color * pcc, const gs_color_space * pcs)
 {
     if (pcs->params.pattern.has_base_space) {
-	const gs_color_space *pbcs =
-	(const gs_color_space *)&pcs->params.pattern.base_space;
+	const gs_color_space *pbcs = pcs->base_space;
 
 	cs_init_color(pcc, pbcs);
     }
@@ -262,8 +249,7 @@ gx_restrict_Pattern(gs_client_color * pcc, const gs_color_space * pcs)
 	pcc->pattern->type->procs.uses_base_space(gs_get_pattern(pcc)) &&
 	pcs->params.pattern.has_base_space
 	) {
-	const gs_color_space *pbcs =
-	    (const gs_color_space *)&pcs->params.pattern.base_space;
+	const gs_color_space *pbcs = pcs->base_space;
 
 	(*pbcs->type->restrict_color) (pcc, pbcs);
     }
@@ -275,8 +261,7 @@ gx_install_Pattern(const gs_color_space * pcs, gs_state * pgs)
 {
     if (!pcs->params.pattern.has_base_space)
 	return 0;
-    return (*pcs->params.pattern.base_space.type->install_cspace)
-	((const gs_color_space *) & pcs->params.pattern.base_space, pgs);
+    return (pcs->base_space->type->install_cspace)(pcs->base_space, pgs);
 }
 
 /*
@@ -291,11 +276,9 @@ gx_set_overprint_Pattern(const gs_color_space * pcs, gs_state * pgs)
 
 /* Adjust the reference counts for Pattern color spaces or colors. */
 private void
-gx_adjust_cspace_Pattern(const gs_color_space * pcs, int delta)
+gx_final_Pattern(const gs_color_space * pcs)
 {
-    if (pcs->params.pattern.has_base_space)
-	(*pcs->params.pattern.base_space.type->adjust_cspace_count)
-	    ((const gs_color_space *)&pcs->params.pattern.base_space, delta);
+    /* {csrc} really do nothing? */
 }
 
 private void
@@ -306,9 +289,8 @@ gx_adjust_color_Pattern(const gs_client_color * pcc,
 
     rc_adjust_only(pinst, delta, "gx_adjust_color_Pattern");
     if (pcs && pcs->params.pattern.has_base_space)
-	(*pcs->params.pattern.base_space.type->adjust_color_count)
-	    (pcc, (const gs_color_space *)&pcs->params.pattern.base_space,
-	     delta);
+	(pcs->base_space->type->adjust_color_count)
+	    (pcc, pcs->base_space, delta);
 }
 
 /* GC procedures */
@@ -316,22 +298,13 @@ gx_adjust_color_Pattern(const gs_client_color * pcc,
 private 
 ENUM_PTRS_BEGIN_PROC(cs_Pattern_enum_ptrs)
 {
-    EV_CONST gs_color_space *const pcs = vptr;
-
-    if (!pcs->params.pattern.has_base_space)
-	return 0;
-    return ENUM_USING(*pcs->params.pattern.base_space.type->stype,
-		      &pcs->params.pattern.base_space,
-		      sizeof(pcs->params.pattern.base_space), index);
+    return 0;
+    /* {csrc} may change to st_base_color_space */
 }
 ENUM_PTRS_END_PROC
-private RELOC_PTRS_WITH(cs_Pattern_reloc_ptrs, gs_color_space *pcs)
+private RELOC_PTRS_BEGIN(cs_Pattern_reloc_ptrs)
 {
-    if (!pcs->params.pattern.has_base_space)
-	return;
-    RELOC_USING(*pcs->params.pattern.base_space.type->stype,
-		&pcs->params.pattern.base_space,
-		sizeof(gs_paint_color_space));
+    return;
 }
 RELOC_PTRS_END
 
@@ -346,10 +319,10 @@ gx_serialize_Pattern(const gs_color_space * pcs, stream * s)
 
     if (code < 0)
 	return code;
-    code = sputs(s, (byte *)&p->has_base_space, sizeof(p->has_base_space), &n);
+    code = sputs(s, (const byte *)&p->has_base_space, sizeof(p->has_base_space), &n);
     if (code < 0)
 	return code;
     if (!p->has_base_space)
 	return 0;
-    return cs_serialize((const gs_color_space *)&p->base_space, s);
+    return cs_serialize(pcs->base_space, s);
 }

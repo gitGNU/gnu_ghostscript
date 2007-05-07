@@ -8,7 +8,12 @@
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
                                                                                 
-    $Id: jbig2_image_pbm.c,v 1.3 2006/03/02 21:27:55 Arabidopsis Exp $
+    For information on commercial licensing, go to
+    http://www.artifex.com/licensing/ or contact
+    Artifex Software, Inc.,  101 Lucas Valley Road #110,
+    San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
+    $Id: jbig2_image_pbm.c,v 1.4 2007/05/07 11:22:12 Arabidopsis Exp $
 */
 
 #ifdef HAVE_CONFIG_H

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sjpx_luratech.c,v 1.1 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: sjpx_luratech.c,v 1.2 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* JPXDecode filter implementation -- hooks in the Luratech JPEG2K CSDK */
  
 #include "memory_.h"

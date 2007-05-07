@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1990, 1991, 1993, 1996 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -15,8 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-
-/* $Id: gdevn533.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $*/
+/* $Id: gdevn533.c,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $*/
 /* Sony NWP-533 driver for GhostScript */
 #include "gdevprn.h"
 #define prn_dev ((gx_device_printer *)dev) /* needed in 5.31 et seq */

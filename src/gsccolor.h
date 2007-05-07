@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsccolor.h,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gsccolor.h,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Client color structure definition */
 
 #ifndef gsccolor_INCLUDED
@@ -33,14 +34,17 @@ typedef struct gs_pattern_instance_s gs_pattern_instance_t;
 /*
  * Define the maximum number of components in a client color.
  * This must be at least 4, and should be at least 6 to accommodate
- * hexachrome DeviceN color spaces.  It is currently set to the maximum
- * size allowed by the size of a gx_color_index
+ * hexachrome DeviceN color spaces.  It is currently set to the same
+ * value as Adobe CPSI can handle 
  */
-#define GS_CLIENT_COLOR_MAX_COMPONENTS (ARCH_SIZEOF_GX_COLOR_INDEX * 8)
+#define GS_CLIENT_COLOR_MAX_COMPONENTS (252)
 
 /* Paint (non-Pattern) colors */
 typedef struct gs_paint_color_s {
     float values[GS_CLIENT_COLOR_MAX_COMPONENTS];
+    /* CAUTION: The shading decomposition algorithm may allocate 
+       a smaller space when a small number of color components is in use.
+    */
 } gs_paint_color;
 
 /* General colors */
@@ -50,8 +54,12 @@ typedef struct gs_client_color_s gs_client_color;
 
 #endif
 struct gs_client_color_s {
-    gs_paint_color paint;	/* also color for uncolored pattern */
     gs_pattern_instance_t *pattern;
+    gs_paint_color paint;	/* also color for uncolored pattern */
+    /* CAUTION: gs_paint_color structure must be the last field in 
+       gs_client_color_s to allow allocating a smaller space when 
+       a small number of color components is in use.
+    */
 };
 
 extern_st(st_client_color);

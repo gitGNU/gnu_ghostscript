@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/*$Id: gstext.h,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/*$Id: gstext.h,v 1.6 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Driver interface for text */
 
 #ifndef gstext_INCLUDED
@@ -117,11 +117,14 @@ typedef struct gs_text_params_s {
 	gs_char s_char;		/* ADD_TO_SPACE_WIDTH & !FROM_GLYPHS */
 	gs_glyph s_glyph;	/* ADD_TO_SPACE_WIDTH & FROM_GLYPHS */
     } space;
-    /* If x_widths == y_widths, widths are taken in pairs. */
-    /* Either one may be NULL, meaning widths = 0. */
+    /*
+     * If x_widths == y_widths, widths are taken in pairs; note that in this
+     * case, widths_size is the number of widths, not the number of pairs.
+     * Either one may be NULL, meaning widths = 0.
+     */
     const float *x_widths;	/* REPLACE_WIDTHS */
     const float *y_widths;	/* REPLACE_WIDTHS */
-    uint widths_size;		/****** PROBABLY NOT NEEDED ******/
+    uint widths_size;		/* REPLACE_WIDTHS */
 } gs_text_params_t;
 
 #define st_gs_text_params_max_ptrs 3
@@ -239,6 +242,12 @@ gs_show_begin(gs_state *, const byte *, uint,
     gs_charboxpath_begin(gs_state *, const byte *, uint, bool,
 			 gs_memory_t *, gs_text_enum_t **);
 
+/* Compute the number of characters in a text. */
+int gs_text_size(gs_state * pgs, gs_text_params_t *text, gs_memory_t * mem);
+/* Retrieve text params from enumerator. */
+gs_text_params_t *gs_get_text_params(gs_text_enum_t *pte);
+
+
 /*
  * Restart text processing with new parameters.
  */
@@ -321,5 +330,8 @@ int gs_text_retry(gs_text_enum_t *pte);
 
 /* Release the text processing structures. */
 void gs_text_release(gs_text_enum_t *pte, client_name_t cname);
+
+/* Compute the number of characters in a text. */
+int gs_text_count_chars(gs_state * pgs, gs_text_params_t *text, gs_memory_t * mem);
 
 #endif /* gstext_INCLUDED */

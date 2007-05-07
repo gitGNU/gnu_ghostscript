@@ -1,5 +1,5 @@
 @echo off 
-@rem $Id: ps2ps.bat,v 1.4 2006/06/16 12:55:13 Arabidopsis Exp $
+@rem $Id: ps2ps.bat,v 1.5 2007/05/07 11:22:07 Arabidopsis Exp $
 @rem "Distill" PostScript.
 
 if %1/==/ goto usage

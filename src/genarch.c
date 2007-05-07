@@ -1,4 +1,5 @@
-/* Copyright (C) 1989-2004 artofcode LLC. All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: genarch.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: genarch.c,v 1.8 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /*
  * Generate a header file (arch.h) with parameters
  * reflecting the machine architecture and compiler characteristics.
@@ -165,7 +166,11 @@ main(int argc, char *argv[])
     define_int(f, "ARCH_LOG2_SIZEOF_SHORT", ilog2(size_of(short)));
     define_int(f, "ARCH_LOG2_SIZEOF_INT", ilog2(size_of(int)));
     define_int(f, "ARCH_LOG2_SIZEOF_LONG", ilog2(size_of(long)));
-#ifdef HAVE_LONG_LONG
+#ifndef _MSC_VER
+    /* MSVC does not provide 'long long' but we need this on some archs
+       to define a 64 bit type. A corresponding #ifdef in stdint_.h handles
+       that case for MSVC. Most other platforms do support long long if
+       they have a 64 bit type at all */
     define_int(f, "ARCH_LOG2_SIZEOF_LONG_LONG", ilog2(size_of(long long)));
 #endif
     define_int(f, "ARCH_SIZEOF_GX_COLOR_INDEX", sizeof(GX_COLOR_INDEX_TYPE));

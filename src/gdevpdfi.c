@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfi.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gdevpdfi.c,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Image handling for PDF-writing driver */
 #include "memory_.h"
 #include "math_.h"
@@ -249,19 +249,15 @@ make_device_color_space(gx_device_pdf *pdev,
     gs_color_space *cs;
     gs_memory_t *mem = pdev->v_memory;
 
-    cs = gs_alloc_struct(mem, gs_color_space, &st_color_space, 
-			    "psdf_setup_image_colors_filter");
-    if (cs == NULL)
-	return_error(gs_error_VMerror);
     switch (output_cspace_index) {
 	case gs_color_space_index_DeviceGray:
-	    gs_cspace_init_DeviceGray(mem, cs);
+	    cs = gs_cspace_new_DeviceGray(mem);
 	    break;
 	case gs_color_space_index_DeviceRGB:
-	    gs_cspace_init_DeviceRGB(mem, cs); 
+	    cs = gs_cspace_new_DeviceRGB(mem); 
 	    break;
 	case gs_color_space_index_DeviceCMYK:
-	    gs_cspace_init_DeviceCMYK(mem, cs); 
+	    cs = gs_cspace_new_DeviceCMYK(mem); 
 	    break;
 	default:
 	    /* Notify the user and terminate.
@@ -271,6 +267,8 @@ make_device_color_space(gx_device_pdf *pdev,
 	    eprintf("Unsupported ProcessColorModel");
 	    return_error(gs_error_undefined);
     }
+    if (cs == NULL)
+	return_error(gs_error_VMerror);
     *ppcs = cs;
     return 0;
 }
@@ -281,7 +279,7 @@ check_image_color_space(gs_pixel_image_t * pim, gs_color_space_index index)
     if (pim->ColorSpace->type->index == index)
 	return true;
     if (pim->ColorSpace->type->index == gs_color_space_index_Indexed)
-	if (pim->ColorSpace->params.indexed.base_space.type->index == index)
+	if (pim->ColorSpace->base_space->type->index == index)
 	    return true;
     return false;
 }
@@ -311,7 +309,6 @@ pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
     pdf_image_enum *pie;
     gs_image_format_t format;
     const gs_color_space *pcs;
-    gs_color_space cs_gray_temp;
     cos_value_t cs_value;
     int num_components;
     bool is_mask = false, in_line = false;
@@ -333,7 +330,7 @@ pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
     const pdf_color_space_names_t *names;
     bool convert_to_process_colors = false;
     gs_color_space *pcs_device = NULL;
-    const gs_color_space *pcs_orig = NULL;
+    gs_color_space *pcs_orig = NULL;
     pdf_lcvd_t *cvd = NULL;
 
     /*
@@ -389,6 +386,15 @@ pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
 		       prect->q.y == pim3->Height))
 	    goto nyi;
 	if (pdev->CompatibilityLevel < 1.3 && !pdev->PatternImagemask) {
+	    if (pdf_must_put_clip_path(pdev, pcpath))
+		code = pdf_unclip(pdev);
+	    else 
+		code = pdf_open_page(pdev, PDF_IN_STREAM);
+	    if (code < 0)
+		return code;
+	    code = pdf_put_clip_path(pdev, pcpath);
+	    if (code < 0)
+		return code;
 	    gs_make_identity(&m);
 	    pmat1 = &m;
 	    m.tx = floor(pis->ctm.tx + 0.5); /* Round the origin against the image size distorsions */
@@ -459,6 +465,7 @@ pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
 	    code = gs_gsave(pgs);
 	    if (code < 0)
 		return code;
+	    /* {csrc}: const cast warning */
 	    code = gs_setcolorspace(pgs, ((const gs_image4_t *)pic)->ColorSpace);
 	    if (code < 0)
 		return code;
@@ -477,6 +484,15 @@ pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
 	    gs_matrix m, m1, mi;
 	    gs_image4_t pi4 = *(const gs_image4_t *)pic;
 
+	    if (pdf_must_put_clip_path(pdev, pcpath))
+		code = pdf_unclip(pdev);
+	    else 
+		code = pdf_open_page(pdev, PDF_IN_STREAM);
+	    if (code < 0)
+		return code;
+	    code = pdf_put_clip_path(pdev, pcpath);
+	    if (code < 0)
+		return code;
 	    gs_make_identity(&m1);
 	    gs_matrix_invert(&pic->ImageMatrix, &mi);
 	    gs_matrix_multiply(&mi, &ctm_only(pis), &m);
@@ -537,17 +553,14 @@ pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
 	 * color space, which pdf_color_space() can't handle.  Patch it
 	 * to DeviceGray here.
 	 */
-	gs_cspace_init_DeviceGray(pdev->memory, &cs_gray_temp);
-	pcs = &cs_gray_temp;
+	/* {csrc} make sure this gets freed */
+	pcs = gs_cspace_new_DeviceGray(pdev->memory);
     } else if (is_mask)
 	code = pdf_prepare_imagemask(pdev, pis, pdcolor);
     else
 	code = pdf_prepare_image(pdev, pis);
     if (code < 0)
 	goto nyi;
-    code = pdf_put_clip_path(pdev, pcpath);
-    if (code < 0)
-	return code;
     if (prect)
 	rect = *prect;
     else {
@@ -616,10 +629,16 @@ pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
 	    goto nyi;
 	}
     }
+    code = pdf_put_clip_path(pdev, pcpath);
+    if (code < 0)
+	return code;
     pdf_image_writer_init(&pie->writer);
     pie->writer.alt_writer_count = (in_line || 
 				    (pim->Width <= 64 && pim->Height <= 64) ||
 				    pdev->transfer_not_identity ? 1 : 2);
+    if (image[0].pixel.ColorSpace != NULL &&
+	image[0].pixel.ColorSpace->type->index == gs_color_space_index_Indexed)
+	pie->writer.alt_writer_count = 1;
     image[1] = image[0];
     names = (in_line ? &pdf_color_space_names_short : &pdf_color_space_names);
     if (!is_mask) {
@@ -777,7 +796,7 @@ pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
 	   1 means no alternative streams.
 	   2 means the main image stream and a mask stream while converting 
 		   an Image Type 4.
-	   3 means the main image steram, alternative image compression stream, 
+	   3 means the main image stream, alternative image compression stream, 
 		   and the compression chooser.
 	   4 meams 3 and a mask stream while convertingh an Image Type 4.
          */
@@ -1190,7 +1209,7 @@ pdf_image3_make_mcde(gx_device *dev, const gs_imager_state *pis,
 	cvd->mdev.mapped_y = origin->y;
 	*pmcdev = (gx_device *)&cvd->mdev;
 	code = gx_default_begin_typed_image
-	    ((gx_device *)&cvd->mdev, pis, pmat, pic, prect, pdcolor, pcpath, mem,
+	    ((gx_device *)&cvd->mdev, pis, pmat, pic, prect, pdcolor, NULL, mem,
 	    pinfo);
     } else {
 	code = pdf_make_mxd(pmcdev, midev, mem);
@@ -1374,6 +1393,8 @@ gdev_pdf_pattern_manage(gx_device *pdev1, gx_bitmap_id id,
 		return code;
 	    return 1;
 	case pattern_manage__shading_area:
+	    return 0;
+	case pattern_manage__is_cpath_accum:
 	    return 0;
     }
     return_error(gs_error_unregistered);

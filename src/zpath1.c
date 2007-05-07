@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zpath1.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zpath1.c,v 1.5 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* PostScript Level 1 additional path operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -146,7 +146,7 @@ zclippath(i_ctx_t *i_ctx_p)
 
 /* <bool> .pathbbox <llx> <lly> <urx> <ury> */
 private int
-zpathbbox(i_ctx_t *i_ctx_p)
+z1pathbbox(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
     gs_rect box;
@@ -162,6 +162,26 @@ zpathbbox(i_ctx_t *i_ctx_p)
     make_real(op - 1, box.q.x);
     make_real(op, box.q.y);
     return 0;
+}
+
+/*
+ * In order to match Adobe output on a Genoa test, pathbbox must be an
+ * operator, not an operator procedure, even though it has a trivial
+ * definition as a procedure.
+ */
+private int
+zpathbbox(i_ctx_t *i_ctx_p)
+{
+    os_ptr op = osp;
+    int code;
+
+    push(1);
+    make_false(op);
+    code = z1pathbbox(i_ctx_p);
+    if (code < 0) {
+	pop(1);			/* remove the Boolean */
+    }
+    return code;
 }
 
 /* <moveproc> <lineproc> <curveproc> <closeproc> pathforall - */
@@ -275,7 +295,8 @@ const op_def zpath1_op_defs[] =
     {"4pathforall", zpathforall},
     {"0reversepath", zreversepath},
     {"0strokepath", zstrokepath},
-    {"1.pathbbox", zpathbbox},
+    {"1.pathbbox", z1pathbbox},
+    {"0pathbbox", zpathbbox},
 		/* Internal operators */
     {"0%path_continue", path_continue},
     op_def_end(0)

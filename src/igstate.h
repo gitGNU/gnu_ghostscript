@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: igstate.h,v 1.5 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: igstate.h,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Interpreter graphics state definition */
 
 #ifndef igstate_INCLUDED
@@ -118,7 +118,7 @@ typedef struct int_remap_color_info_s int_remap_color_info_t;
 #endif
 
 typedef struct int_gstate_s {
-    ref dash_pattern;		/* (array) */
+    ref dash_pattern_array;	/* (array) */
     /* Screen_procs are only relevant if setscreen was */
     /* executed more recently than sethalftone */
     /* (for this graphics context). */

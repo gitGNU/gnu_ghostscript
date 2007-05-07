@@ -1,4 +1,5 @@
-/* Copyright (C) 2001 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gp_msprn.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_msprn.c,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* %printer% IODevice */
 
 #include "windows_.h"
@@ -52,11 +53,10 @@
  * This is implemented by returning the file pointer
  * for the write end of a pipe, and starting a thread
  * which reads the pipe and writes to a Windows printer.
- * This will not work in Win32s.
  *
  * The old method provided by gp_open_printer()
  *  -sOutputFile="\\spool\HP DeskJet 500"
- * should not be used except on Win32s.
+ * should not be used.
  * The "\\spool\" is not a UNC name and causes confusion.
  */
 

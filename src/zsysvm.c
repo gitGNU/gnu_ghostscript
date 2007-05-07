@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 1995, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zsysvm.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zsysvm.c,v 1.5 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* System VM and VM-specific operators */
 #include "ghost.h"
 #include "oper.h"
@@ -130,6 +130,30 @@ zsystemvmstring(i_ctx_t *i_ctx_p)
     return specific_vm_op(i_ctx_p, zstring, avm_system);
 }
 
+/* <name_string> <access_string> .systemvmfile <file> */
+private int
+zsystemvmfile(i_ctx_t *i_ctx_p)
+{
+    return specific_vm_op(i_ctx_p, zfile, avm_system);
+}
+
+/* <string> .systemvmlibfile <file> true */
+/* <string> .systemvmlibfile <string> false */
+private int
+zsystemvmlibfile(i_ctx_t *i_ctx_p)
+{
+    return specific_vm_op(i_ctx_p, zlibfile, avm_system);
+}
+
+/* <source> <EODcount> <EODstring> .systemvmSFD <file> */
+/* <source> <dict> <EODcount> <EODstring> .systemvmSFD <file> */
+/* <source> <dict> .systemvmSFD <file> *//* (LL3 only) */
+private int
+zsystemvmSFD(i_ctx_t *i_ctx_p)
+{
+    return specific_vm_op(i_ctx_p, zSFD, avm_system);
+}
+
 /* <any> .systemvmcheck <bool> */
 private int
 zsystemvmcheck(i_ctx_t *i_ctx_p)
@@ -157,5 +181,8 @@ const op_def zsysvm_op_defs[] =
     {"1.systemvmdict", zsystemvmdict},
     {"1.systemvmpackedarray", zsystemvmpackedarray},
     {"1.systemvmstring", zsystemvmstring},
+    {"1.systemvmfile", zsystemvmfile},
+    {"1.systemvmlibfile", zsystemvmlibfile},
+    {"2.systemvmSFD", zsystemvmSFD},
     op_def_end(0)
 };

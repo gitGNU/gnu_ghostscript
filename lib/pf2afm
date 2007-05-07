@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: pf2afm,v 1.3 2006/03/02 22:26:14 Arabidopsis Exp $
+# $Id: pf2afm,v 1.4 2007/05/07 11:22:07 Arabidopsis Exp $
 # Make an AFM file from PFB / PFA and (optionally) PFM files.  Usage:
 #	pf2afm fontfilename
 # Output goes to fontfilename.afm, which must not already exist.

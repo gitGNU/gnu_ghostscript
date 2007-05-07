@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 1995, 1996, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsimage.h,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gsimage.h,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Generic image rendering interface */
 /* Requires gsstate.h */
 
@@ -136,6 +137,15 @@ gs_image_enum *gs_image_enum_alloc(gs_memory_t *, client_name_t);
 #  define gx_device_DEFINED
 typedef struct gx_device_s gx_device;
 #endif
+#ifndef gx_device_color_DEFINED
+#  define gx_device_color_DEFINED
+typedef struct gx_device_color_s gx_device_color;
+#endif
+
+/* Initialize the common part of the image class */
+int gs_image_common_init(gs_image_enum * penum,
+			 gx_image_enum_common_t * pie,
+			 const gs_data_image_t * pim, gx_device * dev);
 
 /* Initialize an enumerator for an ImageType 1 image. */
 int gs_image_init(gs_image_enum * penum, const gs_image_t * pim,
@@ -190,9 +200,9 @@ int gs_image_next(gs_image_enum * penum, const byte * dbytes,
 		  uint dsize, uint * pused);
 
 /* Clean up after processing an image. */
-int gs_image_cleanup(gs_image_enum * penum);
+int gs_image_cleanup(gs_image_enum * penum, gs_state *pgs);
 
 /* Clean up after processing an image and free the enumerator. */
-int gs_image_cleanup_and_free_enum(gs_image_enum * penum);
+int gs_image_cleanup_and_free_enum(gs_image_enum * penum, gs_state *pgs);
 
 #endif /* gsimage_INCLUDED */

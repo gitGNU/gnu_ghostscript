@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 1996, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: opextern.h,v 1.5 2006/02/20 19:52:05 jemarch Exp $ */
+/* $Id: opextern.h,v 1.6 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Externally accessible operator declarations */
 
 #ifndef opextern_INCLUDED
@@ -45,6 +45,7 @@ int zif(i_ctx_t *);
 int zifelse(i_ctx_t *);
 int zindex(i_ctx_t *);
 int zpop(i_ctx_t *);
+int zrepeat(i_ctx_t *);
 int zroll(i_ctx_t *);
 int zsub(i_ctx_t *);
 /* Internal entry points for the interpreter. */
@@ -82,6 +83,9 @@ int zarray(i_ctx_t *);
 int zdict(i_ctx_t *);
 int zpackedarray(i_ctx_t *);
 int zstring(i_ctx_t *);
+int zfile(i_ctx_t *);
+int zlibfile(i_ctx_t *);
+int zSFD(i_ctx_t *);
 
 /* Operators exported for user path decoding. */
 /* Note that only operators defined in all configurations are declared here. */
@@ -113,11 +117,6 @@ int zln(i_ctx_t *);
 int zlog(i_ctx_t *);
 int zsin(i_ctx_t *);
 int zsqrt(i_ctx_t *);
-/* zjemarch.c */
-/*****************************/
-/* int zjemzero (i_ctx_t *); */
-/* int zjemzero (i_ctx_t *); */
-/*****************************/
 /* zrelbit.c: */
 int zand(i_ctx_t *);
 int zbitshift(i_ctx_t *);
@@ -136,7 +135,7 @@ int zcvr(i_ctx_t *);
 
 /* Operators exported for CIE cache loading. */
 int zcvx(i_ctx_t *);
-int zexec(i_ctx_t *);		/* also for .runexec */
+int zexec(i_ctx_t *);		/* also for .runexec and .errorexec */
 int zfor(i_ctx_t *);
 
 /* Odds and ends */

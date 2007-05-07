@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-#    Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
+#    Copyright (C) 2002-2006 Aladdin Enterprises.  All rights reserved.
 # 
 # This file is part of GNU ghostscript
 #
@@ -19,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: check_source.py,v 1.6 2006/06/16 12:55:32 Arabidopsis Exp $
+# $Id: check_source.py,v 1.7 2007/05/07 11:22:21 Arabidopsis Exp $
 
 # Check basic hygiene of source code.
 
@@ -127,7 +127,7 @@ class GSCheckDoubleInclusion(GSTestCase):
 
 gsSourceSets = [
     ('doc', ['*'], ['Changes.htm', 'gsdoc.el', 'FTL.txt']),
-    ('lib', ['eps', 'ps'], []),
+    ('lib', ['eps', 'ps'], ['jobseparator.ps']),
     ('man', ['*'], []),
     ('src', ['c', 'cpp', 'h', 'mak'], []),
     ('toolbin', ['*'], ['pre.chk'])

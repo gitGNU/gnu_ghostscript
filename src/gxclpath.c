@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/*$Id: gxclpath.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/*$Id: gxclpath.c,v 1.8 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Higher-level path operations for band lists */
 #include "math_.h"
 #include "memory_.h"
@@ -533,8 +533,7 @@ cmd_write_unknown(gx_device_clist_writer * cldev, gx_clist_state * pcls,
 	    const gs_color_space *pcs = cldev->color_space.space;
 	    int hival = pcs->params.indexed.hival;
 	    uint num_values = (hival + 1) *
-		gs_color_space_num_components(
-		    (const gs_color_space *)&pcs->params.indexed.base_space);
+		gs_color_space_num_components(pcs->base_space);
 	    bool use_proc = cldev->color_space.byte1 & 4;
 	    const void *map_data;
 	    uint map_size;

@@ -1,4 +1,5 @@
-/* Copyright (C) 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxiscale.c,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gxiscale.c,v 1.7 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Interpolated image procedures */
 #include "gx.h"
 #include "math_.h"
@@ -215,21 +215,27 @@ image_render_interpolate(gx_image_enum * penum, const byte * buffer,
 	    const byte *pdata = bdata;
 	    frac *psrc = (frac *) penum->line;
 	    gs_client_color cc;
-	    int i;
+	    int i, j;
+            int dpd = dc * (bps <= 8 ? 1 : sizeof(frac));
 
+            if (penum->matrix.xx < 0) {
+              pdata += (pss->params.WidthIn - 1) * dpd;
+              dpd = - dpd;
+            }
 	    r.ptr = (byte *) psrc - 1;
 	    if_debug0('B', "[B]Concrete row:\n[B]");
 	    for (i = 0; i < pss->params.WidthIn; i++, psrc += c) {
-		int j;
-
-		if (bps <= 8)
-		    for (j = 0; j < dc; ++pdata, ++j) {
-			decode_sample(*pdata, cc, j);
-		} else		/* bps == 12 */
-		    for (j = 0; j < dc; pdata += sizeof(frac), ++j) {
-			decode_frac(*(const frac *)pdata, cc, j);
+		if (bps <= 8) {
+		    for (j = 0; j < dc;  ++j) {
+			decode_sample(pdata[j], cc, j);
+                    }
+		} else {	/* bps == 12 */
+		    for (j = 0; j < dc;  ++j) {
+			decode_frac(((const frac *)pdata)[j], cc, j);
 		    }
-		(*pcs->type->concretize_color) (&cc, pcs, psrc, pis);
+                }
+		pdata += dpd;
+                (*pcs->type->concretize_color) (&cc, pcs, psrc, pis);
 #ifdef DEBUG
 		if (gs_debug_c('B')) {
 		    int ci;

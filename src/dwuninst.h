@@ -1,4 +1,5 @@
-/* Copyright (C) 1999, Ghostgum Software Pty Ltd.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,8 +17,7 @@
 
 */
 
-
-// $Id: dwuninst.h,v 1.4 2005/12/13 16:57:18 jemarch Exp $
+// $Id: dwuninst.h,v 1.5 2007/05/07 11:21:47 Arabidopsis Exp $
 
 #ifndef dwuninst_INCLUDED
 #  define dwuninst_INCLUDED

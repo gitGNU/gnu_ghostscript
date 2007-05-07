@@ -1,4 +1,5 @@
-/* Copyright (C) 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: idosave.h,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: idosave.h,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Supporting procedures for 'save' recording. */
 
 #ifndef idosave_INCLUDED
@@ -39,11 +39,9 @@ int alloc_save_change(gs_dual_memory_t *dmem, const ref *pcont,
 		      ref_packed *ptr, client_name_t cname);
 int alloc_save_change_in(gs_ref_memory_t *mem, const ref *pcont,
 			 ref_packed *ptr, client_name_t cname);
-#if NO_INVISIBLE_LEVELS
 /* Remove an AC_OFFSET_ALLOCATED element. */
 void alloc_save_remove(gs_ref_memory_t *mem, ref_packed *obj, client_name_t cname);
 /* Allocate a structure for recording an allocation event. */
 int alloc_save_change_alloc(gs_ref_memory_t *mem, client_name_t cname, ref_packed ***ppr);
-#endif
 
 #endif /* idosave_INCLUDED */

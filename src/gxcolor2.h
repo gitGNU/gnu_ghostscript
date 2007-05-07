@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxcolor2.h,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxcolor2.h,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Internal definitions for Level 2 color routines */
 /* Requires gsstruct.h, gxfixed.h */
 
@@ -33,7 +33,7 @@
 struct gs_indexed_map_s {
     rc_header rc;
     union {
-	int (*lookup_index)(const gs_indexed_params *, int, float *);
+	int (*lookup_index)(const gs_color_space *, int, float *);
 	int (*tint_transform)(const gs_separation_params *, floatp, float *);
     } proc;
     void *proc_data;
@@ -45,7 +45,7 @@ struct gs_indexed_map_s {
     indexed_map_enum_ptrs, indexed_map_reloc_ptrs, proc_data, values)
 
 /* Define a lookup_index procedure that just returns the map values. */
-int lookup_indexed_map(const gs_indexed_params *, int, float *);
+int lookup_indexed_map(const gs_color_space *, int, float *);
 
 /* Allocate an indexed map and its values. */
 /* The initial reference count is 1. */

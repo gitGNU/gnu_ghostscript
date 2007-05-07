@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: interp.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: interp.c,v 1.7 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Ghostscript language interpreter */
 #include "memory_.h"
 #include "string_.h"
@@ -137,9 +137,14 @@ private int estack_underflow(i_ctx_t *);
 private int interp(i_ctx_t **, const ref *, ref *);
 private int interp_exit(i_ctx_t *);
 private void set_gc_signal(i_ctx_t *, int *, int);
-private int copy_stack(i_ctx_t *, const ref_stack_t *, ref *);
+private int copy_stack(i_ctx_t *, const ref_stack_t *, int skip, ref *);
 private int oparray_pop(i_ctx_t *);
 private int oparray_cleanup(i_ctx_t *);
+private int zerrorexec(i_ctx_t *);
+private int zfinderrorobject(i_ctx_t *);
+private int errorexec_find(i_ctx_t *, ref *);
+private int errorexec_pop(i_ctx_t *);
+private int errorexec_cleanup(i_ctx_t *);
 private int zsetstackprotect(i_ctx_t *);
 private int zcurrentstackprotect(i_ctx_t *);
 
@@ -246,20 +251,16 @@ const int gs_interp_num_special_ops = num_special_ops;	/* for iinit.c */
 const int tx_next_index = tx_next_op;
 
 /*
- * Define the interpreter operators, which include the extended-type
- * operators defined in the list above.  NOTE: if the size of this table
- * ever exceeds 15 real entries, it will have to be split.
+ * NOTE: if the size of either table below ever exceeds 15 real entries, it
+ * will have to be split.
  */
-const op_def interp_op_defs[] = {
+/* Define the extended-type operators per the list above. */
+const op_def interp1_op_defs[] = {
     /*
      * The very first entry, which corresponds to operator index 0,
      * must not contain an actual operator.
      */
     op_def_begin_dict("systemdict"),
-    /*
-     * The next entries must be the extended-type operators, in the
-     * correct order.
-     */
     {"2add", zadd},
     {"2def", zdef},
     {"1dup", zdup},
@@ -270,13 +271,17 @@ const op_def interp_op_defs[] = {
     {"1pop", zpop},
     {"2roll", zroll},
     {"2sub", zsub},
-    /*
-     * The remaining entries are internal operators.
-     */
+    op_def_end(0)
+};
+/* Define the internal interpreter operators. */
+const op_def interp2_op_defs[] = {
     {"0.currentstackprotect", zcurrentstackprotect},
     {"1.setstackprotect", zsetstackprotect},
+    {"2.errorexec", zerrorexec},
+    {"0.finderrorobject", zfinderrorobject},
     {"0%interp_exit", interp_exit},
     {"0%oparray_pop", oparray_pop},
+    {"0%errorexec_pop", errorexec_pop},
     op_def_end(0)
 };
 
@@ -399,7 +404,7 @@ gs_interp_make_oper(ref * opref, op_proc_t proc, int idx)
 {
     int i;
 
-    for (i = num_special_ops; i > 0 && proc != interp_op_defs[i].proc; --i)
+    for (i = num_special_ops; i > 0 && proc != interp1_op_defs[i].proc; --i)
 	DO_NOTHING;
     if (i > 0)
 	make_tasv(opref, tx_op + (i - 1), a_executable, i, opproc, proc);
@@ -490,6 +495,10 @@ again:
     }
     code = interp(pi_ctx_p, epref, perror_object);
     i_ctx_p = *pi_ctx_p;
+    if (!r_has_type(&i_ctx_p->error_object, t__invalid)) {
+	*perror_object = i_ctx_p->error_object;
+	make_t(&i_ctx_p->error_object, t__invalid);
+    }
     /* Prevent a dangling reference to the GC signal in ticks_left */
     /* in the frame of interp, but be prepared to do a GC if */
     /* an allocation in this routine asks for it. */
@@ -526,9 +535,7 @@ again:
 	    epref = &doref;
 	    goto again;
 	case e_NeedInput:
-	case e_NeedStdin:
-	case e_NeedStdout:
-	case e_NeedStderr:
+	case e_interrupt:
 	    return code;
     }
     /* Adjust osp in case of operand stack underflow */
@@ -548,7 +555,8 @@ again:
 		if ((ccode = ref_stack_extend(&o_stack, 1)) < 0)
 		    return ccode;
 	    }
-	    ccode = copy_stack(i_ctx_p, &d_stack, &saref);
+            /* Skip system dictionaries for CET 20-02-02 */
+	    ccode = copy_stack(i_ctx_p, &d_stack, min_dstack_size, &saref);
 	    if (ccode < 0)
 		return ccode;
 	    ref_stack_pop_to(&d_stack, min_dstack_size);
@@ -572,7 +580,7 @@ again:
 		if ((ccode = ref_stack_extend(&o_stack, 1)) < 0)
 		    return ccode;
 	    }
-	    ccode = copy_stack(i_ctx_p, &e_stack, &saref);
+	    ccode = copy_stack(i_ctx_p, &e_stack, 0, &saref);
 	    if (ccode < 0)
 		return ccode;
 	    {
@@ -612,7 +620,7 @@ again:
 		epref = &doref;
 		goto again;
 	    }
-	    ccode = copy_stack(i_ctx_p, &o_stack, &saref);
+	    ccode = copy_stack(i_ctx_p, &o_stack, 0, &saref);
 	    if (ccode < 0)
 		return ccode;
 	    ref_stack_clear(&o_stack);
@@ -630,15 +638,24 @@ again:
 	return code;
     if (gs_errorname(i_ctx_p, code, &error_name) < 0)
 	return code;		/* out-of-range error code! */
+    /*
+     * For greater Adobe compatibility, only the standard PostScript errors
+     * are defined in errordict; the rest are in gserrordict.
+     */
     if (dict_find_string(systemdict, "errordict", &perrordict) <= 0 ||
-	dict_find(perrordict, &error_name, &epref) <= 0
+	(dict_find(perrordict, &error_name, &epref) <= 0 &&
+	 (dict_find_string(systemdict, "gserrordict", &perrordict) <= 0 ||
+	  dict_find(perrordict, &error_name, &epref) <= 0))
 	)
 	return code;		/* error name not in errordict??? */
     doref = *epref;
     epref = &doref;
     /* Push the error object on the operand stack if appropriate. */
-    if (!ERROR_IS_INTERRUPT(code))
+    if (!ERROR_IS_INTERRUPT(code)) {
+	/* Replace the error object if within an oparray or .errorexec. */
 	*++osp = *perror_object;
+	errorexec_find(i_ctx_p, osp);
+    }
     goto again;
 }
 private int
@@ -675,9 +692,9 @@ set_gc_signal(i_ctx_t *i_ctx_p, int *psignal, int value)
 
 /* Copy the contents of an overflowed stack into a (local) array. */
 private int
-copy_stack(i_ctx_t *i_ctx_p, const ref_stack_t * pstack, ref * arr)
+copy_stack(i_ctx_t *i_ctx_p, const ref_stack_t * pstack, int skip, ref * arr)
 {
-    uint size = ref_stack_count(pstack);
+    uint size = ref_stack_count(pstack) - skip;
     uint save_space = ialloc_space(idmemory);
     int code;
 
@@ -763,7 +780,8 @@ interp(i_ctx_t **pi_ctx_p /* context for execution, updated if resched */,
     int code;
     ref token;			/* token read from file or string, */
 				/* must be declared in this scope */
-    register const ref *pvalue;
+    register const ref *pvalue = 0;
+    uint opindex;		/* needed for oparrays */
     os_ptr whichp;
 
     /*
@@ -795,12 +813,25 @@ interp(i_ctx_t **pi_ctx_p /* context for execution, updated if resched */,
   { set_error(ecode); goto rwei; }
 #define return_with_code_iref()\
   { ierror.line = __LINE__; goto rweci; }
-#define return_with_error_code_op(nargs)\
-  return_with_code_iref()
 #define return_with_stackoverflow(objp)\
   { o_stack.requested = 1; return_with_error(e_stackoverflow, objp); }
 #define return_with_stackoverflow_iref()\
   { o_stack.requested = 1; return_with_error_iref(e_stackoverflow); }
+/*
+ * If control reaches the special operators (x_add, etc.) as a result of
+ * interpreting an executable name, iref points to the name, not the
+ * operator, so the name rather than the operator becomes the error object,
+ * which is wrong.  We detect and handle this case explicitly when an error
+ * occurs, so as not to slow down the non-error case.
+ */
+#define return_with_error_tx_op(err_code)\
+  { if (r_has_type(IREF, t_name)) {\
+        return_with_error(err_code, pvalue);\
+    } else {\
+        return_with_error_iref(err_code);\
+    }\
+  }
+
     int ticks_left = gs_interp_time_slice_ticks;
 
     /*
@@ -964,61 +995,63 @@ interp(i_ctx_t **pi_ctx_p /* context for execution, updated if resched */,
 	case plain_exec(tx_op_add):
 x_add:	    INCR(x_add);
 	    if ((code = zop_add(iosp)) < 0)
-		return_with_error_code_op(2);
+		return_with_error_tx_op(code);
 	    iosp--;
 	    next_either();
 	case plain_exec(tx_op_def):
 x_def:	    INCR(x_def);
 	    osp = iosp;	/* sync o_stack */
 	    if ((code = zop_def(i_ctx_p)) < 0)
-		return_with_error_code_op(2);
+		return_with_error_tx_op(code);
 	    iosp -= 2;
 	    next_either();
 	case plain_exec(tx_op_dup):
 x_dup:	    INCR(x_dup);
 	    if (iosp < osbot)
-		return_with_error_iref(e_stackunderflow);
-	    if (iosp >= ostop)
-		return_with_stackoverflow_iref();
+		return_with_error_tx_op(e_stackunderflow);
+	    if (iosp >= ostop) {
+		o_stack.requested = 1;
+                return_with_error_tx_op(e_stackoverflow);
+            }
 	    iosp++;
 	    ref_assign_inline(iosp, iosp - 1);
 	    next_either();
 	case plain_exec(tx_op_exch):
 x_exch:	    INCR(x_exch);
 	    if (iosp <= osbot)
-		return_with_error_iref(e_stackunderflow);
+		return_with_error_tx_op(e_stackunderflow);
 	    ref_assign_inline(&token, iosp);
 	    ref_assign_inline(iosp, iosp - 1);
 	    ref_assign_inline(iosp - 1, &token);
 	    next_either();
 	case plain_exec(tx_op_if):
 x_if:	    INCR(x_if);
-	    if (!r_has_type(iosp - 1, t_boolean))
-		return_with_error_iref((iosp <= osbot ?
-					e_stackunderflow : e_typecheck));
 	    if (!r_is_proc(iosp))
-		return_with_error_iref(check_proc_failed(iosp));
+		return_with_error_tx_op(check_proc_failed(iosp));
+	    if (!r_has_type(iosp - 1, t_boolean))
+		return_with_error_tx_op((iosp <= osbot ?
+					e_stackunderflow : e_typecheck));
 	    if (!iosp[-1].value.boolval) {
 		iosp -= 2;
 		next_either();
 	    }
 	    if (iesp >= estop)
-		return_with_error_iref(e_execstackoverflow);
+		return_with_error_tx_op(e_execstackoverflow);
 	    store_state_either(iesp);
 	    whichp = iosp;
 	    iosp -= 2;
 	    goto ifup;
 	case plain_exec(tx_op_ifelse):
 x_ifelse:   INCR(x_ifelse);
-	    if (!r_has_type(iosp - 2, t_boolean))
-		return_with_error_iref((iosp < osbot + 2 ?
-					e_stackunderflow : e_typecheck));
-	    if (!r_is_proc(iosp - 1))
-		return_with_error_iref(check_proc_failed(iosp - 1));
 	    if (!r_is_proc(iosp))
-		return_with_error_iref(check_proc_failed(iosp));
+		return_with_error_tx_op(check_proc_failed(iosp));
+	    if (!r_is_proc(iosp - 1))
+		return_with_error_tx_op(check_proc_failed(iosp - 1));
+	    if (!r_has_type(iosp - 2, t_boolean))
+		return_with_error_tx_op((iosp < osbot + 2 ?
+					e_stackunderflow : e_typecheck));
 	    if (iesp >= estop)
-		return_with_error_iref(e_execstackoverflow);
+		return_with_error_tx_op(e_execstackoverflow);
 	    store_state_either(iesp);
 	    whichp = (iosp[-2].value.boolval ? iosp - 1 : iosp);
 	    iosp -= 3;
@@ -1041,25 +1074,25 @@ x_ifelse:   INCR(x_ifelse);
 x_index:    INCR(x_index);
 	    osp = iosp;	/* zindex references o_stack */
 	    if ((code = zindex(i_ctx_p)) < 0)
-		return_with_error_code_op(1);
+		return_with_error_tx_op(code);
 	    next_either();
 	case plain_exec(tx_op_pop):
 x_pop:	    INCR(x_pop);
 	    if (iosp < osbot)
-		return_with_error_iref(e_stackunderflow);
+		return_with_error_tx_op(e_stackunderflow);
 	    iosp--;
 	    next_either();
 	case plain_exec(tx_op_roll):
 x_roll:	    INCR(x_roll);
 	    osp = iosp;	/* zroll references o_stack */
 	    if ((code = zroll(i_ctx_p)) < 0)
-		return_with_error_code_op(2);
+		return_with_error_tx_op(code);
 	    iosp -= 2;
 	    next_either();
 	case plain_exec(tx_op_sub):
 x_sub:	    INCR(x_sub);
 	    if ((code = zop_sub(iosp)) < 0)
-		return_with_error_code_op(2);
+		return_with_error_tx_op(code);
 	    iosp--;
 	    next_either();
 	    /* Executable types. */
@@ -1068,15 +1101,17 @@ x_sub:	    INCR(x_sub);
 	case plain_exec(t_oparray):
 	    /* Replace with the definition and go again. */
 	    INCR(exec_array);
+	    opindex = op_index(IREF);
 	    pvalue = IREF->value.const_refs;
 	  opst:		/* Prepare to call a t_oparray procedure in *pvalue. */
 	    store_state(iesp);
 	  oppr:		/* Record the stack depths in case of failure. */
-	    if (iesp >= estop - 3)
+	    if (iesp >= estop - 4)
 		return_with_error_iref(e_execstackoverflow);
-	    iesp += 4;
+	    iesp += 5;
 	    osp = iosp;		/* ref_stack_count_inline needs this */
-	    make_mark_estack(iesp - 3, es_other, oparray_cleanup);
+	    make_mark_estack(iesp - 4, es_other, oparray_cleanup);
+	    make_int(iesp - 3, opindex); /* for .errorexec effect */
 	    make_int(iesp - 2, ref_stack_count_inline(&o_stack));
 	    make_int(iesp - 1, ref_stack_count_inline(&d_stack));
 	    make_op_estack(iesp, oparray_pop);
@@ -1222,6 +1257,7 @@ remap:		    if (iesp + 2 >= estop) {
 		    goto bot;
 		case plain_exec(t_oparray):
 		    INCR(name_oparray);
+		    opindex = op_index(pvalue);
 		    pvalue = (const ref *)pvalue->value.const_refs;
 		    goto opst;
 		case plain_exec(t_operator):
@@ -1267,7 +1303,7 @@ remap:		    if (iesp + 2 >= estop) {
 		    goto top;
 	    }
 	case exec(t_file):
-	    {			/* Executable file.  Read the next token and interpret it. */
+	    {	/* Executable file.  Read the next token and interpret it. */
 		stream *s;
 		scanner_state sstate;
 
@@ -1276,9 +1312,9 @@ remap:		    if (iesp + 2 >= estop) {
 		if (iosp >= ostop)	/* check early */
 		    return_with_stackoverflow_iref();
 		osp = iosp;	/* scan_token uses ostack */
-		scanner_state_init_options(&sstate, i_ctx_p->scanner_options);
+		scanner_init_options(&sstate, IREF, i_ctx_p->scanner_options);
 	    again:
-		code = scan_token(i_ctx_p, s, &token, &sstate);
+		code = scan_token(i_ctx_p, &token, &sstate);
 		iosp = osp;	/* ditto */
 		switch (code) {
 		    case 0:	/* read a token */
@@ -1307,6 +1343,7 @@ remap:		    if (iesp + 2 >= estop) {
 			icount = 0;
 			goto top;
 		    case e_undefined:	/* //name undefined */
+			scanner_error_object(i_ctx_p, &sstate, &token);
 			return_with_error(code, &token);
 		    case scan_EOF:	/* end of file */
 			esfile_clear_cache();
@@ -1334,8 +1371,7 @@ remap:		    if (iesp + 2 >= estop) {
 			ref_assign_inline(iesp, &token);
 			esp = iesp;
 			osp = iosp;
-			code = scan_handle_refill(i_ctx_p, &token, &sstate,
-						  true, true,
+			code = scan_handle_refill(i_ctx_p, &sstate, true,
 						  ztokenexec_continue);
 		scan_cont:
 			iosp = osp;
@@ -1366,14 +1402,16 @@ remap:		    if (iesp + 2 >= estop) {
 			ref_assign_inline(iesp, &file_token);
 			esp = iesp;
 			osp = iosp;
-			code = ztoken_handle_comment(i_ctx_p, &file_token,
+			code = ztoken_handle_comment(i_ctx_p,
 						     &sstate, &token,
 						     code, true, true,
 						     ztokenexec_continue);
 		    }
 			goto scan_cont;
 		    default:	/* error */
-			return_with_code_iref();
+			ref_assign_inline(&token, IREF);
+			scanner_error_object(i_ctx_p, &sstate, &token);
+			return_with_error(code, &token);
 		}
 	    }
 	case exec(t_string):
@@ -1381,11 +1419,11 @@ remap:		    if (iesp + 2 >= estop) {
 		stream ss;
 		scanner_state sstate;
 
-		scanner_state_init_options(&sstate, SCAN_FROM_STRING);
 		s_init(&ss, NULL);
 		sread_string(&ss, IREF->value.bytes, r_size(IREF));
+		scanner_init_stream_options(&sstate, &ss, SCAN_FROM_STRING);
 		osp = iosp;	/* scan_token uses ostack */
-		code = scan_token(i_ctx_p, &ss, &token, &sstate);
+		code = scan_token(i_ctx_p, &token, &sstate);
 		iosp = osp;	/* ditto */
 		switch (code) {
 		    case 0:	/* read a token */
@@ -1418,7 +1456,9 @@ remap:		    if (iesp + 2 >= estop) {
 		    case scan_Refill:	/* error */
 			code = gs_note_error(e_syntaxerror);
 		    default:	/* error */
-			return_with_code_iref();
+			ref_assign_inline(&token, IREF);
+			scanner_error_object(i_ctx_p, &sstate, &token);
+			return_with_error(code, &token);
 		}
 	    }
 	    /* Handle packed arrays here by re-dispatching. */
@@ -1449,6 +1489,7 @@ remap:		    if (iesp + 2 >= estop) {
 			if (!op_index_is_operator(index)) {
 			    INCR(p_exec_oparray);
 			    store_state_short(iesp);
+			    opindex = index;
 			    /* Call the operator procedure. */
 			    index -= op_def_count;
 			    pvalue = (const ref *)
@@ -1692,6 +1733,12 @@ res:
     esp = iesp;
     osp = iosp;
     ref_assign_inline(perror_object, ierror.obj);
+#ifdef DEBUG
+    if (ierror.code == e_InterpreterExit) {
+	/* Do not call gs_log_error to reduce the noise. */
+	return e_InterpreterExit;
+    }
+#endif
     return gs_log_error(ierror.code, __FILE__, ierror.line);
 }
 
@@ -1699,7 +1746,7 @@ res:
 private int
 oparray_pop(i_ctx_t *i_ctx_p)
 {
-    esp -= 3;
+    esp -= 4;
     return o_pop_estack;
 }
 
@@ -1709,8 +1756,8 @@ private int
 oparray_cleanup(i_ctx_t *i_ctx_p)
 {				/* esp points just below the cleanup procedure. */
     es_ptr ep = esp;
-    uint ocount_old = (uint) ep[2].value.intval;
-    uint dcount_old = (uint) ep[3].value.intval;
+    uint ocount_old = (uint) ep[3].value.intval;
+    uint dcount_old = (uint) ep[4].value.intval;
     uint ocount = ref_stack_count(&o_stack);
     uint dcount = ref_stack_count(&d_stack);
 
@@ -1744,6 +1791,98 @@ oparray_find(i_ctx_t *i_ctx_p)
 	    )
 	    return ep;
     }
+    return 0;
+}
+
+/* <errorobj> <obj> .errorexec ... */
+/* Execute an object, substituting errorobj for the 'command' if an error */
+/* occurs during the execution.  Cf .execfile (in zfile.c). */
+private int
+zerrorexec(i_ctx_t *i_ctx_p)
+{
+    os_ptr op = osp;
+    int code;
+
+    check_op(2);
+    check_estack(4);		/* mark/cleanup, errobj, pop, obj */
+    push_mark_estack(es_other, errorexec_cleanup);
+    *++esp = op[-1];
+    push_op_estack(errorexec_pop);
+    code = zexec(i_ctx_p);
+    if (code >= 0)
+	pop(1);
+    else
+	esp -= 3;		/* undo our additions to estack */
+    return code;
+}
+
+/* - .finderrorobject <errorobj> true */
+/* - .finderrorobject false */
+/* If we are within an .errorexec or oparray, return the error object */
+/* and true, otherwise return false. */
+private int
+zfinderrorobject(i_ctx_t *i_ctx_p)
+{
+    os_ptr op = osp;
+    ref errobj;
+
+    if (errorexec_find(i_ctx_p, &errobj)) {
+	push(2);
+	op[-1] = errobj;
+	make_true(op);
+    } else {
+	push(1);
+	make_false(op);
+    }
+    return 0;
+}
+
+/*
+ * Find the innermost .errorexec or oparray.  If there is an oparray, or a
+ * .errorexec with errobj != null, store it in *perror_object and return 1,
+ * otherwise return 0;
+ */
+private int
+errorexec_find(i_ctx_t *i_ctx_p, ref *perror_object)
+{
+    long i;
+    const ref *ep;
+
+    for (i = 0; (ep = ref_stack_index(&e_stack, i)) != 0; ++i) {
+	if (r_is_estack_mark(ep)) {
+	    if (ep->value.opproc == oparray_cleanup) {
+		/* See oppr: above. */
+		uint opindex = (uint)ep[1].value.intval;
+		if (opindex == 0) /* internal operator, ignore */
+		    continue;
+		op_index_ref(opindex, perror_object);
+		return 1;
+	    }
+	    if (ep->value.opproc == oparray_no_cleanup)
+		return 0;	/* protection disabled */
+	    if (ep->value.opproc == errorexec_cleanup) {
+		if (r_has_type(ep + 1, t_null))
+		    return 0;
+		*perror_object = ep[1];	/* see .errorexec above */
+		return 1;
+	    }
+	}
+    }
+    return 0;
+}
+
+/* Pop the bookkeeping information on a normal exit from .errorexec. */
+private int
+errorexec_pop(i_ctx_t *i_ctx_p)
+{
+    esp -= 2;
+    return o_pop_estack;
+}
+
+/* Clean up when unwinding the stack on an error.  (No action needed.) */
+private int
+errorexec_cleanup(i_ctx_t *i_ctx_p)
+{
     return 0;
 }
 

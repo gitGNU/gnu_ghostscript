@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxshade1.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gxshade1.c,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Rendering for non-mesh shadings */
 #include "math_.h"
 #include "memory_.h"
@@ -106,7 +106,8 @@ Fb_fill_region(Fb_fill_state_t * pfs, const gs_fixed_rect *rect)
     curve[2].vertex.cc[0] = fp->region.q.x;   curve[2].vertex.cc[1] = fp->region.q.y;
     curve[3].vertex.cc[0] = fp->region.p.x;   curve[3].vertex.cc[1] = fp->region.q.y;
     code = patch_fill(&pfs1, curve, NULL, NULL);
-    term_patch_fill_state(&pfs1);
+    if (term_patch_fill_state(&pfs1))
+	return_error(gs_error_unregistered); /* Must not happen. */
     if (VD_TRACE_FUNCTIONAL_PATCH && vd_allowed('s'))
 	vd_release_dc;
     return code;
@@ -140,6 +141,10 @@ gs_shading_Fb_fill_rectangle(const gs_shading_t * psh0, const gs_rect * rect,
 	y[0] = max(pbox.p.y, psh->params.Domain[2]);
 	y[1] = min(pbox.q.y, psh->params.Domain[3]);
     }
+    if (x[0] > x[1] || y[0] > y[1]) {
+	/* The region is outside the shading area. */
+	return 0;
+    }
     for (xi = 0; xi < 2; ++xi)
 	for (yi = 0; yi < 2; ++yi) {
 	    float v[2];
@@ -158,9 +163,7 @@ gs_shading_Fb_fill_rectangle(const gs_shading_t * psh0, const gs_rect * rect,
 /* ---------------- Axial shading ---------------- */
 
 typedef struct A_fill_state_s {
-    shading_fill_state_common;
     const gs_shading_A_t *psh;
-    gs_rect rect;		/* bounding rectangle in user space */
     gs_point delta;
     double length;
     double t0, t1;
@@ -171,38 +174,26 @@ typedef struct A_fill_state_s {
 /* Note t0 and t1 vary over [0..1], not the Domain. */
 
 private int
-A_fill_region(A_fill_state_t * pfs, const gs_fixed_rect *rect_clip)
+A_fill_region(A_fill_state_t * pfs, patch_fill_state_t *pfs1)
 {
     const gs_shading_A_t * const psh = pfs->psh;
-    gs_function_t * const pfn = psh->params.Function;
     double x0 = psh->params.Coords[0] + pfs->delta.x * pfs->v0;
     double y0 = psh->params.Coords[1] + pfs->delta.y * pfs->v0;
     double x1 = psh->params.Coords[0] + pfs->delta.x * pfs->v1;
     double y1 = psh->params.Coords[1] + pfs->delta.y * pfs->v1;
     double h0 = pfs->u0, h1 = pfs->u1;
     patch_curve_t curve[4];
-    patch_fill_state_t pfs1;
-    int code;
 
-    memcpy(&pfs1, (shading_fill_state_t *)pfs, sizeof(shading_fill_state_t));
-    pfs1.Function = pfn;
-    code = init_patch_fill_state(&pfs1);
-    if (code < 0)
-	return code;
-    pfs1.rect = *rect_clip;
-    pfs1.maybe_self_intersecting = false;
-    gs_point_transform2fixed(&pfs->pis->ctm, x0 + pfs->delta.y * h0, y0 - pfs->delta.x * h0, &curve[0].vertex.p);
-    gs_point_transform2fixed(&pfs->pis->ctm, x1 + pfs->delta.y * h0, y1 - pfs->delta.x * h0, &curve[1].vertex.p);
-    gs_point_transform2fixed(&pfs->pis->ctm, x1 + pfs->delta.y * h1, y1 - pfs->delta.x * h1, &curve[2].vertex.p);
-    gs_point_transform2fixed(&pfs->pis->ctm, x0 + pfs->delta.y * h1, y0 - pfs->delta.x * h1, &curve[3].vertex.p);
+    gs_point_transform2fixed(&pfs1->pis->ctm, x0 + pfs->delta.y * h0, y0 - pfs->delta.x * h0, &curve[0].vertex.p);
+    gs_point_transform2fixed(&pfs1->pis->ctm, x1 + pfs->delta.y * h0, y1 - pfs->delta.x * h0, &curve[1].vertex.p);
+    gs_point_transform2fixed(&pfs1->pis->ctm, x1 + pfs->delta.y * h1, y1 - pfs->delta.x * h1, &curve[2].vertex.p);
+    gs_point_transform2fixed(&pfs1->pis->ctm, x0 + pfs->delta.y * h1, y0 - pfs->delta.x * h1, &curve[3].vertex.p);
     curve[0].vertex.cc[0] = curve[0].vertex.cc[1] = pfs->t0; /* The element cc[1] is set to a dummy value against */
     curve[1].vertex.cc[0] = curve[1].vertex.cc[1] = pfs->t1; /* interrupts while an idle priocessing in gxshade.6.c .  */
     curve[2].vertex.cc[0] = curve[2].vertex.cc[1] = pfs->t1;
     curve[3].vertex.cc[0] = curve[3].vertex.cc[1] = pfs->t0;
     make_other_poles(curve);
-    code = patch_fill(&pfs1, curve, NULL, NULL);
-    term_patch_fill_state(&pfs1);
-    return code;
+    return patch_fill(pfs1, curve, NULL, NULL);
 }
 
 private inline int
@@ -211,18 +202,25 @@ gs_shading_A_fill_rectangle_aux(const gs_shading_t * psh0, const gs_rect * rect,
 			    gx_device * dev, gs_imager_state * pis)
 {
     const gs_shading_A_t *const psh = (const gs_shading_A_t *)psh0;
+    gs_function_t * const pfn = psh->params.Function;
     gs_matrix cmat;
     gs_rect t_rect;
     A_fill_state_t state;
+    patch_fill_state_t pfs1;
     float d0 = psh->params.Domain[0], d1 = psh->params.Domain[1];
     float dd = d1 - d0;
     double t0, t1;
     gs_point dist;
-    int code = 0;
+    int code;
 
-    shade_init_fill_state((shading_fill_state_t *)&state, psh0, dev, pis);
     state.psh = psh;
-    state.rect = *rect;
+    shade_init_fill_state((shading_fill_state_t *)&pfs1, psh0, dev, pis);
+    pfs1.Function = pfn;
+    pfs1.rect = *clip_rect;
+    code = init_patch_fill_state(&pfs1);
+    if (code < 0)
+	return code;
+    pfs1.maybe_self_intersecting = false;
     /*
      * Compute the parameter range.  We construct a matrix in which
      * (0,0) corresponds to t = 0 and (0,1) corresponds to t = 1,
@@ -248,7 +246,7 @@ gs_shading_A_fill_rectangle_aux(const gs_shading_t * psh0, const gs_rect * rect,
     gs_distance_transform(state.delta.x, state.delta.y, &ctm_only(pis),
 			  &dist);
     state.length = hypot(dist.x, dist.y);	/* device space line length */
-    code = A_fill_region(&state, clip_rect);
+    code = A_fill_region(&state, &pfs1);
     if (psh->params.Extend[0] && t0 > t_rect.p.y) {
 	if (code < 0)
 	    return code;
@@ -256,7 +254,7 @@ gs_shading_A_fill_rectangle_aux(const gs_shading_t * psh0, const gs_rect * rect,
 	state.v0 = t_rect.p.y;
 	state.v1 = t0;
 	state.t0 = state.t1 = t0 * dd + d0;
-	code = A_fill_region(&state, clip_rect);
+	code = A_fill_region(&state, &pfs1);
     }
     if (psh->params.Extend[1] && t1 < t_rect.q.y) {
 	if (code < 0)
@@ -265,8 +263,10 @@ gs_shading_A_fill_rectangle_aux(const gs_shading_t * psh0, const gs_rect * rect,
 	state.v0 = t1;
 	state.v1 = t_rect.q.y;
 	state.t0 = state.t1 = t1 * dd + d0;
-	code = A_fill_region(&state, clip_rect);
+	code = A_fill_region(&state, &pfs1);
     }
+    if (term_patch_fill_state(&pfs1))
+	return_error(gs_error_unregistered); /* Must not happen. */
     return code;
 }
 
@@ -409,21 +409,31 @@ R_outer_circle(patch_fill_state_t *pfs, const gs_rect *rect,
        so it's not an exact contact, sorry. */
     if (any_abs(dx) > any_abs(dy)) {
 	/* Solving :
-	    x0 + (x1 - x0) * s - r0 - (r1 - r0) * s == bbox_x
-	    (x1 - x0) * s - (r1 - r0) * s == bbox_x - x0 + r0
-	    s = (bbox_x - x0 + r0) / (x1 - x0 - r1 + r0)
+	    x0 + (x1 - x0) * sq + r0 + (r1 - r0) * sq == bbox_px
+	    (x1 - x0) * sp + (r1 - r0) * sp == bbox_px - x0 - r0
+	    sp = (bbox_px - x0 - r0) / (x1 - x0 + r1 - r0)
+
+	    x0 + (x1 - x0) * sq - r0 - (r1 - r0) * sq == bbox_qx
+	    (x1 - x0) * sq - (r1 - r0) * sq == bbox_x - x0 + r0
+	    sq = (bbox_x - x0 + r0) / (x1 - x0 - r1 + r0)
 	 */
 	if (x1 - x0 + r1 - r0 ==  0) /* We checked for obtuse cone. */
 	    return_error(gs_error_unregistered); /* Must not happen. */
-	sp = (rect->p.x - x0 + r0) / (x1 - x0 - r1 + r0);
+	if (x1 - x0 - r1 + r0 ==  0) /* We checked for obtuse cone. */
+	    return_error(gs_error_unregistered); /* Must not happen. */
+	sp = (rect->p.x - x0 - r0) / (x1 - x0 + r1 - r0);
 	sq = (rect->q.x - x0 + r0) / (x1 - x0 - r1 + r0);
     } else {
 	/* Same by Y. */
-	sp = (rect->p.y - y0 + r0) / (y1 - y0 - r1 + r0);
+	if (y1 - y0 + r1 - r0 ==  0) /* We checked for obtuse cone. */
+	    return_error(gs_error_unregistered); /* Must not happen. */
+	if (y1 - y0 - r1 + r0 ==  0) /* We checked for obtuse cone. */
+	    return_error(gs_error_unregistered); /* Must not happen. */
+	sp = (rect->p.y - y0 - r0) / (y1 - y0 + r1 - r0);
 	sq = (rect->q.y - y0 + r0) / (y1 - y0 - r1 + r0);
     }
     if (sp >= 1 && sq >= 1)
-	s = min(sp, sq);
+	s = max(sp, sq);
     else if(sp >= 1)
 	s = sp;
     else if (sq >= 1)
@@ -463,115 +473,86 @@ R_fill_triangle_new(patch_fill_state_t *pfs, const gs_rect *rect,
     double x0, double y0, double x1, double y1, double x2, double y2, double t)
 {
     shading_vertex_t p0, p1, p2;
+    patch_color_t *c;
     int code;
+    reserve_colors(pfs, &c, 1); /* Can't fail */
 
+    p0.c = c;
+    p1.c = c;
+    p2.c = c;
     code = gs_point_transform2fixed(&pfs->pis->ctm, x0, y0, &p0.p);
-    if (code < 0)
-	return code;
-    code = gs_point_transform2fixed(&pfs->pis->ctm, x1, y1, &p1.p);
-    if (code < 0)
-	return code;
-    code = gs_point_transform2fixed(&pfs->pis->ctm, x2, y2, &p2.p);
-    if (code < 0)
-	return code;
-    p0.c.t[0] = p0.c.t[1] = t;
-    p1.c.t[0] = p1.c.t[1] = t;
-    p2.c.t[0] = p2.c.t[1] = t;
-    patch_resolve_color(&p0.c, pfs);
-    patch_resolve_color(&p1.c, pfs);
-    patch_resolve_color(&p2.c, pfs);
-    return mesh_triangle(pfs, &p0, &p1, &p2);
-}
-
-private bool 
-R_is_covered(double ax, double ay, 
-	const gs_point *p0, const gs_point *p1, const gs_point *p)
-{
-    double dx0 = p0->x - ax, dy0 = p0->y - ay;
-    double dx1 = p1->x - ax, dy1 = p1->y - ay;
-    double dx = p->x - ax, dy = p->y - ay;
-    double vp0 = dx0 * dy - dy0 * dx;
-    double vp1 = dx * dy1 - dy * dx1;
-
-    return vp0 >= 0 && vp1 >= 0;
+    if (code >= 0)
+	code = gs_point_transform2fixed(&pfs->pis->ctm, x1, y1, &p1.p);
+    if (code >= 0)
+	code = gs_point_transform2fixed(&pfs->pis->ctm, x2, y2, &p2.p);
+    if (code >= 0) {
+	c->t[0] = c->t[1] = t;
+	patch_resolve_color(c, pfs);
+	code = mesh_triangle(pfs, &p0, &p1, &p2);
+    }
+    release_colors(pfs, pfs->color_stack, 1);
+    return code;
 }
 
 private int
 R_obtuse_cone(patch_fill_state_t *pfs, const gs_rect *rect,
 	double x0, double y0, double r0, 
-	double x1, double y1, double r1, double t1, double r)
+	double x1, double y1, double r1, double t0, double r_rect)
 {
     double dx = x1 - x0, dy = y1 - y0, dr = any_abs(r1 - r0);
     double d = hypot(dx, dy);
+    /* Assuming dr > d / 3 && d > dr + 1e-7 * (d + dr), see the caller. */
+    double r = r_rect * 1.4143; /* A few bigger than sqrt(2). */
     double ax, ay, as; /* Cone apex. */
-    gs_point p0, p1; /* Tangent limits. */
-    gs_point cp[4]; /* Corners.. */
-    gs_point rp[4]; /* Covered corners.. */
-    gs_point pb;
-    int rp_count = 0, cp_start, i, code;
-    bool covered[4];
+    double g0; /* The distance from apex to the tangent point of the 0th circle. */
+    int code;
 
     as = r0 / (r0 - r1);
     ax = x0 + (x1 - x0) * as;
     ay = y0 + (y1 - y0) * as;
-
-    if (any_abs(d - dr) < 1e-7 * (d + dr)) {
+    g0 = sqrt(dx * dx + dy * dy - dr * dr) * as;
+    if (g0 < 1e-7 * r0) {
 	/* Nearly degenerate, replace with half-plane. */
+	/* Restrict the half plane with triangle, which covers the rect. */
+	gs_point p0, p1, p2; /* Right tangent limit, apex limit, left tangent linit,
+				(right, left == when looking from the apex). */
+
 	p0.x = ax - dy * r / d;
 	p0.y = ay + dx * r / d;
-	p1.x = ax + dy * r / d;
-	p1.y = ay - dx * r / d;
-    } else {
-	/* Tangent limits by proportional triangles. */
-	double da = hypot(ax - x0, ay - y0);
-	double h = r * r0 / da, g;
-
-	if (h > r)
-	    return_error(gs_error_unregistered); /* Must not happen. */
-	g = sqrt(r * r - h * h);
-	p0.x = ax - dx * g / d - dy * h / d;
-	p0.y = ay - dy * g / d + dx * h / d;
-	p1.x = ax - dx * g / d + dy * h / d;
-	p1.y = ay - dy * g / d - dx * h / d;
-    }
-    /* Now we have 2 limited tangents, and 4 corners of the rect. 
-       Need to know what corners are covered. */
-    cp[0].x = rect->p.x, cp[0].y = rect->p.y;
-    cp[1].x = rect->q.x, cp[1].y = rect->p.y;
-    cp[2].x = rect->q.x, cp[2].y = rect->q.y;
-    cp[3].x = rect->p.x, cp[3].y = rect->q.y;
-    covered[0] = R_is_covered(ax, ay, &p0, &p1, &cp[0]);
-    covered[1] = R_is_covered(ax, ay, &p0, &p1, &cp[1]);
-    covered[2] = R_is_covered(ax, ay, &p0, &p1, &cp[2]);
-    covered[3] = R_is_covered(ax, ay, &p0, &p1, &cp[3]);
-    if (!covered[0] && !covered[1] && !covered[2] && !covered[3]) {
-	return R_fill_triangle_new(pfs, rect, ax, ay, p0.x, p0.y, p1.x, p1.y, t1);
-    } 
-    if (!covered[0] && covered[1])
-	cp_start = 1;
-    else if (!covered[1] && covered[2])
-	cp_start = 2;
-    else if (!covered[2] && covered[3])
-	cp_start = 3;
-    else if (!covered[3] && covered[0])
-	cp_start = 0;
-    else {
-	/* Must not happen, handle somehow for safety. */
-	cp_start = 0;
-    }
-    for (i = cp_start; i < cp_start + 4 && covered[i % 4]; i++) {
-	rp[rp_count] = cp[i % 4];
-	rp_count++;
-    }
-    /* Do paint. */
-    pb = p0;
-    for (i = 0; i < rp_count; i++) {
-	code = R_fill_triangle_new(pfs, rect, ax, ay, pb.x, pb.y, rp[i].x, rp[i].y, t1);
+	p1.x = ax - dx * r / d;
+	p1.y = ay - dy * r / d;
+	p2.x = ax + dy * r / d;
+	p2.y = ay - dx * r / d;
+	/* Split into 2 triangles at the apex,
+	   so that the apex is preciselly covered.
+	   Especially important when it is not exactly degenerate. */
+	code = R_fill_triangle_new(pfs, rect, ax, ay, p0.x, p0.y, p1.x, p1.y, t0);
 	if (code < 0)
 	    return code;
-	pb = rp[i];
+	return R_fill_triangle_new(pfs, rect, ax, ay, p1.x, p1.y, p2.x, p2.y, t0);
+    } else {
+	/* Compute the "limit" circle so that its
+	   tangent points are outside the rect. */
+	/* Note: this branch is executed when the condition above is false :
+	   g0 >= 1e-7 * r0 .
+	   We believe that computing this branch with doubles
+	   provides enough precision after converting coordinates into 'fixed',
+	   and that the limit circle radius is not dramatically big.
+	 */
+	double es, er; /* The limit circle parameter, radius. */
+	double ex, ey; /* The limit circle centrum. */
+
+	es = as - as * r / g0; /* Always negative. */
+	er = r * r0 / g0 ;
+	ex = x0 + dx * es;
+	ey = y0 + dy * es;
+	/* Fill the annulus: */
+	code = R_tensor_annulus(pfs, rect, x0, y0, r0, t0, ex, ey, er, t0);
+	if (code < 0)
+	    return code;
+	/* Fill entire ending circle to ewnsure antire rect is covered : */
+	return R_tensor_annulus(pfs, rect, ex, ey, er, t0, ex, ey, 0, t0);
     }
-    return R_fill_triangle_new(pfs, rect, ax, ay, pb.x, pb.y, p1.x, p1.y, t1);
 }
 
 private int
@@ -693,6 +674,8 @@ gs_shading_R_fill_rectangle_aux(const gs_shading_t * psh0, const gs_rect * rect,
     gs_point dev_dr;
     patch_fill_state_t pfs1;
 
+    if (r0 == 0 && r1 == 0)
+	return 0; /* PLRM requires to paint nothing. */
     shade_init_fill_state((shading_fill_state_t *)&state, psh0, dev, pis);
     state.psh = psh;
     state.rect = *rect;
@@ -723,19 +706,19 @@ gs_shading_R_fill_rectangle_aux(const gs_shading_t * psh0, const gs_rect * rect,
     pfs1.rect = *clip_rect;
     pfs1.maybe_self_intersecting = false;
     code = R_extensions(&pfs1, psh, rect, d0, d1, psh->params.Extend[0], false);
-    if (code < 0)
-	return code;
-    {
+    if (code >= 0) {
 	float x0 = psh->params.Coords[0], y0 = psh->params.Coords[1];
 	floatp r0 = psh->params.Coords[2];
 	float x1 = psh->params.Coords[3], y1 = psh->params.Coords[4];
 	floatp r1 = psh->params.Coords[5];
 	
 	code = R_tensor_annulus(&pfs1, rect, x0, y0, r0, d0, x1, y1, r1, d1);
-	if (code < 0)
-	    return code;
     }
-    return R_extensions(&pfs1, psh, rect, d0, d1, false, psh->params.Extend[1]);
+    if (code >= 0)
+	code = R_extensions(&pfs1, psh, rect, d0, d1, false, psh->params.Extend[1]);
+    if (term_patch_fill_state(&pfs1))
+	return_error(gs_error_unregistered); /* Must not happen. */
+    return code;
 }
 
 int

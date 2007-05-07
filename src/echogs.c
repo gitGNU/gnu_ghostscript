@@ -1,5 +1,6 @@
-/* Copyright (C) 1992, 1995-2004 artofcode LLC. All rights reserved.
-
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
+  
   This file is part of GNU ghostscript
 
   GNU ghostscript is free software; you can redistribute it and/or modify it under
@@ -15,8 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-
-/* $Id: echogs.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: echogs.c,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* 'echo'-like utility */
 
 #include "stdpre.h"

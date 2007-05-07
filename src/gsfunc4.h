@@ -1,4 +1,5 @@
-/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsfunc4.h,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsfunc4.h,v 1.5 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Definitions for "PostScript Calculator" Functions */
 
 #ifndef gsfunc4_INCLUDED
@@ -28,6 +29,8 @@
 
 /* Define the Function type. */
 #define function_type_PostScript_Calculator 4
+
+#define MAX_PSC_FUNCTION_NESTING 10
 
 /* Define the opcodes. */
 typedef enum {
@@ -55,11 +58,12 @@ typedef enum {
 
     /* Special operators */
 
-    PtCr_if, PtCr_else, PtCr_return
-
+    PtCr_if, PtCr_else, PtCr_return,
+    PtCr_repeat, PtCr_repeat_end,		/* Ghostscript extension */
+    PtCr_end			/* dummy to make it easier to insert opcodes above */
 } gs_PtCr_opcode_t;
 #define PtCr_NUM_OPS ((int)PtCr_byte)
-#define PtCr_NUM_OPCODES ((int)PtCr_return + 1)
+#define PtCr_NUM_OPCODES ((int)PtCr_end + 1)
 
 /* Define PostScript Calculator functions. */
 typedef struct gs_function_PtCr_params_s {

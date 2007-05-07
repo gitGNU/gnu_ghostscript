@@ -1,4 +1,5 @@
-/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gscindex.h,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gscindex.h,v 1.5 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Client interface to Indexed color facilities */
 
 #ifndef gscindex_INCLUDED
@@ -49,7 +50,7 @@
  */
 extern int gs_cspace_build_Indexed(
 				   gs_color_space ** ppcspace,
-				   const gs_color_space * pbase_cspace,
+				   gs_color_space * pbase_cspace,
 				   uint num_entries,
 				   const gs_const_string * ptbl,
 				   gs_memory_t * pmem
@@ -69,11 +70,11 @@ extern float *gs_cspace_indexed_value_array(
 /* Set the lookup procedure to be used for an Indexed color space. */
 extern int gs_cspace_indexed_set_proc(
 				      gs_color_space * pcspace,
-				      int (*proc) (const gs_indexed_params *, int, float *)
+				      int (*proc) (const gs_color_space *, int, float *)
 				      );
 
 /* Look up an index in an Indexed color space. */
-int gs_cspace_indexed_lookup(const gs_indexed_params *, int,
+int gs_cspace_indexed_lookup(const gs_color_space *, int,
 			     gs_client_color *);
 
 #endif /* gscindex_INCLUDED */

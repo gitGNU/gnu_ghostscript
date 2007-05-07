@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: icsmap.h,v 1.4 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: icsmap.h,v 1.5 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Interface to shared routines for loading the cached color space maps. */
 
 #ifndef icsmap_INCLUDED
@@ -41,7 +41,7 @@
  */
 int zcs_begin_map(i_ctx_t *i_ctx_p, gs_indexed_map ** pmap,
 		  const ref * pproc, int num_entries,
-		  const gs_direct_color_space * base_space,
+		  const gs_color_space * base_space,
 		  op_proc_t map1);
 
 #endif /* icsmap_INCLUDED */

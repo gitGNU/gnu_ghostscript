@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-#    Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
+#    Copyright (C) 2002-2006 Aladdin Enterprises.  All rights reserved.
 # 
 # This file is part of GNU ghostscript
 #
@@ -19,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: check_docrefs.py,v 1.5 2006/03/06 11:16:03 Arabidopsis Exp $
+# $Id: check_docrefs.py,v 1.6 2007/05/07 11:22:21 Arabidopsis Exp $
 
 # Check that the hrefs in an HTML document mention all of a set of files.
 # The requirement is that the union of all the docfiles must somewhere

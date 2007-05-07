@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: ztoken.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: ztoken.c,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Token reading operators */
 #include "string_.h"
 #include "ghost.h"
@@ -39,7 +39,7 @@
 /* <string> token <post> <obj> -true- */
 /* <string|file> token -false- */
 private int ztoken_continue(i_ctx_t *);
-private int token_continue(i_ctx_t *, stream *, scanner_state *, bool);
+private int token_continue(i_ctx_t *, scanner_state *, bool);
 int
 ztoken(i_ctx_t *i_ctx_p)
 {
@@ -54,21 +54,29 @@ ztoken(i_ctx_t *i_ctx_p)
 
 	    check_read_file(s, op);
 	    check_ostack(1);
-	    scanner_state_init(&state, false);
-	    return token_continue(i_ctx_p, s, &state, true);
+	    scanner_init(&state, op);
+	    return token_continue(i_ctx_p, &state, true);
 	}
 	case t_string: {
 	    ref token;
-	    int orig_ostack_depth = ref_stack_count(&o_stack);
-	    int code = scan_string_token(i_ctx_p, op, &token);
+	    /* -1 is to remove the string operand in case of error. */
+	    int orig_ostack_depth = ref_stack_count(&o_stack) - 1;
+	    int code;
 
+	    /* Don't pop the operand in case of invalidaccess. */
+	    if (!r_has_attr(op, a_read))
+		return_error(e_invalidaccess);
+	    code = scan_string_token(i_ctx_p, op, &token);
 	    switch (code) {
 	    case scan_EOF:	/* no tokens */
 		make_false(op);
 		return 0;
 	    default:
 		if (code < 0) {
-		    /* Clear anything that may have been left on the ostack */
+		    /*
+		     * Clear anything that may have been left on the ostack,
+		     * including the string operand.
+		     */
 	    	    if (orig_ostack_depth < ref_stack_count(&o_stack))
 	    		pop(ref_stack_count(&o_stack)- orig_ostack_depth);
 		    return code;
@@ -82,45 +90,35 @@ ztoken(i_ctx_t *i_ctx_p)
     }
 }
 /* Continue reading a token after an interrupt or callout. */
-/* *op is the scanner state; op[-1] is the file. */
+/* *op is the scanner state. */
 private int
 ztoken_continue(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
-    stream *s;
     scanner_state *pstate;
 
-    check_read_file(s, op - 1);
     check_stype(*op, st_scanner_state);
     pstate = r_ptr(op, scanner_state);
-    pop(1);
-    return token_continue(i_ctx_p, s, pstate, false);
+    return token_continue(i_ctx_p, pstate, false);
 }
 /* Common code for token reading. */
 private int
-token_continue(i_ctx_t *i_ctx_p, stream * s, scanner_state * pstate,
-	       bool save)
+token_continue(i_ctx_t *i_ctx_p, scanner_state * pstate, bool save)
 {
     os_ptr op = osp;
     int code;
     ref token;
 
     /* Note that scan_token may change osp! */
-    /* Also, we must temporarily remove the file from the o-stack */
-    /* when calling scan_token, in case we are scanning a procedure. */
-    ref fref;
-
-    ref_assign(&fref, op);
+    pop(1);			/* remove the file or scanner state */
 again:
-    pop(1);
-    code = scan_token(i_ctx_p, s, &token, pstate);
+    code = scan_token(i_ctx_p, &token, pstate);
     op = osp;
     switch (code) {
 	default:		/* error */
 	    if (code > 0)	/* comment, not possible */
 		code = gs_note_error(e_syntaxerror);
-	    push(1);
-	    ref_assign(op, &fref);
+	    scanner_error_object(i_ctx_p, pstate, &i_ctx_p->error_object);
 	    break;
 	case scan_BOS:
 	    code = 0;
@@ -135,9 +133,7 @@ again:
 	    code = 0;
 	    break;
 	case scan_Refill:	/* need more data */
-	    push(1);
-	    ref_assign(op, &fref);
-	    code = scan_handle_refill(i_ctx_p, op, pstate, save, false,
+	    code = scan_handle_refill(i_ctx_p, pstate, save,
 				      ztoken_continue);
 	    switch (code) {
 		case 0:	/* state is not copied to the heap */
@@ -158,7 +154,7 @@ again:
 /* This is different from token + exec because literal procedures */
 /* are not executed (although binary object sequences ARE executed). */
 int ztokenexec_continue(i_ctx_t *);	/* export for interpreter */
-private int tokenexec_continue(i_ctx_t *, stream *, scanner_state *, bool);
+private int tokenexec_continue(i_ctx_t *, scanner_state *, bool);
 int
 ztokenexec(i_ctx_t *i_ctx_p)
 {
@@ -168,43 +164,34 @@ ztokenexec(i_ctx_t *i_ctx_p)
 
     check_read_file(s, op);
     check_estack(1);
-    scanner_state_init(&state, false);
-    return tokenexec_continue(i_ctx_p, s, &state, true);
+    scanner_init(&state, op);
+    return tokenexec_continue(i_ctx_p, &state, true);
 }
 /* Continue reading a token for execution after an interrupt or callout. */
-/* *op is the scanner state; op[-1] is the file. */
+/* *op is the scanner state. */
 /* We export this because this is how the interpreter handles a */
 /* scan_Refill for an executable file. */
 int
 ztokenexec_continue(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
-    stream *s;
     scanner_state *pstate;
 
-    check_read_file(s, op - 1);
     check_stype(*op, st_scanner_state);
     pstate = r_ptr(op, scanner_state);
-    pop(1);
-    return tokenexec_continue(i_ctx_p, s, pstate, false);
+    return tokenexec_continue(i_ctx_p, pstate, false);
 }
 /* Common code for token reading + execution. */
 private int
-tokenexec_continue(i_ctx_t *i_ctx_p, stream * s, scanner_state * pstate,
-		   bool save)
+tokenexec_continue(i_ctx_t *i_ctx_p, scanner_state * pstate, bool save)
 {
-    os_ptr op = osp;
+    os_ptr op;
     int code;
     /* Note that scan_token may change osp! */
-    /* Also, we must temporarily remove the file from the o-stack */
-    /* when calling scan_token, in case we are scanning a procedure. */
-    ref fref;
-
-    ref_assign(&fref, op);
     pop(1);
 again:
     check_estack(1);
-    code = scan_token(i_ctx_p, s, (ref *) (esp + 1), pstate);
+    code = scan_token(i_ctx_p, (ref *) (esp + 1), pstate);
     op = osp;
     switch (code) {
 	case 0:
@@ -223,7 +210,7 @@ again:
 	    code = 0;
 	    break;
 	case scan_Refill:	/* need more data */
-	    code = scan_handle_refill(i_ctx_p, &fref, pstate, save, true,
+	    code = scan_handle_refill(i_ctx_p, pstate, save,
 				      ztokenexec_continue);
 	    switch (code) {
 		case 0:	/* state is not copied to the heap */
@@ -234,14 +221,11 @@ again:
 	    break;		/* error */
 	case scan_Comment:
 	case scan_DSC_Comment:
-	    return ztoken_handle_comment(i_ctx_p, &fref, pstate, esp + 1, code,
+	    return ztoken_handle_comment(i_ctx_p, pstate, esp + 1, code,
 					 save, true, ztokenexec_continue);
 	default:		/* error */
+	    scanner_error_object(i_ctx_p, pstate, &i_ctx_p->error_object);
 	    break;
-    }
-    if (code < 0) {		/* Push the operand back on the stack. */
-	push(1);
-	ref_assign(op, &fref);
     }
     if (!save) {		/* Deallocate the scanner state record. */
 	ifree_object(pstate, "token_continue");
@@ -252,10 +236,10 @@ again:
 /*
  * Handle a scan_Comment or scan_DSC_Comment return from scan_token
  * (scan_code) by calling out to %Process[DSC]Comment.  The continuation
- * procedure expects the file and scanner state on the o-stack.
+ * procedure expects the scanner state on the o-stack.
  */
 int
-ztoken_handle_comment(i_ctx_t *i_ctx_p, const ref *fop, scanner_state *sstate,
+ztoken_handle_comment(i_ctx_t *i_ctx_p, scanner_state *sstate,
 		      const ref *ptoken, int scan_code,
 		      bool save, bool push_file, op_proc_t cont)
 {
@@ -284,8 +268,8 @@ ztoken_handle_comment(i_ctx_t *i_ctx_p, const ref *fop, scanner_state *sstate,
 	if (code < 0)
 	    return code;
     }
-    check_estack(4);
-    code = name_enter_string(imemory, proc_name, esp + 4);
+    check_estack(3);
+    code = name_enter_string(imemory, proc_name, esp + 3);
     if (code < 0)
 	return code;
     if (save) {
@@ -305,9 +289,7 @@ ztoken_handle_comment(i_ctx_t *i_ctx_p, const ref *fop, scanner_state *sstate,
      */
     make_op_estack(esp + 1, cont);
     make_istruct(esp + 2, 0, pstate);
-    esp[3] = *fop;
-    r_clear_attrs(esp + 3, a_executable);
-    ppcproc = dict_find_name(esp + 4);
+    ppcproc = dict_find_name(esp + 3);
     if (ppcproc == 0) {
 	/*
 	 * This can only happen during initialization.
@@ -315,7 +297,7 @@ ztoken_handle_comment(i_ctx_t *i_ctx_p, const ref *fop, scanner_state *sstate,
 	 */
 	if (pstate->s_pstack)
 	    --osp;
-	esp += 3;		/* do run the continuation */
+	esp += 2;		/* do run the continuation */
     } else {
 	/*
 	 * Push the file and comment string on the o-stack.
@@ -328,9 +310,9 @@ ztoken_handle_comment(i_ctx_t *i_ctx_p, const ref *fop, scanner_state *sstate,
 	    op = osp += 2;
 	    /* *op = *ptoken; */	/* saved above */
 	}
-	op[-1] = *fop;
-	esp[4] = *ppcproc;
-	esp += 4;
+	op[-1] = pstate->s_file;
+	esp[3] = *ppcproc;
+	esp += 3;
     }
     return o_push_estack;
 }

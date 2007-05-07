@@ -3,7 +3,7 @@
 <html>
 <head>
 <title>How to use Ghostscript</title>
-<!-- $Id: Use.htm,v 1.7 2006/06/16 12:55:14 Arabidopsis Exp $ -->
+<!-- $Id: Use.htm,v 1.8 2007/05/07 11:22:13 Arabidopsis Exp $ -->
 <!-- Originally: use.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -52,6 +52,7 @@
 <li><a href="#Font_lookup">Font lookup</a>
 <li><a href="#CIDFonts">CID fonts</a>
 <li><a href="#CIDFontSubstitution">CID font substitution</a>
+<li><a href="#UnicodeTT">Using Unicode True Type fonts</a>
 <li><a href="#Temp_files">Temporary files</a>
 </ul>
 
@@ -230,8 +231,6 @@ On other systems the executable may have a different name:
         <td>&nbsp;<td><b><tt>gs</tt></b>
 <tr>    <td>MS Windows 95 and later
         <td>&nbsp;<td><b><tt>gswin32c</tt></b>
-<tr>    <td>MS Windows 3.1/Win32s
-        <td>&nbsp;<td><b><tt>gswin32</tt></b>
 <tr>    <td>OS/2
         <td>&nbsp;<td><b><tt>gsos2</tt></b>
 </table></blockquote>
@@ -1218,10 +1217,17 @@ Where <b><tt>keys&amp;values</tt></b> are explained in the table below.
             The first font in a collection is 0.
             Default value is 0.
 <tr valign="top">       <td><b><tt>/CSI</tt></b>
-        <td>array of 2 elements
+        <td>array of 2 or 3 elements
         <td>(required) Information for building <b><tt>CIDSystemInfo</tt></b>.
-            The first element is a string, which specifies <b><tt>Ordering</tt></b>.
-            The second element is a number, which specifies <b><tt>Supplement</tt></b>.
+            <p>
+            If the array consists of 2 elements,
+            the first element is a string, which specifies <b><tt>Ordering</tt></b>;
+            the second element is a number, which specifies <b><tt>Supplement</tt></b>.
+            <p>
+            If the array consists of 3 elements,
+            the first element is a string, which specifies <b><tt>Registry</tt></b>;
+            the second element is a string, which specifies <b><tt>Ordering</tt></b>;
+            the third element is a number, which specifies <b><tt>Supplement</tt></b>.
 </table>
 
 <p>
@@ -1297,6 +1303,47 @@ Consequently, if you want to handle any PDF document with
 non-embedded CID fonts (which isn't a correct PDF),
 you need to create a suitable <b><tt>lib/cidfmap</tt></b> by hand,
 possibly a specific one for each document.
+
+<h3><a name="UnicodeTT"></a>Using Unicode True Type fonts</h3>
+
+Ghostscript can handle True Type fonts with the full Unicode UTF-16 character set.
+For doing that, a 3d party software should generate a Postscript
+or PDF document with a text, which is encoded with the 
+UTF16 encoding. Ghostscript may be used for converting
+such Postscript documents to PDF and for 
+re-distilling such PDF documents to PDF subsets.
+
+<p>
+To render an UTF-16 encoded text, one must do the following :
+
+<ul>
+
+<li> 
+Provide a True Type font with Unicode Encoding.
+It must have a <b><tt>cmap</tt></b> table with 
+<b><tt>platformID</tt></b> equals to 3 (Windows), 
+and <b><tt>SpecificID</tt></b> eqials to 1 (Unicode).
+
+<li> 
+Describe the font in <b><tt>lib/cidfmap</tt></b>
+with special values for the <b><tt>CSI</tt></b> key :
+<b><tt>[/Artifex /Unicode 0]</tt></b>.
+
+<li> 
+In the PS or PDF document combine the font 
+with one of CMap <b><tt>Identity-UTF16-V</tt></b>
+(for the horizontal writing mode)
+or <b><tt>Identity-UTF16-V</tt></b> 
+(for the vertical writing mode).
+Those CMaps are distributed with Ghostscript
+in <b><tt>Resource/CMap</tt></b>.
+
+</ul>
+
+Please note that <b><tt>/Registry (Adobe) /Ordering (Identity)</tt></b>
+won't properly work for Unicode documents,
+especially for the searchability feature
+(see <a href="#CIDFontSubstitution">CID font substitution</a>).
 
 <h3><a name="Temp_files"></a>Temporary files</h3>
 
@@ -1503,7 +1550,8 @@ The name of the Ghostscript command line executable on MS Windows is
 the quickstart examples.
 
 <p>
-You must add <em>gs\</em><tt>bin</tt> and
+To run the batch files in the ghostscript <tt>lib</tt> directory,
+you must add <em>gs\</em><tt>bin</tt> and
 <em>gs\</em><tt>lib</tt> to the <b><tt>PATH</tt></b>, where
 <em>gs</em> is the top-level Ghostscript directory.
 
@@ -1519,10 +1567,23 @@ Ghostscript treats '#' the same internally, and the '=' is mangled by
 the command shell.
 
 <p>
-There is also an older version for windows called just <tt>gswin32</tt>
-that provides its own window for the interactive postscript prompt. Except
-on Windows 3.1, gswin32c is the better option since it uses the
-native command prompt window.
+There is also an older version for MS Windows called just <tt>gswin32</tt>
+that provides its own window for the interactive postscript prompt.
+The executable <tt>gswin32c</tt> is usually the better option since 
+it uses the native command prompt window.
+
+<p>
+For printer devices, the default output is the default printer.
+This can be modified as follows.
+
+<blockquote>
+<dl>
+<dt><b><tt>-sOutputFile="%printer%printer name"</tt></b>
+<dd>Output to the named printer.  If your printer is named "HP DeskJet 500"
+then you would use <tt>-sOutputFile="%printer%HP DeskJet 500"</tt>.
+
+</dl>
+</blockquote>
 
 <hr>
 
@@ -3215,10 +3276,10 @@ Ghostscript.symbolFonts: \
 <p>
 Font API (FAPI) is a new feature which allows to attach 3d party font renderers to Ghostscript.
 This section explains how to run Ghostscript with 3d party font renderers,
-such as Agfa UFST or Free Type.
+such as UFST or Free Type.
 
 <p>
-<em>Note: To run Ghostscript with Agfa UFST you need a license from Agfa.
+<em>Note: To run Ghostscript with UFST you need a license from Monotype Imaging.
 Please ignore issues about UFST if you haven't got it.
 </em>
 
@@ -3240,34 +3301,39 @@ with the Free Type bridge. Refer <a href="Make.htm#FT_build">How to build Ghosts
 To run Ghostscript with UFST, you first need to build Ghostscript
 with the UFST bridge. Refer <a href="Make.htm#UFST_build">How to build Ghostscript with UFST</a>.
 Both bridges may run together.
-<p>
-
-<p>
-Then you need to obtain the Decoding resources from Artifex Software Inc. and install them with Ghostscript.
-Just copy the files to the <b><tt>Resource/Decoding</tt></b> directory (or to the subdirectory
-<b><tt>Decoding</tt></b> of a directory, which is specified in <b><tt>GenericResourcePath</tt></b>).
-
 
 <p>
 There are 2 ways to handle fonts with a 3d party font renderer (FAPI). First, you can substitute
-any FAPI-handled font to a PostScript font, using special map files.
+any FAPI-handled font to a resident PostScript font, using special map files 
+<b><tt>FAPIfontmap</tt></b> and <b><tt>FAPIcidfmap</tt></b>.
 Second, you can redirect PostScript fonts to FAPI, setting
-entries in <b><tt>lib/FAPIconfig</tt></b> file.
+entries in <b><tt>FAPIconfig</tt></b> file.
 
 <p>
-The file <b><tt>lib/FAPIfontmap</tt></b> defines a map table for FAPI-handled fonts.
-The format of <b><tt>lib/FAPIfontmap</tt></b> is explained below.
+Names <b><tt>FAPIfontmap</tt></b>, <b><tt>FAPIcidfmap</tt></b>, <b><tt>FAPIconfig</tt></b>
+in this text actually are placeholders, which may be substituted with command line arguments :
+<b><tt>-sFAPIfontmap=<em>name1</em></tt></b> <b><tt>-sFAPIcidfmap=<em>name2</em></tt></b> 
+<b><tt>-sFAPIconfig=<em>name3</em></tt></b>.
+Ghostscript searches the specified file names as explained in 
+<a href="#Finding_files">How Ghostscript finds files</a>.
+Default values for these arguments are equal to argument names.
+When building Ghostscript with <tt><b>COMPILE_INITS=1</tt></b>, only default values are used.
 
 <p>
-Font files being handled with FAPI may reside in any directory in your hard disk.
-Paths to them to be specified in <b><tt>lib/FAPIfontmap</tt></b>. The path may be either
-absolute or relative. Relative ones are being resolved from the path,
-which is specified in <b><tt>lib/FAPIconfig</tt></b> file.
+Font files, which are being handled with FAPI, may reside in any directory in your hard disk.
+Paths to them to be specified in <b><tt>FAPIfontmap</tt></b> and 
+with special command line arguments, explained below. 
+The path may be either absolute or relative. Relative ones are being resolved from the path,
+which is specified in <b><tt>FAPIconfig</tt></b> file.
 
 <p>
-The file <b><tt>lib/FAPIfontmap</tt></b> is actually special PostScript code.
-It contains records for each font being rendered with FAPI.
-Records must end with semicolon. Each record is a pair.
+The file <b><tt>FAPIfontmap</tt></b> is actually special PostScript code.
+It may include records of 2 types : general records
+and FCO records (see below).
+
+<p>
+A general record describes a font, which is being rendered with FAPI.
+They must end with semicolon. Each general record is a pair.
 The first element of the pair is the font name (the name that PostScript
 documents use to access the font, which may differ
 from real name of the font which the font file defines).
@@ -3281,7 +3347,7 @@ The second element is a dictionary with entries :
 <tr>    <td>Path
         <td>string
         <td>Absolute path to font file, or relative path to font file from the FontPath value,
-            being specified in <b><tt>lib/FAPIconfig</tt></b>.
+            being specified in <b><tt>FAPIconfig</tt></b>.
 <tr>    <td>FontType
         <td>interger
         <td>PostScript type for this font. Only 1 and 42 are currently allowed.
@@ -3290,7 +3356,7 @@ The second element is a dictionary with entries :
 <tr>    <td>FAPI
         <td>name
         <td>Name of the renderer to be used with the font.
-            Only <b><tt>/AgfaUFST</tt></b> and <b><tt>/FreeType</tt></b> are now allowed.
+            Only <b><tt>/UFST</tt></b> and <b><tt>/FreeType</tt></b> are now allowed.
 <tr>    <td>SubfontId
         <td>integer
         <td>(optional) Index of the font in font collection, such as FCO or TTC.
@@ -3304,21 +3370,42 @@ The second element is a dictionary with entries :
 </table>
 
 <p>
-Example of FAPI font map record :
+Example of a general FAPI font map record :
 <blockquote>
 <b><tt>
-/FCO1        &lt&lt /Path (/AFPL/Agfa/fontdata/MTFONTS/PCLPS3/MT1/PCLP3__F.fco) /FontType 1 /FAPI /AgfaUFST &gt&gt ;
+/FCO1        &lt&lt /Path (/AFPL/UFST/fontdata/MTFONTS/PCLPS3/MT1/PCLP3__F.fco) /FontType 1 /FAPI /UFST &gt&gt ;
 </tt></b>
 </blockquote>
 
 <p>
-Note that <b><tt>lib/FAPIfontmap</tt></b> specifies only instances of
+FCO records work for UFST only.
+A group of FCO records start with a line <b><tt><em>name</em> ReadFCOfontmap:</tt></b>,
+where <b><tt><em>name</em></tt></b> is a name of a command line argument,
+which specify a path to an FCO file. The group of FCO records
+must end with the line <b><tt>EndFCOfontmap</tt></b>.
+Each record of a group occupy a single line,
+and contains a number and 1, 2 or 3 names.
+The number is the font index in the FCO file, the first name
+is the Postscript font name, the secong is an Encoding resource name,
+and the third is a decoding resource name.
+
+<p>
+Note that <b><tt>FAPIfontmap</tt></b> specifies only instances of
 Font category. CID fonts to be listed in another map file.
 
 <p>
-The file <b><tt>lib/FAPIcidfmap</tt></b> defines a mapping table for
+Ghostscript distribution includes sample map files
+<b><tt>gs/lib/FAPIfontmap</tt></b>,
+<b><tt>gs/lib/FCOfontmap-PCLPS2</tt></b>,
+<b><tt>gs/lib/FCOfontmap-PCLPS3</tt></b>,
+<b><tt>gs/lib/FCOfontmap-PS3</tt></b>,
+which may be customized by the user.
+The last 3 ones include an information about UFST FCO files.
+
+<p>
+The file <b><tt>FAPIcidfmap</tt></b> defines a mapping table for
 CIDFont resources. It contains records for each CID font being rendered with FAPI.
-The format is similar to <b><tt>lib/FAPIfontmap</tt></b>,
+The format is similar to <b><tt>FAPIfontmap</tt></b>,
 but dictionaries must contain few different entries :
 
 <table cellpadding=0 cellspacing=10>
@@ -3329,7 +3416,7 @@ but dictionaries must contain few different entries :
 <tr>    <td>Path
         <td>string
         <td>Absolute path to font file, or relative path to font file from the CIDFontPath value,
-            being specified in <b><tt>lib/FAPIconfig</tt></b>.
+            being specified in <b><tt>FAPIconfig</tt></b>.
 <tr>    <td>CIDFontType
         <td>interger
         <td>PostScript type for this CID font. Only 0, 1 and 2 are currently allowed.
@@ -3338,7 +3425,7 @@ but dictionaries must contain few different entries :
 <tr>    <td>FAPI
         <td>name
         <td>Name of the renderer to be used with the font.
-            Only <b><tt>/AgfaUFST</tt></b> and <b><tt>/FreeType</tt></b> are now allowed.
+            Only <b><tt>/UFST</tt></b> and <b><tt>/FreeType</tt></b> are now allowed.
 <tr>    <td>SubfontId
         <td>integer
         <td>(optional) Index of the font in font collection, such as FCO or TTC.
@@ -3355,15 +3442,13 @@ but dictionaries must contain few different entries :
 Example of FAPI CID font map record :
 <blockquote>
 <b><tt>
-/HeiseiKakuGo-W5  &lt&lt /Path (/WIN2000/Fonts/PMINGLIU.TTF) /CIDFontType 0 /FAPI /AgfaUFST /CSI [(Japan1) 2] &gt&gt ;
+/HeiseiKakuGo-W5  &lt&lt /Path (/WIN2000/Fonts/PMINGLIU.TTF) /CIDFontType 0 /FAPI /UFST /CSI [(Japan1) 2] &gt&gt ;
 </tt></b>
 </blockquote>
 
 
-
-
 <p>
-The control file <b><tt>lib/FAPIconfig</tt></b> defines 4 entries :
+The control file <b><tt>FAPIconfig</tt></b> defines 4 entries :
 
 <table cellpadding=0 cellspacing=10>
 <tr>    <th>Key
@@ -3372,17 +3457,17 @@ The control file <b><tt>lib/FAPIconfig</tt></b> defines 4 entries :
 <tr>    <td>FontPath
         <td>string
         <td>Absolute path to a directory, which contains fonts. Used to resolve
-            relative paths in <b><tt>lib/FAPIfontmap</tt></b>.
+            relative paths in <b><tt>FAPIfontmap</tt></b>.
 <tr>    <td>CIDFontPath
         <td>string
         <td>Absolute path to a directory, which contains fonts to substitute to CID fonts.
-            Used to resolve relative paths in <b><tt>lib/FAPIcidfmap</tt></b>.
+            Used to resolve relative paths in <b><tt>FAPIcidfmap</tt></b>.
             It may be same or different than FontPath.
 <tr>    <td>HookDiskFonts
         <td>array of integers.
         <td>List of PS font types to be handled with FAPI.
-            This controls other fonts that ones listed in <b><tt>lib/FAPIfontmap</tt></b>
-            and <b><tt>lib/FAPIcidfmap</tt></b> - such ones are PS fonts installed to
+            This controls other fonts that ones listed in <b><tt>FAPIfontmap</tt></b>
+            and <b><tt>FAPIcidfmap</tt></b> - such ones are PS fonts installed to
             Ghostscript with <b><tt>lib/fontmap</tt></b> or with <b><tt>GS_FONTPATH</tt></b>,
             or regular CID font resources. Unlisted font types will be
             rendered with the native Ghostscript font renderer.
@@ -3400,13 +3485,59 @@ The control file <b><tt>lib/FAPIconfig</tt></b> defines 4 entries :
 </table>
 
 <p>
-You may need to customize the file <b><tt>lib/xlatmap</tt></b>. Follow instructions in it.
+Ghostscript distribution includes sample config files
+<b><tt>gs/lib/FAPIconfig</tt></b>,
+<b><tt>gs/lib/FAPIconfig-FCO</tt></b>.
+which may be customized by the user.
+The last ones defines the configuration
+for handling resident UFST fonts only.
+
+<p>
+In special cases you may need to customize the file <b><tt>lib/xlatmap</tt></b>. Follow instructions in it.
+
+<p>
+Some UFST font collections need a path for finding an UFST plugin.
+If you run UFST with such font collection,
+you should run Ghostscript with a special command line argument 
+<b><tt>-sUFST_PlugIn=<em>path</em></tt></b>, where <b><tt><em>path</em></tt></b> specifies
+a disk path to the UFST plugin file, which Monotype Imaging distributes 
+in <em><tt><b>ufst/fontdata/MTFONTS/PCL45/MT3/plug__xi.fco</em></tt></b>. If UFST needs it and the 
+command line argument is not specified, Ghostscript prints a warning and searches 
+plugin file in the current directory.
+
+<p> 
+If you want to run UFST with resident UFST fonts only
+(and allow Ghostscript font renderer to handle fons, which may be downloaded or embedded into documents),
+you should run Ghostscript with these command line arguments :
+<b><tt>-sFCOfontfile=<em>path1</em></tt></b> <b><tt>-sFCOfontfile2=<em>path2</em></tt></b> 
+<b><tt>-sUFST_PlugIn=<em>path3</em></tt></b> 
+<b><tt>-sFAPIfontmap=<em>map-name</em></tt></b> <b><tt>-sFAPIconfig=FAPIconfig-FCO</tt></b> 
+where <b><tt><em>path1</em></tt></b> specifies
+a disk path to the main FCO file, <b><tt><em>path2</em></tt></b> specifies
+a disk path to the Wingdings FCO file, <b><tt><em>path3</em></tt></b>
+a disk path the FCO plugin file, <b><tt><em>path1</em></tt></b> is either
+<b><tt>gs/lib/FCOfontmap-PCLPS2</tt></b>, 
+<b><tt>gs/lib/FCOfontmap-PCLPS3</tt></b>, or
+<b><tt>gs/lib/FCOfontmap-PS3</tt></b>.
+<b><tt>FAPIcidfmap</tt></b> works as usual, but probably you want to leave it empty
+because FCO doesn't emulate CID fonts. 
+
+<p>
+Some configurations of UFST need a path for finding symbol set files.
+If you compiled UFST with such configuration,
+you should run Ghostscript with a special command line argument 
+<b><tt>-sUFST_SSdir=<em>path</em></tt></b>, where <b><tt><em>path</em></tt></b> specifies
+a disk path to the UFST support directory, which Monotype Imagong distributes 
+in <em><tt><b>ufst/fontdata/SUPPORT</em></tt></b>. If UFST needs it and the 
+command line argument is not specified, Ghostscript prints a warning and searches 
+symbol set files in the current directory.
+
 
 <p>
 Note that UFST and Free Type cannot handle some Ghostscript fonts because
 they does not include a PostScript interpreter and therefore has stronger restrictions on
 font formats than Ghostscript itself does.
-If their font types are listed in HookDiskFonts or in HookEmbeddedFonts,
+If their font types are listed in <tt><b>HookDiskFonts</tt></b> or in <tt><b>HookEmbeddedFonts</tt></b>,
 Ghostscript interpret them as PS files, then serializes font data into a RAM buffer and
 passes it to FAPI as PCLEOs.
 
@@ -3420,21 +3551,22 @@ passes it to FAPI as PCLEOs.
 <hr>
 
 <p>
-<small>Copyright &copy; 1996-2002 artofcode LLC. All rights reserved.</small>
+<small>Copyright &copy; 2000-2006 artofcode LLC.  All rights reserved.</small>
 
 <p>
 This software is provided AS-IS with no warranty, either express or
 implied.
 
-This software is distributed under license and may not be copied,
-modified or distributed except as expressly authorized under the terms
-of the license contained in the file LICENSE in this distribution.
-
+This software is distributed under license and may not be copied, modified
+or distributed except as expressly authorized under the terms of that
+license.  Refer to licensing information at http://www.artifex.com/
+or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.51, 31 December 2005
+<small>Ghostscript version 8.56, 14 March 2007
 
 <!-- [3.0 end visible trailer] ============================================= -->
 
-</small></body>
+</small></h3></body>
 </html>

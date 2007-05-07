@@ -1,4 +1,5 @@
-/* Copyright (C) 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxclutil.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gxclutil.c,v 1.7 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Command list writing utilities. */
 
 #include "memory_.h"
@@ -151,7 +151,7 @@ cmd_write_band(gx_device_clist_writer * cldev, int band_min, int band_max,
 	cb.band_max = band_max;
 	cb.pos = clist_ftell(cfile);
 	if_debug3('l', "[l]writing for bands (%d,%d) at %ld\n",
-		  band_min, band_max, cb.pos);
+		  band_min, band_max, (long)cb.pos);
 	clist_fwrite_chars(&cb, sizeof(cb), bfile);
 	if (cp != 0) {
 	    pcl->tail->next = 0;	/* terminate the list */
@@ -679,7 +679,13 @@ clist_cf_init(stream_CF_state *ss, int width)
 {
     ss->K = -1;
     ss->Columns = width;
+#if 0 /* Disabled due to a crash with ppmraw -r216 c327.bin :
+	 the decoding filter overruns in 1 byte.         
+       */
     ss->EndOfBlock = false;
+#else
+    ss->EndOfBlock = true;
+#endif
     ss->BlackIs1 = true;
     ss->DecodedByteAlign = align_bitmap_mod;
 }

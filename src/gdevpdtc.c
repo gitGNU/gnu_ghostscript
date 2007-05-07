@@ -1,4 +1,5 @@
-/* Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdtc.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevpdtc.c,v 1.7 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Composite and CID-based text processing for pdfwrite. */
 #include "memory_.h"
 #include "string_.h"
@@ -111,7 +112,8 @@ process_composite_text(gs_text_enum_t *pte, void *vbuf, uint bsize)
 		buf_index++;
 		prev_font = new_font;
 		psmat = &curr.fstack.items[curr.fstack.depth - 1].font->FontMatrix;
-		if (pte->text.space.s_char == char_code)
+		if ((pte->text.operation & TEXT_ADD_TO_SPACE_WIDTH) &&
+			pte->text.space.s_char == char_code)
 		    space_char = chr;
 		continue;
 	    case 2:		/* end of string */
@@ -156,7 +158,8 @@ process_composite_text(gs_text_enum_t *pte, void *vbuf, uint bsize)
 	    break;
 	buf[0] = (byte)chr;
 	buf_index = 1;
-	space_char = (pte->text.space.s_char == char_code ? chr : ~0);
+	space_char = ((pte->text.operation & TEXT_ADD_TO_SPACE_WIDTH) &&
+	              pte->text.space.s_char == char_code ? chr : ~0);
 	psmat = &curr.fstack.items[curr.fstack.depth - 1].font->FontMatrix;
 	prev_font = new_font;
     }
@@ -172,8 +175,11 @@ process_composite_text(gs_text_enum_t *pte, void *vbuf, uint bsize)
  */
 private const char *const standard_cmap_names[] = {
     /* The following were added in PDF 1.5. */
-    "GBKp-EUC-H", "GBKp-EUC-V", 
+
     "UniGB-UTF16-H", "UniGB-UTF16-V",
+
+
+    "GBKp-EUC-H", "GBKp-EUC-V", 
     "HKscs-B5-H", "HKscs-B5-V",
     "UniCNS-UTF16-H", "UniCNS-UTF16-V",
     "UniJIS-UTF16-H", "UniJIS-UTF16-V",
@@ -184,36 +190,46 @@ private const char *const standard_cmap_names[] = {
     "GBK2K-H", "GBK2K-V",
     "HKscs-B5-H", "HKscs-B5-V",
 #define END_PDF14_CMAP_NAMES_INDEX 18
+    /* The following were added in PDF 1.3. */
 
-    "Identity-H", "Identity-V",
-
-    "GB-EUC-H", "GB-EUC-V",
-    "GBpc-EUC-H", "GBpc-EUC-V",
+    "GBpc-EUC-V",
     "GBK-EUC-H", "GBK-EUC-V",
     "UniGB-UCS2-H", "UniGB-UCS2-V",
 
-    "B5pc-H", "B5pc-V",
-    "ETen-B5-H", "ETen-B5-V",
     "ETenms-B5-H", "ETenms-B5-V",
-    "CNS-EUC-H", "CNS-EUC-V",
+
     "UniCNS-UCS2-H", "UniCNS-UCS2-V",
 
-    "83pv-RKSJ-H",
-    "90ms-RKSJ-H", "90ms-RKSJ-V",
     "90msp-RKSJ-H", "90msp-RKSJ-V",
-    "90pv-RKSJ-H",
-    "Add-RKSJ-H", "Add-RKSJ-V",
     "EUC-H", "EUC-V",
-    "Ext-RKSJ-H", "Ext-RKSJ-V",
-    "H", "V",
     "UniJIS-UCS2-H", "UniJIS-UCS2-V",
     "UniJIS-UCS2-HW-H", "UniJIS-UCS2-HW-V",
 
+    "KSCms-UHC-HW-H", "KSCms-UHC-HW-V",
+    "UniKS-UCS2-H", "UniKS-UCS2-V",
+
+#define END_PDF13_CMAP_NAMES_INDEX 39
+    /* The following were added in PDF 1.2. */
+
+    "GB-EUC-H", "GB-EUC-V",
+    "GBpc-EUC-H"
+    
+    "B5pc-H", "B5pc-V",
+    "ETen-B5-H", "ETen-B5-V",
+    "CNS-EUC-H", "CNS-EUC-V",
+
+    "83pv-RKSJ-H",
+    "90ms-RKSJ-H", "90ms-RKSJ-V",
+    "90pv-RKSJ-H",
+    "Add-RKSJ-H", "Add-RKSJ-V",
+    "Ext-RKSJ-H", "Ext-RKSJ-V",
+    "H", "V",
+
     "KSC-EUC-H", "KSC-EUC-V",
     "KSCms-UHC-H", "KSCms-UHC-V",
-    "KSCms-UHC-HW-H", "KSCms-UHC-HW-V",
     "KSCpc-EUC-H",
-    "UniKS-UCS2-H", "UniKS-UCS2-V",
+
+    "Identity-H", "Identity-V",
 
     0
 };
@@ -224,7 +240,8 @@ attach_cmap_resource(gx_device_pdf *pdev, pdf_font_resource_t *pdfont,
 {
     const char *const *pcmn =
 	standard_cmap_names +
-	(pdev->CompatibilityLevel < 1.4 ? END_PDF14_CMAP_NAMES_INDEX : 
+	(pdev->CompatibilityLevel < 1.3 ? END_PDF13_CMAP_NAMES_INDEX : 
+	 pdev->CompatibilityLevel < 1.4 ? END_PDF14_CMAP_NAMES_INDEX : 
 	 pdev->CompatibilityLevel < 1.5 ? END_PDF15_CMAP_NAMES_INDEX : 0);
     bool is_identity = false;
     pdf_resource_t *pcmres = 0;	/* CMap */
@@ -274,6 +291,7 @@ attach_cmap_resource(gx_device_pdf *pdev, pdf_font_resource_t *pdfont,
 		if (code < 0)
 		    return code;
 		pidcmap->CMapType = 2;	/* per PDF Reference */
+		pidcmap->ToUnicode = true;
 		code = pdf_cmap_alloc(pdev, pidcmap,
 				&pdev->Identity_ToUnicode_CMaps[pcmap->WMode], -1);
 		if (code < 0)
@@ -349,7 +367,7 @@ scan_cmap_text(pdf_text_enum_t *pte)
 	    byte *glyph_usage;
 	    double *real_widths, *w, *v, *w0;
 	    int char_cache_size, width_cache_size;
-	    uint cid;
+	    gs_char cid;
 
 	    break_index = scan.index;
 	    break_xy_index = scan.xy_index;
@@ -445,11 +463,16 @@ scan_cmap_text(pdf_text_enum_t *pte)
 		if (code < 0)
 		    return code;
 		if (pdf_is_CID_font(subfont)) {
-		    /* Since PScript5.dll creates GlyphNames2Unicode with character codes
-		       instead CIDs, and with the WinCharSetFFFF-H2 CMap
-		       character codes appears different than CIDs (Bug 687954),
-		       pass the character code intead the CID. */
-		    code = pdf_add_ToUnicode(pdev, subfont, pdfont, chr + GS_MIN_CID_GLYPH, chr, NULL);
+		    if (subfont->procs.decode_glyph((gs_font *)subfont, glyph) != GS_NO_CHAR) {
+			/* Since PScript5.dll creates GlyphNames2Unicode with character codes
+			   instead CIDs, and with the WinCharSetFFFF-H2 CMap
+			   character codes appears different than CIDs (Bug 687954),
+			   pass the character code intead the CID. */
+			code = pdf_add_ToUnicode(pdev, subfont, pdfont, chr + GS_MIN_CID_GLYPH, chr, NULL);
+		    } else {
+			/* If we interpret a PDF document, ToUnicode CMap may be attached to the Type 0 font. */
+			code = pdf_add_ToUnicode(pdev, pte->orig_font, pdfont, chr + GS_MIN_CID_GLYPH, chr, NULL);
+		    }
 		} else
 		    code = pdf_add_ToUnicode(pdev, subfont, pdfont, glyph, cid, NULL);
 		if (code < 0)
@@ -466,7 +489,7 @@ scan_cmap_text(pdf_text_enum_t *pte)
 
 			memcpy(buf, subfont->font_name.chars, l);
 			buf[l] = 0;
-			eprintf2("Missing glyph CID=%d in the font %s . The output PDF may fail with some viewers.\n", cid, buf);
+			eprintf2("Missing glyph CID=%d in the font %s . The output PDF may fail with some viewers.\n", (int)cid, buf);
 			pdsubf->used[cid >> 3] |= 0x80 >> (cid & 7);
 		    }
 		    cid = 0, code = 1;  /* undefined glyph. */
@@ -528,7 +551,7 @@ scan_cmap_text(pdf_text_enum_t *pte)
 	if (break_index > index) {
 	    pdf_font_resource_t *pdfont;
 	    gs_matrix m3;
-	    int xy_index_step = (pte->text.x_widths != NULL && /* see gs_text_replaced_width */
+	    int xy_index_step = (!(pte->text.operation & TEXT_REPLACE_WIDTHS) ? 0 :
 				 pte->text.x_widths == pte->text.y_widths ? 2 : 1);
 	    gs_text_params_t save_text;
 
@@ -565,17 +588,21 @@ scan_cmap_text(pdf_text_enum_t *pte)
 	    save_text = pte->text;
 	    str.data = scan.text.data.bytes + index;
 	    str.size = break_index - index;
-	    if (pte->text.x_widths != NULL)
-		pte->text.x_widths += xy_index * xy_index_step;
-	    if (pte->text.y_widths != NULL)
-		pte->text.y_widths += xy_index * xy_index_step;
+	    if (pte->text.operation & TEXT_REPLACE_WIDTHS) {
+		if (pte->text.x_widths != NULL)
+		    pte->text.x_widths += xy_index * xy_index_step;
+		if (pte->text.y_widths != NULL)
+		    pte->text.y_widths += xy_index * xy_index_step;
+	    }
 	    pte->xy_index = 0;
 	    code = process_text_modify_width((pdf_text_enum_t *)pte, (gs_font *)font,
 				  &text_state, &str, &wxy, NULL, true);
-	    if (pte->text.x_widths != NULL)
-		pte->text.x_widths -= xy_index * xy_index_step;
-	    if (pte->text.y_widths != NULL)
-		pte->text.y_widths -= xy_index * xy_index_step;
+	    if (pte->text.operation & TEXT_REPLACE_WIDTHS) {
+		if (pte->text.x_widths != NULL)
+		    pte->text.x_widths -= xy_index * xy_index_step;
+		if (pte->text.y_widths != NULL)
+		    pte->text.y_widths -= xy_index * xy_index_step;
+	    }
 	    pte->text = save_text;
 	    pte->cdevproc_callout = false;
 	    if (code < 0) {

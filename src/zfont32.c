@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zfont32.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: zfont32.c,v 1.6 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Type 32 font operators */
 #include "ghost.h"
 #include "oper.h"
@@ -25,8 +25,10 @@
 #include "gsmatrix.h"
 #include "gsutil.h"
 #include "gxfont.h"
+#include "gxtext.h"
 #include "bfont.h"
 #include "store.h"
+#include "ichar.h"
 
 /* The encode_char procedure of a Type 32 font should never be called. */
 private gs_glyph
@@ -65,10 +67,31 @@ zbuildfont32(i_ctx_t *i_ctx_p)
     return define_gs_font((gs_font *) pfont);
 }
 
+/* - .getshowoperator <oper|null> */
+/* Get the calling operator for error reporting in %Type32BuildGlyph */
+private int
+zgetshowoperator(i_ctx_t *i_ctx_p)
+{
+    os_ptr op = osp;
+    gs_text_enum_t *osenum = op_show_find(i_ctx_p);
+  
+    push(1);
+    if (osenum == NULL)
+        make_null(op);
+    else {
+        op_proc_t proc;
+        *(void **)&proc = osenum->enum_client_data;
+        make_oper(op, 0, proc);
+    }
+    return 0;
+}
+
+
 /* ------ Initialization procedure ------ */
 
 const op_def zfont32_op_defs[] =
 {
     {"2.buildfont32", zbuildfont32},
+    {"0.getshowoperator", zgetshowoperator},
     op_def_end(0)
 };

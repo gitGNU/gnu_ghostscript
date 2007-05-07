@@ -1,4 +1,5 @@
-/* Copyright (C) 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxcdevn.h,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gxcdevn.h,v 1.6 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Internal definitions for DeviceN color spaces */
 
 #ifndef gxcdevn_INCLUDED
@@ -55,7 +55,7 @@ typedef struct gs_device_n_attributes_s gs_device_n_attributes;
 struct gs_device_n_attributes_s {
     rc_header rc;
     gs_separation_name colorant_name;
-    gs_color_space cspace;
+    gs_color_space *cspace;
     struct gs_device_n_attributes_s * next;	/* Linked list */
 };
 #define private_st_device_n_attributes() /* in gscdevn.c */\

@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gspaint.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gspaint.c,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Painting procedures for Ghostscript library */
 #include "math_.h"		/* for fabs */
 #include "gx.h"
@@ -35,6 +35,9 @@
 #include "gxdevmem.h"
 #include "gzcpath.h"
 #include "gxhldevc.h"
+#include "gsutil.h"
+
+extern bool CPSI_mode;
 
 /* Define the nominal size for alpha buffers. */
 #define abuf_nominal_SMALL 500
@@ -73,9 +76,11 @@ gs_fillpage(gs_state * pgs)
     gx_device *dev;
     int code = 0;
     gs_logical_operation_t save_lop;
-    bool hl_color_available = gx_hld_is_hl_color_available((gs_imager_state *)pgs, 
-						    pgs->dev_color);
+    bool hl_color_available;
+
     gx_set_dev_color(pgs);
+    hl_color_available = gx_hld_is_hl_color_available((gs_imager_state *)pgs, 
+						    pgs->dev_color);
     dev = gs_currentdevice(pgs);
     /* Fill the page directly, ignoring clipping. */
     /* Use the default RasterOp. */
@@ -273,6 +278,40 @@ fill_with_rule(gs_state * pgs, int rule)
     } else {
 	int abits, acode, rcode = 0;
 
+	/* Here we need to distinguish text from vectors to compute the object tag.
+	   Actually we need to know whether this function is called to rasterize a character,
+	   or to rasterize a vector graphics to the output device.
+	   Currently we assume it works for the bitrgbtags device only,
+	   which is a low level device with a 4-component color model.
+	   We use the fact that with printers a character is usually being rendered 
+	   to a 1bpp cache device rather than to the output device.
+	   Therefore we hackly look whether the target device
+	   "has a color" : either it's a multicomponent color model,
+	   or it is not gray (such as a yellow separation).
+
+	   This check has several limitations :
+	   1. It doesn't work with -dNOCACHE.
+	   2. It doesn't work with large characters,
+	      which cannot fit into a cache cell and thus they
+	      render directly to the output device.
+	   3. It doesn't work for TextAlphaBits=2 or 4.
+	      We don't care of this case because
+	      text antialiasing usually usn't applied to printers.
+	   4. It doesn't work for things like with "(xyz) true charpath stroke".
+	      That's unfortunate, we'd like to improve someday.
+	   5. It doesn't work for high level devices when a Type 3 character is being constructed.
+	      This case is not important for low level devices
+	      (which a printer is), because low level device doesn't accept
+	      Type 3 charproc streams immediately.
+	   6. It doesn't work properly while an insiding testing,
+	      which sets gs_hit_device, which is uncolored.
+	 */
+        if (gx_device_has_color(gs_currentdevice(pgs))) {
+            gs_set_object_tag(pgs, GS_PATH_TAG);
+	}
+	else {
+            gs_set_object_tag(pgs, GS_TEXT_TAG);
+	}
 	gx_set_dev_color(pgs);
 	code = gs_state_color_load(pgs);
 	if (code < 0)
@@ -332,12 +371,20 @@ gs_stroke(gs_state * pgs)
 	}
 	code = gx_path_add_char_path(pgs->show_gstate->path, pgs->path,
 				     pgs->in_charpath);
-    } else if (gs_is_null_device(pgs->device)) {
+    } if (gs_is_null_device(pgs->device)) {
 	/* Handle separately to prevent gs_state_color_load. */
 	gs_newpath(pgs);
 	code = 0;
     } else {
 	int abits, acode, rcode = 0;
+
+        /* to distinguish text from vectors we hackly look at the
+           target device 1 bit per component is a cache and this is
+           text else it is a path */
+        if (gx_device_has_color(gs_currentdevice(pgs)))
+            gs_set_object_tag(pgs, GS_PATH_TAG);
+        else
+            gs_set_object_tag(pgs, GS_TEXT_TAG);
 
 	gx_set_dev_color(pgs);
 	code = gs_state_color_load(pgs);
@@ -415,6 +462,11 @@ gs_strokepath(gs_state * pgs)
     code = gx_path_assign_free(pgs->path, &spath);
     if (code < 0)
 	return code;
-    gx_setcurrentpoint(pgs, fixed2float(spath.position.x), fixed2float(spath.position.y));
+    /* NB: needs testing with PCL */
+    if (CPSI_mode && gx_path_is_void(pgs->path))
+        pgs->current_point_valid = false;
+    else
+        gx_setcurrentpoint(pgs, fixed2float(spath.position.x), fixed2float(spath.position.y));
     return 0;
+
 }

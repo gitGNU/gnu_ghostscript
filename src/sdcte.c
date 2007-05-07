@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sdcte.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: sdcte.c,v 1.6 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* DCT encoding filter stream */
 #include "memory_.h"
 #include "stdio_.h"

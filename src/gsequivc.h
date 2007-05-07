@@ -1,5 +1,6 @@
-/* Copyright (C) 2004 Artifex Software Inc., artofcode LLC.  All rights reserved.
-
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
+  
   This file is part of GNU ghostscript
 
   GNU ghostscript is free software; you can redistribute it and/or modify it under
@@ -13,10 +14,10 @@
   You should have received a copy of the GNU General Public License along with
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-  
+
 */
 
-/*$Id: gsequivc.h,v 1.1 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/*$Id: gsequivc.h,v 1.2 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Header for routines for determining equivalent color for spot colors */
 
 /* For more information, see comment at the start of src/gsequivc.c */
@@ -44,9 +45,20 @@ typedef struct equivalent_cmyk_color_params_s {
     cmyk_color color[GX_DEVICE_MAX_SEPARATIONS];
 } equivalent_cmyk_color_params;
 
-/* If possible, update the equivalent CMYK color for a spot color */
+/*
+ * If possible, update the equivalent CMYK color for spot colors.
+ */
 void update_spot_equivalent_cmyk_colors(gx_device * pdev,
 		const gs_state * pgs, gs_devn_params * pdevn_params,
+		equivalent_cmyk_color_params * pparams);
+
+/*
+ * Utiliy routine:  Capture equivalent color when given a modified
+ * color space.
+ */
+void capture_spot_equivalent_cmyk_colors(gx_device * pdev,
+		const gs_state * pgs, const gs_client_color * pcc,
+		const gs_color_space * pcs, int sep_num,
 		equivalent_cmyk_color_params * pparams);
 
 #endif		/* define gsequivc_INCLUDED */

@@ -1,4 +1,5 @@
-/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -15,8 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-
-/* $Id: gdevcfax.c,v 1.4 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevcfax.c,v 1.5 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* SFF format writer for CAPI fax devices */
 #include "gdevprn.h"
 #include "strimpl.h"

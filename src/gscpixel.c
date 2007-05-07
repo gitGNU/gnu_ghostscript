@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gscpixel.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gscpixel.c,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* DevicePixel color space and operation definition */
 #include "gx.h"
 #include "gserrors.h"
@@ -39,21 +40,22 @@ private cs_proc_serialize(gx_serialize_DevicePixel);
 private const gs_color_space_type gs_color_space_type_DevicePixel = {
     gs_color_space_index_DevicePixel, true, false,
     &st_base_color_space, gx_num_components_1,
-    gx_no_base_space,
     gx_init_paint_1, gx_restrict_DevicePixel,
     gx_same_concrete_space,
     gx_concretize_DevicePixel, gx_remap_concrete_DevicePixel,
     gx_default_remap_color, gx_no_install_cspace,
     gx_set_overprint_DevicePixel,
-    gx_no_adjust_cspace_count, gx_no_adjust_color_count,
+    NULL, gx_no_adjust_color_count,
     gx_serialize_DevicePixel,
     gx_cspace_is_linear_default
 };
 
-/* Initialize a DevicePixel color space. */
+/* Create a DevicePixel color space. */
 int
-gs_cspace_init_DevicePixel(gs_memory_t *mem, gs_color_space * pcs, int depth)
+gs_cspace_new_DevicePixel(gs_memory_t *mem, gs_color_space **ppcs, int depth)
 {
+    gs_color_space *pcs;
+
     switch (depth) {
 	case 1:
 	case 2:
@@ -66,8 +68,11 @@ gs_cspace_init_DevicePixel(gs_memory_t *mem, gs_color_space * pcs, int depth)
 	default:
 	    return_error(gs_error_rangecheck);
     }
-    gs_cspace_init(pcs, &gs_color_space_type_DevicePixel, mem, false);
+    pcs = gs_cspace_alloc(mem, &gs_color_space_type_DevicePixel);
+    if (pcs == NULL)
+	return_error(gs_error_VMerror);
     pcs->params.pixel.depth = depth;
+    *ppcs = pcs;
     return 0;
 }
 

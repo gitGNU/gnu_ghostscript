@@ -1,14 +1,20 @@
 %    Copyright (C) 2000 artofcode LLC.  All rights reserved.
 % 
-% This software is provided AS-IS with no warranty, either express or
-% implied.
-% 
-% This software is distributed under license and may not be copied,
-% modified or distributed except as expressly authorized under the terms
-% of the license contained in the file LICENSE in this distribution.
-
-
-% $Id: gs_cidcm.ps,v 1.5 2006/03/02 22:26:14 Arabidopsis Exp $
+%  This file is part of GNU ghostscript
+%
+%  GNU ghostscript is free software; you can redistribute it and/or modify it under
+%  the terms of the GNU General Public License as published by the Free Software
+%  Foundation; either version 2, or (at your option) any later version.
+%
+%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+%
+%  You should have received a copy of the GNU General Public License along with
+%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+%
+% $Id: gs_cidcm.ps,v 1.6 2007/05/07 11:22:07 Arabidopsis Exp $
 % Extending Font resource category with CIDFont-CMap fonts.
 
 languagelevel 2 .setlanguagelevel currentglobal true setglobal
@@ -360,9 +366,8 @@ currentdict end def
   % These dictionaries must be created dynamically, to allow for a possible 
   % recursive call to resourceforall from the resourceforall procedure.
   currentglobal false setglobal
-  20 dict 20 dict 20 dict
-
-  4 -1 roll setglobal                     % (templ) proc (scr) <<CIDFont>> <<CMap>> <<Fonts>>
+  20 dict 20 dict 20 dict                  % (templ) proc (scr) g <<CIDFont>> <<CMap>> <<Fonts>>
+  
 
   % Store resource identifiers into local dictionaries
   % A resource instance can have a key that is not a name or a string. In this
@@ -370,21 +375,22 @@ currentdict end def
   % into the scratch string. This case can arise only for a resource instance
   % defined in virtual memory by a previous defineresource
 
-  % Discard non-string keys of CIDFont and CMap because <CIDFontName>- -<CMapName>
+  % Discard non-string keys of CIDFont and CMap because <CIDFontName>-<CMapName>
   % is only defined for names.
 
   { /.DisableResourceOrdering pop % gs_resmp accesses this through execstack - don't remove !
 
-    5 index [ 2 index {exch //null put} aload pop ] cvx bind 5 index //ResourceForAll exec
+    6 index [ 2 index {exch //null put} aload pop ] cvx bind 6 index //ResourceForAll exec
 
     (*) [ 3 index {exch dup type /stringtype eq { cvn dup put } { pop pop } ifelse } aload pop
-        ] cvx bind 5 index /CMap resourceforall
+        ] cvx bind 6 index /CMap resourceforall
 
     (*) [ 4 index {exch dup type /stringtype eq { cvn dup put } { pop pop } ifelse } aload pop
-        ] cvx bind 5 index /CIDFont resourceforall
+        ] cvx bind 6 index /CIDFont resourceforall
 
     exit
   } loop % This loop is a pattern for execstack_lookup - don't remove !
+  4 -1 roll setglobal                     % (templ) proc (scr) <<CIDFont>> <<CMap>> <<Fonts>>
 
   %% Make the list of fonts in the form (/Name status) :
 
@@ -430,7 +436,6 @@ currentdict end def
 
   % Make the enumerator and apply it :
   /MappedCategoryRedefiner /ProcSet findresource /MakeResourceEnumerator get exec exec
-
 } bind def
 
 

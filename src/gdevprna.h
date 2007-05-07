@@ -1,4 +1,5 @@
-/* Copyright (C) 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevprna.h,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevprna.h,v 1.5 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Generic asynchronous printer driver support */
 
 /* Initial version 2/1/1998 by John Desrosiers (soho@crl.com) */

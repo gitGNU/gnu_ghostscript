@@ -1,4 +1,5 @@
-/* Copyright (C) 2000, 2001 Artifex Software, Inc. All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: unistd_.h,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: unistd_.h,v 1.6 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Generic substitute for Unix unistd.h */
 
 #ifndef unistd__INCLUDED

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sjbig2.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: sjbig2.c,v 1.6 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* jbig2decode filter implementation -- hooks in libjbig2dec */
 
 #include "stdint_.h"

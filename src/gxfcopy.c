@@ -15,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxfcopy.c,v 1.7 2006/06/16 18:54:58 Arabidopsis Exp $ */
+/* $Id: gxfcopy.c,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Font copying for high-level output */
 #include "memory_.h"
 #include "gx.h"
@@ -30,10 +29,12 @@
 #include "gspath.h"		/* for gs_moveto in BuildChar */
 #include "gsstruct.h"
 #include "gsutil.h"
+#include "gschar.h"
 #include "stream.h"
 #include "gxfont.h"
 #include "gxfont1.h"
 #include "gxfont42.h"
+#include "gxchar.h"
 #include "gxfcid.h"
 #include "gxfcopy.h"
 #include "gxfcache.h"		/* for gs_font_dir_s */
@@ -706,7 +707,7 @@ copied_glyph_name(gs_font *font, gs_glyph glyph, gs_const_string *pstr)
 }
 
 private int
-copied_build_char(gs_text_enum_t *pte, gs_state *pgs, gs_font *font,
+copied_build_char(gs_show_enum *pte, gs_state *pgs, gs_font *font,
 		  gs_char chr, gs_glyph glyph)
 {
     int wmode = font->WMode;
@@ -717,9 +718,8 @@ copied_build_char(gs_text_enum_t *pte, gs_state *pgs, gs_font *font,
 
     if (glyph == GS_NO_GLYPH) {
 	glyph = font->procs.encode_char(font, chr, GLYPH_SPACE_INDEX);
-	if (glyph == GS_NO_GLYPH) {
+	if (glyph == GS_NO_GLYPH)
 	    glyph = cf_data(font)->notdef;
-	}
     }
     /*
      * Type 1/2 outlines don't require a current point, but TrueType
@@ -739,7 +739,7 @@ copied_build_char(gs_text_enum_t *pte, gs_state *pgs, gs_font *font,
     wxy[3] = info.bbox.p.y;
     wxy[4] = info.bbox.q.x;
     wxy[5] = info.bbox.q.y;
-    if ((code = gs_text_setcachedevice(pte, wxy)) < 0 ||
+    if ((code = gs_setcachedevice_double(pte, pte->pgs, wxy)) < 0 ||
 	(code = font->procs.glyph_outline(font, wmode, glyph, &ctm_only(pgs),
 					  pgs->path, sbw_stub)) < 0
 	)
@@ -1240,18 +1240,19 @@ copied_type42_get_outline(gs_font_type42 *font, uint glyph_index,
 
 private int
 copied_type42_get_metrics(gs_font_type42 * pfont, uint glyph_index,
-			  int wmode, float sbw[4])
+			  gs_type42_metrics_options_t options, float sbw[4])
 {
     /* Check whether we have metrics for this (glyph,wmode) pair. */
     gs_copied_font_data_t *const cfdata = pfont->data.proc_data;
     gs_copied_glyph_t *pcg;
+    int wmode = gs_type42_metrics_options_wmode(options);
 
     if (glyph_index >= cfdata->glyphs_size)
 	return_error(gs_error_rangecheck);
     pcg = &cfdata->glyphs[glyph_index];
     if (!(pcg->used & (HAS_SBW0 << wmode)))
 	return_error(gs_error_undefined);
-    return gs_type42_default_get_metrics(pfont, glyph_index, wmode, sbw);
+    return gs_type42_default_get_metrics(pfont, glyph_index, options, sbw);
 }
 
 private uint
@@ -1298,7 +1299,7 @@ copy_font_type42(gs_font *font, gs_font *copied)
 	psf_write_cid2_stripped(&fs, (gs_font_cid2 *)font42);
     copied42->data.string_proc = copied_type42_string_proc;
     copied42->data.proc_data = cfdata;
-    code = gs_type42_font_init(copied42);
+    code = gs_type42_font_init(copied42, 0);
     if (code < 0)
 	goto fail2;
     /* gs_type42_font_init overwrites font_info. */
@@ -2420,4 +2421,13 @@ copied_order_font(gs_font *font)
 	cfdata->ordered = true;
 	return order_font_data(cfdata, font->memory);
     }
+}
+
+/* Get .nmotdef glyph. */
+gs_glyph
+copied_get_notdef(const gs_font *font)
+{
+    gs_copied_font_data_t * cfdata = cf_data(font);
+
+    return cfdata->notdef;
 }

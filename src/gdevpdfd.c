@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfd.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevpdfd.c,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Path drawing procedures for pdfwrite driver */
 #include "math_.h"
 #include "memory_.h"
@@ -48,12 +48,14 @@ gdev_pdf_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 			gx_color_index color)
 {
     gx_device_pdf *pdev = (gx_device_pdf *) dev;
+    int bottom = (pdev->ResourcesBeforeUsage ? 1 : 0);
     int code;
 
     /* Make a special check for the initial fill with white, */
     /* which shouldn't cause the page to be opened. */
-    if (color == pdev->white && !is_in_page(pdev))
-	return 0;
+    if (color == pdev->white && !is_in_page(pdev) && pdev->sbstack_depth == bottom)
+	if (x == 0 && y == 0 && w == pdev->width && h == pdev->height)
+	    return 0;
     code = pdf_open_page(pdev, PDF_IN_STREAM);
     if (code < 0)
 	return code;
@@ -450,6 +452,7 @@ make_rect_scaling(const gx_device_pdf *pdev, const gs_fixed_rect *bbox,
 /*
  * Prepare a fill with a color anc a clipping path.
  * Return 1 if there is nothing to paint.
+ * Changes *box to the clipping box.
  */
 private int
 prepare_fill_with_clip(gx_device_pdf *pdev, const gs_imager_state * pis,
@@ -457,14 +460,16 @@ prepare_fill_with_clip(gx_device_pdf *pdev, const gs_imager_state * pis,
 	      const gx_drawing_color * pdcolor, const gx_clip_path * pcpath)
 {
     bool new_clip;
+    int bottom = (pdev->ResourcesBeforeUsage ? 1 : 0);
+    gs_fixed_rect cbox;
     int code;
 
     /*
      * Check for an empty clipping path.
      */
     if (pcpath) {
-	gx_cpath_outer_box(pcpath, box);
-	if (box->p.x >= box->q.x || box->p.y >= box->q.y)
+	gx_cpath_outer_box(pcpath, &cbox);
+	if (cbox.p.x >= cbox.q.x || cbox.p.y >= cbox.q.y)
 	    return 1;		/* empty clipping path */
     }
     if (gx_dc_is_pure(pdcolor)) {
@@ -473,9 +478,14 @@ prepare_fill_with_clip(gx_device_pdf *pdev, const gs_imager_state * pis,
 	 * which shouldn't cause the page to be opened.
 	 */
 	if (gx_dc_pure_color(pdcolor) == pdev->white && 
-		!is_in_page(pdev) && pdev->sbstack_depth == 0)
-	    return 1;
+		!is_in_page(pdev) && pdev->sbstack_depth <= bottom) {
+	    if (box->p.x == 0 && box->p.y == 0 && 
+		    box->q.x == int2fixed(pdev->width) && 
+		    box->q.y == int2fixed(pdev->height)) /* See gs_fillpage */
+		return 1;
+        }
     }
+    *box = cbox;
     new_clip = pdf_must_put_clip_path(pdev, pcpath);
     if (have_path || pdev->context == PDF_IN_NONE || new_clip) {
 	if (new_clip)
@@ -530,6 +540,20 @@ lcvd_get_clipping_box_from_target(gx_device *dev, gs_fixed_rect *pbox)
     gx_device_memory *mdev = (gx_device_memory *)dev;
 
     (*dev_proc(mdev->target, get_clipping_box))(mdev->target, pbox);
+}
+private void
+lcvd_get_clipping_box_shifted_from_mdev(gx_device *dev, gs_fixed_rect *pbox)
+{
+    fixed ofs;
+    pdf_lcvd_t *cvd = (pdf_lcvd_t *)dev;
+
+    cvd->std_get_clipping_box((gx_device *)&cvd->mdev, pbox);
+    ofs = int2fixed(cvd->mdev.mapped_x);
+    pbox->p.x += ofs;
+    pbox->q.x += ofs;
+    ofs = int2fixed(cvd->mdev.mapped_y);
+    pbox->p.y += ofs;
+    pbox->q.y += ofs;
 }
 private int 
 lcvd_pattern_manage(gx_device *pdev1, gx_bitmap_id id,
@@ -762,7 +786,7 @@ write_image_with_clip(gx_device_pdf *pdev, pdf_lcvd_t *cvd)
     int code, code1;
 
     if (cvd->write_matrix)
-	pdf_put_matrix(pdev, NULL, &cvd->m, " cm\n");
+	pdf_put_matrix(pdev, NULL, &cvd->m, " cm q\n");
     for(;;) {
 	int x1, y1;
 	
@@ -792,6 +816,8 @@ write_image_with_clip(gx_device_pdf *pdev, pdf_lcvd_t *cvd)
 	    y = y1;
 	}
     }
+    if (cvd->write_matrix)
+	stream_puts(pdev->strm, "Q\n");
     return 0;
 }
 
@@ -973,13 +999,16 @@ pdf_setup_masked_image_converter(gx_device_pdf *pdev, gs_memory_t *mem, const gs
     }
     cvd->std_fill_rectangle = dev_proc(&cvd->mdev, fill_rectangle);
     cvd->std_close_device = dev_proc(&cvd->mdev, close_device);
+    cvd->std_get_clipping_box = dev_proc(&cvd->mdev, get_clipping_box);
     if (!write_on_close) {
 	/* Type 3 images will write to the mask directly. */
 	dev_proc(&cvd->mdev, fill_rectangle) = (need_mask ? lcvd_fill_rectangle_shifted2 
 							  : lcvd_fill_rectangle_shifted);
-    } else
+	dev_proc(&cvd->mdev, get_clipping_box) = lcvd_get_clipping_box_from_target;
+    } else {
 	dev_proc(&cvd->mdev, fill_rectangle) = lcvd_fill_rectangle_shifted_from_mdev;
-    dev_proc(&cvd->mdev, get_clipping_box) = lcvd_get_clipping_box_from_target;
+	dev_proc(&cvd->mdev, get_clipping_box) = lcvd_get_clipping_box_shifted_from_mdev;
+    }
     dev_proc(&cvd->mdev, pattern_manage) = lcvd_pattern_manage;
     dev_proc(&cvd->mdev, fill_path) = lcvd_handle_fill_path_as_shading_coverage;
     cvd->m = *m;
@@ -1042,7 +1071,7 @@ gdev_pdf_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath
      * drawing anything.
      */
     bool have_path;
-    gs_fixed_rect box = {{0, 0}, {0, 0}};
+    gs_fixed_rect box = {{0, 0}, {0, 0}}, box1;
 
     have_path = !gx_path_is_void(ppath);
     if (!have_path && !pdev->vg_initial_set) {
@@ -1051,6 +1080,12 @@ gdev_pdf_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath
 	pdf_reset_graphics(pdev);
 	return 0;
     }
+    if (have_path) {
+	code = gx_path_bbox(ppath, &box);
+	if (code < 0)
+	    return code;
+    }
+    box1 = box;
 
     code = prepare_fill_with_clip(pdev, pis, &box, have_path, pdcolor, pcpath);
     if (code == gs_error_rangecheck) {
@@ -1193,11 +1228,7 @@ gdev_pdf_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath
 	double scale;
 	gs_matrix smat;
 	gs_matrix *psmat = NULL;
-	gs_fixed_rect box1;
 
-	code = gx_path_bbox(ppath, &box1);
-	if (code < 0)
-	    return code;
 	if (pcpath) {
  	    rect_intersect(box1, box);
  	    if (box1.p.x > box1.q.x || box1.p.y > box1.q.y)
@@ -1370,7 +1401,7 @@ gdev_pdf_fill_rectangle_hl_color(gx_device *dev, const gs_fixed_rect *rect,
     const gx_clip_path *pcpath)
 {
     int code;
-    gs_fixed_rect box1 = *rect, box = {{0, 0}, {0, 0}};
+    gs_fixed_rect box1 = *rect, box = box1;
     gx_device_pdf *pdev = (gx_device_pdf *) dev;
     double scale;
     gs_matrix smat;

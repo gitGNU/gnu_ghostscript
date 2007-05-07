@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gspath1.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gspath1.c,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Additional PostScript Level 1 path routines for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -53,7 +53,7 @@ typedef struct arc_curve_params_s {
     segment_notes notes;
     gs_point p0, p3, pt;
     gs_sincos_t sincos;		/* (not used by arc_add) */
-    fixed angle;		/* (not used by arc_add) */
+    double angle;		/* (not used by arc_add) */
     int fast_quadrant;		/* 0 = not calculated, -1 = not fast, */
 				/* 1 = fast (only used for quadrants) */
     /* The following are set once iff fast_quadrant > 0. */
@@ -63,6 +63,9 @@ typedef struct arc_curve_params_s {
 
 /* Forward declarations */
 private int arc_add(const arc_curve_params_t *arc, bool is_quadrant);
+private int gs_imager_arc_add(gx_path * ppath, gs_imager_state * pis, bool clockwise,
+	    floatp axc, floatp ayc, floatp arad, floatp aang1, floatp aang2,
+		  bool add_line, gs_point *p3);
 
 
 int
@@ -81,11 +84,19 @@ private inline int
 gs_arc_add_inline(gs_state *pgs, bool cw, floatp xc, floatp yc, floatp rad, 
 		    floatp a1, floatp a2, bool add)
 {
-    int code = gs_imager_arc_add(pgs->path, (gs_imager_state *)pgs, cw, xc, yc, rad, a1, a2, add);
+    gs_point p3;
+    int code = gs_imager_arc_add(pgs->path, (gs_imager_state *)pgs, cw, xc, yc, rad, a1, a2, add, &p3);
 
     if (code < 0)
 	return code;
+
+#if !PRECISE_CURRENTPOINT
     return gx_setcurrentpoint_from_path((gs_imager_state *)pgs, pgs->path);
+#else
+    pgs->current_point_valid = true;
+    return gs_point_transform(p3.x, p3.y, &ctm_only(pgs), &pgs->current_point);
+#endif
+
 }
 
 int
@@ -112,17 +123,17 @@ gs_arc_add(gs_state * pgs, bool clockwise, floatp axc, floatp ayc,
 
 /* Compute the next curve as part of an arc. */
 private int
-next_arc_curve(arc_curve_params_t * arc, fixed anext)
+next_arc_curve(arc_curve_params_t * arc, double anext)
 {
     double x0 = arc->p0.x = arc->p3.x;
     double y0 = arc->p0.y = arc->p3.y;
     double trad = arc->radius *
-	tan(fixed2float(anext - arc->angle) *
+	tan((anext - arc->angle) *
 	    (degrees_to_radians / 2));
 
     arc->pt.x = x0 - trad * arc->sincos.sin;
     arc->pt.y = y0 + trad * arc->sincos.cos;
-    gs_sincos_degrees(fixed2float(anext), &arc->sincos);
+    gs_sincos_degrees(anext, &arc->sincos);
     arc->p3.x = arc->center.x + arc->radius * arc->sincos.cos;
     arc->p3.y = arc->center.y + arc->radius * arc->sincos.sin;
     arc->angle = anext;
@@ -133,7 +144,7 @@ next_arc_curve(arc_curve_params_t * arc, fixed anext)
  * and anext = arc.angle +/- 90.
  */
 private int
-next_arc_quadrant(arc_curve_params_t * arc, fixed anext)
+next_arc_quadrant(arc_curve_params_t * arc, double anext)
 {
     double x0 = arc->p0.x = arc->p3.x;
     double y0 = arc->p0.y = arc->p3.y;
@@ -166,7 +177,7 @@ next_arc_quadrant(arc_curve_params_t * arc, fixed anext)
      * We know that anext is a multiple of 90 (as a fixed); we want
      * (anext / 90) & 3.  The following is much faster than a division.
      */
-    switch ((fixed2int(anext) >> 1) & 3) {
+    switch (((int)anext >> 1) & 3) {
     case 0:
 	arc->sincos.sin = 0, arc->sincos.cos = 1;
 	arc->p3.x = x0 = arc->center.x + arc->radius;
@@ -193,13 +204,13 @@ next_arc_quadrant(arc_curve_params_t * arc, fixed anext)
     return arc_add(arc, true);
 }
 
-int
+private int
 gs_imager_arc_add(gx_path * ppath, gs_imager_state * pis, bool clockwise,
 	    floatp axc, floatp ayc, floatp arad, floatp aang1, floatp aang2,
-		  bool add_line)
+		  bool add_line, gs_point *p3)
 {
     double ar = arad;
-    fixed ang1 = float2fixed(aang1), ang2 = float2fixed(aang2), anext;
+    double ang1 = aang1, ang2 = aang2, anext;
     double ang1r;		/* reduced angle */
     arc_curve_params_t arc;
     int code;
@@ -208,27 +219,24 @@ gs_imager_arc_add(gx_path * ppath, gs_imager_state * pis, bool clockwise,
     arc.pis = pis;
     arc.center.x = axc;
     arc.center.y = ayc;
-#define fixed_90 int2fixed(90)
-#define fixed_180 int2fixed(180)
-#define fixed_360 int2fixed(360)
     if (ar < 0) {
-	ang1 += fixed_180;
-	ang2 += fixed_180;
+	ang1 += 180;
+	ang2 += 180;
 	ar = -ar;
     }
     arc.radius = ar;
     arc.action = (add_line ? arc_lineto : arc_moveto);
     arc.notes = sn_none;
     arc.fast_quadrant = 0;
-    ang1r = fixed2float(ang1 % fixed_360);
+    ang1r = fmod(ang1, 360);
     gs_sincos_degrees(ang1r, &arc.sincos);
     arc.p3.x = axc + ar * arc.sincos.cos;
     arc.p3.y = ayc + ar * arc.sincos.sin;
     if (clockwise) {
 	while (ang1 < ang2)
-	    ang2 -= fixed_360;
+	    ang2 -= 360;
 	if (ang2 < 0) {
-	    fixed adjust = ROUND_UP(-ang2, fixed_360);
+	    double adjust = ceil(-ang2 / 360) * 360;
 
 	    ang1 += adjust, ang2 += adjust;
 	}
@@ -237,7 +245,7 @@ gs_imager_arc_add(gx_path * ppath, gs_imager_state * pis, bool clockwise,
 	    goto last;
 	/* Do the first part, up to a multiple of 90 degrees. */
 	if (!arc.sincos.orthogonal) {
-	    anext = ROUND_DOWN(arc.angle - fixed_epsilon, fixed_90);
+	    anext = floor(arc.angle / 90) * 90;
 	    if (anext < ang2)
 		goto last;
 	    code = next_arc_curve(&arc, anext);
@@ -247,7 +255,7 @@ gs_imager_arc_add(gx_path * ppath, gs_imager_state * pis, bool clockwise,
 	    arc.notes = sn_not_first;
 	}	    
 	/* Do multiples of 90 degrees.  Invariant: ang1 >= ang2 >= 0. */
-	while ((anext = arc.angle - fixed_90) >= ang2) {
+	while ((anext = arc.angle - 90) >= ang2) {
 	    code = next_arc_quadrant(&arc, anext);
 	    if (code < 0)
 		return code;
@@ -256,18 +264,22 @@ gs_imager_arc_add(gx_path * ppath, gs_imager_state * pis, bool clockwise,
 	}
     } else {
 	while (ang2 < ang1)
-	    ang2 += fixed_360;
+	    ang2 += 360;
 	if (ang1 < 0) {
-	    fixed adjust = ROUND_UP(-ang1, fixed_360);
+	    double adjust = ceil(-ang1 / 360) * 360;
 
 	    ang1 += adjust, ang2 += adjust;
 	}
 	arc.angle = ang1;
-	if (ang1 == ang2)
-	    return next_arc_curve(&arc, ang2);
+	if (ang1 == ang2) {
+	    code = next_arc_curve(&arc, ang2);
+	    if (code < 0)
+		return code;
+	    *p3 = arc.p3;
+	}
 	/* Do the first part, up to a multiple of 90 degrees. */
 	if (!arc.sincos.orthogonal) {
-	    anext = ROUND_UP(arc.angle + fixed_epsilon, fixed_90);
+	    anext = ceil(arc.angle / 90) * 90;
 	    if (anext > ang2)
 		goto last;
 	    code = next_arc_curve(&arc, anext);
@@ -277,7 +289,7 @@ gs_imager_arc_add(gx_path * ppath, gs_imager_state * pis, bool clockwise,
 	    arc.notes = sn_not_first;
 	}	    
 	/* Do multiples of 90 degrees.  Invariant: 0 <= ang1 <= ang2. */
-	while ((anext = arc.angle + fixed_90) <= ang2) {
+	while ((anext = arc.angle + 90) <= ang2) {
 	    code = next_arc_quadrant(&arc, anext);
 	    if (code < 0)
 		return code;
@@ -288,10 +300,16 @@ gs_imager_arc_add(gx_path * ppath, gs_imager_state * pis, bool clockwise,
     /*
      * Do the last curve of the arc, if any.
      */
-    if (arc.angle == ang2)
+    if (arc.angle == ang2) {
+	*p3 = arc.p3;
 	return 0;
+    }
 last:
-    return next_arc_curve(&arc, ang2);
+    code = next_arc_curve(&arc, ang2);
+    if (code < 0)
+	return code;
+    *p3 = arc.p3;
+    return 0;
 }
 
 int
@@ -308,28 +326,34 @@ floatp ax1, floatp ay1, floatp ax2, floatp ay2, floatp arad, float retxy[4])
 
     if (code < 0)
 	return code;
-    {				/* Now we have to compute the tangent points. */
+    {	
+        double dx0, dy0, dx2, dy2, sql0, sql2;
+        
+        /* Now we have to compute the tangent points. */
 	/* Basically, the idea is to compute the tangent */
 	/* of the bisector by using tan(x+y) and tan(z/2) */
 	/* formulas, without ever using any trig. */
-	double dx0 = ax0 - ax1, dy0 = ay0 - ay1;
-	double dx2 = ax2 - ax1, dy2 = ay2 - ay1;
+	dx0 = ax0 - ax1; dy0 = ay0 - ay1;
+	dx2 = ax2 - ax1; dy2 = ay2 - ay1;
 
 	/* Compute the squared lengths from p1 to p0 and p2. */
-	double sql0 = dx0 * dx0 + dy0 * dy0;
-	double sql2 = dx2 * dx2 + dy2 * dy2;
+	sql0 = dx0 * dx0 + dy0 * dy0;
+	sql2 = dx2 * dx2 + dy2 * dy2;
 
-	/* Compute the distance from p1 to the tangent points. */
-	/* This is the only messy part. */
-	double num = dy0 * dx2 - dy2 * dx0;
-	double denom = sqrt(sql0 * sql2) - (dx0 * dx2 + dy0 * dy2);
+        if (sql0 == 0. || sql2 == 0.)
+            return_error(gs_error_undefinedresult); /* for CET 11-04 */
 
 	/* Check for collinear points. */
-	if (denom == 0) {
+	if (dx0*dy2 == dy0*dx2) {
 	    code = gs_lineto(pgs, ax1, ay1);
 	    xt0 = xt2 = ax1;
 	    yt0 = yt2 = ay1;
 	} else {		/* not collinear */
+	    /* Compute the distance from p1 to the tangent points. */
+	    /* This is the only messy part. */
+	    double num = dy0 * dx2 - dy2 * dx0;
+	    double denom = sqrt(sql0 * sql2) - (dx0 * dx2 + dy0 * dy2);
+
 	    double dist = fabs(arad * num / denom);
 	    double l0 = dist / sqrt(sql0), l2 = dist / sqrt(sql2);
 	    arc_curve_params_t arc;
@@ -377,20 +401,25 @@ arc_add(const arc_curve_params_t * arc, bool is_quadrant)
 #if !PRECISE_CURRENTPOINT
 	 (code = gs_point_transform2fixed(&pis->ctm, x0, y0, &p0)) < 0) ||
 	(code = gs_point_transform2fixed(&pis->ctm, xt, yt, &pt)) < 0 ||
-	(code = gs_point_transform2fixed(&pis->ctm, arc->p3.x, arc->p3.y, &p3)) < 0 ||
+	(code = gs_point_transform2fixed(&pis->ctm, arc->p3.x, arc->p3.y, &p3)) < 0
 #else
 	 (code = gs_point_transform2fixed_rounding(&pis->ctm, x0, y0, &p0)) < 0) ||
 	(code = gs_point_transform2fixed_rounding(&pis->ctm, xt, yt, &pt)) < 0 ||
-	(code = gs_point_transform2fixed_rounding(&pis->ctm, arc->p3.x, arc->p3.y, &p3)) < 0 ||
+	(code = gs_point_transform2fixed_rounding(&pis->ctm, arc->p3.x, arc->p3.y, &p3)) < 0
 #endif
-	(code =
-	 (arc->action == arc_nothing ?
+	)
+	return code;
+#if PRECISE_CURRENTPOINT
+    if (!path_position_valid(path))
+	gs_point_transform(arc->p0.x, arc->p0.y, &ctm_only(arc->pis), &pis->subpath_start);
+#endif
+    code = (arc->action == arc_nothing ?
 	  (p0.x = path->position.x, p0.y = path->position.y, 0) :
 	  arc->action == arc_lineto && path_position_valid(path) ?
 	  gx_path_add_line(path, p0.x, p0.y) :
 	  /* action == arc_moveto, or lineto with no current point */
-	  gx_path_add_point(path, p0.x, p0.y))) < 0
-	)
+	  gx_path_add_point(path, p0.x, p0.y));
+    if (code < 0)
 	return code;
     /* Compute the fraction coefficient for the curve. */
     /* See gx_path_add_partial_arc for details. */
@@ -435,6 +464,7 @@ add:
 	      "[r]Arc f=%f p0=(%f,%f) pt=(%f,%f) p3=(%f,%f) action=%d\n",
 	      fraction, x0, y0, xt, yt, arc->p3.x, arc->p3.y,
 	      (int)arc->action);
+
     /* Open-code gx_path_add_partial_arc_notes */
     return gx_path_add_curve_notes(path, p0.x, p0.y, p2.x, p2.y, p3.x, p3.y,
 				   arc->notes | sn_from_arc);

@@ -64,7 +64,7 @@
 /*
  * JasPer Transcoder Program
  *
- * $Id: jasper.c,v 1.3 2006/06/16 18:21:39 Arabidopsis Exp $
+ * $Id: jasper.c,v 1.4 2007/05/07 11:22:24 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -132,6 +132,7 @@ void cmdusage(void);
 void badusage(void);
 void cmdinfo(void);
 int addopt(char *optstr, int maxlen, char *s);
+void errprint(jas_error_t err, char *msg);
 
 /******************************************************************************\
 * Global data.
@@ -164,8 +165,12 @@ int main(int argc, char **argv)
 	}
 
 	if (jas_init()) {
+		errprint(0, "error: cannot initialize jasper library\n");
 		abort();
 	}
+
+	/* set our error callback */
+	jas_set_error_cb(errprint);
 
 	/* Parse the command line options. */
 	if (!(cmdopts = cmdopts_parse(argc, argv))) {
@@ -523,6 +528,11 @@ void badusage()
 	  "For more information on how to use this command, type:\n");
 	jas_eprintf("    %s --help\n", cmdname);
 	exit(EXIT_FAILURE);
+}
+
+void errprint(jas_error_t err, char *msg)
+{
+	fprintf(stderr, "%s", msg);
 }
 
 #if 0

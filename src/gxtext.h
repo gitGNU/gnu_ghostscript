@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxtext.h,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gxtext.h,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Driver text interface implementation support */
 
 #ifndef gxtext_INCLUDED
@@ -97,6 +97,7 @@ rc_free_proc(rc_free_text_enum);
     /* The following change dynamically.  NOTE: gs_text_enum_copy_dynamic */\
     /* knows the entire list of dynamically changing elements. */\
     rc_header rc;\
+    void *enum_client_data;\
     gs_font *current_font; /* changes for composite fonts */\
     gs_glyph outer_CID; /* When a Type 3 is a FMapType 9 descendent. */\
     bool is_pure_color; /* The text is painted with a pure color. */\

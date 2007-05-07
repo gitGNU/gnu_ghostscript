@@ -1,5 +1,5 @@
 @echo off 
-@rem $Id: dumphint.bat,v 1.1.4.1 2003/12/12 22:07:58 giles Exp $
+@rem $Id: dumphint.bat 6300 2005-12-28 19:56:24Z giles $
 @rem Linearized PDF hint formatting utility.
 
 if %1/==/ goto usage

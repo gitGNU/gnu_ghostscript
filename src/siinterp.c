@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: siinterp.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: siinterp.c,v 1.6 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Image interpolation filter */
 #include "memory_.h"
 #include "gxfixed.h"		/* for gxdda.h */

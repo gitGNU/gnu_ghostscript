@@ -1,4 +1,5 @@
-/* Copyright (C) 1996, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gstype2.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gstype2.c,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Adobe Type 2 charstring interpreter */
 #include "math_.h"
 #include "memory_.h"
@@ -72,6 +72,8 @@ type2_sbw(gs_type1_state * pcis, cs_ptr csp, cs_ptr cstack, ip_state_t * ipsp,
 	wx = pcis->pfont->data.defaultWidthX;
     if (pcis->seac_accent < 0) {
 	if (pcis->sb_set) {
+	    pcis->origin_offset.x = pcis->lsb.x - sbx;
+	    pcis->origin_offset.y = pcis->lsb.y - sby;
 	    sbx = pcis->lsb.x;
 	    sby = pcis->lsb.y;
 	}
@@ -163,7 +165,8 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 			    gs_currentaligntopixels(pfont->dir));
 	    if (code < 0)
 	    	return code;
-	    code = t1_hinter__set_font_data(h, 2, pdata, pcis->no_grid_fitting);
+	    code = t1_hinter__set_font_data(h, 2, pdata, pcis->no_grid_fitting,
+			    pcis->pfont->is_resource);
 	    if (code < 0)
 	    	return code;
 	    break;
@@ -339,8 +342,13 @@ gs_type2_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 		    code = gx_setcurrentpoint_from_path(pcis->pis, pcis->path);
 		    if (code < 0)
 			return code;
-		} else
-		    t1_hinter__setcurrentpoint(h, pcis->save_adxy.x, pcis->save_adxy.y);
+		} else {
+		    t1_hinter__setcurrentpoint(h, pcis->save_adxy.x + pcis->origin_offset.x, 
+						  pcis->save_adxy.y + pcis->origin_offset.y);
+		    code = t1_hinter__end_subglyph(h);
+		    if (code < 0)
+			return code;
+		}
 		code = gs_type1_endchar(pcis);
 		if (code == 1) {
 		    /*

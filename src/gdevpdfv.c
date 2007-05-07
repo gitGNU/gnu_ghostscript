@@ -1,4 +1,5 @@
-/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfv.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gdevpdfv.c,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Color value writing for pdfwrite driver */
 #include "math_.h"
 #include "string_.h"
@@ -205,14 +206,16 @@ pdf_store_pattern1_params(gx_device_pdf *pdev, pdf_resource_t *pres,
     double scale_y = pdev->HWResolution[1] / 72.0;
     cos_dict_t *pcd = cos_stream_dict((cos_stream_t *)pres->object);
     cos_dict_t *pcd_Resources = cos_dict_alloc(pdev, "pdf_pattern(Resources)");
-    char buf[60];
+    float bbox[4];
     int code;
 
     if (pcd == NULL || pcd_Resources == NULL)
 	return_error(gs_error_VMerror);
     pdev->substream_Resources = pcd_Resources;
-    sprintf(buf, "[%g %g %g %g]", t->BBox.p.x, t->BBox.p.y, 
-				  t->BBox.q.x, t->BBox.q.y);
+    bbox[0] = t->BBox.p.x;
+    bbox[1] = t->BBox.p.y;
+    bbox[2] = t->BBox.q.x;
+    bbox[3] = t->BBox.q.y;
     /* The graphics library assumes a shifted origin to provide 
        positive bitmap pixel indices. Compensate it now. */
     smat.tx += pinst->step_matrix.tx;
@@ -235,7 +238,7 @@ pdf_store_pattern1_params(gx_device_pdf *pdev, pdf_resource_t *pres,
     if (code >= 0)
 	code = cos_dict_put_c_key_int(pcd, "/TilingType", t->TilingType);
     if (code >= 0)
-	code = cos_dict_put_string(pcd, (byte *)"/BBox", 5, (byte *)buf, strlen(buf));
+	code = cos_dict_put_c_key_floats(pcd, "/BBox", bbox, 4);
     if (code >= 0)
 	code = cos_dict_put_matrix(pcd, "/Matrix", &smat);
     if (code >= 0)
@@ -351,7 +354,7 @@ pdf_put_colored_pattern(gx_device_pdf *pdev, const gx_drawing_color *pdc,
 			bool have_pattern_streams, pdf_resource_t **ppres)
 {
     const gx_color_tile *p_tile = pdc->colors.pattern.p_tile;
-    gs_color_space cs_Device;
+    gs_color_space *pcs_Device;
     cos_value_t cs_value;
     cos_value_t v;
     int code;
@@ -425,12 +428,12 @@ pdf_put_colored_pattern(gx_device_pdf *pdev, const gx_drawing_color *pdc,
     code = pdf_cs_Pattern_colored(pdev, &v);
     if (code < 0)
 	return code;
-    pdf_cspace_init_Device(pdev->memory, &cs_Device, pdev->color_info.num_components);
+    pdf_cspace_init_Device(pdev->memory, &pcs_Device, pdev->color_info.num_components);
     /*
      * We don't have to worry about color space scaling: the color
      * space is always a Device space.
      */
-    code = pdf_color_space(pdev, &cs_value, NULL, &cs_Device,
+    code = pdf_color_space(pdev, &cs_value, NULL, pcs_Device,
 			   &pdf_color_space_names, true);
     if (code < 0)
 	return code;
@@ -438,7 +441,7 @@ pdf_put_colored_pattern(gx_device_pdf *pdev, const gx_drawing_color *pdc,
 	cos_stream_t *pcs_mask = 0;
 	cos_stream_t *pcs_image;
 
-	gs_image_t_init_adjust(&image, &cs_Device, false);
+	gs_image_t_init_adjust(&image, pcs_Device, false);
 	image.BitsPerComponent = 8;
 	pdf_set_pattern_image((gs_data_image_t *)&image, &p_tile->tbits);
 	if (m_tile) {
@@ -474,6 +477,9 @@ pdf_put_colored_pattern(gx_device_pdf *pdev, const gx_drawing_color *pdc,
 	*ppres = pdf_find_resource_by_gs_id(pdev, resourcePattern, p_tile->id);
 	*ppres = pdf_substitute_pattern(*ppres);
     }
+    /* pcs_Device will leak (picked up by GC in PS) on error, but we'll
+       tolerate that for now. */
+    rc_decrement(pcs_Device, "pdf_put_colored_pattern");
     cos_value_write(&v, pdev);
     pprints1(pdev->strm, " %s", ppscc->setcolorspace);
     return 0;

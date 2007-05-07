@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsciemap.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gsciemap.c,v 1.7 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* CIE color rendering */
 #include "math_.h"
 #include "gx.h"
@@ -121,10 +122,9 @@ gx_concretize_CIEDEFG(const gs_client_color * pc, const gs_color_space * pcs,
 	double v0 = pc->paint.values[i];
 	const gs_range *const rangeDEFG = &pcie->RangeDEFG.ranges[i];
 	double value =
-	    (v0 < rangeDEFG->rmin ? 0.0 :
-	     v0 > rangeDEFG->rmax ? factor :
-	     (v0 - rangeDEFG->rmin) * factor /
-	       (rangeDEFG->rmax - rangeDEFG->rmin));
+	    (v0 < rangeDEFG->rmin ? 0.0 : factor *
+	    (v0 > rangeDEFG->rmax ? rangeDEFG->rmax - rangeDEFG->rmin :
+	     v0 - rangeDEFG->rmin ));
 	int vi = (int)value;
 	double vf = value - vi;
 	double v = pcie->caches_defg.DecodeDEFG[i].floats.values[vi];
@@ -180,10 +180,9 @@ gx_concretize_CIEDEF(const gs_client_color * pc, const gs_color_space * pcs,
 	double v0 = pc->paint.values[i];
 	const gs_range *const rangeDEF = &pcie->RangeDEF.ranges[i];
 	double value =
-	    (v0 < rangeDEF->rmin ? 0.0 :
-	     v0 > rangeDEF->rmax ? factor :
-	     (v0 - rangeDEF->rmin) * factor /
-	       (rangeDEF->rmax - rangeDEF->rmin));
+	    (v0 < rangeDEF->rmin ? 0.0 : factor *
+	    (v0 > rangeDEF->rmax ? rangeDEF->rmax - rangeDEF->rmin :
+	     v0 - rangeDEF->rmin ));
 	int vi = (int)value;
 	double vf = value - vi;
 	double v = pcie->caches_def.DecodeDEF[i].floats.values[vi];

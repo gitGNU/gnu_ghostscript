@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1996, 1997, 1998, 1999, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: imain.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: imain.c,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Common support for interpreter front ends */
 #include "malloc_.h"
 #include "memory_.h"
@@ -204,18 +205,13 @@ init2_make_string_array(i_ctx_t *i_ctx_p, const ref * srefs, const char *aname)
 }
 
 /*
- * Invoke the interpreter, handling stdio callouts
- * e_NeedStdin, e_NeedStdout and e_NeedStderr.
- * We don't yet pass callouts all the way out because they
- * occur within gs_main_init2() and swproc().
+ * Invoke the interpreter. This layer doesn't do much (previously stdio
+ * callouts were handled here instead of in the stream processing.
  */
 private int
 gs_main_interpret(gs_main_instance *minst, ref * pref, int user_errors, 
 	int *pexit_code, ref * perror_object)
 {
-    i_ctx_t *i_ctx_p;
-    ref refnul;
-    ref refpop;
     int code;
 
     /* set interpreter pointer to lib_path */
@@ -223,96 +219,6 @@ gs_main_interpret(gs_main_instance *minst, ref * pref, int user_errors,
 
     code = gs_interpret(&minst->i_ctx_p, pref, 
 		user_errors, pexit_code, perror_object);
-    while ((code == e_NeedStdin) || (code == e_NeedStdout) || 
-	(code == e_NeedStderr)) {
-        i_ctx_p = minst->i_ctx_p;
-	if (code == e_NeedStdout) {
-	    /*
-	     * On entry:
-	     *  esp[0]  = string, data to write to stdout
-	     *  esp[-1] = bool, EOF (ignored)
-	     *  esp[-2] = array, procedure (ignored)
-	     *  esp[-3] = file, stdout stream
-	     * We print the string then pop these 4 items.
-	     */
-	    if (r_type(&esp[0]) == t_string) {
-		const char *str = (const char *)(esp[0].value.const_bytes); 
-		int count = esp[0].tas.rsize;
-		int rcode = 0;
-		if (str != NULL)
-		    rcode = outwrite(imemory, str, count);
-		if (rcode < 0)
-		    return_error(e_ioerror);
-	    }
-
-	    /* On return, we need to set 
-	     *  osp[-1] = string buffer, 
-	     *  osp[0] = file
-	     */
-	    gs_push_string(minst, (byte *)minst->stdout_buf, 
-		sizeof(minst->stdout_buf), false);
-	    gs_push_integer(minst, 0);	/* push integer */
-	    osp[0] = esp[-3];		/* then replace with file */
-	    /* remove items from execution stack */
-	    esp -= 4;
-	}
-	else if (code == e_NeedStderr) {
-	    if (r_type(&esp[0]) == t_string) {
-		const char *str = (const char *)(esp[0].value.const_bytes); 
-		int count = esp[0].tas.rsize;
-		int rcode = 0;
-		if (str != NULL)
-		    rcode = errwrite(str, count);
-		if (rcode < 0)
-		    return_error(e_ioerror);
-	    }
-	    gs_push_string(minst, (byte *)minst->stderr_buf, 
-		sizeof(minst->stderr_buf), false);
-	    gs_push_integer(minst, 0);
-	    osp[0] = esp[-3];
-	    esp -= 4;
-	}
-	else if (code == e_NeedStdin) {
-	    int count = sizeof(minst->stdin_buf);
-	    /*
-	     * On entry:
-	     *  esp[0]  = array, procedure (ignored)
-	     *  esp[-1] = file, stdin stream
-	     * We read from stdin then pop these 2 items.
-	     */
-	    if (minst->heap->gs_lib_ctx->stdin_fn)
-		count = (*minst->heap->gs_lib_ctx->stdin_fn)
-		    (minst->heap->gs_lib_ctx->caller_handle, 
-		     minst->stdin_buf, count);
-	    else
-		count = gp_stdin_read(minst->stdin_buf, count, 
-				      minst->heap->gs_lib_ctx->stdin_is_interactive,
-				      minst->heap->gs_lib_ctx->fstdin);
-	    if (count < 0)
-	        return_error(e_ioerror);
-
-	    /* On return, we need to set 
-	     *  osp[-1] = string buffer, 
-	     *  osp[0] = file
-	     */
-	    gs_push_string(minst, (byte *)minst->stdin_buf, count, false);
-	    gs_push_integer(minst, 0);	/* push integer */
-	    osp[0] = esp[-1];		/* then replace with file */
-	    /* remove items from execution stack */
-	    esp -= 2;
-	}
-	/*
-	 * To resume the interpreter, we call gs_interpret with a null ref.
-	 * This copies the literal null onto the operand stack.
-	 * To remove this we push a zpop onto the execution stack.
-	 */
-	make_null(&refnul);
-	make_oper(&refpop, 0, zpop); 
-	esp += 1;
-	*esp = refpop;
-	code = gs_interpret(&minst->i_ctx_p, &refnul, 
-		    user_errors, pexit_code, perror_object);
-    }
     return code;
 }
 
@@ -355,10 +261,18 @@ gs_main_init2(gs_main_instance * minst)
 	 * both minst->display and  display_set_callback() are going away
 	*/
 	if (minst->display)
-	    code = display_set_callback(minst, minst->display);
-
-	if (code < 0)
+	if ((code = display_set_callback(minst, minst->display)) < 0)
 	    return code;
+
+#ifndef PSI_INCLUDED
+	if ((code = gs_main_run_string(minst, 
+		"JOBSERVER "
+		" { false 0 .startnewjob } "
+		" { NOOUTERSAVE not { save pop } if } "
+		"ifelse", 0, &exit_code, 
+		&error_object)) < 0)
+	   return code;
+#endif /* PSI_INCLUDED */
     }
     if (gs_debug_c(':'))
 	print_resource_usage(minst, &gs_imemory, "Start");
@@ -540,9 +454,8 @@ gs_run_init_file(gs_main_instance * minst, int *pexit_code, ref * perror_object)
     }
     /* Check to make sure the first token is an integer */
     /* (for the version number check.) */
-    scanner_state_init(&state, false);
-    code = scan_token(i_ctx_p, ifile.value.pfile, &first_token,
-		      &state);
+    scanner_init(&state, &ifile);
+    code = scan_token(i_ctx_p, &first_token, &state);
     if (code != 0 || !r_has_type(&first_token, t_integer)) {
 	eprintf1("Initialization file %s does not begin with an integer.\n", gs_init_file);
 	*pexit_code = 255;
@@ -850,8 +763,10 @@ gs_main_finit(gs_main_instance * minst, int exit_status, int code)
 	    }
 	    i_ctx_p = minst->i_ctx_p; /* interp_reclaim could change it. */
 	}
+#ifndef PSI_INCLUDED
 	if (i_ctx_p->pgs != NULL && i_ctx_p->pgs->device != NULL) {
 	    gx_device *pdev = i_ctx_p->pgs->device;
+	    const char * dname = pdev->dname;
 
 	    /* make sure device doesn't isn't freed by .uninstalldevice */
 	    rc_adjust(pdev, 1, "gs_main_finit");	
@@ -864,11 +779,12 @@ gs_main_finit(gs_main_instance * minst, int exit_status, int code)
 	    code = gs_closedevice(pdev);
 	    if (code < 0)
 		eprintf2("ERROR %d closing %s device. See gs/src/ierrors.h for code explanation.\n",
-		    code, i_ctx_p->pgs->device->dname);
+		    code, dname);
 	    rc_decrement(pdev, "gs_main_finit");		/* device might be freed */
 	    if (exit_status == 0 || exit_status == e_Quit)
 		exit_status = code;
 	}
+#endif
     }
     /* Flush stdout and stderr */
     if (minst->init_done >= 2)
@@ -889,6 +805,7 @@ gs_main_finit(gs_main_instance * minst, int exit_status, int code)
 	    eprintf1("ERROR %d while the final restore. See gs/src/ierrors.h for code explanation.\n", code);
         i_plugin_finit(mem_raw, h);
     }
+#ifndef PSI_INCLUDED
     /* clean up redirected stdout */
     if (minst->heap->gs_lib_ctx->fstdout2 
 	&& (minst->heap->gs_lib_ctx->fstdout2 != minst->heap->gs_lib_ctx->fstdout)
@@ -896,6 +813,7 @@ gs_main_finit(gs_main_instance * minst, int exit_status, int code)
 	fclose(minst->heap->gs_lib_ctx->fstdout2);
 	minst->heap->gs_lib_ctx->fstdout2 = (FILE *)NULL;
     }
+#endif
     minst->heap->gs_lib_ctx->stdout_is_redirected = 0;
     minst->heap->gs_lib_ctx->stdout_to_stderr = 0;
     /* remove any temporary files, after ghostscript has closed files */
@@ -907,7 +825,9 @@ gs_main_finit(gs_main_instance * minst, int exit_status, int code)
 	}
 	free(tempnames);
     }
+#ifndef PSI_INCLUDED
     gs_lib_finit(exit_status, code, minst->heap);
+#endif
     return exit_status;
 }
 int

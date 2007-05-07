@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsline.c,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsline.c,v 1.5 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Line parameter operators for Ghostscript library */
 #include "math_.h"
 #include "memory_.h"

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsiorom.h,v 1.1 2006/06/16 12:55:05 Arabidopsis Exp $ */
+/* $Id: gsiorom.h,v 1.2 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Rom File System settings */
 
 #ifndef gsiorom_INCLUDED

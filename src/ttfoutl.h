@@ -1,4 +1,5 @@
-/* Copyright (C) 2003 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: ttfoutl.h,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: ttfoutl.h,v 1.6 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* The TrueType instruction interpreter interface definition. */
 
 #ifndef incl_ttfoutl
@@ -112,6 +112,8 @@ struct ttfReader_s {
     bool   (*Error)(ttfReader *);
     int    (*LoadGlyph)(ttfReader *, int nIndex, const byte **, int *);
     void   (*ReleaseGlyph)(ttfReader *, int nIndex);
+    int    (*get_metrics)(const ttfReader *ttf, uint glyph_index, bool bVertical, 
+			  short *sideBearing, unsigned short *nAdvance);
 };
 
 /* Define an auxiliary structure for ttfFont. */

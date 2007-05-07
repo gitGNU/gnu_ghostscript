@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpsim.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gdevpsim.c,v 1.7 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* PostScript image output device */
 #include "gdevprn.h"
 #include "gdevpsu.h"

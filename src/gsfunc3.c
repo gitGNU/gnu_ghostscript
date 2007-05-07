@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsfunc3.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gsfunc3.c,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Implementation of LL3 Functions */
 #include "math_.h"
 #include "memory_.h"
@@ -367,8 +368,10 @@ fn_1ItSg_is_monotonic(const gs_function_t * pfn_common,
 	    vv1 = b1; /* Ignore a small noise */
 	if (vv0 == vv1)
 	    return 1;
-	if (vv0 < b1 && vv1 > b1)
-	    return 0; /* Consider stitches as monotonity beraks. */
+	if (vv0 < b1 && vv1 > b1) {
+	    *mask = 1;
+	    return 0; /* Consider stitches as monotonity breaks. */
+	}
 	e0 = pfn->params.Encode[2 * i];
 	e1 = pfn->params.Encode[2 * i + 1];
 	esmall = (float)1e-6 * any_abs(e1 - e0);

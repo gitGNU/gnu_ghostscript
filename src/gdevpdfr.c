@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfr.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gdevpdfr.c,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Named object pdfmark processing */
 #include "memory_.h"
 #include "string_.h"
@@ -126,10 +127,12 @@ pdf_refer_named(gx_device_pdf * pdev, const gs_param_string * pname_orig,
      * Check for a predefined name.  Map ThisPage, PrevPage, and NextPage
      * to the appropriate Page<#> name.
      */
-    if (pname->size >= 7 &&
-	sscanf((const char *)pname->data, "{Page%d}", &page_number) == 1
-	)
-	goto cpage;
+    if (pname->size >= 7 && pname->size < sizeof(page_name_chars)) {
+        memcpy(page_name_chars, pname->data, pname->size);
+        page_name_chars[pname->size] = 0;
+	if (sscanf(page_name_chars, "{Page%d}", &page_number) == 1)
+	    goto cpage;
+    }
     if (pdf_key_eq(pname, "{ThisPage}"))
 	page_number = pdev->next_page + 1;
     else if (pdf_key_eq(pname, "{NextPage}"))

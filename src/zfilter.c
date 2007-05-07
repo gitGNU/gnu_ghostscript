@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zfilter.c,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zfilter.c,v 1.6 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Filter creation */
 #include "memory_.h"
 #include "ghost.h"
@@ -134,7 +134,7 @@ zRLD(i_ctx_t *i_ctx_p)
 /* <source> <EODcount> <EODstring> SubFileDecode/filter <file> */
 /* <source> <dict> <EODcount> <EODstring> SubFileDecode/filter <file> */
 /* <source> <dict> SubFileDecode/filter <file> *//* (LL3 only) */
-private int
+int				/* exported for zsysvm.c */
 zSFD(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -187,7 +187,8 @@ filter_read(i_ctx_t *i_ctx_p, int npop, const stream_template * template,
     os_ptr op = osp;
     uint min_size = template->min_out_size + max_min_left;
     uint save_space = ialloc_space(idmemory);
-    uint use_space = max(space, save_space);
+    /* PLRM3 requires the following, *not* max(space, save_space). */
+    uint use_space = max(space, avm_system); /* don't alloc in foreign space */
     os_ptr sop = op - npop;
     stream *s;
     stream *sstrm;
@@ -266,8 +267,9 @@ filter_write(i_ctx_t *i_ctx_p, int npop, const stream_template * template,
     os_ptr op = osp;
     uint min_size = template->min_in_size + max_min_left;
     uint save_space = ialloc_space(idmemory);
-    uint use_space = max(space, save_space);
-    register os_ptr sop = op - npop;
+    /* PLRM3 requires the following, *not* max(space, save_space). */
+    uint use_space = max(space, avm_system); /* don't alloc in foreign space */
+    os_ptr sop = op - npop;
     stream *s;
     stream *sstrm;
     bool close = false;

@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zfcmap.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: zfcmap.c,v 1.8 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* CMap creation operator */
 #include "memory_.h"
 #include "ghost.h"
@@ -463,6 +463,11 @@ zbuildcmap(i_ctx_t *i_ctx_p)
 	goto fail;
     if ((code = acquire_code_map(&pcmap->notdef, &rnotdefs, pcmap, imemory)) < 0)
 	goto fail;
+    if (!bytes_compare(pcmap->CIDSystemInfo->Registry.data, pcmap->CIDSystemInfo->Registry.size,
+		    (const byte *)"Artifex", 7) &&
+	!bytes_compare(pcmap->CIDSystemInfo->Ordering.data, pcmap->CIDSystemInfo->Ordering.size,
+		    (const byte *)"Unicode", 7))
+	pcmap->from_Unicode = true;
     pcmap->mark_glyph = zfont_mark_glyph_name;
     pcmap->mark_glyph_data = 0;
     pcmap->glyph_name = zfcmap_glyph_name;

@@ -1,14 +1,20 @@
 %    Copyright (C) 1990, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-% This software is provided AS-IS with no warranty, either express or
-% implied.
-% 
-% This software is distributed under license and may not be copied,
-% modified or distributed except as expressly authorized under the terms
-% of the license contained in the file LICENSE in this distribution.
-
-
-% $Id: gs_lev2.ps,v 1.6 2006/06/16 12:55:14 Arabidopsis Exp $
+%  This file is part of GNU ghostscript
+%
+%  GNU ghostscript is free software; you can redistribute it and/or modify it under
+%  the terms of the GNU General Public License as published by the Free Software
+%  Foundation; either version 2, or (at your option) any later version.
+%
+%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+%
+%  You should have received a copy of the GNU General Public License along with
+%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+%
+% $Id: gs_lev2.ps,v 1.7 2007/05/07 11:22:07 Arabidopsis Exp $
 % Initialization file for Level 2 functions.
 % When this is run, systemdict is still writable,
 % but (almost) everything defined here goes into level2dict.
@@ -45,7 +51,7 @@ level2dict begin
 } .bind def
 /.checksetparams {		% <newdict> <opname> <checkdict>
 				%   .checksetparams <newdict>
-  2 index {
+  2 .argindex {
 		% Stack: newdict opname checkdict key newvalue
     3 copy 3 1 roll .knownget {
       exec not {
@@ -104,7 +110,7 @@ level2dict begin
 systemdict begin
 /psuserparams 48 dict def
 /getuserparam {			% <name> getuserparam <value>
-  /userparams .systemvar 1 index get exch pop
+  /userparams .systemvar 1 .argindex get exch pop
 } odef
 % Fill in userparams (created by the interpreter) with current values.
 mark .currentuserparams
@@ -120,7 +126,9 @@ end
 /currentuserparams {		% - currentuserparams <dict>
   /userparams .systemvar dup length dict .copydict
 } odef
-/setuserparams {		% <dict> setuserparams -
+% We break out setuserparams into a separate procedure so that setvmxxx
+% can use it without affecting the command in case of an error.
+/.setuserparams2 {
 	% Check that we will be able to set the PostScript-level
 	% user parameters.
   /setuserparams /psuserparams .systemvar .checksetparams
@@ -157,6 +165,9 @@ end
 	% Set them again to the new values.  From here on, we are safe,
 	% since a context switch will consult userparams.
   .setuserparams
+} .bind def
+/setuserparams {		% <dict> setuserparams -
+    .setuserparams2
 } .bind odef
 % Initialize user parameters managed here.
 /JobName () .definepsuserparam
@@ -174,7 +185,7 @@ currentdict /pssystemparams known not {
   /pssystemparams 40 dict readonly def
 } if
 /getsystemparam {		% <name> getsystemparam <value>
-  //pssystemparams 1 index .knownget { exch pop } { .getsystemparam } ifelse
+  //pssystemparams 1 .argindex .knownget { exch pop } { .getsystemparam } ifelse
 } odef
 end
 /currentsystemparams {		% - currentsystemparams <dict>
@@ -183,6 +194,7 @@ end
 /setsystemparams {		% <dict> setsystemparams -
 	% Check that we will be able to set the PostScript-level
 	% system parameters.
+   dup pop		% check # of args
    /SAFETY .systemvar /safe get {
      % SAFER mode disallows some changes
      [ /GenericResourceDir /FontResourceDir /GenericResourcePathSep ] {
@@ -229,7 +241,10 @@ end
 
 % Redefine cache parameter setting to interact properly with userparams.
 /setcachelimit {
-  mark /MaxFontItem 2 index .dicttomark setuserparams pop
+    { mark /MaxFontItem 2 .argindex .dicttomark setuserparams pop }
+  stopped
+    {  /setcachelimit .systemvar $error /errorname get signalerror
+    } if
 } .bind odef
 /setcacheparams {
 	% The MaxFontCache parameter is a system parameter, which we might
@@ -241,8 +256,9 @@ end
     3 -1 roll pop
     /MinFontCompress 3 1 roll
     /MaxFontItem exch
-  .dicttomark setuserparams
-  cleartomark
+  .dicttomark { setuserparams cleartomark } stopped {
+    /setcacheparams .systemvar $error /errorname get signalerror
+  } if
 } .bind odef
 
 % Add bogus user and system parameters to satisfy badly written PostScript
@@ -255,7 +271,7 @@ end
   /MaxFormItem 100000 .definepsuserparam
   /MaxPatternItem 20000 .definepsuserparam
   /MaxScreenItem 48000 .definepsuserparam
-  /MaxUPathItem 5000 .definepsuserparam
+  /MaxUPathItem 0 .definepsuserparam
 
 % File Access Permission parameters
   .currentglobal true .setglobal
@@ -338,8 +354,7 @@ psuserparams /ProcessDSCComment {.checkprocesscomment} put
 
 (<<) cvn			% - << -mark-
   /mark load def
-(>>) cvn			% -mark- <key1> <value1> ... >> <dict>
-  /.dicttomark load def
+% (>> is defined primitively.)
 /languagelevel 2 def
 % When running in Level 2 mode, this interpreter is supposed to be
 % compatible with Adobe version 2017.
@@ -394,13 +409,13 @@ psuserparams /ProcessDSCComment {.checkprocesscomment} put
 
 % VMReclaim and VMThreshold are user parameters.
 /setvmthreshold {		% <int> setvmthreshold -
-  mark /VMThreshold 2 index .dicttomark setuserparams pop
+  mark /VMThreshold 2 .argindex .dicttomark .setuserparams2 pop
 } odef
 /vmreclaim {			% <int> vmreclaim -
   dup 0 gt {
     .vmreclaim
   } {
-    mark /VMReclaim 2 index .dicttomark setuserparams pop
+    mark /VMReclaim 2 index .dicttomark .setuserparams2 pop
   } ifelse
 } odef
 -1 setvmthreshold
@@ -414,6 +429,7 @@ psuserparams /ProcessDSCComment {.checkprocesscomment} put
 } if
 /.putdevparams where {
   pop /setdevparams {		% <iodevice> <dict> setdevparams -
+    dup type /dicttype ne { /setdevparams .systemvar /typecheck signalerror } if
     mark 1 index { } forall counttomark 2 add index
     .putdevparams pop pop
   } odef
@@ -426,10 +442,10 @@ serverdict begin
 % We could protect the job information better, but we aren't attempting
 % (currently) to protect ourselves against maliciousness.
 
-/.jobsave null def		% top-level save object
+/.jobsave //null def		% top-level save object
 /.jobsavelevel 0 def		% save depth of job (0 if .jobsave is null,
 				% 1 otherwise)
-/.adminjob true def		% status of current unencapsulated job
+/.adminjob //true def		% status of current unencapsulated job
 
 end		% serverdict
 
@@ -442,53 +458,52 @@ end		% serverdict
 % it doesn't reset stdin/stdout.
 /.startnewjob {			% <exit_bool> <password_level>
 				%   .startnewjob -
-    serverdict /.jobsave get dup null eq { pop } { restore } ifelse
+    serverdict /.jobsave get dup //null eq { pop } { restore } ifelse
     exch {
 			% Unencapsulated job
-      serverdict /.jobsave null put
+      serverdict /.jobsave //null put
       serverdict /.jobsavelevel 0 put
       serverdict /.adminjob 3 -1 roll 1 gt put
-		% The Adobe documentation doesn't say what happens to the
-		% graphics state stack in this case, but an experiment
-		% produced results suggesting that a grestoreall occurs.
-      grestoreall
     } {
 			% Encapsulated job
       pop
       serverdict /.jobsave save put
       serverdict /.jobsavelevel 1 put
-      .userdict /quit /stop load put
+      .userdict /quit { stop } .bind put  % CET 28-10 requires a procedure
     } ifelse
 		% Reset the interpreter state.
   clear cleardictstack
   initgraphics
-  false setglobal
+  //false setglobal
   2 vmreclaim	% Make sure GC'ed memory is reclaimed and freed.
 } bind def
 /.startjob {			% <exit_bool> <password> <finish_proc>
 				%   .startjob <ok_bool>
   vmstatus pop pop serverdict /.jobsavelevel get eq
-  2 index .checkpassword 0 gt and {
+  2 .argindex .checkpassword 0 gt and {
     exch .checkpassword exch count 3 roll count 3 sub { pop } repeat
     cleardictstack
 		% Reset the e-stack back to the 2 .stopped in .runexec,
 		% passing the finish_proc to be executed afterwards.
     2 .stop
   } {		% Password check failed
-    pop pop pop false
+    pop pop pop //false
   } ifelse
 } odef
 /startjob {			% <exit_bool> <password> startjob <ok_bool>
 	% This is a hack.  We really need some way to indicate explicitly
 	% to the interpreter that we are under control of a job server.
-  { .startnewjob true } .startjob
+  1 .argindex type /booleantype ne {
+    /startjob .systemvar /typecheck signalerror
+  } if
+  { .startnewjob //true } .startjob
 } odef
 
 % The procedure to undo the job encapsulation 
 /.endjob {
   clear cleardictstack
-  serverdict /.jobsave get dup null eq { pop } { restore } ifelse
-  serverdict /.jobsave null put
+  serverdict /.jobsave get dup //null eq { pop } { restore } ifelse
+  serverdict /.jobsave //null put
   2 vmreclaim   % recover local and global VM
 } odef
 
@@ -510,7 +525,7 @@ end
 serverdict begin
 
 /exitserver {			% <password> exitserver -
-  true exch { .startnewjob } .startjob not {
+  //true exch { .startnewjob } .startjob not {
     /exitserver /invalidaccess signalerror
   } if
 } bind def
@@ -660,7 +675,7 @@ currentdict end
 
 % ------ Color spaces ------ %
 
-% Move setcolorsapce, setcolor, and colorspacedict to level2dict
+% Move setcolorspace, setcolor, and colorspacedict to level2dict
 level2dict /setcolorspace .cspace_util 1 index get put
 level2dict /setcolor .cspace_util 1 index get put
 level2dict /colorspacedict .cspace_util 1 index get put
@@ -691,16 +706,20 @@ level2dict /colorspacedict .cspace_util 1 index get put
 
 /findcolorrendering {		% <intentname> findcolorrendering
 				%   <crdname> <found>
-  /ColorRendering /ProcSet findresource
-  1 index .namestring (.) concatstrings
-  1 index /GetPageDeviceName get exec .namestring (.) concatstrings
-  2 index /GetHalftoneName get exec .namestring
-  concatstrings concatstrings
-  dup /ColorRendering resourcestatus {
-    pop pop exch pop exch pop true
-  } {
-    pop /GetSubstituteCRD get exec false
-  } ifelse
+    % Adobe interpreters report /findcolorrendering (literal name), not the
+    % operator itself, if an error occurs in findcolorrendering.
+    /findcolorrendering {
+	/ColorRendering /ProcSet findresource
+	1 .argindex dup type /nametype eq { .namestring } if (.) concatstrings
+	1 index /GetPageDeviceName get exec dup type /nametype eq { .namestring } if (.) concatstrings
+	2 index /GetHalftoneName get exec dup type /nametype eq { .namestring } if
+	concatstrings concatstrings cvn	% stack: intentname procset crdname
+	dup /ColorRendering resourcestatus {
+	    pop pop exch pop exch pop true
+	} {
+	    pop /GetSubstituteCRD get exec false
+	} ifelse
+    } .errorexec
 } odef
 
 5 dict dup begin
@@ -731,7 +750,15 @@ end
 /.colorrenderingtypes 5 dict def
 
 /setcolorrendering {		% <crd> setcolorrendering -
-  dup /ColorRenderingType get //.colorrenderingtypes exch get exec
+  dup /ColorRenderingType get
+  dup type /integertype ne {
+    /setcolorrendering .systemvar /typecheck signalerror
+  } if
+  //.colorrenderingtypes exch .knownget {
+     exec 
+  } {
+    /setcolorrendering .systemvar /rangecheck signalerror
+  } ifelse
 } odef
 
 /.setcolorrendering1 where { pop } { (%END CRD) .skipeof } ifelse
@@ -829,21 +856,38 @@ def
 def
 
 /makepattern {			% <proto_dict> <matrix> makepattern <pattern>
-  //.patterntypes 2 index /PatternType get get
+  dup type /dicttype eq {
+     % "<dict> makepattern" reports /typecheck on Adobe
+     /makepattern .systemvar /typecheck signalerror
+  } if
+  //.patterntypes 2 .argindex /PatternType get .knownget not {
+      /makepattern .systemvar /rangecheck signalerror
+  } if
   .currentglobal false .setglobal exch
 		% Stack: proto matrix global buildproc
   3 index dup length 1 add dict .copydict
-  3 index 3 -1 roll exec 3 -1 roll .setglobal
-  % Hide the gs_pattern?_instance_t inside an array to match CPSI and make CET run
-  1 index /Implementation 3 -1 roll
-  2 array dup 3 -1 roll 0 exch put put
-  readonly exch pop exch pop
+		% Stack: proto matrix global buildproc newdict
+  3 index 3 -1 roll exec
+		% Stack: proto matrix global newdict instance
+  % Create an 'Implementation' entry for the pattern dict.  The PRLM 3rd says
+  % this about the contents of Implementation:  "The type and value of this
+  % entry are implementation-dependent."  The CET (page 2 of 18-02f) expects
+  % that this entry be an array and that the second element of the array be a
+  % gstate.  We put our pattern instance struct into the first element of the
+  % array.
+  1 index /Implementation 3 -1 roll gstate 2 array astore
+  put				% put Implementation into the pattern dict.
+		% Stack: proto matrix global newdict
+  readonly exch .setglobal exch pop exch pop
 } odef
 
 /setpattern {			% [<comp1> ...] <pattern> setpattern -
-  currentcolorspace 0 get /Pattern ne {
-    [ /Pattern currentcolorspace ] setcolorspace
-  } if setcolor
+  { currentcolorspace 0 get /Pattern ne {
+      [ /Pattern currentcolorspace ] setcolorspace
+    } if setcolor
+  } stopped {
+    /setpattern .systemvar $error /errorname get signalerror
+  } if
 } odef
 
 % The following functions emulate the actions of findcmykcustomcolor and
@@ -937,7 +981,7 @@ def
 % <width> <height> <bits/sample> <matrix> <proc> <array> customcolorimage -
 /customcolorimage {
   gsave
-  [ /Separation 2 index 4 get /DeviceCMYK 4 index //buildcustomtinttransform exec] setcolorspace
+  [ /Separation 2 index 4 get /DeviceCMYK 5 -1 roll //buildcustomtinttransform exec] setcolorspace
   //args2dict exec image
   grestore
 } bind def

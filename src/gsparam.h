@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gsparam.h,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gsparam.h,v 1.7 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Client interface to parameter dictionaries */
 
 #ifndef gsparam_INCLUDED

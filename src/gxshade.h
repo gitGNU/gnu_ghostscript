@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxshade.h,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gxshade.h,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Internal definitions for shading rendering */
 
 #ifndef gxshade_INCLUDED
@@ -123,6 +123,7 @@ struct shade_coord_stream_s {
     int (*get_value)(shade_coord_stream_t *cs, int num_bits, uint *pvalue);
     int (*get_decoded)(shade_coord_stream_t *cs, int num_bits,
 		       const float decode[2], float *pvalue);
+    void (*align)(shade_coord_stream_t *cs, int radix);
     bool (*is_eod)(const shade_coord_stream_t *cs);
 };
 
@@ -134,6 +135,11 @@ typedef struct mesh_vertex_s {
 
 /* Define a structure for mesh or patch vertex. */
 typedef struct shading_vertex_s shading_vertex_t;
+
+#ifndef patch_color_t_DEFINED
+#  define patch_color_t_DEFINED
+typedef struct patch_color_s patch_color_t;
+#endif
 
 /* Initialize a packed value stream. */
 void shade_next_init(shade_coord_stream_t * cs,
@@ -151,7 +157,8 @@ int shade_next_coords(shade_coord_stream_t * cs, gs_fixed_point * ppt,
 int shade_next_color(shade_coord_stream_t * cs, float *pc);
 
 /* Get the next vertex for a mesh element. */
-int shade_next_vertex(shade_coord_stream_t * cs, shading_vertex_t * vertex);
+int shade_next_vertex(shade_coord_stream_t * cs, shading_vertex_t * vertex, 
+		      patch_color_t *c);
 
 /*
    Currently, all shading fill procedures follow the same algorithm:

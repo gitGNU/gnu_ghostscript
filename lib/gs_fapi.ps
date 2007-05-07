@@ -1,14 +1,20 @@
 %    Copyright (C) 2000 artofcode LLC.  All rights reserved.
 % 
-% This software is provided AS-IS with no warranty, either express or
-% implied.
-% 
-% This software is distributed under license and may not be copied,
-% modified or distributed except as expressly authorized under the terms
-% of the license contained in the file LICENSE in this distribution.
-
-
-% $Id: gs_fapi.ps,v 1.4 2006/06/16 12:55:14 Arabidopsis Exp $
+%  This file is part of GNU ghostscript
+%
+%  GNU ghostscript is free software; you can redistribute it and/or modify it under
+%  the terms of the GNU General Public License as published by the Free Software
+%  Foundation; either version 2, or (at your option) any later version.
+%
+%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+%
+%  You should have received a copy of the GNU General Public License along with
+%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+%
+% $Id: gs_fapi.ps,v 1.5 2007/05/07 11:22:07 Arabidopsis Exp $
 % Redefine Font and CIDFont categories with FAPI-handeled fonts.
 
 systemdict /.FAPIavailable known { .FAPIavailable } { false } ifelse not {
@@ -50,9 +56,26 @@ languagelevel 2 .setlanguagelevel
 
 /Config
 <<
-%% Replace 1 (FAPIconfig)
-  (FAPIconfig) .runlibfile
+  systemdict /FAPIconfig known {/FAPIconfig .systemvar} {(FAPIconfig)} ifelse .runlibfile
+  /ServerOptions 2 dict
 >> def
+systemdict /.FAPIconfig //Config put
+
+()
+systemdict /UFST_SSdir .knownget {
+  (UFST_SSdir=) exch concatstrings concatstrings
+} if
+systemdict /UFST_PlugIn .knownget {
+  1 index length 0 ne {
+    exch .filenamelistseparator concatstrings exch
+  } if
+  (UFST_PlugIn=) exch concatstrings concatstrings
+} if
+dup length 0 ne {
+  //Config /ServerOptions get exch /UFST exch put
+} { 
+  pop
+} ifelse
 
 %------------------Copy the FontEmulationProcs here : -------------------
 
@@ -93,8 +116,10 @@ currentdict /super.complete_instance currentdict /complete_instance get put
 /FontRecordVirtualMethods //RecordVirtualMethodsStub dup length 2 add dict copy begin
   /IsActive //IsActive def
   /MakeInstance   % <Name> <record> MakeInstance <Name> <Instance> <size>
-  { //FontOptions //complete_instance exec
+  { currentglobal 3 1 roll true setglobal
+    //FontOptions //complete_instance exec
     2 copy //GetSize exec
+    4 3 roll setglobal
   } bind def
 currentdict end def
 
@@ -102,10 +127,67 @@ currentdict end def
   /GetCSI //TranslateCSI def
   /IsActive //IsActive def
   /MakeInstance   % <Name> <record> MakeInstance <Name> <Instance> <size>
-  { //CIDFontOptions //complete_instance exec
+  { currentglobal 3 1 roll true setglobal
+    //CIDFontOptions //complete_instance exec
     2 copy //GetSize exec
+    4 3 roll setglobal
   } bind def
 currentdict end def
+
+/ReadFCOfontmap:   % <path> ReadFCOfontmap: name dict ...
+{ /fontfile exch def
+  {
+    currentfile =string readline not {
+      pop exit
+    } if
+    dup length 0 ne {
+      0 () /SubFileDecode filter
+      dup token not {
+        % A comment line
+        closefile
+      } {
+        dup /EndFCOfontmap cvx eq {
+          pop closefile exit
+        } if
+        exch dup token not {
+          /ReadFCOfontmap: cvx /rangecheck signalerror
+        } if
+        exch dup token not {
+          /StandardEncoding
+        } {
+          dup type /nametype ne {
+            /ReadFCOfontmap: cvx /rangecheck signalerror
+          } if
+        } ifelse
+        findencoding                  
+        exch dup token not {
+          null
+        } {
+          dup type /nametype ne {
+            /ReadFCOfontmap: cvx /rangecheck signalerror
+          } if
+          /Decoding findresource
+        } ifelse                     
+        exch closefile                 % index name enc dec|null
+        4 3 roll                       % name enc dec|null index 
+        << /Path fontfile
+           /FontType 1 
+           /FAPI /UFST 
+           /SubfontId counttomark 2 add -1 roll 
+           /Decoding  counttomark 2 add -1 roll
+           dup null eq {
+             pop pop
+           } if
+           /Encoding  counttomark 2 add -1 roll
+        >> % dup { exch == = } forall
+      } ifelse
+    } {
+      pop
+    } ifelse
+  } loop
+  currentdict /fontfile undef
+} bind def
+
 
 %----------------------------------The Redefintion---------------------
 
@@ -114,7 +196,7 @@ currentdict end def
 % Redefine the /Font category :
 4 dict begin
   /CategoryName /Font def
-  /MapFileName (FAPIfontmap) def
+  /MapFileName systemdict /FAPIfontmap known {/FAPIfontmap .systemvar} {(FAPIfontmap)} ifelse def
   /VerifyMap  { pop } bind def
   /PreprocessRecord  % <map> <Name> <raw_record> PreprocessRecord <map> <Name> <record> <bool>
   { //IsMyRecord exec dup {
@@ -127,7 +209,7 @@ currentdict end Redefine
 % Redefine the /CIDFont category :
 4 dict begin
   /CategoryName /CIDFont def
-  /MapFileName (FAPIcidfmap) def
+  /MapFileName systemdict /FAPIcidfmap known {/FAPIcidfmap .systemvar} {(FAPIcidfmap)} ifelse def
   /VerifyMap  { pop } bind def
   /PreprocessRecord  % <map> <Name> <raw_record> PreprocessRecord <map> <Name> <record> <bool>
   { //IsMyRecord exec dup {

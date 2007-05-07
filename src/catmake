@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: catmake,v 1.2 2004/02/14 22:20:04 atai Exp $
+# $Id: catmake,v 1.3 2007/05/07 11:21:45 Arabidopsis Exp $
 # Expand 'includes' in makefiles.  Usage:
 #	catmake orig.mak > makefile
 

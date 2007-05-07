@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: stream.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: stream.c,v 1.8 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Stream package for Ghostscript interpreter */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"
@@ -27,6 +27,7 @@
 #include "strimpl.h"
 
 /* Forward declarations */
+int s_close_disable(stream *);
 private int sreadbuf(stream *, stream_cursor_write *);
 private int swritebuf(stream *, stream_cursor_read *, bool);
 private void stream_compact(stream *, bool);
@@ -823,11 +824,14 @@ sreadbuf(stream * s, stream_cursor_write * pbuf)
 	    MOVE_AHEAD(curr, prev);
 	    stream_compact(curr, false);
 	}
-	/* If curr reached EOD and is a filter or file stream, close it. */
-	/* (see PLRM 3rd, sec 3.8.2, p80) */
+	/* If curr reached EOD and is a filter or file stream, close it
+         * if it is the last filter in the pipeline. Closing the last filter
+         * seems to contradict PLRM3 but matches Adobe interpreters.
+         */
 	if ((strm != 0 || curr->file) && status == EOFC &&
 	    curr->cursor.r.ptr >= curr->cursor.r.limit &&
-	    curr->close_at_eod
+	    curr->close_at_eod &&
+            prev == 0
 	    ) {
 	    int cstat = sclose(curr);
 
@@ -913,7 +917,7 @@ swritebuf(stream * s, stream_cursor_read * pbuf, bool last)
 		    break;
 	    }
 	    status = strm->end_status;
-	    if (status < 0)
+	    if (status < 0 && (status != EOFC || !end))
 		break;
 	    if (!curr->is_temp)
 		++depth;
@@ -1026,9 +1030,13 @@ s_string_reusable_flush(stream *s)
 void
 sread_string_reusable(stream *s, const byte *ptr, uint len)
 {
+    /*
+     * Note that s->procs.close is s_close_disable, to parallel
+     * file_close_disable.
+     */
     static const stream_procs p = {
 	 s_string_available, s_string_read_seek, s_string_reusable_reset,
-	 s_string_reusable_flush, s_std_null, s_string_read_process
+	 s_string_reusable_flush, s_close_disable, s_string_read_process
     };
 
     sread_string(s, ptr, len);
@@ -1223,6 +1231,46 @@ s_close_filters(stream **ps, stream *target)
 	*ps = next;
     }
     return 0;
+}
+
+/* ------ Stream closing ------ */
+
+/*
+ * Finish closing a file stream.  This used to check whether it was
+ * currentfile, but we don't have to do this any longer.  This replaces the
+ * close procedure for the std* streams, which cannot actually be closed.
+ *
+ * This is exported for ziodev.c.  */
+int
+file_close_finish(stream * s)
+{
+    return 0;
+}
+
+/*
+ * Close a file stream, but don't deallocate the buffer.  This replaces the
+ * close procedure for %lineedit and %statementedit.  (This is WRONG: these
+ * streams should allocate a new buffer each time they are opened, but that
+ * would overstress the allocator right now.)  This is exported for ziodev.c.
+ * This also replaces the close procedure for the string-reading streams
+ * created for gs_run_string and for reusable streams.
+ */
+int
+s_close_disable(stream *s)
+{
+    /* Increment the IDs to prevent further access. */
+    s->read_id = s->write_id = (s->read_id | s->write_id) + 1;
+    return 0;
+}
+int
+file_close_disable(stream * s)
+{
+    int code = (*s->save_close)(s);
+
+    if (code)
+	return code;
+    s_close_disable(s);
+    return file_close_finish(s);
 }
 
 /* ------ NullEncode/Decode ------ */

@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: sdcparam.c,v 1.5 2005/12/13 16:57:27 jemarch Exp $ */
+/* $Id: sdcparam.c,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* DCT filter parameter setting and reading */
 #include "memory_.h"
 #include "jpeglib_.h"
@@ -221,9 +221,8 @@ s_DCT_get_quantization_tables(gs_param_list * plist,
 		case 1:
 		    break;
 	    }
-	    /* break const to free the string */
-	    gs_free_string(mem, (byte *) str.data, str.size,
-			   "quant_param_string");
+	    gs_free_const_string(mem, str.data, str.size,
+				 "quant_param_string");
 	}
 	code = quant_param_array(&fa, DCTSIZE2,
 			    table_ptrs[comp_info[i].quant_tbl_no]->quantval,

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ichar1.h,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: ichar1.h,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Type 1 / Type 2 character rendering operator procedures */
 
 #ifndef ichar1_INCLUDED

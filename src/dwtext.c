@@ -1,4 +1,5 @@
-/* Copyright (C) 1996-2001 Ghostgum Software Pty Ltd.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,8 +17,7 @@
 
 */
 
-
-/* $Id: dwtext.c,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
+/* $Id: dwtext.c,v 1.6 2007/05/07 11:21:47 Arabidopsis Exp $ */
 
 /* Microsoft Windows text window for Ghostscript.
 

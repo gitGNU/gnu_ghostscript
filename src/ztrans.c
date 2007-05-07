@@ -1,4 +1,5 @@
-/* Copyright (C) 2000-2002 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: ztrans.c,v 1.7 2006/06/16 12:55:05 Arabidopsis Exp $ */
+/* $Id: ztrans.c,v 1.8 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Transparency operators */
 #include "string_.h"
 #include "memory_.h"
@@ -217,7 +217,8 @@ zbegintransparencygroup(i_ctx_t *i_ctx_p)
     check_dict_read(*dop);
     gs_trans_group_params_init(&params);
     if ((code = dict_bool_param(dop, "Isolated", false, &params.Isolated)) < 0 ||
-	(code = dict_bool_param(dop, "Knockout", false, &params.Knockout)) < 0
+	(code = dict_bool_param(dop, "Knockout", false, &params.Knockout)) < 0 ||
+	(code = dict_bool_param(dop, ".image_with_SMask", false, &params.image_with_SMask)) < 0
 	)
 	return code;
     code = rect_param(&bbox, op);
@@ -370,8 +371,8 @@ zimage3x(i_ctx_t *i_ctx_p)
     if (dict_find_string(op, "DataDict", &pDataDict) <= 0)
 	return_error(e_rangecheck);
     if ((code = pixel_image_params(i_ctx_p, pDataDict,
-				   (gs_pixel_image_t *)&image, &ip_data,
-				   16, false)) < 0 ||
+		   (gs_pixel_image_t *)&image, &ip_data,
+		   16, false, gs_currentcolorspace(igs))) < 0 ||
 	(code = dict_int_param(pDataDict, "ImageType", 1, 1, 0, &ignored)) < 0
 	)
 	return code;

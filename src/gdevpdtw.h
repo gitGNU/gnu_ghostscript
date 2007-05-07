@@ -1,4 +1,5 @@
-/* Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdtw.h,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevpdtw.h,v 1.7 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Font and CMap resource writing API for pdfwrite */
 
 #ifndef gdevpdtw_INCLUDED
@@ -64,11 +65,22 @@ typedef struct gs_cmap_s gs_cmap_t;
 int pdf_write_cid_system_info(gx_device_pdf *pdev,
 			      const gs_cid_system_info_t *pcidsi, gs_id object_id);
 
+/* Write CIDSystemInfo */
+int pdf_write_cid_systemInfo_separate(gx_device_pdf *pdev, 
+		              const gs_cid_system_info_t *pcidsi, long *id);
+
+
+
 /*
  * Write a CMap resource.  We pass the CMap object as well as the resource,
  * because we write CMaps when they are created.
  */
 int pdf_write_cmap(gx_device_pdf *pdev, const gs_cmap_t *pcmap,
 		   pdf_resource_t **ppres, int font_index_only);
+
+/* 
+ * Write OneByteIdentityH CMap. 
+ */
+int pdf_write_OneByteIdentityH(gx_device_pdf *pdev);
 
 #endif /* gdevpdtw_INCLUDED */

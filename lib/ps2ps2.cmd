@@ -1,4 +1,4 @@
-/* $Id: ps2ps2.cmd,v 1.1 2006/06/16 12:55:14 Arabidopsis Exp $ */
+/* $Id: ps2ps2.cmd,v 1.2 2007/05/07 11:22:07 Arabidopsis Exp $ */
 /*
  * This file is maintained by a user: if you have any questions about it,
  * please contact Mark Hale (mark.hale@physics.org).

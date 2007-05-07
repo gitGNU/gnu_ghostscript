@@ -1,4 +1,5 @@
-/* Copyright (C) 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfc.h,v 1.3 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpdfc.h,v 1.4 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Internal color space writing interfaces for pdfwrite driver. */
 
 #ifndef gdevpdfc_INCLUDED

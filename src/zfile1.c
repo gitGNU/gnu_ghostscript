@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: zfile1.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: zfile1.c,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Special file operators */
 
 #include "memory_.h"
@@ -29,6 +30,7 @@
 #include "opdef.h"
 #include "opcheck.h"
 #include "store.h"
+#include "gpmisc.h"
 
 /* <string> <string> <bool> .file_name_combine <string> true */
 /* <string> <string> <bool> .file_name_combine <string> <string> false */
@@ -78,8 +80,8 @@ zfile_name_is_absolute(i_ctx_t *i_ctx_p)
 {   os_ptr op = osp;
 
     check_type(op[0], t_string);
-    make_bool(op, (gp_file_name_root((const char *)op->value.const_bytes, 
-					r_size(op)) > 0));
+    make_bool(op, gp_file_name_is_absolute((const char *)op->value.const_bytes, 
+					r_size(op)));
     return 0;
 }
 

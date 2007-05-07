@@ -1,4 +1,5 @@
-/* Copyright (C) 1996, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/*$Id: gxdcolor.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/*$Id: gxdcolor.c,v 1.7 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Pure and null device color implementation */
 #include "gx.h"
 #include "memory_.h"
@@ -423,13 +423,18 @@ gx_dc_pure_fill_masked(const gx_device_color * pdevc, const byte * data,
 	gx_color_index scolors[2];
 	gx_color_index tcolors[2];
 
-	scolors[0] = gx_device_black(dev);
-	scolors[1] = gx_device_white(dev);
+	if ( lop != lop_default ) {
+	    scolors[0] = gx_device_white(dev);
+	    scolors[1] = gx_device_black(dev);
+	} else {
+	    scolors[0] = gx_device_black(dev);
+	    scolors[1] = gx_device_white(dev);
+        }
 	tcolors[0] = tcolors[1] = pdevc->colors.pure;
 	return (*dev_proc(dev, strip_copy_rop))
 	    (dev, data, data_x, raster, id, scolors,
 	     NULL, tcolors, x, y, w, h, 0, 0,
-	     (invert ? rop3_invert_S(lop) : lop) | lop_S_transparent);
+	     (invert ? rop3_invert_S(lop) : lop) | (rop3_S | lop_S_transparent));
     }
 }
 

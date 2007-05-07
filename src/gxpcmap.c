@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxpcmap.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gxpcmap.c,v 1.7 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Pattern color mapping for Ghostscript library */
 #include "math_.h"
 #include "memory_.h"
@@ -690,8 +690,8 @@ gx_pattern_load(gx_device_color * pdc, const gs_imager_state * pis,
     /* Free the bookkeeping structures, except for the bits and mask */
     /* data iff they are still needed. */
     dev_proc(adev, close_device)((gx_device *)adev);
-    /* Freeing the state will free the device. */
-    gs_state_free(saved);
+    /* Free the chain of gstates. Freeing the state will free the device. */
+    gs_state_free_chain(saved);
     return code;
 fail:
     gs_free_object(mem, adev, "gx_pattern_load");
@@ -717,9 +717,8 @@ gs_pattern1_remap_color(const gs_client_color * pc, const gs_color_space * pcs,
 	return 0;
     }
     if (pinst->template.PaintType == 2) {	/* uncolored */
-	code = (*pcs->params.pattern.base_space.type->remap_color)
-	    (pc, (const gs_color_space *)&pcs->params.pattern.base_space,
-	     pdc, pis, dev, select);
+	code = (pcs->base_space->type->remap_color)
+	    (pc, pcs->base_space, pdc, pis, dev, select);
 	if (code < 0)
 	    return code;
 	if (pdc->type == gx_dc_type_pure)

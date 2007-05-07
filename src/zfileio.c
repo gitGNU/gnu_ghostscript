@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zfileio.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: zfileio.c,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* File I/O operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -295,8 +295,8 @@ zreadstring_at(i_ctx_t *i_ctx_p, os_ptr op, uint start)
     uint len, rlen;
     int status;
 
-    check_read_file(s, op - 1);
     check_write_type(*op, t_string);
+    check_read_file(s, op - 1);
     len = r_size(op);
     status = sgets(s, op->value.bytes + start, len - start, &rlen);
     rlen += start;
@@ -385,8 +385,8 @@ zreadline_at(i_ctx_t *i_ctx_p, os_ptr op, uint count, bool in_eol)
     int status;
     gs_string str;
 
-    check_read_file(s, op - 1);
     check_write_type(*op, t_string);
+    check_read_file(s, op - 1);
     str.data = op->value.bytes;
     str.size = r_size(op);
     status = zreadline_from(s, &str, NULL, &count, &in_eol);
@@ -633,8 +633,8 @@ zsetfileposition(i_ctx_t *i_ctx_p)
     os_ptr op = osp;
     stream *s;
 
-    check_file(s, op - 1);
     check_type(*op, t_integer);
+    check_file(s, op - 1);
     if (sseek(s, op->value.intval) < 0)
 	return_error(e_ioerror);
     pop(2);
@@ -763,7 +763,7 @@ zwritecvp_at(i_ctx_t *i_ctx_p, os_ptr op, uint start, bool first)
     check_write_file(s, op - 2);
     check_type(*op, t_integer);
     code = obj_cvp(op - 1, str, sizeof(str), &len, (int)op->value.intval,
-		   start, imemory);
+		   start, imemory, true);
     if (code == e_rangecheck) {
         code = obj_string_data(imemory, op - 1, &data, &len);
 	if (len < start)
@@ -822,31 +822,6 @@ zwritecvp_continue(i_ctx_t *i_ctx_p)
     return zwritecvp_at(i_ctx_p, op - 1, (uint) op->value.intval, false);
 }
 
-/* Callout for stdin */
-/* - .needstdin - */
-int
-zneedstdin(i_ctx_t *i_ctx_p)
-{
-    return e_NeedStdin;		/* Interpreter will exit to caller. */
-}
-
-/* Callout for stdout */
-/* - .needstdout - */
-int
-zneedstdout(i_ctx_t *i_ctx_p)
-{
-    return e_NeedStdout;	/* Interpreter will exit to caller. */
-}
-
-/* Callout for stderr */
-/* - .needstderr - */
-int
-zneedstderr(i_ctx_t *i_ctx_p)
-{
-    return e_NeedStderr;	/* Interpreter will exit to caller. */
-}
-
-
 
 /* ------ Initialization procedure ------ */
 
@@ -884,9 +859,6 @@ const op_def zfileio2_op_defs[] = {
     {"3%zreadstring_continue", zreadstring_continue},
     {"4%zwritecvp_continue", zwritecvp_continue},
     {"3%zwritehexstring_continue", zwritehexstring_continue},
-    {"0.needstdin", zneedstdin},
-    {"0.needstdout", zneedstdout},
-    {"0.needstderr", zneedstderr},
     op_def_end(0)
 };
 

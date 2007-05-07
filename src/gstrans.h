@@ -15,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gstrans.h,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gstrans.h,v 1.6 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Transparency definitions and interface */
 
 #ifndef gstrans_INCLUDED
@@ -77,6 +76,7 @@ struct gs_pdf14trans_params_s {
     /* Parameters from the gs_transparency_group_params_t structure */
     bool Isolated;
     bool Knockout;
+    bool image_with_SMask;
     gs_rect bbox;
     /*The transparency channel selector */
     gs_transparency_channel_selector_t csel;
@@ -107,6 +107,7 @@ typedef struct gs_pdf14trans_s {
     gs_composite_common;
     gs_pdf14trans_params_t  params;
 } gs_pdf14trans_t;
+
 
 /* Access transparency-related graphics state elements. */
 int gs_setblendmode(gs_state *, gs_blend_mode_t);

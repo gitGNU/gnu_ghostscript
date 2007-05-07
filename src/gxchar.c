@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxchar.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gxchar.c,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Default implementation of text writing */
 #include "gx.h"
 #include "memory_.h"
@@ -219,6 +219,40 @@ gx_default_text_begin(gx_device * dev, gs_imager_state * pis,
     return 0;
 }
 
+/* Compute the number of characters in a text. */
+int
+gs_text_count_chars(gs_state * pgs, gs_text_params_t *text, gs_memory_t * mem)
+{
+    font_proc_next_char_glyph((*next_proc)) = pgs->font->procs.next_char_glyph;
+
+    if (next_proc == gs_default_next_char_glyph)
+	return text->size;
+    else {
+	/* Do it the hard way. */
+	gs_text_enum_t tenum;	/* use a separate enumerator */
+	gs_char tchr;
+	gs_glyph tglyph;
+	int size = 0;
+	int code;
+
+	size = 0;
+
+        code = gs_text_enum_init(&tenum, &default_text_procs,
+			     NULL, NULL, text, pgs->root_font, 
+			     NULL, NULL, NULL, mem);
+	if (code < 0)
+	    return code;
+	while ((code = (*next_proc)(&tenum, &tchr, &tglyph)) != 2) {
+	    if (code < 0)
+		break;
+	    ++size;
+	}
+	if (code < 0)
+	    return code;
+	return size;
+    }
+}
+
 /* An auxiliary functions for pdfwrite to process type 3 fonts. */
 int
 gx_hld_stringwidth_begin(gs_imager_state * pis, gx_path **path)
@@ -263,7 +297,14 @@ gx_show_text_set_cache(gs_text_enum_t *pte, const double *pw,
 {
     gs_show_enum *const penum = (gs_show_enum *)pte;
     gs_state *pgs = penum->pgs;
+    gs_font *pfont = gs_rootfont(pgs);
 
+    /* Detect zero FontMatrix now for Adobe compatibility with CET tests.
+       Note that matrixe\\ces like [1 0 0 0 0 0] are used in comparefiles
+       to compute a text width. See also gs_text_begin. */
+    if (pfont->FontMatrix.xx == 0 && pfont->FontMatrix.xy == 0 &&
+	pfont->FontMatrix.yx == 0 && pfont->FontMatrix.yy == 0)
+	return_error(gs_error_undefinedresult); /* sic! : CPSI compatibility */
     switch (control) {
     case TEXT_SET_CHAR_WIDTH:
 	return set_char_width(penum, pgs, pw[0], pw[1]);
@@ -280,7 +321,7 @@ gx_show_text_set_cache(gs_text_enum_t *pte, const double *pw,
 	int code;
 	bool retry = (penum->width_status == sws_retry);
 
-	if (gs_rootfont(pgs)->WMode) {
+	if (pfont->WMode) {
 	    float vx = pw[8], vy = pw[9];
 	    gs_fixed_point pvxy, dvxy;
 
@@ -572,8 +613,8 @@ set_cache_device(gs_show_enum * penum, gs_state * pgs, floatp llx, floatp lly,
 	    cdim.y > max_cdim[log2_scale.y]
 	    )
 	    return 0;		/* much too big */
-	iwidth = ((ushort) fixed2int_var(cdim.x) + 2) << log2_scale.x;
-	iheight = ((ushort) fixed2int_var(cdim.y) + 2) << log2_scale.y;
+	iwidth = ((ushort) fixed2int_var(cdim.x) + 3) << log2_scale.x;
+	iheight = ((ushort) fixed2int_var(cdim.y) + 3) << log2_scale.y;
 	if_debug3('k', "[k]iwidth=%u iheight=%u dev_cache %s\n",
 		  (uint) iwidth, (uint) iheight,
 		  (penum->dev_cache == 0 ? "not set" : "set"));
@@ -623,8 +664,8 @@ set_cache_device(gs_show_enum * penum, gs_state * pgs, floatp llx, floatp lly,
 	}
 	/* The mins handle transposed coordinate systems.... */
 	/* Truncate the offsets to avoid artifacts later. */
-	cc->offset.x = fixed_ceiling(-cll.x);
-	cc->offset.y = fixed_ceiling(-cll.y);
+	cc->offset.x = fixed_ceiling(-cll.x) + fixed_1;
+	cc->offset.y = fixed_ceiling(-cll.y) + fixed_1;
 	if_debug4('k', "[k]width=%u, height=%u, offset=[%g %g]\n",
 		  (uint) iwidth, (uint) iheight,
 		  fixed2float(cc->offset.x),
@@ -787,6 +828,7 @@ show_update(gs_show_enum * penum)
 	    /* We have to check for this by comparing levels. */
 	    switch (pgs->level - penum->level) {
 		default:
+		    gx_free_cached_char(penum->orig_font->dir, penum->cc);
 		    return_error(gs_error_invalidfont);		/* WRONG */
 		case 2:
 		    code = gs_grestore(pgs);
@@ -877,9 +919,12 @@ show_move(gs_show_enum * penum)
     gs_state *pgs = penum->pgs;
 
     if (SHOW_IS(penum, TEXT_REPLACE_WIDTHS)) {
+	int code;
 	gs_point dpt;
 
-	gs_text_replaced_width(&penum->text, penum->xy_index - 1, &dpt);
+	code = gs_text_replaced_width(&penum->text, penum->xy_index - 1, &dpt);
+	if (code < 0)
+	    return code;
 	gs_distance_transform2fixed(&pgs->ctm, dpt.x, dpt.y, &penum->wxy);
     } else {
 	double dx = 0, dy = 0;
@@ -1238,7 +1283,7 @@ show_proceed(gs_show_enum * penum)
     /* Try using the build procedure in the font. */
     /* < 0 means error, 0 means success, 1 means failure. */
     penum->cc = cc;		/* set this now for build procedure */
-    code = (*pfont->procs.build_char)((gs_text_enum_t *)penum, pgs, pfont,
+    code = (*pfont->procs.build_char)(penum, pgs, pfont,
 				      chr, glyph);
     if (code < 0) {
 	discard(gs_note_error(code));
@@ -1554,6 +1599,8 @@ show_cache_setup(gs_show_enum * penum)
     penum->dev_cache = dev;
     gs_make_mem_mono_device(dev2, mem, gs_currentdevice_inline(pgs));
     penum->dev_cache2 = dev2;
+    dev->HWResolution[0] = pgs->device->HWResolution[0];
+    dev->HWResolution[1] = pgs->device->HWResolution[1];
     /* Retain these devices, since they are referenced from the enumerator. */
     gx_device_retain((gx_device *)dev, true);
     gx_device_retain((gx_device *)dev2, true);

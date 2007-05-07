@@ -1,4 +1,5 @@
-/* Copyright (C) 1992-2004 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: iccfont.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: iccfont.c,v 1.7 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Initialization support for compiled fonts */
 
 #include "string_.h"
@@ -330,10 +331,10 @@ cfont_ref_from_string(i_ctx_t *i_ctx_p, ref * pref, const char *str, uint len)
     stream s;
     int code;
 
-    scanner_state_init(&sstate, false);
     s_init(&s, imemory);
     sread_string(&s, (const byte *)str, len);
-    code = scan_token(i_ctx_p, &s, pref, &sstate);
+    scanner_init_stream(&sstate, &s);
+    code = scan_token(i_ctx_p, pref, &sstate);
     return (code <= 0 ? code : gs_note_error(e_Fatal));
 }
 

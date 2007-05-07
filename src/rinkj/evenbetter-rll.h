@@ -1,4 +1,5 @@
-/* Copyright (C) 2004 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/*$Id: evenbetter-rll.h,v 1.1 2006/03/08 12:30:41 Arabidopsis Exp $ */
+/*$Id: evenbetter-rll.h,v 1.2 2007/05/07 11:22:22 Arabidopsis Exp $ */
 /* Header file for testbed implementation of Even Better Screening. */
 
 #ifdef __cplusplus

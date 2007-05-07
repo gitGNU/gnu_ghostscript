@@ -1,4 +1,5 @@
-/* Copyright (C) 1994 - 2003 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gp_mac.h,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_mac.h,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 
 #ifndef gp_mac_INCLUDED
 #  define gp_mac_INCLUDED

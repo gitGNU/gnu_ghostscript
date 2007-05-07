@@ -1,4 +1,5 @@
-/* Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdtd.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevpdtd.c,v 1.7 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* FontDescriptor implementation for pdfwrite */
 #include "math_.h"
 #include "memory_.h"
@@ -27,6 +28,7 @@
 #include "gdevpdfo.h"		/* for object->written */
 #include "gdevpdtb.h"
 #include "gdevpdtd.h"
+#include "gdevpdtf.h"
 
 /* ================ Types and structures ================ */
 
@@ -324,7 +326,7 @@ pdf_font_used_glyph(pdf_font_descriptor_t *pfd, gs_glyph glyph,
 
 /* Compute the FontDescriptor metrics for a font. */
 int
-pdf_compute_font_descriptor(pdf_font_descriptor_t *pfd)
+pdf_compute_font_descriptor(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
 {
     gs_font_base *bfont = pdf_base_font_font(pfd->base_font, false);
     gs_glyph glyph, notdef;
@@ -338,7 +340,7 @@ pdf_compute_font_descriptor(pdf_font_descriptor_t *pfd)
     int fixed_width = 0;
     int small_descent = 0, small_height = 0;
     bool small_present = false;
-    int x_height = min_int;
+    int x_height = 0;
     int cap_height = 0;
     gs_rect bbox_colon, bbox_period, bbox_I;
     bool is_cid = (bfont->FontType == ft_CID_encrypted ||
@@ -378,12 +380,12 @@ pdf_compute_font_descriptor(pdf_font_descriptor_t *pfd)
      * in gdevpdtd.h for why the following substitution is made.
      */
 #if 0
-#  define CONSIDER_FONT_SYMBOLIC(bfont) font_is_symbolic(bfont)
+#  define CONSIDER_FONT_SYMBOLIC(pdev, bfont) font_is_symbolic(bfont)
 #else
-#  define CONSIDER_FONT_SYMBOLIC(bfont)\
-  ((bfont)->encoding_index != ENCODING_INDEX_STANDARD)
+#  define CONSIDER_FONT_SYMBOLIC(pdev, bfont)\
+  ((bfont)->encoding_index != ENCODING_INDEX_STANDARD) && (!pdev->PDFA || bfont->FontType != ft_TrueType)
 #endif
-    if (CONSIDER_FONT_SYMBOLIC(bfont))
+    if (CONSIDER_FONT_SYMBOLIC(pdev, bfont))
 	desc.Flags |= FONT_IS_SYMBOLIC;
     /*
      * Scan the entire glyph space to compute Ascent, Descent, FontBBox, and
@@ -481,7 +483,7 @@ pdf_compute_font_descriptor(pdf_font_descriptor_t *pfd)
     if (!(desc.Flags & FONT_IS_SYMBOLIC)) {
 	desc.Flags |= FONT_IS_ADOBE_ROMAN; /* required if not symbolic */
 	desc.XHeight = (int)x_height;
-	if (!small_present)
+	if (!small_present && (!pdev->PDFA || bfont->FontType != ft_TrueType))
 	    desc.Flags |= FONT_IS_ALL_CAPS;
 	desc.CapHeight = cap_height;
 	/*
@@ -531,10 +533,11 @@ pdf_compute_font_descriptor(pdf_font_descriptor_t *pfd)
 	desc.Ascent = desc.FontBBox.q.y;
     desc.Descent = desc.FontBBox.p.y;
     if (!(desc.Flags & (FONT_IS_SYMBOLIC | FONT_IS_ALL_CAPS)) &&
-	(small_descent > desc.Descent / 3 || desc.XHeight > small_height * 0.9)
+	(small_descent > desc.Descent / 3 || desc.XHeight > small_height * 0.9) &&
+	(!pdev->PDFA || bfont->FontType != ft_TrueType)
 	)
 	desc.Flags |= FONT_IS_SMALL_CAPS;
-    if (fixed_width > 0) {
+    if (fixed_width > 0 && (!pdev->PDFA || bfont->FontType != ft_TrueType)) {
 	desc.Flags |= FONT_IS_FIXED_WIDTH;
 	desc.AvgWidth = desc.MaxWidth = desc.MissingWidth = fixed_width;
     }
@@ -551,15 +554,18 @@ pdf_compute_font_descriptor(pdf_font_descriptor_t *pfd)
  * writing the associated embedded font if any.
  */
 int
-pdf_finish_FontDescriptor(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
+pdf_finish_FontDescriptor(gx_device_pdf *pdev, pdf_resource_t *pres)
 {
+    pdf_font_descriptor_t *pfd = (pdf_font_descriptor_t *)pres;
     int code = 0;
     cos_dict_t *pcd = 0;
-
+    if (pfd->common.object->id == -1)
+	return 0;
     if (!pfd->common.object->written &&
-	(code = pdf_compute_font_descriptor(pfd)) >= 0 &&
+	(code = pdf_compute_font_descriptor(pdev, pfd)) >= 0 &&
 	(!pfd->embed ||
 	 (code = pdf_write_embedded_font(pdev, pfd->base_font, 
+				pfd->FontType,
 				&pfd->common.values.FontBBox, 
 				pfd->common.rid, &pcd)) >= 0)
 	) {
@@ -570,8 +576,9 @@ pdf_finish_FontDescriptor(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
 
 /* Write a FontDescriptor. */
 int
-pdf_write_FontDescriptor(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
+pdf_write_FontDescriptor(gx_device_pdf *pdev, pdf_resource_t *pres)
 {
+    pdf_font_descriptor_t *pfd = (pdf_font_descriptor_t *)pres;
     font_type ftype = pfd->FontType;
     long cidset_id = 0;
     int code = 0;
@@ -603,7 +610,7 @@ pdf_write_FontDescriptor(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
 	pdf_font_descriptor_common_t fd;
 
 	fd = pfd->common;
-	if (pfd->embed && pfd->FontType == ft_TrueType &&
+	if (pfd->embed && pfd->FontType == ft_TrueType && !pdev->PDFA &&
 	    pdf_do_subset_font(pdev, pfd->base_font, pfd->common.rid)
 	    )
 	    fd.values.Flags =
@@ -656,8 +663,10 @@ pdf_write_FontDescriptor(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
  * Release a FontDescriptor components.
  */
 int
-pdf_release_FontDescriptor_components(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
+pdf_release_FontDescriptor_components(gx_device_pdf *pdev, pdf_resource_t *pres)
 {
+    pdf_font_descriptor_t *pfd = (pdf_font_descriptor_t *) pres;
+
     gs_free_object(pdev->pdf_memory, pfd->base_font, "pdf_release_FontDescriptor_components");
     pfd->base_font = NULL;
     /* fixme: underimplemented. */
@@ -672,5 +681,45 @@ pdf_mark_font_descriptor_used(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
 {
     if (pfd != NULL && pfd->common.object->id == -1)
 	pdf_reserve_object_id(pdev, (pdf_resource_t *)&pfd->common, 0);
+    return 0;
+}
+
+/*
+ * Convert True Type font descriptor into CID font descriptor for PDF/A.
+ */
+int 
+pdf_convert_truetype_font_descriptor(gx_device_pdf *pdev, pdf_font_resource_t *pdfont)
+{
+    pdf_font_descriptor_t *pfd = pdfont->FontDescriptor;
+    int num_CIDs = 256;
+    int length_CIDSet = num_CIDs / 8;
+    int length_CIDToGIDMap = num_CIDs * sizeof(ushort);
+    pdf_base_font_t *pbfont = pfd->base_font;
+    gs_font *pfont = (gs_font *)pbfont->copied;
+    gs_char ch;
+    /* Save the simple font descriptor data because CID font data overlap them. */
+    int FirstChar = pdfont->u.simple.FirstChar, LastChar = pdfont->u.simple.LastChar;
+    pdf_encoding_element_t *Encoding = pdfont->u.simple.Encoding;
+
+    pfd->FontType = ft_CID_TrueType;
+    pdfont->u.simple.Encoding = NULL; /* Drop due to overlapping against a garbager problem. */
+    pbfont->CIDSet = gs_alloc_bytes(pdev->pdf_memory, length_CIDSet, 
+			"pdf_convert_truetype_font_descriptor");
+    if (pbfont->CIDSet == NULL)
+	return_error(gs_error_VMerror);
+    memset(pbfont->CIDSet, 0, length_CIDSet);
+    pdfont->u.cidfont.CIDToGIDMap = (ushort *)gs_alloc_bytes(pdev->pdf_memory, 
+			length_CIDToGIDMap, "pdf_convert_truetype_font_descriptor");
+    if (pdfont->u.cidfont.CIDToGIDMap == NULL)
+	return_error(gs_error_VMerror);
+    memset(pdfont->u.cidfont.CIDToGIDMap, 0, length_CIDToGIDMap);
+    for (ch = FirstChar; ch <= LastChar; ch++) {
+	if (Encoding[ch].glyph != GS_NO_GLYPH) {
+	    gs_glyph glyph = pfont->procs.encode_char(pfont, ch, GLYPH_SPACE_INDEX);
+
+	    pbfont->CIDSet[ch / 8] |= 0x80 >> (ch % 8);
+	    pdfont->u.cidfont.CIDToGIDMap[ch] = glyph - GS_MIN_GLYPH_INDEX;
+	}
+    }
     return 0;
 }

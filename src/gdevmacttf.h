@@ -1,4 +1,5 @@
-/* Copyright (C) 1994-2002 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -15,8 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-
-/* $Id: gdevmacttf.h,v 1.5 2005/12/13 16:57:18 jemarch Exp $ */
+/* $Id: gdevmacttf.h,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Datatypes for simpler access to data structures in TrueType fonts */
 
 #ifndef gdevmacttf_INCLUDED

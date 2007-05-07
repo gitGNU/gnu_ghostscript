@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1990, 1993, 1996, 1999, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsio.h,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: gsio.h,v 1.6 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* stdio redirection */
 
 #ifndef gsio_INCLUDED

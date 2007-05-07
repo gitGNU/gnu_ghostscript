@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 1995, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: spdiffx.h,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: spdiffx.h,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Definitions for PixelDifference filters */
 /* Requires strimpl.h */
 
@@ -27,8 +27,9 @@
 /*
  * Define the maximum value for Colors.  This must be at least 4, but can
  * be arbitrarily large: the only cost is a larger stream state structure.
+ * Some PS3 CET files require this to be at least 57.
  */
-#define s_PDiff_max_Colors 16
+#define s_PDiff_max_Colors 60
 
 /* PixelDifferenceDecode / PixelDifferenceEncode */
 typedef struct stream_PDiff_state_s {

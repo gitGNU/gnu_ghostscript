@@ -1,4 +1,5 @@
-/* Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdtd.h,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevpdtd.h,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* FontDescriptor structure and API for pdfwrite */
 
 #ifndef gdevpdtd_INCLUDED
@@ -126,33 +127,32 @@ int pdf_font_used_glyph(pdf_font_descriptor_t *pfd, gs_glyph glyph,
 /*
  * Compute the FontDescriptor metrics for a font.
  */
-int pdf_compute_font_descriptor(pdf_font_descriptor_t *pfd);
+int pdf_compute_font_descriptor(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd);
 
 /*
  * Finish a FontDescriptor by computing the metric values, and then
  * writing the associated embedded font if any.
  */
 int pdf_finish_FontDescriptor(gx_device_pdf *pdev,
-			      pdf_font_descriptor_t *pfd);
+			      pdf_resource_t *pfd);
 
-int pdf_finish_font_descriptors(gx_device_pdf *pdev,
+int pdf_finish_resources(gx_device_pdf *pdev, pdf_resource_type_t type,
 			int (*finish_proc)(gx_device_pdf *,
-					   pdf_font_descriptor_t *));
+					   pdf_resource_t *));
 /*
  * Write a FontDescriptor.
  */
 int pdf_write_FontDescriptor(gx_device_pdf *pdev,
-			     pdf_font_descriptor_t *pfd);
+			     pdf_resource_t *pfd);
 
 /*
  * Release a FontDescriptor components.
  */
-int pdf_release_FontDescriptor_components(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd);
+int pdf_release_FontDescriptor_components(gx_device_pdf *pdev, pdf_resource_t *pfd);
 
 /*
  * Mark a FontDescriptor used in a text.
  */
 int pdf_mark_font_descriptor_used(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd);
-
 
 #endif /* gdevpdtd_INCLUDED */

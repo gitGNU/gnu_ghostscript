@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsfname.c,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsfname.c,v 1.5 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* File name utilities */
 #include "memory_.h"
 #include "gserror.h"
@@ -75,8 +76,8 @@ gs_parse_real_file_name(gs_parsed_file_name_t * pfn, const char *pname,
 
     if (code < 0)
 	return code;
-    if (pfn->len == 0)
-	return_error(gs_error_invalidfileaccess);	/* device only */
+    if (pfn->len == 0)  /* device only */
+	return_error(gs_error_undefinedfilename); /* for CET 23-23.ps */
     return gs_terminate_file_name(pfn, mem, cname);
 }
 

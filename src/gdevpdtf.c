@@ -1,4 +1,5 @@
-/* Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdtf.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevpdtf.c,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Font and CMap resource implementation for pdfwrite text */
 #include "memory_.h"
 #include "string_.h"
@@ -416,10 +417,12 @@ pdf_assign_font_object_id(gx_device_pdf *pdev, pdf_font_resource_t *pdfont)
 	if (pdfont->FontType == 0) {
 	    pdf_font_resource_t *pdfont1 = pdfont->u.type0.DescendantFont;
 
-	    pdf_reserve_object_id(pdev, (pdf_resource_t *)pdfont1, 0);
-	    code = pdf_mark_font_descriptor_used(pdev, pdfont1->FontDescriptor);
-	    if (code < 0)
-		return code;
+	    if (pdf_font_id(pdfont1) == -1) {
+		pdf_reserve_object_id(pdev, (pdf_resource_t *)pdfont1, 0);
+		code = pdf_mark_font_descriptor_used(pdev, pdfont1->FontDescriptor);
+		if (code < 0)
+		    return code;
+	    }
 	}
     }
     return 0;
@@ -439,6 +442,8 @@ font_resource_simple_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
     pfres->u.simple.FirstChar = 256;
     pfres->u.simple.LastChar = -1;
     pfres->u.simple.BaseEncoding = -1;
+    pfres->u.simple.preferred_encoding_index = -1;
+    pfres->u.simple.last_reserved_char = -1;
     *ppfres = pfres;
     return 0;
 }
@@ -681,7 +686,7 @@ pdf_font_embed_status(gx_device_pdf *pdev, gs_font *font, int *pindex,
      */
     if (pindex)
 	*pindex = index;
-    if (pdev->PDFX)
+    if (pdev->PDFX || pdev->PDFA)
 	return FONT_EMBED_YES;
     if (pdev->CompatibilityLevel < 1.3) {
 	if (index >= 0 && 
@@ -942,15 +947,9 @@ pdf_font_cidfont_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
      * Write the CIDSystemInfo now, so we don't try to access it after
      * the font may no longer be available.
      */
-    {
-	long cidsi_id = pdf_begin_separate(pdev);
-
-	code = pdf_write_cid_system_info(pdev, pcidsi, cidsi_id);
-	if (code < 0)
-	    return code;
-	pdf_end_separate(pdev);
-	pdfont->u.cidfont.CIDSystemInfo_id = cidsi_id;
-    }
+    code = pdf_write_cid_systemInfo_separate(pdev, pcidsi, &pdfont->u.cidfont.CIDSystemInfo_id);
+    if (code < 0)
+	return code;
     *ppfres = pdfont;
     return pdf_compute_BaseFont(pdev, pdfont, false);
 }
@@ -1001,6 +1000,59 @@ pdf_obtain_cidfont_widths_arrays(gx_device_pdf *pdev, pdf_font_resource_t *pdfon
     return 0;
 }
 
+/*
+ * Convert True Type fonts into CID fonts for PDF/A.
+ */
+int 
+pdf_convert_truetype_font(gx_device_pdf *pdev, pdf_resource_t *pres)
+{
+    if (!pdev->PDFA)
+	return 0;
+    else {
+	pdf_font_resource_t *pdfont = (pdf_font_resource_t *)pres;
+
+	if (pdfont->FontType != ft_TrueType)
+	    return 0;
+	else if (pdf_resource_id(pres) == -1)
+	    return 0; /* An unused font. */
+	else {
+	    int code = pdf_different_encoding_index(pdfont, 0);
+
+	    if (code < 0)
+		return code;
+	    if (code == 256)
+		return 0;
+	    {	/* The encoding have a difference - do convert. */
+		pdf_font_resource_t *pdfont0;
+		gs_const_string CMapName = {(const byte *)"OneByteIdentityH", 16};
+
+		code = pdf_convert_truetype_font_descriptor(pdev, pdfont);
+		if (code < 0)
+		    return code;
+		code = pdf_font_type0_alloc(pdev, &pdfont0, pres->rid + 1, pdfont, &CMapName);
+		if (code < 0)
+		    return code;
+		/* Pass the font object ID to the type 0 font resource. */
+		pdf_reserve_object_id(pdev, (pdf_resource_t *)pdfont0, pdf_resource_id(pres));
+		pdf_reserve_object_id(pdev, (pdf_resource_t *)pdfont, gs_no_id);
+		/* Set Encoding_name because we won't call attach_cmap_resource for it : */
+		code = pdf_write_OneByteIdentityH(pdev);
+		if (code < 0)
+		    return 0;
+		pdfont->u.cidfont.CIDSystemInfo_id = pdev->IdentityCIDSystemInfo_id;
+		sprintf(pdfont0->u.type0.Encoding_name, "%ld 0 R", pdf_resource_id(pdev->OneByteIdentityH));
+		/* Move ToUnicode : */
+		pdfont0->res_ToUnicode = pdfont->res_ToUnicode; pdfont->res_ToUnicode = 0;
+		pdfont0->cmap_ToUnicode = pdfont->cmap_ToUnicode; pdfont->cmap_ToUnicode = 0;
+		/* Change the font type to CID font : */
+		pdfont->FontType = ft_CID_TrueType;
+		pdfont->write_contents = pdf_write_contents_cid2;
+		return 0;
+	    }
+	}
+    }
+}
+
 /* ---------------- CMap resources ---------------- */
 
 /*
@@ -1012,3 +1064,4 @@ pdf_cmap_alloc(gx_device_pdf *pdev, const gs_cmap_t *pcmap,
 {
     return pdf_write_cmap(pdev, pcmap, ppres, font_index_only);
 }
+

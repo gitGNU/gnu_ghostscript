@@ -1,4 +1,5 @@
-/* Copyright (C) 1990, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gxhintn.h,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gxhintn.h,v 1.7 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Type 1 hinter, prototypes */
 
 #ifndef gxhintn_INCLUDED
@@ -42,6 +43,7 @@ typedef struct gx_path_s gx_path;
 #define T1_MAX_STEM_SNAPS 12
 #define T1_MAX_ALIGNMENT_ZONES 6
 #define T1_MAX_CONTOURS 10
+#define T1_MAX_SUBGLYPHS 3
 #define T1_MAX_POLES (100 + T1_MAX_CONTOURS) /* Must be grater than 8 for 'flex'. */
 #define T1_MAX_HINTS 30
 
@@ -120,7 +122,7 @@ typedef struct t1_hinter_s
 {   fraction_matrix ctmf;
     fraction_matrix ctmi;
     unsigned int g2o_fraction_bits;
-    unsigned int max_import_coord;
+    unsigned long max_import_coord;
     int32_t g2o_fraction;
     t1_glyph_space_coord orig_gx, orig_gy; /* glyph origin in glyph space */
     t1_glyph_space_coord subglyph_orig_gx, subglyph_orig_gy; /* glyph origin in glyph space */
@@ -134,15 +136,18 @@ typedef struct t1_hinter_s
     bool transposed;
     bool align_to_pixels; /* false == "align to (integral) pixels" */
     bool disable_hinting;
+    bool pass_through;
     bool grid_fit_x, grid_fit_y;
     bool charpath_flag;
     bool path_opened;
     bool autohinting;
+    bool fix_contour_sign;
     t1_glyph_space_coord blue_shift, blue_fuzz;
     t1_pole pole0[T1_MAX_POLES], *pole;
     t1_hint hint0[T1_MAX_HINTS], *hint;
     t1_zone zone0[T1_MAX_ALIGNMENT_ZONES], *zone;
     int contour0[T1_MAX_CONTOURS], *contour;
+    int subglyph0[T1_MAX_CONTOURS], *subglyph;
     t1_glyph_space_coord stem_snap0[2][T1_MAX_STEM_SNAPS + 1]; /* StdWH + StemSnapH, StdWV + StemSnapV */
     t1_glyph_space_coord *stem_snap[2];
     int stem_snap_vote0[T1_MAX_STEM_SNAPS + 1];
@@ -151,6 +156,7 @@ typedef struct t1_hinter_s
     t1_hint_applying hint_applying0[T1_MAX_HINTS * 4], *hint_applying;
     int stem_snap_count[2], max_stem_snap_count[2]; /* H, V */
     int stem_snap_vote_count, max_stem_snap_vote_count;
+    int subglyph_count, max_subglyph_count;
     int contour_count, max_contour_count;
     int zone_count, max_zone_count;
     int pole_count, max_pole_count;
@@ -159,7 +165,7 @@ typedef struct t1_hinter_s
     int hint_applying_count, max_hint_applying_count;
     int primary_hint_count;
     int flex_count;
-    int FontType; /* 1 or 2 */
+    int FontType; /* 1 or 2 or 42 */
     bool have_flex;
     bool ForceBold;
     bool keep_stem_width;
@@ -189,7 +195,7 @@ int  t1_hinter__set_mapping(t1_hinter * this, gs_matrix_fixed * ctm,
 			int log2_subpixels_x, int log2_subpixels_y,
 			fixed origin_x, fixed origin_y, bool align_to_pixels);
 int  t1_hinter__set_font_data(t1_hinter * this, int FontType, gs_type1_data *pdata, 
-			bool no_grid_fitting);
+			bool no_grid_fitting, bool is_resource);
 int  t1_hinter__set_font42_data(t1_hinter * this, int FontType, gs_type42_data *pdata, 
 			bool no_grid_fitting);
 
@@ -200,6 +206,7 @@ int  t1_hinter__rlineto(t1_hinter *, fixed xx, fixed yy);
 int  t1_hinter__rcurveto(t1_hinter * this, fixed xx0, fixed yy0, fixed xx1, fixed yy1, fixed xx2, fixed yy2);
 void t1_hinter__setcurrentpoint(t1_hinter * this, fixed xx, fixed yy);
 int  t1_hinter__closepath(t1_hinter * this);
+int  t1_hinter__end_subglyph(t1_hinter * this);
 
 int  t1_hinter__flex_beg(t1_hinter * this);
 int  t1_hinter__flex_end(t1_hinter * this, fixed flex_height);
@@ -216,5 +223,6 @@ int  t1_hinter__vstem3(t1_hinter * this, fixed y0, fixed y1, fixed y2, fixed y3,
 
 int  t1_hinter__endglyph(t1_hinter * this);
 int  t1_hinter__is_x_fitting(t1_hinter * this);
+void t1_hinter__fix_contour_signs(t1_hinter * this);
 
 #endif /* gxhintn_INCLUDED */

@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsiparm3.h,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsiparm3.h,v 1.5 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* ImageType 3 image parameter definition */
 
 #ifndef gsiparm3_INCLUDED
@@ -54,7 +55,7 @@ typedef struct gs_image3_s {
 /*
  * Initialize an ImageType 3 image.
  */
-void gs_image3_t_init(gs_image3_t * pim, const gs_color_space * color_space,
+void gs_image3_t_init(gs_image3_t * pim, gs_color_space * color_space,
 		      gs_image3_interleave_type_t interleave_type);
 
 #endif /* gsiparm3_INCLUDED */

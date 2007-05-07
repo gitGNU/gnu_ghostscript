@@ -8,7 +8,7 @@ it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.
 
-$Id: jbig2_mmr.c,v 1.1 2005/04/18 12:06:07 Arabidopsis Exp $
+$Id: jbig2_mmr.c,v 1.2 2007/05/07 11:22:12 Arabidopsis Exp $
 */
 
 /*

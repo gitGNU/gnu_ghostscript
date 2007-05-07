@@ -1,23 +1,21 @@
-#    Copyright (C) 1989, 2000-2004 artofcode LLC. All rights reserved.
-# 
-# This file is part of GNU ghostscript
+#  Copyright (C) 2001-2006 artofcode LLC.
+#  All Rights Reserved.
 #
-# GNU ghostscript is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2, or (at your option) any later version.
+#  This file is part of GNU ghostscript
 #
-# This software is provided AS-IS with no warranty, either express or
-# implied. That is, this program is distributed in the hope that it will 
-# be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details
+#  GNU ghostscript is free software; you can redistribute it and/or modify it under
+#  the terms of the GNU General Public License as published by the Free Software
+#  Foundation; either version 2, or (at your option) any later version.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
-
-
-# $Id: devs.mak,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $
+#  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+#  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+#  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License along with
+#  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# $Id: devs.mak,v 1.8 2007/05/07 11:21:45 Arabidopsis Exp $
 # makefile for Aladdin's device drivers.
 
 # Define the name of this makefile.
@@ -816,8 +814,7 @@ $(DD)ps2write.dev : $(DEVS_MAK) $(ECHOGS_XE) $(DD)pdfwrite.dev
 $(DD)pdfwrite.dev : $(DEVS_MAK) $(ECHOGS_XE) $(pdfwrite_)\
  $(GLD)cmyklib.dev $(GLD)cfe.dev $(GLD)lzwe.dev\
  $(GLD)rle.dev $(GLD)sdcte.dev $(GLD)sdeparam.dev $(GLD)smd5.dev\
- $(GLD)szlibe.dev $(GLD)psdf.dev \
- $(DD)pdtext.dev
+ $(GLD)szlibe.dev $(GLD)psdf.dev $(GLD)sarc4.dev $(DD)pdtext.dev
 	$(SETDEV2) $(DD)pdfwrite $(pdfwrite1_)
 	$(ADDMOD) $(DD)pdfwrite $(pdfwrite2_)
 	$(ADDMOD) $(DD)pdfwrite $(pdfwrite3_)
@@ -832,7 +829,7 @@ $(DD)pdfwrite.dev : $(DEVS_MAK) $(ECHOGS_XE) $(pdfwrite_)\
 	$(ADDMOD) $(DD)pdfwrite -ps gs_pdfwr
 	$(ADDMOD) $(DD)pdfwrite -include $(GLD)cmyklib $(GLD)cfe $(GLD)lzwe
 	$(ADDMOD) $(DD)pdfwrite -include $(GLD)rle $(GLD)sdcte $(GLD)sdeparam
-	$(ADDMOD) $(DD)pdfwrite -include $(GLD)smd5 $(GLD)szlibe
+	$(ADDMOD) $(DD)pdfwrite -include $(GLD)smd5 $(GLD)szlibe $(GLD)sarc4.dev
 	$(ADDMOD) $(DD)pdfwrite -include $(GLD)psdf
 	$(ADDMOD) $(DD)pdfwrite -include $(DD)pdtext
 
@@ -1020,7 +1017,7 @@ $(GLOBJ)gdevpdte.$(OBJ) : $(GLSRC)gdevpdte.c $(gx_h) $(math__h) $(memory__h) $(s
 $(GLOBJ)gdevpdtd.$(OBJ) : $(GLSRC)gdevpdtd.c $(math__h) $(memory__h) $(gx_h)\
  $(gserrors_h) $(gsrect_h)\
  $(gdevpdfo_h) $(gdevpdfx_h)\
- $(gdevpdtb_h) $(gdevpdtd_h)
+ $(gdevpdtb_h) $(gdevpdtd_h) $(gdevpdtf_h)
 	$(GLCC) $(GLO_)gdevpdtd.$(OBJ) $(C_) $(GLSRC)gdevpdtd.c
 
 $(GLOBJ)gdevpdtf.$(OBJ) : $(GLSRC)gdevpdtf.c $(gx_h) $(memory__h)\
@@ -1037,7 +1034,7 @@ $(GLOBJ)gdevpdti.$(OBJ) : $(GLSRC)gdevpdti.c $(memory__h) $(string__h) $(gx_h)\
 	$(GLCC) $(GLO_)gdevpdti.$(OBJ) $(C_) $(GLSRC)gdevpdti.c
 
 $(GLOBJ)gdevpdts.$(OBJ) : $(GLSRC)gdevpdts.c $(gx_h) $(math__h) $(memory__h)\
- $(gdevpdfx_h) $(gdevpdtf_h) $(gdevpdts_h) $(gdevpdtx_h)
+ $(gserrors_h) $(gdevpdfx_h) $(gdevpdtf_h) $(gdevpdts_h) $(gdevpdtx_h)
 	$(GLCC) $(GLO_)gdevpdts.$(OBJ) $(C_) $(GLSRC)gdevpdts.c
 
 $(GLOBJ)gdevpdtt.$(OBJ) : $(GLSRC)gdevpdtt.c $(gx_h) $(math__h) $(string__h)\
@@ -1052,7 +1049,7 @@ $(GLOBJ)gdevpdtv.$(OBJ) : $(GLSRC)gdevpdtv.c $(gx_h) $(gdevpdtv_h)
 	$(GLCC) $(GLO_)gdevpdtv.$(OBJ) $(C_) $(GLSRC)gdevpdtv.c
 
 $(GLOBJ)gdevpdtw.$(OBJ) : $(GLSRC)gdevpdtw.c $(gx_h) $(gserrors_h) $(memory__h)\
- $(gxfcmap_h) $(gxfont_h) $(gscencs_h)\
+ $(gxfcmap_h) $(gxfont_h) $(gxfcopy_h) $(gscencs_h)\
  $(gdevpsf_h) $(gdevpdfx_h) $(gdevpdfo_h)\
  $(gdevpdtd_h) $(gdevpdtf_h) $(gdevpdti_h) $(gdevpdtw_h) $(gdevpdtv_h) $(sarc4_h)
 	$(GLCC) $(GLO_)gdevpdtw.$(OBJ) $(C_) $(GLSRC)gdevpdtw.c
@@ -1104,7 +1101,8 @@ $(DD)bitrgbtags.dev : $(DEVS_MAK) $(bit_) $(GLD)page.dev $(GLD)cielib.dev
 	$(ADDMOD) $(DD)bitrgbtags -include $(GLD)cielib
 
 $(GLOBJ)gdevbit.$(OBJ) : $(GLSRC)gdevbit.c $(PDEVH) $(math__h)\
- $(gdevdcrd_h) $(gscrd_h) $(gscrdp_h) $(gsparam_h) $(gxlum_h)
+ $(gsparam_h) $(gdevdcrd_h) $(gscrd_h) $(gscrdp_h) $(gxlum_h) $(gxdcconv_h)\
+ $(gsutil_h)
 	$(GLCC) $(GLO_)gdevbit.$(OBJ) $(C_) $(GLSRC)gdevbit.c
 
 ### ------------------------- .BMP file formats ------------------------- ###
@@ -1497,6 +1495,54 @@ $(GLOBJ)gdevpnga.$(OBJ) : $(GLSRC)gdevpnga.c $(png__h)\
  $(gscdefs_h) $(gsdevice_h) $(gxblend_h) $(gxtext_h)\
  $(gdevmem_h) $(gdevpccm_h) $(gdevprn_h)
 	$(CC_) $(I_)$(GLI_) $(II)$(PI_)$(_I) $(PCF_) $(GLF_) $(GLO_)gdevpnga.$(OBJ) $(C_) $(GLSRC)gdevpnga.c
+
+
+### --------------------- WTS Halftoning drivers ----------------------  ###
+
+### IMDI from Argyll
+
+IMDISRCDIR=../gs/imdi/
+IMDISRC=../gs/imdi
+
+simdi_=$(GLOBJ)imdi.$(OBJ) $(GLOBJ)imdi_tab.$(OBJ)
+
+$(GLOBJ)imdi.$(OBJ) : $(IMDISRCDIR)imdi.c
+	$(GLCC) $(GLO_)imdi.$(OBJ) $(C_) $(IMDISRCDIR)imdi.c
+
+$(GLOBJ)imdi_tab.$(OBJ) : $(IMDISRCDIR)imdi_tab.c
+	$(GLCC) $(GLO_)imdi_tab.$(OBJ) $(C_) $(IMDISRCDIR)/imdi_tab.c
+
+$(DD)simdi.dev : $(DEVS_MAK) $(simdi_)
+	$(SETMOD) $(DD)simdi $(simdi_)
+
+### WTS halftoning CMYK device
+
+wts_=$(GLOBJ)gdevwts.$(OBJ)
+
+$(GLOBJ)gdevwts.$(OBJ) : $(GLSRC)gdevwts.c $(PDEVH)\
+ $(gscdefs_h) $(gscspace_h) $(gxgetbit_h) $(gxiparam_h) $(gxlum_h)
+	$(GLICCCC) -I$(IMDISRC) $(GLO_)gdevwts.$(OBJ) $(C_) $(GLSRC)gdevwts.c
+
+$(DD)wtscmyk.dev : $(DEVS_MAK) $(wts_) $(GLD)page.dev
+	$(SETPDEV2) $(DD)wtscmyk $(wts_)
+
+$(DD)wtsimdi.dev : $(DEVS_MAK) $(wts_) $(GLD)page.dev
+	$(SETPDEV2) $(DD)wtsimdi $(wts_)
+	$(ADDMOD) $(DD)wtsimdi -include $(GLD)sicclib
+	$(ADDMOD) $(DD)wtsimdi -include $(GLD)simdi
+
+### IMDI color converting device
+
+imdi_=$(GLOBJ)gdevimdi.$(OBJ)
+
+$(GLOBJ)gdevimdi.$(OBJ) : $(GLSRC)gdevimdi.c $(PDEVH) \
+    $(gscdefs_h) $(gscspace_h) $(gxgetbit_h) $(gxiparam_h) $(gxlum_h)
+	$(GLICCCC) -I$(IMDISRCDIR) $(GLO_)gdevimdi.$(OBJ) $(C_) $(GLSRC)gdevimdi.c
+
+$(DD)imdi.dev : $(DEVS_MAK) $(imdi_) $(GLD)page.dev $(GLD)sicclib.dev $(GLD)simdi.dev
+	$(SETPDEV2) $(DD)imdi $(imdi_)
+	$(ADDMOD) $(DD)imdi -include $(GLD)sicclib
+	$(ADDMOD) $(DD)imdi -include $(GLD)simdi
 
 ### ---------------------- PostScript image format ---------------------- ###
 ### These devices make it possible to print monochrome Level 2 files on a ###

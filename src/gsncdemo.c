@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gsncdemo.c,v 1.1 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gsncdemo.c,v 1.2 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Sample implementation for handling PANTONE Colors */
 
 /*

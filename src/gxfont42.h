@@ -1,4 +1,5 @@
-/* Copyright (C) 1996, 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxfont42.h,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gxfont42.h,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Type 42 font data definition */
 
 #ifndef gxfont42_INCLUDED
@@ -42,6 +42,26 @@ typedef struct gs_type42_data_s gs_type42_data;
 #  define gs_font_type42_DEFINED
 typedef struct gs_font_type42_s gs_font_type42;
 #endif
+
+
+typedef enum gs_type42_metrics_options_s {
+    gs_type42_metrics_options_WMODE0 = 0,
+    gs_type42_metrics_options_WMODE1 = 1,
+    gs_type42_metrics_options_BBOX = 2,
+    gs_type42_metrics_options_WMODE0_AND_BBOX = 4,
+    gs_type42_metrics_options_WMODE1_AND_BBOX = 5,
+} gs_type42_metrics_options_t;
+#define gs_type42_metrics_options_wmode(a)         ((a)&gs_type42_metrics_options_WMODE1)
+#define gs_type42_metrics_options_sbw_requested(a) (~(a)&gs_type42_metrics_options_BBOX)
+#define gs_type42_metrics_options_bbox_requested(a)((a)&6)
+
+/* Export the default get_metrics procedure. 
+   The length of sbw is >=4 when bbox in not requested,
+   and 8 otherwise.
+ */
+int gs_type42_default_get_metrics(gs_font_type42 *pfont, uint glyph_index,
+				  gs_type42_metrics_options_t options, float *sbw);
+
 typedef struct gs_type42_mtx_s {
     uint numMetrics;		/* num*Metrics from [hv]hea */
     ulong offset;		/* offset to [hv]mtx table */
@@ -58,8 +78,10 @@ struct gs_type42_data_s {
     uint (*get_glyph_index)(gs_font_type42 *pfont, gs_glyph glyph);
     int (*get_outline)(gs_font_type42 *pfont, uint glyph_index,
 		       gs_glyph_data_t *pgd);
-    int (*get_metrics)(gs_font_type42 *pfont, uint glyph_index, int wmode,
-		       float sbw[4]);
+    int (*get_metrics)(gs_font_type42 *pfont, uint glyph_index, 
+			gs_type42_metrics_options_t options,
+			float *sbw_bbox/* See comment for gs_type42_default_get_metrics */);
+
     /* The following are cached values. */
     ulong cmap;			/* offset to cmap table (not used by */
 				/* renderer, only here for clients) */
@@ -107,22 +129,19 @@ extern_st(st_gs_font_type42);
  * we provide a procedure to initialize them from the font data.
  * Note that this initializes the type42_data procedures other than
  * string_proc, and the font procedures as well.
+ * USE_ttfReader subclasses gs_font_type42 with ttfReader or without.
+ * FAPI will disable ttfReader as well. 
  */
-int gs_type42_font_init(gs_font_type42 *);
+int gs_type42_font_init(gs_font_type42 *pfont, int subfontid);
 
 /* Append the outline of a TrueType character to a path. */
-int gs_type42_append(uint glyph_index, gs_imager_state * pis,
-		 gx_path * ppath, const gs_log2_scale_point * pscale,
-		 bool charpath_flag, int paint_type, cached_fm_pair *pair);
+int gs_type42_append(uint glyph_index, gs_state * pgs,
+		 gx_path * ppath, gs_text_enum_t *penum, gs_font *pfont,
+		 bool charpath_flag);
 
 /* Get the metrics of a TrueType character. */
 int gs_type42_get_metrics(gs_font_type42 * pfont, uint glyph_index,
 			  float psbw[4]);
-int gs_type42_wmode_metrics(gs_font_type42 * pfont, uint glyph_index,
-			    int wmode, float psbw[4]);
-/* Export the default get_metrics procedure. */
-int gs_type42_default_get_metrics(gs_font_type42 *pfont, uint glyph_index,
-				  int wmode, float sbw[4]);
 
 int gs_type42_get_outline_from_TT_file(gs_font_type42 * pfont, stream *s, uint glyph_index,
 		gs_glyph_data_t *pgd);

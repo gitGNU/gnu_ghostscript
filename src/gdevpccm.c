@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 1993, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -15,8 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-
-/* $Id: gdevpccm.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gdevpccm.c,v 1.7 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Support routines for PC color mapping */
 #include "gx.h"
 #include "gsmatrix.h"		/* for gxdevice.h */

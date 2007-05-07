@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: iscan.h,v 1.5 2005/12/13 16:57:26 jemarch Exp $ */
+/* $Id: iscan.h,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Token scanner state and interface */
 /* Requires gsstruct.h, ostack.h, stream.h */
 
@@ -32,6 +32,10 @@
  * the caller must initialize the state by calling scanner_state_init.
  * Most of the state is only used if scanning is suspended because of
  * an interrupt or a callout.
+ *
+ * Note that the scanner state includes a reference to the stream being
+ * scanned.  We do this primarily for Adobe compatibility, so that we can
+ * remove the source object from the operand stack after the initial checks.
  *
  * We expose the entire state definition to the caller so that
  * the state can normally be allocated on the stack.
@@ -65,17 +69,20 @@ typedef dynamic_area *da_ptr;
 /* Define state specific to binary tokens and binary object sequences. */
 typedef struct scan_binary_state_s {
     int num_format;
-    int (*cont)(i_ctx_t *, stream *, ref *, scanner_state *);
+    int (*cont)(i_ctx_t *, ref *, scanner_state *);
     ref bin_array;
     uint index;
     uint max_array_index;	/* largest legal index in objects */
     uint min_string_index;	/* smallest legal index in strings */
     uint top_size;
     uint size;
+    int token_type;		/* binary token type for error reporting */
+    ulong lsize;		/* b.o.s. size ibid. */
 } scan_binary_state;
 
 /* Define the scanner state. */
 struct scanner_state_s {
+    ref s_file;			/* source file */
     uint s_pstack;		/* stack depth when starting current */
 				/* procedure, after pushing old pstack */
     uint s_pdepth;		/* pstack for very first { encountered, */
@@ -101,6 +108,17 @@ struct scanner_state_s {
 	stream_AXD_state axd;	/* string */
 	stream_PSSD_state pssd;	/* string */
     } s_ss;
+    /* The following are used only to return information for errors. */
+    struct se_ {		/* scanner error */
+	ref object;		/* normally t__invalid */
+	bool is_name;		/* true if 'string' is name, false if string */
+#define SCANNER_MAX_ERROR_STRING 120 /* adhoc, for Adobe-compatible messages */
+	char string[SCANNER_MAX_ERROR_STRING+1]; /* normally empty */
+    } s_error;
+#define SCAN_INIT_ERROR(pstate)\
+  (make_t(&(pstate)->s_error.object, t__invalid),\
+   (pstate)->s_error.is_name = false,\
+   (pstate)->s_error.string[0] = 0)
 };
 
 /* The type descriptor is public only for checking. */
@@ -121,13 +139,14 @@ extern_st(st_scanner_state);
 #define SCAN_PDF_INV_NUM 32	/* Adobe ignores invalid numbers */
 				/* This is for compatibility with Adobe */
 				/* Acrobat Reader			*/
-void scanner_state_init_options(scanner_state *sstate, int options);
-#define scanner_state_init_check(pstate, from_string, check_only)\
-  scanner_state_init_options(pstate,\
-			     (from_string ? SCAN_FROM_STRING : 0) |\
-			     (check_only ? SCAN_CHECK_ONLY : 0))
-#define scanner_state_init(pstate, from_string)\
-  scanner_state_init_check(pstate, from_string, false)
+void scanner_init_options(scanner_state *sstate, const ref *fop,
+			  int options);
+#define scanner_init(sstate, fop)\
+  scanner_init_options(sstate, fop, 0)
+void scanner_init_stream_options(scanner_state *sstate, stream *s,
+				 int options);
+#define scanner_init_stream(sstate, s)\
+  scanner_init_stream_options(sstate, s, 0)
 
 /*
  * Read a token from a stream.  As usual, 0 is a normal return,
@@ -138,8 +157,7 @@ void scanner_state_init_options(scanner_state *sstate, int options);
 #define scan_Refill 3		/* get more input data, then call again */
 #define scan_Comment 4		/* comment, non-DSC if processing DSC */
 #define scan_DSC_Comment 5	/* DSC comment */
-int scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref,
-	       scanner_state * pstate);
+int scan_token(i_ctx_t *i_ctx_p, ref * pref, scanner_state * pstate);
 
 /*
  * Read a token from a string.  Return like scan_token, but also
@@ -151,13 +169,19 @@ int scan_string_token_options(i_ctx_t *i_ctx_p, ref * pstr, ref * pref,
   scan_string_token_options(i_ctx_p, pstr, pref, 0)
 
 /*
+ * Return the "error object" to be stored in $error.command instead of
+ * --token--, if any, or -1 if no special error object is required.
+ */
+int scanner_error_object(i_ctx_t *i_ctx_p, const scanner_state *pstate,
+			 ref *pseo);
+
+/*
  * Handle a scan_Refill return from scan_token.
  * This may return o_push_estack, 0 (meaning just call scan_token again),
  * or an error code.
  */
-int scan_handle_refill(i_ctx_t *i_ctx_p, const ref * fop,
-		       scanner_state * pstate, bool save, bool push_file,
-		       op_proc_t cont);
+int scan_handle_refill(i_ctx_t *i_ctx_p, scanner_state * pstate,
+		       bool save, op_proc_t cont);
 
 /*
  * Define the procedure "hook" for parsing DSC comments.  If not NULL,

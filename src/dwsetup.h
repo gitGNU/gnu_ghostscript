@@ -1,4 +1,5 @@
-/* Copyright (C) 1999, Ghostgum Software Pty Ltd.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -17,7 +18,7 @@
 */
 
 
-// $Id: dwsetup.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $
+// $Id: dwsetup.h,v 1.6 2007/05/07 11:21:47 Arabidopsis Exp $
 
 #ifndef dwsetup_INCLUDED
 #  define dwsetup_INCLUDED

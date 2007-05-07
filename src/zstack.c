@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1991, 1992, 1994, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zstack.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zstack.c,v 1.5 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Operand stack operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -71,7 +71,7 @@ zindex(i_ctx_t *i_ctx_p)
     register os_ptr opn;
 
     check_type(*op, t_integer);
-    if ((ulong)op->value.intval >= op - osbot) {
+    if ((ulong)op->value.intval >= (ulong)(op - osbot)) {
 	/* Might be in an older stack block. */
 	ref *elt;
 
@@ -79,13 +79,30 @@ zindex(i_ctx_t *i_ctx_p)
 	    return_error(e_rangecheck);
 	elt = ref_stack_index(&o_stack, op->value.intval + 1);
 	if (elt == 0)
-	    return_error(e_rangecheck);
+	    return_error(e_stackunderflow);
 	ref_assign(op, elt);
 	return 0;
     }
     opn = op + ~(int)op->value.intval;
     ref_assign_inline(op, opn);
     return 0;
+}
+
+/* <obj_n> ... <obj_0> <n> .argindex <obj_n> ... <obj_0> <obj_n> */
+private int
+zargindex(i_ctx_t *i_ctx_p)
+{
+    int code = zindex(i_ctx_p);
+
+    /*
+     * Pseudo-operators should use .argindex rather than index to access
+     * their arguments on the stack, so that if there aren't enough, the
+     * result will be a stackunderflow rather than a rangecheck.  (This is,
+     * in fact, the only reason this operator exists.)
+     */
+    if (code == e_rangecheck && osp->value.intval >= 0)
+	code = gs_note_error(e_stackunderflow);
+    return code;
 }
 
 /* <obj_n-1> ... <obj_0> <n> <i> roll */
@@ -101,7 +118,7 @@ zroll(i_ctx_t *i_ctx_p)
 
     check_type(*op1, t_integer);
     check_type(*op, t_integer);
-    if ((ulong) op1->value.intval > op1 - osbot) {
+    if ((ulong) op1->value.intval > (ulong)(op1 - osbot)) {
 	/*
 	 * The data might span multiple stack blocks.
 	 * There are efficient ways to handle this situation,
@@ -110,10 +127,10 @@ zroll(i_ctx_t *i_ctx_p)
 	 */
 	int left, i;
 
-	if (op1->value.intval < 0 ||
-	    op1->value.intval + 2 > ref_stack_count(&o_stack)
-	    )
+	if (op1->value.intval < 0) 
 	    return_error(e_rangecheck);
+	if (op1->value.intval + 2 > (int)ref_stack_count(&o_stack))
+	    return_error(e_stackunderflow);
 	count = op1->value.intval;
 	if (count <= 1) {
 	    pop(2);
@@ -288,6 +305,7 @@ zcounttomark(i_ctx_t *i_ctx_p)
 
 const op_def zstack_op_defs[] =
 {
+    {"2.argindex", zargindex},
     {"0clear", zclear_stack},
     {"0cleartomark", zcleartomark},
     {"0count", zcount},

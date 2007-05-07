@@ -1,14 +1,20 @@
 %    Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
 % 
-% This software is provided AS-IS with no warranty, either express or
-% implied.
-% 
-% This software is distributed under license and may not be copied,
-% modified or distributed except as expressly authorized under the terms
-% of the license contained in the file LICENSE in this distribution.
-
-
-% $Id: gs_cspace.ps,v 1.4 2006/06/16 12:55:13 Arabidopsis Exp $
+%  This file is part of GNU ghostscript
+%
+%  GNU ghostscript is free software; you can redistribute it and/or modify it under
+%  the terms of the GNU General Public License as published by the Free Software
+%  Foundation; either version 2, or (at your option) any later version.
+%
+%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+%
+%  You should have received a copy of the GNU General Public License along with
+%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+%
+% $Id: gs_cspace.ps,v 1.5 2007/05/07 11:22:07 Arabidopsis Exp $
 % basic colorspace mechanism
 
 %
@@ -232,6 +238,13 @@
 userdict /.cspace_util 80 dict put
 .cspace_util begin
 
+
+% Global, read-only, unpacked, array-form device color spaces
+%
+/DeviceGray_array /DeviceGray 1 array astore readonly def
+/DeviceRGB_array  /DeviceRGB  1 array astore readonly def
+/DeviceCMYK_array /DeviceCMYK 1 array astore readonly def
+
 %
 % Colorspacedict is initially in .cspace_util; it is copied to level2dict
 % in the Level 2 initialization code to retain compatibility with 
@@ -382,8 +395,7 @@ bind def
 % NB: This should come prior to the redefinition of setcolorspace, and
 %     must use an array operand.
 %
-[ /DeviceGray ] setcolorspace
-
+//DeviceGray_array setcolorspace
 
 %
 %   <c1> ... <cn>   setcolor   -
@@ -456,22 +468,29 @@ systemdict /setcolor .undef
 %
 /_setcolorspace
   {
-      {
-        % see if the operand space is the same as the current space
-        currentcolorspace dup length 1 eq
-          {
-            0 get
-            2 index dup type dup /arraytype eq exch /packedarraytype eq or
-              {
-                dup length 1 eq
-                  { 0 get }
-                if
-              }
-            if
+      { % Early validation the argument. The code below fails in unpredictable ways
+        % when it is exposed to the garbage.
+        1 index
+        dup type dup /arraytype eq exch /packedarraytype eq or { 0 get } if
+        dup type /nametype ne {
+          //.cspace_util /setcolorspace get /typecheck signalerror 
+        } if
+        //colorspacedict exch known not {
+          //.cspace_util /setcolorspace get /undefined signalerror 
+        } if
+
+        % See if the operand space is the same as the current space.
+        % The test is intentionaly conservative to meet CET 09-06.
+        1 index                       % [/new] bool [/new]
+        type /nametype eq
+          { currentcolorspace 0 get   % [/new] bool /old
+            2 index eq                % [/new] bool bool
           }
-          { 2 index }
+          { currentcolorspace         % [/new] bool [/old] 
+            2 index eq                % [/new] bool eq
+          }
         ifelse
-        eq and dup
+        and dup
           {
             %
             % If PDFfile is defined on the dictionary stack, this is a
@@ -490,7 +509,8 @@ systemdict /setcolor .undef
             //.cs_substitute exec
             //.cs_prepare exec
             //.cs_install exec
-            //make_array1 exec //setcolorspace
+            dup //make_array1 exec //setcolorspace
+	    //.cs_get_default_color exec setcolor
           }
         ifelse
       }
@@ -527,7 +547,7 @@ bind def
 %
 %
 /initgraphics
-  { initgraphics { /DeviceGray } cvlit forcesetcolorspace }
+  { initgraphics //DeviceGray_array forcesetcolorspace }
 .bind systemdict begin odef end
 
 systemdict /setcolorspace .undef
@@ -546,7 +566,7 @@ systemdict /setcolorspace .undef
 %
 /setgray
   {
-      { { /DeviceGray } cvlit  //setcolorspace //setcolor }
+      { //DeviceGray_array //setcolorspace //setcolor }
     stopped
       { /setgray .systemvar $error /errorname get signalerror }
     if
@@ -555,7 +575,7 @@ bind systemdict begin odef end
 
 /setrgbcolor
   {
-      { { /DeviceRGB } cvlit //setcolorspace //setcolor }
+      { //DeviceRGB_array //setcolorspace //setcolor }
     stopped
       { /setrgbcolor .systemvar $error /errorname get signalerror }
     if
@@ -567,7 +587,7 @@ bind systemdict begin odef end
     pop
     /setcmykcolor
       {
-          { { /DeviceCMYK } cvlit //setcolorspace //setcolor }
+          { //DeviceCMYK_array //setcolorspace //setcolor }
         stopped
           { /setcmykcolor .systemvar $error /errorname get signalerror }
         if
@@ -688,17 +708,15 @@ bind def
 % handle resetting the stacks.
 %
 /check_num_stack
-  {
-    dup 2 add copy exch pop
-      {
+  {               % c1 .. cn [] n
+    1 1 3 2 roll  % c1 .. cn [] 1 1 n
+      { index
         type dup /integertype ne exch /realtype ne and
           //setcolor_typecheck
         if
       }
-    repeat
-    pop         % remove the extra op_count
-  }
-bind def
+    for
+  } bind def
 
 %   <c1>  <array>   validate_1   <c1>
 /validate_1 { 1 //check_num_stack exec pop } bind def
@@ -748,23 +766,23 @@ bind def
 % 0 0 0 1.0 (this varies from Adobe's documentation but is consistent
 % with their impelementations).
 %
-/no_currentgray { //.cs_get_ncomps exec //clear_n_objs exec 0 } bind def
-/no_currentrgb { //.cs_get_ncomps exec //clear_n_objs exec 0 0 0 } bind def
-/no_currentcmyk { //.cs_get_ncomps exec //clear_n_objs exec 0 0 0 1.0 } bind def
+/no_currentgray { //.cs_get_ncomps exec //clear_n_objs exec 0. } bind def
+/no_currentrgb { //.cs_get_ncomps exec //clear_n_objs exec 0. 0. 0. } bind def
+/no_currentcmyk { //.cs_get_ncomps exec //clear_n_objs exec 0. 0. 0. 1.} bind def
 
 
 %
 %   <num>   bound_0_1   <num>
 %
-% Bound a number to the range [0, 1]
+% Bound a number to the range [0.0, 1.0]
 %
 /bound_0_1
   {
     dup 0 lt
-      { pop 0 }
+      { pop 0.0 }
       {
         dup 1 gt
-          { pop 1 }
+          { pop 1.0 }
         if
       }
     ifelse
@@ -877,29 +895,35 @@ bind def
 %        break;
 %    }
 %
+
+
+% Define 1/3 and 2/3 accurately (don't use literals like 0.333333).
+/.f1_3 1.0 3 div def
+/.f2_3 2.0 3 div def
+
 /.rgb_2_hsb
   {
     % find the largest and smallest components
     3 copy 3 //max_n exec dup 5 1 roll
-    dup 0 eq
-      { pop pop pop pop 0 0 }
+    dup 0.0 eq
+      { pop pop pop pop 0.0 0.0 }
       {
         4 copy pop 3 //min_n exec 1 index exch sub
         dup 2 index div 7 1 roll
-        dup 0 eq
-          { 5 { pop } repeat 0 3 1 roll }
+        dup 0.0 eq
+          { 5 { pop } repeat 0.0 3 1 roll }
           {
-            6 mul 5 1 roll
+            6.0 mul 5 1 roll
             2 copy eq       % blue == brightness
-              { pop pop sub exch div .666667 add }
+              { pop pop sub exch div //.f2_3 add }
               {
                 2 index eq  % green == brightness
-                  { exch pop exch sub exch div .3333333 add }
+                  { exch pop exch sub exch div //.f1_3 add }
                   {
                     % red == brightness
                     sub exch pop exch div
-                    dup 0 lt
-                      { 1 add }
+                    dup 0.0 lt
+                      { 1.0 add }
                     if
                   }
                 ifelse
@@ -916,37 +940,37 @@ bind def
 
 /.hsb_2_rgb
   {
-    3 { 0 max 1 min 3 1 roll } repeat
-    1 2 index sub 1 index mul      % (1 - s) * br
-    3 -1 roll 2 index mul 6 mul    % 6 * s * br
-    4 -1 roll                      % stack: <br>  <(1 - s) * br>  <6 * s * br>  <h>
+    3 { 0.0 max 1.0 min 3 1 roll } repeat % h s b
+    1.0 2 index sub 1 index mul           % h s b (1-s)*b
+    3 -1 roll 2 index mul 6.0 mul         % h b (1-s)*b 6*s*b 
+    4 -1 roll                             % b (1-s)*b=nm 6*s*b=md h
 
     % array of procedures for the 7 hue cases
       {
-        % 0 ==> r >= g >= b
-        { mul 1 index add exch }
+        % 0 ==> r >= g >= b               % b nm md h
+        { mul 1 index add exch }          
 
         % 1 ==> g >= r >= b
-        { 0.333333 exch sub mul 1 index add 3 1 roll }
+        { //.f1_3 exch sub mul 1 index add 3 1 roll }
 
         % 2 ==> g >= b >= r
-        { 0.333333 sub mul 1 index add 3 1 roll exch 3 -1 roll }
+        { //.f1_3 sub mul 1 index add 3 1 roll exch 3 -1 roll }
 
         % 3 ==> b >= g >= r
-        { 0.666667 exch sub mul 1 index add 3 -1 roll }
+        { //.f2_3 exch sub mul 1 index add 3 -1 roll }
 
         % 4 ==> b >= r >= g
-        { 0.666667 sub mul 1 index add 3 1 roll exch }
+        { //.f2_3 sub mul 1 index add 3 1 roll exch }
 
         % 5 ==> r >= b >= g
-        { 1 exch sub mul 1 index add }
+        { 1.0 exch sub mul 1 index add }
 
         % 6 ==> r = br, g = b = mn
 	% Case 6 is the same as case 0 with h = 0.  This also simplifies
 	% the calculations.
         { pop pop dup }
       }
-    1 index 6 mul cvi              % (int)(6 * h)
+    1 index 6.0 mul cvi                   % b (1-s)*b 6*s*b h {} int(6*h)
     get exec    
   }
 bind def
@@ -974,6 +998,10 @@ bind systemdict begin odef end
     if
   }
 bind systemdict begin odef end
+
+currentdict /DeviceGray_array .undef
+currentdict /DeviceRGB_array  .undef
+currentdict /DeviceCMYK_array .undef
 
 end     % .cspace_util
 .setglobal

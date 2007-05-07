@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 1995, 1997, 1998, 1999, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: ziodev.c,v 1.5 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: ziodev.c,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Standard IODevice implementation */
 #include "memory_.h"
 #include "stdio_.h"
@@ -145,7 +145,7 @@ zfilelineedit(i_ctx_t *i_ctx_p)
 	return_error(e_limitcheck);
     if (!buf->data || (buf->size < initial_buf_size)) {
 	count = 0;
-	buf->data = gs_alloc_string(imemory, initial_buf_size, 
+	buf->data = gs_alloc_string(imemory_system, initial_buf_size, 
 	    "zfilelineedit(buffer)");
 	if (buf->data == 0)
 	    return_error(e_VMerror);
@@ -154,14 +154,14 @@ zfilelineedit(i_ctx_t *i_ctx_p)
     }
 
 rd:
-    code = zreadline_from(ins, buf, imemory, &count, &in_eol);
+    code = zreadline_from(ins, buf, imemory_system, &count, &in_eol);
     if (buf->size > max_string_size) {
 	/* zreadline_from reallocated the buffer larger than
 	 * is valid for a PostScript string.
 	 * Return an error, but first realloc the buffer
 	 * back to a legal size.
 	 */
-	byte *nbuf = gs_resize_string(imemory, buf->data, buf->size, 
+	byte *nbuf = gs_resize_string(imemory_system, buf->data, buf->size, 
 		max_string_size, "zfilelineedit(shrink buffer)");
 	if (nbuf == 0)
 	    return_error(e_VMerror);
@@ -205,7 +205,7 @@ rd:
 		    nsize= max_string_size;
 		else
 		    nsize = buf->size * 2;
-		nbuf = gs_resize_string(imemory, buf->data, buf->size, nsize,
+		nbuf = gs_resize_string(imemory_system, buf->data, buf->size, nsize,
 					"zfilelineedit(grow buffer)");
 		if (nbuf == 0) {
 		    code = gs_note_error(e_VMerror);
@@ -237,7 +237,7 @@ rd:
 		return_error(gs_note_error(e_limitcheck));
 	    }
 	    else {
-		nbuf = gs_resize_string(imemory, buf->data, buf->size, nsize,
+		nbuf = gs_resize_string(imemory_system, buf->data, buf->size, nsize,
 					"zfilelineedit(grow buffer)");
 		if (nbuf == 0) {
 		    code = gs_note_error(e_VMerror);
@@ -251,8 +251,8 @@ rd:
 	s_init(ts, NULL);
 	sread_string(ts, buf->data, count);
 sc:
-	scanner_state_init_check(&state, false, true);
-	code = scan_token(i_ctx_p, ts, &ignore_value, &state);
+	scanner_init_stream_options(&state, ts, SCAN_CHECK_ONLY);
+	code = scan_token(i_ctx_p, &ignore_value, &state);
 	ref_stack_pop_to(&o_stack, depth);
 	if (code < 0)
 	    code = scan_EOF;	/* stop on scanner error */
@@ -268,14 +268,14 @@ sc:
 		return code;
 	}
     }
-    buf->data = gs_resize_string(imemory, buf->data, buf->size, count,
+    buf->data = gs_resize_string(imemory_system, buf->data, buf->size, count,
 			   "zfilelineedit(resize buffer)");
     if (buf->data == 0)
 	return_error(e_VMerror);
     op->value.bytes = buf->data;
     op->tas.rsize = buf->size;
 
-    s = file_alloc_stream(imemory, "zfilelineedit(stream)");
+    s = file_alloc_stream(imemory_system, "zfilelineedit(stream)");
     if (s == 0)
 	return_error(e_VMerror);
 

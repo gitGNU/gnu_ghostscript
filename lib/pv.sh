@@ -1,5 +1,5 @@
 #!/bin/sh -f
-# $Id: pv.sh,v 1.3 2006/03/02 22:26:14 Arabidopsis Exp $
+# $Id: pv.sh,v 1.4 2007/05/07 11:22:07 Arabidopsis Exp $
 #
 # pv - preview a specified page of a dvi file in a Ghostscript window
 # usage: pv page file

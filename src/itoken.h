@@ -1,4 +1,5 @@
-/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: itoken.h,v 1.4 2005/12/13 16:57:26 jemarch Exp $ */
+/* $Id: itoken.h,v 1.5 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Interface to exported procedures in ztoken.c */
 
 #ifndef itoken_INCLUDED
@@ -36,7 +36,7 @@ int ztokenexec_continue(i_ctx_t *i_ctx_p);
 #  define scanner_state_DEFINED
 typedef struct scanner_state_s scanner_state;
 #endif
-int ztoken_handle_comment(i_ctx_t *i_ctx_p, const ref *fop,
+int ztoken_handle_comment(i_ctx_t *i_ctx_p,
 			  scanner_state *sstate, const ref *ptoken,
 			  int scan_code, bool save, bool push_file,
 			  op_proc_t cont);

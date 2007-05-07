@@ -1,4 +1,5 @@
-/* Copyright (C) 2001 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsicc.h,v 1.5 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsicc.h,v 1.6 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Structures for ICCBased color space parameters */
 /* requires: gspsace.h, gscolor2.h */
 
@@ -172,11 +173,5 @@ extern  int     gs_cspace_build_CIEICC( gs_color_space **   ppcspace,
 
 int
 gx_load_icc_profile(gs_cie_icc *picc_info);
-
-/*
- * Increment color space reference counts.
- */
-void
-gx_increment_cspace_count(const gs_color_space * pcs);
 
 #endif /* gsicc_INCLUDED */

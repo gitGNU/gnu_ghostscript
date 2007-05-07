@@ -16,8 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-
-/* $Id: gdevdm24.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $*/
+/* $Id: gdevdm24.c,v 1.7 2007/05/07 11:21:47 Arabidopsis Exp $*/
 /* High-res 24Dot-matrix printer driver */
 
 /* Supported printers 

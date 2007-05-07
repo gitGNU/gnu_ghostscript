@@ -1,5 +1,6 @@
-/* Copyright (C) 2004 Artifex Software Inc., artofcode LLC.  All rights reserved.
-
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
+  
   This file is part of GNU ghostscript
 
   GNU ghostscript is free software; you can redistribute it and/or modify it under
@@ -13,10 +14,10 @@
   You should have received a copy of the GNU General Public License along with
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-  
+
 */
 
-/*$Id: gsequivc.c,v 1.2 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/*$Id: gsequivc.c,v 1.3 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Routines for determining equivalent color for spot colors */
 
 #include "math_.h"
@@ -87,7 +88,7 @@
  * For this process to work properly, the following changes need to made to
  * the device.
  *
- * 1.  The device source module needs to include gsequivc.c for a definition
+ * 1.  The device source module needs to include gsequivc.h for a definition
  *     of the relevant structures and routines.  An equivalent_cmyk_color_params
  *     structure needs to be added to the device's structure definition and
  *     it needs to be initialized.  For examples see the definition of the
@@ -105,12 +106,6 @@
  *     is created.  For example see the psd_write_header routine in
  *     src/gdevpsd.c.
  */
-
-/* Function protypes */
-private void capture_spot_equivalent_cmyk_colors(gx_device * pdev,
-		    const gs_state * pgs, const gs_client_color * pcc,
-		    const gs_color_space * pcs, int sep_num,
-		    equivalent_cmyk_color_params * pparams);
 
 #define compare_color_names(name, name_size, str, str_size) \
     (name_size == str_size && \
@@ -379,7 +374,7 @@ cmap_devicen_capture_cmyk_color(const frac * pcc, gx_device_color * pdc,
  * Note:  The color space (pcs) has already been modified to use the
  * alternate color space.
  */
-private void
+void
 capture_spot_equivalent_cmyk_colors(gx_device * pdev, const gs_state * pgs,
     const gs_client_color * pcc, const gs_color_space * pcs,
     int sep_num, equivalent_cmyk_color_params * pparams)

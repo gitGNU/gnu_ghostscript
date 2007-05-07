@@ -1,14 +1,20 @@
 %    Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-% This software is provided AS-IS with no warranty, either express or
-% implied.
-% 
-% This software is distributed under license and may not be copied,
-% modified or distributed except as expressly authorized under the terms
-% of the license contained in the file LICENSE in this distribution.
-
-
-% $Id: pdf_ops.ps,v 1.6 2006/06/16 12:55:14 Arabidopsis Exp $
+%  This file is part of GNU ghostscript
+%
+%  GNU ghostscript is free software; you can redistribute it and/or modify it under
+%  the terms of the GNU General Public License as published by the Free Software
+%  Foundation; either version 2, or (at your option) any later version.
+%
+%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+%
+%  You should have received a copy of the GNU General Public License along with
+%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+%
+% $Id: pdf_ops.ps,v 1.7 2007/05/07 11:22:07 Arabidopsis Exp $
 % Definitions for most of the PDF operators.
 
 .currentglobal true .setglobal
@@ -147,8 +153,8 @@ nodict readonly pop
 /csdevcmyk [/DeviceCMYK] readonly def
 /cspattern [/Pattern] readonly def
 /nullpattern1 mark
-   /PatternType 1 /PaintType 1 /TilingType 3 /BBox [0 0 0 0]
-   /XStep 1 /YStep 1 /PaintProc { }
+   /PatternType 1 /PaintType 1 /TilingType 3 /BBox [0 0 1 1]
+   /XStep 1 /YStep 1 /PaintProc { pop } bind
 .dicttomark readonly def
 /nullpattern2 nullpattern1 dup length dict copy readonly def
 
@@ -599,7 +605,7 @@ end readonly def
 		% operations when the CTM is singular.
 		% Work around this here.
 	  {	
-            matrix currentmatrix dup
+            matrix currentmatrix dup dup
             dup 0 get 0 eq 1 index 1 get 0 eq and {
               dup dup 2 get 0 eq { 0 }{ 1 } ifelse 1 put
             } if
@@ -607,10 +613,11 @@ end readonly def
               dup dup 1 get 0 eq { 3 }{ 2 } ifelse 1 put
             } if
             setmatrix
-            1 index setfillstate show % Tr was set to graphic state.
+            2 index setfillstate show % Tr was set to graphic state.
             setmatrix 
 	    % now set the currentpoint using the original matrix
             gsave nulldevice
+            setmatrix
             false charpath currentpoint newpath 
             grestore
             moveto

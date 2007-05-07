@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -15,8 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-
-/* $Id: gdevdflt.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gdevdflt.c,v 1.8 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Default device implementation */
 #include "math_.h"
 #include "gx.h"
@@ -683,17 +683,51 @@ gx_default_open_device(gx_device * dev)
 
 /* Get the initial matrix for a device with inverted Y. */
 /* This includes essentially all printers and displays. */
+/* Supports LeadingEdge, but no margins or viewports */
 void
 gx_default_get_initial_matrix(gx_device * dev, register gs_matrix * pmat)
 {
-    pmat->xx = dev->HWResolution[0] / 72.0;	/* x_pixels_per_inch */
-    pmat->xy = 0;
-    pmat->yx = 0;
-    pmat->yy = dev->HWResolution[1] / -72.0;	/* y_pixels_per_inch */
-    /****** tx/y is WRONG for devices with ******/
-    /****** arbitrary initial matrix ******/
-    pmat->tx = 0;
-    pmat->ty = (float)dev->height;
+    /* NB this device has no paper margins */
+    floatp fs_res = dev->HWResolution[0] / 72.0;
+    floatp ss_res = dev->HWResolution[1] / 72.0;
+
+    switch(dev->LeadingEdge & LEADINGEDGE_MASK) {
+    case 1: /* 90 degrees */
+        pmat->xx = 0;
+        pmat->xy = -ss_res;
+        pmat->yx = -fs_res;
+        pmat->yy = 0;
+        pmat->tx = (float)dev->width;
+        pmat->ty = (float)dev->height;
+        break;
+    case 2: /* 180 degrees */
+        pmat->xx = -fs_res;
+        pmat->xy = 0;
+        pmat->yx = 0;
+        pmat->yy = ss_res;
+        pmat->tx = (float)dev->width;
+        pmat->ty = 0;
+        break;
+    case 3: /* 270 degrees */
+        pmat->xx = 0;
+        pmat->xy = ss_res;
+        pmat->yx = fs_res;
+        pmat->yy = 0;
+        pmat->tx = 0;
+        pmat->ty = 0;
+        break;
+    default:
+    case 0:
+        pmat->xx = fs_res;
+        pmat->xy = 0;
+        pmat->yx = 0;
+        pmat->yy = -ss_res;
+        pmat->tx = 0;
+        pmat->ty = (float)dev->height;
+	/****** tx/y is WRONG for devices with ******/
+	/****** arbitrary initial matrix ******/
+        break;
+    }
 }
 /* Get the initial matrix for a device with upright Y. */
 /* This includes just a few printers and window systems. */
@@ -850,7 +884,7 @@ gx_default_fill_rectangle_hl_color(gx_device *pdev,
     const gs_imager_state *pis, const gx_drawing_color *pdcolor,
     const gx_clip_path *pcpath)
 {
-    return_error(gs_error_rangecheck);
+    return gs_error_rangecheck;
 }
 
 int

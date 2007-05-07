@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/*$Id: gzpath.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/*$Id: gzpath.h,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Structure and internal procedure definitions for paths */
 /* Requires gxfixed.h */
 
@@ -42,7 +42,8 @@ typedef enum {
     s_start,
     s_line,
     s_line_close,
-    s_curve
+    s_curve,
+    s_dash /* only for internal use of the stroking algorithm */
 } segment_type;
 
 /* Define the common structure for all segments. */
@@ -82,6 +83,16 @@ typedef struct {
 #define private_st_line()	/* in gxpath.c */\
   gs_private_st_suffix_add0(st_line, line_segment, "line",\
     line_enum_ptrs, line_reloc_ptrs, st_segment)
+
+/* Dash segments (only for internal use of the stroking algorithm). */
+typedef struct {
+    segment_common
+    gs_fixed_point tangent;
+} dash_segment;
+
+#define private_st_dash()	/* in gxpath.c */\
+  gs_private_st_suffix_add0(st_dash, dash_segment, "dash",\
+    dash_enum_ptrs, dash_reloc_ptrs, st_segment)
 
 /* Line_close segments are for the lines appended by closepath. */
 /* They point back to the subpath being closed. */
@@ -397,5 +408,8 @@ bool curve_coeffs_ranged(fixed x0, fixed x1, fixed x2, fixed x3,
 		    fixed *ax, fixed *bx, fixed *cx, 
 		    fixed *ay, fixed *by, fixed *cy, 
 		    int k);
+
+bool gx_check_fixed_diff_overflow(fixed v0, fixed v1);
+bool gx_check_fixed_sum_overflow(fixed v0, fixed v1);
 
 #endif /* gzpath_INCLUDED */

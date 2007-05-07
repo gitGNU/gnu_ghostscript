@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 1996, 1997, 1998, 1999, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: iconf.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: iconf.c,v 1.6 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Configuration-dependent tables and initialization for interpreter */
 #include "stdio_.h"		/* stdio for stream.h */
 #include "gstypes.h"
@@ -70,13 +71,15 @@ const uint build_function_type_table_count =
 /* Initialize the operators. */
 	/* Declare the externs. */
 #define oper_(xx_op_defs) extern const op_def xx_op_defs[];
-oper_(interp_op_defs)		/* Interpreter operators */
+oper_(interp1_op_defs)		/* Interpreter operators */
+oper_(interp2_op_defs)		/* ibid. */
 #include "gconf.h"
 #undef oper_
  
 const op_def *const op_defs_all[] = {
 #define oper_(defs) defs,
-    oper_(interp_op_defs)	/* Interpreter operators */
+    oper_(interp1_op_defs)	/* Interpreter operators */
+    oper_(interp2_op_defs)	/* ibid. */
 #include "gconf.h"
 #undef oper_ 
     0

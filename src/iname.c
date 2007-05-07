@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: iname.c,v 1.5 2005/12/13 16:57:25 jemarch Exp $ */
+/* $Id: iname.c,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Name lookup for Ghostscript interpreter */
 #include "memory_.h"
 #include "string_.h"

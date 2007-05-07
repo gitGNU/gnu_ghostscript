@@ -1,4 +1,5 @@
-/* Copyright (C) 1996, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gstype42.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gstype42.c,v 1.8 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Type 42 (TrueType) font library routines */
 #include "memory_.h"
 #include "gx.h"
@@ -34,8 +34,11 @@
 #include "gxfont42.h"
 #include "gxttf.h"
 #include "gxttfb.h"
+#include "gxtext.h"
+#include "gxchar.h"
 #include "gxfcache.h"
 #include "gxistate.h"
+#include "gzstate.h"
 #include "stream.h"
 
 /* Structure descriptor */
@@ -97,7 +100,7 @@ get_glyph_offset(gs_font_type42 *pfont, uint glyph_index)
  * string_proc, and the font procedures as well.
  */
 int
-gs_type42_font_init(gs_font_type42 * pfont)
+gs_type42_font_init(gs_font_type42 * pfont, int subfontID)
 {
     int (*string_proc)(gs_font_type42 *, ulong, uint, const byte **) =
 	pfont->data.string_proc;
@@ -109,18 +112,34 @@ gs_type42_font_init(gs_font_type42 * pfont)
     byte head_box[8];
     ulong loca_size = 0;
     ulong glyph_start, glyph_offset, glyph_length;
+    uint numFonts;
+    uint OffsetTableOffset;
+
+    static const byte version1_0[4] = {0, 1, 0, 0};
+    static const byte version_true[4] = {'t', 'r', 'u', 'e'};
+    static const byte version_ttcf[4] = {'t', 't', 'c', 'f'};
 
     ACCESS(0, 12, OffsetTable);
+    if (!memcmp(OffsetTable, version_ttcf, 4))
     {
-	static const byte version1_0[4] = {0, 1, 0, 0};
-	static const byte version_true[4] = {'t', 'r', 'u', 'e'};
-
-	if (memcmp(OffsetTable, version1_0, 4) &&
-	    memcmp(OffsetTable, version_true, 4))
-	    return_error(gs_error_invalidfont);
+	numFonts = u32(OffsetTable + 8);
+	if (subfontID < 0 || subfontID >= numFonts)
+	    return_error(gs_error_rangecheck);
+	ACCESS(12, numFonts * 4, OffsetTable);
+	OffsetTableOffset = u32(OffsetTable + subfontID * 4);
+	ACCESS(OffsetTableOffset, 12, OffsetTable);
     }
+    else
+    {
+	OffsetTableOffset = 0;
+    }
+
+    if (memcmp(OffsetTable, version1_0, 4) &&
+	    memcmp(OffsetTable, version_true, 4))
+	return_error(gs_error_invalidfont);
+
     numTables = U16(OffsetTable + 4);
-    ACCESS(12, numTables * 16, TableDirectory);
+    ACCESS(OffsetTableOffset + 12, numTables * 16, TableDirectory);
     /* Clear all non-client-supplied data. */
     {
 	void *proc_data = pfont->data.proc_data;
@@ -196,9 +215,22 @@ gs_type42_font_init(gs_font_type42 * pfont)
 	pfont->data.numGlyphs = pfont->data.trueNumGlyphs;
 	loca_size = pfont->data.numGlyphs + 1;
     }
+
+    pfont->data.warning_patented = false;
+    pfont->data.warning_bad_instruction = false;
+    pfont->procs.glyph_outline = gs_type42_glyph_outline;
+    pfont->procs.glyph_info = gs_type42_glyph_info;
+    pfont->procs.enumerate_glyph = gs_type42_enumerate_glyph;
+    pfont->procs.font_info = gs_type42_font_info;
+
+    /* default data.get routines require a ram version of a ttf file */ 
+    pfont->data.get_glyph_index = default_get_glyph_index;
+    pfont->data.get_outline = default_get_outline;
+    pfont->data.get_metrics = gs_type42_default_get_metrics;
+
     /* Now build the len_glyphs array since 'loca' may not be properly sorted */
     pfont->data.len_glyphs = (uint *)gs_alloc_bytes(pfont->memory, pfont->data.numGlyphs * sizeof(uint),
-	    "gs_type42_font");
+						    "gs_type42_font");
     if (pfont->data.len_glyphs == 0)
 	return_error(gs_error_VMerror);
     gs_font_notify_register((gs_font *)pfont, gs_len_glyphs_release, (void *)pfont);
@@ -428,6 +460,8 @@ default_get_outline(gs_font_type42 * pfont, uint glyph_index,
     uint glyph_length;
     int code;
 
+     if (glyph_index >= pfont->data.trueNumGlyphs)
+ 	return_error(gs_error_invalidfont);
     glyph_start = get_glyph_offset(pfont, glyph_index);
     glyph_length = pfont->data.len_glyphs[glyph_index];
     if (glyph_length == 0)
@@ -622,7 +656,7 @@ gs_type42_glyph_info_by_gid(gs_font *font, gs_glyph glyph, const gs_matrix *pmat
 	    if (members & (GLYPH_INFO_WIDTH0 << i)) {
 		float sbw[4];
 
-		code = gs_type42_wmode_metrics(pfont, glyph_index, i, sbw);
+		code = pfont->data.get_metrics(pfont, glyph_index, i, sbw);
 		if (code < 0) {
 		    code = 0;
 		    continue;
@@ -744,53 +778,69 @@ simple_glyph_metrics(gs_font_type42 * pfont, uint glyph_index, int wmode,
     return 0;
 }
 
-/* Get the metrics of a glyph. */
+/* Export the default get_metrics procedure. 
+   The length of sbw is >=4 when bbox in not requested,
+   and 8 otherwise.
+ */
 int
 gs_type42_default_get_metrics(gs_font_type42 * pfont, uint glyph_index,
-			      int wmode, float sbw[4])
+			      gs_type42_metrics_options_t options, float sbw[4])
 {
     gs_glyph_data_t glyph_data;
     int code;
-    int result;
+    int result = 0;
+    int wmode = gs_type42_metrics_options_wmode(options);
+    int sbw_requested  = gs_type42_metrics_options_sbw_requested(options);
+    int bbox_requested = gs_type42_metrics_options_bbox_requested(options);
 
     glyph_data.memory = pfont->memory;
     code = pfont->data.get_outline(pfont, glyph_index, &glyph_data);
     if (code < 0)
 	return code;
-    if (glyph_data.bits.size != 0 && S16(glyph_data.bits.data) == -1) {
-	/* This is a composite glyph. */
-	uint flags;
-	const byte *gdata = glyph_data.bits.data + 10;
-	gs_matrix_fixed mat;
+    if (bbox_requested) {
+	if (glyph_data.bits.size >= 10 && bbox_requested) {
+	    /* Note: The glyph bbox usn't useful for Dynalab fonts,
+	       which stretch subglyphs. Therefore we don't 
+	       process subglyphs here. */
+	    double factor = 1.0 / pfont->data.unitsPerEm;
 
-	memset(&mat, 0, sizeof(mat)); /* arbitrary */
-	do {
-	    uint comp_index = U16(gdata + 2);
-
-	    parse_component(&gdata, &flags, &mat, NULL, pfont, &mat);
-	    if (flags & TT_CG_USE_MY_METRICS) {
-		result = gs_type42_wmode_metrics(pfont, comp_index, wmode, sbw);
-		goto done;
-	    }
-	}
-	while (flags & TT_CG_MORE_COMPONENTS);
+	    sbw[4] = S16(glyph_data.bits.data + 2) * factor;
+	    sbw[5] = S16(glyph_data.bits.data + 4) * factor;
+	    sbw[6] = S16(glyph_data.bits.data + 6) * factor;
+	    sbw[7] = S16(glyph_data.bits.data + 8) * factor;
+	} else
+	    sbw[4] = sbw[5] = sbw[6] = sbw[7] = 0;
     }
-    result = simple_glyph_metrics(pfont, glyph_index, wmode, sbw);
+    if (sbw_requested) {
+	if (glyph_data.bits.size != 0 && S16(glyph_data.bits.data) == -1) {
+	    /* This is a composite glyph. */
+	    uint flags;
+	    const byte *gdata = glyph_data.bits.data + 10;
+	    gs_matrix_fixed mat;
+
+	    memset(&mat, 0, sizeof(mat)); /* arbitrary */
+	    do {
+		uint comp_index = U16(gdata + 2);
+
+		parse_component(&gdata, &flags, &mat, NULL, pfont, &mat);
+		if (flags & TT_CG_USE_MY_METRICS) {
+		    result = pfont->data.get_metrics(pfont, comp_index, wmode, sbw);
+		    goto done;
+		}
+	    }
+	    while (flags & TT_CG_MORE_COMPONENTS);
+	}
+	result = simple_glyph_metrics(pfont, glyph_index, wmode, sbw);
+    }
  done:
     gs_glyph_data_free(&glyph_data, "gs_type42_default_get_metrics");
     return result;
 }
 int
-gs_type42_wmode_metrics(gs_font_type42 * pfont, uint glyph_index, int wmode,
-			float sbw[4])
-{
-    return pfont->data.get_metrics(pfont, glyph_index, wmode, sbw);
-}
-int
 gs_type42_get_metrics(gs_font_type42 * pfont, uint glyph_index,
 		      float sbw[4])
 {
-    return gs_type42_wmode_metrics(pfont, glyph_index, pfont->WMode, sbw);
+    return pfont->data.get_metrics(pfont, glyph_index, pfont->WMode, sbw);
 }
 
 /* Define the bits in the glyph flags. */
@@ -806,20 +856,37 @@ gs_type42_get_metrics(gs_font_type42 * pfont, uint glyph_index,
 /* Append a TrueType outline to a path. */
 /* Note that this does not append the final moveto for the width. */
 int
-gs_type42_append(uint glyph_index, gs_imager_state * pis,
-		 gx_path * ppath, const gs_log2_scale_point * pscale,
-		 bool charpath_flag, int paint_type, cached_fm_pair *pair)
+gs_type42_append(uint glyph_index, gs_state * pgs,
+		 gx_path * ppath, gs_text_enum_t *penum, gs_font *pfont,
+		 bool charpath_flag)
 {
-    int code = append_outline_fitted(glyph_index, &ctm_only(pis), ppath, 
+    const gs_log2_scale_point * pscale = &penum->log2_scale;
+    cached_fm_pair *pair = penum->pair;
+    int code = append_outline_fitted(glyph_index, &ctm_only(pgs), ppath, 
 			pair, pscale, charpath_flag);
 
-    if (code < 0)
+    if (code < 0) {
+	if (pgs->in_cachedevice == CACHE_DEVICE_CACHING) {
+	    /* Perform the cache cleanup, when the cached character data 
+	       has been allocated (gx_alloc_char_bits) but
+	       the character has not been added to the cache (gx_add_cached_char)
+	       due to a falure in the character renderer.
+	     */
+	    gs_show_enum *const penum_s = (gs_show_enum *)penum;
+
+	    if (penum_s->cc != NULL) {
+		gx_free_cached_char(pfont->dir, penum_s->cc);
+		penum_s->cc = NULL;
+	    }
+	}
 	return code;
-    code = gx_setcurrentpoint_from_path(pis, ppath);
+    }
+    code = gx_setcurrentpoint_from_path((gs_imager_state *)pgs, ppath);
     if (code < 0)
 	return code;
     /* Set the flatness for curve rendering. */
-    return gs_imager_setflat(pis, gs_char_flatness(pis, 1.0));
+    return gs_imager_setflat((gs_imager_state *)pgs, 
+		gs_char_flatness((gs_imager_state *)pgs, 1.0));
 }
 
 /* Add 2nd degree Bezier to the path */

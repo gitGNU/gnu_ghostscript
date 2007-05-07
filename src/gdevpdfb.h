@@ -1,17 +1,23 @@
 /* Copyright (C) 2001-2006 artofcode LLC.
    All Rights Reserved.
   
-   This software is provided AS-IS with no warranty, either express or
-   implied.
+  This file is part of GNU ghostscript
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+  GNU ghostscript is free software; you can redistribute it and/or modify it under
+  the terms of the GNU General Public License as published by the Free Software
+  Foundation; either version 2, or (at your option) any later version.
+
+  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License along with
+  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
 */
 
-/* $Id: gdevpdfb.h,v 1.1 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevpdfb.h,v 1.2 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* pdfwrite, ps2write device body template. */
 
 /* This file is allowed to #include several times into a single .c file.
@@ -178,6 +184,8 @@ const gx_device_pdf PDF_DEVICE_IDENT =
  {0},				/* cs_Patterns */
  {0},				/* Identity_ToUnicode_CMaps */
  0,				/* last_resource */
+ 0,				/* OneByteIdentityH */
+ gs_no_id,			/* IdentityCIDSystemInfo_id */
  {
      {
 	 {0}}},			/* outline_levels */
@@ -224,6 +232,7 @@ const gx_device_pdf PDF_DEVICE_IDENT =
  0,				/* image_mask_id */
  0,				/* image_mask_is_SMask */
  0,				/* image_mask_skip */
+ 0,				/* image_with_SMask */
  {0,0,0,0,0,0}, 		/* gs_matrix converting_image_matrix */
  0,				/* image_mask_scale */
  NULL,				/* pres_soft_mask_dict */

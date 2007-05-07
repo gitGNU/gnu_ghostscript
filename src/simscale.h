@@ -1,4 +1,5 @@
-/* Copyright (C) 1991, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,19 +15,31 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxfapi.h,v 1.3 2005/12/13 16:57:24 jemarch Exp $ */
-/* Font API support */
+/* $Id: simscale.h,v 1.1 2007/05/07 11:21:47 Arabidopsis Exp $ */
+/* Definitions for image mask interpolation filter */
+/* Requires scommon.h; strimpl.h if any templates are referenced */
 
-#ifndef gxfapi_INCLUDED
-#  define gxfapi_INCLUDED
+#ifndef simscale_INCLUDED
+#  define simscale_INCLUDED
 
-void gx_set_UFST_Callbacks(LPUB8 (*p_PCLEO_charptr)(LPUB8 pfont_hdr, UW16  sym_code),
-			   LPUB8 (*p_PCLchId2ptr)(IF_STATE *pIFS, UW16 chId),
-			   LPUB8 (*p_PCLglyphID2Ptr)(IF_STATE *pIFS, UW16 glyphID));
+typedef struct stream_imscale_state_s stream_imscale_state;
 
-void gx_reset_UFST_Callbacks(void);
+struct stream_imscale_state_s {
+    stream_image_scale_state_common;
+    byte *window;
 
-#endif /* gxfapi_INCLUDED */
+    int src_y;
+    int src_offset;
+    int src_size;
+
+    byte *dst;
+    int dst_y;
+    int dst_offset;
+    int dst_size;
+};
+
+extern const stream_template s_imscale_template;
+
+#endif /* simscale_INCLUDED */

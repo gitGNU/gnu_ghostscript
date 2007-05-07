@@ -1,14 +1,20 @@
 %    Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-% This software is provided AS-IS with no warranty, either express or
-% implied.
-% 
-% This software is distributed under license and may not be copied,
-% modified or distributed except as expressly authorized under the terms
-% of the license contained in the file LICENSE in this distribution.
-
-
-% $Id: gs_btokn.ps,v 1.4 2006/06/16 12:55:13 Arabidopsis Exp $
+%  This file is part of GNU ghostscript
+%
+%  GNU ghostscript is free software; you can redistribute it and/or modify it under
+%  the terms of the GNU General Public License as published by the Free Software
+%  Foundation; either version 2, or (at your option) any later version.
+%
+%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+%
+%  You should have received a copy of the GNU General Public License along with
+%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+%
+% $Id: gs_btokn.ps,v 1.5 2007/05/07 11:22:07 Arabidopsis Exp $
 % Initialization file for binary tokens.
 % When this is run, systemdict is still writable,
 % but everything defined here goes into level2dict.
@@ -196,7 +202,7 @@ cntdict /dicttype {
   } {
 	% Use the long header format: tag 0(1) toplen(2) totlen(4)
     exch 8 add exch
-    0 0 4 2 roll .bosobject exch pop exch pop	% store with byte swapping
+     0 0 4 2 roll .bosobject exch pop exch pop	% store with byte swapping
   } ifelse		% Stack: shortlen str
   exch dup -8 bitshift exch 255 and	% str hibyte lobyte
   currentobjectformat 1 and 0 eq {	% lsb first
@@ -240,7 +246,7 @@ cntdict /dicttype {
 	3 index exch writestring
       } forall
     } {
-      { (xxxxxxxx) .bosobject
+      { (x\000xxxxxx) .bosobject
 	dup 1 6 index put
 	3 index exch writestring
 	4 -1 roll pop 0 4 1 roll	% clear tag
@@ -271,24 +277,34 @@ cntdict /dicttype {
 	% Stack: -mark- file
   pop pop
 
-} odef
+} .bind def
 
 /printobject {		% <obj> <tag> printobject -
-  (%stdout) (w) file 2 index 2 index writeobject pop pop
+  currentobjectformat 0 eq {
+      /printobject .systemvar /undefined signalerror
+  } if
+  (%stdout) (w) file 2 index 2 index .writeobject pop pop
 } odef
 /writeobject {		% <file> <obj> <tag> writeobject -
+  currentobjectformat 0 eq {
+      /writeobject .systemvar /undefined signalerror
+  } if
+  2 .argindex pop	% check # of args
+  .writeobject
+} odef
+/.writeobject {
   3 copy exch
 		% We must allocate the array in local VM
 		% to avoid a possible invalidaccess.
   .currentglobal false .setglobal exch 1 array astore exch .setglobal
   .writeobjects pop pop pop
-} odef
+} .bind def
 
 % Implement binary error message output.
 /.objectprinttest {		% <obj> .objectprinttest -
 		% This is a pseudo-operator so it will restore the stack
 		% if it gets an error.
-  mark 0 0 3 index .cntobj cleartomark pop
+  mark 0 0 3 .argindex .cntobj cleartomark pop
 } bind odef
 /.printerror {
   $error /binary get .languagelevel 2 ge and {

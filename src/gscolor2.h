@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gscolor2.h,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gscolor2.h,v 1.6 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Client interface to Level 2 color facilities */
 /* (requires gscspace.h, gsmatrix.h) */
 
@@ -35,8 +36,8 @@
  */
 
 /* General color routines */
-const gs_color_space *gs_currentcolorspace(const gs_state *);
-int gs_setcolorspace(gs_state *, const gs_color_space *);
+gs_color_space *gs_currentcolorspace(const gs_state *);
+int gs_setcolorspace(gs_state *, gs_color_space *);
 const gs_client_color *gs_currentcolor(const gs_state *);
 int gs_setcolor(gs_state *, const gs_client_color *);
 

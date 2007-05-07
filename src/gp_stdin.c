@@ -1,4 +1,5 @@
-/* Copyright (C) 2001 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gp_stdin.c,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_stdin.c,v 1.5 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Read stdin on platforms that do not support unbuffered read.
  * This is the most portable implementation, but it is very slow
  * when reading stdin because it will read one byte at a time.

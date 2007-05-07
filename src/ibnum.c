@@ -1,4 +1,5 @@
-/* Copyright (C) 1990, 1996, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,14 +15,14 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: ibnum.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: ibnum.c,v 1.8 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Level 2 encoded number reading utilities for Ghostscript */
 #include "math_.h"
 #include "memory_.h"
 #include "ghost.h"
+#include "opcheck.h"
 #include "ierrors.h"
 #include "stream.h"
 #include "ibnum.h"
@@ -40,30 +41,34 @@ const byte enc_num_bytes[] = {
 int
 num_array_format(const ref * op)
 {
+    int format;
+
     switch (r_type(op)) {
 	case t_string:
 	    {
 		/* Check that this is a legitimate encoded number string. */
 		const byte *bp = op->value.bytes;
-		int format;
 
 		if (r_size(op) < 4 || bp[0] != bt_num_array_value)
-		    return_error(e_rangecheck);
+		    return_error(e_typecheck);
 		format = bp[1];
 		if (!num_is_valid(format) ||
 		    sdecodeshort(bp + 2, format) !=
 		    (r_size(op) - 4) / encoded_number_bytes(format)
 		    )
 		    return_error(e_rangecheck);
-		return format;
 	    }
+	    break;
 	case t_array:
 	case t_mixedarray:
 	case t_shortarray:
-	    return num_array;
+	    format = num_array;
+	    break;
 	default:
 	    return_error(e_typecheck);
     }
+    check_read(*op);
+    return format;
 }
 
 /* Get the number of elements in an encoded number array/string. */
@@ -92,7 +97,7 @@ num_array_get(const gs_memory_t *mem, const ref * op, int format, uint index, re
 	    case t_real:
 		return t_real;
 	    default:
-		return_error(e_rangecheck);
+		return_error(e_typecheck);
 	}
     } else {
 	uint nbytes = encoded_number_bytes(format);
@@ -144,8 +149,15 @@ sdecode_number(const byte * str, int format, ref * np)
 		return t_real;
 	    }
 	case num_float:
-	    np->value.realval = sdecodefloat(str, format);
-	    return t_real;
+	    {
+		float fval;
+		int code = sdecode_float(str, format, &fval);
+
+		if (code < 0)
+		    return code;
+		np->value.realval = fval;
+		return t_real;
+	    }
 	default:
 	    return_error(e_syntaxerror);	/* invalid format?? */
     }
@@ -188,21 +200,25 @@ sdecodelong(const byte * p, int format)
 }
 
 /* Decode a float.  We assume that native floats occupy 32 bits. */
-float
-sdecodefloat(const byte * p, int format)
+/* If the float is an IEEE NaN or Inf, return e_undefinedresult. */
+int
+sdecode_float(const byte * p, int format, float *pfnum)
 {
     bits32 lnum;
-    float fnum;
 
     if ((format & ~(num_msb | num_lsb)) == num_float_native) {
 	/*
 	 * Just read 4 bytes and interpret them as a float, ignoring
 	 * any indication of byte ordering.
 	 */
-	memcpy(&lnum, p, 4);
-	fnum = *(float *)&lnum;
+	memcpy(pfnum, p, 4);
+#if !ARCH_FLOATS_ARE_IEEE
+	return 0;		/* no way to check for anomalies */
+#endif
+	lnum = *(bits32 *)pfnum;
     } else {
 	lnum = (bits32) sdecodelong(p, format);
+
 #if !ARCH_FLOATS_ARE_IEEE
 	{
 	    /* We know IEEE floats take 32 bits. */
@@ -210,19 +226,31 @@ sdecodefloat(const byte * p, int format)
 	    int sign_expt = lnum >> 23;
 	    int expt = sign_expt & 0xff;
 	    long mant = lnum & 0x7fffff;
+	    float fnum;
 
 	    if (expt == 0 && mant == 0)
 		fnum = 0;
+	    else if (expt == 0xff)
+		return_error(e_undefinedresult); /* Inf or NaN */
 	    else {
 		mant += 0x800000;
 		fnum = (float)ldexp((float)mant, expt - 127 - 23);
 	    }
 	    if (sign_expt & 0x100)
 		fnum = -fnum;
+	    *pfnum = fnum;
+	    return 0;		/* checked for Infs and NaNs above */
 	}
 #else
-	    fnum = *(float *)&lnum;
+	*pfnum = *(float *)&lnum;
 #endif
     }
-    return fnum;
+    /*
+     * Unfortunately, there is no portable way for testing whether a float
+     * is a NaN or Inf.  Do it "by hand" if the input representation is
+     * IEEE (which is the case if control arrives here).
+     */
+    if (!(~lnum & 0x7f800000))	/* i.e. exponent all 1's */
+	return_error(e_undefinedresult); /* Inf or NaN */
+    return 0;
 }

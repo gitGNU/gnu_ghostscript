@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: unix-lpr.sh,v 1.2 2006/03/02 22:26:14 Arabidopsis Exp $
+# $Id: unix-lpr.sh,v 1.3 2007/05/07 11:22:07 Arabidopsis Exp $
 #
 # Unix lpr filter. The default setup sends output directly to a pipe,
 # which requires the Ghostscript process to fork, and thus may cause 

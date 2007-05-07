@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1996, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsfemu.c,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsfemu.c,v 1.5 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Floating point emulator for gcc */
 
 /* We actually only need arch.h + uint and ulong, but because signal.h */

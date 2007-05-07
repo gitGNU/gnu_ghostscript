@@ -1,4 +1,5 @@
-/* Copyright (C) 2003 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: ttcalc.c,v 1.3 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: ttcalc.c,v 1.4 2007/05/07 11:21:46 Arabidopsis Exp $ */
 
 /* Changes after FreeType: cut out the TrueType instruction interpreter. */
 
@@ -91,7 +91,7 @@
   }
 
 
-  Int  Order64( Int64  z )
+  private Int  Order64( Int64  z )
   {
     int  j = 0;
     while ( z )

@@ -1,4 +1,5 @@
-/* Copyright (C) 2001 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,8 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-
 */
-
-/* $Id: gdevp14.h,v 1.5 2006/06/16 16:03:35 Arabidopsis Exp $ */
+/* $Id: gdevp14.h,v 1.6 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Definitions and interface for PDF 1.4 rendering device */
 
 #ifndef gdevp14_INCLUDED

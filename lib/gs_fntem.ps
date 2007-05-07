@@ -1,14 +1,20 @@
 %    Copyright (C) 2000 artofcode LLC.  All rights reserved.
 % 
-% This software is provided AS-IS with no warranty, either express or
-% implied.
-% 
-% This software is distributed under license and may not be copied,
-% modified or distributed except as expressly authorized under the terms
-% of the license contained in the file LICENSE in this distribution.
-
-
-% $Id: gs_fntem.ps,v 1.4 2006/03/02 22:26:14 Arabidopsis Exp $
+%  This file is part of GNU ghostscript
+%
+%  GNU ghostscript is free software; you can redistribute it and/or modify it under
+%  the terms of the GNU General Public License as published by the Free Software
+%  Foundation; either version 2, or (at your option) any later version.
+%
+%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+%
+%  You should have received a copy of the GNU General Public License along with
+%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+%
+% $Id: gs_fntem.ps,v 1.5 2007/05/07 11:22:07 Arabidopsis Exp $
 % A procset for Postscript font emulation
 
 % The procedures must not depend on the presence of the
@@ -83,10 +89,17 @@ currentdict end def
 /TranslateCSI   % <record> TranslateCSI <CSI>
 { RESMPDEBUG { (fntem TranslateCSI beg ) = } if
   begin
-  << /Registry (Adobe) 
-     /Ordering CSI aload pop 
-     /Supplement exch 
-  >>
+  CSI length 2 eq {
+    << /Registry (Adobe) 
+       /Ordering CSI aload pop 
+       /Supplement exch 
+    >>
+  } {
+    << /Registry CSI 0 get
+       /Ordering CSI 1 get
+       /Supplement CSI 2 get
+    >>
+  } ifelse
   end
   RESMPDEBUG { (fntem TranslateCSI end ) = } if
 } bind def
@@ -165,6 +178,8 @@ currentpacking false setpacking
 
   /Identity []
 
+  /Unicode []
+
 >> def
 setpacking
 
@@ -212,7 +227,8 @@ currentdict end def
 { begin
   dup length dict copy
   begin
-  1 index NameKey exch def
+  dup type /nametype ne { cvn } if
+  dup NameKey exch def
   currentglobal true setglobal
   make_procs TypeKey load .knownget {
     exec
@@ -250,9 +266,30 @@ currentdict end def
  ISOLatin1Encoding /ISOLatin1Encoding
  SymbolEncoding /SymbolEncoding
  DingbatsEncoding /DingbatsEncoding
- /resourceforall where
-  { pop (*) { cvn dup findencoding exch } 1024 string /Encoding resourceforall }
- if
+ /resourceforall where {
+   pop (*) { dup cvn
+     EncodingDirectory exch .knownget not {
+       % A work around bug 688710 on Linux :
+       % findencoding can't load resource files until gs_init.ps executes .fixresources . 
+       % It will happen after gs_init.ps runs INITFILES,
+       % from which the current file runs.
+       % Windows build has no such problem.
+       (.svn) anchorsearch {
+         % HACK : skip .svn or */* names, which are subdirectories.
+         pop pop
+       } {
+         (/) search {
+           pop pop pop
+         } {
+           cvn dup /Encoding findresource
+         } ifelse
+       } ifelse
+     } {
+       exch cvn exch
+     } ifelse
+     exch 
+   } 1024 string /Encoding resourceforall 
+ } if
 .dicttomark def
 
 /ChooseDecoding  % <font> ChooseDecoding <font>

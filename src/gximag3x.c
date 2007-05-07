@@ -1,4 +1,5 @@
-/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gximag3x.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gximag3x.c,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* ImageType 3x image implementation */
 /****** THE REAL WORK IS NYI ******/
 #include "math_.h"		/* for ceil, floor */
@@ -67,7 +67,7 @@ gs_image3x_mask_init(gs_image3x_mask_t *pimm)
     pimm->MaskDict.BitsPerComponent = 0;	/* not supplied */
 }
 void
-gs_image3x_t_init(gs_image3x_t * pim, const gs_color_space * color_space)
+gs_image3x_t_init(gs_image3x_t * pim, gs_color_space * color_space)
 {
     gs_pixel_image_t_init((gs_pixel_image_t *) pim, color_space);
     pim->type = &gs_image_type_3x;
@@ -219,11 +219,9 @@ gx_begin_image3x_generic(gx_device * dev,
 	    minfo[i] = 0;
 	    continue;
 	}
-	pmcs =  gs_alloc_struct(mem, gs_color_space, &st_color_space,
-				"gx_begin_image3x_generic");
-	if (pmcs == 0)
-	    return_error(gs_error_VMerror);
-	gs_cspace_init_DevicePixel(mem, pmcs, penum->mask[i].depth);
+	code = gs_cspace_new_DevicePixel(mem, &pmcs, penum->mask[i].depth);
+	if (code < 0)
+	    return code;
 	mrect.p.x = mrect.p.y = 0;
 	mrect.q.x = penum->mask[i].width;
 	mrect.q.y = penum->mask[i].height;

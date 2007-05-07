@@ -1,5 +1,5 @@
 @echo off 
-@rem $Id: pdfopt.bat,v 1.3 2005/04/18 12:06:08 Arabidopsis Exp $
+@rem $Id: pdfopt.bat,v 1.4 2007/05/07 11:22:07 Arabidopsis Exp $
 @rem Convert PDF to "optimized" form.
 
 if %1/==/ goto usage

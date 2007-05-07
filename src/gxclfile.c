@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 1997, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxclfile.c,v 1.4 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gxclfile.c,v 1.5 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* File-based command list implementation */
 #include "stdio_.h"
 #include "string_.h"
@@ -42,7 +42,7 @@ clist_fopen(char fname[gp_file_name_sizeof], const char *fmode,
 	if (fmode[0] == 'r')
 	    return_error(gs_error_invalidfileaccess);
 	*pcf =
-	    (clist_file_ptr) gp_open_scratch_file(gp_scratch_file_name_prefix,
+	    (clist_file_ptr) gp_open_scratch_file_64(gp_scratch_file_name_prefix,
 						  fname, fmode);
     } else
 	*pcf = gp_fopen(fname, fmode);
@@ -129,10 +129,10 @@ clist_ferror_code(clist_file_ptr cf)
     return (ferror((FILE *) cf) ? gs_error_ioerror : 0);
 }
 
-long
+int64_t
 clist_ftell(clist_file_ptr cf)
 {
-    return ftell((FILE *) cf);
+    return gp_ftell_64((FILE *) cf);
 }
 
 void
@@ -160,7 +160,7 @@ clist_rewind(clist_file_ptr cf, bool discard_data, const char *fname)
 }
 
 int
-clist_fseek(clist_file_ptr cf, long offset, int mode, const char *ignore_fname)
+clist_fseek(clist_file_ptr cf, int64_t offset, int mode, const char *ignore_fname)
 {
-    return fseek((FILE *) cf, offset, mode);
+    return gp_fseek_64((FILE *) cf, offset, mode);
 }

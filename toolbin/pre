@@ -1,3 +1,3 @@
 #!/bin/sh
-# $Id: pre,v 1.2 2004/02/14 22:20:20 atai Exp $
+# $Id: pre,v 1.3 2007/05/07 11:22:11 Arabidopsis Exp $
 exec $0.tcl "$@"

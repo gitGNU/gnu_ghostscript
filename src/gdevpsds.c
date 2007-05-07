@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpsds.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevpsds.c,v 1.7 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Image processing streams for PostScript and PDF writers */
 #include "gx.h"
 #include "memory_.h"
@@ -981,6 +981,28 @@ s_compr_chooser_process(stream_state * st, stream_cursor_read * pr,
     return 0;
 }
 
+const stream_template s_compr_chooser_template = {
+    &st_compr_chooser_state, s_compr_chooser_init, s_compr_chooser_process, 1, 1,
+    s_compr_chooser_release, 0 /* NULL */
+};
+
+/* Get choice */
+uint 
+s_compr_chooser__get_choice(stream_compr_chooser_state *ss, bool force)
+{
+    ulong plateaus = min(ss->lower_plateaus, ss->upper_plateaus);
+
+    if (ss->choice)
+	return ss->choice;
+    if (force) {
+	if (ss->gradients > plateaus / 12) /* messenger16.pdf, page 3. */
+	    return 1; /* photo */
+	else if (plateaus / 5000 >= ss->gradients)
+	    return 2; /* lineart */
+    }
+    return 0;
+}
+
 /* ---------------- Am image color conversion filter ---------------- */
 
 private_st_image_colors_state();
@@ -1182,26 +1204,4 @@ const stream_template s__image_colors_template = {
     &st_stream_image_colors_state, s_image_colors_init, s_image_colors_process, 1, 1,
     NULL, NULL
 };
-
-const stream_template s_compr_chooser_template = {
-    &st_compr_chooser_state, s_compr_chooser_init, s_compr_chooser_process, 1, 1,
-    s_compr_chooser_release, 0 /* NULL */
-};
-
-/* Get choice */
-uint 
-s_compr_chooser__get_choice(stream_compr_chooser_state *ss, bool force)
-{
-    ulong plateaus = min(ss->lower_plateaus, ss->upper_plateaus);
-
-    if (ss->choice)
-	return ss->choice;
-    if (force) {
-	if (ss->gradients > plateaus / 12) /* messenger16.pdf, page 3. */
-	    return 1; /* photo */
-	else if (plateaus / 5000 >= ss->gradients)
-	    return 2; /* lineart */
-    }
-    return 0;
-}
 

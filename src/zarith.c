@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zarith.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zarith.c,v 1.5 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Arithmetic operators */
 #include "math_.h"
 #include "ghost.h"
@@ -161,8 +161,8 @@ zmul(i_ctx_t *i_ctx_p)
 	case t_integer: {
 	    long int1 = op[-1].value.intval;
 	    long int2 = op->value.intval;
-	    long abs1 = (int1 >= 0 ? int1 : -int1);
-	    long abs2 = (int2 >= 0 ? int2 : -int2);
+	    unsigned long abs1 = (unsigned long)(int1 >= 0 ? int1 : -int1);
+	    unsigned long abs2 = (unsigned long)(int2 >= 0 ? int2 : -int2);
 	    float fprod;
 
 	    if ((abs1 > MAX_HALF_INTVAL || abs2 > MAX_HALF_INTVAL) &&
@@ -245,13 +245,11 @@ zidiv(i_ctx_t *i_ctx_p)
 
     check_type(*op, t_integer);
     check_type(op[-1], t_integer);
-    if (op->value.intval == 0)
+    if ((op->value.intval == 0) || (op[-1].value.intval == MIN_INTVAL && op->value.intval == -1)) {
+	/* Anomalous boundary case: -MININT / -1, fail. */
 	return_error(e_undefinedresult);
-    if ((op[-1].value.intval /= op->value.intval) ==
-	MIN_INTVAL && op->value.intval == -1
-	) {			/* Anomalous boundary case, fail. */
-	return_error(e_rangecheck);
     }
+    op[-1].value.intval /= op->value.intval;
     pop(1);
     return 0;
 }

@@ -64,7 +64,7 @@
 /*
  * I/O Stream Class
  *
- * $Id: jas_stream.h,v 1.3 2006/06/16 18:21:39 Arabidopsis Exp $
+ * $Id: jas_stream.h,v 1.4 2007/05/07 11:22:22 Arabidopsis Exp $
  */
 
 #ifndef JAS_STREAM_H
@@ -213,6 +213,9 @@ typedef struct {
 	/* The start of the buffer area excluding the extra initial space for
 	  character putback. */
 	uchar *bufstart_;
+
+	/* The stream position of the character at bufstart_ */
+	long buftell_;
 
 	/* The buffer size. */
 	int bufsize_;

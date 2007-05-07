@@ -1,4 +1,5 @@
-/* Copyright (C) 1989-2003 artofcode LLC. All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,8 +17,9 @@
 
 */
 
-/* $Id: gp_unix.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gp_unix.c,v 1.7 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Unix-specific routines for Ghostscript */
+
 #include "pipe_.h"
 #include "string_.h"
 #include "time_.h"
@@ -157,6 +159,13 @@ gp_open_printer(char fname[gp_file_name_sizeof], int binary_mode)
     const char *fmode = (binary_mode ? "wb" : "w");
 
     return (strlen(fname) == 0 ? 0 : fopen(fname, fmode));
+}
+FILE *
+gp_open_printer_64(char fname[gp_file_name_sizeof], int binary_mode)
+{
+    const char *fmode = (binary_mode ? "wb" : "w");
+
+    return (strlen(fname) == 0 ? 0 : gp_fopen_64(fname, fmode));
 }
 
 /* Close the connection to the printer. */

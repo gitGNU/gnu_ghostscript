@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>ps2pdf: PostScript-to-PDF converter</title>
-<!-- $Id: Ps2pdf.htm,v 1.7 2006/06/16 12:55:14 Arabidopsis Exp $ -->
+<!-- $Id: Ps2pdf.htm,v 1.8 2007/05/07 11:22:12 Arabidopsis Exp $ -->
 <!-- Originally: ps2pdf.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -175,9 +175,9 @@ Distiller 5 behavior.
 <p>
 The <em>options</em> in the command line may include any switches that may
 be used with Ghostscript's PostScript and PDF interpreter (see <a
-href="Use.htm#Switches">here</a> for a complete list), although almost none
-of them are useful with <b><tt>ps2pdf</tt></b>.  The following may be
-useful:
+href="Use.htm#Options">here</a> for a complete list), although almost 
+none of them are useful with <b><tt>ps2pdf</tt></b>.  The following may 
+be useful:
 
 <dl>
 
@@ -540,10 +540,10 @@ This parameter can be set and queried, but currently has no effect.
 
 <p>
 <a name="note_1">(note 1)</a>
-Currently, <b><tt>AutoFilterxxxImages</tt></b> doesn't examine the image to
-decide between JPEG and LZW or Flate compression: it always uses 
-Flate compression.  If you want to force JPEG compression, use
-<b><tt>-dAutoFilterxxxImages=false</tt></b>.
+<b><tt>-dAutoFilterxxxImages=false</tt></b> works since Ghostscript version 7.30.
+Older versions of Ghostscript don't examine the image to
+decide between JPEG and LZW or Flate compression: they always uses 
+Flate compression. 
 
 <p>
 <a name="note_2">(note 2)</a>
@@ -765,12 +765,18 @@ define a title with DSC comments. Otherwise remove entire line from definition f
 Rather the PDF/X-3 standard requires colors to be adjusted at the
 document generation time, Ghostscript <em>does not</em> perform any
 special color conversion. Either colors to be adjusted in advance,
-or a proper color conversion to be specified in <b><tt>/DefaultGray</b></tt>,
+or a proper color conversion to be specified in <b><tt>DefaultGray</b></tt>,
 <b><tt>DefaultRGB</b></tt>,  <b><tt>DefaultCMYK</b></tt> resources of the  
-<b><tt>ColorSpace</b></tt> resource category,
-and the <b><tt>-dUseCIEColor</b></tt> option to be specified
-to remap device colors into CIE colors. 
-The choice of the ICC profile is also the user's responsibility.
+<b><tt>ColorSpace</b></tt> resource category.
+
+<P>
+If you want any color to be converted into CIE color,
+the <b><tt>-dUseCIEColor</b></tt> option to be specified
+in the command line. If it is not specified, 
+only RGB colors are being converted into CIE colors
+with using the <b><tt>DefaultRGB</b></tt> color space resource,
+but <b><tt>DeviceGray</b></tt> and <b><tt>DeviceCMYK</b></tt>
+colors are being passed identically.
 
 <p>Please note that if a graphic object can't embed into the output format,
 Ghostscript converts it into low level objects, using a device color space
@@ -827,7 +833,6 @@ Here is a sample command line to invoke Ghostscript for generating a PDF/X-3 doc
 gs -dPDFX -dBATCH -dNOPAUSE -dNOOUTERSAVE -dUseCIEColor -sDEVICE=pdfwrite -sOutputFile=out-x3.pdf PDFX_def.ps input.ps
 </tt></b></blockquote>
 
-
 <p>
 <hr>
 <h2><a name="PDFA"></a>Creating a PDF/A document</h2>
@@ -848,7 +853,6 @@ Here is a sample command line to invoke Ghostscript for generating a PDF/A docum
 <blockquote><b><tt>
 gs -dPDFA -dBATCH -dNOPAUSE -dNOOUTERSAVE -dUseCIEColor -sDEVICE=pdfwrite -sOutputFile=out-a.pdf PDFA_def.ps input.ps
 </tt></b></blockquote>
-
 
 <p>
 <hr>
@@ -999,20 +1003,20 @@ href="http://www.sil.org">http://www.sil.org</a>&gt; for help with testing
 <hr>
 
 <p>
-<small>Copyright &copy; 1996, 2000, 2004 artofcode LLC.  All rights
-reserved.</small>
+<small>Copyright &copy; 2000-2006 artofcode LLC.  All rights reserved.</small>
 
 <p>
 This software is provided AS-IS with no warranty, either express or
 implied.
 
-This software is distributed under license and may not be copied,
-modified or distributed except as expressly authorized under the terms
-of the license contained in the file LICENSE in this distribution.
-
+This software is distributed under license and may not be copied, modified
+or distributed except as expressly authorized under the terms of that
+license.  Refer to licensing information at http://www.artifex.com/
+or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.51, 31 December 2005
+<small>Ghostscript version 8.56, 14 March 2007
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

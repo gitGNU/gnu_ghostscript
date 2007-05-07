@@ -1,4 +1,5 @@
-/* Copyright (C) 1990, 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxtype1.h,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gxtype1.h,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Private Adobe Type 1 / Type 2 charstring interpreter definitions */
 
 #ifndef gxtype1_INCLUDED
@@ -121,18 +121,26 @@ struct gs_type1_state_s {
     bool seac_flag;		/* true if executing the accent */
     /* (Type 2 charstrings only) */
     int num_hints;		/* number of hints (Type 2 only) */
-    gs_fixed_point lsb;		/* left side bearing (char coords) */
-    gs_fixed_point width;	/* character width (char coords) */
+    gs_fixed_point lsb;		/* left side bearing (design coords) */
+    gs_fixed_point width;	/* character width (design coords) */
     int seac_accent;		/* accent character code for seac, or -1 */
-    fixed save_asb;		/* save seac asb */
-    gs_fixed_point save_lsb;	/* save seac accented lsb */
-    gs_fixed_point save_adxy;	/* save seac adx/ady */
-    fixed asb_diff;		/* save_asb - save_lsb.x, */
-				/* needed to adjust Flex endpoint */
-    gs_fixed_point adxy;	/* seac accent displacement, */
-				/* needed to adjust currentpoint */
+    fixed asb;			/* the asb parameter of seac */
+    gs_fixed_point compound_lsb;/* lsb of the compound character 
+				   (i.e. of the accented character 
+				   defined with seac). */
+    gs_fixed_point save_adxy;	/* passes seac adx/ady across the base character. */
+    fixed asb_diff;		/* asb - compound_lsb.x, */
+				/* needed to adjust Flex endpoint
+				   when processing the accent character;
+				   Zero when processing the base character. */
+    gs_fixed_point adxy;	/* seac accent displacement,
+				   needed to adjust currentpoint
+				   when processing the accent character;
+				   Zero when processing the base character. */
+    fixed base_lsb;		/* The lsb of the base character for 'seac'. */
     int flex_path_state_flags;	/* record whether path was open */
 				/* at start of Flex section */
+    gs_fixed_point origin_offset; /* Origin offset due to replaced metrics. */
 #define flex_max 8
     int flex_count;
     int ignore_pops;		/* # of pops to ignore (after */

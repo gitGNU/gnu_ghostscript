@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 1995, 1997, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxttfb.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gxttfb.c,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* A bridge to True Type interpreter. */
 
 #include "gx.h"
@@ -197,9 +197,35 @@ void gx_ttfReader__destroy(gx_ttfReader *this)
     gs_free_object(this->memory, this, "gx_ttfReader__destroy");
 }
 
+private int 
+gx_ttfReader__default_get_metrics(const ttfReader *ttf, uint glyph_index, bool bVertical, 
+				  short *sideBearing, unsigned short *nAdvance)
+{
+    gx_ttfReader *this = (gx_ttfReader *)ttf;
+    float sbw[4];
+    int sbw_offset = bVertical;
+    int code;
+    int factor = this->pfont->data.unitsPerEm;
+
+    if (bVertical)
+	factor = factor; /* See simple_glyph_metrics */    
+    code = this->pfont->data.get_metrics(this->pfont, glyph_index, bVertical, sbw);
+    if (code < 0)
+	return code;
+    /* Due to an obsolete convention, simple_glyph_metrics scales
+       the metrics into 1x1 rectangle as Postscript like.
+       In same time, the True Type interpreter needs 
+       the original design units.
+       Undo the scaling here with accurate rounding. */
+    *sideBearing = (short)floor(sbw[0 + sbw_offset] * factor + 0.5);
+    *nAdvance = (short)floor(sbw[2 + sbw_offset] * factor + 0.5);
+    return 0;
+}
+
 void gx_ttfReader__set_font(gx_ttfReader *this, gs_font_type42 *pfont)
 {
     this->pfont = pfont;
+    this->super.get_metrics = gx_ttfReader__default_get_metrics;
 }
 
 
@@ -271,10 +297,10 @@ private void WarnPatented(gs_font_type42 *pfont, ttfFont *ttf, const char *txt)
 
 /*----------------------------------------------*/
 
-typedef struct gx_ttfMemory_s {
+struct gx_ttfMemory_s {
     ttfMemory super;
     gs_memory_t *memory;
-} gx_ttfMemory;
+};
 
 gs_private_st_simple(st_gx_ttfMemory, gx_ttfMemory, "gx_ttfMemory");
 /* st_gx_ttfMemory::memory points to a root. */
@@ -349,23 +375,27 @@ private void decompose_matrix(const gs_font_type42 *pfont, const gs_matrix * cha
 ttfFont *ttfFont__create(gs_font_dir *dir)
 {
     gs_memory_t *mem = dir->memory;
-    gx_ttfMemory *m = gs_alloc_struct(mem, gx_ttfMemory, &st_gx_ttfMemory, "ttfFont__create");
     ttfFont *ttf;
 
-    if (!m)
-	return 0;
-    m->super.alloc_struct = gx_ttfMemory__alloc_struct;
-    m->super.alloc_bytes = gx_ttfMemory__alloc_bytes;
-    m->super.free = gx_ttfMemory__free;
-    m->memory = mem;
-    if(ttfInterpreter__obtain(&m->super, &dir->tti))
+    if (dir->ttm == NULL) {
+	gx_ttfMemory *m = gs_alloc_struct(mem, gx_ttfMemory, &st_gx_ttfMemory, "ttfFont__create(gx_ttfMemory)");
+
+	if (!m)
+	    return 0;
+	m->super.alloc_struct = gx_ttfMemory__alloc_struct;
+	m->super.alloc_bytes = gx_ttfMemory__alloc_bytes;
+	m->super.free = gx_ttfMemory__free;
+	m->memory = mem;
+	dir->ttm = m;
+    }
+    if(ttfInterpreter__obtain(&dir->ttm->super, &dir->tti))
 	return 0;
     if(gx_san__obtain(mem->stable_memory, &dir->san))
 	return 0;
     ttf = gs_alloc_struct(mem, ttfFont, &st_ttfFont, "ttfFont__create");
     if (ttf == NULL)
 	return 0;
-    ttfFont__init(ttf, &m->super, DebugRepaint, (gs_debug_c('Y') ? DebugPrint : NULL));
+    ttfFont__init(ttf, &dir->ttm->super, DebugRepaint, (gs_debug_c('Y') ? DebugPrint : NULL));
     return ttf;
 }
 
@@ -373,10 +403,15 @@ void ttfFont__destroy(ttfFont *this, gs_font_dir *dir)
 {   
     ttfMemory *mem = this->tti->ttf_memory;
 
+    /* assert(mem == &dir->ttm->super); */
     ttfFont__finit(this);
     mem->free(mem, this, "ttfFont__destroy");
     ttfInterpreter__release(&dir->tti);
     gx_san__release(&dir->san);
+    if (dir->tti == NULL && dir->ttm != NULL) {
+	dir->ttm = NULL;
+	mem->free(mem, mem, "ttfFont__destroy(gx_ttfMemory)");
+    }
 }
 
 int ttfFont__Open_aux(ttfFont *this, ttfInterpreter *tti, gx_ttfReader *r, gs_font_type42 *pfont,

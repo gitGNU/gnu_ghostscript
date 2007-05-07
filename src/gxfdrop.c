@@ -15,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxfdrop.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gxfdrop.c,v 1.6 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Dropout prevention for a character rasterization. */
 
 #include "gx.h"

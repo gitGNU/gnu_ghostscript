@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gp_wgetv.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_wgetv.c,v 1.6 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* MS Windows implementation of gp_getenv */
 
 #include <windows.h>
@@ -56,11 +57,11 @@ gp_getenv(const char *name, char *ptr, int *plen)
     {
 	/* If using Win32, look in the registry for a value with
 	 * the given name.  The registry value will be under the key
-	 * HKEY_CURRENT_USER\Software\GNU Ghostscript\N.NN
+	 * HKEY_CURRENT_USER\Software\GNU Ghostscript\N.NN.N
 	 * or if that fails under the key
-	 * HKEY_LOCAL_MACHINE\Software\GNU Ghostscript\N.NN
+	 * HKEY_LOCAL_MACHINE\Software\GNU Ghostscript\N.NN.N
 	 * where "GNU Ghostscript" is actually gs_productfamily
-	 * and N.NN is obtained from gs_revision.
+	 * and N.NN.N is obtained from gs_revision.
 	 */
 	DWORD version = GetVersion();
 
@@ -71,8 +72,8 @@ gp_getenv(const char *name, char *ptr, int *plen)
 	    char key[256];
 	    char dotversion[16];
 	    
-	    sprintf(dotversion, "%d.%02d", (int)(gs_revision / 100),
-		    (int)(gs_revision % 100));
+	    sprintf(dotversion, "%d.%02d.%d", (int)(gs_revision / 10000),
+		    (int)((gs_revision % 10000) / 100), (int)((gs_revision % 10000) % 100);
 	    sprintf(key, "Software\\%s\\%s", gs_productfamily, dotversion);
 
 	    code = gp_getenv_registry(HKEY_CURRENT_USER, key, name, ptr, plen);

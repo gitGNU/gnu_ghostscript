@@ -1,4 +1,5 @@
-/* Copyright (C) 2003 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: ttfmain.c,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: ttfmain.c,v 1.6 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* A Free Type interface adapter. */
 /* Uses code fragments from the FreeType project. */
 
@@ -179,7 +179,6 @@ void ttfInterpreter__release(ttfInterpreter **ptti)
     mem->free(mem, tti->usage, "ttfInterpreter__release");
     mem->free(mem, tti->exec, "ttfInterpreter__release");
     mem->free(mem, *ptti, "ttfInterpreter__release");
-    mem->free(mem, mem, "ttfInterpreter__release");
     *ptti = 0;
 }
 
@@ -197,8 +196,15 @@ void ttfFont__init(ttfFont *this, ttfMemory *mem,
 void ttfFont__finit(ttfFont *this)
 {   ttfMemory *mem = this->tti->ttf_memory;
 
-    if (this->exec)
-	Context_Destroy(this->exec);
+    if (this->exec) {
+	if (this->inst)
+	    Context_Destroy(this->exec);
+	else {
+	    /* Context_Create was not called - see ttfFont__Open.
+	       Must not call Context_Destroy for proper 'lock' count.
+	     */
+	}
+    }
     this->exec = NULL;
     if (this->inst)
 	Instance_Destroy(this->inst);
@@ -217,7 +223,8 @@ void ttfFont__finit(ttfFont *this)
 FontError ttfFont__Open(ttfInterpreter *tti, ttfFont *this, ttfReader *r, 
 				    unsigned int nTTC, float w, float h, 
 				    bool design_grid)
-{   char sVersion[4], sVersion0[4] = {0, 1, 0, 0};
+{   char sVersion[4], sVersion1[4] = {0, 1, 0, 0};
+    char sVersion2[4] = {0, 2, 0, 0};
     unsigned int nNumTables, i;
     TT_Error code;
     int k;
@@ -233,7 +240,7 @@ FontError ttfFont__Open(ttfInterpreter *tti, ttfFont *this, ttfReader *r,
 	unsigned int nPos = 0xbaadf00d; /* Quiet compiler. */
 
 	r->Read(r, sVersion, 4);
-	if(memcmp(sVersion, sVersion0, 4))
+       if(memcmp(sVersion, sVersion1, 4) && memcmp(sVersion, sVersion2, 4))
 	    return fUnimplemented;
 	nFonts = ttfReader__UInt(r);
 	if (nFonts == 0)
@@ -245,7 +252,7 @@ FontError ttfFont__Open(ttfInterpreter *tti, ttfFont *this, ttfReader *r,
 	r->Seek(r, nPos);
 	r->Read(r, sVersion, 4);
     }
-    if(memcmp(sVersion, sVersion0, 4) && memcmp(sVersion, "true", 4))
+    if(memcmp(sVersion, sVersion1, 4) && memcmp(sVersion, "true", 4))
 	return fUnimplemented;
     nNumTables    = ttfReader__UShort(r);
     ttfReader__UShort(r); /* nSearchRange */
@@ -483,7 +490,7 @@ private FontError ttfOutliner__BuildGlyphOutlineAux(ttfOutliner *this, int glyph
     FontError error = fNoError;
     short arg1, arg2;
     short count;
-    unsigned int nMtxPos, nMtxGlyph = glyphIndex, nLongMetrics, i;
+    unsigned int i;
     unsigned short nAdvance;
     unsigned int nNextGlyphPtr = 0;
     unsigned int nPosBeg;
@@ -494,31 +501,10 @@ private FontError ttfOutliner__BuildGlyphOutlineAux(ttfOutliner *this, int glyph
     const byte *glyph = NULL;
     int glyph_size;
 
-    if(this->bVertical && pFont->t_vhea.nPos && pFont->t_vmtx.nPos) {
-	nLongMetrics = pFont->nLongMetricsVert;
-	nMtxPos = pFont->t_vmtx.nPos;
-    } else {
-	nLongMetrics = pFont->nLongMetricsHorz;
-	nMtxPos = pFont->t_hmtx.nPos;
-    }
-    if (this->bVertical && (!pFont->t_vhea.nPos || pFont->t_vmtx.nPos) && nMtxGlyph < nLongMetrics) {
-	/* A bad font fix. */
-	nMtxGlyph = nLongMetrics;
-	if(nMtxGlyph >= pFont->nNumGlyphs)
-	    nMtxGlyph = pFont->nNumGlyphs - 1;
-    }
-    if (nMtxGlyph < nLongMetrics) {
-	r->Seek(r, nMtxPos + 4 * nMtxGlyph);
-	nAdvance = ttfReader__Short(r);
-	sideBearing = ttfReader__Short(r);
-    } else {
-	r->Seek(r, nMtxPos + 4 * (nLongMetrics - 1));
-	nAdvance = ttfReader__Short(r);
-	r->Seek(r, nMtxPos + 4 * nLongMetrics + 2 * (nMtxGlyph - nLongMetrics));
-	sideBearing = ttfReader__Short(r);
-    }
-    if (r->Error(r))
+    if (r->get_metrics(r, glyphIndex, this->bVertical, &sideBearing, &nAdvance) < 0) {
+	/* fixme: the error code is missing due to interface restrictions. */
 	goto errex;
+    }
     gOutline->sideBearing = shortToF26Dot6(sideBearing);
     gOutline->advance.x = shortToF26Dot6(nAdvance);
     gOutline->advance.y = 0;

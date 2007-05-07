@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 1995, 1996, 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gp_os2.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gp_os2.c,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Common platform-specific routines for OS/2 and MS-DOS */
 /* compiled with GCC/EMX */
 
@@ -863,3 +864,39 @@ int gp_enumerate_fonts_next(void *enum_state, char **fontname, char **path)
 void gp_enumerate_fonts_free(void *enum_state)
 {
 }           
+
+/* --------- 64 bit file access ----------- */
+/* fixme: Not implemented yet.
+ * Currently we stub it with 32 bits access. 
+ */
+
+FILE *gp_fopen_64(const char *filename, const char *mode)
+{
+    return fopen(filename, mode);
+}
+
+FILE *gp_open_scratch_file_64(const char *prefix,
+			   char fname[gp_file_name_sizeof],
+			   const char *mode)
+{
+    return gp_open_scratch_file(prefix, fname, mode);
+}
+
+FILE *gp_open_printer_64(char fname[gp_file_name_sizeof], int binary_mode)
+{
+    return gp_open_printer(fname, binary_mode);
+}
+
+int64_t gp_ftell_64(FILE *strm)
+{
+    return ftell(strm);
+}
+
+int gp_fseek_64(FILE *strm, int64_t offset, int origin)
+{
+    long offset1 = (long)offset;
+    
+    if (offset != offset1)
+	return -1;
+    return fseek(strm, offset1, origin);
+}

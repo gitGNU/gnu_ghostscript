@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxalloc.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gxalloc.h,v 1.8 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Structure definitions for standard allocator */
 /* Requires gsmemory.h, gsstruct.h */
 
@@ -31,8 +31,6 @@ typedef struct gs_ref_memory_s gs_ref_memory_t;
 
 #include "gsalloc.h"
 #include "gxobj.h"
-
-#define NO_INVISIBLE_LEVELS 1 /* old code = 0, new code = 1 */
 
 /* ================ Chunks ================ */
 
@@ -148,7 +146,7 @@ struct chunk_s {
     byte *cbot;			/* bottom of free area */
 				/* (top of aligned objects) */
     obj_header_t *rcur;		/* current refs object, 0 if none */
-    byte *rtop;			/* top of rcur, not aligned to obj_align_mod */
+    byte *rtop;			/* top of rcur */
     byte *ctop;			/* top of free area */
 				/* (bottom of strings) */
     byte *climit;		/* top of strings */
@@ -388,9 +386,7 @@ struct gs_ref_memory_s {
     /* Sharing / saved state information */
     int num_contexts;		/* # of contexts sharing this VM */
     struct alloc_change_s *changes;
-#if NO_INVISIBLE_LEVELS
     struct alloc_change_s *scan_limit;
-#endif
     struct alloc_save_s *saved;
     long total_scanned;
     struct alloc_save_s *reloc_saved;	/* for GC */

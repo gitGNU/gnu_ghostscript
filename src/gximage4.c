@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gximage4.c,v 1.5 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gximage4.c,v 1.6 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* ImageType 4 image implementation */
 #include "memory_.h"
 #include "gx.h"
@@ -54,7 +54,7 @@ const gx_image_type_t gs_image_type_4 = {
 
 /* Initialize an ImageType 4 image. */
 void
-gs_image4_t_init(gs_image4_t * pim, const gs_color_space * color_space)
+gs_image4_t_init(gs_image4_t * pim, gs_color_space * color_space)
 {
     gs_pixel_image_t_init((gs_pixel_image_t *) pim, color_space);
     pim->type = &gs_image_type_4;
@@ -137,7 +137,7 @@ gx_image4_sput(const gs_image_common_t *pic, stream *s,
 
 private int
 gx_image4_sget(gs_image_common_t *pic, stream *s,
-	       const gs_color_space *pcs)
+	       gs_color_space *pcs)
 {
     gs_image4_t *const pim = (gs_image4_t *)pic;
     int num_values;

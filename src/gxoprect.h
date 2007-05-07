@@ -1,5 +1,6 @@
-/* Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
-
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
+  
   This file is part of GNU ghostscript
 
   GNU ghostscript is free software; you can redistribute it and/or modify it under
@@ -16,8 +17,8 @@
 
 */
 
-/* $Id: gxoprect.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
-/* geneic overprint fill rectangle interface */
+/* $Id: gxoprect.h,v 1.6 2007/05/07 11:21:45 Arabidopsis Exp $ */
+/* generic overprint fill rectangle interface */
 
 #ifndef gxoprect_INCLUDED
 #define gxoprect_INCLUDED

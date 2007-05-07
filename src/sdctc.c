@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sdctc.c,v 1.6 2006/06/16 12:55:05 Arabidopsis Exp $ */
+/* $Id: sdctc.c,v 1.7 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Code common to DCT encoding and decoding streams */
 #include "stdio_.h"
 #include "jpeglib_.h"

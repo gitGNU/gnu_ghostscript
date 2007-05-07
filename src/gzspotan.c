@@ -1,4 +1,5 @@
-/* Copyright (C) 2003 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/*$Id: gzspotan.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/*$Id: gzspotan.c,v 1.6 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* A spot analyzer device implementation. */
 /*
     This implements a spot topology analyzis and 
@@ -44,7 +45,6 @@ public_st_device_spot_analyzer();
 private_st_san_trap();
 private_st_san_trap_contact();
 
-private dev_proc_open_device(san_open);
 private dev_proc_close_device(san_close);
 private dev_proc_get_clipping_box(san_get_clipping_box);
 
@@ -278,7 +278,7 @@ private const gx_device_spot_analyzer gx_spot_analyzer_device =
  }
 };
 
-private int
+int
 san_open(register gx_device * dev)
 {
     gx_device_spot_analyzer * const padev = (gx_device_spot_analyzer *)dev;
@@ -301,6 +301,11 @@ san_close(gx_device * dev)
     free_cont_list(padev->memory, &padev->cont_buffer);
     padev->trap_buffer_last = NULL;
     padev->cont_buffer_last = NULL;
+    padev->trap_free = NULL;
+    padev->cont_free = NULL;
+    padev->top_band = NULL;
+    padev->bot_band = NULL;
+    padev->bot_current = NULL;
     return 0;
 }
 

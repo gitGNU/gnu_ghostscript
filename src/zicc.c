@@ -1,4 +1,5 @@
-/* Copyright (C) 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zicc.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: zicc.c,v 1.7 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* ICCBased color operators */
 
 #include "math_.h"
@@ -71,7 +71,7 @@ zseticcspace(i_ctx_t * i_ctx_p)
     int edepth = ref_stack_count(&e_stack);
     int                     code;
     gs_color_space *        pcs;
-    const gs_color_space *  palt_cs;
+    gs_color_space *  palt_cs;
     ref *                   pnval;
     ref *                   pstrmval;
     stream *                s;
@@ -140,14 +140,8 @@ zseticcspace(i_ctx_t * i_ctx_p)
     }
 
     /* record the current space as the alternative color space */
-    memmove( &pcs->params.icc.alt_space,
-             palt_cs,
-             sizeof(pcs->params.icc.alt_space) );
-    /*
-     * Increment reference counts for current cspace since it is the
-     * alternate color space for the ICC space.
-     */
-    gx_increment_cspace_count(palt_cs);
+    pcs->base_space = palt_cs;
+    rc_increment(palt_cs);
 
     code = gx_load_icc_profile(picc_info);
     if (code < 0)

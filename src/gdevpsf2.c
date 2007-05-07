@@ -1,4 +1,5 @@
-/* Copyright (C) 1999, 2000, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpsf2.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevpsf2.c,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Write an embedded CFF font with either Type 1 or Type 2 CharStrings */
 #include "math_.h"		/* for fabs */
 #include "memory_.h"
@@ -956,7 +957,6 @@ cff_write_Encoding(cff_writer_t *pcw, cff_glyph_subset_t *pgsub)
     gs_font_type1 *pfont = (gs_font_type1 *)pcw->pfont;
     byte used[255], index[255], supplement[256];
     int num_enc = min(pgsub->num_encoded, sizeof(index));
-    int num_enc_chars = pgsub->num_encoded_chars;
     int nsupp = 0;
     int j;
 
@@ -981,13 +981,16 @@ cff_write_Encoding(cff_writer_t *pcw, cff_glyph_subset_t *pgsub)
     sputc(s, (byte)(nsupp ? 0x80 : 0));
     sputc(s, (byte)num_enc);
 #ifdef DEBUG
-    if (nsupp != num_enc_chars - num_enc)
-	lprintf3("nsupp = %d, num_enc_chars = %d, num_enc = %d\n",
-		 nsupp, num_enc_chars, num_enc);
-    for (j = 0; j < num_enc; ++j)
-	if (!used[j])
-	    lprintf2("glyph %d = 0x%lx not used\n", j,
-		     pgsub->glyphs.subset_data[j + 1]);
+    {	int num_enc_chars = pgsub->num_encoded_chars;
+
+	if (nsupp != num_enc_chars - num_enc)
+	    lprintf3("nsupp = %d, num_enc_chars = %d, num_enc = %d\n",
+		     nsupp, num_enc_chars, num_enc);
+	for (j = 0; j < num_enc; ++j)
+	    if (!used[j])
+		lprintf2("glyph %d = 0x%lx not used\n", j,
+			 pgsub->glyphs.subset_data[j + 1]);
+    }
 #endif
     put_bytes(s, index, num_enc);
     if (nsupp) {

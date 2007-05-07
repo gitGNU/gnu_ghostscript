@@ -1,14 +1,20 @@
 %    Copyright (C) 1990-2003 artofcode LLC.  All rights reserved.
 % 
-% This software is provided AS-IS with no warranty, either express or
-% implied.
-% 
-% This software is distributed under license and may not be copied,
-% modified or distributed except as expressly authorized under the terms
-% of the license contained in the file LICENSE in this distribution.
-
-
-% $Id: gs_fonts.ps,v 1.6 2006/06/16 12:55:14 Arabidopsis Exp $
+%  This file is part of GNU ghostscript
+%
+%  GNU ghostscript is free software; you can redistribute it and/or modify it under
+%  the terms of the GNU General Public License as published by the Free Software
+%  Foundation; either version 2, or (at your option) any later version.
+%
+%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+%
+%  You should have received a copy of the GNU General Public License along with
+%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+%
+% $Id: gs_fonts.ps,v 1.7 2007/05/07 11:22:07 Arabidopsis Exp $
 % Font initialization and management code.
 
 % Define the default font.
@@ -443,8 +449,8 @@ buildfontdict 3 /.buildfont3 cvx put
          } if
        }
       ifelse
-      dup /.OrigFont known not {
-        dup dup /.OrigFont exch .growput
+      dup /OrigFont known not {
+        dup dup /OrigFont exch .growput
       } if
       true exch
                 % If this is a CIDFont, CIDFontType takes precedence
@@ -455,10 +461,17 @@ buildfontdict 3 /.buildfont3 cvx put
         } if
       } if
       exch {
-        dup /FontType get //buildfontdict exch get exec
+        dup /FontType get //buildfontdict exch get
       } {
-        .buildcidfont
+        {.buildcidfont}		% so it gets bound
       } ifelse
+  } stopped { $error /command get /invalidfont signalerror } if
+
+      % Execute the .buildxxxfontx outside the 'stopped', because we don't
+      % want its errors converted to invalidfont.
+      exec
+
+  {
 
       DISKFONTS {
         FontFileDirectory 2 index known {
@@ -470,21 +483,25 @@ buildfontdict 3 /.buildfont3 cvx put
         /ProvideUnicodeDecoding get exec
       } if
       readonly          % stack: name fontdict
-  } stopped { /invalidfont signalerror } if
-} bind odef
+  } stopped { $error /command get /invalidfont signalerror } if
+} bind def
 /definefont
- { .completefont
+ { dup rcheck not {
+      /definefont cvx /invalidaccess signalerror
+   } if
+   /definefont cvx {.completefont} .errorexec
                 % If the current allocation mode is global, also enter
                 % the font in LocalFontDirectory.
    .currentglobal
     { //systemdict /LocalFontDirectory .knownget
-       { 2 index 2 index .growput }
+       { 2 index 2 index { .growput } //superexec }	% readonly
       if
     }
    if
-   dup .FontDirectory 4 -2 roll .growput
+   dup .FontDirectory 4 -2 roll { .growput } //superexec	% readonly
                 % If the font originated as a resource, register it.
    currentfile .currentresourcefile eq { dup .registerfont } if
+   readonly
  } odef
 
 % Define a procedure for defining aliased fonts.
@@ -527,11 +544,11 @@ buildfontdict 3 /.buildfont3 cvx put
         2 copy /FontName exch put
       } if
       1 index exch /.Alias exch put    % <bool> <name> <dict>
-      dup dup /.OrigFont exch .growput
+      dup dup /OrigFont exch .growput
                 % Don't bind in definefont, since Level 2 redefines it.
       /definefont .systemvar exec
     }
-    { .completefont pop exch pop
+    { /findfont cvx {.completefont} .errorexec pop exch pop
     }
    ifelse
    exch .setglobal
@@ -826,7 +843,7 @@ FAKEFONTS not { (%END FAKEFONTS) .skipeof } if
           } ifelse = flush
         } if
       } ifelse
-  .dofindfont
+  /Font findresource
 } bind def
 
 % Default font substitution does {pop /Courier} om many implementations.
@@ -1023,7 +1040,7 @@ $error /SubstituteFont { } put
                 % because it's different depending on language level.
            .currentglobal exch /.setglobal .systemvar exec
                 % Remove the fake definition, if any.
-           .FontDirectory 3 index .undef
+           .FontDirectory 3 index .forceundef		% readonly
            1 index (r) file .loadfont .FontDirectory exch
            /.setglobal .systemvar exec
          }
@@ -1113,7 +1130,7 @@ currentdict /.putgstringcopy .undef
         .FontDirectory 1 index known not {
           2 dict dup /FontName 3 index put
           dup /FontType 1 put
-          .FontDirectory 3 1 roll put
+          .FontDirectory 3 1 roll { put } //superexec	% readonly
         } {
           pop
         } ifelse

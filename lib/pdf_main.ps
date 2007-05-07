@@ -1,14 +1,20 @@
 %    Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-% This software is provided AS-IS with no warranty, either express or
-% implied.
-% 
-% This software is distributed under license and may not be copied,
-% modified or distributed except as expressly authorized under the terms
-% of the license contained in the file LICENSE in this distribution.
-
-
-% $Id: pdf_main.ps,v 1.6 2006/06/16 12:55:13 Arabidopsis Exp $
+%  This file is part of GNU ghostscript
+%
+%  GNU ghostscript is free software; you can redistribute it and/or modify it under
+%  the terms of the GNU General Public License as published by the Free Software
+%  Foundation; either version 2, or (at your option) any later version.
+%
+%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+%
+%  You should have received a copy of the GNU General Public License along with
+%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+%
+% $Id: pdf_main.ps,v 1.7 2007/05/07 11:22:07 Arabidopsis Exp $
 % pdf_main.ps
 % PDF file- and page-level operations.
 
@@ -69,41 +75,51 @@ systemdict begin
   { dup ( ) .peekstring not { false exit } if
     dup 0 get 32 le { pop dup read pop pop } { true exit } ifelse
   } loop
+  exch pop
   {
-    (%) eq {
-      dup (     ) .peekstring {
-	(%PDF-) eq {
-	    dup (%stdin) (r) file eq {
-	      % Copy PDF from stdin to temporary file then run it.
-	      null (w+) //systemdict /.tempfile get exec exch 3 1 roll
-	      % stack: tempname stdin tempfile
-	      64000 string
-	      {
-		% stack: tempname stdin tempfile string
-		2 index 1 index readstring
-		exch 3 index exch writestring
-		not { exit } if
-	      }
-	      loop
-	      pop exch closefile
-	      % stack: tempname tempfile
-	      dup 0 setfileposition
-	      dup runpdf
-	      closefile deletefile
-	    } {
-	      runpdf
-	    } ifelse
-	  } {
-	    cvx .runps % doesn't start with %PDF-
-	  } ifelse
-	} {
-	  pop cvx .runps % didn't read 5 characters
-	} ifelse
-    } {
-      cvx .runps % didn't start with %
+    dup 127 string .peekstring { % "128 string" doesn't work for "(%stdin) run"
+      (%PDF-1.) search {
+        3 1 roll pop pop
+        dup (%!PS) search not {
+          length 0 ne { 
+            1 index exch readstring pop pop
+            (%stderr) (w) file dup 
+            (   **** Warning: File has some garbage before %PDF-1. .\n)
+            writestring flushfile
+          } { 
+            pop
+          } ifelse
+          dup (%stdin) (r) file eq {
+            % Copy PDF from stdin to temporary file then run it.
+            null (w+) //systemdict /.tempfile get exec exch 3 1 roll
+            % stack: tempname stdin tempfile
+            64000 string
+            {
+              % stack: tempname stdin tempfile string
+              2 index 1 index readstring
+              exch 3 index exch writestring
+              not { exit } if
+            }
+            loop
+            pop exch closefile
+            % stack: tempname tempfile
+            dup 0 setfileposition
+            dup runpdf
+            closefile deletefile
+          } { 
+            runpdf
+          } ifelse
+        } {
+          pop pop pop pop cvx .runps % (%!PS) found first
+        } ifelse
+      } { 
+        pop cvx .runps % (%PDF-1.) not found
+      } ifelse
+    } { 
+      pop cvx .runps   % too short for PDF
     } ifelse
   } {
-    pop closefile % file was empty
+    closefile % file was empty
   } ifelse
 } bind odef
 currentdict /runpdfstring .undef
@@ -203,6 +219,7 @@ pdfdict begin
 %  /null null		% ibid.
   /R { /resolveR cvx 3 packedarray cvx } bind	% see Objects below
   /startxref /exit load
+  /startref /exit load	% Some application (unknown) misspells startxref
 .dicttomark readonly def
 
 % Because of EOL conversion, lines with fixed contents might be followed
@@ -391,7 +408,14 @@ pdfdict begin
 % entry in the prior trailer dictionary.
 /readxref		% <pos> readxref <trailerdict>
  {
-   PDFoffset add PDFfile exch setfileposition
+   PDFoffset add PDFfile exch
+   % Check that the given location is within the file.
+   dup PDFfilelen gt {
+       (   **** Warning:  Specified xref location is beyond end of file.\n)
+       pdfformaterror
+       /readxref cvx /invalidaccess signalerror
+   } if
+   setfileposition
 		% In some PDF files, this position actually points to
 		% white space before the xref line.  Skip over this here.
    {
@@ -452,7 +476,7 @@ pdfdict begin
 % Verify that each entry in the xref table is pointing at an object with
 % the correct object number and generation number.
 /verify_xref				% - verify_xref -
-{ PDFfile dup 0 setfileposition bytesavailable	% Determine the size of the file
+{ PDFfilelen
   1 1 Objects llength 1 sub	% stack: filesize 1 1 <number of objects - 1>
   {	% Check if the object is free (i.e. not used).  The values in
 	% Generations is the generation number plus 1.  If the value in
@@ -492,7 +516,12 @@ pdfdict begin
 	  search_objects
 	  exit
 	} if				% If the entry is invalid
-      } if				% If not in an object stream
+      } {
+	      % The object is in an object stream.  We currently do not rebuild
+	      % objects in an object stream.  So If we find one, then abort the
+	      % verification of the xref table entries.
+	pop exit			% Pop object number and then exit loop
+      } ifelse				% If not in an object stream
     } if				% If object entry is not free
     pop					% Remove object number
   } for
@@ -817,6 +846,17 @@ pdfdict begin
 /pdfpagecount		% - pdfpagecount <int>
  { Trailer /Root oget /Pages oget
    dup /Count knownoget {
+     dup 0 le {
+       pop (   **** Warning:  Invalid Page count.\n) pdfformaterror
+       % find the last page and use that as the Count
+       1 1 999999999 {
+         dup pdffindpage?
+	 exch pop
+         //null eq { exit } { pop } ifelse
+       } for
+       1 sub		% decrement to last page that we were able to find
+       2 copy /Count exch put
+     } if
      exch pop
    } {
        dup /Type oget /Page eq {
@@ -833,10 +873,10 @@ pdfdict begin
    } ifelse
  } bind def
 
-% Find the N'th page of the document by iterating through the Pages tree.
-% The first page is numbered 1.
-/pdffindpageref {		% <int> pdffindpage <objref>
-  dup Trailer /Root oget /Pages get
+/pdffindpage? {		% <int> pdffindpage? 1 null 	(page not found)
+			%  <int> pdffindpage? 1 noderef (page found)
+			%  <int> pdffindpage? 0 null	(Error: page not found)
+  Trailer /Root oget /Pages get
     {		% We should be able to tell when we reach a leaf
 		% by finding a Type unequal to /Pages.  Unfortunately,
 		% some files distributed by Adobe lack the Type key
@@ -853,6 +893,12 @@ pdfdict begin
 		% Stack: index null|noderef
       dup null eq { pop pop 1 null exit } if
     } loop
+} bind def
+
+% Find the N'th page of the document by iterating through the Pages tree.
+% The first page is numbered 1.
+/pdffindpageref {		% <int> pdffindpage <objref>
+  dup pdffindpage?
 		% Stack: index countleft noderef
    1 index 1 ne { pop pop /pdffindpage cvx /rangecheck signalerror } if
    exch pop
@@ -908,6 +954,17 @@ pdfdict begin
 /normrect 	% <rect> normrect <rect>
 {
     aload pop normrect_elems 4 array astore
+} bind def
+
+/fix_empty_rect_elems % </Name> <x1> <y1> <x2> <y2> fix_empty_rect_elems <x1> <y1> <x2'> <y2'>
+{  dup 3 index eq { //true } { 1 index 4 index eq } ifelse {
+     pop pop pop pop
+     (   **** Warning:  File has an empty ) pdfformaterror pdfstring cvs pdfformaterror
+     (. Using the current page size instead.\n) pdfformaterror
+     0 0 currentpagedevice /PageSize get aload pop
+   } {
+     5 -1 roll pop
+   } ifelse
 } bind def
 
 /boxrect		% <llx> <lly> <urx> <ury> boxrect <x> <y> <w> <h>
@@ -1026,18 +1083,26 @@ end readonly def
  { /DSCPageCount DSCPageCount 1 add store
  } bind def
 
+/get_media_box { % <pagedict> get_media_box <box>
+  /MediaBox pget not {
+    (   **** Page has no /MediaBox attribute. Using the current page size.\n)
+    pdfformaterror
+    [ 0 0 currentpagedevice /PageSize get aload pop ]
+  } if
+} bind def
+
 /.pdfshowpage_Install {	% <pagedict> [<prevproc>] .pdfshowpage_Install -
   exch
 	% We would like to clip to the CropBox here, but the subsequent
 	% initgraphics would override it.  Instead, we have to handle it
 	% in graphicsbeginpage.
   dup /CropBox pget dup {exch pop} if systemdict /UseCropBox known and {
-    dup /CropBox pget pop
+    /CropBox exch /CropBox pget pop
   } {
-    dup /MediaBox pget pop	% There has to be a MediaBox
+    /MediaBox exch get_media_box
   } ifelse
-  % stack: [<prevproc>] <pagedict> <Crop|Media Box>
-  exch pop oforce_array normrect		% done with the pagedict
+  % stack: [<prevproc>] /Crop|MediaBox <Crop|Media Box>
+  oforce_elems normrect_elems fix_empty_rect_elems 4 array astore
   systemdict /PDFFitPage known {
     PDFDEBUG { (Fiting PDF to imageable area of the page.) = flush } if
     currentpagedevice /.HWMargins get aload pop
@@ -1071,12 +1136,13 @@ end readonly def
 	% Stack: pagedict currentpagedict
   1 index /CropBox pget dup {exch pop} if systemdict /UseCropBox known and {
 			% Set the page size.
-    1 index /CropBox pget pop oforce_elems normrect_elems boxrect
+    1 index /CropBox pget pop /CropBox exch oforce_elems normrect_elems
+    fix_empty_rect_elems boxrect
     2 array astore /PageSize exch def pop pop
   } {
     1 index /MediaBox pget {
 			% Set the page size.
-      oforce_elems normrect_elems boxrect
+      /MediaBox exch oforce_elems normrect_elems fix_empty_rect_elems boxrect
       2 array astore /PageSize exch def pop pop
     } if
   } ifelse
@@ -1124,11 +1190,11 @@ end readonly def
         % do same here with the CropBox.
 
       1 index /CropBox pget dup {exch pop} if systemdict /UseCropBox known and {
-        1 index /CropBox pget pop
+        1 index /CropBox pget pop /CropBox exch
       } {
-        1 index /MediaBox pget pop	% There has to be a MediaBox
+        1 index get_media_box /MediaBox exch
       } ifelse
-      oforce_array normrect
+      oforce_elems normrect_elems fix_empty_rect_elems 4 array astore
       dup 0 get exch 1 get   % [] tx ty
       2 index 0 get 2 index sub 3 index exch 0 exch put
       2 index 2 get 2 index sub 3 index exch 2 exch put
@@ -1182,9 +1248,12 @@ end readonly def
       % If the page has a Group, enclose contents in transparency group.
       % (Adobe Tech Note 5407, sec 9.2)
       dup /Group knownoget {
-	1 index /CropBox knownoget not {
-	  1 index /MediaBox pget pop
-	} if oforce_array normrect .beginformgroup {
+	1 index /CropBox knownoget {
+          /CropBox exch
+        } {
+	  1 index get_media_box /MediaBox exch
+	} ifelse
+        oforce_elems normrect_elems fix_empty_rect_elems 4 array astore .beginformgroup {
 	  showpagecontents
 	} stopped {
 	  .discardtransparencygroup stop
@@ -1329,12 +1398,13 @@ end readonly def
    false exch			% Assume no transparency
    /Annots knownoget {		% Get Annots array
      { oforce /AP knownoget {	% Get appearance dict for the annoation
-         /N oget		% Get the /N (i.e. normal) appearance stream
-	 /Resources knownoget {
-	   /ExtGState knownoget {
-	     extgstateusestransparency { pop true exit} if
-	   } if			% If ExtGState known
-	 } if			% If Resources known
+	/N knownoget { 	% Get the /N (i.e. normal) appearance stream
+	  /Resources knownoget {
+	    /ExtGState knownoget {
+	       extgstateusestransparency { pop true exit} if
+	     } if		% If ExtGState known
+	   } if			% If Resources known
+	 } if			% If annotation has a normal appearance
        } if			% If AP dict known
      } forall			% For all annots on the page
    } if

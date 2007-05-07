@@ -1,4 +1,5 @@
-/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfg.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevpdfg.h,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Internal graphics interfaces for PDF-writing driver. */
 
 #ifndef gdevpdfg_INCLUDED
@@ -78,7 +79,7 @@ struct pdf_color_space_s {
  * Create a local Device{Gray,RGB,CMYK} color space corresponding to the
  * given number of components.
  */
-int pdf_cspace_init_Device(const gs_memory_t *mem, gs_color_space *pcs, int num_components);
+int pdf_cspace_init_Device(gs_memory_t *mem, gs_color_space **ppcs, int num_components);
 
 /*
  * Create a PDF color space corresponding to a PostScript color space.

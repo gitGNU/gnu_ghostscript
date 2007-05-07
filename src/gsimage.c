@@ -1,4 +1,5 @@
-/* Copyright (C) 1996, 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,9 +17,10 @@
 
 */
 
-/* $Id: gsimage.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gsimage.c,v 1.7 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Image setup procedures for Ghostscript library */
 #include "memory_.h"
+#include "math_.h"
 #include "gx.h"
 #include "gserrors.h"
 #include "gsstruct.h"
@@ -29,6 +31,7 @@
 #include "gxdevice.h"
 #include "gxiparam.h"
 #include "gxpath.h"		/* for gx_effective_clip_path */
+#include "gximask.h"
 #include "gzstate.h"
 
 
@@ -150,6 +153,43 @@ private RELOC_PTRS_WITH(gs_image_enum_reloc_ptrs, gs_image_enum *eptr)
 }
 RELOC_PTRS_END
 
+private int
+is_image_visible(const gs_image_common_t * pic, gs_state * pgs, gx_clip_path *pcpath)
+{
+    /* HACK : We need the source image size here, 
+       but gs_image_common_t doesn't pass it.
+       We would like to move Width, Height to gs_image_common,
+       but gs_image2_t appears to have those fields of double type.
+     */
+    if (pic->type->begin_typed_image == gx_begin_image1) {
+	gs_image1_t *pim = (gs_image1_t *) pic;
+	gs_rect image_rect = {{0, 0}, {0, 0}};
+	gs_rect device_rect;
+	gs_int_rect device_int_rect;
+	gs_matrix mat;
+	int code;
+
+	image_rect.q.x = pim->Width;
+	image_rect.q.y = pim->Height;
+	code = gs_matrix_invert(&pic->ImageMatrix, &mat);
+	if (code < 0)
+	    return code;
+	code = gs_matrix_multiply(&mat, &ctm_only(pgs), &mat);
+	if (code < 0)
+	    return code;
+	code = gs_bbox_transform(&image_rect, &mat, &device_rect);
+	if (code < 0)
+	    return code;
+	device_int_rect.p.x = (int)floor(device_rect.p.x);
+	device_int_rect.p.y = (int)floor(device_rect.p.y);
+	device_int_rect.q.x = (int)ceil(device_rect.q.x);
+	device_int_rect.q.y = (int)ceil(device_rect.q.y);
+	if (!gx_cpath_rect_visible(pcpath, &device_int_rect))
+	    return 0;
+    }
+    return 1;
+}
+
 /* Create an image enumerator given image parameters and a graphics state. */
 int
 gs_image_begin_typed(const gs_image_common_t * pic, gs_state * pgs,
@@ -158,6 +198,7 @@ gs_image_begin_typed(const gs_image_common_t * pic, gs_state * pgs,
     gx_device *dev = gs_currentdevice(pgs);
     gx_clip_path *pcpath;
     int code = gx_effective_clip_path(pgs, &pcpath);
+    gx_device *dev2 = dev;
 
     if (code < 0)
 	return code;
@@ -167,8 +208,30 @@ gs_image_begin_typed(const gs_image_common_t * pic, gs_state * pgs,
         if (code < 0)
 	    return code;
     }
-    return gx_device_begin_typed_image(dev, (const gs_imager_state *)pgs,
+    /* Imagemask with shading color needs a special optimization
+       with converting the image into a clipping. 
+       Check for such case after gs_state_color_load is done,
+       because it can cause interpreter callout.
+     */
+    if (pic->type->begin_typed_image == &gx_begin_image1) {
+	gs_image_t *image = (gs_image_t *)pic;
+
+	if(image->ImageMask) {
+	    code = gx_image_fill_masked_start(dev, pgs->dev_color, pcpath, pgs->memory, &dev2);
+	    if (code < 0)
+		return code;
+	}
+    }
+    code = gx_device_begin_typed_image(dev2, (const gs_imager_state *)pgs,
 		NULL, pic, NULL, pgs->dev_color, pcpath, pgs->memory, ppie);
+    if (code < 0)
+	return code;
+    code = is_image_visible(pic, pgs, pcpath);
+    if (code < 0)
+	return code;
+    if (!code)	
+	(*ppie)->skipping = true;
+    return 0;
 }
 
 /* Allocate an image enumerator. */
@@ -212,17 +275,11 @@ gs_image_init(gs_image_enum * penum, const gs_image_t * pim, bool multi,
 	if (pgs->in_cachedevice)
 	    return_error(gs_error_undefined);
 	if (image.ColorSpace == NULL) {
-            /* parameterless color space - no re-entrancy problems */
-            static gs_color_space cs;
-
             /*
-             * Mutiple initialization of a DeviceGray color space is
-             * not harmful, as the space has no parameters. Use of a
-             * non-current color space is potentially incorrect, but
-             * it appears this case doesn't arise.
+             * Use of a non-current color space is potentially
+             * incorrect, but it appears this case doesn't arise.
              */
-            gs_cspace_init_DeviceGray(pgs->memory, &cs);
-	    image.ColorSpace = &cs;
+	    image.ColorSpace = gs_cspace_new_DeviceGray(pgs->memory);
         }
     }
     code = gs_image_begin_typed((const gs_image_common_t *)&image, pgs,
@@ -286,7 +343,7 @@ begin_planes(gs_image_enum *penum)
     next_plane(penum);
 }
 
-private int
+int
 gs_image_common_init(gs_image_enum * penum, gx_image_enum_common_t * pie,
 	    const gs_data_image_t * pim, gx_device * dev)
 {
@@ -317,7 +374,8 @@ gs_image_common_init(gs_image_enum * penum, gx_image_enum_common_t * pie,
     for (i = 0; i < pie->num_planes; ++i) {
 	penum->planes[i].pos = 0;
 	penum->planes[i].source.size = 0;	/* for gs_image_next_planes */
-	penum->planes[i].row.data = 0; /* for GC */
+	penum->planes[i].source.data = 0; /* for GC */
+        penum->planes[i].row.data = 0; /* for GC */
 	penum->planes[i].row.size = 0; /* ditto */
 	penum->image_planes[i].data_x = 0; /* just init once, never changes */
     }
@@ -556,24 +614,38 @@ gs_image_next_planes(gs_image_enum * penum,
 }
 
 /* Clean up after processing an image. */
+/* Public for ghotpcl. */
 int
-gs_image_cleanup(gs_image_enum * penum)
+gs_image_cleanup(gs_image_enum * penum, gs_state *pgs)
 {
-    int code = 0;
+    int code = 0, code1;
 
     free_row_buffers(penum, penum->num_planes, "gs_image_cleanup(row)");
-    if (penum->info != 0)
-        code = gx_image_end(penum->info, !penum->error);
+    if (penum->info != 0) {
+	if (dev_proc(penum->info->dev, pattern_manage)(penum->info->dev, 
+		    gs_no_id, NULL, pattern_manage__is_cpath_accum)) {
+	    /* Performing a conversion of imagemask into a clipping path. */
+	    gx_device *cdev = penum->info->dev;
+
+	    code = gx_image_end(penum->info, !penum->error); /* Releases penum->info . */
+	    code1 = gx_image_fill_masked_end(cdev, penum->dev, pgs->dev_color);
+	    if (code == 0)
+		code = code1;
+	} else
+	    code = gx_image_end(penum->info, !penum->error);
+    }
     /* Don't free the local enumerator -- the client does that. */
+
     return code;
 }
 
 /* Clean up after processing an image and free the enumerator. */
 int
-gs_image_cleanup_and_free_enum(gs_image_enum * penum)
+gs_image_cleanup_and_free_enum(gs_image_enum * penum, gs_state *pgs)
 {
-    int code = gs_image_cleanup(penum);
+    int code = gs_image_cleanup(penum, pgs);
 
     gs_free_object(penum->memory, penum, "gs_image_cleanup_and_free_enum");
     return code;
 }
+

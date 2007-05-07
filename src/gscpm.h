@@ -1,4 +1,5 @@
-/* Copyright (C) 1995, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gscpm.h,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gscpm.h,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Charpath mode and cache device status definitions */
 
 #ifndef gscpm_INCLUDED

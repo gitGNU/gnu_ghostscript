@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995-2004 artofcode LLC. All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: zmisc.c,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: zmisc.c,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Miscellaneous operators */
 
 #include "errno_.h"
@@ -33,6 +34,8 @@
 #include "ipacked.h"
 #include "ivmspace.h"
 #include "store.h"
+
+/**********************************************************************/
 
 /* <proc> bind <proc> */
 inline private bool
@@ -51,6 +54,9 @@ zbind(i_ctx_t *i_ctx_p)
 
     switch (r_type(op)) {
 	case t_array:
+	    if (!r_has_attr(op, a_write)) {
+		return 0;	/* per PLRM3 */
+	    }
 	case t_mixedarray:
 	case t_shortarray:
 	    defn = *op;
@@ -360,6 +366,29 @@ zsetdebug(i_ctx_t *i_ctx_p)
     return 0;
 }
 
+/* There are a few cases where a customer/user might want CPSI behavior 
+ * instead of the GS default behavior. cmyk_to_rgb and Type 1 char fill
+ * method are two that have come up so far. This operator allows a PS
+ * program to control the behavior without needing to recompile
+ *
+ * While this would better if it were in some context 'state', we use
+ * a global, which we don't really like, but at least it is better
+ * than a compile time #define, as in #USE_ADOBE_CMYK_RGB and allows
+ * us to easily test with/without and not require recompilation.
+ */
+extern bool CPSI_mode;		/* not worth polluting a header file */
+
+/* <bool> .setCPSImode - */
+private int
+zsetCPSImode(i_ctx_t *i_ctx_p)
+{
+    os_ptr op = osp;
+    check_type(*op, t_boolean);
+    CPSI_mode = op->value.boolval;
+    pop(1);
+    return 0;
+}
+
 /* ------ gs persistent cache operators ------ */
 /* these are for testing only. they're disabled in the normal build
  * to prevent access to the cache by malicious postscript files
@@ -449,6 +478,7 @@ const op_def zmisc_op_defs[] =
     {"2.setdebug", zsetdebug},
     {"1.setoserrno", zsetoserrno},
     {"0usertime", zusertime},
+    {"1.setCPSImode", zsetCPSImode},
 #ifdef DEBUG_CACHE
 	/* pcache test */
     {"2.pcacheinsert", zpcacheinsert},

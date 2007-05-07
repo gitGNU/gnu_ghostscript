@@ -16,7 +16,7 @@
     Artifex Software, Inc.,  101 Lucas Valley Road #110,
     San Rafael, CA  94903, U.S.A., +1(415)492-9861.
                                                                                 
-    $Id: jbig2_refinement.c,v 1.2 2006/06/16 12:55:32 Arabidopsis Exp $
+    $Id: jbig2_refinement.c,v 1.3 2007/05/07 11:22:12 Arabidopsis Exp $
 */
 
 /**

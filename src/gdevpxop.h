@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpxop.h,v 1.4 2005/12/13 16:57:19 jemarch Exp $ */
+/* $Id: gdevpxop.h,v 1.5 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Operator and other tag definitions for PCL XL */
 
 #ifndef gdevpxop_INCLUDED
@@ -82,7 +83,7 @@ typedef enum {
     pxtBeginImage, pxtReadImage, pxtEndImage, pxtBeginRastPattern,
     pxtReadRastPattern, pxtEndRastPattern, pxtBeginScan, pxtb7,
     pxtEndScan, pxtScanLineRel, pxtba, pxtbb,
-    pxtbc, pxtbd, pxtbe, pxtbf,
+    pxtbc, pxtbd, pxtbe, pxtPassThrough,
 /*cx */
     pxt_ubyte, pxt_uint16, pxt_uint32, pxt_sint16,
     pxt_sint32, pxt_real32, pxtc6, pxtc7,

@@ -16,7 +16,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
-# $Id: bcwin32.mak,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $
+# $Id: bcwin32.mak,v 1.8 2007/05/07 11:21:45 Arabidopsis Exp $
 # makefile for (MS-Windows 3.1/Win32s / Windows 95 / Windows NT) +
 #   Borland C++ 4.5 platform.
 #   Borland C++Builder 3 platform (need BC++ 4.5 for 16-bit code)
@@ -37,6 +37,7 @@ GLGENDIR=obj
 GLOBJDIR=obj
 PSSRCDIR=src
 PSLIBDIR=lib
+PSRESDIR=Resource
 PSGENDIR=obj
 PSOBJDIR=obj
 
@@ -59,7 +60,7 @@ GS_DOCDIR=$(GSROOTDIR)/doc
 # Use / to indicate directories, not a single \.
 
 !ifndef GS_LIB_DEFAULT
-GS_LIB_DEFAULT=$(GSROOTDIR)/lib\;$(GSROOTDIR)/Resource\;$(AROOTDIR)/fonts
+GS_LIB_DEFAULT=$(GSROOTDIR)/lib\;$(GSROOTDIR)/Resource/Font\;$(AROOTDIR)/fonts
 !endif
 
 # Define whether or not searching for initialization files should always
@@ -154,7 +155,7 @@ JVERSION=6
 
 !ifndef PSRCDIR
 PSRCDIR=libpng
-PVERSION=10210
+PVERSION=10208
 !endif
 
 # Define the directory where the zlib sources are stored.
@@ -317,10 +318,6 @@ SYNC=winsync
 
 FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)epsf.dev $(PSD)mshandle.dev $(PSD)mspoll.dev $(GLD)pipe.dev $(PSD)fapi.dev
 
-# The list of resources to be included in the %rom% file system.
-# This is in the top makefile since the file descriptors are platform specific
-RESOURCE_LIST=Resource/CMap/ Resource/ColorSpace/ Resource/Decoding/ Resource/Fonts/ Resource/Procset/ Resource/IdiomSet/ Resource/CIDFont/
-
 # Choose whether to compile the .ps initialization files into the executable.
 # See gs.mak for details.
 
@@ -399,12 +396,8 @@ PCFBASM=
 
 # Make sure we get the right default target for make.
 
-# Rod Webster (rodw)
-# CBuilder 5 does not support 16 bit compilation 
-# so add conditional to skip attempts to build 16 bit version
-!if $(BUILDER_VERSION) !=5
-dosdefault: default $(BINDIR)\gs16spl.exe
-!endif
+dosdefault: default
+
 # Define the switches for the compilers.
 
 C_=-c
@@ -504,7 +497,7 @@ CCWINFLAGS=
 # so this must precede the !include statements.
 
 # ****** HACK ****** *.tr is still created in the current directory.
-BEGINFILES2=$(BINDIR)\gs16spl.exe *.tr
+BEGINFILES2=*.tr
 
 # Include the generic makefiles.
 
@@ -640,31 +633,6 @@ $(GSCONSOLE_XE):  $(GS_ALL) $(DEVS_ALL)\
 	$(LINK) /L$(LIBDIR) $(LCT) /Tpe /ap @$(PSGEN)gswin32.tr ,$(GSCONSOLE_XE),$(PSOBJ)$(GSCONSOLE) @$(LIBCTR),$(PSSRCDIR)\dw32c.def,$(GS_OBJ).res
 !endif
 
-# Access to 16 spooler from Win32s
-# Rod Webster (rodw)
-# CBuilder 5 does not support 16 bit compilation 
-# so add conditional to skip attempts to build 16 bit version
-!if $(BUILDER_VERSION !=5)
-
-GSSPL_XE=$(BINDIR)\gs16spl.exe
-
-$(GSSPL_XE): $(GLSRCDIR)\gs16spl.c $(GLSRCDIR)\gs16spl.rc $(GLGENDIR)/gswin.ico
-	$(ECHOGS_XE) -w $(GLGEN)_spl.rc -x 23 define -s gstext_ico $(GLGENDIR)/gswin.ico
-	$(ECHOGS_XE) -a $(GLGEN)_spl.rc -x 23 define -s gsgraph_ico $(GLGENDIR)/gswin.ico
-	$(ECHOGS_XE) -a $(GLGEN)_spl.rc -R $(GLSRC)gs16spl.rc
-	$(COMPBASE16)\bin\bcc -W -ms -v -I$(COMPBASE16)\include $(GLO_)gs16spl.obj -c $(GLSRCDIR)\gs16spl.c
-	$(COMPBASE16)\bin\brcc -i$(COMPBASE16)\include -r -fo$(GLOBJ)gs16spl.res $(GLGEN)_spl.rc
-	$(COMPBASE16)\bin\tlink /Twe /c /m /s /l @&&!
-$(COMPBASE16)\lib\c0ws +
-$(GLOBJ)gs16spl.obj, +
-$(GSSPL_XE),$(GLOBJ)gs16spl, +
-$(COMPBASE16)\lib\import +
-$(COMPBASE16)\lib\mathws +
-$(COMPBASE16)\lib\cws, +
-$(GLSRCDIR)\gs16spl.def
-!
-	$(COMPBASE16)\bin\rlink -t $(GLOBJ)gs16spl.res $(GSSPL_XE)
-!endif
 
 # ---------------------- Setup and uninstall programs ---------------------- #
 

@@ -1,4 +1,5 @@
-/* Copyright (C) 1996-2004 Ghostgum Software Pty Ltd.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: dwmainc.c,v 1.6 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: dwmainc.c,v 1.7 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* dwmainc.c */
 
 #include "windows_.h"

@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 1996, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/*$Id: gscdefs.h,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/*$Id: gscdefs.h,v 1.5 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Prototypes for configuration definitions in gconfig.c. */
 
 #ifndef gscdefs_INCLUDED

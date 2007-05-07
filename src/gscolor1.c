@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1992, 1993, 1994, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gscolor1.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gscolor1.c,v 1.7 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Level 1 extended color operators for Ghostscript library */
 #include "gx.h"
 #include "gserrors.h"
@@ -46,11 +47,13 @@ void gx_set_effective_transfer(gs_state *);
 int
 gs_setcmykcolor(gs_state * pgs, floatp c, floatp m, floatp y, floatp k)
 {
-    gs_color_space      cs;
+    gs_color_space      *pcs;
     int                 code;
 
-    gs_cspace_init_DeviceCMYK(pgs->memory, &cs);
-    if ((code = gs_setcolorspace(pgs, &cs)) >= 0) {
+    pcs = gs_cspace_new_DeviceCMYK(pgs->memory);
+    if (pcs == NULL)
+	return_error(gs_error_VMerror);
+    if ((code = gs_setcolorspace(pgs, pcs)) >= 0) {
        gs_client_color *    pcc = pgs->ccolor;
 
         cs_adjust_color_count(pgs, -1); /* not strictly necessary */
@@ -61,6 +64,7 @@ gs_setcmykcolor(gs_state * pgs, floatp c, floatp m, floatp y, floatp k)
         pcc->pattern = 0;		/* for GC */
         gx_unset_dev_color(pgs);
     }
+    rc_decrement_only(pcs, "gs_setcmykcolor");
     return code;
 }
 

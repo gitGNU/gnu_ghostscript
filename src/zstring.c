@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zstring.c,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: zstring.c,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* String operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -57,7 +57,11 @@ zstring(i_ctx_t *i_ctx_p)
     byte *sbody;
     uint size;
 
-    check_int_leu(*op, max_string_size);
+    check_type(*op, t_integer);
+    if (op->value.intval < 0 ) 
+        return_error(e_rangecheck);
+    if (op->value.intval > max_string_size ) 
+        return_error(e_limitcheck); /* to match Distiller */
     size = op->value.intval;
     sbody = ialloc_string(size, "string");
     if (sbody == 0)
@@ -87,8 +91,8 @@ zanchorsearch(i_ctx_t *i_ctx_p)
     os_ptr op1 = op - 1;
     uint size = r_size(op);
 
-    check_read_type(*op1, t_string);
     check_read_type(*op, t_string);
+    check_read_type(*op1, t_string);
     if (size <= r_size(op1) && !memcmp(op1->value.bytes, op->value.bytes, size)) {
 	os_ptr op0 = op;
 

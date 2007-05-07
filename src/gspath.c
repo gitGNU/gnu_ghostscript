@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gspath.c,v 1.6 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: gspath.c,v 1.7 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Basic path routines for Ghostscript library */
 #include "gx.h"
 #include "math_.h"
@@ -56,7 +56,24 @@ gs_closepath(gs_state * pgs)
 int
 gs_upmergepath(gs_state * pgs)
 {
-    return gx_path_add_path(pgs->saved->path, pgs->path);
+    /*
+     * We really should be able to implement this as simply
+     *   return gx_path_add_path(pgs->saved->path, pgs->path);
+     * But because of the current_point members in the imager state,
+     * we can't.
+     */
+    gs_state *saved = pgs->saved;
+    int code;
+
+    code = gx_path_add_path(saved->path, pgs->path);
+    if (code < 0)
+	return code;
+    if (pgs->current_point_valid) {
+	saved->current_point = pgs->current_point;
+	saved->subpath_start = pgs->subpath_start;
+	saved->current_point_valid = true;
+    }
+    return code;
 }
 
 /* Get the current path (for internal use only). */
@@ -412,8 +429,12 @@ gs_clippath(gs_state * pgs)
 
     gx_path_init_local(&cpath, pgs->path->memory);
     code = gx_cpath_to_path(pgs->clip_path, &cpath);
-    if (code >= 0)
+    if (code >= 0) {
 	code = gx_path_assign_free(pgs->path, &cpath);
+	pgs->current_point.x = fixed2float(pgs->path->position.x);
+	pgs->current_point.y = fixed2float(pgs->path->position.y);
+	pgs->current_point_valid = true;
+    }
     if (code < 0)
 	gx_path_free(&cpath, "gs_clippath");
     return code;

@@ -1,4 +1,5 @@
-/* Copyright (C) 1996, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsiparam.h,v 1.4 2005/12/13 16:57:21 jemarch Exp $ */
+/* $Id: gsiparam.h,v 1.5 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Image parameter definition */
 
 #ifndef gsiparam_INCLUDED
@@ -168,15 +169,22 @@ typedef struct gs_color_space_s gs_color_space;
 		 */\
 	gs_image_format_t format;\
 		/*\
-		 * Define the source color space (must be NULL for masks).\
-		 */\
-	const gs_color_space *ColorSpace;\
-		/*\
 		 * Define whether to use the drawing color as the\
 		 * "texture" for RasterOp.  For more information,\
 		 * see the discussion of RasterOp in Language.htm.\
 		 */\
-	bool CombineWithColor
+	bool CombineWithColor;\
+		/*\
+		 * Define the source color space (must be NULL for masks).\
+		 *\
+                 * Make the pointer the last element of the structure.\
+                 * Otherwise, the padding at the end overwrites the 1st\
+                 * member of the subclass, when the base structure is assigned\
+                 * to the subclass structure. Bugs 613909, 688725\
+                 */\
+	gs_color_space *ColorSpace
+
+
 typedef struct gs_pixel_image_s {
     gs_pixel_image_common;
 } gs_pixel_image_t;
@@ -258,7 +266,7 @@ void
    * (Decode is not initialized).
    */
     gs_pixel_image_t_init(gs_pixel_image_t * pim,
-			  const gs_color_space * color_space);
+			  gs_color_space * color_space);
 
 /*
  * Initialize an ImageType 1 image (or imagemask).  Also sets ImageMask,
@@ -272,7 +280,7 @@ void
  * Note that for init and init_adjust, adjust is only relevant if
  * pim->ImageMask is true.
  */
-void gs_image_t_init_adjust(gs_image_t * pim, const gs_color_space * pcs,
+void gs_image_t_init_adjust(gs_image_t * pim, gs_color_space * pcs,
 			    bool adjust);
 #define gs_image_t_init(pim, pcs)\
   gs_image_t_init_adjust(pim, pcs, true)

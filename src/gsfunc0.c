@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsfunc0.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gsfunc0.c,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Implementation of FunctionType 0 (Sampled) Functions */
 #include "math_.h"
 #include "gx.h"

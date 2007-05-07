@@ -1,4 +1,5 @@
-/* Copyright (C) 1991, 1992 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpjet.c,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $*/
+/* $Id: gdevpjet.c,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $*/
 /* H-P PaintJet, PaintJet XL, and DEC LJ250 drivers. */
 /* Thanks to Rob Reiss (rob@moray.berkeley.edu) for the PaintJet XL */
 /* modifications. */

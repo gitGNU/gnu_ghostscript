@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zimage.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: zimage.c,v 1.8 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Image operators */
 #include "math_.h"
 #include "memory_.h"
@@ -41,6 +41,7 @@
 #include "stream.h"
 #include "ifilter.h"		/* for stream exception handling */
 #include "iimage.h"
+#include "gxcspace.h"
 
 /* Forward references */
 private int zimage_data_setup(i_ctx_t *i_ctx_p, const gs_pixel_image_t * pim,
@@ -93,13 +94,26 @@ data_image_params(const gs_memory_t *mem,
 	return 1;		/* no data source */
     }
     if (pip->MultipleDataSources) {
-	long i, n = num_components + (has_alpha ? 1 : 0);
+	ref *ds = pip->DataSource;
+        long i, n = num_components + (has_alpha ? 1 : 0);
         if (!r_is_array(pds))
             return_error(e_typecheck);
 	if (r_size(pds) != n)
 	    return_error(e_rangecheck);
 	for (i = 0; i < n; ++i)
-	    array_get(mem, pds, i, &pip->DataSource[i]);
+	    array_get(mem, pds, i, &ds[i]);
+        if (r_type(&ds[0]) == t_string) {
+            /* We don't have a problem with the strings of different length
+             * but Adobe does and CET tast 12-02.ps reports this as an error.
+             */
+	    if (has_alpha)
+                n--;
+            for (i = 1; i < n; ++i) {
+                if (r_type(&ds[i]) == t_string && r_size(&ds[i]) != r_size(&ds[0])) {
+	            return_error(e_rangecheck);
+                }
+            }
+        }
     } else
 	pip->DataSource[0] = *pds;
     return 0;
@@ -109,15 +123,15 @@ data_image_params(const gs_memory_t *mem,
 int
 pixel_image_params(i_ctx_t *i_ctx_p, const ref *op, gs_pixel_image_t *pim,
 		   image_params *pip, int max_bits_per_component,
-		   bool has_alpha)
+		   bool has_alpha, gs_color_space *csp)
 {
     int num_components =
-	gs_color_space_num_components(gs_currentcolorspace(igs));
+	gs_color_space_num_components(csp);
     int code;
 
     if (num_components < 1)
 	return_error(e_rangecheck);	/* Pattern space not allowed */
-    pim->ColorSpace = gs_currentcolorspace(igs);
+    pim->ColorSpace = csp;
     code = data_image_params(imemory, op, (gs_data_image_t *) pim, pip, true,
 			     num_components, max_bits_per_component,
 			     has_alpha);
@@ -154,14 +168,28 @@ image1_setup(i_ctx_t * i_ctx_p, bool has_alpha)
     gs_image_t      image;
     image_params    ip;
     int             code;
+    gs_color_space *csp = gs_currentcolorspace(igs);
+    extern bool CPSI_mode;
 
-    gs_image_t_init(&image, gs_currentcolorspace(igs));
+    /* Adobe interpreters accept sampled images when the current color
+     * space is a pattern color space using the base color space instead
+     * of the pattern space. CET 12-07a-12
+     * If all conditions are not met the pattern color space goes through
+     * triggering a rangecheck error.
+     */
+    if (CPSI_mode && gs_color_space_num_components(csp) < 1) {
+       gs_color_space *bsp = csp->base_space;
+       if (bsp)
+         csp = bsp;
+    }
+
+    gs_image_t_init(&image, csp);
     code = pixel_image_params( i_ctx_p,
                                op,
                                (gs_pixel_image_t *)&image,
                                &ip,
 			       (level2_enabled ? 16 : 8),
-                               has_alpha );
+                               has_alpha, csp);
     if (code < 0)
 	return code;
 
@@ -195,8 +223,6 @@ zimagemask1(i_ctx_t *i_ctx_p)
 			     &ip, true, 1, 1, false);
     if (code < 0)
 	return code;
-    if (ip.MultipleDataSources)
-	return_error(e_rangecheck);
     return zimage_setup(i_ctx_p, (gs_pixel_image_t *)&image, &ip.DataSource[0],
 			true, 1);
 }
@@ -243,6 +269,7 @@ zimage_data_setup(i_ctx_t *i_ctx_p, const gs_pixel_image_t * pim,
     gs_image_enum *penum;
     int px;
     const ref *pp;
+    bool string_sources = true;
 
     check_estack(inumpush + 2);	/* stuff above, + continuation + proc */
     make_int(EBOT_NUM_SOURCES(esp), num_sources);
@@ -279,6 +306,7 @@ zimage_data_setup(i_ctx_t *i_ctx_p, const gs_pixel_image_t * pim,
 			    break;
 			}
 		}
+		string_sources = false;
 		/* falls through */
 	    case t_string:
 		if (r_type(pp) != r_type(sources)) {
@@ -290,11 +318,14 @@ zimage_data_setup(i_ctx_t *i_ctx_p, const gs_pixel_image_t * pim,
 		break;
 	    default:
 		if (!r_is_proc(sources)) {
-    		    if (pie != NULL)
-		        gx_image_end(pie, false);    /* Clean up pie */
+    		    static const char ds[] = "DataSource";
+                    if (pie != NULL)
+                        gx_image_end(pie, false);    /* Clean up pie */
+                    gs_errorinfo_put_pair(i_ctx_p, ds, sizeof(ds) - 1, pp);
 		    return_error(e_typecheck);
 		}
 		check_proc(*pp);
+		string_sources = false;
 	}
 	*ep = *pp;
     }
@@ -305,8 +336,8 @@ zimage_data_setup(i_ctx_t *i_ctx_p, const gs_pixel_image_t * pim,
     if ((penum = gs_image_enum_alloc(imemory_local, "image_setup")) == 0)
 	return_error(e_VMerror);
     code = gs_image_enum_init(penum, pie, (const gs_data_image_t *)pim, igs);
-    if (code != 0) {		/* error, or empty image */
-	int code1 = gs_image_cleanup_and_free_enum(penum);
+    if (code != 0 || (pie->skipping && string_sources)) {		/* error, or empty image */
+	int code1 = gs_image_cleanup_and_free_enum(penum, igs);
 
 	if (code >= 0)		/* empty image */
 	    pop(npop);
@@ -558,7 +589,7 @@ image_cleanup(i_ctx_t *i_ctx_p)
     es_ptr ep_top = esp + NUM_PUSH(EBOT_NUM_SOURCES(esp)->value.intval);
     gs_image_enum *penum = r_ptr(ep_top, gs_image_enum);
     
-    return gs_image_cleanup_and_free_enum(penum);
+    return gs_image_cleanup_and_free_enum(penum, igs);
 }
 
 /* ------ Initialization procedure ------ */

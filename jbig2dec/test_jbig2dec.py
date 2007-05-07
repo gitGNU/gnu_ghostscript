@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 # this is the testtest script for jbig2dec
-# $Id: test_jbig2dec.py,v 1.2 2006/03/02 21:27:55 Arabidopsis Exp $
+# $Id: test_jbig2dec.py,v 1.3 2007/05/07 11:22:12 Arabidopsis Exp $
 
 import os, re
 import unittest

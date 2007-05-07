@@ -1,4 +1,5 @@
-/* Copyright (C) 1994-2003 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevmac.c,v 1.4 2005/05/02 00:03:22 Arabidopsis Exp $ */
+/* $Id: gdevmac.c,v 1.5 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* MacOS bitmap output device. This code is superceeded by
    the newer gsapi_* interface and the DISPLAY device. Please
    use that instead. See doc/API.htm for more information */
@@ -824,8 +825,8 @@ mac_strip_tile_rectangle(register gx_device *dev, const gx_strip_bitmap *tile,
 	
 	if (color_0 != gx_no_color_index && color_1 != gx_no_color_index) {
 		// monochrome tiles
-		if (phase_x != 0 ||Êphase_y != 0 || tile->shift != 0 ||
-				tile->strip_height != 0 ||Êtile->strip_shift != 0) {
+		if (phase_x != 0 ||ï¿½phase_y != 0 || tile->shift != 0 ||
+				tile->strip_height != 0 ||ï¿½tile->strip_shift != 0) {
 			return gx_default_strip_tile_rectangle(dev, tile, x, y, w, h, color_0, color_1, phase_x, phase_y);
 		}
 		

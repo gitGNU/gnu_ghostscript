@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1993, 1996, 1997 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsfont.h,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gsfont.h,v 1.8 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Generic font and font cache interface */
 
 #ifndef gsfont_INCLUDED

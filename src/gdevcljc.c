@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -15,8 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-
-/* $Id: gdevcljc.c,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gdevcljc.c,v 1.6 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /*
  * H-P Color LaserJet 5/5M contone device; based on the gdevclj.c.
  */

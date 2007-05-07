@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 1997, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gserror.h,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gserror.h,v 1.6 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Error return macros */
 
 #ifndef gserror_INCLUDED
@@ -29,10 +30,12 @@ int gs_log_error(int, const char *, int);
 #define gs_note_error(err) gs_log_error(err, __FILE__, __LINE__)
 #define return_error(err) return gs_note_error(err)
 
-
+# if defined(__WIN32__)
+#define __func__ __FUNCTION__
+# endif
 
 /*
- * Error reporting macros
+ * Error reporting macros.
  * 
  */
 

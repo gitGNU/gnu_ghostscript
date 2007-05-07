@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zcolor.c,v 1.7 2006/06/16 12:55:05 Arabidopsis Exp $ */
+/* $Id: zcolor.c,v 1.8 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Color operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -106,7 +106,7 @@ zcurrentcolor(i_ctx_t * i_ctx_p)
         int     ival = (int)rval;
 
         /* the following handles indexed color spaces */
-        if (rval == ival)
+        if (rval == ival && pcs->type->index == gs_color_space_index_Indexed)
             make_int(op, ival);
         else
             make_real(op, rval);
@@ -307,25 +307,28 @@ private int
 zsetdevcspace(i_ctx_t * i_ctx_p)
 {
 
-    gs_color_space  cs;
+    gs_color_space  *pcs;
     int             code;
 
     switch((gs_color_space_index)osp->value.intval) {
       default:  /* can't happen */
       case gs_color_space_index_DeviceGray:
-	gs_cspace_init_DeviceGray(imemory, &cs);
+	pcs = gs_cspace_new_DeviceGray(imemory);
         break;
 
       case gs_color_space_index_DeviceRGB:
-        gs_cspace_init_DeviceRGB(imemory, &cs);
+        pcs = gs_cspace_new_DeviceRGB(imemory);
         break;
 
       case gs_color_space_index_DeviceCMYK:
-        gs_cspace_init_DeviceCMYK(imemory, &cs);
+        pcs = gs_cspace_new_DeviceCMYK(imemory);
         break;
     }
-    if ((code = gs_setcolorspace(igs, &cs)) >= 0)
+    if (pcs == NULL)
+	return_error(e_VMerror);
+    if ((code = gs_setcolorspace(igs, pcs)) >= 0)
         pop(1);
+    rc_decrement_only(pcs, "zsetdevcspace");
     return code;
 }
 

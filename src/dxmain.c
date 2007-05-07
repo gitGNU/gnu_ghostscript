@@ -1,4 +1,5 @@
-/* Copyright (C) 2001 Ghostgum Software Pty Ltd.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -15,15 +16,14 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-
-/* $Id: dxmain.c,v 1.7 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: dxmain.c,v 1.8 2007/05/07 11:21:43 Arabidopsis Exp $ */
 
 /* dxmain.c */
 /* 
  * Ghostscript frontend which provides a graphical window 
  * using Gtk+.  Load time linking to libgs.so 
  * Compile using
- *    gcc `pkg-config --cflags gtk+-2.0` -o gs dxmain.c -lgs `pkg-config --libs gtk+-2.0`
+ *    gcc `gtk-config --cflags` -o gs dxmain.c -lgs `gtk-config --libs`
  *
  * The ghostscript library needs to be compiled with
  *  gcc -fPIC -g -c -Wall file.c

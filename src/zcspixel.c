@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zcspixel.c,v 1.5 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: zcspixel.c,v 1.6 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* DevicePixel color space support */
 #include "ghost.h"
 #include "oper.h"
@@ -34,7 +34,7 @@ zsetdevicepixelspace(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
     ref depth;
-    gs_color_space cs;
+    gs_color_space *pcs;
     int code;
 
     check_read_type(*op, t_array);
@@ -42,10 +42,12 @@ zsetdevicepixelspace(i_ctx_t *i_ctx_p)
 	return_error(e_rangecheck);
     array_get(imemory, op, 1L, &depth);
     check_type_only(depth, t_integer);
-    code = gs_cspace_init_DevicePixel(imemory, &cs, (int)depth.value.intval);
+    code = gs_cspace_new_DevicePixel(imemory, &pcs, (int)depth.value.intval);
     if (code < 0)
 	return code;
-    code = gs_setcolorspace(igs, &cs);
+    code = gs_setcolorspace(igs, pcs);
+    /* release reference from construction */
+    rc_decrement_only(pcs, "zsetseparationspace");
     if (code >= 0)
 	pop(1);
     return code;

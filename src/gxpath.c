@@ -15,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/*$Id: gxpath.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/*$Id: gxpath.c,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Internal path management routines for Ghostscript library */
 #include "gx.h"
 #include "gserrors.h"
@@ -57,6 +56,7 @@ public_st_path();
 private_st_path_segments();
 private_st_segment();
 private_st_line();
+private_st_dash();
 private_st_line_close();
 private_st_curve();
 private_st_subpath();
@@ -649,6 +649,28 @@ gx_path_add_lines_notes(gx_path *ppath, const gs_fixed_point *ppts, int count,
     return code;
 }
 
+/* Add a dash to the current path (lineto with a small length). */
+/* Only for internal use of the stroking algorithm. */
+int
+gx_path_add_dash_notes(gx_path * ppath, fixed x, fixed y, fixed dx, fixed dy, segment_notes notes)
+{
+    subpath *psub;
+    dash_segment *lp;
+
+    if (ppath->bbox_set)
+	check_in_bbox(ppath, x, y);
+    path_open();
+    path_alloc_segment(lp, dash_segment, &st_dash, s_dash, notes,
+		       "gx_dash_add_dash");
+    path_alloc_link(lp);
+    path_set_point(lp, x, y);
+    lp->tangent.x = dx;
+    lp->tangent.y = dy;
+    path_update_draw(ppath);
+    trace_segment("[P]", (segment *) lp);
+    return 0;
+}
+
 /* Add a rectangle to the current path. */
 /* This is a special case of adding a closed polygon. */
 int
@@ -998,6 +1020,14 @@ gx_print_segment(const segment * pseg)
 	case s_line:
 	    dprintf3("%s: %1.4f %1.4f lineto\n", out, px, py);
 	    break;
+	case s_dash:{
+    		const dash_segment *const pd = (const dash_segment *)pseg;
+
+		dprintf5("%s: %1.4f %1.4f %1.4f  %1.4f dash\n", out, 
+		    fixed2float(pd->pt.x), fixed2float(pd->pt.y), 
+		    fixed2float(pd->tangent.x), fixed2float(pd->tangent.y));
+		break;
+	    }
 	case s_line_close:{
 		const line_close_segment *const plc =
 		(const line_close_segment *)pseg;

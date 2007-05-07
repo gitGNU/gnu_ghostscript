@@ -20,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gstestutils.py,v 1.5 2006/06/16 12:55:32 Arabidopsis Exp $
+# $Id: gstestutils.py,v 1.6 2007/05/07 11:22:21 Arabidopsis Exp $
 
 # Utilities and documentation for Ghostscript testing using the Python
 # 'unittest' framework.
@@ -139,21 +139,30 @@ class GSTestCase(unittest.TestCase):
 # Define a TestResult class that recognizes the GSTestFailure exception
 # as described above, and a TestRunner class that uses it.
 # The TestResult class also accepts a list or tuple of strings as the
-# error message.
+# error message, and prints the verbose log in a single line to
+# reduce mangling in parallel runs.
 
 class _GSTextTestResult(unittest._TextTestResult):
+
+    def startTest(self, test):
+	unittest.TestResult.startTest(self, test)
 
     def addFailure(self, test, err):
         self.failures.append((test, err))
         if self.showAll:
 	    lines = err[1].args[0]
 	    if (len(lines) > 18) & (lines[0:18] == "non-zero exit code"):
-		self.stream.writeln("ERROR")
+		result = "ERROR"
 	    else:
-		self.stream.writeln("DIFFER")
+		result = "DIFFER"
+	    self.stream.writeln(self.getDescription(test) + " ... " + result)
         elif self.dots:
             self.stream.write("D")
-    
+
+    def addSuccess(self, test):
+	unittest.TestResult.addSuccess(self, test)
+	self.stream.writeln(self.getDescription(test) + " ... ok")
+
     def printErrorList(self, flavor, errors):
         handoff = []
         for test, err in errors:

@@ -1,4 +1,5 @@
-/* Copyright (C) 1990, 1996, 1997, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: ibnum.h,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: ibnum.h,v 1.6 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Encoded number definitions and support */
 /* Requires stream.h */
 
@@ -79,6 +79,6 @@ int sdecode_number(const byte *, int, ref *);
 int sdecodeshort(const byte *, int);
 uint sdecodeushort(const byte *, int);
 long sdecodelong(const byte *, int);
-float sdecodefloat(const byte *, int);
+int sdecode_float(const byte *, int, float *);
 
 #endif /* ibnum_INCLUDED */

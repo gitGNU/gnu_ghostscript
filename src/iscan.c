@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,13 +15,13 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: iscan.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: iscan.c,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Token scanner for Ghostscript interpreter */
 #include "ghost.h"
 #include "memory_.h"
+#include "string_.h"
 #include "stream.h"
 #include "ierrors.h"
 #include "btoken.h"		/* for ref_binary_object_format */
@@ -178,23 +179,31 @@ CLEAR_MARKS_PROC(scanner_clear_marks)
 {
     scanner_state *const ssptr = vptr;
 
+    r_clear_attrs(&ssptr->s_file, l_mark);
     r_clear_attrs(&ssarray, l_mark);
+    r_clear_attrs(&ssptr->s_error.object, l_mark);
 }
 private 
 ENUM_PTRS_WITH(scanner_enum_ptrs, scanner_state *ssptr) return 0;
 case 0:
+    ENUM_RETURN_REF(&ssptr->s_file);
+case 1:
+    ENUM_RETURN_REF(&ssptr->s_error.object);
+case 2:
     if (ssptr->s_scan_type == scanning_none ||
 	!ssptr->s_da.is_dynamic
 	)
 	ENUM_RETURN(0);
     return ENUM_STRING2(ssptr->s_da.base, da_size(&ssptr->s_da));
-case 1:
+case 3:
     if (ssptr->s_scan_type != scanning_binary)
 	return 0;
     ENUM_RETURN_REF(&ssarray);
 ENUM_PTRS_END
 private RELOC_PTRS_WITH(scanner_reloc_ptrs, scanner_state *ssptr)
 {
+    RELOC_REF_VAR(ssptr->s_file);
+    r_clear_attrs(&ssptr->s_file, l_mark);
     if (ssptr->s_scan_type != scanning_none && ssptr->s_da.is_dynamic) {
 	gs_string sda;
 
@@ -209,6 +218,8 @@ private RELOC_PTRS_WITH(scanner_reloc_ptrs, scanner_state *ssptr)
 	RELOC_REF_VAR(ssarray);
 	r_clear_attrs(&ssarray, l_mark);
     }
+    RELOC_REF_VAR(ssptr->s_error.object);
+    r_clear_attrs(&ssptr->s_error.object, l_mark);
 }
 RELOC_PTRS_END
 /* Structure type */
@@ -216,20 +227,70 @@ public_st_scanner_state();
 
 /* Initialize a scanner. */
 void
-scanner_state_init_options(scanner_state *sstate, int options)
+scanner_init_options(scanner_state *sstate, const ref *fop, int options)
 {
+    ref_assign(&sstate->s_file, fop);
     sstate->s_scan_type = scanning_none;
     sstate->s_pstack = 0;
     sstate->s_options = options;
+    SCAN_INIT_ERROR(sstate);
+}
+void scanner_init_stream_options(scanner_state *sstate, stream *s,
+				 int options)
+{
+    /*
+     * The file 'object' will never be accessed, but it must be in correct
+     * form for the GC.
+     */
+    ref fobj;
+
+    make_file(&fobj, a_read, 0, s);
+    scanner_init_options(sstate, &fobj, options);
+}
+
+/*
+ * Return the "error object" to be stored in $error.command instead of
+ * --token--, if any, or <0 if no special error object is available.
+ */
+int
+scanner_error_object(i_ctx_t *i_ctx_p, const scanner_state *pstate,
+		     ref *pseo)
+{
+    if (!r_has_type(&pstate->s_error.object, t__invalid)) {
+	ref_assign(pseo, &pstate->s_error.object);
+	return 0;
+    }
+    if (pstate->s_error.string[0]) {
+	int len = strlen(pstate->s_error.string);
+
+	if (pstate->s_error.is_name) {
+	    int code = name_ref(imemory, (const byte *)pstate->s_error.string, len, pseo, 1);
+
+	    if (code < 0)
+		return code;
+	    r_set_attrs(pseo, a_executable); /* Adobe compatibility */
+	    return 0;
+	} else {
+	    byte *estr = ialloc_string(len, "scanner_error_object");
+
+	    if (estr == 0)
+		return -1;		/* VMerror */
+	    memcpy(estr, (const byte *)pstate->s_error.string, len);
+	    make_string(pseo, a_all | icurrent_space, len, estr);
+	    return 0;
+	}
+    }
+    return -1;			/* no error object */
 }
 
 /* Handle a scan_Refill return from scan_token. */
 /* This may return o_push_estack, 0 (meaning just call scan_token again), */
 /* or an error code. */
 int
-scan_handle_refill(i_ctx_t *i_ctx_p, const ref * fop, scanner_state * sstate,
-		   bool save, bool push_file, op_proc_t cont)
+scan_handle_refill(i_ctx_t *i_ctx_p, scanner_state * sstate,
+		   bool save, op_proc_t cont)
 {
+    const ref *const fop = &sstate->s_file;
     stream *s = fptr(fop);
     uint avail = sbufavailable(s);
     int status;
@@ -253,9 +314,8 @@ scan_handle_refill(i_ctx_t *i_ctx_p, const ref * fop, scanner_state * sstate,
 	case INTC:
 	case CALLC:
 	    {
-		ref rstate[2];
+		ref rstate[1];
 		scanner_state *pstate;
-		int nstate = (push_file ? 2 : 1);
 
 		if (save) {
 		    pstate =
@@ -266,16 +326,9 @@ scan_handle_refill(i_ctx_t *i_ctx_p, const ref * fop, scanner_state * sstate,
 		    *pstate = *sstate;
 		} else
 		    pstate = sstate;
-		/* If push_file is true, we want to push the file on the */
-		/* o-stack before the state, for the continuation proc. */
-		/* Since the refs passed to s_handle_read_exception */
-		/* are pushed on the e-stack, we must ensure they are */
-		/* literal, and also pass them in the opposite order! */
 		make_istruct(&rstate[0], 0, pstate);
-		rstate[1] = *fop;
-		r_clear_attrs(&rstate[1], a_executable);
 		return s_handle_read_exception(i_ctx_p, status, fop,
-					       rstate, nstate, cont);
+					       rstate, 1, cont);
 	    }
     }
     /* No more data available, but no exception.  How can this be? */
@@ -348,6 +401,7 @@ scan_comment(i_ctx_t *i_ctx_p, ref *pref, scanner_state *pstate,
 
 /* Read a token from a string. */
 /* Update the string if succesful. */
+/* Store the error object in i_ctx_p->error_object if not. */
 int
 scan_string_token_options(i_ctx_t *i_ctx_p, ref * pstr, ref * pref,
 			  int options)
@@ -361,8 +415,8 @@ scan_string_token_options(i_ctx_t *i_ctx_p, ref * pstr, ref * pref,
 	return_error(e_invalidaccess);
     s_init(s, NULL);
     sread_string(s, pstr->value.bytes, r_size(pstr));
-    scanner_state_init_options(&state, options | SCAN_FROM_STRING);
-    switch (code = scan_token(i_ctx_p, s, pref, &state)) {
+    scanner_init_stream_options(&state, s, options | SCAN_FROM_STRING);
+    switch (code = scan_token(i_ctx_p, pref, &state)) {
 	default:		/* error or comment */
 	    if (code < 0)
 		break;
@@ -381,6 +435,8 @@ scan_string_token_options(i_ctx_t *i_ctx_p, ref * pstr, ref * pref,
 	case scan_EOF:
 	    break;
     }
+    if (code < 0)
+	scanner_error_object(i_ctx_p, &state, &i_ctx_p->error_object);
     return code;
 }
 
@@ -393,8 +449,9 @@ scan_string_token_options(i_ctx_t *i_ctx_p, ref * pstr, ref * pref,
  * as well as for scan_Refill.
  */
 int
-scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
+scan_token(i_ctx_t *i_ctx_p, ref * pref, scanner_state * pstate)
 {
+    stream *const s = pstate->s_file.value.pfile;
     ref *myref = pref;
     int retcode = 0;
     int c;
@@ -409,8 +466,6 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
 
 #define sreturn(code)\
   { retcode = gs_note_error(code); goto sret; }
-#define sreturn_no_error(code)\
-  { scan_end_inline(); return(code); }
 #define if_not_spush1()\
   if ( osp < ostop ) osp++;\
   else if ( (retcode = ref_stack_push(&o_stack, 1)) >= 0 )\
@@ -420,7 +475,13 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
   if ( osp >= osbot ) osp--;\
   else ref_stack_pop(&o_stack, 1)
     int max_name_ctype =
-    (recognize_btokens()? ctype_name : ctype_btoken);
+	(recognize_btokens()? ctype_name : ctype_btoken);
+    /*
+     * The following is a hack so that ^D will be self-delimiting in files
+     * (to compensate for bugs in some PostScript-generating applications)
+     * but not in strings (to match CPSI on the CET).
+     */
+    int ctrld = (pstate->s_options & SCAN_FROM_STRING ? 0x04 : 0xffff);
 
 #define scan_sign(sign, ptr)\
   switch ( *ptr ) {\
@@ -428,9 +489,12 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
     case '+': sign = 1; ptr++; break;\
     default: sign = 0;\
   }
+#define refill2_back(styp,nback)\
+  BEGIN sptr -= nback; scan_type = styp; goto pause; END
 #define ensure2_back(styp,nback)\
-  if ( sptr >= endptr ) { sptr -= nback; scan_type = styp; goto pause; }
+  if ( sptr >= endptr ) refill2_back(styp,nback)
 #define ensure2(styp) ensure2_back(styp, 1)
+#define refill2(styp) refill2_back(styp, 1)
     byte s1[2];
     const byte *const decoder = scan_char_decoder;
     int status;
@@ -470,7 +534,7 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
 	switch (scan_type) {
 	    case scanning_binary:
 		retcode = (*sstate.s_ss.binary.cont)
-		    (i_ctx_p, s, myref, &sstate);
+		    (i_ctx_p, myref, &sstate);
 		scan_begin_inline();
 		if (retcode == scan_Refill)
 		    goto pause;
@@ -490,7 +554,9 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
     /* scan_type == scanning_none. */
     pstack = pstate->s_pstack;
     pdepth = pstate->s_pdepth;
+    ref_assign(&sstate.s_file, &pstate->s_file);
     sstate.s_options = pstate->s_options;
+    SCAN_INIT_ERROR(&sstate);
     scan_begin_inline();
     /*
      * Loop invariants:
@@ -506,7 +572,9 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
 	case char_EOL:
 	case char_NULL:
 	    goto top;
-        case 0x4:	/* ^D is a self-delimiting token */
+	case 0x04:		/* see ctrld above */
+	    if (c == ctrld)	/* treat as ordinary name char */
+		goto begin_name;
 	case '[':
 	case ']':
 	    s1[0] = (byte) c;
@@ -681,7 +749,13 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
 	    }
 	    break;
 	case '/':
-	    ensure2(scanning_none);
+	    /*
+	     * If the last thing in the input is a '/', don't try to read
+	     * any more data.
+	     */
+	    if (sptr >= endptr && s->end_status != EOFC) {
+		refill2(scanning_none);
+	    }
 	    c = scan_getc();
 	    if (!PDFScanRules && (c == '/')) {
 		name_type = 2;
@@ -706,6 +780,8 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
 		     * that handled these specially.)
 		     */
 		case ctype_other:
+		    if (c == ctrld) /* see above */
+			goto do_name;
 		    da.base = da.limit = daptr = 0;
 		    da.is_dynamic = false;
 		    goto nx;
@@ -865,7 +941,7 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
 #undef case4
 	    if (recognize_btokens()) {
 		scan_end_inline();
-		retcode = scan_binary_token(i_ctx_p, s, myref, &sstate);
+		retcode = scan_binary_token(i_ctx_p, myref, &sstate);
 		scan_begin_inline();
 		if (retcode == scan_Refill)
 		    goto pause;
@@ -953,10 +1029,11 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
 	case 'z':
 	case '|':
 	case '~':
+	  begin_name:
 	    /* Common code for scanning a name. */
 	    /* try_number and name_type are already set. */
-	    /* We know c has ctype_name (or maybe ctype_btoken) */
-	    /* or is a digit. */
+	    /* We know c has ctype_name (or maybe ctype_btoken, */
+	    /* or is ^D) or is a digit. */
 	    name_type = 0;
 	    try_number = false;
 	  do_name:
@@ -972,7 +1049,7 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
 		    if (sptr >= endp1)	/* stop 1 early! */
 			goto dyn_name;
 		}
-		while (decoder[*++sptr] <= max_name_ctype);	/* digit or name */
+		while (decoder[*++sptr] <= max_name_ctype || *sptr == ctrld);	/* digit or name */
 	    }
 	    /* Name ended within the buffer. */
 	    daptr = (byte *) sptr;
@@ -997,7 +1074,7 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
 	    /* Enter here to continue scanning a name. */
 	    /* daptr must be set. */
 	  cont_name:scan_begin_inline();
-	    while (decoder[c = scan_getc()] <= max_name_ctype) {
+	    while (decoder[c = scan_getc()] <= max_name_ctype || c == ctrld) {
 		if (daptr == da.limit) {
 		    retcode = dynamic_grow(&da, daptr,
 					   name_max_string);
@@ -1014,8 +1091,10 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
 		*daptr++ = c;
 	    }
 	  nx:switch (decoder[c]) {
-		case ctype_btoken:
 		case ctype_other:
+		    if (c == ctrld) /* see above */
+			break;
+		case ctype_btoken:
 		    scan_putback();
 		    break;
 		case ctype_space:
@@ -1102,10 +1181,13 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
 		    {
 			ref *pvalue;
 
-			if (!r_has_type(myref, t_name))
+			if (!r_has_type(myref, t_name) ||
+			    (pvalue = dict_find_name(myref)) == 0) {
+			    ref_assign(&sstate.s_error.object, myref);
+			    r_set_attrs(&sstate.s_error.object,
+				a_executable); /* Adobe compatibility */
 			    sreturn(e_undefined);
-			if ((pvalue = dict_find_name(myref)) == 0)
-			    sreturn(e_undefined);
+			}
 			if (pstack != 0 &&
 			    r_space(pvalue) > ialloc_space(idmemory)
 			    )
@@ -1116,6 +1198,7 @@ scan_token(i_ctx_t *i_ctx_p, stream * s, ref * pref, scanner_state * pstate)
     }
   sret:if (retcode < 0) {
 	scan_end_inline();
+	pstate->s_error = sstate.s_error;
 	if (pstack != 0) {
 	    if (retcode == e_undefined)
 		*pref = *osp;	/* return undefined name as error token */

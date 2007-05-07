@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zdevice.c,v 1.6 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: zdevice.c,v 1.7 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Device-related operators */
 #include "string_.h"
 #include "ghost.h"
@@ -25,6 +25,8 @@
 #include "ialloc.h"
 #include "idict.h"
 #include "igstate.h"
+#include "imain.h"
+#include "imemory.h"
 #include "iname.h"
 #include "interp.h"
 #include "iparam.h"
@@ -32,6 +34,7 @@
 #include "gsmatrix.h"
 #include "gsstate.h"
 #include "gxdevice.h"
+#include "gxalloc.h"
 #include "gxgetbit.h"
 #include "store.h"
 
@@ -317,6 +320,9 @@ znulldevice(i_ctx_t *i_ctx_p)
     return 0;
 }
 
+extern void print_resource_usage(const gs_main_instance *, gs_dual_memory_t *,
+                     const char *);
+
 /* <num_copies> <flush_bool> .outputpage - */
 private int
 zoutputpage(i_ctx_t *i_ctx_p)
@@ -326,11 +332,21 @@ zoutputpage(i_ctx_t *i_ctx_p)
 
     check_type(op[-1], t_integer);
     check_type(*op, t_boolean);
+#ifdef PSI_INCLUDED
+    code = ps_end_page_top(imemory,
+			   (int)op[-1].value.intval, op->value.boolval);
+#else
     code = gs_output_page(igs, (int)op[-1].value.intval,
 			  op->value.boolval);
+#endif
     if (code < 0)
 	return code;
     pop(2);
+    if (gs_debug[':']) {
+	gs_main_instance *minst = get_minst_from_memory((gs_memory_t *)i_ctx_p->memory.current->non_gc_memory);
+
+	print_resource_usage(minst, &(i_ctx_p->memory), "Outputpage");
+    }
     return 0;
 }
 
@@ -418,14 +434,20 @@ zsetdevice(i_ctx_t *i_ctx_p)
 {
     gx_device *dev = gs_currentdevice(igs);
     os_ptr op = osp;
-    int code;
+    int code = 0;
 
     check_write_type(*op, t_device);
     if (dev->LockSafetyParams) {	  /* do additional checking if locked  */
         if(op->value.pdevice != dev) 	  /* don't allow a different device    */
 	    return_error(e_invalidaccess);
     }
+#ifndef PSI_INCLUDED
+    /* the language switching build shouldn't install a new device
+       here.  The language switching machinery installs a shared
+       device. */
+
     code = gs_setdevice_no_erase(igs, op->value.pdevice);
+#endif
     if (code < 0)
 	return code;
     make_bool(op, code != 0);	/* erase page if 1 */

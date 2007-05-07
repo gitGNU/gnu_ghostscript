@@ -62,7 +62,7 @@
 /*
  * Image Information Program
  *
- * $Id: imginfo.c,v 1.3 2006/06/16 18:21:39 Arabidopsis Exp $
+ * $Id: imginfo.c,v 1.4 2007/05/07 11:22:24 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -94,6 +94,7 @@ typedef enum {
 
 static void usage(void);
 static void cmdinfo(void);
+static void errprint(jas_error_t err, char *msg);
 
 /******************************************************************************\
 *
@@ -128,8 +129,12 @@ int main(int argc, char **argv)
 	char *fmtname;
 
 	if (jas_init()) {
+		errprint(0, "error: cannot initialize jasper library\n");
 		abort();
 	}
+
+	/* set our error callback */
+	jas_set_error_cb(errprint);
 
 	cmdname = argv[0];
 
@@ -221,3 +226,9 @@ static void usage()
 	jas_eprintf("[-f image_file]\n");
 	exit(EXIT_FAILURE);
 }
+
+static void errprint(jas_error_t err, char *msg)
+{
+	fprintf(stderr, "%s", msg);
+}
+

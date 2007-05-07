@@ -15,9 +15,8 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
-/*$Id: gswts.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/*$Id: gswts.c,v 1.6 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Screen generation for Well Tempered Screening. */
 #include "stdpre.h"
 #include <stdlib.h> /* for malloc */
@@ -121,9 +120,6 @@ typedef struct {
     int k;
     int l;
 } wts_vec_t;
-
-private int
-gs_wts_to_buf(const wts_screen_t *ws, byte **pbuf);
 
 private void
 wts_vec_set(wts_vec_t *wv, int u, int v, int k, int l)

@@ -1,5 +1,5 @@
 @echo off
-@rem $Id: ps2pdf12.bat,v 1.2 2004/02/14 22:20:04 atai Exp $
+@rem $Id: ps2pdf12.bat,v 1.3 2007/05/07 11:22:07 Arabidopsis Exp $
 
 rem Convert PostScript to PDF 1.2 (Acrobat 3-and-later compatible).
 

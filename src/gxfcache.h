@@ -1,4 +1,5 @@
-/* Copyright (C) 1992, 1995, 1997, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gxfcache.h,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gxfcache.h,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Font and character cache definitions and procedures */
 /* Requires gsfont.h */
 
@@ -57,6 +57,10 @@ typedef struct gx_ttfReader_s gx_ttfReader;
 #ifndef ttfInterpreter_DEFINED
 #  define ttfInterpreter_DEFINED
 typedef struct ttfInterpreter_s ttfInterpreter;
+#endif
+#ifndef gx_ttfMemory_DEFINED
+#  define gx_ttfMemory_DEFINED
+typedef struct gx_ttfMemory_s gx_ttfMemory;
 #endif
 #ifndef gx_device_spot_analyzer_DEFINED
 #   define gx_device_spot_analyzer_DEFINED
@@ -175,6 +179,21 @@ struct cached_char_s {
     uint pair_index;		/* index of pair in mdata */
     gs_fixed_point subpix_origin; /* glyph origin offset modulo pixel */
 
+#ifdef GSLITE
+    /* GSLite API needs to be able to lock a cache entry from being
+       evicted. We do this by counting how many times the GSLite user
+       has "retained" the slot. The initial value of this is zero.
+       For normal ghostscript operation it will never be changed,
+       so it has no effect.
+
+       This is an ugly and ill conceived hack that was implemented
+       at the behest of a large customer. It is guarded by this ifdef
+       for a reason. We do not want our own code to depend on
+       this functionality.
+     */
+    int dont_evict;
+#endif
+
     /* The rest of the structure is the 'value'. */
     /* gx_cached_bits_common has width, height, raster, */
     /* shift (not used here), id. */
@@ -227,6 +246,11 @@ struct cached_char_s {
 /* Define the hash index for a (glyph, fm_pair) key. */
 #define chars_head_index(glyph, pair)\
   ((uint)(glyph) * 59 + (pair)->hash * 73)	/* scramble it a bit */
+
+#ifdef GSLITE
+void gx_retain_cached_char(cached_char *cc);
+void gx_release_cached_char(cached_char *cc);
+#endif
 
 /* ------ Character cache ------ */
 
@@ -291,6 +315,7 @@ struct gs_font_dir_s {
     /* An allocator for extension structures */
     gs_memory_t *memory;
     ttfInterpreter *tti;
+    gx_ttfMemory *ttm;
     /* User parameter GridFitTT. */
     uint grid_fit_tt;
     gx_device_spot_analyzer *san;
@@ -306,8 +331,8 @@ struct gs_font_dir_s {
 #define font_dir_do_ptrs(m)\
   /*m(-,orig_fonts)*/ m(0,scaled_fonts) m(1,fmcache.mdata)\
   m(2,ccache.table) m(3,ccache.mark_glyph_data)\
-  m(4,glyph_to_unicode_table) m(5,tti) m(6,san)
-#define st_font_dir_max_ptrs 7
+  m(4,glyph_to_unicode_table) m(5,tti) m(6,ttm) m(7,san)
+#define st_font_dir_max_ptrs 8
 
 /* Character cache procedures (in gxccache.c and gxccman.c) */
 int gx_char_cache_alloc(gs_memory_t * struct_mem, gs_memory_t * bits_mem,
@@ -326,9 +351,19 @@ int gx_lookup_fm_pair(gs_font * pfont, const gs_matrix *char_tm,
 int gx_add_fm_pair(register gs_font_dir * dir, gs_font * font, const gs_uid * puid,
 	       const gs_matrix * char_tm, const gs_log2_scale_point *log2_scale,
 	       bool design_grid, cached_fm_pair **ppair);
+int gx_fm_pair_attributes(gs_font_dir * dir,
+	       gs_font *font, cached_fm_pair *pair,
+	       const gs_matrix * char_tm, const gs_log2_scale_point *log2_scale,
+	       bool design_grid);
+int  gx_provide_fm_pair_attributes(gs_font_dir * dir,
+	       gs_font *font, cached_fm_pair *pair,
+	       const gs_matrix * char_tm, const gs_log2_scale_point *log2_scale,
+	       bool design_grid);
 int  gx_touch_fm_pair(gs_font_dir *dir, cached_fm_pair *pair);
 void gx_lookup_xfont(const gs_state *, cached_fm_pair *, int);
+void gs_clean_fm_pair(gs_font_dir * dir, cached_fm_pair * pair);
 int  gs_purge_fm_pair(gs_font_dir *, cached_fm_pair *, int);
-int  gs_purge_font_from_char_caches(gs_font_dir *, const gs_font *);
+int  gs_purge_font_from_char_caches(gs_font *);
+int  gs_purge_font_from_char_caches_completely(gs_font * font);
 
 #endif /* gxfcache_INCLUDED */

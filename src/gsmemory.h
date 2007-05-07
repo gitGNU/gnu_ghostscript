@@ -1,4 +1,5 @@
-/* Copyright (C) 1993, 1996, 1997, 1998, 1999, 2001 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsmemory.h,v 1.5 2006/03/08 12:30:25 Arabidopsis Exp $ */
+/* $Id: gsmemory.h,v 1.6 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Client interface for memory allocation */
 
 /*
@@ -313,7 +314,7 @@ typedef struct gs_memory_procs_s {
      */
 
 #define gs_memory_proc_object_type(proc)\
-  gs_memory_type_ptr_t proc(gs_memory_t *mem, const void *obj)
+  gs_memory_type_ptr_t proc(const gs_memory_t *mem, const void *obj)
 #define gs_object_type(mem, obj)\
   (*(mem)->procs.object_type)(mem, obj)
     gs_memory_proc_object_type((*object_type));

@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 1996 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gp_unifn.c,v 1.5 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gp_unifn.c,v 1.6 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Unix-like file name syntax platform routines for Ghostscript */
 #include "gx.h"
 #include "gp.h"

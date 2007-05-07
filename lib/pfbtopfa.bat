@@ -1,5 +1,5 @@
 @echo off 
-@rem $Id: pfbtopfa.bat,v 1.1 2004/02/14 22:32:07 atai Exp $
+@rem $Id: pfbtopfa.bat,v 1.2 2007/05/07 11:22:07 Arabidopsis Exp $
 @rem Convert .pfb fonts to .pfa format
 
 if %1/==/ goto usage

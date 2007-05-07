@@ -15,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gstrans.c,v 1.6 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gstrans.c,v 1.7 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Implementation of transparency, other than rendering */
 #include "math_.h"
 #include "memory_.h"
@@ -28,6 +27,7 @@
 #include "gsutil.h"
 #include "gzstate.h"
 #include "gxdevcli.h"
+#include "gdevp14.h"
 
 #define PUSH_TS 0
 
@@ -177,6 +177,7 @@ gs_trans_group_params_init(gs_transparency_group_params_t *ptgp)
     ptgp->ColorSpace = 0;	/* bogus, but can't do better */
     ptgp->Isolated = false;
     ptgp->Knockout = false;
+    ptgp->image_with_SMask = false;
 }
 
 int
@@ -211,6 +212,7 @@ gs_begin_transparency_group(gs_state *pgs,
     params.pdf14_op = PDF14_BEGIN_TRANS_GROUP;
     params.Isolated = ptgp->Isolated;
     params.Knockout = ptgp->Knockout;
+    params.image_with_SMask = ptgp->image_with_SMask;
     params.opacity = pgs->opacity;
     params.shape = pgs->shape;
     params.blend_mode = pgs->blend_mode;

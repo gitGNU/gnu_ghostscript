@@ -1,4 +1,5 @@
-/* Copyright (C) 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zfcid0.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: zfcid0.c,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* CIDFontType 0 operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -477,6 +477,18 @@ zbuildfont9(i_ctx_t *i_ctx_p)
 				bf_UniqueID_ignored);
     if (code < 0)
 	goto fail;
+    if (code == 1) {
+	/* The font already has a FID, don't need to build it again. 
+	   Release FDArray and return normally.
+	   fixme: FDArray fonts are thrown for garbager.
+	   We're not safe to build them after 
+	   build_gs_simple_font(..., &pfont, ...),
+	   because a failure in building them would throw
+	   an underbuilt font with unclear consequences.
+	 */
+	ifree_object(FDArray, "buildfont9(FDarray)");
+	return 0;
+    }
     pfont->procs.enumerate_glyph = gs_font_cid0_enumerate_glyph;
     pfont->procs.glyph_outline = z9_glyph_outline;
     pfont->procs.glyph_info = z9_glyph_info;

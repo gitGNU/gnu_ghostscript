@@ -1,4 +1,5 @@
-/* Copyright (C) 1999, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfo.h,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gdevpdfo.h,v 1.7 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Internal definitions for "objects" for pdfwrite driver. */
 
 #ifndef gdevpdfo_INCLUDED

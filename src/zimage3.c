@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zimage3.c,v 1.5 2006/03/08 12:30:26 Arabidopsis Exp $ */
+/* $Id: zimage3.c,v 1.6 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* LanguageLevel 3 ImageTypes (3 & 4 - masked images) */
 #include "memory_.h"
 #include "ghost.h"
@@ -58,8 +58,8 @@ zimage3(i_ctx_t *i_ctx_p)
 	)
 	return_error(e_rangecheck);
     if ((code = pixel_image_params(i_ctx_p, pDataDict,
-				   (gs_pixel_image_t *)&image, &ip_data,
-				   12, false)) < 0 ||
+			(gs_pixel_image_t *)&image, &ip_data,
+			12, false, gs_currentcolorspace(igs))) < 0 ||
 	(mcode = code = data_image_params(imemory, pMaskDict, &image.MaskDict,
 				   &ip_mask, false, 1, 12, false)) < 0 ||
 	(code = dict_int_param(pDataDict, "ImageType", 1, 1, 0, &ignored)) < 0 ||
@@ -101,11 +101,11 @@ zimage4(i_ctx_t *i_ctx_p)
 
     gs_image4_t_init(&image, NULL);
     code = pixel_image_params(i_ctx_p, op, (gs_pixel_image_t *)&image, &ip,
-			      12, false);
+			      12, false, gs_currentcolorspace(igs));
     if (code < 0)
 	return code;
-    code = dict_int_array_check_param(op, "MaskColor", num_components * 2,
-				      colors, 0, e_rangecheck);
+    code = dict_int_array_check_param(imemory, op, "MaskColor",
+       num_components * 2, colors, 0, e_rangecheck);
     /* Clamp the color values to the unsigned range. */
     if (code == num_components) {
 	image.MaskColor_is_range = false;

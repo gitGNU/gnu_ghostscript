@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 1996, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: shcgen.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: shcgen.c,v 1.5 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Generate (bounded) Huffman code definitions from frequencies, */
 /* and tables from definitions. */
 #include "memory_.h"

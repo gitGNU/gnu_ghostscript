@@ -1,4 +1,5 @@
-/* Copyright (C) 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpxut.h,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gdevpxut.h,v 1.6 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Utilities for PCL XL generation */
 /* Requires gdevpxat.h, gdevpxen.h, gdevpxop.h */
 

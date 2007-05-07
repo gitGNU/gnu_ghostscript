@@ -1,4 +1,5 @@
-/* Copyright (C) 1990, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gstype1.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gstype1.c,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Adobe Type 1 charstring interpreter */
 #include "math_.h"
 #include "memory_.h"
@@ -99,7 +99,8 @@ gs_type1_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 			    gs_currentaligntopixels(pfont->dir));
 	    if (code < 0)
 	    	return code;
-	    code = t1_hinter__set_font_data(h, 1, pdata, pcis->no_grid_fitting);
+	    code = t1_hinter__set_font_data(h, 1, pdata, pcis->no_grid_fitting, 
+			    pcis->pfont->is_resource);
 	    if (code < 0)
 	    	return code;
 	    break;
@@ -260,8 +261,12 @@ gs_type1_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 		    code = gx_setcurrentpoint_from_path(pcis->pis, pcis->path);
 		    if (code < 0)
 			return code;
-		} else
+		} else {
+		    code = t1_hinter__end_subglyph(h);
+		    if (code < 0)
+			return code;
 		    pcis->seac_flag = true;
+		}
 		code = gs_type1_endchar(pcis);
 		if (code == 1) {
 		    /* do accent of seac */
@@ -294,6 +299,8 @@ gs_type1_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 
 		    if (pcis->seac_accent < 0) {
 			if (pcis->sb_set) {
+			    pcis->origin_offset.x = pcis->lsb.x - sbx;
+			    pcis->origin_offset.y = pcis->lsb.y - sby;
 			    sbx = pcis->lsb.x;
 			    sby = pcis->lsb.y;
 			}
@@ -301,10 +308,15 @@ gs_type1_interpret(gs_type1_state * pcis, const gs_glyph_data_t *pgd,
 			    wx = pcis->width.x;
 			    wy = pcis->width.y;
 			}
-		    }
+		    } else
+			pcis->base_lsb = sbx;
 		    code = t1_hinter__sbw(h, sbx, sby, wx, wy);
-                } else
-                    code = t1_hinter__sbw_seac(h, pcis->adxy.x, pcis->adxy.y);
+		} else {
+		    fixed accent_lsb = cs0;
+		    fixed overall_x_offset = pcis->compound_lsb.x + pcis->adxy.x - pcis->asb + accent_lsb - pcis->base_lsb;
+
+                    code = t1_hinter__sbw_seac(h, overall_x_offset, pcis->adxy.y);
+		}
 		if (code < 0)
 		    return code;
 		gs_type1_sbw(pcis, cs0, fixed_0, cs1, fixed_0);
@@ -318,29 +330,6 @@ rsbw:		/* Give the caller the opportunity to intervene. */
 		if (pcis->init_done < 0) {
 		    /* Finish init when we return. */
 		    pcis->init_done = 0;
-		} else {
-		    /*
-		     * Accumulate the side bearing now, but don't do it
-		     * a second time for the base character of a seac.
-		     */
-		    if (pcis->seac_accent >= 0) {
-			/*
-			 * As a special hack to work around a bug in
-			 * Fontographer, we deal with the (illegal)
-			 * situation in which the side bearing of the
-			 * accented character (save_lsbx) is different from
-			 * the side bearing of the base character (cs0/cs1).
-			 */
-			fixed dsbx = cs0 - pcis->save_lsb.x;
-			fixed dsby = cs1 - pcis->save_lsb.y;
-
-			if (dsbx | dsby) {
-			    pcis->lsb.x += dsbx;
-			    pcis->lsb.y += dsby;
-			    pcis->save_adxy.x -= dsbx;
-			    pcis->save_adxy.y -= dsby;
-			}
-		    }
 		}
 		return type1_result_sbw;
 	    case cx_escape:
@@ -387,7 +376,7 @@ rsbw:		/* Give the caller the opportunity to intervene. */
 		    case ce1_sbw:
                         if (!pcis->seac_flag)
                             code = t1_hinter__sbw(h, cs0, cs1, cs2, cs3);
-                        else
+                        else 
                             code = t1_hinter__sbw_seac(h, cs0 + pcis->adxy.x , cs1 + pcis->adxy.y);
 			if (code < 0)
 			    return code;
@@ -516,8 +505,8 @@ rsbw:		/* Give the caller the opportunity to intervene. */
 			    return_error(code);
 			goto pushed;
 		    case ce1_setcurrentpoint:
-			cs0 += pcis->adxy.x;
-			cs1 += pcis->adxy.y;
+			cs0 += pcis->adxy.x + pcis->origin_offset.x;
+			cs1 += pcis->adxy.y + pcis->origin_offset.y;
 			t1_hinter__setcurrentpoint(h, cs0, cs1);
 			cnext;
 		    default:

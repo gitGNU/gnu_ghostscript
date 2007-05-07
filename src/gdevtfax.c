@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevtfax.c,v 1.6 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gdevtfax.c,v 1.7 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* TIFF and TIFF/fax devices */
 #include "gdevprn.h"
 #include "gdevtifs.h"
@@ -293,7 +294,7 @@ tiffg32d_print_page(gx_device_printer * dev, FILE * prn_stream)
     stream_CFE_state state;
     tiff_mono_directory dir;
 
-    gdev_fax_init_state(&state, (gx_device_fax *)dev);
+    gdev_fax_init_fax_state(&state, (gx_device_fax *)dev);
     state.K = (dev->y_pixels_per_inch < 100 ? 2 : 4);
     state.EndOfLine = true;
     state.EncodedByteAlign = true;
@@ -309,7 +310,7 @@ tiffg4_print_page(gx_device_printer * dev, FILE * prn_stream)
     stream_CFE_state state;
     tiff_mono_directory dir;
 
-    gdev_fax_init_state(&state, (gx_device_fax *)dev);
+    gdev_fax_init_fax_state(&state, (gx_device_fax *)dev);
     state.K = -1;
     /*state.EncodedByteAlign = false; *//* no fill_bits option for T6 */
     dir = dir_mono_template;

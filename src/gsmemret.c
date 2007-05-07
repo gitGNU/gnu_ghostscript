@@ -1,4 +1,5 @@
-/* Copyright (C) 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsmemret.c,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gsmemret.c,v 1.6 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Retrying memory allocator */
 
 #include "gx.h"
@@ -267,7 +268,7 @@ gs_forward_object_size(gs_memory_t * mem, const void *ptr)
     DO_FORWARD(return target->procs.object_size(target, ptr));
 }
 private gs_memory_type_ptr_t
-gs_forward_object_type(gs_memory_t * mem, const void *ptr)
+gs_forward_object_type(const gs_memory_t * mem, const void *ptr)
 {
     DO_FORWARD(return target->procs.object_type(target, ptr));
 }

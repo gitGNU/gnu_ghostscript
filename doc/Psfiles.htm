@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>.ps files distributed with Ghostscript</title>
-<!-- $Id: Psfiles.htm,v 1.7 2006/06/16 12:55:14 Arabidopsis Exp $ -->
+<!-- $Id: Psfiles.htm,v 1.8 2007/05/07 11:22:13 Arabidopsis Exp $ -->
 <!-- Originally: psfiles.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -381,6 +381,13 @@ href="Fonts.htm#Precompiling">how to do this</a>.
 <dt><a href="../lib/gs_agl.ps"><tt>gs_agl.ps</tt></a>
 <dd>Contains the mapping from Adobe glyph names to Unicode values, used to
 support TrueType fonts.
+</dl>
+
+<dl>
+<dt><a href="../lib/gs_cet.ps"><tt>gs_cet.ps</tt></a>
+<dd>Sets a number of alternate defaults to make Ghostscript
+behave more like Adobe CPSI. Useful for running the CET conformance
+test suite.
 </dl>
 
 <dl>
@@ -986,6 +993,12 @@ These files are found in the <b><tt>lib</tt></b> subdirectory of
 the Ghostscript source distribution.
 
 <dl>
+<dt><a href="../lib/jobseparator.ps"><tt>jobseparator.ps</tt></a>
+<dd>Convience file containing a job separator sequence for use
+when passing files with -dJOBSERVER.
+</dl>
+ 
+<dl>
 <dt><a href="../lib/lines.ps"><tt>lines.ps</tt></a>
 <dd>A test program for line joins and caps.
 </dl>
@@ -1016,20 +1029,20 @@ the Ghostscript source distribution.
 <hr>
 
 <p>
-<small>Copyright &copy; 1996, 2000 Aladdin Enterprises.  All rights
-reserved.</small>
+<small>Copyright &copy; 2000-2006 artofcode LLC.  All rights reserved.</small>
 
 <p>
 This software is provided AS-IS with no warranty, either express or
 implied.
 
-This software is distributed under license and may not be copied,
-modified or distributed except as expressly authorized under the terms
-of the license contained in the file LICENSE in this distribution.
-
+This software is distributed under license and may not be copied, modified
+or distributed except as expressly authorized under the terms of that
+license.  Refer to licensing information at http://www.artifex.com/
+or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.51, 31 December 2005
+<small>Ghostscript version 8.56, 14 March 2007
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

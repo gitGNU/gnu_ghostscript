@@ -1,5 +1,6 @@
-/* Copyright (C) 2002 artofcode LLC.  All rights reserved.
-
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
+  
   This file is part of GNU ghostscript
 
   GNU ghostscript is free software; you can redistribute it and/or modify it under
@@ -14,9 +15,8 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
-/* $Id: gsserial.h,v 1.3 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gsserial.h,v 1.4 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* some general structures useful for converting objects to serial form */
 
 #ifndef gsserial_INCLUDED

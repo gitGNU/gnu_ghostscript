@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1990, 1991, 1996, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevsnfb.c,v 1.4 2005/12/13 16:57:19 jemarch Exp $*/
+/* $Id: gdevsnfb.c,v 1.5 2007/05/07 11:21:47 Arabidopsis Exp $*/
 /* Sony News frame buffer driver for GhostScript */
 #include "gdevprn.h"
 #define prn_dev ((gx_device_printer *)dev) /* needed in 5.31 et seq */

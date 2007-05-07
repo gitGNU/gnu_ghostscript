@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -15,8 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-
-/* $Id: files.h,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: files.h,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Definitions for interpreter support for file objects */
 /* Requires stream.h */
 
@@ -52,21 +52,6 @@ bool zis_stdin(const stream *);
 extern stream *const invalid_file_entry;
 /* Make an invalid file object. */
 void make_invalid_file(ref *);
-
-/*
- * Macros for checking file validity.
- * NOTE: in order to work around a bug in the Borland 5.0 compiler,
- * you must use file_is_invalid rather than !file_is_valid.
- */
-#define file_is_valid(svar,op)\
-  (svar = fptr(op), (svar->read_id | svar->write_id) == r_size(op))
-#define file_is_invalid(svar,op)\
-  (svar = fptr(op), (svar->read_id | svar->write_id) != r_size(op))
-#define check_file(svar,op)\
-  BEGIN\
-    check_type(*(op), t_file);\
-    if ( file_is_invalid(svar, op) ) return_error(e_invalidaccess);\
-  END
 
 /*
  * If a file is open for both reading and writing, its read_id, write_id,
@@ -152,8 +137,6 @@ int filter_open(const char *, uint, ref *, const stream_procs *,
 void make_stream_file(ref *, stream *, const char *);
 
 	/* for ziodev.c */
-int file_close_finish(stream *);
-int file_close_disable(stream *);
 int file_close_file(stream *);
 
 	/* for gsmain.c, interp.c */
@@ -171,8 +154,4 @@ int zreadline_from(stream *s, gs_string *buf, gs_memory_t *bufmem,
 	/* for zfile.c */
 int zfilelineedit(i_ctx_t *i_ctx_p);
 
-	/* for zfproc.c */
-int zneedstdin(i_ctx_t *i_ctx_p);
-int zneedstdout(i_ctx_t *i_ctx_p);
-int zneedstderr(i_ctx_t *i_ctx_p);
 #endif /* files_INCLUDED */

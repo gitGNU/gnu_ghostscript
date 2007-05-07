@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 1995 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevtifs.c,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gdevtifs.c,v 1.5 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* TIFF-writing substructure */
 #include "stdio_.h"
 #include "time_.h"
@@ -207,7 +208,7 @@ gdev_tiff_begin_page(gx_device_printer * pdev, gdev_tiff_state * tifs,
 
 	strncpy(std_values.softwareValue, gs_product, maxSoftware);
 	std_values.softwareValue[maxSoftware - 1] = 0;
-	sprintf(revs, " %1.2f", gs_revision / 100.0);
+	sprintf(revs, " %1.2f", gs_revision / 10000.0);
 	strncat(std_values.softwareValue, revs,
 		maxSoftware - strlen(std_values.softwareValue) - 1);
 	std_entries.Software.count =

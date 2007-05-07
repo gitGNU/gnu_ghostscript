@@ -1,4 +1,5 @@
-/* Copyright (C) 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsmemraw.h,v 1.5 2006/03/08 12:30:24 Arabidopsis Exp $ */
+/* $Id: gsmemraw.h,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* Client interface for "raw memory" allocator */
 
 /* Initial version 02/03/1998 by John Desrosiers (soho@crl.com) */

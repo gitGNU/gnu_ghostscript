@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: gspcolor.h,v 1.5 2005/12/13 16:57:23 jemarch Exp $ */
+/* $Id: gspcolor.h,v 1.6 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Client interface to Pattern color */
 
 #ifndef gspcolor_INCLUDED
@@ -53,6 +53,10 @@
 #ifndef gs_pattern_type_DEFINED
 #  define gs_pattern_type_DEFINED
 typedef struct gs_pattern_type_s gs_pattern_type_t;
+#endif
+#ifndef gs_matrix_DEFINED
+#  define gs_matrix_DEFINED
+typedef struct gs_matrix_s gs_matrix;
 #endif
 
 #define gs_pattern_template_common\

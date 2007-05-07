@@ -1,4 +1,5 @@
-/* Copyright (C) 1997, 1998, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsargs.h,v 1.4 2005/12/13 16:57:20 jemarch Exp $ */
+/* $Id: gsargs.h,v 1.5 2007/05/07 11:21:44 Arabidopsis Exp $ */
 /* Command line argument list management */
 
 #ifndef gsargs_INCLUDED
@@ -62,6 +63,8 @@ void arg_init(arg_list * pal, const char **argv, int argc,
  * This may also be used (once) to "unread" the last argument.
  * If mem != 0, it is used to free the string when we are done with it.
  * Return 0 on success, non-zero on failure
+ * NB: pushing args has the side effect of changing the parsing algoritm to
+ * space delimited instead of argument string delimited.
  */
 int arg_push_memory_string(arg_list * pal, char *str, gs_memory_t * mem);
 

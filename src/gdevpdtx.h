@@ -1,4 +1,5 @@
-/* Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdtx.h,v 1.5 2006/06/16 12:55:05 Arabidopsis Exp $ */
+/* $Id: gdevpdtx.h,v 1.6 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Shared implementation definitions for pdfwrite text and fonts */
 
 #ifndef gdevpdtx_INCLUDED

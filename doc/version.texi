@@ -1,2 +1,0 @@
-@set EDITION First
-@set GSVER 8.16

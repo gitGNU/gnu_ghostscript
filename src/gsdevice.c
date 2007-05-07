@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gsdevice.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gsdevice.c,v 1.8 2007/05/07 11:21:47 Arabidopsis Exp $ */
 /* Device operators for Ghostscript library */
 #include "ctype_.h"
 #include "memory_.h"		/* for memchr, memcpy */
@@ -572,22 +573,31 @@ gx_device_set_margins(gx_device * dev, const float *margins /*[4] */ ,
     }
 }
 
-
-/* Handle 90 and 270 degree rotation of the Tray
- * Device must support TrayOrientation in its InitialMatrix and get/put params
- */
 private void
-gx_device_TrayOrientationRotate(gx_device *dev)
+gx_device_set_hwsize_from_media(gx_device *dev)
 {
-  if ( dev->TrayOrientation == 90 || dev->TrayOrientation == 270) {
-    /* page sizes don't rotate, height and width do rotate 
-     * HWResolution, HWSize, and MediaSize parameters interact, 
-     * and must be set before TrayOrientation
-     */
-    int tmp = dev->height;
-    dev->height = dev->width;
-    dev->width = tmp;
-  }
+    int rot = (dev->LeadingEdge & 1);
+    floatp rot_media_x = rot ? dev->MediaSize[1] : dev->MediaSize[0];
+    floatp rot_media_y = rot ? dev->MediaSize[0] : dev->MediaSize[1];
+
+    dev->width = (int)(rot_media_x * dev->HWResolution[0] / 72.0 + 0.5);
+    dev->height = (int)(rot_media_y * dev->HWResolution[1] / 72.0 + 0.5);
+}
+
+private void
+gx_device_set_media_from_hwsize(gx_device *dev)
+{
+    int rot = (dev->LeadingEdge & 1);
+    floatp x = dev->width * 72.0 / dev->HWResolution[0];
+    floatp y = dev->height * 72.0 / dev->HWResolution[1];
+
+    if (rot) {
+	dev->MediaSize[1] = x;
+	dev->MediaSize[0] = y;
+    } else {
+	dev->MediaSize[0] = x;
+	dev->MediaSize[1] = y;
+    }
 }
 
 /* Set the width and height, updating MediaSize to remain consistent. */
@@ -596,9 +606,7 @@ gx_device_set_width_height(gx_device * dev, int width, int height)
 {
     dev->width = width;
     dev->height = height;
-    dev->MediaSize[0] = width * 72.0 / dev->HWResolution[0];
-    dev->MediaSize[1] = height * 72.0 / dev->HWResolution[1];
-    gx_device_TrayOrientationRotate(dev);
+    gx_device_set_media_from_hwsize(dev);
 }
 
 /* Set the resolution, updating width and height to remain consistent. */
@@ -607,9 +615,7 @@ gx_device_set_resolution(gx_device * dev, floatp x_dpi, floatp y_dpi)
 {
     dev->HWResolution[0] = x_dpi;
     dev->HWResolution[1] = y_dpi;
-    dev->width = (int)(dev->MediaSize[0] * x_dpi / 72.0 + 0.5);
-    dev->height = (int)(dev->MediaSize[1] * y_dpi / 72.0 + 0.5);
-    gx_device_TrayOrientationRotate(dev);
+    gx_device_set_hwsize_from_media(dev);
 }
 
 /* Set the MediaSize, updating width and height to remain consistent. */
@@ -618,9 +624,7 @@ gx_device_set_media_size(gx_device * dev, floatp media_width, floatp media_heigh
 {
     dev->MediaSize[0] = media_width;
     dev->MediaSize[1] = media_height;
-    dev->width = (int)(media_width * dev->HWResolution[0] / 72.0 + 0.499);
-    dev->height = (int)(media_height * dev->HWResolution[1] / 72.0 + 0.499);
-    gx_device_TrayOrientationRotate(dev);
+    gx_device_set_hwsize_from_media(dev);
 }
 
 /*

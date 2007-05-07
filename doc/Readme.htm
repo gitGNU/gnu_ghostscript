@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>Overview of Ghostscript</title>
-<!-- $Id: Readme.htm,v 1.7 2006/06/16 12:55:14 Arabidopsis Exp $ -->
+<!-- $Id: Readme.htm,v 1.8 2007/05/07 11:22:13 Arabidopsis Exp $ -->
 <!-- Originally: README -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -38,6 +38,7 @@ systems).
 <li><a href="#Theme_roadmap">Document roadmap by theme</a>
 <ul>
 <li><a href="#New_users">What should I read if I'm a new user?</a>
+<li><a href="#Two_Ghostscripts">GPL Ghostscript and commerical Ghostscript</a>
 <li><a href="#Before_building">Before building Ghostscript</a>
 <li><a href="#Not_a_new_user">What should I read if I'm not a new user?</a>
 <li><a href="#Developer">What if I'm a developer?</a>
@@ -73,7 +74,7 @@ PostScript, and PDF reference documentation</a>
 <blockquote><table cellpadding=0 cellspacing=0>
 <tr><td valign=top>
 <a href="#Changes">Changes.htm</a><br>
-<a href="#Copying">COPYING</a><br>
+<a href="#Commprod">Commprod.htm</a><br>
 <a href="#Fonts">Fonts.htm</a><br>
 <a href="#Hershey">Hershey.htm</a><br>
 <td>&nbsp;&nbsp;&nbsp;<td valign=top>
@@ -84,7 +85,7 @@ PostScript, and PDF reference documentation</a>
 <td>&nbsp;&nbsp;&nbsp;<td valign=top>
 <a href="#News">News.htm</a><br>
 <a href="#Psfiles">Psfiles.htm</a><br>
-<a href="#Public">Public.htm</a><br>
+<a href="#COPYING">COPYING</a><br>
 </table></blockquote>
 <li>Primarily for developers:
 <blockquote><table cellpadding=0 cellspacing=0>
@@ -98,11 +99,13 @@ PostScript, and PDF reference documentation</a>
 <a href="#Htmstyle">Htmstyle.htm</a><br>
 <a href="#Issues">Issues.htm</a><br>
 <a href="#Lib">Lib.htm</a><br>
+<a href="#Maintain">Maintain.htm</a><br>
 <a href="#Projects">Projects.htm</a><br>
 <td>&nbsp;&nbsp;&nbsp;<td valign=top>
 <a href="#Ps-style">Ps-style.htm</a><br>
 <a href="#Release">Release.htm</a><br>
 <a href="#Source">Source.htm</a><br>
+<a href="#Testing">Testing.htm</a><br>
 <a href="#Xfonts">Xfonts.htm</a><br>
 </table></blockquote>
 </ul>
@@ -129,19 +132,23 @@ reference material.
 <li>detailed information about <a href="Devices.htm">specific
 devices</a> that Ghostscript can use for output
 
-<li>information about <a href="Bug-info.htm">reporting problems</a>--but
-remember that Ghostscript comes with <strong>NO WARRANTY</strong> and <strong>NO
-SUPPORT</strong>
-
 <li>more detailed information about how to use Ghostscript under
 Unix with <tt>lpr</tt> <a href="Unix-lpr.htm">as a filter</a>
 for printing
 
+<li>for information about known problems or to report a new one,
+please visit <a href="http://bugs.ghostscript.com/">bugs.ghostscript.com</a> 
+but remember that free versions of Ghostscript come with with
+<strong>NO WARRANTY</strong> and <strong>NO SUPPORT</strong>
 </ul>
 
+<h3><a name="Two_Ghostscripts"></a>GPL and commercial Ghostscript</h3> 
+<p>
+GPL Ghostscript, Artifex Ghostscript and AFPL Ghostscript are <a href="Commprod.htm">different releases</a>.
+
 <ul>
-<li>additional information about <a href="Public.htm">AFPL Ghostscript
-releases</a> that is not relevant to GNU Ghostscript releases.
+<li>additional information about <a href="COPYING">GPL Ghostscript
+releases</a> that is not relevant to commercial versions.
 </ul>
 
 <p>
@@ -216,8 +223,9 @@ Ghostscript and platform-supplied fonts
 </ul>
 
 <p>
-If you are considering distributing Ghostscript in conjunction with a commercial product, you should read the
-<a href="Copying.htm">license</a> carefully, and you should also read
+If you are considering distributing GPL Ghostscript in conjunction 
+with a commercial product, you should read the
+<a href="COPYING">license</a> carefully, and you should also read
 
 <ul>
 <li> additional clarification of the circumstances under which Ghostscript
@@ -227,7 +235,7 @@ can be distributed <a href="Commprod.htm">with a commercial product</a>
 <p>
 If you intend to use Ghostscript in the form of a dynamic link library
 (DLL) under OS/2 or Microsoft Windows or in the form of shared object
-under GNU/Linux, read
+under Linux, read
 
 <ul>
 <li> documentation on <a href="API.htm">Ghostscript Interpreter API</a>
@@ -273,7 +281,7 @@ Ghostscript's HTML-based documentation.
 <p>
 Ghostscript has a home page on the World Wide Web with helpful information
 such as the FAQ (Frequently Asked Questions) and a list of known problems
-and workarounds for the current AFPL Ghostscript release (in the
+and workarounds for the current GPL Ghostscript release (in the
 "Obtaining" file for that release):
 
 <blockquote>
@@ -314,14 +322,6 @@ class="offsite">Adobe's ftp
 site</a>, but not necessarily under the same filenames.
 
 <h3><a name="Web_other"></a>Other material on the WWW</h3>
-<P>
-GNU Ghostscript has a home page on the World Wide Web with helpful
-information. Pleave visit:
-
-<blockquote>
-<a href="http://www.gnu.org/software/ghostscript/" 
-class="offsite">http://www.gnu.org/software/ghostscript/</a>
-</blockquote>
 
 <p>
 Much other material about Ghostscript is available on the World Wide Web,
@@ -346,7 +346,7 @@ with explanations of the contents.
 <dl>
 <dt><a name="API"></a><a href="API.htm"><b>API.htm</b></a>
 <dd> On MS-Windows and OS/2, Ghostscript is compiled as a dynamic 
-link library (DLL).  On GNU/Linux, Ghostscript can be compiled as
+link library (DLL).  On Linux, Ghostscript can be compiled as
 a shared object.  This describes how to use it.
 For developers.
 </dl>
@@ -367,15 +367,7 @@ pre-release, generated mechanically from the CVS logs. For developers.
 <dl>
 <dt><a name="Commprod"></a><a href="Commprod.htm"><b>Commprod.htm</b></a>
 <dd> The conditions under which Ghostscript may be distributed in a
-commercial context.  See also the <a href="#Public">Aladdin Free Public
-License</a>.
-</dl>
-
-<dl>
-<dt><a name="Copying"></a><a href="COPYING"><b>COPYING</b></a>
-<dd> The text of the GNU 
-<a href="http://www.gnu.org/copyleft/gpl.html">General Public License</a>,
-the copyright terms under which GNU Ghostscript is available.
+commercial context.  See also the <a href="#COPYING">GNU General Public License</a>.
 </dl>
 
 <dl>
@@ -487,6 +479,10 @@ operations in the PostScript language and in Adobe Portable Document Format
 (PDF). For developers.
 </dl>
 
+<dl>
+<dt><a name="Maintain"></a><a href="Maintain.htm"><b>Maintain.htm</b></a>
+<dd> Assorted Ghostscript maintenance procedures. For developers.
+</dl>
 
 <dl>
 <dt><a name="Make"></a><a href="Make.htm"><b>Make.htm</b></a>
@@ -551,6 +547,12 @@ programs, and sample printable files.
 </dl>
 
 <dl>
+<dt><a name="COPYING"></a><a href="COPYING"><b>COPYING</b></a>
+<dd> The GNU General Public License, which states the conditions for using
+and redistributing GPL Ghostscript.
+</dl>
+
+<dl>
 <dt><a name="Readme"></a><b>Readme.htm</b>
 <dd> This document.
 </dl>
@@ -567,6 +569,12 @@ distribution.
 <dd> A guide to the Ghostscript source code, for development and debugging.
 </dl>
 
+<dl>
+<dt><a name="Testing"></a><a href="Testing.htm"><b>Testing.htm</b></a>
+<dd> Documentation for using the test scripts located in the <a
+href="../toolbin/tests">toolbin/tests</a> directory, and conventions for
+writing new testing scripts.
+</dl>
 
 <dl>
 <dt><a name="Unix-lpr"></a><a href="Unix-lpr.htm"><b>Unix-lpr.htm</b></a>
@@ -595,23 +603,20 @@ font-rendering mechanism, for developers.
 <hr>
 
 <p>
-<small>Copyright &copy; 1996-2002 artofcode LLC. All rights reserved.</small>
+<small>Copyright &copy; 2000-2006 artofcode LLC.  All rights reserved.</small>
 
 <p>
 This software is provided AS-IS with no warranty, either express or
-implied. That is, this program is distributed in the hope that it will 
-be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-General Public License for more details
+implied.
 
-You should have received a copy of the GNU General Public License along
-with this program; if not, write to the Free Software Foundation, Inc.,
-59 Temple Place, Suite 330, Boston, MA, 02111-1307.
- 
-
+This software is distributed under license and may not be copied, modified
+or distributed except as expressly authorized under the terms of that
+license.  Refer to licensing information at http://www.artifex.com/
+or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.16, 9 May 2005
+<small>Ghostscript version 8.56, 14 March 2007
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

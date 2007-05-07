@@ -1,4 +1,5 @@
-/* Copyright (C) 1996, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdf.c,v 1.7 2006/06/16 12:55:04 Arabidopsis Exp $ */
+/* $Id: gdevpdf.c,v 1.8 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* PDF-writing driver */
 #include "fcntl_.h"
 #include "memory_.h"
@@ -280,12 +281,12 @@ pdf_initialize_ids(gx_device_pdf * pdev)
     {
 	struct tm tms;
 	time_t t;
-	char buf[1+2+4+2+2+2+2+2+2+1+1]; /* (D:yyyymmddhhmmss)\0 */
+	char buf[1+2+4+2+2+2+2+2+2+1+1+7]; /* (D:yyyymmddhhmmssZhh'mm')\0 */
 
 	time(&t);
-	tms = *localtime(&t);
+	tms = *gmtime(&t);
 	sprintf(buf,
-		"(D:%04d%02d%02d%02d%02d%02d)",
+		"(D:%04d%02d%02d%02d%02d%02dZ)",
 		tms.tm_year + 1900, tms.tm_mon + 1, tms.tm_mday,
 		tms.tm_hour, tms.tm_min, tms.tm_sec);
 	cos_dict_put_c_key_string(pdev->Info, "/CreationDate", (byte *)buf,
@@ -732,7 +733,7 @@ pdf_print_orientation(gx_device_pdf * pdev, pdf_page_t *page)
 	    (page != NULL ? &page->text_rotation : &pdev->text_rotation);
 	int angle = -1;
 
-#define  Bug687800
+#define Bug687800
 #ifndef Bug687800 	/* Bug 687800 together with Bug687489.ps . */
 	const gs_point *pbox = &(page != NULL ? page : &pdev->pages[0])->MediaBox;
 
@@ -753,13 +754,22 @@ pdf_print_orientation(gx_device_pdf * pdev, pdf_page_t *page)
 		angle = 90;
 	}
 
-	/* If not combinable, prefer text rotation : */
 	if (angle < 0) {
+#define Bug688793
+#ifdef  Bug688793
+	/* If not combinable, prefer dsc rotation : */
+	    if (dsc_orientation >= 0)
+		angle = dsc_orientation * 90;
+	    else
+		angle = ptr->Rotate;
+#else
+	/* If not combinable, prefer text rotation : */
 	    if (ptr->Rotate >= 0)
 		angle = ptr->Rotate;
 #ifdef Bug687800
 	    else
 		angle = dsc_orientation * 90;
+#endif
 #endif
 	}
 
@@ -863,6 +873,11 @@ pdf_close_page(gx_device_pdf * pdev)
     page->dsc_info = pdev->page_dsc_info;
     if (page->dsc_info.orientation < 0)
 	page->dsc_info.orientation = pdev->doc_dsc_info.orientation;
+#ifdef Bug688793
+    if (page->dsc_info.viewing_orientation < 0)
+       page->dsc_info.viewing_orientation =
+           pdev->doc_dsc_info.viewing_orientation;
+#endif
     if (page->dsc_info.bounding_box.p.x >= page->dsc_info.bounding_box.q.x ||
 	page->dsc_info.bounding_box.p.y >= page->dsc_info.bounding_box.q.y
 	)
@@ -1129,9 +1144,14 @@ pdf_close(gx_device * dev)
 
     if (pdev->outlines_id != 0) {
 	/* depth > 0 is only possible for an incomplete outline tree. */
-	while (pdev->outline_depth > 0)
-	    pdfmark_close_outline(pdev);
-	pdfmark_close_outline(pdev);
+	while (pdev->outline_depth > 0) {
+	    code1 = pdfmark_close_outline(pdev);
+	    if (code >= 0)
+		code = code1;
+	}
+	code = pdfmark_close_outline(pdev);
+	if (code >= 0)
+	    code = code1;
 	pdf_open_obj(pdev, pdev->outlines_id);
 	pprintd1(s, "<< /Count %d", pdev->outlines_open);
 	pprintld2(s, " /First %ld 0 R /Last %ld 0 R >>\n",

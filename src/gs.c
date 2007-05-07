@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 1995, 1996, 1999 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -16,7 +17,7 @@
 
 */
 
-/* $Id: gs.c,v 1.7 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: gs.c,v 1.8 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* 'main' program for Ghostscript */
 #include "ghost.h"
 #include "imain.h"
@@ -71,12 +72,14 @@ main(int argc, char *argv[])
 {
     int exit_status, code;
     gs_main_instance *minst;
+    gs_memory_t *mem;
 
 #ifdef NEED_COMMIT_STACK   /* hack for bug in gcc 2.96 */
     commit_stack_pages();
 #endif
     exit_status = 0;
-    minst = gs_main_alloc_instance(gs_malloc_init(NULL));
+    mem = gs_malloc_init(NULL);
+    minst = gs_main_alloc_instance(mem);
     code = gs_main_init_with_args(minst, argc, argv);
     
 #ifdef RUN_STRINGS
@@ -120,6 +123,7 @@ main(int argc, char *argv[])
     }
 
     gs_to_exit_with_code(minst->heap, exit_status, code);
+    gs_malloc_release(mem);
 
     switch (exit_status) {
 	case 0:

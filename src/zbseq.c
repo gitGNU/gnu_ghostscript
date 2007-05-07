@@ -1,4 +1,5 @@
-/* Copyright (C) 1990, 2000 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: zbseq.c,v 1.4 2005/12/13 16:57:28 jemarch Exp $ */
+/* $Id: zbseq.c,v 1.5 2007/05/07 11:21:42 Arabidopsis Exp $ */
 /* Level 2 binary object sequence operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -117,7 +117,7 @@ zsetobjectformat(i_ctx_t *i_ctx_p)
  * representation, doing the dirty work of printobject and writeobject.
  * (The main control is in PostScript code, so that we don't have to worry
  * about interrupts or callouts in the middle of writing the various data
- * items.)  Note that this may or may not modify the 'unused' field.
+ * items.)  See encode_binary_token for more details.
  */
 
 private int

@@ -1,4 +1,5 @@
-/* Copyright (C) 1989, 2001 artofcode, LLC.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -18,7 +19,7 @@
 /* Portions Copyright (C) 1994-2000 Ghostgum Software Pty Ltd.  All rights reserved. */
 
 
-/* $Id: gsdll.c,v 1.6 2006/03/08 12:30:23 Arabidopsis Exp $ */
+/* $Id: gsdll.c,v 1.7 2007/05/07 11:21:45 Arabidopsis Exp $ */
 /* Dynamic Link Library interface for OS/2 and MS-Windows Ghostscript */
 /* front end to gs.c */
 

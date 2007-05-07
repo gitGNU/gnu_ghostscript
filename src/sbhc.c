@@ -1,4 +1,5 @@
-/* Copyright (C) 1994, 1995, 1996, 1998 Aladdin Enterprises.  All rights reserved.
+/* Copyright (C) 2001-2006 artofcode LLC.
+   All Rights Reserved.
   
   This file is part of GNU ghostscript
 
@@ -14,10 +15,9 @@
   ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-  
 */
 
-/* $Id: sbhc.c,v 1.4 2005/12/13 16:57:27 jemarch Exp $ */
+/* $Id: sbhc.c,v 1.5 2007/05/07 11:21:43 Arabidopsis Exp $ */
 /* Bounded Huffman code filters */
 #include "memory_.h"
 #include "stdio_.h"

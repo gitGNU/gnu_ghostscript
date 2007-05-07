@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: szlibe.c,v 1.5 2006/06/16 12:55:03 Arabidopsis Exp $ */
+/* $Id: szlibe.c,v 1.6 2007/05/07 11:21:46 Arabidopsis Exp $ */
 /* zlib encoding (compression) filter stream */
 #include "std.h"
 #include "strimpl.h"

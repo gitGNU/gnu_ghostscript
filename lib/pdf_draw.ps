@@ -1,14 +1,20 @@
 %    Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-% This software is provided AS-IS with no warranty, either express or
-% implied.
-% 
-% This software is distributed under license and may not be copied,
-% modified or distributed except as expressly authorized under the terms
-% of the license contained in the file LICENSE in this distribution.
-
-
-% $Id: pdf_draw.ps,v 1.6 2006/06/16 12:55:13 Arabidopsis Exp $
+%  This file is part of GNU ghostscript
+%
+%  GNU ghostscript is free software; you can redistribute it and/or modify it under
+%  the terms of the GNU General Public License as published by the Free Software
+%  Foundation; either version 2, or (at your option) any later version.
+%
+%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+%
+%  You should have received a copy of the GNU General Public License along with
+%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+%
+% $Id: pdf_draw.ps,v 1.7 2007/05/07 11:22:07 Arabidopsis Exp $
 % pdf_draw.ps
 % PDF drawing operations (graphics, text, and images).
 
@@ -270,10 +276,10 @@ drawopdict begin
 	} ifelse
 	% If inside a BT/ET block, we need to update the TextSaveMatrix
 	currentdict /TextSaveMatrix .knownget {
-	  cmmatrix TextSaveMatrix dup concatmatrix pop
+	  //cmmatrix exch dup concatmatrix pop
 	} if
-      } def
-  /i { 1 .min setflat } def
+      } bdef
+  /i { 1 .min setflat } bdef
   /J /setlinecap load def
   /d /setdash load def
   /j /setlinejoin load def
@@ -635,8 +641,12 @@ end
 	3 index
 	  dup dup type /arraytype eq { 0 get } if
 	  //csncompdict exch get exec mul
-	string readstring pop
-		% Stack: filepos /Indexed basespace hival table
+	string dup 3 1 roll readstring pop  % the string is padded with 0s
+        length 1 index length lt {
+          (   **** Warning: Short look-up table in the Indexed color space was padded with 0's.\n)
+          pdfformaterror
+        } if
+		% Stack: filepos /Indexed basespace hival table table'
 	5 -1 roll PDFfile exch setfileposition
     }
     if 4 array astore
@@ -960,6 +970,7 @@ end
     /ColorSpace DataDict /ColorSpace get def
   } ifelse
 } bdef
+
 /doimagesmask { % <imagemask> doimagesmask -
   PDFusingtransparency { currentdict /SMask knownoget } { false } ifelse {
     .begintransparencymaskimage
@@ -973,7 +984,9 @@ end
     end grestore
     PDFfile exch setfileposition
     0 .endtransparencymask
-    << /Subtype /Group /Isolated true >> 0 0 1 1 .begintransparencygroup
+    << /Subtype /Group /Isolated true 
+      /.image_with_SMask true % pdfwrite needs : see gs/src/ztrans.c, gs/src/gdevpdft.c 
+    >> 0 0 1 1 .begintransparencygroup
     doimage
     .endtransparencygroup
   } {
@@ -995,13 +1008,11 @@ end
     } if
   } ifelse
 		% Stack: datasource imagemask
-   % image and imagemask can be redefined in gs_init.ps to tweak interpolation
-   % after device-specific files are run. Don't bind them here.
    { currentdict end setfillstate { imagemask } }
    { ColorSpace setgcolorspace currentdict end setfillblend { image } }
   ifelse
   stopped {
-    pop
+    dup type /dicttype eq { pop } if % Sometimes image fails to restore the stack
     $error /errorname get dup /ioerror eq {
       pop (\n   **** Warning: File has insufficient data for an image.\n)
       pdfformaterror
@@ -1254,6 +1265,10 @@ end
 
 /drawwidget {			% <scalefactor> <annot> drawwidget -
   dup /AP knownoget {
+    dup /N known not {
+      (   **** Appearance dictionary (AP) lacks the mandatory normal (N) appearance.\n)
+      pdfformaterror
+    } if
     false
     [/N /R /D] {
 	% stack: scale annot appearance false key
