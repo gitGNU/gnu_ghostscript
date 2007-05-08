@@ -1,5 +1,5 @@
 
-This is GNU Ghostscript version 8.xx.
+This is GNU Ghostscript version 8.56.0.
 
 GNU Ghostscript is an interpreter for the Postscript language and the
 Adobe Portable Document Format (PDF), a set of C procedures (the
@@ -8,20 +8,18 @@ as primitive operations in the Postscript language and in PDF, and a
 set of utility programs that include the ability to convert PostScript
 to PDF.
 
-The main changes since the last release (8.01) are improved font
-rendering, offers significantly better PDF generation and handling
-over GNU ghostscript 8.01, support for running Ghostscript in job
-server mode, so that multiple jobs can be piped to a since executable
-instance as if it were a printer. Just invoke gs with the new
--dJOBSERVER switch and delimit jobs on stdin with ^D.  See the Usage
-documentation for more details. Many other bug fixes are also present.
+The main changes since the last release (8.55) are numerous bug fixes
+and improvements. Most significantly, comformance with the Quality Logic
+CET suite for Postscript has been improved, and a special 'gs_cet.ps'
+prefix file can be sent with a job to produce output closer to that of
+the reference implementation. In the GNU release, a patch number was added
+to avoid confusion with the GPL version of the package.
 
 GNU Ghostscript is based on the GPLed Ghostscript made by Ralph Giles,
 artofcode LLC and Artifex Software, Inc.  Thanks to Ralph's hard work
 for making this release of Ghostscript possible. Also thanks to Andy
 Tai from the GNU project for the hard work on GNU Ghostscript versions
-before 8.16. Also thanks to Didier Link from the GNU project for his
-maintenance effort that leaded to GNU Ghostscript 8.16.
+before 8.16.
 
 GNU Ghostscript is copyrighted by artofcode LLC and released under the
 GNU General Public License.  A copy of the license is included in the
@@ -30,7 +28,7 @@ the GNU General Public License by writing to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301 or
 on the World Wide Web at http://www.gnu.org/licenses/gpl.txt
 
-GNU Ghostscript is maintained by Didier Link (didier.link@wanadoo.fr)
+GNU Ghostscript is maintained by Didier Link (didier@famille-link.fr)
 and Jose E. Marchesi (jemarch@gnu.org).  For bugs or issues regarding
 the GNU version of Ghostscript, please send them to
 bug-ghostscript@gnu.org.  Please do not contact artofcode LLC or Ralph
@@ -43,6 +41,8 @@ ftp://ftp.gnu.org/gnu/ghostscript/
 
 and GNU ftp mirror sites worldwide.
 
+Didier Link
+didier@famille-link.fr
 
 Jose E. Marchesi
 jemarch@gnu.org

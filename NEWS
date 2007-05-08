@@ -1,0 +1,5 @@
+Version 8.56.0 main changes:
+
+* include all bugfixes and changes from GPL version 8.56
+* change the version numbering convention, add a patch number
+* add DMP printer drivers and ppds, thanks to Sahaya Darcius

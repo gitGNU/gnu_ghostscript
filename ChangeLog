@@ -27,3 +27,12 @@
 
 2006-11-27 Didier LINK <didier.link@wanadoo.fr>
 	* add DMP printer drivers and ppds, thanks to Sahaya Darcius
+
+2007-05-08 Didier Link <didier@famille-link.fr>
+	* lots of updates from GPL 8.56 version released by Artifex Software Inc.
+	* configure.ac, Makefile.in, src/imainarg.c, gscdefs.h: change version
+	numbering in the package to append a patch number
+	* src/version.mak: removed because is functionnalities was transfered
+	in the main Makefile
+	* AUTHORS, NEWS, install-sh, missing: added files
+	* new GNU version: 8.56.0
