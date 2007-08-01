@@ -4,9 +4,9 @@
 
 # This file is part of GNU ghostscript
 #
-# GNU ghostscript is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2, or (at your option) any later version.
+# GNU ghostscript is free software; you can redistribute it and/or
+# modify it under the terms of the version 2 of the GNU General Public
+# License as published by the Free Software Foundation.
 #
 # This software is provided AS-IS with no warranty, either express or
 # implied. That is, this program is distributed in the hope that it will 
@@ -23,7 +23,7 @@
 # This script requires GNU-compatible 'nm' and 'objdump' programs:
 # it has only been tested on (32- and 64-bit) x86 systems.
 
-# $Id: ocheck.py,v 1.1 2007/05/07 11:22:11 Arabidopsis Exp $
+# $Id: ocheck.py,v 1.2 2007/08/01 14:26:56 jemarch Exp $
 
 USAGE = """\
 Usage: python ocheck.py [<cwd>] <ld-script> (--exclude [from]:[to]* |

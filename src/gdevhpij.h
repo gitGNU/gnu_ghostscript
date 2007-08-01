@@ -6,9 +6,9 @@
  * HP Inkjet Server (hpijs).
  *
  * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * modify it under the terms of the 2.1 version of the GNU Lesser
+ * General Public License as published by the Free Software
+ * Foundation.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +21,7 @@
  */
 
 /* gdevhpij.h */
-/* $Id: gdevhpij.h,v 1.2 2005/05/02 00:03:22 Arabidopsis Exp $ */
+/* $Id: gdevhpij.h,v 1.3 2007/08/01 14:25:48 jemarch Exp $ */
 
 #ifndef gdevhpij_INCLUDED
 #define gdevhpij_INCLUDED

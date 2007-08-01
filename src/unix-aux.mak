@@ -4,8 +4,8 @@
 #  This file is part of GNU ghostscript
 #
 #  GNU ghostscript is free software; you can redistribute it and/or modify it under
-#  the terms of the GNU General Public License as published by the Free Software
-#  Foundation; either version 2, or (at your option) any later version.
+#  the terms of the version 2 of the GNU General Public License as published by the Free Software
+#  Foundation.
 #
 #  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
 #  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: unix-aux.mak,v 1.8 2007/05/07 11:21:44 Arabidopsis Exp $
+# $Id: unix-aux.mak,v 1.9 2007/08/01 14:26:46 jemarch Exp $
 # Partial makefile common to all Unix configurations.
 # This makefile contains the build rules for the auxiliary programs such as
 # echogs, and the 'platform' modules.

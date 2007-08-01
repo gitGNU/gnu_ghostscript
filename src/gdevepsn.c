@@ -3,9 +3,9 @@
   
   This file is part of GNU ghostscript
 
-  GNU ghostscript is free software; you can redistribute it and/or modify it under
-  the terms of the GNU General Public License as published by the Free Software
-  Foundation; either version 2, or (at your option) any later version.
+  GNU ghostscript is free software; you can redistribute it and/or
+  modify it under the terms of the version 2 of the GNU General Public
+  License as published by the Free Software Foundation.
 
   GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevepsn.c,v 1.7 2007/05/07 11:21:43 Arabidopsis Exp $*/
+/* $Id: gdevepsn.c,v 1.8 2007/08/01 14:25:47 jemarch Exp $*/
 /*
  * Epson (and similar) dot-matrix printer driver for Ghostscript.
  *

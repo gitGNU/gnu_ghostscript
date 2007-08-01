@@ -2,9 +2,9 @@
 # 
 # This file is part of GNU ghostscript
 #
-# GNU ghostscript is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2, or (at your option) any later version.
+# GNU ghostscript is free software; you can redistribute it and/or
+# modify it under the terms of the version 2 of the GNU General Public
+# License as published by the Free Software Foundation.
 #
 # This software is provided AS-IS with no warranty, either express or
 # implied. That is, this program is distributed in the hope that it will 
@@ -17,7 +17,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: contrib.mak,v 1.6 2006/11/27 10:16:31 Arabidopsis Exp $
+# $Id: contrib.mak,v 1.7 2007/08/01 14:25:42 jemarch Exp $
 # makefile for contributed device drivers.
 
 # Define the name of this makefile.

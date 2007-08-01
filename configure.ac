@@ -2,9 +2,9 @@ dnl Copyright (C) 2002-2004 artofcode LLC. All rights reserved.
 
 dnl This file is part of GNU ghostscript
 dnl 
-dnl GNU ghostscript is free software; you can redistribute it and/or modify it under
-dnl the terms of the GNU General Public License as published by the Free Software
-dnl Foundation; either version 2, or (at your option) any later version.
+dnl GNU ghostscript is free software; you can redistribute it and/or
+dnl modify it under the terms of the version 2 of the GNU General
+dnl Public License as published by the Free Software Foundation.
 dnl 
 dnl GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
 dnl ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
@@ -14,7 +14,7 @@ dnl You should have received a copy of the GNU General Public License along with
 dnl ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 dnl Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 dnl 
-dnl $Id: configure.ac,v 1.13 2007/05/07 21:45:07 Arabidopsis Exp $
+dnl $Id: configure.ac,v 1.14 2007/08/01 14:25:34 jemarch Exp $
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------

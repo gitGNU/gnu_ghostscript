@@ -3,8 +3,8 @@
 % This file is part of GNU ghostscript
 %
 % GNU ghostscript is free software; you can redistribute it and/or modify it under
-% the terms of the GNU General Public License as published by the Free Software
-% Foundation; either version 2, or (at your option) any later version.
+% the terms of the version 2 of the GNU General Public License as published by the Free Software
+% Foundation.
 %
 % This software is provided AS-IS with no warranty, either express or
 % implied. That is, this program is distributed in the hope that it will 
@@ -16,7 +16,7 @@
 % with this program; if not, write to the Free Software Foundation, Inc.,
 % 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 %
-% $Id: Latin1,v 1.3 2005/12/13 17:52:35 jemarch Exp $
+% $Id: Latin1,v 1.4 2007/08/01 14:25:35 jemarch Exp $
 % Decoding for mapping PS names to codes for renderers which cannot
 % retrive characters by names.
 

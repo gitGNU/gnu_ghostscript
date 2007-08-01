@@ -3,8 +3,8 @@
 # This file is part of GNU ghostscript
 #
 # GNU ghostscript is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2, or (at your option) any later version.
+# the terms of the version 2 of the GNU General Public License as published by the Free Software
+# Foundation.
 #
 # This software is provided AS-IS with no warranty, either express or
 # implied. That is, this program is distributed in the hope that it will 
@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: unix-gcc.mak,v 1.10 2007/05/07 21:45:07 Arabidopsis Exp $
+# $Id: unix-gcc.mak,v 1.11 2007/08/01 14:26:47 jemarch Exp $
 # makefile for Unix/gcc/X11 configuration.
 
 # ------------------------------- Options ------------------------------- #

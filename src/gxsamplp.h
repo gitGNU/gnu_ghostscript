@@ -3,9 +3,9 @@
   
   This file is part of GNU ghostscript
 
-  GNU ghostscript is free software; you can redistribute it and/or modify it under
-  the terms of the GNU General Public License as published by the Free Software
-  Foundation; either version 2, or (at your option) any later version.
+  GNU ghostscript is free software; you can redistribute it and/or
+  modify it under the terms of the version 2 of the GNU General Public
+  License as published by the Free Software Foundation.
 
   GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxsamplp.h,v 1.2 2007/05/07 11:21:46 Arabidopsis Exp $ */
+/* $Id: gxsamplp.h,v 1.3 2007/08/01 14:26:28 jemarch Exp $ */
 /* Templates for sample lookup and expansion */
 
 /* This module is allowed to include several times into a single .c file. 

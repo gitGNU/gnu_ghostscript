@@ -3,8 +3,8 @@
 % This file is part of GNU ghostscript
 %
 % GNU ghostscript is free software; you can redistribute it and/or modify it under
-% the terms of the GNU General Public License as published by the Free Software
-% Foundation; either version 2, or (at your option) any later version.
+% the terms of the version 2 of the GNU General Public License as published by the Free Software
+% Foundation.
 %
 % This software is provided AS-IS with no warranty, either express or
 % implied. That is, this program is distributed in the hope that it will 
@@ -16,7 +16,7 @@
 % with this program; if not, write to the Free Software Foundation, Inc.,
 % 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 %
-% $Id: Unicode,v 1.5 2007/05/07 11:22:22 Arabidopsis Exp $
+% $Id: Unicode,v 1.6 2007/08/01 14:25:35 jemarch Exp $
 % Unicode Decoding
 % Maps PS and TT names to Unicode UTF-16.
 

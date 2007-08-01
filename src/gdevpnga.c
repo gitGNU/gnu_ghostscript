@@ -3,9 +3,9 @@
   
   This file is part of GNU ghostscript
 
-  GNU ghostscript is free software; you can redistribute it and/or modify it under
-  the terms of the GNU General Public License as published by the Free Software
-  Foundation; either version 2, or (at your option) any later version.
+  GNU ghostscript is free software; you can redistribute it and/or
+  modify it under the terms of the version 2 of the GNU General Public
+  License as published by the Free Software Foundation.
 
   GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpnga.c,v 1.8 2007/05/07 21:45:07 Arabidopsis Exp $ */
+/* $Id: gdevpnga.c,v 1.9 2007/08/01 14:25:54 jemarch Exp $ */
 /* Test driver for PDF 1.4 transparency stuff */
 
 #include "gdevprn.h"
