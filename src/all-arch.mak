@@ -16,7 +16,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 #
-# $Id: all-arch.mak,v 1.10 2007/08/01 14:25:42 jemarch Exp $
+# $Id: all-arch.mak,v 1.11 2007/09/10 14:08:44 Arabidopsis Exp $
 #
 # Author:
 # 	Nelson H. F. Beebe
@@ -187,7 +187,7 @@ COMMON_ARGS		= DEVICE_DEVS_EXTRA='$(DEVICE_DEVS_EXTRA)' \
 			  JSRCDIR='$(JSRCDIR)' \
 			  PNGSRCDIR='$(PNGSRCDIR)' \
 			  PSRCDIR='$(PNGSRCDIR)' \
-			  PVERSION=10208 \
+			  PVERSION=10216 \
 			  SHARE_LIBPNG='$(SHARE_LIBPNG)' \
 			  SHARE_ZLIB='$(SHARE_ZLIB)' \
 			  XCFLAGS='$(XCFLAGS)' \

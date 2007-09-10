@@ -18,7 +18,7 @@
 # 
 # 
 
-# $Id: unix-gcc.mak,v 1.11 2007/08/01 14:26:47 jemarch Exp $
+# $Id: unix-gcc.mak,v 1.12 2007/09/10 14:08:40 Arabidopsis Exp $
 # makefile for Unix/gcc/X11 configuration.
 
 # ------------------------------- Options ------------------------------- #
@@ -159,7 +159,7 @@ JPEG_NAME=jpeg
 # See libpng.mak for more information.
 
 PSRCDIR=libpng
-PVERSION=10208
+PVERSION=10216
 
 # Choose whether to use a shared version of the PNG library, and if so,
 # what its name is.

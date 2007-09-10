@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpxen.h,v 1.8 2007/08/01 14:25:55 jemarch Exp $ */
+/* $Id: gdevpxen.h,v 1.9 2007/09/10 14:08:41 Arabidopsis Exp $ */
 /* Enumerated attribute value definitions for PCL XL */
 
 #ifndef gdevpxen_INCLUDED
@@ -313,11 +313,12 @@ typedef enum {
 
 typedef enum {
     eNoTreatment = 0,
-    eScreenMatch,
     eVivid,
-    eUnknown1,
-    eUnknown2,
-    eUnknown3,
+    eScreenMatch,
+    eText,
+    eOutofGamut,
+    eCIELabmatch1,
+    eCIELabmatch2,
     pxeColorTreatment_next
 } pxeColorTreatment;
     

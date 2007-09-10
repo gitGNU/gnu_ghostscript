@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevdjet.c,v 1.9 2007/08/01 14:25:47 jemarch Exp $ */
+/* $Id: gdevdjet.c,v 1.10 2007/09/10 14:08:46 Arabidopsis Exp $ */
 /* HP LaserJet/DeskJet driver for Ghostscript */
 #include "gdevprn.h"
 #include "gdevdljm.h"
@@ -176,7 +176,7 @@ const gx_device_hpjet gs_ljet2p_device =
 HPJET_DEVICE(prn_hp_procs, "ljet2p",
 	     DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
 	     X_DPI, Y_DPI,
-	     0.20, 0.25, 0.25, 0.25,	/* margins */
+	     0.25, 0.25, 0.25, 0.0,	/* margins */
 	     1, ljet2p_print_page_copies);
 
 const gx_device_hpjet gs_ljet3_device =

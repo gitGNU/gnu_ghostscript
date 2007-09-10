@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevdflt.c,v 1.9 2007/08/01 14:25:47 jemarch Exp $ */
+/* $Id: gdevdflt.c,v 1.10 2007/09/10 14:08:39 Arabidopsis Exp $ */
 /* Default device implementation */
 #include "math_.h"
 #include "gx.h"
@@ -671,6 +671,7 @@ gx_device_fill_in_procs(register gx_device * dev)
     fill_dev_proc(dev, fill_linear_color_trapezoid, gx_default_fill_linear_color_trapezoid);
     fill_dev_proc(dev, fill_linear_color_triangle, gx_default_fill_linear_color_triangle);
     fill_dev_proc(dev, update_spot_equivalent_colors, gx_default_update_spot_equivalent_colors);
+    fill_dev_proc(dev, ret_devn_params, gx_default_ret_devn_params);
 }
 
 int
@@ -895,7 +896,7 @@ gx_default_include_color_space(gx_device *pdev, gs_color_space *cspace,
 }
 
 /*
- * If a device want to determine an equivalent color for its spot colors then
+ * If a device wants to determine an equivalent color for its spot colors then
  * it needs to implement this method.  See comments at the start of
  * src/gsequivc.c.
  */
@@ -903,6 +904,16 @@ int
 gx_default_update_spot_equivalent_colors(gx_device *pdev, const gs_state * pgs)
 {
     return 0;
+}
+
+/*
+ * If a device wants to determine implement support for spot colors then
+ * it needs to implement this method.
+ */
+gs_devn_params *
+gx_default_ret_devn_params(gx_device *pdev)
+{
+    return NULL;
 }
 
 /* ---------------- Default per-instance procedures ---------------- */

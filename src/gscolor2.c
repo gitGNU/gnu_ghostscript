@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscolor2.c,v 1.8 2007/08/01 14:26:03 jemarch Exp $ */
+/* $Id: gscolor2.c,v 1.9 2007/09/10 14:08:38 Arabidopsis Exp $ */
 /* Level 2 color operators for Ghostscript library */
 #include "memory_.h"
 #include "gx.h"
@@ -58,6 +58,8 @@ gs_setcolorspace(gs_state * pgs, gs_color_space * pcs)
     }
 
     if (code >= 0) {
+	pgs->color_space->pclient_color_space_data =
+	    pcs->pclient_color_space_data;
         cs_full_init_color(pgs->ccolor, pcs);
         gx_unset_dev_color(pgs);
     }
@@ -212,10 +214,10 @@ RELOC_PTRS_END
 /* Color space installation for an Indexed color space. */
 
 private int
-gx_install_Indexed(const gs_color_space * pcs, gs_state * pgs)
+gx_install_Indexed(gs_color_space * pcs, gs_state * pgs)
 {
     return (*pcs->base_space->type->install_cspace)
-	((const gs_color_space *) pcs->base_space, pgs);
+	(pcs->base_space, pgs);
 }
 
 /* Color space overprint setting ditto. */

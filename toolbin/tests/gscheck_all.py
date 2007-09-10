@@ -19,15 +19,15 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gscheck_all.py,v 1.5 2007/08/01 14:26:57 jemarch Exp $
+# $Id: gscheck_all.py,v 1.6 2007/09/10 14:08:49 Arabidopsis Exp $
 
 # Run all the Ghostscript 'gscheck' tests.
 
 from gstestutils import gsRunTestsMain
 
-def addTests(suite, **args):
-    import gscheck_raster; gscheck_raster.addTests(suite, **args)
-    import gscheck_pdfwrite; gscheck_pdfwrite.addTests(suite, **args)
+def addTests(suite, gsroot, now, options=None, **args):
+    import gscheck_raster; gscheck_raster.addTests(suite,gsroot,now,options=options,**args)
+    import gscheck_pdfwrite; gscheck_pdfwrite.addTests(suite,gsroot,now,options=options, **args)
 
 if __name__ == "__main__":
     gsRunTestsMain(addTests)

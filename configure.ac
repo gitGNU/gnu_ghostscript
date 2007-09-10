@@ -14,7 +14,7 @@ dnl You should have received a copy of the GNU General Public License along with
 dnl ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 dnl Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 dnl 
-dnl $Id: configure.ac,v 1.14 2007/08/01 14:25:34 jemarch Exp $
+dnl $Id: configure.ac,v 1.15 2007/09/10 14:08:57 Arabidopsis Exp $
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------
@@ -22,14 +22,14 @@ dnl Initialization and Versioning
 dnl ------------------------------------------------
 
 AC_PREREQ(2.60)
-AC_INIT([gnu-ghostscript], [8.56.0], [gnu-ghostscript-bug@gnu.org])
+AC_INIT([gnu-ghostscript], [8.57.0], [gnu-ghostscript-bug@gnu.org])
 AC_CONFIG_SRCDIR(src/gs.c)
 AM_INIT_AUTOMAKE([-Wall])
 
 GS_VERSION_MAJOR=8
-GS_VERSION_MINOR=56
+GS_VERSION_MINOR=57
 GS_VERSION_PATCH=0
-GS_REVISIONDATE=20070508
+GS_REVISIONDATE=20070910
 
 GS_VERSION=`expr $GS_VERSION_MAJOR \* 10000 + $GS_VERSION_MINOR \* 100 + $GS_VERSION_PATCH`
 

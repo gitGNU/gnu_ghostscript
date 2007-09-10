@@ -1,5 +1,5 @@
 # Report of Ghostscript's conformance against the Quality Logic CET suite
-# $Id: pscet_status.txt,v 1.1 2007/05/07 11:22:13 Arabidopsis Exp $
+# $Id: pscet_status.txt,v 1.2 2007/09/10 14:08:53 Arabidopsis Exp $
 #
 Test	 Status	Comments
 
@@ -279,8 +279,10 @@ Test	 Status	Comments
 
 09-27-5  OK	
 
-09-28-1	 DIFF	Must be regression. CPSI and Tek differ, GS shows 'invalidaccess'
-		errors.
+09-28-1	 AOK 	Ghostscript is different from both Tek and PhotoPrint but
+		matches Distiller 5. Tek doesn't reset the dash array at
+                initgraphics. PhotoPrint redefines halftone operators as no-op,
+                which affects the test results.  Fixed by rev. 7792. - Alex
 
 09-28-2  OK	Fixed as of rev. 7211
 
@@ -1119,7 +1121,7 @@ Test	 Status	Comments
 		Test12: ok	Fixed by rev 7175.
 
 09-47J-1  DIFF	Graphic differences in Test01 (partly drawn) and Test12
-		(green line across the shading). Assign: Alex
+		(green line across the shading). Assign: Igor
                 
 09-47J-10 OK	
 
@@ -1322,13 +1324,13 @@ Test	 Status	Comments
 
 09-56-2  OK	revisin 7234 (peter)
 
-09-56-3  DIFF	Device Dependent: GS missing '1' for GRAY 33 (same as
-		30-07-3, q.v.).  '5' occur in MEMO 03 and 04 because the
-		Tek implementation, unlike both gs and CPSI, defines a
-		ColorRendering resource called /Saturation.  The PLRM3 lists
-		such a resource as present in Adobe products, but it is not
-		required for correct operation of any PostScript program.
-		Assign: Peter
+09-56-3  OK     Ghostscript matches the checksum for Tek360 version of the test.
+		PhotoPrint has extra '1' in GRAY33 that tests that whether the
+                change in colorspace affects CRD. Surprisingly, it does.
+                Tek scan and Distillier 5 have '1' in MEMO 03 and 04, i.e.
+                have different default CRD and a CRD returned by /Saturation
+                findcolorrendering. CRD selection is implementation dependent
+                and is normally left to OEM.
 
 09-57-1  AOK	Fixed by rev 7169.; GS has a better smoothing.
 
@@ -1806,8 +1808,7 @@ Test	 Status	Comments
 
 11-16-7  OK	
 
-11-16-8  DIFF	MORE 21 GS has zig-zag stroke, CPSI and Tek are straight.
-		Assign: Igor
+11-16-8  AOK
 
 11-17-1  OK	Fixed as of rev 7598.
 
@@ -1834,7 +1835,15 @@ Test	 Status	Comments
 
 11-18-5  OK	Minor differences visually reviewed by RJJ
 
-11-18-6  DIFF	similar to 11-11-6 assign: Ray.
+11-18-6  AOK 	Adobe interpreters (CPSI, Tek, Distiller 5) have obvious
+		rendering problems, which are hard to simulate in GS.
+                1. The long diagonal line is caused by "clippath 0 0 rlineto
+                   stroke showpage". Different Adobe interpreters draw it
+                   fron the center of the page to different corners.
+                2. The line drawn by "10 0 rlineto" is not horizontal in
+                   LOOK 30 and MUCH 34 cases. This bug can be demonstrated
+                   by this short program "300 300 moveto 10 10 rlineto 8 8
+                   rlineto strokepath 10 0 rlineto stroke showpage". - Alex
 
 11-19-1  OK	
 
@@ -1910,7 +1919,9 @@ Test	 Status	Comments
 		assign: Ray.
 
 11-20-6  DIFF	In special test B, Adobe has rangechecks, we don't. In
-	 special test A, we have one rangecheck they don't. - assign Raph
+		special test A, we have one rangecheck they don't.
+                The test is about interaction of setbbox with save,
+                gsave and other operators. - assign Raph
 
 11-20-7  OK	
 
@@ -3481,8 +3492,7 @@ Test	 Status	Comments
 
 15-10-4  OK	Minor rasterizing differences. -Tor
 
-15-11-1  DIFF	Top row of circles is visible in GS and empty in CPSI. (/NotDefined null BuildFont) The page says Device Dependent behavior.
-                Assign: Ray
+15-11-1  OK  	Fixed by rev. 7806. - Alex
 
 15-14-1  OK	Minor differences visually reviewed by RJJ
 
@@ -3552,8 +3562,9 @@ Test	 Status	Comments
 
 17-01-6  AOK	Matches Tek. CPSI different.
 
-17-01-7  DIFF	Same as 17-01-6 
-                marked "same as" AOK problem but diff status assign: Ray
+17-01-7  AOK 	Matches Tek and Distiller 5. CPSI is different and wrong,
+                The test exercises ineofill operator and can be easily checked
+                visually by modifying the test to fill the current path.
 
 17-01-8  OK	
 
@@ -3567,13 +3578,11 @@ Test	 Status	Comments
 
 17-02-5  OK	
 
-17-02-6  DIFF	Same as 17-01-6
-                marked "same as" AOK problem but diff status assign: Ray
+17-02-6  AOK 	Same as 17-01-6 but tests infill instead of ineofill.
+                Matches Tek and Distiller 5. CPSI is different and wrong,
 
-
-17-02-7  DIFF	Same as 17-01-6
-                marked "same as" AOK problem but diff status assign: Ray
-
+17-02-7  AOK 	Same as 17-01-6 but tests infill instead of ineofill.
+                Matches Tek and Distiller 5. CPSI is different and wrong,
 
 17-02-8  OK	
 
@@ -3588,17 +3597,25 @@ Test	 Status	Comments
 
 17-03-4  OK	Minor differences visually reviewed by RJJ
 
-17-03-5  DIFF	Same as 17-01-06
-                marked "same as" AOK problem but diff status assign: Ray
+17-03-5  DIFF	Similar to 17-01-6 but tests instroke. The insideness testing is OK
+                but the pattern phase is different from Tek and CPSI. assign: Ray
 
 17-03-6  OK	
 
 17-04-1  OK	
 
-17-04-2  DIFF	GS is missing dots (small circles) in places and has extra dots in others.
-		Note Tek has _different_ pattern of dots, but is more similar to CPSI than
-		to GS.  This is not identified as "Device Dependent" in the test.
-                assign: igor
+17-04-2  AOK 	The test is unreasonable. The test checks whether a point is in
+		the user path (using inueofill operator) but places many of
+                the points on the boundary of the path where insideness is
+                affected by rounding errors. When the point is inside the path,
+                a small black circle is drawn around the point. The test is
+                performed for different CTM.
+                -
+		Ghostscript skips some of the points at low resolution but
+                draws all expected points at 300 dpi and above.
+                -
+                CPSI, Tek, and Distiller 5 are all different and skip different
+                points depending on the current CTM. - Alex
 
 17-04-3  OK	same as 17-02-3
 
@@ -3608,8 +3625,7 @@ Test	 Status	Comments
 
 17-05-1  OK	
 
-17-05-2  DIFF	Same as 17-04-2
-                assign: igor
+17-05-2  AOK 	Similar to 17-04-2 but testing inufill. - Alex
 
 17-05-3  OK	Same as 17-01-3
 
@@ -3619,8 +3635,12 @@ Test	 Status	Comments
 
 17-06-1  OK	
 
-17-06-2  DIFF	Same as 17-04-2 except rectangles instead of dots.  Still like GS output better.  
-		More consistant repeats of the pattern.  assign: Igor.
+17-06-2  AOK 	Similar to 17-04-2 but testing inustroke. Placing the dots in
+		middle of the stroke is reasonable but some of the dots are
+                placed at the end of the line where their relative position
+                depends on the rounding errors. Ghostscript generates
+                correct results above 300 dpi. CPSI and Tek miss some
+                points, - Alex
 
 17-06-3  OK	Fixed as of rev 7636.
 
@@ -3836,10 +3856,7 @@ Test	 Status	Comments
 
 20-02-1  OK	Looks okay. -Tor
 
-20-02-2  DIFF   When --begin-- overflows dictionary stack it restores the argument
-		and places the content of the dictionary stack on the operand
-                stack. Adobe interpreters don't restore the argument.
-                assign Alex
+20-02-2  OK     Fixed by rev. 7829. - Alex
 
 20-02-3  OK	Color corrected by rev 7172.
 
@@ -4242,8 +4259,7 @@ Test	 Status	Comments
 
 23-12K-1  OK	Fixed as of r7500.
 
-23-12K-2  DIFF	GS has 'T' where CPSI has 'F' on one of the DCTEncode. Assign: Peter
-		DCTEncode doesn't close its target with /CloseTarget true
+23-12K-2  OK  	Fixed by rev 7808. - Alex
 
 23-12L-1  AOK	same as 23-12A-3
 
@@ -4325,10 +4341,7 @@ Test	 Status	Comments
 
 23-19-2  OK	
 
-23-20-1  DIFF	GS has different checksum. readhexstring uses the string to store
-		the state. Modified bytes print are not printable but affect the
-                checksum.
-              	Assign: Ray (low priority)
+23-20-1  OK	Fixed by rev. 7809. - Alex
 
 23-20-2  OK	
 
@@ -4862,14 +4875,11 @@ Test	 Status	Comments
                 The test expects currentpagedevice to return the same dictionaty each time. 
                 assign: Alex.
 
-29-05-1  DIFF  	Rev 7595 MSVC8 debug build fails with no output pages.
-		Error: /invalidaccess in --forall--, while copying a halftone with 'Gcopy'.
-		.
-		Here is a simplified test :
-		gswin32c.exe -r300 -dBATCH gs_cet.ps -c currenthalftone /SpotFunction get rcheck ==
-		It prints 'false' with -r200 or greater, and 'true' with -r144 or smaller.
-		.
-		Assign: Raph.
+29-05-1  OK     Make the spot function in the high resolution halftone readable
+                to accomodate the test logic. Ghostscript matches Tek and
+                Distiller 5. CPSI-based PhotoPrint product redefines halftone
+                operations as no-op and cannot serve as a reference
+                implementation here. - Alex
 
 29-05-2  OK	
 

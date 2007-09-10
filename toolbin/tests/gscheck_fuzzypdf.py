@@ -19,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gscheck_fuzzypdf.py,v 1.5 2007/08/01 14:26:57 jemarch Exp $
+# $Id: gscheck_fuzzypdf.py,v 1.6 2007/09/10 14:08:47 Arabidopsis Exp $
 
 #
 # gscheck_fuzzypdf.py
@@ -96,17 +96,19 @@ class GSFuzzyCompareTestCase(gstestgs.GhostscriptTestCase):
 # Add the tests defined in this file to a suite
 
 def add_compare_test(suite, f, device, dpi, band):
-    suite.addTest(GSFuzzyCompareTestCase(gs=gsconf.comparegs, file=gsconf.comparefiledir + f, device=device, dpi=dpi, band=band))
+    suite.addTest(GSFuzzyCompareTestCase(gsroot, file=gsconf.comparefiledir + f, device=device, dpi=dpi, band=band))
 
 def addTests(suite, gsroot, **args):
     # get a list of test files
     comparefiles = os.listdir(gsconf.comparefiledir)
 
 
-    for f in comparefiles:
-        if f[-3:] == '.ps':
+    for testfile in comparefiles:
+
+# this comparison is not good...
+        if testfile[-3:] == '.ps':
 	    for params in gsparamsets.testparamsets:
-	        add_compare_test(suite, f, params.device, params.resolution, params.banding)
+	        add_compare_test(suite, gsroot,testfile, params.device, params.resolution, params.banding)
 
 if __name__ == "__main__":
     gstestutils.gsRunTestsMain(addTests)

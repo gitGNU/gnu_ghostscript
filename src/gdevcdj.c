@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevcdj.c,v 1.7 2007/08/01 14:25:46 jemarch Exp $*/
+/* $Id: gdevcdj.c,v 1.8 2007/09/10 14:08:44 Arabidopsis Exp $*/
 /* HP and Canon colour printer drivers */
 
 /****************************************************************
@@ -2134,7 +2134,7 @@ hp_colour_print_page(gx_device_printer * pdev, FILE * prn_stream, int ptype)
   switch (ptype) {
   case LJ4DITH:
     /* Page size, orientation, top margin & perforation skip */
-    fprintf(prn_stream, "\033&l26A\033&l0o0e0L\033*r0F" );
+    fprintf(prn_stream, "\033&l%dA\033&l0o0e0L\033*r0F", paper_size);
     fprintf(prn_stream, "\033*p0x0Y" ); /* These Offsets are hacked ! */
     fprintf(prn_stream, "\033&u600D\033*r1A" );
     /* Select data compression */

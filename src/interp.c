@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: interp.c,v 1.8 2007/08/01 14:26:37 jemarch Exp $ */
+/* $Id: interp.c,v 1.9 2007/09/10 14:08:42 Arabidopsis Exp $ */
 /* Ghostscript language interpreter */
 #include "memory_.h"
 #include "string_.h"
@@ -545,12 +545,10 @@ again:
     /* we might be able to recover by adding or removing a block. */
     switch (code) {
 	case e_dictstackoverflow:
-	    if (ref_stack_extend(&d_stack, d_stack.requested) >= 0) {
-		dict_set_top();
-		doref = *perror_object;
-		epref = &doref;
-		goto again;
-	    }
+	    /* We don't have to handle this specially: */
+	    /* The only places that could generate it */
+	    /* use check_dstack, which does a ref_stack_extend, */
+	    /* so if` we get this error, it's a real one. */
 	    if (osp >= ostop) {
 		if ((ccode = ref_stack_extend(&o_stack, 1)) < 0)
 		    return ccode;

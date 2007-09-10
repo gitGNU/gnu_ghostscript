@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsstate.h,v 1.7 2007/08/01 14:26:14 jemarch Exp $ */
+/* $Id: gsstate.h,v 1.8 2007/09/10 14:08:40 Arabidopsis Exp $ */
 /* Public graphics state API */
 
 #ifndef gsstate_INCLUDED
@@ -57,6 +57,9 @@ int gs_currentoverprintmode(const gs_state *);
 int gs_setoverprintmode(gs_state *, int);
 
 int gs_do_set_overprint(gs_state *);
+
+int gs_currentrenderingintent(const gs_state *);
+int gs_setrenderingintent(gs_state *, int);
 
 int gs_initgraphics(gs_state *);
 

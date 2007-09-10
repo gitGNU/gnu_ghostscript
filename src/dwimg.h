@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: dwimg.h,v 1.7 2007/08/01 14:25:43 jemarch Exp $ */
+/* $Id: dwimg.h,v 1.8 2007/09/10 14:08:45 Arabidopsis Exp $ */
 
 #ifndef dwimg_INCLUDED
 #  define dwimg_INCLUDED
@@ -84,6 +84,8 @@ IMAGE *image_new(void *handle, void *device);
 void image_delete(IMAGE *img);
 int image_size(IMAGE *img, int new_width, int new_height, int new_raster, 
    unsigned int new_format, void *pimage);
+int image_separation(IMAGE *img, int comp_num, const char *name,
+   unsigned short c, unsigned short m, unsigned short y, unsigned short k);
 
 /* GUI thread only */
 void image_open(IMAGE *img);

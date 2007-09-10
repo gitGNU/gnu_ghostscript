@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevprn.c,v 1.9 2007/08/01 14:25:54 jemarch Exp $ */
+/* $Id: gdevprn.c,v 1.10 2007/09/10 14:08:44 Arabidopsis Exp $ */
 /* Generic printer driver support */
 #include "ctype_.h"
 #include "gdevprn.h"
@@ -143,6 +143,7 @@ BACKTRACE(pdev);
 open_c:
     ppdev->buf = base;
     ppdev->buffer_space = space;
+    clist_init_io_procs(pclist_dev, false);
     clist_init_params(pclist_dev, base, space, pdev,
 		      ppdev->printer_procs.buf_procs,
 		      space_params->band, ppdev->is_async_renderer,
@@ -203,6 +204,13 @@ gdev_prn_tear_down(gx_device *pdev, byte **the_memory)
 	ppdev->buf = 0;
 	ppdev->buffer_space = 0;
 	is_command_list = true;
+	
+	/* If the clist is a reader clist, free any band_complexity_array
+	 * memory used by same.
+	 */
+	if (!CLIST_IS_WRITER(pclist_dev))
+	    gx_clist_reader_free_band_complexity_array(pclist_dev);
+	
     } else {
 	/* point at the device bitmap, no need to close mem dev */
 	*the_memory = pmemdev->base;
@@ -357,7 +365,7 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
 	    ppdev->buffer_space = 0;
 	    if ((code = gdev_create_buf_device
 		 (ppdev->printer_procs.buf_procs.create_buf_device,
-		  &bdev, pdev, NULL, NULL, false)) < 0 ||
+		  &bdev, pdev, NULL, NULL, NULL)) < 0 ||
 		(code = ppdev->printer_procs.buf_procs.setup_buf_device
 		 (bdev, base, buf_space.raster,
 		  (byte **)(base + buf_space.bits), 0, pdev->height,
@@ -407,6 +415,7 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
 	COPY_PROC(stroke_path);
 	COPY_PROC(fill_rectangle_hl_color);
 	COPY_PROC(update_spot_equivalent_colors);
+	COPY_PROC(ret_devn_params);
 #undef COPY_PROC
 	/* If using a command list, already opened the device. */
 	if (is_command_list)
@@ -973,9 +982,9 @@ int
 gdev_create_buf_device(create_buf_device_proc_t cbd_proc, gx_device **pbdev,
 		       gx_device *target,
 		       const gx_render_plane_t *render_plane,
-		       gs_memory_t *mem, bool for_band)
+		       gs_memory_t *mem, gx_band_complexity_t *band_complexity)
 {
-    int code = cbd_proc(pbdev, target, render_plane, mem, for_band);
+    int code = cbd_proc(pbdev, target, render_plane, mem, band_complexity);
 
     if (code < 0)
 	return code;
@@ -990,7 +999,7 @@ gdev_create_buf_device(create_buf_device_proc_t cbd_proc, gx_device **pbdev,
  */
 int
 gx_default_create_buf_device(gx_device **pbdev, gx_device *target,
-    const gx_render_plane_t *render_plane, gs_memory_t *mem, bool for_band)
+    const gx_render_plane_t *render_plane, gs_memory_t *mem, gx_band_complexity_t *band_complexity)
 {
     int plane_index = (render_plane ? render_plane->index : -1);
     int depth;
@@ -1019,7 +1028,7 @@ gx_default_create_buf_device(gx_device **pbdev, gx_device *target,
         check_device_separable((gx_device *)mdev);
 	gx_device_fill_in_procs((gx_device *)mdev);
     } else
-	gs_make_mem_device(mdev, mdproto, mem, (for_band ? 1 : 0),
+	gs_make_mem_device(mdev, mdproto, mem, (band_complexity == NULL ? 1 : 0),
 			   (target == (gx_device *)mdev ? NULL : target));
     mdev->width = target->width;
     /*
@@ -1055,7 +1064,7 @@ gx_default_create_buf_device(gx_device **pbdev, gx_device *target,
 int
 gx_default_size_buf_device(gx_device_buf_space_t *space, gx_device *target,
 			   const gx_render_plane_t *render_plane,
-			   int height, bool for_band)
+			   int height, bool not_used)
 {
     gx_device_memory mdev;
 

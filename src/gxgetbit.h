@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxgetbit.h,v 1.6 2007/08/01 14:26:23 jemarch Exp $ */
+/* $Id: gxgetbit.h,v 1.7 2007/09/10 14:08:41 Arabidopsis Exp $ */
 /* Interface for get_bits_rectangle driver procedure */
 
 #ifndef gxgetbit_INCLUDED
@@ -49,6 +49,7 @@ struct gs_get_bits_params_s {
     gs_get_bits_options_t options;
     byte *data[32];
     int x_offset;		/* in returned data */
+    int original_y;
     uint raster;
 };
 

@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: watcw32.mak,v 1.10 2007/08/01 14:26:47 jemarch Exp $
+# $Id: watcw32.mak,v 1.11 2007/09/10 14:08:46 Arabidopsis Exp $
 # watcw32.mak
 # makefile for Watcom C++ v??, Windows NT or Windows 95 platform.
 # Created 1997-02-23 by Russell Lang from MSVC++ 4.0 makefile.
@@ -124,7 +124,7 @@ JVERSION=6
 # See libpng.mak for more information.
 
 PSRCDIR=libpng
-PVERSION=10208
+PVERSION=10216
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.

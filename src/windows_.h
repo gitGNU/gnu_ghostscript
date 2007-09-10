@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: windows_.h,v 1.8 2007/08/01 14:26:47 jemarch Exp $ */
+/* $Id: windows_.h,v 1.9 2007/09/10 14:08:46 Arabidopsis Exp $ */
 /* Wrapper for windows.h */
 
 #ifndef windows__INCLUDED
@@ -25,6 +25,7 @@
 
 #define STRICT
 #include <windows.h>
+#include <process.h>
 
 #ifdef __WATCOMC__
 typedef RGBQUAD FAR * LPRGBQUAD;

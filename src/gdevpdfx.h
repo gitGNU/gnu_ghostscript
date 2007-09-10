@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfx.h,v 1.9 2007/08/01 14:25:52 jemarch Exp $ */
+/* $Id: gdevpdfx.h,v 1.10 2007/09/10 14:08:42 Arabidopsis Exp $ */
 /* Internal definitions for PDF-writing driver. */
 
 #ifndef gdevpdfx_INCLUDED
@@ -409,6 +409,7 @@ typedef enum {
 /* Define the device structure. */
 struct gx_device_pdf_s {
     gx_device_psdf_common;
+    bool is_ps2write;          /* ps2write (true) versus pdfwrite (false); never changed */
     /* PDF-specific distiller parameters */
     double CompatibilityLevel;
     int EndPage;

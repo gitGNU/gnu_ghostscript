@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxpcolor.h,v 1.7 2007/08/01 14:26:28 jemarch Exp $ */
+/* $Id: gxpcolor.h,v 1.8 2007/09/10 14:08:37 Arabidopsis Exp $ */
 /* Pattern color and tile structures and procedures */
 /* Requires gsmatrix.h, gxcolor2.h, gxdcolor.h */
 
@@ -29,6 +29,11 @@
 #include "gxdevice.h"
 #include "gxdevmem.h"
 #include "gxpcache.h"
+
+#ifndef gx_device_clist_DEFINED
+#define gx_device_clist_DEFINED
+typedef union gx_device_clist_s gx_device_clist;
+#endif
 
 /*
  * Define the type of a Pattern, also used with Pattern instances.
@@ -168,17 +173,19 @@ struct gx_color_tile_s {
     gx_strip_bitmap tbits;	/* data = 0 if uncolored */
     gx_strip_bitmap tmask;	/* data = 0 if no mask */
     /* (i.e., the mask is all 1's) */
-    bool is_simple;		/* true if xstep/ystep = tile size */
-    bool is_dummy;		/* if true, the device manages the pattern, 
+    gx_device_clist *cdev;	/* not NULL if the graphics is a command list. */
+    byte is_simple;		/* true if xstep/ystep = tile size */
+    byte is_dummy;		/* if true, the device manages the pattern, 
                                    and the content of the tile is empty. */
+    byte pad[2];		/* structure members alignment. */
     /* The following is neither key nor value. */
     uint index;			/* the index of the tile within */
     /* the cache (for GC) */
 };
 
 #define private_st_color_tile()	/* in gxpcmap.c */\
-  gs_private_st_ptrs2(st_color_tile, gx_color_tile, "gx_color_tile",\
-    color_tile_enum_ptrs, color_tile_reloc_ptrs, tbits.data, tmask.data)
+  gs_private_st_ptrs3(st_color_tile, gx_color_tile, "gx_color_tile",\
+    color_tile_enum_ptrs, color_tile_reloc_ptrs, tbits.data, tmask.data, cdev)
 #define private_st_color_tile_element()	/* in gxpcmap.c */\
   gs_private_st_element(st_color_tile_element, gx_color_tile,\
     "gx_color_tile[]", color_tile_elt_enum_ptrs, color_tile_elt_reloc_ptrs,\
@@ -221,13 +228,15 @@ typedef struct gx_device_pattern_accum_s {
     instance, bits, mask)
 
 /* Allocate a pattern accumulator. */
-gx_device_pattern_accum *gx_pattern_accum_alloc(gs_memory_t * memory, client_name_t);
+gx_device_forward * gx_pattern_accum_alloc(gs_memory_t * mem, 
+		       gs_memory_t * stoarge_memory, 
+		       gs_pattern1_instance_t *pinst, client_name_t cname);
 
 /* Add an accumulated pattern to the cache. */
 /* Note that this does not free any of the data in the accumulator */
 /* device, but it may zero out the bitmap_memory pointers to prevent */
 /* the accumulated bitmaps from being freed when the device is closed. */
-int gx_pattern_cache_add_entry(gs_imager_state *, gx_device_pattern_accum *,
+int gx_pattern_cache_add_entry(gs_imager_state *, gx_device_forward *,
 			       gx_color_tile **);
 /* Add a dummy Pattern cache entry.  Stubs a pattern tile for interpreter when
    device handles high level patterns. */
@@ -242,5 +251,9 @@ bool gx_pattern_cache_lookup(gx_device_color *, const gs_imager_state *,
 void gx_pattern_cache_winnow(gx_pattern_cache *,
 			     bool (*)(gx_color_tile *, void *),
 			     void *);
+
+bool gx_pattern_tile_is_clist(gx_color_tile *ptile);
+
+dev_proc_open_device(pattern_clist_open_device);
 
 #endif /* gxpcolor_INCLUDED */

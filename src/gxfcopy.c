@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxfcopy.c,v 1.9 2007/08/01 14:26:22 jemarch Exp $ */
+/* $Id: gxfcopy.c,v 1.10 2007/09/10 14:08:39 Arabidopsis Exp $ */
 /* Font copying for high-level output */
 #include "memory_.h"
 #include "gx.h"
@@ -1414,7 +1414,6 @@ private inline int
 access_type42_data(gs_font_type42 *pfont, ulong base, ulong length, 
 		   const byte **vptr)
 {
-    /* See ACCESS macro in gstype42.c */
     return pfont->data.string_proc(pfont, base, length, vptr);
 }
 
@@ -1494,8 +1493,6 @@ same_type42_hinting(gs_font_type42 *font0, gs_font_type42 *font1)
     }
     return 1;
 }
-
-#undef ACCESS
 
 /* ------ CIDFont shared ------ */
 
@@ -2400,7 +2397,7 @@ order_font_data(gs_copied_font_data_t *cfdata, gs_memory_t *memory)
 	}
     }
     qsort(a, cfdata->num_glyphs, sizeof(*a), compare_glyph_names);
-    for (; j >= 0; j--)
+    for (j--; j >= 0; j--)
 	cfdata->glyphs[j].order_index = a[j] - cfdata->names;    
     gs_free_object(memory, a, "order_font_data");
     return 0;

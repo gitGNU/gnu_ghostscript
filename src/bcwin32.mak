@@ -16,7 +16,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
-# $Id: bcwin32.mak,v 1.10 2007/08/01 14:25:42 jemarch Exp $
+# $Id: bcwin32.mak,v 1.11 2007/09/10 14:08:46 Arabidopsis Exp $
 # makefile for (MS-Windows 3.1/Win32s / Windows 95 / Windows NT) +
 #   Borland C++ 4.5 platform.
 #   Borland C++Builder 3 platform (need BC++ 4.5 for 16-bit code)
@@ -155,7 +155,7 @@ JVERSION=6
 
 !ifndef PSRCDIR
 PSRCDIR=libpng
-PVERSION=10208
+PVERSION=10216
 !endif
 
 # Define the directory where the zlib sources are stored.

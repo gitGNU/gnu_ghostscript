@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gdevpsd.c,v 1.8 2007/08/01 14:25:54 jemarch Exp $ */
+/*$Id: gdevpsd.c,v 1.9 2007/09/10 14:08:38 Arabidopsis Exp $ */
 /* PhotoShop (PSD) export device, supporting DeviceN color models. */
 
 #include "math_.h"
@@ -250,6 +250,7 @@ const psd_device gs_psdrgb_device =
       DeviceRGBComponents,	/* Names of color model colorants */
       3,			/* Number colorants for RGB */
       0,			/* MaxSeparations has not been specified */
+      -1,			/* PageSpotColors has not been specified */
       {0},			/* SeparationNames */
       0,			/* SeparationOrder names */
       {0, 1, 2, 3, 4, 5, 6, 7 }	/* Initial component SeparationOrder */
@@ -293,6 +294,7 @@ const psd_device gs_psdcmyk_device =
       DeviceCMYKComponents,	/* Names of color model colorants */
       4,			/* Number colorants for CMYK */
       0,			/* MaxSeparations has not been specified */
+      -1,			/* PageSpotColors has not been specified */
       {0},			/* SeparationNames */
       0,			/* SeparationOrder names */
       {0, 1, 2, 3, 4, 5, 6, 7 }	/* Initial component SeparationOrder */

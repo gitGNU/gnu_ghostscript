@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: msvclib.mak,v 1.10 2007/08/01 14:26:40 jemarch Exp $
+# $Id: msvclib.mak,v 1.11 2007/09/10 14:08:46 Arabidopsis Exp $
 # makefile for Microsoft Visual C++ 4.1 or later, Windows NT or Windows 95 LIBRARY.
 #
 # All configurable options are surrounded by !ifndef/!endif to allow 
@@ -144,7 +144,7 @@ JVERSION=6
 
 !ifndef PSRCDIR
 PSRCDIR=libpng
-PVERSION=10208
+PVERSION=10216
 !endif
 
 # Define the directory where the zlib sources are stored.

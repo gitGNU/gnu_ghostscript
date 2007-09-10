@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfapi.c,v 1.7 2007/08/01 14:26:50 jemarch Exp $ */
+/* $Id: zfapi.c,v 1.8 2007/09/10 14:08:42 Arabidopsis Exp $ */
 /* Font API client */
 
 #include "memory_.h"
@@ -1884,7 +1884,7 @@ private int do_FAPIpassfont(i_ctx_t *i_ctx_p, char *font_file_path, bool *succes
 private int zFAPIpassfont(i_ctx_t *i_ctx_p)
 {   os_ptr op = osp;
     int code;
-    bool found;
+    bool found = false;
     char *font_file_path = NULL;
     ref *v;
 

@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: os2.mak,v 1.9 2007/05/07 21:45:07 Arabidopsis Exp $
+# $Id: os2.mak,v 1.10 2007/09/10 14:08:42 Arabidopsis Exp $
 # makefile for MS-DOS or OS/2 GCC/EMX platform.
 # Uses Borland (MSDOS) MAKER or 
 # Uses IBM NMAKE.EXE Version 2.000.000 Mar 27 1992
@@ -130,7 +130,7 @@ JVERSION=6
 # See libpng.mak for more information.
 
 PSRCDIR=libpng
-PVERSION=10208
+PVERSION=10216
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.

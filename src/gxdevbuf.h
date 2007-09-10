@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxdevbuf.h,v 1.6 2007/08/01 14:26:21 jemarch Exp $ */
+/* $Id: gxdevbuf.h,v 1.7 2007/09/10 14:08:40 Arabidopsis Exp $ */
 /* Definitions for device buffer management */
 
 #ifndef gxdevbuf_INCLUDED
@@ -47,6 +47,21 @@ typedef struct gx_device_buf_space_s {
     uint raster;
 } gx_device_buf_space_t;
 
+/* clist contents analysis per band */
+typedef struct gx_band_complexity_s {
+    /* use null or contents to denote non banding case: */
+
+    bool uses_color;
+    bool nontrivial_rops;
+
+#if 0
+    /* halftone phase */
+    int x0;
+    int y0;
+#endif
+} gx_band_complexity_t;
+
+
 typedef struct gx_device_buf_procs_s {
 
     /*
@@ -64,7 +79,7 @@ typedef struct gx_device_buf_procs_s {
 #define dev_proc_create_buf_device(proc)\
   int proc(gx_device **pbdev, gx_device *target,\
 	   const gx_render_plane_t *render_plane, gs_memory_t *mem,\
-	   bool for_band)
+	   gx_band_complexity_t *band_complexity)
 
     dev_proc_create_buf_device((*create_buf_device));
 

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gspcolor.c,v 1.8 2007/08/01 14:26:12 jemarch Exp $ */
+/* $Id: gspcolor.c,v 1.9 2007/09/10 14:08:44 Arabidopsis Exp $ */
 /* Pattern color operators and procedures for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -257,7 +257,7 @@ gx_restrict_Pattern(gs_client_color * pcc, const gs_color_space * pcs)
 
 /* Install a Pattern color space. */
 private int
-gx_install_Pattern(const gs_color_space * pcs, gs_state * pgs)
+gx_install_Pattern(gs_color_space * pcs, gs_state * pgs)
 {
     if (!pcs->params.pattern.has_base_space)
 	return 0;

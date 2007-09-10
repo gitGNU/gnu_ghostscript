@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zgstate.c,v 1.8 2007/08/01 14:26:52 jemarch Exp $ */
+/* $Id: zgstate.c,v 1.9 2007/09/10 14:08:44 Arabidopsis Exp $ */
 /* Graphics state operators */
 #include "math_.h"
 #include "ghost.h"
@@ -180,7 +180,8 @@ zinitgraphics(i_ctx_t *i_ctx_p)
      * gs_initigraphics does not reset the colorspace;
      * this is now handled in the PostScript code.
      */
-    return gs_initgraphics(igs);
+     make_empty_array(&istate->dash_pattern_array, a_all);
+     return gs_initgraphics(igs);
 }
 
 /* ------ Operations on graphics state elements ------ */

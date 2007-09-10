@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevpbm.c,v 1.7 2007/08/01 14:25:51 jemarch Exp $ */
+/* $Id: gdevpbm.c,v 1.8 2007/09/10 14:08:45 Arabidopsis Exp $ */
 /* Portable Bit/Gray/PixMap drivers */
 #include "gdevprn.h"
 #include "gscdefs.h"
@@ -435,8 +435,12 @@ private int
 ppm_get_params(gx_device * pdev, gs_param_list * plist)
 {
     gx_device_pbm * const bdev = (gx_device_pbm *)pdev;
+    int code;
 
-    return gdev_prn_get_params_planar(pdev, plist, &bdev->UsePlanarBuffer);
+    code = gdev_prn_get_params_planar(pdev, plist, &bdev->UsePlanarBuffer);
+    if (code < 0) return code;
+    code = param_write_null(plist, "OutputIntent");
+    return code;
 }
 
 private int
@@ -449,8 +453,37 @@ ppm_put_params(gx_device * pdev, gs_param_list * plist)
     int ecode = 0;
     int code;
     long v;
+    gs_param_string_array intent;
     const char *vname;
 
+    if ((code = param_read_string_array(plist, "OutputIntent", &intent)) == 0) {
+	/* This device does not use the OutputIntent parameter.
+	   We include this code just as a sample how to handle it.
+	   The PDF interpreter extracts OutputIntent from a PDF file and sends it to here,
+	   if a device includes it in the .getdeviceparams response.
+	   This device does include due to ppm_get_params implementation.
+	   ppm_put_params must handle it (and ingore it) against 'rangecheck'.
+	 */
+	static const bool debug_print_OutputIntent = false;
+
+	if (debug_print_OutputIntent) {
+	    int i, j;
+
+	    dlprintf1("%d strings:\n", intent.size);
+	    for (i = 0; i < intent.size; i++) {
+		const gs_param_string *s = &intent.data[i];
+		dlprintf2("  %d: size %d:", i, s->size);
+		if (i < 4) {
+		    for (j = 0; j < s->size; j++)
+			dlprintf1("%c", s->data[j]);
+		} else {
+		    for (j = 0; j < s->size; j++)
+			dlprintf1(" %02x", s->data[j]);
+		}
+		dlprintf("\n");
+	    }
+	}
+    }
     save_info = pdev->color_info;
     if ((code = param_read_long(plist, (vname = "GrayValues"), &v)) != 1 ||
 	(code = param_read_long(plist, (vname = "RedValues"), &v)) != 1 ||

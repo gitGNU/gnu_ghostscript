@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsptype1.c,v 1.9 2007/08/01 14:26:12 jemarch Exp $ */
+/* $Id: gsptype1.c,v 1.10 2007/09/10 14:08:45 Arabidopsis Exp $ */
 /* PatternType 1 pattern implementation */
 #include "math_.h"
 #include "gx.h"
@@ -453,6 +453,13 @@ gs_pattern1_get_pattern(const gs_pattern_instance_t *pinst)
 {
     return (const gs_pattern_template_t *)
 	&((const gs_pattern1_instance_t *)pinst)->template;
+}
+
+/* Check device color for Pattern Type 1. */
+bool
+gx_dc_is_pattern1_color(const gx_device_color *pdevc)
+{
+    return pdevc->type == &gx_dc_pattern;
 }
 
 /*

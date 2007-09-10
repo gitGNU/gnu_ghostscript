@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxband.h,v 1.7 2007/08/01 14:26:16 jemarch Exp $ */
+/* $Id: gxband.h,v 1.8 2007/09/10 14:08:40 Arabidopsis Exp $ */
 /* Band-processing parameters for Ghostscript */
 
 #ifndef gxband_INCLUDED
@@ -67,6 +67,7 @@ typedef struct gx_band_page_info_s {
     clist_file_ptr cfile;	/* command file, normally 0 */
     char bfname[gp_file_name_sizeof];	/* block file name */
     clist_file_ptr bfile;	/* block file, normally 0 */
+    const clist_io_procs_t *io_procs;
     uint tile_cache_size;	/* size of tile cache */
     int64_t bfile_end_pos;		/* ftell at end of bfile */
     gx_band_params_t band_params;  /* parameters used when writing band list */
@@ -76,7 +77,7 @@ typedef struct gx_band_page_info_s {
     gx_colors_used_t band_colors_used[PAGE_INFO_NUM_COLORS_USED];  /* colors used on the page */
 } gx_band_page_info_t;
 #define PAGE_INFO_NULL_VALUES\
-  { 0 }, 0, { 0 }, 0, 0, 0, { BAND_PARAMS_INITIAL_VALUES },\
+  { 0 }, 0, { 0 }, NULL, 0, 0, 0, { BAND_PARAMS_INITIAL_VALUES },\
   0x3fffffff, { { 0 } }
 
 /*

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zpcolor.c,v 1.8 2007/08/01 14:26:53 jemarch Exp $ */
+/* $Id: zpcolor.c,v 1.9 2007/09/10 14:08:46 Arabidopsis Exp $ */
 /* Pattern color */
 #include "ghost.h"
 #include "oper.h"
@@ -241,7 +241,7 @@ pattern_paint_prepare(i_ctx_t *i_ctx_p)
     gs_pattern1_instance_t *pinst =
 	(gs_pattern1_instance_t *)gs_currentcolor(pgs)->pattern;
     ref *pdict = &((int_pattern *) pinst->template.client_data)->dict;
-    gx_device_pattern_accum *pdev = NULL;
+    gx_device_forward *pdev = NULL;
     gx_device *cdev = gs_currentdevice_inline(igs);
     int code;
     ref *ppp;
@@ -256,11 +256,11 @@ pattern_paint_prepare(i_ctx_t *i_ctx_p)
 	internal_accum = (code == 0);
     }
     if (internal_accum) {
-	pdev = gx_pattern_accum_alloc(imemory, "pattern_paint_prepare");
+	gs_memory_t *storage_memory = gstate_pattern_cache(pgs)->memory;
+
+	pdev = gx_pattern_accum_alloc(imemory, storage_memory, pinst, "pattern_paint_prepare");
 	if (pdev == 0)
 	    return_error(e_VMerror);
-	pdev->instance = pinst;
-	pdev->bitmap_memory = gstate_pattern_cache(pgs)->memory;
 	code = (*dev_proc(pdev, open_device)) ((gx_device *) pdev);
 	if (code < 0) {
 	    ifree_object(pdev, "pattern_paint_prepare");
@@ -322,7 +322,7 @@ private int
 pattern_paint_finish(i_ctx_t *i_ctx_p)
 {
     int o_stack_adjust = ref_stack_count(&o_stack) - esp->value.intval;
-    gx_device_pattern_accum *pdev = r_ptr(esp - 1, gx_device_pattern_accum);
+    gx_device_forward *pdev = r_ptr(esp - 1, gx_device_forward);
 
     if (pdev != NULL) {
 	gx_color_tile *ctile;

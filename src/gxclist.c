@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxclist.c,v 1.9 2007/08/01 14:26:18 jemarch Exp $ */
+/*$Id: gxclist.c,v 1.10 2007/09/10 14:08:39 Arabidopsis Exp $ */
 /* Command list document- and page-level code. */
 #include "memory_.h"
 #include "string_.h"
@@ -32,8 +32,9 @@
 #include "gsparams.h"
 #include "gxdcolor.h"
 
+extern dev_proc_open_device(pattern_clist_open_device);
+
 /* GC information */
-#define CLIST_IS_WRITER(cdev) ((cdev)->common.ymin < 0)
 extern_st(st_imager_state);
 private
 ENUM_PTRS_WITH(device_clist_enum_ptrs, gx_device_clist *cdev)
@@ -42,31 +43,51 @@ ENUM_PTRS_WITH(device_clist_enum_ptrs, gx_device_clist *cdev)
 
 	return (ret ? ret : ENUM_OBJ(0));
     }
-    if (!CLIST_IS_WRITER(cdev))
-	return 0;
     index -= st_device_forward_max_ptrs;
-    switch (index) {
-    case 0: return ENUM_OBJ((cdev->writer.image_enum_id != gs_no_id ?
-			     cdev->writer.clip_path : 0));
-    case 1: return ENUM_OBJ((cdev->writer.image_enum_id != gs_no_id ?
-			     cdev->writer.color_space.space : 0));
-    default:
-	return ENUM_USING(st_imager_state, &cdev->writer.imager_state,
-			  sizeof(gs_imager_state), index - 2);
+    if (CLIST_IS_WRITER(cdev)) {
+        switch (index) {
+        case 0: return ENUM_OBJ((cdev->writer.image_enum_id != gs_no_id ?
+                     cdev->writer.clip_path : 0));
+        case 1: return ENUM_OBJ((cdev->writer.image_enum_id != gs_no_id ?
+                     cdev->writer.color_space.space : 0));
+	case 2: return ENUM_OBJ(cdev->writer.pinst);
+        default:
+        return ENUM_USING(st_imager_state, &cdev->writer.imager_state,
+                  sizeof(gs_imager_state), index - 3);
+        }
+    }
+    else {
+        /* 041207
+         * clist is reader.
+         * We don't expect this code to be exercised at this time as the reader
+         * runs under gdev_prn_output_page which is an atomic function of the
+         * interpreter. We do this as this situation may change in the future.
+         */
+        if (index == 0)
+            return ENUM_OBJ(cdev->reader.band_complexity_array);
+        else
+            return 0;
     }
 ENUM_PTRS_END
 private
 RELOC_PTRS_WITH(device_clist_reloc_ptrs, gx_device_clist *cdev)
 {
     RELOC_PREFIX(st_device_forward);
-    if (!CLIST_IS_WRITER(cdev))
-	return;
-    if (cdev->writer.image_enum_id != gs_no_id) {
-	RELOC_VAR(cdev->writer.clip_path);
-	RELOC_VAR(cdev->writer.color_space.space);
+    if (CLIST_IS_WRITER(cdev)) {
+        if (cdev->writer.image_enum_id != gs_no_id) {
+	    RELOC_VAR(cdev->writer.clip_path);
+	    RELOC_VAR(cdev->writer.color_space.space);
+        }
+	RELOC_VAR(cdev->writer.pinst);
+        RELOC_USING(st_imager_state, &cdev->writer.imager_state,
+            sizeof(gs_imager_state));
     }
-    RELOC_USING(st_imager_state, &cdev->writer.imager_state,
-		sizeof(gs_imager_state));
+    else
+        /* 041207
+         * clist is reader.
+         * See note above in ENUM_PTRS_WITH section.
+         */
+        RELOC_VAR(cdev->reader.band_complexity_array);
 } RELOC_PTRS_END
 public_st_device_clist();
 
@@ -141,8 +162,27 @@ const gx_device_procs gs_clist_device_procs = {
     gx_default_fill_linear_color_scanline,
     gx_default_fill_linear_color_trapezoid, /* fixme : write to clist. */
     gx_default_fill_linear_color_triangle,
-    gx_forward_update_spot_equivalent_colors
+    gx_forward_update_spot_equivalent_colors,
+    gx_forward_ret_devn_params
 };
+
+/*------------------- Choose the implementation -----------------------
+
+   For chossing the clist i/o implementation by makefile options
+   we define global variables, which are initialized with
+   file/memory io procs when they are included into the build.
+ */
+const clist_io_procs_t *clist_io_procs_file_global = NULL;
+const clist_io_procs_t *clist_io_procs_memory_global = NULL;
+
+void 
+clist_init_io_procs(gx_device_clist *pclist_dev, bool in_memory)
+{   
+    if (in_memory || clist_io_procs_file_global == NULL)
+	pclist_dev->common.page_info.io_procs = clist_io_procs_memory_global;
+    else
+	pclist_dev->common.page_info.io_procs = clist_io_procs_file_global;
+}
 
 /* ------ Define the command set and syntax ------ */
 
@@ -241,6 +281,12 @@ clist_init_bands(gx_device * dev, gx_device_memory *bdev, uint data_size,
 	&((gx_device_clist *)dev)->writer;
     int nbands;
 
+    if (dev->procs.open_device == pattern_clist_open_device) {
+	/* We don't need bands really. */
+	cdev->page_band_height = dev->height;
+	cdev->nbands = 1;
+	return 0;
+    }
     if (gdev_mem_data_size(bdev, band_width, band_height) > data_size)
 	return_error(gs_error_rangecheck);
     cdev->page_band_height = band_height;
@@ -307,12 +353,14 @@ clist_init_data(gx_device * dev, byte * init_data, uint data_size)
     int code;
 
     /* Call create_buf_device to get the memory planarity set up. */
-    cdev->buf_procs.create_buf_device(&pbdev, target, NULL, NULL, true);
+    cdev->buf_procs.create_buf_device(&pbdev, target, NULL, NULL, clist_get_band_complexity(0, 0));
     /* HACK - if the buffer device can't do copy_alpha, disallow */
     /* copy_alpha in the commmand list device as well. */
     if (dev_proc(pbdev, copy_alpha) == gx_no_copy_alpha)
 	cdev->disable_mask |= clist_disable_copy_alpha;
-    if (band_height) {
+    if (cdev->procs.open_device == pattern_clist_open_device) {
+	bits_size = data_size / 2;
+    } else if (band_height) {
 	/*
 	 * The band height is fixed, so the band buffer requirement
 	 * is completely determined.
@@ -365,7 +413,7 @@ clist_reset(gx_device * dev)
     nbands = cdev->nbands;
     cdev->ymin = cdev->ymax = -1;	/* render_init not done yet */
     memset(cdev->tile_table, 0, (cdev->tile_hash_mask + 1) *
-	   sizeof(*cdev->tile_table));
+       sizeof(*cdev->tile_table));
     cdev->cnext = cdev->cbuf;
     cdev->ccl = 0;
     cdev->band_range_list.head = cdev->band_range_list.tail = 0;
@@ -457,9 +505,9 @@ clist_reinit_output_file(gx_device *dev)
     /* if partial page rendering is available */
     if ( clist_test_VMerror_recoverable(cdev) )
 	{ if (cdev->page_bfile != 0)
-	    code = clist_set_memory_warning(cdev->page_bfile, b_block);
+	    code = cdev->page_info.io_procs->set_memory_warning(cdev->page_bfile, b_block);
 	if (code >= 0 && cdev->page_cfile != 0)
-	    code = clist_set_memory_warning(cdev->page_cfile, c_block);
+	    code = cdev->page_info.io_procs->set_memory_warning(cdev->page_cfile, c_block);
 	}
     return code;
 }
@@ -517,10 +565,10 @@ clist_open_output_file(gx_device *dev)
     cdev->page_cfname[0] = 0;	/* create a new file */
     cdev->page_bfname[0] = 0;	/* ditto */
     clist_reset_page(cdev);
-    if ((code = clist_fopen(cdev->page_cfname, fmode, &cdev->page_cfile,
+    if ((code = cdev->page_info.io_procs->fopen(cdev->page_cfname, fmode, &cdev->page_cfile,
 			    cdev->bandlist_memory, cdev->bandlist_memory,
 			    true)) < 0 ||
-	(code = clist_fopen(cdev->page_bfname, fmode, &cdev->page_bfile,
+	(code = cdev->page_info.io_procs->fopen(cdev->page_bfname, fmode, &cdev->page_bfile,
 			    cdev->bandlist_memory, cdev->bandlist_memory,
 			    false)) < 0 ||
 	(code = clist_reinit_output_file(dev)) < 0
@@ -538,11 +586,11 @@ int
 clist_close_page_info(gx_band_page_info_t *ppi)
 {
     if (ppi->cfile != NULL) {
-	clist_fclose(ppi->cfile, ppi->cfname, true);
+	ppi->io_procs->fclose(ppi->cfile, ppi->cfname, true);
 	ppi->cfile = NULL;
     }
     if (ppi->bfile != NULL) {
-	clist_fclose(ppi->bfile, ppi->bfname, true);
+	ppi->io_procs->fclose(ppi->bfile, ppi->bfname, true);
 	ppi->bfile = NULL;
     }
     return 0;
@@ -586,6 +634,10 @@ clist_close(gx_device *dev)
 
     if (cdev->do_not_open_or_close_bandfiles)
 	return 0;	
+    if (cdev->procs.open_device == pattern_clist_open_device) {
+	gs_free_object(cdev->bandlist_memory, cdev->data, "clist_close");
+	cdev->data = NULL;
+    }
     return clist_close_output_file(dev);
 }
 
@@ -600,21 +652,26 @@ clist_output_page(gx_device * dev, int num_copies, int flush)
 int
 clist_finish_page(gx_device *dev, bool flush)
 {
-    gx_device_clist_writer * const cdev =
-	&((gx_device_clist *)dev)->writer;
+    gx_device_clist_writer * const cdev =	&((gx_device_clist *)dev)->writer;
     int code;
+
+    /* If this is a reader clist, which is about to be reset to a writer,
+     * free any band_complexity_array memory used by same.
+     */
+    if (!CLIST_IS_WRITER((gx_device_clist *)dev))
+       	gx_clist_reader_free_band_complexity_array( (gx_device_clist *)dev );
 
     if (flush) {
 	if (cdev->page_cfile != 0)
-	    clist_rewind(cdev->page_cfile, true, cdev->page_cfname);
+	    cdev->page_info.io_procs->rewind(cdev->page_cfile, true, cdev->page_cfname);
 	if (cdev->page_bfile != 0)
-	    clist_rewind(cdev->page_bfile, true, cdev->page_bfname);
+	    cdev->page_info.io_procs->rewind(cdev->page_bfile, true, cdev->page_bfname);
 	clist_reset_page(cdev);
     } else {
 	if (cdev->page_cfile != 0)
-	    clist_fseek(cdev->page_cfile, 0L, SEEK_END, cdev->page_cfname);
+	    cdev->page_info.io_procs->fseek(cdev->page_cfile, 0L, SEEK_END, cdev->page_cfname);
 	if (cdev->page_bfile != 0)
-	    clist_fseek(cdev->page_bfile, 0L, SEEK_END, cdev->page_bfname);
+	    cdev->page_info.io_procs->fseek(cdev->page_bfile, 0L, SEEK_END, cdev->page_bfname);
     }
     code = clist_init(dev);		/* reinitialize */
     if (code >= 0)
@@ -641,24 +698,24 @@ clist_end_page(gx_device_clist_writer * cldev)
 	 * Note that because of copypage, there may be many such entries.
 	 */
 	cb.band_min = cb.band_max = cmd_band_end;
-	cb.pos = (cldev->page_cfile == 0 ? 0 : clist_ftell(cldev->page_cfile));
-	code = clist_fwrite_chars(&cb, sizeof(cb), cldev->page_bfile);
+	cb.pos = (cldev->page_cfile == 0 ? 0 : cldev->page_info.io_procs->ftell(cldev->page_cfile));
+	code = cldev->page_info.io_procs->fwrite_chars(&cb, sizeof(cb), cldev->page_bfile);
 	if (code > 0)
 	    code = 0;
     }
     if (code >= 0) {
 	clist_compute_colors_used(cldev);
 	ecode |= code;
-	cldev->page_bfile_end_pos = clist_ftell(cldev->page_bfile);
+	cldev->page_bfile_end_pos = cldev->page_info.io_procs->ftell(cldev->page_bfile);
     }
     if (code < 0)
 	ecode = code;
 
     /* Reset warning margin to 0 to release reserve memory if mem files */
     if (cldev->page_bfile != 0)
-	clist_set_memory_warning(cldev->page_bfile, 0);
+	cldev->page_info.io_procs->set_memory_warning(cldev->page_bfile, 0);
     if (cldev->page_cfile != 0)
-	clist_set_memory_warning(cldev->page_cfile, 0);
+	cldev->page_info.io_procs->set_memory_warning(cldev->page_cfile, 0);
 
 #ifdef DEBUG
     if (gs_debug_c('l') | gs_debug_c(':'))
@@ -668,7 +725,13 @@ clist_end_page(gx_device_clist_writer * cldev)
     return 0;
 }
 
-/* Compute the set of used colors in the page_info structure. */
+/* Compute the set of used colors in the page_info structure. 
+ *
+ * NB: Area for improvement, move states[band] and page_info to clist
+ * rather than writer device, or remove completely as this is used by the old planar devices 
+ * to operate on a plane at a time.  
+ */
+
 void
 clist_compute_colors_used(gx_device_clist_writer *cldev)
 {
@@ -689,6 +752,7 @@ clist_compute_colors_used(gx_device_clist_writer *cldev)
 	    cldev->states[band].colors_used.or;
 	cldev->page_info.band_colors_used[entry].slow_rop |=
 	    cldev->states[band].colors_used.slow_rop;
+
     }
 }
 
@@ -808,4 +872,28 @@ clist_get_band(gx_device * dev, int y, int *band_start)
 	y = dev->height;
     *band_start = start = y - y % band_height;
     return min(dev->height - start, band_height);
+}
+
+
+
+
+/* copy constructor if from != NULL
+ * default constructor if from == NULL
+ */
+void 
+clist_copy_band_complexity(gx_band_complexity_t *this, const gx_band_complexity_t *from)
+{
+    if (from) {
+	memcpy(this, from, sizeof(gx_band_complexity_t));
+    } else {
+	/* default */
+	this->uses_color = false;
+	this->nontrivial_rops = false;
+#if 0
+	/* todo: halftone phase */
+
+	this->x0 = 0;
+	this->y0 = 0;
+#endif
+    }
 }

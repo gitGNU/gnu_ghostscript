@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsstate.c,v 1.8 2007/08/01 14:26:14 jemarch Exp $ */
+/* $Id: gsstate.c,v 1.9 2007/09/10 14:08:40 Arabidopsis Exp $ */
 /* Miscellaneous graphics state operators for Ghostscript library */
 #include "gx.h"
 #include "memory_.h"
@@ -705,6 +705,21 @@ gs_currentoverprintmode(const gs_state * pgs)
     return pgs->overprint_mode;
 }
 
+/* setrenderingintent */
+int
+gs_setrenderingintent(gs_state *pgs, int ri) {
+    if (ri < 0 || ri > 3)
+	return_error(gs_error_rangecheck);
+    pgs->renderingintent = ri;
+    return 0;
+}
+
+/* currentrenderingintent */
+int
+gs_currentrenderingintent(const gs_state * pgs)
+{
+    return pgs->renderingintent;
+}
 
 /*
  * Reset most of the graphics state.

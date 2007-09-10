@@ -19,15 +19,14 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
-
-# $Id: dump_testdb,v 1.6 2007/08/01 14:26:57 jemarch Exp $
+# $Id: dump_checksum_raw.py,v 1.1 2007/09/10 14:08:49 Arabidopsis Exp $
 
 #
-# dump_testdb [<dbfile>]
+# dump_baseline.py [<dbfile>]
 #
-# dumps (prints out) the contents of the testdatadb
+# dumps (prints out) the contents of the baselinedb
 
-import string, sys, anydbm, gsconf
+import string, sys, anydbm, gsconf, os
 
 def compare_field_2(s1, s2):
     if string.split(s1,' ')[1] < string.split(s2,' ')[1]:
@@ -36,19 +35,19 @@ def compare_field_2(s1, s2):
     	return 1
 
 if len(sys.argv) == 2:
-    print "opening ", sys.argv[1]
-    db = anydbm.open(sys.argv[1])
+    name=sys.argv[1]
 else:
-    db = anydbm.open(gsconf.testdatadb)
+    name=gsconf.baselinedb
+
+if not os.path.exists(name):
+    print "cannot open",name
+    sys.exit(1)
+
+print "opening ", name
+db = anydbm.open(name)
 
 # collect the database as strings
 dump = []
 for k in db.keys():
-    dump.append('%s %s' % (db[k], k))
+    print '-%50s- %s' % (k,db[k])
 
-# Sort on field 2 (the file name)
-dump.sort(compare_field_2)
-
-# Print the sorted list
-for line in dump:
-    print line

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ztoken.c,v 1.8 2007/08/01 14:26:54 jemarch Exp $ */
+/* $Id: ztoken.c,v 1.9 2007/09/10 14:08:46 Arabidopsis Exp $ */
 /* Token reading operators */
 #include "string_.h"
 #include "ghost.h"
@@ -328,11 +328,12 @@ ztoken_scanner_options(const ref *upref, int old_options)
 	const char *pname;
 	int option;
     } named_scanner_option_t;
-    static const named_scanner_option_t named_options[4] = {
+    static const named_scanner_option_t named_options[] = {
 	{"ProcessComment", SCAN_PROCESS_COMMENTS},
 	{"ProcessDSCComment", SCAN_PROCESS_DSC_COMMENTS},
 	{"PDFScanRules", SCAN_PDF_RULES},
-	{"PDFScanInvNum", SCAN_PDF_INV_NUM}
+	{"PDFScanInvNum", SCAN_PDF_INV_NUM},
+	{"PDFScanUnsigned", SCAN_PDF_UNSIGNED}
     };
     int options = old_options;
     int i;

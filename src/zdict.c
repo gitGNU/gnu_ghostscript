@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zdict.c,v 1.7 2007/08/01 14:26:49 jemarch Exp $ */
+/* $Id: zdict.c,v 1.8 2007/09/10 14:08:41 Arabidopsis Exp $ */
 /* Dictionary operators */
 #include "ghost.h"
 #include "oper.h"
@@ -65,8 +65,18 @@ zbegin(i_ctx_t *i_ctx_p)
 
     check_type(*op, t_dictionary);
     check_dict_read(*op);
-    if (dsp == dstop)
-	return_error(e_dictstackoverflow);
+    if ( dsp == dstop ) { 
+        int code = ref_stack_extend(&d_stack, 1);
+
+        if ( code < 0 ) {
+            if (code == e_dictstackoverflow) {
+                /* Adobe doesn't restore the operand that caused stack */
+                /* overflow. We do the same to match CET 20-02-02      */
+                pop(1);
+            }
+            return code;
+        }
+    }
     ++dsp;
     ref_assign(dsp, op);
     dict_set_top();

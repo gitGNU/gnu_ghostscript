@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxdda.h,v 1.7 2007/08/01 14:26:21 jemarch Exp $ */
+/* $Id: gxdda.h,v 1.8 2007/09/10 14:08:43 Arabidopsis Exp $ */
 /* Definitions for DDAs */
 /* Requires gxfixed.h */
 
@@ -56,6 +56,13 @@
   struct sname { dtype Q; ntype R; }
 #define dda_step_struct(sname, dtype, ntype)\
   struct sname { dtype dQ; ntype dR, NdR; }
+
+/* DDA with int Q and uint N */
+typedef struct gx_dda_int_s {
+    dda_state_struct(ia_, int, uint) state;
+    dda_step_struct(ie_, int, uint) step;
+} gx_dda_int_t;
+
 /* DDA with fixed Q and (unsigned) integer N */
 typedef 
 dda_state_struct(_a, fixed, uint) gx_dda_state_fixed;

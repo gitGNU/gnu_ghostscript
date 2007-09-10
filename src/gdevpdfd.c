@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfd.c,v 1.9 2007/08/01 14:25:51 jemarch Exp $ */
+/* $Id: gdevpdfd.c,v 1.10 2007/09/10 14:08:43 Arabidopsis Exp $ */
 /* Path drawing procedures for pdfwrite driver */
 #include "math_.h"
 #include "memory_.h"
@@ -53,7 +53,7 @@ gdev_pdf_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 
     /* Make a special check for the initial fill with white, */
     /* which shouldn't cause the page to be opened. */
-    if (color == pdev->white && !is_in_page(pdev) && pdev->sbstack_depth == bottom)
+    if (color == pdev->white && !is_in_page(pdev) && pdev->sbstack_depth <= bottom)
 	if (x == 0 && y == 0 && w == pdev->width && h == pdev->height)
 	    return 0;
     code = pdf_open_page(pdev, PDF_IN_STREAM);

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxcspace.h,v 1.8 2007/08/01 14:26:20 jemarch Exp $ */
+/* $Id: gxcspace.h,v 1.9 2007/09/10 14:08:42 Arabidopsis Exp $ */
 /* Implementation of color spaces */
 /* Requires gsstruct.h */
 
@@ -146,7 +146,7 @@ struct gs_color_space_type_s {
     /* Install the color space in a graphics state. */
 
 #define cs_proc_install_cspace(proc)\
-  int proc(const gs_color_space *, gs_state *)
+  int proc(gs_color_space *, gs_state *)
 	cs_proc_install_cspace((*install_cspace));
 
     /*

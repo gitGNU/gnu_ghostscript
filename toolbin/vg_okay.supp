@@ -1,8 +1,9 @@
-# $Id: vg_okay.supp,v 1.1 2007/05/07 11:22:11 Arabidopsis Exp $
-
 # Ghostscript error suppression file for Valgrind memcheck tool.
 #
 # This file supresses messages that are known not to be bugs.
+#
+# $Id: vg_okay.supp,v 1.2 2007/09/10 14:08:56 Arabidopsis Exp $
+
 
 # Zlib examines the data past the end of the buffer by design
 # to reduce the number of boundary checks. This doesn't have any

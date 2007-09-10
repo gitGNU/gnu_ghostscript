@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxipixel.c,v 1.9 2007/08/01 14:26:26 jemarch Exp $ */
+/* $Id: gxipixel.c,v 1.10 2007/09/10 14:08:46 Arabidopsis Exp $ */
 /* Common code for ImageType 1 and 4 initialization */
 #include "gx.h"
 #include "math_.h"
@@ -208,7 +208,7 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
     byte *buffer;
     fixed mtx, mty;
     gs_fixed_point row_extent, col_extent, x_extent, y_extent;
-    bool device_color;
+    bool device_color = true;
     gs_fixed_rect obox, cbox;
 
     if (pmat == 0)

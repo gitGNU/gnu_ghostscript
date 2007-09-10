@@ -13,7 +13,7 @@
     Artifex Software, Inc.,  101 Lucas Valley Road #110,
     San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-    $Id: jbig2_text.c,v 1.5 2007/05/07 11:22:12 Arabidopsis Exp $
+    $Id: jbig2_text.c,v 1.6 2007/09/10 14:08:57 Arabidopsis Exp $
 */
 
 #ifdef HAVE_CONFIG_H
@@ -212,7 +212,7 @@ jbig2_decode_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment,
 	      return -1;
 	    }
 	    len = symcodelengths[index-1].PREFLEN;
-	    if (code == 32) range = jbig2_huffman_get_bits(hs, 2) + 2;
+	    if (code == 32) range = jbig2_huffman_get_bits(hs, 2) + 3;
 	    else if (code == 33) range = jbig2_huffman_get_bits(hs, 3) + 3;
 	    else if (code == 34) range = jbig2_huffman_get_bits(hs, 7) + 11;
 	  }

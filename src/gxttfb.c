@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxttfb.c,v 1.7 2007/08/01 14:26:30 jemarch Exp $ */
+/* $Id: gxttfb.c,v 1.8 2007/09/10 14:08:47 Arabidopsis Exp $ */
 /* A bridge to True Type interpreter. */
 
 #include "gx.h"
@@ -531,7 +531,8 @@ private int
 path_to_hinter(t1_hinter *h, gx_path *path)
 {   int code;
     gs_path_enum penum;
-    gs_fixed_point pts[3], p;
+    gs_fixed_point pts[3];
+    gs_fixed_point p = {0, 0}; /* initialize to avoid a warning */
     bool first = true;
     int op;
 

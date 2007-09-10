@@ -17,11 +17,12 @@
 
 */
 
-/*$Id: zcolor3.c,v 1.5 2007/08/01 14:26:49 jemarch Exp $*/
+/*$Id: zcolor3.c,v 1.6 2007/09/10 14:08:45 Arabidopsis Exp $*/
 /* Level 3 color operators */
 #include "ghost.h"
 #include "oper.h"
 #include "igstate.h"
+#include "store.h"
 
 
 /*
@@ -49,6 +50,30 @@ zsetuseciecolor(i_ctx_t * i_ctx_p)
     return 0;
 }
 
+/* - .currentrenderingintent <int> */
+private int
+zcurrentrenderingintent(i_ctx_t *i_ctx_p)
+{
+    os_ptr op = osp;
+
+    push(1);
+    make_int(op, gs_currentrenderingintent(igs));
+    return 0;
+}
+
+/* <int> .setrenderingintent - */
+private int
+zsetrenderingintent(i_ctx_t * i_ctx_p)
+{
+    os_ptr op = osp;
+    int param;
+    int code = int_param(op, max_int, &param);
+
+    if (code < 0 || (code = gs_setrenderingintent(igs, param)) < 0)
+	return code;
+    pop(1);
+    return 0;
+}
 
 /*
  * Initialization procedure
@@ -57,5 +82,7 @@ zsetuseciecolor(i_ctx_t * i_ctx_p)
 const op_def    zcolor3_l3_op_defs[] = {
     op_def_begin_ll3(),
     { "0.setuseciecolor", zsetuseciecolor },
+    { "0.currentrenderintent", zcurrentrenderingintent },
+    { "1.setrenderingintent", zsetrenderingintent },
     op_def_end(0)
 };

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsimage.c,v 1.8 2007/08/01 14:26:07 jemarch Exp $ */
+/* $Id: gsimage.c,v 1.9 2007/09/10 14:08:38 Arabidopsis Exp $ */
 /* Image setup procedures for Ghostscript library */
 #include "memory_.h"
 #include "math_.h"
@@ -33,7 +33,7 @@
 #include "gxpath.h"		/* for gx_effective_clip_path */
 #include "gximask.h"
 #include "gzstate.h"
-
+#include "gsutil.h"
 
 /*
   The main internal invariant for the gs_image machinery is
@@ -202,6 +202,9 @@ gs_image_begin_typed(const gs_image_common_t * pic, gs_state * pgs,
 
     if (code < 0)
 	return code;
+    /* Processing an image object operation */
+    gs_set_object_tag(pgs, GS_IMAGE_TAG);
+
     if (uses_color) {
 	gx_set_dev_color(pgs);
         code = gs_state_color_load(pgs);

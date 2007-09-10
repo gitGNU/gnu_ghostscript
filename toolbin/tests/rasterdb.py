@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- Mode: python -*-
 
-#    Copyright (C) 2001-2007 Artifex Software Inc.
+#    Copyright (C) 2001 Artifex Software Inc.
 #
 # This file is part of GNU ghostscript
 #
@@ -20,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
  
-# $Id: rasterdb.py,v 1.6 2007/08/01 14:26:58 jemarch Exp $
+# $Id: rasterdb.py,v 1.7 2007/09/10 14:08:48 Arabidopsis Exp $
  
 # rasterdb.py
 #
@@ -31,19 +31,16 @@ from stat import *
 import gsconf
 
 def exists(file, dbdir=gsconf.rasterdbdir):
-    x = False
+    x = 0
+    filename=dbdir + file + '.gz'
     try:
         mode = os.stat(dbdir + file + '.gz')[ST_MODE]
         if S_ISREG(mode):
-            x = True
+            x = 1
     except:
         pass
     
     return x
-
-def mtime(file, dbdir=gsconf.rasterdbdir):
-    'return the modification time of the entry'
-    return os.stat(dbdir + file + '.gz')[ST_MTIME]
 
 def get_file(file, dbdir=gsconf.rasterdbdir, output=None):
     if exists(file, dbdir):
@@ -59,6 +56,8 @@ def get_file(file, dbdir=gsconf.rasterdbdir, output=None):
             data = zf.read(1024)
         zf.close()
         f.close()
+    else:
+        print "rasterdb.get_file: does not exist",file
 
 def put_file(file, dbdir=gsconf.rasterdbdir):
     mode = os.stat(file)[ST_MODE]

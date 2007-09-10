@@ -1,5 +1,3 @@
-# $Id: vg_bugs.supp,v 1.1 2007/05/07 11:22:11 Arabidopsis Exp $
-
 # Ghostscript error suppression file for Valgrind memcheck tool.
 #
 # The following are suspected bugs which should be either fixed or
@@ -100,17 +98,6 @@
    Memcheck:Cond
    fun:load_transfer_map
    fun:process_transfer
-}
-
-# Image render
-# pdfwrite - 405-01.ps 450-01.ps
-{
-   <bug 688910>
-   Memcheck:Cond
-   fun:image_render_mono
-   fun:gx_image1_plane_data
-   fun:gx_image_plane_data_rows
-   fun:gs_image_next_planes
 }
 
 # Image 3

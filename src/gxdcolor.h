@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxdcolor.h,v 1.6 2007/08/01 14:26:20 jemarch Exp $ */
+/*$Id: gxdcolor.h,v 1.7 2007/09/10 14:08:43 Arabidopsis Exp $ */
 /* Device color representation for Ghostscript */
 
 #ifndef gxdcolor_INCLUDED
@@ -33,7 +33,11 @@
 #ifndef gx_device_DEFINED
 #  define gx_device_DEFINED
 typedef struct gx_device_s gx_device;
+#endif
 
+#ifndef gs_imager_state_DEFINED
+#  define gs_imager_state_DEFINED
+typedef struct gs_imager_state_s gs_imager_state;
 #endif
 
 /*

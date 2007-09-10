@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: iscannum.h,v 1.6 2007/08/01 14:26:38 jemarch Exp $ */
+/* $Id: iscannum.h,v 1.7 2007/09/10 14:08:43 Arabidopsis Exp $ */
 /* Interface to Ghostscript number scanner */
 
 #ifndef iscannum_INCLUDED
@@ -29,6 +29,6 @@
  * Note that scan_number does not mark the result ref as "new".
  */
 int scan_number(const byte * sp, const byte * end, int sign, ref * pref,
-		const byte ** psp, const bool PDFScanRules);
+		const byte ** psp, int scanner_options);
 
 #endif /* iscannum_INCLUDED */

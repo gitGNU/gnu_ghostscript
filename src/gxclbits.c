@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclbits.c,v 1.7 2007/08/01 14:26:17 jemarch Exp $ */
+/* $Id: gxclbits.c,v 1.8 2007/09/10 14:08:39 Arabidopsis Exp $ */
 /* Halftone and bitmap writing for command lists */
 #include "memory_.h"
 #include "gx.h"
@@ -689,7 +689,7 @@ clist_change_bits(gx_device_clist_writer * cldev, gx_clist_state * pcls,
     tile_loc loc;
     int code;
 
-  top:if (clist_find_bits(cldev, tiles->id, &loc)) {	/* The bitmap is in the cache.  Check whether this band */
+   top:if (clist_find_bits(cldev, tiles->id, &loc)) {	/* The bitmap is in the cache.  Check whether this band */
 	/* knows about it. */
 	uint band_index = pcls - cldev->states;
 	byte *bptr = ts_mask(loc.tile) + (band_index >> 3);

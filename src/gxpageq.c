@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxpageq.c,v 1.6 2007/08/01 14:26:27 jemarch Exp $ */
+/* $Id: gxpageq.c,v 1.7 2007/09/10 14:08:40 Arabidopsis Exp $ */
 /* Page queue implementation */
 
 /* Initial version 2/1/98 by John Desrosiers (soho@crl.com) */
@@ -278,7 +278,7 @@ gx_page_queue_enqueue(
 /* Add page to a page queue */
 /* Even if an error is returned, entry will have been added to queue! */
 int				/* rets 0 ok, gs_error_VMerror if error */
-gx_page_queue_add_page(
+gx_page_queue_add_page(gx_device_clist_writer *const pcwdev,
 			  gx_page_queue_t * queue,	/* page queue to add to */
 			  gx_page_queue_action_t action,	/* action code to queue */
 			  const gx_band_page_info_t * page_info,  /* bandinfo incl. bandlist (or 0) */
@@ -302,8 +302,10 @@ gx_page_queue_add_page(
     entry->action = action;
     if (page_info != 0)
 	entry->page_info = *page_info;
-    else
+    else {
 	entry->page_info = null_page_info;
+	entry->page_info.io_procs = pcwdev->page_info.io_procs;
+    }
     entry->num_copies = page_count;
 
     /* Stick onto page queue & signal */

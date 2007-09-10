@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxp1fill.c,v 1.7 2007/08/01 14:26:27 jemarch Exp $ */
+/* $Id: gxp1fill.c,v 1.8 2007/09/10 14:08:41 Arabidopsis Exp $ */
 /* PatternType 1 filling algorithms */
 #include "math_.h"
 #include "gx.h"
@@ -32,6 +32,7 @@
 #include "gxclip2.h"
 #include "gxpcolor.h"
 #include "gxp1impl.h"
+#include "gxcldev.h"
 
 /* Define the state for tile filling. */
 typedef struct tile_fill_state_s {
@@ -241,6 +242,26 @@ tile_colored_fill(const tile_fill_state_t * ptfs,
     }
     return code;
 }
+
+/* Fill a rectangle with a colored Pattern. */
+/* Note that we treat this as "texture" for RasterOp. */
+private int
+tile_pattern_clist(const tile_fill_state_t * ptfs,
+		  int x, int y, int w, int h)
+{
+    gx_color_tile *ptile = ptfs->pdevc->colors.pattern.p_tile;
+    gx_device_clist *cdev = ptile->cdev;
+    gx_device_clist_reader *crdev = (gx_device_clist_reader *)cdev;
+    gx_device *dev = ptfs->orig_dev;
+    int code;
+
+    crdev->page_info.io_procs->rewind(crdev->page_info.bfile, false, NULL);
+    crdev->page_info.io_procs->rewind(crdev->page_info.cfile, false, NULL);
+    code = clist_playback_file_bands(playback_action_render,
+		crdev, &crdev->page_info, dev, 0, 0, ptfs->xoff - x, ptfs->yoff - y);
+    return code;
+}
+
 int
 gx_dc_pattern_fill_rectangle(const gx_device_color * pdevc, int x, int y,
 			     int w, int h, gx_device * dev,
@@ -262,7 +283,7 @@ gx_dc_pattern_fill_rectangle(const gx_device_color * pdevc, int x, int y,
     code = tile_fill_init(&state, pdevc, dev, false);
     if (code < 0)
 	return code;
-    if (ptile->is_simple) {
+    if (ptile->is_simple && ptile->cdev == NULL) {
 	int px =
 	    imod(-(int)(ptile->step_matrix.tx - state.phase.x + 0.5),
 		 bits->rep_width);
@@ -287,9 +308,27 @@ gx_dc_pattern_fill_rectangle(const gx_device_color * pdevc, int x, int y,
 	state.lop = lop;
 	state.source = source;
 	state.rop_source = rop_source;
-	state.orig_dev = dev;
-	code = tile_by_steps(&state, x, y, w, h, ptile,
-			     &ptile->tbits, tile_colored_fill);
+        state.orig_dev = dev;
+	if (ptile->cdev == NULL) {
+	    code = tile_by_steps(&state, x, y, w, h, ptile,
+				 &ptile->tbits, tile_colored_fill);
+	} else {
+	    gx_device_clist *cdev = ptile->cdev;
+	    gx_device_clist_reader *crdev = (gx_device_clist_reader *)cdev;
+	    gx_strip_bitmap tbits;
+
+	    crdev->yplane.depth = 0; /* Don't know what to set here. */
+	    crdev->yplane.shift = 0;
+	    crdev->yplane.index = -1;
+	    crdev->pages = NULL;
+	    crdev->num_pages = 1;
+	    state.orig_dev = dev;
+	    tbits = ptile->tbits;
+	    tbits.size.x = crdev->width;
+	    tbits.size.y = crdev->height;
+	    code = tile_by_steps(&state, x, y, w, h, ptile,
+				 &tbits, tile_pattern_clist);
+	}
     }
     return code;
 }

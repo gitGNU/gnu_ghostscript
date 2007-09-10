@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gp_msprn.c,v 1.7 2007/08/01 14:25:59 jemarch Exp $ */
+/* $Id: gp_msprn.c,v 1.8 2007/09/10 14:08:46 Arabidopsis Exp $ */
 /* %printer% IODevice */
 
 #include "windows_.h"
@@ -112,6 +112,11 @@ void mswin_printer_thread(void *arg)
 		return;
 	    }
 	}
+	if (!StartPagePrinter(hprinter)) {
+		AbortPrinter(hprinter);
+		close(fd);
+		return;
+	}
 	if (!WritePrinter(hprinter, (LPVOID) data, count, &written)) {
 	    AbortPrinter(hprinter);
 	    close(fd);
@@ -121,6 +126,7 @@ void mswin_printer_thread(void *arg)
     if (hprinter != INVALID_HANDLE_VALUE) {
 	if (count == 0) {
 	    /* EOF */
+	    EndPagePrinter(hprinter);
 	    EndDocPrinter(hprinter);
 	    ClosePrinter(hprinter);
 	}
@@ -179,7 +185,7 @@ mswin_printer_fopen(gx_io_device * iodev, const char *fname, const char *access,
     }
 
     /* start a thread to read the pipe */
-    tid = _beginthread(&mswin_printer_thread, 32768, pipeh[0]);
+    tid = _beginthread(&mswin_printer_thread, 32768, (void *)(pipeh[0]));
     if (tid == -1) {
 	fclose(*pfile);
 	close(pipeh[0]);

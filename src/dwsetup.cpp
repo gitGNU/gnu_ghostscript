@@ -17,7 +17,7 @@
 
 */
 
-// $Id: dwsetup.cpp,v 1.10 2007/08/01 14:25:44 jemarch Exp $
+// $Id: dwsetup.cpp,v 1.11 2007/09/10 14:08:42 Arabidopsis Exp $
 //
 //
 // This is the setup program for Win32 GNU Ghostscript
@@ -857,7 +857,6 @@ install_prog()
 
         /* Create lib/cidfmap */
 	if (g_bCJKFonts) {
-		FILE *f;
 		char szCIDFmap[MAXSTR];
 		char szCIDFmap_bak[MAXSTR];
 		char szGSPATH[MAXSTR];

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclist.h,v 1.7 2007/08/01 14:26:18 jemarch Exp $ */
+/* $Id: gxclist.h,v 1.8 2007/09/10 14:08:40 Arabidopsis Exp $ */
 /* Command list definitions for Ghostscript. */
 /* Requires gxdevice.h and gxdevmem.h */
 
@@ -61,6 +61,11 @@
  * in the buffer and are for the same range; if the answer to any of these
  * questions is negative, we flush the buffer.
  */
+
+#ifndef gs_pattern1_instance_t_DEFINED
+#  define gs_pattern1_instance_t_DEFINED
+typedef struct gs_pattern1_instance_s gs_pattern1_instance_t;
+#endif
 
 /* ---------------- Public structures ---------------- */
 
@@ -182,7 +187,7 @@ typedef struct gx_clist_state_s gx_clist_state;
 	int ymin, ymax;			/* current band, <0 when writing */\
 		/* Following are set when writing, read when reading. */\
 	gx_band_page_info_t page_info;	/* page information */\
-	int nbands		/* # of bands */
+	int nbands			/* # of bands */
 
 typedef struct gx_device_clist_common_s {
     gx_device_clist_common_members;
@@ -248,6 +253,7 @@ typedef struct gx_device_clist_writer_s {
 		/* Following must be set before writing */
 	proc_free_up_bandlist_memory((*free_up_bandlist_memory)); /* if nz, proc to free some bandlist memory */
 	int disable_mask;		/* mask of routines to disable clist_disable_xxx */
+	gs_pattern1_instance_t *pinst; /* Used when it is a pattern clist. */
 } gx_device_clist_writer;
 
 /* Bits for gx_device_clist_writer.disable_mask. Bit set disables behavior */
@@ -267,13 +273,19 @@ typedef struct gx_device_clist_reader_s {
 					/* means all planes */
     const gx_placed_page *pages;
     int num_pages;
+    gx_band_complexity_t *band_complexity_array;  /* num_bands elements */
 } gx_device_clist_reader;
 
-typedef union gx_device_clist_s {
+union gx_device_clist_s {
     gx_device_clist_common common;
     gx_device_clist_reader reader;
     gx_device_clist_writer writer;
-} gx_device_clist;
+};
+
+#ifndef gx_device_clist_DEFINED
+#define gx_device_clist_DEFINED
+typedef union gx_device_clist_s gx_device_clist;
+#endif
 
 extern_st(st_device_clist);
 #define public_st_device_clist()	/* in gxclist.c */\
@@ -281,7 +293,9 @@ extern_st(st_device_clist);
     "gx_device_clist", 0, device_clist_enum_ptrs, device_clist_reloc_ptrs,\
     gx_device_finalize)
 #define st_device_clist_max_ptrs\
-  (st_device_forward_max_ptrs + st_imager_state_num_ptrs + 1)
+  (st_device_forward_max_ptrs + st_imager_state_num_ptrs + 3)
+
+#define CLIST_IS_WRITER(cdev) ((cdev)->common.ymin < 0)
 
 /* setup before opening clist device */
 #define clist_init_params(xclist, xdata, xdata_size, xtarget, xbuf_procs, xband_params, xexternal, xmemory, xfree_bandlist, xdisable, pageusestransparency)\
@@ -296,6 +310,7 @@ extern_st(st_device_clist);
 	(xclist)->writer.free_up_bandlist_memory = (xfree_bandlist);\
 	(xclist)->writer.disable_mask = (xdisable);\
 	(xclist)->writer.page_uses_transparency = (pageusestransparency);\
+	(xclist)->writer.pinst = NULL;\
     END
 
 /* Determine whether this clist device is able to recover VMerrors */
@@ -304,6 +319,8 @@ extern_st(st_device_clist);
 
 /* The device template itself is never used, only the procedures. */
 extern const gx_device_procs gs_clist_device_procs;
+
+void clist_init_io_procs(gx_device_clist *pclist_dev, bool in_memory);
 
 /* Reset (or prepare to append to) the command list after printing a page. */
 int clist_finish_page(gx_device * dev, bool flush);
@@ -349,5 +366,35 @@ int clist_render_rectangle(gx_device_clist *cdev,
 			   const gs_int_rect *prect, gx_device *bdev,
 			   const gx_render_plane_t *render_plane,
 			   bool clear);
+
+/* A null pointer is used to denote not banding.  
+ * Since false == NULL the old usage of for_banding = false works even if it's hackish.
+ *
+ * returns the complexity for a band given the y offset from top of page.
+ */
+gx_band_complexity_t *
+clist_get_band_complexity(gx_device *dev, int y);
+
+/* Free any band_complexity_array memory used by the clist reader device */
+void gx_clist_reader_free_band_complexity_array(gx_device_clist *cldev);
+
+/* deep copy constructor if from != NULL
+ * default constructor if from == NULL
+ */
+void 
+clist_copy_band_complexity(gx_band_complexity_t *this, const gx_band_complexity_t *from);
+
+#ifdef DEBUG 
+#define clist_debug_rect clist_debug_rect_imp
+void clist_debug_rect_imp(int x, int y, int width, int height);
+#define clist_debug_image_rect clist_debug_image_rect_imp
+void clist_debug_image_rect_imp(int x, int y, int width, int height);
+#define clist_debug_set_ctm clist_debug_set_ctm_imp
+void clist_debug_set_ctm_imp(const gs_matrix *m);
+#else
+#define clist_debug_rect (void)
+#define clist_debug_image_rect (void)
+#define clist_debug_set_ctm (void)
+#endif
 
 #endif /* gxclist_INCLUDED */

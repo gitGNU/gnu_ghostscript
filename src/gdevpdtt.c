@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdtt.c,v 1.8 2007/08/01 14:25:53 jemarch Exp $ */
+/* $Id: gdevpdtt.c,v 1.9 2007/09/10 14:08:41 Arabidopsis Exp $ */
 /* Text processing for pdfwrite. */
 #include "math_.h"
 #include "string_.h"
@@ -2006,7 +2006,7 @@ pdf_update_text_state(pdf_text_process_state_t *ppts,
     ppts->values.size = size;
     ppts->values.matrix = tmat;
     ppts->values.render_mode = (penum->pis->text_rendering_mode == 3 ? 3 : 
-				font->PaintType == 0 ? 0 : 1);
+				font->PaintType == 0 ? 0 : penum->pis->text_rendering_mode);
     ppts->values.word_spacing = w_s;
     ppts->font = font;
 

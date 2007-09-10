@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: ugcclib.mak,v 1.10 2007/08/01 14:26:46 jemarch Exp $
+# $Id: ugcclib.mak,v 1.11 2007/09/10 14:08:43 Arabidopsis Exp $
 # makefile for Unix / gcc library testing.
 
 BINDIR=./libobj
@@ -52,7 +52,7 @@ SHARE_JPEG=0
 JPEG_NAME=jpeg
 
 PSRCDIR=libpng
-PVERSION=10208
+PVERSION=10216
 SHARE_LIBPNG=1
 LIBPNG_NAME=png
 

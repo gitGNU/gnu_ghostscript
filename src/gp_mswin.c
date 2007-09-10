@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gp_mswin.c,v 1.9 2007/08/01 14:25:59 jemarch Exp $ */
+/* $Id: gp_mswin.c,v 1.10 2007/09/10 14:08:42 Arabidopsis Exp $ */
 /*
  * Microsoft Windows platform support for Ghostscript.
  *
@@ -210,8 +210,6 @@ is_spool(const char *queue)
 private int
 is_printer(const char *name)
 {
-    char buf[128];
-
     /* is printer if no name given */
     if (strlen(name) == 0)
 	return TRUE;

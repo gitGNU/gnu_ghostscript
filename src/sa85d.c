@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sa85d.c,v 1.8 2007/08/01 14:26:40 jemarch Exp $ */
+/* $Id: sa85d.c,v 1.9 2007/09/10 14:08:40 Arabidopsis Exp $ */
 /* ASCII85Decode filter */
 #include "std.h"
 #include "strimpl.h"
@@ -51,7 +51,7 @@ s_A85D_process(stream_state * st, stream_cursor_read * pr,
     /* might be as many as 6 characters after the last valid data char  */
     /* D <cr> <lf> '~' <cr> <lf> '>' where 'D' is a data character.     */
     const byte *rlimit = pr->limit - (last ? 0 : 7); /* max EOD len + 1 */
-    const byte *r = rlimit;
+    const byte *r = max(p, rlimit);
     byte *wlimit = pw->limit;
     int ccount = ss->odd;
     ulong word = ss->word;

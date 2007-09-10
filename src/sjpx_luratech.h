@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sjpx_luratech.h,v 1.3 2007/08/01 14:26:43 jemarch Exp $ */
+/* $Id: sjpx_luratech.h,v 1.4 2007/09/10 14:08:46 Arabidopsis Exp $ */
 /* Definitions for JPXDecode filter (JPEG 2000) */
 /* we link to the Luratech CSDK for the actual decoding */
 
@@ -34,7 +34,7 @@ typedef enum {
   gs_jpx_cs_unset,  /* colorspace hasn't been set */
   gs_jpx_cs_gray,   /* single component grayscale image */ 
   gs_jpx_cs_rgb,    /* three component (s)RGB image */
-  gs_jpx_cs_cmyk    /* four component CMYK image */
+  gs_jpx_cs_cmyk,   /* four component CMYK image */
   gs_jpx_cs_indexed /* PDF image wants raw index values */
 } gs_jpx_cs;
 

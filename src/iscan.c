@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: iscan.c,v 1.9 2007/08/01 14:26:37 jemarch Exp $ */
+/* $Id: iscan.c,v 1.10 2007/09/10 14:08:43 Arabidopsis Exp $ */
 /* Token scanner for Ghostscript interpreter */
 #include "ghost.h"
 #include "memory_.h"
@@ -501,7 +501,6 @@ scan_token(i_ctx_t *i_ctx_p, ref * pref, scanner_state * pstate)
     int sign;
     const bool check_only = (pstate->s_options & SCAN_CHECK_ONLY) != 0;
     const bool PDFScanRules = (i_ctx_p->scanner_options & SCAN_PDF_RULES) != 0;
-    const bool PDFScanInvNum = (i_ctx_p->scanner_options & SCAN_PDF_INV_NUM) != 0;
     scanner_state sstate;
 
 #define pstack sstate.s_pstack
@@ -915,7 +914,7 @@ scan_token(i_ctx_t *i_ctx_p, ref * pref, scanner_state * pstate)
 	     */
 	    retcode = scan_number(sptr + (sign & 1),
 		    endptr /*(*endptr == char_CR ? endptr : endptr + 1) */ ,
-				  sign, myref, &newptr, PDFScanInvNum);
+				  sign, myref, &newptr, i_ctx_p->scanner_options);
 	    if (retcode == 1 && decoder[newptr[-1]] == ctype_space) {
 		sptr = newptr - 1;
 		if (*sptr == char_CR && sptr[1] == char_EOL)
@@ -1127,7 +1126,7 @@ scan_token(i_ctx_t *i_ctx_p, ref * pref, scanner_state * pstate)
 		const byte *base = da.base;
 
 		scan_sign(sign, base);
-		retcode = scan_number(base, daptr, sign, myref, &newptr, PDFScanInvNum);
+		retcode = scan_number(base, daptr, sign, myref, &newptr, i_ctx_p->scanner_options);
 		if (retcode == 1) {
 		    ref_mark_new(myref);
 		    retcode = 0;

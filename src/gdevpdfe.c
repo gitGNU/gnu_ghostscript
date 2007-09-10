@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfe.c,v 1.6 2007/08/01 14:25:51 jemarch Exp $ */
+/* $Id: gdevpdfe.c,v 1.7 2007/09/10 14:08:41 Arabidopsis Exp $ */
 /* Metadata writer. */
 #include "gx.h"
 #include "string_.h"
@@ -351,7 +351,7 @@ pdf_make_document_uuid(gx_device_pdf *pdev, const byte digest[6], char *buf, int
     return 0;
 }
 
-private char dd[]={'\'', 0xEF, 0xBB, 0xBF, '\'', 0};
+static const char dd[]={'\'', '\357', '\273', '\277', '\'', 0};
 
 /* --------------------------------------------  */
 

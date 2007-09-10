@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxshade4.h,v 1.8 2007/08/01 14:26:29 jemarch Exp $ */
+/* $Id: gxshade4.h,v 1.9 2007/09/10 14:08:41 Arabidopsis Exp $ */
 /* Internal definitions for triangle shading rendering */
 
 #ifndef gxshade4_INCLUDED
@@ -118,12 +118,16 @@ struct patch_color_s {
 typedef struct patch_color_s patch_color_t;
 #endif
 
-
+#ifndef gs_color_index_cache_DEFINED
+#  define gs_color_index_cache_DEFINED
+typedef struct gs_color_index_cache_s gs_color_index_cache_t;
+#endif
 
 /* Define the common state for rendering Coons and tensor patches. */
 typedef struct patch_fill_state_s {
     mesh_fill_state_common;
     const gs_function_t *Function;
+    int function_arg_shift;
     bool vectorization;
     int n_color_args;
     fixed max_small_coord; /* Length restriction for intersection_of_small_bars. */
@@ -132,6 +136,7 @@ typedef struct patch_fill_state_s {
     int wedge_vertex_list_elem_count;
     int wedge_vertex_list_elem_count_max;
     gs_client_color color_domain;
+    fixed decomposition_limit;
     fixed fixed_flat;
     double smoothness;
     bool maybe_self_intersecting;
@@ -145,6 +150,7 @@ typedef struct patch_fill_state_s {
     byte *color_stack; /* A storage for shortened patch_color_t structures. */
     byte *color_stack_limit;
     gs_memory_t *memory; /* Where color_buffer is allocated. */
+    gs_color_index_cache_t *pcic;
 } patch_fill_state_t;
 
 /* Define a structure for mesh or patch vertex. */

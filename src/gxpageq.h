@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxpageq.h,v 1.6 2007/08/01 14:26:27 jemarch Exp $ */
+/* $Id: gxpageq.h,v 1.7 2007/09/10 14:08:40 Arabidopsis Exp $ */
 /* Page queue implementation */
 
 /* Initial version 2/1/98 by John Desrosiers (soho@crl.com) */
@@ -233,6 +233,7 @@ void gx_page_queue_enqueue(
  */
 /* rets 0 ok, gs_error_Fatal if error */
 int gx_page_queue_add_page(
+    gx_device_clist_writer *const pcwdev,
     gx_page_queue_t * queue,		/* page queue to add to */
     gx_page_queue_action_t action,		/* action code to queue */
     const gx_band_page_info_t * page_info,	/* bandinfo incl. bandlist */

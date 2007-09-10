@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sisparam.h,v 1.6 2007/08/01 14:26:43 jemarch Exp $ */
+/* $Id: sisparam.h,v 1.7 2007/09/10 14:08:44 Arabidopsis Exp $ */
 /* Generic image scaling stream definitions */
 /* Requires strimpl.h */
 
@@ -61,6 +61,7 @@ typedef struct stream_image_scale_params_s {
     uint MaxValueOut;		/* max value of output component, */
 				/* 0 < MaxValueOut < 1 << BitsPerComponentOut*/
     int WidthOut, HeightOut;	/* > 0 */
+    bool ColorPolarityAdditive;	/* needed by SpecialDownScale filter */
 } stream_image_scale_params_t;
 
 /* Define a generic image scaling stream state. */

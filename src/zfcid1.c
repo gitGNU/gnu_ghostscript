@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfcid1.c,v 1.8 2007/08/01 14:26:50 jemarch Exp $ */
+/* $Id: zfcid1.c,v 1.9 2007/09/10 14:08:45 Arabidopsis Exp $ */
 /* CIDFontType 1 and 2 operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -101,7 +101,7 @@ z11_CIDMap_proc(gs_font_cid2 *pfont, gs_glyph glyph)
 	return prgnum->value.intval;
     default:			/* array type */
         code = string_array_access_proc(pfont->memory, pcidmap, 1, cid * gdbytes,
-					gdbytes, &data);
+					gdbytes, NULL, NULL, &data);
 
 	if (code < 0)
 	    return code;

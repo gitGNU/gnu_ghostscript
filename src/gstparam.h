@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gstparam.h,v 1.7 2007/08/01 14:26:14 jemarch Exp $ */
+/* $Id: gstparam.h,v 1.8 2007/09/10 14:08:46 Arabidopsis Exp $ */
 /* Transparency parameter definitions */
 
 #ifndef gstparam_INCLUDED
@@ -122,6 +122,8 @@ typedef struct gx_transparency_mask_params_s {
     bool function_is_identity;
     byte transfer_fn[MASK_TRANSFER_FUNCTION_SIZE];
 } gx_transparency_mask_params_t;
+
+#define MAX_CLIST_COMPOSITOR_SIZE (sizeof( gx_transparency_mask_params_t ) + 1)
 
 /* Select the opacity or shape parameters. */
 typedef enum {

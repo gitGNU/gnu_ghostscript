@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gstrans.h,v 1.7 2007/08/01 14:26:14 jemarch Exp $ */
+/* $Id: gstrans.h,v 1.8 2007/09/10 14:08:41 Arabidopsis Exp $ */
 /* Transparency definitions and interface */
 
 #ifndef gstrans_INCLUDED
@@ -71,6 +71,7 @@ typedef struct gs_transparency_source_s {
 struct gs_pdf14trans_params_s {
     /* The type of trasnparency operation */
     pdf14_compositor_operations pdf14_op;
+    int num_spot_colors;    /* Only for devices which support spot colors. */
     /* Changed parameters flag */
     int changed;
     /* Parameters from the gs_transparency_group_params_t structure */
@@ -96,7 +97,10 @@ struct gs_pdf14trans_params_s {
     bool mask_is_image;
 };
 
+#ifndef gs_pdf14trans_params_DEFINED
+#define gs_pdf14trans_params_DEFINED
 typedef struct gs_pdf14trans_params_s gs_pdf14trans_params_t;
+#endif
 
 /*
  * The PDF 1.4 transparency compositor structure. This is exactly analogous to

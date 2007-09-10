@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2007 artofcode LLC.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: imainarg.c,v 1.11 2007/08/01 14:26:36 jemarch Exp $ */
+/* $Id: imainarg.c,v 1.12 2007/09/10 14:08:39 Arabidopsis Exp $ */
 /* Command line parsing and dispatching */
 #include "ctype_.h"
 #include "memory_.h"
@@ -68,10 +68,6 @@ extern int zflushpage(i_ctx_t *);
 
 #ifndef GS_MAX_LIB_DIRS
 #  define GS_MAX_LIB_DIRS 25
-#endif
-
-#ifndef GS_BUG_MAILBOX
-#  define GS_BUG_MAILBOX "bug-ghostscript@gnu.org"
 #endif
 
 #define MAX_BUFFERED_SIZE 1024
@@ -889,7 +885,7 @@ private const char help_usage2[] = "\
                                          embed %d or %ld for page #\n";
 private const char help_trailer[] = "\
 For more information, see %s.\n\
-Report bugs to %s, using the form in Bug-form.htm.\n";
+Please report bugs to bug-ghostscript@gnu.org.\n";
 private const char help_devices[] = "Available devices:";
 private const char help_default_device[] = "Default output device:";
 private const char help_emulators[] = "Input formats:";
@@ -1069,5 +1065,5 @@ print_help_trailer(const gs_main_instance *minst)
     if (gp_file_name_combine(gs_doc_directory, strlen(gs_doc_directory), 
 	    use_htm, strlen(use_htm), false, buffer, &blen) != gp_combine_success)
 	p = use_htm;
-    outprintf(minst->heap, help_trailer, p, GS_BUG_MAILBOX);
+    outprintf(minst->heap, help_trailer, p);
 }

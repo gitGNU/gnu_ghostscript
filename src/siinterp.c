@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: siinterp.c,v 1.7 2007/08/01 14:26:42 jemarch Exp $ */
+/* $Id: siinterp.c,v 1.8 2007/09/10 14:08:46 Arabidopsis Exp $ */
 /* Image interpolation filter */
 #include "memory_.h"
 #include "gxfixed.h"		/* for gxdda.h */
@@ -27,10 +27,6 @@
 #include "siinterp.h"
 
 /* ImageInterpolateEncode state */
-typedef struct gx_dda_int_s {
-    dda_state_struct(ia_, int, uint) state;
-    dda_step_struct(ie_, int, uint) step;
-} gx_dda_int_t;
 typedef enum {
     SCALE_SAME = 0,
     SCALE_SAME_ALIGNED,

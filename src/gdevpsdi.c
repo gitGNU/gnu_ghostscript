@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpsdi.c,v 1.9 2007/08/01 14:25:54 jemarch Exp $ */
+/* $Id: gdevpsdi.c,v 1.10 2007/09/10 14:08:46 Arabidopsis Exp $ */
 /* Image compression for PostScript and PDF writers */
 #include "stdio_.h"		/* for jpeglib.h */
 #include "jpeglib_.h"		/* for sdct.h */
@@ -589,7 +589,6 @@ psdf_setup_image_filters(gx_device_psdf * pdev, psdf_binary_writer * pbw,
 	bool cmyk_to_rgb = psdf_is_converting_image_to_RGB(pdev, pis, pim);
 
 	if (cmyk_to_rgb) {
-	    extern_st(st_color_space);
 	    gs_memory_t *mem = pdev->v_memory;
 
 	    /* {csrc} decref old colorspace? */

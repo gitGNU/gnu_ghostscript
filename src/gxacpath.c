@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxacpath.c,v 1.9 2007/08/01 14:26:15 jemarch Exp $ */
+/*$Id: gxacpath.c,v 1.10 2007/09/10 14:08:45 Arabidopsis Exp $ */
 /* Accumulator for clipping paths */
 #include "gx.h"
 #include "gserrors.h"
@@ -43,7 +43,7 @@ private dev_proc_pattern_manage(accum_pattern_manage);
 extern_st(st_clip_list);
 private
 ENUM_PTRS_WITH(device_cpath_accum_enum_ptrs, gx_device_cpath_accum *pdev)
-    if (index > st_device_max_ptrs)
+    if (index >= st_device_max_ptrs)
 	return ENUM_USING(st_clip_list, &pdev->list, sizeof(gx_clip_list), index - st_device_max_ptrs);
     ENUM_PREFIX(st_device, 0);
 ENUM_PTRS_END

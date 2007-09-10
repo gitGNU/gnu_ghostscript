@@ -16,10 +16,11 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/*$Id: gdevdbit.c,v 1.9 2007/08/01 14:25:46 jemarch Exp $ */
+/*$Id: gdevdbit.c,v 1.10 2007/09/10 14:08:38 Arabidopsis Exp $ */
 /* Default device bitmap copying implementation */
 #include "gx.h"
 #include "gpcheck.h"
+#include "gserror.h"
 #include "gserrors.h"
 #include "gsbittab.h"
 #include "gsrect.h"
@@ -55,8 +56,12 @@ gx_default_copy_mono(gx_device * dev, const byte * data,
     bool invert;
     gx_color_index color;
     gx_device_color devc;
-
+    
+    if (!data) 
+	gs_throw(-997, __func__ );
     fit_copy(dev, data, dx, raster, id, x, y, w, h);
+    if (!data) 
+	gs_throw(-997, __func__ );
     if (one != gx_no_color_index) {
 	invert = false;
 	color = one;
@@ -71,7 +76,11 @@ gx_default_copy_mono(gx_device * dev, const byte * data,
 	invert = true;
 	color = zero;
     }
+    if (!data) 
+	gs_throw(-997, __func__ );
     set_nonclient_dev_color(&devc, color);
+    if (!data) 
+	gs_throw(-997, __func__ );
     return gx_dc_default_fill_masked
 	(&devc, data, dx, raster, id, x, y, w, h, dev, rop3_T, invert);
 }

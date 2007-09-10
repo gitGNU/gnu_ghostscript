@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gspath1.c,v 1.8 2007/08/01 14:26:11 jemarch Exp $ */
+/* $Id: gspath1.c,v 1.9 2007/09/10 14:08:39 Arabidopsis Exp $ */
 /* Additional PostScript Level 1 path routines for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -572,7 +572,9 @@ gs_upathbbox(gs_state * pgs, gs_rect * pbox, bool include_moveto)
     if (path_last_is_moveto(pgs->path) && include_moveto) {
 	gs_fixed_point pt;
 
-	gx_path_current_point_inline(pgs->path, &pt);
+	code = gx_path_current_point_inline(pgs->path, &pt);
+        if (code < 0)
+	    return code;
 	if (pt.x < fbox.p.x)
 	    fbox.p.x = pt.x;
 	if (pt.y < fbox.p.y)

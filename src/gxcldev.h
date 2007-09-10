@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxcldev.h,v 1.8 2007/08/01 14:26:17 jemarch Exp $ */
+/*$Id: gxcldev.h,v 1.9 2007/09/10 14:08:46 Arabidopsis Exp $ */
 /* Internal definitions for Ghostscript command lists. */
 
 #ifndef gxcldev_INCLUDED
@@ -222,6 +222,8 @@ typedef struct cmd_block_s {
     int band_min, band_max;
 #define cmd_band_end (-1)	/* end of band file */
     int64_t pos;		/* starting position in cfile */
+    gx_band_complexity_t band_complexity;  
+    
 } cmd_block;
 
 /* ---------------- Band state ---------------- */
@@ -258,7 +260,7 @@ struct gx_clist_state_s {
     /* Following are only used when writing */
     cmd_list list;		/* list of commands for band */
     /* Following are set when writing, read when reading */
-    ulong cost;			/* cost of rendering the band */
+    gx_band_complexity_t band_complexity; 
     gx_colors_used_t colors_used;
 };
 
@@ -270,7 +272,7 @@ struct gx_clist_state_s {
 	0, gx_no_bitmap_id,\
 	 { 0, 0 }, { gx_no_color_index, gx_no_color_index },\
 	 { 0, 0, 0, 0 }, lop_default, 0, 0, 0, initial_known,\
-	{ 0, 0 }, 0, { 0 }
+	{ 0, 0 }, { 0, 0 }, { 0, 0 }
 
 /* Define the size of the command buffer used for reading. */
 /* This is needed to split up operations with a large amount of data, */
@@ -740,4 +742,9 @@ int clist_playback_band(clist_playback_action action,
 			stream *s, gx_device *target,
 			int x0, int y0, gs_memory_t *mem);
 
+/* Playback the band file, taking the indicated action w/ its contents. */
+int clist_playback_file_bands(clist_playback_action action, 
+			  gx_device_clist_reader *crdev,
+			  gx_band_page_info_t *page_info, gx_device *target,
+			  int band_first, int band_last, int x0, int y0);
 #endif /* gxcldev_INCLUDED */

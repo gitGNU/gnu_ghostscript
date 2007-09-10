@@ -17,10 +17,11 @@
 
 */
 
-/* $Id: sfxstdio.c,v 1.7 2007/08/01 14:26:42 jemarch Exp $ */
+/* $Id: sfxstdio.c,v 1.8 2007/09/10 14:08:45 Arabidopsis Exp $ */
 /* File stream implementation using stdio */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"
+#include "unistd_.h"
 #include "gsmemory.h"
 #include "gdebug.h"
 #include "gpcheck.h"

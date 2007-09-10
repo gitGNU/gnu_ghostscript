@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: openvms.mak,v 1.10 2007/08/01 14:26:40 jemarch Exp $
+# $Id: openvms.mak,v 1.11 2007/09/10 14:08:38 Arabidopsis Exp $
 # makefile for OpenVMS VAX and Alpha
 #
 # Please contact Jim Dunham (dunham@omtool.com) if you have questions.
@@ -128,7 +128,7 @@ JVERSION=6
 # See libpng.mak for more information.
 
 PSRCDIR=[.libpng]
-PVERSION=10208
+PVERSION=10216
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.
@@ -263,7 +263,7 @@ FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(P
 # ***********************************************************************************
 # The list of resources to be included in the %rom% file system.
 # This is in the top makefile since the file descriptors are platform specific
-RESOURCE_LIST=[Resource.CMap] [Resource.ColorSpace] [Resource.Decoding] [Resource.Fonts] [Resource.Procset] [Resource.IdiomSet] [Resource.CIDFont]
+RESOURCE_LIST=[Resource.CMap] [Resource.ColorSpace] [Resource.Decoding] [Resource.Fonts] [Resource.ProcSet] [Resource.IdiomSet] [Resource.CIDFont]
 
 # Choose whether to compile the .ps initialization files into the executable.
 # See gs.mak for details.

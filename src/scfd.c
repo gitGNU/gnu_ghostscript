@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: scfd.c,v 1.7 2007/08/01 14:26:41 jemarch Exp $ */
+/* $Id: scfd.c,v 1.8 2007/09/10 14:08:39 Arabidopsis Exp $ */
 /* CCITTFax decoding filter */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"
@@ -52,7 +52,7 @@ s_CFD_init(stream_state * st)
     /* Because skip_white_pixels can look as many as 4 bytes ahead, */
     /* we need to allow 4 extra bytes at the end of the row buffers. */
     ss->lbuf = gs_alloc_bytes(st->memory, raster + 4, "CFD lbuf");
-    memset(ss->lbuf, white, raster);
+    memset(ss->lbuf, white, raster + 4);  /* + 4 for Valgrind */
     ss->lprev = 0;
     if (ss->lbuf == 0)
 	return ERRC;		/****** WRONG ******/
@@ -61,7 +61,7 @@ s_CFD_init(stream_state * st)
 	if (ss->lprev == 0)
 	    return ERRC;	/****** WRONG ******/
 	/* Clear the initial reference line for 2-D encoding. */
-	memset(ss->lprev, white, raster);
+	memset(ss->lprev, white, raster + 4); /* + 4 for Valgrind */
 	/* Ensure that the scan of the reference line will stop. */
 	ss->lprev[raster] = 0xa0;
     }

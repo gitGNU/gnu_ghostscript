@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfb.h,v 1.3 2007/08/01 14:25:51 jemarch Exp $ */
+/* $Id: gdevpdfb.h,v 1.4 2007/09/10 14:08:44 Arabidopsis Exp $ */
 /* pdfwrite, ps2write device body template. */
 
 /* This file is allowed to #include several times into a single .c file.
@@ -94,6 +94,7 @@ const gx_device_pdf PDF_DEVICE_IDENT =
   gdev_pdf_include_color_space 	/* include_color_space */
  },
  psdf_initial_values(PSDF_VERSION_INITIAL, 0 /*false */ ),  /* (!ASCII85EncodePages) */
+ PDF_FOR_OPDFREAD,		/* is_ps2write */
  PDF_COMPATIBILITY_LEVEL_INITIAL,  /* CompatibilityLevel */
  -1,				/* EndPage */
  1,				/* StartPage */

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gximono.c,v 1.7 2007/08/01 14:26:26 jemarch Exp $ */
+/* $Id: gximono.c,v 1.8 2007/09/10 14:08:43 Arabidopsis Exp $ */
 /* General mono-component image rendering */
 #include "gx.h"
 #include "memory_.h"
@@ -99,7 +99,8 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
     gs_client_color cc;
     gx_device_color *pdevc = &penum->icolor1;	/* color for masking */
     bool tiles_fit;
-    uint mask_base = penum->mask_color.values[0];
+    uint mask_base =            /* : 0 to pacify Valgrind */
+        (penum->use_mask_color ? penum->mask_color.values[0] : 0);
     uint mask_limit =
 	(penum->use_mask_color ?
 	 penum->mask_color.values[1] - mask_base + 1 : 0);

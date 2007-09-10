@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: int.mak,v 1.10 2007/05/07 11:21:45 Arabidopsis Exp $
+# $Id: int.mak,v 1.11 2007/09/10 14:08:44 Arabidopsis Exp $
 # (Platform-independent) makefile for PostScript and PDF language
 # interpreters.
 # Users of this makefile must define the following:
@@ -284,7 +284,7 @@ $(PSOBJ)iscan.$(OBJ) : $(PSSRC)iscan.c $(GH) $(memory__h)\
 	$(PSCC) $(PSO_)iscan.$(OBJ) $(C_) $(PSSRC)iscan.c
 
 $(PSOBJ)iscannum.$(OBJ) : $(PSSRC)iscannum.c $(GH) $(math__h)\
- $(ierrors_h) $(iscannum_h) $(scanchar_h) $(scommon_h) $(store_h)
+ $(ierrors_h) $(iscan_h) $(iscannum_h) $(scanchar_h) $(scommon_h) $(store_h)
 	$(PSCC) $(PSO_)iscannum.$(OBJ) $(C_) $(PSSRC)iscannum.c
 
 ### Streams
@@ -368,6 +368,10 @@ $(PSOBJ)ziodevs$(STDIO_IMPLEMENTATION).$(OBJ) : $(PSSRC)ziodevs$(STDIO_IMPLEMENT
 
 $(PSOBJ)zmath.$(OBJ) : $(PSSRC)zmath.c $(OP) $(math__h) $(gxfarith_h) $(store_h)
 	$(PSCC) $(PSO_)zmath.$(OBJ) $(C_) $(PSSRC)zmath.c
+
+$(PSOBJ)zalg.$(OBJ) : $(PSSRC)zalg.c $(OP) $(ghost_h) $(gserrors_h)\
+ $(oper_h) $(store_h) $(estack_h) 
+	$(PSCC) $(PSO_)zalg.$(OBJ) $(C_) $(PSSRC)zalg.c
 
 $(PSOBJ)zmisc.$(OBJ) : $(PSSRC)zmisc.c $(OP) $(gscdefs_h) $(gp_h)\
  $(errno__h) $(memory__h) $(string__h)\
@@ -509,7 +513,7 @@ INT7=$(PSOBJ)sfilter1.$(OBJ) $(GLOBJ)sstring.$(OBJ) $(GLOBJ)stream.$(OBJ)
 Z1=$(PSOBJ)zarith.$(OBJ) $(PSOBJ)zarray.$(OBJ) $(PSOBJ)zcontrol.$(OBJ)
 Z2=$(PSOBJ)zdict.$(OBJ) $(PSOBJ)zfile.$(OBJ) $(PSOBJ)zfile1.$(OBJ) $(PSOBJ)zfileio.$(OBJ)
 Z3=$(PSOBJ)zfilter.$(OBJ) $(PSOBJ)zfproc.$(OBJ) $(PSOBJ)zgeneric.$(OBJ)
-Z4=$(PSOBJ)ziodev.$(OBJ) $(PSOBJ)ziodevs$(STDIO_IMPLEMENTATION).$(OBJ) $(PSOBJ)zmath.$(OBJ)
+Z4=$(PSOBJ)ziodev.$(OBJ) $(PSOBJ)ziodevs$(STDIO_IMPLEMENTATION).$(OBJ) $(PSOBJ)zmath.$(OBJ) $(PSOBJ)zalg.$(OBJ)
 Z5=$(PSOBJ)zmisc.$(OBJ) $(PSOBJ)zpacked.$(OBJ) $(PSOBJ)zrelbit.$(OBJ)
 Z6=$(PSOBJ)zstack.$(OBJ) $(PSOBJ)zstring.$(OBJ) $(PSOBJ)zsysvm.$(OBJ)
 Z7=$(PSOBJ)ztoken.$(OBJ) $(PSOBJ)ztype.$(OBJ) $(PSOBJ)zvmem.$(OBJ)
@@ -517,9 +521,10 @@ Z8=$(PSOBJ)zbfont.$(OBJ) $(PSOBJ)zchar.$(OBJ) $(PSOBJ)zcolor.$(OBJ)
 Z9=$(PSOBJ)zdevice.$(OBJ) $(PSOBJ)zfont.$(OBJ) $(PSOBJ)zfontenum.$(OBJ) $(PSOBJ)zgstate.$(OBJ)
 Z10=$(PSOBJ)zdfilter.$(OBJ) $(PSOBJ)zht.$(OBJ) $(PSOBJ)zimage.$(OBJ) $(PSOBJ)zmatrix.$(OBJ)
 Z11=$(PSOBJ)zpaint.$(OBJ) $(PSOBJ)zpath.$(OBJ)
+Z12=$(PSOBJ)zncdummy.$(OBJ)
 Z1OPS=zarith zarray zcontrol1 zcontrol2 zcontrol3
 Z2OPS=zdict1 zdict2 zfile zfile1 zfileio1 zfileio2
-Z3_4OPS=zfilter zfproc zgeneric ziodev zmath
+Z3_4OPS=zfilter zfproc zgeneric ziodev zmath zalg
 Z5_6OPS=zmisc zpacked zrelbit zstack zstring zsysvm
 Z7_8OPS=ztoken ztype zvmem zbfont zchar zcolor
 Z9OPS=zdevice zfont zfontenum zgstate1 zgstate2 zgstate3
@@ -530,7 +535,7 @@ Z11OPS=zpaint zpath pantone
 INT_MAIN=$(PSOBJ)imain.$(OBJ) $(PSOBJ)imainarg.$(OBJ) $(GLOBJ)gsargs.$(OBJ) $(PSOBJ)idisp.$(OBJ)
 INT_OBJS=$(INT_MAIN)\
  $(INT1) $(INT2) $(INT3) $(INT4) $(INT5) $(INT6) $(INT7)\
- $(Z1) $(Z2) $(Z3) $(Z4) $(Z5) $(Z6) $(Z7) $(Z8) $(Z9) $(Z10) $(Z11)
+ $(Z1) $(Z2) $(Z3) $(Z4) $(Z5) $(Z6) $(Z7) $(Z8) $(Z9) $(Z10) $(Z11) $(Z12)
 INT_CONFIG=$(GLOBJ)gconfig.$(OBJ) $(GLOBJ)gscdefs.$(OBJ)\
  $(PSOBJ)iconfig.$(OBJ) $(PSOBJ)iccinit$(COMPILE_INITS).$(OBJ)
 INT_ALL=$(INT_OBJS) $(INT_CONFIG)
@@ -567,6 +572,7 @@ $(PSD)psbase.dev : $(INT_MAK) $(ECHOGS_XE) $(INT_OBJS)\
 	$(ADDMOD) $(PSD)psbase -obj $(Z9)
 	$(ADDMOD) $(PSD)psbase -obj $(Z10)
 	$(ADDMOD) $(PSD)psbase -obj $(Z11)
+	$(ADDMOD) $(PSD)psbase -obj $(Z12)
 	$(ADDMOD) $(PSD)psbase -oper $(Z1OPS)
 	$(ADDMOD) $(PSD)psbase -oper $(Z2OPS)
 	$(ADDMOD) $(PSD)psbase -oper $(Z3_4OPS)
@@ -986,7 +992,7 @@ EXTRA_INIT_FILES= Fontmap cidfmap xlatmap FAPI FCOfontmap-PCLPS2 gs_cet.ps
 #	The init files are put in the lib/ directory (gs_init.ps + EXTRA_INIT_FILES)
 #	Resource files go into Resource/...
 
-RESOURCE_LIST=ColorSpace/ Decoding/ Font/ Procset/ IdiomSet/ CIDFont/ CMap/
+RESOURCE_LIST=ColorSpace/ Decoding/ Font/ ProcSet/ IdiomSet/ CIDFont/ CMap/
 
 # PCLXL_ PJL and XPS hooks are for other parsers that may be built with a PS
 # language switch build.
@@ -1135,12 +1141,13 @@ $(PSD)usparam.dev : $(INT_MAK) $(ECHOGS_XE) $(usparam_)
 	$(SETMOD) $(PSD)usparam $(usparam_)
 	$(ADDMOD) $(PSD)usparam -oper zusparam -replace $(PSD)nousparm
 
+
 # Note that zusparam includes both Level 1 and Level 2 operators.
 $(PSOBJ)zusparam.$(OBJ) : $(PSSRC)zusparam.c $(OP) $(memory__h) $(string__h)\
  $(gscdefs_h) $(gsfont_h) $(gsstruct_h) $(gsutil_h) $(gxht_h)\
  $(ialloc_h) $(icontext_h) $(idict_h) $(idparam_h) $(iparam_h)\
  $(iname_h) $(itoken_h) $(iutil2_h) $(ivmem2_h)\
- $(dstack_h) $(estack_h) $(store_h)
+ $(dstack_h) $(estack_h) $(store_h) $(gsnamecl_h)
 	$(PSCC) $(PSO_)zusparam.$(OBJ) $(C_) $(PSSRC)zusparam.c
 
 # Define full Level 2 support.
@@ -1979,6 +1986,13 @@ $(PSOBJ)wrfont.$(OBJ) : $(PSSRC)wrfont.c $(AK)\
 
 $(PSD)fapif.dev : $(INT_MAK) $(ECHOGS_XE)
 	$(SETMOD) $(PSD)fapif
+
+
+# ---------------- Custom color dummy callback ---------------- #
+
+$(PSOBJ)zncdummy.$(OBJ) : $(PSSRC)zncdummy.c $(OP) $(GX) $(math_h)\
+  $(memory__h) $(gscdefs_h) $(gsnamecl_h) $(malloc__h) $(gsncdummy_h)
+	$(PSCC) $(PSO_)zncdummy.$(OBJ) $(C_) $(PSSRC)zncdummy.c
 
 # ================ Dependencies for auxiliary programs ================ #
 

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsdparam.c,v 1.9 2007/08/01 14:26:04 jemarch Exp $ */
+/* $Id: gsdparam.c,v 1.10 2007/09/10 14:08:39 Arabidopsis Exp $ */
 /* Default device parameters for Ghostscript library */
 #include "memory_.h"		/* for memcpy */
 #include "string_.h"		/* for strlen */
@@ -123,12 +123,6 @@ gx_default_get_params(gx_device * dev, gs_param_list * plist)
 
     /* Transmit the values. */
 
-#if ENABLE_NAMED_COLOR_CALLBACK
-    /* The named color callback pointer */
-    code = named_color_callback_get_params(dev, plist);
-    if (code < 0)
-	return code;
-#endif
     if (
 
 	/* Standard parameters */
@@ -487,12 +481,6 @@ e:	param_signal_error(plist, param_name, ecode);\
     }\
     END
 
-#if ENABLE_NAMED_COLOR_CALLBACK
-    /* The named_color callback pointer */
-    code = named_color_callback_put_params(dev, plist);
-    if (code < 0)
-	ecode = code;
-#endif
     /*
      * The actual value of LeadingEdge must be changed inside this routine,
      * so that we can detect that it has been changed. Thus, instead of a

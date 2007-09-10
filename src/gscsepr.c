@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscsepr.c,v 1.9 2007/08/01 14:26:03 jemarch Exp $ */
+/* $Id: gscsepr.c,v 1.10 2007/09/10 14:08:45 Arabidopsis Exp $ */
 /* Separation color space and operation definition */
 #include "memory_.h"
 #include "gx.h"
@@ -36,6 +36,7 @@
 #include "gxdevcli.h"
 #include "gsovrc.h"
 #include "stream.h"
+#include "gsnamecl.h"
 
 /* ---------------- Color space ---------------- */
 
@@ -108,20 +109,18 @@ check_Separation_component_name(const gs_color_space * pcs, gs_state * pgs);
 
 /* Install a Separation color space. */
 private int
-gx_install_Separation(const gs_color_space * pcs, gs_state * pgs)
+gx_install_Separation(gs_color_space * pcs, gs_state * pgs)
 {
     int code;
-#if ENABLE_NAMED_COLOR_CALLBACK
+#if ENABLE_CUSTOM_COLOR_CALLBACK
     /*
-     * Check if we want to use the named color callback color processing for
+     * Check if we want to use the custom color callback color processing for
      * this color space.
      */
-    bool use_named_color_callback =
-	    named_color_callback_install_Separation(pgs->color_space, pgs);
+    bool use_custom_color_callback =
+	    custom_color_callback_install_Separation(pcs, pgs);
 
-    pgs->color_component_map.use_named_color_callback =
-	   					 use_named_color_callback;
-    if (use_named_color_callback) {
+    if (use_custom_color_callback) {
 	/*
 	 * We are using the callback instead of the alternate tint transform
 	 * for this color space.
@@ -360,12 +359,15 @@ gx_remap_concrete_Separation(const frac * pconc,  const gs_color_space * pcs,
 	dprintf("gx_remap_concrete_Separation: color space id mismatch");
 #endif
 
-#if ENABLE_NAMED_COLOR_CALLBACK
-    if (pis->color_component_map.use_named_color_callback) {
-	return gx_remap_concrete_named_color_Separation(pconc, pcs, pdc,
+#if ENABLE_CUSTOM_COLOR_CALLBACK
+    {
+	int code = gx_remap_concrete_custom_color_Separation(pconc, pcs, pdc,
 						       	pis, dev, select);
+	if (code >= 0)
+	    return code;
     }
 #endif
+
     if (pis->color_component_map.use_alt_cspace) {
         const gs_color_space *pacs = pcs->base_space;
 

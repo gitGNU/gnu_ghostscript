@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: unixansi.mak,v 1.10 2007/08/01 14:26:47 jemarch Exp $
+# $Id: unixansi.mak,v 1.11 2007/09/10 14:08:42 Arabidopsis Exp $
 # makefile for Unix/ANSI C/X11 configuration.
 
 # ------------------------------- Options ------------------------------- #
@@ -144,7 +144,7 @@ JPEG_NAME=jpeg
 # See libpng.mak for more information.
 
 PSRCDIR=libpng
-PVERSION=10208
+PVERSION=10216
 
 # Choose whether to use a shared version of the PNG library, and if so,
 # what its name is.

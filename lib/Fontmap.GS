@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: Fontmap.GS,v 1.5 2007/08/01 14:25:35 jemarch Exp $
+% $Id: Fontmap.GS,v 1.6 2007/09/10 14:08:56 Arabidopsis Exp $
 % Fontmap - standard font catalog for Ghostscript.
 
 % ----------------------------------------------------------------
@@ -402,3 +402,14 @@
 % the SymbolEncoding.
 
 /Hershey-Symbol				(hrsyr.gsf)	;	% 5066567
+
+/Arial					/ArialMT		;
+/Arial,Bold				/Arial-BoldMT		;
+/Arial,Italic				/Arial-ItalicMT		;
+/Arial,BoldItalic			/Arial-BoldItalicMT	;
+
+/TimesNewRoman				/TimesNewRomanPSMT		;
+/TimesNewRoman,Bold			/TimesNewRomanPS-BoldMT		;
+/TimesNewRoman,Italic			/TimesNewRomanPS-ItalicMT	;
+/TimesNewRoman,BoldItalic		/TimesNewRomanPS-BoldItalicMT	;
+

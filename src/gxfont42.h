@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxfont42.h,v 1.9 2007/08/01 14:26:23 jemarch Exp $ */
+/* $Id: gxfont42.h,v 1.10 2007/09/10 14:08:44 Arabidopsis Exp $ */
 /* Type 42 font data definition */
 
 #ifndef gxfont42_INCLUDED
@@ -133,6 +133,21 @@ extern_st(st_gs_font_type42);
  * FAPI will disable ttfReader as well. 
  */
 int gs_type42_font_init(gs_font_type42 *pfont, int subfontid);
+
+/* Read data from sfnts. */
+int gs_type42_read_data(gs_font_type42 * pfont, ulong pos, uint length, byte *buf);
+
+/* Read data from sfnts. */
+/* A temporary macro for simplifying the old code change. */
+#define READ_SFNTS(pfont, pos, length, buf)\
+  BEGIN\
+    if (length > sizeof(buf))\
+	return_error(gs_error_unregistered);/* Must not happen. */\
+    code = gs_type42_read_data(pfont, (ulong)(pos), length, buf);\
+    if ( code < 0 ) return code;\
+  END
+
+#define MAX_NUM_TT_TABLES 40
 
 /* Append the outline of a TrueType character to a path. */
 int gs_type42_append(uint glyph_index, gs_state * pgs,

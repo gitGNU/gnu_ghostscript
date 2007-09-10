@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: iscan.h,v 1.7 2007/08/01 14:26:38 jemarch Exp $ */
+/* $Id: iscan.h,v 1.8 2007/09/10 14:08:43 Arabidopsis Exp $ */
 /* Token scanner state and interface */
 /* Requires gsstruct.h, ostack.h, stream.h */
 
@@ -139,6 +139,9 @@ extern_st(st_scanner_state);
 #define SCAN_PDF_INV_NUM 32	/* Adobe ignores invalid numbers */
 				/* This is for compatibility with Adobe */
 				/* Acrobat Reader			*/
+#define SCAN_PDF_UNSIGNED 64    /* Scan 2147483648..4294967295 as unsigned numbers */
+                                /* This is needed in some contexts for */
+                                /* compatibility with Adobe */
 void scanner_init_options(scanner_state *sstate, const ref *fop,
 			  int options);
 #define scanner_init(sstate, fop)\

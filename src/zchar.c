@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: zchar.c,v 1.9 2007/08/01 14:26:48 jemarch Exp $ */
+/*$Id: zchar.c,v 1.10 2007/09/10 14:08:40 Arabidopsis Exp $ */
 /* Character operators */
 #include "ghost.h"
 #include "oper.h"
@@ -44,6 +44,8 @@
 #include "ipacked.h"
 #include "store.h"
 #include "zchar42.h"
+
+extern bool CPSI_mode;
 
 /* Forward references */
 private bool map_glyph_to_char(const gs_memory_t *mem, 
@@ -482,7 +484,7 @@ op_show_finish_setup(i_ctx_t *i_ctx_p, gs_text_enum_t * penum, int npop,
     if (osenum == NULL && !(penum->text.operation & (TEXT_FROM_GLYPHS | TEXT_FROM_SINGLE_GLYPH))) {
         int ft = igs->root_font->FontType;
  
-        if (ft >= ft_CID_encrypted && ft <= ft_CID_TrueType || ft == ft_CID_bitmap)
+        if ((ft >= ft_CID_encrypted && ft <= ft_CID_TrueType) || ft == ft_CID_bitmap)
             return_error(e_typecheck);
     }
     make_mark_estack(ep - (snumpush - 1), es_show, op_show_cleanup);
@@ -859,7 +861,7 @@ font_bbox_param(const gs_memory_t *mem, const ref * pfdict, double bbox[4])
 
     /*
      * Pre-clear the bbox in case it's invalid.  The Red Books say that
-     * FontBBox is required, but the Adobe interpreters don't require
+     * FontBBox is required, but old Adobe interpreters don't require
      * it, and a few user-written fonts don't supply it, or supply one
      * of the wrong size (!); also, PageMaker 5.0 (an Adobe product!)
      * sometimes emits an absurd bbox for Type 1 fonts converted from
@@ -891,6 +893,8 @@ font_bbox_param(const gs_memory_t *mem, const ref * pfdict, double bbox[4])
 		)
 		bbox[0] = bbox[1] = bbox[2] = bbox[3] = 0.0;
 	}
+    } else if (CPSI_mode) {
+        return_error(e_invalidfont); /* CPSI requires FontBBox */
     }
     return 0;
 }

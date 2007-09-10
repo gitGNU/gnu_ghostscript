@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevnfwd.c,v 1.9 2007/08/01 14:25:50 jemarch Exp $ */
+/* $Id: gdevnfwd.c,v 1.10 2007/09/10 14:08:47 Arabidopsis Exp $ */
 /* Null and forwarding device implementation */
 #include "gx.h"
 #include "gserrors.h"
@@ -110,6 +110,7 @@ gx_device_forward_fill_in_procs(register gx_device_forward * dev)
     fill_dev_proc(dev, fill_linear_color_trapezoid, gx_forward_fill_linear_color_trapezoid);
     fill_dev_proc(dev, fill_linear_color_triangle, gx_forward_fill_linear_color_triangle);
     fill_dev_proc(dev, update_spot_equivalent_colors, gx_forward_update_spot_equivalent_colors);
+    fill_dev_proc(dev, ret_devn_params, gx_forward_ret_devn_params);
     gx_device_fill_in_procs((gx_device *) dev);
 }
 
@@ -847,6 +848,17 @@ gx_forward_update_spot_equivalent_colors(gx_device *dev, const gs_state * pgs)
     if (tdev != NULL)
 	code = dev_proc(tdev, update_spot_equivalent_colors)(tdev, pgs);
     return code;
+}
+
+gs_devn_params * 
+gx_forward_ret_devn_params(gx_device *dev)
+{
+    gx_device_forward * const fdev = (gx_device_forward *)dev;
+    gx_device *tdev = fdev->target;
+
+    if (tdev != NULL)
+	return dev_proc(tdev, ret_devn_params)(tdev);
+    return NULL;
 }
 
 

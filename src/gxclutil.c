@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclutil.c,v 1.8 2007/08/01 14:26:19 jemarch Exp $ */
+/* $Id: gxclutil.c,v 1.9 2007/09/10 14:08:43 Arabidopsis Exp $ */
 /* Command list writing utilities. */
 
 #include "memory_.h"
@@ -133,7 +133,7 @@ cmd_print_stats(void)
 /* Write the commands for one band or band range. */
 private int	/* ret 0 all ok, -ve error code, or +1 ok w/low-mem warning */
 cmd_write_band(gx_device_clist_writer * cldev, int band_min, int band_max,
-	       cmd_list * pcl, byte cmd_end)
+	       cmd_list * pcl, gx_band_complexity_t *band_complexity, byte cmd_end)
 {
     const cmd_prefix *cp = pcl->head;
     int code_b = 0;
@@ -149,10 +149,11 @@ cmd_write_band(gx_device_clist_writer * cldev, int band_min, int band_max,
  	    return_error(gs_error_ioerror);
 	cb.band_min = band_min;
 	cb.band_max = band_max;
-	cb.pos = clist_ftell(cfile);
-	if_debug3('l', "[l]writing for bands (%d,%d) at %ld\n",
-		  band_min, band_max, (long)cb.pos);
-	clist_fwrite_chars(&cb, sizeof(cb), bfile);
+	cb.pos = cldev->page_info.io_procs->ftell(cfile);
+	clist_copy_band_complexity(&cb.band_complexity, band_complexity);  
+	if_debug4('l', "[l]writing for bands (%d,%d) at %ld K %d \n",
+		  band_min, band_max, (long)cb.pos, cb.band_complexity.uses_color);
+	cldev->page_info.io_procs->fwrite_chars(&cb, sizeof(cb), bfile);
 	if (cp != 0) {
 	    pcl->tail->next = 0;	/* terminate the list */
 	    for (; cp != 0; cp = cp->next) {
@@ -165,14 +166,14 @@ cmd_write_band(gx_device_clist_writer * cldev, int band_min, int band_max,
 		    return_error(gs_error_Fatal);
 		}
 #endif
-		clist_fwrite_chars(cp + 1, cp->size, cfile);
+		cldev->page_info.io_procs->fwrite_chars(cp + 1, cp->size, cfile);
 	    }
 	    pcl->head = pcl->tail = 0;
 	}
-	clist_fwrite_chars(&end, 1, cfile);
+	cldev->page_info.io_procs->fwrite_chars(&end, 1, cfile);
 	process_interrupts(cldev->memory);
-	code_b = clist_ferror_code(bfile);
-	code_c = clist_ferror_code(cfile);
+	code_b = cldev->page_info.io_procs->ferror_code(bfile);
+	code_c = cldev->page_info.io_procs->ferror_code(cfile);
 	if (code_b < 0)
 	    return_error(code_b);
 	if (code_c < 0)
@@ -190,13 +191,16 @@ cmd_write_buffer(gx_device_clist_writer * cldev, byte cmd_end)
     int band;
     int code = cmd_write_band(cldev, cldev->band_range_min,
 			      cldev->band_range_max,
-			      &cldev->band_range_list, cmd_opv_end_run);
+			      &cldev->band_range_list, 
+			      NULL, 
+			      cmd_opv_end_run);
+
     int warning = code;
 
     for (band = 0, pcls = cldev->states;
 	 code >= 0 && band < nbands; band++, pcls++
 	 ) {
-	code = cmd_write_band(cldev, band, band, &pcls->list, cmd_end);
+	code = cmd_write_band(cldev, band, band, &pcls->list, &pcls->band_complexity, cmd_end);
 	warning |= code;
     }
     /* If an error occurred, finish cleaning up the pointers. */

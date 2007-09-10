@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/*$Id: gswts.c,v 1.7 2007/08/01 14:26:15 jemarch Exp $ */
+/*$Id: gswts.c,v 1.8 2007/09/10 14:08:40 Arabidopsis Exp $ */
 /* Screen generation for Well Tempered Screening. */
 #include "stdpre.h"
 #include <stdlib.h> /* for malloc */
@@ -766,6 +766,15 @@ wts_cache_alloc_callback(void *data, int bytes)
     return malloc(bytes);
 }
 
+private void
+store_be32(byte *ptr, int x)
+{
+    ptr[0] = (x >> 24) & 0xff;
+    ptr[1] = (x >> 16) & 0xff;
+    ptr[2] = (x >> 8) & 0xff;
+    ptr[3] = x & 0xff;
+}
+
 /**
  * wts_pick_cell_size: Choose cell size for WTS screen.
  * @ph: The halftone parameters.
@@ -786,17 +795,38 @@ wts_pick_cell_size(gs_screen_halftone *ph, const gs_matrix *pmat)
     double memw = 8.0;
     wts_cell_size_key key;
     int len;
+    byte *keyptr = NULL;
+    byte intkey[12];
+    int keysize;
 
     octangle = sangledeg;
     while (octangle >= 45.0) octangle -= 45.0;
     while (octangle < -45.0) octangle += 45.0;
 
     /* try persistent cache */
-    key.sratiox = sratiox;
-    key.sratioy = sratioy;
-    key.sangledeg = sangledeg;
-    key.memw = memw;
-    len = gp_cache_query(GP_CACHE_TYPE_WTS_SIZE, (byte *)&key, sizeof(key),
+    if (sangledeg == 45.0) {
+	int srxi, sryi;
+
+	srxi = (int)floor(sratiox / sqrt(2) + 0.5);
+	sryi = (int)floor(sratioy / sqrt(2) + 0.5);
+	if (fabs(srxi * sqrt(2) - sratiox) < 2e-6 &&
+	    fabs(sryi * sqrt(2) - sratioy) < 2e-6) {
+	    store_be32(intkey, (int)sangledeg);
+	    store_be32(intkey + 4, srxi);
+	    store_be32(intkey + 8, sryi);
+	    keyptr = intkey;
+	    keysize = sizeof(intkey);
+	}
+    }
+    if (keyptr == NULL) {
+	key.sratiox = sratiox;
+	key.sratioy = sratioy;
+	key.sangledeg = sangledeg;
+	key.memw = memw;
+	keyptr = (byte *)&key;
+	keysize = sizeof(key);
+    }
+    len = gp_cache_query(GP_CACHE_TYPE_WTS_SIZE, keyptr, keysize,
 			 (void **)&result, wts_cache_alloc_callback, NULL);
     if (len >= 0)
 	return result;
@@ -1262,6 +1292,13 @@ wts_screen_from_enum_j(const gs_wts_screen_enum_t *wse)
 	samples[i] = wsej->base.cell[i] >> WTS_EXTRA_SORT_BITS;
     }
 
+#ifdef WTS_CACHE_SIZE_X
+    for (i = 0; i < WTS_CACHE_SIZE_X; i++)
+	wsj->xcache[i].tag = -1;
+    for (i = 0; i < WTS_CACHE_SIZE_Y; i++)
+	wsj->ycache[i].tag = -1;
+#endif
+
     return &wsj->base;
 }
 
@@ -1301,6 +1338,12 @@ typedef struct {
     int height;
 } wts_key_j;
 
+typedef struct {
+    wts_screen_type t;
+    int width;
+    int height;
+} wts_key_h;
+
 wts_screen_t *
 wts_screen_from_enum(const gs_wts_screen_enum_t *wse)
 {
@@ -1323,6 +1366,15 @@ wts_screen_from_enum(const gs_wts_screen_enum_t *wse)
 	/* todo: more params */
 	memcpy(key, &k, cell_off);
 	memcpy(key + cell_off, wse->cell, wse->size * sizeof(bits32));
+    } else if (wse->t == WTS_SCREEN_H) {
+	wts_key_h k;
+	k.t = wse->t;
+	k.width = wse->width;
+	k.height = wse->height;
+	key_size = sizeof(k);
+	key = (byte *)malloc(key_size);
+	/* todo: more params */
+	memcpy(key, &k, key_size);
     }
 
     if (key != NULL)
@@ -1412,6 +1464,18 @@ gs_wts_from_buf(const byte *buf)
 	free(result);
 	return NULL;
     }
+#ifdef WTS_SCREEN_J_SIZE_NOCACHE
+    if (ws->type == WTS_SCREEN_J) {
+	wts_screen_j_t *wsj = (wts_screen_j_t *)result;
+	int i;
+
+	for (i = 0; i < WTS_CACHE_SIZE_X; i++)
+	    wsj->xcache[i].tag = -1;
+	for (i = 0; i < WTS_CACHE_SIZE_Y; i++)
+	    wsj->ycache[i].tag = -1;
+	size = WTS_SCREEN_J_SIZE_NOCACHE;
+    }
+#endif
     memcpy(result->samples, buf + size, cell_size);
 
     return result;

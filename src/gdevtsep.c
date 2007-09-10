@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevtsep.c,v 1.4 2007/08/01 14:25:57 jemarch Exp $ */
+/* $Id: gdevtsep.c,v 1.5 2007/09/10 14:08:39 Arabidopsis Exp $ */
 /* tiffgray device:  8-bit Gray uncompressed TIFF device */
 /* tiff32nc device:  32-bit CMYK uncompressed TIFF device */
 /* tiffsep device: Generate individual TIFF gray files for each separation. */
@@ -244,6 +244,7 @@ private dev_proc_decode_color(tiffsep_decode_color);
 private dev_proc_encode_color(tiffsep_encode_compressed_color);
 private dev_proc_decode_color(tiffsep_decode_compressed_color);
 private dev_proc_update_spot_equivalent_colors(tiffsep_update_spot_equivalent_colors);
+private dev_proc_ret_devn_params(tiffsep_ret_devn_params);
 
 
 /*
@@ -368,7 +369,8 @@ gs_private_st_composite_final(st_tiffsep_device, tiffsep_device,
 	NULL,				/* fill_linear_color_scanline */\
 	NULL,				/* fill_linear_color_trapezoid */\
 	NULL,				/* fill_linear_color_triangle */\
-	tiffsep_update_spot_equivalent_colors /* update_spot_equivalent_colors */\
+	tiffsep_update_spot_equivalent_colors, /* update_spot_equivalent_colors */\
+	tiffsep_ret_devn_params		/* ret_devn_params */\
 }
 
 #define tiffsep_device_body(procs, dname, ncomp, pol, depth, mg, mc, sl, cn)\
@@ -427,6 +429,7 @@ const tiffsep_device gs_tiffsep_device =
       DeviceCMYKComponents,	/* Names of color model colorants */
       4,			/* Number colorants for CMYK */
       0,			/* MaxSeparations has not been specified */
+      -1,			/* PageSpotColors has not been specified */
       {0},			/* SeparationNames */
       0,			/* SeparationOrder names */
       {0, 1, 2, 3, 4, 5, 6, 7 }	/* Initial component SeparationOrder */
@@ -559,6 +562,17 @@ tiffsep_update_spot_equivalent_colors(gx_device * dev, const gs_state * pgs)
     update_spot_equivalent_cmyk_colors(dev, pgs,
 		    &pdev->devn_params, &pdev->equiv_cmyk_colors);
     return 0;
+}
+
+/*
+ *  Device proc for returning a pointer to DeviceN parameter structure
+ */
+private gs_devn_params *
+tiffsep_ret_devn_params(gx_device * dev)
+{
+    tiffsep_device * pdev = (tiffsep_device *)dev;
+
+    return &pdev->devn_params;
 }
 
 /* Get parameters.  We provide a default CRD. */

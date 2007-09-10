@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpnga.c,v 1.9 2007/08/01 14:25:54 jemarch Exp $ */
+/* $Id: gdevpnga.c,v 1.10 2007/09/10 14:08:46 Arabidopsis Exp $ */
 /* Test driver for PDF 1.4 transparency stuff */
 
 #include "gdevprn.h"
@@ -25,6 +25,7 @@
 #include "gscdefs.h"
 #include "gsdevice.h"
 #include "gdevmem.h"
+#include "gxcindex.h"
 #include "gxblend.h"
 #include "gxtext.h"
 

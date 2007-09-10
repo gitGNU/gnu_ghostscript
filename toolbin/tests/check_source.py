@@ -19,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: check_source.py,v 1.8 2007/08/01 14:26:57 jemarch Exp $
+# $Id: check_source.py,v 1.9 2007/09/10 14:08:49 Arabidopsis Exp $
 
 # Check basic hygiene of source code.
 
@@ -127,7 +127,7 @@ class GSCheckDoubleInclusion(GSTestCase):
 
 gsSourceSets = [
     ('doc', ['*'], ['Changes.htm', 'gsdoc.el', 'FTL.txt']),
-    ('lib', ['eps', 'ps'], ['jobseparator.ps']),
+    ('lib', ['eps', 'ps'], []),
     ('man', ['*'], []),
     ('src', ['c', 'cpp', 'h', 'mak'], []),
     ('toolbin', ['*'], ['pre.chk'])

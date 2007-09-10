@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxfill.c,v 1.9 2007/08/01 14:26:22 jemarch Exp $ */
+/* $Id: gxfill.c,v 1.10 2007/09/10 14:08:45 Arabidopsis Exp $ */
 /* A topological spot decomposition algorithm with dropout prevention. */
 /* 
    This is a dramaticly reorganized and improved revision of the 
@@ -47,7 +47,9 @@
 #include "gxpaint.h"		/* for prototypes */
 #include "gxfdrop.h"
 #include "gxfill.h"
+#include "gsptype1.h"
 #include "gsptype2.h"
+#include "gxpcolor.h"
 #include "gdevddrw.h"
 #include "gzspotan.h" /* Only for gx_san_trap_store. */
 #include "memory_.h"
@@ -571,7 +573,10 @@ gx_default_fill_path(gx_device * pdev, const gs_imager_state * pis,
 {
     int code;
 
-    if ((gx_dc_is_pattern2_color(pdevc) || pdevc->type == &gx_dc_type_data_ht_colored)) {
+    if (gx_dc_is_pattern2_color(pdevc) 
+	|| pdevc->type == &gx_dc_type_data_ht_colored
+	|| (gx_dc_is_pattern1_color(pdevc) && gx_pattern_tile_is_clist(pdevc->colors.pattern.p_tile))
+	) {
 	/*  Optimization for shading and halftone fill :
 	    The general filling algorithm subdivides the fill region into 
 	    trapezoid or rectangle subregions and then paints each subregion 
@@ -595,7 +600,7 @@ gx_default_fill_path(gx_device * pdev, const gs_imager_state * pis,
 		    (gs_imager_state *)pis, params);
 	/* Do fill : */
 	if (code >= 0) {
-	    if (pdevc->type == &gx_dc_type_data_ht_colored) {
+	    if (pdevc->type == &gx_dc_type_data_ht_colored || gx_dc_is_pattern1_color(pdevc)) {
 		const gx_rop_source_t *rs = NULL;
 		gx_device *dev;
 		gx_device_clip cdev;

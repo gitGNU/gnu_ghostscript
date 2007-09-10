@@ -16,7 +16,7 @@
 %
 
 
-% $Id: gs_init.ps.in,v 1.3 2007/08/01 14:25:38 jemarch Exp $
+% $Id: gs_init.ps.in,v 1.4 2007/09/10 14:08:56 Arabidopsis Exp $
 % Initialization file for the interpreter.
 % When this is run, systemdict is still writable.
 
@@ -332,21 +332,6 @@ currentdict /hwsizedict .undef
 /min { .min } bind def		% use .min instead
 /unread /.unread load def	% use .peekstring instead
 %**************** END OF BACKWARD COMPATIBILITY SECTION ****************
-
-% Utility procedure to sort an array
-% <array> <lt-proc> .sort <array>
-/.sort {
-  1 index length 1 sub -1 1 {
-    2 index exch 2 copy get 3 copy	% arr proc arr i arr[i] arr i arr[i]
-    0 1 3 index 1 sub {
-      3 index 1 index get	% arr proc arr i arr[i] arr imax amax j arr[j]
-      2 index 1 index 10 index exec {	% ... amax < arr[j]
-	4 2 roll
-      } if pop pop
-    } for			% arr proc arr i arr[i] arr imax amax
-    4 -1 roll exch 4 1 roll put put
-  } for pop
-} bind def
 
 % Utility for removing all entries from a dictionary
 /.PurgeDict   % <dict> .PurgeDict -
@@ -1368,8 +1353,9 @@ devicedict /Default devicedict .defaultdevicename get put
 currentpacking false setpacking
 /.linescreen
 % The following screen algorithm is used by permission of the author.
-    { 1 add 180 mul cos 1 0.08 add mul exch 2 add 180 mul cos 
-      1 0.08 sub mul add 2 div % (C) 1989 Berthold K.P. Horn
+    { ((C) 1989 Berthold K.P. Horn) pop
+      1 add 180 mul cos 1 0.08 add mul exch 2 add 180 mul cos
+      1 0.08 sub mul add 2 div
     }
 bind executeonly def
 setpacking

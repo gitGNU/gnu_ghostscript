@@ -3,7 +3,7 @@
 <html>
 <head>
 <title>How to use Ghostscript</title>
-<!-- $Id: Use.htm,v 1.8 2007/05/07 11:22:13 Arabidopsis Exp $ -->
+<!-- $Id: Use.htm,v 1.9 2007/09/10 14:08:52 Arabidopsis Exp $ -->
 <!-- Originally: use.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -609,6 +609,25 @@ appropriately for a viewer.
 <dt><b><tt>-sPDFPassword=</tt></b><em>password</em>
 <dd>Sets the user or owner password to be used in decoding encrypted
 PDF files.
+</dl>
+
+<dl>
+<dt><b><tt>-dIgnoreTTEncoding</tt></b>
+<dd>
+Force the PDF interpreter to use an encoding specified in the 'cmap' table
+of embedded TrueType fonts and ignore the Encoding dictionary.
+This is a last resort measure for the files that have an incorrect Encoding
+entry for a TrueType font dictionary. This option is known to cause
+regressions and should not be used routinely.
+</dl>
+
+<dl>
+<dt><b><tt>-dShowAcroForm</tt></b>
+<dd>
+Show the content of the Interactive Form Dictionary (AcroForm dictionary).
+By default, AcroForm is not shown because some field types are not yet
+implemented. Adobe Acrobat doesn't always skips AcroForm, but it is
+not known yet when it does.
 </dl>
 
 <h3><a name="PDF_problems"></a>Problems interpreting a PDF file</h3>
@@ -3564,7 +3583,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.56, 14 March 2007
+<small>Ghostscript version 8.57, 11 May 2007
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

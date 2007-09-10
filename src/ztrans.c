@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ztrans.c,v 1.9 2007/08/01 14:26:54 jemarch Exp $ */
+/* $Id: ztrans.c,v 1.10 2007/09/10 14:08:43 Arabidopsis Exp $ */
 /* Transparency operators */
 #include "string_.h"
 #include "memory_.h"
@@ -37,6 +37,8 @@
 #include "iname.h"
 #include "store.h"
 #include "gsdfilt.h"
+#include "gdevdevn.h"
+#include "gxblend.h"
 #include "gdevp14.h"
 
 /* ------ Utilities ------ */

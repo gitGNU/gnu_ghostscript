@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfm.c,v 1.9 2007/08/01 14:25:52 jemarch Exp $ */
+/* $Id: gdevpdfm.c,v 1.10 2007/09/10 14:08:39 Arabidopsis Exp $ */
 /* pdfmark processing for PDF-writing driver */
 #include "math_.h"
 #include "memory_.h"
@@ -1504,6 +1504,7 @@ pdfmark_BP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
     int code;
     gs_matrix ictm;
     byte bbox_str[6 + 6 * 15], matrix_str[6 + 6 * 15];
+    char chars[MAX_RECT_STRING + 1];
     int bbox_str_len, matrix_str_len;
     stream s;
 
@@ -1512,7 +1513,11 @@ pdfmark_BP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
     code = gs_matrix_invert(pctm, &ictm);
     if (code < 0)
 	return code;
-    if (sscanf((const char *)pairs[1].data, "[%lg %lg %lg %lg]",
+    if (pairs[1].size > MAX_RECT_STRING)
+	return_error(gs_error_limitcheck);
+    memcpy(chars, pairs[1].data, pairs[1].size);
+    chars[pairs[1].size] = 0;
+    if (sscanf(chars, "[%lg %lg %lg %lg]",
 	       &bbox.p.x, &bbox.p.y, &bbox.q.x, &bbox.q.y) != 4)
 	return_error(gs_error_rangecheck);
     if ((pdev->used_mask << 1) == 0)

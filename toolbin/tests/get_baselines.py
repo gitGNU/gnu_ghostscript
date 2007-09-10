@@ -19,8 +19,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
-
-# $Id: get_baselines,v 1.5 2007/08/01 14:26:57 jemarch Exp $
+# $Id: get_baselines.py,v 1.1 2007/09/10 14:08:47 Arabidopsis Exp $
 
 #
 # get_baselines <date>
@@ -50,10 +49,11 @@ if len(sys.argv) == 2:
 else:
     usage()
 
+
 try:
-    baseline_log = open(gsconf.log_baseline)
+    baseline_log = open(name)
 except:
-    print "ERROR: Could not open baseline log."
+    print "ERROR: cannot open baseline log",name
     sys.exit(1)
 
 changes = {}

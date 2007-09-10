@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxbitfmt.h,v 1.6 2007/08/01 14:26:16 jemarch Exp $ */
+/* $Id: gxbitfmt.h,v 1.7 2007/09/10 14:08:40 Arabidopsis Exp $ */
 /* Definitions for bitmap storage formats */
 
 #ifndef gxbitfmt_INCLUDED
@@ -196,10 +196,19 @@ typedef ulong gx_bitmap_format_t;
 #define GB_RASTER_NAMES\
   "raster_standard", "raster_specified", "raster_any"
 
+    /*
+     * Return halftoned raster.  (This requires a custom get_bit_rectangle
+     * device procedure.  See the wtsimdi device.  Most devices ignore this
+     * bit.
+     */
+#define GB_HALFTONED (1L<<31)
+#define GB_HALFTONED_NAMES\
+  "halftoned_no", "halftoned_yes"
+
 /* Define names for debugging printout. */
 #define GX_BITMAP_FORMAT_NAMES\
   GB_COLORS_NAMES, GB_ALPHA_NAMES, GB_DEPTH_NAMES, GB_PACKING_NAMES,\
   GB_SELECT_NAMES, GB_RETURN_NAMES, GB_ALIGN_NAMES, GB_OFFSET_NAMES,\
-  GB_RASTER_NAMES
+  GB_RASTER_NAMES, GB_HALFTONE_NAMES
 
 #endif /* gxbitfmt_INCLUDED */

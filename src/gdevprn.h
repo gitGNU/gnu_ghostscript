@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevprn.h,v 1.8 2007/08/01 14:25:54 jemarch Exp $ */
+/* $Id: gdevprn.h,v 1.9 2007/09/10 14:08:44 Arabidopsis Exp $ */
 /* Common header file for memory-buffered printers */
 
 #ifndef gdevprn_INCLUDED
@@ -643,7 +643,7 @@ typedef dev_proc_create_buf_device((*create_buf_device_proc_t));
 int gdev_create_buf_device(create_buf_device_proc_t cbd_proc,
 			   gx_device **pbdev, gx_device *target,
 			   const gx_render_plane_t *render_plane,
-			   gs_memory_t *mem, bool for_band);
+			   gs_memory_t *mem, gx_band_complexity_t *band_complexity);
 
 /* BACKWARD COMPATIBILITY */
 #define dev_print_scan_lines(dev)\

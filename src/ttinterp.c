@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ttinterp.c,v 1.7 2007/08/01 14:26:46 jemarch Exp $ */
+/* $Id: ttinterp.c,v 1.8 2007/09/10 14:08:47 Arabidopsis Exp $ */
 
 /* Changes after FreeType: cut out the TrueType instruction interpreter. */
 /* Patented algorithms are replaced with THROW_PATENTED. */
@@ -93,8 +93,9 @@
 #  define DBG_PRINT4(fmt, a, b, c, d)
 #endif
 
+#ifdef DEBUG
 static int nInstrCount=0;
-
+#endif
 
 /* There are two kinds of implementations there:              */
 /*                                                            */

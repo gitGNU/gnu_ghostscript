@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxistate.h,v 1.9 2007/08/01 14:26:26 jemarch Exp $ */
+/* $Id: gxistate.h,v 1.10 2007/09/10 14:08:42 Arabidopsis Exp $ */
 /* Imager state definition */
 
 #ifndef gxistate_INCLUDED
@@ -148,6 +148,7 @@ typedef struct gx_transfer_s {
 		/* effective_transfer are always the same.) */\
 	gx_transfer set_transfer;		/* members are (RC) */\
 	gx_transfer_map *effective_transfer[GX_DEVICE_COLOR_MAX_COMPONENTS]; /* see below */\
+	int object_tag; /* */\
 \
 		/* Color caches: */\
 \
@@ -203,9 +204,6 @@ typedef struct gx_transfer_s {
 
 typedef struct gs_devicen_color_map_s {
     bool use_alt_cspace;
-#if ENABLE_NAMED_COLOR_CALLBACK
-    bool use_named_color_callback;
-#endif
     separation_type sep_type;
     uint num_components;	/* Input - Duplicate of value in gs_device_n_params */
     uint num_colorants;		/* Number of colorants - output */ 
@@ -247,6 +245,8 @@ typedef struct gs_devicen_color_map_s {
 	bool accurate_curves;\
 	bool have_pattern_streams;\
 	float smoothness;\
+	int renderingintent;\
+	CUSTOM_COLOR_PTR	/* Pointer to custom color callback struct */\
 	const gx_color_map_procs *\
 	  (*get_cmap_procs)(const gs_imager_state *, const gx_device *);\
 	gs_color_rendering_state_common
@@ -277,8 +277,9 @@ struct gs_imager_state_s {
    { (float)(scale), 0.0, 0.0, (float)(-(scale)), 0.0, 0.0 },\
   false, {0, 0}, {0, 0}, false, \
   lop_default, gx_max_color_value, BLEND_MODE_Compatible,\
-   { 1.0, 0 }, { 1.0, 0 }, 0, 0/*false*/, 0, 0, 0/*false*/, 0, 0, 1.0,\
+  { 1.0, 0 }, { 1.0, 0 }, 0, 0/*false*/, 0, 0, 0/*false*/, 0, 0, 1.0,  \
    { fixed_half, fixed_half }, 0/*false*/, 0/*false*/, 0/*false*/, 1.0,\
+  1, INIT_CUSTOM_COLOR_PTR	/* 'Custom color' callback pointer */  \
   gx_default_get_cmap_procs
 
 /* The imager state structure is public only for subclassing. */

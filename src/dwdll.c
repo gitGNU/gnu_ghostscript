@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: dwdll.c,v 1.7 2007/08/01 14:25:43 jemarch Exp $ */
+/* $Id: dwdll.c,v 1.8 2007/09/10 14:08:37 Arabidopsis Exp $ */
 
 /* dwdll.c */
 
@@ -43,7 +43,6 @@ int load_dll(GSDLL *gsdll, char *last_error, int len)
 {
 char fullname[1024];
 char *p;
-long version;
 int length;
 gsapi_revision_t rv;
 

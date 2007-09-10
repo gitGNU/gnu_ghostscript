@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/*$Id: gdevbbox.c,v 1.9 2007/08/01 14:25:45 jemarch Exp $ */
+/*$Id: gdevbbox.c,v 1.10 2007/09/10 14:08:41 Arabidopsis Exp $ */
 /* Device for tracking bounding box */
 #include "math_.h"
 #include "memory_.h"
@@ -278,6 +278,7 @@ gx_device_bbox_init(gx_device_bbox * dev, gx_device * target, gs_memory_t *mem)
 	set_dev_proc(dev, update_spot_equivalent_colors,
 				gx_forward_update_spot_equivalent_colors);
 	set_dev_proc(dev, get_page_device, gx_forward_get_page_device);
+	set_dev_proc(dev, ret_devn_params, gx_forward_ret_devn_params);
 	gx_device_set_target((gx_device_forward *)dev, target);
     } else {
 	gx_device_fill_in_procs((gx_device *)dev);

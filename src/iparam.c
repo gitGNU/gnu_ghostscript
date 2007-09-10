@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: iparam.c,v 1.8 2007/08/01 14:26:37 jemarch Exp $ */
+/* $Id: iparam.c,v 1.9 2007/09/10 14:08:41 Arabidopsis Exp $ */
 /* Interpreter implementations of parameter dictionaries */
 #include "memory_.h"
 #include "string_.h"
@@ -34,6 +34,7 @@
 #include "iutil.h"		/* for num_params */
 #include "ivmspace.h"
 #include "store.h"
+#include "gsstruct.h"           /* for st_bytes */
 
 /* ================ Utilities ================ */
 
@@ -523,7 +524,7 @@ private const gs_param_list_procs ref_read_procs =
 };
 private int ref_param_read(iparam_list *, gs_param_name,
 			   iparam_loc *, int);
-private int ref_param_read_string_value(const gs_memory_t *mem,
+private int ref_param_read_string_value(gs_memory_t *mem,
 					const iparam_loc *,
 					gs_param_string *);
 private int ref_param_read_array(iparam_list *, gs_param_name,
@@ -803,6 +804,7 @@ ref_param_read_typed(gs_param_list * plist, gs_param_name pkey,
 	    pvalue->type = gs_param_type_float;
 	    return 0;
 	case t_string:
+        case t_astruct:
 	    pvalue->type = gs_param_type_string;
 	    return ref_param_read_string_value(plist->memory, &loc, &pvalue->value.s);
 	default:
@@ -870,7 +872,7 @@ ref_param_get_next_key(gs_param_list * plist, gs_param_enumerator_t * penum,
 
 /* Read a string value. */
 private int
-ref_param_read_string_value(const gs_memory_t *mem, const iparam_loc * ploc, gs_param_string * pvalue)
+ref_param_read_string_value(gs_memory_t *mem, const iparam_loc * ploc, gs_param_string * pvalue)
 {
     const ref *pref = ploc->pvalue;
 
@@ -888,6 +890,17 @@ ref_param_read_string_value(const gs_memory_t *mem, const iparam_loc * ploc, gs_
 	    iparam_check_read(*ploc);
 	    pvalue->data = pref->value.const_bytes;
 	    pvalue->size = r_size(pref);
+	    pvalue->persistent = false;
+	    break;
+	case t_astruct:
+	    /* Note: technically, instead of the "mem" argument, we
+	       should be using the plists's ref_memory. However, in a
+	       simple call to .putdeviceparams, they are identical. */
+	    iparam_check_read(*ploc);
+	    if (gs_object_type(mem, pref->value.pstruct) != &st_bytes) 
+		return iparam_note_error(*ploc, e_typecheck);
+	    pvalue->data = r_ptr(pref, byte);
+	    pvalue->size = gs_object_size(mem, pref->value.pstruct);
 	    pvalue->persistent = false;
 	    break;
 	default:

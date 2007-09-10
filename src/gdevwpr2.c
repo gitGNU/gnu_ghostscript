@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevwpr2.c,v 1.8 2007/08/01 14:25:57 jemarch Exp $ */
+/* $Id: gdevwpr2.c,v 1.9 2007/09/10 14:08:42 Arabidopsis Exp $ */
 /*
  * Microsoft Windows 3.n printer driver for Ghostscript.
  * Original version by Russell Lang and
@@ -884,7 +884,6 @@ win_pr2_getdc(gx_device_win_pr2 * wdev)
     int orientation;
     int papersize;
     char papername[64];
-    char drvname[32];
     LPDEVMODE podevmode, pidevmode;
     HANDLE hprinter;
 

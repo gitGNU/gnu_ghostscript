@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscie.c,v 1.7 2007/08/01 14:26:02 jemarch Exp $ */
+/* $Id: gscie.c,v 1.8 2007/09/10 14:08:40 Arabidopsis Exp $ */
 /* CIE color rendering cache management */
 #include "math_.h"
 #include "memory_.h"
@@ -421,10 +421,26 @@ gx_install_cie_abc(gs_cie_abc *pcie, gs_state * pgs)
 }
 
 int
-gx_install_CIEDEFG(const gs_color_space * pcs, gs_state * pgs)
+gx_install_CIEDEFG(gs_color_space * pcs, gs_state * pgs)
 {
     gs_cie_defg *pcie = pcs->params.defg;
 
+#if ENABLE_CUSTOM_COLOR_CALLBACK
+    {
+        /*
+         * Check if we want to use the callback color processing for this
+         * color space.
+         */
+        client_custom_color_params_t * pcb =
+	    (client_custom_color_params_t *) pgs->custom_color_callback;
+
+        if (pcb != NULL) {
+	    if (pcb->client_procs->install_CIEBasedDEFG(pcb, pcs, pgs))
+    	        /* Exit if the client will handle the colorspace completely */
+		return 0;
+        }
+    }
+#endif
     CIE_LOAD_CACHE_BODY(pcie->caches_defg.DecodeDEFG, pcie->RangeDEFG.ranges,
 			&pcie->DecodeDEFG, DecodeDEFG_default, pcie,
 			"DecodeDEFG");
@@ -432,10 +448,26 @@ gx_install_CIEDEFG(const gs_color_space * pcs, gs_state * pgs)
 }
 
 int
-gx_install_CIEDEF(const gs_color_space * pcs, gs_state * pgs)
+gx_install_CIEDEF(gs_color_space * pcs, gs_state * pgs)
 {
     gs_cie_def *pcie = pcs->params.def;
 
+#if ENABLE_CUSTOM_COLOR_CALLBACK
+    {
+        /*
+         * Check if we want to use the callback color processing for this
+         * color space.
+         */
+        client_custom_color_params_t * pcb =
+	    (client_custom_color_params_t *) pgs->custom_color_callback;
+
+        if (pcb != NULL) {
+	    if (pcb->client_procs->install_CIEBasedDEF(pcb, pcs, pgs))
+    	        /* Exit if the client will handle the colorspace completely */
+		return 0;
+        }
+    }
+#endif
     CIE_LOAD_CACHE_BODY(pcie->caches_def.DecodeDEF, pcie->RangeDEF.ranges,
 			&pcie->DecodeDEF, DecodeDEF_default, pcie,
 			"DecodeDEF");
@@ -443,18 +475,50 @@ gx_install_CIEDEF(const gs_color_space * pcs, gs_state * pgs)
 }
 
 int
-gx_install_CIEABC(const gs_color_space * pcs, gs_state * pgs)
+gx_install_CIEABC(gs_color_space * pcs, gs_state * pgs)
 {
+#if ENABLE_CUSTOM_COLOR_CALLBACK
+    {
+        /*
+         * Check if we want to use the callback color processing for this
+         * color space.
+         */
+        client_custom_color_params_t * pcb =
+	    (client_custom_color_params_t *) pgs->custom_color_callback;
+
+        if (pcb != NULL) {
+	    if (pcb->client_procs->install_CIEBasedABC(pcb, pcs, pgs))
+    	        /* Exit if the client will handle the colorspace completely */
+		return 0;
+        }
+    }
+#endif
     return gx_install_cie_abc(pcs->params.abc, pgs);
 }
 
 int
-gx_install_CIEA(const gs_color_space * pcs, gs_state * pgs)
+gx_install_CIEA(gs_color_space * pcs, gs_state * pgs)
 {
     gs_cie_a *pcie = pcs->params.a;
     gs_sample_loop_params_t lp;
     int i;
 
+#if ENABLE_CUSTOM_COLOR_CALLBACK
+    {
+        /*
+         * Check if we want to use the callback color processing for this
+         * color space.
+         */
+        client_custom_color_params_t * pcb =
+	    (client_custom_color_params_t *) pgs->custom_color_callback;
+
+        if (pcb != NULL) {
+	    if (pcb->client_procs->install_CIEBasedA(pcb, pcs, pgs))
+    	        /* Exit if the client will handle the colorspace completely */
+		return 0;
+        }
+    }
+#endif
     gs_cie_cache_init(&pcie->caches.DecodeA.floats.params, &lp,
 		      &pcie->RangeA, "DecodeA");
     for (i = 0; i <= lp.N; ++i) {

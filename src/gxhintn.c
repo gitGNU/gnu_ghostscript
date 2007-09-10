@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxhintn.c,v 1.8 2007/08/01 14:26:23 jemarch Exp $ */
+/* $Id: gxhintn.c,v 1.9 2007/09/10 14:08:45 Arabidopsis Exp $ */
 /* Type 1 hinter, a new algorithm */
 
 #include "memory_.h"
@@ -1754,7 +1754,8 @@ private void t1_hinter__simplify_representation(t1_hinter * this)
 		    this->primary_hint_count--;
 		continue; /* skip it. */
 	    } else {
-		this->hint[j] = this->hint[i];
+		if (i != j)
+                    this->hint[j] = this->hint[i];
 		j++;
 	    }
 	this->hint_count = j;

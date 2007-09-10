@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclpage.c,v 1.6 2007/08/01 14:26:19 jemarch Exp $ */
+/* $Id: gxclpage.c,v 1.7 2007/09/10 14:08:40 Arabidopsis Exp $ */
 /* Page object management */
 #include "gdevprn.h"
 #include "gxcldev.h"
@@ -28,6 +28,8 @@ int
 gdev_prn_save_page(gx_device_printer * pdev, gx_saved_page * page,
 		   int num_copies)
 {
+    gx_device_clist *cdev = (gx_device_clist *) pdev;
+
     /* Make sure we are banding. */
     if (!pdev->buffer_space)
 	return_error(gs_error_rangecheck);
@@ -39,8 +41,8 @@ gdev_prn_save_page(gx_device_printer * pdev, gx_saved_page * page,
 	int code;
 
 	if ((code = clist_end_page(pcldev)) < 0 ||
-	    (code = clist_fclose(pcldev->page_cfile, pcldev->page_cfname, false)) < 0 ||
-	    (code = clist_fclose(pcldev->page_bfile, pcldev->page_bfname, false)) < 0
+	    (code = cdev->common.page_info.io_procs->fclose(pcldev->page_cfile, pcldev->page_cfname, false)) < 0 ||
+	    (code = cdev->common.page_info.io_procs->fclose(pcldev->page_bfile, pcldev->page_bfname, false)) < 0
 	    )
 	    return code;
 	/* Save the device information. */
@@ -114,8 +116,8 @@ gdev_prn_render_pages(gx_device_printer * pdev,
 	for (i = 0; i < count; ++i) {
 	    const gx_saved_page *page = ppages[i].page;
 
-	    clist_unlink(page->info.cfname);
-	    clist_unlink(page->info.bfname);
+	    pcldev->page_info.io_procs->unlink(page->info.cfname);
+	    pcldev->page_info.io_procs->unlink(page->info.bfname);
 	}
 	return code;
     }

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclmem.h,v 1.6 2007/08/01 14:26:18 jemarch Exp $ */
+/* $Id: gxclmem.h,v 1.7 2007/09/10 14:08:42 Arabidopsis Exp $ */
 /* Definitions and declarations for clist implementation in memory. */
 
 #ifndef gxclmem_INCLUDED
@@ -67,7 +67,7 @@ typedef struct LOG_MEMFILE_BLK {
     RAW_BUFFER *raw_block;	/* or NULL */
 } LOG_MEMFILE_BLK;
 
-typedef struct MEMFILE {
+struct MEMFILE_s {
     gs_memory_t *memory;	/* storage allocator */
     gs_memory_t *data_memory;	/* storage allocator for data */
     bool ok_to_compress;	/* if true, OK to compress this file */
@@ -108,7 +108,11 @@ typedef struct MEMFILE {
     bool compressor_initialized;
     stream_state *compress_state;
     stream_state *decompress_state;
-} MEMFILE;
+};
+#ifndef MEMFILE_DEFINED
+#define MEMFILE_DEFINED
+typedef struct MEMFILE_s MEMFILE;
+#endif
 
 /*
  * Only the MEMFILE and stream_state structures are GC-compatible, so we
@@ -118,29 +122,6 @@ typedef struct MEMFILE {
 #define private_st_MEMFILE()	/* in gxclmem.c */\
   gs_private_st_ptrs2(st_MEMFILE, MEMFILE, "MEMFILE",\
     MEMFILE_enum_ptrs, MEMFILE_reloc_ptrs, compress_state, decompress_state)
-
-/* Make the memfile_... operations aliases for the clist_... operations. */
-
-#define memfile_fopen(fname, fmode, pcf, mem, data_mem, compress)\
-  clist_fopen(fname, fmode, pcf, mem, data_mem, compress)
-#define memfile_fclose(cf, fname, delete)\
-  clist_fclose(cf, fname, delete)
-#define memfile_unlink(fname)\
-  clist_unlink(fname)
-
-#define memfile_space_available(req)\
-  clist_space_available(req)
-#define memfile_fwrite_chars(data, len, cf)\
-  clist_fwrite_chars(data, len, cf)
-
-#define memfile_fread_chars(data, len, cf)\
-  clist_fread_chars(data, len, cf)
-
-#define memfile_set_memory_warning(cf, nbytes) clist_set_memory_warning(cf, nbytes)
-#define memfile_ferror_code(cf) clist_ferror_code(cf)
-#define memfile_ftell(cf) clist_ftell(cf)
-#define memfile_rewind(cf, discard, fname) clist_rewind(cf, discard, fname)
-#define memfile_fseek(cf, offset, mode, fname) clist_fseek(cf, offset, mode, fname)
 
 /* Declare the procedures for returning the prototype filter states */
 /* for compressing and decompressing the band list. */

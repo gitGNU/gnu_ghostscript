@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevrops.c,v 1.8 2007/08/01 14:25:55 jemarch Exp $ */
+/* $Id: gdevrops.c,v 1.9 2007/09/10 14:08:40 Arabidopsis Exp $ */
 /* RasterOp source device */
 #include "gx.h"
 #include "gserrors.h"
@@ -111,7 +111,8 @@ private const gx_device_rop_texture gs_rop_texture_device = {
      gx_forward_fill_linear_color_scanline,
      gx_forward_fill_linear_color_trapezoid,
      gx_forward_fill_linear_color_triangle,
-     gx_forward_update_spot_equivalent_colors
+     gx_forward_update_spot_equivalent_colors,
+     gx_forward_ret_devn_params
     },
     0,				/* target */
     lop_default			/* log_op */

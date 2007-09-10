@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscspace.c,v 1.8 2007/08/01 14:26:04 jemarch Exp $ */
+/* $Id: gscspace.c,v 1.9 2007/09/10 14:08:43 Arabidopsis Exp $ */
 /* Color space operators and support */
 #include "memory_.h"
 #include "gx.h"
@@ -35,6 +35,9 @@
 #include "gzstate.h"
 #include "stream.h"
 
+private cs_proc_install_cspace(gx_install_DeviceGray);
+private cs_proc_install_cspace(gx_install_DeviceRGB);
+private cs_proc_install_cspace(gx_install_DeviceCMYK);
 /*
  * Define the standard color space types.  We include DeviceCMYK in the base
  * build because it's too awkward to omit it, but we don't provide any of
@@ -47,7 +50,7 @@ private const gs_color_space_type gs_color_space_type_DeviceGray = {
     gx_init_paint_1, gx_restrict01_paint_1,
     gx_same_concrete_space,
     gx_concretize_DeviceGray, gx_remap_concrete_DGray,
-    gx_remap_DeviceGray, gx_no_install_cspace,
+    gx_remap_DeviceGray, gx_install_DeviceGray,
     gx_spot_colors_set_overprint,
     NULL, gx_no_adjust_color_count,
     gx_serialize_cspace_type,
@@ -59,7 +62,7 @@ private const gs_color_space_type gs_color_space_type_DeviceRGB = {
     gx_init_paint_3, gx_restrict01_paint_3,
     gx_same_concrete_space,
     gx_concretize_DeviceRGB, gx_remap_concrete_DRGB,
-    gx_remap_DeviceRGB, gx_no_install_cspace,
+    gx_remap_DeviceRGB, gx_install_DeviceRGB,
     gx_spot_colors_set_overprint,
     NULL, gx_no_adjust_color_count,
     gx_serialize_cspace_type,
@@ -74,7 +77,7 @@ private const gs_color_space_type gs_color_space_type_DeviceCMYK = {
     gx_init_paint_4, gx_restrict01_paint_4,
     gx_same_concrete_space,
     gx_concretize_DeviceCMYK, gx_remap_concrete_DCMYK,
-    gx_remap_DeviceCMYK, gx_no_install_cspace,
+    gx_remap_DeviceCMYK, gx_install_DeviceCMYK,
     gx_set_overprint_DeviceCMYK,
     NULL, gx_no_adjust_color_count,
     gx_serialize_cspace_type,
@@ -96,6 +99,15 @@ gs_cspace_final(void *vptr)
     if (pcs->type->final)
 	pcs->type->final(pcs);
     if_debug2('c', "[c]cspace final %08x %d\n", pcs, pcs->id);
+    
+#if ENABLE_CUSTOM_COLOR_CALLBACK
+    {
+	client_color_space_data_t *pclient_data = pcs->pclient_color_space_data;
+	if ( pclient_data )
+		pclient_data->client_adjust_cspace_count( pcs, -1 );
+    }
+#endif /*ENABLE_CUSTOM_COLOR_CALLBACK*/
+    
     rc_decrement_only(pcs->base_space, "gs_cspace_final");
 }
 
@@ -112,8 +124,13 @@ gs_cspace_alloc_with_id(gs_memory_t *mem, ulong id,
     pcs->type = pcstype;
     pcs->id = id;
     pcs->base_space = NULL;
+    pcs->pclient_color_space_data = NULL;
     return pcs;
 }
+
+private cs_proc_install_cspace(gx_install_DeviceGray);
+private cs_proc_install_cspace(gx_install_DeviceRGB);
+private cs_proc_install_cspace(gx_install_DeviceCMYK);
 
 /*
  * Generic allocation function for colorspace implementations. Return
@@ -171,6 +188,24 @@ gs_color_space_restrict_color(gs_client_color *pcc, const gs_color_space *pcs)
     cs_restrict_color(pcc, pcs);
 }
 
+/* Install a DeviceGray color space. */
+private int
+gx_install_DeviceGray(gs_color_space * pcs, gs_state * pgs)
+{
+#if ENABLE_CUSTOM_COLOR_CALLBACK
+    /*
+     * Check if we want to use the callback color processing for this
+     * color space.
+     */
+    client_custom_color_params_t * pcb =
+	(client_custom_color_params_t *) pgs->custom_color_callback;
+
+    if (pcb != NULL) 
+	pcb->client_procs->install_DeviceGray(pcb, pcs, pgs);
+#endif
+    return 0;
+}
+
 int
 gx_num_components_1(const gs_color_space * pcs)
 {
@@ -201,8 +236,44 @@ gs_cspace_base_space(const gs_color_space * pcspace)
 
 /* Null color space installation procedure. */
 int
-gx_no_install_cspace(const gs_color_space * pcs, gs_state * pgs)
+gx_no_install_cspace(gs_color_space * pcs, gs_state * pgs)
 {
+    return 0;
+}
+  
+/* Install a DeviceRGB color space. */
+private int
+gx_install_DeviceRGB(gs_color_space * pcs, gs_state * pgs)
+{
+#if ENABLE_CUSTOM_COLOR_CALLBACK
+    /*
+     * Check if we want to use the callback color processing for this
+     * color space.
+     */
+    client_custom_color_params_t * pcb =
+	(client_custom_color_params_t *) pgs->custom_color_callback;
+
+    if (pcb != NULL) 
+	pcb->client_procs->install_DeviceRGB(pcb, pcs, pgs);
+#endif
+    return 0;
+}
+
+/* Install a DeviceCMYK color space. */
+private int
+gx_install_DeviceCMYK(gs_color_space * pcs, gs_state * pgs)
+{
+#if ENABLE_CUSTOM_COLOR_CALLBACK
+    /*
+     * Check if we want to use the callback color processing for this
+     * color space.
+     */
+    client_custom_color_params_t * pcb =
+	(client_custom_color_params_t *) pgs->custom_color_callback;
+
+    if (pcb != NULL) 
+	pcb->client_procs->install_DeviceCMYK(pcb, pcs, pgs);
+#endif
     return 0;
 }
 
@@ -405,6 +476,7 @@ is_dc_nearly_linear(const gx_device *dev, const gx_device_color *c,
 	const gx_device_color *c0, const gx_device_color *c1, 
 	double t, int n, float smoothness)
 {
+
     if (c0->type == &gx_dc_type_data_pure) {
 	int i;
 	gx_color_index pure0 = c0->colors.pure;
@@ -416,11 +488,12 @@ is_dc_nearly_linear(const gx_device *dev, const gx_device_color *c,
 	    int mask = (1 << dev->color_info.comp_bits[i]) - 1;
 	    int max_color = (i == dev->color_info.gray_index ? dev->color_info.max_gray 
 							     : dev->color_info.max_color);
+	    float max_diff = max(1, max_color * smoothness);
 	    int b0 = (pure0 >> shift) & mask, b1 = (pure1 >> shift) & mask; 
 	    int b = (pure >> shift) & mask;
 	    double bb = b0 * t + b1 * (1 - t);
 
-	    if (any_abs(b - bb) > max_color * smoothness)
+	    if (any_abs(b - bb) > max_diff)
 		return false;
 	}
 	return true;

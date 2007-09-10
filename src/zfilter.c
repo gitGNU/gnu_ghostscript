@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfilter.c,v 1.7 2007/08/01 14:26:50 jemarch Exp $ */
+/* $Id: zfilter.c,v 1.8 2007/09/10 14:08:42 Arabidopsis Exp $ */
 /* Filter creation */
 #include "memory_.h"
 #include "ghost.h"
@@ -177,7 +177,7 @@ zSFD(i_ctx_t *i_ctx_p)
 /* ------ Utilities ------ */
 
 /* Forward references */
-private int filter_ensure_buf(stream **, uint, gs_ref_memory_t *, bool);
+private int filter_ensure_buf(stream **, uint, gs_ref_memory_t *, bool, int );
 
 /* Set up an input filter. */
 int
@@ -234,7 +234,7 @@ filter_read(i_ctx_t *i_ctx_p, int npop, const stream_template * template,
 	    code = filter_ensure_buf(&sstrm,
 				     template->min_in_size +
 				     sstrm->state->template->min_out_size,
-				     iimemory, false);
+				     iimemory, false, close);
 	    if (code < 0)
 		goto out;
 	    break;
@@ -314,7 +314,7 @@ filter_write(i_ctx_t *i_ctx_p, int npop, const stream_template * template,
 	    code = filter_ensure_buf(&sstrm,
 				     template->min_out_size +
 				     sstrm->state->template->min_in_size,
-				     iimemory, true);
+				     iimemory, true, close);
 	    if (code < 0)
 		goto out;
 	    break;
@@ -382,7 +382,7 @@ zEOFD(i_ctx_t *i_ctx_p)
 /* This may require creating an intermediate stream. */
 private int
 filter_ensure_buf(stream ** ps, uint min_buf_size, gs_ref_memory_t *imem,
-		  bool writing)
+		  bool writing, int close)
 {
     stream *s = *ps;
     uint min_size = min_buf_size + max_min_left;
@@ -420,6 +420,7 @@ filter_ensure_buf(stream ** ps, uint min_buf_size, gs_ref_memory_t *imem,
 	bs = fptr(&bsop);
 	bs->strm = s;
 	bs->is_temp = 2;
+        bs->close_strm = close;
 	*ps = bs;
 	return code;
     }

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevprna.c,v 1.7 2007/08/01 14:25:54 jemarch Exp $ */
+/* $Id: gdevprna.c,v 1.8 2007/09/10 14:08:44 Arabidopsis Exp $ */
 /* Generic asynchronous printer driver support */
 
 /* Initial version 2/1/98 by John Desrosiers (soho@crl.com) */
@@ -257,9 +257,11 @@ private int
 gdev_prn_async_write_close_device(gx_device * pdev)
 {
     gx_device_printer *const pwdev = (gx_device_printer *) pdev;
+    gx_device_clist_writer *const pcwdev =
+	&((gx_device_clist *) pdev)->writer;
 
     /* Signal render thread to close & terminate when done */
-    gx_page_queue_add_page(pwdev->page_queue,
+    gx_page_queue_add_page(pcwdev, pwdev->page_queue,
 			   GX_PAGE_QUEUE_ACTION_TERMINATE, 0, 0);
 
     /* Wait for renderer to finish all pages & terminate req */
@@ -605,7 +607,7 @@ gdev_prn_async_write_output_page(gx_device * pdev, int num_copies, int flush)
 
     /* do NOT close files before sending to page queue */
     flush_code = clist_end_page(pcwdev);
-    add_code = gx_page_queue_add_page(pwdev->page_queue,
+    add_code = gx_page_queue_add_page(pcwdev, pwdev->page_queue,
 				(flush ? GX_PAGE_QUEUE_ACTION_FULL_PAGE :
 				 GX_PAGE_QUEUE_ACTION_COPY_PAGE),
 				      &pcwdev->page_info, num_copies);
@@ -660,7 +662,7 @@ flush_page(
 
     /* do NOT close files before sending to page queue */
     flush_code = clist_end_page(pcwdev);
-    add_code = gx_page_queue_add_page(pwdev->page_queue,
+    add_code = gx_page_queue_add_page(pcwdev, pwdev->page_queue,
 				(partial ? GX_PAGE_QUEUE_ACTION_PARTIAL_PAGE :
 				 GX_PAGE_QUEUE_ACTION_FULL_PAGE),
 				      &pcwdev->page_info, 0);

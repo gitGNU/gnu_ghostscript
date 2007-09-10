@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclip.c,v 1.8 2007/08/01 14:26:18 jemarch Exp $ */
+/* $Id: gxclip.c,v 1.9 2007/09/10 14:08:44 Arabidopsis Exp $ */
 /* Implementation of (path-based) clipping */
 #include "gx.h"
 #include "gxdevice.h"
@@ -107,7 +107,8 @@ private const gx_device_clip gs_clip_device =
   gx_default_fill_linear_color_scanline,
   gx_default_fill_linear_color_trapezoid,
   gx_default_fill_linear_color_triangle,
-  gx_forward_update_spot_equivalent_colors
+  gx_forward_update_spot_equivalent_colors,
+  gx_forward_ret_devn_params
  }
 };
 
