@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpxut.h,v 1.7 2007/08/01 14:25:55 jemarch Exp $ */
+/* $Id: gdevpxut.h,v 1.8 2007/09/11 15:23:55 Arabidopsis Exp $ */
 /* Utilities for PCL XL generation */
 /* Requires gdevpxat.h, gdevpxen.h, gdevpxop.h */
 
@@ -35,7 +35,8 @@ int px_write_page_header(stream *s, const gx_device *dev);
 /* Write the media selection command if needed, updating the media size. */
 int px_write_select_media(stream *s, const gx_device *dev,
 			  pxeMediaSize_t *pms,
-			  byte *media_source);
+			  byte *media_source,
+			  int page, bool Duplex, bool Tumble);
 
 /*
  * Write the file trailer.  Note that this takes a FILE *, not a stream *,

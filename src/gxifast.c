@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxifast.c,v 1.7 2007/08/01 14:26:25 jemarch Exp $ */
+/* $Id: gxifast.c,v 1.8 2007/09/11 15:24:28 Arabidopsis Exp $ */
 /* Fast monochrome image rendering */
 #include "gx.h"
 #include "memory_.h"

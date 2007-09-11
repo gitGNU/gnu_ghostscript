@@ -1,4 +1,5 @@
-#    Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
+#  Copyright (C) 2001-2006 Artifex Software, Inc.
+#  All Rights Reserved.
 # 
 # This file is part of GNU ghostscript
 #
@@ -18,7 +19,7 @@
 # 
 # 
 
-# $Id: unix-gcc.mak,v 1.12 2007/09/10 14:08:40 Arabidopsis Exp $
+# $Id: unix-gcc.mak,v 1.13 2007/09/11 15:24:38 Arabidopsis Exp $
 # makefile for Unix/gcc/X11 configuration.
 
 # ------------------------------- Options ------------------------------- #
@@ -159,7 +160,7 @@ JPEG_NAME=jpeg
 # See libpng.mak for more information.
 
 PSRCDIR=libpng
-PVERSION=10216
+PVERSION=10218
 
 # Choose whether to use a shared version of the PNG library, and if so,
 # what its name is.
@@ -201,6 +202,11 @@ IJSEXECTYPE=unix
 # Define how to build the library archives.  (These are not used in any
 # standard configuration.)
 
+# Define the directory where the imdi library source is stored.
+# See devs.mak for more information
+
+IMDISRCDIR=imdi
+
 AR=ar
 ARFLAGS=qc
 RANLIB=ranlib
@@ -229,7 +235,7 @@ GCFLAGS=-Wall -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -f
 CFLAGS_STANDARD=-O2
 CFLAGS_DEBUG=-g -O0
 CFLAGS_PROFILE=-pg -O2
-CFLAGS_SO=-fPIC
+CFLAGS_SO=-fPIC -shared
 
 # Define the other compilation flags.  Add at most one of the following:
 #	-DBSD4_2 for 4.2bsd systems.
@@ -242,7 +248,7 @@ CFLAGS_SO=-fPIC
 # We don't include -ansi, because this gets in the way of the platform-
 #   specific stuff that <math.h> typically needs; nevertheless, we expect
 #   gcc to accept ANSI-style function prototypes and function definitions.
-XCFLAGS=
+XCFLAGS=-DGS_DEVS_SHARED -DGS_DEVS_SHARED_DIR=\"$(gssharedir)\"
 
 CFLAGS=$(CFLAGS_STANDARD) $(GCFLAGS) $(XCFLAGS)
 
@@ -264,7 +270,7 @@ LDFLAGS=$(XLDFLAGS)
 # Solaris may need -lnsl -lsocket -lposix4.
 # (Libraries required by individual drivers are handled automatically.)
 
-EXTRALIBS=
+EXTRALIBS=-rdynamic -ldl
 
 # Define the standard libraries to search at the end of linking.
 # Most platforms require -lpthread for the POSIX threads library;
@@ -419,6 +425,10 @@ DEVICE_DEVS19=
 DEVICE_DEVS20=$(DD)cljet5.dev $(DD)cljet5c.dev
 DEVICE_DEVS21=$(DD)spotcmyk.dev $(DD)devicen.dev $(DD)xcf.dev $(DD)bmpsep1.dev $(DD)bmpsep8.dev $(DD)bmp16m.dev $(DD)bmp32b.dev $(DD)psdcmyk.dev $(DD)psdrgb.dev
 
+# Shared library target to build.
+GS_SHARED_OBJS=$(GLOBJDIR)/X11.so $(GLOBJDIR)/lvga256.so $(GLOBJDIR)/vgalib.so
+#GS_SHARED_OBJS=$(GLOBJDIR)/X11.so
+
 # ---------------------------- End of options --------------------------- #
 
 # Define the name of the partial makefile that specifies options --
@@ -441,6 +451,7 @@ CCAUX=$(CC) `cat $(AK)`
 # These are the specific warnings we have to turn off to compile those
 # specific few files that need this.  We may turn off others in the future.
 CC_NO_WARN=$(CC_) -Wno-cast-qual -Wno-traditional
+CC_SHARED=$(CC_) $(CFLAGS_SO)
 
 # ---------------- End of platform-specific section ---------------- #
 

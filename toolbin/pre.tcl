@@ -1,6 +1,6 @@
 #!/usr/bin/tclsh
 
-#    Copyright (C) 2000-2002 artofcode LLC. All rights reserved.
+#    Copyright (C) 2000-2002 Artifex Software, Inc. All rights reserved.
 # 
 # This file is part of GNU ghostscript
 #
@@ -19,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: pre.tcl,v 1.5 2007/08/01 14:26:56 jemarch Exp $
+# $Id: pre.tcl,v 1.6 2007/09/11 15:25:15 Arabidopsis Exp $
 
 # Check various aspects of an about-to-be-released Ghostscript fileset.
 # Only applicable to filesets 6.0 and later (assumes use of CVS).

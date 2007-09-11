@@ -1,4 +1,5 @@
-#    Copyright (C) 1999, 2000 Aladdin Enterprises.  All rights reserved.
+#  Copyright (C) 2001-2006 Artifex Software, Inc.
+#  All Rights Reserved.
 # 
 # This file is part of GNU ghostscript
 #
@@ -16,7 +17,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 #
-# $Id: all-arch.mak,v 1.11 2007/09/10 14:08:44 Arabidopsis Exp $
+# $Id: all-arch.mak,v 1.12 2007/09/11 15:24:27 Arabidopsis Exp $
 #
 # Author:
 # 	Nelson H. F. Beebe
@@ -187,7 +188,7 @@ COMMON_ARGS		= DEVICE_DEVS_EXTRA='$(DEVICE_DEVS_EXTRA)' \
 			  JSRCDIR='$(JSRCDIR)' \
 			  PNGSRCDIR='$(PNGSRCDIR)' \
 			  PSRCDIR='$(PNGSRCDIR)' \
-			  PVERSION=10216 \
+			  PVERSION=10218 \
 			  SHARE_LIBPNG='$(SHARE_LIBPNG)' \
 			  SHARE_ZLIB='$(SHARE_ZLIB)' \
 			  XCFLAGS='$(XCFLAGS)' \

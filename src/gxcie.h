@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxcie.h,v 1.7 2007/09/10 14:08:43 Arabidopsis Exp $ */
+/* $Id: gxcie.h,v 1.8 2007/09/11 15:24:34 Arabidopsis Exp $ */
 /* Internal definitions for CIE color implementation */
 /* Requires gxcspace.h */
 
@@ -62,23 +62,10 @@ extern	void	gx_cie_to_xyz_free(gs_imager_state *);
 
 /*
  * Test whether a CIE rendering has been defined; ensure that the joint
- * caches are loaded.  Note that the procedure may return if no rendering
- * has been defined, and returns if an error occurs.
+ * caches are loaded.  Note that the procedure may return 1 if no rendering
+ * has been defined.
  */
-#define CIE_CHECK_RENDERING(pcs, pconc, pis, do_exit)                   \
-    BEGIN                                                               \
-        if (pis->cie_render == 0) {                                     \
-            /* No rendering has been defined yet: return black. */      \
-            pconc[0] = pconc[1] = pconc[2] = frac_0;                    \
-            do_exit;                                                    \
-        }                                                               \
-        if (pis->cie_joint_caches->status != CIE_JC_STATUS_COMPLETED) { \
-            int     code = gs_cie_jc_complete(pis, pcs);                \
-                                                                        \
-            if (code < 0)                                               \
-                return code;                                            \
-        }                                                               \
-    END
+int gx_cie_check_rendering(const gs_color_space * pcs, frac * pconc, const gs_imager_state * pis);
 
 /*
  * Do the common remapping operation for CIE color spaces. Returns the

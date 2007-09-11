@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxfunc.h,v 1.9 2007/08/01 14:26:23 jemarch Exp $ */
+/* $Id: gxfunc.h,v 1.10 2007/09/11 15:24:38 Arabidopsis Exp $ */
 /* Internal definitions for Functions */
 
 #ifndef gxfunc_INCLUDED

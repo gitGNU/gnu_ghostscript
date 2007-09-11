@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: idebug.h,v 1.7 2007/08/01 14:26:33 jemarch Exp $ */
+/* $Id: idebug.h,v 1.8 2007/09/11 15:24:31 Arabidopsis Exp $ */
 /* Prototypes for debugging procedures in idebug.c */
 
 #ifndef idebug_INCLUDED

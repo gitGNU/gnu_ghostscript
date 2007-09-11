@@ -3,7 +3,7 @@
 <html>
 <head>
 <title>Ghostscript and the PostScript language</title>
-<!-- $Id: Language.htm,v 1.9 2007/09/10 14:08:52 Arabidopsis Exp $ -->
+<!-- $Id: Language.htm,v 1.10 2007/09/11 15:25:03 Arabidopsis Exp $ -->
 <!-- Originally: language.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -722,6 +722,19 @@ determined by the dash pattern.
 manner as <b><tt>rectfill</tt></b>, <b><tt>rectclip</tt></b>, etc.  Defined
 only if the <b><tt>dps</tt></b> or <b><tt>level2</tt></b> option was
 selected when Ghostscript was built.
+</dl>
+
+<dl>
+<dt><b><tt>- .getpath &lt;array&gt;</tt></b>
+<dd>Export the current path to an array of executable arrays. This
+operator is similar to <b><tt>upath</tt></b>, except
+
+<li>array of arrays is used to overcome 64K-1 limit on the
+array lemgth.
+<li>no <b><tt>ucache</tt></b> or <b><tt>setbbox</tt></b> entries are generated.
+<li>operators are used instead of executable names.
+<li>there's no special handling of an empty path or trailing <b><tt>moveto</tt></b>.
+The saved path can be restored by <b><tt>newpath { exec } forall</tt></b>.
 </dl>
 
 <h4><a name="Painting"></a>Painting operators</h4>
@@ -2264,7 +2277,7 @@ will install resource files into <b><tt>/gs/Resource</tt></b>.
 <hr>
 
 <p>
-<small>Copyright &copy; 2000-2006 artofcode LLC.  All rights reserved.</small>
+<small>Copyright &copy; 2000-2006 Artifex Software, Inc.  All rights reserved.</small>
 
 <p>
 This software is provided AS-IS with no warranty, either express or
@@ -2277,7 +2290,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.57, 11 May 2007
+<small>Ghostscript version 8.60, 1 August 2007
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

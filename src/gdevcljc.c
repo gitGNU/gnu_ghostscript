@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevcljc.c,v 1.7 2007/08/01 14:25:46 jemarch Exp $ */
+/* $Id: gdevcljc.c,v 1.8 2007/09/11 15:24:18 Arabidopsis Exp $ */
 /*
  * H-P Color LaserJet 5/5M contone device; based on the gdevclj.c.
  */

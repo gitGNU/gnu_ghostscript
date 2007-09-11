@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -18,7 +18,7 @@
 */
 
 
-/* $Id: gsdll.h,v 1.7 2007/08/01 14:26:04 jemarch Exp $ */
+/* $Id: gsdll.h,v 1.8 2007/09/11 15:24:23 Arabidopsis Exp $ */
 
 /* This interface is deprecated and will be removed in future
  * ghostscript releases.  Use the interface described in

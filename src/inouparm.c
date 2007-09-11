@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: inouparm.c,v 1.6 2007/08/01 14:26:37 jemarch Exp $ */
+/* $Id: inouparm.c,v 1.7 2007/09/11 15:23:46 Arabidopsis Exp $ */
 /* Dummy set_user_params for Level 1 systems */
 #include "ghost.h"
 #include "icontext.h"		/* for set_user_params prototype */

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscoord.c,v 1.7 2007/08/01 14:26:03 jemarch Exp $ */
+/* $Id: gscoord.c,v 1.8 2007/09/11 15:24:31 Arabidopsis Exp $ */
 /* Coordinate system operators for Ghostscript library */
 #include "math_.h"
 #include "gx.h"

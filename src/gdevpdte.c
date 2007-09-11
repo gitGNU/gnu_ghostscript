@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdte.c,v 1.8 2007/08/01 14:25:52 jemarch Exp $ */
+/* $Id: gdevpdte.c,v 1.9 2007/09/11 15:23:48 Arabidopsis Exp $ */
 /* Encoding-based (Type 1/2/42) text processing for pdfwrite. */
 
 #include "math_.h"

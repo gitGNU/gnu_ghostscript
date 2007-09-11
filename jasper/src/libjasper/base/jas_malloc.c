@@ -64,7 +64,7 @@
 /*
  * Memory Allocator
  *
- * $Id: jas_malloc.c,v 1.4 2007/05/07 11:22:24 Arabidopsis Exp $
+ * $Id: jas_malloc.c,v 1.5 2007/09/11 15:25:11 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -166,7 +166,8 @@ static void releaseAllMem( void )
 void *jas_malloc(size_t size)
 {
 	void	*p;
-
+        if(size == 0)
+          size = 1;
 	p = malloc(size);
 	addMem(p);
 	return p;
@@ -183,6 +184,8 @@ void *jas_realloc(void *ptr, size_t size)
 	void	*p;
 
 	removeMem(ptr);
+        if(size == 0)
+          size = 1;
 	p = realloc(ptr, size);
 	addMem(p);
 	return p;

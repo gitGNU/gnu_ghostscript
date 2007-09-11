@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: gs_lev2.ps,v 1.8 2007/08/01 14:25:38 jemarch Exp $
+% $Id: gs_lev2.ps,v 1.9 2007/09/11 15:24:51 Arabidopsis Exp $
 % Initialization file for Level 2 functions.
 % When this is run, systemdict is still writable,
 % but (almost) everything defined here goes into level2dict.
@@ -306,20 +306,27 @@ end
 pssystemparams begin
   /CurDisplayList 0 .forcedef
   /CurFormCache 0 .forcedef
+  /CurInputDevice () .forcedef
   /CurOutlineCache 0 .forcedef
+  /CurOutputDevice () .forcedef
   /CurPatternCache 0 .forcedef
   /CurUPathCache 0 .forcedef
   /CurScreenStorage 0 .forcedef
   /CurSourceList 0 .forcedef
   /DoPrintErrors false .forcedef
+  /JobTimeout 0 .forcedef
+  /LicenseID (LN-001) .forcedef     % bogus
   /MaxDisplayList 140000 .forcedef
   /MaxFormCache 100000 .forcedef
+  /MaxImageBuffer 524288 .forcedef
   /MaxOutlineCache 65000 .forcedef
   /MaxPatternCache 100000 .forcedef
   /MaxUPathCache 300000 .forcedef
   /MaxScreenStorage 84000 .forcedef
   /MaxSourceList 25000 .forcedef
+  /PrinterName product .forcedef
   /RamSize 4194304 .forcedef
+  /WaitTimeout 40 .forcedef
 end
 
 % Define the procedures for handling comment scanning.  The names

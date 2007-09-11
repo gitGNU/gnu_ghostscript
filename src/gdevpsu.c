@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpsu.c,v 1.9 2007/08/01 14:25:55 jemarch Exp $ */
+/* $Id: gdevpsu.c,v 1.10 2007/09/11 15:24:06 Arabidopsis Exp $ */
 /* PostScript-writing utilities */
 #include "math_.h"
 #include "time_.h"
@@ -143,7 +143,7 @@ private const char *const psw_ps_procset[] = {
 };
 
 private const char *const psw_end_prolog[] = {
-    "end readonly def",
+    "end def",
     "%%EndResource",		/* ProcSet */
     "/pagesave null def",	/* establish binding */
     "%%EndProlog",
@@ -207,7 +207,7 @@ psw_begin_file_header(FILE *f, const gx_device *dev, const gs_rect *pbbox,
     fputs("%%BeginResource: procset ", f);
     fflush(f);
     psw_print_procset_name(f, dev, pdpc);
-    fputs("\n/", f);
+    fprintf(f, " %5.3lf %d\n/", pdpc->ProcSet_version / 1000.0, 0);
     fflush(f);
     psw_print_procset_name(f, dev, pdpc);
     fputs(" 80 dict dup begin\n", f);

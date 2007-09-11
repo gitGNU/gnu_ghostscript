@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsjconf.h,v 1.6 2007/08/01 14:26:08 jemarch Exp $ */
+/* $Id: gsjconf.h,v 1.7 2007/09/11 15:23:53 Arabidopsis Exp $ */
 /* jconfig.h file for Independent JPEG Group code */
 
 #ifndef gsjconf_INCLUDED
@@ -58,7 +58,7 @@
 #undef INCOMPLETE_TYPES_BROKEN
 
 /* The following is documented in jmemsys.h, not jconfig.doc. */
-#if ARCH_SIZEOF_INT <= 2
+#if ARCH_LOG2_SIZEOF_INT <= 1
 #  undef MAX_ALLOC_CHUNK
 #  define MAX_ALLOC_CHUNK 0xfff0
 #endif

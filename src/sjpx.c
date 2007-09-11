@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sjpx.c,v 1.4 2007/08/01 14:26:43 jemarch Exp $ */
+/* $Id: sjpx.c,v 1.5 2007/09/11 15:24:42 Arabidopsis Exp $ */
 /* JPXDecode filter implementation -- hooks in libjasper */
 
 #include "memory_.h"
@@ -27,6 +27,8 @@
 #include "strimpl.h"
 #include "gsmalloc.h"
 #include "sjpx.h"
+
+private void s_jpxd_set_defaults(stream_state *ss);
 
 /* stream implementation */
 
@@ -56,12 +58,7 @@ s_jpxd_init(stream_state * ss)
     stream_jpxd_state *const state = (stream_jpxd_state *) ss;
     int status = 0;
 
-    state->buffer = NULL;
-    state->bufsize = 0;
-    state->buffill = 0;
-    state->stream = NULL;
-    state->image = NULL;
-    state->offset = 0;
+    s_jpxd_set_defaults(ss);
     state->jpx_memory = ss->memory ? ss->memory->non_gc_memory : gs_lib_ctx_get_non_gc_memory_t();
             
     status = jas_init();

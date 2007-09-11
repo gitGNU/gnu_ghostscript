@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevx.c,v 1.7 2007/08/01 14:25:57 jemarch Exp $ */
+/* $Id: gdevx.c,v 1.8 2007/09/11 15:24:21 Arabidopsis Exp $ */
 /* X Windows driver for Ghostscript library */
 #include "gx.h"			/* for gx_bitmap; includes std.h */
 #include "math_.h"

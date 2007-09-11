@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpsfx.c,v 1.8 2007/08/01 14:25:55 jemarch Exp $ */
+/* $Id: gdevpsfx.c,v 1.9 2007/09/11 15:23:54 Arabidopsis Exp $ */
 /* Convert Type 1 Charstrings to Type 2 */
 #include "math_.h"
 #include "memory_.h"

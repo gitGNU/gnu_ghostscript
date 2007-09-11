@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 artofcode LLC.
+#  Copyright (C) 2001-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: msvc32.mak,v 1.11 2007/09/10 14:08:46 Arabidopsis Exp $
+# $Id: msvc32.mak,v 1.12 2007/09/11 15:24:42 Arabidopsis Exp $
 # makefile for 32-bit Microsoft Visual C++, Windows NT or Windows 95 platform.
 #
 # All configurable options are surrounded by !ifndef/!endif to allow 
@@ -211,7 +211,7 @@ JVERSION=6
 
 !ifndef PSRCDIR
 PSRCDIR=libpng
-PVERSION=10216
+PVERSION=10218
 !endif
 
 # Define the directory where the zlib sources are stored.
@@ -288,6 +288,13 @@ IJSSRCDIR=ijs
 IJSEXECTYPE=win
 !endif
 
+# Define the directory where the imdi library source is stored.
+# See devs.mak for more information
+
+!ifndef IMDISRCDIR
+IMDISRCDIR=imdi
+!endif
+
 # Define any other compilation flags.
 
 !ifndef CFLAGS
@@ -352,6 +359,9 @@ MSVC_VERSION=7
 MSVC_MINOR_VERSION=1
 !endif
 !if "$(_NMAKE_VER)" == "8.00.40607.16"
+MSVC_VERSION=8
+!endif
+!if "$(_NMAKE_VER)" == "8.00.50727.42"
 MSVC_VERSION=8
 !endif
 !endif

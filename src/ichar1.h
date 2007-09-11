@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ichar1.h,v 1.9 2007/08/01 14:26:32 jemarch Exp $ */
+/* $Id: ichar1.h,v 1.10 2007/09/11 15:24:32 Arabidopsis Exp $ */
 /* Type 1 / Type 2 character rendering operator procedures */
 
 #ifndef ichar1_INCLUDED

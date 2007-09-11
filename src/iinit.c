@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: iinit.c,v 1.8 2007/08/01 14:26:36 jemarch Exp $ */
+/* $Id: iinit.c,v 1.9 2007/09/11 15:24:32 Arabidopsis Exp $ */
 /* Initialize internally known objects for Ghostscript interpreter */
 #include "string_.h"
 #include "ghost.h"

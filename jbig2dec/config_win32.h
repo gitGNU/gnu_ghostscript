@@ -1,7 +1,7 @@
 /*
     jbig2dec
 
-    Copyright (c) 2002-2003 artofcode LLC.
+    Copyright (C) 2002-2003 Artifex Software, Inc.
 
     This software is distributed under license and may not
     be copied, modified or distributed except as expressly
@@ -13,7 +13,7 @@
     Artifex Software, Inc.,  101 Lucas Valley Road #110,
     San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-    $Id: config_win32.h,v 1.3 2007/05/07 11:22:12 Arabidopsis Exp $
+    $Id: config_win32.h,v 1.4 2007/09/11 15:24:52 Arabidopsis Exp $
 */
 
 /* configuration header file for compiling under Microsoft Windows */
@@ -22,8 +22,8 @@
 #define PACKAGE "jbig2dec"
 #define VERSION "0.3"
 
-#ifdef _MSC_VER /* Microsoft Visual C+*/
-
+#if defined(_MSC_VER) || (defined(__BORLANDC__) && defined(__WIN32__))
+  /* Microsoft Visual C++ or Borland C++ */
   typedef signed char             int8_t;
   typedef short int               int16_t;
   typedef int                     int32_t;

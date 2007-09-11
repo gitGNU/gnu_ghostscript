@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: opextern.h,v 1.7 2007/08/01 14:26:40 jemarch Exp $ */
+/* $Id: opextern.h,v 1.8 2007/09/11 15:23:44 Arabidopsis Exp $ */
 /* Externally accessible operator declarations */
 
 #ifndef opextern_INCLUDED

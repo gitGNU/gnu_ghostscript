@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfm.c,v 1.10 2007/09/10 14:08:39 Arabidopsis Exp $ */
+/* $Id: gdevpdfm.c,v 1.11 2007/09/11 15:24:22 Arabidopsis Exp $ */
 /* pdfmark processing for PDF-writing driver */
 #include "math_.h"
 #include "memory_.h"

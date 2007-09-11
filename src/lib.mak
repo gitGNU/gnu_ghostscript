@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 artofcode LLC.
+#  Copyright (C) 2001-2006 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: lib.mak,v 1.10 2007/09/10 14:08:41 Arabidopsis Exp $
+# $Id: lib.mak,v 1.11 2007/09/11 15:23:46 Arabidopsis Exp $
 # (Platform-independent) makefile for Ghostscript graphics library
 # and other support code.
 # Users of this makefile must define the following:
@@ -38,9 +38,9 @@ GLJBIG2CC=$(CC_) $(I_)$(GLI_) $(II)$(JB2I_)$(_I) $(JB2CF_) $(GLF_)
 GLJASCC=$(CC_) $(I_)$(JPXI_) $(II)$(GLI_)$(_I) $(JPXCF_) $(GLF_)
 GLLDFJB2CC=$(CC_) $(I_)$(LDF_JB2I_) $(II)$(GLI_)$(_I) $(JB2CF_) $(GLF_)
 GLLWFJPXCC=$(CC_) $(I_)$(LWF_JPXI_) $(II)$(GLI_)$(_I) $(JPXCF_) $(GLF_)
+GLCCSHARED=$(CC_SHARED) $(GLCCFLAGS)
 # All top-level makefiles define GLD.
 #GLD=$(GLGEN)
-
 # Define the name of this makefile.
 LIB_MAK=$(GLSRC)lib.mak
 
@@ -612,9 +612,10 @@ $(GLOBJ)gxhldevc.$(OBJ) : $(GLSRC)gxhldevc.c $(GX)\
 	$(GLCC) $(GLO_)gxhldevc.$(OBJ) $(C_) $(GLSRC)gxhldevc.c
 
 $(GLOBJ)gxfill.$(OBJ) : $(GLSRC)gxfill.c $(GXERR)\
- $(gsstruct_h)\
+ $(gsstruct_h) $(gsfixed_h)\
  $(gxdcolor_h) $(gxdevice_h) $(gxfixed_h) $(gxhttile_h)\
- $(gxistate_h) $(gxpaint_h) $(gxfill_h) $(gxfdrop_h) $(gsptype1_h) $(gsptype2_h) $(gxpcolor_h)\
+ $(gxistate_h) $(gxpaint_h) $(gxfdrop_h) $(gxfill_h) $(gxpath_h)\
+ $(gsptype1_h) $(gsptype2_h) $(gxpcolor_h)\
  $(gzcpath_h) $(gzpath_h) $(gzspotan_h) $(gdevddrw_h) $(memory__h) $(stdint_) $(vdtrace_h)\
  $(gxfilltr_h) $(gxfillsl_h) $(gxfillts_h)
 	$(GLCC) $(GLO_)gxfill.$(OBJ) $(C_) $(GLSRC)gxfill.c
@@ -878,7 +879,7 @@ $(GLOBJ)gsparam.$(OBJ) : $(GLSRC)gsparam.c $(GXERR) $(memory__h) $(string__h)\
 $(GLOBJ)gsparamx.$(OBJ) : $(GLSRC)gsparamx.c $(string__h)\
  $(gserror_h) $(gserrors_h) $(gsmemory_h) $(gsparam_h) $(gsparamx_h)\
  $(gstypes_h)
-	$(GLCC) $(GLO_)gsparamx.$(OBJ) $(C_) $(GLSRC)gsparamx.c
+	$(GLCCSHARED) $(GLO_)gsparamx.$(OBJ) $(C_) $(GLSRC)gsparamx.c
 
 # Future replacement for gsparams.c
 $(GLOBJ)gsparam2.$(OBJ) : $(GLSRC)gsparam2.c $(GXERR) $(memory__h)\
@@ -1635,7 +1636,7 @@ gxclpath_h=$(GLSRC)gxclpath.h
 
 clbase1_=$(GLOBJ)gxclist.$(OBJ) $(GLOBJ)gxclbits.$(OBJ) $(GLOBJ)gxclpage.$(OBJ)
 clbase2_=$(GLOBJ)gxclrast.$(OBJ) $(GLOBJ)gxclread.$(OBJ) $(GLOBJ)gxclrect.$(OBJ)
-clbase3_=$(GLOBJ)gxclutil.$(OBJ) $(GLOBJ)gsparams.$(OBJ)
+clbase3_=$(GLOBJ)gxclutil.$(OBJ) $(GLOBJ)gsparams.$(OBJ) $(GLOBJ)gxshade6.$(OBJ)
 # gxclrect.c requires rop_proc_table, so we need gsroptab here.
 clbase4_=$(GLOBJ)gsroptab.$(OBJ) $(GLOBJ)stream.$(OBJ)
 clpath_=$(GLOBJ)gxclimag.$(OBJ) $(GLOBJ)gxclpath.$(OBJ) $(GLOBJ)gxdhtserial.$(OBJ)
@@ -1682,7 +1683,7 @@ $(GLOBJ)gxclrast.$(OBJ) : $(GLSRC)gxclrast.c $(GXERR)\
  $(gxpaint_h) $(gxhttile_h) $(gxiparam_h) $(gximask_h)\
  $(gzpath_h) $(gxcpath_h) $(gzacpath_h)\
  $(stream_h) $(strimpl_h) $(gxcomp_h)\
- $(gsserial_h) $(gxdhtserial_h) $(gzht_h)
+ $(gsserial_h) $(gxdhtserial_h) $(gzht_h) $(gxshade_h) $(gxshade4_h)
 	$(GLCC) $(GLO_)gxclrast.$(OBJ) $(C_) $(GLSRC)gxclrast.c
 
 $(GLOBJ)gxclread.$(OBJ) : $(GLSRC)gxclread.c $(GXERR)\
@@ -1691,7 +1692,7 @@ $(GLOBJ)gxclread.$(OBJ) : $(GLSRC)gxclread.c $(GXERR)\
  $(gscoord_h) $(gsdevice_h)\
  $(gxcldev_h) $(gxdevice_h) $(gxdevmem_h) $(gxgetbit_h) $(gxhttile_h)\
  $(gsmemory_h) \
- $(stream_h) $(strimpl_h)
+ $(stream_h) $(strimpl_h) $(vdtrace_h)
 	$(GLCC) $(GLO_)gxclread.$(OBJ) $(C_) $(GLSRC)gxclread.c
 
 $(GLOBJ)gxclrect.$(OBJ) : $(GLSRC)gxclrect.c $(GXERR)\
@@ -1707,7 +1708,7 @@ $(GLOBJ)gxclimag.$(OBJ) : $(GLSRC)gxclimag.c $(GXERR) $(math__h) $(memory__h)\
 	$(GLCC) $(GLO_)gxclimag.$(OBJ) $(C_) $(GLSRC)gxclimag.c
 
 $(GLOBJ)gxclpath.$(OBJ) : $(GLSRC)gxclpath.c $(GXERR)\
- $(math__h) $(memory__h) $(gpcheck_h)\
+ $(math__h) $(memory__h) $(gpcheck_h) $(gptype2_h)\
  $(gxcldev_h) $(gxclpath_h) $(gxcolor2_h)\
  $(gxdcolor_h) $(gxpaint_h)\
  $(gzpath_h) $(gzcpath_h) $(stream_h) $(gsserial_h)
@@ -2599,11 +2600,14 @@ $(GLOBJ)gdevp14.$(OBJ) : $(GLSRC)gdevp14.c $(GXERR) $(math__h) $(memory__h)\
 	$(GLCC) $(GLO_)gdevp14.$(OBJ) $(C_) $(GLSRC)gdevp14.c
 
 translib_=$(GLOBJ)gstrans.$(OBJ) $(GLOBJ)gximag3x.$(OBJ)\
- $(GLOBJ)gxblend.$(OBJ) $(GLOBJ)gdevp14.$(OBJ) $(GLOBJ)gdevdevn.$(OBJ)
-$(GLD)translib.dev : $(LIB_MAK) $(ECHOGS_XE) $(translib_) $(GLD)cspixlib.dev $(GLD)bboxutil.dev
+ $(GLOBJ)gxblend.$(OBJ) $(GLOBJ)gdevp14.$(OBJ) $(GLOBJ)gdevdevn.$(OBJ)\
+ $(GLOBJ)gdevdcrd.$(OBJ)
+$(GLD)translib.dev : $(LIB_MAK) $(ECHOGS_XE) $(translib_)\
+ $(GLD)cspixlib.dev $(GLD)bboxutil.dev $(GLD)cielib.dev
 	$(SETMOD) $(GLD)translib $(translib_)
 	$(ADDMOD) $(GLD)translib -imagetype 3x
 	$(ADDMOD) $(GLD)translib -include $(GLD)cspixlib $(GLD)bboxutil
+	$(ADDMOD) $(GLD)translib -include $(GLD)cielib.dev
 
 # ---------------- Smooth shading ---------------- #
 
@@ -2611,7 +2615,7 @@ gscolor3_h=$(GLSRC)gscolor3.h
 gsfunc3_h=$(GLSRC)gsfunc3.h $(gsdsrc_h) $(gsfunc_h)
 gsshade_h=$(GLSRC)gsshade.h\
  $(gsccolor_h) $(gscspace_h) $(gsdsrc_h) $(gsfunc_h) $(gsmatrix_h)\
- $(gxfixed_h)
+ $(gxfixed_h) $(gscie_h)
 gxshade_h=$(GLSRC)gxshade.h $(gsshade_h) $(gxfixed_h) $(gxmatrix_h) $(stream_h)
 gxshade4_h=$(GLSRC)gxshade4.h
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclip.c,v 1.9 2007/09/10 14:08:44 Arabidopsis Exp $ */
+/* $Id: gxclip.c,v 1.10 2007/09/11 15:23:49 Arabidopsis Exp $ */
 /* Implementation of (path-based) clipping */
 #include "gx.h"
 #include "gxdevice.h"

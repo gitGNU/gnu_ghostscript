@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,9 +17,10 @@
 
 */
 
-/* $Id: zfproc.c,v 1.7 2007/08/01 14:26:51 jemarch Exp $ */
+/* $Id: zfproc.c,v 1.8 2007/09/11 15:24:21 Arabidopsis Exp $ */
 /* Procedure-based filter stream support */
 #include "memory_.h"
+#include "stat_.h" /* get system header early to avoid name clash on Cygwin */
 #include "ghost.h"
 #include "oper.h"		/* for ifilter.h */
 #include "estack.h"

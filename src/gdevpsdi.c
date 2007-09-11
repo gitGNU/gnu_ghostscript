@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpsdi.c,v 1.10 2007/09/10 14:08:46 Arabidopsis Exp $ */
+/* $Id: gdevpsdi.c,v 1.11 2007/09/11 15:24:12 Arabidopsis Exp $ */
 /* Image compression for PostScript and PDF writers */
 #include "stdio_.h"		/* for jpeglib.h */
 #include "jpeglib_.h"		/* for sdct.h */

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxmclip.h,v 1.6 2007/08/01 14:26:27 jemarch Exp $ */
+/* $Id: gxmclip.h,v 1.7 2007/09/11 15:24:23 Arabidopsis Exp $ */
 /* Mask clipping device and interface */
 /* Requires gxdevice.h, gxdevmem.h */
 
@@ -38,7 +38,7 @@
  * stack frame.
  */
 
-#define tile_clip_buffer_request 300
+#define tile_clip_buffer_request 16384	/* enough for 2400 dpi up to 54" wide */
 #define tile_clip_buffer_size\
   ((tile_clip_buffer_request / arch_sizeof_long) * arch_sizeof_long)
 typedef struct gx_device_mask_clip_s {

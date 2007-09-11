@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gximask.c,v 1.2 2007/08/01 14:26:25 jemarch Exp $ */
+/* $Id: gximask.c,v 1.3 2007/09/11 15:24:40 Arabidopsis Exp $ */
 /* Functions for masked fill optimization. */
 #include "gx.h"
 #include "memory_.h"
@@ -66,23 +66,30 @@ int
 gx_image_fill_masked_end(gx_device *dev, gx_device *tdev, const gx_device_color *pdevc)
 {
     gx_device_cpath_accum *pcdev = (gx_device_cpath_accum *)dev;
-    gx_clip_path cpath;
+    gx_clip_path cpath, cpath_with_shading_bbox;
+    const gx_clip_path *pcpath1 = &cpath;
     gx_device_clip cdev;
     int code, code1;
 
     gx_cpath_init_local(&cpath, pcdev->memory);
     code = gx_cpath_accum_end(pcdev, &cpath);
-    gx_make_clip_path_device(&cdev, &cpath);
-    cdev.target = tdev;
-    (*dev_proc(&cdev, open_device)) ((gx_device *) & cdev);
-    code1 = gx_device_color_fill_rectangle(pdevc, 
-		pcdev->bbox.p.x, pcdev->bbox.p.y, 
-		pcdev->bbox.q.x - pcdev->bbox.p.x, 
-		pcdev->bbox.q.y - pcdev->bbox.p.y, 
-		(gx_device *)&cdev, lop_default, 0);
-    if (code == 0)
-	code = code1;
-    gx_device_retain((gx_device *)pcdev, false);
+    if (code >= 0)
+	code = gx_dc_pattern2_clip_with_bbox(pdevc, tdev, &cpath_with_shading_bbox, &pcpath1);
+    if (code >= 0) {
+	gx_make_clip_path_device(&cdev, pcpath1);
+	cdev.target = tdev;
+	(*dev_proc(&cdev, open_device)) ((gx_device *) & cdev);
+	code1 = gx_device_color_fill_rectangle(pdevc, 
+		    pcdev->bbox.p.x, pcdev->bbox.p.y, 
+		    pcdev->bbox.q.x - pcdev->bbox.p.x, 
+		    pcdev->bbox.q.y - pcdev->bbox.p.y, 
+		    (gx_device *)&cdev, lop_default, 0);
+	if (code == 0)
+	    code = code1;
+	gx_device_retain((gx_device *)pcdev, false);
+    }
+    if (pcpath1 == &cpath_with_shading_bbox)
+	gx_cpath_free(&cpath_with_shading_bbox, "s_image_cleanup");
     gx_cpath_free(&cpath, "s_image_cleanup");
     return code;
 }

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevmac.c,v 1.6 2007/08/01 14:25:49 jemarch Exp $ */
+/* $Id: gdevmac.c,v 1.7 2007/09/11 15:23:44 Arabidopsis Exp $ */
 /* MacOS bitmap output device. This code is superceeded by
    the newer gsapi_* interface and the DISPLAY device. Please
    use that instead. See doc/API.htm for more information */

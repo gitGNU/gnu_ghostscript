@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpm.h,v 1.6 2007/08/01 14:25:54 jemarch Exp $ */
+/* $Id: gdevpm.h,v 1.7 2007/09/11 15:24:08 Arabidopsis Exp $ */
 /* Defines common to gdevpm.c, gspmdrv.c and PM GSview */
 
 #ifndef gdevpm_INCLUDED

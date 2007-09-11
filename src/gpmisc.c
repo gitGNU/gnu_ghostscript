@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gpmisc.c,v 1.7 2007/08/01 14:26:00 jemarch Exp $ */
+/* $Id: gpmisc.c,v 1.8 2007/09/11 15:24:36 Arabidopsis Exp $ */
 /* Miscellaneous support for platform facilities */
 
 #include "unistd_.h"

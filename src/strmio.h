@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 artofcode LLC.
+/* Copyright (C) 2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: strmio.h,v 1.2 2007/08/01 14:26:45 jemarch Exp $ */
+/* $Id: strmio.h,v 1.3 2007/09/11 15:24:18 Arabidopsis Exp $ */
 /* Interface for streams that mimic stdio functions (fopen, fread, fseek, ftell) */
 /* Requires stream.h */
 

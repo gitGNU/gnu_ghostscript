@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: zcolor3.c,v 1.6 2007/09/10 14:08:45 Arabidopsis Exp $*/
+/*$Id: zcolor3.c,v 1.7 2007/09/11 15:24:20 Arabidopsis Exp $*/
 /* Level 3 color operators */
 #include "ghost.h"
 #include "oper.h"
@@ -61,7 +61,9 @@ zcurrentrenderingintent(i_ctx_t *i_ctx_p)
     return 0;
 }
 
-/* <int> .setrenderingintent - */
+/* <int> .setrenderingintent - 
+ * See the comment in gsstate.c about the argumet interepretation.
+ */
 private int
 zsetrenderingintent(i_ctx_t * i_ctx_p)
 {

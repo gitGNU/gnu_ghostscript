@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sisparam.h,v 1.7 2007/09/10 14:08:44 Arabidopsis Exp $ */
+/* $Id: sisparam.h,v 1.8 2007/09/11 15:24:04 Arabidopsis Exp $ */
 /* Generic image scaling stream definitions */
 /* Requires strimpl.h */
 

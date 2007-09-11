@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gp_os2.c,v 1.8 2007/08/01 14:25:59 jemarch Exp $ */
+/* $Id: gp_os2.c,v 1.9 2007/09/11 15:24:03 Arabidopsis Exp $ */
 /* Common platform-specific routines for OS/2 and MS-DOS */
 /* compiled with GCC/EMX */
 

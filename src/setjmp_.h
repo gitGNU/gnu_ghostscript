@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 artofcode LLC.
+/* Copyright (C) 2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: setjmp_.h,v 1.3 2007/08/01 14:26:42 jemarch Exp $ */
+/* $Id: setjmp_.h,v 1.4 2007/09/11 15:23:43 Arabidopsis Exp $ */
 /* Macros for making sure setjmp buffers are correctly aligned. */
 
 #ifndef setjmp_INCLUDED

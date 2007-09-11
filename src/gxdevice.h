@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxdevice.h,v 1.10 2007/09/10 14:08:40 Arabidopsis Exp $ */
+/* $Id: gxdevice.h,v 1.11 2007/09/11 15:24:31 Arabidopsis Exp $ */
 /* Definitions for device implementors */
 
 #ifndef gxdevice_INCLUDED
@@ -108,6 +108,7 @@
 #define std_device_part3_()\
 	0/*PageCount*/, 0/*ShowpageCount*/, 1/*NumCopies*/, 0/*NumCopies_set*/,\
 	0/*IgnoreNumCopies*/, 0/*UseCIEColor*/, 0/*LockSafetyParams*/,\
+	0/*band_offset_x*/, 0/*band_offset_y*/,\
 	{ gx_default_install, gx_default_begin_page, gx_default_end_page }
 /*
  * We need a number of different variants of the std_device_ macro simply

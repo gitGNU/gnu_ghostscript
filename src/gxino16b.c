@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxino16b.c,v 1.3 2007/08/01 14:26:26 jemarch Exp $ */
+/* $Id: gxino16b.c,v 1.4 2007/09/11 15:23:47 Arabidopsis Exp $ */
 /* Dummy 16-bit image procedure */
 #include "std.h"
 #include "gstypes.h"

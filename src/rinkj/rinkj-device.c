@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: rinkj-device.c,v 1.3 2007/08/01 14:26:55 jemarch Exp $ */
+/*$Id: rinkj-device.c,v 1.4 2007/09/11 15:25:10 Arabidopsis Exp $ */
 /* The device abstraction within the Rinkj driver. */
 
 #include "rinkj-device.h"

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfb.h,v 1.4 2007/09/10 14:08:44 Arabidopsis Exp $ */
+/* $Id: gdevpdfb.h,v 1.5 2007/09/11 15:24:04 Arabidopsis Exp $ */
 /* pdfwrite, ps2write device body template. */
 
 /* This file is allowed to #include several times into a single .c file.

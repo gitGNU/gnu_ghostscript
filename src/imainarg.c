@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2007 artofcode LLC.
+/* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: imainarg.c,v 1.12 2007/09/10 14:08:39 Arabidopsis Exp $ */
+/* $Id: imainarg.c,v 1.13 2007/09/11 15:23:59 Arabidopsis Exp $ */
 /* Command line parsing and dispatching */
 #include "ctype_.h"
 #include "memory_.h"
@@ -196,7 +196,7 @@ gs_main_init_with_args(gs_main_instance * minst, int argc, char *argv[])
 	    (char *)gs_alloc_bytes(minst->heap, len, "GS_OPTIONS");
 
 	    gp_getenv(GS_OPTIONS, opts, &len);	/* can't fail */
-	    if (arg_push_memory_string(&args, opts, minst->heap))
+	    if (arg_push_memory_string(&args, opts, false, minst->heap))
 		return e_Fatal;
 	}
     }
@@ -368,7 +368,7 @@ run_stdin:
 		    char *p = arg_copy(arg, minst->heap);
 		    if (p == NULL)
 			return e_Fatal;
-		    arg_push_string(pal, p);
+		    arg_push_string(pal, p, true);
 		}
 		pal->expand_ats = ats;
 		break;

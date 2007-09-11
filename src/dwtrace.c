@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: dwtrace.c,v 1.7 2007/08/01 14:25:44 jemarch Exp $ */
+/* $Id: dwtrace.c,v 1.8 2007/09/11 15:24:00 Arabidopsis Exp $ */
 /* Graphical trace server for Windows */
 
 /*  This module use Win32-specific API.

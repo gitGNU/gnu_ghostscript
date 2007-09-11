@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsdevmem.c,v 1.7 2007/08/01 14:26:04 jemarch Exp $ */
+/* $Id: gsdevmem.c,v 1.8 2007/09/11 15:24:32 Arabidopsis Exp $ */
 /* Memory device creation for Ghostscript library */
 #include "math_.h"		/* for fabs */
 #include "memory_.h"

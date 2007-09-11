@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sdctc.c,v 1.8 2007/08/01 14:26:42 jemarch Exp $ */
+/* $Id: sdctc.c,v 1.9 2007/09/11 15:24:19 Arabidopsis Exp $ */
 /* Code common to DCT encoding and decoding streams */
 #include "stdio_.h"
 #include "jpeglib_.h"

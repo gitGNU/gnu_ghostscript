@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sstring.c,v 1.7 2007/08/01 14:26:44 jemarch Exp $ */
+/* $Id: sstring.c,v 1.8 2007/09/11 15:24:16 Arabidopsis Exp $ */
 /* String and hexstring streams (filters) */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"

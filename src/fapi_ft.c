@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: fapi_ft.c,v 1.7 2007/08/01 14:25:44 jemarch Exp $ */
+/* $Id: fapi_ft.c,v 1.8 2007/09/11 15:24:06 Arabidopsis Exp $ */
 
 /*
 GhostScript Font API plug-in that allows fonts to be rendered by FreeType.
@@ -25,6 +25,7 @@ Started by Graham Asher, 6th June 2002.
 
 /* GhostScript headers. */
 #include "stdio_.h"
+#include "malloc_.h"
 #include "ierrors.h"
 #include "ifapi.h"
 #include "write_t1.h"

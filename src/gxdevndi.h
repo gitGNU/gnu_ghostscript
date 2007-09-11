@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxdevndi.h,v 1.5 2007/08/01 14:26:21 jemarch Exp $ */
+/*$Id: gxdevndi.h,v 1.6 2007/09/11 15:24:08 Arabidopsis Exp $ */
 /* Interface to gxdevndi.c */
 
 /* This is the halfoning handlers for DeviceN colors */

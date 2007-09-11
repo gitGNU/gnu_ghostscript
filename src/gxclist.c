@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxclist.c,v 1.10 2007/09/10 14:08:39 Arabidopsis Exp $ */
+/*$Id: gxclist.c,v 1.11 2007/09/11 15:24:37 Arabidopsis Exp $ */
 /* Command list document- and page-level code. */
 #include "memory_.h"
 #include "string_.h"
@@ -130,7 +130,7 @@ const gx_device_procs gs_clist_device_procs = {
     clist_fill_path,
     clist_stroke_path,
     clist_fill_mask,
-    gx_default_fill_trapezoid,
+    clist_fill_trapezoid,
     clist_fill_parallelogram,
     clist_fill_triangle,
     gx_default_draw_thin_line,
@@ -156,12 +156,12 @@ const gx_device_procs gs_clist_device_procs = {
     gx_forward_get_color_comp_index,
     gx_forward_encode_color,
     gx_forward_decode_color,
-    gx_default_pattern_manage,
+    clist_pattern_manage,
     gx_default_fill_rectangle_hl_color,
     gx_default_include_color_space,
     gx_default_fill_linear_color_scanline,
-    gx_default_fill_linear_color_trapezoid, /* fixme : write to clist. */
-    gx_default_fill_linear_color_triangle,
+    clist_fill_linear_color_trapezoid,
+    clist_fill_linear_color_triangle,
     gx_forward_update_spot_equivalent_colors,
     gx_forward_ret_devn_params
 };
@@ -280,6 +280,7 @@ clist_init_bands(gx_device * dev, gx_device_memory *bdev, uint data_size,
     gx_device_clist_writer * const cdev =
 	&((gx_device_clist *)dev)->writer;
     int nbands;
+    ulong space;
 
     if (dev->procs.open_device == pattern_clist_open_device) {
 	/* We don't need bands really. */
@@ -287,7 +288,8 @@ clist_init_bands(gx_device * dev, gx_device_memory *bdev, uint data_size,
 	cdev->nbands = 1;
 	return 0;
     }
-    if (gdev_mem_data_size(bdev, band_width, band_height) > data_size)
+    if (gdev_mem_data_size(bdev, band_width, band_height, &space) < 0 ||
+	space > data_size)
 	return_error(gs_error_rangecheck);
     cdev->page_band_height = band_height;
     nbands = (cdev->target->height + band_height - 1) / band_height;
@@ -365,10 +367,10 @@ clist_init_data(gx_device * dev, byte * init_data, uint data_size)
 	 * The band height is fixed, so the band buffer requirement
 	 * is completely determined.
 	 */
-	uint band_data_size =
-	    gdev_mem_data_size(&bdev, band_width, band_height);
+	ulong band_data_size;
 
-	if (band_data_size >= band_space)
+	if (gdev_mem_data_size(&bdev, band_width, band_height, &band_data_size) < 0 ||
+	    band_data_size >= band_space)
 	    return_error(gs_error_rangecheck);
 	bits_size = min(band_space - band_data_size, data_size >> 1);
     } else {
@@ -461,6 +463,7 @@ clist_reset(gx_device * dev)
     cdev->undercolor_removal_id = gs_no_id;
     cdev->device_halftone_id = gs_no_id;
     cdev->image_enum_id = gs_no_id;
+    cdev->cropping_by_path = false;
     return 0;
 }
 /*

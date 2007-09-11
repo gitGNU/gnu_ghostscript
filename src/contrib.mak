@@ -1,4 +1,5 @@
-#    Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
+#  Copyright (C) 2001-2006 Artifex Software, Inc.
+#  All Rights Reserved.
 # 
 # This file is part of GNU ghostscript
 #
@@ -17,7 +18,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: contrib.mak,v 1.7 2007/08/01 14:25:42 jemarch Exp $
+# $Id: contrib.mak,v 1.8 2007/09/11 15:24:33 Arabidopsis Exp $
 # makefile for contributed device drivers.
 
 # Define the name of this makefile.
@@ -479,16 +480,6 @@ $(GLOBJ)gdevstc3.$(OBJ) : $(GLSRC)gdevstc3.c $(gdevstc_h) $(PDEVH)
 $(GLOBJ)gdevstc4.$(OBJ) : $(GLSRC)gdevstc4.c $(gdevstc_h) $(PDEVH)
 	$(GLCC) $(GLO_)gdevstc4.$(OBJ) $(C_) $(GLSRC)gdevstc4.c
 
-###--------------- Added Omni --------------------------###
-
-epclr_h1=$(GLSRC)defs.h
-
-$(DD)omni.dev : $(GLOBJ)gomni.$(OBJ) $(DD)page.dev
-	$(SETPDEV) $(DD)omni $(GLOBJ)gomni.$(OBJ)
-
-$(GLOBJ)gomni.$(OBJ) : $(GLSRC)gomni.c $(epclr_h1) $(PDEVH)
-	$(GLCC) $(GLO_)gomni.$(OBJ) $(C_) $(GLSRC)gomni.c
-
 ### --------------- Ugly/Update -> Unified Printer Driver ---------------- ###
 ### For questions about this driver, please contact:                       ###
 ###        Gunther Hess (gunther@elmos.de)                                 ###
@@ -854,6 +845,27 @@ $(DD)sunhmono.dev : $(sunr_) $(DD)page.dev
 $(GLOBJ)gdevsunr.$(OBJ) : $(GLSRC)gdevsunr.c $(PDEVH)
 	$(GLCC) $(GLO_)gdevsunr.$(OBJ) $(C_) $(GLSRC)gdevsunr.c
 
+
+#########################################################################
+### --------------------Japanese printer addons --------------------- ###
+#########################################################################
+
+### These drivers are based on patches on existing device drivers in the
+### src/ directory, therefore they are not in addons/
+
+$(DD)ljet4pjl.dev: $(HPMONO) $(DD)page.dev
+	$(SETPDEV) $(DD)ljet4pjl $(HPMONO)
+
+$(DD)lj4dithp.dev: $(cdeskjet_) $(DD)page.dev
+	$(SETPDEV) $(DD)lj4dithp $(cdeskjet_)
+
+$(DD)dj505j.dev: $(cdeskjet_)
+	$(SETPDEV) $(DD)dj505j $(cdeskjet_)
+
+$(DD)picty180.dev: $(cdeskjet_)
+	$(SETPDEV) $(DD)picty180 $(cdeskjet_)
+
+#########################################################################
 ### -------------------- The Brother HL-1250 printer -------------------- ###
 ### This printer is ljet4-compatible, plus support for source tray        ###
 ### selection and special 1200x600 dpi mode.                              ###

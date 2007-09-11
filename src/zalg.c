@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 artofcode LLC.
+/* Copyright (C) 2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zalg.c,v 1.1 2007/09/10 14:08:43 Arabidopsis Exp $ */
+/* $Id: zalg.c,v 1.2 2007/09/11 15:24:26 Arabidopsis Exp $ */
 /* Operators for general-purpose algorithms. For now, only sorting. */
 #include "ghost.h"
 #include "gserrors.h"

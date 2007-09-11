@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ierrors.h,v 1.5 2007/08/01 14:26:34 jemarch Exp $ */
+/* $Id: ierrors.h,v 1.6 2007/09/11 15:23:46 Arabidopsis Exp $ */
 /* Definition of error codes */
 
 #ifndef ierrors_INCLUDED
@@ -47,9 +47,6 @@ extern const char *const gs_error_names[];
 #define e_dictstackunderflow (-4)
 #define e_execstackoverflow (-5)
 #define e_interrupt (-6)
-/* We also need to define gs_error_interrupt, for gpcheck.h. */
-#undef gs_error_interrupt
-#define gs_error_interrupt e_interrupt
 #define e_invalidaccess (-7)
 #define e_invalidexit (-8)
 #define e_invalidfileaccess (-9)

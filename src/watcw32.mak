@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 artofcode LLC.
+#  Copyright (C) 2001-2006 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: watcw32.mak,v 1.11 2007/09/10 14:08:46 Arabidopsis Exp $
+# $Id: watcw32.mak,v 1.12 2007/09/11 15:24:06 Arabidopsis Exp $
 # watcw32.mak
 # makefile for Watcom C++ v??, Windows NT or Windows 95 platform.
 # Created 1997-02-23 by Russell Lang from MSVC++ 4.0 makefile.
@@ -124,7 +124,7 @@ JVERSION=6
 # See libpng.mak for more information.
 
 PSRCDIR=libpng
-PVERSION=10216
+PVERSION=10218
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.
@@ -145,7 +145,9 @@ JBIG2SRCDIR=jbig2dec
 # Define the directory where the icclib source are stored.
 # See icclib.mak for more information
 
+!ifndef ICCSRCDIR
 ICCSRCDIR=icclib
+!endif
 
 # Define the directory where the ijs source is stored,
 # and the process forking method to use for the server.
@@ -153,6 +155,13 @@ ICCSRCDIR=icclib
 
 IJSSRCDIR=ijs
 IJSEXECTYPE=win
+
+# Define the directory where the imdi source are stored.
+# See imdi.mak for more information
+
+!ifndef IMDISRCDIR
+IMDISRCDIR=imdi
+!endif
 
 # Define any other compilation flags.
 
@@ -383,6 +392,7 @@ CC_=$(CC_WX) $(COMPILE_FULL_OPTIMIZED)
 CC_D=$(CC_WX) $(COMPILE_WITH_FRAMES)
 CC_INT=$(CC)
 CC_NO_WARN=$(CC_)
+CC_SHARED=$(CC_)
 
 # No additional flags are needed for Windows compilation.
 CCWINFLAGS=

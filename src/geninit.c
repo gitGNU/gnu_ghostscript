@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: geninit.c,v 1.7 2007/08/01 14:25:58 jemarch Exp $ */
+/* $Id: geninit.c,v 1.8 2007/09/11 15:23:53 Arabidopsis Exp $ */
 /*
  * Utility for merging all the Ghostscript initialization files (gs_*.ps)
  * into a single file, optionally converting them to C data.  Usage:

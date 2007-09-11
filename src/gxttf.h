@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxttf.h,v 1.6 2007/08/01 14:26:30 jemarch Exp $ */
+/* $Id: gxttf.h,v 1.7 2007/09/11 15:24:25 Arabidopsis Exp $ */
 /* Table definitions for TrueType fonts */
 
 #ifndef gxttf_INCLUDED

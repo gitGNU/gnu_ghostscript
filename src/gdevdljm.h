@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevdljm.h,v 1.8 2007/08/01 14:25:47 jemarch Exp $ */
+/* $Id: gdevdljm.h,v 1.9 2007/09/11 15:24:37 Arabidopsis Exp $ */
 /* Interface to generic monochrome H-P DeskJet/LaserJet driver */
 
 #ifndef gdevdljm_INCLUDED
@@ -54,6 +54,7 @@
 #define PCL_HAS_DUPLEX              64	/* <esc>&l<duplex>S supported */
 #define PCL_CAN_SET_PAPER_SIZE     128	/* <esc>&l<sizecode>A supported */
 #define PCL_CAN_PRINT_COPIES       256  /* <esc>&l<copies>X supported */
+#define HACK__IS_A_LJET4PJL	   512
 
 /* Shorthands for the most common spacing/compression combinations. */
 #define PCL_MODE0 PCL3_SPACING
@@ -108,6 +109,12 @@
   (PCL_MODE3 |\
    PCL_CAN_SET_PAPER_SIZE | PCL_CAN_PRINT_COPIES)
 
+     /* H-P LaserJet 4 PL */
+#define PCL_LJ4PJL_FEATURES\
+  (PCL_MODE3 |\
+   PCL_CAN_SET_PAPER_SIZE | PCL_CAN_PRINT_COPIES | HACK__IS_A_LJET4PJL)
+
+
      /* H-P LaserJet 4d */
 #define PCL_LJ4D_FEATURES\
   (PCL_MODE3 |\
@@ -139,7 +146,9 @@ int dljet_mono_print_page_copies(
 	int num_copies,
 	int dots_per_inch,
 	int features,
-	const char *page_init
+	const char *odd_page_init,
+        const char *even_page_init,
+        bool tumble
 			     );
 
 #endif /* gdevdljm_INCLUDED */

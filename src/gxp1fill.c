@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxp1fill.c,v 1.8 2007/09/10 14:08:41 Arabidopsis Exp $ */
+/* $Id: gxp1fill.c,v 1.9 2007/09/11 15:23:53 Arabidopsis Exp $ */
 /* PatternType 1 filling algorithms */
 #include "math_.h"
 #include "gx.h"

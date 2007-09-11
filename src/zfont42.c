@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfont42.c,v 1.10 2007/09/10 14:08:39 Arabidopsis Exp $ */
+/* $Id: zfont42.c,v 1.11 2007/09/11 15:24:30 Arabidopsis Exp $ */
 /* Type 42 font creation operator */
 #include "memory_.h"
 #include "ghost.h"

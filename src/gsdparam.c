@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsdparam.c,v 1.10 2007/09/10 14:08:39 Arabidopsis Exp $ */
+/* $Id: gsdparam.c,v 1.11 2007/09/11 15:24:14 Arabidopsis Exp $ */
 /* Default device parameters for Ghostscript library */
 #include "memory_.h"		/* for memcpy */
 #include "string_.h"		/* for strlen */
@@ -388,6 +388,7 @@ gdev_end_output_media(gs_param_list * mlist, gs_param_dict * pdict)
 /* ================ Putting parameters ================ */
 
 /* Forward references */
+private int param_normalize_anti_alias_bits( uint max_gray, int bits );
 private int param_anti_alias_bits(gs_param_list *, gs_param_name, int *);
 private int param_MediaSize(gs_param_list *, gs_param_name,
 			    const float *, gs_param_float_array *);
@@ -808,8 +809,12 @@ nce:
 	dev->ImagingBBox_set = false;
     }
     dev->UseCIEColor = ucc;
-    dev->color_info.anti_alias.text_bits = tab;
-    dev->color_info.anti_alias.graphics_bits = gab;
+	dev->color_info.anti_alias.text_bits =
+		param_normalize_anti_alias_bits(max(dev->color_info.max_gray,
+			dev->color_info.max_color), tab);
+	dev->color_info.anti_alias.graphics_bits =
+		param_normalize_anti_alias_bits(max(dev->color_info.max_gray,
+			dev->color_info.max_color), gab);
     dev->LockSafetyParams = locksafe;
     gx_device_decache_colors(dev);
     return 0;
@@ -821,6 +826,17 @@ gx_device_request_leadingedge(gx_device *dev, int le_req)
     dev->LeadingEdge = (dev->LeadingEdge & ~LEADINGEDGE_REQ_VAL) |
 	((le_req << LEADINGEDGE_REQ_VAL_SHIFT) & LEADINGEDGE_REQ_VAL) |
 	LEADINGEDGE_REQ_BIT;
+}
+
+/* Limit the anti-alias bit values to the maximum legal value for the
+ * current color depth.
+ */
+private int
+param_normalize_anti_alias_bits( uint max_gray, int bits )
+{
+	int	max_bits = ilog2( max_gray + 1);
+	
+	return  (bits > max_bits ? max_bits : bits);
 }
 
 /* Read TextAlphaBits or GraphicsAlphaBits. */

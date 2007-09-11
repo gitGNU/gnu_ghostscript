@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxipixel.c,v 1.10 2007/09/10 14:08:46 Arabidopsis Exp $ */
+/* $Id: gxipixel.c,v 1.11 2007/09/11 15:23:58 Arabidopsis Exp $ */
 /* Common code for ImageType 1 and 4 initialization */
 #include "gx.h"
 #include "math_.h"
@@ -237,7 +237,7 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
     gx_image_enum_common_init((gx_image_enum_common_t *)penum,
 			      (const gs_data_image_t *)pim,
 			      &image1_enum_procs, dev,
-			      (masked ? 1 : cs_num_components(pcs)),
+			      (masked ? 1 : (penum->alpha ? cs_num_components(pcs)+1 : cs_num_components(pcs))),
 			      format);
     if (penum->rect.w == width && penum->rect.h == height) {
 	x_extent = row_extent;

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevatx.c,v 1.8 2007/08/01 14:25:45 jemarch Exp $ */
+/* $Id: gdevatx.c,v 1.9 2007/09/11 15:23:49 Arabidopsis Exp $ */
 /* Practical Automation ATX-23, -24, and -38 driver */
 #include "math_.h"
 #include "gdevprn.h"

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscspace.c,v 1.9 2007/09/10 14:08:43 Arabidopsis Exp $ */
+/* $Id: gscspace.c,v 1.10 2007/09/11 15:24:40 Arabidopsis Exp $ */
 /* Color space operators and support */
 #include "memory_.h"
 #include "gx.h"

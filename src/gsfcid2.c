@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsfcid2.c,v 1.8 2007/09/10 14:08:44 Arabidopsis Exp $ */
+/* $Id: gsfcid2.c,v 1.9 2007/09/11 15:23:56 Arabidopsis Exp $ */
 /* Create a CIDFontType 2 font from a Type 42 font. */
 #include "memory_.h"
 #include "gx.h"

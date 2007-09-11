@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: stdpn.h,v 1.5 2007/08/01 14:26:45 jemarch Exp $ */
+/* $Id: stdpn.h,v 1.6 2007/09/11 15:23:57 Arabidopsis Exp $ */
 /* Pn macros for pre-ANSI compiler compatibility */
 
 #ifndef stdpn_INCLUDED

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxpflat.c,v 1.9 2007/08/01 14:26:28 jemarch Exp $ */
+/* $Id: gxpflat.c,v 1.10 2007/09/11 15:23:48 Arabidopsis Exp $ */
 /* Path flattening algorithms */
 #include "string_.h"
 #include "gx.h"

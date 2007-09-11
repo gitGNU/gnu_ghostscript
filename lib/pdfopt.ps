@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: pdfopt.ps,v 1.7 2007/08/01 14:25:40 jemarch Exp $
+% $Id: pdfopt.ps,v 1.8 2007/09/11 15:24:49 Arabidopsis Exp $
 % PDF linearizer ("optimizer").
 
 .currentglobal true .setglobal
@@ -388,7 +388,7 @@ userdict /clostreams 20 dict put	% stream -> [data endproc]
     dup /OpenAction .knownget { omvisitnopage } if
     Trailer /Encrypt .knownget { omvisit } if
     dup /Threads .knownget {
-      omforce { omvisit } forall
+        omforce dup //null ne { { omvisit } forall } { pop } ifelse
     } if
     dup /AcroForm .knownget { omvisit } if
     pop

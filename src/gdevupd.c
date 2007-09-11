@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevupd.c,v 1.9 2007/08/01 14:25:57 jemarch Exp $ */
+/* $Id: gdevupd.c,v 1.10 2007/09/11 15:24:00 Arabidopsis Exp $ */
 /* gdevupd.c Revision: 1.88 */
 /* "uniprint" -- Ugly Printer Driver by Gunther Hess (ghess@elmos.de) */
 
@@ -976,7 +976,7 @@ Here are several Macros, named "UPD_MM_*" to deal with that.
 
 /** Version-String */
 
-static const char rcsid[] = "$Revision: 1.9 $";
+static const char rcsid[] = "$Revision: 1.10 $";
 
 /** Default-Transfer-curve */
 

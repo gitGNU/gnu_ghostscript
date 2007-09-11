@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sfilter1.c,v 1.6 2007/08/01 14:26:42 jemarch Exp $ */
+/* $Id: sfilter1.c,v 1.7 2007/09/11 15:23:56 Arabidopsis Exp $ */
 /* Filters included in Level 1 systems: NullEncode/Decode, PFBDecode, */
 /*   SubFileDecode. */
 #include "stdio_.h"		/* includes std.h */

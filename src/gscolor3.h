@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscolor3.h,v 1.6 2007/08/01 14:26:03 jemarch Exp $ */
+/* $Id: gscolor3.h,v 1.7 2007/09/11 15:23:59 Arabidopsis Exp $ */
 /* Client interface to LanguageLevel 3 color facilities */
 
 #ifndef gscolor3_INCLUDED

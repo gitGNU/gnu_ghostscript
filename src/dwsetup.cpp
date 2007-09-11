@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-// $Id: dwsetup.cpp,v 1.11 2007/09/10 14:08:42 Arabidopsis Exp $
+// $Id: dwsetup.cpp,v 1.12 2007/09/11 15:24:24 Arabidopsis Exp $
 //
 //
 // This is the setup program for Win32 GNU Ghostscript

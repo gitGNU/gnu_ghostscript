@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsgdata.c,v 1.5 2007/08/01 14:26:06 jemarch Exp $ */
+/* $Id: gsgdata.c,v 1.6 2007/09/11 15:24:10 Arabidopsis Exp $ */
 /* Support for glyph data access */
 
 #include "memory_.h"

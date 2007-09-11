@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxfillsl.h,v 1.4 2007/08/01 14:26:22 jemarch Exp $ */
+/* $Id: gxfillsl.h,v 1.5 2007/09/11 15:24:28 Arabidopsis Exp $ */
 /* Configurable algorithm for filling a path by scanlines. */
 
 /*

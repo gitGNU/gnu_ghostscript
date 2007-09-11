@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2007 artofcode LLC.
+/* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscdef.c,v 1.10 2007/08/01 14:26:01 jemarch Exp $ */
+/* $Id: gscdef.c,v 1.11 2007/09/11 15:23:54 Arabidopsis Exp $ */
 /* Configuration scalars */
 
 #include "std.h"
@@ -37,7 +37,7 @@ CONFIG_CONST long gs_buildtime = GS_BUILDTIME;
 
 #ifndef GS_COPYRIGHT
 #  define GS_COPYRIGHT\
-	"Copyright (C) 2007 artofcode LLC, Benicia, CA.  All rights reserved."
+	"Copyright (C) 2007 Artifex Software, Inc.  All rights reserved."
 #endif
 const char *CONFIG_CONST gs_copyright = GS_COPYRIGHT;
 
@@ -49,7 +49,7 @@ const char *CONFIG_CONST gs_productfamily = GS_PRODUCTFAMILY;
 
 #ifndef GS_PRODUCT
 #  define GS_PRODUCT\
-	GS_PRODUCTFAMILY ""
+	GS_PRODUCTFAMILY
 #endif
 const char *CONFIG_CONST gs_product = GS_PRODUCT;
 

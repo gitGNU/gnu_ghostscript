@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscie.c,v 1.8 2007/09/10 14:08:40 Arabidopsis Exp $ */
+/* $Id: gscie.c,v 1.9 2007/09/11 15:23:46 Arabidopsis Exp $ */
 /* CIE color rendering cache management */
 #include "math_.h"
 #include "memory_.h"
@@ -793,19 +793,25 @@ gs_currentcolorrendering(const gs_state * pgs)
 
 /* Unshare (allocating if necessary) the joint caches. */
 gx_cie_joint_caches *
-gx_currentciecaches(gs_state * pgs)
+gx_unshare_cie_caches(gs_state * pgs)
 {
     gx_cie_joint_caches *pjc = pgs->cie_joint_caches;
 
     rc_unshare_struct(pgs->cie_joint_caches, gx_cie_joint_caches,
 		      &st_joint_caches, pgs->memory,
-		      return 0, "gx_currentciecaches");
+		      return 0, "gx_unshare_cie_caches");
     if (pgs->cie_joint_caches != pjc) {
 	pjc = pgs->cie_joint_caches;
 	pjc->cspace_id = pjc->render_id = gs_no_id;
 	pjc->id_status = pjc->status = CIE_JC_STATUS_BUILT;
     }
     return pjc;
+}
+
+gx_cie_joint_caches *
+gx_currentciecaches(gs_state * pgs)
+{
+    return pgs->cie_joint_caches;
 }
 
 /* Compute the parameters for loading a cache, setting base and factor. */
@@ -1211,7 +1217,7 @@ gs_cie_cs_common(const gs_state * pgs)
 int
 gs_cie_cs_complete(gs_state * pgs, bool init)
 {
-    gx_cie_joint_caches *pjc = gx_currentciecaches(pgs);
+    gx_cie_joint_caches *pjc = gx_unshare_cie_caches(pgs);
 
     if (pjc == 0)
 	return_error(gs_error_VMerror);
@@ -1490,6 +1496,7 @@ gx_cie_to_xyz_alloc(gs_imager_state **ppis, const gs_color_space *pcs,
     pjc->skipDecodeABC = pabc != 0 && pabc->caches.skipABC;
     /* Mark the joint caches as completed. */
     pjc->remap_finish = gx_cie_xyz_remap_finish;
+    pjc->cspace_id = pcs->id;
     pjc->status = CIE_JC_STATUS_COMPLETED;
     pis->cie_joint_caches = pjc;
     /*
@@ -1605,4 +1612,25 @@ cie_matrix_init(register gs_matrix3 * mat)
 	mat->cu.u == 1.0 && is_fzero2(mat->cu.v, mat->cu.w) &&
 	mat->cv.v == 1.0 && is_fzero2(mat->cv.u, mat->cv.w) &&
 	mat->cw.w == 1.0 && is_fzero2(mat->cw.u, mat->cw.v);
+}
+
+bool 
+gx_color_space_needs_cie_caches(const gs_color_space * pcs)
+{
+    switch (pcs->type->index) {
+    	case gs_color_space_index_CIEDEFG:
+    	case gs_color_space_index_CIEDEF:
+    	case gs_color_space_index_CIEABC:
+    	case gs_color_space_index_CIEA:
+    	case gs_color_space_index_CIEICC:
+	    return true;
+	case gs_color_space_index_DevicePixel:
+    	case gs_color_space_index_DeviceN:
+    	case gs_color_space_index_Separation:
+    	case gs_color_space_index_Indexed:
+    	case gs_color_space_index_Pattern:
+	    return gx_color_space_needs_cie_caches(pcs->base_space);
+	default:
+	    return false;
+    }
 }

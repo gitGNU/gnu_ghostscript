@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gzstate.h,v 1.8 2007/08/01 14:26:31 jemarch Exp $ */
+/* $Id: gzstate.h,v 1.9 2007/09/11 15:24:22 Arabidopsis Exp $ */
 /* Private graphics state definition for Ghostscript library */
 
 #ifndef gzstate_INCLUDED

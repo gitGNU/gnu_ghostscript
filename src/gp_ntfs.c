@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gp_ntfs.c,v 1.8 2007/08/01 14:25:59 jemarch Exp $ */
+/* $Id: gp_ntfs.c,v 1.9 2007/09/11 15:24:23 Arabidopsis Exp $ */
 /* file system stuff for MS-Windows WIN32 and MS-Windows NT */
 /* hacked from gp_dosfs.c by Russell Lang */
 

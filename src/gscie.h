@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscie.h,v 1.9 2007/09/10 14:08:40 Arabidopsis Exp $ */
+/* $Id: gscie.h,v 1.10 2007/09/11 15:23:46 Arabidopsis Exp $ */
 /* Structures for CIE color algorithms */
 /* (requires gscspace.h, gscolor2.h) */
 
@@ -108,10 +108,14 @@
 			        (1 << (_cie_interpolate_bits - 1)),\
 			       _cie_interpolate_bits))
 #  define cie_interpolate(p, i)\
-     cie_interpolate_between((p)[_cix(i)], (p)[_cix(i) + 1], i)
+     ((i) >= (gx_cie_cache_size - 1) << _cie_interpolate_bits ? \
+       (p)[gx_cie_cache_size - 1] : \
+       cie_interpolate_between((p)[_cix(i)], (p)[_cix(i) + 1], i))
 #  define cie_interpolate_fracs(p, i)\
-     ((p)[_cix(i)] +\
-      (frac)arith_rshift((long)((p)[_cix(i) + 1] - (p)[_cix(i)]) * _cif(i), _cie_interpolate_bits))
+     ((i) >= (gx_cie_cache_size - 1) << _cie_interpolate_bits ? \
+       (p)[gx_cie_cache_size - 1] : \
+       ((p)[_cix(i)] + \
+        (frac)arith_rshift((long)((p)[_cix(i) + 1] - (p)[_cix(i)]) * _cif(i), _cie_interpolate_bits)))
 #else
 #  define _cie_interpolate_bits 0
 #  define cie_interpolate_between(v0, v1, i) (v0)
@@ -599,7 +603,7 @@ typedef enum {
   int proc(cie_cached_vector3 vec3, frac *pconc,\
 	   const gs_imager_state *pis, const gs_color_space *pcs)
 
-typedef struct gx_cie_joint_caches_s {
+struct gx_cie_joint_caches_s {
     /*
      * The first 4 members are the "key" in the cache.  They behave as
      * follows:
@@ -637,7 +641,13 @@ typedef struct gx_cie_joint_caches_s {
     bool skipPQR;
     gx_cie_vector_cache3_t TransformPQR;	/* mult. by PQR_inverse_LMN */
     bool skipEncodeLMN;
-} gx_cie_joint_caches;
+};
+
+#ifndef gx_cie_joint_caches_DEFINED
+#define gx_cie_joint_caches_DEFINED
+typedef struct gx_cie_joint_caches_s gx_cie_joint_caches;
+#endif
+
 
 #define private_st_joint_caches() /* in gscie.c */\
   gs_private_st_simple(st_joint_caches, gx_cie_joint_caches,\
@@ -676,6 +686,7 @@ void gs_cie_defg_complete(gs_cie_defg *);
 void gs_cie_def_complete(gs_cie_def *);
 void gs_cie_abc_complete(gs_cie_abc *);
 void gs_cie_a_complete(gs_cie_a *);
+gx_cie_joint_caches *gx_unshare_cie_caches(gs_state *);
 gx_cie_joint_caches *gx_currentciecaches(gs_state *);
 const gs_cie_common *gs_cie_cs_common(const gs_state *);
 int gs_cie_cs_complete(gs_state *, bool);
@@ -806,5 +817,7 @@ extern int
 
 /* Serialize common CIE elements. */
 int gx_serialize_cie_common_elements(const gs_color_space * pcs, stream * s);
+
+bool gx_color_space_needs_cie_caches(const gs_color_space * pcs);
 
 #endif /* gscie_INCLUDED */

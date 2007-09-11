@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxcllzw.c,v 1.7 2007/08/01 14:26:18 jemarch Exp $ */
+/* $Id: gxcllzw.c,v 1.8 2007/09/11 15:24:08 Arabidopsis Exp $ */
 /* LZW filter initialization for RAM-based band lists */
 #include "std.h"
 #include "gstypes.h"

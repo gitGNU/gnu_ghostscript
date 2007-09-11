@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gstrans.c,v 1.9 2007/09/10 14:08:41 Arabidopsis Exp $ */
+/* $Id: gstrans.c,v 1.10 2007/09/11 15:23:46 Arabidopsis Exp $ */
 /* Implementation of transparency, other than rendering */
 #include "math_.h"
 #include "memory_.h"

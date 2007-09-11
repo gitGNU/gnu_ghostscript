@@ -3,7 +3,7 @@
 <html>
 <head>
 <title>How to use Ghostscript</title>
-<!-- $Id: Use.htm,v 1.9 2007/09/10 14:08:52 Arabidopsis Exp $ -->
+<!-- $Id: Use.htm,v 1.10 2007/09/11 15:25:03 Arabidopsis Exp $ -->
 <!-- Originally: use.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -629,6 +629,16 @@ By default, AcroForm is not shown because some field types are not yet
 implemented. Adobe Acrobat doesn't always skips AcroForm, but it is
 not known yet when it does.
 </dl>
+
+<dl>
+<dt><b><tt>-dNoUserUnit</tt></b>
+<dd>
+Ignore <b><tt>UserUnit</tt></b> parameter. This may be useful for backward
+compatibility with old versions of Ghostscript and Adobe Acrobat,
+or for processing files with large values of <b><tt>UserUnit</tt></b>
+that otherwise exceed implementation limits.
+</dl>
+
 
 <h3><a name="PDF_problems"></a>Problems interpreting a PDF file</h3>
 
@@ -1410,7 +1420,7 @@ of an error; you may have to delete them manually from time to time.
 The Ghostscript distribution includes some Unix shell scripts to use with
 Ghostscript in different environments.  These are all user-contributed
 code, so if you have questions, please contact the user identified in the
-file, not Aladdin Enterprises or artofcode LLC.
+file, not Artifex Software.
 
 <dl>
 <dt><b><tt>pv.sh</tt></b>
@@ -3570,7 +3580,7 @@ passes it to FAPI as PCLEOs.
 <hr>
 
 <p>
-<small>Copyright &copy; 2000-2006 artofcode LLC.  All rights reserved.</small>
+<small>Copyright &copy; 2000-2006 Artifex Software, Inc.  All rights reserved.</small>
 
 <p>
 This software is provided AS-IS with no warranty, either express or
@@ -3583,7 +3593,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.57, 11 May 2007
+<small>Ghostscript version 8.60, 1 August 2007
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

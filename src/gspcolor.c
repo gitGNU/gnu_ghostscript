@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gspcolor.c,v 1.9 2007/09/10 14:08:44 Arabidopsis Exp $ */
+/* $Id: gspcolor.c,v 1.10 2007/09/11 15:24:04 Arabidopsis Exp $ */
 /* Pattern color operators and procedures for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -217,6 +217,7 @@ gx_remap_Pattern(const gs_client_color * pc, const gs_color_space * pcs,
 {
     if (pc->pattern == 0) {
         pdc->ccolor_valid = false;
+        pdc->ccolor.pattern = 0; /* for GC */
 	color_set_null_pattern(pdc);
 	return 0;
     }

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevfax.c,v 1.6 2007/08/01 14:25:48 jemarch Exp $ */
+/* $Id: gdevfax.c,v 1.7 2007/09/11 15:23:51 Arabidopsis Exp $ */
 /* Fax devices */
 #include "gdevprn.h"
 #include "strimpl.h"

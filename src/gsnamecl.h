@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2007 artofcode LLC.
+/* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gsnamecl.h,v 1.4 2007/09/10 14:08:42 Arabidopsis Exp $ */
+/* $Id: gsnamecl.h,v 1.5 2007/09/11 15:24:02 Arabidopsis Exp $ */
 /* Global definitions for the 'Named Color' callback handling. */
 
 #ifndef gsnamecl_INCLUDED
@@ -29,7 +29,7 @@
 
 /*
  * Enable custom client callback color processing.  Note:  There is a sample
- * implementation in src/gsncdemo.c.
+ * implementation in src/gsncdummy.c.
  */
 #define ENABLE_CUSTOM_COLOR_CALLBACK 0	/* 0 --> disabled, 1 --> enabled */
 

@@ -1,7 +1,7 @@
 /*
     jbig2dec
     
-    Copyright (C) 2002-2005 artofcode LLC.
+    Copyright (C) 2002-2005 Artifex Software, Inc.
     
     This software is distributed under license and may not
     be copied, modified or distributed except as expressly
@@ -13,7 +13,7 @@
     Artifex Software, Inc.,  101 Lucas Valley Road #110,
     San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-    $Id: jbig2_text.c,v 1.6 2007/09/10 14:08:57 Arabidopsis Exp $
+    $Id: jbig2_text.c,v 1.7 2007/09/11 15:24:53 Arabidopsis Exp $
 */
 
 #ifdef HAVE_CONFIG_H

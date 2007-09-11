@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 artofcode LLC.
+#  Copyright (C) 2001-2006 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This software is provided AS-IS with no warranty, either express or
@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: int.mak,v 1.11 2007/09/10 14:08:44 Arabidopsis Exp $
+# $Id: int.mak,v 1.12 2007/09/11 15:24:19 Arabidopsis Exp $
 # (Platform-independent) makefile for PostScript and PDF language
 # interpreters.
 # Users of this makefile must define the following:
@@ -52,6 +52,7 @@ idebug_h=$(PSSRC)idebug.h
 iddstack_h=$(PSSRC)iddstack.h
 idict_h=$(PSSRC)idict.h $(iddstack_h)
 idictdef_h=$(PSSRC)idictdef.h
+idicttpl_h=$(PSSRC)idicttpl.h
 idosave_h=$(PSSRC)idosave.h
 igcstr_h=$(PSSRC)igcstr.h
 inames_h=$(PSSRC)inames.h
@@ -168,7 +169,7 @@ $(PSOBJ)idebug.$(OBJ) : $(PSSRC)idebug.c $(GH) $(string__h)\
 $(PSOBJ)idict.$(OBJ) : $(PSSRC)idict.c $(GH) $(math__h) $(string__h)\
  $(ierrors_h)\
  $(gxalloc_h)\
- $(iddstack_h) $(idebug_h) $(idict_h) $(idictdef_h)\
+ $(iddstack_h) $(idebug_h) $(idict_h) $(idictdef_h) $(idicttpl_h)\
  $(imemory_h) $(iname_h) $(inamedef_h) $(ipacked_h) $(isave_h)\
  $(iutil_h) $(ivmspace_h) $(store_h)
 	$(PSCC) $(PSO_)idict.$(OBJ) $(C_) $(PSSRC)idict.c
@@ -180,7 +181,7 @@ $(PSOBJ)idparam.$(OBJ) : $(PSSRC)idparam.c $(GH) $(memory__h) $(string__h) $(ier
 	$(PSCC) $(PSO_)idparam.$(OBJ) $(C_) $(PSSRC)idparam.c
 
 $(PSOBJ)idstack.$(OBJ) : $(PSSRC)idstack.c $(GH)\
- $(idebug_h) $(idict_h) $(idictdef_h) $(idstack_h) $(iname_h) $(inamedef_h)\
+ $(idebug_h) $(idict_h) $(idictdef_h) $(idicttpl_h) $(idstack_h) $(iname_h) $(inamedef_h)\
  $(ipacked_h) $(iutil_h) $(ivmspace_h)
 	$(PSCC) $(PSO_)idstack.$(OBJ) $(C_) $(PSSRC)idstack.c
 
@@ -316,7 +317,7 @@ $(PSOBJ)zdict.$(OBJ) : $(PSSRC)zdict.c $(OP)\
 	$(PSCC) $(PSO_)zdict.$(OBJ) $(C_) $(PSSRC)zdict.c
 
 $(PSOBJ)zfile.$(OBJ) : $(PSSRC)zfile.c $(OP)\
- $(memory__h) $(string__h) $(unistd__h) $(gp_h) $(gpmisc_h)\
+ $(memory__h) $(string__h) $(unistd__h) $(stat__h) $(gp_h) $(gpmisc_h)\
  $(gscdefs_h) $(gsfname_h) $(gsstruct_h) $(gsutil_h) $(gxalloc_h) $(gxiodev_h)\
  $(dstack_h) $(estack_h) $(files_h)\
  $(ialloc_h) $(idict_h) $(ilevel_h) $(iname_h) $(iutil_h)\
@@ -340,7 +341,7 @@ $(PSOBJ)zfilter.$(OBJ) : $(PSSRC)zfilter.c $(OP) $(memory__h)\
  $(sfilter_h) $(srlx_h) $(sstring_h) $(stream_h) $(strimpl_h)
 	$(PSCC) $(PSO_)zfilter.$(OBJ) $(C_) $(PSSRC)zfilter.c
 
-$(PSOBJ)zfproc.$(OBJ) : $(PSSRC)zfproc.c $(GH) $(memory__h)\
+$(PSOBJ)zfproc.$(OBJ) : $(PSSRC)zfproc.c $(GH) $(memory__h) $(stat__h)\
  $(oper_h)\
  $(estack_h) $(files_h) $(gsstruct_h) $(ialloc_h) $(ifilter_h) $(istruct_h)\
  $(store_h) $(stream_h) $(strimpl_h)
@@ -400,7 +401,7 @@ $(PSOBJ)zsysvm.$(OBJ) : $(PSSRC)zsysvm.c $(GH)\
  $(ialloc_h) $(ivmspace_h) $(oper_h) $(store_h)
 	$(PSCC) $(PSO_)zsysvm.$(OBJ) $(C_) $(PSSRC)zsysvm.c
 
-$(PSOBJ)ztoken.$(OBJ) : $(PSSRC)ztoken.c $(OP) $(string__h)\
+$(PSOBJ)ztoken.$(OBJ) : $(PSSRC)ztoken.c $(OP) $(string__h) $(stat__h)\
  $(gsstruct_h)\
  $(dstack_h) $(estack_h) $(files_h)\
  $(idict_h) $(iname_h) $(iscan_h) $(itoken_h)\
@@ -414,7 +415,7 @@ $(PSOBJ)ztype.$(OBJ) : $(PSSRC)ztype.c $(OP)\
  $(iscan_h) $(iutil_h) $(sfilter_h) $(store_h) $(stream_h) $(strimpl_h)
 	$(PSCC) $(PSO_)ztype.$(OBJ) $(C_) $(PSSRC)ztype.c
 
-$(PSOBJ)zvmem.$(OBJ) : $(PSSRC)zvmem.c $(OP)\
+$(PSOBJ)zvmem.$(OBJ) : $(PSSRC)zvmem.c $(OP) $(stat__h)\
  $(dstack_h) $(estack_h) $(files_h)\
  $(ialloc_h) $(idict_h) $(igstate_h) $(isave_h) $(store_h) $(stream_h)\
  $(gsmalloc_h) $(gsmatrix_h) $(gsstate_h) $(gsstruct_h)
@@ -481,7 +482,7 @@ $(PSOBJ)zht.$(OBJ) : $(PSSRC)zht.c $(OP) $(memory__h)\
  $(ialloc_h) $(estack_h) $(igstate_h) $(iht_h) $(store_h)
 	$(PSCC) $(PSO_)zht.$(OBJ) $(C_) $(PSSRC)zht.c
 
-$(PSOBJ)zimage.$(OBJ) : $(PSSRC)zimage.c $(OP) $(memory__h)\
+$(PSOBJ)zimage.$(OBJ) : $(PSSRC)zimage.c $(OP) $(math__h) $(memory__h) $(stat__h)\
  $(gscspace_h) $(gscssub_h) $(gsimage_h) $(gsmatrix_h) $(gsstruct_h)\
  $(gxiparam_h)\
  $(estack_h) $(ialloc_h) $(ifilter_h) $(igstate_h) $(iimage_h) $(ilevel_h)\
@@ -1764,7 +1765,7 @@ $(PSOBJ)zcolor3.$(OBJ) : $(PSSRC)zcolor3.c $(GH)\
 
 $(PSOBJ)zshade.$(OBJ) : $(PSSRC)zshade.c $(memory__h) $(OP)\
  $(gscolor2_h) $(gscolor3_h) $(gscspace_h) $(gsfunc3_h)\
- $(gsptype2_h) $(gsshade_h) $(gsstruct_h) $(gsuid_h)\
+ $(gsptype2_h) $(gsshade_h) $(gsstruct_h) $(gsuid_h) $(gscie_h)\
  $(stream_h)\
  $(files_h)\
  $(ialloc_h) $(idict_h) $(idparam_h) $(ifunc_h) $(igstate_h) $(ipcolor_h)\
@@ -2050,7 +2051,7 @@ $(PSOBJ)imain.$(OBJ) : $(PSSRC)imain.c $(GH) $(memory__h) $(string__h)\
 
 #****** $(CCINT) interp.c
 $(PSOBJ)interp.$(OBJ) : $(PSSRC)interp.c $(GH) $(memory__h) $(string__h)\
- $(gsstruct_h) $(idebug_h)\
+ $(gsstruct_h) $(gserror_h) $(idebug_h)\
  $(dstack_h) $(ierrors_h) $(estack_h) $(files_h)\
  $(ialloc_h) $(iastruct_h) $(icontext_h) $(icremap_h) $(iddict_h) $(igstate_h)\
  $(iname_h) $(inamedef_h) $(interp_h) $(ipacked_h)\

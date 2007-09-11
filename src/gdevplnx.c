@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevplnx.c,v 1.8 2007/08/01 14:25:53 jemarch Exp $*/
+/* $Id: gdevplnx.c,v 1.9 2007/09/11 15:24:42 Arabidopsis Exp $*/
 /* Plane extraction device */
 #include "gx.h"
 #include "gserrors.h"

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: std.h,v 1.10 2007/08/01 14:26:44 jemarch Exp $ */
+/* $Id: std.h,v 1.11 2007/09/11 15:24:41 Arabidopsis Exp $ */
 /* Standard definitions for Ghostscript code */
 
 #ifndef std_INCLUDED

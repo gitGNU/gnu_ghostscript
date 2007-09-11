@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: windows_.h,v 1.9 2007/09/10 14:08:46 Arabidopsis Exp $ */
+/* $Id: windows_.h,v 1.10 2007/09/11 15:24:06 Arabidopsis Exp $ */
 /* Wrapper for windows.h */
 
 #ifndef windows__INCLUDED

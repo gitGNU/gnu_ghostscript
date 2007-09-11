@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpxut.c,v 1.7 2007/08/01 14:25:55 jemarch Exp $ */
+/* $Id: gdevpxut.c,v 1.8 2007/09/11 15:23:55 Arabidopsis Exp $ */
 /* Utilities for PCL XL generation */
 #include "math_.h"
 #include "string_.h"
@@ -41,7 +41,7 @@ px_write_file_header(stream *s, const gx_device *dev)
     static const char *const rendermode_color = "COLOR";
     static const char *const file_header =
 	"\n@PJL ENTER LANGUAGE = PCLXL\n\
-) HP-PCL XL;1;1;Comment Copyright artofcode LLC 2005\000\n";
+) HP-PCL XL;1;1;Comment Copyright Artifex Sofware, Inc. 2005\000\n";
     static const byte stream_header[] = {
 	DA(pxaUnitsPerMeasure),
 	DUB(0), DA(pxaMeasure),
@@ -87,7 +87,8 @@ px_write_page_header(stream *s, const gx_device *dev)
 /* Write the media selection command if needed, updating the media size. */
 int
 px_write_select_media(stream *s, const gx_device *dev, 
-		      pxeMediaSize_t *pms, byte *media_source)
+		      pxeMediaSize_t *pms, byte *media_source,
+		      int page, bool Duplex, bool Tumble)
 {
 #define MSD(ms, res, w, h)\
   { ms, (float)((w) * 1.0 / (res)), (float)((h) * 1.0 / res) },
@@ -121,6 +122,22 @@ px_write_select_media(stream *s, const gx_device *dev,
     if (media_source != NULL)
 	tray = *media_source;
     px_put_uba(s, tray, pxaMediaSource);
+
+    if (Duplex)
+    {
+      if (Tumble)
+	px_put_uba(s, (byte)eDuplexHorizontalBinding, pxaDuplexPageMode);
+      else
+	px_put_uba(s, (byte)eDuplexVerticalBinding, pxaDuplexPageMode);
+
+      if (page & 1)
+	px_put_uba(s, (byte)eFrontMediaSide, pxaDuplexPageSide);
+      else
+	px_put_uba(s, (byte)eBackMediaSide, pxaDuplexPageSide);
+    }
+    else
+      px_put_uba(s, (byte)eSimplexFrontSide, pxaSimplexPageMode);
+
     if (pms)
 	*pms = size;
 

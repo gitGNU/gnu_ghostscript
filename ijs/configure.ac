@@ -1,4 +1,4 @@
-dnl Copyright (c) 2001-2004 artofcode LLC.
+dnl Copyright (C) 2001-2004 Artifex Software, Inc.
 dnl
 dnl Permission is hereby granted, free of charge, to any person
 dnl obtaining a copy of this software and associated documentation
@@ -20,7 +20,7 @@ dnl ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 dnl CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 dnl SOFTWARE.
 
-dnl $Id: configure.ac,v 1.3 2007/05/07 11:22:21 Arabidopsis Exp $
+dnl $Id: configure.ac,v 1.4 2007/09/11 15:25:10 Arabidopsis Exp $
 
 dnl Process this file with autoconf to produce a configure script.
 
@@ -53,7 +53,7 @@ pushdef([IJS_VERSION], IJS_MAJOR_VERSION.IJS_MINOR_VERSION[]IJS_EXTRA_VERSION)
 AC_INIT(IJS_NAME, IJS_VERSION, [inkjet-list@linuxprinting.org])
 AC_PREREQ(2.53)
 AC_CONFIG_SRCDIR(ijs.c)
-AC_REVISION($Revision: 1.3 $)
+AC_REVISION($Revision: 1.4 $)
 
 dnl In the following script, there are a the following variants
 dnl of ijs cflags and libs variables

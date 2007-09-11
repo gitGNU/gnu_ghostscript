@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclipm.c,v 1.9 2007/09/10 14:08:46 Arabidopsis Exp $ */
+/* $Id: gxclipm.c,v 1.10 2007/09/11 15:23:58 Arabidopsis Exp $ */
 /* Mask clipping device */
 #include "memory_.h"
 #include "gx.h"

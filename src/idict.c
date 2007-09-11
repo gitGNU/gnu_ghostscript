@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: idict.c,v 1.9 2007/08/01 14:26:33 jemarch Exp $ */
+/* $Id: idict.c,v 1.10 2007/09/11 15:24:04 Arabidopsis Exp $ */
 /* Dictionary implementation */
 #include "math_.h"		/* for frexp */
 #include "string_.h"		/* for strlen */
@@ -35,6 +35,10 @@
 #include "idictdef.h"
 #include "iutil.h"
 #include "ivmspace.h"		/* for store check */
+/*
+#include "idicttpl.h" - Do not remove this comment.
+                        "idicttpl.h" is included below.
+*/
 
 /*
  * Dictionaries per se aren't supposed to know anything about the
@@ -345,12 +349,13 @@ dict_find(const ref * pdref, const ref * pkey,
     if (dict_is_packed(pdict)) {
 	const ref_packed *pslot = 0;
 
-	packed_search_1(*ppvalue = packed_search_value_pointer,
-			return 1,
-			if (pslot == 0) pslot = kp, goto miss);
-	packed_search_2(*ppvalue = packed_search_value_pointer,
-			return 1,
-			if (pslot == 0) pslot = kp, goto miss);
+#	define found *ppvalue = packed_search_value_pointer; return 1
+#	define deleted if (pslot == 0) pslot = kp
+#	define missing goto miss
+#	include "idicttpl.h"
+#	undef missing
+#	undef deleted
+#	undef found
 	/*
 	 * Double wraparound, dict is full.
 	 * Note that even if there was an empty slot (pslot != 0),
@@ -424,7 +429,10 @@ dict_find_string(const ref * pdref, const char *kstr, ref ** ppvalue)
 	if ((code = name_ref(dict_mem(pdict), 
 			     (const byte *)kstr, strlen(kstr), &kname, -1)) < 0)
 	    return code;
-	return dict_find(pdref, &kname, ppvalue);
+	code = dict_find(pdref, &kname, ppvalue);
+        if (code == e_dictfull)
+            return_error(e_undefined);
+        return code;
     }
     return 0;
 }
@@ -574,12 +582,13 @@ dict_undef(ref * pdref, const ref * pkey, dict_stack_t *pds)
     mem = dict_memory(pdict);
     if (dict_is_packed(pdict)) {
 	ref_packed *pkp = pdict->keys.value.writable_packed + index;
+	bool must_save = ref_must_save_in(mem, &pdict->keys);
 
 	if_debug3('d', "[d]0x%lx: removing key at 0%lx: 0x%x\n",
 		  (ulong)pdict, (ulong)pkp, (uint)*pkp);
 	/* See the initial comment for why it is safe not to save */
 	/* the change if the keys array itself is new. */
-	if (ref_must_save_in(mem, &pdict->keys))
+	if (must_save)
 	    ref_do_save_in(mem, &pdict->keys, pkp, "dict_undef(key)");
 	/*
 	 * Accumulating deleted entries slows down lookup.
@@ -595,8 +604,15 @@ dict_undef(ref * pdref, const ref * pkey, dict_stack_t *pds)
 	    uint end = nslots(pdict);
 
 	    *pkp = packed_key_empty;
-	    while (++index < end && *++pkp == packed_key_deleted)
-		*pkp = packed_key_empty;
+	    if (must_save) {
+		while (++index < end && *++pkp == packed_key_deleted) {
+		    ref_do_save_in(mem, &pdict->keys, pkp, "dict_undef(key)");
+		    *pkp = packed_key_empty;
+		}
+	    } else {
+		while (++index < end && *++pkp == packed_key_deleted)
+		    *pkp = packed_key_empty;
+	    }
 	} else
 	    *pkp = packed_key_deleted;
     } else {			/* not packed */

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevsco.c,v 1.6 2007/08/01 14:25:56 jemarch Exp $ */
+/* $Id: gdevsco.c,v 1.7 2007/09/11 15:24:08 Arabidopsis Exp $ */
 /* 17Jul91 - wb - based on gdevpcfb.c */
 /* 31Jul91 - Rick Calder rick@rick.att.com - ifdefs for AT&T UNIX 4.0 2.1 */
 /* 13Sep91 - wb - modify for gs24b2 */

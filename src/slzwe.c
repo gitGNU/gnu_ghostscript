@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: slzwe.c,v 1.4 2007/08/01 14:26:44 jemarch Exp $ */
+/* $Id: slzwe.c,v 1.5 2007/09/11 15:24:06 Arabidopsis Exp $ */
 /* LZW encoding filter */
 #include "stdio_.h"	/* includes std.h */
 #include "gdebug.h"

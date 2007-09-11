@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gximage3.h,v 1.6 2007/08/01 14:26:25 jemarch Exp $ */
+/* $Id: gximage3.h,v 1.7 2007/09/11 15:24:30 Arabidopsis Exp $ */
 /* ImageType 3 internal API */
 
 #ifndef gximage3_INCLUDED

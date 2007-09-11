@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/*$Id: gxwts.h,v 1.7 2007/09/10 14:08:40 Arabidopsis Exp $ */
+/*$Id: gxwts.h,v 1.8 2007/09/11 15:24:23 Arabidopsis Exp $ */
 #ifndef gxwts_INCLUDED
 #  define gxwts_INCLUDED
 

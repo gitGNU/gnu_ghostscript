@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 artofcode LLC.
+#  Copyright (C) 2001-2006 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This software is provided AS-IS with no warranty, either express or
@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: os2.mak,v 1.10 2007/09/10 14:08:42 Arabidopsis Exp $
+# $Id: os2.mak,v 1.11 2007/09/11 15:23:47 Arabidopsis Exp $
 # makefile for MS-DOS or OS/2 GCC/EMX platform.
 # Uses Borland (MSDOS) MAKER or 
 # Uses IBM NMAKE.EXE Version 2.000.000 Mar 27 1992
@@ -130,7 +130,7 @@ JVERSION=6
 # See libpng.mak for more information.
 
 PSRCDIR=libpng
-PVERSION=10216
+PVERSION=10218
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.
@@ -158,6 +158,11 @@ ICCSRCDIR=icclib
 
 #IJSSRCDIR=ijs
 #IJSEXECTYPE=win
+
+# Define the directory where the imdi library source is stored.
+# See devs.mak for more information
+
+IMDISRCDIR=imdi
 
 # 1 --> Use 64 bits for gx_color_index.  This is required only for
 # non standard devices or DeviceN process color model devices.
@@ -448,6 +453,7 @@ CC_=$(CC)
 CC_D=$(CC) $(CO)
 CC_INT=$(CC)
 CC_NO_WARN=$(CC_)
+CC_SHARED=$(CC_)
 
 # ------ Devices and features ------ #
 

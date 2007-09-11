@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsdps1.c,v 1.8 2007/09/10 14:08:42 Arabidopsis Exp $ */
+/* $Id: gsdps1.c,v 1.9 2007/09/11 15:24:02 Arabidopsis Exp $ */
 /* Display PostScript graphics additions for Ghostscript library */
 #include "math_.h"
 #include "gx.h"

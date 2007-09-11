@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: iminst.h,v 1.7 2007/08/01 14:26:36 jemarch Exp $ */
+/* $Id: iminst.h,v 1.8 2007/09/11 15:24:37 Arabidopsis Exp $ */
 /* Definition of interpreter instance */
 /* Requires stdio_.h, gsmemory.h, iref.h, iapi.h */
 
@@ -52,11 +52,6 @@ typedef struct gs_file_path_s {
     const char *final;
     uint count;
 } gs_file_path;
-
-/* buffer sizes for stdio */
-#define STDIN_BUF_SIZE 128
-#define STDOUT_BUF_SIZE 128
-#define STDERR_BUF_SIZE 128
 
 /*
  * Here is where we actually define the structure of interpreter instances.

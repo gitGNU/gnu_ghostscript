@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ialloc.c,v 1.10 2007/08/01 14:26:31 jemarch Exp $ */
+/* $Id: ialloc.c,v 1.11 2007/09/11 15:24:40 Arabidopsis Exp $ */
 /* Memory allocator for Ghostscript interpreter */
 #include "gx.h"
 #include "memory_.h"

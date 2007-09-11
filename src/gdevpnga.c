@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpnga.c,v 1.10 2007/09/10 14:08:46 Arabidopsis Exp $ */
+/* $Id: gdevpnga.c,v 1.11 2007/09/11 15:24:42 Arabidopsis Exp $ */
 /* Test driver for PDF 1.4 transparency stuff */
 
 #include "gdevprn.h"

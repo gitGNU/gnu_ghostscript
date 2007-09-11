@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxpath.c,v 1.9 2007/08/01 14:26:27 jemarch Exp $ */
+/*$Id: gxpath.c,v 1.10 2007/09/11 15:24:31 Arabidopsis Exp $ */
 /* Internal path management routines for Ghostscript library */
 #include "gx.h"
 #include "gserrors.h"

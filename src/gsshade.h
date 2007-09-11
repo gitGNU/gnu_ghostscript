@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsshade.h,v 1.9 2007/08/01 14:26:13 jemarch Exp $ */
+/* $Id: gsshade.h,v 1.10 2007/09/11 15:24:11 Arabidopsis Exp $ */
 /* Definitions for shading */
 
 #ifndef gsshade_INCLUDED
@@ -29,6 +29,11 @@
 #include "gsfunc.h"
 #include "gsmatrix.h"
 #include "gxfixed.h"
+
+#ifndef gx_cie_joint_caches_DEFINED
+#define gx_cie_joint_caches_DEFINED
+typedef struct gx_cie_joint_caches_s gx_cie_joint_caches;
+#endif
 
 /* ---------------- Types and structures ---------------- */
 
@@ -50,6 +55,7 @@ typedef enum {
  */
 #define gs_shading_params_common\
   gs_color_space *ColorSpace;\
+  gx_cie_joint_caches *cie_joint_caches; /* if ColorSpace is CIE or uses CIE. */\
   gs_client_color *Background;\
   bool have_BBox;\
   gs_rect BBox;\
@@ -100,9 +106,9 @@ struct gs_shading_s {
 };
 #define ShadingType(psh) ((psh)->head.type)
 #define private_st_shading()	/* in gsshade.c */\
-  gs_private_st_ptrs2(st_shading, gs_shading_t, "gs_shading_t",\
+  gs_private_st_ptrs3(st_shading, gs_shading_t, "gs_shading_t",\
     shading_enum_ptrs, shading_reloc_ptrs,\
-    params.ColorSpace, params.Background)
+    params.ColorSpace, params.cie_joint_caches, params.Background)
 
 /* Define Function-based shading. */
 typedef struct gs_shading_Fb_params_s {
@@ -253,8 +259,17 @@ int gs_shading_Tpp_init(gs_shading_t ** ppsh,
 #  define gx_path_DEFINED
 typedef struct gx_path_s gx_path;
 #endif
-int gs_shading_fill_path_adjusted(const gs_shading_t *psh, /*const*/ gx_path *ppath,
+#ifndef gs_matrix_fixed_DEFINED
+#define gs_matrix_fixed_DEFINED
+typedef struct gs_matrix_fixed_s gs_matrix_fixed;
+#endif
+/* Fill a rectangle with a shading. */
+int gs_shading_do_fill_rectangle(const gs_shading_t *psh, 
 			 const gs_fixed_rect *prect, gx_device *dev,
 			 gs_imager_state *pis, bool fill_background);
+
+/* Add a shading bbox to a path. */
+int gs_shading_path_add_box(gx_path *ppath, const gs_rect *pbox,
+		     const gs_matrix_fixed *pmat);
 
 #endif /* gsshade_INCLUDED */

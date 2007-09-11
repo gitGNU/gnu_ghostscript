@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevvglb.c,v 1.6 2007/08/01 14:25:57 jemarch Exp $ */
+/* $Id: gdevvglb.c,v 1.7 2007/09/11 15:24:32 Arabidopsis Exp $ */
 /*
  * This is a driver for 386 PCs using vgalib for graphics on the console
  * display.  Note that this driver only works with 16-color modes.
@@ -374,3 +374,12 @@ vgalib_put_params(gx_device * dev, gs_param_list * plist)
     }
     return 0;
 }
+
+#ifdef GS_DEVS_SHARED
+extern void gs_lib_register_device(const gx_device *dev);
+void
+gs_shared_init(void)
+{
+  gs_lib_register_device(&gs_vgalib_device);
+}
+#endif

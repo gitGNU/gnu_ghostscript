@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 artofcode LLC.
+#  Copyright (C) 2001-2006 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: winlib.mak,v 1.9 2007/08/01 14:26:47 jemarch Exp $
+# $Id: winlib.mak,v 1.10 2007/09/11 15:23:48 Arabidopsis Exp $
 # Common makefile section for 32-bit MS Windows.
 
 # This makefile must be acceptable to Microsoft Visual C++, Watcom C++,
@@ -198,7 +198,7 @@ $(GLD)mspoll.dev: $(ECHOGS_XE) $(mspoll_)
 	$(SETMOD) $(GLD)mspoll $(mspoll_)
 
 $(GLOBJ)gp_mspol.$(OBJ): $(GLSRC)gp_mspol.c $(AK)\
- $(gx_h) $(gp_h) $(gpcheck_h) $(iapi_h) $(iref_h) $(iminst_h) $(imain_h)
+ $(gx_h) $(gp_h) $(gpcheck_h)
 	$(GLCCWIN) $(GLO_)gp_mspol.$(OBJ) $(C_) $(GLSRC)gp_mspol.c
 
 # end of winlib.mak

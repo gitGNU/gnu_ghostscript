@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclbits.c,v 1.8 2007/09/10 14:08:39 Arabidopsis Exp $ */
+/* $Id: gxclbits.c,v 1.9 2007/09/11 15:24:31 Arabidopsis Exp $ */
 /* Halftone and bitmap writing for command lists */
 #include "memory_.h"
 #include "gx.h"

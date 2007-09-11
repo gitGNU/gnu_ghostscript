@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: dwtext.h,v 1.6 2007/08/01 14:25:44 jemarch Exp $ */
+/* $Id: dwtext.h,v 1.7 2007/09/11 15:24:42 Arabidopsis Exp $ */
 /* Text Window class */
 
 #ifndef dwtext_INCLUDED

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxhintn.h,v 1.8 2007/08/01 14:26:24 jemarch Exp $ */
+/* $Id: gxhintn.h,v 1.9 2007/09/11 15:24:35 Arabidopsis Exp $ */
 /* Type 1 hinter, prototypes */
 
 #ifndef gxhintn_INCLUDED

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxi16bit.c,v 1.5 2007/09/10 14:08:40 Arabidopsis Exp $ */
+/* $Id: gxi16bit.c,v 1.6 2007/09/11 15:24:23 Arabidopsis Exp $ */
 /* 16-bit image procedures */
 #include "gx.h"
 #include "memory_.h"

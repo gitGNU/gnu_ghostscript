@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: spprint.c,v 1.7 2007/08/01 14:26:44 jemarch Exp $ */
+/* $Id: spprint.c,v 1.8 2007/09/11 15:24:13 Arabidopsis Exp $ */
 /* Print values in ASCII form on a stream */
 #include "math_.h"		/* for fabs */
 #include "stdio_.h"		/* for stream.h */

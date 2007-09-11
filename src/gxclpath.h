@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxclpath.h,v 1.7 2007/08/01 14:26:19 jemarch Exp $ */
+/*$Id: gxclpath.h,v 1.8 2007/09/11 15:24:14 Arabidopsis Exp $ */
 /* Definitions and support procedures for higher-level band list commands */
 /* Extends (requires) gxcldev.h */
 
@@ -148,9 +148,10 @@ typedef enum {
     cmd_opv_stroke = 0xf6,
     /* cmd_opv_htstroke = 0xf7, */ /* obsolete */
     /* cmd_opv_colorstroke = 0xf8, */ /* obsolete */
-    cmd_opv_polyfill = 0xf9
+    cmd_opv_polyfill = 0xf9,
     /* cmd_opv_htpolyfill = 0xfa, */ /* obsolete */
     /* cmd_opv_colorpolyfill = 0xfb */ /* obsolete */
+    cmd_opv_fill_trapezoid = 0xfc
 } gx_cmd_xop;
 
 /*
@@ -187,7 +188,7 @@ typedef enum {
   "fill", "htfill", "colorfill", "eofill",\
   "hteofill", "coloreofill", "stroke", "htstroke",\
   "colorstroke", "polyfill", "htpolyfill", "colorpolyfill",\
-  "?fc?", "?fd?", "?fe?", "?ff?"
+  "fill_trapezoid", "?fd?", "?fe?", "?ff?"
 
 /*
  * We represent path coordinates as 'fixed' values in a variable-length,

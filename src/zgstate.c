@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zgstate.c,v 1.9 2007/09/10 14:08:44 Arabidopsis Exp $ */
+/* $Id: zgstate.c,v 1.10 2007/09/11 15:24:27 Arabidopsis Exp $ */
 /* Graphics state operators */
 #include "math_.h"
 #include "ghost.h"

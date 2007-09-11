@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevprn.c,v 1.10 2007/09/10 14:08:44 Arabidopsis Exp $ */
+/* $Id: gdevprn.c,v 1.11 2007/09/11 15:24:19 Arabidopsis Exp $ */
 /* Generic printer driver support */
 #include "ctype_.h"
 #include "gdevprn.h"
@@ -238,6 +238,7 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
     int save_height = 0x0badf00d; /* Quiet compiler */
     bool is_command_list = false; /* Quiet compiler */
     bool save_is_command_list = false; /* Quiet compiler */
+    bool size_ok = 0;
     int ecode = 0;
     int pass;
     gs_memory_t *buffer_memory =
@@ -280,11 +281,16 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
 
 	/* Init clist/mem device-specific fields */
 	memset(ppdev->skip, 0, sizeof(ppdev->skip));
-	ppdev->printer_procs.buf_procs.size_buf_device
-	    (&buf_space, pdev, NULL, pdev->height, false);
-	if (ppdev->page_uses_transparency)
-	    pdf14_trans_buffer_size = new_height
-		* (ESTIMATED_PDF14_ROW_SPACE(new_width) >> 3);
+	size_ok = ppdev->printer_procs.buf_procs.size_buf_device
+	    (&buf_space, pdev, NULL, pdev->height, false) >= 0;
+	if (ppdev->page_uses_transparency) 
+	    if (new_height < max_ulong/(ESTIMATED_PDF14_ROW_SPACE(new_width) >> 3))
+		pdf14_trans_buffer_size = new_height
+		    * (ESTIMATED_PDF14_ROW_SPACE(new_width) >> 3);
+	    else {
+		size_ok = 0;
+		pdf14_trans_buffer_size = 0;
+	    }
 	mem_space = buf_space.bits + buf_space.line_ptrs
 		    + pdf14_trans_buffer_size;
 
@@ -310,7 +316,7 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
 	else {
 	    is_command_list = space_params.banding_type == BandingAlways ||
 		mem_space >= space_params.MaxBitmap ||
-		mem_space != (uint)mem_space;	    /* too big to allocate */
+		!size_ok;	    /* too big to allocate */
 	}
 	if (!is_command_list) {
 	    /* Try to allocate memory for full memory buffer */
@@ -409,11 +415,6 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
 	COPY_PROC(get_color_comp_index);
 	COPY_PROC(encode_color);
 	COPY_PROC(decode_color);
-	COPY_PROC(begin_image);
-	COPY_PROC(text_begin);
-	COPY_PROC(fill_path);
-	COPY_PROC(stroke_path);
-	COPY_PROC(fill_rectangle_hl_color);
 	COPY_PROC(update_spot_equivalent_colors);
 	COPY_PROC(ret_devn_params);
 #undef COPY_PROC
@@ -1068,12 +1069,16 @@ gx_default_size_buf_device(gx_device_buf_space_t *space, gx_device *target,
 {
     gx_device_memory mdev;
 
+    space->line_ptrs = 0;	/*				*/
+    space->bits = 0;		/* clear in case of failure	*/
+    space->raster = 0;		/*				*/
     mdev.color_info.depth =
 	(render_plane && render_plane->index >= 0 ? render_plane->depth :
 	 target->color_info.depth);
     mdev.width = target->width;
     mdev.num_planes = 0;
-    space->bits = gdev_mem_bits_size(&mdev, target->width, height);
+    if (gdev_mem_bits_size(&mdev, target->width, height, &(space->bits)) < 0)
+	return_error(gs_error_VMerror);
     space->line_ptrs = gdev_mem_line_ptrs_size(&mdev, target->width, height);
     space->raster = gdev_mem_raster(&mdev);
     return 0;

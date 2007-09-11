@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zsysvm.c,v 1.6 2007/08/01 14:26:54 jemarch Exp $ */
+/* $Id: zsysvm.c,v 1.7 2007/09/11 15:24:23 Arabidopsis Exp $ */
 /* System VM and VM-specific operators */
 #include "ghost.h"
 #include "oper.h"

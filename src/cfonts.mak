@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 artofcode LLC.
+#  Copyright (C) 2001-2006 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: cfonts.mak,v 1.7 2007/08/01 14:25:42 jemarch Exp $
+# $Id: cfonts.mak,v 1.8 2007/09/11 15:24:30 Arabidopsis Exp $
 # Makefile for compiling PostScript Type 1 fonts into C.
 # For more information about fonts, consult the Fontmap file,
 # and also Fonts.htm.

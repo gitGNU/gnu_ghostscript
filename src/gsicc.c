@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsicc.c,v 1.9 2007/09/10 14:08:41 Arabidopsis Exp $ */
+/* $Id: gsicc.c,v 1.10 2007/09/11 15:23:47 Arabidopsis Exp $ */
 /* Implementation of the ICCBased color space family */
 
 #include "math_.h"
@@ -233,6 +233,7 @@ gx_concretize_CIEICC(
     cie_cached_vector3      vlmn;
     gs_client_color         lcc = *pcc;
     int                     i, ncomps = picc_info->num_components;
+    int code;
 
     /* use the altenate space concretize if appropriate */
     if (picc == NULL)
@@ -243,7 +244,11 @@ gx_concretize_CIEICC(
                             pis );
 
     /* set up joint cache as required */
-    CIE_CHECK_RENDERING(pcs, pconc, pis, return 0);
+    code = gx_cie_check_rendering(pcs, pconc, pis);
+    if (code < 0)
+	return code;
+    if (code == 1)
+	return 0;
 
     /* verify and update the stream pointer */
     if (picc_info->file_id != (instrp->read_id | instrp->write_id))

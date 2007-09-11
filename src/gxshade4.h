@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxshade4.h,v 1.9 2007/09/10 14:08:41 Arabidopsis Exp $ */
+/* $Id: gxshade4.h,v 1.10 2007/09/11 15:24:09 Arabidopsis Exp $ */
 /* Internal definitions for triangle shading rendering */
 
 #ifndef gxshade4_INCLUDED
@@ -123,8 +123,13 @@ typedef struct patch_color_s patch_color_t;
 typedef struct gs_color_index_cache_s gs_color_index_cache_t;
 #endif
 
+#ifndef patch_fill_state_t_DEFINED
+#  define patch_fill_state_t_DEFINED
+typedef struct patch_fill_state_s  patch_fill_state_t;
+#endif
+
 /* Define the common state for rendering Coons and tensor patches. */
-typedef struct patch_fill_state_s {
+struct patch_fill_state_s {
     mesh_fill_state_common;
     const gs_function_t *Function;
     int function_arg_shift;
@@ -151,7 +156,7 @@ typedef struct patch_fill_state_s {
     byte *color_stack_limit;
     gs_memory_t *memory; /* Where color_buffer is allocated. */
     gs_color_index_cache_t *pcic;
-} patch_fill_state_t;
+} ;
 
 /* Define a structure for mesh or patch vertex. */
 struct shading_vertex_s {
@@ -166,6 +171,11 @@ typedef struct patch_curve_s {
     bool straight;
 } patch_curve_t;
 
+typedef struct {
+    const shading_vertex_t *p[2][2]; /* [v][u] */
+    wedge_vertex_list_t *l0001, *l0111, *l1110, *l1000;
+} quadrangle_patch;
+
 /* Initialize the fill state for triangle shading. */
 int mesh_init_fill_state(mesh_fill_state_t * pfs,
 			  const gs_shading_mesh_t * psh,
@@ -174,6 +184,7 @@ int mesh_init_fill_state(mesh_fill_state_t * pfs,
 
 int init_patch_fill_state(patch_fill_state_t *pfs);
 bool term_patch_fill_state(patch_fill_state_t *pfs);
+int gx_init_patch_fill_state_for_clist(gx_device *dev, patch_fill_state_t *pfs, gs_memory_t *memory);
 
 int mesh_triangle(patch_fill_state_t *pfs, 
     const shading_vertex_t *p0, const shading_vertex_t *p1, const shading_vertex_t *p2);
@@ -186,6 +197,8 @@ int patch_fill(patch_fill_state_t * pfs, const patch_curve_t curve[4],
 	   void (*transform) (gs_fixed_point *, const patch_curve_t[4],
 			      const gs_fixed_point[4], floatp, floatp));
 
+int constant_color_quadrangle(patch_fill_state_t *pfs, const quadrangle_patch *p, bool self_intersecting);
+
 int wedge_vertex_list_elem_buffer_alloc(patch_fill_state_t *pfs);
 void wedge_vertex_list_elem_buffer_free(patch_fill_state_t *pfs);
 
@@ -194,7 +207,12 @@ void patch_resolve_color(patch_color_t * ppcr, const patch_fill_state_t *pfs);
 int gx_shade_background(gx_device *pdev, const gs_fixed_rect *rect, 
 	const gx_device_color *pdevc, gs_logical_operation_t log_op);
 
+int patch_color_to_device_color(const patch_fill_state_t *pfs, 
+	const patch_color_t *c, gx_device_color *pdevc);
+
 byte *reserve_colors(patch_fill_state_t *pfs, patch_color_t *c0[], int n);
 void release_colors(patch_fill_state_t *pfs, byte *ptr, int n);
+
+dev_proc_fill_linear_color_triangle(gx_fill_triangle_small);
 
 #endif /* gxshade4_INCLUDED */

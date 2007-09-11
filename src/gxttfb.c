@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxttfb.c,v 1.8 2007/09/10 14:08:47 Arabidopsis Exp $ */
+/* $Id: gxttfb.c,v 1.9 2007/09/11 15:24:29 Arabidopsis Exp $ */
 /* A bridge to True Type interpreter. */
 
 #include "gx.h"

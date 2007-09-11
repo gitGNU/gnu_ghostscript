@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 artofcode LLC.
+/* Copyright (C) 2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: simscale.c,v 1.2 2007/08/01 14:26:42 jemarch Exp $ */
+/* $Id: simscale.c,v 1.3 2007/09/11 15:24:41 Arabidopsis Exp $ */
 /* Image mask interpolation filter */
 
 #include "memory_.h"

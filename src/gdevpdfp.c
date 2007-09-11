@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfp.c,v 1.10 2007/09/10 14:08:44 Arabidopsis Exp $ */
+/* $Id: gdevpdfp.c,v 1.11 2007/09/11 15:24:04 Arabidopsis Exp $ */
 /* Get/put parameters for PDF-writing driver */
 #include "memory_.h"
 #include "string_.h"
@@ -442,7 +442,7 @@ gdev_pdf_put_params_impl(gx_device * dev, const gx_device_pdf * save_dev, gs_par
     }
     if (pdev->params.ColorConversionStrategy == ccs_UseDeviceIndependentColor) {
 	if (!pdev->UseCIEColor) {
-	    eprintf("Set UseCUEColor for UseDeviceIndependentColor to work properly.\n");
+	    eprintf("Set UseCIEColor for UseDeviceIndependentColor to work properly.\n");
 	    ecode = gs_note_error(gs_error_rangecheck);
 	    pdev->UseCIEColor = true;
 	}
@@ -452,7 +452,7 @@ gdev_pdf_put_params_impl(gx_device * dev, const gx_device_pdf * save_dev, gs_par
 	    eprintf("UseDeviceDependentColorForImages is not supported. Use UseDeviceIndependentColor.\n");
 	    pdev->params.ColorConversionStrategy = ccs_UseDeviceIndependentColor;
 	    if (!pdev->UseCIEColor) {
-		eprintf("Set UseCUEColor for UseDeviceIndependentColor to work properly.\n");
+		eprintf("Set UseCIEColor for UseDeviceIndependentColor to work properly.\n");
 		ecode = gs_note_error(gs_error_rangecheck);
 		pdev->UseCIEColor = true;
 	    }

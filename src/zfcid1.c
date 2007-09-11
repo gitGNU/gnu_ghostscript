@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfcid1.c,v 1.9 2007/09/10 14:08:45 Arabidopsis Exp $ */
+/* $Id: zfcid1.c,v 1.10 2007/09/11 15:24:20 Arabidopsis Exp $ */
 /* CIDFontType 1 and 2 operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -285,7 +285,7 @@ zbuildfont11(i_ctx_t *i_ctx_p)
     if (MetricsCount & 1)	/* only allowable values are 0, 2, 4 */
 	return_error(e_rangecheck);
     code = dict_find_string(op, "File", &pfile);
-    if (code < 0 && code != e_dictfull)
+    if (code < 0 && code != e_undefined)
 	return code;
     if (code > 0) {
 	ref *file_table_pos, *a, v;

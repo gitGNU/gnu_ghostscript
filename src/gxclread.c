@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclread.c,v 1.8 2007/09/10 14:08:39 Arabidopsis Exp $ */
+/* $Id: gxclread.c,v 1.9 2007/09/11 15:23:44 Arabidopsis Exp $ */
 /* Command list reading for Ghostscript. */
 #include "memory_.h"
 #include "gx.h"
@@ -33,6 +33,7 @@
 #include "gxhttile.h"
 #include "gdevplnx.h"
 #include "gsmemory.h"
+#include "vdtrace.h"
 /*
  * We really don't like the fact that gdevprn.h is included here, since
  * command lists are supposed to be usable for purposes other than printer
@@ -475,6 +476,24 @@ clist_render_rectangle(gx_device_clist *cldev, const gs_int_rect *prect,
     for (i = 0; i < num_pages && code >= 0; ++i) {
 	const gx_placed_page *ppage = &ppages[i];
 
+	/*
+	 * Set the band_offset_? values in case the buffer device
+	 * needs this. Example, wtsimdi device needs to adjust the 
+	 * phase of the dithering based on the page position, NOT
+	 * the position within the band buffer to avoid band stitch
+	 * lines in the dither pattern.
+	 *
+	 * The band_offset_x is not important for placed pages that
+	 * are nested on a 'master' page (imposition) since each
+	 * page expects to be dithered independently, but setting
+	 * this allows pages to be contiguous without a dithering
+	 * shift.
+	 *
+	 * The following sets the band_offset_? relative to the
+	 * master page.
+	 */
+	bdev->band_offset_x = ppage->offset.x;
+	bdev->band_offset_y = ppage->offset.y + (band_first * band_height);
 	code = clist_playback_file_bands(playback_action_render,
 					 crdev, &ppage->page->info,
 					 bdev, band_first, band_last,
@@ -534,7 +553,15 @@ clist_playback_file_bands(clist_playback_action action,
 	s_std_init(&s, sbuf, cbuf_size, &no_procs, s_mode_read);
 	s.foreign = 1;
 	s.state = (stream_state *)&rs;
+
+
+	vd_get_dc('s');
+	vd_set_shift(0, 0);
+	vd_set_scale(0.01);
+	vd_set_origin(0, 0);
+	vd_erase(RGB(192, 192, 192));
 	code = clist_playback_band(action, crdev, &s, target, x0, y0, mem);
+	vd_release_dc;
     }
 
     /* Close the files if we just opened them. */
@@ -561,6 +588,15 @@ clist_get_band_complexity(gx_device *dev, int y)
 	if (crdev->band_complexity_array == NULL)
 	    return NULL;
 
+        {
+            /* NB this is a temporary workaround until the band
+               complexity machinery can be removed entirely. */
+            gx_colors_used_t colors_used;
+            int range_ignored;
+            gdev_prn_colors_used(dev, y, 1, &colors_used, &range_ignored);
+            crdev->band_complexity_array[band_number].nontrivial_rops = (int)colors_used.slow_rop;
+            crdev->band_complexity_array[band_number].uses_color = (int)colors_used.or;
+        }
 	return &crdev->band_complexity_array[band_number];
     }
     return NULL;

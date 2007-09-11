@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sjpx.h,v 1.4 2007/08/01 14:26:43 jemarch Exp $ */
+/* $Id: sjpx.h,v 1.5 2007/09/11 15:24:42 Arabidopsis Exp $ */
 /* Definitions for JPXDecode filter (JPEG 2000) */
 /* we link to the JasPer library for the actual decoding */
 

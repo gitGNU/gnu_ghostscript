@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 /* gdevdsp.c */
-/* $Id: gdevdsp.c,v 1.10 2007/09/10 14:08:38 Arabidopsis Exp $ */
+/* $Id: gdevdsp.c,v 1.11 2007/09/11 15:23:44 Arabidopsis Exp $ */
 
 /*
  * DLL based display device driver.
@@ -1357,8 +1357,9 @@ display_alloc_bitmap(gx_device_display * ddev, gx_device * param_dev)
      * so we can place the bitmap in special memory.
      */
     ddev->mdev->line_pointer_memory = ddev->mdev->memory;
-    ddev->ulBitmapSize = gdev_mem_bits_size(ddev->mdev,
-	ddev->mdev->width, ddev->mdev->height);
+    if (gdev_mem_bits_size(ddev->mdev, ddev->mdev->width, ddev->mdev->height,
+	&(ddev->ulBitmapSize)) < 0)
+	return_error(gs_error_VMerror);
 
     /* allocate bitmap using an allocator not subject to GC */
     if (ddev->callback->display_memalloc 

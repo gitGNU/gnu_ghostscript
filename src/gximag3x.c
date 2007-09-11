@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gximag3x.c,v 1.10 2007/09/10 14:08:40 Arabidopsis Exp $ */
+/* $Id: gximag3x.c,v 1.11 2007/09/11 15:24:23 Arabidopsis Exp $ */
 /* ImageType 3x image implementation */
 /****** THE REAL WORK IS NYI ******/
 #include "math_.h"		/* for ceil, floor */
@@ -495,6 +495,9 @@ make_midx_default(gx_device **pmidev, gx_device *dev, int width, int height,
     gx_device_memory *midev;
     int code;
 
+    if (width != 0)
+	if (height > max_ulong/width)	/* protect against overflow in bitmap size */
+	    return_error(gs_error_VMerror);
     if (mdproto == 0)
 	return_error(gs_error_rangecheck);
     midev = gs_alloc_struct(mem, gx_device_memory, &st_device_memory,

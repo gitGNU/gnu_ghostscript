@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfb.c,v 1.9 2007/08/01 14:25:51 jemarch Exp $ */
+/* $Id: gdevpdfb.c,v 1.10 2007/09/11 15:24:04 Arabidopsis Exp $ */
 /* Low-level bitmap image handling for PDF-writing driver */
 #include "string_.h"
 #include "gx.h"
@@ -129,7 +129,7 @@ pdf_copy_mono(gx_device_pdf *pdev,
 	      gx_color_index one, const gx_clip_path *pcpath)
 {
     int code;
-    gs_color_space *pcs;
+    gs_color_space *pcs = NULL;
     cos_value_t cs_value;
     cos_value_t *pcsvalue;
     byte palette[arch_sizeof_color_index * 2];

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclmem.c,v 1.7 2007/09/10 14:08:42 Arabidopsis Exp $ */
+/* $Id: gxclmem.c,v 1.8 2007/09/11 15:24:33 Arabidopsis Exp $ */
 /* RAM-based command list implementation */
 #include "memory_.h"
 #include "gx.h"
@@ -137,7 +137,7 @@ LIMITATIONS.
    least as large as the fixed overhead of the compressor plus the
    decompressor, plus the expected compressed size of a block that size.
  */
-private const long COMPRESSION_THRESHOLD = 300000;
+private const long COMPRESSION_THRESHOLD = 32000000;
 
 #define NEED_TO_COMPRESS(f)\
   ((f)->ok_to_compress && (f)->total_space > COMPRESSION_THRESHOLD)

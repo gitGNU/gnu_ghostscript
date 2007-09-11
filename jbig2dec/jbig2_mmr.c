@@ -1,14 +1,14 @@
 /*
 jbig2dec
 
-Copyright (C) 2001-2002 artofcode LLC.
+Copyright (C) 2001-2002 Artifex Software, Inc.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.
 
-$Id: jbig2_mmr.c,v 1.2 2007/05/07 11:22:12 Arabidopsis Exp $
+$Id: jbig2_mmr.c,v 1.3 2007/09/11 15:24:52 Arabidopsis Exp $
 */
 
 /*

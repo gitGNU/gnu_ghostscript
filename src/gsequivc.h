@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gsequivc.h,v 1.3 2007/08/01 14:26:05 jemarch Exp $ */
+/*$Id: gsequivc.h,v 1.4 2007/09/11 15:23:54 Arabidopsis Exp $ */
 /* Header for routines for determining equivalent color for spot colors */
 
 /* For more information, see comment at the start of src/gsequivc.c */

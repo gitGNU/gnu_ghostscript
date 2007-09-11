@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (C) 2002 artofcode LLC.
+# Copyright (C) 2002-2007 Artifex Software, Inc.
 #
 # This file is part of GNU ghostscript
 #
@@ -20,7 +20,7 @@
 # 
 
 # script to analyse differences in Adobe Font Metrics files
-# $Id: afmutil.py,v 1.3 2007/08/01 14:26:55 jemarch Exp $
+# $Id: afmutil.py,v 1.4 2007/09/11 15:25:15 Arabidopsis Exp $
 
 import string
 
@@ -112,12 +112,26 @@ def diff(a,b):
     two = fontmetric(b)
     two.parse()
     print "differences between '"+a+"' and '"+b+"':"
-    print "  [not yet implemented. try --dump on each file and then running 'diff']"
-    
+    #print "  [not yet implemented. try --dump on each file and then running 'diff']"
+    # break abstraction
+    glyphs = one.metrics.keys()
+    glyphs.sort()
+    count = 0
+    for glyph in glyphs:
+      awx = one.metrics[glyph]['WX']
+      try:
+        bwx = two.metrics[glyph]['WX']
+      except KeyError:
+        continue
+      if awx != bwx:
+        count += 1
+        print " ", glyph, awx, bwx
+    print count, "advance width differences"
+
 import sys, getopt
 
 def usage():
-    print "Usage: " + sys.argv[0] + "[options] <files>"
+    print "Usage: " + sys.argv[0] + " [options] <file1.afm> [<file2.afm>]"
     print "reads adobe font metric files an preforms various tasks"
     print " options:"
     print "   --dump prints the parsed data for manual comparison"

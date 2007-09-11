@@ -1,4 +1,4 @@
-#  Copyright (C) 2003-2006 artofcode LLC.
+#  Copyright (C) 2003-2006 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: jbig2.mak,v 1.8 2007/08/01 14:26:39 jemarch Exp $
+# $Id: jbig2.mak,v 1.9 2007/09/11 15:23:56 Arabidopsis Exp $
 
 # makefile for jbig2dec library code.
 # Users of this makefile must define the following:

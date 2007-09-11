@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevxini.c,v 1.8 2007/08/01 14:25:58 jemarch Exp $ */
+/* $Id: gdevxini.c,v 1.9 2007/09/11 15:24:31 Arabidopsis Exp $ */
 /* X Windows driver initialization/finalization */
 #include "memory_.h"
 #include "x_.h"
@@ -556,8 +556,8 @@ x_set_buffer(gx_device_X * xdev)
 	    byte *buffer;
 	    ulong space;
 
-	    space = gdev_mem_data_size(mdev, xdev->width, xdev->height);
-	    if (space > xdev->MaxBitmap) {
+	    if (gdev_mem_data_size(mdev, xdev->width, xdev->height, &space) < 0 ||
+	    	space > xdev->MaxBitmap) {
 		buffered = false;
 		goto setup;
 	    }

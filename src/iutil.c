@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: iutil.c,v 1.8 2007/08/01 14:26:38 jemarch Exp $ */
+/* $Id: iutil.c,v 1.9 2007/09/11 15:24:40 Arabidopsis Exp $ */
 /* Utilities for Ghostscript interpreter */
 #include "math_.h"		/* for fabs */
 #include "memory_.h"

@@ -7,7 +7,7 @@ AC_CONFIG_SRCDIR([jbig2dec.c])
 AM_INIT_AUTOMAKE([-Wall])
 AM_CONFIG_HEADER(config.h)
 
-dnl AC_REVISION([$Rev: 6227 $])
+dnl AC_REVISION([$Rev: 8022 $])
 
 # Checks for programs.
 AC_PROG_CC

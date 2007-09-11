@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsiparm3.h,v 1.6 2007/08/01 14:26:08 jemarch Exp $ */
+/* $Id: gsiparm3.h,v 1.7 2007/09/11 15:24:33 Arabidopsis Exp $ */
 /* ImageType 3 image parameter definition */
 
 #ifndef gsiparm3_INCLUDED

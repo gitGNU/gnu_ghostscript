@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: scfd.c,v 1.8 2007/09/10 14:08:39 Arabidopsis Exp $ */
+/* $Id: scfd.c,v 1.9 2007/09/11 15:23:45 Arabidopsis Exp $ */
 /* CCITTFax decoding filter */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"
@@ -306,7 +306,7 @@ s_CFD_process(stream_state * st, stream_cursor_read * pr,
 	 * in the string of initial zeros in the EOL.  If EndOfLine
 	 * is false, we aren't sure what we should do....
 	 */
-	if (ss->EncodedByteAlign & !ss->EndOfLine)
+	if (ss->EncodedByteAlign && !ss->EndOfLine)
 	    ss->bits_left &= ~7;
     }
     /* If we're between scan lines, scan for EOLs. */

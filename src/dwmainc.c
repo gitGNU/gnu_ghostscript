@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: dwmainc.c,v 1.8 2007/08/01 14:25:43 jemarch Exp $ */
+/* $Id: dwmainc.c,v 1.9 2007/09/11 15:23:51 Arabidopsis Exp $ */
 /* dwmainc.c */
 
 #include "windows_.h"

@@ -1,7 +1,16 @@
 #!/bin/sh
-# $Id: printafm,v 1.3 2007/05/07 11:22:07 Arabidopsis Exp $
+# $Id: printafm,v 1.4 2007/09/11 15:24:50 Arabidopsis Exp $
 # Print the metrics from a font in AFM format.  Usage:
 #	printafm fontname
 # Output goes to stdout.
 
-exec gs -q -dNODISPLAY -- printafm.ps "$@"
+# This definition is changed on install to match the
+# executable name set in the makefile
+GS_EXECUTABLE=gs
+gs="`dirname $0`/$GS_EXECUTABLE"
+if test ! -x "$gs"; then
+	gs="$GS_EXECUTABLE"
+fi
+GS_EXECUTABLE="$gs"
+
+exec "$GS_EXECUTABLE" -q -dNODISPLAY -- printafm.ps "$@"

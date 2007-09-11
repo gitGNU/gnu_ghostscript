@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zchar42.h,v 1.5 2007/08/01 14:26:48 jemarch Exp $ */
+/* $Id: zchar42.h,v 1.6 2007/09/11 15:24:26 Arabidopsis Exp $ */
 
 #ifndef zchar42_INCLUDED
 #  define zchar42_INCLUDED

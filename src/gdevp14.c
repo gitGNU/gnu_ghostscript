@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevp14.c,v 1.11 2007/09/10 14:08:47 Arabidopsis Exp $	*/
+/* $Id: gdevp14.c,v 1.12 2007/09/11 15:24:22 Arabidopsis Exp $	*/
 /* Compositing devices for implementing	PDF 1.4	imaging	model */
 
 #include "math_.h"
@@ -2147,24 +2147,14 @@ pdf14_begin_transparency_group(gx_device *dev,
     gs_rect dev_bbox;
     gs_int_rect rect;
     int code;
-    gs_fixed_point p0;
 
     code = gs_bbox_transform(pbbox, &ctm_only(pis), &dev_bbox);
     if (code < 0)
 	return code;
-
-    p0.x = float2fixed( dev_bbox.p.x );
-    p0.y = float2fixed( dev_bbox.p.y );
-
-    rect.p.x = fixed2int_pixround( p0.x );
-    rect.p.y = fixed2int_pixround( p0.y );
-
-    p0.x = float2fixed( dev_bbox.q.x );
-    p0.y = float2fixed( dev_bbox.q.y );
-
-    rect.q.x = fixed2int_pixround( p0.x );
-    rect.q.y = fixed2int_pixround( p0.y );
-
+    rect.p.x = (int)floor(dev_bbox.p.x);
+    rect.p.y = (int)floor(dev_bbox.p.y);
+    rect.q.x = (int)ceil(dev_bbox.q.x);
+    rect.q.y = (int)ceil(dev_bbox.q.y);
     rect_intersect(rect, pdev->ctx->rect);
     /* Make sure the rectangle is not anomalous (q < p) -- see gsrect.h */
     if (rect.q.x < rect.p.x)

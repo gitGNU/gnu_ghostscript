@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfu.c,v 1.10 2007/08/01 14:25:52 jemarch Exp $ */
+/* $Id: gdevpdfu.c,v 1.11 2007/09/11 15:24:23 Arabidopsis Exp $ */
 /* Output utilities for PDF-writing driver */
 #include "memory_.h"
 #include "jpeglib_.h"		/* for sdct.h */
@@ -446,17 +446,17 @@ private const context_proc context_procs[4][4] =
 private int
 pdf_object_key(const gx_device_pdf * pdev, gs_id object_id, byte key[16])
 {
-    md5_state_t md5;
-    md5_byte_t zero[2] = {0, 0}, t;
+    gs_md5_state_t md5;
+    gs_md5_byte_t zero[2] = {0, 0}, t;
     int KeySize = pdev->KeyLength / 8;
 
-    md5_init(&md5);
-    md5_append(&md5, pdev->EncryptionKey, KeySize);
-    t = (byte)(object_id >>  0);  md5_append(&md5, &t, 1);
-    t = (byte)(object_id >>  8);  md5_append(&md5, &t, 1);
-    t = (byte)(object_id >> 16);  md5_append(&md5, &t, 1);
-    md5_append(&md5, zero, 2);
-    md5_finish(&md5, key);
+    gs_md5_init(&md5);
+    gs_md5_append(&md5, pdev->EncryptionKey, KeySize);
+    t = (byte)(object_id >>  0);  gs_md5_append(&md5, &t, 1);
+    t = (byte)(object_id >>  8);  gs_md5_append(&md5, &t, 1);
+    t = (byte)(object_id >> 16);  gs_md5_append(&md5, &t, 1);
+    gs_md5_append(&md5, zero, 2);
+    gs_md5_finish(&md5, key);
     return min(KeySize + 5, 16);
 }
 
@@ -476,7 +476,7 @@ pdf_begin_encrypt(gx_device_pdf * pdev, stream **s, gs_id object_id)
 {
     gs_memory_t *mem = pdev->v_memory;
     stream_arcfour_state *ss;
-    md5_byte_t key[16];
+    gs_md5_byte_t key[16];
     int code, keylength;
 
     if (!pdev->KeyLength)
@@ -883,9 +883,12 @@ pdf_find_same_resource(gx_device_pdf * pdev, pdf_resource_type_t rtype, pdf_reso
     for (i = 0; i < NUM_RESOURCE_CHAINS; i++) {
 	for (pres = pchain[i]; pres != 0; pres = pres->next) {
 	    if (*ppres != pres) {
+		int code;
 		cos_object_t *pco1 = pres->object;
-		int code = pco0->cos_procs->equal(pco0, pco1, pdev);
 
+		if (cos_type(pco0) != cos_type(pco1))
+		    continue;	    /* don't compare different types */
+		code = pco0->cos_procs->equal(pco0, pco1, pdev);
 		if (code < 0)
 		    return code;
 		if (code > 0) {

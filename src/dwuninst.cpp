@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-// $Id: dwuninst.cpp,v 1.9 2007/08/01 14:25:44 jemarch Exp $
+// $Id: dwuninst.cpp,v 1.10 2007/09/11 15:24:41 Arabidopsis Exp $
 
 #define STRICT
 #include <windows.h>
@@ -839,7 +839,7 @@ init(void)
 	    s++;
     }
     len = s - p;
-    strncpy(szLogFile, p, min(len, sizeof(szLogFile)-1));
+    strncpy(szLogFile, p, min(len, (int)sizeof(szLogFile)-1));
     szLogFile[len] = '\0';
     if (inquote && (*s == '\042')) {
 	s++;

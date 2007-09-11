@@ -1,7 +1,7 @@
 /*
     jbig2dec
     
-    Copyright (c) 2003 artofcode LLC.
+    Copyright (C) 2003 Artifex Software, Inc.
     
     This software is distributed under license and may not
     be copied, modified or distributed except as expressly
@@ -13,7 +13,7 @@
     Artifex Software, Inc.,  101 Lucas Valley Road #110,
     San Rafael, CA  94903, U.S.A., +1(415)492-9861.
         
-    $Id: os_types.h,v 1.4 2007/05/07 11:22:12 Arabidopsis Exp $
+    $Id: os_types.h,v 1.5 2007/09/11 15:24:52 Arabidopsis Exp $
 */
 
 /*
@@ -41,7 +41,7 @@
 #endif
 #elif defined(HAVE_CONFIG_H)
 # include "config_types.h"
-#elif defined(_WIN32)
+#elif defined(_WIN32) || defined(__WIN32__) 
 # include "config_win32.h"
 #endif
 

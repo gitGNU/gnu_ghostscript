@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclip2.h,v 1.6 2007/08/01 14:26:18 jemarch Exp $ */
+/* $Id: gxclip2.h,v 1.7 2007/09/11 15:23:46 Arabidopsis Exp $ */
 /* Tiled mask clipping device and interface */
 
 #ifndef gxclip2_INCLUDED

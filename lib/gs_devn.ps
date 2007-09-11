@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: gs_devn.ps,v 1.5 2007/08/01 14:25:37 jemarch Exp $
+% $Id: gs_devn.ps,v 1.6 2007/09/11 15:24:50 Arabidopsis Exp $
 % DeviceN color space method dictionary; this depends on gs_sepr.ps
 
 
@@ -201,10 +201,11 @@ colorspacedict
       {
         .usealternate
           {
-            pop currentcolor
+            pop
+            currentcolor
             currentcolorspace 3 get exec
             currentcolorspace 2 get
-            //clear_setcolor_operands exec
+            //clear_setcolor_operands exec            
           }
           { pop }
         ifelse

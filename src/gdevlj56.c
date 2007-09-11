@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevlj56.c,v 1.8 2007/08/01 14:25:48 jemarch Exp $ */
+/* $Id: gdevlj56.c,v 1.9 2007/09/11 15:24:25 Arabidopsis Exp $ */
 /* H-P LaserJet 5 & 6 drivers for Ghostscript */
 #include "gdevprn.h"
 #include "stream.h"
@@ -148,7 +148,7 @@ ljet5_print_page(gx_device_printer * pdev, FILE * prn_stream)
 	};
 
 	px_write_page_header(s, (gx_device *)pdev);
-	px_write_select_media(s, (gx_device *)pdev, NULL, NULL);
+	px_write_select_media(s, (gx_device *)pdev, NULL, NULL, 0, false, false);
 	PX_PUT_LIT(s, page_header);
 	if (pdev->color_info.depth == 1)
 	    PX_PUT_LIT(s, mono_header);

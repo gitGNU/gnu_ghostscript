@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: idparam.c,v 1.8 2007/08/01 14:26:34 jemarch Exp $ */
+/* $Id: idparam.c,v 1.9 2007/09/11 15:24:37 Arabidopsis Exp $ */
 /* Utilities for getting parameters out of dictionaries. */
 #include "memory_.h"
 #include "string_.h"		/* for strlen */

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevl256.c,v 1.6 2007/08/01 14:25:48 jemarch Exp $ */
+/* $Id: gdevl256.c,v 1.7 2007/09/11 15:23:46 Arabidopsis Exp $ */
 /* Ghostscript driver for 256-color VGA modes with Linux and vgalib */
 /* This Driver was derived from the BGI-Driver. It was written
    only for my own purpose. I never planned to release it or send
@@ -282,6 +282,15 @@ lvga256_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
     gl_fillbox(x, y, w, h, color);
     return 0;
 }
+
+#ifdef GS_DEVS_SHARED
+extern void gs_lib_register_device(const gx_device *dev);
+void
+gs_shared_init(void)
+{
+  gs_lib_register_device(&gs_lvga256_device);
+}
+#endif
 
 /* Tile a rectangle.  If neither color is transparent, */
 /* pre-clear the rectangle to color0 and just tile with color1. */

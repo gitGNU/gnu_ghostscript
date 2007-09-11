@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfilter.c,v 1.8 2007/09/10 14:08:42 Arabidopsis Exp $ */
+/* $Id: zfilter.c,v 1.9 2007/09/11 15:23:47 Arabidopsis Exp $ */
 /* Filter creation */
 #include "memory_.h"
 #include "ghost.h"
@@ -220,7 +220,7 @@ filter_read(i_ctx_t *i_ctx_p, int npop, const stream_template * template,
 	    sstrm->is_temp = 1;
 	    break;
 	case t_file:
-	    check_read_known_file(sstrm, sop, return);
+            check_read_known_file_else(sstrm, sop, return, DO_NOTHING);
 	    ialloc_set_space(idmemory, use_space);
 	    goto ens;
 	default:

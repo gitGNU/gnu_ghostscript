@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfo.h,v 1.8 2007/08/01 14:25:52 jemarch Exp $ */
+/* $Id: gdevpdfo.h,v 1.9 2007/09/11 15:23:49 Arabidopsis Exp $ */
 /* Internal definitions for "objects" for pdfwrite driver. */
 
 #ifndef gdevpdfo_INCLUDED

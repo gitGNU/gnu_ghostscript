@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: smtf.c,v 1.6 2007/08/01 14:26:44 jemarch Exp $ */
+/* $Id: smtf.c,v 1.7 2007/09/11 15:24:16 Arabidopsis Exp $ */
 /* MoveToFront filters */
 #include "stdio_.h"
 #include "strimpl.h"

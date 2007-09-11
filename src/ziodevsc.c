@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ziodevsc.c,v 1.8 2007/09/10 14:08:45 Arabidopsis Exp $ */
+/* $Id: ziodevsc.c,v 1.9 2007/09/11 15:24:05 Arabidopsis Exp $ */
 /* %stdxxx IODevice implementation using callouts for PostScript interpreter */
 #include "stdio_.h"
 #include "ghost.h"

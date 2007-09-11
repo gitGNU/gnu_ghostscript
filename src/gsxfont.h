@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsxfont.h,v 1.6 2007/08/01 14:26:15 jemarch Exp $ */
+/* $Id: gsxfont.h,v 1.7 2007/09/11 15:24:17 Arabidopsis Exp $ */
 /* External font client definitions for Ghostscript library */
 
 #ifndef gsxfont_INCLUDED

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sjpx_luratech.c,v 1.3 2007/08/01 14:26:43 jemarch Exp $ */
+/* $Id: sjpx_luratech.c,v 1.4 2007/09/11 15:23:57 Arabidopsis Exp $ */
 /* JPXDecode filter implementation -- hooks in the Luratech JPEG2K CSDK */
  
 #include "memory_.h"

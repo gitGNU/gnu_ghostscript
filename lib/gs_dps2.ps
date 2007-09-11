@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: gs_dps2.ps,v 1.5 2007/08/01 14:25:37 jemarch Exp $
+% $Id: gs_dps2.ps,v 1.6 2007/09/11 15:24:49 Arabidopsis Exp $
 % Initialization file for basic Display PostScript functions
 % that are also included in Level 2.
 
@@ -130,7 +130,7 @@ end
   } if
   exec exec
   .setglobal pop
-} odef
+} .bind odef
 % Redefine setscreen and setcolorscreen to recognize halftone dictionaries,
 % and to insert the Frequency and Angle into Type 1 halftones, per
 % Adobe TN 5085.
@@ -149,13 +149,13 @@ end
 	   { .fixsethalftonescreen sethalftone pop pop pop }
 	   { //setscreen }
 	  ifelse
-	} odef
+	} .bind odef
 /setcolorscreen		% <ignore*11> <dict> setcolorscreen -
 	{ dup type /dicttype eq
 	   { .fixsethalftonescreen sethalftone 12 { pop } repeat }
 	   { //setcolorscreen }
 	  ifelse
-	} odef
+	} .bind odef
 % Redefine currentscreen and currentcolorscreen to extract the Frequency
 % and Angle from Type 1 halftones, per Adobe TN 5085.
 /.fixcurrenthalftonescreen	% <dict> .fix... <freq> <angle> <proc>

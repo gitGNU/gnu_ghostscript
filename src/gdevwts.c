@@ -1,4 +1,4 @@
-/* Copyright (C) 2006-2007 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2006-2007 Artifex Software, Inc.  All rights reserved.
 
   This file is part of GNU ghostscript
 
@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevwts.c,v 1.1 2007/09/10 14:08:42 Arabidopsis Exp $ */
+/* $Id: gdevwts.c,v 1.2 2007/09/11 15:24:02 Arabidopsis Exp $ */
 /* ALPHA: Sample Device that provides WTS screening and IMDI color management */
 /* TODO: this should be configurable */
 #define LINK_ICC_NAME	"../../link.icc"
@@ -91,6 +91,27 @@ typedef struct cached_color_s {
     byte cmyk[4];
 } cached_color;
 
+#define COLOR_CACHE_SIZE 4096
+/*
+ * Hash function should preserve low bits (for images) and MUST map white and
+ * black to different slots
+ */
+#if COLOR_CACHE_SIZE == 256
+#  define COLOR_TO_CACHE_INDEX(color) (((color + 0x000001) ^ (color >> 8) ^ (color >> 16)) & 0xff)
+#elif COLOR_CACHE_SIZE == 4096
+#  define COLOR_TO_CACHE_INDEX(color) ((color ^ (color>>4) ^ (color>>8)) & 0xfff)
+#elif COLOR_CACHE_SIZE == 8192
+#  define COLOR_TO_CACHE_INDEX(color) (((color + 0x010204) ^ (((color << 24) | color) >> 11)) & 0x1fff)
+#elif COLOR_CACHE_SIZE == 16384
+#  define COLOR_TO_CACHE_INDEX(color) (((color + 0x010204) ^ (((color << 24) | color) >> 10)) & 0x3fff)
+#elif COLOR_CACHE_SIZE == 32768
+#  define COLOR_TO_CACHE_INDEX(color) (((color + 0x010204) ^ (((color << 24) | color) >> 9)) & 0x7fff)
+#elif COLOR_CACHE_SIZE == 65536
+#  define COLOR_TO_CACHE_INDEX(color) (((color + 0x010204) ^ (((color << 24) | color) >> 8)) & 0xffff)
+#else
+#  define COLOR_TO_CACHE_INDEX(color) 0
+#endif
+
 typedef struct gx_device_wtsimdi_s {
     gx_device_common;
     gx_prn_device_common;
@@ -100,7 +121,11 @@ typedef struct gx_device_wtsimdi_s {
     icc *icco;
     icmLuBase *luo;
     imdi *mdo;
-    cached_color zero, one;
+    cached_color *color_cache;
+    cached_color current_color;
+#ifdef DEBUG
+    long color_cache_hit, color_cache_collision, cache_fill_empty, color_is_current;
+#endif
 } gx_device_wtsimdi;
 
 private const gx_device_procs wtsimdi_procs =
@@ -120,8 +145,10 @@ const gx_device_wtsimdi gs_wtsimdi_device = {
 			3, 24, 255, 255, 256, 256, wtsimdi_print_page)
 };
 
+#if DUMMY_WTS_HALFTONE_LINE
 private void
 wts_halftone_line(void **wts, int y, int width, int n_planes,
+		  long band_offset_x, long band_offset_y,
 		  byte **dst, const byte *src)
 {
     int x;
@@ -143,9 +170,11 @@ wts_halftone_line(void **wts, int y, int width, int n_planes,
 	}
     }
 }
+#endif
 
 private void
 wts_halftone_line_16(wts_cooked_halftone *wch, int y, int width, int n_planes,
+		     long band_offset_x, long band_offset_y,
 		     byte **dst, const byte *src)
 {
     int x;
@@ -162,7 +191,7 @@ wts_halftone_line_16(wts_cooked_halftone *wch, int y, int width, int n_planes,
 	    int n_samples;
 	    int cx, cy;
 
-	    wts_get_samples(w, x, y, &cx, &cy, &n_samples);
+	    wts_get_samples(w, band_offset_x + x, band_offset_y + y, &cx, &cy, &n_samples);
 	    samples = w->samples + cy * w->cell_width + cx;
 
 	    imax = min(width - x, n_samples);
@@ -208,6 +237,7 @@ wts_halftone_line_16(wts_cooked_halftone *wch, int y, int width, int n_planes,
 
 private void
 wts_halftone_line_8(wts_cooked_halftone *wch, int y, int width, int n_planes,
+		    long band_offset_x, long band_offset_y,
 		    byte * dst, const byte * src)
 {
     int x;
@@ -227,7 +257,7 @@ wts_halftone_line_8(wts_cooked_halftone *wch, int y, int width, int n_planes,
 	    int n_samples;
 	    int cx, cy;
 
-	    wts_get_samples(w, x, y, &cx, &cy, &n_samples);
+	    wts_get_samples(w, band_offset_x + x, band_offset_y + y, &cx, &cy, &n_samples);
 	    samples = wch[plane_ix].cell + cy * width_padded + cx;
 
 	    imax = min(width - x, n_samples);
@@ -270,7 +300,7 @@ wts_load_halftone(gs_memory_t *mem, wts_cooked_halftone *wch, const char *fn)
     }
     fread(buf, 1, size, f);
     fclose(f);
-    wts = gs_wts_from_buf(buf);
+    wts = gs_wts_from_buf(buf, size);
     gs_free(mem, buf, size, 1, "wts_load_halftone");
     wch->wts = wts;
     width_padded = wts->cell_width + 7;
@@ -325,26 +355,36 @@ private int
 wtscmyk_print_page(gx_device_printer *pdev, FILE *prn_stream)
 {
     gx_device_wts *wdev = (gx_device_wts *)pdev;
-    int cmyk_bytes = gdev_mem_bytes_per_scan_line((gx_device *) pdev);
+    gx_device_wtsimdi *idev = (gx_device_wtsimdi *)pdev;
+    int cmyk_bytes = gdev_mem_bytes_per_scan_line((gx_device *)pdev);
     /* Output bytes have to be padded to 16 bits. */
     int y;
-    char *cmyk_line = 0;
+    byte *cmyk_line = 0;
     byte *data;
     int code = 0;
     int pbm_bytes;
     int n_planes = pdev->color_info.num_components;
     byte *dst;
     FILE *ostream[4] = {0};
-    int i;
+    int i, unused_color_cache_slots;
 
     /* Initialize the wts halftones. */
     wts_init_halftones(wdev, n_planes);
 
-    cmyk_line = gs_malloc(pdev->memory, cmyk_bytes, 1, "wtscmyk_print_page(in)");
+    cmyk_line = (byte *)gs_malloc(pdev->memory, cmyk_bytes, 1, "wtscmyk_print_page(in)");
     if (cmyk_line == 0) {
 	code = GS_NOTE_ERROR(pdev->memory, gs_error_VMerror);
 	goto out;
     }
+	/* allocate 1 more for sytems that return NULL if requested count is 0 */
+    idev->color_cache = (cached_color *)gs_malloc(idev->memory, COLOR_CACHE_SIZE + 1,
+				sizeof(cached_color), "wtscmyk_print_page(color_cache)");
+#ifdef DEBUG
+    idev->color_cache_hit = idev->color_cache_collision =
+	idev->color_is_current = idev->cache_fill_empty = 0;
+#endif
+    for (i=0; i<COLOR_CACHE_SIZE; i++)		/* clear cache to empty */
+	idev->color_cache[i].color_index = gx_no_color_index;
     pbm_bytes = (pdev->width + 7) >> 3;
     dst = gs_malloc(pdev->memory, pbm_bytes * n_planes, 1,
 		    "wtscmyk_print_page");
@@ -378,14 +418,26 @@ wtscmyk_print_page(gx_device_printer *pdev, FILE *prn_stream)
     /* For each raster line */
     for (y = 0; y < pdev->height; y++) {
 	gdev_prn_get_bits(pdev, y, cmyk_line, &data);
-	wts_halftone_line_8(wdev->wcooked, y, pdev->width, n_planes, dst, data);
+	wts_halftone_line_8(wdev->wcooked, y, pdev->width, n_planes, 
+			    wdev->band_offset_x, wdev->band_offset_y, dst, data);
 	for (i = 0; i < n_planes; i++)
 	    if (ostream[i])
 		fwrite(dst + i * pbm_bytes, 1, pbm_bytes, ostream[i]);
     }
 out:
+#ifdef DEBUG
+    for (i=0,unused_color_cache_slots=0; i<COLOR_CACHE_SIZE; i++)
+	if (idev->color_cache[i].color_index == gx_no_color_index)
+	    unused_color_cache_slots++;
+    if_debug5(':',"wtscmyk_print_page color cache stats: current=%ld, hits=%ld,"
+	" collisions=%ld, fill=%ld, unused_slots=%d\n",
+	idev->color_is_current, idev->color_cache_hit, idev->color_cache_collision,
+	idev->cache_fill_empty, unused_color_cache_slots);
+#endif
     /* Clean up... */
     gs_free(pdev->memory, cmyk_line, cmyk_bytes, 1, "wtscmyk_print_page(in)");
+    gs_free(pdev->memory, idev->color_cache, COLOR_CACHE_SIZE + 1, sizeof(cached_color),
+	    "wtscmyk_print_page(color_cache)");
     gs_free(pdev->memory, dst, pbm_bytes, 1, "wtscmyk_print_page");
     for (i = 1; i < n_planes; i++) {
 	/* Don't close ostream[0], because gdev_prn_close will. */
@@ -482,8 +534,8 @@ wtsimdi_open_device(gx_device *dev)
     idev->icco = icco;
     idev->luo = luo;
     idev->mdo = mdo;
-    idev->zero.color_index = gx_no_color_index;
-    idev->one.color_index = gx_no_color_index;
+    idev->color_cache = NULL;
+    idev->current_color.color_index = gx_no_color_index;
 
     /* guarantee the device bands */
     ((gx_device_printer *)dev)->space_params.banding_type = BandingAlways;
@@ -512,26 +564,48 @@ wtsimdi_close_device(gx_device *dev)
 private int
 wtsimdi_resolve_one(gx_device_wtsimdi *idev, gx_color_index color)
 {
-    if (color != idev->one.color_index) {
-	int code;
-	int r = (color >> 16) & 0xff;
-	int g = (color >> 8) & 0xff;
-	int b = color & 0xff;
-	double rgb[3];
-	double cmyk[4];
+    if (color != idev->current_color.color_index) { /* quick out for same color */
+	int hash = COLOR_TO_CACHE_INDEX(color);	/* 24 bits down to cache index */
 
-        rgb[0] = r / 255.0;
-        rgb[1] = g / 255.0;
-        rgb[2] = b / 255.0;
-        code = idev->luo->lookup(idev->luo, cmyk, rgb);
-        if (code > 1)
-	    return_error(gs_error_unknownerror);
-	idev->one.color_index = color;
-        idev->one.cmyk[0] = cmyk[0] * 255 + 0.5;
-        idev->one.cmyk[1] = cmyk[1] * 255 + 0.5;
-        idev->one.cmyk[2] = cmyk[2] * 255 + 0.5;
-        idev->one.cmyk[3] = cmyk[3] * 255 + 0.5;
+	if (idev->color_cache[hash].color_index == color) {
+	    /* cache hit */
+#ifdef DEBUG
+	    idev->color_cache_hit++;
+#endif
+	    idev->current_color = idev->color_cache[hash];
+	} else {
+	    /* cache collision or empty, fill it */
+	    int code;
+	    int r = (color >> 16) & 0xff;
+	    int g = (color >> 8) & 0xff;
+	    int b = color & 0xff;
+	    double rgb[3];
+	    double cmyk[4];
+
+#ifdef DEBUG
+	    if (idev->color_cache[hash].color_index == gx_no_color_index)
+		idev->cache_fill_empty++;
+	    else
+		idev->color_cache_collision++;
+#endif
+	    rgb[0] = r / 255.0;
+	    rgb[1] = g / 255.0;
+	    rgb[2] = b / 255.0;
+	    code = idev->luo->lookup(idev->luo, cmyk, rgb);
+	    if (code > 1)
+		return_error(gs_error_unknownerror);
+	    idev->current_color.color_index = color;
+	    idev->current_color.cmyk[0] = cmyk[0] * 255 + 0.5;
+	    idev->current_color.cmyk[1] = cmyk[1] * 255 + 0.5;
+	    idev->current_color.cmyk[2] = cmyk[2] * 255 + 0.5;
+	    idev->current_color.cmyk[3] = cmyk[3] * 255 + 0.5;
+	    idev->color_cache[hash] = idev->current_color;
+	}
     }
+#ifdef DEBUG
+    else
+	idev->color_is_current++;
+#endif
     return 0;
 }
 
@@ -543,7 +617,7 @@ wtsimdi_fill_rectangle(gx_device * dev,
     gx_device_memory * const mdev = (gx_device_memory *)dev;
     gx_device_wtsimdi * idev = (gx_device_wtsimdi *)
 	    ((mdev->target) ? (gx_device_wts *)(mdev->target)
-			    : dev);
+			    : (gx_device_wts *)dev);
     wts_cooked_halftone * wch = idev->wcooked;
     int n_planes = 4;
     int code, comp_value;
@@ -576,7 +650,7 @@ wtsimdi_fill_rectangle(gx_device * dev,
 
 	    width_padded = wch[plane_ix].width_padded;
 	    dst = base + first_byte + plane_ix * halftoned_bytes;
-	    comp_value = idev->one.cmyk[plane_ix];
+	    comp_value = idev->current_color.cmyk[plane_ix];
 	    if (comp_value == 0) {
 		if (nfill == 0) {
 		    dst[0] &= (0xff << (8 - (x & 7))) |
@@ -611,7 +685,8 @@ wtsimdi_fill_rectangle(gx_device * dev,
 		    int cx, cy;
 		    int j;
 
-		    wts_get_samples(wch[plane_ix].wts, (x & -8) + (i << 3), y, &cx, &cy, &n_samples);
+		    wts_get_samples(wch[plane_ix].wts, ((dev->band_offset_x + x) & -8) + (i << 3),
+				    (dev->band_offset_y + y), &cx, &cy, &n_samples);
 		    samples = wch[plane_ix].cell + cy * width_padded + cx;
 
 		    imax = min((nfill + 1 - i) << 3, n_samples);
@@ -647,7 +722,7 @@ wtsimdi_copy_mono(gx_device * dev,
     gx_device_memory * const mdev = (gx_device_memory *)dev;
     gx_device_wtsimdi * idev = (gx_device_wtsimdi *)
 	    ((mdev->target) ? (gx_device_wts *)(mdev->target)
-			    : dev);
+			    : (gx_device_wts *)dev);
     wts_cooked_halftone * wch = idev->wcooked;
     int n_planes = 4;
     int code, comp_value;
@@ -686,6 +761,17 @@ wtsimdi_copy_mono(gx_device * dev,
      * Check if this is a new color.  To minimize color conversion
      * time, we keep a couple of values cached in the wtsimdi device.
      */
+#define COPY_MONO_BLACK_IS_K 
+#define COPY_MONO_OPTIMIZATION
+
+#ifdef COPY_MONO_BLACK_IS_K 
+    if (one == 0) {
+	/* FIXME: This should rely on tag bits, but copy_mono black is (probably) only used for text */
+	idev->current_color.cmyk[0] =idev->current_color.cmyk[1] =  idev->current_color.cmyk[2] = 0;
+	idev->current_color.cmyk[3] = 0xff;	/* 100% K channel, 0% C, M, Y */
+	idev->current_color.color_index = 0;
+    } else
+#endif
     if ((code = wtsimdi_resolve_one(idev, one)) < 0)
 	return code;
 
@@ -695,51 +781,40 @@ wtsimdi_copy_mono(gx_device * dev,
         base = scan_line_base(mdev, y);
         for (plane_ix = 0; plane_ix < 4; plane_ix++) {
 	    int nfill = (end_x >> 3) - first_byte;
+	    int i;
+	    byte smask, save_left, save_right;
 
 	    width_padded = wch[plane_ix].width_padded;
 	    dst = base + first_byte + plane_ix * halftoned_bytes;
-	    comp_value = idev->one.cmyk[plane_ix];
-	    if (0 && comp_value == 0) {
-		/* TODO: these cases should be optimized, avoiding a screen */
-		if (nfill == 0) {
-		    dst[0] &= (0xff << (8 - (x & 7))) |
-			((1 << (7 - (end_x & 7))) - 1);
-		} else {
-		    int i;
-
-		    dst[0] &= (0xff << (8 - (x & 7)));
-		    for (i = 1; i < nfill; i++)
-			dst[i] = 0;
-		    dst[i] &= ((1 << (7 - (end_x & 7))) - 1);
+	    save_left = dst[0];
+	    save_right = dst[nfill];
+	    comp_value = idev->current_color.cmyk[plane_ix];
+#ifdef  COPY_MONO_OPTIMIZATION
+	    if (comp_value == 0) {
+		for (i = 0; i < nfill + 1; i++) {
+		    if ((smask = (src[i] << 8 | src[i + 1]) >> sshift) != 0)
+			dst[i] = dst[i] & ~smask;
 		}
-	    } else if (0 && comp_value == 0xff) {
-		if (nfill == 0) {
-		    dst[0] |= ~((0xff << (8 - (x & 7))) |
-			((1 << (7 - (end_x & 7))) - 1));
-		} else {
-		    int i;
-
-		    dst[0] |= ~(0xff << (8 - (x & 7)));
-		    for (i = 1; i < nfill; i++)
-			dst[i] = 0xff;
-		    dst[i] |= ~((1 << (7 - (end_x & 7))) - 1);
+	    } else if (comp_value == 0xff) {
+		for (i = 0; i < nfill + 1; i++) {
+		    if ((smask = (src[i] << 8 | src[i + 1]) >> sshift) != 0)
+			dst[i] = smask | (dst[i] & ~smask) ;
 		}
-	    } else {
-		byte save_left = dst[0];
-		byte save_right = dst[nfill];
-		int i;
-
+	    } else
+#endif
+	    {
 		for (i = 0; i < nfill + 1;) {
 		    int n_samples;
 		    int cx, cy;
 		    int j;
 
-		    wts_get_samples(wch[plane_ix].wts, (x & -8) + (i << 3), y, &cx, &cy, &n_samples);
+		    wts_get_samples(wch[plane_ix].wts, ((dev->band_offset_x + x) & -8) + (i << 3),
+				    (dev->band_offset_y + y), &cx, &cy, &n_samples);
 		    samples = wch[plane_ix].cell + cy * width_padded + cx;
 
 		    imax = min((nfill + 1 - i) << 3, n_samples);
 		    for (j = 0; j < imax; j += 8) {
-			byte smask = (src[i] << 8 | src[i + 1]) >> sshift;
+			smask = (src[i] << 8 | src[i + 1]) >> sshift;
 			if (smask) {
 			    byte b;
 			    b = (((unsigned int)(((int)(samples[j + 0])) - comp_value) >> 24)) & 0x80;
@@ -754,12 +829,13 @@ wtsimdi_copy_mono(gx_device * dev,
 			}
 			i++;
 		    }
-		    dst[0] = (save_left & (0xff << (8 - (x & 7)))) |
-			(dst[0] & ~(0xff << (8 - (x & 7))));
-		    dst[nfill] = (save_right & ((1 << (7 - (end_x & 7))) - 1)) |
-			(dst[nfill] & ~((1 << (7 - (end_x & 7))) - 1));
 		}
 	    }
+	    /* Restore edge areas on left and right that may have been overwritten */
+	    dst[0] = (save_left & (0xff << (8 - (x & 7)))) |
+			(dst[0] & ~(0xff << (8 - (x & 7))));
+	    dst[nfill] = (save_right & ((1 << (7 - (end_x & 7))) - 1)) |
+			(dst[nfill] & ~((1 << (7 - (end_x & 7))) - 1));
         }
 	src += sraster;
     }
@@ -837,7 +913,7 @@ wtsimdi_contone_get_bits_rectangle(gx_device * dev, const gs_int_rect * prect,
 	gx_device_memory * const mdev = (gx_device_memory *)dev;
         gx_device_wtsimdi * idev = (gx_device_wtsimdi *)
 	    ((mdev->target) ? (gx_device_wts *)(mdev->target)
-			    : dev);
+			    : (gx_device_wts *)dev);
 	int width = dev->width;
 	int n_planes = 4;
 	int r_last = -1, g_last = -1, b_last = -1, r, g, b;
@@ -876,8 +952,8 @@ wtsimdi_contone_get_bits_rectangle(gx_device * dev, const gs_int_rect * prect,
 	    *cmyk_data++ = y;
 	    *cmyk_data++ = k;
 	}
-	wts_halftone_line_8(idev->wcooked, original_y, width,
-					    n_planes, buffer, cmyk_buffer);
+	wts_halftone_line_8(idev->wcooked, original_y, width, n_planes,
+			    idev->band_offset_x, idev->band_offset_y,  buffer, cmyk_buffer);
 	params->data[0] = buffer;
 	gs_free(dev->memory, cmyk_buffer, halftoned_bytes * n_planes, 1,
 		       	"wtsimdi_print_page(halftoned_data)");
@@ -920,60 +996,62 @@ wtsimdi_create_buf_device(gx_device **pbdev, gx_device *target,
 /*
  * Create a row of output data.  The output is the same as the pkmraw
  * device.  This a pseudo 1 bit CMYK output.  Actually the output is
- * 3 byte RGB with each byte being either 0 or 1.
+ * 3 byte RGB with each byte being either 0 or 255.
  *
  * The input data is 1 bit per component CMYK.  The data is separated
  * into planes.
  */
+private void
 write_pkmraw_row(int width, byte * data, FILE * pstream)
 {
-#define noSKIP_OUTPUT
-#ifndef SKIP_OUTPUT
-    int x, bit;
-    int halftoned_bytes = (width + 7) >> 3;
-    byte * cdata = data;
-    byte * mdata = data + halftoned_bytes;
-    byte * ydata = mdata + halftoned_bytes;
-    byte * kdata = ydata + halftoned_bytes;
-    byte c = *cdata++;
-    byte m = *mdata++;
-    byte y = *ydata++;
-    byte k = *kdata++;
+    if (pstream == NULL)
+	return;
+    {
+	int x, bit;
+	int halftoned_bytes = (width + 7) >> 3;
+	byte * cdata = data;
+	byte * mdata = data + halftoned_bytes;
+	byte * ydata = mdata + halftoned_bytes;
+	byte * kdata = ydata + halftoned_bytes;
+	byte c = *cdata++;
+	byte m = *mdata++;
+	byte y = *ydata++;
+	byte k = *kdata++;
 
-    /*
-     * Contrary to what the documentation implies, gcc compiles putc
-     * as a procedure call.  This is ridiculous, but since we can't
-     * change it, we buffer groups of pixels ourselves and use fwrite.
-     */
-    for (bit = 7, x = 0; x < width;) {
-	byte raw[80 * 3];	/* 80 is arbitrary, must be a multiple of 8 */
-	int end = min(x + sizeof(raw) / 3, width);
-	byte *outp = raw;
+	/*
+	 * Contrary to what the documentation implies, gcc compiles putc
+	 * as a procedure call.  This is ridiculous, but since we can't
+	 * change it, we buffer groups of pixels ourselves and use fwrite.
+	 */
+	for (bit = 7, x = 0; x < width;) {
+	    byte raw[80 * 3];	/* 80 is arbitrary, must be a multiple of 8 */
+	    int end = min(x + sizeof(raw) / 3, width);
+	    byte *outp = raw;
 
-	for (; x < end; x++) {
+	    for (; x < end; x++) {
 
-	    if ((k >> bit) & 1) {
-		*outp++ = 0;	/* Set output color = black */
-		*outp++ = 0;
-		*outp++ = 0;
-	    } else {
-		*outp++ = 1 - ((c >> bit) & 1);
-		*outp++ = 1 - ((m >> bit) & 1);
-		*outp++ = 1 - ((y >> bit) & 1);
+		if ((k >> bit) & 1) {
+		    *outp++ = 0;	/* Set output color = black */
+		    *outp++ = 0;
+		    *outp++ = 0;
+		} else {
+		    *outp++ = 255 & (255 + ((c >> bit) & 1));
+		    *outp++ = 255 & (255 + ((m >> bit) & 1));
+		    *outp++ = 255 & (255 + ((y >> bit) & 1));
+		}
+		if (bit == 0) {
+		    c = *cdata++;
+		    m = *mdata++;
+		    y = *ydata++;
+		    k = *kdata++;
+		    bit = 7;
+		} else
+		    bit--;
 	    }
-	    if (bit == 0) {
-	        c = *cdata++;
-	        m = *mdata++;
-	        y = *ydata++;
-	        k = *kdata++;
-	        bit = 7;
-	    } else
-	        bit--;
+	    fwrite(raw, 1, outp - raw, pstream);
 	}
-	fwrite(raw, 1, outp - raw, pstream);
+	return;
     }
-#endif
-    return 0;
 }
 
 /*
@@ -988,10 +1066,13 @@ wtsimdi_print_page(gx_device_printer *pdev, FILE *prn_stream)
     byte * halftoned_data;
     byte * halftoned_buffer;
     int halftoned_bytes, y;
-    int code = 0;
+    int i, code = 0;
+    int unused_color_cache_slots;
     int width = pdev->width;
     int height = pdev->height;
     dev_proc_get_bits((*save_get_bits)) = dev_proc(pdev, get_bits);
+    int output_is_nul = !strncmp(pdev->fname, "nul:", min(strlen(pdev->fname), 4)) ||
+	!strncmp(pdev->fname, "/dev/null", min(strlen(pdev->fname), 9));
 
     /*
      * The printer device setup changed the get_bits routine to
@@ -1015,13 +1096,24 @@ wtsimdi_print_page(gx_device_printer *pdev, FILE *prn_stream)
 	code = GS_NOTE_ERROR(pdev->memory, gs_error_VMerror);
 	goto cleanup;
     }
+	/* allocate 1 more for sytems that return NULL if requested count is 0 */
+    idev->color_cache = (cached_color *)gs_malloc(idev->memory, COLOR_CACHE_SIZE + 1,
+				sizeof(cached_color), "wtscmyk_print_page(color_cache)");
+#ifdef DEBUG
+    idev->color_cache_hit = idev->color_cache_collision =
+	idev->color_is_current = idev->cache_fill_empty = 0;
+#endif
+    for (i=0; i<COLOR_CACHE_SIZE; i++)		/* clear cache to empty */
+	idev->color_cache[i].color_index = gx_no_color_index;
 
     /* Initialize output file header. */
-    fprintf(prn_stream, "P6\n%d %d\n", width, height);
-    fprintf(prn_stream, "# Image generated by %s %d.%02d (device=wtsimdi)\n",
+    if (!output_is_nul) {
+	fprintf(prn_stream, "P6\n%d %d\n", width, height);
+	fprintf(prn_stream, "# Image generated by %s %d.%02d (device=wtsimdi)\n",
 	   	gs_program_name(), gs_revision_number() / 100,
 	   			gs_revision_number() % 100);
-    fprintf(prn_stream, "%d\n", 1);
+	fprintf(prn_stream, "%d\n", 255);
+    }
 
     /*
      * Get raster data and then write data to output file.
@@ -1032,11 +1124,21 @@ wtsimdi_print_page(gx_device_printer *pdev, FILE *prn_stream)
 	 * the output data.  Print this data to the output file.
 	 */
 	gdev_prn_get_bits(pdev, y, halftoned_buffer, &halftoned_data);
-#if 1
-	write_pkmraw_row(width, halftoned_data, prn_stream);
-#endif
+	if (!output_is_nul)
+	    write_pkmraw_row(width, halftoned_data, prn_stream);
     }
 cleanup:
+#ifdef DEBUG
+    for (i=0,unused_color_cache_slots=0; i<COLOR_CACHE_SIZE; i++)
+	if (idev->color_cache[i].color_index == gx_no_color_index)
+	    unused_color_cache_slots++;
+    if_debug5(':',"wtsimdi_print_page color cache stats: current=%ld, hits=%ld,"
+	" collisions=%ld, fill=%ld, unused_slots=%d\n",
+	idev->color_is_current, idev->color_cache_hit, idev->color_cache_collision,
+	idev->cache_fill_empty, unused_color_cache_slots);
+#endif
+    gs_free(pdev->memory, idev->color_cache, COLOR_CACHE_SIZE, sizeof(cached_color),
+	    "wtscmyk_print_page(color_cache)");
     if (halftoned_buffer != NULL)
 	gs_free(pdev->memory, halftoned_buffer, halftoned_bytes * n_planes, 1,
 		       	"wtsimdi_print_page(halftoned_buffer)");

@@ -1,4 +1,4 @@
-/* Copyright (C) 2004 artofcode LLC.  All rights reserved.
+/* Copyright (C) 2004 Artifex Software, Inc.  All rights reserved.
   
   This file is part of GNU ghostscript
  
@@ -15,7 +15,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-/* $Id: jpxtopdf.c,v 1.2 2007/08/01 14:26:56 jemarch Exp $ */
+/* $Id: jpxtopdf.c,v 1.3 2007/09/11 15:25:15 Arabidopsis Exp $ */
 /* encapsulates jp2/jpx JPEG2000 images in PDF 1.5 files */
 /* based on jpegtopdf by Tor Andersson */
 

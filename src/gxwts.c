@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,11 +16,11 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/*$Id: gxwts.c,v 1.6 2007/09/10 14:08:41 Arabidopsis Exp $ */
+/*$Id: gxwts.c,v 1.7 2007/09/11 15:24:24 Arabidopsis Exp $ */
 /* Rendering using Well Tempered Screening. */
 #include "stdpre.h"
 #include "memory_.h" /* for memcmp */
-#include <stdlib.h> /* for malloc */
+#include "malloc_.h"
 #include "gx.h"
 #include "gxstate.h"
 #include "gsht.h"

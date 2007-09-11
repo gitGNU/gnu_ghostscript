@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2007 artofcode LLC.
+/* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gsncdummy.c,v 1.1 2007/09/10 14:08:38 Arabidopsis Exp $ */
+/* $Id: gsncdummy.c,v 1.2 2007/09/11 15:24:37 Arabidopsis Exp $ */
 /* Sample implementation for client custom processing of color spaces. */
 
 /*
@@ -64,6 +64,7 @@
 #include "stdpre.h"
 #include "math_.h"
 #include "memory_.h"
+#include "ierrors.h"
 #include "gx.h"
 #include "gserrors.h"
 #include "gscdefs.h"

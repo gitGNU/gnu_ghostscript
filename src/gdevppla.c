@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevppla.c,v 1.7 2007/09/10 14:08:44 Arabidopsis Exp $ */
+/* $Id: gdevppla.c,v 1.8 2007/09/11 15:24:19 Arabidopsis Exp $ */
 /* Support for printer devices with planar buffering. */
 #include "gdevprn.h"
 #include "gdevmpla.h"
@@ -127,7 +127,8 @@ gdev_prn_size_buf_planar(gx_device_buf_space_t *space, gx_device *target,
 					  height, for_band);
     mdev.color_info = target->color_info;
     gdev_prn_set_planar(&mdev, target);
-    space->bits = gdev_mem_bits_size(&mdev, target->width, height);
+    if (gdev_mem_bits_size(&mdev, target->width, height, &(space->bits)) < 0)
+	return_error(gs_error_VMerror);
     space->line_ptrs = gdev_mem_line_ptrs_size(&mdev, target->width, height);
     space->raster = bitmap_raster(target->width * mdev.planes[0].depth);
     return 0;

@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 artofcode LLC.
+#  Copyright (C) 2001-2006 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: ugcclib.mak,v 1.11 2007/09/10 14:08:43 Arabidopsis Exp $
+# $Id: ugcclib.mak,v 1.12 2007/09/11 15:23:55 Arabidopsis Exp $
 # makefile for Unix / gcc library testing.
 
 BINDIR=./libobj
@@ -52,7 +52,7 @@ SHARE_JPEG=0
 JPEG_NAME=jpeg
 
 PSRCDIR=libpng
-PVERSION=10216
+PVERSION=10218
 SHARE_LIBPNG=1
 LIBPNG_NAME=png
 
@@ -75,6 +75,11 @@ ICCSRCDIR=icclib
 
 IJSSRCDIR=ijs
 IJSEXECTYPE=unix
+
+# Define the directory where the imdi library source is stored.
+# See devs.mak for more information
+
+IMDISRCDIR=imdi
 
 # Define how to build the library archives.  (These are not used in any
 # standard configuration.)
@@ -146,6 +151,7 @@ CCFLAGS=$(GENOPT) $(CFLAGS)
 CC_=$(CC) $(CCFLAGS)
 CCAUX=$(CC)
 CC_NO_WARN=$(CC_) -Wno-cast-qual -Wno-traditional
+CC_SHARED=$(CC_)
 
 include $(GLSRCDIR)/unixhead.mak
 include $(GLSRCDIR)/gs.mak

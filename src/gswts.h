@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/*$Id: gswts.h,v 1.6 2007/08/01 14:26:15 jemarch Exp $ */
+/*$Id: gswts.h,v 1.7 2007/09/11 15:24:17 Arabidopsis Exp $ */
 #ifndef gswts_INCLUDED
 #  define gswts_INCLUDED
 
@@ -66,6 +66,6 @@ int
 wts_size(const wts_screen_t *ws);
 
 wts_screen_t *
-gs_wts_from_buf(const byte *buf);
+gs_wts_from_buf(const byte *buf, int bufsize);
 
 #endif

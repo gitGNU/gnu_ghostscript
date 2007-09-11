@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gslib.c,v 1.9 2007/08/01 14:26:08 jemarch Exp $ */
+/* $Id: gslib.c,v 1.10 2007/09/11 15:23:47 Arabidopsis Exp $ */
 /* Test program for Ghostscript library */
 /* Capture stdin/out/err before gsio.h redefines them. */
 #include "stdio_.h"

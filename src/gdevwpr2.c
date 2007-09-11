@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevwpr2.c,v 1.9 2007/09/10 14:08:42 Arabidopsis Exp $ */
+/* $Id: gdevwpr2.c,v 1.10 2007/09/11 15:24:24 Arabidopsis Exp $ */
 /*
  * Microsoft Windows 3.n printer driver for Ghostscript.
  * Original version by Russell Lang and

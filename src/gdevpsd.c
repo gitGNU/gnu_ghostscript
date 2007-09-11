@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gdevpsd.c,v 1.9 2007/09/10 14:08:38 Arabidopsis Exp $ */
+/*$Id: gdevpsd.c,v 1.10 2007/09/11 15:24:37 Arabidopsis Exp $ */
 /* PhotoShop (PSD) export device, supporting DeviceN color models. */
 
 #include "math_.h"
@@ -326,6 +326,29 @@ psd_prn_open(gx_device * pdev)
     return code;
 }
 
+/* 2007/05/04
+psdgray device
+*/
+private void
+gray_cs_to_psdgray_cm(gx_device * dev, frac gray, frac out[])
+{
+    out[0] = gray;
+}
+
+private void
+rgb_cs_to_psdgray_cm(gx_device * dev, const gs_imager_state *pis,
+				   frac r, frac g, frac b, frac out[])
+{
+    out[0] = color_rgb_to_gray(r, g, b, NULL);
+}
+
+private void
+cmyk_cs_to_psdgray_cm(gx_device * dev, frac c, frac m, frac y, frac k, frac out[])
+{
+    out[0] = color_cmyk_to_gray(c, m, y, k, NULL);
+}
+
+
 /*
  * The following procedures are used to map the standard color spaces into
  * the color components for the psdrgb device.
@@ -462,6 +485,10 @@ rgb_cs_to_spotn_cm(gx_device * dev, const gs_imager_state *pis,
     }
 }
 
+private const gx_cm_color_map_procs psdGray_procs = {/* 2007/05/04 Test */
+    gray_cs_to_psdgray_cm, rgb_cs_to_psdgray_cm, cmyk_cs_to_psdgray_cm
+};
+
 private const gx_cm_color_map_procs psdRGB_procs = {
     gray_cs_to_psdrgb_cm, rgb_cs_to_psdrgb_cm, cmyk_cs_to_psdrgb_cm
 };
@@ -495,6 +522,8 @@ get_psd_color_mapping_procs(const gx_device * dev)
 	return &psdCMYK_procs;
     else if (xdev->color_model == psd_DEVICE_N)
 	return &psdN_procs;
+    else if (xdev->color_model == psd_DEVICE_GRAY)
+    	return &psdGray_procs;
     else
 	return NULL;
 }

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxccache.c,v 1.9 2007/08/01 14:26:17 jemarch Exp $ */
+/* $Id: gxccache.c,v 1.10 2007/09/11 15:24:26 Arabidopsis Exp $ */
 /* Fast case character cache routines for Ghostscript library */
 #include "memory_.h"
 #include "gx.h"

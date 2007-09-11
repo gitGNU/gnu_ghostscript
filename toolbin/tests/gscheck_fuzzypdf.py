@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-#    Copyright (C) 2001 artofcode LLC. All rights reserved.
+#    Copyright (C) 2001 Artifex Software, Inc. All rights reserved.
 # 
 # This file is part of GNU ghostscript
 #
@@ -19,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gscheck_fuzzypdf.py,v 1.6 2007/09/10 14:08:47 Arabidopsis Exp $
+# $Id: gscheck_fuzzypdf.py,v 1.7 2007/09/11 15:25:16 Arabidopsis Exp $
 
 #
 # gscheck_fuzzypdf.py

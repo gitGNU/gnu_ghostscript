@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevps.c,v 1.9 2007/08/01 14:25:54 jemarch Exp $ */
+/* $Id: gdevps.c,v 1.10 2007/09/11 15:24:29 Arabidopsis Exp $ */
 /* PostScript-writing driver */
 #include "math_.h"
 #include "memory_.h"
@@ -1168,7 +1168,7 @@ psw_close_printer(gx_device * dev)
     gs_rect bbox;
 
     gx_device_bbox_bbox(vdev->bbox_device, &bbox);
-    if (pdev->first_page & !vdev->in_page) {
+    if (pdev->first_page && !vdev->in_page) {
 	/* Nothing has been written.  Write the file header now. */
 	code = psw_begin_file(pdev, &bbox);
         if (code < 0)

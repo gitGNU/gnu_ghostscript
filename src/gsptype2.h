@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsptype2.h,v 1.9 2007/08/01 14:26:12 jemarch Exp $ */
+/* $Id: gsptype2.h,v 1.10 2007/09/11 15:23:48 Arabidopsis Exp $ */
 /* Client interface to PatternType 2 Patterns */
 
 #ifndef gsptype2_INCLUDED
@@ -81,6 +81,11 @@ typedef struct gx_device_s gx_device;
 typedef struct gs_color_space_s gs_color_space;
 #endif
 
+#ifndef gx_clip_path_DEFINED
+#  define gx_clip_path_DEFINED
+typedef struct gx_clip_path_s gx_clip_path;
+#endif
+
 extern const gx_device_color_type_t gx_dc_pattern2;
 
 #define gx_dc_type_pattern2 (&gx_dc_pattern2)
@@ -98,11 +103,6 @@ void gs_pattern2_init(gs_pattern2_template_t *);
 /* Check device color for Pattern Type 2. */
 bool gx_dc_is_pattern2_color(const gx_device_color *pdevc);
 
-/* Fill path or rect, and with a PatternType 2 color. */
-int gx_dc_pattern2_fill_path(const gx_device_color * pdevc, 
-			      gx_path * ppath, gs_fixed_rect * rect, 
-			      gx_device * dev);
-
 /* Set the 'shfill' flag to a PatternType 2 pattern instance. */
 int gs_pattern2_set_shfill(gs_client_color * pcc);
 
@@ -112,6 +112,13 @@ int gx_dc_pattern2_shade_bbox_transform2fixed(const gs_rect * rect,
 
 /* Get a shading bbox. Returns 1 on success. */
 int gx_dc_pattern2_get_bbox(const gx_device_color * pdevc, gs_fixed_rect *bbox);
+
+/* Checks whether a PatternType 2 has a shading BBox. */
+int gx_dc_pattern2_color_has_bbox(const gx_device_color * pdevc);
+
+/* Intersect a clipping path a shading BBox. */
+int gx_dc_pattern2_clip_with_bbox(const gx_device_color * pdevc, gx_device * pdev, 
+				  gx_clip_path *cpath_local, const gx_clip_path **cpath1);
 
 /* Get a shading color space. */
 const gs_color_space *gx_dc_pattern2_get_color_space(const gx_device_color * pdevc);

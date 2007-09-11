@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsnorop.c,v 1.6 2007/08/01 14:26:09 jemarch Exp $ */
+/* $Id: gsnorop.c,v 1.7 2007/09/11 15:24:26 Arabidopsis Exp $ */
 /* Stubs for unimplemented RasterOp */
 #include "gx.h"
 #include "gserrors.h"

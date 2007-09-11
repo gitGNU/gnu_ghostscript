@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsmemraw.h,v 1.7 2007/08/01 14:26:09 jemarch Exp $ */
+/* $Id: gsmemraw.h,v 1.8 2007/09/11 15:24:31 Arabidopsis Exp $ */
 /* Client interface for "raw memory" allocator */
 
 /* Initial version 02/03/1998 by John Desrosiers (soho@crl.com) */

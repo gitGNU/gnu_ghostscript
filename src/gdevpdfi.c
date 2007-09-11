@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfi.c,v 1.9 2007/08/01 14:25:51 jemarch Exp $ */
+/* $Id: gdevpdfi.c,v 1.10 2007/09/11 15:24:31 Arabidopsis Exp $ */
 /* Image handling for PDF-writing driver */
 #include "memory_.h"
 #include "math_.h"
@@ -1396,6 +1396,10 @@ gdev_pdf_pattern_manage(gx_device *pdev1, gx_bitmap_id id,
 	    return 0;
 	case pattern_manage__is_cpath_accum:
 	    return 0;
+	case pattern_manage__shfill_doesnt_need_path:
+	    return 0; /* gdev_pdf_fill_path still does need a path. */
+	case pattern_manage__handles_clip_path:
+	    return 1;
     }
     return_error(gs_error_unregistered);
 }

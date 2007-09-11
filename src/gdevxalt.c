@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevxalt.c,v 1.7 2007/08/01 14:25:57 jemarch Exp $ */
+/* $Id: gdevxalt.c,v 1.8 2007/09/11 15:24:16 Arabidopsis Exp $ */
 /* Alternative X Windows drivers for help in driver debugging */
 #include "gx.h"			/* for gx_bitmap; includes std.h */
 #include "math_.h"
@@ -31,6 +31,7 @@
 #include "gdevx.h"
 
 extern const gx_device_X gs_x11_device;
+extern const gx_device_X gs_x11alpha_device;
 
 /*
  * Define a forwarding device with a cache for the first 16 colors,
@@ -848,3 +849,20 @@ x_rg32x_alt_map_color(gx_device * dev, gx_color_index color,
     rgb[2] = ((color >> 11) & 0x3ff) * gx_max_color_value / 0x3ff;
     return -1;
 }
+
+#ifdef GS_DEVS_SHARED
+extern void gs_lib_register_device(const gx_device *dev);
+void
+gs_shared_init(void)
+{
+  gs_lib_register_device(&gs_x11_device);
+  gs_lib_register_device(&gs_x11alpha_device);
+  gs_lib_register_device(&gs_x11cmyk_device);
+  gs_lib_register_device(&gs_x11cmyk2_device);
+  gs_lib_register_device(&gs_x11cmyk4_device);
+  gs_lib_register_device(&gs_x11cmyk8_device);
+  gs_lib_register_device(&gs_x11gray2_device);
+  gs_lib_register_device(&gs_x11gray4_device);
+  gs_lib_register_device(&gs_x11mono_device);
+}
+#endif

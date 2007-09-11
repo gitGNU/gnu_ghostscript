@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gp_msprn.c,v 1.8 2007/09/10 14:08:46 Arabidopsis Exp $ */
+/* $Id: gp_msprn.c,v 1.9 2007/09/11 15:24:07 Arabidopsis Exp $ */
 /* %printer% IODevice */
 
 #include "windows_.h"

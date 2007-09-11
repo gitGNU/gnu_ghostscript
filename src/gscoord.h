@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscoord.h,v 1.6 2007/08/01 14:26:03 jemarch Exp $ */
+/* $Id: gscoord.h,v 1.7 2007/09/11 15:24:31 Arabidopsis Exp $ */
 /* Interface to graphics state CTM procedures */
 /* Requires gsmatrix.h and gsstate.h */
 

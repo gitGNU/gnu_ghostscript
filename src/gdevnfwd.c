@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevnfwd.c,v 1.10 2007/09/10 14:08:47 Arabidopsis Exp $ */
+/* $Id: gdevnfwd.c,v 1.11 2007/09/11 15:24:07 Arabidopsis Exp $ */
 /* Null and forwarding device implementation */
 #include "gx.h"
 #include "gserrors.h"
@@ -757,10 +757,19 @@ gx_forward_pattern_manage(gx_device * dev, gx_bitmap_id id,
 
     /* Note that clist sets fdev->target == fdev, 
        so this function is unapplicable to clist. */
-    if (tdev == 0)
+    if (tdev == 0) {
+	if (function == pattern_manage__shfill_doesnt_need_path) {
+	    if (dev->procs.fill_path == gx_default_fill_path)
+		return 1;
+	}
 	return 0;
-    else
+    } else {
+	if (function == pattern_manage__handles_clip_path) {
+	    if (dev->procs.fill_path == gx_default_fill_path)
+		return 0;
+	}
 	return dev_proc(tdev, pattern_manage)(tdev, id, pinst, function);
+    }
 }
 
 int

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: wrfont.h,v 1.5 2007/08/01 14:26:48 jemarch Exp $ */
+/* $Id: wrfont.h,v 1.6 2007/09/11 15:24:34 Arabidopsis Exp $ */
 /*
 Header for support functions to serialize fonts as PostScript code that can
 then be passed to FreeType via the FAPI FreeType bridge.

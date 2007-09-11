@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxdhtserial.h,v 1.5 2007/08/01 14:26:21 jemarch Exp $ */
+/* $Id: gxdhtserial.h,v 1.6 2007/09/11 15:24:30 Arabidopsis Exp $ */
 /* Interface to [de-]serialization for (traditional) halftones */
 
 #ifndef gxdhtserial_INCLUDED

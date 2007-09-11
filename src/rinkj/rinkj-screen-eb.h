@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: rinkj-screen-eb.h,v 1.3 2007/08/01 14:26:55 jemarch Exp $ */
+/*$Id: rinkj-screen-eb.h,v 1.4 2007/09/11 15:25:09 Arabidopsis Exp $ */
 /* A Rinkj module encapsulating ETS screening. */
 
 RinkjDevice *

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sjpegd.c,v 1.7 2007/08/01 14:26:43 jemarch Exp $ */
+/* $Id: sjpegd.c,v 1.8 2007/09/11 15:24:41 Arabidopsis Exp $ */
 /* Interface routines for IJG decoding code. */
 #include "stdio_.h"
 #include "string_.h"

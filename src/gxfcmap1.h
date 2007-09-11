@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxfcmap1.h,v 1.5 2007/08/01 14:26:22 jemarch Exp $ */
+/* $Id: gxfcmap1.h,v 1.6 2007/09/11 15:24:40 Arabidopsis Exp $ */
 /* Adobe CMapType 1 CMap structure definitions */
 
 #ifndef gxfcmap1_INCLUDED

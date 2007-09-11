@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxcmap.c,v 1.10 2007/09/10 14:08:40 Arabidopsis Exp $ */
+/* $Id: gxcmap.c,v 1.11 2007/09/11 15:24:16 Arabidopsis Exp $ */
 /* Color mapping for Ghostscript */
 #include "gx.h"
 #include "gserrors.h"
@@ -371,12 +371,21 @@ gx_error_get_color_mapping_procs(const gx_device * dev)
 {
     /*
      * We should never get here.  If we do then we do not have a "get_color_mapping_procs"
-     * routine for the device.
+     * routine for the device. This will be noisy, but better than returning NULL which
+     * would lead to SEGV (Segmentation Fault) errors when this is used.
      */
-#ifdef DEBUG
-    dprintf("No get_color_mapping_procs proc defined for device.\n");
-#endif
-    return NULL;
+    eprintf1("No get_color_mapping_procs proc defined for device '%s'\n", dev->dname);
+    switch (dev->color_info.num_components) {
+      case 1:     /* DeviceGray or DeviceInvertGray */
+	return gx_default_DevGray_get_color_mapping_procs(dev);
+
+      case 3:
+	return gx_default_DevRGB_get_color_mapping_procs(dev);
+
+      case 4:
+      default:		/* Unknown color model - punt with CMYK */
+        return gx_default_DevCMYK_get_color_mapping_procs(dev);
+    }
 }
     
 /* ----- Default color component name to colorant index conversion routines ------ */

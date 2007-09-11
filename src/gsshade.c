@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsshade.c,v 1.9 2007/08/01 14:26:13 jemarch Exp $ */
+/* $Id: gsshade.c,v 1.10 2007/09/11 15:24:12 Arabidopsis Exp $ */
 /* Constructors for shadings */
 #include "gx.h"
 #include "gscspace.h"
@@ -141,6 +141,7 @@ private void
 shading_params_init(gs_shading_params_t *params)
 {
     params->ColorSpace = 0;	/* must be set by client */
+    params->cie_joint_caches = 0;
     params->Background = 0;
     params->have_BBox = false;
     params->AntiAlias = false;
@@ -422,8 +423,8 @@ gs_shading_Tpp_init(gs_shading_t ** ppsh,
 /* ================ Shading rendering ================ */
 
 /* Add a user-space rectangle to a path. */
-private int
-shading_path_add_box(gx_path *ppath, const gs_rect *pbox,
+int
+gs_shading_path_add_box(gx_path *ppath, const gs_rect *pbox,
 		     const gs_matrix_fixed *pmat)
 {
     gs_fixed_point pt;
@@ -446,102 +447,20 @@ shading_path_add_box(gx_path *ppath, const gs_rect *pbox,
 }
 
 /* Fill a path with a shading. */
-private int
-gs_shading_fill_path(const gs_shading_t *psh, /*const*/ gx_path *ppath,
-		     const gs_fixed_rect *prect, gx_device *orig_dev,
+int
+gs_shading_do_fill_rectangle(const gs_shading_t *psh,
+		     const gs_fixed_rect *prect, gx_device *dev,
 		     gs_imager_state *pis, bool fill_background)
-{
-    gs_memory_t *mem = pis->memory;
+{   /* If you need to fill a path, clip the output device before calling this function. */
     const gs_matrix_fixed *pmat = &pis->ctm;
-    gx_device *dev = orig_dev;
     gs_fixed_rect path_box;
+    gs_rect path_rect;
     gs_rect rect;
-    gx_clip_path *path_clip = 0;
-    bool path_clip_set = false;
-    gx_device_clip path_dev;
     int code = 0;
 
-    if ((*dev_proc(dev, pattern_manage))(dev, 
-			gs_no_id, NULL, pattern_manage__shading_area) == 0) {
-	path_clip = gx_cpath_alloc(mem, "shading_fill_path(path_clip)");
-	if (path_clip == 0) {
-	    code = gs_note_error(gs_error_VMerror);
-	    goto out;
-	}
-	dev_proc(dev, get_clipping_box)(dev, &path_box);
-	if (prect)
-	    rect_intersect(path_box, *prect);
-	if (psh->params.have_BBox) {
-	    gs_fixed_rect bbox_fixed;
-
-	    if ((is_xxyy(pmat) || is_xyyx(pmat)) &&
-		(code = gx_dc_pattern2_shade_bbox_transform2fixed(&psh->params.BBox, pis,
-						&bbox_fixed)) >= 0
-		) {
-		/* We can fold BBox into the clipping rectangle. */
-		rect_intersect(path_box, bbox_fixed);
-	    } else
-		{
-		gx_path *box_path;
-
-		if (path_box.p.x >= path_box.q.x || path_box.p.y >= path_box.q.y)
-		    goto out;		/* empty rectangle */
-		box_path = gx_path_alloc(mem, "shading_fill_path(box_path)");
-		if (box_path == 0) {
-		    code = gs_note_error(gs_error_VMerror);
-		    goto out;
-		}
-		code = gx_cpath_from_rectangle(path_clip, &path_box);
-		if (code >= 0) {
-		    code = shading_path_add_box(box_path, &psh->params.BBox, pmat);
-		    if (code == gs_error_limitcheck) {
-			/* Ignore huge BBox - bug 689027. */
-			code = 0;
-		    } else if (code >= 0) {
-			code = gx_cpath_intersect(path_clip, box_path,
-					    gx_rule_winding_number, pis);
-			if (code >= 0)
-			    path_clip_set = true;
-		    }
-		}
-		gx_path_free(box_path, "shading_fill_path(box_path)");
-		if (code < 0)
-		    goto out;
-	    }
-	}
-	if (!path_clip_set) {
-	    if (path_box.p.x >= path_box.q.x || path_box.p.y >= path_box.q.y)
-		goto out;		/* empty rectangle */
-	    if ((code = gx_cpath_from_rectangle(path_clip, &path_box)) < 0)
-		goto out;
-	}
-	if (ppath &&
-	    (code =
-	    gx_cpath_intersect(path_clip, ppath, gx_rule_winding_number, pis)) < 0
-	    )
-	    goto out;
-	/* detect empty clip box result and skip filling */
-	if ((path_clip->path.bbox.p.x == path_clip->path.bbox.q.x) || 
-	    (path_clip->path.bbox.p.y == path_clip->path.bbox.q.y))
-	    goto out;
-	gx_make_clip_device(&path_dev, &path_clip->rect_list->list);
-	path_dev.target = dev;
-	path_dev.HWResolution[0] = dev->HWResolution[0];
-	path_dev.HWResolution[1] = dev->HWResolution[1];
-	dev = (gx_device *)&path_dev;
-	dev_proc(dev, open_device)(dev);
-    }
-#if 0 /* doesn't work for 478-01.ps, which sets a big smoothness :
-         makes an assymmetrix domain, and the patch decomposition
-	 becomes highly irregular. */
-    {	gs_fixed_rect r;
-
-	dev_proc(dev, get_clipping_box)(dev, &r);
-	rect_intersect(path_box, r);
-    }
-#else
     dev_proc(dev, get_clipping_box)(dev, &path_box);
-#endif
+    if (prect)
+	rect_intersect(path_box, *prect);
     if (psh->params.Background && fill_background) {
 	const gs_color_space *pcs = psh->params.ColorSpace;
 	gs_client_color cc;
@@ -554,30 +473,14 @@ gs_shading_fill_path(const gs_shading_t *psh, /*const*/ gx_path *ppath,
 
 	/****** WRONG IF NON-IDEMPOTENT RasterOp ******/
 	code = gx_shade_background(dev, &path_box, &dev_color, pis->log_op);
-	if (code < 0)
-	    goto out;
     }
-    {
-	gs_rect path_rect;
-
+    if (code >= 0) {
 	path_rect.p.x = fixed2float(path_box.p.x);
 	path_rect.p.y = fixed2float(path_box.p.y);
 	path_rect.q.x = fixed2float(path_box.q.x);
 	path_rect.q.y = fixed2float(path_box.q.y);
 	gs_bbox_transform_inverse(&path_rect, (const gs_matrix *)pmat, &rect);
+	code = gs_shading_fill_rectangle(psh, &rect, &path_box, dev, pis);
     }
-    code = gs_shading_fill_rectangle(psh, &rect, &path_box, dev, pis);
-out:
-    if (path_clip)
-	gx_cpath_free(path_clip, "shading_fill_path(path_clip)");
     return code;
 }
-
-int
-gs_shading_fill_path_adjusted(const gs_shading_t *psh, /*const*/ gx_path *ppath,
-		     const gs_fixed_rect *prect, gx_device *orig_dev,
-		     gs_imager_state *pis, bool fill_background)
-{   
-    return  gs_shading_fill_path(psh, ppath, prect, orig_dev, pis, fill_background);
-}
-

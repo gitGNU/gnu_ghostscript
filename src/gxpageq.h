@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxpageq.h,v 1.7 2007/09/10 14:08:40 Arabidopsis Exp $ */
+/* $Id: gxpageq.h,v 1.8 2007/09/11 15:24:38 Arabidopsis Exp $ */
 /* Page queue implementation */
 
 /* Initial version 2/1/98 by John Desrosiers (soho@crl.com) */

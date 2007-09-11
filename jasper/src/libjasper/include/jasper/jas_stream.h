@@ -64,7 +64,7 @@
 /*
  * I/O Stream Class
  *
- * $Id: jas_stream.h,v 1.4 2007/05/07 11:22:22 Arabidopsis Exp $
+ * $Id: jas_stream.h,v 1.5 2007/09/11 15:25:12 Arabidopsis Exp $
  */
 
 #ifndef JAS_STREAM_H
@@ -95,8 +95,13 @@ extern "C" {
 \******************************************************************************/
 
 /* On most UNIX systems, we probably need to define O_BINARY ourselves. */
+/* MSVC and other Windows compilers define _O_BINARY instead of O_BINARY. */
 #ifndef O_BINARY
-#define O_BINARY	0
+#  ifdef  _O_BINARY
+#    define O_BINARY	_O_BINARY
+#  else
+#    define O_BINARY	0
+#  endif
 #endif
 
 /*

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -20,7 +20,7 @@
 #ifndef gxarith_INCLUDED
 #  define gxarith_INCLUDED
 
-/* $Id: gxarith.h,v 1.6 2007/08/01 14:26:16 jemarch Exp $ */
+/* $Id: gxarith.h,v 1.7 2007/09/11 15:23:52 Arabidopsis Exp $ */
 /* Arithmetic macros for Ghostscript library */
 
 /* Define an in-line abs function, good for any signed numeric type. */

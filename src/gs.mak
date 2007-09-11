@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 artofcode LLC.
+#  Copyright (C) 2001-2006 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This software is provided AS-IS with no warranty, either express or
@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: gs.mak,v 1.9 2007/05/07 21:45:07 Arabidopsis Exp $
+# $Id: gs.mak,v 1.10 2007/09/11 15:24:03 Arabidopsis Exp $
 # Generic makefile, common to all platforms, products, and configurations.
 # The platform-specific makefiles `include' this file.
 
@@ -70,6 +70,8 @@
 #	    to properly compile in the jpeg2k library source
 #	ICCSRCDIR - the name of the ICC lib source dir, currently
 #	    always icclib (compiled in statically)
+#	IMDISRCDIR - the name of the IMDI lib source directory
+#	    generally 'imdi'
 #	DEVICE_DEVS - the devices to include in the executable.
 #	    See devs.mak for details.
 #	DEVICE_DEVS1...DEVICE_DEVS21 - additional devices, if the definition
@@ -258,7 +260,7 @@ gconfig_h=$(GLGENDIR)$(D)gconfxx.h
 gconfigf_h=$(GLGENDIR)$(D)gconfxc.h
 gconfigd_h=$(GLGENDIR)$(D)gconfigd.h
 
-all default : $(GS_XE)
+all default : $(GS_XE) $(GS_SHARED_OBJS)
 	$(NO_OP)
 
 # the distclean and maintainer-clean targets (if any)
@@ -271,6 +273,7 @@ realclean : clean
 clean : mostlyclean
 	$(RM_) $(GSGEN)arch.h
 	$(RM_) $(GS_XE)
+	$(RM_) $(GS_SHARED_OBJS)
 
 #****** FOLLOWING IS WRONG, NEEDS TO BE PER-SUBSYSTEM ******
 mostlyclean : config-clean

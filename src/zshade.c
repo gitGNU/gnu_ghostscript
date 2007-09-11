@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zshade.c,v 1.8 2007/08/01 14:26:54 jemarch Exp $ */
+/* $Id: zshade.c,v 1.9 2007/09/11 15:23:43 Arabidopsis Exp $ */
 /* PostScript language interface to shading */
 #include "memory_.h"
 #include "ghost.h"
@@ -30,6 +30,7 @@
 #include "gsstruct.h"		/* must precede gsshade.h */
 #include "gsshade.h"
 #include "gsuid.h"
+#include "gscie.h"
 #include "stream.h"		/* for files.h */
 #include "files.h"
 #include "ialloc.h"
@@ -164,6 +165,7 @@ build_shading(i_ctx_t *i_ctx_p, build_shading_proc_t proc)
 
     check_type(*op, t_dictionary);
     params.ColorSpace = 0;
+    params.cie_joint_caches = 0;
     params.Background = 0;
     /* Collect parameters common to all shading types. */
     {
@@ -229,6 +231,11 @@ build_shading(i_ctx_t *i_ctx_p, build_shading_proc_t proc)
     code = (*proc)(i_ctx_p, op, &params, &psh, imemory);
     if (code < 0)
 	goto fail;
+    if (gx_color_space_needs_cie_caches(psh->params.ColorSpace)) {
+	rc_decrement(psh->params.cie_joint_caches, "build_shading");
+	psh->params.cie_joint_caches = gx_currentciecaches(igs);
+	rc_increment(psh->params.cie_joint_caches);
+    }
     make_istruct_new(op, 0, psh);
     return code;
 fail:

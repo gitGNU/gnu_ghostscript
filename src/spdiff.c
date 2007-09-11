@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: spdiff.c,v 1.8 2007/08/01 14:26:44 jemarch Exp $ */
+/* $Id: spdiff.c,v 1.9 2007/09/11 15:24:14 Arabidopsis Exp $ */
 /* Pixel differencing filters */
 #include "stdio_.h"		/* should be std.h, but needs NULL */
 #include "memory_.h"

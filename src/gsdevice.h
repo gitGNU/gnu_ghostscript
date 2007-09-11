@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsdevice.h,v 1.6 2007/08/01 14:26:04 jemarch Exp $ */
+/* $Id: gsdevice.h,v 1.7 2007/09/11 15:24:38 Arabidopsis Exp $ */
 /* Device and page control API */
 
 #ifndef gsdevice_INCLUDED

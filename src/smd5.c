@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: smd5.c,v 1.8 2007/08/01 14:26:44 jemarch Exp $ */
+/* $Id: smd5.c,v 1.9 2007/09/11 15:24:10 Arabidopsis Exp $ */
 /* MD5Encode filter */
 #include "memory_.h"
 #include "strimpl.h"
@@ -34,7 +34,7 @@ s_MD5E_init(stream_state * st)
 {
     stream_MD5E_state *const ss = (stream_MD5E_state *) st;
 
-    md5_init(&ss->md5);
+    gs_md5_init(&ss->md5);
     return 0;
 }
 
@@ -47,12 +47,12 @@ s_MD5E_process(stream_state * st, stream_cursor_read * pr,
     int status = 0;
 
     if (pr->ptr < pr->limit) {
-	md5_append(&ss->md5, pr->ptr + 1, pr->limit - pr->ptr);
+	gs_md5_append(&ss->md5, pr->ptr + 1, pr->limit - pr->ptr);
 	pr->ptr = pr->limit;
     }
     if (last) {
 	if (pw->limit - pw->ptr >= 16) {
-	    md5_finish(&ss->md5, pw->ptr + 1);
+	    gs_md5_finish(&ss->md5, pw->ptr + 1);
 	    pw->ptr += 16;
 	    status = EOFC;
 	} else
@@ -95,7 +95,7 @@ s_MD5C_process(stream_state * st, stream_cursor_read * pr,
     int nw = pw->limit - pw->ptr;
     int n = min(nr, nw);
 
-    md5_append(&ss->md5, pr->ptr + 1, n);
+    gs_md5_append(&ss->md5, pr->ptr + 1, n);
     memcpy(pw->ptr + 1, pr->ptr + 1, n);
     pr->ptr += n;
     pw->ptr += n;
@@ -136,14 +136,14 @@ int
 s_MD5C_get_digest(stream *s, byte *buf, int buf_length)
 {
     stream_MD5E_state *const ss = (stream_MD5E_state *)s->state;
-    md5_state_t md5;
+    gs_md5_state_t md5;
     byte b[16], *p;
     int l = min(16, buf_length), k;
 
     if (s->procs.process != s_MD5C_process)
 	return 0; /* Must not happen. */
     md5 = ss->md5;
-    md5_finish(&md5, b);
+    gs_md5_finish(&md5, b);
     memcpy(buf, b, l);
     for (p = b + l; p < b + sizeof(b); p += l) {
 	for (k = 0; k < l && p + k < b + sizeof(b); k++)

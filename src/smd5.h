@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: smd5.h,v 1.8 2007/08/01 14:26:44 jemarch Exp $ */
+/* $Id: smd5.h,v 1.9 2007/09/11 15:24:10 Arabidopsis Exp $ */
 /* Definitions for MD5Encode filter */
 /* Requires scommon.h; strimpl.h if any templates are referenced */
 
@@ -32,7 +32,7 @@
  */
 typedef struct stream_MD5E_state_s {
     stream_state_common;
-    md5_state_t md5;
+    gs_md5_state_t md5;
 } stream_MD5E_state;
 
 #define private_st_MD5E_state()	/* in smd5.c */\

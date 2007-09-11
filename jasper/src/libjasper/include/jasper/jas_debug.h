@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2001-2002 Michael David Adams.
- * Copyright (c) 2005-2006 artofcode LLC.
+ * Copyright (c) 2005-2006 Artifex Software, Inc.
  * All rights reserved.
  */
 
@@ -63,7 +63,7 @@
 /*
  * Debugging-Related Code
  *
- * $Id: jas_debug.h,v 1.4 2007/05/07 11:22:22 Arabidopsis Exp $
+ * $Id: jas_debug.h,v 1.5 2007/09/11 15:25:12 Arabidopsis Exp $
  */
 
 #ifndef JAS_DEBUG_H

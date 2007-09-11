@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zht2.c,v 1.9 2007/08/01 14:26:53 jemarch Exp $ */
+/* $Id: zht2.c,v 1.10 2007/09/11 15:24:20 Arabidopsis Exp $ */
 /* Level 2 sethalftone operator */
 #include "ghost.h"
 #include "oper.h"

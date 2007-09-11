@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 artofcode LLC.
+#  Copyright (C) 2001-2006 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: openvms.mak,v 1.11 2007/09/10 14:08:38 Arabidopsis Exp $
+# $Id: openvms.mak,v 1.12 2007/09/11 15:23:44 Arabidopsis Exp $
 # makefile for OpenVMS VAX and Alpha
 #
 # Please contact Jim Dunham (dunham@omtool.com) if you have questions.
@@ -128,7 +128,7 @@ JVERSION=6
 # See libpng.mak for more information.
 
 PSRCDIR=[.libpng]
-PVERSION=10216
+PVERSION=10218
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.
@@ -161,6 +161,11 @@ ICCSRCDIR=[.icclib]
 
 #IJSSRCDIR=[.ijs]
 #IJSEXECTYPE=unix
+
+# Define the directory where the imdi source are stored.
+# See imdi.mak for more information
+
+IMDISRCDIR=[.imdi]
 
 # Note that built-in third-party libraries aren't available.
 
@@ -454,6 +459,7 @@ include $(GLSRCDIR)contrib.mak
 CC_=$(COMP)
 CC_INT=$(CC_)
 CC_NO_WARN=$(CC_)
+CC_SHARED=$(CC_)
 
 # ----------------------------- Main program ------------------------------ #
 

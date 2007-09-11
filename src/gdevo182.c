@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevo182.c,v 1.7 2007/08/01 14:25:50 jemarch Exp $*/
+/* $Id: gdevo182.c,v 1.8 2007/09/11 15:24:20 Arabidopsis Exp $*/
 /* Okidata Microline 182 printer driver */
 
 /* Contributed by Maarten Koning (smeg@bnr.ca) April 4, 1993 */

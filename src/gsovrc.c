@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsovrc.c,v 1.8 2007/08/01 14:26:10 jemarch Exp $ */
+/* $Id: gsovrc.c,v 1.9 2007/09/11 15:23:45 Arabidopsis Exp $ */
 /* overprint/overprint mode compositor implementation */
 
 #include "memory_.h"

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zht1.c,v 1.7 2007/08/01 14:26:53 jemarch Exp $ */
+/* $Id: zht1.c,v 1.8 2007/09/11 15:24:06 Arabidopsis Exp $ */
 /* setcolorscreen operator */
 #include "ghost.h"
 #include "memory_.h"

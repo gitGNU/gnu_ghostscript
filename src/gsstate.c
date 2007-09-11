@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsstate.c,v 1.9 2007/09/10 14:08:40 Arabidopsis Exp $ */
+/* $Id: gsstate.c,v 1.10 2007/09/11 15:24:08 Arabidopsis Exp $ */
 /* Miscellaneous graphics state operators for Ghostscript library */
 #include "gx.h"
 #include "memory_.h"
@@ -705,7 +705,15 @@ gs_currentoverprintmode(const gs_state * pgs)
     return pgs->overprint_mode;
 }
 
-/* setrenderingintent */
+/* setrenderingintent
+ *
+ *  Use ICC numbers from Table 18 (section 6.1.11) rather than the PDF order
+ *  to reduce re-coding and confusion.
+ *    Perceptual            0
+ *    Relative Colorimetric 1
+ *    Saturation            2
+ *    AbsoluteColorimetric  3
+ */
 int
 gs_setrenderingintent(gs_state *pgs, int ri) {
     if (ri < 0 || ri > 3)

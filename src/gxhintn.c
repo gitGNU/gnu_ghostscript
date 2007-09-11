@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxhintn.c,v 1.9 2007/09/10 14:08:45 Arabidopsis Exp $ */
+/* $Id: gxhintn.c,v 1.10 2007/09/11 15:23:57 Arabidopsis Exp $ */
 /* Type 1 hinter, a new algorithm */
 
 #include "memory_.h"
@@ -1754,7 +1754,7 @@ private void t1_hinter__simplify_representation(t1_hinter * this)
 		    this->primary_hint_count--;
 		continue; /* skip it. */
 	    } else {
-		if (i != j)
+		if (i != j)  /* for Valgrind */
                     this->hint[j] = this->hint[i];
 		j++;
 	    }

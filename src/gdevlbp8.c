@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevlbp8.c,v 1.6 2007/08/01 14:25:48 jemarch Exp $*/
+/* $Id: gdevlbp8.c,v 1.7 2007/09/11 15:23:51 Arabidopsis Exp $*/
 /* Canon LBP-8II and LIPS III driver */
 #include "gdevprn.h"
 
@@ -49,7 +49,9 @@ problems
 
 /* The device descriptors */
 private dev_proc_print_page(lbp8_print_page);
+#ifdef NOCONTRIB
 private dev_proc_print_page(lips3_print_page);
+#endif
 
 const gx_device_printer far_data gs_lbp8_device =
   prn_device(prn_std_procs, "lbp8",
@@ -58,6 +60,7 @@ const gx_device_printer far_data gs_lbp8_device =
 	0.16, 0.2, 0.32, 0.21,		/* margins: left, bottom, right, top */
 	1, lbp8_print_page);
 
+#ifdef NOCONTRIB
 const gx_device_printer far_data gs_lips3_device =
   prn_device(prn_std_procs, "lips3",
 	82,				/* width_10ths, 8.3" */
@@ -65,6 +68,7 @@ const gx_device_printer far_data gs_lips3_device =
 	X_DPI, Y_DPI,
 	0.16, 0.27, 0.23, 0.27,		/* margins */
 	1, lips3_print_page);
+#endif
 
 /* ------ Internal routines ------ */
 
@@ -84,6 +88,7 @@ static const char lbp8_init[] = {
 
 static const char *lbp8_end = NULL;
 
+#ifdef NOCONTRIB
 static const char lips3_init[] = {
   ESC, '<', /* soft reset */
   DCS, '0', 'J', ST, /* JOB END */
@@ -100,6 +105,7 @@ static const char lips3_init[] = {
 static const char lips3_end[] = {
   DCS, '0', 'J', ST  /* JOB END */
 };
+#endif
 
 /* Send the page to the printer.  */
 private int
@@ -205,9 +211,11 @@ lbp8_print_page(gx_device_printer *pdev, FILE *prn_stream)
 			      lbp8_end, sizeof(lbp8_end));
 }
 
+#ifdef NOCONTRIB
 /* Print a LIPS III page. */
 private int
 lips3_print_page(gx_device_printer *pdev, FILE *prn_stream)
 {	return can_print_page(pdev, prn_stream, lips3_init, sizeof(lips3_init),
 			      lips3_end, sizeof(lips3_end));
 }
+#endif

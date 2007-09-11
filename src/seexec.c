@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: seexec.c,v 1.6 2007/08/01 14:26:42 jemarch Exp $ */
+/* $Id: seexec.c,v 1.7 2007/09/11 15:24:15 Arabidopsis Exp $ */
 /* eexec filters */
 #include "stdio_.h"		/* includes std.h */
 #include "strimpl.h"

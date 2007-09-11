@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxcldev.h,v 1.9 2007/09/10 14:08:46 Arabidopsis Exp $ */
+/*$Id: gxcldev.h,v 1.10 2007/09/11 15:23:57 Arabidopsis Exp $ */
 /* Internal definitions for Ghostscript command lists. */
 
 #ifndef gxcldev_INCLUDED
@@ -288,6 +288,10 @@ dev_proc_copy_color(clist_copy_color);
 dev_proc_copy_alpha(clist_copy_alpha);
 dev_proc_strip_tile_rectangle(clist_strip_tile_rectangle);
 dev_proc_strip_copy_rop(clist_strip_copy_rop);
+dev_proc_fill_trapezoid(clist_fill_trapezoid);
+dev_proc_fill_linear_color_trapezoid(clist_fill_linear_color_trapezoid);
+dev_proc_fill_linear_color_triangle(clist_fill_linear_color_triangle);
+dev_proc_pattern_manage(clist_pattern_manage);
 
 /* In gxclimag.c */
 dev_proc_fill_mask(clist_fill_mask);
@@ -448,6 +452,9 @@ byte *cmd_put_w(uint, byte *);
    (dp = cmd_put_w((uint)(wy), cmd_put_w((uint)(wx), dp))))
 #define cmd_putxy(xy,dp) cmd_put2w((xy).x, (xy).y, dp)
 
+int cmd_size_frac31(register frac31 w);
+byte * cmd_put_frac31(register frac31 w, register byte * dp);
+
 /* Put out a command to set a color. */
 typedef struct {
     byte set_op;
@@ -511,39 +518,49 @@ int cmd_update_lop(gx_device_clist_writer *, gx_clist_state *,
 		   gs_logical_operation_t);
 
 /*
- * Define macros for dividing up an operation into bands, per the
- * template
-
-    FOR_RECTS[_NO_ERROR] {
-	... process rectangle x, y, width, height in band pcls ...
-    } END_RECTS[_NO_ERROR];
-
- * Note that FOR_RECTS resets y and height.  It is OK for the code that
+ * For dividing up an operation into bands, use the control pattern :
+ * 
+ *   cmd_rects_enum_t re;
+ *   RECT_ENUM_INIT(re, ry, rheight);
+ *   do {
+ *	RECT_STEP_INIT(re);
+ *	... process rectangle x, y, width, height in band pcls ...
+ *
+ *	........
+ *	continue;
+ * error_in_rect:
+ *	if (!(cdev->error_is_retryable && cdev->driver_call_nesting == 0 &&
+ *		SET_BAND_CODE(clist_VMerror_recover_flush(cdev, re.band_code)) >= 0))
+ *	    return re.band_code;
+ *	re.y -= re.height;
+ *   } while ((re.y += re.height) < re.yend);
+ *
+ * Note that RECT_STEP_INIT(re) sets re.height.  It is OK for the code that
  * processes each band to reset height to a smaller (positive) value; the
  * vertical subdivision code in copy_mono, copy_color, and copy_alpha makes
  * use of this.  The band processing code may `continue' (to reduce nesting
  * of conditionals).
  *
- * If the processing code detects an error that may be a recoverable
- * VMerror, the code may call ERROR_RECT(), which will attempt to fix the
+ * The error_in_rect code detects an error that may be a recoverable
+ * VMerror, with calling clist_VMerror_recover_flush. It will attempt to fix the
  * VMerror by flushing and closing the band and resetting the imager state,
- * and then restart emitting the entire band. Before flushing the file, the
- * 'on_error' clause of END_RECTS_ON_ERROR (defaults to the constant 1 if
- * END_RECT is used) is evaluated and tested.  The 'on_error' clause enables
- * mop-up actions to be executed before flushing, and/or selectively
- * inhibits the flush, close, reset and restart process.  Similarly, the
- * 'after_recovering' clause of END_RECTS_ON_ERROR allows an action to get
- * performed after successfully recovering.
+ * and then restart emitting the entire band.
+ * Note that re.y must not change when restarting the band.
  *
- * The band processing code may wrap an operation with TRY_RECT { ...  }
- * HANDLE_RECT_UNLESS(code, unless_action) (or HANDLE_RECT(code)). This will
+ * The band processing code may wrap a writing operation with a pattern like this : 
+ *
+ * 	do {
+ *	    code = operation(...);
+ *	} while (RECT_RECOVER(code));
+ *	if (code < 0 && SET_BAND_CODE(code))
+ *	    goto error_in_rect;
+ *
+ *
+ * This will 
  * perform local first-stage VMerror recovery, by waiting for some memory to
  * become free and then retrying the failed operation starting at the
  * TRY_RECT. If local recovery is unsuccessful, the local recovery code
- * calls ERROR_RECT.
- *
- * The band processing loop should use the _NO_ERROR macros iff it doesn't
- * call ERROR_RECT anywhere.
+ * should pass control to error_in_rect.
  *
  * In a few cases, the band processing code calls other driver procedures
  * (e.g., clist_copy_mono calls itself recursively if it must split up the
@@ -551,93 +568,48 @@ int cmd_update_lop(gx_device_clist_writer *, gx_clist_state *,
  * VMerror recovery.  In such cases, the recursive call must not attempt
  * second-stage VMerror recovery, since the caller would have no way of
  * knowing that the writer state had been reset.  Such recursive calls
- * should be wrapped in NEST_RECT { ... } UNNEST_RECT, which causes
- * ERROR_RECT simply to return the error code rather than attempting
- * recovery.  (TRY/HANDLE_RECT will still attempt local recovery, as
- * described above, but this is harmless since it is transparent.) By
+ * should be wrapped in 
+ *
+ *  ++cdev->driver_call_nesting;  { ... } --cdev->driver_call_nesting;
+ *
+ * , which causes error_in_rect
+ * simply to return the error code rather than attempting
+ * recovery.  (The local recovery with do { ... } while (RECT_RECOVER(code));
+ * is still allowed since it is transparent.) By
  * convention, calls to cmd_put_xxx or cmd_set_xxx never attempt recovery
- * and so never require NEST_RECTs.
+ * and so never require  a nesting.
  *
  * If a put_params call fails, the device will be left in a closed state,
  * but higher-level code won't notice this fact.  We flag this by setting
  * permanent_error, which prevents writing to the command list.
  */
 
-/*
- * The "if (1)" statements in the following macros are there to prevent
- * stupid compilers from giving "statement not reached" warnings.
- */
+typedef struct cmd_rects_enum_s {
+	int y;
+	int height;
+	int yend;
+	int band_height;
+	int band_code;
+	int band;
+	gx_clist_state *pcls;
+	int band_end;
+} cmd_rects_enum_t;
 
-#define FOR_RECTS_NO_ERROR\
-    BEGIN\
-	int yend = y + height;\
-	int band_height = cdev->page_band_height;\
-	/* no band_code */\
-\
-	if (cdev->permanent_error < 0)\
-	  return (cdev->permanent_error);\
-	do {\
-	    int band = y / band_height;\
-	    gx_clist_state *pcls = cdev->states + band;\
-	    int band_end = (band + 1) * band_height;\
-\
-	    height = min(band_end, yend) - y;\
-/* no retry_rect: */
-#define FOR_RECTS\
-    BEGIN\
-	int yend = y + height;\
-	int band_height = cdev->page_band_height;\
-	int band_code;\
-\
-	if (cdev->permanent_error < 0)\
-	  return (cdev->permanent_error);\
-	do {\
-	    int band = y / band_height;\
-	    gx_clist_state *pcls = cdev->states + band;\
-	    int band_end = (band + 1) * band_height;\
-\
-	    height = min(band_end, yend) - y;\
-retry_rect:\
-	    ;
-#define NEST_RECT    ++cdev->driver_call_nesting;
-#define UNNEST_RECT  --cdev->driver_call_nesting
-#define ERROR_RECT(code_value)\
-		BEGIN\
-		    band_code = (code_value);\
-		    if (1) goto error_in_rect;\
-		END
-#define TRY_RECT\
-		BEGIN\
-		    do
-#define HANDLE_RECT_UNLESS(codevar, unless_clause)\
-		    while (codevar < 0 &&\
-			   (codevar = clist_VMerror_recover(cdev, codevar)) >= 0\
-			   );\
-		    if (codevar < 0 && !(unless_clause))\
-			ERROR_RECT(codevar);\
-		END
-#define HANDLE_RECT(codevar)\
-		HANDLE_RECT_UNLESS(codevar, 0)
-#define END_RECTS_ON_ERROR(retry_cleanup, is_error, after_recovering)\
-	    continue;\
-error_in_rect:\
-		if (cdev->error_is_retryable) {\
-		    retry_cleanup;\
-		    if ((is_error) &&\
-			cdev->driver_call_nesting == 0 &&\
-			(band_code =\
-			 clist_VMerror_recover_flush(cdev, band_code)) >= 0 &&\
-			(after_recovering)\
-			)\
-			goto retry_rect;\
-		}\
-		if (1) return band_code;\
-	} while ((y += height) < yend);\
-    END
-#define END_RECTS END_RECTS_ON_ERROR(DO_NOTHING, 1, 1)
-#define END_RECTS_NO_ERROR\
-	} while ((y += height) < yend);\
-    END
+#define RECT_ENUM_INIT(re, yvar, heightvar)\
+	re.y = yvar;\
+	re.height = heightvar;\
+	re.yend = re.y + re.height;\
+	re.band_height = cdev->page_band_height;
+
+#define RECT_STEP_INIT(re)\
+	    re.band = re.y / re.band_height;\
+	    re.pcls = cdev->states + re.band;\
+	    re.band_end = (re.band + 1) * re.band_height;\
+	    re.height = min(re.band_end, re.yend) - re.y;
+
+
+#define RECT_RECOVER(codevar) (codevar < 0 && (codevar = clist_VMerror_recover(cdev, codevar)) >= 0)
+#define SET_BAND_CODE(codevar) (re.band_code = codevar)
 
 /* ------ Exported by gxclrect.c ------ */
 

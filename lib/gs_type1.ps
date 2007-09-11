@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: gs_type1.ps,v 1.7 2007/08/01 14:25:39 jemarch Exp $
+% $Id: gs_type1.ps,v 1.8 2007/09/11 15:24:51 Arabidopsis Exp $
 % Type 1 font support code.
 
 % The standard representation for PostScript compatible fonts is described
@@ -27,8 +27,8 @@
 % that these entries are present in the built-in fonts.)
 /.buildfont1
  {
-   currentglobal 3 1 roll
-   dup gcheck setglobal
+   .currentglobal 3 1 roll
+   dup .gcheck .setglobal
    dup .fontbbox {
      pop pop pop pop
      dup /FontInfo known not
@@ -55,7 +55,7 @@
      ifelse
    } if
    //.buildfont1
-   3 2 roll setglobal
+   3 2 roll .setglobal
  } bind def
 % If the diskfont feature isn't included, define a dummy .loadfontdict.
 /.loadfontdict where
@@ -73,19 +73,19 @@ ifelse
 	% However, we can't use any of the other well-known dictionaries
 	% (such as userdict), since the whole point of pushing systemdict
 	% is to make sure that nothing important has been redefined.
-   userdict begin
+   /userdict .systemvar begin
 	% We can't just use `run', because we want to check for .PFB files.
    currentpacking
-    { false setpacking .loadfont1 true setpacking }
+    { //false setpacking .loadfont1 //true setpacking }
     { .loadfont1 }
    ifelse end
     { stop } if
    DISKFONTS { end } if
    cleartomark
  } bind def
- % container for CloseSource flag (default true to prevent buildup of file handles)
+ % container for CloseSource flag (default //true to prevent buildup of file handles)
  /closesourcedict mark
-   /CloseSource true
+   /CloseSource //true
  .dicttomark readonly def
 /.loadfont1 {		% <file> .loadfont1 <errorflag>
   {	% We would like to use `false /PFBDecode filter',
@@ -152,12 +152,12 @@ currentdict /closesourcedict .undef
 /CCRun {	% <font> <code|name> <charstring> CCRun -
 		% <font> <code|name> <charstring> <Private> CCRun -
   dup type /dicttype eq {
-    dup 4 index /Private .knownget { ne } { pop true } ifelse {
+    dup 4 index /Private .knownget { ne } { pop //true } ifelse {
 		% The Private dictionary was supplied, and is different
 		% from the Private dictionary of the font.  Fabricate a
 		% Type 1 font with this Private dictionary.  Most of the
 		% font entries are arbitrary or not needed.
-      .currentglobal false .setglobal 10 dict exch .setglobal begin
+      .currentglobal //false .setglobal 10 dict exch .setglobal begin
 	/Private exch def
 	/FontType 1 def
 	/FontMatrix 3 index /FontMatrix get def

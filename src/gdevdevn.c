@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/*$Id: gdevdevn.c,v 1.9 2007/09/10 14:08:45 Arabidopsis Exp $ */
+/*$Id: gdevdevn.c,v 1.10 2007/09/11 15:23:57 Arabidopsis Exp $ */
 /* Example DeviceN process color model devices. */
 
 #include "math_.h"
@@ -1832,7 +1832,7 @@ repack_data(byte * source, byte * dest, int depth, int first_bit,
     return length;
 }
 
-private int write_pcx_file(gx_device_printer * pdev, char * filename, int ncomp,
+private int devn_write_pcx_file(gx_device_printer * pdev, char * filename, int ncomp,
 			    int bpc, int pcmlinelength);
 /* 
  * This is an example print page routine for a DeviceN device.  This routine
@@ -1939,14 +1939,14 @@ spotcmyk_print_page(gx_device_printer * pdev, FILE * prn_stream)
 
     /* Now convert the bit image files into PCX files */
     if (npcmcolors) {
-	code = write_pcx_file(pdev, (char *) &pdevn->fname,
+	code = devn_write_pcx_file(pdev, (char *) &pdevn->fname,
 				npcmcolors, bpc, pcmlinelength);
 	if (code < 0)
 	    return code;
     }
     for(i = 0; i < nspot; i++) {
 	sprintf(spotname, "%ss%d", pdevn->fname, i);
-	code = write_pcx_file(pdev, spotname, 1, bpc, linelength[i]);
+	code = devn_write_pcx_file(pdev, spotname, 1, bpc, linelength[i]);
 	if (code < 0)
 	    return code;
     }
@@ -2030,8 +2030,8 @@ private const pcx_header pcx_header_prototype =
 
 
 /* Forward declarations */
-private void pcx_write_rle(const byte *, const byte *, int, FILE *);
-private int pcx_write_page(gx_device_printer * pdev, FILE * infile,
+private void devn_pcx_write_rle(const byte *, const byte *, int, FILE *);
+private int devn_pcx_write_page(gx_device_printer * pdev, FILE * infile,
     int linesize, FILE * outfile, pcx_header * phdr, bool planar, int depth);
 
 static const byte pcx_cmyk_palette[16 * 3] =
@@ -2066,7 +2066,7 @@ static const byte pcx_ega_palette[16 * 3] =
  *   num_planes - The number of planes.
  */
 private bool
-setup_pcx_header(gx_device_printer * pdev, pcx_header * phdr, int num_planes, int bits_per_plane)
+devn_setup_pcx_header(gx_device_printer * pdev, pcx_header * phdr, int num_planes, int bits_per_plane)
 {
     bool planar = true; /* Invalid cases could cause an indeterminizm. */
  
@@ -2194,7 +2194,7 @@ pc_write_mono_palette(gx_device * dev, uint max_index, FILE * file)
  *   num_planes - The number of planes.
  */
 private int
-finish_pcx_file(gx_device_printer * pdev, FILE * file, pcx_header * header, int num_planes, int bits_per_plane)
+devn_finish_pcx_file(gx_device_printer * pdev, FILE * file, pcx_header * header, int num_planes, int bits_per_plane)
 {
     switch (num_planes) {
         case 1:
@@ -2268,7 +2268,7 @@ finish_pcx_file(gx_device_printer * pdev, FILE * file, pcx_header * header, int 
 
 /* Send the page to the printer. */
 private int
-write_pcx_file(gx_device_printer * pdev, char * filename, int ncomp,
+devn_write_pcx_file(gx_device_printer * pdev, char * filename, int ncomp,
 			    int bpc, int linesize)
 {
     pcx_header header;
@@ -2289,10 +2289,10 @@ write_pcx_file(gx_device_printer * pdev, char * filename, int ncomp,
 	return_error(gs_error_invalidfileaccess);
     }
 
-    planar = setup_pcx_header(pdev, &header, ncomp, bpc);
-    code = pcx_write_page(pdev, in, linesize, out, &header, planar, depth);
+    planar = devn_setup_pcx_header(pdev, &header, ncomp, bpc);
+    code = devn_pcx_write_page(pdev, in, linesize, out, &header, planar, depth);
     if (code >= 0)
-        code = finish_pcx_file(pdev, out, &header, ncomp, bpc);
+        code = devn_finish_pcx_file(pdev, out, &header, ncomp, bpc);
 
     fclose(in);
     fclose(out);
@@ -2303,7 +2303,7 @@ write_pcx_file(gx_device_printer * pdev, char * filename, int ncomp,
 /* This routine is used for all formats. */
 /* The caller has set header->bpp, nplanes, and palette. */
 private int
-pcx_write_page(gx_device_printer * pdev, FILE * infile, int linesize, FILE * outfile,
+devn_pcx_write_page(gx_device_printer * pdev, FILE * infile, int linesize, FILE * outfile,
 	       pcx_header * phdr, bool planar, int depth)
 {
     int raster = linesize;
@@ -2347,7 +2347,7 @@ pcx_write_page(gx_device_printer * pdev, FILE * infile, int linesize, FILE * out
 		*end = end[-1];
 		++end;
 	    }
-	    pcx_write_rle(row, end, 1, outfile);
+	    devn_pcx_write_rle(row, end, 1, outfile);
 	} else
 	    switch (depth) {
 
@@ -2377,7 +2377,7 @@ pcx_write_page(gx_device_printer * pdev, FILE * infile, int linesize, FILE * out
 			    /* We might be one byte short of rsize. */
 			    if (to < pend)
 				*to = to[-1];
-			    pcx_write_rle(plane, pend, 1, outfile);
+			    devn_pcx_write_rle(plane, pend, 1, outfile);
 			}
 		    }
 		    break;
@@ -2387,7 +2387,7 @@ pcx_write_page(gx_device_printer * pdev, FILE * infile, int linesize, FILE * out
 			int pnum;
 
 			for (pnum = 0; pnum < 3; ++pnum) {
-			    pcx_write_rle(row + pnum, row + raster, 3, outfile);
+			    devn_pcx_write_rle(row + pnum, row + raster, 3, outfile);
 			    if (pdev->width & 1)
 				fputc(0, outfile);		/* pad to even */
 			}
@@ -2412,7 +2412,7 @@ pcx_write_page(gx_device_printer * pdev, FILE * infile, int linesize, FILE * out
 
 /* Write one line in PCX run-length-encoded format. */
 private void
-pcx_write_rle(const byte * from, const byte * end, int step, FILE * file)
+devn_pcx_write_rle(const byte * from, const byte * end, int step, FILE * file)
 {  /*
     * The PCX format theoretically allows encoding runs of 63
     * identical bytes, but some readers can't handle repetition

@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 artofcode LLC.
+#  Copyright (C) 2001-2006 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: openvms.mmk,v 1.10 2007/08/01 14:26:40 jemarch Exp $
+# $Id: openvms.mmk,v 1.11 2007/09/11 15:23:50 Arabidopsis Exp $
 # makefile for OpenVMS VAX and Alpha using MMK
 #
 # Please contact Jim Dunham (dunham@omtool.com) if you have questions.
@@ -447,6 +447,7 @@ CONFLDTR=-o
 CC_=$(COMP)
 CC_INT=$(CC_)
 CC_NO_WARN=$(CC_)
+CC_SHARED=$(CC_)
 
 # ------------------- Include the generic makefiles ---------------------- #
 

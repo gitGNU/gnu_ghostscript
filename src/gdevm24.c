@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevm24.c,v 1.6 2007/08/01 14:25:49 jemarch Exp $ */
+/* $Id: gdevm24.c,v 1.7 2007/09/11 15:24:17 Arabidopsis Exp $ */
 /* 24-bit-per-pixel "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"
@@ -45,7 +45,7 @@ struct stats_mem24_s {
 	fprevc[257];
     double ftotal;
 } stats_mem24;
-static int prev_count;
+static int prev_count = 0;
 static uint prev_colors[256];
 # define INCR(v) (++(stats_mem24.v))
 #else
@@ -215,11 +215,10 @@ mem_true24_fill_rectangle(gx_device * dev,
 		    else
 			--ci;
 		}
-		if (ci) {
+		if (ci)
 		    memmove(&prev_colors[1], &prev_colors[0],
 			    ci * sizeof(prev_colors[0]));
-		    prev_colors[0] = color;
-		}
+		prev_colors[0] = color;
 	    }
 #endif
 	    INCR(fcolor[min(w, 100)]);

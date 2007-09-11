@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: mkromfs.c,v 1.3 2007/08/01 14:26:40 jemarch Exp $ */
+/* $Id: mkromfs.c,v 1.4 2007/09/11 15:24:36 Arabidopsis Exp $ */
 /* Generate source data for the %rom% IODevice */
 /*
  * For reasons of convenience and footprint reduction, the various postscript

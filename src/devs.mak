@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 artofcode LLC.
+#  Copyright (C) 2001-2006 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: devs.mak,v 1.9 2007/08/01 14:25:42 jemarch Exp $
+# $Id: devs.mak,v 1.10 2007/09/11 15:24:12 Arabidopsis Exp $
 # makefile for Aladdin's device drivers.
 
 # Define the name of this makefile.
@@ -417,7 +417,7 @@ $(DD)lvga256.dev : $(DEVS_MAK) $(lvga256_)
 	$(ADDMOD) $(DD)lvga256 -lib vga vgagl
 
 $(GLOBJ)gdevl256.$(OBJ) : $(GLSRC)gdevl256.c $(GDEV) $(memory__h)
-	$(GLCC) $(GLO_)gdevl256.$(OBJ) $(C_) $(GLSRC)gdevl256.c
+	$(GLCCSHARED) $(GLO_)gdevl256.$(OBJ) $(C_) $(GLSRC)gdevl256.c
 
 vgalib_=$(GLOBJ)gdevvglb.$(OBJ) $(GLOBJ)gdevpccm.$(OBJ)
 $(DD)vgalib.dev : $(DEVS_MAK) $(vgalib_)
@@ -425,7 +425,18 @@ $(DD)vgalib.dev : $(DEVS_MAK) $(vgalib_)
 	$(ADDMOD) $(DD)vgalib -lib vga
 
 $(GLOBJ)gdevvglb.$(OBJ) : $(GLSRC)gdevvglb.c $(GDEV) $(gdevpccm_h) $(gsparam_h)
-	$(GLCC) $(GLO_)gdevvglb.$(OBJ) $(C_) $(GLSRC)gdevvglb.c
+	$(GLCCSHARED) $(GLO_)gdevvglb.$(OBJ) $(C_) $(GLSRC)gdevvglb.c
+
+### Shared library object supporting vgalib.
+### NON PORTABLE, ONLY UNIX WITH GCC SUPPORT
+
+$(GLOBJ)lvga256.so: $(lvga256_)
+	$(CCLD) -shared -Wl,'-solvga256.so' $(lvga256_) -lvga -lvgagl
+	mv lvga256.so $(GLOBJ)lvga256.so
+
+$(GLOBJ)vgalib.so: $(vgalib_)
+	$(CCLD) -shared -Wl,'-sovgalib.so' $(vgalib_) -lvga -lvgagl
+	mv vgalib.so $(GLOBJ)vgalib.so
 
 ### -------------------------- The X11 device -------------------------- ###
 
@@ -455,14 +466,14 @@ GDEVX=$(GDEV) $(x__h) $(gdevx_h) $(TOP_MAKEFILES)
 $(GLOBJ)gdevx.$(OBJ) : $(GLSRC)gdevx.c $(GDEVX) $(math__h) $(memory__h)\
  $(gscoord_h) $(gsdevice_h) $(gsiparm2_h) $(gsmatrix_h) $(gsparam_h)\
  $(gxdevmem_h) $(gxgetbit_h) $(gxiparam_h) $(gxpath_h)
-	$(GLCC) $(XINCLUDE) $(GLO_)gdevx.$(OBJ) $(C_) $(GLSRC)gdevx.c
+	$(GLCCSHARED) $(XINCLUDE) $(GLO_)gdevx.$(OBJ) $(C_) $(GLSRC)gdevx.c
 
 $(GLOBJ)gdevxcmp.$(OBJ) : $(GLSRC)gdevxcmp.c $(GDEVX) $(math__h)
-	$(GLCC) $(XINCLUDE) $(GLO_)gdevxcmp.$(OBJ) $(C_) $(GLSRC)gdevxcmp.c
+	$(GLCCSHARED) $(XINCLUDE) $(GLO_)gdevxcmp.$(OBJ) $(C_) $(GLSRC)gdevxcmp.c
 
 $(GLOBJ)gdevxini.$(OBJ) : $(GLSRC)gdevxini.c $(GDEVX) $(memory__h)\
  $(gserrors_h) $(gsparamx_h) $(gxdevmem_h) $(gdevbbox_h)
-	$(GLCC) $(XINCLUDE) $(GLO_)gdevxini.$(OBJ) $(C_) $(GLSRC)gdevxini.c
+	$(GLCCSHARED) $(XINCLUDE) $(GLO_)gdevxini.$(OBJ) $(C_) $(GLSRC)gdevxini.c
 
 # We have to compile gdevxres without warnings, because there is a
 # const/non-const cast required by the X headers that we can't work around.
@@ -472,7 +483,7 @@ $(GLOBJ)gdevxres.$(OBJ) : $(GLSRC)gdevxres.c $(std_h) $(x__h)\
 
 $(GLOBJ)gdevxxf.$(OBJ) : $(GLSRC)gdevxxf.c $(GDEVX) $(math__h) $(memory__h)\
  $(gsstruct_h) $(gsutil_h) $(gxxfont_h)
-	$(GLCC) $(XINCLUDE) $(GLO_)gdevxxf.$(OBJ) $(C_) $(GLSRC)gdevxxf.c
+	$(GLCCSHARED) $(XINCLUDE) $(GLO_)gdevxxf.$(OBJ) $(C_) $(GLSRC)gdevxxf.c
 
 # Alternate X11-based devices to help debug other drivers.
 # x11alpha pretends to have 4 bits of alpha channel.
@@ -522,7 +533,14 @@ $(DD)x11rg32x.dev : $(DEVS_MAK) $(DD)x11alt_.dev
 
 $(GLOBJ)gdevxalt.$(OBJ) : $(GLSRC)gdevxalt.c $(GDEVX) $(math__h) $(memory__h)\
  $(gsdevice_h) $(gsparam_h) $(gsstruct_h)
-	$(GLCC) $(XINCLUDE) $(GLO_)gdevxalt.$(OBJ) $(C_) $(GLSRC)gdevxalt.c
+	$(GLCCSHARED) $(XINCLUDE) $(GLO_)gdevxalt.$(OBJ) $(C_) $(GLSRC)gdevxalt.c
+
+### Shared library object supporting X11.
+### NON PORTABLE, ONLY UNIX WITH GCC SUPPORT
+
+$(GLOBJ)X11.so: $(x11alt_) $(x11_)
+	$(CCLD) -shared -Wl,'-soX11.so' $(x11alt_) $(x11_) -L/usr/X11R6/lib -lXt -lSM -lICE -lXext -lX11 $(XLIBDIRS)
+	mv X11.so $(GLOBJ)X11.so
 
 ###### --------------- Memory-buffered printer devices --------------- ######
 
@@ -862,7 +880,7 @@ $(GLOBJ)gdevpdfc.$(OBJ) : $(GLSRC)gdevpdfc.c $(GXERR) $(math__h) $(memory__h)\
 $(GLOBJ)gdevpdfd.$(OBJ) : $(GLSRC)gdevpdfd.c $(math__h) $(memory__h)\
  $(gx_h) $(gxdevice_h) $(gxfixed_h) $(gxistate_h) $(gxpaint_h)\
  $(gxcoord_h) $(gxdevmem_h) $(gxcolor2_h) $(gxhldevc_h)\
- $(gsstate_h) $(gserrors_h) $(gsptype2_h)\
+ $(gsstate_h) $(gserrors_h) $(gsptype2_h) $(gsshade_h)\
  $(gzpath_h) $(gzcpath_h) $(gdevpdfx_h) $(gdevpdfg_h) $(gdevpdfo_h) $(gsutil_h)
 	$(GLCC) $(GLO_)gdevpdfd.$(OBJ) $(C_) $(GLSRC)gdevpdfd.c
 
@@ -1501,16 +1519,15 @@ $(GLOBJ)gdevpnga.$(OBJ) : $(GLSRC)gdevpnga.c $(png__h)\
 
 ### IMDI from Argyll
 
-IMDISRCDIR=../gs/imdi/
-IMDISRC=../gs/imdi
+IMDISRC=$(IMDISRCDIR)$(D)
 
 simdi_=$(GLOBJ)imdi.$(OBJ) $(GLOBJ)imdi_tab.$(OBJ)
 
-$(GLOBJ)imdi.$(OBJ) : $(IMDISRCDIR)imdi.c
-	$(GLCC) $(GLO_)imdi.$(OBJ) $(C_) $(IMDISRCDIR)imdi.c
+$(GLOBJ)imdi.$(OBJ) : $(IMDISRC)imdi.c
+	$(GLCC) $(GLO_)imdi.$(OBJ) $(C_) $(IMDISRC)imdi.c
 
-$(GLOBJ)imdi_tab.$(OBJ) : $(IMDISRCDIR)imdi_tab.c
-	$(GLCC) $(GLO_)imdi_tab.$(OBJ) $(C_) $(IMDISRCDIR)/imdi_tab.c
+$(GLOBJ)imdi_tab.$(OBJ) : $(IMDISRC)imdi_tab.c
+	$(GLCC) $(GLO_)imdi_tab.$(OBJ) $(C_) $(IMDISRC)imdi_tab.c
 
 $(DD)simdi.dev : $(DEVS_MAK) $(simdi_)
 	$(SETMOD) $(DD)simdi $(simdi_)
@@ -1521,12 +1538,12 @@ wts_=$(GLOBJ)gdevwts.$(OBJ)
 
 $(GLOBJ)gdevwts.$(OBJ) : $(GLSRC)gdevwts.c $(PDEVH)\
  $(gscdefs_h) $(gscspace_h) $(gxgetbit_h) $(gxiparam_h) $(gxlum_h)
-	$(GLICCCC) -I$(IMDISRC) $(GLO_)gdevwts.$(OBJ) $(C_) $(GLSRC)gdevwts.c
+	$(GLICCCC) -I$(IMDISRCDIR) $(GLO_)gdevwts.$(OBJ) $(C_) $(GLSRC)gdevwts.c
 
 $(DD)wtscmyk.dev : $(DEVS_MAK) $(wts_) $(GLD)page.dev
 	$(SETPDEV2) $(DD)wtscmyk $(wts_)
 
-$(DD)wtsimdi.dev : $(DEVS_MAK) $(wts_) $(GLD)page.dev
+$(DD)wtsimdi.dev : $(DEVS_MAK) $(wts_) $(GLD)sicclib.dev $(GLD)simdi.dev $(GLD)page.dev
 	$(SETPDEV2) $(DD)wtsimdi $(wts_)
 	$(ADDMOD) $(DD)wtsimdi -include $(GLD)sicclib
 	$(ADDMOD) $(DD)wtsimdi -include $(GLD)simdi

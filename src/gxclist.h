@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclist.h,v 1.8 2007/09/10 14:08:40 Arabidopsis Exp $ */
+/* $Id: gxclist.h,v 1.9 2007/09/11 15:24:38 Arabidopsis Exp $ */
 /* Command list definitions for Ghostscript. */
 /* Requires gxdevice.h and gxdevmem.h */
 
@@ -254,6 +254,8 @@ typedef struct gx_device_clist_writer_s {
 	proc_free_up_bandlist_memory((*free_up_bandlist_memory)); /* if nz, proc to free some bandlist memory */
 	int disable_mask;		/* mask of routines to disable clist_disable_xxx */
 	gs_pattern1_instance_t *pinst; /* Used when it is a pattern clist. */
+	bool cropping_by_path;
+	int cropping_min, cropping_max;
 } gx_device_clist_writer;
 
 /* Bits for gx_device_clist_writer.disable_mask. Bit set disables behavior */

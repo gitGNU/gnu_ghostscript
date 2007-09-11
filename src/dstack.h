@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: dstack.h,v 1.8 2007/09/10 14:08:38 Arabidopsis Exp $ */
+/* $Id: dstack.h,v 1.9 2007/09/11 15:23:44 Arabidopsis Exp $ */
 /* Definitions for the interpreter's dictionary stack */
 
 #ifndef dstack_INCLUDED

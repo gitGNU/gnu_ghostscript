@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevdflt.c,v 1.10 2007/09/10 14:08:39 Arabidopsis Exp $ */
+/* $Id: gdevdflt.c,v 1.11 2007/09/11 15:24:15 Arabidopsis Exp $ */
 /* Default device implementation */
 #include "math_.h"
 #include "gx.h"
@@ -38,7 +38,7 @@ set_cinfo_polarity(gx_device * dev, gx_color_polarity_t new_polarity)
 #ifdef DEBUG
     /* sanity check */
     if (new_polarity == GX_CINFO_POLARITY_UNKNOWN) {
-        dprintf("set_cinfo_polarity: illegal operand");
+        dprintf("set_cinfo_polarity: illegal operand\n");
         return;
     }
 #endif
@@ -610,7 +610,8 @@ gx_device_fill_in_procs(register gx_device * dev)
 		fill_dev_proc( dev,
                            get_color_mapping_procs,
                            gx_default_DevGray_get_color_mapping_procs );
-            }
+            } else
+		fill_dev_proc(dev, get_color_mapping_procs, gx_error_get_color_mapping_procs);
 	}
         fill_dev_proc( dev,
                        get_color_comp_index,
@@ -627,14 +628,8 @@ gx_device_fill_in_procs(register gx_device * dev)
                            get_color_comp_index,
                            gx_default_DevRGB_get_color_comp_index );
             } else {
-#if 0
-                fill_dev_proc( dev,
-                           get_color_mapping_procs,
-                           gx_default_DevCMY_get_color_mapping_procs );
-                fill_dev_proc( dev,
-                           get_color_comp_index,
-                           gx_default_DevCMY_get_color_comp_index );
-#endif
+		fill_dev_proc(dev, get_color_mapping_procs, gx_error_get_color_mapping_procs);
+		fill_dev_proc(dev, get_color_comp_index, gx_error_get_color_comp_index);
 	    }
         }
         break;
@@ -644,8 +639,10 @@ gx_device_fill_in_procs(register gx_device * dev)
         fill_dev_proc(dev, get_color_comp_index, gx_default_DevCMYK_get_color_comp_index);
         break;
     default:		/* Unknown color model - set error handlers */
-        fill_dev_proc(dev, get_color_mapping_procs, gx_error_get_color_mapping_procs);
-        fill_dev_proc(dev, get_color_comp_index, gx_error_get_color_comp_index);
+	if (dev_proc(dev, get_color_mapping_procs) == NULL) {
+	    fill_dev_proc(dev, get_color_mapping_procs, gx_error_get_color_mapping_procs);
+	    fill_dev_proc(dev, get_color_comp_index, gx_error_get_color_comp_index);
+	}
     }
 
     set_dev_proc(dev, decode_color, get_decode_color(dev));
@@ -876,6 +873,10 @@ int
 gx_default_pattern_manage(gx_device *pdev, gx_bitmap_id id,
 		gs_pattern1_instance_t *pinst, pattern_manage_t function)
 {
+    if (function == pattern_manage__shfill_doesnt_need_path) {
+	if (pdev->procs.fill_path == gx_default_fill_path)
+	    return 1;
+    }
     return 0;
 }
 

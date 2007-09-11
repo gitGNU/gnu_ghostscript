@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,8 +17,9 @@
 
 */
 
-/* $Id: gxmclip.c,v 1.6 2007/08/01 14:26:26 jemarch Exp $ */
+/* $Id: gxmclip.c,v 1.7 2007/09/11 15:24:23 Arabidopsis Exp $ */
 /* Mask clipping support */
+#include "gserrors.h"
 #include "gx.h"
 #include "gxdevice.h"
 #include "gxdevmem.h"
@@ -87,17 +88,20 @@ gx_mask_clip_initialize(gx_device_mask_clip * cdev,
 	buffer_height = bits->size.y;
     gs_make_mem_mono_device(&cdev->mdev, 0, 0);
     for (;;) {
+	ulong bitmap_size = max_ulong;
+
 	if (buffer_height <= 0) {
 	    /*
 	     * The tile is too wide to buffer even one scan line.
 	     * We could do copy_mono in chunks, but for now, we punt.
 	     */
 	    cdev->mdev.base = 0;
-	    return 0;
+	    return_error(gs_error_VMerror);
 	}
 	cdev->mdev.width = buffer_width;
 	cdev->mdev.height = buffer_height;
-	if (gdev_mem_bitmap_size(&cdev->mdev) <= tile_clip_buffer_size)
+	gdev_mem_bitmap_size(&cdev->mdev, &bitmap_size);
+	if (bitmap_size <= tile_clip_buffer_size)
 	    break;
 	buffer_height--;
     }

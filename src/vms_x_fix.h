@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: vms_x_fix.h,v 1.7 2007/08/01 14:26:47 jemarch Exp $ */
+/* $Id: vms_x_fix.h,v 1.8 2007/09/11 15:23:54 Arabidopsis Exp $ */
 
 /* Repair definitions of Xlib when compileing with /name=(as_is) on VMS */
 /* contributed by Jouk Jansen (joukj@hrem.stm.tudelft.nl) */

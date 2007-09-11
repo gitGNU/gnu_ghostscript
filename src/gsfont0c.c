@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsfont0c.c,v 1.5 2007/08/01 14:26:06 jemarch Exp $ */
+/* $Id: gsfont0c.c,v 1.6 2007/09/11 15:24:00 Arabidopsis Exp $ */
 /* Create a FontType 0 wrapper for a CIDFont. */
 #include "memory_.h"
 #include "gx.h"

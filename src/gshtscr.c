@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gshtscr.c,v 1.8 2007/08/01 14:26:07 jemarch Exp $ */
+/* $Id: gshtscr.c,v 1.9 2007/09/11 15:24:27 Arabidopsis Exp $ */
 /* Screen (Type 1) halftone processing for Ghostscript library */
 #include "math_.h"
 #include "gx.h"

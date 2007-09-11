@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2001-2002 artofcode LLC.
+ * Copyright (C) 2001-2002 Artifex Software, Inc.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -23,13 +23,19 @@
 **/
 
 /* unistd_.h */
-#ifdef _MSC_VER
-#include <process.h>
-#include <io.h>
-#include <fcntl.h>
-#define read(handle, buffer, count) _read(handle, buffer, count)
-#define write(handle, buffer, count) _write(handle, buffer, count)
-#define close(fd) _close(fd)
+#if defined(_MSC_VER)
+#  include <process.h>
+#  include <io.h>
+#  include <fcntl.h>
+#  define read(handle, buffer, count) _read(handle, buffer, count)
+#  define write(handle, buffer, count) _write(handle, buffer, count)
+#  define close(fd) _close(fd)
+#elif defined(__BORLANDC__) && defined(__WIN32__) 
+#  include <process.h>
+#  include <io.h>
+#  include <fcntl.h>
+#  define read(handle, buffer, count) _read(handle, buffer, count)
+#  define write(handle, buffer, count) _write(handle, buffer, count)
 #else
-#include <unistd.h>
+#  include <unistd.h>
 #endif

@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 artofcode LLC.
+#  Copyright (C) 2001-2006 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: dvx-gcc.mak,v 1.11 2007/09/10 14:08:47 Arabidopsis Exp $
+# $Id: dvx-gcc.mak,v 1.12 2007/09/11 15:24:42 Arabidopsis Exp $
 # makefile for DesqView/X/gcc/X11 configuration.
 
 #include $(COMMONDIR)/gccdefs.mak
@@ -128,7 +128,7 @@ JPEG_NAME=jpeg
 # See libpng.mak for more information.
 
 PSRCDIR=libpng
-PVERSION=10216
+PVERSION=10218
 
 # Choose whether to use a shared version of the PNG library (-lpng).
 # See gs.mak and Make.htm for more information.
@@ -168,7 +168,10 @@ ICCSRCDIR=icclib
 #IJSSRCDIR=ijs
 #IJSEXECTYPE=unix
 
+# Define the directory where the imdi library source is stored.
+# See devs.mak for more information
 
+IMDISRCDIR=imdi
 
 # ------ Platform-specific options ------ #
 
@@ -336,6 +339,7 @@ AK=
 CCFLAGS=$(GENOPT) $(CFLAGS)
 CC_=$(CC) $(CCFLAGS)
 CC_NO_WARN=$(CC_)
+CC_SHARED=$(CC_)
 
 # ---------------- End of platform-specific section ---------------- #
 

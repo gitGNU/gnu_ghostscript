@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zchar32.c,v 1.7 2007/08/01 14:26:48 jemarch Exp $ */
+/* $Id: zchar32.c,v 1.8 2007/09/11 15:24:05 Arabidopsis Exp $ */
 /* Type 32 font glyph operators */
 #include "ghost.h"
 #include "oper.h"

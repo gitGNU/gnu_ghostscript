@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: pdf_draw.ps,v 1.9 2007/09/10 14:08:56 Arabidopsis Exp $
+% $Id: pdf_draw.ps,v 1.10 2007/09/11 15:24:50 Arabidopsis Exp $
 % pdf_draw.ps
 % PDF drawing operations (graphics, text, and images).
 
@@ -145,18 +145,29 @@ pdfdict begin
 .dicttomark readonly def
 
 /resolveshading {	% <shadingstream> resolveshading <shading>
-  PDFfile fileposition exch
-  mark exch {
-    oforce //shrdict 2 index .knownget { exec } if
-  } forall .dicttomark
-  dup /ShadingType get 4 ge {
-    dup dup true resolvestream
+  dup /.shading_dict .knownget {
+    exch pop 
+    dup /ShadingType get 4 ge {
+      dup /DataSource get 0 setfileposition
+    } if
+  } {
+    dup
+    PDFfile fileposition exch
+    mark exch {
+      oforce //shrdict 2 index .knownget { exec } if
+    } forall .dicttomark
+    dup /ShadingType get 4 ge {
+      dup dup true resolvestream
 		% Make a reusable stream so that the shading doesn't
 		% reposition PDFfile at unexpected times.
-    /ReusableStreamDecode filter /DataSource exch put
-  } if exch PDFfile exch setfileposition
+      /ReusableStreamDecode filter /DataSource exch put
+    } if 
+    exch PDFfile exch setfileposition
+    dup 3 1 roll /.shading_dict exch put
+  } ifelse
 } bdef
-/resolvesh {		% <shname> resolveshading <shading>
+/resolvesh {		% <shname> resolvesh <shading>
+			% <shname> resolvesh <null>
   Page /Shading rget {
     resolveshading
   } {
@@ -265,20 +276,16 @@ drawopdict begin
   /q { q } def
   /Q { Q } def
 			% Graphics state setting
-  /cm { { //false upath } stopped {
-	  pop	% discard 'false' (upath failed, probably no currentpoint).
-	  //cmmatrix astore concat
-	} {
-	  % update the CTM, then uappend.
-	  7 1 roll //cmmatrix astore concat
-	  newpath { mark exch uappend } stopped 
-	  cleartomark
-	} ifelse
+  /cm { //cmmatrix astore
+        .getpath      
+        exch concat
+        newpath { exec } forall
 	% If inside a BT/ET block, we need to update the TextSaveMatrix
 	currentdict /TextSaveMatrix .knownget {
 	  //cmmatrix exch dup concatmatrix pop
 	} if
       } bdef
+
   /i { 1 .min setflat } bdef
   /J /setlinecap load def
   /d /setdash load def
@@ -823,7 +830,18 @@ drawopdict begin
   /b* { b* } def
   /W { W } def
   /W* { W* } def
-  /sh { setfillstate resolvesh shfill } def
+  /sh { setfillstate resolvesh 
+        gsave 0 .setoverprintmode 
+        dup /.shading .knownget {
+          exch 
+          pop
+        } {
+          dup
+          .buildshading
+          dup 3 1 roll /.shading exch put
+        } ifelse
+        .shfill grestore 
+      } def
 end
 
 % ---------------- XObjects ---------------- %
@@ -1234,6 +1252,15 @@ end
     } if
     dup type /dicttype eq {
     dup /W knownoget not { 1 } if
+      % Per PDF1.6 Reference table 8.13, /W in the border style dictionary is
+      % expressed in points (an absolute unit), so compensate here for any
+      % scaling of the PostScript user space done due to /UserUnit.
+      % Scaling due to -dPDFFitPage is not undone, to keep the correct border width
+      % compared to the size of the surrounding marks.
+      //systemdict /NoUserUnit .knownget not { false } if not
+      //systemdict /PDFFitPage known not and {	% UserUnit is ignored if -dPDFFitPage
+        Page /UserUnit knownoget { div } if
+      } if
     [] 2 index /S knownoget {
       /D eq { 2 index /D knownoget not { [3] } if exch pop } if
     } if 3 -1 roll pop strokeborder
@@ -1293,8 +1320,9 @@ end
 		% XObject lacks Type and Subtype keys.  This is illegal,
 		% but Acrobat Reader accepts it.  The only way we can
 		% tell whether this is a Form or a set of sub-appearances
-		% is by testing for the stream Length key.
-      dup /Length known {
+		% is by testing for the stream Length or File key.
+                % If the stream lacks Length key, try File key.
+      dup /Length known 1 index /File known or {
       		% If this is a form then simply use it
         true
       } {

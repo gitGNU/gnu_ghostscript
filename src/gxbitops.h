@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxbitops.h,v 1.7 2007/08/01 14:26:16 jemarch Exp $ */
+/* $Id: gxbitops.h,v 1.8 2007/09/11 15:23:59 Arabidopsis Exp $ */
 /* Internal definitions for bitmap operations */
 
 #ifndef gxbitops_INCLUDED

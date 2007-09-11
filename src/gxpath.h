@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxpath.h,v 1.9 2007/08/01 14:26:27 jemarch Exp $ */
+/* $Id: gxpath.h,v 1.10 2007/09/11 15:24:31 Arabidopsis Exp $ */
 /* Fixed-point path procedures */
 /* Requires gxfixed.h */
 
@@ -340,7 +340,8 @@ int
     gx_cpath_scale_exp2_shared(gx_clip_path *pcpath, int log2_scale_x,
 			       int log2_scale_y, bool list_shared,
 			       bool segments_shared),
-    gx_cpath_to_path(gx_clip_path *, gx_path *);
+    gx_cpath_to_path(gx_clip_path *, gx_path *),
+    gx_cpath_to_path_synthesize(const gx_clip_path * pcpath, gx_path * ppath);
 bool
     gx_cpath_inner_box(const gx_clip_path *, gs_fixed_rect *),
     gx_cpath_outer_box(const gx_clip_path *, gs_fixed_rect *),
@@ -348,10 +349,11 @@ bool
 				fixed, fixed);
 const gs_fixed_rect *cpath_is_rectangle(const gx_clip_path * pcpath);
 bool gx_cpath_rect_visible(gx_clip_path * pcpath, gs_int_rect *prect);
+int gx_cpath_copy(const gx_clip_path * from, gx_clip_path * pcpath);
 
 /* Enumerate a clipping path.  This interface does not copy the path. */
 /* However, it does write into the path's "visited" flags. */
-int gx_cpath_enum_init(gs_cpath_enum *, gx_clip_path *);
+int gx_cpath_enum_init(gs_cpath_enum *, const gx_clip_path *);
 int gx_cpath_enum_next(gs_cpath_enum *, gs_fixed_point[3]);		/* 0 when done */
 
 segment_notes

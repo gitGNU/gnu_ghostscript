@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevijs.c,v 1.9 2007/08/01 14:25:48 jemarch Exp $ */
+/* $Id: gdevijs.c,v 1.10 2007/09/11 15:24:28 Arabidopsis Exp $ */
 /*
  * IJS device for Ghostscript.
  * Intended to work with any IJS compliant inkjet driver, including

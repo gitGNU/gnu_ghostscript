@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 artofcode LLC.
+#  Copyright (C) 2001-2006 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,12 +15,12 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: unixinst.mak,v 1.10 2007/08/01 14:26:47 jemarch Exp $
+# $Id: unixinst.mak,v 1.11 2007/09/11 15:24:07 Arabidopsis Exp $
 # Partial makefile common to all Unix and Desqview/X configurations,
 # containing the `install' targets.
 # This is the very last part of the makefile for these configurations.
 
-install: install-exec install-scripts install-data
+install: install-exec install-scripts install-data $(INSTALL_SHARED) $(INSTALL_CONTRIB)
 
 # The sh -c in the rules below is required because Ultrix's implementation
 # of sh -e terminates execution of a command if any error occurs, even if
@@ -174,3 +174,9 @@ golfer.eps grayalph.ps snowflak.ps tiger.eps vasarely.ps waterfal.ps \
 ridt91.eps ;\
 	do $(INSTALL_DATA) $(PSEXDIR)/$$f $(DESTDIR)$(exdir) ;\
 	done
+
+install-shared: $(GS_SHARED_OBJS)
+	-mkdir -p $(DESTDIR)$(gssharedir)
+	$(SH) -c 'for obj in $(GS_SHARED_OBJS); do \
+	    $(INSTALL_PROGRAM) $$obj $(DESTDIR)$(gssharedir)/; done'
+

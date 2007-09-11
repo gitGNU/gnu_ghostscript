@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zcontrol.c,v 1.7 2007/08/01 14:26:49 jemarch Exp $ */
+/* $Id: zcontrol.c,v 1.8 2007/09/11 15:24:40 Arabidopsis Exp $ */
 /* Control operators */
 #include "string_.h"
 #include "ghost.h"

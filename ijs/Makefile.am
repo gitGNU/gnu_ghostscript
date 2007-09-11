@@ -1,4 +1,4 @@
-## Copyright (c) 2001-2004 artofcode LLC.
+## Copyright (C) 2001-2004 Artifex Software, Inc.
 ##
 ## Permission is hereby granted, free of charge, to any person
 ## obtaining a copy of this software and associated documentation
@@ -20,7 +20,7 @@
 ## CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ## SOFTWARE.
 
-## $Id: Makefile.am,v 1.4 2007/05/07 11:22:21 Arabidopsis Exp $
+## $Id: Makefile.am,v 1.5 2007/09/11 15:25:10 Arabidopsis Exp $
 
 ## Process this file with automake to produce Makefile.in.
 

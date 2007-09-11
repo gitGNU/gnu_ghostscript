@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sjbig2_luratech.h,v 1.3 2007/08/01 14:26:43 jemarch Exp $ */
+/* $Id: sjbig2_luratech.h,v 1.4 2007/09/11 15:24:35 Arabidopsis Exp $ */
 /* Definitions for jbig2decode filter - Luratech version */
 /* Requires scommon.h; strimpl.h if any templates are referenced */
 

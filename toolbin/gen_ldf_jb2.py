@@ -3,14 +3,14 @@
 # script to generate ldf_jb2.mak
 # whose source sometimes changes
 
-# $Id: gen_ldf_jb2.py,v 1.3 2007/08/01 14:26:55 jemarch Exp $
+# $Id: gen_ldf_jb2.py,v 1.4 2007/09/11 15:25:15 Arabidopsis Exp $
 
 import time, glob
 import os.path
 
 outfile="ldf_jb2.mak"
 
-license = """#    Copyright (C) %d artofcode LLC.  All rights reserved.
+license = """#    Copyright (C) %d Artifex Software, Inc.  All rights reserved.
 # This file is part of GNU ghostscript
 #
 # GNU ghostscript is free software; you can redistribute it and/or
@@ -28,7 +28,7 @@ license = """#    Copyright (C) %d artofcode LLC.  All rights reserved.
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 # 
 
-# $Id: gen_ldf_jb2.py,v 1.3 2007/08/01 14:26:55 jemarch Exp $
+# $Id: gen_ldf_jb2.py,v 1.4 2007/09/11 15:25:15 Arabidopsis Exp $
 """ % time.gmtime().tm_year
 
 comment = """

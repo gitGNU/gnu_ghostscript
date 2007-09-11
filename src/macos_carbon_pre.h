@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: macos_carbon_pre.h,v 1.5 2007/08/01 14:26:39 jemarch Exp $ */
+/* $Id: macos_carbon_pre.h,v 1.6 2007/09/11 15:24:13 Arabidopsis Exp $ */
 /* prefix include for MacOS CodeWarrior build, carbon target */
 
 #ifndef macos_carbon_pre_INCLUDED

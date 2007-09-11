@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: iimage2.h,v 1.6 2007/08/01 14:26:36 jemarch Exp $ */
+/* $Id: iimage2.h,v 1.7 2007/09/11 15:24:39 Arabidopsis Exp $ */
 /* Level 2 image operator support */
 /* Requires gsiparam.h */
 

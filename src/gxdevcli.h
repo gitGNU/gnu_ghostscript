@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxdevcli.h,v 1.10 2007/09/10 14:08:44 Arabidopsis Exp $ */
+/* $Id: gxdevcli.h,v 1.11 2007/09/11 15:24:34 Arabidopsis Exp $ */
 /* Definitions for device clients */
 
 #ifndef gxdevcli_INCLUDED
@@ -146,6 +146,10 @@ typedef struct gx_stroke_params_s gx_stroke_params;
 #ifndef gs_imager_state_DEFINED
 #  define gs_imager_state_DEFINED
 typedef struct gs_imager_state_s gs_imager_state;
+#endif
+#ifndef patch_fill_state_t_DEFINED
+#  define patch_fill_state_t_DEFINED
+typedef struct patch_fill_state_s  patch_fill_state_t;
 #endif
 
 /* We need an abstract type for the image enumeration state, */
@@ -710,6 +714,8 @@ typedef struct gx_device_cached_colors_s {
 	bool IgnoreNumCopies;		/* if true, force num_copies = 1 */\
 	bool UseCIEColor;		/* for PS LL3 */\
 	bool LockSafetyParams;		/* If true, prevent unsafe changes */\
+	long band_offset_x;		/* offsets of clist band base to (mem device) buffer */\
+	long band_offset_y;		/* for rendering that is phase sensitive (wtsimdi) */\
 	gx_page_device_procs page_procs;	/* must be last */\
 		/* end of std_device_body */\
 	gx_device_procs procs	/* object procedures */
@@ -1228,7 +1234,9 @@ typedef enum {
     pattern_manage__finish_accum,
     pattern_manage__load,
     pattern_manage__shading_area,
-    pattern_manage__is_cpath_accum
+    pattern_manage__is_cpath_accum,
+    pattern_manage__shfill_doesnt_need_path,
+    pattern_manage__handles_clip_path
 } pattern_manage_t;
 
 #define dev_t_proc_pattern_manage(proc, dev_t)\
@@ -1277,6 +1285,7 @@ typedef struct gs_fill_attributes_s {
       const gx_device_halftone *ht; /* Reserved for possible use in future. */
       gs_logical_operation_t lop; /* Reserved for possible use in future. */
       fixed ystart, yend; /* Only for X-independent gradients. Base coordinates of the gradient. */
+      patch_fill_state_t *pfs; /* For gx_fill_triangle_small. Clients must not change. */
 } gs_fill_attributes;
 
 /* Fill a linear color scanline. */
@@ -1297,12 +1306,12 @@ typedef struct gs_fill_attributes_s {
 /* [p0 : p1] - left edge, from bottom to top.
    [p2 : p3] - right edge, from bottom to top.
    The filled area is within Y-spans of both edges. */
-/* If either (c0 and c1) or (c2 and c3) may be NULL.
+/* Either (c0 and c1) or (c2 and c3) may be NULL.
    In this case the color doesn't depend on X (on Y if fa->swap_axes).
    In this case the base coordinates for the color gradient
    may be unequal to p0, p1, p2, p3, and must be provided/taken
    in/from fa->ystart, fa->yend. 
-   The rerurn value 0 is not allowed in this case. */
+   The return value 0 is not allowed in this case. */
 /* Return values : 
   1 - success;
   0 - Too big. The area isn't filled. The client must decompose the area.

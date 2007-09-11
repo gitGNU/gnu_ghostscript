@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,16 +17,13 @@
 
 */
 
-/*$Id: evenbetter-rll.c,v 1.4 2007/08/01 14:26:54 jemarch Exp $ */
+/*$Id: evenbetter-rll.c,v 1.5 2007/09/11 15:25:09 Arabidopsis Exp $ */
 /* Testbed implementation of Even Better Screening. */
 
 /*
  * Code in this module is covered by US Patents 5,055,942 and
- * 5,917,614, and corresponding international patents.  This version
- * of ETS is for commercial licensees and is governed by the licensing
- * agreement between artofcode LLC and the licensee. Please see
- * http://www.levien.com/artofcode/eventone/ for information on licensing.
-*/
+ * 5,917,614, and corresponding international patents.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>

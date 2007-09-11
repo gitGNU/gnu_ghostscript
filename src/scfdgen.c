@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: scfdgen.c,v 1.7 2007/08/01 14:26:41 jemarch Exp $ */
+/* $Id: scfdgen.c,v 1.8 2007/09/11 15:24:19 Arabidopsis Exp $ */
 /* Generate the CCITTFaxDecode tables */
 #include "stdio_.h"		/* includes std.h */
 #include "scf.h"
@@ -38,7 +38,7 @@ main()
     cfd_node area[1 << max(cfd_white_initial_bits, cfd_black_initial_bits)];
 
     fputs("/* Copyright (C) 1992, 1993, 1998, 1999 Aladdin Enterprises.  All rights reserved. */\n\n", out);
-    fputs("/* $Id: scfdgen.c,v 1.7 2007/08/01 14:26:41 jemarch Exp $ */\n", out);
+    fputs("/* $Id: scfdgen.c,v 1.8 2007/09/11 15:24:19 Arabidopsis Exp $ */\n", out);
     fputs("/* Tables for CCITTFaxDecode filter. */\n\n", out);
     fputs("/* This file was generated automatically.  It is governed by the same terms */\n", out);
     fputs("/* as the files scfetab.c and scfdgen.c from which it was derived. */\n", out);

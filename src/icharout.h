@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: icharout.h,v 1.8 2007/08/01 14:26:32 jemarch Exp $ */
+/* $Id: icharout.h,v 1.9 2007/09/11 15:24:08 Arabidopsis Exp $ */
 /* Interface to zcharout.c */
 
 #ifndef icharout_INCLUDED

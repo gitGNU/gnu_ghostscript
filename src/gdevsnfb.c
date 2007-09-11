@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevsnfb.c,v 1.6 2007/08/01 14:25:56 jemarch Exp $*/
+/* $Id: gdevsnfb.c,v 1.7 2007/09/11 15:24:42 Arabidopsis Exp $*/
 /* Sony News frame buffer driver for GhostScript */
 #include "gdevprn.h"
 #define prn_dev ((gx_device_printer *)dev) /* needed in 5.31 et seq */

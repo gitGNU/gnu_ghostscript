@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsiorom.c,v 1.3 2007/08/01 14:26:07 jemarch Exp $ */
+/* $Id: gsiorom.c,v 1.4 2007/09/11 15:23:44 Arabidopsis Exp $ */
 /* %rom% IODevice implementation for a compressed in-memory filesystem */
  
 /*

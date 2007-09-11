@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpxat.h,v 1.7 2007/08/01 14:25:55 jemarch Exp $ */
+/* $Id: gdevpxat.h,v 1.8 2007/09/11 15:24:22 Arabidopsis Exp $ */
 /* Attribute ID definitions for PCL XL */
 
 #ifndef gdevpxat_INCLUDED

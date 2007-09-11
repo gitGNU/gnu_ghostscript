@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,13 +17,14 @@
 
 */
 
-/*$Id: gxclpath.c,v 1.10 2007/09/10 14:08:38 Arabidopsis Exp $ */
+/*$Id: gxclpath.c,v 1.11 2007/09/11 15:24:14 Arabidopsis Exp $ */
 /* Higher-level path operations for band lists */
 #include "math_.h"
 #include "memory_.h"
 #include "gx.h"
 #include "gpcheck.h"
 #include "gserrors.h"
+#include "gsptype2.h"
 #include "gxdevice.h"
 #include "gxdevmem.h"		/* must precede gxcldev.h */
 #include "gxcldev.h"
@@ -575,14 +576,29 @@ clist_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
     gx_device_clist_writer * const cdev =
 	&((gx_device_clist *)dev)->writer;
     uint unknown = 0;
-    int y, height, y0, y1;
+    int ry, rheight, y0, y1;
     gs_logical_operation_t lop = pis->log_op;
     byte op = (byte)
 	(params->rule == gx_rule_even_odd ?
 	 cmd_opv_eofill : cmd_opv_fill);
     gs_fixed_point adjust;
     bool slow_rop = cmd_slow_rop(dev, lop_know_S_0(lop), pdcolor);
+    cmd_rects_enum_t re;
+    int code;
 
+    if (pdcolor != NULL && gx_dc_is_pattern2_color(pdcolor)) {
+	/* Here we need to intersect *ppath, *pcpath and shading bbox.
+	   Call the default implementation, which has a special
+	   branch for processing a shading fill with the clip writer device.
+	   It will call us back with pdcolor=NULL for passing
+	   the intersected clipping path, 
+	   and then will decompose the shading into trapezoids.
+	   See comment below about pdcolor == NULL.
+	 */
+	code = gx_default_fill_path(dev, pis, ppath, params, pdcolor, pcpath);
+	cdev->cropping_by_path = false;
+	return code;
+    }
     if ( (cdev->disable_mask & clist_disable_fill_path) ||
 	 gs_debug_c(',')
 	 ) {
@@ -595,43 +611,71 @@ clist_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
 	gs_fixed_rect bbox;
 
 	gx_path_bbox(ppath, &bbox);
-	y = fixed2int(bbox.p.y) - 1;
-	height = fixed2int_ceiling(bbox.q.y) - y + 1;
-	fit_fill_y(dev, y, height);
-	fit_fill_h(dev, y, height);
-	if (height <= 0)
+	ry = fixed2int(bbox.p.y) - 1;
+	rheight = fixed2int_ceiling(bbox.q.y) - ry + 1;
+	fit_fill_y(dev, ry, rheight);
+	fit_fill_h(dev, ry, rheight);
+	if (rheight <= 0)
 	    return 0;
     }
-    y0 = y;
-    y1 = y + height;
+    y0 = ry;
+    y1 = ry + rheight;
     cmd_check_fill_known(cdev, pis, params->flatness, &adjust, pcpath,
 			 &unknown);
     if (unknown)
 	cmd_clear_known(cdev, unknown);
-    FOR_RECTS_NO_ERROR {
-	int code = cmd_do_write_unknown(cdev, pcls, FILL_KNOWN);
-
-	if (code < 0)
-	    return code;
-	if ((code = cmd_do_enable_clip(cdev, pcls, pcpath != NULL)) < 0 ||
-	    (code = cmd_update_lop(cdev, pcls, lop)) < 0
-	    )
-	    return code;
-	code = cmd_put_drawing_color(cdev, pcls, pdcolor);
-	if (code < 0) {
-	    /* Something went wrong, use the default implementation. */
-	    return gx_default_fill_path(dev, pis, ppath, params, pdcolor,
-					pcpath);
-	}
-	pcls->colors_used.slow_rop |= slow_rop;
-	code = cmd_put_path(cdev, pcls, ppath,
-			    int2fixed(max(y - 1, y0)),
-			    int2fixed(min(y + height + 1, y1)),
-			    op,
-			    true, sn_none /* fill doesn't need the notes */ );
-	if (code < 0)
-	    return code;
-    } END_RECTS_NO_ERROR;
+    if (cdev->permanent_error < 0)
+	return (cdev->permanent_error);
+    if (pdcolor == NULL) {
+	/* See comment above about pattern2_color.
+	   Put the clipping path only.
+	   The graphics library will call us again with subdividing 
+	   the shading into trapezoids and rectangles. 
+	   Note cropping_by_path is true during such calls. */
+	cdev->cropping_by_path = true;
+	cdev->cropping_min = ry;
+	cdev->cropping_max = ry + rheight;
+	RECT_ENUM_INIT(re, ry, rheight);
+	do {
+	    RECT_STEP_INIT(re);
+	    if (pcpath != NULL) {
+		code = cmd_do_write_unknown(cdev, re.pcls, clip_path_known);
+		if (code < 0)
+		    return code;
+	    }
+	    code = cmd_do_enable_clip(cdev, re.pcls, pcpath != NULL);
+	    if (code  < 0)
+		return code;
+	    re.y += re.height;
+	} while (re.y < re.yend);
+    } else {
+	RECT_ENUM_INIT(re, ry, rheight);
+	do {
+	    RECT_STEP_INIT(re);
+	    code = cmd_do_write_unknown(cdev, re.pcls, FILL_KNOWN);
+	    if (code < 0)
+		return code;
+	    if ((code = cmd_do_enable_clip(cdev, re.pcls, pcpath != NULL)) < 0 ||
+		(code = cmd_update_lop(cdev, re.pcls, lop)) < 0
+		)
+		return code;
+	    code = cmd_put_drawing_color(cdev, re.pcls, pdcolor);
+	    if (code < 0) {
+		/* Something went wrong, use the default implementation. */
+		return gx_default_fill_path(dev, pis, ppath, params, pdcolor,
+					    pcpath);
+	    }
+	    re.pcls->colors_used.slow_rop |= slow_rop;
+	    code = cmd_put_path(cdev, re.pcls, ppath,
+				int2fixed(max(re.y - 1, y0)),
+				int2fixed(min(re.y + re.height + 1, y1)),
+				op,
+				true, sn_none /* fill doesn't need the notes */ );
+	    if (code < 0)
+		return code;
+	    re.y += re.height;
+	} while (re.y < re.yend);
+    }
     return 0;
 }
 
@@ -647,9 +691,10 @@ clist_stroke_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
     gs_fixed_rect bbox;
     gs_fixed_point expansion;
     int adjust_y, expansion_code;
-    int y, height;
+    int ry, rheight;
     gs_logical_operation_t lop = pis->log_op;
     bool slow_rop = cmd_slow_rop(dev, lop_know_S_0(lop), pdcolor);
+    cmd_rects_enum_t re;
 
     if ((cdev->disable_mask & clist_disable_stroke_path) ||
 	gs_debug_c(',')
@@ -665,15 +710,15 @@ clist_stroke_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
     if (expansion_code < 0) {
 	/* Expansion is too large: use the entire page. */
 	adjust_y = 0;
-	y = 0;
-	height = dev->height;
+	ry = 0;
+	rheight = dev->height;
     } else {
 	adjust_y = fixed2int_ceiling(expansion.y) + 1;
-	y = fixed2int(bbox.p.y) - adjust_y;
-	height = fixed2int_ceiling(bbox.q.y) - y + adjust_y;
-	fit_fill_y(dev, y, height);
-	fit_fill_h(dev, y, height);
-	if (height <= 0)
+	ry = fixed2int(bbox.p.y) - adjust_y;
+	rheight = fixed2int_ceiling(bbox.q.y) - ry + adjust_y;
+	fit_fill_y(dev, ry, rheight);
+	fit_fill_h(dev, ry, rheight);
+	if (rheight <= 0)
 	    return 0;
     }
     /* Check the dash pattern, since we bail out if */
@@ -739,21 +784,25 @@ clist_stroke_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
     }
     if (unknown)
 	cmd_clear_known(cdev, unknown);
-    FOR_RECTS_NO_ERROR {
+    if (cdev->permanent_error < 0)
+      return (cdev->permanent_error);
+    RECT_ENUM_INIT(re, ry, rheight);
+    do {
 	int code;
 
-	if ((code = cmd_do_write_unknown(cdev, pcls, stroke_all_known)) < 0 ||
-	    (code = cmd_do_enable_clip(cdev, pcls, pcpath != NULL)) < 0 ||
-	    (code = cmd_update_lop(cdev, pcls, lop)) < 0
+	RECT_STEP_INIT(re);
+	if ((code = cmd_do_write_unknown(cdev, re.pcls, stroke_all_known)) < 0 ||
+	    (code = cmd_do_enable_clip(cdev, re.pcls, pcpath != NULL)) < 0 ||
+	    (code = cmd_update_lop(cdev, re.pcls, lop)) < 0
 	    )
 	    return code;
-	code = cmd_put_drawing_color(cdev, pcls, pdcolor);
+	code = cmd_put_drawing_color(cdev, re.pcls, pdcolor);
 	if (code < 0) {
 	    /* Something went wrong, use the default implementation. */
 	    return gx_default_stroke_path(dev, pis, ppath, params, pdcolor,
 					  pcpath);
 	}
-	pcls->colors_used.slow_rop |= slow_rop;
+	re.pcls->colors_used.slow_rop |= slow_rop;
 	{
 	    fixed ymin, ymax;
 
@@ -768,16 +817,17 @@ clist_stroke_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
 		ymin = min_fixed;
 		ymax = max_fixed;
 	    } else {
-		ymin = int2fixed(y - adjust_y);
-		ymax = int2fixed(y + height + adjust_y);
+		ymin = int2fixed(re.y - adjust_y);
+		ymax = int2fixed(re.y + re.height + adjust_y);
 	    }
-	    code = cmd_put_path(cdev, pcls, ppath, ymin, ymax,
+	    code = cmd_put_path(cdev, re.pcls, ppath, ymin, ymax,
 				cmd_opv_stroke,
 				false, (segment_notes)~0);
 	    if (code < 0)
 		return code;
 	}
-    } END_RECTS_NO_ERROR;
+	re.y += re.height;
+    } while (re.y < re.yend);
     return 0;
 }
 
@@ -799,8 +849,9 @@ clist_put_polyfill(gx_device *dev, fixed px, fixed py,
     gx_device_clist_writer * const cdev =
 	&((gx_device_clist *)dev)->writer;
     gs_fixed_rect bbox;
-    int y, height, y0, y1;
+    int ry, rheight, y0, y1;
     bool slow_rop = cmd_slow_rop(dev, lop_know_S_0(lop), pdcolor);
+    cmd_rects_enum_t re;
 
     if (gs_debug_c(','))
 	return -1;		/* path-based banding is disabled */
@@ -810,27 +861,32 @@ clist_put_polyfill(gx_device *dev, fixed px, fixed py,
 	)
 	goto out;
     gx_path_bbox(&path, &bbox);
-    y = fixed2int(bbox.p.y) - 1;
-    height = fixed2int_ceiling(bbox.q.y) - y + 1;
-    fit_fill_y(dev, y, height);
-    fit_fill_h(dev, y, height);
-    if (height <= 0)
+    ry = fixed2int(bbox.p.y) - 1;
+    rheight = fixed2int_ceiling(bbox.q.y) - ry + 1;
+    fit_fill_y(dev, ry, rheight);
+    fit_fill_h(dev, ry, rheight);
+    if (rheight <= 0)
 	return 0;
-    y0 = y;
-    y1 = y + height;
-    FOR_RECTS_NO_ERROR {
-	if ((code = cmd_update_lop(cdev, pcls, lop)) < 0 ||
-	    (code = cmd_put_drawing_color(cdev, pcls, pdcolor)) < 0)
+    y0 = ry;
+    y1 = ry + rheight;
+    if (cdev->permanent_error < 0)
+      return (cdev->permanent_error);
+    RECT_ENUM_INIT(re, ry, rheight);
+    do {
+	RECT_STEP_INIT(re);
+	if ((code = cmd_update_lop(cdev, re.pcls, lop)) < 0 ||
+	    (code = cmd_put_drawing_color(cdev, re.pcls, pdcolor)) < 0)
 	    goto out;
-	pcls->colors_used.slow_rop |= slow_rop;
-	code = cmd_put_path(cdev, pcls, &path,
-			    int2fixed(max(y - 1, y0)),
-			    int2fixed(min(y + height + 1, y1)),
+	re.pcls->colors_used.slow_rop |= slow_rop;
+	code = cmd_put_path(cdev, re.pcls, &path,
+			    int2fixed(max(re.y - 1, y0)),
+			    int2fixed(min(re.y + re.height + 1, y1)),
 			    cmd_opv_polyfill,
 			    true, sn_none /* fill doesn't need the notes */ );
 	if (code < 0)
 	    goto out;
-    } END_RECTS_NO_ERROR;
+	re.y += re.height;
+    } while (re.y < re.yend);
 out:
     gx_path_free(&path, "clist_put_polyfill");
     return code;
@@ -1258,6 +1314,14 @@ cmd_put_path(gx_device_clist_writer * cldev, gx_clist_state * pcls,
 		     * ends.
 		     */
 		    set_first_point();
+		    /*
+		     * If implicit_close == true, we don't need an explicit closepath,
+		     * because the filling algorithm will close subpath automatically.
+		     * Otherwise, if open < 0, we have an empty closed path.
+		     * If side != 0, it is outside the band, so we can 
+		     * safely skip it, because the band has been expanded
+		     * with line width.
+		     */
 		    if (side != 0) {
 			open = 0;
 			continue;

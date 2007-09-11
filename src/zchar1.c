@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zchar1.c,v 1.9 2007/08/01 14:26:48 jemarch Exp $ */
+/* $Id: zchar1.c,v 1.10 2007/09/11 15:24:18 Arabidopsis Exp $ */
 /* Type 1 character display operator */
 #include "memory_.h"
 #include "ghost.h"
@@ -236,6 +236,7 @@ charstring_execchar_aux(i_ctx_t *i_ctx_p, gs_text_enum_t *penum, gs_font *pfont)
 	cxs.sbw[2] = 0;
 	cxs.sbw[3] = -penum->FontBBox_as_Metrics2.x; /* Sic! */
 	cxs.use_FontBBox_as_Metrics2 = true;
+	cxs.present = metricsNone;
     }
     /* Establish a current point. */
     code = gs_moveto(igs, 0.0, 0.0);

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2007 artofcode LLC.
+/* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscicach.c,v 1.1 2007/09/10 14:08:38 Arabidopsis Exp $ */
+/* $Id: gscicach.c,v 1.2 2007/09/11 15:24:37 Arabidopsis Exp $ */
 /* A color index cache. */
 #include "gx.h"
 #include "gserrors.h"

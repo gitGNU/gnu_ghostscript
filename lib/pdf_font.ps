@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: pdf_font.ps,v 1.9 2007/09/10 14:08:56 Arabidopsis Exp $
+% $Id: pdf_font.ps,v 1.10 2007/09/11 15:24:49 Arabidopsis Exp $
 % PDF font operations.
 
 % Finding a font by name can't give a proper result when PDF font names aren't unique.
@@ -856,11 +856,10 @@ end readonly def
 		                          % filepos fontres stream
     1 index /FontDescriptor oget          % filepos fontres stream fd   
     /Flags get 4 and 0 ne                 % filepos fontres stream is_symbolic
-    dup {
-      2 index null exch getencoding       % filepos fontres stream is_symbolic Encoding
-    } {
-      2 index StandardEncoding exch getencoding
-    } ifelse
+    dup { //null } { StandardEncoding } ifelse        
+    3 index /Encoding known {
+      3 index getencoding
+    } if                                  % filepos fontres stream is_symbolic Encoding
     dup 4 index exch                      % filepos fontres stream is_symbolic Encoding fontres Encoding
     /prebuilt_encoding exch put           % filepos fontres stream is_symbolic Encoding
     .loadpdfttfont
@@ -1448,7 +1447,16 @@ currentdict /bndef undef
   } {
     dup dup /FontDescriptor knownoget {
                                           % font-res font-res font-desc
-      dup /FontObject .knownget {
+
+      dup /FontObject .knownget dup {     % font-res font-res font-desc font? bool bool
+        % Check that the cached FontObject has the right resource type
+        % The same font descriptor can be reused in a CID and non-CID contexts. bug 689301
+        3 index /Subtype knownoget not { /Type1 } if
+        dup /CIDFontType0 eq exch /CIDFontType2 eq or  % font-res font-res font-desc font bool is_cid
+        2 index /CIDFontType known xor {
+          pop pop //false                 % font-res font-res font-desc false 
+        } if
+      } if {
                                           % res res desc obj
           3 1 roll pop pop                % res obj
       } { 

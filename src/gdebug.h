@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdebug.h,v 1.6 2007/08/01 14:25:45 jemarch Exp $ */
+/* $Id: gdebug.h,v 1.7 2007/09/11 15:23:58 Arabidopsis Exp $ */
 /* Debugging machinery definitions */
 
 #ifndef gdebug_INCLUDED

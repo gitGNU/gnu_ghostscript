@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gp_dosfs.c,v 1.7 2007/08/01 14:25:58 jemarch Exp $ */
+/* $Id: gp_dosfs.c,v 1.8 2007/09/11 15:24:04 Arabidopsis Exp $ */
 /* Common routines for MS-DOS (any compiler) and DesqView/X, */
 /* which has a MS-DOS-like file system. */
 #include "dos_.h"

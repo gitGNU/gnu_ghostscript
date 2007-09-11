@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gserver.c,v 1.6 2007/08/01 14:26:05 jemarch Exp $ */
+/* $Id: gserver.c,v 1.7 2007/09/11 15:23:53 Arabidopsis Exp $ */
 /* Server front end for Ghostscript, replacing gs.c. */
 #include "memory_.h"
 #include "string_.h"

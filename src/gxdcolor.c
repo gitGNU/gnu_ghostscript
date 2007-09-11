@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxdcolor.c,v 1.8 2007/08/01 14:26:20 jemarch Exp $ */
+/*$Id: gxdcolor.c,v 1.9 2007/09/11 15:24:19 Arabidopsis Exp $ */
 /* Pure and null device color implementation */
 #include "gx.h"
 #include "memory_.h"

@@ -1,7 +1,7 @@
 /*
     jbig2dec
 
-    Copyright (c) 2001 artofcode LLC.
+    Copyright (C) 2001 Artifex Software, Inc.
 
     This software is distributed under license and may not
     be copied, modified or distributed except as expressly
@@ -13,7 +13,7 @@
     Artifex Software, Inc.,  101 Lucas Valley Road #110,
     San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-    $Id: jbig2_arith_int.h,v 1.3 2007/05/07 11:22:12 Arabidopsis Exp $
+    $Id: jbig2_arith_int.h,v 1.4 2007/09/11 15:24:53 Arabidopsis Exp $
 */
 
 typedef struct _Jbig2ArithIntCtx Jbig2ArithIntCtx;

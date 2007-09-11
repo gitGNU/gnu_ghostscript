@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfunc.c,v 1.7 2007/08/01 14:26:52 jemarch Exp $ */
+/* $Id: zfunc.c,v 1.8 2007/09/11 15:24:00 Arabidopsis Exp $ */
 /* Generic PostScript language interface to Functions */
 #include "memory_.h"
 #include "ghost.h"

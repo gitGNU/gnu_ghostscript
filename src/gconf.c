@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gconf.c,v 1.6 2007/08/01 14:25:45 jemarch Exp $ */
+/* $Id: gconf.c,v 1.7 2007/09/11 15:24:19 Arabidopsis Exp $ */
 /* Configuration tables */
 #include "memory_.h"
 #include "gx.h"
@@ -94,7 +94,8 @@ private const gs_composite_type_t *const gx_compositor_list[] = {
 /* Set up the device table. */
 #define device_(dev) (const gx_device *)&dev,
 #define device2_(dev) &dev,
-private const gx_device *const gx_device_list[] = {
+private const gx_device *gx_device_list[1024] = {
+  /* as shared library are adding drivers here, so removed constness */
 #include "gconf.h"
 	 0
 };
@@ -175,9 +176,29 @@ int
 gs_lib_device_list(const gx_device * const **plist,
 		   gs_memory_struct_type_t ** pst)
 {
+    int i;
+
     if (plist != 0)
 	*plist = gx_device_list;
     if (pst != 0)
 	*pst = NULL;
-    return countof(gx_device_list) - 1;
+
+    for (i = 0; i < countof(gx_device_list) - 1; ++i)
+      if (!gx_device_list[i])
+	break;
+    return i;
 }
+
+#ifdef GS_DEVS_SHARED
+void
+gs_lib_register_device(const gx_device *dev)
+{
+  int i;
+
+  for (i = 0; i < countof(gx_device_list) - 1; ++i)
+    if (!gx_device_list[i]) {
+      gx_device_list[i] = dev;
+      return;
+    }
+}
+#endif

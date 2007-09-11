@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/*$Id: gdevbbox.c,v 1.10 2007/09/10 14:08:41 Arabidopsis Exp $ */
+/*$Id: gdevbbox.c,v 1.11 2007/09/11 15:23:53 Arabidopsis Exp $ */
 /* Device for tracking bounding box */
 #include "math_.h"
 #include "memory_.h"

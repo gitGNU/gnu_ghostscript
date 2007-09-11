@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 artofcode LLC.
+#  Copyright (C) 2001-2006 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: watclib.mak,v 1.10 2007/09/10 14:08:45 Arabidopsis Exp $
+# $Id: watclib.mak,v 1.11 2007/09/11 15:24:41 Arabidopsis Exp $
 # makefile for MS-DOS / Watcom C/C++ library testing.
 
 libdefault: $(GLOBJ)gslib.exe
@@ -72,7 +72,7 @@ JVERSION=6
 PSRCDIR=libpng
 !endif
 !ifndef PVERSION
-PVERSION=10216
+PVERSION=10218
 !endif
 
 !ifndef ZSRCDIR
@@ -104,6 +104,13 @@ ICCSRCDIR=icclib
 !ifndef IJSSRCDIR
 IJSSRCDIR=ijs
 IJSEXECTYPE=win
+!endif
+
+# Define the directory where the imdi library source is stored.
+# See devs.mak for more information
+
+!ifndef IMDISRCDIR
+IMDISRCDIR=imdi
 !endif
 
 CFLAGS=

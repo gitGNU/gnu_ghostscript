@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sfilter.h,v 1.6 2007/08/01 14:26:42 jemarch Exp $ */
+/* $Id: sfilter.h,v 1.7 2007/09/11 15:24:07 Arabidopsis Exp $ */
 /* Definitions for simple Ghostscript streams */
 /* Requires scommon.h; should require strimpl.h only if any templates */
 /* are referenced, but some compilers always require strimpl.h. */

@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#    Copyright (C) 1991-2004 artofcode LLC.  All rights reserved.
+#    Copyright (C) 1991-2004 Artifex Software, Inc.  All rights reserved.
 # 
 # This file is part of GNU ghostscript
 #
@@ -18,7 +18,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 #
 
-# $Id: cmpi.py,v 1.2 2007/08/01 14:26:57 jemarch Exp $
+# $Id: cmpi.py,v 1.3 2007/09/11 15:25:16 Arabidopsis Exp $
 # python compare image -- interactive graphical image differencing
 #
 """
