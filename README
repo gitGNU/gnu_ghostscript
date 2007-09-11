@@ -1,5 +1,5 @@
 
-This is GNU Ghostscript version 8.56.0.
+This is GNU Ghostscript version 8.60.0.
 
 GNU Ghostscript is an interpreter for the Postscript language and the
 Adobe Portable Document Format (PDF), a set of C procedures (the
@@ -7,13 +7,6 @@ Ghostscript lib) that implements the graphics capabilities that appear
 as primitive operations in the Postscript language and in PDF, and a
 set of utility programs that include the ability to convert PostScript
 to PDF.
-
-The main changes since the last release (8.55) are numerous bug fixes
-and improvements. Most significantly, comformance with the Quality Logic
-CET suite for Postscript has been improved, and a special 'gs_cet.ps'
-prefix file can be sent with a job to produce output closer to that of
-the reference implementation. In the GNU release, a patch number was added
-to avoid confusion with the GPL version of the package.
 
 GNU Ghostscript is based on the GPLed Ghostscript made by Ralph Giles,
 artofcode LLC and Artifex Software, Inc.  Thanks to Ralph's hard work

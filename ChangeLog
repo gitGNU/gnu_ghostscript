@@ -36,3 +36,7 @@
 	in the main Makefile
 	* AUTHORS, NEWS, install-sh, missing: added files
 	* new GNU version: 8.56.0
+
+2007-09-12 Didier LINK <didier@famille-link.fr>
+	* lots of updates from GPL 8.57 and 8.60 released by Artifex Software Inc.
+	* new GNU version: 8.60.0

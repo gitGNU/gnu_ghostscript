@@ -1,3 +1,22 @@
+Version 8.60.0 main changes:
+
+* merge of drivers and other patches from ESP Ghostscript
+* include the cups driver from ESP Ghostscript
+* The X11 device is now modularized on Linux and Solaris systems 
+  when built with GNU ld
+* include numerous important bug fixes over the previous stable 
+  version, as well as improvements to performance, memory footprint, 
+  shading and image handling
+* use of bbox for default driver output, no more the x11 one.
+
+Version 8.57.0 main changes:
+
+* bug fixes, performance and quality improvements in the areas of
+  patterns, shading and image filtering
+* implementation of the Well Tempered Screening algorithm in an 
+  output device, using Graeme Gill's IMDI library for efficient 
+  color mapping.
+
 Version 8.56.0 main changes:
 
 * include all bugfixes and changes from GPL version 8.56

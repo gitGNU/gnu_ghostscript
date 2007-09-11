@@ -5,9 +5,10 @@
 
   The files in the Resource directory and any subdirectories thereof
   are also part of GNU Ghostscript, with the explicit exception of
-  the files in the CMap subdirectory. The CMap files are copyright
-  Adobe Systems Incorporated and covered by a separate license
-  which permits only verbatim distribution.
+  the files in the CMap subdirectory. The CMap files presents in the GPL
+  version are copyright Adobe Systems Incorporated and covered by a 
+  separate license which permits only verbatim distribution. For this
+  reason these files aren't distributed with GNU Ghostscript.
 
   GNU Ghostscript is free software; you can redistribute it and/or
   modify it under the terms of version 2 of the GNU General Public
@@ -26,14 +27,14 @@
 
  ---
 
-  GPL Ghostscript contains an implementation of techniques covered 
+  GNU Ghostscript contains an implementation of techniques covered 
   by US Patents 5,055,942 and 5,917,614, and corresponding
   international patents. These patents are licensed for use with
-  GPL Ghostscript under the following grant:
+  GNU Ghostscript under the following grant:
 
   Whereas, Raph Levien (hereinafter "Inventor") has obtained patent
   protection for related technology (hereinafter "Patented
-  Technology"), Inventor wishes to aid the the GNU free software
+  Technology"), Inventor wishes to aid the GNU free software
   project in achieving its goals, and Inventor also wishes to
   increase public awareness of Patented Technology, Inventor hereby
   grants a fully paid up, nonexclusive, royalty free license to
