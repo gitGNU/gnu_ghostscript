@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscdef.c,v 1.11 2007/09/11 15:23:54 Arabidopsis Exp $ */
+/* $Id: gscdef.c,v 1.12 2008/03/23 15:27:39 Arabidopsis Exp $ */
 /* Configuration scalars */
 
 #include "std.h"
@@ -97,3 +97,9 @@ const char *const gs_lib_default_path = GS_LIB_DEFAULT;
 
 /* Define the interpreter initialization file. */
 const char *const gs_init_file = GS_INIT;
+
+/* Define the default devices list. */
+#ifndef GS_DEV_DEFAULT
+#define GS_DEV_DEFAULT ""
+#endif
+const char *const gs_dev_defaults = GS_DEV_DEFAULT;

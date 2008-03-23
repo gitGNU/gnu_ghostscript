@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsnotify.c,v 1.7 2007/09/11 15:24:09 Arabidopsis Exp $ */
+/* $Id: gsnotify.c,v 1.8 2008/03/23 15:28:01 Arabidopsis Exp $ */
 /* Notification machinery implementation */
 #include "gx.h"
 #include "gserrors.h"
@@ -59,7 +59,7 @@ gs_notify_register(gs_notify_list_t *nlist, gs_notify_proc_t proc,
  * If proc_data is 0, unregister all registrations of that proc; otherwise,
  * unregister only the registration of that procedure with that proc_data.
  */
-private void
+static void
 no_unreg_proc(void *pdata)
 {
 }

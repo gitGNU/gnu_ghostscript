@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevabuf.c,v 1.8 2007/09/11 15:24:12 Arabidopsis Exp $ */
+/* $Id: gdevabuf.c,v 1.9 2008/03/23 15:27:46 Arabidopsis Exp $ */
 /* Alpha-buffering memory devices */
 #include "memory_.h"
 #include "gx.h"
@@ -36,10 +36,10 @@
 
 /* We can't initialize the device descriptor statically very well, */
 /* so we patch up the image2 or image4 descriptor. */
-private dev_proc_map_rgb_color(mem_alpha_map_rgb_color);
-private dev_proc_map_color_rgb(mem_alpha_map_color_rgb);
-private dev_proc_map_rgb_alpha_color(mem_alpha_map_rgb_alpha_color);
-private dev_proc_copy_alpha(mem_alpha_copy_alpha);
+static dev_proc_map_rgb_color(mem_alpha_map_rgb_color);
+static dev_proc_map_color_rgb(mem_alpha_map_color_rgb);
+static dev_proc_map_rgb_alpha_color(mem_alpha_map_rgb_alpha_color);
+static dev_proc_copy_alpha(mem_alpha_copy_alpha);
 
 void
 gs_make_mem_alpha_device(gx_device_memory * adev, gs_memory_t * mem,
@@ -59,7 +59,7 @@ gs_make_mem_alpha_device(gx_device_memory * adev, gs_memory_t * mem,
 }
 
 /* Reimplement color mapping. */
-private gx_color_index
+static gx_color_index
 mem_alpha_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 {
     gx_device_memory * const mdev = (gx_device_memory *)dev;
@@ -68,7 +68,7 @@ mem_alpha_map_rgb_color(gx_device * dev, const gx_color_value cv[])
     return (color == 0 || color == gx_no_color_index ? color :
 	    (gx_color_index) ((1 << mdev->log2_alpha_bits) - 1));
 }
-private int
+static int
 mem_alpha_map_color_rgb(gx_device * dev, gx_color_index color,
 			gx_color_value prgb[3])
 {
@@ -77,7 +77,7 @@ mem_alpha_map_color_rgb(gx_device * dev, gx_color_index color,
 				 (color == 0 ? color : (gx_color_index) 1),
 				 prgb);
 }
-private gx_color_index
+static gx_color_index
 mem_alpha_map_rgb_alpha_color(gx_device * dev, gx_color_value r,
 		   gx_color_value g, gx_color_value b, gx_color_value alpha)
 {
@@ -93,7 +93,7 @@ mem_alpha_map_rgb_alpha_color(gx_device * dev, gx_color_value r,
 					mdev->log2_alpha_bits)));
 }
 /* Implement alpha copying. */
-private int
+static int
 mem_alpha_copy_alpha(gx_device * dev, const byte * data, int data_x,
 	   int raster, gx_bitmap_id id, int x, int y, int width, int height,
 		     gx_color_index color, int depth)
@@ -142,13 +142,13 @@ mem_alpha_copy_alpha(gx_device * dev, const byte * data, int data_x,
  */
 
 /* Procedures */
-private dev_proc_close_device(mem_abuf_close);
-private dev_proc_copy_mono(mem_abuf_copy_mono);
-private dev_proc_fill_rectangle(mem_abuf_fill_rectangle);
-private dev_proc_get_clipping_box(mem_abuf_get_clipping_box);
+static dev_proc_close_device(mem_abuf_close);
+static dev_proc_copy_mono(mem_abuf_copy_mono);
+static dev_proc_fill_rectangle(mem_abuf_fill_rectangle);
+static dev_proc_get_clipping_box(mem_abuf_get_clipping_box);
 
 /* The device descriptor. */
-private const gx_device_memory mem_alpha_buffer_device =
+static const gx_device_memory mem_alpha_buffer_device =
 mem_device("image(alpha buffer)", 0, 1,
 	   gx_forward_map_rgb_color, gx_forward_map_color_rgb,
 	 mem_abuf_copy_mono, gx_default_copy_color, mem_abuf_fill_rectangle,
@@ -186,7 +186,7 @@ gs_device_is_abuf(const gx_device * dev)
 /* Internal routine to flush a block of the buffer. */
 /* A block is a group of scan lines whose initial Y is a multiple */
 /* of the Y scale and whose height is equal to the Y scale. */
-private int
+static int
 abuf_flush_block(gx_device_memory * adev, int y)
 {
     gx_device *target = adev->target;
@@ -231,7 +231,7 @@ abuf_flush_block(gx_device_memory * adev, int y)
     }
 }
 /* Flush the entire buffer. */
-private int
+static int
 abuf_flush(gx_device_memory * adev)
 {
     int y, code = 0;
@@ -245,7 +245,7 @@ abuf_flush(gx_device_memory * adev)
 }
 
 /* Close the device, flushing the buffer. */
-private int
+static int
 mem_abuf_close(gx_device * dev)
 {
     gx_device_memory * const mdev = (gx_device_memory *)dev;
@@ -266,7 +266,7 @@ typedef struct y_transfer_s {
     int transfer_y;
     int transfer_height;
 } y_transfer;
-private void
+static void
 y_transfer_init(y_transfer * pyt, gx_device * dev, int ty, int th)
 {
     gx_device_memory * const mdev = (gx_device_memory *)dev;
@@ -283,7 +283,7 @@ y_transfer_init(y_transfer * pyt, gx_device * dev, int ty, int th)
     pyt->transfer_height = 0;
 }
 /* while ( yt.height_left > 0 ) { y_transfer_next(&yt, mdev); ... } */
-private int
+static int
 y_transfer_next(y_transfer * pyt, gx_device * dev)
 {
     gx_device_memory * const mdev = (gx_device_memory *)dev;
@@ -335,7 +335,7 @@ y_transfer_next(y_transfer * pyt, gx_device * dev)
 }
 
 /* Copy a monobit image. */
-private int
+static int
 mem_abuf_copy_mono(gx_device * dev,
 	       const byte * base, int sourcex, int sraster, gx_bitmap_id id,
 	int x, int y, int w, int h, gx_color_index zero, gx_color_index one)
@@ -366,7 +366,7 @@ mem_abuf_copy_mono(gx_device * dev,
 }
 
 /* Fill a rectangle. */
-private int
+static int
 mem_abuf_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 			gx_color_index color)
 {
@@ -392,7 +392,7 @@ mem_abuf_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 }
 
 /* Get the clipping box.  We must scale this up by the number of alpha bits. */
-private void
+static void
 mem_abuf_get_clipping_box(gx_device * dev, gs_fixed_rect * pbox)
 {
     gx_device_memory * const mdev = (gx_device_memory *)dev;

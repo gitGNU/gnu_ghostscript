@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gstype2.c,v 1.10 2007/09/11 15:24:39 Arabidopsis Exp $ */
+/* $Id: gstype2.c,v 1.11 2008/03/23 15:27:40 Arabidopsis Exp $ */
 /* Adobe Type 2 charstring interpreter */
 #include "math_.h"
 #include "memory_.h"
@@ -56,7 +56,7 @@
 	return type2_sbw(pcis, csp, cstack, ipsp, explicit_width);\
       }\
   END
-private int
+static int
 type2_sbw(gs_type1_state * pcis, cs_ptr csp, cs_ptr cstack, ip_state_t * ipsp,
 	  bool explicit_width)
 {
@@ -98,7 +98,7 @@ type2_sbw(gs_type1_state * pcis, cs_ptr csp, cs_ptr cstack, ip_state_t * ipsp,
     }
     return type1_result_sbw;
 }
-private int
+static int
 type2_vstem(gs_type1_state * pcis, cs_ptr csp, cs_ptr cstack)
 {
     fixed x = 0;

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsparam2.c,v 1.7 2007/09/11 15:24:19 Arabidopsis Exp $ */
+/* $Id: gsparam2.c,v 1.8 2008/03/23 15:28:05 Arabidopsis Exp $ */
 /* Serialize and unserialize parameter lists */
 
 /* Initial version 2/1/98 by John Desrosiers (soho@crl.com) */
@@ -33,8 +33,8 @@
 /* ---------------- Serializer ---------------- */
 
 /* Forward references */
-private int sput_word(stream *dest, uint value);
-private int sput_bytes(stream *dest, const byte *data, uint size);
+static int sput_word(stream *dest, uint value);
+static int sput_bytes(stream *dest, const byte *data, uint size);
 
 /*
  * Serialize the contents of a gs_param_list, including sub-dictionaries,
@@ -164,7 +164,7 @@ string_array:	sput_word(dest, size);
 }
 
 /* Put a variable-length value on a stream. */
-private int
+static int
 sput_word(stream *dest, uint value)
 {
     int code = 0;
@@ -182,7 +182,7 @@ sput_word(stream *dest, uint value)
 }
 
 /* Put bytes on a stream. */
-private int
+static int
 sput_bytes(stream *dest, const byte *data, uint size)
 {
     uint ignore_count;
@@ -193,8 +193,8 @@ sput_bytes(stream *dest, const byte *data, uint size)
 /* ---------------- Unserializer ---------------- */
 
 /* Forward references */
-private int sget_word(stream *src, uint *pvalue);
-private int sget_bytes(stream *src, byte *data, uint size);
+static int sget_word(stream *src, uint *pvalue);
+static int sget_bytes(stream *src, byte *data, uint size);
 
 /*
  * Unserialize a parameter list from a stream.  The list must be in WRITE
@@ -351,7 +351,7 @@ put:	if (code < 0)
 /* ---------- Utility functions -------- */
 
 /* Get a value stored with sput_word */
-private int
+static int
 sget_word(stream *src, uint *pvalue)
 {
     uint value = 0;
@@ -372,7 +372,7 @@ sget_word(stream *src, uint *pvalue)
 }
 
 /* Get bytes from a stream */
-private int
+static int
 sget_bytes(stream *src, byte *data, uint size)
 {
     uint ignore_count;

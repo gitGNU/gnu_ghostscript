@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sbhc.c,v 1.7 2007/09/11 15:23:53 Arabidopsis Exp $ */
+/* $Id: sbhc.c,v 1.8 2008/03/23 15:27:56 Arabidopsis Exp $ */
 /* Bounded Huffman code filters */
 #include "memory_.h"
 #include "stdio_.h"
@@ -31,7 +31,7 @@
 private_st_BHCE_state();
 
 /* Initialize BoundedHuffmanEncode filter. */
-private int
+static int
 s_BHCE_reinit(stream_state * st)
 {
     stream_BHCE_state *const ss = (stream_BHCE_state *) st;
@@ -40,7 +40,7 @@ s_BHCE_reinit(stream_state * st)
     s_bhce_init_inline(ss);
     return 0;
 }
-private int
+static int
 s_BHCE_init(register stream_state * st)
 {
     stream_BHCE_state *const ss = (stream_BHCE_state *) st;
@@ -57,7 +57,7 @@ s_BHCE_init(register stream_state * st)
 }
 
 /* Release the filter. */
-private void
+static void
 s_BHCE_release(stream_state * st)
 {
     stream_BHCE_state *const ss = (stream_BHCE_state *) st;
@@ -66,7 +66,7 @@ s_BHCE_release(stream_state * st)
 }
 
 /* Process a buffer. */
-private int
+static int
 s_BHCE_process(stream_state * st, stream_cursor_read * pr,
 	       stream_cursor_write * pw, bool last)
 {
@@ -167,7 +167,7 @@ private_st_BHCD_state();
 #define hcd_initial_bits 7	/* arbitrary, >= 1 and <= 8 */
 
 /* Initialize BoundedHuffmanDecode filter. */
-private int
+static int
 s_BHCD_reinit(stream_state * st)
 {
     stream_BHCD_state *const ss = (stream_BHCD_state *) st;
@@ -176,7 +176,7 @@ s_BHCD_reinit(stream_state * st)
     s_bhcd_init_inline(ss);
     return 0;
 }
-private int
+static int
 s_BHCD_init(register stream_state * st)
 {
     stream_BHCD_state *const ss = (stream_BHCD_state *) st;
@@ -196,7 +196,7 @@ s_BHCD_init(register stream_state * st)
 }
 
 /* Release the filter. */
-private void
+static void
 s_BHCD_release(stream_state * st)
 {
     stream_BHCD_state *const ss = (stream_BHCD_state *) st;
@@ -205,7 +205,7 @@ s_BHCD_release(stream_state * st)
 }
 
 /* Process a buffer. */
-private int
+static int
 s_BHCD_process(stream_state * st, stream_cursor_read * pr,
 	       stream_cursor_write * pw, bool last)
 {

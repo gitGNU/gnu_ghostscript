@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zht2.c,v 1.10 2007/09/11 15:24:20 Arabidopsis Exp $ */
+/* $Id: zht2.c,v 1.11 2008/03/23 15:27:48 Arabidopsis Exp $ */
 /* Level 2 sethalftone operator */
 #include "ghost.h"
 #include "oper.h"
@@ -36,11 +36,11 @@
 #include "zht2.h"
 
 /* Forward references */
-private int dict_spot_params(const ref *, gs_spot_halftone *, ref *, ref *);
-private int dict_spot_results(i_ctx_t *, ref *, const gs_spot_halftone *);
-private int dict_threshold_params(const ref *, gs_threshold_halftone *,
+static int dict_spot_params(const ref *, gs_spot_halftone *, ref *, ref *);
+static int dict_spot_results(i_ctx_t *, ref *, const gs_spot_halftone *);
+static int dict_threshold_params(const ref *, gs_threshold_halftone *,
 				  ref *);
-private int dict_threshold2_params(const ref *, gs_threshold2_halftone *,
+static int dict_threshold2_params(const ref *, gs_threshold2_halftone *,
 				   ref *, gs_memory_t *);
 
 /*
@@ -59,16 +59,16 @@ gs_get_colorname_string(const gs_memory_t *mem, gs_separation_name colorname_ind
 }
 
 /* Dummy spot function */
-private float
+static float
 spot1_dummy(floatp x, floatp y)
 {
     return (x + y) / 2;
 }
 
 /* <dict> <dict5> .sethalftone5 - */
-private int sethalftone_finish(i_ctx_t *);
-private int sethalftone_cleanup(i_ctx_t *);
-private int
+static int sethalftone_finish(i_ctx_t *);
+static int sethalftone_cleanup(i_ctx_t *);
+static int
 zsethalftone5(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -349,7 +349,7 @@ zsethalftone5(i_ctx_t *i_ctx_p)
 }
 
 /* Install the halftone after sampling. */
-private int
+static int
 sethalftone_finish(i_ctx_t *i_ctx_p)
 {
     gx_device_halftone *pdht = r_ptr(esp, gx_device_halftone);
@@ -366,7 +366,7 @@ sethalftone_finish(i_ctx_t *i_ctx_p)
     return o_pop_estack;
 }
 /* Clean up after installing the halftone. */
-private int
+static int
 sethalftone_cleanup(i_ctx_t *i_ctx_p)
 {
     gx_device_halftone *pdht = r_ptr(&esp[4], gx_device_halftone);
@@ -394,7 +394,7 @@ const op_def zht2_l2_op_defs[] =
 
 /* Extract frequency, angle, spot function, and accurate screens flag */
 /* from a dictionary. */
-private int
+static int
 dict_spot_params(const ref * pdict, gs_spot_halftone * psp,
 		 ref * psproc, ref * ptproc)
 {
@@ -419,7 +419,7 @@ dict_spot_params(const ref * pdict, gs_spot_halftone * psp,
 }
 
 /* Set actual frequency and angle in a dictionary. */
-private int
+static int
 dict_real_result(i_ctx_t *i_ctx_p, ref * pdict, const char *kstr, floatp val)
 {
     int code = 0;
@@ -434,7 +434,7 @@ dict_real_result(i_ctx_t *i_ctx_p, ref * pdict, const char *kstr, floatp val)
     }
     return code;
 }
-private int
+static int
 dict_spot_results(i_ctx_t *i_ctx_p, ref * pdict, const gs_spot_halftone * psp)
 {
     int code;
@@ -448,7 +448,7 @@ dict_spot_results(i_ctx_t *i_ctx_p, ref * pdict, const gs_spot_halftone * psp)
 }
 
 /* Extract Width, Height, and TransferFunction from a dictionary. */
-private int
+static int
 dict_threshold_common_params(const ref * pdict,
 			     gs_threshold_halftone_common * ptp,
 			     ref **pptstring, ref *ptproc)
@@ -470,7 +470,7 @@ dict_threshold_common_params(const ref * pdict,
 }
 
 /* Extract threshold common parameters + Thresholds. */
-private int
+static int
 dict_threshold_params(const ref * pdict, gs_threshold_halftone * ptp,
 		      ref * ptproc)
 {
@@ -493,7 +493,7 @@ dict_threshold_params(const ref * pdict, gs_threshold_halftone * ptp,
 
 /* Extract threshold common parameters + Thresholds, Width2, Height2, */
 /* BitsPerSample. */
-private int
+static int
 dict_threshold2_params(const ref * pdict, gs_threshold2_halftone * ptp,
 		       ref * ptproc, gs_memory_t *mem)
 {

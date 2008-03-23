@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: seexec.c,v 1.7 2007/09/11 15:24:15 Arabidopsis Exp $ */
+/* $Id: seexec.c,v 1.8 2008/03/23 15:28:02 Arabidopsis Exp $ */
 /* eexec filters */
 #include "stdio_.h"		/* includes std.h */
 #include "strimpl.h"
@@ -34,7 +34,7 @@
 private_st_exE_state();
 
 /* Process a buffer */
-private int
+static int
 s_exE_process(stream_state * st, stream_cursor_read * pr,
 	      stream_cursor_write * pw, bool last)
 {
@@ -66,7 +66,7 @@ const stream_template s_exE_template = {
 private_st_exD_state();
 
 /* Set defaults. */
-private void
+static void
 s_exD_set_defaults(stream_state * st)
 {
     stream_exD_state *const ss = (stream_exD_state *) st;
@@ -81,7 +81,7 @@ s_exD_set_defaults(stream_state * st)
 
 /* Initialize the state for reading and decrypting. */
 /* Decrypting streams are not positionable. */
-private int
+static int
 s_exD_init(stream_state * st)
 {
     stream_exD_state *const ss = (stream_exD_state *) st;
@@ -92,7 +92,7 @@ s_exD_init(stream_state * st)
 }
 
 /* Process a buffer. */
-private int
+static int
 s_exD_process(stream_state * st, stream_cursor_read * pr,
 	      stream_cursor_write * pw, bool last)
 {

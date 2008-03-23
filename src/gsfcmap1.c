@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsfcmap1.c,v 1.9 2007/09/11 15:24:23 Arabidopsis Exp $ */
+/* $Id: gsfcmap1.c,v 1.10 2008/03/23 15:27:54 Arabidopsis Exp $ */
 /* Adobe-based CMap character decoding */
 #include "memory_.h"
 #include "string_.h"
@@ -28,7 +28,7 @@
 #include "gxfcmap1.h"
 
 /* Get a big-endian integer. */
-inline private ulong
+static inline ulong
 bytes2int(const byte *p, int n)
 {
     ulong v = 0;
@@ -44,7 +44,7 @@ bytes2int(const byte *p, int n)
 public_st_cmap_adobe1();
 /* Because lookup ranges can be elements of arrays, */
 /* their enum_ptrs procedure must never return 0 prematurely. */
-private 
+static 
 ENUM_PTRS_WITH(cmap_lookup_range_enum_ptrs,
                gx_cmap_lookup_range_t *pclr) return 0;
 case 0:
@@ -63,7 +63,7 @@ case 0:
 case 1: return ENUM_STRING(&pclr->keys);
 case 2: return ENUM_STRING(&pclr->values);
 ENUM_PTRS_END
-private
+static
 RELOC_PTRS_WITH(cmap_lookup_range_reloc_ptrs, gx_cmap_lookup_range_t *pclr)
     RELOC_VAR(pclr->cmap);
     RELOC_STRING_VAR(pclr->keys);
@@ -80,7 +80,7 @@ public_st_cmap_lookup_range_element();
  * multi-dimensional range comparator
  */
 
-private void
+static void
 print_msg_str_in_range(const byte *str,
                        const byte *key_lo, const byte *key_hi,
                        int key_size)
@@ -93,7 +93,7 @@ print_msg_str_in_range(const byte *str,
     dlprintf("\n");
 }
 
-private int
+static int
 gs_cmap_get_shortest_chr(const gx_code_map_t * pcmap, uint *pfidx)
 {
     int i;
@@ -118,7 +118,7 @@ gs_cmap_get_shortest_chr(const gx_code_map_t * pcmap, uint *pfidx)
  * Returns offset of the given CID, considering CID range
  * as array of CIDs (the last index changes fastest).
  */
-private int
+static int
 gs_multidim_CID_offset(const byte *key_str,
                         const byte *key_lo, const byte *key_hi,
 			int key_size)
@@ -146,7 +146,7 @@ gs_multidim_CID_offset(const byte *key_str,
  * number of bytes in the code, or an error.  Store the decoded bytes in
  * *pchr.  For undefined characters, set *pglyph = gs_no_glyph and return 0.
  */
-private int
+static int
 code_map_decode_next_multidim_regime(const gx_code_map_t * pcmap,
                      const gs_const_string * pstr,
                      uint * pindex, uint * pfidx,
@@ -332,7 +332,7 @@ code_map_decode_next_multidim_regime(const gx_code_map_t * pcmap,
  * some invalid CMap which def & undef maps exceed the codespacerange.
  * It should be checked in this function, or some procedure in gs_cmap.ps.
  */
-private int
+static int
 gs_cmap_adobe1_decode_next(const gs_cmap_t * pcmap_in,
 			   const gs_const_string * pstr,
 			   uint * pindex, uint * pfidx,
@@ -435,7 +435,7 @@ gs_cmap_adobe1_decode_next(const gs_cmap_t * pcmap_in,
  * the code space ranges, lookup tables, keys, and values.
  */
 
-private int
+static int
 adobe1_next_range(gs_cmap_ranges_enum_t *penum)
 {
     const gs_cmap_adobe1_t *const pcmap =
@@ -446,15 +446,15 @@ adobe1_next_range(gs_cmap_ranges_enum_t *penum)
     penum->range = pcmap->code_space.ranges[penum->index++];
     return 0;
 }
-private const gs_cmap_ranges_enum_procs_t adobe1_range_procs = {
+static const gs_cmap_ranges_enum_procs_t adobe1_range_procs = {
     adobe1_next_range
 };
-private void
+static void
 gs_cmap_adobe1_enum_ranges(const gs_cmap_t *pcmap, gs_cmap_ranges_enum_t *pre)
 {
     gs_cmap_ranges_enum_setup(pre, pcmap, &adobe1_range_procs);
 }
-private int
+static int
 adobe1_next_lookup(gs_cmap_lookups_enum_t *penum, const gx_code_map_t *pcm)
 {
     const gx_cmap_lookup_range_t *lookup = &pcm->lookup[penum->index[0]];
@@ -470,19 +470,19 @@ adobe1_next_lookup(gs_cmap_lookups_enum_t *penum, const gx_code_map_t *pcm)
     penum->index[1] = 0;
     return 0;
 }
-private int
+static int
 adobe1_next_lookup_def(gs_cmap_lookups_enum_t *penum)
 {
     return adobe1_next_lookup(penum,
 			&((const gs_cmap_adobe1_t *)penum->cmap)->def);
 }
-private int
+static int
 adobe1_next_lookup_notdef(gs_cmap_lookups_enum_t *penum)
 {
     return adobe1_next_lookup(penum,
 			&((const gs_cmap_adobe1_t *)penum->cmap)->notdef);
 }
-private int
+static int
 adobe1_next_entry(gs_cmap_lookups_enum_t *penum, const gx_code_map_t *pcm)
 {
     const gx_cmap_lookup_range_t *lookup = &pcm->lookup[penum->index[0] - 1];
@@ -507,25 +507,25 @@ adobe1_next_entry(gs_cmap_lookups_enum_t *penum, const gx_code_map_t *pcm)
     penum->index[1]++;
     return 0;
 }
-private int
+static int
 adobe1_next_entry_def(gs_cmap_lookups_enum_t *penum)
 {
     return adobe1_next_entry(penum,
 			&((const gs_cmap_adobe1_t *)penum->cmap)->def);
 }
-private int
+static int
 adobe1_next_entry_notdef(gs_cmap_lookups_enum_t *penum)
 {
     return adobe1_next_entry(penum,
 			&((const gs_cmap_adobe1_t *)penum->cmap)->notdef);
 }
-private const gs_cmap_lookups_enum_procs_t adobe1_lookup_def_procs = {
+static const gs_cmap_lookups_enum_procs_t adobe1_lookup_def_procs = {
     adobe1_next_lookup_def, adobe1_next_entry_def
 };
-private const gs_cmap_lookups_enum_procs_t adobe1_lookup_notdef_procs = {
+static const gs_cmap_lookups_enum_procs_t adobe1_lookup_notdef_procs = {
     adobe1_next_lookup_notdef, adobe1_next_entry_notdef
 };
-private void
+static void
 gs_cmap_adobe1_enum_lookups(const gs_cmap_t *pcmap, int which,
 			    gs_cmap_lookups_enum_t *pre)
 {
@@ -534,7 +534,7 @@ gs_cmap_adobe1_enum_lookups(const gs_cmap_t *pcmap, int which,
 				&adobe1_lookup_def_procs));
 }
 
-private const gs_cmap_procs_t cmap_adobe1_procs = {
+static const gs_cmap_procs_t cmap_adobe1_procs = {
     gs_cmap_adobe1_decode_next,
     gs_cmap_adobe1_enum_ranges,
     gs_cmap_adobe1_enum_lookups,

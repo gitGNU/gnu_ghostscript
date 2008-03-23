@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevsun.c,v 1.7 2007/09/11 15:24:06 Arabidopsis Exp $*/
+/* $Id: gdevsun.c,v 1.8 2008/03/23 15:27:54 Arabidopsis Exp $*/
 /* SunView driver */
 #include "gx.h"			/* for gx_bitmap; includes std.h */
 
@@ -56,7 +56,7 @@ dev_proc_copy_color(sun_copy_color);
 dev_proc_draw_line(sun_draw_line);
 
 /* The device descriptor */
-private gx_device_procs sun_procs = {
+static gx_device_procs sun_procs = {
 	sun_open,
 	NULL,			/* get_initial_matrix */
 	sun_sync,
@@ -225,7 +225,7 @@ Display_does_not_support_this_many_colors
 #define TRUE_BLUE_COLS	(1 << TRUE_BLUE_BITS)
 
 /* Initialize the device. */
-private Notify_value destroy_func();
+static Notify_value destroy_func();
 int
 sun_open(register gx_device *dev)
 {
@@ -425,7 +425,7 @@ if ( gs_debug['X'] )
 	return 0;
 }
 /* Prevent the user from closing the window. */
-private Notify_value
+static Notify_value
 destroy_func(Frame frame, Destroy_status status)
 {	if ( status == DESTROY_CHECKING )
 	   {	notify_veto_destroy(frame);

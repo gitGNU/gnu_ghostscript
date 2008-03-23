@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpe.c,v 1.7 2007/09/11 15:24:11 Arabidopsis Exp $*/
+/* $Id: gdevpe.c,v 1.8 2008/03/23 15:27:47 Arabidopsis Exp $*/
 /*
  * Private Eye display driver
  *
@@ -54,7 +54,7 @@ dev_proc_close_device(pe_close);
 dev_proc_fill_rectangle(pe_fill_rectangle);
 dev_proc_copy_mono(pe_copy_mono);
 
-private gx_device_procs pe_procs =
+static gx_device_procs pe_procs =
 {	pe_open,
 	NULL,			/* get_initial_matrix */
 	NULL,			/* sync_output */

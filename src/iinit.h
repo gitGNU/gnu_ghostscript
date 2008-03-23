@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: iinit.h,v 1.7 2007/09/11 15:23:47 Arabidopsis Exp $ */
+/* $Id: iinit.h,v 1.8 2008/03/23 15:27:57 Arabidopsis Exp $ */
 /* (Internal) interface to iinit.c */
 
 #ifndef iinit_INCLUDED
@@ -30,6 +30,9 @@
 int obj_init(i_ctx_t **, gs_dual_memory_t *);
 int zop_init(i_ctx_t *);
 int op_init(i_ctx_t *);
+#ifdef DEBUG_TRACE_PS_OPERATORS
+const char *op_get_name_string(op_proc_t opproc);
+#endif
 
 /*
  * Test whether there are any Level 2 operators in the executable.

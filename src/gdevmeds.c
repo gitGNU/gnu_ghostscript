@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevmeds.c,v 1.7 2007/09/11 15:24:20 Arabidopsis Exp $ */
+/* $Id: gdevmeds.c,v 1.8 2008/03/23 15:28:05 Arabidopsis Exp $ */
 /*
  * Media selection support for printer drivers
  *
@@ -32,7 +32,7 @@
 #define INCH      * 0.0254
 #define TOLERANCE 0.1 CM
 
-private const struct {
+static const struct {
 	const char* name;
 	float       width;
 	float       height;

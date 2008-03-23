@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zchar2.c,v 1.7 2007/09/11 15:24:33 Arabidopsis Exp $ */
+/* $Id: zchar2.c,v 1.8 2008/03/23 15:28:15 Arabidopsis Exp $ */
 /* Type 2 character display operator */
 #include "ghost.h"
 #include "oper.h"
@@ -29,7 +29,7 @@
 #include "ichar1.h"
 
 /* <font> <code|name> <name> <charstring> .type2execchar - */
-private int
+static int
 ztype2execchar(i_ctx_t *i_ctx_p)
 {
     return charstring_execchar(i_ctx_p, (1 << (int)ft_encrypted2));

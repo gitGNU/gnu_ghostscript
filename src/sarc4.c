@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sarc4.c,v 1.8 2007/09/11 15:24:11 Arabidopsis Exp $ */
+/* $Id: sarc4.c,v 1.9 2008/03/23 15:27:49 Arabidopsis Exp $ */
 
 /* Arcfour cipher and filter implementation */
 
@@ -74,7 +74,7 @@ s_arcfour_set_key(stream_arcfour_state * state, const unsigned char *key,
 /* (de)crypt a section of text--the procedure is the same
  * in each direction. see strimpl.h for return codes.
  */
-private int
+static int
 s_arcfour_process(stream_state * ss, stream_cursor_read * pr,
 		  stream_cursor_write * pw, bool last)
 {

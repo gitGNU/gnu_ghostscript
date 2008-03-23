@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sjpx.c,v 1.5 2007/09/11 15:24:42 Arabidopsis Exp $ */
+/* $Id: sjpx.c,v 1.6 2008/03/23 15:27:44 Arabidopsis Exp $ */
 /* JPXDecode filter implementation -- hooks in libjasper */
 
 #include "memory_.h"
@@ -28,7 +28,7 @@
 #include "gsmalloc.h"
 #include "sjpx.h"
 
-private void s_jpxd_set_defaults(stream_state *ss);
+static void s_jpxd_set_defaults(stream_state *ss);
 
 /* stream implementation */
 
@@ -41,7 +41,7 @@ private_st_jpxd_state(); /* creates a gc object for our state,
 			    defined in sjpx.h */
 
 /* error reporting callback for the jpx library */
-private void
+static void
 s_jpx_jas_error_cb(jas_error_t err, char *msg)
 {
   dprintf2("jasper (code %d) %s", (int)err, msg);
@@ -52,15 +52,18 @@ s_jpx_jas_error_cb(jas_error_t err, char *msg)
    this involves allocating the stream and image structures, and
    initializing the decoder.
  */
-private int
+static int
 s_jpxd_init(stream_state * ss)
 {
     stream_jpxd_state *const state = (stream_jpxd_state *) ss;
     int status = 0;
 
-    s_jpxd_set_defaults(ss);
-    state->jpx_memory = ss->memory ? ss->memory->non_gc_memory : gs_lib_ctx_get_non_gc_memory_t();
-            
+    if (state->jpx_memory == NULL) {
+      state->jpx_memory = ss->memory ?
+		ss->memory->non_gc_memory : 
+		gs_lib_ctx_get_non_gc_memory_t();
+    }
+
     status = jas_init();
     jas_set_error_cb(s_jpx_jas_error_cb);
 #ifdef JPX_DEBUG
@@ -80,7 +83,7 @@ s_jpxd_init(stream_state * ss)
 
 #ifdef DEBUG
 /* dump information from a jasper image struct for debugging */
-private int
+static int
 dump_jas_image(jas_image_t *image)
 {
     int i, numcmpts = jas_image_numcmpts(image);
@@ -145,7 +148,7 @@ dump_jas_image(jas_image_t *image)
 }
 #endif /* DEBUG */
 
-private int
+static int
 copy_row_gray(unsigned char *dest, jas_image_t *image,
 	int x, int y, int bytes)
 {
@@ -161,7 +164,7 @@ copy_row_gray(unsigned char *dest, jas_image_t *image,
     return bytes;
 }
 
-private int
+static int
 copy_row_rgb(unsigned char *dest, jas_image_t *image,
 	int x, int y, int bytes)
 {
@@ -185,7 +188,7 @@ copy_row_rgb(unsigned char *dest, jas_image_t *image,
     return count;
 }
 
-private int
+static int
 copy_row_yuv(unsigned char *dest, jas_image_t *image,
 	int x, int y, int bytes)
 {
@@ -242,7 +245,7 @@ copy_row_yuv(unsigned char *dest, jas_image_t *image,
     return count;
 }
 
-private int
+static int
 copy_row_default(unsigned char *dest, jas_image_t *image,
 	int x, int y, int bytes)
 {
@@ -261,7 +264,7 @@ copy_row_default(unsigned char *dest, jas_image_t *image,
 }
 
 /* buffer the input stream into our state */
-private int
+static int
 s_jpxd_buffer_input(stream_jpxd_state *const state, stream_cursor_read *pr,
 		       long bytes)
 {
@@ -289,7 +292,7 @@ s_jpxd_buffer_input(stream_jpxd_state *const state, stream_cursor_read *pr,
 }
 
 /* decode the compressed image data saved in our state */
-private int
+static int
 s_jpxd_decode_image(stream_jpxd_state * state)
 {
     jas_stream_t *stream = state->stream;
@@ -341,7 +344,7 @@ s_jpxd_decode_image(stream_jpxd_state * state)
 /* process a secton of the input and return any decoded data.
    see strimpl.h for return codes.
  */
-private int
+static int
 s_jpxd_process(stream_state * ss, stream_cursor_read * pr,
                  stream_cursor_write * pw, bool last)
 {
@@ -422,7 +425,7 @@ s_jpxd_process(stream_state * ss, stream_cursor_read * pr,
 /* stream release.
    free all our decoder state.
  */
-private void
+static void
 s_jpxd_release(stream_state *ss)
 {
     stream_jpxd_state *const state = (stream_jpxd_state *) ss;
@@ -436,21 +439,22 @@ s_jpxd_release(stream_state *ss)
 }
 
 /* set stream defaults.
-   this hook exists to avoid confusing the gc with bogus
-   pointers. we use it similarly just to NULL all the pointers.
-   (could just be done in _init?)
+   This hook exists to avoid confusing the gc with bogus
+   pointers. We also set a default for client-settable 
+   parameters like the requested output colorspace.
  */
-private void
+static void
 s_jpxd_set_defaults(stream_state *ss)
 {
     stream_jpxd_state *const state = (stream_jpxd_state *) ss;
-    
+
     state->stream = NULL;
     state->image = NULL;
     state->offset = 0;
     state->buffer = NULL;
     state->bufsize = 0;
     state->buffill = 0;
+    /* the following can be set by the client before calling init() */
     state->colorspace = gs_jpx_cs_unset;
 }
 

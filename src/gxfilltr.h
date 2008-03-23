@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxfilltr.h,v 1.5 2007/09/11 15:24:22 Arabidopsis Exp $ */
+/* $Id: gxfilltr.h,v 1.6 2008/03/23 15:27:50 Arabidopsis Exp $ */
 /* Configurable algorithm for decomposing a spot into trapezoids. */
 
 /*
@@ -40,7 +40,7 @@
 /* Takes lines off of y_list and adds them to */
 /* x_list as needed.  band_mask limits the size of each band, */
 /* by requiring that ((y1 - 1) & band_mask) == (y0 & band_mask). */
-private int
+static int
 TEMPLATE_spot_into_trapezoids (line_list *ll, fixed band_mask)
 {
     const fill_options fo = *ll->fo;

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxicolor.c,v 1.9 2007/09/11 15:23:56 Arabidopsis Exp $ */
+/* $Id: gxicolor.c,v 1.10 2008/03/23 15:27:58 Arabidopsis Exp $ */
 /* Color image rendering */
 #include "gx.h"
 #include "memory_.h"
@@ -52,7 +52,7 @@ typedef union {
 /* Check the prototype. */
 iclass_proc(gs_image_class_4_color);
 
-private irender_proc(image_render_color);
+static irender_proc(image_render_color);
 irender_proc_t
 gs_image_class_4_color(gx_image_enum * penum)
 {
@@ -93,7 +93,7 @@ gs_image_class_4_color(gx_image_enum * penum)
 /* ------ Rendering procedures ------ */
 
 /* Test whether a color is transparent. */
-private bool
+static bool
 mask_color_matches(const byte *v, const gx_image_enum *penum,
 		   int num_components)
 {
@@ -108,7 +108,7 @@ mask_color_matches(const byte *v, const gx_image_enum *penum,
 }
 
 /* Render a color image with 8 or fewer bits per sample. */
-private int
+static int
 image_render_color(gx_image_enum *penum_orig, const byte *buffer, int data_x,
 		   uint w, int h, gx_device * dev)
 {

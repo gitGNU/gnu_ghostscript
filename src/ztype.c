@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ztype.c,v 1.8 2007/09/11 15:24:02 Arabidopsis Exp $ */
+/* $Id: ztype.c,v 1.9 2008/03/23 15:27:48 Arabidopsis Exp $ */
 /* Type, attribute, and conversion operators */
 #include "math_.h"
 #include "memory_.h"
@@ -42,8 +42,8 @@
  */
 
 /* Forward references */
-private int access_check(i_ctx_t *, int, bool);
-private int convert_to_string(const gs_memory_t *mem, os_ptr, os_ptr);
+static int access_check(i_ctx_t *, int, bool);
+static int convert_to_string(const gs_memory_t *mem, os_ptr, os_ptr);
 
 /*
  * Max and min integer values expressed as reals.
@@ -56,8 +56,8 @@ private int convert_to_string(const gs_memory_t *mem, os_ptr, os_ptr);
  */
 #define ALT_MIN_LONG (-1L << (arch_sizeof_long * 8 - 1))
 #define ALT_MAX_LONG (~(ALT_MIN_LONG))
-private const double min_int_real = (ALT_MIN_LONG * 1.0 - 1);
-private const double max_int_real = (ALT_MAX_LONG * 1.0 + 1);
+static const double min_int_real = (ALT_MIN_LONG * 1.0 - 1);
+static const double max_int_real = (ALT_MAX_LONG * 1.0 + 1);
 
 #define REAL_CAN_BE_INT(v)\
   ((v) > min_int_real && (v) < max_int_real)
@@ -67,7 +67,7 @@ private const double max_int_real = (ALT_MAX_LONG * 1.0 + 1);
   (r_has_type(opp, t_dictionary) ? dict_access_ref(opp) : opp)
 
 /* <obj> <typenames> .type <name> */
-private int
+static int
 ztype(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -98,7 +98,7 @@ ztype(i_ctx_t *i_ctx_p)
 }
 
 /* - .typenames <name1|null> ... <nameN|null> */
-private int
+static int
 ztypenames(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -124,7 +124,7 @@ ztypenames(i_ctx_t *i_ctx_p)
 }
 
 /* <obj> cvlit <obj> */
-private int
+static int
 zcvlit(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -160,7 +160,7 @@ zcvx(i_ctx_t *i_ctx_p)
 }
 
 /* <obj> xcheck <bool> */
-private int
+static int
 zxcheck(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -171,7 +171,7 @@ zxcheck(i_ctx_t *i_ctx_p)
 }
 
 /* <obj:array|packedarray|file|string> executeonly <obj> */
-private int
+static int
 zexecuteonly(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -183,7 +183,7 @@ zexecuteonly(i_ctx_t *i_ctx_p)
 }
 
 /* <obj:array|packedarray|dict|file|string> noaccess <obj> */
-private int
+static int
 znoaccess(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -216,7 +216,7 @@ zreadonly(i_ctx_t *i_ctx_p)
 }
 
 /* <array|packedarray|dict|file|string> rcheck <bool> */
-private int
+static int
 zrcheck(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -228,7 +228,7 @@ zrcheck(i_ctx_t *i_ctx_p)
 }
 
 /* <array|packedarray|dict|file|string> wcheck <bool> */
-private int
+static int
 zwcheck(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -285,7 +285,7 @@ zcvi(i_ctx_t *i_ctx_p)
 }
 
 /* <string> cvn <name> */
-private int
+static int
 zcvn(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -334,7 +334,7 @@ zcvr(i_ctx_t *i_ctx_p)
 }
 
 /* <num> <radix_int> <string> cvrs <substring> */
-private int
+static int
 zcvrs(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -403,7 +403,7 @@ zcvrs(i_ctx_t *i_ctx_p)
 }
 
 /* <any> <string> cvs <substring> */
-private int
+static int
 zcvs(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -447,7 +447,7 @@ const op_def ztype_op_defs[] =
 /* if the object had the access. */
 /* Return an error code if the object is not of appropriate type, */
 /* or if the object did not have the access already when modify=1. */
-private int
+static int
 access_check(i_ctx_t *i_ctx_p,
 	     int access,	/* mask for attrs */
 	     bool modify)	/* if true, reduce access */
@@ -493,7 +493,7 @@ access_check(i_ctx_t *i_ctx_p,
 /* Do all the work of cvs.  The destination has been checked, but not */
 /* the source.  This is a separate procedure so that */
 /* cvrs can use it when the radix is 10. */
-private int
+static int
 convert_to_string(const gs_memory_t *mem, os_ptr op1, os_ptr op)
 {
     uint len;

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxifast.c,v 1.8 2007/09/11 15:24:28 Arabidopsis Exp $ */
+/* $Id: gxifast.c,v 1.9 2008/03/23 15:27:41 Arabidopsis Exp $ */
 /* Fast monochrome image rendering */
 #include "gx.h"
 #include "memory_.h"
@@ -51,9 +51,9 @@
 iclass_proc(gs_image_class_1_simple);
 
 /* Use special fast logic for portrait or landscape black-and-white images. */
-private irender_proc(image_render_skip);
-private irender_proc(image_render_simple);
-private irender_proc(image_render_landscape);
+static irender_proc(image_render_skip);
+static irender_proc(image_render_simple);
+static irender_proc(image_render_landscape);
 irender_proc_t
 gs_image_class_1_simple(gx_image_enum * penum)
 {
@@ -177,7 +177,7 @@ gs_image_class_1_simple(gx_image_enum * penum)
   (gx_dc_is_pure(pdc) && (pdc)->colors.pure == gx_no_color_index)
 
 /* Skip over a completely transparent image. */
-private int
+static int
 image_render_skip(gx_image_enum * penum, const byte * buffer, int data_x,
 		  uint w, int h, gx_device * dev)
 {
@@ -212,12 +212,12 @@ struct stats_image_fast_s {
 #  define INCS(stat) DO_NOTHING
 #  define ADDS(stat, n) DO_NOTHING
 #endif
-inline private void
+static inline void
 fill_row(byte *line, int line_x, uint raster, int value)
 {
     memset(line + (line_x >> 3), value, raster - (line_x >> 3));
 }
-private void
+static void
 image_simple_expand(byte * line, int line_x, uint raster,
 		    const byte * buffer, int data_x, uint w,
 		    fixed xcur, fixed x_extent, byte zero /* 0 or 0xff */ )
@@ -472,7 +472,7 @@ sw:	    if ((data = psrc[1]) != 0) {
 }
 
 /* Copy one rendered scan line to the device. */
-private int
+static int
 copy_portrait(gx_image_enum * penum, const byte * data, int dx, int raster,
 	      int x, int y, int w, int h, gx_device * dev)
 {
@@ -532,7 +532,7 @@ copy_portrait(gx_image_enum * penum, const byte * data, int dx, int raster,
 
 /* Rendering procedure for a monobit image with no */
 /* skew or rotation and pure colors. */
-private int
+static int
 image_render_simple(gx_image_enum * penum, const byte * buffer, int data_x,
 		    uint w, int h, gx_device * dev)
 {
@@ -648,8 +648,8 @@ image_render_simple(gx_image_enum * penum, const byte * buffer, int data_x,
 
 /* Rendering procedure for a 90 degree rotated monobit image */
 /* with pure colors.  We buffer and then flip 8 scan lines at a time. */
-private int copy_landscape(gx_image_enum *, int, int, bool, gx_device *);
-private int
+static int copy_landscape(gx_image_enum *, int, int, bool, gx_device *);
+static int
 image_render_landscape(gx_image_enum * penum, const byte * buffer, int data_x,
 		       uint w, int h, gx_device * dev)
 {
@@ -724,7 +724,7 @@ image_render_landscape(gx_image_enum * penum, const byte * buffer, int data_x,
 }
 
 /* Flip and copy one group of scan lines. */
-private int
+static int
 copy_landscape(gx_image_enum * penum, int x0, int x1, bool y_neg,
 	       gx_device * dev)
 {

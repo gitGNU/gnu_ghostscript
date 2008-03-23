@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: gs_ttf.ps,v 1.9 2007/09/11 15:24:51 Arabidopsis Exp $
+% $Id: gs_ttf.ps,v 1.10 2008/03/23 15:28:28 Arabidopsis Exp $
 % Support code for direct use of TrueType fonts.
 % (Not needed for Type 42 fonts.)
 
@@ -139,12 +139,61 @@ currentdict /tt_tag_dict .undef
   exch pop
 } bind def
 
+% Make /MacRomanEncodingForTrueType including additional
+% characters in Mac OS Roman encoding, which is missing
+% in /MacRomanEncoding. See PDF spec 1.7, p. 431 or
+% "Inside Macintosh: Text" 1-55, Figure 1-36.
+% This is useful to exploit the glyphs via Apple Roman
+% TrueType cmap subtable, but not appropriate for information
+% interchange.
+
+/MacRomanEncodingForTrueType
+  /MacRomanEncoding .findencoding
+  dup length array copy
+  <<
+	/notequal	173
+	/infinity	176
+	/lessequal	178
+	/greaterequal	179
+	/partialdiff	182
+	/summation	183
+	/product	184
+	/pi		185
+	/integral	186
+	/Omega		189
+	/radical	195
+	/approxequal	197
+	/Delta		198
+	/lozenge	215
+	/Euro		219
+	/apple		240
+  >> {
+    TTFDEBUG { (Extend MacRomanEncodingForTrueType for TrueType: ) =only } if
+
+    % check /.notdef to avoid overwriting
+    2 index 1 index get dup /.notdef eq {
+      TTFDEBUG { (insert /) =only 2 index =only ( @ ) =only 1 index == } if
+      pop
+      exch 2 index 3 1 roll put
+    } {
+      TTFDEBUG { (cannot insert /) =only 2 index =only ( @ ) =only 1 index =only ( used for ) =only dup == } if
+      pop
+      pop pop
+    } ifelse
+  } forall
+  aload pop
+  256 packedarray
+  5 1 index .registerencoding
+.defineencoding
+
 % Define the Macintosh standard mapping from characters to glyph indices.
 /MacRomanEncoding dup .findencoding def
 /MacGlyphEncoding dup .findencoding def
+/MacRomanEncodingForTrueType dup .findencoding def
 
 % Invert the MacRomanEncoding.
-/.romanmacdict MacRomanEncoding .invert_encoding def
+/.romanmacdict MacRomanEncodingForTrueType .invert_encoding def
+/.latin1isodict ISOLatin1Encoding .invert_encoding def
 
 % Define remapping for misnamed glyphs in TrueType 'post' tables.
 % There are probably a lot more than this!
@@ -531,7 +580,7 @@ currentdict /tt_tag_dict .undef
         3 1 roll                                  % s o minl p lSi
         sub                                       % s o minl p'
         3 1 roll add                              % s p' o'
-        dup 3 index length ge {
+        dup 3 index length ge 2 index 0 le or {
           exch exit                               % s o p'
         } if
         exch                                      % s o' p'
@@ -574,7 +623,21 @@ currentdict /tt_tag_dict .undef
 	postglyphs postpos //get_from_stringarray exec
         postglyphs postpos 1 add 2 index //getinterval_from_stringarray exec cvn
 	exch postpos add 1 add /postpos exch def
-        2 index 3 1 roll put
+        2 index 3 1 roll
+        % Some TrueType fonts converted by "Windows Type 1 Installer" have
+        % problematic post table including MacGlyphEncoding entries which
+        % should be omitted. Such extra entries in the beginning of glyphName
+        % array make /Encoding broken. If we find populary predefined
+        % ISOLatin1Encoding glyph name in the post table, empty encoding is
+        % returned. Some TrueType fonts for Microsoft Windows redefines
+        % MacGlyphEncoding glyph name out of predefined range). To permit
+        % such fonts, ISOLatin1Encoding is used to find broken post. Bug 689495.
+        .latin1isodict 1 index known {
+          TTFDEBUG { (ignore post table that redefines ISOLatin1Encoding glyph name /) print dup == flush } if
+          pop pop pop pop [ ] /numglyphs 0 def exit
+        } {
+          put
+        } ifelse
       } for
       /postnames exch def
       numglyphs array 0 1 numglyphs 1 sub {
@@ -1075,8 +1138,13 @@ mark
           } if
           /cmapsub 1 index def
           dup 4 getu32                                   % bool [] i PlatID SpecID (cmap) (cmapsub) p
-          cmaptab length 1 index sub                     % bool [] i PlatID SpecID (cmap) (cmapsub) p l
-          cmaptab 3 1 roll getinterval
+          cmaptab 1 index getu16a                        %     get cmap format
+          8 lt {                                         %     length for traditional 16bit format 0, 2, 4, 6
+            cmaptab 1 index 2 add getu16a
+          } {                                            %     length for advanced 32bit format 8, 10, 12
+            cmaptab 1 index 4 add getu32a
+          } ifelse                                       % bool [] i PlatID SpecID (cmap) (cmapsub) p l
+          cmaptab 3 1 roll getinterval_from_stringarray
           /cmaptab exch def                              % bool [] i PlatID SpecID (cmap) (cmapsub)
           5 index 5 index 1 add get                      % bool [] i PlatID SpecID (cmap) (cmapsub) /Decoding
           /Decoding exch def                             % bool [] i PlatID SpecID (cmap) (cmapsub)
@@ -1379,14 +1447,10 @@ mark
         exch
       } if
       2 index 1 index known
-      { dup /.notdef eq {
-	  pop pop	% discard duplicate .notdef glyphs
-        } {
-	  % The same name maps to more than one glyph. Change the name.
-	  pop dup .nname 3 index 2 index 2 index put
-          2 index exch 3 -1 roll put
-        } 
-        ifelse
+      { % The same name maps to more than one glyph. Change the name.
+        % No special treatment for /.notdef glyph. Bug 689408.
+       	pop dup .nname 3 index 2 index 2 index put
+        2 index exch 3 -1 roll put
       } {
         2 index exch 3 -1 roll put	% unique name
       } ifelse
@@ -1761,8 +1825,29 @@ currentdict /postalias undef
     <00030001> .findcmap {
       prebuilt_encoding null ne {
         TTFDEBUG { (Using cmap 3.1 with prebuilt_encoding for non-symbolic.) = } if
+
+        % The character code in /prebuilt_encoding[] is not guaranteed to be
+        % compatible with the Microsoft UCS2 TrueType cmap subtable.
+        % If the glyphname is known by AdobeGlyphList, the charcode for the glyph
+        % is replaced by UCS2 charcode from AdobeGlyphList. Otherwise it is left
+        % as in /prebuilt_encoding[]. /.pdfmapchars should dredge them.
+
   	/.allow_uniXXXX_glyph_names //true def
-        prebuilt_encoding .invert_encoding .pdfmapchars
+        AdobeGlyphList prebuilt_encoding .invert_encoding dup {    % <<AGL>> <<pbe>> <glyphname> <pbecode>
+          pop                                                      % <<AGL>> <<pbe>> <glyphname>
+          TTFDEBUG { (check glypname /) print dup =only flush } if
+          2 index 1 index .knownget {                              % <<AGL>> <<pbe>> <glyphname> <AGLcode>
+            2 index 3 1 roll                                       % <<AGL>> <<pbe>> <<pbe>> <glyphname> <AGLcode>
+            TTFDEBUG { ( redefine codepoint by AdobeGlyphList, ) print dup == flush } if
+            put                                                    % <<AGL>> <<pbe>>
+          } {                                                      % <<AGL>> <<pbe>> <glyphname>
+            TTFDEBUG { ( unknown glyphname, leave as it is ) print flush } if
+            pop                                                    % <<AGL>> <<pbe>>
+          } ifelse
+        } forall
+        exch pop                                                   % <<pbe>>
+        TTFDEBUG { dup (<<\n) print { exch (    ) print =only (\t) print == } forall (>>\n) print flush } if
+        .pdfmapchars
         /Encoding prebuilt_encoding
       } {
         % Likely this branch is now obsolete.
@@ -1777,7 +1862,12 @@ currentdict /postalias undef
       <00010000> .findcmap {
         TTFDEBUG { (Using cmap 1.0 for non-symbolic.) = } if
 	.romanmacdict .pdfmapchars 
-        /Encoding /MacRomanEncoding .findencoding
+        /Encoding
+        prebuilt_encoding null ne {
+          prebuilt_encoding
+        } {
+          /MacRomanEncodingForTrueType .findencoding
+        } ifelse
       } {
         % Apply the default algorithm for using the 'post'.
 	.charkeys

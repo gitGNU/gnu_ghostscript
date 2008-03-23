@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscicach.c,v 1.2 2007/09/11 15:24:37 Arabidopsis Exp $ */
+/* $Id: gscicach.c,v 1.3 2008/03/23 15:27:44 Arabidopsis Exp $ */
 /* A color index cache. */
 #include "gx.h"
 #include "gserrors.h"
@@ -113,7 +113,7 @@ gs_color_index_cache_destroy(gs_color_index_cache_t *pcic)
     gs_free_object(pcic->memory, pcic, "gs_color_index_cache_create");
 }
 
-private inline int 
+static inline int 
 hash_paint_values(const gs_color_index_cache_t *this, const float *paint_values)
 {
     int i;
@@ -129,7 +129,7 @@ hash_paint_values(const gs_color_index_cache_t *this, const float *paint_values)
     return k % COLOR_INDEX_CACHE_CHAINS;
 }
 
-private inline void
+static inline void
 exclude_from_chain(gs_color_index_cache_t *this, uint i)
 {
     uint co = this->buf[i].chain;
@@ -141,7 +141,7 @@ exclude_from_chain(gs_color_index_cache_t *this, uint i)
 	this->chains[co] = in;
 }
 
-private inline void
+static inline void
 include_into_chain(gs_color_index_cache_t *this, uint i, uint c)
 {
     if (this->chains[c] != MYNULL) {
@@ -157,7 +157,7 @@ include_into_chain(gs_color_index_cache_t *this, uint i, uint c)
     this->buf[i].chain = c;
 }
 
-private inline void
+static inline void
 exclude_from_touch_list(gs_color_index_cache_t *this, uint i)
 {
     uint ip = this->buf[i].touch_prev, in = this->buf[i].touch_next;
@@ -172,7 +172,7 @@ exclude_from_touch_list(gs_color_index_cache_t *this, uint i)
     }
 }
 
-private inline void
+static inline void
 include_into_touch_list(gs_color_index_cache_t *this, uint i)
 {
     if (this->recent_touch != MYNULL) {
@@ -187,7 +187,7 @@ include_into_touch_list(gs_color_index_cache_t *this, uint i)
     this->recent_touch = i;
 }
 
-private int 
+static int 
 get_color_index_cache_elem(gs_color_index_cache_t *this, const float *paint_values, uint *pi)
 {
     int client_num_components = this->client_num_components;
@@ -234,7 +234,7 @@ get_color_index_cache_elem(gs_color_index_cache_t *this, const float *paint_valu
     return 0;
 }
 
-private inline void
+static inline void
 compute_frac_values(gs_color_index_cache_t *this, uint i)
 {
     gx_color_index c = this->buf[i].cindex;

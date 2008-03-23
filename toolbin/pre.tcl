@@ -19,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: pre.tcl,v 1.6 2007/09/11 15:25:15 Arabidopsis Exp $
+# $Id: pre.tcl,v 1.7 2008/03/23 15:28:32 Arabidopsis Exp $
 
 # Check various aspects of an about-to-be-released Ghostscript fileset.
 # Only applicable to filesets 6.0 and later (assumes use of CVS).
@@ -146,36 +146,6 @@ if {$vcur != $version} {
     message "$vcur != $version, exiting"
     exit
 }
-
-################ Check the third-party library version #s in the makefiles
-
-proc check_library_version {defname version} {
-    set matches [eval exec grep ${defname}= [glob src/*.mak]]
-    foreach match [split $matches "\n"] {
-	if {![regexp "^(.*):\[ 	\]*${defname}=(\[0-9\]+)(\[^0-9\]|\$)" $match skip file defver]} {
-	    message "Unrecognized result from grep: $match"
-	} elseif {$defver != $version} {
-	    message "$file has ${defname}=$defver, current is $version"
-	}
-    }
-}
-
-set VFILE jpeg/jversion.h
-if ![grep1 {^#define JVERSION[ 	]+"([0-9]+)[^0-9]} $VFILE line] {
-    message "No version number found in $VFILE!"
-    exit
-}
-regexp {^#define JVERSION[ 	]+"([0-9]+)[^0-9]} $line skip jversion
-puts "Current jpeg version is $jversion"
-set VFILE libpng/png.h
-if ![grep1 {^#define PNG_LIBPNG_VER[ 	]+([0-9]+)[^0-9]} $VFILE line] {
-    message "No version number found in $VFILE!"
-    exit
-}
-regexp {^#define PNG_LIBPNG_VER[ 	]+([0-9]+)[^0-9]} $line skip pversion
-puts "Current libpng version is $pversion"
-check_library_version JVERSION $jversion
-check_library_version PVERSION $pversion
 
 ################ If requested, mechanically update doc files.
 

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: spsdf.c,v 1.7 2007/09/11 15:24:32 Arabidopsis Exp $ */
+/* $Id: spsdf.c,v 1.8 2008/03/23 15:27:52 Arabidopsis Exp $ */
 /* Common utilities for PostScript and PDF format printing */
 #include "stdio_.h"		/* for stream.h */
 #include "string_.h"
@@ -132,10 +132,10 @@ const param_printer_params_t param_printer_params_default = {
 };
 
 /* We'll implement the other printers later if we have to. */
-private param_proc_xmit_typed(param_print_typed);
-/*private param_proc_begin_xmit_collection(param_print_begin_collection); */
-/*private param_proc_end_xmit_collection(param_print_end_collection); */
-private const gs_param_list_procs printer_param_list_procs = {
+static param_proc_xmit_typed(param_print_typed);
+/*static param_proc_begin_xmit_collection(param_print_begin_collection);*/
+/*static param_proc_end_xmit_collection(param_print_end_collection);*/
+static const gs_param_list_procs printer_param_list_procs = {
     param_print_typed,
     NULL /* begin_collection */ ,
     NULL /* end_collection */ ,
@@ -192,7 +192,7 @@ s_free_param_printer(gs_param_list * plist)
     }
 }
 
-private int
+static int
 param_print_typed(gs_param_list * plist, gs_param_name pkey,
 		  gs_param_typed_value * pvalue)
 {

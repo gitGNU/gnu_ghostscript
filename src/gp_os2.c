@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gp_os2.c,v 1.9 2007/09/11 15:24:03 Arabidopsis Exp $ */
+/* $Id: gp_os2.c,v 1.10 2008/03/23 15:27:55 Arabidopsis Exp $ */
 /* Common platform-specific routines for OS/2 and MS-DOS */
 /* compiled with GCC/EMX */
 
@@ -334,7 +334,7 @@ gp_enumerate_files_close(file_enum * pfen)
 /* extern char *getenv(const char *); */
 
 /* Forward declarations */
-private void handle_FPE(int);
+static void handle_FPE(int);
 
 /* Do platform-dependent initialization. */
 void
@@ -374,7 +374,7 @@ gp_init(void)
 
 /* Trap numeric exceptions.  Someday we will do something */
 /* more appropriate with these. */
-private void
+static void
 handle_FPE(int sig)
 {
     eprintf("Numeric exception:\n");
@@ -401,7 +401,7 @@ gp_do_exit(int exit_status)
 }
 
 /* ------ Printer accessing ------ */
-private int is_os2_spool(const char *queue);
+static int is_os2_spool(const char *queue);
 
 /* Put a printer file (which might be stdout) into binary or text mode. */
 /* This is not a standard gp procedure, */
@@ -580,7 +580,7 @@ pm_find_queue(char *queue_name, char *driver_name)
 
 
 /* return TRUE if queue looks like a valid OS/2 queue name */
-private int
+static int
 is_os2_spool(const char *queue)
 {
     char *prefix = "\\\\spool\\";	/* 8 characters long */

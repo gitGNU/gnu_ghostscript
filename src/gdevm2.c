@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevm2.c,v 1.7 2007/09/11 15:24:07 Arabidopsis Exp $ */
+/* $Id: gdevm2.c,v 1.8 2008/03/23 15:27:47 Arabidopsis Exp $ */
 /* 2-bit-per-pixel "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"
@@ -50,7 +50,7 @@ static const mono_fill_chunk tile_patterns[4] = {
 };
 
 /* Fill a rectangle with a color. */
-private int
+static int
 mem_mapped2_fill_rectangle(gx_device * dev,
 			   int x, int y, int w, int h, gx_color_index color)
 {
@@ -63,7 +63,7 @@ mem_mapped2_fill_rectangle(gx_device * dev,
 }
 
 /* Copy a bitmap. */
-private int
+static int
 mem_mapped2_copy_mono(gx_device * dev,
 		      const byte * base, int sourcex, int sraster,
 		      gx_bitmap_id id, int x, int y, int w, int h,
@@ -150,7 +150,7 @@ mem_mapped2_copy_mono(gx_device * dev,
 }
 
 /* Copy a color bitmap. */
-private int
+static int
 mem_mapped2_copy_color(gx_device * dev,
 		       const byte * base, int sourcex, int sraster,
 		       gx_bitmap_id id, int x, int y, int w, int h)
@@ -189,7 +189,7 @@ mem_full_device("image2w", 2, 0, mem_open,
 		mem_word_get_bits_rectangle);
 
 /* Fill a rectangle with a color. */
-private int
+static int
 mem2_word_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 			 gx_color_index color)
 {
@@ -208,7 +208,7 @@ mem2_word_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 }
 
 /* Copy a bitmap. */
-private int
+static int
 mem2_word_copy_mono(gx_device * dev,
 		    const byte * base, int sourcex, int sraster,
 		    gx_bitmap_id id, int x, int y, int w, int h,
@@ -231,7 +231,7 @@ mem2_word_copy_mono(gx_device * dev,
 }
 
 /* Copy a color bitmap. */
-private int
+static int
 mem2_word_copy_color(gx_device * dev,
 		     const byte * base, int sourcex, int sraster,
 		     gx_bitmap_id id, int x, int y, int w, int h)

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: dxmain.c,v 1.10 2007/09/11 15:23:53 Arabidopsis Exp $ */
+/* $Id: dxmain.c,v 1.11 2008/03/23 15:28:14 Arabidopsis Exp $ */
 
 /* dxmain.c */
 /* 
@@ -697,7 +697,6 @@ static int display_sync(void *handle, void *device)
 	(color == DISPLAY_COLORS_SEPARATION)) {
 	/* check if separations have changed */
 	int i;
-	int num_visible = 0;
 	gchar *str;
 	for (i=0; i<IMAGE_DEVICEN_MAX; i++) {
 	    gtk_label_get(
@@ -711,13 +710,7 @@ static int display_sync(void *handle, void *device)
 		    img->devicen[i].name);
 		gtk_widget_show(img->separation[i]);
 	    }
-	    if (img->devicen[i].used && img->devicen[i].visible)
-		num_visible++;
 	}
-	if (num_visible <= 1)
-	    gtk_widget_show(img->separation[i]);
-	else
-	    gtk_widget_hide(img->separation[i]);
     }
 		
     /* some formats need to be converted for use by GdkRgb */

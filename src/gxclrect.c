@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclrect.c,v 1.10 2007/09/11 15:24:23 Arabidopsis Exp $ */
+/* $Id: gxclrect.c,v 1.11 2008/03/23 15:27:47 Arabidopsis Exp $ */
 /* Rectangle-oriented command writing for command list */
 #include "gx.h"
 #include "gserrors.h"
@@ -35,14 +35,14 @@
    (rect).width = width, (rect).height = height)
 
 /* Write a rectangle. */
-private int
+static int
 cmd_size_rect(register const gx_cmd_rect * prect)
 {
     return
 	cmd_sizew(prect->x) + cmd_sizew(prect->y) +
 	cmd_sizew(prect->width) + cmd_sizew(prect->height);
 }
-private byte *
+static byte *
 cmd_put_rect(register const gx_cmd_rect * prect, register byte * dp)
 {
     cmd_putw(prect->x, dp);
@@ -140,7 +140,7 @@ cmd_write_rect_cmd(gx_device_clist_writer * cldev, gx_clist_state * pcls,
     return 0;
 }
 
-private inline byte * 
+static inline byte * 
 cmd_put_frac31_color(gx_device_clist_writer * cldev, const frac31 *c, byte *dp)
 {
     int num_components = cldev->color_info.num_components;
@@ -151,7 +151,7 @@ cmd_put_frac31_color(gx_device_clist_writer * cldev, const frac31 *c, byte *dp)
     return dp;
 }
 
-private inline int
+static inline int
 cmd_size_frac31_color(gx_device_clist_writer * cldev, const frac31 *c)
 {
     int j, s = 0;
@@ -162,7 +162,7 @@ cmd_size_frac31_color(gx_device_clist_writer * cldev, const frac31 *c)
     return s;
 }
 
-private int
+static int
 cmd_write_trapezoid_cmd(gx_device_clist_writer * cldev, gx_clist_state * pcls,
 		    int op,  const gs_fixed_edge *left, const gs_fixed_edge *right,
 		    fixed ybot, fixed ytop, int options, 
@@ -279,7 +279,7 @@ error_in_rect:
     return 0;
 }
 
-private inline int 
+static inline int 
 clist_write_fill_trapezoid(gx_device * dev,
     const gs_fixed_edge *left, const gs_fixed_edge *right,
     fixed ybot, fixed ytop, int options,

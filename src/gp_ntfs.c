@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gp_ntfs.c,v 1.9 2007/09/11 15:24:23 Arabidopsis Exp $ */
+/* $Id: gp_ntfs.c,v 1.10 2008/03/23 15:27:48 Arabidopsis Exp $ */
 /* file system stuff for MS-Windows WIN32 and MS-Windows NT */
 /* hacked from gp_dosfs.c by Russell Lang */
 
@@ -40,7 +40,7 @@
 /* Put a printer file (which might be stdout) into binary or text mode. */
 /* This is not a standard gp procedure, */
 /* but all MS-DOS configurations need it. */
-private int
+static int
 setmode_binary(int fno, bool binary)
 {
     /* Use non-standard setmode that almost all NT compilers offer. */

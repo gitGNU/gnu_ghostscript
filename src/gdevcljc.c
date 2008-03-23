@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevcljc.c,v 1.8 2007/09/11 15:24:18 Arabidopsis Exp $ */
+/* $Id: gdevcljc.c,v 1.9 2008/03/23 15:27:36 Arabidopsis Exp $ */
 /*
  * H-P Color LaserJet 5/5M contone device; based on the gdevclj.c.
  */
@@ -32,7 +32,7 @@
  * render mode as well as color parameters - bpp etc. are all
  * hardwired.
  */
-private int
+static int
 cljc_print_page(gx_device_printer * pdev, FILE * prn_stream)
 {
     gs_memory_t *mem = pdev->memory;
@@ -87,7 +87,7 @@ out:
 }
 
 /* CLJ device methods */
-private gx_device_procs cljc_procs =
+static gx_device_procs cljc_procs =
 prn_color_procs(gdev_prn_open, gdev_prn_output_page, gdev_prn_close,
 		gx_default_rgb_map_rgb_color, gx_default_rgb_map_color_rgb);
 

@@ -1,5 +1,5 @@
 /******************************************************************************
-  File:     $Id: pagecount.c,v 1.1 2007/09/11 15:25:15 Arabidopsis Exp $
+  File:     $Id: pagecount.c,v 1.2 2008/03/23 15:28:30 Arabidopsis Exp $
   Contents: Simple (page) count file facility on UNIX
   Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
 	    Germany. E-mail: Martin.Lottermoser@t-online.de.
@@ -14,7 +14,7 @@
 /* Configuration management identification */
 #ifndef lint
 static const char
-  cm_id[] = "@(#)$Id: pagecount.c,v 1.1 2007/09/11 15:25:15 Arabidopsis Exp $";
+  cm_id[] = "@(#)$Id: pagecount.c,v 1.2 2008/03/23 15:28:30 Arabidopsis Exp $";
 #endif
 
 /*****************************************************************************/
@@ -22,6 +22,8 @@ static const char
 #ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE	500
 #endif
+
+#include "std.h"
 
 /* Standard headers */
 #include <errno.h>

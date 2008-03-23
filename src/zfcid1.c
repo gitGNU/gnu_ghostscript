@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfcid1.c,v 1.10 2007/09/11 15:24:20 Arabidopsis Exp $ */
+/* $Id: zfcid1.c,v 1.11 2008/03/23 15:27:49 Arabidopsis Exp $ */
 /* CIDFontType 1 and 2 operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -41,7 +41,7 @@
 /* ---------------- CIDFontType 1 (FontType 10) ---------------- */
 
 /* <string|name> <font_dict> .buildfont10 <string|name> <font> */
-private int
+static int
 zbuildfont10(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -71,7 +71,7 @@ zbuildfont10(i_ctx_t *i_ctx_p)
 /* ------ Accessing ------ */
 
 /* Map a glyph CID to a TrueType glyph number using the CIDMap. */
-private int
+static int
 z11_CIDMap_proc(gs_font_cid2 *pfont, gs_glyph glyph)
 {
     const ref *pcidmap = &pfont_data(pfont)->u.type42.CIDMap;
@@ -116,7 +116,7 @@ z11_CIDMap_proc(gs_font_cid2 *pfont, gs_glyph glyph)
 }
 
 /* Handle MetricsCount when accessing outline or metrics information. */
-private int
+static int
 z11_get_outline(gs_font_type42 * pfont, uint glyph_index,
 		gs_glyph_data_t *pgd)
 {
@@ -140,7 +140,7 @@ z11_get_outline(gs_font_type42 * pfont, uint glyph_index,
 #define GET_U16_MSB(p) (((uint)((p)[0]) << 8) + (p)[1])
 #define GET_S16_MSB(p) (int)((GET_U16_MSB(p) ^ 0x8000) - 0x8000)
 
-private int
+static int
 z11_get_metrics(gs_font_type42 * pfont, uint glyph_index, 
 		gs_type42_metrics_options_t options, float sbw[4])
 {
@@ -184,7 +184,7 @@ z11_get_metrics(gs_font_type42 * pfont, uint glyph_index,
     return 0;
 }
 
-private int
+static int
 z11_glyph_info_aux(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
 		     int members, gs_glyph_info_t *info)
 {
@@ -200,7 +200,7 @@ z11_glyph_info_aux(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
     return gs_type42_glyph_info_by_gid(font, glyph, pmat, members, info, glyph_index);
 }
 
-private int
+static int
 z11_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
 		     int members, gs_glyph_info_t *info)
 {
@@ -212,7 +212,7 @@ z11_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
 
 
 /* Enumerate glyphs (keys) from GlyphDirectory instead of loca / glyf. */
-private int
+static int
 z11_enumerate_glyph(gs_font *font, int *pindex,
 			 gs_glyph_space_t glyph_space, gs_glyph *pglyph)
 {
@@ -239,7 +239,7 @@ z11_enumerate_glyph(gs_font *font, int *pindex,
     return 0;
 }
 
-private uint
+static uint
 z11_get_glyph_index(gs_font_type42 *pfont, gs_glyph glyph)
 {
     int code = z11_CIDMap_proc((gs_font_cid2 *)pfont, glyph);
@@ -248,7 +248,7 @@ z11_get_glyph_index(gs_font_type42 *pfont, gs_glyph glyph)
 }
 
 
-private int
+static int
 z11_glyph_outline(gs_font *font, int WMode, gs_glyph glyph, const gs_matrix *pmat,
 		  gx_path *ppath, double sbw[4])
 {
@@ -260,7 +260,7 @@ z11_glyph_outline(gs_font *font, int WMode, gs_glyph glyph, const gs_matrix *pma
 /* ------ Defining ------ */
 
 /* <string|name> <font_dict> .buildfont11 <string|name> <font> */
-private int
+static int
 zbuildfont11(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -353,8 +353,10 @@ zbuildfont11(i_ctx_t *i_ctx_p)
     pfont->procs.glyph_info = z11_glyph_info;
     pfont->procs.glyph_outline = z11_glyph_outline;
     pfont->data.get_glyph_index = z11_get_glyph_index;
-    get_font_name(imemory, &cfnstr, &CIDFontName);
-    copy_font_name(&pfcid->font_name, &cfnstr);
+    if (pfcid->font_name.size == 0) {
+	get_font_name(imemory, &cfnstr, &CIDFontName);
+	copy_font_name(&pfcid->font_name, &cfnstr);
+    }
     if (MetricsCount) {
 	/* "Wrap" the glyph accessor procedures. */
 	pfcid->cidata.orig_procs.get_outline = pfont->data.get_outline;
@@ -378,7 +380,7 @@ zbuildfont11(i_ctx_t *i_ctx_p)
 }
 
 /* <cid11font> <cid> .type11mapcid <glyph_index> */
-private int
+static int
 ztype11mapcid(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -413,7 +415,7 @@ ztype11mapcid(i_ctx_t *i_ctx_p)
 }
 
 /* <Decoding> <TT_cmap> <SubstNWP> <GDBytes> <CIDMap> .fillCIDMap - */
-private int
+static int
 zfillCIDMap(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

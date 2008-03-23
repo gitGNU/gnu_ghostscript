@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfg.h,v 1.10 2007/09/11 15:24:05 Arabidopsis Exp $ */
+/* $Id: gdevpdfg.h,v 1.11 2008/03/23 15:28:03 Arabidopsis Exp $ */
 /* Internal graphics interfaces for PDF-writing driver. */
 
 #ifndef gdevpdfg_INCLUDED
@@ -132,6 +132,10 @@ void pdf_set_initial_color(gx_device_pdf * pdev, gx_hl_saved_color *saved_fill_c
 		    bool *fill_used_process_color, bool *stroke_used_process_color);
 
 /* Set the fill or stroke color. */
+int pdf_reset_color(gx_device_pdf * pdev, const gs_imager_state * pis, 
+	        const gx_drawing_color *pdc, gx_hl_saved_color * psc,
+		bool *used_process_color,
+		const psdf_set_color_commands_t *ppscc);
 /* pdecolor is &pdev->fill_color or &pdev->stroke_color. */
 int pdf_set_pure_color(gx_device_pdf * pdev, gx_color_index color,
 		   gx_hl_saved_color * psc,

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zimage3.c,v 1.8 2007/09/11 15:23:48 Arabidopsis Exp $ */
+/* $Id: zimage3.c,v 1.9 2008/03/23 15:28:08 Arabidopsis Exp $ */
 /* LanguageLevel 3 ImageTypes (3 & 4 - masked images) */
 #include "memory_.h"
 #include "ghost.h"
@@ -34,7 +34,7 @@
 #include "ialloc.h"
 
 /* <dict> .image3 - */
-private int
+static int
 zimage3(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -87,7 +87,7 @@ zimage3(i_ctx_t *i_ctx_p)
 }
 
 /* <dict> .image4 - */
-private int
+static int
 zimage4(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

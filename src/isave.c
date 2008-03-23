@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: isave.c,v 1.10 2007/09/11 15:23:57 Arabidopsis Exp $ */
+/* $Id: isave.c,v 1.11 2008/03/23 15:27:52 Arabidopsis Exp $ */
 /* Save/restore manager for Ghostscript interpreter */
 #include "ghost.h"
 #include "memory_.h"
@@ -41,11 +41,11 @@ private_st_alloc_save();
 
 /* Define the maximum amount of data we are willing to scan repeatedly -- */
 /* see below for details. */
-private const long max_repeated_scan = 100000;
+static const long max_repeated_scan = 100000;
 
 /* Define the minimum space for creating an inner chunk. */
 /* Must be at least sizeof(chunk_head_t). */
-private const long min_inner_chunk_space = sizeof(chunk_head_t) + 500;
+static const long min_inner_chunk_space = sizeof(chunk_head_t) + 500;
 
 /*
  * The logic for saving and restoring the state is complex.
@@ -152,7 +152,7 @@ private const long min_inner_chunk_space = sizeof(chunk_head_t) + 500;
  */
 
 /* Tracing printout */
-private void
+static void
 print_save(const char *str, uint spacen, const alloc_save_t *sav)
 {
   if_debug5('u', "[u]%s space %u 0x%lx: cdata = 0x%lx, id = %lu\n",\
@@ -178,7 +178,7 @@ struct alloc_change_s {
     short offset;		/* if >= 0, offset within struct */
 };
 
-private 
+static 
 CLEAR_MARKS_PROC(change_clear_marks)
 {
     alloc_change_t *const ptr = (alloc_change_t *)vptr;
@@ -188,7 +188,7 @@ CLEAR_MARKS_PROC(change_clear_marks)
     else
 	r_clear_attrs(&ptr->contents, l_mark);
 }
-private 
+static 
 ENUM_PTRS_WITH(change_enum_ptrs, alloc_change_t *ptr) return 0;
 ENUM_PTR(0, alloc_change_t, next);
 case 1:
@@ -206,7 +206,7 @@ case 1:
 case 2:
     ENUM_RETURN_REF(&ptr->contents);
 ENUM_PTRS_END
-private RELOC_PTRS_WITH(change_reloc_ptrs, alloc_change_t *ptr)
+static RELOC_PTRS_WITH(change_reloc_ptrs, alloc_change_t *ptr)
 {
     RELOC_VAR(ptr->next);
     switch (ptr->offset) {
@@ -255,7 +255,7 @@ gs_private_st_complex_only(st_alloc_change, alloc_change_t, "alloc_change",
 
 /* Debugging printout */
 #ifdef DEBUG
-private void
+static void
 alloc_save_print(alloc_change_t * cp, bool print_current)
 {
     dprintf2(" 0x%lx: 0x%lx: ", (ulong) cp, (ulong) cp->where);
@@ -282,11 +282,11 @@ alloc_save_print(alloc_change_t * cp, bool print_current)
 #endif
 
 /* Forward references */
-private int  restore_resources(alloc_save_t *, gs_ref_memory_t *);
-private void restore_free(gs_ref_memory_t *);
-private int  save_set_new(gs_ref_memory_t * mem, bool to_new, bool set_limit, ulong *pscanned);
-private int  save_set_new_changes(gs_ref_memory_t *, bool, bool);
-private bool check_l_mark(void *obj);
+static int  restore_resources(alloc_save_t *, gs_ref_memory_t *);
+static void restore_free(gs_ref_memory_t *);
+static int  save_set_new(gs_ref_memory_t * mem, bool to_new, bool set_limit, ulong *pscanned);
+static int  save_set_new_changes(gs_ref_memory_t *, bool, bool);
+static bool check_l_mark(void *obj);
 
 /* Initialize the save/restore machinery. */
 void
@@ -296,7 +296,7 @@ alloc_save_init(gs_dual_memory_t * dmem)
 }
 
 /* Record that we are in a save. */
-private void
+static void
 alloc_set_masks(gs_dual_memory_t *dmem, uint new_mask, uint test_mask)
 {
     int i;
@@ -327,10 +327,10 @@ alloc_set_not_in_save(gs_dual_memory_t *dmem)
 }
 
 /* Save the state. */
-private alloc_save_t *alloc_save_space(gs_ref_memory_t *mem,
+static alloc_save_t *alloc_save_space(gs_ref_memory_t *mem,
 				       gs_dual_memory_t *dmem,
 				       ulong sid);
-private void
+static void
 alloc_free_save(gs_ref_memory_t *mem, alloc_save_t *save, const char *scn)
 {
     gs_free_object((gs_memory_t *)mem, save, scn);
@@ -409,7 +409,7 @@ alloc_save_state(gs_dual_memory_t * dmem, void *cdata, ulong *psid)
     return 0;
 }
 /* Save the state of one space (global or local). */
-private alloc_save_t *
+static alloc_save_t *
 alloc_save_space(gs_ref_memory_t * mem, gs_dual_memory_t * dmem, ulong sid)
 {
     gs_ref_memory_t save_mem;
@@ -564,7 +564,7 @@ alloc_save_remove(gs_ref_memory_t *mem, ref_packed *obj, client_name_t cname)
 }
 
 /* Filter save change lists. */
-private inline void
+static inline void
 alloc_save__filter_changes_in_space(gs_ref_memory_t *mem)
 {
     /* This is a special function, which is called
@@ -748,8 +748,8 @@ alloc_save_client_data(const alloc_save_t * save)
  * if this is the outermost restore (which requires restoring both local
  * and global VM) or if we created extra save levels to reduce scanning.
  */
-private void restore_finalize(gs_ref_memory_t *);
-private void restore_space(gs_ref_memory_t *, gs_dual_memory_t *);
+static void restore_finalize(gs_ref_memory_t *);
+static void restore_space(gs_ref_memory_t *, gs_dual_memory_t *);
 
 int
 alloc_restore_step_in(gs_dual_memory_t *dmem, alloc_save_t * save)
@@ -820,7 +820,7 @@ alloc_restore_step_in(gs_dual_memory_t *dmem, alloc_save_t * save)
 }
 /* Restore the memory of one space, by undoing changes and freeing */
 /* memory allocated since the save. */
-private void
+static void
 restore_space(gs_ref_memory_t * mem, gs_dual_memory_t *dmem)
 {
     alloc_save_t *save = mem->saved;
@@ -937,7 +937,7 @@ alloc_restore_all(gs_dual_memory_t * dmem)
  * Note that we must temporarily disable the freeing operations
  * of the allocator while doing this.
  */
-private void
+static void
 restore_finalize(gs_ref_memory_t * mem)
 {
     chunk_t *cp;
@@ -961,7 +961,7 @@ restore_finalize(gs_ref_memory_t * mem)
 }
 
 /* Release resources for a restore */
-private int
+static int
 restore_resources(alloc_save_t * sprev, gs_ref_memory_t * mem)
 {
     int code;
@@ -986,7 +986,7 @@ restore_resources(alloc_save_t * sprev, gs_ref_memory_t * mem)
 }
 
 /* Release memory for a restore. */
-private void
+static void
 restore_free(gs_ref_memory_t * mem)
 {
     /* Free chunks allocated since the save. */
@@ -994,9 +994,9 @@ restore_free(gs_ref_memory_t * mem)
 }
 
 /* Forget a save, by merging this level with the next outer one. */
-private void file_forget_save(gs_ref_memory_t *);
-private void combine_space(gs_ref_memory_t *);
-private void forget_changes(gs_ref_memory_t *);
+static void file_forget_save(gs_ref_memory_t *);
+static void combine_space(gs_ref_memory_t *);
+static void forget_changes(gs_ref_memory_t *);
 int
 alloc_forget_save_in(gs_dual_memory_t *dmem, alloc_save_t * save)
 {
@@ -1055,7 +1055,7 @@ alloc_forget_save_in(gs_dual_memory_t *dmem, alloc_save_t * save)
 }
 /* Combine the chunks of the next outer level with those of the current one, */
 /* and free the bookkeeping structures. */
-private void
+static void
 combine_space(gs_ref_memory_t * mem)
 {
     alloc_save_t *saved = mem->saved;
@@ -1136,7 +1136,7 @@ combine_space(gs_ref_memory_t * mem)
 }
 /* Free the changes chain for a level 0 .forgetsave, */
 /* resetting the l_new flag in the changed refs. */
-private void
+static void
 forget_changes(gs_ref_memory_t * mem)
 {
     register alloc_change_t *chp = mem->changes;
@@ -1157,7 +1157,7 @@ forget_changes(gs_ref_memory_t * mem)
     mem->changes = 0;
 }
 /* Update the streams list when forgetting a save. */
-private void
+static void
 file_forget_save(gs_ref_memory_t * mem)
 {
     const alloc_save_t *save = mem->saved;
@@ -1177,7 +1177,7 @@ file_forget_save(gs_ref_memory_t * mem)
     }
 }
 
-private inline int
+static inline int
 mark_allocated(void *obj, bool to_new, uint *psize)
 {   
     obj_header_t *pre = (obj_header_t *)obj - 1;
@@ -1226,7 +1226,7 @@ mark_allocated(void *obj, bool to_new, uint *psize)
 }
 
 /* Check if a block contains refs marked by garbager. */
-private bool
+static bool
 check_l_mark(void *obj)
 {   
     obj_header_t *pre = (obj_header_t *)obj - 1;
@@ -1263,7 +1263,7 @@ check_l_mark(void *obj)
 /* This includes every slot on the current change chain, */
 /* and every (ref) slot allocated at this save level. */
 /* Return the number of bytes of data scanned. */
-private int
+static int
 save_set_new(gs_ref_memory_t * mem, bool to_new, bool set_limit, ulong *pscanned)
 {
     ulong scanned = 0;
@@ -1306,7 +1306,7 @@ save_set_new(gs_ref_memory_t * mem, bool to_new, bool set_limit, ulong *pscanned
 }
 
 /* Set or reset the l_new attribute on the changes chain. */
-private int
+static int
 save_set_new_changes(gs_ref_memory_t * mem, bool to_new, bool set_limit)
 {
     register alloc_change_t *chp = mem->changes;

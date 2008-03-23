@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gspaint.c,v 1.11 2007/09/11 15:24:34 Arabidopsis Exp $ */
+/* $Id: gspaint.c,v 1.12 2008/03/23 15:27:51 Arabidopsis Exp $ */
 /* Painting procedures for Ghostscript library */
 #include "math_.h"		/* for fabs */
 #include "gx.h"
@@ -116,7 +116,7 @@ gs_fillpage(gs_state * pgs)
  * Determine the number of bits of alpha buffer for a stroke or fill.
  * We should do alpha buffering iff this value is >1.
  */
-private int
+static int
 alpha_buffer_bits(gs_state * pgs)
 {
     gx_device *dev;
@@ -142,7 +142,7 @@ alpha_buffer_bits(gs_state * pgs)
  * alpha buffering.  Either of these is a little inconvenient, but
  * the former is less inconvenient.
  */
-private int
+static int
 scale_paths(gs_state * pgs, int log2_scale_x, int log2_scale_y, bool do_path)
 {
     /*
@@ -194,7 +194,7 @@ scale_paths(gs_state * pgs, int log2_scale_x, int log2_scale_y, bool do_path)
     }
     return 0;
 }
-private void
+static void
 scale_dash_pattern(gs_state * pgs, floatp scale)
 {
     int i;
@@ -207,7 +207,7 @@ scale_dash_pattern(gs_state * pgs, floatp scale)
     if (pgs->line_params.dot_length_absolute)
 	pgs->line_params.dot_length *= scale;
 }
-private int
+static int
 alpha_buffer_init(gs_state * pgs, fixed extra_x, fixed extra_y, int alpha_bits)
 {
     gx_device *dev = gs_currentdevice_inline(pgs);
@@ -253,7 +253,7 @@ alpha_buffer_init(gs_state * pgs, fixed extra_x, fixed extra_y, int alpha_bits)
 }
 
 /* Release an alpha buffer. */
-private int
+static int
 alpha_buffer_release(gs_state * pgs, bool newpath)
 {
     gx_device_memory *mdev =
@@ -269,7 +269,7 @@ alpha_buffer_release(gs_state * pgs, bool newpath)
 }
 
 /* Fill the current path using a specified rule. */
-private int
+static int
 fill_with_rule(gs_state * pgs, int rule)
 {
     int code;

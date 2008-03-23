@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsicc.c,v 1.10 2007/09/11 15:23:47 Arabidopsis Exp $ */
+/* $Id: gsicc.c,v 1.11 2008/03/23 15:28:17 Arabidopsis Exp $ */
 /* Implementation of the ICCBased color space family */
 
 #include "math_.h"
@@ -53,7 +53,7 @@ struct _icmFileGs {
  *
  * No special action is taken with respect to the stream pointer; that is
  * the responsibility of the client.  */
-private void
+static void
 cie_icc_finalize(void * pvicc_info)
 {
     gs_cie_icc *    picc_info = (gs_cie_icc *)pvicc_info;
@@ -85,13 +85,13 @@ gs_private_st_composite( st_color_space_CIEICC,
                          cs_CIEICC_reloc_ptrs );
 
 /* pointer enumeration routine */
-private
+static
 ENUM_PTRS_BEGIN(cs_CIEICC_enum_ptrs) return 0;
         ENUM_PTR(0, gs_color_space, params.icc.picc_info);
 ENUM_PTRS_END
 
 /* pointer relocation routine */
-private
+static
 RELOC_PTRS_BEGIN(cs_CIEICC_reloc_ptrs)
     RELOC_PTR(gs_color_space, params.icc.picc_info);
 RELOC_PTRS_END
@@ -116,18 +116,18 @@ RELOC_PTRS_END
  * common elements (ranges, number of components, etc.) into the color space
  * root class.
  */
-private cs_proc_num_components(gx_num_components_CIEICC);
-private cs_proc_init_color(gx_init_CIEICC);
-private cs_proc_restrict_color(gx_restrict_CIEICC);
-private cs_proc_concrete_space(gx_concrete_space_CIEICC);
-private cs_proc_concretize_color(gx_concretize_CIEICC);
+static cs_proc_num_components(gx_num_components_CIEICC);
+static cs_proc_init_color(gx_init_CIEICC);
+static cs_proc_restrict_color(gx_restrict_CIEICC);
+static cs_proc_concrete_space(gx_concrete_space_CIEICC);
+static cs_proc_concretize_color(gx_concretize_CIEICC);
 #if ENABLE_CUSTOM_COLOR_CALLBACK
-private cs_proc_remap_color(gx_remap_ICCBased);
+static cs_proc_remap_color(gx_remap_ICCBased);
 #endif
-private cs_proc_final(gx_final_CIEICC);
-private cs_proc_serialize(gx_serialize_CIEICC);
+static cs_proc_final(gx_final_CIEICC);
+static cs_proc_serialize(gx_serialize_CIEICC);
 
-private const gs_color_space_type gs_color_space_type_CIEICC = {
+static const gs_color_space_type gs_color_space_type_CIEICC = {
     gs_color_space_index_CIEICC,    /* index */
     true,                           /* can_be_base_space */
     true,                           /* can_be_alt_space */
@@ -155,7 +155,7 @@ private const gs_color_space_type gs_color_space_type_CIEICC = {
 /*
  * Return the number of components used by a ICCBased color space - 1, 3, or 4
  */
-private int
+static int
 gx_num_components_CIEICC(const gs_color_space * pcs)
 {
     return pcs->params.icc.picc_info->num_components;
@@ -165,7 +165,7 @@ gx_num_components_CIEICC(const gs_color_space * pcs)
  * Set the initial client color for an ICCBased color space. The convention
  * suggested by the ICC specification is to set all components to 0.
  */
-private void
+static void
 gx_init_CIEICC(gs_client_color * pcc, const gs_color_space * pcs)
 {
     int     i, ncomps = pcs->params.icc.picc_info->num_components;
@@ -180,7 +180,7 @@ gx_init_CIEICC(gs_client_color * pcc, const gs_color_space * pcs)
 /*
  * Restrict an color to the range specified for an ICCBased color space.
  */
-private void
+static void
 gx_restrict_CIEICC(gs_client_color * pcc, const gs_color_space * pcs)
 {
     int                 i, ncomps = pcs->params.icc.picc_info->num_components;
@@ -204,7 +204,7 @@ gx_restrict_CIEICC(gs_client_color * pcc, const gs_color_space * pcs)
  * for all CIE bases. If the alternate color space is being used, then
  * this question is passed on the the appropriate method of that space.
  */
-private const gs_color_space *
+static const gs_color_space *
 gx_concrete_space_CIEICC(const gs_color_space * pcs, const gs_imager_state * pis)
 {
     if (pcs->params.icc.picc_info->picc == NULL) {
@@ -218,7 +218,7 @@ gx_concrete_space_CIEICC(const gs_color_space * pcs, const gs_imager_state * pis
 /*
  * Convert an ICCBased color space to a concrete color space.
  */
-private int
+static int
 gx_concretize_CIEICC(
     const gs_client_color * pcc,
     const gs_color_space *  pcs,
@@ -345,13 +345,13 @@ gx_remap_ICCBased(const gs_client_color * pc, const gs_color_space * pcs,
  * argument in favor of correct reference counting spoke of "an
  * unintuitive but otherwise legitimate state of affairs".
  */
-private void
+static void
 gx_final_CIEICC(const gs_color_space * pcs)
 {
     rc_decrement_only(pcs->params.icc.picc_info, "gx_final_CIEICC");
 }
 
-private int
+static int
 icmFileGs_seek(icmFile *pp, long int offset)
 {
     icmFileGs *p = (icmFileGs *)pp;
@@ -359,7 +359,7 @@ icmFileGs_seek(icmFile *pp, long int offset)
     return spseek(p->strp, offset);
 }
 
-private size_t
+static size_t
 icmFileGs_read(icmFile *pp, void *buffer, size_t size, size_t count)
 {
     icmFileGs *p = (icmFileGs *)pp;
@@ -369,7 +369,7 @@ icmFileGs_read(icmFile *pp, void *buffer, size_t size, size_t count)
     return (status < 0) ? status : tot;
 }
 
-private size_t
+static size_t
 icmFileGs_write(icmFile *pp, void *buffer, size_t size, size_t count)
 {
     icmFileGs *p = (icmFileGs *)pp;
@@ -379,7 +379,7 @@ icmFileGs_write(icmFile *pp, void *buffer, size_t size, size_t count)
     return (status < 0) ? status : tot;
 }
 
-private int
+static int
 icmFileGs_flush(icmFile *pp)
 {
     icmFileGs *p = (icmFileGs *)pp;
@@ -387,7 +387,7 @@ icmFileGs_flush(icmFile *pp)
     return s_std_write_flush(p->strp);
 }
 
-private int
+static int
 icmFileGs_delete(icmFile *pp)
 {
     free(pp);
@@ -409,7 +409,7 @@ icmFileGs_delete(icmFile *pp)
  * Return value: the stream wrapped as an icmFile object, or NULL on
  * error.
  **/
-private icmFile *
+static icmFile *
 gx_wrap_icc_stream(stream *strp)
 {
     icmFileGs *p;
@@ -588,7 +588,7 @@ gx_load_icc_profile(gs_cie_icc *picc_info)
  * Note that an ICCBased color space must be installed before it is known if
  * the ICC profile or the alternate color space is to be used.
  */
-private int
+static int
 gx_install_CIEICC(gs_color_space * pcs, gs_state * pgs)
 {
     const gs_icc_params * picc_params = (const gs_icc_params *)&pcs->params.icc;
@@ -671,7 +671,7 @@ gs_cspace_build_CIEICC(
 
 /* ---------------- Serialization. -------------------------------- */
 
-private int 
+static int 
 gx_serialize_CIEICC(const gs_color_space * pcs, stream * s)
 {
     const gs_icc_params * p = &pcs->params.icc;

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gshsb.c,v 1.7 2007/09/11 15:24:28 Arabidopsis Exp $ */
+/* $Id: gshsb.c,v 1.8 2008/03/23 15:27:39 Arabidopsis Exp $ */
 /* HSB color operators for Ghostscript library */
 #include "gx.h"
 #include "gscolor.h"
@@ -25,8 +25,8 @@
 #include "gxfrac.h"
 
 /* Forward references */
-private void color_hsb_to_rgb(floatp h, floatp s, floatp b, float rgb[3]);
-private void color_rgb_to_hsb(floatp r, floatp g, floatp b, float hsb[3]);
+static void color_hsb_to_rgb(floatp h, floatp s, floatp b, float rgb[3]);
+static void color_rgb_to_hsb(floatp r, floatp g, floatp b, float hsb[3]);
 
 /* Force a parameter into the range [0.0..1.0]. */
 #define force_unit(p) (p < 0.0 ? 0.0 : p > 1.0 ? 1.0 : p)
@@ -58,7 +58,7 @@ gs_currenthsbcolor(const gs_state * pgs, float pr3[3])
 /* Rogers, Procedural Elements for Computer Graphics, pp. 401-403. */
 
 /* Convert RGB to HSB. */
-private void
+static void
 color_rgb_to_hsb(floatp r, floatp g, floatp b, float hsb[3])
 {
     frac red = float2frac(r), green = float2frac(g), blue = float2frac(b);
@@ -99,7 +99,7 @@ color_rgb_to_hsb(floatp r, floatp g, floatp b, float hsb[3])
 }
 
 /* Convert HSB to RGB. */
-private void
+static void
 color_hsb_to_rgb(floatp hue, floatp saturation, floatp brightness, float rgb[3])
 {
     if (saturation == 0) {

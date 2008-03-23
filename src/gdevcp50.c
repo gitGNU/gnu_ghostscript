@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevcp50.c,v 1.9 2007/09/11 15:24:22 Arabidopsis Exp $*/
+/* $Id: gdevcp50.c,v 1.10 2008/03/23 15:27:51 Arabidopsis Exp $*/
 /* Mitsubishi CP50 color printer driver */
 #include "gdevprn.h"
 #define ppdev ((gx_device_printer *)pdev)
@@ -44,13 +44,13 @@
 #define Y_DPI 187		/* pixels per inch */
 
 /* The device descriptor */
-private dev_proc_print_page(cp50_print_page);
-private dev_proc_output_page(cp50_output_page);
+static dev_proc_print_page(cp50_print_page);
+static dev_proc_output_page(cp50_output_page);
 
-private dev_proc_map_rgb_color(cp50_rgb_color);
-private dev_proc_map_color_rgb(cp50_color_rgb);
+static dev_proc_map_rgb_color(cp50_rgb_color);
+static dev_proc_map_color_rgb(cp50_color_rgb);
 
-private gx_device_procs cp50_procs =
+static gx_device_procs cp50_procs =
   prn_color_procs(gdev_prn_open, cp50_output_page, gdev_prn_close,
     cp50_rgb_color, cp50_color_rgb);
 
@@ -68,7 +68,7 @@ int copies;
 
 
 /* Send the page to the printer. */
-private int
+static int
 cp50_print_page(gx_device_printer *pdev, FILE *prn_stream)
 {	
 	int line_size = gdev_mem_bytes_per_scan_line((gx_device *)pdev);
@@ -175,7 +175,7 @@ cp50_print_page(gx_device_printer *pdev, FILE *prn_stream)
 	return 0;
 }
 
-int private 
+static int 
 cp50_output_page(gx_device *pdev, int num_copies, int flush)
 {   int code, outcode, closecode;
 
@@ -205,7 +205,7 @@ cp50_output_page(gx_device *pdev, int num_copies, int flush)
 /* Note that Windows expects RGB values in the order B,G,R. */
  
 /* Map a r-g-b color to a color index. */
-private gx_color_index
+static gx_color_index
 cp50_rgb_color(gx_device *dev, const gx_color_value cv[])
 {   
     gx_color_value red, green, blue;
@@ -217,7 +217,7 @@ cp50_rgb_color(gx_device *dev, const gx_color_value cv[])
 }
  
 /* Map a color index to a r-g-b color. */
-private int
+static int
 cp50_color_rgb(gx_device *dev, gx_color_index color,
   gx_color_value prgb[3])
 {   prgb[2] = gx_color_value_from_byte(color & 0xff);

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsiorom.c,v 1.4 2007/09/11 15:23:44 Arabidopsis Exp $ */
+/* $Id: gsiorom.c,v 1.5 2008/03/23 15:27:49 Arabidopsis Exp $ */
 /* %rom% IODevice implementation for a compressed in-memory filesystem */
  
 /*
@@ -44,12 +44,12 @@
 #include "zlib.h"
 
 /* device method prototypes */
-private iodev_proc_init(romfs_init);
-private iodev_proc_open_file(romfs_open_file);
-private iodev_proc_file_status(romfs_file_status);
-private iodev_proc_enumerate_files(romfs_enumerate_files_init);
-private iodev_proc_enumerate_next(romfs_enumerate_next);
-private iodev_proc_enumerate_close(romfs_enumerate_close);
+static iodev_proc_init(romfs_init);
+static iodev_proc_open_file(romfs_open_file);
+static iodev_proc_file_status(romfs_file_status);
+static iodev_proc_enumerate_files(romfs_enumerate_files_init);
+static iodev_proc_enumerate_next(romfs_enumerate_next);
+static iodev_proc_enumerate_close(romfs_enumerate_close);
 /* close is handled by stream closure */
 
 /* device definition */
@@ -82,9 +82,9 @@ typedef struct romfs_file_enum_s {
 gs_private_st_ptrs1(st_romfs_file_enum, struct romfs_file_enum_s, "romfs_file_enum",
     romfs_file_enum_enum_ptrs, romfs_file_enum_reloc_ptrs, pattern);
 
-private uint32_t get_u32_big_endian(const uint32_t *a);
+static uint32_t get_u32_big_endian(const uint32_t *a);
 
-private uint32_t
+static uint32_t
 get_u32_big_endian(const uint32_t *a)
 {
     uint32_t v;
@@ -97,7 +97,7 @@ get_u32_big_endian(const uint32_t *a)
 /* ------ Block streams, potentially compressed (read only) ------ */
 
 /* String stream procedures */
-private int
+static int
     s_block_read_available(stream *, long *),
     s_block_read_seek(stream *, long),
     s_block_read_close(stream *),
@@ -105,7 +105,7 @@ private int
 			  stream_cursor_write *, bool);
 
 /* Initialize a stream for reading from a collection of blocks */
-private void
+static void
 sread_block(register stream *s,  const byte *ptr, uint len, const uint32_t *node )
 {
     static const stream_procs p = {
@@ -122,7 +122,7 @@ sread_block(register stream *s,  const byte *ptr, uint len, const uint32_t *node
 }
 
 /* Return the number of available bytes */
-private int
+static int
 s_block_read_available(stream *s, long *pl)
 {
     uint32_t *node = (uint32_t *)s->file;
@@ -135,7 +135,7 @@ s_block_read_available(stream *s, long *pl)
 }
 
 /* Seek in a string being read.  Return 0 if OK, ERRC if not. */
-private int
+static int
 s_block_read_seek(register stream * s, long pos)
 {
     uint32_t *node = (uint32_t *)s->file;
@@ -166,7 +166,7 @@ s_block_read_seek(register stream * s, long pos)
     return 0;
 }
 
-private int
+static int
 s_block_read_close(stream * s)
 {
     gs_free_object(s->memory, s->cbuf, "file_close(buffer)");
@@ -176,7 +176,7 @@ s_block_read_close(stream * s)
     return 0;
 }
 
-private int
+static int
 s_block_read_process(stream_state * st, stream_cursor_read * ignore_pr,
 		      stream_cursor_write * pw, bool last)
 {
@@ -230,7 +230,7 @@ s_block_read_process(stream_state * st, stream_cursor_read * ignore_pr,
     return status;
 }
 
-private int
+static int
 romfs_init(gx_io_device *iodev, gs_memory_t *mem)
 {
     romfs_state *state = gs_alloc_struct(mem, romfs_state, &st_romfs_state, 
@@ -241,7 +241,7 @@ romfs_init(gx_io_device *iodev, gs_memory_t *mem)
     return 0;
 }
 
-private int
+static int
 romfs_open_file(gx_io_device *iodev, const char *fname, uint namelen,
     const char *access, stream **ps, gs_memory_t *mem)
 {
@@ -283,7 +283,7 @@ romfs_open_file(gx_io_device *iodev, const char *fname, uint namelen,
     return 0;
 }
 
-private int
+static int
 romfs_file_status(gx_io_device * iodev, const char *fname, struct stat *pstat)
 {
     extern const uint32_t *gs_romfs[];
@@ -317,7 +317,7 @@ romfs_file_status(gx_io_device * iodev, const char *fname, struct stat *pstat)
     return 0;	/* success */
 }
 
-private file_enum *
+static file_enum *
 romfs_enumerate_files_init(gx_io_device *iodev, const char *pat, uint patlen,
 	     gs_memory_t *mem)
 {
@@ -339,7 +339,7 @@ romfs_enumerate_files_init(gx_io_device *iodev, const char *pat, uint patlen,
     return (file_enum *)penum;
 }
 
-private void
+static void
 romfs_enumerate_close(file_enum *pfen)
 {
     romfs_file_enum *penum = (romfs_file_enum *)pfen;
@@ -350,7 +350,7 @@ romfs_enumerate_close(file_enum *pfen)
     gs_free_object(mem, penum, "romfs_enum_init(romfs_enum)");
 }
 
-private uint
+static uint
 romfs_enumerate_next(file_enum *pfen, char *ptr, uint maxlen)
 {
     extern const uint32_t *gs_romfs[];

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsimpath.c,v 1.7 2007/09/11 15:24:26 Arabidopsis Exp $ */
+/* $Id: gsimpath.c,v 1.8 2008/03/23 15:27:45 Arabidopsis Exp $ */
 /* Image to outline conversion for Ghostscript library */
 #include "gx.h"
 #include "gserrors.h"
@@ -44,9 +44,9 @@ typedef struct {
 #define step 1
 
 /* Forward declarations */
-private int get_pixel(const status *, int, int);
-private int trace_from(status *, int, int, int);
-private int add_dxdy(status *, int, int, int);
+static int get_pixel(const status *, int, int);
+static int trace_from(status *, int, int, int);
+static int add_dxdy(status *, int, int, int);
 
 #define add_deltas(s, dx, dy, n)\
   if ( (code = add_dxdy(s, dx, dy, n)) < 0 ) return code
@@ -85,7 +85,7 @@ gs_imagepath(gs_state * pgs, int width, int height, const byte * data)
 }
 
 /* Get a pixel from the data.  Return 0 if outside the image. */
-private int
+static int
 get_pixel(register const status * out, int x, int y)
 {
     if (x < 0 || x >= out->width || y < 0 || y >= out->height)
@@ -96,7 +96,7 @@ get_pixel(register const status * out, int x, int y)
 /* Trace a path.  If detect is true, don't draw, just return 1 if we ever */
 /* encounter a starting point whose x,y follows that of the initial point */
 /* in x-then-y scan order; if detect is false, actually draw the outline. */
-private int
+static int
 trace_from(register status * out, int x0, int y0, int detect)
 {
     int x = x0, y = y0;
@@ -164,7 +164,7 @@ trace_from(register status * out, int x0, int y0, int detect)
 
 /* Add a (dx, dy) pair to the path being formed. */
 /* Accumulate successive segments in the same direction. */
-private int
+static int
 add_dxdy(register status * out, int dx, int dy, int count)
 {
     if (count != 0) {

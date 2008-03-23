@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sa85d.c,v 1.10 2007/09/11 15:24:23 Arabidopsis Exp $ */
+/* $Id: sa85d.c,v 1.11 2008/03/23 15:27:52 Arabidopsis Exp $ */
 /* ASCII85Decode filter */
 #include "std.h"
 #include "strimpl.h"
@@ -29,7 +29,7 @@
 private_st_A85D_state();
 
 /* Initialize the state */
-private int
+static int
 s_A85D_init(stream_state * st)
 {
     stream_A85D_state *const ss = (stream_A85D_state *) st;
@@ -38,8 +38,8 @@ s_A85D_init(stream_state * st)
 }
 
 /* Process a buffer */
-private int a85d_finish(int, ulong, stream_cursor_write *);
-private int
+static int a85d_finish(int, ulong, stream_cursor_write *);
+static int
 s_A85D_process(stream_state * st, stream_cursor_read * pr,
 	       stream_cursor_write * pw, bool last)
 {
@@ -168,7 +168,7 @@ s_A85D_process(stream_state * st, stream_cursor_read * pr,
     return status;
 }
 /* Handle the end of input data. */
-private int
+static int
 a85d_finish(int ccount, ulong word, stream_cursor_write * pw)
 {
     /* Assume there is enough room in the output buffer! */

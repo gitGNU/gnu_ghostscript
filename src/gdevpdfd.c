@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfd.c,v 1.11 2007/09/11 15:24:34 Arabidopsis Exp $ */
+/* $Id: gdevpdfd.c,v 1.12 2008/03/23 15:27:53 Arabidopsis Exp $ */
 /* Path drawing procedures for pdfwrite driver */
 #include "math_.h"
 #include "memory_.h"
@@ -40,6 +40,8 @@
 #include "gdevpdfg.h"
 #include "gdevpdfo.h"
 #include "gsutil.h"
+#include "gdevpdtf.h"
+#include "gdevpdts.h"
 
 /* ---------------- Drawing ---------------- */
 
@@ -77,21 +79,21 @@ gdev_pdf_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 
 /* ------ Vector device implementation ------ */
 
-private int
+static int
 pdf_setlinewidth(gx_device_vector * vdev, floatp width)
 {
     /* Acrobat Reader doesn't accept negative line widths. */
     return psdf_setlinewidth(vdev, fabs(width));
 }
 
-private int
+static int
 pdf_can_handle_hl_color(gx_device_vector * vdev, const gs_imager_state * pis, 
 		 const gx_drawing_color * pdc)
 {
     return pis != NULL;
 }
 
-private int
+static int
 pdf_setfillcolor(gx_device_vector * vdev, const gs_imager_state * pis, 
 		 const gx_drawing_color * pdc)
 {
@@ -112,7 +114,7 @@ pdf_setfillcolor(gx_device_vector * vdev, const gs_imager_state * pis,
 				 &psdf_set_fill_color_commands);
 }
 
-private int
+static int
 pdf_setstrokecolor(gx_device_vector * vdev, const gs_imager_state * pis, 
                    const gx_drawing_color * pdc)
 {
@@ -133,7 +135,7 @@ pdf_setstrokecolor(gx_device_vector * vdev, const gs_imager_state * pis,
 				 &psdf_set_stroke_color_commands);
 }
 
-private int
+static int
 pdf_dorect(gx_device_vector * vdev, fixed x0, fixed y0, fixed x1, fixed y1,
 	   gx_path_type_t type)
 {
@@ -177,7 +179,7 @@ pdf_dorect(gx_device_vector * vdev, fixed x0, fixed y0, fixed x1, fixed y1,
     return psdf_dorect(vdev, x0, y0, x1, y1, type);
 }
 
-private int
+static int
 pdf_endpath(gx_device_vector * vdev, gx_path_type_t type)
 {
     return 0;			/* always handled by caller */
@@ -230,7 +232,7 @@ pdf_remember_clip_path(gx_device_pdf * pdev, const gx_clip_path * pcpath)
 }
 
 /* Check if same clipping path. */
-private int
+static int
 pdf_is_same_clip_path(gx_device_pdf * pdev, const gx_clip_path * pcpath)
 {
     /* Used for skipping redundant clip paths. SF bug #624168. */
@@ -296,7 +298,7 @@ pdf_must_put_clip_path(gx_device_pdf * pdev, const gx_clip_path * pcpath)
 }
 
 /* Put a single element of a clipping path list. */
-private int
+static int
 pdf_put_clip_path_list_elem(gx_device_pdf * pdev, gx_cpath_path_list *e, 
 	gs_path_enum *cenum, gdev_vector_dopath_state_t *state,
 	gs_fixed_point vs[3])
@@ -429,7 +431,7 @@ pdf_put_clip_path(gx_device_pdf * pdev, const gx_clip_path * pcpath)
  * CTM will be multiplied by *pscale, and all coordinates will be divided by
  * *pscale.
  */
-private bool
+static bool
 make_rect_scaling(const gx_device_pdf *pdev, const gs_fixed_rect *bbox,
 		  floatp prescale, double *pscale)
 {
@@ -455,26 +457,17 @@ make_rect_scaling(const gx_device_pdf *pdev, const gs_fixed_rect *bbox,
  * Return 1 if there is nothing to paint.
  * Changes *box to the clipping box.
  */
-private int
+static int
 prepare_fill_with_clip(gx_device_pdf *pdev, const gs_imager_state * pis,
 	      gs_fixed_rect *box, bool have_path,
 	      const gx_drawing_color * pdcolor, const gx_clip_path * pcpath)
 {
     bool new_clip;
-    int bottom = (pdev->ResourcesBeforeUsage ? 1 : 0);
-    gs_fixed_rect cbox;
     int code;
 
-    /*
-     * Check for an empty clipping path.
-     */
-    if (pcpath) {
-	gx_cpath_outer_box(pcpath, &cbox);
-	if (cbox.p.x >= cbox.q.x || cbox.p.y >= cbox.q.y)
-	    return 1;		/* empty clipping path */
-    }
     if (gx_dc_is_pure(pdcolor)) {
-	/*
+        int bottom = (pdev->ResourcesBeforeUsage ? 1 : 0);
+ 	/*
 	 * Make a special check for the initial fill with white,
 	 * which shouldn't cause the page to be opened.
 	 */
@@ -486,7 +479,17 @@ prepare_fill_with_clip(gx_device_pdf *pdev, const gs_imager_state * pis,
 		return 1;
         }
     }
-    *box = cbox;
+    /*
+     * Check for an empty clipping path.
+     */
+    if (pcpath) {
+        gs_fixed_rect cbox;
+
+	gx_cpath_outer_box(pcpath, &cbox);
+	if (cbox.p.x >= cbox.q.x || cbox.p.y >= cbox.q.y)
+	    return 1;		/* empty clipping path */
+        *box = cbox;
+    }
     new_clip = pdf_must_put_clip_path(pdev, pcpath);
     if (have_path || pdev->context == PDF_IN_NONE || new_clip) {
 	if (new_clip)
@@ -506,7 +509,7 @@ prepare_fill_with_clip(gx_device_pdf *pdev, const gs_imager_state * pis,
 
 public_st_pdf_lcvd_t();
 
-private int 
+static int 
 lcvd_fill_rectangle_shifted(gx_device *dev, int x, int y, int width, int height, gx_color_index color)
 {
     pdf_lcvd_t *cvd = (pdf_lcvd_t *)dev;
@@ -514,7 +517,7 @@ lcvd_fill_rectangle_shifted(gx_device *dev, int x, int y, int width, int height,
     return cvd->std_fill_rectangle((gx_device *)&cvd->mdev, 
 	x - cvd->mdev.mapped_x, y - cvd->mdev.mapped_y, width, height, color);
 }
-private int 
+static int 
 lcvd_fill_rectangle_shifted2(gx_device *dev, int x, int y, int width, int height, gx_color_index color)
 {
     pdf_lcvd_t *cvd = (pdf_lcvd_t *)dev;
@@ -527,7 +530,7 @@ lcvd_fill_rectangle_shifted2(gx_device *dev, int x, int y, int width, int height
     return cvd->std_fill_rectangle((gx_device *)&cvd->mdev, 
 	x - cvd->mdev.mapped_x, y - cvd->mdev.mapped_y, width, height, color);
 }
-private void
+static void
 lcvd_get_clipping_box_shifted_from_mdev(gx_device *dev, gs_fixed_rect *pbox)
 {
     fixed ofs;
@@ -541,7 +544,7 @@ lcvd_get_clipping_box_shifted_from_mdev(gx_device *dev, gs_fixed_rect *pbox)
     pbox->p.y += ofs;
     pbox->q.y += ofs;
 }
-private int 
+static int 
 lcvd_pattern_manage(gx_device *pdev1, gx_bitmap_id id,
 		gs_pattern1_instance_t *pinst, pattern_manage_t function)
 {
@@ -549,7 +552,7 @@ lcvd_pattern_manage(gx_device *pdev1, gx_bitmap_id id,
 	return 1; /* Request shading area. */
     return 0;
 }
-private int 
+static int 
 lcvd_close_device_with_writing(gx_device *pdev)
 {
     /* Assuming 'mdev' is being closed before 'mask' - see gx_image3_end_image. */
@@ -561,7 +564,7 @@ lcvd_close_device_with_writing(gx_device *pdev)
     return code < 0 ? code : code1;
 }
 
-private int
+static int
 write_image(gx_device_pdf *pdev, gx_device_memory *mdev, gs_matrix *m)
 {
     gs_image_t image;
@@ -580,7 +583,7 @@ write_image(gx_device_pdf *pdev, gx_device_memory *mdev, gs_matrix *m)
 	code = pdf_do_image(pdev, writer.pres, NULL, true);
     return code;
 }
-private int
+static int
 write_mask(gx_device_pdf *pdev, gx_device_memory *mdev, gs_matrix *m)
 {
     const int sourcex = 0;
@@ -600,7 +603,7 @@ write_mask(gx_device_pdf *pdev, gx_device_memory *mdev, gs_matrix *m)
     return code;
 }
 
-private void
+static void
 max_subimage_width(int width, byte *base, int x0, long count1, int *x1, long *count)
 {
     long c = 0, c1 = count1 - 1;
@@ -632,7 +635,7 @@ ex:
     *x1 = x;
 }
 
-private void
+static void
 compute_subimage(int width, int height, int raster, byte *base, 
 	    	 int x0, int y0, long MaxClipPathSize, int *x1, int *y1)
 {
@@ -673,7 +676,7 @@ compute_subimage(int width, int height, int raster, byte *base,
     }
 }
 
-private int
+static int
 image_line_to_clip(gx_device_pdf *pdev, byte *base, int x0, int x1, int y0, int y1, bool started)
 {   /* returns the number of segments or error code. */
     int x = x0, xx;
@@ -718,7 +721,7 @@ image_line_to_clip(gx_device_pdf *pdev, byte *base, int x0, int x1, int y0, int 
     return c;
 }
 
-private int
+static int
 mask_to_clip(gx_device_pdf *pdev, int width, int height, 
 	     int raster, byte *base, int x0, int y0, int x1, int y1)
 {
@@ -742,7 +745,7 @@ mask_to_clip(gx_device_pdf *pdev, int width, int height,
     return code < 0 ? code : has_segments ? 1 : 0;
 }
 
-private int
+static int
 write_subimage(gx_device_pdf *pdev, gx_device_memory *mdev, int x, int y, int x1, int y1)
 {
     gs_image_t image;
@@ -765,7 +768,7 @@ write_subimage(gx_device_pdf *pdev, gx_device_memory *mdev, int x, int y, int x1
     return pdf_do_image(pdev, writer.pres, NULL, true);
 }
 
-private int 
+static int 
 write_image_with_clip(gx_device_pdf *pdev, pdf_lcvd_t *cvd)
 {
     int x = 0, y = 0;
@@ -875,7 +878,7 @@ pdf_dump_converted_image(gx_device_pdf *pdev, pdf_lcvd_t *cvd)
 		0, 0, cvd->mdev.width, cvd->mdev.height, (gx_color_index)0);
     return code;
 }
-private int
+static int
 lcvd_handle_fill_path_as_shading_coverage(gx_device *dev,
     const gs_imager_state *pis, gx_path *ppath,
     const gx_fill_params *params,
@@ -1218,8 +1221,37 @@ gdev_pdf_stroke_path(gx_device * dev, const gs_imager_state * pis,
 	return 0;		/* won't mark the page */
     if (pdf_must_put_clip_path(pdev, pcpath))
 	code = pdf_unclip(pdev);
-    else 
-	code = pdf_open_page(pdev, PDF_IN_STREAM);
+    else if ((pdev->last_charpath_op & TEXT_DO_FALSE_CHARPATH) && ppath->current_subpath && 
+	(ppath->last_charpath_segment == ppath->current_subpath->last)) {
+	bool hl_color = pdf_can_handle_hl_color((gx_device_vector *)pdev, pis, pdcolor);
+	const gs_imager_state *pis_for_hl_color = (hl_color ? pis : NULL);
+	
+	if (pdf_modify_text_render_mode(pdev->text->text_state, 1)) {
+	    /* Set the colour for the stroke */
+	    code = pdf_reset_color(pdev, pis_for_hl_color, pdcolor, &pdev->saved_stroke_color, 
+			&pdev->stroke_used_process_color, &psdf_set_stroke_color_commands);
+	    if(code == 0) {
+		s = pdev->strm;
+		/* Text is emitted scaled so that the CTM is an identity matrix, the line width 
+		 * needs to be scaled to match otherwise we will get the default, or the current
+		 * width scaled by the CTM before the text, either of which would be wrong.
+		 */
+		pprintg1(s, "%g w\n", (pis->line_params.half_width * 2));
+		/* Some trickery here. We have altered the colour, text render mode and linewidth,
+		 * we don't want those to persist. By switching to a stream context we will flush the 
+		 * pending text. This has the beneficial side effect of executing a grestore. So
+		 * everything works out neatly.
+		 */
+		code = pdf_open_page(pdev, PDF_IN_STREAM);
+		return(code);
+	    }
+	}
+	/* Can only get here if any of the above steps fail, in which case we proceed to
+	 * emit the charpath as a normal path, and stroke it.
+	 */
+        code = pdf_open_page(pdev, PDF_IN_STREAM);
+    } else
+        code = pdf_open_page(pdev, PDF_IN_STREAM);
     if (code < 0)
 	return code;
     code = pdf_prepare_stroke(pdev, pis);

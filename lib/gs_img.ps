@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: gs_img.ps,v 1.5 2007/08/01 14:25:38 jemarch Exp $
+% $Id: gs_img.ps,v 1.6 2008/03/23 15:28:28 Arabidopsis Exp $
 % image, colorimage, and imagemask implementation
 
 %
@@ -675,6 +675,21 @@ if
   }
 .bind systemdict begin odef end
 
+% An auxiliary function for checking whether an imagemask to be interpolated.
+/.is_low_resolution    %  <image dict> .is_low_resolution <bool>
+{  % Checking whether image pixel maps to more than 2 device pixels.
+   % The threshold 2 is arbitrary.
+   1 exch 0 exch
+   0 exch 1 exch
+   /ImageMatrix get dup
+   2 {
+     4 1 roll
+     idtransform dtransform dup mul exch dup mul add sqrt
+   } repeat
+   max
+   2 gt % arbitrary
+} .bind def
+
 
 %
 %   width  height  polarity  matrix  datasrc   imagemask   -
@@ -687,7 +702,8 @@ if
     dup type /dicttype eq .languagelevel 2 ge and
       { dup /ImageType get
         //.imagemasktypes exch .knownget
-          { 1 index /ImageType get 1 eq
+          { 1 index //.is_low_resolution exec
+            2 index /ImageType get 1 eq and
 	    2 index /BitsPerComponent get 1 eq and
 	    2 index /Interpolate .knownget not { false } if and
 	    //filterdict /ImscaleDecode known and {

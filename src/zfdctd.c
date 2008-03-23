@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfdctd.c,v 1.8 2007/09/11 15:24:09 Arabidopsis Exp $ */
+/* $Id: zfdctd.c,v 1.9 2008/03/23 15:27:41 Arabidopsis Exp $ */
 /* DCTDecode filter creation */
 #include "memory_.h"
 #include "stdio_.h"		/* for jpeglib.h */
@@ -38,7 +38,7 @@ private_st_jpeg_decompress_data();
 stream_state_proc_put_params(s_DCTD_put_params, stream_DCT_state);
 
 /* Find the memory that will be used for allocating the stream. */
-private gs_ref_memory_t *
+static gs_ref_memory_t *
 find_stream_memory(i_ctx_t *i_ctx_p, int npop, uint space)
 {
     uint use_space = max(space, avm_global);
@@ -53,7 +53,7 @@ find_stream_memory(i_ctx_t *i_ctx_p, int npop, uint space)
 
 /* <source> <dict> DCTDecode/filter <file> */
 /* <source> DCTDecode/filter <file> */
-private int
+static int
 zDCTD(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

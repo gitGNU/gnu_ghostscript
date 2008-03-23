@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: smd5.c,v 1.9 2007/09/11 15:24:10 Arabidopsis Exp $ */
+/* $Id: smd5.c,v 1.10 2008/03/23 15:27:58 Arabidopsis Exp $ */
 /* MD5Encode filter */
 #include "memory_.h"
 #include "strimpl.h"
@@ -29,7 +29,7 @@
 private_st_MD5E_state();
 
 /* Initialize the state. */
-private int
+static int
 s_MD5E_init(stream_state * st)
 {
     stream_MD5E_state *const ss = (stream_MD5E_state *) st;
@@ -39,7 +39,7 @@ s_MD5E_init(stream_state * st)
 }
 
 /* Process a buffer. */
-private int
+static int
 s_MD5E_process(stream_state * st, stream_cursor_read * pr,
 	       stream_cursor_write * pw, bool last)
 {
@@ -86,7 +86,7 @@ err:
 }
 
 /* Process a buffer. */
-private int
+static int
 s_MD5C_process(stream_state * st, stream_cursor_read * pr,
 	       stream_cursor_write * pw, bool last)
 {

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxccache.c,v 1.10 2007/09/11 15:24:26 Arabidopsis Exp $ */
+/* $Id: gxccache.c,v 1.11 2008/03/23 15:28:15 Arabidopsis Exp $ */
 /* Fast case character cache routines for Ghostscript library */
 #include "memory_.h"
 #include "gx.h"
@@ -42,10 +42,10 @@
 #include "gxhttile.h"
 
 /* Forward references */
-private byte *compress_alpha_bits(const cached_char *, gs_memory_t *);
+static byte *compress_alpha_bits(const cached_char *, gs_memory_t *);
 
 /* Define a scale factor of 1. */
-private const gs_log2_scale_point scale_log2_1 =
+static const gs_log2_scale_point scale_log2_1 =
 {0, 0};
 
 void
@@ -229,9 +229,11 @@ gx_lookup_xfont_char(const gs_state * pgs, cached_fm_pair * pair,
 	    return 0;
     }
     log2_scale.x = log2_scale.y = 1;
-    cc = gx_alloc_char_bits(font->dir, NULL, NULL, 
+    code = gx_alloc_char_bits(font->dir, NULL, NULL, 
 		(ushort)(bbox.q.x - bbox.p.x), (ushort)(bbox.q.y - bbox.p.y), 
-		&log2_scale, 1);
+		&log2_scale, 1, &cc);
+    if (code < 0)
+	return code;
     if (cc == 0)
 	return 0;
     /* Success.  Make the cache entry. */
@@ -319,10 +321,8 @@ gx_image_cached_char(register gs_show_enum * penum, register cached_char * cc)
 	code = gx_effective_clip_path(pgs, &pcpath);
 	if (code < 0)
 	    return code;
-	gx_make_clip_device(&cdev, gx_cpath_list(pcpath));
-	cdev.target = imaging_dev;
+	gx_make_clip_device_on_stack(&cdev, pcpath, imaging_dev);
 	imaging_dev = (gx_device *) & cdev;
-	(*dev_proc(imaging_dev, open_device)) (imaging_dev);
 	if_debug0('K', "[K](clipping)\n");
     }
     gx_set_dev_color(pgs);
@@ -477,7 +477,7 @@ gx_image_cached_char(register gs_show_enum * penum, register cached_char * cc)
  * Compress a mask with 2 or 4 bits of alpha to a monobit mask.
  * Allocate and return the address of the monobit mask.
  */
-private byte *
+static byte *
 compress_alpha_bits(const cached_char * cc, gs_memory_t * mem)
 {
     const byte *data = cc_const_bits(cc);

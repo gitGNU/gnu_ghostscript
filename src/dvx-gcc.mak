@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 Artifex Software, Inc.
+#  Copyright (C) 2001-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: dvx-gcc.mak,v 1.12 2007/09/11 15:24:42 Arabidopsis Exp $
+# $Id: dvx-gcc.mak,v 1.13 2008/03/23 15:28:06 Arabidopsis Exp $
 # makefile for DesqView/X/gcc/X11 configuration.
 
 #include $(COMMONDIR)/gccdefs.mak
@@ -85,10 +85,6 @@ GS_INIT=gs_init.ps
 #	includes debugging features (-Z switch) in the code.
 #	  Code runs substantially slower even if no debugging switches
 #	  are set.
-# -DNOPRIVATE
-#	makes private (static) procedures and variables public,
-#	  so they are visible to the debugger and profiler.
-#	  No execution time or space penalty.
 
 GENOPT=
 
@@ -112,7 +108,6 @@ BUILD_TIME_GS=gs
 # See jpeg.mak for more information.
 
 JSRCDIR=jpeg
-JVERSION=6
 
 # Note: if a shared library is used, it may not contain the
 # D_MAX_BLOCKS_IN_MCU patch, and thus may not be able to read
@@ -127,8 +122,7 @@ JPEG_NAME=jpeg
 # You may need to change this if the libpng version changes.
 # See libpng.mak for more information.
 
-PSRCDIR=libpng
-PVERSION=10218
+PNGSRCDIR=libpng
 
 # Choose whether to use a shared version of the PNG library (-lpng).
 # See gs.mak and Make.htm for more information.

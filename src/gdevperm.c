@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevperm.c,v 1.7 2007/09/11 15:24:07 Arabidopsis Exp $ */
+/* $Id: gdevperm.c,v 1.8 2008/03/23 15:28:10 Arabidopsis Exp $ */
 /* Device which permutes color components, for testing DeviceN. */
 #include "gdevprn.h"
 #include "gxdcconv.h"
@@ -43,13 +43,13 @@
  * DeviceCMYK.
  **/
 
-private dev_proc_print_page(perm_print_page);
-private dev_proc_get_params(perm_get_params);
-private dev_proc_put_params(perm_put_params);
-private dev_proc_get_color_mapping_procs(perm_get_color_mapping_procs);
-private dev_proc_get_color_comp_index(perm_get_color_comp_index);
-private dev_proc_encode_color(perm_encode_color);
-private dev_proc_decode_color(perm_decode_color);
+static dev_proc_print_page(perm_print_page);
+static dev_proc_get_params(perm_get_params);
+static dev_proc_put_params(perm_put_params);
+static dev_proc_get_color_mapping_procs(perm_get_color_mapping_procs);
+static dev_proc_get_color_comp_index(perm_get_color_comp_index);
+static dev_proc_encode_color(perm_encode_color);
+static dev_proc_decode_color(perm_decode_color);
 
 struct gx_device_perm_s {
     gx_device_common;
@@ -61,7 +61,7 @@ struct gx_device_perm_s {
 };
 typedef struct gx_device_perm_s gx_device_perm_t;
 
-private const gx_device_procs perm_procs = {
+static const gx_device_procs perm_procs = {
     gdev_prn_open,
     NULL,
     NULL,
@@ -132,7 +132,7 @@ const gx_device_perm_t gs_perm_device = {
 };
 
 
-private int
+static int
 perm_print_page(gx_device_printer *pdev, FILE *pstream)
 {
     int y;
@@ -195,7 +195,7 @@ perm_print_page(gx_device_printer *pdev, FILE *pstream)
     return code;
 }
 
-private void
+static void
 perm_permute_cm(gx_device *pdev, frac out[])
 {
     gx_device_perm_t * const dev = (gx_device_perm_t *)pdev;
@@ -211,7 +211,7 @@ perm_permute_cm(gx_device *pdev, frac out[])
     }
 }
 
-private void
+static void
 gray_cs_to_perm_cm_0(gx_device *dev, frac gray, frac out[])
 {
     out[0] = out[1] = out[2] = frac_0;
@@ -219,7 +219,7 @@ gray_cs_to_perm_cm_0(gx_device *dev, frac gray, frac out[])
     perm_permute_cm(dev, out);
 }
 
-private void
+static void
 rgb_cs_to_perm_cm_0(gx_device *dev, const gs_imager_state *pis,
 				  frac r, frac g, frac b, frac out[])
 {
@@ -227,7 +227,7 @@ rgb_cs_to_perm_cm_0(gx_device *dev, const gs_imager_state *pis,
     perm_permute_cm(dev, out);
 }
 
-private void
+static void
 cmyk_cs_to_perm_cm_0(gx_device *dev, frac c, frac m, frac y, frac k, frac out[])
 {
     out[0] = c;
@@ -237,14 +237,14 @@ cmyk_cs_to_perm_cm_0(gx_device *dev, frac c, frac m, frac y, frac k, frac out[])
     perm_permute_cm(dev, out);
 };
 
-private void
+static void
 gray_cs_to_perm_cm_1(gx_device *dev, frac gray, frac out[])
 {
     out[0] = out[1] = out[2] = frac_1 - gray;
     perm_permute_cm(dev, out);
 }
 
-private void
+static void
 rgb_cs_to_perm_cm_1(gx_device *dev, const gs_imager_state *pis,
 				  frac r, frac g, frac b, frac out[])
 {
@@ -254,7 +254,7 @@ rgb_cs_to_perm_cm_1(gx_device *dev, const gs_imager_state *pis,
     perm_permute_cm(dev, out);
 }
 
-private void
+static void
 cmyk_cs_to_perm_cm_1(gx_device *dev, frac c, frac m, frac y, frac k, frac out[])
 {
     color_cmyk_to_rgb(c, m, y, k, NULL, out);
@@ -264,20 +264,20 @@ cmyk_cs_to_perm_cm_1(gx_device *dev, frac c, frac m, frac y, frac k, frac out[])
     perm_permute_cm(dev, out);
 };
 
-private const gx_cm_color_map_procs perm_cmapping_procs_0 = {
+static const gx_cm_color_map_procs perm_cmapping_procs_0 = {
     gray_cs_to_perm_cm_0, rgb_cs_to_perm_cm_0, cmyk_cs_to_perm_cm_0
 };
 
-private const gx_cm_color_map_procs perm_cmapping_procs_1 = {
+static const gx_cm_color_map_procs perm_cmapping_procs_1 = {
     gray_cs_to_perm_cm_1, rgb_cs_to_perm_cm_1, cmyk_cs_to_perm_cm_1
 };
 
-private const gx_cm_color_map_procs *perm_cmapping_procs[] = {
+static const gx_cm_color_map_procs *perm_cmapping_procs[] = {
     &perm_cmapping_procs_0,
     &perm_cmapping_procs_1
 };
 
-private const gx_cm_color_map_procs *
+static const gx_cm_color_map_procs *
 perm_get_color_mapping_procs(const gx_device *dev)
 {
     const gx_device_perm_t * const pdev = (const gx_device_perm_t *)dev;
@@ -291,7 +291,7 @@ perm_get_color_mapping_procs(const gx_device *dev)
     (name_size == str_size && \
 	(strncmp((const char *)name, (const char *)str, name_size) == 0))
 
-private int
+static int
 perm_get_color_comp_index(const gx_device *pdev, const char *pname,
 					int name_size, int component_type)
 {
@@ -315,7 +315,7 @@ perm_get_color_comp_index(const gx_device *pdev, const char *pname,
 /*
  * Encode a list of colorant values into a gx_color_index_value.
  */
-private gx_color_index
+static gx_color_index
 perm_encode_color(gx_device *dev, const gx_color_value colors[])
 {
     int bpc = 8;
@@ -334,7 +334,7 @@ perm_encode_color(gx_device *dev, const gx_color_value colors[])
 /*
  * Decode a gx_color_index value back to a list of colorant values.
  */
-private int
+static int
 perm_decode_color(gx_device *dev, gx_color_index color, gx_color_value *out)
 {
     int bpc = 8;
@@ -353,7 +353,7 @@ perm_decode_color(gx_device *dev, gx_color_index color, gx_color_value *out)
 #define set_param_array(a, d, s)\
   (a.data = d, a.size = s, a.persistent = false);
 
-private int
+static int
 perm_get_params(gx_device *pdev, gs_param_list *plist)
 {
     gx_device_perm_t * const dev = (gx_device_perm_t *)pdev;
@@ -388,7 +388,7 @@ perm_get_params(gx_device *pdev, gs_param_list *plist)
 
 #undef set_param_array
 
-private const char * DeviceCMYKComponents[] = {
+static const char * DeviceCMYKComponents[] = {
 	"Cyan",
 	"Magenta",
 	"Yellow",
@@ -396,14 +396,14 @@ private const char * DeviceCMYKComponents[] = {
 	0		/* List terminator */
 };
 
-private const char * DeviceCMYComponents[] = {
+static const char * DeviceCMYComponents[] = {
 	"Cyan",
 	"Magenta",
 	"Yellow",
 	0		/* List terminator */
 };
 
-private const char * DeviceNComponents[] = {
+static const char * DeviceNComponents[] = {
 	"Yellow",
 	"Cyan",
 	"Cyan2",
@@ -413,7 +413,7 @@ private const char * DeviceNComponents[] = {
 	0		/* List terminator */
 };
 
-private int
+static int
 perm_set_color_model(gx_device_perm_t *dev, int mode, int permute)
 {
     dev->mode = mode;
@@ -447,7 +447,7 @@ perm_set_color_model(gx_device_perm_t *dev, int mode, int permute)
     return 0;
 }
 
-private int
+static int
 perm_put_params(gx_device *pdev, gs_param_list *plist)
 {
     gx_device_perm_t * const dev = (gx_device_perm_t *)pdev;

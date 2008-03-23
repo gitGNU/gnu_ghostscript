@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfont0.c,v 1.8 2007/09/11 15:24:25 Arabidopsis Exp $ */
+/* $Id: zfont0.c,v 1.9 2008/03/23 15:27:57 Arabidopsis Exp $ */
 /* Composite font creation operator */
 #include "ghost.h"
 #include "oper.h"
@@ -49,13 +49,13 @@ int ztype0_get_cmap(const gs_cmap_t ** ppcmap, const ref * pfdepvector,
 		    const ref * op, gs_memory_t *imem);
 
 /* Forward references */
-private font_proc_define_font(ztype0_define_font);
-private font_proc_make_font(ztype0_make_font);
-private int ensure_char_entry(i_ctx_t *, os_ptr, const char *, byte *, int);
+static font_proc_define_font(ztype0_define_font);
+static font_proc_make_font(ztype0_make_font);
+static int ensure_char_entry(i_ctx_t *, os_ptr, const char *, byte *, int);
 
 /* <string|name> <font_dict> .buildfont0 <string|name> <font> */
 /* Build a type 0 (composite) font. */
-private int
+static int
 zbuildfont0(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -272,7 +272,7 @@ fail:
 /* any composite sub-fonts, adjust the parent font's FDepVector. */
 /* This is called only if gs_type0_define/make_font */
 /* actually changed the FDepVector. */
-private int
+static int
 ztype0_adjust_FDepVector(gs_font_type0 * pfont)
 {
     gs_memory_t *mem = pfont->memory;
@@ -300,7 +300,7 @@ ztype0_adjust_FDepVector(gs_font_type0 * pfont)
      */
     return dict_put_string(pfont_dict(pfont), "FDepVector", &newdep, NULL);
 }
-private int
+static int
 ztype0_define_font(gs_font_dir * pdir, gs_font * pfont)
 {
     gs_font_type0 *const pfont0 = (gs_font_type0 *)pfont;
@@ -311,7 +311,7 @@ ztype0_define_font(gs_font_dir * pdir, gs_font * pfont)
 	return code;
     return ztype0_adjust_FDepVector(pfont0);
 }
-private int
+static int
 ztype0_make_font(gs_font_dir * pdir, const gs_font * pfont,
 		 const gs_matrix * pmat, gs_font ** ppfont)
 {
@@ -333,7 +333,7 @@ ztype0_make_font(gs_font_dir * pdir, const gs_font * pfont,
 /* ------ Internal routines ------ */
 
 /* Find or add a character entry in a font dictionary. */
-private int
+static int
 ensure_char_entry(i_ctx_t *i_ctx_p, os_ptr op, const char *kstr,
 		  byte * pvalue, int default_value)
 {

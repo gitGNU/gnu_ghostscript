@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zmath.c,v 1.7 2007/09/11 15:24:05 Arabidopsis Exp $ */
+/* $Id: zmath.c,v 1.8 2008/03/23 15:28:05 Arabidopsis Exp $ */
 /* Mathematical operators */
 #include "math_.h"
 #include "ghost.h"
@@ -65,7 +65,7 @@ zsqrt(i_ctx_t *i_ctx_p)
 }
 
 /* <num> arccos <real> */
-private int
+static int
 zarccos(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -80,7 +80,7 @@ zarccos(i_ctx_t *i_ctx_p)
 }
 
 /* <num> arcsin <real> */
-private int
+static int
 zarcsin(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -197,7 +197,7 @@ zlog(i_ctx_t *i_ctx_p)
 }
 
 /* - rand <int> */
-private int
+static int
 zrand(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -227,7 +227,7 @@ zrand(i_ctx_t *i_ctx_p)
 }
 
 /* <int> srand - */
-private int
+static int
 zsrand(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -253,7 +253,7 @@ zsrand(i_ctx_t *i_ctx_p)
 }
 
 /* - rrand <int> */
-private int
+static int
 zrrand(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

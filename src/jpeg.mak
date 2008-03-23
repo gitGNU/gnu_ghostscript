@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 Artifex Software, Inc.
+#  Copyright (C) 2001-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -16,15 +16,13 @@
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 #
-# $Id: jpeg.mak,v 1.7 2007/09/11 15:24:27 Arabidopsis Exp $
+# $Id: jpeg.mak,v 1.8 2008/03/23 15:27:49 Arabidopsis Exp $
 # makefile for Independent JPEG Group library code.
 # Users of this makefile must define the following:
 #	GSSRCDIR - the GS library source directory
 #	JSRCDIR - the source directory
 #	JGENDIR - the generated intermediate file directory
 #	JOBJDIR - the object directory
-#	JVERSION - the library major version number (currently "6",
-#	   "6b", "62" and "6a" are also supported)
 #	SHARE_JPEG - 0 to compile the library, 1 to share
 #	JPEG_NAME - if SHARE_JPEG = 1, the name of the shared library
 #
@@ -206,11 +204,6 @@ $(JGEN)jpege.dev : $(TOP_MAKEFILES) $(JPEG_MAK) $(JGEN)jpege_$(SHARE_JPEG).dev
 $(JGEN)jpege_1.dev : $(TOP_MAKEFILES) $(JPEG_MAK) $(ECHOGS_XE)
 	$(SETMOD) $(JGEN)jpege_1 -lib $(JPEG_NAME)
 
-# we actually ignore the setting of JVERSION here, which could be used
-# to substitute for jpeg[ed]6.dev to handle differences. However, the
-# build requirements for all supported versions are identical, and
-# new versions are unlikely to be different. We therefore treat all
-# subversions the same.
 $(JGEN)jpege_0.dev : $(TOP_MAKEFILES) $(JPEG_MAK) $(JGEN)jpege6.dev
 	$(CP_) $(JGEN)jpege6.dev $(JGEN)jpege_0.dev
 

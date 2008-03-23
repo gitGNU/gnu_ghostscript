@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 Artifex Software, Inc.
+#  Copyright (C) 2001-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This software is provided AS-IS with no warranty, either express or
@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: os2.mak,v 1.11 2007/09/11 15:23:47 Arabidopsis Exp $
+# $Id: os2.mak,v 1.12 2008/03/23 15:28:11 Arabidopsis Exp $
 # makefile for MS-DOS or OS/2 GCC/EMX platform.
 # Uses Borland (MSDOS) MAKER or 
 # Uses IBM NMAKE.EXE Version 2.000.000 Mar 27 1992
@@ -79,12 +79,6 @@ DEBUG=0
 
 GDEBUG=0
 
-# Setting NOPRIVATE=1 makes private (static) procedures and variables public,
-# so they are visible to the debugger and profiler.
-# No execution time or space penalty, just larger .OBJ and .EXE files.
-
-NOPRIVATE=0
-
 # Setting MAKEDLL=1 makes the target a DLL instead of an EXE
 MAKEDLL=1
 
@@ -122,15 +116,13 @@ BUILD_TIME_GS=gsos2
 # See jpeg.mak for more information.
 
 JSRCDIR=jpeg
-JVERSION=6
 
 # Define the directory where the PNG library sources are stored,
 # and the version of the library that is stored there.
 # You may need to change this if the libpng version changes.
 # See libpng.mak for more information.
 
-PSRCDIR=libpng
-PVERSION=10218
+PNGSRCDIR=libpng
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.
@@ -211,9 +203,7 @@ EMXPATH=/emx
 COMPDIR=$(COMPBASE)\bin
 INCDIR=$(EMXPATH)/include
 LIBDIR=$(EMXPATH)/lib
-!if $(PVERSION) >= 10009
 CPNG=-DPNGAPI=
-!endif
 !endif
 
 !if $(IBMCPP)
@@ -406,12 +396,6 @@ $(PSOBJ)iutilasm.$(OBJ): $(PSSRC)iutilasm.asm
 
 # Define the compilation flags.
 
-!if $(NOPRIVATE)
-CP=-DNOPRIVATE
-!else
-CP=
-!endif
-
 !if $(DEBUG)
 CD=-DDEBUG
 !else
@@ -444,7 +428,7 @@ CDLL=
 CEXE=-Zomf
 !endif
 
-GENOPT=$(CP) $(CD) $(CGDB) $(CDLL) $(CO) $(CPNG)
+GENOPT=$(CD) $(CGDB) $(CDLL) $(CO) $(CPNG)
 
 CCFLAGS0=$(GENOPT) $(PLATOPT) -D__OS2__ $(GCIFLAGS)
 CCFLAGS=$(CCFLAGS0) 
@@ -513,7 +497,7 @@ DEVICE_DEVS11=$(DD)bmpmono.dev $(DD)bmpgray.dev $(DD)bmp16.dev $(DD)bmp256.dev $
 DEVICE_DEVS12=$(DD)psmono.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
 DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev $(DD)jpegcmyk.dev
-DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
+DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)txtwrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
 DEVICE_DEVS16=$(DD)bbox.dev
 # Overflow for DEVS3,4,5,6,9
 DEVICE_DEVS17=$(DD)ljet3.dev $(DD)ljet3d.dev $(DD)ljet4.dev $(DD)ljet4d.dev 

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zdpnext.c,v 1.8 2007/09/11 15:23:52 Arabidopsis Exp $ */
+/* $Id: zdpnext.c,v 1.9 2008/03/23 15:27:43 Arabidopsis Exp $ */
 /* NeXT Display PostScript extensions */
 #include "math_.h"
 #include "ghost.h"
@@ -41,7 +41,7 @@
 /* ------ alpha channel ------ */
 
 /* - currentalpha <alpha> */
-private int
+static int
 zcurrentalpha(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -52,7 +52,7 @@ zcurrentalpha(i_ctx_t *i_ctx_p)
 }
 
 /* <alpha> setalpha - */
-private int
+static int
 zsetalpha(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -92,21 +92,21 @@ typedef struct alpha_composite_state_s {
 } alpha_composite_state_t;
 
 /* Forward references */
-private int begin_composite(i_ctx_t *, alpha_composite_state_t *);
-private void end_composite(i_ctx_t *, alpha_composite_state_t *);
-private int xywh_param(os_ptr, double[4]);
+static int begin_composite(i_ctx_t *, alpha_composite_state_t *);
+static void end_composite(i_ctx_t *, alpha_composite_state_t *);
+static int xywh_param(os_ptr, double[4]);
 
 /* <dict> .alphaimage - */
 /* This is the dictionary version of the alphaimage operator, which is */
 /* now a pseudo-operator (see gs_dpnxt.ps). */
-private int
+static int
 zalphaimage(i_ctx_t *i_ctx_p)
 {
     return image1_setup(i_ctx_p, true);
 }
 
 /* <destx> <desty> <width> <height> <op> compositerect - */
-private int
+static int
 zcompositerect(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -135,7 +135,7 @@ zcompositerect(i_ctx_t *i_ctx_p)
 }
 
 /* Common code for composite and dissolve. */
-private int
+static int
 composite_image(i_ctx_t *i_ctx_p, const gs_composite_alpha_params_t * params)
 {
     os_ptr op = osp;
@@ -187,7 +187,7 @@ composite_image(i_ctx_t *i_ctx_p, const gs_composite_alpha_params_t * params)
 
 /* <srcx> <srcy> <width> <height> <srcgstate|null> <destx> <desty> <op> */
 /*   composite - */
-private int
+static int
 zcomposite(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -200,7 +200,7 @@ zcomposite(i_ctx_t *i_ctx_p)
 
 /* <srcx> <srcy> <width> <height> <srcgstate|null> <destx> <desty> <delta> */
 /*   dissolve - */
-private int
+static int
 zdissolve(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -219,12 +219,12 @@ zdissolve(i_ctx_t *i_ctx_p)
 
 /* ------ Image reading ------ */
 
-private int device_is_true_color(gx_device * dev);
+static int device_is_true_color(gx_device * dev);
 
 /* <x> <y> <width> <height> <matrix> .sizeimagebox */
 /*   <dev_x> <dev_y> <dev_width> <dev_height> <matrix> */
-private void box_confine(int *pp, int *pq, int wh);
-private int
+static void box_confine(int *pp, int *pq, int wh);
+static int
 zsizeimagebox(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -277,7 +277,7 @@ zsizeimagebox(i_ctx_t *i_ctx_p)
     make_int(op - 1, h);
     return 0;
 }
-private void
+static void
 box_confine(int *pp, int *pq, int wh)
 {
     if ( *pq <= 0 )
@@ -293,7 +293,7 @@ box_confine(int *pp, int *pq, int wh)
 }
 
 /* - .sizeimageparams <bits/sample> <multiproc> <ncolors> */
-private int
+static int
 zsizeimageparams(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -347,7 +347,7 @@ const op_def zdpnext_op_defs[] =
 /* ------ Internal routines ------ */
 
 /* Collect a rect operand. */
-private int
+static int
 xywh_param(os_ptr op, double rect[4])
 {
     int code = num_params(op, 4, rect);
@@ -362,7 +362,7 @@ xywh_param(os_ptr op, double rect[4])
 }
 
 /* Begin a compositing operation. */
-private int
+static int
 begin_composite(i_ctx_t *i_ctx_p, alpha_composite_state_t * pcp)
 {
     gx_device *dev = gs_currentdevice(igs);
@@ -383,7 +383,7 @@ begin_composite(i_ctx_t *i_ctx_p, alpha_composite_state_t * pcp)
 }
 
 /* End a compositing operation. */
-private void
+static void
 end_composite(i_ctx_t *i_ctx_p, alpha_composite_state_t * pcp)
 {
     /* Close and free the compositor and the compositing object. */
@@ -400,7 +400,7 @@ end_composite(i_ctx_t *i_ctx_p, alpha_composite_state_t * pcp)
  * (possibly inverted).  Return 0 if not true color, 1 if true color,
  * -1 if inverted true color.
  */
-private int
+static int
 device_is_true_color(gx_device * dev)
 {
     int ncomp = dev->color_info.num_components;

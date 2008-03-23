@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: gs_fntem.ps,v 1.7 2007/09/11 15:24:49 Arabidopsis Exp $
+% $Id: gs_fntem.ps,v 1.8 2008/03/23 15:28:28 Arabidopsis Exp $
 % A procset for Postscript font emulation
 
 % The procedures must not depend on the presence of the
@@ -345,7 +345,9 @@ currentdict end def
       dup /CIDSystemInfo get /Ordering get cvn
     } if
     dup type /nametype eq {
-      //SubstNWP exch get                              % <<font>> [SubstNWP]
+      //SubstNWP exch .knownget not {
+        []
+      } if                                   % <<font>> [SubstNWP]
     } if
     1 index exch /SubstNWP exch put
   } if

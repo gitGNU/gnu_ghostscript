@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: iutil2.c,v 1.8 2007/09/11 15:24:00 Arabidopsis Exp $ */
+/* $Id: iutil2.c,v 1.9 2008/03/23 15:28:02 Arabidopsis Exp $ */
 /* Level 2 utilities for Ghostscript interpreter */
 #include "memory_.h"
 #include "string_.h"
@@ -104,7 +104,7 @@ param_check_password(gs_param_list * plist, const password * ppass)
 
 /* Read a password from, or write a password into, a dictionary */
 /* (presumably systemdict). */
-private int
+static int
 dict_find_password(ref ** ppvalue, const ref * pdref, const char *kstr)
 {
     ref *pvalue;

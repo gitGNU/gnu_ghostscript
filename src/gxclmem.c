@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclmem.c,v 1.8 2007/09/11 15:24:33 Arabidopsis Exp $ */
+/* $Id: gxclmem.c,v 1.9 2008/03/23 15:27:45 Arabidopsis Exp $ */
 /* RAM-based command list implementation */
 #include "memory_.h"
 #include "gx.h"
@@ -137,7 +137,7 @@ LIMITATIONS.
    least as large as the fixed overhead of the compressor plus the
    decompressor, plus the expected compressed size of a block that size.
  */
-private const long COMPRESSION_THRESHOLD = 32000000;
+static const long COMPRESSION_THRESHOLD = 32000000;
 
 #define NEED_TO_COMPRESS(f)\
   ((f)->ok_to_compress && (f)->total_space > COMPRESSION_THRESHOLD)
@@ -156,10 +156,10 @@ private const long COMPRESSION_THRESHOLD = 32000000;
 private_st_MEMFILE();
 
 	/* forward references */
-private void memfile_free_mem(MEMFILE * f);
-private int memfile_init_empty(MEMFILE * f);
-private int memfile_set_memory_warning(clist_file_ptr cf, int bytes_left);
-private int memfile_fclose(clist_file_ptr cf, const char *fname, bool delete);
+static void memfile_free_mem(MEMFILE * f);
+static int memfile_init_empty(MEMFILE * f);
+static int memfile_set_memory_warning(clist_file_ptr cf, int bytes_left);
+static int memfile_fclose(clist_file_ptr cf, const char *fname, bool delete);
 
 /************************************************/
 /*   #define DEBUG      /- force statistics -/  */
@@ -184,7 +184,7 @@ const byte *decomp_rd_ptr1, *decomp_rd_limit1;
 #endif
 
 /* ----------------------------- Memory Allocation --------------------- */
-private void *	/* allocated memory's address, 0 if failure */
+static void *	/* allocated memory's address, 0 if failure */
 allocateWithReserve(
          MEMFILE  *f,			/* file to allocate mem to */
          int      sizeofBlock,		/* size of block to allocate */
@@ -226,7 +226,7 @@ allocateWithReserve(
 
 /* ---------------- Open/close/unlink ---------------- */
 
-private int
+static int
 memfile_fopen(char fname[gp_file_name_sizeof], const char *fmode,
 	      clist_file_ptr /*MEMFILE * */  * pf,
 	      gs_memory_t *mem, gs_memory_t *data_mem, bool ok_to_compress)
@@ -327,7 +327,7 @@ finish:
     return code;
 }
 
-private int
+static int
 memfile_fclose(clist_file_ptr cf, const char *fname, bool delete)
 {
     MEMFILE *const f = (MEMFILE *)cf;
@@ -363,7 +363,7 @@ memfile_fclose(clist_file_ptr cf, const char *fname, bool delete)
     return 0;
 }
 
-private int
+static int
 memfile_unlink(const char *fname)
 {
     /*
@@ -376,7 +376,7 @@ memfile_unlink(const char *fname)
 /* ---------------- Writing ---------------- */
 
 /* Pre-alloc enough reserve mem blox to guarantee a write of N bytes will succeed */
-private int	/* returns 0 ok, gs_error_VMerror if insufficient */
+static int	/* returns 0 ok, gs_error_VMerror if insufficient */
 memfile_set_memory_warning(clist_file_ptr cf, int bytes_left)
 {
     MEMFILE *const f = (MEMFILE *)cf;
@@ -441,7 +441,7 @@ finish:
     return code;
 }
 
-private int
+static int
 compress_log_blk(MEMFILE * f, LOG_MEMFILE_BLK * bp)
 {
     int status;
@@ -508,7 +508,7 @@ compress_log_blk(MEMFILE * f, LOG_MEMFILE_BLK * bp)
 }				/* end "compress_log_blk()"                                     */
 
 /*      Internal (private) routine to handle end of logical block       */
-private int	/* ret 0 ok, -ve error, or +ve low-memory warning */
+static int	/* ret 0 ok, -ve error, or +ve low-memory warning */
 memfile_next_blk(MEMFILE * f)
 {
     LOG_MEMFILE_BLK *bp = f->log_curr_blk;
@@ -619,7 +619,7 @@ memfile_next_blk(MEMFILE * f)
     return (ecode);
 }
 
-private int	/* returns # of chars actually written */
+static int	/* returns # of chars actually written */
 memfile_fwrite_chars(const void *data, uint len, clist_file_ptr cf)
 {
     const char *str = (const char *)data;
@@ -675,7 +675,7 @@ memfile_fwrite_chars(const void *data, uint len, clist_file_ptr cf)
 /*      and decompress it.                                              */
 /*                                                                      */
 
-private int
+static int
 memfile_get_pdata(MEMFILE * f)
 {
     int i, num_raw_buffers, status;
@@ -832,7 +832,7 @@ memfile_get_pdata(MEMFILE * f)
 
 /* ---------------- Reading ---------------- */
 
-private int
+static int
 memfile_fread_chars(void *data, uint len, clist_file_ptr cf)
 {
     char *str = (char *)data;
@@ -865,19 +865,19 @@ memfile_fread_chars(void *data, uint len, clist_file_ptr cf)
 
 /* ---------------- Position/status ---------------- */
 
-private int
+static int
 memfile_ferror_code(clist_file_ptr cf)
 {
     return (((MEMFILE *) cf)->error_code);	/* errors stored here */
 }
 
-private int64_t
+static int64_t
 memfile_ftell(clist_file_ptr cf)
 {
     return (((MEMFILE *) cf)->log_curr_pos);
 }
 
-private void
+static void
 memfile_rewind(clist_file_ptr cf, bool discard_data, const char *ignore_fname)
 {
     MEMFILE *f = (MEMFILE *) cf;
@@ -893,7 +893,7 @@ memfile_rewind(clist_file_ptr cf, bool discard_data, const char *ignore_fname)
     }
 }
 
-private int
+static int
 memfile_fseek(clist_file_ptr cf, int64_t offset, int mode, const char *ignore_fname)
 {
     MEMFILE *f = (MEMFILE *) cf;
@@ -939,7 +939,7 @@ memfile_fseek(clist_file_ptr cf, int64_t offset, int mode, const char *ignore_fn
 
 /* ---------------- Internal routines ---------------- */
 
-private void
+static void
 memfile_free_mem(MEMFILE * f)
 {
     LOG_MEMFILE_BLK *bp, *tmpbp;
@@ -1084,7 +1084,7 @@ memfile_free_mem(MEMFILE * f)
     }
 }
 
-private int
+static int
 memfile_init_empty(MEMFILE * f)
 {
     PHYS_MEMFILE_BLK *pphys;

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsroptab.c,v 1.7 2007/09/11 15:24:28 Arabidopsis Exp $ */
+/* $Id: gsroptab.c,v 1.8 2008/03/23 15:28:01 Arabidopsis Exp $ */
 /* Table of RasterOp procedures */
 #include "stdpre.h"
 #include "gsropt.h"
@@ -29,7 +29,7 @@
  */
 
 #define ROP_PROC(pname, expr)\
-private rop_operand pname(rop_operand D, rop_operand S, rop_operand T)\
+static rop_operand pname(rop_operand D, rop_operand S, rop_operand T)\
 { return expr; }
 
 #define a(u,v) (u&v)

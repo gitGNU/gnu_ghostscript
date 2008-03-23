@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevadmp.c,v 1.8 2007/09/11 15:24:21 Arabidopsis Exp $*/
+/* $Id: gdevadmp.c,v 1.9 2008/03/23 15:27:47 Arabidopsis Exp $*/
 /*
  * Apple DMP / Imagewriter driver
  *
@@ -116,7 +116,7 @@
 #include "gdevprn.h"
 
 /* The device descriptors */
-private dev_proc_print_page(dmp_print_page);
+static dev_proc_print_page(dmp_print_page);
 
 /* Standard DMP device */
 const gx_device_printer far_data gs_appledmp_device =
@@ -166,7 +166,7 @@ prn_device(prn_std_procs, "iwlq",
 #define IWLQ 4
 
 /* Send the page to the printer. */
-private int
+static int
 dmp_print_page(gx_device_printer *pdev, FILE *prn_stream)
 {	
 	int dev_type;

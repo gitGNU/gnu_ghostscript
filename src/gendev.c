@@ -17,10 +17,9 @@
 
 */
 
-/* $Id: gendev.c,v 1.7 2007/09/11 15:23:59 Arabidopsis Exp $ */
+/* $Id: gendev.c,v 1.8 2008/03/23 15:28:02 Arabidopsis Exp $ */
 /* Generate .dev configuration files */
 #include "stdpre.h"
-#include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>		/* for calloc */

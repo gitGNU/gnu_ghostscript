@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsmemory.c,v 1.10 2007/09/11 15:23:46 Arabidopsis Exp $ */
+/* $Id: gsmemory.c,v 1.11 2008/03/23 15:27:45 Arabidopsis Exp $ */
 /* Generic allocator support */
 #include "memory_.h"
 #include "gdebug.h"
@@ -227,7 +227,7 @@ gs_register_struct_root(gs_memory_t *mem, gs_gc_root_t *root,
 
 #ifdef DEBUG
 
-private const char *
+static const char *
 rc_object_type_name(const void *vp, const rc_header *prc)
 {
     gs_memory_type_ptr_t pstype;

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfdcte.c,v 1.8 2007/09/11 15:23:54 Arabidopsis Exp $ */
+/* $Id: zfdcte.c,v 1.9 2008/03/23 15:28:18 Arabidopsis Exp $ */
 /* DCTEncode filter creation */
 #include "memory_.h"
 #include "stdio_.h"		/* for jpeglib.h */
@@ -42,7 +42,7 @@ stream_state_proc_get_params(s_DCTE_get_params, stream_DCT_state);
 #endif
 
 /* <target> <dict> DCTEncode/filter <file> */
-private int
+static int
 zDCTE(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -105,7 +105,7 @@ fail:
 #include "stream.h"
 #include "files.h"
 /* <dict> <filter> <bool> .dcteparams <dict> */
-private int
+static int
 zdcteparams(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

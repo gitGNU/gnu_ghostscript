@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: iplugin.c,v 1.8 2007/09/11 15:24:07 Arabidopsis Exp $ */
+/* $Id: iplugin.c,v 1.9 2008/03/23 15:28:01 Arabidopsis Exp $ */
 /* Plugin manager */
 
 #include "malloc_.h"
@@ -37,12 +37,12 @@
 
 extern_i_plugin_table();
 
-private void *i_plugin_mem_alloc(i_plugin_client_memory *mem, unsigned int nbytes, const char *cname)
+static void *i_plugin_mem_alloc(i_plugin_client_memory *mem, unsigned int nbytes, const char *cname)
 {   gs_memory_t *mem_raw = mem->client_data;
     return mem_raw->procs.alloc_bytes_immovable(mem_raw, nbytes, cname);
 }
 
-private void i_plugin_mem_free(i_plugin_client_memory *mem, void *data, const char *cname)
+static void i_plugin_mem_free(i_plugin_client_memory *mem, void *data, const char *cname)
 {   gs_memory_t *mem_raw = mem->client_data;
     mem_raw->procs.free_object(mem_raw, data, cname);
 }

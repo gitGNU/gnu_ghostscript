@@ -1,4 +1,4 @@
-## Copyright (C) 2001-2004 Artifex Software, Inc.
+## Copyright (C) 2001-2007 Artifex Software, Inc.
 ##
 ## Permission is hereby granted, free of charge, to any person
 ## obtaining a copy of this software and associated documentation
@@ -20,7 +20,7 @@
 ## CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ## SOFTWARE.
 
-## $Id: Makefile.am,v 1.5 2007/09/11 15:25:10 Arabidopsis Exp $
+## $Id: Makefile.am,v 1.6 2008/03/23 15:28:33 Arabidopsis Exp $
 
 ## Process this file with automake to produce Makefile.in.
 
@@ -34,7 +34,7 @@ MAINT_CHARSET = latin1
 
 pkgincludedir=$(includedir)/ijs
 m4datadir = $(datadir)/aclocal
-pkgconfigdatadir = $(prefix)/lib/pkgconfig
+pkgconfigdir = $(libdir)/pkgconfig
 
 lib_LTLIBRARIES = libijs.la
 
@@ -78,7 +78,7 @@ ijs_server_example_LDADD = libijs.la
 
 ## Data
 
-pkgconfigdata_DATA = ijs.pc
+pkgconfig_DATA = ijs.pc
 
 man_MANS = ijs-config.1
 

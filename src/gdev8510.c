@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdev8510.c,v 1.8 2007/09/11 15:23:45 Arabidopsis Exp $*/
+/* $Id: gdev8510.c,v 1.9 2008/03/23 15:28:04 Arabidopsis Exp $*/
 /*
  * C.Itoh M8510 printer driver for ghostscript.
  *
@@ -26,7 +26,7 @@
 #include "gdevprn.h"
 
 /* The device descriptor */
-private dev_proc_print_page(m8510_print_page);
+static dev_proc_print_page(m8510_print_page);
 const gx_device_printer far_data gs_m8510_device =
 	prn_device(prn_std_procs, "m8510",
 		85,				/* width_10ths, 8.5" */
@@ -38,13 +38,13 @@ const gx_device_printer far_data gs_m8510_device =
 
 /* ------ forward declarations ------ */
 
-private void m8510_output_run(gx_device_printer *pdev,
+static void m8510_output_run(gx_device_printer *pdev,
 	byte *out, int pass, FILE *prn_stream);
 
 /* ------ internal routines ------ */
 
 /* Send the page to the printer. */
-private int
+static int
 m8510_print_page(gx_device_printer *pdev, FILE *prn_stream)
 {
 	int line_size = gdev_mem_bytes_per_scan_line((gx_device *)pdev);
@@ -108,7 +108,7 @@ out:;
 	return code;
 }
 
-private void
+static void
 m8510_output_run(gx_device_printer *pdev,
 	byte *out, int pass, FILE *prn_stream)
 {

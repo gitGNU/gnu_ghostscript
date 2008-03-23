@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevo182.c,v 1.8 2007/09/11 15:24:20 Arabidopsis Exp $*/
+/* $Id: gdevo182.c,v 1.9 2008/03/23 15:27:52 Arabidopsis Exp $*/
 /* Okidata Microline 182 printer driver */
 
 /* Contributed by Maarten Koning (smeg@bnr.ca) April 4, 1993 */
@@ -65,7 +65,7 @@ the graphics data can't match any Okidata commands
 
 /* The device descriptor */
 
-private dev_proc_print_page(oki_print_page);
+static dev_proc_print_page(oki_print_page);
 
 const gx_device_printer far_data gs_oki182_device =
   prn_device(prn_std_procs, "oki182",
@@ -92,7 +92,7 @@ const gx_device_printer far_data gs_oki182_device =
    graphic image data for graphic commands.
 */
 
-private void
+static void
 oki_transpose(byte *in, byte *out, int scanBits, register int lineSize)
 {
 	register bitMask = 0x80;
@@ -146,7 +146,7 @@ oki_transpose(byte *in, byte *out, int scanBits, register int lineSize)
    xxx - A future enhancement would be to replace long sequences
    of embedded zeros with exit.graphics-<n> spaces-enter.graphics
 */
-private byte *
+static byte *
 oki_compress(byte *in, int origWidth, int highRes,
 			int *numSpaces, int *newWidth)
 {
@@ -182,7 +182,7 @@ oki_compress(byte *in, int origWidth, int highRes,
 
 /* Send the page to the printer. */
 
-private int
+static int
 oki_print_page(gx_device_printer *pdev, FILE *prn_stream)
 {
 	int highRes = pdev->y_pixels_per_inch > 100;

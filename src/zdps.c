@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zdps.c,v 1.8 2007/09/11 15:24:11 Arabidopsis Exp $ */
+/* $Id: zdps.c,v 1.9 2008/03/23 15:27:58 Arabidopsis Exp $ */
 /* Display PostScript extensions */
 #include "ghost.h"
 #include "oper.h"
@@ -42,7 +42,7 @@ extern int make_upath(i_ctx_t *, ref *, const gs_state *, gx_path *, bool);
 /* ------ Graphics state ------ */
 
 /* <screen_index> <x> <y> .setscreenphase - */
-private int
+static int
 zsetscreenphase(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -67,7 +67,7 @@ zsetscreenphase(i_ctx_t *i_ctx_p)
 }
 
 /* <screen_index> .currentscreenphase <x> <y> */
-private int
+static int
 zcurrentscreenphase(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -92,7 +92,7 @@ zcurrentscreenphase(i_ctx_t *i_ctx_p)
 /* ------ Device-source images ------ */
 
 /* <dict> .image2 - */
-private int
+static int
 zimage2(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -163,28 +163,28 @@ zimage2(i_ctx_t *i_ctx_p)
 /* ------ View clipping ------ */
 
 /* - viewclip - */
-private int
+static int
 zviewclip(i_ctx_t *i_ctx_p)
 {
     return gs_viewclip(igs);
 }
 
 /* - eoviewclip - */
-private int
+static int
 zeoviewclip(i_ctx_t *i_ctx_p)
 {
     return gs_eoviewclip(igs);
 }
 
 /* - initviewclip - */
-private int
+static int
 zinitviewclip(i_ctx_t *i_ctx_p)
 {
     return gs_initviewclip(igs);
 }
 
 /* - viewclippath - */
-private int
+static int
 zviewclippath(i_ctx_t *i_ctx_p)
 {
     return gs_viewclippath(igs);
@@ -193,7 +193,7 @@ zviewclippath(i_ctx_t *i_ctx_p)
 /* ------ User names ------ */
 
 /* <index> <name> defineusername - */
-private int
+static int
 zdefineusername(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

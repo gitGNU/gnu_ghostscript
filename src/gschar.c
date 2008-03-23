@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gschar.c,v 1.7 2007/09/11 15:24:41 Arabidopsis Exp $ */
+/* $Id: gschar.c,v 1.8 2008/03/23 15:27:40 Arabidopsis Exp $ */
 /* Character writing "operators" for Ghostscript library */
 #include "gx.h"
 #include "gserrors.h"
@@ -31,7 +31,7 @@
 #include "gxfont.h"
 
 /* Forward declarations */
-private int show_n_begin(gs_show_enum *penum, gs_state *pgs, int code,
+static int show_n_begin(gs_show_enum *penum, gs_state *pgs, int code,
 			 gs_text_enum_t *pte);
 
 /* Structure descriptors */
@@ -340,7 +340,7 @@ gs_show_width(const gs_show_enum * penum, gs_point * ppt)
  * Force the enumerator to be a gs_show_enum *, which the current
  * implementation code requires.
  */
-private int
+static int
 show_n_begin(gs_show_enum *penum, gs_state *pgs, int code, gs_text_enum_t *pte)
 {
     if (code < 0)

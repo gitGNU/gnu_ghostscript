@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpsfm.c,v 1.10 2007/09/11 15:24:37 Arabidopsis Exp $ */
+/* $Id: gdevpsfm.c,v 1.11 2008/03/23 15:27:49 Arabidopsis Exp $ */
 /* Write a CMap */
 #include "gx.h"
 #include "gserrors.h"
@@ -36,7 +36,7 @@ typedef struct cmap_operators_s {
     const char *beginrange;
     const char *endrange;
 } cmap_operators_t;
-private const cmap_operators_t
+static const cmap_operators_t
   cmap_cid_operators = {
     "begincidchar\n", "endcidchar\n",
     "begincidrange\n", "endcidrange\n"
@@ -47,7 +47,7 @@ private const cmap_operators_t
   };
 
 /* Write a gs_string with a prefix. */
-private void
+static void
 pput_string_entry(stream *s, const char *prefix, const gs_const_string *pstr)
 {
     stream_puts(s, prefix);
@@ -55,7 +55,7 @@ pput_string_entry(stream *s, const char *prefix, const gs_const_string *pstr)
 }
 
 /* Write a hex string. */
-private void
+static void
 pput_hex(stream *s, const byte *pcid, int size)
 {
     int i;
@@ -68,7 +68,7 @@ pput_hex(stream *s, const byte *pcid, int size)
 }
 
 /* Write a list of code space ranges. */
-private void
+static void
 cmap_put_ranges(stream *s, const gx_code_space_range_t *pcsr, int count)
 {
     int i;
@@ -85,7 +85,7 @@ cmap_put_ranges(stream *s, const gx_code_space_range_t *pcsr, int count)
 }
 
 /* Write one CIDSystemInfo dictionary. */
-private void
+static void
 cmap_put_system_info(stream *s, const gs_cid_system_info_t *pcidsi)
 {
     if (cid_system_info_is_null(pcidsi)) {
@@ -101,7 +101,7 @@ cmap_put_system_info(stream *s, const gs_cid_system_info_t *pcidsi)
 }
 
 /* Write one code map. */
-private int
+static int
 cmap_put_code_map(const gs_memory_t *mem,
 		  stream *s, int which, const gs_cmap_t *pcmap,
 		  const cmap_operators_t *pcmo,

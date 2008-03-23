@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevm16.c,v 1.7 2007/09/11 15:24:12 Arabidopsis Exp $ */
+/* $Id: gdevm16.c,v 1.8 2008/03/23 15:28:06 Arabidopsis Exp $ */
 /* 16-bit-per-pixel "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"
@@ -42,7 +42,7 @@ const gx_device_memory mem_true16_device =
 	       mem_true16_fill_rectangle, mem_default_strip_copy_rop);
 
 /* Map a r-g-b color to a color index. */
-private gx_color_index
+static gx_color_index
 mem_true16_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 {
     return ((cv[0] >> (gx_color_value_bits - 5)) << 11) +
@@ -51,7 +51,7 @@ mem_true16_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 }
 
 /* Map a color index to a r-g-b color. */
-private int
+static int
 mem_true16_map_color_rgb(gx_device * dev, gx_color_index color,
 			 gx_color_value prgb[3])
 {
@@ -73,7 +73,7 @@ mem_true16_map_color_rgb(gx_device * dev, gx_color_index color,
 #define x_to_byte(x) ((x) << 1)
 
 /* Fill a rectangle with a color. */
-private int
+static int
 mem_true16_fill_rectangle(gx_device * dev,
 			  int x, int y, int w, int h, gx_color_index color)
 {
@@ -115,7 +115,7 @@ mem_true16_fill_rectangle(gx_device * dev,
 }
 
 /* Copy a monochrome bitmap. */
-private int
+static int
 mem_true16_copy_mono(gx_device * dev,
 		     const byte * base, int sourcex, int sraster,
 		     gx_bitmap_id id, int x, int y, int w, int h,
@@ -164,7 +164,7 @@ mem_true16_copy_mono(gx_device * dev,
 }
 
 /* Copy a color bitmap. */
-private int
+static int
 mem_true16_copy_color(gx_device * dev,
 	       const byte * base, int sourcex, int sraster, gx_bitmap_id id,
 		      int x, int y, int w, int h)

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpcfb.c,v 1.9 2007/09/11 15:23:48 Arabidopsis Exp $ */
+/* $Id: gdevpcfb.c,v 1.10 2008/03/23 15:27:58 Arabidopsis Exp $ */
 /* IBM PC frame buffer (EGA/VGA) drivers */
 #include "memory_.h"
 #include "gconfigv.h"		/* for USE_ASM */
@@ -37,10 +37,10 @@
 #define fb_dev ((gx_device_ega *)dev)
 
 /* Procedure record */
-private dev_proc_map_rgb_color(ega0_map_rgb_color);
-private dev_proc_map_rgb_color(ega1_map_rgb_color);
+static dev_proc_map_rgb_color(ega0_map_rgb_color);
+static dev_proc_map_rgb_color(ega1_map_rgb_color);
 #define ega2_map_rgb_color pc_4bit_map_rgb_color
-private dev_proc_map_color_rgb(ega01_map_color_rgb);
+static dev_proc_map_color_rgb(ega01_map_color_rgb);
 #define ega2_map_color_rgb pc_4bit_map_color_rgb
 #if ega_bits_of_color == 0
 #   define ega_map_rgb_color ega0_map_rgb_color
@@ -76,14 +76,14 @@ private dev_proc_map_color_rgb(ega01_map_color_rgb);
 	NULL,			/* map_rgb_alpha_color */\
 	gx_page_device_get_page_device
 
-private const gx_device_procs ega_procs =
+static const gx_device_procs ega_procs =
 {
     ega_std_procs(NULL, NULL)
 };
 
-private dev_proc_get_params(svga16_get_params);
-private dev_proc_put_params(svga16_put_params);
-private const gx_device_procs svga16_procs =
+static dev_proc_get_params(svga16_get_params);
+static dev_proc_put_params(svga16_put_params);
+static const gx_device_procs svga16_procs =
 {
     ega_std_procs(svga16_get_params, svga16_put_params)
 };
@@ -102,7 +102,7 @@ gx_device_ega far_data gs_svga16_device =
 ega_device("svga16", svga16_procs, 100, 600, 1.0, 0x29 /*Tseng */ );
 
 /* Save the BIOS state */
-private pcfb_bios_state pcfb_save_state =
+static pcfb_bios_state pcfb_save_state =
 {-1};
 
 /* Initialize the EGA for graphics mode */
@@ -140,7 +140,7 @@ ega_close(gx_device * dev)
 }
 
 /* Get/put the display mode parameter. */
-private int
+static int
 svga16_get_params(gx_device * dev, gs_param_list * plist)
 {
     int code = gx_default_get_params(dev, plist);
@@ -149,7 +149,7 @@ svga16_get_params(gx_device * dev, gs_param_list * plist)
 	return code;
     return param_write_int(plist, "DisplayMode", &fb_dev->video_mode);
 }
-private int
+static int
 svga16_put_params(gx_device * dev, gs_param_list * plist)
 {
     int ecode = 0;
@@ -181,12 +181,12 @@ svga16_put_params(gx_device * dev, gs_param_list * plist)
 }
 
 /* Map a r-g-b color to an EGA color code. */
-private gx_color_index
+static gx_color_index
 ega0_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 {
     return pc_4bit_map_rgb_color(dev, cv);
 }
-private gx_color_index
+static gx_color_index
 ega1_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 {
     const gx_color_value cvtop = (1 << (gx_color_value_bits - 1));
@@ -199,7 +199,7 @@ ega1_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 
 /* Map a color code to r-g-b. */
 #define icolor (int)color
-private int
+static int
 ega01_map_color_rgb(gx_device * dev, gx_color_index color,
 		    gx_color_value prgb[3])
 {
@@ -236,7 +236,7 @@ typedef rop_params _ss *rop_ptr;
 void memsetcol(rop_ptr);	/* dest, draster, height, data */
 #else
 #define memsetcol cmemsetcol
-private void
+static void
 cmemsetcol(rop_ptr rop)
 {
     byte *addr = rop->dest;
@@ -256,7 +256,7 @@ cmemsetcol(rop_ptr rop)
 void memsetrect(rop_ptr);	/* dest, draster, width, height, data */
 #else
 #define memsetrect cmemsetrect
-private void
+static void
 cmemsetrect(rop_ptr rop)
 {
     int yc = rop->height;
@@ -299,7 +299,7 @@ void memrwcol(rop_ptr);	/* dest, draster, src, sraster, height, shift, invert */
 #else
 #  define memrwcol cmemrwcol
 #  define memrwcol0 cmemrwcol0
-private void
+static void
 cmemrwcol(rop_ptr rop)
 {
     byte *dp = rop->dest;
@@ -315,7 +315,7 @@ cmemrwcol(rop_ptr rop)
 	dp += draster, sp += sraster;
     }
 }
-private void
+static void
 cmemrwcol0(rop_ptr rop)
 {
     byte *dp = rop->dest;
@@ -338,7 +338,7 @@ cmemrwcol0(rop_ptr rop)
 void memrwcol2(rop_ptr);	/* dest, draster, src, sraster, height, shift, invert */
 #else
 #define memrwcol2 cmemrwcol2
-private void
+static void
 cmemrwcol2(rop_ptr rop)
 {
     byte *dp = rop->dest;
@@ -358,8 +358,8 @@ cmemrwcol2(rop_ptr rop)
 
 /* Forward definitions */
 int ega_write_dot(gx_device *, int, int, gx_color_index);
-private void fill_rectangle(rop_ptr, int, int, int);
-private void fill_row_only(byte *, int, int, int);
+static void fill_rectangle(rop_ptr, int, int, int);
+static void fill_row_only(byte *, int, int, int);
 
 /* Clean up after writing */
 #define dot_end()\
@@ -843,7 +843,7 @@ static const byte rmask_tab[9] =
 /* Fill a rectangle specified by pointer into frame buffer, */
 /* starting bit within byte, width, and height. */
 /* Smashes rop->dest. */
-private void
+static void
 fill_rectangle(register rop_ptr rop, int bit, int w, int color)
   /* rop: dest, draster, height */
 {
@@ -880,7 +880,7 @@ fill_rectangle(register rop_ptr rop, int bit, int w, int color)
 /* Fill a single row specified by pointer into frame buffer, */
 /* starting bit within byte, and width; clean up afterwards. */
 #define r_m_w(ptr) (*(ptr))++	/* read & write, data irrelevant */
-private void
+static void
 fill_row_only(byte * dest, int bit, int w, int color)
   /* rop: dest */
 {

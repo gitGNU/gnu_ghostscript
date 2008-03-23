@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zdps1.c,v 1.9 2007/09/11 15:24:28 Arabidopsis Exp $ */
+/* $Id: zdps1.c,v 1.10 2008/03/23 15:27:43 Arabidopsis Exp $ */
 /* Level 2 / Display PostScript graphics extensions */
 #include "ghost.h"
 #include "oper.h"
@@ -33,7 +33,7 @@
 #include "ibnum.h"
 
 /* Forward references */
-private int gstate_unshare(i_ctx_t *);
+static int gstate_unshare(i_ctx_t *);
 
 /* Declare exported procedures (for zupath.c) */
 int zsetbbox(i_ctx_t *);
@@ -44,7 +44,7 @@ public_st_igstate_obj();
 /* Extend the `copy' operator to deal with gstates. */
 /* This is done with a hack -- we know that gstates are the only */
 /* t_astruct subtype that implements copy. */
-private int
+static int
 z1copy(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -60,7 +60,7 @@ z1copy(i_ctx_t *i_ctx_p)
 /* ------ Graphics state ------ */
 
 /* <bool> setstrokeadjust - */
-private int
+static int
 zsetstrokeadjust(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -72,7 +72,7 @@ zsetstrokeadjust(i_ctx_t *i_ctx_p)
 }
 
 /* - currentstrokeadjust <bool> */
-private int
+static int
 zcurrentstrokeadjust(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -89,7 +89,7 @@ zcurrentstrokeadjust(i_ctx_t *i_ctx_p)
  * can be stored in the given allocation space.
  */
 /* ****** DOESN'T CHECK THE NON-REFS. ****** */
-private int
+static int
 gstate_check_space(i_ctx_t *i_ctx_p, int_gstate *isp, uint space)
 {
     /*
@@ -247,12 +247,12 @@ typedef struct local_rects_s {
 } local_rects_t;
 
 /* Forward references */
-private int rect_get(local_rects_t *, os_ptr, gs_memory_t *);
-private void rect_release(local_rects_t *, gs_memory_t *);
+static int rect_get(local_rects_t *, os_ptr, gs_memory_t *);
+static void rect_release(local_rects_t *, gs_memory_t *);
 
 /* <x> <y> <width> <height> .rectappend - */
 /* <numarray|numstring> .rectappend - */
-private int
+static int
 zrectappend(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -272,7 +272,7 @@ zrectappend(i_ctx_t *i_ctx_p)
 
 /* <x> <y> <width> <height> rectclip - */
 /* <numarray|numstring> rectclip - */
-private int
+static int
 zrectclip(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -292,7 +292,7 @@ zrectclip(i_ctx_t *i_ctx_p)
 
 /* <x> <y> <width> <height> rectfill - */
 /* <numarray|numstring> rectfill - */
-private int
+static int
 zrectfill(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -312,7 +312,7 @@ zrectfill(i_ctx_t *i_ctx_p)
 
 /* <x> <y> <width> <height> rectstroke - */
 /* <numarray|numstring> rectstroke - */
-private int
+static int
 zrectstroke(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -345,7 +345,7 @@ zrectstroke(i_ctx_t *i_ctx_p)
 
 /* Get rectangles from the stack. */
 /* Return the number of elements to pop (>0) if OK, <0 if error. */
-private int
+static int
 rect_get(local_rects_t * plr, os_ptr op, gs_memory_t *mem)
 {
     int format, code;
@@ -412,7 +412,7 @@ rect_get(local_rects_t * plr, os_ptr op, gs_memory_t *mem)
 }
 
 /* Release the rectangle list if needed. */
-private void
+static void
 rect_release(local_rects_t * plr, gs_memory_t *mem)
 {
     if (plr->pr != plr->rl)
@@ -465,7 +465,7 @@ const op_def zdps1_l2_op_defs[] =
 
 /* Ensure that a gstate is not shared with an outer save level. */
 /* *op is of type t_astruct(igstate_obj). */
-private int
+static int
 gstate_unshare(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

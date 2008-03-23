@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 Artifex Software, Inc.
+#  Copyright (C) 2001-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: unix-dll.mak,v 1.10 2007/09/11 15:24:02 Arabidopsis Exp $
+# $Id: unix-dll.mak,v 1.11 2008/03/23 15:28:02 Arabidopsis Exp $
 # Partial makefile for Unix shared library target
 
 # Useful make commands:
@@ -63,9 +63,10 @@ LDFLAGS_SO=-shared -Wl,-soname=$(GS_SONAME_MAJOR)
 #GS_SONAME_MAJOR_MINOR=$(GS_SONAME_BASE).$(GS_VERSION_MAJOR).$(GS_VERSION_MINOR).$(GS_SOEXT)
 #LDFLAGS_SO=-dynamiclib -flat-namespace
 #LDFLAGS_SO=-dynamiclib -install-name $(GS_SONAME_MAJOR_MINOR)
+#LDFLAGS_SO=-dynamiclib
 
 GS_SO=$(BINDIR)/$(GS_SONAME)
-GS_SO_MAJOR=$(BINDIR)/$(GS_SONAME_MAJOR)
+GS_SO_MAJOR=$(BINDIR)/$(GS_SONAME_MAJOR) 
 GS_SO_MAJOR_MINOR=$(BINDIR)/$(GS_SONAME_MAJOR_MINOR)
 
 # Shared object is built by redefining GS_XE in a recursive make.
@@ -119,6 +120,7 @@ install-so: so
 	-mkdir -p $(DESTDIR)$(gsdatadir)
 	-mkdir -p $(DESTDIR)$(bindir)
 	-mkdir -p $(DESTDIR)$(libdir)
+	-mkdir -p $(DESTDIR)$(gsincludedir)
 	$(INSTALL_PROGRAM) $(GSSOC) $(DESTDIR)$(bindir)/$(GSSOC_XENAME)
 	$(INSTALL_PROGRAM) $(GSSOX) $(DESTDIR)$(bindir)/$(GSSOX_XENAME)
 	$(INSTALL_PROGRAM) $(BINDIR)/$(SOBINRELDIR)/$(GS_SONAME_MAJOR_MINOR) $(DESTDIR)$(libdir)/$(GS_SONAME_MAJOR_MINOR)
@@ -126,8 +128,10 @@ install-so: so
 	ln -s $(GS_SONAME_MAJOR_MINOR) $(DESTDIR)$(libdir)/$(GS_SONAME)
 	$(RM_) $(DESTDIR)$(libdir)/$(GS_SONAME_MAJOR)
 	ln -s $(GS_SONAME_MAJOR_MINOR) $(DESTDIR)$(libdir)/$(GS_SONAME_MAJOR)
+	$(INSTALL_DATA) $(PSSRC)iapi.h $(DESTDIR)$(gsincludedir)/iapi.h
+	$(INSTALL_DATA) $(PSSRC)ierrors.h $(DESTDIR)$(gsincludedir)/ierrors.h
 
-soinstall: install-so install-scripts install-data
+soinstall: install-so install-scripts install-data $(INSTALL_SHARED) $(INSTALL_CONTRIB)
 
 # Make the build directories
 SODIRS: STDDIRS

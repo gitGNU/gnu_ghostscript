@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevatx.c,v 1.9 2007/09/11 15:23:49 Arabidopsis Exp $ */
+/* $Id: gdevatx.c,v 1.10 2008/03/23 15:27:44 Arabidopsis Exp $ */
 /* Practical Automation ATX-23, -24, and -38 driver */
 #include "math_.h"
 #include "gdevprn.h"
@@ -39,9 +39,9 @@
 #define ATX_END_PAGE "\033e"
 
 /* The device descriptors */
-private dev_proc_print_page(atx23_print_page);
-private dev_proc_print_page(atx24_print_page);
-private dev_proc_print_page(atx38_print_page);
+static dev_proc_print_page(atx23_print_page);
+static dev_proc_print_page(atx24_print_page);
+static dev_proc_print_page(atx38_print_page);
 
 #define ATX_DEVICE(dname, w10, h10, dpi, lrm, btm, print_page)\
   prn_device_margins(prn_std_procs, dname, w10, h10, dpi, dpi, 0, 0,\
@@ -60,7 +60,7 @@ ATX_DEVICE("atx38", 80 /* 8.0" */, 35 /* (minimum) */,
 	   300, 0.25, 0.125, atx38_print_page);
 
 /* Output a printer command with a 2-byte, little-endian numeric argument. */
-private void
+static void
 fput_atx_command(FILE *f, const char *str, int value)
 {
     fputs(str, f);
@@ -78,7 +78,7 @@ fput_atx_command(FILE *f, const char *str, int value)
 #define MAX_UNCOMPRESSED_SEGMENT_PAIRS 255
 #define COMPRESSED_SEGMENT_COMMAND 0x80	/* + # of repeated pairs */
 #define UNCOMPRESSED_SEGMENT_COMMAND 0x7f /* followed by # of pairs */
-private int
+static int
 atx_compress(const byte *in_buf, int in_size, byte *out_buf, int out_size)
 {
     const byte *const in_end = in_buf + in_size;
@@ -144,7 +144,7 @@ atx_compress(const byte *in_buf, int in_size, byte *out_buf, int out_size)
 }
 
 /* Send the page to the printer. */
-private int
+static int
 atx_print_page(gx_device_printer *pdev, FILE *f, int max_width_bytes)
 {
     /*
@@ -242,17 +242,17 @@ atx_print_page(gx_device_printer *pdev, FILE *f, int max_width_bytes)
 }
 
 /* Print pages with specified maximum pixel widths. */
-private int
+static int
 atx23_print_page(gx_device_printer *pdev, FILE *f)
 {
     return atx_print_page(pdev, f, 576 / 8);
 }
-private int
+static int
 atx24_print_page(gx_device_printer *pdev, FILE *f)
 {
     return atx_print_page(pdev, f, 832 / 8);
 }
-private int
+static int
 atx38_print_page(gx_device_printer *pdev, FILE *f)
 {
     return atx_print_page(pdev, f, 2400 / 8);

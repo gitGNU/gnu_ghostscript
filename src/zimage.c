@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zimage.c,v 1.10 2007/09/11 15:23:52 Arabidopsis Exp $ */
+/* $Id: zimage.c,v 1.11 2008/03/23 15:27:54 Arabidopsis Exp $ */
 /* Image operators */
 #include "math_.h"
 #include "memory_.h"
@@ -45,13 +45,13 @@
 #include "gxcspace.h"
 
 /* Forward references */
-private int zimage_data_setup(i_ctx_t *i_ctx_p, const gs_pixel_image_t * pim,
+static int zimage_data_setup(i_ctx_t *i_ctx_p, const gs_pixel_image_t * pim,
 				 gx_image_enum_common_t * pie,
 				 const ref * sources, int npop);
-private int image_proc_process(i_ctx_t *);
-private int image_file_continue(i_ctx_t *);
-private int image_string_continue(i_ctx_t *);
-private int image_cleanup(i_ctx_t *);
+static int image_proc_process(i_ctx_t *);
+static int image_file_continue(i_ctx_t *);
+static int image_string_continue(i_ctx_t *);
+static int image_cleanup(i_ctx_t *);
 
 
 
@@ -203,14 +203,14 @@ image1_setup(i_ctx_t * i_ctx_p, bool has_alpha)
 }
 
 /* <dict> .image1 - */
-private int
+static int
 zimage1(i_ctx_t *i_ctx_p)
 {
     return image1_setup(i_ctx_p, false);
 }
 
 /* <dict> .imagemask1 - */
-private int
+static int
 zimagemask1(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -260,7 +260,7 @@ zimagemask1(i_ctx_t *i_ctx_p)
   ((ep) - 4 - (i) * 2)
 #define ETOP_PLANE_INDEX(ep) ((ep) - 2)
 #define ETOP_NUM_SOURCES(ep) ((ep) - 1)
-private int
+static int
 zimage_data_setup(i_ctx_t *i_ctx_p, const gs_pixel_image_t * pim,
 		  gx_image_enum_common_t * pie, const ref * sources, int npop)
 {
@@ -366,7 +366,7 @@ zimage_data_setup(i_ctx_t *i_ctx_p, const gs_pixel_image_t * pim,
     return o_push_estack;
 }
 /* Pop all the control information off the e-stack. */
-private es_ptr
+static es_ptr
 zimage_pop_estack(es_ptr tep)
 {
     return tep - NUM_PUSH(ETOP_NUM_SOURCES(tep)->value.intval);
@@ -377,7 +377,7 @@ zimage_pop_estack(es_ptr tep)
  * to remember whether we've just called the procedure (1) or whether we're
  * returning from a RemapColor callout (0).
  */
-private int
+static int
 image_proc_continue(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -427,7 +427,7 @@ image_proc_continue(i_ctx_t *i_ctx_p)
     ETOP_PLANE_INDEX(esp)->value.intval = px;
     return image_proc_process(i_ctx_p);
 }
-private int
+static int
 image_proc_process(i_ctx_t *i_ctx_p)
 {
     int px = ETOP_PLANE_INDEX(esp)->value.intval;
@@ -449,7 +449,7 @@ image_proc_process(i_ctx_t *i_ctx_p)
 }
 
 /* Continue processing data from an image with file data sources. */
-private int
+static int
 image_file_continue(i_ctx_t *i_ctx_p)
 {
     gs_image_enum *penum = r_ptr(esp, gs_image_enum);
@@ -546,7 +546,7 @@ image_file_continue(i_ctx_t *i_ctx_p)
 
 /* Process data from an image with string data sources. */
 /* This may still encounter a RemapColor callback. */
-private int
+static int
 image_string_continue(i_ctx_t *i_ctx_p)
 {
     gs_image_enum *penum = r_ptr(esp, gs_image_enum);
@@ -584,7 +584,7 @@ image_string_continue(i_ctx_t *i_ctx_p)
 }
 
 /* Clean up after enumerating an image */
-private int
+static int
 image_cleanup(i_ctx_t *i_ctx_p)
 {
     es_ptr ep_top = esp + NUM_PUSH(EBOT_NUM_SOURCES(esp)->value.intval);

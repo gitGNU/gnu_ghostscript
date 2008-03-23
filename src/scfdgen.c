@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: scfdgen.c,v 1.8 2007/09/11 15:24:19 Arabidopsis Exp $ */
+/* $Id: scfdgen.c,v 1.9 2008/03/23 15:28:00 Arabidopsis Exp $ */
 /* Generate the CCITTFaxDecode tables */
 #include "stdio_.h"		/* includes std.h */
 #include "scf.h"
@@ -26,11 +26,11 @@
 
 typedef void (*cfd_node_proc) (cfd_node *, cfd_node *, uint, int, int, int);
 typedef void (*cfd_enum_proc) (cfd_node_proc, cfd_node *, cfd_node *, int);
-private void cfd_build_tree(cfd_node *, cfd_enum_proc, int, FILE *);
-private void cfd_enumerate_white(cfd_node_proc, cfd_node *, cfd_node *, int);
-private void cfd_enumerate_black(cfd_node_proc, cfd_node *, cfd_node *, int);
-private void cfd_enumerate_2d(cfd_node_proc, cfd_node *, cfd_node *, int);
-private void cfd_enumerate_uncompressed(cfd_node_proc, cfd_node *, cfd_node *, int);
+static void cfd_build_tree(cfd_node *, cfd_enum_proc, int, FILE *);
+static void cfd_enumerate_white(cfd_node_proc, cfd_node *, cfd_node *, int);
+static void cfd_enumerate_black(cfd_node_proc, cfd_node *, cfd_node *, int);
+static void cfd_enumerate_2d(cfd_node_proc, cfd_node *, cfd_node *, int);
+static void cfd_enumerate_uncompressed(cfd_node_proc, cfd_node *, cfd_node *, int);
 
 main()
 {
@@ -38,7 +38,7 @@ main()
     cfd_node area[1 << max(cfd_white_initial_bits, cfd_black_initial_bits)];
 
     fputs("/* Copyright (C) 1992, 1993, 1998, 1999 Aladdin Enterprises.  All rights reserved. */\n\n", out);
-    fputs("/* $Id: scfdgen.c,v 1.8 2007/09/11 15:24:19 Arabidopsis Exp $ */\n", out);
+    fputs("/* $Id: scfdgen.c,v 1.9 2008/03/23 15:28:00 Arabidopsis Exp $ */\n", out);
     fputs("/* Tables for CCITTFaxDecode filter. */\n\n", out);
     fputs("/* This file was generated automatically.  It is governed by the same terms */\n", out);
     fputs("/* as the files scfetab.c and scfdgen.c from which it was derived. */\n", out);
@@ -70,7 +70,7 @@ main()
 }
 
 /* Initialize first-level leaves, count second-level nodes. */
-private void
+static void
 cfd_count_nodes(cfd_node * tree, cfd_node * ignore_extn,
 		uint code, int code_length, int run_length, int initial_bits)
 {
@@ -92,7 +92,7 @@ cfd_count_nodes(cfd_node * tree, cfd_node * ignore_extn,
 }
 
 /* Initialize second-level nodes. */
-private void
+static void
 cfd_init2_nodes(cfd_node * tree, cfd_node * extn,
 		uint code, int code_length, int run_length, int initial_bits)
 {
@@ -114,7 +114,7 @@ cfd_init2_nodes(cfd_node * tree, cfd_node * extn,
 }
 
 /* Enumerate all the relevant white or black codes. */
-private void
+static void
 cfd_enumerate_codes(cfd_node_proc proc, cfd_node * tree, cfd_node * extn,
 		  int initial_bits, const cfe_run * tt, const cfe_run * mut)
 {
@@ -132,14 +132,14 @@ cfd_enumerate_codes(cfd_node_proc proc, cfd_node * tree, cfd_node * extn,
 	     0, run_eol_code_length - 1,
 	     run_zeros, initial_bits);
 }
-private void
+static void
 cfd_enumerate_white(cfd_node_proc proc, cfd_node * tree, cfd_node * extn,
 		    int initial_bits)
 {
     cfd_enumerate_codes(proc, tree, extn, initial_bits,
 			cf_white_runs.termination, cf_white_runs.make_up);
 }
-private void
+static void
 cfd_enumerate_black(cfd_node_proc proc, cfd_node * tree, cfd_node * extn,
 		    int initial_bits)
 {
@@ -148,7 +148,7 @@ cfd_enumerate_black(cfd_node_proc proc, cfd_node * tree, cfd_node * extn,
 }
 
 /* Enumerate the 2-D codes. */
-private void
+static void
 cfd_enumerate_2d(cfd_node_proc proc, cfd_node * tree, cfd_node * extn,
 		 int initial_bits)
 {
@@ -169,7 +169,7 @@ cfd_enumerate_2d(cfd_node_proc proc, cfd_node * tree, cfd_node * extn,
 }
 
 /* Enumerate the uncompressed codes. */
-private void
+static void
 cfd_enumerate_uncompressed(cfd_node_proc proc, cfd_node * tree, cfd_node * extn,
 			   int initial_bits)
 {
@@ -187,7 +187,7 @@ cfd_enumerate_uncompressed(cfd_node_proc proc, cfd_node * tree, cfd_node * extn,
 }
 
 /* Build and write out the table. */
-private void
+static void
 cfd_build_tree(cfd_node * tree, cfd_enum_proc enum_proc, int initial_bits,
 	       FILE * f)
 {

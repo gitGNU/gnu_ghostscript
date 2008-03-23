@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zcolor2.c,v 1.7 2007/09/11 15:24:03 Arabidopsis Exp $ */
+/* $Id: zcolor2.c,v 1.8 2008/03/23 15:27:41 Arabidopsis Exp $ */
 /* Level 2 color operators */
 #include "ghost.h"
 #include "string_.h"
@@ -37,7 +37,7 @@
  * color space and makes use of that color space (e.g.: a Separation
  * color space for a component not supported by the process color model.
  */
-private int
+static int
 zusealternate(i_ctx_t * i_ctx_p)
 {
     os_ptr                  op = osp;

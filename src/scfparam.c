@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: scfparam.c,v 1.8 2007/09/11 15:24:10 Arabidopsis Exp $ */
+/* $Id: scfparam.c,v 1.9 2008/03/23 15:27:57 Arabidopsis Exp $ */
 /* CCITTFax filter parameter setting and reading */
 #include "std.h"
 #include "gserror.h"
@@ -30,7 +30,7 @@
 #include "scfx.h"
 
 /* Define the CCITTFax parameters. */
-private const gs_param_item_t s_CF_param_items[] =
+static const gs_param_item_t s_CF_param_items[] =
 {
 #define cfp(key, type, memb) { key, type, offset_of(stream_CF_state, memb) }
     cfp("Uncompressed", gs_param_type_bool, Uncompressed),

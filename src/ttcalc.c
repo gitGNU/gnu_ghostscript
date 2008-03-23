@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ttcalc.c,v 1.6 2007/09/11 15:24:24 Arabidopsis Exp $ */
+/* $Id: ttcalc.c,v 1.7 2008/03/23 15:27:47 Arabidopsis Exp $ */
 
 /* Changes after FreeType: cut out the TrueType instruction interpreter. */
 
@@ -91,7 +91,7 @@
   }
 
 
-  private Int  Order64( Int64  z )
+  static Int  Order64( Int64  z )
   {
     int  j = 0;
     while ( z )

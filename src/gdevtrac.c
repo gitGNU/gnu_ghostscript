@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevtrac.c,v 1.8 2007/09/11 15:24:36 Arabidopsis Exp $ */
+/* $Id: gdevtrac.c,v 1.9 2008/03/23 15:27:38 Arabidopsis Exp $ */
 /* Tracing device (including sample high-level implementation) */
 #include "gx.h"
 #include "gserrors.h"
@@ -45,7 +45,7 @@ extern_st(st_gx_image_enum_common);
 
 /* ---------------- Internal utilities ---------------- */
 
-private void
+static void
 trace_drawing_color(const char *prefix, const gx_drawing_color *pdcolor)
 {
     dprintf1("%scolor=", prefix);
@@ -82,13 +82,13 @@ trace_drawing_color(const char *prefix, const gx_drawing_color *pdcolor)
     }
 }
 
-private void
+static void
 trace_lop(gs_logical_operation_t lop)
 {
     dprintf1(", lop=0x%x", (uint)lop);
 }
 
-private void
+static void
 trace_path(const gx_path *path)
 {
     gs_path_enum penum;
@@ -122,7 +122,7 @@ trace_path(const gx_path *path)
     }
 }
 
-private void
+static void
 trace_clip(gx_device *dev, const gx_clip_path *pcpath)
 {
     if (pcpath == 0)
@@ -142,7 +142,7 @@ trace_clip(gx_device *dev, const gx_clip_path *pcpath)
 
 /* ---------------- Low-level driver procedures ---------------- */
 
-private int
+static int
 trace_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 		     gx_color_index color)
 {
@@ -151,7 +151,7 @@ trace_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
     return 0;
 }
 
-private int
+static int
 trace_copy_mono(gx_device * dev, const byte * data,
 		int dx, int raster, gx_bitmap_id id,
 		int x, int y, int w, int h,
@@ -163,7 +163,7 @@ trace_copy_mono(gx_device * dev, const byte * data,
     return 0;
 }
 
-private int
+static int
 trace_copy_color(gx_device * dev, const byte * data,
 		 int dx, int raster, gx_bitmap_id id,
 		 int x, int y, int w, int h)
@@ -173,7 +173,7 @@ trace_copy_color(gx_device * dev, const byte * data,
     return 0;
 }
 
-private int
+static int
 trace_copy_alpha(gx_device * dev, const byte * data, int dx, int raster,
 		 gx_bitmap_id id, int x, int y, int w, int h,
 		 gx_color_index color, int depth)
@@ -184,7 +184,7 @@ trace_copy_alpha(gx_device * dev, const byte * data, int dx, int raster,
     return 0;
 }
 
-private int
+static int
 trace_fill_mask(gx_device * dev,
 		const byte * data, int dx, int raster, gx_bitmap_id id,
 		int x, int y, int w, int h,
@@ -201,7 +201,7 @@ trace_fill_mask(gx_device * dev,
     return 0;
 }
 
-private int
+static int
 trace_fill_trapezoid(gx_device * dev,
 		     const gs_fixed_edge * left,
 		     const gs_fixed_edge * right,
@@ -213,7 +213,7 @@ trace_fill_trapezoid(gx_device * dev,
     return 0;
 }
 
-private int
+static int
 trace_fill_parallelogram(gx_device * dev,
 			 fixed px, fixed py, fixed ax, fixed ay,
 			 fixed bx, fixed by, const gx_drawing_color * pdcolor,
@@ -228,7 +228,7 @@ trace_fill_parallelogram(gx_device * dev,
     return 0;
 }
 
-private int
+static int
 trace_fill_triangle(gx_device * dev,
 		    fixed px, fixed py, fixed ax, fixed ay, fixed bx, fixed by,
 		    const gx_drawing_color * pdcolor,
@@ -243,7 +243,7 @@ trace_fill_triangle(gx_device * dev,
     return 0;
 }
 
-private int
+static int
 trace_draw_thin_line(gx_device * dev,
 		     fixed fx0, fixed fy0, fixed fx1, fixed fy1,
 		     const gx_drawing_color * pdcolor,
@@ -258,7 +258,7 @@ trace_draw_thin_line(gx_device * dev,
     return 0;
 }
 
-private int
+static int
 trace_strip_tile_rectangle(gx_device * dev, const gx_strip_bitmap * tiles,
 			   int x, int y, int w, int h,
 			   gx_color_index color0, gx_color_index color1,
@@ -272,7 +272,7 @@ trace_strip_tile_rectangle(gx_device * dev, const gx_strip_bitmap * tiles,
     return 0;
 }
 
-private int
+static int
 trace_strip_copy_rop(gx_device * dev, const byte * sdata, int sourcex,
 		     uint sraster, gx_bitmap_id id,
 		     const gx_color_index * scolors,
@@ -287,7 +287,7 @@ trace_strip_copy_rop(gx_device * dev, const byte * sdata, int sourcex,
 
 /* ---------------- High-level driver procedures ---------------- */
 
-private int
+static int
 trace_fill_path(gx_device * dev, const gs_imager_state * pis,
 		gx_path * ppath, const gx_fill_params * params,
 		const gx_drawing_color * pdcolor,
@@ -306,7 +306,7 @@ trace_fill_path(gx_device * dev, const gs_imager_state * pis,
     return 0;
 }
 
-private int
+static int
 trace_stroke_path(gx_device * dev, const gs_imager_state * pis,
 		  gx_path * ppath, const gx_stroke_params * params,
 		  const gx_drawing_color * pdcolor,
@@ -331,7 +331,7 @@ gs_private_st_suffix_add0(st_trace_image_enum, trace_image_enum_t,
 			  "trace_image_enum_t", trace_image_enum_enum_ptrs,
 			  trace_image_enum_reloc_ptrs,
 			  st_gx_image_enum_common);
-private int
+static int
 trace_plane_data(gx_image_enum_common_t * info,
 		 const gx_image_plane_t * planes, int height,
 		 int *rows_used)
@@ -352,7 +352,7 @@ trace_plane_data(gx_image_enum_common_t * info,
     *rows_used = height;
     return (pie->rows_left -= height) <= 0;
 }
-private int
+static int
 trace_end_image(gx_image_enum_common_t * info, bool draw_last)
 {
     trace_image_enum_t *pie = (trace_image_enum_t *)info;
@@ -360,10 +360,10 @@ trace_end_image(gx_image_enum_common_t * info, bool draw_last)
     gs_free_object(pie->memory, pie, "trace_end_image");
     return 0;
 }
-private const gx_image_enum_procs_t trace_image_enum_procs = {
+static const gx_image_enum_procs_t trace_image_enum_procs = {
     trace_plane_data, trace_end_image
 };
-private int
+static int
 trace_begin_typed_image(gx_device * dev, const gs_imager_state * pis,
 			const gs_matrix * pmat,
 			const gs_image_common_t * pim,
@@ -422,16 +422,16 @@ trace_begin_typed_image(gx_device * dev, const gs_imager_state * pis,
 					pcpath, memory, pinfo);
 }
 
-private int
+static int
 trace_text_process(gs_text_enum_t *pte)
 {
     return 0;
 }
-private const gs_text_enum_procs_t trace_text_procs = {
+static const gs_text_enum_procs_t trace_text_procs = {
     NULL, trace_text_process, NULL, NULL, NULL, NULL,
     gx_default_text_release
 };
-private int
+static int
 trace_text_begin(gx_device * dev, gs_imager_state * pis,
 		 const gs_text_params_t * text, gs_font * font,
 		 gx_path * path, const gx_device_color * pdcolor,

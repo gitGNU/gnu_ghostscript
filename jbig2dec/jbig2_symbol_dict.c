@@ -13,7 +13,7 @@
     Artifex Software, Inc.,  101 Lucas Valley Road #110,
     San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-    $Id: jbig2_symbol_dict.c,v 1.6 2007/09/11 15:24:52 Arabidopsis Exp $
+    $Id: jbig2_symbol_dict.c,v 1.7 2008/03/23 15:28:33 Arabidopsis Exp $
     
     symbol dictionary segment decode and support
 */
@@ -397,7 +397,7 @@ jbig2_decode_symbol_dict(Jbig2Ctx *ctx,
 		      /* todo: multiple symbols are like a text region */
 		  } else {
 		      /* 6.5.8.2.2 */
-		      bool SBHUFF = params->SDHUFF;
+		      /* bool SBHUFF = params->SDHUFF; */
 		      Jbig2RefinementRegionParams rparams;
 		      Jbig2Image *image;
 		      uint32_t ID;

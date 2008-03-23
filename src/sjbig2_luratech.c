@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sjbig2_luratech.c,v 1.4 2007/09/11 15:24:35 Arabidopsis Exp $ */
+/* $Id: sjbig2_luratech.c,v 1.5 2008/03/23 15:27:43 Arabidopsis Exp $ */
 /* jbig2decode filter implementation -- hooks in luratech JBIG2 */
 
 #include "memory_.h"
@@ -65,7 +65,7 @@ typedef struct s_jbig2decode_global_data_s {
 } s_jbig2decode_global_data;
 
 /* create a global data struct and copy data into it */
-public int
+int
 s_jbig2decode_make_global_data(byte *data, uint size, void **result)
 {
     s_jbig2decode_global_data *global = NULL;
@@ -86,7 +86,7 @@ s_jbig2decode_make_global_data(byte *data, uint size, void **result)
 }
 
 /* free a global data struct and its data */
-public void
+void
 s_jbig2decode_free_global_data(void *data)
 {
     s_jbig2decode_global_data *global = (s_jbig2decode_global_data*)data;
@@ -99,7 +99,7 @@ s_jbig2decode_free_global_data(void *data)
 }
 
 /* store a global ctx pointer in our state structure */
-public int
+int
 s_jbig2decode_set_global_data(stream_state *ss, void *data)
 {
     stream_jbig2decode_state *state = (stream_jbig2decode_state*)ss;
@@ -123,7 +123,7 @@ s_jbig2decode_set_global_data(stream_state *ss, void *data)
 /* invert the bits in a buffer */
 /* jbig2 and postscript have different senses of what pixel
    value is black, so we must invert the image */
-private void
+static void
 s_jbig2_invert_buffer(unsigned char *buf, int length)
 {
     int i;
@@ -135,7 +135,7 @@ s_jbig2_invert_buffer(unsigned char *buf, int length)
 /** callbacks passed to the luratech library */
 
 /* memory allocator */
-private void * JB2_Callback
+static void * JB2_Callback
 s_jbig2_alloc(unsigned long size, void *userdata)
 {
     void *result = malloc(size);
@@ -143,7 +143,7 @@ s_jbig2_alloc(unsigned long size, void *userdata)
 }
 
 /* memory release */
-private JB2_Error JB2_Callback
+static JB2_Error JB2_Callback
 s_jbig2_free(void *ptr, void *userdata)
 {
     free(ptr);
@@ -151,7 +151,7 @@ s_jbig2_free(void *ptr, void *userdata)
 }
 
 /* error callback for jbig2 codec */
-private void JB2_Callback
+static void JB2_Callback
 s_jbig2_message(const char *message, JB2_Message_Level level, void *userdata)
 {
     const char *type;
@@ -180,7 +180,7 @@ s_jbig2_message(const char *message, JB2_Message_Level level, void *userdata)
 }
 
 /* compressed read callback for jbig2 codec */
-private JB2_Size_T JB2_Callback
+static JB2_Size_T JB2_Callback
 s_jbig2_read(unsigned char *buffer, 
 	JB2_Size_T offset, JB2_Size_T size, void *userdata)
 {
@@ -206,7 +206,7 @@ s_jbig2_read(unsigned char *buffer,
 }
 
 /* uncompressed write callback for jbig2 codec */
-private JB2_Error JB2_Callback
+static JB2_Error JB2_Callback
 s_jbig2_write(unsigned char *buffer,
 		unsigned long row, unsigned long width,
 		unsigned long bbp, void *userdata)
@@ -227,7 +227,7 @@ s_jbig2_write(unsigned char *buffer,
 }
 
 
-private int
+static int
 s_jbig2decode_inbuf(stream_jbig2decode_state *state, stream_cursor_read * pr)
 {
     long in_size = pr->limit - pr->ptr;
@@ -268,7 +268,7 @@ s_jbig2decode_inbuf(stream_jbig2decode_state *state, stream_cursor_read * pr)
 }
 
 /* initialize the steam. */
-private int
+static int
 s_jbig2decode_init(stream_state * ss)
 {
     stream_jbig2decode_state *const state = (stream_jbig2decode_state *) ss;
@@ -291,7 +291,7 @@ s_jbig2decode_init(stream_state * ss)
 /* process a section of the input and return any decoded data.
    see strimpl.h for return codes.
  */
-private int
+static int
 s_jbig2decode_process(stream_state * ss, stream_cursor_read * pr,
 		  stream_cursor_write * pw, bool last)
 {
@@ -371,7 +371,7 @@ s_jbig2decode_process(stream_state * ss, stream_cursor_read * pr,
 }
 
 /* stream release. free all our decoder state. */
-private void
+static void
 s_jbig2decode_release(stream_state *ss)
 {
     stream_jbig2decode_state *const state = (stream_jbig2decode_state *) ss;
@@ -404,7 +404,7 @@ const stream_template s_jbig2decode_template = {
 private_st_jbig2encode_state();
 
 /* helper - start up the compression context */
-private int
+static int
 s_jbig2encode_start(stream_jbig2encode_state *state)
 {
     JB2_Error err;
@@ -437,7 +437,7 @@ s_jbig2encode_start(stream_jbig2encode_state *state)
 }
 
 /* callback for compressed data output */
-private JB2_Size_T JB2_Callback
+static JB2_Size_T JB2_Callback
 s_jbig2encode_write(const unsigned char *buffer,
 		JB2_Size_T pos, JB2_Size_T size, void *userdata)
 {
@@ -474,7 +474,7 @@ s_jbig2encode_write(const unsigned char *buffer,
 
 
 /* initialize the steam. */
-private int
+static int
 s_jbig2encode_init(stream_state * ss)
 {
     stream_jbig2encode_state *state = (stream_jbig2encode_state *)ss;
@@ -503,7 +503,7 @@ s_jbig2encode_init(stream_state * ss)
 /* process a section of the input and return any encoded data.
    see strimpl.h for return codes.
  */
-private int
+static int
 s_jbig2encode_process(stream_state * ss, stream_cursor_read * pr,
                   stream_cursor_write * pw, bool last)
 {
@@ -587,7 +587,7 @@ s_jbig2encode_process(stream_state * ss, stream_cursor_read * pr,
 
 /* stream release. free all our decoder state.
  */
-private void
+static void
 s_jbig2encode_release(stream_state *ss)
 {
     stream_jbig2encode_state *state = (stream_jbig2encode_state *)ss;

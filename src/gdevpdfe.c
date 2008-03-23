@@ -17,9 +17,10 @@
 
 */
 
-/* $Id: gdevpdfe.c,v 1.8 2007/09/11 15:24:24 Arabidopsis Exp $ */
+/* $Id: gdevpdfe.c,v 1.9 2008/03/23 15:27:48 Arabidopsis Exp $ */
 /* Metadata writer. */
 #include "gx.h"
+#include "gserrors.h"
 #include "string_.h"
 #include "time_.h"
 #include "stream.h"
@@ -30,39 +31,66 @@
 #include "gdevpdfg.h"
 #include "gdevpdfo.h"
 #include "gdevpdtf.h"
+#include "ConvertUTF.h"
+
+
+static void 
+copy_bytes(stream *s, const byte **data, int *data_length, int n)
+{
+    while (n-- && (*data_length)--) {
+	stream_putc(s, *((*data)++));
+    }
+}
 
 /* Write XML data */
-private void
+static void
 pdf_xml_data_write(stream *s, const byte *data, int data_length)
 {
     int l = data_length;
     const byte *p = data;
 
-    for (; l--; p++) {
+    while (l > 0) {
 	switch (*p) {
-	    case '<' : stream_puts(s, "&lt;"); break;
-	    case '>' : stream_puts(s, "&gt;"); break;
-	    case '&' : stream_puts(s, "&amp;"); break;
-	    case '\'': stream_puts(s, "&apos;"); break;
-	    case '"' : stream_puts(s, "&quot;"); break;
+	    case '<' : stream_puts(s, "&lt;"); l--; p++; break;
+	    case '>' : stream_puts(s, "&gt;"); l--; p++; break;
+	    case '&' : stream_puts(s, "&amp;"); l--; p++; break;
+	    case '\'': stream_puts(s, "&apos;"); l--; p++; break;
+	    case '"' : stream_puts(s, "&quot;"); l--; p++; break;
 	    default:
-		if (*p < 32 || *p > 127)
+		if (*p < 32) {
+		    /* Not allowed in XML. */
 		    pprintd1(s, "&#%d;", *p);
-		else
+		    l--; p++;
+		} else if (*p >= 0x7F && *p <= 0x9f) {
+		    /* Control characters are discouraged in XML. */
+		    pprintd1(s, "&#%d;", *p);
+		    l--; p++;
+		} else if ((*p & 0xE0) == 0xC0) {
+		    /* A 2-byte UTF-8 sequence */
+		    copy_bytes(s, &p, &l, 2);
+		} else if ((*p & 0xF0) == 0xE0) {
+		    /* A 3-byte UTF-8 sequence */
+		    copy_bytes(s, &p, &l, 3);
+		} else if ((*p & 0xF0) == 0xF0) {
+		    /* A 4-byte UTF-8 sequence */
+		    copy_bytes(s, &p, &l, 4);
+		} else {
 		    stream_putc(s, *p);
+		    l--; p++;
+		}
 	}
     }
 }
 
 /* Write XML string */
-private inline void
+static inline void
 pdf_xml_string_write(stream *s, const char *data)
 {
     pdf_xml_data_write(s, (const byte *)data, strlen(data));
 }
 
 /* Begin an opening XML tag */
-private inline void
+static inline void
 pdf_xml_tag_open_beg(stream *s, const char *data)
 {
     stream_putc(s, '<');
@@ -70,21 +98,21 @@ pdf_xml_tag_open_beg(stream *s, const char *data)
 }
 
 /* End an XML tag */
-private inline void
+static inline void
 pdf_xml_tag_end(stream *s)
 {
     stream_putc(s, '>');
 }
 
 /* End an empty XML tag */
-private inline void
+static inline void
 pdf_xml_tag_end_empty(stream *s)
 {
     stream_puts(s, "/>");
 }
 
 /* Write an opening XML tag */
-private inline void
+static inline void
 pdf_xml_tag_open(stream *s, const char *data)
 {
     stream_putc(s, '<');
@@ -93,7 +121,7 @@ pdf_xml_tag_open(stream *s, const char *data)
 }
 
 /* Write a closing XML tag */
-private inline void
+static inline void
 pdf_xml_tag_close(stream *s, const char *data)
 {
     stream_puts(s, "</");
@@ -102,7 +130,7 @@ pdf_xml_tag_close(stream *s, const char *data)
 }
 
 /* Write an attribute name */
-private inline void
+static inline void
 pdf_xml_attribute_name(stream *s, const char *data)
 {
     stream_putc(s, ' ');
@@ -111,7 +139,7 @@ pdf_xml_attribute_name(stream *s, const char *data)
 }
 
 /* Write a attribute value */
-private inline void
+static inline void
 pdf_xml_attribute_value(stream *s, const char *data)
 {
     stream_putc(s, '\'');
@@ -119,7 +147,7 @@ pdf_xml_attribute_value(stream *s, const char *data)
     stream_putc(s, '\'');
 }
 /* Write a attribute value */
-private inline void
+static inline void
 pdf_xml_attribute_value_data(stream *s, const byte *data, int data_length)
 {
     stream_putc(s, '\'');
@@ -128,7 +156,7 @@ pdf_xml_attribute_value_data(stream *s, const byte *data, int data_length)
 }
 
 /* Begin an  XML instruction */
-private inline void
+static inline void
 pdf_xml_ins_beg(stream *s, const char *data)
 {
     stream_puts(s, "<?");
@@ -136,21 +164,21 @@ pdf_xml_ins_beg(stream *s, const char *data)
 }
 
 /* End an XML instruction */
-private inline void
+static inline void
 pdf_xml_ins_end(stream *s)
 {
     stream_puts(s, "?>");
 }
 
 /* Write a newline character */
-private inline void
+static inline void
 pdf_xml_newline(stream *s)
 {
     stream_puts(s, "\n");
 }
 
 /* Copy to XML output */
-private inline void
+static inline void
 pdf_xml_copy(stream *s, const char *data)
 {
     stream_puts(s, data);
@@ -159,7 +187,7 @@ pdf_xml_copy(stream *s, const char *data)
 
 /* --------------------------------------------  */
 
-private int
+static int
 pdf_xmp_time(char *buf, int buf_length)
 {
     /* We don't write a day time because we don't have a time zone. */
@@ -176,7 +204,7 @@ pdf_xmp_time(char *buf, int buf_length)
     return strlen(buf);
 }
 
-private int
+static int
 pdf_xmp_convert_time(char *dt, int dtl, char *buf, int bufl)
 {   /* The 'dt' buffer is of same size as 'buf'. */
     /* Input  sample : D:199812231952?08'00' */
@@ -233,7 +261,7 @@ pdf_xmp_convert_time(char *dt, int dtl, char *buf, int bufl)
     return 25;
 }
 	
-private int
+static int
 pdf_get_docinfo_item(gx_device_pdf *pdev, const char *key, char *buf, int buf_length)
 {
     const cos_value_t *v = cos_dict_find(pdev->Info, (const byte *)key, strlen(key));
@@ -259,7 +287,95 @@ pdf_get_docinfo_item(gx_device_pdf *pdev, const char *key, char *buf, int buf_le
     return l;
 }
 
-private void
+static inline byte
+decode_escape(const byte *data, int data_length, int *index)
+{
+    byte c;
+
+    (*index)++; /* skip '\' */
+    if (*index >= data_length)
+	return 0; /* Must_not_happen, because the string is PS encoded. */
+    c = data[*index];
+    switch (c) {
+	case 'n': (*index)++; return '\n';
+	case 'r': (*index)++; return '\r';
+	case 't': (*index)++; return '\t';
+	default:
+	    break;
+    }
+    if (c >= '0' && c <= '7') {
+	/* octal */
+	byte v = c - '0';
+
+	for (;;) {
+	    (*index)++;
+	    if (*index >= data_length)
+		return v;
+	    c = data[*index];
+	    if (c < '0' || c > '7')
+		break;
+	    v = v * 8 + (c - '0');
+	}
+	return v;	
+    }
+    return c; /* A wrong escapement sequence. */
+}
+
+static int
+pdf_xmp_write_translated(gx_device_pdf *pdev, stream *s, const byte *data, int data_length,
+			 void(*write)(stream *s, const byte *data, int data_length))
+{
+    if (pdev->DSCEncodingToUnicode.data == 0) {
+	write(s, data, data_length);
+	return 0;
+    } else {
+	UTF16 *buf0, *buf0b;
+	UTF8 *buf1, *buf1b;
+	int i, j = 0;
+
+	buf0 = (UTF16 *)gs_alloc_bytes(pdev->memory, data_length * sizeof(UTF16), 
+			"pdf_xmp_write_translated");
+	if (buf0 == NULL)
+	    return_error(gs_error_VMerror);
+	buf1 = (UTF8 *)gs_alloc_bytes(pdev->memory, data_length * 2, 
+			"pdf_xmp_write_translated");
+	if (buf1 == NULL)
+	    return_error(gs_error_VMerror);
+	buf0b = buf0;
+	buf1b = buf1;
+	for (i = 0; i < data_length; i++) {
+	    byte c = data[i];
+	    int v;
+
+	    if (c == '\\') 
+		c = decode_escape(data, data_length, &i);
+	    if (c > pdev->DSCEncodingToUnicode.size)
+		return_error(gs_error_rangecheck);
+
+	    v = pdev->DSCEncodingToUnicode.data[c];
+	    if (v == -1)
+		v = '?'; /* Arbitrary. */
+	    buf0[j] = v;
+	    j++;
+	}
+	switch (ConvertUTF16toUTF8(&buf0b, buf0 + j,
+			     &buf1b, buf1 + data_length * 2, strictConversion)) {
+	    case conversionOK:
+		write(s, buf1, buf1b - buf1);
+		break;
+	    case sourceExhausted:
+	    case targetExhausted:
+	    case sourceIllegal:
+	    default:
+		return_error(gs_error_rangecheck);
+	}
+	gs_free_object(pdev->memory, buf0, "pdf_xmp_write_translated");
+	gs_free_object(pdev->memory, buf1, "pdf_xmp_write_translated");
+	return 0;
+    }
+}
+
+static int
 pdf_xmp_write_docinfo_item(gx_device_pdf *pdev, stream *s, const char *key, const char *default_value,
 			   void(*write)(stream *s, const byte *data, int data_length))
 {
@@ -268,14 +384,18 @@ pdf_xmp_write_docinfo_item(gx_device_pdf *pdev, stream *s, const char *key, cons
     if (v != NULL && (v->value_type == COS_VALUE_SCALAR || 
 			v->value_type == COS_VALUE_CONST)) {
 	if (v->contents.chars.size > 2 && v->contents.chars.data[0] == '(')
-	    write(s, v->contents.chars.data + 1, v->contents.chars.size - 2);
+	    return pdf_xmp_write_translated(pdev, s, v->contents.chars.data + 1, 
+			v->contents.chars.size - 2, write);
 	else
-	    write(s, v->contents.chars.data, v->contents.chars.size);
-    } else 
+	    return pdf_xmp_write_translated(pdev, s, v->contents.chars.data, 
+			v->contents.chars.size, write);
+    } else {
 	stream_puts(s, default_value);
+	return 0;
+    }
 }
 
-private uint64_t
+static uint64_t
 pdf_uuid_time(gx_device_pdf *pdev)
 {   
     long *dt = pdev->uuid_time; /* In seconds since Jan. 1, 1980 and fraction in nanoseconds. */
@@ -289,7 +409,7 @@ pdf_uuid_time(gx_device_pdf *pdev)
     return t;
 }
 
-private void writehex(char **p, ulong v, int l)
+static void writehex(char **p, ulong v, int l)
 {
     int i = l * 2;
     static const char digit[] = "0123456789abcdef";
@@ -298,7 +418,7 @@ private void writehex(char **p, ulong v, int l)
 	*((*p)++) = digit[v >> (i * 4) & 15];
 }
 
-private void
+static void
 pdf_make_uuid(const byte node[6], uint64_t uuid_time, ulong time_seq, char *buf, int buf_length)
 {   
     char b[40], *p = b;
@@ -325,7 +445,7 @@ pdf_make_uuid(const byte node[6], uint64_t uuid_time, ulong time_seq, char *buf,
     strncpy(buf, b, buf_length);
 }
 
-private int
+static int
 pdf_make_instance_uuid(gx_device_pdf *pdev, const byte digest[6], char *buf, int buf_length)
 {
     if (pdev->InstanceUUID.size) {
@@ -338,7 +458,7 @@ pdf_make_instance_uuid(gx_device_pdf *pdev, const byte digest[6], char *buf, int
     return 0;
 }
 
-private int
+static int
 pdf_make_document_uuid(gx_device_pdf *pdev, const byte digest[6], char *buf, int buf_length)
 {
     if (pdev->DocumentUUID.size) {
@@ -356,7 +476,7 @@ static const char dd[]={'\'', '\357', '\273', '\277', '\'', 0};
 /* --------------------------------------------  */
 
 /* Write Document metadata */
-private int
+static int
 pdf_write_document_metadata(gx_device_pdf *pdev, const byte digest[6])
 {
     char instance_uuid[40], document_uuid[40], cre_date_time[40], mod_date_time[40], date_time_buf[40];
@@ -404,8 +524,10 @@ pdf_write_document_metadata(gx_device_pdf *pdev, const byte digest[6])
 	    pdf_xml_attribute_name(s, "xmlns:pdf");
 	    pdf_xml_attribute_value(s, "http://ns.adobe.com/pdf/1.3/");
 	    pdf_xml_attribute_name(s, "pdf:Producer");
-	    pdf_xmp_write_docinfo_item(pdev, s,  "/Producer", "UnknownProduicer",
+	    code = pdf_xmp_write_docinfo_item(pdev, s,  "/Producer", "UnknownProduicer",
 			pdf_xml_attribute_value_data);
+	    if (code < 0)
+		return code;
 	    pdf_xml_tag_end_empty(s);
 	    pdf_xml_newline(s);
 
@@ -422,8 +544,10 @@ pdf_write_document_metadata(gx_device_pdf *pdev, const byte digest[6])
 	    {
 		pdf_xml_tag_open_beg(s, "xap:CreatorTool");
 		pdf_xml_tag_end(s);
-		pdf_xmp_write_docinfo_item(pdev, s,  "/Creator", "UnknownApplication",
+		code = pdf_xmp_write_docinfo_item(pdev, s,  "/Creator", "UnknownApplication",
 			pdf_xml_data_write);
+		if (code < 0)
+		    return code;
 		pdf_xml_tag_close(s, "xap:CreatorTool");
 	    }
 	    pdf_xml_tag_close(s, "rdf:Description");
@@ -457,8 +581,10 @@ pdf_write_document_metadata(gx_device_pdf *pdev, const byte digest[6])
 			pdf_xml_attribute_value(s, "x-default");
 			pdf_xml_tag_end(s);
 			{
-			   pdf_xmp_write_docinfo_item(pdev, s,  "/Title", "Untitled", 
+			   code = pdf_xmp_write_docinfo_item(pdev, s,  "/Title", "Untitled", 
 				    pdf_xml_data_write);
+			    if (code < 0)
+				return code;
 			}
 			pdf_xml_tag_close(s, "rdf:li");
 		    }
@@ -476,8 +602,10 @@ pdf_write_document_metadata(gx_device_pdf *pdev, const byte digest[6])
 			{
 			    pdf_xml_tag_open(s, "rdf:li");
 			    {
-    				pdf_xmp_write_docinfo_item(pdev, s,  "/Author", "Unknown", 
+    				code = pdf_xmp_write_docinfo_item(pdev, s,  "/Author", "Unknown", 
 					    pdf_xml_data_write);
+				if (code < 0)
+				    return code;
 			    }
 			    pdf_xml_tag_close(s, "rdf:li");
 			}
@@ -493,7 +621,7 @@ pdf_write_document_metadata(gx_device_pdf *pdev, const byte digest[6])
 		pdf_xml_attribute_name(s, "rdf:about");
 		pdf_xml_attribute_value(s, instance_uuid);
 		pdf_xml_attribute_name(s, "xmlns:pdfaid");
-		pdf_xml_attribute_value(s, "http://www.aiim.org/pdfa/ns/id.html");
+		pdf_xml_attribute_value(s, "http://www.aiim.org/pdfa/ns/id/");
 		pdf_xml_attribute_name(s, "pdfaid:part");
 		pdf_xml_attribute_value(s,"1");
 		pdf_xml_attribute_name(s, "pdfaid:conformance");
@@ -554,7 +682,7 @@ pdf_document_metadata(gx_device_pdf *pdev)
 /* --------------------------------------------  */
 
 /* Write Font metadata */
-private int
+static int
 pdf_write_font_metadata(gx_device_pdf *pdev, const pdf_base_font_t *pbfont, 
 			const byte *digest, int digest_length)
 {

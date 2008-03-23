@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdev4081.c,v 1.8 2007/09/11 15:24:41 Arabidopsis Exp $*/
+/* $Id: gdev4081.c,v 1.9 2008/03/23 15:28:03 Arabidopsis Exp $*/
 /* Ricoh 4081 laser printer driver */
 #include "gdevprn.h"
 
@@ -24,7 +24,7 @@
 #define Y_DPI 300			/* pixels per inch */
 
 /* The device descriptor */
-private dev_proc_print_page(r4081_print_page);
+static dev_proc_print_page(r4081_print_page);
 const gx_device_printer far_data gs_r4081_device =
   prn_device(prn_std_procs, "r4081",
 	85,				/* width_10ths, 8.5" */
@@ -37,7 +37,7 @@ const gx_device_printer far_data gs_r4081_device =
 
 
 /* Send the page to the printer. */
-private int
+static int
 r4081_print_page(gx_device_printer *pdev, FILE *prn_stream)
 {	
 	int line_size = gdev_mem_bytes_per_scan_line((gx_device *)pdev);

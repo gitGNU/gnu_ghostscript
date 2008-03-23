@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gp_mshdl.c,v 1.7 2007/09/11 15:23:55 Arabidopsis Exp $ */
+/* $Id: gp_mshdl.c,v 1.8 2008/03/23 15:28:03 Arabidopsis Exp $ */
 /* %handle% IODevice */
 #include "errno_.h"
 #include "stdio_.h"
@@ -43,8 +43,8 @@
  * by the Ghostscript process.
  */
 
-private iodev_proc_fopen(mswin_handle_fopen);
-private iodev_proc_fclose(mswin_handle_fclose);
+static iodev_proc_fopen(mswin_handle_fopen);
+static iodev_proc_fclose(mswin_handle_fclose);
 const gx_io_device gs_iodev_handle = {
     "%handle%", "FileSystem",
     {iodev_no_init, iodev_no_open_device,
@@ -74,7 +74,7 @@ const gx_io_device gs_iodev_handle = {
  * inherited by Ghostscript.
  * Pipes aren't supported under Win32s.
  */
-private long 
+static long 
 get_os_handle(const char *name)
 {
     ulong hfile;	/* This must be as long as the longest handle. */
@@ -89,7 +89,7 @@ get_os_handle(const char *name)
     return (long)hfile; 
 }
 
-private int
+static int
 mswin_handle_fopen(gx_io_device * iodev, const char *fname, const char *access,
 	   FILE ** pfile, char *rfname, uint rnamelen)
 {
@@ -115,7 +115,7 @@ mswin_handle_fopen(gx_io_device * iodev, const char *fname, const char *access,
     return 0;
 }
 
-private int
+static int
 mswin_handle_fclose(gx_io_device * iodev, FILE * file)
 {
     fclose(file);

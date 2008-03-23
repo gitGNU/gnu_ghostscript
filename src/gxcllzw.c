@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxcllzw.c,v 1.8 2007/09/11 15:24:08 Arabidopsis Exp $ */
+/* $Id: gxcllzw.c,v 1.9 2008/03/23 15:28:13 Arabidopsis Exp $ */
 /* LZW filter initialization for RAM-based band lists */
 #include "std.h"
 #include "gstypes.h"
@@ -25,8 +25,8 @@
 #include "gxclmem.h"
 #include "slzwx.h"
 
-private stream_LZW_state cl_LZWE_state;
-private stream_LZW_state cl_LZWD_state;
+static stream_LZW_state cl_LZWE_state;
+static stream_LZW_state cl_LZWD_state;
 
 /* Initialize the states to be copied. */
 int

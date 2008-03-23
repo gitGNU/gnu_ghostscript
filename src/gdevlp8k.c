@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevlp8k.c,v 1.8 2007/09/11 15:24:34 Arabidopsis Exp $*/
+/* $Id: gdevlp8k.c,v 1.9 2008/03/23 15:27:57 Arabidopsis Exp $*/
 
 /* EPSON LP-8000 ESC-sequence Laser Printer driver for Ghostscript.
 
@@ -174,7 +174,7 @@ Oleg Fat'yanov  <faty1@rlem.titech.ac.jp>
 #define R_MARGIN 0.25
 #define T_MARGIN 0.25
 
-private dev_proc_print_page(lp8000_print_page);
+static dev_proc_print_page(lp8000_print_page);
 
 gx_device_printer far_data gs_lp8000_device =
   prn_device(prn_std_procs, "lp8000",
@@ -185,7 +185,7 @@ gx_device_printer far_data gs_lp8000_device =
 	1, lp8000_print_page);
                                           
        
-private int
+static int
 lp8000_print_page(gx_device_printer *pdev, FILE *prn_stream)
 {
 

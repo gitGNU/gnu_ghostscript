@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: msvc32.mak,v 1.12 2007/09/11 15:24:42 Arabidopsis Exp $
+# $Id: msvc32.mak,v 1.13 2008/03/23 15:27:57 Arabidopsis Exp $
 # makefile for 32-bit Microsoft Visual C++, Windows NT or Windows 95 platform.
 #
 # All configurable options are surrounded by !ifndef/!endif to allow 
@@ -149,14 +149,6 @@ DEBUGSYM=0
 !endif
 
 
-# Setting NOPRIVATE=1 makes private (static) procedures and variables public,
-# so they are visible to the debugger and profiler.
-# No execution time or space penalty, just larger .OBJ and .EXE files.
-
-!ifndef NOPRIVATE
-NOPRIVATE=0
-!endif
-
 # We can compile for a 32-bit or 64-bit target
 # WIN32 and WIN64 are mutually exclusive.  WIN32 is the default.
 !if !defined(WIN32) && !defined(Win64)
@@ -201,7 +193,6 @@ MAKEDLL=1
 
 !ifndef JSRCDIR
 JSRCDIR=jpeg
-JVERSION=6
 !endif
 
 # Define the directory where the PNG library sources are stored,
@@ -209,9 +200,8 @@ JVERSION=6
 # You may need to change this if the libpng version changes.
 # See libpng.mak for more information.
 
-!ifndef PSRCDIR
-PSRCDIR=libpng
-PVERSION=10218
+!ifndef PNGSRCDIR
+PNGSRCDIR=libpng
 !endif
 
 # Define the directory where the zlib sources are stored.
@@ -297,8 +287,13 @@ IMDISRCDIR=imdi
 
 # Define any other compilation flags.
 
+# support XCFLAGS for parity with the unix makefiles
+!ifndef XCFLAGS
+XCFLAGS=
+!endif
+
 !ifndef CFLAGS
-CFLAGS=
+CFLAGS=$(XCFLAGS)
 !endif
 
 # 1 --> Use 64 bits for gx_color_index.  This is required only for
@@ -686,7 +681,7 @@ DEVICE_DEVS11=$(DD)bmpmono.dev $(DD)bmpgray.dev $(DD)bmp16.dev $(DD)bmp256.dev $
 DEVICE_DEVS12=$(DD)psmono.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
 DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev $(DD)jpegcmyk.dev
-DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
+DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)txtwrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
 DEVICE_DEVS16=$(DD)bbox.dev
 # Overflow for DEVS3,4,5,6,9
 DEVICE_DEVS17=$(DD)ljet3.dev $(DD)ljet3d.dev $(DD)ljet4.dev $(DD)ljet4d.dev 

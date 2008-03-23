@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 Artifex Software, Inc.
+#  Copyright (C) 2001-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This software is provided AS-IS with no warranty, either express or
@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: gs.mak,v 1.10 2007/09/11 15:24:03 Arabidopsis Exp $
+# $Id: gs.mak,v 1.11 2008/03/23 15:27:40 Arabidopsis Exp $
 # Generic makefile, common to all platforms, products, and configurations.
 # The platform-specific makefiles `include' this file.
 
@@ -26,6 +26,8 @@
 #	GS - the name of the executable (without the extension, if any).
 #	GS_LIB_DEFAULT - the default directory/ies for searching for the
 #	    initialization and font files at run time.
+#	GS_DEV_DEFAULT - array of default device names, in order of
+#	    preference. If empty the first DEVICE_DEV will be used.
 #	GS_CACHE_DIR - the default directory for caching data between
 #	    ghostscript invocations.
 #	SEARCH_HERE_FIRST - the default setting of -P (whether or not to
@@ -34,8 +36,7 @@
 #	    at run time.
 #	JSRCDIR - the directory where the IJG JPEG library source code
 #	    is stored (at compilation time).
-#	JVERSION - the major version number of the IJG JPEG library.
-#	PSRCDIR, PVERSION - the same for libpng.
+#	PNGSRCDIR - the same for libpng.
 #	ZSRCDIR - the same for zlib.
 #	SHARE_JPEG - normally 0; if set to 1, asks the linker to use
 #	    an existing compiled libjpeg (-ljpeg) instead of compiling and
@@ -230,6 +231,8 @@ JPXGENDIR=$(GLGENDIR)
 JPXOBJDIR=$(GLOBJDIR)
 ICCGENDIR=$(GLGENDIR)
 ICCOBJDIR=$(GLOBJDIR)
+EXPATGENDIR=$(GLGENDIR)
+EXPATOBJDIR=$(GLOBJDIR)
 IJSGENDIR=$(GLGENDIR)
 IJSOBJDIR=$(GLOBJDIR)
 #**************** END PATCHES
@@ -284,6 +287,9 @@ mostlyclean : config-clean
 	$(RMN_) $(GENARCH_XE) $(GENCONF_XE) $(GENDEV_XE) $(GENHT_XE) $(GENINIT_XE)
 	$(RMN_) $(ECHOGS_XE)
 	$(RMN_) $(GSGEN)gs_init.c $(BEGINFILES)
+	$(RMN_) $(MKROMFS_XE)
+	$(RMN_) $(PSGEN)$(GS_INIT)
+	$(RMN_) $(GSGEN)gsromfs.c
 
 # Remove only configuration-dependent information.
 #****** FOLLOWING IS WRONG, NEEDS TO BE PER-SUBSYSTEM ******
@@ -319,7 +325,7 @@ IJSCF_=
 JI_=$(JSRCDIR)
 JF_=
 JCF_=$(D_)SHARE_JPEG=$(SHARE_JPEG)$(_D)
-PI_=$(PSRCDIR) $(II)$(ZSRCDIR)
+PI_=$(PNGSRCDIR) $(II)$(ZSRCDIR)
 # PF_ should include PNG_USE_CONST, but this doesn't work.
 #PF_=-DPNG_USE_CONST
 PF_=
@@ -432,6 +438,7 @@ $(gconfig_h) : $(ld_tr)
 # save our set of makefile variables that are defined in every build (paths, etc.)
 $(gconfigd_h) : $(ECHOGS_XE) $(GS_MAK) $(TOP_MAKEFILES) 
 	$(EXP)$(ECHOGS_XE) -w $(gconfigd_h) -x 23 define -s -u GS_LIB_DEFAULT -x 2022 $(GS_LIB_DEFAULT) -x 22
+	$(EXP)$(ECHOGS_XE) -a $(gconfigd_h) -x 23 define -s -u GS_DEV_DEFAULT -x 2022 $(GS_DEV_DEFAULT) -x 22
 	$(EXP)$(ECHOGS_XE) -a $(gconfigd_h) -x 23 define -s -u GS_CACHE_DIR -x 2022 $(GS_CACHE_DIR) -x 22
 	$(EXP)$(ECHOGS_XE) -a $(gconfigd_h) -x 23 define -s -u SEARCH_HERE_FIRST -s $(SEARCH_HERE_FIRST)
 	$(EXP)$(ECHOGS_XE) -a $(gconfigd_h) -x 23 define -s -u GS_DOCDIR -x 2022 $(GS_DOCDIR) -x 22

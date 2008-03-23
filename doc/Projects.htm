@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>Ghostscript projects</title>
-<!-- $Id: Projects.htm,v 1.9 2007/09/11 15:25:01 Arabidopsis Exp $ -->
+<!-- $Id: Projects.htm,v 1.10 2008/03/23 15:28:23 Arabidopsis Exp $ -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
 
@@ -70,11 +70,14 @@ the makefiles.
 <p>
 MS Windows has a "language monitor" capability which would allow Ghostscript
 to be invoked seamlessly to process input files in any language Ghostscript
-could handle (currently PostScript and PDF) and for any printer for which
-Ghostscript had a driver.  Doing this properly would require integrating
-Ghostscript with Windows' "Add Printer" dialog, and would also require
-creating a PPD for Ghostscript.  <I>Russell Lang's RedMon program provides
+handles and for any printer for which Ghostscript has a driver. Doing 
+this properly would require integrating Ghostscript with Windows' "Add 
+Printer" dialog, using an appropriate PPD.
+
+<p>
+<I>Russell Lang's RedMon program provides
 some, but not all, of this capability.</I>
+See also <b><tt>lib/ghostpdf.ppd</tt></b>.
 
 <h3>Netscape browser plug-in.</h3>
 
@@ -680,7 +683,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.60, 1 August 2007
+<small>Ghostscript version 8.61, 21 November 2007
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevx.c,v 1.8 2007/09/11 15:24:21 Arabidopsis Exp $ */
+/* $Id: gdevx.c,v 1.9 2008/03/23 15:28:04 Arabidopsis Exp $ */
 /* X Windows driver for Ghostscript library */
 #include "gx.h"			/* for gx_bitmap; includes std.h */
 #include "math_.h"
@@ -44,40 +44,40 @@
 private_st_device_X();
 
 /* Forward references */
-private int x_copy_image(gx_device_X * xdev, const byte * base, int sourcex,
+static int x_copy_image(gx_device_X * xdev, const byte * base, int sourcex,
 			 int raster, int x, int y, int w, int h);
-private int set_tile(gx_device *, const gx_strip_bitmap *);
-private void free_cp(gx_device *);
+static int set_tile(gx_device *, const gx_strip_bitmap *);
+static void free_cp(gx_device *);
 
 /* Screen updating machinery */
-private void update_init(gx_device_X *);
-private void update_do_flush(gx_device_X *);
+static void update_init(gx_device_X *);
+static void update_do_flush(gx_device_X *);
 
 #define flush_text(xdev)\
   if (IN_TEXT(xdev)) do_flush_text(xdev)
-private void do_flush_text(gx_device_X *);
+static void do_flush_text(gx_device_X *);
 
 /* Driver procedures */
 /* (External procedures are declared in gdevx.h.) */
 /*extern int gdev_x_open(gx_device_X *);*/
-private dev_proc_open_device(x_open);
-private dev_proc_get_initial_matrix(x_get_initial_matrix);
-private dev_proc_sync_output(x_sync);
-private dev_proc_output_page(x_output_page);
+static dev_proc_open_device(x_open);
+static dev_proc_get_initial_matrix(x_get_initial_matrix);
+static dev_proc_sync_output(x_sync);
+static dev_proc_output_page(x_output_page);
 /*extern int gdev_x_close(gx_device_X *);*/
-private dev_proc_close_device(x_close);
+static dev_proc_close_device(x_close);
 /*extern dev_proc_map_rgb_color(gdev_x_map_rgb_color);*/
 /*extern dev_proc_map_color_rgb(gdev_x_map_color_rgb);*/
-private dev_proc_fill_rectangle(x_fill_rectangle);
-private dev_proc_copy_mono(x_copy_mono);
-private dev_proc_copy_color(x_copy_color);
+static dev_proc_fill_rectangle(x_fill_rectangle);
+static dev_proc_copy_mono(x_copy_mono);
+static dev_proc_copy_color(x_copy_color);
 /*extern dev_proc_get_params(gdev_x_get_params);*/
 /*extern dev_proc_put_params(gdev_x_put_params);*/
 /*extern dev_proc_get_xfont_procs(gdev_x_get_xfont_procs);*/
-private dev_proc_get_page_device(x_get_page_device);
-private dev_proc_strip_tile_rectangle(x_strip_tile_rectangle);
-private dev_proc_begin_typed_image(x_begin_typed_image);
-private dev_proc_get_bits_rectangle(x_get_bits_rectangle);
+static dev_proc_get_page_device(x_get_page_device);
+static dev_proc_strip_tile_rectangle(x_strip_tile_rectangle);
+static dev_proc_begin_typed_image(x_begin_typed_image);
+static dev_proc_get_bits_rectangle(x_get_bits_rectangle);
 /*extern dev_proc_get_xfont_procs(gdev_x_finish_copydevice);*/
 
 /* The device descriptor */
@@ -240,14 +240,12 @@ x_device(gs_x11alpha_device,
 	 50000000)
 
 /* If XPutImage doesn't work, do it ourselves. */
-private int alt_put_image(gx_device * dev, Display * dpy, Drawable win,
+static int alt_put_image(gx_device * dev, Display * dpy, Drawable win,
 GC gc, XImage * pi, int sx, int sy, int dx, int dy, unsigned w, unsigned h);
 
 #define put_image(dpy,win,gc,im,sx,sy,x,y,w,h)\
   BEGIN\
-    if ( xdev->useXPutImage ) {\
-      if (XInitImage(im) == 0)\
-	return_error(gs_error_unknownerror);\
+    if ( xdev->useXPutImage && !(XInitImage(im) == 0) ) {\
       XPutImage(dpy,win,gc,im,sx,sy,x,y,w,h);\
     } else {\
       int code_ = alt_put_image(dev,dpy,win,gc,im,sx,sy,x,y,w,h);\
@@ -256,7 +254,7 @@ GC gc, XImage * pi, int sx, int sy, int dx, int dy, unsigned w, unsigned h);
   END
 
 /* Open the device.  Most of the code is in gdevxini.c. */
-private int
+static int
 x_open(gx_device * dev)
 {
     gx_device_X *xdev = (gx_device_X *) dev;
@@ -269,7 +267,7 @@ x_open(gx_device * dev)
 }
 
 /* Close the device. */
-private int
+static int
 x_close(gx_device * dev)
 {
     gx_device_X *xdev = (gx_device_X *) dev;
@@ -280,7 +278,7 @@ x_close(gx_device * dev)
 /* Get initial matrix for X device. */
 /* This conflicts seriously with the code for page devices; */
 /* we only do it if Ghostview is active. */
-private void
+static void
 x_get_initial_matrix(gx_device * dev, gs_matrix * pmat)
 {
     gx_device_X *xdev = (gx_device_X *) dev;
@@ -298,7 +296,7 @@ x_get_initial_matrix(gx_device * dev, gs_matrix * pmat)
 }
 
 /* Synchronize the display with the commands already given. */
-private int
+static int
 x_sync(gx_device * dev)
 {
     gx_device_X *xdev = (gx_device_X *) dev;
@@ -325,7 +323,7 @@ gdev_x_send_event(gx_device_X *xdev, Atom msg)
 }
 
 /* Output "page" */
-private int
+static int
 x_output_page(gx_device * dev, int num_copies, int flush)
 {
     gx_device_X *xdev = (gx_device_X *) dev;
@@ -348,7 +346,7 @@ x_output_page(gx_device * dev, int num_copies, int flush)
 }
 
 /* Fill a rectangle with a color. */
-private int
+static int
 x_fill_rectangle(gx_device * dev,
 		 int x, int y, int w, int h, gx_color_index gscolor)
 {
@@ -379,7 +377,7 @@ x_fill_rectangle(gx_device * dev,
 }
 
 /* Copy a monochrome bitmap. */
-private int
+static int
 x_copy_mono(gx_device * dev,
 	    const byte * base, int sourcex, int raster, gx_bitmap_id id,
 	    int x, int y, int w, int h,
@@ -529,7 +527,7 @@ x_copy_mono(gx_device * dev,
 }
 
 /* Internal routine to free the GC and pixmap used for copying. */
-private void
+static void
 free_cp(gx_device * dev)
 {
     gx_device_X *xdev = (gx_device_X *) dev;
@@ -546,7 +544,7 @@ free_cp(gx_device * dev)
 }
 
 /* Copy a color bitmap. */
-private int
+static int
 x_copy_image(gx_device_X * xdev, const byte * base, int sourcex, int raster,
 	     int x, int y, int w, int h)
 {
@@ -592,7 +590,7 @@ x_copy_image(gx_device_X * xdev, const byte * base, int sourcex, int raster,
     }
     return 0;
 }
-private int
+static int
 x_copy_color(gx_device * dev,
 	     const byte * base, int sourcex, int raster, gx_bitmap_id id,
 	     int x, int y, int w, int h)
@@ -612,14 +610,14 @@ x_copy_color(gx_device * dev,
 
 /* Get the page device.  We reimplement this so that we can make this */
 /* device be a page device conditionally. */
-private gx_device *
+static gx_device *
 x_get_page_device(gx_device * dev)
 {
     return (((gx_device_X *) dev)->IsPageDevice ? dev : (gx_device *) 0);
 }
 
 /* Tile a rectangle. */
-private int
+static int
 x_strip_tile_rectangle(gx_device * dev, const gx_strip_bitmap * tiles,
 		       int x, int y, int w, int h,
 		       gx_color_index zero, gx_color_index one,
@@ -704,7 +702,7 @@ x_strip_tile_rectangle(gx_device * dev, const gx_strip_bitmap * tiles,
 /* Implement ImageType 2 using CopyArea if possible. */
 /* Note that since ImageType 2 images don't have any source data, */
 /* this procedure does all the work. */
-private int
+static int
 x_begin_typed_image(gx_device * dev,
 		    const gs_imager_state * pis, const gs_matrix * pmat,
 		    const gs_image_common_t * pic, const gs_int_rect * prect,
@@ -781,7 +779,7 @@ x_begin_typed_image(gx_device * dev,
 }
 
 /* Read bits back from the screen. */
-private int
+static int
 x_get_bits_rectangle(gx_device * dev, const gs_int_rect * prect,
 		     gs_get_bits_params_t * params, gs_int_rect ** unread)
 {
@@ -974,7 +972,7 @@ x_get_bits_rectangle(gx_device * dev, const gs_int_rect * prect,
 
 /* Set up with a specified tile. */
 /* Return false if we can't do it for some reason. */
-private int
+static int
 set_tile(gx_device * dev, const gx_strip_bitmap * tile)
 {
     gx_device_X *xdev = (gx_device_X *) dev;
@@ -1032,7 +1030,7 @@ set_tile(gx_device * dev, const gx_strip_bitmap * tile)
 /* ------ Screen update procedures ------ */
 
 /* Initialize the update machinery. */
-private void
+static void
 update_init(gx_device_X *xdev)
 {
     xdev->update.box.p.x = xdev->update.box.p.y = max_int_in_fixed;
@@ -1041,7 +1039,7 @@ update_init(gx_device_X *xdev)
 }
 
 /* Flush updates to the screen if needed. */
-private void
+static void
 update_do_flush(gx_device_X * xdev)
 {
     flush_text(xdev);
@@ -1131,7 +1129,7 @@ x_update_add(gx_device_X * xdev, int xo, int yo, int w, int h)
 }
 
 /* Flush buffered text to the screen. */
-private void
+static void
 do_flush_text(gx_device_X * xdev)
 {
     if (!IN_TEXT(xdev))
@@ -1141,7 +1139,7 @@ do_flush_text(gx_device_X * xdev)
 }
 
 /* Bounding box device procedures (only used when buffering) */
-private bool
+static bool
 x_bbox_init_box(void *pdata)
 {
     gx_device_X *const xdev = pdata;
@@ -1149,7 +1147,7 @@ x_bbox_init_box(void *pdata)
     update_init(xdev);
     return true;
 }
-private void
+static void
 x_bbox_get_box(const void *pdata, gs_fixed_rect *pbox)
 {
     const gx_device_X *const xdev = pdata;
@@ -1159,7 +1157,7 @@ x_bbox_get_box(const void *pdata, gs_fixed_rect *pbox)
     pbox->q.x = int2fixed(xdev->update.box.q.x);
     pbox->q.y = int2fixed(xdev->update.box.q.y);
 }
-private void
+static void
 x_bbox_add_rect(void *pdata, fixed x0, fixed y0, fixed x1, fixed y1)
 {
     gx_device_X *const xdev = pdata;
@@ -1168,7 +1166,7 @@ x_bbox_add_rect(void *pdata, fixed x0, fixed y0, fixed x1, fixed y1)
     x_update_add(xdev, x, y, fixed2int_ceiling(x1) - x,
 		 fixed2int_ceiling(y1) - y);
 }
-private bool
+static bool
 x_bbox_in_rect(const void *pdata, const gs_fixed_rect *pbox)
 {
     gs_fixed_rect box;
@@ -1187,7 +1185,7 @@ const gx_device_bbox_procs_t gdev_x_box_procs = {
  * around an apparent bug in some X servers.  It only works with the
  * specific parameters (bit/byte order, padding) used above.
  */
-private int
+static int
 alt_put_image(gx_device *dev, Display *dpy, Drawable win, GC gc, XImage *pi,
 	      int sx, int sy, int dx, int dy, unsigned w, unsigned h)
 {

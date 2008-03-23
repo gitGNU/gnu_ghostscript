@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsparam.c,v 1.7 2007/09/11 15:24:18 Arabidopsis Exp $ */
+/* $Id: gsparam.c,v 1.8 2008/03/23 15:28:04 Arabidopsis Exp $ */
 /* Support for parameter lists */
 #include "memory_.h"
 #include "string_.h"
@@ -101,7 +101,7 @@ param_init_enumerator(gs_param_enumerator_t * enumerator)
 }
 
 /* Transfer a collection of parameters. */
-private const byte xfer_item_sizes[] = {
+static const byte xfer_item_sizes[] = {
     GS_PARAM_TYPE_SIZES(0)
 };
 int

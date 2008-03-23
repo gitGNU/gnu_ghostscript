@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,14 +17,11 @@
 
 */
 
-/* $Id: x_.h,v 1.7 2007/09/11 15:23:51 Arabidopsis Exp $ */
+/* $Id: x_.h,v 1.8 2008/03/23 15:27:40 Arabidopsis Exp $ */
 /* Header for including X library calls in Ghostscript X11 driver */
 
 #ifndef x__INCLUDED
 #  define x__INCLUDED
-
-/* Some versions of the X library use `private' as a member name, so: */
-#undef private
 
 /* Most X implementations have _Xdebug, but VMS DECWindows doesn't. */
 #ifndef VMS
@@ -169,8 +166,5 @@
 #    undef XInitImage
 #    define XInitImage(im) 1	/* non-zero = success */
 #  endif
-
-/* Restore the definition of `private'. */
-#define private private_
 
 #endif /* x__INCLUDED */

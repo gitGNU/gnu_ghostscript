@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpsf.h,v 1.9 2007/09/11 15:24:10 Arabidopsis Exp $ */
+/* $Id: gdevpsf.h,v 1.10 2008/03/23 15:27:45 Arabidopsis Exp $ */
 /* PostScript/PDF font writing interface */
 
 #ifndef gdevpsf_INCLUDED
@@ -231,6 +231,8 @@ int psf_write_cmap(const gs_memory_t *mem, stream *s, const gs_cmap_t *pcmap,
 		   psf_put_name_chars_proc_t put_name_chars,
 		   const gs_const_string *alt_cmap_name, int font_index_only);
 /* ------ Exported by gdevpsft.c ------ */
+
+extern const long default_defaultWidthX;
 
 /*
  * Write a TrueType (Type 42) font definition.

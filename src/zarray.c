@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zarray.c,v 1.8 2007/09/11 15:24:22 Arabidopsis Exp $ */
+/* $Id: zarray.c,v 1.9 2008/03/23 15:27:48 Arabidopsis Exp $ */
 /* Array operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -51,7 +51,7 @@ zarray(i_ctx_t *i_ctx_p)
 }
 
 /* <array> aload <obj_0> ... <obj_n-1> <array> */
-private int
+static int
 zaload(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -91,7 +91,7 @@ zaload(i_ctx_t *i_ctx_p)
 }
 
 /* <obj_0> ... <obj_n-1> <array> astore <array> */
-private int
+static int
 zastore(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

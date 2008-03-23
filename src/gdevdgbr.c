@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevdgbr.c,v 1.9 2007/09/11 15:24:11 Arabidopsis Exp $ */
+/* $Id: gdevdgbr.c,v 1.10 2008/03/23 15:27:46 Arabidopsis Exp $ */
 /* Default implementation of device get_bits[_rectangle] */
 #include "memory_.h"
 #include "gx.h"
@@ -66,7 +66,7 @@ gx_default_get_bits(gx_device * dev, int y, byte * data, byte ** actual_data)
  * Determine whether we can satisfy a request by simply using the stored
  * representation.  dev is used only for color_info.{num_components, depth}.
  */
-private bool
+static bool
 requested_includes_stored(const gx_device *dev,
 			  const gs_get_bits_params_t *requested,
 			  const gs_get_bits_params_t *stored)
@@ -209,7 +209,7 @@ gx_get_bits_return_pointer(gx_device * dev, int x, int h,
  * Implement gx_get_bits_copy (see below) for the case of converting
  * 4-bit CMYK to 24-bit RGB with standard mapping, used heavily by PCL.
  */
-private void
+static void
 gx_get_bits_copy_cmyk_1bit(byte *dest_line, uint dest_raster,
 			   const byte *src_line, uint src_raster,
 			   int src_bit, int w, int h)
@@ -252,7 +252,7 @@ gx_get_bits_copy_cmyk_1bit(byte *dest_line, uint dest_raster,
  * factored out into single-use procedures strictly for readability.
  * A good optimizing compiler would compile them in-line.
  */
-private int
+static int
     gx_get_bits_std_to_native(gx_device * dev, int x, int w, int h,
 				  gs_get_bits_params_t * params,
 			      const gs_get_bits_params_t *stored,
@@ -402,7 +402,7 @@ gx_get_bits_copy(gx_device * dev, int x, int w, int h,
  * Convert standard colors to native.  Note that the source
  * may have depths other than 8 bits per component.
  */
-private int
+static int
 gx_get_bits_std_to_native(gx_device * dev, int x, int w, int h,
 			  gs_get_bits_params_t * params,
 			  const gs_get_bits_params_t *stored,
@@ -503,7 +503,7 @@ gx_get_bits_std_to_native(gx_device * dev, int x, int w, int h,
 /*
  * Convert native colors to standard.  Only GB_DEPTH_8 is supported.
  */
-private int
+static int
 gx_get_bits_native_to_std(gx_device * dev, int x, int w, int h,
 			  gs_get_bits_params_t * params,
 			  const gs_get_bits_params_t *stored,

@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevmem.h,v 1.7 2007/09/11 15:24:07 Arabidopsis Exp $ */
+/* $Id: gdevmem.h,v 1.8 2008/03/23 15:27:54 Arabidopsis Exp $ */
 /* Private definitions for memory devices. */
 
 #ifndef gdevmem_INCLUDED
@@ -78,12 +78,12 @@
 dev_proc_get_initial_matrix(mem_get_initial_matrix);
 dev_proc_close_device(mem_close);
 #define declare_mem_map_procs(map_rgb_color, map_color_rgb)\
-  private dev_proc_map_rgb_color(map_rgb_color);\
-  private dev_proc_map_color_rgb(map_color_rgb)
+  static dev_proc_map_rgb_color(map_rgb_color);\
+  static dev_proc_map_color_rgb(map_color_rgb)
 #define declare_mem_procs(copy_mono, copy_color, fill_rectangle)\
-  private dev_proc_copy_mono(copy_mono);\
-  private dev_proc_copy_color(copy_color);\
-  private dev_proc_fill_rectangle(fill_rectangle)
+  static dev_proc_copy_mono(copy_mono);\
+  static dev_proc_copy_color(copy_color);\
+  static dev_proc_fill_rectangle(fill_rectangle)
 /*
  * We define one relatively low-usage drawing procedure that is common to
  * all memory devices so that we have a reliable way to implement

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevprn.h,v 1.10 2007/09/11 15:24:19 Arabidopsis Exp $ */
+/* $Id: gdevprn.h,v 1.11 2008/03/23 15:27:41 Arabidopsis Exp $ */
 /* Common header file for memory-buffered printers */
 
 #ifndef gdevprn_INCLUDED
@@ -662,20 +662,20 @@ int gdev_prn_initialize(gx_device *, const char *, dev_proc_print_page((*)));
 void gdev_prn_init_color(gx_device *, int, dev_proc_map_rgb_color((*)), dev_proc_map_color_rgb((*)));
 
 #define prn_device_type(dtname, initproc, pageproc)\
-private dev_proc_print_page(pageproc);\
+static dev_proc_print_page(pageproc);\
 device_type(dtname, st_prn_device, initproc)
 
 #define prn_device_type_mono(dtname, dname, initproc, pageproc)\
-private dev_proc_print_page(pageproc);\
-private int \
+static dev_proc_print_page(pageproc);\
+static int \
 initproc(gx_device *dev)\
 {	return gdev_prn_initialize(dev, dname, pageproc);\
 }\
 device_type(dtname, st_prn_device, initproc)
 
 #define prn_device_type_color(dtname, dname, depth, initproc, pageproc, rcproc, crproc)\
-private dev_proc_print_page(pageproc);\
-private int \
+static dev_proc_print_page(pageproc);\
+static int \
 initproc(gx_device *dev)\
 {	int code = gdev_prn_initialize(dev, dname, pageproc);\
 	gdev_prn_init_color(dev, depth, rcproc, crproc);\

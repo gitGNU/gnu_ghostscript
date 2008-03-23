@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: int.mak,v 1.12 2007/09/11 15:24:19 Arabidopsis Exp $
+# $Id: int.mak,v 1.13 2008/03/23 15:27:58 Arabidopsis Exp $
 # (Platform-independent) makefile for PostScript and PDF language
 # interpreters.
 # Users of this makefile must define the following:
@@ -527,7 +527,7 @@ Z1OPS=zarith zarray zcontrol1 zcontrol2 zcontrol3
 Z2OPS=zdict1 zdict2 zfile zfile1 zfileio1 zfileio2
 Z3_4OPS=zfilter zfproc zgeneric ziodev zmath zalg
 Z5_6OPS=zmisc zpacked zrelbit zstack zstring zsysvm
-Z7_8OPS=ztoken ztype zvmem zbfont zchar zcolor
+Z7_8OPS=ztoken ztype zvmem zbfont zchar_a zchar_b zcolor
 Z9OPS=zdevice zfont zfontenum zgstate1 zgstate2 zgstate3
 Z10OPS=zdfilter zht zimage zmatrix
 Z11OPS=zpaint zpath pantone
@@ -980,7 +980,7 @@ $(PSOBJ)iccinit1.$(OBJ) :  $(PSSRC)iccinit1.c $(stdpre_h) $(GLOBJ)gsromfs.$(OBJ)
 
 # All the gs_*.ps files should be prerequisites of gs_init.c but we don't have
 # any convenient list of them so we just use lib/gs_init.ps == $(PSLIB)$(GS_INIT).
-$(PSGEN)gs_init.ps : $(PSLIB)$(GS_INIT) $(GENINIT_XE) $(gconfig_h)
+$(PSGEN)$(GS_INIT) : $(PSLIB)$(GS_INIT) $(GENINIT_XE) $(gconfig_h)
 	$(EXP)$(GENINIT_XE) -I $(PSLIB) $(GS_INIT) $(gconfig_h) $(PSGEN)gs_init.ps
 
 # The following list of files needed by the interpreter is maintained here.
@@ -993,12 +993,9 @@ EXTRA_INIT_FILES= Fontmap cidfmap xlatmap FAPI FCOfontmap-PCLPS2 gs_cet.ps
 #	The init files are put in the lib/ directory (gs_init.ps + EXTRA_INIT_FILES)
 #	Resource files go into Resource/...
 
-RESOURCE_LIST=ColorSpace/ Decoding/ Font/ ProcSet/ IdiomSet/ CIDFont/ CMap/
+RESOURCE_LIST=ColorSpace/ Decoding/ Encoding/ Font/ ProcSet/ IdiomSet/ CIDFont/ CMap/
 
-# PCLXL_ PJL and XPS hooks are for other parsers that may be built with a PS
-# language switch build.
-$(GLOBJ)gsromfs.c : $(MKROMFS_XE) $(PSGEN)gs_init.ps $(arch_h)
-	$(EXP)$(MKROMFS_XE) -o $(GLOBJ)gsromfs.c -X .svn $(UFST_ROMFS_ARGS) $(PCLXL_ROMFS_ARGS) $(PJL_ROMFS_ARGS) $(XPS_ROMFS_ARGS) $(UFST_ROMGS_ARGS) -c -P $(PSRESDIR)$(D) -d Resource/ $(RESOURCE_LIST) -d lib/ -P $(PSGEN) gs_init.ps -P $(PSLIB) $(EXTRA_INIT_FILES) 
+PS_ROMFS_ARGS=-c -P $(PSRESDIR)$(D) -d Resource/ $(RESOURCE_LIST) -d lib/ -P $(PSGEN) $(GS_INIT) -P $(PSLIB)
 
 # ---------------- Stochastic halftone ---------------- #
 
@@ -1888,6 +1885,11 @@ $(PSD)pdfread.dev : $(INT_MAK) $(ECHOGS_XE) $(GLOBJ)gxi16bit.$(OBJ)\
 	$(ADDMOD) $(PSD)pdfread -ps pdf_rbld
 	$(ADDMOD) $(PSD)pdfread -ps pdf_base pdf_draw pdf_font pdf_main pdf_sec
 
+# Optional Illustrator CS2/CS3 layer info extractor
+
+$(PSD)cslayer.dev : $(INT_MAK) $(ECHOGS_XE) $(PSD)pdfread.dev
+	$(SETMOD) $(PSD)cslayer -ps pdf_cslayer
+
 # ---------------- Font API ---------------- #
 
 $(PSD)fapi.dev : $(INT_MAK) $(ECHOGS_XE) $(PSOBJ)zfapi.$(OBJ)\
@@ -2045,7 +2047,7 @@ $(PSOBJ)imain.$(OBJ) : $(PSSRC)imain.c $(GH) $(memory__h) $(string__h)\
  $(dstack_h) $(ierrors_h) $(estack_h) $(files_h)\
  $(ialloc_h) $(iconf_h) $(idebug_h) $(idict_h) $(idisp_h) $(iinit_h)\
  $(iname_h) $(interp_h) $(iplugin_h) $(isave_h) $(iscan_h) $(ivmspace_h)\
- $(main_h) $(oper_h) $(ostack_h)\
+ $(iinit_h) $(main_h) $(oper_h) $(ostack_h)\
  $(sfilter_h) $(store_h) $(stream_h) $(strimpl_h)
 	$(PSCC) $(PSO_)imain.$(OBJ) $(C_) $(PSSRC)imain.c
 

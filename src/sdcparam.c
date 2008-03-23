@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sdcparam.c,v 1.8 2007/09/11 15:24:33 Arabidopsis Exp $ */
+/* $Id: sdcparam.c,v 1.9 2008/03/23 15:27:44 Arabidopsis Exp $ */
 /* DCT filter parameter setting and reading */
 #include "memory_.h"
 #include "jpeglib_.h"
@@ -33,13 +33,13 @@
 
 /* Define the DCT parameters. */
 #define dctp(key, type, stype, memb) { key, type, offset_of(stype, memb) }
-private const gs_param_item_t s_DCT_param_items[] =
+static const gs_param_item_t s_DCT_param_items[] =
 {
 dctp("ColorTransform", gs_param_type_int, stream_DCT_state, ColorTransform),
     dctp("QFactor", gs_param_type_float, stream_DCT_state, QFactor),
     gs_param_item_end
 };
-private const gs_param_item_t jsd_param_items[] =
+static const gs_param_item_t jsd_param_items[] =
 {
     dctp("Picky", gs_param_type_int, jpeg_stream_data, Picky),
     dctp("Relax", gs_param_type_int, jpeg_stream_data, Relax),
@@ -89,7 +89,7 @@ static const byte inverse_natural_order[DCTSIZE2] =
 
 /* ================ Get parameters ================ */
 
-private int
+static int
 quant_param_string(gs_param_string * pstr, int count, const UINT16 * pvals,
 		   floatp QFactor, gs_memory_t * mem)
 {
@@ -112,7 +112,7 @@ quant_param_string(gs_param_string * pstr, int count, const UINT16 * pvals,
     return code & 1;
 }
 
-private int
+static int
 quant_param_array(gs_param_float_array * pfa, int count, const UINT16 * pvals,
 		  floatp QFactor, gs_memory_t * mem)
 {
@@ -236,7 +236,7 @@ s_DCT_get_quantization_tables(gs_param_list * plist,
     return param_end_write_dict(plist, "QuantTables", &quant_tables);
 }
 
-private int
+static int
 pack_huff_table(gs_param_string * pstr, const JHUFF_TBL * table,
 		gs_memory_t * mem)
 {
@@ -373,7 +373,7 @@ s_DCT_byte_params(gs_param_list * plist, gs_param_name key, int start,
 }
 
 /* Get N quantization values from an array or a string. */
-private int
+static int
 quant_params(gs_param_list * plist, gs_param_name key, int count,
 	     UINT16 * pvals, floatp QFactor)
 {
@@ -508,7 +508,7 @@ s_DCT_put_quantization_tables(gs_param_list * plist, stream_DCT_state * pdct,
 }
 
 /* Put Huffman tables. */
-private int
+static int
 find_huff_values(JHUFF_TBL ** table_ptrs, int num_tables,
 	       const UINT8 counts[16], const UINT8 * values, int codes_size)
 {

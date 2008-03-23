@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxpdash.c,v 1.8 2007/09/11 15:24:18 Arabidopsis Exp $ */
+/* $Id: gxpdash.c,v 1.9 2008/03/23 15:28:01 Arabidopsis Exp $ */
 /* Dash expansion for paths */
 #include "math_.h"
 #include "gx.h"
@@ -32,7 +32,7 @@
 
 /* Expand a dashed path into explicit segments. */
 /* The path contains no curves. */
-private int subpath_expand_dashes(const subpath *, gx_path *,
+static int subpath_expand_dashes(const subpath *, gx_path *,
 				  const gs_imager_state *,
 				  const gx_dash_params *);
 int
@@ -52,7 +52,7 @@ gx_path_add_dash_expansion(const gx_path * ppath_old, gx_path * ppath,
     return code;
 }
 
-private int
+static int
 subpath_expand_dashes(const subpath * psub, gx_path * ppath,
 		   const gs_imager_state * pis, const gx_dash_params * dash)
 {

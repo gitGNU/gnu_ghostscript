@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscparam.c,v 1.8 2007/09/11 15:24:32 Arabidopsis Exp $ */
+/* $Id: gscparam.c,v 1.9 2008/03/23 15:27:59 Arabidopsis Exp $ */
 /* Default implementation of parameter lists */
 #include "memory_.h"
 #include "string_.h"
@@ -131,7 +131,7 @@ gs_c_param_list_alloc(gs_memory_t *mem, client_name_t cname)
     return gs_alloc_struct(mem, gs_c_param_list, &st_c_param_list, cname);
 }
 
-private gs_c_param *
+static gs_c_param *
 c_param_find(const gs_c_param_list *plist, gs_param_name pkey, bool any)
 {
     gs_c_param *pparam = plist->head;
@@ -145,12 +145,12 @@ c_param_find(const gs_c_param_list *plist, gs_param_name pkey, bool any)
 
 /* ---------------- Writing parameters to a list ---------------- */
 
-private param_proc_begin_xmit_collection(c_param_begin_write_collection);
-private param_proc_end_xmit_collection(c_param_end_write_collection);
-private param_proc_xmit_typed(c_param_write_typed);
-private param_proc_request(c_param_request);
-private param_proc_requested(c_param_requested);
-private const gs_param_list_procs c_write_procs =
+static param_proc_begin_xmit_collection(c_param_begin_write_collection);
+static param_proc_end_xmit_collection(c_param_end_write_collection);
+static param_proc_xmit_typed(c_param_write_typed);
+static param_proc_request(c_param_request);
+static param_proc_requested(c_param_requested);
+static const gs_param_list_procs c_write_procs =
 {
     c_param_write_typed,
     c_param_begin_write_collection,
@@ -233,7 +233,7 @@ gs_c_param_list_release(gs_c_param_list * plist)
 }
 
 /* Add an entry to a list.  Doesn't set: value, type, plist->head. */
-private gs_c_param *
+static gs_c_param *
 c_param_add(gs_c_param_list * plist, gs_param_name pkey)
 {
     gs_c_param *pparam =
@@ -267,7 +267,7 @@ c_param_add(gs_c_param_list * plist, gs_param_name pkey)
 }
 
 /*  Write a dynamically typed parameter to a list. */
-private int
+static int
 c_param_write(gs_c_param_list * plist, gs_param_name pkey, void *pvalue,
 	      gs_param_type type)
 {
@@ -346,7 +346,7 @@ c_param_write(gs_c_param_list * plist, gs_param_name pkey, void *pvalue,
 }
 
 /* Individual writing routines. */
-private int
+static int
 c_param_begin_write_collection(gs_param_list * plist, gs_param_name pkey,
 	       gs_param_dict * pvalue, gs_param_collection_type_t coll_type)
 {
@@ -362,7 +362,7 @@ c_param_begin_write_collection(gs_param_list * plist, gs_param_name pkey,
     pvalue->list = (gs_param_list *) dlist;
     return 0;
 }
-private int
+static int
 c_param_end_write_collection(gs_param_list * plist, gs_param_name pkey,
 			     gs_param_dict * pvalue)
 {
@@ -375,7 +375,7 @@ c_param_end_write_collection(gs_param_list * plist, gs_param_name pkey,
 		     dlist->coll_type == gs_param_collection_array ?
 		     gs_param_type_array : gs_param_type_dict));
 }
-private int
+static int
 c_param_write_typed(gs_param_list * plist, gs_param_name pkey,
 		    gs_param_typed_value * pvalue)
 {
@@ -401,7 +401,7 @@ c_param_write_typed(gs_param_list * plist, gs_param_name pkey,
 
 /* Other procedures */
 
-private int
+static int
 c_param_request(gs_param_list * plist, gs_param_name pkey)
 {
     gs_c_param_list *const cplist = (gs_c_param_list *)plist;
@@ -418,7 +418,7 @@ c_param_request(gs_param_list * plist, gs_param_name pkey)
     return 0;
 }
 
-private int
+static int
 c_param_requested(const gs_param_list * plist, gs_param_name pkey)
 {
     const gs_c_param_list *const cplist = (const gs_c_param_list *)plist;
@@ -437,14 +437,14 @@ c_param_requested(const gs_param_list * plist, gs_param_name pkey)
 
 /* ---------------- Reading from a list to parameters ---------------- */
 
-private param_proc_begin_xmit_collection(c_param_begin_read_collection);
-private param_proc_end_xmit_collection(c_param_end_read_collection);
-private param_proc_xmit_typed(c_param_read_typed);
-private param_proc_next_key(c_param_get_next_key);
-private param_proc_get_policy(c_param_read_get_policy);
-private param_proc_signal_error(c_param_read_signal_error);
-private param_proc_commit(c_param_read_commit);
-private const gs_param_list_procs c_read_procs =
+static param_proc_begin_xmit_collection(c_param_begin_read_collection);
+static param_proc_end_xmit_collection(c_param_end_read_collection);
+static param_proc_xmit_typed(c_param_read_typed);
+static param_proc_next_key(c_param_get_next_key);
+static param_proc_get_policy(c_param_read_get_policy);
+static param_proc_signal_error(c_param_read_signal_error);
+static param_proc_commit(c_param_read_commit);
+static const gs_param_list_procs c_read_procs =
 {
     c_param_read_typed,
     c_param_begin_read_collection,
@@ -466,7 +466,7 @@ gs_c_param_list_read(gs_c_param_list * plist)
 
 /* Generic routine for reading a parameter from a list. */
 
-private int
+static int
 c_param_read_typed(gs_param_list * plist, gs_param_name pkey,
 		   gs_param_typed_value * pvalue)
 {
@@ -525,7 +525,7 @@ c_param_read_typed(gs_param_list * plist, gs_param_name pkey,
 }
 
 /* Individual reading routines. */
-private int
+static int
 c_param_begin_read_collection(gs_param_list * plist, gs_param_name pkey,
 	       gs_param_dict * pvalue, gs_param_collection_type_t coll_type)
 {
@@ -557,7 +557,7 @@ c_param_begin_read_collection(gs_param_list * plist, gs_param_name pkey,
     pvalue->size = pparam->value.d.count;
     return 0;
 }
-private int
+static int
 c_param_end_read_collection(gs_param_list * plist, gs_param_name pkey,
 			    gs_param_dict * pvalue)
 {
@@ -565,7 +565,7 @@ c_param_end_read_collection(gs_param_list * plist, gs_param_name pkey,
 }
 
 /* Other procedures */
-private int			/* ret 0 ok, 1 if EOF, or -ve err */
+static int			/* ret 0 ok, 1 if EOF, or -ve err */
 c_param_get_next_key(gs_param_list * plist, gs_param_enumerator_t * penum,
 		     gs_param_key_t * key)
 {
@@ -580,17 +580,17 @@ c_param_get_next_key(gs_param_list * plist, gs_param_enumerator_t * penum,
     *key = pparam->key;
     return 0;
 }
-private int
+static int
 c_param_read_get_policy(gs_param_list * plist, gs_param_name pkey)
 {
     return gs_param_policy_ignore;
 }
-private int
+static int
 c_param_read_signal_error(gs_param_list * plist, gs_param_name pkey, int code)
 {
     return code;
 }
-private int
+static int
 c_param_read_commit(gs_param_list * plist)
 {
     return 0;

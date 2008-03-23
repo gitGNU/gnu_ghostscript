@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxcldev.h,v 1.10 2007/09/11 15:23:57 Arabidopsis Exp $ */
+/*$Id: gxcldev.h,v 1.11 2008/03/23 15:27:48 Arabidopsis Exp $ */
 /* Internal definitions for Ghostscript command lists. */
 
 #ifndef gxcldev_INCLUDED
@@ -719,4 +719,9 @@ int clist_playback_file_bands(clist_playback_action action,
 			  gx_device_clist_reader *crdev,
 			  gx_band_page_info_t *page_info, gx_device *target,
 			  int band_first, int band_last, int x0, int y0);
+#ifdef DEBUG 
+int64_t clist_file_offset(const stream_state *st, uint buffer_offset);
+int top_up_offset_map(stream_state * st, const byte *buf, const byte *ptr, const byte *end);
+#endif
+
 #endif /* gxcldev_INCLUDED */

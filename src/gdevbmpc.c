@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevbmpc.c,v 1.8 2007/09/11 15:24:03 Arabidopsis Exp $ */
+/* $Id: gdevbmpc.c,v 1.9 2008/03/23 15:27:46 Arabidopsis Exp $ */
 /* .BMP file format driver utilities */
 #include "gdevprn.h"
 #include "gdevbmp.h"
@@ -95,7 +95,7 @@ typedef struct bmp_quad_s {
 } bmp_quad;
 
 /* Write the BMP file header. */
-private int
+static int
 write_bmp_depth_header(gx_device_printer *pdev, FILE *file, int depth,
 		       const byte *palette /* [4 << depth] */,
 		       int raster)

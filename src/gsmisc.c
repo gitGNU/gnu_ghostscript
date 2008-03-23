@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsmisc.c,v 1.11 2007/09/11 15:23:55 Arabidopsis Exp $ */
+/* $Id: gsmisc.c,v 1.12 2008/03/23 15:28:12 Arabidopsis Exp $ */
 /* Miscellaneous utilities for Ghostscript library */
 
 
@@ -42,7 +42,7 @@ int CPSI_mode = 0; /* false */	/* default GS behavior is 'false' */
 #else
 #  include <math.h>
 #endif
-inline private double
+static inline double
 orig_sqrt(double x)
 {
     return sqrt(x);
@@ -140,7 +140,7 @@ dflush(void)
 {
     errflush();
 }
-private const char *
+static const char *
 dprintf_file_tail(const char *file)
 {
     const char *tail = file + strlen(file);
@@ -1118,7 +1118,7 @@ gs_sqrt(double x, const char *file, int line)
 #define sin89 0.99984769515639127
 #define sin90 1.00000000000000000
 
-private const double sin_table[361] =
+static const double sin_table[361] =
 {
     sin0,
     sin1, sin2, sin3, sin4, sin5, sin6, sin7, sin8, sin9, sin10,

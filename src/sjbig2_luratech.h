@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sjbig2_luratech.h,v 1.4 2007/09/11 15:24:35 Arabidopsis Exp $ */
+/* $Id: sjbig2_luratech.h,v 1.5 2008/03/23 15:27:51 Arabidopsis Exp $ */
 /* Definitions for jbig2decode filter - Luratech version */
 /* Requires scommon.h; strimpl.h if any templates are referenced */
 
@@ -50,11 +50,11 @@ stream_jbig2decode_state;
 extern const stream_template s_jbig2decode_template;
 
 /* call in to process the JBIG2Globals parameter */
-public int
+int
 s_jbig2decode_make_global_data(byte *data, uint size, void **result);
-public int
+int
 s_jbig2decode_set_global_data(stream_state *ss, void *data);
-public void
+void
 s_jbig2decode_free_global_data(void *data);
 
 

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevwprn.c,v 1.8 2007/09/11 15:24:20 Arabidopsis Exp $ */
+/* $Id: gdevwprn.c,v 1.9 2008/03/23 15:27:46 Arabidopsis Exp $ */
 /*
  * Microsoft Windows 3.n printer driver for Ghostscript.
  *
@@ -51,24 +51,24 @@ typedef struct gx_device_win_prn_s gx_device_win_prn;
 #define wdev ((gx_device_win_prn *)dev)
 
 /* Forward references */
-private void near win_prn_addtool(gx_device_win_prn *, int);
-private void near win_prn_maketools(gx_device_win_prn *, HDC);
-private void near win_prn_destroytools(gx_device_win_prn *);
+static void near win_prn_addtool(gx_device_win_prn *, int);
+static void near win_prn_maketools(gx_device_win_prn *, HDC);
+static void near win_prn_destroytools(gx_device_win_prn *);
 BOOL CALLBACK _export AbortProc(HDC, int);
 
 /* Device procedures */
 
 /* See gxdevice.h for the definitions of the procedures. */
-private dev_proc_open_device(win_prn_open);
-private dev_proc_close_device(win_prn_close);
-private dev_proc_sync_output(win_prn_sync_output);
-private dev_proc_output_page(win_prn_output_page);
-private dev_proc_map_rgb_color(win_prn_map_rgb_color);
-private dev_proc_fill_rectangle(win_prn_fill_rectangle);
-private dev_proc_tile_rectangle(win_prn_tile_rectangle);
-private dev_proc_copy_mono(win_prn_copy_mono);
-private dev_proc_copy_color(win_prn_copy_color);
-private dev_proc_draw_line(win_prn_draw_line);
+static dev_proc_open_device(win_prn_open);
+static dev_proc_close_device(win_prn_close);
+static dev_proc_sync_output(win_prn_sync_output);
+static dev_proc_output_page(win_prn_output_page);
+static dev_proc_map_rgb_color(win_prn_map_rgb_color);
+static dev_proc_fill_rectangle(win_prn_fill_rectangle);
+static dev_proc_tile_rectangle(win_prn_tile_rectangle);
+static dev_proc_copy_mono(win_prn_copy_mono);
+static dev_proc_copy_color(win_prn_copy_color);
+static dev_proc_draw_line(win_prn_draw_line);
 
 /* The device descriptor */
 struct gx_device_win_prn_s {
@@ -102,7 +102,7 @@ struct gx_device_win_prn_s {
     char mfname[gp_file_name_sizeof];
     DLGPROC lpfnAbortProc;
 };
-private const gx_device_procs win_prn_procs =
+static const gx_device_procs win_prn_procs =
 {
     win_prn_open,
     NULL,			/* get_initial_matrix */
@@ -134,7 +134,7 @@ gx_device_win_prn far_data gs_mswinprn_device =
 };
 
 /* Open the win_prn driver */
-private int
+static int
 win_prn_open(gx_device * dev)
 {
     int depth;
@@ -267,7 +267,7 @@ win_prn_open(gx_device * dev)
 
 
 /* Close the win_prn driver */
-private int
+static int
 win_prn_close(gx_device * dev)
 {
     HMETAFILE hmf;
@@ -324,7 +324,7 @@ win_prn_output_page(gx_device * dev, int num_copies, int flush)
 
 
 /* Map a r-g-b color to the colors available under Windows */
-private gx_color_index
+static gx_color_index
 win_prn_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 {
     int i = wdev->nColors;
@@ -350,7 +350,7 @@ FillRect(wdev->hdcmf, &rect, wdev->hbrushs[(int)color])
 
 
 /* Fill a rectangle. */
-private int
+static int
 win_prn_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 		       gx_color_index color)
 {
@@ -370,7 +370,7 @@ win_prn_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 /* pre-clear the rectangle to color0 and just tile with color1. */
 /* This is faster because of how win_copy_mono is implemented. */
 /* Note that this also does the right thing for colored tiles. */
-private int
+static int
 win_prn_tile_rectangle(gx_device * dev, const gx_tile_bitmap * tile,
       int x, int y, int w, int h, gx_color_index czero, gx_color_index cone,
 		       int px, int py)
@@ -438,7 +438,7 @@ win_prn_tile_rectangle(gx_device * dev, const gx_tile_bitmap * tile,
 
 
 /* Draw a line */
-private int
+static int
 win_prn_draw_line(gx_device * dev, int x0, int y0, int x1, int y1,
 		  gx_color_index color)
 {
@@ -453,7 +453,7 @@ win_prn_draw_line(gx_device * dev, int x0, int y0, int x1, int y1,
 
 /* Copy a monochrome bitmap.  The colors are given explicitly. */
 /* Color = gx_no_color_index means transparent (no effect on the image). */
-private int
+static int
 win_prn_copy_mono(gx_device * dev,
 		const byte * base, int sourcex, int raster, gx_bitmap_id id,
 		  int x, int y, int w, int h,
@@ -555,7 +555,7 @@ win_prn_copy_mono(gx_device * dev,
 
 /* Copy a color pixel map.  This is just like a bitmap, except that */
 /* each pixel takes 8 or 4 bits instead of 1 when device driver has color. */
-private int
+static int
 win_prn_copy_color(gx_device * dev,
 		const byte * base, int sourcex, int raster, gx_bitmap_id id,
 		   int x, int y, int w, int h)
@@ -637,7 +637,7 @@ win_prn_copy_color(gx_device * dev,
 #undef wdev
 
 
-private void near
+static void near
 win_prn_addtool(gx_device_win_prn * wdev, int i)
 {
     wdev->hpens[i] = CreatePen(PS_SOLID, 1, PALETTEINDEX(i));
@@ -645,7 +645,7 @@ win_prn_addtool(gx_device_win_prn * wdev, int i)
 }
 
 
-private void near
+static void near
 win_prn_maketools(gx_device_win_prn * wdev, HDC hdc)
 {
     int i;
@@ -669,7 +669,7 @@ win_prn_maketools(gx_device_win_prn * wdev, HDC hdc)
 }
 
 
-private void near
+static void near
 win_prn_destroytools(gx_device_win_prn * wdev)
 {
     int i;

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ifont.h,v 1.10 2007/09/11 15:24:13 Arabidopsis Exp $ */
+/* $Id: ifont.h,v 1.11 2008/03/23 15:27:40 Arabidopsis Exp $ */
 /* Interpreter internal font representation */
 
 #ifndef ifont_INCLUDED
@@ -75,9 +75,9 @@ typedef struct font_data_s {
 /* st_font_data is exported for zdefault_make_font in zfont.c. */
 extern_st(st_font_data);
 #define public_st_font_data()	/* in zbfont.c */\
-  private struct_proc_clear_marks(font_data_clear_marks);\
-  private struct_proc_enum_ptrs(font_data_enum_ptrs);\
-  private struct_proc_reloc_ptrs(font_data_reloc_ptrs);\
+  static struct_proc_clear_marks(font_data_clear_marks);\
+  static struct_proc_enum_ptrs(font_data_enum_ptrs);\
+  static struct_proc_reloc_ptrs(font_data_reloc_ptrs);\
   gs_public_st_complex_only(st_font_data, font_data, "font_data",\
     font_data_clear_marks, font_data_enum_ptrs, font_data_reloc_ptrs, 0)
 #define pfont_data(pfont) ((font_data *)((pfont)->client_data))

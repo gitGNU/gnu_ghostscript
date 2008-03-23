@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: dscparse.h,v 1.8 2007/09/11 15:24:25 Arabidopsis Exp $*/
+/* $Id: dscparse.h,v 1.9 2008/03/23 15:27:40 Arabidopsis Exp $*/
 /* Interface for the DSC parser. */
 
 #ifndef dscparse_INCLUDED
@@ -44,14 +44,6 @@ typedef unsigned int GSWORD;	/* must be at least 16 bits */
 #endif
 #ifndef DSC_OFFSET_FORMAT
 # define DSC_OFFSET_FORMAT "lu"	/* for printf */
-#endif
-
-#ifndef dsc_private
-# ifdef private
-#  define dsc_private private
-# else
-#  define dsc_private static
-# endif
 #endif
 
 #ifndef min

@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevm8.c,v 1.7 2007/09/11 15:24:21 Arabidopsis Exp $ */
+/* $Id: gdevm8.c,v 1.8 2008/03/23 15:27:42 Arabidopsis Exp $ */
 /* 8-bit-per-pixel "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"
@@ -46,7 +46,7 @@ mem_device("image8", 8, 0,
 #define x_to_byte(x) (x)
 
 /* Fill a rectangle with a color. */
-private int
+static int
 mem_mapped8_fill_rectangle(gx_device * dev,
 			   int x, int y, int w, int h, gx_color_index color)
 {
@@ -60,13 +60,13 @@ mem_mapped8_fill_rectangle(gx_device * dev,
 
 /* Copy a monochrome bitmap. */
 /* We split up this procedure because of limitations in the bcc32 compiler. */
-private void mapped8_copy01(chunk *, const byte *, int, int, uint,
+static void mapped8_copy01(chunk *, const byte *, int, int, uint,
 			    int, int, byte, byte);
-private void mapped8_copyN1(chunk *, const byte *, int, int, uint,
+static void mapped8_copyN1(chunk *, const byte *, int, int, uint,
 			    int, int, byte);
-private void mapped8_copy0N(chunk *, const byte *, int, int, uint,
+static void mapped8_copy0N(chunk *, const byte *, int, int, uint,
 			    int, int, byte);
-private int
+static int
 mem_mapped8_copy_mono(gx_device * dev,
 	       const byte * base, int sourcex, int sraster, gx_bitmap_id id,
 	int x, int y, int w, int h, gx_color_index zero, gx_color_index one)
@@ -114,7 +114,7 @@ mem_mapped8_copy_mono(gx_device * dev,
 		inc_ptr(dest, draster);\
 	}
 /* Halftone coloring */
-private void
+static void
 mapped8_copy01(chunk * dest, const byte * line, int first_bit,
 	       int sraster, uint draster, int w, int h, byte b0, byte b1)
 {
@@ -123,7 +123,7 @@ mapped8_copy01(chunk * dest, const byte * line, int first_bit,
     COPY_END
 }
 /* Stenciling */
-private void
+static void
 mapped8_copyN1(chunk * dest, const byte * line, int first_bit,
 	       int sraster, uint draster, int w, int h, byte b1)
 {
@@ -133,7 +133,7 @@ mapped8_copyN1(chunk * dest, const byte * line, int first_bit,
     COPY_END
 }
 /* Reverse stenciling */
-private void
+static void
 mapped8_copy0N(chunk * dest, const byte * line, int first_bit,
 	       int sraster, uint draster, int w, int h, byte b0)
 {
@@ -146,7 +146,7 @@ mapped8_copy0N(chunk * dest, const byte * line, int first_bit,
 #undef COPY_END
 
 /* Copy a color bitmap. */
-private int
+static int
 mem_mapped8_copy_color(gx_device * dev,
 	       const byte * base, int sourcex, int sraster, gx_bitmap_id id,
 		       int x, int y, int w, int h)
@@ -177,7 +177,7 @@ mem_full_device("image8w", 8, 0, mem_open,
 		gx_no_strip_copy_rop, mem_word_get_bits_rectangle);
 
 /* Fill a rectangle with a color. */
-private int
+static int
 mem8_word_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 			 gx_color_index color)
 {
@@ -195,7 +195,7 @@ mem8_word_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 }
 
 /* Copy a bitmap. */
-private int
+static int
 mem8_word_copy_mono(gx_device * dev,
 	       const byte * base, int sourcex, int sraster, gx_bitmap_id id,
 	int x, int y, int w, int h, gx_color_index zero, gx_color_index one)
@@ -217,7 +217,7 @@ mem8_word_copy_mono(gx_device * dev,
 }
 
 /* Copy a color bitmap. */
-private int
+static int
 mem8_word_copy_color(gx_device * dev,
 	       const byte * base, int sourcex, int sraster, gx_bitmap_id id,
 		     int x, int y, int w, int h)

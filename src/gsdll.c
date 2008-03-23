@@ -19,7 +19,7 @@
 /* Portions Copyright (C) 1994-2000 Ghostgum Software Pty Ltd.  All rights reserved. */
 
 
-/* $Id: gsdll.c,v 1.9 2007/09/11 15:24:22 Arabidopsis Exp $ */
+/* $Id: gsdll.c,v 1.10 2008/03/23 15:27:37 Arabidopsis Exp $ */
 /* Dynamic Link Library interface for OS/2 and MS-Windows Ghostscript */
 /* front end to gs.c */
 
@@ -66,10 +66,10 @@ static gs_main_instance *pgs_minst = NULL;
 
 
 /* local functions */
-private int GSDLLCALL gsdll_old_stdin(void *caller_handle, char *buf, int len);
-private int GSDLLCALL gsdll_old_stdout(void *caller_handle, const char *str, int len);
-private int GSDLLCALL gsdll_old_stderr(void *caller_handle, const char *str, int len);
-private int GSDLLCALL gsdll_old_poll(void *caller_handle);
+static int GSDLLCALL gsdll_old_stdin(void *caller_handle, char *buf, int len);
+static int GSDLLCALL gsdll_old_stdout(void *caller_handle, const char *str, int len);
+static int GSDLLCALL gsdll_old_stderr(void *caller_handle, const char *str, int len);
+static int GSDLLCALL gsdll_old_poll(void *caller_handle);
 
 
 /* ---------- DLL exported functions ---------- */
@@ -170,24 +170,24 @@ gsdll_revision(const char ** product, const char ** copyright,
 }
 
 
-private int GSDLLCALL
+static int GSDLLCALL
 gsdll_old_stdin(void *caller_handle, char *buf, int len)
 {
     return (*pgsdll_callback)(GSDLL_STDIN, buf, len);
 }
-private int GSDLLCALL
+static int GSDLLCALL
 gsdll_old_stdout(void *caller_handle, const char *str, int len)
 {
     return (*pgsdll_callback)(GSDLL_STDOUT, (char *)str, len);
 }
 
-private int GSDLLCALL
+static int GSDLLCALL
 gsdll_old_stderr(void *caller_handle, const char *str, int len)
 {
     return (*pgsdll_callback)(GSDLL_STDOUT, (char *)str, len);
 }
 
-private int GSDLLCALL
+static int GSDLLCALL
 gsdll_old_poll(void *caller_handle)
 {
     return (*pgsdll_callback)(GSDLL_POLL, NULL, 0);

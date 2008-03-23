@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: watclib.mak,v 1.11 2007/09/11 15:24:41 Arabidopsis Exp $
+# $Id: watclib.mak,v 1.12 2008/03/23 15:27:40 Arabidopsis Exp $
 # makefile for MS-DOS / Watcom C/C++ library testing.
 
 libdefault: $(GLOBJ)gslib.exe
@@ -33,9 +33,6 @@ DEBUG=1
 !endif
 !ifndef TDEBUG
 TDEBUG=1
-!endif
-!ifndef NOPRIVATE
-NOPRIVATE=1
 !endif
 
 GS=gslib
@@ -64,15 +61,9 @@ GLD=$(GLGENDIR)\$(NUL)
 !ifndef JSRCDIR
 JSRCDIR=jpeg
 !endif
-!ifndef JVERSION
-JVERSION=6
-!endif
 
-!ifndef PSRCDIR
-PSRCDIR=libpng
-!endif
-!ifndef PVERSION
-PVERSION=10218
+!ifndef PNGSRCDIR
+PNGSRCDIR=libpng
 !endif
 
 !ifndef ZSRCDIR

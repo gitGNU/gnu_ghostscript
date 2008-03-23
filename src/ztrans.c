@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ztrans.c,v 1.11 2007/09/11 15:23:55 Arabidopsis Exp $ */
+/* $Id: ztrans.c,v 1.12 2008/03/23 15:28:15 Arabidopsis Exp $ */
 /* Transparency operators */
 #include "string_.h"
 #include "memory_.h"
@@ -43,7 +43,7 @@
 
 /* ------ Utilities ------ */
 
-private int
+static int
 set_float_value(i_ctx_t *i_ctx_p, int (*set_value)(gs_state *, floatp))
 {
     os_ptr op = osp;
@@ -58,7 +58,7 @@ set_float_value(i_ctx_t *i_ctx_p, int (*set_value)(gs_state *, floatp))
     return 0;
 }
 
-private int
+static int
 current_float_value(i_ctx_t *i_ctx_p,
 		    float (*current_value)(const gs_state *))
 {
@@ -69,7 +69,7 @@ current_float_value(i_ctx_t *i_ctx_p,
     return 0;
 }
 
-private int
+static int
 enum_param(const gs_memory_t *mem, const ref *pnref, 
 	   const char *const names[])
 {
@@ -87,12 +87,12 @@ enum_param(const gs_memory_t *mem, const ref *pnref,
 
 /* ------ Graphics state operators ------ */
 
-private const char *const blend_mode_names[] = {
+static const char *const blend_mode_names[] = {
     GS_BLEND_MODE_NAMES, 0
 };
 
 /* <modename> .setblendmode - */
-private int
+static int
 zsetblendmode(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -108,7 +108,7 @@ zsetblendmode(i_ctx_t *i_ctx_p)
 }
 
 /* - .currentblendmode <modename> */
-private int
+static int
 zcurrentblendmode(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -124,35 +124,35 @@ zcurrentblendmode(i_ctx_t *i_ctx_p)
 }
 
 /* <0..1> .setopacityalpha - */
-private int
+static int
 zsetopacityalpha(i_ctx_t *i_ctx_p)
 {
     return set_float_value(i_ctx_p, gs_setopacityalpha);
 }
 
 /* - .currentopacityalpha <0..1> */
-private int
+static int
 zcurrentopacityalpha(i_ctx_t *i_ctx_p)
 {
     return current_float_value(i_ctx_p, gs_currentopacityalpha);
 }
 
 /* <0..1> .setshapealpha - */
-private int
+static int
 zsetshapealpha(i_ctx_t *i_ctx_p)
 {
     return set_float_value(i_ctx_p, gs_setshapealpha);
 }
 
 /* - .currentshapealpha <0..1> */
-private int
+static int
 zcurrentshapealpha(i_ctx_t *i_ctx_p)
 {
     return current_float_value(i_ctx_p, gs_currentshapealpha);
 }
 
 /* <bool> .settextknockout - */
-private int
+static int
 zsettextknockout(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -164,7 +164,7 @@ zsettextknockout(i_ctx_t *i_ctx_p)
 }
 
 /* - .currenttextknockout <bool> */
-private int
+static int
 zcurrenttextknockout(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -176,7 +176,7 @@ zcurrenttextknockout(i_ctx_t *i_ctx_p)
 
 /* ------ Rendering stack operators ------ */
 
-private int
+static int
 rect_param(gs_rect *prect, os_ptr op)
 {
     double coords[4];
@@ -189,7 +189,7 @@ rect_param(gs_rect *prect, os_ptr op)
     return 0;
 }
 
-private int
+static int
 mask_op(i_ctx_t *i_ctx_p,
 	int (*mask_proc)(gs_state *, gs_transparency_channel_selector_t))
 {
@@ -206,7 +206,7 @@ mask_op(i_ctx_t *i_ctx_p,
 }
 
 /* <paramdict> <llx> <lly> <urx> <ury> .begintransparencygroup - */
-private int
+static int
 zbegintransparencygroup(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -235,7 +235,7 @@ zbegintransparencygroup(i_ctx_t *i_ctx_p)
 }
 
 /* - .discardtransparencygroup - */
-private int
+static int
 zdiscardtransparencygroup(i_ctx_t *i_ctx_p)
 {
     if (gs_current_transparency_type(igs) != TRANSPARENCY_STATE_Group)
@@ -244,15 +244,15 @@ zdiscardtransparencygroup(i_ctx_t *i_ctx_p)
 }
 
 /* - .endtransparencygroup - */
-private int
+static int
 zendtransparencygroup(i_ctx_t *i_ctx_p)
 {
     return gs_end_transparency_group(igs);
 }
 
 /* <paramdict> <llx> <lly> <urx> <ury> .begintransparencymaskgroup - */
-private int tf_using_function(floatp, float *, void *);
-private int
+static int tf_using_function(floatp, float *, void *);
+static int
 zbegintransparencymaskgroup(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -302,7 +302,7 @@ zbegintransparencymaskgroup(i_ctx_t *i_ctx_p)
 }
 
 /* - .begintransparencymaskimage - */
-private int
+static int
 zbegintransparencymaskimage(i_ctx_t *i_ctx_p)
 {
     gs_transparency_mask_params_t params;
@@ -317,7 +317,7 @@ zbegintransparencymaskimage(i_ctx_t *i_ctx_p)
 }
 
 /* Implement the TransferFunction using a Function. */
-private int
+static int
 tf_using_function(floatp in_val, float *out, void *proc_data)
 {
     float in = in_val;
@@ -327,7 +327,7 @@ tf_using_function(floatp in_val, float *out, void *proc_data)
 }
 
 /* - .discardtransparencymask - */
-private int
+static int
 zdiscardtransparencymask(i_ctx_t *i_ctx_p)
 {
     if (gs_current_transparency_type(igs) != TRANSPARENCY_STATE_Mask)
@@ -336,14 +336,14 @@ zdiscardtransparencymask(i_ctx_t *i_ctx_p)
 }
 
 /* <mask#> .endtransparencymask - */
-private int
+static int
 zendtransparencymask(i_ctx_t *i_ctx_p)
 {
     return mask_op(i_ctx_p, gs_end_transparency_mask);
 }
 
 /* <mask#> .inittransparencymask - */
-private int
+static int
 zinittransparencymask(i_ctx_t *i_ctx_p)
 {
     return mask_op(i_ctx_p, gs_init_transparency_mask);
@@ -352,10 +352,10 @@ zinittransparencymask(i_ctx_t *i_ctx_p)
 /* ------ Soft-mask images ------ */
 
 /* <dict> .image3x - */
-private int mask_dict_param(const gs_memory_t *mem, os_ptr, 
+static int mask_dict_param(const gs_memory_t *mem, os_ptr, 
 			    image_params *, const char *, int,
 			    gs_image3x_mask_t *);
-private int
+static int
 zimage3x(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -396,7 +396,7 @@ zimage3x(i_ctx_t *i_ctx_p)
 }    
 
 /* Get one soft-mask dictionary parameter. */
-private int
+static int
 mask_dict_param(const gs_memory_t *mem, os_ptr op, 
 image_params *pip_data, const char *dict_name,
 		int num_components, gs_image3x_mask_t *pixm)
@@ -439,7 +439,7 @@ image_params *pip_data, const char *dict_name,
 /* depth .pushpdf14devicefilter - */
 /* this is a filter operator, but we include it here to maintain
    modularity of the pdf14 transparency support */
-private int
+static int
 zpushpdf14devicefilter(i_ctx_t *i_ctx_p)
 {
     int code;
@@ -455,7 +455,7 @@ zpushpdf14devicefilter(i_ctx_t *i_ctx_p)
 
 /* this is a filter operator, but we include it here to maintain
    modularity of the pdf14 transparency support */
-private int
+static int
 zpoppdf14devicefilter(i_ctx_t *i_ctx_p)
 {
     return gs_pop_pdf14trans_device(igs); 

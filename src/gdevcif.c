@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevcif.c,v 1.8 2007/09/11 15:24:29 Arabidopsis Exp $*/
+/* $Id: gdevcif.c,v 1.9 2008/03/23 15:27:53 Arabidopsis Exp $*/
 /*
   CIF output driver
 
@@ -36,7 +36,7 @@
 #endif
 
 /* The device descriptor */
-private dev_proc_print_page(cif_print_page);
+static dev_proc_print_page(cif_print_page);
 const gx_device_printer far_data gs_cif_device =
   prn_device(prn_std_procs, "cif",
 	DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
@@ -45,7 +45,7 @@ const gx_device_printer far_data gs_cif_device =
 	1, cif_print_page);
 
 /* Send the page to the output. */
-private int
+static int
 cif_print_page(gx_device_printer *pdev, FILE *prn_stream)
 {	int line_size = gdev_mem_bytes_per_scan_line((gx_device *)pdev);
 	int lnum;

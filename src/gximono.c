@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gximono.c,v 1.9 2007/09/11 15:24:10 Arabidopsis Exp $ */
+/* $Id: gximono.c,v 1.10 2008/03/23 15:28:04 Arabidopsis Exp $ */
 /* General mono-component image rendering */
 #include "gx.h"
 #include "memory_.h"
@@ -44,7 +44,7 @@
 /* Check the prototype. */
 iclass_proc(gs_image_class_3_mono);
 
-private irender_proc(image_render_mono);
+static irender_proc(image_render_mono);
 irender_proc_t
 gs_image_class_3_mono(gx_image_enum * penum)
 {
@@ -87,7 +87,7 @@ gs_image_class_3_mono(gx_image_enum * penum)
  * Separation, Indexed), and color masking. This procedure handles a
  * single scan line.
  */
-private int
+static int
 image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
 		  uint w, int h, gx_device * dev)
 {

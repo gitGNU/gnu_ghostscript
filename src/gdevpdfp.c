@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfp.c,v 1.11 2007/09/11 15:24:04 Arabidopsis Exp $ */
+/* $Id: gdevpdfp.c,v 1.12 2008/03/23 15:28:06 Arabidopsis Exp $ */
 /* Get/put parameters for PDF-writing driver */
 #include "memory_.h"
 #include "string_.h"
@@ -41,11 +41,11 @@
  *      pdfmark - see gdevpdfm.c
  *	DSC - processed in this file
  */
-private int pdf_dsc_process(gx_device_pdf * pdev,
+static int pdf_dsc_process(gx_device_pdf * pdev,
 			    const gs_param_string_array * pma);
 
-private const int CoreDistVersion = 5000;	/* Distiller 5.0 */
-private const gs_param_item_t pdf_param_items[] = {
+static const int CoreDistVersion = 5000;	/* Distiller 5.0 */
+static const gs_param_item_t pdf_param_items[] = {
 #define pi(key, type, memb) { key, type, offset_of(gx_device_pdf, memb) }
 
 	/* Acrobat Distiller 4 parameters */
@@ -79,6 +79,7 @@ private const gs_param_item_t pdf_param_items[] = {
     pi("CompressFonts", gs_param_type_bool, CompressFonts),
     pi("PrintStatistics", gs_param_type_bool, PrintStatistics),
     pi("MaxInlineImageSize", gs_param_type_long, MaxInlineImageSize),
+    pi("DSCEncodingToUnicode", gs_param_type_int_array, DSCEncodingToUnicode),
 
 	/* PDF Encryption */
     pi("OwnerPassword", gs_param_type_string, OwnerPassword),
@@ -217,7 +218,7 @@ gdev_pdf_get_params(gx_device * dev, gs_param_list * plist)
 /* ---------------- Put parameters ---------------- */
 
 /* Put parameters, implementation */
-private int
+static int
 gdev_pdf_put_params_impl(gx_device * dev, const gx_device_pdf * save_dev, gs_param_list * plist)
 {
     int ecode, code;
@@ -555,7 +556,7 @@ gdev_pdf_put_params(gx_device * dev, gs_param_list * plist)
 
 /* ---------------- Process DSC comments ---------------- */
 
-private int
+static int
 pdf_dsc_process(gx_device_pdf * pdev, const gs_param_string_array * pma)
 {
     /*

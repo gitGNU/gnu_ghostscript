@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gspath1.c,v 1.10 2007/09/11 15:23:59 Arabidopsis Exp $ */
+/* $Id: gspath1.c,v 1.11 2008/03/23 15:27:57 Arabidopsis Exp $ */
 /* Additional PostScript Level 1 path routines for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -62,8 +62,8 @@ typedef struct arc_curve_params_s {
 } arc_curve_params_t;
 
 /* Forward declarations */
-private int arc_add(const arc_curve_params_t *arc, bool is_quadrant);
-private int gs_imager_arc_add(gx_path * ppath, gs_imager_state * pis, bool clockwise,
+static int arc_add(const arc_curve_params_t *arc, bool is_quadrant);
+static int gs_imager_arc_add(gx_path * ppath, gs_imager_state * pis, bool clockwise,
 	    floatp axc, floatp ayc, floatp arad, floatp aang1, floatp aang2,
 		  bool add_line, gs_point *p3);
 
@@ -80,7 +80,7 @@ gx_setcurrentpoint_from_path(gs_imager_state *pis, gx_path *path)
     return 0;
 }
 
-private inline int
+static inline int
 gs_arc_add_inline(gs_state *pgs, bool cw, floatp xc, floatp yc, floatp rad, 
 		    floatp a1, floatp a2, bool add)
 {
@@ -122,7 +122,7 @@ gs_arc_add(gs_state * pgs, bool clockwise, floatp axc, floatp ayc,
 }
 
 /* Compute the next curve as part of an arc. */
-private int
+static int
 next_arc_curve(arc_curve_params_t * arc, double anext)
 {
     double x0 = arc->p0.x = arc->p3.x;
@@ -143,7 +143,7 @@ next_arc_curve(arc_curve_params_t * arc, double anext)
  * Use this when both arc.angle and anext are multiples of 90 degrees,
  * and anext = arc.angle +/- 90.
  */
-private int
+static int
 next_arc_quadrant(arc_curve_params_t * arc, double anext)
 {
     double x0 = arc->p0.x = arc->p3.x;
@@ -204,7 +204,7 @@ next_arc_quadrant(arc_curve_params_t * arc, double anext)
     return arc_add(arc, true);
 }
 
-private int
+static int
 gs_imager_arc_add(gx_path * ppath, gs_imager_state * pis, bool clockwise,
 	    floatp axc, floatp ayc, floatp arad, floatp aang1, floatp aang2,
 		  bool add_line, gs_point *p3)
@@ -386,7 +386,7 @@ floatp ax1, floatp ay1, floatp ax2, floatp ay2, floatp arad, float retxy[4])
 }
 
 /* Internal routine for adding an arc to the path. */
-private int
+static int
 arc_add(const arc_curve_params_t * arc, bool is_quadrant)
 {
     gx_path *path = arc->ppath;

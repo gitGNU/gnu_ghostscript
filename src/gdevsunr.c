@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevsunr.c,v 1.8 2007/09/11 15:24:20 Arabidopsis Exp $ */
+/* $Id: gdevsunr.c,v 1.9 2008/03/23 15:27:48 Arabidopsis Exp $ */
 /* Sun raster file driver */
 #include "gdevprn.h"
 
@@ -47,7 +47,7 @@ typedef struct sun_rasterfile_s {
 #  define Y_DPI 72
 #endif
 
-private dev_proc_print_page(sunhmono_print_page);
+static dev_proc_print_page(sunhmono_print_page);
 
 const gx_device_printer gs_sunhmono_device =
     prn_device(prn_std_procs, "sunhmono",
@@ -56,7 +56,7 @@ const gx_device_printer gs_sunhmono_device =
 	       0, 0, 0, 0,	/* margins */
 	       1, sunhmono_print_page);
 
-private int
+static int
 sunhmono_print_page(gx_device_printer * pdev, FILE * prn_stream)
 {
     int gsLineBytes = gdev_mem_bytes_per_scan_line((gx_device *) pdev);

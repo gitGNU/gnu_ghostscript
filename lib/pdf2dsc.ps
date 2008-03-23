@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: pdf2dsc.ps,v 1.6 2007/09/10 14:08:56 Arabidopsis Exp $
+% $Id: pdf2dsc.ps,v 1.7 2008/03/23 15:28:29 Arabidopsis Exp $
 % pdf2dsc.ps
 % read pdf file and produce DSC "index" file.
 %
@@ -117,6 +117,7 @@ systemdict /.setsafe known { .setsafe } if
    DSCfile PDFname write==only
    ( \(r\) file { DELAYSAFER { .setsafe } if } stopped pop\n) puts
    ( pdfopen begin\n) puts
+   ( copy_trailer_attrs\n) puts
    (%%EndSetup\n) puts
 
    /.hasPageLabels false def % see "Page Labels" in the PDF Reference

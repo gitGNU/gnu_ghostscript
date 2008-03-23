@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfb.c,v 1.10 2007/09/11 15:24:04 Arabidopsis Exp $ */
+/* $Id: gdevpdfb.c,v 1.11 2008/03/23 15:28:04 Arabidopsis Exp $ */
 /* Low-level bitmap image handling for PDF-writing driver */
 #include "string_.h"
 #include "gx.h"
@@ -36,7 +36,7 @@ extern const gs_color_space_type gs_color_space_type_Indexed;
 /* ---------------- Utilities ---------------- */
 
 /* Fill in the image parameters for a bitmap image. */
-private void
+static void
 pdf_make_bitmap_image(gs_image_t * pim, int x, int y, int w, int h)
 {
     pim->Width = w;
@@ -48,7 +48,7 @@ pdf_make_bitmap_image(gs_image_t * pim, int x, int y, int w, int h)
 
 /* Copy a mask bitmap.  for_pattern = -1 means put the image in-line, */
 /* 1 means put the image in a resource. */
-private int
+static int
 pdf_copy_mask_data(gx_device_pdf * pdev, const byte * base, int sourcex,
 		   int raster, gx_bitmap_id id, int x, int y, int w, int h,
 		   gs_image_t *pim, pdf_image_writer *piw,
@@ -109,7 +109,7 @@ pdf_copy_mask_data(gx_device_pdf * pdev, const byte * base, int sourcex,
     return pdf_end_write_image(pdev, piw);
 }
 
-private void 
+static void 
 set_image_color(gx_device_pdf *pdev, gx_color_index c)
 {
     pdf_set_pure_color(pdev, c, &pdev->saved_fill_color,
@@ -122,7 +122,7 @@ set_image_color(gx_device_pdf *pdev, gx_color_index c)
 }
 
 /* Copy a monochrome bitmap or mask. */
-private int
+static int
 pdf_copy_mono(gx_device_pdf *pdev,
 	      const byte *base, int sourcex, int raster, gx_bitmap_id id,
 	      int x, int y, int w, int h, gx_color_index zero,

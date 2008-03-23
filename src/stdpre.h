@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,11 +17,14 @@
 
 */
 
-/* $Id: stdpre.h,v 1.8 2007/09/11 15:23:55 Arabidopsis Exp $ */
+/* $Id: stdpre.h,v 1.9 2008/03/23 15:28:18 Arabidopsis Exp $ */
 /* Standard definitions for Ghostscript code not needing arch.h */
 
 #ifndef stdpre_INCLUDED
 #  define stdpre_INCLUDED
+
+/* Ghostscript uses transitional LFS functions. */
+#define _LARGEFILE64_SOURCE 1
 
 /*
  * Here we deal with the vagaries of various C compilers.  We assume that:
@@ -397,23 +400,6 @@ typedef double floatp;
 typedef const char *client_name_t;
 /****** WHAT TO DO ABOUT client_name_string ? ******/
 #define client_name_string(cname) (cname)
-
-/*
- * If we are debugging, make all static variables and procedures public
- * so they get passed through the linker.
- */
-#define public			/* */
-/*
- * We separate out the definition of private this way so that
- * we can temporarily #undef it to handle the X Windows headers,
- * which define a member named private.
- */
-#ifdef NOPRIVATE
-# define private_		/* */
-#else
-# define private_ static
-#endif
-#define private private_
 
 /*
  * Define the now-deprecated Pn macros for pre-ANSI compiler compatibility.

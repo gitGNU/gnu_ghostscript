@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdtd.c,v 1.9 2007/09/11 15:24:31 Arabidopsis Exp $ */
+/* $Id: gdevpdtd.c,v 1.10 2008/03/23 15:28:05 Arabidopsis Exp $ */
 /* FontDescriptor implementation for pdfwrite */
 #include "math_.h"
 #include "memory_.h"
@@ -151,14 +151,14 @@ gs_public_st_basic_super(st_pdf_sub_font_descriptor,
 /* ---------------- Private ---------------- */
 
 /* Get the ID of font descriptor metrics. */
-inline private long
+static inline long
 pdf_font_descriptor_common_id(const pdf_font_descriptor_common_t *pfdc)
 {
     return pdf_resource_id((const pdf_resource_t *)pfdc);
 }
 
 /* Write the common part of a FontDescriptor, aside from the final >>. */
-private int
+static int
 write_FontDescriptor_common(gx_device_pdf *pdev,
 			    const pdf_font_descriptor_common_t *pfd)
 {
@@ -721,5 +721,8 @@ pdf_convert_truetype_font_descriptor(gx_device_pdf *pdev, pdf_font_resource_t *p
 	    pdfont->u.cidfont.CIDToGIDMap[ch] = glyph - GS_MIN_GLYPH_INDEX;
 	}
     }
+    pdfont->u.cidfont.Widths2 = NULL;
+    pdfont->u.cidfont.used2 = NULL;
+    pdfont->u.cidfont.v = NULL;
     return 0;
 }

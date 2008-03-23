@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: iname.c,v 1.8 2007/09/11 15:23:59 Arabidopsis Exp $ */
+/* $Id: iname.c,v 1.9 2008/03/23 15:27:47 Arabidopsis Exp $ */
 /* Name lookup for Ghostscript interpreter */
 #include "memory_.h"
 #include "string_.h"
@@ -34,12 +34,12 @@
 const uint name_max_string = max_name_string;
 
 /* Define the permutation table for name hashing. */
-private const byte hash_permutation[256] = {
+static const byte hash_permutation[256] = {
     NAME_HASH_PERMUTATION_DATA
 };
 
 /* Define the data for the 1-character names. */
-private const byte nt_1char_names[NT_1CHAR_SIZE] = {
+static const byte nt_1char_names[NT_1CHAR_SIZE] = {
     NT_1CHAR_NAMES_DATA
 };
 
@@ -52,13 +52,13 @@ gs_private_st_composite(st_name_table, name_table, "name_table",
 			name_table_enum_ptrs, name_table_reloc_ptrs);
 
 /* Forward references */
-private int name_alloc_sub(name_table *);
-private void name_free_sub(name_table *, uint);
-private void name_scan_sub(name_table *, uint, bool);
+static int name_alloc_sub(name_table *);
+static void name_free_sub(name_table *, uint);
+static void name_scan_sub(name_table *, uint, bool);
 
 /* Debugging printout */
 #ifdef DEBUG
-private void
+static void
 name_print(const char *msg, const name_table *nt, uint nidx, const int *pflag)
 {
     const name_string_t *pnstr = names_index_string_inline(nt, nidx);
@@ -470,7 +470,7 @@ names_restore(name_table * nt, alloc_save_t * save)
 /* ------ Internal procedures ------ */
 
 /* Allocate the next sub-table. */
-private int
+static int
 name_alloc_sub(name_table * nt)
 {
     gs_memory_t *mem = nt->memory;
@@ -536,7 +536,7 @@ name_alloc_sub(name_table * nt)
 }
 
 /* Free a sub-table. */
-private void
+static void
 name_free_sub(name_table * nt, uint sub_index)
 {
     gs_free_object(nt->memory, nt->sub[sub_index].strings,
@@ -551,7 +551,7 @@ name_free_sub(name_table * nt, uint sub_index)
 /* We add the entries in decreasing count order, so the free list */
 /* will stay sorted.  If all entries are unmarked and free_empty is true, */
 /* free the sub-table. */
-private void
+static void
 name_scan_sub(name_table * nt, uint sub_index, bool free_empty)
 {
     name_string_sub_table_t *ssub = nt->sub[sub_index].strings;
@@ -596,7 +596,7 @@ name_scan_sub(name_table * nt, uint sub_index, bool free_empty)
 }
 
 /* Garbage collector enumeration and relocation procedures. */
-private 
+static 
 ENUM_PTRS_BEGIN_PROC(name_table_enum_ptrs)
 {
     EV_CONST name_table *const nt = vptr;
@@ -610,7 +610,7 @@ ENUM_PTRS_BEGIN_PROC(name_table_enum_ptrs)
 	ENUM_RETURN(nt->sub[i].names);
 }
 ENUM_PTRS_END_PROC
-private RELOC_PTRS_WITH(name_table_reloc_ptrs, name_table *nt)
+static RELOC_PTRS_WITH(name_table_reloc_ptrs, name_table *nt)
 {
     uint sub_count = nt->sub_count;
     uint i;
@@ -628,12 +628,12 @@ private RELOC_PTRS_WITH(name_table_reloc_ptrs, name_table *nt)
 }
 RELOC_PTRS_END
 
-private ENUM_PTRS_BEGIN_PROC(name_string_sub_enum_ptrs)
+static ENUM_PTRS_BEGIN_PROC(name_string_sub_enum_ptrs)
 {
     return 0;
 }
 ENUM_PTRS_END_PROC
-private RELOC_PTRS_BEGIN(name_string_sub_reloc_ptrs)
+static RELOC_PTRS_BEGIN(name_string_sub_reloc_ptrs)
 {
     name_string_t *pnstr = ((name_string_sub_table_t *)vptr)->strings;
     uint i;

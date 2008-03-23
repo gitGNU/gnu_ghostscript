@@ -18,7 +18,7 @@
    copies.
  */
 
-/*$Id: gdevlips.c,v 1.1 2007/09/11 15:24:45 Arabidopsis Exp $ */
+/*$Id: gdevlips.c,v 1.2 2008/03/23 15:28:18 Arabidopsis Exp $ */
 /* Common Utility for LIPS driver */
 
 #include "gx.h"
@@ -68,8 +68,8 @@ lips_media_selection(int width, int height)
     return pt->num_unit + landscape;
 }
 
-private int GetNumSameData(const byte * curPtr, const int maxnum);
-private int GetNumWrongData(const byte * curPtr, const int maxnum);
+static int GetNumSameData(const byte * curPtr, const int maxnum);
+static int GetNumWrongData(const byte * curPtr, const int maxnum);
 
 /* This routine talkes from LipsIVRunLengthEncode in Yoshiharu ITO's patch  */
 int
@@ -137,7 +137,7 @@ lips_mode3format_encode(byte * inBuff, byte * outBuff, int Length)
     return (size);
 }
 
-private int
+static int
 GetNumSameData(const byte * curPtr, const int maxnum)
 {
     int count = 1;
@@ -152,7 +152,7 @@ GetNumSameData(const byte * curPtr, const int maxnum)
     return (count);
 }
 
-private int
+static int
 GetNumWrongData(const byte * curPtr, const int maxnum)
 {
     int count = 0;

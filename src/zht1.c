@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zht1.c,v 1.8 2007/09/11 15:24:06 Arabidopsis Exp $ */
+/* $Id: zht1.c,v 1.9 2008/03/23 15:27:44 Arabidopsis Exp $ */
 /* setcolorscreen operator */
 #include "ghost.h"
 #include "memory_.h"
@@ -35,16 +35,16 @@
 #include "store.h"
 
 /* Dummy spot function */
-private float
+static float
 spot_dummy(floatp x, floatp y)
 {
     return (x + y) / 2;
 }
 
 /* <red_freq> ... <gray_proc> setcolorscreen - */
-private int setcolorscreen_finish(i_ctx_t *);
-private int setcolorscreen_cleanup(i_ctx_t *);
-private int
+static int setcolorscreen_finish(i_ctx_t *);
+static int setcolorscreen_cleanup(i_ctx_t *);
+static int
 zsetcolorscreen(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -111,7 +111,7 @@ zsetcolorscreen(i_ctx_t *i_ctx_p)
     return o_push_estack;
 }
 /* Install the color screen after sampling. */
-private int
+static int
 setcolorscreen_finish(i_ctx_t *i_ctx_p)
 {
     gx_device_halftone *pdht = r_ptr(esp, gx_device_halftone);
@@ -128,7 +128,7 @@ setcolorscreen_finish(i_ctx_t *i_ctx_p)
     return o_pop_estack;
 }
 /* Clean up after installing the color screen. */
-private int
+static int
 setcolorscreen_cleanup(i_ctx_t *i_ctx_p)
 {
     gs_halftone *pht = r_ptr(esp + 6, gs_halftone);

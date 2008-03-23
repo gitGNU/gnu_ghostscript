@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: srld.c,v 1.7 2007/09/11 15:24:00 Arabidopsis Exp $ */
+/* $Id: srld.c,v 1.8 2008/03/23 15:28:06 Arabidopsis Exp $ */
 /* RunLengthDecode filter */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"
@@ -29,7 +29,7 @@
 private_st_RLD_state();
 
 /* Set defaults */
-private void
+static void
 s_RLD_set_defaults(stream_state * st)
 {
     stream_RLD_state *const ss = (stream_RLD_state *) st;
@@ -38,7 +38,7 @@ s_RLD_set_defaults(stream_state * st)
 }
 
 /* Initialize */
-private int
+static int
 s_RLD_init(stream_state * st)
 {
     stream_RLD_state *const ss = (stream_RLD_state *) st;
@@ -47,7 +47,7 @@ s_RLD_init(stream_state * st)
 }
 
 /* Refill the buffer */
-private int
+static int
 s_RLD_process(stream_state * st, stream_cursor_read * pr,
 	      stream_cursor_write * pw, bool last)
 {

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zbfont.c,v 1.11 2007/09/11 15:23:49 Arabidopsis Exp $ */
+/* $Id: zbfont.c,v 1.12 2008/03/23 15:28:17 Arabidopsis Exp $ */
 /* Font creation utilities */
 #include "memory_.h"
 #include "string_.h"
@@ -42,18 +42,18 @@
 
 /* Structure descriptor and GC procedures for font_data */
 public_st_font_data();
-private
+static
 CLEAR_MARKS_PROC(font_data_clear_marks)
 {
     ref_struct_clear_marks(cmem, vptr, offset_of(font_data, u.type42.mru_sfnts_index)/*size*/, pstype);
 }
-private
+static
 ENUM_PTRS_BEGIN_PROC(font_data_enum_ptrs)
 {
     return ref_struct_enum_ptrs(mem, vptr, offset_of(font_data, u.type42.mru_sfnts_index)/*size*/, index, pep, pstype, gcst);
 }
 ENUM_PTRS_END_PROC
-private
+static
 RELOC_PTRS_BEGIN(font_data_reloc_ptrs)
 {
     ref_struct_reloc_ptrs(vptr, offset_of(font_data, u.type42.mru_sfnts_index)/*size*/, pstype, gcst);
@@ -62,7 +62,7 @@ RELOC_PTRS_END
 
 /* <string|name> <font_dict> .buildfont3 <string|name> <font> */
 /* Build a type 3 (user-defined) font. */
-private int
+static int
 zbuildfont3(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -126,7 +126,7 @@ zfont_encode_char(gs_font *pfont, gs_char chr, gs_glyph_space_t gspace)
 }
 
 /* Get the name of a glyph. */
-private int
+static int
 zfont_glyph_name(gs_font *font, gs_glyph index, gs_const_string *pstr)
 {
     ref nref, sref;
@@ -148,7 +148,7 @@ zfont_glyph_name(gs_font *font, gs_glyph index, gs_const_string *pstr)
     return 0;
 }
 
-private gs_char 
+static gs_char 
 gs_font_map_glyph_by_dict(const gs_memory_t *mem, const ref *map, gs_glyph glyph)
 {
     ref *v, n;
@@ -276,7 +276,7 @@ build_gs_font_procs(os_ptr op, build_proc_refs * pbuild)
     return 0;
 }
 
-private int font_with_same_UID_and_another_metrics(const gs_font *pfont0, const gs_font *pfont1)
+static int font_with_same_UID_and_another_metrics(const gs_font *pfont0, const gs_font *pfont1)
 {
     const gs_font_base *pbfont0 = (const gs_font_base *)pfont0;
     const gs_font_base *pbfont1 = (const gs_font_base *)pfont1;
@@ -372,7 +372,7 @@ build_gs_primitive_font(i_ctx_t *i_ctx_p, os_ptr op, gs_font_base ** ppfont,
 /* Build a FDArray entry for a CIDFontType 0 font. */
 /* Note that as of Adobe PostScript version 3011, this may be either */
 /* a Type 1 or Type 2 font. */
-private int
+static int
 build_FDArray_sub_font(i_ctx_t *i_ctx_p, ref *op,
 		       gs_font_base **ppfont,
 		       font_type ftype, gs_memory_type_ptr_t pstype,
@@ -588,12 +588,10 @@ lookup_gs_simple_font_encoding(gs_font_base * pfont)
 }
 
 /* Get FontMatrix and FontName parameters. */
-private int
-sub_font_params(const gs_memory_t *mem, const ref *op, gs_matrix *pmat, gs_matrix *pomat, ref *pfname)
+static int
+sub_font_params(gs_memory_t *mem, const ref *op, gs_matrix *pmat, gs_matrix *pomat, ref *pfname)
 {
-    ref *pmatrix;
-    ref *pfontname;
-    ref *porigfont;
+    ref *pmatrix, *pfontname, *pfontstyle, *porigfont, *pfontinfo;
 
     if (dict_find_string(op, "FontMatrix", &pmatrix) <= 0 ||
 	read_matrix(mem, pmatrix, pmat) < 0
@@ -609,10 +607,24 @@ sub_font_params(const gs_memory_t *mem, const ref *op, gs_matrix *pmat, gs_matri
 	    memset(pomat, 0, sizeof(*pomat));
     }
     /* Use the FontInfo/OrigFontName key preferrentially (created by MS PSCRIPT driver) */
-    if ((dict_find_string((porigfont != NULL ? porigfont : op), "FontInfo", &pfontname) > 0) &&
-	r_has_type(pfontname, t_dictionary) &&
-        (dict_find_string(pfontname, "OrigFontName", &pfontname) > 0)) {
-	get_font_name(mem, pfname, pfontname);
+    if ((dict_find_string((porigfont != NULL ? porigfont : op), "FontInfo", &pfontinfo) > 0) &&
+	r_has_type(pfontinfo, t_dictionary) &&
+        (dict_find_string(pfontinfo, "OrigFontName", &pfontname) > 0)) {
+	if ((dict_find_string(pfontinfo, "OrigFontStyle", &pfontstyle) > 0) &&
+		r_size(pfontstyle) > 0) {
+	    const byte *tmpStr1 = pfontname->value.const_bytes;
+	    const byte *tmpStr2 = pfontstyle->value.const_bytes;
+	    int fssize1 = r_size(pfontname), fssize2 = r_size(pfontstyle), fssize = fssize1 + fssize2 + 1;
+	    byte *sfname = gs_alloc_string(mem, fssize, "sub_font_params");
+
+	    if (sfname == NULL)
+		return_error(e_VMerror);
+	    memcpy(sfname, tmpStr1, fssize1);
+	    sfname[fssize1]=',' ;
+	    memcpy(sfname + fssize1 + 1, tmpStr2, fssize2);
+	    make_string(pfname, a_readonly, fssize, sfname);
+	} else 
+	    get_font_name(mem, pfname, pfontname);
     } else if (dict_find_string((porigfont != NULL ? porigfont : op), ".Alias", &pfontname) > 0) {
         /* If we emulate the font, we want the requested name rather than a substitute. */
 	get_font_name(mem, pfname, pfontname);
@@ -686,30 +698,30 @@ build_gs_font(i_ctx_t *i_ctx_p, os_ptr op, gs_font ** ppfont, font_type ftype,
 	 * anyway).
 	 */
 	pfont = r_ptr(pfid, gs_font);
-	if (pfont->base == pfont) {	/* original font */
-	    if (!level2_enabled)
-		return_error(e_invalidfont);
-	    if (obj_eq(pfont->memory, pfont_dict(pfont), op)) {
+	/*
+	 * If the following condition is false this is a re-encoded font,
+         * or some other questionable situation in which the FID
+	 * was preserved.  Pretend the FID wasn't there.
+	 */
+	if (obj_eq(pfont->memory, pfont_dict(pfont), op)) {
+	    if (pfont->base == pfont) {	/* original font */
+	        if (!level2_enabled)
+		    return_error(e_invalidfont);
 		*ppfont = pfont;
 		return 1;
-	    }
-	    /*
-	     * This is a re-encoded font, or some other
-	     * questionable situation in which the FID
-	     * was preserved.  Pretend the FID wasn't there.
-	     */
-	} else {		/* This was made by makefont or scalefont. */
-	    /* Just insert the new name. */
-	    gs_matrix mat;
-	    ref fname;			/* t_string */
+	    } else {		/* This was made by makefont or scalefont. */
+	        /* Just insert the new name. */
+	        gs_matrix mat;
+	        ref fname;			/* t_string */
 
-	    code = sub_font_params(imemory, op, &mat, NULL, &fname);
-	    if (code < 0)
-		return code;
-	    code = 1;
-	    copy_font_name(&pfont->font_name, &fname);
-	    goto set_name;
-	}
+	        code = sub_font_params(imemory, op, &mat, NULL, &fname);
+	        if (code < 0)
+		    return code;
+	        code = 1;
+	        copy_font_name(&pfont->font_name, &fname);
+	        goto set_name;
+	    }
+        }
     }
     /* This is a new font. */
     if (!r_has_attr(aop, a_write))

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevsppr.c,v 1.8 2007/09/11 15:24:05 Arabidopsis Exp $*/
+/* $Id: gdevsppr.c,v 1.9 2008/03/23 15:28:13 Arabidopsis Exp $*/
 /* SPARCprinter driver for Ghostscript */
 #include "gdevprn.h"
 #include <stdio.h>
@@ -44,8 +44,8 @@ drawings normally occur as one-page outputs, where asynchronous IO doesn't
 help anyway.
 */
 
-private dev_proc_open_device(sparc_open);
-private dev_proc_print_page(sparc_print_page);
+static dev_proc_open_device(sparc_open);
+static dev_proc_print_page(sparc_print_page);
 
 #define SPARC_MARGINS_A4	0.15, 0.12, 0.12, 0.15
 #define SPARC_MARGINS_LETTER	0.15, 0.12, 0.12, 0.15
@@ -63,7 +63,7 @@ prn_device(prn_sparc_procs,
   sparc_print_page);
 
 /* Open the printer, and set the margins. */
-private int
+static int
 sparc_open(gx_device *pdev)
 {	/* Change the margins according to the paper size. */
 	const float *m;
@@ -99,7 +99,7 @@ char *errmsg[]={
 
 /* The static buffer is unfortunate.... */
 static char err_buffer[80];
-private char *
+static char *
 err_code_string(int err_code)
   {
   if ((err_code<EMOTOR)||(err_code>ESERIAL))
@@ -112,7 +112,7 @@ err_code_string(int err_code)
 
 int warning=0;
 
-private int
+static int
 sparc_print_page(gx_device_printer *pdev, FILE *prn)
   {
   struct lpvi_page lpvipage;

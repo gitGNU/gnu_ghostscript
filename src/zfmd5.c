@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfmd5.c,v 1.7 2007/09/11 15:24:25 Arabidopsis Exp $ */
+/* $Id: zfmd5.c,v 1.8 2008/03/23 15:27:44 Arabidopsis Exp $ */
 /* MD5Encode filter creation */
 #include "memory_.h"
 #include "ghost.h"
@@ -31,7 +31,7 @@
 
 /* <source> MD5Encode/filter <file> */
 /* <source> <dict> MD5Encode/filter <file> */
-private int
+static int
 zMD5E(i_ctx_t *i_ctx_p)
 {
     return filter_write_simple(i_ctx_p, &s_MD5E_template);

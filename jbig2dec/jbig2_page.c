@@ -13,7 +13,7 @@
     Artifex Software, Inc.,  101 Lucas Valley Road #110,
     San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-    $Id: jbig2_page.c,v 1.6 2007/09/11 15:24:52 Arabidopsis Exp $
+    $Id: jbig2_page.c,v 1.7 2008/03/23 15:28:33 Arabidopsis Exp $
 */
 
 #ifdef HAVE_CONFIG_H
@@ -243,7 +243,6 @@ jbig2_page_add_result(Jbig2Ctx *ctx, Jbig2Page *page, Jbig2Image *image,
 {
     /* grow the page to accomodate a new stripe if necessary */
     if (page->striped) {
-	int old_height = page->image->height;
 	int new_height = y + image->height + page->end_row;
 	if (page->image->height < new_height) {
 	    jbig2_error(ctx, JBIG2_SEVERITY_DEBUG, -1,

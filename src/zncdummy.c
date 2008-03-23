@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 "é)é*/
-/* $Id: zncdummy.c,v 1.2 2007/09/11 15:24:14 Arabidopsis Exp $ */
+/* $Id: zncdummy.c,v 1.3 2008/03/23 15:27:43 Arabidopsis Exp $ */
 /* Sample implementation for client custom processing of color spaces. */
 
 /*
@@ -69,7 +69,7 @@ client_custom_color_params_t demo_callback = {
  */
 
 /* <string> .pantonecallback <string> */
-private int
+static int
 zpantonecallback(i_ctx_t *i_ctx_p)
 {
 #if ENABLE_CUSTOM_COLOR_CALLBACK

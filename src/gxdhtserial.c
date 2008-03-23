@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxdhtserial.c,v 1.9 2007/09/11 15:24:30 Arabidopsis Exp $ */
+/* $Id: gxdhtserial.c,v 1.10 2008/03/23 15:27:46 Arabidopsis Exp $ */
 /* Serialization and de-serialization for (traditional) halftones */
 
 #include "memory_.h"
@@ -74,7 +74,7 @@ typedef enum {
  *    gs_error_rangecheck, with *psize set to the size required, if the
  *        original *psize was not large enough
  */
-private int
+static int
 gx_ht_write_tf(
     const gx_transfer_map * pmap,
     byte *                  data,    
@@ -108,7 +108,7 @@ gx_ht_write_tf(
  *
  * Returns the number of bytes read, or < 0 in the event of an error.
  */
-private int
+static int
 gx_ht_read_tf(
     gx_transfer_map **  ppmap,
     const byte *        data,
@@ -155,7 +155,7 @@ gx_ht_read_tf(
     }
 }
 
-private int
+static int
 gx_ht_write_component_wts(const wts_screen_t *wts, byte *data, uint *psize)
 {
     uint hdr_size = wts_size(wts);
@@ -197,7 +197,7 @@ gx_ht_write_component_wts(const wts_screen_t *wts, byte *data, uint *psize)
  *    some other error code, with *psize unchanged, in the event of an
  *        error other than lack of space
  */
-private int
+static int
 gx_ht_write_component(
     const gx_ht_order_component *   pcomp,
     byte *                          data,
@@ -299,7 +299,7 @@ gx_ht_write_component(
     return code;
 }
 
-private int
+static int
 gx_ht_read_component_wts(gx_ht_order_component *pcomp,
 			 const byte *data, uint size,
 			 gs_memory_t *mem)
@@ -336,7 +336,7 @@ gx_ht_read_component_wts(gx_ht_order_component *pcomp,
  *
  * Returns the number of bytes read, or < 0 in the event of an error.
  */
-private int
+static int
 gx_ht_read_component(
     gx_ht_order_component * pcomp,
     const byte *            data,

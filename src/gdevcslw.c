@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevcslw.c,v 1.8 2007/09/11 15:23:46 Arabidopsis Exp $ */
+/* $Id: gdevcslw.c,v 1.9 2008/03/23 15:27:54 Arabidopsis Exp $ */
 /* CoStar LabelWriter II, II Plus driver for Ghostscript */
 /* Contributed by Mike McCauley mikem@open.com.au        */
 
@@ -31,7 +31,7 @@ typedef ulong word;
 
 /* The device descriptors */
 
-private dev_proc_print_page(coslw_print_page);
+static dev_proc_print_page(coslw_print_page);
 
 const gx_device_printer gs_coslw2p_device =
 prn_device(prn_std_procs, "coslw2p",
@@ -50,7 +50,7 @@ prn_device(prn_std_procs, "coslwxl",
 /* ------ Internal routines ------ */
 
 /* Send the page to the printer. */
-private int
+static int
 coslw_print_page(gx_device_printer * pdev, FILE * prn_stream)
 {
     int line_size = gdev_mem_bytes_per_scan_line((gx_device *) pdev);

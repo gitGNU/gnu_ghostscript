@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpsu.c,v 1.10 2007/09/11 15:24:06 Arabidopsis Exp $ */
+/* $Id: gdevpsu.c,v 1.11 2008/03/23 15:27:58 Arabidopsis Exp $ */
 /* PostScript-writing utilities */
 #include "math_.h"
 #include "time_.h"
@@ -46,7 +46,7 @@ psw_print_lines(FILE *f, const char *const lines[])
 }
 
 /* Write the ProcSet name. */
-private void
+static void
 psw_put_procset_name(stream *s, const gx_device *dev,
 		     const gx_device_pswrite_common_t *pdpc)
 {
@@ -56,7 +56,7 @@ psw_put_procset_name(stream *s, const gx_device *dev,
 	    (int)(pdpc->LanguageLevel * 10 + 0.5) % 10,
 	    pdpc->ProcSet_version);
 }
-private void
+static void
 psw_print_procset_name(FILE *f, const gx_device *dev,
 		       const gx_device_pswrite_common_t *pdpc)
 {
@@ -70,7 +70,7 @@ psw_print_procset_name(FILE *f, const gx_device *dev,
 }
 
 /* Write a bounding box. */
-private void
+static void
 psw_print_bbox(FILE *f, const gs_rect *pbbox)
 {
     fprintf(f, "%%%%BoundingBox: %d %d %d %d\n",
@@ -82,18 +82,18 @@ psw_print_bbox(FILE *f, const gs_rect *pbbox)
 
 /* ---------------- File level ---------------- */
 
-private const char *const psw_ps_header[] = {
+static const char *const psw_ps_header[] = {
     "%!PS-Adobe-3.0",
     "%%Pages: (atend)",
     0
 };
 
-private const char *const psw_eps_header[] = {
+static const char *const psw_eps_header[] = {
     "%!PS-Adobe-3.0 EPSF-3.0",
     0
 };
 
-private const char *const psw_begin_prolog[] = {
+static const char *const psw_begin_prolog[] = {
     "%%EndComments",
     "%%BeginProlog",
     "% This copyright applies to everything between here and the %%EndProlog:",
@@ -108,7 +108,7 @@ private const char *const psw_begin_prolog[] = {
  * parameters. The following code checks the current page size and sets
  * it only if it is necessary.
  */
-private const char *const psw_ps_procset[] = {
+static const char *const psw_ps_procset[] = {
 	/* <w> <h> <sizename> setpagesize - */
    "/PageSize 2 array def"
    "/setpagesize"              /* x y /a4 -> -          */
@@ -142,7 +142,7 @@ private const char *const psw_ps_procset[] = {
     0
 };
 
-private const char *const psw_end_prolog[] = {
+static const char *const psw_end_prolog[] = {
     "end def",
     "%%EndResource",		/* ProcSet */
     "/pagesave null def",	/* establish binding */
@@ -153,7 +153,7 @@ private const char *const psw_end_prolog[] = {
 /* Return true when the file is seekable.
  * On Windows NT ftell() returns some non-EOF value when used on pipes.
  */
-private bool
+static bool
 is_seekable(FILE *f)
 { 
     struct stat buf;

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxp1fill.c,v 1.9 2007/09/11 15:23:53 Arabidopsis Exp $ */
+/* $Id: gxp1fill.c,v 1.10 2008/03/23 15:28:05 Arabidopsis Exp $ */
 /* PatternType 1 filling algorithms */
 #include "math_.h"
 #include "gx.h"
@@ -64,7 +64,7 @@ typedef struct tile_fill_state_s {
 } tile_fill_state_t;
 
 /* Initialize the filling state. */
-private int
+static int
 tile_fill_init(tile_fill_state_t * ptfs, const gx_device_color * pdevc,
 	       gx_device * dev, bool set_mask_phase)
 {
@@ -103,7 +103,7 @@ tile_fill_init(tile_fill_state_t * ptfs, const gx_device_color * pdevc,
  * the tile size.
  * This implementation could be sped up considerably!
  */
-private int
+static int
 tile_by_steps(tile_fill_state_t * ptfs, int x0, int y0, int w0, int h0,
 	      const gx_color_tile * ptile,
 	      const gx_strip_bitmap * tbits_or_tmask,
@@ -196,7 +196,7 @@ tile_by_steps(tile_fill_state_t * ptfs, int x0, int y0, int w0, int h0,
 
 /* Fill a rectangle with a colored Pattern. */
 /* Note that we treat this as "texture" for RasterOp. */
-private int
+static int
 tile_colored_fill(const tile_fill_state_t * ptfs,
 		  int x, int y, int w, int h)
 {
@@ -245,7 +245,7 @@ tile_colored_fill(const tile_fill_state_t * ptfs,
 
 /* Fill a rectangle with a colored Pattern. */
 /* Note that we treat this as "texture" for RasterOp. */
-private int
+static int
 tile_pattern_clist(const tile_fill_state_t * ptfs,
 		  int x, int y, int w, int h)
 {
@@ -255,6 +255,7 @@ tile_pattern_clist(const tile_fill_state_t * ptfs,
     gx_device *dev = ptfs->orig_dev;
     int code;
 
+    crdev->offset_map = NULL;
     crdev->page_info.io_procs->rewind(crdev->page_info.bfile, false, NULL);
     crdev->page_info.io_procs->rewind(crdev->page_info.cfile, false, NULL);
     code = clist_playback_file_bands(playback_action_render,
@@ -335,7 +336,7 @@ gx_dc_pattern_fill_rectangle(const gx_device_color * pdevc, int x, int y,
 
 /* Fill a rectangle with an uncolored Pattern. */
 /* Note that we treat this as "texture" for RasterOp. */
-private int
+static int
 tile_masked_fill(const tile_fill_state_t * ptfs,
 		 int x, int y, int w, int h)
 {

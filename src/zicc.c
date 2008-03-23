@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zicc.c,v 1.9 2007/09/11 15:24:15 Arabidopsis Exp $ */
+/* $Id: zicc.c,v 1.10 2008/03/23 15:28:15 Arabidopsis Exp $ */
 /* ICCBased color operators */
 
 #include "math_.h"
@@ -64,7 +64,7 @@
  * the operand is a dictionary, is readable, and defines the key /N
  * (number of components).
  */
-private int
+static int
 zseticcspace(i_ctx_t * i_ctx_p)
 {
     os_ptr                  op = osp;

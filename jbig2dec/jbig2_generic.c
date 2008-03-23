@@ -16,7 +16,7 @@
     Artifex Software, Inc.,  101 Lucas Valley Road #110,
     San Rafael, CA  94903, U.S.A., +1(415)492-9861.
                                                                                 
-    $Id: jbig2_generic.c,v 1.6 2007/09/11 15:24:51 Arabidopsis Exp $
+    $Id: jbig2_generic.c,v 1.7 2008/03/23 15:28:32 Arabidopsis Exp $
 */
 
 /**
@@ -37,6 +37,7 @@
 
 #include "jbig2.h"
 #include "jbig2_priv.h"
+#include "jbig2_image.h"
 #include "jbig2_arith.h"
 #include "jbig2_generic.h"
 #include "jbig2_mmr.h"

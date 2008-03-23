@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: pdfopt.ps,v 1.8 2007/09/11 15:24:49 Arabidopsis Exp $
+% $Id: pdfopt.ps,v 1.9 2008/03/23 15:28:29 Arabidopsis Exp $
 % PDF linearizer ("optimizer").
 
 .currentglobal true .setglobal
@@ -390,7 +390,7 @@ userdict /clostreams 20 dict put	% stream -> [data endproc]
     dup /Threads .knownget {
         omforce dup //null ne { { omvisit } forall } { pop } ifelse
     } if
-    dup /AcroForm .knownget { omvisit } if
+    dup /AcroForm .knownget { omvisitnopage } if
     pop
   } visited
 } bind def
@@ -434,7 +434,7 @@ userdict /clostreams 20 dict put	% stream -> [data endproc]
     exch omvisit
 		% Visit Annots, if any.
 		% We don't try to defer the drawing information.
-    dup /Annots .knownget { omvisit } if
+    dup /Annots .knownget { omvisitnopage } if
 		% Visit beads.
     dup /B .knownget { omvisit } if
 		% Visit resources dictionaries.

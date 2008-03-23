@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevbjcl.c,v 1.7 2007/09/11 15:24:24 Arabidopsis Exp $*/
+/* $Id: gdevbjcl.c,v 1.8 2008/03/23 15:27:48 Arabidopsis Exp $*/
 /* Canon BJC command generation library */
 #include "std.h"
 #include "gdevbjcl.h"
@@ -26,7 +26,7 @@
 
 /* ---------------- Utilities ---------------- */
 
-private void
+static void
 bjc_put_bytes(stream *s, const byte *data, uint count)
 {
     uint ignore;
@@ -34,21 +34,21 @@ bjc_put_bytes(stream *s, const byte *data, uint count)
     sputs(s, data, count, &ignore);
 }
 
-private void
+static void
 bjc_put_hi_lo(stream *s, int value)
 {
     spputc(s, value >> 8);
     spputc(s, value & 0xff);
 }
 
-private void
+static void
 bjc_put_lo_hi(stream *s, int value)
 {
     spputc(s, value & 0xff);
     spputc(s, value >> 8);
 }
 
-private void
+static void
 bjc_put_command(stream *s, int ch, int count)
 {
     spputc(s, 033 /*ESC*/);

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: idebug.c,v 1.8 2007/09/11 15:24:30 Arabidopsis Exp $ */
+/* $Id: idebug.c,v 1.9 2008/03/23 15:27:55 Arabidopsis Exp $ */
 /* Debugging support for Ghostscript interpreter */
 /* This file must always be compiled with DEBUG set. */
 #undef DEBUG
@@ -61,7 +61,7 @@ debug_print_name_index(const gs_memory_t *mem, name_index_t nidx)
 }
 
 /* Print a ref. */
-private void
+static void
 debug_print_full_ref(const gs_memory_t *mem, const ref * pref)
 {
     uint size = r_size(pref);
@@ -153,7 +153,7 @@ debug_print_full_ref(const gs_memory_t *mem, const ref * pref)
 	    dprintf1("type 0x%x", r_type(pref));
     }
 }
-private void
+static void
 debug_print_packed_ref(const gs_memory_t *mem, const ref_packed *pref)
 {
     ushort elt = *pref & packed_value_mask;
@@ -197,7 +197,7 @@ debug_print_ref(const gs_memory_t *mem, const ref * pref)
 }
 
 /* Dump one ref. */
-private void print_ref_data(const gs_memory_t *mem, const ref *);
+static void print_ref_data(const gs_memory_t *mem, const ref *);
 void
 debug_dump_one_ref(const gs_memory_t *mem, const ref * p)
 {
@@ -222,7 +222,7 @@ debug_dump_one_ref(const gs_memory_t *mem, const ref * p)
     print_ref_data(mem, p);
     dflush();
 }
-private void
+static void
 print_ref_data(const gs_memory_t *mem, const ref *p)
 {
 #define BUF_SIZE 30

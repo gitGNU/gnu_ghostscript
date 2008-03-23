@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sbcp.c,v 1.7 2007/09/11 15:23:54 Arabidopsis Exp $ */
+/* $Id: sbcp.c,v 1.8 2008/03/23 15:28:01 Arabidopsis Exp $ */
 /* BCP and TBCP filters */
 #include "stdio_.h"
 #include "strimpl.h"
@@ -34,12 +34,12 @@
 #define CtrlBksl 0x1c
 
 /* The following is not used yet. */
-/*private const char *TBCP_end_protocol_string = "\033%-12345X"; */
+/*static const char *TBCP_end_protocol_string = "\033%-12345X";*/
 
 /* ------ BCPEncode and TBCPEncode ------ */
 
 /* Process a buffer */
-private int
+static int
 s_xBCPE_process(stream_state * st, stream_cursor_read * pr,
 		stream_cursor_write * pw, bool last, const byte * escaped)
 {
@@ -71,7 +71,7 @@ s_xBCPE_process(stream_state * st, stream_cursor_read * pr,
 }
 
 /* Actual process procedures */
-private int
+static int
 s_BCPE_process(stream_state * st, stream_cursor_read * pr,
 	       stream_cursor_write * pw, bool last)
 {
@@ -83,7 +83,7 @@ s_BCPE_process(stream_state * st, stream_cursor_read * pr,
 
     return s_xBCPE_process(st, pr, pw, last, escaped);
 }
-private int
+static int
 s_TBCPE_process(stream_state * st, stream_cursor_read * pr,
 		stream_cursor_write * pw, bool last)
 {
@@ -109,7 +109,7 @@ const stream_template s_TBCPE_template =
 private_st_BCPD_state();
 
 /* Initialize the state */
-private int
+static int
 s_BCPD_init(stream_state * st)
 {
     stream_BCPD_state *const ss = (stream_BCPD_state *) st;
@@ -120,7 +120,7 @@ s_BCPD_init(stream_state * st)
 }
 
 /* Process a buffer */
-private int
+static int
 s_xBCPD_process(stream_state * st, stream_cursor_read * pr,
 		stream_cursor_write * pw, bool last, bool tagged)
 {
@@ -230,13 +230,13 @@ s_xBCPD_process(stream_state * st, stream_cursor_read * pr,
 }
 
 /* Actual process procedures */
-private int
+static int
 s_BCPD_process(stream_state * st, stream_cursor_read * pr,
 	       stream_cursor_write * pw, bool last)
 {
     return s_xBCPD_process(st, pr, pw, last, false);
 }
-private int
+static int
 s_TBCPD_process(stream_state * st, stream_cursor_read * pr,
 		stream_cursor_write * pw, bool last)
 {

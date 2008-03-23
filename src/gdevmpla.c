@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevmpla.c,v 1.7 2007/09/11 15:24:01 Arabidopsis Exp $ */
+/* $Id: gdevmpla.c,v 1.8 2008/03/23 15:27:53 Arabidopsis Exp $ */
 /* Any-depth planar "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"
@@ -29,10 +29,10 @@
 #include "gdevmpla.h"		/* interface */
 
 /* procedures */
-private dev_proc_open_device(mem_planar_open);
+static dev_proc_open_device(mem_planar_open);
 declare_mem_procs(mem_planar_copy_mono, mem_planar_copy_color, mem_planar_fill_rectangle);
-private dev_proc_strip_tile_rectangle(mem_planar_strip_tile_rectangle);
-private dev_proc_get_bits_rectangle(mem_planar_get_bits_rectangle);
+static dev_proc_strip_tile_rectangle(mem_planar_strip_tile_rectangle);
+static dev_proc_get_bits_rectangle(mem_planar_get_bits_rectangle);
 
 /*
  * Set up a planar memory device, after calling gs_make_mem_device but
@@ -89,7 +89,7 @@ gdev_mem_set_planar(gx_device_memory * mdev, int num_planes,
 }
 
 /* Open a planar memory device. */
-private int
+static int
 mem_planar_open(gx_device * dev)
 {
     gx_device_memory *const mdev = (gx_device_memory *)dev;
@@ -124,7 +124,7 @@ typedef struct mem_save_params_s {
    mdev->line_ptrs = msp.line_ptrs)
 
 /* Fill a rectangle with a color. */
-private int
+static int
 mem_planar_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 			  gx_color_index color)
 {
@@ -150,7 +150,7 @@ mem_planar_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 }
 
 /* Copy a bitmap. */
-private int
+static int
 mem_planar_copy_mono(gx_device * dev, const byte * base, int sourcex,
 		     int sraster, gx_bitmap_id id, int x, int y, int w, int h,
 		     gx_color_index color0, gx_color_index color1)
@@ -187,7 +187,7 @@ mem_planar_copy_mono(gx_device * dev, const byte * base, int sourcex,
 
 /* Copy a color bitmap. */
 /* This is slow and messy. */
-private int
+static int
 mem_planar_copy_color(gx_device * dev, const byte * base, int sourcex,
 		      int sraster, gx_bitmap_id id,
 		      int x, int y, int w, int h)
@@ -289,7 +289,7 @@ mem_planar_copy_color(gx_device * dev, const byte * base, int sourcex,
 #undef BUF_LONGS
 }
 
-private int
+static int
 mem_planar_strip_tile_rectangle(gx_device * dev, const gx_strip_bitmap * tiles,
 				int x, int y, int w, int h,
 				gx_color_index color0, gx_color_index color1,
@@ -341,7 +341,7 @@ mem_planar_strip_tile_rectangle(gx_device * dev, const gx_strip_bitmap * tiles,
  * implements the straightforward chunky case of get_bits_rectangle, and
  * is also used for the general cases.
  */
-private int
+static int
 planar_to_chunky(gx_device_memory *mdev, int x, int y, int w, int h,
 		 int offset, uint draster, byte *dest)
 {
@@ -430,7 +430,7 @@ planar_to_chunky(gx_device_memory *mdev, int x, int y, int w, int h,
 }
 
 /* Copy bits back from a planar memory device. */
-private int
+static int
 mem_planar_get_bits_rectangle(gx_device * dev, const gs_int_rect * prect,
 			      gs_get_bits_params_t * params,
 			      gs_int_rect ** unread)

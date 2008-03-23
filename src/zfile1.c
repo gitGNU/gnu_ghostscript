@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfile1.c,v 1.8 2007/09/11 15:24:25 Arabidopsis Exp $ */
+/* $Id: zfile1.c,v 1.9 2008/03/23 15:28:00 Arabidopsis Exp $ */
 /* Special file operators */
 
 #include "memory_.h"
@@ -34,7 +34,7 @@
 
 /* <string> <string> <bool> .file_name_combine <string> true */
 /* <string> <string> <bool> .file_name_combine <string> <string> false */
-private int
+static int
 zfile_name_combine(i_ctx_t *i_ctx_p)
 {
     uint plen, flen, blen, blen0;
@@ -75,7 +75,7 @@ zfile_name_combine(i_ctx_t *i_ctx_p)
  */
 
 /* <string> .file_name_is_absolute <bool> */
-private int
+static int
 zfile_name_is_absolute(i_ctx_t *i_ctx_p)
 {   os_ptr op = osp;
 
@@ -85,7 +85,7 @@ zfile_name_is_absolute(i_ctx_t *i_ctx_p)
     return 0;
 }
 
-private int
+static int
 push_string(i_ctx_t *i_ctx_p, const char *v)
 {   os_ptr op = osp;
     int len = strlen(v);
@@ -97,25 +97,25 @@ push_string(i_ctx_t *i_ctx_p, const char *v)
 }
 
 /* - .file_name_separator <string> */
-private int
+static int
 zfile_name_separator(i_ctx_t *i_ctx_p)
 {   return push_string(i_ctx_p, gp_file_name_separator());
 }
 
 /* - .file_name_directory_separator <string> */
-private int
+static int
 zfile_name_directory_separator(i_ctx_t *i_ctx_p)
 {   return push_string(i_ctx_p, gp_file_name_directory_separator());
 }
 
 /* - .file_name_current <string> */
-private int
+static int
 zfile_name_current(i_ctx_t *i_ctx_p)
 {   return push_string(i_ctx_p, gp_file_name_current());
 }
 
 /* - .file_name_parent <string> */
-private int
+static int
 zfile_name_parent(i_ctx_t *i_ctx_p)
 {   return push_string(i_ctx_p, gp_file_name_parent());
 }

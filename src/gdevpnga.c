@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpnga.c,v 1.11 2007/09/11 15:24:42 Arabidopsis Exp $ */
+/* $Id: gdevpnga.c,v 1.12 2008/03/23 15:27:57 Arabidopsis Exp $ */
 /* Test driver for PDF 1.4 transparency stuff */
 
 #include "gdevprn.h"
@@ -89,14 +89,14 @@ struct pdf14_ctx_s {
 
 /* GC procedures for buffer stack */
 
-private
+static
 ENUM_PTRS_WITH(pdf14_buf_enum_ptrs, pdf14_buf *buf)
     return 0;
     case 0: return ENUM_OBJ(buf->saved);
     case 1: return ENUM_OBJ(buf->data);
 ENUM_PTRS_END
 
-private
+static
 RELOC_PTRS_WITH(pdf14_buf_reloc_ptrs, pdf14_buf *buf)
 {
     RELOC_VAR(buf->saved);
@@ -119,23 +119,23 @@ gs_private_st_ptrs1(st_pdf14_ctx, pdf14_ctx, "pdf14_ctx",
 #define X_DPI 72
 #define Y_DPI 72
 
-private int pnga_open(gx_device * pdev);
-private dev_proc_close_device(pnga_close);
-private int pnga_output_page(gx_device * pdev, int num_copies, int flush);
-private dev_proc_fill_rectangle(pnga_fill_rectangle);
-private dev_proc_fill_path(pnga_fill_path);
-private dev_proc_stroke_path(pnga_stroke_path);
-private dev_proc_begin_typed_image(pnga_begin_typed_image);
-private dev_proc_text_begin(pnga_text_begin);
-private dev_proc_begin_transparency_group(pnga_begin_transparency_group);
-private dev_proc_end_transparency_group(pnga_end_transparency_group);
+static int pnga_open(gx_device * pdev);
+static dev_proc_close_device(pnga_close);
+static int pnga_output_page(gx_device * pdev, int num_copies, int flush);
+static dev_proc_fill_rectangle(pnga_fill_rectangle);
+static dev_proc_fill_path(pnga_fill_path);
+static dev_proc_stroke_path(pnga_stroke_path);
+static dev_proc_begin_typed_image(pnga_begin_typed_image);
+static dev_proc_text_begin(pnga_text_begin);
+static dev_proc_begin_transparency_group(pnga_begin_transparency_group);
+static dev_proc_end_transparency_group(pnga_end_transparency_group);
 
 #define XSIZE (8.5 * X_DPI)	/* 8.5 x 11 inch page, by default */
 #define YSIZE (11 * Y_DPI)
 
 /* 24-bit color. */
 
-private const gx_device_procs pnga_procs =
+static const gx_device_procs pnga_procs =
 {
 	pnga_open,			/* open */
 	NULL,	/* get_initial_matrix */
@@ -216,11 +216,11 @@ prn_device(pnga_procs, "pnga",
 #endif
 
 /* GC procedures */
-private 
+static 
 ENUM_PTRS_WITH(pnga_device_enum_ptrs, pnga_device *pdev) return 0;
 case 0: return ENUM_OBJ(pdev->ctx);
 ENUM_PTRS_END
-private RELOC_PTRS_WITH(pnga_device_reloc_ptrs, pnga_device *pdev)
+static RELOC_PTRS_WITH(pnga_device_reloc_ptrs, pnga_device *pdev)
 {
     RELOC_VAR(pdev->ctx);
 }
@@ -228,10 +228,10 @@ RELOC_PTRS_END
 
 /* ------ The device descriptors for the marking device ------ */
 
-private dev_proc_fill_rectangle(pnga_mark_fill_rectangle);
-private dev_proc_fill_rectangle(pnga_mark_fill_rectangle_ko_simple);
+static dev_proc_fill_rectangle(pnga_mark_fill_rectangle);
+static dev_proc_fill_rectangle(pnga_mark_fill_rectangle_ko_simple);
 
-private const gx_device_procs pnga_mark_procs =
+static const gx_device_procs pnga_mark_procs =
 {
 	NULL,	/* open */
 	NULL,	/* get_initial_matrix */
@@ -322,7 +322,7 @@ gs_private_st_suffix_add1(st_pnga_text_enum, pnga_text_enum_t,
  *
  * Return value: Newly allocated buffer, or NULL on failure.
  **/
-private pdf14_buf *
+static pdf14_buf *
 pdf14_buf_new(gs_int_rect *rect, bool has_alpha_g, bool has_shape,
 	       int n_chan,
 	       gs_memory_t *memory)
@@ -359,14 +359,14 @@ pdf14_buf_new(gs_int_rect *rect, bool has_alpha_g, bool has_shape,
     return result;
 }
 
-private void
+static void
 pdf14_buf_free(pdf14_buf *buf, gs_memory_t *memory)
 {
     gs_free_object(memory, buf->data, "pdf14_buf_free");
     gs_free_object(memory, buf, "pdf14_buf_free");
 }
 
-private pdf14_ctx *
+static pdf14_ctx *
 pdf14_ctx_new(gs_int_rect *rect, int n_chan, gs_memory_t *memory)
 {
     pdf14_ctx *result;
@@ -389,7 +389,7 @@ pdf14_ctx_new(gs_int_rect *rect, int n_chan, gs_memory_t *memory)
     return result;
 }
 
-private void
+static void
 pdf14_ctx_free(pdf14_ctx *ctx)
 {
     pdf14_buf *buf, *next;
@@ -407,7 +407,7 @@ pdf14_ctx_free(pdf14_ctx *ctx)
  * Return value: Backdrop buffer for current group operation, or NULL
  * if backdrop is fully transparent.
  **/
-private pdf14_buf *
+static pdf14_buf *
 pdf14_find_backdrop_buf(pdf14_ctx *ctx)
 {
     pdf14_buf *buf = ctx->stack;
@@ -422,7 +422,7 @@ pdf14_find_backdrop_buf(pdf14_ctx *ctx)
     return NULL;
 }
 
-private int
+static int
 pdf14_push_transparency_group(pdf14_ctx *ctx, gs_int_rect *rect,
 			      bool isolated, bool knockout,
 			      byte alpha, byte shape,
@@ -488,7 +488,7 @@ pdf14_push_transparency_group(pdf14_ctx *ctx, gs_int_rect *rect,
     return 0;
 }
 
-private int
+static int
 pdf14_pop_transparency_group(pdf14_ctx *ctx)
 {
     pdf14_buf *tos = ctx->stack;
@@ -593,7 +593,7 @@ pdf14_pop_transparency_group(pdf14_ctx *ctx)
     return 0;
 }
 
-private int
+static int
 pnga_open(gx_device *dev)
 {
     pnga_device *pdev = (pnga_device *)dev;
@@ -613,7 +613,7 @@ pnga_open(gx_device *dev)
     return 0;
 }
 
-private int
+static int
 pnga_close(gx_device *dev)
 {
     pnga_device *pdev = (pnga_device *)dev;
@@ -623,7 +623,7 @@ pnga_close(gx_device *dev)
     return 0;
 }
 
-private int
+static int
 pnga_output_page(gx_device *dev, int num_copies, int flush)
 {
     pnga_device *pdev = (pnga_device *)dev;
@@ -735,7 +735,7 @@ pnga_output_page(gx_device *dev, int num_copies, int flush)
     return code;
 }
 
-private void
+static void
 pnga_finalize(gx_device *dev)
 {
     if_debug1('v', "[v]finalizing %lx\n", dev);
@@ -752,7 +752,7 @@ pnga_finalize(gx_device *dev)
  *
  * Return value: Marking device, or NULL on error.
  **/
-private gx_device *
+static gx_device *
 pnga_get_marking_device(gx_device *dev, const gs_imager_state *pis)
 {
     pnga_device *pdev = (pnga_device *)dev;
@@ -786,13 +786,13 @@ pnga_get_marking_device(gx_device *dev, const gs_imager_state *pis)
     return (gx_device *)mdev;
 }
 
-private void
+static void
 pnga_release_marking_device(gx_device *marking_dev)
 {
     rc_decrement_only(marking_dev, "pnga_release_marking_device");
 }
 
-private int
+static int
 pnga_fill_path(gx_device *dev, const gs_imager_state *pis,
 			   gx_path *ppath, const gx_fill_params *params,
 			   const gx_drawing_color *pdcolor,
@@ -808,7 +808,7 @@ pnga_fill_path(gx_device *dev, const gs_imager_state *pis,
     return code;
 }
 
-private int
+static int
 pnga_stroke_path(gx_device *dev, const gs_imager_state *pis,
 			     gx_path *ppath, const gx_stroke_params *params,
 			     const gx_drawing_color *pdcolor,
@@ -824,7 +824,7 @@ pnga_stroke_path(gx_device *dev, const gs_imager_state *pis,
     return code;
 }
 
-private int
+static int
 pnga_begin_typed_image(gx_device * dev, const gs_imager_state * pis,
 			   const gs_matrix *pmat, const gs_image_common_t *pic,
 			   const gs_int_rect * prect,
@@ -846,7 +846,7 @@ pnga_begin_typed_image(gx_device * dev, const gs_imager_state * pis,
     return code;
 }
 
-private int
+static int
 pnga_text_resync(gs_text_enum_t *pte, const gs_text_enum_t *pfrom)
 {
     pnga_text_enum_t *const penum = (pnga_text_enum_t *)pte;
@@ -864,7 +864,7 @@ pnga_text_resync(gs_text_enum_t *pte, const gs_text_enum_t *pfrom)
     return 0;
 }
 
-private int
+static int
 pnga_text_process(gs_text_enum_t *pte)
 {
     pnga_text_enum_t *const penum = (pnga_text_enum_t *)pte;
@@ -875,7 +875,7 @@ pnga_text_process(gs_text_enum_t *pte)
     return code;
 }
 
-private bool
+static bool
 pnga_text_is_width_only(const gs_text_enum_t *pte)
 {
     const pnga_text_enum_t *const penum = (const pnga_text_enum_t *)pte;
@@ -885,7 +885,7 @@ pnga_text_is_width_only(const gs_text_enum_t *pte)
     return false;
 }
 
-private int
+static int
 pnga_text_current_width(const gs_text_enum_t *pte, gs_point *pwidth)
 {
     const pnga_text_enum_t *const penum = (const pnga_text_enum_t *)pte;
@@ -895,7 +895,7 @@ pnga_text_current_width(const gs_text_enum_t *pte, gs_point *pwidth)
     return_error(gs_error_rangecheck); /* can't happen */
 }
 
-private int
+static int
 pnga_text_set_cache(gs_text_enum_t *pte, const double *pw,
 		   gs_text_cache_control_t control)
 {
@@ -906,7 +906,7 @@ pnga_text_set_cache(gs_text_enum_t *pte, const double *pw,
     return_error(gs_error_rangecheck); /* can't happen */
 }
 
-private int
+static int
 pnga_text_retry(gs_text_enum_t *pte)
 {
     pnga_text_enum_t *const penum = (pnga_text_enum_t *)pte;
@@ -916,7 +916,7 @@ pnga_text_retry(gs_text_enum_t *pte)
     return_error(gs_error_rangecheck); /* can't happen */
 }
 
-private void
+static void
 pnga_text_release(gs_text_enum_t *pte, client_name_t cname)
 {
     pnga_text_enum_t *const penum = (pnga_text_enum_t *)pte;
@@ -928,14 +928,14 @@ pnga_text_release(gs_text_enum_t *pte, client_name_t cname)
     gx_default_text_release(pte, cname);
 }
 
-private const gs_text_enum_procs_t pnga_text_procs = {
+static const gs_text_enum_procs_t pnga_text_procs = {
     pnga_text_resync, pnga_text_process,
     pnga_text_is_width_only, pnga_text_current_width,
     pnga_text_set_cache, pnga_text_retry,
     pnga_text_release
 };
 
-private int
+static int
 pnga_text_begin(gx_device * dev, gs_imager_state * pis,
 		 const gs_text_params_t * text, gs_font * font,
 		 gx_path * path, const gx_device_color * pdcolor,
@@ -969,7 +969,7 @@ pnga_text_begin(gx_device * dev, gs_imager_state * pis,
     return code;
 }
 
-private int
+static int
 pnga_fill_rectangle(gx_device * dev,
 		    int x, int y, int w, int h, gx_color_index color)
 {
@@ -978,7 +978,7 @@ pnga_fill_rectangle(gx_device * dev,
 }
 
 
-private int
+static int
 pnga_begin_transparency_group(gx_device *dev,
 			      const gs_transparency_group_params_t *ptgp,
 			      const gs_rect *pbbox,
@@ -1001,7 +1001,7 @@ pnga_begin_transparency_group(gx_device *dev,
     return code;
 }
 
-private int
+static int
 pnga_end_transparency_group(gx_device *dev,
 			      gs_imager_state *pis,
 			      gs_transparency_state_t **ppts)
@@ -1014,7 +1014,7 @@ pnga_end_transparency_group(gx_device *dev,
     return code;
 }
 
-private int
+static int
 pnga_mark_fill_rectangle(gx_device * dev,
 			 int x, int y, int w, int h, gx_color_index color)
 {
@@ -1071,7 +1071,7 @@ pnga_mark_fill_rectangle(gx_device * dev,
     return 0;
 }
 
-private int
+static int
 pnga_mark_fill_rectangle_ko_simple(gx_device * dev,
 				   int x, int y, int w, int h, gx_color_index color)
 {

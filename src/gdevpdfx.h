@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfx.h,v 1.11 2007/09/11 15:24:24 Arabidopsis Exp $ */
+/* $Id: gdevpdfx.h,v 1.12 2008/03/23 15:27:52 Arabidopsis Exp $ */
 /* Internal definitions for PDF-writing driver. */
 
 #ifndef gdevpdfx_INCLUDED
@@ -387,6 +387,7 @@ typedef struct pdf_substream_save_s {
     bool		accumulating_a_global_object;
     pdf_resource_t      *pres_soft_mask_dict;
     gs_const_string		objname;
+    int			last_charpath_op;
 } pdf_substream_save;
 
 #define private_st_pdf_substream_save()\
@@ -456,6 +457,7 @@ struct gx_device_pdf_s {
 			      a bitmap representation of a shading.
 			      (Bigger shadings to be downsampled). */
     long MaxInlineImageSize;
+    gs_param_int_array DSCEncodingToUnicode;
     /* Encryption parameters */
     gs_param_string OwnerPassword;
     gs_param_string UserPassword;
@@ -655,6 +657,7 @@ struct gx_device_pdf_s {
     gs_const_string objname;
     int OPDFRead_procset_length;      /* PS2WRITE only. */
     void *find_resource_param; /* WARNING : not visible for garbager. */
+    int last_charpath_op; /* true or false state of last charpath */
 };
 
 #define is_in_page(pdev)\
@@ -679,8 +682,8 @@ struct gx_device_pdf_s {
  m(28,sbstack) m(29,substream_Resources) m(30,font3)\
  m(31,accumulating_substream_resource) \
  m(32,pres_soft_mask_dict) m(33,PDFXTrimBoxToMediaBoxOffset.data)\
- m(34,PDFXBleedBoxToTrimBoxOffset.data)
-#define gx_device_pdf_num_ptrs 35
+ m(34,PDFXBleedBoxToTrimBoxOffset.data) m(35, DSCEncodingToUnicode.data)
+#define gx_device_pdf_num_ptrs 36
 #define gx_device_pdf_do_param_strings(m)\
     m(0, OPDFReadProcsetPath) m(1, OwnerPassword) m(2, UserPassword) m(3, NoEncrypt)\
     m(4, DocumentUUID) m(5, InstanceUUID)
@@ -1072,6 +1075,7 @@ int pdf_write_function(gx_device_pdf *pdev, const gs_function_t *pfn,
 
 /* Write a FontBBox dictionary element. */
 int pdf_write_font_bbox(gx_device_pdf *pdev, const gs_int_rect *pbox);
+int pdf_write_font_bbox_float(gx_device_pdf *pdev, const gs_rect *pbox);
 
 /* ---------------- Exported by gdevpdfm.c ---------------- */
 

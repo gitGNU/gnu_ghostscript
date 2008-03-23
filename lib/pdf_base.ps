@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: pdf_base.ps,v 1.10 2007/09/11 15:24:50 Arabidopsis Exp $
+% $Id: pdf_base.ps,v 1.11 2008/03/23 15:28:28 Arabidopsis Exp $
 % pdf_base.ps
 % Basic parser for PDF reader.
 
@@ -178,10 +178,18 @@ pdfdict begin
     } ifelse
   } ifelse
 } bind def
+/PDFScanRules_true << /PDFScanRules true >> def
+/PDFScanRules_null << /PDFScanRules null >> def
 /.pdfrun {			% <file> <opdict> .pdfrun -
 	% Construct a procedure with the stack depth, file and opdict
 	% bound into it.
-  1 index cvlit count 2 sub 3 1 roll mark mark 5 2 roll
+  1 index cvlit count 2 sub 3 1 roll mark
+  /PDFScanRules .getuserparam //null eq {
+    //PDFScanRules_true { setuserparams } 0 get % force PDF scanning mode
+    mark 7 4 roll
+  } {
+    mark 5 2 roll
+  } ifelse
   {	% Stack: ..operands.. count opdict file
     { token } stopped {
       dup type /filetype eq { pop } if % pop the operand if it is restored
@@ -212,12 +220,17 @@ pdfdict begin
     } ifelse
   }
   aload pop .packtomark cvx
-  /loop cvx 2 packedarray cvx
-  { stopped /PDFsource } aload pop
-  PDFsource
+  { loop } 0 get 2 packedarray cvx
+  { stopped } 0 get
+  /PDFScanRules .getuserparam //null eq {
+    //PDFScanRules_null { setuserparams } 0 get % reset PDF scannig mode if it was off
+  } if
+  /PDFsource PDFsource
   { store { stop } if } aload pop .packtomark cvx
   /PDFsource 3 -1 roll store exec
 } bind def
+currentdict /PDFScanRules_true undef
+currentdict /PDFScanRules_null undef
 
 % Execute a file, like .pdfrun, for a marking context.
 % This temporarily rebinds LocalResources and DefaultQstate.
@@ -242,19 +255,47 @@ pdfdict begin
 % Read a token, but simply return false (no token read) in the case of an
 % error.  This is messy because 'token' either may or may not pop its operand
 % if an error occurs, and because the return values are different depending
-% on whether the source is a file or a string.
+% on whether the source is a file or a string. To avoid closing the file
+% check for '{' before trying 'token'.
+/token_nofail_dict mark
+  ( )  { dup ( ) readstring pop pop } bind
+  (\t) 1 index
+  (\r) 1 index
+  (\n) 1 index
+  (\000) 1 index
+  ({) { //null //true exit } bind
+.dicttomark def
+
 /token_nofail {		% <file|string> token_nofail false
 			% <file> token_nofail <token> true
 			% <string> token_nofail <post> <token> true
-  null 1 index			% stack: source null source
-  { token } .internalstopped {	% stack: source null [source]
-    null ne { pop } if pop false
-  } {				% stack: source null ([post] token true | false)
-    { 1 index null eq { 3 1 } { 4 2 } ifelse roll pop pop true }
-    { pop pop false }
-    ifelse
-  } ifelse
+  dup type /filetype eq {
+    { dup ( ) .peekstring not { ({) } if
+      //token_nofail_dict exch .knownget not {
+        //null 1 index { token } .internalstopped exit
+      } if
+      exec
+    } loop
+    {                                   % stack: source null [source]
+      //null ne { pop } if pop //false
+    } {			         	% stack: source null ([post] token true | false)
+      { 3 1 roll pop pop //true }
+      { pop pop //false }
+      ifelse
+    } ifelse
+  } {
+    //null 1 index			% stack: source null source
+    { token } .internalstopped {	% stack: source null [source]
+      //null ne { pop } if pop //false
+    } {			         	% stack: source null ([post] token true | false)
+      { 4 2 roll pop pop //true }
+      { pop pop //false }
+      ifelse
+    } ifelse
+   } ifelse
 } bind def
+
+currentdict /token_nofail_dict .undef
 
 % ================================ Objects ================================ %
 
@@ -740,14 +781,19 @@ pdfdict begin
       dup /File PDFfile put
       % make sure that we are just past the EOL \n character
       PDFfile dup fileposition 1 sub setfileposition	% back up one
-      { PDFfile read pop dup 13 eq {
-	  % If there had been a \n, token would have advanced over it
-	  % thus, if the terminator was \r, we have a format error!
-	  (   **** Warning: stream operator not terminated by valid EOL.\n) pdfformaterror
-	  pop exit	% fileposition is OK (just past the \r).
-	} if 
-	10 eq { exit } if
-      } loop	% scan past \n
+
+      PDFfile read pop
+      dup 13 eq {
+        % If there had been a \n, token would have advanced over it
+	% thus, if the terminator was \r, we have a format error!
+	(   **** Warning: stream operator not terminated by valid EOL.\n) pdfformaterror
+	pop   % fileposition is OK (just past the \r).
+      } {
+        % Otherwise, scan past \n
+        { 10 eq { exit } if
+          PDFfile read pop
+        } loop
+      } ifelse   
       dup /FilePosition PDFfile fileposition put
       PDFDEBUG {
         PDFSTEPcount 1 le {

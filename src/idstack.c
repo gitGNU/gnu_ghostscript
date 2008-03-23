@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: idstack.c,v 1.8 2007/09/11 15:24:35 Arabidopsis Exp $ */
+/* $Id: idstack.c,v 1.9 2008/03/23 15:27:49 Arabidopsis Exp $ */
 /* Implementation of dictionary stacks */
 #include "ghost.h"
 #include "idict.h"
@@ -204,7 +204,7 @@ dstack_find_name_by_index(dict_stack_t * pds, uint nidx)
 
 /* Set the cached values computed from the top entry on the dstack. */
 /* See idstack.h for details. */
-private const ref_packed no_packed_keys[2] =
+static const ref_packed no_packed_keys[2] =
 {packed_key_deleted, packed_key_empty};
 void
 dstack_set_top(dict_stack_t * pds)

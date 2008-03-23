@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsstate.c,v 1.10 2007/09/11 15:24:08 Arabidopsis Exp $ */
+/* $Id: gsstate.c,v 1.11 2008/03/23 15:28:17 Arabidopsis Exp $ */
 /* Miscellaneous graphics state operators for Ghostscript library */
 #include "gx.h"
 #include "memory_.h"
@@ -44,13 +44,14 @@
 #include "gxpcolor.h"
 
 /* Forward references */
-private gs_state *gstate_alloc(gs_memory_t *, client_name_t,
+static gs_state *gstate_alloc(gs_memory_t *, client_name_t,
 			       const gs_state *);
-private gs_state *gstate_clone(gs_state *, gs_memory_t *, client_name_t,
+static gs_state *gstate_clone(gs_state *, gs_memory_t *, client_name_t,
 			       gs_state_copy_reason_t);
-private void gstate_free_contents(gs_state *);
-private int gstate_copy(gs_state *, const gs_state *,
+static void gstate_free_contents(gs_state *);
+static int gstate_copy(gs_state *, const gs_state *,
 			gs_state_copy_reason_t, client_name_t);
+static void clip_stack_rc_adjust(gx_clip_stack_t *cs, int delta, client_name_t cname);
 
 /*
  * Graphics state storage management is complicated.  There are many
@@ -159,7 +160,7 @@ extern_st(st_imager_state);
 public_st_gs_state();
 
 /* GC procedures for gs_state */
-private ENUM_PTRS_WITH(gs_state_enum_ptrs, gs_state *gsvptr)
+static ENUM_PTRS_WITH(gs_state_enum_ptrs, gs_state *gsvptr)
 ENUM_PREFIX(st_imager_state, gs_state_num_ptrs + 2);
 #define e1(i,elt) ENUM_PTR(i,gs_state,elt);
 gs_state_do_ptrs(e1)
@@ -169,7 +170,7 @@ case gs_state_num_ptrs + 1:	/* handle device filter stack specially */
 ENUM_RETURN(gsvptr->dfilter_stack);
 #undef e1
 ENUM_PTRS_END
-private RELOC_PTRS_WITH(gs_state_reloc_ptrs, gs_state *gsvptr)
+static RELOC_PTRS_WITH(gs_state_reloc_ptrs, gs_state *gsvptr)
 {
     RELOC_PREFIX(st_imager_state);
     {
@@ -184,7 +185,7 @@ RELOC_PTRS_END
 
 /* Copy client data, using the copy_for procedure if available, */
 /* the copy procedure otherwise. */
-private int
+static int
 gstate_copy_client_data(gs_state * pgs, void *dto, void *dfrom,
 			gs_state_copy_reason_t reason)
 {
@@ -196,7 +197,7 @@ gstate_copy_client_data(gs_state * pgs, void *dto, void *dfrom,
 /* ------ Operations on the entire graphics state ------ */
 
 /* Define the initial value of the graphics state. */
-private const gs_imager_state gstate_initial = {
+static const gs_imager_state gstate_initial = {
     gs_imager_state_initial(1.0)
 };
 
@@ -207,7 +208,7 @@ private const gs_imager_state gstate_initial = {
  * built between the setcachedevice and the restore must not be freed.
  * If it weren't for this, we don't think stable memory would be needed.
  */
-private gs_memory_t *
+static gs_memory_t *
 gstate_path_memory(gs_memory_t *mem)
 {
     return gs_memory_stable(mem);
@@ -496,7 +497,7 @@ gs_state_copy(gs_state * pgs, gs_memory_t * mem)
 
     pgs->view_clip = 0;
     pnew = gstate_clone(pgs, mem, "gs_gstate", copy_for_gstate);
-    rc_increment(pnew->clip_stack);
+    clip_stack_rc_adjust(pnew->clip_stack, 1, "gs_state_copy");
     rc_increment(pnew->dfilter_stack);
     pgs->view_clip = view_clip;
     if (pnew == 0)
@@ -813,7 +814,7 @@ gs_currenttextrenderingmode(const gs_state * pgs)
 /* ------ Internal routines ------ */
 
 /* Free the privately allocated parts of a gstate. */
-private void
+static void
 gstate_free_parts(const gs_state * parts, gs_memory_t * mem, client_name_t cname)
 {
     gs_free_object(mem, parts->dev_color, cname);
@@ -825,7 +826,7 @@ gstate_free_parts(const gs_state * parts, gs_memory_t * mem, client_name_t cname
 }
 
 /* Allocate the privately allocated parts of a gstate. */
-private int
+static int
 gstate_alloc_parts(gs_state * parts, const gs_state * shared,
 		   gs_memory_t * mem, client_name_t cname)
 {
@@ -871,7 +872,7 @@ gstate_alloc_parts(gs_state * parts, const gs_state * shared,
  * clip_path and view_clip) effective_clip_path share the segments of
  * pfrom's corresponding path(s).
  */
-private gs_state *
+static gs_state *
 gstate_alloc(gs_memory_t * mem, client_name_t cname, const gs_state * pfrom)
 {
     gs_state *pgs =
@@ -888,7 +889,7 @@ gstate_alloc(gs_memory_t * mem, client_name_t cname, const gs_state * pfrom)
 }
 
 /* Copy the dash pattern from one gstate to another. */
-private int
+static int
 gstate_copy_dash(gs_state * pto, const gs_state * pfrom)
 {
     return gs_setdash(pto, pfrom->line_params.dash.pattern,
@@ -900,7 +901,7 @@ gstate_copy_dash(gs_state * pto, const gs_state * pfrom)
 /* Return 0 if the allocation fails. */
 /* If reason is for_gsave, the clone refers to the old contents, */
 /* and we switch the old state to refer to the new contents. */
-private gs_state *
+static gs_state *
 gstate_clone(gs_state * pfrom, gs_memory_t * mem, client_name_t cname,
 	     gs_state_copy_reason_t reason)
 {
@@ -954,16 +955,31 @@ gstate_clone(gs_state * pfrom, gs_memory_t * mem, client_name_t cname,
     return 0;
 }
 
+
+/* Adjust reference counters for the whole clip stack */
+/* accessible from the given point */
+static void
+clip_stack_rc_adjust(gx_clip_stack_t *cs, int delta, client_name_t cname)
+{
+    gx_clip_stack_t *p = cs;  
+
+    while(p) {
+        gx_clip_stack_t *q = p;
+        p = p->next;  
+        rc_adjust(q, delta, cname);
+    }
+}
+
 /* Release the composite parts of a graphics state, */
 /* but not the state itself. */
-private void
+static void
 gstate_free_contents(gs_state * pgs)
 {
     gs_memory_t *mem = pgs->memory;
     const char *const cname = "gstate_free_contents";
 
     rc_decrement(pgs->device, cname);
-    rc_decrement(pgs->clip_stack, cname);
+    clip_stack_rc_adjust(pgs->clip_stack, -1, cname);
     rc_decrement(pgs->dfilter_stack, cname);
     cs_adjust_counts(pgs, -1);
     if (pgs->client_data != 0)
@@ -974,7 +990,7 @@ gstate_free_contents(gs_state * pgs)
 }
 
 /* Copy one gstate to another. */
-private int
+static int
 gstate_copy(gs_state * pto, const gs_state * pfrom,
 	    gs_state_copy_reason_t reason, client_name_t cname)
 {
@@ -1015,11 +1031,12 @@ gstate_copy(gs_state * pto, const gs_state * pfrom,
     *parts.ccolor = *pfrom->ccolor;
     *parts.dev_color = *pfrom->dev_color;
     /* Handle references from gstate object. */
-#define RCCOPY(element)\
-    rc_pre_assign(pto->element, pfrom->element, cname)
-    RCCOPY(device);
-    RCCOPY(clip_stack);
-    RCCOPY(dfilter_stack);
+    rc_pre_assign(pto->device, pfrom->device, cname);
+    rc_pre_assign(pto->dfilter_stack, pfrom->dfilter_stack, cname);
+    if (pto->clip_stack != pfrom->clip_stack) {
+        clip_stack_rc_adjust(pfrom->clip_stack, 1, cname);
+        clip_stack_rc_adjust(pto->clip_stack, -1, cname);
+    }
     {
 	struct gx_pattern_cache_s *pcache = pto->pattern_cache;
 	void *pdata = pto->client_data;
@@ -1044,7 +1061,6 @@ gstate_copy(gs_state * pto, const gs_state * pfrom,
     }
     GSTATE_ASSIGN_PARTS(pto, &parts);
     cs_adjust_counts(pto, 1);
-#undef RCCOPY
     pto->show_gstate =
 	(pfrom->show_gstate == pfrom ? pto : 0);
     return 0;

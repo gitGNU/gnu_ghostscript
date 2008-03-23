@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsdps.c,v 1.7 2007/09/11 15:24:20 Arabidopsis Exp $ */
+/* $Id: gsdps.c,v 1.8 2008/03/23 15:27:59 Arabidopsis Exp $ */
 /* Display PostScript extensions */
 #include "gx.h"
 #include "gserrors.h"
@@ -31,7 +31,7 @@
 /* ---------------- View clipping ---------------- */
 
 /* Forward references */
-private int common_viewclip(gs_state *, int);
+static int common_viewclip(gs_state *, int);
 
 int
 gs_initviewclip(gs_state * pgs)
@@ -59,7 +59,7 @@ gs_eoviewclip(gs_state * pgs)
 
 /* This code is (almost) copied from common_clip in gspath.c. */
 /* Someday we'll find a way to merge them. */
-private int
+static int
 common_viewclip(gs_state * pgs, int rule)
 {
     gs_fixed_rect bbox;

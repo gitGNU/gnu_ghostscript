@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxtype1.h,v 1.10 2007/09/11 15:24:05 Arabidopsis Exp $ */
+/* $Id: gxtype1.h,v 1.11 2008/03/23 15:27:47 Arabidopsis Exp $ */
 /* Private Adobe Type 1 / Type 2 charstring interpreter definitions */
 
 #ifndef gxtype1_INCLUDED
@@ -243,6 +243,8 @@ typedef fixed *cs_ptr;
       }\
     sign_extend_num4(lw);\
   END
+
+int gs_type1_check_float(crypt_state *state, bool encrypted, const byte **cip, cs_ptr csp, long lw);
 
 /* ------ Shared Type 1 / Type 2 charstring utilities ------ */
 

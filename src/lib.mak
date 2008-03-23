@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: lib.mak,v 1.11 2007/09/11 15:23:46 Arabidopsis Exp $
+# $Id: lib.mak,v 1.12 2008/03/23 15:27:42 Arabidopsis Exp $
 # (Platform-independent) makefile for Ghostscript graphics library
 # and other support code.
 # Users of this makefile must define the following:
@@ -2574,7 +2574,7 @@ gstrans_h=$(GLSRC)gstrans.h $(gstparam_h) $(gxcomp_h)
 gsipar3x_h=$(GLSRC)gsipar3x.h $(gsiparam_h) $(gsiparm3_h)
 gximag3x_h=$(GLSRC)gximag3x.h $(gsipar3x_h) $(gxiparam_h)
 gxblend_h=$(GLSRC)gxblend.h
-gdevp14_h=$(GLSRC)gdevp14.h
+gdevp14_h=$(GLSRC)gdevp14.h $(GLSRC)gxcmap.h
 
 $(GLOBJ)gstrans.$(OBJ) : $(GLSRC)gstrans.c $(GXERR)\
  $(math__h) $(memory__h) $(gdevp14_h)\
@@ -2690,6 +2690,11 @@ $(GLD)romfs1.dev : $(LIB_MAK) $(ECHO_XE) $(romfs_)
 $(GLD)romfs0.dev :  $(LIB_MAK) $(ECHO_XE) 
 	$(SETMOD) $(GLD)romfs0 
 
+$(GLGEN)gsromfs.c : $(MKROMFS_XE) $(GLGEN)gs_init.ps
+	$(EXP)$(MKROMFS_XE) -o $(GLGEN)gsromfs.c -X .svn $(UFST_ROMFS_ARGS) \
+	$(PCLXL_ROMFS_ARGS) $(PJL_ROMFS_ARGS) $(XPS_ROMFS_ARGS) \
+	$(PS_ROMFS_ARGS) $(EXTRA_INIT_FILES) 
+
 # the following module is only included if the romfs.dev FEATURE is enabled
 $(GLOBJ)gsiorom.$(OBJ) : $(GLSRC)gsiorom.c $(gsiorom_h) \
  $(std_h) $(gx_h) $(gserrors_h) $(gsstruct_h) $(gxiodev_h) $(stat__h)
@@ -2703,15 +2708,8 @@ $(GLOBJ)gsromfs.$(OBJ) : $(GLOBJ)gsromfs.c $(time__h)
 MKROMFS_ZLIB_OBJS=$(GLOBJ)compress.$(OBJ) $(GLOBJ)deflate.$(OBJ) \
 	$(GLOBJ)zutil.$(OBJ) $(GLOBJ)adler32.$(OBJ) $(GLOBJ)crc32.$(OBJ) \
 	$(GLOBJ)trees.$(OBJ)
-MKROMFS_COMMON_DEPS=$(stdpre_h) $(stdint__h) $(gsiorom_h) \
+MKROMFS_COMMON_DEPS=$(stdpre_h) $(stdint__h) $(gsiorom_h) $(arch_h)\
 	$(gsmemret_h) $(gsmalloc_h) $(gsstype_h) $(gp_h) $(time__h)
-
-# The following is only and example since the %rom% IODevice is not exclusively
-# a PostScript feature (although it is usually used for COMPILE_INITS
-# If not using the PS interpreter, the rule for gsromfs.c in int.mak is not used
-# In that case build it here using the example below:
-# $(GLOBJ)gsromfs.c: $(GLSRC)mkromfs.c $(MKROMFS_XE)
-# 	$(EXP)$(MKROMFS_XE) -o $(GLOBJ)gsromfs.c -c -P my_rom_contents/ *
 
 # ---------------- Support for %disk IODevices ---------------- #
 # The following module is included only if the diskn.dev FEATURE is included

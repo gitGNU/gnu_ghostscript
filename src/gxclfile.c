@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclfile.c,v 1.8 2007/09/11 15:24:39 Arabidopsis Exp $ */
+/* $Id: gxclfile.c,v 1.9 2008/03/23 15:27:59 Arabidopsis Exp $ */
 /* File-based command list implementation */
 #include "stdio_.h"
 #include "string_.h"
@@ -33,7 +33,7 @@
 
 /* ------ Open/close/unlink ------ */
 
-private int
+static int
 clist_fopen(char fname[gp_file_name_sizeof], const char *fmode,
 	    clist_file_ptr * pcf, gs_memory_t * mem, gs_memory_t *data_mem,
 	    bool ok_to_compress)
@@ -53,13 +53,13 @@ clist_fopen(char fname[gp_file_name_sizeof], const char *fmode,
     return 0;
 }
 
-private int
+static int
 clist_unlink(const char *fname)
 {
     return (unlink(fname) != 0 ? gs_note_error(gs_error_ioerror) : 0);
 }
 
-private int
+static int
 clist_fclose(clist_file_ptr cf, const char *fname, bool delete)
 {
     return (fclose((FILE *) cf) != 0 ? gs_note_error(gs_error_ioerror) :
@@ -69,7 +69,7 @@ clist_fclose(clist_file_ptr cf, const char *fname, bool delete)
 
 /* ------ Writing ------ */
 
-private int
+static int
 clist_fwrite_chars(const void *data, uint len, clist_file_ptr cf)
 {
     return fwrite(data, 1, len, (FILE *) cf);
@@ -77,7 +77,7 @@ clist_fwrite_chars(const void *data, uint len, clist_file_ptr cf)
 
 /* ------ Reading ------ */
 
-private int
+static int
 clist_fread_chars(void *data, uint len, clist_file_ptr cf)
 {
     FILE *f = (FILE *) cf;
@@ -111,25 +111,25 @@ clist_fread_chars(void *data, uint len, clist_file_ptr cf)
 
 /* ------ Position/status ------ */
 
-private int
+static int
 clist_set_memory_warning(clist_file_ptr cf, int bytes_left)
 {
     return 0;			/* no-op */
 }
 
-private int
+static int
 clist_ferror_code(clist_file_ptr cf)
 {
     return (ferror((FILE *) cf) ? gs_error_ioerror : 0);
 }
 
-private int64_t
+static int64_t
 clist_ftell(clist_file_ptr cf)
 {
     return gp_ftell_64((FILE *) cf);
 }
 
-private void
+static void
 clist_rewind(clist_file_ptr cf, bool discard_data, const char *fname)
 {
     FILE *f = (FILE *) cf;
@@ -153,13 +153,13 @@ clist_rewind(clist_file_ptr cf, bool discard_data, const char *fname)
     }
 }
 
-private int
+static int
 clist_fseek(clist_file_ptr cf, int64_t offset, int mode, const char *ignore_fname)
 {
     return gp_fseek_64((FILE *) cf, offset, mode);
 }
 
-private clist_io_procs_t clist_io_procs_file = {
+static clist_io_procs_t clist_io_procs_file = {
     clist_fopen,
     clist_fclose,
     clist_unlink,

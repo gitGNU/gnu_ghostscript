@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsclipsr.c,v 1.7 2007/09/11 15:24:01 Arabidopsis Exp $ */
+/* $Id: gsclipsr.c,v 1.8 2008/03/23 15:27:45 Arabidopsis Exp $ */
 /* clipsave/cliprestore */
 #include "gx.h"
 #include "gserrors.h"
@@ -32,23 +32,19 @@
 private_st_clip_stack();
 
 /*
- * When we free a clip stack entry, free the associated clip path,
- * and iterate down the list.  We do this iteratively so that we don't
- * take a level of recursion for each node on the list.
+ * When we free a clip stack entry and the associated clip path.
  */
-private void
+static void
 rc_free_clip_stack(gs_memory_t * mem, void *vstack, client_name_t cname)
 {
     gx_clip_stack_t *stack = (gx_clip_stack_t *)vstack;
-    gx_clip_stack_t *next;
 
-    do {
-	gx_clip_path *pcpath = stack->clip_path;
+    if (stack->rc.ref_count <= 1 ) {
+        gx_clip_path *pcpath = stack->clip_path;
 
-	next = stack->next;
 	gs_free_object(stack->rc.memory, stack, cname);
 	gx_cpath_free(pcpath, "rc_free_clip_stack");
-    } while ((stack = next) != 0 && !--(stack->rc.ref_count));
+    }
 }
 
 /* clipsave */

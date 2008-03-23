@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sjpegc.c,v 1.8 2007/09/11 15:23:53 Arabidopsis Exp $ */
+/* $Id: sjpegc.c,v 1.9 2008/03/23 15:27:52 Arabidopsis Exp $ */
 /* Interface routines for IJG code, common to encode/decode. */
 #include "stdio_.h"
 #include "string_.h"
@@ -83,7 +83,7 @@ private_st_jpeg_block();
  * offset_of(jpeg_compress_data, cinfo)==offset_of(jpeg_decompress_data, dinfo)
  */
 
-private void
+static void
 gs_jpeg_error_exit(j_common_ptr cinfo)
 {
     jpeg_stream_data *jcomdp =
@@ -93,7 +93,7 @@ gs_jpeg_error_exit(j_common_ptr cinfo)
     longjmp(find_jmp_buf(jcomdp->exit_jmpbuf), 1);
 }
 
-private void
+static void
 gs_jpeg_emit_message(j_common_ptr cinfo, int msg_level)
 {
     if (msg_level < 0) {	/* GS policy is to ignore IJG warnings when Picky=0,
@@ -188,7 +188,7 @@ gs_jpeg_destroy(stream_DCT_state * st)
  * Note we do not need these to be declared in any GS header file.
  */
 
-private inline jpeg_compress_data *
+static inline jpeg_compress_data *
 cinfo2jcd(j_common_ptr cinfo)
 {   /* We use the offset of cinfo in jpeg_compress data here, but we */
     /* could equally well have used jpeg_decompress_data.            */
@@ -196,7 +196,7 @@ cinfo2jcd(j_common_ptr cinfo)
       ((byte *)cinfo - offset_of(jpeg_compress_data, cinfo));
 }
 
-private void *
+static void *
 jpeg_alloc(j_common_ptr cinfo, size_t size, const char *info)
 {
     jpeg_compress_data *jcd = cinfo2jcd(cinfo);
@@ -217,7 +217,7 @@ jpeg_alloc(j_common_ptr cinfo, size_t size, const char *info)
     return data;
 }
 
-private void
+static void
 jpeg_free(j_common_ptr cinfo, void *data, const char *info)
 {
     jpeg_compress_data *jcd = cinfo2jcd(cinfo);

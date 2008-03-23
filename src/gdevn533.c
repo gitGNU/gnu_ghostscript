@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevn533.c,v 1.8 2007/09/11 15:24:33 Arabidopsis Exp $*/
+/* $Id: gdevn533.c,v 1.9 2008/03/23 15:27:49 Arabidopsis Exp $*/
 /* Sony NWP-533 driver for GhostScript */
 #include "gdevprn.h"
 #define prn_dev ((gx_device_printer *)dev) /* needed in 5.31 et seq */
@@ -46,10 +46,10 @@
 #endif
 
 /* The device descriptor */
-private dev_proc_open_device(nwp533_open);
-private dev_proc_print_page(nwp533_print_page);
-private dev_proc_close_device(nwp533_close);
-private gx_device_procs nwp533_procs =
+static dev_proc_open_device(nwp533_open);
+static dev_proc_print_page(nwp533_print_page);
+static dev_proc_close_device(nwp533_close);
+static gx_device_procs nwp533_procs =
   prn_procs(nwp533_open, gdev_prn_output_page, nwp533_close);
 
 const gx_device_printer far_data gs_nwp533_device =
@@ -62,7 +62,7 @@ const gx_device_printer far_data gs_nwp533_device =
 	1, nwp533_print_page);
 
 /* return True if should retry - False if should quit */
-private int
+static int
 analyze_error(int printer_file)
 {
   struct lbp_stat status;
@@ -130,7 +130,7 @@ analyze_error(int printer_file)
   return retry_after_return;
 }
 
-private int
+static int
 nwp533_open(gx_device *dev)
 {
   gx_device_printer *pdev = (gx_device_printer *) dev;
@@ -142,7 +142,7 @@ nwp533_open(gx_device *dev)
   return gdev_prn_open(dev);
 }
 
-private int
+static int
 nwp533_close(gx_device *dev)
 {
   if (((gx_device_printer *) dev)->file != NULL)
@@ -163,7 +163,7 @@ nwp533_close(gx_device *dev)
 }
 
 /* Send the page to the printer. */
-private int
+static int
 nwp533_print_page(gx_device_printer *dev, FILE *prn_stream)
 {
   int lnum;

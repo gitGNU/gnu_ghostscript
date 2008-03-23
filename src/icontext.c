@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: icontext.c,v 1.8 2007/09/11 15:24:21 Arabidopsis Exp $ */
+/* $Id: icontext.c,v 1.9 2008/03/23 15:27:55 Arabidopsis Exp $ */
 /* Context state operations */
 #include "ghost.h"
 #include "gsstruct.h"		/* for gxalloc.h */
@@ -42,7 +42,7 @@ extern_st(st_exec_stack);
 extern_st(st_op_stack);
 
 /* GC descriptors */
-private 
+static 
 CLEAR_MARKS_PROC(context_state_clear_marks)
 {
     gs_context_state_t *const pcst = vptr;
@@ -53,7 +53,7 @@ CLEAR_MARKS_PROC(context_state_clear_marks)
     r_clear_attrs(&pcst->error_object, l_mark);
     r_clear_attrs(&pcst->userparams, l_mark);
 }
-private 
+static 
 ENUM_PTRS_WITH(context_state_enum_ptrs, gs_context_state_t *pcst) {
     index -= 6;
     if (index < st_gs_dual_memory_num_ptrs)
@@ -78,7 +78,7 @@ ENUM_PTRS_WITH(context_state_enum_ptrs, gs_context_state_t *pcst) {
     case 4: ENUM_RETURN_REF(&pcst->error_object);
     case 5: ENUM_RETURN_REF(&pcst->userparams);
 ENUM_PTRS_END
-private RELOC_PTRS_WITH(context_state_reloc_ptrs, gs_context_state_t *pcst);
+static RELOC_PTRS_WITH(context_state_reloc_ptrs, gs_context_state_t *pcst);
     RELOC_PTR(gs_context_state_t, pgs);
     RELOC_USING(st_gs_dual_memory, &pcst->memory, sizeof(pcst->memory));
     /******* WHY DON'T WE CLEAR THE l_mark OF stdio? ******/

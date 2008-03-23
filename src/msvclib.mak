@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 Artifex Software, Inc.
+#  Copyright (C) 2001-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: msvclib.mak,v 1.12 2007/09/11 15:24:13 Arabidopsis Exp $
+# $Id: msvclib.mak,v 1.13 2008/03/23 15:28:10 Arabidopsis Exp $
 # makefile for Microsoft Visual C++ 4.1 or later, Windows NT or Windows 95 LIBRARY.
 #
 # All configurable options are surrounded by !ifndef/!endif to allow 
@@ -88,14 +88,6 @@ DEBUG=0
 TDEBUG=1
 !endif
 
-# Setting NOPRIVATE=1 makes private (static) procedures and variables public,
-# so they are visible to the debugger and profiler.
-# No execution time or space penalty, just larger .OBJ and .EXE files.
-
-!ifndef NOPRIVATE
-NOPRIVATE=0
-!endif
-
 # Define the name of the executable file.
 
 !ifndef GS
@@ -134,7 +126,6 @@ GLD=$(GLGENDIR)\$(NUL)
 
 !ifndef JSRCDIR
 JSRCDIR=jpeg
-JVERSION=6
 !endif
 
 # Define the directory where the PNG library sources are stored,
@@ -142,9 +133,8 @@ JVERSION=6
 # You may need to change this if the libpng version changes.
 # See libpng.mak for more information.
 
-!ifndef PSRCDIR
-PSRCDIR=libpng
-PVERSION=10218
+!ifndef PNGSRCDIR
+PNGSRCDIR=libpng
 !endif
 
 # Define the directory where the zlib sources are stored.

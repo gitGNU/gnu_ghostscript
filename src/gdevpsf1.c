@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpsf1.c,v 1.9 2007/09/11 15:24:21 Arabidopsis Exp $ */
+/* $Id: gdevpsf1.c,v 1.10 2008/03/23 15:27:58 Arabidopsis Exp $ */
 /* Write an embedded Type 1 font */
 #include "memory_.h"
 #include "gx.h"
@@ -61,7 +61,7 @@ psf_get_type1_glyphs(psf_outline_glyphs_t *pglyphs, gs_font_type1 *pfont,
 /* ------ Main program ------ */
 
 /* Write a (named) array of floats. */
-private int
+static int
 write_float_array(gs_param_list *plist, const char *key, const float *values,
 		  int count)
 {
@@ -76,7 +76,7 @@ write_float_array(gs_param_list *plist, const char *key, const float *values,
 }
 
 /* Write a UniqueID and/or XUID. */
-private void
+static void
 write_uid(stream *s, const gs_uid *puid)
 {
     if (uid_is_UniqueID(puid))
@@ -92,20 +92,47 @@ write_uid(stream *s, const gs_uid *puid)
 }
 
 /* Write the font name. */
-private void
+static void
 write_font_name(stream *s, const gs_font_type1 *pfont,
-		const gs_const_string *alt_font_name)
+		const gs_const_string *alt_font_name, bool as_name)
 {
-    if (alt_font_name)
-	stream_write(s, alt_font_name->data, alt_font_name->size);
-    else
-	stream_write(s, pfont->font_name.chars, pfont->font_name.size);
+    const byte *c;
+    const byte *name = (alt_font_name ? alt_font_name->data : pfont->font_name.chars);
+    int         n    = (alt_font_name ? alt_font_name->size : pfont->font_name.size);
+
+    if (n == 0)
+	/* empty name, may need to write it as empty string */
+	stream_puts(s, (as_name ? "/" : "()"));
+    else {
+	for (c = (byte *)"()<>[]{}/% \n\r\t\b\f\004\033"; *c; c++)
+	    if (memchr(name, *c, n))
+		break;
+	if (*c || memchr(name, 0, n)) {
+	    /* name contains whitespace (NUL included) or a PostScript separator */
+	    byte pssebuf[1 + 4 * gs_font_name_max + 1]; /* "(" + "\ooo" * gs_font_name_max + ")" */
+	    stream_cursor_read  r;
+	    stream_cursor_write w;
+
+	    pssebuf[0] = '(';
+	    r.limit = (r.ptr = name - 1) + n;
+	    w.limit = (w.ptr = pssebuf) + sizeof pssebuf - 1;
+	    s_PSSE_template.process(NULL, &r, &w, true);
+	    stream_write(s, pssebuf, w.ptr - pssebuf + 1);
+	    if (as_name)
+		stream_puts(s, " cvn");
+	} else {
+	    /* name without any special characters */
+	    if (as_name)
+		stream_putc(s, '/');
+	    stream_write(s, name, n);
+	}
+    }
 }
 /*
  * Write the Encoding array.  This is a separate procedure only for
  * readability.
  */
-private int
+static int
 write_Encoding(stream *s, gs_font_type1 *pfont, int options,
 	      gs_glyph *subset_glyphs, uint subset_size, gs_glyph notdef)
 {
@@ -163,7 +190,7 @@ write_Encoding(stream *s, gs_font_type1 *pfont, int options,
  * Subrs and CharStrings when the font's lenIV == -1 but we are writing
  * the font with lenIV = 0.
  */
-private int
+static int
 write_Private(stream *s, gs_font_type1 *pfont,
 	      gs_glyph *subset_glyphs, uint subset_size,
 	      gs_glyph notdef, int lenIV,
@@ -182,7 +209,7 @@ write_Private(stream *s, gs_font_type1 *pfont,
     stream_puts(s, "/|-{noaccess def}executeonly def\n");
     stream_puts(s, "/|{noaccess put}executeonly def\n");
     {
-	private const gs_param_item_t private_items[] = {
+	static const gs_param_item_t private_items[] = {
 	    {"BlueFuzz", gs_param_type_int,
 	     offset_of(gs_type1_data, BlueFuzz)},
 	    {"BlueScale", gs_param_type_float,
@@ -327,7 +354,7 @@ write_Private(stream *s, gs_font_type1 *pfont,
 }
 
 /* Encrypt and write a CharString. */
-private int
+static int
 stream_write_encrypted(stream *s, const void *ptr, uint count)
 {
     const byte *const data = ptr;
@@ -345,7 +372,7 @@ stream_write_encrypted(stream *s, const void *ptr, uint count)
 }
 
 /* Write one FontInfo entry. */
-private void
+static void
 write_font_info(stream *s, const char *key, const gs_const_string *pvalue,
 		int do_write)
 {
@@ -396,7 +423,7 @@ psf_write_type1_font(stream *s, gs_font_type1 *pfont, int options,
     /* Write the font header. */
 
     stream_puts(s, "%!FontType1-1.0: ");
-    write_font_name(s, pfont, alt_font_name);
+    write_font_name(s, pfont, alt_font_name, false);
     stream_puts(s, "\n11 dict begin\n");
 
     /* Write FontInfo. */
@@ -424,8 +451,8 @@ psf_write_type1_font(stream *s, gs_font_type1 *pfont, int options,
 
     /* Write the main font dictionary. */
 
-    stream_puts(s, "/FontName /");
-    write_font_name(s, pfont, alt_font_name);
+    stream_puts(s, "/FontName ");
+    write_font_name(s, pfont, alt_font_name, true);
     stream_puts(s, " def\n");
     code = write_Encoding(s, pfont, options, glyphs.subset_glyphs,
 			  glyphs.subset_size, glyphs.notdef);
@@ -440,7 +467,7 @@ psf_write_type1_font(stream *s, gs_font_type1 *pfont, int options,
 	     pfont->FontBBox.p.x, pfont->FontBBox.p.y,
 	     pfont->FontBBox.q.x, pfont->FontBBox.q.y);
     {
-	private const gs_param_item_t font_items[] = {
+	static const gs_param_item_t font_items[] = {
 	    {"FontType", gs_param_type_int,
 	     offset_of(gs_font_type1, FontType)},
 	    {"PaintType", gs_param_type_int,

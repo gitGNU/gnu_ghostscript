@@ -3,7 +3,7 @@
 <html>
 <head>
 <title>How to use Ghostscript</title>
-<!-- $Id: Use.htm,v 1.10 2007/09/11 15:25:03 Arabidopsis Exp $ -->
+<!-- $Id: Use.htm,v 1.11 2008/03/23 15:28:23 Arabidopsis Exp $ -->
 <!-- Originally: use.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -622,12 +622,20 @@ regressions and should not be used routinely.
 </dl>
 
 <dl>
+<dt><b><tt>-dShowAnnots=false</tt></b>
+<dd>
+Don't enumerate anntoations associated with the page objects through
+<b><tt>Annots</tt></b> attribute. Annotations are shown by default.
+</dl>
+
+
+<dl>
 <dt><b><tt>-dShowAcroForm</tt></b>
 <dd>
-Show the content of the Interactive Form Dictionary (AcroForm dictionary).
-By default, AcroForm is not shown because some field types are not yet
-implemented. Adobe Acrobat doesn't always skips AcroForm, but it is
-not known yet when it does.
+Show annotations referred from the Interactive Form Dictionary (AcroForm dictionary).
+By default, AcroForm is not enumerated because Adobe Acrobat doesn't do this.
+This option may be useful for debugging or recovery of incorrect PDF files
+that don't associate all annotations with the page objects.
 </dl>
 
 <dl>
@@ -1287,16 +1295,33 @@ Examples :
 </tt></b></blockquote>
 
 <p>
-Note that the font file path uses Postscript syntax for strings.
-Due to that backslashes must be represented as a double backslash each.
+Note that the font file path uses Postscript syntax.
+Because of this, backslashes in the paths must be 
+represented as a double backslash.
+
+<p>
+This can complicate substitutions for fonts with non-Roman names. 
+For example, if a PDF file asks for a font with the name
+<tt>/#82l#82r#83S#83V#83b#83N</tt>. This cannot be used directly
+in a cidfmap file because the #xx notation in names is a PDF-only
+encoding. Instead, try something like:
+<blockquote>
+<tt>&lt;82C68272835383568362834E&gt;cvn << /Path 
+(C:/WINDOWS/Fonts/msmincho.ttc) /FileType /TrueType /SubfontID 0 /CSI 
+[(Japan1) 3] >> ;</tt>
+</blockquote>
+Where <tt>&lt;82C68272835383568362834E&gt;</tt> is the same byte 
+sequence converted to a hex string. This lets you specify a name
+using any sequence of bytes through the encodings available for 
+Postscript strings.
 
 <p>
 Note that loading truetype fonts directly from 
-<b>><tt>/Resources/CIDFont</tt></b> is no longer supported. 
+<b><tt>/Resources/CIDFont</tt></b> is no longer supported. 
 There is no reliable way to generate a character ordering for truetype
 fonts. The 7.0x versions of Ghostscript supported this by assuming a Japanese
-character ordering. This is replaced in the 8.0x and later releases with the more
-general <b><tt>cidfmap</tt></b> mechanism.
+character ordering. This is replaced in the 8.0x and later releases with 
+the more general <b><tt>cidfmap</tt></b> mechanism.
 
 <p>
 The PDF specification requires CID font files to be embedded,
@@ -1335,10 +1360,10 @@ possibly a specific one for each document.
 
 <h3><a name="UnicodeTT"></a>Using Unicode True Type fonts</h3>
 
-Ghostscript can handle True Type fonts with the full Unicode UTF-16 character set.
+Ghostscript can handle True Type fonts with the full Unicode character set.
 For doing that, a 3d party software should generate a Postscript
 or PDF document with a text, which is encoded with the 
-UTF16 encoding. Ghostscript may be used for converting
+UTF-16 encoding. Ghostscript may be used for converting
 such Postscript documents to PDF and for 
 re-distilling such PDF documents to PDF subsets.
 
@@ -1360,7 +1385,7 @@ with special values for the <b><tt>CSI</tt></b> key :
 
 <li> 
 In the PS or PDF document combine the font 
-with one of CMap <b><tt>Identity-UTF16-V</tt></b>
+with one of CMap <b><tt>Identity-UTF16-H</tt></b>
 (for the horizontal writing mode)
 or <b><tt>Identity-UTF16-V</tt></b> 
 (for the vertical writing mode).
@@ -2495,10 +2520,19 @@ or <b><tt>-sstdout=-</tt></b>.
 
 <dl>
 <dt><b><tt>-dTTYPAUSE</tt></b>
-<dd>Causes Ghostscript to read a character from <b><tt>/dev/tty</tt></b>,
+<dd>
+Causes Ghostscript to read a character from <b><tt>/dev/tty</tt></b>,
 rather than standard input, at the end of each page.  This may be useful if
 input is coming from a pipe.  Note that <b><tt>-dTTYPAUSE</tt></b>
 overrides <b><tt>-dNOPAUSE</tt></b>.
+
+Also note that <tt>-dTTYPAUSE</tt> requires opening the terminal 
+device directly, and may cause problems in combination with -dSAFER. 
+Permission errors  can be avoided by adding the device to the permitted 
+reading list before invoking safer mode. For example:
+<tt>gs -dTTYPAUSE -dDELAYSAFER 
+-c '<< /PermitFileReading [ (/dev/tty)] >>
+setuserparams .locksafe' -dSAFER</tt>
 </dl>
 
 <h4><a name="Output_selection_parameters"></a>Device and output selection parameters</h4>
@@ -2509,7 +2543,7 @@ overrides <b><tt>-dNOPAUSE</tt></b>.
 output image) rather than the default device or the device selected with
 <b><tt>-sDEVICE=</tt></b>.  This is usually useful only when running
 PostScript code whose purpose is to compute something rather than to
-produce an output image; for instance, when converting PostScript to PDF.
+produce an output image.
 </dl>
 
 <dl>
@@ -2522,6 +2556,15 @@ device</a>.
 <dt><b><tt>-sOutputFile=</tt></b><em>filename</em>
 <dd>Selects an alternate output file (or pipe) for the initial output
 device, as described above.
+</dl>
+
+<dl>
+<dt><b><tt>-d.IgnoreNumCopies=true</b></tt>
+<dd>Some devices implement support for "printing" multiple copies of the 
+input document and some do not, usually based on whether it makes sense 
+for a particular output format. This switch instructs all devices to 
+ignore a request to print multiple copies, giving more consistent 
+behaviour.
 </dl>
 
 <h4><a name="EPS_parameters"></a>EPS parameters</h4>
@@ -2859,9 +2902,8 @@ usage.
         <td>&nbsp;
         <td>Force the interpreter's allocator to acquire additional memory
             in units of <b><em>n</em></b>K bytes, rather than the default
-            (currently 20K on DOS systems, 50K on Unix). <b><em>n</em></b>
-            is a positive decimal integer, on DOS systems no greater than
-            63.
+            20K. <b><em>n</em></b> is a positive decimal integer, on 
+            16-bit systems no greater than 63.
 <tr>    <td valign=top><b><tt>-N</tt></b><em>n</em>
         <td>&nbsp;
         <td>&nbsp;
@@ -2922,8 +2964,8 @@ usage.
 <dt><b><tt>t</tt></b><dd>tiling algorithm
 <dt><b><tt>u</tt></b><dd>undo saver (for save/restore), finalization
 <dt>&nbsp;&nbsp;&nbsp;<b><tt>U</tt></b><dd>undo saver, more detail
-<dt><b><tt>v</tt></b><dd>alpha/transparency
-<dt>&nbsp;&nbsp;&nbsp;<b><tt>V</tt></b><dd>alpha/transparency, more detail
+<dt><b><tt>v</tt></b><dd>compositors: alpha/transparency/overprint/rop
+<dt>&nbsp;&nbsp;&nbsp;<b><tt>V</tt></b><dd>compositors: alpha/transparency/overprint/rop, more detail
 <dt><b><tt>w</tt></b><dd>compression encoder/decoder
 <dt><b><tt>x</tt></b><dd>transformations
 <dt><b><tt>y</tt></b><dd>Type 1 hints
@@ -2938,6 +2980,8 @@ usage.
 <dt>&nbsp;&nbsp;&nbsp;<b><tt>"</tt></b><dd>contexts, every operation
 <dt><b><tt>^</tt></b><dd>reference counting
 <dt><b><tt>_</tt></b><dd>high-level output
+<dt><b><tt>!</tt></b><dd>Postscript operator names (this option is available only
+when Ghostscript is compiled with a predefined macro DEBUG_TRACE_PS_OPERATORS)
 <dt><b><tt>|</tt></b><dd>(reserved for experimental code)
 </dl>
 
@@ -3593,7 +3637,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.60, 1 August 2007
+<small>Ghostscript version 8.61, 21 November 2007
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

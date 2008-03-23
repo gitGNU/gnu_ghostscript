@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zcfont.c,v 1.8 2007/09/11 15:24:03 Arabidopsis Exp $ */
+/* $Id: zcfont.c,v 1.9 2008/03/23 15:27:51 Arabidopsis Exp $ */
 /* Composite font-related character operators */
 #include "ghost.h"
 #include "oper.h"
@@ -32,11 +32,11 @@
 #include "store.h"
 
 /* Forward references */
-private int cshow_continue(i_ctx_t *);
-private int cshow_restore_font(i_ctx_t *);
+static int cshow_continue(i_ctx_t *);
+static int cshow_restore_font(i_ctx_t *);
 
 /* <proc> <string> cshow - */
-private int
+static int
 zcshow(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -71,7 +71,7 @@ zcshow(i_ctx_t *i_ctx_p)
     pop(2);
     return cshow_continue(i_ctx_p);
 }
-private int
+static int
 cshow_continue(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -143,7 +143,7 @@ cshow_continue(i_ctx_t *i_ctx_p)
     }
     return o_push_estack;
 }
-private int
+static int
 cshow_restore_font(i_ctx_t *i_ctx_p)
 {
     /* We must restore both the root font and the current font. */
@@ -153,7 +153,7 @@ cshow_restore_font(i_ctx_t *i_ctx_p)
 }
 
 /* - rootfont <font> */
-private int
+static int
 zrootfont(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

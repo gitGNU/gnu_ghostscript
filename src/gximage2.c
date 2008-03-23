@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gximage2.c,v 1.7 2007/09/11 15:24:14 Arabidopsis Exp $ */
+/* $Id: gximage2.c,v 1.8 2008/03/23 15:28:04 Arabidopsis Exp $ */
 /* ImageType 2 image implementation */
 #include "math_.h"
 #include "memory_.h"
@@ -35,8 +35,8 @@
 #include "gscolor2.h"
 
 /* Forward references */
-private dev_proc_begin_typed_image(gx_begin_image2);
-private image_proc_source_size(gx_image2_source_size);
+static dev_proc_begin_typed_image(gx_begin_image2);
+static image_proc_source_size(gx_image2_source_size);
 
 /* Structure descriptor */
 private_st_gs_image2();
@@ -66,7 +66,7 @@ typedef struct image2_data_s {
     gs_int_rect bbox;
     gs_image1_t image;
 } image2_data_t;
-private int
+static int
 image2_set_data(const gs_image2_t * pim, image2_data_t * pid)
 {
     gs_state *pgs = pim->DataSource;
@@ -89,7 +89,7 @@ image2_set_data(const gs_image2_t * pim, image2_data_t * pid)
 }
 
 /* Compute the source size of an ImageType 2 image. */
-private int
+static int
 gx_image2_source_size(const gs_imager_state * pis, const gs_image_common_t * pim,
 		      gs_int_point * psize)
 {
@@ -104,7 +104,7 @@ gx_image2_source_size(const gs_imager_state * pis, const gs_image_common_t * pim
 /* Begin an ImageType 2 image. */
 /* Note that since ImageType 2 images don't have any source data, */
 /* this procedure does all the work. */
-private int
+static int
 gx_begin_image2(gx_device * dev,
 		const gs_imager_state * pis, const gs_matrix * pmat,
 		const gs_image_common_t * pic, const gs_int_rect * prect,

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsdsrc.c,v 1.7 2007/09/11 15:24:11 Arabidopsis Exp $ */
+/* $Id: gsdsrc.c,v 1.8 2008/03/23 15:27:37 Arabidopsis Exp $ */
 /* DataSource procedures */
 
 #include "memory_.h"
@@ -28,7 +28,7 @@
 
 /* GC descriptor */
 public_st_data_source();
-private 
+static 
 ENUM_PTRS_WITH(data_source_enum_ptrs, gs_data_source_t *psrc)
 {
     if (psrc->type == data_source_type_string)
@@ -39,7 +39,7 @@ ENUM_PTRS_WITH(data_source_enum_ptrs, gs_data_source_t *psrc)
 	ENUM_RETURN_PTR(gs_data_source_t, data.str.data);
 }
 ENUM_PTRS_END
-private RELOC_PTRS_WITH(data_source_reloc_ptrs, gs_data_source_t *psrc)
+static RELOC_PTRS_WITH(data_source_reloc_ptrs, gs_data_source_t *psrc)
 {
     if (psrc->type == data_source_type_string)
 	RELOC_CONST_STRING_PTR(gs_data_source_t, data.str);

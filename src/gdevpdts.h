@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdts.h,v 1.7 2007/09/11 15:23:50 Arabidopsis Exp $ */
+/* $Id: gdevpdts.h,v 1.8 2008/03/23 15:27:59 Arabidopsis Exp $ */
 /* Text state structure and API for pdfwrite */
 
 #ifndef gdevpdts_INCLUDED
@@ -130,5 +130,11 @@ void pdf_text_position(const gx_device_pdf *pdev, gs_point *ppt);
  */
 int pdf_append_chars(gx_device_pdf * pdev, const byte * str, uint size,
 		     floatp wx, floatp wy, bool nobreak);
+
+bool pdf_compare_text_state_for_charpath(pdf_text_state_t *pts, gx_device_pdf *pdev, 
+			     gs_imager_state *pis, gs_font *font, 
+			     const gs_text_params_t *text);
+
+int pdf_modify_text_render_mode(pdf_text_state_t *pts, int render_mode);
 
 #endif /* gdevpdts_INCLUDED */

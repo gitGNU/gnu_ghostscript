@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: pdf_rbld.ps,v 1.7 2007/09/11 15:24:49 Arabidopsis Exp $
+% $Id: pdf_rbld.ps,v 1.8 2008/03/23 15:28:28 Arabidopsis Exp $
 % pdf_rbld.ps - Rebuilding of broken PDF files (xref errors)
 
 % This module contains routines that are used if we detect an error
@@ -32,10 +32,12 @@
 
 % Note:  This procedure is also used by non-rebuild code.
 % Store a line in the xref array (Actually Objects and Generations arrays)
-% <obj num> (strm num> <obj loc> <gen num>  setxrefentry <obj num> strm num>
-% 						 	 <obj loc> <gen num>
+% <obj num> (strm num> <obj loc> <gen num> <rebuild>
+%                         setxrefentry <obj num> strm num> <obj loc> <gen num>
 /setxrefentry
-{	% We store generation numbers as value + 1
+{
+  5 1 roll
+       	% We store generation numbers as value + 1
 	% We reserve 0 to indicate an free xref entry
   1 add			% increment generation number
 	% To save space, generations numbers are stored in a lstring unless we
@@ -71,7 +73,7 @@
     } if
 	% Set error flag if we have equal object and generation numbers
     Generations 4 index lget 1 index eq { /dup_obj_gen_num true def } if
-  } ifelse
+  } 8 -1 roll { ifelse } { pop if } ifelse  % Run 'else' only when rebuilding.
 } bind def
 
 % Print the contents of the xref array.  This actually consists of three
@@ -208,6 +210,7 @@
   exch 2 div lt { search_start_trailer } { search_end_trailer } ifelse
   % get the trailer
   PDFfile exch setfileposition		% set to the specified trailer location
+  /dictlevelcount 0 def
   PDFfile traileropdict .pdfrun		% read trailer info
   /Trailer exch def
 } bind def
@@ -275,7 +278,7 @@
 	      % save xref parameters into ObjectStream, Objects and Generations
 	      1 index 0			% rearrange parms for setxrefentry
 	      4 index PDFoffset sub 3 index
-	      setxrefentry		% save parameters
+	      //true setxrefentry	% save parameters
 	      pop pop pop pop		% clear parameters
 	    } if			% check if name is 'obj'
           } if				% check if we got 'obj" string

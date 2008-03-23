@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zdevcal.c,v 1.7 2007/09/11 15:23:48 Arabidopsis Exp $ */
+/* $Id: zdevcal.c,v 1.8 2008/03/23 15:28:06 Arabidopsis Exp $ */
 /* %Calendar% IODevice */
 #include "time_.h"
 #include "ghost.h"
@@ -27,7 +27,7 @@
 
 /* ------ %Calendar% ------ */
 
-private iodev_proc_get_params(calendar_get_params);
+static iodev_proc_get_params(calendar_get_params);
 const gx_io_device gs_iodev_calendar = {
     "%Calendar%", "Special",
     { iodev_no_init, iodev_no_open_device, iodev_no_open_file,
@@ -39,7 +39,7 @@ const gx_io_device gs_iodev_calendar = {
 };
 
 /* Get the date and time. */
-private int
+static int
 calendar_get_params(gx_io_device * iodev, gs_param_list * plist)
 {
     int code;

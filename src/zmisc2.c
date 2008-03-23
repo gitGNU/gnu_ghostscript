@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zmisc2.c,v 1.8 2007/09/11 15:23:57 Arabidopsis Exp $ */
+/* $Id: zmisc2.c,v 1.9 2008/03/23 15:28:00 Arabidopsis Exp $ */
 /* Miscellaneous Level 2 operators */
 #include "memory_.h"
 #include "string_.h"
@@ -35,12 +35,12 @@
 #include "store.h"
 
 /* Forward references */
-private int set_language_level(i_ctx_t *, int);
+static int set_language_level(i_ctx_t *, int);
 
 /* ------ Language level operators ------ */
 
 /* - .languagelevel <int> */
-private int
+static int
 zlanguagelevel(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -51,7 +51,7 @@ zlanguagelevel(i_ctx_t *i_ctx_p)
 }
 
 /* <int> .setlanguagelevel - */
-private int
+static int
 zsetlanguagelevel(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -85,10 +85,10 @@ const op_def zmisc2_op_defs[] =
  * This is used for the .setlanguagelevel operator,
  * and (perhaps someday) after a restore.
  */
-private int swap_level_dict(i_ctx_t *i_ctx_p, const char *dict_name);
-private int swap_entry(i_ctx_t *i_ctx_p, ref elt[2], ref * pdict,
+static int swap_level_dict(i_ctx_t *i_ctx_p, const char *dict_name);
+static int swap_entry(i_ctx_t *i_ctx_p, ref elt[2], ref * pdict,
 		       ref * pdict2);
-private int
+static int
 set_language_level(i_ctx_t *i_ctx_p, int new_level)
 {
     int old_level = LANGUAGE_LEVEL;
@@ -183,7 +183,7 @@ set_language_level(i_ctx_t *i_ctx_p, int new_level)
  * with the contents of the same dictionary in systemdict.  (This is a hack
  * to swap the contents of statusdict.)
  */
-private int
+static int
 swap_level_dict(i_ctx_t *i_ctx_p, const char *dict_name)
 {
     ref *pleveldict;
@@ -236,7 +236,7 @@ swap_level_dict(i_ctx_t *i_ctx_p, const char *dict_name)
  * elt[0] is the key, elt[1] is the current value in the Level 2 dictionary
  * (*pdict2).
  */
-private int
+static int
 swap_entry(i_ctx_t *i_ctx_p, ref elt[2], ref * pdict, ref * pdict2)
 {
     ref *pvalue;

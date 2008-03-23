@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxobj.h,v 1.9 2007/09/11 15:23:54 Arabidopsis Exp $ */
+/* $Id: gxobj.h,v 1.10 2008/03/23 15:28:03 Arabidopsis Exp $ */
 /* Memory manager implementation structures for Ghostscript */
 
 #ifndef gxobj_INCLUDED
@@ -25,10 +25,8 @@
 
 #include "gxbitmap.h"
 
-#ifdef DEBUG
-#define IGC_PTR_STABILITY_CHECK 0
-#else
-#define IGC_PTR_STABILITY_CHECK 0
+#ifndef IGC_PTR_STABILITY_CHECK
+#  define IGC_PTR_STABILITY_CHECK 0
 #endif
 
 /* ================ Objects ================ */

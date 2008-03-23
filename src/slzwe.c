@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: slzwe.c,v 1.5 2007/09/11 15:24:06 Arabidopsis Exp $ */
+/* $Id: slzwe.c,v 1.6 2008/03/23 15:28:00 Arabidopsis Exp $ */
 /* LZW encoding filter */
 #include "stdio_.h"	/* includes std.h */
 #include "gdebug.h"
@@ -62,7 +62,7 @@ gs_private_st_simple(st_lzwe_table, lzw_encode_table, "lzw_encode_table");
 /* Relevant invariants: 9 <= S <= 12; N / 2 <= M < N; 0 <= code < N; */
 /* 1 <= ss->bits_left <= 8; only the rightmost (8 - ss->bits_left) */
 /* bits of ss->bits contain valid data. */
-private byte *
+static byte *
 lzw_put_code(register stream_LZW_state *ss, byte *q, uint code)
 {	uint size = ss->code_size;
 	byte cb = (ss->bits << ss->bits_left) +
@@ -78,7 +78,7 @@ lzw_put_code(register stream_LZW_state *ss, byte *q, uint code)
 }
 
 /* Internal routine to reset the encoding table */
-private void
+static void
 lzw_reset_encode(stream_LZW_state *ss)
 {	register int c;
 	lzw_encode_table *table = ss->table.encode;
@@ -102,7 +102,7 @@ lzw_reset_encode(stream_LZW_state *ss)
 #define ss ((stream_LZW_state *)st)
 
 /* Initialize LZWEncode filter */
-private int
+static int
 s_LZWE_init(stream_state *st)
 {	ss->bits_left = 8;
 	ss->table.encode = gs_alloc_struct(st->memory,
@@ -115,7 +115,7 @@ s_LZWE_init(stream_state *st)
 }
 
 /* Process a buffer */
-private int
+static int
 s_LZWE_process(stream_state *st, stream_cursor_read *pr,
   stream_cursor_write *pw, bool last)
 {	register const byte *p = pr->ptr;

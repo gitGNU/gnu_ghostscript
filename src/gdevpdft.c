@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdft.c,v 1.7 2007/09/11 15:24:05 Arabidopsis Exp $ */
+/* $Id: gdevpdft.c,v 1.8 2008/03/23 15:28:13 Arabidopsis Exp $ */
 /* transparency processing for PDF-writing driver */
 #include "gx.h"
 #include "string_.h"
@@ -29,7 +29,7 @@
 #include "gdevpdfg.h"
 #include "gdevpdfo.h"
 
-private int
+static int
 pdf_make_soft_mask_dict(gx_device_pdf * pdev, const gs_pdf14trans_params_t * pparams)
 {
     pdf_resource_t *pres_soft_mask_dict = 0;
@@ -75,7 +75,7 @@ pdf_make_soft_mask_dict(gx_device_pdf * pdev, const gs_pdf14trans_params_t * ppa
 
 }
 
-private int
+static int
 pdf_make_group_dict(gx_device_pdf * pdev, const gs_pdf14trans_params_t * pparams,
 			    const gs_imager_state * pis, cos_dict_t **pdict)
 {
@@ -125,7 +125,7 @@ pdf_make_group_dict(gx_device_pdf * pdev, const gs_pdf14trans_params_t * pparams
     return 0;
 }
 
-private int
+static int
 pdf_make_form_dict(gx_device_pdf * pdev, const gs_pdf14trans_params_t * pparams,
 			    const gs_imager_state * pis, 
 			    const cos_dict_t *group_dict, cos_dict_t *form_dict)
@@ -164,7 +164,7 @@ pdf_make_form_dict(gx_device_pdf * pdev, const gs_pdf14trans_params_t * pparams,
     return cos_dict_put_c_key_object(form_dict, "/Group", (cos_object_t *)group_dict);
 }
 
-private int 
+static int 
 pdf_begin_transparency_group(gs_imager_state * pis, gx_device_pdf * pdev,
 				const gs_pdf14trans_params_t * pparams)
 {
@@ -212,7 +212,7 @@ pdf_begin_transparency_group(gs_imager_state * pis, gx_device_pdf * pdev,
     return 0;
 }
 
-private int 
+static int 
 pdf_end_transparency_group(gs_imager_state * pis, gx_device_pdf * pdev)
 {
     int bottom = (pdev->ResourcesBeforeUsage ? 1 : 0);
@@ -244,7 +244,7 @@ pdf_end_transparency_group(gs_imager_state * pis, gx_device_pdf * pdev)
     }
 }
 
-private int 
+static int 
 pdf_begin_transparency_mask(gs_imager_state * pis, gx_device_pdf * pdev,
 				const gs_pdf14trans_params_t * pparams)
 {
@@ -290,7 +290,7 @@ pdf_begin_transparency_mask(gs_imager_state * pis, gx_device_pdf * pdev,
     }
 }
 
-private int 
+static int 
 pdf_end_transparency_mask(gs_imager_state * pis, gx_device_pdf * pdev,
 				const gs_pdf14trans_params_t * pparams)
 {
@@ -322,7 +322,7 @@ pdf_end_transparency_mask(gs_imager_state * pis, gx_device_pdf * pdev,
     return 0;
 }
 
-private int
+static int
 pdf_set_blend_params(gs_imager_state * pis, gx_device_pdf * dev,
 				const gs_pdf14trans_params_t * pparams)
 {

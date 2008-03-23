@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: time_.h,v 1.8 2007/09/11 15:23:57 Arabidopsis Exp $ */
+/* $Id: time_.h,v 1.9 2008/03/23 15:27:49 Arabidopsis Exp $ */
 /* Generic substitute for Unix sys/time.h */
 
 #ifndef time__INCLUDED
@@ -39,7 +39,9 @@
  */
 #ifdef HAVE_SYS_TIME_H
 #  include <sys/time.h>
-#  if defined(Plan9) || defined(M_UNIX) || defined(_IBMR2) || defined(_SEQUENT_) || defined(__GNUC__) || defined(__INTEL_COMPILER)
+#  if defined(Plan9) || defined(M_UNIX) || defined(_IBMR2) || \
+      defined(_SEQUENT_) || defined(__GNUC__) || defined(__INTEL_COMPILER) ||\
+      defined(__hpux)
      /* Plan 9, SCO, AIX and Sequent's DYNIX/ptx need both time.h and
       * sys/time.h! As of version 2.2, at least some glibc
       * installations also require both files. 

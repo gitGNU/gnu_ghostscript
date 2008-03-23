@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 Artifex Software, Inc.
+#  Copyright (C) 2001-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: macosx.mak,v 1.12 2007/09/11 15:24:09 Arabidopsis Exp $
+# $Id: macosx.mak,v 1.13 2008/03/23 15:27:59 Arabidopsis Exp $
 # makefile for MacOS X/darwin/gcc/framework configuration.
 
 # ------------------------------- Options ------------------------------- #
@@ -62,11 +62,14 @@ prefix = /Library/Frameworks/$(FRAMEWORK_NAME)$(FRAMEWORK_EXT)
 exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
 scriptdir = $(bindir)
+includedir = $(prefix)/include
 libdir = $(exec_prefix)/lib
 mandir = $(prefix)/man
 man1ext = 1
 datadir = $(prefix)/Resources
 gsdatadir = $(prefix)/Versions/$(GS_DOT_VERSION)/Resources
+gssharedir = $(libdir)/ghostscript/$(GS_DOT_VERSION)
+gsincludedir = $(includedir)/ghostscript/
 
 docdir=$(gsdatadir)/doc
 exdir=$(gsdatadir)/examples
@@ -97,10 +100,6 @@ GS_INIT=gs_init.ps
 #	includes debugging features (-Z switch) in the code.
 #	  Code runs substantially slower even if no debugging switches
 #	  are set.
-# -DNOPRIVATE
-#	makes private (static) procedures and variables public,
-#	  so they are visible to the debugger and profiler.
-#	  No execution time or space penalty.
 
 GENOPT=
 
@@ -142,7 +141,6 @@ SORELDIR=../soobj
 # See jpeg.mak for more information.
 
 JSRCDIR=jpeg
-JVERSION=6
 
 # Note: if a shared library is used, it may not contain the
 # D_MAX_BLOCKS_IN_MCU patch, and thus may not be able to read
@@ -157,8 +155,7 @@ JPEG_NAME=jpeg
 # You may need to change this if the libpng version changes.
 # See libpng.mak for more information.
 
-PSRCDIR=libpng
-PVERSION=10218
+PNGSRCDIR=libpng
 
 # Choose whether to use a shared version of the PNG library, and if so,
 # what its name is.
@@ -401,7 +398,7 @@ DEVICE_DEVS12=
 #DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
 DEVICE_DEVS13=$(DD)png16.dev $(DD)png256.dev $(DD)pngalpha.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev $(DD)jpegcmyk.dev
-DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
+DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)txtwrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
 DEVICE_DEVS16=$(DD)bbox.dev
 DEVICE_DEVS17=
 DEVICE_DEVS18=

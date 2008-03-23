@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfont2.c,v 1.8 2007/09/11 15:24:22 Arabidopsis Exp $ */
+/* $Id: zfont2.c,v 1.9 2008/03/23 15:28:05 Arabidopsis Exp $ */
 /* Type 2 font creation operators */
 #include "ghost.h"
 #include "oper.h"
@@ -33,7 +33,7 @@
 #include "ialloc.h"
 
 /* Private utilities */
-private uint
+static uint
 subr_bias(const ref * psubrs)
 {
     uint size = r_size(psubrs);
@@ -90,7 +90,7 @@ type2_font_params(const_os_ptr op, charstring_font_refs_t *pfr,
 
 /* <string|name> <font_dict> .buildfont2 <string|name> <font> */
 /* Build a type 2 (compact Adobe encrypted) font. */
-private int
+static int
 zbuildfont2(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

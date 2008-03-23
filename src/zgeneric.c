@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zgeneric.c,v 1.9 2007/09/11 15:24:04 Arabidopsis Exp $ */
+/* $Id: zgeneric.c,v 1.10 2008/03/23 15:27:36 Arabidopsis Exp $ */
 /* Array/string/dictionary generic operators for PostScript */
 #include "memory_.h"
 #include "ghost.h"
@@ -40,9 +40,9 @@
 /* more efficient implementation of forall. */
 
 /* Forward references */
-private int zcopy_integer(i_ctx_t *);
-private int zcopy_interval(i_ctx_t *);
-private int copy_interval(i_ctx_t *, os_ptr, uint, os_ptr, client_name_t);
+static int zcopy_integer(i_ctx_t *);
+static int zcopy_interval(i_ctx_t *);
+static int copy_interval(i_ctx_t *, os_ptr, uint, os_ptr, client_name_t);
 
 /* <various1> <various2> copy <various> */
 /* <obj1> ... <objn> <int> copy <obj1> ... <objn> <obj1> ... <objn> */
@@ -69,7 +69,7 @@ zcopy(i_ctx_t *i_ctx_p)
 }
 
 /* <obj1> ... <objn> <int> copy <obj1> ... <objn> <obj1> ... <objn> */
-private int
+static int
 zcopy_integer(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -104,7 +104,7 @@ zcopy_integer(i_ctx_t *i_ctx_p)
 
 /* <array1> <array2> copy <subarray2> */
 /* <string1> <string2> copy <substring2> */
-private int
+static int
 zcopy_interval(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -120,7 +120,7 @@ zcopy_interval(i_ctx_t *i_ctx_p)
 }
 
 /* <array|dict|name|packedarray|string> length <int> */
-private int
+static int
 zlength(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -156,7 +156,7 @@ zlength(i_ctx_t *i_ctx_p)
 
 /* <array|packedarray|string> <index> get <obj> */
 /* <dict> <key> get <obj> */
-private int
+static int
 zget(i_ctx_t *i_ctx_p)
 {
     int code;
@@ -197,7 +197,7 @@ zget(i_ctx_t *i_ctx_p)
 /* <array> <index> <obj> put - */
 /* <dict> <key> <value> put - */
 /* <string> <index> <int> put - */
-private int
+static int
 zput(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -261,7 +261,7 @@ str:	    check_write(*op2);
  * and a few similar applications.  After initialization, this operator
  * should no longer be accessible by name.
  */
-private int
+static int
 zforceput(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -304,7 +304,7 @@ zforceput(i_ctx_t *i_ctx_p)
 }
 
 /* <seq:array|packedarray|string> <index> <count> getinterval <subseq> */
-private int
+static int
 zgetinterval(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -353,7 +353,7 @@ zgetinterval(i_ctx_t *i_ctx_p)
 /* <array1> <index> <array2|packedarray2> putinterval - */
 /* <string1> <index> <string2> putinterval - */
 /* <bytestring1> <index> <string2> putinterval - */
-private int
+static int
 zputinterval(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -404,13 +404,13 @@ zputinterval(i_ctx_t *i_ctx_p)
 
 /* <array|packedarray|string> <<element> proc> forall - */
 /* <dict> <<key> <value> proc> forall - */
-private int
+static int
     array_continue(i_ctx_t *),
     dict_continue(i_ctx_t *),
     string_continue(i_ctx_t *),
     packedarray_continue(i_ctx_t *);
-private int forall_cleanup(i_ctx_t *);
-private int
+static int forall_cleanup(i_ctx_t *);
+static int
 zforall(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -459,7 +459,7 @@ zforall(i_ctx_t *i_ctx_p)
     return (*real_opproc(cproc))(i_ctx_p);
 }
 /* Continuation operator for arrays */
-private int
+static int
 array_continue(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -479,7 +479,7 @@ array_continue(i_ctx_t *i_ctx_p)
     }
 }
 /* Continuation operator for dictionaries */
-private int
+static int
 dict_continue(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -499,7 +499,7 @@ dict_continue(i_ctx_t *i_ctx_p)
     }
 }
 /* Continuation operator for strings */
-private int
+static int
 string_continue(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -519,7 +519,7 @@ string_continue(i_ctx_t *i_ctx_p)
     }
 }
 /* Continuation operator for packed arrays */
-private int
+static int
 packedarray_continue(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -541,7 +541,7 @@ packedarray_continue(i_ctx_t *i_ctx_p)
     }
 }
 /* Vacuous cleanup procedure */
-private int
+static int
 forall_cleanup(i_ctx_t *i_ctx_p)
 {
     return 0;
@@ -574,7 +574,7 @@ const op_def zgeneric_op_defs[] =
 /* The destination is known to be an array or string, */
 /* and the starting index is known to be less than or equal to */
 /* its length; nothing else has been checked. */
-private int
+static int
 copy_interval(i_ctx_t *i_ctx_p /* for ref_assign_old */, os_ptr prto,
 	      uint index, os_ptr prfrom, client_name_t cname)
 {

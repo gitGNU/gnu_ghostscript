@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: scfe.c,v 1.8 2007/09/11 15:23:58 Arabidopsis Exp $ */
+/* $Id: scfe.c,v 1.9 2008/03/23 15:27:37 Arabidopsis Exp $ */
 /* CCITTFax encoding filter */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"
@@ -36,11 +36,11 @@ typedef struct stats_runs_s {
     ulong termination[64];
     ulong make_up[41];
 } stats_runs_t;
-private stats_runs_t stats_white_runs, stats_black_runs;
+static stats_runs_t stats_white_runs, stats_black_runs;
 
 #define COUNT_RUN(tab, i) (tab)[i]++;
 
-private void
+static void
 print_run_stats(const stats_runs_t * stats)
 {
     int i;
@@ -80,7 +80,7 @@ BEGIN\
     hc_put_value(ss, q, rr.code, rr.code_length);\
 END
 
-private byte *
+static byte *
 cf_put_long_run(stream_CFE_state * ss, byte * q, int lenv, const cf_runs * prt)
 {
     hce_declare_state;
@@ -116,10 +116,10 @@ cf_put_long_run(stream_CFE_state * ss, byte * q, int lenv, const cf_runs * prt)
 
 private_st_CFE_state();
 
-private void s_CFE_release(stream_state *);
+static void s_CFE_release(stream_state *);
 
 /* Set default parameter values. */
-private void
+static void
 s_CFE_set_defaults(register stream_state * st)
 {
     stream_CFE_state *const ss = (stream_CFE_state *) st;
@@ -128,7 +128,7 @@ s_CFE_set_defaults(register stream_state * st)
 }
 
 /* Initialize CCITTFaxEncode filter */
-private int
+static int
 s_CFE_init(register stream_state * st)
 {
     stream_CFE_state *const ss = (stream_CFE_state *) st;
@@ -183,7 +183,7 @@ s_CFE_init(register stream_state * st)
 }
 
 /* Release the filter. */
-private void
+static void
 s_CFE_release(stream_state * st)
 {
     stream_CFE_state *const ss = (stream_CFE_state *) st;
@@ -194,11 +194,11 @@ s_CFE_release(stream_state * st)
 }
 
 /* Flush the buffer */
-private void cf_encode_1d(stream_CFE_state *, const byte *,
+static void cf_encode_1d(stream_CFE_state *, const byte *,
 			  stream_cursor_write *);
-private void cf_encode_2d(stream_CFE_state *, const byte *,
+static void cf_encode_2d(stream_CFE_state *, const byte *,
 			  stream_cursor_write *, const byte *);
-private int
+static int
 s_CFE_process(stream_state * st, stream_cursor_read * pr,
 	      stream_cursor_write * pw, bool last)
 {
@@ -382,7 +382,7 @@ s_CFE_process(stream_state * st, stream_cursor_read * pr,
 }
 
 /* Encode a 1-D scan line. */
-private void
+static void
 cf_encode_1d(stream_CFE_state * ss, const byte * lbuf, stream_cursor_write * pw)
 {
     uint count = ss->raster << 3;
@@ -413,7 +413,7 @@ cf_encode_1d(stream_CFE_state * ss, const byte * lbuf, stream_cursor_write * pw)
 }
 
 /* Encode a 2-D scan line. */
-private void
+static void
 cf_encode_2d(stream_CFE_state * ss, const byte * lbuf, stream_cursor_write * pw,
 	     const byte * lprev)
 {

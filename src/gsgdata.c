@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsgdata.c,v 1.6 2007/09/11 15:24:10 Arabidopsis Exp $ */
+/* $Id: gsgdata.c,v 1.7 2008/03/23 15:27:37 Arabidopsis Exp $ */
 /* Support for glyph data access */
 
 #include "memory_.h"
@@ -29,11 +29,11 @@
 #include "gxfont.h"
 
 /* GC structure descriptor */
-private ENUM_PTRS_WITH(gs_glyph_data_enum_ptrs, gs_glyph_data_t *pgd)
+static ENUM_PTRS_WITH(gs_glyph_data_enum_ptrs, gs_glyph_data_t *pgd)
     case 0: return ENUM_CONST_BYTESTRING(&pgd->bits);
     case 1: return ENUM_OBJ(pgd->proc_data);
 ENUM_PTRS_END
-private RELOC_PTRS_WITH(gs_glyph_data_reloc_ptrs, gs_glyph_data_t *pgd)
+static RELOC_PTRS_WITH(gs_glyph_data_reloc_ptrs, gs_glyph_data_t *pgd)
 {
     RELOC_CONST_BYTESTRING_VAR(pgd->bits);
     RELOC_OBJ_VAR(pgd->proc_data);
@@ -63,11 +63,11 @@ gs_glyph_data_free(gs_glyph_data_t *pgd, client_name_t cname)
 /* ------ Implementor support ------ */
 
 /* Don't manage the glyph data. */
-private void
+static void
 glyph_data_free_permanent(gs_glyph_data_t *pgd, client_name_t cname)
 {
 }
-private int
+static int
 glyph_data_substring_permanent(gs_glyph_data_t *pgd, uint offset, uint size)
 {
     pgd->bits.data += offset;
@@ -76,13 +76,13 @@ glyph_data_substring_permanent(gs_glyph_data_t *pgd, uint offset, uint size)
 }			       
 
 /* Manage the glyph data using the font's allocator. */
-private void
+static void
 glyph_data_free_by_font(gs_glyph_data_t *pgd, client_name_t cname)
 {
     gs_free_const_bytestring(((gs_font *)pgd->proc_data)->memory,
 			     &pgd->bits, cname);
 }
-private int
+static int
 glyph_data_substring_by_font(gs_glyph_data_t *pgd, uint offset, uint size)
 {
     gs_font *const font = pgd->proc_data;
@@ -99,10 +99,10 @@ glyph_data_substring_by_font(gs_glyph_data_t *pgd, uint offset, uint size)
     return 0;
 }			       
 
-private const gs_glyph_data_procs_t no_free_procs = {
+static const gs_glyph_data_procs_t no_free_procs = {
     glyph_data_free_permanent, glyph_data_substring_permanent
 };
-private const gs_glyph_data_procs_t free_by_font_procs = {
+static const gs_glyph_data_procs_t free_by_font_procs = {
     glyph_data_free_by_font, glyph_data_substring_by_font
 };
 

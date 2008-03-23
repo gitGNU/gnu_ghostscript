@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gp_unix_cache.c,v 1.5 2007/09/11 15:24:39 Arabidopsis Exp $ */
+/* $Id: gp_unix_cache.c,v 1.6 2008/03/23 15:28:02 Arabidopsis Exp $ */
 /* Generic POSIX persistent-cache implementation for Ghostscript */
 
 #include "stdio_.h"
@@ -46,7 +46,7 @@ typedef struct gp_cache_entry_s {
 } gp_cache_entry;
 
 /* initialize a new gp_cache_entry struct */
-private void gp_cache_clear_entry(gp_cache_entry *item)
+static void gp_cache_clear_entry(gp_cache_entry *item)
 {
     item->type = -1;
     item->key = NULL;
@@ -59,7 +59,7 @@ private void gp_cache_clear_entry(gp_cache_entry *item)
 }
 
 /* get the cache directory's path */
-private char *gp_cache_prefix(void)
+static char *gp_cache_prefix(void)
 {
     char *prefix = NULL;
     int plen = 0;
@@ -116,7 +116,7 @@ private char *gp_cache_prefix(void)
 }
 
 /* compute the cache index file's path */
-private char *
+static char *
 gp_cache_indexfilename(const char *prefix)
 {
     const char *fn = "gs_cache";
@@ -143,7 +143,7 @@ gp_cache_indexfilename(const char *prefix)
 }
 
 /* compute and set a cache key's hash */
-private void gp_cache_hash(gp_cache_entry *entry)
+static void gp_cache_hash(gp_cache_entry *entry)
 {
     gs_md5_state_t md5;
     
@@ -154,7 +154,7 @@ private void gp_cache_hash(gp_cache_entry *entry)
 }
 
 /* compute and set cache item's filename */
-private void gp_cache_filename(const char *prefix, gp_cache_entry *item)
+static void gp_cache_filename(const char *prefix, gp_cache_entry *item)
 {
     const char hexmap[16] = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
     char *fn = malloc(gp_file_name_sizeof), *fni;
@@ -175,7 +175,7 @@ private void gp_cache_filename(const char *prefix, gp_cache_entry *item)
 }
 
 /* generate an access path for a cache item */
-private char *gp_cache_itempath(const char *prefix, gp_cache_entry *item)
+static char *gp_cache_itempath(const char *prefix, gp_cache_entry *item)
 {
     const char *fn = item->filename;
     gp_file_name_combine_result result;
@@ -194,7 +194,7 @@ private char *gp_cache_itempath(const char *prefix, gp_cache_entry *item)
     return path;
 }
 
-private int gp_cache_saveitem(FILE *file, gp_cache_entry* item)
+static int gp_cache_saveitem(FILE *file, gp_cache_entry* item)
 {
     unsigned char version = 0;
     int ret;
@@ -211,7 +211,7 @@ private int gp_cache_saveitem(FILE *file, gp_cache_entry* item)
     return ret;
 }
 
-private int gp_cache_loaditem(FILE *file, gp_cache_entry *item, gp_cache_alloc alloc, void *userdata)
+static int gp_cache_loaditem(FILE *file, gp_cache_entry *item, gp_cache_alloc alloc, void *userdata)
 {
     unsigned char version;
     unsigned char *filekey = NULL;
@@ -264,7 +264,7 @@ private int gp_cache_loaditem(FILE *file, gp_cache_entry *item, gp_cache_alloc a
 }
 
 /* convert a two-character hex string to an integer */
-private int readhexbyte(const char *s)
+static int readhexbyte(const char *s)
 {
     const char hexmap[16] = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
     int i,r;
@@ -281,7 +281,7 @@ private int readhexbyte(const char *s)
     return r;
 }
 
-private int
+static int
 gp_cache_read_entry(FILE *file, gp_cache_entry *item)
 {
     char line[256];
@@ -313,7 +313,7 @@ gp_cache_read_entry(FILE *file, gp_cache_entry *item)
     return 0;
 }
 
-private int
+static int
 gp_cache_write_entry(FILE *file, gp_cache_entry *item)
 {
     fprintf(file, "%s %ld\n", item->filename, item->last_used);

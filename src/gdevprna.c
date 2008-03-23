@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevprna.c,v 1.9 2007/09/11 15:24:19 Arabidopsis Exp $ */
+/* $Id: gdevprna.c,v 1.10 2008/03/23 15:28:06 Arabidopsis Exp $ */
 /* Generic asynchronous printer driver support */
 
 /* Initial version 2/1/98 by John Desrosiers (soho@crl.com) */
@@ -49,23 +49,23 @@
 #endif /* defined(DEBUG) */
 
 /* ---------------- Standard device procedures ---------------- */
-private dev_proc_close_device(gdev_prn_async_write_close_device);
-private dev_proc_output_page(gdev_prn_async_write_output_page);
-private dev_proc_put_params(gdev_prn_async_write_put_params);
-private dev_proc_get_hardware_params(gdev_prn_async_write_get_hardware_params);
-private dev_proc_put_params(gdev_prn_async_render_put_params);
+static dev_proc_close_device(gdev_prn_async_write_close_device);
+static dev_proc_output_page(gdev_prn_async_write_output_page);
+static dev_proc_put_params(gdev_prn_async_write_put_params);
+static dev_proc_get_hardware_params(gdev_prn_async_write_get_hardware_params);
+static dev_proc_put_params(gdev_prn_async_render_put_params);
 
 /* ---------------- Forward Declarations ---------------------- */
-private void gdev_prn_dealloc(gx_device_printer *);
-private proc_free_up_bandlist_memory(gdev_prn_async_write_free_up_bandlist_memory);
-private int flush_page(gx_device_printer *, bool);
-private int reopen_clist_after_flush(gx_device_printer *);
-private void reinit_printer_into_printera(gx_device_printer * const);
-private int alloc_bandlist_memory(gs_memory_t **, gs_memory_t *);
-private void free_bandlist_memory(gs_memory_t *);
-private int alloc_render_memory(gs_memory_t **, gs_memory_t *, long);
-private void free_render_memory(gs_memory_t *);
-private gs_memory_recover_status_t
+static void gdev_prn_dealloc(gx_device_printer *);
+static proc_free_up_bandlist_memory(gdev_prn_async_write_free_up_bandlist_memory);
+static int flush_page(gx_device_printer *, bool);
+static int reopen_clist_after_flush(gx_device_printer *);
+static void reinit_printer_into_printera(gx_device_printer * const);
+static int alloc_bandlist_memory(gs_memory_t **, gs_memory_t *);
+static void free_bandlist_memory(gs_memory_t *);
+static int alloc_render_memory(gs_memory_t **, gs_memory_t *, long);
+static void free_render_memory(gs_memory_t *);
+static gs_memory_recover_status_t
     prna_mem_recover(gs_memory_retrying_t *rmem, void *proc_data);
 
 /* ------ Open/close ------ */
@@ -220,7 +220,7 @@ open_err:
 /* This procedure is called from within the memory allocator when regular */
 /* malloc's fail -- this procedure tries to free up pages from the queue  */
 /* and returns a status code indicating whether any more can be freed.    */
-private gs_memory_recover_status_t
+static gs_memory_recover_status_t
 prna_mem_recover(gs_memory_retrying_t *rmem, void *proc_data)
 {
     int pages_remain = 0;
@@ -233,7 +233,7 @@ prna_mem_recover(gs_memory_retrying_t *rmem, void *proc_data)
 }
 
 /* (Re)set printer device fields which get trampled by gdevprn_open & put_params */
-private void
+static void
 reinit_printer_into_printera(
 			     gx_device_printer * const pdev	/* printer to convert */
 )
@@ -253,7 +253,7 @@ reinit_printer_into_printera(
 }
 
 /* Generic closing for the writer device. */
-private int
+static int
 gdev_prn_async_write_close_device(gx_device * pdev)
 {
     gx_device_printer *const pwdev = (gx_device_printer *) pdev;
@@ -277,7 +277,7 @@ gdev_prn_async_write_close_device(gx_device * pdev)
 }
 
 /* Deallocte dynamic memory attached to device. Aware of possible imcomplete open */
-private void
+static void
 gdev_prn_dealloc(gx_device_printer * pwdev)
 {
     gx_device_printer *const prdev = pwdev->async_renderer;
@@ -325,7 +325,7 @@ gdev_prn_async_render_close_device(gx_device_printer * prdev)
 }
 
 /* (Re)set renderer device fields which get trampled by gdevprn_open & put_params */
-private void
+static void
 reinit_printer_into_renderer(
 			     gx_device_printer * const pdev	/* printer to convert */
 )
@@ -448,7 +448,7 @@ gdev_prn_async_render_thread(
 /* ------ Get/put parameters ------ */
 
 /* Put parameters. */
-private int
+static int
 gdev_prn_async_write_put_params(gx_device * pdev, gs_param_list * plist)
 {
     gx_device_clist_writer *const pclwdev =
@@ -542,7 +542,7 @@ gdev_prn_async_write_put_params(gx_device * pdev, gs_param_list * plist)
 }
 
 /* Get hardware-detected params. Drain page queue, then call renderer version */
-private int
+static int
 gdev_prn_async_write_get_hardware_params(gx_device * pdev, gs_param_list * plist)
 {
     gx_device_printer *const pwdev = (gx_device_printer *) pdev;
@@ -562,7 +562,7 @@ gdev_prn_async_write_get_hardware_params(gx_device * pdev, gs_param_list * plist
 }
 
 /* Put parameters on RENDERER. */
-private int		/* returns -ve err code only if FATAL error (can't keep rendering) */
+static int		/* returns -ve err code only if FATAL error (can't keep rendering) */
 gdev_prn_async_render_put_params(gx_device * pdev, gs_param_list * plist)
 {
     gx_device_printer *const prdev = (gx_device_printer *) pdev;
@@ -594,7 +594,7 @@ gdev_prn_async_render_put_params(gx_device * pdev, gs_param_list * plist)
 /* ------ Others ------ */
 
 /* Output page causes file to get added to page queue for later rasterizing */
-private int
+static int
 gdev_prn_async_write_output_page(gx_device * pdev, int num_copies, int flush)
 {
     gx_device_printer *const pwdev = (gx_device_printer *) pdev;
@@ -631,7 +631,7 @@ gdev_prn_async_write_output_page(gx_device * pdev, int num_copies, int flush)
 }
 
 /* Free bandlist memory waits until the rasterizer runs enough to free some mem */
-private int			/* -ve err,  0 if no pages remain to rasterize, 1 if more pages to go */
+static int			/* -ve err,  0 if no pages remain to rasterize, 1 if more pages to go */
 gdev_prn_async_write_free_up_bandlist_memory(gx_device * pdev, bool flush_current)
 {
     gx_device_printer *const pwdev = (gx_device_printer *) pdev;
@@ -649,7 +649,7 @@ gdev_prn_async_write_free_up_bandlist_memory(gx_device * pdev, bool flush_curren
 
 /* Flush out any partial pages accumulated in device */
 /* LEAVE DEVICE in a state where it must be re-opened/re-init'd */
-private int			/* ret 0 ok no flush, -ve error code */
+static int			/* ret 0 ok no flush, -ve error code */
 flush_page(
 	   gx_device_printer * pwdev,	/* async writer device to flush */
 	   bool partial	/* true if only partial page */
@@ -677,7 +677,7 @@ flush_page(
 }
 
 /* Flush any pending partial pages, re-open device */
-private int
+static int
 reopen_clist_after_flush(
 			 gx_device_printer * pwdev	/* async writer device to flush */
 )
@@ -706,7 +706,7 @@ reopen_clist_after_flush(
  */
 
 /* Create a bandlist allocator. */
-private int
+static int
 alloc_bandlist_memory(gs_memory_t ** final_allocator,
 		      gs_memory_t * base_allocator)
 {
@@ -744,7 +744,7 @@ alloc_err:
 }
 
 /* Free a bandlist allocator. */
-private void
+static void
 free_bandlist_memory(gs_memory_t *bandlist_allocator)
 {
     gs_memory_locked_t *const lmem = (gs_memory_locked_t *)bandlist_allocator;
@@ -759,7 +759,7 @@ free_bandlist_memory(gs_memory_t *bandlist_allocator)
 }
 
 /* Create an allocator with a fixed memory limit. */
-private int
+static int
 alloc_render_memory(gs_memory_t **final_allocator,
 		    gs_memory_t *base_allocator, long space)
 {
@@ -791,7 +791,7 @@ alloc_render_memory(gs_memory_t **final_allocator,
 }
 
 /* Free an allocator with a fixed memory limit. */
-private void
+static void
 free_render_memory(gs_memory_t *render_allocator)
 {
     if (render_allocator)

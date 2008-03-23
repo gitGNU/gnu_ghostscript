@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gscdefs.h,v 1.8 2007/09/11 15:24:36 Arabidopsis Exp $ */
+/*$Id: gscdefs.h,v 1.9 2008/03/23 15:27:44 Arabidopsis Exp $ */
 /* Prototypes for configuration definitions in gconfig.c. */
 
 #ifndef gscdefs_INCLUDED
@@ -55,6 +55,7 @@ extern CONFIG_CONST long gs_serialnumber;
 extern const char *const gs_doc_directory;
 extern const char *const gs_lib_default_path;
 extern const char *const gs_init_file;
+extern const char *const gs_dev_defaults;
 
 /* Resource tables.  In order to avoid importing a large number of types, */
 /* we only provide macros for some externs, not the externs themselves. */

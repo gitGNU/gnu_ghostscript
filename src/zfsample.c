@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfsample.c,v 1.8 2007/09/11 15:24:03 Arabidopsis Exp $ */
+/* $Id: zfsample.c,v 1.9 2008/03/23 15:27:42 Arabidopsis Exp $ */
 /* Sample data to create a type 0 function */
 #include "memory_.h"
 #include "ghost.h"
@@ -70,16 +70,16 @@ gs_private_st_ptrs1(st_gs_sampled_data_enum, gs_sampled_data_enum,
 
 /* Forward references */
 
-private int cube_build_func0(const ref * pdict,
+static int cube_build_func0(const ref * pdict,
 	gs_function_Sd_params_t * params, gs_memory_t *mem);
-private int sampled_data_setup(i_ctx_t *i_ctx_p, gs_function_t *pfn,
+static int sampled_data_setup(i_ctx_t *i_ctx_p, gs_function_t *pfn,
 	const ref * pproc, int (*finish_proc)(i_ctx_t *),
 	gs_memory_t * mem);
-private int sampled_data_sample(i_ctx_t *i_ctx_p);
-private int sampled_data_continue(i_ctx_t *i_ctx_p);
-private int sampled_data_finish(i_ctx_t *i_ctx_p);
+static int sampled_data_sample(i_ctx_t *i_ctx_p);
+static int sampled_data_continue(i_ctx_t *i_ctx_p);
+static int sampled_data_finish(i_ctx_t *i_ctx_p);
 
-private gs_sampled_data_enum * gs_sampled_data_enum_alloc
+static gs_sampled_data_enum * gs_sampled_data_enum_alloc
 	(gs_memory_t * mem, client_name_t cname);
 
 /*
@@ -95,7 +95,7 @@ private gs_sampled_data_enum * gs_sampled_data_enum_alloc
  *    BitsPerSample (required) Only 8, 16, 24, and 32 accepted,
  * The remaining keys are ignored.
  */
-private int
+static int
 zbuildsampledfunction(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -144,7 +144,7 @@ zbuildsampledfunction(i_ctx_t *i_ctx_p)
  * This routine will verify that the requested data hypercube parameters will require
  * a data storage size less than or equal to the MAX_DATA_SIZE.
  */
-private bool
+static bool
 valid_cube_size(int num_inputs, int num_outputs, int sample_size, const int Size[])
 {
     int i, total_size = num_outputs * sample_size;
@@ -171,7 +171,7 @@ valid_cube_size(int num_inputs, int num_outputs, int sample_size, const int Size
  * e_rangecheck error if the cube can not fit into the maximum  size.
  * On exit the Size array contains the cube size (if a valid size was found).
  */
-private int
+static int
 determine_sampled_data_size(int num_inputs, int num_outputs,
 				int sample_size, int Size[])
 {
@@ -206,7 +206,7 @@ determine_sampled_data_size(int num_inputs, int num_outputs,
  * Allocate the enumerator used while collecting sampled data.  This enumerator
  * is used to hold the various state data required while sampling.
  */
-private gs_sampled_data_enum *
+static gs_sampled_data_enum *
 gs_sampled_data_enum_alloc(gs_memory_t * mem, client_name_t cname)
 {
     return gs_alloc_struct(mem, gs_sampled_data_enum,
@@ -218,7 +218,7 @@ gs_sampled_data_enum_alloc(gs_memory_t * mem, client_name_t cname)
  * in the hyper cube.  Basically this does an index calculation
  * for an n dimensional cube.
  */
-private byte *
+static byte *
 cube_ptr_from_index(gs_function_Sd_params_t * params, int indexes[])
 {
     int i, sum = indexes[params->m - 1];
@@ -236,7 +236,7 @@ cube_ptr_from_index(gs_function_Sd_params_t * params, int indexes[])
  * is used for collecting the data.  If we have incremented the
  * last index beyond its last value then we return a true, else false;
  */
-private bool
+static bool
 increment_cube_indexes(gs_function_Sd_params_t * params, int indexes[])
 {
     int i = 0;
@@ -274,7 +274,7 @@ increment_cube_indexes(gs_function_Sd_params_t * params, int indexes[])
  * will create a function type 0 object to be used to calculate values
  * as a replacement for the original function.
  */
-private int
+static int
 cube_build_func0(const ref * pdict, gs_function_Sd_params_t * params,
 							gs_memory_t *mem)
 {
@@ -391,7 +391,7 @@ fail:
  * those alternate tint transforms that cannot be converted into a
  * type 4 function.
  */
-private int
+static int
 sampled_data_setup(i_ctx_t *i_ctx_p, gs_function_t *pfn,
 	const ref * pproc, int (*finish_proc)(i_ctx_t *), gs_memory_t * mem)
 {
@@ -445,7 +445,7 @@ sampled_data_setup(i_ctx_t *i_ctx_p, gs_function_t *pfn,
 /*
  * Set up to collect the next sampled data value.
  */
-private int
+static int
 sampled_data_sample(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -475,7 +475,7 @@ sampled_data_sample(i_ctx_t *i_ctx_p)
 /* 
  * Continuation procedure for processing sampled values.
  */
-private int
+static int
 sampled_data_continue(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -556,7 +556,7 @@ sampled_data_continue(i_ctx_t *i_ctx_p)
 /*
  * We have collected all of the sample data.  Create a type 0 function stucture.
  */
-private int
+static int
 sampled_data_finish(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

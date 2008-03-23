@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: simscale.c,v 1.3 2007/09/11 15:24:41 Arabidopsis Exp $ */
+/* $Id: simscale.c,v 1.4 2008/03/23 15:28:02 Arabidopsis Exp $ */
 /* Image mask interpolation filter */
 
 #include "memory_.h"
@@ -8230,7 +8230,7 @@ gs_private_st_ptrs2(st_imscale_state, stream_imscale_state,
 		    imscale_state_enum_ptrs, imscale_state_reloc_ptrs,
 		    window, dst);
 
-private void
+static void
 s_imscale_release(stream_state *st)
 {
     stream_imscale_state *const ss = (stream_imscale_state *) st;
@@ -8242,7 +8242,7 @@ s_imscale_release(stream_state *st)
     ss->dst = 0;
 }
 
-private int
+static int
 s_imscale_init(stream_state *st)
 {
     stream_imscale_state *const ss = (stream_imscale_state *) st;
@@ -8264,7 +8264,7 @@ s_imscale_init(stream_state *st)
     return 0;
 }
 
-private void
+static void
 zoom_line(stream_imscale_state *ss)
 {
     uint w = ss->src_size + 2;
@@ -8313,7 +8313,7 @@ zoom_line(stream_imscale_state *ss)
 	dst[i] = (dst[i] << 2) + (dst[i + 1] >> 6);
 }
 
-private int
+static int
 s_imscale_process(stream_state *st, stream_cursor_read *pr,
 		stream_cursor_write *pw, bool last)
 {

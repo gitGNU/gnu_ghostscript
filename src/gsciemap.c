@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsciemap.c,v 1.10 2007/09/11 15:24:34 Arabidopsis Exp $ */
+/* $Id: gsciemap.c,v 1.11 2008/03/23 15:27:53 Arabidopsis Exp $ */
 /* CIE color rendering */
 #include "math_.h"
 #include "gx.h"
@@ -46,13 +46,13 @@
 #define LOOKUP_ENTRY_(vin, pcache)\
   (&(pcache)->vecs.values[(int)LOOKUP_INDEX(vin, pcache, 0)])
 #ifdef DEBUG
-private cie_cached_value
+static cie_cached_value
 LOOKUP_INDEX(cie_cached_value vin, const gx_cie_vector_cache *pcache,
 	     int fbits)
 {
     return LOOKUP_INDEX_(vin, pcache, fbits);
 }
-private const cie_cached_vector3 *
+static const cie_cached_vector3 *
 LOOKUP_ENTRY(cie_cached_value vin, const gx_cie_vector_cache *pcache)
 {
     return LOOKUP_ENTRY_(vin, pcache);
@@ -75,11 +75,11 @@ LOOKUP_ENTRY(cie_cached_value vin, const gx_cie_vector_cache *pcache)
 #endif
 
 /* Forward references */
-private void cie_lookup_mult3(cie_cached_vector3 *,
+static void cie_lookup_mult3(cie_cached_vector3 *,
 			      const gx_cie_vector_cache3_t *);
 
 #ifdef DEBUG
-private void
+static void
 cie_lookup_map3(cie_cached_vector3 * pvec,
 		const gx_cie_vector_cache3_t * pc, const char *cname)
 {
@@ -100,12 +100,12 @@ cie_lookup_map3(cie_cached_vector3 * pvec,
 /*
  * Test whether a CIE rendering has been defined; ensure that the joint
  * caches are loaded.  Note that the procedure may return 1 if no rendering
- * has been defined.
+ * has been defined. The 'cie_to_xyz' flag indicates that we don't need a CRD
  */
-private inline int 
+static inline int 
 gx_cie_check_rendering_inline(const gs_color_space * pcs, frac * pconc, const gs_imager_state * pis)
 {
-    if (pis->cie_render == 0) {
+    if (pis->cie_render == 0 && !pis->cie_to_xyz) {
 	/* No rendering has been defined yet: return black. */
 	pconc[0] = pconc[1] = pconc[2] = frac_0;
 	return 1;
@@ -614,7 +614,7 @@ gx_cie_real_remap_finish(cie_cached_vector3 vec3, frac * pconc,
  * Note that we can't currently represent values outside the range [0..1]:
  * this is a bug that we will have to address someday.
  */
-private frac
+static frac
 float2frac_clamp(floatp x)
 {
     return float2frac((x <= 0 ? 0 : x >= 1 ? 1 : x));
@@ -642,7 +642,7 @@ gx_cie_xyz_remap_finish(cie_cached_vector3 vec3, frac * pconc,
 }
 
 /* Look up 3 values in a cache, with cached post-multiplication. */
-private void
+static void
 cie_lookup_mult3(cie_cached_vector3 * pvec,
 		 const gx_cie_vector_cache3_t * pc)
 {
@@ -650,7 +650,7 @@ cie_lookup_mult3(cie_cached_vector3 * pvec,
     cie_cached_value u, v, w;
 
 #ifdef CIE_CACHE_USE_FIXED
-#  define LOOKUP_INTERPOLATE_BETWEEN(v0, v1, i, ftemp)\
+#  define LOOKUP_INTERPOLATE_BETWEEN(v0, v1, i)\
      cie_interpolate_between(v0, v1, i)
 #else
     float ftemp;

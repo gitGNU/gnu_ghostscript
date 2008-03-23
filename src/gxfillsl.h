@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxfillsl.h,v 1.5 2007/09/11 15:24:28 Arabidopsis Exp $ */
+/* $Id: gxfillsl.h,v 1.6 2008/03/23 15:28:09 Arabidopsis Exp $ */
 /* Configurable algorithm for filling a path by scanlines. */
 
 /*
@@ -29,7 +29,7 @@
  *  TEMPLATE_spot_into_scanlines - the name of the procedure to generate.
 */
 
-private int
+static int
 TEMPLATE_spot_into_scanlines (line_list *ll, fixed band_mask)
 {
     const fill_options fo = *ll->fo;

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfm.c,v 1.11 2007/09/11 15:24:22 Arabidopsis Exp $ */
+/* $Id: gdevpdfm.c,v 1.12 2008/03/23 15:27:37 Arabidopsis Exp $ */
 /* pdfmark processing for PDF-writing driver */
 #include "math_.h"
 #include "memory_.h"
@@ -90,7 +90,7 @@ pdfmark_scan_int(const gs_param_string * pstr, int *pvalue)
 /* ---------------- Private utilities ---------------- */
 
 /* Find a key in a dictionary. */
-private bool
+static bool
 pdfmark_find_key(const char *key, const gs_param_string * pairs, uint count,
 		 gs_param_string * pstr)
 {
@@ -110,7 +110,7 @@ pdfmark_find_key(const char *key, const gs_param_string * pairs, uint count,
  * Get the page number for a page referenced by number or as /Next or /Prev.
  * The result may be 0 if the page number is 0 or invalid.
  */
-private int
+static int
 pdfmark_page_number(gx_device_pdf * pdev, const gs_param_string * pnstr)
 {
     int page = pdev->next_page + 1;
@@ -130,7 +130,7 @@ pdfmark_page_number(gx_device_pdf * pdev, const gs_param_string * pnstr)
 /* Construct a destination string specified by /Page and/or /View. */
 /* Return 0 if none (but still fill in a default), 1 or 2 if present */
 /* (1 if only one of /Page or /View, 2 if both), <0 if error. */
-private int
+static int
 pdfmark_make_dest(char dstr[MAX_DEST_STRING], gx_device_pdf * pdev,
 		  const char *Page_key, const char *View_key,
 		  const gs_param_string * pairs, uint count)
@@ -169,7 +169,7 @@ pdfmark_make_dest(char dstr[MAX_DEST_STRING], gx_device_pdf * pdev,
  * If a named destination is specified by a string, convert it to a name,
  * update *dstr, and return 1; otherwise return 0.
  */
-private int
+static int
 pdfmark_coerce_dest(gs_param_string *dstr, char dest[MAX_DEST_STRING])
 {
     const byte *data = dstr->data;
@@ -187,13 +187,13 @@ pdfmark_coerce_dest(gs_param_string *dstr, char dest[MAX_DEST_STRING])
 }
 
 /* Put pairs in a dictionary. */
-private int
+static int
 pdfmark_put_c_pair(cos_dict_t *pcd, const char *key,
 		   const gs_param_string * pvalue)
 {
     return cos_dict_put_c_key_string(pcd, key, pvalue->data, pvalue->size);
 }
-private int
+static int
 pdfmark_put_pair(cos_dict_t *pcd, const gs_param_string * pair)
 {
     return cos_dict_put_string(pcd, pair->data, pair->size,
@@ -201,7 +201,7 @@ pdfmark_put_pair(cos_dict_t *pcd, const gs_param_string * pair)
 }
 
 /* Scan a Rect value. */
-private int
+static int
 pdfmark_scan_rect(gs_rect * prect, const gs_param_string * str,
 		  const gs_matrix * pctm)
 {
@@ -225,7 +225,7 @@ pdfmark_scan_rect(gs_rect * prect, const gs_param_string * str,
 }
 
 /* Make a Rect value. */
-private void
+static void
 pdfmark_make_rect(char str[MAX_RECT_STRING], const gs_rect * prect)
 {
     /*
@@ -243,7 +243,7 @@ pdfmark_make_rect(char str[MAX_RECT_STRING], const gs_rect * prect)
 }
 
 /* Write a transformed Border value on a stream. */
-private int
+static int
 pdfmark_write_border(stream *s, const gs_param_string *str,
 		     const gs_matrix *pctm)
 {
@@ -294,14 +294,14 @@ pdfmark_write_border(stream *s, const gs_param_string *str,
 }
 
 /* Put an element in a stream's dictionary. */
-private int
+static int
 cos_stream_put_c_strings(cos_stream_t *pcs, const char *key, const char *value)
 {
     return cos_dict_put_c_strings(cos_stream_dict(pcs), key, value);
 }
 
 /* Setup pdfmak stream compression. */
-private int
+static int
 setup_pdfmark_stream_compression(gx_device_psdf *pdev0,
 			cos_stream_t *pco)
 {
@@ -344,7 +344,7 @@ setup_pdfmark_stream_compression(gx_device_psdf *pdev0,
     return pdf_put_filters(cos_stream_dict(pco), pdev, pco->input_strm, &fnames);
 }
 
-private int
+static int
 pdfmark_bind_named_object(gx_device_pdf *pdev, const gs_const_string *objname, 
 			  pdf_resource_t **pres)
 {
@@ -374,7 +374,10 @@ pdfmark_bind_named_object(gx_device_pdf *pdev, const gs_const_string *objname,
 	}
     }
     if ((*pres)->object->id == -1) {
-	code = pdf_substitute_resource(pdev, pres, resourceXObject, NULL, true);
+	if(objname != NULL && objname->size)
+	    code = pdf_substitute_resource(pdev, pres, resourceXObject, NULL, false);
+	else
+	    code = pdf_substitute_resource(pdev, pres, resourceXObject, NULL, true);
 	if (code < 0)
 	    return code;
     } else {
@@ -435,7 +438,7 @@ typedef struct ao_params_s {
     const char *subtype;	/* default Subtype in top-level dictionary */
     long src_pg;		/* set to SrcPg - 1 if any */
 } ao_params_t;
-private int
+static int
 pdfmark_put_ao_pairs(gx_device_pdf * pdev, cos_dict_t *pcd,
 		     const gs_param_string * pairs, uint count,
 		     const gs_matrix * pctm, ao_params_t * params,
@@ -695,7 +698,7 @@ pdfmark_put_ao_pairs(gx_device_pdf * pdev, cos_dict_t *pcd,
 }
 
 /* Copy an annotation dictionary. */
-private int
+static int
 pdfmark_annot(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	      const gs_matrix * pctm, const gs_param_string *objname,
 	      const char *subtype)
@@ -740,7 +743,7 @@ pdfmark_annot(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 }
 
 /* ANN pdfmark */
-private int
+static int
 pdfmark_ANN(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	    const gs_matrix * pctm, const gs_param_string * objname)
 {
@@ -748,7 +751,7 @@ pdfmark_ANN(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 }
 
 /* LNK pdfmark (obsolescent) */
-private int
+static int
 pdfmark_LNK(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	    const gs_matrix * pctm, const gs_param_string * objname)
 {
@@ -756,7 +759,7 @@ pdfmark_LNK(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 }
 
 /* Write and release one node of the outline tree. */
-private int
+static int
 pdfmark_write_outline(gx_device_pdf * pdev, pdf_outline_node_t * pnode,
 		      long next_id)
 {
@@ -793,7 +796,7 @@ pdfmark_write_outline(gx_device_pdf * pdev, pdf_outline_node_t * pnode,
 }
 
 /* Adjust the parent's count when writing an outline node. */
-private void
+static void
 pdfmark_adjust_parent_count(pdf_outline_level_t * plevel)
 {
     pdf_outline_level_t *parent = plevel - 1;
@@ -834,7 +837,7 @@ pdfmark_close_outline(gx_device_pdf * pdev)
 }
 
 /* OUT pdfmark */
-private int
+static int
 pdfmark_OUT(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	    const gs_matrix * pctm, const gs_param_string * no_objname)
 {
@@ -907,7 +910,7 @@ pdfmark_OUT(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 }
 
 /* Write an article bead. */
-private int
+static int
 pdfmark_write_bead(gx_device_pdf * pdev, const pdf_bead_t * pbead)
 {
     stream *s;
@@ -951,7 +954,7 @@ pdfmark_write_article(gx_device_pdf * pdev, const pdf_article_t * part)
 }
 
 /* ARTICLE pdfmark */
-private int
+static int
 pdfmark_ARTICLE(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 		const gs_matrix * pctm, const gs_param_string * no_objname)
 {
@@ -1043,7 +1046,7 @@ pdfmark_ARTICLE(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 }
 
 /* DEST pdfmark */
-private int
+static int
 pdfmark_DEST(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	     const gs_matrix * pctm, const gs_param_string * objname)
 {
@@ -1091,7 +1094,7 @@ pdfmark_DEST(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 }
 
 /* Check that pass-through PostScript code is a string. */
-private bool
+static bool
 ps_source_ok(const gs_param_string * psource)
 {
     if (psource->size >= 2 && psource->data[0] == '(' &&
@@ -1110,7 +1113,7 @@ ps_source_ok(const gs_param_string * psource)
 
 /* Write the contents of pass-through PostScript code. */
 /* Return the size written on the file. */
-private uint
+static uint
 pdfmark_write_ps(stream *s, const gs_param_string * psource)
 {
     /****** REMOVE ESCAPES WITH PSSDecode, SEE gdevpdfr p. 2 ******/
@@ -1122,7 +1125,7 @@ pdfmark_write_ps(stream *s, const gs_param_string * psource)
 }
 
 /* Start a XObject. */
-private int
+static int
 start_XObject(gx_device_pdf * pdev, bool compress, cos_stream_t **ppcs)
 {   pdf_resource_t *pres;
     cos_stream_t *pcs;
@@ -1154,7 +1157,7 @@ start_XObject(gx_device_pdf * pdev, bool compress, cos_stream_t **ppcs)
 
 /* PS pdfmark */
 #define MAX_PS_INLINE 100
-private int
+static int
 pdfmark_PS(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	   const gs_matrix * pctm, const gs_param_string * objname)
 {
@@ -1255,7 +1258,7 @@ pdfmark_PS(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 }
 
 /* Common code for pdfmarks that do PUT into a specific object. */
-private int
+static int
 pdfmark_put_pairs(cos_dict_t *pcd, gs_param_string * pairs, uint count)
 {
     int code = 0, i;
@@ -1268,7 +1271,7 @@ pdfmark_put_pairs(cos_dict_t *pcd, gs_param_string * pairs, uint count)
 }
 
 /* PAGES pdfmark */
-private int
+static int
 pdfmark_PAGES(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	      const gs_matrix * pctm, const gs_param_string * no_objname)
 {
@@ -1276,7 +1279,7 @@ pdfmark_PAGES(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 }
 
 /* PAGE pdfmark */
-private int
+static int
 pdfmark_PAGE(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	     const gs_matrix * pctm, const gs_param_string * no_objname)
 {
@@ -1286,7 +1289,7 @@ pdfmark_PAGE(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 /* Add a page label for the current page. The last label on a page 
  * overrides all previous labels for this page. Unlabeled pages will get 
  * empty page labels. label == NULL flushes the last label */
-private int 
+static int 
 pdfmark_add_pagelabel(gx_device_pdf * pdev, const gs_param_string *label) 
 {
     cos_value_t value;
@@ -1374,7 +1377,7 @@ pdfmark_end_pagelabels(gx_device_pdf * pdev)
 
 /* [ /Label string /PlateColor string pdfmark */
 /* FIXME: /PlateColor is ignored */
-private int
+static int
 pdfmark_PAGELABEL(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	     const gs_matrix * pctm, const gs_param_string * no_objname)
 {
@@ -1389,7 +1392,7 @@ pdfmark_PAGELABEL(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 }
 
 /* DOCINFO pdfmark */
-private int
+static int
 pdfmark_DOCINFO(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 		const gs_matrix * pctm, const gs_param_string * no_objname)
 {
@@ -1468,7 +1471,7 @@ pdfmark_DOCINFO(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 }
 
 /* DOCVIEW pdfmark */
-private int
+static int
 pdfmark_DOCVIEW(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 		const gs_matrix * pctm, const gs_param_string * no_objname)
 {
@@ -1495,7 +1498,7 @@ pdfmark_DOCVIEW(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 /* ---------------- Named object pdfmarks ---------------- */
 
 /* [ /BBox [llx lly urx ury] /_objdef {obj} /BP pdfmark */
-private int
+static int
 pdfmark_BP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	   const gs_matrix * pctm, const gs_param_string * objname)
 {
@@ -1564,7 +1567,7 @@ pdfmark_BP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 }
 
 /* [ /EP pdfmark */
-private int
+static int
 pdfmark_EP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	   const gs_matrix * pctm, const gs_param_string * no_objname)
 {
@@ -1588,7 +1591,7 @@ pdfmark_EP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 }
 
 /* [ {obj} /SP pdfmark */
-private int
+static int
 pdfmark_SP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	   const gs_matrix * pctm, const gs_param_string * no_objname)
 {
@@ -1613,7 +1616,7 @@ pdfmark_SP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 /* [ /_objdef {array} /type /array /OBJ pdfmark */
 /* [ /_objdef {dict} /type /dict /OBJ pdfmark */
 /* [ /_objdef {stream} /type /stream /OBJ pdfmark */
-private int
+static int
 pdfmark_OBJ(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	    const gs_matrix * pctm, const gs_param_string * objname)
 {
@@ -1654,7 +1657,7 @@ pdfmark_OBJ(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 /* [ {array} index value /PUT pdfmark */
 /* Dictionaries are converted to .PUTDICT */
 /* Streams are converted to .PUTSTREAM */
-private int
+static int
 pdfmark_PUT(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	    const gs_matrix * pctm, const gs_param_string * no_objname)
 {
@@ -1683,7 +1686,7 @@ pdfmark_PUT(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
  * but it's reasonable and unambiguous, and Acrobat Distiller accepts it,
  * so we do too.
  */
-private int
+static int
 pdfmark_PUTDICT(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 		const gs_matrix * pctm, const gs_param_string * no_objname)
 {
@@ -1700,7 +1703,7 @@ pdfmark_PUTDICT(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 }
 
 /* [ {stream} string ... /.PUTSTREAM pdfmark */
-private int
+static int
 pdfmark_PUTSTREAM(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 		  const gs_matrix * pctm, const gs_param_string * no_objname)
 {
@@ -1723,7 +1726,7 @@ pdfmark_PUTSTREAM(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 }
 
 /* [ {array} value /APPEND pdfmark */
-private int
+static int
 pdfmark_APPEND(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	       const gs_matrix * pctm, const gs_param_string * objname)
 {
@@ -1740,7 +1743,7 @@ pdfmark_APPEND(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 }
 
 /* [ {array} index value ... /.PUTINTERVAL pdfmark */
-private int
+static int
 pdfmark_PUTINTERVAL(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 		 const gs_matrix * pctm, const gs_param_string * no_objname)
 {
@@ -1763,7 +1766,7 @@ pdfmark_PUTINTERVAL(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 }
 
 /* [ {stream} /CLOSE pdfmark */
-private int
+static int
 pdfmark_CLOSE(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 	      const gs_matrix * pctm, const gs_param_string * no_objname)
 {
@@ -1782,7 +1785,7 @@ pdfmark_CLOSE(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
 }
 
 /* [ /NamespacePush pdfmark */
-private int
+static int
 pdfmark_NamespacePush(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 		      const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1792,7 +1795,7 @@ pdfmark_NamespacePush(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 }
 
 /* [ /NamespacePop pdfmark */
-private int
+static int
 pdfmark_NamespacePop(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 		     const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1803,7 +1806,7 @@ pdfmark_NamespacePop(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 }
 
 /* [ /_objdef {image} /NI pdfmark */
-private int
+static int
 pdfmark_NI(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 	   const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1821,7 +1824,7 @@ pdfmark_NI(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 /* ---------------- Named content pdfmarks ---------------- */
 
 /* [ tag /MP pdfmark */
-private int
+static int
 pdfmark_MP(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 	   const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1829,7 +1832,7 @@ pdfmark_MP(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 }
 
 /* [ tag propdict /DP pdfmark */
-private int
+static int
 pdfmark_DP(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 	   const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1837,7 +1840,7 @@ pdfmark_DP(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 }
 
 /* [ tag /BMC pdfmark */
-private int
+static int
 pdfmark_BMC(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 	    const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1845,7 +1848,7 @@ pdfmark_BMC(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 }
 
 /* [ tag propdict /BDC pdfmark */
-private int
+static int
 pdfmark_BDC(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 	    const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1853,7 +1856,7 @@ pdfmark_BDC(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 }
 
 /* [ /EMC pdfmark */
-private int
+static int
 pdfmark_EMC(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 	    const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1863,7 +1866,7 @@ pdfmark_EMC(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 /* ---------------- Document structure pdfmarks ---------------- */
 
 /* [ newsubtype1 stdsubtype1 ... /StRoleMap pdfmark */
-private int
+static int
 pdfmark_StRoleMap(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 		  const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1871,7 +1874,7 @@ pdfmark_StRoleMap(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 }
 
 /* [ class1 {attrobj1} ... /StClassMap pdfmark */
-private int
+static int
 pdfmark_StClassMap(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 		   const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1883,7 +1886,7 @@ pdfmark_StClassMap(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
  *   [/ID string] [/Class name] [/At index] [/Bookmark dict] [action_pairs...]
  *   /StPNE pdfmark
  */
-private int
+static int
 pdfmark_StPNE(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 	      const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1891,7 +1894,7 @@ pdfmark_StPNE(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 }
 
 /* [ [/Title string] [/Open bool] [action_pairs...] /StBookmarkRoot pdfmark */
-private int
+static int
 pdfmark_StBookmarkRoot(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 		       const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1899,7 +1902,7 @@ pdfmark_StBookmarkRoot(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 }
 
 /* [ [/E {elt}] /StPush pdfmark */
-private int
+static int
 pdfmark_StPush(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 	       const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1907,7 +1910,7 @@ pdfmark_StPush(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 }
 
 /* [ /StPop pdfmark */
-private int
+static int
 pdfmark_StPop(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 	      const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1915,7 +1918,7 @@ pdfmark_StPop(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 }
 
 /* [ /StPopAll pdfmark */
-private int
+static int
 pdfmark_StPopAll(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 		 const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1923,7 +1926,7 @@ pdfmark_StPopAll(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 }
 
 /* [ [/T tagname] [/At index] /StBMC pdfmark */
-private int
+static int
 pdfmark_StBMC(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 	      const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1931,7 +1934,7 @@ pdfmark_StBMC(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 }
 
 /* [ [/P propdict] [/T tagname] [/At index] /StBDC pdfmark */
-private int
+static int
 pdfmark_StBDC(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 	      const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1939,7 +1942,7 @@ pdfmark_StBDC(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 }
 
 /* [ /Obj {obj} [/At index] /StOBJ pdfmark */
-private int
+static int
 pdfmark_StOBJ(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 	      const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1947,7 +1950,7 @@ pdfmark_StOBJ(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 }
 
 /* [ /Obj {obj} /StAttr pdfmark */
-private int
+static int
 pdfmark_StAttr(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 	       const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1955,7 +1958,7 @@ pdfmark_StAttr(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 }
 
 /* [ /StoreName name /StStore pdfmark */
-private int
+static int
 pdfmark_StStore(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 		const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1963,7 +1966,7 @@ pdfmark_StStore(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 }
 
 /* [ /StoreName name /StRetrieve pdfmark */
-private int
+static int
 pdfmark_StRetrieve(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 		   const gs_matrix *pctm, const gs_param_string *objname)
 {
@@ -1975,7 +1978,7 @@ pdfmark_StRetrieve(gx_device_pdf *pdev, gs_param_string *pairs, uint count,
 /*
  * Define the pdfmark types we know about.
  */
-private const pdfmark_name mark_names[] =
+static const pdfmark_name mark_names[] =
 {
 	/* Miscellaneous. */
     {"ANN",          pdfmark_ANN,         PDFMARK_NAMEABLE},

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gximask.c,v 1.3 2007/09/11 15:24:40 Arabidopsis Exp $ */
+/* $Id: gximask.c,v 1.4 2008/03/23 15:27:43 Arabidopsis Exp $ */
 /* Functions for masked fill optimization. */
 #include "gx.h"
 #include "memory_.h"
@@ -76,9 +76,7 @@ gx_image_fill_masked_end(gx_device *dev, gx_device *tdev, const gx_device_color 
     if (code >= 0)
 	code = gx_dc_pattern2_clip_with_bbox(pdevc, tdev, &cpath_with_shading_bbox, &pcpath1);
     if (code >= 0) {
-	gx_make_clip_path_device(&cdev, pcpath1);
-	cdev.target = tdev;
-	(*dev_proc(&cdev, open_device)) ((gx_device *) & cdev);
+	gx_make_clip_device_on_stack(&cdev, pcpath1, tdev);
 	code1 = gx_device_color_fill_rectangle(pdevc, 
 		    pcdev->bbox.p.x, pcdev->bbox.p.y, 
 		    pcdev->bbox.q.x - pcdev->bbox.p.x, 

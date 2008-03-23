@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gp_psync.c,v 1.7 2007/09/11 15:24:09 Arabidopsis Exp $ */
+/* $Id: gp_psync.c,v 1.8 2008/03/23 15:27:51 Arabidopsis Exp $ */
 /* POSIX pthreads threads / semaphore / monitor implementation */
 #include "std.h"
 #include "malloc_.h"
@@ -196,7 +196,7 @@ typedef struct gp_thread_creation_closure_s {
 } gp_thread_creation_closure_t;
 
 /* Wrapper procedure called to start the new thread. */
-private void *
+static void *
 gp_thread_begin_wrapper(void *thread_data /* gp_thread_creation_closure_t * */)
 {
     gp_thread_creation_closure_t closure;

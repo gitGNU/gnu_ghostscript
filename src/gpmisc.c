@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gpmisc.c,v 1.8 2007/09/11 15:24:36 Arabidopsis Exp $ */
+/* $Id: gpmisc.c,v 1.9 2008/03/23 15:27:57 Arabidopsis Exp $ */
 /* Miscellaneous support for platform facilities */
 
 #include "unistd_.h"
@@ -51,7 +51,7 @@ gp_gettmpdir(char *ptr, int *plen)
  * Open a temporary file, using O_EXCL and S_I*USR to prevent race
  * conditions and symlink attacks.
  */
-private FILE *
+static FILE *
 gp_fopentemp_generic(const char *fname, const char *mode, bool b64)
 {
     int flags = O_EXCL;
@@ -99,11 +99,7 @@ gp_fopentemp_generic(const char *fname, const char *mode, bool b64)
      * fdopen as (char *), rather than following the POSIX.1 standard,
      * which defines it as (const char *).  Patch this here.
      */
-#if defined (O_LARGEFILE)
-    file = (b64 ? fdopen64 : fdopen)(fildes, (char *)mode); /* still really const */
-#else
     file = fdopen(fildes, (char *)mode); /* still really const */
-#endif
     if (file == 0)
 	close(fildes);
     return file;
@@ -120,7 +116,7 @@ FILE *gp_fopentemp(const char *fname, const char *mode)
 }
 
 /* Append a string to buffer. */
-private inline bool
+static inline bool
 append(char **bp, const char *bpe, const char **ip, uint len)
 {
     if (bpe - *bp < len)
@@ -132,7 +128,7 @@ append(char **bp, const char *bpe, const char **ip, uint len)
 }
 
 /* Search a separator forward. */
-private inline uint
+static inline uint
 search_separator(const char **ip, const char *ipe, const char *item, int direction)
 {   uint slen = 0;
     for (slen = 0; (*ip - ipe) * direction < 0; (*ip) += direction)
@@ -373,7 +369,7 @@ gp_file_name_is_absolute(const char *fname, uint flen)
 /* 
  * Returns length of all starting parent references.
  */
-private uint 
+static uint 
 gp_file_name_prefix(const char *fname, uint flen, 
 		bool (*test)(const char *fname, uint flen))
 {

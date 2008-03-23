@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfb.h,v 1.5 2007/09/11 15:24:04 Arabidopsis Exp $ */
+/* $Id: gdevpdfb.h,v 1.6 2008/03/23 15:27:59 Arabidopsis Exp $ */
 /* pdfwrite, ps2write device body template. */
 
 /* This file is allowed to #include several times into a single .c file.
@@ -133,6 +133,7 @@ const gx_device_pdf PDF_DEVICE_IDENT =
  max_long,                      /* MaxViewerMemorySize */
  256000,			/* MaxShadingBitmapSize */
  PDF_DEVICE_MaxInlineImageSize,	/* MaxInlineImageSize */
+ {0, 0},                        /* DSCEncodingToUnicode */
  {0, 0, 0},			/* OwnerPassword */
  {0, 0, 0},			/* UserPassword */
  0,				/* KeyLength */

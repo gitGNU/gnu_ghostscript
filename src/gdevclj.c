@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevclj.c,v 1.7 2007/09/11 15:24:07 Arabidopsis Exp $ */
+/* $Id: gdevclj.c,v 1.8 2008/03/23 15:27:50 Arabidopsis Exp $ */
 /*
  * H-P Color LaserJet 5/5M device; based on the PaintJet.
  */
@@ -80,7 +80,7 @@ typedef struct clj_paper_size_s {
  * long-edge-feed (landscape) orientation. Only executive, letter, and
  * A4 size are supported for color, so we don't bother to list the others.
  */
-private const clj_paper_size    clj_paper_sizes[] = {
+static const clj_paper_size    clj_paper_sizes[] = {
     /* U.S. letter size comes first so it will be the default. */
     {   2,  1, 11.00 * 72.0, 8.50 * 72.0, { .200 * 72.0, 0.0 } },
     {   1,  1, 10.50 * 72.0, 7.25 * 72.0, { .200 * 72.0, 0.0 } },
@@ -105,7 +105,7 @@ private const clj_paper_size    clj_paper_sizes[] = {
  *
  * All valuse are in dots per inch.
  */
-private const float supported_resolutions[] = { 75.0, 100.0, 150.0, 300.0 };
+static const float supported_resolutions[] = { 75.0, 100.0, 150.0, 300.0 };
 
 
 /* indicate the maximum supported resolution and scan-line length (pts) */
@@ -116,7 +116,7 @@ private const float supported_resolutions[] = { 75.0, 100.0, 150.0, 300.0 };
 /*
  * Determine a requested resolution pair is supported.
  */
-  private bool
+  static bool
 is_supported_resolution(
     const float HWResolution[2]
 )
@@ -141,7 +141,7 @@ is_supported_resolution(
  *
  * Note that for the standard driver, rotation is not allowed.
  */
-  private const clj_paper_size *
+  static const clj_paper_size *
 get_paper_size(
     const float             MediaSize[2],
     bool *                  rotatep
@@ -178,7 +178,7 @@ get_paper_size(
  * As will all HP laser printers, the printable region marin is 12 pts. from
  * the edge of the physical page.
  */
-private void
+static void
 clj_get_initial_matrix( gx_device *pdev, gs_matrix *pmat)
 {
     floatp      	fs_res = pdev->HWResolution[0] / 72.0;
@@ -221,7 +221,7 @@ clj_get_initial_matrix( gx_device *pdev, gs_matrix *pmat)
  * We associate each page size with a different "media source", since that
  * is currently the only way to register multiple page sizes.
  */
-private int
+static int
 clj_get_params(gx_device *pdev, gs_param_list *plist)
 {
     gs_param_dict mdict;
@@ -252,7 +252,7 @@ clj_get_params(gx_device *pdev, gs_param_list *plist)
  * size is being set, 1 (and set mediasize[]) if the size is being set, <0
  * on error.
  */
-private int
+static int
 clj_media_size(float mediasize[2], gs_param_list *plist)
 {
     gs_param_float_array fres;
@@ -284,7 +284,7 @@ clj_media_size(float mediasize[2], gs_param_list *plist)
  * Special put_params routine, to make certain the desired MediaSize and
  * HWResolution are supported.
  */
-  private int
+  static int
 clj_put_params(
     gx_device *             pdev,
     gs_param_list *         plist
@@ -324,7 +324,7 @@ clj_put_params(
  * effort to generate, so it is useful only when it is known a prior that
  * scanlines repeat frequently.
  */
-  private void
+  static void
 pack_and_compress_scanline(
     const byte *        pin,
     int                 in_size,
@@ -407,7 +407,7 @@ pack_and_compress_scanline(
 /*
  * Send the page to the printer.  Compress each scan line.
  */
-  private int
+  static int
 clj_print_page(
     gx_device_printer *     pdev,
     FILE *                  prn_stream
@@ -531,7 +531,7 @@ clj_print_page(
     NULL,	                    /* map_rgb_alpha_color */\
     gx_page_device_get_page_device  /* get_page_device */
 
-private gx_device_procs cljet5_procs = {
+static gx_device_procs cljet5_procs = {
     CLJ_PROCS(clj_get_params, clj_put_params)
 };
 
@@ -576,7 +576,7 @@ gx_device_clj gs_cljet5_device = {
  * Special get_params routine, to fake MediaSize, width, and height if
  * we were in a 'rotated' state.
  */
-private int
+static int
 clj_pr_get_params( gx_device *pdev, gs_param_list *plist )
 {
     int code;
@@ -620,7 +620,7 @@ clj_pr_get_params( gx_device *pdev, gs_param_list *plist )
  * This function will rotate MediaSize if it is needed by the device in
  * order to print this size page.
  */
-  private int
+  static int
 clj_pr_put_params(
     gx_device *             pdev,
     gs_param_list *         plist
@@ -670,7 +670,7 @@ clj_pr_put_params(
 }
 
 /* CLJ device methods -- se above for CLJ_PROCS */
-private gx_device_procs cljet5pr_procs = {
+static gx_device_procs cljet5pr_procs = {
     CLJ_PROCS(clj_pr_get_params, clj_pr_put_params)
 };
 

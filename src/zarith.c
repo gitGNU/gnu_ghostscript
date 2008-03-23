@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zarith.c,v 1.7 2007/09/11 15:24:26 Arabidopsis Exp $ */
+/* $Id: zarith.c,v 1.8 2008/03/23 15:27:53 Arabidopsis Exp $ */
 /* Arithmetic operators */
 #include "math_.h"
 #include "ghost.h"
@@ -381,7 +381,7 @@ ztruncate(i_ctx_t *i_ctx_p)
 /* Non-standard operators */
 
 /* <int1> <int2> .bitadd <sum> */
-private int
+static int
 zbitadd(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

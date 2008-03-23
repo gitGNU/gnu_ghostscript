@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: iparam.c,v 1.10 2007/09/11 15:24:24 Arabidopsis Exp $ */
+/* $Id: iparam.c,v 1.11 2008/03/23 15:28:01 Arabidopsis Exp $ */
 /* Interpreter implementations of parameter dictionaries */
 #include "memory_.h"
 #include "string_.h"
@@ -39,7 +39,7 @@
 /* ================ Utilities ================ */
 
 /* Convert a key to a ref. */
-private int
+static int
 ref_param_key(const iparam_list * plist, gs_param_name pkey, ref * pkref)
 {
     if (plist->int_keys) {
@@ -54,7 +54,7 @@ ref_param_key(const iparam_list * plist, gs_param_name pkey, ref * pkref)
 }
 
 /* Fill in a gs_param_key_t from a name or int ref. */
-private int
+static int
 ref_to_key(const ref * pref, gs_param_key_t * key, iparam_list *plist)
 {
     if (r_has_type(pref, t_name)) {
@@ -86,18 +86,18 @@ ref_to_key(const ref * pref, gs_param_key_t * key, iparam_list *plist)
 /* ================ Writing parameters to refs ================ */
 
 /* Forward references */
-private int array_new_indexed_plist_write(dict_param_list *plist,
+static int array_new_indexed_plist_write(dict_param_list *plist,
 					  ref *parray, const ref *pwanted,
 					  gs_ref_memory_t *imem);
 
 /* ---------------- Generic writing procedures ---------------- */
 
-private param_proc_begin_xmit_collection(ref_param_begin_write_collection);
-private param_proc_end_xmit_collection(ref_param_end_write_collection);
-private param_proc_xmit_typed(ref_param_write_typed);
-private param_proc_next_key(ref_param_get_next_key);
-private param_proc_requested(ref_param_requested);
-private const gs_param_list_procs ref_write_procs =
+static param_proc_begin_xmit_collection(ref_param_begin_write_collection);
+static param_proc_end_xmit_collection(ref_param_end_write_collection);
+static param_proc_xmit_typed(ref_param_write_typed);
+static param_proc_next_key(ref_param_get_next_key);
+static param_proc_requested(ref_param_requested);
+static const gs_param_list_procs ref_write_procs =
 {
     ref_param_write_typed,
     ref_param_begin_write_collection,
@@ -106,40 +106,40 @@ private const gs_param_list_procs ref_write_procs =
     NULL,			/* request */
     ref_param_requested
 };
-private int ref_array_param_requested(const iparam_list *, gs_param_name,
+static int ref_array_param_requested(const iparam_list *, gs_param_name,
 				      ref *, uint, client_name_t);
-private int ref_param_write(iparam_list *, gs_param_name, const ref *);
-private int ref_param_write_string_value(ref *, const gs_param_string *,
+static int ref_param_write(iparam_list *, gs_param_name, const ref *);
+static int ref_param_write_string_value(ref *, const gs_param_string *,
 					 gs_ref_memory_t *);
-private int ref_param_write_name_value(const gs_memory_t *mem, ref *, const gs_param_string *);
-private int
+static int ref_param_write_name_value(const gs_memory_t *mem, ref *, const gs_param_string *);
+static int
 ref_param_make_int(ref *pe, const void *pvalue, uint i, gs_ref_memory_t *imem)
 {
     make_tav(pe, t_integer, imemory_new_mask(imem), intval,
 	     ((const gs_param_int_array *)pvalue)->data[i]);
     return 0;
 }
-private int
+static int
 ref_param_make_float(ref *pe, const void *pvalue, uint i, gs_ref_memory_t *imem)
 {
     make_tav(pe, t_real, imemory_new_mask(imem), realval,
 	     ((const gs_param_float_array *)pvalue)->data[i]);
     return 0;
 }
-private int
+static int
 ref_param_make_string(ref *pe, const void *pvalue, uint i, gs_ref_memory_t *imem)
 {
     return ref_param_write_string_value(pe,
 			 &((const gs_param_string_array *)pvalue)->data[i],
 					imem);
 }
-private int
+static int
 ref_param_make_name(ref * pe, const void *pvalue, uint i, gs_ref_memory_t *imem)
 {
     return ref_param_write_name_value((const gs_memory_t *)imem, pe,
 			 &((const gs_param_string_array *)pvalue)->data[i]);
 }
-private int
+static int
 ref_param_write_typed_array(gs_param_list * plist, gs_param_name pkey,
 			    void *pvalue, uint count,
 			    int (*make)(ref *, const void *, uint,
@@ -159,7 +159,7 @@ ref_param_write_typed_array(gs_param_list * plist, gs_param_name pkey,
 	    return code;
     return ref_param_write(iplist, pkey, &value);
 }
-private int
+static int
 ref_param_begin_write_collection(gs_param_list * plist, gs_param_name pkey,
 				 gs_param_dict * pvalue,
 				 gs_param_collection_type_t coll_type)
@@ -195,7 +195,7 @@ ref_param_begin_write_collection(gs_param_list * plist, gs_param_name pkey,
 	pvalue->list = (gs_param_list *) dlist;
     return code;
 }
-private int
+static int
 ref_param_end_write_collection(gs_param_list * plist, gs_param_name pkey,
 			       gs_param_dict * pvalue)
 {
@@ -206,7 +206,7 @@ ref_param_end_write_collection(gs_param_list * plist, gs_param_name pkey,
     gs_free_object(plist->memory, pvalue->list, "ref_param_end_write_collection");
     return code;
 }
-private int
+static int
 ref_param_write_typed(gs_param_list * plist, gs_param_name pkey,
 		      gs_param_typed_value * pvalue)
 {
@@ -272,7 +272,7 @@ ref_param_write_typed(gs_param_list * plist, gs_param_name pkey,
 }
 
 /* Check whether a given parameter was requested. */
-private int
+static int
 ref_param_requested(const gs_param_list * plist, gs_param_name pkey)
 {
     const iparam_list *const ciplist = (const iparam_list *)plist;
@@ -288,7 +288,7 @@ ref_param_requested(const gs_param_list * plist, gs_param_name pkey)
 
 /* Check whether an array parameter is wanted, and allocate it if so. */
 /* Return <0 on error, 0 if not wanted, 1 if wanted. */
-private int
+static int
 ref_array_param_requested(const iparam_list *iplist, gs_param_name pkey,
 			  ref *pvalue, uint size, client_name_t cname)
 {
@@ -303,7 +303,7 @@ ref_array_param_requested(const iparam_list *iplist, gs_param_name pkey,
 /* ---------------- Internal routines ---------------- */
 
 /* Prepare to write a string value. */
-private int
+static int
 ref_param_write_string_value(ref * pref, const gs_param_string * pvalue,
 			     gs_ref_memory_t *imem)
 {
@@ -325,7 +325,7 @@ ref_param_write_string_value(ref * pref, const gs_param_string * pvalue,
 }
 
 /* Prepare to write a name value. */
-private int
+static int
 ref_param_write_name_value(const gs_memory_t *mem, ref * pref, const gs_param_string * pvalue)
 {
     return name_ref(mem, pvalue->data, pvalue->size, pref,
@@ -333,7 +333,7 @@ ref_param_write_name_value(const gs_memory_t *mem, ref * pref, const gs_param_st
 }
 
 /* Generic routine for writing a ref parameter. */
-private int
+static int
 ref_param_write(iparam_list * plist, gs_param_name pkey, const ref * pvalue)
 {
     ref kref;
@@ -350,7 +350,7 @@ ref_param_write(iparam_list * plist, gs_param_name pkey, const ref * pvalue)
 /* ---------------- Implementations ---------------- */
 
 /* Initialize for writing parameters. */
-private void
+static void
 ref_param_write_init(iparam_list * plist, const ref * pwanted,
 		     gs_ref_memory_t *imem)
 {
@@ -366,7 +366,7 @@ ref_param_write_init(iparam_list * plist, const ref * pwanted,
 }
 
 /* Implementation for getting parameters to a stack. */
-private int
+static int
 stack_param_write(iparam_list * plist, const ref * pkey, const ref * pvalue)
 {
     stack_param_list *const splist = (stack_param_list *) plist;
@@ -390,7 +390,7 @@ stack_param_write(iparam_list * plist, const ref * pkey, const ref * pvalue)
 }
 
 /* Implementation for enumerating parameters on a stack */
-private int			/* ret 0 ok, 1 if EOF, or -ve err */
+static int			/* ret 0 ok, 1 if EOF, or -ve err */
 stack_param_enumerate(iparam_list * plist, gs_param_enumerator_t * penum,
 		      gs_param_key_t * key, ref_type * type)
 {
@@ -425,7 +425,7 @@ stack_param_list_write(stack_param_list * plist, ref_stack_t * pstack,
 }
 
 /* Implementation for getting parameters to a dictionary. */
-private int
+static int
 dict_param_write(iparam_list * plist, const ref * pkey, const ref * pvalue)
 {
     int code =
@@ -435,7 +435,7 @@ dict_param_write(iparam_list * plist, const ref * pkey, const ref * pvalue)
 }
 
 /* Implementation for enumerating parameters in a dictionary */
-private int			/* ret 0 ok, 1 if EOF, or -ve err */
+static int			/* ret 0 ok, 1 if EOF, or -ve err */
 dict_param_enumerate(iparam_list * plist, gs_param_enumerator_t * penum,
 		     gs_param_key_t * key, ref_type * type)
 {
@@ -468,7 +468,7 @@ dict_param_list_write(dict_param_list *plist, ref *pdict, const ref *pwanted,
 
 /* Implementation for getting parameters to an indexed array. */
 /* Note that this is now internal, since it only handles "new" arrays. */
-private int
+static int
 array_new_indexed_param_write(iparam_list * iplist, const ref * pkey,
 			  const ref * pvalue)
 {
@@ -485,7 +485,7 @@ array_new_indexed_param_write(iparam_list * iplist, const ref * pkey,
     r_set_attrs(eltp, imemory_new_mask(iplist->ref_memory));
     return 0;
 }
-private int
+static int
 array_new_indexed_plist_write(dict_param_list * plist, ref * parray,
 			      const ref * pwanted, gs_ref_memory_t *imem)
 {
@@ -502,15 +502,15 @@ array_new_indexed_plist_write(dict_param_list * plist, ref * parray,
 
 /* ---------------- Generic reading procedures ---------------- */
 
-private param_proc_begin_xmit_collection(ref_param_begin_read_collection);
-private param_proc_end_xmit_collection(ref_param_end_read_collection);
-private param_proc_xmit_typed(ref_param_read_typed);
+static param_proc_begin_xmit_collection(ref_param_begin_read_collection);
+static param_proc_end_xmit_collection(ref_param_end_read_collection);
+static param_proc_xmit_typed(ref_param_read_typed);
 
-/*private param_proc_next_key(ref_param_get_next_key); already dec'ld above */
-private param_proc_get_policy(ref_param_read_get_policy);
-private param_proc_signal_error(ref_param_read_signal_error);
-private param_proc_commit(ref_param_read_commit);
-private const gs_param_list_procs ref_read_procs =
+/*static param_proc_next_key(ref_param_get_next_key); already dec'ld above */
+static param_proc_get_policy(ref_param_read_get_policy);
+static param_proc_signal_error(ref_param_read_signal_error);
+static param_proc_commit(ref_param_read_commit);
+static const gs_param_list_procs ref_read_procs =
 {
     ref_param_read_typed,
     ref_param_begin_read_collection,
@@ -522,12 +522,12 @@ private const gs_param_list_procs ref_read_procs =
     ref_param_read_signal_error,
     ref_param_read_commit
 };
-private int ref_param_read(iparam_list *, gs_param_name,
+static int ref_param_read(iparam_list *, gs_param_name,
 			   iparam_loc *, int);
-private int ref_param_read_string_value(gs_memory_t *mem,
+static int ref_param_read_string_value(gs_memory_t *mem,
 					const iparam_loc *,
 					gs_param_string *);
-private int ref_param_read_array(iparam_list *, gs_param_name,
+static int ref_param_read_array(iparam_list *, gs_param_name,
 				 iparam_loc *);
 
 #define iparam_note_error(loc, code)\
@@ -539,7 +539,7 @@ private int ref_param_read_array(iparam_list *, gs_param_name,
   if ( !r_has_attr((loc).pvalue, a_read) )\
     return iparam_note_error(loc, e_invalidaccess)
 
-private int
+static int
 ref_param_read_int_array(gs_param_list * plist, gs_param_name pkey,
 			 gs_param_int_array * pvalue)
 {
@@ -583,7 +583,7 @@ ref_param_read_int_array(gs_param_list * plist, gs_param_name pkey,
     pvalue->persistent = true;
     return 0;
 }
-private int
+static int
 ref_param_read_float_array(gs_param_list * plist, gs_param_name pkey,
 			   gs_param_float_array * pvalue)
 {
@@ -618,7 +618,7 @@ ref_param_read_float_array(gs_param_list * plist, gs_param_name pkey,
     pvalue->persistent = true;
     return 0;
 }
-private int
+static int
 ref_param_read_string_array(gs_param_list * plist, gs_param_name pkey,
 			    gs_param_string_array * pvalue)
 {
@@ -662,7 +662,7 @@ ref_param_read_string_array(gs_param_list * plist, gs_param_name pkey,
     pvalue->persistent = true;
     return 0;
 }
-private int
+static int
 ref_param_begin_read_collection(gs_param_list * plist, gs_param_name pkey,
 				gs_param_dict * pvalue,
 				gs_param_collection_type_t coll_type)
@@ -700,7 +700,7 @@ ref_param_begin_read_collection(gs_param_list * plist, gs_param_name pkey,
     pvalue->list = (gs_param_list *) dlist;
     return 0;
 }
-private int
+static int
 ref_param_end_read_collection(gs_param_list * plist, gs_param_name pkey,
 			      gs_param_dict * pvalue)
 {
@@ -709,7 +709,7 @@ ref_param_end_read_collection(gs_param_list * plist, gs_param_name pkey,
 		   "ref_param_end_read_collection");
     return 0;
 }
-private int
+static int
 ref_param_read_typed(gs_param_list * plist, gs_param_name pkey,
 		     gs_param_typed_value * pvalue)
 {
@@ -813,7 +813,7 @@ ref_param_read_typed(gs_param_list * plist, gs_param_name pkey,
     return gs_note_error(e_typecheck);
 }
 
-private int
+static int
 ref_param_read_get_policy(gs_param_list * plist, gs_param_name pkey)
 {
     iparam_list *const iplist = (iparam_list *) plist;
@@ -826,7 +826,7 @@ ref_param_read_get_policy(gs_param_list * plist, gs_param_name pkey)
 	return gs_param_policy_ignore;
     return (int)pvalue->value.intval;
 }
-private int
+static int
 ref_param_read_signal_error(gs_param_list * plist, gs_param_name pkey, int code)
 {
     iparam_list *const iplist = (iparam_list *) plist;
@@ -843,7 +843,7 @@ ref_param_read_signal_error(gs_param_list * plist, gs_param_name pkey, int code)
 	    return code;
     }
 }
-private int
+static int
 ref_param_read_commit(gs_param_list * plist)
 {
     iparam_list *const iplist = (iparam_list *) plist;
@@ -858,7 +858,7 @@ ref_param_read_commit(gs_param_list * plist)
 	    iplist->results[i] = ecode = gs_note_error(e_undefined);
     return ecode;
 }
-private int
+static int
 ref_param_get_next_key(gs_param_list * plist, gs_param_enumerator_t * penum,
 		       gs_param_key_t * key)
 {
@@ -871,7 +871,7 @@ ref_param_get_next_key(gs_param_list * plist, gs_param_enumerator_t * penum,
 /* ---------------- Internal routines ---------------- */
 
 /* Read a string value. */
-private int
+static int
 ref_param_read_string_value(gs_memory_t *mem, const iparam_loc * ploc, gs_param_string * pvalue)
 {
     const ref *pref = ploc->pvalue;
@@ -910,7 +910,7 @@ ref_param_read_string_value(gs_memory_t *mem, const iparam_loc * ploc, gs_param_
 }
 
 /* Read an array (or packed array) parameter. */
-private int
+static int
 ref_param_read_array(iparam_list * plist, gs_param_name pkey, iparam_loc * ploc)
 {
     int code = ref_param_read(plist, pkey, ploc, -1);
@@ -924,7 +924,7 @@ ref_param_read_array(iparam_list * plist, gs_param_name pkey, iparam_loc * ploc)
 }
 
 /* Generic routine for reading a ref parameter. */
-private int
+static int
 ref_param_read(iparam_list * plist, gs_param_name pkey, iparam_loc * ploc,
 	       int type)
 {
@@ -945,14 +945,14 @@ ref_param_read(iparam_list * plist, gs_param_name pkey, iparam_loc * ploc,
 /* ---------------- Implementations ---------------- */
 
 /* Implementation for putting parameters from an empty collection. */
-private int
+static int
 empty_param_read(iparam_list * plist, const ref * pkey, iparam_loc * ploc)
 {
     return 1;
 }
 
 /* Initialize for reading parameters. */
-private int
+static int
 ref_param_read_init(iparam_list * plist, uint count, const ref * ppolicies,
 		    bool require_all, gs_ref_memory_t *imem)
 {
@@ -978,7 +978,7 @@ ref_param_read_init(iparam_list * plist, uint count, const ref * ppolicies,
 }
 
 /* Implementation for putting parameters from an indexed array. */
-private int
+static int
 array_indexed_param_read(iparam_list * plist, const ref * pkey, iparam_loc * ploc)
 {
     ref *const arr = &((dict_param_list *) plist)->dict;
@@ -1009,7 +1009,7 @@ array_indexed_param_list_read(dict_param_list * plist, const ref * parray,
 }
 
 /* Implementation for putting parameters from an array. */
-private int
+static int
 array_param_read(iparam_list * plist, const ref * pkey, iparam_loc * ploc)
 {
     ref *bot = ((array_param_list *) plist)->bot;
@@ -1028,7 +1028,7 @@ array_param_read(iparam_list * plist, const ref * pkey, iparam_loc * ploc)
 }
 
 /* Implementation for enumerating parameters in an array */
-private int			/* ret 0 ok, 1 if EOF, or -ve err */
+static int			/* ret 0 ok, 1 if EOF, or -ve err */
 array_param_enumerate(iparam_list * plist, gs_param_enumerator_t * penum,
 		      gs_param_key_t * key, ref_type * type)
 {
@@ -1068,7 +1068,7 @@ array_param_list_read(array_param_list * plist, ref * bot, uint count,
 }
 
 /* Implementation for putting parameters from a stack. */
-private int
+static int
 stack_param_read(iparam_list * plist, const ref * pkey, iparam_loc * ploc)
 {
     stack_param_list *const splist = (stack_param_list *) plist;
@@ -1111,7 +1111,7 @@ stack_param_list_read(stack_param_list * plist, ref_stack_t * pstack,
 }
 
 /* Implementation for putting parameters from a dictionary. */
-private int
+static int
 dict_param_read(iparam_list * plist, const ref * pkey, iparam_loc * ploc)
 {
     ref const *spdict = &((dict_param_list *) plist)->dict;

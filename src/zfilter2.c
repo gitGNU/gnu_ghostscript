@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfilter2.c,v 1.8 2007/09/11 15:24:06 Arabidopsis Exp $ */
+/* $Id: zfilter2.c,v 1.9 2008/03/23 15:28:04 Arabidopsis Exp $ */
 /* Additional filter creation */
 #include "memory_.h"
 #include "ghost.h"
@@ -40,7 +40,7 @@
 /* ------ CCITTFaxEncode filter ------ */
 
 /* <target> <dict> CCITTFaxEncode/filter <file> */
-private int
+static int
 zCFE(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -133,7 +133,7 @@ filter_write_predictor(i_ctx_t *i_ctx_p, int npop,
 
 /* <target> LZWEncode/filter <file> */
 /* <target> <dict> LZWEncode/filter <file> */
-private int
+static int
 zLZWE(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

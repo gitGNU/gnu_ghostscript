@@ -3,7 +3,7 @@
 <head>
 <title>Information for Ghostscript developers</title>
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
-<!-- $Id: Develop.htm,v 1.10 2007/09/11 15:24:59 Arabidopsis Exp $ -->
+<!-- $Id: Develop.htm,v 1.11 2008/03/23 15:28:22 Arabidopsis Exp $ -->
 </head>
 
 <body>
@@ -1757,6 +1757,8 @@ New text and fonts:
 <a href="../src/gdevpdtw.c">src/gdevpdtw.c</a>,
 <a href="../src/gdevpdtw.h">src/gdevpdtw.h</a>,
 <a href="../src/gdevpdtx.h">src/gdevpdtx.h</a>.
+<a href="../src/ConvertUTF.h">src/ConvertUTF.h</a>,
+<a href="../src/ConvertUTF.c">src/ConvertUTF.c</a>,
 
 <dt>
 Graphics:
@@ -1807,6 +1809,11 @@ PCL XL output device (pxlmono, pxlcolor):
 <a href="../src/gdevpxop.h">src/gdevpxop.h</a>,
 <a href="../src/gdevpxut.c">src/gdevpxut.c</a>,
 <a href="../src/gdevpxut.h">src/gdevpxut.h</a>.
+
+<dt>
+Text extraction:
+<dd>
+<a href="../src/gdevtxtw.c">src/gdevtxtw.c</a>.
 
 <dt>
 Other high-level devices:
@@ -2963,7 +2970,18 @@ Files:
 <a href="../lib/pdf_rbld.ps">lib/pdf_rbld.ps</a>,
 <a href="../lib/pdf_ops.ps">lib/pdf_ops.ps</a>,
 <a href="../lib/pdf_sec.ps">lib/pdf_sec.ps</a>.
+</dl>
 
+<p>
+Extraction of layer information from Illustratir CS2/CS3 PDF files is
+implemented for a specific commercial customer; it is not used by any of the
+included drivers. To activate this feature add
+<b><tt>cslayer.dev</tt></b> to the list of feature devices.
+<dl>
+Files:
+<dt>
+<dd>
+<a href="../lib/pdf_cslayer.ps">lib/pdf_cslayer.ps</a>,
 </dl>
 
 <h3><a name="PPD"></a>PostScript Printer Description</h3>
@@ -4442,6 +4460,7 @@ PostScript interpreter and fonts:
 <dt>
 Third-party libraries:
 <dd>
+<a href="../src/expat.mak">src/expat.mak</a>,
 <a href="../src/icclib.mak">src/icclib.mak</a>,
 <a href="../src/ijs.mak">src/ijs.mak</a>,
 <a href="../src/jasper.mak">src/jasper.mak</a>,
@@ -4451,7 +4470,6 @@ Third-party libraries:
 <a href="../src/jpeg.mak">src/jpeg.mak</a>,
 <a href="../src/libpng.mak">src/libpng.mak</a>,
 <a href="../src/zlib.mak">src/zlib.mak</a>.
-
 </dl>
 
 <dt>
@@ -4850,7 +4868,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.60, 1 August 2007
+<small>Ghostscript version 8.61, 21 November 2007
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

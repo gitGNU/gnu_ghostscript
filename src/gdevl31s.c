@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevl31s.c,v 1.8 2007/09/11 15:24:14 Arabidopsis Exp $ */
+/* $Id: gdevl31s.c,v 1.9 2008/03/23 15:27:59 Arabidopsis Exp $ */
 /*
  * H-P LaserJet 3100 driver
  *
@@ -45,7 +45,7 @@ const int width[2]      = {2528,
 /* These codes correspond to sequences of pixels with the same color.
  * After the code for a sequence < 64 pixels the color changes.
  * After the code for a sequence with 64 pixels the previous color continues. */ 
-private struct {
+static struct {
 	uint bits;
 	uint length; /* number of valid bits */
 } code[2][65] =
@@ -79,10 +79,10 @@ private struct {
 #endif
 
 /* The device descriptors */
-private dev_proc_print_page_copies(lj3100sw_print_page_copies);
-private dev_proc_close_device(lj3100sw_close);
+static dev_proc_print_page_copies(lj3100sw_print_page_copies);
+static dev_proc_close_device(lj3100sw_close);
 
-private gx_device_procs prn_lj3100sw_procs = 
+static gx_device_procs prn_lj3100sw_procs = 
     prn_params_procs(gdev_prn_open, gdev_prn_output_page, lj3100sw_close,
 	     gdev_prn_get_params, gdev_prn_put_params);
 
@@ -101,7 +101,7 @@ gx_device_printer far_data gs_lj3100sw_device =
 
 #define BUFFERSIZE 0x1000
 
-private void
+static void
 lj3100sw_output_section_header(FILE *prn_stream, int type, int arg1, int arg2)
 {
 	fputc(type      & 0xff, prn_stream);
@@ -112,7 +112,7 @@ lj3100sw_output_section_header(FILE *prn_stream, int type, int arg1, int arg2)
 	fputc(arg2 >> 8 & 0xff, prn_stream);
 }
 
-private void
+static void
 lj3100sw_flush_buffer(FILE *prn_stream, char *buffer, char **pptr)
 {
 	int size = *pptr - buffer;
@@ -123,7 +123,7 @@ lj3100sw_flush_buffer(FILE *prn_stream, char *buffer, char **pptr)
 	}
 }
 
-private void
+static void
 lj3100sw_output_data_byte(FILE *prn_stream, char *buffer, char **pptr, int val)
 {
 	if (*pptr >= buffer + BUFFERSIZE)
@@ -131,7 +131,7 @@ lj3100sw_output_data_byte(FILE *prn_stream, char *buffer, char **pptr, int val)
 	*(*pptr)++ = val;
 }
 
-private void
+static void
 lj3100sw_output_repeated_data_bytes(FILE *prn_stream, char *buffer, char **pptr, int val, int num)
 {
 	int size;
@@ -145,7 +145,7 @@ lj3100sw_output_repeated_data_bytes(FILE *prn_stream, char *buffer, char **pptr,
 	}
 }
 
-private void
+static void
 lj3100sw_output_newline(FILE *prn_stream, char *buffer, char **pptr)
 {
 	lj3100sw_output_data_byte(prn_stream, buffer, pptr, 0);
@@ -153,7 +153,7 @@ lj3100sw_output_newline(FILE *prn_stream, char *buffer, char **pptr)
 	lj3100sw_output_data_byte(prn_stream, buffer, pptr, 0x80);
 }
 
-private void
+static void
 lj3100sw_output_empty_line(FILE *prn_stream, char *buffer, char **pptr, bool high_resolution)
 {
 	if (high_resolution) {
@@ -168,7 +168,7 @@ lj3100sw_output_empty_line(FILE *prn_stream, char *buffer, char **pptr, bool hig
 	}
 }
 
-private int
+static int
 lj3100sw_print_page_copies(gx_device_printer *pdev, FILE *prn_stream, int num_copies /* ignored */)
 {
 	int i, j;
@@ -268,7 +268,7 @@ lj3100sw_print_page_copies(gx_device_printer *pdev, FILE *prn_stream, int num_co
 	return 0;
 }
 
-private int
+static int
 lj3100sw_close(gx_device *pdev)
 {
 	int i;

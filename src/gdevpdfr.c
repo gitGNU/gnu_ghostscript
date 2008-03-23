@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfr.c,v 1.8 2007/09/11 15:24:31 Arabidopsis Exp $ */
+/* $Id: gdevpdfr.c,v 1.9 2008/03/23 15:27:50 Arabidopsis Exp $ */
 /* Named object pdfmark processing */
 #include "memory_.h"
 #include "string_.h"
@@ -393,7 +393,7 @@ pdf_scan_token_composite(const byte **pscan, const byte * end,
 }
 
 /* Replace object names with object references in a (parameter) string. */
-private const byte *
+static const byte *
 pdfmark_next_object(const byte * scan, const byte * end, const byte **pname,
 		    cos_object_t **ppco, gx_device_pdf * pdev)
 {

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsparams.c,v 1.7 2007/09/11 15:24:15 Arabidopsis Exp $ */
+/* $Id: gsparams.c,v 1.8 2008/03/23 15:27:55 Arabidopsis Exp $ */
 /* Generic parameter list serializer & expander */
 
 /* Initial version 2/1/98 by John Desrosiers (soho@crl.com) */
@@ -37,30 +37,30 @@ typedef struct {
 } WriteBuffer;
 
 /* ---------- Forward refs ----------- */
-private void
+static void
 ptr_align_to(
 	    const byte ** src,	/* pointer to align */
 	    unsigned alignment	/* alignment, must be power of 2 */
 	    );
-private void
+static void
 wb_put_word(
 	    unsigned source,	/* number to put to buffer */
 	    WriteBuffer * dest	/* destination descriptor */
 	    );
-private void
+static void
 wb_put_bytes(
 	     const byte * source,	/* bytes to put to buffer */
 	     unsigned source_sizeof,	/* # bytes to put */
 	     WriteBuffer * dest		/* destination descriptor */
 	     );
-private void
+static void
 wb_put_alignment(
 		 unsigned alignment,	/* alignment to match, must be power 2 */
 		 WriteBuffer * dest	/* destination descriptor */
 		 );
 
 /* Get word compressed with wb_put_word */
-private unsigned		/* decompressed word */
+static unsigned		/* decompressed word */
 buf_get_word(
 	    const byte ** src	/* UPDATES: ptr to src buf ptr */
 	    );
@@ -334,7 +334,7 @@ gs_param_list_unserialize(
 /* ---------- Utility functions -------- */
 
 /* Align a byte pointer on the next Nth byte */
-private void
+static void
 ptr_align_to(
 	    const byte ** src,	/* pointer to align */
 	    unsigned alignment	/* alignment, must be power of 2 */
@@ -344,7 +344,7 @@ ptr_align_to(
 }
 
 /* Put compressed word repr to a buffer */
-private void
+static void
 wb_put_word(
 	    unsigned source,	/* number to put to buffer */
 	    WriteBuffer * dest	/* destination descriptor */
@@ -364,7 +364,7 @@ wb_put_word(
 }
 
 /* Put array of bytes to buffer */
-private void
+static void
 wb_put_bytes(
 	     const byte * source,	/* bytes to put to buffer */
 	     unsigned source_sizeof,	/* # bytes to put */
@@ -380,7 +380,7 @@ wb_put_bytes(
 }
 
 /* Pad destination out to req'd alignment w/zeros */
-private void
+static void
 wb_put_alignment(
 		 unsigned alignment,	/* alignment to match, must be power 2 */
 		 WriteBuffer * dest	/* destination descriptor */
@@ -394,7 +394,7 @@ wb_put_alignment(
 }
 
 /* Get word compressed with wb_put_word */
-private unsigned		/* decompressed word */
+static unsigned		/* decompressed word */
 buf_get_word(
 	    const byte ** src	/* UPDATES: ptr to src buf ptr */
 )

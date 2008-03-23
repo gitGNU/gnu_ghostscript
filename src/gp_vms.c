@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gp_vms.c,v 1.9 2007/09/11 15:24:28 Arabidopsis Exp $ */
+/* $Id: gp_vms.c,v 1.10 2008/03/23 15:27:56 Arabidopsis Exp $ */
 /* VAX/VMS specific routines for Ghostscript */
 
 #include "string_.h"
@@ -73,7 +73,7 @@ extern uint
     SYS$FILESCAN(descrip *, uint *, uint *),
     SYS$PUTMSG(uint *, int (*)(), descrip *, uint);
 
-private uint
+static uint
 strlength(char *str, uint maxlen, char term)
 {
     uint i = 0;
@@ -294,7 +294,7 @@ gp_setmode_binary(FILE * pfile, bool binary)
 
 /* ------ Wild card file search procedures ------ */
 
-private void
+static void
 gp_free_enumeration(file_enum * pfen)
 {
     if (pfen) {

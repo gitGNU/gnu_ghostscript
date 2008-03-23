@@ -16,7 +16,7 @@
     Artifex Software, Inc.,  101 Lucas Valley Road #110,
     San Rafael, CA  94903, U.S.A., +1(415)492-9861.
                                                                                 
-    $Id: jbig2_refinement.c,v 1.4 2007/09/11 15:24:53 Arabidopsis Exp $
+    $Id: jbig2_refinement.c,v 1.5 2008/03/23 15:28:33 Arabidopsis Exp $
 */
 
 /**
@@ -169,7 +169,6 @@ jbig2_decode_refinement_template1(Jbig2Ctx *ctx,
   const int GRH = image->height;
   const int stride = image->stride;
   const int refstride = params->reference->stride;
-  const int dx = params->DX;
   const int dy = params->DY;
   byte *grreg_line = (byte *)image->data;
   byte *grref_line = (byte *)params->reference->data;

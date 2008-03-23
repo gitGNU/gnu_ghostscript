@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevtknk.c,v 1.7 2007/09/11 15:24:37 Arabidopsis Exp $*/
+/* $Id: gdevtknk.c,v 1.8 2008/03/23 15:28:02 Arabidopsis Exp $*/
 /*   
    This driver is written for Tektronix ink-jet 4696 and 4695 plotters.
 
@@ -33,10 +33,10 @@
 
 /* The device descriptor */
 /* We need our own color mapping procedures. */
-private dev_proc_map_rgb_color(tekink_map_rgb_color);
-private dev_proc_map_color_rgb(tekink_map_color_rgb);
-private dev_proc_print_page(tekink_print_page);
-private gx_device_procs tekink_procs =
+static dev_proc_map_rgb_color(tekink_map_rgb_color);
+static dev_proc_map_color_rgb(tekink_map_color_rgb);
+static dev_proc_print_page(tekink_print_page);
+static gx_device_procs tekink_procs =
     prn_color_procs(gdev_prn_open, gdev_prn_output_page, gdev_prn_close,
 	tekink_map_rgb_color, tekink_map_color_rgb);
 
@@ -93,7 +93,7 @@ static ushort index_to_rgb[16][3]={
 };
 
 /* Map an RGB color to a printer color. */
-private gx_color_index
+static gx_color_index
 tekink_map_rgb_color(gx_device *dev, const gx_color_value cv[])
 {
     gx_color_value r = cv[0];
@@ -105,7 +105,7 @@ tekink_map_rgb_color(gx_device *dev, const gx_color_value cv[])
 }
 
 /* Map the printer color back to RGB. */
-private int
+static int
 tekink_map_color_rgb(gx_device *dev, gx_color_index color, ushort prgb[3])
 {
     register ushort c = (ushort)color;
@@ -119,7 +119,7 @@ tekink_map_color_rgb(gx_device *dev, gx_color_index color, ushort prgb[3])
 }
 
 /* Send the page to the printer. */
-private int
+static int
 tekink_print_page(gx_device_printer *pdev,FILE *prn_stream)
 {
     int line_size,color_line_size,scan_line,num_bytes,scan_lines,color_plane;

@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevlbp8.c,v 1.7 2007/09/11 15:23:51 Arabidopsis Exp $*/
+/* $Id: gdevlbp8.c,v 1.8 2008/03/23 15:28:02 Arabidopsis Exp $*/
 /* Canon LBP-8II and LIPS III driver */
 #include "gdevprn.h"
 
@@ -48,9 +48,9 @@ problems
 #define LINE_SIZE ((X_DPI * 85 / 10 + 7) / 8)	/* bytes per line */
 
 /* The device descriptors */
-private dev_proc_print_page(lbp8_print_page);
+static dev_proc_print_page(lbp8_print_page);
 #ifdef NOCONTRIB
-private dev_proc_print_page(lips3_print_page);
+static dev_proc_print_page(lips3_print_page);
 #endif
 
 const gx_device_printer far_data gs_lbp8_device =
@@ -108,7 +108,7 @@ static const char lips3_end[] = {
 #endif
 
 /* Send the page to the printer.  */
-private int
+static int
 can_print_page(gx_device_printer *pdev, FILE *prn_stream,
   const char *init, int init_size, const char *end, int end_size)
 {	
@@ -205,7 +205,7 @@ can_print_page(gx_device_printer *pdev, FILE *prn_stream,
 }
 
 /* Print an LBP-8 page. */
-private int
+static int
 lbp8_print_page(gx_device_printer *pdev, FILE *prn_stream)
 {	return can_print_page(pdev, prn_stream, lbp8_init, sizeof(lbp8_init),
 			      lbp8_end, sizeof(lbp8_end));
@@ -213,7 +213,7 @@ lbp8_print_page(gx_device_printer *pdev, FILE *prn_stream)
 
 #ifdef NOCONTRIB
 /* Print a LIPS III page. */
-private int
+static int
 lips3_print_page(gx_device_printer *pdev, FILE *prn_stream)
 {	return can_print_page(pdev, prn_stream, lips3_init, sizeof(lips3_init),
 			      lips3_end, sizeof(lips3_end));

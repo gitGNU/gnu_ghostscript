@@ -17,11 +17,11 @@
 
 */
 
-/* $Id: zfjpx.c,v 1.5 2007/09/11 15:24:24 Arabidopsis Exp $ */
+/* $Id: zfjpx.c,v 1.6 2008/03/23 15:28:00 Arabidopsis Exp $ */
 
-/* this is the ps interpreter interface to the JPXDecode filter
+/* This is the ps interpreter interface to the JPXDecode filter
    used for (JPEG2000) scanned image compression. PDF only specifies
-   a decoder filter, and we don't currently implement anything else */
+   a decoder filter, and we don't currently implement anything else. */
 
 #include "memory_.h"
 #include "ghost.h"
@@ -45,7 +45,7 @@
 
 /* <source> /JPXDecode <file> */
 /* <source> <dict> /JPXDecode <file> */
-private int
+static int
 z_jpx_decode(i_ctx_t * i_ctx_p)
 {
     os_ptr op = osp;
@@ -53,6 +53,8 @@ z_jpx_decode(i_ctx_t * i_ctx_p)
     ref *csname = NULL;
     stream_jpxd_state state;
 
+    /* it's our responsibility to call set_defaults() */
+    (*s_jpxd_template.set_defaults)((stream_state *)&state);
     state.jpx_memory = imemory->non_gc_memory;
     if (r_has_type(op, t_dictionary)) {
         check_dict_read(*op);
@@ -89,8 +91,8 @@ z_jpx_decode(i_ctx_t * i_ctx_p)
 }
 
 
-/* match the above routine to the corresponding filter name
-   this is how our 'private' routines get called externally */
+/* Match the above routine to the corresponding filter name.
+   This is how our static routines get called externally. */
 const op_def zfjpx_op_defs[] = {
     op_def_begin_filter(),
     {"2JPXDecode", z_jpx_decode},

@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxclpath.h,v 1.8 2007/09/11 15:24:14 Arabidopsis Exp $ */
+/*$Id: gxclpath.h,v 1.9 2008/03/23 15:28:10 Arabidopsis Exp $ */
 /* Definitions and support procedures for higher-level band list commands */
 /* Extends (requires) gxcldev.h */
 
@@ -173,7 +173,7 @@ typedef enum {
   2, 2, 1, 1, 4, 6, 6, 6, 4, 4, 4, 4, 2, 2, 0, 0
 
 #define cmd_misc2_op_name_strings\
-  "set_color", "set_color_short", "set_fill_adjust", "set_ctm",\
+  "cmd_opv_set_color", "set_color_short", "set_fill_adjust", "set_ctm",\
   "set_color_space", "set_misc2", "set_dash", "enable_clip",\
   "disable_clip", "begin_clip", "end_clip", "begin_image_rect",\
   "begin_image", "image_data", "image_plane_data", "put_params"

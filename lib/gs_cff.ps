@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: gs_cff.ps,v 1.7 2007/08/01 14:25:36 jemarch Exp $
+% $Id: gs_cff.ps,v 1.8 2008/03/23 15:28:29 Arabidopsis Exp $
 % Loader for CFF (compressed) fonts, including OpenType CFFs.
 % The following are not implemented yet:
 %	Deleted entries in the Name Index
@@ -678,6 +678,10 @@ dup							% Format 2
   /vminor next def
   /hdrsize next def
   /aoffsize next def
+  hdrsize 4 gt {
+    hdrsize 4 sub dup advance
+    f exch () /SubFileDecode filter flushfile
+  } if
 
 	% Read the Indexes.
 

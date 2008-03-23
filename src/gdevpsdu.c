@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpsdu.c,v 1.9 2007/09/11 15:23:51 Arabidopsis Exp $ */
+/* $Id: gdevpsdu.c,v 1.10 2008/03/23 15:28:11 Arabidopsis Exp $ */
 /* Common utilities for PostScript and PDF writers */
 #include "stdio_.h"		/* for FILE for jpeglib.h */
 #include "jpeglib_.h"		/* for sdct.h */
@@ -209,7 +209,7 @@ psdf_round(double v, int precision, int radix)
  * Since we only have 8 bits of color to start with, round the
  * values to 3 digits for more compact output.
  */
-private inline double
+static inline double
 round_byte_color(gx_color_index cv)
 {
     return (int)((uint)cv * (1000.0 / 255.0) + 0.5) / 1000.0;

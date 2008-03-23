@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ialloc.c,v 1.11 2007/09/11 15:24:40 Arabidopsis Exp $ */
+/* $Id: ialloc.c,v 1.12 2008/03/23 15:28:15 Arabidopsis Exp $ */
 /* Memory allocator for Ghostscript interpreter */
 #include "gx.h"
 #include "memory_.h"
@@ -136,7 +136,7 @@ ialloc_reset_requested(gs_dual_memory_t * dmem)
 /* ================ Refs ================ */
 
 #ifdef DEBUG
-private int
+static int
 ialloc_trace_space(const gs_ref_memory_t *imem)
 {
     return imem->space + (imem->stable_memory == (const gs_memory_t *)imem);

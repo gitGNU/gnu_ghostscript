@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfcid0.c,v 1.10 2007/09/11 15:24:05 Arabidopsis Exp $ */
+/* $Id: zfcid0.c,v 1.11 2008/03/23 15:27:56 Arabidopsis Exp $ */
 /* CIDFontType 0 operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -50,7 +50,7 @@ font_proc_glyph_outline(zcharstring_glyph_outline);
 /* ------ Accessing ------ */
 
 /* Parse a multi-byte integer from a string. */
-private int
+static int
 get_index(gs_glyph_data_t *pgd, int count, ulong *pval)
 {
     int i;
@@ -66,7 +66,7 @@ get_index(gs_glyph_data_t *pgd, int count, ulong *pval)
 }
 
 /* Get bytes from GlyphData or DataSource. */
-private int
+static int
 cid0_read_bytes(gs_font_cid0 *pfont, ulong base, uint count, byte *buf,
 		gs_glyph_data_t *pgd)
 {
@@ -172,7 +172,7 @@ cid0_read_bytes(gs_font_cid0 *pfont, ulong base, uint count, byte *buf,
 /* Get the CharString data for a CIDFontType 0 font. */
 /* This is the glyph_data procedure in the font itself. */
 /* Note that pgd may be NULL. */
-private int
+static int
 z9_glyph_data(gs_font_base *pbfont, gs_glyph glyph, gs_glyph_data_t *pgd,
 	      int *pfidx)
 {
@@ -251,7 +251,7 @@ z9_glyph_data(gs_font_base *pbfont, gs_glyph glyph, gs_glyph_data_t *pgd,
 }
 
 /* Get the outline of a CIDFontType 0 glyph. */
-private int
+static int
 z9_glyph_outline(gs_font *font, int WMode, gs_glyph glyph, const gs_matrix *pmat,
 		 gx_path *ppath, double sbw[4])
 {
@@ -272,7 +272,7 @@ z9_glyph_outline(gs_font *font, int WMode, gs_glyph glyph, const gs_matrix *pmat
     return ocode;
 }
 
-private int
+static int
 z9_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
 		     int members, gs_glyph_info_t *info)
 {   /* fixme : same as z11_glyph_info. */
@@ -288,13 +288,13 @@ z9_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
  * outlines are always provided externally.  Replace the accessor procedures
  * with ones that will give an error if called.
  */
-private int
+static int
 z9_FDArray_glyph_data(gs_font_type1 * pfont, gs_glyph glyph,
 		      gs_glyph_data_t *pgd)
 {
     return_error(e_invalidfont);
 }
-private int
+static int
 z9_FDArray_seac_data(gs_font_type1 *pfont, int ccode, gs_glyph *pglyph,
 		     gs_const_string *gstr, gs_glyph_data_t *pgd)
 {
@@ -304,7 +304,7 @@ z9_FDArray_seac_data(gs_font_type1 *pfont, int ccode, gs_glyph *pglyph,
 /* ------ Defining ------ */
 
 /* Get one element of a FDArray. */
-private int
+static int
 fd_array_element(i_ctx_t *i_ctx_p, gs_font_type1 **ppfont, ref *prfd)
 {
     charstring_font_refs_t refs;
@@ -370,7 +370,7 @@ fd_array_element(i_ctx_t *i_ctx_p, gs_font_type1 **ppfont, ref *prfd)
 
 
 
-private int 
+static int 
 notify_remove_font_type9(void *proc_data, void *event_data)
 {  /* Likely type 9 font descendents are never released explicitly.
       So releaseing a type 9 font we must reset pointers in descendents.
@@ -389,7 +389,7 @@ notify_remove_font_type9(void *proc_data, void *event_data)
 }
 
 /* <string|name> <font_dict> .buildfont9 <string|name> <font> */
-private int
+static int
 zbuildfont9(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -471,10 +471,10 @@ zbuildfont9(i_ctx_t *i_ctx_p)
 	if (code < 0)
 	    goto fail;
     }
-    code = build_gs_simple_font(i_ctx_p, op, &pfont, ft_CID_encrypted,
+    code = build_gs_outline_font(i_ctx_p, op, &pfont, ft_CID_encrypted, 
 				&st_gs_font_cid0, &build,
-				bf_Encoding_optional |
-				bf_UniqueID_ignored);
+				bf_Encoding_optional | bf_UniqueID_ignored, 
+				build_gs_simple_font);
     if (code < 0)
 	goto fail;
     if (code == 1) {
@@ -500,8 +500,10 @@ zbuildfont9(i_ctx_t *i_ctx_p)
     pfcid->cidata.FDBytes = FDBytes;
     pfcid->cidata.glyph_data = z9_glyph_data;
     pfcid->cidata.proc_data = 0;	/* for GC */
-    get_font_name(imemory, &cfnstr, &CIDFontName);
-    copy_font_name(&pfcid->font_name, &cfnstr);
+    if (pfcid->font_name.size == 0) {
+	get_font_name(imemory, &cfnstr, &CIDFontName);
+	copy_font_name(&pfcid->font_name, &cfnstr);
+    }
     ref_assign(&pfont_data(pfont)->u.cid0.GlyphDirectory, &GlyphDirectory);
     ref_assign(&pfont_data(pfont)->u.cid0.GlyphData, &GlyphData);
     ref_assign(&pfont_data(pfont)->u.cid0.DataSource, &DataSource);

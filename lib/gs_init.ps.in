@@ -16,7 +16,7 @@
 %
 
 
-% $Id: gs_init.ps.in,v 1.5 2007/09/11 15:24:48 Arabidopsis Exp $
+% $Id: gs_init.ps.in,v 1.6 2008/03/23 15:28:29 Arabidopsis Exp $
 % Initialization file for the interpreter.
 % When this is run, systemdict is still writable.
 
@@ -30,9 +30,12 @@
 % initialization files, have names that begin with %, e.g.,
 % (%Type1BuildChar) cvn.
 
-% Check the interpreter revision.  NOTE: the interpreter code requires
-% that the first non-comment token in this file be an integer.
+% Interpreter library version number
+% NOTE: the interpreter code requires that the first non-comment token
+% in this file be an integer, and that it match the compiled-in version!
 @GS_REVISION@
+
+% Check the interpreter revision.
 dup revision ne
  { (gs: Interpreter revision \() print revision 10 string cvs print
    (\) does not match gs_init.ps revision \() print 10 string cvs print
@@ -1284,7 +1287,7 @@ put		% errordict /rangecheck
        }
       if
     }
-    { 0 .getdevice .devicename
+    { .getdefaultdevice .devicename
     }
    ifelse
  }
@@ -1518,6 +1521,14 @@ setpacking
   .useloresscreen { .setloresscreen } { .sethiresscreen } ifelse
   .setdefaultbgucr
 } bind def
+
+% Rendering intent mapping for setcolorrendering1 and PDF interpreter
+/.renderingintentdict mark
+  /Perceptual 0
+  /RelativeColorimetric 1
+  /Saturation 2
+  /AbsoluteColorimetric 3
+.dicttomark readonly def
 
 % Load basic color support
 %% Replace 1 (gs_cspace.ps)
@@ -2150,6 +2161,7 @@ currentdict /.imagemasktypes .undef
 currentdict /.patterntypes .undef
 currentdict /.shadingtypes .undef
 currentdict /.wheredict .undef
+currentdict /.renderingintentdict .undef
 end
 
 % Clean up VM, and enable GC.

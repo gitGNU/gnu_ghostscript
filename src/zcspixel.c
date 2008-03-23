@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zcspixel.c,v 1.8 2007/09/11 15:23:50 Arabidopsis Exp $ */
+/* $Id: zcspixel.c,v 1.9 2008/03/23 15:27:42 Arabidopsis Exp $ */
 /* DevicePixel color space support */
 #include "ghost.h"
 #include "oper.h"
@@ -29,7 +29,7 @@
 #include "ialloc.h"
 
 /* <array> .setdevicepixelspace - */
-private int
+static int
 zsetdevicepixelspace(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ziodev.c,v 1.8 2007/09/11 15:24:07 Arabidopsis Exp $ */
+/* $Id: ziodev.c,v 1.9 2008/03/23 15:27:51 Arabidopsis Exp $ */
 /* Standard IODevice implementation */
 #include "memory_.h"
 #include "stdio_.h"
@@ -60,19 +60,19 @@ extern const char iodev_dtype_stdio[];
  */
 
 #define LINEEDIT_BUF_SIZE 20	/* initial size, not fixed size */
-/*private iodev_proc_open_device(lineedit_open);*/ /* no longer used */
+/*static iodev_proc_open_device(lineedit_open);*/ /* no longer used */
 const gx_io_device gs_iodev_lineedit =
     iodev_special("%lineedit%", iodev_no_init, iodev_no_open_device);
 
 #define STATEMENTEDIT_BUF_SIZE 50	/* initial size, not fixed size */
-/*private iodev_proc_open_device(statementedit_open);*/ /* no longer used */
+/*static iodev_proc_open_device(statementedit_open);*/ /* no longer used */
 const gx_io_device gs_iodev_statementedit =
     iodev_special("%statementedit%", iodev_no_init, iodev_no_open_device);
 
 /* ------ Operators ------ */
 
 /* <int> .getiodevice <string|null> */
-private int
+static int
 zgetiodevice(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

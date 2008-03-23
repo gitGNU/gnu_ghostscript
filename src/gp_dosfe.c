@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gp_dosfe.c,v 1.7 2007/09/11 15:23:48 Arabidopsis Exp $ */
+/* $Id: gp_dosfe.c,v 1.8 2008/03/23 15:27:37 Arabidopsis Exp $ */
 /* MS-DOS file enumeration. */
 #include "stdio_.h"
 #include <fcntl.h>
@@ -107,7 +107,7 @@ gp_enumerate_files_init(const char *pat, uint patlen, gs_memory_t * mem)
 }
 
 /* Enumerate the next file. */
-private const string_match_params smp_file =
+static const string_match_params smp_file =
 {'*', '?', -1, true, true};
 
 uint

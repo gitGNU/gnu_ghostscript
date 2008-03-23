@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gp_wsync.c,v 1.7 2007/09/11 15:24:18 Arabidopsis Exp $ */
+/* $Id: gp_wsync.c,v 1.8 2008/03/23 15:27:50 Arabidopsis Exp $ */
 /* MS Windows (Win32) thread / semaphore / monitor implementation */
 /* original multi-threading code by John Desrosiers */
 #include "malloc_.h"
@@ -162,7 +162,7 @@ typedef struct gp_thread_creation_closure_s {
 } gp_thread_creation_closure;
 
 /* Origin of new threads started by gp_create_thread */
-private void
+static void
 gp_thread_begin_wrapper(
 			void *thread_data	/* gp_thread_creation_closure passed as magic data */
 )

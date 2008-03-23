@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevijs.c,v 1.10 2007/09/11 15:24:28 Arabidopsis Exp $ */
+/* $Id: gdevijs.c,v 1.11 2008/03/23 15:27:56 Arabidopsis Exp $ */
 /*
  * IJS device for Ghostscript.
  * Intended to work with any IJS compliant inkjet driver, including
@@ -48,14 +48,14 @@ int gdev_prn_maybe_realloc_memory(gx_device_printer *pdev,
 /* Device procedures */
 
 /* See gxdevice.h for the definitions of the procedures. */
-private dev_proc_open_device(gsijs_open);
-private dev_proc_close_device(gsijs_close);
-private dev_proc_output_page(gsijs_output_page);
-private dev_proc_get_params(gsijs_get_params);
-private dev_proc_put_params(gsijs_put_params);
-private dev_proc_finish_copydevice(gsijs_finish_copydevice);
+static dev_proc_open_device(gsijs_open);
+static dev_proc_close_device(gsijs_close);
+static dev_proc_output_page(gsijs_output_page);
+static dev_proc_get_params(gsijs_get_params);
+static dev_proc_put_params(gsijs_put_params);
+static dev_proc_finish_copydevice(gsijs_finish_copydevice);
 
-private const gx_device_procs gsijs_procs = {
+static const gx_device_procs gsijs_procs = {
 	gsijs_open,
 	NULL,	/* get_initial_matrix */
 	NULL,	/* sync_output */
@@ -160,14 +160,14 @@ gx_device_ijs gs_ijs_device =
 };
 
 
-private int gsijs_client_set_param(gx_device_ijs *ijsdev, const char *key,
+static int gsijs_client_set_param(gx_device_ijs *ijsdev, const char *key,
     const char *value);
-private int gsijs_set_color_format(gx_device_ijs *ijsdev);
-private int gsijs_read_int(gs_param_list *plist, gs_param_name pname, 
+static int gsijs_set_color_format(gx_device_ijs *ijsdev);
+static int gsijs_read_int(gs_param_list *plist, gs_param_name pname, 
    int *pval, int min_value, int max_value, bool only_when_closed);
-private int gsijs_read_bool(gs_param_list *plist, gs_param_name pname, 
+static int gsijs_read_bool(gs_param_list *plist, gs_param_name pname, 
    bool *pval, bool only_when_closed);
-private int gsijs_read_string(gs_param_list * plist, gs_param_name pname, 
+static int gsijs_read_string(gs_param_list * plist, gs_param_name pname, 
    char * str, uint size, bool safety, bool only_when_closed);
 
 /**************************************************************************/
@@ -179,7 +179,7 @@ private int gsijs_read_string(gs_param_list * plist, gs_param_name pname,
    become ubiquitous, all these workarounds should be removed. */
 #define HPIJS_1_0_VERSION 29
 
-private int
+static int
 gsijs_parse_wxh (const char *val, int size, double *pw, double *ph)
 {
     char buf[256];
@@ -220,7 +220,7 @@ gsijs_parse_wxh (const char *val, int size, double *pw, double *ph)
  * This version is specialized for hpijs 1.0 through 1.0.2, and
  * accommodates a number of quirks.
  **/
-private int
+static int
 gsijs_set_generic_params_hpijs(gx_device_ijs *ijsdev)
 {
     char buf[256];
@@ -245,7 +245,7 @@ gsijs_set_generic_params_hpijs(gx_device_ijs *ijsdev)
 /**
  * gsijs_set_generic_params: Set generic IJS parameters.
  **/
-private int
+static int
 gsijs_set_generic_params(gx_device_ijs *ijsdev)
 {
     char buf[256];
@@ -301,7 +301,7 @@ gsijs_set_generic_params(gx_device_ijs *ijsdev)
  * This version is specialized for hpijs 1.0 through 1.0.2, and
  * accommodates a number of quirks.
  **/
-private int
+static int
 gsijs_set_margin_params_hpijs(gx_device_ijs *ijsdev)
 {
     char buf[256];
@@ -360,7 +360,7 @@ gsijs_set_margin_params_hpijs(gx_device_ijs *ijsdev)
 /**
  * gsijs_set_margin_params: Do margin negotiation with IJS server.
  **/
-private int
+static int
 gsijs_set_margin_params(gx_device_ijs *ijsdev)
 {
     char buf[256];
@@ -472,7 +472,7 @@ gsijs_set_margin_params(gx_device_ijs *ijsdev)
  * changed from that.  This causes a minor infelicity: if DEFAULT_DPI
  * is set on the command line, it is changed to the default here.
  **/
-private int
+static int
 gsijs_set_resolution(gx_device_ijs *ijsdev)
 {
     char buf[256];
@@ -529,7 +529,7 @@ gsijs_set_resolution(gx_device_ijs *ijsdev)
 }
 
 /* Open the gsijs driver */
-private int
+static int
 gsijs_open(gx_device *dev)
 {
     gx_device_ijs *ijsdev = (gx_device_ijs *)dev;
@@ -620,7 +620,7 @@ gsijs_open(gx_device *dev)
 }
 
 /* Finish device initialization. */
-private int
+static int
 gsijs_finish_copydevice(gx_device *dev, const gx_device *from_dev)
 {
     int code;
@@ -643,7 +643,7 @@ gsijs_finish_copydevice(gx_device *dev, const gx_device *from_dev)
 }
 
 /* Close the gsijs driver */
-private int
+static int
 gsijs_close(gx_device *dev)
 {
     gx_device_ijs *ijsdev = (gx_device_ijs *)dev;
@@ -680,7 +680,7 @@ gsijs_close(gx_device *dev)
 /* This routine is entirely analagous to gdev_prn_print_scan_lines(),
    but computes width instead of height. It is not specific to IJS,
    and a strong case could be made for moving it into gdevprn.c. */
-private int
+static int
 gsijs_raster_width(gx_device *pdev)
 {
     int width = pdev->width;
@@ -696,7 +696,7 @@ gsijs_raster_width(gx_device *pdev)
     return min(width, end);
 }
 
-private int ijs_all_white(unsigned char *data, int size)
+static int ijs_all_white(unsigned char *data, int size)
 {
    int clean = 1;
    int i;
@@ -714,7 +714,7 @@ private int ijs_all_white(unsigned char *data, int size)
 /* Print a page.  Don't use normal printer gdev_prn_output_page 
  * because it opens the output file.
  */
-private int
+static int
 gsijs_output_page(gx_device *dev, int num_copies, int flush)
 {
     gx_device_ijs *ijsdev = (gx_device_ijs *)dev;
@@ -814,7 +814,7 @@ gsijs_output_page(gx_device *dev, int num_copies, int flush)
 /**************************************************************************/
 
 /* Get device parameters */
-private int
+static int
 gsijs_get_params(gx_device *dev, gs_param_list *plist)
 {
     gx_device_ijs *ijsdev = (gx_device_ijs *)dev;
@@ -872,7 +872,7 @@ gsijs_get_params(gx_device *dev, gs_param_list *plist)
     return code;
 }
 
-private int
+static int
 gsijs_read_int(gs_param_list *plist, gs_param_name pname, int *pval,
      int min_value, int max_value, bool only_when_closed)
 {
@@ -901,7 +901,7 @@ gsijs_read_int(gs_param_list *plist, gs_param_name pname, int *pval,
     return code;
 }
 
-private int
+static int
 gsijs_read_bool(gs_param_list *plist, gs_param_name pname, bool *pval,
 		bool only_when_closed)
 {
@@ -927,7 +927,7 @@ gsijs_read_bool(gs_param_list *plist, gs_param_name pname, bool *pval,
     return code;
 }
 
-private int
+static int
 gsijs_read_string(gs_param_list *plist, gs_param_name pname, char *str,
     uint size, bool safety, bool only_when_closed)
 {
@@ -964,7 +964,7 @@ gsijs_read_string(gs_param_list *plist, gs_param_name pname, char *str,
     return code;
 }
 
-private int
+static int
 gsijs_read_string_malloc(gs_param_list *plist, gs_param_name pname, char **str,
     int *size, bool only_when_closed)
 {
@@ -1010,7 +1010,7 @@ gsijs_read_string_malloc(gs_param_list *plist, gs_param_name pname, char **str,
 }
 
 
-private int
+static int
 gsijs_put_params(gx_device *dev, gs_param_list *plist)
 {
     gx_device_ijs *ijsdev = (gx_device_ijs *)dev;
@@ -1086,7 +1086,7 @@ gsijs_put_params(gx_device *dev, gs_param_list *plist)
     return code;
 }
 
-private int
+static int
 gsijs_client_set_param(gx_device_ijs *ijsdev, const char *key,
     const char *value)
 {
@@ -1098,7 +1098,7 @@ gsijs_client_set_param(gx_device_ijs *ijsdev, const char *key,
 }
  
 
-private int
+static int
 gsijs_set_color_format(gx_device_ijs *ijsdev)
 {
     gx_device_color_info dci = ijsdev->color_info;

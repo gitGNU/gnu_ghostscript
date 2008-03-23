@@ -64,7 +64,7 @@
 /*
  * JPEG-2000 Code Stream Library
  *
- * $Id: jpc_cs.c,v 1.4 2007/05/07 11:22:21 Arabidopsis Exp $
+ * $Id: jpc_cs.c,v 1.5 2008/03/23 15:28:33 Arabidopsis Exp $
  */
 
 /******************************************************************************\
@@ -991,7 +991,10 @@ static int jpc_qcx_getcompparms(jpc_qcxcp_t *compparms, jpc_cstate_t *cstate,
 		compparms->numstepsizes = (len - n) / 2;
 		break;
 	}
-if (compparms->numstepsizes > 0) {
+if (compparms->numstepsizes > 3 * JPC_MAXRLVLS + 1) {
+		jpc_qcx_destroycompparms(compparms);
+                return -1;
+        } else if (compparms->numstepsizes > 0) {
 	compparms->stepsizes = jas_malloc(compparms->numstepsizes *
 	  sizeof(uint_fast32_t));
 	assert(compparms->stepsizes);

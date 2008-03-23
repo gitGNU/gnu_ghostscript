@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfg.c,v 1.10 2007/09/11 15:24:05 Arabidopsis Exp $ */
+/* $Id: gdevpdfg.c,v 1.11 2008/03/23 15:27:43 Arabidopsis Exp $ */
 /* Graphics state management for pdfwrite driver */
 #include "math_.h"
 #include "string_.h"
@@ -84,7 +84,7 @@ pdf_save_viewer_state(gx_device_pdf *pdev, stream *s)
 }
 
 /* Load the viewer's graphic state. */
-private void
+static void
 pdf_load_viewer_state(gx_device_pdf *pdev, pdf_viewer_state *s)
 {   
     pdev->transfer_ids[0] = s->transfer_ids[0];
@@ -146,7 +146,7 @@ pdf_set_initial_color(gx_device_pdf * pdev, gx_hl_saved_color *saved_fill_color,
 }
 
 /* Prepare intitial values for viewer's graphics state parameters. */
-private void
+static void
 pdf_viewer_state_from_imager_state_aux(pdf_viewer_state *pvs, const gs_imager_state *pis)
 {
     pvs->transfer_not_identity = 
@@ -221,7 +221,7 @@ pdf_prepare_initial_viewer_state(gx_device_pdf * pdev, const gs_imager_state *pi
 
 /* Reset the graphics state parameters to initial values. */
 /* Used if pdf_prepare_initial_viewer_state was not callad. */
-private void
+static void
 pdf_reset_graphics_old(gx_device_pdf * pdev)
 {
 
@@ -252,7 +252,7 @@ pdf_reset_graphics(gx_device_pdf * pdev)
 }
 
 /* Write client color. */
-private int
+static int
 pdf_write_ccolor(gx_device_pdf * pdev, const gs_imager_state * pis, 
 	        const gs_client_color *pcc)
 {   
@@ -265,7 +265,7 @@ pdf_write_ccolor(gx_device_pdf * pdev, const gs_imager_state * pis,
     return 0;
 }
 
-private inline bool
+static inline bool
 is_cspace_allowed_in_strategy(gx_device_pdf * pdev, gs_color_space_index csi)
 {
     if (pdev->params.ColorConversionStrategy == ccs_CMYK && 
@@ -282,7 +282,7 @@ is_cspace_allowed_in_strategy(gx_device_pdf * pdev, gs_color_space_index csi)
     return true;
 }
 
-private inline bool
+static inline bool
 is_pattern2_allowed_in_strategy(gx_device_pdf * pdev, const gx_drawing_color *pdc)
 {
     const gs_color_space *pcs2 = gx_dc_pattern2_get_color_space(pdc);
@@ -292,15 +292,14 @@ is_pattern2_allowed_in_strategy(gx_device_pdf * pdev, const gx_drawing_color *pd
 }
 
 /* Set the fill or stroke color. */
-private int
+int
 pdf_reset_color(gx_device_pdf * pdev, const gs_imager_state * pis, 
 	        const gx_drawing_color *pdc, gx_hl_saved_color * psc,
 		bool *used_process_color,
 		const psdf_set_color_commands_t *ppscc)
 {
-    int code;
+    int code = 0;
     gx_hl_saved_color temp;
-    bool process_color;
     const gs_color_space *pcs, *pcs2;
     const gs_client_color *pcc; /* fixme: not needed due to gx_hld_get_color_component. */
     cos_value_t cs_value;
@@ -310,23 +309,14 @@ pdf_reset_color(gx_device_pdf * pdev, const gs_imager_state * pis,
 
     if (pdev->skip_colors)
 	return 0;
-    process_color = !gx_hld_save_color(pis, pdc, &temp);
+    gx_hld_save_color(pis, pdc, &temp);
     /* Since pdfwrite never applies halftones and patterns, but monitors
      * halftone/pattern IDs separately, we don't need to compare
      * halftone/pattern bodies here.
      */
     if (gx_hld_saved_color_equal(&temp, psc))
 	return 0;
-    /*
-     * In principle, we can set colors in either stream or text
-     * context.  However, since we currently enclose all text
-     * strings inside a gsave/grestore, this causes us to lose
-     * track of the color when we leave text context.  Therefore,
-     * we require stream context for setting colors.
-     */
-    code = pdf_open_page(pdev, PDF_IN_STREAM);
-    if (code < 0)
-	return code;
+
     switch (gx_hld_get_color_space_and_ccolor(pis, pdc, &pcs, &pcc)) {
 	case non_pattern_color_space:
 	    switch (gs_color_space_get_index(pcs)) {
@@ -465,6 +455,34 @@ pdf_set_drawing_color(gx_device_pdf * pdev, const gs_imager_state * pis,
 		      bool *used_process_color,
 		      const psdf_set_color_commands_t *ppscc)
 {
+    gx_hl_saved_color temp;
+    int code;
+
+    /* This section of code was in pdf_reset_color above, but was moved into this 
+     * routine (and below) in order to isolate the switch to a stream context. This
+     * now allows us the opportunity to write colours in any context, in particular
+     * when in a text context, by using pdf_reset_color.
+     */
+    if (pdev->skip_colors)
+	return 0;
+    gx_hld_save_color(pis, pdc, &temp);
+    /* Since pdfwrite never applies halftones and patterns, but monitors
+     * halftone/pattern IDs separately, we don't need to compare
+     * halftone/pattern bodies here.
+     */
+    if (gx_hld_saved_color_equal(&temp, psc))
+	return 0;
+    /*
+     * In principle, we can set colors in either stream or text
+     * context.  However, since we currently enclose all text
+     * strings inside a gsave/grestore, this causes us to lose
+     * track of the color when we leave text context.  Therefore,
+     * we require stream context for setting colors.
+     */
+    code = pdf_open_page(pdev, PDF_IN_STREAM);
+    if (code < 0)
+	return code;
+
     return pdf_reset_color(pdev, pis, pdc, psc, used_process_color, ppscc);
 }
 int
@@ -474,8 +492,31 @@ pdf_set_pure_color(gx_device_pdf * pdev, gx_color_index color,
 		   const psdf_set_color_commands_t *ppscc)
 {
     gx_drawing_color dcolor;
+    gx_hl_saved_color temp;
+    int code;
 
     set_nonclient_dev_color(&dcolor, color);
+
+    if (pdev->skip_colors)
+	return 0;
+    gx_hld_save_color(NULL, &dcolor, &temp);
+    /* Since pdfwrite never applies halftones and patterns, but monitors
+     * halftone/pattern IDs separately, we don't need to compare
+     * halftone/pattern bodies here.
+     */
+    if (gx_hld_saved_color_equal(&temp, psc))
+	return 0;
+    /*
+     * In principle, we can set colors in either stream or text
+     * context.  However, since we currently enclose all text
+     * strings inside a gsave/grestore, this causes us to lose
+     * track of the color when we leave text context.  Therefore,
+     * we require stream context for setting colors.
+     */
+    code = pdf_open_page(pdev, PDF_IN_STREAM);
+    if (code < 0)
+	return code;
+
     return pdf_reset_color(pdev, NULL, &dcolor, psc, used_process_color, ppscc);
 }
 
@@ -511,8 +552,8 @@ pdf_string_to_cos_name(gx_device_pdf *pdev, const byte *str, uint len,
  * an identity map.  Return 1 if the map is the identity map, otherwise
  * return 0.
  */
-private data_source_proc_access(transfer_map_access); /* check prototype */
-private int
+static data_source_proc_access(transfer_map_access); /* check prototype */
+static int
 transfer_map_access(const gs_data_source_t *psrc, ulong start, uint length,
 		    byte *buf, const byte **ptr)
 {
@@ -525,7 +566,7 @@ transfer_map_access(const gs_data_source_t *psrc, ulong start, uint length,
 	buf[i] = frac2byte(map->values[(uint)start + i]);
     return 0;
 }
-private int
+static int
 transfer_map_access_signed(const gs_data_source_t *psrc,
 			   ulong start, uint length,
 			   byte *buf, const byte **ptr)
@@ -545,7 +586,7 @@ transfer_map_access_signed(const gs_data_source_t *psrc,
 	    ((frac2float(map->values[(uint)start + i]) + 1) * 127);
     return 0;
 }
-private int
+static int
 pdf_write_transfer_map(gx_device_pdf *pdev, const gx_transfer_map *map,
 		       int range0, bool check_identity,
 		       const char *key, char *ids)
@@ -620,7 +661,7 @@ pdf_write_transfer_map(gx_device_pdf *pdev, const gx_transfer_map *map,
     sprintf(ids, "%s%s%ld 0 R", key, (key[0] && key[0] != ' ' ? " " : ""), id);
     return 0;
 }
-private int
+static int
 pdf_write_transfer(gx_device_pdf *pdev, const gx_transfer_map *map,
 		   const char *key, char *ids)
 {
@@ -636,7 +677,7 @@ pdf_write_transfer(gx_device_pdf *pdev, const gx_transfer_map *map,
  * results.  Currently we only do this for a few of the functions.
  */
 #define HT_FUNC(name, expr)\
-  private floatp name(floatp xd, floatp yd) {\
+  static floatp name(floatp xd, floatp yd) {\
     float x = (float)xd, y = (float)yd;\
     return d2f(expr);\
   }
@@ -646,13 +687,13 @@ pdf_write_transfer(gx_device_pdf *pdev, const gx_transfer_map *map,
  * doesn't actually do the coercion.  Force this here.  Note that if we
  * use 'inline', it doesn't work.
  */
-private float
+static float
 d2f(floatp d)
 {
     float f = (float)d;
     return f;
 }
-private floatp
+static floatp
 ht_Round(floatp xf, floatp yf)
 {
     float x = (float)xf, y = (float)yf;
@@ -663,7 +704,7 @@ ht_Round(floatp xf, floatp yf)
     xabs -= 1, yabs -= 1;
     return d2f(d2f(d2f(xabs * xabs) + d2f(yabs * yabs)) - 1);
 }
-private floatp
+static floatp
 ht_Diamond(floatp xf, floatp yf)
 {
     float x = (float)xf, y = (float)yf;
@@ -676,7 +717,7 @@ ht_Diamond(floatp xf, floatp yf)
     xabs -= 1, yabs -= 1;
     return d2f(d2f(d2f(xabs * xabs) + d2f(yabs * yabs)) - 1);
 }
-private floatp
+static floatp
 ht_Ellipse(floatp xf, floatp yf)
 {
     float x = (float)xf, y = (float)yf;
@@ -702,11 +743,11 @@ ht_Ellipse(floatp xf, floatp yf)
  * Most of these are recognized properly even without d2f.  We've only
  * added d2f where it apparently makes a difference.
  */
-private float
+static float
 d2fsin_d(double x) {
     return d2f(gs_sin_degrees(d2f(x)));
 }
-private float
+static float
 d2fcos_d(double x) {
     return d2f(gs_cos_degrees(d2f(x)));
 }
@@ -732,7 +773,7 @@ typedef struct ht_function_s {
     const char *fname;
     floatp (*proc)(floatp, floatp);
 } ht_function_t;
-private const ht_function_t ht_functions[] = {
+static const ht_function_t ht_functions[] = {
     {"Round", ht_Round},
     {"Diamond", ht_Diamond},
     {"Ellipse", ht_Ellipse},
@@ -757,7 +798,7 @@ private const ht_function_t ht_functions[] = {
 };
 
 /* Write each kind of halftone. */
-private int
+static int
 pdf_write_spot_function(gx_device_pdf *pdev, const gx_ht_order *porder,
 			long *pid)
 {
@@ -826,7 +867,7 @@ pdf_write_spot_function(gx_device_pdf *pdev, const gx_ht_order *porder,
     gs_free_object(mem, values, "pdf_write_spot_function");
     return code;
 }
-private int
+static int
 pdf_write_spot_halftone(gx_device_pdf *pdev, const gs_spot_halftone *psht,
 			const gx_ht_order *porder, long *pid)
 {
@@ -895,7 +936,7 @@ pdf_write_spot_halftone(gx_device_pdf *pdev, const gs_spot_halftone *psht,
     stream_puts(s, ">>\n");
     return pdf_end_separate(pdev);
 }
-private int
+static int
 pdf_write_screen_halftone(gx_device_pdf *pdev, const gs_screen_halftone *psht,
 			  const gx_ht_order *porder, long *pid)
 {
@@ -907,7 +948,7 @@ pdf_write_screen_halftone(gx_device_pdf *pdev, const gs_screen_halftone *psht,
     spot.transfer_closure.proc = 0;
     return pdf_write_spot_halftone(pdev, &spot, porder, pid);
 }
-private int
+static int
 pdf_write_colorscreen_halftone(gx_device_pdf *pdev,
 			       const gs_colorscreen_halftone *pcsht,
 			       const gx_device_halftone *pdht, long *pid)
@@ -941,7 +982,7 @@ pdf_write_colorscreen_halftone(gx_device_pdf *pdev,
 #define CHECK(expr)\
   BEGIN if ((code = (expr)) < 0) return code; END
 
-private int
+static int
 pdf_write_threshold_halftone(gx_device_pdf *pdev,
 			     const gs_threshold_halftone *ptht,
 			     const gx_ht_order *porder, long *pid)
@@ -971,7 +1012,7 @@ pdf_write_threshold_halftone(gx_device_pdf *pdev,
     stream_write(writer.binary.strm, ptht->thresholds.data, ptht->thresholds.size);
     return pdf_end_data(&writer);
 }
-private int
+static int
 pdf_write_threshold2_halftone(gx_device_pdf *pdev,
 			      const gs_threshold2_halftone *ptht,
 			      const gx_ht_order *porder, long *pid)
@@ -1020,7 +1061,7 @@ pdf_write_threshold2_halftone(gx_device_pdf *pdev,
     }
     return pdf_end_data(&writer);
 }
-private int 
+static int 
 pdf_get_halftone_component_index(const gs_multiple_halftone *pmht,
 				 const gx_device_halftone *pdht,
 				 int dht_index)
@@ -1040,7 +1081,7 @@ pdf_get_halftone_component_index(const gs_multiple_halftone *pmht,
     }
     return j;
 }
-private int
+static int
 pdf_write_multiple_halftone(gx_device_pdf *pdev,
 			    const gs_multiple_halftone *pmht,
 			    const gx_device_halftone *pdht, long *pid)
@@ -1139,7 +1180,7 @@ pdf_write_multiple_halftone(gx_device_pdf *pdev,
  * Update the halftone.  This is a separate procedure only for
  * readability.
  */
-private int
+static int
 pdf_update_halftone(gx_device_pdf *pdev, const gs_imager_state *pis,
 		    char *hts)
 {
@@ -1186,14 +1227,14 @@ pdf_update_halftone(gx_device_pdf *pdev, const gs_imager_state *pis,
 
 /* ------ Graphics state updating ------ */
 
-private inline cos_dict_t *
+static inline cos_dict_t *
 resource_dict(pdf_resource_t *pres)
 {
     return (cos_dict_t *)pres->object;
 }
 
 /* Open an ExtGState. */
-private int
+static int
 pdf_open_gstate(gx_device_pdf *pdev, pdf_resource_t **ppres)
 {
     int code;
@@ -1244,7 +1285,7 @@ pdf_end_gstate(gx_device_pdf *pdev, pdf_resource_t *pres)
  * Update the transfer functions(s).  This is a separate procedure only
  * for readability.
  */
-private int
+static int
 pdf_update_transfer(gx_device_pdf *pdev, const gs_imager_state *pis,
 		    char *trs)
 {
@@ -1301,7 +1342,7 @@ pdf_update_transfer(gx_device_pdf *pdev, const gs_imager_state *pis,
  * stores separate opacity and shape alpha, a rangecheck will occur if
  * both are different from the current setting.
  */
-private int
+static int
 pdf_update_alpha(gx_device_pdf *pdev, const gs_imager_state *pis,
 		 pdf_resource_t **ppres)
 {
@@ -1565,7 +1606,7 @@ pdf_prepare_fill(gx_device_pdf *pdev, const gs_imager_state *pis)
 }
 
 /* Update the graphics state for stroking. */
-private int
+static int
 pdf_try_prepare_stroke(gx_device_pdf *pdev, const gs_imager_state *pis)
 {
     pdf_resource_t *pres = 0;

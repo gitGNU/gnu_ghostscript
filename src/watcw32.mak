@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 Artifex Software, Inc.
+#  Copyright (C) 2001-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: watcw32.mak,v 1.12 2007/09/11 15:24:06 Arabidopsis Exp $
+# $Id: watcw32.mak,v 1.13 2008/03/23 15:28:03 Arabidopsis Exp $
 # watcw32.mak
 # makefile for Watcom C++ v??, Windows NT or Windows 95 platform.
 # Created 1997-02-23 by Russell Lang from MSVC++ 4.0 makefile.
@@ -83,12 +83,6 @@ DEBUG=0
 
 TDEBUG=0
 
-# Setting NOPRIVATE=1 makes private (static) procedures and variables public,
-# so they are visible to the debugger and profiler.
-# No execution time or space penalty, just larger .OBJ and .EXE files.
-
-NOPRIVATE=0
-
 # Define the name of the executable file.
 
 GS=gswin32
@@ -116,15 +110,13 @@ MAKEDLL=1
 # See jpeg.mak for more information.
 
 JSRCDIR=jpeg
-JVERSION=6
 
 # Define the directory where the PNG library sources are stored,
 # and the version of the library that is stored there.
 # You may need to change this if the libpng version changes.
 # See libpng.mak for more information.
 
-PSRCDIR=libpng
-PVERSION=10218
+PNGSRCDIR=libpng
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.
@@ -270,7 +262,7 @@ DEVICE_DEVS11=$(DD)bmpmono.dev $(DD)bmp16.dev $(DD)bmp256.dev $(DD)bmp16m.dev $(
 DEVICE_DEVS12=$(DD)psmono.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
 DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev $(DD)jpegcmyk.dev
-DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
+DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)txtwrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
 # Overflow for DEVS3,4,5,6,9
 DEVICE_DEVS16=$(DD)ljet3.dev $(DD)ljet3d.dev $(DD)ljet4.dev $(DD)ljet4d.dev
 DEVICE_DEVS17=$(DD)pj.dev $(DD)pjxl.dev $(DD)pjxl300.dev
@@ -339,12 +331,6 @@ FPFLAGS=
 !endif
 
 
-!ifneq NOPRIVATE 0
-CP=/DNOPRIVATE
-!else
-CP=
-!endif
-
 !ifneq DEBUG 0
 CD=-dDEBUG
 !else
@@ -377,7 +363,7 @@ COMPILE_FOR_DLL=-bd
 COMPILE_FOR_EXE=
 COMPILE_FOR_CONSOLE_EXE=
 
-GENOPT=-d+ $(CP) $(CD) $(CT) $(CS) -zq -zp8
+GENOPT=-d+ $(CD) $(CT) $(CS) -zq -zp8
 
 CCFLAGS=$(PLATOPT) $(FPFLAGS) $(CPFLAGS) $(CFLAGS) $(XCFLAGS)
 CC=$(COMP) $(CCFLAGS) @$(GLGENDIR)\ccf32.tr

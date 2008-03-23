@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdtt.h,v 1.9 2007/09/11 15:24:32 Arabidopsis Exp $ */
+/* $Id: gdevpdtt.h,v 1.10 2008/03/23 15:28:01 Arabidopsis Exp $ */
 /* Internal text processing interface for pdfwrite */
 
 #ifndef gdevpdtt_INCLUDED
@@ -167,7 +167,6 @@ typedef struct pdf_glyph_widths_s {
  * Compute and return the orig_matrix of a font.
  */
 int pdf_font_orig_matrix(const gs_font *font, gs_matrix *pmat);
-int font_orig_scale(const gs_font *font, double *sx);
 
 /* 
  * Check the Encoding compatibility 
@@ -199,7 +198,7 @@ int pdf_obtain_cidfont_resource(gx_device_pdf *pdev, gs_font *subfont,
  * Create or find a parent Type 0 font resource object for a CID font resource.
  */
 int pdf_obtain_parent_type0_font_resource(gx_device_pdf *pdev, pdf_font_resource_t *pdsubf, 
-		const gs_const_string *CMapName, pdf_font_resource_t **pdfont);
+		uint font_index, const gs_const_string *CMapName, pdf_font_resource_t **pdfont);
 
 /*
  * Retrive font resource attached to a font.
@@ -276,9 +275,6 @@ bool pdf_is_simple_font(gs_font *font);
  */
 bool pdf_is_CID_font(gs_font *font);
 
-/* Get a synthesized Type 3 font scale. */
-void pdf_font3_scale(gx_device_pdf *pdev, gs_font *font, double *scale);
-
 /* Release a text characters colloction. */
 void pdf_text_release_cgp(pdf_text_enum_t *penum);
 
@@ -330,4 +326,9 @@ int pdf_encode_glyph(gs_font_base *bfont, gs_glyph glyph0,
 
 int pdf_shift_text_currentpoint(pdf_text_enum_t *penum, gs_point *wpt);
 
+void adjust_first_last_char(pdf_font_resource_t *pdfont, byte *str, int size);
+
+float pdf_calculate_text_size(gs_imager_state *pis, pdf_font_resource_t *pdfont, 
+			      const gs_matrix *pfmat, gs_matrix *smat, gs_matrix *tmat,
+			      gs_font *font, gx_device_pdf *pdev);
 #endif /* gdevpdtt_INCLUDED */

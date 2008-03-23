@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: siscale.c,v 1.8 2007/09/11 15:24:18 Arabidopsis Exp $ */
+/* $Id: siscale.c,v 1.9 2008/03/23 15:27:41 Arabidopsis Exp $ */
 /* Image scaling filters */
 #include "math_.h"
 #include "memory_.h"
@@ -72,7 +72,7 @@ typedef double AccumTmp;
 #define num_weight_bits 0		/* Not used for floating point */
 #define fixedScaleFactor 1		/* Straight scaling for floating point */
 #define scale_PixelWeight(factor) (factor)
-#define unscale_AccumTmp(atemp, fraction_bits) ((int)(atemp))
+#define unscale_AccumTmp(atemp, fraction_bits) ((int)(atemp + 0.5))
 /*#undef NEED_FRACTION_BITS*/
 
 #endif /* USE_FPU */
@@ -136,7 +136,7 @@ gs_private_st_ptrs5(st_IScale_state, stream_IScale_state,
 #define Mitchell_support 2.0
 #define B (1.0 / 3.0)
 #define C (1.0 / 3.0)
-private double
+static double
 Mitchell_filter(double t)
 {
     double t2 = t * t;
@@ -181,16 +181,16 @@ Mitchell_filter(double t)
 
 /* Calculate the support for a given scale. */
 /* The value is always in the range 1 .. MAX_ISCALE_SUPPORT. */
-private int
+static int
 contrib_pixels(double scale)
 {
     return (int)(fWidthIn / (scale >= 1.0 ? 1.0 : max(scale, min_scale))
-		 * 2 + 1);
+		 * 2 + 1.5);
 }
 
 /* Pre-calculate filter contributions for a row or a column. */
 /* Return the highest input pixel index used. */
-private int
+static int
 calculate_contrib(
 	/* Return weight list parameters in contrib[0 .. size-1]. */
 		     CLIST * contrib,
@@ -271,18 +271,24 @@ calculate_contrib(
 	for (j = 0; j < npixels; ++j)
 	    p[j].weight = 0;
 	if (squeeze) {
+            double sum = 0;
+	    for (j = left; j <= right; ++j)
+		sum += fproc((center - j) / fscale) / fscale;
 	    for (j = left; j <= right; ++j) {
-		double weight =
-		fproc((center - j) / fscale) / fscale;
+		double weight = fproc((center - j) / fscale) / fscale / sum;
 		int n = clamp_pixel(j);
 		int k = n - first_pixel;
 
-		p[k].weight +=
+                p[k].weight +=
 		    (PixelWeight) (weight * scaled_factor);
 	    }
+
 	} else {
+            double sum = 0;
+	    for (j = left; j <= right; ++j)
+		sum += fproc(center - j);
 	    for (j = left; j <= right; ++j) {
-		double weight = fproc(center - j);
+		double weight = fproc(center - j) / sum;
 		int n = clamp_pixel(j);
 		int k = n - first_pixel;
 
@@ -296,7 +302,7 @@ calculate_contrib(
 
 
 /* Apply filter to zoom horizontally from src to tmp. */
-private void
+static void
 zoom_x(PixelTmp * tmp, const void /*PixelIn */ *src, int sizeofPixelIn,
        int tmp_width, int WidthIn, int Colors, const CLIST * contrib,
        const CONTRIB * items)
@@ -361,7 +367,7 @@ zoom_x(PixelTmp * tmp, const void /*PixelIn */ *src, int sizeofPixelIn,
  * This is simpler because we can treat all columns identically
  * without regard to the number of samples per pixel.
  */
-private void
+static void
 zoom_y(void /*PixelOut */ *dst, int sizeofPixelOut, uint MaxValueOut,
        const PixelTmp * tmp, int WidthOut, int tmp_width,
        int Colors, const CLIST * contrib, const CONTRIB * items)
@@ -409,10 +415,10 @@ zoom_y(void /*PixelOut */ *dst, int sizeofPixelOut, uint MaxValueOut,
 #define tmp_height params.HeightIn
 
 /* Forward references */
-private void s_IScale_release(stream_state * st);
+static void s_IScale_release(stream_state * st);
 
 /* Calculate the weights for an output row. */
-private void
+static void
 calculate_dst_contrib(stream_IScale_state * ss, int y)
 {
     uint row_size = ss->params.WidthOut * ss->params.Colors;
@@ -447,7 +453,7 @@ calculate_dst_contrib(stream_IScale_state * ss, int y)
 }
 
 /* Set default parameter values (actually, just clear pointers). */
-private void
+static void
 s_IScale_set_defaults(stream_state * st)
 {
     stream_IScale_state *const ss = (stream_IScale_state *) st;
@@ -460,7 +466,7 @@ s_IScale_set_defaults(stream_state * st)
 }
 
 /* Initialize the filter. */
-private int
+static int
 s_IScale_init(stream_state * st)
 {
     stream_IScale_state *const ss = (stream_IScale_state *) st;
@@ -514,7 +520,7 @@ s_IScale_init(stream_state * st)
 }
 
 /* Process a buffer.  Note that this handles Encode and Decode identically. */
-private int
+static int
 s_IScale_process(stream_state * st, stream_cursor_read * pr,
 		 stream_cursor_write * pw, bool last)
 {
@@ -606,7 +612,7 @@ s_IScale_process(stream_state * st, stream_cursor_read * pr,
 }
 
 /* Release the filter's storage. */
-private void
+static void
 s_IScale_release(stream_state * st)
 {
     stream_IScale_state *const ss = (stream_IScale_state *) st;

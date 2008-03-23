@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zcsindex.c,v 1.9 2007/09/11 15:24:35 Arabidopsis Exp $ */
+/* $Id: zcsindex.c,v 1.10 2008/03/23 15:27:51 Arabidopsis Exp $ */
 /* Indexed color space support */
 #include "memory_.h"
 #include "ghost.h"
@@ -39,11 +39,11 @@
 extern const gs_color_space_type gs_color_space_type_Indexed;
 
 /* Forward references. */
-private int indexed_map1(i_ctx_t *);
+static int indexed_map1(i_ctx_t *);
 
 /* <array> .setindexedspace - */
 /* The current color space is the base space for the indexed space. */
-private int
+static int
 zsetindexedspace(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -125,7 +125,7 @@ zsetindexedspace(i_ctx_t *i_ctx_p)
 }
 
 /* Continuation procedure for saving mapped Indexed color values. */
-private int
+static int
 indexed_map1(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

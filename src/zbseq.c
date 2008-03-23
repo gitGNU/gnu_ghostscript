@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zbseq.c,v 1.7 2007/09/11 15:23:45 Arabidopsis Exp $ */
+/* $Id: zbseq.c,v 1.8 2008/03/23 15:27:48 Arabidopsis Exp $ */
 /* Level 2 binary object sequence operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -54,7 +54,7 @@ create_names_array(ref **ppnames, gs_memory_t *mem, client_name_t cname)
 }
 
 /* Initialize the binary token machinery. */
-private int
+static int
 zbseq_init(i_ctx_t *i_ctx_p)
 {
     /* Initialize a fake system name table. */
@@ -70,7 +70,7 @@ zbseq_init(i_ctx_t *i_ctx_p)
 }
 
 /* <names> .installsystemnames - */
-private int
+static int
 zinstallsystemnames(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -84,7 +84,7 @@ zinstallsystemnames(i_ctx_t *i_ctx_p)
 }
 
 /* - currentobjectformat <int> */
-private int
+static int
 zcurrentobjectformat(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -95,7 +95,7 @@ zcurrentobjectformat(i_ctx_t *i_ctx_p)
 }
 
 /* <int> setobjectformat - */
-private int
+static int
 zsetobjectformat(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -120,7 +120,7 @@ zsetobjectformat(i_ctx_t *i_ctx_p)
  * items.)  See encode_binary_token for more details.
  */
 
-private int
+static int
 zbosobject(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

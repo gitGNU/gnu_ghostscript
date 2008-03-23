@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsalphac.c,v 1.9 2007/09/11 15:23:52 Arabidopsis Exp $ */
+/* $Id: gsalphac.c,v 1.10 2008/03/23 15:28:03 Arabidopsis Exp $ */
 /* Alpha-compositing implementation */
 #include "memory_.h"
 #include "gx.h"
@@ -94,10 +94,10 @@ int composite_values(const pixel_row_t * pdest,
 /* ------ Object definition and creation ------ */
 
 /* Define alpha-compositing objects. */
-private composite_create_default_compositor_proc(c_alpha_create_default_compositor);
-private composite_equal_proc(c_alpha_equal);
-private composite_write_proc(c_alpha_write);
-private composite_read_proc(c_alpha_read);
+static composite_create_default_compositor_proc(c_alpha_create_default_compositor);
+static composite_equal_proc(c_alpha_equal);
+static composite_write_proc(c_alpha_write);
+static composite_read_proc(c_alpha_read);
 const gs_composite_type_t gs_composite_alpha_type =
 {
     GX_COMPOSITOR_ALPHA,
@@ -139,7 +139,7 @@ gs_create_composite_alpha(gs_composite_t ** ppcte,
 
 #define pacte ((const gs_composite_alpha_t *)pcte)
 
-private bool
+static bool
 c_alpha_equal(const gs_composite_t * pcte, const gs_composite_t * pcte2)
 {
     return (pcte2->type == pcte->type &&
@@ -150,12 +150,13 @@ c_alpha_equal(const gs_composite_t * pcte, const gs_composite_t * pcte2)
 #undef pacte2
 }
 
-private int
+static int
 c_alpha_write(const gs_composite_t * pcte, byte * data, uint * psize)
 {
     uint size = *psize;
     uint used;
 
+    if_debug1('v', "[v]c_alpha_write(%d)\n", pacte->params.op);
     if (pacte->params.op == composite_Dissolve) {
 	used = 1 + sizeof(pacte->params.delta);
 	if (size < used) {
@@ -175,7 +176,7 @@ c_alpha_write(const gs_composite_t * pcte, byte * data, uint * psize)
     return 0;
 }
 
-private int
+static int
 c_alpha_read(gs_composite_t ** ppcte, const byte * data, uint size,
 	     gs_memory_t * mem)
 {
@@ -185,6 +186,7 @@ c_alpha_read(gs_composite_t ** ppcte, const byte * data, uint size,
     if (size < 1 || *data > composite_op_last)
 	return_error(gs_error_rangecheck);
     params.op = *data;
+    if_debug1('v', "[v]c_alpha_read(%d)\n", params.op);
     if (params.op == composite_Dissolve) {
 	if (size < 1 + sizeof(params.delta))
 	    return_error(gs_error_rangecheck);
@@ -208,16 +210,16 @@ gs_private_st_suffix_add0_final(st_device_composite_alpha,
     device_c_alpha_enum_ptrs, device_c_alpha_reloc_ptrs, gx_device_finalize,
 				st_device_forward);
 /* The device descriptor. */
-private dev_proc_close_device(dca_close);
-private dev_proc_fill_rectangle(dca_fill_rectangle);
-private dev_proc_map_rgb_color(dca_map_rgb_color);
-private dev_proc_map_color_rgb(dca_map_color_rgb);
-private dev_proc_copy_mono(dca_copy_mono);
-private dev_proc_copy_color(dca_copy_color);
-private dev_proc_map_rgb_alpha_color(dca_map_rgb_alpha_color);
-private dev_proc_map_color_rgb_alpha(dca_map_color_rgb_alpha);
-private dev_proc_copy_alpha(dca_copy_alpha);
-private const gx_device_composite_alpha gs_composite_alpha_device =
+static dev_proc_close_device(dca_close);
+static dev_proc_fill_rectangle(dca_fill_rectangle);
+static dev_proc_map_rgb_color(dca_map_rgb_color);
+static dev_proc_map_color_rgb(dca_map_color_rgb);
+static dev_proc_copy_mono(dca_copy_mono);
+static dev_proc_copy_color(dca_copy_color);
+static dev_proc_map_rgb_alpha_color(dca_map_rgb_alpha_color);
+static dev_proc_map_color_rgb_alpha(dca_map_color_rgb_alpha);
+static dev_proc_copy_alpha(dca_copy_alpha);
+static const gx_device_composite_alpha gs_composite_alpha_device =
 {std_device_std_body_open(gx_device_composite_alpha, 0,
 			  "alpha compositor", 0, 0, 1, 1),
  {gx_default_open_device,
@@ -265,7 +267,7 @@ private const gx_device_composite_alpha gs_composite_alpha_device =
 };
 
 /* Create an alpha compositor. */
-private int
+static int
 c_alpha_create_default_compositor(const gs_composite_t * pcte,
 	   gx_device ** pcdev, gx_device * dev, gs_imager_state * pis,
 	   gs_memory_t * mem)
@@ -309,7 +311,7 @@ c_alpha_create_default_compositor(const gs_composite_t * pcte,
 }
 
 /* Close the device and free its storage. */
-private int
+static int
 dca_close(gx_device * dev)
 {				/*
 				 * Finalization will call close again: avoid a recursion loop.
@@ -321,12 +323,12 @@ dca_close(gx_device * dev)
 
 /* ------ (RGB) color mapping ------ */
 
-private gx_color_index
+static gx_color_index
 dca_map_rgb_color(gx_device * dev, const gx_color_value cv[])
 {
     return dca_map_rgb_alpha_color(dev, cv[0], cv[1], cv[2], gx_max_color_value);
 }
-private gx_color_index
+static gx_color_index
 dca_map_rgb_alpha_color(gx_device * dev,
 	      gx_color_value red, gx_color_value green, gx_color_value blue,
 			gx_color_value alpha)
@@ -370,7 +372,7 @@ dca_map_rgb_alpha_color(gx_device * dev,
 #undef premult
     return (color << 8) + a;
 }
-private int
+static int
 dca_map_color_rgb(gx_device * dev, gx_color_index color,
 		  gx_color_value prgb[3])
 {
@@ -417,7 +419,7 @@ dca_map_color_rgb(gx_device * dev, gx_color_index color,
 #undef postdiv
     return 0;
 }
-private int
+static int
 dca_map_color_rgb_alpha(gx_device * dev, gx_color_index color,
 			gx_color_value prgba[4])
 {
@@ -427,7 +429,7 @@ dca_map_color_rgb_alpha(gx_device * dev, gx_color_index color,
 
 /* ------ Imaging ------ */
 
-private int
+static int
 dca_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 		   gx_color_index color)
 {				/* This is where all the real work gets done! */
@@ -522,7 +524,7 @@ dca_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
     return code;
 }
 
-private int
+static int
 dca_copy_mono(gx_device * dev, const byte * data,
 	    int dx, int raster, gx_bitmap_id id, int x, int y, int w, int h,
 	      gx_color_index zero, gx_color_index one)
@@ -532,7 +534,7 @@ dca_copy_mono(gx_device * dev, const byte * data,
 				zero, one);
 }
 
-private int
+static int
 dca_copy_color(gx_device * dev, const byte * data,
 	       int dx, int raster, gx_bitmap_id id,
 	       int x, int y, int w, int h)
@@ -541,7 +543,7 @@ dca_copy_color(gx_device * dev, const byte * data,
     return gx_default_copy_color(dev, data, dx, raster, id, x, y, w, h);
 }
 
-private int
+static int
 dca_copy_alpha(gx_device * dev, const byte * data, int data_x,
 	   int raster, gx_bitmap_id id, int x, int y, int width, int height,
 	       gx_color_index color, int depth)

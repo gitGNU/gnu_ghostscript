@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sdeparam.c,v 1.7 2007/09/11 15:24:03 Arabidopsis Exp $ */
+/* $Id: sdeparam.c,v 1.8 2008/03/23 15:27:59 Arabidopsis Exp $ */
 /* DCTEncode filter parameter setting and reading */
 #include "memory_.h"
 #include "jpeglib_.h"
@@ -41,12 +41,12 @@ typedef struct dcte_scalars_s {
     int Resync;
     int Blend;
 } dcte_scalars_t;
-private const dcte_scalars_t dcte_scalars_default =
+static const dcte_scalars_t dcte_scalars_default =
 {
     0, 0, -1,
     {0, 0}, 0 /*false */ , 0, 0
 };
-private const gs_param_item_t s_DCTE_param_items[] =
+static const gs_param_item_t s_DCTE_param_items[] =
 {
 #define dctp(key, type, memb) { key, type, offset_of(dcte_scalars_t, memb) }
     dctp("Columns", gs_param_type_int, Columns),
@@ -65,7 +65,7 @@ private const gs_param_item_t s_DCTE_param_items[] =
 stream_state_proc_get_params(s_DCTE_get_params, stream_DCT_state);	/* check */
 
 /* Get a set of sampling values. */
-private int
+static int
 dcte_get_samples(gs_param_list * plist, gs_param_name key, int num_colors,
  const jpeg_compress_data * jcdp, gs_memory_t * mem, bool is_vert, bool all)
 {
@@ -153,7 +153,7 @@ s_DCTE_get_params(gs_param_list * plist, const stream_DCT_state * ss, bool all)
 stream_state_proc_put_params(s_DCTE_put_params, stream_DCT_state);	/* check */
 
 /* Put a set of sampling values. */
-private int
+static int
 dcte_put_samples(gs_param_list * plist, gs_param_name key, int num_colors,
 		 jpeg_compress_data * jcdp, bool is_vert)
 {

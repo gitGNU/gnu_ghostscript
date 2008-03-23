@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/*$Id: gdevdbit.c,v 1.11 2007/09/11 15:24:37 Arabidopsis Exp $ */
+/*$Id: gdevdbit.c,v 1.12 2008/03/23 15:27:53 Arabidopsis Exp $ */
 /* Default device bitmap copying implementation */
 #include "gx.h"
 #include "gpcheck.h"
@@ -325,10 +325,8 @@ gx_default_fill_mask(gx_device * orig_dev,
     gx_device_clip cdev;
 
     if (pcpath != 0) {
-	gx_make_clip_path_device(&cdev, pcpath);
-	cdev.target = orig_dev;
+	gx_make_clip_device_on_stack(&cdev, pcpath, orig_dev);
 	dev = (gx_device *) & cdev;
-	(*dev_proc(dev, open_device)) (dev);
     } else
 	dev = orig_dev;
     if (depth > 1) {

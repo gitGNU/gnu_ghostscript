@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxiscale.c,v 1.10 2007/09/11 15:24:26 Arabidopsis Exp $ */
+/* $Id: gxiscale.c,v 1.11 2008/03/23 15:27:44 Arabidopsis Exp $ */
 /* Interpolated image procedures */
 #include "gx.h"
 #include "math_.h"
@@ -54,7 +54,7 @@
 iclass_proc(gs_image_class_0_interpolate);
 
 /* If we're interpolating, use special logic. */
-private irender_proc(image_render_interpolate);
+static irender_proc(image_render_interpolate);
 irender_proc_t
 gs_image_class_0_interpolate(gx_image_enum * penum)
 {
@@ -191,7 +191,7 @@ gs_image_class_0_interpolate(gx_image_enum * penum)
 
 /* ------ Rendering for interpolated images ------ */
 
-private int
+static int
 image_render_interpolate(gx_image_enum * penum, const byte * buffer,
 			 int data_x, uint iw, int h, gx_device * dev)
 {

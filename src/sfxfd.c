@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sfxfd.c,v 1.8 2007/09/11 15:24:42 Arabidopsis Exp $ */
+/* $Id: sfxfd.c,v 1.9 2008/03/23 15:28:05 Arabidopsis Exp $ */
 /* File stream implementation using direct OS calls */
 /******
  ****** NOTE: THIS FILE MAY NOT COMPILE ON NON-UNIX PLATFORMS, AND MAY
@@ -59,37 +59,37 @@ void
 #endif
 
 /* Forward references for file stream procedures */
-private int
+static int
     s_fileno_available(stream *, long *),
     s_fileno_read_seek(stream *, long),
     s_fileno_read_close(stream *),
     s_fileno_read_process(stream_state *, stream_cursor_read *,
 			  stream_cursor_write *, bool);
-private int
+static int
     s_fileno_write_seek(stream *, long),
     s_fileno_write_flush(stream *),
     s_fileno_write_close(stream *),
     s_fileno_write_process(stream_state *, stream_cursor_read *,
 			   stream_cursor_write *, bool);
-private int
+static int
     s_fileno_switch(stream *, bool);
 
 /* Get the file descriptor number of a stream. */
-inline private int
+static inline int
 sfileno(const stream *s)
 {
     return fileno(s->file);
 }
 
 /* Get the current position of a file descriptor. */
-inline private long
+static inline long
 ltell(int fd)
 {
     return lseek(fd, 0L, SEEK_CUR);
 }
 
 /* Define the System V interrupts that require retrying a call. */
-private bool
+static bool
 errno_is_retry(int errn)
 {
     switch (errn) {
@@ -158,7 +158,7 @@ sread_subfile(stream *s, long start, long length)
 #endif
 
 /* Procedures for reading from a file */
-private int
+static int
 s_fileno_available(register stream * s, long *pl)
 {
     long max_avail = s->file_limit - stell(s);
@@ -185,7 +185,7 @@ s_fileno_available(register stream * s, long *pl)
     }
     return 0;
 }
-private int
+static int
 s_fileno_read_seek(register stream * s, long pos)
 {
     uint end = s->srlimit - s->cbuf + 1;
@@ -204,7 +204,7 @@ s_fileno_read_seek(register stream * s, long pos)
     s->position = pos;
     return 0;
 }
-private int
+static int
 s_fileno_read_close(stream * s)
 {
     FILE *file = s->file;
@@ -218,7 +218,7 @@ s_fileno_read_close(stream * s)
 
 /* Process a buffer for a file reading stream. */
 /* This is the first stream in the pipeline, so pr is irrelevant. */
-private int
+static int
 s_fileno_read_process(stream_state * st, stream_cursor_read * ignore_pr,
 		      stream_cursor_write * pw, bool last)
 {
@@ -285,7 +285,7 @@ sappend_fileno(register stream * s, FILE * file, byte * buf, uint len)
     s->position = lseek(fileno(file), 0L, SEEK_END);
 }
 /* Procedures for writing on a file */
-private int
+static int
 s_fileno_write_seek(stream * s, long pos)
 {
     /* We must flush the buffer to reposition. */
@@ -298,7 +298,7 @@ s_fileno_write_seek(stream * s, long pos)
     s->position = pos;
     return 0;
 }
-private int
+static int
 s_fileno_write_flush(register stream * s)
 {
     int result = s_process_write_buf(s, false);
@@ -306,7 +306,7 @@ s_fileno_write_flush(register stream * s)
     discard(fsync(sfileno(s)));
     return result;
 }
-private int
+static int
 s_fileno_write_close(register stream * s)
 {
     s_process_write_buf(s, true);
@@ -315,7 +315,7 @@ s_fileno_write_close(register stream * s)
 
 /* Process a buffer for a file writing stream. */
 /* This is the last stream in the pipeline, so pw is irrelevant. */
-private int
+static int
 s_fileno_write_process(stream_state * st, stream_cursor_read * pr,
 		       stream_cursor_write * ignore_pw, bool last)
 {
@@ -346,7 +346,7 @@ again:
 /* ------ File switching ------ */
 
 /* Switch a file stream to reading or writing. */
-private int
+static int
 s_fileno_switch(stream * s, bool writing)
 {
     uint modes = s->file_modes;

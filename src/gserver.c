@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gserver.c,v 1.7 2007/09/11 15:23:53 Arabidopsis Exp $ */
+/* $Id: gserver.c,v 1.8 2008/03/23 15:27:43 Arabidopsis Exp $ */
 /* Server front end for Ghostscript, replacing gs.c. */
 #include "memory_.h"
 #include "string_.h"
@@ -174,9 +174,9 @@ main(int argc, char *argv[])
 /* ------ Private definitions ------ */
 
 /* Forward references */
-private int job_begin(void);
-private int job_end(void);
-private void errstr_report(ref *, char *, int, int *);
+static int job_begin(void);
+static int job_end(void);
+static void errstr_report(ref *, char *, int, int *);
 
 /* ------ Public routines ------ */
 
@@ -267,13 +267,13 @@ gs_server_terminate()
 
 /* ------ Private routines ------ */
 
-private ref job_save;		/* 'save' object for baseline state */
+static ref job_save;		/* 'save' object for baseline state */
 
 extern int zsave(os_ptr), zrestore(os_ptr);
 
 /* Start a 'job' by restoring the baseline state. */
 
-private int
+static int
 job_begin()
 {
     int code;
@@ -292,7 +292,7 @@ job_begin()
 
 /* End a 'job'. */
 
-private int
+static int
 job_end()
 {
     gs_interp_reset();
@@ -302,7 +302,7 @@ job_end()
 
 /* Produce a printable representation of an error object. */
 
-private void
+static void
 errstr_report(ref * perror_object, char *errstr, int errstr_max_len,
 	      int *errstr_len_ptr)
 {

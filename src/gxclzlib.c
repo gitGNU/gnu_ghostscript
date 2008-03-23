@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclzlib.c,v 1.8 2007/09/11 15:24:41 Arabidopsis Exp $ */
+/* $Id: gxclzlib.c,v 1.9 2008/03/23 15:28:01 Arabidopsis Exp $ */
 /* zlib filter initialization for RAM-based band lists */
 /* Must be compiled with -I$(ZSRCDIR) */
 #include "std.h"
@@ -26,8 +26,8 @@
 #include "gxclmem.h"
 #include "szlibx.h"
 
-private stream_zlib_state cl_zlibE_state;
-private stream_zlib_state cl_zlibD_state;
+static stream_zlib_state cl_zlibE_state;
+static stream_zlib_state cl_zlibD_state;
 
 /* Initialize the states to be copied. */
 int

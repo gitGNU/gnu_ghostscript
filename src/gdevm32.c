@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevm32.c,v 1.8 2007/09/11 15:24:04 Arabidopsis Exp $ */
+/* $Id: gdevm32.c,v 1.9 2008/03/23 15:27:58 Arabidopsis Exp $ */
 /* 32-bit-per-pixel "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"
@@ -55,7 +55,7 @@ mem_full_device("image32", 24, 8, mem_open,
 #endif
 
 /* Fill a rectangle with a color. */
-private int
+static int
 mem_true32_fill_rectangle(gx_device * dev,
 			  int x, int y, int w, int h, gx_color_index color)
 {
@@ -128,7 +128,7 @@ mem_true32_fill_rectangle(gx_device * dev,
 }
 
 /* Copy a monochrome bitmap. */
-private int
+static int
 mem_true32_copy_mono(gx_device * dev,
 	       const byte * base, int sourcex, int sraster, gx_bitmap_id id,
 	int x, int y, int w, int h, gx_color_index zero, gx_color_index one)
@@ -224,7 +224,7 @@ mem_true32_copy_mono(gx_device * dev,
 }
 
 /* Copy a color bitmap. */
-private int
+static int
 mem_true32_copy_color(gx_device * dev,
 	       const byte * base, int sourcex, int sraster, gx_bitmap_id id,
 		      int x, int y, int w, int h)
@@ -255,7 +255,7 @@ mem_full_device("image32w", 24, 8, mem_open,
 		gx_no_strip_copy_rop, mem_word_get_bits_rectangle);
 
 /* Fill a rectangle with a color. */
-private int
+static int
 mem32_word_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 			  gx_color_index color)
 {
@@ -264,7 +264,7 @@ mem32_word_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 }
 
 /* Copy a bitmap. */
-private int
+static int
 mem32_word_copy_mono(gx_device * dev,
 	       const byte * base, int sourcex, int sraster, gx_bitmap_id id,
 	int x, int y, int w, int h, gx_color_index zero, gx_color_index one)
@@ -275,7 +275,7 @@ mem32_word_copy_mono(gx_device * dev,
 }
 
 /* Copy a color bitmap. */
-private int
+static int
 mem32_word_copy_color(gx_device * dev,
 	       const byte * base, int sourcex, int sraster, gx_bitmap_id id,
 		      int x, int y, int w, int h)

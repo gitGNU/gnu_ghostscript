@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclpage.c,v 1.8 2007/09/11 15:24:15 Arabidopsis Exp $ */
+/* $Id: gxclpage.c,v 1.9 2008/03/23 15:27:39 Arabidopsis Exp $ */
 /* Page object management */
 #include "gdevprn.h"
 #include "gxcldev.h"
@@ -105,6 +105,7 @@ gdev_prn_render_pages(gx_device_printer * pdev,
     pcldev->ymin = pcldev->ymax = 0;
     pcldev->pages = ppages;
     pcldev->num_pages = count;
+    pcldev->offset_map = NULL;
     /* Render the pages. */
     {
 	int code = (*dev_proc(pdev, output_page))

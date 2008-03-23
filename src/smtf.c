@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: smtf.c,v 1.7 2007/09/11 15:24:16 Arabidopsis Exp $ */
+/* $Id: smtf.c,v 1.8 2008/03/23 15:27:37 Arabidopsis Exp $ */
 /* MoveToFront filters */
 #include "stdio_.h"
 #include "strimpl.h"
@@ -28,7 +28,7 @@
 private_st_MTF_state();
 
 /* Initialize */
-private int
+static int
 s_MTF_init(stream_state * st)
 {
     stream_MTF_state *const ss = (stream_MTF_state *) st;
@@ -40,7 +40,7 @@ s_MTF_init(stream_state * st)
 }
 
 /* Encode a buffer */
-private int
+static int
 s_MTFE_process(stream_state * st, stream_cursor_read * pr,
 	       stream_cursor_write * pw, bool last)
 {
@@ -74,7 +74,7 @@ const stream_template s_MTFE_template = {
 };
 
 /* Decode a buffer */
-private int
+static int
 s_MTFD_process(stream_state * st, stream_cursor_read * pr,
 	       stream_cursor_write * pw, bool last)
 {

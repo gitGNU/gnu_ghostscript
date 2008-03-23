@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: gs_lev2.ps,v 1.9 2007/09/11 15:24:51 Arabidopsis Exp $
+% $Id: gs_lev2.ps,v 1.10 2008/03/23 15:28:29 Arabidopsis Exp $
 % Initialization file for Level 2 functions.
 % When this is run, systemdict is still writable,
 % but (almost) everything defined here goes into level2dict.
@@ -771,6 +771,10 @@ end
 /.setcolorrendering1 where { pop } { (%END CRD) .skipeof } ifelse
 
 .colorrenderingtypes 1 {
+  % Adobe ProcSet "Adobe_AGM_Core 2.0 0" places an /Intent key into CRD's 
+  dup /Intent .knownget {
+    //.renderingintentdict exch .knownget { .setrenderingintent } if
+  } if
   dup .buildcolorrendering1 .setcolorrendering1
 } .bind put
 

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zcsdevn.c,v 1.9 2007/09/11 15:23:54 Arabidopsis Exp $ */
+/* $Id: zcsdevn.c,v 1.10 2008/03/23 15:28:09 Arabidopsis Exp $ */
 /* DeviceN color space support */
 #include "memory_.h"
 #include "ghost.h"
@@ -39,7 +39,7 @@ extern const gs_color_space_type gs_color_space_type_DeviceN;
 
 /* <array> .setdevicenspace - */
 /* The current color space is the alternate space for the DeviceN space. */
-private int
+static int
 zsetdevicenspace(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -149,7 +149,7 @@ zsetdevicenspace(i_ctx_t *i_ctx_p)
  * color space is in the current (temp) gstate.  The DeviceN color space is
  * in the next gstate down in the gstate list (pgs->saved).
  */
-private int
+static int
 zattachdevicenattributespace(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevtfax.c,v 1.9 2007/09/11 15:24:08 Arabidopsis Exp $ */
+/* $Id: gdevtfax.c,v 1.10 2008/03/23 15:27:46 Arabidopsis Exp $ */
 /* TIFF and TIFF/fax devices */
 #include "gdevprn.h"
 #include "gdevtifs.h"
@@ -30,12 +30,12 @@
 
 /* The device descriptors */
 
-private dev_proc_get_params(tfax_get_params);
-private dev_proc_put_params(tfax_put_params);
-private dev_proc_print_page(tiffcrle_print_page);
-private dev_proc_print_page(tiffg3_print_page);
-private dev_proc_print_page(tiffg32d_print_page);
-private dev_proc_print_page(tiffg4_print_page);
+static dev_proc_get_params(tfax_get_params);
+static dev_proc_put_params(tfax_put_params);
+static dev_proc_print_page(tiffcrle_print_page);
+static dev_proc_print_page(tiffg3_print_page);
+static dev_proc_print_page(tiffg32d_print_page);
+static dev_proc_print_page(tiffg4_print_page);
 
 struct gx_device_tfax_s {
     gx_device_common;
@@ -49,7 +49,7 @@ struct gx_device_tfax_s {
 typedef struct gx_device_tfax_s gx_device_tfax;
 
 /* Define procedures that adjust the paper size. */
-private const gx_device_procs gdev_tfax_std_procs =
+static const gx_device_procs gdev_tfax_std_procs =
     prn_params_procs(gdev_prn_open, gdev_prn_output_page, gdev_prn_close,
 		     tfax_get_params, tfax_put_params);
 
@@ -73,7 +73,7 @@ const gx_device_tfax gs_tiffg4_device =
     TFAX_DEVICE("tiffg4", tiffg4_print_page);
 
 /* Get/put the MaxStripSize parameter. */
-private int
+static int
 tfax_get_params(gx_device * dev, gs_param_list * plist)
 {
     gx_device_tfax *const tfdev = (gx_device_tfax *)dev;
@@ -86,7 +86,7 @@ tfax_get_params(gx_device * dev, gs_param_list * plist)
         ecode = code;
     return ecode;
 }
-private int
+static int
 tfax_put_params(gx_device * dev, gs_param_list * plist)
 {
     gx_device_tfax *const tfdev = (gx_device_tfax *)dev;
@@ -141,7 +141,7 @@ tfax_put_params(gx_device * dev, gs_param_list * plist)
 /* Print a page with a specified width, which may differ from	*/
 /* the width stored in the device. The TIFF file may have	*/
 /* multiple strips of height 'rows'.				*/
-private int
+static int
 gdev_stream_print_page_strips(gx_device_printer * pdev, FILE * prn_stream,
 			      const stream_template * temp, stream_state * ss,
 			      int width, long rows_per_strip)
@@ -164,7 +164,7 @@ gdev_stream_print_page_strips(gx_device_printer * pdev, FILE * prn_stream,
 
 /* Print a page with a specified width, which may differ from the */
 /* width stored in the device. */
-private int
+static int
 gdev_stream_print_page_width(gx_device_printer * pdev, FILE * prn_stream,
 			     const stream_template * temp, stream_state * ss,
 			     int width)
@@ -173,7 +173,7 @@ gdev_stream_print_page_width(gx_device_printer * pdev, FILE * prn_stream,
 					 width, pdev->height);
 }
 
-private int
+static int
 gdev_stream_print_page(gx_device_printer * pdev, FILE * prn_stream,
 		       const stream_template * temp, stream_state * ss)
 {
@@ -197,8 +197,8 @@ gdev_fax_print_page_stripped(gx_device_printer * pdev, FILE * prn_stream,
 #include "srlx.h"
 
 /* Device descriptors for TIFF formats other than fax. */
-private dev_proc_print_page(tifflzw_print_page);
-private dev_proc_print_page(tiffpack_print_page);
+static dev_proc_print_page(tifflzw_print_page);
+static dev_proc_print_page(tiffpack_print_page);
 
 const gx_device_tfax gs_tifflzw_device = {
     prn_device_std_body(gx_device_tfax, prn_std_procs, "tifflzw",
@@ -228,7 +228,7 @@ typedef struct tiff_mono_directory_s {
     /* Don't use CleanFaxData. */
     /*  TIFF_dir_entry  CleanFaxData;   */
 } tiff_mono_directory;
-private const tiff_mono_directory dir_mono_template =
+static const tiff_mono_directory dir_mono_template =
 {
     {TIFFTAG_BitsPerSample, TIFF_SHORT, 1, 1},
     {TIFFTAG_Compression, TIFF_SHORT, 1, Compression_CCITT_T4},
@@ -240,11 +240,11 @@ private const tiff_mono_directory dir_mono_template =
 };
 
 /* Forward references */
-private int tfax_begin_page(gx_device_tfax *, FILE *,
+static int tfax_begin_page(gx_device_tfax *, FILE *,
 			    const tiff_mono_directory *, int);
 
 /* Print a fax-encoded page. */
-private int
+static int
 tifff_print_page(gx_device_printer * dev, FILE * prn_stream,
 		 stream_CFE_state * pstate, tiff_mono_directory * pdir)
 {
@@ -258,7 +258,7 @@ tifff_print_page(gx_device_printer * dev, FILE * prn_stream,
     gdev_tiff_end_page(&tfdev->tiff, prn_stream);
     return code;
 }
-private int
+static int
 tiffcrle_print_page(gx_device_printer * dev, FILE * prn_stream)
 {
     stream_CFE_state state;
@@ -273,7 +273,7 @@ tiffcrle_print_page(gx_device_printer * dev, FILE * prn_stream)
     dir.T4T6Options.value = T4Options_fill_bits;
     return tifff_print_page(dev, prn_stream, &state, &dir);
 }
-private int
+static int
 tiffg3_print_page(gx_device_printer * dev, FILE * prn_stream)
 {
     stream_CFE_state state;
@@ -288,7 +288,7 @@ tiffg3_print_page(gx_device_printer * dev, FILE * prn_stream)
     dir.T4T6Options.value = T4Options_fill_bits;
     return tifff_print_page(dev, prn_stream, &state, &dir);
 }
-private int
+static int
 tiffg32d_print_page(gx_device_printer * dev, FILE * prn_stream)
 {
     stream_CFE_state state;
@@ -304,7 +304,7 @@ tiffg32d_print_page(gx_device_printer * dev, FILE * prn_stream)
     dir.T4T6Options.value = T4Options_2D_encoding | T4Options_fill_bits;
     return tifff_print_page(dev, prn_stream, &state, &dir);
 }
-private int
+static int
 tiffg4_print_page(gx_device_printer * dev, FILE * prn_stream)
 {
     stream_CFE_state state;
@@ -320,7 +320,7 @@ tiffg4_print_page(gx_device_printer * dev, FILE * prn_stream)
 }
 
 /* Print an LZW page. */
-private int
+static int
 tifflzw_print_page(gx_device_printer * dev, FILE * prn_stream)
 {
     gx_device_tfax *const tfdev = (gx_device_tfax *)dev;
@@ -343,7 +343,7 @@ tifflzw_print_page(gx_device_printer * dev, FILE * prn_stream)
 }
 
 /* Print a PackBits page. */
-private int
+static int
 tiffpack_print_page(gx_device_printer * dev, FILE * prn_stream)
 {
     gx_device_tfax *const tfdev = (gx_device_tfax *)dev;
@@ -364,7 +364,7 @@ tiffpack_print_page(gx_device_printer * dev, FILE * prn_stream)
 }
 
 /* Begin a TIFF fax page. */
-private int
+static int
 tfax_begin_page(gx_device_tfax * tfdev, FILE * fp,
 		const tiff_mono_directory * pdir, int width)
 {

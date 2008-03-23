@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gp_os9.c,v 1.9 2007/09/11 15:24:35 Arabidopsis Exp $ */
+/* $Id: gp_os9.c,v 1.10 2008/03/23 15:27:58 Arabidopsis Exp $ */
 /* OSK-specific routines for Ghostscript */
 
 #include "pipe_.h"
@@ -31,8 +31,8 @@
 int interrupted;
 
 /* Forward declarations */
-private void signalhandler(int);
-private FILE *rbfopen(char *, char *);
+static void signalhandler(int);
+static FILE *rbfopen(char *, char *);
 
 /* Do platform-dependent initialization */
 void
@@ -54,7 +54,7 @@ gp_do_exit(int exit_status)
     exit(exit_status);
 }
 
-private void
+static void
 signalhandler(int sig)
 {
     clearerr(stdin);

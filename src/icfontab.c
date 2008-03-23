@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: icfontab.c,v 1.7 2007/09/11 15:23:52 Arabidopsis Exp $ */
+/* $Id: icfontab.c,v 1.8 2008/03/23 15:27:39 Arabidopsis Exp $ */
 /* Table of compiled fonts */
 #include "ccfont.h"
 
@@ -34,7 +34,7 @@
 # include GCONFIGF_H
 #endif
 
-private const ccfont_fproc fprocs[] = {
+static const ccfont_fproc fprocs[] = {
 #undef font_
 #define font_(fname, fproc, zfproc) fproc,  /* fname, zfproc are not needed */
 #ifndef GCONFIGF_H

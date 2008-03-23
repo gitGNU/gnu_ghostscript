@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxxfont.h,v 1.7 2007/09/11 15:23:55 Arabidopsis Exp $ */
+/* $Id: gxxfont.h,v 1.8 2008/03/23 15:28:03 Arabidopsis Exp $ */
 /* External font interface for Ghostscript library */
 
 #ifndef gxxfont_INCLUDED
@@ -155,10 +155,10 @@ struct gx_xfont_procs_s {
  * to its device:
  */
 #define gs__st_dev_ptrs1(scope_st, stname, stype, sname, penum, preloc, de)\
-  private ENUM_PTRS_WITH(penum, stype *xfptr) return 0;\
+  static ENUM_PTRS_WITH(penum, stype *xfptr) return 0;\
     case 0: ENUM_RETURN(gx_device_enum_ptr((gx_device *)(xfptr->de)));\
   ENUM_PTRS_END\
-  private RELOC_PTRS_WITH(preloc, stype *xfptr) ;\
+  static RELOC_PTRS_WITH(preloc, stype *xfptr) ;\
     xfptr->de = (void *)gx_device_reloc_ptr((gx_device *)(xfptr->de), gcst);\
   RELOC_PTRS_END\
   gs__st_composite_only(scope_st, stname, stype, sname, penum, preloc)

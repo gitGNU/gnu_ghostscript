@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zmisc.c,v 1.8 2007/09/11 15:24:31 Arabidopsis Exp $ */
+/* $Id: zmisc.c,v 1.9 2008/03/23 15:27:38 Arabidopsis Exp $ */
 /* Miscellaneous operators */
 
 #include "errno_.h"
@@ -38,13 +38,13 @@
 /**********************************************************************/
 
 /* <proc> bind <proc> */
-inline private bool
+static inline bool
 r_is_ex_oper(const ref *rp)
 {
     return (r_has_attr(rp, a_executable) &&
 	    (r_btype(rp) == t_operator || r_type(rp) == t_oparray));
 }
-private int
+static int
 zbind(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -166,7 +166,7 @@ zbind(i_ctx_t *i_ctx_p)
 }
 
 /* - serialnumber <int> */
-private int
+static int
 zserialnumber(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -177,9 +177,9 @@ zserialnumber(i_ctx_t *i_ctx_p)
 }
 
 /* some FTS tests work better if realtime starts from 0 at boot time */
-private long    real_time_0[2];
+static long    real_time_0[2];
 
-private int
+static int
 zmisc_init_realtime(i_ctx_t * i_ctx_p)
 {
     gp_get_realtime(real_time_0);
@@ -187,7 +187,7 @@ zmisc_init_realtime(i_ctx_t * i_ctx_p)
 }
 
 /* - realtime <int> */
-private int
+static int
 zrealtime(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -202,7 +202,7 @@ zrealtime(i_ctx_t *i_ctx_p)
 }
 
 /* - usertime <int> */
-private int
+static int
 zusertime(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -218,7 +218,7 @@ zusertime(i_ctx_t *i_ctx_p)
 
 /* <string> getenv <value_string> true */
 /* <string> getenv false */
-private int
+static int
 zgetenv(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -252,7 +252,7 @@ zgetenv(i_ctx_t *i_ctx_p)
 }
 
 /* <name> <proc> .makeoperator <oper> */
-private int
+static int
 zmakeoperator(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -295,7 +295,7 @@ zmakeoperator(i_ctx_t *i_ctx_p)
 }
 
 /* - .oserrno <int> */
-private int
+static int
 zoserrno(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -306,7 +306,7 @@ zoserrno(i_ctx_t *i_ctx_p)
 }
 
 /* <int> .setoserrno - */
-private int
+static int
 zsetoserrno(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -319,7 +319,7 @@ zsetoserrno(i_ctx_t *i_ctx_p)
 
 /* <int> .oserrorstring <string> true */
 /* <int> .oserrorstring false */
-private int
+static int
 zoserrorstring(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -349,7 +349,7 @@ zoserrorstring(i_ctx_t *i_ctx_p)
 }
 
 /* <string> <bool> .setdebug - */
-private int
+static int
 zsetdebug(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -379,7 +379,7 @@ zsetdebug(i_ctx_t *i_ctx_p)
 extern bool CPSI_mode;		/* not worth polluting a header file */
 
 /* <bool> .setCPSImode - */
-private int
+static int
 zsetCPSImode(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -401,7 +401,7 @@ zsetCPSImode(i_ctx_t *i_ctx_p)
 #ifdef DEBUG_CACHE
 
 /* <string> <string> .pcacheinsert */
-private int
+static int
 zpcacheinsert(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -426,7 +426,7 @@ zpcacheinsert(i_ctx_t *i_ctx_p)
 }
 
 /* allocation callback for query result */
-private void *
+static void *
 pcache_alloc_callback(void *userdata, int bytes)
 {
     i_ctx_t *i_ctx_p = (i_ctx_t*)userdata;    
@@ -435,7 +435,7 @@ pcache_alloc_callback(void *userdata, int bytes)
 
 /* <string> .pcachequery <string> true */
 /* <string> .pcachequery false */
-private int
+static int
 zpcachequery(i_ctx_t *i_ctx_p)
 {
 	os_ptr op = osp;

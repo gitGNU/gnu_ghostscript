@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevvec.c,v 1.10 2007/09/11 15:23:55 Arabidopsis Exp $ */
+/* $Id: gdevvec.c,v 1.11 2008/03/23 15:27:39 Arabidopsis Exp $ */
 /* Utilities for "vector" devices */
 #include "math_.h"
 #include "memory_.h"
@@ -48,7 +48,7 @@ gdev_vector_setflat(gx_device_vector * vdev, floatp flatness)
 }
 
 /* Put a path on the output file. */
-private bool
+static bool
 coord_between(fixed start, fixed mid, fixed end)
 {
     return (start <= end ? start <= mid && mid <= end :
@@ -230,7 +230,7 @@ gdev_vector_dorect(gx_device_vector * vdev, fixed x0, fixed y0, fixed x1,
 /* ================ Utility procedures ================ */
 
 /* Recompute the cached color values. */
-private void
+static void
 gdev_vector_load_cache(gx_device_vector * vdev)
 {
     vdev->black = gx_device_black((gx_device *)vdev);
@@ -363,7 +363,7 @@ gdev_vector_update_log_op(gx_device_vector * vdev, gs_logical_operation_t lop)
 }
 
 /* Update color (fill or stroke). */
-private int
+static int
 gdev_vector_update_color(gx_device_vector * vdev,
 			      const gs_imager_state * pis,
 			      const gx_drawing_color * pdcolor,
@@ -398,7 +398,7 @@ gdev_vector_update_fill_color(gx_device_vector * vdev,
 }
 
 /* Update the state for filling a region. */
-private int
+static int
 update_fill(gx_device_vector * vdev, const gs_imager_state * pis, 
 	    const gx_drawing_color * pdcolor, gs_logical_operation_t lop)
 {
@@ -425,7 +425,7 @@ gdev_vector_prepare_fill(gx_device_vector * vdev, const gs_imager_state * pis,
 }
 
 /* Compare two dash patterns. */
-private bool
+static bool
 dash_pattern_eq(const float *stored, const gx_dash_params * set, floatp scale)
 {
     int i;

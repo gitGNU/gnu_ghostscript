@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zdosio.c,v 1.7 2007/09/11 15:23:53 Arabidopsis Exp $ */
+/* $Id: zdosio.c,v 1.8 2008/03/23 15:27:42 Arabidopsis Exp $ */
 /* MS-DOS direct I/O operators. */
 /* These should NEVER be included in a released configuration! */
 #include "dos_.h"
@@ -26,7 +26,7 @@
 #include "store.h"
 
 /* <port> .inport <word> */
-private int
+static int
 zinport(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -37,7 +37,7 @@ zinport(i_ctx_t *i_ctx_p)
 }
 
 /* <port> .inportb <byte> */
-private int
+static int
 zinportb(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -48,7 +48,7 @@ zinportb(i_ctx_t *i_ctx_p)
 }
 
 /* <port> <word> .outport - */
-private int
+static int
 zoutport(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -61,7 +61,7 @@ zoutport(i_ctx_t *i_ctx_p)
 }
 
 /* <port> <byte> .outportb - */
-private int
+static int
 zoutportb(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -74,7 +74,7 @@ zoutportb(i_ctx_t *i_ctx_p)
 }
 
 /* <loc> .peek <byte> */
-private int
+static int
 zpeek(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -85,7 +85,7 @@ zpeek(i_ctx_t *i_ctx_p)
 }
 
 /* <loc> <byte> .poke - */
-private int
+static int
 zpoke(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

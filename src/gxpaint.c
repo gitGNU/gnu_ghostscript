@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxpaint.c,v 1.8 2007/09/11 15:24:23 Arabidopsis Exp $ */
+/* $Id: gxpaint.c,v 1.9 2008/03/23 15:28:14 Arabidopsis Exp $ */
 /* Graphics-state-aware fill and stroke procedures */
 #include "gx.h"
 #include "gzstate.h"
@@ -27,7 +27,7 @@
 #include "gxpath.h"
 #include "gxfont.h"
 
-private bool caching_an_outline_font(const gs_state * pgs)
+static bool caching_an_outline_font(const gs_state * pgs)
 {
     return pgs->in_cachedevice > 1 &&
 	    pgs->font != NULL &&

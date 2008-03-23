@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsdevice.c,v 1.11 2007/09/11 15:24:38 Arabidopsis Exp $ */
+/* $Id: gsdevice.c,v 1.12 2008/03/23 15:28:03 Arabidopsis Exp $ */
 /* Device operators for Ghostscript library */
 #include "ctype_.h"
 #include "memory_.h"		/* for memchr, memcpy */
@@ -68,11 +68,11 @@ gx_device_free_local(gx_device *dev)
 }
 
 /* GC procedures */
-private 
+static 
 ENUM_PTRS_WITH(device_forward_enum_ptrs, gx_device_forward *fdev) return 0;
 case 0: ENUM_RETURN(gx_device_enum_ptr(fdev->target));
 ENUM_PTRS_END
-private RELOC_PTRS_WITH(device_forward_reloc_ptrs, gx_device_forward *fdev)
+static RELOC_PTRS_WITH(device_forward_reloc_ptrs, gx_device_forward *fdev)
 {
     fdev->target = gx_device_reloc_ptr(fdev->target, gcst);
 }
@@ -212,8 +212,45 @@ gs_getdevice(int index)
     return list[index];
 }
 
+/* Get the default device from the known device list */
+const gx_device *
+gs_getdefaultdevice(void)
+{
+    const gx_device *const *list;
+    int count = gs_lib_device_list(&list, NULL);
+    const char *name, *end, *fin;
+    int i;
+
+    /* Search the compiled in device list for a known device name */
+    name = gs_dev_defaults;
+    fin = name + strlen(name);
+
+    /* iterate through each name in the string */
+    while (name < fin) {
+
+      /* split a name from any whitespace */
+      while ((name < fin) && (*name == ' ' || *name == '\t')) 
+	name++;
+      end = name;
+      while ((end < fin) && (*end != ' ') && (*end != '\t'))
+	end++;
+
+      /* return any matches */
+      for (i = 0; i < count; i++)
+        if ((end - name) == strlen(list[i]->dname))
+	  if (!memcmp(name, list[i]->dname, end - name))
+	    return gs_getdevice(i);
+
+      /* otherwise, try the next device name */
+      name = end;
+    }
+
+    /* Fall back to the first device in the list. */
+    return gs_getdevice(0);
+}
+
 /* Fill in the GC structure descriptor for a device. */
-private void
+static void
 gx_device_make_struct_type(gs_memory_struct_type_t *st,
 			   const gx_device *dev)
 {
@@ -343,7 +380,7 @@ gs_imager_putdeviceparams(gs_imager_state *pis, gx_device *dev,
 	gx_set_cmap_procs(pis, dev);
     return code;
 }
-private void
+static void
 gs_state_update_device(gs_state *pgs)
 {
     gx_set_cmap_procs((gs_imager_state *)pgs, pgs->device);
@@ -576,7 +613,7 @@ gx_device_set_margins(gx_device * dev, const float *margins /*[4] */ ,
     }
 }
 
-private void
+static void
 gx_device_set_hwsize_from_media(gx_device *dev)
 {
     int rot = (dev->LeadingEdge & 1);
@@ -587,7 +624,7 @@ gx_device_set_hwsize_from_media(gx_device *dev)
     dev->height = (int)(rot_media_y * dev->HWResolution[1] / 72.0 + 0.5);
 }
 
-private void
+static void
 gx_device_set_media_from_hwsize(gx_device *dev)
 {
     int rot = (dev->LeadingEdge & 1);
@@ -724,7 +761,7 @@ gx_device_copy_params(gx_device *dev, const gx_device *target)
  *
  * If there was a format, then return the max_width
  */
-private int
+static int
 gx_parse_output_format(gs_parsed_file_name_t *pfn, const char **pfmt)
 {
     bool have_format = false, field;

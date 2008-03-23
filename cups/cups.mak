@@ -1,9 +1,10 @@
 #
-# "$Id: cups.mak,v 1.1 2007/09/11 15:25:05 Arabidopsis Exp $"
+# "$Id: cups.mak,v 1.2 2008/03/23 15:28:32 Arabidopsis Exp $"
 #
 # CUPS driver makefile for Ghostscript.
 #
 # Copyright 2001-2005 by Easy Software Products.
+# Copyright 2007 Artifex Software, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,34 +21,40 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #
 
+# define the name of this makefile
+CUPS_MAK=cups/cups.mak
+
 ### ----------------- CUPS Ghostscript Driver ---------------------- ###
 
 cups_=	$(GLOBJ)gdevcups.$(OBJ)
 
-CUPSSERVER=`cups-config --serverbin`
-CUPSCONFIG=`cups-config --serverroot`
-CUPSDATA=`cups-config --datadir`
+# These are set in the toplevel Makefile via autoconf(1)
+# CUPSCFLAGS=`cups-config --cflags`
+# CUPSSERVERBIN=`cups-config --serverbin`
+# CUPSSERVERROOT=`cups-config --serverroot`
+# CUPSDATA=`cups-config --datadir`
 
-$(DD)cups.dev:	$(cups_) $(GLD)page.dev
-	$(ADDMOD) $(DD)cups -lib cupsimage -lib cups
+$(DD)cups.dev : $(CUPS_MAK) $(cups_) $(GLD)page.dev
 	$(SETPDEV2) $(DD)cups $(cups_)
+	$(ADDMOD) $(DD)cups -libpath $(CUPSLIBDIRS)
+	$(ADDMOD) $(DD)cups -lib $(CUPSLIBS)
 
-$(GLOBJ)gdevcups.$(OBJ): cups/gdevcups.c $(PDEVH)
-	$(GLCC) $(GLO_)gdevcups.$(OBJ) $(C_) cups/gdevcups.c
+$(GLOBJ)gdevcups.$(OBJ) : cups/gdevcups.c $(PDEVH)
+	$(GLCC) $(CUPSCFLAGS) $(GLO_)gdevcups.$(OBJ) $(C_) cups/gdevcups.c
 
 install:	install-cups
 
 install-cups:
-	-mkdir -p $(DESTDIR)$(CUPSSERVER)/filter
-	$(INSTALL_PROGRAM) cups/pstoraster $(DESTDIR)$(CUPSSERVER)/filter
-	$(INSTALL_PROGRAM) cups/pstopxl $(DESTDIR)$(CUPSSERVER)/filter
-	-mkdir -p $(DESTDIR)$(CUPSCONFIG)
-	$(INSTALL_DATA) cups/pstoraster.convs $(DESTDIR)$(CUPSCONFIG)
+	-mkdir -p $(DESTDIR)$(CUPSSERVERBIN)/filter
+	$(INSTALL_PROGRAM) cups/pstoraster $(DESTDIR)$(CUPSSERVERBIN)/filter
+	$(INSTALL_PROGRAM) cups/pstopxl $(DESTDIR)$(CUPSSERVERBIN)/filter
+	-mkdir -p $(DESTDIR)$(CUPSSERVERROOT)
+	$(INSTALL_DATA) cups/pstoraster.convs $(DESTDIR)$(CUPSSERVERROOT)
 	-mkdir -p $(DESTDIR)$(CUPSDATA)/model
 	$(INSTALL_DATA) cups/pxlcolor.ppd $(DESTDIR)$(CUPSDATA)/model
 	$(INSTALL_DATA) cups/pxlmono.ppd $(DESTDIR)$(CUPSDATA)/model
 
 
 #
-# End of "$Id: cups.mak,v 1.1 2007/09/11 15:25:05 Arabidopsis Exp $".
+# End of "$Id: cups.mak,v 1.2 2008/03/23 15:28:32 Arabidopsis Exp $".
 #

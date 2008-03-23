@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevstc4.c,v 1.7 2007/09/11 15:23:45 Arabidopsis Exp $*/
+/* $Id: gdevstc4.c,v 1.8 2008/03/23 15:28:05 Arabidopsis Exp $*/
 /* Epson Stylus-Color Printer-Driver */
 
 /***
@@ -38,7 +38,7 @@
 /*
  * escp2c_pick best scans for best matching color 
  */
-private byte *
+static byte *
 escp2c_pick_best(byte *col)
 {
     static byte colour[8][3] = {
@@ -119,7 +119,7 @@ escp2c_pick_best(byte *col)
 /*
  * escp2c_conv_stc converts into the ouput format used by stcolor
  */
-private void
+static void
 escp2c_conv_stc(byte *p, byte *q, int i)
 {
     for(; i; p+=3, i-=3)

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevsvga.c,v 1.8 2007/09/11 15:23:51 Arabidopsis Exp $ */
+/* $Id: gdevsvga.c,v 1.9 2008/03/23 15:27:53 Arabidopsis Exp $ */
 /* SuperVGA display drivers */
 #include "memory_.h"
 #include "gconfigv.h"		/* for USE_ASM */
@@ -32,13 +32,13 @@
 
 /* The color map for dynamically assignable colors. */
 #define first_dc_index 64
-private int next_dc_index;
+static int next_dc_index;
 
 #define dc_hash_size 293	/* prime, >num_dc */
 typedef struct {
     ushort rgb, index;
 } dc_entry;
-private dc_entry dynamic_colors[dc_hash_size + 1];
+static dc_entry dynamic_colors[dc_hash_size + 1];
 
 #define num_colors 255
 
@@ -60,7 +60,7 @@ private dc_entry dynamic_colors[dc_hash_size + 1];
 }
 
 /* Save the controller mode */
-private int svga_save_mode = -1;
+static int svga_save_mode = -1;
 
 /* ------ Internal routines ------ */
 
@@ -126,7 +126,7 @@ svga_init_colors(gx_device * dev)
 }
 
 /* Load the color DAC with the predefined colors. */
-private void
+static void
 svga_load_colors(gx_device * dev)
 {
     int ci;
@@ -496,7 +496,7 @@ svga_get_bits(gx_device * dev, int y, byte * data, byte ** actual_data)
 
 /* Copy an alpha-map to the screen. */
 /* Depth is 1, 2, or 4. */
-private int
+static int
 svga_copy_alpha(gx_device * dev, const byte * base, int sourcex,
 		int sraster, gx_bitmap_id id, int x, int y, int w, int h,
 		gx_color_index color, int depth)
@@ -572,11 +572,11 @@ svga_copy_alpha(gx_device * dev, const byte * base, int sourcex,
 
 /* ------ The VESA device ------ */
 
-private dev_proc_open_device(vesa_open);
-private const gx_device_procs vesa_procs = svga_procs(vesa_open);
+static dev_proc_open_device(vesa_open);
+static const gx_device_procs vesa_procs = svga_procs(vesa_open);
 int vesa_get_mode(void);
 void vesa_set_mode(int);
-private void vesa_set_page(gx_device_svga *, int, int);
+static void vesa_set_page(gx_device_svga *, int, int);
 gx_device_svga far_data gs_vesa_device =
 svga_device(vesa_procs, "vesa", vesa_get_mode, vesa_set_mode, vesa_set_page);
 
@@ -650,7 +650,7 @@ vesa_set_mode(int mode)
 }
 
 /* Read information about a device mode */
-private int
+static int
 vesa_get_info(int mode, vesa_info _ss * info)
 {
     registers regs;
@@ -679,7 +679,7 @@ vesa_get_info(int mode, vesa_info _ss * info)
 
 /* Initialize the graphics mode. */
 /* Shared routine to look up a VESA-compatible BIOS mode. */
-private int
+static int
 vesa_find_mode(gx_device * dev, const mode_info * mode_table)
 {				/* Select the proper video mode */
     vesa_info info;
@@ -732,7 +732,7 @@ vesa_find_mode(gx_device * dev, const mode_info * mode_table)
     fb_dev->raster = info.bytes_per_line;
     return 0;
 }
-private int
+static int
 vesa_open(gx_device * dev)
 {
     static const mode_info mode_table[] =
@@ -752,7 +752,7 @@ vesa_open(gx_device * dev)
 }
 
 /* Set the current display page. */
-private void
+static void
 vesa_set_page(gx_device_svga * dev, int pn, int wnum)
 {
 #if USE_ASM
@@ -775,16 +775,16 @@ vesa_set_page(gx_device_svga * dev, int pn, int wnum)
 
 /* ------ The ATI Wonder device ------ */
 
-private dev_proc_open_device(atiw_open);
-private const gx_device_procs atiw_procs = svga_procs(atiw_open);
-private int atiw_get_mode(void);
-private void atiw_set_mode(int);
-private void atiw_set_page(gx_device_svga *, int, int);
+static dev_proc_open_device(atiw_open);
+static const gx_device_procs atiw_procs = svga_procs(atiw_open);
+static int atiw_get_mode(void);
+static void atiw_set_mode(int);
+static void atiw_set_page(gx_device_svga *, int, int);
 gx_device_svga far_data gs_atiw_device =
 svga_device(atiw_procs, "atiw", atiw_get_mode, atiw_set_mode, atiw_set_page);
 
 /* Read the device mode */
-private int
+static int
 atiw_get_mode(void)
 {
     registers regs;
@@ -795,7 +795,7 @@ atiw_get_mode(void)
 }
 
 /* Set the device mode */
-private void
+static void
 atiw_set_mode(int mode)
 {
     registers regs;
@@ -806,7 +806,7 @@ atiw_set_mode(int mode)
 }
 
 /* Initialize the graphics mode. */
-private int
+static int
 atiw_open(gx_device * dev)
 {				/* Select the proper video mode */
     {
@@ -828,7 +828,7 @@ atiw_open(gx_device * dev)
 }
 
 /* Set the current display page. */
-private void
+static void
 atiw_set_page(gx_device_svga * dev, int pn, int wnum)
 {
     int select_reg = dev->info.atiw.select_reg;
@@ -844,16 +844,16 @@ atiw_set_page(gx_device_svga * dev, int pn, int wnum)
 
 /* ------ The Trident device ------ */
 
-private dev_proc_open_device(tvga_open);
-private const gx_device_procs tvga_procs = svga_procs(tvga_open);
+static dev_proc_open_device(tvga_open);
+static const gx_device_procs tvga_procs = svga_procs(tvga_open);
 
 /* We can use the atiw_get/set_mode procedures. */
-private void tvga_set_page(gx_device_svga *, int, int);
+static void tvga_set_page(gx_device_svga *, int, int);
 gx_device_svga far_data gs_tvga_device =
 svga_device(tvga_procs, "tvga", atiw_get_mode, atiw_set_mode, tvga_set_page);
 
 /* Initialize the graphics mode. */
-private int
+static int
 tvga_open(gx_device * dev)
 {
     fb_dev->wnum_read = 1;
@@ -877,7 +877,7 @@ tvga_open(gx_device * dev)
 }
 
 /* Set the current display page. */
-private void
+static void
 tvga_set_page(gx_device_svga * dev, int pn, int wnum)
 {
     /* new mode */
@@ -890,19 +890,19 @@ tvga_set_page(gx_device_svga * dev, int pn, int wnum)
 
 /* ------ The Tseng Labs ET3000/4000 devices ------ */
 
-private dev_proc_open_device(tseng_open);
-private const gx_device_procs tseng_procs =
+static dev_proc_open_device(tseng_open);
+static const gx_device_procs tseng_procs =
 svga_procs(tseng_open);
 
 /* We can use the atiw_get/set_mode procedures. */
-private void tseng_set_page(gx_device_svga *, int, int);
+static void tseng_set_page(gx_device_svga *, int, int);
 
 /* The 256-color Tseng device */
 gx_device_svga far_data gs_tseng_device =
 svga_device(tseng_procs, "tseng", atiw_get_mode, atiw_set_mode, tseng_set_page);
 
 /* Initialize the graphics mode. */
-private int
+static int
 tseng_open(gx_device * dev)
 {
     fb_dev->wnum_read = 1;
@@ -939,7 +939,7 @@ tseng_open(gx_device * dev)
 }
 
 /* Set the current display page. */
-private void
+static void
 tseng_set_page(gx_device_svga * dev, int pn, int wnum)
 {				/* The ET3000 has read page = 5:3, write page = 2:0; */
     /* the ET4000 has read page = 7:4, write page = 3:0. */
@@ -954,16 +954,16 @@ tseng_set_page(gx_device_svga * dev, int pn, int wnum)
 /* Written by Piotr Strzelczyk, BOP s.c., Gda\'nsk, Poland, */
 /* e-mail contact via B.Jackowski@GUST.org.pl */
 
-private dev_proc_open_device(cirr_open);
-private gx_device_procs cirr_procs = svga_procs(cirr_open);
+static dev_proc_open_device(cirr_open);
+static gx_device_procs cirr_procs = svga_procs(cirr_open);
 
 /* We can use the atiw_get/set_mode procedures. */
-private void cirr_set_page(gx_device_svga *, int, int);
+static void cirr_set_page(gx_device_svga *, int, int);
 gx_device_svga gs_cirr_device =
 svga_device(cirr_procs, "cirr", atiw_get_mode, atiw_set_mode, cirr_set_page);
 
 /* Initialize the graphics mode. */
-private int
+static int
 cirr_open(gx_device * dev)
 {
     fb_dev->wnum_read = 1;
@@ -991,7 +991,7 @@ cirr_open(gx_device * dev)
 }
 
 /* Set the current display page. */
-private void
+static void
 cirr_set_page(gx_device_svga * dev, int pn, int wnum)
 {
     outportb(0x3ce, 0x09);
@@ -1002,11 +1002,11 @@ cirr_set_page(gx_device_svga * dev, int pn, int wnum)
 /* For questions about this device, please contact Stefan Freund */
 /* <freund@ikp.uni-koeln.de>. */
 
-private dev_proc_open_device(ali_open);
-private const gx_device_procs ali_procs = svga_procs(ali_open);
+static dev_proc_open_device(ali_open);
+static const gx_device_procs ali_procs = svga_procs(ali_open);
 
 /* We can use the atiw_get/set_mode procedures. */
-private void ali_set_page(gx_device_svga *, int, int);
+static void ali_set_page(gx_device_svga *, int, int);
 
 /* The 256-color Avance Logic device */
 gx_device_svga gs_ali_device =
@@ -1014,7 +1014,7 @@ svga_device(ali_procs, "ali", atiw_get_mode, atiw_set_mode,
 	    ali_set_page);
 
 /* Initialize the graphics mode. */
-private int
+static int
 ali_open(gx_device * dev)
 {
     fb_dev->wnum_read = 1;
@@ -1039,7 +1039,7 @@ ali_open(gx_device * dev)
 }
 
 /* Set the current display page. */
-private void
+static void
 ali_set_page(gx_device_svga * dev, int pn, int wnum)
 {
     outportb(0x3d6, pn);	/* read  */

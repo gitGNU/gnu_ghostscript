@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevppla.c,v 1.8 2007/09/11 15:24:19 Arabidopsis Exp $ */
+/* $Id: gdevppla.c,v 1.9 2008/03/23 15:27:37 Arabidopsis Exp $ */
 /* Support for printer devices with planar buffering. */
 #include "gdevprn.h"
 #include "gdevmpla.h"
@@ -75,7 +75,7 @@ gdev_prn_put_params_planar(gx_device * pdev, gs_param_list * plist,
 }
 
 /* Set the buffer device to planar mode. */
-private int
+static int
 gdev_prn_set_planar(gx_device_memory *mdev, const gx_device *tdev)
 {
     int num_comp = tdev->color_info.num_components;

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zvmem2.c,v 1.7 2007/09/11 15:24:03 Arabidopsis Exp $ */
+/* $Id: zvmem2.c,v 1.8 2008/03/23 15:27:48 Arabidopsis Exp $ */
 /* Level 2 "Virtual memory" operators */
 #include "ghost.h"
 #include "oper.h"
@@ -36,7 +36,7 @@
 /* ------ Local/global VM control ------ */
 
 /* <bool> .setglobal - */
-private int
+static int
 zsetglobal(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -48,7 +48,7 @@ zsetglobal(i_ctx_t *i_ctx_p)
 }
 
 /* <bool> .currentglobal - */
-private int
+static int
 zcurrentglobal(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -59,7 +59,7 @@ zcurrentglobal(i_ctx_t *i_ctx_p)
 }
 
 /* <any> gcheck/scheck <bool> */
-private int
+static int
 zgcheck(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -113,7 +113,7 @@ set_vm_reclaim(i_ctx_t *i_ctx_p, long val)
  * This implements only immediate garbage collection: enabling and
  * disabling GC is implemented by calling setuserparams.
  */
-private int
+static int
 zvmreclaim(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

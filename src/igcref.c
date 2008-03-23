@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: igcref.c,v 1.10 2007/09/11 15:24:37 Arabidopsis Exp $ */
+/* $Id: igcref.c,v 1.11 2008/03/23 15:27:42 Arabidopsis Exp $ */
 /* ref garbage collector for Ghostscript */
 #include "memory_.h"
 #include "ghost.h"
@@ -46,13 +46,13 @@ refs_proc_reloc(igc_reloc_refs);
  * Define the 'structure' type descriptor for refs.
  * This is special because it has different shared procs.
  */
-private gc_proc_clear_reloc(refs_clear_reloc);
-private gc_proc_set_reloc(refs_set_reloc);
-private gc_proc_compact(refs_compact);
-private const struct_shared_procs_t refs_shared_procs =
+static gc_proc_clear_reloc(refs_clear_reloc);
+static gc_proc_set_reloc(refs_set_reloc);
+static gc_proc_compact(refs_compact);
+static const struct_shared_procs_t refs_shared_procs =
 {refs_clear_reloc, refs_set_reloc, refs_compact};
-private struct_proc_clear_marks(refs_clear_marks);
-private struct_proc_reloc_ptrs(refs_do_reloc);
+static struct_proc_clear_marks(refs_clear_marks);
+static struct_proc_reloc_ptrs(refs_do_reloc);
 const gs_memory_struct_type_t st_refs =
 {sizeof(ref), "refs", &refs_shared_procs, refs_clear_marks, 0, refs_do_reloc};
 
@@ -108,7 +108,7 @@ ptr_ref_unmark(enum_ptr_t *pep, gc_state_t * ignored)
 }
 
 /* Unmarking routine for ref objects. */
-private void
+static void
 refs_clear_marks(const gs_memory_t *cmem, 
 		 void /*obj_header_t */ *vptr, uint size,
 		 const gs_memory_struct_type_t * pstype)
@@ -180,7 +180,7 @@ ptr_ref_mark(enum_ptr_t *pep, gc_state_t * ignored)
  */
 
 /* Clear the relocation for a ref object. */
-private void
+static void
 refs_clear_reloc(obj_header_t *hdr, uint size)
 {
     ref_packed *rp = (ref_packed *) (hdr + 1);
@@ -203,7 +203,7 @@ refs_clear_reloc(obj_header_t *hdr, uint size)
 }
 
 /* Set the relocation for a ref object. */
-private bool
+static bool
 refs_set_reloc(obj_header_t * hdr, uint reloc, uint size)
 {
     ref_packed *rp = (ref_packed *) (hdr + 1);
@@ -375,7 +375,7 @@ refs_set_reloc(obj_header_t * hdr, uint reloc, uint size)
 /* ------ Relocation phase ------ */
 
 /* Relocate all the pointers in a block of refs. */
-private void
+static void
 refs_do_reloc(void /*obj_header_t */ *vptr, uint size,
 	      const gs_memory_struct_type_t * pstype, gc_state_t * gcst)
 {
@@ -666,7 +666,7 @@ ret_rp:
 
 /* Compact a ref object. */
 /* Remove the marks at the same time. */
-private void
+static void
 refs_compact(const gs_memory_t *mem, obj_header_t * pre, obj_header_t * dpre, uint size)
 {
     ref_packed *dest;

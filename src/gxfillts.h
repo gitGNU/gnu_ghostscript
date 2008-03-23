@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxfillts.h,v 1.4 2007/09/11 15:24:37 Arabidopsis Exp $ */
+/* $Id: gxfillts.h,v 1.5 2008/03/23 15:28:03 Arabidopsis Exp $ */
 /* Configurable algorithm for filling a slanted trapezoid. */
 
 /*
@@ -30,7 +30,7 @@
 */
 
 
-private inline int
+static inline int
 TEMPLATE_slant_into_trapezoids (const line_list *ll, 
 	const active_line *flp, const active_line *alp, fixed y, fixed y1)
 {

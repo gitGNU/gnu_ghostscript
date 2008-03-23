@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: spprint.c,v 1.8 2007/09/11 15:24:13 Arabidopsis Exp $ */
+/* $Id: spprint.c,v 1.9 2008/03/23 15:27:42 Arabidopsis Exp $ */
 /* Print values in ASCII form on a stream */
 #include "math_.h"		/* for fabs */
 #include "stdio_.h"		/* for stream.h */
@@ -50,7 +50,7 @@ stream_puts(stream * s, const char *str)
 
 /* Print a format string up to the first variable substitution. */
 /* Return a pointer to the %, or to the terminating 0 if no % found. */
-private const char *
+static const char *
 pprintf_scan(stream * s, const char *format)
 {
     const char *fp = format;
@@ -67,7 +67,7 @@ pprintf_scan(stream * s, const char *format)
 }
 
 /* Print a short string on a stream. */
-private void
+static void
 pputs_short(stream *s, const char *str)
 {
     const char *p = str;

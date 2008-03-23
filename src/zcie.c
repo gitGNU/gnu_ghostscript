@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zcie.c,v 1.9 2007/09/11 15:23:43 Arabidopsis Exp $ */
+/* $Id: zcie.c,v 1.10 2008/03/23 15:27:41 Arabidopsis Exp $ */
 /* CIE color operators */
 #include "math_.h"
 #include "memory_.h"
@@ -162,7 +162,7 @@ cie_points_param(const gs_memory_t *mem,
 /* Process a 3- or 4-dimensional lookup table from a dictionary. */
 /* The caller has set pclt->n and pclt->m. */
 /* ptref is known to be a readable array of size at least n+1. */
-private int cie_3d_table_param(const ref * ptable, uint count, uint nbytes,
+static int cie_3d_table_param(const ref * ptable, uint count, uint nbytes,
 			       gs_const_string * strings);
 int
 cie_table_param(const ref * ptref, gx_color_lookup_table * pclt,
@@ -220,7 +220,7 @@ cie_table_param(const ref * ptref, gx_color_lookup_table * pclt,
     pclt->table = table;
     return 0;
 }
-private int
+static int
 cie_3d_table_param(const ref * ptable, uint count, uint nbytes,
 		   gs_const_string * strings)
 {
@@ -246,7 +246,7 @@ cie_3d_table_param(const ref * ptable, uint count, uint nbytes,
 /* ------ CIE setcolorspace ------ */
 
 /* Common code for the CIEBased* cases of setcolorspace. */
-private int
+static int
 cie_lmnp_param(const gs_memory_t *mem, const ref * pdref, gs_cie_common * pcie, ref_cie_procs * pcprocs)
 {
     int code;
@@ -262,7 +262,7 @@ cie_lmnp_param(const gs_memory_t *mem, const ref * pdref, gs_cie_common * pcie, 
 }
 
 /* Common code for the CIEBasedABC/DEF[G] cases of setcolorspace. */
-private int
+static int
 cie_abc_param(const gs_memory_t *mem, const ref * pdref, gs_cie_abc * pcie, ref_cie_procs * pcprocs)
 {
     int code;
@@ -296,14 +296,14 @@ cie_set_finish(i_ctx_t *i_ctx_p, gs_color_space * pcs,
 }
 
 /* Forward references */
-private int cache_common(i_ctx_t *, gs_cie_common *, const ref_cie_procs *,
+static int cache_common(i_ctx_t *, gs_cie_common *, const ref_cie_procs *,
 			 void *, gs_ref_memory_t *);
-private int cache_abc_common(i_ctx_t *, gs_cie_abc *, const ref_cie_procs *,
+static int cache_abc_common(i_ctx_t *, gs_cie_abc *, const ref_cie_procs *,
 			     void *, gs_ref_memory_t *);
 
 /* <dict> .setciedefgspace - */
-private int cie_defg_finish(i_ctx_t *);
-private int
+static int cie_defg_finish(i_ctx_t *);
+static int
 zsetciedefgspace(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -346,7 +346,7 @@ zsetciedefgspace(i_ctx_t *i_ctx_p)
 	DO_NOTHING;
     return cie_set_finish(i_ctx_p, pcs, &procs, edepth, code);
 }
-private int
+static int
 cie_defg_finish(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -361,8 +361,8 @@ cie_defg_finish(i_ctx_t *i_ctx_p)
 }
 
 /* <dict> .setciedefspace - */
-private int cie_def_finish(i_ctx_t *);
-private int
+static int cie_def_finish(i_ctx_t *);
+static int
 zsetciedefspace(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -405,7 +405,7 @@ zsetciedefspace(i_ctx_t *i_ctx_p)
 	DO_NOTHING;
     return cie_set_finish(i_ctx_p, pcs, &procs, edepth, code);
 }
-private int
+static int
 cie_def_finish(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -420,8 +420,8 @@ cie_def_finish(i_ctx_t *i_ctx_p)
 }
 
 /* <dict> .setcieabcspace - */
-private int cie_abc_finish(i_ctx_t *);
-private int
+static int cie_abc_finish(i_ctx_t *);
+static int
 zsetcieabcspace(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -449,7 +449,7 @@ zsetcieabcspace(i_ctx_t *i_ctx_p)
 	DO_NOTHING;
     return cie_set_finish(i_ctx_p, pcs, &procs, edepth, code);
 }
-private int
+static int
 cie_abc_finish(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -463,8 +463,8 @@ cie_abc_finish(i_ctx_t *i_ctx_p)
 }
 
 /* <dict> .setcieaspace - */
-private int cie_a_finish(i_ctx_t *);
-private int
+static int cie_a_finish(i_ctx_t *);
+static int
 zsetcieaspace(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -497,7 +497,7 @@ zsetcieaspace(i_ctx_t *i_ctx_p)
     pcie->DecodeA = DecodeA_default;
     return cie_set_finish(i_ctx_p, pcs, &procs, edepth, code);
 }
-private int
+static int
 cie_a_finish(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -512,7 +512,7 @@ cie_a_finish(i_ctx_t *i_ctx_p)
 
 /* Common cache code */
 
-private int
+static int
 cache_abc_common(i_ctx_t *i_ctx_p, gs_cie_abc * pcie,
 		 const ref_cie_procs * pcprocs,
 		 void *container, gs_ref_memory_t * imem)
@@ -527,7 +527,7 @@ cache_abc_common(i_ctx_t *i_ctx_p, gs_cie_abc * pcie,
 	    cache_common(i_ctx_p, &pcie->common, pcprocs, pcie, imem));
 }
 
-private int
+static int
 cache_common(i_ctx_t *i_ctx_p, gs_cie_common * pcie,
 	     const ref_cie_procs * pcprocs,
 	     void *container, gs_ref_memory_t * imem)
@@ -541,8 +541,8 @@ cache_common(i_ctx_t *i_ctx_p, gs_cie_common * pcie,
 /* ------ Internal routines ------ */
 
 /* Prepare to cache the values for one or more procedures. */
-private int cie_cache_finish1(i_ctx_t *);
-private int cie_cache_finish(i_ctx_t *);
+static int cie_cache_finish1(i_ctx_t *);
+static int cie_cache_finish(i_ctx_t *);
 int
 cie_prepare_cache(i_ctx_t *i_ctx_p, const gs_range * domain, const ref * proc,
 		  cie_cache_floats * pcache, void *container,
@@ -598,7 +598,7 @@ cie_prepare_caches_4(i_ctx_t *i_ctx_p, const gs_range * domains,
 }
 
 /* Store the result of caching one procedure. */
-private int
+static int
 cie_cache_finish_store(i_ctx_t *i_ctx_p, bool replicate)
 {
     os_ptr op = osp;
@@ -642,12 +642,12 @@ cie_cache_finish_store(i_ctx_t *i_ctx_p, bool replicate)
     esp -= 2;			/* pop pointer to cache */
     return o_pop_estack;
 }
-private int
+static int
 cie_cache_finish(i_ctx_t *i_ctx_p)
 {
     return cie_cache_finish_store(i_ctx_p, false);
 }
-private int
+static int
 cie_cache_finish1(i_ctx_t *i_ctx_p)
 {
     return cie_cache_finish_store(i_ctx_p, true);

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gspcolor.c,v 1.10 2007/09/11 15:24:04 Arabidopsis Exp $ */
+/* $Id: gspcolor.c,v 1.11 2008/03/23 15:27:44 Arabidopsis Exp $ */
 /* Pattern color operators and procedures for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -50,15 +50,15 @@ public_st_pattern_instance();
 /* Define the Pattern color space. */
 gs_private_st_composite(st_color_space_Pattern, gs_color_space,
      "gs_color_space_Pattern", cs_Pattern_enum_ptrs, cs_Pattern_reloc_ptrs);
-private cs_proc_num_components(gx_num_components_Pattern);
-private cs_proc_remap_color(gx_remap_Pattern);
-private cs_proc_init_color(gx_init_Pattern);
-private cs_proc_restrict_color(gx_restrict_Pattern);
-private cs_proc_install_cspace(gx_install_Pattern);
-private cs_proc_set_overprint(gx_set_overprint_Pattern);
-private cs_proc_final(gx_final_Pattern);
-private cs_proc_adjust_color_count(gx_adjust_color_Pattern);
-private cs_proc_serialize(gx_serialize_Pattern);
+static cs_proc_num_components(gx_num_components_Pattern);
+static cs_proc_remap_color(gx_remap_Pattern);
+static cs_proc_init_color(gx_init_Pattern);
+static cs_proc_restrict_color(gx_restrict_Pattern);
+static cs_proc_install_cspace(gx_install_Pattern);
+static cs_proc_set_overprint(gx_set_overprint_Pattern);
+static cs_proc_final(gx_final_Pattern);
+static cs_proc_adjust_color_count(gx_adjust_color_Pattern);
+static cs_proc_serialize(gx_serialize_Pattern);
 const gs_color_space_type gs_color_space_type_Pattern = {
     gs_color_space_index_Pattern, false, false,
     &st_color_space_Pattern, gx_num_components_Pattern,
@@ -200,7 +200,7 @@ gs_get_pattern(const gs_client_color * pcc)
  * For backward compatibility, and to distinguish Pattern color spaces
  * from all others, we negate the result.
  */
-private int
+static int
 gx_num_components_Pattern(const gs_color_space * pcs)
 {
     return
@@ -210,7 +210,7 @@ gx_num_components_Pattern(const gs_color_space * pcs)
 }
 
 /* Remap a Pattern color. */
-private int
+static int
 gx_remap_Pattern(const gs_client_color * pc, const gs_color_space * pcs,
 		 gx_device_color * pdc, const gs_imager_state * pis,
 		 gx_device * dev, gs_color_select_t select)
@@ -226,7 +226,7 @@ gx_remap_Pattern(const gs_client_color * pc, const gs_color_space * pcs,
 }
 
 /* Initialize a Pattern color. */
-private void
+static void
 gx_init_Pattern(gs_client_color * pcc, const gs_color_space * pcs)
 {
     if (pcs->params.pattern.has_base_space) {
@@ -242,7 +242,7 @@ gx_init_Pattern(gs_client_color * pcc, const gs_color_space * pcs)
 /* the color space must have a base space: we check this here only */
 /* to prevent accessing uninitialized data, but if there is no base space, */
 /* it is an error that we count on being detected elsewhere. */
-private void
+static void
 gx_restrict_Pattern(gs_client_color * pcc, const gs_color_space * pcs)
 {
     /* We need a special check for the null pattern. */
@@ -257,7 +257,7 @@ gx_restrict_Pattern(gs_client_color * pcc, const gs_color_space * pcs)
 }
 
 /* Install a Pattern color space. */
-private int
+static int
 gx_install_Pattern(gs_color_space * pcs, gs_state * pgs)
 {
     if (!pcs->params.pattern.has_base_space)
@@ -269,20 +269,20 @@ gx_install_Pattern(gs_color_space * pcs, gs_state * pgs)
  * Set the overprint compositor for a Pattern color space. This does nothing;
  * for patterns the overprint compositor is set at set_device_color time.
 */
-private int
+static int
 gx_set_overprint_Pattern(const gs_color_space * pcs, gs_state * pgs)
 {
     return 0;
 }
 
 /* Adjust the reference counts for Pattern color spaces or colors. */
-private void
+static void
 gx_final_Pattern(const gs_color_space * pcs)
 {
     /* {csrc} really do nothing? */
 }
 
-private void
+static void
 gx_adjust_color_Pattern(const gs_client_color * pcc,
 			const gs_color_space * pcs, int delta)
 {
@@ -296,14 +296,14 @@ gx_adjust_color_Pattern(const gs_client_color * pcc,
 
 /* GC procedures */
 
-private 
+static 
 ENUM_PTRS_BEGIN_PROC(cs_Pattern_enum_ptrs)
 {
     return 0;
     /* {csrc} may change to st_base_color_space */
 }
 ENUM_PTRS_END_PROC
-private RELOC_PTRS_BEGIN(cs_Pattern_reloc_ptrs)
+static RELOC_PTRS_BEGIN(cs_Pattern_reloc_ptrs)
 {
     return;
 }
@@ -311,7 +311,7 @@ RELOC_PTRS_END
 
 /* ---------------- Serialization. -------------------------------- */
 
-private int 
+static int 
 gx_serialize_Pattern(const gs_color_space * pcs, stream * s)
 {
     const gs_pattern_params * p = &pcs->params.pattern;

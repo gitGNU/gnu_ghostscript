@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevokii.c,v 1.8 2007/09/11 15:24:01 Arabidopsis Exp $*/
+/* $Id: gdevokii.c,v 1.9 2008/03/23 15:27:59 Arabidopsis Exp $*/
 /*
  * Okidata IBM compatible dot-matrix printer driver for Ghostscript.
  *
@@ -74,7 +74,7 @@
 #endif
 
 /* The device descriptor */
-private dev_proc_print_page(okiibm_print_page);
+static dev_proc_print_page(okiibm_print_page);
 
 /* Okidata IBM device */
 const gx_device_printer far_data gs_okiibm_device =
@@ -87,10 +87,10 @@ const gx_device_printer far_data gs_okiibm_device =
 /* ------ Internal routines ------ */
 
 /* Forward references */
-private void okiibm_output_run(byte *, int, int, char, FILE *, int);
+static void okiibm_output_run(byte *, int, int, char, FILE *, int);
 
 /* Send the page to the printer. */
-private int
+static int
 okiibm_print_page1(gx_device_printer *pdev, FILE *prn_stream, int y_9pin_high,
   const char *init_string, int init_length,
   const char *end_string, int end_length)
@@ -257,7 +257,7 @@ okiibm_print_page1(gx_device_printer *pdev, FILE *prn_stream, int y_9pin_high,
 
 /* Output a single graphics command. */
 /* pass=0 for all columns, 1 for even columns, 2 for odd columns. */
-private void
+static void
 okiibm_output_run(byte *data, int count, int y_mult,
   char start_graphics, FILE *prn_stream, int pass)
 {	
@@ -290,12 +290,12 @@ okiibm_output_run(byte *data, int count, int y_mult,
 
 /* The print_page procedures are here, to avoid a forward reference. */
 
-private const char okiibm_init_string[]	= { 0x18 };
-private const char okiibm_end_string[]	= { 0x0c };
-private const char okiibm_one_direct[]	= { 0x1b, 0x55, 0x01 };
-private const char okiibm_two_direct[]	= { 0x1b, 0x55, 0x00 };
+static const char okiibm_init_string[]	= { 0x18 };
+static const char okiibm_end_string[]	= { 0x0c };
+static const char okiibm_one_direct[]	= { 0x1b, 0x55, 0x01 };
+static const char okiibm_two_direct[]	= { 0x1b, 0x55, 0x00 };
 
-private int
+static int
 okiibm_print_page(gx_device_printer *pdev, FILE *prn_stream)
 {
 	char init_string[16], end_string[16];

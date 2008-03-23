@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevccr.c,v 1.9 2007/09/11 15:24:34 Arabidopsis Exp $*/
+/* $Id: gdevccr.c,v 1.10 2008/03/23 15:27:38 Arabidopsis Exp $*/
 /* CalComp Raster Format driver */
 #include "gdevprn.h"
 
@@ -59,11 +59,11 @@ typedef struct cmyrow_s
 #define ybuf _cmybuf[YPASS]
 #define cmybuf _cmybuf
 
-private int alloc_rb( gs_memory_t *mem, cmyrow **rb, int rows);
-private int alloc_line( gs_memory_t *mem, cmyrow *row, int cols);
-private void add_cmy8(cmyrow *rb, char c, char m, char y);
-private void write_cpass(cmyrow *buf, int rows, int pass, FILE * pstream);
-private void free_rb_line( gs_memory_t *mem, cmyrow *rbuf, int rows, int cols);
+static int alloc_rb( gs_memory_t *mem, cmyrow **rb, int rows);
+static int alloc_line( gs_memory_t *mem, cmyrow *row, int cols);
+static void add_cmy8(cmyrow *rb, char c, char m, char y);
+static void write_cpass(cmyrow *buf, int rows, int pass, FILE * pstream);
+static void free_rb_line( gs_memory_t *mem, cmyrow *rbuf, int rows, int cols);
 
 struct gx_device_ccr_s {
 	gx_device_common;
@@ -94,15 +94,15 @@ typedef struct gx_device_ccr_s gx_device_ccr;
 }
 
 /* For CCR, we need our own color mapping procedures. */
-private dev_proc_map_rgb_color(ccr_map_rgb_color);
-private dev_proc_map_color_rgb(ccr_map_color_rgb);
+static dev_proc_map_rgb_color(ccr_map_rgb_color);
+static dev_proc_map_color_rgb(ccr_map_color_rgb);
 
 
 /* And of course we need our own print-page routine. */
-private dev_proc_print_page(ccr_print_page);
+static dev_proc_print_page(ccr_print_page);
 
 /* The device procedures */
-private gx_device_procs ccr_procs =
+static gx_device_procs ccr_procs =
     prn_color_procs(gdev_prn_open, gdev_prn_output_page, gdev_prn_close,
 		    ccr_map_rgb_color, ccr_map_color_rgb);
 
@@ -113,7 +113,7 @@ gx_device_ccr far_data gs_ccr_device =
 
 /* ------ Color mapping routines ------ */
 /* map an rgb color to a ccr cmy bitmap */
-private gx_color_index
+static gx_color_index
 ccr_map_rgb_color(gx_device *pdev, const ushort cv[])
 {
   ushort r, g, b;
@@ -129,7 +129,7 @@ ccr_map_rgb_color(gx_device *pdev, const ushort cv[])
 }
 
 /* map an ccr cmy bitmap to a rgb color */ 
-private int
+static int
 ccr_map_color_rgb(gx_device *pdev, gx_color_index color, ushort rgb[3])
 {
   rgb[2]=(1-(color >>2))*gx_max_color_value; /* r */
@@ -140,7 +140,7 @@ ccr_map_color_rgb(gx_device *pdev, gx_color_index color, ushort rgb[3])
 /* ------ print page routine ------ */
 
 
-private int
+static int
 ccr_print_page(gx_device_printer *pdev, FILE *pstream)
 {
   cmyrow *linebuf;
@@ -206,7 +206,7 @@ return 0;
 /* ------ Internal routines ------ */
 
 
-private int alloc_rb( gs_memory_t *mem, cmyrow **rb, int rows)
+static int alloc_rb( gs_memory_t *mem, cmyrow **rb, int rows)
   {
   *rb = (cmyrow*) gs_malloc(mem, rows, sizeof(cmyrow), "rb");
   if( *rb == 0)
@@ -225,7 +225,7 @@ private int alloc_rb( gs_memory_t *mem, cmyrow **rb, int rows)
     }
 }
 
-private int alloc_line( gs_memory_t *mem, cmyrow *row, int cols)
+static int alloc_line( gs_memory_t *mem, cmyrow *row, int cols)
 {
   int suc;
   suc=((row->cbuf = (unsigned char *) gs_malloc(mem, cols,1, row->cname)) &&
@@ -244,7 +244,7 @@ private int alloc_line( gs_memory_t *mem, cmyrow *row, int cols)
   return 0;
 }
 
-private void add_cmy8(cmyrow *rb, char c, char m, char y)
+static void add_cmy8(cmyrow *rb, char c, char m, char y)
 {
   int cur=rb->current;
   rb->cbuf[cur]=c;
@@ -260,7 +260,7 @@ private void add_cmy8(cmyrow *rb, char c, char m, char y)
   return;
 }
 
-private void write_cpass(cmyrow *buf, int rows, int pass, FILE * pstream)
+static void write_cpass(cmyrow *buf, int rows, int pass, FILE * pstream)
 {
   int row, len;
     for(row=0; row<rows; row++)
@@ -277,7 +277,7 @@ private void write_cpass(cmyrow *buf, int rows, int pass, FILE * pstream)
   return;
 }
 
-private void free_rb_line( gs_memory_t *mem, cmyrow *rbuf, int rows, int cols)
+static void free_rb_line( gs_memory_t *mem, cmyrow *rbuf, int rows, int cols)
 {
   int i;
   for(i=0; i<rows; i++)

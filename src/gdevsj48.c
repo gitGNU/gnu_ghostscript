@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevsj48.c,v 1.8 2007/09/11 15:23:50 Arabidopsis Exp $*/
+/* $Id: gdevsj48.c,v 1.9 2008/03/23 15:28:14 Arabidopsis Exp $*/
 /*
  * StarJet SJ48 printer driver.
  *
@@ -43,7 +43,7 @@
  */
 
 /* The device descriptor */
-private dev_proc_print_page(sj48_print_page);
+static dev_proc_print_page(sj48_print_page);
 gx_device_printer far_data gs_sj48_device =
   prn_device(prn_std_procs, "sj48",
 	80,				/* width_10ths, 8" */
@@ -84,7 +84,7 @@ gx_device_printer far_data gs_sj48_device =
 
 
 /* Send the page to the printer. */
-private int
+static int
 sj48_print_page(gx_device_printer *pdev, FILE *prn_stream)
 {	int line_size = gx_device_raster((gx_device *)pdev, 0);
 	int xres = pdev->x_pixels_per_inch;

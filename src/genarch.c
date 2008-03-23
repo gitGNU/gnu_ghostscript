@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: genarch.c,v 1.10 2007/09/11 15:24:10 Arabidopsis Exp $ */
+/* $Id: genarch.c,v 1.11 2008/03/23 15:27:53 Arabidopsis Exp $ */
 /*
  * Generate a header file (arch.h) with parameters
  * reflecting the machine architecture and compiler characteristics.
@@ -44,25 +44,25 @@
 /* We should write the result on stdout, but the original Turbo C 'make' */
 /* can't handle output redirection (sigh). */
 
-private void
+static void
 section(FILE * f, const char *str)
 {
     fprintf(f, "\n\t /* ---------------- %s ---------------- */\n\n", str);
 }
 
-private void
+static void
 define(FILE *f, const char *str)
 {
     fprintf(f, "#define %s ", str);
 }
 
-private void
+static void
 define_int(FILE *f, const char *str, int value)
 {
     fprintf(f, "#define %s %d\n", str, value);
 }
 
-private void
+static void
 print_ffs(FILE *f, int nbytes)
 {
     int i;
@@ -71,7 +71,7 @@ print_ffs(FILE *f, int nbytes)
 	fprintf(f, "ff");
 }
 
-private int
+static int
 ilog2(int n)
 {
     int i = 0, m = n;

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxctable.c,v 1.7 2007/09/11 15:24:01 Arabidopsis Exp $ */
+/* $Id: gxctable.c,v 1.8 2008/03/23 15:27:40 Arabidopsis Exp $ */
 /* Color table lookup and interpolation */
 #include "gx.h"
 #include "gxfixed.h"
@@ -56,7 +56,7 @@ gx_color_interpolate_nearest(const fixed * pi,
 /*
  * Define an implementation that uses trilinear interpolation.
  */
-private void
+static void
 interpolate_accum(const fixed * pi, const gx_color_lookup_table * pclt,
 		  frac * pv, fixed factor)
 {

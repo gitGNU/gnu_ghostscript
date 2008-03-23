@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zcharx.c,v 1.8 2007/09/11 15:23:56 Arabidopsis Exp $ */
+/* $Id: zcharx.c,v 1.9 2008/03/23 15:27:49 Arabidopsis Exp $ */
 /* Level 2 character operators */
 #include "ghost.h"
 #include "oper.h"
@@ -34,7 +34,7 @@
 #include "memory_.h"
 
 /* Common setup for glyphshow and .glyphwidth. */
-private int
+static int
 glyph_show_setup(i_ctx_t *i_ctx_p, gs_glyph *pglyph)
 {
     os_ptr op = osp;
@@ -55,7 +55,7 @@ glyph_show_setup(i_ctx_t *i_ctx_p, gs_glyph *pglyph)
 }
 
 /* <charname> glyphshow - */
-private int
+static int
 zglyphshow(i_ctx_t *i_ctx_p)
 {
     gs_glyph glyph;
@@ -74,7 +74,7 @@ zglyphshow(i_ctx_t *i_ctx_p)
 }
 
 /* <charname> .glyphwidth <wx> <wy> */
-private int
+static int
 zglyphwidth(i_ctx_t *i_ctx_p)
 {
     gs_glyph glyph;
@@ -94,7 +94,7 @@ zglyphwidth(i_ctx_t *i_ctx_p)
 /* <string> <numarray|numstring> xshow - */
 /* <string> <numarray|numstring> yshow - */
 /* <string> <numarray|numstring> xyshow - */
-private int
+static int
 moveshow(i_ctx_t *i_ctx_p, bool have_x, bool have_y)
 {
     os_ptr op = osp;
@@ -159,17 +159,17 @@ moveshow(i_ctx_t *i_ctx_p, bool have_x, bool have_y)
     pop(2);
     return op_show_continue(i_ctx_p);
 }
-private int
+static int
 zxshow(i_ctx_t *i_ctx_p)
 {
     return moveshow(i_ctx_p, true, false);
 }
-private int
+static int
 zyshow(i_ctx_t *i_ctx_p)
 {
     return moveshow(i_ctx_p, false, true);
 }
-private int
+static int
 zxyshow(i_ctx_t *i_ctx_p)
 {
     return moveshow(i_ctx_p, true, true);

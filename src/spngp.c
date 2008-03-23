@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: spngp.c,v 1.7 2007/09/11 15:24:12 Arabidopsis Exp $ */
+/* $Id: spngp.c,v 1.8 2008/03/23 15:27:47 Arabidopsis Exp $ */
 /* PNG pixel prediction filters */
 #include "memory_.h"
 #include "strimpl.h"
@@ -36,12 +36,12 @@ private_st_PNGP_state();
 #define cOptimum 15
 #define cEncode -10
 #define cDecode -4
-private const byte pngp_case_needs_prev[] = {
+static const byte pngp_case_needs_prev[] = {
     0, 0, 1, 1, 1, 1
 };
 
 /* Set defaults */
-private void
+static void
 s_PNGP_set_defaults(stream_state * st)
 {
     stream_PNGP_state *const ss = (stream_PNGP_state *) st;
@@ -50,7 +50,7 @@ s_PNGP_set_defaults(stream_state * st)
 }
 
 /* Common (re)initialization. */
-private int
+static int
 s_PNGP_reinit(stream_state * st)
 {
     stream_PNGP_state *const ss = (stream_PNGP_state *) st;
@@ -62,7 +62,7 @@ s_PNGP_reinit(stream_state * st)
 }
 
 /* Common initialization. */
-private int
+static int
 s_pngp_init(stream_state * st, bool need_prev)
 {
     stream_PNGP_state *const ss = (stream_PNGP_state *) st;
@@ -90,7 +90,7 @@ s_pngp_init(stream_state * st, bool need_prev)
 }
 
 /* Initialize PNGPredictorEncode filter. */
-private int
+static int
 s_PNGPE_init(stream_state * st)
 {
     stream_PNGP_state *const ss = (stream_PNGP_state *) st;
@@ -99,14 +99,14 @@ s_PNGPE_init(stream_state * st)
 }
 
 /* Initialize PNGPredictorDecode filter. */
-private int
+static int
 s_PNGPD_init(stream_state * st)
 {
     return s_pngp_init(st, true);
 }
 
 /* Release a PNGPredictor filter. */
-private void
+static void
 s_PNGP_release(stream_state *st)
 {
     stream_PNGP_state *const ss = (stream_PNGP_state *) st;
@@ -124,7 +124,7 @@ s_PNGP_release(stream_state *st)
  *
  * Uses ss->case_index; uses and updates ss->row_left, pr->ptr, pw->ptr.
  */
-private int
+static int
 paeth_predictor(int a, int b, int c)
 {
     /* The definitions of ac and bc are correct, not a typo. */
@@ -134,7 +134,7 @@ paeth_predictor(int a, int b, int c)
 
     return (pa <= pb && pa <= pc ? a : pb <= pc ? b : c);
 }
-private void
+static void
 s_pngp_process(stream_state * st, stream_cursor_write * pw,
 	       const byte * dprev, stream_cursor_read * pr,
 	       const byte * upprev, const byte * up, uint count)
@@ -188,7 +188,7 @@ s_pngp_process(stream_state * st, stream_cursor_write * pw,
 
 /* Calculate the number of bytes for the next processing step, */
 /* the min of (input data, output data, remaining row length). */
-private uint
+static uint
 s_pngp_count(const stream_state * st_const, const stream_cursor_read * pr,
 	     const stream_cursor_write * pw)
 {
@@ -219,12 +219,12 @@ s_pngp_count(const stream_state * st_const, const stream_cursor_read * pr,
  * the beginning of each row, and copying trailing bytes from ss->prev (and
  * possibly the input) to prev_row at the end of each row.
  */
-private int
+static int
 optimum_predictor(const stream_state * st, const stream_cursor_read * pr)
 {
     return cSub;
 }
-private int
+static int
 s_PNGPE_process(stream_state * st, stream_cursor_read * pr,
 		stream_cursor_write * pw, bool last)
 {
@@ -318,7 +318,7 @@ s_PNGPE_process(stream_state * st, stream_cursor_read * pr,
  * the beginning of each row, and copying trailing bytes from ss->prev (and
  * possibly the output) to prev_row at the end of each row.
  */
-private int
+static int
 s_PNGPD_process(stream_state * st, stream_cursor_read * pr,
 		stream_cursor_write * pw, bool last)
 {

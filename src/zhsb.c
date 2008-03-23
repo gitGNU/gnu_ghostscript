@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zhsb.c,v 1.7 2007/09/11 15:24:34 Arabidopsis Exp $ */
+/* $Id: zhsb.c,v 1.8 2008/03/23 15:27:57 Arabidopsis Exp $ */
 /* HSB color operators */
 #include "ghost.h"
 #include "oper.h"
@@ -26,7 +26,7 @@
 #include "gshsb.h"
 
 /* - currenthsbcolor <hue> <saturation> <brightness> */
-private int
+static int
 zcurrenthsbcolor(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -39,7 +39,7 @@ zcurrenthsbcolor(i_ctx_t *i_ctx_p)
 }
 
 /* <hue> <saturation> <brightness> sethsbcolor - */
-private int
+static int
 zsethsbcolor(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

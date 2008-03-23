@@ -1,4 +1,4 @@
-dnl Copyright (C) 2002-2004 artofcode LLC. All rights reserved.
+dnl Copyright (C) 2001-2007 Artifex Software, Inc.
 
 dnl This file is part of GNU ghostscript
 dnl 
@@ -14,7 +14,7 @@ dnl You should have received a copy of the GNU General Public License along with
 dnl ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 dnl Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 dnl 
-dnl $Id: configure.ac,v 1.16 2007/09/11 15:25:16 Arabidopsis Exp $
+dnl $Id: configure.ac,v 1.17 2008/03/23 15:28:31 Arabidopsis Exp $
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------
@@ -22,7 +22,7 @@ dnl Initialization and Versioning
 dnl ------------------------------------------------
 
 AC_PREREQ(2.60)
-AC_INIT([gnu-ghostscript], [8.60.0], [gnu-ghostscript-bug@gnu.org])
+AC_INIT([gnu-ghostscript], [8.61.0], [gnu-ghostscript-bug@gnu.org])
 AC_CONFIG_SRCDIR(src/gs.c)
 AM_INIT_AUTOMAKE([-Wall])
 
@@ -33,9 +33,9 @@ CXXFLAGS="${CXXFLAGS:=}"
 LDFLAGS="${LDFLAGS:=}"
 
 GS_VERSION_MAJOR=8
-GS_VERSION_MINOR=60
+GS_VERSION_MINOR=61
 GS_VERSION_PATCH=0
-GS_REVISIONDATE=20070912
+GS_REVISIONDATE=20071121
 
 GS_VERSION=`expr $GS_VERSION_MAJOR \* 10000 + $GS_VERSION_MINOR \* 100 + $GS_VERSION_PATCH`
 
@@ -54,6 +54,41 @@ AC_SUBST(GS_VERSION_MINOR0, $GS_VERSION_MINOR0)
 AC_SUBST(GS_VERSION_PATCH, $GS_VERSION_PATCH)
 AC_SUBST(GS_VERSION, $GS_VERSION)
 AC_SUBST(GS_REVISION, $GS_REVISION)
+
+dnl --------------------------------------------------
+dnl Local utilities
+dnl --------------------------------------------------
+
+dnl GS_SPLIT_LIBS( LIBS, LINKLINE )
+dnl Split a unix-style link line into a list of 
+dnl bare library names. For example, the line
+dnl '-L/usr/X11R6/lib -lX11 -lXt' splits into
+dnl LIB='X11 Xt'
+dnl
+AC_DEFUN([GS_SPLIT_LIBS], [
+# the makefile wants a list of just the library names 
+for gs_item in $2; do
+  gs_stripped_item=`echo "$gs_item" | sed -e 's/-l//'`
+  if test "x$gs_stripped_item" != "x$gs_item"; then
+    $1="$[$1] $gs_stripped_item"
+  fi
+done
+])
+
+dnl GS_SPLIT_LIBPATHS( LIBPATHS, LINKLINE )
+dnl Split a unix-style link line into a list of
+dnl bare search path entries. For example,
+dnl '-L/usr/X11R6/lib -lX11 -L/opt/lib -lXt'
+dnl splits to LIBPATHS='/usr/X11R6/lib /opt/lib'
+dnl
+AC_DEFUN([GS_SPLIT_LIBPATHS], [
+for gs_item in $2; do
+  gs_stripped_item=`echo "$gs_item" | sed -e 's/-L//'`
+  if test "x$gs_stripped_item" != "x$gs_item"; then
+    $1="$[$1] $gs_stripped_item"
+  fi
+done
+])
 
 dnl --------------------------------------------------  
 dnl Check for programs
@@ -203,6 +238,7 @@ AC_PATH_PROG(PKGCONFIG, pkg-config)
 
 dnl Fontconfig support
 HAVE_FONTCONFIG=""
+FONTCONFIG_CFLAGS=""
 FONTCONFIG_LIBS=""
 AC_ARG_ENABLE(fontconfig, [  --disable-fontconfig    Don't use fontconfig to list system fonts])
 if test "$enable_fontconfig" != "no"; then
@@ -210,18 +246,27 @@ if test "$enable_fontconfig" != "no"; then
 	# autoconf macro and b) requires pkg-config on the system, which is
 	# NOT standard on ANY OS, including Linux!
 	if test "x$PKGCONFIG" != x; then
-		AC_MSG_CHECKING(for fontconfig)
+		AC_MSG_CHECKING(for fontconfig with pkg-config)
 		if $PKGCONFIG --exists fontconfig; then
 			AC_MSG_RESULT(yes)
-			CFLAGS="$CFLAGS `$PKGCONFIG --cflags fontconfig`"
+			FONTCONFIG_CFLAGS="$CFLAGS `$PKGCONFIG --cflags fontconfig`"
 			FONTCONFIG_LIBS="`$PKGCONFIG --libs fontconfig`"
 			HAVE_FONTCONFIG=-DHAVE_FONTCONFIG
 		else
 			AC_MSG_RESULT(no)
 		fi
 	fi
+	if test -z "$HAVE_FONTCONFIG"; then
+		AC_CHECK_LIB([fontconfig], [FcInitLoadConfigAndFonts], [
+		  AC_CHECK_HEADER([fontconfig/fontconfig.h], [
+		    FONTCONFIG_LIBS="-lfontconfg"
+		    HAVE_FONTCONFIG="-DHAVE_FONTCONFIG"
+		  ])
+		])
+	fi
 fi
 AC_SUBST(HAVE_FONTCONFIG)
+AC_SUBST(FONTCONFIG_CFLAGS)
 AC_SUBST(FONTCONFIG_LIBS)
 
 dnl --------------------------------------------------
@@ -381,23 +426,28 @@ AC_ARG_ENABLE(cups, [  --enable-cups           turn on CUPS support, default=yes
 
 CUPSDEV=""
 CUPSINCLUDE=""
+CUPSCFLAGS=""
+CUPSLIBS=""
+CUPSLIBDIRS=""
 CUPSCONFIG="${CUPSCONFIG:=}"
-cups_datadir="/usr/share/cups"
-cups_serverroot="/etc/cups"
-cups_serverbin="/usr/lib/cups"
+CUPSSERVERBIN=""
+CUPSSERVERROOT=""
+CUPSDATA=""
 
 if ( test -d cups ); then
     if test x$enable_cups != xno; then
 	AC_PATH_PROG(CUPSCONFIG,cups-config)
-	AC_CHECK_HEADER([cups/raster.h],[],[CUPSCONFIG=""])
+dnl	AC_CHECK_HEADER([cups/raster.h],[],[CUPSCONFIG=""])
 	if test "x$CUPSCONFIG" != x; then
 	    dnl Use values from CUPS config...
-#	    LIBS="`$CUPSCONFIG --ldflags` `$CUPSCONFIG --static --image --libs | sed -e '1,$s/-lssl//'` $LIBS"
-	    LIBS="`$CUPSCONFIG --ldflags` `$CUPSCONFIG --image --libs` $LIBS"
-	    CFLAGS="`$CUPSCONFIG --cflags` $CFLAGS"
-	    cups_serverroot="`$CUPSCONFIG --serverroot`"
-	    cups_serverbin="`$CUPSCONFIG --serverbin`"
-	    cups_datadir="`$CUPSCONFIG --datadir`"
+	    CUPSCFLAGS="`$CUPSCONFIG --cflags` $CFLAGS"
+#	    CUPSLINK="`$CUPSCONFIG --ldflags` `$CUPSCONFIG --static --image --libs | sed -e '1,$s/-lssl//'` $LIBS"
+	    CUPSLINK="`$CUPSCONFIG --ldflags` `$CUPSCONFIG --image --libs`"
+	    GS_SPLIT_LIBS([CUPSLIBS], [$CUPSLINK])
+	    GS_SPLIT_LIBPATHS([CUPSLIBDIRS],[$CUPSLINK])
+	    CUPSSERVERROOT="`$CUPSCONFIG --serverroot`"
+	    CUPSSERVERBIN="`$CUPSCONFIG --serverbin`"
+	    CUPSDATA="`$CUPSCONFIG --datadir`"
 	    CUPSINCLUDE="include cups/cups.mak"
 	    CUPSDEV="\$(DD)cups.dev"
 	fi
@@ -405,11 +455,14 @@ if ( test -d cups ); then
 fi
 
 AC_SUBST(CUPSDEV)
-AC_SUBST(CUPSCONFIG)
+AC_SUBST(CUPSCFLAGS)
+AC_SUBST(CUPSLIBS)
+AC_SUBST(CUPSLIBDIRS)
 AC_SUBST(CUPSINCLUDE)
-AC_SUBST(cups_datadir)
-AC_SUBST(cups_serverroot)
-AC_SUBST(cups_serverbin)
+AC_SUBST(CUPSSERVERBIN)
+AC_SUBST(CUPSSERVERROOT)
+AC_SUBST(CUPSDATA)
+
 
 dnl look for IJS implementation
 AC_ARG_WITH(ijs, AC_HELP_STRING([--with-ijs],[include IJS driver support]))
@@ -596,7 +649,6 @@ if test x$no_x != xyes; then
 		x_libraries="NONE"
 	fi
 	if test ! "$x_libraries" = "NONE" -a ! "$x_libraries" = ""; then
-		LDFLAGS="-L$x_libraries $LDFLAGS"
 		X_LDFLAGS="-L$x_libraries"
 		if test "$uname" = "SunOS"; then
 			X_LDFLAGS="$X_LDFLAGS -R$x_libraries"
@@ -612,24 +664,22 @@ if test x$no_x != xyes; then
 	fi
 
 	SAVELIBS="$LIBS"
+	SAVELDFLAGS="$LDFLAGS"
+	LDFLAGS="$LDFLAGS $X_LDFLAGS"
 
 	AC_CHECK_LIB(X11,XOpenDisplay)
 	AC_CHECK_LIB(Xext,XdbeQueryExtension)
 	AC_CHECK_LIB(Xt,XtAppCreateShell)
 
+	LDFLAGS="$SAVELDFLAGS"
 	LIBS="$SAVELIBS"
 
 	if test "$ac_cv_lib_Xt_XtAppCreateShell" = yes; then
 		X11DEVS="\$(DD)x11.dev \$(DD)x11alpha.dev \$(DD)x11cmyk.dev \$(DD)x11mono.dev \$(DD)x11_.dev \$(DD)x11alt_.dev \$(DD)x11cmyk2.dev \$(DD)x11cmyk4.dev \$(DD)x11cmyk8.dev \$(DD)x11rg16x.dev \$(DD)x11rg32x.dev \$(DD)x11gray2.dev \$(DD)x11gray4.dev"
 		X_DEVS=$X11DEVS
-		# the makefile wants a list of just the library names in XLIBS
-		for item  in -lXt $X_PRE_LIBS -lXext -lX11 $X_EXTRA_LIBS; do
-			stripped=`echo "$item" | sed -e 's/-l//'`
-			if test "x$stripped" != "x$item"; then
-				XLIBS="$XLIBS $stripped"
-			fi
-		done
-		X_LIBS=$XLIBS
+		# the makefile wants a list of just the library names in X_LIBS
+		GS_SPLIT_LIBS([X_LIBS], 
+			[-lXt $X_PRE_LIBS -lXext -lX11 $X_EXTRA_LIBS])
 	fi
 fi
 
@@ -852,10 +902,10 @@ if test -n "$P_DEVS"; then
 # Remove contributed drivers if requested and make sure we don't have any 
 # duplicates in there, add $(DD)foo.dev constructs
 	noncontribmakefiles=`find . -name '*.mak' -print | grep -v '^\./contrib/'`
-	PRINTERS=`(for i in $P_DEVS; do d='$(DD)'${i}.dev; if ( grep -q '^'$d $noncontribmakefiles ) || ( ! test -z "$CONTRIBINCLUDE" ); then echo $d; fi; done) | sort | uniq | tr '\012' ' '`
+	PRINTERS=`(for i in $P_DEVS; do d='$(DD)'${i}.dev; if ( grep '^'$d $noncontribmakefiles 2>&1 >/dev/null ) || ( ! test -z "$CONTRIBINCLUDE" ); then echo $d; fi; done) | sort | uniq | tr '\012' ' '`
 fi
 if test -n "$F_DEVS"; then
-	FILES=`(for i in $F_DEVS; do d='$(DD)'${i}.dev; if ( grep -q '^'$d $noncontribmakefiles ) || ( ! test -z "$CONTRIBINCLUDE" ); then echo $d; fi; done) | sort | uniq | tr '\012' ' '`
+	FILES=`(for i in $F_DEVS; do d='$(DD)'${i}.dev; if ( grep '^'$d $noncontribmakefiles  2>&1 >/dev/null) || ( ! test -z "$CONTRIBINCLUDE" ); then echo $d; fi; done) | sort | uniq | tr '\012' ' '`
 fi
 AC_SUBST(PRINTERS)
 AC_SUBST(FILES)
@@ -888,6 +938,13 @@ AC_ARG_ENABLE(dynamic, [  --enable-dynamic        enable dynamically loaded driv
 		DYNAMIC_DEVS="\$(GLOBJDIR)/X11.so"
 		DYNAMIC_FLAGS="-DGS_DEVS_SHARED -DGS_DEVS_SHARED_DIR=\\\"\$(gssharedir)\\\""
 		DYNAMIC_LDFLAGS="-fPIC -shared"
+		DYNAMIC_LIBS=""
+		X_DEVS=""
+		;;
+		Darwin*)
+		INSTALL_SHARED="install-shared"
+		DYNAMIC_FLAGS="-DGS_DEVS_SHARED -DGS_DEVS_SHARED_DIR=\\\"\$(gssharedir)\\\""
+		DYNAMIC_LDFLAGS="-dynamiclib"
 		DYNAMIC_LIBS=""
 		X_DEVS=""
 		;;
@@ -938,6 +995,11 @@ if test "x$fontpath" = "x"; then
 	# These font directories are used by Solaris...
 	fontpath="${fontpath}:/usr/openwin/lib/X11/fonts/Type1"
 	fontpath="${fontpath}:/usr/openwin/lib/X11/fonts/TrueType"
+
+	# This font directory is used by CUPS...
+	if test "x$CUPSCONFIG" != x; then
+	  fontpath="${fontpath}:`$CUPSCONFIG --datadir`/fonts"
+	fi
 fi
 
 AC_SUBST(fontpath)
@@ -954,6 +1016,9 @@ AC_SUBST(HAVE_HYPOT)
 
 AC_CHECK_FUNCS([fopen64], [HAVE_FILE64=-DHAVE_FILE64])
 AC_SUBST(HAVE_FILE64)
+
+AC_CHECK_FUNCS([mkstemp64], [HAVE_MKSTEMP64=-DHAVE_MKSTEMP64])
+AC_SUBST(HAVE_MKSTEMP64)
 
 AC_PROG_GCC_TRADITIONAL
 

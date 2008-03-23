@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: stdint_.h,v 1.7 2007/09/11 15:24:29 Arabidopsis Exp $ */
+/* $Id: stdint_.h,v 1.8 2008/03/23 15:27:46 Arabidopsis Exp $ */
 /* Generic substitute for stdint.h */
 
 #ifndef stdint__INCLUDED
@@ -65,14 +65,6 @@
 #  define STDINT_TYPES_DEFINED
 # elif defined(__VMS) /* OpenVMS provides these types in inttypes.h */
 #  include <inttypes.h>
-#  define STDINT_TYPES_DEFINED
-# elif defined(__CYGWIN__)
-   /* Cygwin defines the signed versions in sys/types.h */
-   /* but uses a u_ prefix for the unsigned versions */
-   typedef u_int8_t                uint8_t;
-   typedef u_int16_t               uint16_t;
-   typedef u_int32_t               uint32_t;
-   typedef u_int64_t               uint64_t;
 #  define STDINT_TYPES_DEFINED
 # endif
    /* other archs may want to add defines here, 

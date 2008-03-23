@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zcolor1.c,v 1.7 2007/09/11 15:23:46 Arabidopsis Exp $ */
+/* $Id: zcolor1.c,v 1.8 2008/03/23 15:27:59 Arabidopsis Exp $ */
 /* Level 1 extended color operators */
 #include "ghost.h"
 #include "oper.h"
@@ -37,7 +37,7 @@
 #include "iimage.h"
 
 /* - currentblackgeneration <proc> */
-private int
+static int
 zcurrentblackgeneration(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -48,7 +48,7 @@ zcurrentblackgeneration(i_ctx_t *i_ctx_p)
 }
 
 /* - currentcolortransfer <redproc> <greenproc> <blueproc> <grayproc> */
-private int
+static int
 zcurrentcolortransfer(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -62,7 +62,7 @@ zcurrentcolortransfer(i_ctx_t *i_ctx_p)
 }
 
 /* - currentundercolorremoval <proc> */
-private int
+static int
 zcurrentundercolorremoval(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -73,7 +73,7 @@ zcurrentundercolorremoval(i_ctx_t *i_ctx_p)
 }
 
 /* <proc> setblackgeneration - */
-private int
+static int
 zsetblackgeneration(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -94,7 +94,7 @@ zsetblackgeneration(i_ctx_t *i_ctx_p)
 }
 
 /* <redproc> <greenproc> <blueproc> <grayproc> setcolortransfer - */
-private int
+static int
 zsetcolortransfer(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -140,7 +140,7 @@ zsetcolortransfer(i_ctx_t *i_ctx_p)
 }
 
 /* <proc> setundercolorremoval - */
-private int
+static int
 zsetundercolorremoval(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

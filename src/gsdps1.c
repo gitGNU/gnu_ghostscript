@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsdps1.c,v 1.9 2007/09/11 15:24:02 Arabidopsis Exp $ */
+/* $Id: gsdps1.c,v 1.10 2008/03/23 15:28:03 Arabidopsis Exp $ */
 /* Display PostScript graphics additions for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -100,7 +100,7 @@ gs_setbbox(gs_state * pgs, floatp llx, floatp lly, floatp urx, floatp ury)
 /* ------ Rectangles ------ */
 
 /* Append a list of rectangles to a path. */
-private int
+static int
 gs_rectappend_compat(gs_state * pgs, const gs_rect * pr, uint count, bool clip)
 {
     extern bool CPSI_mode;

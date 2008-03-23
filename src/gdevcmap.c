@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevcmap.c,v 1.8 2007/09/11 15:23:45 Arabidopsis Exp $ */
+/* $Id: gdevcmap.c,v 1.9 2008/03/23 15:27:40 Arabidopsis Exp $ */
 /* Special color mapping device */
 #include "gx.h"
 #include "gserrors.h"
@@ -35,10 +35,10 @@
 public_st_device_cmap();
 
 /* Device procedures */
-private dev_proc_get_params(cmap_get_params);
-private dev_proc_put_params(cmap_put_params);
-private dev_proc_begin_typed_image(cmap_begin_typed_image);
-private dev_proc_get_color_mapping_procs(cmap_get_color_mapping_procs);
+static dev_proc_get_params(cmap_get_params);
+static dev_proc_put_params(cmap_put_params);
+static dev_proc_begin_typed_image(cmap_begin_typed_image);
+static dev_proc_get_color_mapping_procs(cmap_get_color_mapping_procs);
 
 /*
  * NB: all of the device color model information will be replaced by
@@ -51,7 +51,7 @@ private dev_proc_get_color_mapping_procs(cmap_get_color_mapping_procs);
  * than device_cmap_identity) is requested.
  */
 
-private const gx_device_cmap gs_cmap_device = {
+static const gx_device_cmap gs_cmap_device = {
     std_device_dci_body(gx_device_cmap, 0, "special color mapper",
                         0, 0, 1, 1,
                         3, 24, 255, 255, 256, 256),
@@ -80,7 +80,7 @@ private const gx_device_cmap gs_cmap_device = {
 };
 
 /* Set the color mapping method. */
-private int
+static int
 gdev_cmap_set_method(gx_device_cmap * cmdev,
 		     gx_device_color_mapping_method_t method)
 {
@@ -160,7 +160,7 @@ gdev_cmap_init(gx_device_cmap * dev, gx_device * target,
 }
 
 /* Get parameters. */
-private int
+static int
 cmap_get_params(gx_device * dev, gs_param_list * plist)
 {
     int code = gx_forward_get_params(dev, plist);
@@ -174,7 +174,7 @@ cmap_get_params(gx_device * dev, gs_param_list * plist)
 }
 
 /* Update parameters; copy the device information back afterwards. */
-private int
+static int
 cmap_put_params(gx_device * dev, gs_param_list * plist)
 {
     int code = gx_forward_put_params(dev, plist);
@@ -210,7 +210,7 @@ cmap_put_params(gx_device * dev, gs_param_list * plist)
  * cmap device to do its color mapping.  As presently implemented, this
  * disables any high-level implementation that the target may provide.
  */
-private int
+static int
 cmap_begin_typed_image(gx_device * dev,
 		       const gs_imager_state * pis, const gs_matrix * pmat,
 		   const gs_image_common_t * pic, const gs_int_rect * prect,
@@ -228,7 +228,7 @@ cmap_begin_typed_image(gx_device * dev,
 					pdcolor, pcpath, memory, pinfo);
 }
 
-private void
+static void
 cmap_gray_cs_to_cm(gx_device * dev, frac gray, frac out[])
 {
     gx_device_cmap *    cmdev = (gx_device_cmap *)dev;
@@ -249,7 +249,7 @@ cmap_gray_cs_to_cm(gx_device * dev, frac gray, frac out[])
     }
 }
 
-private void
+static void
 cmap_rgb_cs_to_cm(gx_device * dev, const gs_imager_state * pis, frac r, frac g, frac b, frac out[])
 {
     
@@ -281,7 +281,7 @@ cmap_rgb_cs_to_cm(gx_device * dev, const gs_imager_state * pis, frac r, frac g, 
     }
 }
 
-private void
+static void
 cmap_cmyk_cs_to_cm(gx_device * dev, frac c, frac m, frac y, frac k, frac out[])
 {
     gx_device_cmap *    cmdev = (gx_device_cmap *)dev;
@@ -314,12 +314,12 @@ cmap_cmyk_cs_to_cm(gx_device * dev, frac c, frac m, frac y, frac k, frac out[])
     }
 }
 
-private const gx_cm_color_map_procs cmap_cm_procs = {
+static const gx_cm_color_map_procs cmap_cm_procs = {
     cmap_gray_cs_to_cm, cmap_rgb_cs_to_cm, cmap_cmyk_cs_to_cm
 };
 
 
-private const gx_cm_color_map_procs *
+static const gx_cm_color_map_procs *
 cmap_get_color_mapping_procs(const gx_device * dev)
 {
     return &cmap_cm_procs;

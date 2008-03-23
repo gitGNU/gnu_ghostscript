@@ -1,7 +1,7 @@
-# $Id: contrib.mak,v 1.1 2007/09/11 15:25:05 Arabidopsis Exp $
+# $Id: contrib.mak,v 1.2 2008/03/23 15:28:31 Arabidopsis Exp $
 
-# Makefile for device drivers which are not in the original GPL GhostScript
-# distributiion
+# Makefile for device drivers which are not in the original GNU GhostScript
+# distribution
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -536,7 +536,7 @@ $(GLOBJ)gdevl4r.$(OBJ): $(LIPS_SRC)gdevl4r.c $(LIPS_SRC)gdevlips.h $(PDEVH)
 	$(GLCC) -DA4 $(GLO_)gdevl4r.$(OBJ) $(LIPS_OPT) $(C_)\
  $(LIPS_SRC)gdevl4r.c
 
-$(GLOBJ)gdevlips.$(OBJ): $(LIPS_SRC)gdevlips.c
+$(GLOBJ)gdevlips.$(OBJ): $(GX) $(LIPS_SRC)gdevlips.c
 	$(GLCC) $(GLO_)gdevlips.$(OBJ) $(LIPS_OPT) $(C_) $(LIPS_SRC)gdevlips.c
 
 $(DD)lips4.dev: $(lipsr_) $(DD)page.dev
@@ -678,7 +678,7 @@ $(DD)oprp.dev : $(opvp_) $(DD)page.dev
 pcl3_options=
 eprn_fs_options=
 
-# Version of the pcl3 rules: $Revision: 1.1 $.
+# Version of the pcl3 rules: $Revision: 1.2 $.
 
 #==============================================================================
 
@@ -700,17 +700,17 @@ eprn_=$(GLOBJ)gdeveprn.$(OBJ) $(GLOBJ)pagecount.$(OBJ) \
   $(GLOBJ)eprnfs.$(OBJ)
 
 # List of eprn headers needed when gdeveprn.h is included:
-eprn_headers=$(eprn_src)mediasize.h $(eprn_src)gdeveprn.h
+eprn_headers=$(eprn_src)mediasize.h $(eprn_src)gdeveprn.h $(PDEVH)
 
 #------------------------------------------------------------------------------
 
 # Rules for individual files
 
-$(GLOBJ)mediasize.$(OBJ): $(eprn_src)mediasize.c $(eprn_src)mediasize.h
+$(GLOBJ)mediasize.$(OBJ): $(std_h) \
+  $(eprn_src)mediasize.c $(eprn_src)mediasize.h
 	$(GLCC) $(C_) $(O_)$@ $(eprn_opts) $(eprn_src)mediasize.c
 
-$(GLOBJ)gdeveprn.$(OBJ): $(eprn_src)gdeveprn.c $(eprn_headers) \
-	  $(eprn_src)pagecount.h
+$(GLOBJ)gdeveprn.$(OBJ): $(eprn_headers) $(eprn_src)pagecount.h
 	$(GLCC) $(C_) $(O_)$@ $(eprn_opts) $(eprn_src)gdeveprn.c
 
 $(GLOBJ)eprnparm.$(OBJ): $(eprn_src)eprnparm.c $(eprn_headers)
@@ -724,7 +724,8 @@ $(GLOBJ)eprnfs.$(OBJ): $(eprn_src)eprnfs.c $(eprn_headers)
 	  $(eprn_src)eprnfs.c
 
 # File also used by hpdj:
-$(GLOBJ)pagecount.$(OBJ): $(eprn_src)pagecount.c $(eprn_src)pagecount.h
+$(GLOBJ)pagecount.$(OBJ): $(std_h) \
+  $(eprn_src)pagecount.c $(eprn_src)pagecount.h
 	$(GLCC) $(C_) $(O_)$@ $(eprn_opts) $(eprn_src)pagecount.c
 
 #==============================================================================
@@ -996,7 +997,7 @@ $(GLOBJ)gdevfmlbp.$(OBJ): $(JAPSRC)gdevfmlbp.c $(PDEVH)
 #
 #  by N.Tagawa
 #
-#  $Id: contrib.mak,v 1.1 2007/09/11 15:25:05 Arabidopsis Exp $
+#  $Id: contrib.mak,v 1.2 2008/03/23 15:28:31 Arabidopsis Exp $
 #
 
 ml6_=$(GLOBJ)gdevml6.$(OBJ) $(GLOBJ)gdevprn.$(OBJ)

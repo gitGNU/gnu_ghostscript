@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: wccommon.mak,v 1.10 2007/09/11 15:24:22 Arabidopsis Exp $
+# $Id: wccommon.mak,v 1.11 2008/03/23 15:27:43 Arabidopsis Exp $
 # wccommon.mak
 # Section of Watcom C/C++ makefile common to MS-DOS and MS Windows.
 # We strongly recommend that you read the Watcom section of Make.htm
@@ -27,7 +27,7 @@
 #	GS_LIB_DEFAULT, SEARCH_HERE_FIRST, GS_INIT, FEATURE_DEVS,
 #	DEVICE_DEVS*, COMPILE_INITS, BAND_LIST_*
 #   Configuration, internal, generic:
-#	PLATFORM, MAKEFILE, AK, CC*, DEBUG, NOPRIVATE, CP_, RM_, RMN_
+#	PLATFORM, MAKEFILE, AK, CC*, DEBUG, CP_, RM_, RMN_
 #   Configuration, internal, specific to DOS/Windows:
 #	TDEBUG, USE_ASM, ASM,
 #	COMPDIR, LIBPATHS,
@@ -196,13 +196,6 @@ dosdefault: default
 
 # Define the compilation flags.
 
-# Privacy
-!ifneq NOPRIVATE 0
-CP=-dNOPRIVATE
-!else
-CP=
-!endif
-
 # Run-time debugging and stack checking
 !ifneq DEBUG 0
 CD=-dDEBUG
@@ -221,7 +214,7 @@ CT=-d1
 LCT=DEBUG LINES
 !endif
 
-GENOPT=$(CP) $(CD) $(CT) $(CS)
+GENOPT=$(CD) $(CT) $(CS)
 
 CCOPT=-d+ -i=$(INCDIRS) -zq -zp8 -ei
 CCFLAGS=$(CCOPT) $(GENOPT) $(PLATOPT) $(FPFLAGS) $(CFLAGS) $(XCFLAGS)

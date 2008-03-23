@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevdjet.c,v 1.11 2007/09/11 15:24:42 Arabidopsis Exp $ */
+/* $Id: gdevdjet.c,v 1.12 2008/03/23 15:28:11 Arabidopsis Exp $ */
 /* HP LaserJet/DeskJet driver for Ghostscript */
 #include "gdevprn.h"
 #include "gdevdljm.h"
@@ -99,30 +99,30 @@
 /* See gdevdljm.h for the definitions of the PCL_ features. */
 
 /* The device descriptors */
-private dev_proc_open_device(hpjet_open);
-private dev_proc_close_device(hpjet_close);
-private dev_proc_close_device(ljet4pjl_close);
-private dev_proc_print_page_copies(djet_print_page_copies);
-private dev_proc_print_page_copies(djet500_print_page_copies);
-private dev_proc_print_page_copies(fs600_print_page_copies);
-private dev_proc_print_page_copies(ljet_print_page_copies);
-private dev_proc_print_page_copies(ljetplus_print_page_copies);
-private dev_proc_print_page_copies(ljet2p_print_page_copies);
-private dev_proc_print_page_copies(ljet3_print_page_copies);
-private dev_proc_print_page_copies(ljet3d_print_page_copies);
-private dev_proc_print_page_copies(ljet4_print_page_copies);
-private dev_proc_print_page_copies(ljet4d_print_page_copies);
-private dev_proc_print_page_copies(lp2563_print_page_copies);
-private dev_proc_print_page_copies(oce9050_print_page_copies);
-private dev_proc_print_page_copies(ljet4pjl_print_page_copies);
-private dev_proc_get_params(hpjet_get_params);
-private dev_proc_put_params(hpjet_put_params);
+static dev_proc_open_device(hpjet_open);
+static dev_proc_close_device(hpjet_close);
+static dev_proc_close_device(ljet4pjl_close);
+static dev_proc_print_page_copies(djet_print_page_copies);
+static dev_proc_print_page_copies(djet500_print_page_copies);
+static dev_proc_print_page_copies(fs600_print_page_copies);
+static dev_proc_print_page_copies(ljet_print_page_copies);
+static dev_proc_print_page_copies(ljetplus_print_page_copies);
+static dev_proc_print_page_copies(ljet2p_print_page_copies);
+static dev_proc_print_page_copies(ljet3_print_page_copies);
+static dev_proc_print_page_copies(ljet3d_print_page_copies);
+static dev_proc_print_page_copies(ljet4_print_page_copies);
+static dev_proc_print_page_copies(ljet4d_print_page_copies);
+static dev_proc_print_page_copies(lp2563_print_page_copies);
+static dev_proc_print_page_copies(oce9050_print_page_copies);
+static dev_proc_print_page_copies(ljet4pjl_print_page_copies);
+static dev_proc_get_params(hpjet_get_params);
+static dev_proc_put_params(hpjet_put_params);
 
-private const gx_device_procs prn_hp_procs =
+static const gx_device_procs prn_hp_procs =
 prn_params_procs(hpjet_open, gdev_prn_output_page, hpjet_close,
 		 hpjet_get_params, hpjet_put_params);
 
-private gx_device_procs prn_ljet4pjl_procs =
+static gx_device_procs prn_ljet4pjl_procs =
 prn_params_procs(hpjet_open, gdev_prn_output_page, ljet4pjl_close,
 		 gdev_prn_get_params, gdev_prn_put_params);
 
@@ -236,7 +236,7 @@ prn_device_copies(prn_ljet4pjl_procs, "ljet4pjl",
 	   1, ljet4pjl_print_page_copies);
 
 /* Open the printer, adjusting the margins if necessary. */
-private int
+static int
 hpjet_open(gx_device * pdev)
 {				/* Change the margins if necessary. */
     gx_device_printer *const ppdev = (gx_device_printer *)pdev;
@@ -278,7 +278,7 @@ hpjet_open(gx_device * pdev)
 
 /* hpjet_close is only here to eject odd numbered pages in duplex mode, */
 /* and to reset the printer so the ink cartridge doesn't clog up. */
-private int
+static int
 hpjet_close(gx_device * pdev)
 {
     gx_device_printer *const ppdev = (gx_device_printer *)pdev;
@@ -296,7 +296,7 @@ hpjet_close(gx_device * pdev)
     return gdev_prn_close(pdev);
 }
 
-private int
+static int
 ljet4pjl_close(gx_device *pdev)
 {
     gx_device_printer *const ppdev = (gx_device_printer *)pdev;
@@ -317,7 +317,7 @@ ljet4pjl_close(gx_device *pdev)
 /* Make an init string that contains paper tray selection. The resulting
    init string is stored in buf, so make sure that buf is at least 5
    bytes larger than str. */
-private void
+static void
 hpjet_make_init(gx_device_printer *pdev, char *buf, const char *str)
 {
     gx_device_hpjet *dev = (gx_device_hpjet *)pdev;
@@ -335,7 +335,7 @@ hpjet_make_init(gx_device_printer *pdev, char *buf, const char *str)
 }
 
 /* The DeskJet can compress (mode 2) */
-private int
+static int
 djet_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 		       int num_copies)
 {
@@ -346,7 +346,7 @@ djet_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 					300, PCL_DJ_FEATURES, init, init, false);
 }
 /* The DeskJet500 can compress (modes 2&3) */
-private int
+static int
 djet500_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 			  int num_copies)
 {
@@ -359,7 +359,7 @@ djet500_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 /* The Kyocera FS-600 laser printer (and perhaps other printers */
 /* which use the PeerlessPrint5 firmware) doesn't handle        */
 /* ESC&l#u and ESC&l#Z correctly.                               */
-private int
+static int
 fs600_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 			int num_copies)
 {
@@ -374,7 +374,7 @@ fs600_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 					init, init, false);
 }
 /* The LaserJet series II can't compress */
-private int
+static int
 ljet_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 		       int num_copies)
 {
@@ -385,7 +385,7 @@ ljet_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 					300, PCL_LJ_FEATURES, init, init, false);
 }
 /* The LaserJet Plus can't compress */
-private int
+static int
 ljetplus_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 			   int num_copies)
 {
@@ -397,7 +397,7 @@ ljetplus_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 }
 /* LaserJet series IIp & IId compress (mode 2) */
 /* but don't support *p+ or *b vertical spacing. */
-private int
+static int
 ljet2p_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 			 int num_copies)
 {
@@ -409,7 +409,7 @@ ljet2p_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 }
 /* All LaserJet series IIIs (III,IIId,IIIp,IIIsi) compress (modes 2&3) */
 /* They also need their coordinate system translated slightly. */
-private int
+static int
 ljet3_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 			int num_copies)
 {
@@ -420,7 +420,7 @@ ljet3_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 					300, PCL_LJ3_FEATURES, init, init, false);
 }
 /* LaserJet IIId is same as LaserJet III, except for duplex */
-private int
+static int
 ljet3d_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 			 int num_copies)
 {
@@ -438,7 +438,7 @@ ljet3d_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 /* LaserJet 4 series compresses, and it needs a special sequence to */
 /* allow it to specify coordinates at 600 dpi. */
 /* It too needs its coordinate system translated slightly. */
-private int
+static int
 ljet4_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 			int num_copies)
 {
@@ -453,7 +453,7 @@ ljet4_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 					dots_per_inch, PCL_LJ4_FEATURES,
 					init, init, false);
 }
-private int
+static int
 ljet4d_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 			 int num_copies)
 {
@@ -478,7 +478,7 @@ ljet4d_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 /* LaserJet 4 series compresses, and it needs a special sequence to */
 /* allow it to specify coordinates at 600 dpi. */
 /* It too needs its coordinate system translated slightly. */
-private int
+static int
 ljet4pjl_print_page_copies(gx_device_printer *pdev, FILE *prn_stream,
 			int num_copies)
 {	int dots_per_inch = (int)pdev->y_pixels_per_inch;
@@ -492,7 +492,7 @@ ljet4pjl_print_page_copies(gx_device_printer *pdev, FILE *prn_stream,
 
 /* The 2563B line printer can't compress */
 /* and doesn't support *p+ or *b vertical spacing. */
-private int
+static int
 lp2563_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 			 int num_copies)
 {
@@ -504,7 +504,7 @@ lp2563_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 }
 /* The Oce line printer has TIFF compression */
 /* and doesn't support *p+ or *b vertical spacing. */
-private int
+static int
 oce9050_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
 			  int num_copies)
 {
@@ -533,7 +533,7 @@ oce9050_print_page_copies(gx_device_printer * pdev, FILE * prn_stream,
     return code;
 }
 
-private int
+static int
 hpjet_get_params(gx_device *pdev, gs_param_list *plist)
 {
     gx_device_hpjet *dev = (gx_device_hpjet *)pdev;
@@ -548,7 +548,7 @@ hpjet_get_params(gx_device *pdev, gs_param_list *plist)
     return code;
 }
 
-private int
+static int
 hpjet_put_params(gx_device *pdev, gs_param_list *plist)
 {
     gx_device_hpjet *dev = (gx_device_hpjet *)pdev;

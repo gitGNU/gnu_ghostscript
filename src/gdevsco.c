@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevsco.c,v 1.7 2007/09/11 15:24:08 Arabidopsis Exp $ */
+/* $Id: gdevsco.c,v 1.8 2008/03/23 15:28:18 Arabidopsis Exp $ */
 /* 17Jul91 - wb - based on gdevpcfb.c */
 /* 31Jul91 - Rick Calder rick@rick.att.com - ifdefs for AT&T UNIX 4.0 2.1 */
 /* 13Sep91 - wb - modify for gs24b2 */
@@ -53,9 +53,9 @@ extern int ioctl(int, int,...);
 extern int open(const char *, int,...);
 #endif
 
-private int console_fd = -1;	/* file descriptor of console */
+static int console_fd = -1;	/* file descriptor of console */
 fb_ptr fb_addr;			/* address of frame buffer for unix */
-private int cur_mode = -1;	/* current video mode */
+static int cur_mode = -1;	/* current video mode */
 
 /* open the console */
 /* possible files to open:
@@ -64,9 +64,9 @@ private int cur_mode = -1;	/* current video mode */
  * /dev/tty = current terminal
  */
 
-private void open_console(void);
+static void open_console(void);
 
-private void
+static void
 open_console()
 {
     const char *dev;
@@ -141,7 +141,7 @@ outport2(uint port, byte index, byte data)
 
 /* interrupt signal handler */
 /*  restore the video mode and exit */
-private void
+static void
 ega_int_handler(int sig)
 {
     ega_close((gx_device *) NULL);
@@ -157,7 +157,7 @@ ega_int_handler(int sig)
 
 #ifdef	SIGTSTP
 /* user tried to stop us.  restore video and stop */
-private void
+static void
 ega_tstp_handler(int sig)
 {
 #if 1
@@ -175,7 +175,7 @@ ega_tstp_handler(int sig)
 
 #ifdef	SIGCONT
 /* we were unstopped.  reopen video */
-private void
+static void
 ega_cont_handler(int sig)
 {
 #if 1

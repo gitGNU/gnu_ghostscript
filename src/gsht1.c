@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gsht1.c,v 1.8 2007/09/11 15:23:52 Arabidopsis Exp $ */
+/*$Id: gsht1.c,v 1.9 2008/03/23 15:28:03 Arabidopsis Exp $ */
 /* Extended halftone operators for Ghostscript library */
 #include "memory_.h"
 #include "string_.h"
@@ -36,15 +36,15 @@
 void load_transfer_map(gs_state *, gx_transfer_map *, floatp);
 
 /* Forward declarations */
-private int process_spot(gx_ht_order *, gs_state *,
+static int process_spot(gx_ht_order *, gs_state *,
 			 gs_spot_halftone *, gs_memory_t *);
-private int process_threshold(gx_ht_order *, gs_state *,
+static int process_threshold(gx_ht_order *, gs_state *,
 			      gs_threshold_halftone *, gs_memory_t *);
-private int process_threshold2(gx_ht_order *, gs_state *,
+static int process_threshold2(gx_ht_order *, gs_state *,
 			       gs_threshold2_halftone *, gs_memory_t *);
-private int process_client_order(gx_ht_order *, gs_state *,
+static int process_client_order(gx_ht_order *, gs_state *,
 				 gs_client_order_halftone *, gs_memory_t *);
-private int
+static int
 gs_sethalftone_try_wts(gs_halftone *pht, gs_state *pgs,
 		       gx_device_halftone *pdht);
 
@@ -54,7 +54,7 @@ public_st_ht_component_element();
 
 /* GC procedures */
 
-private 
+static 
 ENUM_PTRS_WITH(halftone_component_enum_ptrs, gs_halftone_component *hptr) return 0;
 case 0:
 switch (hptr->type)
@@ -87,7 +87,7 @@ switch (hptr->type) {
 	return 0;
 }
 ENUM_PTRS_END
-private RELOC_PTRS_WITH(halftone_component_reloc_ptrs, gs_halftone_component *hptr)
+static RELOC_PTRS_WITH(halftone_component_reloc_ptrs, gs_halftone_component *hptr)
 {
     switch (hptr->type) {
 	case ht_type_spot:
@@ -331,7 +331,7 @@ gs_sethalftone_prepare(gs_state * pgs, gs_halftone * pht,
 /* ------ Internal routines ------ */
 
 /* Process a transfer function override, if any. */
-private int
+static int
 process_transfer(gx_ht_order * porder, gs_state * pgs,
 		 gs_mapping_proc proc, gs_mapping_closure_t * pmc,
 		 gs_memory_t * mem)
@@ -356,7 +356,7 @@ process_transfer(gx_ht_order * porder, gs_state * pgs,
 }
 
 /* Process a spot plane. */
-private int
+static int
 process_spot(gx_ht_order * porder, gs_state * pgs,
 	     gs_spot_halftone * phsp, gs_memory_t * mem)
 {
@@ -405,7 +405,7 @@ gx_ht_construct_threshold_order(gx_ht_order * porder, const byte * thresholds)
 }
 
 /* Process a threshold plane. */
-private int
+static int
 process_threshold(gx_ht_order * porder, gs_state * pgs,
 		  gs_threshold_halftone * phtp, gs_memory_t * mem)
 {
@@ -425,7 +425,7 @@ process_threshold(gx_ht_order * porder, gs_state * pgs,
 }
 
 /* Process an extended threshold plane. */
-private int
+static int
 process_threshold2(gx_ht_order * porder, gs_state * pgs,
 		   gs_threshold2_halftone * phtp, gs_memory_t * mem)
 {
@@ -541,7 +541,7 @@ process_threshold2(gx_ht_order * porder, gs_state * pgs,
 }
 
 /* Process a client-order plane. */
-private int
+static int
 process_client_order(gx_ht_order * porder, gs_state * pgs,
 		     gs_client_order_halftone * phcop, gs_memory_t * mem)
 {
@@ -553,7 +553,7 @@ process_client_order(gx_ht_order * porder, gs_state * pgs,
 			    &phcop->transfer_closure, mem);
 }
 
-private const gx_ht_order_procs_t wts_order_procs = { 0
+static const gx_ht_order_procs_t wts_order_procs = { 0
 };
 
 /**
@@ -567,7 +567,7 @@ private const gx_ht_order_procs_t wts_order_procs = { 0
  * was not done, and that the legacy initialization code path should
  * be used.
  **/
-private int
+static int
 gs_sethalftone_try_wts(gs_halftone *pht, gs_state *pgs,
 		       gx_device_halftone *pdht)
 {

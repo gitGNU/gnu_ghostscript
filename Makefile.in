@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 Artifex Software, Inc.
+#  Copyright (C) 2001-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 # 
 # This file is part of GNU ghostscript
@@ -18,7 +18,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: Makefile.in,v 1.17 2007/09/11 15:25:16 Arabidopsis Exp $
+# $Id: Makefile.in,v 1.18 2008/03/23 15:28:32 Arabidopsis Exp $
 # makefile template for/from the autoconf build.
 # @configure_input@
 
@@ -75,6 +75,7 @@ prefix = @prefix@
 exec_prefix = @exec_prefix@
 bindir = @bindir@
 scriptdir = $(bindir)
+includedir = @includedir@
 libdir = @libdir@
 mandir = @mandir@
 man1ext = 1
@@ -87,10 +88,19 @@ datarootdir = @datarootdir@
 gsdir = @datadir@/ghostscript
 gsdatadir = $(gsdir)/$(GS_DOT_VERSION)
 gssharedir = @libdir@/ghostscript/$(GS_DOT_VERSION)
+gsincludedir = @includedir@/ghostscript/
 
 docdir=$(gsdatadir)/doc
 exdir=$(gsdatadir)/examples
 GS_DOCDIR=$(docdir)
+
+# Define install location for 'cups' device/filter support
+CUPSCFLAGS=@CUPSCFLAGS@
+CUPSLIBS=@CUPSLIBS@
+CUPSLIBDIRS=@CUPSLIBDIRS@
+CUPSSERVERBIN=@CUPSSERVERBIN@
+CUPSSERVERROOT=@CUPSSERVERROOT@
+CUPSDATA=@CUPSDATA@
 
 # Define the default directory/ies for the runtime
 # initialization and font files.  Separate multiple directories with a :.
@@ -122,10 +132,6 @@ GS_INIT=gs_init.ps
 #	includes debugging features (-Z switch) in the code.
 #	  Code runs substantially slower even if no debugging switches
 #	  are set.
-# -DNOPRIVATE
-#	makes private (static) procedures and variables public,
-#	  so they are visible to the debugger and profiler.
-#	  No execution time or space penalty.
 
 GENOPT=
 
@@ -140,8 +146,11 @@ GENOPT=
 #
 # -DHAVE_FILE64
 #	use marked versions of the stdio FILE calls, fopen64() et al.
+#
+# -DHAVE_MKSTEMP64
+#	use non-standard function mkstemp64()
 
-CAPOPT= @HAVE_MKSTEMP@ @HAVE_HYPOT@ @HAVE_FILE64@ @HAVE_FONTCONFIG@
+CAPOPT= @HAVE_MKSTEMP@ @HAVE_HYPOT@ @HAVE_FILE64@ @HAVE_MKSTEMP64@ @HAVE_FONTCONFIG@
 
 # Define the name of the executable file.
 
@@ -169,7 +178,6 @@ PGRELDIR=../pgobj
 # See jpeg.mak for more information.
 
 JSRCDIR=@LIBJPEGDIR@
-JVERSION=6
 
 # Note: if a shared library is used, it may not contain the
 # D_MAX_BLOCKS_IN_MCU patch, and thus may not be able to read
@@ -185,7 +193,7 @@ JPEG_NAME=jpeg
 # See libpng.mak for more information.
 
 SHARE_LIBPNG=@SHARE_LIBPNG@
-PSRCDIR=@LIBPNGDIR@
+PNGSRCDIR=@LIBPNGDIR@
 LIBPNG_NAME=png
 
 # Define the directory where the zlib sources are stored.
@@ -279,6 +287,10 @@ CFLAGS_SO=@DYNAMIC_CFLAGS@
 #   specific stuff that <math.h> typically needs; nevertheless, we expect
 #   gcc to accept ANSI-style function prototypes and function definitions.
 XCFLAGS=@DYNAMIC_FLAGS@
+
+# fontconfig flags, used by unix-aux.mak
+FONTCONFIG_CFLAGS=@FONTCONFIG_CFLAGS@
+FONTCONFIG_LIBS=@FONTCONFIG_LIBS@
 
 # defines from autoconf; note that we don't use these at present.
 ACDEFS=@DEFS@
@@ -412,7 +424,11 @@ FILE_IMPLEMENTATION=stdio
 
 STDIO_IMPLEMENTATION=c
 
-# Override the default device.  This is set to 'display' by 
+# List of default devices, in order of priority. They need not be 
+# present in the actual build.
+GS_DEV_DEFAULT="x11alpha x11 bbox"
+
+# Fallback default device.  This is set to 'display' by 
 # unix-dll.mak when building a shared object.
 DISPLAY_DEV=$(DD)bbox.dev
 
@@ -443,7 +459,7 @@ EXTEND_NAMES=0
 #DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev
 #DEVICE_DEVS13=@PNGDEVS@
 #DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev
-#DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
+#DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)txtwrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
 #DEVICE_DEVS16=$(DD)bbox.dev
 
 #DEVICE_DEVS17=

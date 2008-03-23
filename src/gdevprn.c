@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevprn.c,v 1.11 2007/09/11 15:24:19 Arabidopsis Exp $ */
+/* $Id: gdevprn.c,v 1.12 2008/03/23 15:27:57 Arabidopsis Exp $ */
 /* Generic printer driver support */
 #include "ctype_.h"
 #include "gdevprn.h"
@@ -34,14 +34,14 @@
 
 /* GC information */
 #define PRINTER_IS_CLIST(pdev) ((pdev)->buffer_space != 0)
-private
+static
 ENUM_PTRS_WITH(device_printer_enum_ptrs, gx_device_printer *pdev)
     if (PRINTER_IS_CLIST(pdev))
 	ENUM_PREFIX(st_device_clist, 0);
     else
 	ENUM_PREFIX(st_device_forward, 0);
 ENUM_PTRS_END
-private
+static
 RELOC_PTRS_WITH(device_printer_reloc_ptrs, gx_device_printer *pdev)
 {
     if (PRINTER_IS_CLIST(pdev))
@@ -98,7 +98,7 @@ gdev_prn_close(gx_device * pdev)
     return code;
 }
 
-private int		/* returns 0 ok, else -ve error cde */
+static int		/* returns 0 ok, else -ve error cde */
 gdev_prn_setup_as_command_list(gx_device *pdev, gs_memory_t *buffer_memory,
 			       byte **the_memory,
 			       const gdev_prn_space_params *space_params,
@@ -188,7 +188,7 @@ open_c:
     return code;
 }
 
-private bool	/* ret true if device was cmd list, else false */
+static bool	/* ret true if device was cmd list, else false */
 gdev_prn_tear_down(gx_device *pdev, byte **the_memory)
 {
     gx_device_printer * const ppdev = (gx_device_printer *)pdev;
@@ -226,7 +226,7 @@ gdev_prn_tear_down(gx_device *pdev, byte **the_memory)
     return is_command_list;
 }
 
-private int
+static int
 gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
 		  int new_width, int new_height, bool reallocate)
 {
@@ -284,7 +284,7 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
 	size_ok = ppdev->printer_procs.buf_procs.size_buf_device
 	    (&buf_space, pdev, NULL, pdev->height, false) >= 0;
 	if (ppdev->page_uses_transparency) 
-	    if (new_height < max_ulong/(ESTIMATED_PDF14_ROW_SPACE(new_width) >> 3))
+	    if (new_height < max_ulong/(ESTIMATED_PDF14_ROW_SPACE(max(1, new_width)) >> 3))
 		pdf14_trans_buffer_size = new_height
 		    * (ESTIMATED_PDF14_ROW_SPACE(new_width) >> 3);
 	    else {
@@ -520,7 +520,7 @@ gdev_prn_get_params(gx_device * pdev, gs_param_list * plist)
 }
 
 /* Validate an OutputFile name by checking any %-formats. */
-private int
+static int
 validate_output_file(const gs_param_string * ofs)
 {
     gs_parsed_file_name_t parsed;

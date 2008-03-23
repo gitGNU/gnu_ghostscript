@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevdfax.c,v 1.7 2007/09/11 15:24:00 Arabidopsis Exp $*/
+/* $Id: gdevdfax.c,v 1.8 2008/03/23 15:28:03 Arabidopsis Exp $*/
 /* DigiBoard fax device. */
 /***
  *** Note: this driver is maintained by a user: please contact
@@ -34,8 +34,8 @@
 
 /* The device descriptors */
 
-private dev_proc_open_device(dfax_prn_open);
-private dev_proc_print_page(dfax_print_page);
+static dev_proc_open_device(dfax_prn_open);
+static dev_proc_print_page(dfax_print_page);
 
 struct gx_device_dfax_s {
 	gx_device_common;
@@ -45,7 +45,7 @@ struct gx_device_dfax_s {
 };
 typedef struct gx_device_dfax_s gx_device_dfax;
 
-private gx_device_procs dfax_procs =
+static gx_device_procs dfax_procs =
   prn_procs(dfax_prn_open, gdev_prn_output_page, gdev_prn_close);
 
 gx_device_dfax far_data gs_dfaxlow_device =
@@ -67,14 +67,14 @@ gx_device_dfax far_data gs_dfaxhigh_device =
 #define dfdev ((gx_device_dfax *)dev)
 
 /* Open the device, adjusting the paper size. */
-private int
+static int
 dfax_prn_open(gx_device *dev)
 {	dfdev->pageno = 0;
 	return gdev_fax_open(dev);
 }
 
 /* Print a DigiFAX page. */
-private int
+static int
 dfax_print_page(gx_device_printer *dev, FILE *prn_stream)
 {	stream_CFE_state state;
 	static char hdr[64] = "\000PC Research, Inc\000\000\000\000\000\000";

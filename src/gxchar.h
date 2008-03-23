@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxchar.h,v 1.9 2007/09/11 15:24:29 Arabidopsis Exp $ */
+/* $Id: gxchar.h,v 1.10 2008/03/23 15:28:17 Arabidopsis Exp $ */
 /* Internal character definition for Ghostscript library */
 /* Requires gsmatrix.h, gxfixed.h */
 
@@ -125,8 +125,7 @@ int gx_current_char(const gs_text_enum_t * pte);
 typedef struct gs_font_dir_s gs_font_dir;
 
 #endif
-cached_char *
-            gx_alloc_char_bits(gs_font_dir *, gx_device_memory *, gx_device_memory *, ushort, ushort, const gs_log2_scale_point *, int);
+int  gx_alloc_char_bits(gs_font_dir *, gx_device_memory *, gx_device_memory *, ushort, ushort, const gs_log2_scale_point *, int, cached_char **);
 void gx_open_cache_device(gx_device_memory *, cached_char *);
 void gx_free_cached_char(gs_font_dir *, cached_char *);
 int  gx_add_cached_char(gs_font_dir *, gx_device_memory *, cached_char *, cached_fm_pair *, const gs_log2_scale_point *);

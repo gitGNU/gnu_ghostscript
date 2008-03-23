@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: zdfilter.c,v 1.7 2007/09/11 15:23:55 Arabidopsis Exp $ */
+/* $Id: zdfilter.c,v 1.8 2008/03/23 15:28:05 Arabidopsis Exp $ */
 /* PostScript operators for managing the device filter stack */
 
 /* We probably don't need all of these, they were copied from zdevice.c. */
@@ -39,7 +39,7 @@
 /* pushpdf14devicefilter is defined in ztrans.c */
 
 /* - .popdevicefilter - */
-private int
+static int
 zpopdevicefilter(i_ctx_t *i_ctx_p)
 {
     gs_memory_t *mem = gs_memory_stable(imemory);

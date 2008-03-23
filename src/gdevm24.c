@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevm24.c,v 1.7 2007/09/11 15:24:17 Arabidopsis Exp $ */
+/* $Id: gdevm24.c,v 1.8 2008/03/23 15:27:55 Arabidopsis Exp $ */
 /* 24-bit-per-pixel "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"
@@ -60,7 +60,7 @@ static uint prev_colors[256];
 
 /* Procedures */
 declare_mem_procs(mem_true24_copy_mono, mem_true24_copy_color, mem_true24_fill_rectangle);
-private dev_proc_copy_alpha(mem_true24_copy_alpha);
+static dev_proc_copy_alpha(mem_true24_copy_alpha);
 
 /* The device descriptor. */
 const gx_device_memory mem_true24_device =
@@ -105,7 +105,7 @@ mem_full_alpha_device("image24", 24, 0, mem_open,
 #endif
 
 /* Fill a rectangle with a color. */
-private int
+static int
 mem_true24_fill_rectangle(gx_device * dev,
 			  int x, int y, int w, int h, gx_color_index color)
 {
@@ -345,7 +345,7 @@ mem_true24_fill_rectangle(gx_device * dev,
 }
 
 /* Copy a monochrome bitmap. */
-private int
+static int
 mem_true24_copy_mono(gx_device * dev,
 	       const byte * base, int sourcex, int sraster, gx_bitmap_id id,
 	int x, int y, int w, int h, gx_color_index zero, gx_color_index one)
@@ -462,7 +462,7 @@ mem_true24_copy_mono(gx_device * dev,
 }
 
 /* Copy a color bitmap. */
-private int
+static int
 mem_true24_copy_color(gx_device * dev,
 	       const byte * base, int sourcex, int sraster, gx_bitmap_id id,
 		      int x, int y, int w, int h)
@@ -475,7 +475,7 @@ mem_true24_copy_color(gx_device * dev,
 }
 
 /* Copy an alpha map. */
-private int
+static int
 mem_true24_copy_alpha(gx_device * dev, const byte * base, int sourcex,
 		   int sraster, gx_bitmap_id id, int x, int y, int w, int h,
 		      gx_color_index color, int depth)
@@ -538,7 +538,7 @@ mem_full_device("image24w", 24, 0, mem_open,
 		gx_no_strip_copy_rop, mem_word_get_bits_rectangle);
 
 /* Fill a rectangle with a color. */
-private int
+static int
 mem24_word_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 			  gx_color_index color)
 {
@@ -556,7 +556,7 @@ mem24_word_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 }
 
 /* Copy a bitmap. */
-private int
+static int
 mem24_word_copy_mono(gx_device * dev,
 	       const byte * base, int sourcex, int sraster, gx_bitmap_id id,
 	int x, int y, int w, int h, gx_color_index zero, gx_color_index one)
@@ -578,7 +578,7 @@ mem24_word_copy_mono(gx_device * dev,
 }
 
 /* Copy a color bitmap. */
-private int
+static int
 mem24_word_copy_color(gx_device * dev,
 	       const byte * base, int sourcex, int sraster, gx_bitmap_id id,
 		      int x, int y, int w, int h)

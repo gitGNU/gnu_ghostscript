@@ -17,7 +17,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
-# $Id: bcwin32.mak,v 1.12 2007/09/11 15:24:13 Arabidopsis Exp $
+# $Id: bcwin32.mak,v 1.13 2008/03/23 15:27:50 Arabidopsis Exp $
 # makefile for (MS-Windows 3.1/Win32s / Windows 95 / Windows NT) +
 #   Borland C++ 4.5 and 5.5 platforms.
 #   Borland C++Builder 3 platform (need BC++ 4.5 for 16-bit code)
@@ -122,14 +122,6 @@ DEBUG=0
 TDEBUG=0
 !endif
 
-# Setting NOPRIVATE=1 makes private (static) procedures and variables
-# public, so they are visible to the debugger and profiler.  There is no
-# execution time or space penalty, just larger .OBJ and .EXE files.
-
-!ifndef NOPRIVATE
-NOPRIVATE=0
-!endif
-
 # Define the names of the executable files.
 
 !ifndef GS
@@ -168,7 +160,6 @@ MAKEDLL=1
 
 !ifndef JSRCDIR
 JSRCDIR=jpeg
-JVERSION=6
 !endif
 
 # Define the directory where the PNG library sources are stored,
@@ -176,9 +167,8 @@ JVERSION=6
 # You may need to change this if the libpng version changes.
 # See libpng.mak for more information.
 
-!ifndef PSRCDIR
-PSRCDIR=libpng
-PVERSION=10218
+!ifndef PNGSRCDIR
+PNGSRCDIR=libpng
 !endif
 
 # Define the directory where the zlib sources are stored.
@@ -457,7 +447,7 @@ DEVICE_DEVS11=$(DD)bmpmono.dev $(DD)bmpgray.dev $(DD)bmp16.dev $(DD)bmp256.dev $
 DEVICE_DEVS12=$(DD)psmono.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
 DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev $(DD)jpegcmyk.dev
-DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
+DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)txtwrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
 DEVICE_DEVS16=$(DD)bbox.dev
 # Overflow for DEVS3,4,5,6,9
 DEVICE_DEVS17=$(DD)ljet3.dev $(DD)ljet3d.dev $(DD)ljet4.dev $(DD)ljet4d.dev 
@@ -531,12 +521,6 @@ ASMFPU=
 FPFLAGS=
 FPLIB=
 
-!if $(NOPRIVATE)!=0
-CP=-DNOPRIVATE
-!else
-CP=
-!endif
-
 !if $(DEBUG)!=0
 CD=-DDEBUG
 !else
@@ -569,7 +553,7 @@ COMPILE_FOR_EXE=-WE
 COMPILE_FOR_CONSOLE_EXE=-WC
 
 # The -tWM is for multi-thread-safe compilation.
-GENOPT=$(CP) $(CD) $(CT) $(CS) $(CMT)
+GENOPT=$(CD) $(CT) $(CS) $(CMT)
 
 CCFLAGS0=$(GENOPT) $(PLATOPT) $(CPFLAGS) $(FPFLAGS) $(CFLAGS) $(XCFLAGS)
 CCFLAGS=$(CCFLAGS0)

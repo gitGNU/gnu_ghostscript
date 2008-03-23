@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: spdiff.c,v 1.9 2007/09/11 15:24:14 Arabidopsis Exp $ */
+/* $Id: spdiff.c,v 1.10 2008/03/23 15:27:53 Arabidopsis Exp $ */
 /* Pixel differencing filters */
 #include "stdio_.h"		/* should be std.h, but needs NULL */
 #include "memory_.h"
@@ -38,7 +38,7 @@ private_st_PDiff_state();
 #define cDecode 25
 
 /* Set defaults */
-private void
+static void
 s_PDiff_set_defaults(stream_state * st)
 {
     stream_PDiff_state *const ss = (stream_PDiff_state *) st;
@@ -47,7 +47,7 @@ s_PDiff_set_defaults(stream_state * st)
 }
 
 /* Common (re)initialization. */
-private int
+static int
 s_PDiff_reinit(stream_state * st)
 {
     stream_PDiff_state *const ss = (stream_PDiff_state *) st;
@@ -57,7 +57,7 @@ s_PDiff_reinit(stream_state * st)
 }
 
 /* Initialize PixelDifferenceEncode filter. */
-private int
+static int
 s_PDiffE_init(stream_state * st)
 {
     stream_PDiff_state *const ss = (stream_PDiff_state *) st;
@@ -77,7 +77,7 @@ s_PDiffE_init(stream_state * st)
 }
 
 /* Initialize PixelDifferenceDecode filter. */
-private int
+static int
 s_PDiffD_init(stream_state * st)
 {
     stream_PDiff_state *const ss = (stream_PDiff_state *) st;
@@ -88,7 +88,7 @@ s_PDiffD_init(stream_state * st)
 }
 
 /* Process a buffer.  Note that this handles both Encode and Decode. */
-private int
+static int
 s_PDiff_process(stream_state * st, stream_cursor_read * pr,
 		stream_cursor_write * pw, bool last)
 {

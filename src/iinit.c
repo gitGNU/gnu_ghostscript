@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: iinit.c,v 1.9 2007/09/11 15:24:32 Arabidopsis Exp $ */
+/* $Id: iinit.c,v 1.10 2008/03/23 15:27:48 Arabidopsis Exp $ */
 /* Initialize internally known objects for Ghostscript interpreter */
 #include "string_.h"
 #include "ghost.h"
@@ -93,7 +93,7 @@ const char *const gs_error_names[] =
 op_array_table op_array_table_global, op_array_table_local;	/* definitions of `operator' procedures */
 
 /* Enter a name and value into a dictionary. */
-private int
+static int
 i_initial_enter_name_in(i_ctx_t *i_ctx_p, ref *pdict, const char *nstr,
 			const ref * pref)
 {
@@ -166,7 +166,7 @@ const char *const initial_dstack[] =
  * We export this for gs_init1 in imain.c.
  * This is slow, but we only call it a couple of times.
  */
-private int
+static int
 gs_op_language_level(void)
 {
     const op_def *const *tptr;
@@ -192,7 +192,7 @@ gs_have_level2(void)
 }
 
 /* Create an initial dictionary if necessary. */
-private ref *
+static ref *
 make_initial_dict(i_ctx_t *i_ctx_p, const char *iname, ref idicts[])
 {
     int i;
@@ -408,7 +408,7 @@ zop_init(i_ctx_t *i_ctx_p)
 }
 
 /* Create an op_array table. */
-private int
+static int
 alloc_op_array_table(i_ctx_t *i_ctx_p, uint size, uint space,
 		     op_array_table *opt)
 {
@@ -518,3 +518,25 @@ op_init(i_ctx_t *i_ctx_p)
 
     return 0;
 }
+
+#ifdef DEBUG_TRACE_PS_OPERATORS
+static const char *unknown_op_name = "unknown_op";
+
+const char *
+op_get_name_string(op_proc_t opproc)
+{
+    const op_def *const *tptr;
+    int code;
+
+    for (tptr = op_defs_all; *tptr != 0; tptr++) {
+	const op_def *def;
+
+	for (def = *tptr; def->oname != 0; def++)
+	    if (!op_def_is_begin_dict(def)) {
+		if (def->proc == opproc)
+		    return def->oname;
+	    }
+    }
+    return unknown_op_name;
+}
+#endif		   

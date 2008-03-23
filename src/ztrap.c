@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ztrap.c,v 1.7 2007/09/11 15:24:07 Arabidopsis Exp $ */
+/* $Id: ztrap.c,v 1.8 2008/03/23 15:28:00 Arabidopsis Exp $ */
 /* Operators for setting trapping parameters and zones */
 #include "ghost.h"
 #include "oper.h"
@@ -30,7 +30,7 @@
 gs_trap_params_t i_trap_params;
 
 /* <dict> .settrapparams - */
-private int
+static int
 zsettrapparams(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -50,7 +50,7 @@ zsettrapparams(i_ctx_t *i_ctx_p)
 }
 
 /* - settrapzone - */
-private int
+static int
 zsettrapzone(i_ctx_t *i_ctx_p)
 {
 /****** NYI ******/

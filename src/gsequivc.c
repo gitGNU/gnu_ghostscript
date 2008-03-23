@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gsequivc.c,v 1.5 2007/09/11 15:23:55 Arabidopsis Exp $ */
+/*$Id: gsequivc.c,v 1.6 2008/03/23 15:28:02 Arabidopsis Exp $ */
 /* Routines for determining equivalent color for spot colors */
 
 #include "math_.h"
@@ -111,7 +111,7 @@
     (name_size == str_size && \
 	(strncmp((const char *)name, (const char *)str, name_size) == 0))
 
-private void
+static void
 update_Separation_spot_equivalent_cmyk_colors(gx_device * pdev,
 		    const gs_state * pgs, const gs_color_space * pcs,
 		    gs_devn_params * pdevn_params,
@@ -152,7 +152,7 @@ update_Separation_spot_equivalent_cmyk_colors(gx_device * pdev,
     }
 }
 
-private void
+static void
 update_DeviceN_spot_equivalent_cmyk_colors(gx_device * pdev,
 		    const gs_state * pgs, const gs_color_space * pcs,
 		    gs_devn_params * pdevn_params,
@@ -214,7 +214,7 @@ update_DeviceN_spot_equivalent_cmyk_colors(gx_device * pdev,
     }
 }
 
-private bool check_all_colors_known(int num_spot,
+static bool check_all_colors_known(int num_spot,
 		equivalent_cmyk_color_params * pparams)
 {
     for (num_spot--; num_spot >= 0; num_spot--)
@@ -261,7 +261,7 @@ update_spot_equivalent_cmyk_colors(gx_device * pdev, const gs_state * pgs,
     }
 }
 
-private void
+static void
 save_spot_equivalent_cmyk_color(int sep_num,
 		equivalent_cmyk_color_params * pparams, frac cmyk[4])
 {
@@ -289,14 +289,14 @@ typedef struct color_capture_device_s {
  * Replacement routines for the cmap procs.  These routines will capture the
  * equivalent color.
  */
-private cmap_proc_gray(cmap_gray_capture_cmyk_color);
-private cmap_proc_rgb(cmap_rgb_capture_cmyk_color);
-private cmap_proc_cmyk(cmap_cmyk_capture_cmyk_color);
-private cmap_proc_rgb_alpha(cmap_rgb_alpha_capture_cmyk_color);
-private cmap_proc_separation(cmap_separation_capture_cmyk_color);
-private cmap_proc_devicen(cmap_devicen_capture_cmyk_color);
+static cmap_proc_gray(cmap_gray_capture_cmyk_color);
+static cmap_proc_rgb(cmap_rgb_capture_cmyk_color);
+static cmap_proc_cmyk(cmap_cmyk_capture_cmyk_color);
+static cmap_proc_rgb_alpha(cmap_rgb_alpha_capture_cmyk_color);
+static cmap_proc_separation(cmap_separation_capture_cmyk_color);
+static cmap_proc_devicen(cmap_devicen_capture_cmyk_color);
 
-private const gx_color_map_procs cmap_capture_cmyk_color = {
+static const gx_color_map_procs cmap_capture_cmyk_color = {
     cmap_gray_capture_cmyk_color, 
     cmap_rgb_capture_cmyk_color, 
     cmap_cmyk_capture_cmyk_color,
@@ -305,7 +305,7 @@ private const gx_color_map_procs cmap_capture_cmyk_color = {
     cmap_devicen_capture_cmyk_color
 };
 
-private void
+static void
 cmap_gray_capture_cmyk_color(frac gray, gx_device_color * pdc,
 	const gs_imager_state * pis, gx_device * dev, gs_color_select_t select)
 {
@@ -319,7 +319,7 @@ cmap_gray_capture_cmyk_color(frac gray, gx_device_color * pdc,
     save_spot_equivalent_cmyk_color(sep_num, pparams, cmyk);
 }
 
-private void
+static void
 cmap_rgb_capture_cmyk_color(frac r, frac g, frac b, gx_device_color * pdc,
      const gs_imager_state * pis, gx_device * dev, gs_color_select_t select)
 {
@@ -332,7 +332,7 @@ cmap_rgb_capture_cmyk_color(frac r, frac g, frac b, gx_device_color * pdc,
     save_spot_equivalent_cmyk_color(sep_num, pparams, cmyk);
 }
 
-private void
+static void
 cmap_cmyk_capture_cmyk_color(frac c, frac m, frac y, frac k, gx_device_color * pdc,
      const gs_imager_state * pis, gx_device * dev, gs_color_select_t select)
 {
@@ -348,7 +348,7 @@ cmap_cmyk_capture_cmyk_color(frac c, frac m, frac y, frac k, gx_device_color * p
     save_spot_equivalent_cmyk_color(sep_num, pparams, cmyk);
 }
 
-private void
+static void
 cmap_rgb_alpha_capture_cmyk_color(frac r, frac g, frac b, frac alpha,
 	gx_device_color * pdc, const gs_imager_state * pis, gx_device * dev,
 			 gs_color_select_t select)
@@ -356,14 +356,14 @@ cmap_rgb_alpha_capture_cmyk_color(frac r, frac g, frac b, frac alpha,
     cmap_rgb_capture_cmyk_color(r, g, b, pdc, pis, dev, select);
 }
 
-private void
+static void
 cmap_separation_capture_cmyk_color(frac all, gx_device_color * pdc,
      const gs_imager_state * pis, gx_device * dev, gs_color_select_t select)
 {
     dprintf("cmap_separation_capture_cmyk_color - this routine should not be executed\n");
 }
 
-private void
+static void
 cmap_devicen_capture_cmyk_color(const frac * pcc, gx_device_color * pdc,
      const gs_imager_state * pis, gx_device * dev, gs_color_select_t select)
 {

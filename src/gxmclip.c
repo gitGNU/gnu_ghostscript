@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxmclip.c,v 1.7 2007/09/11 15:24:23 Arabidopsis Exp $ */
+/* $Id: gxmclip.c,v 1.8 2008/03/23 15:27:48 Arabidopsis Exp $ */
 /* Mask clipping support */
 #include "gserrors.h"
 #include "gx.h"
@@ -29,7 +29,7 @@
 public_st_device_mask_clip();
 
 /* GC procedures */
-private ENUM_PTRS_WITH(device_mask_clip_enum_ptrs, gx_device_mask_clip *mcdev)
+static ENUM_PTRS_WITH(device_mask_clip_enum_ptrs, gx_device_mask_clip *mcdev)
 {
     if (index < st_gx_strip_bitmap_max_ptrs) {
 	return ENUM_USING(st_gx_strip_bitmap, &mcdev->tiles,
@@ -43,7 +43,7 @@ private ENUM_PTRS_WITH(device_mask_clip_enum_ptrs, gx_device_mask_clip *mcdev)
     ENUM_PREFIX(st_device_forward, st_device_memory_max_ptrs);
 }
 ENUM_PTRS_END
-private RELOC_PTRS_WITH(device_mask_clip_reloc_ptrs, gx_device_mask_clip *mcdev)
+static RELOC_PTRS_WITH(device_mask_clip_reloc_ptrs, gx_device_mask_clip *mcdev)
 {
     RELOC_PREFIX(st_device_forward);
     RELOC_USING(st_gx_strip_bitmap, &mcdev->tiles, sizeof(mcdev->tiles));

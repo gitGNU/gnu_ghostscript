@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gschar0.c,v 1.7 2007/09/11 15:24:40 Arabidopsis Exp $ */
+/* $Id: gschar0.c,v 1.8 2008/03/23 15:27:58 Arabidopsis Exp $ */
 /* Composite font decoding for Ghostscript library */
 #include "memory_.h"
 #include "gx.h"
@@ -32,7 +32,7 @@
 #include "gxtext.h"
 
 /* Stack up modal composite fonts, down to a non-modal or base font. */
-private int
+static int
 gs_stack_modal_fonts(gs_text_enum_t *pte)
 {
     int fdepth = pte->fstack.depth;
@@ -86,7 +86,7 @@ gs_type0_init_fstack(gs_text_enum_t *pte, gs_font * pfont)
 
 /* Get the root EscChar of a composite font, which overrides the EscChar */
 /* of descendant fonts. */
-private uint
+static uint
 root_esc_char(const gs_text_enum_t *pte)
 {
     return ((gs_font_type0 *) (pte->fstack.items[0].font))->data.EscChar;

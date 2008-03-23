@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxclrast.c,v 1.11 2007/09/11 15:23:49 Arabidopsis Exp $ */
+/*$Id: gxclrast.c,v 1.12 2008/03/23 15:28:04 Arabidopsis Exp $ */
 /* Command list interpreter/rasterizer */
 #include "memory_.h"
 #include "gx.h"
@@ -65,7 +65,7 @@ extern const gs_color_space_type gs_color_space_type_Indexed;
 
 /* Print a bitmap for tracing */
 #ifdef DEBUG
-private void
+static void
 cmd_print_bits(const byte * data, int width, int height, int raster)
 {
     int i, j;
@@ -92,13 +92,13 @@ cmd_print_bits(const byte * data, int width, int height, int raster)
     else { const byte *_cbp; var = cmd_get_w(p, &_cbp); p = _cbp; }\
   END
 
-private long
+static long
 cmd_get_w(const byte * p, const byte ** rp)
 {
-    long val = *p++ & 0x7f;
+    int val = *p++ & 0x7f;
     int shift = 7;
 
-    for (; val |= (long)(*p & 0x7f) << shift, *p++ > 0x7f; shift += 7);
+    for (; val |= (int)(*p & 0x7f) << shift, *p++ > 0x7f; shift += 7);
     *rp = p;
     return val;
 }
@@ -109,7 +109,7 @@ cmd_get_w(const byte * p, const byte ** rp)
     if ( !(*p & 1) ) var = (*p++) << 24;\
     else { const byte *_cbp; var = cmd_get_frac31(p, &_cbp); p = _cbp; }\
   END
-private frac31
+static frac31
 cmd_get_frac31(const byte * p, const byte ** rp)
 {
     frac31 val = (*p++ & 0xFE) << 24;
@@ -139,7 +139,7 @@ typedef struct command_buf_s {
 } command_buf_t;
 
 /* Set the end of a command buffer. */
-private void
+static void
 set_cb_end(command_buf_t *pcb, const byte *end)
 {
     pcb->end = end;
@@ -149,12 +149,29 @@ set_cb_end(command_buf_t *pcb, const byte *end)
 }
 
 /* Read more data into a command buffer. */
-private const byte *
-top_up_cbuf(command_buf_t *pcb, const byte *cbp)
+static int
+top_up_cbuf(command_buf_t *pcb, const byte **pcbp)
 {
     uint nread;
+    const byte *cbp = *pcbp;
     byte *cb_top = pcb->data + (pcb->end - cbp);
+#   ifdef DEBUG
+    stream_state *st = pcb->s->state;
+#   endif
 
+    if (seofp(pcb->s)) {
+	/* Can't use offset_map, because s_close resets s->state. Don't top up. */
+	pcb->end_status = pcb->s->end_status;
+	return 0;
+    }
+#   ifdef DEBUG
+    {
+	int code = top_up_offset_map(st, pcb->data, cbp, pcb->end);
+
+	if (code < 0)
+	    return code;
+    }
+#   endif
     memmove(pcb->data, cbp, pcb->end - cbp);
     nread = pcb->end - cb_top;
     pcb->end_status = sgets(pcb->s, cb_top, nread, &nread);
@@ -165,11 +182,12 @@ top_up_cbuf(command_buf_t *pcb, const byte *cbp)
     }
     set_cb_end(pcb, cb_top + nread);
     process_interrupts(pcb->s->memory);
-    return pcb->data;
+    *pcbp = pcb->data;
+    return 0;
 }
 
 /* Read data from the command buffer and stream. */
-private const byte *
+static const byte *
 cmd_read_data(command_buf_t *pcb, byte *ptr, uint rsize, const byte *cbp)
 {
     if (pcb->end - cbp >= rsize) {
@@ -188,7 +206,7 @@ cmd_read_data(command_buf_t *pcb, byte *ptr, uint rsize, const byte *cbp)
   cbp = cmd_read_data(&cbuf, ptr, rsize, cbp)
 
 /* Read a fixed-size value from the command buffer. */
-inline private const byte *
+static inline const byte *
 cmd_copy_value(void *pvar, int var_size, const byte *cbp)
 {
     memcpy(pvar, cbp, var_size);
@@ -213,43 +231,43 @@ typedef struct ht_buff_s {
  * Render one band to a specified target device.  Note that if
  * action == setup, target may be 0.
  */
-private int read_set_tile_size(command_buf_t *pcb, tile_slot *bits);
-private int read_set_bits(command_buf_t *pcb, tile_slot *bits,
+static int read_set_tile_size(command_buf_t *pcb, tile_slot *bits);
+static int read_set_bits(command_buf_t *pcb, tile_slot *bits,
                           int compress, gx_clist_state *pcls,
                           gx_strip_bitmap *tile, tile_slot **pslot,
                           gx_device_clist_reader *cdev, gs_memory_t *mem);
-private int read_set_misc2(command_buf_t *pcb, gs_imager_state *pis,
+static int read_set_misc2(command_buf_t *pcb, gs_imager_state *pis,
                            segment_notes *pnotes);
-private int read_set_color_space(command_buf_t *pcb, gs_imager_state *pis,
+static int read_set_color_space(command_buf_t *pcb, gs_imager_state *pis,
                                  gs_color_space **ppcs,
                                  gs_memory_t *mem);
-private int read_begin_image(command_buf_t *pcb, gs_image_common_t *pic,
+static int read_begin_image(command_buf_t *pcb, gs_image_common_t *pic,
                              gs_color_space *pcs);
-private int read_put_params(command_buf_t *pcb, gs_imager_state *pis,
+static int read_put_params(command_buf_t *pcb, gs_imager_state *pis,
                             gx_device_clist_reader *cdev,
                             gs_memory_t *mem);
-private int read_create_compositor(command_buf_t *pcb, gs_imager_state *pis,
+static int read_create_compositor(command_buf_t *pcb, gs_imager_state *pis,
                                    gx_device_clist_reader *cdev,
                                    gs_memory_t *mem, gx_device ** ptarget);
-private int read_alloc_ht_buff(ht_buff_t *, uint, gs_memory_t *);
-private int read_ht_segment(ht_buff_t *, command_buf_t *, gs_imager_state *,
+static int read_alloc_ht_buff(ht_buff_t *, uint, gs_memory_t *);
+static int read_ht_segment(ht_buff_t *, command_buf_t *, gs_imager_state *,
 			    gx_device *, gs_memory_t *);
 
-private const byte *cmd_read_rect(int, gx_cmd_rect *, const byte *);
-private const byte *cmd_read_matrix(gs_matrix *, const byte *);
-private const byte *cmd_read_short_bits(command_buf_t *pcb, byte *data,
+static const byte *cmd_read_rect(int, gx_cmd_rect *, const byte *);
+static const byte *cmd_read_matrix(gs_matrix *, const byte *);
+static const byte *cmd_read_short_bits(command_buf_t *pcb, byte *data,
                                         int width_bytes, int height,
                                         uint raster, const byte *cbp);
-private int cmd_select_map(cmd_map_index, cmd_map_contents,
+static int cmd_select_map(cmd_map_index, cmd_map_contents,
                            gs_imager_state *, int **,
                            frac **, uint *, gs_memory_t *);
-private int cmd_create_dev_ht(gx_device_halftone **, gs_memory_t *);
-private int cmd_resize_halftone(gx_device_halftone **, uint,
+static int cmd_create_dev_ht(gx_device_halftone **, gs_memory_t *);
+static int cmd_resize_halftone(gx_device_halftone **, uint,
                                 gs_memory_t *);
-private int clist_decode_segment(gx_path *, int, fixed[6],
+static int clist_decode_segment(gx_path *, int, fixed[6],
                                  gs_fixed_point *, int, int,
                                  segment_notes);
-private int clist_do_polyfill(gx_device *, gx_path *,
+static int clist_do_polyfill(gx_device *, gx_path *,
                               const gx_drawing_color *,
                               gs_logical_operation_t);
 
@@ -266,7 +284,7 @@ clist_playback_band(clist_playback_action playback_action,
     /* must be aligned */
 #define data_bits_size cbuf_size
     byte *data_bits = 0;
-    register const byte *cbp;
+    const byte *cbp;
     int dev_depth;		/* May vary due to compositing devices */
     int dev_depth_bytes;
     int odd_delta_shift;
@@ -320,6 +338,7 @@ clist_playback_band(clist_playback_action playback_action,
     gx_device_clip clipper_dev;
     bool clipper_dev_open;
     patch_fill_state_t pfs;
+    stream_state *st = s->state; /* Save because s_close resets s->state. */
 
     cbuf.data = (byte *)cbuf_storage;
     cbuf.size = cbuf_size;
@@ -404,18 +423,22 @@ in:				/* Initialize for a new page. */
 		    break;
 		}
 	    } else {
-		cbp = top_up_cbuf(&cbuf, cbp);
+		code = top_up_cbuf(&cbuf, &cbp);
+		if (code < 0)
+		    return code;
 	    }
 	}
 	op = *cbp++;
 #ifdef DEBUG
 	if (gs_debug_c('L')) {
 	    const char *const *sub = cmd_sub_op_names[op >> 4];
+	    long offset = (long)clist_file_offset(st, cbp - 1 - cbuf.data);
 
 	    if (sub)
-		dlprintf1("[L]%s:", sub[op & 0xf]);
+		dlprintf1("[L]%s", sub[op & 0xf]);
 	    else
-		dlprintf2("[L]%s %d:", cmd_op_names[op >> 4], op & 0xf);
+		dlprintf2("[L]%s %d", cmd_op_names[op >> 4], op & 0xf);
+	    dlprintf1("(offset=%ld):", offset);
 	}
 #endif
 	switch (op >> 4) {
@@ -576,7 +599,7 @@ in:				/* Initialize for a new page. */
 			    gx_color_index delta = 0;
 			    uint data;
 
-			    dev_depth = cdev->color_info.depth;
+			    dev_depth = tdev->color_info.depth;
 			    dev_depth_bytes = (dev_depth + 7) >> 3;
 		            switch (dev_depth_bytes) {
 				/* For cases with an even number of bytes */
@@ -655,7 +678,7 @@ in:				/* Initialize for a new page. */
 		else {
 		    gx_color_index color = 0;
 
-		    dev_depth = cdev->color_info.depth;
+		    dev_depth = tdev->color_info.depth;
 		    dev_depth_bytes = (dev_depth + 7) >> 3;
 		    switch (dev_depth_bytes - num_zero_bytes) {
 			case 8:
@@ -723,7 +746,7 @@ in:				/* Initialize for a new page. */
 		    if (!(op & 8))
 			depth = *cbp++;
 		} else 
-		    depth = cdev->color_info.depth;
+		    depth = tdev->color_info.depth;
 	      copy:cmd_getw(state.rect.x, cbp);
 		cmd_getw(state.rect.y, cbp);
 		if (op & 8) {	/* Use the current "tile". */
@@ -777,9 +800,14 @@ in:				/* Initialize for a new page. */
 			/* the uncompressed size. */
 			uint cleft = cbuf.end - cbp;
 
-			if (cleft < bytes) {
+			if (cleft < bytes  && !cbuf.end_status) {
 			    uint nread = cbuf_size - cleft;
 
+#			    ifdef DEBUG
+				code = top_up_offset_map(st, cbuf.data, cbp, cbuf.end);
+				if (code < 0)
+				    return code;
+#			    endif
 			    memmove(cbuf.data, cbp, cleft);
 			    cbuf.end_status = sgets(s, cbuf.data + cleft, nread, &nread);
 			    set_cb_end(&cbuf, cbuf.data + cleft + nread);
@@ -924,12 +952,12 @@ set_phase:	/*
 			    gs_matrix mat;
 
 			    cbp = cmd_read_matrix(&mat, cbp);
-			    mat.tx -= x0;
-			    mat.ty -= y0;
-			    gs_imager_setmatrix(&imager_state, &mat);
 			    if_debug6('L', " [%g %g %g %g %g %g]\n",
 				      mat.xx, mat.xy, mat.yx, mat.yy,
 				      mat.tx, mat.ty);
+			    mat.tx -= x0;
+			    mat.ty -= y0;
+			    gs_imager_setmatrix(&imager_state, &mat);
 			}
 			continue;
 		    case cmd_opv_set_misc2:
@@ -1111,7 +1139,9 @@ ibegin:			if_debug0('L', "\n");
 				if (flags & 1) {
 				    if (cbuf.end - cbp <
 					2 * cmd_max_intsize(sizeof(uint)))
-					cbp = top_up_cbuf(&cbuf, cbp);
+					code = top_up_cbuf(&cbuf, &cbp);
+					if (code < 0)
+					    return code;
 				    cmd_getw(planes[plane].raster, cbp);
 				    if ((raster1 = planes[plane].raster) != 0)
 					cmd_getw(data_x, cbp);
@@ -1157,7 +1187,9 @@ idata:			data_size = 0;
 			data_size *= data_height;
 			data_on_heap = 0;
 			if (cbuf.end - cbp < data_size)
-			    cbp = top_up_cbuf(&cbuf, cbp);
+			    code = top_up_cbuf(&cbuf, &cbp);
+			    if (code < 0)
+				return code;
 			if (cbuf.end - cbp >= data_size) {
 			    planes[0].data = cbp;
 			    cbp += data_size;
@@ -1216,6 +1248,8 @@ idata:			data_size = 0;
 #endif
 			code = gx_image_plane_data(image_info, planes,
 						   data_height);
+			if (code < 0)
+			    gx_image_end(image_info, false);
 			if (data_on_heap)
 			    gs_free_object(mem, data_on_heap,
 					   "clist image_data");
@@ -1282,8 +1316,11 @@ idata:			data_size = 0;
 					goto out;
 				    }
 				    enc_u_getw(color_size, cbp);
-				    if (cbp + color_size > cbuf.limit)
-					cbp = top_up_cbuf(&cbuf, cbp);
+				    if (cbp + color_size > cbuf.limit) {
+					code = top_up_cbuf(&cbuf, &cbp);
+					if (code < 0)
+					    return code;
+				    }
 				    code = pdct->read(&dev_color, &imager_state,
 						      &dev_color, tdev, cbp,
 						      color_size, mem);
@@ -1306,7 +1343,7 @@ idata:			data_size = 0;
 		continue;
 	    case cmd_op_segment >> 4:
 		{
-		    int i, code;
+		    int i;
 		    static const byte op_num_operands[] = {
 			cmd_segment_op_num_operands_values
 		    };
@@ -1429,9 +1466,7 @@ idata:			data_size = 0;
 				gx_device *ttdev = tdev;
 
 				if (pcpath != NULL && !clipper_dev_open) {
-				    gx_make_clip_device(&clipper_dev, gx_cpath_list(pcpath)); /* fixme : create a global instance */
-				    clipper_dev.target = tdev;
-				    (*dev_proc(&clipper_dev, open_device))((gx_device *)&clipper_dev);
+				    gx_make_clip_device_on_stack(&clipper_dev, pcpath, tdev);
 				    clipper_dev_open = true;
 				}
 				if (clipper_dev_open)
@@ -1465,9 +1500,13 @@ idata:			data_size = 0;
 				    byte colors_mask, i, j, m = 1;
 				    gs_fill_attributes fa;
 				    gs_fixed_rect clip;
+				    fixed hh = int2fixed(swap_axes ? target->width : target->height);
 
-				    if (cbuf.end - cbp < 5 * cmd_max_intsize(sizeof(frac31)))
-					cbp = top_up_cbuf(&cbuf, cbp);
+				    if (cbuf.end - cbp < 5 * cmd_max_intsize(sizeof(frac31))) {
+					code = top_up_cbuf(&cbuf, &cbp);
+					if (code < 0)
+					    return code;
+				    }
 				    cmd_getw(clip.p.x, cbp);
 				    cmd_getw(clip.p.y, cbp);
 				    cmd_getw(clip.q.x, cbp);
@@ -1476,6 +1515,10 @@ idata:			data_size = 0;
 				    clip.p.y -= y0f;
 				    clip.q.x -= x0f;
 				    clip.q.y -= y0f;
+				    if (clip.p.y < 0)
+					clip.p.y = 0;
+				    if (clip.q.y > hh)
+					clip.q.y = hh;
 				    fa.clip = &clip;
 				    fa.swap_axes = swap_axes;
 				    fa.ht = NULL;
@@ -1485,8 +1528,11 @@ idata:			data_size = 0;
 				    cmd_getw(colors_mask, cbp);
 				    for (i = 0; i < 4; i++, m <<= 1) {
 					if (colors_mask & m) {
-					    if (cbuf.end - cbp < num_components * cmd_max_intsize(sizeof(frac31)))
-						cbp = top_up_cbuf(&cbuf, cbp);
+					    if (cbuf.end - cbp < num_components * cmd_max_intsize(sizeof(frac31))) {
+						code = top_up_cbuf(&cbuf, &cbp);
+						if (code < 0)
+						    return code;
+					    }
 					    cc[i] = c[i];
 					    for (j = 0; j < num_components; j++)
 						cmd_getfrac(c[i][j], cbp);
@@ -1502,9 +1548,8 @@ idata:			data_size = 0;
 					code = 0;
 #					endif
 					if (code == 0) {
-					    /* Fixme : The target device didn't fill the trapezoid and
-					       requests a decomposition. Call a code from gxshade6.c 
-					       for subdividing into smaller triangles : */
+					    /* The target device didn't fill the trapezoid and
+					       requests a decomposition. Subdivide into smaller triangles : */
 					    if (pfs.dev == NULL)
 						code = gx_init_patch_fill_state_for_clist(tdev, &pfs, mem);
 					    if (code >= 0) {
@@ -1704,7 +1749,7 @@ idata:			data_size = 0;
  * and update it there.
  */
 
-private int
+static int
 read_set_tile_size(command_buf_t *pcb, tile_slot *bits)
 {
     const byte *cbp = pcb->ptr;
@@ -1744,7 +1789,7 @@ read_set_tile_size(command_buf_t *pcb, tile_slot *bits)
     return 0;
 }
 
-private int
+static int
 read_set_bits(command_buf_t *pcb, tile_slot *bits, int compress,
 	      gx_clist_state *pcls, gx_strip_bitmap *tile, tile_slot **pslot,
 	      gx_device_clist_reader *cdev, gs_memory_t *mem)
@@ -1793,9 +1838,18 @@ read_set_bits(command_buf_t *pcb, tile_slot *bits, int compress,
 	 */
 	uint cleft = pcb->end - cbp;
 
-	if (cleft < bytes) {
+	if (cleft < bytes && !pcb->end_status) {
 	    uint nread = cbuf_size - cleft;
+	    stream_state *st = pcb->s->state;
 
+#	    ifdef DEBUG
+	    {
+		int code = top_up_offset_map(st, pcb->data, cbp, pcb->end);
+
+		if (code < 0)
+		    return code;
+	    }
+#	    endif
 	    memmove(pcb->data, cbp, cleft);
 	    pcb->end_status = sgets(pcb->s, pcb->data + cleft, nread, &nread);
 	    set_cb_end(pcb, pcb->data + cleft + nread);
@@ -1858,7 +1912,7 @@ read_set_bits(command_buf_t *pcb, tile_slot *bits, int compress,
 }
 
 /* if necessary, allocate a buffer to hold a serialized halftone */
-private int
+static int
 read_alloc_ht_buff(ht_buff_t * pht_buff, uint ht_size, gs_memory_t * mem)
 {
     /* free the existing buffer, if any (usually none) */
@@ -1883,7 +1937,7 @@ read_alloc_ht_buff(ht_buff_t * pht_buff, uint ht_size, gs_memory_t * mem)
 }
 
 /* read a halftone segment; if it is the final segment, build the halftone */
-private int
+static int
 read_ht_segment(
     ht_buff_t *                 pht_buff,
     command_buf_t *             pcb,
@@ -1898,8 +1952,11 @@ read_ht_segment(
 
     /* get the segment size; refill command buffer if necessary */
     enc_u_getw(seg_size, cbp);
-    if (cbp + seg_size > pcb->limit)
-        cbp = top_up_cbuf(pcb, cbp);
+    if (cbp + seg_size > pcb->limit) {
+        code = top_up_cbuf(pcb, &cbp);
+	if (code < 0)
+	    return code;
+    }
 
     if (pht_buff->pbuff == 0) {
         /* if not separate buffer, must be only one segment */
@@ -1936,7 +1993,7 @@ read_ht_segment(
 }
 
 
-private int
+static int
 read_set_misc2(command_buf_t *pcb, gs_imager_state *pis, segment_notes *pnotes)
 {
     const byte *cbp = pcb->ptr;
@@ -2010,7 +2067,7 @@ read_set_misc2(command_buf_t *pcb, gs_imager_state *pis, segment_notes *pnotes)
     return 0;
 }
 
-private int
+static int
 read_set_color_space(command_buf_t *pcb, gs_imager_state *pis,
 		     gs_color_space **ppcs, gs_memory_t *mem)
 {
@@ -2097,7 +2154,7 @@ out:
     return code;
 }
 
-private int
+static int
 read_begin_image(command_buf_t *pcb, gs_image_common_t *pic,
 		 gs_color_space *pcs)
 {
@@ -2107,7 +2164,9 @@ read_begin_image(command_buf_t *pcb, gs_image_common_t *pic,
     int code;
 
     /* This is sloppy, but we don't have enough information to do better. */
-    pcb->ptr = top_up_cbuf(pcb, pcb->ptr);
+    code = top_up_cbuf(pcb, &pcb->ptr);
+    if (code < 0)
+	return code;
     s_init(&s, NULL);
     sread_string(&s, pcb->ptr, pcb->end - pcb->ptr);
     code = image_type->sget(pic, &s, pcs);
@@ -2115,7 +2174,7 @@ read_begin_image(command_buf_t *pcb, gs_image_common_t *pic,
     return code;
 }
 
-private int
+static int
 read_put_params(command_buf_t *pcb, gs_imager_state *pis,
 		gx_device_clist_reader *cdev, gs_memory_t *mem)
 {
@@ -2126,7 +2185,7 @@ read_put_params(command_buf_t *pcb, gs_imager_state *pis,
     bool alloc_data_on_heap = false;
     byte *param_buf;
     uint param_length;
-    int code = 0;
+    int code;
 
     cmd_get_value(param_length, cbp);
     if_debug1('L', " length=%d\n", param_length);
@@ -2137,7 +2196,9 @@ read_put_params(command_buf_t *pcb, gs_imager_state *pis,
 
     /* Make sure entire serialized param list is in cbuf */
     /* + force void* alignment */
-    cbp = top_up_cbuf(pcb, cbp);
+    code = top_up_cbuf(pcb, &cbp);
+    if (code < 0)
+	return code;
     if (pcb->end - cbp >= param_length) {
 	param_buf = (byte *)cbp;
 	cbp += param_length;
@@ -2204,7 +2265,7 @@ out:
  */
 extern_gs_find_compositor();
 
-private int
+static int
 read_create_compositor(
     command_buf_t *             pcb,
     gs_imager_state *           pis,
@@ -2219,8 +2280,11 @@ read_create_compositor(
     gx_device *                 tdev = *ptarget;
 
     /* fill the command buffer (see comment above) */
-	if (pcb->end - cbp < MAX_CLIST_COMPOSITOR_SIZE + sizeof(comp_id))
-		cbp = top_up_cbuf(pcb, cbp);
+    if (pcb->end - cbp < MAX_CLIST_COMPOSITOR_SIZE + sizeof(comp_id)) {
+	code = top_up_cbuf(pcb, &cbp);
+	if (code < 0)
+	    return code;
+    }
 
     /* find the appropriate compositor method vector */
     comp_id = *cbp++;
@@ -2266,7 +2330,7 @@ read_create_compositor(
 /* ---------------- Utilities ---------------- */
 
 /* Read and unpack a short bitmap */
-private const byte *
+static const byte *
 cmd_read_short_bits(command_buf_t *pcb, byte *data, int width_bytes,
 		    int height, uint raster, const byte *cbp)
 {
@@ -2300,7 +2364,7 @@ cmd_read_short_bits(command_buf_t *pcb, byte *data, int width_bytes,
 }
 
 /* Read a rectangle. */
-private const byte *
+static const byte *
 cmd_read_rect(int op, gx_cmd_rect * prect, const byte * cbp)
 {
     cmd_getw(prect->x, cbp);
@@ -2319,7 +2383,7 @@ cmd_read_rect(int op, gx_cmd_rect * prect, const byte * cbp)
 }
 
 /* Read a transformation matrix. */
-private const byte *
+static const byte *
 cmd_read_matrix(gs_matrix * pmat, const byte * cbp)
 {
     stream s;
@@ -2341,7 +2405,7 @@ cmd_read_matrix(gs_matrix * pmat, const byte * cbp)
  *		 be sent for this map.
  *   *pcount - the size of the map (in bytes).
  */
-private int
+static int
 cmd_select_map(cmd_map_index map_index, cmd_map_contents cont,
 	       gs_imager_state * pis, int ** pcomp_num, frac ** pmdata,
 	       uint * pcount, gs_memory_t * mem)
@@ -2433,7 +2497,7 @@ alloc:	    if (cont == cmd_map_none) {
 }
 
 /* Create a device halftone for the imager if necessary. */
-private int
+static int
 cmd_create_dev_ht(gx_device_halftone **ppdht, gs_memory_t *mem)
 {
     gx_device_halftone *pdht = *ppdht;
@@ -2453,7 +2517,7 @@ cmd_create_dev_ht(gx_device_halftone **ppdht, gs_memory_t *mem)
 }
 
 /* Resize the halftone components array if necessary. */
-private int
+static int
 cmd_resize_halftone(gx_device_halftone **ppdht, uint num_comp,
 		    gs_memory_t * mem)
 {
@@ -2511,7 +2575,7 @@ cmd_resize_halftone(gx_device_halftone **ppdht, uint num_comp,
 /* ------ Path operations ------ */
 
 /* Decode a path segment. */
-private int
+static int
 clist_decode_segment(gx_path * ppath, int op, fixed vs[6],
 		 gs_fixed_point * ppos, int x0, int y0, segment_notes notes)
 {
@@ -2634,7 +2698,7 @@ vhc:	    E = B + D, F = D = A + C, C = B, B = A, A = 0;
  * a single line or point.  We must check for this so we don't try to
  * access non-existent segments.
  */
-private int
+static int
 clist_do_polyfill(gx_device *dev, gx_path *ppath,
 		  const gx_drawing_color *pdcolor,
 		  gs_logical_operation_t lop)

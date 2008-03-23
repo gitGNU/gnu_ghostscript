@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxidata.c,v 1.8 2007/09/11 15:24:22 Arabidopsis Exp $ */
+/* $Id: gxidata.c,v 1.9 2008/03/23 15:27:49 Arabidopsis Exp $ */
 /* Generic image enumeration and cleanup */
 #include "gx.h"
 #include "memory_.h"
@@ -27,12 +27,12 @@
 #include "gximage.h"
 
 /* Forward declarations */
-private void update_strip(gx_image_enum *penum);
-private void repack_bit_planes(const gx_image_plane_t *src_planes,
+static void update_strip(gx_image_enum *penum);
+static void repack_bit_planes(const gx_image_plane_t *src_planes,
 			       const ulong *offsets, int num_planes,
 			       byte *buffer, int width,
 			       const sample_lookup_t * ptab, int spread);
-private gx_device *setup_image_device(const gx_image_enum *penum);
+static gx_device *setup_image_device(const gx_image_enum *penum);
 
 /* Process the next piece of an ImageType 1 image. */
 int
@@ -281,7 +281,7 @@ gx_image1_flush(gx_image_enum_common_t * info)
 }
 
 /* Update the strip DDA when moving to a new row. */
-private void
+static void
 update_strip(gx_image_enum *penum)
 {
     dda_translate(penum->dda.strip.x, penum->cur.x - penum->prev.x);
@@ -295,7 +295,7 @@ update_strip(gx_image_enum *penum)
  * This procedure repacks one row, so the only relevant members of
  * src_planes are data and data_x (not raster).
  */
-private void
+static void
 repack_bit_planes(const gx_image_plane_t *src_planes, const ulong *offsets,
 		  int num_planes, byte *buffer, int width,
 		  const sample_lookup_t * ptab, int spread)
@@ -397,7 +397,7 @@ repack_bit_planes(const gx_image_plane_t *src_planes, const ulong *offsets,
 }
 
 /* Set up the device for drawing an image. */
-private gx_device *
+static gx_device *
 setup_image_device(const gx_image_enum *penum)
 {
     gx_device *dev = penum->dev;

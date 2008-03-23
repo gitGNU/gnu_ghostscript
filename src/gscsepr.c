@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscsepr.c,v 1.11 2007/09/11 15:24:05 Arabidopsis Exp $ */
+/* $Id: gscsepr.c,v 1.12 2008/03/23 15:27:38 Arabidopsis Exp $ */
 /* Separation color space and operation definition */
 #include "memory_.h"
 #include "gx.h"
@@ -45,15 +45,15 @@ gs_private_st_composite(st_color_space_Separation, gs_color_space,
 			cs_Separation_enum_ptrs, cs_Separation_reloc_ptrs);
 
 /* Define the Separation color space type. */
-private cs_proc_init_color(gx_init_Separation);
-private cs_proc_concrete_space(gx_concrete_space_Separation);
-private cs_proc_concretize_color(gx_concretize_Separation);
-private cs_proc_remap_concrete_color(gx_remap_concrete_Separation);
-private cs_proc_remap_color(gx_remap_Separation);
-private cs_proc_install_cspace(gx_install_Separation);
-private cs_proc_set_overprint(gx_set_overprint_Separation);
-private cs_proc_final(gx_final_Separation);
-private cs_proc_serialize(gx_serialize_Separation);
+static cs_proc_init_color(gx_init_Separation);
+static cs_proc_concrete_space(gx_concrete_space_Separation);
+static cs_proc_concretize_color(gx_concretize_Separation);
+static cs_proc_remap_concrete_color(gx_remap_concrete_Separation);
+static cs_proc_remap_color(gx_remap_Separation);
+static cs_proc_install_cspace(gx_install_Separation);
+static cs_proc_set_overprint(gx_set_overprint_Separation);
+static cs_proc_final(gx_final_Separation);
+static cs_proc_serialize(gx_serialize_Separation);
 const gs_color_space_type gs_color_space_type_Separation = {
     gs_color_space_index_Separation, true, false,
     &st_color_space_Separation, gx_num_components_1,
@@ -69,18 +69,18 @@ const gs_color_space_type gs_color_space_type_Separation = {
 
 /* GC procedures */
 
-private 
+static 
 ENUM_PTRS_BEGIN(cs_Separation_enum_ptrs) return 0;
     ENUM_PTR(0, gs_color_space, params.separation.map);
 ENUM_PTRS_END
-private RELOC_PTRS_BEGIN(cs_Separation_reloc_ptrs)
+static RELOC_PTRS_BEGIN(cs_Separation_reloc_ptrs)
 {
     RELOC_PTR(gs_color_space, params.separation.map);
 }
 RELOC_PTRS_END
 
 /* Get the concrete space for a Separation space. */
-private const gs_color_space *
+static const gs_color_space *
 gx_concrete_space_Separation(const gs_color_space * pcs,
 			     const gs_imager_state * pis)
 {
@@ -104,11 +104,11 @@ gx_concrete_space_Separation(const gs_color_space * pcs,
     return pcs;
 }
 
-private int
+static int
 check_Separation_component_name(const gs_color_space * pcs, gs_state * pgs);
 
 /* Install a Separation color space. */
-private int
+static int
 gx_install_Separation(gs_color_space * pcs, gs_state * pgs)
 {
     int code;
@@ -151,7 +151,7 @@ gx_install_Separation(gs_color_space * pcs, gs_state * pgs)
 }
 
 /* Set the overprint information appropriate to a separation color space */
-private int
+static int
 gx_set_overprint_Separation(const gs_color_space * pcs, gs_state * pgs)
 {
     gs_devicen_color_map *  pcmap = &pgs->color_component_map;
@@ -180,7 +180,7 @@ gx_set_overprint_Separation(const gs_color_space * pcs, gs_state * pgs)
 }
 
 /* Finalize contents of a Separation color space. */
-private void
+static void
 gx_final_Separation(const gs_color_space * pcs)
 {
     rc_adjust_const(pcs->params.separation.map, -1,
@@ -286,7 +286,7 @@ gs_cspace_get_sepr_function(const gs_color_space *pcspace)
 /* ------ Internal procedures ------ */
 
 /* Initialize a Separation color. */
-private void
+static void
 gx_init_Separation(gs_client_color * pcc, const gs_color_space * pcs)
 {
     pcc->paint.values[0] = 1.0;
@@ -294,7 +294,7 @@ gx_init_Separation(gs_client_color * pcc, const gs_color_space * pcs)
 
 /* Remap a Separation color. */
 
-private int
+static int
 gx_remap_Separation(const gs_client_color * pcc, const gs_color_space * pcs,
 	gx_device_color * pdc, const gs_imager_state * pis, gx_device * dev,
 		       gs_color_select_t select)
@@ -312,7 +312,7 @@ gx_remap_Separation(const gs_client_color * pcc, const gs_color_space * pcs,
     return code;
 }
 
-private int
+static int
 gx_concretize_Separation(const gs_client_color *pc, const gs_color_space *pcs,
 			 frac *pconc, const gs_imager_state *pis)
 {
@@ -346,7 +346,7 @@ gx_concretize_Separation(const gs_client_color *pc, const gs_color_space *pcs,
     return 0;
 }
 
-private int
+static int
 gx_remap_concrete_Separation(const frac * pconc,  const gs_color_space * pcs,
 	gx_device_color * pdc, const gs_imager_state * pis, gx_device * dev,
 			     gs_color_select_t select)
@@ -385,7 +385,7 @@ gx_remap_concrete_Separation(const frac * pconc,  const gs_color_space * pcs,
  * matches the device colorant names.  Also build a gs_devicen_color_map
  * structure.
  */
-private int
+static int
 check_Separation_component_name(const gs_color_space * pcs, gs_state * pgs)
 {
     const gs_separation_name name = pcs->params.separation.sep_name;
@@ -476,7 +476,7 @@ typedef ulong gs_separation;	/* BOGUS */
 
 /* ---------------- Serialization. -------------------------------- */
 
-private int 
+static int 
 gx_serialize_Separation(const gs_color_space * pcs, stream * s)
 {
     const gs_separation_params * p = &pcs->params.separation;

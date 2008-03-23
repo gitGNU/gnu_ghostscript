@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxtype1.c,v 1.10 2007/09/11 15:24:05 Arabidopsis Exp $ */
+/* $Id: gxtype1.c,v 1.11 2008/03/23 15:28:03 Arabidopsis Exp $ */
 /* Adobe Type 1 font interpreter support */
 #include "math_.h"
 #include "memory_.h"
@@ -56,7 +56,7 @@ public_st_gs_font_type1();
 /* Define the structure type for a Type 1 interpreter state. */
 public_st_gs_type1_state();
 /* GC procedures */
-private 
+static 
 ENUM_PTRS_WITH(gs_type1_state_enum_ptrs, gs_type1_state *pcis)
 {
     index -= 4;
@@ -70,7 +70,7 @@ ENUM_PTRS_WITH(gs_type1_state_enum_ptrs, gs_type1_state *pcis)
 ENUM_PTR3(0, gs_type1_state, pfont, pis, path);
 ENUM_PTR(3, gs_type1_state, callback_data);
 ENUM_PTRS_END
-private RELOC_PTRS_WITH(gs_type1_state_reloc_ptrs, gs_type1_state *pcis)
+static RELOC_PTRS_WITH(gs_type1_state_reloc_ptrs, gs_type1_state *pcis)
 {
     int i;
 
@@ -490,7 +490,7 @@ gs_type1_piece_codes(/*const*/ gs_font_type1 *pfont,
  * and/or stores into info->pieces.  Updates info->members.  This is a
  * single-use procedure broken out only for readability.
  */
-private int
+static int
 gs_type1_glyph_pieces(gs_font_type1 *pfont, const gs_glyph_data_t *pgd,
 		      int members, gs_glyph_info_t *info)
 {

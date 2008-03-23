@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsalloc.c,v 1.10 2007/09/11 15:24:35 Arabidopsis Exp $ */
+/* $Id: gsalloc.c,v 1.11 2008/03/23 15:27:41 Arabidopsis Exp $ */
 /* Standard memory allocator */
 #include "gx.h"
 #include "memory_.h"
@@ -49,12 +49,12 @@
  *      own chunk = L, lost = #, lost own chunk = ~, other = .}.
  */
 #ifdef DEBUG
-private int
+static int
 alloc_trace_space(const gs_ref_memory_t *imem)
 {
     return imem->space + (imem->stable_memory == (const gs_memory_t *)imem);
 }
-private void
+static void
 alloc_trace(const char *chars, gs_ref_memory_t * imem, client_name_t cname,
 	    gs_memory_type_ptr_t stype, uint size, const void *ptr)
 {
@@ -64,7 +64,7 @@ alloc_trace(const char *chars, gs_ref_memory_t * imem, client_name_t cname,
 	       struct_type_name_string(stype)),
 	      size, (chars[1] == '+' ? "= " : ""), (ulong) ptr);
 }
-private bool
+static bool
 alloc_size_is_ok(gs_memory_type_ptr_t stype)
 {
     return (stype->ssize > 0 && stype->ssize < 0x100000);
@@ -87,13 +87,13 @@ alloc_size_is_ok(gs_memory_type_ptr_t stype)
  * are allocated outside GC space, they reference objects within it.
  */
 public_st_ref_memory();
-private 
+static 
 ENUM_PTRS_BEGIN(ref_memory_enum_ptrs) return 0;
 ENUM_PTR3(0, gs_ref_memory_t, streams, names_array, changes);
 ENUM_PTR(3, gs_ref_memory_t, saved);
 ENUM_PTR(4, gs_ref_memory_t, scan_limit);
 ENUM_PTRS_END
-private RELOC_PTRS_WITH(ref_memory_reloc_ptrs, gs_ref_memory_t *mptr)
+static RELOC_PTRS_WITH(ref_memory_reloc_ptrs, gs_ref_memory_t *mptr)
 {
     RELOC_PTR(gs_ref_memory_t, streams);
     RELOC_PTR(gs_ref_memory_t, names_array);
@@ -114,15 +114,15 @@ typedef enum {
 } alloc_flags_t;
 
 /* Forward references */
-private void remove_range_from_freelist(gs_ref_memory_t *mem, void* bottom, void* top);
-private obj_header_t *large_freelist_alloc(gs_ref_memory_t *mem, uint size);
-private obj_header_t *scavenge_low_free(gs_ref_memory_t *mem, unsigned request_size);
-private ulong compute_free_objects(gs_ref_memory_t *);
-private obj_header_t *alloc_obj(gs_ref_memory_t *, ulong, gs_memory_type_ptr_t, alloc_flags_t, client_name_t);
-private void consolidate_chunk_free(chunk_t *cp, gs_ref_memory_t *mem);
-private void trim_obj(gs_ref_memory_t *mem, obj_header_t *obj, uint size, chunk_t *cp);
-private chunk_t *alloc_acquire_chunk(gs_ref_memory_t *, ulong, bool, client_name_t);
-private chunk_t *alloc_add_chunk(gs_ref_memory_t *, ulong, client_name_t);
+static void remove_range_from_freelist(gs_ref_memory_t *mem, void* bottom, void* top);
+static obj_header_t *large_freelist_alloc(gs_ref_memory_t *mem, uint size);
+static obj_header_t *scavenge_low_free(gs_ref_memory_t *mem, unsigned request_size);
+static ulong compute_free_objects(gs_ref_memory_t *);
+static obj_header_t *alloc_obj(gs_ref_memory_t *, ulong, gs_memory_type_ptr_t, alloc_flags_t, client_name_t);
+static void consolidate_chunk_free(chunk_t *cp, gs_ref_memory_t *mem);
+static void trim_obj(gs_ref_memory_t *mem, obj_header_t *obj, uint size, chunk_t *cp);
+static chunk_t *alloc_acquire_chunk(gs_ref_memory_t *, ulong, bool, client_name_t);
+static chunk_t *alloc_add_chunk(gs_ref_memory_t *, ulong, client_name_t);
 void alloc_close_chunk(gs_ref_memory_t *);
 
 /*
@@ -130,31 +130,31 @@ void alloc_close_chunk(gs_ref_memory_t *);
  * of Ghostscript's memory manager interface.
  */
 /* Raw memory procedures */
-private gs_memory_proc_alloc_bytes(i_alloc_bytes_immovable);
-private gs_memory_proc_resize_object(i_resize_object);
-private gs_memory_proc_free_object(i_free_object);
-private gs_memory_proc_stable(i_stable);
-private gs_memory_proc_status(i_status);
-private gs_memory_proc_free_all(i_free_all);
-private gs_memory_proc_consolidate_free(i_consolidate_free);
+static gs_memory_proc_alloc_bytes(i_alloc_bytes_immovable);
+static gs_memory_proc_resize_object(i_resize_object);
+static gs_memory_proc_free_object(i_free_object);
+static gs_memory_proc_stable(i_stable);
+static gs_memory_proc_status(i_status);
+static gs_memory_proc_free_all(i_free_all);
+static gs_memory_proc_consolidate_free(i_consolidate_free);
 
 /* Object memory procedures */
-private gs_memory_proc_alloc_bytes(i_alloc_bytes);
-private gs_memory_proc_alloc_struct(i_alloc_struct);
-private gs_memory_proc_alloc_struct(i_alloc_struct_immovable);
-private gs_memory_proc_alloc_byte_array(i_alloc_byte_array);
-private gs_memory_proc_alloc_byte_array(i_alloc_byte_array_immovable);
-private gs_memory_proc_alloc_struct_array(i_alloc_struct_array);
-private gs_memory_proc_alloc_struct_array(i_alloc_struct_array_immovable);
-private gs_memory_proc_object_size(i_object_size);
-private gs_memory_proc_object_type(i_object_type);
-private gs_memory_proc_alloc_string(i_alloc_string);
-private gs_memory_proc_alloc_string(i_alloc_string_immovable);
-private gs_memory_proc_resize_string(i_resize_string);
-private gs_memory_proc_free_string(i_free_string);
-private gs_memory_proc_register_root(i_register_root);
-private gs_memory_proc_unregister_root(i_unregister_root);
-private gs_memory_proc_enable_free(i_enable_free);
+static gs_memory_proc_alloc_bytes(i_alloc_bytes);
+static gs_memory_proc_alloc_struct(i_alloc_struct);
+static gs_memory_proc_alloc_struct(i_alloc_struct_immovable);
+static gs_memory_proc_alloc_byte_array(i_alloc_byte_array);
+static gs_memory_proc_alloc_byte_array(i_alloc_byte_array_immovable);
+static gs_memory_proc_alloc_struct_array(i_alloc_struct_array);
+static gs_memory_proc_alloc_struct_array(i_alloc_struct_array_immovable);
+static gs_memory_proc_object_size(i_object_size);
+static gs_memory_proc_object_type(i_object_type);
+static gs_memory_proc_alloc_string(i_alloc_string);
+static gs_memory_proc_alloc_string(i_alloc_string_immovable);
+static gs_memory_proc_resize_string(i_resize_string);
+static gs_memory_proc_free_string(i_free_string);
+static gs_memory_proc_register_root(i_register_root);
+static gs_memory_proc_unregister_root(i_unregister_root);
+static gs_memory_proc_enable_free(i_enable_free);
 
 /* We export the procedures for subclasses. */
 const gs_memory_procs_t gs_ref_memory_procs =
@@ -190,7 +190,7 @@ const gs_memory_procs_t gs_ref_memory_procs =
  * Allocate and mostly initialize the state of an allocator (system, global,
  * or local).  Does not initialize global or space.
  */
-private void *ialloc_solo(gs_memory_t *, gs_memory_type_ptr_t,
+static void *ialloc_solo(gs_memory_t *, gs_memory_type_ptr_t,
 			  chunk_t **);
 gs_ref_memory_t *
 ialloc_alloc_state(gs_memory_t * parent, uint chunk_size)
@@ -233,7 +233,7 @@ ialloc_alloc_state(gs_memory_t * parent, uint chunk_size)
 }
 
 /* Allocate a 'solo' object with its own chunk. */
-private void *
+static void *
 ialloc_solo(gs_memory_t * parent, gs_memory_type_ptr_t pstype,
 	    chunk_t ** pcp)
 {	/*
@@ -398,7 +398,7 @@ ialloc_set_limit(register gs_ref_memory_t * mem)
  * Note that this only frees memory at the current save level: the client
  * is responsible for restoring to the outermost level if desired.
  */
-private void
+static void
 i_free_all(gs_memory_t * mem, uint free_mask, client_name_t cname)
 {
     gs_ref_memory_t * const imem = (gs_ref_memory_t *)mem;
@@ -430,14 +430,14 @@ i_free_all(gs_memory_t * mem, uint free_mask, client_name_t cname)
 /* ================ Accessors ================ */
 
 /* Get the size of an object from the header. */
-private uint
+static uint
 i_object_size(gs_memory_t * mem, const void /*obj_header_t */ *obj)
 {
     return pre_obj_contents_size((const obj_header_t *)obj - 1);
 }
 
 /* Get the type of a structure from the header. */
-private gs_memory_type_ptr_t
+static gs_memory_type_ptr_t
 i_object_type(const gs_memory_t * mem, const void /*obj_header_t */ *obj)
 {
     return ((const obj_header_t *)obj - 1)->o_type;
@@ -531,7 +531,7 @@ gs_memory_set_vm_reclaim(gs_ref_memory_t * mem, bool enabled)
 	}\
 	else
 
-private byte *
+static byte *
 i_alloc_bytes(gs_memory_t * mem, uint size, client_name_t cname)
 {
     gs_ref_memory_t * const imem = (gs_ref_memory_t *)mem;
@@ -553,7 +553,7 @@ i_alloc_bytes(gs_memory_t * mem, uint size, client_name_t cname)
     }
     return (byte *) obj;
 }
-private byte *
+static byte *
 i_alloc_bytes_immovable(gs_memory_t * mem, uint size, client_name_t cname)
 {
     gs_ref_memory_t * const imem = (gs_ref_memory_t *)mem;
@@ -565,7 +565,7 @@ i_alloc_bytes_immovable(gs_memory_t * mem, uint size, client_name_t cname)
     alloc_trace("|+b.", imem, cname, NULL, size, obj);
     return (byte *) obj;
 }
-private void *
+static void *
 i_alloc_struct(gs_memory_t * mem, gs_memory_type_ptr_t pstype,
 	       client_name_t cname)
 {
@@ -590,7 +590,7 @@ i_alloc_struct(gs_memory_t * mem, gs_memory_type_ptr_t pstype,
     }
     return obj;
 }
-private void *
+static void *
 i_alloc_struct_immovable(gs_memory_t * mem, gs_memory_type_ptr_t pstype,
 			 client_name_t cname)
 {
@@ -603,7 +603,7 @@ i_alloc_struct_immovable(gs_memory_t * mem, gs_memory_type_ptr_t pstype,
     alloc_trace("|+<.", imem, cname, pstype, size, obj);
     return obj;
 }
-private byte *
+static byte *
 i_alloc_byte_array(gs_memory_t * mem, uint num_elements, uint elt_size,
 		   client_name_t cname)
 {
@@ -617,7 +617,7 @@ i_alloc_byte_array(gs_memory_t * mem, uint num_elements, uint elt_size,
 	      num_elements, elt_size, (ulong) obj);
     return (byte *) obj;
 }
-private byte *
+static byte *
 i_alloc_byte_array_immovable(gs_memory_t * mem, uint num_elements,
 			     uint elt_size, client_name_t cname)
 {
@@ -632,7 +632,7 @@ i_alloc_byte_array_immovable(gs_memory_t * mem, uint num_elements,
 	      num_elements, elt_size, (ulong) obj);
     return (byte *) obj;
 }
-private void *
+static void *
 i_alloc_struct_array(gs_memory_t * mem, uint num_elements,
 		     gs_memory_type_ptr_t pstype, client_name_t cname)
 {
@@ -657,7 +657,7 @@ i_alloc_struct_array(gs_memory_t * mem, uint num_elements,
 	      num_elements, pstype->ssize, (ulong) obj);
     return (char *)obj;
 }
-private void *
+static void *
 i_alloc_struct_array_immovable(gs_memory_t * mem, uint num_elements,
 			   gs_memory_type_ptr_t pstype, client_name_t cname)
 {
@@ -675,7 +675,7 @@ i_alloc_struct_array_immovable(gs_memory_t * mem, uint num_elements,
 	      num_elements, pstype->ssize, (ulong) obj);
     return (char *)obj;
 }
-private void *
+static void *
 i_resize_object(gs_memory_t * mem, void *obj, uint new_num_elements,
 		client_name_t cname)
 {
@@ -721,7 +721,7 @@ i_resize_object(gs_memory_t * mem, void *obj, uint new_num_elements,
     gs_free_object(mem, obj, cname);
     return new_obj;
 }
-private void
+static void
 i_free_object(gs_memory_t * mem, void *ptr, client_name_t cname)
 {
     gs_ref_memory_t * const imem = (gs_ref_memory_t *)mem;
@@ -859,7 +859,7 @@ i_free_object(gs_memory_t * mem, void *ptr, client_name_t cname)
     alloc_trace(":-o#", imem, cname, pstype, size, ptr);
     imem->lost.objects += obj_size_round(size);
 }
-private byte *
+static byte *
 i_alloc_string(gs_memory_t * mem, uint nbytes, client_name_t cname)
 {
     gs_ref_memory_t * const imem = (gs_ref_memory_t *)mem;
@@ -917,7 +917,7 @@ top:
 	goto top;
     }
 }
-private byte *
+static byte *
 i_alloc_string_immovable(gs_memory_t * mem, uint nbytes, client_name_t cname)
 {
     gs_ref_memory_t * const imem = (gs_ref_memory_t *)mem;
@@ -936,7 +936,7 @@ i_alloc_string_immovable(gs_memory_t * mem, uint nbytes, client_name_t cname)
     gs_alloc_fill(str, gs_alloc_fill_alloc, nbytes);
     return str;
 }
-private byte *
+static byte *
 i_resize_string(gs_memory_t * mem, byte * data, uint old_num, uint new_num,
 		client_name_t cname)
 {
@@ -984,7 +984,7 @@ i_resize_string(gs_memory_t * mem, byte * data, uint old_num, uint new_num,
     return ptr;
 }
 
-private void
+static void
 i_free_string(gs_memory_t * mem, byte * data, uint nbytes,
 	      client_name_t cname)
 {
@@ -1003,13 +1003,13 @@ i_free_string(gs_memory_t * mem, byte * data, uint nbytes,
     gs_alloc_fill(data, gs_alloc_fill_free, nbytes);
 }
 
-private gs_memory_t *
+static gs_memory_t *
 i_stable(gs_memory_t *mem)
 {
     return mem->stable_memory;
 }
 
-private void
+static void
 i_status(gs_memory_t * mem, gs_memory_status_t * pstat)
 {
     gs_ref_memory_t * const imem = (gs_ref_memory_t *)mem;
@@ -1037,7 +1037,7 @@ i_status(gs_memory_t * mem, gs_memory_status_t * pstat)
 	imem->previous_status.allocated;
 }
 
-private void
+static void
 i_enable_free(gs_memory_t * mem, bool enable)
 {
     if (enable)
@@ -1051,7 +1051,7 @@ i_enable_free(gs_memory_t * mem, bool enable)
 /* ------ Internal procedures ------ */
 
 /* Compute the amount of free object space by scanning free lists. */
-private ulong
+static ulong
 compute_free_objects(gs_ref_memory_t * mem)
 {
     ulong unused = mem->lost.objects;
@@ -1070,7 +1070,7 @@ compute_free_objects(gs_ref_memory_t * mem)
 }
     
 /* Allocate an object from the large-block freelist. */
-private obj_header_t *	/* rets obj if allocated, else 0 */
+static obj_header_t *	/* rets obj if allocated, else 0 */
 large_freelist_alloc(gs_ref_memory_t *mem, uint size)
 {
     /* Scan large object freelist. We'll grab an object up to 1/8 bigger */
@@ -1126,7 +1126,7 @@ large_freelist_alloc(gs_ref_memory_t *mem, uint size)
 }
 
 /* Allocate an object.  This handles all but the fastest, simplest case. */
-private obj_header_t *
+static obj_header_t *
 alloc_obj(gs_ref_memory_t *mem, ulong lsize, gs_memory_type_ptr_t pstype,
 	  alloc_flags_t flags, client_name_t cname)
 {
@@ -1278,7 +1278,7 @@ done:
  * area. Also keep track of end of highest internal free object
  * (int_freed_top).
  */
-private void
+static void
 consolidate_chunk_free(chunk_t *cp, gs_ref_memory_t *mem)
 {
     obj_header_t *begin_free = 0;
@@ -1336,14 +1336,14 @@ ialloc_consolidate_free(gs_ref_memory_t *mem)
     }
     alloc_open_chunk(mem);
 }
-private void
+static void
 i_consolidate_free(gs_memory_t *mem)
 {
     ialloc_consolidate_free((gs_ref_memory_t *)mem);
 }
 
 /* try to free-up given amount of space from freespace below chunk base */
-private obj_header_t *	/* returns uninitialized object hdr, NULL if none found */
+static obj_header_t *	/* returns uninitialized object hdr, NULL if none found */
 scavenge_low_free(gs_ref_memory_t *mem, unsigned request_size)
 {
     /* find 1st range of memory that can be glued back together to fill request */
@@ -1393,7 +1393,7 @@ scavenge_low_free(gs_ref_memory_t *mem, unsigned request_size)
 }
 
 /* Remove range of memory from a mem's freelists */
-private void
+static void
 remove_range_from_freelist(gs_ref_memory_t *mem, void* bottom, void* top)
 {
     int num_free[num_freelists];
@@ -1466,7 +1466,7 @@ remove_range_from_freelist(gs_ref_memory_t *mem, void* bottom, void* top)
 }
 
 /* Trim a memory object down to a given size */
-private void
+static void
 trim_obj(gs_ref_memory_t *mem, obj_header_t *obj, uint size, chunk_t *cp)
 /* Obj must have rounded size == req'd size, or have enough room for */
 /* trailing dummy obj_header */
@@ -1543,7 +1543,7 @@ trim_obj(gs_ref_memory_t *mem, obj_header_t *obj, uint size, chunk_t *cp)
 /* ================ Roots ================ */
 
 /* Register a root. */
-private int
+static int
 i_register_root(gs_memory_t * mem, gs_gc_root_t * rp, gs_ptr_type_t ptype,
 		void **up, client_name_t cname)
 {
@@ -1567,7 +1567,7 @@ i_register_root(gs_memory_t * mem, gs_gc_root_t * rp, gs_ptr_type_t ptype,
 }
 
 /* Unregister a root. */
-private void
+static void
 i_unregister_root(gs_memory_t * mem, gs_gc_root_t * rp, client_name_t cname)
 {
     gs_ref_memory_t * const imem = (gs_ref_memory_t *)mem;
@@ -1626,7 +1626,7 @@ alloc_link_chunk(chunk_t * cp, gs_ref_memory_t * imem)
 }
 
 /* Add a chunk for ordinary allocation. */
-private chunk_t *
+static chunk_t *
 alloc_add_chunk(gs_ref_memory_t * mem, ulong csize, client_name_t cname)
 {
     chunk_t *cp = alloc_acquire_chunk(mem, csize, true, cname);
@@ -1645,7 +1645,7 @@ alloc_add_chunk(gs_ref_memory_t * mem, ulong csize, client_name_t cname)
 /* or if we would exceed the VMThreshold and psignal is NULL, */
 /* return 0; if we would exceed the VMThreshold but psignal is valid, */
 /* just set the signal and return successfully. */
-private chunk_t *
+static chunk_t *
 alloc_acquire_chunk(gs_ref_memory_t * mem, ulong csize, bool has_strings,
 		    client_name_t cname)
 {
@@ -1881,7 +1881,7 @@ chunk_locate_ptr(const void *ptr, chunk_locator_t * clp)
 
 #include "string_.h"
 
-inline private bool
+static inline bool
 obj_in_control_region(const void *obot, const void *otop,
 		      const dump_control_t *pdc)
 {
@@ -1904,7 +1904,7 @@ const dump_control_t dump_control_all =
  * Internal procedure to dump a block of memory, in hex and optionally
  * also as characters.
  */
-private void
+static void
 debug_indent(int indent)
 {
     int i;
@@ -1912,7 +1912,7 @@ debug_indent(int indent)
     for (i = indent; i > 0; --i)
 	dputc(' ');
 }
-private void
+static void
 debug_dump_contents(const byte * bot, const byte * top, int indent,
 		    bool as_chars)
 {

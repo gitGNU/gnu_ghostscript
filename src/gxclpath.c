@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxclpath.c,v 1.11 2007/09/11 15:24:14 Arabidopsis Exp $ */
+/*$Id: gxclpath.c,v 1.12 2008/03/23 15:27:49 Arabidopsis Exp $ */
 /* Higher-level path operations for band lists */
 #include "math_.h"
 #include "memory_.h"
@@ -43,7 +43,7 @@ ulong stats_cmd_diffs[5];
 #endif
 
 /* Forward declarations */
-private int cmd_put_path(gx_device_clist_writer * cldev,
+static int cmd_put_path(gx_device_clist_writer * cldev,
 			 gx_clist_state * pcls, const gx_path * ppath,
 			 fixed ymin, fixed ymax, byte op,
 			 bool implicit_close, segment_notes keep_notes);
@@ -51,7 +51,7 @@ private int cmd_put_path(gx_device_clist_writer * cldev,
 /* ------ Utilities ------ */
 
 /* Compute the colors used by a colored halftone. */
-private gx_color_index
+static gx_color_index
 colored_halftone_colors_used(gx_device_clist_writer *cldev,
 			     const gx_drawing_color *pdcolor)
 {
@@ -94,7 +94,7 @@ cmd_slow_rop(gx_device *dev, gs_logical_operation_t lop,
 	    rop = rop3_know_T_1(rop);
     }
     return !(rop == rop3_0 || rop == rop3_1 ||
-	     rop == rop3_D || rop == rop3_S || rop == rop3_T);
+	     rop == rop3_S || rop == rop3_T);
 }
 
 /* Write out the color for filling, stroking, or masking. */
@@ -120,16 +120,6 @@ cmd_put_drawing_color(gx_device_clist_writer * cldev, gx_clist_state * pcls,
         color_unset(psdc);
     }
 
-    /* see if phase informaiton must be inserted in the command list */
-    if ( pdcolor->type->get_phase(pdcolor, &color_phase) &&
-         (color_phase.x != pcls->tile_phase.x ||
-          color_phase.y != pcls->tile_phase.y   )        &&
-	 (code = cmd_set_tile_phase( cldev,
-                                     pcls,
-                                     color_phase.x,
-                                     color_phase.y )) < 0  )
-        return code;
-
     /*
      * Get the device color type index and the required size.
      *
@@ -152,6 +142,16 @@ cmd_put_drawing_color(gx_device_clist_writer * cldev, gx_clist_state * pcls,
     else if (code < 0 && code != gs_error_rangecheck)
         return code;
     req_size = dc_size + 2 + 1 + enc_u_sizew(dc_size);
+
+    /* see if phase informaiton must be inserted in the command list */
+    if ( pdcolor->type->get_phase(pdcolor, &color_phase) &&
+         (color_phase.x != pcls->tile_phase.x ||
+          color_phase.y != pcls->tile_phase.y   )        &&
+	 (code = cmd_set_tile_phase( cldev,
+                                     pcls,
+                                     color_phase.x,
+                                     color_phase.y )) < 0  )
+        return code;
 
     /*
      * Encoded device colors are small in comparison to the command
@@ -237,7 +237,7 @@ cmd_check_clip_path(gx_device_clist_writer * cldev, const gx_clip_path * pcpath)
 #define FILL_KNOWN\
  (cj_ac_sa_known | flatness_known | op_bm_tk_known | opacity_alpha_known |\
   shape_alpha_known | fill_adjust_known | alpha_known | clip_path_known)
-private void
+static void
 cmd_check_fill_known(gx_device_clist_writer *cdev, const gs_imager_state *pis,
 		     floatp flatness, const gs_fixed_point *padjust,
 		     const gx_clip_path *pcpath, uint *punknown)
@@ -838,7 +838,7 @@ clist_stroke_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
  * sometimes used for images, so its performance does matter.
  */
 
-private int
+static int
 clist_put_polyfill(gx_device *dev, fixed px, fixed py,
 		   const gs_fixed_point *points, int num_points,
 		   const gx_drawing_color *pdcolor, gs_logical_operation_t lop)
@@ -951,7 +951,7 @@ typedef struct cmd_segment_writer_s {
 cmd_segment_writer;
 
 /* Put out a path segment command. */
-private int
+static int
 cmd_put_segment(cmd_segment_writer * psw, byte op,
 		const fixed * operands, segment_notes notes)
 {
@@ -1087,7 +1087,7 @@ cmd_put_segment(cmd_segment_writer * psw, byte op,
  * Write a path.  We go to a lot of trouble to omit segments that are
  * entirely outside the band.
  */
-private int
+static int
 cmd_put_path(gx_device_clist_writer * cldev, gx_clist_state * pcls,
 	     const gx_path * ppath, fixed ymin, fixed ymax, byte path_op,
 	     bool implicit_close, segment_notes keep_notes)

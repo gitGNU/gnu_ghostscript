@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfdecode.c,v 1.8 2007/09/11 15:23:50 Arabidopsis Exp $ */
+/* $Id: zfdecode.c,v 1.9 2008/03/23 15:28:14 Arabidopsis Exp $ */
 /* Additional decoding filter creation */
 #include "memory_.h"
 #include "ghost.h"
@@ -50,7 +50,7 @@
 
 /* <target> ASCII85Encode/filter <file> */
 /* <target> <dict> ASCII85Encode/filter <file> */
-private int
+static int
 zA85E(i_ctx_t *i_ctx_p)
 {
     return filter_write_simple(i_ctx_p, &s_A85E_template);
@@ -58,7 +58,7 @@ zA85E(i_ctx_t *i_ctx_p)
 
 /* <source> ASCII85Decode/filter <file> */
 /* <source> <dict> ASCII85Decode/filter <file> */
-private int
+static int
 zA85D(i_ctx_t *i_ctx_p)
 {
     return filter_read_simple(i_ctx_p, &s_A85D_template);
@@ -84,7 +84,7 @@ zcf_setup(os_ptr op, stream_CF_state *pcfs, gs_ref_memory_t *imem)
 
 /* <source> <dict> CCITTFaxDecode/filter <file> */
 /* <source> CCITTFaxDecode/filter <file> */
-private int
+static int
 zCFD(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -211,7 +211,7 @@ zlz_setup(os_ptr op, stream_LZW_state * plzs)
 
 /* <source> LZWDecode/filter <file> */
 /* <source> <dict> LZWDecode/filter <file> */
-private int
+static int
 zLZWD(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -263,7 +263,7 @@ zpd_setup(os_ptr op, stream_PDiff_state * ppds)
 }
 
 /* <target> <dict> PixelDifferenceEncode/filter <file> */
-private int
+static int
 zPDiffE(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -276,7 +276,7 @@ zPDiffE(i_ctx_t *i_ctx_p)
 }
 
 /* <source> <dict> PixelDifferenceDecode/filter <file> */
-private int
+static int
 zPDiffD(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -314,7 +314,7 @@ zpp_setup(os_ptr op, stream_PNGP_state * ppps)
 }
 
 /* <target> <dict> PNGPredictorEncode/filter <file> */
-private int
+static int
 zPNGPE(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -327,7 +327,7 @@ zPNGPE(i_ctx_t *i_ctx_p)
 }
 
 /* <source> <dict> PNGPredictorDecode/filter <file> */
-private int
+static int
 zPNGPD(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

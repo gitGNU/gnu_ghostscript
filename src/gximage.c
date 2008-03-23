@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gximage.c,v 1.8 2007/09/11 15:24:12 Arabidopsis Exp $ */
+/* $Id: gximage.c,v 1.9 2008/03/23 15:28:14 Arabidopsis Exp $ */
 /* Generic image support */
 #include "memory_.h"
 #include "gx.h"
@@ -243,7 +243,7 @@ gx_image_default_release(gs_image_common_t *pic, gs_memory_t *mem)
 }
 
 #ifdef DEBUG
-private void
+static void
 debug_b_print_matrix(const gs_pixel_image_t *pim)
 {
     if_debug6('b', "      ImageMatrix=[%g %g %g %g %g %g]\n",
@@ -251,7 +251,7 @@ debug_b_print_matrix(const gs_pixel_image_t *pim)
 	      pim->ImageMatrix.yx, pim->ImageMatrix.yy,
 	      pim->ImageMatrix.tx, pim->ImageMatrix.ty);
 }
-private void
+static void
 debug_b_print_decode(const gs_pixel_image_t *pim, int num_decode)
 {
     if (gs_debug_c('b')) {

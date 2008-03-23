@@ -1,4 +1,4 @@
-#  Copyright (C) 2004-2006 Artifex Software, Inc.
+#  Copyright (C) 2004-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: jasper.mak,v 1.5 2007/09/11 15:24:41 Arabidopsis Exp $
+# $Id: jasper.mak,v 1.6 2008/03/23 15:27:38 Arabidopsis Exp $
 
 # makefile for jasper JPEG 2000 support library
 # Users of this makefile must define the following:
@@ -164,7 +164,7 @@ JAS_EXCF_=\
         $(D_)EXCLUDE_PNG_SUPPORT$(_D_)1$(_D)
 
 # define our specific compiler
-JAS_CC=$(CC_) $(I_)$(JASGEN) $(II)$(JPXI_)$(_I) $(JPXCF_) $(JAS_EXCF_) $(CFLAGS)
+JAS_CC=$(CC_) $(I_)$(JASGEN) $(II)$(JPXI_)$(_I) $(JPXCF_) $(JAS_EXCF_)
 JASO_=$(O_)$(JASOBJ)
 
 # switch in the selected .dev

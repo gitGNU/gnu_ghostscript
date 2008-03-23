@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxipixel.c,v 1.11 2007/09/11 15:23:58 Arabidopsis Exp $ */
+/* $Id: gxipixel.c,v 1.12 2008/03/23 15:28:05 Arabidopsis Exp $ */
 /* Common code for ImageType 1 and 4 initialization */
 #include "gx.h"
 #include "math_.h"
@@ -49,12 +49,12 @@ private_st_gx_image_enum();
 extern_gx_image_class_table();
 
 /* Enumerator procedures */
-private const gx_image_enum_procs_t image1_enum_procs = {
+static const gx_image_enum_procs_t image1_enum_procs = {
     gx_image1_plane_data, gx_image1_end_image, gx_image1_flush
 };
 
 /* GC procedures */
-private 
+static 
 ENUM_PTRS_WITH(image_enum_enum_ptrs, gx_image_enum *eptr)
 {
     int bps;
@@ -82,7 +82,7 @@ ENUM_PTRS_WITH(image_enum_enum_ptrs, gx_image_enum *eptr)
 gx_image_enum_do_ptrs(e1)
 #undef e1
 ENUM_PTRS_END
-private RELOC_PTRS_WITH(image_enum_reloc_ptrs, gx_image_enum *eptr)
+static RELOC_PTRS_WITH(image_enum_reloc_ptrs, gx_image_enum *eptr)
 {
     int i;
 
@@ -104,10 +104,10 @@ private RELOC_PTRS_WITH(image_enum_reloc_ptrs, gx_image_enum *eptr)
 RELOC_PTRS_END
 
 /* Forward declarations */
-private int color_draws_b_w(gx_device * dev,
+static int color_draws_b_w(gx_device * dev,
 			    const gx_drawing_color * pdcolor);
-private void image_init_map(byte * map, int map_size, const float *decode);
-private void image_init_colors(gx_image_enum * penum, int bps, int spp,
+static void image_init_map(byte * map, int map_size, const float *decode);
+static void image_init_colors(gx_image_enum * penum, int bps, int spp,
 			       gs_image_format_t format,
 			       const float *decode,
 			       const gs_imager_state * pis, gx_device * dev,
@@ -595,10 +595,7 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
 				 false);
 	    return_error(gs_error_VMerror);
 	}
-	gx_make_clip_translate_device(cdev, gx_cpath_list(pcpath), 0, 0, mem);
-	gx_device_retain((gx_device *)cdev, true); /* will free explicitly */
-	gx_device_set_target((gx_device_forward *)cdev, dev);
-	(*dev_proc(cdev, open_device)) ((gx_device *) cdev);
+	gx_make_clip_device_in_heap(cdev, pcpath, dev, mem);
 	penum->clip_dev = cdev;
     }
     if (penum->use_rop) {	/* Set up the RasterOp source device. */
@@ -622,7 +619,7 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
 
 /* If a drawing color is black or white, return 0 or 1 respectively, */
 /* otherwise return -1. */
-private int
+static int
 color_draws_b_w(gx_device * dev, const gx_drawing_color * pdcolor)
 {
     if (color_is_pure(pdcolor)) {
@@ -680,7 +677,7 @@ image_init_clues(gx_image_enum * penum, int bps, int spp)
 }
 
 /* Initialize the color mapping tables for a non-mask image. */
-private void
+static void
 image_init_colors(gx_image_enum * penum, int bps, int spp,
 		  gs_image_format_t format, const float *decode /*[spp*2] */ ,
 		  const gs_imager_state * pis, gx_device * dev,
@@ -790,7 +787,7 @@ image_init_colors(gx_image_enum * penum, int bps, int spp,
 /* Construct a mapping table for sample values. */
 /* map_size is 2, 4, 16, or 256.  Note that 255 % (map_size - 1) == 0, */
 /* so the division 0xffffL / (map_size - 1) is always exact. */
-private void
+static void
 image_init_map(byte * map, int map_size, const float *decode)
 {
     float min_v = decode[0];

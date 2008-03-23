@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevwdib.c,v 1.9 2007/09/11 15:24:27 Arabidopsis Exp $ */
+/* $Id: gdevwdib.c,v 1.10 2008/03/23 15:27:56 Arabidopsis Exp $ */
 /* MS Windows 3.n driver for Ghostscript using a DIB for buffering. */
 #include "gdevmswn.h"
 #include "gxdevmem.h"
@@ -39,19 +39,19 @@ typedef struct gx_device_win_dib_s gx_device_win_dib;
 /* Device procedures */
 
 /* See gxdevice.h for the definitions of the procedures. */
-private dev_proc_open_device(win_dib_open);
-private dev_proc_get_initial_matrix(win_dib_get_initial_matrix);
-private dev_proc_close_device(win_dib_close);
-private dev_proc_fill_rectangle(win_dib_fill_rectangle);
-private dev_proc_copy_mono(win_dib_copy_mono);
-private dev_proc_copy_color(win_dib_copy_color);
-private dev_proc_get_bits(win_dib_get_bits);
-private dev_proc_put_params(win_dib_put_params);
+static dev_proc_open_device(win_dib_open);
+static dev_proc_get_initial_matrix(win_dib_get_initial_matrix);
+static dev_proc_close_device(win_dib_close);
+static dev_proc_fill_rectangle(win_dib_fill_rectangle);
+static dev_proc_copy_mono(win_dib_copy_mono);
+static dev_proc_copy_color(win_dib_copy_color);
+static dev_proc_get_bits(win_dib_get_bits);
+static dev_proc_put_params(win_dib_put_params);
 
 /* Windows-specific procedures */
-private win_proc_repaint(win_dib_repaint);
-private win_proc_alloc_bitmap(win_dib_alloc_bitmap);
-private win_proc_free_bitmap(win_dib_free_bitmap);
+static win_proc_repaint(win_dib_repaint);
+static win_proc_alloc_bitmap(win_dib_alloc_bitmap);
+static win_proc_free_bitmap(win_dib_free_bitmap);
 
 /* The device descriptor */
 struct gx_device_win_dib_s {
@@ -76,7 +76,7 @@ struct gx_device_win_dib_s {
     int lock_count;
     gx_device_memory mdev;
 };
-private const gx_device_procs win_dib_procs =
+static const gx_device_procs win_dib_procs =
 {
     win_dib_open,
     win_dib_get_initial_matrix,
@@ -114,12 +114,12 @@ gx_device_win_dib far_data gs_mswindll_device =
 };
 
 /* forward declarations */
-private HGLOBAL win_dib_make_dib(gx_device_win * dev, int orgx, int orgy, int wx, int wy);
-private int win_dib_lock_device(unsigned char *device, int flag);
+static HGLOBAL win_dib_make_dib(gx_device_win * dev, int orgx, int orgy, int wx, int wy);
+static int win_dib_lock_device(unsigned char *device, int flag);
 
 
 /* Open the win_dib driver */
-private int
+static int
 win_dib_open(gx_device * dev)
 {
     int code = win_open(dev);
@@ -152,7 +152,7 @@ win_dib_open(gx_device * dev)
 
 /* Get the initial matrix.  DIBs, unlike most displays, */
 /* put (0,0) in the lower left corner. */
-private void
+static void
 win_dib_get_initial_matrix(gx_device * dev, gs_matrix * pmat)
 {
     pmat->xx = dev->x_pixels_per_inch / 72.0;
@@ -164,7 +164,7 @@ win_dib_get_initial_matrix(gx_device * dev, gs_matrix * pmat)
 }
 
 /* Close the win_dib driver */
-private int
+static int
 win_dib_close(gx_device * dev)
 {
     int code;
@@ -206,7 +206,7 @@ win_dib_close(gx_device * dev)
 #endif /* (!)USE_SEGMENTS */
 
 /* Fill a rectangle. */
-private int
+static int
 win_dib_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 		       gx_color_index color)
 {
@@ -226,7 +226,7 @@ win_dib_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 
 /* Copy a monochrome bitmap.  The colors are given explicitly. */
 /* Color = gx_no_color_index means transparent (no effect on the image). */
-private int
+static int
 win_dib_copy_mono(gx_device * dev,
 		const byte * base, int sourcex, int raster, gx_bitmap_id id,
 		  int x, int y, int w, int h,
@@ -255,7 +255,7 @@ win_dib_copy_mono(gx_device * dev,
 
 /* Copy a color pixel map.  This is just like a bitmap, except that */
 /* each pixel takes 8 or 4 bits instead of 1 when device driver has color. */
-private int
+static int
 win_dib_copy_color(gx_device * dev,
 		const byte * base, int sourcex, int raster, gx_bitmap_id id,
 		   int x, int y, int w, int h)
@@ -354,7 +354,7 @@ gsdll_draw(unsigned char *device, HDC hdc, LPRECT dest, LPRECT src)
 
 
 /* Repaint a section of the window. */
-private void
+static void
 win_dib_repaint(gx_device_win * dev, HDC hdc, int dx, int dy, int wx, int wy,
 		int sx, int sy)
 {
@@ -426,7 +426,7 @@ win_dib_repaint(gx_device_win * dev, HDC hdc, int dx, int dy, int wx, int wy,
 
 /* This makes a DIB that contains all or part of the bitmap. */
 /* The bitmap pixel orgx must start on a byte boundary. */
-private HGLOBAL
+static HGLOBAL
 win_dib_make_dib(gx_device_win * dev, int orgx, int orgy, int wx, int wy)
 {
 #define xwdev ((gx_device_win_dib *)dev)
@@ -537,7 +537,7 @@ win_dib_make_dib(gx_device_win * dev, int orgx, int orgy, int wx, int wy)
 
 
 /* Allocate the backing bitmap. */
-private int
+static int
 win_dib_alloc_bitmap(gx_device_win * dev, gx_device * param_dev)
 {
     int width;
@@ -616,7 +616,7 @@ win_dib_alloc_bitmap(gx_device_win * dev, gx_device * param_dev)
 
 
 /* Free the backing bitmap. */
-private void
+static void
 win_dib_free_bitmap(gx_device_win * dev)
 {
     HGLOBAL hmdata = wdev->hmdata;
@@ -628,7 +628,7 @@ win_dib_free_bitmap(gx_device_win * dev)
 /* Lock the device (so it's size cannot be changed) if flag = TRUE */
 /* or unlock the device if flag = FALSE */
 /* device is a pointer to Ghostscript device from GSDLL_DEVICE message */
-private int
+static int
 win_dib_lock_device(unsigned char *device, int flag)
 {
     gx_device *dev = (gx_device *) device;

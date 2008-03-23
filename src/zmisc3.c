@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zmisc3.c,v 1.8 2007/09/11 15:24:40 Arabidopsis Exp $ */
+/* $Id: zmisc3.c,v 1.9 2008/03/23 15:28:06 Arabidopsis Exp $ */
 /* Miscellaneous LanguageLevel 3 operators */
 #include "ghost.h"
 #include "gscspace.h"		/* for gscolor2.h */
@@ -29,14 +29,14 @@
 #include "store.h"
 
 /* - clipsave - */
-private int
+static int
 zclipsave(i_ctx_t *i_ctx_p)
 {
     return gs_clipsave(igs);
 }
 
 /* - cliprestore - */
-private int
+static int
 zcliprestore(i_ctx_t *i_ctx_p)
 {
     return gs_cliprestore(igs);
@@ -53,7 +53,7 @@ zcliprestore(i_ctx_t *i_ctx_p)
 typedef struct ref2_s {
     ref proc1, proc2;
 } ref2_t;
-private int
+static int
 zeqproc(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

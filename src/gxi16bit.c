@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxi16bit.c,v 1.6 2007/09/11 15:24:23 Arabidopsis Exp $ */
+/* $Id: gxi16bit.c,v 1.7 2008/03/23 15:28:11 Arabidopsis Exp $ */
 /* 16-bit image procedures */
 #include "gx.h"
 #include "memory_.h"
@@ -39,7 +39,7 @@
 
 /* ---------------- Unpacking procedures ---------------- */
 
-private const byte *
+static const byte *
 sample_unpack_16(byte * bptr, int *pdata_x, const byte * data,
 		 int data_x, uint dsize, const sample_map *ignore_smap, int spread,
 		 int ignore_num_components_per_plane)

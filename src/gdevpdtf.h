@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdtf.h,v 1.9 2007/09/11 15:24:04 Arabidopsis Exp $ */
+/* $Id: gdevpdtf.h,v 1.10 2008/03/23 15:28:04 Arabidopsis Exp $ */
 /* Font and CMap resource structure and API for pdfwrite */
 
 #ifndef gdevpdtf_INCLUDED
@@ -243,6 +243,7 @@ struct pdf_font_resource_s {
 	    ];
 	    gs_const_string CMapName; /* copied from the original CMap, */
 				/* or references the table of standard names */
+	    uint font_index;	/* The index of the descendent font in the source CMap. */
 	    bool cmap_is_standard;
 	    int WMode;		/* of CMap */
 
@@ -290,7 +291,7 @@ struct pdf_font_resource_s {
 		} truetype;
 
 		struct /*type3*/ {
-		    gs_int_rect FontBBox;
+		    gs_rect FontBBox;
 		    gs_matrix FontMatrix;
 		    pdf_char_proc_ownership_t *char_procs;
 		    int max_y_offset;

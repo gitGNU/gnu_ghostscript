@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevmswn.c,v 1.8 2007/09/11 15:24:19 Arabidopsis Exp $ */
+/* $Id: gdevmswn.c,v 1.9 2008/03/23 15:28:08 Arabidopsis Exp $ */
 /*
  * Microsoft Windows 3.n driver for Ghostscript.
  *
@@ -33,7 +33,7 @@
 #include "gsdll.h"
 
 /* Forward references */
-private int win_set_bits_per_pixel(gx_device_win *, int);
+static int win_set_bits_per_pixel(gx_device_win *, int);
 
 #define TIMER_ID 1
 
@@ -422,7 +422,7 @@ win_makepalette(gx_device_win * wdev)
 }
 
 
-private int
+static int
 win_set_bits_per_pixel(gx_device_win * wdev, int bpp)
 {
     static const gx_device_color_info win_24bit_color = dci_color(24, 255, 255);

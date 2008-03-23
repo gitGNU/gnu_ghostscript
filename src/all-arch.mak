@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 Artifex Software, Inc.
+#  Copyright (C) 2001-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 # 
 # This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 #
-# $Id: all-arch.mak,v 1.12 2007/09/11 15:24:27 Arabidopsis Exp $
+# $Id: all-arch.mak,v 1.13 2008/03/23 15:27:58 Arabidopsis Exp $
 #
 # Author:
 # 	Nelson H. F. Beebe
@@ -187,8 +187,6 @@ COMMON_ARGS		= DEVICE_DEVS_EXTRA='$(DEVICE_DEVS_EXTRA)' \
 			  GS_LIB_DEFAULT='$(GS_LIB_DEFAULT)' \
 			  JSRCDIR='$(JSRCDIR)' \
 			  PNGSRCDIR='$(PNGSRCDIR)' \
-			  PSRCDIR='$(PNGSRCDIR)' \
-			  PVERSION=10218 \
 			  SHARE_LIBPNG='$(SHARE_LIBPNG)' \
 			  SHARE_ZLIB='$(SHARE_ZLIB)' \
 			  XCFLAGS='$(XCFLAGS)' \

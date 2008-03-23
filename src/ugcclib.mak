@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 Artifex Software, Inc.
+#  Copyright (C) 2001-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: ugcclib.mak,v 1.12 2007/09/11 15:23:55 Arabidopsis Exp $
+# $Id: ugcclib.mak,v 1.13 2008/03/23 15:27:49 Arabidopsis Exp $
 # makefile for Unix / gcc library testing.
 
 BINDIR=./libobj
@@ -46,13 +46,10 @@ DEBUGRELDIR=.
 PGRELDIR=.
 
 JSRCDIR=jpeg
-JVERSION=6
-
 SHARE_JPEG=0
 JPEG_NAME=jpeg
 
-PSRCDIR=libpng
-PVERSION=10218
+PNGSRCDIR=libpng
 SHARE_LIBPNG=1
 LIBPNG_NAME=png
 
@@ -114,7 +111,7 @@ FEATURE_DEVS=$(GLD)dps2lib.dev $(GLD)psl2cs.dev $(GLD)cielib.dev\
  $(GLD)psl3lib.dev $(GLD)path1lib.dev $(GLD)patlib.dev $(GLD)htxlib.dev \
  $(GLD)roplib.dev $(GLD)devcmap.dev
 
-COMPILE_INITS=0
+COMPILE_INITS?=0
 BAND_LIST_STORAGE=file
 BAND_LIST_COMPRESSOR=zlib
 FILE_IMPLEMENTATION=stdio

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ztoken.c,v 1.10 2007/09/11 15:24:06 Arabidopsis Exp $ */
+/* $Id: ztoken.c,v 1.11 2008/03/23 15:27:37 Arabidopsis Exp $ */
 /* Token reading operators */
 #include "string_.h"
 #include "stat_.h" /* get system header early to avoid name clash on Cygwin */
@@ -39,8 +39,8 @@
 /* <file> token <obj> -true- */
 /* <string> token <post> <obj> -true- */
 /* <string|file> token -false- */
-private int ztoken_continue(i_ctx_t *);
-private int token_continue(i_ctx_t *, scanner_state *, bool);
+static int ztoken_continue(i_ctx_t *);
+static int token_continue(i_ctx_t *, scanner_state *, bool);
 int
 ztoken(i_ctx_t *i_ctx_p)
 {
@@ -92,7 +92,7 @@ ztoken(i_ctx_t *i_ctx_p)
 }
 /* Continue reading a token after an interrupt or callout. */
 /* *op is the scanner state. */
-private int
+static int
 ztoken_continue(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -103,7 +103,7 @@ ztoken_continue(i_ctx_t *i_ctx_p)
     return token_continue(i_ctx_p, pstate, false);
 }
 /* Common code for token reading. */
-private int
+static int
 token_continue(i_ctx_t *i_ctx_p, scanner_state * pstate, bool save)
 {
     os_ptr op = osp;
@@ -155,7 +155,7 @@ again:
 /* This is different from token + exec because literal procedures */
 /* are not executed (although binary object sequences ARE executed). */
 int ztokenexec_continue(i_ctx_t *);	/* export for interpreter */
-private int tokenexec_continue(i_ctx_t *, scanner_state *, bool);
+static int tokenexec_continue(i_ctx_t *, scanner_state *, bool);
 int
 ztokenexec(i_ctx_t *i_ctx_p)
 {
@@ -183,7 +183,7 @@ ztokenexec_continue(i_ctx_t *i_ctx_p)
     return tokenexec_continue(i_ctx_p, pstate, false);
 }
 /* Common code for token reading + execution. */
-private int
+static int
 tokenexec_continue(i_ctx_t *i_ctx_p, scanner_state * pstate, bool save)
 {
     os_ptr op;
@@ -318,6 +318,18 @@ ztoken_handle_comment(i_ctx_t *i_ctx_p, scanner_state *sstate,
     return o_push_estack;
 }
 
+typedef struct named_scanner_option_s {
+    const char *pname;
+    int option;
+} named_scanner_option_t;
+static const named_scanner_option_t named_options[] = {
+    {"PDFScanRules", SCAN_PDF_RULES},
+    {"ProcessComment", SCAN_PROCESS_COMMENTS},
+    {"ProcessDSCComment", SCAN_PROCESS_DSC_COMMENTS},
+    {"PDFScanInvNum", SCAN_PDF_INV_NUM},
+    {"PDFScanUnsigned", SCAN_PDF_UNSIGNED}
+};
+
 /*
  * Update the cached scanner_options in the context state after doing a
  * setuserparams.  (We might move this procedure somewhere else eventually.)
@@ -325,17 +337,6 @@ ztoken_handle_comment(i_ctx_t *i_ctx_p, scanner_state *sstate,
 int
 ztoken_scanner_options(const ref *upref, int old_options)
 {
-    typedef struct named_scanner_option_s {
-	const char *pname;
-	int option;
-    } named_scanner_option_t;
-    static const named_scanner_option_t named_options[] = {
-	{"ProcessComment", SCAN_PROCESS_COMMENTS},
-	{"ProcessDSCComment", SCAN_PROCESS_DSC_COMMENTS},
-	{"PDFScanRules", SCAN_PDF_RULES},
-	{"PDFScanInvNum", SCAN_PDF_INV_NUM},
-	{"PDFScanUnsigned", SCAN_PDF_UNSIGNED}
-    };
     int options = old_options;
     int i;
 
@@ -353,6 +354,24 @@ ztoken_scanner_options(const ref *upref, int old_options)
 	}
     }
     return options;
+}
+/*
+ * Get the value for a scanner option.
+ * return -1 if no such option, 1/0 for on/off and option's name in *pname as a C string
+ */
+int
+ztoken_get_scanner_option(const ref *psref, int options, const char **pname)
+{
+    const named_scanner_option_t *pnso;
+
+    for (pnso = named_options + countof(named_options); pnso-- != named_options;) {
+	if (!bytes_compare((const byte *)pnso->pname, strlen(pnso->pname),
+			psref->value.const_bytes, r_size(psref))) {
+	    *pname = pnso->pname;
+	    return (options & pnso->option ? 1 : 0);
+	}
+    }
+    return -1;
 }
 
 /* ------ Initialization procedure ------ */

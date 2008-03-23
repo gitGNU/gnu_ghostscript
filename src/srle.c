@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: srle.c,v 1.7 2007/09/11 15:23:46 Arabidopsis Exp $ */
+/* $Id: srle.c,v 1.8 2008/03/23 15:27:50 Arabidopsis Exp $ */
 /* RunLengthEncode filter */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"
@@ -29,7 +29,7 @@
 private_st_RLE_state();
 
 /* Set defaults */
-private void
+static void
 s_RLE_set_defaults(stream_state * st)
 {
     stream_RLE_state *const ss = (stream_RLE_state *) st;
@@ -38,7 +38,7 @@ s_RLE_set_defaults(stream_state * st)
 }
 
 /* Initialize */
-private int
+static int
 s_RLE_init(stream_state * st)
 {
     stream_RLE_state *const ss = (stream_RLE_state *) st;
@@ -47,7 +47,7 @@ s_RLE_init(stream_state * st)
 }
 
 /* Process a buffer */
-private int
+static int
 s_RLE_process(stream_state * st, stream_cursor_read * pr,
 	      stream_cursor_write * pw, bool last)
 {

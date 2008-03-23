@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevtsep.c,v 1.6 2007/09/11 15:23:44 Arabidopsis Exp $ */
+/* $Id: gdevtsep.c,v 1.7 2008/03/23 15:28:06 Arabidopsis Exp $ */
 /* tiffgray device:  8-bit Gray uncompressed TIFF device */
 /* tiff32nc device:  32-bit CMYK uncompressed TIFF device */
 /* tiffsep device: Generate individual TIFF gray files for each separation. */
@@ -50,9 +50,9 @@ typedef struct gx_device_tiff_s {
     gdev_tiff_state tiff;
 } gx_device_tiff;
 
-private dev_proc_print_page(tiffgray_print_page);
+static dev_proc_print_page(tiffgray_print_page);
 
-private const gx_device_procs tiffgray_procs =
+static const gx_device_procs tiffgray_procs =
 prn_color_procs(gdev_prn_open, gdev_prn_output_page, gdev_prn_close,
 		gx_default_gray_map_rgb_color, gx_default_gray_map_color_rgb);
 
@@ -75,7 +75,7 @@ typedef struct tiff_gray_directory_s {
     TIFF_dir_entry SamplesPerPixel;
 } tiff_gray_directory;
 
-private const tiff_gray_directory dir_gray_template =
+static const tiff_gray_directory dir_gray_template =
 {
     {TIFFTAG_BitsPerSample, TIFF_SHORT, 1, 8},
     {TIFFTAG_Compression, TIFF_SHORT, 1, Compression_none},
@@ -88,13 +88,13 @@ typedef struct tiff_gray_values_s {
     TIFF_ushort bps[1];
 } tiff_gray_values;
 
-private const tiff_gray_values val_gray_template = {
+static const tiff_gray_values val_gray_template = {
     {8}
 };
 
 /* ------ Private functions ------ */
 
-private int
+static int
 tiffgray_print_page(gx_device_printer * pdev, FILE * file)
 {
     gx_device_tiff *const tfdev = (gx_device_tiff *)pdev;
@@ -134,7 +134,7 @@ tiffgray_print_page(gx_device_printer * pdev, FILE * file)
 
 /* ------ The tiff32nc device ------ */
 
-private dev_proc_print_page(tiff32nc_print_page);
+static dev_proc_print_page(tiff32nc_print_page);
 
 #define cmyk_procs(p_map_color_rgb, p_map_cmyk_color)\
     gdev_prn_open, NULL, NULL, gdev_prn_output_page, gdev_prn_close,\
@@ -144,7 +144,7 @@ private dev_proc_print_page(tiff32nc_print_page);
 
 /* 8-bit-per-plane separated CMYK color. */
 
-private const gx_device_procs tiff32nc_procs = {
+static const gx_device_procs tiff32nc_procs = {
     cmyk_procs(cmyk_8bit_map_color_cmyk, cmyk_8bit_map_cmyk_color)
 };
 
@@ -171,11 +171,11 @@ typedef struct tiff_cmyk_values_s {
     TIFF_ushort bps[4];
 } tiff_cmyk_values;
 
-private const tiff_cmyk_values val_cmyk_template = {
+static const tiff_cmyk_values val_cmyk_template = {
     {8, 8, 8 ,8}
 };
 
-private const tiff_cmyk_directory dir_cmyk_template =
+static const tiff_cmyk_directory dir_cmyk_template =
 {
 	/* C's ridiculous rules about & and arrays require bps[0] here: */
     {TIFFTAG_BitsPerSample, TIFF_SHORT | TIFF_INDIRECT, 4, offset_of(tiff_cmyk_values, bps[0])},
@@ -187,7 +187,7 @@ private const tiff_cmyk_directory dir_cmyk_template =
 
 /* ------ Private functions ------ */
 
-private int
+static int
 tiff32nc_print_page(gx_device_printer * pdev, FILE * file)
 {
     gx_device_tiff *const tfdev = (gx_device_tiff *)pdev;
@@ -232,19 +232,19 @@ tiff32nc_print_page(gx_device_printer * pdev, FILE * file)
 #define MAX_COLOR_VALUE	255		/* We are using 8 bits per colorant */
 
 /* The device descriptor */
-private dev_proc_open_device(tiffsep_prn_open);
-private dev_proc_close_device(tiffsep_prn_close);
-private dev_proc_get_params(tiffsep_get_params);
-private dev_proc_put_params(tiffsep_put_params);
-private dev_proc_print_page(tiffsep_print_page);
-private dev_proc_get_color_mapping_procs(tiffsep_get_color_mapping_procs);
-private dev_proc_get_color_comp_index(tiffsep_get_color_comp_index);
-private dev_proc_encode_color(tiffsep_encode_color);
-private dev_proc_decode_color(tiffsep_decode_color);
-private dev_proc_encode_color(tiffsep_encode_compressed_color);
-private dev_proc_decode_color(tiffsep_decode_compressed_color);
-private dev_proc_update_spot_equivalent_colors(tiffsep_update_spot_equivalent_colors);
-private dev_proc_ret_devn_params(tiffsep_ret_devn_params);
+static dev_proc_open_device(tiffsep_prn_open);
+static dev_proc_close_device(tiffsep_prn_close);
+static dev_proc_get_params(tiffsep_get_params);
+static dev_proc_put_params(tiffsep_put_params);
+static dev_proc_print_page(tiffsep_print_page);
+static dev_proc_get_color_mapping_procs(tiffsep_get_color_mapping_procs);
+static dev_proc_get_color_comp_index(tiffsep_get_color_comp_index);
+static dev_proc_encode_color(tiffsep_encode_color);
+static dev_proc_decode_color(tiffsep_decode_color);
+static dev_proc_encode_color(tiffsep_encode_compressed_color);
+static dev_proc_decode_color(tiffsep_decode_compressed_color);
+static dev_proc_update_spot_equivalent_colors(tiffsep_update_spot_equivalent_colors);
+static dev_proc_ret_devn_params(tiffsep_ret_devn_params);
 
 
 /*
@@ -265,7 +265,7 @@ typedef struct tiffsep_device_s {
 } tiffsep_device;
 
 /* GC procedures */
-private 
+static 
 ENUM_PTRS_WITH(tiffsep_device_enum_ptrs, tiffsep_device *pdev)
 {
     if (index == 0)
@@ -279,7 +279,7 @@ ENUM_PTRS_WITH(tiffsep_device_enum_ptrs, tiffsep_device *pdev)
 }
 ENUM_PTRS_END
 
-private RELOC_PTRS_WITH(tiffsep_device_reloc_ptrs, tiffsep_device *pdev)
+static RELOC_PTRS_WITH(tiffsep_device_reloc_ptrs, tiffsep_device *pdev)
 {
     RELOC_PREFIX(st_device_printer);
     {
@@ -296,7 +296,7 @@ RELOC_PTRS_END
 /* Even though tiffsep_device_finalize is the same as gx_device_finalize, */
 /* we need to implement it separately because st_composite_final */
 /* declares all 3 procedures as private. */
-private void
+static void
 tiffsep_device_finalize(void *vpdev)
 {
     gx_device_finalize(vpdev);
@@ -418,7 +418,7 @@ gs_private_st_composite_final(st_tiffsep_device, tiffsep_device,
 /*
  * TIFF device with CMYK process color model and spot color support.
  */
-private const gx_device_procs spot_cmyk_procs =
+static const gx_device_procs spot_cmyk_procs =
 		device_procs(ENCODE_COLOR, DECODE_COLOR);
 
 const tiffsep_device gs_tiffsep_device =
@@ -446,7 +446,7 @@ const tiffsep_device gs_tiffsep_device =
  * The following procedures are used to map the standard color spaces into
  * the color components for the tiffsep device.
  */
-private void
+static void
 tiffsep_gray_cs_to_cm(gx_device * dev, frac gray, frac out[])
 {
     int * map = ((tiffsep_device *) dev)->devn_params.separation_order_map;
@@ -454,7 +454,7 @@ tiffsep_gray_cs_to_cm(gx_device * dev, frac gray, frac out[])
     gray_cs_to_devn_cm(dev, map, gray, out);
 }
 
-private void
+static void
 tiffsep_rgb_cs_to_cm(gx_device * dev, const gs_imager_state *pis,
 				   frac r, frac g, frac b, frac out[])
 {
@@ -463,7 +463,7 @@ tiffsep_rgb_cs_to_cm(gx_device * dev, const gs_imager_state *pis,
     rgb_cs_to_devn_cm(dev, map, pis, r, g, b, out);
 }
 
-private void
+static void
 tiffsep_cmyk_cs_to_cm(gx_device * dev,
 		frac c, frac m, frac y, frac k, frac out[])
 {
@@ -472,7 +472,7 @@ tiffsep_cmyk_cs_to_cm(gx_device * dev,
     cmyk_cs_to_devn_cm(dev, map, c, m, y, k, out);
 }
 
-private const gx_cm_color_map_procs tiffsep_cm_procs = {
+static const gx_cm_color_map_procs tiffsep_cm_procs = {
     tiffsep_gray_cs_to_cm,
     tiffsep_rgb_cs_to_cm,
     tiffsep_cmyk_cs_to_cm
@@ -482,7 +482,7 @@ private const gx_cm_color_map_procs tiffsep_cm_procs = {
  * These are the handlers for returning the list of color space
  * to color model conversion routines.
  */
-private const gx_cm_color_map_procs *
+static const gx_cm_color_map_procs *
 tiffsep_get_color_mapping_procs(const gx_device * dev)
 {
     return &tiffsep_cm_procs;
@@ -493,7 +493,7 @@ tiffsep_get_color_mapping_procs(const gx_device * dev)
  * With 64 bit gx_color_index values, we compress the colorant values.  This
  * allows us to handle more than 8 colorants.
  */
-private gx_color_index
+static gx_color_index
 tiffsep_encode_compressed_color(gx_device *dev, const gx_color_value colors[])
 {
     return devn_encode_compressed_color(dev, colors, &(((tiffsep_device *)dev)->devn_params));
@@ -504,7 +504,7 @@ tiffsep_encode_compressed_color(gx_device *dev, const gx_color_value colors[])
  * With 64 bit gx_color_index values, we compress the colorant values.  This
  * allows us to handle more than 8 colorants.
  */
-private int
+static int
 tiffsep_decode_compressed_color(gx_device * dev, gx_color_index color, gx_color_value * out)
 {
     return devn_decode_compressed_color(dev, color, out,
@@ -515,7 +515,7 @@ tiffsep_decode_compressed_color(gx_device * dev, gx_color_index color, gx_color_
  * Encode a list of colorant values into a gx_color_index_value.
  * With 32 bit gx_color_index values, we simply pack values.
  */
-private gx_color_index
+static gx_color_index
 tiffsep_encode_color(gx_device *dev, const gx_color_value colors[])
 {
     int bpc = ((tiffsep_device *)dev)->devn_params.bitspercomponent;
@@ -535,7 +535,7 @@ tiffsep_encode_color(gx_device *dev, const gx_color_value colors[])
  * Decode a gx_color_index value back to a list of colorant values.
  * With 32 bit gx_color_index values, we simply pack values.
  */
-private int
+static int
 tiffsep_decode_color(gx_device * dev, gx_color_index color, gx_color_value * out)
 {
     int bpc = ((tiffsep_device *)dev)->devn_params.bitspercomponent;
@@ -554,7 +554,7 @@ tiffsep_decode_color(gx_device * dev, gx_color_index color, gx_color_value * out
 /*
  *  Device proc for updating the equivalent CMYK color for spot colors.
  */
-private int
+static int
 tiffsep_update_spot_equivalent_colors(gx_device * dev, const gs_state * pgs)
 {
     tiffsep_device * pdev = (tiffsep_device *)dev;
@@ -567,7 +567,7 @@ tiffsep_update_spot_equivalent_colors(gx_device * dev, const gs_state * pgs)
 /*
  *  Device proc for returning a pointer to DeviceN parameter structure
  */
-private gs_devn_params *
+static gs_devn_params *
 tiffsep_ret_devn_params(gx_device * dev)
 {
     tiffsep_device * pdev = (tiffsep_device *)dev;
@@ -576,7 +576,7 @@ tiffsep_ret_devn_params(gx_device * dev)
 }
 
 /* Get parameters.  We provide a default CRD. */
-private int
+static int
 tiffsep_get_params(gx_device * pdev, gs_param_list * plist)
 {
     int code = gdev_prn_get_params(pdev, plist);
@@ -589,7 +589,7 @@ tiffsep_get_params(gx_device * pdev, gs_param_list * plist)
 }
 
 /* Set parameters.  We allow setting the number of bits per component. */
-private int
+static int
 tiffsep_put_params(gx_device * pdev, gs_param_list * plist)
 {
     tiffsep_device * const pdevn = (tiffsep_device *) pdev;
@@ -612,7 +612,7 @@ tiffsep_put_params(gx_device * pdev, gs_param_list * plist)
  * the colorant is not being used due to a SeparationOrder device parameter.
  * It returns a negative value if not found.
  */
-private int
+static int
 tiffsep_get_color_comp_index(gx_device * dev, const char * pname,
 				int name_size, int component_type)
 {
@@ -638,7 +638,7 @@ tiffsep_get_color_comp_index(gx_device * dev, const char * pname,
  * to put the handling of that escaping.  However it is not actually
  * implemented.
  */
-private void
+static void
 copy_separation_name(tiffsep_device * pdev,
 		char * buffer, int max_size, int sep_num)
 {
@@ -657,7 +657,7 @@ copy_separation_name(tiffsep_device * pdev,
  * the extension '.tif', then we remove it from the length of the file
  * name.
  */
-private int
+static int
 length_base_file_name(tiffsep_device * pdev)
 {
     int base_filename_length = strlen(pdev->fname);
@@ -679,7 +679,7 @@ length_base_file_name(tiffsep_device * pdev)
 /*
  * Create a name for a separation file.
  */
-private int
+static int
 create_separation_file_name(tiffsep_device * pdev, char * buffer,
 				uint max_size, int sep_num)
 {
@@ -748,7 +748,7 @@ create_separation_file_name(tiffsep_device * pdev, char * buffer,
  * allow the user to create more than 8 separations by a making multiple
  * passes and using the SeparationOrder parameter.)
 */
-private int
+static int
 number_output_separations(int num_dev_comp, int num_std_colorants,
 					int num_order, int num_spot)
 {
@@ -768,7 +768,7 @@ number_output_separations(int num_dev_comp, int num_std_colorants,
  *
  * This is the inverse of the separation_order_map.
  */
-private void
+static void
 build_comp_to_sep_map(tiffsep_device * pdev, short * map_comp_to_sep)
 {
     int num_sep = pdev->devn_params.separations.num_separations;
@@ -849,7 +849,7 @@ typedef struct cmyk_composite_map_s {
  * Build the map to be used to create a CMYK equivalent to the current
  * device components.
  */
-private void
+static void
 build_cmyk_map(tiffsep_device * pdev, int num_comp,
 	short *map_comp_to_sep, cmyk_composite_map * cmyk_map)
 {
@@ -884,7 +884,7 @@ build_cmyk_map(tiffsep_device * pdev, int num_comp,
 /*
  * Build a CMYK equivalent to a raster line.
  */
-private void
+static void
 build_cmyk_raster_line(byte * src, byte * dest, int width,
 	int num_comp, cmyk_composite_map * cmyk_map)
 {
@@ -934,7 +934,7 @@ build_cmyk_raster_line(byte * src, byte * dest, int width,
  * The DeviceN parameters (SeparationOrder, SeparationColorNames, and
  * MaxSeparations) are applied to the tiffsep device.
  */
-private int
+static int
 tiffsep_print_page(gx_device_printer * pdev, FILE * file)
 {
     tiffsep_device * const tfdev = (tiffsep_device *)pdev;

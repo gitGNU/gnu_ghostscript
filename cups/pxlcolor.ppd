@@ -1,6 +1,6 @@
 *PPD-Adobe: "4.3"
 *%
-*% "$Id: pxlcolor.ppd,v 1.1 2007/09/11 15:25:05 Arabidopsis Exp $"
+*% "$Id: pxlcolor.ppd,v 1.2 2008/03/23 15:28:32 Arabidopsis Exp $"
 *%
 *%   Sample color PCL XL/PCL 6 driver PPD file for the Common UNIX
 *%   Printing System (CUPS).
@@ -28,15 +28,15 @@
 *LanguageVersion: English 
 *LanguageEncoding: ISOLatin1
 *PCFileName:	"PXLCOLOR.PPD"
-*Manufacturer:	"ESP"
-*Product:	"(ESP Ghostscript)"
+*Manufacturer:	"HP"
+*Product:	"(GPL Ghostscript)"
 *cupsVersion:	1.1
 *cupsManualCopies: False
 *cupsFilter:	"application/vnd.cups-postscript 0 pstopxl"
 *ModelName:     "HP Color LaserJet Series PCL 6"
 *ShortNickName: "HP Color LaserJet Series PCL 6"
 *NickName:      "HP Color LaserJet Series PCL 6 CUPS"
-*PSVersion:	"(3010.000) 81500"
+*PSVersion:	"(3010.000) 86000"
 *LanguageLevel:	"3"
 *ColorDevice:	True
 *DefaultColorSpace: RGB
@@ -202,5 +202,5 @@
 *Font ZapfChancery-MediumItalic: Standard "(001.007S)" Standard ROM
 *Font ZapfDingbats: Special "(001.004S)" Standard ROM
 *%
-*% End of "$Id: pxlcolor.ppd,v 1.1 2007/09/11 15:25:05 Arabidopsis Exp $".
+*% End of "$Id: pxlcolor.ppd,v 1.2 2008/03/23 15:28:32 Arabidopsis Exp $".
 *%

@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 Artifex Software, Inc.
+#  Copyright (C) 2001-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: openvms.mmk,v 1.11 2007/09/11 15:23:50 Arabidopsis Exp $
+# $Id: openvms.mmk,v 1.12 2008/03/23 15:27:47 Arabidopsis Exp $
 # makefile for OpenVMS VAX and Alpha using MMK
 #
 # Please contact Jim Dunham (dunham@omtool.com) if you have questions.
@@ -129,7 +129,6 @@ JSRCDIR=sys$library:
 .else
 JSRCDIR=[--.jpeg]
 .endif
-JVERSION=6
 
 # Define the directory where the PNG library sources are stored,
 # and the version of the library that is stored there.
@@ -137,11 +136,10 @@ JVERSION=6
 # See libpng.mak for more information.
 
 .ifdef SYSLIB
-PSRCDIR=sys$library:
+PNGSRCDIR=sys$library:
 .else
-PSRCDIR=[--.libpng]
+PNGSRCDIR=[--.libpng]
 .endif
-PVERSION=10208
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.

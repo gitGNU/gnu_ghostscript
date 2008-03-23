@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zrop.c,v 1.7 2007/09/11 15:24:42 Arabidopsis Exp $ */
+/* $Id: zrop.c,v 1.8 2008/03/23 15:27:59 Arabidopsis Exp $ */
 /* RasterOp control operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -31,7 +31,7 @@
 #include "store.h"
 
 /* <int8> .setrasterop - */
-private int
+static int
 zsetrasterop(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -46,7 +46,7 @@ zsetrasterop(i_ctx_t *i_ctx_p)
 }
 
 /* - .currentrasterop <int8> */
-private int
+static int
 zcurrentrasterop(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -57,7 +57,7 @@ zcurrentrasterop(i_ctx_t *i_ctx_p)
 }
 
 /* <bool> .setsourcetransparent - */
-private int
+static int
 zsetsourcetransparent(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -69,7 +69,7 @@ zsetsourcetransparent(i_ctx_t *i_ctx_p)
 }
 
 /* - .currentsourcetransparent <bool> */
-private int
+static int
 zcurrentsourcetransparent(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -80,7 +80,7 @@ zcurrentsourcetransparent(i_ctx_t *i_ctx_p)
 }
 
 /* <bool> .settexturetransparent - */
-private int
+static int
 zsettexturetransparent(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -92,7 +92,7 @@ zsettexturetransparent(i_ctx_t *i_ctx_p)
 }
 
 /* - .currenttexturetransparent <bool> */
-private int
+static int
 zcurrenttexturetransparent(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;

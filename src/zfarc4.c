@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfarc4.c,v 1.7 2007/09/11 15:24:05 Arabidopsis Exp $ */
+/* $Id: zfarc4.c,v 1.8 2008/03/23 15:28:10 Arabidopsis Exp $ */
 
 /* this is the ps interpreter interface to the arcfour cipher filter
    used in PDF encryption. We provide both Decode and Encode filters;
@@ -37,7 +37,7 @@
 
 /* <source> <dict> arcfour/filter <file> */
 
-private int
+static int
 z_arcfour_d(i_ctx_t * i_ctx_p)
 {
     os_ptr op = osp;		/* i_ctx_p->op_stack.stack.p defined in osstack.h */
@@ -61,7 +61,7 @@ z_arcfour_d(i_ctx_t * i_ctx_p)
 }
 
 /* encode version of the filter */
-private int
+static int
 z_arcfour_e(i_ctx_t * i_ctx_p)
 {
     os_ptr op = osp;		/* i_ctx_p->op_stack.stack.p defined in osstack.h */
@@ -84,8 +84,8 @@ z_arcfour_e(i_ctx_t * i_ctx_p)
 			(stream_state *) & state, 0);
 }
 
-/* match the above routines to their postscript filter names
-   this is how our 'private' routines get called externally */
+/* Match the above routines to their postscript filter names.
+   This is how our static routines get called externally. */
 const op_def zfarc4_op_defs[] = {
     op_def_begin_filter(),
     {"2ArcfourDecode", z_arcfour_d},

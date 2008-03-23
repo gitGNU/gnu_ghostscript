@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfi.c,v 1.10 2007/09/11 15:24:31 Arabidopsis Exp $ */
+/* $Id: gdevpdfi.c,v 1.11 2008/03/23 15:27:39 Arabidopsis Exp $ */
 /* Image handling for PDF-writing driver */
 #include "memory_.h"
 #include "math_.h"
@@ -41,29 +41,29 @@
 
 
 /* Forward references */
-private image_enum_proc_plane_data(pdf_image_plane_data);
-private image_enum_proc_end_image(pdf_image_end_image);
-private image_enum_proc_end_image(pdf_image_end_image_object);
-private image_enum_proc_end_image(pdf_image_end_image_object2);
-private image_enum_proc_end_image(pdf_image_end_image_cvd);
-private IMAGE3_MAKE_MID_PROC(pdf_image3_make_mid);
-private IMAGE3_MAKE_MCDE_PROC(pdf_image3_make_mcde);
-private IMAGE3X_MAKE_MID_PROC(pdf_image3x_make_mid);
-private IMAGE3X_MAKE_MCDE_PROC(pdf_image3x_make_mcde);
+static image_enum_proc_plane_data(pdf_image_plane_data);
+static image_enum_proc_end_image(pdf_image_end_image);
+static image_enum_proc_end_image(pdf_image_end_image_object);
+static image_enum_proc_end_image(pdf_image_end_image_object2);
+static image_enum_proc_end_image(pdf_image_end_image_cvd);
+static IMAGE3_MAKE_MID_PROC(pdf_image3_make_mid);
+static IMAGE3_MAKE_MCDE_PROC(pdf_image3_make_mcde);
+static IMAGE3X_MAKE_MID_PROC(pdf_image3x_make_mid);
+static IMAGE3X_MAKE_MCDE_PROC(pdf_image3x_make_mcde);
 
-private const gx_image_enum_procs_t pdf_image_enum_procs = {
+static const gx_image_enum_procs_t pdf_image_enum_procs = {
     pdf_image_plane_data,
     pdf_image_end_image
 };
-private const gx_image_enum_procs_t pdf_image_object_enum_procs = {
+static const gx_image_enum_procs_t pdf_image_object_enum_procs = {
     pdf_image_plane_data,
     pdf_image_end_image_object
 };
-private const gx_image_enum_procs_t pdf_image_object_enum_procs2 = {
+static const gx_image_enum_procs_t pdf_image_object_enum_procs2 = {
     pdf_image_plane_data,
     pdf_image_end_image_object2
 };
-private const gx_image_enum_procs_t pdf_image_cvd_enum_procs = {
+static const gx_image_enum_procs_t pdf_image_cvd_enum_procs = {
     gx_image1_plane_data,
     pdf_image_end_image_cvd,
     gx_image1_flush
@@ -84,7 +84,7 @@ typedef struct pdf_image_enum_s {
 gs_private_st_composite(st_pdf_image_enum, pdf_image_enum, "pdf_image_enum",
   pdf_image_enum_enum_ptrs, pdf_image_enum_reloc_ptrs);
 /* GC procedures */
-private ENUM_PTRS_WITH(pdf_image_enum_enum_ptrs, pdf_image_enum *pie)
+static ENUM_PTRS_WITH(pdf_image_enum_enum_ptrs, pdf_image_enum *pie)
     if (index < pdf_image_writer_max_ptrs) {
 	gs_ptr_type_t ret =
 	    ENUM_USING(st_pdf_image_writer, &pie->writer, sizeof(pie->writer),
@@ -97,7 +97,7 @@ private ENUM_PTRS_WITH(pdf_image_enum_enum_ptrs, pdf_image_enum *pie)
     return ENUM_USING_PREFIX(st_gx_image_enum_common,
 			     pdf_image_writer_max_ptrs);
 ENUM_PTRS_END
-private RELOC_PTRS_WITH(pdf_image_enum_reloc_ptrs, pdf_image_enum *pie)
+static RELOC_PTRS_WITH(pdf_image_enum_reloc_ptrs, pdf_image_enum *pie)
 {
     RELOC_USING(st_pdf_image_writer, &pie->writer, sizeof(pie->writer));
     RELOC_USING(st_gx_image_enum_common, vptr, size);
@@ -108,7 +108,7 @@ RELOC_PTRS_END
  * Test whether we can write an image in-line.  This is always true,
  * because we only support PDF 1.2 and later.
  */
-private bool
+static bool
 can_write_image_in_line(const gx_device_pdf *pdev, const gs_image_t *pim)
 {
     return true;
@@ -122,14 +122,14 @@ can_write_image_in_line(const gx_device_pdf *pdev, const gs_image_t *pim)
  * with a color-key mask, at least for 1-bit-deep images using an Indexed
  * color space.
  */
-private int
+static int
 color_is_black_or_white(gx_device *dev, const gx_drawing_color *pdcolor)
 {
     return (!color_is_pure(pdcolor) ? -1 :
 	    gx_dc_pure_color(pdcolor) == gx_device_black(dev) ? 0 :
 	    gx_dc_pure_color(pdcolor) == gx_device_white(dev) ? 1 : -1);
 }
-private int
+static int
 pdf_convert_image4_to_image1(gx_device_pdf *pdev,
 			     const gs_imager_state *pis,
 			     const gx_drawing_color *pbcolor,
@@ -219,7 +219,7 @@ pdf_convert_image4_to_image1(gx_device_pdf *pdev,
     return -1;			/* arbitrary <0 */
 }
 
-private int
+static int
 pdf_begin_image_data_decoded(gx_device_pdf *pdev, int num_components, const gs_range_t *pranges, int i, 
 			     gs_pixel_image_t *pi, cos_value_t *cs_value, pdf_image_enum *pie)
 {
@@ -241,7 +241,7 @@ pdf_begin_image_data_decoded(gx_device_pdf *pdev, int num_components, const gs_r
     return pdf_begin_image_data(pdev, &pie->writer, pi, cs_value, i);
 }
 
-private int
+static int
 make_device_color_space(gx_device_pdf *pdev, 
 			gs_color_space_index output_cspace_index, 
 			gs_color_space **ppcs)
@@ -273,7 +273,7 @@ make_device_color_space(gx_device_pdf *pdev,
     return 0;
 }
 
-private bool
+static bool
 check_image_color_space(gs_pixel_image_t * pim, gs_color_space_index index)
 {
     if (pim->ColorSpace->type->index == index)
@@ -294,14 +294,36 @@ typedef enum {
     PDF_IMAGE_TYPE3_MASK,	/* no in-line, don't render */
     PDF_IMAGE_TYPE3_DATA	/* no in-line */
 } pdf_typed_image_context_t;
-private int
-pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
+
+/*
+ * We define this union because psdf_setup_image_filters may alter the
+ * gs_pixel_image_t part, but pdf_begin_image_data must also have access
+ * to the type-specific parameters.
+ */
+typedef union image_union_s {
+    gs_pixel_image_t pixel;	/* we may change some components */
+    gs_image1_t type1;
+    gs_image3_t type3;
+    gs_image3x_t type3x;
+    gs_image4_t type4;
+} image_union_t;
+
+static int pdf_begin_typed_image(gx_device_pdf *pdev,
+    const gs_imager_state * pis, const gs_matrix *pmat,
+    const gs_image_common_t *pic, const gs_int_rect * prect,
+    const gx_drawing_color * pdcolor, const gx_clip_path * pcpath,
+    gs_memory_t * mem, gx_image_enum_common_t ** pinfo,
+    pdf_typed_image_context_t context);
+
+static int
+pdf_begin_typed_image_impl(gx_device_pdf *pdev, const gs_imager_state * pis,
 		      const gs_matrix *pmat, const gs_image_common_t *pic,
 		      const gs_int_rect * prect,
 		      const gx_drawing_color * pdcolor,
 		      const gx_clip_path * pcpath, gs_memory_t * mem,
 		      gx_image_enum_common_t ** pinfo,
-		      pdf_typed_image_context_t context)
+		      pdf_typed_image_context_t context,
+                      image_union_t *image)
 {
     cos_dict_t *pnamed = 0;
     const gs_pixel_image_t *pim;
@@ -313,18 +335,6 @@ pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
     int num_components;
     bool is_mask = false, in_line = false;
     gs_int_rect rect;
-    /*
-     * We define this union because psdf_setup_image_filters may alter the
-     * gs_pixel_image_t part, but pdf_begin_image_data must also have access
-     * to the type-specific parameters.
-     */
-    union iu_ {
-	gs_pixel_image_t pixel;	/* we may change some components */
-	gs_image1_t type1;
-	gs_image3_t type3;
-	gs_image3x_t type3x;
-	gs_image4_t type4;
-    } image[4];
     int width, height;
     const gs_range_t *pranges = 0;
     const pdf_color_space_names_t *names;
@@ -637,7 +647,8 @@ pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
 				    (pim->Width <= 64 && pim->Height <= 64) ||
 				    pdev->transfer_not_identity ? 1 : 2);
     if (image[0].pixel.ColorSpace != NULL &&
-	image[0].pixel.ColorSpace->type->index == gs_color_space_index_Indexed)
+	image[0].pixel.ColorSpace->type->index == gs_color_space_index_Indexed 
+	&& pdev->params.ColorImage.DownsampleType != ds_Subsample)
 	pie->writer.alt_writer_count = 1;
     image[1] = image[0];
     names = (in_line ? &pdf_color_space_names_short : &pdf_color_space_names);
@@ -810,6 +821,28 @@ pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
 	((gx_device *)pdev, pis, pmat, pic, prect, pdcolor, pcpath, mem,
 	 pinfo);
 }
+
+static int
+pdf_begin_typed_image(gx_device_pdf *pdev, const gs_imager_state * pis,
+		      const gs_matrix *pmat, const gs_image_common_t *pic,
+		      const gs_int_rect * prect,
+		      const gx_drawing_color * pdcolor,
+		      const gx_clip_path * pcpath, gs_memory_t * mem,
+		      gx_image_enum_common_t ** pinfo,
+		      pdf_typed_image_context_t context)
+{
+  int code;
+  image_union_t *image = (image_union_t *)gs_malloc(mem->non_gc_memory, 4,
+                       sizeof(image_union_t), "pdf_begin_typed_image(image)");
+  if (image == 0)
+      return_error(gs_error_VMerror);
+  code = pdf_begin_typed_image_impl(pdev, pis, pmat, pic, prect,
+         pdcolor, pcpath, mem, pinfo, context, image);
+  gs_free(mem->non_gc_memory, image, 4, sizeof(image_union_t),
+                                              "pdf_begin_typed_image(image)");
+  return code;
+}
+
 int
 gdev_pdf_begin_typed_image(gx_device * dev, const gs_imager_state * pis,
 			   const gs_matrix *pmat, const gs_image_common_t *pic,
@@ -826,7 +859,7 @@ gdev_pdf_begin_typed_image(gx_device * dev, const gs_imager_state * pis,
 /* ---------------- All images ---------------- */
 
 /* Process the next piece of an image. */
-private int
+static int
 pdf_image_plane_data_alt(gx_image_enum_common_t * info,
 		     const gx_image_plane_t * planes, int height,
 		     int *rows_used, int alt_writer_index)
@@ -901,7 +934,7 @@ pdf_image_plane_data_alt(gx_image_enum_common_t * info,
 #undef ROW_BYTES
 }
 
-private int
+static int
 pdf_image_plane_data(gx_image_enum_common_t * info,
 		     const gx_image_plane_t * planes, int height,
 		     int *rows_used)
@@ -919,7 +952,7 @@ pdf_image_plane_data(gx_image_enum_common_t * info,
     return !pie->rows_left;
 }
 
-private int
+static int
 use_image_as_pattern(gx_device_pdf *pdev, pdf_resource_t *pres1, 
 		     const gs_matrix *pmat, gs_id id)
 {   /* See also dump_image in gdevpdfd.c . */
@@ -990,7 +1023,7 @@ typedef enum {
 } pdf_image_usage_t;
 
 /* Close PDF image and do it. */
-private int
+static int
 pdf_end_and_do_image(gx_device_pdf *pdev, pdf_image_writer *piw, 
 		     const gs_matrix *mat, gs_id ps_bitmap_id, pdf_image_usage_t do_image)
 {
@@ -1034,7 +1067,7 @@ pdf_end_and_do_image(gx_device_pdf *pdev, pdf_image_writer *piw,
 }
 
 /* Clean up by releasing the buffers. */
-private int
+static int
 pdf_image_end_image_data(gx_image_enum_common_t * info, bool draw_last,
 			 pdf_image_usage_t do_image)
 {
@@ -1084,14 +1117,14 @@ pdf_image_end_image_data(gx_image_enum_common_t * info, bool draw_last,
 }
 
 /* End a normal image, drawing it. */
-private int
+static int
 pdf_image_end_image(gx_image_enum_common_t * info, bool draw_last)
 {
     return pdf_image_end_image_data(info, draw_last, USE_AS_IMAGE);
 }
 
 /* End an image converted with pdf_lcvd_t. */
-private int
+static int
 pdf_image_end_image_cvd(gx_image_enum_common_t * info, bool draw_last)
 {   pdf_lcvd_t *cvd = (pdf_lcvd_t *)info->dev;
     int code = pdf_dump_converted_image(cvd->pdev, cvd);
@@ -1109,7 +1142,7 @@ pdf_image_end_image_cvd(gx_image_enum_common_t * info, bool draw_last)
  * For both types of masked images, we create temporary dummy (null) devices
  * that forward the begin_typed_image call to the implementation above.
  */
-private int
+static int
 pdf_make_mxd(gx_device **pmxdev, gx_device *tdev, gs_memory_t *mem)
 {
     gx_device *fdev;
@@ -1123,13 +1156,13 @@ pdf_make_mxd(gx_device **pmxdev, gx_device *tdev, gs_memory_t *mem)
 }
 
 /* End the mask of an ImageType 3 image, not drawing it. */
-private int
+static int
 pdf_image_end_image_object(gx_image_enum_common_t * info, bool draw_last)
 {
     return pdf_image_end_image_data(info, draw_last, USE_AS_MASK);
 }
 /* End the data of an ImageType 3 image, converting it into pattern. */
-private int
+static int
 pdf_image_end_image_object2(gx_image_enum_common_t * info, bool draw_last)
 {
     return pdf_image_end_image_data(info, draw_last, USE_AS_PATTERN);
@@ -1138,8 +1171,8 @@ pdf_image_end_image_object2(gx_image_enum_common_t * info, bool draw_last)
 /* ---------------- Type 3 images ---------------- */
 
 /* Implement the mask image device. */
-private dev_proc_begin_typed_image(pdf_mid_begin_typed_image);
-private int
+static dev_proc_begin_typed_image(pdf_mid_begin_typed_image);
+static int
 pdf_image3_make_mid(gx_device **pmidev, gx_device *dev, int width, int height,
 		    gs_memory_t *mem)
 {
@@ -1169,7 +1202,7 @@ pdf_image3_make_mid(gx_device **pmidev, gx_device *dev, int width, int height,
 	return 0;
     }
 }
-private int
+static int
 pdf_mid_begin_typed_image(gx_device * dev, const gs_imager_state * pis,
 			  const gs_matrix *pmat, const gs_image_common_t *pic,
 			  const gs_int_rect * prect,
@@ -1186,7 +1219,7 @@ pdf_mid_begin_typed_image(gx_device * dev, const gs_imager_state * pis,
 }
 
 /* Implement the mask clip device. */
-private int
+static int
 pdf_image3_make_mcde(gx_device *dev, const gs_imager_state *pis,
 		     const gs_matrix *pmat, const gs_image_common_t *pic,
 		     const gs_int_rect *prect, const gx_drawing_color *pdcolor,
@@ -1228,7 +1261,7 @@ pdf_image3_make_mcde(gx_device *dev, const gs_imager_state *pis,
 /* ---------------- Type 3x images ---------------- */
 
 /* Implement the mask image device. */
-private int
+static int
 pdf_image3x_make_mid(gx_device **pmidev, gx_device *dev, int width, int height,
 		     int depth, gs_memory_t *mem)
 {
@@ -1241,7 +1274,7 @@ pdf_image3x_make_mid(gx_device **pmidev, gx_device *dev, int width, int height,
 }
 
 /* Implement the mask clip device. */
-private int
+static int
 pdf_image3x_make_mcde(gx_device *dev, const gs_imager_state *pis,
 		      const gs_matrix *pmat, const gs_image_common_t *pic,
 		      const gs_int_rect *prect,
@@ -1312,7 +1345,7 @@ pdf_resource_t *pdf_substitute_pattern(pdf_resource_t *pres)
 }
 
 
-private int 
+static int 
 check_unsubstituted2(gx_device_pdf * pdev, pdf_resource_t *pres0, pdf_resource_t *pres1)
 {
     pdf_pattern_t *ppat = (pdf_pattern_t *)pres0;
@@ -1320,7 +1353,7 @@ check_unsubstituted2(gx_device_pdf * pdev, pdf_resource_t *pres0, pdf_resource_t
     return ppat->substitute == NULL;
 }
 
-private int 
+static int 
 check_unsubstituted1(gx_device_pdf * pdev, pdf_resource_t *pres0)
 {
     pdf_pattern_t *ppat = (pdf_pattern_t *)pres0;
@@ -1399,7 +1432,13 @@ gdev_pdf_pattern_manage(gx_device *pdev1, gx_bitmap_id id,
 	case pattern_manage__shfill_doesnt_need_path:
 	    return 0; /* gdev_pdf_fill_path still does need a path. */
 	case pattern_manage__handles_clip_path:
-	    return 1;
+	    /* This is important when the default implementation of 
+	       of fill_path is called due to a failure in setcolor
+	       or so, for example when a shading is incorfect. 
+	       The test case is the unfixed (buggy) Genoa test 446-01.ps . 
+	       In this case pdfwrite converts the object into rectangles,
+	       and the clipping device has to be set up. */
+	    return 0;
     }
     return_error(gs_error_unregistered);
 }

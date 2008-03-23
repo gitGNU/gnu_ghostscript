@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zpacked.c,v 1.8 2007/09/11 15:24:06 Arabidopsis Exp $ */
+/* $Id: zpacked.c,v 1.9 2008/03/23 15:27:50 Arabidopsis Exp $ */
 /* Packed array operators */
 #include "ghost.h"
 #include "ialloc.h"
@@ -32,7 +32,7 @@
 #include "gxalloc.h"
 
 /* - currentpacking <bool> */
-private int
+static int
 zcurrentpacking(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
@@ -67,7 +67,7 @@ zpackedarray(i_ctx_t *i_ctx_p)
 }
 
 /* <bool> setpacking - */
-private int
+static int
 zsetpacking(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
