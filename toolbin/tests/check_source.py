@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
-#    Copyright (C) 2002-2006 Artifex Software, Inc.  All rights reserved.
-# 
+#    Copyright (C) 2002-2006 Artifex Software, Inc.
+#    All Rights Reserved.
+#
 # This file is part of GNU ghostscript
 #
 # GNU ghostscript is free software; you can redistribute it and/or
@@ -19,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: check_source.py,v 1.10 2007/09/11 15:25:16 Arabidopsis Exp $
+# $Id: check_source.py,v 1.11 2008/05/04 14:35:05 Arabidopsis Exp $
 
 # Check basic hygiene of source code.
 
@@ -139,7 +140,8 @@ gsDoubleInclusionOK = [
     'src/gxfilltr.h',
     'src/gxfillts.h',
     'src/gxsamplp.h',
-    'src/gdevpdfb.h'
+    'src/gdevpdfb.h',
+    'src/idicttpl.h'
     ]
 
 # Add the tests defined in this file to a suite.

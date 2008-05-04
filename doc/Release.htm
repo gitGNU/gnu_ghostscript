@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>How to prepare a Ghostscript release</title>
-<!-- $Id: Release.htm,v 1.12 2008/03/23 15:28:19 Arabidopsis Exp $ -->
+<!-- $Id: Release.htm,v 1.13 2008/05/04 14:34:59 Arabidopsis Exp $ -->
 <!-- Originally: make.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -438,18 +438,13 @@ cd ..
 </pre></blockquote>
 
 <p>
-The xml changelog file can now be deleted. Run
-
-<blockquote><pre>
-toolbin/makehist.tcl
-</pre></blockquote>
+The xml changelog file can now be deleted.
 
 <p>
-This updates <b><tt>doc/History#.htm</tt></b> from
-<b><tt>doc/News.htm</tt></b> and <b><tt>doc/Changes.htm</tt></b>.
-
-<p><strong>N.B. this is currently broken; changelog updates have to be 
-manually copied into the History and Details files.</strong>
+Copy the contents of News.htm and Changes.htm into a new section in 
+History8.htm, and News.htm and Details.htm into Details8.htm. Then 
+update the hyperlinks in History8.htm to point to Details8.htm instead  
+of Details.htm so these remain valid after the next release.
 
 <p>
 Then run
@@ -481,7 +476,7 @@ tag names, or a '.<i>n</i>' tiny release number to post-release fixes.
 Pull a fresh copy for distribution from the repository:
 
 <blockquote><pre>
-<tt>svn export http://svn.ghostscript.com:8080/ghostscript/tags/ghostscript-#.##</tt>
+<tt>svn export http://svn.ghostscript.com/ghostscript/tags/ghostscript-#.##</tt>
 </pre></blockquote>
 
 
@@ -491,7 +486,6 @@ Generate the text versions of the README and PUBLIC documents:
 <blockquote>
 <pre><tt>cd ghostscript-#.##</tt>
 <tt>lynx -dump -nolist doc/Readme.htm &gt; doc/README</tt>
-<tt>lynx -dump -nolist doc/Public.htm &gt; doc/PUBLIC</tt></pre>
 </blockquote>
 
 <p>
@@ -513,7 +507,10 @@ invoke autoconf to create the <tt>configure</tt> script.
 
 <p>
 Also run <tt>make distclean</tt> in the jasper subdir to
-clean up any incidental config there.
+clean up any incidental config there. If you get a warning,
+for example if the build files think they need updating
+and not all the tools are available, be sure to run <tt>autoreconf && 
+make distclean</tt> to avoid version skew issues.
 
 <p>
 Move back to directory containing the distribution code and make the
@@ -769,6 +766,9 @@ To: gs-announce
 Edit the Web pages in svn and commit to reflect the new release.
 The Wisconsin server should update automatically.
 
+<p>
+Also update the documentation snapshots on the website.
+
 <h2><a name="After_releasing"></a>After releasing</h2>
 
 <p>
@@ -827,7 +827,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.61, 21 November 2007
+<small>Ghostscript version 8.62, 29 February 2008
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

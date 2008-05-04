@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: ugcclib.mak,v 1.13 2008/03/23 15:27:49 Arabidopsis Exp $
+# $Id: ugcclib.mak,v 1.14 2008/05/04 14:34:52 Arabidopsis Exp $
 # makefile for Unix / gcc library testing.
 
 BINDIR=./libobj
@@ -104,12 +104,12 @@ XLIBDIRS=-L/usr/X11R6/lib
 XLIBDIR=
 XLIBS=Xt Xext X11
 
-FPU_TYPE=1
 SYNC=posync
 
 FEATURE_DEVS=$(GLD)dps2lib.dev $(GLD)psl2cs.dev $(GLD)cielib.dev\
- $(GLD)psl3lib.dev $(GLD)path1lib.dev $(GLD)patlib.dev $(GLD)htxlib.dev \
- $(GLD)roplib.dev $(GLD)devcmap.dev
+ $(GLD)psl3lib.dev $(GLD)path1lib.dev $(GLD)patlib.dev $(GLD)htxlib.dev\
+ $(GLD)cidlib.dev $(GLD)psf0lib.dev $(GLD)psf1lib.dev\
+ $(GLD)roplib.dev
 
 COMPILE_INITS?=0
 BAND_LIST_STORAGE=file
@@ -117,7 +117,7 @@ BAND_LIST_COMPRESSOR=zlib
 FILE_IMPLEMENTATION=stdio
 STDIO_IMPLEMENTATION=
 DEVICE_DEVS=$(DD)x11cmyk.dev $(DD)x11mono.dev $(DD)x11.dev $(DD)x11alpha.dev\
- $(DD)djet500.dev $(DD)pbmraw.dev $(DD)pgmraw.dev $(DD)ppmraw.dev\
+ $(DD)djet500.dev $(DD)pbmraw.dev $(DD)pgmraw.dev $(DD)ppmraw.dev $(DD)pamcmyk32.dev\
  $(DD)bitcmyk.dev $(GLD)bbox.dev
 DEVICE_DEVS1=
 DEVICE_DEVS2=
@@ -152,6 +152,8 @@ CC_SHARED=$(CC_)
 
 include $(GLSRCDIR)/unixhead.mak
 include $(GLSRCDIR)/gs.mak
+# psromfs.mak must precede lib.mak
+include $(GLSRCDIR)/psromfs.mak
 include $(GLSRCDIR)/lib.mak
 include $(GLSRCDIR)/jpeg.mak
 # zlib.mak must precede libpng.mak
@@ -166,7 +168,7 @@ include $(GLSRCDIR)/unix-aux.mak
 
 # The following replaces unixlink.mak
 
-LIB_ONLY=$(GLOBJ)gsnogc.$(OBJ) $(GLOBJ)gconfig.$(OBJ) $(GLOBJ)gscdefs.$(OBJ)
+LIB_ONLY=$(GLOBJ)gsnogc.$(OBJ) $(GLOBJ)gconfig.$(OBJ) $(GLOBJ)gscdefs.$(OBJ) $(GLOBJ)gsromfs$(COMPILE_INITS).$(OBJ)
 ldt_tr=$(GLOBJ)ldt.tr
 $(GS_XE): $(ld_tr) $(ECHOGS_XE) $(LIB_ALL) $(DEVS_ALL) $(GLOBJ)gslib.$(OBJ) $(LIB_ONLY)
 	$(ECHOGS_XE) -w $(ldt_tr) -n - $(CCLD) $(LDFLAGS) -o $(GS_XE)
@@ -179,7 +181,7 @@ $(GS_XE): $(ld_tr) $(ECHOGS_XE) $(LIB_ALL) $(DEVS_ALL) $(GLOBJ)gslib.$(OBJ) $(LI
 
 GSLIB_A=libgsgraph.a
 lar_tr=$(GLOBJ)lar.tr
-$(GSLIB_A):  $(obj_tr) $(ECHOGS_XE) $(LIB_ALL) $(DEVS_ALL) $(LIB_ONLY)
+$(GSLIB_A):  $(obj_tr) $(ECHOGS_XE) $(LIB_ALL) $(DEVS_ALL) $(LIB_ONLY) $(GLOBJ)gsromfs$(COMPILE_INITS).$(OBJ)
 	rm -f $(GSLIB_A)
 	$(ECHOGS_XE) -w $(lar_tr) -n - $(AR) $(ARFLAGS) $(GSLIB_A)
 	$(ECHOGS_XE) -a $(lar_tr) -n -s $(LIB_ONLY) -s

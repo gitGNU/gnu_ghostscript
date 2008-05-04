@@ -17,7 +17,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
-# $Id: bcwin32.mak,v 1.13 2008/03/23 15:27:50 Arabidopsis Exp $
+# $Id: bcwin32.mak,v 1.14 2008/05/04 14:34:53 Arabidopsis Exp $
 # makefile for (MS-Windows 3.1/Win32s / Windows 95 / Windows NT) +
 #   Borland C++ 4.5 and 5.5 platforms.
 #   Borland C++Builder 3 platform (need BC++ 4.5 for 16-bit code)
@@ -348,13 +348,6 @@ LINK=$(COMPDIR)\ilink32
 LINK=$(COMPDIR)\ilink32
 !endif
 
-# If you don't have an assembler, set USE_ASM=0.  Otherwise, set USE_ASM=1,
-# and set ASM to the name of the assembler you are using.  This can be
-# a full path name if you want.  Normally it will be masm or tasm.
-
-USE_ASM=0
-ASM=tasm
-
 # Define the processor architecture. (always i386)
 
 CPU_FAMILY=i386
@@ -362,21 +355,6 @@ CPU_FAMILY=i386
 # Define the processor (CPU) type.  (386, 486 or 586)
 
 CPU_TYPE=586
-
-# Define the math coprocessor (FPU) type.
-# Options are -1 (optimize for no FPU), 0 (optimize for FPU present,
-# but do not require a FPU), 87, 287, or 387.
-# If you have a 486 or Pentium CPU, you should normally set FPU_TYPE to 387,
-# since most of these CPUs include the equivalent of an 80387 on-chip;
-# however, the 486SX and the Cyrix 486SLC do not have an on-chip FPU, so if
-# you have one of these CPUs and no external FPU, set FPU_TYPE to -1 or 0.
-# An xx87 option means that the executable will run only if a FPU
-# of that type (or higher) is available: this is NOT currently checked
-# at runtime.
-
-! ifndef FPU_TYPE
-FPU_TYPE=387
-!endif
 
 # Define the .dev module that implements thread and synchronization
 # primitives for this platform.  Don't change this unless you really know
@@ -453,7 +431,7 @@ DEVICE_DEVS16=$(DD)bbox.dev
 DEVICE_DEVS17=$(DD)ljet3.dev $(DD)ljet3d.dev $(DD)ljet4.dev $(DD)ljet4d.dev 
 DEVICE_DEVS18=$(DD)pj.dev $(DD)pjxl.dev $(DD)pjxl300.dev $(DD)jetp3852.dev $(DD)r4081.dev
 DEVICE_DEVS19=$(DD)lbp8.dev $(DD)m8510.dev $(DD)necp6.dev $(DD)bjc600.dev $(DD)bjc800.dev
-DEVICE_DEVS20=$(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev
+DEVICE_DEVS20=$(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev $(DD)pamcmyk32.dev
 DEVICE_DEVS21= $(DD)spotcmyk.dev $(DD)devicen.dev $(DD)bmpsep1.dev $(DD)bmpsep8.dev $(DD)bmp16m.dev $(DD)bmp32b.dev $(DD)psdcmyk.dev $(DD)psdrgb.dev
 !endif
 
@@ -483,9 +461,6 @@ CONFLDTR=-ol
 
 PLATOPT=
 
-INTASM=
-PCFBASM=
-
 # Make sure we get the right default target for make.
 
 dosdefault: default
@@ -499,25 +474,13 @@ RO_=-fo
 # Define the compilation flags.
 
 !if $(CPU_TYPE)>500
-ASMCPU=/DFOR80386 /DFOR80486
 CPFLAGS=-DFOR80486 -DFOR80386
 !else if $(CPU_TYPE)>400
-ASMCPU=/DFOR80386 /DFOR80486
 CPFLAGS=-DFOR80486 -DFOR80386
 !else
-ASMCPU=/DFOR80386
 CPFLAGS=-DFOR80386
 !endif
 
-!if $(CPU_TYPE) >= 486 || $(FPU_TYPE) > 0
-ASMFPU=/DFORFPU
-!else
-!if $(FPU_TYPE) < 0
-ASMFPU=/DNOFPU
-!else
-ASMFPU=
-!endif
-!endif
 FPFLAGS=
 FPLIB=
 
@@ -531,7 +494,6 @@ CD=
 CT=-v
 LCT=-v -m -s
 CO=    # no optimization when debugging
-ASMDEBUG=/DDEBUG
 !else
 CT=
 LCT=
@@ -580,8 +542,9 @@ CCWINFLAGS=
 # ****** HACK ****** *.tr is still created in the current directory.
 BEGINFILES2=*.tr
 
-# Include the generic makefiles.
+# Include the generic makefiles. psromfs.mak must precede lib.mak
 
+!include $(GLSRCDIR)\psromfs.mak
 !include $(GLSRCDIR)\winlib.mak
 !include $(PSSRCDIR)\winint.mak
 
@@ -684,29 +647,32 @@ $(GS_OBJ).res
 
 # The big DLL
 $(GSDLL_DLL): $(GS_ALL) $(DEVS_ALL) $(PSOBJ)gsdll.$(OBJ)\
- $(GSDLL_OBJ).res $(PSSRCDIR)\gsdll32.def
+ $(GSDLL_OBJ).res $(PSSRCDIR)\gsdll32.def $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ)
 	-del $(PSGEN)gswin32.tr
 	copy $(ld_tr) $(PSGEN)gswin32.tr
+	echo  $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ) + >> $(PSGEN)gswin32.tr
 	echo $(LIBDIR)\c0d32 $(PSOBJ)gsdll + >> $(PSGEN)gswin32.tr
-	$(LINK) /L$(LIBDIR) $(LCT) /Tpd /aa @$(PSGEN)gswin32.tr $(INTASM) ,$(GSDLL_DLL),$(PSOBJ)$(GSDLL),@$(LIBCTR),$(PSSRCDIR)\gsdll32.def,$(GSDLL_OBJ).res
+	$(LINK) /L$(LIBDIR) $(LCT) /Tpd /aa @$(PSGEN)gswin32.tr ,$(GSDLL_DLL),$(PSOBJ)$(GSDLL),@$(LIBCTR),$(PSSRCDIR)\gsdll32.def,$(GSDLL_OBJ).res
 
 !else
 # The big graphical EXE
 $(GS_XE):   $(GSCONSOLE_XE) $(GS_ALL) $(DEVS_ALL)\
- $(PSOBJ)gsdll.$(OBJ) $(DWOBJNO) $(GS_OBJ).res $(PSSRCDIR)\dwmain32.def
+ $(PSOBJ)gsdll.$(OBJ) $(DWOBJNO) $(GS_OBJ).res $(PSSRCDIR)\dwmain32.def $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ)
 	-del $(PSGEN)gswin32.tr
 	copy $(ld_tr) $(PSGEN)gswin32.tr
+	echo  $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ) + >> $(PSGEN)gswin32.tr
 	echo $(LIBDIR)\c0w32 $(PSOBJ)gsdll + >> $(PSGEN)gswin32.tr
-	echo $(DWOBJNO) $(INTASM) >> $(PSGEN)gswin32.tr
+	echo $(DWOBJNO) >> $(PSGEN)gswin32.tr
 	$(LINK) /L$(LIBDIR) $(LCT) /Tpe /aa @$(PSGEN)gswin32.tr ,$(GS_XE),$(PSOBJ)$(GS) @$(LIBCTR),$(PSSRCDIR)\dwmain32.def,$(GS_OBJ).res
 
 # The big console mode EXE
 $(GSCONSOLE_XE):  $(GS_ALL) $(DEVS_ALL)\
- $(PSOBJ)gsdll.$(OBJ) $(OBJCNO) $(GS_OBJ).res $(PSSRCDIR)\dw32c.def
+ $(PSOBJ)gsdll.$(OBJ) $(OBJCNO) $(GS_OBJ).res $(PSSRCDIR)\dw32c.def $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ)
 	-del $(PSGEN)gswin32.tr
 	copy $(ld_tr) $(PSGEN)gswin32.tr
+	echo  $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ) + >> $(PSGEN)gswin32.tr
 	echo $(LIBDIR)\c0w32 $(PSOBJ)gsdll + >> $(PSGEN)gswin32.tr
-	echo $(OBJCNO) $(INTASM) >> $(PSGEN)gswin32.tr
+	echo $(OBJCNO) >> $(PSGEN)gswin32.tr
 	$(LINK) /L$(LIBDIR) $(LCT) /Tpe /ap @$(PSGEN)gswin32.tr ,$(GSCONSOLE_XE),$(PSOBJ)$(GSCONSOLE) @$(LIBCTR),$(PSSRCDIR)\dw32c.def,$(GS_OBJ).res
 !endif
 

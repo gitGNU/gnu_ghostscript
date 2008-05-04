@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevbmpa.c,v 1.8 2008/03/23 15:27:37 Arabidopsis Exp $ */
+/* $Id: gdevbmpa.c,v 1.9 2008/05/04 14:34:40 Arabidopsis Exp $ */
 /* .BMP file format output drivers: Demo of ASYNC rendering */
 
 /* 2000-04-20 ghost@aladdin.com - Makes device structures const, changing
@@ -458,7 +458,7 @@ bmpa_reader_buffer_planes(gx_device_printer *pdev, FILE *file, int num_copies,
 
 	    /* Set up the buffer device. */
 	    code = gdev_create_buf_device(crdev->buf_procs.create_buf_device,
-					  &bdev, crdev->target, &render_plane,
+					  &bdev, crdev->target, 0, &render_plane,
 					  dev->memory, NULL);
 	    if (code < 0)
 		goto done;

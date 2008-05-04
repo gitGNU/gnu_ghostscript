@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevdflt.c,v 1.12 2008/03/23 15:27:41 Arabidopsis Exp $ */
+/* $Id: gdevdflt.c,v 1.13 2008/05/04 14:34:43 Arabidopsis Exp $ */
 /* Default device implementation */
 #include "math_.h"
 #include "gx.h"
@@ -849,6 +849,31 @@ gx_default_composite_clist_write_update(const gs_composite_t *pcte, gx_device * 
 {
     *pcdev = dev;		/* Do nothing -> return the same device */
     return 0;
+}
+
+/* Default handler for adjusting a compositor's CTM. */
+int
+gx_default_composite_adjust_ctm(gs_composite_t *pcte, int x0, int y0, gs_imager_state *pis)
+{
+    return 0;
+}
+
+/*
+ * Default check for closing compositor. 
+ */
+int
+gx_default_composite_is_closing(const gs_composite_t *this, gs_composite_t **pcte, gx_device *dev)
+{
+    return false;
+}
+
+/*
+ * Default check whether a next operation is friendly to the compositor.
+ */
+bool
+gx_default_composite_is_friendly(const gs_composite_t *this, byte cmd0, byte cmd1)
+{
+    return false;
 }
 
 /*

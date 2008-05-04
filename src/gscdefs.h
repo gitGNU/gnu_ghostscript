@@ -17,13 +17,11 @@
 
 */
 
-/*$Id: gscdefs.h,v 1.9 2008/03/23 15:27:44 Arabidopsis Exp $ */
+/*$Id: gscdefs.h,v 1.10 2008/05/04 14:34:46 Arabidopsis Exp $ */
 /* Prototypes for configuration definitions in gconfig.c. */
 
 #ifndef gscdefs_INCLUDED
 #  define gscdefs_INCLUDED
-
-#include "gconfigv.h"
 
 /*
  * This file may be #included in places that don't even have stdpre.h,
@@ -33,23 +31,15 @@
  */
 
 /* Miscellaneous system constants (read-only systemparams). */
-/* They should all be const, but one application needs some of them */
-/* to be writable.... */
 
-#if SYSTEM_CONSTANTS_ARE_WRITABLE
-#  define CONFIG_CONST		/* */
-#else
-#  define CONFIG_CONST const
-#endif
-
-extern CONFIG_CONST long gs_buildtime;
-extern const char *CONFIG_CONST gs_copyright;
-extern const char *CONFIG_CONST gs_product;
-extern const char *CONFIG_CONST gs_productfamily;
-extern CONFIG_CONST long gs_version;
-extern CONFIG_CONST long gs_revision;
-extern CONFIG_CONST long gs_revisiondate;
-extern CONFIG_CONST long gs_serialnumber;
+extern const long gs_buildtime;
+extern const char *const gs_copyright;
+extern const char *const gs_product;
+extern const char *const gs_productfamily;
+extern const long gs_version;
+extern const long gs_revision;
+extern const long gs_revisiondate;
+extern const long gs_serialnumber;
 
 /* Installation directories and files */
 extern const char *const gs_doc_directory;

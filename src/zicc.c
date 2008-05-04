@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2008 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zicc.c,v 1.10 2008/03/23 15:28:15 Arabidopsis Exp $ */
+/* $Id: zicc.c,v 1.11 2008/05/04 14:34:55 Arabidopsis Exp $ */
 /* ICCBased color operators */
 
 #include "math_.h"
@@ -82,6 +82,9 @@ zseticcspace(i_ctx_t * i_ctx_p)
 
     dict_find_string(op, "N", &pnval);
     ncomps = pnval->value.intval;
+
+    if (2*ncomps > sizeof(range_buff)/sizeof(range_buff[0]))
+        return_error(e_rangecheck);
 
     /* verify the DataSource entry */
     if (dict_find_string(op, "DataSource", &pstrmval) <= 0)

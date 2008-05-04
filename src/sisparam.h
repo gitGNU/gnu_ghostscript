@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sisparam.h,v 1.8 2007/09/11 15:24:04 Arabidopsis Exp $ */
+/* $Id: sisparam.h,v 1.9 2008/05/04 14:34:44 Arabidopsis Exp $ */
 /* Generic image scaling stream definitions */
 /* Requires strimpl.h */
 
@@ -62,6 +62,11 @@ typedef struct stream_image_scale_params_s {
 				/* 0 < MaxValueOut < 1 << BitsPerComponentOut*/
     int WidthOut, HeightOut;	/* > 0 */
     bool ColorPolarityAdditive;	/* needed by SpecialDownScale filter */
+    int src_y_offset;		/* Offset of the subimage in the source image. */
+    int EntireWidthIn;		/* Height of entire input image. */
+    int EntireHeightIn;		/* Height of entire input image. */
+    int EntireWidthOut;		/* Height of entire output image. */
+    int EntireHeightOut;	/* Height of entire output image. */
 } stream_image_scale_params_t;
 
 /* Define a generic image scaling stream state. */

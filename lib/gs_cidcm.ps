@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: gs_cidcm.ps,v 1.8 2007/09/11 15:24:50 Arabidopsis Exp $
+% $Id: gs_cidcm.ps,v 1.9 2008/05/04 14:34:58 Arabidopsis Exp $
 % Extending Font resource category with CIDFont-CMap fonts.
 
 languagelevel 2 .setlanguagelevel currentglobal true setglobal
@@ -172,12 +172,15 @@ currentdict end def
           RESMPDEBUG { (cidcm GetCIDSystemInfo from file ) print dup = } if
           currentglobal exch true setglobal   % CSIs /InstName g (path)
           mark exch                           % CSIs /InstName g [ (path)
-          { (r) file                          % CSIs /InstName g [ file
-            //GetCIDSystemInfoFromFile exec   % CSIs /InstName g [ CSI
-          } stopped {
-            cleartomark //.prs_empty             
+          { (r) file } stopped {
+            cleartomark //.prs_empty
           } {
-            exch pop
+            exch 1 index                      % CSIs /InstName g file [ file
+            //GetCIDSystemInfoFromFile stopped {
+              cleartomark closefile //.prs_empty
+            } {
+              exch pop exch closefile
+            } ifelse
           } ifelse                            % CSIs /InstName g CSI
           exch setglobal                      % CSIs /InstName CSI
           dup 4 1 roll                        % CSI CSIs /InstName CSI

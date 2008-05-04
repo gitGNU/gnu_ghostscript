@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclrect.c,v 1.11 2008/03/23 15:27:47 Arabidopsis Exp $ */
+/* $Id: gxclrect.c,v 1.12 2008/05/04 14:34:49 Arabidopsis Exp $ */
 /* Rectangle-oriented command writing for command list */
 #include "gx.h"
 #include "gserrors.h"
@@ -441,6 +441,8 @@ clist_pattern_manage(gx_device *pdev, gx_bitmap_id id,
 		gs_pattern1_instance_t *pinst, pattern_manage_t function)
 {
     if (function == pattern_manage__handles_clip_path)
+	return 1;
+    if (function == pattern_manage__shfill_doesnt_need_path)
 	return 1;
     return gx_default_pattern_manage(pdev, id, pinst, function);
 }

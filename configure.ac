@@ -14,7 +14,7 @@ dnl You should have received a copy of the GNU General Public License along with
 dnl ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 dnl Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 dnl 
-dnl $Id: configure.ac,v 1.17 2008/03/23 15:28:31 Arabidopsis Exp $
+dnl $Id: configure.ac,v 1.18 2008/05/04 14:35:10 Arabidopsis Exp $
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------
@@ -22,7 +22,7 @@ dnl Initialization and Versioning
 dnl ------------------------------------------------
 
 AC_PREREQ(2.60)
-AC_INIT([gnu-ghostscript], [8.61.0], [gnu-ghostscript-bug@gnu.org])
+AC_INIT([gnu-ghostscript], [8.62.0], [gnu-ghostscript-bug@gnu.org])
 AC_CONFIG_SRCDIR(src/gs.c)
 AM_INIT_AUTOMAKE([-Wall])
 
@@ -33,9 +33,9 @@ CXXFLAGS="${CXXFLAGS:=}"
 LDFLAGS="${LDFLAGS:=}"
 
 GS_VERSION_MAJOR=8
-GS_VERSION_MINOR=61
+GS_VERSION_MINOR=62
 GS_VERSION_PATCH=0
-GS_REVISIONDATE=20071121
+GS_REVISIONDATE=20080229
 
 GS_VERSION=`expr $GS_VERSION_MAJOR \* 10000 + $GS_VERSION_MINOR \* 100 + $GS_VERSION_PATCH`
 
@@ -126,7 +126,7 @@ dnl --------------------------------------------------
 #AC_CANONICAL_HOST
 
 if test $ac_cv_prog_gcc = yes; then
-    cflags_to_try="-Wall -Wstrict-prototypes \
+    cflags_to_try="-Wall -Wstrict-prototypes -Wundef \
 -Wmissing-declarations -Wmissing-prototypes -Wwrite-strings \
 -Wno-strict-aliasing \
 -fno-builtin -fno-common"
@@ -259,7 +259,7 @@ if test "$enable_fontconfig" != "no"; then
 	if test -z "$HAVE_FONTCONFIG"; then
 		AC_CHECK_LIB([fontconfig], [FcInitLoadConfigAndFonts], [
 		  AC_CHECK_HEADER([fontconfig/fontconfig.h], [
-		    FONTCONFIG_LIBS="-lfontconfg"
+		    FONTCONFIG_LIBS="-lfontconfig"
 		    HAVE_FONTCONFIG="-DHAVE_FONTCONFIG"
 		  ])
 		])

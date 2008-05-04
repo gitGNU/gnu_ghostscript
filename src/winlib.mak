@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: winlib.mak,v 1.10 2007/09/11 15:23:48 Arabidopsis Exp $
+# $Id: winlib.mak,v 1.11 2008/05/04 14:34:47 Arabidopsis Exp $
 # Common makefile section for 32-bit MS Windows.
 
 # This makefile must be acceptable to Microsoft Visual C++, Watcom C++,
@@ -76,9 +76,6 @@ RMN_=call $(GLSRCDIR)\rm.bat
 
 PLATOPT=
 
-INTASM=
-PCFBASM=
-
 # Define conditinal name for UFST bridge :
 !ifdef UFST_ROOT
 UFST_BRIDGE = 1
@@ -136,12 +133,6 @@ GSDLL_OBJ=$(GLOBJ)$(GSDLL)
 # No special gconfig_.h is needed.	/* This file deliberately left blank. */
 $(gconfig__h): $(TOP_MAKEFILES)
 	$(ECHOGS_XE) -w $(gconfig__h) -x 2f2a20 This file deliberately left blank. -x 2a2f
-
-$(gconfigv_h): $(TOP_MAKEFILES) $(ECHOGS_XE)
-	$(ECHOGS_XE) -w $(gconfigv_h) -x 23 define USE_ASM -x 2028 -q $(USE_ASM)-0 -x 29
-	$(ECHOGS_XE) -a $(gconfigv_h) -x 23 define USE_FPU -x 2028 -q $(FPU_TYPE)-0 -x 29
-	$(ECHOGS_XE) -a $(gconfigv_h) -x 23 define EXTEND_NAMES 0$(EXTEND_NAMES)
-	$(ECHOGS_XE) -a $(gconfigv_h) -x 23 define SYSTEM_CONSTANTS_ARE_WRITABLE 0$(SYSTEM_CONSTANTS_ARE_WRITABLE)
 
 # -------------------------------- Library -------------------------------- #
 

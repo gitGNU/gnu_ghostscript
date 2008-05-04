@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gp_unix_cache.c,v 1.6 2008/03/23 15:28:02 Arabidopsis Exp $ */
+/* $Id: gp_unix_cache.c,v 1.7 2008/05/04 14:34:45 Arabidopsis Exp $ */
 /* Generic POSIX persistent-cache implementation for Ghostscript */
 
 #include "stdio_.h"
@@ -42,7 +42,7 @@ typedef struct gp_cache_entry_s {
     int len;
     void *buffer;
     int dirty;
-    time_t last_used;
+    ulong last_used;	/* we assume time_t fits in here */
 } gp_cache_entry;
 
 /* initialize a new gp_cache_entry struct */
@@ -294,7 +294,7 @@ gp_cache_read_entry(FILE *file, gp_cache_entry *item)
     if (line[0] == '#') return 1;
     
     /* otherwise, parse the line */
-    sscanf(line, "%s %ld\n", fn, &item->last_used);
+    sscanf(line, "%s %lu\n", fn, &item->last_used);
     /* unpack the type from the filename */
     item->type = readhexbyte(fn);
     /* unpack the md5 hash from the filename */
@@ -316,7 +316,7 @@ gp_cache_read_entry(FILE *file, gp_cache_entry *item)
 static int
 gp_cache_write_entry(FILE *file, gp_cache_entry *item)
 {
-    fprintf(file, "%s %ld\n", item->filename, item->last_used);
+    fprintf(file, "%s %lu\n", item->filename, item->last_used);
     return 0;
 }
 

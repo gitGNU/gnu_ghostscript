@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gximage.h,v 1.9 2007/09/11 15:24:12 Arabidopsis Exp $ */
+/* $Id: gximage.h,v 1.10 2008/05/04 14:34:42 Arabidopsis Exp $ */
 /* Default image rendering state structure */
 /* Requires gxcpath.h, gxdevmem.h, gxdcolor.h, gzpath.h */
 
@@ -170,6 +170,8 @@ struct gx_image_enum_s {
     /* We really want the map structure to be long-aligned, */
     /* so we choose shorter types for some flags. */
     /* Following are set at structure initialization */
+    int Width;			/* Full image width */
+    int Height;			/* Full image height */
     byte bps;			/* bits per sample: 1, 2, 4, 8, 12 */
     byte unpack_bps;		/* bps for computing unpack proc, */
 				/* set to 8 if no unpacking */
@@ -197,6 +199,10 @@ struct gx_image_enum_s {
     struct r_ {
 	int x, y, w, h;		/* subrectangle being rendered */
     } rect;
+    fixed dst_height;		/* Full image height in the device space for siscale.c only;
+				   assumes posture == image_portrait. */
+    fixed dst_width;		/* Full image width in the device space for siscale.c only;
+				   assumes posture == image_portrait. */
     gs_fixed_point x_extent, y_extent;	/* extent of one row of rect */
     SAMPLE_UNPACK_PROC((*unpack));
     irender_proc((*render));
@@ -254,6 +260,7 @@ struct gx_image_enum_s {
 				/* (landscape only) */
     gs_int_point xyi;		/* integer origin of row */
 				/* (Interpolate only) */
+    int yi0;			/* integer y of entire image origin. */
     int yci, hci;		/* integer y & h of row (portrait) */
     int xci, wci;		/* integer x & w of row (landscape) */
     /* The maps are set at initialization.  We put them here */

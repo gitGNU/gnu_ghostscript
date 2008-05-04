@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevcgm.c,v 1.9 2008/03/23 15:27:44 Arabidopsis Exp $ */
+/* $Id: gdevcgm.c,v 1.10 2008/05/04 14:34:46 Arabidopsis Exp $ */
 /* CGM (Computer Graphics Metafile) driver */
 #include "memory_.h"
 #include "gx.h"
@@ -24,6 +24,7 @@
 #include "gxdevice.h"
 #include "gp.h"
 #include "gsparam.h"
+#include "gsutil.h"
 #include "gdevcgml.h"
 #include "gdevpccm.h"
 

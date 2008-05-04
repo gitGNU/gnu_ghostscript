@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclutil.c,v 1.11 2008/03/23 15:28:05 Arabidopsis Exp $ */
+/* $Id: gxclutil.c,v 1.12 2008/05/04 14:34:49 Arabidopsis Exp $ */
 /* Command list writing utilities. */
 
 #include "memory_.h"
@@ -252,7 +252,7 @@ cmd_put_list_op(gx_device_clist_writer * cldev, cmd_list * pcl, uint size)
 	    lprintf1("cmd_put_list_op error at 0x%lx\n", (ulong) pcl->tail);
 	}
 #endif
-	if_debug2('L', ", to id=%ld , offset=%ld", pcl->tail->id, pcl->tail->size);
+	if_debug2('L', ", to id=%ld , offset=%ld", pcl->tail->id, (long)pcl->tail->size);
 	pcl->tail->size += size;
     } else {
 	/* Skip to an appropriate alignment boundary. */
@@ -754,3 +754,16 @@ clist_rld_init(stream_RLD_state *ss)
     s_RLD_set_defaults_inline(ss);
     s_RLD_init_inline(ss);
 }
+
+/* Read a transformation matrix. */
+const byte *
+cmd_read_matrix(gs_matrix * pmat, const byte * cbp)
+{
+    stream s;
+
+    s_init(&s, NULL);
+    sread_string(&s, cbp, 1 + sizeof(*pmat));
+    sget_matrix(&s, pmat);
+    return cbp + stell(&s);
+}
+

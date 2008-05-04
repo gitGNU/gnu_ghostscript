@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsistate.c,v 1.11 2008/03/23 15:27:57 Arabidopsis Exp $ */
+/* $Id: gsistate.c,v 1.12 2008/05/04 14:34:43 Arabidopsis Exp $ */
 /* Imager state housekeeping */
 #include "gx.h"
 #include "gserrors.h"
@@ -68,10 +68,8 @@ static
 ENUM_PTRS_BEGIN(imager_state_enum_ptrs)
     ENUM_SUPER(gs_imager_state, st_line_params, line_params, st_imager_state_num_ptrs - st_line_params_num_ptrs);
     ENUM_PTR(0, gs_imager_state, client_data);
-    ENUM_PTR(1, gs_imager_state, opacity.mask);
-    ENUM_PTR(2, gs_imager_state, shape.mask);
-    ENUM_PTR(3, gs_imager_state, transparency_stack);
-#define E1(i,elt) ENUM_PTR(i+4,gs_imager_state,elt);
+    ENUM_PTR(1, gs_imager_state, transparency_stack);
+#define E1(i,elt) ENUM_PTR(i+2,gs_imager_state,elt);
     gs_cr_state_do_ptrs(E1)
 #undef E1
 ENUM_PTRS_END
@@ -79,8 +77,6 @@ static RELOC_PTRS_BEGIN(imager_state_reloc_ptrs)
 {
     RELOC_SUPER(gs_imager_state, st_line_params, line_params);
     RELOC_PTR(gs_imager_state, client_data);
-    RELOC_PTR(gs_imager_state, opacity.mask);
-    RELOC_PTR(gs_imager_state, shape.mask);
     RELOC_PTR(gs_imager_state, transparency_stack);
 #define R1(i,elt) RELOC_PTR(gs_imager_state,elt);
     gs_cr_state_do_ptrs(R1)
@@ -102,8 +98,6 @@ gs_imager_state_initialize(gs_imager_state * pis, gs_memory_t * mem)
     int i;
     pis->memory = mem;
     pis->client_data = 0;
-    pis->opacity.mask = 0;
-    pis->shape.mask = 0;
     pis->transparency_stack = 0;
     /* Color rendering state */
     pis->halftone = 0;
@@ -163,8 +157,6 @@ gs_imager_state_copy(const gs_imager_state * pis, gs_memory_t * mem)
 void
 gs_imager_state_copied(gs_imager_state * pis)
 {
-    rc_increment(pis->opacity.mask);
-    rc_increment(pis->shape.mask);
     rc_increment(pis->halftone);
     rc_increment(pis->dev_ht);
     rc_increment(pis->cie_render);
@@ -198,8 +190,6 @@ gs_imager_state_pre_assign(gs_imager_state *pto, const gs_imager_state *pfrom)
     RCCOPY(cie_render);
     RCCOPY(dev_ht);
     RCCOPY(halftone);
-    RCCOPY(shape.mask);
-    RCCOPY(opacity.mask);
     RCCOPY(devicergb_cs);
     RCCOPY(devicecmyk_cs);
 #undef RCCOPY
@@ -232,8 +222,6 @@ gs_imager_state_release(gs_imager_state * pis)
     }
     RCDECR(dev_ht);
     RCDECR(halftone);
-    RCDECR(shape.mask);
-    RCDECR(opacity.mask);
     RCDECR(devicergb_cs);
     RCDECR(devicecmyk_cs);
 #undef RCDECR

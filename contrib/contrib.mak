@@ -1,4 +1,4 @@
-# $Id: contrib.mak,v 1.2 2008/03/23 15:28:31 Arabidopsis Exp $
+# $Id: contrib.mak,v 1.3 2008/05/04 14:35:11 Arabidopsis Exp $
 
 # Makefile for device drivers which are not in the original GNU GhostScript
 # distribution
@@ -524,7 +524,7 @@ $(DD)lxm3200.dev: $(lxm3200_) $(DD)page.dev
 ###                                                                      ###
 LIPS_DIR=$(CONTRIBSRC)lips4
 LIPS_SRC=$(LIPS_DIR)$(D)
-LIPS_OPT=-DGS_VERSION_MAJOR=$(GS_VERSION_MAJOR) $(I_) $(LIPS_SRC)
+LIPS_OPT=-DGS_VERSION_MAJOR=$(GS_VERSION_MAJOR) $(I_)$(LIPS_SRC)
 
 $(GLOBJ)gdevlprn.$(OBJ): $(LIPS_SRC)gdevlprn.c $(LIPS_SRC)gdevlprn.h\
  $(gdevprn_h) $(PDEVH)
@@ -678,7 +678,7 @@ $(DD)oprp.dev : $(opvp_) $(DD)page.dev
 pcl3_options=
 eprn_fs_options=
 
-# Version of the pcl3 rules: $Revision: 1.2 $.
+# Version of the pcl3 rules: $Revision: 1.3 $.
 
 #==============================================================================
 
@@ -997,7 +997,7 @@ $(GLOBJ)gdevfmlbp.$(OBJ): $(JAPSRC)gdevfmlbp.c $(PDEVH)
 #
 #  by N.Tagawa
 #
-#  $Id: contrib.mak,v 1.2 2008/03/23 15:28:31 Arabidopsis Exp $
+#  $Id: contrib.mak,v 1.3 2008/05/04 14:35:11 Arabidopsis Exp $
 #
 
 ml6_=$(GLOBJ)gdevml6.$(OBJ) $(GLOBJ)gdevprn.$(OBJ)

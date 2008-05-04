@@ -2,6 +2,7 @@
 # -*- Mode: python -*-
 
 #    Copyright (C) 2007 Artifex Software Inc.
+#    All Rights Reserved.
 # 
 # This file is part of GNU ghostscript
 #

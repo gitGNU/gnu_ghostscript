@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: wctail.mak,v 1.9 2007/09/11 15:23:58 Arabidopsis Exp $
+# $Id: wctail.mak,v 1.10 2008/05/04 14:34:45 Arabidopsis Exp $
 # wctail.mak
 # Last part of Watcom C/C++ makefile common to MS-DOS and MS Windows.
 
@@ -87,9 +87,3 @@ $(AUXGEN)geninit.$(OBJ): $(GLSRC)geninit.c $(stdpre_h)
 # Watcom `make' supports output redirection.
 $(gconfig__h): $(WCTAIL_MAK)
 	echo /* This file deliberately left blank. */ >$(gconfig__h)
-
-$(gconfigv_h): $(WCTAIL_MAK) $(TOP_MAKEFILES) $(ECHOGS_XE)
-	$(ECHOGS_XE) -w $(gconfigv_h) -x 23 define USE_ASM -x 2028 -q $(USE_ASM)-0 -x 29
-	$(ECHOGS_XE) -a $(gconfigv_h) -x 23 define USE_FPU -x 2028 -q $(FPU_TYPE)-0 -x 29
-	$(ECHOGS_XE) -a $(gconfigv_h) -x 23 define EXTEND_NAMES 0$(EXTEND_NAMES)
-	$(ECHOGS_XE) -a $(gconfigv_h) -x 23 define SYSTEM_CONSTANTS_ARE_WRITABLE 0$(SYSTEM_CONSTANTS_ARE_WRITABLE)

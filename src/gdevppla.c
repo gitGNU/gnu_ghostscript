@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevppla.c,v 1.9 2008/03/23 15:27:37 Arabidopsis Exp $ */
+/* $Id: gdevppla.c,v 1.10 2008/05/04 14:34:39 Arabidopsis Exp $ */
 /* Support for printer devices with planar buffering. */
 #include "gdevprn.h"
 #include "gdevmpla.h"
@@ -99,11 +99,11 @@ gdev_prn_set_planar(gx_device_memory *mdev, const gx_device *tdev)
 
 /* Create a planar buffer device. */
 int
-gdev_prn_create_buf_planar(gx_device **pbdev, gx_device *target,
+gdev_prn_create_buf_planar(gx_device **pbdev, gx_device *target, int y,
 			   const gx_render_plane_t *render_plane,
 			   gs_memory_t *mem, gx_band_complexity_t *for_band)
 {
-    int code = gx_default_create_buf_device(pbdev, target, render_plane, mem,
+    int code = gx_default_create_buf_device(pbdev, target, y, render_plane, mem,
 					    for_band);
 
     if (code < 0)

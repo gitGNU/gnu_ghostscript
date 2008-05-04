@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gximask.c,v 1.4 2008/03/23 15:27:43 Arabidopsis Exp $ */
+/* $Id: gximask.c,v 1.5 2008/05/04 14:34:45 Arabidopsis Exp $ */
 /* Functions for masked fill optimization. */
 #include "gx.h"
 #include "memory_.h"
@@ -66,17 +66,16 @@ int
 gx_image_fill_masked_end(gx_device *dev, gx_device *tdev, const gx_device_color *pdevc)
 {
     gx_device_cpath_accum *pcdev = (gx_device_cpath_accum *)dev;
-    gx_clip_path cpath, cpath_with_shading_bbox;
-    const gx_clip_path *pcpath1 = &cpath;
+    gx_clip_path cpath;
     gx_device_clip cdev;
     int code, code1;
 
     gx_cpath_init_local(&cpath, pcdev->memory);
     code = gx_cpath_accum_end(pcdev, &cpath);
     if (code >= 0)
-	code = gx_dc_pattern2_clip_with_bbox(pdevc, tdev, &cpath_with_shading_bbox, &pcpath1);
+	code = gx_dc_pattern2_clip_with_bbox_simple(pdevc, tdev, &cpath);
+	gx_make_clip_device_on_stack(&cdev, &cpath, tdev);
     if (code >= 0) {
-	gx_make_clip_device_on_stack(&cdev, pcpath1, tdev);
 	code1 = gx_device_color_fill_rectangle(pdevc, 
 		    pcdev->bbox.p.x, pcdev->bbox.p.y, 
 		    pcdev->bbox.q.x - pcdev->bbox.p.x, 
@@ -86,8 +85,6 @@ gx_image_fill_masked_end(gx_device *dev, gx_device *tdev, const gx_device_color 
 	    code = code1;
 	gx_device_retain((gx_device *)pcdev, false);
     }
-    if (pcpath1 == &cpath_with_shading_bbox)
-	gx_cpath_free(&cpath_with_shading_bbox, "s_image_cleanup");
     gx_cpath_free(&cpath, "s_image_cleanup");
     return code;
 }

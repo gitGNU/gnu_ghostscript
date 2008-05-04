@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: vdtrace.c,v 1.9 2008/03/23 15:27:47 Arabidopsis Exp $ */
+/* $Id: vdtrace.c,v 1.10 2008/05/04 14:34:49 Arabidopsis Exp $ */
 /* Visual tracer service */
 
 #include "math_.h"
@@ -187,6 +187,11 @@ void vd_impl_round(double x, double y, int r, unsigned long c)
     vd_trace1->setcolor(vd_trace1, c);
     vd_trace1->setlinewidth(vd_trace1, 1);
     vd_trace1->round(vd_trace1, SX(x), SY(y), r);
+}
+
+void vd_impl_pixel(double x, double y, unsigned long c)
+{   NullRET;
+    vd_trace1->pixel(vd_trace1, SX(x), SY(y), c);
 }
 
 void vd_impl_text(double x, double y, char *s, unsigned long c)

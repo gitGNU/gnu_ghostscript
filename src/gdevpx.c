@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpx.c,v 1.11 2008/03/23 15:27:54 Arabidopsis Exp $ */
+/* $Id: gdevpx.c,v 1.12 2008/05/04 14:34:57 Arabidopsis Exp $ */
 /* H-P PCL XL driver */
 #include "math_.h"
 #include "memory_.h"
@@ -1078,6 +1078,12 @@ pclxl_endpath(gx_device_vector * vdev, gx_path_type_t type)
     if (code < 0)
 	return code;
     if (type & (gx_path_type_fill | gx_path_type_stroke)) {
+	if (rule != xdev->fill_rule) {
+	    px_put_ub(s, (byte)(rule == gx_path_type_even_odd ? eEvenOdd :
+		       eNonZeroWinding));
+	    px_put_ac(s, pxaFillMode, pxtSetFillMode);
+	    xdev->fill_rule = rule;
+	}
 	pclxl_set_paints(xdev, type);
 	spputc(s, pxtPaintPath);
     }

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxtype1.c,v 1.11 2008/03/23 15:28:03 Arabidopsis Exp $ */
+/* $Id: gxtype1.c,v 1.12 2008/05/04 14:34:46 Arabidopsis Exp $ */
 /* Adobe Type 1 font interpreter support */
 #include "math_.h"
 #include "memory_.h"
@@ -551,6 +551,7 @@ gs_type1_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
     }
 
     if (width_members) {
+	gx_path path;
 	/*
 	 * Interpret the CharString until we get to the [h]sbw.
 	 */
@@ -573,6 +574,8 @@ gs_type1_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
 	if (code < 0)
 	    return code;
 	cis.no_grid_fitting = true;
+	gx_path_init_bbox_accumulator(&path);
+	cis.path = &path;
 	code = pdata->interpret(&cis, &gdata, &value);
 	switch (code) {
 	case 0:		/* done with no [h]sbw, error */

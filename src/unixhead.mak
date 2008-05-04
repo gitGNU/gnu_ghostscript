@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: unixhead.mak,v 1.7 2007/09/11 15:23:52 Arabidopsis Exp $
+# $Id: unixhead.mak,v 1.8 2008/05/04 14:34:50 Arabidopsis Exp $
 # Partial makefile common to all Unix configurations.
 
 # This part of the makefile gets inserted after the compiler-specific part
@@ -74,11 +74,6 @@ CC_D=$(CC_)
 CC_INT=$(CC_)
 
 BEGINFILES=
-
-# Patch a couple of PC-specific things that aren't relevant to Unix builds,
-# but that cause `make' to produce warnings.
-
-PCFBASM=
 
 # Define the default build rule, so the object directories get created
 # automatically.

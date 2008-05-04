@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevbit.c,v 1.11 2008/03/23 15:27:47 Arabidopsis Exp $ */
+/* $Id: gdevbit.c,v 1.12 2008/05/04 14:34:49 Arabidopsis Exp $ */
 /* "Plain bits" devices to measure rendering time. */
 
 #include "math_.h"
@@ -44,7 +44,9 @@ static dev_proc_map_rgb_color(bittag_rgb_map_rgb_color);
 static dev_proc_map_color_rgb(bittag_map_color_rgb);
 static dev_proc_put_params(bittag_put_params);
 static dev_proc_map_rgb_color(bit_mono_map_color);
+#if 0 /* unused */
 static dev_proc_map_rgb_color(bit_forcemono_map_rgb_color);
+#endif
 static dev_proc_map_color_rgb(bit_map_color_rgb);
 static dev_proc_map_cmyk_color(bit_map_cmyk_color);
 static dev_proc_get_params(bit_get_params);
@@ -388,6 +390,7 @@ bit_mono_map_color(gx_device * dev, const gx_color_value cv[])
     return (bpc == 1 ? gx_max_color_value - gray : gray) >> drop;
 }
 
+#if 0 /* unused */
 /* Map RGB to gray shade. */
 /* Only used in CMYK mode when put_params has set ForceMono=1 */
 static gx_color_index
@@ -409,6 +412,7 @@ bit_forcemono_map_rgb_color(gx_device * dev, const gx_color_value cv[])
     color = (gx_max_color_value - gray) >> drop;	/* color is in K channel */
     return color;
 }
+#endif
 
 /* Map color to RGB.  This has 3 separate cases, but since it is rarely */
 /* used, we do a case test rather than providing 3 separate routines. */

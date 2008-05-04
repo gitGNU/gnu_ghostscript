@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gstrans.c,v 1.11 2008/03/23 15:27:59 Arabidopsis Exp $ */
+/* $Id: gstrans.c,v 1.12 2008/05/04 14:34:44 Arabidopsis Exp $ */
 /* Implementation of transparency, other than rendering */
 #include "math_.h"
 #include "memory_.h"
@@ -239,6 +239,7 @@ gx_begin_transparency_group(gs_imager_state * pis, gx_device * pdev,
 	return_error(gs_error_rangecheck);
     tgp.Isolated = pparams->Isolated;
     tgp.Knockout = pparams->Knockout;
+    tgp.idle = pparams->idle;
     pis->opacity.alpha = pparams->opacity.alpha;
     pis->shape.alpha = pparams->shape.alpha;
     pis->blend_mode = pparams->blend_mode;
@@ -305,6 +306,7 @@ gs_trans_mask_params_init(gs_transparency_mask_params_t *ptmp,
     ptmp->Background_components = 0;
     ptmp->TransferFunction = mask_transfer_identity;
     ptmp->TransferFunction_data = 0;
+    ptmp->replacing = false;
 }
 
 int
@@ -332,6 +334,7 @@ gs_begin_transparency_mask(gs_state * pgs,
     params.function_is_identity =
 	    (ptmp->TransferFunction == mask_transfer_identity);
     params.mask_is_image = mask_is_image;
+    params.replacing = ptmp->replacing;
     /* Sample the transfer function */
     for (i = 0; i < MASK_TRANSFER_FUNCTION_SIZE; i++) {
 	float in = (float)(i * (1.0 / (MASK_TRANSFER_FUNCTION_SIZE - 1)));
@@ -355,6 +358,8 @@ gx_begin_transparency_mask(gs_imager_state * pis, gx_device * pdev,
     memcpy(tmp.Background, pparams->Background, l);
     tmp.GrayBackground = pparams->GrayBackground;
     tmp.function_is_identity = pparams->function_is_identity;
+    tmp.idle = pparams->idle;
+    tmp.replacing = pparams->replacing;
     memcpy(tmp.transfer_fn, pparams->transfer_fn, size_of(tmp.transfer_fn));
     if_debug8('v', "[v](0x%lx)gx_begin_transparency_mask [%g %g %g %g]\n\
       subtype = %d  Background_components = %d  %s\n",
@@ -409,45 +414,13 @@ gs_discard_transparency_layer(gs_state *pgs)
     return 0;
 }
 
-int
-gs_init_transparency_mask(gs_state *pgs,
-			  gs_transparency_channel_selector_t csel)
-{
-    gs_pdf14trans_params_t params = { 0 };
-
-    if_debug2('v', "[v](0x%lx)gs_init_transparency_mask(%d)\n", (ulong)pgs,
-	      (int)csel);
-
-    params.pdf14_op = PDF14_INIT_TRANS_MASK;
-    params.csel = csel;
-    return gs_state_update_pdf14trans(pgs, &params);
-}
-
-int
-gx_init_transparency_mask(gs_imager_state * pis,
-				const gs_pdf14trans_params_t * pparams)
-{
-    gs_transparency_source_t *ptm;
-
-    if_debug2('v', "[v](0x%lx)gx_init_transparency_mask(%d)\n", (ulong)pis,
-	      (int)pparams->csel);
-    switch (pparams->csel) {
-    case TRANSPARENCY_CHANNEL_Opacity: ptm = &pis->opacity; break;
-    case TRANSPARENCY_CHANNEL_Shape: ptm = &pis->shape; break;
-    default: return_error(gs_error_rangecheck);
-    }
-    rc_decrement_only(ptm->mask, "gs_init_transparency_mask");
-    ptm->mask = 0;
-    return 0;
-}
-
 /*
  * We really only care about the number of spot colors when we have
  * a device which supports spot colors.  With the other devices we use
  * the tint transform function for DeviceN and Separation color spaces
  * and convert spot colors into process colors.
  */
-int
+static int
 get_num_pdf14_spot_colors(gs_state * pgs)
 {
     gx_device * dev = pgs->device;

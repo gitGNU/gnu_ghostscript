@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: spprint.c,v 1.9 2008/03/23 15:27:42 Arabidopsis Exp $ */
+/* $Id: spprint.c,v 1.10 2008/05/04 14:34:44 Arabidopsis Exp $ */
 /* Print values in ASCII form on a stream */
 #include "math_.h"		/* for fabs */
 #include "stdio_.h"		/* for stream.h */
@@ -113,16 +113,24 @@ const char *
 pprintg1(stream * s, const char *format, floatp v)
 {
     const char *fp = pprintf_scan(s, format);
-    char str[150];
+    char dot, str[150];
 
 #ifdef DEBUG
     if (*fp == 0 || fp[1] != 'g')	/* shouldn't happen! */
 	lprintf1("Bad format in pprintg: %s\n", format);
 #endif
+    sprintf(str, "%f", 1.5);
+    dot = str[1]; /* locale-dependent */
     sprintf(str, "%g", v);
     if (strchr(str, 'e')) {
 	/* Bad news.  Try again using f-format. */
 	sprintf(str, (fabs(v) > 1 ? "%1.1f" : "%1.8f"), v);
+    }
+    /* Juggling locales isn't thread-safe. Posix me harder. */
+    if (dot != '.') {
+        char *pdot = strchr(str, dot); 
+        if (pdot)
+            *pdot = '.';
     }
     pputs_short(s, str);
     return pprintf_scan(s, fp + 2);

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxidata.c,v 1.9 2008/03/23 15:27:49 Arabidopsis Exp $ */
+/* $Id: gxidata.c,v 1.10 2008/05/04 14:34:51 Arabidopsis Exp $ */
 /* Generic image enumeration and cleanup */
 #include "gx.h"
 #include "memory_.h"
@@ -162,8 +162,8 @@ gx_image1_plane_data(gx_image_enum_common_t * info,
 			yn += adjust;
 			if (yn <= penum->clip_outer.p.y)
 			    goto mt;
-			penum->yci = fixed2int_pixround(yc);
-			penum->hci = fixed2int_pixround(yn) - penum->yci;
+			penum->yci = fixed2int_pixround_perfect(yc);
+			penum->hci = fixed2int_pixround_perfect(yn) - penum->yci;
 			if (penum->hci == 0)
 			    goto mt;
 			if_debug2('b', "[b]yci=%d, hci=%d\n",
@@ -187,8 +187,8 @@ gx_image1_plane_data(gx_image_enum_common_t * info,
 			xn += adjust;
 			if (xn <= penum->clip_outer.p.x)
 			    goto mt;
-			penum->xci = fixed2int_pixround(xc);
-			penum->wci = fixed2int_pixround(xn) - penum->xci;
+			penum->xci = fixed2int_pixround_perfect(xc);
+			penum->wci = fixed2int_pixround_perfect(xn) - penum->xci;
 			if (penum->wci == 0)
 			    goto mt;
 			if_debug2('b', "[b]xci=%d, wci=%d\n",
@@ -284,9 +284,28 @@ gx_image1_flush(gx_image_enum_common_t * info)
 static void
 update_strip(gx_image_enum *penum)
 {
+
+#if 1 
+    /* Old code. */
     dda_translate(penum->dda.strip.x, penum->cur.x - penum->prev.x);
     dda_translate(penum->dda.strip.y, penum->cur.y - penum->prev.y);
     penum->dda.pixel0 = penum->dda.strip;
+#else
+    /* A better precision with stromng dda_advance -
+       doesn't work becauae gx_image1_plane_data
+       doesn't call it at each step. */
+    gx_dda_fixed_point temp;
+
+    temp.x.state = penum->dda.strip.x.state;
+    temp.y.state = penum->dda.strip.y.state;
+    temp.x.step = penum->dda.row.x.step;
+    temp.y.step = penum->dda.row.y.step;
+    dda_next(temp.x);
+    dda_next(temp.y);
+    penum->dda.strip.x.state = temp.x.state;
+    penum->dda.strip.y.state = temp.y.state;
+    penum->dda.pixel0 = penum->dda.strip;
+#endif
 }
 
 /*

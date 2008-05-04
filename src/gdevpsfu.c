@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpsfu.c,v 1.10 2008/03/23 15:27:37 Arabidopsis Exp $ */
+/* $Id: gdevpsfu.c,v 1.11 2008/05/04 14:34:40 Arabidopsis Exp $ */
 /* PostScript/PDF font writing utilities */
 #include "memory_.h"
 #include <stdlib.h>		/* for qsort */
@@ -212,7 +212,7 @@ psf_check_outline_glyphs(gs_font_base *pfont, psf_glyph_enum_t *ppge,
 {
     uint members = GLYPH_INFO_WIDTH0 << pfont->WMode;
     gs_glyph glyph;
-    int code;
+    int code, good_glyphs = 0;
 
     while ((code = psf_enumerate_glyphs_next(ppge, &glyph)) != 1) {
 	gs_glyph_data_t gdata;
@@ -241,10 +241,22 @@ psf_check_outline_glyphs(gs_font_base *pfont, psf_glyph_enum_t *ppge,
 	 */
 	code = pfont->procs.glyph_info((gs_font *)pfont, glyph, NULL,
 				       members, &info);
+
+	/* It may be that a single glyph is bad (eg no (h)sbw), we'll ignore it */
+	/* here, the glyph may not be included in any subset, or not used at all */
+	/* (ie the /.notdef). If an invalid glyoh is actually used then the text */
+	/* processing will still signal an error causing the document to fail. */
+	if(code == gs_error_invalidfont)
+	    continue;
+
 	if (code < 0)
 	    return code;
+	good_glyphs++;
     }
-    return 0;
+    if(good_glyphs)
+	return 0;
+    else
+	return_error(gs_error_invalidfont);
 }
 
 /* Gather glyph information for a Type 1 or Type 2 font. */

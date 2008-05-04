@@ -2,6 +2,7 @@
 # -*- Mode: python -*-
 
 #    Copyright (C) 2001 Artifex Software Inc.
+#    All Rights Reserved.
 # 
 # This file is part of GNU ghostscript
 #
@@ -20,7 +21,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gstestgs.py,v 1.9 2007/09/10 14:08:48 Arabidopsis Exp $
+# $Id: gstestgs.py,v 1.10 2008/05/04 14:35:05 Arabidopsis Exp $
 
 # gstestgs.py
 #

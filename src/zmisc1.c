@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zmisc1.c,v 1.8 2008/03/23 15:28:16 Arabidopsis Exp $ */
+/* $Id: zmisc1.c,v 1.9 2008/05/04 14:34:55 Arabidopsis Exp $ */
 /* Miscellaneous Type 1 font operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -120,7 +120,9 @@ zexD(i_ctx_t *i_ctx_p)
 	    (code = dict_int_param(op, "lenIV", 0, max_int, 4,
 				   &state.lenIV)) < 0 ||
 	    (code = dict_bool_param(op, "eexec", false,
-				   &is_eexec)) < 0
+				   &is_eexec)) < 0 ||
+	    (code = dict_bool_param(op, "keep_spaces", false,
+				   &state.keep_spaces)) < 0
 	    )
 	    return code;
 	state.cstate = cstate;

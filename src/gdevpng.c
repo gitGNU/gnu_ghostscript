@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpng.c,v 1.13 2008/03/23 15:28:18 Arabidopsis Exp $ */
+/* $Id: gdevpng.c,v 1.14 2008/05/04 14:34:56 Arabidopsis Exp $ */
 /* PNG (Portable Network Graphics) Format.  Pronounced "ping". */
 /* lpd 1999-09-24: changes PNG_NO_STDIO to PNG_NO_CONSOLE_IO for libpng
    versions 1.0.3 and later. */
@@ -453,12 +453,12 @@ pngalpha_open(gx_device * pdev)
 }
 
 static int 
-pngalpha_create_buf_device(gx_device **pbdev, gx_device *target,
+pngalpha_create_buf_device(gx_device **pbdev, gx_device *target, int y,
    const gx_render_plane_t *render_plane, gs_memory_t *mem,
    gx_band_complexity_t *band_complexity)
 {
     gx_device_printer *ptarget = (gx_device_printer *)target;
-    int code = gx_default_create_buf_device(pbdev, target, 
+    int code = gx_default_create_buf_device(pbdev, target, y, 
 	render_plane, mem, band_complexity);
     /* Now set copy_alpha to one that handles RGBA */
     set_dev_proc(*pbdev, copy_alpha, ptarget->orig_procs.copy_alpha);

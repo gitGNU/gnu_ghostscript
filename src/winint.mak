@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2007 Artifex Software, Inc.
+#  Copyright (C) 2001-2008 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: winint.mak,v 1.10 2007/09/11 15:24:10 Arabidopsis Exp $
+# $Id: winint.mak,v 1.11 2008/05/04 14:34:53 Arabidopsis Exp $
 # Common interpreter makefile section for 32-bit MS Windows.
 
 # This makefile must be acceptable to Microsoft Visual C++, Watcom C++,
@@ -79,7 +79,7 @@ i_INCDIR=-i$(INCDIR)
 
 ICONS=$(GLGEN)gswin.ico $(GLGEN)gswin16.ico
 
-GS_ALL=$(INT_ALL) $(INTASM)\
+GS_ALL=$(INT_ALL)\
   $(LIB_ALL) $(LIBCTR) $(ld_tr) $(GSDLL_OBJ).res $(PSSRC)$(GSDLL).def $(ICONS)
 
 dwdll_h=$(PSSRC)dwdll.h
@@ -290,7 +290,7 @@ archive: zip $(PSOBJ)gswin16.ico $(ECHOGS_XE)
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -a -s $(PSOBJ)about.txt
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -t -s $(PSOBJ)dialog.txt
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -c -s $(SETUP_XE_NAME)
-	$(ECHOGS_XE) -w $(PSOBJ)about.txt "GNU Ghostscript is Copyright " -x A9 " 2007 Artifex Software, Inc."
+	$(ECHOGS_XE) -w $(PSOBJ)about.txt "GNU Ghostscript is Copyright " -x A9 " 2008 Artifex Software, Inc."
 	$(ECHOGS_XE) -a $(PSOBJ)about.txt See license in gs$(GS_DOT_VERSION)\doc\Public.htm.
 	$(ECHOGS_XE) -a $(PSOBJ)about.txt See gs$(GS_DOT_VERSION)\doc\Commprod.htm regarding commercial distribution.
 	$(ECHOGS_XE) -w $(PSOBJ)dialog.txt This installs GNU Ghostscript $(GS_DOT_VERSION).

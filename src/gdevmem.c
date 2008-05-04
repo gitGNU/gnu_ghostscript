@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevmem.c,v 1.11 2008/03/23 15:27:43 Arabidopsis Exp $ */
+/* $Id: gdevmem.c,v 1.12 2008/05/04 14:34:46 Arabidopsis Exp $ */
 /* Generic "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"
@@ -180,6 +180,7 @@ gs_make_mem_device(gx_device_memory * dev, const gx_device_memory * mdproto,
     }
     check_device_separable((gx_device *)dev);
     gx_device_fill_in_procs((gx_device *)dev);
+    dev->band_y = 0;
 }
 /* Make a monobit memory device.  This is never a page device. */
 /* Note that white=0, black=1. */

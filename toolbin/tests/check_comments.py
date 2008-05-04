@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-#    Copyright (C) 2003 Artifex Software, Inc. All rights reserved.
+#    Copyright (C) 2003 Artifex Software, Inc.
+#    All Rights Reserved.
 #
 # This file is part of GNU ghostscript
 #
@@ -19,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: check_comments.py,v 1.7 2007/09/11 15:25:16 Arabidopsis Exp $
+# $Id: check_comments.py,v 1.8 2008/05/04 14:35:06 Arabidopsis Exp $
 
 # Check for C++ style comments
 

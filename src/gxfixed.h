@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxfixed.h,v 1.10 2007/09/11 15:24:33 Arabidopsis Exp $ */
+/* $Id: gxfixed.h,v 1.11 2008/05/04 14:34:52 Arabidopsis Exp $ */
 /* Fixed-point arithmetic for Ghostscript */
 
 #ifndef gxfixed_INCLUDED
@@ -82,6 +82,8 @@ typedef ulong ufixed;		/* only used in a very few places */
 #define fixed2int_ceiling(x) ((int)_fixed_rshift((x)+_fixed_fraction_v))
 #define fixed_pre_pixround(x) ((x)+_fixed_pixround_v)
 #define fixed2int_pixround(x) fixed2int(fixed_pre_pixround(x))
+#define fixed2int_pixround_perfect(x) ((x) < 0 && ((x) & (fixed_1 - fixed_epsilon)) == fixed_half \
+	? (int)_fixed_rshift(x) + 1 : fixed2int_pixround(x))
 #define fixed_is_int(x) !((x)&_fixed_fraction_v)
 #if ARCH_INTS_ARE_SHORT & !ARCH_IS_BIG_ENDIAN
 /* Do some of the shifting and extraction ourselves. */
@@ -130,13 +132,6 @@ typedef ulong ufixed;		/* only used in a very few places */
 #  define max_int_in_fixed max_int
 #  define min_int_in_fixed min_int
 #endif
-
-#ifdef USE_FPU
-#  define USE_FPU_FIXED (USE_FPU < 0 && ARCH_FLOATS_ARE_IEEE && arch_sizeof_long == 4)
-#else
-#  define USE_FPU_FIXED 0
-#endif
-
 /*
  * Define a macro for checking for overflow of the sum of two fixed values
  * and and setting the result to the sum if no overflow.
@@ -202,27 +197,7 @@ gx_intersect_small_bars(fixed q0x, fixed q0y, fixed q1x, fixed q1y, fixed q2x, f
  *	if (code < 0) ...;
  *	FINISH_DFMUL2FIXED_VARS(R, dtemp);
  */
-#if USE_FPU_FIXED && arch_sizeof_short == 2
-#define NEED_SET_FMUL2FIXED
-int set_fmul2fixed_(fixed *, long, long);
-#define CHECK_FMUL2FIXED_VARS(vr, vfa, vfb, dtemp)\
-  set_fmul2fixed_(&vr, *(const long *)&vfa, *(const long *)&vfb)
-#define FINISH_FMUL2FIXED_VARS(vr, dtemp)\
-  DO_NOTHING
-int set_dfmul2fixed_(fixed *, ulong, long, long);
-#  if ARCH_IS_BIG_ENDIAN
-#  define CHECK_DFMUL2FIXED_VARS(vr, vda, vfb, dtemp)\
-     set_dfmul2fixed_(&vr, ((const ulong *)&vda)[1], *(const long *)&vfb, *(const long *)&vda)
-#  else
-#  define CHECK_DFMUL2FIXED_VARS(vr, vda, vfb, dtemp)\
-     set_dfmul2fixed_(&vr, *(const ulong *)&vda, *(const long *)&vfb, ((const long *)&vda)[1])
-#  endif
-#define FINISH_DFMUL2FIXED_VARS(vr, dtemp)\
-  DO_NOTHING
 
-#else /* don't bother */
-
-#undef NEED_SET_FMUL2FIXED
 #define CHECK_FMUL2FIXED_VARS(vr, vfa, vfb, dtemp)\
   (dtemp = (vfa) * (vfb),\
    (f_fits_in_bits(dtemp, fixed_int_bits) ? 0 :\
@@ -234,8 +209,6 @@ int set_dfmul2fixed_(fixed *, ulong, long, long);
 #define FINISH_DFMUL2FIXED_VARS(vr, dtemp)\
   FINISH_FMUL2FIXED_VARS(vr, dtemp)
 
-#endif
-
 /*
  * set_float2fixed_vars(R, F) does the equivalent of R = float2fixed(F):
  *      R is a fixed, F is a float or a double.
@@ -245,30 +218,7 @@ int set_dfmul2fixed_(fixed *, ulong, long, long);
  *      R is a double, V is a fixed, E is an int.
  * R and F must be variables, not expressions; V and E may be expressions.
  */
-#if USE_FPU_FIXED
-int set_float2fixed_(fixed *, long, int);
-int set_double2fixed_(fixed *, ulong, long, int);
 
-# define set_float2fixed_vars(vr,vf)\
-    (sizeof(vf) == sizeof(float) ?\
-     set_float2fixed_(&vr, *(const long *)&vf, fixed_fraction_bits) :\
-     set_double2fixed_(&vr, ((const ulong *)&vf)[ARCH_IS_BIG_ENDIAN],\
-		       ((const long *)&vf)[1 - ARCH_IS_BIG_ENDIAN],\
-		       fixed_fraction_bits))
-long fixed2float_(fixed, int);
-void set_fixed2double_(double *, fixed, int);
-
-/*
- * We need the (double *)&vf cast to prevent compile-time error messages,
- * even though the call will only be executed if vf has the correct type.
- */
-# define set_fixed2float_var(vf,x)\
-    (sizeof(vf) == sizeof(float) ?\
-     (*(long *)&vf = fixed2float_(x, fixed_fraction_bits), 0) :\
-     (set_fixed2double_((double *)&vf, x, fixed_fraction_bits), 0))
-#define set_ldexp_fixed2double(vd, x, exp)\
-  set_fixed2double_(&vd, x, -(exp))
-#else
 # define set_float2fixed_vars(vr,vf)\
     (f_fits_in_bits(vf, fixed_int_bits) ? (vr = float2fixed(vf), 0) :\
      gs_note_error(gs_error_limitcheck))
@@ -276,7 +226,6 @@ void set_fixed2double_(double *, fixed, int);
     (vf = fixed2float(x), 0)
 # define set_ldexp_fixed2double(vd, x, exp)\
     discard(vd = ldexp((double)(x), exp))
-#endif
 
 /* A point with fixed coordinates */
 typedef struct gs_fixed_point_s {

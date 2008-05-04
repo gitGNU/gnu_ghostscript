@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxclimag.c,v 1.11 2008/03/23 15:27:53 Arabidopsis Exp $ */
+/*$Id: gxclimag.c,v 1.12 2008/05/04 14:34:57 Arabidopsis Exp $ */
 /* Higher-level image operations for band lists */
 #include "math_.h"
 #include "memory_.h"
@@ -874,6 +874,7 @@ clist_create_compositor(gx_device * dev,
     if (code < 0)
         return code;
 
+#if 0 /* Disabled sinse c_pdf14trans_write includes CTM into the pdf14 compositor parameters. */
     if (pcte->type->comp_id == GX_COMPOSITOR_PDF14_TRANS) {
 	gx_device_clist_writer * const cdev =
 			&((gx_device_clist *)dev)->writer;
@@ -889,6 +890,7 @@ clist_create_compositor(gx_device * dev,
 	    return code;
 	state_update(ctm);
     }
+#endif
 
     /* overprint applies to all bands */
     /* fixme: optimize: the pdf14 compositor could be applied 

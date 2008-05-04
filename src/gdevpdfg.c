@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfg.c,v 1.11 2008/03/23 15:27:43 Arabidopsis Exp $ */
+/* $Id: gdevpdfg.c,v 1.12 2008/05/04 14:34:46 Arabidopsis Exp $ */
 /* Graphics state management for pdfwrite driver */
 #include "math_.h"
 #include "string_.h"
@@ -1423,8 +1423,8 @@ pdf_prepare_drawing(gx_device_pdf *pdev, const gs_imager_state *pis,
 	 * If the graphics state calls for any transparency functions,
 	 * we can't represent them, so return a rangecheck.
 	 */
-	if (pis->opacity.alpha != 1 || pis->opacity.mask != 0 ||
-	    pis->shape.alpha != 1 || pis->shape.mask != 0 ||
+	if (pis->opacity.alpha != 1 || 
+	    pis->shape.alpha != 1 || 
 	    pis->transparency_stack != 0
 	    )
 	    return_error(gs_error_rangecheck);

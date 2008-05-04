@@ -1,4 +1,4 @@
-/* $Id: ps2epsi.cmd,v 1.3 2007/05/07 11:22:07 Arabidopsis Exp $ */
+/* $Id: ps2epsi.cmd,v 1.4 2008/05/04 14:34:58 Arabidopsis Exp $ */
 /*
  * This file is maintained by a user: if you have any questions about it,
  * please contact Mark Hale (mark.hale@physics.org).
@@ -18,6 +18,7 @@ rem We bracket the actual file with a few commands to help encapsulation
 echo %%%%Page: 1 1 >> %outfile%
 echo %%%%BeginDocument: %outfile% >> %outfile%
 echo /InitDictCount countdictstack def gsave save mark newpath >> %outfile%
+echo userdict /setpagedevice /pop load put >> %outfile%
 
 rem Append the original onto the preview header
 copy %outfile% + %infile%

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 #    Copyright (C) 2001-2004 Artifex Software Inc.
+#    All Rights Reserved.
 # 
 # This file is part of GNU ghostscript
 #
@@ -18,7 +19,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
-# $Id: gscheck_testfiles.py,v 1.1 2007/09/10 14:08:48 Arabidopsis Exp $
+# $Id: gscheck_testfiles.py,v 1.2 2008/05/04 14:35:05 Arabidopsis Exp $
 
 #
 # gscheck_raster.py

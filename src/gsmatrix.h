@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsmatrix.h,v 1.7 2007/09/11 15:24:12 Arabidopsis Exp $ */
+/* $Id: gsmatrix.h,v 1.8 2008/05/04 14:34:49 Arabidopsis Exp $ */
 /* Definition of matrices and client interface to matrix routines */
 
 #ifndef gsmatrix_INCLUDED
@@ -32,10 +32,17 @@
 struct gs_matrix_s {
     _matrix_body;
 };
+struct gs_matrix_double_s {
+  double xx, xy, yx, yy, tx, ty;
+};
 
 #ifndef gs_matrix_DEFINED
 #  define gs_matrix_DEFINED
 typedef struct gs_matrix_s gs_matrix;
+#endif
+#ifndef gs_matrix_double_DEFINED
+#  define gs_matrix_double_DEFINED
+typedef struct gs_matrix_double_s gs_matrix_double;
 #endif
 
 /* Macro for initializing constant matrices */
@@ -60,7 +67,9 @@ int gs_make_translation(floatp, floatp, gs_matrix *),
 
 /* Matrix arithmetic */
 int gs_matrix_multiply(const gs_matrix *, const gs_matrix *, gs_matrix *),
+    gs_matrix_multiply_double(const gs_matrix_double *, const gs_matrix *, gs_matrix_double *),
     gs_matrix_invert(const gs_matrix *, gs_matrix *),
+    gs_matrix_invert_to_double(const gs_matrix *, gs_matrix_double *),
     gs_matrix_translate(const gs_matrix *, floatp, floatp, gs_matrix *),
     gs_matrix_scale(const gs_matrix *, floatp, floatp, gs_matrix *),
     gs_matrix_rotate(const gs_matrix *, floatp, gs_matrix *);

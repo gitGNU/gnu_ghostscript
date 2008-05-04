@@ -1,8 +1,9 @@
 #!/usr/bin/python
 # -*- Mode: python -*-
 
-#    Copyright (C) 2001-2006 Artifex Software Inc.
-# 
+#    Copyright (C) 2001-2007 Artifex Software Inc.
+#    All Rights Reserved.
+#
 # This file is part of GNU ghostscript
 #
 # GNU ghostscript is free software; you can redistribute it and/or
@@ -93,7 +94,7 @@ def change_gsproduct(file):
             m = changere.search(line)
             if m:
                 state = 2
-                new.write("\t\"AFPL Ghostscript\"\n")
+                new.write("\t\"GPL Ghostscript\"\n")
             else:
                 new.write(line)
         elif state == 2:

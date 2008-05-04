@@ -17,13 +17,11 @@
 
 */
 
-/* $Id: inameidx.h,v 1.7 2007/09/11 15:24:28 Arabidopsis Exp $ */
+/* $Id: inameidx.h,v 1.8 2008/05/04 14:34:52 Arabidopsis Exp $ */
 /* Name index definitions */
 
 #ifndef inameidx_INCLUDED
 #  define inameidx_INCLUDED
-
-#include "gconfigv.h"		/* defines EXTEND_NAMES */
 
 /*
  * The name table machinery has two slightly different configurations:

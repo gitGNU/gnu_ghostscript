@@ -17,12 +17,11 @@
 
 */
 
-/* $Id: sidscale.c,v 1.3 2008/03/23 15:28:07 Arabidopsis Exp $ */
+/* $Id: sidscale.c,v 1.4 2008/05/04 14:34:51 Arabidopsis Exp $ */
 /* Special Image downsample scaling filters for dithered devices */
 #include "math_.h"
 #include "memory_.h"
 #include "stdio_.h"
-#include "gconfigv.h"
 #include "gdebug.h"
 #include "gxfixed.h"		/* for gxdda.h */
 #include "gxdda.h"

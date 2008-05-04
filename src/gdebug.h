@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdebug.h,v 1.7 2007/09/11 15:23:58 Arabidopsis Exp $ */
+/* $Id: gdebug.h,v 1.8 2008/05/04 14:34:48 Arabidopsis Exp $ */
 /* Debugging machinery definitions */
 
 #ifndef gdebug_INCLUDED
@@ -64,13 +64,6 @@ bool gs_debug_c(int /*char */ );
 
 /* If debugging, direct all error output to gs_debug_out. */
 extern FILE *gs_debug_out;
-
-#ifdef DEBUG
-#undef dstderr
-#define dstderr gs_debug_out
-#undef estderr
-#define estderr gs_debug_out
-#endif
 
 /* Debugging printout macros. */
 #ifdef DEBUG

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdtb.h,v 1.9 2007/09/11 15:24:03 Arabidopsis Exp $ */
+/* $Id: gdevpdtb.h,v 1.10 2008/05/04 14:34:40 Arabidopsis Exp $ */
 /* BaseFont structure and API for pdfwrite */
 
 #ifndef gdevpdtb_INCLUDED
@@ -78,7 +78,7 @@ typedef struct pdf_base_font_s pdf_base_font_t;
  */
 int pdf_base_font_alloc(gx_device_pdf *pdev, pdf_base_font_t **ppbfont,
 		    gs_font_base *font, const gs_matrix *orig_matrix, 
-		    bool is_standard, bool orig_name);
+		    bool is_standard);
 
 /*
  * Return a reference to the name of a base font.  This name is guaranteed

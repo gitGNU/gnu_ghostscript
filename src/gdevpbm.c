@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevpbm.c,v 1.10 2008/03/23 15:28:07 Arabidopsis Exp $ */
+/* $Id: gdevpbm.c,v 1.11 2008/05/04 14:34:51 Arabidopsis Exp $ */
 /* Portable Bit/Gray/PixMap drivers */
 #include "gdevprn.h"
 #include "gscdefs.h"
@@ -47,7 +47,8 @@
  *        otherwise PPM.
  *      pkm[raw] - computes internally in CMYK, outputs PPM (RGB).
  *      pksm[raw] - computes internally in CMYK, outputs 4 PBM pages.
- *      pam - outputs CMYK as PAM
+ *      pamcmyk32 - outputs CMYK as PAM 8-bits per color
+ *      pam - previous name for the pamcmyk32 device retained for backwards compatibility
  *      plan9bm - outputs Plan 9 bitmap format.
  */
 
@@ -209,6 +210,10 @@ pbm_prn_device(pkm_procs, "pksm", '1', 0, 4, 4, 1, 1, 0,
 const gx_device_pbm gs_pksmraw_device =
 pbm_prn_device(pkm_procs, "pksmraw", '4', 1, 4, 4, 1, 1, 0,
 	       X_DPI, Y_DPI, psm_print_page);
+const gx_device_pbm gs_pamcmyk32_device =
+pbm_prn_device(pam_procs, "pamcmyk32", '7', 1, 4, 32, 255, 255, 0,
+	       X_DPI, Y_DPI, pam_print_page);
+/* Also keep the old device name so anyone using it won't be surprised */
 const gx_device_pbm gs_pam_device =
 pbm_prn_device(pam_procs, "pam", '7', 1, 4, 32, 255, 255, 0,
 	       X_DPI, Y_DPI, pam_print_page);

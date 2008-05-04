@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxcomp.h,v 1.8 2007/09/11 15:23:52 Arabidopsis Exp $ */
+/* $Id: gxcomp.h,v 1.9 2008/05/04 14:34:43 Arabidopsis Exp $ */
 /* Definitions for implementing compositing functions */
 
 #ifndef gxcomp_INCLUDED
@@ -111,6 +111,32 @@ typedef struct gs_composite_type_procs_s {
     composite_read_proc((*read));
 
     /*
+     * Adjust CTM before applying the compositor. Used with banding.
+     */
+#define composite_adjust_ctm_proc(proc)\
+  int proc(gs_composite_t *pcte, int x0, int y0, gs_imager_state *pis)
+    composite_adjust_ctm_proc((*adjust_ctm));
+
+    /*
+     * Checks whether a next compositor operation closes this one.
+     * Must set the 2nd argument with a pointer to the opening compositor operation.
+     * Return coides : <0 - error, 0 - not closing,
+     * 1 - closing with annihilation, 2 - execute immediately, 
+     * 3 - closing and replacing, 4 - replace one, 5 - drop queue.
+     */
+#define composite_is_closing_proc(proc)\
+  int proc(const gs_composite_t *this, gs_composite_t **pcte, gx_device *dev)
+    composite_is_closing_proc((*is_closing));
+
+    /*
+     * Checks whether a next operation is friendly to the compositor
+     * so that it may commutate with the compositor operation.
+     */
+#define composite_is_friendly_proc(proc)\
+  bool proc(const gs_composite_t *this, byte cmd0, byte cmd1)
+    composite_is_friendly_proc((*is_friendly));
+
+    /*
      * Update the clist write device when a compositor device is created.
      */
 #define composite_clist_write_update(proc)\
@@ -139,6 +165,15 @@ typedef struct gs_composite_type_s {
  */
 composite_clist_write_update(gx_default_composite_clist_write_update);
 
+/* Default handler for adjusting a compositor's CTM. */
+composite_adjust_ctm_proc(gx_default_composite_adjust_ctm);
+
+/* Default check for closing compositor. */
+composite_is_closing_proc(gx_default_composite_is_closing);
+
+/* Default check for a friendly command to a compositor. */
+composite_is_friendly_proc(gx_default_composite_is_friendly);
+
 /*
  * Default implementation for adjusting the clist reader when a compositor
  * device is added.  The default does nothing.
@@ -154,7 +189,9 @@ composite_clist_read_update(gx_default_composite_clist_read_update);
 #define gs_composite_common\
 	const gs_composite_type_t *type;\
 	gs_id id;		/* see gscompt.h */\
-	rc_header rc
+	bool idle;		/* Doesn't paint anything. */\
+	struct gs_composite_s *prev, *next /* Queue links for clist_playback_band. */ 
+
 struct gs_composite_s {
     gs_composite_common;
 };

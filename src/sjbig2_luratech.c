@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sjbig2_luratech.c,v 1.5 2008/03/23 15:27:43 Arabidopsis Exp $ */
+/* $Id: sjbig2_luratech.c,v 1.6 2008/05/04 14:34:45 Arabidopsis Exp $ */
 /* jbig2decode filter implementation -- hooks in luratech JBIG2 */
 
 #include "memory_.h"
@@ -100,23 +100,22 @@ s_jbig2decode_free_global_data(void *data)
 
 /* store a global ctx pointer in our state structure */
 int
-s_jbig2decode_set_global_data(stream_state *ss, void *data)
+s_jbig2decode_set_global_data(stream_state *ss, s_jbig2_global_data_t *gs)
 {
     stream_jbig2decode_state *state = (stream_jbig2decode_state*)ss;
-    s_jbig2decode_global_data *global = (s_jbig2decode_global_data*)data;
+    if (state == NULL)
+        return gs_error_VMerror;
+    
+    state->global_struct = gs;
+    if (gs != NULL) {
+        s_jbig2decode_global_data *global = (s_jbig2decode_global_data*)(gs->data);
 
-    if (state != NULL) {
-      if (global != NULL) {
         state->global_data = global->data;
         state->global_size = global->size;
-        return 0;
-      } else {
-	state->global_data = NULL;
-	state->global_size = 0;
-	return 0;
-      }
+    } else {
+        state->global_data = NULL;
+        state->global_size = 0;
     }
-    
     return gs_error_VMerror;
 }
 

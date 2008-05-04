@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclmem.c,v 1.9 2008/03/23 15:27:45 Arabidopsis Exp $ */
+/* $Id: gxclmem.c,v 1.10 2008/05/04 14:34:48 Arabidopsis Exp $ */
 /* RAM-based command list implementation */
 #include "memory_.h"
 #include "gx.h"
@@ -953,7 +953,7 @@ memfile_free_mem(MEMFILE * f)
     if (tot_cache_hits != 0) {
 	if_debug3(':', "[:]Cache hits=%ld, cache misses=%ld, swapouts=%ld\n",
 		 tot_cache_hits,
-		 tot_cache_miss - (f->log_length / MEMFILE_DATA_SIZE),
+		 (long)(tot_cache_miss - (f->log_length / MEMFILE_DATA_SIZE)),
 		 tot_swap_out);
     }
     tot_raw = 0;

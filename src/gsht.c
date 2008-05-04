@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gsht.c,v 1.11 2008/03/23 15:28:01 Arabidopsis Exp $ */
+/*$Id: gsht.c,v 1.12 2008/05/04 14:34:45 Arabidopsis Exp $ */
 /* setscreen operator for Ghostscript library */
 #include "memory_.h"
 #include "string_.h"
@@ -1115,7 +1115,7 @@ gx_imager_dev_ht_install(
 
                 tile_bytes = porder->raster
                               * (porder->num_bits / porder->width);
-                num_tiles = 1 + max_tile_cache_bytes / tile_bytes;
+                num_tiles = 1 + gx_ht_cache_default_bits_size() / tile_bytes;
                 pcache = gx_ht_alloc_cache( pis->memory,
                                             num_tiles,
                                             tile_bytes * num_tiles );

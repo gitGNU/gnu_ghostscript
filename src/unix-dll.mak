@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: unix-dll.mak,v 1.11 2008/03/23 15:28:02 Arabidopsis Exp $
+# $Id: unix-dll.mak,v 1.12 2008/05/04 14:34:45 Arabidopsis Exp $
 # Partial makefile for Unix shared library target
 
 # Useful make commands:
@@ -130,6 +130,7 @@ install-so: so
 	ln -s $(GS_SONAME_MAJOR_MINOR) $(DESTDIR)$(libdir)/$(GS_SONAME_MAJOR)
 	$(INSTALL_DATA) $(PSSRC)iapi.h $(DESTDIR)$(gsincludedir)/iapi.h
 	$(INSTALL_DATA) $(PSSRC)ierrors.h $(DESTDIR)$(gsincludedir)/ierrors.h
+	$(INSTALL_DATA) $(PSSRC)gdevdsp.h $(DESTDIR)$(gsincludedir)/gdevdsp.h
 
 soinstall: install-so install-scripts install-data $(INSTALL_SHARED) $(INSTALL_CONTRIB)
 

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zdict.c,v 1.10 2008/03/23 15:27:56 Arabidopsis Exp $ */
+/* $Id: zdict.c,v 1.11 2008/05/04 14:34:41 Arabidopsis Exp $ */
 /* Dictionary operators */
 #include "ghost.h"
 #include "oper.h"
@@ -151,8 +151,10 @@ zop_def(i_ctx_t *i_ctx_p)
     if (dict_find(dsp, op1, &pvslot) <= 0)
 	return idict_put(dsp, op1, op);
 ra:
-    ref_assign_old_inline(&dsp->value.pdict->values, pvslot, op,
-			  "dict_put(value)");
+    if ((pvslot->tas.type_attrs & (&i_ctx_p->memory)->test_mask) == 0)
+	alloc_save_change(idmemory, &dsp->value.pdict->values, (ref_packed *)pvslot, "dict_put(value)");
+    ref_assign_new_inline(pvslot,op);
+
     return 0;
 }
 int

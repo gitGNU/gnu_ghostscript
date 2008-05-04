@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxdevbuf.h,v 1.8 2007/09/11 15:24:32 Arabidopsis Exp $ */
+/* $Id: gxdevbuf.h,v 1.9 2008/05/04 14:34:49 Arabidopsis Exp $ */
 /* Definitions for device buffer management */
 
 #ifndef gxdevbuf_INCLUDED
@@ -77,7 +77,7 @@ typedef struct gx_device_buf_procs_s {
      */
 
 #define dev_proc_create_buf_device(proc)\
-  int proc(gx_device **pbdev, gx_device *target,\
+  int proc(gx_device **pbdev, gx_device *target, int y,\
 	   const gx_render_plane_t *render_plane, gs_memory_t *mem,\
 	   gx_band_complexity_t *band_complexity)
 

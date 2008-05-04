@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxchar.c,v 1.11 2008/03/23 15:27:45 Arabidopsis Exp $ */
+/* $Id: gxchar.c,v 1.12 2008/05/04 14:34:47 Arabidopsis Exp $ */
 /* Default implementation of text writing */
 #include "gx.h"
 #include "memory_.h"
@@ -189,7 +189,9 @@ gx_default_text_begin(gx_device * dev, gs_imager_state * pis,
     penum->show_gstate =
 	(propagate_charpath && (pgs->in_charpath != 0) ?
 	 pgs->show_gstate : pgs);
-    if (!(~operation & (TEXT_DO_NONE | TEXT_RETURN_WIDTH))) {
+    if((operation & 
+         (TEXT_DO_NONE | TEXT_RETURN_WIDTH | TEXT_RENDER_MODE_3)) == 
+         (TEXT_DO_NONE | TEXT_RETURN_WIDTH)) {
 	/* This is stringwidth. */
 	gx_device_null *dev_null =
 	    gs_alloc_struct(mem, gx_device_null, &st_device_null,
@@ -1245,7 +1247,6 @@ show_proceed(gs_show_enum * penum)
 	/* Normally, char_tm is valid because of show_state_setup, */
 	/* but if we're in a cshow, it may not be. */
 	gs_currentcharmatrix(pgs, NULL, true);
-#if 1				/*USE_FPU <= 0 */
 	if (pgs->ctm.txy_fixed_valid && pgs->char_tm.txy_fixed_valid) {
 	    fixed tx = pgs->ctm.tx_fixed;
 	    fixed ty = pgs->ctm.ty_fixed;
@@ -1253,9 +1254,7 @@ show_proceed(gs_show_enum * penum)
 	    gs_settocharmatrix(pgs);
 	    cpt.x += pgs->ctm.tx_fixed - tx;
 	    cpt.y += pgs->ctm.ty_fixed - ty;
-	} else
-#endif
-	{
+	} else 	{
 	    double tx = pgs->ctm.tx;
 	    double ty = pgs->ctm.ty;
 	    double fpx, fpy;
@@ -1345,7 +1344,6 @@ static int
 show_finish(gs_show_enum * penum)
 {
     gs_state *pgs = penum->pgs;
-    int code, rcode;
 
     if ((penum->text.operation & TEXT_DO_FALSE_CHARPATH) || 
 	(penum->text.operation & TEXT_DO_TRUE_CHARPATH)) {
@@ -1354,13 +1352,18 @@ show_finish(gs_show_enum * penum)
     }
     if (penum->auto_release)
 	penum->procs->release((gs_text_enum_t *)penum, "show_finish");
-    if (!SHOW_IS_STRINGWIDTH(penum))
-	return 0;
-    /* Save the accumulated width before returning, */
-    /* and undo the extra gsave. */
-    code = gs_currentpoint(pgs, &penum->returned.total_width);
-    rcode = gs_grestore(pgs);
-    return (code < 0 ? code : rcode);
+    
+    if((penum->text.operation & 
+         (TEXT_DO_NONE | TEXT_RETURN_WIDTH | TEXT_RENDER_MODE_3)) == 
+         (TEXT_DO_NONE | TEXT_RETURN_WIDTH)) {
+        /* Save the accumulated width before returning, */
+        /* and undo the extra gsave. */
+        int code = gs_currentpoint(pgs, &penum->returned.total_width);
+        int rcode = gs_grestore(pgs);
+
+        return (code < 0 ? code : rcode);
+    }
+    return 0;
 }
 
 /* Release the structure. */
@@ -1500,14 +1503,12 @@ show_state_setup(gs_show_enum * penum)
 	penum->obox.p.y = fixed2int_var(cbox.p.y);
 	penum->obox.q.x = fixed2int_var_ceiling(cbox.q.x);
 	penum->obox.q.y = fixed2int_var_ceiling(cbox.q.y);
-#if 1				/*USE_FPU <= 0 */
 	if (pgs->ctm.txy_fixed_valid && pgs->char_tm.txy_fixed_valid) {
 	    penum->ftx = (int)fixed2long(pgs->char_tm.tx_fixed -
 					 pgs->ctm.tx_fixed);
 	    penum->fty = (int)fixed2long(pgs->char_tm.ty_fixed -
 					 pgs->ctm.ty_fixed);
 	} else {
-#endif
 	    double fdx = pgs->char_tm.tx - pgs->ctm.tx;
 	    double fdy = pgs->char_tm.ty - pgs->ctm.ty;
 

@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: int.mak,v 1.13 2008/03/23 15:27:58 Arabidopsis Exp $
+# $Id: int.mak,v 1.14 2008/05/04 14:34:43 Arabidopsis Exp $
 # (Platform-independent) makefile for PostScript and PDF language
 # interpreters.
 # Users of this makefile must define the following:
@@ -57,7 +57,7 @@ idosave_h=$(PSSRC)idosave.h
 igcstr_h=$(PSSRC)igcstr.h
 inames_h=$(PSSRC)inames.h
 iname_h=$(PSSRC)iname.h $(inames_h)
-inameidx_h=$(PSSRC)inameidx.h $(gconfigv_h)
+inameidx_h=$(PSSRC)inameidx.h
 inamestr_h=$(PSSRC)inamestr.h $(inameidx_h)
 ipacked_h=$(PSSRC)ipacked.h
 iref_h=$(PSSRC)iref.h
@@ -402,7 +402,7 @@ $(PSOBJ)zsysvm.$(OBJ) : $(PSSRC)zsysvm.c $(GH)\
 	$(PSCC) $(PSO_)zsysvm.$(OBJ) $(C_) $(PSSRC)zsysvm.c
 
 $(PSOBJ)ztoken.$(OBJ) : $(PSSRC)ztoken.c $(OP) $(string__h) $(stat__h)\
- $(gsstruct_h)\
+ $(gsstruct_h) $(gsutil_h)\
  $(dstack_h) $(estack_h) $(files_h)\
  $(idict_h) $(iname_h) $(iscan_h) $(itoken_h)\
  $(sfilter_h) $(store_h) $(stream_h) $(strimpl_h)
@@ -735,7 +735,7 @@ $(PSD)psf1read.dev : $(INT_MAK) $(ECHOGS_XE) $(psf1read_) $(GLD)seexec.dev
 $(PSOBJ)zchar1.$(OBJ) : $(PSSRC)zchar1.c $(OP) $(memory__h)\
  $(gscencs_h) $(gspaint_h) $(gspath_h) $(gsrect_h) $(gsstruct_h)\
  $(gxdevice_h) $(gxfixed_h) $(gxmatrix_h)\
- $(gxfont_h) $(gxfont1_h) $(gxtype1_h) $(gxchar_h) $(gzstate_h)\
+ $(gxfont_h) $(gxfont1_h) $(gxtype1_h) $(gxfcid_h) $(gxchar_h) $(gzstate_h)\
  $(estack_h) $(ialloc_h) $(ichar_h) $(ichar1_h) $(icharout_h)\
  $(idict_h) $(ifont_h) $(igstate_h) $(iname_h) $(iutil_h) $(store_h)
 	$(PSCC) $(PSO_)zchar1.$(OBJ) $(C_) $(PSSRC)zchar1.c
@@ -975,27 +975,13 @@ $(PSOBJ)iccfont.$(OBJ) : $(PSSRC)iccfont.c $(GH) $(string__h)\
 $(PSOBJ)iccinit0.$(OBJ) : $(PSSRC)iccinit0.c $(stdpre_h)
 	$(PSCC) $(PSO_)iccinit0.$(OBJ) $(C_) $(PSSRC)iccinit0.c
 
-$(PSOBJ)iccinit1.$(OBJ) :  $(PSSRC)iccinit1.c $(stdpre_h) $(GLOBJ)gsromfs.$(OBJ)
+$(PSOBJ)iccinit1.$(OBJ) :  $(PSSRC)iccinit1.c $(stdpre_h)
 	$(PSCC) $(PSO_)iccinit1.$(OBJ) $(C_) $(PSSRC)iccinit1.c
 
 # All the gs_*.ps files should be prerequisites of gs_init.c but we don't have
 # any convenient list of them so we just use lib/gs_init.ps == $(PSLIB)$(GS_INIT).
 $(PSGEN)$(GS_INIT) : $(PSLIB)$(GS_INIT) $(GENINIT_XE) $(gconfig_h)
 	$(EXP)$(GENINIT_XE) -I $(PSLIB) $(GS_INIT) $(gconfig_h) $(PSGEN)gs_init.ps
-
-# The following list of files needed by the interpreter is maintained here.
-# This changes infrequently, but is a potential point of bitrot, but since
-# unix-inst.mak uses this macro, problems should surface when testing installed
-# versions.
-#		Note: gs_cet.ps is only needed to match Adobe CPSI defaults
-EXTRA_INIT_FILES= Fontmap cidfmap xlatmap FAPI FCOfontmap-PCLPS2 gs_cet.ps
-
-#	The init files are put in the lib/ directory (gs_init.ps + EXTRA_INIT_FILES)
-#	Resource files go into Resource/...
-
-RESOURCE_LIST=ColorSpace/ Decoding/ Encoding/ Font/ ProcSet/ IdiomSet/ CIDFont/ CMap/
-
-PS_ROMFS_ARGS=-c -P $(PSRESDIR)$(D) -d Resource/ $(RESOURCE_LIST) -d lib/ -P $(PSGEN) $(GS_INIT) -P $(PSLIB)
 
 # ---------------- Stochastic halftone ---------------- #
 
@@ -1875,11 +1861,9 @@ $(PSD)pdf.dev : $(INT_MAK) $(ECHOGS_XE)\
 $(PSD)pdffonts.dev : $(INT_MAK) $(ECHOGS_XE)
 	$(SETMOD) $(PSD)pdffonts -ps gs_mex_e gs_mro_e gs_pdf_e gs_wan_e
 
-$(PSD)pdfread.dev : $(INT_MAK) $(ECHOGS_XE) $(GLOBJ)gxi16bit.$(OBJ)\
+$(PSD)pdfread.dev : $(INT_MAK) $(ECHOGS_XE) \
  $(PSD)frsd.dev $(PSD)func4.dev $(PSD)fzlib.dev $(PSD)transpar.dev
-	$(SETMOD) $(GLD)pdfread $(GLOBJ)gxi16bit.$(OBJ)
-	$(ADDMOD) $(GLD)pdfread -replace $(GLD)no16bit
-	$(ADDMOD) $(PSD)pdfread -include $(PSD)frsd $(PSD)func4 $(PSD)fzlib
+	$(SETMOD) $(PSD)pdfread -include $(PSD)frsd $(PSD)func4 $(PSD)fzlib
 	$(ADDMOD) $(PSD)pdfread -include $(PSD)transpar
 	$(ADDMOD) $(PSD)pdfread -ps pdf_ops gs_l2img
 	$(ADDMOD) $(PSD)pdfread -ps pdf_rbld

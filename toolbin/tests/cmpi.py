@@ -1,6 +1,7 @@
 #!/usr/bin/python
-#    Copyright (C) 1991-2004 Artifex Software, Inc.  All rights reserved.
-# 
+#    Copyright (C) 1991-2004 Artifex Software, Inc.
+#    All Rights Reserved.
+#
 # This file is part of GNU ghostscript
 #
 # GNU ghostscript is free software; you can redistribute it and/or
@@ -18,7 +19,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 #
 
-# $Id: cmpi.py,v 1.3 2007/09/11 15:25:16 Arabidopsis Exp $
+# $Id: cmpi.py,v 1.4 2008/05/04 14:35:07 Arabidopsis Exp $
 # python compare image -- interactive graphical image differencing
 #
 """

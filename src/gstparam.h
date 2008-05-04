@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gstparam.h,v 1.9 2007/09/11 15:24:36 Arabidopsis Exp $ */
+/* $Id: gstparam.h,v 1.10 2008/05/04 14:34:48 Arabidopsis Exp $ */
 /* Transparency parameter definitions */
 
 #ifndef gstparam_INCLUDED
@@ -89,6 +89,7 @@ typedef struct gs_transparency_group_params_s {
     bool Isolated;
     bool Knockout;
     bool image_with_SMask;
+    bool idle;
 } gs_transparency_group_params_t;
 
 /* Define the parameter structure for a transparency mask. */
@@ -109,6 +110,7 @@ typedef struct gs_transparency_mask_params_s {
     float GrayBackground;
     int (*TransferFunction)(floatp in, float *out, void *proc_data);
     gs_function_t *TransferFunction_data;
+    bool replacing;
 } gs_transparency_mask_params_t;
 
 #define MASK_TRANSFER_FUNCTION_SIZE 256
@@ -120,6 +122,8 @@ typedef struct gx_transparency_mask_params_s {
     float Background[GS_CLIENT_COLOR_MAX_COMPONENTS];
     float GrayBackground;
     bool function_is_identity;
+    bool idle;
+    bool replacing;
     byte transfer_fn[MASK_TRANSFER_FUNCTION_SIZE];
 } gx_transparency_mask_params_t;
 

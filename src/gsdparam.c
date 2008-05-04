@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsdparam.c,v 1.12 2008/03/23 15:27:45 Arabidopsis Exp $ */
+/* $Id: gsdparam.c,v 1.13 2008/05/04 14:34:47 Arabidopsis Exp $ */
 /* Default device parameters for Ghostscript library */
 #include "memory_.h"		/* for memcpy */
 #include "string_.h"		/* for strlen */
@@ -180,8 +180,7 @@ gx_default_get_params(gx_device * dev, gs_param_list * plist)
 
     if (colors > 1) {
 	int RGBValues = dev->color_info.max_color + 1;
-	long ColorValues = (depth >= (8 * arch_sizeof_color_index) ? -1
-							: 1L << depth);
+	long ColorValues = (depth >= 32 ? -1 : 1L << depth); /* value can only be 32 bits */
 
 	if ((code = param_write_int(plist, "RedValues", &RGBValues)) < 0 ||
 	    (code = param_write_int(plist, "GreenValues", &RGBValues)) < 0 ||

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ztoken.c,v 1.11 2008/03/23 15:27:37 Arabidopsis Exp $ */
+/* $Id: ztoken.c,v 1.12 2008/05/04 14:34:40 Arabidopsis Exp $ */
 /* Token reading operators */
 #include "string_.h"
 #include "stat_.h" /* get system header early to avoid name clash on Cygwin */
@@ -26,6 +26,7 @@
 #include "dstack.h"		/* for dict_find_name */
 #include "estack.h"
 #include "gsstruct.h"		/* for iscan.h */
+#include "gsutil.h"
 #include "stream.h"
 #include "files.h"
 #include "store.h"

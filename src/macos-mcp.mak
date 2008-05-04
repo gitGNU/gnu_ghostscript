@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: macos-mcp.mak,v 1.13 2008/03/23 15:27:51 Arabidopsis Exp $
+# $Id: macos-mcp.mak,v 1.14 2008/05/04 14:34:54 Arabidopsis Exp $
 # Makefile for CodeWarrior XML project file creation from Darwin/MacOSX.
 
 # Run this file through make on MacOS X (or any other system with shell
@@ -163,18 +163,6 @@ CCLD=
 LDFLAGS=
 EXTRALIBS=
 STDLIBS=
-
-# Define whether this platform has floating point hardware:
-#	FPU_TYPE=2 means floating point is faster than fixed point.
-# (This is the case on some RISCs with multiple instruction dispatch.)
-#	FPU_TYPE=1 means floating point is at worst only slightly slower
-# than fixed point.
-#	FPU_TYPE=0 means that floating point may be considerably slower.
-#	FPU_TYPE=-1 means that floating point is always much slower than
-# fixed point.
-
-FPU_TYPE=2
-
 # Define the .dev module that implements thread and synchronization
 # primitives for this platform.
 # No real sync in MacOS 8/9, so leave it at nosync
@@ -217,11 +205,6 @@ FILE_IMPLEMENTATION=stdio
 
 STDIO_IMPLEMENTATION=c
 
-# Define the name table capacity size of 2^(16+n).
-# Setting this to a non-zero value will slow down the interpreter.
-
-EXTEND_NAMES=0
-
 # Choose the device(s) to include.  See devs.mak for details,
 # devs.mak and contrib.mak for the list of available devices.
 
@@ -256,7 +239,7 @@ DEVICE_DEVS5=$(DD)uniprint.dev
 DEVICE_DEVS6=$(DD)bj10e.dev $(DD)bj200.dev $(DD)bjc600.dev $(DD)bjc800.dev
 DEVICE_DEVS7=$(DD)faxg3.dev $(DD)faxg32d.dev $(DD)faxg4.dev
 DEVICE_DEVS8=$(DD)pcxmono.dev $(DD)pcxgray.dev $(DD)pcx16.dev $(DD)pcx256.dev $(DD)pcx24b.dev $(DD)pcxcmyk.dev
-DEVICE_DEVS9=$(DD)pbm.dev $(DD)pbmraw.dev $(DD)pgm.dev $(DD)pgmraw.dev $(DD)pgnm.dev $(DD)pgnmraw.dev $(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev $(DD)pkm.dev $(DD)pkmraw.dev $(DD)pksm.dev $(DD)pksmraw.dev
+DEVICE_DEVS9=$(DD)pbm.dev $(DD)pbmraw.dev $(DD)pgm.dev $(DD)pgmraw.dev $(DD)pgnm.dev $(DD)pgnmraw.dev $(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev $(DD)pkm.dev $(DD)pkmraw.dev $(DD)pksm.dev $(DD)pksmraw.dev $(DD)pamcmyk32.dev
 DEVICE_DEVS10=$(DD)tiffcrle.dev $(DD)tiffg3.dev $(DD)tiffg32d.dev $(DD)tiffg4.dev $(DD)tifflzw.dev $(DD)tiffpack.dev
 DEVICE_DEVS11=$(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiffsep.dev
 DEVICE_DEVS12=$(DD)psmono.dev $(DD)psgray.dev $(DD)psrgb.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
@@ -301,6 +284,8 @@ include $(GLSRCDIR)/unixhead.mak
 PLATFORM=macos_
 
 include $(GLSRCDIR)/gs.mak
+# psromfs.mak must precede lib.mak
+include $(GLSRCDIR)/psromfs.mak
 include $(GLSRCDIR)/lib.mak
 include $(PSSRCDIR)/int.mak
 include $(PSSRCDIR)/cfonts.mak
@@ -346,7 +331,6 @@ $(GLOBJ)gdevmacxf.$(OBJ):  $(GLSRC)gdevmacxf.c
 
 gp_mac_h=$(GLSRC)gp_mac.h
 gconfig_h=$(GLOBJ)gconfig.h
-gconfigv_h=$(GLOBJ)gconfigv.h
 
 macsystypes_h=$(GLSRC)macsystypes.h
 systypes_h=$(GLOBJ)sys/types.h
@@ -421,7 +405,7 @@ $(CWPROJ_XML): $(gconfigd_h)
 	$(CP_) $(GLSRC)gscdef.c $(GLOBJ)gscdefs.c
 	/Developer/Tools/SetFile -c CWIE -t TEXT $(CWPROJ_XML)
 
-$(GS_XE): $(ld_tr) $(ECHOGS_XE) $(XE_ALL) $(CWPROJ_XML)
+$(GS_XE): $(ld_tr) $(ECHOGS_XE) $(XE_ALL) $(CWPROJ_XML) $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ)
 
 # ------------------------------------------------------------------- #
 

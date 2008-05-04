@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxalloc.h,v 1.10 2007/09/11 15:24:18 Arabidopsis Exp $ */
+/* $Id: gxalloc.h,v 1.11 2008/05/04 14:34:51 Arabidopsis Exp $ */
 /* Structure definitions for standard allocator */
 /* Requires gsmemory.h, gsstruct.h */
 
@@ -359,11 +359,6 @@ struct gs_ref_memory_s {
     chunk_locator_t cfreed;	/* chunk where last object freed */
     ulong allocated;		/* total size of all chunks */
 				/* allocated at this save level */
-    long inherited;		/* chunks allocated at outer save */
-				/* levels that should be counted */
-				/* towards the GC threshold */
-				/* (may be negative, but allocated + */
-				/* inherited >= 0 always) */
     ulong gc_allocated;		/* value of (allocated + */
 				/* previous_status.allocated) after last GC */
     struct lost_ {		/* space freed and 'lost' (not put on a */
@@ -389,6 +384,7 @@ struct gs_ref_memory_s {
     struct alloc_change_s *scan_limit;
     struct alloc_save_s *saved;
     long total_scanned;
+    long total_scanned_after_compacting;
     struct alloc_save_s *reloc_saved;	/* for GC */
     gs_memory_status_t previous_status;		/* total allocated & used */
 				/* in outer save levels */

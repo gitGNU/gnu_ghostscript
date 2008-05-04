@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: dvx-head.mak,v 1.7 2007/09/11 15:24:27 Arabidopsis Exp $
+# $Id: dvx-head.mak,v 1.8 2008/05/04 14:34:56 Arabidopsis Exp $
 # Partial makefile, common to all Desqview/X configurations.
 
 # This part of the makefile gets inserted after the compiler-specific part
@@ -70,7 +70,3 @@ CONFLDTR=-ol
 CC_D=$(CC_)
 CC_INT=$(CC_)
 
-# Patch a couple of PC-specific things that aren't relevant to DV/X builds,
-# but that cause `make' to produce warnings.
-
-PCFBASM=

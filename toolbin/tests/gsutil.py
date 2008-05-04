@@ -1,4 +1,5 @@
 #    Copyright (C) 2004 Artifex Software Inc.
+#    All Rights Reserved.
 # 
 # This file is part of GNU ghostscript
 #
@@ -17,7 +18,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 # 
 
-# $Id: gsutil.py,v 1.2 2007/08/01 14:26:57 jemarch Exp $
+# $Id: gsutil.py,v 1.3 2008/05/04 14:35:05 Arabidopsis Exp $
 
 # gsutil.py
 #

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevprn.c,v 1.12 2008/03/23 15:27:57 Arabidopsis Exp $ */
+/* $Id: gdevprn.c,v 1.13 2008/05/04 14:34:42 Arabidopsis Exp $ */
 /* Generic printer driver support */
 #include "ctype_.h"
 #include "gdevprn.h"
@@ -283,7 +283,7 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
 	memset(ppdev->skip, 0, sizeof(ppdev->skip));
 	size_ok = ppdev->printer_procs.buf_procs.size_buf_device
 	    (&buf_space, pdev, NULL, pdev->height, false) >= 0;
-	if (ppdev->page_uses_transparency) 
+	if (ppdev->page_uses_transparency) {
 	    if (new_height < max_ulong/(ESTIMATED_PDF14_ROW_SPACE(max(1, new_width)) >> 3))
 		pdf14_trans_buffer_size = new_height
 		    * (ESTIMATED_PDF14_ROW_SPACE(new_width) >> 3);
@@ -291,6 +291,7 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
 		size_ok = 0;
 		pdf14_trans_buffer_size = 0;
 	    }
+	}
 	mem_space = buf_space.bits + buf_space.line_ptrs
 		    + pdf14_trans_buffer_size;
 
@@ -371,7 +372,7 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
 	    ppdev->buffer_space = 0;
 	    if ((code = gdev_create_buf_device
 		 (ppdev->printer_procs.buf_procs.create_buf_device,
-		  &bdev, pdev, NULL, NULL, NULL)) < 0 ||
+		  &bdev, pdev, 0, NULL, NULL, NULL)) < 0 ||
 		(code = ppdev->printer_procs.buf_procs.setup_buf_device
 		 (bdev, base, buf_space.raster,
 		  (byte **)(base + buf_space.bits), 0, pdev->height,
@@ -981,11 +982,11 @@ gdev_prn_colors_used(gx_device *dev, int y, int height,
  */
 int
 gdev_create_buf_device(create_buf_device_proc_t cbd_proc, gx_device **pbdev,
-		       gx_device *target,
+		       gx_device *target, int y,
 		       const gx_render_plane_t *render_plane,
 		       gs_memory_t *mem, gx_band_complexity_t *band_complexity)
 {
-    int code = cbd_proc(pbdev, target, render_plane, mem, band_complexity);
+    int code = cbd_proc(pbdev, target, y, render_plane, mem, band_complexity);
 
     if (code < 0)
 	return code;
@@ -999,7 +1000,7 @@ gdev_create_buf_device(create_buf_device_proc_t cbd_proc, gx_device **pbdev,
  * possibly preceded by a plane extraction device.
  */
 int
-gx_default_create_buf_device(gx_device **pbdev, gx_device *target,
+gx_default_create_buf_device(gx_device **pbdev, gx_device *target, int y,
     const gx_render_plane_t *render_plane, gs_memory_t *mem, gx_band_complexity_t *band_complexity)
 {
     int plane_index = (render_plane ? render_plane->index : -1);
@@ -1032,6 +1033,7 @@ gx_default_create_buf_device(gx_device **pbdev, gx_device *target,
 	gs_make_mem_device(mdev, mdproto, mem, (band_complexity == NULL ? 1 : 0),
 			   (target == (gx_device *)mdev ? NULL : target));
     mdev->width = target->width;
+    mdev->band_y = y;
     /*
      * The matrix in the memory device is irrelevant,
      * because all we do with the device is call the device-level

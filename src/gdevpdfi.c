@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfi.c,v 1.11 2008/03/23 15:27:39 Arabidopsis Exp $ */
+/* $Id: gdevpdfi.c,v 1.12 2008/05/04 14:34:42 Arabidopsis Exp $ */
 /* Image handling for PDF-writing driver */
 #include "memory_.h"
 #include "math_.h"
@@ -1385,6 +1385,9 @@ gdev_pdf_pattern_manage(gx_device *pdev1, gx_bitmap_id id,
 	    code = pdf_store_pattern1_params(pdev, pres, pinst);
 	    if (code < 0)
 		return code;
+	    /* Scale the coordinate system, because object handlers assume so. See none_to_stream. */
+	    pprintg2(pdev->strm, "%g 0 0 %g 0 0 cm\n",
+		     72.0 / pdev->HWResolution[0], 72.0 / pdev->HWResolution[1]);
 	    return 1;
 	case pattern_manage__finish_accum:
 	    code = pdf_add_procsets(pdev->substream_Resources, pdev->procsets);

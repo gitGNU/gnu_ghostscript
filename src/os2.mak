@@ -1,16 +1,21 @@
 #  Copyright (C) 2001-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 #
-#  This software is provided AS-IS with no warranty, either express or
-#  implied.
+#  This file is part of GNU ghostscript
 #
-#  This software is distributed under license and may not be copied, modified
-#  or distributed except as expressly authorized under the terms of that
-#  license.  Refer to licensing information at http://www.artifex.com/
-#  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-#  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+#  GNU ghostscript is free software; you can redistribute it and/or modify it under
+#  the terms of the version 2 of the GNU General Public License as published by the Free Software
+#  Foundation.
 #
-# $Id: os2.mak,v 1.12 2008/03/23 15:28:11 Arabidopsis Exp $
+#  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
+#  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+#  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License along with
+#  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# $Id: os2.mak,v 1.13 2008/05/04 14:34:53 Arabidopsis Exp $
 # makefile for MS-DOS or OS/2 GCC/EMX platform.
 # Uses Borland (MSDOS) MAKER or 
 # Uses IBM NMAKE.EXE Version 2.000.000 Mar 27 1992
@@ -180,13 +185,6 @@ PSD=$(PSGENDIR)\$(NUL)
 
 # ------ Platform-specific options ------ #
 
-# If you don't have an assembler, set USE_ASM=0.  Otherwise, set USE_ASM=1,
-# and set ASM to the name of the assembler you are using.  This can be
-# a full path name if you want.  Normally it will be masm or tasm.
-
-USE_ASM=0
-ASM= 
-
 # Define the drive, directory, and compiler name for the EMX files.
 # COMP is the compiler name (gcc)
 # COMPDIR contains the compiler and linker (normally \emx\bin).
@@ -225,17 +223,6 @@ LIBDIR=$(TOOLPATH)\lib;$(COMPBASE)\lib
 
 # EMX requires 386 or higher
 CPU_TYPE=386
-
-# Define the math coprocessor (FPU) type.
-# Options are -1 (optimize for no FPU), 0 (optimize for FPU present,
-# but do not require a FPU), 87, 287, or 387.
-# If CPU_TYPE is 486 or above, FPU_TYPE is implicitly set to 387,
-# since 486DX and later processors include the equivalent of an 80387 on-chip.
-# An xx87 option means that the executable will run only if a FPU
-# of that type (or higher) is available: this is NOT currently checked
-# at runtime.
-
-FPU_TYPE=387
 
 # Define the .dev module that implements thread and synchronization
 # primitives for this platform.  Don't change this unless you really know
@@ -345,35 +332,12 @@ CONFLDTR=-ol
 # Define the generic compilation flags.
 
 !if $(CPU_TYPE) >= 486
-ASMCPU=/DFOR80386 /DFOR80486
 PLATOPT=-DFOR80386 -DFOR80486
 !else
 !if $(CPU_TYPE) >= 386
-ASMCPU=/DFOR80386
 PLATOPT=-DFOR80386
 !endif
 !endif
-
-!if $(FPU_TYPE) > 0
-ASMFPU=/DFORFPU
-!else
-ASMFPU=
-!endif
-
-!if $(USE_ASM)
-INTASM=iutilasm.$(OBJ)
-PCFBASM=gdevegaa.$(OBJ)
-!else
-INTASM=
-PCFBASM=
-!endif
-
-# Define the generic compilation rules.
-
-ASMFLAGS=$(ASMCPU) $(ASMFPU) $(ASMDEBUG)
-
-.asm.o:
-	$(ASM) $(ASMFLAGS) $<;
 
 # ---------------------- MS-DOS I/O debugging option ---------------------- #
 
@@ -387,12 +351,6 @@ $(PSGEN)dosio.dev: $(dosio_)
 
 $(PSOBJ)zdosio.$(OBJ): $(PSSRC)zdosio.c $(OP) $(store_h)
 	$(PSCC) $(PSO_)zdosio.$(OBJ) $(C_) $(PSSRC)zdosio.c
-
-# ----------------------------- Assembly code ----------------------------- #
-
-$(PSOBJ)iutilasm.$(OBJ): $(PSSRC)iutilasm.asm
-
-#################  END
 
 # Define the compilation flags.
 
@@ -503,11 +461,13 @@ DEVICE_DEVS16=$(DD)bbox.dev
 DEVICE_DEVS17=$(DD)ljet3.dev $(DD)ljet3d.dev $(DD)ljet4.dev $(DD)ljet4d.dev 
 DEVICE_DEVS18=$(DD)pj.dev $(DD)pjxl.dev $(DD)pjxl300.dev $(DD)jetp3852.dev $(DD)r4081.dev
 DEVICE_DEVS19=$(DD)lbp8.dev $(DD)m8510.dev $(DD)necp6.dev $(DD)bjc600.dev $(DD)bjc800.dev
-DEVICE_DEVS20=$(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev
+DEVICE_DEVS20=$(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev $(DD)pamcmyk32.dev
 DEVICE_DEVS21= $(DD)spotcmyk.dev $(DD)devicen.dev $(DD)bmpsep1.dev $(DD)bmpsep8.dev $(DD)bmp16m.dev $(DD)bmp32b.dev $(DD)psdcmyk.dev $(DD)psdrgb.dev
 
 # Include the generic makefiles.
 !include "$(GLSRCDIR)\gs.mak"
+# psromfs.mak must precede lib.mak
+!include "$(GLSRCDIR)\psromfs.mak"
 !include "$(GLSRCDIR)\lib.mak"
 !include "$(GLSRCDIR)\jpeg.mak"
 # zlib.mak must precede libpng.mak
@@ -635,12 +595,6 @@ $(MKROMFS_XE): $(GLSRC)mkromfs.c $(MKROMFS_COMMON_DEPS) $(MKROMFS_OBJS)
 $(gconfig__h): $(TOP_MAKEFILES) $(ECHOGS_XE)
 	$(ECHOGS_XE) -w $(gconfig__h) /* This file deliberately left blank. */
 
-$(gconfigv_h): $(PSSRCDIR)\os2.mak $(TOP_MAKEFILES) $(ECHOGS_XE)
-	$(ECHOGS_XE) -w $(gconfigv_h) -x 23 define USE_ASM -x 2028 -q $(USE_ASM)-0 -x 29
-	$(ECHOGS_XE) -a $(gconfigv_h) -x 23 define USE_FPU -x 2028 -q $(FPU_TYPE)-0 -x 29
-	$(ECHOGS_XE) -a $(gconfigv_h) -x 23 define EXTEND_NAMES 0$(EXTEND_NAMES)
-	$(ECHOGS_XE) -a $(gconfigv_h) -x 23 define SYSTEM_CONSTANTS_ARE_WRITABLE 0$(SYSTEM_CONSTANTS_ARE_WRITABLE)
-
 # ----------------------------- Main program ------------------------------ #
 
 gsdllos2_h=$(GLSRC)gsdllos2.h
@@ -655,8 +609,8 @@ $(PSOBJ)dpmain.$(OBJ): $(PSSRC)dpmain.c $(AK)\
 
 !if $(MAKEDLL)
 #making a DLL
-GS_ALL=$(PSOBJ)gsdll.$(OBJ) $(INT_ALL) $(INTASM)\
-  $(LIB_ALL) $(LIBCTR) $(ld_tr) $(PSOBJ)$(GS).res $(ICONS)
+GS_ALL=$(PSOBJ)gsdll.$(OBJ) $(INT_ALL) \
+  $(LIB_ALL) $(LIBCTR) $(ld_tr) $(PSOBJ)$(GS).res $(ICONS) $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ)
 
 $(GS_XE): $(BINDIR)\$(GSDLL).dll $(PSSRC)dpmain.c $(gsdll_h) $(gsdllos2_h) $(PSSRC)gsos2.rc $(GLOBJ)gscdefs.$(OBJ)
 !if $(EMX)
@@ -672,19 +626,19 @@ $(PSOBJ)gsdll.$(OBJ): $(PSSRC)gsdll.c $(gsdll_h) $(ghost_h) $(gscdefs_h)
 
 $(BINDIR)\$(GSDLL).dll: $(GS_ALL) $(ALL_DEVS) $(PSOBJ)gsdll.$(OBJ)
 !if $(EMX)
-	LINK386 /DEBUG $(COMPBASE)\lib\dll0.obj $(COMPBASE)\lib\end.lib @$(ld_tr) $(PSOBJ)gsdll.obj, $(BINDIR)\$(GSDLL).dll, ,$(X11LIBS) $(COMPBASE)\lib\gcc.lib $(COMPBASE)\lib\st\c.lib $(COMPBASE)\lib\st\c_dllso.lib $(COMPBASE)\lib\st\sys.lib $(COMPBASE)\lib\c_alias.lib $(COMPBASE)\lib\os2.lib, $(PSSRC)gsdll2.def
+	LINK386 /DEBUG $(COMPBASE)\lib\dll0.obj $(COMPBASE)\lib\end.lib @$(ld_tr) $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ) $(PSOBJ)gsdll.obj, $(BINDIR)\$(GSDLL).dll, ,$(X11LIBS) $(COMPBASE)\lib\gcc.lib $(COMPBASE)\lib\st\c.lib $(COMPBASE)\lib\st\c_dllso.lib $(COMPBASE)\lib\st\sys.lib $(COMPBASE)\lib\c_alias.lib $(COMPBASE)\lib\os2.lib, $(PSSRC)gsdll2.def
 !endif
 !if $(IBMCPP)
-	LINK386 /NOE /DEBUG @$(ld_tr) $(PSOBJ)gsdll.obj, $(BINDIR)\$(GSDLL).dll, , , $(PSSRC)gsdll2.def
+	LINK386 /NOE /DEBUG @$(ld_tr) $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ) $(PSOBJ)gsdll.obj, $(BINDIR)\$(GSDLL).dll, , , $(PSSRC)gsdll2.def
 !endif
 
 !else
 #making an EXE
-GS_ALL=$(PSOBJ)gs.$(OBJ) $(INT_ALL) $(INTASM)\
-  $(LIB_ALL) $(LIBCTR) $(ld_tr) $(PSOBJ)$(GS).res $(ICONS)
+GS_ALL=$(PSOBJ)gs.$(OBJ) $(INT_ALL) \
+  $(LIB_ALL) $(LIBCTR) $(ld_tr) $(PSOBJ)$(GS).res $(ICONS) $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ)
 
 $(GS_XE): $(GS_ALL) $(ALL_DEVS)
-	$(COMPDIR)\$(COMP) $(CGDB) I$(PSSRCDIR) -I$(GLSRCDIR) -o $(PSOBJ)$(GS) $(PSOBJ)gs.$(OBJ) @$(ld_tr) $(INTASM) -lm
+	$(COMPDIR)\$(COMP) $(CGDB) I$(PSSRCDIR) -I$(GLSRCDIR) -o $(PSOBJ)$(GS) $(PSOBJ)gs.$(OBJ) @$(ld_tr) $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ) -lm
 	$(COMPDIR)\emxbind -r$(PSOBJ)$(GS).res $(COMPDIR)\emxl.exe $(PSOBJ)$(GS) $(GS_XE) -ac
 	del $(PSOBJ)$(GS)
 !endif

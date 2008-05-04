@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxdda.h,v 1.9 2007/09/11 15:24:10 Arabidopsis Exp $ */
+/* $Id: gxdda.h,v 1.10 2008/05/04 14:34:41 Arabidopsis Exp $ */
 /* Definitions for DDAs */
 /* Requires gxfixed.h */
 
@@ -157,5 +157,5 @@ dda_state_struct(_a, fixed, uint) gx_dda_state_fixed;
   ((dstate).Q += (delta))
 #define dda_translate(dda, delta)\
   dda_state_translate((dda).state, delta)
-
+  
 #endif /* gxdda_INCLUDED */

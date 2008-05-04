@@ -16,13 +16,14 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevm24.c,v 1.8 2008/03/23 15:27:55 Arabidopsis Exp $ */
+/* $Id: gdevm24.c,v 1.9 2008/05/04 14:34:39 Arabidopsis Exp $ */
 /* 24-bit-per-pixel "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"
 #include "gxdevice.h"
 #include "gxdevmem.h"		/* semi-public definitions */
 #include "gdevmem.h"		/* private definitions */
+#include "vdtrace.h"
 
 #define mem_true24_strip_copy_rop mem_gray8_rgb24_strip_copy_rop
 
@@ -113,6 +114,7 @@ mem_true24_fill_rectangle(gx_device * dev,
     declare_unpack_color(r, g, b, color);
     declare_scan_ptr(dest);
 
+    if_debug4('b', "[b]device y=%d h=%d x=%d w=%d\n", y + mdev->band_y, h, x, w);
     /*
      * In order to avoid testing w > 0 and h > 0 twice, we defer
      * executing setup_rect, and use fit_fill_xywh instead of
@@ -375,10 +377,14 @@ mem_true24_copy_mono(gx_device * dev,
 
 	    do {
 		if (sbyte & bit) {
-		    if (one != gx_no_color_index)
+		    if (one != gx_no_color_index) {
 			put3(pptr, r1, g1, b1);
-		} else
+			vd_pixel(int2fixed((pptr - mdev->line_ptrs[y]) / 3), int2fixed(y), RGB(r1, g1, b1));
+		    }
+		} else {
 		    put3(pptr, r0, g0, b0);
+		    vd_pixel(int2fixed((pptr - mdev->line_ptrs[y]) / 3), int2fixed(y), RGB(r0, g0, b0));
+		}
 		pptr += 3;
 		if ((bit >>= 1) == 0)
 		    bit = 0x80, sbyte = *sptr++;
@@ -469,6 +475,7 @@ mem_true24_copy_color(gx_device * dev,
 {
     gx_device_memory * const mdev = (gx_device_memory *)dev;
 
+    if_debug1('w', "[w]device y=%d:\n", y + mdev->band_y); /* See siscale.c about 'w'. */
     fit_copy(dev, base, sourcex, sraster, id, x, y, w, h);
     mem_copy_byte_rect(mdev, base, sourcex, sraster, x, y, w, h);
     return 0;

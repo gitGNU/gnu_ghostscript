@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: ps2epsi.ps,v 1.6 2007/08/01 14:25:41 jemarch Exp $
+% $Id: ps2epsi.ps,v 1.7 2008/05/04 14:34:58 Arabidopsis Exp $
 % Convert an arbitrary PostScript file to an EPSI file.
 %
 % Please do not contact these users if you have questions.  They no longer
@@ -79,6 +79,7 @@ ps2edict begin
 				% Replace the definition of showpage
      userdict /showpage { ps2edict begin epsipage end } bind put
      userdict /setfont { ps2edict begin epsisetfont end } bind put
+     userdict /setpagedevice /pop load put
      //systemdict /.setsafe known { .setsafe } if
    } bind def
 

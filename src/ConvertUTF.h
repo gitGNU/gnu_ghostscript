@@ -22,8 +22,10 @@
 
 /* The full license terms for this file can be found at LICENSE.Unicode */
 
-/* $Id: ConvertUTF.h,v 1.1 2008/05/04 08:52:16 Arabidopsis Exp $*/
+/* $Id: ConvertUTF.h,v 1.2 2008/05/04 14:34:41 Arabidopsis Exp $*/
 
+#ifndef ConvertUTF_INCLUDED
+#define ConvertUTF_INCLUDED
 
 /* ---------------------------------------------------------------------
 
@@ -152,3 +154,5 @@ Boolean isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd);
 #endif
 
 /* --------------------------------------------------------------------- */
+
+#endif /* ConvertUTF_INCLUDED */

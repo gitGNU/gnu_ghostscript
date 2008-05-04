@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxcmap.c,v 1.12 2008/03/23 15:27:40 Arabidopsis Exp $ */
+/* $Id: gxcmap.c,v 1.13 2008/05/04 14:34:43 Arabidopsis Exp $ */
 /* Color mapping for Ghostscript */
 #include "gx.h"
 #include "gserrors.h"
@@ -616,9 +616,7 @@ int
 gx_concretize_DeviceGray(const gs_client_color * pc, const gs_color_space * pcs,
 			 frac * pconc, const gs_imager_state * pis)
 {
-    float ftemp;
-
-    pconc[0] = unit_frac(pc->paint.values[0], ftemp);
+    pconc[0] = gx_unit_frac(pc->paint.values[0]);
     return 0;
 }
 int
@@ -655,8 +653,7 @@ gx_remap_DeviceGray(const gs_client_color * pc, const gs_color_space * pcs,
 	gx_device_color * pdc, const gs_imager_state * pis, gx_device * dev,
 		    gs_color_select_t select)
 {
-    float ftemp;
-    frac fgray = unit_frac(pc->paint.values[0], ftemp);
+    frac fgray = gx_unit_frac(pc->paint.values[0]);
 
     /* Save original color space and color info into dev color */
     pdc->ccolor.paint.values[0] = pc->paint.values[0];
@@ -691,11 +688,9 @@ int
 gx_concretize_DeviceRGB(const gs_client_color * pc, const gs_color_space * pcs,
 			frac * pconc, const gs_imager_state * pis)
 {
-    float ftemp;
-
-    pconc[0] = unit_frac(pc->paint.values[0], ftemp);
-    pconc[1] = unit_frac(pc->paint.values[1], ftemp);
-    pconc[2] = unit_frac(pc->paint.values[2], ftemp);
+    pconc[0] = gx_unit_frac(pc->paint.values[0]);
+    pconc[1] = gx_unit_frac(pc->paint.values[1]);
+    pconc[2] = gx_unit_frac(pc->paint.values[2]);
     return 0;
 }
 int
@@ -731,9 +726,8 @@ gx_remap_DeviceRGB(const gs_client_color * pc, const gs_color_space * pcs,
 	gx_device_color * pdc, const gs_imager_state * pis, gx_device * dev,
 		   gs_color_select_t select)
 {
-    float ftemp;
-    frac fred = unit_frac(pc->paint.values[0], ftemp), fgreen = unit_frac(pc->paint.values[1], ftemp),
-         fblue = unit_frac(pc->paint.values[2], ftemp);
+    frac fred = gx_unit_frac(pc->paint.values[0]), fgreen = gx_unit_frac(pc->paint.values[1]),
+         fblue = gx_unit_frac(pc->paint.values[2]);
 
     /* Save original color space and color info into dev color */
     pdc->ccolor.paint.values[0] = pc->paint.values[0];
@@ -774,12 +768,10 @@ int
 gx_concretize_DeviceCMYK(const gs_client_color * pc, const gs_color_space * pcs,
 			 frac * pconc, const gs_imager_state * pis)
 {
-    float ftemp;
-
-    pconc[0] = unit_frac(pc->paint.values[0], ftemp);
-    pconc[1] = unit_frac(pc->paint.values[1], ftemp);
-    pconc[2] = unit_frac(pc->paint.values[2], ftemp);
-    pconc[3] = unit_frac(pc->paint.values[3], ftemp);
+    pconc[0] = gx_unit_frac(pc->paint.values[0]);
+    pconc[1] = gx_unit_frac(pc->paint.values[1]);
+    pconc[2] = gx_unit_frac(pc->paint.values[2]);
+    pconc[3] = gx_unit_frac(pc->paint.values[3]);
     return 0;
 }
 int
@@ -812,8 +804,6 @@ gx_remap_DeviceCMYK(const gs_client_color * pc, const gs_color_space * pcs,
 		    gs_color_select_t select)
 {
 /****** IGNORE alpha ******/
-    float ft0, ft1, ft2, ft3;
-
     /* Save original color space and color info into dev color */
     pdc->ccolor.paint.values[0] = pc->paint.values[0];
     pdc->ccolor.paint.values[1] = pc->paint.values[1];
@@ -830,10 +820,10 @@ gx_remap_DeviceCMYK(const gs_client_color * pc, const gs_color_space * pcs,
 	    frac conc[4];
 	    int code;
 
-	    conc[0] = (frac)unit_frac(pc->paint.values[0], ft0);
-	    conc[1] = (frac)unit_frac(pc->paint.values[1], ft1);
-	    conc[2] = (frac)unit_frac(pc->paint.values[2], ft2);
-	    conc[3] = (frac)unit_frac(pc->paint.values[3], ft3);
+	    conc[0] = gx_unit_frac(pc->paint.values[0]);
+	    conc[1] = gx_unit_frac(pc->paint.values[1]);
+	    conc[2] = gx_unit_frac(pc->paint.values[2]);
+	    conc[3] = gx_unit_frac(pc->paint.values[3]);
 	    code = pcb->client_procs->remap_DeviceCMYK(pcb, conc,
 						pcs, pdc, pis, dev, select);
 	    if (code == 0)
@@ -841,10 +831,10 @@ gx_remap_DeviceCMYK(const gs_client_color * pc, const gs_color_space * pcs,
 	}
     }
 #endif
-    gx_remap_concrete_cmyk((frac)unit_frac(pc->paint.values[0], ft0),
-			   (frac)unit_frac(pc->paint.values[1], ft1),
-			   (frac)unit_frac(pc->paint.values[2], ft2),
-			   (frac)unit_frac(pc->paint.values[3], ft3),
+    gx_remap_concrete_cmyk(gx_unit_frac(pc->paint.values[0]),
+			   gx_unit_frac(pc->paint.values[1]),
+			   gx_unit_frac(pc->paint.values[2]),
+			   gx_unit_frac(pc->paint.values[3]),
 			   pdc, pis, dev, select);
     return 0;
 }
@@ -1614,4 +1604,17 @@ gx_default_map_color_rgb_alpha(gx_device * dev, gx_color_index color,
 {
     prgba[3] = gx_max_color_value;	/* alpha = 1 */
     return (*dev_proc(dev, map_color_rgb)) (dev, color, prgba);
+}
+
+frac
+gx_unit_frac(float fvalue)
+{
+    frac f = frac_0;
+    if (is_fneg(fvalue))
+        f = frac_0;
+    else if (is_fge1(fvalue))
+        f = frac_1;
+    else
+        f = float2frac(fvalue);
+    return f;
 }

@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: unix-end.mak,v 1.9 2007/09/11 15:23:45 Arabidopsis Exp $
+# $Id: unix-end.mak,v 1.10 2008/05/04 14:34:57 Arabidopsis Exp $
 # Partial makefile common to all Unix and Desqview/X configurations.
 # This is the next-to-last part of the makefile for these configurations.
 
@@ -65,14 +65,6 @@ debug: DEBUGDIRS
 
 debugclean: DEBUGDIRS
 	$(MAKE) $(DEBUGDEFS) clean
-
-# The rule for gconfigv.h is here because it is shared between Unix and
-# DV/X environments.
-$(gconfigv_h): $(GLSRC)unix-end.mak $(TOP_MAKEFILES) $(ECHOGS_XE)
-	$(ECHOGS_XE) -w $(gconfigv_h) -x 23 define USE_ASM -x 2028 -q $(USE_ASM)-0 -x 29
-	$(ECHOGS_XE) -a $(gconfigv_h) -x 23 define USE_FPU -x 2028 -q $(FPU_TYPE)-0 -x 29
-	$(ECHOGS_XE) -a $(gconfigv_h) -x 23 define EXTEND_NAMES 0$(EXTEND_NAMES)
-	$(ECHOGS_XE) -a $(gconfigv_h) -x 23 define SYSTEM_CONSTANTS_ARE_WRITABLE 0$(SYSTEM_CONSTANTS_ARE_WRITABLE)
 
 # Emacs tags maintenance.
 

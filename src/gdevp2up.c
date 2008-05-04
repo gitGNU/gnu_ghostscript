@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevp2up.c,v 1.10 2008/03/23 15:28:08 Arabidopsis Exp $ */
+/* $Id: gdevp2up.c,v 1.11 2008/05/04 14:34:52 Arabidopsis Exp $ */
 /* A "2-up" PCX device for testing page objects. */
 #include "gdevprn.h"
 #include "gdevpccm.h"
@@ -95,7 +95,6 @@ pcx2up_print_page(gx_device_printer * pdev, FILE * file)
 	gx_saved_page even_page;
 	gx_placed_page pages[2];
 	int x_offset = (int)(pdev->HWResolution[0] * 0.5);
-	int y_offset = (int)(pdev->HWResolution[1] * 0.5);
 	int code = gdev_prn_save_page(pdev, &even_page, 1);
 	int prdev_size = prdev_template->params_size;
 	gx_device_printer *prdev;

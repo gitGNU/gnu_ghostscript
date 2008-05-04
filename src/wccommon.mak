@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: wccommon.mak,v 1.11 2008/03/23 15:27:43 Arabidopsis Exp $
+# $Id: wccommon.mak,v 1.12 2008/05/04 14:34:46 Arabidopsis Exp $
 # wccommon.mak
 # Section of Watcom C/C++ makefile common to MS-DOS and MS Windows.
 # We strongly recommend that you read the Watcom section of Make.htm
@@ -29,9 +29,8 @@
 #   Configuration, internal, generic:
 #	PLATFORM, MAKEFILE, AK, CC*, DEBUG, CP_, RM_, RMN_
 #   Configuration, internal, specific to DOS/Windows:
-#	TDEBUG, USE_ASM, ASM,
-#	COMPDIR, LIBPATHS,
-#	CPU_TYPE, FPU_TYPE
+#	TDEBUG, COMPDIR, LIBPATHS,
+#	CPU_TYPE,
 
 # We want Unix-compatible behavior.  This is part of it.
 
@@ -180,14 +179,6 @@ FPFLAGS=-fpi
 !endif
 !endif
 !endif
-
-INTASM=
-PCFBASM=
-
-# Define the generic compilation rules.
-
-.asm.obj:
-	$(ASM) $(ASMFLAGS) $<;
 
 # Make sure we get the right default target for make.
 

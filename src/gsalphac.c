@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsalphac.c,v 1.10 2008/03/23 15:28:03 Arabidopsis Exp $ */
+/* $Id: gsalphac.c,v 1.11 2008/05/04 14:34:46 Arabidopsis Exp $ */
 /* Alpha-compositing implementation */
 #include "memory_.h"
 #include "gx.h"
@@ -106,6 +106,9 @@ const gs_composite_type_t gs_composite_alpha_type =
 	c_alpha_equal,
 	c_alpha_write,
 	c_alpha_read,
+	gx_default_composite_adjust_ctm,
+	gx_default_composite_is_closing,
+	gx_default_composite_is_friendly,
 	gx_default_composite_clist_write_update,
 	gx_default_composite_clist_read_update
     }
@@ -125,12 +128,14 @@ gs_create_composite_alpha(gs_composite_t ** ppcte,
 {
     gs_composite_alpha_t *pcte;
 
-    rc_alloc_struct_0(pcte, gs_composite_alpha_t, &st_composite_alpha,
-		      mem, return_error(gs_error_VMerror),
-		      "gs_create_composite_alpha");
+    pcte = gs_alloc_struct(mem, gs_composite_alpha_t, &st_composite_alpha,
+			     "gs_create_composite_alpha");
+    if (pcte == NULL)
+	return_error(gs_error_VMerror);
     pcte->type = &gs_composite_alpha_type;
     pcte->id = gs_next_ids(mem, 1);
     pcte->params = *params;
+    pcte->idle = false;
     *ppcte = (gs_composite_t *) pcte;
     return 0;
 }

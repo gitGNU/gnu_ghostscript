@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: dwtrace.c,v 1.9 2008/03/23 15:27:45 Arabidopsis Exp $ */
+/* $Id: dwtrace.c,v 1.10 2008/05/04 14:34:47 Arabidopsis Exp $ */
 /* Graphical trace server for Windows */
 
 /*  This module use Win32-specific API.
@@ -251,6 +251,14 @@ static void dw_gt_round(vd_trace_interface *I, double x, double y, int r)
     SelectObject(I->host->hdc, h);
 }
 
+static void dw_gt_pixel(vd_trace_interface *I, double x, double y, unsigned long rgbcolor)
+{   HPEN h;
+    get_window(); 
+    if (host.tw == NULL) 
+        return;
+    SetPixel(I->host->hdc, SX(x), SY(y), rgbcolor);
+}
+
 static void dw_gt_fill(vd_trace_interface *I)
 {   get_window(); 
     if (host.tw == NULL) 
@@ -345,6 +353,7 @@ void visual_tracer_init(void)
     SET_CALLBACK(visual_tracer, closepath);
     SET_CALLBACK(visual_tracer, circle);
     SET_CALLBACK(visual_tracer, round);
+    SET_CALLBACK(visual_tracer, pixel);
     SET_CALLBACK(visual_tracer, fill);
     SET_CALLBACK(visual_tracer, stroke);
     SET_CALLBACK(visual_tracer, setcolor);

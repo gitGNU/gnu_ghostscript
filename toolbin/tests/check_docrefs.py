@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
-#    Copyright (C) 2002-2006 Aladdin Enterprises.  All rights reserved.
-# 
+#    Copyright (C) 2002-2004 Artifex Software, Inc.
+#    All Rights Reserved.
+#
 # This file is part of GNU ghostscript
 #
 # GNU ghostscript is free software; you can redistribute it and/or
@@ -19,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: check_docrefs.py,v 1.7 2007/08/01 14:26:57 jemarch Exp $
+# $Id: check_docrefs.py,v 1.8 2008/05/04 14:35:05 Arabidopsis Exp $
 
 # Check that the hrefs in an HTML document mention all of a set of files.
 # The requirement is that the union of all the docfiles must somewhere

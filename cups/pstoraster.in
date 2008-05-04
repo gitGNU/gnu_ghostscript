@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# "$Id: pstoraster.in,v 1.1 2007/09/11 15:25:05 Arabidopsis Exp $"
+# "$Id: pstoraster.in,v 1.2 2008/05/04 14:35:12 Arabidopsis Exp $"
 #
 # CUPS raster filter script for Ghostscript.
 #
@@ -46,7 +46,7 @@ done
 
 # See if we have a filename on the command-line...
 if test -z "$6"; then
-	ifile="-"
+	ifile="-_"
 else
 	ifile="$6"
 fi
@@ -58,5 +58,5 @@ echo DEBUG: Running $bindir/@GS@ $gsopts -sOUTPUTFILE="%stdout" -c"$profile" "$i
 exec $bindir/@GS@ $gsopts -sOUTPUTFILE="%stdout" -c"$profile" "$ifile"
 
 #
-# End of "$Id: pstoraster.in,v 1.1 2007/09/11 15:25:05 Arabidopsis Exp $".
+# End of "$Id: pstoraster.in,v 1.2 2008/05/04 14:35:12 Arabidopsis Exp $".
 #

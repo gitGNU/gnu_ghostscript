@@ -1,7 +1,8 @@
 #!/usr/bin/python
 # -*- Mode: python -*-
 
-#    Copyright (C) 2001-2006 Artifex Software Inc.
+#    Copyright (C) 2001-2007 Artifex Software Inc.
+#    All Rights Reserved.
 # 
 # This file is part of GNU ghostscript
 #
@@ -62,7 +63,7 @@
 #
 
 
-# $Id: run_nightly.py,v 1.1 2007/09/10 14:08:49 Arabidopsis Exp $
+# $Id: run_nightly.py,v 1.2 2008/05/04 14:35:05 Arabidopsis Exp $
 
 
 import os
@@ -140,7 +141,7 @@ def change_gsproduct(file):
     tmpfile = "%s.tmp" % (file,)
 
     startre = re.compile("^#ifndef\ GS_PRODUCT$")
-    changere = re.compile("^.*?\"[A-Za-z -]+\".*?$")
+    changere = re.compile("^.*?["A-Za-z -]+.*?$")
     endre = re.compile("^$")
 
     old = open(file, "r")
@@ -158,7 +159,7 @@ def change_gsproduct(file):
             m = changere.search(line)
             if m:
                 state = 2
-                new.write("\t\"AFPL Ghostscript\"\n")
+                new.write("\t\"GPL Ghostscript\"\n")
             else:
                 new.write(line)
         elif state == 2:

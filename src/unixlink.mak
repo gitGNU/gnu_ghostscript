@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: unixlink.mak,v 1.8 2007/09/11 15:24:02 Arabidopsis Exp $
+# $Id: unixlink.mak,v 1.9 2008/05/04 14:34:56 Arabidopsis Exp $
 # Partial makefile common to all Unix configurations.
 # This part of the makefile contains the linking steps.
 
@@ -54,9 +54,9 @@ $(GS_A): $(obj_tr) $(ECHOGS_XE) $(INT_ARCHIVE_ALL) $(INT_ALL) $(DEVS_ALL)
 # The resetting of the environment variables to empty strings is for SCO Unix,
 # which has limited environment space.
 ldt_tr=$(PSOBJ)ldt.tr
-$(GS_XE): $(ld_tr) $(ECHOGS_XE) $(XE_ALL)
+$(GS_XE): $(ld_tr) $(ECHOGS_XE) $(XE_ALL) $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ)
 	$(ECHOGS_XE) -w $(ldt_tr) -n - $(CCLD) $(LDFLAGS) -o $(GS_XE)
-	$(ECHOGS_XE) -a $(ldt_tr) -n -s $(PSOBJ)gs.$(OBJ) -s
+	$(ECHOGS_XE) -a $(ldt_tr) -n -s $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ) $(PSOBJ)gs.$(OBJ) -s
 	cat $(ld_tr) >>$(ldt_tr)
 	$(ECHOGS_XE) -a $(ldt_tr) -s - $(EXTRALIBS) $(STDLIBS)
 	if [ x$(XLIBDIR) != x ]; then LD_RUN_PATH=$(XLIBDIR); export LD_RUN_PATH; fi; \

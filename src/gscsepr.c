@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscsepr.c,v 1.12 2008/03/23 15:27:38 Arabidopsis Exp $ */
+/* $Id: gscsepr.c,v 1.13 2008/05/04 14:34:41 Arabidopsis Exp $ */
 /* Separation color space and operation definition */
 #include "memory_.h"
 #include "gx.h"
@@ -316,7 +316,6 @@ static int
 gx_concretize_Separation(const gs_client_color *pc, const gs_color_space *pcs,
 			 frac *pconc, const gs_imager_state *pis)
 {
-    float ftemp;
     int code;
     gs_client_color cc;
     const gs_color_space *pacs = pcs->base_space;
@@ -341,7 +340,7 @@ gx_concretize_Separation(const gs_client_color *pc, const gs_color_space *pcs,
 	return cs_concretize_color(&cc, pacs, pconc, pis);
     }
     else {
-    	pconc[0] = unit_frac(pc->paint.values[0], ftemp);
+    	pconc[0] = gx_unit_frac(pc->paint.values[0]);
     }
     return 0;
 }

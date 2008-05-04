@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: jbig2.mak,v 1.9 2007/09/11 15:23:56 Arabidopsis Exp $
+# $Id: jbig2.mak,v 1.10 2008/05/04 14:34:56 Arabidopsis Exp $
 
 # makefile for jbig2dec library code.
 # Users of this makefile must define the following:
@@ -75,6 +75,7 @@ libjbig2_HDRS=\
         $(JBIG2SRC)jbig2_mmr.h \
         $(JBIG2SRC)jbig2_priv.h \
         $(JBIG2SRC)jbig2_symbol_dict.h \
+        $(JBIG2SRC)jbig2_text.h \
         $(JBIG2SRC)jbig2_metadata.h \
         $(JBIG2SRC)config_win32.h
 

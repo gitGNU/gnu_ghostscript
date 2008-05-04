@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsptype2.h,v 1.10 2007/09/11 15:23:48 Arabidopsis Exp $ */
+/* $Id: gsptype2.h,v 1.11 2008/05/04 14:34:42 Arabidopsis Exp $ */
 /* Client interface to PatternType 2 Patterns */
 
 #ifndef gsptype2_INCLUDED
@@ -117,8 +117,10 @@ int gx_dc_pattern2_get_bbox(const gx_device_color * pdevc, gs_fixed_rect *bbox);
 int gx_dc_pattern2_color_has_bbox(const gx_device_color * pdevc);
 
 /* Intersect a clipping path a shading BBox. */
-int gx_dc_pattern2_clip_with_bbox(const gx_device_color * pdevc, gx_device * pdev, 
-				  gx_clip_path *cpath_local, const gx_clip_path **cpath1);
+int gx_dc_pattern2_clip_with_bbox_simple(const gx_device_color * pdevc, gx_device * pdev, 
+				  gx_clip_path *cpath);
+/* Check whether color is a shading with BBox. */
+int gx_dc_pattern2_is_rectangular_cell(const gx_device_color * pdevc, gx_device * pdev, gs_fixed_rect *rect);
 
 /* Get a shading color space. */
 const gs_color_space *gx_dc_pattern2_get_color_space(const gx_device_color * pdevc);

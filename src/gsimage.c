@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsimage.c,v 1.11 2008/03/23 15:27:55 Arabidopsis Exp $ */
+/* $Id: gsimage.c,v 1.12 2008/05/04 14:34:40 Arabidopsis Exp $ */
 /* Image setup procedures for Ghostscript library */
 #include "memory_.h"
 #include "math_.h"
@@ -34,6 +34,7 @@
 #include "gximask.h"
 #include "gzstate.h"
 #include "gsutil.h"
+#include "vdtrace.h"
 
 /*
   The main internal invariant for the gs_image machinery is
@@ -483,6 +484,10 @@ gs_image_next_planes(gs_image_enum * penum,
     int code = 0;
 
 #ifdef DEBUG
+    vd_get_dc('i');
+    vd_set_shift(0, 0);
+    vd_set_scale(0.01);
+    vd_set_origin(0, 0);
     if (gs_debug_c('b')) {
 	int pi;
 
@@ -613,6 +618,7 @@ gs_image_next_planes(gs_image_enum * penum,
     /* Return the retained data pointers. */
     for (i = 0; i < num_planes; ++i)
 	plane_data[i] = penum->planes[i].source;
+    vd_release_dc;
     return code;
 }
 

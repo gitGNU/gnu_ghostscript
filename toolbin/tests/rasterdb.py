@@ -2,6 +2,7 @@
 # -*- Mode: python -*-
 
 #    Copyright (C) 2001 Artifex Software Inc.
+#    All Rights Reserved.
 #
 # This file is part of GNU ghostscript
 #
@@ -20,7 +21,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
  
-# $Id: rasterdb.py,v 1.7 2007/09/10 14:08:48 Arabidopsis Exp $
+# $Id: rasterdb.py,v 1.8 2008/05/04 14:35:07 Arabidopsis Exp $
  
 # rasterdb.py
 #

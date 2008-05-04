@@ -17,12 +17,11 @@
 
 */
 
-/* $Id: gxpcopy.c,v 1.11 2008/03/23 15:27:40 Arabidopsis Exp $ */
+/* $Id: gxpcopy.c,v 1.12 2008/05/04 14:34:43 Arabidopsis Exp $ */
 /* Path copying and flattening */
 #include "math_.h"
 #include "gx.h"
 #include "gserrors.h"
-#include "gconfigv.h"		/* for USE_FPU */
 #include "gxfixed.h"
 #include "gxfarith.h"
 #include "gxistate.h"		/* for access to line params */

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: genarch.c,v 1.11 2008/03/23 15:27:53 Arabidopsis Exp $ */
+/* $Id: genarch.c,v 1.12 2008/05/04 14:34:57 Arabidopsis Exp $ */
 /*
  * Generate a header file (arch.h) with parameters
  * reflecting the machine architecture and compiler characteristics.
@@ -112,7 +112,6 @@ main(int argc, char *argv[])
     } sd;
     long lm1 = -1;
     long lr1 = lm1 >> 1, lr2 = lm1 >> 2;
-    unsigned long um1 = ~(unsigned long)0;
     int im1 = -1;
     int ir1 = im1 >> 1, ir2 = im1 >> 2;
     union {
@@ -120,7 +119,6 @@ main(int argc, char *argv[])
 	char *p;
     } pl0, pl1;
     int ars;
-    int lwidth = size_of(long) * 8;
     union {
 	float f;
 	int i;
@@ -235,11 +233,6 @@ main(int argc, char *argv[])
 	   lr1 != -1 ? 1 :	/* Turbo C problem */
 	   2);
     define_int(f, "ARCH_ARITH_RSHIFT", ars);
-    /*
-     * Some machines can't handle a variable shift by
-     * the full width of a long.
-     */
-    define_int(f, "ARCH_CAN_SHIFT_FULL_LONG", um1 >> lwidth == 0);
     /*
      * Determine whether dividing a negative integer by a positive one
      * takes the floor or truncates toward zero.

@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxclpath.c,v 1.12 2008/03/23 15:27:49 Arabidopsis Exp $ */
+/*$Id: gxclpath.c,v 1.13 2008/05/04 14:34:51 Arabidopsis Exp $ */
 /* Higher-level path operations for band lists */
 #include "math_.h"
 #include "memory_.h"
@@ -302,6 +302,18 @@ cmd_write_ctm_return_length(gx_device_clist_writer * cldev, const gs_matrix *m)
     stream s;
 
     s_init(&s, cldev->memory);
+    swrite_position_only(&s);
+    sput_matrix(&s, m);
+    return (uint)stell(&s);
+}
+
+/* Compute the written CTM length. */
+int
+cmd_write_ctm_return_length_nodevice(const gs_matrix *m)
+{
+    stream s;
+
+    s_init(&s, NULL);
     swrite_position_only(&s);
     sput_matrix(&s, m);
     return (uint)stell(&s);
@@ -610,7 +622,12 @@ clist_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
     {
 	gs_fixed_rect bbox;
 
-	gx_path_bbox(ppath, &bbox);
+	if (ppath != NULL)
+	    gx_path_bbox(ppath, &bbox);
+	else {
+	    /* gx_default_fill_path passes the clip path for shfill. */
+	    gx_cpath_outer_box(pcpath, &bbox);
+	}
 	ry = fixed2int(bbox.p.y) - 1;
 	rheight = fixed2int_ceiling(bbox.q.y) - ry + 1;
 	fit_fill_y(dev, ry, rheight);

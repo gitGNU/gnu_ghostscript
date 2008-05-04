@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclread.c,v 1.10 2008/03/23 15:27:54 Arabidopsis Exp $ */
+/* $Id: gxclread.c,v 1.11 2008/05/04 14:34:39 Arabidopsis Exp $ */
 /* Command list reading for Ghostscript. */
 #include "memory_.h"
 #include "gx.h"
@@ -97,7 +97,6 @@ static int
 s_band_read_init_offset_map(gx_device_clist_reader *crdev, stream_state * st)
 {
     stream_band_read_state *const ss = (stream_band_read_state *) st;
-    const clist_io_procs_t *io_procs = ss->page_info.io_procs;
 
     if (gs_debug_c('L')) {
 	ss->offset_map_length = 0;
@@ -214,7 +213,7 @@ static const stream_template s_band_read_template = {
 };
 
 #ifdef DEBUG
-int
+static int
 buffer_segment_index(const stream_band_read_state *ss, uint buffer_offset, uint *poffset0)
 {
     uint i, offset0, offset = 0;
@@ -432,7 +431,7 @@ clist_get_bits_rectangle(gx_device *dev, const gs_int_rect * prect,
 
     clist_select_render_plane(dev, y, line_count, &render_plane, plane_index);
     code = gdev_create_buf_device(cdev->buf_procs.create_buf_device,
-				  &bdev, cdev->target, &render_plane,
+				  &bdev, cdev->target, y, &render_plane,
 				  dev->memory, clist_get_band_complexity(dev,y));
     if (code < 0)
 	return code;
@@ -470,7 +469,7 @@ clist_get_bits_rectangle(gx_device *dev, const gs_int_rect * prect,
 	uint raster = gx_device_raster(bdev, true);
 
 	code = gdev_create_buf_device(cdev->buf_procs.create_buf_device,
-				      &bdev, cdev->target, &render_plane,
+				      &bdev, cdev->target, y, &render_plane,
 				      dev->memory, clist_get_band_complexity(dev, y));
 	if (code < 0)
 	    return code;
@@ -694,11 +693,14 @@ clist_playback_file_bands(clist_playback_action action,
 	s.foreign = 1;
 	s.state = (stream_state *)&rs;
 
-	vd_get_dc('s');
+	if (vd_allowed('s')) {
+	    vd_get_dc('s');
+	} else if (vd_allowed('i')) {
+	    vd_get_dc('i');
+	}
 	vd_set_shift(0, 0);
 	vd_set_scale(0.01);
 	vd_set_origin(0, 0);
-	vd_erase(RGB(192, 192, 192));
 	code = clist_playback_band(action, crdev, &s, target, x0, y0, mem);
 	vd_release_dc;
 #	ifdef DEBUG

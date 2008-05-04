@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 Artifex Software, Inc.
+#  Copyright (C) 2001-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This file is part of GNU ghostscript
@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: devs.mak,v 1.11 2008/03/23 15:27:52 Arabidopsis Exp $
+# $Id: devs.mak,v 1.12 2008/05/04 14:34:55 Arabidopsis Exp $
 # makefile for Aladdin's device drivers.
 
 # Define the name of this makefile.
@@ -147,7 +147,7 @@ GDEV=$(AK) $(ECHOGS_XE) $(GDEVH)
 #	jpeggray  JPEG format, gray output
 #	jpegcmyk  JPEG format, cmyk output
 #	miff24	ImageMagick MIFF format, 24-bit direct color, RLE compressed
-#	pam	Portable Arbitrary Map file format
+#	pamcmyk32	Portable Arbitrary Map file format 32-bit CMYK
 #	pcxmono	PCX file format, monochrome (1-bit black and white)
 #	pcxgray	PCX file format, 8-bit gray scale
 #	pcx16	PCX file format, 4-bit planar (EGA/VGA) color
@@ -301,18 +301,10 @@ $(GLOBJ)gdevpsu.$(OBJ) : $(GLSRC)gdevpsu.c $(GX) $(GDEV) $(math__h) $(time__h)\
 
 ### ----------------------- EGA and VGA displays ----------------------- ###
 
-# The shared MS-DOS makefile defines PCFBASM as either gdevegaa.$(OBJ)
-# or an empty string.
-
-$(GLOBJ)gdevegaa.$(OBJ) : $(GLSRC)gdevegaa.asm
-	$(GLCC) $(GLO_)gdevegaa.$(OBJ) $(C_) $(GLSRC)gdevegaa.c
-
-EGAVGA_DOS=$(GLOBJ)gdevevga.$(OBJ) $(GLOBJ)gdevpcfb.$(OBJ) $(GLOBJ)gdevpccm.$(OBJ) $(PCFBASM)
-EGAVGA_SCO=$(GLOBJ)gdevsco.$(OBJ) $(GLOBJ)gdevpcfb.$(OBJ) $(GLOBJ)gdevpccm.$(OBJ) $(PCFBASM)
+EGAVGA_DOS=$(GLOBJ)gdevevga.$(OBJ) $(GLOBJ)gdevpcfb.$(OBJ) $(GLOBJ)gdevpccm.$(OBJ)
+EGAVGA_SCO=$(GLOBJ)gdevsco.$(OBJ) $(GLOBJ)gdevpcfb.$(OBJ) $(GLOBJ)gdevpccm.$(OBJ)
 # NOTE: for direct frame buffer addressing under SCO Unix or Xenix,
-# change DOS to SCO in the following line.  Also, since SCO's /bin/as
-# does not support the "out" instructions, you must build the GNU
-# assembler and have it on your path as "as".
+# change DOS to SCO in the following line.
 EGAVGA=$(EGAVGA_DOS)
 
 #**************** $(CCD) gdevevga.c
@@ -324,7 +316,7 @@ $(GLOBJ)gdevsco.$(OBJ) : $(GLSRC)gdevsco.c $(GDEV) $(memory__h) $(gdevpcfb_h)
 
 # Common code for MS-DOS and SCO.
 #**************** $(CCD) gdevpcfb.c
-$(GLOBJ)gdevpcfb.$(OBJ) : $(GLSRC)gdevpcfb.c $(GDEV) $(memory__h) $(gconfigv_h)\
+$(GLOBJ)gdevpcfb.$(OBJ) : $(GLSRC)gdevpcfb.c $(GDEV) $(memory__h)\
  $(gdevpccm_h) $(gdevpcfb_h) $(gsparam_h)
 	$(GLCC) $(GLO_)gdevpcfb.$(OBJ) $(C_) $(GLSRC)gdevpcfb.c
 
@@ -351,10 +343,10 @@ $(DD)svga16.dev : $(DEVS_MAK) $(EGAVGA)
 # More capable SuperVGAs have a wide variety of slightly differing
 # interfaces, so we need a separate driver for each one.
 
-SVGA=$(GLOBJ)gdevsvga.$(OBJ) $(GLOBJ)gdevpccm.$(OBJ) $(PCFBASM)
+SVGA=$(GLOBJ)gdevsvga.$(OBJ) $(GLOBJ)gdevpccm.$(OBJ)
 
 #**************** $(CCD) gdevsvga.c
-$(GLOBJ)gdevsvga.$(OBJ) : $(GLSRC)gdevsvga.c $(GDEV) $(memory__h) $(gconfigv_h)\
+$(GLOBJ)gdevsvga.$(OBJ) : $(GLSRC)gdevsvga.c $(GDEV) $(memory__h)\
  $(gsparam_h) $(gxarith_h) $(gdevpccm_h) $(gdevpcfb_h) $(gdevsvga_h)
 	$(GLCC) $(GLO_)gdevsvga.$(OBJ) $(C_) $(GLSRC)gdevsvga.c
 
@@ -1049,7 +1041,7 @@ $(GLOBJ)gdevpdte.$(OBJ) : $(GLSRC)gdevpdte.c $(gx_h) $(math__h) $(memory__h) $(s
 	$(GLCC) $(GLO_)gdevpdte.$(OBJ) $(C_) $(GLSRC)gdevpdte.c
 
 $(GLOBJ)gdevpdtd.$(OBJ) : $(GLSRC)gdevpdtd.c $(math__h) $(memory__h) $(gx_h)\
- $(gserrors_h) $(gsrect_h)\
+ $(gserrors_h) $(gsrect_h) $(gscencs_h)\
  $(gdevpdfo_h) $(gdevpdfx_h)\
  $(gdevpdtb_h) $(gdevpdtd_h) $(gdevpdtf_h)
 	$(GLCC) $(GLO_)gdevpdtd.$(OBJ) $(C_) $(GLSRC)gdevpdtd.c
@@ -1223,7 +1215,7 @@ gdevcgml_h=$(GLSRC)gdevcgml.h
 gdevcgmx_h=$(GLSRC)gdevcgmx.h $(gdevcgml_h)
 
 $(GLOBJ)gdevcgm.$(OBJ) : $(GLSRC)gdevcgm.c $(GDEV) $(memory__h)\
- $(gp_h) $(gsparam_h) $(gdevpccm_h) $(gdevcgml_h)
+ $(gp_h) $(gsparam_h) $(gsutil_h) $(gdevpccm_h) $(gdevcgml_h)
 	$(GLCC) $(GLO_)gdevcgm.$(OBJ) $(C_) $(GLSRC)gdevcgm.c
 
 $(GLOBJ)gdevcgml.$(OBJ) : $(GLSRC)gdevcgml.c $(memory__h) $(stdio__h)\
@@ -1474,6 +1466,10 @@ $(DD)plan9bm.dev : $(DEVS_MAK) $(pxm_) $(GLD)page.dev
 
 ### Portable Arbitrary Map (PAM, magic number "P7", CMYK)
 
+$(DD)pamcmyk32.dev : $(DEVS_MAK) $(pxm_) $(GLD)page.dev
+	$(SETPDEV2) $(DD)pamcmyk32 $(pxm_)
+
+# Keep the older (non-descriptive) name in case it is being used
 $(DD)pam.dev : $(DEVS_MAK) $(pxm_) $(GLD)page.dev
 	$(SETPDEV2) $(DD)pam $(pxm_)
 

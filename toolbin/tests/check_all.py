@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
-#    Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
-# 
+#    Copyright (C) 2002 Artifex Software, Inc.  All rights reserved.
+#    All Rights Reserved.
+#
 # This file is part of GNU ghostscript
 #
 # GNU ghostscript is free software; you can redistribute it and/or
@@ -19,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: check_all.py,v 1.5 2007/08/01 14:26:56 jemarch Exp $
+# $Id: check_all.py,v 1.6 2008/05/04 14:35:07 Arabidopsis Exp $
 
 # Run all the Ghostscript 'check' tests.
 

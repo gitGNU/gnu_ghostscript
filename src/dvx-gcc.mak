@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: dvx-gcc.mak,v 1.13 2008/03/23 15:28:06 Arabidopsis Exp $
+# $Id: dvx-gcc.mak,v 1.14 2008/05/04 14:34:49 Arabidopsis Exp $
 # makefile for DesqView/X/gcc/X11 configuration.
 
 #include $(COMMONDIR)/gccdefs.mak
@@ -243,17 +243,6 @@ XLIBDIR=
 # XLIBS=Xt Xext X
 XLIBS=Xt Xext X11
 
-# Define whether this platform has floating point hardware:
-#	FPU_TYPE=2 means floating point is faster than fixed point.
-# (This is the case on some RISCs with multiple instruction dispatch.)
-#	FPU_TYPE=1 means floating point is at worst only slightly slower
-# than fixed point.
-#	FPU_TYPE=0 means that floating point may be considerably slower.
-#	FPU_TYPE=-1 means that floating point is always much slower than
-# fixed point.
-
-FPU_TYPE=1
-
 # Define the .dev module that implements thread and synchronization
 # primitives for this platform.  Don't change this unless you really know
 # what you're doing.
@@ -303,7 +292,7 @@ DEVICE_DEVS5=paintjet.dev pjetxl.dev uniprint.dev
 DEVICE_DEVS6=
 DEVICE_DEVS7=
 DEVICE_DEVS8=
-DEVICE_DEVS9=pbm.dev pbmraw.dev pgm.dev pgmraw.dev pgnm.dev pgnmraw.dev pnm.dev pnmraw.dev ppm.dev ppmraw.dev
+DEVICE_DEVS9=pbm.dev pbmraw.dev pgm.dev pgmraw.dev pgnm.dev pgnmraw.dev pnm.dev pnmraw.dev ppm.dev ppmraw.dev pamcmyk32.dev
 DEVICE_DEVS10=tiffcrle.dev tiffg3.dev tiffg32d.dev tiffg4.dev tifflzw.dev tiffpack.dev
 DEVICE_DEVS11=tiff12nc.dev tiff24nc.dev tiffgray.dev tiff32nc.dev tiffsep.dev
 DEVICE_DEVS12=psmono.dev psgray.dev bit.dev bitrgb.dev bitcmyk.dev
@@ -339,6 +328,8 @@ CC_SHARED=$(CC_)
 
 include $(GLSRCDIR)/dvx-head.mak
 include $(GLSRCDIR)/gs.mak
+# psromfs.mak must precede lib.mak
+include $(GLSRCDIR)/psromfs.mak
 include $(GLSRCDIR)/lib.mak
 include $(PSSRCDIR)/int.mak
 include $(PSSRCDIR)/cfonts.mak

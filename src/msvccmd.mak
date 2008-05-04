@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: msvccmd.mak,v 1.11 2008/03/23 15:27:55 Arabidopsis Exp $
+# $Id: msvccmd.mak,v 1.12 2008/05/04 14:34:40 Arabidopsis Exp $
 # Command definition section for Microsoft Visual C++ 4.x/5.x,
 # Windows NT or Windows 95 platform.
 # Created 1997-05-22 by L. Peter Deutsch from msvc4/5 makefiles.
@@ -70,9 +70,6 @@ CONFLDTR=-ol
 
 PLATOPT=
 
-INTASM=
-PCFBASM=
-
 # Make sure we get the right default target for make.
 
 dosdefault: default
@@ -114,7 +111,7 @@ CPFLAGS=/GB $(QI0f)
 !endif
 !endif
 
-!if $(FPU_TYPE)>0 && $(MSVC_VERSION)<5
+!if $(MSVC_VERSION)<5
 FPFLAGS=/FPi87
 !else
 FPFLAGS=

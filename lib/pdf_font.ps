@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: pdf_font.ps,v 1.11 2008/03/23 15:28:29 Arabidopsis Exp $
+% $Id: pdf_font.ps,v 1.12 2008/05/04 14:34:57 Arabidopsis Exp $
 % PDF font operations.
 
 % Finding a font by name can't give a proper result when PDF font names aren't unique.
@@ -587,8 +587,17 @@ setglobal
 		% If the font isn't available, synthesize one based on
 		% its descriptor.
   dup /Font resourcestatus {
-    pop pop pdffindcachedfont
+    pop pop dup pdffindcachedfont
+    dup .isregisteredfont
+    % <font-resource> <fontname> <font> true	% font preloaded from disk
+    % <font-resource> <fontname> <font> false	% font preloaded from document
+    { exch pop false } { pop true } ifelse
   } {
+    true
+  } ifelse
+  % <font-resource> <font> false	% font preloaded from disk
+  % <font-resource> <fontname> true	% font not loaded yet or embedded
+  {
     1 index /FontDescriptor knownoget {
 		% Stack: font-res fontname fontdesc
       dup /Flags oget
@@ -660,7 +669,7 @@ setglobal
 		% No descriptor available, use the default algorithm.
       pdffindcachedfont
     } ifelse
-  } ifelse
+  } if
   exch pop
 } bdef
 
@@ -674,6 +683,12 @@ setglobal
 /readfontfilter {	% <proc> readfontfilter <filter>
   0 () /SubFileDecode filter
 } bdef
+
+% Adobe Acrobat doesn't skip space characters after eexec
+/eexec_pdf_param_dict mark
+  .eexec_param_dict {} forall
+  /keep_spaces true
+.dicttomark readonly def
 
 % When Type 1 font reading procedure is executing, a copy of this dictionary is current.
 % We have to do something special about embedded fonts that execute definefont
@@ -707,7 +722,7 @@ setglobal
   /eexec {
 	% Assume the font dictionary is directly below the file on the stack
     count 0 gt { /topFontDict 2 index cvlit store } if
-    //.eexec_param_dict /eexecDecode filter
+    //eexec_pdf_param_dict /eexecDecode filter
 
     //missing-type1-procs begin
     /userdict .systemvar begin
@@ -718,11 +733,29 @@ setglobal
     { stop } if
   } bdef
 
-  currentdict dup
+  /readonly-op-dict <<
+    /stringtype 0
+    /arraytype 0
+    /packedarraytype 0
+    /dicttype 0
+  >> readonly def
+
+  /readonly { % bug 689617
+    dup type //readonly-op-dict exch known {
+    readonly
+  } {
+    (   **** Warning: Type 1 font applies operator readonly to a wrong type.\n)
+    pdfformaterror
+  } ifelse } .bind def
+
+  currentdict dup dup
   /undef_proc_warning undef
   /missing-type1-procs undef
+  /readonly-op-dict undef
 
 end readonly def
+
+currentdict /eexec_pdf_param_dict .undef
 
 /readtype1 {		% <font-resource> <stream-dict> readtype1 <font>
    1 index exch                       % res res stream
@@ -853,8 +886,6 @@ end readonly def
 
 /buildTrueType {	% <TrueType-font-resource> buildTrueType <font>
   dup /BaseFont oget
-  /Repaired true store	% flag that we had warnings
-  TTFWarnList 1 index true put	% Add fontname to the list
   dup /Font resourcestatus dup { exch pop exch pop } if not
   TTfonts 2 index known and {
     dup TTfonts exch get

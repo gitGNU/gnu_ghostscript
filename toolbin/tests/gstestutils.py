@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- Mode: python -*-
 
-#    Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
+#    Copyright (C) 2002 Artifex Software, Inc.
+#    All Rights Reserved.
 # 
 # This file is part of GNU ghostscript
 #
@@ -20,7 +21,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gstestutils.py,v 1.8 2007/09/10 14:08:47 Arabidopsis Exp $
+# $Id: gstestutils.py,v 1.9 2008/05/04 14:35:06 Arabidopsis Exp $
 
 # Utilities and documentation for Ghostscript testing using the Python
 # 'unittest' framework.

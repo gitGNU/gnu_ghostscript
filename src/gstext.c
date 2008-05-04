@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gstext.c,v 1.12 2008/03/23 15:27:49 Arabidopsis Exp $ */
+/* $Id: gstext.c,v 1.13 2008/05/04 14:34:51 Arabidopsis Exp $ */
 /* Driver text interface support */
 
 #include "memory_.h"
@@ -299,7 +299,8 @@ gs_text_update_dev_color(gs_state * pgs, gs_text_enum_t * pte)
 
 static inline uint text_do_draw(gs_state * pgs)
 {
-    return (pgs->text_rendering_mode == 3 ? TEXT_DO_NONE : TEXT_DO_DRAW);
+    return (pgs->text_rendering_mode == 3 ?
+        TEXT_DO_NONE | TEXT_RENDER_MODE_3 : TEXT_DO_DRAW);
 }
 
 /* Begin PostScript-equivalent text operations. */

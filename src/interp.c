@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: interp.c,v 1.11 2008/03/23 15:27:56 Arabidopsis Exp $ */
+/* $Id: interp.c,v 1.12 2008/05/04 14:34:41 Arabidopsis Exp $ */
 /* Ghostscript language interpreter */
 #include "memory_.h"
 #include "string_.h"
@@ -924,7 +924,7 @@ interp(i_ctx_t **pi_ctx_p /* context for execution, updated if resched */,
 	dputc('\n');
 	osp = save_osp;
 	esp = save_esp;
-	fflush(dstderr);
+	dflush();
     }
 #endif
 /* Objects that have attributes (arrays, dictionaries, files, and strings) */

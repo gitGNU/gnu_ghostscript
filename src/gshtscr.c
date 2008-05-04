@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gshtscr.c,v 1.10 2008/03/23 15:27:37 Arabidopsis Exp $ */
+/* $Id: gshtscr.c,v 1.11 2008/05/04 14:34:40 Arabidopsis Exp $ */
 /* Screen (Type 1) halftone processing for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -255,7 +255,7 @@ gs_screen_order_init_memory(gx_ht_order * porder, const gs_state * pgs,
                             gs_memory_t * mem)
 {
     gs_matrix imat;
-    ulong max_size = max_tile_cache_bytes;
+    ulong max_size = gx_ht_cache_default_bits_size();
     int code;
 
     if (phsp->frequency < 0.1)

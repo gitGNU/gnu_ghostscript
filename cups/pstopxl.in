@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# "$Id: pstopxl.in,v 1.1 2007/09/11 15:25:05 Arabidopsis Exp $"
+# "$Id: pstopxl.in,v 1.2 2008/05/04 14:35:12 Arabidopsis Exp $"
 #
 # CUPS PCL XL/PCL 6 filter script for Ghostscript.
 #
@@ -51,7 +51,7 @@ gsopts="$gsopts -dNOMEDIAATTRS -sDEVICE=$device -sstdout=%stderr"
 
 # See if we have a filename on the command-line...
 if test -z "$6"; then
-	ifile="-"
+	ifile="-_"
 else
 	ifile="$6"
 fi
@@ -63,5 +63,5 @@ echo DEBUG: Running $bindir/@GS@ $gsopts -sOUTPUTFILE="%stdout" "$ifile" 1>&2
 exec $bindir/@GS@ $gsopts -sOUTPUTFILE="%stdout" "$ifile"
 
 #
-# End of "$Id: pstopxl.in,v 1.1 2007/09/11 15:25:05 Arabidopsis Exp $".
+# End of "$Id: pstopxl.in,v 1.2 2008/05/04 14:35:12 Arabidopsis Exp $".
 #

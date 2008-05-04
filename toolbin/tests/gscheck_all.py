@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-#    Copyright (C) 2002 Aladdin Enterprises.  All rights reserved.
+#    Copyright (C) 2002 Artifex Software, Inc.
+#    All Rights Reserved.
 # 
 # This file is part of GNU ghostscript
 #
@@ -19,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gscheck_all.py,v 1.6 2007/09/10 14:08:49 Arabidopsis Exp $
+# $Id: gscheck_all.py,v 1.7 2008/05/04 14:35:06 Arabidopsis Exp $
 
 # Run all the Ghostscript 'gscheck' tests.
 

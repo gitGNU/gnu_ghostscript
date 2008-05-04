@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsovrc.h,v 1.8 2007/09/11 15:23:44 Arabidopsis Exp $ */
+/* $Id: gsovrc.h,v 1.9 2008/05/04 14:34:57 Arabidopsis Exp $ */
 /* overprint/overprint mode compositor interface */
 
 #ifndef gsovrc_INCLUDED
@@ -265,6 +265,12 @@ struct gs_overprint_params_s {
      *     mode.
      */
     bool            retain_spot_comps;
+
+    /* 
+     * Don't we print anything with overprint ? 
+     * This info may come from the clist reader.
+     */
+    bool idle;
 
     /*
      * The list of color model compoents to be retained (i.e.: that are

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevprn.h,v 1.11 2008/03/23 15:27:41 Arabidopsis Exp $ */
+/* $Id: gdevprn.h,v 1.12 2008/05/04 14:34:44 Arabidopsis Exp $ */
 /* Common header file for memory-buffered printers */
 
 #ifndef gdevprn_INCLUDED
@@ -641,7 +641,7 @@ int gdev_prn_free_memory(gx_device *pdev);
  */
 typedef dev_proc_create_buf_device((*create_buf_device_proc_t));
 int gdev_create_buf_device(create_buf_device_proc_t cbd_proc,
-			   gx_device **pbdev, gx_device *target,
+			   gx_device **pbdev, gx_device *target, int y,
 			   const gx_render_plane_t *render_plane,
 			   gs_memory_t *mem, gx_band_complexity_t *band_complexity);
 

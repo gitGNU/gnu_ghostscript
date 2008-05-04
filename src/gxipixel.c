@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxipixel.c,v 1.12 2008/03/23 15:28:05 Arabidopsis Exp $ */
+/* $Id: gxipixel.c,v 1.13 2008/05/04 14:34:48 Arabidopsis Exp $ */
 /* Common code for ImageType 1 and 4 initialization */
 #include "gx.h"
 #include "math_.h"
@@ -197,7 +197,7 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
     const int bps = pim->BitsPerComponent;
     bool masked = penum->masked;
     const float *decode = pim->Decode;
-    gs_matrix mat;
+    gs_matrix_double mat;
     int index_bps;
     const gs_color_space *pcs = pim->ColorSpace;
     gs_logical_operation_t lop = (pis ? pis->log_op : lop_default);
@@ -211,29 +211,53 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
     bool device_color = true;
     gs_fixed_rect obox, cbox;
 
+    penum->Width = width;
+    penum->Height = height;
     if (pmat == 0)
 	pmat = &ctm_only(pis);
-    if ((code = gs_matrix_invert(&pim->ImageMatrix, &mat)) < 0 ||
-	(code = gs_matrix_multiply(&mat, pmat, &mat)) < 0
+    if ((code = gs_matrix_invert_to_double(&pim->ImageMatrix, &mat)) < 0 ||
+	(code = gs_matrix_multiply_double(&mat, pmat, &mat)) < 0
 	) {
 	gs_free_object(mem, penum, "gx_default_begin_image");
 	return code;
     }
-    penum->matrix = mat;
+    /*penum->matrix = mat;*/
+    penum->matrix.xx = mat.xx;
+    penum->matrix.xy = mat.xy;
+    penum->matrix.yx = mat.yx;
+    penum->matrix.yy = mat.yy;
+    penum->matrix.tx = mat.tx;
+    penum->matrix.ty = mat.ty;
     if_debug6('b', " [%g %g %g %g %g %g]\n",
 	      mat.xx, mat.xy, mat.yx, mat.yy, mat.tx, mat.ty);
     /* following works for 1, 2, 4, 8, 12, 16 */
     index_bps = (bps < 8 ? bps >> 1 : (bps >> 2) + 1);
-    mtx = float2fixed(mat.tx);
-    mty = float2fixed(mat.ty);
-    row_extent.x = float2fixed(width * mat.xx + mat.tx) - mtx;
+    /* 
+     * Compute extents with distance transformation.
+     */
+    if (mat.tx > 0)
+	mtx = float2fixed(mat.tx);
+    else { /* Use positive values to ensure round down. */
+	int f = (int)-mat.tx + 1;
+
+	mtx = float2fixed(mat.tx + f) - int2fixed(f);
+    }
+    if (mat.ty > 0)
+	mty = float2fixed(mat.ty);
+    else {  /* Use positive values to ensure round down. */
+	int f = (int)-mat.ty + 1;
+
+	mty = float2fixed(mat.ty + f) - int2fixed(f);
+    }
+
+    row_extent.x = float2fixed_rounded(width * mat.xx);
     row_extent.y =
 	(is_fzero(mat.xy) ? fixed_0 :
-	 float2fixed(width * mat.xy + mat.ty) - mty);
+	 float2fixed_rounded(width * mat.xy));
     col_extent.x =
 	(is_fzero(mat.yx) ? fixed_0 :
-	 float2fixed(height * mat.yx + mat.tx) - mtx);
-    col_extent.y = float2fixed(height * mat.yy + mat.ty) - mty;
+	 float2fixed_rounded(height * mat.yx));
+    col_extent.y = float2fixed_rounded(height * mat.yy);
     gx_image_enum_common_init((gx_image_enum_common_t *)penum,
 			      (const gs_data_image_t *)pim,
 			      &image1_enum_procs, dev,
@@ -245,14 +269,14 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
     } else {
 	int rw = penum->rect.w, rh = penum->rect.h;
 
-	x_extent.x = float2fixed(rw * mat.xx + mat.tx) - mtx;
+	x_extent.x = float2fixed_rounded(rw * mat.xx);
 	x_extent.y =
 	    (is_fzero(mat.xy) ? fixed_0 :
-	     float2fixed(rw * mat.xy + mat.ty) - mty);
+	     float2fixed_rounded(rw * mat.xy));
 	y_extent.x =
 	    (is_fzero(mat.yx) ? fixed_0 :
-	     float2fixed(rh * mat.yx + mat.tx) - mtx);
-	y_extent.y = float2fixed(rh * mat.yy + mat.ty) - mty;
+	     float2fixed_rounded(rh * mat.yx));
+	y_extent.y = float2fixed_rounded(rh * mat.yy);
     }
     if (masked) {	/* This is imagemask. */
 	if (bps != 1 || pcs != NULL || penum->alpha || decode[0] == decode[1]) {
@@ -504,9 +528,16 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
 		  penum->clip_image);
 	dda_init(penum->dda.row.x, mtx, col_extent.x, height);
 	dda_init(penum->dda.row.y, mty, col_extent.y, height);
+	penum->dst_width = row_extent.x;
+	penum->dst_height = col_extent.y;
+	penum->yi0 = fixed2int_pixround_perfect(dda_current(penum->dda.row.y)); /* For gs_image_class_0_interpolate. */
 	if (penum->rect.y) {
-	    dda_advance(penum->dda.row.x, penum->rect.y);
-	    dda_advance(penum->dda.row.y, penum->rect.y);
+	    int y = penum->rect.y;
+
+	    while (y--) {
+		dda_next(penum->dda.row.x);
+		dda_next(penum->dda.row.y);
+	    }
 	}
 	penum->cur.x = penum->prev.x = dda_current(penum->dda.row.x);
 	penum->cur.y = penum->prev.y = dda_current(penum->dda.row.y);

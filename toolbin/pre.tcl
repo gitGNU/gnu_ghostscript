@@ -1,6 +1,7 @@
 #!/usr/bin/tclsh
 
-#    Copyright (C) 2000-2002 Artifex Software, Inc. All rights reserved.
+# Copyright (C) 2000-2007 Artifex Software, Inc.
+# All rights reserved.
 # 
 # This file is part of GNU ghostscript
 #
@@ -17,9 +18,9 @@
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
+#
 
-
-# $Id: pre.tcl,v 1.7 2008/03/23 15:28:32 Arabidopsis Exp $
+# $Id: pre.tcl,v 1.8 2008/05/04 14:35:09 Arabidopsis Exp $
 
 # Check various aspects of an about-to-be-released Ghostscript fileset.
 # Only applicable to filesets 6.0 and later (assumes use of CVS).
@@ -159,10 +160,19 @@ foreach d "[glob doc/*.htm] doc/gs-vms.hlp" {
 }
 
 if {$argv == {update}} {
-	# Update dates in .htm and .1 files.
+    # Update dates in .htm and .1 files.
     proc updoc {doc before after} {
-	set tmpfile /tmp/[pid]
-	catch {file delete $tmpfile}
+	set tmpfile [file join /tmp [pid]]
+	set access [list RDWR CREAT EXCL TRUNC]
+	set perm 0600
+	if {[catch {open $tmpfile $access $perm} fid ]} {
+	    # something went wrong
+	     error "Could not open tempfile."
+	}
+	if {[catch {close $fid} err]} {
+	    error "Failed closing temporary file: $err"
+	}
+
 	exec perl -pwe "s{$before}{$after}" < $doc > $tmpfile
 	file rename -force $tmpfile $doc
     }
@@ -227,7 +237,7 @@ foreach doc $manlist {
     # We must be careful not to include the string $,I,d,: in any pattern,
     # since CVS/RCS will substitute for it!
     if {![regexp {^\.\\" [$]Id: ([^ ]+) ([0-9.]+) ([0-9][0-9][0-9][0-9])/([0-9][0-9])/([0-9][0-9])} $idline skip file idrevision idyear idmonth idday]} {
-	message "In $doc, can't parse $Id line: $idline"
+	message "In $doc, can't parse \$Id line: $idline"
 	continue
     }
     if {$file != [file tail $doc]} {

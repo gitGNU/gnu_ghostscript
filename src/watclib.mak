@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: watclib.mak,v 1.12 2008/03/23 15:27:40 Arabidopsis Exp $
+# $Id: watclib.mak,v 1.13 2008/05/04 14:34:43 Arabidopsis Exp $
 # makefile for MS-DOS / Watcom C/C++ library testing.
 
 libdefault: $(GLOBJ)gslib.exe
@@ -115,9 +115,6 @@ STUB=$(%WATCOM)\binb\wstub.exe
 !ifndef CPU_TYPE
 CPU_TYPE=386
 !endif
-!ifndef FPU_TYPE
-FPU_TYPE=0
-!endif
 
 !ifndef SYNC
 SYNC=winsync
@@ -180,7 +177,7 @@ $(GLOBJ)gp_iwatc.$(OBJ): $(GLSRC)gp_iwatc.c $(stat__h) $(string__h)\
 
 BEGINFILES=*.err
 
-LIB_ONLY=$(GLOBJ)gslib.obj $(GLOBJ)gsnogc.obj $(GLOBJ)gconfig.obj $(GLOBJ)gscdefs.obj
+LIB_ONLY=$(GLOBJ)gslib.obj $(GLOBJ)gsnogc.obj $(GLOBJ)gconfig.obj $(GLOBJ)gscdefs.obj $(GLOBJ)gsromfs$(COMPILE_INITS).$(OBJ)
 ll_tr=ll.tr
 $(ll_tr): $(TOP_MAKEFILES)
 	echo OPTION STACK=64k >$(ll_tr)
@@ -188,6 +185,7 @@ $(ll_tr): $(TOP_MAKEFILES)
 	echo SYSTEM DOS4G >>$(ll_tr)
 	echo OPTION STUB=$(STUB) >>$(ll_tr)
 !endif
+	echo FILE $(GLOBJ)gsromfs$(COMPILE_INITS).$(OBJ) >>$(ll_tr)
 	echo FILE $(GLOBJ)gsnogc.obj >>$(ll_tr)
 	echo FILE $(GLOBJ)gconfig.obj >>$(ll_tr)
 	echo FILE $(GLOBJ)gscdefs.obj >>$(ll_tr)

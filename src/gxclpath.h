@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxclpath.h,v 1.9 2008/03/23 15:28:10 Arabidopsis Exp $ */
+/*$Id: gxclpath.h,v 1.10 2008/05/04 14:34:53 Arabidopsis Exp $ */
 /* Definitions and support procedures for higher-level band list commands */
 /* Extends (requires) gxcldev.h */
 
@@ -252,6 +252,7 @@ void cmd_clear_known(gx_device_clist_writer * cldev, uint known);
 
 /* Compute the written CTM length. */
 int cmd_write_ctm_return_length(gx_device_clist_writer * cldev, const gs_matrix *m);
+int cmd_write_ctm_return_length_nodevice(const gs_matrix *m);
 /* Write out CTM. */
 int cmd_write_ctm(const gs_matrix *m, byte *dp, int len);
 

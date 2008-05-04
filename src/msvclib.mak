@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: msvclib.mak,v 1.13 2008/03/23 15:28:10 Arabidopsis Exp $
+# $Id: msvclib.mak,v 1.14 2008/05/04 14:34:53 Arabidopsis Exp $
 # makefile for Microsoft Visual C++ 4.1 or later, Windows NT or Windows 95 LIBRARY.
 #
 # All configurable options are surrounded by !ifndef/!endif to allow 
@@ -357,27 +357,6 @@ CPU_TYPE=486
 #CPU_TYPE=601
 !endif
 
-!if "$(CPU_FAMILY)"=="i386"
-
-# Intel(-compatible) processors are the only ones for which the CPU type
-# doesn't indicate whether a math coprocessor is present.
-# For Intel processors only, define the math coprocessor (FPU) type.
-# Options are -1 (optimize for no FPU), 0 (optimize for FPU present,
-# but do not require a FPU), 87, 287, or 387.
-# If you have a 486 or Pentium CPU, you should normally set FPU_TYPE to 387,
-# since most of these CPUs include the equivalent of an 80387 on-chip;
-# however, the 486SX and the Cyrix 486SLC do not have an on-chip FPU, so if
-# you have one of these CPUs and no external FPU, set FPU_TYPE to -1 or 0.
-# An xx87 option means that the executable will run only if a FPU
-# of that type (or higher) is available: this is NOT currently checked
-# at runtime.
-
-! ifndef FPU_TYPE
-FPU_TYPE=387
-! endif
-
-!endif
-
 # Define the .dev module that implements thread and synchronization
 # primitives for this platform.  Don't change this unless you really know
 # what you're doing.
@@ -455,21 +434,6 @@ DEVICE_DEVS20=
 
 # ---------------------------- End of options ---------------------------- #
 
-# Derive values for FPU_TYPE for non-Intel processors.
-
-!if "$(CPU_FAMILY)"=="ppc"
-! if $(CPU_TYPE)>601
-FPU_TYPE=2
-! else
-FPU_TYPE=1
-! endif
-!endif
-
-!if "$(CPU_FAMILY)"=="alpha"
-# *** alpha *** This needs fixing
-FPU_TYPE=1
-!endif
-
 # Define the name of the makefile -- used in dependencies.
 
 MAKEFILE=$(GLSRCDIR)\msvclib.mak
@@ -484,7 +448,7 @@ BEGINFILES2=$(GLOBJDIR)\$(GS).ilk $(GLOBJDIR)\$(GS).pdb $(GLOBJDIR)\genarch.ilk 
 # Define these right away because they modify the behavior of
 # msvccmd.mak, msvctail.mak & winlib.mak.
 
-LIB_ONLY=$(GLOBJDIR)\gslib.obj $(GLOBJDIR)\gsnogc.obj $(GLOBJDIR)\gconfig.obj $(GLOBJDIR)\gscdefs.obj
+LIB_ONLY=$(GLOBJDIR)\gslib.obj $(GLOBJDIR)\gsnogc.obj $(GLOBJDIR)\gconfig.obj $(GLOBJDIR)\gscdefs.obj $(GLOBJDIR)\gsromfs$(COMPILE_INITS).obj
 MAKEDLL=0
 PLATFORM=mslib32_
 
@@ -512,11 +476,12 @@ $(GLGEN)mslib32_.dev: $(mslib32__) $(ECHOGS_XE) $(GLGEN)mswin32_.dev
 # The library tester EXE
 $(GS_XE):  $(GS_ALL) $(DEVS_ALL) $(LIB_ONLY) $(LIBCTR)
 	copy $(ld_tr) $(GLGENDIR)\gslib32.tr
+	echo $(GLOBJDIR)\gsromfs$(COMPILE_INITS).$(OBJ) >> $(GLGENDIR)\gslib32.tr
 	echo $(GLOBJ)gsnogc.obj >> $(GLGENDIR)\gslib32.tr
 	echo $(GLOBJ)gconfig.obj >> $(GLGENDIR)\gslib32.tr
 	echo $(GLOBJ)gscdefs.obj >> $(GLGENDIR)\gslib32.tr
 	echo  /SUBSYSTEM:CONSOLE > $(GLGENDIR)\gslib32.rsp
 	echo  /OUT:$(GS_XE) >> $(GLGENDIR)\gslib32.rsp
-	$(LINK) $(LCT) @$(GLGENDIR)\gslib32.rsp $(GLOBJ)gslib @$(GLGENDIR)\gslib32.tr @$(LIBCTR) $(INTASM)
+	$(LINK) $(LCT) @$(GLGENDIR)\gslib32.rsp $(GLOBJ)gslib @$(GLGENDIR)\gslib32.tr @$(LIBCTR)
 	-del $(GLGENDIR)\gslib32.rsp
 	-del $(GLGENDIR)\gslib32.tr

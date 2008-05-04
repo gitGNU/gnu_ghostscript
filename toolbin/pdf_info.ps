@@ -14,7 +14,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 %
-% $Id: pdf_info.ps,v 1.3 2007/09/11 15:25:16 Arabidopsis Exp $
+% $Id: pdf_info.ps,v 1.4 2008/05/04 14:35:09 Arabidopsis Exp $
 
 % Dump some info from a PDF file
 
@@ -37,7 +37,7 @@ pop			% discard the dict from where
 
 () =
 File dup (r) file runpdfbegin
-/PDFPageCount exch def pop
+/PDFPageCount pdfpagecount def
 print ( has ) print PDFPageCount =print ( pages.) =
 flush
 

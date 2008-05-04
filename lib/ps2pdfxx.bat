@@ -1,5 +1,5 @@
 @echo off
-@rem $Id: ps2pdfxx.bat,v 1.3 2007/05/07 11:22:07 Arabidopsis Exp $
+@rem $Id: ps2pdfxx.bat,v 1.4 2008/05/04 14:34:58 Arabidopsis Exp $
 rem Internal batch file for calling pdfwrite driver.
 
 rem The files that call this one (ps2pdf*.bat) write the command-line
@@ -23,7 +23,7 @@ rem appears before other options.
 :run
 echo -sOutputFile#%2 >>_.at2
 copy /b /y _.at2+_.at >NUL
-echo -c .setpdfwrite -f %1 >>_.at2
+echo -c .setpdfwrite -f%1 >>_.at2
 %GSC% @_.at @_.at2
 goto end
 

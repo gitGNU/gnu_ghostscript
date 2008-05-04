@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsalloc.c,v 1.11 2008/03/23 15:27:41 Arabidopsis Exp $ */
+/* $Id: gsalloc.c,v 1.12 2008/05/04 14:34:43 Arabidopsis Exp $ */
 /* Standard memory allocator */
 #include "gx.h"
 #include "memory_.h"
@@ -328,10 +328,10 @@ ialloc_reset(gs_ref_memory_t * mem)
     mem->cc.rtop = 0;
     mem->cc.has_refs = false;
     mem->allocated = 0;
-    mem->inherited = 0;
     mem->changes = 0;
     mem->scan_limit = 0;
     mem->total_scanned = 0;
+    mem->total_scanned_after_compacting = 0;
     ialloc_reset_free(mem);
 }
 

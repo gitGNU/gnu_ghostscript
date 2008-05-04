@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,10 +17,9 @@
 
 */
 
-/* $Id: gdevsvga.c,v 1.9 2008/03/23 15:27:53 Arabidopsis Exp $ */
+/* $Id: gdevsvga.c,v 1.10 2008/05/04 14:34:56 Arabidopsis Exp $ */
 /* SuperVGA display drivers */
 #include "memory_.h"
-#include "gconfigv.h"		/* for USE_ASM */
 #include "gx.h"
 #include "gserrors.h"
 #include "gxarith.h"		/* for ...log2 */
@@ -755,22 +754,13 @@ vesa_open(gx_device * dev)
 static void
 vesa_set_page(gx_device_svga * dev, int pn, int wnum)
 {
-#if USE_ASM
-    extern void vesa_call_set_page(void (*)(int, int), int, int);
+    registers regs;
 
-    if (dev->info.vesa.bios_set_page != NULL)
-	vesa_call_set_page(dev->info.vesa.bios_set_page, pn << dev->info.vesa.pn_shift, wnum);
-    else
-#endif
-    {
-	registers regs;
-
-	regs.rshort.dx = pn << dev->info.vesa.pn_shift;
-	regs.h.ah = 0x4f;
-	regs.h.al = 5;
-	regs.rshort.bx = wnum;
-	int86(0x10, &regs, &regs);
-    }
+    regs.rshort.dx = pn << dev->info.vesa.pn_shift;
+    regs.h.ah = 0x4f;
+    regs.h.al = 5;
+    regs.rshort.bx = wnum;
+    int86(0x10, &regs, &regs);
 }
 
 /* ------ The ATI Wonder device ------ */

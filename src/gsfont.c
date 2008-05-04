@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsfont.c,v 1.11 2008/03/23 15:27:51 Arabidopsis Exp $ */
+/* $Id: gsfont.c,v 1.12 2008/05/04 14:34:53 Arabidopsis Exp $ */
 /* Font operators for Ghostscript library */
 #include "gx.h"
 #include "memory_.h"
@@ -478,8 +478,8 @@ gs_makefont(gs_font_dir * pdir, const gs_font * pfont,
 	    dlprintf1("[m]XUID(%u)", (uint) (-pbfont->UID.id));
 	else
 	    dlprintf("[m]no UID");
-	dprintf7(", FontType=%d,\n[m]  new FontMatrix=[%g %g %g %g %g %g]\n",
-		 pfont->FontType,
+	dprintf8(", FontType=%d, base=0x%lx,\n[m]  new FontMatrix=[%g %g %g %g %g %g]\n",
+		 pfont->FontType, (ulong)pfont->base,
 		 pmat->xx, pmat->xy, pmat->yx, pmat->yy,
 		 pmat->tx, pmat->ty);
     }

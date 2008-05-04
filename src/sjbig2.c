@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sjbig2.c,v 1.9 2008/03/23 15:27:49 Arabidopsis Exp $ */
+/* $Id: sjbig2.c,v 1.10 2008/05/04 14:34:52 Arabidopsis Exp $ */
 /* jbig2decode filter implementation -- hooks in libjbig2dec */
 
 #include "stdint_.h"
@@ -138,10 +138,11 @@ s_jbig2decode_free_global_data(void *data)
 
 /* store a global ctx pointer in our state structure */
 int
-s_jbig2decode_set_global_data(stream_state *ss, void *data)
+s_jbig2decode_set_global_data(stream_state *ss, s_jbig2_global_data_t *gd)
 {
     stream_jbig2decode_state *state = (stream_jbig2decode_state*)ss;
-    state->global_ctx = (Jbig2GlobalCtx*)data;
+    state->global_struct = gd;
+    state->global_ctx = (Jbig2GlobalCtx*)(gd ? gd->data : 0);
     return 0;
 }
 
@@ -241,6 +242,7 @@ s_jbig2decode_set_defaults(stream_state *ss)
     stream_jbig2decode_state *const state = (stream_jbig2decode_state *) ss;
     
     /* state->global_ctx is not owned by us */
+    state->global_struct = NULL;
     state->global_ctx = NULL;
     state->decode_ctx = NULL;
     state->image = NULL;

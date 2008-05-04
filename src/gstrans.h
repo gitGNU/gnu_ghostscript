@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gstrans.h,v 1.9 2007/09/11 15:23:46 Arabidopsis Exp $ */
+/* $Id: gstrans.h,v 1.10 2008/05/04 14:34:45 Arabidopsis Exp $ */
 /* Transparency definitions and interface */
 
 #ifndef gstrans_INCLUDED
@@ -25,6 +25,7 @@
 
 #include "gstparam.h"
 #include "gxcomp.h"
+#include "gsmatrix.h"
 
 /*
  * Define the operations for the PDF 1.4 transparency compositor.
@@ -34,7 +35,6 @@ typedef enum {
     PDF14_POP_DEVICE,
     PDF14_BEGIN_TRANS_GROUP,
     PDF14_END_TRANS_GROUP,
-    PDF14_INIT_TRANS_MASK,
     PDF14_BEGIN_TRANS_MASK,
     PDF14_END_TRANS_MASK,
     PDF14_SET_BLEND_PARAMS
@@ -46,7 +46,6 @@ typedef enum {
     "PDF14_POP_DEVICE       ",\
     "PDF14_BEGIN_TRANS_GROUP",\
     "PDF14_END_TRANS_GROUP  ",\
-    "PDF14_INIT_TRANS_MASK  ",\
     "PDF14_BEGIN_TRANS_MASK ",\
     "PDF14_END_TRANS_MASK   ",\
     "PDF14_SET_BLEND_PARAMS "\
@@ -65,7 +64,6 @@ typedef struct gs_function_s gs_function_t;
 
 typedef struct gs_transparency_source_s {
     float alpha;		/* constant alpha */
-    gs_transparency_mask_t *mask;
 } gs_transparency_source_t;
 
 struct gs_pdf14trans_params_s {
@@ -95,6 +93,9 @@ struct gs_pdf14trans_params_s {
     gs_transparency_source_t opacity;
     gs_transparency_source_t shape;
     bool mask_is_image;
+    gs_matrix ctm;
+    bool idle;
+    bool replacing;
 };
 
 #ifndef gs_pdf14trans_params_DEFINED
@@ -157,9 +158,6 @@ int gs_begin_transparency_mask(gs_state *pgs,
 int gs_end_transparency_mask(gs_state *pgs,
 			     gs_transparency_channel_selector_t csel);
 
-int gs_init_transparency_mask(gs_state *pgs,
-			      gs_transparency_channel_selector_t csel);
-
 int gs_discard_transparency_layer(gs_state *pgs);
 
 /*
@@ -169,9 +167,6 @@ int gx_begin_transparency_group(gs_imager_state * pis, gx_device * pdev,
 				const gs_pdf14trans_params_t * pparams);
 
 int gx_end_transparency_group(gs_imager_state * pis, gx_device * pdev);
-
-int gx_init_transparency_mask(gs_imager_state * pis,
-				const gs_pdf14trans_params_t * pparams);
 
 int gx_begin_transparency_mask(gs_imager_state * pis, gx_device * pdev,
 				const gs_pdf14trans_params_t * pparams);

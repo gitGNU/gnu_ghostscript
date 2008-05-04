@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsjmorec.h,v 1.7 2007/09/11 15:23:56 Arabidopsis Exp $ */
+/* $Id: gsjmorec.h,v 1.8 2008/05/04 14:34:51 Arabidopsis Exp $ */
 /* "Wrapper" for Independent JPEG Group code jmorecfg.h */
 
 #ifndef gsjmorec_INCLUDED
@@ -27,14 +27,11 @@
 
 /* Remove unwanted / unneeded features. */
 #undef DCT_IFAST_SUPPORTED
-#if FPU_TYPE <= 0
-#  undef DCT_FLOAT_SUPPORTED
-#endif
 #undef C_MULTISCAN_FILES_SUPPORTED
 #undef C_PROGRESSIVE_SUPPORTED
 #undef ENTROPY_OPT_SUPPORTED
 #undef INPUT_SMOOTHING_SUPPORTED
-
+#undef DCT_FLOAT_SUPPORTED
 
 /* Progressive JPEG is required for PDF 1.3.
  * Don't undefine D_MULTISCAN_FILES_SUPPORTED and D_PROGRESSIVE_SUPPORTED

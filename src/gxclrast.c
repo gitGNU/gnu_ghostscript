@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxclrast.c,v 1.12 2008/03/23 15:28:04 Arabidopsis Exp $ */
+/*$Id: gxclrast.c,v 1.13 2008/05/04 14:34:48 Arabidopsis Exp $ */
 /* Command list interpreter/rasterizer */
 #include "memory_.h"
 #include "gx.h"
@@ -246,15 +246,15 @@ static int read_begin_image(command_buf_t *pcb, gs_image_common_t *pic,
 static int read_put_params(command_buf_t *pcb, gs_imager_state *pis,
                             gx_device_clist_reader *cdev,
                             gs_memory_t *mem);
-static int read_create_compositor(command_buf_t *pcb, gs_imager_state *pis,
-                                   gx_device_clist_reader *cdev,
-                                   gs_memory_t *mem, gx_device ** ptarget);
+static int read_create_compositor(command_buf_t *pcb, gs_memory_t *mem, gs_composite_t **ppcomp);
+static int apply_create_compositor(gx_device_clist_reader *cdev, gs_imager_state *pis, 
+				   gs_memory_t *mem, gs_composite_t *pcomp, 
+				   int x0, int y0, gx_device **ptarget);
 static int read_alloc_ht_buff(ht_buff_t *, uint, gs_memory_t *);
 static int read_ht_segment(ht_buff_t *, command_buf_t *, gs_imager_state *,
 			    gx_device *, gs_memory_t *);
 
 static const byte *cmd_read_rect(int, gx_cmd_rect *, const byte *);
-static const byte *cmd_read_matrix(gs_matrix *, const byte *);
 static const byte *cmd_read_short_bits(command_buf_t *pcb, byte *data,
                                         int width_bytes, int height,
                                         uint raster, const byte *cbp);
@@ -270,6 +270,190 @@ static int clist_decode_segment(gx_path *, int, fixed[6],
 static int clist_do_polyfill(gx_device *, gx_path *,
                               const gx_drawing_color *,
                               gs_logical_operation_t);
+
+
+static inline void
+enqueue_compositor(gs_composite_t **ppcomp_first, gs_composite_t **ppcomp_last, gs_composite_t *pcomp)
+{
+    if (*ppcomp_last == NULL) {
+	pcomp->prev = pcomp->next = NULL;
+	*ppcomp_last = *ppcomp_first = pcomp;
+    } else {
+	(*ppcomp_last)->next = pcomp;
+	pcomp->prev = *ppcomp_last;
+	pcomp->next = NULL;
+	*ppcomp_last = pcomp;
+    }
+}
+
+#if 0 /* Appears unused - keep for a while. */
+static inline gs_composite_t * 
+dequeue_last_compositor(gs_composite_t **ppcomp_first, gs_composite_t **ppcomp_last)
+{
+    gs_composite_t *pcomp = *ppcomp_last;
+
+    if (*ppcomp_first == *ppcomp_last)
+	*ppcomp_first = *ppcomp_last = NULL;
+    else {
+	*ppcomp_last = (*ppcomp_last)->prev;
+	pcomp->prev = NULL;
+	(*ppcomp_last)->next = NULL;
+    }
+    return pcomp;
+}
+
+static inline gs_composite_t * 
+dequeue_first_compositor(gs_composite_t **ppcomp_first, gs_composite_t **ppcomp_last)
+{
+    gs_composite_t *pcomp = *ppcomp_first;
+
+    if (*ppcomp_first == *ppcomp_last)
+	*ppcomp_first = *ppcomp_last = NULL;
+    else {
+	*ppcomp_first = (*ppcomp_first)->next;
+	pcomp->next = NULL;
+	(*ppcomp_last)->prev = NULL;
+    }
+    return pcomp;
+}
+#endif
+
+static inline int
+dequeue_compositor(gs_composite_t **ppcomp_first, gs_composite_t **ppcomp_last, gs_composite_t *pcomp)
+{
+    if (*ppcomp_last == *ppcomp_first) {
+	if (*ppcomp_last == pcomp) {
+	    *ppcomp_last = *ppcomp_first = NULL;
+	    return 0;
+	} else 
+	    return_error(gs_error_unregistered); /* Must not happen. */
+    } else {
+	gs_composite_t *pcomp_next = pcomp->next, *pcomp_prev = pcomp->prev;
+
+	if (*ppcomp_last == pcomp)
+	    *ppcomp_last = pcomp->prev;
+	else
+	    pcomp_next->prev = pcomp_prev;
+	if (*ppcomp_first == pcomp)
+	    *ppcomp_first = pcomp->next;
+	else
+	    pcomp_prev->next = pcomp_next;
+	pcomp->next = pcomp->prev = NULL;
+	return 0;
+    }
+}
+
+static inline void
+free_compositor(gs_composite_t *pcomp, gs_memory_t *mem)
+{
+    gs_free_object(mem, pcomp, "free_compositor");
+}
+
+static inline bool
+is_null_compositor_op(const byte *cbp, int *length)
+{
+    if (cbp[0] == cmd_opv_end_run) {
+	*length = 1;
+	return true;
+    }
+    return false;
+}
+
+static int
+execute_compositor_queue(gx_device_clist_reader *cdev, gx_device **target, gx_device **tdev, gs_imager_state *pis, 
+			 gs_composite_t **ppcomp_first, gs_composite_t **ppcomp_last, gs_composite_t *pcomp_from,
+			 int x0, int y0, gs_memory_t *mem, bool idle)
+{
+    while (pcomp_from != NULL) {
+	gs_composite_t *pcomp = pcomp_from;
+	int code;
+
+	pcomp_from = pcomp->next;
+	code = dequeue_compositor(ppcomp_first, ppcomp_last, pcomp);
+	if (code < 0)
+	    return code;
+	pcomp->idle |= idle;
+	code = apply_create_compositor(cdev, pis, mem, pcomp, x0, y0, target); /* Releases the compositor. */
+	if (code < 0)
+	    return code;
+	*tdev = *target;
+    }
+    return 0;
+}
+
+static void
+mark_as_idle(gs_composite_t *pcomp_start, gs_composite_t *pcomp_end)
+{
+    gs_composite_t *pcomp = pcomp_start;
+
+    while (pcomp != NULL) {
+	pcomp->idle = true;
+	if (pcomp == pcomp_end)
+	    break;
+	pcomp = pcomp->next;
+    }
+}
+
+static inline void
+drop_compositor_queue(gs_composite_t **ppcomp_first, gs_composite_t **ppcomp_last, 
+		      gs_composite_t *pcomp_from, gs_memory_t *mem)
+{
+    gs_composite_t *pcomp;
+
+    do {
+	pcomp = *ppcomp_last;
+	dequeue_compositor(ppcomp_first, ppcomp_last, *ppcomp_last);
+	free_compositor(pcomp, mem);
+    } while (pcomp != pcomp_from);
+}
+
+static int
+read_set_misc_map(byte cb, command_buf_t *pcb, gs_imager_state *pis, gs_memory_t *mem)
+{
+    const byte *cbp = pcb->ptr;
+    frac *mdata;
+    int *pcomp_num;
+    uint count;
+    cmd_map_contents cont =
+	(cmd_map_contents)(cb & 0x30) >> 4;
+    int code;
+
+    code = cmd_select_map(cb & 0xf, cont,
+			  pis,
+			  &pcomp_num,
+			  &mdata, &count, mem);
+
+    if (code < 0)
+	return code;
+    /* Get component number if relevant */
+    if (pcomp_num == NULL)
+	cbp++;
+    else {
+	*pcomp_num = (int) *cbp++;
+		if_debug1('L', " comp_num=%d",
+			*pcomp_num);
+    }
+    if (cont == cmd_map_other) {
+	cbp = cmd_read_data(pcb, (byte *)mdata, count, cbp);
+
+#ifdef DEBUG
+	if (gs_debug_c('L')) {
+	    uint i;
+
+	    for (i = 0; i < count / sizeof(*mdata); ++i)
+		dprintf1(" 0x%04x", mdata[i]);
+	    dputc('\n');
+	}
+    } else {
+	if_debug0('L', " none\n");
+#endif
+    }
+    /* Recompute the effective transfer, */
+    /* in case this was a transfer map. */
+    gx_imager_set_effective_xfer(pis);
+    pcb->ptr = cbp;
+    return 0;
+}
 
 int
 clist_playback_band(clist_playback_action playback_action,
@@ -339,6 +523,7 @@ clist_playback_band(clist_playback_action playback_action,
     bool clipper_dev_open;
     patch_fill_state_t pfs;
     stream_state *st = s->state; /* Save because s_close resets s->state. */
+    gs_composite_t *pcomp_first = NULL, *pcomp_last = NULL;
 
     cbuf.data = (byte *)cbuf_storage;
     cbuf.size = cbuf_size;
@@ -511,46 +696,11 @@ in:				/* Initialize for a new page. */
 				    if_debug1('L', " data_x=%d\n", data_x);
 				    break;
 				case cmd_set_misc_map >> 6:
-				    {
-					frac *mdata;
-					int *pcomp_num;
-					uint count;
-					cmd_map_contents cont =
-					    (cmd_map_contents)(cb & 0x30) >> 4;
-
-					code = cmd_select_map(cb & 0xf, cont,
-							      &imager_state,
-							      &pcomp_num,
-							      &mdata, &count, mem);
-
-					if (code < 0)
-					    goto out;
-					/* Get component number if relevant */
-					if (pcomp_num == NULL)
-					    cbp++;
-					else {
-					    *pcomp_num = (int) *cbp++;
-				    	    if_debug1('L', " comp_num=%d",
-							    *pcomp_num);
-					}
-					if (cont == cmd_map_other) {
-					    cmd_read((byte *)mdata, count, cbp);
-#ifdef DEBUG
-					    if (gs_debug_c('L')) {
-						uint i;
-
-						for (i = 0; i < count / sizeof(*mdata); ++i)
-						    dprintf1(" 0x%04x", mdata[i]);
-						dputc('\n');
-					    }
-					} else {
-					    if_debug0('L', " none\n");
-#endif
-					}
-				    }
-				    /* Recompute the effective transfer, */
-				    /* in case this was a transfer map. */
-				    gx_imager_set_effective_xfer(&imager_state);
+				    cbuf.ptr = cbp;
+				    code = read_set_misc_map(cb, &cbuf, &imager_state, mem);
+				    if (code < 0)
+					goto out;
+				    cbp = cbuf.ptr;
 				    break;
 				case cmd_set_misc_halftone >> 6: {
 				    uint num_comp;
@@ -1279,12 +1429,155 @@ idata:			data_size = 0;
 				 */
 				gx_imager_setscreenphase(&imager_state,
 					    -x0, -y0, gs_color_select_all);
-				code = read_create_compositor(&cbuf, &imager_state,
-							      cdev, mem, &target);
-				cbp = cbuf.ptr;
-				tdev = target;
-				if (code < 0)
+				cbp -= 2; /* Step back to simplify the cycle invariant below. */
+				for (;;) {
+				    /* This internal loop looks ahead for compositor commands and 
+				       copies them into a temporary queue. Compositors, which do not paint something,
+				       are marked as idle and later executed with a reduced functionality 
+				       for reducing time and memory expense. */
+				    int len;
+
+				    if (cbp >= cbuf.limit) {
+					code = top_up_cbuf(&cbuf, &cbp);
+					if (code < 0)
+					    goto out;
+				    }
+				    if (cbp[0] == cmd_opv_extend && cbp[1] == cmd_opv_ext_create_compositor) {
+					gs_composite_t *pcomp, *pcomp_opening;
+
+					cbuf.ptr = cbp += 2;
+					code = read_create_compositor(&cbuf, mem, &pcomp);
+					if (code < 0)
+					    goto out;
+					cbp = cbuf.ptr;
+					if (pcomp == NULL)
+					    continue;
+					pcomp_opening = pcomp_last;
+					code = pcomp->type->procs.is_closing(pcomp, &pcomp_opening, tdev);
+					if (code < 0)
+					    goto out;
+					else if (code == 0) {
+					    /* Enqueue. */
+					    enqueue_compositor(&pcomp_first, &pcomp_last, pcomp);
+					} else if (code == 1) {
+					    /* Execute idle. */
+					    enqueue_compositor(&pcomp_first, &pcomp_last, pcomp);
+					    code = execute_compositor_queue(cdev, &target, &tdev, 
+						&imager_state, &pcomp_first, &pcomp_last, pcomp_opening, x0, y0, mem, true);
+					    if (code < 0)
+						goto out;
+					} else if (code == 2) {
+					    /* The opening command was executed. Execute the queue. */
+					    enqueue_compositor(&pcomp_first, &pcomp_last, pcomp);
+					    code = execute_compositor_queue(cdev, &target, &tdev, 
+						&imager_state, &pcomp_first, &pcomp_last, pcomp_first, x0, y0, mem, false);
+					    if (code < 0)
+						goto out;
+					} else if (code == 3) {
+					    /* Replace last compositors. */
+					    code = execute_compositor_queue(cdev, &target, &tdev, 
+						&imager_state, &pcomp_first, &pcomp_last, pcomp_opening, x0, y0, mem, true);
+					    if (code < 0)
+						goto out;
+					    enqueue_compositor(&pcomp_first, &pcomp_last, pcomp);
+					} else if (code == 4) {
+					    /* Replace specific compositor. */
+					    code = dequeue_compositor(&pcomp_first, &pcomp_last, pcomp_opening);
+					    if (code < 0)
+						goto out;
+					    enqueue_compositor(&pcomp_first, &pcomp_last, pcomp);
+					    free_compositor(pcomp_opening, mem);
+					} else if (code == 5) {
+					    /* Annihilate the last compositors. */
+					    enqueue_compositor(&pcomp_first, &pcomp_last, pcomp);
+					    drop_compositor_queue(&pcomp_first, &pcomp_last, pcomp_opening, mem);
+					} else if (code == 6) {
+					    /* Mark as idle. */
+					    enqueue_compositor(&pcomp_first, &pcomp_last, pcomp);
+					    mark_as_idle(pcomp_opening, pcomp);
+					} else {
+					    code = gs_note_error(gs_error_unregistered); /* Must not happen. */
+					    goto out;
+					}
+  				    } else if (is_null_compositor_op(cbp, &len)) {
+  					cbuf.ptr = cbp += len;
+				    } else if (cbp[0] == cmd_opv_end_page) {
+					/* End page, drop the queue. */
+					code = execute_compositor_queue(cdev, &target, &tdev, 
+						&imager_state, &pcomp_first, &pcomp_last, pcomp_first, x0, y0, mem, true);
+					if (code < 0)
+					    goto out;
+					break;
+				    } else if (pcomp_last != NULL &&
+					    pcomp_last->type->procs.is_friendly(pcomp_last, cbp[0], cbp[1])) {
+					/* Immediately execute friendly commands 
+					   inside the compositor lookahead loop.
+					   Currently there are few friendly commands for the pdf14 compositor only
+					   due to the logic defined in c_pdf14trans_is_friendly.
+					   This code duplicates some code portions from the main loop,
+					   but we have no better idea with no slowdown to the main loop.
+					 */
+					uint cb;
+
+					switch (*cbp++) {
+					    case cmd_opv_extend: 
+						switch (*cbp++) {
+						    case cmd_opv_ext_put_halftone:
+							{
+							    uint    ht_size;
+
+							    enc_u_getw(ht_size, cbp);
+							    code = read_alloc_ht_buff(&ht_buff, ht_size, mem);
+							    if (code < 0)
+								goto out;
+							}
+							break;
+						    case cmd_opv_ext_put_ht_seg:
+							cbuf.ptr = cbp;
+							code = read_ht_segment(&ht_buff, &cbuf,
+									       &imager_state, tdev,
+									       mem);
+							cbp = cbuf.ptr;
+							if (code < 0)
+							    goto out;
+							break;
+						    default:
+							code = gs_note_error(gs_error_unregistered); /* Must not happen. */
+							goto out;
+						}
+						break;
+					    case cmd_opv_set_misc:
+						cb = *cbp++;
+						switch (cb >> 6) {
+						    case cmd_set_misc_map >> 6:
+							cbuf.ptr = cbp;
+							code = read_set_misc_map(cb, &cbuf, &imager_state, mem);
+							if (code < 0)
+							    goto out;
+							cbp = cbuf.ptr;
+							break;
+						    default:
+							code = gs_note_error(gs_error_unregistered); /* Must not happen. */
+							goto out;
+						}
+						break;
+					    default:
+						code = gs_note_error(gs_error_unregistered); /* Must not happen. */
+						goto out;
+					}
+				    } else {
+					/* A drawing command, execute entire queue. */
+					code = execute_compositor_queue(cdev, &target, &tdev, 
+					    &imager_state, &pcomp_first, &pcomp_last, pcomp_first, x0, y0, mem, false);
+  					if (code < 0)
+  					    goto out;
+  					break;
+  				    }
+				}
+				if (pcomp_last != NULL) {
+				    code = gs_note_error(gs_error_unregistered);
 				    goto out;
+				}
 				break;
 			    case cmd_opv_ext_put_halftone:
                                 {
@@ -1714,6 +2007,8 @@ idata:			data_size = 0;
     ht_buff.ht_size = 0;
     ht_buff.read_size = 0;
 
+    if (pcomp_last != NULL)
+	drop_compositor_queue(&pcomp_first, &pcomp_last, NULL, mem);
     rc_decrement(pcs, "clist_playback_band");
     gx_cpath_free(&clip_path, "clist_render_band exit");
     gx_path_free(&path, "clist_render_band exit");
@@ -2267,17 +2562,11 @@ extern_gs_find_compositor();
 
 static int
 read_create_compositor(
-    command_buf_t *             pcb,
-    gs_imager_state *           pis,
-    gx_device_clist_reader *    cdev,
-    gs_memory_t *               mem,
-    gx_device **                ptarget )
+    command_buf_t *pcb,  gs_memory_t *mem, gs_composite_t **ppcomp)
 {
     const byte *                cbp = pcb->ptr;
     int                         comp_id = 0, code = 0;
     const gs_composite_type_t * pcomp_type = 0;
-    gs_composite_t *            pcomp;
-    gx_device *                 tdev = *ptarget;
 
     /* fill the command buffer (see comment above) */
     if (pcb->end - cbp < MAX_CLIST_COMPOSITOR_SIZE + sizeof(comp_id)) {
@@ -2292,7 +2581,7 @@ read_create_compositor(
         return_error(gs_error_unknownerror);
 
     /* de-serialize the compositor */
-    code = pcomp_type->procs.read(&pcomp, cbp, pcb->end - cbp, mem);
+    code = pcomp_type->procs.read(ppcomp, cbp, pcb->end - cbp, mem);
     
     /* If we read more than the maximum expected, return a rangecheck error */
     if ( code > MAX_CLIST_COMPOSITOR_SIZE )
@@ -2301,9 +2590,19 @@ read_create_compositor(
     if (code > 0)
         cbp += code;
     pcb->ptr = cbp;
-    if (code < 0 || pcomp == 0)
-        return code;
+    return code;
+}
 
+static int apply_create_compositor(gx_device_clist_reader *cdev, gs_imager_state *pis, 
+				   gs_memory_t *mem, gs_composite_t *pcomp, 
+				   int x0, int y0, gx_device **ptarget)
+{
+    gx_device *tdev = *ptarget;
+    int code;
+
+    code = pcomp->type->procs.adjust_ctm(pcomp, x0, y0, pis);
+    if (code < 0)
+        return code;
     /*
      * Apply the compositor to the target device; note that this may
      * change the target device.
@@ -2313,6 +2612,8 @@ read_create_compositor(
         rc_increment(tdev);
         *ptarget = tdev;
     }
+    if (code < 0)
+        return code;
 
     /* Perform any updates for the clist device required */
     code = pcomp->type->procs.clist_compositor_read_update(pcomp,
@@ -2321,8 +2622,7 @@ read_create_compositor(
         return code;
 
     /* free the compositor object */
-    if (pcomp != 0)
-        gs_free_object(mem, pcomp, "read_create_compositor");
+    gs_free_object(mem, pcomp, "read_create_compositor");
 
     return code;
 }
@@ -2380,18 +2680,6 @@ cmd_read_rect(int op, gx_cmd_rect * prect, const byte * cbp)
 	cmd_getw(prect->height, cbp);
     }
     return cbp;
-}
-
-/* Read a transformation matrix. */
-static const byte *
-cmd_read_matrix(gs_matrix * pmat, const byte * cbp)
-{
-    stream s;
-
-    s_init(&s, NULL);
-    sread_string(&s, cbp, 1 + sizeof(*pmat));
-    sget_matrix(&s, pmat);
-    return cbp + stell(&s);
 }
 
 /*

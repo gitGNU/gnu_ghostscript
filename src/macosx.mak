@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: macosx.mak,v 1.13 2008/03/23 15:27:59 Arabidopsis Exp $
+# $Id: macosx.mak,v 1.14 2008/05/04 14:34:44 Arabidopsis Exp $
 # makefile for MacOS X/darwin/gcc/framework configuration.
 
 # ------------------------------- Options ------------------------------- #
@@ -307,18 +307,6 @@ XLIBDIR=
 #XLIBS=Xt Xext X11
 XLIBS=
 
-# Define whether this platform has floating point hardware:
-#	FPU_TYPE=2 means floating point is faster than fixed point.
-# (This is the case on some RISCs with multiple instruction dispatch.)
-#	FPU_TYPE=1 means floating point is at worst only slightly slower
-# than fixed point.
-#	FPU_TYPE=0 means that floating point may be considerably slower.
-#	FPU_TYPE=-1 means that floating point is always much slower than
-# fixed point.
-
-# might as well be true on ppc
-FPU_TYPE=2
-
 # Define the .dev module that implements thread and synchronization
 # primitives for this platform.
 
@@ -369,11 +357,6 @@ STDIO_IMPLEMENTATION=c
 # unix-dll.mak when building a shared object.
 DISPLAY_DEV=
 
-# Define the name table capacity size of 2^(16+n).
-# Setting this to a non-zero value will slow down the interpreter.
-
-EXTEND_NAMES=0
-
 # Choose the device(s) to include.  See devs.mak for details,
 # devs.mak and contrib.mak for the list of available devices.
 
@@ -391,7 +374,7 @@ DEVICE_DEVS5=
 DEVICE_DEVS6=
 DEVICE_DEVS7=
 DEVICE_DEVS8=
-DEVICE_DEVS9=$(DD)pbm.dev $(DD)pbmraw.dev $(DD)pgm.dev $(DD)pgmraw.dev $(DD)pgnm.dev $(DD)pgnmraw.dev $(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev $(DD)pkm.dev $(DD)pkmraw.dev $(DD)pksm.dev $(DD)pksmraw.dev
+DEVICE_DEVS9=$(DD)pbm.dev $(DD)pbmraw.dev $(DD)pgm.dev $(DD)pgmraw.dev $(DD)pgnm.dev $(DD)pgnmraw.dev $(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev $(DD)pkm.dev $(DD)pkmraw.dev $(DD)pksm.dev $(DD)pksmraw.dev $(DD)pamcmyk32.dev
 DEVICE_DEVS10=
 DEVICE_DEVS11=
 DEVICE_DEVS12=
@@ -430,6 +413,8 @@ CC_NO_WARN=$(CC_) -Wno-cast-qual -Wno-traditional
 
 include $(GLSRCDIR)/unixhead.mak
 include $(GLSRCDIR)/gs.mak
+# psromfs.mak must precede lib.mak
+include $(GLSRCDIR)/psromfs.mak
 include $(GLSRCDIR)/lib.mak
 include $(PSSRCDIR)/int.mak
 include $(PSSRCDIR)/cfonts.mak

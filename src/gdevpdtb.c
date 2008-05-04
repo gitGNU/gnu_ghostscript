@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdtb.c,v 1.10 2008/03/23 15:28:13 Arabidopsis Exp $ */
+/* $Id: gdevpdtb.c,v 1.11 2008/05/04 14:34:54 Arabidopsis Exp $ */
 /* BaseFont implementation for pdfwrite */
 #include "memory_.h"
 #include "ctype_.h"
@@ -127,7 +127,7 @@ pdf_end_fontfile(gx_device_pdf *pdev, pdf_data_writer_t *pdw)
 int
 pdf_base_font_alloc(gx_device_pdf *pdev, pdf_base_font_t **ppbfont,
 		    gs_font_base *font, const gs_matrix *orig_matrix, 
-		    bool is_standard, bool orig_name)
+		    bool is_standard)
 {
     gs_memory_t *mem = pdev->pdf_memory;
     gs_font *copied;
@@ -135,7 +135,7 @@ pdf_base_font_alloc(gx_device_pdf *pdev, pdf_base_font_t **ppbfont,
     pdf_base_font_t *pbfont =
 	gs_alloc_struct(mem, pdf_base_font_t,
 			&st_pdf_base_font, "pdf_base_font_alloc");
-    const gs_font_name *pfname = pdf_choose_font_name((gs_font *)font, orig_name);
+    const gs_font_name *pfname = &font->font_name;
     gs_const_string font_name;
     char fnbuf[3 + sizeof(long) / 3 + 1]; /* .F#######\0 */
     int code;

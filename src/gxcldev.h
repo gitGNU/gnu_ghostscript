@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxcldev.h,v 1.11 2008/03/23 15:27:48 Arabidopsis Exp $ */
+/*$Id: gxcldev.h,v 1.12 2008/05/04 14:34:50 Arabidopsis Exp $ */
 /* Internal definitions for Ghostscript command lists. */
 
 #ifndef gxcldev_INCLUDED
@@ -610,6 +610,10 @@ typedef struct cmd_rects_enum_s {
 
 #define RECT_RECOVER(codevar) (codevar < 0 && (codevar = clist_VMerror_recover(cdev, codevar)) >= 0)
 #define SET_BAND_CODE(codevar) (re.band_code = codevar)
+
+/* Read a transformation matrix. */
+const byte *cmd_read_matrix(gs_matrix * pmat, const byte * cbp);
+
 
 /* ------ Exported by gxclrect.c ------ */
 

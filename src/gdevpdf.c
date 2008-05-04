@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdf.c,v 1.11 2008/03/23 15:27:55 Arabidopsis Exp $ */
+/* $Id: gdevpdf.c,v 1.12 2008/05/04 14:34:40 Arabidopsis Exp $ */
 /* PDF-writing driver */
 #include "fcntl_.h"
 #include "memory_.h"
@@ -949,8 +949,8 @@ pdf_write_page(gx_device_pdf *pdev, int page_num)
 		pdev->PDFXTrimBoxToMediaBoxOffset.data[3] >= 0) {
 	    trimbox[0] = mediabox[0] + pdev->PDFXTrimBoxToMediaBoxOffset.data[0];
 	    trimbox[1] = mediabox[1] + pdev->PDFXTrimBoxToMediaBoxOffset.data[3];
-	    trimbox[2] = mediabox[2] + pdev->PDFXTrimBoxToMediaBoxOffset.data[1];
-	    trimbox[3] = mediabox[3] + pdev->PDFXTrimBoxToMediaBoxOffset.data[2];
+	    trimbox[2] = mediabox[2] - pdev->PDFXTrimBoxToMediaBoxOffset.data[1];
+	    trimbox[3] = mediabox[3] - pdev->PDFXTrimBoxToMediaBoxOffset.data[2];
 	}
 	if (pdev->PDFXSetBleedBoxToMediaBox)
 	    print_bleedbox = true;

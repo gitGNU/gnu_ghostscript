@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sfilter.h,v 1.7 2007/09/11 15:24:07 Arabidopsis Exp $ */
+/* $Id: sfilter.h,v 1.8 2008/05/04 14:34:51 Arabidopsis Exp $ */
 /* Definitions for simple Ghostscript streams */
 /* Requires scommon.h; should require strimpl.h only if any templates */
 /* are referenced, but some compilers always require strimpl.h. */
@@ -60,6 +60,7 @@ typedef struct stream_exD_state_s {
     int lenIV;			/* # of initial decoded bytes to skip */
     stream_PFBD_state *pfb_state;	/* state of underlying */
 				/* PFBDecode stream, if any */
+    bool keep_spaces;           /* PS skips spaces after eexec, PDF doesn't */
     /* The following change dynamically. */
     int odd;			/* odd digit */
     long record_left;		/* data left in binary record in .PFB file, */

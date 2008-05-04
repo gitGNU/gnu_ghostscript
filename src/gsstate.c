@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsstate.c,v 1.11 2008/03/23 15:28:17 Arabidopsis Exp $ */
+/* $Id: gsstate.c,v 1.12 2008/05/04 14:34:56 Arabidopsis Exp $ */
 /* Miscellaneous graphics state operators for Ghostscript library */
 #include "gx.h"
 #include "memory_.h"
@@ -417,7 +417,7 @@ gs_grestore_only(gs_state * pgs)
     gs_free_object(pgs->memory, saved, "gs_grestore");
 
     /* update the overprint compositor, if necessary */
-    if (prior_overprint || pgs->overprint)
+    if (prior_overprint != pgs->overprint)
         return gs_do_set_overprint(pgs);
     else
         return 0;

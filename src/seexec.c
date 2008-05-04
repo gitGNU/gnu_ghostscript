@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: seexec.c,v 1.8 2008/03/23 15:28:02 Arabidopsis Exp $ */
+/* $Id: seexec.c,v 1.9 2008/05/04 14:34:45 Arabidopsis Exp $ */
 /* eexec filters */
 #include "stdio_.h"		/* includes std.h */
 #include "strimpl.h"
@@ -77,6 +77,7 @@ s_exD_set_defaults(stream_state * st)
     ss->hex_left = max_long;
     /* Clear pointers for GC */
     ss->pfb_state = 0;
+    ss->keep_spaces = false;    /* PS mode */
 }
 
 /* Initialize the state for reading and decrypting. */
@@ -112,10 +113,11 @@ s_exD_process(stream_state * st, stream_cursor_read * pr,
 	const byte *const decoder = scan_char_decoder;
 	int i;
 
-        if (ss->pfb_state == 0) {
+        if (ss->pfb_state == 0 && !ss->keep_spaces) {
 	    /*
 	     * Skip '\t', '\r', '\n', ' ' at the beginning of the input stream,
-	     * because Adobe interpreters do this. Don't skip '\0' or '\f'.
+	     * because Adobe PS interpreters do this. Don't skip '\0' or '\f'.
+             * Acrobat Reader doesn't skip spaces at all.
 	     */
 	    for (; rcount; rcount--, p++) {
 		byte c = p[1];
@@ -221,8 +223,10 @@ hp:	r = *pr;
  * so that it will stay under the limit even after adding min_in_size
  * for a subsequent filter in a pipeline.  Note that we have to specify
  * a size of at least 128 so that filter_read won't round it up.
+ * The value of 132 is samll enough for the sample file of the bug 689577 but
+ * still sufficient for comparefiles/fonttest.pdf .
  */
 const stream_template s_exD_template = {
-    &st_exD_state, s_exD_init, s_exD_process, 8, 200,
+    &st_exD_state, s_exD_init, s_exD_process, 8, 132,
     NULL, s_exD_set_defaults
 };

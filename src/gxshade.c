@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxshade.c,v 1.11 2008/03/23 15:27:43 Arabidopsis Exp $ */
+/* $Id: gxshade.c,v 1.12 2008/05/04 14:34:46 Arabidopsis Exp $ */
 /* Shading rendering support */
 #include "math_.h"
 #include "gx.h"
@@ -172,12 +172,8 @@ cs_next_packed_decoded(shade_coord_stream_t * cs, int num_bits,
 {
     uint value;
     int code = cs->get_value(cs, num_bits, &value);
-#if ARCH_CAN_SHIFT_FULL_LONG
-    double max_value = (double)(uint) ((1 << num_bits) - 1);
-#else
     double max_value = (double)(uint)
 	(num_bits == sizeof(uint) * 8 ? ~0 : ((1 << num_bits) - 1));
-#endif
 
     if (code < 0)
 	return code;

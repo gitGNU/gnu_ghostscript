@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfe.c,v 1.9 2008/03/23 15:27:48 Arabidopsis Exp $ */
+/* $Id: gdevpdfe.c,v 1.10 2008/05/04 14:34:50 Arabidopsis Exp $ */
 /* Metadata writer. */
 #include "gx.h"
 #include "gserrors.h"
@@ -329,7 +329,8 @@ pdf_xmp_write_translated(gx_device_pdf *pdev, stream *s, const byte *data, int d
 	write(s, data, data_length);
 	return 0;
     } else {
-	UTF16 *buf0, *buf0b;
+	UTF16 *buf0;
+	const UTF16 *buf0b;
 	UTF8 *buf1, *buf1b;
 	int i, j = 0;
 

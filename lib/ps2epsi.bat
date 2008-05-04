@@ -1,5 +1,5 @@
 @echo off 
-@rem $Id: ps2epsi.bat,v 1.3 2007/05/07 11:22:07 Arabidopsis Exp $
+@rem $Id: ps2epsi.bat,v 1.4 2008/05/04 14:34:58 Arabidopsis Exp $
 
 if %1/==/ goto usage
 if %2/==/ goto usage
@@ -15,6 +15,7 @@ rem We bracket the actual file with a few commands to help encapsulation
 echo %%%%Page: 1 1 >> %outfile%
 echo %%%%BeginDocument: %outfile% >> %outfile%
 echo /InitDictCount countdictstack def gsave save mark newpath >> %outfile%
+echo userdict /setpagedevice /pop load put >> %outfile%
 
 rem Append the original onto the preview header
 copy %outfile% + %infile%
