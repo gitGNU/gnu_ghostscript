@@ -14,7 +14,7 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/*$Id: gdevwep24pin.c,v 1.3 2007/08/01 14:25:57 jemarch Exp $*/
+/*$Id: gdevwep24pin.c,v 1.4 2008/05/04 08:52:15 Arabidopsis Exp $*/
 /*
 
 
@@ -87,7 +87,7 @@
 #endif
 
 /* The device descriptors */
-private dev_proc_print_page(wep24pin_print_page);
+static dev_proc_print_page(wep24pin_print_page);
 
 /* Standard WeP device */
 const gx_device_printer far_data gs_wep24pin_device =
@@ -100,13 +100,13 @@ const gx_device_printer far_data gs_wep24pin_device =
 /* ------ Driver procedures ------ */
 
 /* Forward references */
-private void eps_output_run(byte *, int, int, char, FILE *, int);
+static void eps_output_run(byte *, int, int, char, FILE *, int);
 
 /* Send the page to the printer. */
 #define DD 0x40				/* double density flag */
 
 
-private int
+static int
 wep_print_page(gx_device_printer *pdev, FILE *prn_stream, int y_9pin_high,
   const char *init_string, int init_length, const char *end_string,
   int archaic, int tab_hiccup)
@@ -378,7 +378,7 @@ wep_print_page(gx_device_printer *pdev, FILE *prn_stream, int y_9pin_high,
 
 /* Output a single graphics command. */
 /* pass=0 for all columns, 1 for even columns, 2 for odd columns. */
-private void
+static void
 eps_output_run(byte *data, int count, int y_mult,
   char start_graphics, FILE *prn_stream, int pass)
 {	
@@ -426,7 +426,7 @@ eps_output_run(byte *data, int count, int y_mult,
 #endif
 
 #define ESC 0x1b
-private const char eps_init_string[] = {
+static const char eps_init_string[] = {
 #if ARCHAIC
 	ESC, '@', 022 /*^R*/, ESC, 'Q'
 #else
@@ -434,7 +434,7 @@ private const char eps_init_string[] = {
 #endif
 };
 
-private int
+static int
 wep24pin_print_page(gx_device_printer *pdev, FILE *prn_stream)
 {
 	return wep_print_page(pdev, prn_stream, 0, eps_init_string,

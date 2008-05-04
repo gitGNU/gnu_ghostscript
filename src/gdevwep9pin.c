@@ -15,7 +15,7 @@
 
 */
 
-/*$Id: gdevwep9pin.c,v 1.3 2007/08/01 14:25:57 jemarch Exp $*/
+/*$Id: gdevwep9pin.c,v 1.4 2008/05/04 08:52:15 Arabidopsis Exp $*/
 /*
 
 
@@ -59,7 +59,7 @@
 #endif
 
 /* The device descriptor */
-private dev_proc_print_page(wep9pin_print_page);
+static dev_proc_print_page(wep9pin_print_page);
 
 /* WeP 9 Pin device */
 const gx_device_printer far_data gs_wep9pin_device =
@@ -72,10 +72,10 @@ const gx_device_printer far_data gs_wep9pin_device =
 /* ------ Internal routines ------ */
 
 /* Forward references */
-private void wep_output_run(byte *, int, int, char, FILE *, int);
+static void wep_output_run(byte *, int, int, char, FILE *, int);
 
 /* Send the page to the printer. */
-private int
+static int
 wep9pin_print_page1(gx_device_printer *pdev, FILE *prn_stream, int y_9pin_high,
   const char *init_string, int init_length,
   const char *end_string, int end_length)
@@ -247,7 +247,7 @@ wep9pin_print_page1(gx_device_printer *pdev, FILE *prn_stream, int y_9pin_high,
 
 /* Output a single graphics command. */
 /* pass=0 for all columns, 1 for even columns, 2 for odd columns. */
-private void
+static void
 wep_output_run(byte *data, int count, int y_mult,
   char start_graphics, FILE *prn_stream, int pass)
 {	
@@ -280,10 +280,10 @@ wep_output_run(byte *data, int count, int y_mult,
 
 /* The print_page procedures are here, to avoid a forward reference. */
 
-private const char wep_init_string[]	= { 0x18 };
-private const char wep_end_string[]	= { 0x0c };
+static const char wep_init_string[]	= { 0x18 };
+static const char wep_end_string[]	= { 0x0c };
 
-private int
+static int
 wep9pin_print_page(gx_device_printer *pdev, FILE *prn_stream)
 {
 	char init_string[16], end_string[16];
