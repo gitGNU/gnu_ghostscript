@@ -45,4 +45,7 @@
 	* updates from GPL 8.61 release
 	* add LICENSE.Unicode file to cover src/ConvertUTF.[c|h] files
 	* new GNU version: 8.61.0
+	* updates from GPL 8.62 release
+	* gdevxini.c: patch from savannah bug #20270 to correct gv cropping error
+	* new GNU version 8.62.0
 	

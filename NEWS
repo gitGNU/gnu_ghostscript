@@ -1,3 +1,12 @@
+Version 8.62.0 main changes:
+
+* numerous bug fixes  and improvements:
+	- COMPILE_INIT=1 fixes from release 8.61
+	- tiffsep device can use more than 8 colorants
+	- faster shadings, overprinting and transparency
+	- fix some compatibility issues in PDF/A produced with pdfwrite device
+* fixed bug #20270 by patching src/gdevxini.c to avoid cropping issue in gv
+
 Version 8.61.0 main changes:
 
 * numerous bug fixed

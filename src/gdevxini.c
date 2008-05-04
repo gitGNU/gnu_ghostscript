@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevxini.c,v 1.10 2008/03/23 15:27:52 Arabidopsis Exp $ */
+/* $Id: gdevxini.c,v 1.11 2008/05/04 21:04:04 Arabidopsis Exp $ */
 /* X Windows driver initialization/finalization */
 #include "memory_.h"
 #include "x_.h"
@@ -917,6 +917,18 @@ gdev_x_put_params(gx_device * dev, gs_param_list * plist)
 	if (xdev->is_open)
 	    gs_closedevice(dev);
 	xdev->pwin = (Window) pwin;
+    }
+    /* Do not change the image size set by Ghostview */
+    /* This gives the Ghostview user control over the /setpage entry */
+    if (xdev->is_open && xdev->ghostview) {
+	dev->width = values.width;
+	dev->height = values.height;
+	dev->x_pixels_per_inch = values.x_pixels_per_inch;
+	dev->y_pixels_per_inch = values.y_pixels_per_inch;
+	dev->HWResolution[0] = values.HWResolution[0];
+	dev->HWResolution[1] = values.HWResolution[1];
+	dev->MediaSize[0] = values.MediaSize[0];
+	dev->MediaSize[1] = values.MediaSize[1];
     }
     /* If the device is open, resize the window. */
     /* Don't do this if Ghostview is active. */
