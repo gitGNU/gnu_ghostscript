@@ -40,3 +40,9 @@
 2007-09-12 Didier LINK <didier@famille-link.fr>
 	* lots of updates from GPL 8.57 and 8.60 released by Artifex Software Inc.
 	* new GNU version: 8.60.0
+
+2008-05-04 Didier LINK <didier@famille-link.fr>
+	* updates from GPL 8.61 release
+	* add LICENSE.Unicode file to cover src/ConvertUTF.[c|h] files
+	* new GNU version: 8.61.0
+	
