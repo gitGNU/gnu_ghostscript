@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: spngp.c,v 1.8 2008/03/23 15:27:47 Arabidopsis Exp $ */
+/* $Id: spngp.c,v 1.9 2009/04/19 13:54:35 Arabidopsis Exp $ */
 /* PNG pixel prediction filters */
 #include "memory_.h"
 #include "strimpl.h"
@@ -76,6 +76,10 @@ s_pngp_init(stream_state * st, bool need_prev)
 #endif
     ss->row_count = (uint) ((bits_per_row + 7) >> 3);
     ss->end_mask = (1 << (-bits_per_row & 7)) - 1;
+
+    if (ss->Colors > s_PNG_max_Colors)
+	return ERRC; /* Too many colorants */
+
     ss->bpp = (bits_per_pixel + 7) >> 3;
     if (need_prev) {
 	prev_row = gs_alloc_bytes(st->memory, ss->bpp + ss->row_count,

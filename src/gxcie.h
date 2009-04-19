@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxcie.h,v 1.8 2007/09/11 15:24:34 Arabidopsis Exp $ */
+/* $Id: gxcie.h,v 1.9 2009/04/19 13:54:30 Arabidopsis Exp $ */
 /* Internal definitions for CIE color implementation */
 /* Requires gxcspace.h */
 
@@ -97,6 +97,7 @@ cs_proc_concretize_color(gx_concretize_CIEABC);
 cs_proc_remap_color(gx_remap_CIEDEFG);
 cs_proc_remap_color(gx_remap_CIEDEF);
 cs_proc_remap_color(gx_remap_CIEA);
+cs_proc_remap_color(gx_remap_IndexedSpace);
 #endif
 cs_proc_remap_color(gx_remap_CIEABC);
 cs_proc_concretize_color(gx_concretize_CIEA);

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gstrans.h,v 1.10 2008/05/04 14:34:45 Arabidopsis Exp $ */
+/* $Id: gstrans.h,v 1.11 2009/04/19 13:54:27 Arabidopsis Exp $ */
 /* Transparency definitions and interface */
 
 #ifndef gstrans_INCLUDED
@@ -94,8 +94,9 @@ struct gs_pdf14trans_params_s {
     gs_transparency_source_t shape;
     bool mask_is_image;
     gs_matrix ctm;
-    bool idle;
     bool replacing;
+    bool idle; /* For clist reader.*/
+    uint mask_id; /* For clist reader.*/
 };
 
 #ifndef gs_pdf14trans_params_DEFINED

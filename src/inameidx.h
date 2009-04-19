@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: inameidx.h,v 1.8 2008/05/04 14:34:52 Arabidopsis Exp $ */
+/* $Id: inameidx.h,v 1.9 2009/04/19 13:54:33 Arabidopsis Exp $ */
 /* Name index definitions */
 
 #ifndef inameidx_INCLUDED
@@ -26,15 +26,19 @@
 /*
  * The name table machinery has two slightly different configurations:
  * a faster one that limits the total number of names to 64K and allows
- * names up to 16K in size, and a slightly slower one that limits
- * the total to 4M and restricts names to 256 characters.
+ * names up to 16K in size (EXTEND_NAMES == 0), and a slightly slower
+ * one that limits the total to 64K << EXTEND_NAMES and and restricts names
+ * to 16K >> EXTEND_NAMES. Max value of EXTEND_NAMES is 6, which corresponds
+ * to 4M names of up to to 256 characters.
  */
 #ifndef EXTEND_NAMES		/* # of bits beyond 16 */
-#  define EXTEND_NAMES 0
+#  define EXTEND_NAMES 4
 #endif
 
 /* Define the size of a name sub-table. */
-#define NT_LOG2_SUB_SIZE (8 + (EXTEND_NAMES / 2))
+/* With NT_LOG2_SUB_SIZE >= 10 the subtable goes into a large chunk, */
+/* which names_trace_finish() cannot handle. */
+# define NT_LOG2_SUB_SIZE (8 + (EXTEND_NAMES >= 2)) 
 # define NT_SUB_SIZE (1 << NT_LOG2_SUB_SIZE)
 # define NT_SUB_INDEX_MASK (NT_SUB_SIZE - 1)
 

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsimage.c,v 1.12 2008/05/04 14:34:40 Arabidopsis Exp $ */
+/* $Id: gsimage.c,v 1.13 2009/04/19 13:54:23 Arabidopsis Exp $ */
 /* Image setup procedures for Ghostscript library */
 #include "memory_.h"
 #include "math_.h"
@@ -108,9 +108,9 @@ struct gs_image_enum_s {
 				/* only needed for gs_image_next */
     int y;
     bool error;
-    byte wanted[gs_image_max_planes]; /* cache gx_image_planes_wanted */
-    byte client_wanted[gs_image_max_planes]; /* see gsimage.h */
-    image_enum_plane_t planes[gs_image_max_planes]; /* see above */
+    byte wanted[GS_IMAGE_MAX_COMPONENTS]; /* cache gx_image_planes_wanted */
+    byte client_wanted[GS_IMAGE_MAX_COMPONENTS]; /* see gsimage.h */
+    image_enum_plane_t planes[GS_IMAGE_MAX_COMPONENTS]; /* see above */
     /*
      * To reduce setup for transferring complete rows, we maintain a
      * partially initialized parameter array for gx_image_plane_data_rows.
@@ -118,7 +118,7 @@ struct gs_image_enum_s {
      * gx_image_plane_data_rows; the data_x and raster members are reset
      * when needed.
      */
-    gx_image_plane_t image_planes[gs_image_max_planes];
+    gx_image_plane_t image_planes[GS_IMAGE_MAX_COMPONENTS];
 };
 
 gs_private_st_composite(st_gs_image_enum, gs_image_enum, "gs_image_enum",
@@ -200,6 +200,7 @@ gs_image_begin_typed(const gs_image_common_t * pic, gs_state * pgs,
     gx_clip_path *pcpath;
     int code = gx_effective_clip_path(pgs, &pcpath);
     gx_device *dev2 = dev;
+    gx_device_color dc_temp, *pdevc = pgs->dev_color;
 
     if (code < 0)
 	return code;
@@ -225,9 +226,13 @@ gs_image_begin_typed(const gs_image_common_t * pic, gs_state * pgs,
 	    if (code < 0)
 		return code;
 	}
+	if (dev2 != dev) {
+	    set_nonclient_dev_color(&dc_temp, 1);
+	    pdevc = &dc_temp;
+	}
     }
     code = gx_device_begin_typed_image(dev2, (const gs_imager_state *)pgs,
-		NULL, pic, NULL, pgs->dev_color, pcpath, pgs->memory, ppie);
+		NULL, pic, NULL, pdevc, pcpath, pgs->memory, ppie);
     if (code < 0)
 	return code;
     code = is_image_visible(pic, pgs, pcpath);
@@ -398,6 +403,7 @@ int
 gs_image_enum_init(gs_image_enum * penum, gx_image_enum_common_t * pie,
 		   const gs_data_image_t * pim, gs_state *pgs)
 {
+    pgs->device->sgr.stroke_stored = false;
     return gs_image_common_init(penum, pie, pim,
 				(pgs->in_charpath ? NULL :
 				 gs_currentdevice_inline(pgs)));
@@ -457,8 +463,8 @@ gs_image_next(gs_image_enum * penum, const byte * dbytes, uint dsize,
     int px = penum->plane_index;
     int num_planes = penum->num_planes;
     int i, code;
-    uint used[gs_image_max_planes];
-    gs_const_string plane_data[gs_image_max_planes];
+    uint used[GS_IMAGE_MAX_COMPONENTS];
+    gs_const_string plane_data[GS_IMAGE_MAX_COMPONENTS];
 
     if (penum->planes[px].source.size != 0)
 	return_error(gs_error_rangecheck);

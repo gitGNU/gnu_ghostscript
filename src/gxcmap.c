@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxcmap.c,v 1.13 2008/05/04 14:34:43 Arabidopsis Exp $ */
+/* $Id: gxcmap.c,v 1.14 2009/04/19 13:54:26 Arabidopsis Exp $ */
 /* Color mapping for Ghostscript */
 #include "gx.h"
 #include "gserrors.h"
@@ -34,6 +34,7 @@
 #include "gxdither.h"
 #include "gxcdevn.h"
 #include "string_.h"
+#include "gsnamecl.h"  /* Custom color call back define */
 
 /* Structure descriptor */
 public_st_device_color();
@@ -627,7 +628,7 @@ gx_remap_concrete_DGray(const frac * pconc, const gs_color_space * pcs,
 #if ENABLE_CUSTOM_COLOR_CALLBACK
     {
         client_custom_color_params_t * pcb =
-	    (client_custom_color_params_t *) (pis->custom_color_callback);
+	    (client_custom_color_params_t *) (pis->memory->gs_lib_ctx->custom_color_callback);
 
         if (pcb != NULL) {
 	    int code = pcb->client_procs->remap_DeviceGray(pcb, pconc,
@@ -662,7 +663,7 @@ gx_remap_DeviceGray(const gs_client_color * pc, const gs_color_space * pcs,
 #if ENABLE_CUSTOM_COLOR_CALLBACK
     {
         client_custom_color_params_t * pcb =
-	    (client_custom_color_params_t *) (pis->custom_color_callback);
+	    (client_custom_color_params_t *) (pis->memory->gs_lib_ctx->custom_color_callback);
 
         if (pcb != NULL) {
 	    int code = pcb->client_procs->remap_DeviceGray(pcb, &fgray,
@@ -701,7 +702,7 @@ gx_remap_concrete_DRGB(const frac * pconc, const gs_color_space * pcs,
 #if ENABLE_CUSTOM_COLOR_CALLBACK
     {
         client_custom_color_params_t * pcb =
-	    (client_custom_color_params_t *) (pis->custom_color_callback);
+	    (client_custom_color_params_t *) (pis->memory->gs_lib_ctx->custom_color_callback);
 
         if (pcb != NULL) {
 	    int code = pcb->client_procs->remap_DeviceRGB(pcb, pconc,
@@ -738,7 +739,7 @@ gx_remap_DeviceRGB(const gs_client_color * pc, const gs_color_space * pcs,
 #if ENABLE_CUSTOM_COLOR_CALLBACK
     {
         client_custom_color_params_t * pcb =
-	    (client_custom_color_params_t *) (pis->custom_color_callback);
+	    (client_custom_color_params_t *) (pis->memory->gs_lib_ctx->custom_color_callback);
 
         if (pcb != NULL) {
 	    frac conc[3];
@@ -783,7 +784,7 @@ gx_remap_concrete_DCMYK(const frac * pconc, const gs_color_space * pcs,
 #if ENABLE_CUSTOM_COLOR_CALLBACK
     {
         client_custom_color_params_t * pcb =
-	    (client_custom_color_params_t *) (pis->custom_color_callback);
+	    (client_custom_color_params_t *) (pis->memory->gs_lib_ctx->custom_color_callback);
 
         if (pcb != NULL) {
 	    int code = pcb->client_procs->remap_DeviceCMYK(pcb, pconc,
@@ -814,7 +815,7 @@ gx_remap_DeviceCMYK(const gs_client_color * pc, const gs_color_space * pcs,
 #if ENABLE_CUSTOM_COLOR_CALLBACK
     {
         client_custom_color_params_t * pcb =
-	    (client_custom_color_params_t *) (pis->custom_color_callback);
+	    (client_custom_color_params_t *) (pis->memory->gs_lib_ctx->custom_color_callback);
 
         if (pcb != NULL) {
 	    frac conc[4];
@@ -857,11 +858,25 @@ cmap_gray_halftoned(frac gray, gx_device_color * pdc,
         for (i = 0; i < ncomps; i++)
             cm_comps[i] = gx_map_color_frac(pis,
 	    			cm_comps[i], effective_transfer[i]);
+    else {
+        if (dev->color_info.opmode == GX_CINFO_OPMODE_UNKNOWN)
+            check_cmyk_color_model_comps(dev);  
+        if (dev->color_info.opmode == GX_CINFO_OPMODE) {  /* CMYK-like color space */
+            int k = dev->color_info.black_component;
+
+            for (i = 0; i < ncomps; i++) {
+                if (i == k)
+                    cm_comps[i] = frac_1 - gx_map_color_frac(pis,
+	    		(frac)(frac_1 - cm_comps[i]), effective_transfer[i]);
     else
+                    cm_comps[i] = cm_comps[i]; /* Ignore transfer, see PLRM3 p. 494 */
+            }
+        } else {
         for (i = 0; i < ncomps; i++)
             cm_comps[i] = frac_1 - gx_map_color_frac(pis,
 	    		(frac)(frac_1 - cm_comps[i]), effective_transfer[i]);
-
+        }
+    }
     if (gx_render_device_DeviceN(cm_comps, pdc, dev, pis->dev_ht,
 	    				&pis->screen_phase[select]) == 1)
 	gx_color_load_select(pdc, pis, dev, select);
@@ -884,11 +899,25 @@ cmap_gray_direct(frac gray, gx_device_color * pdc, const gs_imager_state * pis,
         for (i = 0; i < ncomps; i++)
             cv[i] = frac2cv(gx_map_color_frac(pis,
 	    			cm_comps[i], effective_transfer[i]));
+    else {
+        if (dev->color_info.opmode == GX_CINFO_OPMODE_UNKNOWN)
+            check_cmyk_color_model_comps(dev);  
+        if (dev->color_info.opmode == GX_CINFO_OPMODE) {  /* CMYK-like color space */
+            int k = dev->color_info.black_component;
+
+            for (i = 0; i < ncomps; i++) {
+                if (i == k)
+                    cv[i] = frac2cv(frac_1 - gx_map_color_frac(pis,
+	    		(frac)(frac_1 - cm_comps[i]), effective_transfer[i]));
     else
+                    cv[i] = frac2cv(cm_comps[i]); /* Ignore transfer, see PLRM3 p. 494 */
+            }
+        } else {
         for (i = 0; i < ncomps; i++)
             cv[i] = frac2cv(frac_1 - gx_map_color_frac(pis,
 	    		(frac)(frac_1 - cm_comps[i]), effective_transfer[i]));
-
+        }
+    }
     /* encode as a color index */
     color = dev_proc(dev, encode_color)(dev, cv);
 

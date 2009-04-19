@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gximage.h,v 1.10 2008/05/04 14:34:42 Arabidopsis Exp $ */
+/* $Id: gximage.h,v 1.11 2009/04/19 13:54:34 Arabidopsis Exp $ */
 /* Default image rendering state structure */
 /* Requires gxcpath.h, gxdevmem.h, gxdcolor.h, gzpath.h */
 
@@ -121,6 +121,12 @@ typedef struct sample_map_s sample_map;
   cc.paint.values[i] =\
     penum->map[i].decode_base + (frac_value) * penum->map[i].decode_factor
 
+
+/* Decode a frac value, to our 16 bit frac form. */
+#define DECODE_FRAC_FRAC(frac_value, frac_value_out, i)\
+  frac_value_out =\
+    gx_unit_frac(penum->map[i].decode_base + (frac_value) * penum->map[i].decode_factor)
+
 /*
  * Declare the pointer that holds the 12-bit unpacking procedure
  * if 12-bit samples are supported, 0 otherwise.
@@ -208,7 +214,6 @@ struct gx_image_enum_s {
     irender_proc((*render));
     const gs_imager_state *pis;
     const gs_color_space *pcs;	/* color space of image */
-    gs_memory_t *memory;
     byte *buffer;		/* for expanding samples to a */
 				/* byte or frac */
     uint buffer_size;

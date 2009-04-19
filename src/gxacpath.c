@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxacpath.c,v 1.12 2008/03/23 15:28:06 Arabidopsis Exp $ */
+/*$Id: gxacpath.c,v 1.13 2009/04/19 13:54:33 Arabidopsis Exp $ */
 /* Accumulator for clipping paths */
 #include "gx.h"
 #include "gserrors.h"
@@ -69,7 +69,7 @@ static const gx_device_cpath_accum gs_cpath_accum_device =
   NULL,
   accum_fill_rectangle,
   NULL,
-  NULL,
+  gx_default_copy_mono,
   NULL,
   NULL,
   NULL,

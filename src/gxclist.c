@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxclist.c,v 1.13 2008/05/04 14:34:42 Arabidopsis Exp $ */
+/*$Id: gxclist.c,v 1.14 2009/04/19 13:54:25 Arabidopsis Exp $ */
 /* Command list document- and page-level code. */
 #include "memory_.h"
 #include "string_.h"
@@ -51,6 +51,7 @@ ENUM_PTRS_WITH(device_clist_enum_ptrs, gx_device_clist *cdev)
         case 1: return ENUM_OBJ((cdev->writer.image_enum_id != gs_no_id ?
                      cdev->writer.color_space.space : 0));
 	case 2: return ENUM_OBJ(cdev->writer.pinst);
+	case 3: return ENUM_OBJ(cdev->writer.cropping_stack);
         default:
         return ENUM_USING(st_imager_state, &cdev->writer.imager_state,
                   sizeof(gs_imager_state), index - 3);
@@ -81,6 +82,7 @@ RELOC_PTRS_WITH(device_clist_reloc_ptrs, gx_device_clist *cdev)
 	    RELOC_VAR(cdev->writer.color_space.space);
         }
 	RELOC_VAR(cdev->writer.pinst);
+	RELOC_VAR(cdev->writer.cropping_stack);
         RELOC_USING(st_imager_state, &cdev->writer.imager_state,
             sizeof(gs_imager_state));
     } else {
@@ -93,9 +95,10 @@ RELOC_PTRS_WITH(device_clist_reloc_ptrs, gx_device_clist *cdev)
     }
 } RELOC_PTRS_END
 public_st_device_clist();
+private_st_clist_writer_cropping_buffer();
 
 /* Forward declarations of driver procedures */
-static dev_proc_open_device(clist_open);
+dev_proc_open_device(clist_open);
 static dev_proc_output_page(clist_output_page);
 static dev_proc_close_device(clist_close);
 static dev_proc_get_band(clist_get_band);
@@ -470,7 +473,11 @@ clist_reset(gx_device * dev)
     cdev->undercolor_removal_id = gs_no_id;
     cdev->device_halftone_id = gs_no_id;
     cdev->image_enum_id = gs_no_id;
-    cdev->cropping_by_path = false;
+    cdev->cropping_min = cdev->save_cropping_min = 0;
+    cdev->cropping_max = cdev->save_cropping_max = cdev->height;
+    cdev->cropping_stack = NULL;
+    cdev->cropping_level = 0;
+    cdev->mask_id_count = cdev->mask_id = cdev->temp_mask_id = 0;
     return 0;
 }
 /*
@@ -619,7 +626,7 @@ clist_close_output_file(gx_device *dev)
 
 /* Open the device by initializing the device state and opening the */
 /* scratch files. */
-static int
+int
 clist_open(gx_device *dev)
 {
     gx_device_clist_writer * const cdev =
@@ -667,9 +674,12 @@ clist_finish_page(gx_device *dev, bool flush)
 
     /* If this is a reader clist, which is about to be reset to a writer,
      * free any band_complexity_array memory used by same.
+     * since we have been rendering, shut down threads
      */
-    if (!CLIST_IS_WRITER((gx_device_clist *)dev))
+    if (!CLIST_IS_WRITER((gx_device_clist *)dev)) {
        	gx_clist_reader_free_band_complexity_array( (gx_device_clist *)dev );
+	clist_teardown_render_threads(dev);
+    }
 
     if (flush) {
 	if (cdev->page_cfile != 0)
@@ -907,3 +917,119 @@ clist_copy_band_complexity(gx_band_complexity_t *this, const gx_band_complexity_
 #endif
     }
 }
+
+int 
+clist_writer_push_no_cropping(gx_device_clist_writer *cdev)
+{
+    clist_writer_cropping_buffer_t *buf = gs_alloc_struct(cdev->memory, 
+		clist_writer_cropping_buffer_t,
+		&st_clist_writer_cropping_buffer, "clist_writer_transparency_push");
+
+    if (buf == NULL)
+	return_error(gs_error_VMerror);
+    if_debug1('v', "[v]push cropping[%d]\n", cdev->cropping_level);
+    buf->next = cdev->cropping_stack;
+    cdev->cropping_stack = buf;
+    buf->cropping_min = cdev->cropping_min;
+    buf->cropping_max = cdev->cropping_max;
+    buf->mask_id = cdev->mask_id;
+    buf->temp_mask_id = cdev->temp_mask_id;
+    cdev->cropping_level++;
+    return 0;
+}
+
+int 
+clist_writer_push_cropping(gx_device_clist_writer *cdev, int ry, int rheight)
+{
+    int code = clist_writer_push_no_cropping(cdev);
+    
+    if (code < 0)
+	return 0;
+    cdev->cropping_min = max(cdev->cropping_min, ry);
+    cdev->cropping_max = min(cdev->cropping_max, ry + rheight);
+    return 0;
+}
+
+int 
+clist_writer_pop_cropping(gx_device_clist_writer *cdev)
+{
+    clist_writer_cropping_buffer_t *buf = cdev->cropping_stack;
+
+    if (buf == NULL)
+	return_error(gs_error_unregistered); /*Must not happen. */
+    cdev->cropping_min = buf->cropping_min;
+    cdev->cropping_max = buf->cropping_max;
+    cdev->mask_id = buf->mask_id;
+    cdev->temp_mask_id = buf->temp_mask_id;
+    cdev->cropping_stack = buf->next;
+    cdev->cropping_level--;
+    if_debug1('v', "[v]pop cropping[%d]\n", cdev->cropping_level);
+    gs_free_object(cdev->memory, buf, "clist_writer_transparency_pop");
+    return 0;
+}
+
+int 
+clist_writer_check_empty_cropping_stack(gx_device_clist_writer *cdev)
+{
+    if (cdev->cropping_stack != NULL) {
+	if_debug1('v', "[v]Error: left %d cropping(s)\n", cdev->cropping_level);
+	return_error(gs_error_unregistered); /* Must not happen */
+    }
+    return 0;
+}
+
+/* Retrieve total size for cfile and bfile. */
+int clist_data_size(const gx_device_clist *cdev, int select)
+{
+    const gx_band_page_info_t *pinfo = &cdev->common.page_info;
+    clist_file_ptr pfile = (!select ? pinfo->bfile : pinfo->cfile);
+    const char *fname = (!select ? pinfo->bfname : pinfo->cfname);
+    int code, size;
+
+    code = pinfo->io_procs->fseek(pfile, 0, SEEK_END, fname);
+    if (code < 0)
+	return_error(gs_error_unregistered); /* Must not happen. */
+    code = pinfo->io_procs->ftell(pfile);
+    if (code < 0)
+	return_error(gs_error_unregistered); /* Must not happen. */
+    size = code;
+    return size;
+}
+
+/* Get command list data. */
+int
+clist_get_data(const gx_device_clist *cdev, int select, int offset, byte *buf, int length)
+{
+    const gx_band_page_info_t *pinfo = &cdev->common.page_info;
+    clist_file_ptr pfile = (!select ? pinfo->bfile : pinfo->cfile);
+    const char *fname = (!select ? pinfo->bfname : pinfo->cfname);
+    int code;
+
+    code = pinfo->io_procs->fseek(pfile, offset, SEEK_SET, fname);
+    if (code < 0)
+	return_error(gs_error_unregistered); /* Must not happen. */
+    /* This assumes that fread_chars doesn't return prematurely
+       when the buffer is not fully filled and the end of stream is not reached. */
+    return pinfo->io_procs->fread_chars(buf, length, pfile);
+}
+
+/* Put command list data. */
+int
+clist_put_data(const gx_device_clist *cdev, int select, int offset, const byte *buf, int length)
+{
+    const gx_band_page_info_t *pinfo = &cdev->common.page_info;
+    clist_file_ptr pfile = (!select ? pinfo->bfile : pinfo->cfile);
+    int code;
+
+    code = pinfo->io_procs->ftell(pfile);
+    if (code < 0)
+	return_error(gs_error_unregistered); /* Must not happen. */
+    if (code != offset) {
+	/* Assuming a consecutive writing only. */
+	return_error(gs_error_unregistered); /* Must not happen. */
+    }
+    /* This assumes that fwrite_chars doesn't return prematurely
+       when the buffer is not fully written, except with an error. */
+    return pinfo->io_procs->fwrite_chars(buf, length, pfile);
+}
+

@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: ugcclib.mak,v 1.14 2008/05/04 14:34:52 Arabidopsis Exp $
+# $Id: ugcclib.mak,v 1.15 2009/04/19 13:54:30 Arabidopsis Exp $
 # makefile for Unix / gcc library testing.
 
 BINDIR=./libobj
@@ -181,7 +181,7 @@ $(GS_XE): $(ld_tr) $(ECHOGS_XE) $(LIB_ALL) $(DEVS_ALL) $(GLOBJ)gslib.$(OBJ) $(LI
 
 GSLIB_A=libgsgraph.a
 lar_tr=$(GLOBJ)lar.tr
-$(GSLIB_A):  $(obj_tr) $(ECHOGS_XE) $(LIB_ALL) $(DEVS_ALL) $(LIB_ONLY) $(GLOBJ)gsromfs$(COMPILE_INITS).$(OBJ)
+$(GSLIB_A):  $(obj_tr) $(ECHOGS_XE) $(LIB_ALL) $(DEVS_ALL) $(LIB_ONLY)
 	rm -f $(GSLIB_A)
 	$(ECHOGS_XE) -w $(lar_tr) -n - $(AR) $(ARFLAGS) $(GSLIB_A)
 	$(ECHOGS_XE) -a $(lar_tr) -n -s $(LIB_ONLY) -s

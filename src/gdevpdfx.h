@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfx.h,v 1.12 2008/03/23 15:27:52 Arabidopsis Exp $ */
+/* $Id: gdevpdfx.h,v 1.13 2009/04/19 13:54:28 Arabidopsis Exp $ */
 /* Internal definitions for PDF-writing driver. */
 
 #ifndef gdevpdfx_INCLUDED
@@ -658,6 +658,7 @@ struct gx_device_pdf_s {
     int OPDFRead_procset_length;      /* PS2WRITE only. */
     void *find_resource_param; /* WARNING : not visible for garbager. */
     int last_charpath_op; /* true or false state of last charpath */
+    bool type3charpath;
 };
 
 #define is_in_page(pdev)\

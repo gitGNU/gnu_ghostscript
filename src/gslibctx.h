@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gslibctx.h,v 1.4 2007/09/11 15:24:07 Arabidopsis Exp $ */
+/*$Id: gslibctx.h,v 1.5 2009/04/19 13:54:22 Arabidopsis Exp $ */
 #ifndef GSLIBCTX_H 
 #define GSLIBCTX_H 
 
@@ -39,6 +39,7 @@ typedef struct gs_lib_ctx_s
     bool stdout_to_stderr;
     bool stdin_is_interactive;   
     void *caller_handle;	/* identifies caller of GS DLL/shared object */
+    void *custom_color_callback;  /* pointer to color callback structure */
     int (GSDLLCALL *stdin_fn)(void *caller_handle, char *buf, int len);
     int (GSDLLCALL *stdout_fn)(void *caller_handle, const char *str, int len);
     int (GSDLLCALL *stderr_fn)(void *caller_handle, const char *str, int len);

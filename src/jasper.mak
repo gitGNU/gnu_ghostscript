@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: jasper.mak,v 1.6 2008/03/23 15:27:38 Arabidopsis Exp $
+# $Id: jasper.mak,v 1.7 2009/04/19 13:54:33 Arabidopsis Exp $
 
 # makefile for jasper JPEG 2000 support library
 # Users of this makefile must define the following:
@@ -172,11 +172,11 @@ $(JASGEN)jasper.dev : $(TOP_MAKEFILES) $(JASGEN)jasper_$(SHARE_JPX).dev
 	$(CP_) $(JASGEN)jasper_$(SHARE_JPX).dev $(JASGEN)jasper.dev
 
 # external link .dev
-$(GLOBJ)jasper_1.dev : $(TOP_MAKEFILES) $(JASPER_MAK) $(ECHOGS_XE)
-	$(SETMOD) $(GLOBJ)jasper_1 -lib jasper
+$(JASGEN)jasper_1.dev : $(TOP_MAKEFILES) $(JASPER_MAK) $(ECHOGS_XE)
+	$(SETMOD) $(JASGEN)jasper_1 -lib jasper
 
 # compile in .dev
-$(GLOBJ)jasper_0.dev : $(TOP_MAKEFILES) $(JASPER_MAK) $(ECHOGS_XE) $(libjasper_OBJS)
+$(JASGEN)jasper_0.dev : $(TOP_MAKEFILES) $(JASPER_MAK) $(ECHOGS_XE) $(libjasper_OBJS)
 	$(SETMOD) $(JASGEN)jasper_0 $(libjasper_OBJS_base)
 	$(ADDMOD) $(JASGEN)jasper_0 $(libjasper_OBJS_jpc)
 	$(ADDMOD) $(JASGEN)jasper_0 $(libjasper_OBJS_jp2)

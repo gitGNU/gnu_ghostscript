@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: Fontmap.GS,v 1.7 2008/05/04 14:34:57 Arabidopsis Exp $
+% $Id: Fontmap.GS,v 1.8 2009/04/19 13:54:38 Arabidopsis Exp $
 % Fontmap - standard font catalog for Ghostscript.
 
 % ----------------------------------------------------------------
@@ -273,22 +273,12 @@
 
 % 
 %
-% Shareware Kana fonts.  These are subject to the following notice:
+% Calligraphic Kana fonts.  These are distributed under the OFL 1.1:
 %
-% These copyrighted fonts were developed by Kevin Hartig. Permission is
-% granted to freely distribute them in entirety along with this statement.
-% This is shareware. If you decide to use these fonts please contribute
-% $10 US to help support further freeware and shareware software development.
-% Questions and comments may be sent to:
-%
-% hartig@fsl.noaa.gov
-% khartig@nyx.cs.du.edu
-%
-% Kevin Hartig
-% 1126 Collyer Street
-% Longmont, CO 80501 USA
-% 
-% copyright 1993.
+% Copyright (c) 1993, Kevin Hartig (kevin.hartig@gmail.com),
+% with Reserved Font Name Calligraphic-Hiragana and Calligraphic-Katakana.
+% This Font Software is licensed under the SIL Open Font License, Version 1.1.
+% This license is available with an FAQ at:  http://scripts.sil.org/OFL
 
 % Hiragana and Katakana fonts.  The character names are inappropriate,
 % and the encoding is probably not related to any known standard.

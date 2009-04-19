@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclist.h,v 1.10 2008/03/23 15:27:56 Arabidopsis Exp $ */
+/* $Id: gxclist.h,v 1.11 2009/04/19 13:54:25 Arabidopsis Exp $ */
 /* Command list definitions for Ghostscript. */
 /* Requires gxdevice.h and gxdevmem.h */
 
@@ -190,6 +190,12 @@ typedef struct gx_clist_state_s gx_clist_state;
 	gx_band_page_info_t page_info;	/* page information */\
 	int nbands			/* # of bands */
 
+/*
+ * Chech whether a clist is used for storing a pattern command stream.
+ * Useful for both reader and writer.
+ */
+#define IS_CLIST_FOR_PATTERN(cdev) (cdev->procs.open_device == pattern_clist_open_device)
+
 typedef struct gx_device_clist_common_s {
     gx_device_clist_common_members;
 } gx_device_clist_common;
@@ -204,13 +210,29 @@ typedef struct gx_device_clist_common_s {
 /* (Strokes with longer patterns are converted to fills.) */
 #define cmd_max_dash 11
 
+/* Define a clist cropping buffer, 
+   which represents a cropping stack element while clist writing. */
+typedef struct clist_writer_cropping_buffer_s clist_writer_cropping_buffer_t;
+
+struct clist_writer_cropping_buffer_s {
+    int cropping_min, cropping_max;
+    uint mask_id, temp_mask_id;
+    clist_writer_cropping_buffer_t *next;
+};
+
+#define private_st_clist_writer_cropping_buffer()\
+  gs_private_st_ptrs1(st_clist_writer_cropping_buffer,\
+		clist_writer_cropping_buffer_t, "clist_writer_transparency_buffer",\
+		clist_writer_cropping_buffer_enum_ptrs, clist_writer_cropping_buffer_reloc_ptrs, next)
+
+
 /* Define the state of a band list when writing. */
 typedef struct clist_color_space_s {
     byte byte1;			/* see cmd_opv_set_color_space in gxclpath.h */
     gs_id id;			/* space->id for comparisons */
     const gs_color_space *space;
 } clist_color_space_t;
-typedef struct gx_device_clist_writer_s {
+struct gx_device_clist_writer_s {
     gx_device_clist_common_members;	/* (must be first) */
     int error_code;		/* error returned by cmd_put_op */
     gx_clist_state *states;	/* current state of each band */
@@ -255,10 +277,19 @@ typedef struct gx_device_clist_writer_s {
     proc_free_up_bandlist_memory((*free_up_bandlist_memory)); /* if nz, proc to free some bandlist memory */
     int disable_mask;		/* mask of routines to disable clist_disable_xxx */
     gs_pattern1_instance_t *pinst; /* Used when it is a pattern clist. */
-    bool cropping_by_path;
     int cropping_min, cropping_max;
+    int save_cropping_min, save_cropping_max;
+    int cropping_level;
+    clist_writer_cropping_buffer_t *cropping_stack;
     ulong ins_count;
-} gx_device_clist_writer;
+    uint mask_id_count;
+    uint mask_id;
+    uint temp_mask_id; /* Mask id of a mask of an image with SMask. */
+};
+#ifndef gx_device_clist_writer_DEFINED
+#define gx_device_clist_writer_DEFINED
+typedef struct gx_device_clist_writer_s gx_device_clist_writer;
+#endif
 
 /* Bits for gx_device_clist_writer.disable_mask. Bit set disables behavior */
 #define clist_disable_fill_path	(1 << 0)
@@ -268,6 +299,11 @@ typedef struct gx_device_clist_writer_s {
 #define clist_disable_nonrect_hl_image (1 << 4)
 #define clist_disable_pass_thru_params (1 << 5)	/* disable EXCEPT at top of page */
 #define clist_disable_copy_alpha (1 << 6) /* target does not support copy_alpha */
+
+#ifndef clist_render_thread_control_t_DEFINED
+#  define clist_render_thread_control_t_DEFINED
+typedef struct clist_render_thread_control_s clist_render_thread_control_t;
+#endif
 
 /* Define the state of a band list when reading. */
 /* For normal rasterizing, pages and num_pages are both 0. */
@@ -279,6 +315,11 @@ typedef struct gx_device_clist_reader_s {
     int num_pages;
     gx_band_complexity_t *band_complexity_array;  /* num_bands elements */
     void *offset_map; /* Just against collecting the map as garbage. */
+    int num_render_threads;		/* number of threads being used */
+    clist_render_thread_control_t *render_threads;	/* array of threads */
+    byte *main_thread_data;		/* saved data pointer of main thread */
+    int curr_render_thread;		/* index into array */
+    int thread_lookahead_direction;	/* +1 or -1 */
 } gx_device_clist_reader;
 
 union gx_device_clist_s {
@@ -298,7 +339,7 @@ extern_st(st_device_clist);
     "gx_device_clist", 0, device_clist_enum_ptrs, device_clist_reloc_ptrs,\
     gx_device_finalize)
 #define st_device_clist_max_ptrs\
-  (st_device_forward_max_ptrs + st_imager_state_num_ptrs + 3)
+  (st_device_forward_max_ptrs + st_imager_state_num_ptrs + 4)
 
 #define CLIST_IS_WRITER(cdev) ((cdev)->common.ymin < 0)
 
@@ -389,6 +430,38 @@ void gx_clist_reader_free_band_complexity_array(gx_device_clist *cldev);
 void 
 clist_copy_band_complexity(gx_band_complexity_t *this, const gx_band_complexity_t *from);
 
+/* Retrieve total size for cfile and bfile. */
+int clist_data_size(const gx_device_clist *cdev, int select);
+/* Get command list data. */
+int clist_get_data(const gx_device_clist *cdev, int select, int offset, byte *buf, int length);
+/* Put command list data. */
+int clist_put_data(const gx_device_clist *cdev, int select, int offset, const byte *buf, int length);
+
+/* Exports from gxclread used by the multi-threading logic */
+
+/* Initialize for reading. */
+int clist_render_init(gx_device_clist *dev);
+
+int 
+clist_close_writer_and_init_reader(gx_device_clist *cldev);
+
+void
+clist_select_render_plane(gx_device *dev, int y, int height,
+			  gx_render_plane_t *render_plane, int index);
+
+int clist_rasterize_lines(gx_device *dev, int y, int lineCount,
+				  gx_device *bdev,
+				  const gx_render_plane_t *render_plane,
+				  int *pmy);
+
+/* Enable multi threaded rendering. Returns > 0 if supported, < 0 if single threaded */
+int
+clist_enable_multi_thread_render(gx_device *dev);
+
+/* Shutdown render threads and free up the related memory */
+void
+clist_teardown_render_threads(gx_device *dev);
+
 #ifdef DEBUG 
 #define clist_debug_rect clist_debug_rect_imp
 void clist_debug_rect_imp(int x, int y, int width, int height);
@@ -401,5 +474,54 @@ void clist_debug_set_ctm_imp(const gs_matrix *m);
 #define clist_debug_image_rect (void)
 #define clist_debug_set_ctm (void)
 #endif
+
+/* Cropping by Y is necessary when the shading path is smaller than shading.
+   In this case the clipping path is written into the path's bands only.
+   Thus bands outside the shading path are not clipped,
+   but the shading may paint into them, so use this macro to crop them.
+
+   Besides that, cropping by Y is necessary when a transparency compositor
+   is installed over clist writer. Transparency compositors change the number
+   of device color components, so transparency group's elements
+   must not paint to bands that are not covered by the transparency bbox
+   to prevent a failure when clist reader recieves a wrong number of color components.
+ */
+#define crop_fill_y(cdev, ry, rheight)\
+    BEGIN\
+	if (ry < cdev->cropping_min) {\
+	    rheight = ry + rheight - cdev->cropping_min;\
+	    ry = cdev->cropping_min;\
+	}\
+	if (ry + rheight > cdev->cropping_max)\
+	    rheight = cdev->cropping_max - ry;\
+    END
+
+#define crop_fill(dev, x, y, w, h)\
+    BEGIN\
+	if ( x < 0 )\
+	    w += x, x = 0;\
+	fit_fill_w(dev, x, w);\
+	crop_fill_y(dev, y, h);\
+    END
+
+#define crop_copy_y(cdev, data, data_x, raster, id, ry, rheight)\
+    BEGIN\
+	if (ry < cdev->cropping_min) {\
+	    rheight = ry + rheight - cdev->cropping_min;\
+	    data += (cdev->cropping_min - ry) * raster;\
+	    id = gx_no_bitmap_id;\
+	    ry = cdev->cropping_min;\
+	}\
+	if (ry + rheight > cdev->cropping_max)\
+	    rheight = cdev->cropping_max - ry;\
+    END
+
+#define crop_copy(dev, data, data_x, raster, id, x, y, w, h)\
+    BEGIN\
+	if ( x < 0 )\
+	    w += x, data_x -= x, x = 0;\
+	fit_fill_w(dev, x, w);\
+	crop_copy_y(dev, data, data_x, raster, id, y, h);\
+    END
 
 #endif /* gxclist_INCLUDED */

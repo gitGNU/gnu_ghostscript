@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: imain.c,v 1.11 2008/03/23 15:28:01 Arabidopsis Exp $ */
+/* $Id: imain.c,v 1.12 2009/04/19 13:54:26 Arabidopsis Exp $ */
 /* Common support for interpreter front ends */
 #include "malloc_.h"
 #include "memory_.h"
@@ -121,7 +121,7 @@ gs_main_init0(gs_main_instance * minst, FILE * in, FILE * out, FILE * err,
 #   else
        /* plmain settings remain in effect */
 #   endif
-    gp_get_usertime(minst->base_time);
+    gp_get_realtime(minst->base_time);
 
     /* Initialize the file search paths. */
     paths = (ref *) gs_alloc_byte_array(minst->heap, max_lib_paths, sizeof(ref),
@@ -860,7 +860,7 @@ print_resource_usage(const gs_main_instance * minst, gs_dual_memory_t * dmem,
     ulong allocated = 0, used = 0;
     long utime[2];
 
-    gp_get_usertime(utime);
+    gp_get_realtime(utime);
     {
 	int i;
 

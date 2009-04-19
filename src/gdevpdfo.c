@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfo.c,v 1.11 2008/03/23 15:28:12 Arabidopsis Exp $ */
+/* $Id: gdevpdfo.c,v 1.12 2009/04/19 13:54:32 Arabidopsis Exp $ */
 /* Cos object support */
 #include "memory_.h"
 #include "string_.h"
@@ -530,6 +530,8 @@ cos_array_write(const cos_object_t *pco, gx_device_pdf *pdev, gs_id object_id)
     }
     DISCARD(cos_array_reorder(pca, first));
     stream_puts(s, "]");
+    if (pdev->PDFA)
+        stream_puts(s, "\n");
     return 0;
 }
 
@@ -796,6 +798,8 @@ cos_dict_write(const cos_object_t *pco, gx_device_pdf *pdev, gs_id object_id)
     stream_puts(s, "<<");
     cos_elements_write(s, ((const cos_dict_t *)pco)->elements, pdev, false, object_id);
     stream_puts(s, ">>");
+    if (pdev->PDFA)
+        stream_puts(s, "\n");
     return 0;
 }
 

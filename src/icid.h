@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: icid.h,v 1.9 2007/09/11 15:23:48 Arabidopsis Exp $ */
+/* $Id: icid.h,v 1.10 2009/04/19 13:54:31 Arabidopsis Exp $ */
 /* Interface to zcid.c, zfcid0.c */
 
 #ifndef icid_INCLUDED
@@ -38,7 +38,7 @@ int cid_to_TT_charcode(const gs_memory_t *mem,
 		       const ref *SubstNWP, 
                        uint nCID, uint *c, ref *src_type, ref *dst_type);
 
-/* Create a CIDMap from a True Type cmap array, Decoding and SubstNWP. */
+/* Create a CIDMap from a True Type cmap, Decoding and SubstNWP. */
 int cid_fill_CIDMap(const gs_memory_t *mem, const ref *Decoding, const ref *TT_cmap, const ref *SubstNWP, 
                     int GDBytes, ref *CIDMap);
 

@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/*$Id: gdevdbit.c,v 1.12 2008/03/23 15:27:53 Arabidopsis Exp $ */
+/*$Id: gdevdbit.c,v 1.13 2009/04/19 13:54:23 Arabidopsis Exp $ */
 /* Default device bitmap copying implementation */
 #include "gx.h"
 #include "gpcheck.h"
@@ -353,6 +353,8 @@ gx_default_strip_tile_rectangle(gx_device * dev, const gx_strip_bitmap * tiles,
     int shift = tiles->shift;
     gs_id tile_id = tiles->id;
 
+    if (rwidth == 0 || rheight == 0)
+	return_error(gs_error_unregistered); /* Must not happen. */
     fit_fill_xy(dev, x, y, w, h);
 
 #ifdef DEBUG

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxfill.c,v 1.13 2008/05/04 14:34:47 Arabidopsis Exp $ */
+/* $Id: gxfill.c,v 1.14 2009/04/19 13:54:33 Arabidopsis Exp $ */
 /* A topological spot decomposition algorithm with dropout prevention. */
 /* 
    This is a dramaticly reorganized and improved revision of the 
@@ -620,6 +620,9 @@ gx_default_fill_path(gx_device * pdev, const gs_imager_state * pis,
 	    else
 		(*dev_proc(pdev, get_clipping_box)) (pdev, &clip_box);
 	    rect_intersect(clip_box, shading_rect);
+	    if (clip_box.p.x > clip_box.q.x || clip_box.p.y > clip_box.q.y)
+		return 0; /* Empty clipping, must not pass to gx_cpath_from_rectangle. */
+	    gx_cpath_init_local(&cpath_intersection, pdev->memory);
 	    code = gx_cpath_from_rectangle(&cpath_intersection, &clip_box);
 	} else if (pcpath != NULL) {
 	    /* either *pcpath is not a rectangle, or shading cell is not a rectangle.  */

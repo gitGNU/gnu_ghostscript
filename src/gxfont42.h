@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxfont42.h,v 1.11 2007/09/11 15:24:04 Arabidopsis Exp $ */
+/* $Id: gxfont42.h,v 1.12 2009/04/19 13:54:31 Arabidopsis Exp $ */
 /* Type 42 font data definition */
 
 #ifndef gxfont42_INCLUDED
@@ -91,6 +91,7 @@ struct gs_type42_data_s {
     gs_type42_mtx_t metrics[2];	/* hhea/hmtx, vhea/vmtx (indexed by WMode) */
     ulong loca;			/* offset to loca table */
     ulong name_offset;		/* offset to name table */		
+    ulong os2_offset;		/* offset to OS/2 table */		
     /*
      * TrueType fonts specify the number of glyphs in two different ways:
      * the size of the loca table, and an explicit value in maxp.  Currently

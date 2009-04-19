@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: gs_img.ps,v 1.6 2008/03/23 15:28:28 Arabidopsis Exp $
+% $Id: gs_img.ps,v 1.7 2009/04/19 13:54:37 Arabidopsis Exp $
 % image, colorimage, and imagemask implementation
 
 %
@@ -708,15 +708,19 @@ if
 	    2 index /Interpolate .knownget not { false } if and
 	    //filterdict /ImscaleDecode known and {
 	      % Apply interpolated imagemask scaling filter
-	      exch dup length dict .copydict
+	      exch .currentglobal exch dup .gcheck .setglobal
+              dup length dict .copydict
 	      dup dup /DataSource get
+              dup type /stringtype eq {
+                1 array astore cvx        % image.* operators read strings repeatesly
+              } if
 	      mark /Width 3 index /Width get /Height 5 index /Height get .dicttomark
 	      /ImscaleDecode filter /DataSource exch put
 	      dup dup /Width get 4 mul /Width exch put
 	      dup dup /Height get 4 mul /Height exch put
 	      dup dup /ImageMatrix get
-	        4 4 matrix scale matrix concatmatrix /ImageMatrix exch put
-	      exch
+              { 4 0 0 4 0 0 } matrix concatmatrix /ImageMatrix exch put
+	      3 1 roll .setglobal
 	    } if
 	    exec
           }

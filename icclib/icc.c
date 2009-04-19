@@ -9273,6 +9273,13 @@ static int icc_read(
 		for (i = 0; i < p->count; i++, bp += 12) {
 	    	p->data[i].sig = (icTagSignature)read_SInt32Number(bp + 0);	
 	    	p->data[i].offset = read_UInt32Number(bp + 4);
+	    	if (p->data[i].offset < 128) { /* to catch 0 offset */
+	    	    sprintf(p->err, "icc_read: Impossible offset %u in tag %d", p->data[i].offset, i);
+	    	    p->al->free(p->al, p->data);
+	    	    p->data = NULL;
+	    	    p->al->free(p->al, buf);
+	    	    return p->errc = 1;
+	    	}
 	    	p->data[i].size = read_UInt32Number(bp + 8);	
 			if (   p->fp->seek(p->fp, of + p->data[i].offset) != 0
 			    || p->fp->read(p->fp, tcbuf, 1, 4) != 4) {
@@ -9915,6 +9922,7 @@ static void icc_delete(
 	if (p->header != NULL)
 		(p->header->del)(p->header);
 
+	if (p->data != NULL) {
 	/* Free up the tag data objects */
 	for (i = 0; i < p->count; i++) {
 		if (p->data[i].objp != NULL) {
@@ -9926,6 +9934,7 @@ static void icc_delete(
 
 	/* Free tag table */
 	al->free(al, p->data);
+	}
 
 	/* This object */
 	al->free(al, p);

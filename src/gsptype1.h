@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsptype1.h,v 1.8 2007/09/11 15:24:35 Arabidopsis Exp $ */
+/* $Id: gsptype1.h,v 1.9 2009/04/19 13:54:34 Arabidopsis Exp $ */
 /* Client interface to PatternType 1 Patterns */
 
 #ifndef gsptype1_INCLUDED
@@ -29,6 +29,10 @@
 #ifndef gx_device_color_DEFINED
 #  define gx_device_color_DEFINED
 typedef struct gx_device_color_s gx_device_color;
+#endif
+#ifndef gs_color_space_DEFINED
+#  define gs_color_space_DEFINED
+typedef struct gs_color_space_s gs_color_space;
 #endif
 
 /* ---------------- Types and structures ---------------- */
@@ -91,6 +95,9 @@ const gs_client_pattern *gs_getpattern(const gs_client_color *);
 
 /* Check device color for Pattern Type 1. */
 bool gx_dc_is_pattern1_color(const gx_device_color *pdevc);
+
+/* Check device color for clist-based Pattern Type 1. */
+bool gx_dc_is_pattern1_color_clist_based(const gx_device_color *pdevc);
 
 /*
  * Make a pattern from a bitmap or pixmap. The pattern may be colored or

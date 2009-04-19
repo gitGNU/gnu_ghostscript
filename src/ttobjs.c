@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ttobjs.c,v 1.8 2007/09/11 15:24:32 Arabidopsis Exp $ */
+/* $Id: ttobjs.c,v 1.9 2009/04/19 13:54:26 Arabidopsis Exp $ */
 
 /* Changes after FreeType: cut out the TrueType instruction interpreter. */
 
@@ -312,6 +312,8 @@ static int free_aux(ttfMemory *mem, void *ptr)
 
    n_points        = face->maxPoints + 2;
    n_twilight      = maxp->maxTwilightPoints;
+   if (n_points < 100)
+       n_points = 100; /* Bug 689907 */
 
    if ( ALLOC_ARRAY( exec->callStack, exec->callSize, callSize, TCallRecord ) ||
         /* reserve interpreter call stack */
@@ -575,7 +577,7 @@ static int free_aux(ttfMemory *mem, void *ptr)
     ins->numIDefs = maxp->maxInstructionDefs;
     ins->countIDefs = 0;
     if (maxp->maxInstructionDefs > 255)
-	goto Fail_Memory;
+	maxp->maxInstructionDefs = 255;  /* Bug 689960 */
     memset(ins->IDefPtr, (Byte)ins->numIDefs, sizeof(ins->IDefPtr));
     if (ins->numFDefs < 50)
 	ins->numFDefs = 50; /* Bug 687858 */

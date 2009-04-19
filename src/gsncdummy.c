@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gsncdummy.c,v 1.3 2008/03/23 15:27:57 Arabidopsis Exp $ */
+/* $Id: gsncdummy.c,v 1.4 2009/04/19 13:54:23 Arabidopsis Exp $ */
 /* Sample implementation for client custom processing of color spaces. */
 
 /*
@@ -26,8 +26,11 @@
  * all lines and fills to shades of blue.  if the flag is 0 then our example
  * only handles PANTONE colors (see comment below).
  */
-#define OBJECT_TYPE_EXAMPLE 1		/* 0 --> disabled, 1 --> enabled */
 
+/* Added these two defines so that I could compare to ghost script rendering color */
+
+#define OBJECT_TYPE_EXAMPLE 1		/* 0 --> disabled, 1 --> enabled */
+#define PANTONE_ONLY 0
 /*
  * This module has been created to demonstrate how to support the use of
  * PANTONE colors to the Ghostscript graphics library.  PANTONE colors
@@ -76,7 +79,9 @@
 #include "gzstate.h"
 #include "malloc_.h"
 #include "gsutil.h"
+#include "gxcie.h"
 #include "gsncdummy.h"
+
 
 #if ENABLE_CUSTOM_COLOR_CALLBACK		/* Defined in src/gsnamecl.h */
 
@@ -154,40 +159,6 @@ client_install_no_op(client_custom_color_params_t * pparams,
 	    gs_color_space * pcs, gs_state * pgs)
 {
     return false;	/* Do nothing */
-}
-
-/*
- * Dummy convert routine for simple color spaces (gray, RGB, CMYK, DeviceN,
- * and Separation) which are not handled by the client.
- */
-static int
-client_remap_simple_no_op(client_custom_color_params_t * pparams,
-    const frac * pconc, const gs_color_space * pcs, gx_device_color * pdc,
-    const gs_imager_state * pis, gx_device * dev, gs_color_select_t select)
-{
-    /*
-     * Returning an error value will cause GS to use its normal processes
-     * for handling the color space.
-     */
-    return_error(gs_error_rangecheck);
-}
-
-/*
- * Dummy convert routine for complex color spaces (CIEBasedA, CIEBasedABC,
- * CIEBasedDEF, CIEBasedDEF, CIEBasedDEFG, ICCBased) which are not handled
- * by the client.
- */
-static int
-client_remap_complex_no_op(client_custom_color_params_t * pparams,
-    const gs_client_color * pc, const gs_color_space * pcs,
-    gx_device_color * pdc, const gs_imager_state * pis, gx_device * dev,
-    gs_color_select_t select)
-{
-    /*
-     * Returning an error value will cause GS to use its normal processes
-     * for handling the color space.
-     */
-    return_error(gs_error_rangecheck);
 }
 
 /*
@@ -531,7 +502,9 @@ client_pantone_remap_DeviceN(client_custom_color_params_t * pparam,
 	pdc, pis, dev, select, gs_color_space_num_components(pcs));	
 }
 
-#if OBJECT_TYPE_EXAMPLE
+
+#if !PANTONE_ONLY
+
 /*
  * Install a DeviceGray color space.
  */
@@ -583,13 +556,24 @@ client_remap_DeviceGray(client_custom_color_params_t * pparams,
     const frac * pconc, const gs_color_space * pcs, gx_device_color * pdc,
     const gs_imager_state * pis, gx_device * dev, gs_color_select_t select)
 {
-    /*
-     * For demo and debug purposes, make our colors a function of the
-     * intensity of the given colors and the object type.
-     */
-    frac intensity = pconc[0];
 
+	#if OBJECT_TYPE_EXAMPLE
+   
+		 /* For demo and debug purposes, make our colors a function of the
+		 * intensity of the given colors and the object type. */
+
+		frac intensity = pconc[0];
     convert_intensity_into_device_color(intensity, pdc, pis, dev, select);
+
+	#else
+
+		/* If desired, replace with your own color transformation */
+
+		gx_remap_concrete_gray(pconc[0], pdc, pis, dev, select);
+	
+	#endif
+
+
     return 0;
 }
 
@@ -613,13 +597,23 @@ client_remap_DeviceRGB(client_custom_color_params_t * pparams,
 	const frac * pconc, const gs_color_space * pcs, gx_device_color * pdc,
        	const gs_imager_state * pis, gx_device * dev, gs_color_select_t select)
 {
-    /*
-     * For demo and debug purposes, make our colors a function of the
-     * intensity of the given colors and the object type.
-     */
-    frac intensity = (frac)(pconc[0] * 0.30 + pconc[1] * 0.59 + pconc[2] * 0.11);
 
+	#if OBJECT_TYPE_EXAMPLE
+   
+		/* For demo and debug purposes, make our colors a function of the
+		 * intensity of the given colors and the object type. */
+	     
+		frac intensity = (frac)(pconc[0] * 0.30 + pconc[1] * 0.59 + pconc[2] * 0.11);
     convert_intensity_into_device_color(intensity, pdc, pis, dev, select);
+		
+	#else
+
+		 /* If desired, replace with your own color transformation */
+
+		 gx_remap_concrete_rgb(pconc[0], pconc[1], pconc[2], pdc, pis, dev, select);
+	
+	#endif
+
     return 0;
 }
 
@@ -642,16 +636,27 @@ client_remap_DeviceCMYK(client_custom_color_params_t * pparams,
 	const frac * pconc, const gs_color_space * pcs, gx_device_color * pdc,
        	const gs_imager_state * pis, gx_device * dev, gs_color_select_t select)
 {
+
+	#if OBJECT_TYPE_EXAMPLE
+   
     /*
      * For demo and debug purposes, make our colors a function of the
-     * intensity of the given colors and the object type.
-     */
+		 * intensity of the given colors and the object type.  */
+	     
     frac intensity = frac_1 - (frac)(pconc[0] * 0.30 + pconc[1] * 0.59
 		    + pconc[2] * 0.11 + pconc[3]);
 
     if (intensity < frac_0)
 	intensity = frac_0;
     convert_intensity_into_device_color(intensity, pdc, pis, dev, select);
+
+	#else
+
+		 /* If desired, replace with your own color transformation */
+		 gx_remap_concrete_cmyk(pconc[0], pconc[1], pconc[2], pconc[3],pdc, pis, dev, select);
+	
+	#endif
+		  
     return 0;
 }
 
@@ -665,6 +670,7 @@ client_remap_DeviceCMYK(client_custom_color_params_t * pparams,
 		: (frac) (frac_1 * \
 			(color - range.rmin) / (range.rmax - range.rmin))
 
+static bool
 client_install_CIEtoA(client_custom_color_params_t * pparams,
 	    gs_color_space * pcs, gs_state * pgs)
 {
@@ -710,6 +716,7 @@ client_install_CIEtoA(client_custom_color_params_t * pparams,
     return true;
 }
 
+static bool
 client_install_CIEtoXYZ(client_custom_color_params_t * pparams,
 	    gs_color_space * pcs, gs_state * pgs)
 {
@@ -770,12 +777,23 @@ client_install_CIEtoXYZ(client_custom_color_params_t * pparams,
     return true;
 }
 
+
+static bool
 client_install_ICCtoXYZ(client_custom_color_params_t * pparams,
 	    gs_color_space * pcs, gs_state * pgs)
 {
     int code;
     const gs_icc_params * picc_params = (const gs_icc_params *)&pcs->params.icc;
     gs_cie_icc *    picc_info = picc_params->picc_info;
+    demo_color_space_data_t * pdata;
+
+    if (pcs->pclient_color_space_data != NULL)
+	return true;
+
+    pdata = allocate_client_data_block(1, pcs->rc.memory->stable_memory);
+    pcs->pclient_color_space_data = (client_color_space_data_t *) pdata;
+
+	/* Need to initialize the client data.  The imager_state is what is needed in pdata->CIEtoXZY_ps */
 
     /* update the stub information used by the joint caches */
     gx_cie_load_common_cache(&picc_info->common, pgs);
@@ -784,6 +802,17 @@ client_install_ICCtoXYZ(client_custom_color_params_t * pparams,
 	client_adjust_cspace_count(pcs, -1);  /* free it up */
 	return false;
     }
+
+	/* Now allocate the conversion imager state in stable_memory	*/
+	/* so that the garbage collector won't free it			*/
+	code = gx_cie_to_xyz_alloc(&pdata->CIEtoXYZ_pis, pcs,
+				pcs->rc.memory->stable_memory);
+
+	if (code < 0) {
+	    client_adjust_cspace_count(pcs, -1);  /* free it up */
+	    return false;
+	}
+
     return true;
 }
 
@@ -986,9 +1015,40 @@ client_remap_ICCBased(client_custom_color_params_t * pparams,
 
 #undef convert2frac
 
-#endif 		/* OBJECT_TYPE_EXAMPLE */
+#endif 		/* NOT PANTONE_ONLY */
 
-#if OBJECT_TYPE_EXAMPLE
+#if PANTONE_ONLY
+
+	/*
+	 * For PANTONE colors, we only need to handle Separation and DeviceN
+	 * color spaces.  These are the only color spaces that can have PANTONE
+	 * colors.
+	 */
+	client_custom_color_procs_t demo_procs = {
+		client_install_no_op,		/* DeviceGray */
+		NULL,
+		client_install_no_op,		/* DeviceRGB */
+		NULL,
+		client_install_no_op,		/* DeviceCMYK */
+		NULL,
+		client_pantone_install_Separation,	/* Separation */
+		client_pantone_remap_Separation,
+		client_pantone_install_DeviceN,	/* DeviceN */
+		client_pantone_remap_DeviceN,
+		client_install_no_op,		/* CIEBasedA */
+		NULL,
+		client_install_no_op,		/* CIEBasedABC */
+		NULL,
+		client_install_no_op,		/* CIEBasedDEF */
+		NULL,
+		client_install_no_op,		/* CIEBasedDEFG */
+		NULL,
+		client_install_no_op,		/* ICCBased */
+		NULL
+	};
+
+#else			/* Not PANTONE_ONLY special */
+
 /*
  * Client call back procedures for our demo which illustrates color
  * processing based upon object type.
@@ -1015,34 +1075,7 @@ client_custom_color_procs_t demo_procs = {
     client_install_ICCtoXYZ,		/* ICCBased */
     client_remap_ICCBased
 };
-#else			/* Not OBJECT_TYPE_EXAMPLE special */
-/*
- * For PANTONE colors, we only need to handle Separation and DeviceN
- * color spaces.  These are the only color spaces that can have PANTONE
- * colors.
- */
-client_custom_color_procs_t demo_procs = {
-    client_install_no_op,		/* DeviceGray */
-    client_remap_simple_no_op,
-    client_install_no_op,		/* DeviceRGB */
-    client_remap_simple_no_op,
-    client_install_no_op,		/* DeviceCMYK */
-    client_remap_simple_no_op,
-    client_pantone_install_Separation,	/* Separation */
-    client_pantone_remap_Separation,
-    client_pantone_install_DeviceN,	/* DeviceN */
-    client_pantone_remap_DeviceN,
-    client_install_no_op,		/* CIEBasedA */
-    client_remap_complex_no_op,
-    client_install_no_op,		/* CIEBasedABC */
-    client_remap_complex_no_op,
-    client_install_no_op,		/* CIEBasedDEF */
-    client_remap_complex_no_op,
-    client_install_no_op,		/* CIEBasedDEFG */
-    client_remap_complex_no_op,
-    client_install_no_op,		/* ICCBased */
-    client_remap_complex_no_op
-};
-#endif		/* OBJECT_TYPE_EXAMPLE */
+
+#endif		/* PANTONE_ONLY_EXAMPLE */
 
 #endif		/* ENABLE_CUSTOM_COLOR_CALLBACK */

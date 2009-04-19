@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsdevice.c,v 1.12 2008/03/23 15:28:03 Arabidopsis Exp $ */
+/* $Id: gsdevice.c,v 1.13 2009/04/19 13:54:25 Arabidopsis Exp $ */
 /* Device operators for Ghostscript library */
 #include "ctype_.h"
 #include "memory_.h"		/* for memchr, memcpy */
@@ -901,6 +901,8 @@ gx_device_open_output_file(const gx_device * dev, char *fname,
 	*pfile = dev->memory->gs_lib_ctx->fstdout;
 	/* Force stdout to binary. */
 	return gp_setmode_binary(*pfile, true);
+    } else if (parsed.iodev && !strcmp(parsed.iodev->dname, "%pipe%")) {
+	positionable = false;
     }
     if (fmt) {						/* filename includes "%nnd" */
 	long count1 = dev->PageCount + 1;

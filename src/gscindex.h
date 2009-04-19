@@ -17,13 +17,14 @@
 
 */
 
-/* $Id: gscindex.h,v 1.7 2007/09/11 15:24:03 Arabidopsis Exp $ */
+/* $Id: gscindex.h,v 1.8 2009/04/19 13:54:31 Arabidopsis Exp $ */
 /* Client interface to Indexed color facilities */
 
 #ifndef gscindex_INCLUDED
 #  define gscindex_INCLUDED
 
 #include "gscspace.h"
+#include "gxfrac.h"
 
 /*
  * Indexed color spaces.
@@ -76,5 +77,13 @@ extern int gs_cspace_indexed_set_proc(
 /* Look up an index in an Indexed color space. */
 int gs_cspace_indexed_lookup(const gs_color_space *, int,
 			     gs_client_color *);
+
+/* Look up an index in an Indexed color space. Return as a byte */
+int gs_cspace_indexed_lookup_bytes(const gs_color_space *pcs, float index_float,
+			unsigned char *output);
+
+/* Look up an index in an Indexed color space. Return as a frac */
+int gs_cspace_indexed_lookup_frac(const gs_color_space *pcs, float index_float,
+			frac *output);
 
 #endif /* gscindex_INCLUDED */

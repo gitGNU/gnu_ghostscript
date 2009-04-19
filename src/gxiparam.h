@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxiparam.h,v 1.7 2007/09/11 15:24:12 Arabidopsis Exp $ */
+/* $Id: gxiparam.h,v 1.8 2009/04/19 13:54:35 Arabidopsis Exp $ */
 /* Definitions for implementors of image types */
 
 #ifndef gxiparam_INCLUDED
@@ -219,11 +219,12 @@ typedef struct gx_image_enum_procs_s {
 	const gx_image_type_t *image_type;\
 	const gx_image_enum_procs_t *procs;\
 	gx_device *dev;\
+	gs_memory_t *memory;	/* from begin_image */\
 	gs_id id;\
 	bool skipping; /* don't render, just consume image streams. */\
 	int num_planes;\
-	int plane_depths[gs_image_max_planes];	/* [num_planes] */\
-	int plane_widths[gs_image_max_planes]	/* [num_planes] */
+	int plane_depths[GS_IMAGE_MAX_COMPONENTS]; /* [num_planes] */\
+	int plane_widths[GS_IMAGE_MAX_COMPONENTS]  /* [num_planes] */
 struct gx_image_enum_common_s {
     gx_image_enum_common;
 };
@@ -257,5 +258,8 @@ dev_proc_begin_typed_image(gx_begin_image1);
 image_enum_proc_plane_data(gx_image1_plane_data);
 image_enum_proc_end_image(gx_image1_end_image);
 image_enum_proc_flush(gx_image1_flush);
+
+/* Free the image enumerator. */
+void gx_image_free_enum(gx_image_enum_common_t **ppenum);
 
 #endif /* gxiparam_INCLUDED */

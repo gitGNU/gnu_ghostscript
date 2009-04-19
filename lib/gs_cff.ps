@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: gs_cff.ps,v 1.8 2008/03/23 15:28:29 Arabidopsis Exp $
+% $Id: gs_cff.ps,v 1.9 2009/04/19 13:54:37 Arabidopsis Exp $
 % Loader for CFF (compressed) fonts, including OpenType CFFs.
 % The following are not implemented yet:
 %	Deleted entries in the Name Index
@@ -42,8 +42,8 @@
 		% If this is a font at all, it's an OpenType CFF font set.
     .init_otto_font_file
 	% Use a random FontSet resource name.  ****** WRONG ******
-    realtime rand xor =string cvs exch false
-    ReadData
+    realtime rand xor =string cvs exch //false //false
+    ReadData pop
   } {
 		% Not a TrueType font.
     .loadnonottofontfile
@@ -233,10 +233,16 @@ def
 def
 /Index {	% <name> Index <name> <array>
   CFFDEBUG { (% reading Index: ) print dup = } if
-  mark card16 dup 0 ne {
-    1 exch next offsetproc dup exec pop exch {
+  mark card16
+  dup 0 ne {
+    1 exch next
+    dup 0 eq { 
+      pop       % skip incorrect index, bug 689854
+    } {
+      offsetproc dup exec pop exch {
       dup exec dup 4 -1 roll sub 3 1 roll exch
-    } repeat pop
+      } repeat
+    } ifelse pop
   } if pop .packtomark
   CFFDEBUG { (% Index lengths = ) print dup === } if
   [ exch { nextstring } forall ] readonly
@@ -395,8 +401,8 @@ def
     /CIDCount 8720 def % Default value defined in CFF spec.
     3 dict begin
     /Supplement pxdef
-    idstring /Ordering pxdef
-    idstring /Registry pxdef
+    idstring dup type /nametype eq { .namestring } if /Ordering pxdef
+    idstring dup type /nametype eq { .namestring } if /Registry pxdef
     /CIDSystemInfo currentdict end def
   }
   63 { /CIDFontVersion pxdef }
@@ -564,9 +570,21 @@ dup							% Format 2
 
 /readPrivate {		% <font> <size> readPrivate -
   2 dict begin
+  f 3 1 roll exch       % f <size> <font> 
+  StringCache queued_offset known {
+    /PrivateStart queued_offset def
+  } {
   /PrivateStart pos def
-  f 3 1 roll exch 1 index f exch subfilefilter /f exch store
-  dup /FontType get exch
+    1 index 0 gt {
+      f 2 index string readstring pop
+    } {
+      ()
+    } ifelse
+    StringCache queued_offset 2 index put
+    0 () /SubFileDecode filter
+    /f exch store
+  } ifelse
+  dup /FontType .knownget not { 2 } if exch
   /Private get begin
 		% Default lenIV to -1 even for Type 1 CharStrings.
   2 ne { /lenIV -1 def } if
@@ -652,24 +670,62 @@ dup							% Format 2
   currentdict /FDSelect undef
   cleanupFont
 } bind def
+
+% PDF may load OpenType font containing ordinary CFF data as a CIDFont.
+% Convert the ordinary font to a CIDFont.
+/makeCIDFont {        % (currentdict) finishCIDFont -
+  /CIDFontType 0 def
+  /FDBytes 0 def
+  /GDBytes 0 def
+  /CIDMapOffset 0 def
+
+  /CIDSystemInfo 3 dict begin  % bogus
+    /Registry   (Adobe) def
+    /Ordering   (Identity) def
+    /Supplement 0 def
+  currentdict end def
+
+  /FDArray 4 dict begin
+    /FontMatrix dup load { 1000 0 0 1000 0 0 } matrix concatmatrix def
+    /Private    dup load def
+    /FontType   dup load def
+    /PaintType  dup load def
+  currentdict end 1 array astore def
+
+  /FontType 9 def
+
+  /GlyphDirectory CharStringArray def
+  /CIDCount GlyphDirectory length def
+
+  Private /GlobalSubrs undef
+  currentdict /Encoding undef
+  currentdict /CharStrings undef
+  currentdict /UniqueID undef
+  currentdict /XUID undef
+  cleanupFont
+} bind def
+
 % We need to pass the file as a parameter for the sake of the PDF
 % interpreter. Also for the sake of PDF, a flag forces the font
 % to be defined as <resname> instead of the name embedded in the data.
 % This is needed for subsetted fonts; it is valid if the CFF
 % contains only a single font.
+% Finally, PDF interpreter may request creation of CIDFont out of an
+% ordinary CFF font.
 /StartData {          % <resname> <nbytes> StartData -
-  currentfile exch subfilefilter false ReadData
+  currentfile exch subfilefilter //false //false ReadData pop
 } bind def
-/ReadData {           % <resname> <file> <forceresname> ReadData -
-
+/ReadData {           % <resname> <file> <forceresname> <forcecid> ReadData <fontset>
 	% Initialize.
 
   30 dict begin
+  /forcecidfont exch def
   /forceresname exch def
   /cff exch def
   /pos 0 def
   /resname exch cvlit def
   /DEBUG CFFDEBUG def	% bring the binding closer
+  /StringCache 1 dict def % Private DICT may be reused.
 
 	% Read the header.
 
@@ -723,9 +779,14 @@ dup							% Format 2
     CFFDEBUG { (offsets: ) print [ offsets { pop } forall ] == } if
     [ offsets { pop } forall ] { lt } .sort	% process in order of appearance
     { 
-      /f cff def
       CFFDEBUG { (queued offset: ) print dup =print flush (, current pos=) print pos = } if
+      /queued_offset 1 index def
+      StringCache 1 index .knownget {
+        /f exch 0 () /SubFileDecode filter def
+      } {
+        /f cff def
       dup pos ne { dup pos sub nextstring pop } if	% negative advance will cause error
+      } ifelse
       offsets exch 2 copy get 3 1 roll undef
       CFFDEBUG { (exec queued: ) print dup == } if
       exec
@@ -742,7 +803,11 @@ dup							% Format 2
 
   fonts {
     begin
-    currentdict /CIDFontType known { finishCIDFont } { finishFont } ifelse
+    currentdict /CIDFontType known {
+      finishCIDFont
+    } {
+      forcecidfont //makeCIDFont //finishFont ifelse
+    } ifelse
     end
   } forall
 
@@ -766,7 +831,7 @@ dup							% Format 2
   } for .dicttomark
   end		% temporary dict
   end		% FontSetInit ProcSet
-  /FontSet defineresource pop
+  /FontSet defineresource
 
 } bind def
 

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: iapi.c,v 1.9 2007/09/11 15:24:17 Arabidopsis Exp $ */
+/* $Id: iapi.c,v 1.10 2009/04/19 13:54:28 Arabidopsis Exp $ */
 
 /* Public Application Programming Interface to Ghostscript interpreter */
 
@@ -87,6 +87,7 @@ gsapi_new_instance(void **pinstance, void *caller_handle)
     minst = gs_main_alloc_instance(mem);
     mem->gs_lib_ctx->top_of_system = (void*) minst;
     mem->gs_lib_ctx->caller_handle = caller_handle;
+    mem->gs_lib_ctx->custom_color_callback = NULL;
     mem->gs_lib_ctx->stdin_fn = NULL;
     mem->gs_lib_ctx->stdout_fn = NULL;
     mem->gs_lib_ctx->stderr_fn = NULL;

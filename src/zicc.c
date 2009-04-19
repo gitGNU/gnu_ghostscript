@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zicc.c,v 1.11 2008/05/04 14:34:55 Arabidopsis Exp $ */
+/* $Id: zicc.c,v 1.12 2009/04/19 13:54:25 Arabidopsis Exp $ */
 /* ICCBased color operators */
 
 #include "math_.h"
@@ -29,6 +29,7 @@
 #include "stream.h"
 #include "files.h"
 #include "gscolor2.h"
+#include "icc.h"			
 #include "gsicc.h"
 #include "estack.h"
 #include "idict.h"
@@ -149,6 +150,38 @@ zseticcspace(i_ctx_t * i_ctx_p)
     code = gx_load_icc_profile(picc_info);
     if (code < 0)
 	return code;
+
+	/* If the input space to this profile is CIELAB, then we need to adjust the limits */
+	/* See ICC spec ICC.1:2004-10 Section 6.3.4.2 and 6.4 */
+	if(picc_info->plu->e_inSpace == icSigLabData)
+	{
+        picc_info->Range.ranges[0].rmin = 0.0;
+        picc_info->Range.ranges[0].rmax = 100.0;
+
+        picc_info->Range.ranges[1].rmin = -128.0;
+        picc_info->Range.ranges[1].rmax = 127.0;
+
+        picc_info->Range.ranges[2].rmin = -128.0;
+        picc_info->Range.ranges[2].rmax = 127.0;
+
+	} 
+
+	/* If the input space is icSigXYZData, then we should do the limits based upon the white point of the profile.  */
+
+	if(picc_info->plu->e_inSpace == icSigXYZData)
+	{
+		for (i = 0; i < 3; i++) 
+		{
+
+			picc_info->Range.ranges[i].rmin = 0;
+
+		}
+
+		picc_info->Range.ranges[0].rmax = picc_info->common.points.WhitePoint.u;
+		picc_info->Range.ranges[1].rmax = picc_info->common.points.WhitePoint.v;
+		picc_info->Range.ranges[2].rmax = picc_info->common.points.WhitePoint.w;
+
+	}
 
     code = cie_cache_joint(i_ctx_p, &istate->colorrendering.procs,
 			   (gs_cie_common *)picc_info, igs);

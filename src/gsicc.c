@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsicc.c,v 1.11 2008/03/23 15:28:17 Arabidopsis Exp $ */
+/* $Id: gsicc.c,v 1.12 2009/04/19 13:54:28 Arabidopsis Exp $ */
 /* Implementation of the ICCBased color space family */
 
 #include "math_.h"
@@ -30,10 +30,10 @@
 #include "gxarith.h"
 #include "gxcie.h"
 #include "gzstate.h"
-#include "stream.h"
 #include "icc.h"		/* must precede icc.h */
 #include "gsicc.h"
 
+#define SAVEICCPROFILE 0
 
 typedef struct _icmFileGs icmFileGs;
 
@@ -260,13 +260,17 @@ gx_concretize_CIEICC(
     for (i = 0; i < ncomps; i++)
         inv[i] = lcc.paint.values[i];
 
+	/* Since the original limits were wrong for this case, We need to adjust things a bit different */
+
     /* For input Lab color space massage the values into Lab range */
 
-    if (picc_info->plu->e_inSpace == icSigLabData) {
+   /* if (picc_info->plu->e_inSpace == icSigLabData) {
+
         inv[0] *= 100;
         inv[1] = inv[1]*255 - 128;
         inv[2] = inv[2]*255 - 128; 
-    }
+
+    } */
 
     /*
      * Perform the lookup operation. A return value of 1 indicates that
@@ -326,7 +330,7 @@ gx_remap_ICCBased(const gs_client_color * pc, const gs_color_space * pcs,
 		gs_color_select_t select)
 {
     client_custom_color_params_t * pcb =
-	    (client_custom_color_params_t *) (pis->custom_color_callback);
+	    (client_custom_color_params_t *) (pis->memory->gs_lib_ctx->custom_color_callback);
 
     if (pcb != NULL) {
 	if (pcb->client_procs->remap_ICCBased(pcb, pc, pcs,
@@ -435,6 +439,14 @@ gx_load_icc_profile(gs_cie_icc *picc_info)
     icmLuBase * plu = NULL;
     icmFile *pfile = NULL;
 	
+#if   SAVEICCPROFILE
+
+    unsigned int num_bytes;
+    unsigned char *iccbuffer;
+    FILE *fid;
+
+#endif
+	
     /* verify that the file is legitimate */
     if (picc_info->file_id != (instrp->read_id | instrp->write_id))
 	return_error(gs_error_ioerror);
@@ -463,6 +475,20 @@ gx_load_icc_profile(gs_cie_icc *picc_info)
       
 	if ((picc->read(picc, pfile, 0)) != 0)
 	    goto return_rangecheck;
+            
+#if SAVEICCPROFILE
+
+        num_bytes = picc->header->size;
+        iccbuffer = (unsigned char *) malloc(num_bytes);
+        pfile->seek(pfile,0);
+        pfile->read(pfile,iccbuffer,1,num_bytes);
+        fid = fopen("DumpedICC.icm","wb");
+        fwrite(iccbuffer,sizeof(unsigned char),num_bytes,fid);
+        fclose(fid);
+        free(iccbuffer);
+
+#endif
+        
             
 	/* verify the profile type */
 	profile_class = picc->header->deviceClass;
@@ -601,7 +627,7 @@ gx_install_CIEICC(gs_color_space * pcs, gs_state * pgs)
          * color space.
          */
         client_custom_color_params_t * pcb =
-	    (client_custom_color_params_t *) pgs->custom_color_callback;
+	    (client_custom_color_params_t *) pgs->memory->gs_lib_ctx->custom_color_callback;
 
         if (pcb != NULL) {
 	    if (pcb->client_procs->install_ICCBased(pcb, pcs, pgs))

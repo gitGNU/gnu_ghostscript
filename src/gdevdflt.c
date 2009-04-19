@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevdflt.c,v 1.13 2008/05/04 14:34:43 Arabidopsis Exp $ */
+/* $Id: gdevdflt.c,v 1.14 2009/04/19 13:54:25 Arabidopsis Exp $ */
 /* Default device implementation */
 #include "math_.h"
 #include "gx.h"
@@ -885,6 +885,15 @@ gx_default_composite_clist_read_update(gs_composite_t *pxcte, gx_device * cdev,
 		gx_device * tdev, gs_imager_state * pis, gs_memory_t * mem)
 {
     return 0;			/* Do nothing */
+}
+
+/*
+ * Default handler for get_cropping returns no cropping.
+ */
+int
+gx_default_composite_get_cropping(const gs_composite_t *pxcte, int *ry, int *rheight)
+{
+    return 0;			/* No cropping. */
 }
 
 int

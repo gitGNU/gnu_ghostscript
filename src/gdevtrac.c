@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevtrac.c,v 1.9 2008/03/23 15:27:38 Arabidopsis Exp $ */
+/* $Id: gdevtrac.c,v 1.10 2009/04/19 13:54:36 Arabidopsis Exp $ */
 /* Tracing device (including sample high-level implementation) */
 #include "gx.h"
 #include "gserrors.h"
@@ -357,7 +357,7 @@ trace_end_image(gx_image_enum_common_t * info, bool draw_last)
 {
     trace_image_enum_t *pie = (trace_image_enum_t *)info;
 
-    gs_free_object(pie->memory, pie, "trace_end_image");
+    gx_image_free_enum(&info);
     return 0;
 }
 static const gx_image_enum_procs_t trace_image_enum_procs = {

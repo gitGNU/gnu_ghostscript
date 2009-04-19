@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxclpath.c,v 1.13 2008/05/04 14:34:51 Arabidopsis Exp $ */
+/*$Id: gxclpath.c,v 1.14 2009/04/19 13:54:23 Arabidopsis Exp $ */
 /* Higher-level path operations for band lists */
 #include "math_.h"
 #include "memory_.h"
@@ -111,6 +111,11 @@ cmd_put_drawing_color(gx_device_clist_writer * cldev, gx_clist_state * pcls,
     byte *                     dp;
     byte *                     dp0;
     gs_int_point               color_phase;
+    int			       buffer_space;
+    int			       offset = 0;
+    int			       left;
+    uint		       portion_size, prefix_size;
+    int			       req_size_final;
 
     /* see if the halftone must be inserted in the command list */
     if ( pdht != NULL                          &&
@@ -134,6 +139,7 @@ cmd_put_drawing_color(gx_device_clist_writer * cldev, gx_clist_state * pcls,
                                  psdc,
                                  (gx_device *)cldev,
                                  0,
+                                 0,
                                  &dc_size );
 
     /* if the returned value is > 0, no change in the color is necessary */
@@ -141,7 +147,7 @@ cmd_put_drawing_color(gx_device_clist_writer * cldev, gx_clist_state * pcls,
         return 0;
     else if (code < 0 && code != gs_error_rangecheck)
         return code;
-    req_size = dc_size + 2 + 1 + enc_u_sizew(dc_size);
+    left = dc_size;
 
     /* see if phase informaiton must be inserted in the command list */
     if ( pdcolor->type->get_phase(pdcolor, &color_phase) &&
@@ -153,26 +159,39 @@ cmd_put_drawing_color(gx_device_clist_writer * cldev, gx_clist_state * pcls,
                                      color_phase.y )) < 0  )
         return code;
 
-    /*
-     * Encoded device colors are small in comparison to the command
-     * buffer size (< 64 bytes), so we can just clear space in the
-     * command buffer for them.
-     */
-    if ((code = set_cmd_put_op(dp, cldev, pcls, cmd_opv_extend, req_size)) < 0)
+    while (left) {
+	prefix_size = 2 + 1 + (offset > 0 ? enc_u_sizew(offset) : 0);
+	req_size = left + prefix_size + enc_u_sizew(left);
+	code = cmd_get_buffer_space(cldev, pcls, req_size);
+	if (code < 0)
+	    return code;
+	buffer_space = min(code, req_size);
+	portion_size = buffer_space - prefix_size - enc_u_sizew(left);
+	req_size_final = portion_size + prefix_size + enc_u_sizew(portion_size);
+	if (req_size_final > buffer_space)
+	    return_error(gs_error_unregistered); /* Must not happen. */
+	if ((code = set_cmd_put_op(dp, cldev, pcls, cmd_opv_extend, req_size_final)) < 0)
         return code;
     dp0 = dp;
     dp[1] = cmd_opv_ext_put_drawing_color;
     dp += 2;
-    *dp++ = di;
-    enc_u_putw(dc_size, dp);
+	*dp++ = di | (offset > 0 ? 0x80 : 0);
+	if (offset > 0)
+	    enc_u_putw(offset, dp);
+	enc_u_putw(portion_size, dp);
     code = pdcolor->type->write( pdcolor,
                                  &pcls->sdc,
                                  (gx_device *)cldev,
+				     offset,
                                  dp,
-                                 &dc_size );
+				     &portion_size);
     if (code < 0) {
+	    if (offset == 0)
         cldev->cnext = dp0;
         return code;
+    }
+	offset += portion_size;
+	left -= portion_size;
     }
 
     /* should properly calculate colors_used, but for now just punt */
@@ -608,7 +627,10 @@ clist_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
 	   See comment below about pdcolor == NULL.
 	 */
 	code = gx_default_fill_path(dev, pis, ppath, params, pdcolor, pcpath);
-	cdev->cropping_by_path = false;
+	cdev->cropping_min = cdev->save_cropping_min;
+	cdev->cropping_max = cdev->save_cropping_max;
+	if_debug2('v', "[v] clist_fill_path: restore cropping_min=%d croping_max=%d\n",
+				cdev->save_cropping_min, cdev->save_cropping_max);
 	return code;
     }
     if ( (cdev->disable_mask & clist_disable_fill_path) ||
@@ -630,8 +652,7 @@ clist_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
 	}
 	ry = fixed2int(bbox.p.y) - 1;
 	rheight = fixed2int_ceiling(bbox.q.y) - ry + 1;
-	fit_fill_y(dev, ry, rheight);
-	fit_fill_h(dev, ry, rheight);
+	crop_fill_y(cdev, ry, rheight);
 	if (rheight <= 0)
 	    return 0;
     }
@@ -648,10 +669,13 @@ clist_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
 	   Put the clipping path only.
 	   The graphics library will call us again with subdividing 
 	   the shading into trapezoids and rectangles. 
-	   Note cropping_by_path is true during such calls. */
-	cdev->cropping_by_path = true;
-	cdev->cropping_min = ry;
-	cdev->cropping_max = ry + rheight;
+	   Narrow cropping_min, croping_max for such calls. */
+	cdev->save_cropping_min = cdev->cropping_min;
+	cdev->save_cropping_max = cdev->cropping_max;
+	cdev->cropping_min = max(ry, cdev->cropping_min);
+	cdev->cropping_max = min(ry + rheight, cdev->cropping_max);
+	if_debug2('v', "[v] clist_fill_path: narrow cropping_min=%d croping_max=%d\n",
+				cdev->save_cropping_min, cdev->save_cropping_max);
 	RECT_ENUM_INIT(re, ry, rheight);
 	do {
 	    RECT_STEP_INIT(re);
@@ -677,6 +701,8 @@ clist_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
 		)
 		return code;
 	    code = cmd_put_drawing_color(cdev, re.pcls, pdcolor);
+	    if (code == gs_error_unregistered)
+		return code;
 	    if (code < 0) {
 		/* Something went wrong, use the default implementation. */
 		return gx_default_fill_path(dev, pis, ppath, params, pdcolor,
@@ -814,6 +840,8 @@ clist_stroke_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
 	    )
 	    return code;
 	code = cmd_put_drawing_color(cdev, re.pcls, pdcolor);
+	    if (code == gs_error_unregistered)
+		return code;
 	if (code < 0) {
 	    /* Something went wrong, use the default implementation. */
 	    return gx_default_stroke_path(dev, pis, ppath, params, pdcolor,
@@ -1173,6 +1201,7 @@ cmd_put_path(gx_device_clist_writer * cldev, gx_clist_state * pcls,
 
     /* Information about the last emitted operation: */
     int open = 0;		/* -1 if last was moveto, 1 if line/curveto, */
+    struct { fixed vs[6]; } prev;
 
     /* 0 if newpath/closepath */
 
@@ -1189,7 +1218,6 @@ cmd_put_path(gx_device_clist_writer * cldev, gx_clist_state * pcls,
     set_first_point();
     for (;;) {
 	fixed vs[6];
-	struct { fixed vs[6]; } prev;
 
 #define A vs[0]
 #define B vs[1]

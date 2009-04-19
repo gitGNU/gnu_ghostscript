@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevp14.h,v 1.11 2008/05/04 14:34:43 Arabidopsis Exp $ */
+/* $Id: gdevp14.h,v 1.12 2009/04/19 13:54:36 Arabidopsis Exp $ */
 /* Definitions and interface for PDF 1.4 rendering device */
 
 #ifndef gdevp14_INCLUDED
@@ -62,6 +62,7 @@ struct pdf14_buf_s {
     gs_int_rect bbox;
     pdf14_buf *maskbuf; /* Save pdf14_ctx_s::maksbuf. */
     bool idle;
+    uint mask_id;
 };
 
 struct pdf14_ctx_s {

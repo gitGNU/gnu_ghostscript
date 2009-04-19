@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gximage.c,v 1.9 2008/03/23 15:28:14 Arabidopsis Exp $ */
+/* $Id: gximage.c,v 1.10 2009/04/19 13:54:34 Arabidopsis Exp $ */
 /* Generic image support */
 #include "memory_.h"
 #include "gx.h"
@@ -152,13 +152,13 @@ gx_image_data(gx_image_enum_common_t * info, const byte ** plane_data,
 	      int data_x, uint raster, int height)
 {
     int num_planes = info->num_planes;
-    gx_image_plane_t planes[gs_image_max_planes];
+    gx_image_plane_t planes[GS_IMAGE_MAX_COMPONENTS];
     int i;
 
 #ifdef DEBUG
-    if (num_planes > gs_image_max_planes) {
-	lprintf2("num_planes=%d > gs_image_max_planes=%d!\n",
-		 num_planes, gs_image_max_planes);
+    if (num_planes > GS_IMAGE_MAX_COMPONENTS) {
+	lprintf2("num_planes=%d > GS_IMAGE_MAX_COMPONENTS=%d!\n",
+		 num_planes, GS_IMAGE_MAX_COMPONENTS);
 	return_error(gs_error_Fatal);
     }
 #endif

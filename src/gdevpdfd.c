@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfd.c,v 1.12 2008/03/23 15:27:53 Arabidopsis Exp $ */
+/* $Id: gdevpdfd.c,v 1.13 2009/04/19 13:54:31 Arabidopsis Exp $ */
 /* Path drawing procedures for pdfwrite driver */
 #include "math_.h"
 #include "memory_.h"
@@ -1236,7 +1236,23 @@ gdev_pdf_stroke_path(gx_device * dev, const gs_imager_state * pis,
 		 * needs to be scaled to match otherwise we will get the default, or the current
 		 * width scaled by the CTM before the text, either of which would be wrong.
 		 */
+		if (pdev->font3 != 0) {
+		    double det, scale;
+
+		    /* Since font matrix may have different scaling effect by
+		       different directions, we need to average them into
+		       a single scaling factor. A right way is to use
+		       the geometric average of the 2 eigenvalues of the 2x2 matrix,
+		       which appears equal to sqrt(abs(det(M)) where M
+		       is the font matrix with no translation.  */
+		    det = ((double)fixed2float(pdev->charproc_ctm.xx) * fixed2float(pdev->charproc_ctm.yy)) - 
+			((double)fixed2float(pdev->charproc_ctm.xy) * fixed2float(pdev->charproc_ctm.yx));
+		    scale = fabs(sqrt(det));
+		    scale *= 72 / pdev->HWResolution[0];
+		    pprintg1(s, "%g w\n", (pis->line_params.half_width * 2) * (float)scale);
+		} else {
 		pprintg1(s, "%g w\n", (pis->line_params.half_width * 2));
+		}
 		/* Some trickery here. We have altered the colour, text render mode and linewidth,
 		 * we don't want those to persist. By switching to a stream context we will flush the 
 		 * pending text. This has the beneficial side effect of executing a grestore. So

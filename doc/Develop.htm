@@ -3,7 +3,7 @@
 <head>
 <title>Information for Ghostscript developers</title>
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
-<!-- $Id: Develop.htm,v 1.12 2008/05/04 14:34:59 Arabidopsis Exp $ -->
+<!-- $Id: Develop.htm,v 1.13 2009/04/19 13:54:43 Arabidopsis Exp $ -->
 </head>
 
 <body>
@@ -100,7 +100,8 @@
 <ul>
 <li><a href="#malloc">malloc</a>,
     <a href="#Locking">Locking</a>,
-    <a href="#Retrying">Retrying</a>
+    <a href="#Retrying">Retrying</a>,
+    <a href="#Chunk">Chunk</a>
 </ul>
 <li><a href="#Standard_implementation">Standard implementation</a>
 <li><a href="#PostScript_interpreter_extensions">PostScript interpreter extensions</a>
@@ -563,6 +564,8 @@ Non-standard filters:
 <a href="../src/sbwbs.h">src/sbwbs.h</a>,
 <a href="../src/smd5.c">src/smd5.c</a>,
 <a href="../src/smd5.h">src/smd5.h</a>,
+<a href="../src/saes.c">src/saes.c</a>,
+<a href="../src/saes.h">src/saes.h</a>,
 <a href="../src/sarc4.c">src/sarc4.c</a>,
 <a href="../src/sarc4.h">src/sarc4.h</a>,
 <a href="../src/smtf.c">src/smtf.c</a>,
@@ -648,7 +651,9 @@ Other:
 <a href="../src/gx.h">src/gx.h</a>,
 <a href="../src/md5.c">src/md5.c</a>,
 <a href="../src/md5.h">src/md5.h</a>,
-<a href="../src/md5main.c">src/md5main.c</a>.
+<a href="../src/md5main.c">src/md5main.c</a>,
+<a href="../src/aes.c">src/aes.c</a>,
+<a href="../src/aes.h">src/aes.h</a>.
 
 </dl>
 
@@ -1522,6 +1527,8 @@ Banding:
 <a href="../src/gxclrast.c">src/gxclrast.c</a>,
 <a href="../src/gxclread.c">src/gxclread.c</a>,
 <a href="../src/gxclrect.c">src/gxclrect.c</a>,
+<a href="../src/gxclthrd.c">src/gxclthrd.c</a>,
+<a href="../src/gxclthrd.h">src/gxclthrd.h</a>,
 <a href="../src/gxclutil.c">src/gxclutil.c</a>,
 <a href="../src/gxclzlib.c">src/gxclzlib.c</a>,
 <a href="../src/gxdhtserial.c">src/gxdhtserial.c</a>,
@@ -1806,6 +1813,17 @@ PCL XL output device (pxlmono, pxlcolor):
 <a href="../src/gdevpxop.h">src/gdevpxop.h</a>,
 <a href="../src/gdevpxut.c">src/gdevpxut.c</a>,
 <a href="../src/gdevpxut.h">src/gdevpxut.h</a>.
+
+<dt>
+Cairo and SVG output devices (cairo, svgwrite):
+<dd>
+<a href="../src/gdevcairo.c">src/gdevcairo.c</a>,
+<a href="../src/gdevsvg.c">src/gdevsvg.c</a>.
+
+<p>
+The svgwrite device produces SVG only. The cairo device uses the cairo 
+graphics library to produce PDF, EPS, SVG or PNG output, based on the
+requested filename extension.
 
 <dt>
 Text extraction:
@@ -2374,6 +2392,7 @@ File and stream I/O:
 <a href="../src/itoken.h">src/itoken.h</a>,
 <a href="../src/zbseq.c">src/zbseq.c</a>,
 <a href="../src/zdscpars.c">src/zdscpars.c</a>,
+<a href="../src/zfile.h">src/zfile.h</a>,
 <a href="../src/zfile.c">src/zfile.c</a>,
 <a href="../src/zfile1.c">src/zfile1.c</a>,
 <a href="../src/zfileio.c">src/zfileio.c</a>,
@@ -3804,6 +3823,10 @@ As mentioned <a href="#Parent_hierarchy">above</a>, the ultimate ancestor of
 all allocators with an expandable pool is one that calls
 <b><tt>malloc</tt></b>.
 
+<p>Note that the default gsmalloc.c allocator for malloc/free now uses
+a mutex so that allocators that use this can be assured of thread safe
+behavior.
+
 <dl>
 <dt>
 Files:
@@ -3847,6 +3870,27 @@ Files:
 <dd>
 <a href="../src/gsmemret.h">src/gsmemret.h</a>,
 <a href="../src/gsmemret.c">src/gsmemret.c</a>.
+</dl>
+
+<h4><a name="Chunk"></a>Chunk</h4>
+
+<p>When multiple threads are used and there may be frequent memory allocator
+requests, mutex contention is a problem and can cause severe performance
+degradation. The chunk memory wrapper can provide each thread with its own
+instance of an allocator that only makes requests on the underlying (non-GC)
+alloctor when large blocks are needed. Small object allocations are managed
+within chunks.
+
+<p>This allocator is intended to be used on top of the basic 'gsmalloc'
+allocator (malloc/free) which is NOT garbage collected or relocated and
+which MUST be mutex protected.
+
+<dl>
+<dt>
+Files:
+<dd>
+<a href="../src/gsmchunk.h">src/gsmchunk.h</a>,
+<a href="../src/gsmchunk.c">src/gsmchunk.c</a>.
 </dl>
 
 <h3><a name="Standard_implementation"></a>Standard implementation</h3>
@@ -4864,7 +4908,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.62, 29 February 2008
+<small>Ghostscript version 8.63, 1 August 2008
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

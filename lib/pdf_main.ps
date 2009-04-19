@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: pdf_main.ps,v 1.12 2008/05/04 14:34:58 Arabidopsis Exp $
+% $Id: pdf_main.ps,v 1.13 2009/04/19 13:54:38 Arabidopsis Exp $
 % pdf_main.ps
 % PDF file- and page-level operations.
 
@@ -89,20 +89,20 @@ systemdict begin
       dup 1023 string .peekstring pop dup length 400 ge {
 	% "1024 string" exceeds current %stdin buffer
 	% Valid PDF file cannot be smaller than 400 bytes.
-	(%PDF-1.) search {
+	(%PDF-) search {
 	  3 1 roll pop pop
 	  dup (%!PS) search not {
 	    length 0 ne { 
 	      1 index exch readstring pop pop
 	      (%stderr) (w) file dup 
-	      (   **** Warning: File has some garbage before %PDF-1. .\n)
+	      (   **** Warning: File has some garbage before %PDF- .\n)
 	      writestring flushfile
 	    } { 
 	      pop
 	    } ifelse
 	    dup (%stdin) (r) file eq {
 	      % Copy PDF from stdin to temporary file then run it.
-	      null (w+) //systemdict /.tempfile get exec exch 3 1 roll
+	      null (w+) /.tempfile .systemvar exec exch 3 1 roll
 	      % stack: tempname stdin tempfile
 	      64000 string
 	      {
@@ -124,7 +124,7 @@ systemdict begin
 	    pop pop pop pop cvx .runps % (%!PS) found first
 	  } ifelse
 	} { 
-	  pop cvx .runps % (%PDF-1.) not found
+	  pop cvx .runps % (%PDF-) not found
 	} ifelse
       } { 
 	pop cvx .runps   % too short for PDF
@@ -177,6 +177,8 @@ currentdict /runpdfstring .undef
 
 /dopdfpages {   % firstpage# lastpage# dopdfpages -
   << /PDFScanRules //true >> setuserparams	% set scanning rules for PDF vs. PS
+  << /RenderTTNotdef systemdict 
+     /RENDERTTNOTDEF get >> setuserparams	% Should we render TT /.notdef
   1 exch
     { dup /Page# exch store
       QUIET not { (Page ) print dup == flush } if
@@ -196,9 +198,14 @@ currentdict /runpdfstring .undef
    2 vmreclaim		% couldn't hurt
 } bind def
 
-% - pdf_collection_files [temp_files] show_container
+
+% Copy default subfile to a temporary file and return the file name
+% as a PostScript name to protect it from restore. Return null if
+% there's no default subfile.
+%
+% - pdf_collection_files /temp_file_name | null
 /pdf_collection_files {
-  {} //true
+  //null
   Trailer /Root oget /Collection knownoget {
     /D knownoget { % We have default document in the collection
       Trailer /Root oget /Names knownoget {
@@ -206,21 +213,19 @@ currentdict /runpdfstring .undef
           exch nameoget dup //null ne {
             /EF knownoget {
               /F knownoget {
-                //true resolvestream    % {} true strm
-                //null (w) .tempfile    % {} true strm (name) file
-                3 -1 roll               % {} true (name) file strm
-                32768 string            % {} true (name) file strm (buf)
-                { 3 copy readstring     % {} true (name) file strm (buf) file (data) bool
-                  3 1 roll              % {} true (name) file strm (buf) bool file (data)
-                  writestring           % {} true (name) file strm (buf) bool
+                //true resolvestream    % null strm
+                //null (w) /.tempfile   % null strm (name) null (w) /.tempfile
+                .systemvar exec         % null strm (name) file
+                3 -1 roll               % null (name) file strm
+                32768 string            % null (name) file strm (buf)
+                { 3 copy readstring     % null (name) file strm (buf) file (data) bool
+                  3 1 roll              % null (name) file strm (buf) bool file (data)
+                  writestring           % null (name) file strm (buf) bool
                   not { exit } if
                 } loop                  
-                pop closefile           % {} true (name) file
-                closefile               % {} true (name)
-                3 1 roll pop pop        % (name)
-                .currentglobal //true .setglobal
-                exch dup length string copy 1 array astore
-                exch .setglobal //false
+                pop closefile           % null (name) file
+                closefile               % null (name)
+                exch pop cvn            % /name
               } if
             } if
           } {
@@ -238,21 +243,24 @@ currentdict /runpdfstring .undef
 
 /runpdf {		% <file> runpdf -
   //runpdfbegin exec
-  //pdf_collection_files exec {
+  //pdf_collection_files exec
+  dup type /nametype ne {
     copy_trailer_attrs
     //runpdfpagerange exec
     //dopdfpages exec
   } if
   //runpdfend exec
-  {
-    dup (r) file
+  dup type /nametype eq {
+    .namestring dup (r) file
     //runpdfbegin exec
     copy_trailer_attrs
     //runpdfpagerange exec
     //dopdfpages exec
     //runpdfend exec
     deletefile
-  } forall
+  } {
+    pop
+  } ifelse
 } bind def
 
 currentdict /runpdfpagerange .undef
@@ -1564,20 +1572,20 @@ currentdict /PDF2PS_matrix_key undef
 % of any other transparency features, they have no effect.
 /pageusestransparency {		% <pagedict> pageusestransparency <bool>
   PDFversion PDFtransparencyversion lt NOTRANSPARENCY or {
-    pop false
+    pop //false
   } {
-    dup false exch {
+    dup //false exch {
       4 dict 1 index resourceusestransparency { pop not exit } if
       /Parent knownoget not { exit } if
     } loop
     % Also check for transparency in the annotation (if not in resources).
-    { pop true } { annotsusetransparency } ifelse
+    { pop //true } { annotsusetransparency } ifelse
   } ifelse
 } bind def
 
 % Check if transparency is specified in an ExtGState dict
 /extgstateusestransparency {	% <gstate dict> extgstateusestransparency <bool>
-  false exch		% Assume no transparency
+  //false exch		% Assume no transparency
   {			% establish loop context
     exch pop oforce
     dup /BM knownoget { dup /Normal ne exch /Compatible ne and
@@ -1626,16 +1634,12 @@ currentdict /PDF2PS_matrix_key undef
 
 % Check if the annotations on a page use transparency
 /annotsusetransparency {	% <page dict> annotsusetransparency <bool>
-   false exch			% Assume no transparency
+   //false exch			% Assume no transparency
    /Annots knownoget {		% Get Annots array
      { oforce /AP knownoget {	% Get appearance dict for the annoation
-	/N knownoget { 	% Get the /N (i.e. normal) appearance stream
-	  /Resources knownoget {
-	    /ExtGState knownoget {
-	       extgstateusestransparency { pop true exit} if
-	     } if		% If ExtGState known
-	   } if			% If Resources known
-	 } if			% If annotation has a normal appearance
+         /N knownogetdict { 	% Get the /N (i.e. normal) appearance stream
+           4 dict exch resourceusestransparency { pop //true exit } if
+         } if
        } if			% If AP dict known
      } forall			% For all annots on the page
    } if
@@ -1714,7 +1718,7 @@ currentdict /PDF2PS_matrix_key undef
 % 		 annotsspotcolors <spotcolordict> <loopdict>
 /annotsspotcolors {
   { oforce /AP knownoget {	% Get appearance dict for the annoation
-      /N knownoget {		% Get the /N (i.e. normal) appearance stream
+      /N knownogetdict {		% Get the /N (i.e. normal) appearance stream
         resourcespotcolors
       } if			% If normal appearance streamknown
     } if			% If AP dict known
@@ -1805,18 +1809,19 @@ bind def
 
 % Write OutputIntents to device if the device handles it
 /writeoutputintents {
-  currentdevice 1 dict dup /OutputIntent null put readonly
+  currentdevice 1 dict dup /OutputIntent //null put readonly
   .getdeviceparams
   mark ne { pop pop
     % device supports OutputIntent parameter
     Trailer /Root oget /OutputIntents knownoget {
+      dup type /arraytype eq {
       {	% process all output profiles present
         oforce
         dup length dict .copydict
 	dup /DestOutputProfile knownoget {
 	  PDFfile fileposition exch
 	  mark exch { oforce } forall .dicttomark
-	  true resolvestream
+	    //true resolvestream
 	  [ { counttomark 1 add index
 	      64000 string readstring
 	      not { exit} if
@@ -1840,6 +1845,11 @@ bind def
 	[ /OutputIntent 3 2 roll .pdfputparams pop pop
         pop	  % done with this OutputIntent dictionary
       } forall
+      } {
+        pop
+        (   **** Warning: OutputIntent attribute of a wrong type is ignored.\n)
+        pdfformaterror
+      } ifelse
     } if	% OutputIntents known
     % tell device there are no more OutputIntents
     [ /OutputIntent [ ] .pdfputparams pop pop

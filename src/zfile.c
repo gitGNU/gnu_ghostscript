@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfile.c,v 1.11 2008/03/23 15:27:40 Arabidopsis Exp $ */
+/* $Id: zfile.c,v 1.12 2009/04/19 13:54:25 Arabidopsis Exp $ */
 /* Non-I/O file operators */
 #include "memory_.h"
 #include "string_.h"
@@ -48,6 +48,7 @@
 #include "files.h"
 #include "main.h"		/* for gs_lib_paths */
 #include "store.h"
+#include "zfile.h"
 
 /* Import the IODevice table. */
 extern_gx_io_device_table();
@@ -65,9 +66,6 @@ static int parse_file_access_string(const ref *op, char file_access[4]);
 /* Forward references: other. */
 static int execfile_finish(i_ctx_t *);
 static int execfile_cleanup(i_ctx_t *);
-static int zopen_file(i_ctx_t *, const gs_parsed_file_name_t *pfn,
-		       const char *file_access, stream **ps,
-		       gs_memory_t *mem);
 static iodev_proc_open_file(iodev_os_open_file);
 stream_proc_report_error(filter_report_error);
 
@@ -294,7 +292,7 @@ zfile(i_ctx_t *i_ctx_p)
  * The names 'SAFETY' and 'tempfiles' are defined by gs_init.ps
 */
 static bool
-file_is_tempfile(i_ctx_t *i_ctx_p, const ref *op)
+file_is_tempfile(i_ctx_t *i_ctx_p, const uchar *fname, int len)
 {
     ref *SAFETY;
     ref *tempfiles;
@@ -303,7 +301,7 @@ file_is_tempfile(i_ctx_t *i_ctx_p, const ref *op)
     if (dict_find_string(systemdict, "SAFETY", &SAFETY) <= 0 ||
 	    dict_find_string(SAFETY, "tempfiles", &tempfiles) <= 0)
 	return false;
-    if (name_ref(imemory, op->value.bytes, r_size(op), &kname, -1) < 0 ||
+    if (name_ref(imemory, fname, len, &kname, -1) < 0 ||
 	    dict_find(tempfiles, &kname, &SAFETY) <= 0)
 	return false;
     return true;
@@ -324,7 +322,7 @@ zdeletefile(i_ctx_t *i_ctx_p)
     if (pname.iodev == iodev_default) {
 	if ((code = check_file_permissions(i_ctx_p, pname.fname, pname.len,
 		"PermitFileControl")) < 0 &&
-		 !file_is_tempfile(i_ctx_p, op)) {
+		 !file_is_tempfile(i_ctx_p, op->value.bytes, r_size(op))) {
 	    return code;
 	}
     }
@@ -453,7 +451,7 @@ zrenamefile(i_ctx_t *i_ctx_p)
 		 */
 	      ((check_file_permissions(i_ctx_p, pname1.fname, pname1.len,
 	      				"PermitFileControl") < 0 &&
-	          !file_is_tempfile(i_ctx_p, op - 1)) ||
+	          !file_is_tempfile(i_ctx_p, op[-1].value.bytes, r_size(op - 1))) ||
 	      (check_file_permissions(i_ctx_p, pname2.fname, pname2.len,
 	      				"PermitFileControl") < 0 ||
 	      check_file_permissions(i_ctx_p, pname2.fname, pname2.len,
@@ -837,7 +835,7 @@ parse_file_access_string(const ref *op, char file_access[4])
  * Open a file specified by a parsed file name (which may be only a
  * device).
  */
-static int
+int
 zopen_file(i_ctx_t *i_ctx_p, const gs_parsed_file_name_t *pfn,
 	   const char *file_access, stream **ps, gs_memory_t *mem)
 {
@@ -855,7 +853,8 @@ zopen_file(i_ctx_t *i_ctx_p, const gs_parsed_file_name_t *pfn,
 	    int code = check_file_permissions(i_ctx_p, pfn->fname, pfn->len,
 		file_access[0] == 'r' ? "PermitFileReading" : "PermitFileWriting");
 
-	    if (code < 0)
+	    if (code < 0 && !file_is_tempfile(i_ctx_p,
+                                          (const uchar *)pfn->fname, pfn->len))
 		return code;
 	}
 	return open_file(iodev, pfn->fname, pfn->len, file_access, ps, mem);

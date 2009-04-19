@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxp1fill.c,v 1.10 2008/03/23 15:28:05 Arabidopsis Exp $ */
+/* $Id: gxp1fill.c,v 1.11 2009/04/19 13:54:27 Arabidopsis Exp $ */
 /* PatternType 1 filling algorithms */
 #include "math_.h"
 #include "gx.h"
@@ -86,9 +86,9 @@ tile_fill_init(tile_fill_state_t * ptfs, const gx_device_color * pdevc,
      * tile_by_steps loop, but for simple tiles, we must set it now.
      */
     if (set_mask_phase && m_tile->is_simple) {
-	px = imod(-(int)(m_tile->step_matrix.tx - ptfs->phase.x + 0.5),
+	px = imod(-(int)floor(m_tile->step_matrix.tx - ptfs->phase.x + 0.5),
 		  m_tile->tmask.rep_width);
-	py = imod(-(int)(m_tile->step_matrix.ty - ptfs->phase.y + 0.5),
+	py = imod(-(int)floor(m_tile->step_matrix.ty - ptfs->phase.y + 0.5),
 		  m_tile->tmask.rep_height);
     } else
 	px = py = 0;
@@ -155,9 +155,9 @@ tile_by_steps(tile_fill_state_t * ptfs, int x0, int y0, int w0, int h0,
     if_debug4('T', "[T]i=(%d,%d) j=(%d,%d)\n", i0, i1, j0, j1);
     for (i = i0; i < i1; i++)
 	for (j = j0; j < j1; j++) {
-	    int x = (int)(step_matrix.xx * i +
+	    int x = (int)floor(step_matrix.xx * i +
 			  step_matrix.yx * j + step_matrix.tx);
-	    int y = (int)(step_matrix.xy * i +
+	    int y = (int)floor(step_matrix.xy * i +
 			  step_matrix.yy * j + step_matrix.ty);
 	    int w = tbits_or_tmask->size.x;
 	    int h = tbits_or_tmask->size.y;
@@ -258,8 +258,11 @@ tile_pattern_clist(const tile_fill_state_t * ptfs,
     crdev->offset_map = NULL;
     crdev->page_info.io_procs->rewind(crdev->page_info.bfile, false, NULL);
     crdev->page_info.io_procs->rewind(crdev->page_info.cfile, false, NULL);
+
+    if_debug0('L', "Pattern clist playback begin\n");
     code = clist_playback_file_bands(playback_action_render,
 		crdev, &crdev->page_info, dev, 0, 0, ptfs->xoff - x, ptfs->yoff - y);
+    if_debug0('L', "Pattern clist playback end\n");
     return code;
 }
 
@@ -286,10 +289,10 @@ gx_dc_pattern_fill_rectangle(const gx_device_color * pdevc, int x, int y,
 	return code;
     if (ptile->is_simple && ptile->cdev == NULL) {
 	int px =
-	    imod(-(int)(ptile->step_matrix.tx - state.phase.x + 0.5),
+	    imod(-(int)floor(ptile->step_matrix.tx - state.phase.x + 0.5),
 		 bits->rep_width);
 	int py =
-	    imod(-(int)(ptile->step_matrix.ty - state.phase.y + 0.5),
+	    imod(-(int)floor(ptile->step_matrix.ty - state.phase.y + 0.5),
 		 bits->rep_height);
 
 	if (state.pcdev != dev)

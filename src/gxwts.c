@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/*$Id: gxwts.c,v 1.8 2008/03/23 15:28:12 Arabidopsis Exp $ */
+/*$Id: gxwts.c,v 1.9 2009/04/19 13:54:26 Arabidopsis Exp $ */
 /* Rendering using Well Tempered Screening. */
 #include "stdpre.h"
 #include "memory_.h" /* for memcmp */
@@ -423,6 +423,7 @@ gx_dc_wts_write(
     const gx_device_color *         pdevc,
     const gx_device_color_saved *   psdc,
     const gx_device *               dev,
+    uint			    offset,
     byte *                          pdata,
     uint *                          psize )
 {
@@ -436,6 +437,7 @@ gx_dc_wts_read(
     const gs_imager_state * pis,
     const gx_device_color * prior_devc,
     const gx_device *       dev,
+    uint		    offset,
     const byte *            pdata,
     uint                    size,
     gs_memory_t *           mem )

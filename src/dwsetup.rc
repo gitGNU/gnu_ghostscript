@@ -18,7 +18,7 @@
 */
 
 
-// $Id: dwsetup.rc,v 1.11 2008/05/04 14:34:54 Arabidopsis Exp $
+// $Id: dwsetup.rc,v 1.12 2009/04/19 13:54:34 Arabidopsis Exp $
 
 #include <windows.h>
 #include "dwsetup.h"
@@ -54,8 +54,6 @@ BEGIN
     EDITTEXT        IDC_TARGET_GROUP,8,124,220,12,ES_AUTOHSCROLL
     PUSHBUTTON      "Browse...",IDC_BROWSE_GROUP,240,123,50,14
 
-    CONTROL         "Install Ghostscript Fonts",IDC_INSTALL_FONTS,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,8,142,220,12
     CONTROL         "Use Windows TrueType fonts for Chinese, Japanese and Korean",IDC_CJK_FONTS,"Button",
                     BS_AUTOCHECKBOX | WS_TABSTOP,8,156,220,12
 

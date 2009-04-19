@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2006 Artifex Software, Inc.
+#  Copyright (C) 2001-2008 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This software is provided AS-IS with no warranty, either express or
@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: int.mak,v 1.14 2008/05/04 14:34:43 Arabidopsis Exp $
+# $Id: int.mak,v 1.15 2009/04/19 13:54:31 Arabidopsis Exp $
 # (Platform-independent) makefile for PostScript and PDF language
 # interpreters.
 # Users of this makefile must define the following:
@@ -255,6 +255,7 @@ ifilter_h=$(PSSRC)ifilter.h $(istream_h) $(ivmspace_h)
 igstate_h=$(PSSRC)igstate.h $(gsstate_h) $(gxstate_h) $(imemory_h) $(istruct_h) $(gxcindex_h)
 iscan_h=$(PSSRC)iscan.h $(sa85x_h) $(sstring_h)
 sbhc_h=$(PSSRC)sbhc.h $(shc_h)
+zfile_h=$(PSSRC)zfile.h
 # Include files for optional features
 ibnum_h=$(PSSRC)ibnum.h
 
@@ -321,7 +322,8 @@ $(PSOBJ)zfile.$(OBJ) : $(PSSRC)zfile.c $(OP)\
  $(gscdefs_h) $(gsfname_h) $(gsstruct_h) $(gsutil_h) $(gxalloc_h) $(gxiodev_h)\
  $(dstack_h) $(estack_h) $(files_h)\
  $(ialloc_h) $(idict_h) $(ilevel_h) $(iname_h) $(iutil_h)\
- $(isave_h) $(main_h) $(sfilter_h) $(stream_h) $(strimpl_h) $(store_h)
+ $(isave_h) $(main_h) $(sfilter_h) $(stream_h) $(strimpl_h) $(store_h)\
+ $(zfile_h)
 	$(PSCC) $(PSO_)zfile.$(OBJ) $(C_) $(PSSRC)zfile.c
 
 $(PSOBJ)zfile1.$(OBJ) : $(PSSRC)zfile1.c $(OP) $(memory__h) $(string__h)\
@@ -822,7 +824,7 @@ $(PSOBJ)zchar42.$(OBJ) : $(PSSRC)zchar42.c $(OP)\
  $(gxfixed_h) $(gxfont_h) $(gxfont42_h)\
  $(gxistate_h) $(gxpath_h) $(gxtext_h) $(gzstate_h)\
  $(dstack_h) $(estack_h) $(ichar_h) $(icharout_h)\
- $(ifont_h) $(igstate_h) $(store_h) $(zchar42_h)
+ $(ifont_h) $(igstate_h) $(store_h) $(string_h) $(zchar42_h)
 	$(PSCC) $(PSO_)zchar42.$(OBJ) $(C_) $(PSSRC)zchar42.c
 
 $(PSOBJ)zfont42.$(OBJ) : $(PSSRC)zfont42.c $(OP) $(memory__h)\
@@ -1060,7 +1062,8 @@ $(PSD)zfrsd.dev : $(INT_MAK) $(ECHOGS_XE) $(zfrsd_)
 $(PSOBJ)zfrsd.$(OBJ) : $(PSSRC)zfrsd.c $(OP) $(memory__h)\
  $(gsfname_h) $(gxiodev_h)\
  $(sfilter_h) $(stream_h) $(strimpl_h)\
- $(files_h) $(idict_h) $(idparam_h) $(iname_h) $(store_h)
+ $(files_h) $(idict_h) $(idparam_h) $(iname_h) $(istruct_h) $(store_h)\
+ $(zfile_h)
 	$(PSCC) $(PSO_)zfrsd.$(OBJ) $(C_) $(PSSRC)zfrsd.c
 
 # ======================== PostScript Level 2 ======================== #
@@ -1816,8 +1819,9 @@ $(PSD)icc.dev : $(INT_MAK) $(ECHOGS_XE) $(PSD)cie.dev $(iccread_) \
 
 $(PSOBJ)zicc.$(OBJ) : $(PSSRC)zicc.c  $(OP) $(math__h) $(memory__h)\
  $(gsstruct_h) $(gxcspace_h) $(stream_h) $(files_h) $(gscolor2_h)\
- $(gsicc_h) $(estack_h) $(idict_h) $(idparam_h) $(igstate_h) $(icie_h)
-	$(PSCC) $(PSO_)zicc.$(OBJ) $(C_) $(PSSRC)zicc.c
+ $(gsicc_h) $(estack_h) $(idict_h) $(idparam_h) $(igstate_h) $(icie_h) \
+ $(ialloc_h)
+	$(GLICCCC) $(PSO_)zicc.$(OBJ) $(C_) $(PSSRC)zicc.c
 
 # ---------------- Support for %disk IODevices ---------------- #
 

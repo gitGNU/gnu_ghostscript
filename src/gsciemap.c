@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsciemap.c,v 1.11 2008/03/23 15:27:53 Arabidopsis Exp $ */
+/* $Id: gsciemap.c,v 1.12 2009/04/19 13:54:31 Arabidopsis Exp $ */
 /* CIE color rendering */
 #include "math_.h"
 #include "gx.h"
@@ -28,6 +28,7 @@
 #include "gxdevice.h"		/* for gxcmap.h */
 #include "gxcmap.h"
 #include "gxistate.h"
+#include "gscolor2.h"
 
 /*
  * Compute a cache index as (vin - base) * factor.
@@ -265,7 +266,7 @@ gx_remap_CIEDEFG(const gs_client_color * pc, const gs_color_space * pcs,
 		gs_color_select_t select)
 {
     client_custom_color_params_t * pcb =
-	    (client_custom_color_params_t *) (pis->custom_color_callback);
+        (client_custom_color_params_t *) (pis->memory->gs_lib_ctx->custom_color_callback);
 
     if (pcb != NULL) {
 	if (pcb->client_procs->remap_CIEBasedDEFG(pcb, pc, pcs,
@@ -289,7 +290,7 @@ gx_remap_CIEDEF(const gs_client_color * pc, const gs_color_space * pcs,
 		gs_color_select_t select)
 {
     client_custom_color_params_t * pcb =
-	    (client_custom_color_params_t *) (pis->custom_color_callback);
+	    (client_custom_color_params_t *) (pis->memory->gs_lib_ctx->custom_color_callback);
 
     if (pcb != NULL) {
 	if (pcb->client_procs->remap_CIEBasedDEF(pcb, pc, pcs,
@@ -313,7 +314,7 @@ gx_remap_CIEA(const gs_client_color * pc, const gs_color_space * pcs,
 		gs_color_select_t select)
 {
     client_custom_color_params_t * pcb =
-	    (client_custom_color_params_t *) (pis->custom_color_callback);
+	    (client_custom_color_params_t *) (pis->memory->gs_lib_ctx->custom_color_callback);
 
     if (pcb != NULL) {
 	if (pcb->client_procs->remap_CIEBasedA(pcb, pc, pcs,
@@ -323,6 +324,53 @@ gx_remap_CIEA(const gs_client_color * pc, const gs_color_space * pcs,
     /* Use default routine for non custom color processing. */
     return gx_default_remap_color(pc, pcs, pdc, pis, dev, select);
 }
+
+
+/* Render an Indexed color.
+ * This routine is only used if ENABLE_CUSTOM_COLOR_CALLBACK is true.
+ * Otherwise we use gx_default_remap_color directly for Indexed color
+ * spaces.
+ */
+
+int
+gx_remap_IndexedSpace(const gs_client_color * pc, const gs_color_space * pcs,
+	gx_device_color * pdc, const gs_imager_state * pis, gx_device * dev,
+		gs_color_select_t select)
+{
+
+    const gs_color_space *pbcs;
+    int code;
+    gs_client_color cc;
+    client_custom_color_params_t * pcb =
+	    (client_custom_color_params_t *) (pis->memory->gs_lib_ctx->custom_color_callback);
+
+    if (pcb != NULL) {
+
+        /* First handle all the index look up stuff  */
+
+        code = gs_indexed_limit_and_lookup(pc, pcs, &cc);
+
+        if (code < 0)
+        {
+	    return code;
+
+        }
+
+        /* We can either have a switch here to pick the proper call back process 
+           or go ahead and have the remap call do it.  For now do the later. */
+
+        pbcs = (const gs_color_space *)pcs->base_space;
+
+        if( pbcs->type->remap_color(&cc, pbcs,
+                                pdc, pis, dev, select) == 0 )                               
+                                return(0);
+
+    }
+
+    /* Use default routine for non custom color processing. */
+    return gx_default_remap_color(pc, pcs, pdc, pis, dev, select);
+}
+
 #endif
 
 /* Render a CIEBasedABC color. */
@@ -343,7 +391,7 @@ gx_remap_CIEABC(const gs_client_color * pc, const gs_color_space * pcs,
 #if ENABLE_CUSTOM_COLOR_CALLBACK
     {
         client_custom_color_params_t * pcb =
-	    (client_custom_color_params_t *) (pis->custom_color_callback);
+	    (client_custom_color_params_t *) (pis->memory->gs_lib_ctx->custom_color_callback);
 
         if (pcb != NULL) {
 	    if (pcb->client_procs->remap_CIEBasedABC(pcb, pc, pcs,

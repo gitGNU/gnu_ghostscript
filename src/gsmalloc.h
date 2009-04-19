@@ -17,12 +17,14 @@
 
 */
 
-/* $Id: gsmalloc.h,v 1.8 2007/09/11 15:24:25 Arabidopsis Exp $ */
+/* $Id: gsmalloc.h,v 1.9 2009/04/19 13:54:29 Arabidopsis Exp $ */
 /* Client interface to default (C heap) allocator */
 /* Requires gsmemory.h */
 
 #ifndef gsmalloc_INCLUDED
 #  define gsmalloc_INCLUDED
+
+#include "gxsync.h"
 
 /* Define a memory manager that allocates directly from the C heap. */
 typedef struct gs_malloc_block_s gs_malloc_block_t;
@@ -32,6 +34,7 @@ typedef struct gs_malloc_memory_s {
     long limit;
     long used;
     long max_used;
+    gx_monitor_t *monitor;	/* monitor to serialize access to functions */
 } gs_malloc_memory_t;
 
 /* Allocate and initialize a malloc memory manager. */

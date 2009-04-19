@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gstrans.c,v 1.12 2008/05/04 14:34:44 Arabidopsis Exp $ */
+/* $Id: gstrans.c,v 1.13 2009/04/19 13:54:27 Arabidopsis Exp $ */
 /* Implementation of transparency, other than rendering */
 #include "math_.h"
 #include "memory_.h"
@@ -156,7 +156,7 @@ gs_state_update_pdf14trans(gs_state * pgs, gs_pdf14trans_params_t * pparams)
 {
     gs_imager_state * pis = (gs_imager_state *)pgs;
     gx_device * dev = pgs->device;
-    gx_device * pdf14dev;
+    gx_device *pdf14dev = NULL;
     int code;
 
     /*
@@ -180,6 +180,7 @@ gs_trans_group_params_init(gs_transparency_group_params_t *ptgp)
     ptgp->Isolated = false;
     ptgp->Knockout = false;
     ptgp->image_with_SMask = false;
+    ptgp->mask_id = 0;
 }
 
 int
@@ -240,6 +241,7 @@ gx_begin_transparency_group(gs_imager_state * pis, gx_device * pdev,
     tgp.Isolated = pparams->Isolated;
     tgp.Knockout = pparams->Knockout;
     tgp.idle = pparams->idle;
+    tgp.mask_id = pparams->mask_id;
     pis->opacity.alpha = pparams->opacity.alpha;
     pis->shape.alpha = pparams->shape.alpha;
     pis->blend_mode = pparams->blend_mode;
@@ -360,6 +362,7 @@ gx_begin_transparency_mask(gs_imager_state * pis, gx_device * pdev,
     tmp.function_is_identity = pparams->function_is_identity;
     tmp.idle = pparams->idle;
     tmp.replacing = pparams->replacing;
+    tmp.mask_id = pparams->mask_id;
     memcpy(tmp.transfer_fn, pparams->transfer_fn, size_of(tmp.transfer_fn));
     if_debug8('v', "[v](0x%lx)gx_begin_transparency_mask [%g %g %g %g]\n\
       subtype = %d  Background_components = %d  %s\n",

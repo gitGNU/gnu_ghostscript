@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: iimage.h,v 1.8 2007/09/11 15:24:39 Arabidopsis Exp $ */
+/* $Id: iimage.h,v 1.9 2009/04/19 13:54:28 Arabidopsis Exp $ */
 /* Image operator entry points */
 /* Requires gscspace.h, gxiparam.h */
 
@@ -32,7 +32,7 @@
  */
 typedef struct image_params_s {
     bool MultipleDataSources;
-    ref DataSource[gs_image_max_components];
+    ref DataSource[GS_IMAGE_MAX_COMPONENTS];
     const float *pDecode;
 } image_params;
 

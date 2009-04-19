@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevbit.c,v 1.12 2008/05/04 14:34:49 Arabidopsis Exp $ */
+/* $Id: gdevbit.c,v 1.13 2009/04/19 13:54:35 Arabidopsis Exp $ */
 /* "Plain bits" devices to measure rendering time. */
 
 #include "math_.h"
@@ -273,6 +273,7 @@ const gx_device_printer gs_bitrgbtags_device =
         0 ,
 	0,
 	0,
+	{false},
         { 
             gx_default_install,
             gx_default_begin_page,

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: pdfopt,v 1.5 2007/09/11 15:24:48 Arabidopsis Exp $
+# $Id: pdfopt,v 1.6 2009/04/19 13:54:38 Arabidopsis Exp $
 # Convert PDF to "optimized" form.
 
 # This definition is changed on install to match the
@@ -15,7 +15,7 @@ OPTIONS="-dSAFER -dDELAYSAFER"
 while true
 do
 	case "$1" in
-	-*) OPTIONS="$OPTIONS $1" ;;
+	-?*) OPTIONS="$OPTIONS $1" ;;
 	*)  break ;;
 	esac
 	shift

@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: pdfopt.ps,v 1.9 2008/03/23 15:28:29 Arabidopsis Exp $
+% $Id: pdfopt.ps,v 1.10 2009/04/19 13:54:38 Arabidopsis Exp $
 % PDF linearizer ("optimizer").
 
 .currentglobal true .setglobal
@@ -685,7 +685,7 @@ userdict /clostreams 20 dict put	% stream -> [data endproc]
 /writePart3 {		% <xrefstart> writePart3 -
   {
     FirstPageXN NObjects 1 add 1 index sub pdfwritexref
-    Trailer dup length 1 add dict copy
+    Trailer dup length 1 add dict copy Trailer xcheck { cvx } if
     dup /Size NObjects 1 add put
     dup /Prev 4 -1 roll put
     pdfwritetrailer

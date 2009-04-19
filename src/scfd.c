@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: scfd.c,v 1.10 2008/03/23 15:27:43 Arabidopsis Exp $ */
+/* $Id: scfd.c,v 1.11 2009/04/19 13:54:25 Arabidopsis Exp $ */
 /* CCITTFax decoding filter */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"
@@ -167,7 +167,7 @@ s_CFD_release(stream_state * st)
 /* makeup codes efficiently, since these are always a multiple of 64. */
 #define invert_data(rlen, black_byte, makeup_action, d)\
 	if ( rlen > qbit )\
-	{	*q++ ^= (1 << qbit) - 1;\
+	{	if (q >= ss->lbuf) *q++ ^= (1 << qbit) - 1; else q++;\
 		rlen -= qbit;\
 		switch ( rlen >> 3 )\
 		{\

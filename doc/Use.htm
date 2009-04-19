@@ -3,7 +3,7 @@
 <html>
 <head>
 <title>How to use Ghostscript</title>
-<!-- $Id: Use.htm,v 1.12 2008/05/04 14:35:00 Arabidopsis Exp $ -->
+<!-- $Id: Use.htm,v 1.13 2009/04/19 13:54:41 Arabidopsis Exp $ -->
 <!-- Originally: use.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -647,6 +647,18 @@ or for processing files with large values of <b><tt>UserUnit</tt></b>
 that otherwise exceed implementation limits.
 </dl>
 
+<dl>
+<dt><b><tt>-dRENDERTTNOTDEF</tt></b>
+<dd>
+If a glyph is not present in a font the normal behaviour is to use the /.notdef
+glyph instead. On TrueType fonts, this is often a hollow sqaure. Under some
+conditions Acrobat does not do this, instead leaving a gap equivalent to the 
+width of the missing glyph, or the width of the /.notdef glyph if no /Widths
+array is present. Ghostscript now attempts to mimic this undocumented feature
+using a user parameter <b><tt>RenderTTNotdef</tt></b>. The PDF interpreter sets this
+user paramter to the value of <b><tt>RENDERTTNOTDEF</tt></b> in systemdict,
+when rendering PDF files. To restore rendering of /.notdef glyphs from TrueType fonts in PDF files, set this parameter to true.
+</dl>
 
 <h3><a name="PDF_problems"></a>Problems interpreting a PDF file</h3>
 
@@ -2238,8 +2250,8 @@ of CMYK documents to RGB.
 
 <dl>
 <dt><b><tt>-dNOCIE</tt></b>
-<dd>Substitutes <b><tt>DeviceGray</tt></b> and <b><tt>DeviceRGB</tt></b>
-for CIEBasedA and CIEBasedABC color spaces respectively.  Useful only on
+<dd>Substitutes <b><tt>DeviceGray</tt></b>, <b><tt>DeviceRGB</tt></b> and <b><tt>DeviceCMYK</tt></b>
+for CIEBasedA, CIEBasedABC, CIEBasedDEF and CIEBasedDEFG color spaces respectively.  Useful only on
 very slow systems where color accuracy is less important.
 </dl>
 
@@ -2731,6 +2743,21 @@ consumption, but there are some cases in which you may get a very large
 speedup by telling Ghostscript to use more memory.
 
 <ul>
+<li>
+For raster printers and image format (jpeg*, tiff*, png* ...) devices, 
+performance can be 'tuned' by adjusting some of the parameters related
+to banding (clist) options (refer to: <a href="Language.htm#Banding_parameters">
+Banding Parameters</a>).
+<p>In general, page buffer mode is faster than banded/clist mode (a full page
+buffer is used when <b><tt>-dMaxBitmap=#</tt></b> is large enough for the entire
+raster image) since there is no need to write, then interpret the clist data.
+<p>On a multi-core system where multiple threads can be dispatched to
+individual processors/cores, banding mode may provide higher performance
+since <b><tt>-dNumRenderingThreads=#</tt></b> can be used to take advantage of
+more than one CPU core when rendering the clist. The number of threads should
+generally be set to the number of available processor cores for best throughput.
+<p>In general, larger <b><tt>-dBufferSpace=#</tt></b> values provide 
+slightly higher performance since the per-band overhead is reduced.
 
 <li>
 If you are using X Windows, setting the <b><tt>-dMaxBitmap=</tt></b>
@@ -2738,13 +2765,16 @@ parameter described <a href="#X_device_parameters">above</a> may
 dramatically improve performance on files that have a lot of bitmap images.
 
 <li>
-If you are using Chinese, Japanese, or other fonts with very large character
-sets, adding the following sequence of switches before the first file name
-may dramatically improve performance at the cost of an additional 2-3 Mb of
-memory: <b><tt>-c&nbsp;3000000&nbsp;setvmthreshold&nbsp;-f</tt></b>. This 
-can also be useful in processing large documents when using a high-level
-output device (like pdfwrite) that maintains significant internal state.
-In fact, the <a href="Language.htm#.setpdfwrite"><tt>.setpdfwrite</tt></a>
+<p>
+With some PDF files, or if you are using Chinese, Japanese, or other fonts with
+very large character sets, adding the following sequence of switches before the
+first file name may dramatically improve performance at the cost of an additional 
+memory. For example, to allow use of 30Mb of extra RAM use:
+<p>
+    <b><tt>-c&nbsp;30000000&nbsp;setvmthreshold&nbsp;-f</tt></b>.
+<p>This can also be useful in processing large documents when using a
+high-level output device (like pdfwrite) that maintains significant internal
+state.  In fact, the <a href="Language.htm#.setpdfwrite"><tt>.setpdfwrite</tt></a>
 operator used by the ps2pdf script and others sets a vmthreshold value of
 3&nbsp;MB to account for this.
 
@@ -3637,7 +3667,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.62, 29 February 2008
+<small>Ghostscript version 8.63, 1 August 2008
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

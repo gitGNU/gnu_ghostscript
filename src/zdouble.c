@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zdouble.c,v 1.9 2008/05/04 14:34:40 Arabidopsis Exp $ */
+/* $Id: zdouble.c,v 1.10 2009/04/19 13:54:27 Arabidopsis Exp $ */
 /* Double-precision floating point arithmetic operators */
 #include "math_.h"
 #include "memory_.h"
@@ -411,7 +411,7 @@ zdcvs(i_ctx_t *i_ctx_p)
 	return code;
     check_write_type(*op, t_string);
     sprintf(str, "%f", 1.5);
-    dot = buf[1]; /* locale-dependent */
+    dot = str[1]; /* locale-dependent */
     /*
      * To get fully accurate output results for IEEE double-
      * precision floats (53 bits of mantissa), the ANSI

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscolor2.h,v 1.8 2007/09/11 15:23:44 Arabidopsis Exp $ */
+/* $Id: gscolor2.h,v 1.9 2009/04/19 13:54:24 Arabidopsis Exp $ */
 /* Client interface to Level 2 color facilities */
 /* (requires gscspace.h, gsmatrix.h) */
 
@@ -40,6 +40,11 @@ gs_color_space *gs_currentcolorspace(const gs_state *);
 int gs_setcolorspace(gs_state *, gs_color_space *);
 const gs_client_color *gs_currentcolor(const gs_state *);
 int gs_setcolor(gs_state *, const gs_client_color *);
+
+/* Look up with restriction */
+int
+gs_indexed_limit_and_lookup(const gs_client_color * pc,const gs_color_space *pcs,
+			 gs_client_color *pcc);
 
 
 /* CIE-specific routines */

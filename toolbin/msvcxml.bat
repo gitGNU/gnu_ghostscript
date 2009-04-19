@@ -1,3 +1,5 @@
+# MS-DOS batch file to create an project file for MS Visual Studio
+# $Id: msvcxml.bat,v 1.3 2009/04/19 13:54:46 Arabidopsis Exp $
 @echo off
 
 if "%1" == "DLL" goto DLL

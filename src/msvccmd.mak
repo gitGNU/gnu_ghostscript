@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: msvccmd.mak,v 1.12 2008/05/04 14:34:40 Arabidopsis Exp $
+# $Id: msvccmd.mak,v 1.13 2009/04/19 13:54:35 Arabidopsis Exp $
 # Command definition section for Microsoft Visual C++ 4.x/5.x,
 # Windows NT or Windows 95 platform.
 # Created 1997-05-22 by L. Peter Deutsch from msvc4/5 makefiles.
@@ -78,7 +78,7 @@ dosdefault: default
 # Define the compilation flags.
 
 # MSVC 8 (2005) warns about deprecated unsafe common functions like strcpy.
-!if ($(MSVC_VERSION) == 8) || defined(WIN64)
+!if ($(MSVC_VERSION) > 7) || defined(WIN64)
 VC8WARN=/wd4996 /wd4224
 !else
 VC8WARN=

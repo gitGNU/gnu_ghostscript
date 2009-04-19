@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevprn.c,v 1.13 2008/05/04 14:34:42 Arabidopsis Exp $ */
+/* $Id: gdevprn.c,v 1.14 2009/04/19 13:54:32 Arabidopsis Exp $ */
 /* Generic printer driver support */
 #include "ctype_.h"
 #include "gdevprn.h"
@@ -62,6 +62,8 @@ int gdev_prn_maybe_realloc_memory(gx_device_printer *pdev,
 				  gdev_prn_space_params *old_space,
 			          int old_width, int old_height,
 			          bool old_page_uses_transparency);
+
+extern dev_proc_open_device(pattern_clist_open_device);
 
 /* ------ Open/close ------ */
 
@@ -283,17 +285,16 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
 	memset(ppdev->skip, 0, sizeof(ppdev->skip));
 	size_ok = ppdev->printer_procs.buf_procs.size_buf_device
 	    (&buf_space, pdev, NULL, pdev->height, false) >= 0;
+	mem_space = buf_space.bits + buf_space.line_ptrs;
 	if (ppdev->page_uses_transparency) {
-	    if (new_height < max_ulong/(ESTIMATED_PDF14_ROW_SPACE(max(1, new_width)) >> 3))
-		pdf14_trans_buffer_size = new_height
-		    * (ESTIMATED_PDF14_ROW_SPACE(new_width) >> 3);
-	    else {
+	    pdf14_trans_buffer_size = (ESTIMATED_PDF14_ROW_SPACE(max(1, new_width)) >> 3);
+	    if (new_height < (max_ulong - mem_space) / pdf14_trans_buffer_size) {
+		pdf14_trans_buffer_size *= new_height;
+		mem_space += pdf14_trans_buffer_size;
+	    } else {
 		size_ok = 0;
-		pdf14_trans_buffer_size = 0;
 	    }
 	}
-	mem_space = buf_space.bits + buf_space.line_ptrs
-		    + pdf14_trans_buffer_size;
 
 	/* Compute desired space params: never use the space_params as-is. */
 	/* Rather, give the dev-specific driver a chance to adjust them. */
@@ -364,6 +365,11 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
 
 	    if ( code >= 0 || (reallocate && pass > 1) )
 		ppdev->procs = gs_clist_device_procs;
+	    /* 
+	     * Now the device is a clist device, we enable multi-threaded rendering.
+	     * It will remain enabled, but that doesn't really cause any problems.
+	     */
+	    clist_enable_multi_thread_render(pdev);
 	} else {
 	    /* Render entirely in memory. */
 	    gx_device *bdev = (gx_device *)pmemdev;
@@ -503,6 +509,7 @@ gdev_prn_get_params(gx_device * pdev, gs_param_list * plist)
 	(code = param_write_int(plist, "BandWidth", &ppdev->space_params.band.BandWidth)) < 0 ||
 	(code = param_write_int(plist, "BandHeight", &ppdev->space_params.band.BandHeight)) < 0 ||
 	(code = param_write_long(plist, "BandBufferSpace", &ppdev->space_params.band.BandBufferSpace)) < 0 ||
+	(code = param_write_int(plist, "NumRenderingThreads", &ppdev->num_render_threads_requested)) < 0 ||
 	(code = param_write_bool(plist, "OpenOutputFile", &ppdev->OpenOutputFile)) < 0 ||
 	(code = param_write_bool(plist, "ReopenPerPage", &ppdev->ReopenPerPage)) < 0 ||
 	(code = param_write_bool(plist, "PageUsesTransparency",
@@ -548,6 +555,7 @@ gdev_prn_put_params(gx_device * pdev, gs_param_list * plist)
     int duplex_set = -1;
     int width = pdev->width;
     int height = pdev->height;
+    int nthreads = ppdev->num_render_threads_requested;
     gdev_prn_space_params sp, save_sp;
     gs_param_string ofs;
     gs_param_dict mdict;
@@ -671,6 +679,16 @@ label:\
     read_media("InputAttributes");
     read_media("OutputAttributes");
 
+    switch (code = param_read_int(plist, (param_name = "NumRenderingThreads"), &nthreads)) {
+	case 0:
+	    break;
+	default:
+	    ecode = code;
+	    param_signal_error(plist, param_name, ecode);
+	case 1:
+	    ;
+    }
+
     if (ecode < 0)
 	return ecode;
     /* Prevent gx_default_put_params from closing the printer. */
@@ -688,6 +706,7 @@ label:\
 	ppdev->Duplex_set = duplex_set;
     }
     ppdev->space_params = sp;
+    ppdev->num_render_threads_requested = nthreads;
 
     /* If necessary, free and reallocate the printer memory. */
     /* Formerly, would not reallocate if device is not open: */

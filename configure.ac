@@ -14,7 +14,7 @@ dnl You should have received a copy of the GNU General Public License along with
 dnl ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 dnl Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 dnl 
-dnl $Id: configure.ac,v 1.18 2008/05/04 14:35:10 Arabidopsis Exp $
+dnl $Id: configure.ac,v 1.19 2009/04/19 13:54:47 Arabidopsis Exp $
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------
@@ -33,9 +33,9 @@ CXXFLAGS="${CXXFLAGS:=}"
 LDFLAGS="${LDFLAGS:=}"
 
 GS_VERSION_MAJOR=8
-GS_VERSION_MINOR=62
+GS_VERSION_MINOR=63
 GS_VERSION_PATCH=0
-GS_REVISIONDATE=20080229
+GS_REVISIONDATE=20080801
 
 GS_VERSION=`expr $GS_VERSION_MAJOR \* 10000 + $GS_VERSION_MINOR \* 100 + $GS_VERSION_PATCH`
 
@@ -274,7 +274,15 @@ dnl Check for libraries
 dnl --------------------------------------------------
 
 AC_CHECK_LIB(m, cos)
-dnl AC_CHECK_LIB(pthread, pthread_create)
+
+SYNC="nosync"
+PTHREAD_LIBS=""
+AC_CHECK_LIB(pthread, pthread_create, [
+  SYNC=posync;
+  PTHREAD_LIBS="-lpthread"
+])
+AC_SUBST(SYNC)
+AC_SUBST(PTHREAD_LIBS)
 
 dnl Tests for iconv (Needed for OpenPrinting Vector, "opvp" output device)
 AC_ARG_WITH(libiconv,
@@ -620,6 +628,25 @@ AC_SUBST(SOC_CFLAGS)
 AC_SUBST(SOC_LIBS)
 AC_SUBST(SOC_LOADER)
 
+dnl enable the cairo device if the library is available
+CAIRO_DEVS=""
+CAIRO_CFLAGS=""
+CAIRO_LIBS=""
+AC_PATH_PROG(PKGCONFIG, pkg-config)
+if test "x$PKGCONFIG" != x; then
+  AC_MSG_CHECKING([for cairo])
+  CAIRO_CFLAGS=`pkg-config cairo --cflags`
+  CAIRO_LIBS=`pkg-config cairo --libs`
+  if test -z "$CAIRO_LIBS"; then
+    AC_MSG_RESULT([no])
+  else
+    CAIRO_DEVS="cairo"
+    AC_MSG_RESULT([yes])
+  fi
+fi
+AC_SUBST(CAIRO_CFLAGS)
+AC_SUBST(CAIRO_LIBS)
+
 dnl look for omni implementation
 AC_ARG_WITH([omni], AC_HELP_STRING([--with-omni],
 	[build the omni driver]))
@@ -732,7 +759,9 @@ AC_ARG_WITH(drivers,
 			  PNG      = Output to PNG
                           PS       = Output to PostScript/PDF
                           TIFF     = Output to TIFF
+                          CAIRO    = Output using libcairo
 			  WTS      = WTS Halftoning devices
+			  ETS      = ETS Halftoning devices
                           You can mix both variants, e.g.
                           --with-drivers=HP,stcolor would build HP drivers and
                           the Epson stcolor driver.
@@ -766,6 +795,7 @@ OKI_DEVS="oki182 okiibm oki4w"
 JAPAN_DEVS="lips4 lips4v ljet4pjl lj4dithp dj505j picty180 lips2p bjc880j pr201 pr150 pr1000 pr1000_4 jj100 bj10v bj10vh mj700v2c mj500c mj6000c mj8000c fmpr fmlbp ml600 lbp310 lbp320 md50Mono md50Eco md1xMono escpage lp2000 npdl rpdl"
 MISC_PDEVS="uniprint ap3250 atx23 atx24 atx38 coslw2p coslwxl cp50 declj250 fs600 imagen lj250 m8510 necp6 oce9050 r4081 sj48 tek4696 t4693d2 t4693d4 t4693d8 dl2100 la50 la70 la75 la75plus ln03 xes md2k md5k gdi samsunggdi wep9pin wep24pin"
 OPVP_DEVS="opvp oprp"
+ETS_HALFTONING_DEVS="rinkj"
 
 dnl Known file formats
 BMP_DEVS="bmpmono bmpgray bmpsep1 bmpsep8 bmp16 bmp256 bmp16m bmp32b"
@@ -776,6 +806,7 @@ TIFF_DEVS="tiffs tiff12nc tiff24nc tiff32nc tiffcrle tifflzw tiffpack tiffgray t
 PCX_DEVS="pcxmono pcxgray pcx16 pcx256 pcx24b pcxcmyk pcx2up"
 PBM_DEVS="pbm pbmraw pgm pgmraw pgnm pgnmraw pnm pnmraw ppm ppmraw pkm pkmraw pksm pksmraw pam"
 PS_DEVS="psdf psdcmyk psdrgb pdfwrite pswrite ps2write epswrite psgray psmono psrgb bbox"
+# CAIRO_DEVS is defined conditionally above
 WTS_HALFTONING_DEVS="imdi simdi wtsimdi wtscmyk"
 MISC_FDEVS="ccr cgm24 cgm8 cgmmono cif inferno mag16 mag256 mgr4 mgr8 mgrgray2 mgrgray4 mgrgray8 mgrmono miff24 plan9bm sgirgb sunhmono bit bitrgb bitrgbtags bitcmyk devicen spotcmyk xcf"
 
@@ -797,10 +828,10 @@ while test -n "$drivers"; do
 		fi
 		;;
 	PRINTERS)
-		P_DEVS="$P_DEVS $CANON_DEVS $EPSON_DEVS $HP_DEVS $LEXMARK_DEVS $BROTHER_DEVS $APPLE_DEVS $IBM_DEVS $OKI_DEVS $JAPAN_DEVS $MISC_PDEVS $OPVP_DEVS"
+		P_DEVS="$P_DEVS $CANON_DEVS $EPSON_DEVS $HP_DEVS $LEXMARK_DEVS $BROTHER_DEVS $APPLE_DEVS $IBM_DEVS $OKI_DEVS $JAPAN_DEVS $MISC_PDEVS $ETS_HALFTONING_DEVS $OPVP_DEVS"
 		;;
 	FILES)
-		F_DEVS="$F_DEVS $BMP_DEVS $FAX_DEVS $JPEG_DEVS $PNG_DEVS $TIFF_DEVS $PCX_DEVS $PBM_DEVS $PS_DEVS $WTS_HALFTONING_DEVS $MISC_FDEVS"
+		F_DEVS="$F_DEVS $BMP_DEVS $FAX_DEVS $JPEG_DEVS $PNG_DEVS $TIFF_DEVS $PCX_DEVS $PBM_DEVS $PS_DEVS $CAIRO_DEVS $WTS_HALFTONING_DEVS $MISC_FDEVS"
 		;;
 	APPLE)
 		# All Apple printers
@@ -874,9 +905,17 @@ while test -n "$drivers"; do
 		# PostScript/PDF writing
 		F_DEVS="$F_DEVS $PS_DEVS"
 		;;
+	CAIRO)
+		$ cairo output device
+		F_DEVS="$F_DEVS $CAIRO_DEVS"
+		;;
 	WTS)
 		# WTS Halftoning devices
 		F_DEVS="$F_DEVS $WTS_HALFTONING_DEVS"
+		;;
+	ETS)
+		# ETS Halftoning devices
+		F_DEVS="$F_DEVS $ETS_HALFTONING_DEVS"
 		;;
         opvp)
 		# Open Vector Printing driver...

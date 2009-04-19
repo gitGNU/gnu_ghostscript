@@ -13,7 +13,7 @@
     Artifex Software, Inc.,  101 Lucas Valley Road #110,
     San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-    $Id: config_win32.h,v 1.4 2007/09/11 15:24:52 Arabidopsis Exp $
+    $Id: config_win32.h,v 1.5 2009/04/19 13:54:46 Arabidopsis Exp $
 */
 
 /* configuration header file for compiling under Microsoft Windows */
@@ -34,7 +34,12 @@
   typedef unsigned int              uint32_t;
   /* no uint64_t */
 
+#if defined(_MSC_VER)
+	#if _MSC_VER < 1500  /* Visual Studio 2008 has definition for vsnprintf */
 #  define vsnprintf _vsnprintf
+	#endif
+#endif
+
 #  define snprintf _snprintf
 
 #endif /* _MSC_VER */

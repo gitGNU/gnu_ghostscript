@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: icstate.h,v 1.9 2007/09/11 15:24:10 Arabidopsis Exp $ */
+/* $Id: icstate.h,v 1.10 2009/04/19 13:54:30 Arabidopsis Exp $ */
 /* Externally visible context state */
 
 #ifndef icstate_INCLUDED
@@ -62,6 +62,7 @@ struct gs_context_state_s {
     int scanner_options;	/* derived from userparams */
     bool LockFilePermissions;	/* accessed from userparams */
     bool starting_arg_file;	/* starting a file specified in command line. */
+    bool RenderTTNotdef;	/* accessed from userparams */
     gs_file_path_ptr lib_path;	/* library search list (GS_LIB) */
     ref stdio[3];		/* t_file */
     /* Put the stacks at the end to minimize other offsets. */

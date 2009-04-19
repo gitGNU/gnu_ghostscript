@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: winint.mak,v 1.11 2008/05/04 14:34:53 Arabidopsis Exp $
+# $Id: winint.mak,v 1.12 2009/04/19 13:54:30 Arabidopsis Exp $
 # Common interpreter makefile section for 32-bit MS Windows.
 
 # This makefile must be acceptable to Microsoft Visual C++, Watcom C++,
@@ -221,7 +221,7 @@ $(PSOBJ)dwuninst.obj: $(PSSRC)dwuninst.cpp $(PSSRC)dwuninst.h
 # Create a self-extracting archive with setup program.
 # This assumes that the current directory is named gs#.## relative to its
 # parent, where #.## is the Ghostscript version, and that the files and
-# directories listed in ZIPTEMPFILE and ZIPFONTFILES are the complete list
+# directories listed in ZIPTEMPFILE are the complete list
 # of needed files and directories relative to the current directory's parent.
 
 ZIPTEMPFILE=gs$(GS_DOT_VERSION)\obj\dwfiles.rsp
@@ -232,13 +232,13 @@ ZIPPROGFILE4=gs$(GS_DOT_VERSION)\bin\gswin32c.exe
 ZIPPROGFILE5=gs$(GS_DOT_VERSION)\doc
 ZIPPROGFILE6=gs$(GS_DOT_VERSION)\examples
 ZIPPROGFILE7=gs$(GS_DOT_VERSION)\lib
+!if $(COMPILE_INITS)
+!else
 ZIPPROGFILE8=gs$(GS_DOT_VERSION)\Resource
-ZIPFONTDIR=fonts
-ZIPFONTFILES=$(ZIPFONTDIR)\*.*
+!endif
 
 # Make the zip archive.
 FILELIST_TXT=filelist.txt
-FONTLIST_TXT=fontlist.txt
 !ifdef WIN64
 ZIPTARGET=gs$(GS_VERSION)w64
 !else
@@ -246,6 +246,7 @@ ZIPTARGET=gs$(GS_VERSION)w32
 !endif
 zip: $(SETUP_XE) $(UNINSTALL_XE)
 	cd ..
+	copy gs$(GS_DOT_VERSION)\$(SETUP_XE) make_filelist.exe
 	copy gs$(GS_DOT_VERSION)\$(SETUP_XE) .
 	copy gs$(GS_DOT_VERSION)\$(UNINSTALL_XE) .
 	echo $(ZIPPROGFILE1) >  $(ZIPTEMPFILE)
@@ -255,12 +256,13 @@ zip: $(SETUP_XE) $(UNINSTALL_XE)
 	echo $(ZIPPROGFILE5) >> $(ZIPTEMPFILE)
 	echo $(ZIPPROGFILE6) >> $(ZIPTEMPFILE)
 	echo $(ZIPPROGFILE7) >> $(ZIPTEMPFILE)
+!if $(COMPILE_INITS)
+!else
 	echo $(ZIPPROGFILE8) >> $(ZIPTEMPFILE)
-	$(SETUP_XE_NAME) -title "GNU Ghostscript $(GS_DOT_VERSION)" -dir "gs$(GS_DOT_VERSION)" -list "$(FILELIST_TXT)" @$(ZIPTEMPFILE)
-	$(SETUP_XE_NAME) -title "GNU Ghostscript Fonts" -dir "fonts" -list "$(FONTLIST_TXT)" $(ZIPFONTFILES)
+!endif
+	make_filelist.exe -title "GPL Ghostscript $(GS_DOT_VERSION)" -dir "gs$(GS_DOT_VERSION)" -list "$(FILELIST_TXT)" @$(ZIPTEMPFILE)
 	-del $(ZIPTARGET).zip
-	$(ZIP_XE) -9 $(ZIPTARGET).zip $(SETUP_XE_NAME) $(UNINSTALL_XE_NAME) $(FILELIST_TXT) $(FONTLIST_TXT)
-	$(ZIP_XE) -9 -r $(ZIPTARGET).zip $(ZIPFONTDIR)
+	$(ZIP_XE) -9 $(ZIPTARGET).zip $(SETUP_XE_NAME) $(UNINSTALL_XE_NAME) $(FILELIST_TXT)
 	$(ZIP_XE) -9 -r $(ZIPTARGET).zip $(ZIPPROGFILE1)
 	$(ZIP_XE) -9 -r $(ZIPTARGET).zip $(ZIPPROGFILE2)
 	$(ZIP_XE) -9 -r $(ZIPTARGET).zip $(ZIPPROGFILE3)
@@ -268,12 +270,15 @@ zip: $(SETUP_XE) $(UNINSTALL_XE)
 	$(ZIP_XE) -9 -r $(ZIPTARGET).zip $(ZIPPROGFILE5)
 	$(ZIP_XE) -9 -r $(ZIPTARGET).zip $(ZIPPROGFILE6)
 	$(ZIP_XE) -9 -r $(ZIPTARGET).zip $(ZIPPROGFILE7)
+!if $(COMPILE_INITS)
+!else
 	$(ZIP_XE) -9 -r $(ZIPTARGET).zip $(ZIPPROGFILE8)
+!endif
 	-del $(ZIPTEMPFILE)
+	-del make_filelist.exe
 	-del $(SETUP_XE_NAME)
 	-del $(UNINSTALL_XE_NAME)
 	-del $(FILELIST_TXT)
-	-del $(FONTLIST_TXT)
 	cd gs$(GS_DOT_VERSION)
 
 # Now convert to a self extracting archive.
@@ -291,7 +296,7 @@ archive: zip $(PSOBJ)gswin16.ico $(ECHOGS_XE)
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -t -s $(PSOBJ)dialog.txt
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -c -s $(SETUP_XE_NAME)
 	$(ECHOGS_XE) -w $(PSOBJ)about.txt "GNU Ghostscript is Copyright " -x A9 " 2008 Artifex Software, Inc."
-	$(ECHOGS_XE) -a $(PSOBJ)about.txt See license in gs$(GS_DOT_VERSION)\doc\Public.htm.
+	$(ECHOGS_XE) -a $(PSOBJ)about.txt See license in gs$(GS_DOT_VERSION)\doc\COPYING.
 	$(ECHOGS_XE) -a $(PSOBJ)about.txt See gs$(GS_DOT_VERSION)\doc\Commprod.htm regarding commercial distribution.
 	$(ECHOGS_XE) -w $(PSOBJ)dialog.txt This installs GNU Ghostscript $(GS_DOT_VERSION).
 	$(ECHOGS_XE) -a $(PSOBJ)dialog.txt GNU Ghostscript displays, prints and converts PostScript and PDF files.

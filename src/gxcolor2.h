@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxcolor2.h,v 1.8 2007/09/11 15:24:28 Arabidopsis Exp $ */
+/* $Id: gxcolor2.h,v 1.9 2009/04/19 13:54:34 Arabidopsis Exp $ */
 /* Internal definitions for Level 2 color routines */
 /* Requires gsstruct.h, gxfixed.h */
 
@@ -94,5 +94,12 @@ struct gs_pattern1_instance_s {
   gs_private_st_composite(st_pattern1_instance, gs_pattern1_instance_t,\
     "gs_pattern1_instance_t", pattern1_instance_enum_ptrs,\
     pattern1_instance_reloc_ptrs)
+
+/* This is used for the case where we have float outputs due to the use of a procedure in 
+   the indexed image, but we desire to have byte outputs.  Used with interpolated images. */
+
+#define float_color_to_byte_color(float_color) ( (0.0 < float_color && float_color < 1.0) ? \
+    ((unsigned char) (float_color*255.0)) :  ( (float_color <= 0.0) ? 0x00 : 0xFF  ))
+
 
 #endif /* gxcolor2_INCLUDED */

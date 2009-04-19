@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gspaint.c,v 1.12 2008/03/23 15:27:51 Arabidopsis Exp $ */
+/* $Id: gspaint.c,v 1.13 2009/04/19 13:54:32 Arabidopsis Exp $ */
 /* Painting procedures for Ghostscript library */
 #include "math_.h"		/* for fabs */
 #include "gx.h"
@@ -348,12 +348,14 @@ fill_with_rule(gs_state * pgs, int rule)
 int
 gs_fill(gs_state * pgs)
 {
+    pgs->device->sgr.stroke_stored = false;
     return fill_with_rule(pgs, gx_rule_winding_number);
 }
 /* Fill using the even/odd rule */
 int
 gs_eofill(gs_state * pgs)
 {
+    pgs->device->sgr.stroke_stored = false;
     return fill_with_rule(pgs, gx_rule_even_odd);
 }
 
@@ -500,6 +502,7 @@ gs_strokepath(gs_state * pgs)
 	gx_path_free(&spath, "gs_strokepath");
 	return code;
     }
+    pgs->device->sgr.stroke_stored = false;
     code = gx_path_assign_free(pgs->path, &spath);
     if (code < 0)
 	return code;

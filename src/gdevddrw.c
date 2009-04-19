@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gdevddrw.c,v 1.12 2008/05/04 14:34:57 Arabidopsis Exp $ */
+/* $Id: gdevddrw.c,v 1.13 2009/04/19 13:54:28 Arabidopsis Exp $ */
 /* Default polygon and image drawing device procedures */
 #include "math_.h"
 #include "memory_.h"
@@ -132,7 +132,7 @@ compute_dx(trap_line *tl, fixed xd, fixed ys)
 	if ((tl->df = xd + h) >= 0 /* xd >= -h */)
 	    tl->di = -1, tl->x -= ys;
 	else {
-	    tl->di = di = (int)-((h - 1 - xd) / h);
+	    tl->di = di = (int)((xd + 1) / h - 1);
 	    tl->df = xd - di * h;
 	    tl->x += ys * di;
 	}
@@ -934,7 +934,16 @@ gx_default_image_data(gx_device *dev, gx_image_enum_common_t * info,
 		      const byte ** plane_data,
 		      int data_x, uint raster, int height)
 {
-    return gx_image_data(info, plane_data, data_x, raster, height);
+    int code;
+
+    vd_get_dc('i');
+    vd_set_shift(0, 0);
+    vd_set_scale(0.01);
+    vd_set_origin(0, 0);
+    /* vd_erase(RGB(192, 192, 192)); */
+    code = gx_image_data(info, plane_data, data_x, raster, height);
+    vd_release_dc;
+    return code;
 }
 
 int

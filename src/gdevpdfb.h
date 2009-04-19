@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfb.h,v 1.6 2008/03/23 15:27:59 Arabidopsis Exp $ */
+/* $Id: gdevpdfb.h,v 1.7 2009/04/19 13:54:32 Arabidopsis Exp $ */
 /* pdfwrite, ps2write device body template. */
 
 /* This file is allowed to #include several times into a single .c file.
@@ -240,6 +240,8 @@ const gx_device_pdf PDF_DEVICE_IDENT =
  NULL,				/* pres_soft_mask_dict */
  {0, 0},			/* objname */
  0,				/* OPDFRead_procset_length */
- 0				/* find_resource_param */
+ 0,				/* find_resource_param */
+ 0,				/* last_charpath_op */
+ 0				/* type3charpath */
 };
 

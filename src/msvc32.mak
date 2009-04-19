@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: msvc32.mak,v 1.14 2008/05/04 14:34:42 Arabidopsis Exp $
+# $Id: msvc32.mak,v 1.15 2009/04/19 13:54:36 Arabidopsis Exp $
 # makefile for 32-bit Microsoft Visual C++, Windows NT or Windows 95 platform.
 #
 # All configurable options are surrounded by !ifndef/!endif to allow 
@@ -359,6 +359,12 @@ MSVC_VERSION=8
 !if "$(_NMAKE_VER)" == "8.00.50727.42"
 MSVC_VERSION=8
 !endif
+!if "$(_NMAKE_VER)" == "8.00.50727.762"
+MSVC_VERSION=8
+!endif
+!if "$(_NMAKE_VER)" == "9.00.21022.08"
+MSVC_VERSION=9
+!endif
 !endif
 
 !ifndef MSVC_VERSION
@@ -452,6 +458,28 @@ DEVSTUDIO=C:\Program Files\Microsoft Visual Studio 8
 COMPBASE=
 SHAREDBASE=
 !else
+COMPBASE=$(DEVSTUDIO)\VC
+SHAREDBASE=$(DEVSTUDIO)\VC
+!ifdef WIN64
+COMPDIR64=$(COMPBASE)\bin\x86_amd64
+LINKLIBPATH=/LIBPATH:"$(COMPBASE)\lib\amd64" /LIBPATH:"$(COMPBASE)\PlatformSDK\Lib\AMD64"
+!endif
+!endif
+!endif
+
+!if $(MSVC_VERSION) == 9
+! ifndef DEVSTUDIO
+!ifdef WIN64
+DEVSTUDIO=C:\Program Files (x86)\Microsoft Visual Studio 9.0
+!else
+DEVSTUDIO=C:\Program Files\Microsoft Visual Studio 9.0
+!endif
+! endif
+!if "$(DEVSTUDIO)"==""
+COMPBASE=
+SHAREDBASE=
+!else
+RCDIR=C:\Program Files\Microsoft SDKs\Windows\v6.0A\bin
 COMPBASE=$(DEVSTUDIO)\VC
 SHAREDBASE=$(DEVSTUDIO)\VC
 !ifdef WIN64
@@ -754,7 +782,7 @@ $(GS_XE): $(GSCONSOLE_XE) $(GS_ALL) $(DEVS_ALL) $(GSDLL_OBJS) $(DWOBJNO) $(GSDLL
 # The big console mode EXE
 $(GSCONSOLE_XE): $(GS_ALL) $(DEVS_ALL) $(GSDLL_OBJS) $(OBJCNO) $(GS_OBJ).res $(PSSRCDIR)\dw32c.def $(PSGEN)lib32.rsp $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ)
 	copy $(ld_tr) $(PSGEN)gswin32c.tr
-	echo $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ) >> $(PSGEN)gswin32.tr
+	echo $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ) >> $(PSGEN)gswin32c.tr
 	echo $(PSOBJ)dwnodllc.obj >> $(PSGEN)gswin32c.tr
 	echo $(GLOBJ)dwimg.obj >> $(PSGEN)gswin32c.tr
 	echo $(PSOBJ)dwmainc.obj >> $(PSGEN)gswin32c.tr

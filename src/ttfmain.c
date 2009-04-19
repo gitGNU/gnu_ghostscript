@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: ttfmain.c,v 1.9 2008/03/23 15:27:55 Arabidopsis Exp $ */
+/* $Id: ttfmain.c,v 1.10 2009/04/19 13:54:36 Arabidopsis Exp $ */
 /* A Free Type interface adapter. */
 /* Uses code fragments from the FreeType project. */
 
@@ -226,7 +226,7 @@ FontError ttfFont__Open(ttfInterpreter *tti, ttfFont *this, ttfReader *r,
 {   char sVersion[4], sVersion1[4] = {0, 1, 0, 0};
     char sVersion2[4] = {0, 2, 0, 0};
     unsigned int nNumTables, i;
-    TT_Error code;
+    TT_Error code, code1 = 0;
     int k;
     TT_Instance I;
     ttfMemory *mem = tti->ttf_memory;
@@ -334,8 +334,8 @@ FontError ttfFont__Open(ttfInterpreter *tti, ttfFont *this, ttfReader *r,
     if (code == TT_Err_Out_Of_Memory)
 	return fMemoryError;
     if (code >= TT_Err_Invalid_Opcode && code <= TT_Err_Invalid_Displacement)
-	return fBadInstruction;
-    if (code)
+	code1 = fBadInstruction;
+    else if (code)
 	return fBadFontData;
     I.z = this->inst;
     if (design_grid)
@@ -355,6 +355,8 @@ FontError ttfFont__Open(ttfInterpreter *tti, ttfFont *this, ttfReader *r,
 	return fBadInstruction;
     if (code)
 	return fBadFontData;
+    if (code1)
+	return code1;
     return code;
 }
 

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpx.c,v 1.12 2008/05/04 14:34:57 Arabidopsis Exp $ */
+/* $Id: gdevpx.c,v 1.13 2009/04/19 13:54:36 Arabidopsis Exp $ */
 /* H-P PCL XL driver */
 #include "math_.h"
 #include "memory_.h"
@@ -26,6 +26,7 @@
 #include "gserrors.h"
 #include "gsccolor.h"
 #include "gsdcolor.h"
+#include "gxiparam.h"
 #include "gxcspace.h"		/* for color mapping for images */
 #include "gxdevice.h"
 #include "gxpath.h"
@@ -36,6 +37,8 @@
 #include "gdevpxen.h"
 #include "gdevpxop.h"
 #include "gdevpxut.h"
+#include "gxlum.h"
+
 
 /* ---------------- Device definition ---------------- */
 
@@ -520,14 +523,14 @@ pclxl_write_image_data(gx_device_pclxl * xdev, const byte * data, int data_bit,
 	    r.ptr = data + i * raster - 1;
 	    r.limit = r.ptr + width_bytes;
 	    if ((*s_RLE_template.process)
-		((stream_state *) & rlstate, &r, &w, false) != 0 ||
+		((stream_state *) & rlstate, &r, &w, true) != 0 ||
 		r.ptr != r.limit
 		)
 		goto ncfree;
 	    r.ptr = (const byte *)"\000\000\000\000\000";
 	    r.limit = r.ptr + (-(int)width_bytes & 3);
 	    if ((*s_RLE_template.process)
-		((stream_state *) & rlstate, &r, &w, false) != 0 ||
+		((stream_state *) & rlstate, &r, &w, true) != 0 ||
 		r.ptr != r.limit
 		)
 		goto ncfree;
@@ -791,9 +794,11 @@ pclxl_beginpage(gx_device_vector * vdev)
 
     xdev->page ++;
 
+/*
     errprintf("PAGE: %d %d\n", xdev->page, xdev->NumCopies);
     errprintf("INFO: Printing page %d...\n", xdev->page);
     errflush();
+*/
 
     px_write_page_header(s, (const gx_device *)vdev);
 
@@ -1224,6 +1229,11 @@ pclxl_copy_mono(gx_device * dev, const byte * data, int data_x, int raster,
     code = gdev_vector_update_clip_path(vdev, NULL);
     if (code < 0)
 	return code;
+
+    if (data_x !=0 )
+        return gx_default_copy_mono(dev, data, data_x, raster, id, 
+  				    x, y, w, h, zero, one);
+
     pclxl_set_cursor(xdev, x, y);
     if (id != gs_no_id && zero == gx_no_color_index &&
 	one != gx_no_color_index && data_x == 0
@@ -1238,18 +1248,32 @@ pclxl_copy_mono(gx_device * dev, const byte * data, int data_x, int raster,
     /*
      * The following doesn't work if we're writing white with a mask.
      * We'll fix it eventually.
+     *
+     * This is a slightly better version than before (see bug 688372).
      */
+    if (zero == one) {
     if (zero == gx_no_color_index) {
-	if (one == gx_no_color_index)
-	    return 0;
+          /* one != gx_no_color_index */
 	lop = rop3_S | lop_S_transparent;
 	color0 = (1 << dev->color_info.depth) - 1;
     } else if (one == gx_no_color_index) {
+          /* zero != gx_no_color_index */
 	lop = rop3_S | lop_S_transparent;
 	color1 = (1 << dev->color_info.depth) - 1;
     } else {
+          /* both != no_color_index */
 	lop = rop3_S;
     }
+    } else {
+        if_debug3('b', "zero %d one %d noidx %08X\n", zero, one, gx_no_color_index);
+	if ((zero == gx_no_color_index) &&
+	    (one == gx_no_color_index))
+	  return 0;
+	lop = lop_T_transparent  |rop3_S;
+	color1 = one;
+	color0 = one;
+    }
+
     if (dev->color_info.num_components == 1 ||
 	(RGB_IS_GRAY(color0) && RGB_IS_GRAY(color1))
 	) {
@@ -1257,6 +1281,7 @@ pclxl_copy_mono(gx_device * dev, const byte * data, int data_x, int raster,
 	palette[1] = (byte) color1;
 	palette_size = 2;
 	color_space = eGray;
+	if_debug2('b', "color palette %02X %02X\n", palette[0], palette[1]);
     } else {
 	palette[0] = (byte) (color0 >> 16);
 	palette[1] = (byte) (color0 >> 8);
@@ -1394,7 +1419,7 @@ pclxl_strip_copy_rop(gx_device * dev, const byte * sdata, int sourcex,
 
 /* ------ High-level images ------ */
 
-#define MAX_ROW_DATA 4000	/* arbitrary */
+#define MAX_ROW_DATA 500000	/* arbitrary */
 typedef struct pclxl_image_enum_s {
     gdev_vector_image_enum_common;
     gs_matrix mat;
@@ -1448,7 +1473,7 @@ pclxl_begin_image(gx_device * dev,
 	 (!gx_dc_is_pure(pdcolor) || pim->CombineWithColor) :
 	 (!pclxl_can_handle_color_space(pim->ColorSpace) ||
 	  (bits_per_pixel != 1 && bits_per_pixel != 4 &&
-	   bits_per_pixel != 8))) ||
+	   bits_per_pixel != 8 && bits_per_pixel !=24))) ||
 	format != gs_image_format_chunky ||
 	prect
 	)
@@ -1497,6 +1522,22 @@ pclxl_begin_image(gx_device * dev,
 		goto fail;
 	    pclxl_set_color_palette(xdev, eGray, palette, 2);
 	} else {
+            if (bits_per_pixel == 24 ) {
+                stream *s = pclxl_stream(xdev);
+                if (dev->color_info.num_components == 1) {
+                    pclxl_set_color_space(xdev, eGray);
+                    px_put_uba(s, (byte) 0x00, pxaGrayLevel);
+                } else {
+                    pclxl_set_color_space(xdev, eRGB);
+                    spputc(s, pxt_ubyte_array);
+                    px_put_ub(s, 3);
+                    spputc(s, (byte) 0x00);
+                    spputc(s, (byte) 0x00);
+                    spputc(s, (byte) 0x00);
+                    px_put_a(s, pxaRGBColor);
+                }
+                spputc(s, (byte) pxtSetBrushSource);
+            } else {
 	    int bpc = pim->BitsPerComponent;
 	    int num_components = pie->plane_depths[0] * pie->num_planes / bpc;
 	    int sample_max = (1 << bpc) - 1;
@@ -1541,6 +1582,7 @@ pclxl_begin_image(gx_device * dev,
 					3 << bits_per_pixel);
 	}
     }
+    }
     return 0;
  fail:
     gs_free_object(mem, row_data, "pclxl_begin_image(rows)");
@@ -1578,19 +1620,47 @@ pclxl_image_write_rows(pclxl_image_enum_t *pie)
     int yo = image_transform_y(pie, y);
     int dw = image_transform_x(pie, pie->width) - xo;
     int dh = image_transform_y(pie, y + h) - yo;
-    static const byte ii_[] = {
-	DA(pxaColorDepth),
-	DUB(eIndexedPixel), DA(pxaColorMapping)
-    };
+    int rows_raster=pie->rows.raster;
 
     if (dw <= 0 || dh <= 0)
 	return 0;
     pclxl_set_cursor(xdev, xo, yo);
+    if (pie->bits_per_pixel==24) {
+	static const byte ci_[] = {
+	    DA(pxaColorDepth),
+	    DUB(eDirectPixel), DA(pxaColorMapping)
+	};
+
+	px_put_ub(s, eBit_values[8]);
+	PX_PUT_LIT(s, ci_);
+        if (xdev->color_info.depth==8) {
+          byte *in=pie->rows.data;
+          byte *out=pie->rows.data;
+          int i;
+          int j;
+          rows_raster/=3;
+          for (j=0;  j<h;  j++) {
+            for (i=0;  i<rows_raster;  i++) {
+              *out = (byte)( ((*(in+0) * (ulong) lum_red_weight) + 
+                              (*(in+1) * (ulong) lum_green_weight) + 
+                              (*(in+3) * (ulong) lum_blue_weight) + 
+                              (lum_all_weights / 2)) / lum_all_weights);
+              in+=3;
+              out++;
+            }
+          }
+        }
+    } else {
+        static const byte ii_[] = {
+	    DA(pxaColorDepth),
+	    DUB(eIndexedPixel), DA(pxaColorMapping)
+        };
     px_put_ub(s, eBit_values[pie->bits_per_pixel]);
     PX_PUT_LIT(s, ii_);
+    }
     pclxl_write_begin_image(xdev, pie->width, h, dw, dh);
-    pclxl_write_image_data(xdev, pie->rows.data, 0, pie->rows.raster,
-			   pie->rows.raster << 3, 0, h);
+    pclxl_write_image_data(xdev, pie->rows.data, 0, rows_raster,
+			   rows_raster << 3, 0, h);
     pclxl_write_end_image(xdev);
     return 0;
 }
@@ -1639,7 +1709,7 @@ pclxl_image_end_image(gx_image_enum_common_t * info, bool draw_last)
     if (pie->y > pie->rows.first_y && draw_last)
 	code = pclxl_image_write_rows(pie);
     gs_free_object(pie->memory, pie->rows.data, "pclxl_end_image(rows)");
-    gs_free_object(pie->memory, pie, "pclxl_end_image");
+    gx_image_free_enum(&info);
     return code;
 }
 

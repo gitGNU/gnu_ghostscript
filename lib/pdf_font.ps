@@ -14,8 +14,14 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: pdf_font.ps,v 1.12 2008/05/04 14:34:57 Arabidopsis Exp $
+% $Id: pdf_font.ps,v 1.13 2009/04/19 13:54:37 Arabidopsis Exp $
 % PDF font operations.
+
+% Since PDF font are not unique and can collide with external font resources
+% or each other, use font dictionaries obtained from PDF directly, never
+% register them as resources or look them up by name. Use findfont oparator
+% for non-embedded fonts only. CIDFont resources still use the old logic
+% described below.
 
 % Finding a font by name can't give a proper result when PDF font names aren't unique.
 % But it is only the way to obtain a font in Postscript after a font file is executed.
@@ -127,7 +133,7 @@ pdfdict begin
 /adjustfont {		% <font-resource> <font> adjustfont <font'>
   getfontencoding
   3 copy .processToUnicode
-  getfontmetrics 5 -1 roll pop .updatefont { dup /FontName get exch definefont } if
+  getfontmetrics 5 -1 roll pop .updatefont { .completefont } if
 } bind def
 
 % Get the (possibly modified) encoding of a font.
@@ -472,9 +478,16 @@ currentdict end readonly def
         (   **** Warning: Ignoring bad ToUnicode CMap.\n)  pdfformaterror
         pop
       } {
-        PDFfile fileposition exch
-        false resolvestream
 
+        /PDFScanRules .getuserparam dup //null eq {
+          pop //PDFScanRules_null
+        } {
+          1 dict dup /PDFScanRules 4 -1 roll put
+        } ifelse
+        //PDFScanRules_true setuserparams
+        PDFfile fileposition 3 -1 roll
+
+        //false resolvestream
         //ToUnicodeCMapReader begin
            % Following Acrobat we ignore everything outside begincmap..endcmap.
            dup 0 (begincmap) /SubFileDecode filter flushfile
@@ -485,6 +498,8 @@ currentdict end readonly def
         end end end
 
         PDFfile exch setfileposition
+        setuserparams
+
         1 index /FontInfo .knownget not {
           1 index /FontInfo 5 dict dup 4 1 roll put
         } if
@@ -496,7 +511,7 @@ currentdict end readonly def
         exch pop exch                        % font-res font-dict g2u encoding|null
         userdict /.lastToUnicode get         % font-res font-dict g2u Encoding|null CMap
         .convert_ToUnicode-into-g2u          % font-res font-dict
-        null                                 % font-res font-dict null
+        //null                               % font-res font-dict null
       } ifelse
     } if
     PDFDEBUG {
@@ -587,17 +602,8 @@ setglobal
 		% If the font isn't available, synthesize one based on
 		% its descriptor.
   dup /Font resourcestatus {
-    pop pop dup pdffindcachedfont
-    dup .isregisteredfont
-    % <font-resource> <fontname> <font> true	% font preloaded from disk
-    % <font-resource> <fontname> <font> false	% font preloaded from document
-    { exch pop false } { pop true } ifelse
+    pop pop pdffindcachedfont
   } {
-    true
-  } ifelse
-  % <font-resource> <font> false	% font preloaded from disk
-  % <font-resource> <fontname> true	% font not loaded yet or embedded
-  {
     1 index /FontDescriptor knownoget {
 		% Stack: font-res fontname fontdesc
       dup /Flags oget
@@ -664,12 +670,12 @@ setglobal
         true .copyfontdict
         2 copy exch /FontName exch put
       } if
-      definefont
+      exch pop .completefont
     } {
 		% No descriptor available, use the default algorithm.
       pdffindcachedfont
     } ifelse
-  } if
+  } ifelse
   exch pop
 } bdef
 
@@ -698,11 +704,17 @@ setglobal
 
 /readtype1dict 5 dict dup begin
   /definefont {
-    dup topFontDict eq topFontDict null eq or {
-      dup wcheck not { dup length dict copy } if
-      exch pop savedFontName exch
+    exch pop
+    dup /UniqueID .knownget {
+      dup dup 0 lt exch 16#ffffff gt or {
+        (   **** Warning: Ignoring invalid /UniqueID = ) exch =string cvs
+        concatstrings (\n) concatstrings pdfformaterror
+        dup /UniqueID undef
+      } {
+        pop
+      } ifelse
     } if
-    //systemdict /definefont get exec
+    .completefont
   } bdef
 
   /undef_proc_warning {
@@ -772,22 +784,17 @@ currentdict /eexec_pdf_param_dict .undef
                 % Also restore dictstack depth.
                 % 
    //systemdict begin
-		% The PDF specification is somewhat muddy about whether
-		% an embedded font's name is supposed to be the BaseFont
-		% from the Font object or the FontName from the descriptor.
-		% Acrobat Distiller requires the former.  Save away the
-		% name so we can substitute it at definefont time.
    //readtype1dict dup length 3 add dict copy begin
    1 index /BaseFont oget /savedFontName exch def
    /topFontDict null def
    /readtype1dictcopy currentdict def
     { cvx exec } aload pop count 2 sub 3 packedarray cvx exec
     % clean up the dictstack
-    { currentdict /topFontDict known not { end } { end end exit } ifelse } loop
+    { currentdict /topFontDict known not { end } { exit } ifelse } loop
    count exch sub { pop } repeat
    PDFfile 3 -1 roll setfileposition
-   /BaseFont oget pdfaddcachedfont
-   exch pop
+   pop pop
+   currentdict end end /topFontDict get
  } bdef
 
 % ---------------- Type 3 fonts ---------------- %
@@ -831,14 +838,14 @@ currentdict /eexec_pdf_param_dict .undef
       1 index begin 3 dict begin
       /Font 3 -1 roll def /CharCode 1 index def
       Encoding exch get CharProcs exch knownoget {
-        PDFfile fileposition exch
-        //false resolvestream
+        { //false resolvestream
 		% Stack: filepos stream
 		% Don't let setgcolor set the color inside the BuildGlyph
 		% procedure, because this causes an /undefined error.
         q //null /FillColor gput //null /StrokeColor gput
         Font /Resources get exch pdfopdict .pdfruncontext
         Q
+        } PDFfile fileposition 2 .execn % Keep pdfcount valid.
         PDFfile exch setfileposition
       } {
         % PDF Type 3 fonts don't use .notdef
@@ -849,7 +856,7 @@ currentdict /eexec_pdf_param_dict .undef
       end end
     } bdef
     dup currentdict Encoding .processToUnicode
-    FontName currentdict end definefont exch pop
+    currentdict end .completefont exch pop
 } bdef
 /.adjustcharwidth {	% <wx> <wy> .adjustcharwidth <wx'> <wy'>
   % Enforce the metrics, in glyph space, to the values found in the PDF Font object
@@ -896,7 +903,7 @@ currentdict /eexec_pdf_param_dict .undef
     exch 3 1 roll pdffindfont
     true .copyfontdict
     2 copy exch /FontName exch put
-    definefont
+    exch pop .completefont
   } {
     pdffindfont
   } ifelse
@@ -993,10 +1000,11 @@ currentdict /eexec_pdf_param_dict .undef
   .composefontdict  % composefont must insert FontInfo dictionary - see gs_cmap.ps .
 		    % Stack: fontres name font
   3 copy exch pop null .processToUnicode
-  /Font defineresource   % Stack: fontres font
+  exch pop .completefont % Stack: fontres font
   1 index /FontMatrix knownoget {
     dup aload pop true {0 0 1 0 0 1} {3 -1 roll eq and} forall {
-      1 index exch makefont exch /FontName get exch definefont
+      1 index exch makefont exch /FontName get exch 
+      exch pop .completefont
     } {
       pop
     } ifelse
@@ -1355,7 +1363,9 @@ currentdict /eexec_pdf_param_dict .undef
 % Adjust a CIDFontType2 DW[2] and CIDToGIDMap in the font resource.
 /adjustCIDType2 {		% <font-resource> <font> adjustfont <font'>
   addCIDmetrics
-  processCIDToGIDMap
+  dup /CIDFontType get 2 eq {   % OpenType CFF font converts to CIDFontType 0
+    processCIDToGIDMap          %  that ignores CIDMap.
+  } if
   dup /CIDFontName get exch /CIDFont defineresource
 } bind def
 
@@ -1373,11 +1383,13 @@ currentdict /eexec_pdf_param_dict .undef
   dup true resolvestream dup readfontfilter
 		% Stack: pos resource streamdict stream filter
   3 index /FontDescriptor oget /FontName oget
-  1 index FRD
+  1 index 
+  /FontSetInit /ProcSet findresource begin //true //false ReadData
+  { exch pop exit } forall
+  7 1 roll
   closefile closefile pop
   PDFfile 3 -1 roll setfileposition
-  /FontDescriptor oget /FontName oget pdfaddcachedfont
-  exch pop
+  pop pop
 } bdef
 
 % Read an embedded CFF CIDFont.
@@ -1386,7 +1398,8 @@ currentdict /eexec_pdf_param_dict .undef
   dup true resolvestream dup readfontfilter
 		% Stack: pos resource streamdict stream filter
   3 index /FontDescriptor oget /FontName oget
-  1 index FRD
+  1 index 
+  /FontSetInit /ProcSet findresource begin //true //false ReadData pop
   closefile closefile pop
   PDFfile 3 -1 roll setfileposition
 		% Some broken Adobe software produces PDF files in which
@@ -1399,17 +1412,60 @@ currentdict /eexec_pdf_param_dict .undef
 
 % Read an embedded OpenType font.
 /readOTTOfont {		% <font-resource> <stream-dict> readOTTOfont <font>
-  1 index exch
-  PDFfile fileposition 3 1 roll
-  dup true resolvestream dup readfontfilter
-		% Stack: pos resource streamdict stream filter
-  3 index /FontDescriptor oget /FontName oget
-  1 index
-  .init_otto_font_file //true ReadData
-  closefile closefile pop
-  PDFfile 3 -1 roll setfileposition
-  /FontDescriptor oget /FontName oget pdfaddcachedfont
-  exch pop
+  1 index exch                    % res res strdict
+  PDFfile fileposition 3 1 roll   % res pos res strdict
+  dup //true resolvestream        % res pos res strdict stream
+  dup readfontfilter              % res pos res strdict stream filter
+  3 index /FontDescriptor oget
+  /FontName oget                  % res pos res strdict stream filter /name
+  1 index .init_otto_font_file    % res pos res strdict stream filter /name filter'
+  //true
+  6 index /CIDSystemInfo known    % res pos res strdict stream filter /name filter' bool bool
+  ReadData                        % res pos res strdict stream filter fontset
+  { exch pop exit } forall        % res pos res strdict stream filter font
+  dup /FontType get 9 eq  {
+    % OpenType may contain simple CFF font, which is accesed as a CIDFont by PDF.
+    % The font is converted to Type 9 CIDFont resource, which ignores CIDMap attribute.
+    % The following code just shuffles GlyphDirectory to the same effect.
+    4 index /CIDToGIDMap knownoget {
+      dup type /dicttype eq {
+        1 index /GlyphDirectory get exch       % res pos res strdict stream filter font dir c2g
+        //true resolvestream                   % res pos res strdict stream filter font dir c2g_file
+        256 dict begin
+        0 2 index 0 get def  % copy .notdef
+        0 1 16#7fffffff {
+          1 index read not { pop exit } if     % res pos res strdict stream filter font dir c2g_file cid hi
+          256 mul                              % res pos res strdict stream filter font dir c2g_file cid hi
+          2 index read not { pop pop exit } if % res pos res strdict stream filter font dir c2g_file cid hi lo
+          add                                  % res pos res strdict stream filter font dir c2g_file cid gid
+          dup 0 ne {
+            dup 4 index length lt {
+              3 index exch get                 % res pos res strdict stream filter font dir c2g_file cid charstr
+              def                              % res pos res strdict stream filter font dir c2g_file
+            } {
+              pop pop
+            } ifelse
+          } {
+            pop pop
+          } ifelse
+        } for
+        closefile pop                          % res pos res strdict stream filter font
+        dup length dict copy                   % res pos res strdict stream filter font'
+        dup /GlyphDirectory currentdict put    % res pos res strdict stream filter font'
+        end
+        dup /GlyphDirectory get 0 exch {
+          pop .max
+        } forall
+        1 index exch /CIDCount exch 1 add put
+      } {
+      pop
+      } ifelse
+    } if
+  } if
+  7 1 roll                        % font res pos res strdict stream filter
+  closefile closefile pop pop     % font res pos
+  PDFfile exch setfileposition    % font res
+  pop                             % font
 } bdef
 
 % ---------------- Font lookup ---------------- %
@@ -1454,12 +1510,12 @@ currentdict /eexec_pdf_param_dict .undef
   /no_stream 
     { pop pop 
       dup /Subtype get  % res res /subtype
-      fonttypeprocs exch dup / eq {
+      dup / eq {
         (   **** Warning: Font missing required Subtype, /Type1 assumed.\n)
 	pdfformaterror
         pop /Type1
       } if
-      get exec 
+      //fonttypeprocs exch get exec 
     } bdef
 
   /bad_stream 
@@ -1498,28 +1554,24 @@ currentdict end readonly def
 currentdict /bndef undef
 
 /resourcefont                   % <font-resource> resourcefont <font>
-{ dup /PSFont .knownget {
-    /FID knownoget { type /fonttype eq } { //false } ifelse 
-  } {
-    //false 
-  } ifelse {
+{ dup /PSFont .knownget dup {
+    pop /FID knownoget dup { pop type /fonttype eq } if
+  } if {
     /PSFont get 
   } {
     dup dup /FontDescriptor knownoget {
                                           % font-res font-res font-desc
-
-      dup /FontObject .knownget dup {     % font-res font-res font-desc font? bool bool
-        % Check that the cached FontObject has the right resource type
-        % The same font descriptor can be reused in a CID and non-CID contexts. bug 689301
-        3 index /Subtype knownoget not { /Type1 } if
-        dup /CIDFontType0 eq exch /CIDFontType2 eq or  % font-res font-res font-desc font bool is_cid
-        2 index /CIDFontType known xor {
-          pop pop //false                 % font-res font-res font-desc false 
-        } if
-      } if {
-                                          % res res desc obj
-          3 1 roll pop pop                % res obj
+      % The same font descriptor can be reused in a CID and non-CID contexts.
+      % Store CID and non-CID fonts under different keys. Bug 689301
+      1 index /Subtype knownoget dup {
+        pop dup /CIDFontType0 eq exch /CIDFontType2 eq or
+      } if { /CIDFontObject } { /FontObject } ifelse
+                                          % font-res font-res font-desc /key
+      2 copy .knownget {
+        4 1 roll pop pop pop              % font-res obj
       } { 
+        4 1 roll                          % /key font-res font-res font-desc
+
         dup /FontFile knownoget not {
           dup /FontFile2 knownoget not {
             dup /FontFile3 knownoget not {
@@ -1527,45 +1579,47 @@ currentdict /bndef undef
             } if
           } if
         } if
-                                          % res res desc stream
+                                          % /key res res desc stream
         dup //null ne {
           PDFfile fileposition 
           1 index //true resolvestream dup
-          4 string readstring not { /bad_stream } if
+          4 string readstring pop
 	  exch closefile
           PDFfile 3 -1 roll setfileposition
           dup length 4 lt { pop /bad_stream } if
         } {
           /no_stream
 	} ifelse
-                                          % res res desc stream tag	      
+                                          % /key res res desc stream tag	      
 
         //font_tag_dict 1 index known not {
           dup 0 2 getinterval <8001> eq {
-            0 2 getinterval               % res res desc stream pfb_tag
+            0 2 getinterval               % /key res res desc stream pfb_tag
 	  } { 
             (12345678>\n) dup /ASCIIHexEncode filter dup 4 -1 roll writestring closefile
             (   **** Warning: unrecognized font file starts with <) exch concatstrings
 	    pdfformaterror
-	    /no_stream                    % res res desc stream unknown_tag
+	    /no_stream                    % /key res res desc stream unknown_tag
           } ifelse    
 	} if		
 	      
 	//font_tag_dict exch get exec
    
-        1 index /FontDescriptor oget      % res font desc
-        1 index /FontObject exch put      % Save pointer to the font
+        1 index /FontDescriptor oget      % /key res font desc
+        4 -1 roll 2 index                 % res font desc /key font
+        put  % Save pointer to the font.
       } ifelse
     } {
-      dup /Subtype get fonttypeprocs exch dup / eq {
+      dup /Subtype get
+      dup / eq {
         (   **** Warning: Font missing required Subtype, /Type1 assumed.\n)
         pdfformaterror
         pop /Type1
       } if 
-      get exec
+      //fonttypeprocs exch get exec
     } ifelse
         % Stack: font-res font
-    1 index 3 1 roll
+    1 index exch
     1 index /Subtype get
     //adjustfonttypes exch .knownget { exec } { exch pop } ifelse
     dup 3 1 roll /PSFont exch put
@@ -1573,7 +1627,9 @@ currentdict /bndef undef
   dup checkGlyphNames2Unicode
 } bdef
 
-currentdict /font_tag_dict undef
+currentdict /font_tag_dict .undef
+currentdict /fonttypeprocs .undef
+currentdict /adjustfonttypes .undef
 
 drawopdict begin
   /d0 {

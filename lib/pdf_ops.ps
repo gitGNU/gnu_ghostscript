@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: pdf_ops.ps,v 1.12 2008/05/04 14:34:58 Arabidopsis Exp $
+% $Id: pdf_ops.ps,v 1.13 2009/04/19 13:54:38 Arabidopsis Exp $
 % Definitions for most of the PDF operators.
 
 .currentglobal true .setglobal
@@ -95,25 +95,25 @@ nodict readonly pop
    if def
  } bdef
 
-% Restore graphics state, but do not modify path. Paths are not part
-% of the PDF graphics state; see 4.4.1 of PDF reference 3rd ed.
-/grestore_nopath {
-  % Collect the upath with an identity CTM
-    matrix setmatrix .getpath
-    % Save the CTM, set identity during the uappend, then set the CTM
-    grestore matrix currentmatrix matrix setmatrix
-    exch newpath { exec } forall setmatrix
-} bdef
-
 /q {
   gsave //nodict begin
 } bdef
 % Some PDF files have excess Q operators!
 /Q {
   currentdict /self .knownget {
-    exec //nodict eq { end grestore_nopath false } { true } ifelse
+    exec //nodict eq {
+      end
+      % Restore graphics state, but do not modify path. Paths are not part
+      % of the PDF graphics state; see 4.4.1 of PDF reference 3rd ed.
+      % Collecting the path with one ctm and re-playing it with another ctm
+      % transforms the path exactly as PDF needs.
+      .getpath grestore newpath { exec } forall
+      //false
+    } {
+      //true
+    } ifelse
   } {
-    true	% formaterror -- not a gsave dict
+    //true	% formaterror -- not a gsave dict
   } ifelse
   { (\n   **** File has imbalanced q/Q operators \(too many Q's\) ****\n)
     pdfformaterror
@@ -327,8 +327,17 @@ nodict readonly pop
        } ifelse
      } if
 
-     dup /Matrix knownoget not { matrix } if
-     gsave DefaultQstate setqstate makepattern grestore setcolor
+     % Associate pattern instance with the default qstate for the context. 
+     % A single pattren object can be reused in several contexts.
+     dup DefaultQstate .knownget {
+       exch pop
+     } {
+       dup dup /Matrix knownoget not { { 1 0 0 1 0 0 } } if
+       gsave DefaultQstate setqstate makepattern grestore
+       dup 3 1 roll
+       DefaultQstate exch put
+     } ifelse
+     setcolor
    } bdef
 end def
 /setgcolor	% (null | <color...>) <colorspace> setgcolor -
@@ -542,11 +551,6 @@ end readonly def
   /TextFont gput settextstate
 } bdef
 
-% Read a CFF font.
-/FRD		% <resname> <file> FRD -
- { /FontSetInit /ProcSet findresource begin //true ReadData
- } bdef
-
 % Copy a font, removing its FID.  If changed is true, also remove
 % the UniqueID and XUID, if any.  If the original dictionary doesn't have
 % the keys being removed, don't copy it.
@@ -707,7 +711,7 @@ end readonly def
 	            2 index setfillstate show % Tr was set to graphic state.
 	            setmatrix 
 		    % now set the currentpoint using the original matrix
-	            gsave nulldevice
+	            gsave
 	            setmatrix
 	            false charpath currentpoint newpath 
 	            grestore

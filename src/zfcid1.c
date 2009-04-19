@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfcid1.c,v 1.11 2008/03/23 15:27:49 Arabidopsis Exp $ */
+/* $Id: zfcid1.c,v 1.12 2009/04/19 13:54:33 Arabidopsis Exp $ */
 /* CIDFontType 1 and 2 operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -220,6 +220,9 @@ z11_enumerate_glyph(gs_font *font, int *pindex,
     int code0 = z11_CIDMap_proc(pfont, GS_MIN_CID_GLYPH);
     int code;
 
+    if(*pindex > pfont->cidata.common.CIDCount)
+	return_error(e_rangecheck);
+
     for (;;) {
 	code = z11_CIDMap_proc(pfont, GS_MIN_CID_GLYPH + *pindex);
 
@@ -341,7 +344,8 @@ zbuildfont11(i_ctx_t *i_ctx_p)
 				  (const char *)0, "%Type11BuildGlyph",
 				  bf_Encoding_optional |
 				  bf_UniqueID_ignored |
-				  bf_CharStrings_optional);
+				  bf_CharStrings_optional |
+				  (pfile != NULL ? bf_has_font_file : 0));
     if (code < 0)
 	return code;
     pfcid = (gs_font_cid2 *)pfont;
@@ -424,7 +428,7 @@ zfillCIDMap(i_ctx_t *i_ctx_p)
     int code;
 
     check_type(*Decoding, t_dictionary);
-    check_type(*TT_cmap, t_array);
+    check_type(*TT_cmap, t_dictionary);
     check_type(*SubstNWP, t_array);
     check_type(*GDBytes, t_integer);
     check_type(*CIDMap, t_array);

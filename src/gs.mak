@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: gs.mak,v 1.12 2008/05/04 14:34:42 Arabidopsis Exp $
+# $Id: gs.mak,v 1.13 2009/04/19 13:54:31 Arabidopsis Exp $
 # Generic makefile, common to all platforms, products, and configurations.
 # The platform-specific makefiles `include' this file.
 
@@ -275,10 +275,10 @@ mostlyclean : config-clean
 	$(RMN_) $(GSGEN)_temp_* $(GSGEN)_temp_*.* $(GSOBJ)*.map $(GSOBJ)*.sym
 	$(RMN_) $(GENARCH_XE) $(GENCONF_XE) $(GENDEV_XE) $(GENHT_XE) $(GENINIT_XE)
 	$(RMN_) $(ECHOGS_XE)
-	$(RMN_) $(GSGEN)gs_init.c $(BEGINFILES)
+	$(RMN_) $(GSGEN)gs_init.ps $(BEGINFILES)
 	$(RMN_) $(MKROMFS_XE)
 	$(RMN_) $(PSGEN)$(GS_INIT)
-	$(RMN_) $(GSGEN)gsromfs.c
+	$(RMN_) $(GSGEN)gsromfs1.c
 
 # Remove only configuration-dependent information.
 #****** FOLLOWING IS WRONG, NEEDS TO BE PER-SUBSYSTEM ******

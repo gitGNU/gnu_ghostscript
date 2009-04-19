@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2007 Artifex Software, Inc.
+#  Copyright (C) 2001-2006 Artifex Software, Inc.
 #  All Rights Reserved.
 # 
 # This file is part of GNU ghostscript
@@ -18,7 +18,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: Makefile.in,v 1.19 2008/05/04 14:35:11 Arabidopsis Exp $
+# $Id: Makefile.in,v 1.20 2009/04/19 13:54:47 Arabidopsis Exp $
 # makefile template for/from the autoconf build.
 # @configure_input@
 
@@ -271,7 +271,7 @@ GCFLAGS=@CPPFLAGS@ @GCFLAGS@ @CFLAGS@
 # and shared object builds.
 
 CFLAGS_STANDARD=@OPT_CFLAGS@
-CFLAGS_DEBUG=-g -O
+CFLAGS_DEBUG=-g -O0
 CFLAGS_PROFILE=-pg @OPT_CFLAGS@
 CFLAGS_SO=@DYNAMIC_CFLAGS@
 
@@ -324,10 +324,7 @@ EXTRALIBS=@LIBS@ @DYNAMIC_LIBS@ @FONTCONFIG_LIBS@
 # All reasonable platforms require -lm, but Rhapsody and perhaps one or
 # two others fold libm into libc and don't require any additional library.
 
-#STDLIBS=-lpthread -lm
-
-# Since the default build is for nosync, don't include pthread lib
-STDLIBS=-lm
+STDLIBS=@PTHREAD_LIBS@ -lm
 
 # Define the include switch(es) for the X11 header files.
 # This can be null if handled in some other way (e.g., the files are
@@ -359,11 +356,10 @@ XLIBS=@X_LIBS@
 # primitives for this platform.
 
 # If POSIX sync primitives are used, also change the STDLIBS to include
-# the pthread library.
+# the pthread library. Otherwise use SYNC=nosync
 #SYNC=posync
-
-# Default is No sync primitives since some platforms don't have it (HP-UX)
-SYNC=nosync
+#SYNC=nosync
+SYNC=@SYNC@
 
 # programs we use
 RM=rm -f
@@ -372,6 +368,10 @@ RM=rm -f
 SOC_CFLAGS	=	@SOC_CFLAGS@
 SOC_LIBS	=	@SOC_LIBS@
 SOC_LOADER	=	@SOC_LOADER@
+
+
+CAIRO_CFLAGS	=	@CAIRO_CFLAGS@
+CAIRO_LIBS	=	@CAIRO_LIBS@
 
 # ------ Devices and features ------ #
 
@@ -459,7 +459,7 @@ DEVICE_DEVS4=@IJSDEVS@
 DEVICE_DEVS5=@OMNIDEVS@
 DEVICE_DEVS6=@PNGDEVS@
 DEVICE_DEVS7=@JBIG2DEVS@
-DEVICE_DEVS8=
+DEVICE_DEVS8=$(DD)svgwrite.dev
 DEVICE_DEVS9=
 DEVICE_DEVS10=
 DEVICE_DEVS11=

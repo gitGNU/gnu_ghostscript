@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/*$Id: gdevbbox.c,v 1.12 2008/03/23 15:28:18 Arabidopsis Exp $ */
+/*$Id: gdevbbox.c,v 1.13 2009/04/19 13:54:27 Arabidopsis Exp $ */
 /* Device for tracking bounding box */
 #include "math_.h"
 #include "memory_.h"
@@ -761,7 +761,21 @@ bbox_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
 	 dev_proc(tdev, fill_path));
     int code;
 
-    if (!GX_DC_IS_TRANSPARENT(pdevc, bdev) && !gx_path_is_void(ppath)) {
+    if (ppath == NULL) {
+	/* A special handling of shfill with no path. */
+	gs_fixed_rect ibox;
+	gs_fixed_point adjust;
+
+	if (pcpath == NULL)
+	    return 0;
+	gx_cpath_inner_box(pcpath, &ibox);
+	adjust = params->adjust;
+	if (params->fill_zero_width)
+	    gx_adjust_if_empty(&ibox, &adjust);
+	adjust_box(&ibox, adjust);
+	BBOX_ADD_RECT(bdev, ibox.p.x, ibox.p.y, ibox.q.x, ibox.q.y);
+	return 0;
+    } else if (!GX_DC_IS_TRANSPARENT(pdevc, bdev) && !gx_path_is_void(ppath)) {
 	gs_fixed_rect ibox;
 	gs_fixed_point adjust;
 
@@ -909,7 +923,6 @@ bbox_fill_mask(gx_device * dev,
 
 typedef struct bbox_image_enum_s {
     gx_image_enum_common;
-    gs_memory_t *memory;
     gs_matrix matrix;		/* map from image space to device space */
     const gx_clip_path *pcpath;
     gx_image_enum_common_t *target_info;
@@ -1008,7 +1021,7 @@ bbox_begin_typed_image(gx_device * dev,
 	gx_device_bbox *const bdev = (gx_device_bbox *) dev;
 	gx_device *tdev = bdev->target;
 	dev_proc_begin_typed_image((*begin_typed_image));
-	byte wanted[GS_IMAGE_MAX_PLANES];
+	byte wanted[GS_IMAGE_MAX_COMPONENTS];
 
 	if (tdev == 0) {
 	    tdev = dev;
@@ -1107,7 +1120,7 @@ bbox_image_end_image(gx_image_enum_common_t * info, bool draw_last)
     bbox_image_enum *pbe = (bbox_image_enum *) info;
     int code = gx_image_end(pbe->target_info, draw_last);
 
-    gs_free_object(pbe->memory, pbe, "bbox_end_image");
+    gx_image_free_enum(&info);
     return code;
 }
 

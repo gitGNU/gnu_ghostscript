@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxhintn.c,v 1.11 2008/03/23 15:27:38 Arabidopsis Exp $ */
+/* $Id: gxhintn.c,v 1.12 2009/04/19 13:54:34 Arabidopsis Exp $ */
 /* Type 1 hinter, a new algorithm */
 
 #include "memory_.h"
@@ -1179,11 +1179,11 @@ static void t1_hinter__fix_missed_flex(t1_hinter * this)
 	    if (gcj < gc0 || gcj > gc1)
 		break;
 	}
-	i++;
 	if (i == contour_end) {
 	    i = contour_beg;
 	    wrapped = true;
-	}
+	} else
+	    i++;
 	/* Forward search for all platues. */
 	for (;;i++) {
 	    prev_dir = 0;

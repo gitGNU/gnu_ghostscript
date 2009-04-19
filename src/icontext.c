@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: icontext.c,v 1.9 2008/03/23 15:27:55 Arabidopsis Exp $ */
+/* $Id: icontext.c,v 1.10 2009/04/19 13:54:35 Arabidopsis Exp $ */
 /* Context state operations */
 #include "ghost.h"
 #include "gsstruct.h"		/* for gxalloc.h */
@@ -157,6 +157,7 @@ context_state_alloc(gs_context_state_t ** ppcst,
     pcst->scanner_options = 0;
     pcst->LockFilePermissions = false;
     pcst->starting_arg_file = false;
+    pcst->RenderTTNotdef = true;
     /* The initial stdio values are bogus.... */
     make_file(&pcst->stdio[0], a_readonly | avm_invalid_file_entry, 1,
 	      invalid_file_entry);

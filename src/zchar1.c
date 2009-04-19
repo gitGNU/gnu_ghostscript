@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zchar1.c,v 1.12 2008/05/04 14:34:53 Arabidopsis Exp $ */
+/* $Id: zchar1.c,v 1.13 2009/04/19 13:54:29 Arabidopsis Exp $ */
 /* Type 1 character display operator */
 #include "memory_.h"
 #include "ghost.h"
@@ -295,12 +295,22 @@ charstring_execchar_aux(i_ctx_t *i_ctx_p, gs_text_enum_t *penum, gs_font *pfont)
 	 * create the path twice, since we can't know the
 	 * oversampling factor until after setcachedevice.
 	 */
-	if (cxs.present == metricsSideBearingAndWidth) {
-	    gs_point sbpt;
+	switch (cxs.present) {
+            case metricsSideBearingAndWidth: { 
+                gs_point pt;
 
-	    sbpt.x = cxs.sbw[0], sbpt.y = cxs.sbw[1];
-	    gs_type1_set_lsb(pcis, &sbpt);
+	        pt.x = cxs.sbw[0], pt.y = cxs.sbw[1];
+	        gs_type1_set_lsb(pcis, &pt);
+            }
+            /* fall through */
+            case metricsWidthOnly: {
+                gs_point pt;
+
+	        pt.x = cxs.sbw[2], pt.y = cxs.sbw[3];
+                gs_type1_set_width(pcis, &pt);
+            }
 	}
+
 	/* Continue interpreting. */
       icont:
 	code = type1_continue_dispatch(i_ctx_p, &cxs, opstr, &other_subr, 4);
@@ -314,8 +324,15 @@ charstring_execchar_aux(i_ctx_t *i_ctx_p, gs_text_enum_t *penum, gs_font *pfont)
 		return type1_call_OtherSubr(i_ctx_p, &cxs, nobbox_continue,
 					    &other_subr);
 	    case type1_result_sbw:	/* [h]sbw, just continue */
-		if (cxs.present != metricsSideBearingAndWidth)
-		    type1_cis_get_metrics(pcis, cxs.sbw);
+                switch (cxs.present) {
+                    case metricsNone:
+                        cxs.sbw[0] = fixed2float(pcis->lsb.x);
+                        cxs.sbw[1] = fixed2float(pcis->lsb.y);
+                    /* fall through */
+                    case metricsWidthOnly:
+                        cxs.sbw[2] = fixed2float(pcis->width.x);
+                        cxs.sbw[3] = fixed2float(pcis->width.y);
+                }
 		opstr = 0;
 		goto icont;
 	}

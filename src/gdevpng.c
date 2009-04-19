@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpng.c,v 1.14 2008/05/04 14:34:56 Arabidopsis Exp $ */
+/* $Id: gdevpng.c,v 1.15 2009/04/19 13:54:22 Arabidopsis Exp $ */
 /* PNG (Portable Network Graphics) Format.  Pronounced "ping". */
 /* lpd 1999-09-24: changes PNG_NO_STDIO to PNG_NO_CONSOLE_IO for libpng
    versions 1.0.3 and later. */
@@ -549,7 +549,7 @@ pngalpha_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
     if ((color == 0xffffff00) && (x==0) && (y==0) 
 	&& (w==dev->width) && (h==dev->height)) {
 	/* If filling whole page with white, make it transparent */
-        return pdev->orig_fill_rectangle(dev, x, y, w, h, 0xfefefeff);
+        return pdev->orig_fill_rectangle(dev, x, y, w, h, 0xffffffff);
     }
     return pdev->orig_fill_rectangle(dev, x, y, w, h, color);
 }

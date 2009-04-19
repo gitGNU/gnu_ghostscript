@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfb.c,v 1.11 2008/03/23 15:28:04 Arabidopsis Exp $ */
+/* $Id: gdevpdfb.c,v 1.12 2009/04/19 13:54:32 Arabidopsis Exp $ */
 /* Low-level bitmap image handling for PDF-writing driver */
 #include "string_.h"
 #include "gx.h"
@@ -575,6 +575,9 @@ gdev_pdf_strip_tile_rectangle(gx_device * dev, const gx_strip_bitmap * tiles,
 
 	    sprintf(buf, "/R%ld Do\n", image_id);
 	    pprintd1(s, "%d>>stream\n", strlen(buf));
+	    if (pdev->PDFA)
+		pprints1(s, "%s\nendstream\n", buf);
+	    else
 	    pprints1(s, "%sendstream\n", buf);
 	    pdf_end_resource(pdev);
 	} else {

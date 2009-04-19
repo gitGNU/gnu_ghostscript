@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zchar42.c,v 1.10 2008/03/23 15:28:07 Arabidopsis Exp $ */
+/* $Id: zchar42.c,v 1.11 2009/04/19 13:54:29 Arabidopsis Exp $ */
 /* Type 42 character display operator */
 #include "ghost.h"
 #include "oper.h"
@@ -37,7 +37,9 @@
 #include "icharout.h"
 #include "ifont.h"		/* for font_param */
 #include "igstate.h"
+#include "iname.h"
 #include "store.h"
+#include "string_.h"
 #include "zchar42.h"
 
 /* Get a Type 42 character metrics and set the cache device. */
@@ -231,6 +233,20 @@ type42_finish(i_ctx_t *i_ctx_p, int (*cont) (gs_state *))
 		       pfont->FontType != ft_CID_TrueType)
 	)
 	return_error(e_undefined);
+
+    if (!i_ctx_p->RenderTTNotdef) {
+	if (r_has_type(op - 1, t_name)) {
+	    ref gref;
+
+	    name_string_ref(imemory, op - 1, &gref);
+
+	    if ((gref.tas.rsize == 7 && strncmp((const char *)gref.value.const_bytes, ".notdef", 7) == 0) || 
+		(gref.tas.rsize > 9 && strncmp((const char *)gref.value.const_bytes, ".notdef~GS", 10) == 0)) {
+		pop((psbpt == 0 ? 4 : 6));
+		return (*cont)(igs);
+	    }
+	}
+    }
     /*
      * We have to disregard penum->pis and penum->path, and render to
      * the current gstate and path.  This is a design bug that we will

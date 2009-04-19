@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxfont.h,v 1.10 2007/09/11 15:23:48 Arabidopsis Exp $ */
+/* $Id: gxfont.h,v 1.11 2009/04/19 13:54:30 Arabidopsis Exp $ */
 /* Font object structure */
 /* Requires gsmatrix.h, gxdevice.h */
 
@@ -114,7 +114,8 @@ typedef struct gs_font_info_s {
     gs_const_string FamilyName;
 #define FONT_INFO_FULL_NAME 0x2000
     gs_const_string FullName;
-
+#define FONT_INFO_EMBEDDING_RIGHTS 0x4000
+    int EmbeddingRights;
 } gs_font_info_t;
 
 #define public_st_gs_font_info() /* in gsfont.c */\

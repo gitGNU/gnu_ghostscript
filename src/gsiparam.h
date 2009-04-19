@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsiparam.h,v 1.7 2007/09/11 15:24:12 Arabidopsis Exp $ */
+/* $Id: gsiparam.h,v 1.8 2009/04/19 13:54:33 Arabidopsis Exp $ */
 /* Image parameter definition */
 
 #ifndef gsiparam_INCLUDED
@@ -64,24 +64,11 @@ typedef struct gs_image_common_s {
     "gs_image_common_t")
 
 /*
- * Define the maximum number of components in image data.
+ * Define the maximum number of components/planes in image data.
  * The +1 is for either color + alpha or mask + color.
  */
 #define GS_IMAGE_MAX_COLOR_COMPONENTS GS_CLIENT_COLOR_MAX_COMPONENTS
 #define GS_IMAGE_MAX_COMPONENTS (GS_IMAGE_MAX_COLOR_COMPONENTS + 1)
-/* Backward compatibility */
-#define gs_image_max_components GS_IMAGE_MAX_COMPONENTS
-
-/*
- * Define the maximum number of planes in image data.  Since we support
- * allocating a plane for each bit, the maximum value is the maximum number
- * of components (see above) times the maximum depth per component
- * (currently 8 for multi-component bit-planar images, but could be 16
- * someday; 32 or maybe 64 for DevicePixel images).
- */
-#define GS_IMAGE_MAX_PLANES (GS_IMAGE_MAX_COMPONENTS * 8)
-/* Backward compatibility */
-#define gs_image_max_planes GS_IMAGE_MAX_PLANES
 
 /*
  * Define the structure for defining data common to ImageType 1 images,

@@ -16,7 +16,7 @@
   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
-/* $Id: gsnamecl.h,v 1.5 2007/09/11 15:24:02 Arabidopsis Exp $ */
+/* $Id: gsnamecl.h,v 1.6 2009/04/19 13:54:28 Arabidopsis Exp $ */
 /* Global definitions for the 'Named Color' callback handling. */
 
 #ifndef gsnamecl_INCLUDED
@@ -31,8 +31,9 @@
  * Enable custom client callback color processing.  Note:  There is a sample
  * implementation in src/gsncdummy.c.
  */
+#ifndef ENABLE_CUSTOM_COLOR_CALLBACK
 #define ENABLE_CUSTOM_COLOR_CALLBACK 0	/* 0 --> disabled, 1 --> enabled */
-
+#endif
 
 #if ENABLE_CUSTOM_COLOR_CALLBACK
 /* Ptr to custom color callback struct */
@@ -152,12 +153,16 @@ int gx_remap_concrete_custom_color_DeviceN(const frac * pconc,
  * consists of a pointer to a list of client color space handling procedures
  * and a pointer to a client data structure.
  */
+
+#ifndef client_custom_color_params_DEFINED
+#define client_custom_color_params_DEFINED
 typedef struct client_custom_color_params_s {
     /* Client callback handlers */
     struct client_custom_color_procs_s * client_procs;
     /* For global client data */
     void * data;
 } client_custom_color_params_t;
+#endif
 
 
 /*

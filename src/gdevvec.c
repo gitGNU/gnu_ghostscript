@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevvec.c,v 1.11 2008/03/23 15:27:39 Arabidopsis Exp $ */
+/* $Id: gdevvec.c,v 1.12 2009/04/19 13:54:30 Arabidopsis Exp $ */
 /* Utilities for "vector" devices */
 #include "math_.h"
 #include "memory_.h"
@@ -30,6 +30,7 @@
 #include "gxfixed.h"
 #include "gdevvec.h"
 #include "gscspace.h"
+#include "gxiparam.h"
 #include "gxdcolor.h"
 #include "gxpaint.h"		/* requires gx_path, ... */
 #include "gzpath.h"
@@ -306,7 +307,7 @@ gdev_vector_open_file_options(gx_device_vector * vdev, uint strmbuf_size,
 	    gs_free_object(vdev->v_memory, vdev->strmbuf,
 			   "vector_open(strmbuf)");
 	vdev->strmbuf = 0;
-	fclose(vdev->file);
+	gx_device_close_output_file((gx_device *)vdev, vdev->fname, vdev->file);
 	vdev->file = 0;
 	return_error(gs_error_VMerror);
     }
@@ -918,7 +919,7 @@ gdev_vector_end_image(gx_device_vector * vdev,
 	if (bcode < 0)
 	    code = bcode;
     }
-    gs_free_object(pie->memory, pie, "gdev_vector_end_image");
+    gx_image_free_enum((gx_image_enum_common_t **)&pie);
     return code;
 }
 
@@ -1061,8 +1062,8 @@ gdev_vector_fill_path(gx_device * dev, const gs_imager_state * pis,
 {
     int code;
 
-    if ((code = gdev_vector_prepare_fill(vdev, pis, params, pdevc)) < 0 ||
-	(code = gdev_vector_update_clip_path(vdev, pcpath)) < 0 ||
+    if ((code = gdev_vector_update_clip_path(vdev, pcpath)) < 0 ||
+	(code = gdev_vector_prepare_fill(vdev, pis, params, pdevc)) < 0 ||
 	(vdev->bbox_device &&
 	 (code = (*dev_proc(vdev->bbox_device, fill_path))
 	  ((gx_device *) vdev->bbox_device, pis, ppath, params,
@@ -1088,9 +1089,9 @@ gdev_vector_stroke_path(gx_device * dev, const gs_imager_state * pis,
     int set_ctm;
     gs_matrix mat;
 
-    if ((set_ctm = gdev_vector_stroke_scaling(vdev, pis, &scale, &mat)) != 0 ||
+    if ((code = gdev_vector_update_clip_path(vdev, pcpath)) < 0 ||
+	(set_ctm = gdev_vector_stroke_scaling(vdev, pis, &scale, &mat)) != 0 ||
 	(code = gdev_vector_prepare_stroke(vdev, pis, params, pdcolor, scale)) < 0 ||
-	(code = gdev_vector_update_clip_path(vdev, pcpath)) < 0 ||
 	(vdev->bbox_device &&
 	 (code = (*dev_proc(vdev->bbox_device, stroke_path))
 	  ((gx_device *) vdev->bbox_device, pis, ppath, params,

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gximag3x.c,v 1.12 2008/03/23 15:27:38 Arabidopsis Exp $ */
+/* $Id: gximag3x.c,v 1.13 2009/04/19 13:54:26 Arabidopsis Exp $ */
 /* ImageType 3x image implementation */
 /****** THE REAL WORK IS NYI ******/
 #include "math_.h"		/* for ceil, floor */
@@ -101,7 +101,6 @@ typedef struct gx_image3x_enum_s {
     gx_device *pcdev;		/* gx_device_mask_clip in default impl. */
     int num_components;		/* (not counting masks) */
     int bpc;			/* pixel BitsPerComponent */
-    gs_memory_t *memory;
 #define NUM_MASKS 2		/* opacity, shape */
     image3x_channel_state_t mask[NUM_MASKS], pixel;
 } gx_image3x_enum_t;
@@ -861,6 +860,6 @@ gx_image3x_end_image(gx_image_enum_common_t * info, bool draw_last)
     gs_free_object(mem, pcdev, "gx_image3x_end_image(pcdev)");
     gs_free_object(mem, mdev0, "gx_image3x_end_image(mask[0].mdev)");
     gs_free_object(mem, mdev1, "gx_image3x_end_image(mask[1].mdev)");
-    gs_free_object(mem, penum, "gx_image3x_end_image");
+    gx_image_free_enum(&info);
     return (pcode < 0 ? pcode : scode < 0 ? scode : ocode);
 }

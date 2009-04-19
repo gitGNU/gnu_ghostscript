@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxicolor.c,v 1.10 2008/03/23 15:27:58 Arabidopsis Exp $ */
+/* $Id: gxicolor.c,v 1.11 2009/04/19 13:54:31 Arabidopsis Exp $ */
 /* Color image rendering */
 #include "gx.h"
 #include "memory_.h"
@@ -38,6 +38,8 @@
 #include "gxdevmem.h"
 #include "gxcpath.h"
 #include "gximage.h"
+#include "icc.h"			
+#include "gsicc.h"
 
 typedef union {
     byte v[GS_IMAGE_MAX_COLOR_COMPONENTS];
@@ -148,6 +150,7 @@ image_render_color(gx_image_enum *penum_orig, const byte *buffer, int data_x,
     const byte *bufend = psrc + w;
     bool use_cache = spp * penum->bps <= 12;
     int code = 0, mcode = 0;
+    gs_cie_icc * picc_info; /*used for detecting if image source color space is CIELAB.  */
 
     if (h == 0)
 	return 0;
@@ -248,13 +251,51 @@ map4:	    if (posture != image_skewed && next.all[0] == run.all[0])
 	    }
 	    decode_sample(next.v[3], cc, 3);
 	    if_debug1('B', "[B]cc[3]=%g\n", cc.paint.values[3]);
-do3:	    decode_sample(next.v[0], cc, 0);
+do3:	if(spp == 3 && pcs->type->index == gs_color_space_index_CIEICC)
+		{
+			/* It is 3 channel with an ICC profile.
+			 We need to check if it is an LAB image */
+
+			picc_info = pcs->params.icc.picc_info;
+
+			if( picc_info->plu->e_inSpace == icSigLabData )
+			{
+
+				/* It is a CIELAB image.  For now, put in true CIELAB float values rather than normalized 0 to 1 floats */
+				/* concretization will handle the proper conversion  this way */
+
+				decode_sample(next.v[0], cc, 0);
+				cc.paint.values[0]*=100.0;
 	    decode_sample(next.v[1], cc, 1);
+				cc.paint.values[1] = 255.0*cc.paint.values[1] - 128.0;
 	    decode_sample(next.v[2], cc, 2);
+				cc.paint.values[2] = 255.0*cc.paint.values[2] - 128.0;
+
+			} else {
+
+				/* To floats */
+
+				decode_sample(next.v[0], cc, 0);
+				decode_sample(next.v[1], cc, 1);
+				decode_sample(next.v[2], cc, 2);
+
+			}
+
+		} else {
+
+			/* To floats */
+
+			decode_sample(next.v[0], cc, 0);
+			decode_sample(next.v[1], cc, 1);
+			decode_sample(next.v[2], cc, 2);
+
+		}
+
 	    if_debug3('B', "[B]cc[0..2]=%g,%g,%g\n",
 		      cc.paint.values[0], cc.paint.values[1],
 		      cc.paint.values[2]);
-	} else if (spp == 3) {	    /* may be RGB */
+
+	} else if (spp == 3) {	    /* may be RGB, but could be LAB image file with ICC profile... */
 	    next.v[0] = psrc[0];
 	    next.v[1] = psrc[1];
 	    next.v[2] = psrc[2];

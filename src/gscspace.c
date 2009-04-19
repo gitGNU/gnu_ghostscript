@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gscspace.c,v 1.11 2008/03/23 15:27:52 Arabidopsis Exp $ */
+/* $Id: gscspace.c,v 1.12 2009/04/19 13:54:30 Arabidopsis Exp $ */
 /* Color space operators and support */
 #include "memory_.h"
 #include "gx.h"
@@ -34,6 +34,7 @@
 #include "gxdevcli.h"
 #include "gzstate.h"
 #include "stream.h"
+#include "gsnamecl.h"  /* Custom color call back define */
 
 static cs_proc_install_cspace(gx_install_DeviceGray);
 static cs_proc_install_cspace(gx_install_DeviceRGB);
@@ -198,7 +199,7 @@ gx_install_DeviceGray(gs_color_space * pcs, gs_state * pgs)
      * color space.
      */
     client_custom_color_params_t * pcb =
-	(client_custom_color_params_t *) pgs->custom_color_callback;
+	(client_custom_color_params_t *) pgs->memory->gs_lib_ctx->custom_color_callback;
 
     if (pcb != NULL) 
 	pcb->client_procs->install_DeviceGray(pcb, pcs, pgs);
@@ -251,7 +252,7 @@ gx_install_DeviceRGB(gs_color_space * pcs, gs_state * pgs)
      * color space.
      */
     client_custom_color_params_t * pcb =
-	(client_custom_color_params_t *) pgs->custom_color_callback;
+	(client_custom_color_params_t *) pgs->memory->gs_lib_ctx->custom_color_callback;
 
     if (pcb != NULL) 
 	pcb->client_procs->install_DeviceRGB(pcb, pcs, pgs);
@@ -269,7 +270,7 @@ gx_install_DeviceCMYK(gs_color_space * pcs, gs_state * pgs)
      * color space.
      */
     client_custom_color_params_t * pcb =
-	(client_custom_color_params_t *) pgs->custom_color_callback;
+	(client_custom_color_params_t *) pgs->memory->gs_lib_ctx->custom_color_callback;
 
     if (pcb != NULL) 
 	pcb->client_procs->install_DeviceCMYK(pcb, pcs, pgs);
@@ -314,7 +315,9 @@ check_single_comp(int comp, frac targ_val, int ncomps, const frac * pval)
 /*
  * Determine if the current color model is a "DeviceCMYK" color model, and
  * if so what are its process color components. This information is required
- * only if overprint is true and overprint mode is set to 1.
+ * when PLRM defines special rules for CMYK devices. This includes:
+ * 1. DeviceGray to CMYK color conversion
+ * 2. when overprint is true and overprint mode is set to 1.
  *
  * A color model is considered a "DeviceCMYK" color model if it supports the
  * cyan, magenta, yellow, and black color components, and maps the DeviceCMYK
@@ -326,7 +329,7 @@ check_single_comp(int comp, frac targ_val, int ncomps, const frac * pval)
  * If the color model is a "DeviceCMYK" color model, return the set of
  * process color components; otherwise return 0.
  */
-static gx_color_index
+gx_color_index
 check_cmyk_color_model_comps(gx_device * dev)
 {
     gx_device_color_info *          pcinfo = &dev->color_info;
@@ -390,6 +393,7 @@ check_cmyk_color_model_comps(gx_device * dev)
                    | ((gx_color_index)1 << black_c);
     pcinfo->opmode = GX_CINFO_OPMODE;
     pcinfo->process_comps = process_comps;
+    pcinfo->black_component = black_c;
     return process_comps;
 }
 

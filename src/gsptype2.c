@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsptype2.c,v 1.12 2008/05/04 14:34:42 Arabidopsis Exp $ */
+/* $Id: gsptype2.c,v 1.13 2009/04/19 13:54:29 Arabidopsis Exp $ */
 /* PatternType 2 implementation */
 #include "gx.h"
 #include "gserrors.h"
@@ -150,7 +150,7 @@ const gx_device_color_type_t gx_dc_pattern2 = {
     gx_dc_ht_get_phase,
     gx_dc_pattern2_load, gx_dc_pattern2_fill_rectangle,
     gx_dc_default_fill_masked, gx_dc_pattern2_equal,
-    gx_dc_pattern_write, gx_dc_pattern_read,
+    gx_dc_cannot_write, gx_dc_cannot_read, 
     gx_dc_pattern_get_nonzero_comps
 };
 

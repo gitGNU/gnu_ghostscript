@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevps.c,v 1.11 2008/03/23 15:27:48 Arabidopsis Exp $ */
+/* $Id: gdevps.c,v 1.12 2009/04/19 13:54:22 Arabidopsis Exp $ */
 /* PostScript-writing driver */
 #include "math_.h"
 #include "memory_.h"
@@ -1628,7 +1628,7 @@ psw_image_plane_data(gx_image_enum_common_t * info,
 	        return_error(gs_error_rangecheck);
 	    psw_put_bits(pdev->image_stream,
                 planes[pi].data,
-		planes[pi].data_x*info->plane_depths[pi] + pie->bits_per_row*j,
+		planes[pi].data_x*info->plane_depths[pi] + planes[pi].raster*j*8,
 		planes[pi].raster,
                 pie->bits_per_row,
 		1 );

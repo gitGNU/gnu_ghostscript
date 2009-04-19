@@ -17,10 +17,8 @@
 
 */
 
-/*$Id: rinkj-epson870.c,v 1.4 2007/09/11 15:25:09 Arabidopsis Exp $ */
+/*$Id: rinkj-epson870.c,v 1.5 2009/04/19 13:54:47 Arabidopsis Exp $ */
 /* A Rinkj driver for a number of variable-dot Epson devices. */
-
-#define VERBOSE
 
 #include <stdlib.h>
 #include <stdio.h>

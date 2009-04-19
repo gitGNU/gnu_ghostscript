@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zcontrol.c,v 1.9 2008/03/23 15:27:37 Arabidopsis Exp $ */
+/* $Id: zcontrol.c,v 1.10 2009/04/19 13:54:29 Arabidopsis Exp $ */
 /* Control operators */
 #include "string_.h"
 #include "ghost.h"
@@ -822,9 +822,10 @@ do_execstack(i_ctx_t *i_ctx_p, bool include_marks, os_ptr op1)
 	    }
 	    case t_struct:
 	    case t_astruct: {
-		const char *tname =
+		const char *tname = rq->value.pstruct ?
 		    gs_struct_type_name_string(
-				gs_object_type(imemory, rq->value.pstruct));
+				gs_object_type(imemory, rq->value.pstruct))
+                    : "NULL";
 
 		make_const_string(rq, a_readonly | avm_foreign,
 				  strlen(tname), (const byte *)tname);

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: dwtrace.c,v 1.10 2008/05/04 14:34:47 Arabidopsis Exp $ */
+/* $Id: dwtrace.c,v 1.11 2009/04/19 13:54:27 Arabidopsis Exp $ */
 /* Graphical trace server for Windows */
 
 /*  This module use Win32-specific API.
@@ -338,7 +338,7 @@ static void dw_gt_set_origin(vd_trace_interface *I)
 #    define SET_CALLBACK(I,a) I.a = 0
 #endif
 
-void visual_tracer_init(void)
+vd_trace_interface *visual_tracer_init(void)
 {   SET_CALLBACK(visual_tracer, get_dc);
     SET_CALLBACK(visual_tracer, release_dc);
     SET_CALLBACK(visual_tracer, erase);
@@ -363,6 +363,7 @@ void visual_tracer_init(void)
     SET_CALLBACK(visual_tracer, set_scale);
     SET_CALLBACK(visual_tracer, set_shift);
     SET_CALLBACK(visual_tracer, set_origin);
+    return &visual_tracer;
 }
         
 void visual_tracer_close(void)

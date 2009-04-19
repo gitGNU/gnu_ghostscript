@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxcldev.h,v 1.12 2008/05/04 14:34:50 Arabidopsis Exp $ */
+/*$Id: gxcldev.h,v 1.13 2009/04/19 13:54:34 Arabidopsis Exp $ */
 /* Internal definitions for Ghostscript command lists. */
 
 #ifndef gxcldev_INCLUDED
@@ -384,6 +384,11 @@ void cmd_print_stats(void);
 /* and allocate space for its data. */
 byte *cmd_put_list_op(gx_device_clist_writer * cldev, cmd_list * pcl, uint size);
 
+/* Request a space in the buffer. 
+   Writes out the buffer if necessary.
+   Returns the size of available space. */
+int cmd_get_buffer_space(gx_device_clist_writer * cldev, gx_clist_state * pcls, uint size);
+
 #ifdef DEBUG
 byte *cmd_put_op(gx_device_clist_writer * cldev, gx_clist_state * pcls, uint size);
 #else
@@ -727,5 +732,10 @@ int clist_playback_file_bands(clist_playback_action action,
 int64_t clist_file_offset(const stream_state *st, uint buffer_offset);
 int top_up_offset_map(stream_state * st, const byte *buf, const byte *ptr, const byte *end);
 #endif
+
+int clist_writer_push_no_cropping(gx_device_clist_writer *cdev);
+int clist_writer_push_cropping(gx_device_clist_writer *cdev, int ry, int rheight);
+int clist_writer_pop_cropping(gx_device_clist_writer *cdev);
+int clist_writer_check_empty_cropping_stack(gx_device_clist_writer *cdev);
 
 #endif /* gxcldev_INCLUDED */

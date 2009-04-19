@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdti.c,v 1.10 2008/03/23 15:27:45 Arabidopsis Exp $ */
+/* $Id: gdevpdti.c,v 1.11 2009/04/19 13:54:33 Arabidopsis Exp $ */
 /* Bitmap font implementation for pdfwrite */
 #include "memory_.h"
 #include "string_.h"
@@ -353,6 +353,8 @@ pdf_end_char_proc(gx_device_pdf * pdev, pdf_stream_position_t * ppos)
     sseek(s, start_pos - 15);
     pprintd1(s, "%d", length);
     sseek(s, end_pos);
+    if (pdev->PDFA)
+	stream_puts(s, "\n");
     stream_puts(s, "endstream\n");
     pdf_end_separate(pdev);
     return 0;
@@ -620,6 +622,9 @@ pdf_enter_substream(gx_device_pdf *pdev, pdf_resource_type_t rtype,
     pdev->context = PDF_IN_STREAM;
     pdev->accumulating_substream_resource = pres;
     pdev->last_charpath_op = 0;
+    /* Do not alter type3charpath, inherit the current value. We need to know if */
+    /* we are inside a charpath operation, and only reset this when the charpath */
+    /* is complete */
     pdf_reset_graphics(pdev);
     *ppres = pres;
     return 0;

@@ -16,11 +16,10 @@
 
 */
 
-/* $Id: gdevopvp.c,v 1.2 2008/03/23 15:28:33 Arabidopsis Exp $ */
+/* $Id: gdevopvp.c,v 1.3 2009/04/19 13:54:47 Arabidopsis Exp $ */
 /* gdevopvp.c  ver.1.00 rel.1.0     26 Nov 2004 */
 /* OpenPrinting Vector Printer Driver Glue Code */
 
-#include        "std.h"
 #include	<stdio.h>
 #include	<stdlib.h>
 #include	<unistd.h>
@@ -44,6 +43,7 @@
 #include	"gsmatrix.h"
 #include	"gsparam.h"
 #include	"gxdevice.h"
+#include "gxdcconv.h"
 #include	"gscspace.h"
 #include	"gsutil.h"
 #include	"gdevprn.h"
@@ -97,6 +97,11 @@
 /* buffer */
 #define	OPVP_BUFF_SIZE	1024
 
+/* ROP */
+#define OPVP_0_2_ROP_S	0xCC
+#define OPVP_0_2_ROP_P	0xF0
+#define OPVP_0_2_ROP_OR	0xB8
+
 /* paper */
 #define	PS_DPI		72
 #define	MMPI		25.4
@@ -113,20 +118,6 @@ const	char		*name;
 #define	Y_DPI		300
 
 /* driver */
-#define	gx_device_opvp_common\
-	char		*vectorDriver;\
-	char		*printerModel;\
-	void		*handle;\
-	int		(*OpenPrinter)(int,char*,int*,OPVP_api_procs**);\
-	int		*errorno;\
-	int		outputFD;\
-	int		nApiEntry;\
-	OPVP_api_procs	*apiEntry;\
-	int		printerContext;\
-	char		*jobInfo;\
-	char		*docInfo;\
-	char		*pageInfo
-
 typedef	struct	gx_device_opvp_s {
 	gx_device_vector_common;
 } gx_device_opvp;
@@ -166,9 +157,9 @@ static	char *opvp_gen_page_info(gx_device *);
 static	char *opvp_gen_doc_info(gx_device *);
 static	char *opvp_gen_job_info(gx_device *);
 static	int opvp_set_brush_color(gx_device_opvp *, gx_color_index,
-                                 OPVP_Brush *);
+                                 opvp_brush_t *);
 static	int opvp_draw_image(gx_device_opvp *, int,
-                            int, int, int, int, int, /*const*/ byte *);
+                            int, int, int, int, int, int, const byte *);
 
 /* load/unload vector driver */
 static	int opvp_load_vector_driver(void);
@@ -182,16 +173,16 @@ static	void opvp_get_initial_matrix(gx_device *, gs_matrix *);
 static	int opvp_output_page(gx_device *, int, int);
 static	int opvp_close(gx_device *);
 #if GS_VERSION_MAJOR >= 8
-static	gx_color_index opvp_map_rgb_color(gx_device *, gx_color_value *);	/* modified for gs 8.15 */
+static	gx_color_index opvp_map_rgb_color(gx_device *, const gx_color_value *);	/* modified for gs 8.15 */
 #else
 static	gx_color_index opvp_map_rgb_color(gx_device *, gx_color_value,
 	               gx_color_value, gx_color_value);
 #endif
 static	int opvp_map_color_rgb(gx_device *, gx_color_index, gx_color_value *);
-static	int opvp_copy_mono(gx_device *, /*const*/ byte *, int, int,
+static	int opvp_copy_mono(gx_device *, const byte *, int, int,
                            gx_bitmap_id, int, int, int, int,
                            gx_color_index, gx_color_index);
-static	int opvp_copy_color(gx_device *, /*const*/ byte *, int, int,
+static	int opvp_copy_color(gx_device *, const byte *, int, int,
                             gx_bitmap_id, int, int, int, int);
 static	int _get_params(gs_param_list *);
 static	int opvp_get_params(gx_device *, gs_param_list *);
@@ -208,6 +199,19 @@ static	int opvp_stroke_path(gx_device *, const gs_imager_state *, gx_path *,
 static	int opvp_fill_mask(gx_device *, const byte *, int, int, gx_bitmap_id,
 	                   int, int, int, int, const gx_drawing_color *,
 	                   int, gs_logical_operation_t, const gx_clip_path *);
+
+/* available color spaces */
+
+static char cspace_available[] = {
+        0, /* OPVP_CSPACE_BW */
+        0, /* OPVP_CSPACE_DEVICEGRAY */
+        0, /* OPVP_CSPACE_DEVICECMY */
+        0, /* OPVP_CSPACE_DEVICECMYK */
+        0, /* OPVP_CSPACE_DEVICERGB */
+        0, /* OPVP_CSPACE_DEVICEKRGB */
+        1, /* OPVP_CSPACE_STANDARDRGB */
+        0 /* OPVP_CSPACE_STANDARDRGB64 */
+};
 
 /* vector driver procs */
 static	int opvp_beginpage(gx_device_vector *);
@@ -295,7 +299,7 @@ gs_public_st_suffix_add0_final(
 	NULL,	/* *printerModel */\
 	NULL,	/* *handle */\
 	NULL,	/* (*OpenPrinter)() */\
-	NULL,	/* *errorno */\
+    NULL, /* *ErrorNo */\
 	-1,	/* outputFD */\
 	0,	/* nApiEntry */\
 	NULL,	/* *apiEntry */\
@@ -442,23 +446,707 @@ static	bool			inkjet = false;
 static	char			*vectorDriver = NULL;
 static	char			*printerModel = NULL;
 static	void			*handle = NULL;
-static	int			(*OpenPrinter)(int,char*,int*,OPVP_api_procs**)
-				    = NULL;
-static	int			*errorno = NULL;
-static	int			outputFD = -1;
-static	int			nApiEntry = 0;
-static	OPVP_api_procs		*apiEntry = NULL;
-static	int			printerContext = -1;
+static opvp_dc_t (*OpenPrinter)(opvp_int_t,const opvp_char_t*,
+                                  const opvp_int_t[2],
+				  opvp_api_procs_t**) = NULL;
+static int (*OpenPrinter_0_2)(int,char*,int*,
+				  OPVP_api_procs**) = NULL;
+static opvp_int_t *ErrorNo = NULL;
+static opvp_int_t outputFD = -1;
+static opvp_int_t nApiEntry = 0;
+static opvp_api_procs_t *apiEntry = NULL;
+static OPVP_api_procs *apiEntry_0_2 = NULL;
+static opvp_dc_t printerContext = -1;
 static	char			*jobInfo = NULL;
 static	char			*docInfo = NULL;
-static	OPVP_ColorSpace		colorSpace = OPVP_cspaceStandardRGB;
-static	OPVP_Brush		*vectorFillColor = NULL;
+static opvp_cspace_t colorSpace = OPVP_CSPACE_STANDARDRGB;
+static opvp_cspace_t savedColorSpace;
+static opvp_brush_t *vectorFillColor = NULL;
 static	float			margins[4] = {0, 0, 0, 0};
 static	float			zoom[2] = {1, 1};
 static	float			shift[2] = {0, 0};
 static	bool			zoomAuto = false;
 static	bool			zooming = false;
 static  bool			beginPage = false;
+
+static int
+GetLastError_1_0(void)
+{
+    return *ErrorNo;
+}
+
+static int (*GetLastError)(void) = GetLastError_1_0;
+
+/* Wrapper functions that keep compatible with 0.2 */
+
+/* color space mapping 0.2 to 1.0 */
+static opvp_cspace_t cspace_0_2_to_1_0[] = {
+    OPVP_CSPACE_BW,
+    OPVP_CSPACE_DEVICEGRAY,
+    OPVP_CSPACE_DEVICECMY,
+    OPVP_CSPACE_DEVICECMYK,
+    OPVP_CSPACE_DEVICERGB,
+    OPVP_CSPACE_STANDARDRGB,
+    OPVP_CSPACE_STANDARDRGB64
+};
+
+/* color space mapping 1.0 to 0.2 */
+static opvp_cspace_t cspace_1_0_to_0_2[] = {
+    OPVP_cspaceBW,
+    OPVP_cspaceDeviceGray,
+    OPVP_cspaceDeviceCMY,
+    OPVP_cspaceDeviceCMYK,
+    OPVP_cspaceDeviceRGB,
+    0, /* 0.2 doesn't have OPVP_CSPACE_DEVICEKRGB */
+    OPVP_cspaceStandardRGB,
+    OPVP_cspaceStandardRGB64,
+};
+
+/* image format mapping 1.0 to 0.2 */
+static opvp_imageformat_t iformat_1_0_to_0_2[] = {
+    OPVP_iformatRaw,
+    OPVP_iformatRaw, /* OPVP_IFORMAT_MASK use iformat raw in 0.2 */
+    OPVP_iformatRLE,
+    OPVP_iformatJPEG,
+    OPVP_iformatPNG,
+};
+/* image colorDepth needed in 0.2 */
+static int colorDepth_0_2[] = {
+    1, /* OPVP_CSPACE_BW */
+    8, /* OPVP_CSPACE_DEVICEGRAY */
+    24, /* OPVP_CSPACE_DEVICECMY */
+    32, /* OPVP_CSPACE_DEVICECMYK */
+    24, /* OPVP_CSPACE_DEVICERGB */
+    32, /* OPVP_CSPACE_DEVICEKRGB */
+    24, /* OPVP_CSPACE_STANDARDRGB */
+    64, /* OPVP_CSPACE_STANDARDRGB64 */
+};
+
+/* translate error code */
+static int
+GetLastError_0_2(void)
+{
+    switch(*ErrorNo) {
+    case OPVP_FATALERROR_0_2:
+	return OPVP_FATALERROR; 
+	break;
+    case OPVP_BADREQUEST_0_2:
+	return OPVP_BADREQUEST; 
+	break;
+    case OPVP_BADCONTEXT_0_2:
+	return OPVP_BADCONTEXT; 
+	break;
+    case OPVP_NOTSUPPORTED_0_2:
+	return OPVP_NOTSUPPORTED; 
+	break;
+    case OPVP_JOBCANCELED_0_2:
+	return OPVP_JOBCANCELED; 
+	break;
+    case OPVP_PARAMERROR_0_2:
+	return OPVP_PARAMERROR; 
+	break;
+    default:
+	break;
+    }
+    /* unknown error no */
+    /* return FATALERROR instead */
+    return OPVP_FATALERROR;
+}
+
+static opvp_result_t
+StartPageWrapper(opvp_dc_t printerContext, const opvp_char_t *pageInfo)
+{
+    int r;
+
+    if ((r = apiEntry_0_2->StartPage(printerContext,
+           /* discard const */(char *)pageInfo)) != OPVP_OK) {
+	  /* error */
+	return r;
+    }
+    /* initialize ROP */
+    if (apiEntry_0_2->SetROP != NULL) {
+	apiEntry_0_2->SetROP(printerContext,
+	  OPVP_0_2_ROP_P);
+    }
+    return OPVP_OK;
+}
+
+static opvp_result_t
+InitGSWrapper(opvp_dc_t printerContext)
+{
+    int r;
+
+    if ((r = apiEntry_0_2->InitGS(printerContext)) != OPVP_OK) {
+	  /* error */
+	return r;
+    }
+    /* initialize ROP */
+    if (apiEntry_0_2->SetROP != NULL) {
+	apiEntry_0_2->SetROP(printerContext,
+	  OPVP_0_2_ROP_P);
+    }
+    return OPVP_OK;
+}
+
+static opvp_result_t
+QueryColorSpaceWrapper( opvp_dc_t printerContext, opvp_int_t *pnum,
+    opvp_cspace_t *pcspace)
+{
+    int r;
+    int i;
+
+    if ((r = apiEntry_0_2->QueryColorSpace(printerContext,
+	 (OPVP_ColorSpace *)pcspace,pnum)) != OPVP_OK) {
+	/* error */
+	return r;
+    }
+    /* translate cspaces */
+    for (i = 0;i < *pnum;i++) {
+	if (pcspace[i] 
+	     > sizeof(cspace_0_2_to_1_0)/sizeof(opvp_cspace_t)) {
+	    /* unknown color space */
+	    /* set DEVICERGB instead */
+	    pcspace[i] = OPVP_CSPACE_DEVICERGB;
+	} else {
+	    pcspace[i] = cspace_0_2_to_1_0[pcspace[i]];
+	}
+    }
+    return OPVP_OK;
+}
+
+static opvp_result_t
+SetColorSpaceWrapper(opvp_dc_t printerContext, opvp_cspace_t cspace)
+{
+    if (cspace == OPVP_CSPACE_DEVICEKRGB) {
+	/* 0.2 doesn't have OPVP_CSPACE_DEVICEKRGB */
+	*ErrorNo = OPVP_NOTSUPPORTED_0_2;
+	return -1;
+    }
+    if (cspace
+	 > sizeof(cspace_1_0_to_0_2)/sizeof(OPVP_ColorSpace)) {
+	/* unknown color space */
+	*ErrorNo = OPVP_PARAMERROR_0_2;
+	return -1;
+    }
+    return  apiEntry_0_2->SetColorSpace(printerContext,
+      cspace_1_0_to_0_2[cspace]);
+}
+
+static opvp_result_t
+GetColorSpaceWrapper(opvp_dc_t printerContext, opvp_cspace_t *pcspace)
+{
+    int r;
+
+    if ((r = apiEntry_0_2->GetColorSpace(printerContext,
+      (OPVP_ColorSpace *)pcspace)) != OPVP_OK) {
+	/* error */
+	return r;
+    }
+    if (*pcspace
+	 > sizeof(cspace_0_2_to_1_0)/sizeof(opvp_cspace_t)) {
+	/* unknown color space */
+	/* set DEVICERGB instead */
+	*pcspace = OPVP_CSPACE_DEVICERGB;
+    } else {
+	*pcspace = cspace_0_2_to_1_0[*pcspace];
+    }
+    return r;
+}
+
+static opvp_result_t
+SetStrokeColorWrapper(opvp_dc_t printerContext, const opvp_brush_t *brush)
+{
+    OPVP_Brush brush_0_2;
+
+    if (brush == NULL) {
+	*ErrorNo = OPVP_PARAMERROR_0_2;
+	return -1;
+    }
+    if (brush->colorSpace == OPVP_CSPACE_DEVICEKRGB) {
+	/* 0.2 doesn't have OPVP_CSPACE_DEVICEKRGB */
+	return OPVP_NOTSUPPORTED;
+    }
+    if (brush->colorSpace
+	 > sizeof(cspace_1_0_to_0_2)/sizeof(OPVP_ColorSpace)) {
+	/* unknown color space */
+	*ErrorNo = OPVP_PARAMERROR_0_2;
+	return -1;
+    }
+    brush_0_2.colorSpace = cspace_1_0_to_0_2[brush->colorSpace];
+    brush_0_2.xorg = brush->xorg;
+    brush_0_2.yorg = brush->yorg;
+    brush_0_2.pbrush = (OPVP_BrushData *)brush->pbrush;
+    memcpy(brush_0_2.color,brush->color,sizeof(brush_0_2.color));
+    return apiEntry_0_2->SetStrokeColor(printerContext,&brush_0_2);
+}
+
+static opvp_result_t
+SetFillColorWrapper(opvp_dc_t printerContext, const opvp_brush_t *brush)
+{
+    OPVP_Brush brush_0_2;
+
+    if (brush == NULL) {
+	*ErrorNo = OPVP_PARAMERROR_0_2;
+	return -1;
+    }
+    if (brush->colorSpace == OPVP_CSPACE_DEVICEKRGB) {
+	/* 0.2 doesn't have OPVP_CSPACE_DEVICEKRGB */
+	return OPVP_NOTSUPPORTED;
+    }
+    if (brush->colorSpace
+	 > sizeof(cspace_1_0_to_0_2)/sizeof(OPVP_ColorSpace)) {
+	/* unknown color space */
+	*ErrorNo = OPVP_PARAMERROR_0_2;
+	return -1;
+    }
+    brush_0_2.colorSpace = cspace_1_0_to_0_2[brush->colorSpace];
+    brush_0_2.xorg = brush->xorg;
+    brush_0_2.yorg = brush->yorg;
+    brush_0_2.pbrush = (OPVP_BrushData *)brush->pbrush;
+    memcpy(brush_0_2.color,brush->color,sizeof(brush_0_2.color));
+    return apiEntry_0_2->SetFillColor(printerContext,&brush_0_2);
+}
+
+static opvp_result_t
+SetBgColorWrapper(opvp_dc_t printerContext, const opvp_brush_t *brush)
+{
+    OPVP_Brush brush_0_2;
+
+    if (brush == NULL) {
+	*ErrorNo = OPVP_PARAMERROR_0_2;
+	return -1;
+    }
+    if (brush->colorSpace == OPVP_CSPACE_DEVICEKRGB) {
+	/* 0.2 doesn't have OPVP_CSPACE_DEVICEKRGB */
+	*ErrorNo = OPVP_NOTSUPPORTED_0_2;
+	return -1;
+    }
+    if (brush->colorSpace
+	 > sizeof(cspace_1_0_to_0_2)/sizeof(OPVP_ColorSpace)) {
+	/* unknown color space */
+	*ErrorNo = OPVP_PARAMERROR_0_2;
+	return -1;
+    }
+    brush_0_2.colorSpace = cspace_1_0_to_0_2[brush->colorSpace];
+    brush_0_2.xorg = brush->xorg;
+    brush_0_2.yorg = brush->yorg;
+    brush_0_2.pbrush = (OPVP_BrushData *)brush->pbrush;
+    memcpy(brush_0_2.color,brush->color,sizeof(brush_0_2.color));
+    return apiEntry_0_2->SetBgColor(printerContext,&brush_0_2);
+}
+
+static opvp_result_t
+DrawImageWrapper(
+    opvp_dc_t printerContext,
+    opvp_int_t sourceWidth,
+    opvp_int_t sourceHeight,
+    opvp_int_t sourcePitch,
+    opvp_imageformat_t imageFormat,
+    opvp_int_t destinationWidth,
+    opvp_int_t destinationHeight,
+    const void *imagedata)
+{
+    int r;
+    OPVP_Rectangle rect;
+    OPVP_ImageFormat iformat_0_2;
+    OPVP_PaintMode paintmode_0_2 = OPVP_paintModeTransparent;
+    int depth;
+
+    if (imageFormat == OPVP_IFORMAT_MASK) {
+	if (apiEntry_0_2->GetPaintMode != NULL) {
+	    apiEntry_0_2->GetPaintMode(printerContext,
+	      &paintmode_0_2);
+	}
+	if (paintmode_0_2 != OPVP_paintModeTransparent) {
+	    if (apiEntry_0_2->SetROP != NULL) {
+		apiEntry_0_2->SetROP(printerContext,
+		    OPVP_0_2_ROP_S);
+	    }
+	}
+	else {
+	    if (apiEntry_0_2->SetROP != NULL) {
+		apiEntry_0_2->SetROP(printerContext,
+		    OPVP_0_2_ROP_OR);
+	    }
+	}
+	depth = 1;
+    } else {
+	if (apiEntry_0_2->SetROP != NULL) {
+	    apiEntry_0_2->SetROP(printerContext,OPVP_0_2_ROP_S);
+	}
+	depth = colorDepth_0_2[colorSpace];
+    }
+
+    OPVP_I2FIX(0,rect.p0.x);
+    OPVP_I2FIX(0,rect.p0.y);
+    OPVP_I2FIX(destinationWidth,rect.p1.x);
+    OPVP_I2FIX(destinationHeight,rect.p1.y);
+    if (imageFormat > sizeof(iformat_1_0_to_0_2)/sizeof(OPVP_ImageFormat)) {
+	/* illegal image format */
+	*ErrorNo = OPVP_PARAMERROR_0_2;
+	return -1;
+    }
+    iformat_0_2 = iformat_1_0_to_0_2[imageFormat];
+    r = apiEntry_0_2->DrawImage(printerContext,sourceWidth,sourceHeight,
+	    depth,iformat_0_2,rect,
+	    sourcePitch*sourceHeight,
+	    /* remove const */ (void *)imagedata);
+
+    if (apiEntry_0_2->SetROP != NULL) {
+        apiEntry_0_2->SetROP(printerContext,OPVP_0_2_ROP_P);
+    }
+
+    return r;
+}
+
+static opvp_result_t
+StartDrawImageWrapper(
+    opvp_dc_t printerContext,
+    opvp_int_t sourceWidth,
+    opvp_int_t sourceHeight,
+    opvp_int_t sourcePitch,
+    opvp_imageformat_t imageFormat,
+    opvp_int_t destinationWidth,
+    opvp_int_t destinationHeight)
+{
+    int r;
+    OPVP_Rectangle rect;
+    OPVP_ImageFormat iformat_0_2;
+    OPVP_PaintMode paintmode_0_2 = OPVP_paintModeTransparent;
+    int depth;
+
+    if (imageFormat == OPVP_IFORMAT_MASK) {
+	if (apiEntry_0_2->GetPaintMode != NULL) {
+	    apiEntry_0_2->GetPaintMode(printerContext,
+	      &paintmode_0_2);
+	}
+	if (paintmode_0_2 != OPVP_paintModeTransparent) {
+	    if (apiEntry_0_2->SetROP != NULL) {
+		apiEntry_0_2->SetROP(printerContext,OPVP_0_2_ROP_S);
+	    }
+	}
+	else {
+	    if (apiEntry_0_2->SetROP != NULL) {
+		apiEntry_0_2->SetROP(printerContext,OPVP_0_2_ROP_OR);
+	    }
+	}
+	depth = 1;
+    } else {
+	if (apiEntry_0_2->SetROP != NULL) {
+	    apiEntry_0_2->SetROP(printerContext,OPVP_0_2_ROP_S);
+	}
+	depth = colorDepth_0_2[colorSpace];
+    }
+
+    OPVP_I2FIX(0,rect.p0.x);
+    OPVP_I2FIX(0,rect.p0.y);
+    OPVP_I2FIX(destinationWidth,rect.p1.x);
+    OPVP_I2FIX(destinationHeight,rect.p1.y);
+    if (imageFormat > sizeof(iformat_1_0_to_0_2)/sizeof(OPVP_ImageFormat)) {
+	/* illegal image format */
+	*ErrorNo = OPVP_PARAMERROR_0_2;
+	return -1;
+    }
+    iformat_0_2 = iformat_1_0_to_0_2[imageFormat];
+    r = apiEntry_0_2->StartDrawImage(printerContext,
+	    sourceWidth,sourceHeight,
+	    depth,iformat_0_2,rect);
+
+    return r;
+}
+
+static opvp_result_t
+EndDrawImageWrapper(opvp_dc_t printerContext)
+{
+    int r;
+
+    r = apiEntry_0_2->EndDrawImage(printerContext);
+
+    /* make sure rop is pattern copy */
+    if (apiEntry_0_2->SetROP != NULL) {
+	apiEntry_0_2->SetROP(printerContext,OPVP_0_2_ROP_P);
+    }
+
+    return r;
+}
+
+static opvp_result_t
+QueryDeviceCapabilityWrapper(
+    opvp_dc_t printerContext,
+    opvp_queryinfoflags_t queryflag,
+    opvp_int_t *buflen,
+    opvp_char_t *infoBuf)
+{
+    return apiEntry_0_2->QueryDeviceCapability(printerContext,queryflag,
+      *buflen,(char *)infoBuf);
+}
+
+static opvp_result_t
+QueryDeviceInfoWrapper(
+    opvp_dc_t printerContext,
+    opvp_queryinfoflags_t queryflag,
+    opvp_int_t *buflen,
+    opvp_char_t *infoBuf)
+{
+    if (queryflag & OPVP_QF_MEDIACOPY) {
+	*ErrorNo = OPVP_NOTSUPPORTED;
+	return -1;
+    }
+    if (queryflag & OPVP_QF_PRINTREGION) {
+	queryflag &= ~OPVP_QF_PRINTREGION;
+	queryflag |= 0x0020000;
+    }
+    return apiEntry_0_2->QueryDeviceInfo(printerContext,queryflag,
+      *buflen,(char *)infoBuf);
+}
+
+static opvp_result_t
+SetLineDashWrapper(opvp_dc_t printerContext, opvp_int_t num,
+    const opvp_fix_t *pdash)
+{
+    return apiEntry_0_2->SetLineDash(printerContext,
+      /* remove const */ (OPVP_Fix *)pdash,num);
+}
+
+static opvp_result_t
+GetLineDashWrapper(opvp_dc_t printerContext, opvp_int_t *pnum,
+    opvp_fix_t *pdash)
+{
+    return apiEntry_0_2->GetLineDash(printerContext,
+      pdash,pnum);
+}
+
+static opvp_dc_t
+OpenPrinterWrapper(
+    opvp_int_t outputFD,
+    const opvp_char_t *printerModel,
+    const opvp_int_t apiVersion[2],
+    opvp_api_procs_t **apiProcs)
+{
+    opvp_dc_t dc = -1;
+
+    if (OpenPrinter != NULL) {
+	dc = (*OpenPrinter)(outputFD,printerModel,apiVersion,apiProcs);
+    } else {
+	/* try version 0.2 */
+
+	if (OpenPrinter_0_2 != NULL) {
+	    static opvp_api_procs_t tEntry;
+	    int nApiEntry;
+
+	    dc = (*OpenPrinter_0_2)(outputFD,
+		    /* remove const */
+		    (char *)printerModel,
+		    &nApiEntry,&apiEntry_0_2);
+	    /* setting functions */
+	    tEntry.opvpClosePrinter
+		    = apiEntry_0_2->ClosePrinter;
+	    tEntry.opvpStartJob
+		    = (opvp_result_t (*)(opvp_int_t,
+		       const opvp_char_t*))
+		       apiEntry_0_2->StartJob;
+	    tEntry.opvpEndJob = apiEntry_0_2->EndJob;
+	    tEntry.opvpAbortJob = NULL;
+	    tEntry.opvpStartDoc
+		    = (opvp_result_t (*)(opvp_dc_t,
+		       const opvp_char_t*))
+		       apiEntry_0_2->StartDoc;
+	    tEntry.opvpEndDoc = apiEntry_0_2->EndDoc;
+	    if (apiEntry_0_2->StartPage != NULL) {
+		tEntry.opvpStartPage = StartPageWrapper;
+	    } else {
+		tEntry.opvpStartPage = NULL;
+	    }
+	    tEntry.opvpEndPage = apiEntry_0_2->EndPage;
+
+	    if (apiEntry_0_2->QueryDeviceCapability != NULL) {
+		tEntry.opvpQueryDeviceCapability
+		  = QueryDeviceCapabilityWrapper;
+	    } else {
+		tEntry.opvpQueryDeviceCapability = NULL;
+	    }
+
+	    if (apiEntry_0_2->QueryDeviceInfo != NULL) {
+		tEntry.opvpQueryDeviceInfo = QueryDeviceInfoWrapper;
+	    } else {
+		tEntry.opvpQueryDeviceInfo = NULL;
+	    }
+
+	    tEntry.opvpResetCTM = apiEntry_0_2->ResetCTM;
+	    tEntry.opvpSetCTM = (opvp_result_t (*)(opvp_dc_t,
+		       const opvp_ctm_t*))
+		       apiEntry_0_2->SetCTM;
+	    tEntry.opvpGetCTM = (opvp_result_t (*)(opvp_dc_t,opvp_ctm_t*))
+		       apiEntry_0_2->GetCTM;
+	    if (apiEntry_0_2->InitGS != NULL) {
+		tEntry.opvpInitGS = InitGSWrapper;
+	    } else {
+		tEntry.opvpInitGS = NULL;
+	    }
+	    tEntry.opvpSaveGS = apiEntry_0_2->SaveGS;
+	    tEntry.opvpRestoreGS = apiEntry_0_2->RestoreGS;
+	    if (apiEntry_0_2->QueryColorSpace != NULL) {
+		tEntry.opvpQueryColorSpace = QueryColorSpaceWrapper;
+	    } else {
+		tEntry.opvpQueryColorSpace = NULL;
+	    }
+	    if (apiEntry_0_2->SetColorSpace != NULL) {
+		tEntry.opvpSetColorSpace = SetColorSpaceWrapper;
+	    } else {
+		tEntry.opvpSetColorSpace = NULL;
+	    }
+	    if (apiEntry_0_2->GetColorSpace != NULL) {
+		tEntry.opvpGetColorSpace = GetColorSpaceWrapper;
+	    } else {
+		tEntry.opvpGetColorSpace = NULL;
+	    }
+	    tEntry.opvpSetFillMode
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_fillmode_t))
+		       apiEntry_0_2->SetFillMode;
+	    tEntry.opvpGetFillMode
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_fillmode_t*))
+		       apiEntry_0_2->GetFillMode;
+	    tEntry.opvpSetAlphaConstant = apiEntry_0_2->SetAlphaConstant;
+	    tEntry.opvpGetAlphaConstant = apiEntry_0_2->GetAlphaConstant;
+	    tEntry.opvpSetLineWidth = apiEntry_0_2->SetLineWidth;
+	    tEntry.opvpGetLineWidth = apiEntry_0_2->GetLineWidth;
+	    if (apiEntry_0_2->SetLineDash != NULL) {
+		tEntry.opvpSetLineDash = SetLineDashWrapper;
+	    } else {
+		tEntry.opvpSetLineDash = NULL;
+	    }
+	    if (apiEntry_0_2->GetLineDash != NULL) {
+		tEntry.opvpGetLineDash = GetLineDashWrapper;
+	    } else {
+		tEntry.opvpGetLineDash = NULL;
+	    }
+	    tEntry.opvpSetLineDashOffset
+		    = apiEntry_0_2->SetLineDashOffset;
+	    tEntry.opvpGetLineDashOffset
+		    = apiEntry_0_2->GetLineDashOffset;
+	    tEntry.opvpSetLineStyle
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_linestyle_t))
+		       apiEntry_0_2->SetLineStyle;
+	    tEntry.opvpGetLineStyle
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_linestyle_t*))
+		       apiEntry_0_2->GetLineStyle;
+	    tEntry.opvpSetLineCap
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_linecap_t))
+		       apiEntry_0_2->SetLineCap;
+	    tEntry.opvpGetLineCap
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_linecap_t*))
+		       apiEntry_0_2->GetLineCap;
+	    tEntry.opvpSetLineJoin
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_linejoin_t))
+		       apiEntry_0_2->SetLineJoin;
+	    tEntry.opvpGetLineJoin
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_linejoin_t*))
+		       apiEntry_0_2->GetLineJoin;
+	    tEntry.opvpSetMiterLimit = apiEntry_0_2->SetMiterLimit;
+	    tEntry.opvpGetMiterLimit = apiEntry_0_2->GetMiterLimit;
+	    tEntry.opvpSetPaintMode
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_paintmode_t))
+		       apiEntry_0_2->SetPaintMode;
+	    tEntry.opvpGetPaintMode
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_paintmode_t*))
+		       apiEntry_0_2->GetPaintMode;
+	    if (apiEntry_0_2->SetStrokeColor != NULL) {
+		tEntry.opvpSetStrokeColor = SetStrokeColorWrapper;
+	    } else {
+		tEntry.opvpSetStrokeColor = NULL;
+	    }
+	    if (apiEntry_0_2->SetFillColor != NULL) {
+		tEntry.opvpSetFillColor = SetFillColorWrapper;
+	    } else {
+		tEntry.opvpSetFillColor = NULL;
+	    }
+	    if (apiEntry_0_2->SetBgColor != NULL) {
+		tEntry.opvpSetBgColor = SetBgColorWrapper;
+	    } else {
+		tEntry.opvpSetBgColor = NULL;
+	    }
+	    tEntry.opvpNewPath = apiEntry_0_2->NewPath;
+	    tEntry.opvpEndPath = apiEntry_0_2->EndPath;
+	    tEntry.opvpStrokePath = apiEntry_0_2->StrokePath;
+	    tEntry.opvpFillPath = apiEntry_0_2->FillPath;
+	    tEntry.opvpStrokeFillPath = apiEntry_0_2->StrokeFillPath;
+	    tEntry.opvpSetClipPath
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_cliprule_t))
+		       apiEntry_0_2->SetClipPath;
+	    tEntry.opvpResetClipPath = apiEntry_0_2->ResetClipPath;
+	    tEntry.opvpSetCurrentPoint = apiEntry_0_2->SetCurrentPoint;
+	    tEntry.opvpLinePath
+		    = (opvp_result_t (*)(opvp_dc_t,
+		       opvp_pathmode_t,opvp_int_t,
+		       const opvp_point_t*))
+		       apiEntry_0_2->LinePath;
+	    tEntry.opvpPolygonPath
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_int_t,
+		       const opvp_int_t*,
+		       const opvp_point_t*))
+		       apiEntry_0_2->PolygonPath;
+	    tEntry.opvpRectanglePath
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_int_t,
+		       const opvp_rectangle_t*))
+		       apiEntry_0_2->RectanglePath;
+	    tEntry.opvpRoundRectanglePath
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_int_t,
+		       const opvp_roundrectangle_t*))
+		       apiEntry_0_2->RoundRectanglePath;
+	    tEntry.opvpBezierPath
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_int_t,
+		       const opvp_point_t*))
+		       apiEntry_0_2->BezierPath;
+	    tEntry.opvpArcPath
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_arcmode_t,
+		       opvp_arcdir_t,opvp_fix_t,opvp_fix_t,opvp_fix_t,
+		       opvp_fix_t,opvp_fix_t,opvp_fix_t,opvp_fix_t,
+		       opvp_fix_t))apiEntry_0_2->ArcPath;
+	    if (apiEntry_0_2->DrawImage != NULL) {
+		tEntry.opvpDrawImage = DrawImageWrapper;
+	    } else {
+		tEntry.opvpDrawImage = NULL;
+	    }
+	    if (apiEntry_0_2->StartDrawImage != NULL) {
+		tEntry.opvpStartDrawImage = StartDrawImageWrapper;
+	    } else {
+		tEntry.opvpStartDrawImage = NULL;
+	    }
+	    tEntry.opvpTransferDrawImage = 
+	       (opvp_result_t (*)(opvp_dc_t,opvp_int_t,const void*))
+	       apiEntry_0_2->TransferDrawImage;
+	    if (apiEntry_0_2->EndDrawImage != NULL) {
+		tEntry.opvpEndDrawImage = EndDrawImageWrapper;
+	    } else {
+		tEntry.opvpEndDrawImage = NULL;
+	    }
+	    tEntry.opvpStartScanline = apiEntry_0_2->StartScanline;
+	    tEntry.opvpScanline
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_int_t,
+		       const opvp_int_t*))
+		       apiEntry_0_2->Scanline;
+	    tEntry.opvpEndScanline = apiEntry_0_2->EndScanline;
+	    tEntry.opvpStartRaster = apiEntry_0_2->StartRaster;
+	    tEntry.opvpTransferRasterData
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_int_t,
+		       const opvp_byte_t*))
+		       apiEntry_0_2->TransferRasterData;
+	    tEntry.opvpSkipRaster = apiEntry_0_2->SkipRaster;
+	    tEntry.opvpEndRaster = apiEntry_0_2->EndRaster;
+	    tEntry.opvpStartStream = apiEntry_0_2->StartStream;
+	    tEntry.opvpTransferStreamData
+		    = (opvp_result_t (*)(opvp_dc_t,opvp_int_t,
+		       const void *))
+		       apiEntry_0_2->TransferStreamData;
+	    tEntry.opvpEndStream = apiEntry_0_2->EndStream;
+
+	    *apiProcs = &tEntry;
+
+	    GetLastError = GetLastError_0_2;
+	}
+    }
+    return dc;
+}
 
 /* for image */
 static	const
@@ -478,7 +1166,10 @@ typedef	enum	_FastImageSupportMode {
 static	char			*fastImage = NULL;
 static	FastImageSupportMode	FastImageMode = FastImageDisable;
 static	bool			begin_image = false;
+static bool change_paint_mode = false;
+static bool change_cspace = false;
 static	gs_color_space_index	color_index = 0;
+static gs_color_space_index base_color_index = 0;
 static	byte			palette[3*256];
 static  float                   imageDecode[GS_IMAGE_MAX_COMPONENTS * 2];
 static	bool			reverse_image = false;
@@ -486,7 +1177,7 @@ static	bool			reverse_image = false;
 /* added for image gamma correction */
 typedef struct bbox_image_enum_s {
 							gx_image_enum_common;
-	gs_memory_t				*memory;
+/*  gs_memory_t	*memory; */
 	gs_matrix				matrix;		/* map from image space to device dpace */
 	const	gx_clip_path	*pcpath;
 	gx_image_enum_common_t	*target_info;
@@ -500,13 +1191,45 @@ typedef struct bbox_image_enum_s {
 
 
 /* ----- Utilities ----- */
+
+/* initialize Graphic State */
+/* No defaults in OPVP 1.0 */
 static	int
-opvp_startpage(
-	gx_device		*dev
-	)
+InitGS(void)
+{
+    if (apiEntry->opvpInitGS != NULL) {
+	if (apiEntry->opvpInitGS(printerContext) != OPVP_OK) {
+	    return -1;
+	}
+    }
+    if (apiEntry->opvpSetColorSpace != NULL) {
+	if (apiEntry->opvpSetColorSpace(printerContext,colorSpace)
+	   != OPVP_OK) {
+	    return -1;
+	}
+    }
+    if (apiEntry->opvpSetPaintMode != NULL) {
+	if (apiEntry->opvpSetPaintMode(printerContext,
+	    OPVP_PAINTMODE_TRANSPARENT) != OPVP_OK) {
+	    return -1;
+	}
+    }
+    if (apiEntry->opvpSetAlphaConstant != NULL) {
+	if (apiEntry->opvpSetAlphaConstant(printerContext,1.0)
+	   != OPVP_OK) {
+	    return -1;
+	}
+    }
+
+    /* other properties are set by GhostScript */
+    return 0;
+}
+
+static	int
+opvp_startpage(gx_device *dev)
 {
 	int			ecode = 0;
-	int			code = -1;
+    opvp_result_t r = -1;
 static	char			*page_info = NULL;
 
 	/* page info */
@@ -515,11 +1238,13 @@ static	char			*page_info = NULL;
 
 	/* call StartPage */
 	if (printerContext != -1) {
-		if (apiEntry->StartPage)
-		code = apiEntry->StartPage(printerContext,
-		                           opvp_to_utf8(page_info));
-		if (code != OPVP_OK) {
+	if (apiEntry->opvpStartPage)
+	    r = apiEntry->opvpStartPage(printerContext,
+		       (opvp_char_t *)opvp_to_utf8(page_info));
+	if (r != OPVP_OK) {
 			ecode = -1;
+	} else {
+	    ecode = InitGS();
 		}
 	}
 
@@ -527,18 +1252,16 @@ static	char			*page_info = NULL;
 }
 
 static	int
-opvp_endpage(
-	void
-	)
+opvp_endpage(void)
 {
 	int			ecode = 0;
-	int			code = -1;
+    opvp_result_t r = -1;
 
 	/* call EndPage */
 	if (printerContext != -1) {
-		if (apiEntry->EndPage)
-		code = apiEntry->EndPage(printerContext);
-		if (code != OPVP_OK) {
+	if (apiEntry->opvpEndPage)
+	    r = apiEntry->opvpEndPage(printerContext);
+	if (r != OPVP_OK) {
 			ecode = -1;
 		}
 	}
@@ -547,10 +1270,7 @@ opvp_endpage(
 }
 
 static	char *
-opvp_alloc_string(
-	char			**destin,
-const	char			*source
-	)
+opvp_alloc_string(char **destin, const char *source)
 {
 	if (!destin) return NULL;
 
@@ -576,10 +1296,7 @@ const	char			*source
 }
 
 static	char *
-opvp_cat_string(
-	char			**destin,
-const	char			*string
-	)
+opvp_cat_string(char **destin, const char *string)
 {
 	if (!destin) return NULL;
 	if (!(*destin)) return opvp_alloc_string(destin, string);
@@ -593,9 +1310,7 @@ const	char			*string
 }
 
 static	char *
-opvp_adjust_num_string(
-	char			*num_string
-	)
+opvp_adjust_num_string(char *num_string)
 {
 	char			*pp;
 	char			*lp;
@@ -617,9 +1332,7 @@ opvp_adjust_num_string(
 }
 
 static	char **
-opvp_gen_dynamic_lib_name(
-	void
-	)
+opvp_gen_dynamic_lib_name(void)
 {
 static	char			*buff[5] = {NULL,NULL,NULL,NULL,NULL};
 	char			tbuff[OPVP_BUFF_SIZE];
@@ -654,9 +1367,7 @@ static	char			*buff[5] = {NULL,NULL,NULL,NULL,NULL};
 }
 
 static	char *
-opvp_to_utf8(
-	char			*string
-	)
+opvp_to_utf8(char *string)
 {
 	char			*locale;
 	iconv_t			cd;
@@ -679,13 +1390,10 @@ opvp_to_utf8(
 #endif /* CODESET */
 			if (locale) {
 				if (strcmp(locale, "C") && buff) {
-					if ((cd = iconv_open("UTF-8", locale))
-					     != (iconv_t)-1) {
+		    if ((cd = iconv_open("UTF-8", locale)) != (iconv_t)-1) {
 						ibuff = string;
 						obuff = buff;
-						if (iconv(cd, &ibuff, &ib,
-						          &obuff, &ob)
-						    != -1) {
+			if (iconv(cd, &ibuff, &ib, &obuff, &ob) != -1) {
 							*obuff = 0;
 							complete = true;
 						}
@@ -713,9 +1421,7 @@ opvp_fabsf(float f)
 }
 
 static	int
-opvp_get_papertable_index(
-	gx_device		*pdev
-	)
+opvp_get_papertable_index(gx_device *pdev)
 {
 	int			i;
 	float			width, height;
@@ -742,16 +1448,6 @@ opvp_get_papertable_index(
 	/* paper size */
 	width  = (landscape ? pdev->MediaSize[1] : pdev->MediaSize[0]);
 	height = (landscape ? pdev->MediaSize[0] : pdev->MediaSize[1]);
-
-#if 0
-	for (i=0; paperTable[i].name != NULL; i++) {
-		if ((width  <= ceilf(paperTable[i].width)) &&
-		    (height <= ceilf(paperTable[i].height))) {
-			break;
-		}
-	}
-	return i;
-#endif
 
 	for (i=0; paperTable[i].name != NULL; i++) {
 		paper_w = paperTable[i].width;
@@ -800,8 +1496,7 @@ opvp_get_papertable_index(
 					sh_delta = 0;
 					s_candi  = i;
 					break;
-				} else if ((f = opvp_fabsf(height - paper_h))
-				           < TOLERANCE) {
+		} else if ((f = opvp_fabsf(height - paper_h)) < TOLERANCE) {
 					if (f < sh_delta) {
 						sh_delta = f;
 						s_candi  = i;
@@ -817,8 +1512,7 @@ opvp_get_papertable_index(
 					lh_delta = 0;
 					l_candi  = i;
 					break;
-				} else if ((f = opvp_fabsf(height - paper_h))
-				           < TOLERANCE) {
+		} else if ((f = opvp_fabsf(height - paper_h)) < TOLERANCE) {
 					if (f < lh_delta) {
 						lh_delta = f;
 						l_candi  = i;
@@ -848,10 +1542,7 @@ opvp_get_papertable_index(
 }
 
 static	char *
-opvp_get_sizestring(
-	float			width,
-	float			height
-	)
+opvp_get_sizestring(float width, float height)
 {
 	char nbuff[OPVP_BUFF_SIZE];
 	char nbuff1[OPVP_BUFF_SIZE / 2];
@@ -871,62 +1562,8 @@ static	char			*buff = NULL;
 	return opvp_alloc_string(&buff, nbuff);
 }
 
-/* not used
-static	const	char *
-opvp_get_papersize_region(
-	gx_device		*pdev
-	)
-{
-	return paperTable[opvp_get_papertable_index(pdev)].region;
-}
-*/
-
-/* not used
-static	const	char *
-opvp_get_papersize_name(
-	gx_device		*pdev
-	)
-{
-	return paperTable[opvp_get_papertable_index(pdev)].name;
-}
-*/
-
-/* not used
 static	char *
-opvp_get_papersize_inch(
-	gx_device		*pdev
-	)
-{
-	bool			landscape;
-	float			width, height;
-
-	landscape = (pdev->MediaSize[0] < pdev->MediaSize[1] ? false : true);
-	width  = (landscape ? pdev->MediaSize[1] : pdev->MediaSize[0]) / PS_DPI;
-	height = (landscape ? pdev->MediaSize[0] : pdev->MediaSize[1]) / PS_DPI;
-
-	return opvp_get_sizestring(width, height);
-}
-*/
-
-/* not used
-static	const	char *
-opvp_get_papersize(
-	gx_device		*pdev
-	)
-{
-const	char			*paper;
-
-	paper = opvp_get_papersize_name(pdev);
-	if (!paper) paper = opvp_get_papersize_inch(pdev);
-
-	return paper;
-}
-*/
-
-static	char *
-opvp_get_mediasize(
-	gx_device		*pdev
-	)
+opvp_get_mediasize(gx_device *pdev)
 {
 	int			i;
 	char			wbuff[OPVP_BUFF_SIZE];
@@ -976,9 +1613,7 @@ const	char			*unit;
 }
 
 static	char *
-opvp_gen_page_info(
-	gx_device		*dev
-	)
+opvp_gen_page_info(gx_device *dev)
 {
 static	char			*buff = NULL;
 	int num_copies = 1;
@@ -998,7 +1633,8 @@ static	char			*buff = NULL;
 	                                                   : true);
 	memset((void*)tbuff, 0, OPVP_BUFF_SIZE);
 	snprintf(tbuff, OPVP_BUFF_SIZE - 1,
-	"MediaCopy=%d;DeviceResolution=deviceResolution_%s;MediaPageRotation=%s;MediaSize=%s",
+       "MediaCopy=%d;DeviceResolution=deviceResolution_%s;"
+       "MediaPageRotation=%s;MediaSize=%s",
 	num_copies,
 	opvp_get_sizestring(dev->x_pixels_per_inch, dev->y_pixels_per_inch),
 	(landscape ? "landscape" : "portrait"),
@@ -1010,27 +1646,20 @@ static	char			*buff = NULL;
 }
 
 static	char *
-opvp_gen_doc_info(
-	gx_device		*dev
-	)
+opvp_gen_doc_info(gx_device *dev)
 {
 	return opvp_gen_page_info(dev);
 }
 
 static	char *
-opvp_gen_job_info(
-	gx_device		*dev
-	)
+opvp_gen_job_info(gx_device *dev)
 {
 	return opvp_gen_doc_info(dev);
 }
 
 static	int
-opvp_set_brush_color(
-	gx_device_opvp		*pdev,
-	gx_color_index		color,
-	OPVP_Brush		*brush
-	)
+opvp_set_brush_color(gx_device_opvp *pdev, gx_color_index color,
+    opvp_brush_t *brush)
 {
 	int			code;
 	int			ecode = 0;
@@ -1043,12 +1672,14 @@ opvp_set_brush_color(
 #if ENABLE_SIMPLE_MODE
 		brush->colorSpace = colorSpace;
 #else
+	opvp_result_t		r = -1;
 		/* call GetColorSpace */
-		if (apiEntry->GetColorSpace)
-		code = apiEntry->GetColorSpace(printerContext,
+	if (apiEntry->opvpGetColorSpace) {
+	    r = apiEntry->opvpGetColorSpace(printerContext,
 		                               &(brush->colorSpace));
-		if (code != OPVP_OK) {
-			brush->colorSpace = OPVP_cspaceDeviceRGB;
+	}
+	if (r != OPVP_OK) {
+	    brush->colorSpace = OPVP_CSPACE_DEVICEKRGB;
 		}
 #endif
 		brush->pbrush = NULL;
@@ -1071,61 +1702,54 @@ opvp_draw_image(
 	int			dw,
 	int			dh,
 	int			raster,
-/*const*/
-	byte			*data
-	)
+    int	mask,
+    const byte *data)
 {
-	int			code = -1;
+    opvp_result_t		r = -1;
 	int			ecode = 0;
 	int			count;
-	OPVP_Rectangle		rect;
 
 	/* check page-in */
 	if (opvp_check_in_page(pdev)) return -1;
 
 	/* image size */
-/*	count = (((((sw * depth + 7) >> 3) + 3) >> 2) << 2) * sh; */
 	count = raster * sh;
-	OPVP_i2Fix(0, rect.p0.x);
-	OPVP_i2Fix(0, rect.p0.y);
-	OPVP_i2Fix(dw, rect.p1.x);
-	OPVP_i2Fix(dh, rect.p1.y);
 
 	/* call DrawImage */
-	if (apiEntry->DrawImage)
-	code = apiEntry->DrawImage(printerContext,
-	                           sw,
-	                           sh,
-	                           depth,
-	                           OPVP_iformatRaw,
-	                           rect,
-	                           count,
+    if (apiEntry->opvpDrawImage) {
+	r = apiEntry->opvpDrawImage(printerContext,
+	       sw,sh,
+	       raster,
+	       mask ? OPVP_IFORMAT_MASK : OPVP_IFORMAT_RAW,
+	       dw,dh,
+	       /* discard 'const' qualifier */
 	                           (void *)data);
-	if (code != OPVP_OK) {
-
+    }
+    if (r != OPVP_OK) {
 		/* call StartDrawImage */
-		if (apiEntry->StartDrawImage)
-		code = apiEntry->StartDrawImage(printerContext,
-		                                sw,
-		                                sh,
-		                                depth,
-		                                OPVP_iformatRaw,
-		                                rect);
-		if (code == OPVP_OK) {
-
+	if (apiEntry->opvpStartDrawImage) {
+	    r = apiEntry->opvpStartDrawImage(printerContext,
+		    sw,sh,
+		    raster,
+		    mask ? OPVP_IFORMAT_MASK : OPVP_IFORMAT_RAW,
+		    dw,dh);
+	}
+	if (r == OPVP_OK) {
 			/* call TansferDrawImage */
-			if (apiEntry->TransferDrawImage)
-			code = apiEntry->TransferDrawImage(printerContext,
+	    if (apiEntry->opvpTransferDrawImage) {
+		r = apiEntry->opvpTransferDrawImage(
+		       printerContext,
 			                                   count,
+			/* discard 'const' qualifier */
 			                                   (void *)data);
-			if (code != OPVP_OK) ecode = -1;
+	    }
+	    if (r != OPVP_OK) ecode = -1;
 
 			/* call EndDrawImage */
-			if (apiEntry->EndDrawImage)
-			apiEntry->EndDrawImage(printerContext);
-
+	    if (apiEntry->opvpEndDrawImage) {
+		apiEntry->opvpEndDrawImage(printerContext);
+	    }
 		} else {
-			/* ecode = -1;*/
 			ecode = 0;	/* continue... */
 		}
 	}
@@ -1139,9 +1763,7 @@ opvp_draw_image(
  * load vector-driver
  */
 static	int
-opvp_load_vector_driver(
-	void
-	)
+opvp_load_vector_driver(void)
 {
 	char			**list = NULL;
 	int			i;
@@ -1159,14 +1781,23 @@ opvp_load_vector_driver(
 		i = 0;
 		while (list[i]) {
 			if ((h = dlopen(list[i],RTLD_NOW))) {
-				OpenPrinter = dlsym(h,"OpenPrinter");
-				errorno = dlsym(h,"errorno");
-				if (OpenPrinter && errorno) {
+		OpenPrinter = dlsym(h,"opvpOpenPrinter");
+		ErrorNo = dlsym(h,"opvpErrorNo");
+		if (OpenPrinter && ErrorNo) {
 					handle = h;
 					break;
 				}
 				OpenPrinter = NULL;
-				errorno = NULL;
+		ErrorNo = NULL;
+		/* try version 0.2 driver */
+		OpenPrinter_0_2 = dlsym(h,"OpenPrinter");
+		ErrorNo = dlsym(h,"errorno");
+		if (OpenPrinter_0_2 && ErrorNo) {
+		    handle = h;
+		    break;
+		}
+		OpenPrinter_0_2 = NULL;
+		ErrorNo = NULL;
 			}
 			i++;
 		}
@@ -1183,15 +1814,13 @@ opvp_load_vector_driver(
  * unload vector-driver
  */
 static	int
-opvp_unload_vector_driver(
-	void
-	)
+opvp_unload_vector_driver(void)
 {
 	if (handle) {
 		dlclose(handle);
 		handle = NULL;
 		OpenPrinter = NULL;
-		errorno = NULL;
+	ErrorNo = NULL;
 	}
 	return 0;
 }
@@ -1200,16 +1829,15 @@ opvp_unload_vector_driver(
  * prepare open
  */
 static	int
-prepare_open(
-	gx_device		*dev
-	)
+prepare_open(gx_device *dev)
 {
 	int			ecode = 0;
-	int			code = -1;
-	OPVP_api_procs		*api_entry;
+    int code;
+    opvp_result_t r = -1;
+    opvp_api_procs_t *api_entry;
 	int			dumFD = -1;
-	int			dumContext = -1;
-	OPVP_ColorSpace		cspace = OPVP_cspaceStandardRGB;
+    opvp_dc_t dumContext = -1;
+    opvp_cspace_t cspace = OPVP_CSPACE_STANDARDRGB;
 
 	/* open dummy device */
 	code = open("/dev/null", O_RDWR);
@@ -1226,27 +1854,34 @@ prepare_open(
 	/* prepare array of function pointer for PDAPI */
 	if (!ecode) {
 		if (!apiEntry) {
-			if (!(apiEntry = calloc(sizeof(OPVP_api_procs), 1))) {
+	    if (!(apiEntry = calloc(sizeof(opvp_api_procs_t), 1))) {
 				ecode = -1;
 			}
 		} else {
-			memset(apiEntry, 0, sizeof(OPVP_api_procs));
+	    memset(apiEntry, 0, sizeof(opvp_api_procs_t));
 		}
 	}
 
-	/* call OpenPrinter as dummy */
+    /* call opvpOpenPrinter as dummy */
 	if (!ecode) {
-		code = OpenPrinter(dumFD, printerModel,
-				   &nApiEntry, &api_entry);
-		if (code == -1) ecode = code;
-		else dumContext = code;
+	opvp_dc_t dc;
+	opvp_int_t apiVersion[2];
+
+	/* require version 1.0 */
+	apiVersion[0] = 1;
+	apiVersion[1] = 0;
+	dc = OpenPrinterWrapper(dumFD, (opvp_char_t *)printerModel,
+	  apiVersion,&api_entry);
+	if (dc == -1) {
+	    ecode = -1;
+	} else {
+	    dumContext = dc;
+	}
 	}
 
 	/* set apiEntry */
 	if (!ecode) {
-		if (nApiEntry > sizeof(OPVP_api_procs)/sizeof(void *)) {
-			nApiEntry = sizeof(OPVP_api_procs)/sizeof(void *);
-		}
+	nApiEntry = sizeof(opvp_api_procs_t)/sizeof(void *);
 		memcpy(apiEntry, api_entry, nApiEntry*sizeof(void *));
 	} else {
 		if (apiEntry) free(apiEntry);
@@ -1256,20 +1891,21 @@ prepare_open(
 	/* check vector fucntion */
 	if (apiEntry) {
 		if (!inkjet) {
-			if (!(apiEntry->NewPath) ||
-			    !(apiEntry->EndPath) ||
-			    !(apiEntry->StrokePath) ||
-			    !(apiEntry->SetCurrentPoint) ||
-			    !(apiEntry->LinePath) ||
-			    !(apiEntry->BezierPath)) {
+	    if (!(apiEntry->opvpNewPath) ||
+		!(apiEntry->opvpEndPath) ||
+		!(apiEntry->opvpStrokePath) ||
+		!(apiEntry->opvpSetCurrentPoint) ||
+		!(apiEntry->opvpLinePath) ||
+		!(apiEntry->opvpBezierPath)) {
 				/* NOT avail vector drawing mode */
 				vector = false;
 			}
 		}
 		/* call GetColorSpace */
-		if (apiEntry->GetColorSpace)
-		code = apiEntry->GetColorSpace(dumContext, &cspace);
-		if (cspace == OPVP_cspaceBW) {
+	if (apiEntry->opvpGetColorSpace) {
+	    r = apiEntry->opvpGetColorSpace(dumContext, &cspace);
+	}
+	if (cspace == OPVP_CSPACE_BW) {
 			/* mono-color */
 			colorSpace = cspace;
 			dev->color_info.num_components = 1;
@@ -1278,7 +1914,7 @@ prepare_open(
 			dev->color_info.max_color = 0;
 			dev->color_info.dither_grays = 1;
 			dev->color_info.dither_colors = 1;
-		} else if (cspace == OPVP_cspaceDeviceGray) {
+	} else if (cspace == OPVP_CSPACE_DEVICEGRAY) {
 			/* gray-scale */
 			colorSpace = cspace;
 			dev->color_info.num_components = 1;
@@ -1289,7 +1925,7 @@ prepare_open(
 			dev->color_info.dither_colors = 256;
 		} else {
 			/* rgb color */
-			colorSpace = OPVP_cspaceStandardRGB;
+	    colorSpace = OPVP_CSPACE_STANDARDRGB;
 			dev->color_info.num_components = 3;
 			dev->color_info.depth = 24;
 			dev->color_info.max_gray = 255;
@@ -1307,8 +1943,9 @@ prepare_open(
 	/* call Closerinter as dummy */
 	if (dumContext != -1) {
 		/* call ClosePrinter */
-		if (apiEntry->ClosePrinter)
-		apiEntry->ClosePrinter(dumContext);
+	if (apiEntry->opvpClosePrinter) {
+	    apiEntry->opvpClosePrinter(dumContext);
+	}
 		dumContext = -1;
 	}
 
@@ -1329,21 +1966,22 @@ prepare_open(
  * open device
  */
 static	int
-opvp_open(
-	gx_device		*dev
-	)
+opvp_open(gx_device *dev)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)dev;
 	gx_device_oprp		*rdev = (gx_device_oprp *)dev;
 	int			ecode = 0;
 	int			code;
-	OPVP_api_procs		*api_entry;
+    opvp_result_t r = -1;
+    opvp_dc_t dc;
+    opvp_api_procs_t *api_entry;
 	char			*job_info = NULL;
 	char			*doc_info = NULL;
 	char			*tmp_info = NULL;
 	float			margin_width = 0;
 	float			margin_height = 0;
 	float			adj_margins[4];
+    opvp_int_t apiVersion[2];
 
 	/* prepare open : load and open as dummy */
 	code = prepare_open(dev);
@@ -1360,8 +1998,11 @@ opvp_open(
 		              * dev->HWResolution[1];
 		zoom[0] = (dev->width - margin_width) / dev->width;
 		zoom[1] = (dev->height - margin_height) / dev->height;
-		if (zoom[0] < zoom[1]) zoom[1] = zoom[0];
-		else zoom[0] = zoom[1];
+	if (zoom[0] < zoom[1]) {
+	    zoom[1] = zoom[0];
+	} else {
+	    zoom[0] = zoom[1];
+	}
 	}
 	if (inkjet) {
 		if ((margins[0] != 0) ||
@@ -1408,9 +2049,10 @@ opvp_open(
 		}
 #if GS_VERSION_MAJOR >= 8
 		if (pdev->bbox_device != NULL) {
-			if (pdev->bbox_device->memory == NULL)
+	    if (pdev->bbox_device->memory == NULL) {
 				pdev->bbox_device->memory = gs_memory_stable(dev->memory);
 		}
+	}
 #endif
 		outputFD = fileno(pdev->file);
 	} else {
@@ -1435,18 +2077,21 @@ opvp_open(
 		return ecode;
 	}
 
-	/* call OpenPrinter */
-	code = OpenPrinter(outputFD, printerModel,
-	                   &nApiEntry, &api_entry);
+    /* call opvpOpenPrinter */
+    /* require version 1.0 */
+    apiVersion[0] = 1;
+    apiVersion[1] = 0;
+    dc = OpenPrinterWrapper(outputFD,(opvp_char_t *)printerModel,
+      apiVersion,&api_entry);
 	if (!apiEntry) {
-		if (!(apiEntry = calloc(sizeof(OPVP_api_procs), 1))) {
+	if (!(apiEntry = calloc(sizeof(opvp_api_procs_t), 1))) {
 			ecode = -1;
 		}
 	} else {
-		memset(apiEntry, 0, sizeof(OPVP_api_procs));
+	memset(apiEntry, 0, sizeof(opvp_api_procs_t));
 	}
-	if (code == -1) {
-		ecode =  code;
+    if (dc == -1) {
+	ecode =  -1;
 		if (apiEntry) free(apiEntry);
 		apiEntry = NULL;
 		opvp_unload_vector_driver();
@@ -1454,17 +2099,9 @@ opvp_open(
 		else gdev_vector_close_file((gx_device_vector *)pdev);
 		return ecode;
 	}
-	printerContext = code;
-	if (nApiEntry > sizeof(OPVP_api_procs)/sizeof(void *)) {
-		nApiEntry = sizeof(OPVP_api_procs)/sizeof(void *);
-	}
+    printerContext = dc;
+    nApiEntry = sizeof(opvp_api_procs_t)/sizeof(void *);
 	memcpy(apiEntry, api_entry, nApiEntry*sizeof(void *));
-
-	/* call SetColorSpace */
-	if (!ecode) {
-		if (apiEntry->SetColorSpace)
-		apiEntry->SetColorSpace(printerContext, colorSpace);
-	}
 
 	/* initialize */
 	if ((!ecode) && (!inkjet)) {
@@ -1472,17 +2109,37 @@ opvp_open(
 		if (vector) gdev_vector_init((gx_device_vector *)pdev);
 	}
 
+    if (apiEntry->opvpQueryColorSpace) {
+	int n = sizeof(cspace_available);
+	int nn = n;
+	opvp_cspace_t *p = malloc(n*sizeof(opvp_cspace_t));
+
+	if ((r = apiEntry->opvpQueryColorSpace(printerContext,&nn,p))
+	     == OPVP_PARAMERROR && nn > n) {
+	    /* realloc buffer and retry */
+	    p = realloc(p,nn*sizeof(opvp_cspace_t));
+	    r = apiEntry->opvpQueryColorSpace(printerContext,&nn,p);
+	}
+	if (r == OPVP_OK) {
+	    int i;
+
+	    for (i = 0;i < nn;i++) {
+		if (p[i] < sizeof(cspace_available)) {
+		    cspace_available[p[i]] = 1;
+		}
+	    }
+	}
+	free(p);
+    }
 	/* start job */
 	if (!ecode) {
 		/* job info */
 		if (jobInfo) {
 			if (strlen(jobInfo) > 0) {
-				job_info = opvp_alloc_string(&job_info,
-				                             jobInfo);
+		job_info = opvp_alloc_string(&job_info,jobInfo);
 			}
 		}
-		tmp_info = opvp_alloc_string(&tmp_info,
-		                             opvp_gen_job_info(dev));
+	tmp_info = opvp_alloc_string(&tmp_info,opvp_gen_job_info(dev));
 		if (tmp_info) {
 			if (strlen(tmp_info) > 0) {
 				if (job_info) {
@@ -1490,17 +2147,17 @@ opvp_open(
 						opvp_cat_string(&job_info, ";");
 					}
 				}
-				job_info = opvp_cat_string(&job_info,
-				                           OPVP_INFO_PREFIX);
+		job_info = opvp_cat_string(&job_info,OPVP_INFO_PREFIX);
 				job_info = opvp_cat_string(&job_info, tmp_info);
 			}
 		}
 
 		/* call StartJob */
-		if (apiEntry->StartJob)
-		code = apiEntry->StartJob(printerContext,
-		                          opvp_to_utf8(job_info));
-		if (code != OPVP_OK) {
+	if (apiEntry->opvpStartJob) {
+	    r = apiEntry->opvpStartJob(printerContext,
+	      (opvp_char_t *)opvp_to_utf8(job_info));
+	}
+	if (r != OPVP_OK) {
 			ecode = -1;
 		}
 	}
@@ -1510,12 +2167,10 @@ opvp_open(
 		/* doc info */
 		if (docInfo) {
 			if (strlen(docInfo) > 0) {
-				doc_info = opvp_alloc_string(&doc_info,
-					                     docInfo);
+		doc_info = opvp_alloc_string(&doc_info,docInfo);
 			}
 		}
-		tmp_info = opvp_alloc_string(&tmp_info,
-		                             opvp_gen_doc_info(dev));
+	tmp_info = opvp_alloc_string(&tmp_info, opvp_gen_doc_info(dev));
 		if (tmp_info) {
 			if (strlen(tmp_info) > 0) {
 				if (doc_info) {
@@ -1523,17 +2178,17 @@ opvp_open(
 						opvp_cat_string(&doc_info, ";");
 					}
 				}
-				doc_info = opvp_cat_string(&doc_info,
-				                           OPVP_INFO_PREFIX);
+		doc_info = opvp_cat_string(&doc_info,OPVP_INFO_PREFIX);
 				doc_info = opvp_cat_string(&doc_info, tmp_info);
 			}
 		}
 
 		/* call StartDoc */
-		if (apiEntry->StartDoc)
-		code = apiEntry->StartDoc(printerContext,
-		                          opvp_to_utf8(doc_info));
-		if (code != OPVP_OK) {
+	if (apiEntry->opvpStartDoc) {
+	    r = apiEntry->opvpStartDoc(printerContext,
+	      (opvp_char_t *)opvp_to_utf8(doc_info));
+	}
+	if (r != OPVP_OK) {
 			ecode = -1;
 		}
 	}
@@ -1549,9 +2204,7 @@ opvp_open(
  * open device for inkjet
  */
 static	int
-oprp_open(
-	gx_device		*dev
-	)
+oprp_open(gx_device *dev)
 {
 	/* set inkjet mode */
 	vector = false;
@@ -1566,13 +2219,10 @@ oprp_open(
  * get initial matrix
  */
 static	void
-opvp_get_initial_matrix(
-	gx_device		*dev,
-	gs_matrix		*pmat
-	)
+opvp_get_initial_matrix(gx_device *dev, gs_matrix *pmat)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)dev;
-	OPVP_CTM		omat;
+    opvp_ctm_t omat;
 
 	gx_default_get_initial_matrix(dev,pmat);
 	if (zooming) {
@@ -1586,11 +2236,10 @@ opvp_get_initial_matrix(
 	}
 
 	if (pdev->is_open) {
-
 		/* call ResetCTM */
-		if (apiEntry->ResetCTM)
-		apiEntry->ResetCTM(printerContext);
-		else {
+	if (apiEntry->opvpResetCTM) {
+	    apiEntry->opvpResetCTM(printerContext);
+	} else {
 			/* call SetCTM */
 			omat.a = 1;
 			omat.b = 0;
@@ -1598,8 +2247,9 @@ opvp_get_initial_matrix(
 			omat.d = 1;
 			omat.e = 0;
 			omat.f = 0;
-			if (apiEntry->SetCTM)
-			apiEntry->SetCTM(printerContext, &omat);
+	    if (apiEntry->opvpSetCTM) {
+		apiEntry->opvpSetCTM(printerContext, &omat);
+	    }
 		}
 	}
 
@@ -1610,15 +2260,11 @@ opvp_get_initial_matrix(
  * output page
  */
 static	int
-opvp_output_page(
-	gx_device		*dev,
-	int			num_copies,
-	int			flush
-	)
+opvp_output_page(gx_device *dev, int num_copies, int flush)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)dev;
 	int			ecode = 0;
-	int			code = OPVP_OK;
+    int code = -1;
 
 	if (inkjet) return gdev_prn_output_page(dev, num_copies, flush);
 
@@ -1652,13 +2298,11 @@ opvp_output_page(
  * print page
  */
 static	int
-oprp_print_page(
-	gx_device_printer	*pdev,
-	FILE			*prn_stream
-	)
+oprp_print_page(gx_device_printer *pdev, FILE *prn_stream)
 {
 	int			ecode = 0;
 	int			code = -1;
+    opvp_result_t r = -1;
 	int			raster_size;
 	int			buff_size;
 	byte			*buff = NULL;
@@ -1680,7 +2324,7 @@ oprp_print_page(
 	rasterWidth = pdev->width;
 
 	/* allocate buffer */
-	buff = (byte*)gs_malloc(gs_lib_ctx_get_non_gc_memory_t(), 1, buff_size, "oprp_print_page(buff)");
+    buff = (byte*)calloc(1, buff_size);
 	if (!buff) return ecode = -1;
 
 	/* start page */
@@ -1696,10 +2340,14 @@ oprp_print_page(
 
 	/* call StartRaster */
 	if (!ecode) {
-		if (apiEntry->StartRaster)
-		code = apiEntry->StartRaster(printerContext, rasterWidth);
-		if (code != OPVP_OK) ecode = code;
-		else start_raster = true;
+	if (apiEntry->opvpStartRaster) {
+	    r = apiEntry->opvpStartRaster(printerContext,rasterWidth);
+	}
+	if (r != OPVP_OK) {
+	    ecode = r;
+	} else {
+	    start_raster = true;
+	}
 	}
 
 	/* line */
@@ -1714,7 +2362,7 @@ oprp_print_page(
 		}
 #if ENABLE_SKIP_RASTER
 		/* check support SkipRaster */
-		if (apiEntry->SkipRaster) {
+	if (apiEntry->opvpSkipRaster) {
 			/* check all white */
 			if (pdev->color_info.depth > 8) {
 				for (check = 0xff, i = 0; i < raster_size; i++)
@@ -1724,40 +2372,39 @@ oprp_print_page(
 				}
 				/* if all white call SkipRaster */
 				if (check == 0xff) {
-					code = apiEntry->SkipRaster(
-					           printerContext, 1);
-					if (code == OPVP_OK) continue;
+		    r = apiEntry->opvpSkipRaster(printerContext, 1);
+		    if (r == OPVP_OK) continue;
 				}
 			} else {
-				for (check = 0, i = 0; i < raster_size; i++)
-				{
+		for (check = 0, i = 0; i < raster_size; i++) {
 					check |= data[i];
 					if (check) break;
 				}
 				/* if all zero call SkipRaster */
 				if (check) {
-					code = apiEntry->SkipRaster(
-					           printerContext, 1);
-					if (code == OPVP_OK) continue;
+		    r = apiEntry->opvpSkipRaster(printerContext, 1);
+		    if (r == OPVP_OK) continue;
 				}
 			}
 		}
 #endif
 		/* call TransferRasterData */
 		if (!ecode) {
-			if (apiEntry->TransferRasterData)
-			code = apiEntry->TransferRasterData(printerContext,
+	    if (apiEntry->opvpTransferRasterData) {
+		r = apiEntry->opvpTransferRasterData(printerContext,
 			                                    raster_size,
 			                                    data);
-			if (code != OPVP_OK) ecode = code;
+	    }
+	    if (r != OPVP_OK) ecode = r;
 		}
 	}
 
-	/* call StartRaster */
+    /* call EndRaster */
 	if (start_raster) {
-		if (apiEntry->EndRaster)
-		code = apiEntry->EndRaster(printerContext);
-		if (code != OPVP_OK) ecode = code;
+	if (apiEntry->opvpEndRaster) {
+	    r = apiEntry->opvpEndRaster(printerContext);
+	}
+	if (r != OPVP_OK) ecode = r;
 		start_raster = false;
 	}
 
@@ -1770,7 +2417,7 @@ oprp_print_page(
 
 	/* free buffer */
 	if (buff) {
-		gs_free(gs_lib_ctx_get_non_gc_memory_t(), (char*)buff, 1, buff_size, "oprp_print_page(buff)");
+	free(buff);
 		buff = NULL;
 	}
 
@@ -1781,27 +2428,27 @@ oprp_print_page(
  * close device
  */
 static	int
-opvp_close(
-	gx_device		*dev
-	)
+opvp_close(gx_device *dev)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)dev;
 	int			ecode = 0;
 
 	/* finalize */
 	if (printerContext != -1) {
-
 		/* call EndDoc */
-		if (apiEntry->EndDoc)
-		apiEntry->EndDoc(printerContext);
+	if (apiEntry->opvpEndDoc) {
+	    apiEntry->opvpEndDoc(printerContext);
+	}
 
 		/* call EndJob */
-		if (apiEntry->EndJob)
-		apiEntry->EndJob(printerContext);
+	if (apiEntry->opvpEndJob) {
+	    apiEntry->opvpEndJob(printerContext);
+	}
 
 		/* call ClosePrinter */
-		if (apiEntry->ClosePrinter)
-		apiEntry->ClosePrinter(printerContext);
+	if (apiEntry->opvpClosePrinter) {
+	    apiEntry->opvpClosePrinter(printerContext);
+	}
 		printerContext = -1;
 	}
 
@@ -1827,26 +2474,22 @@ opvp_close(
  */
 #if GS_VERSION_MAJOR >= 8
 static	gx_color_index
-opvp_map_rgb_color(
-	gx_device		*dev,
-	gx_color_value	*prgb		/* modified for gs 8.15 */
-	)
+opvp_map_rgb_color(gx_device *dev,
+	const gx_color_value *prgb /* modified for gs 8.15 */)
 #else
 static	gx_color_index
-opvp_map_rgb_color(
-	gx_device		*dev,
+opvp_map_rgb_color(gx_device *dev,
 	gx_color_value		r,
 	gx_color_value		g,
-	gx_color_value		b
-	)
+	gx_color_value b)
 #endif
 {
-	OPVP_ColorSpace		cs;
+    opvp_cspace_t cs;
 	uint				c, m, y, k;
 
 #if !(ENABLE_SIMPLE_MODE)
 	gx_device_opvp		*pdev;
-	int				code;
+    opvp_result_t r;
 #endif
 
 #if GS_VERSION_MAJOR >= 8
@@ -1858,33 +2501,34 @@ opvp_map_rgb_color(
 
 #if !(ENABLE_SIMPLE_MODE)
 	pdev = (gx_device_opvp *)dev;
-	code = -1;
+    r = -1;
 #endif
-	cs = OPVP_cspaceStandardRGB;
+    cs = OPVP_CSPACE_STANDARDRGB;
 
 #if ENABLE_SIMPLE_MODE
 	cs = colorSpace;
 #else
 	if (pdev->is_open) {
 		/* call GetColorSpace */
-		if (apiEntry->GetColorSpace)
-		code = apiEntry->GetColorSpace(printerContext, &cs);
-		if (code != OPVP_OK) {
+	if (apiEntry->opvpGetColorSpace) {
+	    r = apiEntry->opvpGetColorSpace(printerContext, &cs);
+	}
+	if (r != OPVP_OK) {
 			if (pdev->color_info.depth > 32) {
-				cs = OPVP_cspaceStandardRGB64;
+		    cs = OPVP_CSPACE_STANDARDRGB64;
 			} else if (pdev->color_info.depth > 8 ) {
-				cs = OPVP_cspaceStandardRGB;
+		    cs = OPVP_CSPACE_STANDARDRGB;
 			} else if (pdev->color_info.depth > 1 ) {
-				cs = OPVP_cspaceDeviceGray;
+		    cs = OPVP_CSPACE_DEVICEGRAY;
 			} else {
-				cs = OPVP_cspaceBW;
+		    cs = OPVP_CSPACE_BW;
 			}
 		}
 	}
 #endif
 
 	switch (cs) {
-		case	OPVP_cspaceStandardRGB64 :
+    case OPVP_CSPACE_STANDARDRGB64:
 			/* unsupported */
 			if (sizeof(gx_color_index) >= 6) {
 				return (long long)b
@@ -1896,13 +2540,13 @@ opvp_map_rgb_color(
 				     + ((ulong)gx_color_value_to_byte(r) << 16);
 			}
 			break;
-		case	OPVP_cspaceDeviceCMYK :
-		case	OPVP_cspaceDeviceCMY :
+    case OPVP_CSPACE_DEVICECMYK:
+    case OPVP_CSPACE_DEVICECMY:
 			/* unsupported */
 			c = gx_color_value_to_byte(~r);
 			m = gx_color_value_to_byte(~g);
 			y = gx_color_value_to_byte(~b);
-			if (cs == OPVP_cspaceDeviceCMYK) {
+	if (cs == OPVP_CSPACE_DEVICECMYK) {
 				k = (c<m ? (c<y ? c : y) : (m<y ? m : y));
 				c -= k;
 				m -= k;
@@ -1912,7 +2556,7 @@ opvp_map_rgb_color(
 			}
 			return (k + (y << 8) + (m << 16) + (c << 24));
 			break;
-		case	OPVP_cspaceDeviceGray :
+    case OPVP_CSPACE_DEVICEGRAY:
 #if GS_VERSION_MAJOR >= 8
 			{
 				gx_color_value rgb[3];
@@ -1923,15 +2567,15 @@ opvp_map_rgb_color(
 			return gx_default_gray_map_rgb_color(dev, r, g, b);
 #endif
 			break;
-		case	OPVP_cspaceBW :
+    case OPVP_CSPACE_BW :
 #if GS_VERSION_MAJOR >= 8
 			return gx_default_b_w_map_rgb_color(dev, prgb);
 #else
 			return gx_default_b_w_map_rgb_color(dev, r, g, b);
 #endif
 			break;
-		case	OPVP_cspaceStandardRGB :
-		case	OPVP_cspaceDeviceRGB :
+    case OPVP_CSPACE_STANDARDRGB:
+    case OPVP_CSPACE_DEVICEKRGB:
 		default :
 #if GS_VERSION_MAJOR >= 8
 			return gx_default_rgb_map_rgb_color(dev, prgb);
@@ -1946,17 +2590,14 @@ opvp_map_rgb_color(
  * map color rgb
  */
 static	int
-opvp_map_color_rgb(
-	gx_device		*dev,
-	gx_color_index		color,
-	gx_color_value		prgb[3]
-	)
+opvp_map_color_rgb(gx_device *dev, gx_color_index color,
+    gx_color_value prgb[3])
 {
 #if !(ENABLE_SIMPLE_MODE)
 	gx_device_opvp		*pdev = (gx_device_opvp *)dev;
-	int			code = -1;
+    opvp_result_t r = -1;
 #endif
-	OPVP_ColorSpace		cs = OPVP_cspaceStandardRGB;
+    opvp_cspace_t cs = OPVP_CSPACE_STANDARDRGB;
 	uint			c, m, y, k;
 
 #if ENABLE_SIMPLE_MODE
@@ -1964,45 +2605,43 @@ opvp_map_color_rgb(
 #else
 	/* call GetColorSpace */
 	if (pdev->is_open) {
-		if (apiEntry->GetColorSpace)
-		code = apiEntry->GetColorSpace(printerContext, &cs);
-		if (code != OPVP_OK) {
+	if (apiEntry->opvpGetColorSpace) {
+	    r = apiEntry->opvpGetColorSpace(printerContext, &cs);
+	}
+	if (r != OPVP_OK) {
 			if (pdev->color_info.depth > 32) {
-				cs = OPVP_cspaceStandardRGB64;
+		cs = OPVP_CSPACE_STANDARDRGB64;
 			} else if (pdev->color_info.depth > 8 ) {
-				cs = OPVP_cspaceStandardRGB;
+		cs = OPVP_CSPACE_STANDARDRGB;
 			} else if (pdev->color_info.depth > 1 ) {
-				cs = OPVP_cspaceDeviceGray;
+		cs = OPVP_CSPACE_DEVICEGRAY;
 			} else {
-				cs = OPVP_cspaceBW;
+		cs = OPVP_CSPACE_BW;
 			}
 		}
 	}
 #endif
 
 	switch (cs) {
-		case	OPVP_cspaceStandardRGB64 :
+    case OPVP_CSPACE_STANDARDRGB64:
 			/* unsupported */
 			if (sizeof(gx_color_index) >= 6) {
 				prgb[0] = ((long long)color >> 32) & 0xffff;
 				prgb[1] = ((long long)color >> 16) & 0xffff;
 				prgb[2] = color & 0xffff;
 			} else {
-				prgb[0] = gx_color_value_from_byte(
-				              (color >> 16) & 0xff);
-				prgb[1] = gx_color_value_from_byte(
-				              (color >> 8) & 0xff);
-				prgb[2] = gx_color_value_from_byte(
-				              color & 0xff);
+	    prgb[0] = gx_color_value_from_byte((color >> 16) & 0xff);
+	    prgb[1] = gx_color_value_from_byte((color >> 8) & 0xff);
+	    prgb[2] = gx_color_value_from_byte(color & 0xff);
 			}
 			break;
-		case	OPVP_cspaceDeviceCMYK :
-		case	OPVP_cspaceDeviceCMY :
+    case OPVP_CSPACE_DEVICECMYK:
+    case OPVP_CSPACE_DEVICECMY:
 			/* unsupported */
 			c = gx_color_value_from_byte((color >> 24) & 0xff);
 			m = gx_color_value_from_byte((color >> 16) & 0xff);
 			y = gx_color_value_from_byte((color >> 8) & 0xff);
-			if (cs == OPVP_cspaceDeviceCMYK) {
+	if (cs == OPVP_CSPACE_DEVICECMYK) {
 				k = gx_color_value_from_byte(color & 0xff);
 				c += k; if (c > 255) c = 255;
 				m += k; if (m > 255) m = 255;
@@ -2012,14 +2651,14 @@ opvp_map_color_rgb(
 			prgb[1] = gx_color_value_from_byte(~m & 0xff);
 			prgb[2] = gx_color_value_from_byte(~y & 0xff);
 			break;
-		case	OPVP_cspaceDeviceGray :
+    case OPVP_CSPACE_DEVICEGRAY:
 			return gx_default_gray_map_color_rgb(dev, color, prgb);
 			break;
-		case	OPVP_cspaceBW :
+    case OPVP_CSPACE_BW:
 			return gx_default_b_w_map_color_rgb(dev, color, prgb);
 			break;
-		case	OPVP_cspaceStandardRGB :
-		case	OPVP_cspaceDeviceRGB :
+    case OPVP_CSPACE_STANDARDRGB:
+    case OPVP_CSPACE_DEVICEKRGB:
 		default :
 			return gx_default_rgb_map_color_rgb(dev, color, prgb);
 			break;
@@ -2038,18 +2677,14 @@ opvp_fill_rectangle(
 	int			y,
 	int			w,
 	int			h,
-	gx_color_index		color
-	)
+    gx_color_index color)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)dev;
 	byte			data[8] = {0xC0, 0, 0, 0, 0xC0, 0, 0, 0};
 	int			code = -1;
 	int			ecode = 0;
-	OPVP_Brush		brush;
-	OPVP_Point		point;
-#if !(ENABLE_SIMPLE_MODE)
-	int			rop = 0;
-#endif
+    opvp_brush_t brush;
+    opvp_point_t point;
 
 	if (vector) {
 		return gdev_vector_fill_rectangle( dev, x, y, w, h, color);
@@ -2060,38 +2695,25 @@ opvp_fill_rectangle(
 
 #if !(ENABLE_SIMPLE_MODE)
 	/* call SaveGS */
-	if (apiEntry->SaveGS)
-	apiEntry->SaveGS(printerContext);
+    if (apiEntry->opvpSaveGS) {
+	apiEntry->opvpSaveGS(printerContext);
+    }
 #endif
-
-	/* zero-color */
-	opvp_set_brush_color(pdev, gx_no_color_index, &brush);
-
-	/* call SetBgColor */
-	if (apiEntry->SetBgColor)
-	apiEntry->SetBgColor(printerContext, &brush);
 
 	/* one-color */
 	opvp_set_brush_color(pdev, color, &brush);
 
 	/* call SetFillColor */
-	if (apiEntry->SetFillColor)
-	apiEntry->SetFillColor(printerContext, &brush);
-
-#if !(ENABLE_SIMPLE_MODE)
-	/* save ROP */
-	if (apiEntry->GetROP)
-	apiEntry->GetROP(printerContext, &rop);
-#endif
-	/* call SetROP */
-	if (apiEntry->SetROP)
-	apiEntry->SetROP(printerContext, 0xB8);
+    if (apiEntry->opvpSetFillColor) {
+	apiEntry->opvpSetFillColor(printerContext, &brush);
+    }
 
 	/* call SetCurrentPoint */
-	OPVP_i2Fix(x, point.x);
-	OPVP_i2Fix(y, point.y);
-	if (apiEntry->SetCurrentPoint)
-	apiEntry->SetCurrentPoint(printerContext, point.x, point.y);
+    OPVP_I2FIX(x, point.x);
+    OPVP_I2FIX(y, point.y);
+    if (apiEntry->opvpSetCurrentPoint) {
+	apiEntry->opvpSetCurrentPoint(printerContext,point.x, point.y);
+    }
 
 	/* draw image */
 	code = opvp_draw_image(pdev,
@@ -2099,31 +2721,25 @@ opvp_fill_rectangle(
 	                       2, 2,
 	                       w, h,
 	                       4,
+			   0,
 	                       data);
 	if (code) {
 		ecode = code;
 	}
 
-#if !(ENABLE_SIMPLE_MODE)
-	/* restore ROP */
-	if (rop) {
-		/* call SetROP */
-		if (apiEntry->SetROP)
-		apiEntry->SetROP(printerContext, rop);
-	}
-#endif
-
 	/* restore fill color */
 	if (vectorFillColor) {
 		/* call SetFillColor */
-		if (apiEntry->SetFillColor)
-		apiEntry->SetFillColor(printerContext, vectorFillColor);
+	if (apiEntry->opvpSetFillColor) {
+	    apiEntry->opvpSetFillColor(printerContext,vectorFillColor);
+	}
 	}
 
 #if !(ENABLE_SIMPLE_MODE)
 	/* call RestoreGS */
-	if (apiEntry->RestoreGS)
-	apiEntry->RestoreGS(printerContext);
+    if (apiEntry->opvpRestoreGS) {
+	apiEntry->opvpRestoreGS(printerContext);
+    }
 #endif
 
 	return ecode;
@@ -2135,8 +2751,7 @@ opvp_fill_rectangle(
 static	int
 opvp_copy_mono(
 	gx_device		*dev,
-/*const*/
-	byte			*data,
+    const byte *data,
 	int			data_x,
 	int			raster,
 	gx_bitmap_id		id,
@@ -2145,30 +2760,24 @@ opvp_copy_mono(
 	int			w,
 	int			h,
 	gx_color_index		zero,
-	gx_color_index		one
-	)
+    gx_color_index one)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)dev;
 	int			code = -1;
 	int			ecode = 0;
-	OPVP_Brush		brush;
-	OPVP_Point		point;
-	byte			*buff = data;
+    opvp_brush_t brush;
+    opvp_point_t point;
+    const byte *buff = data;
+    byte *mybuf = NULL;
 	int			i, j;
 	byte			*d;
-	byte			*s;
+    const byte *s;
 	int			byte_offset = 0;
-	int			bit_offset = 0;
 	int			byte_length = raster;
 	int			bit_shift = 0;
-	int			trans_color = -1;
 	int			adj_raster = raster;
-	int			adj_height = h;
 	char			bit_mask = 0xff;
-	int			loop = 1;
-#if !(ENABLE_SIMPLE_MODE)
-	int			rop = 0;
-#endif
+    bool reverse = false;
 
 	/* check page-in */
 	if (opvp_check_in_page(pdev)) return -1;
@@ -2176,109 +2785,94 @@ opvp_copy_mono(
 	/* data offset */
 	if (data_x) {
 		byte_offset = data_x >> 3;
-		bit_offset = data_x & 0x07;
-		if (bit_offset) bit_mask <<= (8 - bit_offset);
+	bit_shift = data_x & 0x07;
+	if (bit_shift) bit_mask <<= (8 - bit_shift);
 
-		if (zero == gx_no_color_index) {
-			trans_color = 0;
-		} else if (one == gx_no_color_index) {
-			trans_color = 1;
-		} else {
-			trans_color = -1;
-			bit_shift = bit_offset;
-			bit_offset = 0;
-		}
-		byte_length = (((w + (bit_offset - bit_shift)) + 7) >> 3);
+	byte_length = ((w + 7) >> 3);
 		adj_raster = ((byte_length + 3) >> 2) << 2;
 
-		if (trans_color != -1) {
-			loop = 1;
-			adj_height = h;
+	buff = mybuf = calloc(adj_raster, h);
+	if (!mybuf) {
+	    /* memory error */
+	    return -1;
 		}
-
-		buff = calloc(adj_raster, h);
-		if (buff) {
 			s = &(data[byte_offset]);
-			d = buff;
+	d = mybuf;
 			if (bit_shift) {
-				for (i = 0;i < h; i++, d += adj_raster,
-				                  s+= raster) {
+	    for (i = 0;i < h; i++, d += adj_raster, s+= raster) {
 					for (j = 0; j < byte_length; j++) {
-					d[j] = ((s[j] & ~bit_mask)
-					        << bit_shift)
-					     | ((s[j + 1] & bit_mask)
-					        >> (8 - bit_shift));
+		    d[j] = ((s[j] & ~bit_mask) << bit_shift)
+			 | ((s[j + 1] & bit_mask) >> (8 - bit_shift));
 					}
 				}
 			} else {
-				for (i = 0;i < h; i++, d += adj_raster,
-				                  s += raster) {
-					memcpy(d, s, byte_length);
-					if (bit_offset) {
-						if (trans_color == 0) {
-							*d &= ~bit_mask;
-						} else {
-							*d |= bit_mask;
-						}
+	    for (i = 0;i < h; i++, d += adj_raster, s+= raster) {
+		for (j = 0; j < byte_length; j++) {
+		    d[j] = s[j];
 					}
 				}
 			}
 			byte_offset = 0;
-		} else {
-			buff = data;
-			loop = y;
-			adj_raster = raster;
-			adj_height = 1;
-			if (bit_shift) bit_offset = bit_shift;
-		}
 	}
 
 #if !(ENABLE_SIMPLE_MODE)
 	/* call SaveGS */
-	if (apiEntry->SaveGS)
-	apiEntry->SaveGS(printerContext);
+    if (apiEntry->opvpSaveGS) {
+	apiEntry->opvpSaveGS(printerContext);
+    }
 #endif
+    if (one == gx_no_color_index) {
+	gx_color_index tc;
 
+	reverse = (!reverse);
+	tc = zero;
+	zero = one;
+	one = tc;
+    }
+
+    if (zero != gx_no_color_index) {
+	/* not mask */
+	/* Set PaintMode */
+	if (apiEntry->opvpSetPaintMode) {
+	    apiEntry->opvpSetPaintMode(printerContext,OPVP_PAINTMODE_OPAQUE);
+	}
 	/* zero-color */
 	opvp_set_brush_color(pdev, zero, &brush);
 
 	/* call SetBgColor */
-	if (apiEntry->SetBgColor)
-	apiEntry->SetBgColor(printerContext, &brush);
+	if (apiEntry->opvpSetBgColor) {
+	    apiEntry->opvpSetBgColor(printerContext, &brush);
+	}
+    }
 
 	/* one-color */
 	opvp_set_brush_color(pdev, one, &brush);
 
 	/* call SetFillColor */
-	if (apiEntry->SetFillColor)
-	apiEntry->SetFillColor(printerContext, &brush);
+    if (apiEntry->opvpSetFillColor) {
+	apiEntry->opvpSetFillColor(printerContext, &brush);
+    }
 
-#if !(ENABLE_SIMPLE_MODE)
-	/* save ROP */
-	if (apiEntry->GetROP)
-	apiEntry->GetROP(printerContext, &rop);
-#endif
-	/* call SetROP */
-	if (zero == gx_no_color_index) {
-		if (apiEntry->SetROP)
-		apiEntry->SetROP(printerContext, 0xB8);
-	} else {
-		if (apiEntry->SetROP)
-		apiEntry->SetROP(printerContext, 0xCC);
+    if (reverse) {
+	/* 0/1 reverse image */
+	int n = adj_raster*h;
+
+	if (buff == data) {
+	    /* buff was not allocated from this function yet */
+	    /* allocate here */
+	    if ((mybuf = malloc(n)) == 0) return -1;
 	}
-
-	/* adjust */
-	x -= bit_offset;
-	w += bit_offset;
-	h = adj_height;
-
-	/* loop */
-	for (i = 0; i < loop; i++, y += h) {
+	for (i = 0;i < n;i++) {
+	    mybuf[i] = ~buff[i];
+	}
+	buff = mybuf;
+    }
 		/* call SetCurrentPoint */
-		OPVP_i2Fix(x, point.x);
-		OPVP_i2Fix(y, point.y);
-		if (apiEntry->SetCurrentPoint)
-		apiEntry->SetCurrentPoint(printerContext, point.x, point.y);
+    OPVP_I2FIX(x, point.x);
+    OPVP_I2FIX(y, point.y);
+    if (apiEntry->opvpSetCurrentPoint) {
+	apiEntry->opvpSetCurrentPoint(printerContext,point.x, point.y);
+    }
 
 		/* draw image */
 		code = opvp_draw_image(pdev,
@@ -2286,37 +2880,37 @@ opvp_copy_mono(
 				       w, h,
 				       w, h,
 				       adj_raster,
-				       &(buff[byte_offset + (adj_raster * i)]));
+			   1,
+			   &(buff[byte_offset]));
 		if (code) {
 			ecode = code;
-			break;
-		}
 	}
 
-#if !(ENABLE_SIMPLE_MODE)
-	/* restore ROP */
-	if (rop) {
-		/* call SetROP */
-		if (apiEntry->SetROP)
-		apiEntry->SetROP(printerContext, rop);
+    if (zero != gx_no_color_index) {
+	/* restore PaintMode */
+	if (apiEntry->opvpSetPaintMode) {
+	    apiEntry->opvpSetPaintMode(printerContext,
+	      OPVP_PAINTMODE_TRANSPARENT);
 	}
-#endif
-
+	}
 	/* restore fill color */
 	if (vectorFillColor) {
 		/* call SetFillColor */
-		if (apiEntry->SetFillColor)
-		apiEntry->SetFillColor(printerContext, vectorFillColor);
+	if (apiEntry->opvpSetFillColor) {
+	    apiEntry->opvpSetFillColor(printerContext,vectorFillColor);
+	}
 	}
 
 #if !(ENABLE_SIMPLE_MODE)
 	/* call RestoreGS */
-	if (apiEntry->RestoreGS)
-	apiEntry->RestoreGS(printerContext);
+    if (apiEntry->opvpRestoreGS) {
+	apiEntry->opvpRestoreGS(printerContext);
+    }
 #endif
 
 	if (buff != data) {
-		if (buff) free(buff);
+	/* buff was allocated from this function */
+	if (mybuf) free(mybuf);
 	}
 
 	return ecode;
@@ -2328,35 +2922,28 @@ opvp_copy_mono(
 static	int
 opvp_copy_color(
 	gx_device		*dev,
-/*const*/
-	byte			*data,
+    const byte *data,
 	int			data_x,
 	int			raster,
 	gx_bitmap_id		id,
 	int			x,
 	int			y,
 	int			w,
-	int			h
-	)
+    int h)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)dev;
 	int			code = -1;
 	int			ecode = 0;
-	OPVP_Point		point;
-	byte			*buff = data;
+    opvp_point_t point;
+    const byte *buff = data;
+    byte *mybuf = NULL;
 	int			i;
 	byte			*d;
-	byte			*s;
+    const byte *s;
 	int			byte_length = raster;
 	int			depth;
 	int			pixel;
 	int			adj_raster = raster;
-	int			adj_height = h;
-	int			loop = 1;
-#if !(ENABLE_SIMPLE_MODE)
-	int			j;
-	int			rop = 0;
-#endif
 
 	/* check page-in */
 	if (opvp_check_in_page(pdev)) return -1;
@@ -2368,46 +2955,32 @@ opvp_copy_color(
 		byte_length = pixel * w;
 		adj_raster = ((byte_length + 3) >> 2) << 2;
 
-		buff = malloc(adj_raster * h);
-		if (buff) {
-			s = &(data[data_x]);
-			d = buff;
+	buff = mybuf = malloc(adj_raster * h);
+	if (!mybuf) {
+	    /* memory error */
+	    return -1;
+	}
+	s = &(data[data_x*pixel]);
+	d = mybuf;
 			for (i = 0;i < h; i++, d += adj_raster, s += raster) {
 				memcpy(d, s, byte_length);
 			}
-		} else {
-			buff = data;
-			loop = y;
-			adj_height = 1;
-			adj_raster = raster;
-		}
+	data_x = 0;
 	}
 
 #if !(ENABLE_SIMPLE_MODE)
 	/* call SaveGS */
-	if (apiEntry->SaveGS)
-	apiEntry->SaveGS(printerContext);
+    if (apiEntry->opvpSaveGS) {
+	apiEntry->opvpSaveGS(printerContext);
+    }
 #endif
 
-#if !(ENABLE_SIMPLE_MODE)
-	/* save ROP */
-	if (apiEntry->GetROP)
-	apiEntry->GetROP(printerContext, &rop);
-#endif
-	/* call SetROP */
-	if (apiEntry->SetROP)
-	apiEntry->SetROP(printerContext, 0xCC); /* SRCCOPY */
-
-	/* adjust */
-	h = adj_height;
-
-	/* loop */
-	for (i = 0; i < loop; i++, y += h) {
 		/* call SetCurrentPoint */
-		OPVP_i2Fix(x, point.x);
-		OPVP_i2Fix(y, point.y);
-		if (apiEntry->SetCurrentPoint)
-		apiEntry->SetCurrentPoint(printerContext, point.x, point.y);
+    OPVP_I2FIX(x, point.x);
+    OPVP_I2FIX(y, point.y);
+    if (apiEntry->opvpSetCurrentPoint) {
+	apiEntry->opvpSetCurrentPoint(printerContext, point.x, point.y);
+    }
 
 		/* draw image */
 		code = opvp_draw_image(pdev,
@@ -2415,30 +2988,23 @@ opvp_copy_color(
 				       w, h,
 				       w, h,
 					   adj_raster,
-				       &(buff[data_x + (adj_raster * i)]));
+			   0,
+			   &(buff[data_x]));
 		if (code) {
 			ecode = code;
-			break;
-		}
 	}
 
-#if !(ENABLE_SIMPLE_MODE)
-	/* restore ROP */
-	if (rop) {
-		/* call SetROP */
-		if (apiEntry->SetROP)
-		apiEntry->SetROP(printerContext, rop);
-	}
-#endif
 
 #if !(ENABLE_SIMPLE_MODE)
 	/* call RestoreGS */
-	if (apiEntry->RestoreGS)
-	apiEntry->RestoreGS(printerContext);
+    if (apiEntry->opvpRestoreGS) {
+	apiEntry->opvpRestoreGS(printerContext);
+    }
 #endif
 
 	if (buff != data) {
-		if (buff) free(buff);
+	/* buff was allocated from this function */
+	if (mybuf) free(mybuf);
 	}
 
 	return ecode;
@@ -2448,9 +3014,7 @@ opvp_copy_color(
  * get params
  */
 static	int
-_get_params(
-	gs_param_list		*plist
-	)
+_get_params(gs_param_list *plist)
 {
 	int			code;
 	int			ecode = 0;
@@ -2471,7 +3035,7 @@ _get_params(
 
 	/* vector driver name */
 	pname = "Driver";
-	vdps.data = vectorDriver;
+    vdps.data = (byte *)vectorDriver;
 	vdps.size = (vectorDriver ? strlen(vectorDriver) + 1 : 0);
 	vdps.persistent = false;
 	code = param_write_string(plist, pname, &vdps);
@@ -2479,7 +3043,7 @@ _get_params(
 
 	/* printer model name */
 	pname = "Model";
-	pmps.data = printerModel;
+    pmps.data = (byte *)printerModel;
 	pmps.size = (printerModel ? strlen(printerModel) + 1 : 0);
 	pmps.persistent = false;
 	code = param_write_string(plist, pname, &pmps);
@@ -2487,7 +3051,7 @@ _get_params(
 
 	/* job info */
 	pname = "JobInfo";
-	jips.data = jobInfo;
+    jips.data = (byte *)jobInfo;
 	jips.size = (jobInfo ? strlen(jobInfo) + 1 : 0);
 	jips.persistent = false;
 	code = param_write_string(plist, pname, &jips);
@@ -2495,7 +3059,7 @@ _get_params(
 
 	/* doc info */
 	pname = "DocInfo";
-	dips.data = docInfo;
+    dips.data = (byte *)docInfo;
 	dips.size = (docInfo ? strlen(docInfo) + 1 : 0);
 	dips.persistent = false;
 	code = param_write_string(plist, pname, &dips);
@@ -2524,7 +3088,7 @@ _get_params(
 			break;
 	}
 	pname = "FastImage";
-	fips.data = fastImage;
+    fips.data = (byte *)fastImage;
 	fips.size = (fastImage ? strlen(fastImage) + 1 : 0);
 	fips.persistent = false;
 	code = param_write_string(plist, pname, &fips);
@@ -2534,28 +3098,28 @@ _get_params(
 	memset((void*)buff, 0, OPVP_BUFF_SIZE);
 	pname = "MarginLeft";
 	snprintf(buff, OPVP_BUFF_SIZE - 1, "%f",margins[0]);
-	mlps.data = buff;
+    mlps.data = (byte *)buff;
 	mlps.size = strlen(buff) + 1;
 	mlps.persistent = false;
 	code = param_write_string(plist, pname, &mlps);
 	if (code) ecode = code;
 	pname = "MarginTop";
 	snprintf(buff, OPVP_BUFF_SIZE - 1, "%f",margins[3]);
-	mtps.data = buff;
+    mtps.data = (byte *)buff;
 	mtps.size = strlen(buff) + 1;
 	mtps.persistent = false;
 	code = param_write_string(plist, pname, &mtps);
 	if (code) ecode = code;
 	pname = "MarginRight";
 	snprintf(buff, OPVP_BUFF_SIZE - 1, "%f",margins[2]);
-	mrps.data = buff;
+    mrps.data = (byte *)buff;
 	mrps.size = strlen(buff) + 1;
 	mrps.persistent = false;
 	code = param_write_string(plist, pname, &mrps);
 	if (code) ecode = code;
 	pname = "MarginBottom";
 	snprintf(buff, OPVP_BUFF_SIZE - 1, "%f",margins[1]);
-	mbps.data = buff;
+    mbps.data = (byte *)buff;
 	mbps.size = strlen(buff) + 1;
 	mbps.persistent = false;
 	code = param_write_string(plist, pname, &mbps);
@@ -2564,7 +3128,7 @@ _get_params(
 	/* zoom */
 	pname = "Zoom";
 	snprintf(buff, OPVP_BUFF_SIZE - 1, "%f",zoom[0]);
-	zmps.data = buff;
+    zmps.data = (byte *)buff;
 	zmps.size = strlen(buff) + 1;
 	zmps.persistent = false;
 	code = param_write_string(plist, pname, &zmps);
@@ -2577,10 +3141,7 @@ _get_params(
  * get params for vector
  */
 static	int
-opvp_get_params(
-	gx_device		*dev,
-	gs_param_list		*plist
-	)
+opvp_get_params(gx_device *dev, gs_param_list *plist)
 {
 	int			code;
 
@@ -2596,10 +3157,7 @@ opvp_get_params(
  * get params for inkjet
  */
 static	int
-oprp_get_params(
-	gx_device		*dev,
-	gs_param_list		*plist
-	)
+oprp_get_params(gx_device *dev, gs_param_list *plist)
 {
 	int			code;
 
@@ -2615,9 +3173,7 @@ oprp_get_params(
  * put params
  */
 static	int
-_put_params(
-	gs_param_list		*plist
-	)
+_put_params(gs_param_list *plist)
 {
 	int			code;
 	int			ecode = 0;
@@ -2835,10 +3391,7 @@ _put_params(
  * put params for vector
  */
 static	int
-opvp_put_params(
-	gx_device		*dev,
-	gs_param_list		*plist
-	)
+opvp_put_params(gx_device *dev, gs_param_list *plist)
 {
 	int			code;
 
@@ -2854,10 +3407,7 @@ opvp_put_params(
  * put params for inkjet
  */
 static	int
-oprp_put_params(
-	gx_device		*dev,
-	gs_param_list		*plist
-	)
+oprp_put_params(gx_device *dev, gs_param_list *plist)
 {
 	int			code;
 
@@ -2879,14 +3429,13 @@ const	gs_imager_state		*pis,
 	gx_path			*ppath,
 const	gx_fill_params		*params,
 const	gx_device_color		*pdevc,
-const	gx_clip_path		*pxpath
-	)
+    const gx_clip_path *pxpath)
 {
 	bool			draw_image = false;
 	gs_fixed_rect		inner, outer;
 
 	/* check clippath support */
-	if (!(apiEntry->SetClipPath)) {
+    if (!(apiEntry->opvpSetClipPath)) {
 		/* get clipping box area */
 		gx_cpath_inner_box(pxpath,&inner);
 		gx_cpath_outer_box(pxpath,&outer);
@@ -2899,8 +3448,7 @@ const	gx_clip_path		*pxpath
 	}
 
 	if (!vector || draw_image) {
-		return gx_default_fill_path(dev, pis, ppath,
-	                                    params, pdevc, pxpath);
+	return gx_default_fill_path(dev, pis, ppath, params, pdevc, pxpath);
 	}
 
 	return gdev_vector_fill_path(dev, pis, ppath, params, pdevc, pxpath);
@@ -2916,14 +3464,13 @@ const	gs_imager_state		*pis,
 	gx_path			*ppath,
 const	gx_stroke_params	*params,
 const	gx_drawing_color	*pdcolor,
-const	gx_clip_path		*pxpath
-	)
+    const gx_clip_path *pxpath)
 {
 	bool			draw_image = false;
 	gs_fixed_rect		inner, outer;
 
 	/* check clippath support */
-	if (!(apiEntry->SetClipPath)) {
+    if (!(apiEntry->opvpSetClipPath)) {
 		/* get clipping box area */
 		gx_cpath_inner_box(pxpath,&inner);
 		gx_cpath_outer_box(pxpath,&outer);
@@ -2961,12 +3508,11 @@ const	byte			*data,
 const	gx_drawing_color	*pdcolor,
 	int			depth,
 	gs_logical_operation_t	lop,
-const	gx_clip_path		*pcpath
-	)
+    const gx_clip_path *pcpath)
 {
 	if (vector) {
-#if GS_VERSION_MAJOR >= 8
-		gdev_vector_update_fill_color((gx_device_vector *)dev, NULL, pdcolor);	/* for gs 8.15 */
+#if GS_VERSION_MAJOR >= 8	/* for gs 8.15 */
+	gdev_vector_update_fill_color((gx_device_vector *)dev, NULL, pdcolor);
 #else
 		gdev_vector_update_fill_color((gx_device_vector *)dev, pdcolor);
 #endif
@@ -2991,25 +3537,22 @@ const	gs_int_rect				*prect,
 const	gx_drawing_color		*pdcolor,
 const	gx_clip_path			*pcpath,
 		gs_memory_t				*mem,
-		gx_image_enum_common_t	**pinfo
-	)
+    gx_image_enum_common_t **pinfo)
 {
 	gx_device_vector	*vdev =(gx_device_vector *)dev;
 	gdev_vector_image_enum_t	*vinfo;
 	gs_matrix		mtx;
-	OPVP_CTM		ctm;
+    opvp_ctm_t ctm;
 	bool			draw_image = false;
 	bool			supported_angle = false;
 	int			code = -1;
+    opvp_result_t r = -1;
 	int			ecode = 0;
-	OPVP_Rectangle		rect;
-	OPVP_Brush		brush;
-	int			bits_per_pixel;
+    int bits_per_pixel = 24;
 	bool			can_reverse = false;
 	int			p;
 	float			mag[2] = {1, 1};
 const	gs_color_space		*pcs = pim->ColorSpace;
-	gs_color_space_index	index;
 
 	color_index = 0;
 
@@ -3027,36 +3570,66 @@ const	gs_color_space		*pcs = pim->ColorSpace;
 		if (code) ecode = code;
 
 		if (!ecode) {
-#if 0	/* deleted to speed up 256-color image printing */
-			/* check 256-color image, Thanks to T */
-			/* Unavailiavle color space check */
-			if (!(pim->ImageMask)) {
-				index = gs_color_space_get_index(pcs);
-				if (index == gs_color_space_index_Indexed)
-					return gx_default_begin_image(
-					           dev, pis, pim, format,
-					           prect, pdcolor, pcpath,
-					           mem, pinfo);
-			}
-#endif
 			/* bits per pixel */
-			for (bits_per_pixel=0, p=0; p < vinfo->num_planes; p++) 
+	    for (bits_per_pixel=0, p=0; p < vinfo->num_planes; p++) {
 				bits_per_pixel += vinfo->plane_depths[p];
+	    }
 
 			/* for indexed color */
 			if (!(pim->ImageMask)) {
 				color_index = gs_color_space_get_index(pcs);
 				if (color_index == gs_color_space_index_Indexed) {
-					if (pcs->params.indexed.lookup.table.size > 3*256) {
+		    base_color_index
+		      = gs_color_space_indexed_base_space(pcs)->type->index;
+		    if (((pcs->params.indexed.hival + 1) > 256) 
+		        || (bits_per_pixel != 8 && bits_per_pixel != 1)) {
 						return gx_default_begin_image(
 							dev, pis, pim, format,
 							prect, pdcolor, pcpath,
 							mem, pinfo);
-					} else {
+		    } else if (base_color_index
+		         == gs_color_space_index_DeviceCMYK) {
+			/* for CMYK indexed color */
+			int count;
+			const unsigned char *p
+			     = pcs->params.indexed.lookup.table.data;
+			frac rgb[3];
+ 
+			for(count = 0;count <
+			     (pcs->params.indexed.hival + 1); count++) {
+			    memset(rgb, 0, sizeof(rgb));
+			    color_cmyk_to_rgb(
+			       byte2frac((*(p + 0 + (count * 4)))),
+			       byte2frac((*(p + 1 + (count * 4)))),
+			       byte2frac((*(p + 2 + (count * 4)))),
+			       byte2frac((*(p + 3 + (count * 4)))),
+			       pis, rgb);
+			    *(palette + 0 + (count * 3)) = frac2byte(rgb[0]);
+			    *(palette + 1 + (count * 3)) = frac2byte(rgb[1]);
+			    *(palette + 2 + (count * 3)) = frac2byte(rgb[2]);
+			}
+
+			bits_per_pixel = 24;
+		    } else if (base_color_index
+		        == gs_color_space_index_DeviceRGB ||
+		        base_color_index == gs_color_space_index_CIEABC) {
+			/* for RGB or CalRGB indexed color */
 						memcpy(palette, pcs->params.indexed.lookup.table.data,\
 						pcs->params.indexed.lookup.table.size);
-						if (bits_per_pixel == 8)
 							bits_per_pixel = 24;
+		    } else if (base_color_index
+		        == gs_color_space_index_DeviceGray ||
+			base_color_index == gs_color_space_index_CIEA) {
+			/* for Gray or CalGray indexed color */
+			memcpy(palette, pcs->params.indexed.lookup.table.data,\
+			pcs->params.indexed.lookup.table.size);
+			bits_per_pixel = 8;
+		    } else {
+			/* except CMYK and RGB */
+			return gx_default_begin_image(
+				    dev, pis, pim, format,
+				    prect, pdcolor, pcpath,
+				    mem, pinfo);
 					}
 				}
 			}
@@ -3072,8 +3645,7 @@ const	gs_color_space		*pcs = pim->ColorSpace;
 			gs_matrix_multiply(&mtx, &ctm_only(pis), &mtx);
 			switch (FastImageMode) {
 				case	FastImageNoCTM :
-					if ((mtx.xy==0)&&(mtx.yx==0)&&
-					    (mtx.yy>=0)) {
+		if ((mtx.xy==0)&&(mtx.yx==0)&& (mtx.yy>=0)) {
 						if (mtx.xx>=0) {
 							mag[0] = mtx.xx;
 							mag[1] = mtx.yy;
@@ -3094,8 +3666,7 @@ const	gs_color_space		*pcs = pim->ColorSpace;
 					}
 					break;
 				case	FastImageNoRotate :
-					if ((mtx.xy==0)&&(mtx.yx==0)&&
-					    (mtx.yy>=0)) {
+		if ((mtx.xy==0)&&(mtx.yx==0)&& (mtx.yy>=0)) {
 						if (mtx.xx>=0) {
 							supported_angle = true;
 						} else if (can_reverse) {
@@ -3145,26 +3716,6 @@ const	gs_color_space		*pcs = pim->ColorSpace;
 				default :
 					break;
 			}
-#if 1
-			if (supported_angle) {
-				/* moveto */
-				opvp_moveto(vdev, 0, 0, mtx.tx, mtx.ty, 0);
-			}
-#endif
-			if ((supported_angle) &&
-			    (FastImageMode != FastImageNoCTM)) {
-				/* call SetCTM */
-				ctm.a = mtx.xx;
-				ctm.b = mtx.xy;
-				ctm.c = mtx.yx;
-				ctm.d = mtx.yy;
-				ctm.e = mtx.tx;
-				ctm.f = mtx.ty;
-				if (apiEntry->SetCTM)
-				code = apiEntry->SetCTM(printerContext, &ctm);
-				else code = -1;
-				if (code != OPVP_OK) ecode = code;
-			}
 		}
 
 		if ((!ecode) && supported_angle) {
@@ -3183,7 +3734,7 @@ const	gs_color_space		*pcs = pim->ColorSpace;
 				 * 3 planes 24 bits color image
 				 * (8 bits per plane)
 				 */
-				if (apiEntry->StartDrawImage) {
+		if (apiEntry->opvpStartDrawImage) {
 					draw_image = true;
 				}
 			}
@@ -3194,65 +3745,138 @@ const	gs_color_space		*pcs = pim->ColorSpace;
 		*pinfo = (gx_image_enum_common_t *)vinfo;
 
 		if (!ecode) {
-#if 0
-			if (FastImageMode == FastImageNoCTM) {
+	    if (!pim->ImageMask) {
+		/* call SetPaintMode */
+		if (apiEntry->opvpSetPaintMode) {
+		    apiEntry->opvpSetPaintMode(printerContext,
+		       OPVP_PAINTMODE_OPAQUE);
+		    change_paint_mode = true;
+		}
+		/* set color space */
+		if (apiEntry->opvpSetColorSpace != NULL) {
+		    opvp_cspace_t ncspace;
+
+		    savedColorSpace = colorSpace;
+		    switch (bits_per_pixel) {
+		    case 1:
+			ncspace = OPVP_CSPACE_DEVICEGRAY;
+			bits_per_pixel = 8;
+			if (!cspace_available[ncspace]) {
+			    ncspace = OPVP_CSPACE_STANDARDRGB;
+			    bits_per_pixel = 24;
+			}
+			break;
+		    case 8:
+			ncspace = OPVP_CSPACE_DEVICEGRAY;
+			if (!cspace_available[ncspace]) {
+			    ncspace = OPVP_CSPACE_STANDARDRGB;
+			    bits_per_pixel = 24;
+			}
+			break;
+		    case 24:
+			ncspace = OPVP_CSPACE_DEVICERGB;
+			if (!cspace_available[ncspace]) {
+			    ncspace = OPVP_CSPACE_STANDARDRGB;
+			}
+			break;
+		    default:
+			r = -1;
+			goto fallthrough;
+			break;
+		    }
+		    if (ncspace != colorSpace) {
+			if (apiEntry->opvpSetColorSpace(printerContext,ncspace)
+			     != OPVP_OK) {
+			    r = -1;
+			    goto fallthrough;
+			}
+			colorSpace = ncspace;
+			change_cspace = true;
+		    }
+		}
+	    }
+	}
+	if (!ecode) {
+	    if (supported_angle) {
 				/* moveto */
 				opvp_moveto(vdev, 0, 0, mtx.tx, mtx.ty, 0);
-			} else {
-				/* moveto new origin */
-				opvp_moveto(vdev, 0, 0, 0, 0, 0);
 			}
-#endif
+	    if ((supported_angle) && (FastImageMode != FastImageNoCTM)) {
+		/* call SetCTM */
+		ctm.a = mtx.xx;
+		ctm.b = mtx.xy;
+		ctm.c = mtx.yx;
+		ctm.d = mtx.yy;
+		ctm.e = mtx.tx;
+		ctm.f = mtx.ty;
+		if (apiEntry->opvpSetCTM) {
+		    r = apiEntry->opvpSetCTM(printerContext, &ctm);
+			}
+		else r = -1;
+		if (r != OPVP_OK) ecode = r;
+	    }
+	}
+	if (!ecode) {
+	    int dw,dh;
 
-#if 0
-			if ((vinfo->num_planes == 1) &&
-			    (vinfo->plane_depths[0] == 1)) {
-				/* zero-color */
-				opvp_set_brush_color((gx_device_opvp*)vdev,
-				                     vdev->white, &brush);
-				/* call SetBgColor */
-				if (apiEntry->SetBgColor)
-				apiEntry->SetBgColor(printerContext, &brush);
-				/* one-color */
-				opvp_set_brush_color((gx_device_opvp*)vdev,
-				                     vdev->black, &brush);
-				/* call SetFillColor */
-				if (apiEntry->SetFillColor)
-				apiEntry->SetFillColor(printerContext, &brush);
-			}
-#endif
-			/* call SetROP */
-			if (apiEntry->SetROP)
-			apiEntry->SetROP(printerContext, 0xCC);
 			/* image size */
-			OPVP_i2Fix(0, rect.p0.x);
-			OPVP_i2Fix(0, rect.p0.y);
 			if (mag[0] != 1) {
-				OPVP_f2Fix(vinfo->width * mag[0], rect.p1.x);
+		dw = floor(vinfo->width * mag[0]+0.5);
 			} else {
-				OPVP_i2Fix(vinfo->width, rect.p1.x);
+		dw = vinfo->width;
 			}
 			if (mag[1] != 1) {
-				OPVP_f2Fix(vinfo->height * mag[1], rect.p1.y);
+		dh = floor(vinfo->height * mag[1]+0.5);
 			} else {
-				OPVP_i2Fix(vinfo->height, rect.p1.y);
+		dh = vinfo->height;
 			}
 			/* call StartDrawImage */
-			if (apiEntry->StartDrawImage)
-			code = apiEntry->StartDrawImage(printerContext,
+	    if (apiEntry->opvpStartDrawImage) {
+		opvp_int_t adj_raster;
+
+		adj_raster = bits_per_pixel*vinfo->width;
+		adj_raster = ((adj_raster+31) >> 5) << 2;
+		r = apiEntry->opvpStartDrawImage(
+					printerContext,
 							vinfo->width,
 							vinfo->height,
-							bits_per_pixel,
-							OPVP_iformatRaw,
-							rect);
+					adj_raster,
+					pim->ImageMask ?
+					  OPVP_IFORMAT_MASK:
+					  OPVP_IFORMAT_RAW,
+					dw,dh);
+		if(r != OPVP_OK) {
+		    if (apiEntry->opvpEndDrawImage) {
+			apiEntry->opvpEndDrawImage(printerContext);
+		    }
+		}
+	    }
 			
 			/* bugfix for 32bit CMYK image print error */
-			if(code != OPVP_OK) {
-				if(apiEntry->ResetCTM)
-					apiEntry->ResetCTM(printerContext);	/* reset CTM */
+fallthrough:
+	    if(r != OPVP_OK) {
+		if (change_paint_mode) {
+		    /* restore paint mode */
+		    if (apiEntry->opvpSetPaintMode) {
+			apiEntry->opvpSetPaintMode(printerContext,
+			   OPVP_PAINTMODE_TRANSPARENT);
+		    }
+		    change_paint_mode = false;
+		}
+		if (change_cspace) {
+		    /* restore color space */
+		    colorSpace = savedColorSpace;
+		    if (apiEntry->opvpSetColorSpace) {
+			apiEntry->opvpSetColorSpace(printerContext,
+			   colorSpace);
+		    }
+		    change_cspace = false;
+		}
+		if(apiEntry->opvpResetCTM) {
+		    apiEntry->opvpResetCTM(printerContext); /* reset CTM */
+		}
 				return gx_default_begin_image(dev, pis, pim, format,
 									prect, pdcolor, pcpath, mem, pinfo);
-				/* ecode = code; */
 			}
 		}
 
@@ -3275,8 +3899,7 @@ opvp_image_plane_data(
 		gx_image_enum_common_t	*info,
 const	gx_image_plane_t		*planes,
 		int						height,
-		int						*rows_used
-	)
+    int *rows_used)
 {
 	gdev_vector_image_enum_t	*vinfo;
 	byte		*tmp_buf = NULL;
@@ -3298,11 +3921,11 @@ const	gx_image_plane_t		*planes,
 
 	vinfo = (gdev_vector_image_enum_t *)info;
 
-	if (!begin_image)
-		return 0;
+    if (!begin_image) return 0;
 
-	for (bits_per_pixel=0, p=0; p < vinfo->num_planes; p++) 
+    for (bits_per_pixel=0, p=0; p < vinfo->num_planes; p++) {
 		bits_per_pixel += vinfo->plane_depths[p];
+    }
 	
 	data_bytes = (bits_per_pixel * vinfo->width + 7) >> 3;
 	raster_length = ((data_bytes + 3) >> 2) << 2;
@@ -3316,15 +3939,21 @@ const	gx_image_plane_t		*planes,
 	}
 
 	if (buf) {
+	/* Adjust image data gamma */
+	pbe = (bbox_image_enum *)vinfo->bbox_info;
+	tinfo = (gx_image_enum *)pbe->target_info;
+	pis = tinfo->pis;
+	
 		if (vinfo->num_planes == 1) {
 			for (h = 0; h < height; h++) {
 				d = raster_length * h;
-				if ((reverse_image) && (bits_per_pixel == 8)) {
-					for (x = data_bytes * (h + 1) - 1;
+		if (reverse_image) {
+		    int bytes_per_pixel = bits_per_pixel / 8;
+		    for (x = data_bytes * (h + 1) - bytes_per_pixel;
 					     x >= data_bytes * h;
-					     x--, d++) {
-						buf[d]
-						    = (byte)planes[0].data[x];
+			  x-=bytes_per_pixel,
+			  d+=bytes_per_pixel) {
+			memcpy(buf+d, planes[0].data+x, bytes_per_pixel);
 					}
 				} else {
 					memcpy(buf + d,
@@ -3343,8 +3972,7 @@ const	gx_image_plane_t		*planes,
 						for (p = 0;
 						     p < vinfo->num_planes;
 						     p++, d++) {
-							buf[d] = (byte)
-							   (planes[p].data[x]);
+			    buf[d] = (byte)(planes[p].data[x]);
 						}
 					}
 				} else {
@@ -3362,10 +3990,29 @@ const	gx_image_plane_t		*planes,
 			}
 		}
 		
-		/* Convert 256 color -> RGB */
-		if(color_index == gs_color_space_index_Indexed) {	/* 256 color */
-			if (vinfo->bits_per_pixel >= 8) {		/* 8bit image */
-				dst_bytes = data_bytes * 3;
+	if (tinfo->masked) {
+	    bool reverse = false;
+
+	    /* image mask */
+	    if (imageDecode[0] == 0) {
+		reverse = true;
+	    }
+	    if (reverse) {
+		for (i = 0; i < height; i++) {
+		    src_ptr = buf + raster_length * i;
+		    for (j = 0; j < data_bytes; j++) {
+			src_ptr[j] ^= 0xff;
+		    }
+		}
+	    }
+	} else {
+	    if(color_index == gs_color_space_index_Indexed) {
+		if (base_color_index == gs_color_space_index_DeviceGray ||
+		   base_color_index == gs_color_space_index_CIEA) {
+		    if (colorSpace == OPVP_CSPACE_DEVICEGRAY) {
+			/* Convert indexed gray color -> Gray */
+			if (bits_per_pixel == 8) { /* 8bit image */
+			    dst_bytes = data_bytes;
 				dst_length = ((dst_bytes + 3) >> 2) << 2;
 				
 				tmp_buf = calloc(dst_length, height);
@@ -3374,10 +4021,57 @@ const	gx_image_plane_t		*planes,
 						src_ptr = buf + raster_length * i;
 						dst_ptr = tmp_buf + dst_length * i;
 						for (j = 0; j < data_bytes; j++) {
-							ppalette = palette + src_ptr[j] * 3;
-							dst_ptr[j*3]     = ppalette[0];		/* R */
-							dst_ptr[j*3 + 1] = ppalette[1];		/* G */
-							dst_ptr[j*3 + 2] = ppalette[2];		/* B */
+					ppalette = palette + src_ptr[j] ;
+					dst_ptr[j] = ppalette[0];
+				    }
+				}
+				
+				free (buf);
+				buf = tmp_buf;
+				data_bytes = dst_bytes;
+				raster_length = dst_length;
+				vinfo->bits_per_pixel = 8;
+			    }
+			} else { /* 1bit image */
+			    dst_bytes = vinfo->width;
+			    dst_length = ((dst_bytes + 3) >> 2) << 2;
+			    
+			    tmp_buf = calloc(dst_length, height);
+			    if (tmp_buf) {
+				for (i = 0; i < height; i++) {
+				    src_ptr = buf + raster_length * i;
+				    dst_ptr = tmp_buf + dst_length * i;
+				    for (j = 0; j < vinfo->width; j++) {
+					int o = ((src_ptr[j/8] & (1 << (7 - (j & 7))))
+						   != 0);
+					ppalette = palette + o;
+					dst_ptr[j] = ppalette[0];
+				    }
+				}
+
+				free (buf);
+				buf = tmp_buf;
+				data_bytes = dst_bytes;
+				raster_length = dst_length;
+				vinfo->bits_per_pixel = 8;
+			    }
+			}
+		    } else {
+			/* Convert indexed Gray color -> RGB */
+			if (bits_per_pixel == 8) { /* 8bit image */
+			    dst_bytes = data_bytes * 3;
+			    dst_length = ((dst_bytes + 3) >> 2) << 2;
+			    
+			    tmp_buf = calloc(dst_length, height);
+			    if (tmp_buf) {
+				for (i = 0; i < height; i++) {
+				    src_ptr = buf + raster_length * i;
+				    dst_ptr = tmp_buf + dst_length * i;
+				    for (j = 0; j < data_bytes; j++) {
+					ppalette = palette + src_ptr[j] * 3;
+					dst_ptr[j*3] = ppalette[0]; /* R */
+					dst_ptr[j*3 + 1] = ppalette[0]; /* G */
+					dst_ptr[j*3 + 2] = ppalette[0]; /* B */
 						}
 					}
 					
@@ -3388,91 +4082,231 @@ const	gx_image_plane_t		*planes,
 					vinfo->bits_per_pixel = 24;
 				}
 			} else {		/* 1bit image */
-				if (palette[0] == 0) {		/* 0/1 reverse is needed */
+			    dst_bytes = vinfo->width * 3;
+			    dst_length = ((dst_bytes + 3) >> 2) << 2;
+			    
+			    tmp_buf = calloc(dst_length, height);
+			    if (tmp_buf) {
 					for (i = 0; i < height; i++) {
 						src_ptr = buf + raster_length * i;
-						for (j = 0; j < data_bytes; j++)
-							src_ptr[j] ^= 0xff;
+				    dst_ptr = tmp_buf + dst_length * i;
+				    for (j = 0; j < vinfo->width; j++) {
+					int o = ((src_ptr[j/8] & (1 << (7 - (j & 7))))
+						   != 0);
+					ppalette = palette + o * 3;
+					dst_ptr[j*3] = ppalette[0]; /* R */
+					dst_ptr[j*3 + 1] = ppalette[0]; /* G */
+					dst_ptr[j*3 + 2] = ppalette[0]; /* B */
 					}
 				}
+
+				free (buf);
+				buf = tmp_buf;
+				data_bytes = dst_bytes;
+				raster_length = dst_length;
+				vinfo->bits_per_pixel = 24;
+			    }
 			}
 		}
+		} else {
+		    /* Convert indexed color -> RGB */
+		    if (bits_per_pixel == 8) { /* 8bit image */
+			dst_bytes = data_bytes * 3;
+			dst_length = ((dst_bytes + 3) >> 2) << 2;
 		
-		/* Adjust image data gamma */
-		pbe = (bbox_image_enum *)vinfo->bbox_info;
-		tinfo = pbe->target_info;
-		pis = tinfo->pis;
+			tmp_buf = calloc(dst_length, height);
+			if (tmp_buf) {
+			    for (i = 0; i < height; i++) {
+				src_ptr = buf + raster_length * i;
+				dst_ptr = tmp_buf + dst_length * i;
+				for (j = 0; j < data_bytes; j++) {
+				    ppalette = palette + src_ptr[j] * 3;
+				    dst_ptr[j*3] = ppalette[0]; /* R */
+				    dst_ptr[j*3 + 1] = ppalette[1]; /* G */
+				    dst_ptr[j*3 + 2] = ppalette[2]; /* B */
+				}
+			    }
 		
+			    free (buf);
+			    buf = tmp_buf;
+			    data_bytes = dst_bytes;
+			    raster_length = dst_length;
+			    vinfo->bits_per_pixel = 24;
+			}
+		    } else { /* 1bit image */
+			dst_bytes = vinfo->width * 3;
+			dst_length = ((dst_bytes + 3) >> 2) << 2;
+			
+			tmp_buf = calloc(dst_length, height);
+			if (tmp_buf) {
+			for (i = 0; i < height; i++) {
+				src_ptr = buf + raster_length * i;
+				dst_ptr = tmp_buf + dst_length * i;
+				for (j = 0; j < vinfo->width; j++) {
+				    int o = ((src_ptr[j/8] & (1 << (7 - (j & 7))))
+					       != 0);
+				    ppalette = palette + o * 3;
+				    dst_ptr[j*3] = ppalette[0]; /* R */
+				    dst_ptr[j*3 + 1] = ppalette[1]; /* G */
+				    dst_ptr[j*3 + 2] = ppalette[2]; /* B */
+				}
+			}
+
+			    free (buf);
+			    buf = tmp_buf;
+			    data_bytes = dst_bytes;
+			    raster_length = dst_length;
+			    vinfo->bits_per_pixel = 24;
+			}
+		    }
+		}
+	    }
+
+	    /* Convert Gray */
+	    if(color_index == gs_color_space_index_DeviceGray ||
+	       color_index == gs_color_space_index_CIEA) {
+		if (colorSpace == OPVP_CSPACE_STANDARDRGB
+		  || colorSpace == OPVP_CSPACE_DEVICERGB) {
+		    /* convert to RGB */
+		    if (bits_per_pixel == 8) { /* 8bit image */
+			dst_bytes = data_bytes * 3;
+			dst_length = ((dst_bytes + 3) >> 2) << 2;
+			
+			tmp_buf = calloc(dst_length, height);
+			if (tmp_buf) {
+			for (i = 0; i < height; i++) {
+				src_ptr = buf + raster_length * i;
+				dst_ptr = tmp_buf + dst_length * i;
+				for (j = 0; j < data_bytes; j++) {
+				    unsigned char d = floor(
+				      imageDecode[0]*255 + src_ptr[j]*
+				      (imageDecode[1]-imageDecode[0])+0.5);
+
+				    dst_ptr[j*3] = d; /* R */
+				    dst_ptr[j*3 + 1] = d; /* G */
+				    dst_ptr[j*3 + 2] = d; /* B */
+				}
+			    }
+			    
+			    free (buf);
+			    buf = tmp_buf;
+			    data_bytes = dst_bytes;
+			    raster_length = dst_length;
+			    vinfo->bits_per_pixel = 24;
+			}
+		    } else { /* 1bit image */
+			dst_bytes = vinfo->width * 3;
+			dst_length = ((dst_bytes + 3) >> 2) << 2;
+			
+			tmp_buf = calloc(dst_length, height);
+			if (tmp_buf) {
+			    for (i = 0; i < height; i++) {
+				src_ptr = buf + raster_length * i;
+				dst_ptr = tmp_buf + dst_length * i;
+				for (j=0; j < vinfo->width; j++) {
+				    int o = ((src_ptr[j/8] & (1 << (7 - (j & 7))))
+					      != 0);
+				    unsigned char d = floor(
+				      imageDecode[0]*255 + o*
+				      (imageDecode[1]-imageDecode[0])*255+0.5);
+				    dst_ptr[j*3] = d; /* R */
+				    dst_ptr[j*3 + 1] = d; /* G */
+				    dst_ptr[j*3 + 2] =d; /* B */
+				}
+			}
+
+			    free (buf);
+			    buf = tmp_buf;
+			    data_bytes = dst_bytes;
+			    raster_length = dst_length;
+			    vinfo->bits_per_pixel = 24;
+			}
+		    }
+		} else if (colorSpace == OPVP_CSPACE_DEVICEGRAY) {
+		    if (bits_per_pixel == 1) { /* 1bit image */
+			dst_bytes = vinfo->width;
+			dst_length = ((dst_bytes + 3) >> 2) << 2;
+			
+			tmp_buf = calloc(dst_length, height);
+			if (tmp_buf) {
+			for (i = 0; i < height; i++) {
+				src_ptr = buf + raster_length * i;
+				dst_ptr = tmp_buf + dst_length * i;
+				for (j = 0; j < vinfo->width; j++) {
+				    int o = ((src_ptr[j/8] & (1 << (7 - (j & 7))))
+					      != 0);
+				    unsigned char d = floor(
+				      imageDecode[0]*255 + o*
+				      (imageDecode[1]-imageDecode[0])*255+0.5);
+				    dst_ptr[j] = d; /* R */
+			}
+		    }
+
+			    free (buf);
+			    buf = tmp_buf;
+			    data_bytes = dst_bytes;
+			    raster_length = dst_length;
+			    vinfo->bits_per_pixel = 8;
+		}
+		    }
+		}
+	    }
+	}
 #if GS_VERSION_MAJOR >= 8
 		if (vinfo->bits_per_pixel == 24) {	/* 24bit RGB color */
 			for (i = 0; i < height; i++) {
 				ptr = buf + raster_length * i;
 				for (j = 0; j < vinfo->width; j++) {
-					ptr[j*3] = min(255, frac2cv(gx_map_color_frac(pis, cv2frac(ptr[j*3]),\
-													effective_transfer[0])));
-					ptr[j*3+1] = min(255, frac2cv(gx_map_color_frac(pis, cv2frac(ptr[j*3+1]),\
-													effective_transfer[1])));
-					ptr[j*3+2] = min(255, frac2cv(gx_map_color_frac(pis, cv2frac(ptr[j*3+2]),\
-													effective_transfer[2])));
+		    ptr[j*3] = min(255, frac2cv(gx_map_color_frac(pis,
+		      cv2frac(ptr[j*3]), effective_transfer[0])));
+		    ptr[j*3+1] = min(255, frac2cv(gx_map_color_frac(pis,
+		      cv2frac(ptr[j*3+1]), effective_transfer[1])));
+		    ptr[j*3+2] = min(255, frac2cv(gx_map_color_frac(pis,
+		      cv2frac(ptr[j*3+2]), effective_transfer[2])));
 				}
 			}
 		} else if (vinfo->bits_per_pixel == 8) {	/* 8bit Gray image */
 			for (i = 0; i < height; i++) {
 				ptr = buf + raster_length * i;
-				for (j=0; j < vinfo->width; j++) {
-					ptr[j] = min(255, frac2cv(gx_map_color_frac(pis, cv2frac(ptr[j]),\
-													effective_transfer[3])));
+				for (j = 0; j < vinfo->width; j++) {
+		    ptr[j] = min(255, frac2cv(gx_map_color_frac(pis,
+		      cv2frac(ptr[j]), effective_transfer[3])));
 				}
 			}
-		} else if ((vinfo->bits_per_pixel == 1) && (color_index != gs_color_space_index_Indexed)) {/* 1bit gray */
-		    if (imageDecode[0] == 0) {
-			for (i = 0; i < height; i++) {
-				src_ptr = buf + raster_length * i;
-				for (j = 0; j < data_bytes; j++)
-					src_ptr[j] ^= 0xff;
-			}
-		    }
-		}
+	}
 #else
-		if (vinfo->bits_per_pixel == 24) {	/* 24bit RGB color */
+	if (vinfo->bits_per_pixel == 24) { /* 24bit RGB color */
 			for (i = 0; i < height; i++) {
-				ptr = buf + raster_length * i;
-				for (j = 0; j < vinfo->width; j++) {
-					ptr[j*3] = min(255, frac2cv(gx_map_color_frac(pis, cv2frac(ptr[j*3]),\
-													effective_transfer.colored.red)));
-					ptr[j*3+1] = min(255, frac2cv(gx_map_color_frac(pis, cv2frac(ptr[j*3+1]),\
-													effective_transfer.colored.green)));
-					ptr[j*3+2] = min(255, frac2cv(gx_map_color_frac(pis, cv2frac(ptr[j*3+2]),\
-													effective_transfer.colored.blue)));
-				}
-			}
-		} else if (vinfo->bits_per_pixel == 8) {	/* 8bit Gray image */
-			for (i = 0; i < height; i++) {
-				ptr = buf + raster_length * i;
-				for (j = 0; j < vinfo->width; j++) {
-					ptr[j] = min(255, frac2cv(gx_map_color_frac(pis, cv2frac(ptr[j]),\
-													effective_transfer.colored.gray)));
-				}
-			}
-		} else if ((vinfo->bits_per_pixel == 1) && (color_index != gs_color_space_index_Indexed)) {/* 1bit gray */
-		    if (imageDecode[0] == 0) {
-			for (i = 0; i < height; i++) {
-				src_ptr = buf + raster_length * i;
-				for (j = 0; j < data_bytes; j++)
-					src_ptr[j] ^= 0xff;
+		ptr = buf + raster_length * i;
+		for (j = 0; j < vinfo->width; j++) {
+		    ptr[j*3] = min(255, frac2cv(gx_map_color_frac(pis,
+		      cv2frac(ptr[j*3]), effective_transfer.colored.red)));
+		    ptr[j*3+1] = min(255, frac2cv(gx_map_color_frac(pis,
+		      cv2frac(ptr[j*3+1]), effective_transfer.colored.green)));
+		    ptr[j*3+2] = min(255, frac2cv(gx_map_color_frac(pis,
+		      cv2frac(ptr[j*3+2]), effective_transfer.colored.blue)));
+		}
+	    }
+	} else if (vinfo->bits_per_pixel == 8) { /* 8bit Gray image */
+	    for (i = 0; i < height; i++) {
+		ptr = buf + raster_length * i;
+		for (j = 0; j < vinfo->width; j++) {
+		    ptr[j] = min(255, frac2cv(gx_map_color_frac(pis,
+		      cv2frac(ptr[j]), effective_transfer.colored.gray)));
 			}
 		    }
 		}
 #endif
 
 		/* call TansferDrawImage */
-		if (apiEntry->TransferDrawImage)
-		apiEntry->TransferDrawImage(printerContext,
-		                            raster_length * height,
-		                            (void *)buf);
-		if (buf)
+	if (apiEntry->opvpTransferDrawImage) {
+	    apiEntry->opvpTransferDrawImage(printerContext,
+			raster_length * height, (void *)buf);
+	}
+	if (buf) {
 			free(buf);		/* free buffer */
 	}
+    }
 
 	vinfo->y += height;
 	ecode = (vinfo->y >= vinfo->height);
@@ -3484,30 +4318,28 @@ const	gx_image_plane_t		*planes,
  * end image
  */
 static	int
-opvp_image_end_image(
-	gx_image_enum_common_t	*info,
-	bool					draw_last
-	)
+opvp_image_end_image(gx_image_enum_common_t *info, bool	draw_last)
 {
 	gx_device		*dev = info->dev;
 	gx_device_vector	*vdev = (gx_device_vector *)dev;
 	gdev_vector_image_enum_t	*vinfo;
-	OPVP_CTM		ctm;
+    opvp_ctm_t ctm;
 
 	vinfo = (gdev_vector_image_enum_t *)info;
 
 	if (begin_image) {
 		/* call EndDrawImage */
-		if (apiEntry->EndDrawImage)
-		apiEntry->EndDrawImage(printerContext);
+	if (apiEntry->opvpEndDrawImage) {
+	    apiEntry->opvpEndDrawImage(printerContext);
+	}
 
 		begin_image = false;
 
 		if (FastImageMode != FastImageNoCTM) {
 			/* call ResetCTM */
-			if (apiEntry->ResetCTM)
-			apiEntry->ResetCTM(printerContext);
-			else {
+	    if (apiEntry->opvpResetCTM) {
+		apiEntry->opvpResetCTM(printerContext);
+	    } else {
 				/* call SetCTM */
 				ctm.a = 1;
 				ctm.b = 0;
@@ -3515,19 +4347,27 @@ opvp_image_end_image(
 				ctm.d = 1;
 				ctm.e = 0;
 				ctm.f = 0;
-				if (apiEntry->SetCTM)
-				apiEntry->SetCTM(printerContext, &ctm);
+		if (apiEntry->opvpSetCTM) {
+		    apiEntry->opvpSetCTM(printerContext, &ctm);
 			}
 		}
-		if ((vinfo->num_planes == 1) &&
-		    (vinfo->plane_depths[0] == 1)) {
-			/* restore fill color */
-			if (vectorFillColor) {
-				/* call SetFillColor */
-				if (apiEntry->SetFillColor)
-				apiEntry->SetFillColor(printerContext,
-				                       vectorFillColor);
 			}
+	if (change_paint_mode) {
+	    /* restore paint mode */
+	    if (apiEntry->opvpSetPaintMode) {
+		apiEntry->opvpSetPaintMode(printerContext,
+		   OPVP_PAINTMODE_TRANSPARENT);
+	    }
+	    change_paint_mode = false;
+	}
+	if (change_cspace) {
+	    /* restore color space */
+	    colorSpace = savedColorSpace;
+	    if (apiEntry->opvpSetColorSpace) {
+		apiEntry->opvpSetColorSpace(printerContext,
+		   colorSpace);
+	    }
+	    change_cspace = false;
 		}
 	}
 
@@ -3539,9 +4379,7 @@ opvp_image_end_image(
  * begin page
  */
 static	int
-opvp_beginpage(
-	gx_device_vector	*vdev
-	)
+opvp_beginpage(gx_device_vector *vdev)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)vdev;
 	int			code = -1;
@@ -3566,28 +4404,22 @@ opvp_beginpage(
  * set line width
  */
 static	int
-opvp_setlinewidth(
-	gx_device_vector	*vdev,
-	floatp			width
-	)
+opvp_setlinewidth(gx_device_vector *vdev, floatp width)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)vdev;
-	int			code = -1;
+    opvp_result_t r = -1;
 	int			ecode = 0;
-	OPVP_Fix		w;
+    opvp_fix_t w;
 
 	/* check page-in */
 	if (opvp_check_in_page(pdev)) return -1;
 
-#if 0
-	if (width < 1) width = 1;
-#endif
-
 	/* call SetLineWidth */
-	OPVP_f2Fix(width, w);
-	if (apiEntry->SetLineWidth)
-	code = apiEntry->SetLineWidth(printerContext, w);
-	if (code != OPVP_OK) {
+    OPVP_F2FIX(width, w);
+    if (apiEntry->opvpSetLineWidth) {
+	r = apiEntry->opvpSetLineWidth(printerContext, w);
+    }
+    if (r != OPVP_OK) {
 		ecode = -1;
 	}
 
@@ -3598,39 +4430,37 @@ opvp_setlinewidth(
  * set line cap
  */
 static	int
-opvp_setlinecap(
-	gx_device_vector	*vdev,
-	gs_line_cap		cap
-	)
+opvp_setlinecap(gx_device_vector *vdev, gs_line_cap cap)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)vdev;
-	int			code = -1;
+    opvp_result_t r = -1;
 	int			ecode = 0;
-	OPVP_LineCap		linecap;
+    opvp_linecap_t linecap;
 
 	/* check page-in */
 	if (opvp_check_in_page(pdev)) return -1;
 
 	switch (cap) {
 		case	gs_cap_butt :
-			linecap = OPVP_lineCapButt;
+	linecap = OPVP_LINECAP_BUTT;
 			break;
 		case	gs_cap_round :
-			linecap = OPVP_lineCapRound;
+	linecap = OPVP_LINECAP_ROUND;
 			break;
 		case	gs_cap_square :
-			linecap = OPVP_lineCapSquare;
+	linecap = OPVP_LINECAP_SQUARE;
 			break;
 		case	gs_cap_triangle :
 		default :
-			linecap = OPVP_lineCapButt;
+	linecap = OPVP_LINECAP_BUTT;
 			break;
 	}
 
 	/* call SetLineCap */
-	if (apiEntry->SetLineCap)
-	code = apiEntry->SetLineCap(printerContext, linecap);
-	if (code != OPVP_OK) {
+    if (apiEntry->opvpSetLineCap) {
+	r = apiEntry->opvpSetLineCap(printerContext, linecap);
+    }
+    if (r != OPVP_OK) {
 		ecode = -1;
 	}
 
@@ -3641,40 +4471,38 @@ opvp_setlinecap(
  * set line join
  */
 static	int
-opvp_setlinejoin(
-	gx_device_vector	*vdev,
-	gs_line_join		join
-	)
+opvp_setlinejoin(gx_device_vector *vdev, gs_line_join join)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)vdev;
-	int			code = -1;
+    opvp_result_t r = -1;
 	int			ecode = 0;
-	OPVP_LineJoin		linejoin;
+    opvp_linejoin_t linejoin;
 
 	/* check page-in */
 	if (opvp_check_in_page(pdev)) return -1;
 
 	switch (join) {
 		case	gs_join_miter :
-			linejoin = OPVP_lineJoinMiter;
+	linejoin = OPVP_LINEJOIN_MITER;
 			break;
 		case	gs_join_round :
-			linejoin = OPVP_lineJoinRound;
+	linejoin = OPVP_LINEJOIN_ROUND;
 			break;
 		case	gs_join_bevel :
-			linejoin = OPVP_lineJoinBevel;
+	linejoin = OPVP_LINEJOIN_BEVEL;
 			break;
 		case	gs_join_none :
 		case	gs_join_triangle :
 		default :
-			linejoin = OPVP_lineCapButt;
+	linejoin = OPVP_LINECAP_BUTT;
 			break;
 	}
 
 	/* call SetLineJoin */
-	if (apiEntry->SetLineJoin)
-	code = apiEntry->SetLineJoin(printerContext, linejoin);
-	if (code != OPVP_OK) {
+    if (apiEntry->opvpSetLineJoin) {
+	r = apiEntry->opvpSetLineJoin(printerContext, linejoin);
+    }
+    if (r != OPVP_OK) {
 		ecode = -1;
 	}
 
@@ -3685,24 +4513,22 @@ opvp_setlinejoin(
  * set miter limit
  */
 static	int
-opvp_setmiterlimit(
-	gx_device_vector	*vdev,
-	floatp			limit
-	)
+opvp_setmiterlimit(gx_device_vector *vdev, floatp limit)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)vdev;
-	int			code = -1;
+    opvp_result_t r = -1;
 	int			ecode = 0;
-	OPVP_Fix		l;
+    opvp_fix_t l;
 
 	/* check page-in */
 	if (opvp_check_in_page(pdev)) return -1;
 
 	/* call SetMiterLimit */
-	OPVP_f2Fix(limit, l);
-	if (apiEntry->SetMiterLimit)
-	code = apiEntry->SetMiterLimit(printerContext, l);
-	if (code != OPVP_OK) {
+    OPVP_F2FIX(limit, l);
+    if (apiEntry->opvpSetMiterLimit) {
+	r = apiEntry->opvpSetMiterLimit(printerContext, l);
+    }
+    if (r != OPVP_OK) {
 		ecode = -1;
 	}
 
@@ -3717,14 +4543,13 @@ opvp_setdash(
 	gx_device_vector	*vdev,
 	const	float		*pattern,
 	uint			count,
-	floatp			offset
-	)
+    floatp offset)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)vdev;
-	int			code = -1;
+    opvp_result_t r = -1;
 	int			ecode = 0;
-	OPVP_Fix		*p = NULL;
-	OPVP_Fix		o;
+    opvp_fix_t *p = NULL;
+    opvp_fix_t o;
 	int			i;
 
 	/* check page-in */
@@ -3732,10 +4557,10 @@ opvp_setdash(
 
 	/* pattern */
 	if (count) {
-		p = calloc(sizeof(OPVP_Fix), count);
+	p = calloc(sizeof(opvp_fix_t), count);
 		if (p) {
 			for (i = 0; i < count; i++) {
-				OPVP_f2Fix(pattern[i], p[i]);
+		OPVP_F2FIX(pattern[i], p[i]);
 			}
 		} else {
 			ecode = -1;
@@ -3744,31 +4569,34 @@ opvp_setdash(
 
 	/* call SetLineDash */
 	if (!ecode) {
-		if (apiEntry->SetLineDash)
-		code = apiEntry->SetLineDash(printerContext, p, count);
-		if (code != OPVP_OK) {
+	if (apiEntry->opvpSetLineDash) {
+	    r = apiEntry->opvpSetLineDash(printerContext, count,p);
+	}
+	if (r != OPVP_OK) {
 			ecode = -1;
 		}
 	}
 
 	/* call SetLineDashOffset */
 	if (!ecode) {
-		OPVP_f2Fix(offset, o);
-		if (apiEntry->SetLineDashOffset)
-		code = apiEntry->SetLineDashOffset(printerContext, o);
-		if (code != OPVP_OK) {
+	OPVP_F2FIX(offset, o);
+	if (apiEntry->opvpSetLineDashOffset) {
+	    r = apiEntry->opvpSetLineDashOffset(printerContext, o);
+	}
+	if (r != OPVP_OK) {
 			ecode = -1;
 		}
 	}
 
 	/* call SetLineStyle */
 	if (!ecode) {
-		if (apiEntry->SetLineStyle)
-		code = apiEntry->SetLineStyle(printerContext,
+	if (apiEntry->opvpSetLineStyle) {
+	    r = apiEntry->opvpSetLineStyle(printerContext,
 		                              (count ?
-		                               OPVP_lineStyleDash :
-		                               OPVP_lineStyleSolid));
-		if (code != OPVP_OK) {
+				   OPVP_LINESTYLE_DASH :
+				   OPVP_LINESTYLE_SOLID));
+	}
+	if (r != OPVP_OK) {
 			ecode = -1;
 		}
 	}
@@ -3782,13 +4610,9 @@ opvp_setdash(
  * set flat
  */
 static	int
-opvp_setflat(
-	gx_device_vector	*vdev,
-	floatp			flatness
-	)
+opvp_setflat(gx_device_vector *vdev, floatp flatness)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)vdev;
-/*	int			code = -1;*/
 	int			ecode = 0;
 
 	/* check page-in */
@@ -3806,80 +4630,10 @@ static	int
 opvp_setlogop(
 	gx_device_vector	*vdev,
 	gs_logical_operation_t	lop,
-	gs_logical_operation_t	diff
-	)
+    gs_logical_operation_t diff)
 {
-	gx_device_opvp		*pdev = (gx_device_opvp *)vdev;
-	int			code = -1;
-	int			ecode = 0;
-static	int			*prop = NULL;
-static	int			pnum = 0;
-	int			exist =0;
-	int			i;
-	int			rop = (lop_rop(lop)) & 0x00ff;
-
-	/* check page-in */
-	if (opvp_check_in_page(pdev)) return -1;
-
-	if (!prop) {
-		/* call QueryROP with NULL */
-		if (!ecode) {
-			if (apiEntry->QueryROP) {
-				code = apiEntry->QueryROP(printerContext,
-				                          &pnum, NULL);
-				if (code != OPVP_OK) {
-					ecode = -1;
-				}
-			}
-		}
-	}
-
-	/* call QueryROP with array-pointer */
-	if (!ecode && (pnum > 0)) {
-		if (!prop) {
-			if ((prop = calloc(sizeof(int), pnum))) {
-				if (apiEntry->QueryROP)
-				code = apiEntry->QueryROP(printerContext,
-				                          &pnum, prop);
-				if (code != OPVP_OK) {
-					ecode = -1;
-				}
-			}
-		}
-		if (!ecode) {
-			for (i = 0; i < pnum; i++ ) {
-				if (prop[i] == rop) {
-					exist = 1;
-					break;
-				}
-			}
-		}
-	}
-
-	/* call SetROP */
-	if (!ecode) {
-		if (!exist) {
-			/* what to do ? */
-			if (apiEntry->SetROP)
-			apiEntry->SetROP(printerContext, 0xCC); /* SRCCOPY */
-		} else {
-			if (apiEntry->SetROP)
-			code = apiEntry->SetROP(printerContext, rop);
-			if (code != OPVP_OK) {
-				ecode = -1;
-			}
-		}
-	}
-
-#if !(ENABLE_SIMPLE_MODE)
-	/* free buffer */
-	if (prop) {
-		free(prop);
-		prop = NULL;
-	}
-#endif
-
-	return ecode;
+    /* nothing done */
+    return 0;
 }
 
 #if GS_VERSION_MAJOR >= 8
@@ -3900,21 +4654,17 @@ static	int
 opvp_setfillcolor(
 	gx_device_vector	*vdev,
 	const	gs_imager_state		*pis,		/* added for gs 8.15 */
-const	gx_drawing_color	*pdc
-	)
+    const gx_drawing_color *pdc)
 #else
 static	int
-opvp_setfillcolor(
-	gx_device_vector	*vdev,
-const	gx_drawing_color	*pdc
-	)
+opvp_setfillcolor(gx_device_vector *vdev, const	gx_drawing_color *pdc)
 #endif
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)vdev;
-	int			code = -1;
+    opvp_result_t r = -1;
 	int			ecode = 0;
 	gx_color_index		color;
-static	OPVP_Brush		brush;
+    static opvp_brush_t brush;
 
 	/* check page-in */
 	if (opvp_check_in_page(pdev)) return -1;
@@ -3927,9 +4677,10 @@ static	OPVP_Brush		brush;
 	opvp_set_brush_color(pdev, color, vectorFillColor);
 
 	/* call SetFillColor */
-	if (apiEntry->SetFillColor)
-	code = apiEntry->SetFillColor(printerContext, vectorFillColor);
-	if (code != OPVP_OK) {
+    if (apiEntry->opvpSetFillColor) {
+	r = apiEntry->opvpSetFillColor(printerContext, vectorFillColor);
+    }
+    if (r != OPVP_OK) {
 		ecode = -1;
 	}
 
@@ -3944,21 +4695,17 @@ static	int
 opvp_setstrokecolor(
 	gx_device_vector	*vdev,
 	const	gs_imager_state		*pis,		/* added for gs 8.15 */
-const	gx_drawing_color	*pdc
-	)
+    const gx_drawing_color *pdc)
 #else
 static	int
-opvp_setstrokecolor(
-	gx_device_vector	*vdev,
-const	gx_drawing_color	*pdc
-	)
+opvp_setstrokecolor(gx_device_vector *vdev, const gx_drawing_color *pdc)
 #endif
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)vdev;
-	int			code = -1;
+    opvp_result_t r = -1;
 	int			ecode = 0;
 	gx_color_index		color;
-	OPVP_Brush		brush;
+    opvp_brush_t brush;
 
 	/* check page-in */
 	if (opvp_check_in_page(pdev)) return -1;
@@ -3970,9 +4717,10 @@ const	gx_drawing_color	*pdc
 	opvp_set_brush_color(pdev, color, &brush);
 
 	/* call SetStrokeColor */
-	if (apiEntry->SetStrokeColor)
-	code = apiEntry->SetStrokeColor(printerContext, &brush);
-	if (code != OPVP_OK) {
+    if (apiEntry->opvpSetStrokeColor) {
+	r = apiEntry->opvpSetStrokeColor(printerContext, &brush);
+    }
+    if (r != OPVP_OK) {
 		ecode = -1;
 	}
 
@@ -3989,10 +4737,10 @@ opvp_vector_dopath(
 	gx_device_vector	*vdev,
 const	gx_path			*ppath,
 	gx_path_type_t		type,
-const	gs_matrix		*pmat
-	)
+    const gs_matrix *pmat)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)vdev;
+    opvp_result_t r = -1;
 	int			code = -1;
 	int			ecode = 0;
 	gs_fixed_rect		rect;
@@ -4005,7 +4753,7 @@ const	gs_matrix		*pmat
 	int			npoints = 0;
 	int			*cp_num = NULL;
 	_fPoint 		*points = NULL;
-	OPVP_Point		*opvp_p = NULL;
+    opvp_point_t *opvp_p = NULL;
 	_fPoint 		current;
 	_fPoint 		check_p;
 #else
@@ -4015,6 +4763,10 @@ const	gs_matrix		*pmat
 	fixed			vs[6];
 	bool			begin = true;
 
+    start.x = start.y = 0;
+#ifdef	OPVP_OPT_MULTI_PATH
+    current.x = current.y = 0;
+#endif
 	/* check page-in */
 	if (opvp_check_in_page(pdev)) return -1;
 
@@ -4048,45 +4800,37 @@ const	gs_matrix		*pmat
 			points[0] = start;
 
 #ifdef	OPVP_OPT_MULTI_PATH
-
 		} else if (op != pop) {
-
 			/* convert float to Fix */
-			opvp_p = realloc(opvp_p, sizeof(OPVP_Point) * npoints);
+	    opvp_p = realloc(opvp_p, sizeof(opvp_point_t) * npoints);
 			for (i = 0; i < npoints; i++) {
-				OPVP_f2Fix(points[i].x, opvp_p[i].x);
-				OPVP_f2Fix(points[i].y, opvp_p[i].y);
+		OPVP_F2FIX(points[i].x, opvp_p[i].x);
+		OPVP_F2FIX(points[i].y, opvp_p[i].y);
 			}
 
 			switch (pop) {
-
 				case	gs_pe_moveto :
-
 					/* call SetCurrentPoint */
-					if (apiEntry->SetCurrentPoint)
-					code = apiEntry->SetCurrentPoint(
+		if (apiEntry->opvpSetCurrentPoint) {
+		    r = apiEntry->opvpSetCurrentPoint(
 					           printerContext,
 					           opvp_p[npoints-1].x,
 					           opvp_p[npoints-1].y);
-					if (code != OPVP_OK) ecode = -1;
-
+		}
+		if (r != OPVP_OK) ecode = -1;
 					break;
-
 				case	gs_pe_lineto :
-
 					/* call LinePath */
-					if (apiEntry->LinePath)
-					code = apiEntry->LinePath(
+		if (apiEntry->opvpLinePath) {
+		    r = apiEntry->opvpLinePath(
 					           printerContext,
-					           OPVP_PathOpen,
+		       OPVP_PATHOPEN,
 					           npoints - 1,
 					           &(opvp_p[1]));
-					if (code != OPVP_OK) ecode = -1;
-
+		}
+		if (r != OPVP_OK) ecode = -1;
 					break;
-
 				case	gs_pe_curveto :
-
 					/* npoints */
 					if (!cp_num)
 					cp_num = calloc(sizeof(int), 2);
@@ -4094,31 +4838,21 @@ const	gs_matrix		*pmat
 					cp_num[1] = 0;
 
 					/* call BezierPath */
-					if (apiEntry->BezierPath)
-					code = apiEntry->BezierPath(
+		if (apiEntry->opvpBezierPath) {
+		    r = apiEntry->opvpBezierPath(
 					           printerContext,
-#if (_PDAPI_VERSION_MAJOR_ == 0 && _PDAPI_VERSION_MINOR_ < 2)
-					           cp_num,
-					           opvp_p
-#else
 					           npoints - 1,
 					           &(opvp_p[1])
-#endif
 					           );
-					if (code != OPVP_OK) ecode = -1;
-
+		}
+		if (r != OPVP_OK) ecode = -1;
 					break;
-
 				case	gs_pe_closepath :
-
 					/* close path */
 					break;
-
 				default :
-
 					/* error */
 					return_error(gs_error_unknownerror);
-
 					break;
 			}
 
@@ -4142,8 +4876,7 @@ const	gs_matrix		*pmat
 				/* move to */
 				i = npoints;
 				npoints += 1;
-				points = realloc(points,
-				                 sizeof(_fPoint) * npoints);
+	    points = realloc(points, sizeof(_fPoint) * npoints);
 				points[i].x = fixed2float(vs[0]) / scale.x;
 				points[i].y = fixed2float(vs[1]) / scale.y;
 				current = points[i];
@@ -4174,8 +4907,7 @@ const	gs_matrix		*pmat
 				/* line to */
 				i = npoints;
 				npoints += 1;
-				points = realloc(points,
-				                 sizeof(_fPoint) * npoints);
+	    points = realloc(points, sizeof(_fPoint) * npoints);
 				points[i].x = fixed2float(vs[0]) / scale.x;
 				points[i].y = fixed2float(vs[1]) / scale.y;
 				current = points[i];
@@ -4207,8 +4939,7 @@ const	gs_matrix		*pmat
 
 				i = npoints;
 				npoints += 3;
-				points = realloc(points,
-				                 sizeof(_fPoint) * npoints);
+	    points = realloc(points, sizeof(_fPoint) * npoints);
 				points[i  ].x = fixed2float(vs[0]) / scale.x;
 				points[i  ].y = fixed2float(vs[1]) / scale.y;
 				points[i+1].x = fixed2float(vs[2]) / scale.x;
@@ -4296,14 +5027,14 @@ opvp_vector_dorect(
 	fixed			y0,
 	fixed			x1,
 	fixed			y1,
-	gx_path_type_t		type
-	)
+    gx_path_type_t type)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)vdev;
+    opvp_result_t r = -1;
 	int			code = -1;
 	int			ecode = 0;
 	gs_point		scale;
-	OPVP_Rectangle		rectangles[1];
+    opvp_rectangle_t rectangles[1];
 	_fPoint			p;
 
 	/* check page-in */
@@ -4319,22 +5050,22 @@ opvp_vector_dorect(
 		/* rectangle */
 		p.x = fixed2float(x0) / scale.x;
 		p.y = fixed2float(y0) / scale.y;
-		OPVP_f2Fix(p.x, rectangles[0].p0.x);
-		OPVP_f2Fix(p.y, rectangles[0].p0.y);
+	OPVP_F2FIX(p.x, rectangles[0].p0.x);
+	OPVP_F2FIX(p.y, rectangles[0].p0.y);
 		p.x = fixed2float(x1) / scale.x;
 		p.y = fixed2float(y1) / scale.y;
-		OPVP_f2Fix(p.x, rectangles[0].p1.x);
-		OPVP_f2Fix(p.y, rectangles[0].p1.y);
+	OPVP_F2FIX(p.x, rectangles[0].p1.x);
+	OPVP_F2FIX(p.y, rectangles[0].p1.y);
 
 		/* call RectanglePath */
-		if (apiEntry->RectanglePath)
-		code = apiEntry->RectanglePath(printerContext,
+	if (apiEntry->opvpRectanglePath) {
+	    r = apiEntry->opvpRectanglePath(printerContext,
 		                               1,
 		                               rectangles);
-		if (code != OPVP_OK) {
+	}
+	if (r != OPVP_OK) {
 			ecode = -1;
 		}
-
 	}
 
 	/* end path */
@@ -4353,30 +5084,26 @@ opvp_vector_dorect(
  * begin path
  */
 static	int
-opvp_beginpath(
-	gx_device_vector	*vdev,
-	gx_path_type_t		type
-	)
+opvp_beginpath(gx_device_vector *vdev, gx_path_type_t type)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)vdev;
-	int			code = -1;
+    opvp_result_t r = -1;
 	int			ecode = 0;
 
 	/* check page-in */
 	if (opvp_check_in_page(pdev)) return -1;
 
-#if (_PDAPI_VERSION_MAJOR_ > 0 || _PDAPI_VERSION_MINOR_ >= 2)
 	/* check clip-path */
 	if (type & gx_path_type_clip) {
-		if (apiEntry->ResetClipPath)
-		apiEntry->ResetClipPath(printerContext);
+	if (apiEntry->opvpResetClipPath)
+	apiEntry->opvpResetClipPath(printerContext);
 	}
-#endif
 
 	/* call NewPath */
-	if (apiEntry->NewPath)
-	code = apiEntry->NewPath(printerContext);
-	if (code != OPVP_OK) {
+    if (apiEntry->opvpNewPath) {
+	r = apiEntry->opvpNewPath(printerContext);
+    }
+    if (r != OPVP_OK) {
 		ecode = -1;
 	}
 
@@ -4393,23 +5120,23 @@ opvp_moveto(
 	floatp			y0,
 	floatp			x1,
 	floatp			y1,
-	gx_path_type_t		type
-	)
+    gx_path_type_t type)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)vdev;
-	int			code = -1;
+    opvp_result_t r = -1;
 	int			ecode = 0;
-	OPVP_Point		p;
+    opvp_point_t p;
 
 	/* check page-in */
 	if (opvp_check_in_page(pdev)) return -1;
 
 	/* call SetCurrentPoint */
-	OPVP_f2Fix(x1, p.x);
-	OPVP_f2Fix(y1, p.y);
-	if (apiEntry->SetCurrentPoint)
-	code = apiEntry->SetCurrentPoint(printerContext, p.x, p.y);
-	if (code != OPVP_OK) {
+    OPVP_F2FIX(x1, p.x);
+    OPVP_F2FIX(y1, p.y);
+    if (apiEntry->opvpSetCurrentPoint) {
+	r = apiEntry->opvpSetCurrentPoint(printerContext, p.x, p.y);
+    }
+    if (r != OPVP_OK) {
 		ecode = -1;
 	}
 
@@ -4426,25 +5153,25 @@ opvp_lineto(
 	floatp			y0,
 	floatp			x1,
 	floatp			y1,
-	gx_path_type_t		type
-	)
+    gx_path_type_t type)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)vdev;
-	int			code = -1;
+    opvp_result_t r = -1;
 	int			ecode = 0;
-	OPVP_Point		points[1];
+    opvp_point_t points[1];
 
 	/* check page-in */
 	if (opvp_check_in_page(pdev)) return -1;
 
 	/* point */
-	OPVP_f2Fix(x1, points[0].x);
-	OPVP_f2Fix(y1, points[0].y);
+    OPVP_F2FIX(x1, points[0].x);
+    OPVP_F2FIX(y1, points[0].y);
 	
 	/* call LinePath */
-	if (apiEntry->LinePath)
-	code = apiEntry->LinePath(printerContext, OPVP_PathOpen, 1, points);
-	if (code != OPVP_OK) {
+    if (apiEntry->opvpLinePath) {
+	r = apiEntry->opvpLinePath(printerContext, OPVP_PATHOPEN, 1, points);
+    }
+    if (r != OPVP_OK) {
 		ecode = -1;
 	}
 
@@ -4465,14 +5192,13 @@ opvp_curveto(
 	floatp			y2,
 	floatp			x3,
 	floatp			y3,
-	gx_path_type_t		type
-	)
+    gx_path_type_t type)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)vdev;
-	int			code = -1;
+    opvp_result_t r = -1;
 	int			ecode = 0;
 	int			npoints[2];
-	OPVP_Point		points[4];
+    opvp_point_t points[4];
 
 	/* check page-in */
 	if (opvp_check_in_page(pdev)) return -1;
@@ -4480,27 +5206,23 @@ opvp_curveto(
 	/* points */
 	npoints[0] = 4;
 	npoints[1] = 0;
-	OPVP_f2Fix(x0, points[0].x);
-	OPVP_f2Fix(y0, points[0].y);
-	OPVP_f2Fix(x1, points[1].x);
-	OPVP_f2Fix(y1, points[1].y);
-	OPVP_f2Fix(x2, points[2].x);
-	OPVP_f2Fix(y2, points[2].y);
-	OPVP_f2Fix(x3, points[3].x);
-	OPVP_f2Fix(y3, points[3].y);
+    OPVP_F2FIX(x0, points[0].x);
+    OPVP_F2FIX(y0, points[0].y);
+    OPVP_F2FIX(x1, points[1].x);
+    OPVP_F2FIX(y1, points[1].y);
+    OPVP_F2FIX(x2, points[2].x);
+    OPVP_F2FIX(y2, points[2].y);
+    OPVP_F2FIX(x3, points[3].x);
+    OPVP_F2FIX(y3, points[3].y);
 	
 	/* call BezierPath */
-	if (apiEntry->BezierPath)
-	code = apiEntry->BezierPath(printerContext,
-#if (_PDAPI_VERSION_MAJOR_ == 0 && _PDAPI_VERSION_MINOR_ < 2)
-	                            npoints,
-	                            points
-#else
+    if (apiEntry->opvpBezierPath) {
+	r = apiEntry->opvpBezierPath(printerContext,
 	                            3,
 	                            &(points[1])
-#endif
 	                            );
-	if (code != OPVP_OK) {
+    }
+    if (r != OPVP_OK) {
 		ecode = -1;
 	}
 
@@ -4517,25 +5239,25 @@ opvp_closepath(
 	floatp			y,
 	floatp			x_start,
 	floatp			y_start,
-	gx_path_type_t		type
-	)
+    gx_path_type_t type)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)vdev;
-	int			code = -1;
+    opvp_result_t r = -1;
 	int			ecode = 0;
-	OPVP_Point		points[1];
+    opvp_point_t points[1];
 
 	/* check page-in */
 	if (opvp_check_in_page(pdev)) return -1;
 
 	/* point */
-	OPVP_f2Fix(x_start, points[0].x);
-	OPVP_f2Fix(y_start, points[0].y);
+    OPVP_F2FIX(x_start, points[0].x);
+    OPVP_F2FIX(y_start, points[0].y);
 	
 	/* call LinePath */
-	if (apiEntry->LinePath)
-	code = apiEntry->LinePath(printerContext, OPVP_PathClose, 1, points);
-	if (code != OPVP_OK) {
+    if (apiEntry->opvpLinePath) {
+	r = apiEntry->opvpLinePath(printerContext, OPVP_PATHCLOSE, 1, points);
+    }
+    if (r != OPVP_OK) {
 		ecode = -1;
 	}
 
@@ -4546,22 +5268,20 @@ opvp_closepath(
  * end path
  */
 static	int
-opvp_endpath(
-	gx_device_vector	*vdev,
-	gx_path_type_t		type
-	)
+opvp_endpath(gx_device_vector *vdev, gx_path_type_t type)
 {
 	gx_device_opvp		*pdev = (gx_device_opvp *)vdev;
-	int			code = -1;
+    opvp_result_t r = -1;
 	int			ecode = 0;
 
 	/* check page-in */
 	if (opvp_check_in_page(pdev)) return -1;
 
 	/* call EndPath */
-	if (apiEntry->EndPath)
-	code = apiEntry->EndPath(printerContext);
-	if (code != OPVP_OK) {
+    if (apiEntry->opvpEndPath) {
+	r = apiEntry->opvpEndPath(printerContext);
+    }
+    if (r != OPVP_OK) {
 		ecode = -1;
 	}
 
@@ -4570,65 +5290,65 @@ opvp_endpath(
 		/* fill mode */
 		if (type & gx_path_type_even_odd) {
 			/* call SetFillMode */
-			if (apiEntry->SetFillMode)
-			code = apiEntry->SetFillMode(
+	    if (apiEntry->opvpSetFillMode) {
+		r = apiEntry->opvpSetFillMode(
 			           printerContext,
-			           OPVP_fillModeEvenOdd
+		   OPVP_FILLMODE_EVENODD
 			       );
-			if (code != OPVP_OK) {
+	    }
+	    if (r != OPVP_OK) {
 				ecode = -1;
 			}
 		} else {
 			/* call SetFillMode */
-			if (apiEntry->SetFillMode)
-			code = apiEntry->SetFillMode(
+	    if (apiEntry->opvpSetFillMode) {
+		r = apiEntry->opvpSetFillMode(
 			           printerContext,
-			           OPVP_fillModeWinding
+		   OPVP_FILLMODE_WINDING
 			       );
-			if (code != OPVP_OK) {
+	    }
+	    if (r != OPVP_OK) {
 				ecode = -1;
 			}
 		}
 
 		if (type & gx_path_type_stroke) {
 			/* call StrokeFillPath */
-			if (apiEntry->StrokeFillPath)
-			code = apiEntry->StrokeFillPath(
-			           printerContext);
-			if (code != OPVP_OK) {
+	    if (apiEntry->opvpStrokeFillPath) {
+		r = apiEntry->opvpStrokeFillPath(printerContext);
+	    }
+	    if (r != OPVP_OK) {
 				ecode = -1;
 			}
 		} else {
 			/* call FillPath */
-			if (apiEntry->FillPath)
-			code = apiEntry->FillPath(printerContext);
-			if (code != OPVP_OK) {
+	    if (apiEntry->opvpFillPath) {
+		r = apiEntry->opvpFillPath(printerContext);
+	    }
+	    if (r != OPVP_OK) {
 				ecode = -1;
 			}
 		}
-
 	} else if (type & gx_path_type_clip) {
-
 		/* call SetClipPath */
-		if (apiEntry->SetClipPath)
-		code = apiEntry->SetClipPath(
+	if (apiEntry->opvpSetClipPath) {
+	    r = apiEntry->opvpSetClipPath(
 		           printerContext,
-		           (type & gx_path_type_even_odd ? OPVP_clipRuleEvenOdd
-		                                         : OPVP_clipRuleWinding)
-		       );
-		if (code != OPVP_OK) {
+	       (type & gx_path_type_even_odd
+			    ? OPVP_CLIPRULE_EVENODD
+			    : OPVP_CLIPRULE_WINDING));
+	}
+	if (r != OPVP_OK) {
 			ecode = -1;
 		}
-
 	} else if (type & gx_path_type_stroke) {
-
 		/* call StrokePath */
-		if (apiEntry->StrokePath)
-		code = apiEntry->StrokePath(printerContext);
-		if (code != OPVP_OK) {
+	if (apiEntry->opvpStrokePath) {
+	    r = apiEntry->opvpStrokePath(printerContext);
+	}
+	if (r != OPVP_OK) {
 			ecode = -1;
 		}
-
 	}
 
 	return ecode;

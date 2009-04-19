@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: spngpx.h,v 1.7 2007/09/11 15:24:19 Arabidopsis Exp $ */
+/* $Id: spngpx.h,v 1.8 2009/04/19 13:54:31 Arabidopsis Exp $ */
 /* Definitions for PNGPredictor filters */
 /* Requires strimpl.h */
 
@@ -28,8 +28,10 @@
  * Define the maximum value for Colors.  The PNG specification probably
  * defines this as 16, but some PS3 CET files require it to be as large as
  * 53.  The only cost of larger values is a larger stream state structure.
+ * In fact some CET files (09-34.ps) require 250 inks, so bump this to the 
+ * current maximum of 256.
  */
-#define s_PNG_max_Colors 60
+#define s_PNG_max_Colors 256
 
 /* PNGPredictorDecode / PNGPredictorEncode */
 typedef struct stream_PNGP_state_s {

@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: jbig2.mak,v 1.10 2008/05/04 14:34:56 Arabidopsis Exp $
+# $Id: jbig2.mak,v 1.11 2009/04/19 13:54:32 Arabidopsis Exp $
 
 # makefile for jbig2dec library code.
 # Users of this makefile must define the following:
@@ -36,7 +36,7 @@
 JBIG2_MAK=$(GLSRC)jbig2.mak
 
 JBIG2SRC=$(JBIG2SRCDIR)$(D)
-JBIG2GEN=$(JBIG2OBJDIR)$(D)
+JBIG2GEN=$(JBIG2GENDIR)$(D)
 JBIG2OBJ=$(JBIG2OBJDIR)$(D)
 
 # This makefile is only known to work with jbig2dec v0.7 and later

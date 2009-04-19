@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfont42.c,v 1.12 2008/03/23 15:27:48 Arabidopsis Exp $ */
+/* $Id: zfont42.c,v 1.13 2009/04/19 13:54:25 Arabidopsis Exp $ */
 /* Type 42 font creation operator */
 #include "memory_.h"
 #include "ghost.h"
@@ -85,6 +85,7 @@ build_gs_TrueType_font(i_ctx_t *i_ctx_p, os_ptr op, gs_font_type42 **ppfont,
     ref_assign(&pdata->u.type42.GlyphDirectory, &GlyphDirectory);
     pfont->data.string_proc = z42_string_proc;
     pfont->data.proc_data = (char *)pdata;
+    pfont->is_resource = (options & bf_has_font_file ? true : false);
     code = gs_type42_font_init(pfont, 0);
     if (code < 0)
 	return code;

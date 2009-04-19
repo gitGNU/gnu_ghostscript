@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: pdfwrite.ps,v 1.7 2007/09/11 15:24:49 Arabidopsis Exp $
+% $Id: pdfwrite.ps,v 1.8 2009/04/19 13:54:38 Arabidopsis Exp $
 % Writer for transmuting PDF files.
 
 % NOTES:
@@ -152,7 +152,7 @@
 % set of valid name characters. PDF 1.1 and earlier allowed spaces in names
 % which probably wouldn't make it past the tokenizer anyway.
 /pdfnamechars
-  (!"#$&'*+,-.0123456789:;=?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\\^_`abcdefghijklmnopqrstuvwxyz|~)
+  (!"$&'*+,-.0123456789:;=?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\\^_`abcdefghijklmnopqrstuvwxyz|~)
 readonly def
 /pdfwritename {		% <name> pdfwritename -
   (/) ows .namestring {
@@ -336,7 +336,20 @@ readonly def
   } for
 } bind def
 /pdfwritetrailer {	% <trailer> pdfwritetrailer -
-  (trailer\n) ows pdfwritevalue (\n) ows
+  (trailer\n) ows
+  % Since we always write a complete "classic" xref, the Trailer may need to be adjusted:
+  % - remove keys that pertain to xref-streams and hybrid-xref PDFs;
+  % - if it's a PDF stream, turn it into a PDF dict by removing keys used for 
+  %   PDF streams (both standard and GS-specific), and the executable attribute
+  dup /XRefStm known 1 index xcheck or {
+    dup length dict copy
+    dup {/Type/Index/W /XRefStm /Filter/DecodeParms/Length/File/FilePosition} {
+      undef dup
+    } forall pop
+    % note: the executable attribute is "removed" by not being copied
+  } if
+  pdfwritevalue
+  (\n) ows
 } bind def
 /pdfwritestartxref {	% <startpos> pdfwritestartxref -
   (startxref\n) ows OFile exch write=
@@ -375,7 +388,7 @@ readonly def
 
   /xref OFile fileposition def
   0 XRef ld_length 1 add pdfwritexref
-  trailer dup length 1 add dict copy
+  trailer dup length 1 add dict copy trailer xcheck { cvx } if
   dup /Size XRef ld_length 1 add put pdfwritetrailer
   xref pdfwritestartxref
 

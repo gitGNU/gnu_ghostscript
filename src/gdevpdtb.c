@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdtb.c,v 1.11 2008/05/04 14:34:54 Arabidopsis Exp $ */
+/* $Id: gdevpdtb.c,v 1.12 2009/04/19 13:54:30 Arabidopsis Exp $ */
 /* BaseFont implementation for pdfwrite */
 #include "memory_.h"
 #include "ctype_.h"
@@ -49,6 +49,8 @@
 /* ---------------- Private ---------------- */
 
 private_st_pdf_base_font();
+gs_private_st_basic(st_pdf_base_font, pdf_base_font_t, "pdf_base_font_t",\
+		    pdf_base_font_ptrs, pdf_base_font_data);
 
 #define SUBSET_PREFIX_SIZE 7	/* XXXXXX+ */
 
@@ -563,6 +565,7 @@ pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont, font_type 
 #define TRUETYPE_OPTIONS (WRITE_TRUETYPE_NAME | WRITE_TRUETYPE_HVMTX)
 	/* Acrobat Reader 3 doesn't handle cmap format 6 correctly. */
 	const int options = TRUETYPE_OPTIONS |
+	    (pdev->PDFA ? WRITE_TRUETYPE_UNICODE_CMAP : 0) |
 	    (pdev->CompatibilityLevel <= 1.2 ?
 	     WRITE_TRUETYPE_NO_TRIMMED_TABLE : 0) |
 	    /* Generate a cmap only for incrementally downloaded fonts

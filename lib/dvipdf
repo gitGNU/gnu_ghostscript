@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: dvipdf,v 1.5 2007/09/11 15:24:50 Arabidopsis Exp $
+# $Id: dvipdf,v 1.6 2009/04/19 13:54:37 Arabidopsis Exp $
 # Convert DVI to PDF.
 #
 # Please contact Andrew Ford <A.Ford@ford-mason.co.uk> with any questions
@@ -18,7 +18,7 @@ while true
 do
 	case "$1" in
 	-R*) DVIPSOPTIONS="$DVIPSOPTIONS $1";;
-	-*) OPTIONS="$OPTIONS $1" ;;
+	-?*) OPTIONS="$OPTIONS $1" ;;
 	*)  break ;;
 	esac
 	shift

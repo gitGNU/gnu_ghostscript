@@ -16,7 +16,7 @@
 %
 
 
-% $Id: gs_init.ps.in,v 1.6 2008/03/23 15:28:29 Arabidopsis Exp $
+% $Id: gs_init.ps.in,v 1.7 2009/04/19 13:54:38 Arabidopsis Exp $
 % Initialization file for the interpreter.
 % When this is run, systemdict is still writable.
 
@@ -188,6 +188,7 @@ currentdict /SHORTERRORS known   /SHORTERRORS exch def
 currentdict /STRICT known   /STRICT exch def
 currentdict /TTYPAUSE known   /TTYPAUSE exch def
 currentdict /WRITESYSTEMDICT known   /WRITESYSTEMDICT exch def
+currentdict /RENDERTTNOTDEF known /RENDERTTNOTDEF exch def
 
 % Acquire environment variables.
 currentdict /DEVICE known not

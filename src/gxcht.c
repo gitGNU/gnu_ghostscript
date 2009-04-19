@@ -17,7 +17,7 @@
 
 */
 
-/*$Id: gxcht.c,v 1.11 2008/03/23 15:27:46 Arabidopsis Exp $ */
+/*$Id: gxcht.c,v 1.12 2009/04/19 13:54:32 Arabidopsis Exp $ */
 /* Color halftone rendering for Ghostscript imaging library */
 #include "memory_.h"
 #include "gx.h"
@@ -191,6 +191,7 @@ gx_dc_ht_colored_write(
     const gx_device_color *         pdevc,
     const gx_device_color_saved *   psdc0,
     const gx_device *               dev,
+    uint			    offset,
     byte *                          pdata,
     uint *                          psize )
 {
@@ -202,6 +203,9 @@ gx_dc_ht_colored_write(
     gx_color_value                  alpha = pdevc->colors.colored.alpha;
     const gx_device_color_saved *   psdc = psdc0;
     byte *                          pdata0 = pdata;
+
+    if (offset != 0)
+	return_error(gs_error_unregistered); /* Not implemented yet. */
 
     /* sanity check */
     if (pdevc->colors.colored.num_components != num_comps)
@@ -356,6 +360,7 @@ gx_dc_ht_colored_read(
     const gs_imager_state * pis,
     const gx_device_color * prior_devc,
     const gx_device *       dev,
+    uint		    offset,
     const byte *            pdata,
     uint                    size,
     gs_memory_t *           mem )       /* ignored */
@@ -365,6 +370,9 @@ gx_dc_ht_colored_read(
     int                     depth = dev->color_info.depth;
     const byte *            pdata0 = pdata;
     int                     flag_bits;
+
+    if (offset != 0)
+	return_error(gs_error_unregistered); /* Not implemented yet. */
 
     /* if prior information is available, use it */
     if (prior_devc != 0 && prior_devc->type == gx_dc_type_ht_colored)

@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2008 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: zfjpx.c,v 1.6 2008/03/23 15:28:00 Arabidopsis Exp $ */
+/* $Id: zfjpx.c,v 1.7 2009/04/19 13:54:27 Arabidopsis Exp $ */
 
 /* This is the ps interpreter interface to the JPXDecode filter
    used for (JPEG2000) scanned image compression. PDF only specifies
@@ -43,6 +43,10 @@
 #include "sjpx.h"
 #endif
 
+/* macro to test a name ref against a C string */
+# define ISTRCMP(ref, string) (memcmp((ref)->value.const_bytes, string, \
+	min(strlen(string), r_size(ref))))
+
 /* <source> /JPXDecode <file> */
 /* <source> <dict> /JPXDecode <file> */
 static int
@@ -54,6 +58,7 @@ z_jpx_decode(i_ctx_t * i_ctx_p)
     stream_jpxd_state state;
 
     /* it's our responsibility to call set_defaults() */
+    if (s_jpxd_template.set_defaults)
     (*s_jpxd_template.set_defaults)((stream_state *)&state);
     state.jpx_memory = imemory->non_gc_memory;
     if (r_has_type(op, t_dictionary)) {
@@ -74,8 +79,50 @@ z_jpx_decode(i_ctx_t * i_ctx_p)
 		/* get a reference to the name's string value */
 		name_string_ref(imemory, csname, &sref);
 		/* request raw index values if the colorspace is /Indexed */
-		if (!memcmp(sref.value.const_bytes, "Indexed", min(7,r_size(&sref))))
+		if (!ISTRCMP(&sref, "Indexed"))
 		    state.colorspace = gs_jpx_cs_indexed;
+		/* tell the filter what output we want for other spaces */
+		else if (!ISTRCMP(&sref, "DeviceGray"))
+		    state.colorspace = gs_jpx_cs_gray;
+		else if (!ISTRCMP(&sref, "DeviceRGB"))
+		    state.colorspace = gs_jpx_cs_rgb;
+		else if (!ISTRCMP(&sref, "DeviceCMYK"))
+		    state.colorspace = gs_jpx_cs_cmyk;
+		else if (!ISTRCMP(&sref, "ICCBased")) {
+		    /* The second array element should be the profile's
+		       stream dict */
+		    ref *csdict = sop->value.refs + 1;
+		    ref *nref;
+		    ref altname;
+		    if (r_is_array(sop) && (r_size(sop) > 1) &&
+		      r_has_type(csdict, t_dictionary)) {
+		        check_dict_read(*csdict);
+		        /* try to look up the alternate space */
+		        if (dict_find_string(csdict, "Alternate", &nref) > 0) {
+		          name_string_ref(imemory, csname, &altname);
+		          if (!ISTRCMP(&altname, "DeviceGray"))
+		            state.colorspace = gs_jpx_cs_gray;
+		          else if (!ISTRCMP(&altname, "DeviceRGB"))
+		            state.colorspace = gs_jpx_cs_rgb;
+		          else if (!ISTRCMP(&altname, "DeviceCMYK"))
+		            state.colorspace = gs_jpx_cs_cmyk;
+		        }
+		        /* else guess based on the number of components */
+			if (state.colorspace == gs_jpx_cs_unset &&
+				dict_find_string(csdict, "N", &nref) > 0) {
+			  if_debug1('w', "[w] JPX image has an external %d"
+				   " channel colorspace\n", nref->value.intval);
+			  switch (nref->value.intval) {
+			    case 1: state.colorspace = gs_jpx_cs_gray;
+				break;
+			    case 3: state.colorspace = gs_jpx_cs_rgb;
+				break;
+			    case 4: state.colorspace = gs_jpx_cs_cmyk;
+				break;
+			  }
+			}
+		    }
+		}
 	    } else {
 		if_debug0('w', "[w] Couldn't read JPX ColorSpace key!\n");
 	    }

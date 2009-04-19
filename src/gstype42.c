@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gstype42.c,v 1.12 2008/03/23 15:27:50 Arabidopsis Exp $ */
+/* $Id: gstype42.c,v 1.13 2009/04/19 13:54:33 Arabidopsis Exp $ */
 /* Type 42 (TrueType) font library routines */
 #include "memory_.h"
 #include "gx.h"
@@ -114,6 +114,7 @@ get_glyph_offset(gs_font_type42 *pfont, uint glyph_index)
 typedef struct gs_type42_font_init_sort_s {
     ulong glyph_offset;
     int glyph_num;
+    int glyph_length;
 } gs_type42_font_init_sort_t;
 static int
 gs_type42_font_init_compare (const void *a, const void *b)
@@ -229,6 +230,8 @@ gs_type42_font_init(gs_font_type42 * pfont, int subfontID)
 	} else if (!memcmp(tab, "vmtx", 4)) {
 	    pfont->data.metrics[1].offset = offset;
 	    pfont->data.metrics[1].length = (uint)u32(tab + 12);
+	} else if (!memcmp(tab, "OS/2", 4)) {
+	    pfont->data.os2_offset = offset;
 	}
     }
     loca_size >>= pfont->data.indexToLocFormat + 1;
@@ -247,11 +250,23 @@ gs_type42_font_init(gs_font_type42 * pfont, int subfontID)
 	   Continue using trueNumGlyphs since the document of
 	   the bug 688467 fails otherwise.
 	 */
-#	ifdef DEBUG
 	    /* pfont->key_name.chars is ASCIIZ due to copy_font_name. */
 	eprintf3("Warning: 'loca' length %d is greater than numGlyphs %d in the font %s.\n", 
 		pfont->data.numGlyphs + 1, pfont->data.trueNumGlyphs, pfont->key_name.chars);
-#	endif
+	if (loca_size > pfont->data.trueNumGlyphs + 1) {
+	    /* Bug 689516 demonstrates a font, in which numGlyps is smaller than loca size,
+	       and there are useful glyphs behind maxp.numGlyphs. */
+	    for (i = loca_size - 1;  i > pfont->data.trueNumGlyphs; i--) {
+		glyph_offset = get_glyph_offset(pfont, i);
+		if (glyph_offset < glyph_size)
+		    break;
+	    }
+	    if (i > pfont->data.trueNumGlyphs) {
+		/* loca contains more good offsets, fix maxp.numGlyphs. 
+		   Note a code below will fix bad offsets if any. */
+		 pfont->data.numGlyphs = pfont->data.trueNumGlyphs = loca_size - 1;
+	    }
+	}
 	pfont->data.numGlyphs = pfont->data.trueNumGlyphs;
 	loca_size = pfont->data.numGlyphs + 1;
     }
@@ -268,6 +283,20 @@ gs_type42_font_init(gs_font_type42 * pfont, int subfontID)
     pfont->data.get_outline = default_get_outline;
     pfont->data.get_metrics = gs_type42_default_get_metrics;
 
+    if (pfont->FontType == ft_CID_TrueType && pfont->is_resource) {
+	/* This font was load with .load_tt_font_stripped,
+	   (it's only the case when bf_has_font_file is set because font file
+	   presents with True Type - see zbuildfont11).
+	   Can't use get_glyph_offset because 'loca' does not present in sfnt. 
+	   So we skip the unsorted 'loca' check.
+
+	   A better way would be to perform the unsorted loca check
+	   after glyph cache is initialized in zbuildfont11 with gs_glyph_cache__alloc.
+	   But we're doing this fix under a rush of 8.63 release,
+	   so have no time for deeper changes.
+	*/
+	pfont->data.len_glyphs = NULL;
+    } else {
     /* Now build the len_glyphs array since 'loca' may not be properly sorted */
     pfont->data.len_glyphs = (uint *)gs_alloc_byte_array(pfont->memory, loca_size, sizeof(uint),
 						    "gs_type42_font");
@@ -283,7 +312,10 @@ gs_type42_font_init(gs_font_type42 * pfont, int subfontID)
 	glyph_offset = get_glyph_offset(pfont, i);
 	glyph_length = glyph_offset - glyph_start;
 	if (glyph_length > 0x80000000)
-	    break;				/* out of order loca */
+		break;
+	    if (glyph_offset > glyph_size)
+		break;
+	    /* out of order loca */
 	pfont->data.len_glyphs[i - 1] = glyph_length;
 	glyph_start = glyph_offset;
     }
@@ -296,6 +328,7 @@ gs_type42_font_init(gs_font_type42 * pfont, int subfontID)
 	 */
 	ulong last_glyph_offset = glyph_size;
 	ulong num_valid_loca_elm = loca_size;
+	    long last_offset = 0;
 	gs_type42_font_init_sort_t *psort;
 	gs_type42_font_init_sort_t *psortary = 
 	    (gs_type42_font_init_sort_t *)gs_alloc_byte_array(pfont->memory, 
@@ -303,18 +336,31 @@ gs_type42_font_init(gs_font_type42 * pfont, int subfontID)
 
 	if (psortary == 0)
 	    return_error(gs_error_VMerror);
-	for (i = 0, psort = psortary; i < loca_size; i++, psort++) {
+	    /* loca_size > 0 due to condition above, so we always have the 0th element. */
+	    psortary->glyph_num = 0;
+	    psortary->glyph_offset = get_glyph_offset(pfont, 0);
+	    for (i = 1, psort = psortary + 1; i < loca_size; i++, psort++) {
 	    psort->glyph_num = i;
 	    psort->glyph_offset = get_glyph_offset(pfont, i);
+		psort[-1].glyph_length = psort->glyph_offset - last_offset;
+		last_offset = psort->glyph_offset;
 	    }
+	    psort[-1].glyph_length = 0; /* Dummy element. */
 	qsort(psortary, loca_size, sizeof(gs_type42_font_init_sort_t), gs_type42_font_init_compare);
 	while (num_valid_loca_elm > 0 && psortary[num_valid_loca_elm - 1].glyph_offset > glyph_size)
 	    num_valid_loca_elm --;
 	if (0 == num_valid_loca_elm)
 	    return_error(gs_error_invalidfont);
 	for (i = num_valid_loca_elm; i--;) {
+		long old_length;
+
 	    psort = psortary + i;
+		old_length = psort->glyph_length;
+		if (old_length < 0 || old_length > 2000 /*  arbitrary */) {
 	    pfont->data.len_glyphs[psort->glyph_num] = last_glyph_offset - psort->glyph_offset;
+		    /* Note the new length may be so big as old_length. */
+		} else
+		    pfont->data.len_glyphs[psort->glyph_num] = old_length;
 	    last_glyph_offset = psort->glyph_offset;
 	}
 	for (i = num_valid_loca_elm; i < loca_size; i++) {
@@ -326,6 +372,7 @@ gs_type42_font_init(gs_font_type42 * pfont, int subfontID)
 	   To know that, set a conditional breakpoint at the next statement.
 	 */
 	gs_free_object(pfont->memory, psortary, "gs_type42_font_init(sort loca)");
+    }
     }
     /*
      * If the font doesn't have a valid FontBBox, compute one from the
@@ -1300,6 +1347,16 @@ gs_truetype_font_info(gs_font *font, const gs_point *pscale, int members,
     gs_font_type42 *pfont = (gs_font_type42 *)font;
     int code;
 
+    if (!(info->members & FONT_INFO_EMBEDDING_RIGHTS) && (members & FONT_INFO_EMBEDDING_RIGHTS)) {
+	if(pfont->data.os2_offset != 0) {
+	    int (*string_proc)(gs_font_type42 *, ulong, uint, const byte **) = pfont->data.string_proc;
+	    unsigned char fstype[2];
+
+	    READ_SFNTS(pfont, pfont->data.os2_offset + 8, 2, fstype);
+    	    info->EmbeddingRights = U16(fstype);
+    	    info->members |= FONT_INFO_EMBEDDING_RIGHTS;
+	}
+    }
     if (pfont->data.name_offset == 0)
 	return 0;
     if (!(info->members & FONT_INFO_COPYRIGHT) && (members & FONT_INFO_COPYRIGHT)) {

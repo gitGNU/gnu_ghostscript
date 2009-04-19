@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: simscale.c,v 1.4 2008/03/23 15:28:02 Arabidopsis Exp $ */
+/* $Id: simscale.c,v 1.5 2009/04/19 13:54:34 Arabidopsis Exp $ */
 /* Image mask interpolation filter */
 
 #include "memory_.h"
@@ -8352,6 +8352,8 @@ s_imscale_process(stream_state *st, stream_cursor_read *pr,
 	    }
 	    if (rleft == 0 && !last)
 		return 0; /* need more input */
+          /*  if (rleft == 0)
+                return EOFC;  */  /* end of file.  pass along in stream */
 	    if (ss->src_offset == 0) {
 		/* could maintain window as ring (y mod 4 addressing),
 		   but this is simpler */

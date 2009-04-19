@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gstext.c,v 1.13 2008/05/04 14:34:51 Arabidopsis Exp $ */
+/* $Id: gstext.c,v 1.14 2009/04/19 13:54:35 Arabidopsis Exp $ */
 /* Driver text interface support */
 
 #include "memory_.h"
@@ -269,6 +269,7 @@ gs_text_begin(gs_state * pgs, const gs_text_params_t * text,
     code = gs_state_color_load(pgs);
     if (code < 0)
 	return code;
+    pgs->device->sgr.stroke_stored = false;
     return gx_device_text_begin(pgs->device, (gs_imager_state *) pgs,
 				text, pgs->font, pgs->path, pgs->dev_color,
 				pcpath, mem, ppte);

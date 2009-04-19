@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: gs_cidfn.ps,v 1.7 2007/08/01 14:25:36 jemarch Exp $
+% $Id: gs_cidfn.ps,v 1.8 2009/04/19 13:54:37 Arabidopsis Exp $
 % ProcSet for implementing CIDFont and CIDMap resources.
 % When this is run, systemdict is still writable.
 
@@ -66,15 +66,23 @@ dup 0 {
 % or for .buildfont9 (FDArray.Private.Subrs).
 /.completefont9 {	% <cidfont0> .completefont9 <cidfont0>
   currentglobal 3 1 roll dup gcheck setglobal
-  dup /FontMatrix known not {
+  dup /FontMatrix known {
+    dup /FDArray get {
+      dup /FontMatrix get 0 get 1000000 ge {
+        /FontMatrix matrix put  % Bug 688517
+      } {
+        pop
+      } ifelse
+    } forall
+  } {
     dup /FontMatrix [0.001 0 0 0.001 0 0] put
     dup /FDArray get {
        currentglobal exch dup gcheck setglobal
-       dup /FontMatrix get [1000 0 0 1000 0 0] matrix concatmatrix
+       dup /FontMatrix get {1000 0 0 1000 0 0} matrix concatmatrix
        /FontMatrix exch put
        setglobal
     } forall
-  } if
+  } ifelse
   dup /FDArray get {
 		% Read the Subrs if necessary.
     dup /Private get dup /Subrs known not {

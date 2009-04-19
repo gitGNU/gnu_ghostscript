@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sjpx.h,v 1.5 2007/09/11 15:24:42 Arabidopsis Exp $ */
+/* $Id: sjpx.h,v 1.6 2009/04/19 13:54:35 Arabidopsis Exp $ */
 /* Definitions for JPXDecode filter (JPEG 2000) */
 /* we link to the JasPer library for the actual decoding */
 
@@ -50,7 +50,6 @@ typedef struct stream_jpxd_state_s
 {
     stream_state_common;	/* a define from scommon.h */
     jas_image_t *image;
-    jas_stream_t *stream;
     long offset; /* offset into the image bitmap of the next
                     byte to be returned */
     const gs_memory_t *jpx_memory;

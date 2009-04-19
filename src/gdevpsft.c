@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpsft.c,v 1.12 2008/03/23 15:27:50 Arabidopsis Exp $ */
+/* $Id: gdevpsft.c,v 1.13 2009/04/19 13:54:28 Arabidopsis Exp $ */
 /* Write an embedded TrueType font */
 #include "memory_.h"
 #include <stdlib.h>		/* for qsort */
@@ -244,6 +244,27 @@ static const byte cmap_initial_6[] = {
     0, 0,		/* first character code */
     0, 0		/* # of entries *VARIABLE* */
 };
+static const byte cmap_unicode_initial_6[] = {
+    0, 0,		/* table version # = 0 */
+    0, 2,		/* # of encoding tables = 2 */
+
+	/* First table, Macintosh */
+    0, 1,		/* platform ID = Macintosh */
+    0, 0,		/* platform encoding ID = ??? */
+    0, 0, 0, 4+8+8,	/* offset to table start */
+	/* Second table, Windows */
+    0, 3,		/* platform ID = Microsoft */
+    0, 1,		/* platform encoding ID = Unicode */
+    0, 0, 0, 4+8+8+10,	/* offset to table start */
+			/* *VARIABLE*, add 2 x # of entries */
+
+	/* Start of Macintosh format 6 table */
+    0, 6,		/* format = 6, trimmed table mapping */
+    0, 10,		/* length *VARIABLE*, add 2 x # of entries */
+    0, 0,		/* version number */
+    0, 0,		/* first character code */
+    0, 0		/* # of entries *VARIABLE* */
+};
 static const byte cmap_initial_4[] = {
     0, 0,		/* table version # = 0 */
     0, 1,		/* # of encoding tables = 2 */
@@ -307,6 +328,21 @@ write_cmap_6(stream *s, byte *entries /*[CMAP_ENTRIES_SIZE]*/, uint first_code,
     stream_write(s, cmap_data, sizeof(cmap_data));
     stream_write(s, entries + first_entry * 2, num_entries * 2);
 }
+static void write_unicode_cmap_6(stream *s, byte *entries, uint first_code,
+	     uint first_entry, uint num_entries)
+{
+    byte cmap_data[sizeof(cmap_unicode_initial_6)];
+
+    memcpy(cmap_data, cmap_unicode_initial_6, sizeof(cmap_unicode_initial_6));
+    put_u16(cmap_data + 18,
+	    U16(cmap_data + 18) + num_entries * 2);  /* offset */
+    put_u16(cmap_data + 22,
+	    U16(cmap_data + 22) + num_entries * 2);  /* length */
+    put_u16(cmap_data + 26, first_entry);
+    put_u16(cmap_data + 28, num_entries);
+    stream_write(s, cmap_data, sizeof(cmap_data));
+    stream_write(s, entries + first_entry * 2, num_entries * 2);
+}
 static void
 write_cmap(stream *s, gs_font *font, uint first_code, int num_glyphs,
 	   gs_glyph max_glyph, int options, uint cmap_length)
@@ -342,6 +378,19 @@ write_cmap(stream *s, gs_font *font, uint first_code, int num_glyphs,
 
     /* Write the table header and Macintosh sub-table (if any). */
 
+    if (options & WRITE_TRUETYPE_UNICODE_CMAP) {
+	write_unicode_cmap_6(s, entries, first_code, first_entry, num_entries);
+
+	/* Write the Windows sub-table. */
+	memcpy(cmap_sub, cmap_sub_initial, sizeof(cmap_sub_initial));
+	put_u16(cmap_sub + 2, U16(cmap_sub + 2) + num_entries * 2); /* length */
+	put_u16(cmap_sub + 14, end_entry - 1); /* endCount[0] */
+	put_u16(cmap_sub + 20, first_entry); /* startCount[0] */
+	stream_write(s, cmap_sub, sizeof(cmap_sub));
+	stream_write(s, entries + first_entry * 2, num_entries * 2);
+	put_pad(s, cmap_length);
+	return;
+    } 
 #if TT_FORCE_CMAP_6 > 0
     /* Always use format 6. */
     write_cmap_6(s, entries, first_code, first_entry, num_entries);
@@ -500,6 +549,8 @@ static void
 write_OS_2(stream *s, gs_font *font, uint first_glyph, int num_glyphs)
 {
     ttf_OS_2_t os2;
+    gs_font_info_t info;
+    int code;
 
     /*
      * We don't bother to set most of the fields.  The really important
@@ -513,6 +564,17 @@ write_OS_2(stream *s, gs_font *font, uint first_glyph, int num_glyphs)
     put_u16(os2.usWeightClass, 400); /* Normal */
     put_u16(os2.usWidthClass, 5); /* Normal */
     update_OS_2(&os2, first_glyph, num_glyphs);
+
+    /*
+     * We should also preserve the licensed embedding rights, to prevent
+     * 'laundering' a TrueType font. These can be non-zero even when embedding is permitted.
+     */
+    memset(&info, 0x00, sizeof(gs_font_info_t));
+    code = font->procs.font_info(font, NULL, FONT_INFO_EMBEDDING_RIGHTS, &info);
+    if (code == 0 && (info.members & FONT_INFO_EMBEDDING_RIGHTS)) {
+	put_u16(os2.fsType, info.EmbeddingRights);
+    }
+
     stream_write(s, &os2, offset_of(ttf_OS_2_t, sxHeight[0]));
     put_pad(s, offset_of(ttf_OS_2_t, sxHeight[0]));
 }

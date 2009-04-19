@@ -1,7 +1,7 @@
 /*
     jbig2dec
     
-    Copyright (C) 2002-2005 Artifex Software, Inc.
+    Copyright (C) 2002-2008 Artifex Software, Inc.
     
     This software is distributed under license and may not
     be copied, modified or distributed except as expressly
@@ -13,7 +13,7 @@
     Artifex Software, Inc.,  101 Lucas Valley Road #110,
     San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-    $Id: jbig2_text.c,v 1.9 2008/05/04 14:35:11 Arabidopsis Exp $
+    $Id: jbig2_text.c,v 1.10 2009/04/19 13:54:46 Arabidopsis Exp $
 */
 
 #ifdef HAVE_CONFIG_H
@@ -147,7 +147,11 @@ jbig2_decode_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment,
 	      /* todo: memory cleanup */
 	      return -1;
 	    }
+	    if (code == 32) {
 	    len = symcodelengths[index-1].PREFLEN;
+	    } else {
+	      len = 0; /* code == 33 or 34 */
+	    }
 	    if (code == 32) range = jbig2_huffman_get_bits(hs, 2) + 3;
 	    else if (code == 33) range = jbig2_huffman_get_bits(hs, 3) + 3;
 	    else if (code == 34) range = jbig2_huffman_get_bits(hs, 7) + 11;

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxstroke.c,v 1.11 2008/03/23 15:28:06 Arabidopsis Exp $ */
+/* $Id: gxstroke.c,v 1.12 2009/04/19 13:54:26 Arabidopsis Exp $ */
 /* Path stroking procedures for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -215,7 +215,7 @@ typedef partial_line *pl_ptr;
 
 /* Other forward declarations */
 static bool width_is_thin(pl_ptr);
-static void adjust_stroke(pl_ptr, const gs_imager_state *, bool, bool);
+static void adjust_stroke(gx_device *, pl_ptr, const gs_imager_state *, bool, bool);
 static int line_join_points(const gx_line_params * pgs_lp,
 			     pl_ptr plp, pl_ptr nplp,
 			     gs_fixed_point * join_points,
@@ -744,7 +744,9 @@ gx_stroke_path_only_aux(gx_path * ppath, gx_path * to_path, gx_device * pdev,
 		    pl.thin = width_is_thin(&pl);
 		}
 		if (!pl.thin) {
-		    adjust_stroke(&pl, pis, false, 
+		    if (index)
+			dev->sgr.stroke_stored = false;
+		    adjust_stroke(dev, &pl, pis, false, 
 			    (pseg->prev == 0 || pseg->prev->type == s_start) && 
 			    (pseg->next == 0 || pseg->next->type == s_start) &&
 			    (zero_length || !is_closed));
@@ -806,6 +808,8 @@ gx_stroke_path_only_aux(gx_path * ppath, gx_path * to_path, gx_device * pdev,
 	psub = (const subpath *)pseg;
     }
   exit:
+    if (dev == (gx_device *)&cdev)
+	cdev.target->sgr = cdev.sgr;
     if (to_path == &stroke_path_body)
 	gx_path_free(&stroke_path_body, "gx_stroke_path_only error");	/* (only needed if error) */
     if (dash_count)
@@ -832,6 +836,8 @@ gx_stroke_path_only(gx_path * ppath, gx_path * to_path, gx_device * pdev,
 	    vd_erase(RGB(192, 192, 192));
 	}
     }
+    if (vd_enabled)
+	vd_setcolor(pdevc->colors.pure);
     code = gx_stroke_path_only_aux(ppath, to_path, pdev, pis, params, pdevc, pcpath);
     if (vd_allowed('S'))
 	vd_release_dc;
@@ -852,9 +858,9 @@ width_is_thin(pl_ptr plp)
     fixed dx, dy, wx = plp->width.x, wy = plp->width.y;
 
     /* If the line is horizontal or vertical, things are easy. */
-    if ((dy = plp->e.p.y - plp->o.p.y) == 0)
+    if ((dy = plp->vector.y) == 0)
 	return any_abs(wy) < fixed_half;
-    if ((dx = plp->e.p.x - plp->o.p.x) == 0)
+    if ((dx = plp->vector.x) == 0)
 	return any_abs(wx) < fixed_half;
 
     /*
@@ -949,6 +955,12 @@ adjust_stroke_longitude(pl_ptr plp, const gs_imager_state * pis, bool thin, bool
 	fixed adj2 = (horiz ? STROKE_ADJUSTMENT(thin, pis, x)
 			    : STROKE_ADJUSTMENT(thin, pis, y)) << 1;
         
+	/* fixme :
+	   The best value for adjust_longitude is whether 
+	   the dash is isolated and doesn't cover entire segment.
+	   The current data structure can't pass this info.
+	   Therefore we restrict adjust_stroke_longitude with 1 pixel length.
+	*/
 	if (length > fixed_1) /* comparefiles/file2.pdf */
 	    return;
 	if (pis->line_params.cap == gs_cap_butt) {
@@ -981,22 +993,102 @@ adjust_stroke_longitude(pl_ptr plp, const gs_imager_state * pis, bool thin, bool
 /* to achieve more uniform rendering. */
 /* Only o.p, e.p, e.cdelta, and width have been set. */
 static void
-adjust_stroke(pl_ptr plp, const gs_imager_state * pis, bool thin, bool adjust_longitude)
+adjust_stroke(gx_device *dev, pl_ptr plp, const gs_imager_state * pis, bool thin, bool adjust_longitude)
 {
-    bool horiz;
+    bool horiz, adjust = true;
 
-    if (!pis->stroke_adjust && plp->width.x != 0 && plp->width.y != 0)
+    if (!pis->stroke_adjust && (plp->width.x != 0 && plp->width.y != 0)) {
+	dev->sgr.stroke_stored = false;
 	return;			/* don't adjust */
+    }
+    /* Recognizing gradients, which some obsolete software
+       represent as a set of parallel strokes. 
+       Such strokes must not be adjusted - bug 687974. */
+    if (dev->sgr.stroke_stored && pis->line_params.cap == gs_cap_butt && 
+	dev->sgr.orig[3].x == plp->vector.x && dev->sgr.orig[3].y == plp->vector.y) {
+	/* Parallel. */
+	if ((int64_t)(plp->o.p.x - dev->sgr.orig[0].x) * plp->vector.x == 
+	    (int64_t)(plp->o.p.y - dev->sgr.orig[0].y) * plp->vector.y &&
+	    (int64_t)(plp->e.p.x - dev->sgr.orig[1].x) * plp->vector.x == 
+	    (int64_t)(plp->e.p.y - dev->sgr.orig[1].y) * plp->vector.y) {
+	    /* Transversal shift. */
+	    if (any_abs(plp->o.p.x - dev->sgr.orig[0].x) <= any_abs(plp->width.x + dev->sgr.orig[2].x) &&
+		any_abs(plp->o.p.y - dev->sgr.orig[0].y) <= any_abs(plp->width.y + dev->sgr.orig[2].y) &&
+		any_abs(plp->e.p.x - dev->sgr.orig[1].x) <= any_abs(plp->width.x + dev->sgr.orig[2].x) &&
+		any_abs(plp->e.p.y - dev->sgr.orig[1].y) <= any_abs(plp->width.y + dev->sgr.orig[2].y)) {
+		/* The strokes were contacting or overlapping. */
+		if (any_abs(plp->o.p.x - dev->sgr.orig[0].x) >= any_abs(plp->width.x + dev->sgr.orig[2].x) / 2 &&
+		    any_abs(plp->o.p.y - dev->sgr.orig[0].y) >= any_abs(plp->width.y + dev->sgr.orig[2].y) / 2 &&
+		    any_abs(plp->e.p.x - dev->sgr.orig[1].x) >= any_abs(plp->width.x + dev->sgr.orig[2].x) / 2 &&
+		    any_abs(plp->e.p.y - dev->sgr.orig[1].y) >= any_abs(plp->width.y + dev->sgr.orig[2].y) / 2) {
+		    /* The strokes were not much overlapping. */
+		    if (!(any_abs(plp->o.p.x - dev->sgr.adjusted[0].x) <= any_abs(plp->width.x + dev->sgr.adjusted[2].x) &&
+			  any_abs(plp->o.p.y - dev->sgr.adjusted[0].y) <= any_abs(plp->width.y + dev->sgr.adjusted[2].y) &&
+			  any_abs(plp->e.p.x - dev->sgr.adjusted[1].x) <= any_abs(plp->width.x + dev->sgr.adjusted[2].x) &&
+			  any_abs(plp->e.p.y - dev->sgr.adjusted[1].y) <= any_abs(plp->width.y + dev->sgr.adjusted[2].y))) {
+			/* they became not contacting.
+			   We should not have adjusted the last stroke. Since if we did,
+			   lets change the current one to restore the contact,
+			   so that we don't leave gaps when rasterising. See bug 687974.
+			 */
+   			fixed delta_w_x = (dev->sgr.adjusted[2].x - dev->sgr.orig[2].x);
+			fixed delta_w_y = (dev->sgr.adjusted[2].y - dev->sgr.orig[2].y);
+			fixed shift_o_x = (dev->sgr.adjusted[0].x - dev->sgr.orig[0].x);
+			fixed shift_o_y = (dev->sgr.adjusted[0].y - dev->sgr.orig[0].y);
+			fixed shift_e_x = (dev->sgr.adjusted[1].x - dev->sgr.orig[1].x); /* Must be same, but we prefer clarity. */
+			fixed shift_e_y = (dev->sgr.adjusted[1].y - dev->sgr.orig[1].y);
+         
+			if (plp->o.p.x < dev->sgr.orig[0].x || 
+			    (plp->o.p.x == dev->sgr.orig[0].x && plp->o.p.y < dev->sgr.orig[0].y)) {
+			    /* Left contact, adjust to keep the contact. */
+			    if_debug4('O', "[O]don't adjust {{%f,%f},{%f,%f}}\n",
+				  fixed2float(plp->o.p.x), fixed2float(plp->o.p.y),
+				  fixed2float(plp->e.p.x), fixed2float(plp->e.p.y));
+			    plp->width.x += (shift_o_x - delta_w_x) / 2;
+			    plp->width.y += (shift_o_y - delta_w_y) / 2;
+			    plp->o.p.x += (shift_o_x - delta_w_x) / 2; 
+			    plp->o.p.y += (shift_o_y - delta_w_y) / 2;
+			    plp->e.p.x += (shift_e_x - delta_w_x) / 2;
+			    plp->e.p.y += (shift_e_y - delta_w_y) / 2;
+			    adjust = false;
+			} else {
+			    /* Right contact, adjust to keep the contact. */
+			    if_debug4('O', "[O]don't adjust {{%f,%f},{%f,%f}}\n",
+				  fixed2float(plp->o.p.x), fixed2float(plp->o.p.y),
+				  fixed2float(plp->e.p.x), fixed2float(plp->e.p.y));
+			    plp->width.x -= (shift_o_x + delta_w_x) / 2;
+			    plp->width.y -= (shift_o_y + delta_w_y) / 2;
+			    plp->o.p.x += (shift_o_x + delta_w_x) / 2; 
+			    plp->o.p.y += (shift_o_y + delta_w_y) / 2;
+			    plp->e.p.x += (shift_e_x + delta_w_x) / 2;
+			    plp->e.p.y += (shift_e_y + delta_w_y) / 2;
+			    adjust = false;
+			}
+		    }
+		}
+	    }
+	}
+    }
+    if (pis->line_params.cap == gs_cap_butt) {
+	dev->sgr.stroke_stored = true;
+	dev->sgr.orig[0] = plp->o.p;
+	dev->sgr.orig[1] = plp->e.p;
+	dev->sgr.orig[2] = plp->width;
+	dev->sgr.orig[3] = plp->vector;
+    } else
+	dev->sgr.stroke_stored = false;
+    if (adjust) {
     horiz = (any_abs(plp->width.x) <= any_abs(plp->width.y));
     adjust_stroke_transversal(plp, pis, thin, horiz);
     if (adjust_longitude)
 	adjust_stroke_longitude(plp, pis, thin, horiz);
-    /* fixme :
-       The best value for adjust_longitude is whether 
-       the dash is isolated and doesn't cover entire segment.
-       The current data structure can't pass this info.
-       Therefore we restrict adjust_stroke_longitude with 1 pixel length.
-    */
+    } 
+    if (pis->line_params.cap == gs_cap_butt) {
+	dev->sgr.adjusted[0] = plp->o.p;
+	dev->sgr.adjusted[1] = plp->e.p;
+	dev->sgr.adjusted[2] = plp->width;
+	dev->sgr.adjusted[3] = plp->vector;
+    }
 }
 
 /* Compute the intersection of two lines.  This is a messy algorithm */
@@ -1185,7 +1277,7 @@ stroke_add(gx_path * ppath, int first, pl_ptr plp, pl_ptr nplp,
 	/* We didn't set up the endpoint parameters before, */
 	/* because the line was thin.  Do it now. */
 	set_thin_widths(plp);
-	adjust_stroke(plp, pis, true, first == 0 && nplp == 0);
+	adjust_stroke(dev, plp, pis, true, first == 0 && nplp == 0);
 	compute_caps(plp);
     }
     /* Create an initial cap if desired. */
@@ -1257,7 +1349,7 @@ stroke_add_compat(gx_path * ppath, int first, pl_ptr plp, pl_ptr nplp,
 	/* We didn't set up the endpoint parameters before, */
 	/* because the line was thin.  Do it now. */
 	set_thin_widths(plp);
-	adjust_stroke(plp, pis, true, first == 0 && nplp == 0);
+	adjust_stroke(dev, plp, pis, true, first == 0 && nplp == 0);
 	compute_caps(plp);
     }
     /* The segment itself : */
@@ -1353,7 +1445,7 @@ stroke_add_initial_cap_compat(gx_path * ppath, pl_ptr plp, bool adlust_longitude
 	/* We didn't set up the endpoint parameters before, */
 	/* because the line was thin.  Do it now. */
 	set_thin_widths(plp);
-	adjust_stroke(plp, pis, true, adlust_longitude);
+	adjust_stroke(dev, plp, pis, true, adlust_longitude);
 	compute_caps(plp);
     }
     /* Create an initial cap if desired. */
@@ -1386,7 +1478,7 @@ add_points(gx_path * ppath, const gs_fixed_point * points, int npoints,
 {
     int code;
 
-    vd_setcolor(0);
+    /* vd_setcolor(0); */
     vd_setlinewidth(0);
     if (moveto_first) {
 	code = gx_path_add_point(ppath, points[0].x, points[0].y);
@@ -1472,7 +1564,7 @@ line_join_points(const gx_line_params * pgs_lp, pl_ptr plp, pl_ptr nplp,
 	ASSIGN_POINT(&np2, nplp->o.p);
 	np = &np1;
     }
-    if_debug1('O', "[o]use %s\n", (ccw ? "co (ccw)" : "ce (cw)"));
+    if_debug1('O', "[O]use %s\n", (ccw ? "co (ccw)" : "ce (cw)"));
 
     /* Handle triangular joins now. */
     if (join == gs_join_triangle) {

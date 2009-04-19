@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: iscan.c,v 1.12 2008/03/23 15:27:42 Arabidopsis Exp $ */
+/* $Id: iscan.c,v 1.13 2009/04/19 13:54:29 Arabidopsis Exp $ */
 /* Token scanner for Ghostscript interpreter */
 #include "ghost.h"
 #include "memory_.h"
@@ -476,12 +476,6 @@ scan_token(i_ctx_t *i_ctx_p, ref * pref, scanner_state * pstate)
   else ref_stack_pop(&o_stack, 1)
     int max_name_ctype =
 	(recognize_btokens()? ctype_name : ctype_btoken);
-    /*
-     * The following is a hack so that ^D will be self-delimiting in files
-     * (to compensate for bugs in some PostScript-generating applications)
-     * but not in strings (to match CPSI on the CET).
-     */
-    int ctrld = (pstate->s_options & SCAN_FROM_STRING ? 0x04 : 0xffff);
 
 #define scan_sign(sign, ptr)\
   switch ( *ptr ) {\
@@ -501,6 +495,13 @@ scan_token(i_ctx_t *i_ctx_p, ref * pref, scanner_state * pstate)
     int sign;
     const bool check_only = (pstate->s_options & SCAN_CHECK_ONLY) != 0;
     const bool PDFScanRules = (i_ctx_p->scanner_options & SCAN_PDF_RULES) != 0;
+    /*
+     * The following is a hack so that ^D will be self-delimiting in PS files
+     * (to compensate for bugs in some PostScript-generating applications)
+     * but not in strings (to match CPSI on the CET) or PDF.
+     */
+    const int ctrld = (pstate->s_options & SCAN_FROM_STRING ||
+                      PDFScanRules ? 0x04 : 0xffff);
     scanner_state sstate;
 
 #define pstack sstate.s_pstack

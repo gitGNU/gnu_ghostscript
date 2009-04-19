@@ -15,7 +15,7 @@
 #  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-# $Id: devs.mak,v 1.12 2008/05/04 14:34:55 Arabidopsis Exp $
+# $Id: devs.mak,v 1.13 2009/04/19 13:54:33 Arabidopsis Exp $
 # makefile for Aladdin's device drivers.
 
 # Define the name of this makefile.
@@ -1095,11 +1095,32 @@ $(DD)pxlcolor.dev : $(DEVS_MAK) $(pxl_) $(GDEV) $(GLD)vector.dev
 
 $(GLOBJ)gdevpx.$(OBJ) : $(GLSRC)gdevpx.c\
  $(math__h) $(memory__h) $(string__h)\
- $(gx_h) $(gsccolor_h) $(gsdcolor_h) $(gserrors_h)\
+ $(gx_h) $(gsccolor_h) $(gsdcolor_h) $(gxiparam_h) $(gserrors_h)\
  $(gxcspace_h) $(gxdevice_h) $(gxpath_h)\
  $(gdevpxat_h) $(gdevpxen_h) $(gdevpxop_h) $(gdevpxut_h) $(gdevvec_h)\
  $(srlx_h) $(strimpl_h)
 	$(GLCC) $(GLO_)gdevpx.$(OBJ) $(C_) $(GLSRC)gdevpx.c
+
+# Scalable Vector Graphics (SVG) output device
+
+svgwrite_=$(GLOBJ)gdevsvg.$(OBJ)
+$(DD)svgwrite.dev : $(DEVS_MAK) $(svgwrite_) $(GDEV) $(GLD)vector.dev
+	$(SETDEV2) $(DD)svgwrite $(svgwrite_)
+	$(ADDMOD) $(DD)svgwrite -include $(GLD)vector
+
+$(GLOBJ)gdevsvg.$(OBJ) : $(GLSRC)gdevsvg.c $(gx_h) $(gdevvec_h)
+	$(GLCC) $(GLO_)gdevsvg.$(OBJ) $(C_) $(GLSRC)gdevsvg.c
+
+# cairo output device
+
+cairo_=$(GLOBJ)gdevcairo.$(OBJ)
+$(DD)cairo.dev : $(DEVS_MAK) $(cairo_) $(GDEV) $(GLD)vector.dev
+	$(SETDEV2) $(DD)cairo $(cairo_)
+	$(ADDMOD) $(DD)cairo -include $(GLD)vector
+	$(ADDMOD) $(DD)cairo -lib cairo
+
+$(GLOBJ)gdevcairo.$(OBJ) : $(GLSRC)gdevcairo.c $(gx_h) $(gdevvec_h)
+	$(GLCC) $(GLO_)gdevcairo.$(OBJ) $(C_) $(GLSRC)gdevcairo.c $(CAIRO_CFLAGS) $(CAIRO_LIBS)
 
 ###### --------------------- Raster file formats --------------------- ######
 
@@ -1514,18 +1535,6 @@ $(DD)png48.dev : $(DEVS_MAK) $(libpng_dev) $(png_) $(GLD)page.dev
 $(DD)pngalpha.dev : $(DEVS_MAK) $(libpng_dev) $(png_) $(GLD)page.dev
 	$(SETPDEV2) $(DD)pngalpha $(png_)
 	$(ADDMOD) $(DD)pngalpha $(png_i_)
-
-### -------------------- PNG with transparency -------------------- ###
-
-pnga_=$(GLOBJ)gdevpnga.$(OBJ)
-$(DD)pnga.dev :	$(pnga_)
-	$(SETDEV) $(DD)pnga $(pnga_)
-
-$(GLOBJ)gdevpnga.$(OBJ) : $(GLSRC)gdevpnga.c $(png__h)\
- $(gscdefs_h) $(gsdevice_h) $(gxblend_h) $(gxtext_h)\
- $(gdevmem_h) $(gdevpccm_h) $(gdevprn_h)
-	$(CC_) $(I_)$(GLI_) $(II)$(PI_)$(_I) $(PCF_) $(GLF_) $(GLO_)gdevpnga.$(OBJ) $(C_) $(GLSRC)gdevpnga.c
-
 
 ### --------------------- WTS Halftoning drivers ----------------------  ###
 

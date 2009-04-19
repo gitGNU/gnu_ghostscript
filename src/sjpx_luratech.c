@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: sjpx_luratech.c,v 1.5 2008/03/23 15:28:00 Arabidopsis Exp $ */
+/* $Id: sjpx_luratech.c,v 1.6 2009/04/19 13:54:35 Arabidopsis Exp $ */
 /* JPXDecode filter implementation -- hooks in the Luratech JPEG2K CSDK */
  
 #include "memory_.h"
@@ -172,7 +172,11 @@ s_jpxd_init(stream_state * ss)
 {
     stream_jpxd_state *const state = (stream_jpxd_state *) ss;
 
-    state->jpx_memory = ss->memory ? ss->memory->non_gc_memory : gs_lib_ctx_get_non_gc_memory_t();
+    if (state->jpx_memory == NULL) {
+      state->jpx_memory = ss->memory ?
+		ss->memory->non_gc_memory :
+		gs_lib_ctx_get_non_gc_memory_t();
+    }
 
     state->handle = (JP2_Decomp_Handle)NULL;
 

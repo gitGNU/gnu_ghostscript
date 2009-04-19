@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevwts.c,v 1.4 2008/05/04 14:34:51 Arabidopsis Exp $ */
+/* $Id: gdevwts.c,v 1.5 2009/04/19 13:54:29 Arabidopsis Exp $ */
 /* ALPHA: Sample Device that provides WTS screening and IMDI color management */
 /* TODO: this should be configurable */
 #define LINK_ICC_NAME	"link.icc"
@@ -937,7 +937,7 @@ wtsimdi_contone_get_bits_rectangle(gx_device * dev, const gs_int_rect * prect,
 		r_last = r, g_last = g, b_last = b;
 		wtsimdi_resolve_one(idev, color);
 	    }
-	    *cmyk_data++ = (uint32_t)idev->current_color.cmyk;
+	    *cmyk_data++ = *((uint32_t *)idev->current_color.cmyk);
 	}
 	wts_halftone_line_8(idev->wcooked, original_y, width, n_planes,
 			    idev->band_offset_x, idev->band_offset_y,  buffer, (const byte *)cmyk_buffer);

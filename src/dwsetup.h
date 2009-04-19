@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2008 Artifex Software, Inc.
    All Rights Reserved.
   
   This file is part of GNU ghostscript
@@ -18,7 +18,7 @@
 */
 
 
-// $Id: dwsetup.h,v 1.8 2007/09/11 15:24:38 Arabidopsis Exp $
+// $Id: dwsetup.h,v 1.9 2009/04/19 13:54:25 Arabidopsis Exp $
 
 #ifndef dwsetup_INCLUDED
 #  define dwsetup_INCLUDED
@@ -42,7 +42,6 @@
 #define IDS_TARGET_DIR                  502
 #define IDS_TARGET_GROUP                503
 #define IDC_PRODUCT_NAME                1000
-#define IDC_INSTALL_FONTS               1001
 #define IDC_TEXTWIN_MLE                 1002
 #define IDC_TEXTWIN_COPY                1003
 #define IDC_INSTALL                     1004

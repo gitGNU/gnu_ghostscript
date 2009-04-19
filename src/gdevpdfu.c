@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdfu.c,v 1.13 2008/05/04 14:34:52 Arabidopsis Exp $ */
+/* $Id: gdevpdfu.c,v 1.14 2009/04/19 13:54:25 Arabidopsis Exp $ */
 /* Output utilities for PDF-writing driver */
 #include "memory_.h"
 #include "jpeglib_.h"		/* for sdct.h */
@@ -695,6 +695,8 @@ stream_to_none(gx_device_pdf * pdev)
 	pdf_end_encrypt(pdev);
     	s = pdev->strm;
 	length = pdf_stell(pdev) - pdev->contents_pos;
+	if (pdev->PDFA)
+	    stream_puts(s, "\n");
 	stream_puts(s, "endstream\n");
 	pdf_end_obj(pdev);
 	pdf_open_obj(pdev, pdev->contents_length_id);

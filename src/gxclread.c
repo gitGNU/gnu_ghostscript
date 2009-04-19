@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxclread.c,v 1.11 2008/05/04 14:34:39 Arabidopsis Exp $ */
+/* $Id: gxclread.c,v 1.12 2009/04/19 13:54:23 Arabidopsis Exp $ */
 /* Command list reading for Ghostscript. */
 #include "memory_.h"
 #include "gx.h"
@@ -177,8 +177,13 @@ rb:
 	    int bmin = ss->b_this.band_min;
 	    int bmax = ss->b_this.band_max;
 	    int64_t pos = ss->b_this.pos;
+	    int nread;
 
-	    io_procs->fread_chars(&ss->b_this, sizeof(ss->b_this), bfile);
+	    nread = io_procs->fread_chars(&ss->b_this, sizeof(ss->b_this), bfile);
+	    if (nread < sizeof(ss->b_this)) {
+		gs_note_error(gs_error_unregistered); /* Must not happen. */
+		return ERRC;
+	    }
 	    if (!(ss->band_last >= bmin && ss->band_first <= bmax))
 		goto rb;
 	    io_procs->fseek(cfile, pos, SEEK_SET, ss->page_cfname);
@@ -282,14 +287,6 @@ top_up_offset_map(stream_state * st, const byte *buf, const byte *ptr, const byt
 
 /* ------ Reading/rendering ------ */
 
-/* Forward references */
-
-static int clist_render_init(gx_device_clist *);
-static int clist_rasterize_lines(gx_device *dev, int y, int lineCount,
-				  gx_device *bdev,
-				  const gx_render_plane_t *render_plane,
-				  int *pmy);
-
 /* Calculate the raster for a chunky or planar device. */
 static int
 clist_plane_raster(const gx_device *dev, const gx_render_plane_t *render_plane)
@@ -300,7 +297,7 @@ clist_plane_raster(const gx_device *dev, const gx_render_plane_t *render_plane)
 }
 
 /* Select full-pixel rendering if required for RasterOp. */
-static void
+void
 clist_select_render_plane(gx_device *dev, int y, int height,
 			  gx_render_plane_t *render_plane, int index)
 {
@@ -343,7 +340,7 @@ clist_setup_params(gx_device *dev)
     return code;
 }
 
-static int 
+int 
 clist_close_writer_and_init_reader(gx_device_clist *cldev)
 {
     gx_device_clist_reader * const crdev = &cldev->reader;
@@ -361,7 +358,7 @@ clist_close_writer_and_init_reader(gx_device_clist *cldev)
 }
 
 /* Initialize for reading. */
-static int
+int
 clist_render_init(gx_device_clist *dev)
 {
     gx_device_clist_reader * const crdev = &dev->reader;
@@ -504,7 +501,7 @@ clist_get_bits_rectangle(gx_device *dev, const gs_int_rect * prect,
 
 /* Copy scan lines to the client.  This is where rendering gets done. */
 /* Processes min(requested # lines, # lines available thru end of band) */
-static int	/* returns -ve error code, or # scan lines copied */
+int	/* returns -ve error code, or # scan lines copied */
 clist_rasterize_lines(gx_device *dev, int y, int line_count,
 		      gx_device *bdev, const gx_render_plane_t *render_plane,
 		      int *pmy)

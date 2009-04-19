@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxpcmap.c,v 1.11 2008/03/23 15:27:43 Arabidopsis Exp $ */
+/* $Id: gxpcmap.c,v 1.12 2009/04/19 13:54:28 Arabidopsis Exp $ */
 /* Pattern color mapping for Ghostscript library */
 #include "math_.h"
 #include "memory_.h"
@@ -179,7 +179,9 @@ static dev_proc_destroy_buf_device(dummy_destroy_buf_device)
 {
 }
 
-#define MAX_BITMAP_PATTERN_SIZE (1024*1024)
+#ifndef MAX_BITMAP_PATTERN_SIZE		/* Allow override with XCFLAGS */
+#  define MAX_BITMAP_PATTERN_SIZE (32*1024*1024)	/* default 32Mb tolerable for most hosts */
+#endif
 
 /* Allocate a pattern accumulator, with an initial refct of 0. */
 gx_device_forward *
@@ -568,6 +570,16 @@ ensure_pattern_cache(gs_imager_state * pis)
     return 0;
 }
 
+/* Free pattern cache and its components. */
+void
+gx_pattern_cache_free(gx_pattern_cache *pcache)
+{
+    pattern_cache_free_all(pcache);
+    gs_free_object(pcache->memory, pcache->tiles, "gx_pattern_cache_free");
+    pcache->tiles = NULL;
+    gs_free_object(pcache->memory, pcache, "gx_pattern_cache_free");
+}
+
 /* Get and set the Pattern cache in a gstate. */
 gx_pattern_cache *
 gstate_pattern_cache(gs_state * pgs)
@@ -751,6 +763,24 @@ gx_pattern_cache_add_entry(gs_imager_state * pis,
 	cwdev->do_not_open_or_close_bandfiles = true;
     }
     pcache->tiles_used++;
+    *pctile = ctile;
+    return 0;
+}
+
+/* Get entry for reading a pattern from clist. */
+int
+gx_pattern_cache_get_entry(gs_imager_state * pis, gs_id id, gx_color_tile ** pctile)
+{
+    gx_pattern_cache *pcache;
+    gx_color_tile *ctile;
+    int code = ensure_pattern_cache(pis);
+
+    if (code < 0)
+	return code;
+    pcache = pis->pattern_cache;
+    ctile = &pcache->tiles[id % pcache->num_tiles];
+    gx_pattern_cache_free_entry(pis->pattern_cache, ctile);
+    ctile->id = id;
     *pctile = ctile;
     return 0;
 }

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxcomp.h,v 1.9 2008/05/04 14:34:43 Arabidopsis Exp $ */
+/* $Id: gxcomp.h,v 1.10 2009/04/19 13:54:25 Arabidopsis Exp $ */
 /* Definitions for implementing compositing functions */
 
 #ifndef gxcomp_INCLUDED
@@ -67,7 +67,11 @@ typedef struct gs_imager_state_s gs_imager_state;
 #ifndef gx_device_DEFINED
 #  define gx_device_DEFINED
 typedef struct gx_device_s gx_device;
+#endif
 
+#ifndef gx_device_clist_writer_DEFINED
+#define gx_device_clist_writer_DEFINED
+typedef struct gx_device_clist_writer_s gx_device_clist_writer;
 #endif
 
 typedef struct gs_composite_type_procs_s {
@@ -97,7 +101,7 @@ typedef struct gs_composite_type_procs_s {
      * not changed.
      */
 #define composite_write_proc(proc)\
-  int proc(const gs_composite_t *pcte, byte *data, uint *psize)
+  int proc(const gs_composite_t *pcte, byte *data, uint *psize, gx_device_clist_writer *cdev)
     composite_write_proc((*write));
 
     /*
@@ -152,6 +156,13 @@ typedef struct gs_composite_type_procs_s {
 			gs_imager_state * pis, gs_memory_t * mem)
     composite_clist_read_update((*clist_compositor_read_update));
 
+    /*
+     * Get compositor cropping.
+     */
+#define composite_get_cropping_proc(proc)\
+  int proc(const gs_composite_t * pcte, int *ry, int *rheight)
+    composite_get_cropping_proc((*get_cropping));
+
 } gs_composite_type_procs_t;
 
 typedef struct gs_composite_type_s {
@@ -179,6 +190,11 @@ composite_is_friendly_proc(gx_default_composite_is_friendly);
  * device is added.  The default does nothing.
  */
 composite_clist_read_update(gx_default_composite_clist_read_update);
+
+/*
+ * Default implementation for get_cropping doesn't return a cropping.
+ */
+composite_get_cropping_proc(gx_default_composite_get_cropping);
 
 /*
  * Compositing objects are reference-counted, because graphics states will

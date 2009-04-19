@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdtt.c,v 1.12 2008/05/04 14:34:45 Arabidopsis Exp $ */
+/* $Id: gdevpdtt.c,v 1.13 2009/04/19 13:54:27 Arabidopsis Exp $ */
 /* Text processing for pdfwrite. */
 #include "math_.h"
 #include "string_.h"
@@ -101,6 +101,9 @@ pdf_text_set_cache(gs_text_enum_t *pte, const double *pw,
 {
     pdf_text_enum_t *const penum = (pdf_text_enum_t *)pte;
     gx_device_pdf *pdev = (gx_device_pdf *)pte->dev;
+
+    if (pdev->type3charpath)
+	return gs_text_set_cache(penum->pte_default, pw, control);
 
     switch (control) {
     case TEXT_SET_CHAR_WIDTH:
@@ -349,6 +352,7 @@ gdev_pdf_text_begin(gx_device * dev, gs_imager_state * pis,
 	    pdev->last_charpath_op = text->operation & TEXT_DO_ANY_CHARPATH;
     }
 
+    if (font->FontType != ft_user_defined || !(text->operation & TEXT_DO_ANY_CHARPATH)) {
     if (font->FontType == ft_user_defined &&
 	(text->operation & TEXT_DO_NONE) && (text->operation & TEXT_RETURN_WIDTH)) {
 	/* This is stringwidth, see gx_default_text_begin.
@@ -360,13 +364,15 @@ gdev_pdf_text_begin(gx_device * dev, gs_imager_state * pis,
 	if (code < 0)
 	    return code;
     } else if ((!(text->operation & TEXT_DO_DRAW) && pis->text_rendering_mode != 3) 
-		|| path == 0 || gx_path_current_point(path, &cpt) < 0
-	    )
+/*		    || path == 0 || gx_path_current_point(path, &cpt) < 0 */
+		    || path == 0 || path_position_valid(path) < 0
+		    || pdev->type3charpath) 
 	return gx_default_text_begin(dev, pis, text, font, path, pdcolor,
 					 pcpath, mem, ppte);
     else if (text->operation & TEXT_DO_ANY_CHARPATH)
 	return gx_default_text_begin(dev, pis, text, font, path, pdcolor,
 					 pcpath, mem, ppte);
+    }
 
     /* Allocate and initialize the enumerator. */
 
@@ -2414,6 +2420,12 @@ pdf_text_process(gs_text_enum_t *pte)
 	    penum->current_font = penum->orig_font;
 	}
     }
+    if (penum->current_font->FontType == ft_user_defined && (penum->text.operation & TEXT_DO_ANY_CHARPATH)
+	&& !pdev->type3charpath) {
+	pdev->type3charpath = true;
+	goto default_impl;
+    }
+
     code = -1;		/* to force default implementation */
 
     /*
@@ -2437,7 +2449,7 @@ pdf_text_process(gs_text_enum_t *pte)
 		len = min(gs_font_name_max, gnstr.size);
 		memcpy(glyph, gnstr.data, len);
 		glyph[len] = 0x00;
-		len = min(255, penum->current_font->font_name.size);
+		len = min(gs_font_name_max, penum->current_font->font_name.size);
 		memcpy(FontName, penum->current_font->font_name.chars, len);
 		FontName[len] = 0x00;
 		len = min(255, penum->current_font->key_name.size);
@@ -2465,7 +2477,7 @@ pdf_text_process(gs_text_enum_t *pte)
 	code = gs_text_process(pte_default);
 	pdev->pte = NULL;	 /* CAUTION: See comment in gdevpdfx.h . */
 	pdev->charproc_just_accumulated = false;
-	if (code == TEXT_PROCESS_RENDER) {
+	if (code == TEXT_PROCESS_RENDER && !pdev->type3charpath) {
 	    penum->returned.current_char = pte_default->returned.current_char;
 	    penum->returned.current_glyph = pte_default->returned.current_glyph;
 	    pdev->charproc_ctm = penum->pis->ctm;
@@ -2517,6 +2529,8 @@ pdf_text_process(gs_text_enum_t *pte)
 	    return code;
 	gs_text_release(pte_default, "pdf_text_process");
 	penum->pte_default = 0;
+	if (pdev->type3charpath)
+	    pdev->type3charpath = false;
 	return 0;
     }
     {

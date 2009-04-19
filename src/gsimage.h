@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gsimage.h,v 1.8 2007/09/11 15:24:30 Arabidopsis Exp $ */
+/* $Id: gsimage.h,v 1.9 2009/04/19 13:54:22 Arabidopsis Exp $ */
 /* Generic image rendering interface */
 /* Requires gsstate.h */
 
@@ -122,10 +122,10 @@
 typedef struct gx_image_enum_common_s gx_image_enum_common_t;
 #endif
 
+typedef struct gs_image_enum_s gs_image_enum;
 int gs_image_begin_typed(const gs_image_common_t * pic, gs_state * pgs,
 			 bool uses_color, gx_image_enum_common_t ** ppie);
 
-typedef struct gs_image_enum_s gs_image_enum;
 gs_image_enum *gs_image_enum_alloc(gs_memory_t *, client_name_t);
 
 /*

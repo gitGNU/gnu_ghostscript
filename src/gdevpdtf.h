@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gdevpdtf.h,v 1.11 2008/05/04 14:34:47 Arabidopsis Exp $ */
+/* $Id: gdevpdtf.h,v 1.12 2009/04/19 13:54:32 Arabidopsis Exp $ */
 /* Font and CMap resource structure and API for pdfwrite */
 
 #ifndef gdevpdtf_INCLUDED
@@ -191,8 +191,6 @@ BASIC_PTRS(pdf_base_font_ptrs) {\
     GC_OBJ_ELT(pdf_base_font_t, FontFile),\
     GC_STRING_ELT(pdf_base_font_t, font_name)\
 };\
-gs_private_st_basic(st_pdf_base_font, pdf_base_font_t, "pdf_base_font_t",\
-		    pdf_base_font_ptrs, pdf_base_font_data);
 
 
 typedef struct {

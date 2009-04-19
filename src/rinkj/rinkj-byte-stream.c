@@ -17,11 +17,12 @@
 
 */
 
-/*$Id: rinkj-byte-stream.c,v 1.4 2007/09/11 15:25:09 Arabidopsis Exp $ */
+/*$Id: rinkj-byte-stream.c,v 1.5 2009/04/19 13:54:47 Arabidopsis Exp $ */
 /* Bytestream abstraction for Rinkj driver. */
 
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdarg.h>
 #include "rinkj-byte-stream.h"
 

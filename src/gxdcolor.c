@@ -17,13 +17,14 @@
 
 */
 
-/*$Id: gxdcolor.c,v 1.10 2008/03/23 15:27:53 Arabidopsis Exp $ */
+/*$Id: gxdcolor.c,v 1.11 2009/04/19 13:54:31 Arabidopsis Exp $ */
 /* Pure and null device color implementation */
 #include "gx.h"
 #include "memory_.h"
 #include "gserrors.h"
 #include "gsbittab.h"
 #include "gxdcolor.h"
+#include "gxpcolor.h"
 #include "gxdevice.h"
 #include "gxdevcli.h"
 
@@ -184,7 +185,7 @@ static  const gx_device_color_type_t * dc_color_type_table[] = {
     gx_dc_type_none,            /* unset device color */
     gx_dc_type_null,            /* blank (transparent) device color */
     gx_dc_type_pure,            /* pure device color */
-    /* gx_dc_type_pattern, */   /* patterns - not used in command list */
+    gx_dc_type_pattern,         /* patterns */
     gx_dc_type_ht_binary,       /* binary halftone device colors */
     gx_dc_type_ht_colored,      /* general halftone device colors */
     gx_dc_type_wts              /* well-tempered screen device colors */
@@ -286,6 +287,7 @@ gx_dc_no_write(
     const gx_device_color *         pdevc,      /* ignored */
     const gx_device_color_saved *   psdc,       /* ignored */
     const gx_device *               dev,        /* ignored */
+    uint			    offset,     /* ignored */
     byte *                          data,       /* ignored */
     uint *                          psize )
 {
@@ -299,12 +301,39 @@ gx_dc_no_read(
     const gs_imager_state * pis,                /* ignored */
     const gx_device_color * prior_devc,         /* ignored */
     const gx_device *       dev,                /* ignored */
+    uint		    offset,             /* ignored */
     const byte *            pdata,              /* ignored */
     uint                    size,               /* ignored */
     gs_memory_t *           mem )               /* ignored */
 {
     pdevc->type = gx_dc_type_none;
     return 0;
+}
+
+int
+gx_dc_cannot_write(
+    const gx_device_color *         pdevc,      /* ignored */
+    const gx_device_color_saved *   psdc,       /* ignored */
+    const gx_device *               dev,        /* ignored */
+    uint			    offset,     /* ignored */
+    byte *                          data,       /* ignored */
+    uint *                          psize )
+{
+    return_error(gs_error_unknownerror);
+}
+
+int
+gx_dc_cannot_read(
+    gx_device_color *       pdevc,
+    const gs_imager_state * pis,                /* ignored */
+    const gx_device_color * prior_devc,         /* ignored */
+    const gx_device *       dev,                /* ignored */
+    uint		    offset,             /* ignored */
+    const byte *            pdata,              /* ignored */
+    uint                    size,               /* ignored */
+    gs_memory_t *           mem )               /* ignored */
+{
+    return_error(gs_error_unknownerror);
 }
 
 static int
@@ -355,6 +384,7 @@ gx_dc_null_read(
     const gs_imager_state * pis,                /* ignored */
     const gx_device_color * prior_devc,         /* ignored */
     const gx_device *       dev,                /* ignored */
+    uint		    offset,             /* ignored */
     const byte *            pdata,              /* ignored */
     uint                    size,               /* ignored */
     gs_memory_t *           mem )               /* ignored */
@@ -481,6 +511,7 @@ gx_dc_pure_write(
     const gx_device_color *         pdevc,
     const gx_device_color_saved *   psdc,       /* ignored */
     const gx_device *               dev,
+    uint			    offset,     /* ignored */
     byte *                          pdata,
     uint *                          psize )
 {
@@ -528,6 +559,7 @@ gx_dc_pure_read(
     const gs_imager_state * pis,                /* ignored */
     const gx_device_color * prior_devc,         /* ignored */
     const gx_device *       dev,
+    uint		    offset,             /* ignored */
     const byte *            pdata,
     uint                    size,
     gs_memory_t *           mem )               /* ignored */
@@ -700,7 +732,7 @@ gx_dc_write_color(
     /* check for adequate space */
     if (*psize < num_bytes) {
         *psize = num_bytes;
-        return gs_error_rangecheck;
+        return_error(gs_error_rangecheck);
     }
     *psize = num_bytes;
 
@@ -750,7 +782,7 @@ gx_dc_read_color(
 
     /* check that enough data has been provided */
     if (size < 1 || (pdata[0] != 0xff && size < num_bytes))
-        return gs_error_rangecheck;
+        return_error(gs_error_rangecheck);
 
     /* check of gx_no_color_index */
     if (pdata[0] == 0xff) {

@@ -17,7 +17,7 @@
 
 */
 
-/* $Id: gxidata.c,v 1.10 2008/05/04 14:34:51 Arabidopsis Exp $ */
+/* $Id: gxidata.c,v 1.11 2009/04/19 13:54:22 Arabidopsis Exp $ */
 /* Generic image enumeration and cleanup */
 #include "gx.h"
 #include "memory_.h"
@@ -53,7 +53,7 @@ gx_image1_plane_data(gx_image_enum_common_t * info,
     + 7) >> 3)
 
     fixed adjust = penum->adjust;
-    ulong offsets[gs_image_max_planes];
+    ulong offsets[GS_IMAGE_MAX_COMPONENTS];
     int ignore_data_x;
     bool bit_planar = penum->num_planes > penum->spp;
     int code;
@@ -470,6 +470,6 @@ gx_image1_end_image(gx_image_enum_common_t * info, bool draw_last)
     }
     gs_free_object(mem, penum->line, "image line");
     gs_free_object(mem, penum->buffer, "image buffer");
-    gs_free_object(mem, penum, "gx_default_end_image");
+    gx_image_free_enum(&info);
     return 0;
 }
