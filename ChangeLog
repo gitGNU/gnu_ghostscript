@@ -49,3 +49,7 @@
 	* gdevxini.c: patch from savannah bug #20270 to correct gv cropping error
 	* new GNU version 8.62.0
 	
+2009-04-19 Didier LINK <didier@famille-link.fr>
+	* updates from GPL 8.63 release
+	* new GNU version : 8.63.0
+	

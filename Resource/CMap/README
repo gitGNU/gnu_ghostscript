@@ -6,7 +6,7 @@ CMap PostScript Resources
    All CJK (CID-keyed font) supporting features requires CMap resources.
    Please install CMap resource files under the directory 
 
-     /usr/share/ghostscript/8.16/Resource/CMap
+     /usr/share/ghostscript/8.63/Resource/CMap
 
    Adobe's "CMaps for PDF 1.4 CJK Fonts" are available at:
 
