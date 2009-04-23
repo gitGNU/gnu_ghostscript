@@ -20,7 +20,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
-# $Id: testdiff.py,v 1.2 2008/05/04 14:35:06 Arabidopsis Exp $
+# $Id: testdiff.py,v 1.3 2009/04/23 23:32:08 Arabidopsis Exp $
 
 #
 # testdiff <start date> [<end date>]
@@ -93,6 +93,7 @@ if not baseline_db:
     print myself,"empty checksum database",baseline_dbname
 
 if not new_db or not old_db or not baseline_db:
+    print myself,"sys.exit(1) called"
     sys.exit(1)
 
 # find any checksum in new that is a new mis-match from baseline, then compare with old
@@ -153,7 +154,7 @@ for d in new_diffs:
 length = len(list)
 if length>0:
     print
-    print myself,new_name,"new differences from",old_name,"(",str(length)," differences)"
+    print myself,new_name,"new differences from",old_name,"("+str(length)+" differences)"
     list.sort()
     for l in list:
         print "%s %s (%s/%d/%s)" % (l[0], l[1], l[2], l[3], l[4])
@@ -198,7 +199,7 @@ for d in all_diffs:
 length = len(list)
 if length > 0:
     print
-    print myself,new_name,"differences from baseline""(",str(length)," differences)"
+    print myself,new_name,"differences from baseline ("+str(length)+" differences)"
     list.sort()
     for l in list:
         print "%s %s (%s/%d/%s)" % (l[0], l[1], l[2], l[3], l[4])

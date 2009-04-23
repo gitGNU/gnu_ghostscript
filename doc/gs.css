@@ -1,5 +1,5 @@
 /* This is the default Ghostscript stylesheet */
-/* $Id: gs.css,v 1.5 2007/05/07 11:22:13 Arabidopsis Exp $ */
+/* $Id: gs.css,v 1.6 2009/04/23 23:32:05 Arabidopsis Exp $ */
 
 body
 {
@@ -48,6 +48,12 @@ tt
   color: rgb(40%,24%,24%);
 }
 
+code
+{
+  color: rgb(40%,24%,24%);
+  text-weight: bold;
+}
+
 a > tt, a > b > tt
 {
   color: blue;
@@ -73,7 +79,7 @@ a:hover, a:active, a:focus
   background: #FFFFAA;
 }
 
-# table formatting hints
+/* table formatting hints */
 td
 {
   vertical-align: top;

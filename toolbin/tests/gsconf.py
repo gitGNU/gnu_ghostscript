@@ -21,7 +21,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gsconf.py,v 1.8 2008/05/04 14:35:06 Arabidopsis Exp $
+# $Id: gsconf.py,v 1.9 2009/04/23 23:32:09 Arabidopsis Exp $
 
 # gsconf.py
 #
@@ -60,6 +60,6 @@ def parse_config(file=configdir+"testing.cfg"):
 
 
 def get_dailydb_name():
-    return dailydir + time.strftime("%Y%m%d", time.localtime()) + ".db"
+    return dailydir + time.strftime("%Y%m%d", time.localtime()) # mhw + ".db"
 
 parse_config()

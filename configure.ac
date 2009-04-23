@@ -14,7 +14,7 @@ dnl You should have received a copy of the GNU General Public License along with
 dnl ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 dnl Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 dnl 
-dnl $Id: configure.ac,v 1.19 2009/04/19 13:54:47 Arabidopsis Exp $
+dnl $Id: configure.ac,v 1.20 2009/04/23 23:31:55 Arabidopsis Exp $
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------
@@ -22,8 +22,8 @@ dnl Initialization and Versioning
 dnl ------------------------------------------------
 
 AC_PREREQ(2.60)
-AC_INIT([gnu-ghostscript], [8.62.0], [gnu-ghostscript-bug@gnu.org])
-AC_CONFIG_SRCDIR(src/gs.c)
+AC_INIT([gnu-ghostscript], [8.64.0], [gnu-ghostscript-bug@gnu.org])
+AC_CONFIG_SRCDIR(psi/gs.c)
 AM_INIT_AUTOMAKE([-Wall])
 
 dnl Inherit compiler flags from the environment...
@@ -33,9 +33,9 @@ CXXFLAGS="${CXXFLAGS:=}"
 LDFLAGS="${LDFLAGS:=}"
 
 GS_VERSION_MAJOR=8
-GS_VERSION_MINOR=63
+GS_VERSION_MINOR=64
 GS_VERSION_PATCH=0
-GS_REVISIONDATE=20080801
+GS_REVISIONDATE=20090203
 
 GS_VERSION=`expr $GS_VERSION_MAJOR \* 10000 + $GS_VERSION_MINOR \* 100 + $GS_VERSION_PATCH`
 
@@ -68,7 +68,7 @@ dnl
 AC_DEFUN([GS_SPLIT_LIBS], [
 # the makefile wants a list of just the library names 
 for gs_item in $2; do
-  gs_stripped_item=`echo "$gs_item" | sed -e 's/-l//'`
+  gs_stripped_item=`echo "$gs_item" | sed -e 's/^-l//'`
   if test "x$gs_stripped_item" != "x$gs_item"; then
     $1="$[$1] $gs_stripped_item"
   fi
@@ -108,7 +108,8 @@ dnl --------------------------------------------------
 dnl Allow excluding the contributed drivers
 dnl --------------------------------------------------  
 
-AC_ARG_ENABLE(contrib, [  --disable-contrib       do not include contributed drivers [default=include]])
+AC_ARG_ENABLE([contrib], AC_HELP_STRING([--disable-contrib],
+    [Do not include contributed drivers]))
 CONTRIBINCLUDE="include contrib/contrib.mak"
 INSTALL_CONTRIB="install-contrib-extras"
 if test x$enable_contrib = xno; then
@@ -128,7 +129,7 @@ dnl --------------------------------------------------
 if test $ac_cv_prog_gcc = yes; then
     cflags_to_try="-Wall -Wstrict-prototypes -Wundef \
 -Wmissing-declarations -Wmissing-prototypes -Wwrite-strings \
--Wno-strict-aliasing \
+-Wno-strict-aliasing -Wdeclaration-after-statement \
 -fno-builtin -fno-common"
     optflags_to_try="-O2"
 else
@@ -136,7 +137,8 @@ else
     optflags_to_try="-O"
 fi
 
-AC_ARG_ENABLE(debug, [  --enable-debug          turn on debugging [default=no]])
+AC_ARG_ENABLE([debug], AC_HELP_STRING([--enable-debug],
+    [turn on debugging]))
 if test x$enable_debug = xyes; then
     optflags_to_try="-g"
     CFLAGS="-DDEBUG $CFLAGS"
@@ -240,7 +242,8 @@ dnl Fontconfig support
 HAVE_FONTCONFIG=""
 FONTCONFIG_CFLAGS=""
 FONTCONFIG_LIBS=""
-AC_ARG_ENABLE(fontconfig, [  --disable-fontconfig    Don't use fontconfig to list system fonts])
+AC_ARG_ENABLE([fontconfig], AC_HELP_STRING([--disable-fontconfig],
+    [Don't use fontconfig to list system fonts]))
 if test "$enable_fontconfig" != "no"; then
 	# We MUST NOT use PKG_CHECK_MODULES since it is a) not a standard
 	# autoconf macro and b) requires pkg-config on the system, which is
@@ -320,11 +323,29 @@ fi
 case $with_libiconv in
   gnu)
     AC_DEFINE(USE_LIBICONV_GNU, 1, [Using GNU libiconv])
+    CFLAGS="$CFLAGS -DUSE_LIBICONV_GNU"
     ;;
   native)
     AC_DEFINE(USE_LIBICONV_NATIVE, 1, [Using a native implementation of iconv in a separate library])
     ;;
 esac
+
+dnl Tests for libpaper (to determine system default paper size)
+AC_ARG_WITH([libpaper],
+            AC_HELP_STRING([--without-libpaper],
+                           [disable libpaper support]))
+if test x$with_libpaper != xno; then
+    AC_CHECK_LIB(paper, systempapername, [with_libpaper=yes],
+    [
+	AC_MSG_WARN([disabling support for libpaper])
+        with_libpaper=no
+    ])
+fi
+if test x$with_libpaper != xno; then
+    LIBS="$LIBS -lpaper"
+    AC_DEFINE(USE_LIBPAPER, 1, [Using libpaper])
+    CFLAGS="$CFLAGS -DUSE_LIBPAPER"
+fi
 
 AC_CHECK_LIB(dl, dlopen)
 
@@ -430,7 +451,8 @@ AC_SUBST(LIBPNGDIR)
 AC_SUBST(PNGDEVS)
 
 dnl look for CUPS...
-AC_ARG_ENABLE(cups, [  --enable-cups           turn on CUPS support, default=yes])
+AC_ARG_ENABLE([cups], AC_HELP_STRING([--disable-cups],
+    [Don't include CUPS support]))
 
 CUPSDEV=""
 CUPSINCLUDE=""
@@ -473,7 +495,8 @@ AC_SUBST(CUPSDATA)
 
 
 dnl look for IJS implementation
-AC_ARG_WITH(ijs, AC_HELP_STRING([--with-ijs],[include IJS driver support]))
+AC_ARG_WITH([ijs], AC_HELP_STRING([--without-ijs],
+    [disable IJS driver support]))
 dnl set safe defaults
     IJSDIR=src
     IJSDEVS=''
@@ -491,7 +514,8 @@ AC_SUBST(IJSDIR)
 AC_SUBST(IJSDEVS)
 
 dnl look for jbig2dec
-AC_ARG_WITH(jbig2dec, AC_HELP_STRING([--with-jbig2dec],[include JBIG2 decode support]))
+AC_ARG_WITH([jbig2dec], AC_HELP_STRING([--without-jbig2dec],
+    [disable JBIG2 decode support]))
 JBIG2DIR=src
 SHARE_JBIG2=0
 JBIG2DEVS=''
@@ -525,7 +549,8 @@ AC_SUBST(SHARE_JBIG2)
 AC_SUBST(JBIG2DEVS)
 
 dnl look for the jasper JPEG 2000 library
-AC_ARG_WITH(jasper, AC_HELP_STRING([--with-jasper],[link to the JasPer library for JPEG 2000]))
+AC_ARG_WITH([jasper], AC_HELP_STRING([--without-jasper],
+  [don't use the JasPer library for JPEG 2000]))
 JASPERDIR=src
 SHARE_JASPER=0
 JPXDEVS=''
@@ -596,7 +621,8 @@ AC_SUBST(SHARE_JASPER)
 AC_SUBST(JPXDEVS)
 
 dnl check if we can/should build the gtk loader
-AC_ARG_ENABLE([gtk], AC_HELP_STRING([--disable-gtk], [Don't build the gtk loader]))
+AC_ARG_ENABLE([gtk], AC_HELP_STRING([--disable-gtk],
+    [Don't build the gtk loader]))
 SOC_CFLAGS=""
 SOC_LIBS=""
 SOC_LOADER="dxmainc.c"
@@ -629,27 +655,32 @@ AC_SUBST(SOC_LIBS)
 AC_SUBST(SOC_LOADER)
 
 dnl enable the cairo device if the library is available
+AC_ARG_ENABLE([cairo], AC_HELP_STRING([--disable-cairo],
+    [Don't include the cairo output device]))
 CAIRO_DEVS=""
 CAIRO_CFLAGS=""
 CAIRO_LIBS=""
+if test "x$enable_cairo" != xno; then
 AC_PATH_PROG(PKGCONFIG, pkg-config)
 if test "x$PKGCONFIG" != x; then
   AC_MSG_CHECKING([for cairo])
-  CAIRO_CFLAGS=`pkg-config cairo --cflags`
-  CAIRO_LIBS=`pkg-config cairo --libs`
-  if test -z "$CAIRO_LIBS"; then
-    AC_MSG_RESULT([no])
-  else
+    if $PKGCONFIG --exists 'cairo >= 1.2.0'; then
+      CAIRO_CFLAGS=`$PKGCONFIG --cflags cairo`
+      CAIRO_LIBS=`$PKGCONFIG --libs cairo`
     CAIRO_DEVS="cairo"
     AC_MSG_RESULT([yes])
+    else
+      AC_MSG_RESULT([no])
   fi
 fi
+fi
+
 AC_SUBST(CAIRO_CFLAGS)
 AC_SUBST(CAIRO_LIBS)
 
 dnl look for omni implementation
-AC_ARG_WITH([omni], AC_HELP_STRING([--with-omni],
-	[build the omni driver]))
+AC_ARG_WITH([omni], AC_HELP_STRING([--without-omni],
+	[disable the omni driver]))
 dnl set safe defaults
 OMNIDEVS=''
 INCLUDEOMNI=yes
@@ -718,15 +749,15 @@ AC_SUBST(X11DEVS)
 AC_SUBST(XLIBS)
 
 dnl executible name
-AC_ARG_WITH(gs, AC_HELP_STRING([--with-gs=NAME],
-	[name of the ghostscript executible [[gs]]]),
+AC_ARG_WITH([gs], AC_HELP_STRING([--with-gs=NAME],
+	[name of the Ghostscript executible [[gs]]]),
 	[GS="$with_gs"],[GS='gs'])
 AC_SUBST(GS)
 
 dnl do we compile the postscript initialization files into Ghostscript?
 COMPILE_INITS="1"
-AC_ARG_ENABLE(compile-inits, AC_HELP_STRING([--disable-compile-inits],
-       [don't compile in initialization files]),[
+AC_ARG_ENABLE([compile-inits], AC_HELP_STRING([--disable-compile-inits],
+       [Don't compile in initialization files]),[
                if test "x$enable_compile_inits" = xno; then
                        COMPILE_INITS="0"
                fi])
@@ -957,9 +988,10 @@ DYNAMIC_LDFLAGS=""
 DYNAMIC_LIBS=""
 INSTALL_SHARED=""
 
-AC_ARG_ENABLE(dynamic, [  --enable-dynamic        enable dynamically loaded drivers (default=no)],
+AC_ARG_ENABLE([dynamic], AC_HELP_STRING([--enable-dynamic],
+    [Enable dynamically loaded drivers]),
 [	case `uname` in
-		Linux*)
+		Linux*|GNU*)
 		INSTALL_SHARED="install-shared"
 		DYNAMIC_CFLAGS="-fPIC"
 		if test "x$X_DEVS" != x; then
@@ -1009,7 +1041,8 @@ AC_SUBST(DYNAMIC_LIBS)
 AC_SUBST(INSTALL_SHARED)
 
 dnl look for default font path...
-AC_ARG_WITH(fontpath, [  --with-fontpath         set font path for gs],fontpath="$withval",fontpath="")
+AC_ARG_WITH([fontpath],  AC_HELP_STRING([--with-fontpath],
+    [set font search path for gs]), fontpath="$withval", fontpath="")
 
 dnl Fix "prefix" variable...
 if test "x$prefix" = xNONE; then

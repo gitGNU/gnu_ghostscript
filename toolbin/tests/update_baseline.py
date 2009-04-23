@@ -20,7 +20,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
-# $Id: update_baseline.py,v 1.2 2008/05/04 14:35:06 Arabidopsis Exp $
+# $Id: update_baseline.py,v 1.3 2009/04/23 23:32:09 Arabidopsis Exp $
 
 #
 # update_baseline <file>
@@ -28,7 +28,7 @@
 # this script updates the testdata database with a new baseline sum
 # for all versions of file <file>.  use this when the comparing gs is
 # producing better output than the normal baseline (ie, when a regression
-# is really a progression
+# is really a progression)
 
 import gstestgs
 import gsconf

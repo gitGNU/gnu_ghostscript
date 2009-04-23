@@ -20,7 +20,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
-# $Id: run_regression.py,v 1.2 2008/05/04 14:35:06 Arabidopsis Exp $
+# $Id: run_regression.py,v 1.3 2009/04/23 23:32:09 Arabidopsis Exp $
 
 #
 # run_regression.py
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     revision_value=options.revision_value
 
     if revision != "HEAD":
-        gsconf.checksumdb = gsconf.dailydir+revision+".db"
+        gsconf.checksumdb = gsconf.dailydir+revision # mhw +".db"
 
     if revision != "HEAD":
         gsroot=gsconf.root+"gs."+revision+"/"
@@ -123,6 +123,7 @@ if __name__ == "__main__":
     testAll(options.track,gsroot,now,options)
 
     if options.track:
+        dbname = dbname + ".db" # mhw
         if not os.path.exists(dbname):
             print options.myself,"ERROR","the checksum database does not exist",dbname
 

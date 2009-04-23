@@ -1,23 +1,33 @@
 #!/bin/sh
 
 # helper script to syncronize a working tree with the regression cluster
-# $Id: clusterpush.sh,v 1.1 2009/04/19 13:54:46 Arabidopsis Exp $
+# $Id: clusterpush.sh,v 1.2 2009/04/23 23:32:17 Arabidopsis Exp $
 
 HOST=atfxsw01@tticluster.com
 DEST=$USER
 
 # try to use the same directory name on the cluster
 TARGET=`basename $PWD`
-if test -z "$TARGET"; then
+
+# determine which build we're doing
   if test -d gs; then
-    TARGET='ghostpcl'
+  BUILD_TYPE='ghostpdl'
   else
-    TARGET='gs'
+  BUILD_TYPE='gs'
   fi
+# fall back to build type if we don't have a target
+if test -z "$TARGET"; then
+  TARGET="$BUILD_TYPE"
 fi
 
+
 # try get the current revision
+REV=''
+if test -d .svn; then
 REV=`svn info | grep Revision | cut -d ' ' -f 2`
+elif test -d .git; then
+  REV=`git rev-parse HEAD`
+fi
 if test -z "$REV"; then
   REV='unknown'
 fi
@@ -25,6 +35,7 @@ fi
 echo "Pushing to $DEST/$TARGET on the cluster..."
 rsync -avz \
   --exclude .svn --exclude .git \
+  --exclude _darcs --exclude .bzr --exclude .hg \
   --exclude bin --exclude obj --exclude debugobj \
   --exclude sobin --exclude soobj \
   --exclude main/obj --exclude main/debugobj \
@@ -33,33 +44,23 @@ rsync -avz \
   --exclude svg/obj --exclude xps/debugobj \
   --exclude ufst --exclude ufst-obj \
   ./* $HOST:$DEST/$TARGET
-if test $? != 0; then
+if test ! $? -eq 0; then
   echo "$0 aborted."
   exit 1
 fi
 
-echo -n "Copying regression baseline..."
-if test -d src; then
-  LATEST='gs'
-else
-  LATEST=`ssh $HOST 'for file in \`ls regression |\
-    egrep ghostpcl-r[0-9]+[+][0-9]+$ | sort -r | head\`; do\
-      if test -r regression/$file/reg_baseline.txt; then\
-        echo $file; break;\
-      fi;\
-    done'`
-fi
-if test -z "$LATEST"; then echo "$0 aborted."; exit 1; fi
-echo " from $LATEST..."
-ssh $HOST "cp regression/$LATEST/reg_baseline.txt $DEST/$TARGET/"
-if test $? != 0; then
+echo -n "Copying regression baseline"
+if test -z "$BUILD_TYPE"; then echo " $0 aborted."; exit 1; fi
+echo " from $BUILD_TYPE..."
+ssh $HOST "cp regression/$BUILD_TYPE/reg_baseline.txt $DEST/$TARGET/"
+if test ! $? -eq 0; then
   echo "$0 aborted."
   exit 1
 fi
 
 echo "Queuing regression test..."
 echo "cd $DEST/$TARGET && run_regression" | ssh $HOST
-if test $? != 0; then
+if test ! $? -eq 0; then
   echo "$0 aborted."
   exit 1
 fi
@@ -67,12 +68,12 @@ fi
 REPORT=`ssh $HOST ls $DEST/$TARGET \| egrep '^regression-[0-9]+.log$' \| sort -r \| head -1`
 echo "Pulling $REPORT..."
 scp -q $HOST:$DEST/$TARGET/$REPORT .
-if test $? != 0; then
+if test ! $? -eq 0; then
   echo "$0 aborted."
   exit 1
 fi
 cat $REPORT
-if test $? != 0; then
+if test ! $? -eq 0; then
   echo "$0 aborted."
   exit 1
 fi

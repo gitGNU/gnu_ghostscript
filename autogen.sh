@@ -1,7 +1,7 @@
 #!/bin/sh
 # Run this to set up the build system: configure, makefiles, etc.
 
-# $Id: autogen.sh,v 1.7 2006/06/16 16:03:35 Arabidopsis Exp $
+# $Id: autogen.sh,v 1.8 2009/04/23 23:31:55 Arabidopsis Exp $
 
 package="gnu-ghostscript"
 
@@ -23,9 +23,9 @@ echo "Generating configuration files for $package, please wait...."
 echo "  libtoolize"
 libtoolize -c -f
 echo "  aclocal $ACLOCAL_FLAGS"
-aclocal $ACLOCAL_FLAGS
+aclocal $ACLOCAL_FLAGS  || exit 1
 echo "  running autoconf"
-autoconf
+autoconf || exit 1
 
 if test -z "$*"; then
         echo "I am going to run ./configure with no arguments - if you wish "

@@ -20,7 +20,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
-# $Id: compare_checksumdb.py,v 1.2 2008/05/04 14:35:05 Arabidopsis Exp $
+# $Id: compare_checksumdb.py,v 1.3 2009/04/23 23:32:09 Arabidopsis Exp $
 
 #
 # compare_checksumdb.py firstname secondname
@@ -169,7 +169,7 @@ for d in all_diffs:
 length = len(list)
 if length > 0:
     print
-    print myself,new_name,"differences from baseline""(",str(length)," differences)"
+    print myself,new_name,"differences from baseline ("+str(length)+" differences)"
     list.sort()
     for l in list:
         print "%s %s (%s/%d/%s)" % (l[0], l[1], l[2], l[3], l[4])

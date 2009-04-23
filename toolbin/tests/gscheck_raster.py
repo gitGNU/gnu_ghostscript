@@ -20,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
 
 
-# $Id: gscheck_raster.py,v 1.10 2008/05/04 14:35:07 Arabidopsis Exp $
+# $Id: gscheck_raster.py,v 1.11 2009/04/23 23:32:09 Arabidopsis Exp $
 
 #
 # gscheck_raster.py
@@ -34,6 +34,9 @@ import sys, os, stat
 import string, calendar, time
 import gstestutils
 import gssum, gsconf, gstestgs, gsparamsets, gsutil
+import shutil
+
+import time
 
 class GSCompareTestCase(gstestgs.GhostscriptTestCase):
 
@@ -85,11 +88,12 @@ class GSCompareTestCase(gstestgs.GhostscriptTestCase):
 	    sum = ''
 
         if os.path.exists(outputfile):
-            os.unlink(outputfile)
+            shutil.move(outputfile, gsconf.datadir+"/raster.daily")
+#           os.unlink(outputfile)
 
 	if sum and self.track_daily:	                                                  # add test result to daily database
             if gsconf.__dict__.has_key("checksumdb") and gsconf.checksumdb:
-                dbname=gsconf.dailydir+gsconf.checksumdb+".db"
+                dbname=gsconf.dailydir+gsconf.checksumdb # mhw +".db"
             else:
                 dbname=gsconf.get_dailydb_name()
             gssum.add_file(outputfile, dbname=dbname, sum=sum)

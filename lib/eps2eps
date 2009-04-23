@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: eps2eps,v 1.6 2009/04/19 13:54:37 Arabidopsis Exp $
+# $Id: eps2eps,v 1.7 2009/04/23 23:31:12 Arabidopsis Exp $
 # "Distill" Encapsulated PostScript.
 
 # This definition is changed on install to match the
@@ -26,4 +26,4 @@ if [ $# -ne 2 ]; then
 	exit 1
 fi
 
-exec "$GS_EXECUTABLE" -q -sDEVICE=epswrite "-sOutputFile=$2" -dNOPAUSE -dBATCH -dSAFER $OPTIONS "$1"
+exec "$GS_EXECUTABLE" -q -sDEVICE=epswrite -sstdout=%stderr "-sOutputFile=$2" -dNOPAUSE -dBATCH -dSAFER $OPTIONS "$1"

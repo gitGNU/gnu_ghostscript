@@ -1,3 +1,29 @@
+Version 8.64.0 main changes:
+* Approximately 100 bugs have been fixed since version 8.63.0. 
+	Of particular note in this release are improvements to overprint and spot 
+	color support in documents with transparency, improvements to PDF and PS 
+	output, proper handling of PDF-specific text rendering modes and support 
+	for reading AES-encrypted PDF documents.
+
+* Also improved is handling of CJK text, especially in vertical writing modes, 
+	memory footprint processing some files at high resolution and support for 
+	using the system's default paper size on unix.
+
+* The interpreter's handling of color spaces has been moved from PostScript 
+	code to C.
+
+* A number of the included printer drivers and cups wrappers have been updated 
+	to support a PDF-based workflow. Also fixed are several long-standing bugs
+	in the pcl drivers with respect to duplex, resolution and paper tray 
+	selection.
+* In this release they are one incompatible change:
+
+	- In this release the C source files have been split into two new 
+		directories. Interpreter source files are now in psi and the graphics 
+		library and output devices are now in base. Previously everything was 
+		in src. This may cause problems with existing references in external 
+		build files or when applying patches generated against an older version.
+
 Version 8.63.0 main changes:
 * Approximately 238 bugs have been fixed since version 8.62.0. 
 	Of particular note are robustness and performance improvements with large

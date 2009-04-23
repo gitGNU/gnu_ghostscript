@@ -1,5 +1,5 @@
 /**
- * Fuzzy comparison utility. Copyright 2001-2003 Artifex Software, Inc.
+ * Fuzzy comparison utility. Copyright 2001-2008 Artifex Software, Inc.
  **/
 
 #include <stdio.h>
@@ -514,10 +514,6 @@ fuzzy_diff_images (Image *image1, Image *image2, const FuzzyParams *fparams,
   }
 
   /* Do compare : */
-  freport->n_diff = 0;
-  freport->n_outof_tolerance = 0;
-  freport->n_outof_window = 0;
-
   for (y = 0; y < height; y++)
     {
       int x;
@@ -609,8 +605,6 @@ ex:
   free_window (buf2, window_size);
   if (out_buf)
     free(out_buf);
-  if (image_out)
-    fclose(image_out->f);
   return rcode;
 }
 
@@ -730,11 +724,11 @@ main (int argc, char **argv)
       return 1;
     }
     if (image1->width != image2->width) {
-	printf("Diffenert image width for page %d\n", page);
+	printf("Different image width for page %d\n", page);
 	rcode = MAX(rcode, 1);
     }
     if (image1->height != image2->height) {
-	printf("Diffenert image height for page %d\n", page);
+	printf("Different image height for page %d\n", page);
 	rcode = MAX(rcode, 1);
     }
     if (out_fn != NULL) {
@@ -760,6 +754,10 @@ main (int argc, char **argv)
            (image1, out_fn);
     } else
       image_out = NULL;
+
+    freport.n_diff = 0;
+    freport.n_outof_tolerance = 0;
+    freport.n_outof_window = 0;
     if (fuzzy_diff_images (image1, image2, &fparams, &freport, image_out))
 	return 1;
     if (image_out)

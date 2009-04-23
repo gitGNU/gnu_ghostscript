@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: ps2ps,v 1.6 2009/04/19 13:54:37 Arabidopsis Exp $
+# $Id: ps2ps,v 1.7 2009/04/23 23:31:13 Arabidopsis Exp $
 # "Distill" PostScript.
 
 # This definition is changed on install to match the
@@ -27,4 +27,4 @@ if [ $# -ne 2 ]; then
 	exit 1
 fi
 
-exec "$GS_EXECUTABLE" -q -sDEVICE=pswrite "-sOutputFile=$2" -dNOPAUSE -dBATCH $OPTIONS "$1"
+exec "$GS_EXECUTABLE" -q -sDEVICE=pswrite -sstdout=%stderr "-sOutputFile=$2" -dNOPAUSE -dBATCH $OPTIONS "$1"

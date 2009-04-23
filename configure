@@ -749,7 +749,7 @@ PACKAGE_VERSION='8.62.0'
 PACKAGE_STRING='gnu-ghostscript 8.62.0'
 PACKAGE_BUGREPORT='gnu-ghostscript-bug@gnu.org'
 
-ac_unique_file="src/gs.c"
+ac_unique_file="psi/gs.c"
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>
@@ -1705,7 +1705,7 @@ Optional Packages:
                           have the same name).
                           Default: ALL
   --with-driversfile=FILE Drivers to support from file, separated by newlines.
-  --with-fontpath         set font path for gs
+  --with-fontpath         set font search path for gs
 
 Some influential environment variables:
   CC          C compiler command
@@ -11323,7 +11323,7 @@ fi
 if test $ac_cv_c_compiler_gnu = yes; then
     cflags_to_try="-Wall -Wstrict-prototypes -Wundef \
 -Wmissing-declarations -Wmissing-prototypes -Wwrite-strings \
--Wno-strict-aliasing \
+-Wno-strict-aliasing -Wdeclaration-after-statement \
 -fno-builtin -fno-common"
     optflags_to_try="-O2"
 else
@@ -15936,6 +15936,7 @@ cat >>confdefs.h <<\_ACEOF
 #define USE_LIBICONV_GNU 1
 _ACEOF
 
+    CFLAGS="$CFLAGS -DUSE_LIBICONV_GNU"
     ;;
   native)
 
@@ -16878,7 +16879,7 @@ fi
 
 # the makefile wants a list of just the library names
 for gs_item in $CUPSLINK; do
-  gs_stripped_item=`echo "$gs_item" | sed -e 's/-l//'`
+  gs_stripped_item=`echo "$gs_item" | sed -e 's/^-l//'`
   if test "x$gs_stripped_item" != "x$gs_item"; then
     CUPSLIBS="$CUPSLIBS $gs_stripped_item"
   fi
@@ -17292,9 +17293,15 @@ fi
 
 
 
+# Check whether --enable-cairo was given.
+if test "${enable_cairo+set}" = set; then
+  enableval=$enable_cairo;
+fi
+
 CAIRO_DEVS=""
 CAIRO_CFLAGS=""
 CAIRO_LIBS=""
+if test "x$enable_cairo" != xno; then
 # Extract the first word of "pkg-config", so it can be a program name with args.
 set dummy pkg-config; ac_word=$2
 { $as_echo "$as_me:$LINENO: checking for $ac_word" >&5
@@ -19014,7 +19021,7 @@ fi
 
 # the makefile wants a list of just the library names
 for gs_item in -lXt $X_PRE_LIBS -lXext -lX11 $X_EXTRA_LIBS; do
-  gs_stripped_item=`echo "$gs_item" | sed -e 's/-l//'`
+  gs_stripped_item=`echo "$gs_item" | sed -e 's/^-l//'`
   if test "x$gs_stripped_item" != "x$gs_item"; then
     X_LIBS="$X_LIBS $gs_stripped_item"
   fi
@@ -19254,7 +19261,7 @@ INSTALL_SHARED=""
 # Check whether --enable-dynamic was given.
 if test "${enable_dynamic+set}" = set; then
   enableval=$enable_dynamic; 	case `uname` in
-		Linux*)
+		Linux*|GNU*)
 		INSTALL_SHARED="install-shared"
 		DYNAMIC_CFLAGS="-fPIC"
 		if test "x$X_DEVS" != x; then

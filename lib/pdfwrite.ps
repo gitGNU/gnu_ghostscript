@@ -14,7 +14,7 @@
 %  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
 %  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 %
-% $Id: pdfwrite.ps,v 1.8 2009/04/19 13:54:38 Arabidopsis Exp $
+% $Id: pdfwrite.ps,v 1.9 2009/04/23 23:31:12 Arabidopsis Exp $
 % Writer for transmuting PDF files.
 
 % NOTES:
@@ -27,7 +27,7 @@
 %   XRef (dict): output_obj# => output_file_pos
 %   ToWrite: 0..N-1 => [obj# gen#]
 
-/.setlanguagelevel where { pop 2 .setlanguagelevel } if
+.languagelevel 2 .setlanguagelevel
 .currentglobal true .setglobal
 
 /PDFWRDEBUG where { pop } { /PDFWRDEBUG false def } ifelse
@@ -395,4 +395,4 @@ readonly def
   end
 } bind def
 
-.setglobal
+.setglobal .setlanguagelevel
