@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gp_upapr.c,v 1.1 2009/04/23 23:26:51 Arabidopsis Exp $ */
+/* $Id: gp_upapr.c,v 1.2 2010/07/10 22:02:25 Arabidopsis Exp $ */
 /* Unix implementation of gp_defaultpapersize */
 
 #ifdef USE_LIBPAPER
@@ -29,7 +29,12 @@ int
 gp_defaultpapersize(char *ptr, int *plen)
 {
 #ifdef USE_LIBPAPER
-    const char *paper = systempapername();
+    const char *paper;
+
+    paperinit();
+
+    paper = systempapername();
+    if (!paper) paper = defaultpapername();
 
     if (paper) {
 	int len = strlen(paper);
@@ -38,10 +43,12 @@ gp_defaultpapersize(char *ptr, int *plen)
 	    /* string fits */
 	    strcpy(ptr, paper);
 	    *plen = len + 1;
+	    paperdone();
 	    return 0;
 	}
 	/* string doesn't fit */
 	*plen = len + 1;
+	paperdone();
 	return -1;
     }
 #endif

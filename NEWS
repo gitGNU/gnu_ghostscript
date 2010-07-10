@@ -1,3 +1,59 @@
+Version 8.71.0 main changes:
+* A big security update from upstream was included,
+	r11351(Adding -P- and -dSAFER to many POSIX shell scripts, win32 and OS/2
+	batch scripts; bug 691355) and r11352(observe minst->search_here_first
+	condition in file search; bug 691350), plus SEARCH_HERE_FIRST=0 by default
+	enabled in current dev tree.
+
+* Update some last files with the new LICENSE statement for a real complete
+    GPL V3 release.
+
+* Changes included from the 8.70 version from Artifex:
+    This release fixes a large number of issues with transparency, especially
+    as it interacts with color space conversion, mask contexts and patterns.
+    There have also been a number of significant fixes to font handling,
+    especially when generating PDF. And there are numerous robustness,
+    correctness and performance improvements.
+
+    New generic Esc/Page devices, eplmono and eplcolor were added to the
+    contrib directory. A new cdnj500 device was added to support the
+    HP DesignJet 500.
+
+    The licensing of the Free version of the core Ghostscript code has been
+    changed to GPLv3 or later. Previously, the core code was GPLv2 only.
+    Ghostscript can now be used with GPLv3 applications, and can no longer be
+    used with applications that are GPLv2-only.
+
+    This release also includes security fixes addressing CVE-2009-0583 and
+    CVE-2009-0792.
+
+* Changes included from the 8.71 version from Artifex:
+    It features improved handling of fonts, nesting and color fixes with
+    transparency objects, reduced memory footprint for the halftone cache,
+    as well as improvements to the pxl output devices, and the usual number of
+    bug and robustness fixes.
+
+    New in this release is an experimental project file for Microsoft
+    Visual Studio. This wraps the normal nmake build, and makes it easier for
+    developers to get started building Ghostscript with that compiler.
+
+    Support for tiff file output is now provided using the libtiff
+    implementation rather than our more limited native code as in previous
+    releases. There is also a new 'tiffsep1' output device which produces
+    halftoned separations at 1 bit-per-pixel, in contrast to the 'tiffsep'
+    device which produces 8 bit-per-pixel plates.
+
+    Support for using FreeType as a type rasterizer has been greatly improved.
+    We do not recommend its use as of this release, but it is much more
+    functional than previously and our intent is that it will become the
+    default in a future release.
+
+    The graphics library has been updated to provide more accurate scan
+    conversion of vector art including fixes to dash behavior, transparent
+    stroked paths, thick stroked paths, radial shadings, xps cap handling,
+    "pie" joins, degenerate beziers, improved handling of dropouts in thin
+    strokes and better thin axis-aligned strokes. 
+
 Version 8.64.0 main changes:
 * Approximately 100 bugs have been fixed since version 8.63.0. 
 	Of particular note in this release are improvements to overprint and spot 

@@ -1,11 +1,11 @@
 @echo off 
-@rem $Id: eps2eps.bat,v 1.3 2007/05/07 11:22:07 Arabidopsis Exp $
+@rem $Id: eps2eps.bat,v 1.4 2010/07/10 22:02:36 Arabidopsis Exp $
 @rem "Distill" Encapsulated PostScript.
 
 if %1/==/ goto usage
 if %2/==/ goto usage
 call gssetgs.bat
-echo -dNOPAUSE -dBATCH -dSAFER >_.at
+echo -dNOPAUSE -dBATCH -P- -dSAFER >_.at
 rem Watcom C deletes = signs, so use # instead.
 echo -dDEVICEWIDTH#250000 -dDEVICEHEIGHT#250000 >>_.at
 :cp

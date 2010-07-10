@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zfcid1.c,v 1.1 2009/04/23 23:31:49 Arabidopsis Exp $ */
+/* $Id: zfcid1.c,v 1.2 2010/07/10 22:02:44 Arabidopsis Exp $ */
 /* CIDFontType 1 and 2 operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -273,7 +267,7 @@ get_subst_CID_on_WMode(gs_subst_CID_on_WMode_t *subst, ref *t, int WMode)
 	uint *s;
 
 	s = (uint *)gs_alloc_byte_array(subst->rc.memory, n, sizeof(int), "zbuildfont11");
-	if (subst == NULL)
+	if (s == NULL)
 	    return_error(e_VMerror);
 	for (i = 0; i < n; i++) {
 	    array_get(subst->rc.memory, a, (long)i, &e);
@@ -556,6 +550,20 @@ zfillCIDMap(i_ctx_t *i_ctx_p)
     return code;
 }
 
+static int
+zfillIdentityCIDMap(i_ctx_t *i_ctx_p)
+{
+    os_ptr op = osp;
+    ref *Decoding = op - 4, *TT_cmap = op - 3, *SubstNWP = op - 2, 
+        *GDBytes = op - 1, *CIDMap = op;
+    int code;
+
+    check_type(*CIDMap, t_array);
+    code = cid_fill_Identity_CIDMap(imemory, CIDMap);
+    pop(1);
+    return code;
+}
+
 /* ------ Initialization procedure ------ */
 
 const op_def zfcid1_op_defs[] =
@@ -564,5 +572,6 @@ const op_def zfcid1_op_defs[] =
     {"2.buildfont11", zbuildfont11},
     {"2.type11mapcid", ztype11mapcid},
     {"2.fillCIDMap", zfillCIDMap},
+    {"2.fillIdentityCIDMap", zfillIdentityCIDMap},
     op_def_end(0)
 };

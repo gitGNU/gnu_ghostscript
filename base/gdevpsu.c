@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpsu.c,v 1.1 2009/04/23 23:25:55 Arabidopsis Exp $ */
+/* $Id: gdevpsu.c,v 1.2 2010/07/10 22:02:17 Arabidopsis Exp $ */
 /* PostScript-writing utilities */
 #include "math_.h"
 #include "time_.h"
@@ -261,7 +255,7 @@ psw_end_file(FILE *f, const gx_device *dev,
 		bbox.q.y = height;
 		psw_print_bbox(f, &bbox);
 	    } else 
-	    psw_print_bbox(f, pbbox);
+		psw_print_bbox(f, pbbox);
             fputc('%', f);
             if (ferror(f))
                 return_error(gs_error_ioerror);
@@ -294,7 +288,7 @@ psw_write_page_header(stream *s, const gx_device *dev,
     if (!pdpc->ProduceEPS)
 	pprintld2(s, "%%%%PageBoundingBox: 0 0 %ld %ld\n", width, height);
 
-    stream_puts(s, "%%%%BeginPageSetup\n");
+    stream_puts(s, "%%BeginPageSetup\n");
     /*
      * Adobe's documentation says that page setup must be placed outside the
      * save/restore that encapsulates the page contents, and that the
@@ -313,7 +307,7 @@ psw_write_page_header(stream *s, const gx_device *dev,
 	} page_size;
 	static const page_size sizes[] = {
 	    {"/11x17", 792, 1224},
-	    {"/a3", 842, 1190},
+	    {"/a3", 842, 1191},
 	    {"/a4", 595, 842},
 	    {"/b5", 501, 709},
 	    {"/ledger", 1224, 792},
@@ -323,9 +317,16 @@ psw_write_page_header(stream *s, const gx_device *dev,
 	};
 	const page_size *p = sizes;
 
-	while (p->size_name[0] == '/' &&
-	       (p->width != width || p->height != height))
-	    ++p;
+	while (p->size_name[0] == '/') {
+	    if((p->width - 5) <= width && (p->width + 5) >= width) {
+		if((p->height - 5) <= height && (p->height + 5) >= height) {
+		    break;
+		} else 
+		    ++p;
+	    }
+	    else
+		++p;
+	}
 	pprintd2(s, "%d %d ", width, height);
 	pprints1(s, "%s setpagesize\n", p->size_name);
     }

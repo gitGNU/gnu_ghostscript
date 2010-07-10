@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
-  This file is part of GNU ghostscript
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevbit.c,v 1.1 2009/04/23 23:26:00 Arabidopsis Exp $ */
+/* $Id: gdevbit.c,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $ */
 /* "Plain bits" devices to measure rendering time. */
 
 #include "gdevprn.h"
@@ -28,6 +22,7 @@
 #include "gxdcconv.h"
 #include "gdevdcrd.h"
 #include "gsutil.h" /* for bittags hack */
+
 
 /* Define the device parameters. */
 #ifndef X_DPI
@@ -658,7 +653,7 @@ bit_put_params(gx_device * pdev, gs_param_list * plist)
 		     pdev->color_info.depth == 32 ? cmyk_8bit_map_cmyk_color :
 		     bit_map_cmyk_color);
     }
-    /* Reset the sparable and linear shift, masks, bits. */
+    /* Reset the separable and linear shift, masks, bits. */
     set_linear_color_bits_mask_shift(pdev);
     pdev->color_info.separable_and_linear = GX_CINFO_SEP_LIN;
     ((gx_device_bit *)pdev)->FirstLine = FirstLine;
@@ -676,16 +671,18 @@ bit_print_page(gx_device_printer * pdev, FILE * prn_stream)
     byte *in = gs_alloc_bytes(pdev->memory, line_size, "bit_print_page(in)");
     byte *data;
     int nul = !strcmp(pdev->fname, "nul") || !strcmp(pdev->fname, "/dev/null");
-    int lnum = ((gx_device_bit *)pdev)->FirstLine;
-    int bottom = ((gx_device_bit *)pdev)->LastLine;
+    int lnum = ((gx_device_bit *)pdev)->FirstLine >= pdev->height ?  pdev->height - 1 :
+		 ((gx_device_bit *)pdev)->FirstLine;
+    int bottom = ((gx_device_bit *)pdev)->LastLine >= pdev->height ?  pdev->height - 1 :
+		 ((gx_device_bit *)pdev)->LastLine;
     int line_count = any_abs(bottom - lnum);
     int i, step = lnum > bottom ? -1 : 1;
 
     if (in == 0)
 	return_error(gs_error_VMerror);
     if ((lnum == 0) && (bottom == 0))
-	bottom = pdev->height - 1;
-    for (i = 0; i < line_count; i++, lnum += step) {
+	line_count = pdev->height - 1;		/* default when LastLine == 0, FirstLine == 0 */
+    for (i = 0; i <= line_count; i++, lnum += step) {
 	gdev_prn_get_bits(pdev, lnum, in, &data);
 	if (!nul)
 	    fwrite(data, 1, line_size, prn_stream);

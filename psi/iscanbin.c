@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: iscanbin.c,v 1.1 2009/04/23 23:31:29 Arabidopsis Exp $ */
+/* $Id: iscanbin.c,v 1.2 2010/07/10 22:02:42 Arabidopsis Exp $ */
 /* Ghostscript binary token scanner and writer */
 #include "math_.h"
 #include "memory_.h"
@@ -201,7 +195,7 @@ scan_bos(i_ctx_t *i_ctx_p, ref *pref, scanner_state *pstate)
 
 	if (top_size == 0) {
 	    /* Extended header (2-byte array size, 4-byte length) */
-	    ulong lsize;
+	    uint lsize;
 
 	    if (rcnt < 7) {
 		s_end_inline(s, p - 1, rlimit);
@@ -209,7 +203,7 @@ scan_bos(i_ctx_t *i_ctx_p, ref *pref, scanner_state *pstate)
 		return scan_Refill;
 	    }
 	    pbs->top_size = top_size = sdecodeushort(p + 2, num_format);
-	    pbs->lsize = lsize = sdecodelong(p + 4, num_format);
+	    pbs->lsize = lsize = sdecodeint32(p + 4, num_format);
 	    if ((size = lsize) != lsize) {
 		scan_bos_error(pstate, "bin obj seq length too large");
 		return_error(e_limitcheck);
@@ -540,8 +534,7 @@ scan_bos_continue(i_ctx_t *i_ctx_p, ref * pref, scanner_state * pstate)
     for (; index < max_array_index; p += SIZEOF_BIN_SEQ_OBJ, index++) {
 	ref *op = abase + index;
 	uint osize;
-	long value;
-	uint atype, attrs;
+	int value, atype, attrs;
 
 	s_end_inline(s, p, rlimit);	/* in case of error */
 	if (rlimit - p < SIZEOF_BIN_SEQ_OBJ) {
@@ -561,7 +554,7 @@ scan_bos_continue(i_ctx_t *i_ctx_p, ref * pref, scanner_state * pstate)
 	 * syntaxerror if any unused field is non-zero (per PLRM).
 	 */
   	osize = sdecodeushort(p + 3, num_format);
-	value = sdecodelong(p + 5, num_format);
+	value = sdecodeint32(p + 5, num_format);
 	switch (p[1] & 0x7f) {
 	    case BS_TYPE_NULL:
 		if (osize | value) { /* unused */
@@ -860,13 +853,13 @@ scan_bos_string_continue(i_ctx_t *i_ctx_p, ref * pref,
  * but it always write bytes 0 and 2-7.
  */
 int
-encode_binary_token(i_ctx_t *i_ctx_p, const ref *obj, long *ref_offset,
-		    long *char_offset, byte *str)
+encode_binary_token(i_ctx_t *i_ctx_p, const ref *obj, int *ref_offset,
+		    int *char_offset, byte *str)
 {
     bin_seq_type_t type;
     uint size = 0;
     int format = (int)ref_binary_object_format.value.intval;
-    long value = 0;
+    int value = 0;
     ref nstr;
 
     switch (r_type(obj)) {
@@ -906,7 +899,7 @@ encode_binary_token(i_ctx_t *i_ctx_p, const ref *obj, long *ref_offset,
 	    type = BS_TYPE_DICTIONARY;
 	    size = dict_length(obj) << 1;
 	  aod:value = *ref_offset;
-	    *ref_offset += size * (ulong) SIZEOF_BIN_SEQ_OBJ;
+	    *ref_offset += size * SIZEOF_BIN_SEQ_OBJ;
 	    break;
 	case t_string:
 	    type = BS_TYPE_STRING;

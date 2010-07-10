@@ -1,5 +1,5 @@
 /******************************************************************************
-  File:     $Id: gdevpcl3.c,v 1.1 2007/09/11 15:24:56 Arabidopsis Exp $
+  File:     $Id: gdevpcl3.c,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $
   Contents: Ghostscript device 'pcl3' for PCL-3+ printers
   Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
             Germany. E-mail: Martin.Lottermoser@t-online.de.
@@ -26,7 +26,7 @@
 /* Configuration management identification */
 #ifndef lint
 static const char
-  cm_id[] = "@(#)$Id: gdevpcl3.c,v 1.1 2007/09/11 15:24:56 Arabidopsis Exp $";
+  cm_id[] = "@(#)$Id: gdevpcl3.c,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $";
 #endif
 
 /*****************************************************************************/
@@ -1315,7 +1315,7 @@ static int pcl3_open_device(gx_device *device)
 	"%s  page setup requested by the document as being for `",
 	epref, epref);
       if (ms_find_name_from_code(buffer, sizeof(buffer),
-	  dev->eprn.code, flag_description) == 0) eprintf(buffer);
+	  dev->eprn.code, flag_description) == 0) eprintf1("%s", buffer);
       else eprintf("UNKNOWN");	/* should never happen */
       eprintf3("' (%.0f x %.0f bp).\n"
 	"%s  The driver does not know how to do this in PCL.\n",

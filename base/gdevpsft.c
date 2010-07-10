@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpsft.c,v 1.1 2009/04/23 23:27:01 Arabidopsis Exp $ */
+/* $Id: gdevpsft.c,v 1.2 2010/07/10 22:02:26 Arabidopsis Exp $ */
 /* Write an embedded TrueType font */
 #include "memory_.h"
 #include <stdlib.h>		/* for qsort */
@@ -310,7 +304,8 @@ write_cmap_0(stream *s, byte* entries /*[CMAP_ENTRIES_SIZE]*/, uint num_glyphs)
 {
     int i;
 
-    memset(entries + 2 * num_glyphs, 0, CMAP_ENTRIES_SIZE - 2 * num_glyphs);
+    if (CMAP_ENTRIES_SIZE - 2 * num_glyphs>0)
+      memset(entries + 2 * num_glyphs, 0, CMAP_ENTRIES_SIZE - 2 * num_glyphs);
     stream_write(s, cmap_initial_0, sizeof(cmap_initial_0));
     for (i = 0; i <= 0xff; ++i)
 	sputc(s, (byte)entries[2 * i + 1]);
@@ -717,6 +712,30 @@ write_post(stream *s, gs_font *font, post_t *post)
     return 0;
 }
 
+static inline bool check_position(int pos1, int pos2)
+{ 
+    if (pos1 == pos2)
+	return false;
+    eprintf2("Actual TT subtable offset %d differs from one in the TT header %d.\n", pos1, pos2);
+    return true;
+}
+
+static void remove_table(byte *tables, char *tag, uint *numTables)
+{
+    /* Not a high performance implementation because it is called seldom. */
+    int i;
+
+    for (i = 0; i < *numTables;) {
+	byte *tab = tables + i * 16;
+
+	if (!memcmp(tab, tag, 4)) {
+	    memmove(tab, tab + 16, 16 * (*numTables - i - 1));
+	    --*numTables;
+	} else
+	    ++i;
+    }
+}
+
 /* ---------------- Main program ---------------- */
 
 /* Write the definition of a TrueType font. */
@@ -764,8 +783,15 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
     uint cmap_length = 0;
     ulong OS_2_start = 0;
     uint OS_2_length = OS_2_LENGTH1;
+    ulong maxp_start = 0;
+    uint maxp_length = 0;
+    struct { int glyf, loca, cmap, name, os_2, mtx[2], post, head; 
+           } subtable_positions;
+    int start_position = stell(s);
+    int enlarged_numGlyphs = 0;
     int code;
 
+    memset(&subtable_positions, 0, sizeof(subtable_positions));
     have_hvhea[0] = have_hvhea[1] = 0;
     if (alt_font_name)
 	font_name = *alt_font_name;
@@ -820,6 +846,8 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 	case W('m','a','x','p'):
 	    READ_SFNTS(pfont, start, length, data);
 	    numGlyphs = U16(data + 4);
+	    maxp_start = start;
+	    maxp_length = length;
 	    break;
 	case W('n','a','m','e'):
 	    if (writing_cid)
@@ -855,6 +883,10 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 	case W('k','e','r','n'):
 	case W('p','r','e','p'):
 	    break;		/* always copy these if present */
+	case W('E','B','D','T'):
+	case W('E','B','L','C'):
+	case W('E','B','S','C'):
+	    continue;
 	default:
 	    if (writing_cid)
 		continue;
@@ -894,19 +926,30 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 	    gs_glyph_data_free(&glyph_data, "psf_write_truetype_data");
 	}
     }
-    /*
-     * For subset fonts, we should trim the loca table so that it only
-     * contains entries through max_glyph.  Unfortunately, this would
-     * require changing numGlyphs in maxp, which in turn would affect hdmx,
-     * hhea, hmtx, vdmx, vhea, vmtx, and possibly other tables.  This is way
-     * more work than we want to do right now.
-     */
     if (writing_stripped) {
 	glyf_length = 0;
 	loca_length = 0;
     } else {
-	/*loca_length = (max_glyph + 2) << 2;*/
-	loca_length = (numGlyphs + 1) << 2;
+	if (max_glyph + 1 > numGlyphs) {
+	    /* Either original font is wrong,
+	       or we added glyphs to it due to font merge. 
+	       Need to adjust maxp, hmtx, vmtx, vdmx, hdmx,
+	       assuming that the merge doesn't change hhea
+	       and other tables.
+	       Since changing hdmx, vdmx is too difficult,
+	       and since they're not required for PDF,
+	       we'll simply skip them.
+	     */
+	    enlarged_numGlyphs = max_glyph + 1;
+	    if (enlarged_numGlyphs > 0xFFFF) {
+		eprintf1("The number of glyphs %d exceeds capability of True Type format.\n", enlarged_numGlyphs);
+		return_error(gs_error_unregistered);
+	    }
+	    loca_length = (enlarged_numGlyphs + 1) << 2;
+	    remove_table(tables, (char *)"hdmx", &numTables);
+	    remove_table(tables, (char *)"vdmx", &numTables);
+	} else
+	    loca_length = (numGlyphs + 1) << 2;
 	indexToLocFormat = (glyf_length > 0x1fffc);
 	if (!indexToLocFormat)
 	    loca_length >>= 1;
@@ -968,10 +1011,11 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 	byte *tab = &tables[numTables * 16];
 
 	if (!writing_stripped) {
+	    subtable_positions.glyf = offset;
 	    offset = put_table(tab, "glyf", glyf_checksum,
 			       offset, glyf_length);
 	    tab += 16;
-
+	    subtable_positions.loca = offset;
 	    offset = put_table(tab, "loca", loca_checksum[indexToLocFormat],
 			       offset, loca_length);
 	    tab += 16;
@@ -980,18 +1024,21 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 	if (!have_cmap) {
 	    cmap_length = size_cmap(font, TT_BIAS, 256,
 				    GS_MIN_GLYPH_INDEX + max_glyph, options);
+	    subtable_positions.cmap = offset;
 	    offset = put_table(tab, "cmap", 0L /****** NO CHECKSUM ******/,
 			       offset, cmap_length);
 	    tab += 16;
 	}
 
 	if (!have_name) {
+	    subtable_positions.name = offset;
 	    offset = put_table(tab, "name", 0L /****** NO CHECKSUM ******/,
 			       offset, size_name(&font_name));
 	    tab += 16;
 	}
 
 	if (!no_generate) {
+	    subtable_positions.os_2 = offset;
 	    offset = put_table(tab, "OS/2", 0L /****** NO CHECKSUM ******/,
 			       offset, OS_2_length);
 	    tab += 16;
@@ -1000,6 +1047,7 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 	if (generate_mtx)
 	    for (i = 0; i < 2; ++i)
 		if (have_hvhea[i]) {
+		    subtable_positions.mtx[i] = offset;
 		    offset = put_table(tab, (i ? "vmtx" : "hmtx"),
 				       0L /****** NO CHECKSUM ******/,
 				       offset,
@@ -1008,6 +1056,7 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 		}
 
 	if (!have_post) {
+	    subtable_positions.post = offset;
 	    offset = put_table(tab, "post", 0L /****** NO CHECKSUM ******/,
 			       offset, post.length);
 	    tab += 16;
@@ -1017,6 +1066,7 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 	 * Note that the 'head' table must have length 54, even though
 	 * it occupies 56 bytes on the file.
 	 */
+	subtable_positions.head = offset;
 	offset = put_table(tab, "head", head_checksum, offset, 54);
 	tab += 16;
     }
@@ -1088,6 +1138,19 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 		    put_pad(s, OS_2_length);
 		}
 	    break;
+	    case W('m','a','x','p'):
+		if (enlarged_numGlyphs) {
+		    /* Must keep the table size. */
+		    byte buf[6];
+
+		    READ_SFNTS(pfont, maxp_start, sizeof(buf), buf);
+		    put_u16(buf + 4, enlarged_numGlyphs);
+		    stream_write(s, buf, min(length, sizeof(buf)));
+		    if (length > sizeof(buf)) /* Paranoid Safety */
+			write_range(s, pfont, start + sizeof(buf), length - sizeof(buf));
+		} else
+		    write_range(s, pfont, start, length);
+		break;
 	    case W('h','h','e','a'):
 	    case W('v','h','e','a'):
 		if (generate_mtx) {
@@ -1104,9 +1167,12 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
     }
 
     if (!writing_stripped) {
+	int n = max(numGlyphs, enlarged_numGlyphs) + 1;
 
 	/* Write glyf. */
 
+	if (check_position(subtable_positions.glyf + start_position, stell(s)))
+	    return_error(gs_error_unregistered);
 	psf_enumerate_glyphs_reset(penum);
 	for (offset = 0; psf_enumerate_glyphs_next(penum, &glyph) != 1; ) {
 	    gs_glyph_data_t glyph_data;
@@ -1137,6 +1203,8 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 
 	/* Write loca. */
 
+	if (check_position(subtable_positions.loca + start_position, stell(s)))
+	    return_error(gs_error_unregistered);
 	psf_enumerate_glyphs_reset(penum);
 	glyph_prev = 0;
 	for (offset = 0; psf_enumerate_glyphs_next(penum, &glyph) != 1; ) {
@@ -1159,25 +1227,36 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 
 	}
 	/* Pad to numGlyphs + 1 entries (including the trailing entry). */
-	for (; glyph_prev <= numGlyphs; ++glyph_prev)
+	for (; glyph_prev < n; ++glyph_prev)
 	    put_loca(s, offset, indexToLocFormat);
 	put_pad(s, loca_length);
 
 	/* If necessary, write cmap, name, and OS/2. */
 
-	if (!have_cmap)
+	if (!have_cmap) {
+	    if (check_position(subtable_positions.cmap + start_position, stell(s)))
+		return_error(gs_error_unregistered);
 	    write_cmap(s, font, TT_BIAS, 256, GS_MIN_GLYPH_INDEX + max_glyph,
 		       options, cmap_length);
-	if (!have_name)
+	}
+	if (!have_name) {
+	    if (check_position(subtable_positions.name + start_position, stell(s)))
+		return_error(gs_error_unregistered);
 	    write_name(s, &font_name);
-	if (!have_OS_2)
+	}
+	if (!have_OS_2) {
+	    if (check_position(subtable_positions.os_2 + start_position, stell(s)))
+		return_error(gs_error_unregistered);
 	    write_OS_2(s, font, TT_BIAS, 256);
+	}
 
 	/* If necessary, write [hv]mtx. */
 
 	if (generate_mtx)
 	    for (i = 0; i < 2; ++i)
 		if (have_hvhea[i]) {
+		    if (check_position(subtable_positions.mtx[i] + start_position, stell(s)))
+			return_error(gs_error_unregistered);
 		    write_mtx(s, pfont, &mtx[i], i);
 		    put_pad(s, mtx[i].length);
 		}
@@ -1185,6 +1264,8 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 	/* If necessary, write post. */
 
 	if (!have_post) {
+	    if (check_position(subtable_positions.post + start_position, stell(s)))
+		return_error(gs_error_unregistered);
 	    if (options & WRITE_TRUETYPE_POST) {
 		code = write_post(s, font, &post);
 		if (code < 0)
@@ -1213,6 +1294,8 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
 #endif
     put_u32(head + 8, HEAD_MAGIC - file_checksum); /* per spec */
 #undef HEAD_MAGIC
+    if (check_position(subtable_positions.head + start_position, stell(s)))
+	return_error(gs_error_unregistered);
     stream_write(s, head, 56);
 
     return 0;

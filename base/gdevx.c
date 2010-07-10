@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevx.c,v 1.1 2009/04/23 23:26:32 Arabidopsis Exp $ */
+/* $Id: gdevx.c,v 1.2 2010/07/10 22:02:22 Arabidopsis Exp $ */
 /* X Windows driver for Ghostscript library */
 #include "gx.h"			/* for gx_bitmap; includes std.h */
 #include "math_.h"
@@ -571,15 +565,24 @@ x_copy_image(gx_device_X * xdev, const byte * base, int sourcex, int raster,
 	X_SET_FORE_COLOR(xdev, pixel);
 	XDrawPoint(xdev->dpy, xdev->dest, xdev->gc, x, y);
     } else {
-	xdev->image.width = sourcex + w;
+	/* Reduce base, sourcex  */
+	int width = sourcex + w;
+    	int vdepth = xdev->vinfo->depth;
+	xdev->image.width = width;
 	xdev->image.height = h;
 	xdev->image.format = ZPixmap;
 	xdev->image.data = (char *)base;
-	xdev->image.depth = xdev->vinfo->depth;
-	xdev->image.bytes_per_line = raster;
+	xdev->image.depth = vdepth;
+	xdev->image.bitmap_pad = 8;
+	if (width * vdepth < raster * 8)
+	    xdev->image.bytes_per_line = raster;
+	else
+	    xdev->image.bytes_per_line = 0;
 	xdev->image.bits_per_pixel = depth;
-	if (XInitImage(&xdev->image) == 0)
+	if (XInitImage(&xdev->image) == 0){
+	    errprintf("XInitImage failed in x_copy_image.\n");
 	    return_error(gs_error_unknownerror);
+	}
 	XPutImage(xdev->dpy, xdev->dest, xdev->gc, &xdev->image,
 		  sourcex, 0, x, y, w, h);
 	xdev->image.depth = xdev->image.bits_per_pixel = 1;
@@ -887,8 +890,10 @@ x_get_bits_rectangle(gx_device * dev, const gs_int_rect * prect,
 		/*
 		 * We need to swap byte order and/or bit order.  What a
 		 * totally unnecessary nuisance!  For the moment, the only
-		 * cases we deal with are 16- and 24-bit images with padding
+		 * cases we deal with are 15-, 16- and 24-bit images with padding
 		 * and/or byte swapping.
+		 * If we ever need to support other color depths, consider rewriting
+		 * all these byte swaps with XGetPixel() .
 		 */
 		if (image->depth == 24) {
 		    int cx;
@@ -904,7 +909,7 @@ x_get_bits_rectangle(gx_device * dev, const gs_int_rect * prect,
 			for (cx = x0; cx < x1; p += step, q += 3, ++cx)
 			    q[0] = p[2], q[1] = p[1], q[2] = p[0];
 		    }
-		} else if (image->depth == 16) {
+		} else if (image->depth == 16 || image->depth == 15) {
 		    int cx;
 		    const byte *p = source;
 		    byte *q = dest;

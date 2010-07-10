@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: iparam.c,v 1.1 2009/04/23 23:31:18 Arabidopsis Exp $ */
+/* $Id: iparam.c,v 1.2 2010/07/10 22:02:40 Arabidopsis Exp $ */
 /* Interpreter implementations of parameter dictionaries */
 #include "memory_.h"
 #include "string_.h"
@@ -69,7 +63,7 @@ ref_to_key(const ref * pref, gs_param_key_t * key, iparam_list *plist)
 	int len;
 	byte *buf;
 
-	sprintf(istr, "%ld", pref->value.intval);
+	sprintf(istr, "%d", pref->value.intval);
 	len = strlen(istr);
 	/* GC will take care of freeing this: */
 	buf = gs_alloc_string(plist->memory, len, "ref_to_key");
@@ -396,7 +390,7 @@ stack_param_enumerate(iparam_list * plist, gs_param_enumerator_t * penum,
 {
     int code;
     stack_param_list *const splist = (stack_param_list *) plist;
-    long index = penum->intval;
+    int index = penum->intval;
     ref *stack_element;
 
     do {
@@ -566,12 +560,6 @@ ref_param_read_int_array(gs_param_list * plist, gs_param_name pkey,
 	    code = gs_note_error(e_typecheck);
 	    break;
 	}
-#if arch_sizeof_int < arch_sizeof_long
-	if (elt.value.intval != (int)elt.value.intval) {
-	    code = gs_note_error(e_rangecheck);
-	    break;
-	}
-#endif
 	piv[i] = (int)elt.value.intval;
     }
     if (code < 0) {

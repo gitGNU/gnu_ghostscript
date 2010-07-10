@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsptype2.c,v 1.1 2009/04/23 23:26:40 Arabidopsis Exp $ */
+/* $Id: gsptype2.c,v 1.2 2010/07/10 22:02:23 Arabidopsis Exp $ */
 /* PatternType 2 implementation */
 #include "gx.h"
 #include "gserrors.h"
@@ -327,6 +321,35 @@ gx_dc_shading_path_add_box(gx_path *ppath, const gx_device_color * pdevc)
 
 	return gs_shading_path_add_box(ppath, &psh->params.BBox, &pis->ctm);
     }
+}
+
+/* Intersect a clipping path a shading BBox. */
+int
+gx_dc_pattern2_clip_with_bbox(const gx_device_color * pdevc, gx_device * pdev,
+                              gx_clip_path *cpath_local, const gx_clip_path **ppcpath1)
+{
+    if (gx_dc_is_pattern2_color(pdevc) && gx_dc_pattern2_color_has_bbox(pdevc) &&
+            (*dev_proc(pdev, pattern_manage))(pdev, gs_no_id, NULL, pattern_manage__shading_area) == 0) {
+        gs_pattern2_instance_t *pinst = (gs_pattern2_instance_t *)pdevc->ccolor.pattern;
+        gx_path box_path;
+        gs_memory_t *mem = (*ppcpath1 != NULL ? (*ppcpath1)->path.memory : pdev->memory);
+        int code;
+
+        gx_path_init_local(&box_path, mem);
+        code = gx_dc_shading_path_add_box(&box_path, pdevc);
+        if (code == gs_error_limitcheck) {
+            /* Ignore huge BBox - bug 689027. */
+            code = 0;
+        } else {
+            if (code >= 0) {
+                gx_cpath_init_local_shared(cpath_local, *ppcpath1, mem);
+                code = gx_cpath_intersect(cpath_local, &box_path, gx_rule_winding_number, (gs_imager_state *)pinst->saved);
+                *ppcpath1 = cpath_local;
+            }
+        }
+        gx_path_free(&box_path, "gx_default_fill_path(path_bbox)");
+    }
+    return 0;
 }
 
 /* Intersect a clipping path a shading BBox. */

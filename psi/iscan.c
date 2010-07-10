@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: iscan.c,v 1.1 2009/04/23 23:31:47 Arabidopsis Exp $ */
+/* $Id: iscan.c,v 1.2 2010/07/10 22:02:44 Arabidopsis Exp $ */
 /* Token scanner for Ghostscript interpreter */
 #include "ghost.h"
 #include "memory_.h"
@@ -78,7 +72,7 @@ static inline void
 dynamic_init(da_ptr pda, gs_memory_t *mem)
 {
     pda->is_dynamic = false;
-    pda->limit = pda->buf + da_buf_size;
+    pda->limit = pda->buf + sizeof(pda->buf);
     pda->next = pda->base = pda->buf;
     pda->memory = mem;
 }
@@ -133,7 +127,7 @@ dynamic_grow(da_ptr pda, byte * next, uint max_size)
     int code;
 
     pda->next = next;
-    if (old_size == max_size)
+    if (old_size >= max_size)
 	return_error(e_limitcheck);
     while ((code = dynamic_resize(pda, new_size)) < 0 &&
 	   new_size > old_size
@@ -149,8 +143,12 @@ static void
 dynamic_save(da_ptr pda)
 {
     if (!pda->is_dynamic && pda->base != pda->buf) {
-	memcpy(pda->buf, pda->base, da_size(pda));
-	pda->next = pda->buf + da_size(pda);
+        int len = da_size(pda);
+
+	if (len > sizeof(pda->buf))
+            len = sizeof(pda->buf);
+        memcpy(pda->buf, pda->base, len);
+	pda->next = pda->buf + len;
 	pda->base = pda->buf;
     }
 }
@@ -699,10 +697,10 @@ scan_token(i_ctx_t *i_ctx_p, ref * pref, scanner_state * pstate)
 		uint size = ref_stack_count_inline(&o_stack) - pstack;
 		ref arr;
 
-		if_debug4('S', "[S}]d=%d, s=%d->%ld, c=%d\n",
+		if_debug4('S', "[S}]d=%d, s=%d->%d, c=%d\n",
 			  pdepth, pstack,
 			  (pstack == pdepth ? 0 :
-			   ref_stack_index(&o_stack, size)->value.intval),
+			  ref_stack_index(&o_stack, size)->value.intval),
 			  size + pstack);
 		myref = (pstack == pdepth ? pref : &arr);
 		if (check_only) {

@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gximask.c,v 1.1 2009/04/23 23:26:11 Arabidopsis Exp $ */
+/* $Id: gximask.c,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
 /* Functions for masked fill optimization. */
 #include "gx.h"
 #include "memory_.h"
@@ -70,14 +64,16 @@ gx_image_fill_masked_end(gx_device *dev, gx_device *tdev, const gx_device_color 
 {
     gx_device_cpath_accum *pcdev = (gx_device_cpath_accum *)dev;
     gx_clip_path cpath;
+    gx_clip_path cpath_with_shading_bbox;
+    const gx_clip_path *pcpath1 = &cpath;
     gx_device_clip cdev;
     int code, code1;
 
     gx_cpath_init_local(&cpath, pcdev->memory);
     code = gx_cpath_accum_end(pcdev, &cpath);
     if (code >= 0)
-	code = gx_dc_pattern2_clip_with_bbox_simple(pdevc, tdev, &cpath);
-	gx_make_clip_device_on_stack(&cdev, &cpath, tdev);
+	code = gx_dc_pattern2_clip_with_bbox(pdevc, tdev, &cpath_with_shading_bbox, &pcpath1);
+    gx_make_clip_device_on_stack(&cdev, pcpath1, tdev);
     if (code >= 0 && pcdev->bbox.p.x < pcdev->bbox.q.x) {
 	code1 = gx_device_color_fill_rectangle(pdevc, 
 		    pcdev->bbox.p.x, pcdev->bbox.p.y, 
@@ -87,6 +83,8 @@ gx_image_fill_masked_end(gx_device *dev, gx_device *tdev, const gx_device_color 
 	if (code == 0)
 	    code = code1;
     }
+    if (pcpath1 == &cpath_with_shading_bbox)
+	gx_cpath_free(&cpath_with_shading_bbox, "s_image_cleanup");
     gx_device_retain((gx_device *)pcdev, false);
     gx_cpath_free(&cpath, "s_image_cleanup");
     return code;

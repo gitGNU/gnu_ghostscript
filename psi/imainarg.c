@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: imainarg.c,v 1.1 2009/04/23 23:31:54 Arabidopsis Exp $ */
+/* $Id: imainarg.c,v 1.2 2010/07/10 22:02:44 Arabidopsis Exp $ */
 /* Command line parsing and dispatching */
 #include "ctype_.h"
 #include "memory_.h"
@@ -208,6 +202,14 @@ gs_main_init_with_args(gs_main_instance * minst, int argc, char *argv[])
 		    return code;
 		if (code > 0)
 		    outprintf(minst->heap, "Unknown switch %s - ignoring\n", arg);
+		if (gs_debug[':'] && arg[1] == 'Z') {
+		    int i;
+
+		    dprintf1("%% Init started, instance 0x%p, with args: ", minst);
+		    for (i=1; i<argc; i++)
+			dprintf1("%s ", argv[i]);
+		    dprintf("\n");
+		}
 		break;
 	    default:
 		code = argproc(minst, arg);
@@ -218,11 +220,18 @@ gs_main_init_with_args(gs_main_instance * minst, int argc, char *argv[])
     if (code < 0)
 	return code;
 
-
     code = gs_main_init2(minst);
     if (code < 0)
 	return code;
 
+    if (gs_debug[':']) {
+	int i;
+
+	dprintf1("%% Init done, instance 0x%p, with args: ", minst);
+	for (i=1; i<argc; i++)
+	    dprintf1("%s ", argv[i]);
+	dprintf("\n");
+    }
     if (!minst->run_start)
 	return e_Quit;
     return code ;
@@ -742,8 +751,10 @@ run_buffered(gs_main_instance * minst, const char *arg)
 	return_error(e_invalidfileaccess);
     }
     code = gs_main_init2(minst);
-    if (code < 0)
+    if (code < 0) {
+        fclose(in);
 	return code;
+    }
     code = gs_main_run_string_begin(minst, minst->user_errors,
 				    &exit_code, &error_object);
     if (!code) {
@@ -936,10 +947,7 @@ print_revision(const gs_main_instance *minst)
 static void
 print_version(const gs_main_instance *minst)
 {
-	outprintf(minst->heap, "%d.%02d.%d",
-		(int)(gs_version / 10000),
-		(int)(gs_version / 100 % 100),
-		(int)(gs_version % 100));
+    printf_program_ident(minst->heap, NULL, gs_revision);
 }
 
 /* Print usage information. */
@@ -971,7 +979,7 @@ print_devices(const gs_main_instance *minst)
 	const char **names;
 	size_t ndev = 0;
 
-	for (i = 0; (pdev = gs_getdevice(i)) != 0; i++)
+	for (i = 0; gs_getdevice(i) != 0; i++)
 	    ;
 	ndev = (size_t)i;
 	names = (const char **)gs_alloc_bytes(minst->heap, ndev * sizeof(const char*), "print_devices");

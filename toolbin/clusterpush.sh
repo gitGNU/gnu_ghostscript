@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # helper script to syncronize a working tree with the regression cluster
-# $Id: clusterpush.sh,v 1.2 2009/04/23 23:32:17 Arabidopsis Exp $
+# $Id: clusterpush.sh,v 1.3 2010/07/10 22:02:46 Arabidopsis Exp $
 
 HOST=atfxsw01@tticluster.com
 DEST=$USER
@@ -10,11 +10,11 @@ DEST=$USER
 TARGET=`basename $PWD`
 
 # determine which build we're doing
-  if test -d gs; then
+if test -d gs; then
   BUILD_TYPE='ghostpdl'
-  else
+else
   BUILD_TYPE='gs'
-  fi
+fi
 # fall back to build type if we don't have a target
 if test -z "$TARGET"; then
   TARGET="$BUILD_TYPE"
@@ -24,7 +24,7 @@ fi
 # try get the current revision
 REV=''
 if test -d .svn; then
-REV=`svn info | grep Revision | cut -d ' ' -f 2`
+  REV=`svn info | grep Revision | cut -d ' ' -f 2`
 elif test -d .git; then
   REV=`git rev-parse HEAD`
 fi

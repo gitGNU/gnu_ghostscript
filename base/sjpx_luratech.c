@@ -1,25 +1,19 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
-  This file is part of GNU ghostscript
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: sjpx_luratech.c,v 1.1 2009/04/23 23:26:53 Arabidopsis Exp $ */
+/* $Id: sjpx_luratech.c,v 1.2 2010/07/10 22:02:25 Arabidopsis Exp $ */
 /* JPXDecode filter implementation -- hooks in the Luratech JPEG2K CSDK */
- 
+
 #include "memory_.h"
 #include "malloc_.h"
 #include "gserrors.h"
@@ -43,8 +37,8 @@
 #endif
 ***/
 
-/* As with the /JBIG2Decode filter, we let the library do its  
-   memory management through malloc() etc. and rely on our release() 
+/* As with the /JBIG2Decode filter, we let the library do its
+   memory management through malloc() etc. and rely on our release()
    proc being called to deallocate state.
 */
 
@@ -61,7 +55,7 @@ s_jpx_alloc(long size, JP2_Callback_Param param)
 {
     void *result = malloc(size);
 
-    return result;   
+    return result;
 }
 
 /* memory free */
@@ -76,7 +70,7 @@ s_jpx_free(void *ptr, JP2_Callback_Param param)
 /* pass any available input to the library */
 static unsigned long JP2_Callback_Conv
 s_jpxd_read_data(unsigned char *pucData,
-			    unsigned long ulPos, unsigned long ulSize, 
+			    unsigned long ulPos, unsigned long ulSize,
 			    JP2_Callback_Param param)
 {
     stream_jpxd_state *const state = (stream_jpxd_state *) param;
@@ -144,7 +138,7 @@ s_jpxd_inbuf(stream_jpxd_state *state, stream_cursor_read * pr)
 	while (new_size < state->inbuf_fill + in_size)
 	    new_size = new_size << 1;
 
-	if_debug1('s', "[s]jpxd growing input buffer to %lu bytes\n", 
+	if_debug1('s', "[s]jpxd growing input buffer to %lu bytes\n",
 		new_size);
 	new = realloc(state->inbuf, new_size);
 	if (new == NULL) return gs_error_VMerror;
@@ -219,7 +213,7 @@ s_jpxd_process(stream_state * ss, stream_cursor_read * pr,
 	if (state->handle == (JP2_Decomp_Handle)NULL) {
 	    /* initialize decompressor */
 	    err = JP2_Decompress_Start(&state->handle,
-		/* memory allocator callbacks */ 
+		/* memory allocator callbacks */
 		s_jpx_alloc, (JP2_Callback_Param)state,
 		s_jpx_free,  (JP2_Callback_Param)state,
 		/* our read callback */
@@ -248,7 +242,7 @@ s_jpxd_process(stream_state * ss, stream_cursor_read * pr,
 	    state->ncomp = result;
 
 	    if_debug1('w', "[w]jpxd image has %d components\n", state->ncomp);
-	
+
 	    {
 		const char *cspace = "unknown";
 		err = JP2_Decompress_GetProp(state->handle,
@@ -317,7 +311,7 @@ s_jpxd_process(stream_state * ss, stream_cursor_read * pr,
 		    err= JP2_Decompress_GetProp(state->handle,
 			cJP2_Prop_Signed_Samples, &result, -1, (short)comp);
 		    if (err != cJP2_Error_OK) {
-			dlprintf2("Luratech JP2 error %d decoding " 
+			dlprintf2("Luratech JP2 error %d decoding "
 				"signedness of component %d\n", (int)err, comp);
 			return ERRC;
 		    }
@@ -334,12 +328,12 @@ s_jpxd_process(stream_state * ss, stream_cursor_read * pr,
 		}
 	    }
 	    if_debug3('w', "[w]jpxd decoding image at %ldx%ld"
-		" with %d bits per component\n", 
+		" with %d bits per component\n",
 		state->width, state->height, state->bpc);
 
 	}
 
-	if (state->handle != (JP2_Decomp_Handle)NULL && 
+	if (state->handle != (JP2_Decomp_Handle)NULL &&
 		state->image == NULL) {
 
 	    /* allocate our output buffer */
@@ -355,7 +349,7 @@ s_jpxd_process(stream_state * ss, stream_cursor_read * pr,
 		return ERRC;
 	    }
 	    err = JP2_Decompress_SetProp(state->handle,
-		cJP2_Prop_Output_Function, 
+		cJP2_Prop_Output_Function,
 		(JP2_Property_Value)s_jpxd_write_data);
 	    if (err != cJP2_Error_OK) {
 		dlprintf1("Luratech JP2 error %d setting output function\n", (int)err);
@@ -405,10 +399,10 @@ s_jpxd_release(stream_state *ss)
 
 /* stream template */
 const stream_template s_jpxd_template = {
-    &st_jpxd_state, 
+    &st_jpxd_state,
     s_jpxd_init,
     s_jpxd_process,
-    1024, 1024,   /* min in and out buffer sizes we can handle 
+    1024, 1024,   /* min in and out buffer sizes we can handle
                      should be ~32k,64k for efficiency? */
     s_jpxd_release
 };
@@ -490,7 +484,7 @@ s_jpxe_write(unsigned char *buffer,
 	}
 	state->outbuf = new;
 	state->outsize *= 2;
-	if_debug1('s', "[s] jpxe output buffer resized to %lu bytes\n", 
+	if_debug1('s', "[s] jpxe output buffer resized to %lu bytes\n",
 		state->outsize);
     }
 
@@ -604,25 +598,25 @@ s_jpxe_init(stream_state *ss)
     }
 
     /* set image parameters - the same for all components */
-    err = JP2_Compress_SetProp(state->handle, 
+    err = JP2_Compress_SetProp(state->handle,
 	cJP2_Prop_Width, state->width, -1, -1);
     if (err != cJP2_Error_OK) {
 	dlprintf1("Luratech JP2 error %d setting width\n", (int)err);
 	return ERRC;
     }
-    err = JP2_Compress_SetProp(state->handle, 
+    err = JP2_Compress_SetProp(state->handle,
 	cJP2_Prop_Height, state->height, -1, -1);
     if (err != cJP2_Error_OK) {
 	dlprintf1("Luratech JP2 error %d setting height\n", (int)err);
 	return ERRC;
     }
-    err = JP2_Compress_SetProp(state->handle, 
+    err = JP2_Compress_SetProp(state->handle,
 	cJP2_Prop_Bits_Per_Sample, state->bpc, -1, -1);
     if (err != cJP2_Error_OK) {
 	dlprintf1("Luratech JP2 error %d setting bits per sample\n", (int)err);
 	return ERRC;
     }
-  
+
     switch (state->colorspace) {
 	case gs_jpx_cs_gray: value = cJP2_Colorspace_Gray; break;
 	case gs_jpx_cs_rgb: value = cJP2_Colorspace_RGBa; break;
@@ -632,7 +626,7 @@ s_jpxe_init(stream_state *ss)
 		(int)state->colorspace);
 	    return ERRC;
     }
-    err = JP2_Compress_SetProp(state->handle, 
+    err = JP2_Compress_SetProp(state->handle,
 	cJP2_Prop_Extern_Colorspace, value, -1, -1);
     if (err != cJP2_Error_OK) {
 	dlprintf1("Luratech JP2 error %d setting colorspace\n", (int)err);
@@ -761,7 +755,7 @@ s_jpxe_release(stream_state *ss)
 	if_debug1('w', "[w]jpxe Luratech JP2 error %d"
 		" closing compression context", (int)err);
     }
-    
+
     /* free our own storage */
     free(state->outbuf);
     free(state->inbuf);

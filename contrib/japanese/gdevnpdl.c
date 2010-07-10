@@ -28,7 +28,7 @@
  * 
  *  -- Osamu Watanabe <owatanab@ceres.dti.ne.jp>
  *
- * $Id: gdevnpdl.c,v 1.2 2008/03/23 15:28:27 Arabidopsis Exp $
+ * $Id: gdevnpdl.c,v 1.3 2010/07/10 22:02:55 Arabidopsis Exp $
  *
  */
 

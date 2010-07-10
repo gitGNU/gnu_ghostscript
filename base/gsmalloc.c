@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsmalloc.c,v 1.1 2009/04/23 23:26:32 Arabidopsis Exp $ */
+/* $Id: gsmalloc.c,v 1.2 2010/07/10 22:02:22 Arabidopsis Exp $ */
 /* C heap allocator */
 #include "malloc_.h"
 #include "gdebug.h"
@@ -215,8 +209,8 @@ gs_heap_alloc_bytes(gs_memory_t * mem, uint size, client_name_t cname)
 	gs_alloc_fill(ptr, gs_alloc_fill_alloc, size);
 #ifdef DEBUG
     if (gs_debug_c('a') || msg != ok_msg)
-	dlprintf4("[a+]gs_malloc(%s)(%u) = 0x%lx: %s\n",
-		  client_name_string(cname), size, (ulong) ptr, msg);
+	dlprintf6("[a+]gs_malloc(%s)(%u) = 0x%lx: %s, used=%ld, max=%ld\n",
+		  client_name_string(cname), size, (ulong) ptr, msg, mmem->used, mmem->max_used);
 #endif
     return ptr;
 #undef set_msg
@@ -476,25 +470,25 @@ gs_malloc_wrap(gs_memory_t **wrapped, gs_malloc_memory_t *contents)
      * color device and not for PDF or XPS with transparency
      */
     {
-    gs_memory_retrying_t *rmem;
-    rmem = (gs_memory_retrying_t *)
-	gs_alloc_bytes_immovable((gs_memory_t *)lmem,
-				 sizeof(gs_memory_retrying_t),
-				 "gs_malloc_wrap(retrying)");
-    if (rmem == 0) {
-	gs_memory_locked_release(lmem);
-	gs_free_object(cmem, lmem, "gs_malloc_wrap(locked)");
-	return_error(gs_error_VMerror);
-    }
-    code = gs_memory_retrying_init(rmem, (gs_memory_t *)lmem);
-    if (code < 0) {
-	gs_free_object((gs_memory_t *)lmem, rmem, "gs_malloc_wrap(retrying)");
-	gs_memory_locked_release(lmem);
-	gs_free_object(cmem, lmem, "gs_malloc_wrap(locked)");
-	return code;
-    }
+	gs_memory_retrying_t *rmem;
+	rmem = (gs_memory_retrying_t *)
+	    gs_alloc_bytes_immovable((gs_memory_t *)lmem,
+				     sizeof(gs_memory_retrying_t),
+				     "gs_malloc_wrap(retrying)");
+	if (rmem == 0) {
+	    gs_memory_locked_release(lmem);
+	    gs_free_object(cmem, lmem, "gs_malloc_wrap(locked)");
+	    return_error(gs_error_VMerror);
+	}
+	code = gs_memory_retrying_init(rmem, (gs_memory_t *)lmem);
+	if (code < 0) {
+	    gs_free_object((gs_memory_t *)lmem, rmem, "gs_malloc_wrap(retrying)");
+	    gs_memory_locked_release(lmem);
+	    gs_free_object(cmem, lmem, "gs_malloc_wrap(locked)");
+	    return code;
+	}
 
-    *wrapped = (gs_memory_t *)rmem;
+	*wrapped = (gs_memory_t *)rmem;
     }
 #  endif /* retrying */
     return 0;
@@ -525,7 +519,7 @@ gs_malloc_unwrap(gs_memory_t *wrapped)
     return (gs_malloc_memory_t *)contents;
 #else
     return (gs_malloc_memory_t *)wrapped;
-#endif 
+#endif
 }
 
 

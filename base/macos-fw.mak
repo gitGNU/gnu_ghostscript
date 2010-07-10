@@ -1,21 +1,16 @@
-#  Copyright (C) 2001-2006 Artifex Software, Inc.
+#  Copyright (C) 2001-2009 Artifex Software, Inc.
 #  All Rights Reserved.
 #
-#  This file is part of GNU ghostscript
+#  This software is provided AS-IS with no warranty, either express or
+#  implied.
 #
-#  GNU ghostscript is free software; you can redistribute it and/or modify it under
-#  the terms of the version 2 of the GNU General Public License as published by the Free Software
-#  Foundation.
+#  This software is distributed under license and may not be copied, modified
+#  or distributed except as expressly authorized under the terms of that
+#  license.  Refer to licensing information at http://www.artifex.com/
+#  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+#  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-#  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-#  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-#  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License along with
-#  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# $Id: macos-fw.mak,v 1.1 2009/04/23 23:26:14 Arabidopsis Exp $
+# $Id: macos-fw.mak,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $
 # Partial makefile for MacOS X/Darwin shared object target
 
 # Useful make commands:
@@ -44,15 +39,14 @@ GSSOC_XE=$(BINDIR)/$(GSSOC_XENAME)
 GSSOC=$(BINDIR)/$(SOBINRELDIR)/$(GSSOC_XENAME)
 
 # shared library
-#SOPREF=.so
-#SOSUF=
-SOPREF=
+SOPREF=lib
+#SOSUF=.so
 SOSUF=.dylib
 
-GS_SONAME_BASE=lib$(GS)$(SOPREF)
+GS_SONAME_BASE=$(SOPREF)$(GS)
 GS_SONAME=$(GS_SONAME_BASE)$(SOSUF)
 GS_SONAME_MAJOR=$(GS_SONAME_BASE).$(GS_VERSION_MAJOR)$(SOSUF)
-GS_SONAME_MAJOR_MINOR= $(GS_SONAME_BASE).$(GS_VERSION_MAJOR).$(GS_VERSION_MINOR)$(SOSUF)
+GS_SONAME_MAJOR_MINOR=$(GS_SONAME_BASE).$(GS_VERSION_MAJOR).$(GS_VERSION_MINOR)$(SOSUF)
 GS_SO=$(BINDIR)/$(GS_SONAME)
 GS_SO_MAJOR=$(BINDIR)/$(GS_SONAME_MAJOR)
 GS_SO_MAJOR_MINOR=$(BINDIR)/$(GS_SONAME_MAJOR_MINOR)
@@ -72,18 +66,20 @@ $(GS_SO_MAJOR): $(GS_SO_MAJOR_MINOR)
 # Build the small Ghostscript loaders
 # it would be nice if we could link to the framework instead
 
-$(GSSOC_XE): $(GS_SO) $(GLSRC)dxmainc.c
-	$(GLCC) -g -o $(GSSOC_XE) $(GLSRC)dxmainc.c -L$(BINDIR) -l$(GS)
+$(GSSOC_XE): $(GS_SO) $(PSSRC)dxmainc.c
+	$(GLCC) -g -o $(GSSOC_XE) $(PSSRC)dxmainc.c -L$(BINDIR) -l$(GS)
 
 # ------------------------- Recursive make targets ------------------------- #
 
-# we pass the framework path under -install_name here rather than /usr/local/lib
-# or whatever. This will effectively break the .dylib build in favor of the
-# Framework. Generally on MacOS X this is what we want, but there should be
-# a separate .dylib target if we're going to build them at all
-# we should also be passing compatibility versions
+# Not that for the framwework build we need to set -install_name
+# differently in unix-dll.mak. We could pass it here under LDFLAGS
+# but that breaks the .dylib build in favor of the Framework, and
+# throws an error linking the example client so the build doesn't
+# complete cleanly. There should probably be a separate .dylib target
+# if we're going to build them at all. We should also be passing 
+# compatibility versions.
 
-SODEFS=LDFLAGS='$(LDFLAGS) $(CFLAGS_SO) -dynamiclib -install_name $(prefix)/$(FRAMEWORK_NAME)'\
+SODEFS=LDFLAGS='$(LDFLAGS) $(CFLAGS_SO) -dynamiclib'\
  GS_XE=$(BINDIR)/$(SOBINRELDIR)/$(GS_SONAME_MAJOR_MINOR)\
  STDIO_IMPLEMENTATION=c\
  DISPLAY_DEV=$(DD)$(SOOBJRELDIR)/display.dev\
@@ -138,7 +134,7 @@ framework: so lib/Info-macos.plist
 	ln -s Versions/Current/doc . ;\
 	ln -s Versions/Current/$(FRAMEWORK_NAME) . )
 	pwd
-	cp src/iapi.h src/ierrors.h src/gdevdsp.h $(GS_FRAMEWORK)/Headers/
+	cp psi/iapi.h psi/ierrors.h base/gdevdsp.h $(GS_FRAMEWORK)/Headers/
 	cp lib/Info-macos.plist $(GS_FRAMEWORK)/Resources/
 	cp -r lib $(GS_FRAMEWORK)/Resources/
 	cp $(BINDIR)/$(SOBINRELDIR)/$(GS_SONAME_MAJOR_MINOR) $(GS_FRAMEWORK)/Versions/Current/$(FRAMEWORK_NAME)

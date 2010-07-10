@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id: gxclist.c,v 1.1 2009/04/23 23:27:24 Arabidopsis Exp $ */
+/*$Id: gxclist.c,v 1.2 2010/07/10 22:02:30 Arabidopsis Exp $ */
 /* Command list document- and page-level code. */
 #include "memory_.h"
 #include "string_.h"
@@ -170,7 +164,10 @@ const gx_device_procs gs_clist_device_procs = {
     clist_fill_linear_color_triangle,
     gx_forward_update_spot_equivalent_colors,
     gx_forward_ret_devn_params,
-    clist_fillpage
+    clist_fillpage,
+    NULL,                      /* push_transparency_state */
+    NULL                       /* pop_transparency_state */
+
 };
 
 /*------------------- Choose the implementation -----------------------
@@ -196,7 +193,7 @@ clist_init_io_procs(gx_device_clist *pclist_dev, bool in_memory)
 /* Initialization for imager state. */
 /* The initial scale is arbitrary. */
 const gs_imager_state clist_imager_state_initial =
-{gs_imager_state_initial(300.0 / 72.0)};
+{gs_imager_state_initial(300.0 / 72.0, false)};
 
 /*
  * The buffer area (data, data_size) holds a bitmap cache when both writing
@@ -364,6 +361,16 @@ clist_init_data(gx_device * dev, byte * init_data, uint data_size)
     gx_device *pbdev = (gx_device *)&bdev;
     int code;
 
+    /* the clist writer has its own color info that depends upon the 
+       transparency group color space (if transparency exists).  The data that is
+       used in the clist writing. Here it is initialized with 
+       the target device color info.  The values will be pushed and popped
+       in a stack if we have changing color spaces in the transparency groups. */
+
+    cdev->clist_color_info.depth = dev->color_info.depth;
+    cdev->clist_color_info.polarity = dev->color_info.polarity;
+    cdev->clist_color_info.num_components = dev->color_info.num_components;
+    
     /* Call create_buf_device to get the memory planarity set up. */
     cdev->buf_procs.create_buf_device(&pbdev, target, 0, NULL, NULL, clist_get_band_complexity(0, 0));
     /* HACK - if the buffer device can't do copy_alpha, disallow */
@@ -646,7 +653,7 @@ clist_open(gx_device *dev)
 	code = clist_emit_page_header(dev);
     if (code >= 0)
        dev->is_open = save_is_open;
-    return code;
+     return code;
 }
 
 static int
@@ -683,7 +690,7 @@ clist_finish_page(gx_device *dev, bool flush)
      * since we have been rendering, shut down threads
      */
     if (!CLIST_IS_WRITER((gx_device_clist *)dev)) {
-       	gx_clist_reader_free_band_complexity_array( (gx_device_clist *)dev );
+	gx_clist_reader_free_band_complexity_array( (gx_device_clist *)dev );
 	clist_teardown_render_threads(dev);
     }
 
@@ -899,9 +906,6 @@ clist_get_band(gx_device * dev, int y, int *band_start)
     *band_start = start = y - y % band_height;
     return min(dev->height - start, band_height);
 }
-
-
-
 
 /* copy constructor if from != NULL
  * default constructor if from == NULL

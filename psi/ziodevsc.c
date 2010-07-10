@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: ziodevsc.c,v 1.1 2009/04/23 23:31:39 Arabidopsis Exp $ */
+/* $Id: ziodevsc.c,v 1.2 2010/07/10 22:02:43 Arabidopsis Exp $ */
 /* %stdxxx IODevice implementation using callouts for PostScript interpreter */
 #include "stdio_.h"
 #include "ghost.h"
@@ -126,20 +120,20 @@ stdin_open(gx_io_device * iodev, const char *access, stream ** ps,
 	return_error(e_invalidfileaccess);
     if (file_is_invalid(s, &ref_stdin)) {
 	/****** stdin SHOULD NOT LINE-BUFFER ******/
-	gs_memory_t *mem = imemory_system;
+	gs_memory_t *sysmem = imemory_system;
 	byte *buf;
 	static const stream_procs p = {
 	    s_std_noavailable, s_std_noseek, s_std_read_reset,
 	    s_std_read_flush, file_close_file, s_stdin_read_process
 	};
 
-	s = file_alloc_stream(mem, "stdin_open(stream)");
+	s = file_alloc_stream(sysmem, "stdin_open(stream)");
 
 	/* We want stdin to read only one character at a time, */
 	/* but it must have a substantial buffer, in case it is used */
 	/* by a stream that requires more than one input byte */
 	/* to make progress. */
-	buf = gs_alloc_bytes(mem, STDIN_BUF_SIZE, "stdin_open(buffer)");
+	buf = gs_alloc_bytes(sysmem, STDIN_BUF_SIZE, "stdin_open(buffer)");
 	if (s == 0 || buf == 0)
 	    return_error(e_VMerror);
 
@@ -209,15 +203,15 @@ stdout_open(gx_io_device * iodev, const char *access, stream ** ps,
     if (!streq1(access, 'w'))
 	return_error(e_invalidfileaccess);
     if (file_is_invalid(s, &ref_stdout)) {
-	gs_memory_t *mem = imemory_system;
+	gs_memory_t *sysmem = imemory_system;
 	byte *buf;
 	static const stream_procs p = {
 	    s_std_noavailable, s_std_noseek, s_std_write_reset,
 	    s_std_write_flush, file_close_file, s_stdout_write_process
 	};
 
-	s = file_alloc_stream(mem, "stdout_open(stream)");
-	buf = gs_alloc_bytes(mem, STDOUT_BUF_SIZE, "stdout_open(buffer)");
+	s = file_alloc_stream(sysmem, "stdout_open(stream)");
+	buf = gs_alloc_bytes(sysmem, STDOUT_BUF_SIZE, "stdout_open(buffer)");
 	if (s == 0 || buf == 0)
 	    return_error(e_VMerror);
 	s_std_init(s, buf, STDOUT_BUF_SIZE, &p, s_mode_write);
@@ -280,15 +274,15 @@ stderr_open(gx_io_device * iodev, const char *access, stream ** ps,
     if (!streq1(access, 'w'))
 	return_error(e_invalidfileaccess);
     if (file_is_invalid(s, &ref_stderr)) {
-	gs_memory_t *mem = imemory_system;
+	gs_memory_t *sysmem = imemory_system;
 	byte *buf;
 	static const stream_procs p = {
 	    s_std_noavailable, s_std_noseek, s_std_write_reset,
 	    s_std_write_flush, file_close_file, s_stderr_write_process
 	};
 
-	s = file_alloc_stream(mem, "stderr_open(stream)");
-	buf = gs_alloc_bytes(mem, STDERR_BUF_SIZE, "stderr_open(buffer)");
+	s = file_alloc_stream(sysmem, "stderr_open(stream)");
+	buf = gs_alloc_bytes(sysmem, STDERR_BUF_SIZE, "stderr_open(buffer)");
 	if (s == 0 || buf == 0)
 	    return_error(e_VMerror);
 	s_std_init(s, buf, STDERR_BUF_SIZE, &p, s_mode_write);

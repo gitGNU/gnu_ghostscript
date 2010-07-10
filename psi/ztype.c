@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: ztype.c,v 1.1 2009/04/23 23:31:47 Arabidopsis Exp $ */
+/* $Id: ztype.c,v 1.2 2010/07/10 22:02:44 Arabidopsis Exp $ */
 /* Type, attribute, and conversion operators */
 #include "math_.h"
 #include "memory_.h"
@@ -54,10 +48,10 @@ static int convert_to_string(const gs_memory_t *mem, os_ptr, os_ptr);
  * constant expressions, so we can't use min_long and max_long.
  * What a nuisance!
  */
-#define ALT_MIN_LONG (-1L << (arch_sizeof_long * 8 - 1))
-#define ALT_MAX_LONG (~(ALT_MIN_LONG))
-static const double min_int_real = (ALT_MIN_LONG * 1.0 - 1);
-static const double max_int_real = (ALT_MAX_LONG * 1.0 + 1);
+#define ALT_MIN_INT (-1 << 31)
+#define ALT_MAX_INT (~(ALT_MIN_INT))
+static const double min_int_real = (ALT_MIN_INT * 1.0 - 1);
+static const double max_int_real = (ALT_MAX_INT * 1.0 + 1);
 
 #define REAL_CAN_BE_INT(v)\
   ((v) > min_int_real && (v) < max_int_real)
@@ -363,14 +357,14 @@ zcvrs(i_ctx_t *i_ctx_p)
 		return_error(e_rangecheck); /* CET 24-05 wants rangecheck */
 	}
     } else {
-	ulong ival;
+	uint ival;
 	byte digits[sizeof(ulong) * 8];
 	byte *endp = &digits[countof(digits)];
 	byte *dp = endp;
 
 	switch (r_type(op - 2)) {
 	    case t_integer:
-		ival = (ulong) op[-2].value.intval;
+		ival = (uint) op[-2].value.intval;
 		break;
 	    case t_real:
 		{

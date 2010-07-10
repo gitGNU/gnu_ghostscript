@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdfi.c,v 1.1 2009/04/23 23:27:07 Arabidopsis Exp $ */
+/* $Id: gdevpdfi.c,v 1.2 2010/07/10 22:02:27 Arabidopsis Exp $ */
 /* Image handling for PDF-writing driver */
 #include "memory_.h"
 #include "math_.h"
@@ -135,7 +129,8 @@ pdf_convert_image4_to_image1(gx_device_pdf *pdev,
 			     const gs_image4_t *pim4, gs_image_t *pim1,
 			     gx_drawing_color *pdcolor)
 {
-    if (pim4->BitsPerComponent == 1 &&
+    if (pim4->BitsPerComponent == 1 && 
+	pim4->ColorSpace->type->num_components == gx_num_components_1 &&
 	(pim4->MaskColor_is_range ?
 	 pim4->MaskColor[0] | pim4->MaskColor[1] :
 	 pim4->MaskColor[0]) <= 1
@@ -375,8 +370,11 @@ pdf_begin_typed_image_impl(gx_device_pdf *pdev, const gs_imager_state * pis,
 		    )
 		    goto nyi;
 	}
-	in_line = context == PDF_IMAGE_DEFAULT &&
-	    can_write_image_in_line(pdev, pim1);
+        /* If image is not type 3X and we can write in-line then make it so */
+
+ 	 in_line = context == PDF_IMAGE_DEFAULT &&
+	    can_write_image_in_line(pdev, pim1); 
+
 	image[0].type1 = *pim1;
 	break;
     }
@@ -659,9 +657,9 @@ pdf_begin_typed_image_impl(gx_device_pdf *pdev, const gs_imager_state * pis,
 	     */
 	    cos_c_string_value(&cs_value, names->DeviceRGB);
         } else {
-	    code = pdf_color_space(pdev, &cs_value, &pranges,
+	    code = pdf_color_space_named(pdev, &cs_value, &pranges,
 				     pcs,
-				     names, in_line);
+				     names, in_line, NULL, 0);
 	    if (code < 0)
 	        convert_to_process_colors = true;
         }
@@ -1332,8 +1330,11 @@ pdf_image3x_make_mcde(gx_device *dev, const gs_imager_state *pis,
 	if (code < 0)
 	    return code;
     }
-    return cos_dict_put_c_key_object(cos_stream_dict(pmcs), "/SMask",
-				     pmie->writer.pres->object);
+/* Don't put SMask here because pmie->writer.pres->object may be substituted
+ * after the image stream is accummulated. pdf_end_and_do_image will set
+ * SMask with the right value. Bug 690345.
+ */ 
+    return 0;
 }
 
 pdf_resource_t *pdf_substitute_pattern(pdf_resource_t *pres)
@@ -1423,6 +1424,7 @@ gdev_pdf_pattern_manage(gx_device *pdev1, gx_bitmap_id id,
 	    if (pres == 0)
 		return gs_error_undefined;
 	    pres = pdf_substitute_pattern(pres);
+	    pres->where_used |= pdev->used_mask;
 	    code = pdf_add_resource(pdev, pdev->substream_Resources, "/Pattern", pres);
 	    if (code < 0)
 		return code;

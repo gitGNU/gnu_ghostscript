@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: ifapi.h,v 1.1 2009/04/23 23:31:37 Arabidopsis Exp $ */
+/* $Id: ifapi.h,v 1.2 2010/07/10 22:02:42 Arabidopsis Exp $ */
 /* Font API interface */
 
 #ifndef ifapi_INCLUDED
@@ -64,9 +58,25 @@ typedef enum {
     FAPI_FONT_FEATURE_ForceBold,
     FAPI_FONT_FEATURE_LanguageGroup,
     FAPI_FONT_FEATURE_lenIV,
+    FAPI_FONT_FEATURE_GlobalSubrs_count,
     FAPI_FONT_FEATURE_Subrs_count,
     FAPI_FONT_FEATURE_Subrs_total_size,
-    FAPI_FONT_FEATURE_TT_size
+    FAPI_FONT_FEATURE_TT_size,
+    /* Multiple Master specifics */
+    FAPI_FONT_FEATURE_DollarBlend,
+    FAPI_FONT_FEATURE_DollarBlend_length,
+    FAPI_FONT_FEATURE_BlendAxisTypes_count,
+    FAPI_FONT_FEATURE_BlendAxisTypes,
+    FAPI_FONT_FEATURE_BlendPrivate_count,
+    FAPI_FONT_FEATURE_BlendFontInfo_count,
+    FAPI_FONT_FEATURE_WeightVector_count,
+    FAPI_FONT_FEATURE_WeightVector,
+    FAPI_FONT_FEATURE_BlendDesignPositionsArrays_count,
+    FAPI_FONT_FEATURE_BlendDesignPositionsArrayValue,
+    FAPI_FONT_FEATURE_BlendDesignMapArrays_count,
+    FAPI_FONT_FEATURE_BlendDesignMapSubArrays_count,
+    FAPI_FONT_FEATURE_BlendDesignMapArrayValue,
+    /* End MM specifics */
 } fapi_font_feature;
 
 typedef enum {
@@ -112,6 +122,9 @@ struct FAPI_font_s {
     unsigned short (*get_word )(FAPI_font *ff, fapi_font_feature var_id, int index);
     unsigned long  (*get_long )(FAPI_font *ff, fapi_font_feature var_id, int index);
     float          (*get_float)(FAPI_font *ff, fapi_font_feature var_id, int index);
+    int            (*get_name) (FAPI_font *ff, fapi_font_feature var_id, int index, char *buffer, int len);
+    int		   (*get_proc) (FAPI_font *ff, fapi_font_feature var_id, int index, char *Buffer);
+    unsigned short (*get_gsubr)(FAPI_font *ff, int index,     byte *buf, ushort buf_length);
     unsigned short (*get_subr) (FAPI_font *ff, int index,     byte *buf, ushort buf_length);
     unsigned short (*get_glyph)(FAPI_font *ff, int char_code, byte *buf, ushort buf_length);
     unsigned short (*serialize_tt_font)(FAPI_font *ff, void *buf, int buf_size);
@@ -146,6 +159,7 @@ typedef struct FAPI_font_scale_s {
 typedef struct FAPI_metrics_s {
     int bbox_x0, bbox_y0, bbox_x1, bbox_y1; /* design units */
     int escapement; /* design units */
+    int v_escapement; /* design units */
     int em_x, em_y; /* design units */
 } FAPI_metrics;
 
@@ -174,6 +188,10 @@ struct FAPI_server_s {
     int frac_shift; /* The number of fractional bits in coordinates. */
     FAPI_face face;
     FAPI_font ff;
+    gs_matrix initial_FontMatrix; /* Font Matrix at the time the font is defined */
+				  /* Used to use the stored 'OrigFont' entry but */
+				  /* this did not change f a font was defined    */
+				  /* using an existing base font */
     FAPI_retcode (*ensure_open)(FAPI_server *server, const byte * param, int param_size);
     FAPI_retcode (*get_scaled_font)(FAPI_server *server, FAPI_font *ff, const FAPI_font_scale *scale, const char *xlatmap, FAPI_descendant_code dc);
     FAPI_retcode (*get_decodingID)(FAPI_server *server, FAPI_font *ff, const char **decodingID);
@@ -188,6 +206,7 @@ struct FAPI_server_s {
     FAPI_retcode (*get_char_outline)(FAPI_server *server, FAPI_path *p);
     FAPI_retcode (*release_char_data)(FAPI_server *server);
     FAPI_retcode (*release_typeface)(FAPI_server *server, void *server_font_data);
+    FAPI_retcode (*check_cmap_for_GID)(FAPI_server *server, uint *index);
     /*  Some people get confused with terms "font cache" and "character cache".
         "font cache" means a cache for scaled font objects, which mainly
         keep the font header information and rules for adjusting it to specific raster.

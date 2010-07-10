@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsovrc.c,v 1.1 2009/04/23 23:27:10 Arabidopsis Exp $ */
+/* $Id: gsovrc.c,v 1.2 2010/07/10 22:02:27 Arabidopsis Exp $ */
 /* overprint/overprint mode compositor implementation */
 
 #include "memory_.h"
@@ -88,7 +82,8 @@ read_color_index(gx_color_index * pcindex, const byte * data, uint size)
         if (++nbytes > size)
             return_error(gs_error_rangecheck);
         else {
-            int     c = *data;
+            unsigned char byte = *data;
+            gx_color_index c = byte;
 
             cindex += (c & 0x7f) << shift;
             if ((c & 0x80) == 0)
@@ -419,7 +414,10 @@ static gx_device_procs no_overprint_procs = {
     0,					/* fill_linear_color_triangle */
     0,					/* update_spot_equivalent_colors */
     0,					/* ret_devn_params */
-    gx_forward_fillpage
+    gx_forward_fillpage,
+    0,                                  /* push_transparency_state */
+    0                                   /* pop_transparency_state */
+
 };
 
 /*

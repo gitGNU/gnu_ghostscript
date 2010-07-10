@@ -1,20 +1,19 @@
 %    Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-%  This file is part of GNU ghostscript
-%
-%  GNU ghostscript is free software; you can redistribute it and/or modify it under
-%  the terms of the version 2 of the GNU General Public License as published by the Free Software
-%  Foundation.
-%
-%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-%
-%  You should have received a copy of the GNU General Public License along with
-%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-%
-% $Id: pdf_main.ps,v 1.1 2009/04/23 23:25:47 Arabidopsis Exp $
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
+% $Id: pdf_main.ps,v 1.2 2010/07/10 22:02:13 Arabidopsis Exp $
 % pdf_main.ps
 % PDF file- and page-level operations.
 
@@ -49,9 +48,36 @@ pdfdict begin
   /EX { /BXlevel BXlevel 1 sub store } bind
   /PS { cvx exec } bind
 	% PDF 1.2 operators
-  /BMC { pop } bind
-  /BDC { pop pop } bind
-  /EMC { }
+  /BMC {
+    /BMClevel BMClevel 1 add store
+    pop
+  } bind
+  /BDC {
+    /BMClevel BMClevel 1 add store
+    exch /OC eq {
+      dup type /nametype eq {
+        PDFfile fileposition exch                      % pos /Name
+        Page /Properties rget {
+          ocg-is-visible not {
+            OFFlevels BMClevel dup put
+          } if
+        } if
+        PDFfile exch setfileposition
+      } {
+        pop
+      } ifelse
+    } {
+      pop
+    } ifelse
+  } bind
+  /EMC {
+    OFFlevels BMClevel
+    2 copy known {
+       2 copy undef
+    } if
+    1 sub /BMClevel exch store
+    pop
+  } bind
   /MP { pop } bind
   /DP { pop pop } bind
   /- { 0  % Bug 690016
@@ -203,67 +229,98 @@ currentdict /runpdfstring .undef
 } bind def
 
 
-% Copy default subfile to a temporary file and return the file name
-% as a PostScript name to protect it from restore. Return null if
-% there's no default subfile.
+% Copy stream to an external temporary file and
+% return the file name as PS name.
+/copy_embedded_file {
+  //true resolvestream      % strm
+  dup 1023 string .peekstring pop % "1024 string" exceeds current %stdin buffer
+  dup length 400 ge {             % Valid PDF file cannot be smaller than 400 bytes.
+     (%PDF-) search {
+       pop pop pop //true
+     } {
+       pop //false
+     } ifelse
+   } {
+     pop //false
+   } ifelse {
+    //null (w) /.tempfile   % strm (name) null (w) /.tempfile
+    .systemvar exec         % strm (name) file
+    3 -1 roll               % (name) file strm
+    32768 string            % (name) file strm (buf)
+    { 3 copy readstring     % (name) file strm (buf) file (data) bool
+      3 1 roll              % (name) file strm (buf) bool file (data)
+      writestring           % (name) file strm (buf) bool
+      not { exit } if
+    } loop                  
+    pop closefile           % (name) file
+    closefile               % (name)
+    cvn                     % /name
+  } {
+    closefile
+  } ifelse
+} bind def
+
+
+% Copy selected subfiles to temporary files and return the file names
+% as a PostScript names to protect them from restore.
+% Currently, all PDF files in the Portfolio are extracted and returned.
 %
-% - pdf_collection_files /temp_file_name | null
+% - pdf_collection_files [ /temp_file_name ... /temp_file_name
 /pdf_collection_files {
-  //null
-  Trailer /Root oget /Collection knownoget {
-    /D knownoget { % We have default document in the collection
-      Trailer /Root oget /Names knownoget {
-        /EmbeddedFiles knownoget {
-          exch nameoget dup //null ne {
-            /EF knownoget {
-              /F knownoget {
-                //true resolvestream    % null strm
-                //null (w) /.tempfile   % null strm (name) null (w) /.tempfile
-                .systemvar exec         % null strm (name) file
-                3 -1 roll               % null (name) file strm
-                32768 string            % null (name) file strm (buf)
-                { 3 copy readstring     % null (name) file strm (buf) file (data) bool
-                  3 1 roll              % null (name) file strm (buf) bool file (data)
-                  writestring           % null (name) file strm (buf) bool
-                  not { exit } if
-                } loop                  
-                pop closefile           % null (name) file
-                closefile               % null (name)
-                exch pop cvn            % /name
+  mark
+  Trailer /Root oget
+  dup /Collection oknown {
+    /Names knownoget {
+      /EmbeddedFiles knownoget {
+        /Names knownoget {
+          { oforce
+            dup type /dicttype eq {
+              /EF knownoget {
+                /F knownoget {
+                  copy_embedded_file
+                } if
               } if
-            } if
-          } {
-            pop
-          } ifelse
-        } {
-          pop
-        } ifelse
-      } {
-        pop
-      } ifelse
+            } {
+              pop
+            } ifelse
+          } forall
+        } if
+      } if
     } if
-  } if
+  } {
+    pop
+  } ifelse
 } bind def
 
 /runpdf {		% <file> runpdf -
   //runpdfbegin exec
   //pdf_collection_files exec
-  dup type /nametype ne {
-    copy_trailer_attrs
-    //runpdfpagerange exec
-    //dopdfpages exec
-  } if
-  //runpdfend exec
-  dup type /nametype eq {
-    .namestring dup (r) file
-    //runpdfbegin exec
-    copy_trailer_attrs
+  dup mark eq {
+    pop
+    process_trailer_attrs
     //runpdfpagerange exec
     //dopdfpages exec
     //runpdfend exec
-    deletefile
   } {
-    pop
+    //runpdfend exec
+    ] {
+        dup type /filetype eq {
+          //runpdfbegin exec
+          process_trailer_attrs
+          //runpdfpagerange exec
+          //dopdfpages exec
+          //runpdfend exec
+          closefile
+        } {
+          .namestring dup (r) file
+          //runpdfbegin exec
+          process_trailer_attrs
+          //runpdfpagerange exec
+          //dopdfpages exec
+          //runpdfend exec
+          deletefile
+        } ifelse
+    } forall
   } ifelse
 } bind def
 
@@ -347,9 +404,14 @@ pdfdict begin
        pop			% Stack: <err count> <obj#> <loc> <gen#> <tag>
        dup /n eq {		% xref line tag is /n
 	 pop			% pop dup of line tag
-	 0 3 1 roll		% Set ObjectStream object number = 0
-	 //false setxrefentry	% Save xref entry, don't change existing entries
-	 3 -1 roll pop		% Remove ObjectStream object onumber
+         2 copy or 0 eq {
+           (   **** Warning: considering '0000000000 00000 n' as a free entry.\n)
+           pdfformaterror
+         } {
+           0 3 1 roll		% Set ObjectStream object number = 0
+	   //false setxrefentry	% Save xref entry, don't change existing entries
+	   3 -1 roll pop	% Remove ObjectStream object onumber
+         } ifelse
        }
        {			% xref line tag was not /n
 	 /f ne			% verify that the tag was /f
@@ -548,7 +610,7 @@ pdfdict begin
   currentdict end
 } bind def
 
-/copy_trailer_attrs {  % - copy_trailer_attrs -
+/process_trailer_attrs {  % - process_trailer_attrs -
   writeoutputintents
   .writepdfmarks {
 	% Copy bookmarks (outline) to the output.
@@ -558,6 +620,20 @@ pdfdict begin
       } if
     } if
   } if		% end .writepdfmarks
+  % Initialize OC groups
+  Trailer /Root oget /OCProperties knownoget {
+    % By default, OCGs are 'on'; mark only 'off' OCGs.
+    /D knownoget {
+      /OFF knownoget {
+        { oforce dup type /dicttype eq {
+            /OFF 0 put
+          } {
+            pop
+          } ifelse
+        } forall
+      } if
+    } if
+  } if
 } bind def
 
 % Verify that each entry in the xref table is pointing at an object with
@@ -937,16 +1013,39 @@ pdfdict begin
 /rget {			% <resname> <pagedict> <restype> rget <value> -true-
 			% <resname> <pagedict> <restype> rget -false-
   LocalResources 1 index knownoget {
-     3 index knownoget
+     dup type /dicttype eq {
+       3 index knownoget
+     } {
+       //false exch {
+         4 index knownoget {
+           exch not exit
+         } if
+       } forall
+     } ifelse
   } {
-    false
+    //false
   } ifelse {
-    exch pop exch pop exch pop true
+    exch pop exch pop exch pop //true
   } {
     exch /Resources pget {
-      exch knownoget { exch knownoget } { pop false } ifelse
+      exch knownoget {                 % /Name [<<>> ...]
+          dup type /dicttype eq {
+            exch knownoget
+          } {
+            % GS uses array of dicts if resources don't fit in one dict.
+            //false 3 1 roll {         % false /Name <<>>
+              1 index knownoget {      % false /Name val
+                exch pop exch not % i.e. true
+                0 exit
+              } if
+            } forall
+            pop
+          } ifelse
+      } {
+        pop //false
+      } ifelse
     } {
-      pop pop false
+      pop pop //false
     } ifelse
   } ifelse
 } bind def
@@ -956,15 +1055,22 @@ pdfdict begin
  { Trailer /Root oget /Pages oget
    dup /Count knownoget {
      dup 0 le {
-       pop (   **** Warning:  Invalid Page count.\n) pdfformaterror
-       % find the last page and use that as the Count
-       1 1 999999999 {
-         dup pdffindpage?
-	 exch pop
-         //null eq { exit } { pop } ifelse
-       } for
-       1 sub		% decrement to last page that we were able to find
-       2 copy /Count exch put
+       pop 
+       dup /Kids knownoget {
+         pop
+         (   **** Warning:  Invalid Page count.\n) pdfformaterror
+         % find the last page and use that as the Count
+         1 1 999999999 {
+           dup pdffindpage?
+	   exch pop
+           //null eq { exit } { pop } ifelse
+         } for
+         1 sub		% decrement to last page that we were able to find
+         2 copy /Count exch put
+       } {
+         0 % return 0 and keep 0 page count.
+         (   **** Warning:  PDF document has no pages.\n) pdfformaterror
+       } ifelse
      } if
      exch pop
    } {
@@ -1215,10 +1321,21 @@ end readonly def
   } bind def
   /Link {
     mark exch
+    dup /BS knownoget { << exch { oforce } forall >> /BS exch 3 -1 roll } if
+    dup /F knownoget { /F exch 3 -1 roll } if
     dup /C knownoget { /Color exch 3 -1 roll } if
-     { /Rect /Border }
-     { 2 copy knownoget { 3 -1 roll } { pop } ifelse }
-    forall dup /A knownoget {
+    dup /Rect knownoget { /Rect exch 3 -1 roll } if
+    dup /Border knownoget {
+      dup type /arraytype eq {
+        dup length 3 lt
+      } {
+        //true
+      } ifelse {
+        pop [ 0 0 0 ] % Following AR5 use invisible border.
+      } if
+      /Border exch 3 -1 roll
+    } if
+    dup /A knownoget {
       dup /URI known {
         /A mark 3 2 roll    % <<>> /A [ <<action>>
         { oforce } forall
@@ -1273,16 +1390,30 @@ end readonly def
   } if
 } bind def
 
+/get_any_box { % <pagedict> get_any_box <box name> <box>
+  //systemdict /UseTrimBox .knownget dup { and } if {
+    dup /TrimBox pget {
+      exch pop /TrimBox exch
+    } if
+  } if
+  dup type /arraytype ne {
+    //systemdict /UseCropBox .knownget dup { and } if {
+      dup /CropBox pget {
+        exch pop /CropBox exch
+      } if
+    } if
+  } if
+  dup type /arraytype ne {
+    /MediaBox exch get_media_box
+  } if
+} bind def
+
 % Compute the matrix that transforms the PDF->PS "default" user space
 /pdf_PDF2PS_matrix {	% <pdfpagedict> -- matrix
   matrix currentmatrix matrix setmatrix exch
   % stack: savedCTM <pdfpagedict>
-  dup /CropBox pget dup {exch pop} if //systemdict /UseCropBox known and {
-    /CropBox 2 copy pget pop
-  } {
-    /MediaBox 1 index get_media_box
-  } ifelse
-  % stack: savedCTM <pdfpagedict> /Crop|MediaBox <Crop|Media Box>
+  dup get_any_box
+  % stack: savedCTM <pdfpagedict> /Trim|Crop|MediaBox <Trim|Crop|Media Box>
   oforce_elems normrect_elems fix_empty_rect_elems 4 array astore
   //systemdict /PDFFitPage known {
     PDFDEBUG { (Fiting PDF to imageable area of the page.) = flush } if
@@ -1373,35 +1504,28 @@ currentdict /PDF2PS_matrix_key undef
   /Orientation 0 def
   currentpagedevice
 	% Stack: pdfpagedict currentpagedevicedict
-  1 index /CropBox pget dup {exch pop} if //systemdict /UseCropBox known and {
-    /CropBox 2 index /CropBox pget % will use the CropBox
+  1 index get_any_box 
+	% Stack: pdfpagedict currentpagedevicedict /BoxName [box]
+  oforce_elems normrect_elems fix_empty_rect_elems boxrect 4 2 roll pop pop
+  3 index /Rotate pget not { 0 } if 90 idiv 1 and 0 ne { exch } if
+  % stack: pdfpagedict currentpagedevicedict boxwidth boxheight
+  //systemdict /PDFFitPage known {
+    % Preserve page size,
+    % but choose portrait/landscape depending on box width:height ratio
+    % (if box width == height, select portrait orientation)
+    gt
+    1 index /PageSize get aload pop
+    2 copy gt
+    4 -1 roll ne { exch } if
   } {
-    /MediaBox 2 index get_media_box true % will use the MediaBox
-  } ifelse
-  {
-    oforce_elems normrect_elems fix_empty_rect_elems boxrect 4 2 roll pop pop
-    3 index /Rotate pget not { 0 } if 90 idiv 1 and 0 ne { exch } if
-    % stack: pdfpagedict currentpagedevicedict boxwidth boxheight
-    //systemdict /PDFFitPage known {
-      % Preserve page size,
-      % but choose portrait/landscape depending on box width:height ratio
-      % (if box width == height, select portrait orientation)
-      gt
-      1 index /PageSize get aload pop
-      2 copy gt
-      4 -1 roll ne { exch } if
-    } {
-      % Set the page size.
-      //systemdict /NoUserUnit .knownget not { false } if not {
-        3 index /UserUnit knownoget {
-          dup 4 -1 roll mul 3 1 roll mul
-        } if
+    % Set the page size.
+    //systemdict /NoUserUnit .knownget not { false } if not {
+      3 index /UserUnit knownoget {
+        dup 4 -1 roll mul 3 1 roll mul
       } if
-    } ifelse
-    2 array astore /PageSize exch def
-  } {
-    pop % pops /Crop|MediaBox
+    } if
   } ifelse
+  2 array astore /PageSize exch def
   % Determine the number of spot colors used on the page.  Note: This searches
   % the pages resources.  It may be high if a spot color is in a resource but
   % is not actually used on the page.
@@ -1434,13 +1558,15 @@ currentdict /PDF2PS_matrix_key undef
 /.free_page_resources {   % - .free_page_resources -
   Page /Resources pget {
     /Shading knownoget {
-      { dup type /dicttype eq {
-          dup /.shading_dict known {
-            dup /.shading_dict undef
+      { {
+          dup type /dicttype eq {
+            dup /.shading_dict known {
+              dup /.shading_dict undef
+            } if
           } if
-        } if
-        pop pop
-      } forall
+          pop pop
+        } forall
+      } big-res-forall
     } if
   } if
 } bind def
@@ -1482,8 +1608,10 @@ currentdict /PDF2PS_matrix_key undef
   } if		% end .writepdfmarks
 
 	% Display the actual page contents.
-   6 dict begin
+   8 dict begin
    /BXlevel 0 def
+   /BMClevel 0 def
+   /OFFlevels 0 dict def
    /BGDefault currentblackgeneration def
    /UCRDefault currentundercolorremoval def
 	%****** DOESN'T HANDLE COLOR TRANSFER YET ******
@@ -1540,7 +1668,7 @@ currentdict /PDF2PS_matrix_key undef
   % Some PDF files don't have matching q/Q (gsave/grestore) so we need
   % to clean up any left over dicts from the dictstack
   countdictstack PDFdictstackcount sub dup 0 ne { 
-    (   **** Warning: File has imbalanced q/Q operators \(too many q's\)\n)
+    (   **** Warning: File has unbalanced q/Q operators \(too many q's\)\n)
     pdfformaterror
     { end } repeat
   } {
@@ -1627,16 +1755,30 @@ currentdict /PDF2PS_matrix_key undef
 /extgstateusestransparency {	% <gstate dict> extgstateusestransparency <bool>
   //false exch		% Assume no transparency
   {			% establish loop context
-    exch pop oforce
     dup /BM knownoget { dup /Normal ne exch /Compatible ne and
 	                    { pop not exit } if
                           } if
     dup /ca knownoget { 1 ne { pop not exit } if } if
     dup /CA knownoget { 1 ne { pop not exit } if } if
     dup /SMask knownoget { /None ne { pop not exit } if } if
-    pop
-  } forall
+    pop exit
+  } loop
 } bind def
+
+% Check if transparency is used in a Pattern
+/patternusestransparency {	% <Pattern dict> patternusestransparency <bool>
+  NOTRANSPARENCY
+  { pop //false } 
+  { //false exch		% Assume no transparency
+    {
+      4 dict 1 index resourceusestransparency { pop not exit } if
+      dup /ExtGState knownoget { extgstateusestransparency { pop not exit } if } if
+      pop exit
+    } loop
+  }
+  ifelse
+} bind def
+
 
 % Check the Resources of a page or Form. Check for loops in the resource chain.
 /resourceusestransparency {	% <dict> <dict> resourceusestransparency <bool>
@@ -1652,19 +1794,41 @@ currentdict /PDF2PS_matrix_key undef
     } if
     2 copy //true put              % In the current chain.
     dup /ExtGState knownoget {
-      extgstateusestransparency
+      //false exch
+      { { exch pop oforce extgstateusestransparency { pop //true exit } if
+        } forall
+        dup { exit } if
+      } big-res-forall
+      { pop //true exit } if
+    } if
+    dup /Pattern knownoget {
+      //false exch
+      { { exch pop oforce patternusestransparency { pop //true exit } if
+        } forall
+        dup { exit } if
+      } big-res-forall
       { pop //true exit } if
     } if
     dup /XObject knownoget {
-      //false exch {
-	exch pop oforce dup /Subtype get
-	dup /Image eq { 1 index /SMask known { pop pop not exit } if } if
-	/Form eq {
-	  3 index exch resourceusestransparency { not exit } if
-	} {
-	  pop
-	} ifelse
-      } forall { pop //true exit } if
+      dup type dup /dicttype eq exch /arraytype eq or {
+        //false exch
+        { {
+	    exch pop oforce dup /Subtype get
+	    dup /Image eq { 1 index /SMask known { pop pop not exit } if } if
+	    /Form eq {
+	      3 index exch resourceusestransparency { not exit } if
+	    } {
+	      pop
+	    } ifelse
+          } forall
+          dup { exit } if
+        } big-res-forall
+        { pop //true exit } if
+      } {
+        (   **** Ignoring non-dictionary /XObject attribute.\n)
+        pdfformaterror
+        pop
+      } ifelse
     } if
     2 copy //false put             % Visited but not in the current chain.
     pop //false exit
@@ -1721,6 +1885,13 @@ currentdict /PDF2PS_matrix_key undef
   pop pop
 } bind def
 
+% Enumerate resource dictionary or an array of dictionaries
+% <object> <proc> big-res-forall - 
+/big-res-forall {
+  1 index type /dicttype eq { 0 get } if
+  forall
+} bind def
+
 % Check the Resources of a page, form, or annotation.  Determine which spot
 % colors are used within the resource  Note: The spot color dict will include
 % all colors used in Separation or DeviceN color spaces.  Thus it may include
@@ -1740,18 +1911,23 @@ currentdict /PDF2PS_matrix_key undef
 
     % Scan resources that might contain a color space.
     dup /ColorSpace knownoget {
-      { exch pop oforce 3 index colorspacespotcolors } forall
+      { { exch pop oforce 3 index colorspacespotcolors } forall } big-res-forall
     } if
     dup /Pattern knownoget {
-      { exch pop oforce 4 copy exch pop resourcespotcolors pop pop pop } forall
+      { { exch pop oforce 4 copy exch pop resourcespotcolors pop pop pop } forall } big-res-forall
     } if
     dup /Shading knownoget {
-      { exch pop oforce /ColorSpace oget 3 index colorspacespotcolors } forall
+      { { exch pop oforce /ColorSpace oget 3 index colorspacespotcolors } forall } big-res-forall
     } if
     /XObject knownoget {
-      { exch pop oforce dup
-        /Subtype get /Form eq { resourcespotcolors } { pop } ifelse
-      } forall
+      dup type dup /dicttype eq exch /arraytype eq or {
+        { { exch pop oforce dup
+            /Subtype get /Form eq { resourcespotcolors } { pop } ifelse
+          } forall
+        } big-res-forall
+      } {
+        pop % Just ignore here, already reported by resourceusestransparency.
+      } ifelse
     } if
     exit
   } loop

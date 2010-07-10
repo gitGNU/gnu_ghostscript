@@ -1,25 +1,20 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id: gdevmem.c,v 1.1 2009/04/23 23:26:36 Arabidopsis Exp $ */
+/* $Id: gdevmem.c,v 1.2 2010/07/10 22:02:22 Arabidopsis Exp $ */
 /* Generic "memory" (stored bitmap) device */
 #include "memory_.h"
 #include "gx.h"
+#include "gsdevice.h"
 #include "gserrors.h"
 #include "gsrect.h"
 #include "gsstruct.h"
@@ -174,14 +169,105 @@ gs_make_mem_device(gx_device_memory * dev, const gx_device_memory * mdproto,
 	dev->cached_colors = target->cached_colors;
     }
     if (dev->color_info.depth == 1) {
-	gdev_mem_mono_set_inverted(dev,
-				   (target == 0 || 
-                                    dev->color_info.polarity == GX_CINFO_POLARITY_SUBTRACTIVE));
+	gx_color_value cv[3];
+
+       cv[0] = cv[1] = cv[2] = 0;
+	gdev_mem_mono_set_inverted(dev, (target == 0 ||
+				   (*dev_proc(dev, map_rgb_color))((gx_device *)dev, cv) != 0));
     }
     check_device_separable((gx_device *)dev);
     gx_device_fill_in_procs((gx_device *)dev);
     dev->band_y = 0;
 }
+
+/* Make a memory device using copydevice, this should replace gs_make_mem_device. */
+/* Note that the default for monobit devices is white = 0, black = 1. */
+int
+gs_make_mem_device_with_copydevice(gx_device_memory ** ppdev,
+                                   const gx_device_memory * mdproto,
+                                   gs_memory_t * mem, 
+                                   int page_device,
+                                   gx_device * target)
+{
+    int code;
+    gx_device_memory *pdev;
+
+    if (mem == 0)
+        return -1;
+    
+    code = gs_copydevice((gx_device **)&pdev,
+                         (const gx_device *)mdproto,
+                         mem);
+    if (code < 0)
+        return code;
+
+    switch (page_device) {
+	case -1:
+	    set_dev_proc(pdev, get_page_device, gx_default_get_page_device);
+	    break;
+	case 1:
+	    set_dev_proc(pdev, get_page_device, gx_page_device_get_page_device);
+	    break;
+    }
+    /* Preload the black and white cache. */
+    if (target == 0) {
+	if (pdev->color_info.depth == 1) {
+	    /* The default for black-and-white devices is inverted. */
+	    pdev->cached_colors.black = 1;
+	    pdev->cached_colors.white = 0;
+	} else {
+	    pdev->cached_colors.black = 0;
+	    pdev->cached_colors.white = (1 << pdev->color_info.depth) - 1;
+	}
+    } else {
+	gx_device_set_target((gx_device_forward *)pdev, target);
+	/* Forward the color mapping operations to the target. */
+	gx_device_forward_color_procs((gx_device_forward *) pdev);
+	gx_device_copy_color_procs((gx_device *)pdev, target);
+	pdev->cached_colors = target->cached_colors;
+    }
+    if (pdev->color_info.depth == 1) {
+	gx_color_value cv[3];
+
+       cv[0] = cv[1] = cv[2] = 0;
+	gdev_mem_mono_set_inverted(pdev, (target == 0 ||
+				   (*dev_proc(pdev, map_rgb_color))((gx_device *)pdev, cv) != 0));
+    }
+    check_device_separable((gx_device *)pdev);
+    gx_device_fill_in_procs((gx_device *)pdev);
+    pdev->band_y = 0;
+    *ppdev = pdev;
+    return 0;
+}
+
+
+/* Make a monobit memory device using copydevice */
+int
+gs_make_mem_mono_device_with_copydevice(gx_device_memory ** ppdev, gs_memory_t * mem, 
+                                        gx_device * target)
+{
+    int code;
+    gx_device_memory *pdev;
+
+    if (mem == 0)
+        return -1;
+    
+    code = gs_copydevice((gx_device **)&pdev,
+                         (const gx_device *)&mem_mono_device,
+                         mem);
+    if (code < 0)
+        return code;
+
+    set_dev_proc(pdev, get_page_device, gx_default_get_page_device);
+    gx_device_set_target((gx_device_forward *)pdev, target);
+    gdev_mem_mono_set_inverted(pdev, true);
+    check_device_separable((gx_device *)pdev);
+    gx_device_fill_in_procs((gx_device *)pdev);
+    *ppdev = pdev;
+    return 0;
+}
+
+    
 /* Make a monobit memory device.  This is never a page device. */
 /* Note that white=0, black=1. */
 void
@@ -651,7 +737,9 @@ mem_mapped_map_color_rgb(gx_device * dev, gx_color_index color,
 int
 mem_draw_thin_line(gx_device *dev, fixed fx0, fixed fy0, fixed fx1, fixed fy1,
 		   const gx_drawing_color *pdcolor,
-		   gs_logical_operation_t lop)
+		   gs_logical_operation_t lop,
+		   fixed adjustx, fixed adjusty)
 {
-    return gx_default_draw_thin_line(dev, fx0, fy0, fx1, fy1, pdcolor, lop);
+    return gx_default_draw_thin_line(dev, fx0, fy0, fx1, fy1, pdcolor, lop,
+				     adjustx, adjusty);
 }

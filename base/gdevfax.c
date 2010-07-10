@@ -1,22 +1,16 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id: gdevfax.c,v 1.1 2009/04/23 23:26:00 Arabidopsis Exp $ */
+/* $Id: gdevfax.c,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $ */
 /* Fax devices */
 #include "gdevprn.h"
 #include "strimpl.h"
@@ -99,6 +93,20 @@ gdev_fax_put_params(gx_device * dev, gs_param_list * plist)
     return code;
 }
 
+int
+gdev_fax_adjusted_width(int width)
+{
+    /* Adjust the page width to a legal value for fax systems. */
+    if (width >= 1680 && width <= 1736)
+	/* Adjust width for A4 paper. */
+	return 1728;
+    else if (width >= 2000 && width <= 2056)
+	/* Adjust width for B4 paper. */
+	return 2048;
+    else
+	return width;
+}
+
 /* Initialize the stream state with a set of default parameters. */
 /* These select the same defaults as the CCITTFaxEncode filter, */
 /* except we set BlackIs1 = true. */
@@ -111,17 +119,10 @@ gdev_fax_init_state_adjust(stream_CFE_state *ss,
     ss->Columns = fdev->width;
     ss->Rows = fdev->height;
     ss->BlackIs1 = true;
-    if (adjust_width > 0) {
-	/* Adjust the page width to a legal value for fax systems. */
-	if (ss->Columns >= 1680 && ss->Columns <= 1736) {
-	    /* Adjust width for A4 paper. */
-	    ss->Columns = 1728;
-	} else if (ss->Columns >= 2000 && ss->Columns <= 2056) {
-	    /* Adjust width for B4 paper. */
-	    ss->Columns = 2048;
-	}
-    }
+    if (adjust_width > 0)
+	ss->Columns = gdev_fax_adjusted_width(ss->Columns);
 }
+
 void
 gdev_fax_init_state(stream_CFE_state *ss, const gx_device_fax *fdev)
 {

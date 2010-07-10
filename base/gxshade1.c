@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxshade1.c,v 1.1 2009/04/23 23:25:56 Arabidopsis Exp $ */
+/* $Id: gxshade1.c,v 1.2 2010/07/10 22:02:17 Arabidopsis Exp $ */
 /* Rendering for non-mesh shadings */
 #include "math_.h"
 #include "memory_.h"
@@ -487,7 +481,8 @@ R_fill_triangle_new(patch_fill_state_t *pfs, const gs_rect *rect,
 static int
 R_obtuse_cone(patch_fill_state_t *pfs, const gs_rect *rect,
 	double x0, double y0, double r0, 
-	double x1, double y1, double r1, double t0, double r_rect)
+	double x1, double y1, double r1, double t0, double r_rect,
+	bool inwards)
 {
     double dx = x1 - x0, dy = y1 - y0, dr = any_abs(r1 - r0);
     double d = hypot(dx, dy);
@@ -540,8 +535,12 @@ R_obtuse_cone(patch_fill_state_t *pfs, const gs_rect *rect,
 	code = R_tensor_annulus(pfs, rect, x0, y0, r0, t0, ex, ey, er, t0);
 	if (code < 0)
 	    return code;
-	/* Fill entire ending circle to ewnsure antire rect is covered : */
-	return R_tensor_annulus(pfs, rect, ex, ey, er, t0, ex, ey, 0, t0);
+	/* Fill entire ending circle to ensure entire rect is covered, but
+	 * only if we are filling "inwards" (as otherwise we will overwrite
+	 * all the hard work we have done to this point) */
+	if (inwards)
+	    code = R_tensor_annulus(pfs, rect, ex, ey, er, t0, ex, ey, 0, t0);
+        return code;
     }
 }
 
@@ -600,7 +599,7 @@ R_extensions(patch_fill_state_t *pfs, const gs_shading_R_t *psh, const gs_rect *
 	if (r0 > r1) {
 	    if (Extend0) {
 		r = R_rect_radius(rect, x0, y0);
-		code = R_obtuse_cone(pfs, rect, x0, y0, r0, x1, y1, r1, t0, r);
+		code = R_obtuse_cone(pfs, rect, x0, y0, r0, x1, y1, r1, t0, r, true);
 		if (code < 0)
 		    return code;
 	    }
@@ -610,7 +609,7 @@ R_extensions(patch_fill_state_t *pfs, const gs_shading_R_t *psh, const gs_rect *
 	} else {
 	    if (Extend1) {
 		r = R_rect_radius(rect, x1, y1);
-		code = R_obtuse_cone(pfs, rect, x1, y1, r1, x0, y0, r0, t1, r);
+		code = R_obtuse_cone(pfs, rect, x1, y1, r1, x0, y0, r0, t1, r, false);
 		if (code < 0)
 		    return code;
 	    }

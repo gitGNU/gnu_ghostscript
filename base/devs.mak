@@ -1,21 +1,16 @@
 #  Copyright (C) 2001-2008 Artifex Software, Inc.
 #  All Rights Reserved.
 #
-#  This file is part of GNU ghostscript
+#  This software is provided AS-IS with no warranty, either express or
+#  implied.
 #
-#  GNU ghostscript is free software; you can redistribute it and/or
-#  modify it under the terms of the version 2 of the GNU General
-#  Public License as published by the Free Software Foundation.
+#  This software is distributed under license and may not be copied, modified
+#  or distributed except as expressly authorized under the terms of that
+#  license.  Refer to licensing information at http://www.artifex.com/
+#  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+#  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-#  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-#  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-#  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License along with
-#  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# $Id: devs.mak,v 1.1 2009/04/23 23:26:30 Arabidopsis Exp $
+# $Id: devs.mak,v 1.2 2010/07/10 22:02:21 Arabidopsis Exp $
 # makefile for Aladdin's device drivers.
 
 # Define the name of this makefile.
@@ -181,8 +176,11 @@ GDEV=$(AK) $(ECHOGS_XE) $(GDEVH)
 #	tiffgray  TIFF 8-bit gray, no compression
 #	tiff12nc  TIFF 12-bit RGB, no compression
 #	tiff24nc  TIFF 24-bit RGB, no compression (NeXT standard format)
+#	tiff48nc  TIFF 48-bit RGB, no compression
 #	tiff32nc  TIFF 32-bit CMYK
+#	tiff64nc  TIFF 64-bit CMYK
 #	tiffsep   Creates tiffgray for each colorant plus a CMYK composite
+#	tiffsep1  Creates halftoned tiff 1-bit per pixel for each colorant
 #	tifflzw  TIFF LZW (tag = 5) (monochrome)
 #	tiffpack  TIFF PackBits (tag = 32773) (monochrome)
 
@@ -422,13 +420,11 @@ $(GLOBJ)gdevvglb.$(OBJ) : $(GLSRC)gdevvglb.c $(GDEV) $(gdevpccm_h) $(gsparam_h)
 ### Shared library object supporting vgalib.
 ### NON PORTABLE, ONLY UNIX WITH GCC SUPPORT
 
-$(GLOBJ)lvga256.so: $(lvga256_)
-	$(CCLD) -shared -Wl,'-solvga256.so' $(lvga256_) -lvga -lvgagl
-	mv lvga256.so $(GLOBJ)lvga256.so
+$(GLOBJ)lvga256.so : $(lvga256_)
+	$(CCLD) $(LDFLAGS) -shared -o $(GLOBJ)lvga256.so $(lvga256_) -lvga -lvgagl
 
-$(GLOBJ)vgalib.so: $(vgalib_)
-	$(CCLD) -shared -Wl,'-sovgalib.so' $(vgalib_) -lvga -lvgagl
-	mv vgalib.so $(GLOBJ)vgalib.so
+$(GLOBJ)vgalib.so : $(vgalib_)
+	$(CCLD) $(LDFLAGS) -shared -o $(GLOBJ)vgalib.so $(vgalib_) -lvga -lvgagl
 
 ### -------------------------- The X11 device -------------------------- ###
 
@@ -461,7 +457,7 @@ $(GLOBJ)gdevx.$(OBJ) : $(GLSRC)gdevx.c $(GDEVX) $(math__h) $(memory__h)\
 	$(GLCCSHARED) $(XINCLUDE) $(GLO_)gdevx.$(OBJ) $(C_) $(GLSRC)gdevx.c
 
 $(GLOBJ)gdevxcmp.$(OBJ) : $(GLSRC)gdevxcmp.c $(GDEVX) $(math__h)
-	$(GLCCSHARED) $(XINCLUDE) $(GLO_)gdevxcmp.$(OBJ) $(C_) $(GLSRC)gdevxcmp.c
+	$(GLCC) $(XINCLUDE) $(GLO_)gdevxcmp.$(OBJ) $(C_) $(GLSRC)gdevxcmp.c
 
 $(GLOBJ)gdevxini.$(OBJ) : $(GLSRC)gdevxini.c $(GDEVX) $(memory__h)\
  $(gserrors_h) $(gsparamx_h) $(gxdevmem_h) $(gdevbbox_h)
@@ -530,9 +526,8 @@ $(GLOBJ)gdevxalt.$(OBJ) : $(GLSRC)gdevxalt.c $(GDEVX) $(math__h) $(memory__h)\
 ### Shared library object supporting X11.
 ### NON PORTABLE, ONLY UNIX WITH GCC SUPPORT
 
-$(GLOBJ)X11.so: $(x11alt_) $(x11_)
-	$(CCLD) -shared -Wl,'-soX11.so' $(x11alt_) $(x11_) -L/usr/X11R6/lib -lXt -lSM -lICE -lXext -lX11 $(XLIBDIRS)
-	mv X11.so $(GLOBJ)X11.so
+$(GLOBJ)X11.so : $(x11alt_) $(x11_)
+	$(CCLD) $(LDFLAGS) -shared -o $(GLOBJ)X11.so $(x11alt_) $(x11_) -L/usr/X11R6/lib -lXt -lSM -lICE -lXext -lX11 $(XLIBDIRS)
 
 ###### --------------- Memory-buffered printer devices --------------- ######
 
@@ -685,25 +680,25 @@ rinkj_core=$(RINKJ_OBJ)evenbetter-rll.$(OBJ) \
  $(RINKJ_OBJ)rinkj-config.$(OBJ) $(RINKJ_OBJ)rinkj-dither.$(OBJ) \
  $(RINKJ_OBJ)rinkj-epson870.$(OBJ) $(RINKJ_OBJ)rinkj-screen-eb.$(OBJ)
 
-$(RINKJ_OBJ)evenbetter-rll.$(OBJ): $(RINKJ_SRC)evenbetter-rll.c
+$(RINKJ_OBJ)evenbetter-rll.$(OBJ) : $(RINKJ_SRC)evenbetter-rll.c
 	$(RINKJ_CC) $(RINKJ_O_)evenbetter-rll.$(OBJ) $(C_) $(RINKJ_SRC)evenbetter-rll.c
 
-$(RINKJ_OBJ)rinkj-byte-stream.$(OBJ): $(RINKJ_SRC)rinkj-byte-stream.c
+$(RINKJ_OBJ)rinkj-byte-stream.$(OBJ) : $(RINKJ_SRC)rinkj-byte-stream.c
 	$(RINKJ_CC) $(RINKJ_O_)rinkj-byte-stream.$(OBJ) $(C_) $(RINKJ_SRC)rinkj-byte-stream.c
 
-$(RINKJ_OBJ)rinkj-device.$(OBJ): $(RINKJ_SRC)rinkj-device.c
+$(RINKJ_OBJ)rinkj-device.$(OBJ) : $(RINKJ_SRC)rinkj-device.c
 	$(RINKJ_CC) $(RINKJ_O_)rinkj-device.$(OBJ) $(C_) $(RINKJ_SRC)rinkj-device.c
 
-$(RINKJ_OBJ)rinkj-config.$(OBJ): $(RINKJ_SRC)rinkj-config.c
+$(RINKJ_OBJ)rinkj-config.$(OBJ) : $(RINKJ_SRC)rinkj-config.c
 	$(RINKJ_CC) $(RINKJ_O_)rinkj-config.$(OBJ) $(C_) $(RINKJ_SRC)rinkj-config.c
 
-$(RINKJ_OBJ)rinkj-dither.$(OBJ): $(RINKJ_SRC)rinkj-dither.c
+$(RINKJ_OBJ)rinkj-dither.$(OBJ) : $(RINKJ_SRC)rinkj-dither.c
 	$(RINKJ_CC) $(RINKJ_O_)rinkj-dither.$(OBJ) $(C_) $(RINKJ_SRC)rinkj-dither.c
 
-$(RINKJ_OBJ)rinkj-epson870.$(OBJ): $(RINKJ_SRC)rinkj-epson870.c
+$(RINKJ_OBJ)rinkj-epson870.$(OBJ) : $(RINKJ_SRC)rinkj-epson870.c
 	$(RINKJ_CC) $(RINKJ_O_)rinkj-epson870.$(OBJ) $(C_) $(RINKJ_SRC)rinkj-epson870.c
 
-$(RINKJ_OBJ)rinkj-screen-eb.$(OBJ): $(RINKJ_SRC)rinkj-screen-eb.c
+$(RINKJ_OBJ)rinkj-screen-eb.$(OBJ) : $(RINKJ_SRC)rinkj-screen-eb.c
 	$(RINKJ_CC) $(RINKJ_O_)rinkj-screen-eb.$(OBJ) $(C_) $(RINKJ_SRC)rinkj-screen-eb.c
 
 rinkj_=$(GLOBJ)gdevrinkj.$(OBJ) $(rinkj_core)
@@ -1081,7 +1076,7 @@ $(GLOBJ)gdevpdtw.$(OBJ) : $(GLSRC)gdevpdtw.c $(gx_h) $(gserrors_h) $(memory__h)\
 
 # High-level PCL XL writer
 
-pxl_=$(GLOBJ)gdevpx.$(OBJ) $(GLOBJ)gdevpxut.$(OBJ)
+pxl_=$(GLOBJ)gdevpx.$(OBJ) $(GLOBJ)gdevpxut.$(OBJ) $(HPPCL)
 $(DD)pxlmono.dev : $(DEVS_MAK) $(pxl_) $(GDEV) $(GLD)vector.dev
 	$(SETDEV2) $(DD)pxlmono $(pxl_)
 	$(ADDMOD) $(DD)pxlmono -include $(GLD)vector
@@ -1613,24 +1608,29 @@ $(DD)psrgb.dev : $(DEVS_MAK) $(psim_) $(GLD)page.dev
 # AdjustWidth to 0 (e.g., -dAdjustWidth=0 on the command line).
 
 gdevfax_h=$(GLSRC)gdevfax.h
+libtiff_dev=$(TIFFGENDIR)$(D)libtiff.dev
+tiff_i_=-include $(TIFFGENDIR)$(D)libtiff
 
 fax_=$(GLOBJ)gdevfax.$(OBJ)
-$(DD)fax.dev : $(DEVS_MAK) $(fax_) $(GLD)cfe.dev
+$(DD)fax.dev : $(DEVS_MAK) $(libtiff_dev) $(fax_) $(GLD)cfe.dev
 	$(SETMOD) $(DD)fax $(fax_)
-	$(ADDMOD) $(DD)fax -include $(GLD)cfe
+	$(ADDMOD) $(DD)fax -include $(GLD)cfe $(tiff_i_)
 
 $(GLOBJ)gdevfax.$(OBJ) : $(GLSRC)gdevfax.c $(PDEVH)\
  $(gdevfax_h) $(scfx_h) $(strimpl_h)
 	$(GLCC) $(GLO_)gdevfax.$(OBJ) $(C_) $(GLSRC)gdevfax.c
 
-$(DD)faxg3.dev : $(DEVS_MAK) $(DD)fax.dev
+$(DD)faxg3.dev : $(DEVS_MAK) $(libtiff_dev) $(DD)fax.dev
 	$(SETDEV2) $(DD)faxg3 -include $(DD)fax
+	$(ADDMOD) $(DD)faxg3 $(tiff_i_)
 
-$(DD)faxg32d.dev : $(DEVS_MAK) $(DD)fax.dev
+$(DD)faxg32d.dev : $(DEVS_MAK) $(libtiff_dev) $(DD)fax.dev
 	$(SETDEV2) $(DD)faxg32d -include $(DD)fax
+	$(ADDMOD) $(DD)faxg32d $(tiff_i_)
 
-$(DD)faxg4.dev : $(DEVS_MAK) $(DD)fax.dev
+$(DD)faxg4.dev : $(DEVS_MAK) $(libtiff_dev) $(DD)fax.dev
 	$(SETDEV2) $(DD)faxg4 -include $(DD)fax
+	$(ADDMOD) $(DD)faxg4 $(tiff_i_)
 
 ### -------------------- Plain or TIFF fax encoding --------------------- ###
 ###    Use -sDEVICE=tiffg3 or tiffg4 and				  ###
@@ -1638,93 +1638,114 @@ $(DD)faxg4.dev : $(DEVS_MAK) $(DD)fax.dev
 ###	  -r204x196 for high resolution output				  ###
 
 gdevtifs_h=$(GLSRC)gdevtifs.h
-gdevtfax_h=$(GLSRC)gdevtfax.h
 
 tfax_=$(GLOBJ)gdevtfax.$(OBJ)
-$(DD)tfax.dev : $(DEVS_MAK) $(tfax_) $(GLD)cfe.dev $(GLD)lzwe.dev $(GLD)rle.dev $(DD)fax.dev $(DD)tiffs.dev
+$(DD)tfax.dev : $(DEVS_MAK) $(libtiff_dev) $(tfax_) $(GLD)cfe.dev $(GLD)lzwe.dev $(GLD)rle.dev $(DD)fax.dev $(DD)tiffs.dev
 	$(SETMOD) $(DD)tfax $(tfax_)
 	$(ADDMOD) $(DD)tfax -include $(GLD)cfe $(GLD)lzwe $(GLD)rle
-	$(ADDMOD) $(DD)tfax -include $(DD)fax $(DD)tiffs
+	$(ADDMOD) $(DD)tfax -include $(DD)fax $(DD)tiffs $(tiff_i_)
 
 $(GLOBJ)gdevtfax.$(OBJ) : $(GLSRC)gdevtfax.c $(PDEVH)\
- $(gdevfax_h) $(gdevtfax_h) $(gdevtifs_h)\
+ $(gdevfax_h) $(gdevtifs_h)\
  $(scfx_h) $(slzwx_h) $(srlx_h) $(strimpl_h)
-	$(GLCC) $(GLO_)gdevtfax.$(OBJ) $(C_) $(GLSRC)gdevtfax.c
+	$(GLCC) $(I_)$(TI_)$(_I) $(GLO_)gdevtfax.$(OBJ) $(C_) $(GLSRC)gdevtfax.c
 
 ### ---------------------------- TIFF formats --------------------------- ###
 
 tiffs_=$(GLOBJ)gdevtifs.$(OBJ)
-$(DD)tiffs.dev : $(DEVS_MAK) $(tiffs_) $(GLD)page.dev
+$(DD)tiffs.dev : $(DEVS_MAK) $(libtiff_dev) $(tiffs_) $(GLD)page.dev
 	$(SETMOD) $(DD)tiffs $(tiffs_)
-	$(ADDMOD) $(DD)tiffs -include $(GLD)page
+	$(ADDMOD) $(DD)tiffs -include $(GLD)page $(tiff_i_)
 
 $(GLOBJ)gdevtifs.$(OBJ) : $(GLSRC)gdevtifs.c $(PDEVH) $(stdio__h) $(time__h)\
  $(gdevtifs_h) $(gscdefs_h) $(gstypes_h)
-	$(GLCC) $(GLO_)gdevtifs.$(OBJ) $(C_) $(GLSRC)gdevtifs.c
+	$(GLCC) $(I_)$(GLI_) $(II)$(TI_)$(_I) $(GLO_)gdevtifs.$(OBJ) $(C_) $(GLSRC)gdevtifs.c
 
 # Black & white, G3/G4 fax
 # NOTE: see under faxg* above regarding page width adjustment.
 
-$(DD)tiffcrle.dev : $(DEVS_MAK) $(DD)tfax.dev
+$(DD)tiffcrle.dev : $(DEVS_MAK) $(libtiff_dev) $(DD)tfax.dev
 	$(SETDEV2) $(DD)tiffcrle -include $(DD)tfax
+	$(ADDMOD) $(DD)tiffcrle $(tiff_i_)
 
-$(DD)tiffg3.dev : $(DEVS_MAK) $(DD)tfax.dev
+$(DD)tiffg3.dev : $(DEVS_MAK) $(libtiff_dev) $(DD)tfax.dev
 	$(SETDEV2) $(DD)tiffg3 -include $(DD)tfax
+	$(ADDMOD) $(DD)tiffg3 $(tiff_i_)
 
-$(DD)tiffg32d.dev : $(DEVS_MAK) $(DD)tfax.dev
+$(DD)tiffg32d.dev : $(DEVS_MAK) $(libtiff_dev) $(DD)tfax.dev
 	$(SETDEV2) $(DD)tiffg32d -include $(DD)tfax
+	$(ADDMOD) $(DD)tiffg32d $(tiff_i_)
 
-$(DD)tiffg4.dev : $(DEVS_MAK) $(DD)tfax.dev
+$(DD)tiffg4.dev : $(DEVS_MAK) $(libtiff_dev) $(DD)tfax.dev
 	$(SETDEV2) $(DD)tiffg4 -include $(DD)tfax
+	$(ADDMOD) $(DD)tiffg4 $(tiff_i_)
 
 # Black & white, LZW compression
 
-$(DD)tifflzw.dev : $(DEVS_MAK) $(DD)tfax.dev
+$(DD)tifflzw.dev : $(DEVS_MAK) $(libtiff_dev) $(DD)tfax.dev
 	$(SETDEV2) $(DD)tifflzw -include $(DD)tfax
+	$(ADDMOD) $(DD)tifflzw $(tiff_i_)
 
 # Black & white, PackBits compression
 
-$(DD)tiffpack.dev : $(DEVS_MAK) $(DD)tfax.dev
+$(DD)tiffpack.dev : $(DEVS_MAK) $(libtiff_dev) $(DD)tfax.dev
 	$(SETDEV2) $(DD)tiffpack -include $(DD)tfax
+	$(ADDMOD) $(DD)tiffpack $(tiff_i_)
 
 # TIFF Gray, no compression
 
 tiffgray_=$(GLOBJ)gdevtsep.$(OBJ)
 
-$(DD)tiffgray.dev : $(DEVS_MAK) $(tiffgray_) $(DD)tiffs.dev
+$(DD)tiffgray.dev : $(DEVS_MAK) $(libtiff_dev) $(tiffgray_) $(DD)tiffs.dev
 	$(SETPDEV2) $(DD)tiffgray $(tiffgray_)
-	$(ADDMOD) $(DD)tiffgray -include $(DD)tiffs
+	$(ADDMOD) $(DD)tiffgray -include $(DD)tiffs $(tiff_i_)
 
 $(GLOBJ)gdevtsep.$(OBJ) : $(GLSRC)gdevtsep.c $(PDEVH) $(gdevtifs_h)\
 	$(gdevdevn_h) $(gsequivc_h) $(stdio__h) $(ctype__h)
-	$(GLCC) $(GLO_)gdevtsep.$(OBJ) $(C_) $(GLSRC)gdevtsep.c
+	$(GLCC) $(I_)$(TI_)$(_I) $(GLO_)gdevtsep.$(OBJ) $(C_) $(GLSRC)gdevtsep.c
 
 # TIFF RGB, no compression
 
 tiffrgb_=$(GLOBJ)gdevtfnx.$(OBJ)
 
-$(DD)tiff12nc.dev : $(DEVS_MAK) $(tiffrgb_) $(DD)tiffs.dev
+$(DD)tiff12nc.dev : $(DEVS_MAK) $(libtiff_dev) $(tiffrgb_) $(DD)tiffs.dev
 	$(SETPDEV2) $(DD)tiff12nc $(tiffrgb_)
-	$(ADDMOD) $(DD)tiff12nc -include $(DD)tiffs
+	$(ADDMOD) $(DD)tiff12nc -include $(DD)tiffs $(tiff_i_)
 
-$(DD)tiff24nc.dev : $(DEVS_MAK) $(tiffrgb_) $(DD)tiffs.dev
+$(DD)tiff24nc.dev : $(DEVS_MAK) $(libtiff_dev) $(tiffrgb_) $(DD)tiffs.dev
 	$(SETPDEV2) $(DD)tiff24nc $(tiffrgb_)
-	$(ADDMOD) $(DD)tiff24nc -include $(DD)tiffs
+	$(ADDMOD) $(DD)tiff24nc -include $(DD)tiffs $(tiff_i_)
+
+$(DD)tiff48nc.dev : $(DEVS_MAK) $(libtiff_dev) $(tiffrgb_) $(DD)tiffs.dev
+	$(SETPDEV2) $(DD)tiff48nc $(tiffrgb_)
+	$(ADDMOD) $(DD)tiff48nc -include $(DD)tiffs $(tiff_i_)
 
 $(GLOBJ)gdevtfnx.$(OBJ) : $(GLSRC)gdevtfnx.c $(PDEVH) $(gdevtifs_h)
-	$(GLCC) $(GLO_)gdevtfnx.$(OBJ) $(C_) $(GLSRC)gdevtfnx.c
+	$(GLCC) $(I_)$(TI_)$(_I) $(GLO_)gdevtfnx.$(OBJ) $(C_) $(GLSRC)gdevtfnx.c
 
 # TIFF CMYK, no compression
 
-$(DD)tiff32nc.dev : $(DEVS_MAK) $(tiffgray_) $(DD)tiffs.dev
+$(DD)tiff32nc.dev : $(DEVS_MAK) $(libtiff_dev) $(tiffgray_) $(DD)tiffs.dev
 	$(SETPDEV2) $(DD)tiff32nc $(tiffgray_)
-	$(ADDMOD) $(DD)tiff32nc -include $(DD)tiffs
+	$(ADDMOD) $(DD)tiff32nc -include $(DD)tiffs $(tiff_i_)
+
+$(DD)tiff64nc.dev : $(DEVS_MAK) $(libtiff_dev) $(tiffgray_) $(DD)tiffs.dev
+	$(SETPDEV2) $(DD)tiff64nc $(tiffgray_)
+	$(ADDMOD) $(DD)tiff64nc -include $(DD)tiffs $(tiff_i_)
+
 #
 # Create separation files (tiffgray) plus CMYK composite (tiff32nc)
 
 tiffsep_=$(tiffgray_) $(GLOBJ)gdevdevn.$(OBJ) $(GLOBJ)gsequivc.$(OBJ)
 
-$(DD)tiffsep.dev : $(DEVS_MAK) $(tiffgray_) $(DD)tiffs.dev
+$(DD)tiffsep.dev : $(DEVS_MAK) $(libtiff_dev) $(tiffgray_) $(DD)tiffs.dev
 	$(SETPDEV2) $(DD)tiffsep $(tiffsep_)
-	$(ADDMOD) $(DD)tiffsep -include $(DD)tiffs
+	$(ADDMOD) $(DD)tiffsep -include $(DD)tiffs $(tiff_i_)
+
+#
+# Create separation files (tiff 1-bit) 
+
+$(DD)tiffsep1.dev : $(DEVS_MAK) $(tiffgray_) $(DD)tiffs.dev
+	$(SETPDEV2) $(DD)tiffsep1 $(tiffsep_)
+	$(ADDMOD) $(DD)tiffsep1 -include $(DD)tiffs
 

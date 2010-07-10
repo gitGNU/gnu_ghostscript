@@ -1,27 +1,20 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdtb.c,v 1.1 2009/04/23 23:26:23 Arabidopsis Exp $ */
+/* $Id: gdevpdtb.c,v 1.2 2010/07/10 22:02:20 Arabidopsis Exp $ */
 /* BaseFont implementation for pdfwrite */
 #include "memory_.h"
 #include "ctype_.h"
-#include "string_.h"
 #include "gx.h"
 #include "gserrors.h"
 #include "gsutil.h"		/* for bytes_compare */
@@ -33,7 +26,6 @@
 #include "gdevpdfx.h"
 #include "gdevpdfo.h"
 #include "gdevpdtb.h"
-#include "gdevpdfg.h"
 #include "gdevpdtf.h"
 #include "smd5.h"
 
@@ -44,7 +36,7 @@
  * TrueType are subsetted.  We do the latter, except that we always
  * subset large TrueType fonts.
  */
-#define MAX_NO_SUBSET_GLYPHS 500	/* arbitrary */
+#define MAX_NO_SUBSET_GLYPHS 4096	/* arbitrary */
 
 /* ---------------- Private ---------------- */
 
@@ -159,7 +151,7 @@ pdf_base_font_alloc(gx_device_pdf *pdev, pdf_base_font_t **ppbfont,
 		 )
 		    ++count;
 	    pbfont->num_glyphs = count;
-	pbfont->do_subset = (is_standard ? DO_SUBSET_NO : DO_SUBSET_UNKNOWN);
+	    pbfont->do_subset = (is_standard ? DO_SUBSET_NO : DO_SUBSET_UNKNOWN);
 	}
 	/* If we find an excessively large type 1 font we won't be able to emit 
 	 * a complete copy. Instead we will emit multiple subsets. Detect that here
@@ -235,7 +227,7 @@ pdf_base_font_alloc(gx_device_pdf *pdev, pdf_base_font_t **ppbfont,
 	    if (code < 0)
 		goto fail;
 	}
-        code = gs_copy_font_complete((gs_font *)font, complete);
+	code = gs_copy_font_complete((gs_font *)font, complete);
 	if (code < 0 && pbfont->do_subset == DO_SUBSET_NO) {
 	    char buf[gs_font_name_max + 1];
 	    int l = min(copied->font_name.size, sizeof(buf) - 1);
@@ -252,7 +244,7 @@ pdf_base_font_alloc(gx_device_pdf *pdev, pdf_base_font_t **ppbfont,
 	       another error will hgappen when the glyph is used.
 	     */
 	    complete = copied;
-	}
+	} 
     } else
 	complete = copied;
     pbfont->copied = (gs_font_base *)copied;
@@ -638,17 +630,6 @@ pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont, font_type 
 	    return code;
 	}
 	code = pdf_end_fontfile(pdev, &writer);
-	if (pdev->PDFA && code >= 0) {
-	    gs_id metadata_object_id;
-
-	    code = pdf_font_metadata(pdev, pbfont, digest, sizeof(digest), &metadata_object_id);
-	    if (metadata_object_id && code >= 0) {
-		char buf[20];
-
-		sprintf(buf, "%ld 0 R", metadata_object_id);
-		code = cos_dict_put_string_copy(*ppcd, "/Metadata", buf);
-	    }
-	}
 	break;
 
     default:

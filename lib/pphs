@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: pphs,v 1.5 2007/09/11 15:24:49 Arabidopsis Exp $
+# $Id: pphs,v 1.6 2010/07/10 22:02:36 Arabidopsis Exp $
 # Print the Primary Hint Stream from a linearized PDF file.  Usage:
 #	pphs filename.pdf
 # Output goes to stdout.
@@ -13,4 +13,4 @@ if test ! -x "$gs"; then
 fi
 GS_EXECUTABLE="$gs"
 
-exec "$GS_EXECUTABLE" -q -dNODISPLAY -- pphs.ps "$@"
+exec "$GS_EXECUTABLE" -q -P- -dSAFER -dNODISPLAY -- pphs.ps "$@"

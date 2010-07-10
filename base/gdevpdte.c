@@ -1,28 +1,21 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdte.c,v 1.1 2009/04/23 23:25:52 Arabidopsis Exp $ */
+/* $Id: gdevpdte.c,v 1.2 2010/07/10 22:02:17 Arabidopsis Exp $ */
 /* Encoding-based (Type 1/2/42) text processing for pdfwrite. */
 
 #include "math_.h"
 #include "memory_.h"
-#include "string_.h"
 #include "gx.h"
 #include "gserrors.h"
 #include "gsutil.h"
@@ -101,13 +94,16 @@ pdf_add_ToUnicode(gx_device_pdf *pdev, gs_font *font, pdf_font_resource_t *pdfon
     }
     if (unicode != GS_NO_CHAR) {
 	if (pdfont->cmap_ToUnicode == NULL) {
-	    uint num_codes = 256, key_size = 1;
+	    /* ToUnicode CMaps are always encoded with two byte keys. See
+	     * Technical Note 5411, 'ToUnicode Mapping File Tutorial'
+	     * page 3.
+	     */
+	    uint num_codes = 256, key_size = 2;
 	    
 	    if (font->FontType == ft_CID_encrypted) {
 		gs_font_cid0 *pfcid = (gs_font_cid0 *)font;
 
 		num_codes = pfcid->cidata.common.CIDCount;
-		key_size = 2;
 	    } else if (font->FontType == ft_CID_TrueType) {
 #if 0
 		gs_font_cid2 *pfcid = (gs_font_cid2 *)font;
@@ -121,7 +117,6 @@ pdf_add_ToUnicode(gx_device_pdf *pdev, gs_font *font, pdf_font_resource_t *pdfon
 		   code count. */
 		num_codes = 65536;
 #endif
-		key_size = 2;
 	    }
 	    code = gs_cmap_ToUnicode_alloc(pdev->pdf_memory, pdfont->rid, num_codes, key_size, 
 					    &pdfont->cmap_ToUnicode);
@@ -324,7 +319,12 @@ process_text_estimate_bbox(pdf_text_enum_t *pte, gs_font_base *font,
 	gs_glyph glyph = font->procs.encode_char((gs_font *)font, c, 
 					GLYPH_SPACE_NAME);
 	gs_glyph_info_t info;
-	int code = font->procs.glyph_info((gs_font *)font, glyph, NULL,
+	int code;
+
+	if (glyph == gs_no_glyph)
+	    return_error (gs_error_invalidfont);
+
+	code = font->procs.glyph_info((gs_font *)font, glyph, NULL,
 					    GLYPH_INFO_WIDTH0 << WMode,
 					    &info);
 

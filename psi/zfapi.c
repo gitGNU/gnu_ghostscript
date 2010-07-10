@@ -1,27 +1,20 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zfapi.c,v 1.1 2009/04/23 23:31:33 Arabidopsis Exp $ */
+/* $Id: zfapi.c,v 1.2 2010/07/10 22:02:42 Arabidopsis Exp $ */
 /* Font API client */
 
 #include "memory_.h"
-#include "string_.h"
 #include "math_.h"
 #include "ghost.h"
 #include "gp.h"
@@ -40,10 +33,9 @@
 #include "gspath.h"
 #include "bfont.h"
 #include "dstack.h"
+#include "estack.h"
 #include "ichar.h"
 #include "idict.h"
-#include "iddict.h"
-#include "idparam.h"
 #include "iname.h"
 #include "ifont.h"
 #include "icid.h"
@@ -55,9 +47,12 @@
 #include "gzstate.h"
 #include "gdevpsf.h"
 #include "stream.h"		/* for files.h */
-#include "files.h"
 #include "gscrypt1.h"
 #include "gxfcid.h"
+#include "gsstype.h"
+#include "gxchar.h"		/* for st_gs_show_enum */
+#include "ipacked.h"	    /* for packed_next */
+#include "iddict.h"
 
 /* -------------------------------------------------------- */
 
@@ -185,10 +180,11 @@ static void sfnts_reader_rstring(sfnts_reader *r, byte *v, int length)
     while (!r->error) {
         int l = min(length, r->length - r->offset);
         memcpy(v, r->p + r->offset, l);
-        r->p += l;
         length -= l;
+	r->offset += l;
         if (length <= 0)
             return;
+	v += l;
         sfnts_next_elem(r);
     }
 }
@@ -425,21 +421,121 @@ static ushort FAPI_FF_get_word(FAPI_font *ff, fapi_font_feature var_id, int inde
         case FAPI_FONT_FEATURE_ForceBold: return pfont->data.ForceBold;
         case FAPI_FONT_FEATURE_LanguageGroup: return pfont->data.LanguageGroup;
         case FAPI_FONT_FEATURE_lenIV: return (ff->need_decrypt ? 0 : pfont->data.lenIV);
+        case FAPI_FONT_FEATURE_GlobalSubrs_count: 
+            {   ref *Private, *GlobalSubrs;
+                if (dict_find_string(pdr, "Private", &Private) <= 0)
+                    return 0;
+                if (dict_find_string(Private, "GlobalSubrs", &GlobalSubrs) <= 0)
+                    return 0;;
+                return r_size(GlobalSubrs);
+            }
         case FAPI_FONT_FEATURE_Subrs_count: 
-            {   ref *Private, *Subrs, *GlobalSubrs;
-                int n1, n2;
+            {   ref *Private, *Subrs;
                 if (dict_find_string(pdr, "Private", &Private) <= 0)
                     return 0;
                 if (dict_find_string(Private, "Subrs", &Subrs) <= 0)
-                    Subrs = NULL;
-                if (dict_find_string(Private, "GlobalSubrs", &GlobalSubrs) <= 0)
-                    GlobalSubrs = NULL;
-                n1 = (Subrs != NULL ? r_size(Subrs) : 0);
-                n2 = (GlobalSubrs != NULL ? r_size(GlobalSubrs) : 0);
-                /* trick : we return twice maximum of n1, n2 to pass both Subrs and GlobalSubrs in same array.
-                */
-                return (n1 < n2 ? n2 : n1) * 2;
+                    return 0;
+                return r_size(Subrs);
             }
+	    /* Multiple Master specific */
+        case FAPI_FONT_FEATURE_DollarBlend: 
+	    {   ref *DBlend; 
+		if (dict_find_string(pdr, "$Blend", &DBlend) <= 0)
+		    return 0;
+		return 1;
+	    }
+        case FAPI_FONT_FEATURE_BlendAxisTypes_count: 
+	    {   ref *Info, *Axes; 
+		if (dict_find_string(pdr, "FontInfo", &Info) <= 0)
+		    return 0;
+		if (dict_find_string(Info, "BlendAxisTypes", &Axes) <= 0)
+		    return 0;
+		return r_size(Axes);
+	    }
+        case FAPI_FONT_FEATURE_BlendFontInfo_count: 
+	    {   ref *Info, *FontInfo; 
+		if (dict_find_string(pdr, "Blend", &Info) <= 0)
+		    return 0;
+		if (dict_find_string(Info, "FontInfo", &FontInfo) <= 0)
+		    return 0;
+		return dict_length(FontInfo);
+	    }
+        case FAPI_FONT_FEATURE_BlendPrivate_count: 
+	    {   ref *Info, *Private; 
+		if (dict_find_string(pdr, "Blend", &Info) <= 0)
+		    return 0;
+		if (dict_find_string(Info, "Private", &Private) <= 0)
+		    return 0;
+		return dict_length(Private);
+	    }
+        case FAPI_FONT_FEATURE_WeightVector_count: 
+	    {   ref *Array; 
+		if (dict_find_string(pdr, "WeightVector", &Array) <= 0)
+		    return 0;
+		return r_size(Array);
+	    }
+        case FAPI_FONT_FEATURE_BlendDesignPositionsArrays_count: 
+	    {   ref *Info, *Array; 
+		if (dict_find_string(pdr, "FontInfo", &Info) <= 0)
+		    return 0;
+		if (dict_find_string(Info, "BlendDesignPositions", &Array) <= 0)
+		    return 0;
+		return r_size(Array);
+	    }
+        case FAPI_FONT_FEATURE_BlendDesignMapArrays_count: 
+	    {   ref *Info, *Array; 
+		if (dict_find_string(pdr, "FontInfo", &Info) <= 0)
+		    return 0;
+		if (dict_find_string(Info, "BlendDesignMap", &Array) <= 0)
+		    return 0;
+		return r_size(Array);
+	    }
+        case FAPI_FONT_FEATURE_BlendDesignMapSubArrays_count: 
+	    {   ref *Info, *Array, SubArray; 
+		if (dict_find_string(pdr, "FontInfo", &Info) <= 0)
+		    return 0;
+		if (dict_find_string(Info, "BlendDesignMap", &Array) <= 0)
+		    return 0;
+		if (array_get(ff->memory, Array, index, &SubArray) < 0)
+		    return 0;
+		return r_size(&SubArray);
+	    }
+	case FAPI_FONT_FEATURE_DollarBlend_length:
+	    {   ref *DBlend, Element, name, string; 
+		int i, length = 0;
+		char Buffer[32];
+		if (dict_find_string(pdr, "$Blend", &DBlend) <= 0)
+		    return 0;
+		for (i = 0;i < r_size(DBlend);i++) {
+		    if (array_get(ff->memory, DBlend, i, &Element) < 0)
+			return 0;
+		    switch (r_btype(&Element)) {
+			case t_name:
+			    name_string_ref(ff->memory, &Element, &string);
+			    length += r_size(&string) + 1;
+			    break;
+			case t_real:
+			    sprintf(Buffer, "%f", Element.value.realval);
+			    length += strlen(Buffer) + 1;
+			    break;
+			case t_integer:
+			    sprintf(Buffer, "%d", Element.value.intval);
+			    length += strlen(Buffer) + 1;
+			    break;
+			case t_operator:
+			    { op_def const *op;
+
+			    op = op_index_def(r_size(&Element));
+			    length += strlen(op->oname + 1) + 1;
+			    }
+			    break;
+			default:
+			    break;
+		    }
+		}
+		return length;
+	    }
+	    /* End MM specifics */
     }
     return 0;
 }
@@ -476,6 +572,7 @@ static ulong FAPI_FF_get_long(FAPI_font *ff, fapi_font_feature var_id, int index
 
 static float FAPI_FF_get_float(FAPI_font *ff, fapi_font_feature var_id, int index)
 {   gs_font_base *pbfont = (gs_font_base *)ff->client_font_data;
+    ref *pdr = (ref *)ff->client_font_data2;
 
     switch((int)var_id) {
         case FAPI_FONT_FEATURE_FontMatrix:
@@ -489,10 +586,141 @@ static float FAPI_FF_get_float(FAPI_font *ff, fapi_font_feature var_id, int inde
                     case 5 : return pbfont->base->FontMatrix.ty / FontMatrix_div;
                 }
             } 
+        case FAPI_FONT_FEATURE_WeightVector: 
+	    {   ref *Array, value; 
+
+		if (dict_find_string(pdr, "WeightVector", &Array) <= 0)
+		    return 0;
+		if (array_get(ff->memory, Array, index, &value) < 0)
+		    return 0;
+		if (!r_has_type(&value, t_integer)) {
+		    if (r_has_type(&value, t_real)) {
+			return value.value.realval;
+		    } else
+			return 0;
+		}
+		else
+		    return (float)value.value.intval;
+	    }
+	case FAPI_FONT_FEATURE_BlendDesignPositionsArrayValue:
+	    {	ref *Info, *Array, SubArray, value;
+		int array_index = index / 8;
+		index %= 8;
+		if (dict_find_string(pdr, "FontInfo", &Info) <= 0)
+		    return 0;
+		if (dict_find_string(Info, "BlendDesignPositions", &Array) <= 0)
+		    return 0;
+		if (array_get(ff->memory, Array, array_index, &SubArray) < 0)
+		    return 0;
+		if (array_get(ff->memory, &SubArray, index, &value) < 0)
+		    return 0;
+		if (!r_has_type(&value, t_integer)) {
+		    if (r_has_type(&value, t_real)) {
+			return value.value.realval;
+		    } else
+			return 0;
+		}
+		else
+		    return (float)value.value.intval;
+	    }
+	case FAPI_FONT_FEATURE_BlendDesignMapArrayValue:
+	    {	ref *Info, *Array, SubArray, SubSubArray, value;
+		int array_index = index / 64, subarray_index = (index %64) / 8;
+		index %= 8;
+		if (dict_find_string(pdr, "FontInfo", &Info) <= 0)
+		    return 0;
+		if (dict_find_string(Info, "BlendDesignMap", &Array) <= 0)
+		    return 0;
+		if (array_get(ff->memory, Array, array_index, &SubArray) < 0)
+		    return 0;
+		if (array_get(ff->memory, &SubArray, index, &SubSubArray) < 0)
+		    return 0;
+		if (array_get(ff->memory, &SubSubArray, index, &value) < 0)
+		    return 0;
+		if (!r_has_type(&value, t_integer)) {
+		    if (r_has_type(&value, t_real)) {
+			return value.value.realval;
+		    } else
+			return 0;
+		}
+		else
+		    return (float)value.value.intval;
+	    }
     }
     return 0;
 }
 
+static int FAPI_FF_get_name(FAPI_font *ff, fapi_font_feature var_id, int index, char *Buffer, int len)
+{
+    ref name, string, *pdr = (ref *)ff->client_font_data2;
+
+    switch((int)var_id) {
+	case FAPI_FONT_FEATURE_BlendAxisTypes:
+	    {   ref *Info, *Axes; 
+		if (dict_find_string(pdr, "FontInfo", &Info) <= 0)
+		    return 0;
+		if (dict_find_string(Info, "BlendAxisTypes", &Axes) <= 0)
+		    return 0;
+		if(!r_has_type(Axes, t_array))
+		    return 0;
+		if (array_get(ff->memory, Axes, index, &name) < 0)
+		    return 0;
+	    }
+    }
+    name_string_ref(ff->memory, &name, &string);
+    if(r_size(&string) >= len)
+	return 0;
+    memcpy(Buffer, string.value.const_bytes, r_size(&string));
+    Buffer[r_size(&string)] = 0x00;
+    return 1;
+}
+
+static int FAPI_FF_get_proc(FAPI_font *ff, fapi_font_feature var_id, int index, char *Buffer)
+{
+    ref *pdr = (ref *)ff->client_font_data2;
+    char *ptr = Buffer;
+
+    if (!Buffer)
+	return 0;
+
+    switch((int)var_id) {
+	case FAPI_FONT_FEATURE_DollarBlend:
+	    {   ref *DBlend, Element; 
+		int i;
+		char Buf[32];
+		if (dict_find_string(pdr, "$Blend", &DBlend) <= 0)
+		    return 0;
+		for (i = 0;i < r_size(DBlend);i++) {
+		    *ptr++ = 0x20;
+		    if (array_get(ff->memory, DBlend, i, &Element) < 0)
+			return 0;
+		    switch (r_btype(&Element)) {
+			case t_real:
+			    sprintf(Buf, "%f", Element.value.realval);
+			    strcpy(ptr, Buf);
+			    ptr += strlen(Buf);
+			    break;
+			case t_integer:
+			    sprintf(Buf, "%d", Element.value.intval);
+			    strcpy(ptr, Buf);
+			    ptr += strlen(Buf);
+			    break;
+			case t_operator:
+			    { op_def const *op;
+
+			    op = op_index_def(r_size(&Element));
+			    strcpy(ptr, op->oname + 1);
+			    ptr += strlen(op->oname + 1);
+			    }
+			    break;
+			default:
+			    break;
+		    }
+		}
+	    }
+    }
+    return ptr - Buffer;
+}
 static inline void decode_bytes(byte *p, const byte *s, int l, int lenIV)
 {   ushort state = 4330;
 
@@ -524,43 +752,42 @@ static ushort get_type1_data(FAPI_font *ff, const ref *type1string,
     return length;
 }
 
-static ushort FAPI_FF_get_subr(FAPI_font *ff, int index, byte *buf, ushort buf_length)
+static ushort FAPI_FF_get_gsubr(FAPI_font *ff, int index, byte *buf, ushort buf_length)
 {   ref *pdr = (ref *)ff->client_font_data2;
-    ref *Private, *Subrs, *GlobalSubrs, subr;
-    int n1, n2, n;
+    ref *Private, *GlobalSubrs, subr;
 
     if (dict_find_string(pdr, "Private", &Private) <= 0)
         return 0;
-    if (dict_find_string(Private, "Subrs", &Subrs) <= 0)
-        Subrs = NULL;
     if (dict_find_string(Private, "GlobalSubrs", &GlobalSubrs) <= 0)
-        GlobalSubrs = NULL;
-    n1 = (Subrs != NULL ? r_size(Subrs) : 0);
-    n2 = (GlobalSubrs != NULL ? r_size(GlobalSubrs) : 0);
-    /* trick : we use the maximum of n1, n2 to pass both Subrs and GlobalSubrs in same array.
-    */
-    n = (n1 < n2 ? n2 : n1);
-    if (index < n && Subrs != NULL) {
-        if (array_get(ff->memory, Subrs, index, &subr) < 0 || r_type(&subr) != t_string)
-            return 0;
-    } else if (index >= n && GlobalSubrs != NULL) {
-        if (array_get(ff->memory, 
-		      GlobalSubrs, index - n, &subr) < 0 || r_type(&subr) != t_string)
-            return 0;
-    } else
+	return 0;
+    if (array_get(ff->memory, 
+	      GlobalSubrs, index, &subr) < 0 || r_type(&subr) != t_string)
         return 0;
     return get_type1_data(ff, &subr, buf, buf_length);
 }
 
-static bool sfnt_get_glyph_offset(ref *pdr, gs_font_type42 *pfont42, int index, ulong *offset0, ulong *offset1)
+static ushort FAPI_FF_get_subr(FAPI_font *ff, int index, byte *buf, ushort buf_length)
+{   ref *pdr = (ref *)ff->client_font_data2;
+    ref *Private, *Subrs, subr;
+
+    if (dict_find_string(pdr, "Private", &Private) <= 0)
+        return 0;
+    if (dict_find_string(Private, "Subrs", &Subrs) <= 0)
+	return 0;
+    if (array_get(ff->memory, Subrs, index, &subr) < 0 || r_type(&subr) != t_string)
+        return 0;
+    return get_type1_data(ff, &subr, buf, buf_length);
+}
+
+static bool sfnt_get_glyph_offset(ref *pdr, gs_font_type42 *pfont42, int index, ulong *offset0)
 {   /* Note : TTC is not supported and probably is unuseful for Type 42. */
     sfnts_reader r;
-    int glyf_elem_size = (2 << pfont42->data.indexToLocFormat);
+    int i, glyf_elem_size = (2 << pfont42->data.indexToLocFormat);
+    ulong off;
 
     sfnts_reader_init(&r, pdr);
     r.seek(&r, pfont42->data.loca + index * glyf_elem_size);
     *offset0 = pfont42->data.glyf + (glyf_elem_size == 2 ? r.rword(&r) * 2 : r.rlong(&r));
-    *offset1 = pfont42->data.glyf + (glyf_elem_size == 2 ? r.rword(&r) * 2 : r.rlong(&r));
     return r.error;
 }
 
@@ -578,7 +805,12 @@ static int get_GlyphDirectory_data_ptr(const gs_memory_t *mem,
 	    && r_type(glyph) == t_string) {
         *ptr = glyph->value.const_bytes;
 	return r_size(glyph);
-    }
+    } else
+	/* We have a GlyphDirectory, but couldn't find the glyph. If we 
+	 * return -1 then we will attempt to use glyf and loca which 
+	 * will fail. Instead return 0, so we execute an 'empty' glyph.
+	 */
+	return 0;
     }
     return -1;
 }
@@ -596,20 +828,19 @@ static bool get_MetricsCount(FAPI_font *ff)
 
 static ushort FAPI_FF_get_glyph(FAPI_font *ff, int char_code, byte *buf, ushort buf_length)
 {   /* 
-     * We assume that renderer requests glyph data with multiple consequtive
-     * calls to this function. 
+     * We assume that renderer requests glyph data with multiple
+     * consecutive calls to this function.
      *
-     * For a simple glyph it calls this
-     * function exactly twice : first with buf == NULL for requesting
-     * the necessary buffer length, and second with
-     * buf != NULL for requesting the data (the second call may be skept
-     * if the renderer discontinues the rendering on an exception).
+     * For a simple glyph it calls this function exactly twice: first
+     * with buf == NULL for requesting the necessary buffer length, and
+     * second with buf != NULL for requesting the data (the second call
+     * may be skipped if the renderer discontinues the rendering).
      *
      * For a composite glyph it calls this function 2 * (N + 1)
-     * times : 2 calls for the main glyph (same as above) followed with 
-     * 2 * N calls for subglyphs, where N is less or equal to the number of
-     * subglyphs ( N may be less if the renderer caches glyph data,
-     * or discontinues the rendering on an exception).
+     * times: 2 calls for the main glyph (same as above) followed with
+     * 2 * N calls for subglyphs, where N is less or equal to the number
+     * of subglyphs (N may be less if the renderer caches glyph data,
+     * or discontinues rendering on an exception).
      */
     ref *pdr = (ref *)ff->client_font_data2;
     ushort glyph_length;
@@ -665,10 +896,10 @@ static ushort FAPI_FF_get_glyph(FAPI_font *ff, int char_code, byte *buf, ushort 
                 memcpy(buf, data_ptr + mc, min(glyph_length, buf_length)/* safety */);
         } else {
             gs_font_type42 *pfont42 = (gs_font_type42 *)ff->client_font_data;
-            ulong offset0, offset1;
-            bool error = sfnt_get_glyph_offset(pdr, pfont42, char_code, &offset0, &offset1);
+            ulong offset0;
+	    bool error = sfnt_get_glyph_offset(pdr, pfont42, char_code, &offset0);
 
-            glyph_length = (error ? -1 : offset1 - offset0);
+            glyph_length = (error ? -1 : pfont42->data.len_glyphs[char_code]);
             if (buf != 0 && !error) {
                 sfnts_reader r;
                 sfnts_reader_init(&r, pdr);
@@ -702,6 +933,9 @@ static const FAPI_font ff_stub = {
     FAPI_FF_get_word,
     FAPI_FF_get_long,
     FAPI_FF_get_float,
+    FAPI_FF_get_name,
+    FAPI_FF_get_proc,
+    FAPI_FF_get_gsubr,
     FAPI_FF_get_subr,
     FAPI_FF_get_glyph,
     FAPI_FF_serialize_tt_font
@@ -942,24 +1176,37 @@ static int FAPI_refine_font(i_ctx_t *i_ctx_p, os_ptr op, gs_font_base *pbfont, c
 
     if (code > 0) {
 	/* Refine FontBBox : */
-	ref *v, x0, y0, x1, y1;
+	ref *v, mat[4], arr;
 
 	pbfont->FontBBox.p.x = (double)BBox[0] * size1 / size;
 	pbfont->FontBBox.p.y = (double)BBox[1] * size1 / size;
 	pbfont->FontBBox.q.x = (double)BBox[2] * size1 / size;
 	pbfont->FontBBox.q.y = (double)BBox[3] * size1 / size;
-	if (dict_find_string(op, "FontBBox", &v) <= 0 || !r_has_type(v, t_array))
-	    return_error(e_invalidfont);
-	if (r_size(v) < 4)
-	    return_error(e_invalidfont);
-	make_real(&x0, pbfont->FontBBox.p.x);
-	make_real(&y0, pbfont->FontBBox.p.y);
-	make_real(&x1, pbfont->FontBBox.q.x);
-	make_real(&y1, pbfont->FontBBox.q.y);
-	ref_assign_old(v, v->value.refs + 0, &x0, "FAPI_refine_font_BBox");
-	ref_assign_old(v, v->value.refs + 1, &y0, "FAPI_refine_font_BBox");
-	ref_assign_old(v, v->value.refs + 2, &x1, "FAPI_refine_font_BBox");
-	ref_assign_old(v, v->value.refs + 3, &y1, "FAPI_refine_font_BBox");
+	if (dict_find_string(op, "FontBBox", &v) > 0) {
+	    if(!r_has_type(v, t_array) && !r_has_type(v, t_shortarray) && !r_has_type(v, t_mixedarray))
+		return_error(e_invalidfont);
+	    if (r_size(v) < 4)
+		return_error(e_invalidfont);
+
+	    make_real(&mat[0], pbfont->FontBBox.p.x);
+	    make_real(&mat[1], pbfont->FontBBox.p.y);
+	    make_real(&mat[2], pbfont->FontBBox.q.x);
+	    make_real(&mat[3], pbfont->FontBBox.q.y);
+	    if(r_has_type(v, t_shortarray) || r_has_type(v, t_mixedarray)) {
+		/* Create a new full blown array in case the values are reals */
+		code = ialloc_ref_array(&arr, a_all, 4, "array");
+		if (code < 0)
+		    return code;
+		v = &arr;
+		code = idict_put_string(op, "FontBBox", &arr);
+		if (code < 0)
+		    return code;
+	    }
+	    ref_assign_old(v, v->value.refs + 0, &mat[0], "FAPI_refine_font_BBox");
+	    ref_assign_old(v, v->value.refs + 1, &mat[1], "FAPI_refine_font_BBox");
+	    ref_assign_old(v, v->value.refs + 2, &mat[2], "FAPI_refine_font_BBox");
+	    ref_assign_old(v, v->value.refs + 3, &mat[3], "FAPI_refine_font_BBox");
+	}
     }
 
     /* Assign a Decoding : */
@@ -1032,6 +1279,7 @@ static int zFAPIrebuildfont(i_ctx_t *i_ctx_p)
     const byte *pchars;
     uint len;
     font_data *pdata;
+    FAPI_server *I;
 
     if (code < 0)
 	return code;
@@ -1052,15 +1300,19 @@ static int zFAPIrebuildfont(i_ctx_t *i_ctx_p)
 	    return code;
     }
     pdata = (font_data *)pfont->client_data;
+    I = pbfont->FAPI;
     if (dict_find_string(op - 1, "Path", &v) <= 0 || !r_has_type(v, t_string))
         v = NULL;
     if (pfont->FontType == ft_CID_encrypted && v == NULL) {
         if ((code = build_proc_name_refs(imemory, &build, ".FAPIBuildGlyph9", ".FAPIBuildGlyph9")) < 0)
 	    return code;
+	pop(1);
+	return 0;
     } else
         if ((code = build_proc_name_refs(imemory, &build, ".FAPIBuildChar", ".FAPIBuildGlyph")) < 0)
 	    return code;
-    if (name_index(imemory, &pdata->BuildChar) == name_index(imemory, &build.BuildChar)) {
+    if (pdata->BuildChar.value.pname && build.BuildChar.value.pname &&
+	name_index(imemory, &pdata->BuildChar) == name_index(imemory, &build.BuildChar)) {
         /* Already rebuilt - maybe a substituted font. */
     } else {
         ref_assign_new(&pdata->BuildChar, &build.BuildChar);
@@ -1068,6 +1320,7 @@ static int zFAPIrebuildfont(i_ctx_t *i_ctx_p)
         if (v != NULL)
             font_file_path = ref_to_string(v, imemory_global, "font file path");
         code = FAPI_refine_font(i_ctx_p, op - 1, pbfont, font_file_path);
+	memcpy(&I->initial_FontMatrix, &pbfont->FontMatrix, sizeof(gs_matrix));
         if (font_file_path != NULL)
             gs_free_string(imemory_global, (byte *)font_file_path, r_size(v) + 1, "font file path");
         code1 = gs_notify_register(&pfont->notify_list, notify_remove_font, pbfont);
@@ -1147,12 +1400,34 @@ static const int frac_pixel_shift = 4;
 static int fapi_finish_render_aux(i_ctx_t *i_ctx_p, gs_font_base *pbfont, FAPI_server *I)
 {   gs_text_enum_t *penum = op_show_find(i_ctx_p);
     gs_show_enum *penum_s = (gs_show_enum *)penum;
-    gs_state *pgs = penum_s->pgs;
-    gx_device *dev1 = gs_currentdevice_inline(pgs); /* Possibly changed by zchar_set_cache. */
-    gx_device *dev = penum_s->dev;
+    gs_state *pgs;
+    gx_device *dev1;
+    gx_device *dev;
     const int import_shift_v = _fixed_shift - I->frac_shift;
     FAPI_raster rast;
     int code;
+    extern_st(st_gs_show_enum);
+    extern_st(st_gs_state);
+
+    if(penum == NULL) {
+	return_error(e_undefined);
+    }
+    dev = penum_s->dev;
+
+    /* Ensure that pis points to a st_gs_gstate (graphics state) structure */
+    if (gs_object_type(penum->memory, penum->pis) != &st_gs_state) {
+	/* If pis is not a graphics state, see if the text enumerator is a 
+	 * show enumerator, in which case we have a pointer to the graphics state there
+	 */
+	if (gs_object_type(penum->memory, penum) == &st_gs_show_enum) {
+	    pgs = penum_s->pgs;
+	} else
+	    /* No graphics state, give up... */
+	    return_error(e_undefined);
+    } else 
+	pgs = (gs_state *)penum->pis;
+
+    dev1 = gs_currentdevice_inline(pgs); /* Possibly changed by zchar_set_cache. */
 
     if (SHOW_IS(penum, TEXT_DO_NONE)) {
         /* do nothing */
@@ -1161,7 +1436,7 @@ static int fapi_finish_render_aux(i_ctx_t *i_ctx_p, gs_font_base *pbfont, FAPI_s
 	    return code;
     } else {
         int code = I->get_char_raster(I, &rast);
-        if (code == e_limitcheck) {
+        if (code == e_limitcheck || pbfont->PaintType) {
             /* The server provides an outline instead the raster. */
             gs_imager_state *pis = (gs_imager_state *)pgs->show_gstate;
             gs_point pt;
@@ -1210,19 +1485,31 @@ static int fapi_finish_render_aux(i_ctx_t *i_ctx_p, gs_font_base *pbfont, FAPI_s
 				dy + rast.top_indent, dy + rast.top_indent + rast.black_height - dev1->height);
 		    if ((code = fapi_copy_mono(dev1, &rast, dx, dy)) < 0)
 			return code;
-		    penum_s->cc->offset.x += float2fixed(penum_s->fapi_glyph_shift.x);
-		    penum_s->cc->offset.y += float2fixed(penum_s->fapi_glyph_shift.y);
+
+		    if (gs_object_type(penum->memory, penum) == &st_gs_show_enum) {
+			penum_s->cc->offset.x += float2fixed(penum_s->fapi_glyph_shift.x);
+			penum_s->cc->offset.y += float2fixed(penum_s->fapi_glyph_shift.y);
+		    }
 		}
             } else { /* Not using GS cache */
 	        const gx_clip_path * pcpath = i_ctx_p->pgs->clip_path; 
                 const gx_drawing_color * pdcolor = penum->pdcolor;
 
-		if ((code = gx_image_fill_masked(dev, rast.p, 0, rast.line_step, 0,
-			          (int)(penum_s->pgs->ctm.tx + (double)rast_orig_x / (1 << frac_pixel_shift) + penum_s->fapi_glyph_shift.x + 0.5), 
-			          (int)(penum_s->pgs->ctm.ty + (double)rast_orig_y / (1 << frac_pixel_shift) + penum_s->fapi_glyph_shift.y + 0.5), 
+		if (gs_object_type(penum->memory, penum) == &st_gs_show_enum) {
+		    if ((code = gx_image_fill_masked(dev, rast.p, 0, rast.line_step, 0,
+			          (int)(pgs->ctm.tx + (double)rast_orig_x / (1 << frac_pixel_shift) + penum_s->fapi_glyph_shift.x + 0.5), 
+			          (int)(pgs->ctm.ty + (double)rast_orig_y / (1 << frac_pixel_shift) + penum_s->fapi_glyph_shift.y + 0.5), 
 			          rast.width, rast.height,
 			          pdcolor, 1, rop3_default, pcpath)) < 0)
 				    return code;
+		} else {
+		    if ((code = gx_image_fill_masked(dev, rast.p, 0, rast.line_step, 0,
+			          (int)(pgs->ctm.tx + (double)rast_orig_x / (1 << frac_pixel_shift) + 0.5), 
+			          (int)(pgs->ctm.ty + (double)rast_orig_y / (1 << frac_pixel_shift) + 0.5), 
+			          rast.width, rast.height,
+			          pdcolor, 1, rop3_default, pcpath)) < 0)
+				    return code;
+		}
             }
         }
     }
@@ -1306,15 +1593,15 @@ static int FAPI_do_char(i_ctx_t *i_ctx_p, gs_font_base *pbfont, gx_device *dev, 
     } else
         check_type(*op, t_integer);
 
-    /* Compute the sacle : */
+    if (penum == 0)
+        return_error(e_undefined);
+    /* Compute the scale : */
     if (!SHOW_IS(penum, TEXT_DO_NONE) && !igs->in_charpath) {
         gs_currentcharmatrix(igs, NULL, 1); /* make char_tm valid */
         penum_s->fapi_log2_scale.x = -1;
         gx_compute_text_oversampling(penum_s, (gs_font *)pbfont, alpha_bits, &log2_scale);
         penum_s->fapi_log2_scale = log2_scale;
     }
-    if (penum == 0)
-        return_error(e_undefined);
     scale = 1 << I->frac_shift;
 retry_oversampling:
     if (I->face.font_id != pbfont->id ||
@@ -1326,7 +1613,7 @@ retry_oversampling:
 	I->face.HWResolution[1] != dev->HWResolution[1]
        ) {
 	FAPI_font_scale font_scale = {{1, 0, 0, 1, 0, 0}, {0, 0}, {1, 1}, true};
-        gs_matrix *base_font_matrix = &pbfont->base->orig_FontMatrix;
+        gs_matrix *base_font_matrix = &I->initial_FontMatrix;
         double dx, dy;
 
 	I->face.font_id = pbfont->id;
@@ -1398,7 +1685,8 @@ retry_oversampling:
 	ref *Encoding;
 	int_param(op, 0xFF, &client_char_code);
         if (dict_find_string(pdr, "Encoding", &Encoding) > 0 && 
-            (r_has_type(Encoding, t_array) || r_has_type(Encoding, t_shortarray))) {
+            (r_has_type(Encoding, t_array) || 
+	    r_has_type(Encoding, t_shortarray) || r_has_type(Encoding, t_mixedarray))) {
 	    if (array_get(imemory, Encoding, client_char_code, &char_name) < 0)
 	        if ((code = name_ref(imemory, (const byte *)".notdef", 7, &char_name, -1)) < 0)
 		    return code;
@@ -1411,26 +1699,92 @@ retry_oversampling:
     cr.char_codes_count = 1;
     if (bCID) {
         if (font_file_path != NULL) {
-            ref *Decoding, *SubstNWP, src_type, dst_type;
+            ref *Decoding, *TT_cmap, *SubstNWP;
+            ref src_type, dst_type;
+	    bool is_glyph_index = true;
 	    uint c;
 
             if (dict_find_string(pdr, "Decoding", &Decoding) <= 0 || !r_has_type(Decoding, t_dictionary))
                 return_error(e_invalidfont);
             if (dict_find_string(pdr, "SubstNWP", &SubstNWP) <= 0 || !r_has_type(SubstNWP, t_array))
                 return_error(e_invalidfont);
+	    if (dict_find_string(pdr, "TT_cmap", &TT_cmap) <= 0 || !r_has_type(TT_cmap, t_dictionary)) {
+		ref *DecodingArray, char_code, char_code1, ih;
+		int i = client_char_code % 256, n;
 
-	    code = cid_to_TT_charcode(imemory, Decoding, NULL, SubstNWP, 
+		make_int(&ih, client_char_code / 256);
+		/* Check the Decoding array for this block of CIDs */
+		if (dict_find(Decoding, &ih, &DecodingArray) <= 0 || 
+			!r_has_type(DecodingArray, t_array) ||
+			array_get(imemory, DecodingArray, i, &char_code) < 0)
+		    return_error(e_invalidfont);
+		
+		/* Check the Decoding entry */
+		if (r_has_type(&char_code, t_integer))
+		    n = 1; 
+		else if (r_has_type(&char_code, t_array)) {
+		    DecodingArray = &char_code;
+		    i = 0;
+		    n = r_size(DecodingArray);
+		} else
+		    return_error(e_invalidfont);
+
+		for (;n--; i++) {
+		    if (array_get(imemory, DecodingArray, i, &char_code1) < 0 ||
+			!r_has_type(&char_code1, t_integer))
+			return_error(e_invalidfont);
+
+		    c = char_code1.value.intval;
+		    I->check_cmap_for_GID(I, &c);
+		    if (c != 0)
+		        break;
+		}
+	    } else {
+		code = cid_to_TT_charcode(imemory, Decoding, TT_cmap, SubstNWP,
 				      client_char_code, &c, &src_type, &dst_type);
-	    if (code < 0)
-		return code;
+		if (code < 0)
+		    return code;
+
+		/* cid_to_TT_charcode() returns 1 if it found a 
+                 * matching character code. Otherwise it returns
+                 * zero after setting c to zero (.notdef glyph id)
+                 * or a negative value on error. */
+		if (code > 0)
+		    is_glyph_index = false;
+	    }
 	    cr.char_codes[0] = c;
-	    cr.is_glyph_index = (code == 0);
+	    cr.is_glyph_index = is_glyph_index;
             /* fixme : process the narrow/wide/proportional mapping type,
 	       using src_type, dst_type. Should adjust the 'matrix' above.
                Call get_font_proportional_feature for proper choice.
             */
-        } else
-            cr.char_codes[0] = client_char_code;
+	} else {
+            ref *CIDMap, Str;
+	    byte *Map;
+	    int ccode = client_char_code;
+
+	    /* The PDF Reference says that we should use a CIDToGIDMap, but the PDF
+	     * interpreter converts this into a CIDMap (see pdf_font.ps, processCIDToGIDMap)
+	     */
+	    if (dict_find_string(pdr, "CIDMap", &CIDMap) > 0 && !r_has_type(CIDMap, t_name)) {
+		if (r_has_type(CIDMap, t_array)) {
+		    /* Too big for single string, so its an array of 2 strings */
+		    if (client_char_code < 32767) 
+			code = array_get(imemory, CIDMap, 0, &Str);
+		    else {
+			code = array_get(imemory, CIDMap, 1, &Str);
+			ccode -= 32767;
+		    }
+		    if (code < 0)
+		        return code;
+		    Map = &Str.value.bytes[ccode * 2];
+		} else
+		    Map = &CIDMap->value.bytes[ccode * 2];
+		cr.char_codes[0] = (Map[0] << 8) + Map[1];
+	    }
+	    else
+		cr.char_codes[0] = client_char_code;
+	}
     } else if (is_TT_from_type42) {
         /* This font must not use 'cmap', so compute glyph index from CharStrings : */
 	ref *CharStrings, *glyph_index;
@@ -1442,8 +1796,19 @@ retry_oversampling:
 		return code;
         } else if (r_has_type(glyph_index, t_integer))
             cr.char_codes[0] = glyph_index->value.intval;
-        else
-            return_error(e_invalidfont);
+	else {
+	    /* Check execution stack has space for BuldChar proc and finish_render */
+	    check_estack(2);
+	    /* check space and duplicate the glyph index for BuildChar */
+	    check_op(1);
+	    push(1);
+	    ref_assign_inline(op, op - 1);
+	    /* Come back to fapi_finish_render after running the BuildChar */
+	    push_op_estack(fapi_finish_render);
+	    ++esp;
+	    ref_assign(esp, glyph_index);
+	    return o_push_estack;
+	}
         cr.is_glyph_index = true;
     } else if (is_embedded_type1) {
         /*  Since the client passes charstring by callback using I->ff.char_data,
@@ -1664,6 +2029,7 @@ retry_oversampling:
     penum_s->fapi_glyph_shift.x = penum_s->fapi_glyph_shift.y = 0;
     if (sbw_state == SBW_FROM_RENDERER) {
 	sbw[2] = metrics.escapement / em_scale_x;
+	sbw[3] = metrics.v_escapement / em_scale_y;
 	if (pbfont->FontType == 2) {
 	    gs_font_type1 *pfont1 = (gs_font_type1 *)pbfont;
 
@@ -1727,10 +2093,15 @@ retry_oversampling:
      * from glyph code ? Currently we keep a compatibility
      * to the native GS font renderer without a deep analyzis.
      */
-    code = zchar_set_cache(i_ctx_p, pbfont, &char_name,
+    if (bCID)
+	code = zchar_set_cache(i_ctx_p, pbfont, op,
 		           NULL, sbw + 2, &char_bbox,
 			   fapi_finish_render, &exec_cont, sbw);
-    if (code >= 0 && exec_cont != 0)
+    else
+	code = zchar_set_cache(i_ctx_p, pbfont, &char_name,
+		           NULL, sbw + 2, &char_bbox,
+			   fapi_finish_render, &exec_cont, sbw);
+    if (code >= 0 && exec_cont != 0) 
 	code = (*exec_cont)(i_ctx_p);
     if (code != 0) {
         if (code < 0) {
@@ -1840,6 +2211,7 @@ static int do_FAPIpassfont(i_ctx_t *i_ctx_p, char *font_file_path, bool *success
     char *xlatmap = NULL;
     FAPI_font_scale font_scale = {{1, 0, 0, 1, 0, 0}, {0, 0}, {1, 1}, true};
     const char *decodingID = NULL;
+
 
     if (code < 0)
 	return code;

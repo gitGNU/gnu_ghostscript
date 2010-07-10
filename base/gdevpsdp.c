@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpsdp.c,v 1.1 2009/04/23 23:26:15 Arabidopsis Exp $ */
+/* $Id: gdevpsdp.c,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
 /* (Distiller) parameter handling for PostScript and PDF writers */
 #include "string_.h"
 #include "jpeglib_.h"		/* for sdct.h */
@@ -493,22 +487,22 @@ psdf_DCT_put_params(gs_param_list * plist, stream_state * st)
 }
 
 /* Put [~](Always|Never)Embed parameters. */
+/* Returns 0 = OK, 1 = no paramewter specified, <0 = error. */
 static int
 param_read_embed_array(gs_param_list * plist, gs_param_name pname,
-		       gs_param_string_array * psa, int ecode)
+		       gs_param_string_array * psa)
 {
     int code;
 
     psa->data = 0, psa->size = 0;
     switch (code = param_read_name_array(plist, pname, psa)) {
 	default:
-	    ecode = code;
-	    param_signal_error(plist, pname, ecode);
+	    param_signal_error(plist, pname, code);
 	case 0:
 	case 1:
 	    break;
     }
-    return ecode;
+    return code;
 }
 static bool
 param_string_eq(const gs_param_string *ps1, const gs_param_string *ps2)
@@ -569,88 +563,83 @@ delete_embed(gs_param_string_array *prsa, const gs_param_string_array *pnsa,
     }
     prsa->size = count;
 }
+static int merge_embed(gs_param_string_array * psa, gs_param_string_array * asa, 
+		     gs_memory_t *mem)
+{
+    gs_param_string_array rsa;
+    gs_param_string *rdata;
+    int code;
+
+    rdata = gs_alloc_struct_array(mem, psa->size + asa->size,
+				  gs_param_string,
+				  &st_param_string_element,
+				  "psdf_put_embed_param(update)");
+    if (rdata == 0)
+	return_error(gs_error_VMerror);
+    memcpy(rdata, psa->data, psa->size * sizeof(*psa->data));
+    rsa.data = rdata;
+    rsa.size = psa->size;
+    rsa.persistent = false;
+    code = add_embed(&rsa, asa, mem);
+    if (code < 0) {
+	gs_free_object(mem, rdata, "psdf_put_embed_param(update)");
+	return code;
+    }
+    gs_free_const_object(mem, psa->data, "psdf_put_embed_param(free)");
+    *psa = rsa;
+    return 0;
+}
+
 static int
 psdf_put_embed_param(gs_param_list * plist, gs_param_name notpname,
-		     gs_param_name allpname, gs_param_string_array * psa,
+		     gs_param_name pname, gs_param_string_array * psa,
 		     gs_memory_t *mem, int ecode)
 {
-    gs_param_name pname = notpname + 1;
+    gs_param_name allpname = pname + 1;
     gs_param_string_array sa, nsa, asa;
-    bool replace;
-    gs_param_string *rdata;
-    gs_param_string_array rsa;
-    int code = 0;
+    int code;
 
     mem = gs_memory_stable(mem);
-    ecode = param_read_embed_array(plist, pname, &sa, ecode);
-    ecode = param_read_embed_array(plist, notpname, &nsa, ecode);
-    ecode = param_read_embed_array(plist, allpname, &asa, ecode);
-    if (ecode < 0)
-	return ecode;
-    /*
-     * Figure out whether we're replacing (sa == asa or asa and no sa,
-     * no nsa) or updating (all other cases).
-     */
-    if (asa.data == 0 || nsa.data != 0)
-	replace = false;
-    else if (sa.data == 0)
-	replace = true;
-    else if (sa.size != asa.size)
-	replace = false;
-    else {
-	/* Test whether sa == asa. */
-	uint i;
+    code  = param_read_embed_array(plist, pname, &sa);
+    if (code < 0)
+	return code;
+    if (code == 0) {
+	/* Optimize for sa == *psa. */
+	int i;
 
-	replace = true;
-	for (i = 0; i < sa.size; ++i)
-	    if (!param_string_eq(&sa.data[i], &asa.data[i])) {
-		replace = false;
-		break;
-	    }
-	if (replace)
-	    return 0;		/* no-op */
-    }
-    if (replace) {
-	/* Wholesale replacement, only asa is relevant. */
-	rdata = gs_alloc_struct_array(mem, asa.size, gs_param_string,
-				      &st_param_string_element,
-				      "psdf_put_embed_param(replace)");
-	if (rdata == 0)
-	    return_error(gs_error_VMerror);
-	rsa.data = rdata;
-	rsa.size = 0;
-	if ((code = add_embed(&rsa, &asa, mem)) < 0) {
-	    gs_free_object(mem, rdata, "psdf_put_embed_param(replace)");
-	    ecode = code;
+	if (sa.size == psa->size) {
+	    for (i = 0; i < sa.size; ++i) {
+		if (!param_string_eq(&sa.data[i], &psa->data[i]))
+		    break;
+     }
 	} else
-	    delete_embed(psa, psa, mem);
-    } else if (sa.data || nsa.data) {
-	/* Incremental update, sa and nsa are relevant, asa is not. */
-	rdata = gs_alloc_struct_array(mem, psa->size + sa.size,
-				      gs_param_string,
-				      &st_param_string_element,
-				      "psdf_put_embed_param(update)");
-	if (rdata == 0)
-	    return_error(gs_error_VMerror);
-	memcpy(rdata, psa->data, psa->size * sizeof(*psa->data));
-	rsa.data = rdata;
-	rsa.size = psa->size;
-	if ((code = add_embed(&rsa, &sa, mem)) < 0) {
-	    gs_free_object(mem, rdata, "psdf_put_embed_param(update)");
-	    ecode = code;
+	    i = -1;
+	if (i == sa.size) {
+	    /* equal, no-op. */
 	} else {
-	    delete_embed(&rsa, &nsa, mem);
-	    rsa.data = gs_resize_object(mem, rdata, rsa.size,
-					"psdf_put_embed_param(resize)");
+	    delete_embed(psa, psa, mem);
+	    code = merge_embed(psa, &sa, mem);
+	    if (code < 0)
+		return code;
 	}
-    } else
-	return 0;		/* no-op */
-    if (code >= 0) {
-	gs_free_const_object(mem, psa->data, "psdf_put_embed_param(free)");
-	rsa.persistent = false;
-	*psa = rsa;
     }
-    return ecode;
+    code = param_read_embed_array(plist, notpname, &nsa);
+    if (code < 0)
+	return code;
+    if (nsa.data != 0)
+	delete_embed(psa, &nsa, mem);
+    code = param_read_embed_array(plist, allpname, &asa);
+    if (code < 0)
+	return code;
+    if (asa.data != 0) {
+	code = merge_embed(psa, &asa, mem);
+	if (code < 0)
+	    return code;
+    }
+    if (psa->data)
+	psa->data = gs_resize_object(mem, (gs_param_string *)psa->data, psa->size,
+					"psdf_put_embed_param(resize)");
+    return 0;
 }
 
 /* Put an image Dict parameter. */

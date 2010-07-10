@@ -24,7 +24,7 @@
 % parameters, usually absent from Type 1 fonts.
 
 % Tribute:
-% $Id: pf2afm.ps,v 1.5 2009/04/19 13:54:37 Arabidopsis Exp $
+% $Id: pf2afm.ps,v 1.6 2010/07/10 22:02:38 Arabidopsis Exp $
 % The program is based on James Clark's <jjc@jclark.uucp> printafm.ps
 % (with alterations by d.love@dl.ac.uk and L. Peter Deutsch) from
 % Ghostscript 5.10 distribution.
@@ -458,7 +458,9 @@
 % i.e., it analyses the supplied names, appends extensions if needed,
 % and check files:
   /pfbn () def /pfan () def /pfmn () def % initialisation
-
+  [ t1_glyph_equivalence { pop } forall ] { % disable glyph substitution
+    t1_glyph_equivalence exch undef
+  } forall
   ifn pfa_or_pfb? {
       ifn dup length string copy def
       ifn dup length 4 sub 0 exch getinterval /ifn edef

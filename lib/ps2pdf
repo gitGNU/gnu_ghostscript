@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: ps2pdf,v 1.5 2007/09/11 15:24:49 Arabidopsis Exp $
+# $Id: ps2pdf,v 1.6 2010/07/10 22:02:36 Arabidopsis Exp $
 # Convert PostScript to PDF.
 
 # Currently, we produce PDF 1.4 by default, but this is not guaranteed

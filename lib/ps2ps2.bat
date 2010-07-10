@@ -1,11 +1,11 @@
 @echo off
-@rem $Id: ps2ps2.bat,v 1.2 2007/05/07 11:22:07 Arabidopsis Exp $
+@rem $Id: ps2ps2.bat,v 1.3 2010/07/10 22:02:36 Arabidopsis Exp $
 @rem Converting Postscript 3 or PDF into PostScript 2.
 
 if %1/==/ goto usage
 if %2/==/ goto usage
 call gssetgs.bat
-echo -dNOPAUSE -dSAFER -dBATCH >_.at
+echo -dNOPAUSE -P- -dSAFER -dBATCH >_.at
 :cp
 if %3/==/ goto doit
 echo %1 >>_.at

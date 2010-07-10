@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxistate.h,v 1.1 2009/04/23 23:26:34 Arabidopsis Exp $ */
+/* $Id: gxistate.h,v 1.2 2010/07/10 22:02:22 Arabidopsis Exp $ */
 /* Imager state definition */
 
 #ifndef gxistate_INCLUDED
@@ -213,6 +207,18 @@ typedef struct gs_devicen_color_map_s {
 } gs_devicen_color_map;
 
 
+/* These flags are used to keep track of qQ 
+   combinations surrounding a graphic state
+   change that includes a softmask setting.
+   The transparency compositor must be notified
+   when a Q event occurs following a softmask */
+
+typedef struct gs_xstate_trans_flags {
+    bool xstate_pending;
+    bool xstate_change;
+} gs_xstate_trans_flags_t;
+
+
 /* Define the imager state structure itself. */
 /*
  * Note that the ctm member is a gs_matrix_fixed.  As such, it cannot be
@@ -221,6 +227,7 @@ typedef struct gs_devicen_color_map_s {
  * than &pis->ctm.
  */
 #define gs_imager_state_common\
+	bool is_gstate;	/* is this imager state part of gstate ? */\
 	gs_memory_t *memory;\
 	void *client_data;\
 	gx_line_params line_params;\
@@ -233,10 +240,13 @@ typedef struct gs_devicen_color_map_s {
 	gx_color_value alpha;\
 	gs_blend_mode_t blend_mode;\
 	gs_transparency_source_t opacity, shape;\
+        gs_xstate_trans_flags_t trans_flags;\
 	gs_id soft_mask_id;\
 	bool text_knockout;\
 	uint text_rendering_mode;\
 	gs_transparency_state_t *transparency_stack;\
+        bool has_transparency;   /* used to keep from doing shading fills in device color space */\
+        gx_device *trans_device;  /* trans device has all mappings to group color space */\
 	bool overprint;\
 	int overprint_mode;\
 	int effective_overprint_mode;\
@@ -252,7 +262,7 @@ typedef struct gs_devicen_color_map_s {
 	  (*get_cmap_procs)(const gs_imager_state *, const gx_device *);\
 	gs_color_rendering_state_common
 #define st_imager_state_num_ptrs\
-  (st_line_params_num_ptrs + st_cr_state_num_ptrs + 2)
+  (st_line_params_num_ptrs + st_cr_state_num_ptrs + 3)
 /* Access macros */
 #define ctm_only(pis) (*(const gs_matrix *)&(pis)->ctm)
 #define ctm_only_writable(pis) (*(gs_matrix *)&(pis)->ctm)
@@ -273,12 +283,12 @@ struct gs_imager_state_s {
 };
 
 /* Initialization for gs_imager_state */
-#define gs_imager_state_initial(scale)\
-  0, 0, { gx_line_params_initial },\
+#define gs_imager_state_initial(scale, is_gstate)\
+  is_gstate, 0, 0, { gx_line_params_initial },\
    { (float)(scale), 0.0, 0.0, (float)(-(scale)), 0.0, 0.0 },\
   false, {0, 0}, {0, 0}, false, \
   lop_default, gx_max_color_value, BLEND_MODE_Compatible,\
-  { 1.0 }, { 1.0 }, 0, 0/*false*/, 0, 0, 0/*false*/, 0, 0, 1.0,  \
+{ 1.0 }, { 1.0 }, {0, 0}, 0, 0/*false*/, 0, 0, 0, 0, 0/*false*/, 0, 0, 1.0,  \
    { fixed_half, fixed_half }, 0/*false*/, 0/*false*/, 0/*false*/, 1.0,\
   1, INIT_CUSTOM_COLOR_PTR	/* 'Custom color' callback pointer */  \
   gx_default_get_cmap_procs

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: ps2ps2,v 1.4 2009/04/23 23:31:12 Arabidopsis Exp $
+# $Id: ps2ps2,v 1.5 2010/07/10 22:02:35 Arabidopsis Exp $
 # "Distill" PostScript with the Ghostscript 'ps2write' device
 # this generates a PDF-style stream with an attached 
 # PostScript program to interpret it.
@@ -8,7 +8,7 @@
 # executable name set in the makefile
 GS_EXECUTABLE=gs
 
-OPTIONS="-dSAFER"
+OPTIONS="-P- -dSAFER"
 while true
 do
 	case "$1" in

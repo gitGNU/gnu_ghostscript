@@ -1,5 +1,5 @@
 /* using GS DLL as a ps colorpage separator.  
-	Carsten Hammer Ocï¿½-Deutschland GmbH
+	Carsten Hammer Océ-Deutschland GmbH
 	Hammer.Carsten@oce.de			*/
 
 #ifdef _Windows

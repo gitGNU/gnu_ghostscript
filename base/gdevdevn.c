@@ -1,22 +1,16 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/*$Id: gdevdevn.c,v 1.1 2009/04/23 23:26:41 Arabidopsis Exp $ */
+/*$Id: gdevdevn.c,v 1.2 2010/07/10 22:02:23 Arabidopsis Exp $ */
 /* Example DeviceN process color model devices. */
 
 #include "math_.h"
@@ -222,7 +216,7 @@ devn_get_color_comp_index(gx_device * dev, gs_devn_params * pdevn_params,
 {
     int num_order = pdevn_params->num_separation_order_names;
     int color_component_number = 0;
-    int max_spot_colors = GX_DEVICE_MAX_SEPARATIONS;
+    int max_spot_colors = GX_DEVICE_MAX_SEPARATIONS - MAX_DEVICE_PROCESS_COLORS;
 
     /*
      * Check if the component is in either the process color model list
@@ -271,8 +265,8 @@ devn_get_color_comp_index(gx_device * dev, gs_devn_params * pdevn_params,
 	gs_separations * separations = &pdevn_params->separations;
 	int sep_num = separations->num_separations++;
 
-	/* We have a new spot colorant */
-	sep_name = gs_alloc_bytes(dev->memory,
+	/* We have a new spot colorant - put in stable memory to avoid "restore" */
+	sep_name = gs_alloc_bytes(dev->memory->stable_memory,
 			name_size, "devn_get_color_comp_index");
 	memcpy(sep_name, pname, name_size);
 	separations->names[sep_num].size = name_size;
@@ -476,8 +470,9 @@ devn_put_params(gx_device * pdev, gs_param_list * plist,
             case 0:
 	        if (page_spot_colors < -1)
 		    return_error(gs_error_rangecheck);
-	        if (page_spot_colors > GX_DEVICE_COLOR_MAX_COMPONENTS)
-		    page_spot_colors = GX_DEVICE_COLOR_MAX_COMPONENTS;
+	        if (page_spot_colors > GX_DEVICE_COLOR_MAX_COMPONENTS - MAX_DEVICE_PROCESS_COLORS)
+		    page_spot_colors = GX_DEVICE_COLOR_MAX_COMPONENTS - MAX_DEVICE_PROCESS_COLORS;  
+                    /* Need to leave room for the process colors in GX_DEVICE_COLOR_MAX_COMPONENTS  */
         }
         /* 
          * The DeviceN device can have zero components if nothing has been
@@ -722,7 +717,7 @@ free_separation_names(gs_memory_t * mem,
 
     /* Discard the sub levels. */
     for (i = 0; i < pseparation->num_separations; i++)
-        gs_free_object(mem, pseparation->names[i].data,
+        gs_free_object(mem->stable_memory, pseparation->names[i].data,
 				"free_separation_names");
     pseparation->num_separations = 0;
     return;

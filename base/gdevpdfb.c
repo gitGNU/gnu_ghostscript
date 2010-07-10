@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdfb.c,v 1.1 2009/04/23 23:26:50 Arabidopsis Exp $ */
+/* $Id: gdevpdfb.c,v 1.2 2010/07/10 22:02:24 Arabidopsis Exp $ */
 /* Low-level bitmap image handling for PDF-writing driver */
 #include "string_.h"
 #include "gx.h"
@@ -29,6 +23,9 @@
 #include "gxdcolor.h"
 #include "gxpcolor.h"
 #include "gxhldevc.h"
+#include "gxchar.h"
+#include "gdevpdtf.h"		/* Required to include gdevpdti.h */
+#include "gdevpdti.h"		/* For pdf_charproc_x_offset */
 
 /* We need this color space type for constructing temporary color spaces. */
 extern const gs_color_space_type gs_color_space_type_Indexed;
@@ -121,7 +118,6 @@ set_image_color(gx_device_pdf *pdev, gx_color_index c)
 			    &psdf_set_stroke_color_commands);
 }
 
-/* Copy a monochrome bitmap or mask. */
 static int
 pdf_copy_mono(gx_device_pdf *pdev,
 	      const byte *base, int sourcex, int raster, gx_bitmap_id id,
@@ -139,6 +135,9 @@ pdf_copy_mono(gx_device_pdf *pdev,
     pdf_resource_t *pres = 0;
     byte invert = 0;
     bool in_line = false;
+    gs_show_enum *show_enum = (gs_show_enum *)pdev->pte;
+		double width;
+		int x_offset, y_offset;
 
     /* Update clipping. */
     if (pdf_must_put_clip_path(pdev, pcpath)) {
@@ -154,33 +153,40 @@ pdf_copy_mono(gx_device_pdf *pdev,
 	if (one == gx_no_color_index)
 	    return 0;
 	/* If a mask has an id, assume it's a character. */
-	if (id != gx_no_bitmap_id && sourcex == 0) {
+	if (id != gx_no_bitmap_id && sourcex == 0 && show_enum) {
+	    pdf_char_proc_t *pcp;
+
+	    if (show_enum->use_wxy_float)
+	        pdev->char_width.x = show_enum->wxy_float.x;
+	    else
+	        pdev->char_width.x = fixed2float(show_enum->wxy.x);
 	    pres = pdf_find_resource_by_gs_id(pdev, resourceCharProc, id);
 	    if (pres == 0) {	/* Define the character in an embedded font. */
-		pdf_char_proc_t *pcp;
-		double x_offset;
-		int y_offset;
-
 		gs_image_t_init_mask(&image, false);
 		invert = 0xff;
+		x_offset = x - (int)show_enum->pis->current_point.x;
+		y_offset = y - (int)show_enum->pis->current_point.y;
+		x -= x_offset;
+		y -= y_offset;
+		y -= h;
 		pdf_make_bitmap_image(&image, x, y, w, h);
-		y_offset = pdf_char_image_y_offset(pdev, x, y, h);
+		y+= h;
 		/*
 		 * The Y axis of the text matrix is inverted,
 		 * so we need to negate the Y offset appropriately.
 		 */
-		code = pdf_begin_char_proc(pdev, w, h, 0, y_offset, id,
+		code = pdf_begin_char_proc(pdev, w, h, 0, y_offset, x_offset, id,
 					   &pcp, &ipos);
 		if (code < 0)
 		    return code;
 		y_offset = -y_offset;
-		x_offset = psdf_round(pdev->char_width.x, 100, 10); /* See 
+		width = psdf_round(pdev->char_width.x, 100, 10); /* See 
 			pdf_write_Widths about rounding. We need to provide 
 			a compatible data for Tj. */
-		pprintg1(pdev->strm, "%g ", x_offset);
-		pprintd3(pdev->strm, "0 0 %d %d %d d1\n", y_offset, w, h + y_offset);
-		pprintd3(pdev->strm, "%d 0 0 %d 0 %d cm\n", w, h,
-			 y_offset);
+		pprintg1(pdev->strm, "%g ", width);
+		pprintd4(pdev->strm, "0 %d %d %d %d d1\n",  x_offset, -h + y_offset, w + x_offset, y_offset);
+		pprintd4(pdev->strm, "%d 0 0 %d %d %d cm\n", w, h, x_offset,
+			 -h + y_offset);
 		pdf_image_writer_init(&writer);
 		code = pdf_begin_write_image(pdev, &writer, gs_no_id, w, h, NULL, true);
 		if (code < 0)
@@ -191,7 +197,12 @@ pdf_copy_mono(gx_device_pdf *pdev,
 		/* We're under pdf_text_process. It set a high level color. */
 	    } else
 		set_image_color(pdev, one);
-	    pdf_make_bitmap_matrix(&image.ImageMatrix, x, y, w, h, h);
+	    pcp = (pdf_char_proc_t *) pres;
+	    x -= pdf_charproc_x_offset(pcp);
+	    y -= pdf_charproc_y_offset(pcp);
+	    y -= h;
+	    pdf_make_bitmap_image(&image, x, y, w, h);
+	    y += h;
 	    goto rx;
 	}
 	set_image_color(pdev, one);
@@ -266,8 +277,8 @@ pdf_copy_mono(gx_device_pdf *pdev,
 	 * We don't have to worry about color space scaling: the color
 	 * space is always a Device space.
 	 */
-	code = pdf_color_space(pdev, &cs_value, NULL, pcs,
-			       &writer.pin->color_spaces, in_line);
+	code = pdf_color_space_named(pdev, &cs_value, NULL, pcs,
+			       &writer.pin->color_spaces, in_line, NULL, 0);
 	if (code < 0)
 	    return code;
 	pcsvalue = &cs_value;
@@ -416,8 +427,8 @@ pdf_copy_color_data(gx_device_pdf * pdev, const byte * base, int sourcex,
     pdf_image_writer_init(piw);
     pdev->ParamCompatibilityLevel = pdev->CompatibilityLevel;
     if ((code = pdf_begin_write_image(pdev, piw, id, w, h, NULL, in_line)) < 0 ||
-	(code = pdf_color_space(pdev, &cs_value, NULL, pcs,
-				&piw->pin->color_spaces, in_line)) < 0 ||
+	(code = pdf_color_space_named(pdev, &cs_value, NULL, pcs,
+				&piw->pin->color_spaces, in_line, NULL, 0)) < 0 ||
 	(for_pattern < 2 || nbytes < 512000 ?
 	    (code = psdf_setup_lossless_filters((gx_device_psdf *) pdev,
 			&piw->binary[0], (gs_pixel_image_t *)pim, false)) :
@@ -578,7 +589,7 @@ gdev_pdf_strip_tile_rectangle(gx_device * dev, const gx_strip_bitmap * tiles,
 	    if (pdev->PDFA)
 		pprints1(s, "%s\nendstream\n", buf);
 	    else
-	    pprints1(s, "%sendstream\n", buf);
+		pprints1(s, "%sendstream\n", buf);
 	    pdf_end_resource(pdev);
 	} else {
 	    length_id = pdf_obj_ref(pdev);

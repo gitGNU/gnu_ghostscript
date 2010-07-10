@@ -1,22 +1,20 @@
 /* Copyright (C) 2006-2007 Artifex Software, Inc.  All rights reserved.
 
-  This file is part of GNU ghostscript
-
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+  This software is provided AS-IS with no warranty, either express or
+  implied.
+  
+  This software is distributed under license and may not be copied,
+  modified or distributed except as expressly authorized under the terms
+  of the license contained in the file LICENSE in this distribution.
+  
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: gdevwts.c,v 1.1 2009/04/23 23:25:52 Arabidopsis Exp $ */
+/* $Id: gdevwts.c,v 1.2 2010/07/10 22:02:17 Arabidopsis Exp $ */
 /* ALPHA: Sample Device that provides WTS screening and IMDI color management */
 /* TODO: this should be configurable */
 #define LINK_ICC_NAME	"link.icc"
@@ -344,6 +342,14 @@ wts_init_halftones(gx_device_wts *wdev, int n_planes)
 	    char wts_fn[256];
 
 	    sprintf(wts_fn, "wts_plane_%d", i);
+            {
+              FILE *f;
+              if ((f=fopen(wts_fn,"r"))) {
+                fclose(f);
+              } else {
+	        sprintf(wts_fn, "/usr/local/lib/ghostscript/wts_plane_%d", i);
+              }
+            }
 	    code = wts_load_halftone(wdev->memory, &wdev->wcooked[i], wts_fn);
 	    if (code < 0)
 		return gs_throw1(code, "could not open file '%s'", wts_fn);
@@ -467,6 +473,7 @@ wtsimdi_open_device(gx_device *dev)
     icc *icco;
     icmLuBase *luo;
     imdi *mdo;
+    char link_icc_name[256];
 
     /*
      * We replace create_buf_device so we can replace copy_alpha 
@@ -476,9 +483,19 @@ wtsimdi_open_device(gx_device *dev)
 	wtsimdi_create_buf_device;
     /* Open and read profile */
 
-    fp = new_icmFileStd_name((char *)LINK_ICC_NAME, (char *)"rb");
+    sprintf(link_icc_name, "%s", LINK_ICC_NAME);
+    {
+      FILE *f;
+      if ((f=fopen(link_icc_name,"r"))) {
+        fclose(f);
+      } else {
+        sprintf(link_icc_name, "/usr/local/lib/ghostscript/%s", LINK_ICC_NAME);
+      }
+    }
+
+    fp = new_icmFileStd_name((char *)link_icc_name, (char *)"rb");
     if (!fp)
-	return gs_throw1(-1, "could not open file '%s'", LINK_ICC_NAME);
+	return gs_throw1(-1, "could not open file '%s'", link_icc_name);
 
     icco = new_icc();
     if (!icco)
@@ -651,9 +668,8 @@ wtsimdi_fill_rectangle(gx_device * dev,
 		    int i;
 
 		    dst[0] &= (0xff << (8 - (x & 7)));
-		    for (i = 1; i < nfill; i++)
-			dst[i] = 0;
-		    dst[i] &= ((1 << (7 - (end_x & 7))) - 1);
+                    memset(&dst[1], 0, nfill-1);
+		    dst[nfill] &= ((1 << (7 - (end_x & 7))) - 1);
 		}
 	    } else if (comp_value == 0xff) {
 		if (nfill == 0) {
@@ -663,9 +679,8 @@ wtsimdi_fill_rectangle(gx_device * dev,
 		    int i;
 
 		    dst[0] |= ~(0xff << (8 - (x & 7)));
-		    for (i = 1; i < nfill; i++)
-			dst[i] = 0xff;
-		    dst[i] |= ~((1 << (7 - (end_x & 7))) - 1);
+                    memset(&dst[1], 0xff, nfill-1);
+		    dst[nfill] |= ~((1 << (7 - (end_x & 7))) - 1);
 		}
 	    } else {
 		byte save_left = dst[0];
@@ -972,7 +987,6 @@ wtsimdi_create_buf_device(gx_device **pbdev, gx_device *target, int y,
 	   implemented or replaced with a default implementation. The following
 	   three don't have significant usage in testing with Altona.
 	*/
-	set_dev_proc(*pbdev, strip_copy_rop, gx_default_strip_copy_rop);
 	set_dev_proc(*pbdev, copy_alpha, gx_default_copy_alpha);
 	set_dev_proc(*pbdev, copy_color, gx_default_copy_color);
     }

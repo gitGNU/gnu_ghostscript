@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsistate.c,v 1.1 2009/04/23 23:26:17 Arabidopsis Exp $ */
+/* $Id: gsistate.c,v 1.2 2010/07/10 22:02:20 Arabidopsis Exp $ */
 /* Imager state housekeeping */
 #include "gx.h"
 #include "gserrors.h"
@@ -69,7 +63,8 @@ ENUM_PTRS_BEGIN(imager_state_enum_ptrs)
     ENUM_SUPER(gs_imager_state, st_line_params, line_params, st_imager_state_num_ptrs - st_line_params_num_ptrs);
     ENUM_PTR(0, gs_imager_state, client_data);
     ENUM_PTR(1, gs_imager_state, transparency_stack);
-#define E1(i,elt) ENUM_PTR(i+2,gs_imager_state,elt);
+    ENUM_PTR(2, gs_imager_state, trans_device); 
+#define E1(i,elt) ENUM_PTR(i+3,gs_imager_state,elt);
     gs_cr_state_do_ptrs(E1)
 #undef E1
 ENUM_PTRS_END
@@ -78,6 +73,7 @@ static RELOC_PTRS_BEGIN(imager_state_reloc_ptrs)
     RELOC_SUPER(gs_imager_state, st_line_params, line_params);
     RELOC_PTR(gs_imager_state, client_data);
     RELOC_PTR(gs_imager_state, transparency_stack);
+    RELOC_PTR(gs_imager_state, trans_device);
 #define R1(i,elt) RELOC_PTR(gs_imager_state,elt);
     gs_cr_state_do_ptrs(R1)
 #undef R1
@@ -99,6 +95,7 @@ gs_imager_state_initialize(gs_imager_state * pis, gs_memory_t * mem)
     pis->memory = mem;
     pis->client_data = 0;
     pis->transparency_stack = 0;
+    pis->trans_device = 0;
     /* Color rendering state */
     pis->halftone = 0;
     {

@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxchar.c,v 1.1 2009/04/23 23:27:17 Arabidopsis Exp $ */
+/* $Id: gxchar.c,v 1.2 2010/07/10 22:02:28 Arabidopsis Exp $ */
 /* Default implementation of text writing */
 #include "gx.h"
 #include "memory_.h"
@@ -38,10 +32,6 @@
 #include "gspath.h"
 #include "gzpath.h"
 #include "gxfcid.h"
-
-/* Define whether or not to cache characters rotated by angles other than */
-/* multiples of 90 degrees. */
-static const bool CACHE_ROTATED_CHARS = true;
 
 /* Define the maximum size of a full temporary bitmap when rasterizing, */
 /* in bits (not bytes). */
@@ -173,7 +163,6 @@ gx_default_text_begin(gx_device * dev, gs_imager_state * pis,
 	    (propagate_charpath ? pgs->in_charpath : cpm_show);
     penum->cc = 0;
     penum->continue_proc = continue_show;
-    /* Note: show_state_setup may reset can_cache. */
     switch (penum->charpath_flag) {
     case cpm_false_charpath: case cpm_true_charpath:
 	penum->can_cache = -1; break;
@@ -381,25 +370,6 @@ set_char_width(gs_show_enum *penum, gs_state *pgs, floatp wx, floatp wy)
 
     if (penum->width_status != sws_none && penum->width_status != sws_retry)
 	return_error(gs_error_undefined);
-    if (penum->fstack.depth > 0 && 
-	penum->fstack.items[penum->fstack.depth].font->FontType == ft_CID_encrypted) {
-    	/* We must not convert advance width with a CID font leaf's FontMatrix,
-	   because CDevProc is attached to the CID font rather than to its leaf.
-	   But show_state_setup sets CTM with the leaf's matrix.
-	   Compensate it here with inverse FontMatrix of the leaf.
-	   ( We would like to do without an inverse transform, but 
-	     we don't like to extend general gs_state or gs_show_enum
-	     for this particular reason. ) */
-	const gx_font_stack_item_t *pfsi = &penum->fstack.items[penum->fstack.depth];
-	gs_point p;
-
-	code = gs_distance_transform_inverse(wx, wy,
-		&gs_cid0_indexed_font(pfsi->font, pfsi->index)->FontMatrix, &p);
-	if (code < 0)
-	    return code;
-	wx = p.x; 
-	wy = p.y;
-    }
     code = gs_distance_transform2fixed(&pgs->ctm, wx, wy, &penum->wxy);
     if (code < 0 && penum->cc == 0) {
 	/* Can't represent in 'fixed', use floats. */
@@ -896,7 +866,7 @@ int gx_current_char(const gs_text_enum_t * pte)
 
     if (fdepth > 0) {
 	/* Add in the shifted font number. */
-	uint fidx = penum->fstack.items[fdepth].index;
+	uint fidx = penum->fstack.items[fdepth - 1].index;
 
 	switch (((gs_font_type0 *) (penum->fstack.items[fdepth - 1].font))->data.FMapType) {
 	case fmap_1_7:
@@ -919,15 +889,17 @@ static int
 show_move(gs_show_enum * penum)
 {
     gs_state *pgs = penum->pgs;
+    int code;
 
     if (SHOW_IS(penum, TEXT_REPLACE_WIDTHS)) {
-	int code;
 	gs_point dpt;
 
 	code = gs_text_replaced_width(&penum->text, penum->xy_index - 1, &dpt);
 	if (code < 0)
 	    return code;
-	gs_distance_transform2fixed(&pgs->ctm, dpt.x, dpt.y, &penum->wxy);
+	code = gs_distance_transform2fixed(&pgs->ctm, dpt.x, dpt.y, &penum->wxy);
+	if (code < 0)
+	    return code;
     } else {
 	double dx = 0, dy = 0;
 
@@ -946,7 +918,9 @@ show_move(gs_show_enum * penum)
 	if (!is_fzero2(dx, dy)) {
 	    gs_fixed_point dxy;
 
-	    gs_distance_transform2fixed(&pgs->ctm, dx, dy, &dxy);
+	    code = gs_distance_transform2fixed(&pgs->ctm, dx, dy, &dxy);
+	    if (code < 0)
+	        return code;
 	    penum->wxy.x += dxy.x;
 	    penum->wxy.y += dxy.y;
 	}
@@ -1435,22 +1409,6 @@ gs_show_current_font(const gs_show_enum * penum)
 
 /* ------ Internal routines ------ */
 
-static inline bool
-is_matrix_good_for_caching(const gs_matrix_fixed *m)
-{
-    /* Skewing or non-rectangular rotation are not supported,
-       but we ignore a small noise skew. */
-    const float axx = any_abs(m->xx), axy = any_abs(m->xy);
-    const float ayx = any_abs(m->yx), ayy = any_abs(m->yy);
-    const float thr = 5000; /* examples/alphabet.ps */
-
-    if (ayx * thr < axx || axy * thr < ayy)
-	return true;
-    if (axx * thr < ayx || ayy * thr < axy)
-	return true;
-    return false;
-}
-
 /* Initialize the gstate-derived parts of a show enumerator. */
 /* We do this both when starting the show operation, */
 /* and when returning from the kshow callout. */
@@ -1464,7 +1422,25 @@ show_state_setup(gs_show_enum * penum)
 
     if (penum->fstack.depth <= 0) {
 	pfont = pgs->font;
-	gs_currentcharmatrix(pgs, NULL, 1);	/* make char_tm valid */
+	if (pfont->FontType == ft_CID_encrypted) {
+	    /* doing 'cid glyphshow', 
+	       assuming penum->operation has TEXT_FROM_SINGLE_GLYPH */
+	    gs_matrix mat;
+	    int fidx;
+	    int code = ((gs_font_cid0 *)pfont)->cidata.glyph_data((gs_font_base *)pfont,
+				penum->text.data.d_glyph, NULL, &fidx);
+	    if (code < 0) { /* failed to load glyph data, reload glyph for CID 0 */
+	       code = ((gs_font_cid0 *)pfont)->cidata.glyph_data((gs_font_base *)pfont,
+			    (gs_glyph)(gs_min_cid_glyph + 0), NULL, &fidx);
+	       if (code < 0)
+		   return_error(gs_error_invalidfont);
+	    }
+	    gs_matrix_multiply(&(gs_cid0_indexed_font(pfont, fidx)->FontMatrix),
+				&pfont->FontMatrix, &mat);
+	    gs_setcharmatrix(pgs, &mat);
+	} else {
+	    gs_currentcharmatrix(pgs, NULL, 1);	/* make char_tm valid */
+	}
     } else {
 	/* We have to concatenate the parent's FontMatrix as well. */
 	gs_matrix mat;
@@ -1476,15 +1452,12 @@ show_state_setup(gs_show_enum * penum)
 			   &pfsi[-1].font->FontMatrix, &mat);
 	if (pfont->FontType == ft_CID_encrypted) {
 	    /* concatenate the Type9 leaf's matrix */
-	    gs_matrix_multiply(&mat,
-		&(gs_cid0_indexed_font(pfont, pfsi->index)->FontMatrix), &mat);
+	    gs_matrix_multiply(&(gs_cid0_indexed_font(pfont, pfsi->index)->FontMatrix),
+				&mat, &mat);
 	}
 	gs_setcharmatrix(pgs, &mat);
     }
     penum->current_font = pfont;
-    /* Skewing or non-rectangular rotation are not supported. */
-    if (!CACHE_ROTATED_CHARS && is_matrix_good_for_caching(&pgs->char_tm))
-	penum->can_cache = 0;
     if (penum->can_cache >= 0 &&
 	gx_effective_clip_path(pgs, &pcpath) >= 0
 	) {
@@ -1538,10 +1511,8 @@ show_set_scale(const gs_show_enum * penum, gs_log2_scale_point *log2_scale)
 
     if ((penum->charpath_flag == cpm_show ||
 	 penum->charpath_flag == cpm_charwidth) &&
-	SHOW_USES_OUTLINE(penum) &&
-	/* gx_path_is_void_inline(pgs->path) && */
-    /* Oversampling rotated characters doesn't work well. */
-	is_matrix_good_for_caching(&pgs->char_tm)
+	SHOW_USES_OUTLINE(penum)  
+	/* && gx_path_is_void_inline(pgs->path) */
 	) {
 	const gs_font_base *pfont = (const gs_font_base *)penum->current_font;
 	gs_fixed_point extent;

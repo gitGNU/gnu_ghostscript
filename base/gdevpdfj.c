@@ -1,26 +1,19 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdfj.c,v 1.1 2009/04/23 23:27:09 Arabidopsis Exp $ */
+/* $Id: gdevpdfj.c,v 1.2 2010/07/10 22:02:27 Arabidopsis Exp $ */
 /* Image-writing utilities for pdfwrite driver */
 #include "memory_.h"
-#include "string_.h"
 #include "gx.h"
 #include "gserrors.h"
 #include "gdevpdfx.h"
@@ -30,6 +23,7 @@
 #include "gsiparm4.h"
 #include "gdevpsds.h"
 #include "spngpx.h"
+#include <stdlib.h> /* for atoi */
 
 #define CHECK(expr)\
   BEGIN if ((code = (expr)) < 0) return code; END
@@ -451,9 +445,32 @@ pdf_end_image_binary(gx_device_pdf *pdev, pdf_image_writer *piw, int data_h)
     else
 	code = psdf_end_binary(&piw->binary[0]);
     /* If the image ended prematurely, update the Height. */
-    if (data_h != piw->height)
-	code1 = cos_dict_put_c_key_int(cos_stream_dict(piw->data),
+    if (data_h != piw->height) {
+	char data[255];
+	int OutHeight;
+	cos_value_t *value;
+	value = (cos_value_t *)cos_dict_find(cos_stream_dict(piw->data),
+				      (const byte *)piw->pin->Height, strlen(piw->pin->Height));
+	if (!value || value->contents.chars.size > 255)
+	    return(gs_error_rangecheck);
+	strncpy((char *)&data, (const char *)value->contents.chars.data, value->contents.chars.size);
+	data[value->contents.chars.size] = 0x00;
+	OutHeight = atoi(data);
+	if (OutHeight != piw->height) {
+	    /* Looks like we are downsampling, so we can't use the number
+	     * of rows of data actually received, we must divide those by
+	     * the sampling factor.
+	     */
+	    float factor = (float)OutHeight / piw->height;
+	    OutHeight = (int)(factor * data_h);
+	    code1 = cos_dict_put_c_key_int(cos_stream_dict(piw->data),
+				      piw->pin->Height, OutHeight);
+	} else {
+	
+	    code1 = cos_dict_put_c_key_int(cos_stream_dict(piw->data),
 				      piw->pin->Height, data_h);
+	}
+    }
     return code < 0 ? code : code1;
 }
 

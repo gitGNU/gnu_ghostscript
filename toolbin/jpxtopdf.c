@@ -1,21 +1,20 @@
 /* Copyright (C) 2004-2008 Artifex Software, Inc.  All rights reserved.
-  
-  This file is part of GNU ghostscript
- 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
- 
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+  This software is provided AS-IS with no warranty, either express or
+  implied.
+
+  This software is distributed under license and may not be copied,
+  modified or distributed except as expressly authorized under the terms
+  of the license contained in the file LICENSE in this distribution.
+
+  For more information about licensing, please refer to
+  http://www.ghostscript.com/licensing/. For information on
+  commercial licensing, go to http://www.artifex.com/licensing/ or
+  contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+  San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
-/* $Id: jpxtopdf.c,v 1.4 2009/04/23 23:32:17 Arabidopsis Exp $ */
+/* $Id: jpxtopdf.c,v 1.5 2010/07/10 22:02:46 Arabidopsis Exp $ */
 /* encapsulates jp2/jpx JPEG2000 images in PDF 1.5 files */
 /* based on jpegtopdf by Tor Andersson */
 
@@ -137,7 +136,7 @@ box_t *box_read(const unsigned char *buf, const long size)
 
   return box;
 }
-    
+
 #ifdef DEBUG
 void box_print(box_t *box)
 {
@@ -163,10 +162,10 @@ void box_print(box_t *box)
         ihdr->bpc, ihdr->sign ? "signed" : "unsigned");
     else
       fprintf(stderr, " no parse result");
-	}
+  }
 
   fprintf(stderr, "\n");
-    }
+}
 #endif /* DEBUG */
 
 /* parse the image header in a jpx file and fill out imagedata struct */
@@ -183,7 +182,7 @@ static int jpx_read_imagedata(imagedata * jpx)
     fprintf(stderr, "Error: could not open input file '%s'\n",
 	jpx->filename);
     return FALSE;
-	}
+  }
 
   n = fread(buf, 1, BUFSIZE, in);
 
@@ -195,7 +194,7 @@ static int jpx_read_imagedata(imagedata * jpx)
   if (memcmp(buf, "\x00\x00\x00\x0CjP  \x0D\x0A\x87\x0A", 12)) {
     fprintf(stderr, "Skipping '%s': not a JPX file\n", jpx->filename);
     return FALSE;
-	}
+  }
 
   /* initialize the resultion in case the file doesn't set it */
   jpx->dpi = 0.0;
@@ -235,7 +234,7 @@ static int jpx_read_imagedata(imagedata * jpx)
     return FALSE;
   }
 
-	fprintf(stderr,
+  fprintf(stderr,
 	"Note on file '%s': %dx%d pixel, %d color component%s, dpi %lf\n",
 		jpx->filename, jpx->width, jpx->height,
 		jpx->numcmpts, (jpx->numcmpts == 1 ? "" : "s"),
@@ -255,7 +254,7 @@ static int jpx_pdf(imagedata * jpx, FILE * out)
 	double scale;
 
 	if ( !jpx_read_imagedata(jpx) ) return -1;
-    
+
 	in = fopen(jpx->filename, "rb");
 	if (in == NULL) {
 		fprintf(stderr, "Error: unable to open input file '%s'\n", jpx->filename);
@@ -343,7 +342,7 @@ int main(int argc, char **argv)
 	nxref++;
 
 	for (i = 1; i < argc; i++) {
-		image.filename = argv[i];
+	  image.filename = argv[i];
 
 	  /* copy the jpx stream wrapped in a pdf object */
 	  pages[npages++] = jpx_pdf(&image, outfile);

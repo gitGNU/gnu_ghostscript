@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>ps2pdf: PostScript-to-PDF converter</title>
-<!-- $Id: Ps2pdf.htm,v 1.14 2009/04/23 23:32:00 Arabidopsis Exp $ -->
+<!-- $Id: Ps2pdf.htm,v 1.15 2010/07/10 22:02:50 Arabidopsis Exp $ -->
 <!-- Originally: ps2pdf.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -59,12 +59,7 @@ to Portable Document Format (PDF) files.
 <p>
 <code>ps2pdf</code> is implemented as a very small command script (batch
 file) that invokes Ghostscript, selecting a special "output device" called
-<code>pdfwrite</code>.  In order to use <b><tt>ps2pdf</tt></b>, the
-<code>pdfwrite</code> device must be included in the makefile when
-Ghostscript was compiled; see the <a
-href="Make.htm#Features_and_devices">documentation on building
-Ghostscript</a> for details: this is currently the case on all platforms, in
-Ghostscript as we distribute it.
+<code>pdfwrite</code>.
 
 <hr>
 
@@ -245,6 +240,22 @@ wide variety of uses, possibly at the expense of a larger output file.
 
 </ul>
 
+<dt><code>-dDoNumCopies</code>
+<dd>When present, causes pdfwrite to use the #copies or /NumCopies entry in the page
+device dictionary to duplicate each page in the output PDF file as many times as
+the 'copies' value. This is intended for use by workflow applications like CUPS
+and should not be used for generating general purpose PDF files. In particular any
+pdfmark operations which rely on page numbers, such as Link or Outline annotations
+will not work correctly with this flag.
+
+<dt><code>-dPreserveSeparation</code>
+<dd>This takes a Boolean argument, when set to true (the default) any /Separation
+colour spaces in the input PostScript or PDF file will be preserved as /Separation
+colour spaces in the output. When false, the alternate space specified by the 
+original colour space will be used instead.
+<dt><code>-dPreserveDeviceN</code>
+<dd>Behaves as per PreserveSeparation above except that it deals with DeviceN colour
+spaces.
 </dl>
 
 <p>
@@ -367,7 +378,7 @@ owner password.
 <dt><code>-sUserPassword=</code><em>string</em>
 <dd>Defines the user password for opening the document.
 If empty, the document can be opened with no password,
-but the owner password is required to eï¿½dit it.
+but the owner password is required to eÂdit it.
 </dl>
 
 <dl>
@@ -870,6 +881,18 @@ with the following exceptions :
 are not required in the PDF/A definition file.
 </ul>
 
+There is one additional control for PDF/A output:
+
+<dl>
+<dt><code>PDFACompatibilityPolicy</code> <em>integer</em>
+<dd>When an operation (eg pdfmark) is encountered which cannot be emitted in a PDF/A compliant file, this policy is consulted, there are currently two possible values:
+
+<blockquote>0 - (default) Include the feature or operation in the output file, the file will not be PDF/A compliant. Because the document Catalog is emitted before this is encountered, the file will still contain PDF/A metadata but will not be compliant. A warning will be emitted in this case.
+</blockquote>
+<dd>
+<blockquote>1 - The feature or operation is ignored, the resulting PDF file will be PDF/A compliant. A warning wil be emitted for every elided feature.
+</blockquote>
+</dl>
 
 Here is a sample command line to invoke Ghostscript for generating a PDF/A document :
 <blockquote><code>
@@ -1038,7 +1061,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.64, 3 February 2009
+<small>Ghostscript version 8.71, 10 February 2010
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

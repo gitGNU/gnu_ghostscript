@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id: gxpath2.c,v 1.1 2009/04/23 23:26:07 Arabidopsis Exp $ */
+/*$Id: gxpath2.c,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
 /* Path tracing procedures for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -274,17 +268,34 @@ gx_path_translate(gx_path * ppath, fixed dx, fixed dy)
     return 0;
 }
 
-/* Scale an existing path by a power of 2 (positive or negative). */
+/* Scale an existing path by a power of 2 (positive or negative).
+ * Currently the path drawing routines can't handle values
+ * close to the edge of the representable space.
+ * Also see clamp_point() in gspath.c .
+ */
 void
 gx_point_scale_exp2(gs_fixed_point * pt, int sx, int sy)
 {
-    if (sx >= 0)
-	pt->x <<= sx;
-    else
+    int v;
+
+    if (sx > 0) {
+        v = (max_int - int2fixed(1000)) >> sx; /* arbitrary */
+        if (pt->x > v)
+            pt->x = v;
+        else if (pt->x < -v)
+            pt->x = -v;
+        pt->x <<= sx;
+    } else
 	pt->x >>= -sx;
-    if (sy >= 0)
-	pt->y <<= sy;
-    else
+
+    if (sy > 0) {
+        v = (max_int - int2fixed(1000)) >> sy;
+        if (pt->y > v)
+            pt->y = v;
+        else if (pt->y < -v)
+            pt->y = -v;
+        pt->y <<= sy;
+    } else
 	pt->y >>= -sy;
 }
 void
@@ -350,6 +361,105 @@ gx_path_copy_reversed(const gx_path * ppath_old, gx_path * ppath)
 
 	if (!psub->is_closed) {
 	    code = gx_path_add_point(ppath, prev->pt.x, prev->pt.y);
+	    if (code < 0)
+		return code;
+	}
+	/*
+	 * The do ... while structure of this loop is artificial,
+	 * designed solely to keep compilers from complaining about
+	 * 'statement not reached' or 'end-of-loop code not reached'.
+	 * The normal exit from this loop is the goto statement in
+	 * the s_start arm of the switch.
+	 */
+	do {
+	    pseg = prev;
+	    prev_notes = notes;
+	    prev = pseg->prev;
+	    notes = pseg->notes;
+	    prev_notes = (prev_notes & sn_not_first) |
+		(notes & ~sn_not_first);
+	    switch (pseg->type) {
+		case s_start:
+		    /* Finished subpath */
+		    if (psub->is_closed) {
+			code =
+			    gx_path_close_subpath_notes(ppath, prev_notes);
+			if (code < 0)
+			    return code;
+		    }
+		    do {
+			psub = (const subpath *)psub->prev;
+		    } while (psub && psub->type != s_start);
+		    goto nsp;
+		case s_curve:
+		    {
+			const curve_segment *pc =
+			(const curve_segment *)pseg;
+
+			code = gx_path_add_curve_notes(ppath,
+						       pc->p2.x, pc->p2.y,
+						       pc->p1.x, pc->p1.y,
+					prev->pt.x, prev->pt.y, prev_notes);
+			break;
+		    }
+		case s_line:
+		    code = gx_path_add_line_notes(ppath,
+					prev->pt.x, prev->pt.y, prev_notes);
+		    break;
+		case s_line_close:
+		    /* Skip the closing line. */
+		    code = gx_path_add_point(ppath, prev->pt.x,
+					     prev->pt.y);
+		    break;
+		default:	/* not possible */
+		    return_error(gs_error_Fatal);
+	    }
+	} while (code >= 0);
+	return code;		/* only reached if code < 0 */
+    }
+#undef sn_not_end
+    /*
+     * In the Adobe implementations, reversepath discards a trailing
+     * moveto unless the path consists only of a moveto.  We reproduce
+     * this behavior here, even though we consider it a bug.
+     */
+    if (ppath_old->first_subpath == 0 &&
+	path_last_is_moveto(ppath_old)
+	) {
+	int code = gx_path_add_point(ppath, ppath_old->position.x,
+				     ppath_old->position.y);
+
+	if (code < 0)
+	    return code;
+    }
+#ifdef DEBUG
+    if (gs_debug_c('P'))
+	gx_dump_path(ppath, "after reversepath");
+#endif
+    return 0;
+}
+
+int
+gx_path_append_reversed(const gx_path * ppath_old, gx_path * ppath)
+{
+    const subpath *psub = ppath_old->current_subpath;
+
+#ifdef DEBUG
+    if (gs_debug_c('P'))
+	gx_dump_path(ppath_old, "before reversepath");
+#endif
+ nsp:
+    if (psub) {
+	const segment *prev = psub->last;
+	const segment *pseg;
+	segment_notes notes =
+	    (prev == (const segment *)psub ? sn_none :
+	     psub->next->notes);
+	segment_notes prev_notes;
+	int code;
+
+	if (!psub->is_closed) {
+	    code = gx_path_add_line(ppath, prev->pt.x, prev->pt.y);
 	    if (code < 0)
 		return code;
 	}

@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpxut.h,v 1.1 2009/04/23 23:26:17 Arabidopsis Exp $ */
+/* $Id: gdevpxut.h,v 1.2 2010/07/10 22:02:20 Arabidopsis Exp $ */
 /* Utilities for PCL XL generation */
 /* Requires gdevpxat.h, gdevpxen.h, gdevpxop.h */
 
@@ -61,15 +55,17 @@ void px_put_ac(stream *s, px_attribute_t a, px_tag_t op);
 void px_put_ub(stream * s, byte b);
 void px_put_uba(stream *s, byte b, px_attribute_t a);
 
-#define DS(i) (byte)(i), (byte)((i) >> 8)
-void px_put_s(stream * s, uint i);
+/* signed and unsigned shorts */
+#define DS(i) (byte)(i), (byte)(((i) >= 0 ? (i) : ((i)|0x8000)) >> 8)
+#define US(i) (byte)(i), (byte)((i) >> 8)
+void px_put_s(stream * s, int i);
 
-#define DUS(i) pxt_uint16, DS(i)
+#define DUS(i) pxt_uint16, US(i)
 void px_put_us(stream * s, uint i);
 void px_put_usa(stream *s, uint i, px_attribute_t a);
 void px_put_u(stream * s, uint i);
 
-#define DUSP(ix,iy) pxt_uint16_xy, DS(ix), DS(iy)
+#define DUSP(ix,iy) pxt_uint16_xy, US(ix), US(iy)
 void px_put_usp(stream * s, uint ix, uint iy);
 void px_put_usq_fixed(stream * s, fixed x0, fixed y0, fixed x1, fixed y1);
 
@@ -80,6 +76,8 @@ void px_put_l(stream * s, ulong l);
 
 void px_put_r(stream * s, floatp r);  /* no tag */
 void px_put_rl(stream * s, floatp r);  /* pxt_real32 tag */
+void px_put_rp(stream * s, floatp rx, floatp ry);
+void px_put_rpa(stream * s, floatp rx, floatp ry, px_attribute_t a);
 
 void px_put_data_length(stream * s, uint num_bytes);
 

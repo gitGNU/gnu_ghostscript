@@ -1,26 +1,20 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevtfnx.c,v 1.1 2009/04/23 23:26:46 Arabidopsis Exp $ */
+/* $Id: gdevtfnx.c,v 1.2 2010/07/10 22:02:24 Arabidopsis Exp $ */
 /* 12-bit & 24-bit RGB uncompressed TIFF driver */
-#include "gdevprn.h"
 #include "gdevtifs.h"
+#include "gdevprn.h"
 
 /*
  * Thanks to Alan Barclay <alan@escribe.co.uk> for donating the original
@@ -33,71 +27,63 @@
 #define X_DPI 72
 #define Y_DPI 72
 
-typedef struct gx_device_tiff_s {
-    gx_device_common;
-    gx_prn_device_common;
-    gdev_tiff_state tiff;
-} gx_device_tiff;
-
 static dev_proc_print_page(tiff12_print_page);
-static dev_proc_print_page(tiff24_print_page);
+static dev_proc_print_page(tiff_rgb_print_page);
 
 static const gx_device_procs tiff12_procs =
-prn_color_procs(gdev_prn_open, gdev_prn_output_page, gdev_prn_close,
-		gx_default_rgb_map_rgb_color, gx_default_rgb_map_color_rgb);
+prn_color_params_procs(tiff_open, tiff_output_page, tiff_close,
+		gx_default_rgb_map_rgb_color, gx_default_rgb_map_color_rgb,
+		tiff_get_params, tiff_put_params);
 static const gx_device_procs tiff24_procs =
-prn_color_procs(gdev_prn_open, gdev_prn_output_page, gdev_prn_close,
-		gx_default_rgb_map_rgb_color, gx_default_rgb_map_color_rgb);
+prn_color_params_procs(tiff_open, tiff_output_page, tiff_close,
+		gx_default_rgb_map_rgb_color, gx_default_rgb_map_color_rgb,
+		tiff_get_params, tiff_put_params);
 
-const gx_device_printer gs_tiff12nc_device = {
+const gx_device_tiff gs_tiff12nc_device = {
     prn_device_std_body(gx_device_tiff, tiff12_procs, "tiff12nc",
 			DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
 			X_DPI, Y_DPI,
 			0, 0, 0, 0,
-			24, tiff12_print_page)
+			24, tiff12_print_page),
+    arch_is_big_endian          /* default to native endian (i.e. use big endian iff the platform is so*/,
+    COMPRESSION_NONE,
+    TIFF_DEFAULT_STRIP_SIZE
 };
 
-const gx_device_printer gs_tiff24nc_device = {
+const gx_device_tiff gs_tiff24nc_device = {
     prn_device_std_body(gx_device_tiff, tiff24_procs, "tiff24nc",
 			DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
 			X_DPI, Y_DPI,
 			0, 0, 0, 0,
-			24, tiff24_print_page)
+			24, tiff_rgb_print_page),
+    arch_is_big_endian          /* default to native endian (i.e. use big endian iff the platform is so*/,
+    COMPRESSION_NONE,
+    TIFF_DEFAULT_STRIP_SIZE
 };
 
-/* ------ Private definitions ------ */
-
-/* Define our TIFF directory - sorted by tag number */
-typedef struct tiff_rgb_directory_s {
-    TIFF_dir_entry BitsPerSample;
-    TIFF_dir_entry Compression;
-    TIFF_dir_entry Photometric;
-    TIFF_dir_entry FillOrder;
-    TIFF_dir_entry SamplesPerPixel;
-} tiff_rgb_directory;
-typedef struct tiff_rgb_values_s {
-    TIFF_ushort bps[3];
-} tiff_rgb_values;
-
-static const tiff_rgb_directory dir_rgb_template =
-{
-	/* C's ridiculous rules about & and arrays require bps[0] here: */
-    {TIFFTAG_BitsPerSample, TIFF_SHORT | TIFF_INDIRECT, 3, offset_of(tiff_rgb_values, bps[0])},
-    {TIFFTAG_Compression, TIFF_SHORT, 1, Compression_none},
-    {TIFFTAG_Photometric, TIFF_SHORT, 1, Photometric_RGB},
-    {TIFFTAG_FillOrder, TIFF_SHORT, 1, FillOrder_MSB2LSB},
-    {TIFFTAG_SamplesPerPixel, TIFF_SHORT, 1, 3},
-};
-
-static const tiff_rgb_values val_12_template = {
-    {4, 4, 4}
-};
-
-static const tiff_rgb_values val_24_template = {
-    {8, 8, 8}
+const gx_device_tiff gs_tiff48nc_device = {
+    prn_device_std_body(gx_device_tiff, tiff24_procs, "tiff48nc",
+			DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
+			X_DPI, Y_DPI,
+			0, 0, 0, 0,
+			48, tiff_rgb_print_page),
+    arch_is_big_endian          /* default to native endian (i.e. use big endian iff the platform is so*/,
+    COMPRESSION_NONE,
+    TIFF_DEFAULT_STRIP_SIZE
 };
 
 /* ------ Private functions ------ */
+
+static void
+tiff_set_rgb_fields(gx_device_tiff *tfdev)
+{
+    TIFFSetField(tfdev->tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
+    TIFFSetField(tfdev->tif, TIFFTAG_FILLORDER, FILLORDER_MSB2LSB);
+    TIFFSetField(tfdev->tif, TIFFTAG_SAMPLESPERPIXEL, 3);
+
+    tiff_set_compression((gx_device_printer *)tfdev, tfdev->tif,
+			 tfdev->Compression, tfdev->MaxStripSize);
+}
 
 static int
 tiff12_print_page(gx_device_printer * pdev, FILE * file)
@@ -105,86 +91,78 @@ tiff12_print_page(gx_device_printer * pdev, FILE * file)
     gx_device_tiff *const tfdev = (gx_device_tiff *)pdev;
     int code;
 
-    /* Write the page directory. */
-    code = gdev_tiff_begin_page(pdev, &tfdev->tiff, file,
-				(const TIFF_dir_entry *)&dir_rgb_template,
-			  sizeof(dir_rgb_template) / sizeof(TIFF_dir_entry),
-				(const byte *)&val_12_template,
-				sizeof(val_12_template), 0);
+    /* open the TIFF device */
+    if (gdev_prn_file_is_new(pdev)) {
+	tfdev->tif = tiff_from_filep(pdev->dname, file, tfdev->BigEndian);
+	if (!tfdev->tif)
+	    return_error(gs_error_invalidfileaccess);
+    }
+
+    code = gdev_tiff_begin_page(tfdev, file);
     if (code < 0)
 	return code;
+
+    TIFFSetField(tfdev->tif, TIFFTAG_BITSPERSAMPLE, 4);
+    tiff_set_rgb_fields(tfdev);
 
     /* Write the page data. */
     {
 	int y;
-	int raster = gdev_prn_raster(pdev);
-	byte *line = gs_alloc_bytes(pdev->memory, raster, "tiff12_print_page");
-	byte *row;
+	int size = gdev_prn_raster(pdev);
+	byte *data = gs_alloc_bytes(pdev->memory, size, "tiff12_print_page");
 
-	if (line == 0)
+	if (data == 0)
 	    return_error(gs_error_VMerror);
+
+	memset(data, 0, size);
 
 	for (y = 0; y < pdev->height; ++y) {
 	    const byte *src;
 	    byte *dest;
 	    int x;
 
-	    code = gdev_prn_get_bits(pdev, y, line, &row);
+	    code = gdev_prn_copy_scan_lines(pdev, y, data, size);
 	    if (code < 0)
 		break;
 
-	    for (src = row, dest = line, x = 0; x < raster;
+	    for (src = data, dest = data, x = 0; x < size;
 		 src += 6, dest += 3, x += 6
 		) {
 		dest[0] = (src[0] & 0xf0) | (src[1] >> 4);
 		dest[1] = (src[2] & 0xf0) | (src[3] >> 4);
 		dest[2] = (src[4] & 0xf0) | (src[5] >> 4);
 	    }
-	    fwrite(line, 1, (pdev->width * 3 + 1) >> 1, file);
+	    TIFFWriteScanline(tfdev->tif, data, y, 0);
 	}
+	gs_free_object(pdev->memory, data, "tiff12_print_page");
 
-	gdev_tiff_end_strip(&tfdev->tiff, file);
-	gdev_tiff_end_page(&tfdev->tiff, file);
-	gs_free_object(pdev->memory, line, "tiff12_print_page");
+	TIFFWriteDirectory(tfdev->tif);
     }
 
     return code;
 }
 
 static int
-tiff24_print_page(gx_device_printer * pdev, FILE * file)
+tiff_rgb_print_page(gx_device_printer * pdev, FILE * file)
 {
     gx_device_tiff *const tfdev = (gx_device_tiff *)pdev;
     int code;
 
-    /* Write the page directory. */
-    code = gdev_tiff_begin_page(pdev, &tfdev->tiff, file,
-				(const TIFF_dir_entry *)&dir_rgb_template,
-			  sizeof(dir_rgb_template) / sizeof(TIFF_dir_entry),
-				(const byte *)&val_24_template,
-				sizeof(val_24_template), 0);
+    /* open the TIFF device */
+    if (gdev_prn_file_is_new(pdev)) {
+	tfdev->tif = tiff_from_filep(pdev->dname, file, tfdev->BigEndian);
+	if (!tfdev->tif)
+	    return_error(gs_error_invalidfileaccess);
+    }
+
+    code = gdev_tiff_begin_page(tfdev, file);
     if (code < 0)
 	return code;
 
+    TIFFSetField(tfdev->tif, TIFFTAG_BITSPERSAMPLE,
+		 pdev->color_info.depth / pdev->color_info.num_components);
+    tiff_set_rgb_fields(tfdev);
+
     /* Write the page data. */
-    {
-	int y;
-	int raster = gdev_prn_raster(pdev);
-	byte *line = gs_alloc_bytes(pdev->memory, raster, "tiff24_print_page");
-	byte *row;
-
-	if (line == 0)
-	    return_error(gs_error_VMerror);
-	for (y = 0; y < pdev->height; ++y) {
-	    code = gdev_prn_get_bits(pdev, y, line, &row);
-	    if (code < 0)
-		break;
-	    fwrite((char *)row, raster, 1, file);
-	}
-	gdev_tiff_end_strip(&tfdev->tiff, file);
-	gdev_tiff_end_page(&tfdev->tiff, file);
-	gs_free_object(pdev->memory, line, "tiff24_print_page");
-    }
-
-    return code;
+    return tiff_print_page(pdev, tfdev->tif);
 }

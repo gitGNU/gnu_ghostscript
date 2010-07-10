@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: ijs.mak,v 1.1 2009/04/23 23:25:55 Arabidopsis Exp $
+# $Id: ijs.mak,v 1.2 2010/07/10 22:02:17 Arabidopsis Exp $
 # makefile for ijs client library code.
 # Users of this makefile must define the following:
 #	IJSSRCDIR - the icclib source directory

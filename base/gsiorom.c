@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsiorom.c,v 1.1 2009/04/23 23:26:30 Arabidopsis Exp $ */
+/* $Id: gsiorom.c,v 1.2 2010/07/10 22:02:21 Arabidopsis Exp $ */
 /* %rom% IODevice implementation for a compressed in-memory filesystem */
  
 /*
@@ -154,6 +148,7 @@ s_block_read_seek(register stream * s, long pos)
 	s->position = pos - offset;
 	pw.ptr = s->cbuf - 1;
 	pw.limit = pw.ptr + s->cbsize;
+	s->srptr = s->srlimit = s->cbuf - 1;
 	if ((s->end_status = s_block_read_process((stream_state *)s, NULL, &pw, 0)) == ERRC)
 	    return ERRC;
 	if (s->end_status == 1)
@@ -187,41 +182,58 @@ s_block_read_process(stream_state * st, stream_cursor_read * ignore_pr,
     int status = 1;
     int compression = ((get_u32_big_endian(node) & 0x80000000) != 0) ? 1 : 0;
     uint32_t filelen = get_u32_big_endian(node) & 0x7fffffff;	/* ignore compression bit */
-    uint32_t blocks = (filelen+ROMFS_BLOCKSIZE-1)/ ROMFS_BLOCKSIZE;
-    int iblock = (s->position + s->file_offset + pw->ptr + 1 - s->cbuf) / ROMFS_BLOCKSIZE;
-    unsigned long block_length = get_u32_big_endian(node+1+(2*iblock));
-    unsigned const long block_offset = get_u32_big_endian(node+2+(2*iblock));
+    uint32_t blocks = (filelen+ROMFS_BLOCKSIZE-1) / ROMFS_BLOCKSIZE;
+    uint32_t iblock = (s->position + s->file_offset + (s->srlimit + 1 - s->cbuf)) / ROMFS_BLOCKSIZE;
+    uint32_t block_length = get_u32_big_endian(node+1+(2*iblock));
+    uint32_t block_offset = get_u32_big_endian(node+2+(2*iblock));
     unsigned const char *block_data = ((unsigned char *)node) + block_offset;
     int count = iblock < (blocks - 1) ? ROMFS_BLOCKSIZE : filelen - (ROMFS_BLOCKSIZE * iblock);
 
-    if (count > max_count) {
-	return ERRC;			/* should not happen */
-    }
-    if (block_data == NULL) {
-	return EOFC;
-    }
+    if (s->position + (s->cursor.r.limit - s->cbuf + 1) >= filelen || block_data == NULL)
+	return EOFC;			/* at EOF */
     if (s->file_limit < max_long) {
-	long limit_count = s->file_offset + s->file_limit - s->position;
+	/* Adjust count for subfile limit */
+	uint32_t limit_count = s->file_offset + s->file_limit - s->position;
 
 	if (count > limit_count)
 	    count = limit_count;
     }
-
-    if (count < ROMFS_BLOCKSIZE || iblock == (blocks - 1))
-	status = EOFC;			/* at EOF when not filling entire buffer */
     /* get the block into the buffer */
     if (compression) {
 	unsigned long buflen = ROMFS_BLOCKSIZE;
+	byte *dest = (pw->ptr + 1);	/* destination for unpack */
+	int need_copy = false;
 
+	/* If the dest is not in our buffer, we can only use it if there */
+	/* is enough space in it					 */
+	if ((dest < s->cbuf) || (dest >= (s->cbuf + s->cbsize))) {
+	    /* the destination is _not_ in our buffer. If the area isn't */
+	    /* big enough we need to ucompress to our buffer, then copy  */
+	    /* the data afterward. INVARIANT: if the buffer is outside   */
+	    /* the cbuf, then the cbuf must be empty.			 */
+	    if (max_count < count) {
+#ifdef DEBUG
+		if ((sbufptr(s)) != s->srlimit)
+		    eprintf("cbuf not empty as expected\n.");
+#endif
+		dest = s->cbuf;
+		need_copy = true;
+	    }
+	}
 	/* Decompress the data into this block */
-	code = uncompress (pw->ptr+1, &buflen, block_data, block_length);
-	if (count != buflen) {
+	code = uncompress (dest, &buflen, block_data, block_length);
+	if (count != buflen)
 	    return ERRC;
+	if (need_copy) {
+	    memcpy(pw->ptr+1, dest, max_count);
+	    count = max_count;
 	}
     } else {
 	/* not compressed -- just copy it */
-	memcpy(pw->ptr+1, block_data, block_length);
 	count = block_length;
+	if (count > max_count)
+	    count = max_count;
+	memcpy(pw->ptr+1, block_data, count);
     }
     if (count < 0)
 	count = 0;
@@ -359,7 +371,7 @@ romfs_enumerate_next(file_enum *pfen, char *ptr, uint maxlen)
     while (gs_romfs[penum->list_index] != 0) {
 	const uint32_t *node = gs_romfs[penum->list_index];
 	uint32_t filelen = get_u32_big_endian(node) & 0x7fffffff;	/* ignore compression bit */
-	long blocks = (filelen+ROMFS_BLOCKSIZE-1)/ ROMFS_BLOCKSIZE;
+	uint32_t blocks = (filelen+ROMFS_BLOCKSIZE-1)/ ROMFS_BLOCKSIZE;
 	char *filename = (char *)(&(node[1+(2*blocks)]));
 
 	penum->list_index++;		/* bump to next unconditionally */

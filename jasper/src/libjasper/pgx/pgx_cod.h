@@ -62,7 +62,7 @@
 /*
  * PGX Format Library
  *
- * $Id: pgx_cod.h,v 1.4 2007/05/07 11:22:24 Arabidopsis Exp $
+ * $Id: pgx_cod.h,v 1.5 2010/07/10 22:02:56 Arabidopsis Exp $
  */
 
 #ifndef PGX_COD_H

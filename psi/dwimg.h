@@ -1,22 +1,16 @@
 /* Copyright (C) 2001-2008 Artifex Software, Inc.
    All Rights Reserved.
-  
-  This file is part of GNU ghostscript
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id: dwimg.h,v 1.1 2009/04/23 23:31:20 Arabidopsis Exp $ */
+/* $Id: dwimg.h,v 1.2 2010/07/10 22:02:41 Arabidopsis Exp $ */
 
 #ifndef dwimg_INCLUDED
 #  define dwimg_INCLUDED
@@ -82,7 +76,7 @@ extern IMAGE *first_image;
 IMAGE *image_find(void *handle, void *device);
 IMAGE *image_new(void *handle, void *device);
 void image_delete(IMAGE *img);
-int image_size(IMAGE *img, int new_width, int new_height, int new_raster, 
+int image_size(IMAGE *img, int new_width, int new_height, int new_raster,
    unsigned int new_format, void *pimage);
 int image_separation(IMAGE *img, int comp_num, const char *name,
    unsigned short c, unsigned short m, unsigned short y, unsigned short k);
@@ -92,7 +86,7 @@ void image_open(IMAGE *img);
 void image_close(IMAGE *img);
 void image_sync(IMAGE *img);
 void image_page(IMAGE *img);
-void image_presize(IMAGE *img, int new_width, int new_height, int new_raster, 
+void image_presize(IMAGE *img, int new_width, int new_height, int new_raster,
    unsigned int new_format);
 void image_poll(IMAGE *img);
 void image_updatesize(IMAGE *img);

@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: saes.h,v 1.1 2009/04/23 23:26:52 Arabidopsis Exp $ */
+/* $Id: saes.h,v 1.2 2010/07/10 22:02:25 Arabidopsis Exp $ */
 /* Stream wrapper for the AES cypher implementation */
 /* Requires scommon.h; strimpl.h if any templates are referenced */
 
@@ -47,8 +47,9 @@ int s_aes_set_key(stream_aes_state * state,
 /* state declaration macro;
    should be updated for the aes_context finalization */
 #define private_st_aes_state()	\
-  gs_private_st_simple(st_aes_state, stream_aes_state,\
-    "aes filter state")
+  gs_private_st_ptrs1(st_aes_state, stream_aes_state, "aes filter state",\
+  aes_state_enum_ptrs, aes_state_reloc_ptrs, ctx)
+
 extern const stream_template s_aes_template;
 
 /* (de)crypt a section of text in a buffer -- the procedure is the same

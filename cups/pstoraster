@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# "$Id: pstoraster,v 1.1 2007/09/11 15:25:05 Arabidopsis Exp $"
+# "$Id: pstoraster,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $"
 #
 # CUPS raster filter script for Ghostscript.
 #
@@ -46,17 +46,17 @@ done
 
 # See if we have a filename on the command-line...
 if test -z "$6"; then
-	ifile="-"
+	ifile="-_"
 else
 	ifile="$6"
 fi
 
 echo INFO: Starting GPL Ghostscript `$bindir/gs --version`... 1>&2
-echo DEBUG: Running $bindir/gs $gsopts -sOUTPUTFILE="%stdout" -c"$profile" "$ifile" 1>&2
+echo DEBUG: Running $bindir/gs $gsopts -sOUTPUTFILE="%stdout" -c "$profile" -f "$ifile" 1>&2
 
 # Now run Ghostscript...
-exec $bindir/gs $gsopts -sOUTPUTFILE="%stdout" -c"$profile" "$ifile"
+exec $bindir/gs $gsopts -sOUTPUTFILE="%stdout" -c "$profile" -f "$ifile"
 
 #
-# End of "$Id: pstoraster,v 1.1 2007/09/11 15:25:05 Arabidopsis Exp $".
+# End of "$Id: pstoraster,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $".
 #

@@ -1,23 +1,17 @@
 /* Copyright (C) 2008 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: sfxcommon.c,v 1.1 2009/04/23 23:27:18 Arabidopsis Exp $ */
+/* $Id: sfxcommon.c,v 1.2 2010/07/10 22:02:28 Arabidopsis Exp $ */
 /* Common routines for stdio and fd file stream implementations. */
 #include "stdio_.h"		/* includes std.h */
 #include "memory_.h"
@@ -81,8 +75,13 @@ file_open_stream(const char *fname, uint len, const char *file_access,
 	return 0;		/* so this is the same as len == 0, so return NULL */
     code = (*fopen_proc)(iodev, (char *)(*ps)->cbuf, fmode, &file,
 			 (char *)(*ps)->cbuf, (*ps)->bsize);
-    if (code < 0)
+    if (code < 0) {
+	/* discard the stuff we allocated to keep from accumulating stuff needing GC */
+	gs_free_object(mem, (*ps)->cbuf, "file_close(buffer)");
+	gs_free_object(mem, *ps, "file_prepare_stream(stream)");
+	*ps = NULL;
 	return code;
+    }
     file_init_stream(*ps, file, fmode, (*ps)->cbuf, (*ps)->bsize);
     return 0;
 }
@@ -187,6 +186,7 @@ file_prepare_stream(const char *fname, uint len, const char *file_access,
 	buffer[0] = 0;	/* safety */
     s->cbuf = buffer;
     s->bsize = s->cbsize = buffer_size;
+    s->save_close = 0;	    /* in case this stream gets disabled before init finishes */
     *ps = s;
     return 0;
 }

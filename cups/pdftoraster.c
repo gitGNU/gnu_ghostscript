@@ -25,7 +25,7 @@ MIT Open Source License  -  http://www.opensource.org/
 
 */
 
-/* $Id: pdftoraster.c,v 1.1 2009/04/23 23:31:59 Arabidopsis Exp $ */
+/* $Id: pdftoraster.c,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $ */
 
 /* PDF to CUPS Raster filter based on Ghostscript */
 

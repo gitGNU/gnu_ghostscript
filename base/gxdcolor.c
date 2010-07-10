@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id: gxdcolor.c,v 1.1 2009/04/23 23:25:55 Arabidopsis Exp $ */
+/*$Id: gxdcolor.c,v 1.2 2010/07/10 22:02:17 Arabidopsis Exp $ */
 /* Pure and null device color implementation */
 #include "gx.h"
 #include "memory_.h"
@@ -723,11 +717,14 @@ gx_dc_write_color(
     uint *              psize )
 {
     int                 depth = dev->color_info.depth;
-    int                 num_bytes = (depth + 8) >> 3;   /* NB: +8, not +7 */
+    int                 num_bytes;   /* NB: +8, not +7 */
 
     /* gx_no_color_index is encoded as a single byte */
-    if (color == gx_no_color_index)
+    if (color == gx_no_color_index) {
         num_bytes = 1;
+    } else {
+        num_bytes = sizeof(gx_color_index) + 1;
+    }
 
     /* check for adequate space */
     if (*psize < num_bytes) {
@@ -741,8 +738,6 @@ gx_dc_write_color(
         *psize = 1;
         *pdata = 0xff;
     } else {
-        if (depth < 8 * arch_sizeof_color_index)
-            color &= ((gx_color_index)1 << depth) - 1;
         while (--num_bytes >= 0) {
             pdata[num_bytes] = color & 0xff;
             color >>= 8;
@@ -769,6 +764,7 @@ gx_dc_write_color(
  *
  * Returns: # of bytes read, or < 0 in the event of an error
  */
+
 int
 gx_dc_read_color(
     gx_color_index *    pcolor,
@@ -777,21 +773,22 @@ gx_dc_read_color(
     int                 size )
 {
     gx_color_index      color = 0;
-    int                 depth = dev->color_info.depth;
-    int                 i, num_bytes = (depth + 8) >> 3;   /* NB: +8, not +7 */
+    int                 i, num_bytes;
 
     /* check that enough data has been provided */
-    if (size < 1 || (pdata[0] != 0xff && size < num_bytes))
+    if (size < 1 || (pdata[0] != 0xff && size < sizeof(gx_color_index)))
         return_error(gs_error_rangecheck);
 
     /* check of gx_no_color_index */
     if (pdata[0] == 0xff) {
         *pcolor = gx_no_color_index;
         return 1;
+    } else {
+        num_bytes = sizeof(gx_color_index) + 1;
     }
 
     /* num_bytes > arch_sizeof_color_index, discard first byte */
-    for (i = (num_bytes >= arch_sizeof_color_index ? 1 : 0); i < num_bytes; i++)
+    for (i = 0; i < num_bytes; i++)
         color = (color << 8) | pdata[i];
     *pcolor = color;
     return num_bytes;

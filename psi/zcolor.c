@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2008 Artifex Software, Inc.
    All Rights Reserved.
-  
-  This file is part of GNU ghostscript
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zcolor.c,v 1.1 2009/04/23 23:31:44 Arabidopsis Exp $ */
+/* $Id: zcolor.c,v 1.2 2010/07/10 22:02:43 Arabidopsis Exp $ */
 /* Color operators */
 #include "memory_.h"
 #include "math_.h"
@@ -55,6 +49,9 @@
 #include "zcolor.h"	/* For the PS_colour_space_t structure */
 #include "zcie.h"	/* For CIE space function declarations */
 #include "zicc.h"	/* For declaration of seticc */
+#include "gscspace.h"   /* Needed for checking if current pgs colorspace is CIE */
+#include "iddict.h"	/* for idict_put_string */
+#include "zfrsd.h"      /* for make_rss() */
 
 /* imported from gsht.c */
 extern  void    gx_set_effective_transfer(gs_state *);
@@ -180,18 +177,18 @@ zcurrentcolorspace(i_ctx_t * i_ctx_p)
 			return_error(e_VMerror);
 		    memcpy(body, "systemdict /DeviceCMYK_array get", 32);
 		    make_string(&stref, a_all | icurrent_space, 32, body);
-        } else {
+		} else {
 		    /* Not one of the Device spaces, but still just a name. Give 
 		     * up and return the name on the stack.
 		     */
 		    push(1);
 		    code = ialloc_ref_array(op, a_all, 1, "currentcolorspace");
-	    if (code < 0)
-	        return code;
+		    if (code < 0)
+			return code;
 		    refset_null(op->value.refs, 1);
 		    ref_assign_old(op, op->value.refs, &istate->colorspace.array, "currentcolorspace");
 		    return 0;
-        }
+		}
 	    }
 	}
 	r_set_attrs(&stref, a_executable);
@@ -203,7 +200,7 @@ zcurrentcolorspace(i_ctx_t * i_ctx_p)
 	 * action and can simply use it.
 	 */
 	push(1);
-        *op = istate->colorspace.array;
+	*op = istate->colorspace.array;
     }
     return 0;
 }
@@ -261,7 +258,7 @@ zsetcolor(i_ctx_t * i_ctx_p)
     PS_colour_space_t *space;
 
     /* initialize the client color pattern pointer for GC */
-    cc.pattern = 0;
+    cc.pattern = 0; 
 
     /* check for a pattern color space */
     if ((n_comps = cs_num_components(pcs)) < 0) {
@@ -301,7 +298,7 @@ zsetcolor(i_ctx_t * i_ctx_p)
 	if (code < 0)
 	    return code;
     }
- 
+
     /* pass the color to the graphic library */
     if ((code = gs_setcolor(igs, &cc)) >= 0) {
 
@@ -318,7 +315,7 @@ zsetcolor(i_ctx_t * i_ctx_p)
      */
     code = validate_spaces(i_ctx_p, &istate->colorspace.array, &depth);
     if (code < 0)
-    return code;
+	return code;
     /* Set up for the continuation procedure which will do the work */
     /* Make sure the exec stack has enough space */
     check_estack(5);
@@ -342,13 +339,27 @@ zsetcolor(i_ctx_t * i_ctx_p)
     return o_push_estack;
 }
 
+/* This is used to detect color space changes due
+   to the changing of UseCIEColor during transparency
+   soft mask processing */
+
+static bool name_is_device_color( char *cs_name )
+{
+
+    return( strcmp(cs_name, "DeviceGray") == 0 || 
+            strcmp(cs_name, "DeviceRGB")  == 0 ||
+            strcmp(cs_name, "DeviceCMYK") == 0);
+
+}
+
+
 /*
  * Given two color space arrays, attempts to determine if they are the 
  * same space by comparing their contents recursively. For some spaces,
  * especially CIE based color spaces, it can significantly improve
  * performance if the same space is frequently re-used.
  */
-static int is_same_colorspace(i_ctx_t * i_ctx_p, ref *space1, ref *space2)
+static int is_same_colorspace(i_ctx_t * i_ctx_p, ref *space1, ref *space2, bool isCIE)
 {
     PS_colour_space_t *oldcspace = 0, *newcspace = 0;
     ref oldspace, *poldspace = &oldspace, newspace, *pnewspace = &newspace;
@@ -382,6 +393,29 @@ static int is_same_colorspace(i_ctx_t * i_ctx_p, ref *space1, ref *space2)
 	if (!oldcspace->compareproc(i_ctx_p, poldspace, pnewspace))
 	    return 0;
 
+        /* See if current space is CIE based (which could happen
+           if UseCIE had been true previously), but UseCIE is false
+           and incoming space is device based.  This can occur
+           when we are now processing a soft mask, which should not
+           use the UseCIEColor option.  
+           
+           Need to detect this case at both transitions
+
+            Device Color UseCIEColor true
+            Soft mask 
+	            Device color UseCIEColor false
+            Soft mask
+            Device color UseCIEColor true
+            */
+
+        if ( name_is_device_color(newcspace->name) ){
+            if ( gs_color_space_is_CIE(i_ctx_p->pgs->color_space) ){
+                if ( !isCIE ) return 0; /*  The color spaces will be different */
+            } else {
+                if ( isCIE ) return 0; /*  The color spaces will be different */
+            }
+        }       
+
 	/* The current space is OK, if there is no alternate, then that's
 	 * good enough. 
 	 */
@@ -404,6 +438,8 @@ static int is_same_colorspace(i_ctx_t * i_ctx_p, ref *space1, ref *space2)
     return 1;
 }
 
+
+
 /*
  *  <array>   setcolorspace   -
  *
@@ -418,6 +454,7 @@ zsetcolorspace(i_ctx_t * i_ctx_p)
     os_ptr  op = osp;
     es_ptr ep = esp;
     int code, depth;
+    bool is_CIE;
 
     /* Make sure we have an operand... */
     check_op(1);
@@ -430,8 +467,10 @@ zsetcolorspace(i_ctx_t * i_ctx_p)
     if (code < 0)
 	return code;
 
+    is_CIE = istate->use_cie_color.value.boolval;
+
     /* See if its the same as the current space */
-    if (is_same_colorspace(i_ctx_p, op, &istate->colorspace.array)) {
+    if (is_same_colorspace(i_ctx_p, op, &istate->colorspace.array, is_CIE)) {
 	PS_colour_space_t *cspace;
 
 	/* Even if its the same space, we still need to set the correct
@@ -444,9 +483,9 @@ zsetcolorspace(i_ctx_t * i_ctx_p)
 	    cspace->initialcolorproc(i_ctx_p, &istate->colorspace.array);
 	}
 	/* Pop the space off the stack */
-    pop(1);
-    return 0;
-}
+	pop(1);
+	return 0;
+    }
     /* Set up for the continuation procedure which will do the work */
     /* Make sure the exec stack has enough space */
     check_estack(5);
@@ -491,7 +530,7 @@ setcolorspace_nosubst(i_ctx_t * i_ctx_p)
 
     code = validate_spaces(i_ctx_p, op, &depth);
     if (code < 0)
-    return code;
+	return code;
 
     /* Set up for the continuation procedure which will do the work */
     /* Make sure the exec stack has enough space */
@@ -526,16 +565,15 @@ zincludecolorspace(i_ctx_t * i_ctx_p)
 {
     os_ptr  op = osp;
     ref nsref;
-    int             code;
+    int code;
 
     check_type(*op, t_name);
     name_string_ref(imemory, op, &nsref);
     code =  gs_includecolorspace(igs, nsref.value.const_bytes, r_size(&nsref));
     if (!code)
-        pop(1);
+	pop(1);
     return code;
 }
-
 
 /*  -   currenttransfer   <proc> */
 static int
@@ -3732,11 +3770,11 @@ static int devicencolorants_cont(i_ctx_t *i_ctx_p)
 	     * so that our continuation is ahead of the sub-proc's continuation.
 	     */
 	    check_estack(1);
+	    push(1);
 	    /* The push_op_estack macro increments esp before use, so we don't need to */
 	    push_op_estack(devicencolorants_cont);
 
 	    make_int(pstage, 1);
-	    push(1);
 	    *op = space[1];
 	    code = zsetcolorspace(i_ctx_p);
 	    if (code != 0)
@@ -4575,19 +4613,72 @@ static int indexedrange(i_ctx_t * i_ctx_p, ref *space, float *ptr)
 }
 static int indexedbasecolor(i_ctx_t * i_ctx_p, ref *space, int base, int *stage, int *cont, int *stack_depth)
 {
-    es_ptr ep = ++esp;
-    ref proc;
     int code;
 
     if (*stage == 0) {
+	/* Usefully /Indexed can't be the base of any other space, so we know
+	 * the current space in the graphics state is this one.
+	 */
+        gs_color_space *pcs;
+        pcs = gs_currentcolorspace(igs);
+
+	/* Update the counters */
 	*stage = 1;
 	*cont = 1;
-	check_estack(1);
-	code = array_get(imemory, space, 3, &proc);
-	if (code < 0)
-	    return code;
-        *ep = proc;	/* lookup proc */
-	return o_push_estack;
+
+	/* Indexed spaces can have *either* a procedure or a string for the
+	 * lookup.
+	 */
+	if (pcs->params.indexed.use_proc) {
+	    es_ptr ep = ++esp;
+	    ref proc;
+	    
+	    /* We have a procedure, set up the continuation to run the 
+	     * lookup procedure. (The index is already on the operand stack)
+	     */
+	    check_estack(1);
+	    code = array_get(imemory, space, 3, &proc);
+	    if (code < 0)
+		return code;
+	    *ep = proc;	/* lookup proc */
+	    return o_push_estack;
+	} else {
+	    int i, index;
+	    os_ptr op = osp;
+	    unsigned char *ptr = (unsigned char *)pcs->params.indexed.lookup.table.data;
+
+	    *stage = 0;
+	    /* We have a string, start by retrieving the index from the op stack */
+	    /* Make sure its an integer! */
+	    if (!r_has_type(op, t_integer)) 
+		return_error (e_typecheck);
+	    index = op->value.intval;
+	    /* And remove it from the stack. */
+	    pop(1);
+	    op = osp;
+
+	    /* Make sure we have enough space on the op stack to hold 
+	     * one value for each component of the alternate space 
+	     */
+	    push(pcs->params.indexed.n_comps);
+	    op -= pcs->params.indexed.n_comps - 1;
+
+	    /* Move along the lookup table, one byte for each component , the 
+	     * number of times required to get to the lookup for this index
+	     */
+	    ptr += index * pcs->params.indexed.n_comps;
+
+	    /* For all the components of the alternate space, push the value
+	     * of the component on the stack. The value is given by the byte
+	     * from the lookup table divided by 255 to give a value between 
+	     * 0 and 1.
+	     */
+	    for (i = 0; i < pcs->params.indexed.n_comps; i++, op++) {
+		float rval = (*ptr++) / 255.0;
+		make_real(op, rval);
+	    }
+	    return 0;
+	}
     } else {
 	*stage = 0;
 	*cont = 1;
@@ -4898,18 +4989,34 @@ static int devicepvalidate(i_ctx_t *i_ctx_p, ref *space, float *values, int num_
     return 0;
 }
 
+static int set_dev_space(i_ctx_t * i_ctx_p, int components)
+{
+    int code, stage = 1, cont = 0;
+    switch(components) {
+	case 1:
+	    code = setgrayspace(i_ctx_p, (ref *)0, &stage, &cont, 1);
+	    break;
+	case 3:
+	    code = setrgbspace(i_ctx_p, (ref *)0, &stage, &cont, 1);
+	    break;
+	case 4:
+	    code = setcmykspace(i_ctx_p, (ref *)0, &stage, &cont, 1);
+	    break;
+	default:
+	    code = gs_note_error(e_rangecheck);
+	    break;
+    }
+    return code;
+}
+
 /* ICCBased */
 static int iccrange(i_ctx_t * i_ctx_p, ref *space, float *ptr);
 static int seticcspace(i_ctx_t * i_ctx_p, ref *r, int *stage, int *cont, int CIESubst)
 {
     os_ptr op = osp;
-    ref     ICCdict, *tempref, *altref=NULL, *icc, *nocie;
+    ref     ICCdict, *tempref, *altref=NULL, *nocie;
     int components, code;
     float range[8];
-
-    code = dict_find_string(systemdict, ".seticcspace", &icc);
-    if (code < 0)
-	return_error(e_undefined);
 
     code = dict_find_string(systemdict, "NOCIE", &nocie);
     if (code < 0)
@@ -4951,30 +5058,10 @@ static int seticcspace(i_ctx_t * i_ctx_p, ref *r, int *stage, int *cont, int CIE
 			/* There's no /Alternate (or it is null), set a default space
 			 * based on the number of components in the ICCBased space
 			 */
-			int stage1 = 1, cont1 = 0;
-			switch(components) {
-			    case 1:
-				code = setgrayspace(i_ctx_p, (ref *)0x00, &stage1, &cont1, 1);
-				if (code != 0)
-				    return code;
-				*stage = 0;
-				break;
-			    case 3:
-				code = setrgbspace(i_ctx_p, (ref *)0x00, &stage1, &cont1, 1);
-				if (code != 0)
-				    return code;
-				*stage = 0;
-				break;
-			    case 4:
-				code = setcmykspace(i_ctx_p, (ref *)0x00, &stage1, &cont1, 1);
-				if (code != 0)
-				    return code;
-				*stage = 0;
-				break;
-			    default:
-				return_error(e_rangecheck);
-				break;
-			}
+			code = set_dev_space(i_ctx_p, components);
+			if (code != 0)
+			    return code;
+			*stage = 0;
 		    }
 		} else {
 		    code = iccrange(i_ctx_p, r, (float *)&range);
@@ -4983,21 +5070,15 @@ static int seticcspace(i_ctx_t * i_ctx_p, ref *r, int *stage, int *cont, int CIE
 		    code = dict_find_string(&ICCdict, "DataSource", &tempref);
 		    if (code < 0)
 			return code;
-		    /* Check for string based ICC and convert to a file (stage = 2) */
-		    if (!r_has_type(tempref, t_file)){
-			ref stref;
-			byte *body;
+		    /* Check for string based ICC and convert to a file */
+		    if (r_has_type(tempref, t_string)){
+                        uint n = r_size(tempref);
+                        ref rss;
 
-			(*stage)++;
-			body = ialloc_string(48, "string");
-			if (body == 0)
-			    return_error(e_VMerror);
-			memcpy(body, "{systemdict /.convertICCSource get exec} stopped",48);
-			make_string(&stref, a_all | icurrent_space, 48, body);
-			r_set_attrs(&stref, a_executable);
-			esp++;
-			ref_assign(esp, &stref);
-			return o_push_estack;
+                        code = make_rss(i_ctx_p, &rss, tempref->value.const_bytes, n, r_space(tempref), 0L, n, false);
+                        if (code < 0)
+                            return code;
+                        ref_assign(tempref, &rss);
 		    }
 		    /* Make space on operand stack to pass the ICC dictionary */
 		    push(1);
@@ -5021,30 +5102,10 @@ static int seticcspace(i_ctx_t * i_ctx_p, ref *r, int *stage, int *cont, int CIE
 			    /* We have no /Alternate in the ICC space, use hte /N key to
 			     * determine an 'appropriate' default space.
 			     */
-			    int stage1 = 1, cont1 = 0;
-			    switch(components) {
-				case 1:
-				    code = setgrayspace(i_ctx_p, (ref *)0x00, &stage1, &cont1, 1);
-				    if (code != 0)
-					return code;
-				    *stage = 0;
-				    break;
-				case 3:
-				    code = setrgbspace(i_ctx_p, (ref *)0x00, &stage1, &cont1, 1);
-				    if (code != 0)
-					return code;
-				    *stage = 0;
-				    break;
-				case 4:
-				    code = setcmykspace(i_ctx_p, (ref *)0x00, &stage1, &cont1, 1);
-				    if (code != 0)
-					return code;
-				    *stage = 0;
-				    break;
-				default:
-				    return_error(e_rangecheck);
-				    break;
-			    }
+			    code = set_dev_space(i_ctx_p, components);
+			    if (code != 0)
+			        return code;
+			    *stage = 0;
 			}
 			pop(1);
 		    }
@@ -5056,43 +5117,6 @@ static int seticcspace(i_ctx_t * i_ctx_p, ref *r, int *stage, int *cont, int CIE
 		/* All done, exit */
 		*stage = 0;
 		code = 0;
-		break;
-	    case 2:
-		/* Converted a string DataSource ICC profile into a file
-		 * using ReusableStreamDecode. See gs_cspace.ps.
-		 */
-		*stage = 1;
-		code = array_get(imemory, r, 1, &ICCdict);
-		if (code < 0)
-		    return code;
-		code = iccrange(i_ctx_p, r, (float *)&range);
-		if (code < 0)
-		    return code;
-		code = dict_find_string(&ICCdict, "N", &tempref);
-		if (code < 0)
-		    return code;
-		components = tempref->value.intval;
-
-		/* Make space on operand stack to pass the ICC dictionary */
-		push (1);
-		ref_assign(op, &ICCdict);
-		code = seticc(i_ctx_p, components, op, (float *)&range);
-		if (code < 0) {
-    		    code = dict_find_string(&ICCdict, "Alternate", &altref);
-		    if (code < 0)
-			make_null(altref);	/* no Alternate -- just use null */
-		    /* Our dictionary still on operand stack, we can reuse the
-		     * slot on the stack to hold the alternate space.
-		     */
-		    ref_assign(op, altref);
-		    /* If CIESubst, we are already substituting for CIE, so use nosubst 
-		     * to prevent further substitution!
-		     */
-		    if (CIESubst) 
-		        return setcolorspace_nosubst(i_ctx_p);
-		    else
-		        return zsetcolorspace(i_ctx_p);
-		}
 		break;
 	    default:
 		return_error (e_rangecheck);
@@ -5174,22 +5198,36 @@ static int validateiccspace(i_ctx_t * i_ctx_p, ref **r)
 		return_error(e_typecheck);
 	}
     } else {
+        ref nameref;
+
 	switch (components) {
 	    case 1:
-		code = name_enter_string(imemory, "DeviceGray", *r);
+		code = name_enter_string(imemory, "DeviceGray", &nameref);
 		break;
 	    case 3:
-		code = name_enter_string(imemory, "DeviceRGB", *r);
+		code = name_enter_string(imemory, "DeviceRGB", &nameref);
 		break;
 	    case 4:
-		code = name_enter_string(imemory, "DeviceCMYK", *r);
+		code = name_enter_string(imemory, "DeviceCMYK", &nameref);
 		break;
 	    default:
 		return_error(e_rangecheck);
 	}
+	/* In case this space is the /ALternate for a previous ICCBased space
+	 * insert the named space into the ICC dictionary. If we simply returned
+	 * the named space, as before, then we are replacing the second ICCBased
+	 * space in the first ICCBased space with the named space!
+	 */
+	code = idict_put_string(&ICCdict, "Alternate", &nameref);
+	if (code < 0)
+	    return code;
+
+	/* And now revalidate with the newly updated dictionary */
+	return validateiccspace(i_ctx_p, r);
     }
     return code;
 }
+
 static int iccalternatespace(i_ctx_t * i_ctx_p, ref *space, ref **r, int *CIESubst)
 {
     int components, code = 0;
@@ -5295,9 +5333,9 @@ static int iccrange(i_ctx_t * i_ctx_p, ref *space, float *ptr)
 	    if (code < 0)
 		return code;
 	    if (r_has_type(&valref, t_integer))
-		ptr[i * 2] = (float)valref.value.intval;
+		ptr[i] = (float)valref.value.intval;
 	    else
-		ptr[i * 2] = (float)valref.value.realval;
+		ptr[i] = (float)valref.value.realval;
 	}
     } else {
 	for (i=0;i<components;i++) {
@@ -5613,6 +5651,8 @@ setdevicecolor_cont(i_ctx_t *i_ctx_p)
      * so that our continuation is ahead of the sub-proc's continuation.
      */
     check_estack(1);
+    /* May need to push a /Device... name on the stack so make sure we have space */
+    check_ostack(1);
     /* The push_op_estack macro increments esp before use, so we don't need to */
     push_op_estack(setdevicecolor_cont);
 

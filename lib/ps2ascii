@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: ps2ascii,v 1.4 2007/05/07 11:22:07 Arabidopsis Exp $
+# $Id: ps2ascii,v 1.5 2010/07/10 22:02:35 Arabidopsis Exp $
 # Extract ASCII text from a PostScript file.  Usage:
 #	ps2ascii [infile.ps [outfile.txt]]
 # If outfile is omitted, output goes to stdout.
@@ -12,7 +12,7 @@ GS_EXECUTABLE=gs
 
 trap "rm -f _temp_.err _temp_.out" 0 1 2 15
 
-OPTIONS="-q -dNODISPLAY -dSAFER -dDELAYBIND -dWRITESYSTEMDICT -dSIMPLE"
+OPTIONS="-q -dNODISPLAY -P- -dSAFER -dDELAYBIND -dWRITESYSTEMDICT -dSIMPLE"
 if ( test $# -eq 0 ) then
 	$GS_EXECUTABLE $OPTIONS -c save -f ps2ascii.ps - -c quit
 elif ( test $# -eq 1 ) then

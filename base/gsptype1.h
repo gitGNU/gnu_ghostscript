@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsptype1.h,v 1.1 2009/04/23 23:26:13 Arabidopsis Exp $ */
+/* $Id: gsptype1.h,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
 /* Client interface to PatternType 1 Patterns */
 
 #ifndef gsptype1_INCLUDED
@@ -47,6 +41,7 @@ typedef struct gs_pattern1_template_s {
     gs_pattern_template_common;
     int PaintType;
     int TilingType;
+    bool uses_transparency;
     gs_rect BBox;
     float XStep;
     float YStep;
@@ -95,6 +90,9 @@ const gs_client_pattern *gs_getpattern(const gs_client_color *);
 
 /* Check device color for Pattern Type 1. */
 bool gx_dc_is_pattern1_color(const gx_device_color *pdevc);
+
+/* Get transparency pointer */
+void * gx_pattern1_get_transptr(const gx_device_color *pdevc);
 
 /* Check device color for clist-based Pattern Type 1. */
 bool gx_dc_is_pattern1_color_clist_based(const gx_device_color *pdevc);

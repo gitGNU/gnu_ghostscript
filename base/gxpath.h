@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxpath.h,v 1.1 2009/04/23 23:27:31 Arabidopsis Exp $ */
+/* $Id: gxpath.h,v 1.2 2010/07/10 22:02:31 Arabidopsis Exp $ */
 /* Fixed-point path procedures */
 /* Requires gxfixed.h */
 
@@ -46,9 +40,11 @@ typedef struct gx_path_s gx_path;
 /* Define 'notes' that describe the role of a path segment. */
 /* These are only for internal use; a normal segment's notes are 0. */
 typedef enum {
-    sn_none = 0,
-    sn_not_first = 1,		/* segment is in curve/arc and not first */
-    sn_from_arc = 2		/* segment is part of an arc */
+    sn_none      = 0,
+    sn_not_first = 1,           /* segment is in curve/arc and not first */
+    sn_from_arc  = 2,           /* segment is part of an arc             */
+    sn_dash_head = 4,           /* segment follows a dash break          */
+    sn_dash_tail = 8,           /* segment is followed by dash break     */
 } segment_notes;
 
 /* Debugging routines */
@@ -105,6 +101,8 @@ int gx_path_init_local_shared(gx_path * ppath, const gx_path * shared,
 /*
  * Initialize a stack-allocated pseudo-path for computing a bbox
  * for a dynamic path.
+ *
+ * Note: This bbox will always contain the origin.
  */
 void gx_path_init_bbox_accumulator(gx_path * ppath);
 
@@ -245,6 +243,7 @@ int gx_path_copy_reducing(const gx_path * ppath_old, gx_path * ppath_new,
 int gx_path_add_dash_expansion(const gx_path * /*old*/, gx_path * /*new*/,
 				  const gs_imager_state *),
       gx_path_copy_reversed(const gx_path * /*old*/, gx_path * /*new*/),
+      gx_path_append_reversed(const gx_path * /*orig*/, gx_path * /*rev*/),
       gx_path_translate(gx_path *, fixed, fixed),
       gx_path_scale_exp2_shared(gx_path *ppath, int log2_scale_x,
 				   int log2_scale_y, bool segments_shared);

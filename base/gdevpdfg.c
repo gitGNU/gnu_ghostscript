@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdfg.c,v 1.1 2009/04/23 23:26:10 Arabidopsis Exp $ */
+/* $Id: gdevpdfg.c,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
 /* Graphics state management for pdfwrite driver */
 #include "math_.h"
 #include "string_.h"
@@ -171,7 +165,9 @@ pdf_viewer_state_from_imager_state_aux(pdf_viewer_state *pvs, const gs_imager_st
     pvs->stroke_overprint = false;
     pvs->stroke_adjust = false;
     pvs->line_params.half_width = 0.5;
-    pvs->line_params.cap = 0;
+    pvs->line_params.start_cap = 0;
+    pvs->line_params.end_cap = 0;
+    pvs->line_params.dash_cap = 0;
     pvs->line_params.join = 0;
     pvs->line_params.curve_join = 0;
     pvs->line_params.miter_limit = 10.0;
@@ -193,6 +189,8 @@ pdf_viewer_state_from_imager_state(gx_device_pdf * pdev,
     pdf_viewer_state_from_imager_state_aux(&vs, pis);
     gx_hld_save_color(pis, pdevc, &vs.saved_fill_color);
     gx_hld_save_color(pis, pdevc, &vs.saved_stroke_color);
+    vs.fill_used_process_color = 0;
+    vs.stroke_used_process_color = 0;
     pdf_load_viewer_state(pdev, &vs);
 }
 
@@ -382,8 +380,8 @@ pdf_reset_color(gx_device_pdf * pdev, const gs_imager_state * pis,
 	        scn:
 		    command = ppscc->setcolorn;
 		    if (!gx_hld_saved_color_same_cspace(&temp, psc)) {
-			code = pdf_color_space(pdev, &cs_value, NULL, pcs,
-					&pdf_color_space_names, true);
+			code = pdf_color_space_named(pdev, &cs_value, NULL, pcs,
+					&pdf_color_space_names, true, NULL, 0);
 			/* fixme : creates redundant PDF objects. */
 			if (code == gs_error_rangecheck) {
 			    /* The color space can't write to PDF. */
@@ -818,6 +816,7 @@ pdf_write_spot_function(gx_device_pdf *pdev, const gx_ht_order *porder,
     uint i;
     int code = 0;
 
+    params.array_size = 0;
     params.m = 2;
     params.Domain = domain_spot;
     params.n = 1;
@@ -828,7 +827,12 @@ pdf_write_spot_function(gx_device_pdf *pdev, const gx_ht_order *porder,
      * simplicity, we always use 16.
      */
     if (num_bits > 0x10000)
-	return_error(gs_error_rangecheck);
+	/* rangecheck is a 'special case' in gdev_pdf_fill_path, if this error is encountered
+	 * then it 'falls back' to a different method assuming its handling transparency in an
+	 * old PDF output version. But if we fail to write the halftone, we want to abort
+	 * so use limitcheck instead.
+	 */
+	return_error(gs_error_limitcheck);
     params.BitsPerSample = 16;
     params.Encode = 0;
     /*
@@ -861,7 +865,7 @@ pdf_write_spot_function(gx_device_pdf *pdev, const gx_ht_order *porder,
     /* Warning from COverity that params.array_size is uninitialised. Correct */
     /* but immeidiately after copying the data Sd_init sets the copied value  */
     /* to zero, so it is not actually used uninitialised. */
-	(code = gs_function_Sd_init(&pfn, &params, mem)) >= 0
+        (code = gs_function_Sd_init(&pfn, &params, mem)) >= 0
 	) {
 	code = pdf_write_function(pdev, pfn, pid);
 	gs_function_free(pfn, false, mem);
@@ -921,7 +925,9 @@ pdf_write_spot_halftone(gx_device_pdf *pdev, const gs_spot_halftone *psht,
  notrec:
     if (i == countof(ht_functions)) {
 	/* Create and write a Function for the spot function. */
-	pdf_write_spot_function(pdev, porder, &spot_id);
+	code = pdf_write_spot_function(pdev, porder, &spot_id);
+	if (code < 0) 
+	    return code;
     }	
     *pid = id = pdf_begin_separate(pdev);
     s = pdev->strm;
@@ -1271,6 +1277,7 @@ pdf_end_gstate(gx_device_pdf *pdev, pdf_resource_t *pres)
 	
 	if (code < 0)
 	    return code;
+	pres->where_used |= pdev->used_mask;
 	code = pdf_open_page(pdev, PDF_IN_STREAM);
 	if (code < 0)
 	    return code;

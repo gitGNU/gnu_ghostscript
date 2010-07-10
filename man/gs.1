@@ -1,5 +1,5 @@
-.\" $Id: gs.1,v 1.12 2009/04/23 23:31:57 Arabidopsis Exp $
-.TH GS 1 "3 February 2009" 8.64 Ghostscript \" -*- nroff -*-
+.\" $Id: gs.1,v 1.13 2010/07/10 22:02:47 Arabidopsis Exp $
+.TH GS 1 "10 February 2010" 8.71 Ghostscript \" -*- nroff -*-
 .SH NAME
 gs \- Ghostscript (PostScript and PDF language interpreter and previewer)
 .SH SYNOPSIS
@@ -208,6 +208,13 @@ whereas \fB\-sname=35\fR is equivalent to
 .br
 	/name (35) def
 .TP
+.B \-P
+Makes Ghostscript to look first in the current directory for library files.
+By default, Ghostscript no longer looks in the current directory,
+unless, of course, the first explicitly supplied directory is "." in \fB-I\fR.
+See also the \fBINITIALIZATION FILES\fR section below, and bundled 
+\fBUse.htm\fR for detailed discussion on search paths and how Ghostcript finds files.
+.TP
 .B \-q
 Quiet startup: suppress normal startup messages, and also do the
 equivalent of \fB\-dQUIET\fR.
@@ -397,7 +404,7 @@ The various Ghostscript document files (above), especially \fBUse.htm\fR.
 See http://bugs.ghostscript.com/ and the Usenet news group 
 comp.lang.postscript.
 .SH VERSION
-This document was last revised for Ghostscript version 8.64.
+This document was last revised for Ghostscript version 8.71.
 .SH AUTHOR
 Artifex Software, Inc. are the primary maintainers
 of Ghostscript.

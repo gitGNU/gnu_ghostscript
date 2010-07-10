@@ -36,7 +36,7 @@
  *  http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
  */
 
-/* $Id: aes.c,v 1.1 2009/04/23 23:26:45 Arabidopsis Exp $ */
+/* $Id: aes.c,v 1.2 2010/07/10 22:02:24 Arabidopsis Exp $ */
 /* AES block cipher implementation from XYSSL */
 
 #include "string_.h"	/* memcmp() */

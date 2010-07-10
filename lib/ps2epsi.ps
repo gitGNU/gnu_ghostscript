@@ -1,20 +1,20 @@
+
 %    Copyright (C) 1990, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-%  This file is part of GNU ghostscript
-%
-%  GNU ghostscript is free software; you can redistribute it and/or modify it under
-%  the terms of the version 2 of the GNU General Public License as published by the Free Software
-%  Foundation.
-%
-%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-%
-%  You should have received a copy of the GNU General Public License along with
-%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-%
-% $Id: ps2epsi.ps,v 1.8 2009/04/19 13:54:38 Arabidopsis Exp $
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
+% $Id: ps2epsi.ps,v 1.9 2010/07/10 22:02:37 Arabidopsis Exp $
 % Convert an arbitrary PostScript file to an EPSI file.
 %
 % Please do not contact these users if you have questions.  They no longer
@@ -54,7 +54,13 @@ ps2edict begin
 
 				% The main procedure
   /ps2epsi
-   {				% Open the file
+   {			
+	% bbox written to outfile by bbox device from ps2epsi command file
+	outfile (r) file /epsifile exch def
+	/BBoxString epsifile 256 string readline pop def
+	/HiresBBoxString epsifile 256 string readline pop def
+	epsifile closefile
+			% Open the file
      outfile (w) file /epsifile exch def
 					% Get the device parameters
      currentdevice getdeviceprops .dicttomark 
@@ -161,17 +167,8 @@ ps2edict begin
 	  dup rm gt
           % If the new index is greater, we save index and element
           { /rm exch def } { pop } ifelse
-	} {
-          pop
-        } ifelse
+	} if
       } for
-
-     % Calculate the bounding box values.
-     % Note that these must be corrected to produce closed-open intervals.
-     /llx lm def
-     /lly devheight bm sub 1 sub def
-     /urx rm 1 add def
-     /ury devheight tm sub def
 
     % Write out the magic string and bounding box information
      epsifile (%!PS-Adobe-2.0 EPSF-1.2\n) writestring
@@ -196,11 +193,8 @@ ps2edict begin
 	 epsifile (\n) writestring
      epsifile flushfile
 
-     epsifile (%%BoundingBox: ) writestring
-     epsifile llx write==only epsifile ( ) writestring
-     epsifile lly write==only epsifile ( ) writestring
-     epsifile urx write==only epsifile ( ) writestring
-     epsifile ury write==
+	epsifile BBoxString writestring epsifile (\r) writestring
+	epsifile HiresBBoxString writestring epsifile (\r) writestring
 
     % Define character and bit widths for the output line buffer:
      /cwidth rm lm sub 1 add def

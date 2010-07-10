@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxtext.h,v 1.1 2009/04/23 23:26:46 Arabidopsis Exp $ */
+/* $Id: gxtext.h,v 1.2 2010/07/10 22:02:24 Arabidopsis Exp $ */
 /* Driver text interface implementation support */
 
 #ifndef gxtext_INCLUDED
@@ -48,18 +42,21 @@ typedef struct gs_text_returned_s {
  * If the current font is not composite, depth = -1.
  * If the current font is composite, 0 <= depth <= MAX_FONT_STACK.
  * items[0] through items[depth] are occupied.
- * items[0].font is the root font; items[0].index = 0.
+ * items[0].font is the root font.
  * The root font must be composite, but may be of any map type.
  * items[0..N-1] are modal composite fonts, for some N <= depth.
  * items[N..depth-1] are non-modal composite fonts.
- * items[depth] is a base (non-composite) font.
+ * items[depth] is a base font or a CIDFont (i.e. non-composite font).
  * Note that if depth >= 0, the font member of the graphics state
  * for a base font BuildChar/Glyph is the same as items[depth].font.
  */
 #define MAX_FONT_STACK 5
 typedef struct gx_font_stack_item_s {
     gs_font *font;		/* font at this level */
-    uint index;			/* index of this font in parent's Encoding */
+    uint index;			/* if *font is a composite font, this is a font number of
+				   selected discendant font (index in Encoding).
+				   if *font is a CIDFont, an index of selected FDArray font.
+				   zero otherwise. */
 } gx_font_stack_item_t;
 typedef struct gx_font_stack_s {
     int depth;

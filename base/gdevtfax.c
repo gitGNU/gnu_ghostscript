@@ -1,35 +1,30 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevtfax.c,v 1.1 2009/04/23 23:27:04 Arabidopsis Exp $ */
+/* $Id: gdevtfax.c,v 1.2 2010/07/10 22:02:26 Arabidopsis Exp $ */
 /* TIFF and TIFF/fax devices */
-#include "gdevprn.h"
 #include "gdevtifs.h"
+#include "gdevprn.h"
 #include "strimpl.h"
 #include "scfx.h"
 #include "gdevfax.h"
-#include "gdevtfax.h"		/* for gdev_fax_print_page_stripped proto */
 
 /* ---------------- TIFF/fax output ---------------- */
 
 /* The device descriptors */
 
+static dev_proc_open_device(tfax_open);
+static dev_proc_close_device(tfax_close);
 static dev_proc_get_params(tfax_get_params);
 static dev_proc_put_params(tfax_put_params);
 static dev_proc_print_page(tiffcrle_print_page);
@@ -44,48 +39,91 @@ struct gx_device_tfax_s {
     long MaxStripSize;		/* 0 = no limit, other is UNCOMPRESSED limit */
                                 /* The type and range of FillOrder follows TIFF 6 spec  */
     int  FillOrder;             /* 1 = lowest column in the high-order bit, 2 = reverse */
-    gdev_tiff_state tiff;	/* for TIFF output only */
+    bool  BigEndian;            /* true = big endian; false = little endian*/
+    uint16 Compression;		/* same values as TIFFTAG_COMPRESSION */
+
+    TIFF *tif;			/* For TIFF output only */
 };
 typedef struct gx_device_tfax_s gx_device_tfax;
 
 /* Define procedures that adjust the paper size. */
 static const gx_device_procs gdev_tfax_std_procs =
-    prn_params_procs(gdev_prn_open, gdev_prn_output_page, gdev_prn_close,
+    prn_params_procs(tfax_open, tiff_output_page, tfax_close,
 		     tfax_get_params, tfax_put_params);
 
-#define TFAX_DEVICE(dname, print_page)\
+#define TFAX_DEVICE(dname, print_page, compr)\
 {\
     FAX_DEVICE_BODY(gx_device_tfax, gdev_tfax_std_procs, dname, print_page),\
-    0				/* unlimited strip size byte count */,\
-    1                           /* lowest column in the high-order bit */\
+    TIFF_DEFAULT_STRIP_SIZE	/* strip size byte count */,\
+    1                           /* lowest column in the high-order bit */,\
+    arch_is_big_endian          /* default to native endian (i.e. use big endian iff the platform is so*/,\
+    compr,\
+    NULL\
 }
 
 const gx_device_tfax gs_tiffcrle_device =
-    TFAX_DEVICE("tiffcrle", tiffcrle_print_page);
+    TFAX_DEVICE("tiffcrle", tiffcrle_print_page, COMPRESSION_CCITTRLE);
 
 const gx_device_tfax gs_tiffg3_device =
-    TFAX_DEVICE("tiffg3", tiffg3_print_page);
+    TFAX_DEVICE("tiffg3", tiffg3_print_page, COMPRESSION_CCITTFAX3);
 
 const gx_device_tfax gs_tiffg32d_device =
-    TFAX_DEVICE("tiffg32d", tiffg32d_print_page);
+    TFAX_DEVICE("tiffg32d", tiffg32d_print_page, COMPRESSION_CCITTFAX3);
 
 const gx_device_tfax gs_tiffg4_device =
-    TFAX_DEVICE("tiffg4", tiffg4_print_page);
+    TFAX_DEVICE("tiffg4", tiffg4_print_page, COMPRESSION_CCITTFAX4);
 
-/* Get/put the MaxStripSize parameter. */
+
+static int
+tfax_open(gx_device * pdev)
+{
+    gx_device_printer * const ppdev = (gx_device_printer *)pdev;
+    int code;
+
+    ppdev->file = NULL;
+    code = gdev_prn_allocate_memory(pdev, NULL, 0, 0);
+    if (code < 0)
+	return code;
+
+    if (ppdev->OpenOutputFile)
+	if ((code = gdev_prn_open_printer_seekable(pdev, 1, true)) < 0)
+	    return code;
+
+    return code;
+}
+
+static int
+tfax_close(gx_device * pdev)
+{
+    gx_device_tfax *const tfdev = (gx_device_tfax *)pdev;
+
+    TIFFCleanup(tfdev->tif);
+
+    return gdev_prn_close(pdev);
+}
+
 static int
 tfax_get_params(gx_device * dev, gs_param_list * plist)
 {
     gx_device_tfax *const tfdev = (gx_device_tfax *)dev;
     int code = gdev_fax_get_params(dev, plist);
     int ecode = code;
-    
+    gs_param_string comprstr;
+
+
     if ((code = param_write_long(plist, "MaxStripSize", &tfdev->MaxStripSize)) < 0)
         ecode = code;
     if ((code = param_write_int(plist, "FillOrder", &tfdev->FillOrder)) < 0)
         ecode = code;
+    if ((code = param_write_bool(plist, "BigEndian", &tfdev->BigEndian)) < 0)
+        ecode = code;
+    if ((code = tiff_compression_param_string(&comprstr, tfdev->Compression)) < 0 ||
+	(code = param_write_string(plist, "Compression", &comprstr)) < 0)
+	ecode = code;
+
     return ecode;
 }
+
 static int
 tfax_put_params(gx_device * dev, gs_param_list * plist)
 {
@@ -95,6 +133,9 @@ tfax_put_params(gx_device * dev, gs_param_list * plist)
     long mss = tfdev->MaxStripSize;
     int fill_order = tfdev->FillOrder;
     const char *param_name;
+    bool big_endian = tfdev->BigEndian;
+    uint16 compr = tfdev->Compression;
+    gs_param_string comprstr;
 
     switch (code = param_read_long(plist, (param_name = "MaxStripSize"), &mss)) {
         case 0:
@@ -125,6 +166,29 @@ tfax_put_params(gx_device * dev, gs_param_list * plist)
 	case 1:
 	    break;
     }
+    
+    /* Read BigEndian option as bool */ 
+    switch (code = param_read_bool(plist, (param_name = "BigEndian"), &big_endian)) {
+	default:
+	    ecode = code;
+	    param_signal_error(plist, param_name, ecode);
+        case 0:
+	case 1:
+	    break;
+    }
+    /* Read Compression */
+    switch (code = param_read_string(plist, (param_name = "Compression"), &comprstr)) {
+	case 0:
+	    if ((ecode = tiff_compression_id(&compr, &comprstr)) < 0 ||
+		!tiff_compression_allowed(compr, dev->color_info.depth))
+		param_signal_error(plist, param_name, ecode);
+	    break;
+	case 1:
+	    break;
+	default:
+	    ecode = code;
+	    param_signal_error(plist, param_name, ecode);
+    }
 
     if (ecode < 0)
 	return ecode;
@@ -134,62 +198,11 @@ tfax_put_params(gx_device * dev, gs_param_list * plist)
 
     tfdev->MaxStripSize = mss;
     tfdev->FillOrder = fill_order;
+    tfdev->BigEndian = big_endian;
+    tfdev->Compression = compr;
     return code;
 }
 
-/* Send the page to the printer. */
-/* Print a page with a specified width, which may differ from	*/
-/* the width stored in the device. The TIFF file may have	*/
-/* multiple strips of height 'rows'.				*/
-static int
-gdev_stream_print_page_strips(gx_device_printer * pdev, FILE * prn_stream,
-			      const stream_template * temp, stream_state * ss,
-			      int width, long rows_per_strip)
-{
-    gx_device_tfax *const tfdev = (gx_device_tfax *)pdev;
-    int row, row_next;
-    int code = 0;
-
-    for (row = 0; row < pdev->height; row = row_next) {
-	row_next = min(row + rows_per_strip, pdev->height);
-	code = gdev_fax_print_strip(pdev, prn_stream, temp, ss, width,
-				    row, row_next);
-	if (code < 0)
-	    break;
-	gdev_tiff_end_strip(&tfdev->tiff, prn_stream);
-
-    }
-    return code;
-}
-
-/* Print a page with a specified width, which may differ from the */
-/* width stored in the device. */
-static int
-gdev_stream_print_page_width(gx_device_printer * pdev, FILE * prn_stream,
-			     const stream_template * temp, stream_state * ss,
-			     int width)
-{
-    return gdev_stream_print_page_strips(pdev, prn_stream, temp, ss,
-					 width, pdev->height);
-}
-
-static int
-gdev_stream_print_page(gx_device_printer * pdev, FILE * prn_stream,
-		       const stream_template * temp, stream_state * ss)
-{
-    return gdev_stream_print_page_width(pdev, prn_stream, temp, ss,
-					pdev->width);
-}
-
-/* Print a fax page.  Other fax drivers use this. */
-int
-gdev_fax_print_page_stripped(gx_device_printer * pdev, FILE * prn_stream,
-		    stream_CFE_state * ss, long rows)
-{
-    return gdev_stream_print_page_strips(pdev, prn_stream, &s_CFE_template,
-					 (stream_state *)ss, ss->Columns,
-					 rows);
-}
 
 /* ---------------- Other TIFF output ---------------- */
 
@@ -201,122 +214,103 @@ static dev_proc_print_page(tifflzw_print_page);
 static dev_proc_print_page(tiffpack_print_page);
 
 const gx_device_tfax gs_tifflzw_device = {
-    prn_device_std_body(gx_device_tfax, prn_std_procs, "tifflzw",
+    prn_device_std_body(gx_device_tfax, gdev_tfax_std_procs, "tifflzw",
 			DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
 			X_DPI, Y_DPI,
 			0, 0, 0, 0,	/* margins */
-			1, tifflzw_print_page)
+			1, tifflzw_print_page),
+    1				/* AdjustWidth, not used */,
+    TIFF_DEFAULT_STRIP_SIZE	/* strip size byte count */,
+    1                           /* lowest column in the high-order bit, not used */,
+    arch_is_big_endian          /* default to native endian (i.e. use big endian iff the platform is so*/,
+    COMPRESSION_LZW
 };
 
 const gx_device_tfax gs_tiffpack_device = {
-    prn_device_std_body(gx_device_tfax, prn_std_procs, "tiffpack",
+    prn_device_std_body(gx_device_tfax, gdev_tfax_std_procs, "tiffpack",
 			DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
 			X_DPI, Y_DPI,
 			0, 0, 0, 0,	/* margins */
-			1, tiffpack_print_page)
+			1, tiffpack_print_page),
+    1				/* AdjustWidth, not used */,
+    TIFF_DEFAULT_STRIP_SIZE	/* strip size byte count */,
+    1                           /* lowest column in the high-order bit, not used */,
+    arch_is_big_endian          /* default to native endian (i.e. use big endian iff the platform is so*/,
+    COMPRESSION_PACKBITS
 };
 
-/* Define the TIFF directory we use, beyond the standard entries. */
-/* NB: this array is sorted by tag number (assumed below) */
-typedef struct tiff_mono_directory_s {
-    TIFF_dir_entry BitsPerSample;
-    TIFF_dir_entry Compression;
-    TIFF_dir_entry Photometric;
-    TIFF_dir_entry FillOrder;
-    TIFF_dir_entry SamplesPerPixel;
-    TIFF_dir_entry T4T6Options;
-    /* Don't use CleanFaxData. */
-    /*  TIFF_dir_entry  CleanFaxData;   */
-} tiff_mono_directory;
-static const tiff_mono_directory dir_mono_template =
-{
-    {TIFFTAG_BitsPerSample, TIFF_SHORT, 1, 1},
-    {TIFFTAG_Compression, TIFF_SHORT, 1, Compression_CCITT_T4},
-    {TIFFTAG_Photometric, TIFF_SHORT, 1, Photometric_min_is_white},
-    {TIFFTAG_FillOrder, TIFF_SHORT, 1, FillOrder_MSB2LSB},
-    {TIFFTAG_SamplesPerPixel, TIFF_SHORT, 1, 1},
-    {TIFFTAG_T4Options, TIFF_LONG, 1, 0},
-	/* { TIFFTAG_CleanFaxData,      TIFF_SHORT, 1, CleanFaxData_clean }, */
-};
 
 /* Forward references */
-static int tfax_begin_page(gx_device_tfax *, FILE *,
-			    const tiff_mono_directory *, int);
+static int tfax_begin_page(gx_device_tfax * tfdev, FILE * file, int width);
 
-/* Print a fax-encoded page. */
-static int
-tifff_print_page(gx_device_printer * dev, FILE * prn_stream,
-		 stream_CFE_state * pstate, tiff_mono_directory * pdir)
+static void
+tfax_set_fields(gx_device_tfax *tfdev)
 {
-    gx_device_tfax *const tfdev = (gx_device_tfax *)dev;
-    int code;
+    short fillorder = tfdev->FillOrder == 1 ? FILLORDER_MSB2LSB : FILLORDER_LSB2MSB;
 
-    pdir->FillOrder.value = tfdev->FillOrder;
-    tfax_begin_page(tfdev, prn_stream, pdir, pstate->Columns);
-    pstate->FirstBitLowOrder = tfdev->FillOrder == 2;
-    code = gdev_fax_print_page_stripped(dev, prn_stream, pstate, tfdev->tiff.rows);
-    gdev_tiff_end_page(&tfdev->tiff, prn_stream);
-    return code;
+    TIFFSetField(tfdev->tif, TIFFTAG_BITSPERSAMPLE, 1);
+    TIFFSetField(tfdev->tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISWHITE);
+    TIFFSetField(tfdev->tif, TIFFTAG_FILLORDER, fillorder);
+    TIFFSetField(tfdev->tif, TIFFTAG_SAMPLESPERPIXEL, 1);
+
+    tiff_set_compression((gx_device_printer *)tfdev,
+			 tfdev->tif,
+			 tfdev->Compression,
+			 tfdev->MaxStripSize);
 }
+
 static int
 tiffcrle_print_page(gx_device_printer * dev, FILE * prn_stream)
 {
-    stream_CFE_state state;
-    tiff_mono_directory dir;
+    gx_device_tfax *tfdev = (gx_device_tfax *)dev;
 
-    gdev_fax_init_fax_state(&state, (gx_device_fax *)dev);
-    state.EndOfLine = false;
-    state.EncodedByteAlign = true;
-    dir = dir_mono_template;
-    dir.Compression.value = Compression_CCITT_RLE;
-    dir.T4T6Options.tag = TIFFTAG_T4Options;
-    dir.T4T6Options.value = T4Options_fill_bits;
-    return tifff_print_page(dev, prn_stream, &state, &dir);
+    tfax_begin_page(tfdev, prn_stream, gdev_fax_adjusted_width(dev->width));
+
+    tfax_set_fields(tfdev);
+
+    return tiff_print_page(dev, tfdev->tif);
 }
+
 static int
 tiffg3_print_page(gx_device_printer * dev, FILE * prn_stream)
 {
-    stream_CFE_state state;
-    tiff_mono_directory dir;
+    gx_device_tfax *tfdev = (gx_device_tfax *)dev;
 
-    gdev_fax_init_fax_state(&state, (gx_device_fax *)dev);
-    state.EndOfLine = true;
-    state.EncodedByteAlign = true;
-    dir = dir_mono_template;
-    dir.Compression.value = Compression_CCITT_T4;
-    dir.T4T6Options.tag = TIFFTAG_T4Options;
-    dir.T4T6Options.value = T4Options_fill_bits;
-    return tifff_print_page(dev, prn_stream, &state, &dir);
+    tfax_begin_page(tfdev, prn_stream, gdev_fax_adjusted_width(dev->width));
+
+    tfax_set_fields(tfdev);
+    if (tfdev->Compression == COMPRESSION_CCITTFAX3)
+	TIFFSetField(tfdev->tif, TIFFTAG_GROUP3OPTIONS, GROUP3OPT_FILLBITS);
+
+    return tiff_print_page(dev, tfdev->tif);
 }
+
 static int
 tiffg32d_print_page(gx_device_printer * dev, FILE * prn_stream)
 {
-    stream_CFE_state state;
-    tiff_mono_directory dir;
+    gx_device_tfax *tfdev = (gx_device_tfax *)dev;
 
-    gdev_fax_init_fax_state(&state, (gx_device_fax *)dev);
-    state.K = (dev->y_pixels_per_inch < 100 ? 2 : 4);
-    state.EndOfLine = true;
-    state.EncodedByteAlign = true;
-    dir = dir_mono_template;
-    dir.Compression.value = Compression_CCITT_T4;
-    dir.T4T6Options.tag = TIFFTAG_T4Options;
-    dir.T4T6Options.value = T4Options_2D_encoding | T4Options_fill_bits;
-    return tifff_print_page(dev, prn_stream, &state, &dir);
+    tfax_begin_page(tfdev, prn_stream, gdev_fax_adjusted_width(dev->width));
+
+    tfax_set_fields(tfdev);
+    if (tfdev->Compression == COMPRESSION_CCITTFAX3)
+	TIFFSetField(tfdev->tif, TIFFTAG_GROUP3OPTIONS, GROUP3OPT_2DENCODING | GROUP3OPT_FILLBITS);
+
+    return tiff_print_page(dev, tfdev->tif);
 }
+
 static int
 tiffg4_print_page(gx_device_printer * dev, FILE * prn_stream)
 {
-    stream_CFE_state state;
-    tiff_mono_directory dir;
+    gx_device_tfax *tfdev = (gx_device_tfax *)dev;
 
-    gdev_fax_init_fax_state(&state, (gx_device_fax *)dev);
-    state.K = -1;
-    /*state.EncodedByteAlign = false; *//* no fill_bits option for T6 */
-    dir = dir_mono_template;
-    dir.Compression.value = Compression_CCITT_T6;
-    dir.T4T6Options.tag = TIFFTAG_T6Options;
-    return tifff_print_page(dev, prn_stream, &state, &dir);
+    tfax_begin_page(tfdev, prn_stream, gdev_fax_adjusted_width(dev->width));
+
+    tfax_set_fields(tfdev);
+    if (tfdev->Compression == COMPRESSION_CCITTFAX4)
+	TIFFSetField(tfdev->tif, TIFFTAG_GROUP4OPTIONS, 0);
+
+    return tiff_print_page(dev, tfdev->tif);
 }
 
 /* Print an LZW page. */
@@ -324,22 +318,12 @@ static int
 tifflzw_print_page(gx_device_printer * dev, FILE * prn_stream)
 {
     gx_device_tfax *const tfdev = (gx_device_tfax *)dev;
-    tiff_mono_directory dir;
-    stream_LZW_state state;
-    int code;
 
-    dir = dir_mono_template;
-    dir.Compression.value = Compression_LZW;
-    dir.FillOrder.value = FillOrder_MSB2LSB;
-    tfax_begin_page(tfdev, prn_stream, &dir, dev->width);
-    state.InitialCodeLength = 8;
-    state.FirstBitLowOrder = false;
-    state.BlockData = false;
-    state.EarlyChange = 1;	/* PLRM is sort of confusing, but this is correct */
-    code = gdev_stream_print_page(dev, prn_stream, &s_LZWE_template,
-				  (stream_state *) & state);
-    gdev_tiff_end_page(&tfdev->tiff, prn_stream);
-    return code;
+    tfax_begin_page(tfdev, prn_stream, dev->width);
+    tfax_set_fields(tfdev);
+    TIFFSetField(tfdev->tif, TIFFTAG_FILLORDER, FILLORDER_MSB2LSB);
+
+    return tiff_print_page(dev, tfdev->tif);
 }
 
 /* Print a PackBits page. */
@@ -347,37 +331,32 @@ static int
 tiffpack_print_page(gx_device_printer * dev, FILE * prn_stream)
 {
     gx_device_tfax *const tfdev = (gx_device_tfax *)dev;
-    tiff_mono_directory dir;
-    stream_RLE_state state;
-    int code;
 
-    dir = dir_mono_template;
-    dir.Compression.value = Compression_PackBits;
-    dir.FillOrder.value = FillOrder_MSB2LSB;
-    tfax_begin_page(tfdev, prn_stream, &dir, dev->width);
-    state.EndOfData = false;
-    state.record_size = gdev_mem_bytes_per_scan_line((gx_device *) dev);
-    code = gdev_stream_print_page(dev, prn_stream, &s_RLE_template,
-				  (stream_state *) & state);
-    gdev_tiff_end_page(&tfdev->tiff, prn_stream);
-    return code;
+    tfax_begin_page(tfdev, prn_stream, dev->width);
+    tfax_set_fields(tfdev);
+    TIFFSetField(tfdev->tif, TIFFTAG_FILLORDER, FILLORDER_MSB2LSB);
+
+    return tiff_print_page(dev, tfdev->tif);
 }
 
 /* Begin a TIFF fax page. */
 static int
-tfax_begin_page(gx_device_tfax * tfdev, FILE * fp,
-		const tiff_mono_directory * pdir, int width)
+tfax_begin_page(gx_device_tfax * tfdev, FILE * file, int width)
 {
+    gx_device_printer *const pdev = (gx_device_printer *)tfdev;
     /* Patch the width to reflect fax page width adjustment. */
     int save_width = tfdev->width;
     int code;
 
+    /* open the TIFF device */
+    if (gdev_prn_file_is_new(pdev)) {
+	tfdev->tif = tiff_from_filep(pdev->dname, file, tfdev->BigEndian);
+	if (!tfdev->tif)
+	    return_error(gs_error_invalidfileaccess);
+    }
+
     tfdev->width = width;
-    code = gdev_tiff_begin_page((gx_device_printer *) tfdev,
-				&tfdev->tiff, fp,
-				(const TIFF_dir_entry *)pdir,
-				sizeof(*pdir) / sizeof(TIFF_dir_entry),
-				NULL, 0, tfdev->MaxStripSize);
+    code = tiff_set_fields_for_printer(pdev, tfdev->tif);
     tfdev->width = save_width;
     return code;
 }

@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdft.c,v 1.1 2009/04/23 23:25:54 Arabidopsis Exp $ */
+/* $Id: gdevpdft.c,v 1.2 2010/07/10 22:02:17 Arabidopsis Exp $ */
 /* transparency processing for PDF-writing driver */
 #include "gx.h"
 #include "string_.h"
@@ -109,8 +103,8 @@ pdf_make_group_dict(gx_device_pdf * pdev, const gs_pdf14trans_params_t * pparams
     if (gstate != NULL) {
 	const gs_color_space *cs = gstate->color_space;
 
-	code = pdf_color_space(pdev, &cs_value, NULL, cs,
-		&pdf_color_space_names, false);
+	code = pdf_color_space_named(pdev, &cs_value, NULL, cs,
+		&pdf_color_space_names, false, NULL, 0);
 	if (code < 0)
 	    return code;
 	code = cos_dict_put_c_key(group_dict, "/CS", &cs_value);
@@ -121,6 +115,7 @@ pdf_make_group_dict(gx_device_pdf * pdev, const gs_pdf14trans_params_t * pparams
     code = pdf_substitute_resource(pdev, &pres_group, resourceGroup, NULL, false);
     if (code < 0)
 	return code;
+    pres_group->where_used |= pdev->used_mask;
     *pdict = (cos_dict_t *)pres_group->object;
     return 0;
 }
@@ -217,6 +212,8 @@ pdf_end_transparency_group(gs_imager_state * pis, gx_device_pdf * pdev)
 {
     int bottom = (pdev->ResourcesBeforeUsage ? 1 : 0);
 
+    if (!is_in_page(pdev)) 
+	return 0;	/* corresponds to check in pdf_begin_transparency_group */
     if (pdev->image_with_SMask) {
 	/* An internal group for the image implementation. 
 	   See pdf_begin_transparency_group. */
@@ -238,6 +235,8 @@ pdf_end_transparency_group(gs_imager_state * pis, gx_device_pdf * pdev)
 	code = pdf_substitute_resource(pdev, &pres, resourceXObject, NULL, false);
 	if (code < 0)
 	    return code;
+	/* We need to update the 'where_used' field, in case we substituted a resource */
+	pres->where_used |= pdev->used_mask;
 	sputc(pdev->strm,'/');
 	sputs(pdev->strm, (const byte *)pres->rname, strlen(pres->rname), &ignore);
 	sputs(pdev->strm, (const byte *)" Do\n", 4, &ignore);
@@ -308,6 +307,8 @@ pdf_end_transparency_mask(gs_imager_state * pis, gx_device_pdf * pdev,
 	code = pdf_substitute_resource(pdev, &pres, resourceXObject, NULL, false);
 	if (code < 0)
 	    return 0;
+	/* We need to update the 'where_used' field, in case we substituted a resource */
+	pres->where_used |= pdev->used_mask;
 	sprintf(buf, "%ld 0 R", pdf_resource_id(pres));
 	code = cos_dict_put_c_key_string((cos_dict_t *)pdev->pres_soft_mask_dict->object,
 		"/G", (const byte *)buf, strlen(buf));
@@ -317,6 +318,7 @@ pdf_end_transparency_mask(gs_imager_state * pis, gx_device_pdf * pdev,
 					resourceSoftMaskDict, NULL, false);
 	if (code < 0)
 	    return code;
+	pdev->pres_soft_mask_dict->where_used |= pdev->used_mask;
 	pis->soft_mask_id = pdev->pres_soft_mask_dict->object->id;
 	pdev->pres_soft_mask_dict = NULL;
     }
@@ -359,6 +361,12 @@ gdev_pdf_create_compositor(gx_device *dev,
 		return pdf_end_transparency_mask(pis, pdev, params);
 	    case PDF14_SET_BLEND_PARAMS:
 		return pdf_set_blend_params(pis, pdev, params);
+            case PDF14_PUSH_TRANS_STATE:
+                return 0;
+            case PDF14_POP_TRANS_STATE:
+                return 0;
+
+
 	    default :
 		return_error(gs_error_unregistered); /* Must not happen. */
 	}
@@ -402,6 +410,7 @@ gdev_pdf_begin_transparency_mask(gx_device *dev,
 
 int
 gdev_pdf_end_transparency_mask(gx_device *dev,
+    gs_imager_state *pis,
     gs_transparency_mask_t **pptm)
 {
     return 0;

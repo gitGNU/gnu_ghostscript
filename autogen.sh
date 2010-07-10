@@ -1,7 +1,7 @@
 #!/bin/sh
 # Run this to set up the build system: configure, makefiles, etc.
 
-# $Id: autogen.sh,v 1.8 2009/04/23 23:31:55 Arabidopsis Exp $
+# $Id: autogen.sh,v 1.9 2010/07/10 22:02:45 Arabidopsis Exp $
 
 package="gnu-ghostscript"
 

@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpxut.c,v 1.1 2009/04/23 23:26:18 Arabidopsis Exp $ */
+/* $Id: gdevpxut.c,v 1.2 2010/07/10 22:02:20 Arabidopsis Exp $ */
 /* Utilities for PCL XL generation */
 #include "math_.h"
 #include "string_.h"
@@ -148,21 +142,32 @@ px_write_select_media(stream *s, const gx_device *dev,
     float w = dev->width / dev->HWResolution[0],
 	h = dev->height / dev->HWResolution[1];
     int i;
-    pxeMediaSize_t size;
+    pxeMediaSize_t size = eDefaultPaperSize;
     byte tray = eAutoSelect;
+    bool match_found = false;
 
-    /* The default is eLetterPaper, media size 0. */
+    /* The default is eDefaultPaperSize (=96), but we'll emit CustomMediaSize */
+    /* 0.05 = 30@r600 - one of the test files is 36 off and within 5.0/72@600 */
     for (i = countof(media_sizes) - 2; i > 0; --i)
-	if (fabs(media_sizes[i].width - w) < 5.0 / 72 &&
-	    fabs(media_sizes[i].height - h) < 5.0 / 72
-	    )
+	if (fabs(media_sizes[i].width - w) < 0.05 &&
+	    fabs(media_sizes[i].height - h) < 0.05
+	    ) {
+	    match_found = true;
+	    size = media_sizes[i].ms;
 	    break;
-    size = media_sizes[i].ms;
+	}
     /*
-     * According to the PCL XL documentation, MediaSize must always
+     * According to the PCL XL documentation, MediaSize/CustomMediaSize must always
      * be specified, but MediaSource is optional.
      */
-    px_put_uba(s, (byte)size, pxaMediaSize);
+    if (match_found) {
+        /* standard media */
+        px_put_uba(s, (byte)size, pxaMediaSize);
+    } else {
+        /* CustomMediaSize in Inches */
+        px_put_rpa(s, w, h, pxaCustomMediaSize);
+        px_put_uba(s, (byte)eInch, pxaCustomMediaSizeUnits);
+    }
 
     if (media_source != NULL)
 	tray = *media_source;
@@ -246,9 +251,11 @@ px_put_uba(stream *s, byte b, px_attribute_t a)
 }
 
 void
-px_put_s(stream * s, uint i)
+px_put_s(stream * s, int i)
 {
     sputc(s, (byte) i);
+    if (i < 0)
+       i |= 0x8000;
     sputc(s, (byte) (i >> 8));
 }
 void
@@ -293,22 +300,54 @@ void
 px_put_ss(stream * s, int i)
 {
     sputc(s, pxt_sint16);
-    px_put_s(s, (uint) i);
+    px_put_s(s, i);
 }
 void
 px_put_ssp(stream * s, int ix, int iy)
 {
     sputc(s, pxt_sint16_xy);
-    px_put_s(s, (uint) ix);
-    px_put_s(s, (uint) iy);
+    px_put_s(s, ix);
+    px_put_s(s, iy);
 }
 
 void
 px_put_l(stream * s, ulong l)
 {
-    px_put_s(s, (uint) l);
-    px_put_s(s, (uint) (l >> 16));
+    sputc(s, (byte) l);
+    sputc(s, (byte) (l >> 8));
+    sputc(s, (byte) (l >> 16));
+    sputc(s, (byte) (l >> 24));
 }
+
+/*
+    The single-precison IEEE float is represented with 32-bit as follows:
+
+    1      8          23
+    sign | exponent | matissa_bits
+
+    switch(exponent):
+    case 0:
+        (-1)^sign * 2^(-126) * 0.<matissa_bits>_base2
+    case 0xFF:
+        +- infinity
+    default: (0x01 - 0xFE)
+        (-1)^sign * 2^(exponent - 127) * 1.<matissa_bits>_base2
+
+    The "1." part is not coded since it is always "1.".
+
+    To uses frexp, which returns
+        0.<matissa_bits>_base2 * 2^exp
+    We need to think of it as:
+        1.<matissa_bits,drop_MSB>_base2 * 2^(exp-1)
+
+    2009: the older version of this code has always been wrong (since 2000),
+    missing the -1 (the number was wrong by a factor of 2). Checked against
+    inserting hexdump code and compared with python snipplets (and pxldis):
+
+    import struct
+    for x in struct.pack("f", number):
+        hex(ord(x))
+*/
 
 void
 px_put_r(stream * s, floatp r)
@@ -316,21 +355,40 @@ px_put_r(stream * s, floatp r)
     int exp;
     long mantissa = (long)(frexp(r, &exp) * 0x1000000);
 
+    /* we can go a bit lower than -126 and represent:
+           2^(-126) * 0.[22 '0' then '1']_base2 = 2 ^(146) * 0.1_base2
+       but it is simplier for such small number to be zero. */
     if (exp < -126)
 	mantissa = 0, exp = 0;	/* unnormalized */
+    /* put the sign bit in the right place */
     if (mantissa < 0)
 	exp += 128, mantissa = -mantissa;
     /* All quantities are little-endian. */
     spputc(s, (byte) mantissa);
     spputc(s, (byte) (mantissa >> 8));
-    spputc(s, (byte) (((exp + 127) << 7) + ((mantissa >> 16) & 0x7f)));
-    spputc(s, (byte) ((exp + 127) >> 1));
+    spputc(s, (byte) (((exp + 126) << 7) + ((mantissa >> 16) & 0x7f)));
+    spputc(s, (byte) ((exp + 126) >> 1));
 }
 void
 px_put_rl(stream * s, floatp r)
 {
     spputc(s, pxt_real32);
     px_put_r(s, r);
+}
+
+void
+px_put_rp(stream * s, floatp rx, floatp ry)
+{
+    spputc(s, pxt_real32_xy);
+    px_put_r(s, rx);
+    px_put_r(s, ry);
+}
+
+void
+px_put_rpa(stream * s, floatp rx, floatp ry, px_attribute_t a)
+{
+    px_put_rp(s, rx, ry);
+    px_put_a(s, a);
 }
 
 void

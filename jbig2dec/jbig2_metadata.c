@@ -1,24 +1,21 @@
 /*
     jbig2dec
-    
+
     Copyright (C) 2003 Artifex Software, Inc.
-    
+
     This software is distributed under license and may not
     be copied, modified or distributed except as expressly
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
-                                                                                
-    For information on commercial licensing, go to
-    http://www.artifex.com/licensing/ or contact
-    Artifex Software, Inc.,  101 Lucas Valley Road #110,
-    San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-    $Id: jbig2_metadata.c,v 1.5 2007/09/11 15:24:52 Arabidopsis Exp $
+    For further licensing information refer to http://artifex.com/ or
+    contact Artifex Software, Inc., 7 Mt. Lassen Drive - Suite A-134,
+    San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif 
+#endif
 #include "os_types.h"
 
 #include <stdlib.h>
@@ -32,7 +29,7 @@
 Jbig2Metadata *jbig2_metadata_new(Jbig2Ctx *ctx, Jbig2Encoding encoding)
 {
     Jbig2Metadata *md = jbig2_alloc(ctx->allocator, sizeof(Jbig2Metadata));
-    
+
     if (md != NULL) {
         md->encoding = encoding;
         md->entries = 0;
@@ -82,7 +79,7 @@ int jbig2_metadata_add(Jbig2Ctx *ctx, Jbig2Metadata *md,
                         const char *value, const int value_length)
 {
     char **keys, **values;
-    
+
     /* grow the array if necessary */
     if (md->entries == md->max_entries) {
         md->max_entries >>= 2;
@@ -96,18 +93,18 @@ int jbig2_metadata_add(Jbig2Ctx *ctx, Jbig2Metadata *md,
         md->keys = keys;
         md->values = values;
     }
-    
+
     /* copy the passed key,value pair */
     md->keys[md->entries] = jbig2_strndup(ctx, key, key_length);
     md->values[md->entries] = jbig2_strndup(ctx, value, value_length);
     md->entries++;
-    
+
     return 0;
 }
 
 
 /* decode an ascii comment segment 7.4.15.1 */
-int jbig2_parse_comment_ascii(Jbig2Ctx *ctx, Jbig2Segment *segment,
+int jbig2_comment_ascii(Jbig2Ctx *ctx, Jbig2Segment *segment,
                                const uint8_t *segment_data)
 {
     char *s = (char *)(segment_data + 4);
@@ -115,10 +112,10 @@ int jbig2_parse_comment_ascii(Jbig2Ctx *ctx, Jbig2Segment *segment,
     Jbig2Metadata *comment;
     char *key, *value;
     int key_length, value_length;
-    
+
     jbig2_error(ctx, JBIG2_SEVERITY_INFO, segment->number,
         "ASCII comment data");
-        
+
     comment = jbig2_metadata_new(ctx, JBIG2_ENCODING_ASCII);
     if (comment == NULL) {
         jbig2_error(ctx, JBIG2_SEVERITY_WARNING, segment->number,
@@ -137,12 +134,12 @@ int jbig2_parse_comment_ascii(Jbig2Ctx *ctx, Jbig2Segment *segment,
         jbig2_error(ctx, JBIG2_SEVERITY_INFO, segment->number,
             "'%s'\t'%s'", key, value);
     }
-    
+
     /* TODO: associate with ctx, page, or referred-to segment(s) */
     segment->result = comment;
-    
+
     return 0;
-    
+
 too_short:
     jbig2_metadata_free(ctx, comment);
     return jbig2_error(ctx, JBIG2_SEVERITY_WARNING, segment->number,
@@ -150,7 +147,7 @@ too_short:
 }
 
 /* decode a UCS-16 comment segement 7.4.15.2 */
-int jbig2_parse_comment_unicode(Jbig2Ctx *ctx, Jbig2Segment *segment,
+int jbig2_comment_unicode(Jbig2Ctx *ctx, Jbig2Segment *segment,
                                const uint8_t *segment_data)
 {
     return jbig2_error(ctx, JBIG2_SEVERITY_WARNING, segment->number,

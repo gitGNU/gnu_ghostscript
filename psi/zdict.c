@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zdict.c,v 1.1 2009/04/23 23:31:42 Arabidopsis Exp $ */
+/* $Id: zdict.c,v 1.2 2010/07/10 22:02:43 Arabidopsis Exp $ */
 /* Dictionary operators */
 #include "ghost.h"
 #include "oper.h"
@@ -36,12 +30,8 @@ zdict(i_ctx_t *i_ctx_p)
     os_ptr op = osp;
 
     check_type(*op, t_integer);
-#if arch_sizeof_int < arch_sizeof_long
-    check_int_leu(*op, max_uint);
-#else
     if (op->value.intval < 0)
 	return_error(e_rangecheck);
-#endif
     return dict_create((uint) op->value.intval, op);
 }
 
@@ -502,12 +492,8 @@ zsetmaxlength(i_ctx_t *i_ctx_p)
     if (i_ctx_p->in_superexec == 0)
 	check_dict_write(*op1);
     check_type(*op, t_integer);
-#if arch_sizeof_int < arch_sizeof_long
-    check_int_leu(*op, max_uint);
-#else
     if (op->value.intval < 0)
 	return_error(e_rangecheck);
-#endif
     new_size = (uint) op->value.intval;
     if (dict_length(op - 1) > new_size)
 	return_error(e_dictfull);

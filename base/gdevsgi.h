@@ -7,7 +7,7 @@
  * the file image.h on SGI's file server; there is no copyright on that file.
  */
 
-/* $Id: gdevsgi.h,v 1.1 2009/04/23 23:27:31 Arabidopsis Exp $*/
+/* $Id: gdevsgi.h,v 1.2 2010/07/10 22:02:31 Arabidopsis Exp $*/
 /* SGI raster file definitions */
 
 #ifndef gdevsgi_INCLUDED
@@ -46,11 +46,11 @@ typedef struct {
     unsigned short 	xsize;
     unsigned short 	ysize;
     unsigned short 	zsize;
-    unsigned long 	min_color;
-    unsigned long 	max_color;
-    unsigned long	wastebytes;	
+    unsigned int 	min_color;
+    unsigned int 	max_color;
+    unsigned int	wastebytes;
     char 		name[80];
-    unsigned long	colormap;
+    unsigned int	colormap;
 
     long 		file;		/* stuff used in core only */
     unsigned short 	flags;

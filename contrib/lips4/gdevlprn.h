@@ -17,7 +17,7 @@
    copies.
  */
 
-/*$Id: gdevlprn.h,v 1.2 2009/04/23 23:32:12 Arabidopsis Exp $ */
+/*$Id: gdevlprn.h,v 1.3 2010/07/10 22:02:45 Arabidopsis Exp $ */
 /* Library for Laser Printer Driver */
 
 /*
@@ -137,9 +137,7 @@ struct gx_device_lprn_s
 #define ESC 0x1b		/* \033 */
 #define GS  0x1d		/* \035 */
 
-#ifndef assert
-# define assert(x)
-#endif
+#include "assert_.h"
 
 dev_proc_get_params(lprn_get_params);
 dev_proc_put_params(lprn_put_params);

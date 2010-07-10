@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zfaes.c,v 1.1 2009/04/23 23:31:28 Arabidopsis Exp $ */
+/* $Id: zfaes.c,v 1.2 2010/07/10 22:02:42 Arabidopsis Exp $ */
 
 /* this is the ps interpreter interface to the AES cipher filter
    used in PDF encryption. We currently provide only decode support. */

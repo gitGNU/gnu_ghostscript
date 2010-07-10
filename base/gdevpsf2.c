@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpsf2.c,v 1.1 2009/04/23 23:26:15 Arabidopsis Exp $ */
+/* $Id: gdevpsf2.c,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
 /* Write an embedded CFF font with either Type 1 or Type 2 CharStrings */
 #include "math_.h"		/* for fabs */
 #include "memory_.h"
@@ -34,7 +28,6 @@
 #include "gxfont1.h"
 #include "gxfcid.h"
 #include "stream.h"
-#include "sfilter.h"
 #include "gdevpsf.h"
 
 /* Define additional opcodes used in Dicts, but not in CharStrings. */
@@ -1540,15 +1533,15 @@ psf_write_cid0_font(stream *s, gs_font_cid0 *pfont, int options,
      */
     uint
 	Top_size = 0x7fffff,
-	GSubrs_offset = 0x7fffff,
-	charset_offset = 0x7fffff,
-	FDSelect_offset = 0x7fffff,
-	CharStrings_offset = 0x7fffff,
-	Font_offset = 0x7fffff,
+	GSubrs_offset = 0x1ffffff,
+	charset_offset = 0x1ffffff,
+	FDSelect_offset = 0x1ffffff,
+	CharStrings_offset = 0x1ffffff,
+	Font_offset = 0x1ffffff,
 	FDArray_offsets[257],
 	Private_offsets[257],
 	Subrs_offsets[257],
-	End_offset = 0x7fffff;
+	End_offset = 0x1ffffff;
     int j;
     psf_glyph_enum_t genum;
     gs_font_info_t info;
@@ -1645,8 +1638,11 @@ psf_write_cid0_font(stream *s, gs_font_cid0 *pfont, int options,
     fdselect_size = cff_FDSelect_size(&writer, &genum, &fdselect_format);
 
     /* Compute the size of the CharStrings Index. */
-    charstrings_size =
-	cff_write_CharStrings_offsets(&writer, &genum, &charstrings_count);
+    /* Compute the size of the CharStrings Index. */
+    code = cff_write_CharStrings_offsets(&writer, &genum, &charstrings_count);
+    if (code < 0)
+	return code;
+    charstrings_size = (uint)code;
 
     /* Compute the size of the (local) Subrs Indexes. */
     for (j = 0; j < num_fonts; ++j) {

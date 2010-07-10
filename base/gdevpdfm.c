@@ -1,27 +1,20 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdfm.c,v 1.1 2009/04/23 23:26:55 Arabidopsis Exp $ */
+/* $Id: gdevpdfm.c,v 1.2 2010/07/10 22:02:25 Arabidopsis Exp $ */
 /* pdfmark processing for PDF-writing driver */
 #include "math_.h"
 #include "memory_.h"
-#include "string_.h"
 #include "gx.h"
 #include "gserrors.h"
 #include "gsutil.h"		/* for bytes_compare */
@@ -138,10 +131,12 @@ pdfmark_make_dest(char dstr[MAX_DEST_STRING], gx_device_pdf * pdev,
     int present =
 	pdfmark_find_key(Page_key, pairs, count, &page_string) +
 	pdfmark_find_key(View_key, pairs, count, &view_string);
-    int page = pdfmark_page_number(pdev, &page_string);
+    int page=0;
     gs_param_string action;
     int len;
 
+    if (present)
+	page = pdfmark_page_number(pdev, &page_string);
     if (view_string.size == 0)
 	param_string_from_string(view_string, "[/XYZ null null null]");
     if (page == 0)
@@ -377,6 +372,7 @@ pdfmark_bind_named_object(gx_device_pdf *pdev, const gs_const_string *objname,
 	    code = pdf_substitute_resource(pdev, pres, resourceXObject, NULL, false);
 	else
 	    code = pdf_substitute_resource(pdev, pres, resourceXObject, NULL, true);
+	(*pres)->where_used |= pdev->used_mask;
 	if (code < 0)
 	    return code;
     } else {
@@ -472,7 +468,11 @@ pdfmark_put_ao_pairs(gx_device_pdf * pdev, cos_dict_t *pcd,
 	    pdfmark_put_c_pair(pcd, "/T", pair + 1);
 	else if (pdf_key_eq(pair, "/Action") || pdf_key_eq(pair, "/A"))
 	    Action = pair;
-	else if (pdf_key_eq(pair, "/File") || pdf_key_eq(pair, "/F"))
+	/* Previously also catered for '/F', but at the top level (outside an
+	 * Action dict which is handled below), a /F can only be the Flags for
+	 * the annotation, not a File or JavaScript action.
+	 */
+	else if (pdf_key_eq(pair, "/File") /* || pdf_key_eq(pair, "/F")*/)
 	    File = pair;
 	else if (pdf_key_eq(pair, "/Dest")) {
 	    Dest = pair[1];
@@ -711,6 +711,48 @@ pdfmark_annot(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
     cos_value_t value;
     int code;
 
+    /* Annotations are only permitted in PDF/A if they have the
+     * Print flag enabled, so we need to prescan for that here.
+     */
+    if(pdev->PDFA) {
+	int i, Flags = 0;
+	/* Check all the keys to see if we have a /F (Flags) key/value pair defined */
+	for (i = 0; i < count; i += 2) {
+	    const gs_param_string *pair = &pairs[i];
+
+	    if (pdf_key_eq(pair, "/F")) {
+		code = sscanf((const char *)pair[1].data, "%ld", &Flags);
+		if (code != 1)
+		    eprintf("Annotation has an invalid /Flags attribute\n");
+		break;
+	    }
+	}
+	/* Check the Print flag, PDF/A annotations *must* be set to print */
+	if ((Flags & 4) == 0){
+	    switch (pdev->PDFACompatibilityPolicy) {
+		/* Default behaviour matches Adobe Acrobat, warn and continue,
+		 * output file will not be PDF/A compliant
+		 */
+		case 0:
+		    eprintf("Annotation set to non-printing,\n not permitted in PDF/A, reverting to normal PDF output\n");
+		    pdev->AbortPDFAX = true;
+		    pdev->PDFA = false;
+		    break;
+		    /* Since the annotation would break PDF/A compatibility, do not
+		     * include it, but warn the user that it has been dropped.
+		     */
+		case 1:
+		    eprintf("Annotation set to non-printing,\n not permitted in PDF/A, annotation will not be present in output file\n");
+		    return 0;
+		    break;
+		default:
+		    eprintf("Annotation set to non-printing,\n not permitted in PDF/A, unrecognised PDFACompatibilityLevel,\nreverting to normal PDF output\n");
+		    pdev->AbortPDFAX = true;
+		    pdev->PDFA = false;
+		    break;
+	    }
+	}
+    }
     params.pdev = pdev;
     params.subtype = subtype;
     params.src_pg = -1;

@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxclutil.c,v 1.1 2009/04/23 23:26:15 Arabidopsis Exp $ */
+/* $Id: gxclutil.c,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
 /* Command list writing utilities. */
 
 #include "memory_.h"
@@ -506,7 +500,8 @@ cmd_put_color(gx_device_clist_writer * cldev, gx_clist_state * pcls,
 	    return code;
     } else {
 	/* Check if the "delta" mode command can be used. */
-	int num_bytes = (cldev->color_info.depth + 7) >> 3;
+	int num_bytes = (cldev->clist_color_info.depth + 7) >> 3;  /* clist_color_info may be different than target device
+                                                                      due to transparency group during clist writing phase */
 	int delta_bytes = (num_bytes + 1) / 2;
 	gx_color_index delta_offset = cmd_delta_offsets[num_bytes];
 	gx_color_index delta_mask = cmd_delta_masks[num_bytes];

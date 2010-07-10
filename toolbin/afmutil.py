@@ -2,25 +2,15 @@
 
 # Copyright (C) 2002-2007 Artifex Software, Inc.
 #
-# This file is part of GNU ghostscript
-#
-# GNU ghostscript is free software; you can redistribute it and/or
-# modify it under the terms of the version 2 of the GNU General Public
-# License as published by the Free Software Foundation.
-#
 # This software is provided AS-IS with no warranty, either express or
-# implied. That is, this program is distributed in the hope that it will 
-# be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details
-#
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
+# implied.
 # 
+# This software is distributed under license and may not be copied,
+# modified or distributed except as expressly authorized under the terms
+# of the license contained in the file LICENSE in this distribution.
 
 # script to analyse differences in Adobe Font Metrics files
-# $Id: afmutil.py,v 1.4 2007/09/11 15:25:15 Arabidopsis Exp $
+# $Id: afmutil.py,v 1.5 2010/07/10 22:02:46 Arabidopsis Exp $
 
 import string
 

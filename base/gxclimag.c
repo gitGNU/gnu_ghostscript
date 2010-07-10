@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id: gxclimag.c,v 1.1 2009/04/23 23:25:58 Arabidopsis Exp $ */
+/*$Id: gxclimag.c,v 1.2 2010/07/10 22:02:17 Arabidopsis Exp $ */
 /* Higher-level image operations for band lists */
 #include "math_.h"
 #include "memory_.h"
@@ -481,7 +475,7 @@ clist_begin_typed_image(gx_device * dev,
 	 * worthwhile.
 	 */
 	gx_color_index all =
-	    ((gx_color_index)1 << dev->color_info.depth) - 1;
+	    ((gx_color_index)1 << cdev->clist_color_info.depth) - 1;
 
 	if (bits_per_pixel > 4 || pim->Interpolate || num_components > 1)
 	    colors_used = all;
@@ -542,13 +536,22 @@ clist_begin_typed_image(gx_device * dev,
     return 0;
 
     /*
-     * We couldn't handle the image.  Use the default algorithms, which
+     * We couldn't handle the image.  It is up to the caller to
+     * use the default algorithms, which
      * break the image up into rectangles or small pixmaps.
+     * If we are doing the PDF14 transparency device
+     * then we want to make sure we do NOT use the target 
+     * device.  In this case we return -1.
      */
 use_default:
     gs_free_object(mem, pie, "clist_begin_typed_image");
-    return gx_default_begin_typed_image(dev, pis, pmat, pic, prect,
-					pdcolor, pcpath, mem, pinfo);
+
+    if (pis->has_transparency){
+        return -1;
+    } else {
+        return gx_default_begin_typed_image(dev, pis, pmat, pic, prect,
+					    pdcolor, pcpath, mem, pinfo);
+    }
 }
 
 /* Error cleanup for clist_image_plane_data. */
@@ -884,10 +887,13 @@ clist_create_compositor(gx_device * dev,
     if (code < 0)
         return code;
 
-    code = pcte->type->procs.get_cropping(pcte, &ry, &rheight);
-	if (code < 0)
-	    return code;
+    code = pcte->type->procs.get_cropping(pcte, &ry, &rheight, cdev->cropping_min, cdev->cropping_max);
+
+    if (code < 0)
+	return code;
+
     cropping_op = code;
+
     if (cropping_op == 1) {
 	first_band = ry / band_height;
 	last_band = (ry + rheight + band_height - 1) / band_height;
@@ -895,29 +901,52 @@ clist_create_compositor(gx_device * dev,
 	first_band = cdev->cropping_min / band_height;
 	last_band = (cdev->cropping_max + band_height - 1) / band_height;
     }
+
     if (last_band - first_band > no_of_bands * 2 / 3) {
 	/* Covering many bands, so write "all bands" command for shorter clist. */
 	cropping_op = 0;
     }
+
+    /* Using 'v' here instead of 'L' since this is used almost exclusively with
+       the transparency code */
+ 
+    if (gs_debug_c('v')) {
+
+        if(cropping_op != 0) {
+
+           dprintf2("[v] cropping_op = %d. Total number of bands is %d \n",
+		     cropping_op, no_of_bands);
+           dprintf2("[v]  Writing out from band %d through band %d \n",
+		     first_band, last_band);
+
+        } else {
+
+           dprintf1("[v] cropping_op = %d. Writing out to all bands \n",
+		     cropping_op);
+
+        }
+
+    }
+   
     if (cropping_op == 0) {
-    /* overprint applies to all bands */
+	/* overprint applies to all bands */
 	size_dummy = size;
-    code = set_cmd_put_all_op( dp,
-                               (gx_device_clist_writer *)dev,
-                               cmd_opv_extend,
-                               size );
-    if (code < 0)
-        return code;
+	code = set_cmd_put_all_op( dp,
+				   (gx_device_clist_writer *)dev,
+				   cmd_opv_extend,
+				   size );
+	if (code < 0)
+	    return code;
 
-    /* insert the command and compositor identifier */
-    dp[1] = cmd_opv_ext_create_compositor;
-    dp[2] = pcte->type->comp_id;
+	/* insert the command and compositor identifier */
+	dp[1] = cmd_opv_ext_create_compositor;
+	dp[2] = pcte->type->comp_id;
 
-    /* serialize the remainder of the compositor */
+	/* serialize the remainder of the compositor */
 	if ((code = pcte->type->procs.write(pcte, dp + 3, &size_dummy, cdev)) < 0)
-        ((gx_device_clist_writer *)dev)->cnext = dp;
-    return code;
-}
+	    ((gx_device_clist_writer *)dev)->cnext = dp;
+	return code;
+    } 
     if (cropping_op == 1) {
 	code = clist_writer_push_cropping(cdev, ry, rheight);
 	if (code < 0)
@@ -1494,7 +1523,7 @@ cmd_image_plane_data(gx_device_clist_writer * cldev, gx_clist_state * pcls,
 	code = cmd_put_set_data_x(cldev, pcls, data_x);
 	if (code < 0)
 	    return code;
-	offset = ((data_x & ~7) * cldev->color_info.depth) >> 3;
+	offset = ((data_x & ~7) * cldev->clist_color_info.depth) >> 3;
     }
     code = set_cmd_put_op(dp, cldev, pcls, cmd_opv_image_data, len);
     if (code < 0)

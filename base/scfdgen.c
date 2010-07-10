@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: scfdgen.c,v 1.1 2009/04/23 23:27:00 Arabidopsis Exp $ */
+/* $Id: scfdgen.c,v 1.2 2010/07/10 22:02:26 Arabidopsis Exp $ */
 /* Generate the CCITTFaxDecode tables */
 #include "stdio_.h"		/* includes std.h */
 #include "scf.h"
@@ -38,7 +32,7 @@ main()
     cfd_node area[1 << max(cfd_white_initial_bits, cfd_black_initial_bits)];
 
     fputs("/* Copyright (C) 1992, 1993, 1998, 1999 Aladdin Enterprises.  All rights reserved. */\n\n", out);
-    fputs("/* $Id: scfdgen.c,v 1.1 2009/04/23 23:27:00 Arabidopsis Exp $ */\n", out);
+    fputs("/* $Id: scfdgen.c,v 1.2 2010/07/10 22:02:26 Arabidopsis Exp $ */\n", out);
     fputs("/* Tables for CCITTFaxDecode filter. */\n\n", out);
     fputs("/* This file was generated automatically.  It is governed by the same terms */\n", out);
     fputs("/* as the files scfetab.c and scfdgen.c from which it was derived. */\n", out);

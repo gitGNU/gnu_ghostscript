@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: unix-lpr.sh,v 1.3 2007/05/07 11:22:07 Arabidopsis Exp $
+# $Id: unix-lpr.sh,v 1.4 2010/07/10 22:02:36 Arabidopsis Exp $
 #
 # Unix lpr filter. The default setup sends output directly to a pipe,
 # which requires the Ghostscript process to fork, and thus may cause 
@@ -153,7 +153,7 @@ echo "\
     } { pop } ifelse
   } if
 quit"
-) | $GS_EXECUTABLE -q -dNOPAUSE -sDEVICE=${device} \
+) | $GS_EXECUTABLE -q -P- -dSAFER -dNOPAUSE -sDEVICE=${device} \
 		-dBitsPerPixel=${bpp} $colorspec \
 		-sOutputFile=\|"${gsoutput}" -
 #		-sOutputFile=${gspipe} -

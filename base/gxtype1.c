@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxtype1.c,v 1.1 2009/04/23 23:26:35 Arabidopsis Exp $ */
+/* $Id: gxtype1.c,v 1.2 2010/07/10 22:02:22 Arabidopsis Exp $ */
 /* Adobe Type 1 font interpreter support */
 #include "math_.h"
 #include "memory_.h"
@@ -345,7 +339,6 @@ type1_cis_get_metrics(const gs_type1_state * pcis, double psbw[4])
 
 /* ------ Font procedures ------ */
 
-
 /*
  * If a Type 1 character is defined with 'seac', store the character codes
  * in chars[0] and chars[1] and return 1; otherwise, return 0 or <0.
@@ -376,7 +369,7 @@ gs_type1_piece_codes(/*const*/ gs_font_type1 *pfont,
     ip_state_t *ipsp = &ipstack[0];
     const byte *cip;
     crypt_state state;
-    int c;
+    int c, hhints = 0, vhints = 0;
     int code;
     
     CLEAR_CSTACK(cstack, csp);
@@ -414,7 +407,39 @@ gs_type1_piece_codes(/*const*/ gs_font_type1 *pfont,
 #define cnext CLEAR_CSTACK(cstack, csp); goto top
 	switch ((char_command) c) {
 	default:
+	    cnext;
 	    goto out;
+	case c2_shortint:
+	    cip += 2;
+	    break;
+	case c2_hstemhm:
+	    hhints += ((csp - cstack) + 1) / 2;
+	    cnext;
+	    break;
+	case c2_vstemhm:
+	    vhints += ((csp - cstack) + 1) / 2;
+	    cnext;
+	    break;
+	case c2_cntrmask:
+	    cip += (vhints + hhints + 7) / 8;
+	    cnext;
+	    break;
+	case c2_hintmask:
+	    {
+		if (csp > cstack)
+		    vhints += ((csp - cstack) + 1) / 2;
+		cip += (vhints + hhints + 7) / 8;
+		cnext;
+	    }
+	    break;
+	case c2_callgsubr:
+	    /* FIXME
+	     * We should process subr and gsubr routines to see if they contain
+	     * a CFF endchar, and if it is a SEAC (deprecated but possible). Sadly
+	     * we don't have a full type 2 parser, and apparently can't handle gsubr
+	     * routines, so if we find one, assume there is no SEAC.
+	     */
+	    return 0;
 	case c_callsubr:
 	    c = fixed2int_var(*csp) + pdata->subroutineNumberBias;
 	    code = pdata->procs.subr_data
@@ -429,10 +454,18 @@ gs_type1_piece_codes(/*const*/ gs_font_type1 *pfont,
 	case c_return:
 	    gs_glyph_data_free(&ipsp->cs_data, "gs_type1_piece_codes");
 	    --ipsp;
+	    if (ipsp < ipstack)
+		return (gs_note_error(gs_error_invalidfont));
 	    cip = ipsp->ip, state = ipsp->dstate;
 	    goto top;
 	case cx_hstem:
+	    hhints += ((csp - cstack) + 1) / 2;
+	    cnext;
+	    break;
 	case cx_vstem:
+	    vhints += ((csp - cstack) + 1) / 2;
+	    cnext;
+	    break;
 	case c1_hsbw:
 	    cnext;
 	case cx_endchar:
@@ -484,6 +517,7 @@ gs_type1_piece_codes(/*const*/ gs_font_type1 *pfont,
  out:
     return 0;
 }
+
 
 /*
  * Get PIECES and/or NUM_PIECES of a Type 1 glyph.  Sets info->num_pieces
@@ -579,7 +613,12 @@ gs_type1_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
 	code = pdata->interpret(&cis, &gdata, &value);
 	switch (code) {
 	case 0:		/* done with no [h]sbw, error */
-	    code = gs_note_error(gs_error_invalidfont);
+	                /* Adobe interpreters ignore the error! */
+	    info->width[wmode].x = 0;
+	    info->width[wmode].y = 0;
+	    info->v.x = 0;
+	    info->v.y = 0;
+	    break;
 	default:		/* code < 0, error */
 	    return code;
 	case type1_result_callothersubr:	/* unknown OtherSubr */

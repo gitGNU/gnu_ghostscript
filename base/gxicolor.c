@@ -1,24 +1,19 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxicolor.c,v 1.1 2009/04/23 23:26:13 Arabidopsis Exp $ */
+/* $Id: gxicolor.c,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
 /* Color image rendering */
+
 #include "gx.h"
 #include "memory_.h"
 #include "gpcheck.h"
@@ -266,9 +261,9 @@ do3:	if(spp == 3 && pcs->type->index == gs_color_space_index_CIEICC)
 
 				decode_sample(next.v[0], cc, 0);
 				cc.paint.values[0]*=100.0;
-	    decode_sample(next.v[1], cc, 1);
+				decode_sample(next.v[1], cc, 1);
 				cc.paint.values[1] = 255.0*cc.paint.values[1] - 128.0;
-	    decode_sample(next.v[2], cc, 2);
+				decode_sample(next.v[2], cc, 2);
 				cc.paint.values[2] = 255.0*cc.paint.values[2] - 128.0;
 
 			} else {
@@ -322,18 +317,20 @@ do3:	if(spp == 3 && pcs->type->index == gs_color_space_index_CIEICC)
 		goto mapped;
 	    }
 	    if (device_color) {
-		frac frac_color[3];
-		/*
-		 * We can call the remap concrete_color for the colorspace
-		 * directly since device_color is only true if the colorspace
-		 * is concrete.
-		 */
-		frac_color[0] = byte2frac(next.v[0]);
-		frac_color[1] = byte2frac(next.v[1]);
-		frac_color[2] = byte2frac(next.v[2]);
-		remap_concrete_color(frac_color, pcs, pdevc_next, pis,
-						dev, gs_color_select_source);
-		goto mapped;
+
+			frac frac_color[3];
+			/*
+			 * We can call the remap concrete_color for the colorspace
+			 * directly since device_color is only true if the colorspace
+			 * is concrete.
+			 */
+			frac_color[0] = byte2frac(next.v[0]);
+			frac_color[1] = byte2frac(next.v[1]);
+			frac_color[2] = byte2frac(next.v[2]);
+			remap_concrete_color(frac_color, pcs, pdevc_next, pis,
+							dev, gs_color_select_source);
+			goto mapped;
+
 	    }
 	    goto do3;
 	} else if (penum->alpha) {

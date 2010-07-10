@@ -1,5 +1,5 @@
 /******************************************************************************
-  File:     $Id: pclgen.h,v 1.1 2007/09/11 15:24:54 Arabidopsis Exp $
+  File:     $Id: pclgen.h,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $
   Contents: Header for PCL-generating routines
   Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
             Germany. E-mail: Martin.Lottermoser@t-online.de.
@@ -23,7 +23,7 @@
 #define _pclgen_h
 
 /* Configuration management identification */
-#pragma ident "@(#)$Id: pclgen.h,v 1.1 2007/09/11 15:24:54 Arabidopsis Exp $"
+#pragma ident "@(#)$Id: pclgen.h,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $"
 
 /*****************************************************************************/
 

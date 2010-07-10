@@ -1,11 +1,11 @@
 @echo off 
-@rem $Id: pdfopt.bat,v 1.4 2007/05/07 11:22:07 Arabidopsis Exp $
+@rem $Id: pdfopt.bat,v 1.5 2010/07/10 22:02:37 Arabidopsis Exp $
 @rem Convert PDF to "optimized" form.
 
 if %1/==/ goto usage
 if %2/==/ goto usage
 call gssetgs.bat
-echo -q -dNODISPLAY -dSAFER -dDELAYSAFER >_.at
+echo -q -dNODISPLAY -P- -dSAFER -dDELAYSAFER >_.at
 :cp
 if %3/==/ goto doit
 echo %1 >>_.at

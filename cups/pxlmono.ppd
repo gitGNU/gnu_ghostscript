@@ -1,6 +1,6 @@
 *PPD-Adobe: "4.3"
 *%
-*% "$Id: pxlmono.ppd,v 1.3 2009/04/23 23:31:59 Arabidopsis Exp $"
+*% "$Id: pxlmono.ppd,v 1.4 2010/07/10 22:02:49 Arabidopsis Exp $"
 *%
 *%   Sample monochrome PCL XL/PCL 6 driver PPD file for the Common UNIX
 *%   Printing System (CUPS).
@@ -206,5 +206,5 @@
 *Font ZapfChancery-MediumItalic: Standard "(001.007S)" Standard ROM
 *Font ZapfDingbats: Special "(001.004S)" Standard ROM
 *%
-*% End of "$Id: pxlmono.ppd,v 1.3 2009/04/23 23:31:59 Arabidopsis Exp $".
+*% End of "$Id: pxlmono.ppd,v 1.4 2010/07/10 22:02:49 Arabidopsis Exp $".
 *%

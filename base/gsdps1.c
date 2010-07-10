@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsdps1.c,v 1.1 2009/04/23 23:26:50 Arabidopsis Exp $ */
+/* $Id: gsdps1.c,v 1.2 2010/07/10 22:02:24 Arabidopsis Exp $ */
 /* Display PostScript graphics additions for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -202,6 +196,7 @@ gs_rectfill(gs_state * pgs, const gs_rect * pr, uint count)
     bool hl_color = (hl_color_available && 
 		dev_proc(pdev, fill_rectangle_hl_color)(pdev, 
 		    	    &empty, pis, pdc, NULL) == 0);
+    bool center_of_pixel = (pgs->fill_adjust.x == 0 && pgs->fill_adjust.y == 0);
 
     /* Processing a fill object operation */
     gs_set_object_tag(pgs, GS_PATH_TAG);
@@ -225,6 +220,10 @@ gs_rectfill(gs_state * pgs, const gs_rect * pr, uint count)
 	gs_fixed_rect clip_rect;
 
 	gx_cpath_inner_box(pcpath, &clip_rect);
+	/* We should never plot anything for an empty clip rectangle */
+	if ((clip_rect.p.x >= clip_rect.q.x) &&
+	    (clip_rect.p.y >= clip_rect.q.y))
+	    return 0;
 	for (i = 0; i < count; ++i) {
 	    gs_fixed_point p, q;
 	    gs_fixed_rect draw_rect;
@@ -240,8 +239,14 @@ gs_rectfill(gs_state * pgs, const gs_rect * pr, uint count)
 	    draw_rect.q.y = max(p.y, q.y);
 	    if (hl_color) {
 		rect_intersect(draw_rect, clip_rect);
-		if (draw_rect.p.x < draw_rect.q.x &&
-		    draw_rect.p.y < draw_rect.q.y) {
+                /* We do pass on 0 extant rectangles to high level
+                   devices.  It isn't clear how a client and an output
+                   device should interact if one uses a center of
+                   pixel algorithm and the other uses any part of
+                   pixel.  For now we punt and just pass the high
+                   level rectangle on without adjustment. */
+		if (draw_rect.p.x <= draw_rect.q.x &&
+		    draw_rect.p.y <= draw_rect.q.y) {
 		    code = dev_proc(pdev, fill_rectangle_hl_color)(pdev,
 			     &draw_rect, pis, pdc, pcpath);
 		    if (code < 0)
@@ -250,18 +255,37 @@ gs_rectfill(gs_state * pgs, const gs_rect * pr, uint count)
 	    } else {
 		int x, y, w, h;
 
-		draw_rect.p.x -= max(pgs->fill_adjust.x - fixed_epsilon, 0);
-		draw_rect.p.y -= max(pgs->fill_adjust.y - fixed_epsilon, 0);
-		draw_rect.q.x += pgs->fill_adjust.x;
-		draw_rect.q.y += pgs->fill_adjust.y;
 		rect_intersect(draw_rect, clip_rect);
-		x = fixed2int_pixround(draw_rect.p.x);
-		y = fixed2int_pixround(draw_rect.p.y);
-		w = fixed2int_pixround(draw_rect.q.x) - x;
-		h = fixed2int_pixround(draw_rect.q.y) - y;
-		if (w > 0 && h > 0)
-    		    if (gx_fill_rectangle(x, y, w, h, pdc, pgs) < 0)
-			goto slow;
+                if (center_of_pixel) {
+                    draw_rect.p.x = fixed_rounded(draw_rect.p.x);
+                    draw_rect.p.y = fixed_rounded(draw_rect.p.y);
+                    draw_rect.q.x = fixed_rounded(draw_rect.q.x);
+                    draw_rect.q.y = fixed_rounded(draw_rect.q.y);
+                } else { /* any part of pixel rule - touched */
+                    draw_rect.p.x = fixed_floor(draw_rect.p.x);
+                    draw_rect.p.y = fixed_floor(draw_rect.p.y);
+                    draw_rect.q.x = fixed_ceiling(draw_rect.q.x);
+                    draw_rect.q.y = fixed_ceiling(draw_rect.q.y);
+                }
+		x = fixed2int(draw_rect.p.x);
+		y = fixed2int(draw_rect.p.y);
+		w = fixed2int(draw_rect.q.x - draw_rect.p.x);
+		h = fixed2int(draw_rect.q.y - draw_rect.p.y);
+                /* clients that use the "any part of pixel" rule also
+                   fill 0 areas.  This is true of current graphics
+                   library clients but not a general rule.  */
+                if (!center_of_pixel) {
+                    if (w == 0)
+                        w = 1;
+                    /* yes Adobe Acrobat 8, seems to back up the y
+                       coordinate when the width is 0, sigh. */
+                    if (h == 0) {
+                        y--;
+                        h = 1;
+                    }
+                }
+                if (gx_fill_rectangle(x, y, w, h, pdc, pgs) < 0)
+                    goto slow;
 	    }
 	}
 	return 0;

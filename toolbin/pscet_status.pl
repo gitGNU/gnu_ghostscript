@@ -2,7 +2,7 @@
 $/="";
 
 # script for generating reports from the pscet status document
-# $Id: pscet_status.pl,v 1.2 2007/09/10 14:08:56 Arabidopsis Exp $
+# $Id: pscet_status.pl,v 1.3 2010/07/10 22:02:46 Arabidopsis Exp $
 
 $mydb = "pscet_status.txt";
 open(MYDB,$mydb) or die "Unable to open $mydb:$!\n";

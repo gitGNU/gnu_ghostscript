@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxipixel.c,v 1.1 2009/04/23 23:27:31 Arabidopsis Exp $ */
+/* $Id: gxipixel.c,v 1.2 2010/07/10 22:02:31 Arabidopsis Exp $ */
 /* Common code for ImageType 1 and 4 initialization */
 #include "gx.h"
 #include "math_.h"
@@ -69,11 +63,16 @@ ENUM_PTRS_WITH(image_enum_enum_ptrs, gx_image_enum *eptr)
 	bps = 1;
     if (index >= (1 << bps) * st_device_color_max_ptrs)		/* done */
 	return 0;
-    ret = ENUM_USING(st_device_color,
+    /* the clues may have been cleared by gx_image_free_enum, but not freed in that */
+    /* function due to being at a different save level. Only trace if dev_color.type != 0. */
+    if (eptr->clues[(index/st_device_color_max_ptrs) * (255 / ((1 << bps) - 1))].dev_color.type != 0)
+	ret = ENUM_USING(st_device_color,
 		     &eptr->clues[(index / st_device_color_max_ptrs) *
 				  (255 / ((1 << bps) - 1))].dev_color,
 		     sizeof(eptr->clues[0].dev_color),
 		     index % st_device_color_max_ptrs);
+    else
+	ret = 0;
     if (ret == 0)		/* don't stop early */
 	ENUM_RETURN(0);
     return ret;
@@ -223,12 +222,12 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
         mat.tx = pmat->tx - pim->ImageMatrix.tx;
         mat.ty = pmat->ty - pim->ImageMatrix.ty;
     } else {
-    if ((code = gs_matrix_invert_to_double(&pim->ImageMatrix, &mat)) < 0 ||
-	(code = gs_matrix_multiply_double(&mat, pmat, &mat)) < 0
-	) {
-	gs_free_object(mem, penum, "gx_default_begin_image");
-	return code;
-    }
+        if ((code = gs_matrix_invert_to_double(&pim->ImageMatrix, &mat)) < 0 ||
+	    (code = gs_matrix_multiply_double(&mat, pmat, &mat)) < 0
+	    ) {
+	    gs_free_object(mem, penum, "gx_default_begin_image");
+	    return code;
+        }
     }
     /*penum->matrix = mat;*/
     penum->matrix.xx = mat.xx;
@@ -752,11 +751,11 @@ image_init_colors(gx_image_enum * penum, int bps, int spp,
 	map_decode = real_decode = this_decode;
 	if (!(decode_type & 1)) {
 	    if ((decode_type & 2) && bps <= 8) {
-	    real_decode = default_decode;
-	} else {
-	    *pdcb = false;
-	    map_decode = default_decode;
-	}
+	        real_decode = default_decode;
+	    } else {
+	        *pdcb = false;
+	        map_decode = default_decode;
+	    }
         }
 	if (bps > 2 || format != gs_image_format_chunky) {
 	    if (bps <= 8)

@@ -18,7 +18,7 @@
    copies.
  */
 
-/*$Id: gdevlips.c,v 1.2 2008/03/23 15:28:18 Arabidopsis Exp $ */
+/*$Id: gdevlips.c,v 1.3 2010/07/10 22:02:45 Arabidopsis Exp $ */
 /* Common Utility for LIPS driver */
 
 #include "gx.h"

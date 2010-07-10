@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id: gxacpath.c,v 1.1 2009/04/23 23:27:16 Arabidopsis Exp $ */
+/*$Id: gxacpath.c,v 1.2 2010/07/10 22:02:28 Arabidopsis Exp $ */
 /* Accumulator for clipping paths */
 #include "gx.h"
 #include "gserrors.h"
@@ -25,6 +19,7 @@
 #include "gsstruct.h"
 #include "gsutil.h"
 #include "gsdcolor.h"
+#include "gsstate.h"
 #include "gxdevice.h"
 #include "gxfixed.h"
 #include "gxistate.h"
@@ -206,10 +201,12 @@ gx_cpath_intersect_path_slow(gx_clip_path * pcpath, gx_path * ppath,
     if (params0 != 0)
 	params = *params0;
     else {
+        gs_point fadjust;
 	params.rule = rule;
-	params.adjust.x = params.adjust.y = fixed_half;
+        gs_currentfilladjust((gs_state *)pis, &fadjust);
+        params.adjust.x = float2fixed(fadjust.x);
+        params.adjust.y = float2fixed(fadjust.y);
 	params.flatness = gs_currentflat_inline(pis);
-	params.fill_zero_width = true;
     }
     code = gx_fill_path_only(ppath, (gx_device *)&adev, pis,
 			     &params, &devc, pcpath);

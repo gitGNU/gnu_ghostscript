@@ -64,7 +64,7 @@
 /*
  * Portable Pixmap/Graymap Format Support
  *
- * $Id: pnm_enc.c,v 1.4 2007/05/07 11:22:21 Arabidopsis Exp $
+ * $Id: pnm_enc.c,v 1.5 2010/07/10 22:02:56 Arabidopsis Exp $
  */
 
 /******************************************************************************\

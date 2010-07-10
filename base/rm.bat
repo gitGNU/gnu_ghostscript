@@ -1,4 +1,4 @@
-@rem $Id: rm.bat,v 1.1 2009/04/23 23:27:25 Arabidopsis Exp $
+@rem $Id: rm.bat,v 1.2 2010/07/10 22:02:30 Arabidopsis Exp $
 @echo off
 :next
 if '%1'=='' goto exit

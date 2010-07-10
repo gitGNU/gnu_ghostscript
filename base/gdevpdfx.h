@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdfx.h,v 1.1 2009/04/23 23:27:22 Arabidopsis Exp $ */
+/* $Id: gdevpdfx.h,v 1.2 2010/07/10 22:02:30 Arabidopsis Exp $ */
 /* Internal definitions for PDF-writing driver. */
 
 #ifndef gdevpdfx_INCLUDED
@@ -447,6 +441,7 @@ struct gx_device_pdf_s {
 			      with pattern color. */
     bool PDFX;		   /* Generate PDF/X */
     bool PDFA;		   /* Generate PDF/A */
+    bool AbortPDFAX;	    /* Abort generation of PDFA or X, produce regular PDF */
     long MaxClipPathSize;  /* The maximal number of elements of a clipping path
 			      that the target viewer|printer can handle. */
     long MaxViewerMemorySize;
@@ -659,6 +654,11 @@ struct gx_device_pdf_s {
     bool SetPageSize;
     bool RotatePages;
     bool FitPages;
+    bool CenterPages;
+    bool DoNumCopies;
+    bool PreserveSeparation;
+    bool PreserveDeviceN;
+    int PDFACompatibilityPolicy;
 };
 
 #define is_in_page(pdev)\
@@ -893,7 +893,7 @@ int pdf_write_and_free_all_resource_objects(gx_device_pdf *pdev);
  * Store the resource sets for a content stream (page or XObject).
  * Sets page->{procsets, resource_ids[], fonts_id}.
  */
-int pdf_store_page_resources(gx_device_pdf *pdev, pdf_page_t *page);
+int pdf_store_page_resources(gx_device_pdf *pdev, pdf_page_t *page, bool clear_usage);
 
 /* Copy data from a temporary file to a stream. */
 void pdf_copy_data(stream *s, FILE *file, long count, stream_arcfour_state *ss);
@@ -1218,7 +1218,7 @@ int pdf_char_image_y_offset(const gx_device_pdf *pdev, int x, int y, int h);
 
 /* Begin a CharProc for an embedded (bitmap) font. */
 int pdf_begin_char_proc(gx_device_pdf * pdev, int w, int h, int x_width,
-			int y_offset, gs_id id, pdf_char_proc_t **ppcp,
+			int y_offset, int x_offset, gs_id id, pdf_char_proc_t **ppcp,
 			pdf_stream_position_t * ppos);
 
 /* End a CharProc. */

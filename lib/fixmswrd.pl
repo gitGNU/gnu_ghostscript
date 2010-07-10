@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: fixmswrd.pl,v 1.2 2007/05/07 11:22:07 Arabidopsis Exp $
+# $Id: fixmswrd.pl,v 1.3 2010/07/10 22:02:36 Arabidopsis Exp $
 
 #   (C) 1997 Anthony Shipman
 # 

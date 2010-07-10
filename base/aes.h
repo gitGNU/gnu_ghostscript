@@ -30,7 +30,7 @@
  *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $Id: aes.h,v 1.1 2009/04/23 23:26:46 Arabidopsis Exp $ */
+/* $Id: aes.h,v 1.2 2010/07/10 22:02:24 Arabidopsis Exp $ */
 /* AES block cipher implementation from XYSSL */
 
 #ifndef XYSSL_AES_H

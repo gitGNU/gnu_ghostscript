@@ -17,7 +17,7 @@
    copies.
  */
 
-/*$Id: gdevrpdl.c,v 1.2 2008/03/23 15:28:26 Arabidopsis Exp $ */
+/*$Id: gdevrpdl.c,v 1.3 2010/07/10 22:02:55 Arabidopsis Exp $ */
 /* Ricoh RPDL driver for Ghostscript */
 
 #include "gdevlprn.h"

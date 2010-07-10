@@ -3,7 +3,7 @@
 <html>
 <head>
 <title>Ghostscript and the PostScript language</title>
-<!-- $Id: Language.htm,v 1.14 2009/04/23 23:32:06 Arabidopsis Exp $ -->
+<!-- $Id: Language.htm,v 1.15 2010/07/10 22:02:52 Arabidopsis Exp $ -->
 <!-- Originally: language.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -1227,10 +1227,25 @@ at the beginning of the procedure.
 
 <dl>
 <dt><code>&lt;string&gt; &lt;boolean&gt; .setdebug -</code>
-<dd>If the Ghostscript interpreter was built with the <code>DEBUG</code>
-flag set, sets or resets any subset of the debugging flags normally
-controlled by <code>-Z</code> in the command line.  Has no effect
-otherwise.
+<dd>Sets or clears any subset of the debugging flags included in
+<code>&lt;string&gt;</code> based on the value of
+<code>&lt;boolean&gt;</code>. These correspond to the debug
+flags set by <code>-Z</code> on the command line and enable
+debug and tracing output from various internal modules.
+
+<p>Note that most tracing output is only produced if the Ghostscript
+interpreter was built with the <code>DEBUG</code> preprocessor
+symbol defined.
+
+<p>The <code>zsetdebug()</code> C function, which implements this
+operator, is a useful breakpoint for debuggers.
+Inserting '<code>() true .setdebug</code>' in the interpreted code will
+trigger a breakpoint at that location without side effects. The
+current  flag state is available in C as the <code>gs_debug[]</code>
+array, indexed by character value. The <code>zsetdebug</code> function will
+be entered, and <code>gs_debug[]</code> updated, whether or not Ghostscript
+is built with the <code>DEBUG</code> preprocessor symbol defined, so this
+is useful even with release builds.
 </dl>
 
 <dl>
@@ -2245,7 +2260,7 @@ The file format for <code>Decoding</code> resource files is
 generic PostScript.
 Users may want to define custom <code>Decoding</code> resources.
 The <code>ParseDecoding</code> procset defined in 
-<a href="../lib/gs_ciddc.ps">lib/gs_ciddc.ps</a> allows representation
+<a href="../Resource/Init/gs_ciddc.ps">Resource/Init/gs_ciddc.ps</a> allows representation
 of the table in a comfortable form.
 
 
@@ -2274,7 +2289,7 @@ The Ghostscript library is capable of generating some <code>CIDDecoding</code>
 instances automatically, using the appropriate <code>CMap</code> (character map)
 resources. This covers most of practical cases if the neccessary <code>CMap</code>
 resources  are provided. See the table <code>.CMapChooser</code> in
-<a href="../lib/gs_ciddc.ps">lib/gs_ciddc.ps</a>
+<a href="../Resource/Init/gs_ciddc.ps">Resource/Init/gs_ciddc.ps</a>
 for the names of automatically gerenated resources and associated <code>CMap</code>s.
 They allow to mapping CNS1, GB1, Japan1, Japan2 and Korea1 CID sets to TrueType
 character sets known as Unicode (exactly UTF-16), Big5, 
@@ -2352,7 +2367,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.64, 3 February 2009
+<small>Ghostscript version 8.71, 10 February 2010
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

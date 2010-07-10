@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id: gxclpath.c,v 1.1 2009/04/23 23:27:16 Arabidopsis Exp $ */
+/*$Id: gxclpath.c,v 1.2 2010/07/10 22:02:28 Arabidopsis Exp $ */
 /* Higher-level path operations for band lists */
 #include "math_.h"
 #include "memory_.h"
@@ -61,7 +55,7 @@ colored_halftone_colors_used(gx_device_clist_writer *cldev,
      * standard CMYK color mapping function.
      */
     if (dev_proc(cldev, map_cmyk_color) != cmyk_1bit_map_cmyk_color)
-	return ((gx_color_index)1 << cldev->color_info.depth) - 1;
+	return ((gx_color_index)1 << cldev->color_info.depth) - 1;  /* What about tranparency?  Need to check this */
     /*
      * Note that c_base[0], and the low-order bit of plane_mask,
      * correspond to cyan: this requires reversing the bit order of
@@ -143,7 +137,7 @@ cmd_put_drawing_color(gx_device_clist_writer * cldev, gx_clist_state * pcls,
     code = pdcolor->type->write( pdcolor,
                                  psdc,
                                  (gx_device *)cldev,
-                                 0,
+				 0,
                                  0,
                                  &dc_size );
 
@@ -192,7 +186,7 @@ cmd_put_drawing_color(gx_device_clist_writer * cldev, gx_clist_state * pcls,
 	}
     }
 
-    while (left) {
+    do {
 	prefix_size = 2 + 1 + (offset > 0 ? enc_u_sizew(offset) : 0);
 	req_size = left + prefix_size + enc_u_sizew(left);
 	code = cmd_get_buffer_space(cldev, pcls, req_size);
@@ -208,31 +202,31 @@ cmd_put_drawing_color(gx_device_clist_writer * cldev, gx_clist_state * pcls,
 	else
 	    code = set_cmd_put_op(dp, cldev, pcls, cmd_opv_extend, req_size_final);
 	if (code < 0)
-        return code;
-    dp0 = dp;
-    dp[1] = cmd_opv_ext_put_drawing_color;
-    dp += 2;
+	    return code;
+	dp0 = dp;
+	dp[1] = cmd_opv_ext_put_drawing_color;
+	dp += 2;
 	*dp++ = di | (offset > 0 ? 0x80 : 0);
 	if (offset > 0)
 	    enc_u_putw(offset, dp);
 	enc_u_putw(portion_size, dp);
-    code = pdcolor->type->write( pdcolor,
-                                 &pcls->sdc,
-                                 (gx_device *)cldev,
+	code = pdcolor->type->write( pdcolor,
+				     &pcls->sdc,
+				     (gx_device *)cldev,
 				     offset,
-                                 dp,
+				     dp,
 				     &portion_size);
-    if (code < 0) {
+	if (code < 0) {
 	    if (offset == 0)
-        cldev->cnext = dp0;
-        return code;
-    }
+		cldev->cnext = dp0;
+	    return code;
+	}
 	offset += portion_size;
 	left -= portion_size;
-    }
+    } while (left);
 
     /* should properly calculate colors_used, but for now just punt */
-    pcls->colors_used.or = ((gx_color_index)1 << cldev->color_info.depth) - 1;
+    pcls->colors_used.or = ((gx_color_index)1 << cldev->clist_color_info.depth) - 1;
 
     /* Here we can't know whether a pattern paints colors besides 
        black and white, so assume that it does.
@@ -279,7 +273,7 @@ cmd_drawing_colors_used(gx_device_clist_writer *cldev,
     else if (gx_dc_is_colored_halftone(pdcolor))
 	return colored_halftone_colors_used(cldev, pdcolor);
     else
-	return ((gx_color_index)1 << cldev->color_info.depth) - 1;
+	return ((gx_color_index)1 << cldev->clist_color_info.depth) - 1;
 }
 
 
@@ -435,8 +429,9 @@ cmd_write_unknown(gx_device_clist_writer * cldev, gx_clist_state * pcls,
 	];
 	byte *bp = buf;
 
+        /* Here we assume that all the caps are the same as start_cap */
 	if (unknown & cap_join_known) {
-	    *bp++ = (cldev->imager_state.line_params.cap << 3) +
+	    *bp++ = (cldev->imager_state.line_params.start_cap << 3) +
 		cldev->imager_state.line_params.join;
 	}
 	if (unknown & cj_ac_sa_known) {
@@ -866,9 +861,10 @@ clist_stroke_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
 			  pis->line_params.dot_length,
 			  pis->line_params.dot_length_absolute);
     }
-    if (state_neq(line_params.cap) || state_neq(line_params.join)) {
+    /* Here we assume that all the caps are the same as start_cap */
+    if (state_neq(line_params.start_cap) || state_neq(line_params.join)) {
 	unknown |= cap_join_known;
-	state_update(line_params.cap);
+	state_update(line_params.start_cap);
 	state_update(line_params.join);
     }
     cmd_check_fill_known(cdev, pis, params->flatness, &pis->fill_adjust,
@@ -1267,7 +1263,7 @@ cmd_put_path(gx_device_clist_writer * cldev, gx_clist_state * pcls,
 
     /* Information about the last emitted operation: */
     int open = 0;		/* -1 if last was moveto, 1 if line/curveto, */
-    /* 0 if newpath/closepath */
+				/* 0 if newpath/closepath */
     struct { fixed vs[6]; } prev;
 
     first.x = first.y = out.x = out.y = start.x = start.y = 0; /* Quiet gcc warning. */   

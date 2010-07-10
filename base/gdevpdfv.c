@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdfv.c,v 1.1 2009/04/23 23:26:56 Arabidopsis Exp $ */
+/* $Id: gdevpdfv.c,v 1.2 2010/07/10 22:02:25 Arabidopsis Exp $ */
 /* Color value writing for pdfwrite driver */
 #include "math_.h"
 #include "string_.h"
@@ -105,7 +99,13 @@ tile_size_ok(const gx_device_pdf *pdev, const gx_color_tile *p_tile,
 	(p_tile == 0 ? 0 : tile_size(&p_tile->tbits, p_tile->depth));
     uint m_size =
 	(m_tile == 0 ? 0 : tile_size(&m_tile->tmask, 1));
-    return (max(p_size, m_size) <= 65500);
+    /* The image limit only applies to Acrobat versions less than 5
+     * (PDF 1.4).
+     */
+    if (pdev->CompatibilityLevel < 1.4)
+	return (max(p_size, m_size) <= 65500);
+    else
+	return 1;
 }
 
 static int
@@ -336,6 +336,7 @@ pdf_put_uncolored_pattern(gx_device_pdf *pdev, const gx_drawing_color *pdc,
 		stream_puts(pdev->strm, "q q Q Q\n");
 		pdev->AR4_save_bug = true;
 	    }
+	    (*ppres)->where_used |= pdev->used_mask;
 	}
 	cos_value_write(&v, pdev);
 	pprints1(s, " %s ", ppscc->setcolorspace);
@@ -432,8 +433,8 @@ pdf_put_colored_pattern(gx_device_pdf *pdev, const gx_drawing_color *pdc,
      * We don't have to worry about color space scaling: the color
      * space is always a Device space.
      */
-    code = pdf_color_space(pdev, &cs_value, NULL, pcs_Device,
-			   &pdf_color_space_names, true);
+    code = pdf_color_space_named(pdev, &cs_value, NULL, pcs_Device,
+			   &pdf_color_space_names, true, NULL, 0);
     if (code < 0)
 	return code;
     if (!have_pattern_streams) {
@@ -475,6 +476,7 @@ pdf_put_colored_pattern(gx_device_pdf *pdev, const gx_drawing_color *pdc,
     } else {
 	*ppres = pdf_find_resource_by_gs_id(pdev, resourcePattern, p_tile->id);
 	*ppres = pdf_substitute_pattern(*ppres);
+	(*ppres)->where_used |= pdev->used_mask;
     }
     /* pcs_Device will leak (picked up by GC in PS) on error, but we'll
        tolerate that for now. */
@@ -500,8 +502,8 @@ pdf_put_shading_common(cos_dict_t *pscd, const gs_shading_t *psh,
     if (code < 0 ||
 	(psh->params.AntiAlias &&
 	 (code = cos_dict_put_c_strings(pscd, "/AntiAlias", "true")) < 0) ||
-	(code = pdf_color_space(pscd->pdev, &cs_value, ppranges, pcs,
-				&pdf_color_space_names, false)) < 0 ||
+	(code = pdf_color_space_named(pscd->pdev, &cs_value, ppranges, pcs,
+				&pdf_color_space_names, false, NULL, 0)) < 0 ||
 	(code = cos_dict_put_c_key(pscd, "/ColorSpace", &cs_value)) < 0
 	)
 	return code;

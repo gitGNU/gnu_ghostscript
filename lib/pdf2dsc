@@ -1,5 +1,5 @@
 #! /bin/sh
-# $Id: pdf2dsc,v 1.5 2007/09/11 15:24:51 Arabidopsis Exp $
+# $Id: pdf2dsc,v 1.6 2010/07/10 22:02:38 Arabidopsis Exp $
 
 # psf2dsc: generates an index of a PDF file.
 #
@@ -31,5 +31,5 @@ pdffile=$1
 dscfile=$2
 : ${dscfile:=`echo $pdffile | sed 's,\.[^/.]*,,'`.dsc}
 
-exec "$GS_EXECUTABLE" -q -dNODISPLAY -dSAFER -dDELAYSAFER\
+exec "$GS_EXECUTABLE" -q -dNODISPLAY -P- -dSAFER -dDELAYSAFER\
     -sPDFname="$pdffile" -sDSCname="$dscfile" pdf2dsc.ps -c quit

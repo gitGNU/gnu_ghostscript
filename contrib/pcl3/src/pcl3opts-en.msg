@@ -1,5 +1,5 @@
 $ *****************************************************************************
-$ File:     @(#)$Id: pcl3opts-en.msg,v 1.1 2007/09/11 15:24:55 Arabidopsis Exp $
+$ File:     @(#)$Id: pcl3opts-en.msg,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $
 $ Contents: NLS message catalogue for pcl3opts in English
 $ Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
 $           Germany

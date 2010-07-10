@@ -1,26 +1,19 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdfp.c,v 1.1 2009/04/23 23:26:37 Arabidopsis Exp $ */
+/* $Id: gdevpdfp.c,v 1.2 2010/07/10 22:02:22 Arabidopsis Exp $ */
 /* Get/put parameters for PDF-writing driver */
 #include "memory_.h"
-#include "string_.h"
 #include "gx.h"
 #include "gserrors.h"
 #include "gdevpdfx.h"
@@ -115,6 +108,11 @@ static const gs_param_item_t pdf_param_items[] = {
     pi("SetPageSize", gs_param_type_bool, SetPageSize),
     pi("RotatePages", gs_param_type_bool, RotatePages),
     pi("FitPages", gs_param_type_bool, FitPages),
+    pi("CenterPages", gs_param_type_bool, CenterPages),
+    pi("DoNumCopies", gs_param_type_bool, DoNumCopies),
+    pi("PreserveSeparation", gs_param_type_bool, PreserveSeparation),
+    pi("PreserveDeviceN", gs_param_type_bool, PreserveDeviceN),
+    pi("PDFACompatibilityPolicy", gs_param_type_int, PDFACompatibilityPolicy),
 #undef pi
     gs_param_item_end
 };
@@ -200,12 +198,10 @@ gdev_pdf_get_params(gx_device * dev, gs_param_list * plist)
     float cl = (float)pdev->CompatibilityLevel;
     int code;
     int cdv = CoreDistVersion;
-    int EmbedFontObjects = 1;
 
     pdev->ParamCompatibilityLevel = cl;
     code = gdev_psdf_get_params(dev, plist);
     if (code < 0 ||
-	(code = param_write_int(plist, ".EmbedFontObjects", &EmbedFontObjects)) < 0 ||
 	(code = param_write_int(plist, "CoreDistVersion", &cdv)) < 0 ||
 	(code = param_write_float(plist, "CompatibilityLevel", &cl)) < 0 ||
 	(pdev->is_ps2write && (code = param_write_string(plist, "OPDFReadProcsetPath", &pdev->OPDFReadProcsetPath)) < 0) ||
@@ -390,6 +386,17 @@ gdev_pdf_put_params_impl(gx_device * dev, const gx_device_pdf * save_dev, gs_par
     }
     if (ecode < 0)
 	goto fail;
+    /* PDFA and PDFX are stored in the page device dictionary and therefore
+     * set on every setpagedevice. However, if we have encountered a file which
+     * can't be made this way, and the PDFACompatibilityPolicy is 1, we want to
+     * continue producing the file, but not as a PDF/A or PDF/X file. Its more
+     * or less impossible to alter the setting in the (potentially saved) page
+     * device dictionary, so we use this rather clunky method.
+     */
+    if(pdev->PDFA && pdev->AbortPDFAX)
+	pdev->PDFA = false;
+    if(pdev->PDFX && pdev->AbortPDFAX)
+	pdev->PDFX = false;
     if (pdev->PDFX && pdev->PDFA) {
 	ecode = gs_note_error(gs_error_rangecheck);
 	param_signal_error(plist, "PDFA", ecode);

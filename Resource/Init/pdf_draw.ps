@@ -1,20 +1,19 @@
 %    Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-%  This file is part of GNU ghostscript
-%
-%  GNU ghostscript is free software; you can redistribute it and/or modify it under
-%  the terms of the version 2 of the GNU General Public License as published by the Free Software
-%  Foundation.
-%
-%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-%
-%  You should have received a copy of the GNU General Public License along with
-%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-%
-% $Id: pdf_draw.ps,v 1.1 2009/04/23 23:25:43 Arabidopsis Exp $
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
+% $Id: pdf_draw.ps,v 1.2 2010/07/10 22:02:13 Arabidopsis Exp $
 % pdf_draw.ps
 % PDF drawing operations (graphics, text, and images).
 
@@ -263,7 +262,7 @@ pdfdict begin
 } bdef
 
 /resolvehalftone {	% <dict> resolvehalftone <halftone>
-  dup /HalftoneType get
+  dup /HalftoneType oget
   dup //htrdict exch .knownget {
     exch pop exec
   } {
@@ -388,7 +387,7 @@ end
 % ------ Transparency support ------ %
 
 /gssmask {
-  dup /None eq PDFusingtransparency not or {
+  dup /None eq 1 index //null eq or PDFusingtransparency not or {
     pop null
   } {
 	% Preprocess the SMask value into a parameter dictionary for
@@ -398,16 +397,20 @@ end
 			% Stack: mark ... smaskdict
     dup /BC knownoget {
       dup /Background exch 4 2 roll
-      gsave
+      gsave //nodict begin
         1 index /G oget /Group oget /CS knownoget {
 	  resolvecolorspace dup setgcolorspace csput
 	} if
         aload pop setcolor [ currentgray ]
-      grestore
+      end grestore
       /GrayBackground exch 3 2 roll
     } if
     dup /TR knownoget {
-      resolveidfnproc /TransferFunction exch 3 2 roll
+      dup /Identity eq {
+        pop
+      } {
+        resolvefnproc /TransferFunction exch 3 2 roll
+      } ifelse
     } if    
     dup /G oget dup /BBox oget /BBox exch 4 2 roll
     /.execmaskgroup cvx 2 packedarray cvx /Draw exch 3 2 roll
@@ -415,16 +418,44 @@ end
   } ifelse SMask
 } bdef
 
+% Functions specific to the Device* colorspaces to force the switch to
+% the Device* colorspace so that the SMask will not get a CIEBased* colorspace
+% in the case when UseCIEColor changes the Device* colorspace to something else.
+% Also see the logic in pdf_main.ps:pdfopen that similarly defines these resources.
+/forceDefaultCS <<
+  {
+    currentcolorspace setcolorspace	% this will switch to Device colorspace
+  } bind
+  /DeviceGray exch
+  /DeviceRGB 1 index
+  /DeviceCMYK 1 index
+>>
+def
+
 % This procedure is called to actually render the soft mask.
 /.execmaskgroup {	% <masknum> <paramdict> <formdict> .execmaskgroup -
-	% Save our place in PDFfile, and do a gsave to avoid resetting
-	% the color space.
-  currentcolorspace 4 1 roll
+    % Save our place in PDFfile. Do not use gsave-grestore when creating
+    % a soft mask with .begintransparencygroup because high level devices
+    % need to modify the graphic state by storing the soft mask ID.
+    % Save the ExtGState (//nodict begin) BEFORE changing the colorspace
+  mark currentcolor counttomark dup 4 add exch roll pop
+  currentcolorspace 4 1 roll .getuseciecolor 4 1 roll //nodict begin
   PDFfile fileposition 4 1 roll
 	% We have to select the group's color space so that the
 	% background color will be interpreted correctly.
-  dup /Group oget /CS knownoget { resolvecolorspace dup setgcolorspace csput } if
-  exch dup /BBox get aload pop .begintransparencymaskgroup {
+	% [save/restore]DefaultCS make sure that the SMask logic sees
+	% the Device* spaces, not CIEBased* that UseCIEColor may have
+	% established.
+  false .setuseciecolor		% SMask gets processed without UseCIEColor
+  dup /Group oget /CS knownoget {
+    resolvecolorspace dup setgcolorspace csput
+    //true		% use currentcolorspace
+  } {
+    % inheriting the colorspace -- make sure Device* spaces are not CIEBased
+    forceDefaultCS currentcolorspace 0 get .knownget { exec } if
+    //false		% no defined colorspace
+  } ifelse
+  3 -1 roll dup /BBox get aload pop .begintransparencymaskgroup {
     dup /Resources knownoget { oforce } { 0 dict } ifelse
     exch false resolvestream
     .execgroup .endtransparencymask
@@ -432,13 +463,14 @@ end
     .discardtransparencymask stop
   } if
   PDFfile exch setfileposition 
-  setcolorspace
+  .setuseciecolor setcolorspace setcolor end	% restore colorspace, color and ExtGState (end)
 } bdef
 % Paint a Form+Group XObject, either for a transparency mask or for a Do.
 /.execgroup {		% <resdict> <stream> .execgroup -
   gsave //nodict begin
-  null SMask
+  newpath null SMask
   1 .setopacityalpha 1 .setshapealpha
+  1 CA 1 ca
   /Compatible .setblendmode
 	% Execute the body of the Form, similar to DoForm.
   pdfopdict .pdfruncontext
@@ -508,15 +540,16 @@ end
 /01_4 [0 1 0 1 0 1 0 1] readonly def
 
 % The keys here are resolved (PostScript, not PDF) color space names.
-/csncompdict 8 dict begin
+/csncompdict 9 dict begin
   /DeviceGray { pop 1 } bdef
   /DeviceRGB { pop 3 } bdef
   /DeviceCMYK { pop 4 } bdef
-  /CIEBasedA { pop 1 } bdef
-  /CIEBasedABC { pop 3 } bdef
+  /CIEBasedA //DeviceGray def
+  /CIEBasedABC //DeviceRGB def
   /ICCBased { 1 oget /N oget } bdef
-  /Separation { pop 1 } bdef
+  /Separation //DeviceGray def
   /DeviceN { 1 oget length } bdef
+  /Indexed  //DeviceGray def
 currentdict end readonly def
 
 /csrdict 13 dict begin 
@@ -755,13 +788,16 @@ currentdict end readonly def
 
 /.pdfpaintproc {         % <patdict> <resdict> .pdfpaintproc -
   PDFDEBUG { pdfdict /PDFSTEPcount .knownget { 1 le } { true } ifelse { (%Begin PaintProc) print dup === flush } if } if
-	% For uncolored patterns, we have to unbind the current
-	% color and color space before running the PaintProc.
-	% There's no harm in doing this for colored patterns,
-	% so for simplicity, we always do it.
   PDFfile fileposition 3 1 roll
   q
-  //null sc1 //null SC1
+  1 index /PaintType oget 1 eq {
+    % For colored patterns, set default fill and stroke colors.
+    0 g 0 G
+  } {
+    % For uncolored patterns, we have to unbind the current
+    % color and color space before running the PaintProc.
+    //null sc1 //null SC1
+  } ifelse
 
   % Save old values on opstack, set pdfemptycount to new value.
   pdfemptycount countdictstack
@@ -774,7 +810,7 @@ currentdict end readonly def
   exch //false resolvestream pdfopdict .pdfruncontext
 
   countdictstack exch sub dup 0 gt { 
-     (   **** Warning: Pattern stream has imbalanced q/Q operators (too many q's)\n)
+     (   **** Warning: Pattern stream has unbalanced q/Q operators \(too many q's\)\n)
      pdfformaterror
      { Q } repeat
    } {
@@ -797,16 +833,18 @@ currentdict end readonly def
     1 index /File get dup fileposition 3 1 roll
 		% Stack: dict savepos pos file
     dup 3 -1 roll setfileposition
-    dup 3 index /Length oget
-
-    dup 65535 le {
-      dup 0 eq {
-        pop pop ()
+    dup 3 index /Length knownoget {
+      dup 65535 le {
+        dup 0 eq {
+          pop pop ()
+        } {
+          string readstring pop
+        } ifelse
       } {
-        string readstring pop
+        () /SubFileDecode filter /ReusableStreamDecode filter
       } ifelse
     } {
-      () /SubFileDecode filter /ReusableStreamDecode filter
+      0 (endstream) /SubFileDecode filter /ReusableStreamDecode filter
     } ifelse
 		% Stack: dict savepos file string
     3 1 roll exch setfileposition
@@ -821,6 +859,7 @@ currentdict end readonly def
     2 index /Resources knownoget { oforce } { 0 dict } ifelse
     /.pdfpaintproc cvx
   ] cvx put
+  dup /.pattern_uses_transparency  1 index patternusestransparency put
   PDFDEBUG { pdfdict /PDFSTEPcount .knownget { 1 le } { true } ifelse { (%Pattern: ) print dup === flush } if } if
 } bdef
 
@@ -918,12 +957,12 @@ drawopdict begin
   /m /moveto load def
   /l /lineto load def
   /c /curveto load def
-  /v { currentpoint 6 2 roll curveto } def
-  /y { 2 copy curveto } def
+  /v { currentpoint 6 2 roll curveto } bdef
+  /y { 2 copy curveto } bdef
   /re {
    4 2 roll moveto  exch dup 0 rlineto  0 3 -1 roll rlineto  neg 0 rlineto
    closepath
-  } def
+  } bdef
   /h /closepath load def
 			% Path painting and clipping
   /n { n } def
@@ -937,7 +976,9 @@ drawopdict begin
   /b* { b* } def
   /W { W } def
   /W* { W* } def
-  /sh { setfillstate resolvesh 
+  /sh {
+      OFFlevels length 0 eq {
+        setfillstate resolvesh 
         gsave 0 .setoverprintmode 
         dup /.shading .knownget {
           exch 
@@ -947,8 +988,11 @@ drawopdict begin
           .buildshading
           dup 3 1 roll /.shading exch put
         } ifelse
-        .shfill grestore 
-      } def
+        .shfill grestore
+      } {
+        pop
+      } ifelse
+    } bdef
 end
 
 % ---------------- XObjects ---------------- %
@@ -1001,6 +1045,117 @@ end
   } if
 } bdef
 
+% <string> <index> getu16 <integer>
+/getu16 {
+  2 copy get 8 bitshift 3 1 roll 1 add get add
+} bind def
+
+% <string> <index> getu32 <integer>
+/getu32 {
+  2 copy getu16 16 bitshift 3 1 roll 2 add getu16 add
+} bind def
+
+/jp2_csp_dict <<
+  16 { /sRGB /ColorSpace findresource } bind
+  18 1 index  % YCC is convertrd to RGB
+  17 { /sGray /ColorSpace findresource } bind
+>> readonly def
+ 
+% Process jp2 blocks (aka boxes). All procedures have the signature
+% <file> <length> -> ... <file> <flush_length>
+/jp2_tag_dict <<
+  /jp2h { % descend into a sub-stream, don't return.
+    () /SubFileDecode filter 0
+  } bind
+  /ihdr {
+    14 sub                               % file len-14
+    1 index 14 string readstring pop     % file len-14 (14)
+    /Components 1 index 8 getu16         % file len-14 (14) /Components NC
+    def                                  % file len-14 (14)
+    10 get 16#7F and 1 add
+    8 .min % color depth is reduced in the library
+    /BitsPerComponent exch def           % file len-14 
+  } bind
+  /colr {
+    currentdict /ColorSpace known not {
+      3 sub
+      1 index 3 string readstring pop      % file len-3 (3)
+      0 get dup 1 eq {
+        pop 4 sub                          % file len-7
+        1 index 4 string readstring pop    % file len-16 (4) 
+        0 getu32                           % file len-16 enum
+        //jp2_csp_dict exch .knownget {
+          exec /ColorSpace exch def        % file len-7
+        } {
+          (   **** Warning: Unknown enumerated color space in JPX stream.\n)
+          pdfformaterror
+        } ifelse
+      } {
+        2 eq {
+          3 dict begin
+          /N /Components load def
+          string 1 index exch readstring pop % file ()
+          /ReusableStreamDecode filter /DataSource exch def
+          currentdict end
+          /ICCBased exch 2 array astore
+          /ColorSpace exch                 % file /ColorSpace [...]
+          def 0                            % file 0
+        } {
+          (   **** Warning: Unknown color space method in JPX stream.\n)
+          pdfformaterror
+        } ifelse
+      } ifelse
+    } if
+  } bind
+  % Palette colors are decoded by the library.
+  % For now, ignore 'pclr' table.
+  /pclr { }
+>> readonly def
+
+
+% Parse jp2 file format to get color space and image depth info.
+% <file> get_jp2_csp -
+/get_jp2_csp {
+  {
+    dup (01234567) readstring pop        % f (LBoxTBox)
+    dup length 8 lt {
+      pop exit
+    } if
+    dup 4 4 getinterval exch             % f (TBox) (LBoxTBox)
+    0 getu32                             % f (TBox) LBox
+    dup 0 eq {
+      pop pop exit % cannot happen
+    } {
+      dup 1 eq {
+        pop 1 index (01234567) readstring pop
+        4 getu32                         % f (TBox) LBox
+        16 sub
+      } {
+        8 sub
+      } ifelse
+    } ifelse                             % f (TBox) LBox-8..16  
+
+    PDFDEBUG {
+      2 copy 2 packedarray ==            % f (TBox) LBox-8..16
+    } if
+   
+    //jp2_tag_dict 3 -1 roll .knownget {
+      exec
+    } if                                  % f flush
+
+    dup 0 ne {
+      1 index exch                        % f f flush
+      () /SubFileDecode filter flushfile % skip unwanted blocks
+    } {
+      pop
+    } ifelse
+  } loop
+  pop
+} bind def
+
+currentdict /jp2_tag_dict .undef
+currentdict /jp2_csp_dict .undef
+
 /makeimagedict {	% <resdict> <newdict> makeimagedict <imagemask>
 			% On return, newdict' is currentdict
   begin
@@ -1012,7 +1167,7 @@ end
   makeimagekeys
 } bdef
 /makeimagekeys {	% <resdict> makeimagekeys <imagemask>
-		% newdict is currentdict
+              	% newdict is currentdict
 		% Assumes Width, Height, BPC, Interpolate already copied.
   /ImageType 1 def
   /ImageMatrix Width 0 0
@@ -1026,30 +1181,97 @@ end
     /Decode 2 copy knownoget { 0 2 getinterval } { //01_1 } ifelse def
 		% BitsPerComponent is optional for masks.
     /BitsPerComponent 2 copy known { pop } { 1 def } ifelse
-    true
+		% Even though we're going to read data,
+		% pass false to resolvestream so that
+		% it doesn't try to use Length (which may not be present).
+    //false resolvestream /DataSource exch def
+    //true
   } {
 		% Opaque image
-    dup /ColorSpace knownoget 
-    % JPXDecode filters can omit the /ColorSpace and /BitsPerComponent
-    % keys, in which case the interpreter must retrieve this information
-    % from inside the compressed stream. Here we substitute the most
-    % likely values as a work-around.
-    not {
-      (   **** Warning: assuming JPX image is 8-bit RGB.\n) stderrprint
-      [/DeviceRGB] /BitsPerComponent 8 def
-    } if 
+    dup /ColorSpace oknown 
+    1 index /BitsPerComponent oknown and not {
+      dup /Filter knownoget {
+        dup type /arraytype eq {
+          dup length
+          dup 0 gt {
+            1 sub get oforce
+          } {
+            pop
+          } ifelse
+        } if
+        /JPXDecode eq {
+          % JPXDecode filters can omit the /ColorSpace and /BitsPerComponent
+          % keys, in which case the interpreter must retrieve this information
+          % from inside the compressed stream. Here we substitute the most
+          % likely values as a work-around.
+          dup /IDFlag known {
+            (   **** Warning: PDF spec bans inline JPX images.\n) pdfformaterror
+            % Inline stream is not positionable. Cannot get ColorSpace.
+          } {
+            % Drop the last filter (JPXDecode) from the pipeline
+            dup dup length dict copy
+            dup /Filter oget
+            dup type /arraytype eq {
+              dup length 1 gt {
+                dup length 1 sub 0 exch getinterval
+                1 index exch /Filter exch put
+
+                dup /Params knownoget {
+                  dup type /arraytype eq {
+                    dup length 1 gt {
+                      dup length 1 sub 0 exch getinterval
+                      1 index exch /Params exch put
+                    } {
+                      pop
+                      dup /Params undef
+                    } ifelse
+                  } {
+                    pop
+                    dup /Params undef
+                  } ifelse
+                } if
+              } {
+                pop
+                dup /Filter undef
+                dup /Params undef
+              } ifelse
+            } {
+              pop
+              dup /Filter undef
+              dup /Params undef
+            } ifelse
+
+            //false resolvestream get_jp2_csp
+          } ifelse
+        } if
+      } if
+      currentdict /BitsPerComponent oknown not {
+        (   **** Warning: image has no /BitsPerComponent key; assuming 8 bit.\n)
+        pdfformaterror
+        /BitsPerComponent 8 def
+      } if
+    } if
+
+    currentdict /ColorSpace knownoget not {
+      dup /ColorSpace knownoget not {
+        (   **** Warning: image has no /ColorSpace key; assuming /DeviceRGB.\n)
+        pdfformaterror
+        /DeviceRGB
+      } if
+    } if
     resolvecolorspace /ColorSpace exch def
+
 		% Decode is required for the PostScript image operators.
     /Decode 2 copy knownoget not {
       ColorSpace //defaultdecodedict
       ColorSpace dup type /arraytype eq { 0 get } if get exec
     } if def
-    false
-  } ifelse
 		% Even though we're going to read data,
 		% pass false to resolvestream so that
 		% it doesn't try to use Length (which may not be present).
-  exch false resolvestream /DataSource exch def
+    //false resolvestream /DataSource exch def
+    //false
+  } ifelse
 } bdef
 
 /DoImage {
@@ -1079,7 +1301,7 @@ end
     } forall exch pop {
       (\n   **** Warning: Some elements of Mask array are out of range.\n)
       pdfformaterror
-      [ exch { 0 .max 1 BitsPerComponent bitshift 1 sub .min } forall ]
+      [ exch { 1 BitsPerComponent bitshift 1 sub and } forall ] % AR5 does this
     } if
     /MaskColor exch def
   } {
@@ -1109,24 +1331,42 @@ end
 } bdef
 
 /doimagesmask { % <imagemask> doimagesmask -
-  PDFusingtransparency { currentdict /SMask knownoget } { false } ifelse {
-    .begintransparencymaskimage
-    PDFfile fileposition exch
-    gsave //nodict begin
-    null /SoftMask gput
-    1 .setopacityalpha 1 .setshapealpha
-    /Compatible .setblendmode
-    DoImage
-    end grestore
-    PDFfile exch setfileposition
-    0 .endtransparencymask
+  PDFusingtransparency {
+    currentdict /SMask knownoget
+  } {
+    false
+  } ifelse
+  {	% We are doing transparency and SMask is present in the image
+	% stack: <imagemask> <SMask>
+    currentdevice .devicename /pdfwrite eq {
+      pop	% pdfwrite will process SMask directly during 'doimage'
+    } {
+      .begintransparencymaskimage
+      PDFfile fileposition exch
+      gsave //nodict begin
+      null /SoftMask gput
+      1 .setopacityalpha 1 .setshapealpha
+      1 CA 1 ca
+      /Compatible .setblendmode
+      DoImage
+      end grestore
+      PDFfile exch setfileposition
+      0 .endtransparencymask
+    } ifelse
     << /Subtype /Group /Isolated true 
       /.image_with_SMask true % pdfwrite needs : see gs/src/ztrans.c, gs/src/gdevpdft.c 
     >> 0 0 1 1 .begintransparencygroup
     doimage
     .endtransparencygroup
   } {
-    doimage
+    SoftMask //null ne {
+      % the image doesn't have an SMask, but the ExtGState does, force a group.
+      << /Subtype /Group /Isolated true >> 0 0 1 1 .begintransparencygroup
+      doimage
+      .endtransparencygroup
+    }
+    { doimage }
+    ifelse
   } ifelse
 } bdef
 
@@ -1159,22 +1399,19 @@ end
 /doimage {	% <imagemask> doimage -
 		% imagedict is currentdict, gets popped from dstack
   DataSource exch
-
   PDFusingtransparency
   currentdevice .devicename /pdfwrite ne { 
     % This is a temporary workaround for the bug 689080,
     % which is done under a rush of 8.63 release.
     % The purpose is to disable a conversion of an image with soft mask
     % into a Type 103 image, which currently allocates a full mask buffer
-    % before writing clist. Note that imagemask installs
-    % the transparency mask anyway (likely another bug), 
-    % so the image is still masked.
+    % before writing clist.
     % With this workaround the Matte color is not working (ignored).
     is_big_mask not 
   } {
     true % pdfwrite doesn't need the workaround explained above,
          % and cannot work with it. 
-  } ifelse 
+  } ifelse
   and {
     currentdict /SMask knownoget
   } {
@@ -1228,11 +1465,17 @@ end
   /.paintform cvx
   ] cvx /PaintProc exch put
     % Adjust pdfemptycount since we have an extra dictionary on the stack
-  pdfemptycount exch
-  /pdfemptycount where pop count 2 sub /pdfemptycount exch put
-  q execform Q			% gsave / grestore around the Form
+  pdfemptycount countdictstack  3 -1 roll
+  /pdfemptycount count 2 sub store
+  q execform  			% gsave / grestore around the Form
     % Restore pdfemptycount
-  /pdfemptycount where pop exch /pdfemptycount exch put
+  countdictstack exch sub
+  dup 1 gt {
+    (   **** Warning: Pattern stream has unbalanced q/Q operators \(too many q's\)\n)
+    pdfformaterror
+  } if
+  { Q } repeat
+  /pdfemptycount exch store
 } bdef
 
 /_dops_save 1 array def
@@ -1250,18 +1493,77 @@ end
 
 currentdict /_dops_save undef
 
-drawopdict begin
-  /Do {
-    setfillblend
-    PDFfile fileposition exch
-    dup Page /XObject rget { 
-      exch pop dup /Subtype get xobjectprocs exch get
-		% Don't leave extra objects on the stack while executing
-		% the definition of the form.
-      3 -1 roll 2 .execn
+/ocg_pocs 4 dict begin
+  /AllOn {
+    //true exch {
+      oforce dup type /dicttype eq {
+        /OFF known not and
+      } {
+        pop
+      } ifelse
+    } forall
+  } bdef  
+  /AnyOn {
+    //false exch {
+      oforce dup type /dicttype eq {
+        /OFF known not or
+      } {
+        pop
+      } ifelse
+    } forall
+  } bdef
+  /AnyOff {
+    //AllOn exec not
+  } bdef
+  /AllOff {
+    //AnyOn exec not
+  } bdef
+currentdict end readonly def
+
+
+% Check whether OCG or OCMD is visible
+% <dict> oc-is-visible <bool>
+/ocg-is-visible {
+  dup /Type knownoget {
+    /OCMD eq {
+      dup /OCGs knownoget not { {} } if      % OC OCGs
+      dup type /dicttype eq { 1 array astore } if
+      //true 1 index { //null eq and } forall {
+         pop pop //true  % all nulls => show 
+      } {
+        exch /P knownoget not { /AnyOn } if  % OCGs P
+        //ocg_pocs exch get exec             % bool
+      } ifelse
     } {
-		% This should cause an error, but Acrobat Reader can
-		% continue, so we do too.
+      /OFF known not % OFF is inserted by process_trailer_attrs
+    } ifelse
+  } {
+    /OFF known not % OFF is inserted by process_trailer_attrs
+  } ifelse
+} bdef
+
+drawopdict begin
+  /Do {                                              % /Name
+    setfillblend
+    PDFfile fileposition exch                      % pos /Name
+    dup Page /XObject rget { 
+      exch pop                                     % pos obj
+      OFFlevels length 0 eq {
+        dup /OC knownoget { ocg-is-visible } { //true } ifelse
+      } {
+        //false
+      } ifelse {
+        dup /Subtype get //xobjectprocs exch get   % pos obj {proc}
+        % Don't leave extra objects on the stack while executing
+        % the definition of the form.
+        3 -1 roll                                  % obj {proc} pos
+        2 .execn                                   % pos
+      } {
+        pop                                        % pos
+      } ifelse
+    } {
+        % This should cause an error, but Acrobat Reader can
+        % continue, so we do too.
       (   **** Undefined XObject resource: ) 
       exch =string cvs concatstrings (\n) concatstrings
       pdfformaterror
@@ -1269,6 +1571,9 @@ drawopdict begin
     PDFfile exch setfileposition
   } bdef
 end
+
+currentdict /xobjectprocs .undef
+currentdict /ocg_pocs .undef
 
 % ---------------- In-line images ---------------- %
 
@@ -1300,6 +1605,8 @@ end
   oforce //unabbrevtypedict 1 index type .knownget { exec } if
 } bdef
 
+/is_space_dict << 0 0 9 9 10 10 12 12 13 13 32 32 >> readonly def
+
 drawopdict begin
   /BI { mark } bdef
   /ID {
@@ -1309,29 +1616,54 @@ drawopdict begin
     } repeat pop
     /IDFlag true def  % flag for stream processing.
     /File PDFsource def
-    currentdict makeimagekeys doimage	
-	% The Adobe documentation says that the data following ID
+    currentdict makeimagekeys
+    OFFlevels length 0 eq {
+      doimage
+    } {
+      Width
+      1 index /ImageMask knownoget dup { and } if not {
+        1 index /ColorSpace oget
+        dup type /arraytype eq { 0 oget } if
+        //csncompdict exch get exec
+        BitsPerComponent mul
+      } if
+      7 add 8 idiv Height mul
+      DataSource exch () /SubFileDecode filter flushfile
+      end
+    } ifelse  	
+       	% The Adobe documentation says that the data following ID
 	% consists of "lines", and some PDF files (specifically, some files
 	% produced by PCL2PDF from Visual Software) contain garbage bytes
 	% between the last byte of valid data and an EOL.
         % Some files (PDFOUT v3.8d by GenText) have EI immediately following
         % the stream. Some have no EOL and garbage bytes.
-        % Therefore, we skip all bytes before EI or EOL 
-    0
-      { PDFsource read not { //true exit } if
-        dup 10 eq 1 index 13 eq or
-          { pop PDFsource token pop /EI ne exit
-          }
-        if
-        exch 69 eq 1 index 73 eq and { //false exit } if  % 'EI'
-      }
-    loop
-    exch pop
-      { /ID cvx /syntaxerror signalerror
-      }
-    if
+        % Sometimes (bug 690300) CCITTDecode filter consumes 'E' in 'EI'.
+        % Therefore, we search for <start>I<sp|end> or <start|sp>EI<sp|end> 
+    PDFsource read not {
+      /ID cvx /syntaxerror signalerror
+    } if
+    dup 73 eq {
+      pop 10 69 73     % Seed to: <sp>EI
+    } {
+      10 10 3 -1 roll  % Seed to: <sp><sp><any>
+    } ifelse
+    { PDFsource read not dup { 10 exch } if
+      //is_space_dict 2 index known
+      3 index 73 eq and 4 index 69 eq and
+      //is_space_dict 6 index known and {
+        pop pop pop pop pop exit
+      } {
+          {
+            pop pop pop /ID cvx /syntaxerror signalerror
+          } {
+            4 -1 roll pop
+          } ifelse
+      } ifelse
+    } loop
   } bdef
 end
+
+currentdict /is_space_dict undef
 
 % ================================ Text ================================ %
 
@@ -1358,12 +1690,22 @@ drawopdict begin
 
   /Tform { Tform } def  % Text formatting and painting for AcroForm
                         % without appearance streams.
+end
+
+% ======================= Invalid operators ============================ %
+
+drawopdict begin
   /QBT {
     Q BT
     (   **** Warning: invalid operator QBT processed as Q BT .\n)
     pdfformaterror  % Bug 690089
   } def
 
+  /. {
+    0.
+    (   **** Warning: invalid operator . processed as number 0. .\n)
+    pdfformaterror  % Bug 690730
+  } def
 end
 
 % ============================== Annotations ============================== %
@@ -1403,38 +1745,42 @@ end
 /drawborder {		% <annot> drawborder -
   gsave
   dup /BS known 1 index /Border known or {
-  dup /BS knownoget {
+    dup /BS knownoget {
       dup type /dicttype ne   % <annot> <border> <bad?>
     } {
       dup /Border oget 
-      dup type /arraytype ne  % <annot> [border] <bad?>
-    } ifelse
-    { 
-      (   **** Warning: Wrong type of annotation border object.\n)
+      dup type /arraytype eq {
+        dup length 3 lt
+      } {
+        //true
+      } ifelse                % <annot> [border] <bad?>
+    } ifelse { 
+      (   **** Warning: Wrong annotation border object, no border is drawn.\n)
       pdfformaterror
+      pop { 0 0 0 }
     } if
     dup type /dicttype eq {
-    dup /W knownoget not { 1 } if
+      dup /W knownoget not { 1 } if
       % Per PDF1.6 Reference table 8.13, /W in the border style dictionary is
       % expressed in points (an absolute unit), so compensate here for any
       % scaling of the PostScript user space done due to /UserUnit.
       % Scaling due to -dPDFFitPage is not undone, to keep the correct border width
       % compared to the size of the surrounding marks.
-      //systemdict /NoUserUnit .knownget not { false } if not
+      //systemdict /NoUserUnit .knownget not { //false } if not
       //systemdict /PDFFitPage known not and {	% UserUnit is ignored if -dPDFFitPage
         Page /UserUnit knownoget { div } if
       } if
-    [] 2 index /S knownoget {
-      /D eq { 2 index /D knownoget not { [3] } if exch pop } if
-    } if 3 -1 roll pop strokeborder
-  } {
+      {} 2 index /S knownoget {
+        /D eq { 2 index /D knownoget not { {3} } if exch pop } if
+      } if 3 -1 roll pop strokeborder
+    } {
       dup 2 get
-      exch dup length 3 gt { 3 get } { pop [] } ifelse
+      exch dup length 3 gt { 3 get } { pop {} } ifelse
       strokeborder
     } ifelse
-    } {
-      1 [] strokeborder
-    } ifelse
+  } {
+    1 {} strokeborder
+  } ifelse
   grestore
 } bdef
 
@@ -1584,7 +1930,7 @@ end
           } ifelse
 	} {
 	  pop pop pop 1 1	% default to unity scaling
-	} ifelse			% if we have /BBox
+	} ifelse		% if we have /BBox
       } {
 	pop pop 1 1
       } ifelse			% if we have /N
@@ -1598,23 +1944,43 @@ end
   } ifelse
 } bdef
 
-/drawlink {			% <annot> drawlink -
-  dup drawborder dup calc_annot_scale 3 -1 roll drawwidget
-} bdef
-
 % Draw an annotation.
 /drawannottypes mark
-  /Link { drawlink } bind
+  /Link { % <annot> -> <false>
+    dup drawborder dup calc_annot_scale 3 -1 roll drawwidget //false
+  } bind
+  /Ink { % <annot> -> <annot> <true>
+         % <annot> -> <false>
+    dup /AP oknown {
+      //true
+    } {
+      1 setlinewidth
+      1 setlinecap
+      1 setlinejoin
+      dup annotsetcolor
+      dup calc_annot_scale
+      3 index annotrect pop pop translate
+      scale
+      /InkList knownoget {
+        { oforce 
+          mark exch { oforce } forall
+          .pdfinkpath
+          stroke
+        } forall
+      } if
+      //false
+    } ifelse
+  } bind
 .dicttomark readonly def
+
 /drawannot {		% <annot> drawannot -
   dup annotvisible {
     gsave
     dup dup /Subtype knownoget {
-      //drawannottypes exch .knownget {
-        exec
-      } {
-        dup calc_annot_scale 3 -1 roll drawwidget	% Use drawwidget for everything else
-      } ifelse			% type known
+      //drawannottypes exch .knownget { exec } { //true } ifelse
+      {
+        dup calc_annot_scale 3 -1 roll drawwidget % Draw rejected annots as widgets
+      } if			% type known
     } {
       pop
       (   **** Warning: /Annot dict without required /Subtype entry is ignored.\n)

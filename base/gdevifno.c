@@ -11,7 +11,7 @@
  * OF THIS SOFTWARE OR ITS FITNESS FOR ANY PARTICULAR PURPOSE.
  */
 
-/* $Id: gdevifno.c,v 1.1 2009/04/23 23:25:50 Arabidopsis Exp $ */
+/* $Id: gdevifno.c,v 1.2 2010/07/10 22:02:16 Arabidopsis Exp $ */
 /*
  * gs device to generate inferno bitmaps
  *
@@ -22,14 +22,12 @@
 
 #include "gdevprn.h"
 #include "gsparam.h"
-#include "gxlum.h"
-#include <stdlib.h>
 
 #define nil ((void*)0)
 
 /*
- * ERROR 
- * is used to go up the stack and 
+ * ERROR
+ * is used to go up the stack and
  * eventually return_error(gs_error_Fatal) to gs.
  */
 #define ERROR (-2)
@@ -49,11 +47,13 @@ struct Rectangle {
 };
 static Point ZP = { 0, 0 };
 
-static WImage* initwriteimage(FILE *f, Rectangle r, int ldepth);
-static int writeimageblock(WImage *w, uchar *data, int ndata);
+static WImage* initwriteimage(FILE *f, Rectangle r, int ldepth, gs_memory_t *mem);
+static int writeimageblock(WImage *w, uchar *data, int ndata, gs_memory_t *mem);
 static int bytesperline(Rectangle, int);
 static int rgb2cmap(int, int, int);
-static long cmap2rgb(int);
+/* static long cmap2rgb(int); */ /* not currently used */
+
+void init_p9color(ulong *p9color);
 
 #define X_DPI	100
 #define Y_DPI	100
@@ -72,7 +72,15 @@ typedef struct inferno_device_s {
 	int color, gray;
 	int cmapcall;
 	int nbits;
+	ulong *p9color;	/* index blue most sig, red least sig */
 } inferno_device;
+
+/* structure descriptor for the garbage collector */
+/* we must use the final version because gx_device_common requires
+   a finalisation call, but such procedures aren't inherited. */
+gs_private_st_suffix_add1_final(st_inferno_device, inferno_device,
+        "inferno_device", inferno_device_enum_ptrs, inferno_device_reloc_ptrs,
+                          gx_device_finalize, st_device_printer, p9color);
 
 static const gx_device_procs inferno_procs =
 	prn_color_params_procs(inferno_open, gdev_prn_output_page, inferno_close,
@@ -81,7 +89,8 @@ static const gx_device_procs inferno_procs =
 
 
 inferno_device far_data gs_inferno_device =
-{ prn_device_body(inferno_device, inferno_procs, "inferno",
+{ prn_device_stype_body(inferno_device, inferno_procs, "inferno",
+	&st_inferno_device,
 	DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
 	X_DPI, Y_DPI,
 	0,0,0,0,	/* margins */
@@ -98,7 +107,7 @@ inferno_device far_data gs_inferno_device =
  * ghostscript asks us how to convert between
  * rgb and color map entries
  */
-static gx_color_index 
+static gx_color_index
 inferno_rgb2cmap(gx_device *dev, const gx_color_value cv[]) {
 	int shift;
 	inferno_device *bdev = (inferno_device*) dev;
@@ -128,7 +137,7 @@ inferno_rgb2cmap(gx_device *dev, const gx_color_value cv[]) {
 	/*
 	 * we keep track of what ldepth bitmap this is by watching
 	 * what colors gs asks for.
-	 * 
+	 *
 	 * one catch: sometimes print_page gets called more than one
 	 * per page (for multiple copies) without cmap calls inbetween.
 	 * if bdev->cmapcall is 0 when print_page gets called, it uses
@@ -149,7 +158,7 @@ inferno_rgb2cmap(gx_device *dev, const gx_color_value cv[]) {
 	return ((((blue<<4)|green)<<4)|red);
 }
 
-static int 
+static int
 inferno_cmap2rgb(gx_device *dev, gx_color_index color,
   gx_color_value rgb[3]) {
 	int shift, i;
@@ -186,13 +195,12 @@ inferno_cmap2rgb(gx_device *dev, gx_color_index color,
 #define Glevs	16
 #define Blevs	16
 #define Mlevs	16
-#define Rfactor 1		/* multiple of red level in p9color[] index */
+#define Rfactor 1		/* multiple of red level in e cp9color[] index */
 #define Gfactor Rlevs
 #define Bfactor	(Rlevs*Glevs)
-			
-ulong p9color[Rlevs*Glevs*Blevs];	/* index blue most sig, red least sig */
+#define p9color_size (sizeof(ulong)*Rlevs*Glevs*Blevs)
 
-void init_p9color(void)		/* init at run time since p9color[] is so big */
+void init_p9color(ulong *p9color)	/* init at run time since p9color[] is so big */
 {
 	int r, g, b, o;
 	ulong* cur = p9color;
@@ -232,18 +240,25 @@ inferno_open(gx_device *dev)
 	bdev->ldepth = 3;
 	bdev->nbits = 4;	/* 4 bits per color per pixel (12 bpp, then we dither) */
 				/* if you change this, change the entry in gs_inferno_device */
-	init_p9color();
+	bdev->p9color = (ulong *)gs_alloc_bytes(bdev->memory, p9color_size, "plan 9 colour cube");
+	if (bdev->p9color == NULL)
+		return_error(gs_error_VMerror);
+	init_p9color(bdev->p9color);
 	return gdev_prn_open(dev);
 }
 
-/* 
+/*
  * inferno_close() is called at the end, once everything
  * is finished.  we have nothing to do.
  */
 static int
 inferno_close(gx_device *dev)
 {
+	inferno_device *bdev = (inferno_device*) dev;
 	int code;
+
+	gs_free_object(dev->memory, bdev->p9color, "plan 9 colour cube");
+
 	code = gdev_prn_close(dev);
 	if(code < 0)
 		return_error(code);
@@ -258,7 +273,7 @@ inferno_close(gx_device *dev)
 static int
 inferno_print_page(gx_device_printer *pdev, FILE *f)
 {
-	uchar buf[16384];	/* == 8192 dots across */
+	uchar *buf;
 	uchar *p;
 	WImage *w;
 	int bpl, y;
@@ -274,7 +289,7 @@ inferno_print_page(gx_device_printer *pdev, FILE *f)
 	Rectangle r;
 
 	gsbpl = gdev_prn_raster(pdev);
-	if(gsbpl > sizeof(buf)) {
+	if(gsbpl > 16384) {	/* == 8192 dots across */
 		errprintf("bitmap far too wide for inferno\n");
 		return_error(gs_error_Fatal);
 	}
@@ -290,10 +305,16 @@ inferno_print_page(gx_device_printer *pdev, FILE *f)
 	r.max.x = pdev->width;
 	r.max.y = pdev->height;
 	bpl = bytesperline(r, ldepth);
-	w = initwriteimage(f, r, ldepth);
+	w = initwriteimage(f, r, ldepth, bdev->memory);
 	if(w == nil) {
 		errprintf("initwriteimage failed\n");
 		return_error(gs_error_Fatal);
+	}
+
+	buf = gs_alloc_bytes(bdev->memory, gsbpl, "inferno line buffer");
+	if(buf == NULL) {
+		errprintf("couldn't allocate line buffer\n");
+		return_error(gs_error_VMerror);
 	}
 
 	/*
@@ -314,10 +335,10 @@ inferno_print_page(gx_device_printer *pdev, FILE *f)
 					r<<=4;
 					g<<=4;
 					b<<=4;
-					p[x] = rgb2cmap(r,g,b);	
+					p[x] = rgb2cmap(r,g,b);
 				}
 				if(1){
-					u = p9color[us];
+					u = bdev->p9color[us];
 					/* the ulong in p9color is a 2x2 matrix.  pull the entry
 					 * u[x%2][y%2], more or less.
 					 */
@@ -345,19 +366,25 @@ inferno_print_page(gx_device_printer *pdev, FILE *f)
 		xmod = pdev->width % ppb[ldepth];
 		if(xmod)
 			p[(x-1)/ppb[ldepth]] <<= ((ppb[ldepth]-xmod)*bpp[ldepth]);
-		if(writeimageblock(w, p, bpl) == ERROR)
+		if(writeimageblock(w, p, bpl, bdev->memory) == ERROR) {
+			gs_free_object(bdev->memory, buf, "inferno line buffer");
+			/* w leaks here */
 			return_error(gs_error_Fatal);
+		}
 	}
-	if(writeimageblock(w, nil, 0) == ERROR)
+	gs_free_object(bdev->memory, buf, "inferno line buffer");
+	if(writeimageblock(w, nil, 0, bdev->memory) == ERROR) {
 		return_error(gs_error_Fatal);
+	}
 
 	return 0;
 }
 
 /*
  * this is a modified version of the image compressor
- * from fb/bit2enc.  it is modified only in that it 
+ * from fb/bit2enc.  it is modified only in that it
  * now compiles as part of gs.
+ * some updates have been made to use dynamic memory.
  */
 
 /*
@@ -402,7 +429,7 @@ struct WImage {
 	/*
 	 * ibase is the pointer to where the beginning of
 	 * the input "is" in memory.  whenever we "slide" the
-	 * buffer N bytes, what we are actually doing is 
+	 * buffer N bytes, what we are actually doing is
 	 * decrementing ibase by N.
 	 * the ulongs in the Hlist structures are just
 	 * pointers relative to ibase.
@@ -537,7 +564,7 @@ gobbleline(WImage *w)
 		/* hash table lookup */
 		for(hp=w->hash[w->h].next;hp;hp=hp->next){
 			/*
-			 * the next block is an optimization of 
+			 * the next block is an optimization of
 			 * for(s=p, t=w->ibase+hp->p; s<es && *s == *t; s++, t++)
 			 * 	;
 			 */
@@ -563,7 +590,7 @@ gobbleline(WImage *w)
 		}
 
 		/*
-		 * if we didn't find a long enough run, append to 
+		 * if we didn't find a long enough run, append to
 		 * the raw dump buffer
 		 */
 		if(runlen<NMATCH){
@@ -636,7 +663,7 @@ shiftwindow(WImage *w, uchar *data, uchar *edata)
 }
 
 static WImage*
-initwriteimage(FILE *f, Rectangle r, int ldepth)
+initwriteimage(FILE *f, Rectangle r, int ldepth, gs_memory_t *mem)
 {
 	WImage *w;
 	int n, bpl;
@@ -648,7 +675,7 @@ initwriteimage(FILE *f, Rectangle r, int ldepth)
 	}
 
 	n = NMEM+NMATCH+NRUN+bpl*2;
-	w = malloc(n+sizeof(*w));
+	w = (WImage*)gs_alloc_bytes(mem, n+sizeof(*w), "inferno image");
 	if(w == nil)
 		return nil;
 	w->inbuf = (uchar*) &w[1];
@@ -673,7 +700,7 @@ initwriteimage(FILE *f, Rectangle r, int ldepth)
 }
 
 static int
-writeimageblock(WImage *w, uchar *data, int ndata)
+writeimageblock(WImage *w, uchar *data, int ndata, gs_memory_t *mem)
 {
 	uchar *edata;
 
@@ -685,7 +712,7 @@ writeimageblock(WImage *w, uchar *data, int ndata)
 		if(w->r.min.y != w->origr.max.y) {
 			errprintf("not enough data supplied to writeimage\n");
 		}
-		free(w);
+		gs_free_object(mem, w, "inferno image");
 		return 0;
 	}
 
@@ -704,7 +731,7 @@ writeimageblock(WImage *w, uchar *data, int ndata)
 }
 
 /*
- * functions from the Plan9/Brazil drawing libraries 
+ * functions from the Plan9/Brazil drawing libraries
  */
 static int
 bytesperline(Rectangle r, int ld)

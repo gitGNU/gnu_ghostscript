@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zfile.c,v 1.1 2009/04/23 23:31:29 Arabidopsis Exp $ */
+/* $Id: zfile.c,v 1.2 2010/07/10 22:02:42 Arabidopsis Exp $ */
 /* Non-I/O file operators */
 #include "memory_.h"
 #include "string_.h"
@@ -387,7 +381,7 @@ file_continue(i_ctx_t *i_ctx_p)
     os_ptr op = osp;
     es_ptr pscratch = esp - 2;
     file_enum *pfen = r_ptr(esp - 1, file_enum);
-    long devlen = esp[-3].value.intval;
+    int devlen = esp[-3].value.intval;
     gx_io_device *iodev = r_ptr(esp - 4, gx_io_device);
     uint len = r_size(pscratch);
     uint code;
@@ -685,7 +679,7 @@ ztempfile(i_ctx_t *i_ctx_p)
     uint fnlen;
     FILE *sfile;
     stream *s;
-    byte *buf;
+    byte *buf, *sbody;
 
     if (code < 0)
 	return code;
@@ -726,15 +720,21 @@ ztempfile(i_ctx_t *i_ctx_p)
 	return_error(e_invalidfileaccess);
     }
     fnlen = strlen(fname);
+    sbody = ialloc_string(fnlen, ".tempfile(fname)");
+    if (sbody == 0) {
+	gs_free_object(imemory, buf, "ztempfile(buffer)");
+	return_error(e_VMerror);
+    }
+    memcpy(sbody, fname, fnlen);
     file_init_stream(s, sfile, fmode, buf, file_default_buffer_size);
     code = ssetfilename(s, (const unsigned char*) fname, fnlen);
     if (code < 0) {
 	sclose(s);
 	iodev_default->procs.delete_file(iodev_default, fname);
+	ifree_string(sbody, fnlen, ".tempfile(fname)");
 	return_error(e_VMerror);
     }
-    make_const_string(op - 1, a_readonly | icurrent_space, fnlen,
-		      s->file_name.data);
+    make_string(op - 1, a_readonly | icurrent_space, fnlen, sbody);
     make_stream_file(op, s, fmode);
     return code;
 }
@@ -903,6 +903,91 @@ check_file_permissions_aux(i_ctx_t *i_ctx_p, char *fname, uint flen)
 }
 
 
+/* return zero for success, -ve for error, +1 for continue */
+static int
+lib_file_open_search_with_no_combine(gs_file_path_ptr  lib_path, const gs_memory_t *mem, i_ctx_t *i_ctx_p,
+                                     const char *fname, uint flen, char *buffer, int blen, uint *pclen, ref *pfile,
+                                     gx_io_device *iodev, bool starting_arg_file, char *fmode)
+{
+    stream *s;
+    uint blen1 = blen;
+    if (gp_file_name_reduce(fname, flen, buffer, &blen1) != gp_combine_success)
+      goto skip;
+    if (iodev_os_open_file(iodev, (const char *)buffer, blen1,
+                           (const char *)fmode, &s, (gs_memory_t *)mem) == 0) {
+      if (starting_arg_file ||
+          check_file_permissions_aux(i_ctx_p, buffer, blen1) >= 0) {
+        *pclen = blen1;
+        make_stream_file(pfile, s, "r");
+        return 0;
+      }
+      sclose(s);
+      return_error(e_invalidfileaccess);
+    }
+ skip:;
+    return 1;
+}
+
+/* return zero for success, -ve for error, +1 for continue */
+static int
+lib_file_open_search_with_combine(gs_file_path_ptr  lib_path, const gs_memory_t *mem, i_ctx_t *i_ctx_p,
+                                  const char *fname, uint flen, char *buffer, int blen, uint *pclen, ref *pfile,
+                                  gx_io_device *iodev, bool starting_arg_file, char *fmode)
+{
+    stream *s;
+    const gs_file_path *pfpath = lib_path;
+    uint pi;
+
+    for (pi = 0; pi < r_size(&pfpath->list); ++pi) {
+        const ref *prdir = pfpath->list.value.refs + pi;
+        const char *pstr = (const char *)prdir->value.const_bytes;
+        uint plen = r_size(prdir), blen1 = blen;
+        gs_parsed_file_name_t pname;
+        gp_file_name_combine_result r;
+
+        /* We need to concatenate and parse the file name here
+         * if this path has a %device% prefix.              */
+        if (pstr[0] == '%') {
+            int code;
+
+            /* We concatenate directly since gp_file_name_combine_*
+             * rules are not correct for other devices such as %rom% */
+            code = gs_parse_file_name(&pname, pstr, plen);
+            if (code < 0)
+                continue;
+            memcpy(buffer, pname.fname, pname.len);
+            memcpy(buffer+pname.len, fname, flen);
+            code = pname.iodev->procs.open_file(pname.iodev, buffer, pname.len + flen, fmode,
+                                          &s, (gs_memory_t *)mem);
+            if (code < 0)
+                continue;
+            make_stream_file(pfile, s, "r");
+            /* fill in the buffer with the device concatenated */
+            memcpy(buffer, pstr, plen);
+            memcpy(buffer+plen, fname, flen);
+            *pclen = plen + flen;
+            return 0;
+        } else {
+            r = gp_file_name_combine(pstr, plen,
+                    fname, flen, false, buffer, &blen1);
+            if (r != gp_combine_success)
+                continue;
+            if (iodev_os_open_file(iodev, (const char *)buffer, blen1, (const char *)fmode,
+                                    &s, (gs_memory_t *)mem) == 0) {
+                if (starting_arg_file ||
+                    check_file_permissions_aux(i_ctx_p, buffer, blen1) >= 0) {
+                    *pclen = blen1;
+                    make_stream_file(pfile, s, "r");
+                    return 0;
+                }
+                sclose(s);
+                return_error(e_invalidfileaccess);
+            }
+        }
+    }
+    return 1;
+}
+
 /* Return a file object of of the file searched for using the search paths. */
 /* The fname cannot contain a device part (%...%) but the lib paths might. */
 /* The startup code calls this to open the initialization file gs_init.ps. */
@@ -917,8 +1002,9 @@ lib_file_open(gs_file_path_ptr  lib_path, const gs_memory_t *mem, i_ctx_t *i_ctx
     bool search_with_no_combine = false;
     bool search_with_combine = false;
     char fmode[4] = { 'r', 0, 0, 0 };		/* room for binary suffix */
-    stream *s;
     gx_io_device *iodev = iodev_default;
+    gs_main_instance *minst = get_minst_from_memory(mem);
+    int code;
 
     /* when starting arg files (@ files) iodev_default is not yet set */
     if (iodev == 0)
@@ -932,74 +1018,37 @@ lib_file_open(gs_file_path_ptr  lib_path, const gs_memory_t *mem, i_ctx_t *i_ctx
        search_with_no_combine = starting_arg_file;
        search_with_combine = true;
     }
-    if (search_with_no_combine) {
-	uint blen1 = blen;
-
-	if (gp_file_name_reduce(fname, flen, buffer, &blen1) != gp_combine_success)
-	    goto skip;
-	if (iodev_os_open_file(iodev, (const char *)buffer, blen1,
-				(const char *)fmode, &s, (gs_memory_t *)mem) == 0) {
-	    if (starting_arg_file ||
-			check_file_permissions_aux(i_ctx_p, buffer, blen1) >= 0) {
-		*pclen = blen1;
-		make_stream_file(pfile, s, "r");
-		return 0;
-	    }
-	    sclose(s);
-	    return_error(e_invalidfileaccess);
-	}
-	skip:;
+    if (minst->search_here_first) {
+      if (search_with_no_combine) {
+        code = lib_file_open_search_with_no_combine(lib_path, mem, i_ctx_p,
+                                                    fname, flen, buffer, blen, pclen, pfile,
+                                                    iodev, starting_arg_file, fmode);
+        if (code <= 0) /* +ve means continue continue */
+          return code;
+      }
+      if (search_with_combine) {
+        code = lib_file_open_search_with_combine(lib_path, mem, i_ctx_p,
+                                                 fname, flen, buffer, blen, pclen, pfile,
+                                                 iodev, starting_arg_file, fmode);
+        if (code <= 0) /* +ve means continue searching */
+          return code;
+      }
+    } else {
+      if (search_with_combine) {
+        code = lib_file_open_search_with_combine(lib_path, mem, i_ctx_p,
+                                                 fname, flen, buffer, blen, pclen, pfile,
+                                                 iodev, starting_arg_file, fmode);
+        if (code <= 0) /* +ve means continue searching */
+          return code;
+      }
+      if (search_with_no_combine) {
+        code = lib_file_open_search_with_no_combine(lib_path, mem, i_ctx_p,
+                                                    fname, flen, buffer, blen, pclen, pfile,
+                                                    iodev, starting_arg_file, fmode);
+        if (code <= 0) /* +ve means continue searching */
+          return code;
+      }
     } 
-    if (search_with_combine) {
-	const gs_file_path *pfpath = lib_path;
-	uint pi;
-
-	for (pi = 0; pi < r_size(&pfpath->list); ++pi) {
-	    const ref *prdir = pfpath->list.value.refs + pi;
-	    const char *pstr = (const char *)prdir->value.const_bytes;
-	    uint plen = r_size(prdir), blen1 = blen;
-    	    gs_parsed_file_name_t pname;
-	    gp_file_name_combine_result r;
-
-	    /* We need to concatenate and parse the file name here
-	     * if this path has a %device% prefix.		*/
-	    if (pstr[0] == '%') {
-		int code;
-
-		/* We concatenate directly since gp_file_name_combine_*
-		 * rules are not correct for other devices such as %rom% */
-		gs_parse_file_name(&pname, pstr, plen);
-		memcpy(buffer, pname.fname, pname.len);
-		memcpy(buffer+pname.len, fname, flen);
-		code = pname.iodev->procs.open_file(pname.iodev, buffer, pname.len + flen, fmode,
-					      &s, (gs_memory_t *)mem);
-		if (code < 0)
-		    continue;
-		make_stream_file(pfile, s, "r");
-		/* fill in the buffer with the device concatenated */
-		memcpy(buffer, pstr, plen);
-		memcpy(buffer+plen, fname, flen);
-		*pclen = plen + flen;
-		return 0;
-	    } else {
-		r = gp_file_name_combine(pstr, plen, 
-			fname, flen, false, buffer, &blen1);
-		if (r != gp_combine_success)
-		    continue;
-		if (iodev_os_open_file(iodev, (const char *)buffer, blen1, (const char *)fmode,
-					&s, (gs_memory_t *)mem) == 0) {
-		    if (starting_arg_file ||
-			check_file_permissions_aux(i_ctx_p, buffer, blen1) >= 0) {
-			*pclen = blen1;
-			make_stream_file(pfile, s, "r");
-			return 0;
-		    }
-		    sclose(s);
-		    return_error(e_invalidfileaccess);
-		}
-	    }
-	}
-    }
     return_error(e_undefinedfilename);
 }
 

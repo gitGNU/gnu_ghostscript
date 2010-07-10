@@ -22,7 +22,7 @@
   ghost@aladdin.com
 
  */
-/* $Id: md5main.c,v 1.1 2009/04/23 23:26:33 Arabidopsis Exp $ */
+/* $Id: md5main.c,v 1.2 2010/07/10 22:02:22 Arabidopsis Exp $ */
 /*
   Independent implementation of MD5 (RFC 1321).
 

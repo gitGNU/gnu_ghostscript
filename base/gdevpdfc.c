@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdfc.c,v 1.1 2009/04/23 23:26:26 Arabidopsis Exp $ */
+/* $Id: gdevpdfc.c,v 1.2 2010/07/10 22:02:21 Arabidopsis Exp $ */
 /* Color space management and writing for pdfwrite driver */
 #include "math_.h"
 #include "memory_.h"
@@ -351,7 +345,7 @@ pdf_separation_color_space(gx_device_pdf *pdev,
 
     if ((code = cos_array_add(pca, cos_c_string_value(&v, csname))) < 0 ||
 	(code = cos_array_add_no_copy(pca, snames)) < 0 ||
-	(code = pdf_color_space(pdev, &v, &ranges, alt_space, pcsn, false)) < 0 ||
+	(code = pdf_color_space_named(pdev, &v, &ranges, alt_space, pcsn, false, NULL, 0)) < 0 ||
 	(code = cos_array_add(pca, &v)) < 0 ||
 	(code = pdf_function_scaled(pdev, pfn, ranges, &v)) < 0 ||
 	(code = cos_array_add(pca, &v)) < 0 ||
@@ -389,7 +383,7 @@ pdf_indexed_color_space(gx_device_pdf *pdev, cos_value_t *pvalue,
     /* PDF doesn't support Indexed color spaces with more than 256 entries. */
     if (num_entries > 256)
 	return_error(gs_error_rangecheck);
-    if (pdev->CompatibilityLevel < 1.3) {
+    if (pdev->CompatibilityLevel < 1.3 && !pdev->ForOPDFRead) {
 	switch (gs_color_space_get_index(pcs)) {
 	    case gs_color_space_index_Pattern:
 	    case gs_color_space_index_Separation:
@@ -478,8 +472,8 @@ pdf_indexed_color_space(gx_device_pdf *pdev, cos_value_t *pvalue,
      * in PDF, unlike PostScript, the values from the lookup table are
      * scaled automatically.
      */
-    if ((code = pdf_color_space(pdev, pvalue, NULL, base_space,
-				&pdf_color_space_names, false)) < 0 ||
+    if ((code = pdf_color_space_named(pdev, pvalue, NULL, base_space,
+				&pdf_color_space_names, false, NULL, 0)) < 0 ||
 	(code = cos_array_add(pca,
 			      cos_c_string_value(&v, 
 						 pdf_color_space_names.Indexed
@@ -577,9 +571,9 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
 	    ) {
 	    if (res_name != NULL)
 		return 0; /* Ignore .includecolorspace */
-            return pdf_color_space( pdev, pvalue, ppranges,
+            return pdf_color_space_named( pdev, pvalue, ppranges,
                                     pcs->base_space,
-                                    pcsn, by_name);
+                                    pcsn, by_name, NULL, 0);
 	}
         break;
     default:
@@ -789,6 +783,8 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
 	break;
 
     case gs_color_space_index_DeviceN:
+	if (!pdev->PreserveDeviceN)
+	    return_error(gs_error_rangecheck);
         if (pdev->CompatibilityLevel < 1.3)
 	    return_error(gs_error_rangecheck);
 	pfn = gs_cspace_get_devn_function(pcs);
@@ -838,7 +834,7 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
 				  csa->colorant_name, &name_string, &name_string_length);
 		    if (code < 0)
 			return code;
-		    code = pdf_color_space(pdev, &v_separation, NULL, csa->cspace, pcsn, false);
+		    code = pdf_color_space_named(pdev, &v_separation, NULL, csa->cspace, pcsn, false, NULL, 0);
 		    if (code < 0)
 			return code;
 		    code = pdf_string_to_cos_name(pdev, name_string, name_string_length, &v_colorant_name);
@@ -852,6 +848,7 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
     		code = pdf_substitute_resource(pdev, &pres_attributes, resourceOther, NULL, true);
 		if (code < 0)
 		    return code;
+		pres_attributes->where_used |= pdev->used_mask;
 		va = &v_attriburtes;
 		COS_OBJECT_VALUE(va, pres_attributes->object);
 	    }
@@ -863,6 +860,8 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
 	break;
 
     case gs_color_space_index_Separation:
+	if (!pdev->PreserveSeparation)
+	    return_error(gs_error_rangecheck);
 	pfn = gs_cspace_get_sepr_function(pcs);
 	/****** CURRENTLY WE ONLY HANDLE Functions ******/
 	if (pfn == 0)
@@ -884,9 +883,9 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
 	break;
 
     case gs_color_space_index_Pattern:
-	if ((code = pdf_color_space(pdev, pvalue, ppranges,
+	if ((code = pdf_color_space_named(pdev, pvalue, ppranges,
 				    pcs->base_space,
-				    &pdf_color_space_names, false)) < 0 ||
+				    &pdf_color_space_names, false, NULL, 0)) < 0 ||
 	    (code = cos_array_add(pca,
 				  cos_c_string_value(&v, "/Pattern"))) < 0 ||
 	    (code = cos_array_add(pca, pvalue)) < 0
@@ -963,16 +962,6 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
     return 0;
 }
 
-int
-pdf_color_space(gx_device_pdf *pdev, cos_value_t *pvalue,
-		const gs_range_t **ppranges,
-		const gs_color_space *pcs,
-		const pdf_color_space_names_t *pcsn,
-		bool by_name)
-{
-    return pdf_color_space_named(pdev, pvalue, ppranges, pcs, pcsn, by_name, NULL, 0);
-}
-
 /* ---------------- Miscellaneous ---------------- */
 
 /* Create colored and uncolored Pattern color spaces. */
@@ -1024,7 +1013,7 @@ pdf_cs_Pattern_uncolored_hl(gx_device_pdf *pdev,
 		const gs_color_space *pcs, cos_value_t *pvalue)
 {
     /* Only for high level colors. */
-    return pdf_color_space(pdev, pvalue, NULL, pcs, &pdf_color_space_names, true);
+    return pdf_color_space_named(pdev, pvalue, NULL, pcs, &pdf_color_space_names, true, NULL, 0);
 }
 
 /* Set the ProcSets bits corresponding to an image color space. */

@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id: gxclrast.c,v 1.1 2009/04/23 23:25:49 Arabidopsis Exp $ */
+/*$Id: gxclrast.c,v 1.2 2010/07/10 22:02:14 Arabidopsis Exp $ */
 /* Command list interpreter/rasterizer */
 #include "memory_.h"
 #include "gx.h"
@@ -133,7 +127,7 @@ typedef struct command_buf_s {
     byte *data;			/* actual buffer, guaranteed aligned */
     uint size;
     const byte *ptr;		/* next byte to be read (see above) */
-    const byte *limit;		/* refill warning point */
+    const byte *warn_limit;	/* refill warning point */
     const byte *end;		/* byte just beyond valid data */
     stream *s;			/* for refilling buffer */
     int end_status;
@@ -144,9 +138,11 @@ static void
 set_cb_end(command_buf_t *pcb, const byte *end)
 {
     pcb->end = end;
-    pcb->limit = pcb->data + (pcb->size - cmd_largest_size + 1);
-    if ( pcb->limit > pcb->end )
-	pcb->limit = pcb->end;
+    pcb->warn_limit = pcb->data + (pcb->size - cmd_largest_size + 1);
+    if ( pcb->warn_limit > pcb->end )
+	pcb->warn_limit = pcb->end;	/**** This is dangerous. Other places ****/
+					/**** assume that the limit is a soft ****/
+					/**** limit and should check 'end'    ****/
 }
 
 /* Read more data into a command buffer. */
@@ -178,6 +174,12 @@ top_up_cbuf(command_buf_t *pcb, const byte **pcbp)
     pcb->end_status = sgets(pcb->s, cb_top, nread, &nread);
     if ( nread == 0 ) {
 	/* No data for this band at all. */
+	if (cb_top >= pcb->end) {
+	    /* should not happen */
+	    *pcbp = pcb->data;
+	    pcb->data[0] = cmd_opv_end_run;
+	    return_error(gs_error_ioerror);
+	}
 	*cb_top = cmd_opv_end_run;
 	nread = 1;
     }
@@ -500,7 +502,6 @@ clist_playback_band(clist_playback_action playback_action,
     gs_fixed_rect target_box;
     struct _cas {
 	bool lop_enabled;
-	gs_fixed_point fill_adjust;
 	gx_device_color dcolor;
     } clip_save;
     bool in_clip = false;
@@ -599,7 +600,6 @@ in:				/* Initialize for a new page. */
 	gx_set_cmap_procs(&imager_state, tdev);
     gx_imager_setscreenphase(&imager_state, -x0, -y0, gs_color_select_all);
     halftone_type = ht_type_none;
-    fill_params.fill_zero_width = false;
     pcs = gs_cspace_new_DeviceGray(mem);
     if (pcs == NULL) {
 	code = gs_note_error(gs_error_VMerror);
@@ -623,9 +623,9 @@ in:				/* Initialize for a new page. */
 	gs_logical_operation_t log_op;
 
 	/* Make sure the buffer contains a full command. */
-	if (cbp >= cbuf.limit) {
+	if (cbp >= cbuf.warn_limit) {
 	    if (cbuf.end_status < 0) {	/* End of file or error. */
-		if (cbp == cbuf.end) {
+		if (cbp >= cbuf.end) {
 		    code = (cbuf.end_status == EOFC ? 0 :
 			    gs_note_error(gs_error_ioerror));
 		    break;
@@ -1199,15 +1199,11 @@ set_phase:	/*
 						&target_box);
 			tdev = (gx_device *)&clip_accum;
 			clip_save.lop_enabled = state.lop_enabled;
-			clip_save.fill_adjust =
-			    imager_state.fill_adjust;
 			clip_save.dcolor = dev_color;
 			/* temporarily set a solid color */
 			color_set_pure(&dev_color, (gx_color_index)1);
 			state.lop_enabled = false;
 			imager_state.log_op = lop_default;
-			imager_state.fill_adjust.x =
-			    imager_state.fill_adjust.y = fixed_half;
 			break;
 		    case cmd_opv_end_clip:
 			if_debug0('L', "\n");
@@ -1233,8 +1229,6 @@ set_phase:	/*
 			imager_state.log_op =
 			    (state.lop_enabled ? state.lop :
 			     lop_default);
-			imager_state.fill_adjust =
-			    clip_save.fill_adjust;
 			dev_color = clip_save.dcolor;
 			in_clip = false;
 			break;
@@ -1465,7 +1459,7 @@ idata:			data_size = 0;
 				       for reducing time and memory expense. */
 				    int len;
 
-				    if (cbp >= cbuf.limit) {
+				    if (cbp >= cbuf.warn_limit) {
 					code = top_up_cbuf(&cbuf, &cbp);
 					if (code < 0)
 					    goto out;
@@ -1658,17 +1652,17 @@ idata:			data_size = 0;
 					    goto out;
 				    }
 				    while (left) {
-					if (cbp + left > cbuf.limit) {
-					code = top_up_cbuf(&cbuf, &cbp);
-					if (code < 0)
-					    return code;
-				    }
+					if (cbuf.warn_limit - cbp < (int)left) {  /* cbp can be past warn_limit */
+					    code = top_up_cbuf(&cbuf, &cbp);
+					    if (code < 0)
+						return code;
+					}
 					l = min(left, cbuf.end - cbp);
-				    code = pdct->read(&dev_color, &imager_state,
+					code = pdct->read(&dev_color, &imager_state,
 							  &dev_color, tdev, offset, cbp,
 							  l, mem);
-				    if (code < 0)
-					goto out;
+					if (code < 0)
+					    goto out;
 					l = code;
 					cbp += l;
 					offset += l;
@@ -1784,9 +1778,6 @@ idata:			data_size = 0;
 			fill:
 			    fill_params.adjust = imager_state.fill_adjust;
 			    fill_params.flatness = imager_state.flatness;
-			    fill_params.fill_zero_width =
-				fill_params.adjust.x != 0 ||
-				fill_params.adjust.y != 0;
 			    code = gx_fill_path_only(ppath, tdev,
 						     &imager_state,
 						     &fill_params,
@@ -1794,6 +1785,7 @@ idata:			data_size = 0;
 			    break;
 			case cmd_opv_stroke:
 			    stroke_params.flatness = imager_state.flatness;
+			    stroke_params.traditional = false;
 			    code = gx_stroke_path_only(ppath,
 						       (gx_path *) 0, tdev,
 					      &imager_state, &stroke_params,
@@ -1817,7 +1809,20 @@ idata:			data_size = 0;
 				    clipper_dev_open = true;
 				}
 				if (clipper_dev_open)
-				    ttdev = (gx_device *)&clipper_dev;
+				    ttdev = (gx_device *)&clipper_dev;                                
+                                /* Note that if we have transparency present, the clipper device may need to have
+                                   its color information updated to be synced up with the target device.
+                                   This can occur if we had fills of a path first with a transparency mask to get
+                                   an XPS opacity followed by a fill with a transparency group. This occurs in
+                                   the XPS gradient code */
+                                if (tdev->color_info.num_components != ttdev->color_info.num_components){
+                                    /* Reset the clipper device color information. Only worry about
+                                       the information that is used in the trap code */
+                                    ttdev->color_info.num_components = tdev->color_info.num_components;
+                                    ttdev->color_info.depth = tdev->color_info.depth;
+                                    memcpy(&(ttdev->color_info.comp_bits),&(tdev->color_info.comp_bits),GX_DEVICE_COLOR_MAX_COMPONENTS);
+                                    memcpy(&(ttdev->color_info.comp_shift),&(tdev->color_info.comp_shift),GX_DEVICE_COLOR_MAX_COMPONENTS);
+                                }
 				cmd_getw(left.start.x, cbp);
 				cmd_getw(left.start.y, cbp);
 				cmd_getw(left.end.x, cbp);
@@ -1828,8 +1833,8 @@ idata:			data_size = 0;
 				cmd_getw(right.end.y, cbp);
 				cmd_getw(options, cbp);
 				if (!(options & 4)) {
-				cmd_getw(ybot, cbp);
-				cmd_getw(ytop, cbp);
+				    cmd_getw(ybot, cbp);
+				    cmd_getw(ytop, cbp);
 				} else 
 				    ytop = ybot = 0; /* Unused, but quiet gcc warning. */
 				swap_axes = options & 1;
@@ -2326,10 +2331,14 @@ read_ht_segment(
 
     /* get the segment size; refill command buffer if necessary */
     enc_u_getw(seg_size, cbp);
-    if (cbp + seg_size > pcb->limit) {
+    if (pcb->warn_limit - cbp < (int)seg_size) { /* cbp can be past warn_limit */
         code = top_up_cbuf(pcb, &cbp);
 	if (code < 0)
 	    return code;
+	if (pcb->end - cbp < (int)seg_size) {
+	    eprintf(" *** ht segment size doesn't fit in buffer ***\n");
+            return_error(gs_error_unknownerror);
+	}
     }
 
     if (pht_buff->pbuff == 0) {
@@ -2376,10 +2385,12 @@ read_set_misc2(command_buf_t *pcb, gs_imager_state *pis, segment_notes *pnotes)
     cmd_getw(mask, cbp);
     if (mask & cap_join_known) {
 	cb = *cbp++;
-	pis->line_params.cap = (gs_line_cap)((cb >> 3) & 7);
+        pis->line_params.start_cap =
+            pis->line_params.end_cap =
+                pis->line_params.dash_cap = (gs_line_cap)((cb >> 3) & 7);
 	pis->line_params.join = (gs_line_join)(cb & 7);
 	if_debug2('L', " cap=%d join=%d\n",
-		  pis->line_params.cap, pis->line_params.join);
+		  pis->line_params.start_cap, pis->line_params.join);
     }
     if (mask & cj_ac_sa_known) {
 	cb = *cbp++;
@@ -2664,7 +2675,7 @@ read_create_compositor(
     
     /* If we read more than the maximum expected, return a rangecheck error */
     if ( code > MAX_CLIST_COMPOSITOR_SIZE )
- 		return_error(gs_error_rangecheck);
+	return_error(gs_error_rangecheck);
    	
     if (code > 0)
         cbp += code;

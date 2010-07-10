@@ -1,4 +1,4 @@
-/* $Id: ps2epsi.cmd,v 1.4 2008/05/04 14:34:58 Arabidopsis Exp $ */
+/* $Id: ps2epsi.cmd,v 1.5 2010/07/10 22:02:36 Arabidopsis Exp $ */
 /*
  * This file is maintained by a user: if you have any questions about it,
  * please contact Mark Hale (mark.hale@physics.org).
@@ -11,8 +11,12 @@ if %2/==/ goto usage
 set infile=%1
 set outfile=%2
 
+rem First we need to determine the bounding box. ps2epsi.ps below will pick
+rem the result up from %outfile%
+gsos2 -q -dNOPAUSE -dBATCH -P- -dSAFER -dDELAYSAFER -sDEVICE=bbox -sOutputFile=NUL %infile% 2> %outfile%
+
 rem Ghostscript uses %outfile% to define the output file
-gsos2 -q -dNOPAUSE -dSAFER -dDELAYSAFER -sDEVICE=bit -sOutputFile=NUL ps2epsi.ps < %infile%
+gsos2 -q -dNOPAUSE -P- -dSAFER -dDELAYSAFER -sDEVICE=bit -sOutputFile=NUL ps2epsi.ps < %infile%
 
 rem We bracket the actual file with a few commands to help encapsulation
 echo %%%%Page: 1 1 >> %outfile%

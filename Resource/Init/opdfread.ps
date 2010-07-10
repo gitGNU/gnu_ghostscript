@@ -2,21 +2,20 @@
 %
 %        Copyright (C) 2002 Artifex Software, Inc.      All rights reserved.
 % 
-%  This file is part of GNU ghostscript
-%
-%  GNU ghostscript is free software; you can redistribute it and/or modify it under
-%  the terms of the version 2 of the GNU General Public License as published by the Free Software
-%  Foundation.
-%
-%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-%
-%  You should have received a copy of the GNU General Public License along with
-%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-%
-% $Id: opdfread.ps,v 1.1 2009/04/23 23:25:46 Arabidopsis Exp $
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
+% $Id: opdfread.ps,v 1.2 2010/07/10 22:02:13 Arabidopsis Exp $
 % pdfread.ps - A procset for interpreting an ordered PDF 1.3 file.
 
 % This module defines routines for interpreting a PDF file with
@@ -153,6 +152,7 @@ end % A dictionary for local binding
 /TTFDEBUG DefaultSwitch
 /RotatePages DefaultSwitch
 /FitPages DefaultSwitch
+/CenterPages DefaultSwitch
 /SetPageSize DefaultSwitch
 
 /error  %  mark <object> .... error -
@@ -168,10 +168,16 @@ end % A dictionary for local binding
 } bind def
 
 //SetPageSize {
-  //RotatePages //FitPages or {
-    mark (/RotatePages, /FitPages are not allowed with /SetPageSize) //error exec
+  //RotatePages //FitPages or //CenterPages or{
+    mark (/RotatePages, /FitPages and CenterPages are not allowed with /SetPageSize) //error exec
   } if
-} if
+} 
+{
+  //FitPages //CenterPages and {
+    mark (CenterPages is not allowed with /FitPages) //error exec
+  } if
+}
+ifelse
 
 % ===================== Utilities =========================================
 
@@ -852,23 +858,43 @@ currentdict end readonly def
   } {
     false
   } ifelse
-  { //FitPages {
-      1 index 5 index div 1 index 7 index div           % bw bh px0 py0 pw ph sx sy
-      2 copy gt {
-        exch
+  { //CenterPages {
+        //PDFR_DEBUG {
+          (Rotating page, and then centering it) ==
+        } if
+        90 rotate
+        0 5 index neg translate
+        5 index 1 index exch sub 2 div  
+        2 index 6 index sub 2 div neg                   % bw bh px0 py0 pw ph lm bm
+        translate
+    } {
+      //FitPages {
+        1 index 5 index div 1 index 7 index div         % bw bh px0 py0 pw ph sx sy
+        2 copy gt {
+          exch
+        } if
+        pop dup scale                                   % bw bh px0 py0 pw ph
       } if
-      pop dup scale                                     % bw bh px0 py0 pw ph
-    } if
-    90 rotate
-    0 5 index neg translate
+      90 rotate
+      0 5 index neg translate
+    } ifelse
   } {
-    //FitPages {
-      1 index 6 index div 1 index 6 index div           % bw bh px0 py0 pw ph sx sy
-      2 copy gt {
-        exch
+    //CenterPages {
+        //PDFR_DEBUG {
+          (Ccentering page) ==
+        } if
+        1 index 6 index sub 2 div 
+        1 index 6 index sub 2 div                       % bw bh px0 py0 pw ph lm bm
+        translate
+    } {
+      //FitPages {
+        1 index 6 index div 1 index 6 index div         % bw bh px0 py0 pw ph sx sy
+        2 copy gt {
+          exch
+        } if
+        pop dup scale                                   % bw bh px0 py0 pw ph
       } if
-      pop dup scale                                     % bw bh px0 py0 pw ph
-    } if
+    } ifelse
   } ifelse                                               
   pop pop                                               % bw bh px0 py0
   translate                                             % bw bh
@@ -974,13 +1000,13 @@ currentdict end readonly def
     dup /FontName //knownget exec {
 	1 index /FontName 3 -1 roll //UnPDFEscape exec put
     } if
-      dup dup /FontFile known {/FontFile} {/FontFile2} ifelse 
-      //knownget exec {                                 % id obj ff
-        0 get //DoNothing exch                          % id obj dn id1
-        [ % <id> <obj> proc <id> <obj>
-          3 index //FontFileDaemon /exec load
-        ] cvx                                           % id obj {}
-        //Register exec                                 % id obj
+    dup dup /FontFile known {/FontFile} {/FontFile2} ifelse 
+    //knownget exec {                                 % id obj ff
+      0 get //DoNothing exch                          % id obj dn id1
+      [ % <id> <obj> proc <id> <obj>
+        3 index //FontFileDaemon /exec load
+      ] cvx                                           % id obj {}
+      //Register exec                                 % id obj
     } {
       % FontFile3 are not implemented yet.
       (Font descriptor ) print 1 index =only ( has no FontFile.) =
@@ -1899,7 +1925,7 @@ end
   1 exch div exch
   1 exch div exch                                       % wx wy
   1 index 0 setcharwidth
-  o setlinewidth
+  0 setlinewidth
   0 0 moveto
   2 copy rlineto
   1 index 0 rlineto
@@ -1995,7 +2021,7 @@ end
         } ifelse
         exch                                            % s f fr
         dup /Encoding known not {
-          1 index /Encoding get 1 index exch /Encoding exch put
+          1 index /Encoding get 1 index exch /Encoding exch put 
         } if
         //ObtainEncoding exec
         //ObtainMetrics exec
@@ -2007,7 +2033,7 @@ end
           2 index /Subtype get /TrueType ne {
             1 index /FontMatrix get 0 get
             dup 0 eq {
-	      % FontMatrix[0] == 0, so cannot downscale by it
+          % FontMatrix[0] == 0, so cannot downscale by it
 	      % HACK: downscale by FontMatrix[1], and will get the target value of wx as wy
 	      pop
 	      1 index /FontMatrix get 1 get
@@ -2029,7 +2055,7 @@ end
 	            dup 0 eq { pop 1 } if % sorry, FontMatrix is singular so cannot enforce the PDF metrics
               } if
               //ScaleMetrics exec
-          } if
+            } if
           } ifelse
           1 index exch /Metrics exch put                % s fr f
         } if
@@ -2397,7 +2423,7 @@ end
       TTFDEBUG { (post format 2.0 invalid.) = flush } if
       pop [ ]
     } {
-    /postglyphs exch def
+      /postglyphs exch def
       /post_first postglyphs dup type /arraytype eq { 0 get } if def
       post_first 32 getu16 /numglyphs exch def
       /glyphnames numglyphs 2 mul 34 add def
@@ -2410,11 +2436,11 @@ end
           1 numglyphs 1 sub { 1 index exch /.notdef put } for
           exit
         } if
-        % No name available, /postnames will be defined as an empty
-        % array and the glyph won't get a name attached.
+    % No name available, /postnames will be defined as an empty
+    % array and the glyph won't get a name attached.
     postglyphs postpos //get_from_stringarray exec
         postglyphs postpos 1 add 2 index //getinterval_from_stringarray exec cvn
-        exch postpos add 1 add /postpos exch def
+    exch postpos add 1 add /postpos exch def
         2 index 3 1 roll
         put
       } for
@@ -2422,28 +2448,28 @@ end
       numglyphs array 0 1 numglyphs 1 sub {
     dup 2 mul 34 add postglyphs exch 2 //getinterval_from_stringarray exec 
     dup 0 get 8 bitshift exch 1 get add dup 258 lt {
-          MacGlyphEncoding exch get
-        } {
-          dup 32768 ge {
-                % According to the published TrueType spec, such values are
-                % "reserved for future use", but at least some PDF files
-                % produced by the Adobe PDF library contain entries with a
-                % value of 16#ffff.
-            pop /.notdef
-          } {
-            % Get the name for this glyph
-            258 sub dup postnames length ge {
-              TTFDEBUG { (   *** warning: glyph index past end of 'post' table) = flush } if
+      MacGlyphEncoding exch get
+    } {
+      dup 32768 ge {
+        % According to the published TrueType spec, such values are
+        % "reserved for future use", but at least some PDF files
+        % produced by the Adobe PDF library contain entries with a
+        % value of 16#ffff.
+        pop /.notdef
+      } {
+        % Get the name for this glyph
+        258 sub dup postnames length ge {
+          TTFDEBUG { (   *** warning: glyph index past end of 'post' table) = flush } if
           pop
-              exit
-            } if
-            postnames exch get
-            % At least some of Microsoft's TrueType fonts use incorrect
-            % (Adobe-incompatible) names for some glyphs.
-            % Correct for this here.
-            postremap 1 index .knownget { exch pop } if
-          } ifelse
-        } ifelse
+          exit
+        } if
+        postnames exch get
+        % At least some of Microsoft's TrueType fonts use incorrect
+        % (Adobe-incompatible) names for some glyphs.
+        % Correct for this here.
+        postremap 1 index .knownget { exch pop } if
+      } ifelse
+    } ifelse
     2 index 3 1 roll put
       } for
 
@@ -2744,7 +2770,8 @@ end
     exch                                                % d [] cmap
     1 index length 1 sub -1 0 {                         % d [] cmap code
       dup 3 index exch get exch                         % d [] cmap name code
-      dup 0 eq {
+      dup 0 eq 2 index /.notdef eq or {			  % do not re-encode GID 0, or the
+									  % /.notdef glyph name
         pop pop
       } {
         def
@@ -2778,9 +2805,9 @@ end
   //TTParser /Pos //TTParser /Pos get 4 index add put
   exch dup 65535 le {
     string                                              % f s
-  readstring not {
-    mark (Insufficient data in the stream for ParseTTpost.) //error exec
-  } if                                                  % s
+    readstring not {
+      mark (Insufficient data in the stream for ParseTTpost.) //error exec
+    } if                                                % s
   } {
                                     % f s
       [ 3 1 roll                    % [ f s
@@ -3362,16 +3389,20 @@ end
 { //PDFR_DEBUG {
     (FunctionToProc beg ) print count =
   } if
-  dup /Domain get length 2 idiv
-  {
-    dup 1 eq {
-      pop //FunctionToProc1 exec exit
-    } if
-    dup 2 eq {
-      pop //FunctionToProc20 exec exit
-    } if
-    mark (Functions with many arguments aren't implemented yet.) //error exec
-  } loop
+  dup type /dicttype eq {
+    dup /Domain get length 2 idiv
+    {
+      dup 1 eq {
+        pop //FunctionToProc1 exec exit
+      } if
+      dup 2 eq {
+        pop //FunctionToProc20 exec exit
+      } if
+      mark (Functions with many arguments aren't implemented yet.) //error exec
+    } loop
+  } {
+    //PDFR_DEBUG {(Not a function dict, assume already a procedure.) print } if
+  } ifelse
   //PDFR_DEBUG {
     (FunctionToProc end ) print count =
   } if
@@ -3521,6 +3552,9 @@ end
       exit
       pop
     } if
+    % Check if this is an already substituted space   
+    dup 0 get /CIEBasedA eq {exit} if
+    dup 0 get /CIEBasedABC eq {exit} if
     mark exch (Unimplemented color space ) exch //error exec
   } loop
 } bind def
@@ -3528,11 +3562,26 @@ end
 //SubstitutePDFColorSpaceRec 0 //SubstitutePDFColorSpace put
 
 /ResolveArrayElement  % <array> <index> ResolveArrayElement <array>
-{ 2 copy get xcheck {
-    2 copy get exec
-    2 index 4 1 roll put
+{ 2 copy get 
+  dup type dup /arraytype eq exch
+  /packedarraytype eq or {             % make sure its a procedure/executable array
+    xcheck {
+      2 copy get		       % Get executable array                       
+      dup 0 get type /integertype eq   % ensure first element is an integer      
+      1 index 1 get type dup /arraytype                                               
+      eq exch
+      /packedarraytype eq or           % ensure second element is executable array
+      and {
+          exec
+          2 index 4 1 roll put
+        } {
+          pop pop
+      } ifelse
+    } {
+      pop
+    } ifelse
   } {
-    pop
+    pop pop
   } ifelse
 } bind def
 
@@ -3654,8 +3703,10 @@ end
     } if
     pop
   } if
-  dup /Type get /Pattern ne {
-    mark (Resource ) 4 index ( must have /Type/Pattern .) //error exec
+  dup /Type knownget { % /Type is optional for type 1 pattern dictionaries
+    /Pattern ne {
+      mark (Resource ) 4 index ( must have /Type/Pattern .) //error exec
+    } if
   } if
 } bind def
 
@@ -3754,7 +3805,9 @@ currentdict end readonly def
   /DeviceGray { [0 1] } def
   /DeviceRGB { [0 1 0 1 0 1] } def
   /DeviceCMYK { [0 1 0 1 0 1 0 1] } def 
-  /Indexed { dup /ColorSpace get 2 get [ exch 0 exch ] } def
+  /Indexed { 
+  dup /BitsPerComponent get 2 exch exp [exch 0 exch] 
+  } def
   /Separation { [0 1] } def
   /CIEBasedA { [0 1]  /RangeA //GetColorSpaceRange exec } def
   /CIEBasedABC { [0 1 0 1 0 1] /RangeABC //GetColorSpaceRange exec } def
@@ -4478,4 +4531,3 @@ currentdict end def
 % Leaving the procset on the dictionary stack to provide 
 % definitions of obj, endobj, stream, endstream, R, xref.
 %%EndPrologue
-

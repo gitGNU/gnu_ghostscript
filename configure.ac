@@ -1,20 +1,24 @@
-dnl Copyright (C) 2001-2007 Artifex Software, Inc.
+dnl  Copyright (C) 2001-2007 Artifex Software, Inc.
+dnl  All Rights Reserved.
 
-dnl This file is part of GNU ghostscript
-dnl 
-dnl GNU ghostscript is free software; you can redistribute it and/or
-dnl modify it under the terms of the version 2 of the GNU General
-dnl Public License as published by the Free Software Foundation.
-dnl 
-dnl GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-dnl ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-dnl FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-dnl 
-dnl You should have received a copy of the GNU General Public License along with
-dnl ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-dnl Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-dnl 
-dnl $Id: configure.ac,v 1.20 2009/04/23 23:31:55 Arabidopsis Exp $
+dnl  This file is part of GNU ghostscript.
+dnl
+dnl    GNU ghostscript is free software: you can redistribute it and/or modify
+dnl    it under the terms of the GNU General Public License as published by
+dnl    the Free Software Foundation, either version 3 of the License, or
+dnl    (at your option) any later version.
+dnl
+dnl    GNU ghostscript is distributed in the hope that it will be useful,
+dnl    but WITHOUT ANY WARRANTY; without even the implied warranty of
+dnl    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+dnl    GNU General Public License for more details.
+dnl
+dnl    You should have received a copy of the GNU General Public License
+dnl   along with GNU ghostscript.  If not, see <http://www.gnu.org/licenses/>.
+dnl   for further information.
+dnl
+dnl $Id: configure.ac,v 1.21 2010/07/10 22:02:45 Arabidopsis Exp $
+
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------
@@ -22,7 +26,7 @@ dnl Initialization and Versioning
 dnl ------------------------------------------------
 
 AC_PREREQ(2.60)
-AC_INIT([gnu-ghostscript], [8.64.0], [gnu-ghostscript-bug@gnu.org])
+AC_INIT([gnu-ghostscript], [8.71.0], [gnu-ghostscript-bug@gnu.org])
 AC_CONFIG_SRCDIR(psi/gs.c)
 AM_INIT_AUTOMAKE([-Wall])
 
@@ -33,9 +37,9 @@ CXXFLAGS="${CXXFLAGS:=}"
 LDFLAGS="${LDFLAGS:=}"
 
 GS_VERSION_MAJOR=8
-GS_VERSION_MINOR=64
+GS_VERSION_MINOR=71
 GS_VERSION_PATCH=0
-GS_REVISIONDATE=20090203
+GS_REVISIONDATE=20100509
 
 GS_VERSION=`expr $GS_VERSION_MAJOR \* 10000 + $GS_VERSION_MINOR \* 100 + $GS_VERSION_PATCH`
 
@@ -398,7 +402,7 @@ AC_ARG_WITH(zlib, AC_HELP_STRING([--with-zlib],[include zlib support (local, sha
 # this seems a harmless default
 ZLIBDIR=src
 if test x$with_zlib != xno; then
-	AC_MSG_CHECKING([for local zlib source])
+AC_MSG_CHECKING([for local zlib source])
 	if test x$with_zlib != xshared && test -d zlib; then
 		AC_MSG_RESULT([yes])
 		SHARE_ZLIB=0
@@ -423,19 +427,19 @@ AC_SUBST(ZLIBDIR)
 dnl png for the png output device; it also requires zlib
 AC_ARG_WITH(png, AC_HELP_STRING([--with-png],[include PNG support (local, shared, no)]))
 dnl set safe defaults
-	LIBPNGDIR=src
-	PNGDEVS=''
-	PNGDEVS_ALL='$(DD)png48.dev $(DD)png16m.dev $(DD)pnggray.dev $(DD)pngmono.dev $(DD)png256.dev $(DD)png16.dev $(DD)pngalpha.dev'
+LIBPNGDIR=src
+PNGDEVS=''
+PNGDEVS_ALL='$(DD)png48.dev $(DD)png16m.dev $(DD)pnggray.dev $(DD)pngmono.dev $(DD)png256.dev $(DD)png16.dev $(DD)pngalpha.dev'
 if test x$with_png != xno; then
 	AC_MSG_CHECKING([for local png library source])
-	if test x$with_png != xshared && test -f libpng/pngread.c; then
+		if test x$with_png != xshared && test -f libpng/pngread.c; then
 		AC_MSG_RESULT([yes])
 		SHARE_LIBPNG=0
 		LIBPNGDIR=libpng
 		PNGDEVS="$PNGDEVS_ALL"
 	else
 		AC_MSG_RESULT([shared])
-		AC_CHECK_LIB(png, png_check_sig, [
+		AC_CHECK_LIB(png, png_get_io_ptr, [
 		  AC_CHECK_HEADERS(png.h, [
 			SHARE_LIBPNG=1
 			PNGDEVS="$PNGDEVS_ALL"
@@ -450,9 +454,90 @@ AC_SUBST(SHARE_LIBPNG)
 AC_SUBST(LIBPNGDIR)
 AC_SUBST(PNGDEVS)
 
+
+dnl look for libtiff, it also requires lib
+dnl png for the png output device; it also requires zlib
+AC_ARG_WITH([system-libtiff], AC_HELP_STRING([--with-system-libtiff],
+					     [Force using the systems libtiff]),
+	    [], [with_system_libtiff=check])
+TIFFDEVS=''
+TIFFDEVS_ALL='$(DD)tiffs $(DD)tiff12nc $(DD)tiff24nc $(DD)tiff48nc $(DD)tiff32nc $(DD)tiff64nc $(DD)tiffcrle $(DD)tifflzw $(DD)tiffpack $(DD)tiffgray $(DD)tiffsep'
+case "x$with_system_libtiff" in
+    xcheck)
+	if test -d tiff; then
+	    LIBTIFFDIR=tiff
+	    LOCAL_LIBTIFF_VERSION=`sed -n 's/^#define\s\+TIFFLIB_VERSION\s\+\([0-9]\+\)\s*.*$/\1/p' $LIBTIFFDIR/libtiff/tiffvers.h`
+	    SHARE_LIBTIFF=0
+	fi
+	AC_CHECK_LIB(tiff, TIFFOpen,
+		     [AC_CHECK_HEADERS(tiff.h, [HAVE_SYSTEM_LIBTIFF=1;SHARE_LIBTIFF=1])],
+		     [], [-ljpeg])
+	if test -z $LOCAL_LIBTIFF_VERSION && test "x$HAVE_SYSTEM_LIBTIFF" == x; then
+	    AC_MSG_NOTICE([Could not find a copy of libtiff on your system.
+Disabling tiff output devices.])
+	else
+	    TIFFDEVS="$TIFFDEVS_ALL"
+	fi
+	if test ! -z $LOCAL_LIBTIFF_VERSION && test "x$HAVE_SYSTEM_LIBTIFF" != x; then
+	    AC_TRY_COMPILE([#include <tiffvers.h>
+			    #if TIFFLIB_VERSION < $LOCAL_LIBTIFF_VERSION
+			    #error system libtiff is older
+			    #endif], [],
+			    [SHARE_LIBTIFF=1], [SHARE_LIBTIFF=0])
+	fi
+	;;
+    xyes)
+	AC_CHECK_LIB(tiff, TIFFOpen,
+		     [AC_CHECK_HEADERS(tiff.h, [HAVE_SYSTEM_LIBTIFF=1;SHARE_LIBTIFF=1])],
+		     [], [-ljpeg])
+	if test "x$HAVE_SYSTEM_LIBTIFF" != x; then
+	    SHARE_LIBTIFF=1
+	    TIFFDEVS="$TIFFDEVS_ALL"
+	else
+	    AC_MSG_NOTICE([Could not find a copy of libtiff on your system.
+Disabling tiff output devices.])
+	fi
+	;;
+    xno)
+	AC_MSG_CHECKING([for local libtiff source])
+        if test -d tiff; then
+	    AC_MSG_RESULT([yes])
+	    LIBTIFFDIR=tiff
+	    SHARE_LIBTIFF=0
+	    TIFFDEVS="$TIFFDEVS_ALL"
+	else
+	    AC_MSG_RESULT([no])
+	    AC_MSG_NOTICE([Could not find local copy of libtiff.
+Disabling tiff output devices.])
+	fi
+	;;
+esac
+
+if test $SHARE_LIBTIFF -eq 0; then
+      echo
+      echo "Running libtiff configure script..."
+      olddir=`pwd`
+      cd $LIBTIFFDIR && ./configure
+      status=$?
+      if test "$status" -ne 0 ; then
+        AC_MSG_ERROR([libtiff configure script failed], $status)
+      fi
+      cd $olddir
+      echo
+      echo "Continuing with Ghostscript configuration..."
+fi
+
+AC_SUBST(SHARE_LIBTIFF)
+AC_SUBST(TIFFDEVS)
+AC_SUBST(LIBTIFFDIR)
+
+
 dnl look for CUPS...
 AC_ARG_ENABLE([cups], AC_HELP_STRING([--disable-cups],
     [Don't include CUPS support]))
+
+AC_ARG_WITH([pdftoraster], AC_HELP_STRING([--without-pdftoraster],
+    [Don't include CUPS' pdftoraster filter]))
 
 CUPSDEV=""
 CUPSINCLUDE=""
@@ -463,11 +548,13 @@ CUPSCONFIG="${CUPSCONFIG:=}"
 CUPSSERVERBIN=""
 CUPSSERVERROOT=""
 CUPSDATA=""
+CUPSVERSION="0"
+CUPSPDFTORASTER="0"
 
 if ( test -d cups ); then
     if test x$enable_cups != xno; then
 	AC_PATH_PROG(CUPSCONFIG,cups-config)
-dnl	AC_CHECK_HEADER([cups/raster.h],[],[CUPSCONFIG=""])
+	dnl AC_CHECK_HEADER([cups/raster.h],[],[CUPSCONFIG=""])
 	if test "x$CUPSCONFIG" != x; then
 	    dnl Use values from CUPS config...
 	    CUPSCFLAGS="`$CUPSCONFIG --cflags` $CFLAGS"
@@ -480,6 +567,12 @@ dnl	AC_CHECK_HEADER([cups/raster.h],[],[CUPSCONFIG=""])
 	    CUPSDATA="`$CUPSCONFIG --datadir`"
 	    CUPSINCLUDE="include cups/cups.mak"
 	    CUPSDEV="\$(DD)cups.dev"
+	    CUPSVERSION="`$CUPSCONFIG --version`"
+	    if ( test x$with_pdftoraster != xno ); then
+	        if test "$CUPSVERSION" ">" "1.2"; then
+		    CUPSPDFTORASTER="1"
+		fi
+	    fi
 	fi
     fi
 fi
@@ -492,6 +585,7 @@ AC_SUBST(CUPSINCLUDE)
 AC_SUBST(CUPSSERVERBIN)
 AC_SUBST(CUPSSERVERROOT)
 AC_SUBST(CUPSDATA)
+AC_SUBST(CUPSPDFTORASTER)
 
 
 dnl look for IJS implementation
@@ -561,35 +655,38 @@ if test x$with_jasper != xno; then
   done
   if test "x$JASPERDIR" != xsrc; then
     AC_MSG_RESULT([$JASPERDIR])
-    AC_MSG_CHECKING([for local jasper config header])
-    if test -r $JASPERDIR/src/libjasper/include/jasper/jas_config_ac.h; then
+    AC_MSG_CHECKING([for local jasper configure script])
+    if test -x $JASPERDIR/configure; then
       AC_MSG_RESULT([yes])
+      echo
+      echo "Running jasper configure script..."
+      olddir=`pwd`
+      cd $JASPERDIR && ./configure
+      status=$?
+      if test "$status" -ne 0 ; then
+        AC_MSG_ERROR([jasper configure script failed], $status)
+      fi
+      cd $olddir
+      echo
+      echo "Continuing with Ghostscript configuration..."
     else
       AC_MSG_RESULT([no])
-      AC_MSG_CHECKING([for local jasper configure script])
-      if test -r $JASPERDIR/configure; then
+      AC_MSG_CHECKING([for local jasper autogen.sh script])
+      if test -x $JASPERDIR/autogen.sh; then
         AC_MSG_RESULT([yes])
         echo
-        echo "Running jasper configure script..."
-		olddir=`pwd`
-        cd $JASPERDIR && sh ./configure
+        echo "Running jasper autogen script..."
+        olddir=`pwd`
+        cd $JASPERDIR && ./autogen.sh
+        status=$?
+        if test "$status" -ne 0 ; then
+          AC_MSG_ERROR([jasper autogen script failed], $status)
+        fi
         cd $olddir
         echo
         echo "Continuing with Ghostscript configuration..."
       else
-        AC_MSG_RESULT([no])
-        AC_MSG_CHECKING([for local jasper autogen.sh script])
-        if test -x $JASPERDIR/autogen.sh; then
-          AC_MSG_RESULT([yes])
-          echo
-          echo "Running jasper autogen script..."
-		  olddir=`pwd`
-          cd $JASPERDIR && ./autogen.sh
-          cd $olddir
-          echo
-          echo "Continuing with Ghostscript configuration..."
-        else
-          AC_MSG_WARN([
+        AC_MSG_ERROR([
 Unable to find $JASPERDIR/src/libjasper/include/jas_config.h,
 or generate such a file for this system. You will
 have to build one by hand, or configure, build and install
@@ -598,8 +695,6 @@ the jasper library separately.
 You can also pass --without-jasper to configure to disable
 JPEG 2000 PDF image support entirely.
 ])
-		with_jasper=no
-        fi
       fi
     fi
   else
@@ -661,18 +756,18 @@ CAIRO_DEVS=""
 CAIRO_CFLAGS=""
 CAIRO_LIBS=""
 if test "x$enable_cairo" != xno; then
-AC_PATH_PROG(PKGCONFIG, pkg-config)
-if test "x$PKGCONFIG" != x; then
-  AC_MSG_CHECKING([for cairo])
+  AC_PATH_PROG(PKGCONFIG, pkg-config)
+  if test "x$PKGCONFIG" != x; then
+    AC_MSG_CHECKING([for cairo])
     if $PKGCONFIG --exists 'cairo >= 1.2.0'; then
       CAIRO_CFLAGS=`$PKGCONFIG --cflags cairo`
       CAIRO_LIBS=`$PKGCONFIG --libs cairo`
-    CAIRO_DEVS="cairo"
-    AC_MSG_RESULT([yes])
+      CAIRO_DEVS="cairo"
+      AC_MSG_RESULT([yes])
     else
       AC_MSG_RESULT([no])
+    fi
   fi
-fi
 fi
 
 AC_SUBST(CAIRO_CFLAGS)
@@ -814,9 +909,9 @@ P_DEVS=""
 F_DEVS=""
 
 dnl Known printers
-HP_DEVS="cdj500 djet500 djet500c dnj650c cljet5pr deskjet laserjet ljetplus ljet2p ljet3 ljet3d ljet4 ljet4d lj4dith lj5mono lj5gray cdeskjet cdjcolor cdjmono cdj550 pj pjxl pjxl300 lp2563 paintjet pjetxl cljet5 cljet5c pxlmono pxlcolor cdj670 cdj850 cdj880 cdj890 cdj970 cdj1600 chp2200 pcl3 hpdjplus hpdjportable hpdj310 hpdj320 hpdj340 hpdj400 hpdj500 hpdj500c hpdj510 hpdj520 hpdj540 hpdj550c hpdj560c hpdj600 hpdj660c hpdj670c hpdj680c hpdj690c hpdj850c hpdj855c hpdj870c hpdj890c hpdj1120c lj3100sw"
+HP_DEVS="cdj500 djet500 djet500c dnj650c cljet5pr deskjet laserjet ljetplus ljet2p ljet3 ljet3d ljet4 ljet4d lj4dith lj5mono lj5gray cdeskjet cdjcolor cdjmono cdj550 pj pjxl pjxl300 lp2563 paintjet pjetxl cljet5 cljet5c pxlmono pxlcolor cdj670 cdj850 cdj880 cdj890 cdj970 cdj1600 cdnj500 chp2200 pcl3 hpdjplus hpdjportable hpdj310 hpdj320 hpdj340 hpdj400 hpdj500 hpdj500c hpdj510 hpdj520 hpdj540 hpdj550c hpdj560c hpdj600 hpdj660c hpdj670c hpdj680c hpdj690c hpdj850c hpdj855c hpdj870c hpdj890c hpdj1120c lj3100sw"
 PCLXL_DEVS="pxlmono pxlcolor"
-EPSON_DEVS="eps9high eps9mid epson epsonc escp lp8000 lq850 photoex st800 stcolor alc1900 alc2000 alc4000 alc4100 alc8500 alc8600 alc9100 lp3000c lp8000c lp8200c lp8300c lp8500c lp8800c lp9000c lp9200c lp9500c lp9800c lps6500 epl2050 epl2050p epl2120 epl2500 epl2750 epl5800 epl5900 epl6100 epl6200 lp1800 lp1900 lp2200 lp2400 lp2500 lp7500 lp7700 lp7900 lp8100 lp8300f lp8400f lp8600 lp8600f lp8700 lp8900 lp9000b lp9100 lp9200b lp9300 lp9400 lp9600 lp9600s lps4500"
+EPSON_DEVS="eps9high eps9mid epson epsonc escp lp8000 lq850 photoex st800 stcolor alc1900 alc2000 alc4000 alc4100 alc8500 alc8600 alc9100 lp3000c lp8000c lp8200c lp8300c lp8500c lp8800c lp9000c lp9200c lp9500c lp9800c lps6500 epl2050 epl2050p epl2120 epl2500 epl2750 epl5800 epl5900 epl6100 epl6200 lp1800 lp1900 lp2200 lp2400 lp2500 lp7500 lp7700 lp7900 lp8100 lp8300f lp8400f lp8600 lp8600f lp8700 lp8900 lp9000b lp9100 lp9200b lp9300 lp9400 lp9600 lp9600s lps4500 eplcolor eplmono"
 CANON_DEVS="bj10e bj200 bjc600 bjc800 lbp8 lips3 bjcmono bjcgray bjccmyk bjccolor"
 LEXMARK_DEVS="lxm5700m lx5000 lxm3200 lex2050 lex3200 lex5700 lex7000"
 BROTHER_DEVS="hl7x0 hl1240 hl1250"
@@ -833,7 +928,7 @@ BMP_DEVS="bmpmono bmpgray bmpsep1 bmpsep8 bmp16 bmp256 bmp16m bmp32b"
 FAX_DEVS="cfax dfaxlow dfaxhigh fax tfax tiffg3 tiffg32d tiffg4 faxg3 faxg32d faxg4"
 JPEG_DEVS="jpeg jpeggray jpegcmyk"
 PNG_DEVS="png16 png16m png256 pngalpha pnggray pngmono"
-TIFF_DEVS="tiffs tiff12nc tiff24nc tiff32nc tiffcrle tifflzw tiffpack tiffgray tiffsep"
+TIFF_DEVS="tiffs tiff12nc tiff24nc tiff48nc tiff32nc tiff64nc tiffcrle tifflzw tiffpack tiffgray tiffsep tiffsep1"
 PCX_DEVS="pcxmono pcxgray pcx16 pcx256 pcx24b pcxcmyk pcx2up"
 PBM_DEVS="pbm pbmraw pgm pgmraw pgnm pgnmraw pnm pnmraw ppm ppmraw pkm pkmraw pksm pksmraw pam"
 PS_DEVS="psdf psdcmyk psdrgb pdfwrite pswrite ps2write epswrite psgray psmono psrgb bbox"
@@ -1110,7 +1205,7 @@ dnl --------------------------------------------------
 
 AC_SUBST(OPT_CFLAGS)
 AC_SUBST(GCFLAGS)
-AC_CONFIG_FILES([Makefile lib/gs_init.ps doc/version.texi cups/pstopxl cups/pstoraster])
+AC_CONFIG_FILES([Makefile Resource/Init/gs_init.ps doc/version.texi cups/pstopxl cups/pstoraster])
 AC_OUTPUT
 
 chmod +x cups/pstopxl cups/pstoraster

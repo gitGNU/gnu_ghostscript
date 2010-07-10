@@ -1,20 +1,19 @@
 %    Copyright (C) 1997, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-%  This file is part of GNU ghostscript
-%
-%  GNU ghostscript is free software; you can redistribute it and/or modify it under
-%  the terms of the version 2 of the GNU General Public License as published by the Free Software
-%  Foundation.
-%
-%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-%
-%  You should have received a copy of the GNU General Public License along with
-%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-%
-% $Id: gs_ll3.ps,v 1.1 2009/04/23 23:25:38 Arabidopsis Exp $
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
+% $Id: gs_ll3.ps,v 1.2 2010/07/10 22:02:12 Arabidopsis Exp $
 % Initialization file for PostScript LanguageLevel 3 functions.
 % This file must be loaded after gs_lev2.ps and gs_res.ps.
 % These definitions go into ll3dict or various ProcSets.
@@ -201,13 +200,131 @@ end
 
 % ------ ImageTypes 3 and 4 (masked images) ------ %
 
+% Put the new data source in the requested dictionary.
+% Copy the updated dictionary because it nay be used elsewhere.
+% <dict> <data> <name> update_image3 <dict'>
+/update_image3 {
+  3 -1 roll dup length dict copy dup  % [data] /name <<image>> <<image>>
+  2 index get                         % [data] /name <<image>> <<sub-image>>
+  dup length dict copy dup            % [data] /name <<image>> <<sub-image>> <<sub-image>>
+  /DataSource 6 -1 roll put           % /name <<image>> <<sub-image>>
+  exch dup                            % /name <<sub-image>> <<image>> <<image>>
+  4 2 roll                            % <<image>> <<image>> /name <<sub-image>>
+  put                                 % <<image>>
+} bind def
+
+% Copy mask data source to a reusable stream
+% <dict> <source> buffer_mask <dict> <file>
+/buffer_mask {
+  1 index /MaskDict get
+  dup /Width get
+  1 index /BitsPerComponent get mul 7 add 8 idiv
+  exch /Height get mul () /SubFileDecode filter
+  /ReusableStreamDecode filter
+} bind def
+
+% Data type vs. mask type decission table.
+% All procedures have the signature:
+% <image dict> <data DataSource> <mask DataSource> proc <image dict'>
+/data_mask_dict mark
+  /stringtype mark % data is a string
+    /stringtype { pop pop } bind
+    /arraytype { % convert data to proc, don't buffer mask
+      pop
+      dup type dup /arraytype eq exch /packedarraytype eq or {
+        [ exch { 1 array astore cvx } forall ]
+      } {
+        1 array astore cvx
+      } ifelse
+      /DataDict //update_image3 exec
+    } bind
+    /packedarraytype 1 index
+    /filetype { % convert data to file, don't buffer mask
+      pop
+      dup type dup /arraytype eq exch /packedarraytype eq or {
+        [ exch { 1 array astore cvx 0 () /SubFileDecode filter } forall ]
+      } {
+        1 array astore cvx 0 () /SubFileDecode filter
+      } ifelse
+      /DataDict //update_image3 exec
+    } bind
+  .dicttomark readonly
+  /arraytype mark  % data is a proc
+    /stringtype { % convert mask to proc
+      exch pop
+      1 array astore cvx
+      /MaskDict //update_image3 exec
+    } bind
+    /arraytype { % buffer mask in reusable stream and convert back to proc
+      exch pop
+      //buffer_mask exec
+      500 string
+      { readstring pop } aload pop
+      4 packedarray cvx
+      /MaskDict //update_image3 exec
+    } bind
+    /packedarraytype 1 index
+    /filetype 1 index
+  .dicttomark readonly
+  /packedarraytype 1 index
+  /filetype mark  % data is a file
+    /stringtype { % convert mask to file
+      exch pop
+      1 array astore cvx 0 () /SubFileDecode filter
+      /MaskDict //update_image3 exec
+    } bind
+    /arraytype { % buffer the mask and convert to file
+      exch pop
+      //buffer_mask exec
+      /MaskDict //update_image3 exec
+    } bind
+    /packedarraytype 1 index
+    /filetype {
+      //systemdict /userdict get /PDFTopSave known {
+        pop pop   % mask is already buffered by PDF interpreter
+      } {
+        exch pop  % buffer the mask
+        //buffer_mask exec
+        /MaskDict //update_image3 exec
+      } ifelse
+    } bind
+  .dicttomark readonly
+.dicttomark readonly def
+
 .imagetypes
-  dup 3 /.image3 load put
+  dup 3 {
+    dup /InterleaveType get 3 eq {
+      % .image3 requires data sources of the image and mask to be of the
+      % same type. Work around this restriction here.
+      dup /DataDict get /DataSource get
+      1 index /MaskDict get /DataSource get  % <<>> data mask
+      dup type                               % <<>> data mask mask_type
+      2 index
+      4 index /DataDict get /MultipleDataSources .knownget {
+        { 0 get } if
+      } if
+      type                                   % <<>> data mask mask_type data_type
+      //data_mask_dict exch .knownget {
+        exch .knownget {
+          exec
+        } {
+          pop pop   % pass wrong type as is to .image3
+        } ifelse
+      } {
+        pop pop pop % pass wrong type as is to .image3
+      } ifelse
+    } if
+    .image3
+  } bind put
   dup 4 /.image4 load put
 % We also detect ImageType 103 here: it isn't worth making a separate file
 % just for this.
   /.image3x where { pop dup 103 /.image3x load put } if
 pop
+
+currentdict /data_mask_dict undef
+currentdict /update_image3 undef
+currentdict /buffer_mask undef
 
 % ------ Functions ------ %
 

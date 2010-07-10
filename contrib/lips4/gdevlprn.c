@@ -17,7 +17,7 @@
    copies.
  */
 
-/*$Id: gdevlprn.c,v 1.2 2008/03/23 15:28:19 Arabidopsis Exp $ */
+/*$Id: gdevlprn.c,v 1.3 2010/07/10 22:02:45 Arabidopsis Exp $ */
 /* Library for Laser Printer Driver */
 
 /*

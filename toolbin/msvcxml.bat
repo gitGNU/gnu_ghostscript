@@ -15,7 +15,7 @@ REM
 REM Example usage
 REM msvcxml.bat gs obj\ld.tr > ghostscript.sln
 REM
-REM # $Id: msvcxml.bat,v 1.4 2009/04/23 23:32:17 Arabidopsis Exp $
+REM # $Id: msvcxml.bat,v 1.5 2010/07/10 22:02:46 Arabidopsis Exp $
 
 if "%1" == "" goto usage
 if "%1" == "DLL" goto DLL
@@ -1428,7 +1428,7 @@ echo   ^<UserMacro Name="GS_DOCDIR" Value="$(GSROOTDIR)/doc" /^>
 echo   ^<UserMacro Name="GS_INIT" Value="gs_init.ps" /^>
 echo   ^<UserMacro Name="GS_LIB_DEFAULT" Value="$(GSROOTDIR)/lib;$(GSROOTDIR)/Resource/Font;$(AROOTDIR)/fonts" /^>
 echo   ^<UserMacro Name="GS_REVISION" Value="$(GS_VERSION)" /^>
-echo   ^<UserMacro Name="SEARCH_HERE_FIRST" Value="1" /^>
+echo   ^<UserMacro Name="SEARCH_HERE_FIRST" Value="0" /^>
 echo ^</VisualStudioPropertySheet^>
 goto end
 

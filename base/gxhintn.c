@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxhintn.c,v 1.1 2009/04/23 23:26:45 Arabidopsis Exp $ */
+/* $Id: gxhintn.c,v 1.2 2010/07/10 22:02:24 Arabidopsis Exp $ */
 /* Type 1 hinter, a new algorithm */
 
 #include "memory_.h"
@@ -1723,9 +1717,11 @@ static void t1_hinter__compute_y_span(t1_hinter * this)
 	   and doesn't allow a stable recognition 
 	   of the upper side of a dot, comma, etc.. */
 	n--; 
+    } else if (n < 0) {
+        return; /* empty glyph */
     }
     this->ymin = this->ymax = this->pole[0].gy;
-    for (i = 0; i < n; i++) {
+    for (i = 1; i < n; i++) {
 	if (this->ymin > this->pole[i].gy)
 	    this->ymin = this->pole[i].gy;
 	if (this->ymax < this->pole[i].gy)
@@ -2932,8 +2928,7 @@ static int t1_hinter__export(t1_hinter * this)
     fixed fx, fy;
 
     for(i = 0; ; i++) {
-        int beg_pole = this->contour[i];
-        int end_pole = this->contour[i + 1] - 2;
+        int end_pole, beg_pole = this->contour[i];
         t1_pole *pole = & this->pole[beg_pole];
 
         g2d(this, pole->ax, pole->ay, &fx, &fy);
@@ -2944,6 +2939,7 @@ static int t1_hinter__export(t1_hinter * this)
 	    break;
 	vd_setcolor(RGB(255,0,0)); 
         vd_moveto(fx,fy);
+        end_pole = this->contour[i + 1] - 2;
         for(j = beg_pole + 1; j <= end_pole; j++) {
             pole = & this->pole[j];
             g2d(this, pole->ax, pole->ay, &fx, &fy);

@@ -1,20 +1,19 @@
 %    Copyright (C) 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-%  This file is part of GNU ghostscript
-%
-%  GNU ghostscript is free software; you can redistribute it and/or modify it under
-%  the terms of the version 2 of the GNU General Public License as published by the Free Software
-%  Foundation.
-%
-%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-%
-%  You should have received a copy of the GNU General Public License along with
-%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-%
-% $Id: gs_cff.ps,v 1.1 2009/04/23 23:25:46 Arabidopsis Exp $
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
+% $Id: gs_cff.ps,v 1.2 2010/07/10 22:02:13 Arabidopsis Exp $
 % Loader for CFF (compressed) fonts, including OpenType CFFs.
 % The following are not implemented yet:
 %	Deleted entries in the Name Index
@@ -193,7 +192,7 @@ mark
       pop 
       (   **** Warning: Out of range access to a CFF table, assuming 0.\n)
       pdfformaterror
-  } if
+    } if
   } ifelse
 } bind def
 /next2 {	% - next2 <byte1> <byte2>
@@ -248,7 +247,7 @@ def
       pop       % skip incorrect index, bug 689854
     } {
       offsetproc dup exec pop exch {
-      dup exec dup 4 -1 roll sub 3 1 roll exch
+        dup exec dup 4 -1 roll sub 3 1 roll exch
       } repeat
     } ifelse pop
   } if pop .packtomark
@@ -582,7 +581,7 @@ dup							% Format 2
   StringCache queued_offset known {
     /PrivateStart queued_offset def
   } {
-  /PrivateStart pos def
+    /PrivateStart pos def
     1 index 0 gt {
       f 2 index string readstring pop
     } {
@@ -793,7 +792,7 @@ dup							% Format 2
         /f exch 0 () /SubFileDecode filter def
       } {
         /f cff def
-      dup pos ne { dup pos sub nextstring pop } if	% negative advance will cause error
+        dup pos ne { dup pos sub nextstring pop } if	% negative advance will cause error
       } ifelse
       offsets exch 2 copy get 3 1 roll undef
       CFFDEBUG { (exec queued: ) print dup == } if

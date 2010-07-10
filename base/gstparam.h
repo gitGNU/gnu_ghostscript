@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gstparam.h,v 1.1 2009/04/23 23:26:27 Arabidopsis Exp $ */
+/* $Id: gstparam.h,v 1.2 2010/07/10 22:02:21 Arabidopsis Exp $ */
 /* Transparency parameter definitions */
 
 #ifndef gstparam_INCLUDED
@@ -91,6 +85,8 @@ typedef struct gs_transparency_group_params_s {
     bool image_with_SMask;
     bool idle;
     uint mask_id;
+    int group_color_numcomps;
+    gs_transparency_color_t group_color;
 } gs_transparency_group_params_t;
 
 /* Define the parameter structure for a transparency mask. */
@@ -105,6 +101,7 @@ typedef enum {
 /* See the gx_transparency_mask_params_t type below */
 /* (Update gs_trans_mask_params_init if these change.) */
 typedef struct gs_transparency_mask_params_s {
+    const gs_color_space *ColorSpace;
     gs_transparency_mask_subtype_t subtype;
     int Background_components;
     float Background[GS_CLIENT_COLOR_MAX_COMPONENTS];
@@ -119,6 +116,9 @@ typedef struct gs_transparency_mask_params_s {
 /* The post clist version of transparency mask parameters */
 typedef struct gx_transparency_mask_params_s {
     gs_transparency_mask_subtype_t subtype;
+    bool SMask_is_CIE;
+    int group_color_numcomps;
+    gs_transparency_color_t group_color;
     int Background_components;
     float Background[GS_CLIENT_COLOR_MAX_COMPONENTS];
     float GrayBackground;

@@ -1,22 +1,16 @@
 /* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
-  
-  This file is part of GNU ghostscript
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id: gsncdummy.c,v 1.1 2009/04/23 23:26:14 Arabidopsis Exp $ */
+/* $Id: gsncdummy.c,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
 /* Sample implementation for client custom processing of color spaces. */
 
 /*
@@ -61,7 +55,7 @@
  *     specified with the DeviceN color space.  (This is the normal PS
  *     and PDF operation.)
  *
- * See also src/zsncdummy.c for an example custom color callback. 
+ * See also src/zsncdummy.c for an example custom color callback.
  */
 
 #include "stdpre.h"
@@ -88,7 +82,7 @@
  * of the different PANTONE colors.  Creation of a real list is left as an
  * exercise for the user.
  */
-const pantone_list_t pantone_list[] = { 
+const pantone_list_t pantone_list[] = {
     { "PantoneCyan",	1, 0, 0, 0 },
     { "PantoneMagenta",	0, 1, 0, 0 },
     { "PantoneYellow",	0, 0, 1, 0 },
@@ -166,7 +160,7 @@ client_install_no_op(client_custom_color_params_t * pparams,
 static void
 client_adjust_cspace_count(const gs_color_space * pcs, int delta)
 {
-    demo_color_space_data_t * pdata = 
+    demo_color_space_data_t * pdata =
 	(demo_color_space_data_t *)(pcs->pclient_color_space_data);
 
     pdata->ref_count += delta;
@@ -210,7 +204,7 @@ allocate_client_data_block(int initial_ref_count, gs_memory_t *mem)
 	pdata->ref_count = 1;
 	pdata->memory = mem;
     }
-    
+
     return pdata;
 }
 
@@ -496,7 +490,7 @@ client_pantone_remap_DeviceN(client_custom_color_params_t * pparam,
 {
    	return client_pantone_remap_color(pparam, pconc,
 	(demo_color_space_data_t *)(pcs->pclient_color_space_data),
-	pdc, pis, dev, select, gs_color_space_num_components(pcs));	
+	pdc, pis, dev, select, gs_color_space_num_components(pcs));
 }
 
 
@@ -555,19 +549,19 @@ client_remap_DeviceGray(client_custom_color_params_t * pparams,
 {
 
 	#if OBJECT_TYPE_EXAMPLE
-   
+
 		 /* For demo and debug purposes, make our colors a function of the
 		 * intensity of the given colors and the object type. */
 
 		frac intensity = pconc[0];
-    convert_intensity_into_device_color(intensity, pdc, pis, dev, select);
+		convert_intensity_into_device_color(intensity, pdc, pis, dev, select); 
 
 	#else
 
 		/* If desired, replace with your own color transformation */
 
 		gx_remap_concrete_gray(pconc[0], pdc, pis, dev, select);
-	
+
 	#endif
 
 
@@ -596,19 +590,19 @@ client_remap_DeviceRGB(client_custom_color_params_t * pparams,
 {
 
 	#if OBJECT_TYPE_EXAMPLE
-   
+
 		/* For demo and debug purposes, make our colors a function of the
 		 * intensity of the given colors and the object type. */
-	     
+
 		frac intensity = (frac)(pconc[0] * 0.30 + pconc[1] * 0.59 + pconc[2] * 0.11);
-    convert_intensity_into_device_color(intensity, pdc, pis, dev, select);
-		
+		convert_intensity_into_device_color(intensity, pdc, pis, dev, select);
+
 	#else
 
 		 /* If desired, replace with your own color transformation */
 
 		 gx_remap_concrete_rgb(pconc[0], pconc[1], pconc[2], pdc, pis, dev, select);
-	
+
 	#endif
 
     return 0;
@@ -635,25 +629,25 @@ client_remap_DeviceCMYK(client_custom_color_params_t * pparams,
 {
 
 	#if OBJECT_TYPE_EXAMPLE
-   
-    /*
-     * For demo and debug purposes, make our colors a function of the
-		 * intensity of the given colors and the object type.  */
-	     
-    frac intensity = frac_1 - (frac)(pconc[0] * 0.30 + pconc[1] * 0.59
-		    + pconc[2] * 0.11 + pconc[3]);
 
-    if (intensity < frac_0)
-	intensity = frac_0;
-    convert_intensity_into_device_color(intensity, pdc, pis, dev, select);
+	   /*
+		 * For demo and debug purposes, make our colors a function of the
+		 * intensity of the given colors and the object type.  */
+
+		frac intensity = frac_1 - (frac)(pconc[0] * 0.30 + pconc[1] * 0.59
+				+ pconc[2] * 0.11 + pconc[3]);
+
+		if (intensity < frac_0)
+		intensity = frac_0;
+		convert_intensity_into_device_color(intensity, pdc, pis, dev, select); 		
 
 	#else
 
 		 /* If desired, replace with your own color transformation */
 		 gx_remap_concrete_cmyk(pconc[0], pconc[1], pconc[2], pconc[3],pdc, pis, dev, select);
-	
+
 	#endif
-		  
+
     return 0;
 }
 
@@ -700,8 +694,8 @@ client_install_CIEtoA(client_custom_color_params_t * pparams,
 	gx_cie_load_common_cache(&pcie->common, pgs);
 	gs_cie_a_complete(pcie);
 	if ((code=gs_cie_cs_complete(pgs, true)) >= 0) {
-	    /* Now allocate the conversion imager state in stable_memory	*/
-	    /* so that the garbage collector won't free it			*/
+	    /* Now allocate the conversion imager state in stable_memory */
+	    /* so that the garbage collector won't free it		 */
 	    code = gx_cie_to_xyz_alloc(&pdata->CIEtoXYZ_pis, pcs,
 					pcs->rc.memory->stable_memory);
 	}
@@ -761,8 +755,8 @@ client_install_CIEtoXYZ(client_custom_color_params_t * pparams,
 	}
 	/* Fill the caches we need in the CIE color space */
         if ((code=gx_install_cie_abc((gs_cie_abc *)pcie, pgs)) >= 0) {
-	    /* Now allocate the conversion imager state in stable_memory	*/
-	    /* so that the garbage collector won't free it			*/
+	    /* Now allocate the conversion imager state in stable_memory */
+	    /* so that the garbage collector won't free it               */
 	    code = gx_cie_to_xyz_alloc(&pdata->CIEtoXYZ_pis, pcs,
 				    pcs->rc.memory->stable_memory);
 	}
@@ -792,11 +786,12 @@ client_install_ICCtoXYZ(client_custom_color_params_t * pparams,
 
 	/* Need to initialize the client data.  The imager_state is what is needed in pdata->CIEtoXZY_ps */
 
-    /* update the stub information used by the joint caches */
+    /* update the stub information used by the joint caches  */
     gx_cie_load_common_cache(&picc_info->common, pgs);
     gx_cie_common_complete(&picc_info->common);
+
     if ((code=gs_cie_cs_complete(pgs, true)) < 0) {
-	client_adjust_cspace_count(pcs, -1);  /* free it up */
+	client_adjust_cspace_count(pcs, -1);  /* free it up  */
 	return false;
     }
 
@@ -813,6 +808,7 @@ client_install_ICCtoXYZ(client_custom_color_params_t * pparams,
     return true;
 }
 
+
 /*
  * Convert a CIEBasedA color into device color.
  */
@@ -822,10 +818,9 @@ client_remap_CIEBasedA(client_custom_color_params_t * pparams,
     gx_device_color * pdc, const gs_imager_state * pis, gx_device * dev,
     gs_color_select_t select)
 {
-    demo_color_space_data_t * pdata = 
+    demo_color_space_data_t * pdata =
 	(demo_color_space_data_t *)(pcs->pclient_color_space_data);
     frac gray = convert2frac(pc->paint.values[0], pcs->params.a->RangeA);
-
 
     /*** Demonstrate method to convert to XYZ ***/
     if (pdata->CIEtoXYZ_pis) {
@@ -855,7 +850,7 @@ client_remap_CIEBasedABC(client_custom_color_params_t * pparams,
     gx_device_color * pdc, const gs_imager_state * pis, gx_device * dev,
     gs_color_select_t select)
 {
-    demo_color_space_data_t * pdata = 
+    demo_color_space_data_t * pdata =
 	(demo_color_space_data_t *)(pcs->pclient_color_space_data);
     frac rgb[3];
     int i;
@@ -892,7 +887,7 @@ client_remap_CIEBasedDEF(client_custom_color_params_t * pparams,
     gx_device_color * pdc, const gs_imager_state * pis, gx_device * dev,
     gs_color_select_t select)
 {
-    demo_color_space_data_t * pdata = 
+    demo_color_space_data_t * pdata =
 	(demo_color_space_data_t *)(pcs->pclient_color_space_data);
     frac rgb[3];
     int i;
@@ -929,7 +924,7 @@ client_remap_CIEBasedDEFG(client_custom_color_params_t * pparams,
     gx_device_color * pdc, const gs_imager_state * pis, gx_device * dev,
     gs_color_select_t select)
 {
-    demo_color_space_data_t * pdata = 
+    demo_color_space_data_t * pdata =
 	(demo_color_space_data_t *)(pcs->pclient_color_space_data);
     frac cmyk[4];
     int i;
@@ -967,22 +962,24 @@ client_remap_ICCBased(client_custom_color_params_t * pparams,
     gx_device_color * pdc, const gs_imager_state * pis, gx_device * dev,
     gs_color_select_t select)
 {
-    demo_color_space_data_t * pdata = 
+    demo_color_space_data_t * pdata =
 	(demo_color_space_data_t *)(pcs->pclient_color_space_data);
     frac frac_color[GS_CLIENT_COLOR_MAX_COMPONENTS];
     int i, num_values = pcs->params.icc.picc_info->num_components;
 
     /*** Demonstrate method to convert to XYZ ***/
     if (pdata->CIEtoXYZ_pis) {
-	frac xyz[3];
 
-	cs_concretize_color(pc, pcs, xyz, pdata->CIEtoXYZ_pis);
-	/* We don't really do anything with these values, but this */
-	/* is where a real client could convert to a device color  */
-	if_debug6('|', "[c]client_remap ICCBased [%g, %g, %g] -> XYZ [%g, %g, %g]\n",
-		  pc->paint.values[0], pc->paint.values[1], pc->paint.values[2],
-		  frac2float(xyz[0]), frac2float(xyz[1]), frac2float(xyz[2]));
+		frac xyz[3];
+
+		cs_concretize_color(pc, pcs, xyz, pdata->CIEtoXYZ_pis);
+		/* We don't really do anything with these values, but this */
+		/* is where a real client could convert to a device color  */
+		if_debug6('|', "[c]client_remap ICCBased [%g, %g, %g] -> XYZ [%g, %g, %g]\n",
+			  pc->paint.values[0], pc->paint.values[1], pc->paint.values[2],
+			  frac2float(xyz[0]), frac2float(xyz[1]), frac2float(xyz[2]));
     }
+
     /*
      * For demo and debug purposes, make our colors a function of the
      * intensity of the given color value and the object type.  The color

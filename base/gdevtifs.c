@@ -1,325 +1,365 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
-  This file is part of GNU ghostscript
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevtifs.c,v 1.1 2009/04/23 23:26:22 Arabidopsis Exp $ */
+/* $Id: gdevtifs.c,v 1.2 2010/07/10 22:02:20 Arabidopsis Exp $ */
 /* TIFF-writing substructure */
+#include "gdevtifs.h"
 #include "stdio_.h"
 #include "time_.h"
 #include "gstypes.h"
 #include "gscdefs.h"
 #include "gdevprn.h"
-#include "gdevtifs.h"
+
+#include <tiffio.h>
 
 /*
- * Define the standard contents of a TIFF directory.
- * Clients may add more items, also sorted in increasing tag order.
+ * Open the output seekable, because libtiff doesn't support writing to
+ * non-positionable streams. Otherwise, these are the same as
+ * gdev_prn_output_page() and gdev_prn_open().
  */
-typedef struct TIFF_std_directory_entries_s {
-    TIFF_dir_entry SubFileType;
-    TIFF_dir_entry ImageWidth;
-    TIFF_dir_entry ImageLength;
-    TIFF_dir_entry StripOffsets;
-    TIFF_dir_entry Orientation;
-    TIFF_dir_entry RowsPerStrip;
-    TIFF_dir_entry StripByteCounts;
-    TIFF_dir_entry XResolution;
-    TIFF_dir_entry YResolution;
-    TIFF_dir_entry PlanarConfig;
-    TIFF_dir_entry ResolutionUnit;
-    TIFF_dir_entry PageNumber;
-    TIFF_dir_entry Software;
-    TIFF_dir_entry DateTime;
-} TIFF_std_directory_entries;
-
-/* Define values that follow the directory entries. */
-typedef struct TIFF_std_directory_values_s {
-    TIFF_ulong diroff;		/* offset to next directory */
-    TIFF_ulong xresValue[2];	/* XResolution indirect value */
-    TIFF_ulong yresValue[2];	/* YResolution indirect value */
-#define maxSoftware 40
-    char softwareValue[maxSoftware];	/* Software indirect value */
-    char dateTimeValue[20];	/* DateTime indirect value */
-} TIFF_std_directory_values;
-static const TIFF_std_directory_entries std_entries_initial =
-{
-    {TIFFTAG_SubFileType, TIFF_LONG, 1, SubFileType_page},
-    {TIFFTAG_ImageWidth, TIFF_LONG, 1},
-    {TIFFTAG_ImageLength, TIFF_LONG, 1},
-    {TIFFTAG_StripOffsets, TIFF_LONG, 1},
-    {TIFFTAG_Orientation, TIFF_SHORT, 1, Orientation_top_left},
-    {TIFFTAG_RowsPerStrip, TIFF_LONG, 1},
-    {TIFFTAG_StripByteCounts, TIFF_LONG, 1},
-    {TIFFTAG_XResolution, TIFF_RATIONAL | TIFF_INDIRECT, 1,
-     offset_of(TIFF_std_directory_values, xresValue[0])},
-    {TIFFTAG_YResolution, TIFF_RATIONAL | TIFF_INDIRECT, 1,
-     offset_of(TIFF_std_directory_values, yresValue[0])},
-    {TIFFTAG_PlanarConfig, TIFF_SHORT, 1, PlanarConfig_contig},
-    {TIFFTAG_ResolutionUnit, TIFF_SHORT, 1, ResolutionUnit_inch},
-    {TIFFTAG_PageNumber, TIFF_SHORT, 2},
-    {TIFFTAG_Software, TIFF_ASCII | TIFF_INDIRECT, 0,
-     offset_of(TIFF_std_directory_values, softwareValue[0])},
-    {TIFFTAG_DateTime, TIFF_ASCII | TIFF_INDIRECT, 20,
-     offset_of(TIFF_std_directory_values, dateTimeValue[0])}
-};
-static const TIFF_std_directory_values std_values_initial =
-{
-    0,
-    {0, 1},
-    {0, 1},
-    {0},
-    {0, 0}
-};
-
-/* Fix up tag values on big-endian machines if necessary. */
-#if arch_is_big_endian
-static void
-tiff_fixup_tag(TIFF_dir_entry * dp)
-{
-    switch (dp->type) {
-	case TIFF_SHORT:
-	case TIFF_SSHORT:
-	    /* We may have two shorts packed into a TIFF_ulong. */
-	    dp->value = (dp->value << 16) + (dp->value >> 16);
-	    break;
-	case TIFF_BYTE:
-	case TIFF_SBYTE:
-	    dp->value <<= 24;
-	    break;
-    }
-}
-#else
-#  define tiff_fixup_tag(dp) DO_NOTHING
-#endif
-
-/* Begin a TIFF page. */
 int
-gdev_tiff_begin_page(gx_device_printer * pdev, gdev_tiff_state * tifs,
-		     FILE * fp,
-		     const TIFF_dir_entry * entries, int entry_count,
-		     const byte * values, int value_size, long max_strip_size)
+tiff_output_page(gx_device *pdev, int num_copies, int flush)
 {
-    gs_memory_t *mem = pdev->memory;
-    TIFF_std_directory_entries std_entries;
-    const TIFF_dir_entry *pse;
-    const TIFF_dir_entry *pce;
-    TIFF_dir_entry entry;
-#define std_entry_count\
-  (sizeof(TIFF_std_directory_entries) / sizeof(TIFF_dir_entry))
-    int nse, nce, ntags;
-    TIFF_std_directory_values std_values;
+    gx_device_printer * const ppdev = (gx_device_printer *)pdev;
+    int outcode = 0, closecode = 0, errcode = 0, endcode;
+    bool upgraded_copypage = false;
 
-#define std_value_size sizeof(TIFF_std_directory_values)
+    if (num_copies > 0 || !flush) {
+	int code = gdev_prn_open_printer_positionable(pdev, 1, 1);
 
-    tifs->mem = mem;
-    if (gdev_prn_file_is_new(pdev)) {
-	/* This is a new file; write the TIFF header. */
-	static const TIFF_header hdr = {
-#if arch_is_big_endian
-	    TIFF_magic_big_endian,
+	if (code < 0)
+	    return code;
+
+	/* If copypage request, try to do it using buffer_page */
+	if ( !flush &&
+	     (*ppdev->printer_procs.buffer_page)
+	     (ppdev, ppdev->file, num_copies) >= 0
+	     ) {
+	    upgraded_copypage = true;
+	    flush = true;
+	}
+	else if (num_copies > 0)
+	    /* Print the accumulated page description. */
+	    outcode =
+		(*ppdev->printer_procs.print_page_copies)(ppdev, ppdev->file,
+							  num_copies);
+	fflush(ppdev->file);
+	errcode =
+	    (ferror(ppdev->file) ? gs_note_error(gs_error_ioerror) : 0);
+	if (!upgraded_copypage)
+	    closecode = gdev_prn_close_printer(pdev);
+    }
+    endcode = (ppdev->buffer_space && !ppdev->is_async_renderer ?
+	       clist_finish_page(pdev, flush) : 0);
+
+    if (outcode < 0)
+	return outcode;
+    if (errcode < 0)
+	return errcode;
+    if (closecode < 0)
+	return closecode;
+    if (endcode < 0)
+	return endcode;
+    endcode = gx_finish_output_page(pdev, num_copies, flush);
+    return (endcode < 0 ? endcode : upgraded_copypage ? 1 : 0);
+}
+
+int
+tiff_open(gx_device *pdev)
+{
+    gx_device_printer * const ppdev = (gx_device_printer *)pdev;
+    int code;
+
+    ppdev->file = NULL;
+    code = gdev_prn_allocate_memory(pdev, NULL, 0, 0);
+    if (code < 0)
+	return code;
+    if (ppdev->OpenOutputFile)
+	code = gdev_prn_open_printer_seekable(pdev, 1, true);
+    return code;
+}
+
+int
+tiff_close(gx_device * pdev)
+{
+    gx_device_tiff *const tfdev = (gx_device_tiff *)pdev;
+
+    if (tfdev->tif)
+	TIFFCleanup(tfdev->tif);
+
+    return gdev_prn_close(pdev);
+}
+
+int
+tiff_get_params(gx_device * dev, gs_param_list * plist)
+{
+    gx_device_tiff *const tfdev = (gx_device_tiff *)dev;
+    int code = gdev_prn_get_params(dev, plist);
+    int ecode = code;
+    gs_param_string comprstr;
+
+    if ((code = param_write_bool(plist, "BigEndian", &tfdev->BigEndian)) < 0)
+        ecode = code;
+    if ((code = tiff_compression_param_string(&comprstr, tfdev->Compression)) < 0 ||
+	(code = param_write_string(plist, "Compression", &comprstr)) < 0)
+	ecode = code;
+    if ((code = param_write_long(plist, "MaxStripSize", &tfdev->MaxStripSize)) < 0)
+        ecode = code;
+    return ecode;
+}
+
+int
+tiff_put_params(gx_device * dev, gs_param_list * plist)
+{
+    gx_device_tiff *const tfdev = (gx_device_tiff *)dev;
+    int ecode = 0;
+    int code;
+    const char *param_name;
+    bool big_endian = tfdev->BigEndian;
+    uint16 compr = tfdev->Compression;
+    gs_param_string comprstr;
+    long mss = tfdev->MaxStripSize;
+
+    /* Read BigEndian option as bool */
+    switch (code = param_read_bool(plist, (param_name = "BigEndian"), &big_endian)) {
+	default:
+	    ecode = code;
+	    param_signal_error(plist, param_name, ecode);
+        case 0:
+	case 1:
+	    break;
+    }
+    /* Read Compression */
+    switch (code = param_read_string(plist, (param_name = "Compression"), &comprstr)) {
+	case 0:
+	    if ((ecode = tiff_compression_id(&compr, &comprstr)) < 0 ||
+		!tiff_compression_allowed(compr, dev->color_info.depth))
+		param_signal_error(plist, param_name, ecode);
+	    break;
+	case 1:
+	    break;
+	default:
+	    ecode = code;
+	    param_signal_error(plist, param_name, ecode);
+    }
+
+    switch (code = param_read_long(plist, (param_name = "MaxStripSize"), &mss)) {
+        case 0:
+	    /*
+	     * Strip must be large enough to accommodate a raster line.
+	     * If the max strip size is too small, we still write a single
+	     * line per strip rather than giving an error.
+	     */
+	    if (mss >= 0)
+	        break;
+	    code = gs_error_rangecheck;
+	default:
+	    ecode = code;
+	    param_signal_error(plist, param_name, ecode);
+	case 1:
+	    break;
+    }
+
+    if (ecode < 0)
+	return ecode;
+    code = gdev_prn_put_params(dev, plist);
+    if (code < 0)
+	return code;
+
+    tfdev->BigEndian = big_endian;
+    tfdev->Compression = compr;
+    tfdev->MaxStripSize = mss;
+    return code;
+}
+
+TIFF *
+tiff_from_filep(const char *name, FILE *filep, int big_endian)
+{
+    int fd;
+
+#ifdef __WIN32__
+	fd = _get_osfhandle(fileno(filep));
 #else
-	    TIFF_magic_little_endian,
+	fd = fileno(filep);
 #endif
-	    TIFF_version_value,
-	    sizeof(TIFF_header)
-	};
 
-	fwrite((const char *)&hdr, sizeof(hdr), 1, fp);
-	tifs->prev_dir = 0;
-    } else {			/* Patch pointer to this directory from previous. */
-	TIFF_ulong offset = (TIFF_ulong) tifs->dir_off;
+    if (fd < 0)
+	return NULL;
 
-	fseek(fp, tifs->prev_dir, SEEK_SET);
-	fwrite((char *)&offset, sizeof(offset), 1, fp);
-	fseek(fp, tifs->dir_off, SEEK_SET);
+    return TIFFFdOpen(fd, name, big_endian ? "wb" : "wl");
+}
+
+int gdev_tiff_begin_page(gx_device_tiff *tfdev,
+			 FILE *file)
+{
+    gx_device_printer *const pdev = (gx_device_printer *)tfdev;
+
+    if (gdev_prn_file_is_new(pdev)) {
+	/* open the TIFF device */
+	tfdev->tif = tiff_from_filep(pdev->dname, file, tfdev->BigEndian);
+	if (!tfdev->tif)
+	    return_error(gs_error_invalidfileaccess);
     }
 
-    /* We're going to shuffle the two tag lists together. */
-    /* Both lists are sorted; entries in the client list */
-    /* replace entries with the same tag in the standard list. */
-    for (ntags = 0, pse = (const TIFF_dir_entry *)&std_entries_initial,
-	 nse = std_entry_count, pce = entries, nce = entry_count;
-	 nse && nce; ++ntags
-	) {
-	if (pse->tag < pce->tag)
-	    ++pse, --nse;
-	else if (pce->tag < pse->tag)
-	    ++pce, --nce;
-	else
-	    ++pse, --nse, ++pce, --nce;
-    }
-    ntags += nse + nce;
-    tifs->ntags = ntags;
+    return tiff_set_fields_for_printer(pdev, tfdev->tif);
+}
 
-    /* Write count of tags in directory. */
-    {
-	TIFF_short dircount = ntags;
+int tiff_set_compression(gx_device_printer *pdev,
+			 TIFF *tif,
+			 uint compression,
+			 long max_strip_size)
+{
+    TIFFSetField(tif, TIFFTAG_COMPRESSION, compression);
 
-	fwrite((char *)&dircount, sizeof(dircount), 1, fp);
-    }
-    tifs->dir_off = ftell(fp);
-
-    /* Fill in standard directory tags. */
-    std_entries = std_entries_initial;
-    std_values = std_values_initial;
-    std_entries.ImageWidth.value = pdev->width;
-    std_entries.ImageLength.value = pdev->height;
     if (max_strip_size == 0) {
-	tifs->strip_count = 1;
-	tifs->rows = pdev->height;
-	std_entries.RowsPerStrip.value = pdev->height;
-    } else {
-	int max_strip_rows =
-	    max_strip_size / gdev_mem_bytes_per_scan_line((gx_device *)pdev);
-        int rps = max(1, max_strip_rows);
-
-	tifs->strip_count = (pdev->height + rps - 1) / rps;
-	tifs->rows = rps;
-	std_entries.RowsPerStrip.value = rps;
-	std_entries.StripOffsets.count = tifs->strip_count;
-	std_entries.StripByteCounts.count = tifs->strip_count;
+	TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, pdev->height);
     }
-    tifs->StripOffsets = (TIFF_ulong *)gs_alloc_bytes(mem,
-    		    (tifs->strip_count)*2*sizeof(TIFF_ulong),
-		    "gdev_tiff_begin_page(StripOffsets)");
-    tifs->StripByteCounts = &(tifs->StripOffsets[tifs->strip_count]);
-    if (tifs->StripOffsets == 0)
-	return_error(gs_error_VMerror);
-    std_entries.PageNumber.value = (TIFF_ulong) pdev->PageCount;
-    std_values.xresValue[0] = (TIFF_ulong)pdev->x_pixels_per_inch;
-    std_values.yresValue[0] = (TIFF_ulong)pdev->y_pixels_per_inch;
+    else {
+	int rows = max_strip_size /
+	    gdev_mem_bytes_per_scan_line((gx_device *)pdev);
+	TIFFSetField(tif,
+		     TIFFTAG_ROWSPERSTRIP,
+		     TIFFDefaultStripSize(tif, max(1, rows)));
+    }
+
+    return 0;
+}
+
+int tiff_set_fields_for_printer(gx_device_printer *pdev, TIFF *tif)
+{
+    TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, pdev->width);
+    TIFFSetField(tif, TIFFTAG_IMAGELENGTH, pdev->height);
+    TIFFSetField(tif, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);
+    TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
+
+    TIFFSetField(tif, TIFFTAG_RESOLUTIONUNIT, RESUNIT_INCH);
+    TIFFSetField(tif, TIFFTAG_XRESOLUTION, pdev->x_pixels_per_inch);
+    TIFFSetField(tif, TIFFTAG_YRESOLUTION, pdev->y_pixels_per_inch);
+
     {
 	char revs[10];
+#define maxSoftware 40
+	char softwareValue[maxSoftware];
 
-	strncpy(std_values.softwareValue, gs_product, maxSoftware);
-	std_values.softwareValue[maxSoftware - 1] = 0;
+	strncpy(softwareValue, gs_product, maxSoftware);
+	softwareValue[maxSoftware - 1] = 0;
 	sprintf(revs, " %1.2f", gs_revision / 100.0);
-	strncat(std_values.softwareValue, revs,
-		maxSoftware - strlen(std_values.softwareValue) - 1);
-	std_entries.Software.count =
-	    strlen(std_values.softwareValue) + 1;
+	strncat(softwareValue, revs,
+		maxSoftware - strlen(softwareValue) - 1);
+
+	TIFFSetField(tif, TIFFTAG_SOFTWARE, softwareValue);
     }
     {
 	struct tm tms;
 	time_t t;
+	char dateTimeValue[20];
 
 	time(&t);
 	tms = *localtime(&t);
-	sprintf(std_values.dateTimeValue,
-		"%04d:%02d:%02d %02d:%02d:%02d",
+	sprintf(dateTimeValue, "%04d:%02d:%02d %02d:%02d:%02d",
 		tms.tm_year + 1900, tms.tm_mon + 1, tms.tm_mday,
 		tms.tm_hour, tms.tm_min, tms.tm_sec);
+
+	TIFFSetField(tif, TIFFTAG_DATETIME, dateTimeValue);
     }
 
-    /* Write the merged directory. */
-    for (pse = (const TIFF_dir_entry *)&std_entries,
-	 nse = std_entry_count, pce = entries, nce = entry_count;
-	 nse || nce;
-	) {
-	bool std;
+    TIFFSetField(tif, TIFFTAG_SUBFILETYPE, FILETYPE_PAGE);
+    TIFFSetField(tif, TIFFTAG_PAGENUMBER, pdev->PageCount, 0);
 
-	if (nce == 0 || (nse != 0 && pse->tag < pce->tag))
-	    std = true, entry = *pse++, --nse;
-	else if (nse == 0 || (nce != 0 && pce->tag < pse->tag))
-	    std = false, entry = *pce++, --nce;
-	else
-	    std = false, ++pse, --nse, entry = *pce++, --nce;
-	if (entry.tag == TIFFTAG_StripOffsets)  {
-	    if (tifs->strip_count > 1) {
-		tifs->offset_StripOffsets = tifs->dir_off +
-		    (ntags * sizeof(TIFF_dir_entry)) + std_value_size + value_size;
-		entry.value = tifs->offset_StripOffsets;
-	    } else {
-		tifs->offset_StripOffsets = ftell(fp) +
-		    offset_of(TIFF_dir_entry, value);
-	    }
-	}
-	if (entry.tag == TIFFTAG_StripByteCounts) {
-	    if (tifs->strip_count > 1) {
-	        tifs->offset_StripByteCounts = tifs->dir_off +
-		    (ntags * sizeof(TIFF_dir_entry)) + std_value_size + value_size +
-		    (sizeof(TIFF_ulong) * tifs->strip_count);
-	        entry.value = tifs->offset_StripByteCounts;
-	    } else {
-		tifs->offset_StripByteCounts = ftell(fp) +
-		    offset_of(TIFF_dir_entry, value);
-	    }
-	}
-	tiff_fixup_tag(&entry);	/* don't fix up indirects */
-	if (entry.type & TIFF_INDIRECT) {
-	    /* Fix up the offset for an indirect value. */
-	    entry.type -= TIFF_INDIRECT;
-	    entry.value +=
-		tifs->dir_off + ntags * sizeof(TIFF_dir_entry) +
-		(std ? 0 : std_value_size);
-	}
-	fwrite((char *)&entry, sizeof(entry), 1, fp);
-    }
-
-    /* Write the indirect values. */
-    fwrite((const char *)&std_values, sizeof(std_values), 1, fp);
-    fwrite((const char *)values, value_size, 1, fp);
-    /* Write placeholders for the strip offsets. */
-    fwrite(tifs->StripOffsets, sizeof(TIFF_ulong), 2 * tifs->strip_count, fp);
-    tifs->strip_index = 0;
-    tifs->StripOffsets[0] = ftell(fp);
     return 0;
 }
 
-/* End a TIFF strip. */
-/* Record the size of the current strip, update the	*/
-/* start of the next strip  and bump the strip_index	*/
 int
-gdev_tiff_end_strip(gdev_tiff_state * tifs, FILE * fp)
+tiff_print_page(gx_device_printer *dev, TIFF *tif)
 {
-    TIFF_ulong strip_size;
-    TIFF_ulong next_strip_start;
-    int pad = 0;
+    int code;
+    byte *data;
+    int size = gdev_mem_bytes_per_scan_line((gx_device *)dev);
+    int max_size = max(size, TIFFScanlineSize(tif));
+    int row;
+    int bpc = dev->color_info.depth / dev->color_info.num_components;
 
-    next_strip_start = (TIFF_ulong)ftell(fp);
-    strip_size = next_strip_start - tifs->StripOffsets[tifs->strip_index];
-    if (next_strip_start & 1) {
-        next_strip_start++;	/* WORD alignment */
-	fwrite(&pad, 1, 1, fp);
+    data = gs_alloc_bytes(dev->memory, max_size, "tiff_print_page(data)");
+    if (data == NULL)
+	return_error(gs_error_VMerror);
+
+    memset(data, 0, max_size);
+    for (row = 0; row < dev->height; row++) {
+	code = gdev_prn_copy_scan_lines(dev, row, data, size);
+	if (code < 0)
+	    break;
+
+#if defined(ARCH_IS_BIG_ENDIAN) && (!ARCH_IS_BIG_ENDIAN) 
+	if (bpc == 16)
+	    TIFFSwabArrayOfShort((uint16 *)data,
+				 dev->width * dev->color_info.num_components);
+#endif
+
+	TIFFWriteScanline(tif, data, row, 0);
     }
-    tifs->StripByteCounts[tifs->strip_index++] = strip_size;
-    if (tifs->strip_index < tifs->strip_count)
-	tifs->StripOffsets[tifs->strip_index] = next_strip_start;
-    return 0;
+
+    gs_free_object(dev->memory, data, "tiff_print_page(data)");
+
+    TIFFWriteDirectory(tif);
+    return code;
 }
 
-/* End a TIFF page. */
+
+static struct compression_string {
+    uint16 id;
+    const char *str;
+} compression_strings [] = {
+    { COMPRESSION_NONE, "none" },
+    { COMPRESSION_CCITTRLE, "crle" },
+    { COMPRESSION_CCITTFAX3, "g3" },
+    { COMPRESSION_CCITTFAX4, "g4" },
+    { COMPRESSION_LZW, "lzw" },
+    { COMPRESSION_PACKBITS, "pack" },
+
+    { 0, NULL }
+};
+
 int
-gdev_tiff_end_page(gdev_tiff_state * tifs, FILE * fp)
+tiff_compression_param_string(gs_param_string *param, uint16 id)
 {
-    gs_memory_t *mem = tifs->mem;
-    long dir_off = tifs->dir_off;
-    int tags_size = tifs->ntags * sizeof(TIFF_dir_entry);
-
-    tifs->prev_dir =
-	dir_off + tags_size + offset_of(TIFF_std_directory_values, diroff);
-    tifs->dir_off = ftell(fp);
-    /* Patch strip byte counts and offsets values. */
-    /* The offset in the file was determined at begin_page and may be indirect */
-    fseek(fp, tifs->offset_StripOffsets, SEEK_SET);
-    fwrite(tifs->StripOffsets, sizeof(TIFF_ulong), tifs->strip_count, fp);
-    fseek(fp, tifs->offset_StripByteCounts, SEEK_SET);
-    fwrite(tifs->StripByteCounts, sizeof(TIFF_ulong), tifs->strip_count, fp);
-    gs_free_object(mem, tifs->StripOffsets, "gdev_tiff_begin_page(StripOffsets)");
-    return 0;
+    struct compression_string *c;
+    for (c = compression_strings; c->str; c++)
+	if (id == c->id) {
+	    param_string_from_string(*param, c->str);
+	    return 0;
+	}
+    return gs_error_undefined;
 }
+
+int
+tiff_compression_id(uint16 *id, gs_param_string *param)
+{
+    struct compression_string *c;
+    for (c = compression_strings; c->str; c++)
+	if (!bytes_compare(param->data, param->size,
+			   (const byte *)c->str, strlen(c->str)))
+	{
+	    *id = c->id;
+	    return 0;
+	}
+    return gs_error_undefined;
+}
+
+int tiff_compression_allowed(uint16 compression, byte depth)
+{
+    return depth == 1 || (compression != COMPRESSION_CCITTRLE &&
+			  compression != COMPRESSION_CCITTFAX3 &&
+			  compression != COMPRESSION_CCITTFAX4);
+
+}
+

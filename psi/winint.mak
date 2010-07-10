@@ -1,21 +1,16 @@
-#  Copyright (C) 2001-2009 Artifex Software, Inc.
+#  Copyright (C) 2001-2010 Artifex Software, Inc.
 #  All Rights Reserved.
 #
-#  This file is part of GNU ghostscript
+#  This software is provided AS-IS with no warranty, either express or
+#  implied.
 #
-#  GNU ghostscript is free software; you can redistribute it and/or modify it under
-#  the terms of the version 2 of the GNU General Public License as published by the Free Software
-#  Foundation.
+#  This software is distributed under license and may not be copied, modified
+#  or distributed except as expressly authorized under the terms of that
+#  license.  Refer to licensing information at http://www.artifex.com/
+#  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+#  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-#  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-#  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-#  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License along with
-#  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# $Id: winint.mak,v 1.1 2009/04/23 23:31:41 Arabidopsis Exp $
+# $Id: winint.mak,v 1.2 2010/07/10 22:02:43 Arabidopsis Exp $
 # Common interpreter makefile section for 32-bit MS Windows.
 
 # This makefile must be acceptable to Microsoft Visual C++, Watcom C++,
@@ -289,22 +284,23 @@ ZIP_RSP = $(PSOBJ)setupgs.rsp
 # as used by Windows XP.
 archive: zip $(PSOBJ)gswin16.ico $(ECHOGS_XE)
 	$(ECHOGS_XE) -w $(ZIP_RSP) -q "-win32 -setup"
-	$(ECHOGS_XE) -a $(ZIP_RSP) -q -st -x 22 GNU Ghostscript $(GS_DOT_VERSION) for Win32 -x 22
+	$(ECHOGS_XE) -a $(ZIP_RSP) -q -st -x 22 GPL Ghostscript $(GS_DOT_VERSION) for Win32 -x 22
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -i -s $(PSOBJ)gswin16.ico
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -a -s $(PSOBJ)about.txt
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -t -s $(PSOBJ)dialog.txt
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -c -s $(SETUP_XE_NAME)
-	$(ECHOGS_XE) -w $(PSOBJ)about.txt "GNU Ghostscript is Copyright " -x A9 " 2009 Artifex Software, Inc."
+	$(ECHOGS_XE) -w $(PSOBJ)about.txt "GPL Ghostscript is Copyright " -x A9 " 2010 Artifex Software, Inc."
 	$(ECHOGS_XE) -a $(PSOBJ)about.txt See license in gs$(GS_DOT_VERSION)\doc\COPYING.
 	$(ECHOGS_XE) -a $(PSOBJ)about.txt See gs$(GS_DOT_VERSION)\doc\Commprod.htm regarding commercial distribution.
-	$(ECHOGS_XE) -w $(PSOBJ)dialog.txt This installs GNU Ghostscript $(GS_DOT_VERSION).
-	$(ECHOGS_XE) -a $(PSOBJ)dialog.txt GNU Ghostscript displays, prints and converts PostScript and PDF files.
+	$(ECHOGS_XE) -w $(PSOBJ)dialog.txt This installs GPL Ghostscript $(GS_DOT_VERSION).
+	$(ECHOGS_XE) -a $(PSOBJ)dialog.txt GPL Ghostscript displays, prints and converts PostScript and PDF files.
 	$(WINZIPSE_XE) ..\$(ZIPTARGET) @$(PSOBJ)setupgs.rsp
 # Don't delete temporary files, because make continues
 # before these files are used.
 #	-del $(ZIP_RSP)
 #	-del $(PSOBJ)about.txt
 #	-del $(PSOBJ)dialog.txt
+
 
 # -------------------- Distribution source archive ------------------- #
 # This creates a zip file containing the files needed to build 
@@ -323,7 +319,7 @@ archive: zip $(PSOBJ)gswin16.ico $(ECHOGS_XE)
 gs$(GS_VERSION)src.zip:
 	-rmdir /s /q gs$(GS_DOT_VERSION)
 	-del temp.zip
-	zip -r -X temp.zip LICENSE doc examples icclib ijs jasper jbig2dec jpeg lib libpng base psi Resource zlib -x ".svn/*" -x "*/.svn/*" -x "*/*/.svn/*" -x "*/*/*/.svn/*" -x "*/*/*/*/.svn/*" -x "*/*/*/*/*/.svn/*"
+	zip -r -X temp.zip LICENSE doc examples icclib ijs jasper jbig2dec jpeg lib libpng base psi Resource tiff zlib -x ".svn/*" -x "*/.svn/*" -x "*/*/.svn/*" -x "*/*/*/.svn/*" -x "*/*/*/*/.svn/*" -x "*/*/*/*/*/.svn/*"
 	mkdir gs$(GS_DOT_VERSION)
 	cd gs$(GS_DOT_VERSION)
 	unzip -a ../temp.zip
@@ -332,5 +328,5 @@ gs$(GS_VERSION)src.zip:
 
 srczip: gs$(GS_VERSION)src.zip
 
-
 # end of winint.mak
+

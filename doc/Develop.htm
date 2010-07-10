@@ -3,7 +3,7 @@
 <head>
 <title>Information for Ghostscript developers</title>
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
-<!-- $Id: Develop.htm,v 1.14 2009/04/23 23:32:01 Arabidopsis Exp $ -->
+<!-- $Id: Develop.htm,v 1.15 2010/07/10 22:02:51 Arabidopsis Exp $ -->
 </head>
 
 <body>
@@ -128,12 +128,11 @@
 </ul>
 <li><a href="#Platform_specific_code">Platform-specific code</a>
 </ul>
-<li><a href="#Adding_features_and_options">Adding features and options</a>
+<li><a href="#Troubleshooting">Troubleshooting and debugging</a>
 <li><a href="#Profiling">Profiling</a>
 <ul>
 <li><a href="#ProfilingMSVC6">Profiling with Microsoft Developer Studio 6</a>
 </ul>
-<li><a href="#Troubleshooting">Troubleshooting</a>
 </ul></blockquote>
 
 <!-- [1.2 end table of contents] =========================================== -->
@@ -3303,8 +3302,12 @@ Files for PC environments:
 <a href="../psi/dwmain32.def">psi/dwmain32.def</a>,
 <a href="../psi/dwsetup.def">psi/dwsetup.def</a>,
 <a href="../psi/dwsetup.rc">psi/dwsetup.rc</a>,
+<a href="../psi/dwsetup_x86.manifest">psi/dwsetup_x86.manifest</a>,
+<a href="../psi/dwsetup_x64.manifest">psi/dwsetup_x64.manifest</a>,
 <a href="../psi/dwuninst.def">psi/dwuninst.def</a>,
 <a href="../psi/dwuninst.rc">psi/dwuninst.rc</a>,
+<a href="../psi/dwuninst_x86.manifest">psi/dwuninst_x86.manifest</a>,
+<a href="../psi/dwuninst_x64.manifest">psi/dwuninst_x64.manifest</a>,
 <a href="../psi/gsdll2.def">psi/gsdll2.def</a>,
 <a href="../psi/gsdll2.rc">psi/gsdll2.rc</a>,
 <a href="../psi/gsdll32.def">psi/gsdll32.def</a>,
@@ -4385,6 +4388,8 @@ for Unix with an ANSI C compiler other than gcc.
 
 <li>PC:
 <ul>
+<li><a href="../ghostscript.vcproj">ghostscript.vcproj</a>,
+Visual Studio project file used to build Ghostscript.
 <li><a href="../base/bcwin32.mak">base/bcwin32.mak</a>,
 for MS Windows with Borland C++ Builder.
 <li><a href="../psi/msvc32.mak">psi/msvc32.mak</a>,
@@ -4666,8 +4671,8 @@ Macintosh files:
 <a href="../base/macos_carbon_d_pre.h">base/macos_carbon_d_pre.h</a>,
 <a href="../base/macos_classic_d_pre.h">base/macos_classic_d_pre.h</a>,
 
-<a href="../base/dmmain.c">base/dmmain.c</a>,
-<a href="../base/dmmain.r">base/dmmain.r</a>.
+<a href="../psi/dmmain.c">psi/dmmain.c</a>,
+<a href="../psi/dmmain.r">psi/dmmain.r</a>.
 
 <dt>
 VMS files:
@@ -4695,17 +4700,6 @@ Lang.
 
 
 <hr>
-
-<h2><a name="Adding_features_and_options"></a>Adding features and options</h2>
-
-<p>
-[Ray, please supply more information about what you want here]
-
-
-<h2><a name="Profiling"></a>Profilinging</h2>
-
-<p>
-
 
 <h2><a name="Troubleshooting"></a>Troubleshooting</h2>
 
@@ -4741,7 +4735,7 @@ Files:
 
 <hr>
 
-<h2><a name="Profiling"></a>Profilinging</h2>
+<h2><a name="Profiling"></a>Profiling</h2>
 <h3><a name="ProfilingMSVC6"></a>Profiling with Microsoft Developer Studio 6</h3>
 
 <p>
@@ -4858,7 +4852,8 @@ Edit the output file name in the line 5.
 <hr>
 
 <p>
-<small>Copyright &copy; 2001-2006 Artifex Software, Inc.  All rights reserved.</small>
+<small>Copyright &copy; 2001-2009 Artifex Software, Inc.  All rights 
+reserved.</small>
 
 <p>
 This software is provided AS-IS with no warranty, either express or
@@ -4871,7 +4866,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.64, 3 February 2009
+<small>Ghostscript version 8.71, 10 February 2010
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

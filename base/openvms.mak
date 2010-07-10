@@ -1,21 +1,16 @@
 #  Copyright (C) 2001-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 #
-#  This file is part of GNU ghostscript
+#  This software is provided AS-IS with no warranty, either express or
+#  implied.
 #
-#  GNU ghostscript is free software; you can redistribute it and/or modify it under
-#  the terms of the version 2 of the GNU General Public License as published by the Free Software
-#  Foundation.
+#  This software is distributed under license and may not be copied, modified
+#  or distributed except as expressly authorized under the terms of that
+#  license.  Refer to licensing information at http://www.artifex.com/
+#  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+#  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-#  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-#  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-#  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License along with
-#  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# $Id: openvms.mak,v 1.1 2009/04/23 23:26:10 Arabidopsis Exp $
+# $Id: openvms.mak,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $
 # makefile for OpenVMS VAX and Alpha
 #
 # Please contact Jim Dunham (dunham@omtool.com) if you have questions.
@@ -72,12 +67,9 @@ GS_LIB_DEFAULT=GS_ROOT:[RESOURCE.INIT],GS_ROOT:[LIB],GS_ROOT:[RESOURCE.FONT],GS_
 
 # Define whether or not searching for initialization files should always
 # look in the current directory first.  This leads to well-known security
-# and confusion problems, but users insist on it.
-# NOTE: this also affects searching for files named on the command line:
-# see the "File searching" section of Use.htm for full details.
-# Because of this, setting SEARCH_HERE_FIRST to 0 is not recommended.
+# and confusion problems,  but may be convenient sometimes.
 
-SEARCH_HERE_FIRST=1
+SEARCH_HERE_FIRST=0
 
 # Define the name of the interpreter initialization file.
 # (There is no reason to change this.)
@@ -230,7 +222,7 @@ DEVICE_DEVS7=$(DD)faxg3.dev $(DD)faxg32d.dev $(DD)faxg4.dev
 DEVICE_DEVS8=$(DD)pcxmono.dev $(DD)pcxgray.dev $(DD)pcx16.dev $(DD)pcx256.dev $(DD)pcx24b.dev $(DD)pcxcmyk.dev
 DEVICE_DEVS9=$(DD)pbm.dev $(DD)pbmraw.dev $(DD)pgm.dev $(DD)pgmraw.dev $(DD)pgnm.dev $(DD)pgnmraw.dev
 DEVICE_DEVS10=$(DD)tiffcrle.dev $(DD)tiffg3.dev $(DD)tiffg32d.dev $(DD)tiffg4.dev $(DD)tifflzw.dev $(DD)tiffpack.dev
-DEVICE_DEVS11=$(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiffsep.dev
+DEVICE_DEVS11=$(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiffsep.dev $(DD)tiffsep1.dev
 DEVICE_DEVS12=$(DD)psmono.dev $(DD)psgray.dev $(DD)psrgb.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
 DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev $(DD)jpegcmyk.dev

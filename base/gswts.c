@@ -1,22 +1,16 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/*$Id: gswts.c,v 1.1 2009/04/23 23:27:30 Arabidopsis Exp $ */
+/*$Id: gswts.c,v 1.2 2010/07/10 22:02:31 Arabidopsis Exp $ */
 /* Screen generation for Well Tempered Screening. */
 #include "stdpre.h"
 #include <stdlib.h> /* for malloc */
@@ -1430,16 +1424,29 @@ gs_wts_free_screen(wts_screen_t * wts)
     free(wts);
 }
 
+/* 20090929:mu: dirty fix to deal with bug #690710.
+   wts plane files (wts_plane_{0,1,2,3}) are not maintained long time
+   and contains littile endian 32 bit machine specific data.
+   this quick fix only adresses reading this file on 64 bit and big endian machines.
+   writing of those files are not supported this time. */
+/* short le_s16(byte *p), ushort le_u16(byte *p) */
+#define le_u16(p) (ushort)(*(byte *)(p) | *((byte *)(p) + 1) << 8)
+#define le_s16(p) (short)le_u16(p)
+/* int le_s32(byte *p), uint le_u32(byte *p) */
+#define le_u32(p) (uint)(*(byte *)(p) | *((byte *)(p) + 1) << 8 | *((byte *)(p) + 2) << 16 | *((byte *)(p) + 3) << 24)
+#define le_s32(p) (int)le_u32(p)
+
 int
 wts_size(const wts_screen_t *ws)
 {
     int size = 0; /* A stub. Was uninitialized when none of 3 cases below. */
+    int type = le_s32(&ws->type);
 
-    if (ws->type == WTS_SCREEN_RAT) {
+    if (type == WTS_SCREEN_RAT) {
 	size = sizeof(wts_screen_t);
-    } else if (ws->type == WTS_SCREEN_J) {
+    } else if (type == WTS_SCREEN_J) {
 	size = sizeof(wts_screen_j_t);
-    } else if (ws->type == WTS_SCREEN_H) {
+    } else if (type == WTS_SCREEN_H) {
 	size = sizeof(wts_screen_h_t);
     }
     return size;
@@ -1457,18 +1464,47 @@ gs_wts_from_buf(const byte *buf, int bufsize)
     result = (wts_screen_t *)malloc(size);
     if (result == NULL)
 	return NULL;
-    
-#ifdef WTS_SCREEN_J_SIZE_NOCACHE	/* ??? isn't this always defined ??? */
-    if (ws->type == WTS_SCREEN_J) {
-	hdr_size = WTS_SCREEN_J_SIZE_NOCACHE;
-	memcpy(result, ws, hdr_size);
-    } else
-#endif
-    {
-	hdr_size = sizeof(wts_screen_t);
-        memcpy(result, ws, hdr_size);
+
+    hdr_size = offset_of(wts_screen_t, samples) + sizeof(int);
+    if (bufsize < hdr_size ) {
+	free(result);
+	return NULL;
     }
-    cell_size = ws->cell_width * ws->cell_height * sizeof(wts_screen_sample_t);
+    result->type        = le_s32(&ws->type);
+    result->cell_width  = le_s32(&ws->cell_width);
+    result->cell_height = le_s32(&ws->cell_height);
+    result->cell_shift  = le_s32(&ws->cell_shift);
+    result->samples     = NULL;
+    if (result->type == WTS_SCREEN_J) {
+	wts_screen_j_t *wsj = (wts_screen_j_t *)result;
+	const int *wsj_params = (const int *)((const byte *)ws + hdr_size);
+
+	hdr_size += sizeof(int) * 12;
+	if (bufsize < hdr_size ) {
+	    free(result);
+	    return NULL;
+	}
+	wsj->pa         = le_s32(&wsj_params[0]);
+	wsj->pb         = le_s32(&wsj_params[1]);
+	wsj->pc         = le_s32(&wsj_params[2]);
+	wsj->pd         = le_s32(&wsj_params[3]);
+	wsj->XA         = le_s32(&wsj_params[4]);
+	wsj->YA         = le_s32(&wsj_params[5]);
+	wsj->XB         = le_s32(&wsj_params[6]);
+	wsj->YB         = le_s32(&wsj_params[7]);
+	wsj->XC         = le_s32(&wsj_params[8]);
+	wsj->YC         = le_s32(&wsj_params[9]);
+	wsj->XD         = le_s32(&wsj_params[10]);
+	wsj->YD         = le_s32(&wsj_params[11]);
+	/* 20090929:mu: In last version, we didn't copied these entries unless 
+	   WTS_SCREEN_J_SIZE_NOCACHE has been defined.
+	   But, judging from gs_wts_to_buf() code below, 
+	   those are written into file even WTS_SCREEN_J_SIZE_NOCACHE haven't defined
+	   and thereofore I think these should be read. */
+    }
+    /* 20090929:mu: This code doesn't care about WTS_SCREEN_H type file.
+       If you attenpt to read such files, probably end up with errors. */
+    cell_size = result->cell_width * result->cell_height * sizeof(wts_screen_sample_t);
 
     if (bufsize < (cell_size + hdr_size) ||
 	(result->samples = (wts_screen_sample_t *)malloc(cell_size)) == NULL) {
@@ -1486,7 +1522,15 @@ gs_wts_from_buf(const byte *buf, int bufsize)
 	    wsj->ycache[i].tag = -1;
     }
 #endif
-    memcpy(result->samples, buf + hdr_size, cell_size);
+    { /* 20090929:mu: memcpy(result->samples, buf + hdr_size, cell_size); */
+	/* assuming wts_screen_sample_t == ushort */
+	wts_screen_sample_t *p = result->samples, *q = (wts_screen_sample_t *)(buf + hdr_size);
+	int i = result->cell_width * result->cell_height;
+	for ( ; i > 0; i-- ) {
+		*p++ = le_u16(q);
+		q++;
+	}
+    }
 
     return result;
 }

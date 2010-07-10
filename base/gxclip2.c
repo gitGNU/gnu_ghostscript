@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxclip2.c,v 1.1 2009/04/23 23:26:00 Arabidopsis Exp $ */
+/* $Id: gxclip2.c,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $ */
 /* Mask clipping for patterns */
 #include "memory_.h"
 #include "gx.h"
@@ -101,7 +95,9 @@ static const gx_device_tile_clip gs_tile_clip_device =
   gx_forward_fill_linear_color_triangle,
   gx_forward_update_spot_equivalent_colors,
   gx_forward_ret_devn_params,
-  gx_forward_fillpage
+  gx_forward_fillpage,
+  NULL,                      /* push_transparency_state */
+  NULL                       /* pop_transparency_state */
  }
 };
 
@@ -260,16 +256,19 @@ tile_clip_copy_color(gx_device * dev,
 {
     gx_device_tile_clip *cdev = (gx_device_tile_clip *) dev;
 
-    FOR_RUNS(data_row, txrun, tx, ty) {
-	/* Copy the run. */
-	int code = (*dev_proc(cdev->target, copy_color))
-	(cdev->target, data_row, sourcex + txrun - x, raster,
-	 gx_no_bitmap_id, txrun, ty, tx - txrun, 1);
+    fit_copy(dev, data, sourcex, raster, id, x, y, w, h);
+    {
+	FOR_RUNS(data_row, txrun, tx, ty) {
+	    /* Copy the run. */
+	    int code = (*dev_proc(cdev->target, copy_color))
+	    (cdev->target, data_row, sourcex + txrun - x, raster,
+	     gx_no_bitmap_id, txrun, ty, tx - txrun, 1);
 
-	if (code < 0)
-	    return code;
+	    if (code < 0)
+		return code;
+	}
+	END_FOR_RUNS();
     }
-    END_FOR_RUNS();
     return 0;
 }
 
@@ -281,16 +280,19 @@ tile_clip_copy_alpha(gx_device * dev,
 {
     gx_device_tile_clip *cdev = (gx_device_tile_clip *) dev;
 
-    FOR_RUNS(data_row, txrun, tx, ty) {
-	/* Copy the run. */
-	int code = (*dev_proc(cdev->target, copy_alpha))
-	(cdev->target, data_row, sourcex + txrun - x, raster,
-	 gx_no_bitmap_id, txrun, ty, tx - txrun, 1, color, depth);
+    fit_copy(dev, data, sourcex, raster, id, x, y, w, h);
+    {
+	FOR_RUNS(data_row, txrun, tx, ty) {
+	    /* Copy the run. */
+	    int code = (*dev_proc(cdev->target, copy_alpha))
+	    (cdev->target, data_row, sourcex + txrun - x, raster,
+	     gx_no_bitmap_id, txrun, ty, tx - txrun, 1, color, depth);
 
-	if (code < 0)
-	    return code;
+	    if (code < 0)
+		return code;
+	}
+	END_FOR_RUNS();
     }
-    END_FOR_RUNS();
     return 0;
 }
 
@@ -305,16 +307,19 @@ tile_clip_strip_copy_rop(gx_device * dev,
 {
     gx_device_tile_clip *cdev = (gx_device_tile_clip *) dev;
 
-    FOR_RUNS(data_row, txrun, tx, ty) {
-	/* Copy the run. */
-	int code = (*dev_proc(cdev->target, strip_copy_rop))
-	(cdev->target, data_row, sourcex + txrun - x, raster,
-	 gx_no_bitmap_id, scolors, textures, tcolors,
-	 txrun, ty, tx - txrun, 1, phase_x, phase_y, lop);
+    fit_copy(dev, data, sourcex, raster, id, x, y, w, h);
+    {
+	FOR_RUNS(data_row, txrun, tx, ty) {
+	    /* Copy the run. */
+	    int code = (*dev_proc(cdev->target, strip_copy_rop))
+	    (cdev->target, data_row, sourcex + txrun - x, raster,
+	     gx_no_bitmap_id, scolors, textures, tcolors,
+	     txrun, ty, tx - txrun, 1, phase_x, phase_y, lop);
 
-	if (code < 0)
-	    return code;
+	    if (code < 0)
+		return code;
+	}
+	END_FOR_RUNS();
     }
-    END_FOR_RUNS();
     return 0;
 }

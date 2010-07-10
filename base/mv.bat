@@ -1,2 +1,2 @@
-@rem $Id: mv.bat,v 1.1 2009/04/23 23:26:05 Arabidopsis Exp $
+@rem $Id: mv.bat,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $
 @rename %1 %2

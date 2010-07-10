@@ -1,27 +1,20 @@
 /* Copyright (C) 2001-2008 Artifex Software, Inc.
    All Rights Reserved.
-  
-  This file is part of GNU ghostscript
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: sjpx.c,v 1.1 2009/04/23 23:26:11 Arabidopsis Exp $ */
+/* $Id: sjpx.c,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
 /* JPXDecode filter implementation -- hooks in libjasper */
 
 #include "memory_.h"
-#include "gserrors.h"
 #include "gserror.h"
 #include "gdebug.h"
 #include "strimpl.h"
@@ -32,8 +25,8 @@ static void s_jpxd_set_defaults(stream_state *ss);
 
 /* stream implementation */
 
-/* As with the /JBIG2Decode filter, we let the library do its own 
-   memory management through malloc() etc. and rely on our release() 
+/* As with the /JBIG2Decode filter, we let the library do its own
+   memory management through malloc() etc. and rely on our release()
    proc being called to deallocate state.
 */
 
@@ -60,7 +53,7 @@ s_jpxd_init(stream_state * ss)
 
     if (state->jpx_memory == NULL) {
       state->jpx_memory = ss->memory ?
-		ss->memory->non_gc_memory : 
+		ss->memory->non_gc_memory :
 		gs_lib_ctx_get_non_gc_memory_t();
     }
 
@@ -107,7 +100,7 @@ dump_jas_image(jas_image_t *image)
 	case JAS_CLRSPC_GENRGB: csname = "generic RGB"; break;
 	case JAS_CLRSPC_GENYCBCR: csname = "generic YCbCr"; break;
     }
-    if_debug3('w',"[w]  colorspace is %s (family %d, member %d)\n", 
+    if_debug3('w',"[w]  colorspace is %s (family %d, member %d)\n",
 	csname, jas_clrspc_fam(clrspc), jas_clrspc_mbr(clrspc));
 
     for (i = 0; i < numcmpts; i++) {
@@ -179,15 +172,30 @@ copy_row_gray(unsigned char *dest, jas_image_t *image,
 {
     int i, p;
     int v;
-    int shift;
+    int shift, bits;
 
     v = jas_image_getcmptbytype(image, JAS_IMAGE_CT_GRAY_Y);
     if (v < 0) return 0; /* no matching component */
-    shift = max(jas_image_cmptprec(image, v) - 8, 0);
 
-    for (i = 1; i <= bytes; i++) {
-	p = jas_image_readcmptsample(image, v, x++, y);
-	dest[i] = p >> shift;
+    bits = jas_image_cmptprec(image, v);
+    if (bits >= 8) {
+	/* shift down to 8 bpp */
+	shift = max(jas_image_cmptprec(image, v) - 8, 0);
+
+	for (i = 1; i <= bytes; i++) {
+	    p = jas_image_readcmptsample(image, v, x++, y);
+	    dest[i] = p >> shift;
+	}
+   } else if (bits == 4) {
+	/* return two packed pixels per byte */
+	for (i = 1; i <= bytes; i++) {
+	    p = jas_image_readcmptsample(image, v, x++, y) << 4;
+	    p |= jas_image_readcmptsample(image, v, x++, y);
+	    dest[i] = p;
+	}
+    } else {
+	/* todo: handle other bit depths */
+	memset(dest + 1, 0x80, bytes);
     }
 
     return bytes;
@@ -259,7 +267,7 @@ copy_row_yuv(unsigned char *dest, jas_image_t *image,
 #ifdef JPX_USE_IRT
 	q[1] = p[0] - ((p[1] + p[2])>>2);
 	q[0] = p[1] + q[1];
-	q[2] = p[2] + q[1]; 
+	q[2] = p[2] + q[1];
 #else
 	q[0] = (int)((double)p[0] + 1.402 * p[2]);
 	q[1] = (int)((double)p[0] - 0.34413 * p[1] - 0.71414 * p[2]);
@@ -309,7 +317,7 @@ s_jpxd_buffer_input(stream_jpxd_state *const state, stream_cursor_read *pr,
         unsigned char *newbuf = NULL;
         while (newsize - state->buffill < bytes)
             newsize <<= 1;
-        newbuf = (unsigned char *)gs_malloc(state->jpx_memory, newsize, 1, 
+        newbuf = (unsigned char *)gs_malloc(state->jpx_memory, newsize, 1,
 					    "JPXDecode temp buffer");
         /* TODO: check for allocation failure */
         memcpy(newbuf, state->buffer, state->buffill);
@@ -347,14 +355,14 @@ s_jpxd_decode_image(stream_jpxd_state * state)
 	return ERRC;
     }
     /* decode an image */
-	image = jas_image_decode(stream, -1, optstr);
-	if (image == NULL) {
-	    dprintf("unable to decode JPX image data.\n");
-	    return ERRC;
-	}
+    image = jas_image_decode(stream, -1, optstr);
+    if (image == NULL) {
+	dprintf("unable to decode JPX image data.\n");
+	return ERRC;
+    }
 #ifdef JPX_USE_JASPER_CM
 	/* convert non-rgb multicomponent colorspaces to sRGB */
-	if (jas_image_numcmpts(image) > 1 && 
+	if (jas_image_numcmpts(image) > 1 &&
 	    jas_clrspc_fam(jas_image_clrspc(image)) != JAS_CLRSPC_FAM_RGB) {
 	    jas_cmprof_t *outprof;
 	    jas_image_t *rgbimage = NULL;
@@ -367,9 +375,9 @@ s_jpxd_decode_image(stream_jpxd_state * state)
 	    }
 	}
 #endif
-	state->image = image;
-        state->offset = 0;
-        jas_stream_close(stream);
+    state->image = image;
+    state->offset = 0;
+    jas_stream_close(stream);
 
 #ifdef DEBUG
 	dump_jas_image(image);
@@ -390,39 +398,42 @@ s_jpxd_process(stream_state * ss, stream_cursor_read * pr,
     long in_size = pr->limit - pr->ptr;
     long out_size = pw->limit - pw->ptr;
     int status = 0;
-    
+
     /* note that the gs stream library expects offset-by-one
        indexing of its buffers while we use zero indexing */
-       
+
     /* JasPer has its own stream library, but there's no public
-       api for handing it pieces. We need to add some plumbing 
+       api for handing it pieces. We need to add some plumbing
        to convert between gs and jasper streams. In the meantime
        just buffer the entire stream, since it can handle that
        as input. */
-    
+
     /* pass all available input to the decoder */
     if (in_size > 0) {
 	s_jpxd_buffer_input(state, pr, in_size);
     }
     if (last) {
-        if (state->image == NULL) {
-	    status = s_jpxd_decode_image(state);
-        }
-        if (state->image != NULL) {
-            jas_image_t *image = state->image;
-	    int numcmpts = jas_image_numcmpts(image);
-	    int stride = numcmpts*jas_image_width(image);
-            long image_size = stride*jas_image_height(image);
-	    int clrspc = jas_image_clrspc(image);
-	    int x, y;
-	    long usable, done;
+      if (state->image == NULL) {
+	status = s_jpxd_decode_image(state);
+      }
+      if (state->image != NULL) {
+	jas_image_t *image = state->image;
+	int numcmpts = jas_image_numcmpts(image);
+	int bits = jas_image_cmptprec(image, 0);
+	int stride = numcmpts*jas_image_width(image);
+	long image_size = stride*jas_image_height(image);
+	int clrspc = jas_image_clrspc(image);
+	int x, y;
+	long usable, done;
+
+	if (bits == 4) stride = (stride + 1)/2;
 
 	/* copy data out of the decoded image data */
 	/* be lazy and only write the rest of the current row */
-	    y = state->offset / stride;
-	    x = state->offset - y*stride; /* bytes, not samples */
-	    usable = min(out_size, stride - x);
-	    x = x/numcmpts;               /* now samples */
+	y = state->offset / stride;
+	x = state->offset - y*stride; /* bytes, not samples */
+	usable = min(out_size, stride - x);
+	x = x/numcmpts;               /* now samples */
 
 	/* Make sure we can return a full pixel.
 	   This can fail if we get the colorspace wrong. */
@@ -433,10 +444,10 @@ s_jpxd_process(stream_state * ss, stream_cursor_read * pr,
 	  switch (state->colorspace) {
 	    case gs_jpx_cs_gray:
 	    case gs_jpx_cs_indexed:
-		/* we've passed 'raw' but the palette is the same pixel
-		   format as a grayscale image. The PDF interpreter will
-		   know to handle it differently. */
-		done = copy_row_gray(pw->ptr, image, x, y, usable);
+	    /* we've passed 'raw' but the palette is the same pixel
+	       format as a grayscale image. The PDF interpreter will
+	       know to handle it differently. */
+	      done = copy_row_gray(pw->ptr, image, x, y, usable);
 	      break;
 	    case gs_jpx_cs_rgb:
 	      done = copy_row_rgb(pw->ptr, image, x, y, usable);
@@ -447,7 +458,7 @@ s_jpxd_process(stream_state * ss, stream_cursor_read * pr,
 	      break;
 	  }
 	else /* use the stream's colorspace */
-	    switch (jas_clrspc_fam(clrspc)) {
+	  switch (jas_clrspc_fam(clrspc)) {
 		case JAS_CLRSPC_FAM_GRAY:
 		    done = copy_row_gray(pw->ptr, image, x, y, usable);
 		    break;
@@ -463,16 +474,16 @@ s_jpxd_process(stream_state * ss, stream_cursor_read * pr,
 		default:
 		    done = copy_row_default(pw->ptr, image, x, y, usable);
 		    break;
-	    }
+	 }
 	/* advance pointers for returned data */
-	    pw->ptr += done;
-            state->offset += done;
+	pw->ptr += done;
+        state->offset += done;
         status = (state->offset < image_size) ? 1 : EOFC;
         /* return an error if we failed to advance decoding */
         if (done <= 0) status = ERRC;
       } /* image != NULL */
     } /* last */
-    
+
     return status;
 }
 
@@ -493,7 +504,7 @@ s_jpxd_release(stream_state *ss)
 
 /* set stream defaults.
    This hook exists to avoid confusing the gc with bogus
-   pointers. We also set a default for client-settable 
+   pointers. We also set a default for client-settable
    parameters like the requested output colorspace.
  */
 static void
@@ -513,10 +524,10 @@ s_jpxd_set_defaults(stream_state *ss)
 
 /* stream template */
 const stream_template s_jpxd_template = {
-    &st_jpxd_state, 
+    &st_jpxd_state,
     s_jpxd_init,
     s_jpxd_process,
-    1, 1, /* min in and out buffer sizes we can handle 
+    1, 1, /* min in and out buffer sizes we can handle
                      should be ~32k,64k for efficiency? */
     s_jpxd_release,
     s_jpxd_set_defaults

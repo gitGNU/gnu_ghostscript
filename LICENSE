@@ -1,22 +1,22 @@
 
   The files in the base, psi, lib, toolbin, examples, doc and man
   directories (folders) and any subdirectories (sub-folders)
-  thereof are part of GNU Ghostscript.
+  thereof are part of GPL Ghostscript.
 
   The files in the Resource directory and any subdirectories thereof
-  are also part of GNU Ghostscript, with the explicit exception of
-  the files in the CMap subdirectory. The CMap files presents in the GPL
-  version are copyright Adobe Systems Incorporated and covered by a 
-  separate license which permits only verbatim distribution. For this
-  reason these files aren't distributed with GNU Ghostscript.
+  are also part of GPL Ghostscript, with the explicit exception of
+  the files in the CMap subdirectory. The CMap files are copyright
+  Adobe Systems Incorporated and covered by a separate license
+  which permits only verbatim distribution.
 
-  GNU Ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
+  GPL Ghostscript is free software; you can redistribute it and/or
+  modify it under the terms the GNU General Public License as 
+  published by the Free Software Foundation, either version 3
+  of the License, or (at your option) any later version.
 
-  GNU Ghostscript is distributed in the hope that it will be
-  useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-  of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  GPL Ghostscript is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   General Public License for more details.
 
   You should have received a copy of the GNU General Public License
@@ -27,14 +27,14 @@
 
  ---
 
-  GNU Ghostscript contains an implementation of techniques covered 
+  GPL Ghostscript contains an implementation of techniques covered 
   by US Patents 5,055,942 and 5,917,614, and corresponding
   international patents. These patents are licensed for use with
-  GNU Ghostscript under the following grant:
+  GPL Ghostscript under the following grant:
 
   Whereas, Raph Levien (hereinafter "Inventor") has obtained patent
   protection for related technology (hereinafter "Patented
-  Technology"), Inventor wishes to aid the GNU free software
+  Technology"), Inventor wishes to aid the the GNU free software
   project in achieving its goals, and Inventor also wishes to
   increase public awareness of Patented Technology, Inventor hereby
   grants a fully paid up, nonexclusive, royalty free license to

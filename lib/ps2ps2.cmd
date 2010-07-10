@@ -1,4 +1,4 @@
-/* $Id: ps2ps2.cmd,v 1.2 2007/05/07 11:22:07 Arabidopsis Exp $ */
+/* $Id: ps2ps2.cmd,v 1.3 2010/07/10 22:02:35 Arabidopsis Exp $ */
 /*
  * This file is maintained by a user: if you have any questions about it,
  * please contact Mark Hale (mark.hale@physics.org).
@@ -12,7 +12,7 @@ gs='@gsos2'
 
 if params='' then call usage
 
-options='-dNOPAUSE -dBATCH'
+options='-P- -dSAFER -dNOPAUSE -dBATCH'
 
 /* extract options from command line */
 i=1

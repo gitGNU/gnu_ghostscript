@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: dwres.h,v 1.1 2009/04/23 23:31:28 Arabidopsis Exp $ */
+/* $Id: dwres.h,v 1.2 2010/07/10 22:02:42 Arabidopsis Exp $ */
 
 #ifndef dwres_INCLUDED
 #  define dwres_INCLUDED

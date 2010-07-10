@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: sa85d.c,v 1.1 2009/04/23 23:26:42 Arabidopsis Exp $ */
+/* $Id: sa85d.c,v 1.2 2010/07/10 22:02:23 Arabidopsis Exp $ */
 /* ASCII85Decode filter */
 #include "std.h"
 #include "strimpl.h"
@@ -134,16 +128,27 @@ s_A85D_process(stream_state * st, stream_cursor_read * pr,
 	     * And any other characters should raise an ioerror.
 	     * But Adobe Acrobat allows CR/LF between ~ and >.
 	     * So we allow CR/LF between them. */
+	    /* PDF further relaxes the requirements and accepts bare '~'.
+	     */
 	    while ((p[i] == 13 || p[i] == 10) && (p+i <= rlimit)) 
 		i++;
 	    if (p[i] != '>') {
-		if (p+i == rlimit) {
-		    if (last)
-			status = ERRC;
-		    else
-			p--;	/* we'll see the '~' after filling the buffer */
+		if (ss->pdf_rules) {
+		    if (p[i] == 13 || p[i] == 10) {
+		        if (!last)
+		            break;
+		    } else {
+		        p--;
+		    }   
+		} else {
+		    if (p+i == rlimit) {
+		        if (last)
+			    status = ERRC;
+		        else
+			    p--;	/* we'll see the '~' after filling the buffer */
+		    }
+		    break;
 		}
-		break;
 	    }
 	    p += i;		/* advance to the '>' */
 	    pw->ptr = q;

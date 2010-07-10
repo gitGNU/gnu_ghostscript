@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdtw.c,v 1.1 2009/04/23 23:26:42 Arabidopsis Exp $ */
+/* $Id: gdevpdtw.c,v 1.2 2010/07/10 22:02:23 Arabidopsis Exp $ */
 /* Font resource writing for pdfwrite text */
 #include "memory_.h"
 #include "gx.h"
@@ -230,6 +224,7 @@ pdf_write_simple_contents(gx_device_pdf *pdev,
 	      pdfont->u.simple.s.type1.is_MM_instance ? "MMType1" : "Type1"));
     pdf_end_separate(pdev);
     if (diff_id) {
+	mark_font_descriptor_symbolic(pdfont);
 	code = pdf_write_encoding(pdev, pdfont, diff_id, ch);
 	if (code < 0)
 	    return code;
@@ -349,22 +344,22 @@ pdf_write_CIDFont_widths(gx_device_pdf *pdev,
 		gs_font_base *pfont = pdf_font_resource_font(pdfont, false);
 		gs_glyph_info_t info;
 
-		    if (pfont->FontType == ft_TrueType) {
-			/* We're converting a Type 42 into CIDFontType2. */
-			/* We know that CIDs equal to char codes. */
-			gs_glyph glyph1;
-			int ch = glyph & 0xff;
+		if (pfont->FontType == ft_TrueType) {
+		    /* We're converting a Type 42 into CIDFontType2. */
+		    /* We know that CIDs equal to char codes. */
+		    gs_glyph glyph1;
+		    int ch = glyph & 0xff;
 
-			glyph1 = pfont->procs.encode_char((gs_font *)pfont, ch, GLYPH_SPACE_NAME);
-			if (cid == 0 && glyph1 == GS_NO_GLYPH)
-			    glyph1 = copied_get_notdef((gs_font *)pdf_font_resource_font(pdfont, false));
-			if (glyph1 == GS_NO_GLYPH)
-			    continue;
-			if (pfont->procs.glyph_info((gs_font *)pfont, glyph1, NULL, 0, &info) < 0)
-			    continue;
-		    } else if (pfont->procs.glyph_info((gs_font *)pfont, glyph, NULL, 0, &info) < 0)
-			continue;
-		}
+		    glyph1 = pfont->procs.encode_char((gs_font *)pfont, ch, GLYPH_SPACE_NAME);
+		    if (cid == 0 && glyph1 == GS_NO_GLYPH)
+		        glyph1 = copied_get_notdef((gs_font *)pdf_font_resource_font(pdfont, false));
+		    if (glyph1 == GS_NO_GLYPH)
+		        continue;
+		    if (pfont->procs.glyph_info((gs_font *)pfont, glyph1, NULL, 0, &info) < 0)
+		        continue;
+		} else if (pfont->procs.glyph_info((gs_font *)pfont, glyph, NULL, 0, &info) < 0)
+		    continue;
+	    }
 #endif
 	    if (cid == prev + 1) {
 		if (wmode) {
@@ -516,11 +511,17 @@ pdf_write_contents_cid2(gx_device_pdf *pdev, pdf_font_resource_t *pdfont)
 	}
     }
 
+    if (map_id == 0 && pdf_font_descriptor_embedding(pdfont->FontDescriptor)) {
+	code = stream_puts(pdev->strm, "/CIDToGIDMap /Identity\n");
+	if (code < 0)
+	    return code;
+    }
+
     code = write_contents_cid_common(pdev, pdfont, 2);
     if (code < 0)
 	return code;
 
-    if (map_id) {
+    if (map_id && pdf_font_descriptor_embedding(pdfont->FontDescriptor)) {
 	pdf_data_writer_t writer;
 	int i;
 

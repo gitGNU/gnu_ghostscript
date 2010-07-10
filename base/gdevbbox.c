@@ -1,22 +1,16 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/*$Id: gdevbbox.c,v 1.1 2009/04/23 23:26:16 Arabidopsis Exp $ */
+/*$Id: gdevbbox.c,v 1.2 2010/07/10 22:02:20 Arabidopsis Exp $ */
 /* Device for tracking bounding box */
 #include "math_.h"
 #include "memory_.h"
@@ -150,7 +144,9 @@ gx_device_bbox gs_bbox_device =
      NULL,			/* fill_linear_color_triangle */
      NULL,			/* update_spot_equivalent_colors */
      NULL,			/* ret_devn_params */
-     bbox_fillpage			/* fillpage */
+     bbox_fillpage,		/* fillpage */
+     NULL,                      /* push_transparency_state */
+     NULL                       /* pop_transparency_state */
     },
     0,				/* target */
     1,				/*true *//* free_standing */
@@ -221,7 +217,7 @@ static const gx_device_bbox_procs_t box_procs_default = {
     bbox_default_in_rect
 };
 
-     /* ---------------- Open/close/page ---------------- */
+/* ---------------- Open/close/page ---------------- */
 
 /* Copy device parameters back from the target. */
 static void
@@ -240,7 +236,7 @@ bbox_copy_params(gx_device_bbox * bdev, bool remap_colors)
 }
 
 #define GX_DC_IS_TRANSPARENT(pdevc, bdev)\
-  (gx_dc_pure_color(pdevc) == (bdev)->transparent && gx_dc_is_pure(pdevc))
+  (gx_dc_is_pure(pdevc) && gx_dc_pure_color(pdevc) == (bdev)->transparent)
 
 static int
 bbox_close_device(gx_device * dev)
@@ -710,7 +706,8 @@ bbox_fill_triangle(gx_device * dev,
 static int
 bbox_draw_thin_line(gx_device * dev,
 		    fixed fx0, fixed fy0, fixed fx1, fixed fy1,
-		    const gx_device_color * pdevc, gs_logical_operation_t lop)
+		    const gx_device_color * pdevc, gs_logical_operation_t lop,
+		    fixed adjustx, fixed adjusty)
 {
     gx_device_bbox *const bdev = (gx_device_bbox *) dev;
     /* Skip the call if there is no target. */
@@ -718,7 +715,7 @@ bbox_draw_thin_line(gx_device * dev,
     int code =
 	(tdev == 0 ? 0 :
 	 dev_proc(tdev, draw_thin_line)
-	 (tdev, fx0, fy0, fx1, fy0, pdevc, lop));
+	 (tdev, fx0, fy0, fx1, fy0, pdevc, lop, adjustx, adjusty));
 
     if (!GX_DC_IS_TRANSPARENT(pdevc, bdev)) {
 	fixed xmin, ymin, xmax, ymax;
@@ -766,8 +763,6 @@ bbox_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
 	    return 0;
 	gx_cpath_inner_box(pcpath, &ibox);
 	adjust = params->adjust;
-	if (params->fill_zero_width)
-	    gx_adjust_if_empty(&ibox, &adjust);
 	adjust_box(&ibox, adjust);
 	BBOX_ADD_RECT(bdev, ibox.p.x, ibox.p.y, ibox.q.x, ibox.q.y);
 	return 0;
@@ -778,8 +773,6 @@ bbox_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
 	if (gx_path_bbox(ppath, &ibox) < 0)
 	    return 0;
 	adjust = params->adjust;
-	if (params->fill_zero_width)
-	    gx_adjust_if_empty(&ibox, &adjust);
 	adjust_box(&ibox, adjust);
 	/*
 	 * If the path lies within the already accumulated box, just draw

@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdtd.c,v 1.1 2009/04/23 23:27:14 Arabidopsis Exp $ */
+/* $Id: gdevpdtd.c,v 1.2 2010/07/10 22:02:28 Arabidopsis Exp $ */
 /* FontDescriptor implementation for pdfwrite */
 #include "math_.h"
 #include "memory_.h"
@@ -393,7 +387,7 @@ pdf_compute_font_descriptor(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
 	 * If we have a font with a non-standard matrix we must account for that
 	 * here by scaling the font outline.
 	 */
-    default:
+    default:	
 	gs_matrix_scale(&bfont->FontMatrix, 1000.0, 1000.0, &smat);
 	pmat = &smat;
 	break;
@@ -416,6 +410,7 @@ pdf_compute_font_descriptor(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
 	gs_glyph_info_t info;
 	gs_const_string gname;
 	gs_glyph glyph_known_enc;
+	gs_char position=0;
 
 	code = bfont->procs.glyph_info((gs_font *)bfont, glyph, pmat, members, &info);
 	if (code == gs_error_VMerror)
@@ -465,9 +460,15 @@ pdf_compute_font_descriptor(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
 	    continue;
 	}
 	/* Finally check if the encoded glyph is in Standard Encoding */
-	if (gs_c_decode(glyph_known_enc, 0) == gs_no_glyph) {
-	    desc.Flags |= FONT_IS_SYMBOLIC;
-	    continue;
+	/* gs_c_decode always fails to find .notdef, its always present so 
+	 * don't worry about it
+	 */
+	if(strncmp(".notdef", (const char *)gname.data, gname.size)) {
+	    position = gs_c_decode(glyph_known_enc, 0);
+	    if (position == GS_NO_CHAR) {
+		desc.Flags |= FONT_IS_SYMBOLIC;
+		continue;
+	    }
 	}
         switch (gname.size) {
 	case 5:
@@ -753,4 +754,20 @@ pdf_convert_truetype_font_descriptor(gx_device_pdf *pdev, pdf_font_resource_t *p
     pdfont->u.cidfont.used2 = NULL;
     pdfont->u.cidfont.v = NULL;
     return 0;
+}
+
+int mark_font_descriptor_symbolic(pdf_font_resource_t *pdfont)
+{
+    pdf_font_descriptor_values_t *desc;
+    
+    if(!pdfont || !pdfont->FontDescriptor)
+	return 0;
+
+    desc = &pdfont->FontDescriptor->common.values;
+
+    if (!(desc->Flags & FONT_IS_SYMBOLIC)) {
+	desc->Flags |= FONT_IS_SYMBOLIC; 
+	desc->Flags &= ~FONT_IS_ADOBE_ROMAN; 
+    }
+    return 1;
 }

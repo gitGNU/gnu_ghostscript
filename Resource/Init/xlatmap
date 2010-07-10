@@ -9,7 +9,7 @@
 % obvious format of this file. Strings and names must not be empty
 % and must not contain null ('\0') characters.
 
-% $Id: xlatmap,v 1.1 2009/04/23 23:25:45 Arabidopsis Exp $
+% $Id: xlatmap,v 1.2 2010/07/10 22:02:13 Arabidopsis Exp $
 
 % The map contains entries for each kind of font being handled by
 % any font rendering plugin. The key of an entry is the font type

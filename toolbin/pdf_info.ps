@@ -14,7 +14,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 %
-% $Id: pdf_info.ps,v 1.4 2008/05/04 14:35:09 Arabidopsis Exp $
+% $Id: pdf_info.ps,v 1.5 2010/07/10 22:02:46 Arabidopsis Exp $
 
 % Dump some info from a PDF file
 
@@ -83,10 +83,11 @@ systemdict /DumpMediaSizes known
     /Resources pget {
       /Font knownoget {
 	{ exch pop oforce
-	  dup
-	  /FontDescriptor knownoget
-	  {
-	    dup /FontFile known 1 index /FontFile2 known or exch /FontFile3 known or
+          dup /DescendantFonts knownoget {
+            exch pop 0 get oforce
+          } if
+       	  dup /FontDescriptor knownoget {
+            dup /FontFile known 1 index /FontFile2 known or exch /FontFile3 known or
 	    /ShowEmbeddedFonts where { pop pop false} if {
 	      pop			% skip embedded fonts
 	    } {
@@ -107,7 +108,7 @@ systemdict /DumpMediaSizes known
 
 systemdict /DumpFontsUsed known
 {
-  (\nFonts Used:) =
+  (\nFont or CIDFont resources used:) =
   getPDFfonts { = } forall
 } if
 

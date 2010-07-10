@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsstruct.h,v 1.1 2009/04/23 23:26:51 Arabidopsis Exp $ */
+/* $Id: gsstruct.h,v 1.2 2010/07/10 22:02:25 Arabidopsis Exp $ */
 /* Definitions for Ghostscript modules that define allocatable structures */
 /* Requires gstypes.h */
 
@@ -518,14 +512,14 @@ extern void reloc_const_bytestring(gs_const_bytestring *pbs, gc_state_t *gcst);
 /* -------------- Simple structures (no internal pointers). -------------- */
 
 #define gs__st_simple(scope_st, stname, stype, sname)\
-  scope_st stname = { sizeof(stype), sname, 0, 0, gs_no_struct_enum_ptrs, gs_no_struct_reloc_ptrs, 0 }
+  scope_st stname = { sizeof(stype), sname, 0, 0, gs_no_struct_enum_ptrs, gs_no_struct_reloc_ptrs, 0, 0 }
 #define gs_public_st_simple(stname, stype, sname)\
   gs__st_simple(public_st, stname, stype, sname)
 #define gs_private_st_simple(stname, stype, sname)\
   gs__st_simple(private_st, stname, stype, sname)
 
 #define gs__st_simple_final(scope_st, stname, stype, sname, pfinal)\
-  scope_st stname = { sizeof(stype), sname, 0, 0, gs_no_struct_enum_ptrs, gs_no_struct_reloc_ptrs, pfinal }
+  scope_st stname = { sizeof(stype), sname, 0, 0, gs_no_struct_enum_ptrs, gs_no_struct_reloc_ptrs, pfinal, 0 }
 #define gs_public_st_simple_final(stname, stype, sname, pfinal)\
   gs__st_simple_final(public_st, stname, stype, sname, pfinal)
 #define gs_private_st_simple_final(stname, stype, sname, pfinal)\
@@ -543,7 +537,7 @@ extern void reloc_const_bytestring(gs_const_bytestring *pbs, gc_state_t *gcst);
 	/* enum, reloc, and finalize procedures. */
 
 #define gs__st_complex_only(scope_st, stname, stype, sname, pclear, penum, preloc, pfinal)\
-  scope_st stname = { sizeof(stype), sname, 0, pclear, penum, preloc, pfinal }
+  scope_st stname = { sizeof(stype), sname, 0, pclear, penum, preloc, pfinal, 0 }
 #define gs_public_st_complex_only(stname, stype, sname, pclear, penum, preloc, pfinal)\
   gs__st_complex_only(public_st, stname, stype, sname, pclear, penum, preloc, pfinal)
 #define gs_private_st_complex_only(stname, stype, sname, pclear, penum, preloc, pfinal)\
@@ -934,6 +928,17 @@ extern void reloc_const_bytestring(gs_const_bytestring *pbs, gc_state_t *gcst);
   gs__st_suffix_add2_final(public_st, stname, stype, sname, penum, preloc, pfinal, supstname, e1, e2)
 #define gs_private_st_suffix_add2_final(stname, stype, sname, penum, preloc, pfinal, supstname, e1, e2)\
   gs__st_suffix_add2_final(private_st, stname, stype, sname, penum, preloc, pfinal, supstname, e1, e2)
+
+#define gs__st_suffix_string2_final(scope_st, stname, stype, sname, penum, preloc, pfinal, supstname, e1, e2)\
+  BASIC_PTRS(penum) {\
+    GC_STRING_ELT(stype, e1),\
+    GC_STRING_ELT(stype, e2)\
+  };\
+  gs__st_basic_super_final(scope_st, stname, stype, sname, penum, preloc, &supstname, 0, pfinal)
+#define gs_public_st_suffix_string2_final(stname, stype, sname, penum, preloc, pfinal, supstname, e1, e2)\
+  gs__st_suffix_string2_final(public_st, stname, stype, sname, penum, preloc, pfinal, supstname, e1, e2)
+#define gs_private_st_suffix_string2_final(stname, stype, sname, penum, preloc, pfinal, supstname, e1, e2)\
+  gs__st_suffix_string2_final(private_st, stname, stype, sname, penum, preloc, pfinal, supstname, e1, e2)
 
 	/* Suffix subclasses with 3 additional pointers. */
 

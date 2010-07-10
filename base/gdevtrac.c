@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevtrac.c,v 1.1 2009/04/23 23:26:34 Arabidopsis Exp $ */
+/* $Id: gdevtrac.c,v 1.2 2010/07/10 22:02:22 Arabidopsis Exp $ */
 /* Tracing device (including sample high-level implementation) */
 #include "gx.h"
 #include "gserrors.h"
@@ -247,7 +241,8 @@ static int
 trace_draw_thin_line(gx_device * dev,
 		     fixed fx0, fixed fy0, fixed fx1, fixed fy1,
 		     const gx_drawing_color * pdcolor,
-		     gs_logical_operation_t lop)
+		     gs_logical_operation_t lop,
+		     fixed adjustx, fixed adjusty)
 {
     dprintf4("draw_thin_line((%g,%g), (%g,%g)",
 	     fixed2float(fx0), fixed2float(fy0), fixed2float(fx1),
@@ -296,10 +291,9 @@ trace_fill_path(gx_device * dev, const gs_imager_state * pis,
     dputs("fill_path({\n");
     trace_path(ppath);
     trace_drawing_color("}, ", pdcolor);
-    dprintf5(", rule=%d, adjust=(%g,%g), flatness=%g, fill_zero_width=%s",
+    dprintf4(", rule=%d, adjust=(%g,%g), flatness=%g",
 	     params->rule, fixed2float(params->adjust.x),
-	     fixed2float(params->adjust.y), params->flatness,
-	     (params->fill_zero_width ? "true" : "false"));
+	     fixed2float(params->adjust.y), params->flatness);
     trace_clip(dev, pcpath);
     /****** pis ******/
     dputs(")\n");
@@ -324,7 +318,6 @@ trace_stroke_path(gx_device * dev, const gs_imager_state * pis,
 
 typedef struct trace_image_enum_s {
     gx_image_enum_common;
-    gs_memory_t *memory;
     int rows_left;
 } trace_image_enum_t;
 gs_private_st_suffix_add0(st_trace_image_enum, trace_image_enum_t,

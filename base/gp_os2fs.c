@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gp_os2fs.c,v 1.1 2009/04/23 23:27:26 Arabidopsis Exp $ */
+/* $Id: gp_os2fs.c,v 1.2 2010/07/10 22:02:30 Arabidopsis Exp $ */
 /* File access and enumeration for OS/2 */
 
 #define INCL_DOS

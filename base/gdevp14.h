@@ -1,28 +1,27 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id: gdevp14.h,v 1.1 2009/04/23 23:27:24 Arabidopsis Exp $ */
+/* $Id: gdevp14.h,v 1.2 2010/07/10 22:02:30 Arabidopsis Exp $ */
 /* Definitions and interface for PDF 1.4 rendering device */
 
 #ifndef gdevp14_INCLUDED
 #  define gdevp14_INCLUDED
 
 #include "gxcmap.h"
+#include "gsmatrix.h"
+#include "gxcolor2.h"
+#include "gxdcolor.h"
+#include "gxpcolor.h"
+#include "gdevdevn.h"
 
 typedef enum {
     PDF14_DeviceGray = 0,
@@ -36,6 +35,90 @@ typedef enum {
 #  define pdf14_buf_DEFINED
 typedef struct pdf14_buf_s pdf14_buf;
 #endif
+
+/*
+ * This structure contains procedures for processing routine which differ
+ * between the different blending color spaces.
+ */
+typedef struct {
+    /*
+     * Unpack a device color.  This routine is similar to the device's
+     * decode_color procedure except for two things.  The procedure produces
+     * 1 byte values instead of gx_color_values (2 bytes) and the output
+     * values are inverted for subtractive color spaces (like CMYK).
+     * A separate procedure is used instead of the decode_color to minimize
+     * execution time.
+     */
+    void (* unpack_color)(int num_comp, gx_color_index color,
+			       	pdf14_device * p14dev, byte * out);
+    /*
+     * This procedure sends the final rasterized transparency data to the
+     * output device as an image.
+     */
+    int (* put_image)(gx_device * dev,
+		    gs_imager_state * pis, gx_device * target);
+} pdf14_procs_s;
+
+
+typedef pdf14_procs_s pdf14_procs_t;
+
+/* A stack structure for the softmask buffers. 
+   The mask will be pdf14 buffers that are wrapped
+   in a refernce counted structure.  We need this to
+   be referenced counted since we need to be able to push
+   multiple copies of the same buffer on the
+   stack as we get multiple q operations when
+   a soft mask is present in the graphic state. */
+
+typedef struct pdf14_rcmask_s pdf14_rcmask_t;
+
+struct pdf14_rcmask_s {
+
+    pdf14_buf   *mask_buf;
+    rc_header rc;
+    gs_memory_t *memory;
+     
+};
+
+typedef struct pdf14_mask_s pdf14_mask_t;
+
+struct pdf14_mask_s {
+
+    pdf14_rcmask_t *rc_mask;
+    pdf14_mask_t *previous;
+    gs_memory_t *memory;
+ 
+};
+
+
+/* A structure to hold information
+ * about the parent color related
+ * procs and other information.
+ * These may change depending upon
+ * if the blending space is different
+ * than the base space.  The structure
+ * is a list that is updated upon
+ * every transparency group push and pop */
+
+typedef struct pdf14_parent_color_s pdf14_parent_color_t;
+
+struct pdf14_parent_color_s {
+
+    int num_components;
+    bool isadditive;
+    gx_color_polarity_t polarity;
+    byte comp_shift[GX_DEVICE_COLOR_MAX_COMPONENTS]; /* These are needed for the shading code */
+    byte comp_bits[GX_DEVICE_COLOR_MAX_COMPONENTS];
+    byte depth;  /* used in clist writer cmd_put_color */
+    const gx_color_map_procs *(*get_cmap_procs)(const gs_imager_state *,
+						     const gx_device *);
+    const gx_cm_color_map_procs *(*parent_color_mapping_procs)(const gx_device *);
+    int (*parent_color_comp_index)(gx_device *, const char *, int, int); 
+    const pdf14_procs_t * unpack_procs;
+    const pdf14_nonseparable_blending_procs_t * parent_blending_procs;
+    pdf14_parent_color_t *previous;
+ 
+};
 
 typedef struct pdf14_ctx_s pdf14_ctx;
 
@@ -64,14 +147,21 @@ struct pdf14_buf_s {
     byte *data;
     byte *transfer_fn;
     gs_int_rect bbox;
-    pdf14_buf *maskbuf; /* Save pdf14_ctx_s::maksbuf. */
+    pdf14_mask_t *maskbuf;
     bool idle;
+
+    bool SMask_is_CIE;
+    gs_transparency_mask_subtype_t SMask_SubType;
+
     uint mask_id;
+    pdf14_parent_color_t parent_color_info_procs;
+
+    gs_transparency_color_t color_space;  /* Different groups can have different spaces for blending */
 };
 
 struct pdf14_ctx_s {
     pdf14_buf *stack;
-    pdf14_buf *maskbuf;
+    pdf14_mask_t *maskbuf;
     gs_memory_t *memory;
     gs_int_rect rect;
     bool additive;
@@ -103,30 +193,7 @@ typedef struct gs_pdf14trans_params_s gs_pdf14trans_params_t;
 typedef struct pdf14_device_s pdf14_device;
 #endif
 
-/*
- * This structure contains procedures for processing routine which differ
- * between the different blending color spaces.
- */
-typedef struct {
-    /*
-     * Unpack a device color.  This routine is similar to the device's
-     * decode_color procedure except for two things.  The procedure produces
-     * 1 byte values instead of gx_color_values (2 bytes) and the output
-     * values are inverted for subtractive color spaces (like CMYK).
-     * A separate procedure is used instead of the decode_color to minimize
-     * execution time.
-     */
-    void (* unpack_color)(int num_comp, gx_color_index color,
-			       	pdf14_device * p14dev, byte * out);
-    /*
-     * This procedure sends the final rasterized transparency data to the
-     * output device as an image.
-     */
-    int (* put_image)(gx_device * dev,
-		    gs_imager_state * pis, gx_device * target);
-} pdf14_procs_s;
 
-typedef pdf14_procs_s pdf14_procs_t;
 
 /*
  * Define the default post-clist (clist reader) PDF 1.4 compositing device.
@@ -161,6 +228,9 @@ typedef struct pdf14_device_s {
     dev_proc_decode_color(*my_decode_color);
     dev_proc_get_color_mapping_procs(*my_get_color_mapping_procs);
     dev_proc_get_color_comp_index(*my_get_color_comp_index);
+    
+    pdf14_parent_color_t *trans_group_parent_cmap_procs;
+
 } pdf14_device_t;
 
 /*
@@ -190,5 +260,14 @@ int send_pdf14trans(gs_imager_state * pis, gx_device * dev,
 int
 pdf14_put_devn_params(gx_device * pdev, gs_devn_params * pdevn_params,
 	       				gs_param_list * plist);
+
+/* Used to passed along information about the buffer created by the
+   pdf14 device.  This is used by the pattern accumulator when the
+   pattern contains transparency */
+
+int pdf14_get_buffer_information(const gx_device * dev, gx_pattern_trans_t *transbuff);
+
+/* Not static due to call from pattern logic */
+int pdf14_disable_device(gx_device * dev);
 
 #endif /* gdevp14_INCLUDED */

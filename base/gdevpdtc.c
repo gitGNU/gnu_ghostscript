@@ -1,26 +1,19 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdtc.c,v 1.1 2009/04/23 23:26:47 Arabidopsis Exp $ */
+/* $Id: gdevpdtc.c,v 1.2 2010/07/10 22:02:24 Arabidopsis Exp $ */
 /* Composite and CID-based text processing for pdfwrite. */
 #include "memory_.h"
-#include "string_.h"
 #include "gx.h"
 #include "gserrors.h"
 #include "gxfcmap.h"
@@ -260,6 +253,10 @@ attach_cmap_resource(gx_device_pdf *pdev, pdf_font_resource_t *pdfont,
     pdf_resource_t *pcmres = 0;	/* CMap */
     int code;
 
+    /* Make sure cmap names is properly initialised. Silences Coverity warning */
+    if (!pcmn)
+	return_error(gs_error_unknownerror);
+
     /*
      * If the CMap isn't standard, write it out if necessary.
      */
@@ -330,6 +327,12 @@ attach_cmap_resource(gx_device_pdf *pdev, pdf_font_resource_t *pdfont,
 	pdfont->u.type0.CMapName.data = chars;
 	pdfont->u.type0.CMapName.size = size;
     } else {
+	if (!*pcmn)
+	    /* Should not be possible, if *pcmn is NULL then either 
+	     * is_identity is true or we create pcmres.
+	     */ 
+	    return_error(gs_error_invalidfont);
+
 	sprintf(pdfont->u.type0.Encoding_name, "/%s", *pcmn);
 	pdfont->u.type0.CMapName.data = (const byte *)*pcmn;
 	pdfont->u.type0.CMapName.size = strlen(*pcmn);
@@ -394,7 +397,7 @@ scan_cmap_text(pdf_text_enum_t *pte, void *vbuf)
 	    if (code < 0)
 	    	return code;
 	    subfont = scan.fstack.items[scan.fstack.depth].font;
-	    font_index = scan.fstack.items[scan.fstack.depth].index;
+	    font_index = scan.fstack.items[scan.fstack.depth - 1].index;
 	    scan.xy_index++;
 	    if (glyph == GS_NO_GLYPH)
 		glyph = GS_MIN_CID_GLYPH;
@@ -528,7 +531,7 @@ scan_cmap_text(pdf_text_enum_t *pte, void *vbuf)
 			    memcpy(buf, subfont->font_name.chars, l);
 			    buf[l] = 0;
 			    eprintf3("Missing glyph CID=%d, glyph=%04x in the font %s . The output PDF may fail with some viewers.\n", 
-				    (int)cid, glyph - GS_MIN_CID_GLYPH, buf);
+				    (int)cid, (unsigned int)(glyph - GS_MIN_CID_GLYPH), buf);
 			    pdsubf->used[cid >> 3] |= 0x80 >> (cid & 7);
 			}
 			cid = 0, code = 1;  /* undefined glyph. */
@@ -632,6 +635,10 @@ scan_cmap_text(pdf_text_enum_t *pte, void *vbuf)
 		pte->text.operation = save_op;
 	    }
 	    pte->current_font = subfont0;
+	    if (!subfont0 || !pdsubf0)
+		/* This should be impossible */
+		return_error(gs_error_invalidfont);
+
 	    code = gs_matrix_multiply(&subfont0->FontMatrix, &font->FontMatrix, &m3); 
 	    /* We thought that it should be gs_matrix_multiply(&font->FontMatrix, &subfont0->FontMatrix, &m3); */
 	    if (code < 0) 

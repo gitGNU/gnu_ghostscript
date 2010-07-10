@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2008 Artifex Software, Inc.
    All Rights Reserved.
-  
-  This file is part of GNU ghostscript
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxclmem.c,v 1.1 2009/04/23 23:27:21 Arabidopsis Exp $ */
+/* $Id: gxclmem.c,v 1.2 2010/07/10 22:02:29 Arabidopsis Exp $ */
 /* RAM-based command list implementation */
 #include "memory_.h"
 #include "gx.h"
@@ -143,7 +137,7 @@ static const long COMPRESSION_THRESHOLD = 500000000;	/* 0.5 Gb for host machines
   ((f)->ok_to_compress && (f)->total_space > COMPRESSION_THRESHOLD)
 
    /* FOR NOW ALLOCATE 1 raw buffer for every 32 blocks (at least 8, no more than 64)    */
-#define GET_NUM_RAW_BUFFERS( f ) 					\
+#define GET_NUM_RAW_BUFFERS( f ) \
 	 min(64, max(f->log_length/MEMFILE_DATA_SIZE/32, 8))
 
 #define MALLOC(f, siz, cname)\
@@ -187,11 +181,11 @@ const byte *decomp_rd_ptr1, *decomp_rd_limit1;
 /* ----------------------------- Memory Allocation --------------------- */
 static void *	/* allocated memory's address, 0 if failure */
 allocateWithReserve(
-         MEMFILE  *f,			/* file to allocate mem to */
-         int      sizeofBlock,		/* size of block to allocate */
-         int      *return_code,         /* RET 0 ok, -ve GS-style error, or +1 if OK but low memory */
-	 const   char     *allocName,		/* name to allocate by */
-	 const   char     *errorMessage         /* error message to print */
+		MEMFILE  *f,			/* file to allocate mem to */
+		int      sizeofBlock,		/* size of block to allocate */
+		int      *return_code,		/* RET 0 ok, -ve GS-style error, or +1 if OK but low memory */
+		const   char     *allocName,	/* name to allocate by */
+		const   char     *errorMessage	/* error message to print */
 )
 {
     int code = 0;	/* assume success */
@@ -245,9 +239,9 @@ memfile_fopen(char fname[gp_file_name_sizeof], const char *fmode,
 	/* reopening an existing file. */
 	code = sscanf(fname+1, "%p", &base_f);
 	if (code != 1) {
-		code = gs_note_error(gs_error_ioerror);
-		goto finish;
-	    }
+	    code = gs_note_error(gs_error_ioerror);
+	    goto finish;
+	}
 	/* Reopen an existing file for 'read' */
 	if (base_f->is_open == false) {
 	    /* File is not is use, just re-use it. */
@@ -262,8 +256,8 @@ memfile_fopen(char fname[gp_file_name_sizeof], const char *fmode,
 	    if (f == NULL) {
 		eprintf1("memfile_open_scratch(%s): gs_alloc_struct failed\n", fname);
 		code = gs_note_error(gs_error_VMerror);
-	goto finish;
-    }
+		goto finish;
+	    }
 	    memcpy(f, base_f, sizeof(MEMFILE));
 	    f->memory = mem;
 	    f->data_memory = data_mem;
@@ -409,9 +403,9 @@ finish:
 	if (code >= 0)
 	    code = gs_error_ioerror;
     } else {
-      /* return success */
+	/* return success */
 	f->is_open = true;
-      *pf = f;
+	*pf = f;
     }
     return code;
 }
@@ -434,7 +428,7 @@ memfile_fclose(clist_file_ptr cf, const char *fname, bool delete)
 		    break;
 	    if (prev_f == NULL) {
 		eprintf1("Could not find %p on memfile openlist\n", f);
-	return_error(gs_error_invalidfileaccess);
+		return_error(gs_error_invalidfileaccess);
 	    }
 	    prev_f->openlist = f->openlist;	/* link around the one being fclosed */
 	    /* Now delete this MEMFILE reader instance */
@@ -477,38 +471,38 @@ memfile_fclose(clist_file_ptr cf, const char *fname, bool delete)
     /* future accesses will use the current contents. This may result in  */
     /* leaks if other users of the memfile don't 'fclose with delete=true */
     if (f->openlist != NULL || ((f->base_memfile != NULL) && f->base_memfile->is_open)) {
-        /* TODO: do the cleanup rather than just giving an error */
+	/* TODO: do the cleanup rather than just giving an error */
     	eprintf1("Attempt to delete a memfile still open for read: %p\n", f);
-        return_error(gs_error_invalidfileaccess);
+	return_error(gs_error_invalidfileaccess);
     } else {
 	/* Free the memory used by this memfile */
-    memfile_free_mem(f);
+	memfile_free_mem(f);
 
-    /* Free reserve blocks; don't do it in memfile_free_mem because */
-    /* that routine gets called to reinit file */
-    while (f->reserveLogBlockChain != NULL) {
-	LOG_MEMFILE_BLK *block = f->reserveLogBlockChain;
+	/* Free reserve blocks; don't do it in memfile_free_mem because */
+	/* that routine gets called to reinit file */
+	while (f->reserveLogBlockChain != NULL) {
+	    LOG_MEMFILE_BLK *block = f->reserveLogBlockChain;
 
-	f->reserveLogBlockChain = block->link;
-	FREE(f, block, "memfile_set_block_size");
+	    f->reserveLogBlockChain = block->link;
+	    FREE(f, block, "memfile_set_block_size");
+	}
+	while (f->reservePhysBlockChain != NULL) {
+	    PHYS_MEMFILE_BLK *block = f->reservePhysBlockChain;
+
+	    f->reservePhysBlockChain = block->link;
+	    FREE(f, block, "memfile_set_block_size");
+	}
+
+	/* deallocate de/compress state */
+	gs_free_object(f->memory, f->decompress_state,
+		       "memfile_close_and_unlink(decompress_state)");
+	gs_free_object(f->memory, f->compress_state,
+		       "memfile_close_and_unlink(compress_state)");
+
+	/* deallocate the memfile object proper */
+	gs_free_object(f->memory, f, "memfile_close_and_unlink(MEMFILE)");
+	return 0;
     }
-    while (f->reservePhysBlockChain != NULL) {
-	PHYS_MEMFILE_BLK *block = f->reservePhysBlockChain;
-
-	f->reservePhysBlockChain = block->link;
-	FREE(f, block, "memfile_set_block_size");
-    }
-
-    /* deallocate de/compress state */
-    gs_free_object(f->memory, f->decompress_state,
-		   "memfile_close_and_unlink(decompress_state)");
-    gs_free_object(f->memory, f->compress_state,
-		   "memfile_close_and_unlink(compress_state)");
-
-    /* deallocate the memfile object proper */
-    gs_free_object(f->memory, f, "memfile_close_and_unlink(MEMFILE)");
-    return 0;
-}
 }
 
 static int
@@ -521,7 +515,7 @@ memfile_unlink(const char *fname)
     if (fname[0] == '\377' && (code = sscanf(fname+1, "0x%x", &f) == 1)) {
 	return memfile_fclose((clist_file_ptr)f, fname, true);
     } else
-    return_error(gs_error_invalidfileaccess);
+	return_error(gs_error_invalidfileaccess);
 }
 
 /* ---------------- Writing ---------------- */
@@ -844,11 +838,11 @@ memfile_get_pdata(MEMFILE * f)
 	    /* need to allocate the raw buffer pool                        */
 	    num_raw_buffers = GET_NUM_RAW_BUFFERS(f);
 	    if (f->reservePhysBlockCount) {
-            /* HACK: allocate reserve block that's been reserved for
-	     * decompression.  This buffer's block was pre-allocated to make
-	     * sure we won't come up short here. Take from chain instead of
-	     * allocateWithReserve() since this buf would just be wasted if
-	     * allowed to remain preallocated. */
+		/* HACK: allocate reserve block that's been reserved for
+		 * decompression.  This buffer's block was pre-allocated to make
+		 * sure we won't come up short here. Take from chain instead of
+		 * allocateWithReserve() since this buf would just be wasted if
+		 * allowed to remain preallocated. */
 		f->raw_head = (RAW_BUFFER *)f->reservePhysBlockChain;
 		f->reservePhysBlockChain = f->reservePhysBlockChain->link;
 		--f->reservePhysBlockCount;

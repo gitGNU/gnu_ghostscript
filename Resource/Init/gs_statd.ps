@@ -1,20 +1,19 @@
 %    Copyright (C) 1989, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-%  This file is part of GNU ghostscript
-%
-%  GNU ghostscript is free software; you can redistribute it and/or modify it under
-%  the terms of the version 2 of the GNU General Public License as published by the Free Software
-%  Foundation.
-%
-%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-%
-%  You should have received a copy of the GNU General Public License along with
-%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-%
-% $Id: gs_statd.ps,v 1.1 2009/04/23 23:25:37 Arabidopsis Exp $
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
+% $Id: gs_statd.ps,v 1.2 2010/07/10 22:02:12 Arabidopsis Exp $
 % This file provides statusdict, serverdict, and assorted LaserWriter
 % operators, mostly for the benefit of poorly designed PostScript programs
 % that 'know' they are running on a LaserWriter.
@@ -110,6 +109,8 @@ STRICT { (%END SIZES) .skipeof } if
  /halfletter {396 612 //.setpagesize exec} bind def
 	% minimum of a4 and letter (a4 width, letter length)
  /pa4 {595 792 //.setpagesize exec} bind def
+	% Japanese postcard size, 100mm x 148mm
+ /hagaki {283 420 //.setpagesize exec} bind def
 % /tabloid {792 1224 //.setpagesize exec} bind def  % 11x17 portrait
 % /csheet {1224 1584 //.setpagesize exec} bind def % ANSI C 17x22
 % /dsheet {1584 2448 //.setpagesize exec} bind def % ANSI D 22x34
@@ -135,7 +136,7 @@ STRICT { (%END SIZES) .skipeof } if
    /flsa /flse /halfletter
    /isob0 /isob1 /isob2 /isob3 /isob4 /isob5 /isob6
    /jisb0 /jisb1 /jisb2 /jisb3 /jisb4 /jisb5 /jisb6
-   /pa4
+   /pa4 /hagaki
 %END SIZES
  ] cvlit readonly def
 

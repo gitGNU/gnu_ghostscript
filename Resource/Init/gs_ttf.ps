@@ -1,20 +1,19 @@
 %    Copyright (C) 1996-2003 Artifex Software, Inc.  All rights reserved.
 % 
-%  This file is part of GNU ghostscript
-%
-%  GNU ghostscript is free software; you can redistribute it and/or modify it under
-%  the terms of the version 2 of the GNU General Public License as published by the Free Software
-%  Foundation.
-%
-%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-%
-%  You should have received a copy of the GNU General Public License along with
-%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-%
-% $Id: gs_ttf.ps,v 1.1 2009/04/23 23:25:47 Arabidopsis Exp $
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
+% $Id: gs_ttf.ps,v 1.2 2010/07/10 22:02:13 Arabidopsis Exp $
 % Support code for direct use of TrueType fonts.
 % (Not needed for Type 42 fonts.)
 
@@ -292,7 +291,7 @@ currentdict /tt_tag_dict .undef
     0 1 3 index 2 getu16 1 sub {
 		% Stack: false table id index
       12 mul 6 add 2 index exch 12 getinterval
-      dup 6 getu16 2 index eq {
+      dup 6 getu16 2 index eq 1 index 8 getu16 0 ne and {
 		  % We found the name we want.
 	exch pop
 		  % Stack: false table record
@@ -557,27 +556,27 @@ currentdict /tt_tag_dict .undef
     getinterval
   } {
     dup 65535 le { 
-    string exch 0                                 % [] s o p
-    4 3 roll {                                    % s o p Si
-      dup length                                  % s o p Si lSi
-      dup 4 index lt {
-        3 index exch sub                          % s o p Si o'
-        exch pop 3 1 roll exch pop                % s o' p
-      } {                                         % s o p Si lSi
-        dup 3 1 roll                              % s o p lSi Si lSi
-        4 index sub                               % s o p lSi Si lSi-o
-        5 index length 4 index sub                % s o p lSi Si lSi-o ls-p
-        2 copy gt { exch } if pop                 % s o p lSi Si minl
-        dup 3 1 roll                              % s o p lSi minl Si minl
-        5 index exch getinterval                  % s o p lSi minl from
-        5 index 4 index 3 index                   % s o p lSi minl from s p minl
-        getinterval                               % s o p lSi minl from to
-        copy pop                                  % s o p lSi minl
-        exch pop add exch pop 0 exch              % s 0 p'
-        dup 3 index length ge { exit } if
-      } ifelse
-    } forall
-    pop pop                                       % s
+      string exch 0                                 % [] s o p
+      4 3 roll {                                    % s o p Si
+        dup length                                  % s o p Si lSi
+        dup 4 index lt {
+          3 index exch sub                          % s o p Si o'
+          exch pop 3 1 roll exch pop                % s o' p
+        } {                                         % s o p Si lSi
+          dup 3 1 roll                              % s o p lSi Si lSi
+          4 index sub                               % s o p lSi Si lSi-o
+          5 index length 4 index sub                % s o p lSi Si lSi-o ls-p
+          2 copy gt { exch } if pop                 % s o p lSi Si minl
+          dup 3 1 roll                              % s o p lSi minl Si minl
+          5 index exch getinterval                  % s o p lSi minl from
+          5 index 4 index 3 index                   % s o p lSi minl from s p minl
+          getinterval                               % s o p lSi minl from to
+          copy pop                                  % s o p lSi minl
+          exch pop add exch pop 0 exch              % s 0 p'
+          dup 3 index length ge { exit } if
+        } ifelse
+      } forall
+      pop pop                                       % s
     } {
       [ 4 1 roll
         {
@@ -634,7 +633,15 @@ currentdict /tt_tag_dict .undef
 	% No name available, /postnames will be defined as an empty
 	% array and the glyph won't get a name attached.
 	postglyphs postpos //get_from_stringarray exec
-        postglyphs postpos 1 add 2 index //getinterval_from_stringarray exec cvn
+        postglyphs postpos 1 add 2 index
+        2 copy add total_length gt {
+          TTFDEBUG { (post table ends in the middle of the entry.) print flush } if
+          pop pop pop pop
+          % Fill the rest with .notdef
+          1 numglyphs 1 sub { 1 index exch /.notdef put } for
+          exit
+        } if
+        //getinterval_from_stringarray exec cvn
 	exch postpos add 1 add /postpos exch def
         2 index 3 1 roll
         put
@@ -684,7 +691,7 @@ currentdict /tt_tag_dict .undef
 	    % Get the name for this glyph
 	    258 sub dup postnames length ge {
 	      TTFDEBUG { (   *** warning: glyph index past end of 'post' table) = flush } if
-	      pop
+	      pop pop
 	      exit
 	    } if
 	    postnames exch get
@@ -828,7 +835,8 @@ end readonly def                % .loadttfontdict
     } if
     /ttc_offset 0 def
   } ifelse
-  /tables f offsets 4 getu16 16 mul string readstring pop def
+        % Peek because table counter may be incorrect.
+  /tables f offsets 4 getu16 16 mul string .peekstring pop def
   /tabdict tables length 16 idiv dict def
 	% tabs = tables we want to keep, sorted by file position.
   /tabs [ 0 16 tables length 1 sub {
@@ -869,7 +877,7 @@ mark
 % Read data.  Updates offsets, tabs; stores data in tabdict.
 /.readttdata {
   /file_table_pos 10 dict def
-  /fpos offsets length tables length add ttc_offset add def
+  /fpos offsets length ttc_offset add def
   /sfpos offsets length tabs length 16 mul add def
   offsets 4 tabs length putu16
   tabs {
@@ -1523,7 +1531,7 @@ mark
       } {
         glyphencoding  dup length 256 gt { 0 256 getinterval } if
         aload pop
-      counttomark 256 exch sub { /.notdef } repeat 
+        counttomark 256 exch sub { /.notdef } repeat
       } ifelse
     ]
   TTFDEBUG { (Encoding: ) print dup === flush } if
@@ -1568,21 +1576,22 @@ currentdict /postalias undef
   pop
 } bind def
 
-% -mark- <key> <value> ... .definettcidfont <font>
+% <dict> .definettcidfont <font>
 /.definettcidfont {
-  /CIDFontName fontname
-  /CIDFontType 2
-  /CIDSystemInfo mark
+  dup begin
+  /CIDFontName fontname def
+  /CIDFontType 2 def
+  /CIDSystemInfo mark 
     /Registry (Adobe)
     /Ordering (Japan1)		% adhoc
     /Supplement 0
-  .dicttomark
-  /CharStrings mark /.notdef 0 .dicttomark
+  .dicttomark def
+  /CharStrings mark /.notdef 0 .dicttomark def
 		% The cmap isn't of any use even if it is present.
 		% Just construct an identity CIDMap covering all the glyphs.
 
   /CIDCount numloca % Wrong if a CIDFontType2 embedded into PDF with a non-Identity CIDToGIDMap.
-                    % processCIDToGIDMap may replace.
+  def               % processCIDToGIDMap may replace.
   /CIDMap numloca maxstring le {
                 % Use a single string.
       numloca 2 mul string 0 .fill_identity_cmap
@@ -1592,19 +1601,28 @@ currentdict /postalias undef
       numloca maxstring sub 2 mul string maxstring .fill_identity_cmap
       2 array astore
   } ifelse
+  def
 
-  /GDBytes 2
-  .dicttomark
+  /GDBytes 2 def
+  end
+
   end end dup /CIDFontName get exch /CIDFont defineresource
 } bind def
 
-% <file> .loadttcidfont <cidtype2font>
+% <file> <Substite name> .loadttcidfont <cidtype2font>
 /.loadttcidfont {
+  exch
   //false 0 .loadttfonttables
   .makesfnts
 	% CIDFontType2 fonts don't have a cmap: they are indexed by CID.
   mark
   .ttkeys
+  .dicttomark dup              % convert keys to dict and copy dict
+  3 -1 roll                    % Bring PDF substitute name to top of stack
+  
+  dup
+  /fontname exch def
+  /FontName exch put           % replace any definition of /FontName
   .definettcidfont
 } bind def
 
@@ -1770,94 +1788,47 @@ currentdict /postalias undef
 
 } bind def
 
+% <subtable> .pdfmapsymbolic  /Encoding [] /CharStrings <<>>
+/.pdfmapsymbolic {
+  cmaparray
+  dup length 1 add dict begin
+  [ 64 { /.notdef /.notdef /.notdef /.notdef } repeat ]
+  exch { % char glyph
+    exch 255 and                    % glyph char
+    dup 16 (01234567) cvrs cvn      % glyph char /char
+    3 1 roll                        % /char glyph char
+    3 index exch                    % /char glyph [] char
+    3 index put                     % /char glyph
+    def                             % -
+  } forall
+  /.notdef 0 def
+  /Encoding exch
+  /CharStrings currentdict end
+} bind def
+
 % - .pdfcharkeys /CharStrings <charstrings> /Encoding <encoding>
 /.pdfcharkeys {
-	% The following algorithms are per the PDF Reference, Second Edition
-	% (PDF 1.3 reference manual).
+	% The following algorithms are per the PDF 1.7 Reference.
   TTFDEBUG { (.pdfcharkeys beg) = } if
   is_symbolic {
-    <00030001> .findcmap {
-      %
-      % Adobe PDF spec says that symbolic fonts should contain exactly one 
-      % cmap subtable for Platform=1, Encoding=0.
-      % Perhaps "Adobe Acrobat PDFWriter 4.0 for Windows" sometimes embeds
-      % fonts with both subtables 3.1 and 1.0 (see comparefiles/159.pdf,
-      % the font "Arial,Bold" with the character "registered"),
-      % and both Acrobat Reader 4.0 and 5.0 choose 3.1.
-      % Therefore we try 3.1 first.
-      %
-      (   **** Warning: Embedded symbolic TT fonts should not contain a cmap for Platform=3 Encoding=1.\n)
-        pdfformaterror
-      prebuilt_encoding null ne {
-        % Bug 689083.
-        TTFDEBUG { (Using cmap 3.0 with prebuilt_encoding.) = } if
-        prebuilt_encoding .invert_encoding .pdfmapchars
-        /Encoding prebuilt_encoding
-      } {
-        TTFDEBUG { (Using cmap 3.1 with WinAnsiEncoding) = } if
-        AdobeGlyphList .pdfmapchars 
-        /Encoding /WinAnsiEncoding .findencoding
-      } ifelse
+    <00030000> .findcmap { //true } { <00010000> .findcmap } ifelse {
+      .pdfmapsymbolic
     } {
-      %
-      % Adobe PDF spec says that in this case PDF interpreter should
-      % map character codes directly to glyphs using
-      % the cmap <00010000>. But we use PS interpreter to emulate
-      % a PDF interpreter. Therefore we need to construct
-      % a type 42 font, which requires an Encoding and a Charstrings.
-      % We construct them with symbol_list, which
-      % includes all glyphs from SymbolEncoding and additional
-      % random names for 1-to-1 mapping.
-      %
-      % A real TT font may use a different characters than
-      % the Symbol charaster set. Perhaps our code
-      % will give a correct printing, because glyph names are not
-      % important for symbolic fonts in PDF.
-      %
-      <00010000> .findcmap {
-        prebuilt_encoding null ne {
-          TTFDEBUG { (Using cmap 1.0 with prebuilt_encoding.) = } if
-          prebuilt_encoding .invert_encoding .pdfmapchars
-          /Encoding prebuilt_encoding
-        } {
-          % This is a case, in which an obsolete software could stupidly specify Macintosh Roman
-          % for a random encoding. Particulatrly GNU Ghostscript 7.06 does so.
-          % Trying to recover with 'post'.
-          pop  % The table itself doesn't contain useful data.
-          TTFDEBUG { (Using cmap 1.0 with post or .GS_extended_SymbolEncoding) = } if
-          .charkeys
-        } ifelse
-      } {
-        % This is illegal with PDF spec.
-        (   **** Warning: Embedded symbolic TT fonts must contain a cmap for Platform=1 Encoding=0.\n)
-        pdfformaterror
-        % Apply the default algorithm. Hopely it has 'post'.
-        .charkeys
-        % check if the CharStrings dict contains glyphs needed by the
-        % prebuilt_encoding otherwise try the 3,0 cmap.
-	prebuilt_encoding null ne {
-	  false prebuilt_encoding {	% false means no missing glyphs
-	    4 index exch known not { pop true exit } if
-          } forall
-          {
-	    (   **** Warning: Encoding derived from 'post' is incomplete.\n)
-	    pdfformaterror
-	    % Try another cmap format 3,0 -- Adobe doesn't mention it, but does
-	    % use it apparently (empirically determined).
-	    <00030000> .findcmap {
-	      TTFDEBUG { (Adding cmap 3.0) = } if
-   	      5 1 roll pop pop pop pop             
-	      prebuilt_encoding null ne {
-	      prebuilt_encoding .invert_encoding .pdfmapchars
-	      /Encoding prebuilt_encoding
-	    } {
-	      AdobeGlyphList .pdfmapchars
-	      /Encoding /SymbolEncoding .findencoding
-	      } ifelse
-	    } if
-          } if
+      % This is illegal with PDF spec.
+      (   **** Warning: Embedded symbolic TT fonts must contain a cmap for Platform=1,3 Encoding=0.\n)
+      pdfformaterror
+      % Apply the default algorithm. Hopely it has 'post'.
+      .charkeys
+      % check if the CharStrings dict contains glyphs needed by the
+      % prebuilt_encoding otherwise try the 3,0 cmap.
+      prebuilt_encoding null ne {
+        false prebuilt_encoding {	% false means no missing glyphs
+	  4 index exch known not { pop true exit } if
+        } forall
+        {
+	  (   **** Warning: Encoding derived from 'post' is incomplete.\n) pdfformaterror
         } if
-      } ifelse
+      } if
     } ifelse
   } {
     <00030001> .findcmap {
@@ -1909,6 +1880,10 @@ currentdict /postalias undef
       } {
         % Apply the default algorithm for using the 'post'.
 	.charkeys
+        % But use PDF encoding when available.
+        prebuilt_encoding //null ne {
+          pop prebuilt_encoding
+        } if
       } ifelse
     } ifelse
   } ifelse

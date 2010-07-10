@@ -1,21 +1,16 @@
 #  Copyright (C) 2001-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 #
-#  This file is part of GNU ghostscript
+#  This software is provided AS-IS with no warranty, either express or
+#  implied.
 #
-#  GNU ghostscript is free software; you can redistribute it and/or modify it under
-#  the terms of the version 2 of the GNU General Public License as published by the Free Software
-#  Foundation.
+#  This software is distributed under license and may not be copied, modified
+#  or distributed except as expressly authorized under the terms of that
+#  license.  Refer to licensing information at http://www.artifex.com/
+#  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+#  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-#  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-#  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-#  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License along with
-#  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# $Id: msvc32.mak,v 1.1 2009/04/23 23:31:45 Arabidopsis Exp $
+# $Id: msvc32.mak,v 1.2 2010/07/10 22:02:43 Arabidopsis Exp $
 # makefile for 32-bit Microsoft Visual C++, Windows NT or Windows 95 platform.
 #
 # All configurable options are surrounded by !ifndef/!endif to allow 
@@ -41,6 +36,12 @@
 # source, generated intermediate file, and object directories
 # for the graphics library (GL) and the PostScript/PDF interpreter (PS).
 
+!if "$(DEBUG)"=="1"
+DEFAULT_OBJ_DIR=.\debugobj
+!else
+DEFAULT_OBJ_DIR=.\obj
+!endif
+
 !ifndef BINDIR
 BINDIR=.\bin
 !endif
@@ -48,10 +49,10 @@ BINDIR=.\bin
 GLSRCDIR=.\base
 !endif
 !ifndef GLGENDIR
-GLGENDIR=.\obj
+GLGENDIR=$(DEFAULT_OBJ_DIR)
 !endif
 !ifndef GLOBJDIR
-GLOBJDIR=.\obj
+GLOBJDIR=$(DEFAULT_OBJ_DIR)
 !endif
 !ifndef PSSRCDIR
 PSSRCDIR=.\psi
@@ -63,10 +64,13 @@ PSLIBDIR=.\lib
 PSRESDIR=.\Resource
 !endif
 !ifndef PSGENDIR
-PSGENDIR=.\obj
+PSGENDIR=$(DEFAULT_OBJ_DIR)
 !endif
 !ifndef PSOBJDIR
-PSOBJDIR=.\obj
+PSOBJDIR=$(DEFAULT_OBJ_DIR)
+!endif
+!ifndef SBRDIR
+SBRDIR=$(DEFAULT_OBJ_DIR)
 !endif
 
 # Define the root directory for Ghostscript installation.
@@ -96,13 +100,10 @@ GS_LIB_DEFAULT=$(GSROOTDIR)/Resource/Init;$(GSROOTDIR)/lib;$(GSROOTDIR)/Resource
 
 # Define whether or not searching for initialization files should always
 # look in the current directory first.  This leads to well-known security
-# and confusion problems, but users insist on it.
-# NOTE: this also affects searching for files named on the command line:
-# see the "File searching" section of Use.htm for full details.
-# Because of this, setting SEARCH_HERE_FIRST to 0 is not recommended.
+# and confusion problems, but may be convenient sometimes.
 
 !ifndef SEARCH_HERE_FIRST
-SEARCH_HERE_FIRST=1
+SEARCH_HERE_FIRST=0
 !endif
 
 # Define the name of the interpreter initialization file.
@@ -190,6 +191,12 @@ JSRCDIR=jpeg
 
 !ifndef PNGSRCDIR
 PNGSRCDIR=libpng
+!endif
+
+!ifndef TIFFSRCDIR
+TIFFSRCDIR=tiff$(D)
+TIFFCONFIG_SUFFIX=.vc
+TIFFPLATFORM=win32
 !endif
 
 # Define the directory where the zlib sources are stored.
@@ -307,12 +314,17 @@ WARNOPT=-W2
 #!include $(COMMONDIR)\msvcdefs.mak
 #!include $(COMMONDIR)\pcdefs.mak
 #!include $(COMMONDIR)\generic.mak
+!include $(GLSRCDIR)\version.mak
 # The following is a hack to get around the special treatment of \ at
 # the end of a line.
 NUL=
 DD=$(GLGENDIR)\$(NUL)
 GLD=$(GLGENDIR)\$(NUL)
 PSD=$(PSGENDIR)\$(NUL)
+
+!ifdef SBR
+SBRFLAGS=/FR$(SBRDIR)\$(NUL)
+!endif
 
 # ------ Platform-specific options ------ #
 
@@ -354,6 +366,9 @@ MSVC_VERSION=8
 MSVC_VERSION=8
 !endif
 !if "$(_NMAKE_VER)" == "9.00.21022.08"
+MSVC_VERSION=9
+!endif
+!if "$(_NMAKE_VER)" == "9.00.30729.01"
 MSVC_VERSION=9
 !endif
 !endif
@@ -425,15 +440,6 @@ SHAREDBASE=
 !else
 COMPBASE=$(DEVSTUDIO)\Vc7
 SHAREDBASE=$(DEVSTUDIO)\Vc7
-!ifdef WIN64
-# Windows Server 2003 DDK is needed for the 64-bit compiler
-# but it won't install on Windows XP 64-bit.
-DDKBASE=c:\winddk\3790
-COMPDIR64=$(DDKBASE)\bin\win64\x86\amd64
-LINKLIBPATH=/LIBPATH:"$(DDKBASE)\lib\wnet\amd64"
-INCDIR64A=$(DDKBASE)\inc\wnet
-INCDIR64B=$(DDKBASE)\inc\crt
-!endif
 !endif
 !endif
 
@@ -452,7 +458,7 @@ SHAREDBASE=
 COMPBASE=$(DEVSTUDIO)\VC
 SHAREDBASE=$(DEVSTUDIO)\VC
 !ifdef WIN64
-COMPDIR64=$(COMPBASE)\bin\x86_amd64
+COMPDIR64=$(COMPBASE)\bin\amd64
 LINKLIBPATH=/LIBPATH:"$(COMPBASE)\lib\amd64" /LIBPATH:"$(COMPBASE)\PlatformSDK\Lib\AMD64"
 !endif
 !endif
@@ -470,11 +476,18 @@ DEVSTUDIO=C:\Program Files\Microsoft Visual Studio 9.0
 COMPBASE=
 SHAREDBASE=
 !else
+# There are at least 4 different values:
+# "v6.0"=Vista, "v6.0A"=Visual Studio 2008,
+# "v6.1"=Windows Server 2008, "v7.0"=Windows 7
+! ifdef MSSDK
+RCDIR=$(MSSDK)\bin
+! else
 RCDIR=C:\Program Files\Microsoft SDKs\Windows\v6.0A\bin
+! endif
 COMPBASE=$(DEVSTUDIO)\VC
 SHAREDBASE=$(DEVSTUDIO)\VC
 !ifdef WIN64
-COMPDIR64=$(COMPBASE)\bin\x86_amd64
+COMPDIR64=$(COMPBASE)\bin\amd64
 LINKLIBPATH=/LIBPATH:"$(COMPBASE)\lib\amd64" /LIBPATH:"$(COMPBASE)\PlatformSDK\Lib\AMD64"
 !endif
 !endif
@@ -530,7 +543,11 @@ MSINCDIR=$(COMPBASE)\include
 !if "$(COMPBASE)"==""
 LIBDIR=
 !else
+!ifdef WIN64
+LIBDIR=$(COMPBASE)\lib\amd64
+!else
 LIBDIR=$(COMPBASE)\lib
+!endif
 !endif
 !endif
 
@@ -546,7 +563,7 @@ COMPCPP=$(COMP)
 !endif
 !ifndef COMPAUX
 !ifdef WIN64
-COMPAUX="$(COMPBASE)\bin\cl"
+COMPAUX=$(COMP)
 !else
 COMPAUX=$(COMP)
 !endif
@@ -675,7 +692,7 @@ DEVICE_DEVS7=$(DD)t4693d2.dev $(DD)t4693d4.dev $(DD)t4693d8.dev $(DD)tek4696.dev
 DEVICE_DEVS8=$(DD)pcxmono.dev $(DD)pcxgray.dev $(DD)pcx16.dev $(DD)pcx256.dev $(DD)pcx24b.dev $(DD)pcxcmyk.dev
 DEVICE_DEVS9=$(DD)pbm.dev $(DD)pbmraw.dev $(DD)pgm.dev $(DD)pgmraw.dev $(DD)pgnm.dev $(DD)pgnmraw.dev $(DD)pkmraw.dev
 DEVICE_DEVS10=$(DD)tiffcrle.dev $(DD)tiffg3.dev $(DD)tiffg32d.dev $(DD)tiffg4.dev $(DD)tifflzw.dev $(DD)tiffpack.dev
-DEVICE_DEVS11=$(DD)bmpmono.dev $(DD)bmpgray.dev $(DD)bmp16.dev $(DD)bmp256.dev $(DD)bmp16m.dev $(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiffsep.dev
+DEVICE_DEVS11=$(DD)bmpmono.dev $(DD)bmpgray.dev $(DD)bmp16.dev $(DD)bmp256.dev $(DD)bmp16m.dev $(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiff48nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiff64nc.dev $(DD)tiffsep.dev $(DD)tiffsep1.dev
 DEVICE_DEVS12=$(DD)psmono.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
 DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev $(DD)jpegcmyk.dev
@@ -706,7 +723,11 @@ TOP_MAKEFILES=$(MAKEFILE) $(GLSRCDIR)\msvccmd.mak $(GLSRCDIR)\msvctail.mak $(GLS
 BEGINFILES2=$(GLGENDIR)\lib32.rsp\
  $(GLOBJDIR)\*.exp $(GLOBJDIR)\*.ilk $(GLOBJDIR)\*.pdb $(GLOBJDIR)\*.lib\
  $(BINDIR)\*.exp $(BINDIR)\*.ilk $(BINDIR)\*.pdb $(BINDIR)\*.lib obj.pdb\
- obj.idb $(GLOBJDIR)\gs.pch
+ obj.idb $(GLOBJDIR)\gs.pch $(SBRDIR)\*.sbr
+
+!ifdef BSCFILE
+BEGINFILES2=$(BEGINFILES2) $(BSCFILE)
+!endif
 
 !include $(GLSRCDIR)\msvccmd.mak
 # psromfs.mak must precede lib.mak
@@ -789,7 +810,7 @@ $(GSCONSOLE_XE): $(GS_ALL) $(DEVS_ALL) $(GSDLL_OBJS) $(OBJCNO) $(GS_OBJ).res $(P
 
 !if $(MAKEDLL)
 
-$(SETUP_XE): $(PSOBJ)dwsetup.obj $(PSOBJ)dwinst.obj $(PSOBJ)dwsetup.res $(PSSRC)dwsetup.def
+$(SETUP_XE): $(PSOBJ)dwsetup.obj $(PSOBJ)dwinst.obj $(PSOBJ)dwsetup.res $(PSSRC)dwsetup.def $(PSSRC)dwsetup_x86.manifest $(PSSRC)dwsetup_x64.manifest
 	echo /DEF:$(PSSRC)dwsetup.def /OUT:$(SETUP_XE) > $(PSGEN)dwsetup.rsp
 	echo $(PSOBJ)dwsetup.obj $(PSOBJ)dwinst.obj >> $(PSGEN)dwsetup.rsp
 	copy $(LIBCTR) $(PSGEN)dwsetup.tr
@@ -798,8 +819,15 @@ $(SETUP_XE): $(PSOBJ)dwsetup.obj $(PSOBJ)dwinst.obj $(PSOBJ)dwsetup.res $(PSSRC)
 	$(LINK) $(LCT) @$(PSGEN)dwsetup.rsp $(LINKLIBPATH) @$(PSGEN)dwsetup.tr $(PSOBJ)dwsetup.res
 	del $(PSGEN)dwsetup.rsp
 	del $(PSGEN)dwsetup.tr
+!if $(MSVC_VERSION) >= 8
+!ifdef WIN64
+	mt -nologo -manifest $(PSSRC)dwsetup_x64.manifest -outputresource:$(SETUP_XE);#1
+!else
+	mt -nologo -manifest $(PSSRC)dwsetup_x86.manifest -outputresource:$(SETUP_XE);#1
+!endif
+!endif
 
-$(UNINSTALL_XE): $(PSOBJ)dwuninst.obj $(PSOBJ)dwuninst.res $(PSSRC)dwuninst.def
+$(UNINSTALL_XE): $(PSOBJ)dwuninst.obj $(PSOBJ)dwuninst.res $(PSSRC)dwuninst.def $(PSSRC)dwuninst_x86.manifest $(PSSRC)dwuninst_x64.manifest
 	echo /DEF:$(PSSRC)dwuninst.def /OUT:$(UNINSTALL_XE) > $(PSGEN)dwuninst.rsp
 	echo $(PSOBJ)dwuninst.obj >> $(PSGEN)dwuninst.rsp
 	copy $(LIBCTR) $(PSGEN)dwuninst.tr
@@ -808,14 +836,34 @@ $(UNINSTALL_XE): $(PSOBJ)dwuninst.obj $(PSOBJ)dwuninst.res $(PSSRC)dwuninst.def
 	$(LINK) $(LCT) @$(PSGEN)dwuninst.rsp $(LINKLIBPATH) @$(PSGEN)dwuninst.tr $(PSOBJ)dwuninst.res
 	del $(PSGEN)dwuninst.rsp
 	del $(PSGEN)dwuninst.tr
+!if $(MSVC_VERSION) >= 8
+!ifdef WIN64
+	mt -nologo -manifest $(PSSRC)dwuninst_x64.manifest -outputresource:$(UNINSTALL_XE);#1
+!else
+	mt -nologo -manifest $(PSSRC)dwuninst_x86.manifest -outputresource:$(UNINSTALL_XE);#1
+!endif
+!endif
 
 !endif
 
-DEBUGDEFS=BINDIR=.\debugbin GLGENDIR=.\debugobj GLOBJDIR=.\debugobj PSLIBDIR=.\lib PSGENDIR=.\debugobj PSOBJDIR=.\debugobj DEBUG=1 TDEBUG=1
+# ---------------------- Debug targets ---------------------- #
+# Simply set some definitions and call ourselves back         #
+
+DEBUGDEFS=BINDIR=.\debugbin GLGENDIR=.\debugobj GLOBJDIR=.\debugobj PSLIBDIR=.\lib PSGENDIR=.\debugobj PSOBJDIR=.\debugobj DEBUG=1 TDEBUG=1 SBRDIR=.\debugobj
 debug:
 	nmake -f $(MAKEFILE) $(DEBUGDEFS)
 
 debugclean:
 	nmake -f $(MAKEFILE) $(DEBUGDEFS) clean
+
+debugbsc:
+	nmake -f $(MAKEFILE) $(DEBUGDEFS) bsc
+
+
+
+# ---------------------- Browse information step ---------------------- #
+
+bsc:
+	bscmake /o $(SBRDIR)\ghostscript.bsc /v $(GLOBJDIR)\*.sbr
 
 # end of makefile

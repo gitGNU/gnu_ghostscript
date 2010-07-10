@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>ps2ps2: Converts Postscript Level 3 or PDF into Postscript Level 2</title>
-<!-- $Id: Ps2ps2.htm,v 1.8 2009/04/23 23:32:05 Arabidopsis Exp $ -->
+<!-- $Id: Ps2ps2.htm,v 1.9 2010/07/10 22:02:52 Arabidopsis Exp $ -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
 
@@ -193,12 +193,17 @@ especially for fonts which Ghostscript had converted into bitmaps
 See <a href="#Options">Options</a> about the <code>PageSize</code> entry of the <b><tt>Policies</tt></b>
 dictionary while the conversion step). 
 Default value : <em>false</em>.
-Must be <em>false</em> if <code>-dSetPageSize=true</code>.
+Must be <em>false</em> if <code>-dSetPageSize=true</code> or <code>-dCenterPages=true</code>.
+
+<dt><code>-dCenterPages=</code><em>boolean</em>. 
+<dd>The printer will center the page image on the selected media. Compatible with <code>-dRotatePages=true</code>, which may rotate the image on the media if it fits better, and then center it. 
+Default value : <em>false</em>.
+Must be <em>false</em> if <code>-dSetPageSize=true</code> or <code>-dFitPages=true</code>.
 
 <dt><code>-dSetPageSize=</code><em>boolean</em>. 
 <dd>The printer will try to set page size from the job. 
 Only use with printers which can handle random <em>PageSize</em>.
-Must be <em>false</em> if <code>-dRotatePages=true</code> or <b><tt>-dFitPages=true</tt></b>.
+Must be <em>false</em> if <code>-dRotatePages=true</code>, <code>-dCenterPages=true</code> or <code>-dFitPages=true</code>.
 
 </dl>
 
@@ -263,7 +268,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.64, 3 February 2009
+<small>Ghostscript version 8.71, 10 February 2010
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

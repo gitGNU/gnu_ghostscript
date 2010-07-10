@@ -64,7 +64,7 @@
 /*
  * Sun Rasterfile Library
  *
- * $Id: ras_cod.c,v 1.3 2007/05/07 11:22:22 Arabidopsis Exp $
+ * $Id: ras_cod.c,v 1.4 2010/07/10 22:02:57 Arabidopsis Exp $
  */
 
 /* Note: There is not currently any code common to both the encoder and

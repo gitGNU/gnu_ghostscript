@@ -1,22 +1,16 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id: gdevdrop.c,v 1.1 2009/04/23 23:27:02 Arabidopsis Exp $ */
+/* $Id: gdevdrop.c,v 1.2 2010/07/10 22:02:26 Arabidopsis Exp $ */
 /* Default and device-independent RasterOp algorithms */
 #include "memory_.h"
 #include "gx.h"
@@ -106,7 +100,7 @@ gx_default_strip_copy_rop(gx_device * dev,
     int depth = dev->color_info.depth;
     gs_memory_t *mem = dev->memory;
     const gx_device_memory *mdproto = gdev_mem_device_for_bits(depth);
-    gx_device_memory mdev;
+    gx_device_memory *pmdev;
     uint draster;
     byte *row = 0;
     gs_int_rect rect;
@@ -134,13 +128,13 @@ gx_default_strip_copy_rop(gx_device * dev,
     if (max_height == 0)
 	max_height = 1;
     block_height = min(height, max_height);
-    gs_make_mem_device(&mdev, mdproto, mem, -1, dev);
-    gx_device_retain((gx_device *)&mdev, true);	/* prevent freeing */
-    mdev.width = width;
-    mdev.height = block_height;
-    mdev.bitmap_memory = mem;
-    mdev.color_info = dev->color_info;
-    code = (*dev_proc(&mdev, open_device))((gx_device *)&mdev);
+    gs_make_mem_device_with_copydevice(&pmdev, mdproto, mem, -1, dev);
+    pmdev->width = width;
+    pmdev->height = block_height;
+    pmdev->bitmap_memory = mem;
+    pmdev->color_info = dev->color_info;
+    code = (*dev_proc(pmdev, open_device))((gx_device *)pmdev);
+    pmdev->is_open = true; /* not sure why we need this, but we do. */
     if (code < 0)
 	return code;
     if (rop3_uses_D(gs_transparent_rop(lop))) {
@@ -170,29 +164,29 @@ gx_default_strip_copy_rop(gx_device * dev,
 		(dev, &rect, &bit_params, NULL);
 	    if (code < 0)
 		break;
-	    code = (*dev_proc(&mdev, copy_color))
-		((gx_device *)&mdev, bit_params.data[0], bit_params.x_offset,
+	    code = (*dev_proc(pmdev, copy_color))
+		((gx_device *)pmdev, bit_params.data[0], bit_params.x_offset,
 		 draster, gx_no_bitmap_id, 0, 0, width,
 		 block_height);
 	    if (code < 0)
 		return code;
 	}
-	code = (*dev_proc(&mdev, strip_copy_rop))
-	    ((gx_device *)&mdev,
+	code = (*dev_proc(pmdev, strip_copy_rop))
+	    ((gx_device *)pmdev,
 	     sdata + (py - y) * sraster, sourcex, sraster,
 	     gx_no_bitmap_id, scolors, textures, tcolors,
 	     0, 0, width, block_height, phase_x + x, phase_y + py, lop);
 	if (code < 0)
 	    break;
 	code = (*dev_proc(dev, copy_color))
-	    (dev, scan_line_base(&mdev, 0), 0, draster, gx_no_bitmap_id,
+	    (dev, scan_line_base(pmdev, 0), 0, draster, gx_no_bitmap_id,
 	     x, py, width, block_height);
 	if (code < 0)
 	    break;
     }
 out:
     gs_free_object(mem, row, "copy_rop row");
-    (*dev_proc(&mdev, close_device))((gx_device *)&mdev);
+    gx_device_retain((gx_device *)pmdev, false);
     return code;
 }
 
@@ -492,6 +486,8 @@ mem_default_strip_copy_rop(gx_device * dev,
 	rop_texture.size.x = rop_texture.rep_width;
 	rop_texture.id = gs_no_bitmap_id;
 	real_texture = &rop_texture;
+	if (rop_texture.size.y > rop_texture.rep_height)
+	    rop_texture.size.y = rop_texture.rep_height;   /* we only allocated one row_raster, no reps */
     }
     if (tcolors && uses_t) {
 	unpack_colors_to_standard(dev, texture_colors, tcolors, rop_depth);

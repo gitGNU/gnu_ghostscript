@@ -1,4 +1,4 @@
-/* $Id: ps2pdf.cmd,v 1.4 2008/03/23 15:28:29 Arabidopsis Exp $ */
+/* $Id: ps2pdf.cmd,v 1.5 2010/07/10 22:02:37 Arabidopsis Exp $ */
 /*
  * This file is maintained by a user: if you have any questions about it,
  * please contact Mark Hale (mark.hale@physics.org).
@@ -35,7 +35,7 @@ if outfile='' then do
 	infile=infile''inext
 end
 
-gs options '-q -dNOPAUSE -dBATCH -sDEVICE=pdfwrite -sOutputFile='outfile options '-c save pop -f' infile
+gs options '-q -P- -dSAFER -dNOPAUSE -dBATCH -sDEVICE=pdfwrite -sOutputFile='outfile options '-c save pop -f' infile
 exit
 
 usage:

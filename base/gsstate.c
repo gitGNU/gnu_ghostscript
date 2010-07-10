@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsstate.c,v 1.1 2009/04/23 23:27:01 Arabidopsis Exp $ */
+/* $Id: gsstate.c,v 1.2 2010/07/10 22:02:26 Arabidopsis Exp $ */
 /* Miscellaneous graphics state operators for Ghostscript library */
 #include "gx.h"
 #include "memory_.h"
@@ -198,7 +192,7 @@ gstate_copy_client_data(gs_state * pgs, void *dto, void *dfrom,
 
 /* Define the initial value of the graphics state. */
 static const gs_imager_state gstate_initial = {
-    gs_imager_state_initial(1.0)
+    gs_imager_state_initial(1.0, true)		/* is_gstate == true */
 };
 
 /*
@@ -224,7 +218,7 @@ gs_state_alloc(gs_memory_t * mem)
     if (pgs == 0)
 	return 0;
     pgs->saved = 0;
-    *(gs_imager_state *)pgs = gstate_initial;
+    *(gs_imager_state *)pgs = gstate_initial;	/* this sets is_gstate == true */
 
     /*
      * Just enough of the state is initialized at this point
@@ -261,7 +255,7 @@ gs_state_alloc(gs_memory_t * mem)
     gs_setalpha(pgs, 1.0);
     gs_settransfer(pgs, gs_identity_transfer);
     gs_setflat(pgs, 1.0);
-    gs_setfilladjust(pgs, 0.25, 0.25);
+    gs_setfilladjust(pgs, 0.3, 0.3);
     gs_setlimitclamp(pgs, false);
     gs_setstrokeadjust(pgs, true);
     pgs->font = 0;		/* Not right, but acceptable until the */
@@ -497,11 +491,11 @@ gs_state_copy(gs_state * pgs, gs_memory_t * mem)
 
     pgs->view_clip = 0;
     pnew = gstate_clone(pgs, mem, "gs_gstate", copy_for_gstate);
+    if (pnew == 0)
+	return 0;
     clip_stack_rc_adjust(pnew->clip_stack, 1, "gs_state_copy");
     rc_increment(pnew->dfilter_stack);
     pgs->view_clip = view_clip;
-    if (pnew == 0)
-	return 0;
     pnew->saved = 0;
     /*
      * Prevent dangling references from the show_gstate pointer.  If
@@ -747,7 +741,9 @@ gs_initgraphics(gs_state * pgs)
     if ((code = gs_newpath(pgs)) < 0 ||
 	(code = gs_initclip(pgs)) < 0 ||
 	(code = gs_setlinewidth(pgs, 1.0)) < 0 ||
-	(code = gs_setlinecap(pgs, gstate_initial.line_params.cap)) < 0 ||
+	(code = gs_setlinestartcap(pgs, gstate_initial.line_params.start_cap)) < 0 ||
+	(code = gs_setlineendcap(pgs, gstate_initial.line_params.end_cap)) < 0 ||
+	(code = gs_setlinedashcap(pgs, gstate_initial.line_params.dash_cap)) < 0 ||
 	(code = gs_setlinejoin(pgs, gstate_initial.line_params.join)) < 0 ||
 	(code = gs_setcurvejoin(pgs, gstate_initial.line_params.curve_join)) < 0 ||
 	(code = gs_setdash(pgs, (float *)0, 0, 0.0)) < 0 ||

@@ -2,28 +2,11 @@
 
 # Copyright (C) 2006 Aladdin Enterprises.  All rights reserved.
 
-# This file is part of GNU ghostscript
-#
-# GNU ghostscript is free software; you can redistribute it and/or
-# modify it under the terms of the version 2 of the GNU General Public
-# License as published by the Free Software Foundation.
-#
-# This software is provided AS-IS with no warranty, either express or
-# implied. That is, this program is distributed in the hope that it will 
-# be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details
-#
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
-# 
-
 # Analyze the module dependency structure of binary files.
 # This script requires GNU-compatible 'nm' and 'objdump' programs:
 # it has only been tested on (32- and 64-bit) x86 systems.
 
-# $Id: ocheck.py,v 1.2 2007/08/01 14:26:56 jemarch Exp $
+# $Id: ocheck.py,v 1.3 2010/07/10 22:02:46 Arabidopsis Exp $
 
 USAGE = """\
 Usage: python ocheck.py [<cwd>] <ld-script> (--exclude [from]:[to]* |

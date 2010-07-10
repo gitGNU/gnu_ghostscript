@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zcolor.h,v 1.1 2009/04/23 23:31:44 Arabidopsis Exp $ */
+/* $Id: zcolor.h,v 1.2 2010/07/10 22:02:43 Arabidopsis Exp $ */
 /* Definitions for setcolorspace */
 
 #ifndef zcolor_INCLUDED

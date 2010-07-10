@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpsdu.c,v 1.1 2009/04/23 23:26:14 Arabidopsis Exp $ */
+/* $Id: gdevpsdu.c,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
 /* Common utilities for PostScript and PDF writers */
 #include "stdio_.h"		/* for FILE for jpeglib.h */
 #include "jpeglib_.h"		/* for sdct.h */
@@ -61,14 +55,48 @@ psdf_setlinewidth(gx_device_vector * vdev, floatp width)
 int
 psdf_setlinecap(gx_device_vector * vdev, gs_line_cap cap)
 {
-    pprintd1(gdev_vector_stream(vdev), "%d J\n", cap);
+    switch (cap) {
+	case gs_cap_butt:
+	case gs_cap_round:
+	case gs_cap_square:
+	    pprintd1(gdev_vector_stream(vdev), "%d J\n", cap);
+	    break;
+	case gs_cap_triangle:
+	    /* If we get a PCL triangle cap, substitute with a round cap */
+	    pprintd1(gdev_vector_stream(vdev), "%d J\n", gs_cap_round);
+	    break;
+	default:
+	    /* Ensure we don't write a broken file if we don't recognise the cap */
+	    eprintf1("Unknown line cap enumerator %d, substituting butt\n", cap);
+	    pprintd1(gdev_vector_stream(vdev), "%d J\n", gs_cap_butt);
+	    break;
+    }
     return 0;
 }
 
 int
 psdf_setlinejoin(gx_device_vector * vdev, gs_line_join join)
 {
-    pprintd1(gdev_vector_stream(vdev), "%d j\n", join);
+    switch (join) {
+	case gs_join_miter:
+	case gs_join_round:
+	case gs_join_bevel:
+	    pprintd1(gdev_vector_stream(vdev), "%d j\n", join);
+	    break;
+	case gs_join_none:
+	    /* If we get a PCL triangle join, substitute with a bevel join */
+	    pprintd1(gdev_vector_stream(vdev), "%d j\n", gs_join_bevel);
+	    break;
+	case gs_join_triangle:
+	    /* If we get a PCL triangle join, substitute with a miter join */
+	    pprintd1(gdev_vector_stream(vdev), "%d j\n", gs_join_miter);
+	    break;
+	default:
+	    /* Ensure we don't write a broken file if we don't recognise the join */
+	    eprintf1("Unknown line join enumerator %d, substituting miter\n", join);
+	    pprintd1(gdev_vector_stream(vdev), "%d j\n", gs_join_miter);
+	    break;
+    }
     return 0;
 }
 

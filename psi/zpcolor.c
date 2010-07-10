@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zpcolor.c,v 1.1 2009/04/23 23:31:30 Arabidopsis Exp $ */
+/* $Id: zpcolor.c,v 1.2 2010/07/10 22:02:42 Arabidopsis Exp $ */
 /* Pattern color */
 #include "ghost.h"
 #include "oper.h"
@@ -44,6 +38,7 @@
 #include "store.h"
 #include "gzstate.h"
 #include "memory_.h"
+#include "gdevp14.h"
 
 /* Imported from gspcolor.c */
 extern const gs_color_space_type gs_color_space_type_Pattern;
@@ -116,6 +111,10 @@ zbuildpattern1(i_ctx_t *i_ctx_p)
     if (code < 0)
         return code;
     
+    code = dict_bool_param(op1, ".pattern_uses_transparency", 0, &template.uses_transparency);
+    if (code < 0)
+        return code;
+
     code = dict_floats_param(imemory, op1, "BBox", 4, BBox, NULL);
     if (code < 0)
         return code;
@@ -237,9 +236,14 @@ pattern_paint_prepare(i_ctx_t *i_ctx_p)
 	return code;
     }
     /* gx_set_device_only(pgs, (gx_device *) pdev); */
-    if (internal_accum)
+    if (internal_accum) {
 	gs_setdevice_no_init(pgs, (gx_device *)pdev);
-    else {
+	if (pinst->template.uses_transparency) {
+	    if_debug0('v', "   pushing the pdf14 compositor device into this graphics state\n");
+	    if ((code = gs_push_pdf14trans_device(pgs)) < 0)
+		return code;
+	}
+    } else {
 	gs_matrix m;
 	gs_rect bbox;
 	gs_fixed_rect clip_box;
@@ -285,11 +289,33 @@ pattern_paint_finish(i_ctx_t *i_ctx_p)
 {
     int o_stack_adjust = ref_stack_count(&o_stack) - esp->value.intval;
     gx_device_forward *pdev = r_ptr(esp - 1, gx_device_forward);
+    gs_pattern1_instance_t *pinst =
+	(gs_pattern1_instance_t *)gs_currentcolor(igs->saved)->pattern;
+    gx_device_pattern_accum const *padev = (const gx_device_pattern_accum *) pdev;
+
 
     if (pdev != NULL) {
 	gx_color_tile *ctile;
-	int code = gx_pattern_cache_add_entry((gs_imager_state *)igs,
-					  pdev, &ctile);
+	int code;
+
+	if (pinst->template.uses_transparency) {
+	    gs_state *pgs = igs;
+	    int code;
+
+            /* Get PDF14 buffer information */
+
+            code = pdf14_get_buffer_information(pgs->device,padev->transbuff);
+	    if (code < 0)
+		return code;
+
+            /* Do not pop the device.  Instead go ahead and and disable it.
+               We will later free it when the pattern cache entry is freed. 
+               The ctile maintains a pointer to the device */
+
+            pdf14_disable_device(pgs->device);
+
+	} 
+	code = gx_pattern_cache_add_entry((gs_imager_state *)igs, pdev, &ctile);
 	if (code < 0)
 	    return code;
     }
@@ -317,6 +343,7 @@ pattern_paint_cleanup(i_ctx_t *i_ctx_p)
 	(*dev_proc(pdev, close_device)) ((gx_device *) pdev);
     }
     code = gs_grestore(igs);
+    gx_unset_dev_color(igs);	/* dev_color may need updating if GC ran */
     if (pdev == NULL) {
 	gx_device *cdev = gs_currentdevice_inline(igs);
 	int code1 = dev_proc(cdev, pattern_manage)(cdev, gx_no_bitmap_id, NULL, 

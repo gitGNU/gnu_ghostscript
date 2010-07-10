@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zarith.c,v 1.1 2009/04/23 23:31:46 Arabidopsis Exp $ */
+/* $Id: zarith.c,v 1.2 2010/07/10 22:02:44 Arabidopsis Exp $ */
 /* Arithmetic operators */
 #include "math_.h"
 #include "ghost.h"
@@ -33,9 +27,9 @@
  */
 
 /* Define max and min values for what will fit in value.intval. */
-#define MIN_INTVAL min_long
-#define MAX_INTVAL max_long
-#define MAX_HALF_INTVAL ((1L << (size_of(long) * 4 - 1)) - 1)
+#define MIN_INTVAL 0x80000000
+#define MAX_INTVAL 0x7fffffff
+#define MAX_HALF_INTVAL 0x7fff
 
 /* <num1> <num2> add <sum> */
 /* We make this into a separate procedure because */
@@ -65,7 +59,7 @@ zop_add(register os_ptr op)
 	    op[-1].value.realval += (double)op->value.intval;
 	    break;
 	case t_integer: {
-	    long int2 = op->value.intval;
+	    int int2 = op->value.intval;
 
 	    if (((op[-1].value.intval += int2) ^ int2) < 0 &&
 		((op[-1].value.intval - int2) ^ int2) >= 0
@@ -159,10 +153,10 @@ zmul(i_ctx_t *i_ctx_p)
 	    op[-1].value.realval *= (double)op->value.intval;
 	    break;
 	case t_integer: {
-	    long int1 = op[-1].value.intval;
-	    long int2 = op->value.intval;
-	    unsigned long abs1 = (unsigned long)(int1 >= 0 ? int1 : -int1);
-	    unsigned long abs2 = (unsigned long)(int2 >= 0 ? int2 : -int2);
+	    int int1 = op[-1].value.intval;
+	    int int2 = op->value.intval;
+	    uint abs1 = (uint)(int1 >= 0 ? int1 : -int1);
+	    uint abs2 = (uint)(int2 >= 0 ? int2 : -int2);
 	    float fprod;
 
 	    if ((abs1 > MAX_HALF_INTVAL || abs2 > MAX_HALF_INTVAL) &&
@@ -213,7 +207,7 @@ zop_sub(register os_ptr op)
 	    op[-1].value.realval -= (double)op->value.intval;
 	    break;
 	case t_integer: {
-	    long int1 = op[-1].value.intval;
+	    int int1 = op[-1].value.intval;
 
 	    if ((int1 ^ (op[-1].value.intval = int1 - op->value.intval)) < 0 &&
 		(int1 ^ op->value.intval) < 0

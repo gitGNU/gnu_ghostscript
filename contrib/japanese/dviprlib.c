@@ -35,7 +35,7 @@
 
 
 /***** From rcfg.c *****/
-/* $Id: dviprlib.c,v 1.2 2008/03/23 15:28:26 Arabidopsis Exp $ */
+/* $Id: dviprlib.c,v 1.3 2010/07/10 22:02:55 Arabidopsis Exp $ */
 
 
 /*--- forward declarations ---*/
@@ -410,7 +410,7 @@ dviprt_read_QR_cfg(dviprt_cfg_t *pcfg,dviprt_cfg_i *pinfo)
 
 
 /***** From rsrc.c *****/
-/* $Id: dviprlib.c,v 1.2 2008/03/23 15:28:26 Arabidopsis Exp $ */
+/* $Id: dviprlib.c,v 1.3 2010/07/10 22:02:55 Arabidopsis Exp $ */
 
 
 typedef struct {
@@ -1425,7 +1425,7 @@ dviprt_printtokenerror(dviprt_cfg_i *pinfo,char *token,int len,int type)
 
 
 /***** From util.c *****/
-/* $Id: dviprlib.c,v 1.2 2008/03/23 15:28:26 Arabidopsis Exp $ */
+/* $Id: dviprlib.c,v 1.3 2010/07/10 22:02:55 Arabidopsis Exp $ */
 
 
 char *dviprt_integername[] = { CFG_INTEGER_NAME, NULL };
@@ -1568,7 +1568,7 @@ dviprt_printcfgwarning(dviprt_cfg_i *pinfo,char *msg,int len)
 
 
 /***** From print.c *****/
-/* $Id: dviprlib.c,v 1.2 2008/03/23 15:28:26 Arabidopsis Exp $ */
+/* $Id: dviprlib.c,v 1.3 2010/07/10 22:02:55 Arabidopsis Exp $ */
 
 
 /*--- forward declarations ---*/
@@ -2261,7 +2261,7 @@ dviprt_default_outputproc(uchar far *buf,long s,void *fp)
 
 
 /***** From encode.c *****/
-/* $Id: dviprlib.c,v 1.2 2008/03/23 15:28:26 Arabidopsis Exp $ */
+/* $Id: dviprlib.c,v 1.3 2010/07/10 22:02:55 Arabidopsis Exp $ */
 
 
 #define DVIPRT_SUPPORT_FAX 1

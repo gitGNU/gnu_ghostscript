@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: iscan.h,v 1.1 2009/04/23 23:31:47 Arabidopsis Exp $ */
+/* $Id: iscan.h,v 1.2 2010/07/10 22:02:44 Arabidopsis Exp $ */
 /* Token scanner state and interface */
 /* Requires gsstruct.h, ostack.h, stream.h */
 
@@ -26,6 +20,7 @@
 
 #include "sa85x.h"
 #include "sstring.h"
+#include "inamestr.h"
 
 /*
  * Define the state of the scanner.  Before calling scan_token initially,
@@ -52,14 +47,12 @@ typedef struct scanner_state_s scanner_state;
  * or (only while control is inside scan_token) into the source stream buffer.
  */
 #define max_comment_line 255	/* max size of an externally processable comment */
-#define max_dsc_line max_comment_line	/* backward compatibility */
-#define da_buf_size (max_comment_line + 2)
 typedef struct dynamic_area_s {
     byte *base;
     byte *next;
     byte *limit;
     bool is_dynamic;
-    byte buf[da_buf_size];	/* initial buffer */
+    byte buf[max_name_string];	/* initial buffer, enough for a valid string */
     gs_memory_t *memory;
 } dynamic_area;
 

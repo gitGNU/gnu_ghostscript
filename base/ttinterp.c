@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: ttinterp.c,v 1.1 2009/04/23 23:26:19 Arabidopsis Exp $ */
+/* $Id: ttinterp.c,v 1.2 2010/07/10 22:02:20 Arabidopsis Exp $ */
 
 /* Changes after FreeType: cut out the TrueType instruction interpreter. */
 /* Patented algorithms are replaced with THROW_PATENTED. */
@@ -1695,6 +1689,9 @@ static int nInstrCount=0;
 
     L = args[0];
 
+    if (L == 0)
+	return;
+
     if ( L<0 || L > CUR.args )
     {
       CUR.error = TT_Err_Invalid_Reference;
@@ -1842,6 +1839,10 @@ static int nInstrCount=0;
     {
       CUR.IP      += (Int)(args[0]);
       CUR.step_ins = FALSE;
+
+      /* See JMPR below */
+      if(CUR.code[CUR.IP] != 0x2D && CUR.code[CUR.IP - 1] == 0x2D)
+        CUR.IP -= 1;
     }
   }
 
@@ -1854,6 +1855,16 @@ static int nInstrCount=0;
   {
     CUR.IP      += (Int)(args[0]);
     CUR.step_ins = FALSE;
+
+    if(CUR.code[CUR.IP] != 0x2D && CUR.code[CUR.IP - 1] == 0x2D)
+    /* The JPMR is meant to stop at the ENDF instruction to finish
+     * the function. However the programmer made a mistake, and ended
+     * up one byte too far. I suspect that some TT interpreters handle this
+     * by detecting that the IP has gone off the end of the function. We can 
+     * allow for simple cases here by just checking the preceding byte.
+     * Fonts with this problem are not uncommon.
+     */
+      CUR.IP -= 1;
   }
 
 
@@ -1867,6 +1878,10 @@ static int nInstrCount=0;
     {
       CUR.IP      += (Int)(args[0]);
       CUR.step_ins = FALSE;
+
+      /* See JMPR above */
+      if(CUR.code[CUR.IP] != 0x2D && CUR.code[CUR.IP - 1] == 0x2D)
+        CUR.IP -= 1;
     }
   }
 
@@ -3552,7 +3567,9 @@ static int nInstrCount=0;
 
     if ( BOUNDS( p, zp.n_points ) )
     {
-      CUR.error = TT_Err_Invalid_Displacement;
+      /* Don't set error code, just return. */
+      /* Ported from Freetype2 */
+      *refp = 0;
       return FAILURE;
     }
 
@@ -3862,7 +3879,11 @@ static int nInstrCount=0;
     if ( BOUNDS( args[0], CUR.zp0.n_points ) ||
          BOUNDS( args[1], CUR.cvtSize )      )
     {
-      CUR.error = TT_Err_Invalid_Reference;
+	/* Ignore these errors, abort the instruction
+	 * and continue. This restores the FreeType 
+	 * behaviour when pedantic_hinting is false. For bug
+	 * #689471, see also Ins_SHC above and bug #688501.
+	 */
       return;
     }
 

@@ -1,10 +1,10 @@
-%   Copyright (C) 1996-1998 Geoffrey Keating. 
+% Copyright (C) 1996-1998 Geoffrey Keating.
 % Copyright (C) 2001-2008 Artifex Software, Inc.
 % This file may be freely distributed with or without modifications,
 % so long as modified versions are marked as such and copyright notices are
 % not removed.
 
-% $Id: pdf_sec.ps,v 1.1 2009/04/23 23:25:46 Arabidopsis Exp $
+% $Id: pdf_sec.ps,v 1.2 2010/07/10 22:02:13 Arabidopsis Exp $
 % Implementation of security hooks for PDF reader.
 
 % This file contains the procedures that have to take encryption into
@@ -12,11 +12,11 @@
 % separately by Geoffrey Keating as an add-on to version 6 and earlier.
 
 % Modified by Alex Cherepanov to work with GS 6.60 and higher.
-% New versions of GS require explicit checks for /true , /false, and /null
-% in .decpdfrun . This fix is backward-compatible.
+% New versions of GS require explicit checks for /true, /false, and /null
+% in .decpdfrun. This fix is backward-compatible.
 
-% Modified by Raph Levien and Ralph Giles to use the new C
-% implementations of md5 and arcfour in ghostscript 7.01, and to
+% Modified by Raph Levien and Ralph Giles to use the new C 
+% implementations of md5 and arcfour in ghostscript 7.01, and to 
 % be compatible with PDF 1.4 128-bit encryption.
 
 % Modified by Ralph Giles for PDF 1.6 AES encryption.
@@ -80,7 +80,7 @@ pdfdict begin
 def
 
 % Pad a key out to 32 bytes.
-/pdf_pad_key {		% <key> pdf_pad_key <padded key>
+/pdf_pad_key {         % <key> pdf_pad_key <padded key>
   dup length 32 gt { 0 32 getinterval } if
   pdf_padding_string
   0 32 3 index length sub getinterval
@@ -328,16 +328,17 @@ def
   pop
     % this step is for the AES cipher only
     Trailer /Encrypt oget
-    dup /StmF known
-     {
-      dup /StmF oget
-      exch /CF oget exch oget /CFM oget
-      /AESV2 eq {
-        (sAlT) concatstrings
-      } if
-     }
-     { pop }
-    ifelse
+    dup /StmF knownoget {
+      exch /CF knownoget {
+        exch oget /CFM oget /AESV2 eq {
+          (sAlT) concatstrings
+        } if
+      } {
+        pop
+      } ifelse
+    } {
+      pop
+    } ifelse
   md5 0 FileKey length 5 add 2 index length .min getinterval
 } bind def
 
@@ -345,7 +346,7 @@ def
 /PDFScanRules_true << /PDFScanRules true >> def
 /PDFScanRules_null << /PDFScanRules null >> def
 /.decpdfrun			% <file> <keystring> <opdict> .decpdfrun -
- {	% Construct a procedure with the file, opdict and key bound into it.
+ {     % Construct a procedure with the file, opdict and key bound into it.
    2 index cvlit mark
    /PDFScanRules .getuserparam //null eq {
      //PDFScanRules_true { setuserparams } 0 get % force PDF scanning mode
@@ -385,7 +386,7 @@ def
        { exch pop PDFDEBUG { dup ==only ( ) print flush } if
 	 dup type /stringtype eq
           {
-	% Check if we have encrypted strings  R=4 allows for
+	% Check if we have encrypted strings R=4 allows for
 	% selection of encryption on streams and strings
             Trailer /Encrypt oget	% Get encryption dictionary
             dup /R oget 4 lt		% only 4 has selectable
@@ -397,12 +398,15 @@ def
 	        {			% If StrF is present ...
 		  dup /Identity eq not	% Check if StrF != Identity
 	  	   { /StdCF eq
-		       { Trailer /Encryption oget /StdCF oget /CFM oget
-			 /AESV2 eq
-			   % Decrypt string
-			   { 1 index aesdecode }
-			   { 1 index arc4decode }
-			 ifelse
+		       { Trailer /Encrypt oget /CF knownoget {
+                           /StdCF oget /CFM oget /AESV2 eq
+                         } {
+                           //false
+                         } ifelse {     % Decrypt string
+			   1 index aesdecode
+                         } {
+                           1 index arc4decode
+                         } ifelse
 		       }
 		       { 1 index arc4decode }
 		     ifelse		% If StrF != StdCF
@@ -415,7 +419,7 @@ def
       	     }
 	    ifelse			% Ifelse R < 4
 	  }
-	 if				% If  = stringtype
+	 if				% If = stringtype
 	 exch pop
        }
       ifelse
@@ -456,11 +460,11 @@ currentdict /PDFScanRules_null undef
         pop pop /StreamKey exch put	% Insert StreamKey in dictionary
 	exit				% Exit 'loop' context
       } if
-	% Check EncryptMeta.  stack:  object object key Encrypt R
+	% Check EncryptMeta.  stack: object object key Encrypt R
       exch dup /EncryptMetadata knownoget % Get EncryptMetadata (if present)
       not { true } if			% If not present default = true
       not				% Check if EncryptMetadata = false
-      { 				% if false we need to check the stream type
+      {					% if false we need to check the stream type
 	3 index /Type knownoget		% Get stream type (if present)
 	not { //null } if		% If type not present use fake name
 	/Metadata eq			% Check if the type is Metadata
@@ -470,19 +474,21 @@ currentdict /PDFScanRules_null undef
       } if
     	% PDF 1.5 encryption (R == 4) has selectable encryption handlers.  If
 	% this is not PDF 1.5 encryption (R < 4) then we are done checking and
-	% we need to decrypt the stream.  stack:  object object key R Encrypt
+	% we need to decrypt the stream.  stack: object object key R Encrypt
       exch 4 lt				% Check for less than PDF 1.5
       { pop /StreamKey exch put		% Insert StreamKey in dictionary
 	exit				% Exit 'loop' context
       } if
 	% Check if the stream encryption handler (StmF) == Identity.
       PDFDEBUG {
-	Trailer /Encrypt oget /CF get /StdCF get /CFM get
-	(Encrypt StmF is StdCF with CFM ) print =
+	Trailer /Encrypt oget /CF knownoget {
+          /StdCF oget /CFM oget
+	  (Encrypt StmF is StdCF with CFM ) print =
+        } if
       } if
       /StmF knownoget			% Get StmF (if present)
       not { /Identity } if		% If StmF not present default = Identity
-      /Identity eq 			% Check if StmF == Identity
+      /Identity eq			% Check if StmF == Identity
       { pop pop				% Identity --> no encryption
 	exit				% Exit 'loop' context
       } if
@@ -504,13 +510,13 @@ currentdict /PDFScanRules_null undef
       exch 
 	% Stack: readdata? dict parms filternames file/string
       3 index /StreamKey get
-      Trailer /Encrypt oget dup /StmF 
-      known
-       {
-	dup /StmF oget		% stack: key Encrypt StmF
-	exch /CF oget
-	exch oget /CFM oget	% stack: key StmF-CFM
-	/AESV2 eq
+      Trailer /Encrypt oget
+      dup /StmF knownoget
+       {                        % stack: key Encrypt StmF
+	exch /CF knownoget {
+	  exch oget /CFM oget	% stack: key StmF-CFM
+	  /AESV2 eq
+        } { pop //false } ifelse
 	 { aesdecodefilter }	% install the requested filter
 	 { arc4decodefilter }
 	ifelse

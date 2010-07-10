@@ -1,5 +1,5 @@
 @echo off
-@rem $Id: ps2pdf.bat,v 1.5 2008/03/23 15:28:29 Arabidopsis Exp $
+@rem $Id: ps2pdf.bat,v 1.6 2010/07/10 22:02:36 Arabidopsis Exp $
 
 rem Convert PostScript to PDF 1.4 (Acrobat 5-and-later compatible).
 rem The default PDF compatibility level may change in the future:

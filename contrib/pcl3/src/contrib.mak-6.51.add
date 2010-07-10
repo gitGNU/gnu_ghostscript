@@ -1,6 +1,6 @@
 ### Driver "pcl3" for various PCL-3+ printers #################################
 #
-# @(#)$Id: contrib.mak-6.51.add,v 1.1 2007/09/11 15:24:54 Arabidopsis Exp $
+# @(#)$Id: contrib.mak-6.51.add,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $
 # Author: Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
 #         Germany, e-mail: Martin.Lottermoser@t-online.de.
 #
@@ -59,7 +59,7 @@
 pcl3_options=
 eprn_fs_options=
 
-# Version of the pcl3 rules: $Revision: 1.1 $.
+# Version of the pcl3 rules: $Revision: 1.2 $.
 
 #==============================================================================
 

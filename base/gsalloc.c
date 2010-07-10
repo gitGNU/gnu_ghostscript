@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsalloc.c,v 1.1 2009/04/23 23:26:01 Arabidopsis Exp $ */
+/* $Id: gsalloc.c,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $ */
 /* Standard memory allocator */
 #include "gx.h"
 #include "memory_.h"
@@ -208,7 +202,7 @@ ialloc_alloc_state(gs_memory_t * parent, uint chunk_size)
     iimem->large_size = ((chunk_size / 4) & -obj_align_mod) + 1;
     iimem->is_controlled = false;
     iimem->gc_status.vm_threshold = chunk_size * 3L;
-    iimem->gc_status.max_vm = max_long;
+    iimem->gc_status.max_vm = 0x7fffffff;
     iimem->gc_status.psignal = NULL;
     iimem->gc_status.signal_value = 0;
     iimem->gc_status.enabled = false;
@@ -551,6 +545,9 @@ i_alloc_bytes(gs_memory_t * mem, uint size, client_name_t cname)
 	    return 0;
 	alloc_trace(":+b.", imem, cname, NULL, size, obj);
     }
+#if IGC_PTR_STABILITY_CHECK
+	obj[-1].d.o.space_id = imem->space_id;
+#endif
     return (byte *) obj;
 }
 static byte *
@@ -588,6 +585,9 @@ i_alloc_struct(gs_memory_t * mem, gs_memory_type_ptr_t pstype,
 	    return 0;
 	alloc_trace(":+<.", imem, cname, pstype, size, obj);
     }
+#if IGC_PTR_STABILITY_CHECK
+	obj[-1].d.o.space_id = imem->space_id;
+#endif
     return obj;
 }
 static void *
@@ -1901,6 +1901,12 @@ const dump_control_t dump_control_all =
     dump_do_pointed_strings | dump_do_contents, NULL, NULL
 };
 
+const dump_control_t dump_control_no_contents = 
+{
+    dump_do_strings | dump_do_type_addresses | dump_do_pointers |
+    dump_do_pointed_strings, NULL, NULL
+};
+
 /*
  * Internal procedure to dump a block of memory, in hex and optionally
  * also as characters.
@@ -1990,17 +1996,17 @@ debug_print_object(const gs_memory_t *mem, const void *obj, const dump_control_t
     dprintf3("  pre=0x%lx(obj=0x%lx) size=%lu", (ulong) pre, (ulong) obj,
 	     size);
     switch (options & (dump_do_type_addresses | dump_do_no_types)) {
-	case dump_do_type_addresses + dump_do_no_types:	/* addresses only */
-	    dprintf1(" type=0x%lx", (ulong) type);
-	    break;
-	case dump_do_type_addresses:	/* addresses & names */
-	    dprintf2(" type=%s(0x%lx)", struct_type_name_string(type),
-		     (ulong) type);
-	    break;
-	case 0:		/* names only */
-	    dprintf1(" type=%s", struct_type_name_string(type));
-	case dump_do_no_types:	/* nothing */
-	    ;
+    case dump_do_type_addresses + dump_do_no_types:	/* addresses only */
+        dprintf1(" type=0x%lx", (ulong) type);
+        break;
+    case dump_do_type_addresses:	/* addresses & names */
+        dprintf2(" type=%s(0x%lx)", struct_type_name_string(type),
+                 (ulong) type);
+        break;
+    case 0:		/* names only */
+        dprintf1(" type=%s", struct_type_name_string(type));
+    case dump_do_no_types:	/* nothing */
+        ;
     }
     if (options & dump_do_marks) {
 	dprintf2(" smark/back=%u (0x%x)", pre->o_smark, pre->o_smark);
@@ -2014,29 +2020,39 @@ debug_print_object(const gs_memory_t *mem, const void *obj, const dump_control_t
 	enum_ptr_t eptr;
 	gs_ptr_type_t ptype;
 
-	if (proc != gs_no_struct_enum_ptrs)
-	    for (; (ptype = (*proc)(mem, pre + 1, size, index, &eptr, type, NULL)) != 0;
-		 ++index
-		) {
-		const void *ptr = eptr.ptr;
+	if (proc != gs_no_struct_enum_ptrs) {
+            if (proc != 0) {
+                for (; (ptype = (*proc)(mem, pre + 1, size, index, &eptr, type, NULL)) != 0;
+                     ++index
+                     ) {
+                    const void *ptr = eptr.ptr;
 
-		dprintf1("    ptr %u: ", index);
-		if (ptype == ptr_string_type || ptype == ptr_const_string_type) {
-		    const gs_const_string *str = (const gs_const_string *)ptr;
-
-		    dprintf2("0x%lx(%u)", (ulong) str->data, str->size);
-		    if (options & dump_do_pointed_strings) {
-			dputs(" =>\n");
-			debug_dump_contents(str->data, str->data + str->size, 6,
-					    true);
-		    } else {
-			dputc('\n');
-		    }
-		} else {
-		    dprintf1((PTR_BETWEEN(ptr, obj, (const byte *)obj + size) ?
-			      "(0x%lx)\n" : "0x%lx\n"), (ulong) ptr);
-		}
-	    }
+                    dprintf1("    ptr %u: ", index);
+                    if (ptype == ptr_string_type || ptype == ptr_const_string_type) {
+                        const gs_const_string *str = (const gs_const_string *)&eptr;
+                        if (!str)
+                            dprintf("0x0");
+                        else
+                            dprintf2("0x%lx(%u)", (ulong) str->data, str->size);
+                        if (options & dump_do_pointed_strings) {
+                            dputs(" =>\n");
+                            if (!str)
+                                dprintf("(null)\n");
+                            else
+                                debug_dump_contents(str->data, str->data + str->size, 6,
+                                                    true);
+                        } else {
+                            dputc('\n');
+                        }
+                    } else {
+                        dprintf1((PTR_BETWEEN(ptr, obj, (const byte *)obj + size) ?
+                                  "(0x%lx)\n" : "0x%lx\n"), (ulong) ptr);
+                    }
+                }
+            } else { /* proc == 0 */
+                dprintf("previous line should be a ref\n");
+            }
+        } /* proc != gs_no_struct_enum_ptrs */
     }
     if (options & dump_do_contents) {
 	debug_dump_contents((const byte *)obj, (const byte *)obj + size,
@@ -2105,6 +2121,12 @@ debug_dump_memory(const gs_ref_memory_t * mem, const dump_control_t * control)
     }
 }
 
+void
+debug_dump_allocator(const gs_ref_memory_t *mem)
+{
+    debug_dump_memory(mem, &dump_control_no_contents);
+}
+
 /* Find all the objects that contain a given pointer. */
 void
 debug_find_pointers(const gs_ref_memory_t *mem, const void *target)
@@ -2122,7 +2144,7 @@ debug_find_pointers(const gs_ref_memory_t *mem, const void *target)
 	    uint index = 0;
 	    enum_ptr_t eptr;
 
-	    if (proc)		/* doesn't trace refs */
+	    if (proc)		/* doesn't trace refs NB fix me. */
 		for (; (*proc)((const gs_memory_t *)mem, pre + 1, size, index, 
 			       &eptr, pre->o_type, NULL); 
 		     ++index)

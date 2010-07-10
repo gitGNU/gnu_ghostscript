@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsdevice.c,v 1.1 2009/04/23 23:27:26 Arabidopsis Exp $ */
+/* $Id: gsdevice.c,v 1.2 2010/07/10 22:02:30 Arabidopsis Exp $ */
 /* Device operators for Ghostscript library */
 #include "ctype_.h"
 #include "memory_.h"		/* for memchr, memcpy */
@@ -134,6 +128,16 @@ int
 gs_output_page(gs_state * pgs, int num_copies, int flush)
 {
     gx_device *dev = gs_currentdevice(pgs);
+
+    /* for devices that hook 'fill_path' in order to pick up imager state */
+    /* values such as dev_ht (such as tiffsep1), make a dummy call here   */
+    /* to make sure that it has been called at least once		  */
+    gs_gsave(pgs);
+    gs_newpath(pgs);
+    gs_moveto(pgs, 0.0, 0.0);
+    gs_setgray(pgs, 0.0);
+    gs_fill(pgs);
+    gs_grestore(pgs);
 
     if (dev->IgnoreNumCopies)
 	num_copies = 1;

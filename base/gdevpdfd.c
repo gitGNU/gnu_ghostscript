@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdfd.c,v 1.1 2009/04/23 23:25:59 Arabidopsis Exp $ */
+/* $Id: gdevpdfd.c,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $ */
 /* Path drawing procedures for pdfwrite driver */
 #include "math_.h"
 #include "memory_.h"
@@ -51,7 +45,6 @@ gdev_pdf_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 			gx_color_index color)
 {
     gx_device_pdf *pdev = (gx_device_pdf *) dev;
-    int bottom = (pdev->ResourcesBeforeUsage ? 1 : 0);
     int code;
 
     code = pdf_open_page(pdev, PDF_IN_STREAM);
@@ -1214,13 +1207,12 @@ gdev_pdf_stroke_path(gx_device * dev, const gs_imager_state * pis,
 	(ppath->last_charpath_segment == ppath->current_subpath->last)) {
 	bool hl_color = pdf_can_handle_hl_color((gx_device_vector *)pdev, pis, pdcolor);
 	const gs_imager_state *pis_for_hl_color = (hl_color ? pis : NULL);
-	int save_render_mode = pdf_get_text_render_mode(pdev->text->text_state);
 	
 	if (pdf_modify_text_render_mode(pdev->text->text_state, 1)) {
 	    /* Set the colour for the stroke */
 	    code = pdf_reset_color(pdev, pis_for_hl_color, pdcolor, &pdev->saved_stroke_color, 
 			&pdev->stroke_used_process_color, &psdf_set_stroke_color_commands);
-	    if(code == 0) {
+	    if (code == 0) {
 		s = pdev->strm;
 		/* Text is emitted scaled so that the CTM is an identity matrix, the line width 
 		 * needs to be scaled to match otherwise we will get the default, or the current
@@ -1228,7 +1220,7 @@ gdev_pdf_stroke_path(gx_device * dev, const gs_imager_state * pis,
 		 */
 		scale = 72 / pdev->HWResolution[0];
 		scale *= pis->ctm.xx;
-		    pprintg1(s, "%g w\n", (pis->line_params.half_width * 2) * (float)scale);
+		pprintg1(s, "%g w\n", (pis->line_params.half_width * 2) * (float)scale);
 		/* Some trickery here. We have altered the colour, text render mode and linewidth,
 		 * we don't want those to persist. By switching to a stream context we will flush the 
 		 * pending text. This has the beneficial side effect of executing a grestore. So
@@ -1411,7 +1403,6 @@ gdev_pdf_fill_rectangle_hl_color(gx_device *dev, const gs_fixed_rect *rect,
 	params.rule = 1; /* Not important because the path is a rectange. */
 	params.adjust.x = params.adjust.y = 0;
         params.flatness = pis->flatness;
-	params.fill_zero_width = false;
 	gx_path_init_local(&path, pis->memory);
 	code = gx_path_add_rectangle(&path, rect->p.x, rect->p.y, rect->q.x, rect->q.y);
 	if (code < 0)

@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zcharout.c,v 1.1 2009/04/23 23:31:30 Arabidopsis Exp $ */
+/* $Id: zcharout.c,v 1.2 2010/07/10 22:02:42 Arabidopsis Exp $ */
 /* Common code for outline (Type 1 / 4 / 42) fonts */
 #include "memory_.h"
 #include "ghost.h"
@@ -170,7 +164,7 @@ zchar_set_cache(i_ctx_t *i_ctx_p, const gs_font_base * pbfont,
 		const double Metrics2_sbw_default[4])
 {
     os_ptr op = osp;
-    ref *pcdevproc;
+    ref *pcdevproc, *valueref;
     int have_cdevproc;
     ref rpop;
     bool metrics2;
@@ -218,6 +212,20 @@ zchar_set_cache(i_ctx_t *i_ctx_p, const gs_font_base * pbfont,
     /* Check for CDevProc or "short-circuiting". */
 
     have_cdevproc = zchar_get_CDevProc(pbfont, &pcdevproc);
+
+    /* Obscure test. If we have replaced a CIDFont with a disk-based TrueType font, then we do *not*
+     * want to execute the CDevProc. This is beacause the CDevProc is supposed to be called wiht the 
+     * original CID but what we have here is the TT GID. So the CDevProc won't do the right thing. Since
+     * the CDevProc is really rather closely tied to the font we almost certainly don't want to run it
+     * if we've replaced the font. So here we check the key_name against the font_name and if they do
+     * not match, we don't run the CDevProc because we assume that we have substituted a font.
+     */
+    if (pbfont->FontType == ft_CID_TrueType && dict_find_string(&pfont_data(gs_font_parent(pbfont))->dict, "File", &valueref) > 0) {
+	if (pbfont->key_name.size != pbfont->font_name.size || 
+	    strncmp((const char *)pbfont->key_name.chars, (const char *)pbfont->font_name.chars, pbfont->key_name.size)) {
+	    have_cdevproc = 0;
+	}
+    }
     if (have_cdevproc || zchar_show_width_only(penum)) {
 	int i;
 	op_proc_t zsetc;

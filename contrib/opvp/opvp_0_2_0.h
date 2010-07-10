@@ -22,7 +22,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
-/* $Id: opvp_0_2_0.h,v 1.1 2009/04/19 13:54:47 Arabidopsis Exp $ */
+/* $Id: opvp_0_2_0.h,v 1.2 2010/07/10 22:02:58 Arabidopsis Exp $ */
 /* opvp_common.h  ver.1.00 rel.1.0  26 Nov 2004 */
 /* OpenPrinting Vector Printer Driver Glue Code */
 

@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdts.c,v 1.1 2009/04/23 23:25:58 Arabidopsis Exp $ */
+/* $Id: gdevpdts.c,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $ */
 /* Text state management for pdfwrite */
 #include "math_.h"
 #include "memory_.h"
@@ -29,6 +23,7 @@
 #include "gdevpdtf.h"		/* for pdfont->FontType */
 #include "gdevpdts.h"
 #include "gdevpdtt.h"
+#include "gdevpdti.h"
 
 /* ================ Types and structures ================ */
 
@@ -232,8 +227,16 @@ add_text_delta_move(gx_device_pdf *pdev, const gs_matrix *pmat)
 	     * Note that the value 990 is arbitrary and may need a
 	     * further adjustment.
 	     */
+	     /* Revised the above. It seems unreasonable to use a fixed
+	      * value which is not based on the point size, when the problem is 
+	      * caused by a large point size being multiplied by the width. The
+	      * original fix also caused bitmap fonts (from PCL and other sources)
+	      * to fail to use kerning, as these fonts are scaled to 1 point and
+	      * therefore use large kerning values. Instead we check the kerned value
+	      * multiplied by the point size of the font.
+	      */
 	    (tdw = dw * -1000.0 / pts->in.size,
-	     tdw >= -MAX_USER_COORD && tdw < 990)
+	     tdw >= -MAX_USER_COORD && (tdw * pts->in.size) < MAX_USER_COORD)
 	    ) {
 	    /* Use TJ. */
 	    int code = append_text_move(pts, tdw);
@@ -570,12 +573,12 @@ pdf_set_text_state_values(gx_device_pdf *pdev,
 	    pts->in.word_spacing == ptsv->word_spacing
 	    ) {
 	    if (!memcmp(&pts->in.matrix, &ptsv->matrix,
-			sizeof(pts->in.matrix)))
-		return 0;
+	    	sizeof(pts->in.matrix)))
+	        return 0;
 	    /* add_text_delta_move sets pts->in.matrix if successful */
 	    code = add_text_delta_move(pdev, &ptsv->matrix);
 	    if (code >= 0)
-		return 0;
+	        return 0;
 	}
 	code = sync_text_state(pdev);
 	if (code < 0)

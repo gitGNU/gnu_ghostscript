@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevphex.c,v 1.1 2009/04/23 23:27:03 Arabidopsis Exp $ */
+/* $Id: gdevphex.c,v 1.2 2010/07/10 22:02:26 Arabidopsis Exp $ */
 
 /****************************************************************************/
 /*	Ghostscript printer driver for Epson Color Photo, Photo EX, Photo 700	*/
@@ -35,14 +29,14 @@
 HISTORY
 ~~~~~~~
 
-8 June 1999 Zoltï¿½n Kï¿½csi (aka Kocsonya) zoltan@bendor.com.au
+8 June 1999 Zoltán Kócsi (aka Kocsonya) zoltan@bendor.com.au
 
 	Initial revision. 
 	No shingling, depletion.
 	Colour only.
 	Dither matrix is blatantly copied from gslib.c.
 
-17 April 2000 Zoltï¿½n Kï¿½csi
+17 April 2000 Zoltán Kócsi
 
 	After much play worked out a reasonably simple colour mapping
 	that gives fairly good results. It has some very hairy things 
@@ -53,7 +47,7 @@ HISTORY
 LEGALISE
 ~~~~~~~~
 
-The usual disclaimer applies, neither me (Zoltï¿½n Kï¿½csi) nor 
+The usual disclaimer applies, neither me (Zoltán Kócsi) nor 
 Bendor Research Pty. Ltd. assume any liability whatsoever in 
 relation to events arising out of or related to the use of 
 the software or the included documentation in any form, way 

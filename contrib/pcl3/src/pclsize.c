@@ -1,5 +1,5 @@
 /******************************************************************************
-  File:     $Id: pclsize.c,v 1.1 2007/09/11 15:24:55 Arabidopsis Exp $
+  File:     $Id: pclsize.c,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $
   Contents: Maps between PCL Page Size codes und size information
   Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
             Germany. E-mail: Martin.Lottermoser@t-online.de.
@@ -14,7 +14,7 @@
 /* Configuration management identification */
 #ifndef lint
 static const char
-  cm_id[] = "@(#)$Id: pclsize.c,v 1.1 2007/09/11 15:24:55 Arabidopsis Exp $";
+  cm_id[] = "@(#)$Id: pclsize.c,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $";
 #endif
 
 /*****************************************************************************/

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: pdfopt,v 1.6 2009/04/19 13:54:38 Arabidopsis Exp $
+# $Id: pdfopt,v 1.7 2010/07/10 22:02:35 Arabidopsis Exp $
 # Convert PDF to "optimized" form.
 
 # This definition is changed on install to match the
@@ -11,7 +11,7 @@ if test ! -x "$gs"; then
 fi
 GS_EXECUTABLE="$gs"
 
-OPTIONS="-dSAFER -dDELAYSAFER"
+OPTIONS="-P- -dSAFER -dDELAYSAFER"
 while true
 do
 	case "$1" in

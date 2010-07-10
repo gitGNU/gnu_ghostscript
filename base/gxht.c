@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id: gxht.c,v 1.1 2009/04/23 23:26:24 Arabidopsis Exp $ */
+/*$Id: gxht.c,v 1.2 2010/07/10 22:02:20 Arabidopsis Exp $ */
 /* Halftone rendering for imaging library */
 #include "memory_.h"
 #include "gx.h"
@@ -203,43 +197,6 @@ static int render_ht(gx_ht_tile *, int, const gx_ht_order *,
 		      gx_bitmap_id);
 static gx_ht_tile *
 gx_render_ht_default(gx_ht_cache * pcache, int b_level)
-{
-    const gx_ht_order *porder = &pcache->order;
-    int level = porder->levels[b_level];
-    gx_ht_tile *bt;
-
-    if (pcache->num_cached < porder->num_levels )
-	bt = &pcache->ht_tiles[level / pcache->levels_per_tile];
-    else
-	bt =  &pcache->ht_tiles[b_level];	/* one tile per b_level */
-
-    if (bt->level != level) {
-	int code = render_ht(bt, level, porder, pcache->base_id + b_level);
-
-	if (code < 0)
-	    return 0;
-    }
-    return bt;
-}
-/* Faster code if num_tiles == 1. */
-static gx_ht_tile *
-gx_render_ht_1_tile(gx_ht_cache * pcache, int b_level)
-{
-    const gx_ht_order *porder = &pcache->order;
-    int level = porder->levels[b_level];
-    gx_ht_tile *bt = &pcache->ht_tiles[0];
-
-    if (bt->level != level) {
-	int code = render_ht(bt, level, porder, pcache->base_id + b_level);
-
-	if (code < 0)
-	    return 0;
-    }
-    return bt;
-}
-/* Faster code if levels_per_tile == 1. */
-static gx_ht_tile *
-gx_render_ht_1_level(gx_ht_cache * pcache, int b_level)
 {
     const gx_ht_order *porder = &pcache->order;
     int level = porder->levels[b_level];
@@ -790,10 +747,7 @@ gx_ht_init_cache(const gs_memory_t *mem, gx_ht_cache * pcache, const gx_ht_order
 	bt->tiles.rep_height = height;
 	bt->tiles.shift = bt->tiles.rep_shift = shift;
     }
-    pcache->render_ht =
-	(pcache->num_tiles == 1 ? gx_render_ht_1_tile :
-	 pcache->levels_per_tile == 1 ? gx_render_ht_1_level :
-	 gx_render_ht_default);
+    pcache->render_ht = gx_render_ht_default;
 }
 
 /*

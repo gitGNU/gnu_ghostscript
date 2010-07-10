@@ -64,7 +64,7 @@
 /*
  * Windows Bitmap File Library
  *
- * $Id: bmp_cod.h,v 1.3 2007/05/07 11:22:24 Arabidopsis Exp $
+ * $Id: bmp_cod.h,v 1.4 2010/07/10 22:02:59 Arabidopsis Exp $
  */
 
 #ifndef BMP_COD_H

@@ -18,7 +18,7 @@
    copies.
  */
 
-/*$Id: gdevlips.h,v 1.1 2007/09/11 15:24:45 Arabidopsis Exp $ */
+/*$Id: gdevlips.h,v 1.2 2010/07/10 22:02:45 Arabidopsis Exp $ */
 /* Common header file for LIPS driver */
 
 #define	LIPS_ESC	0x1b

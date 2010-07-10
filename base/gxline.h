@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxline.h,v 1.1 2009/04/23 23:26:35 Arabidopsis Exp $ */
+/* $Id: gxline.h,v 1.2 2010/07/10 22:02:22 Arabidopsis Exp $ */
 /* Private line parameter definitions */
 
 #ifndef gxline_INCLUDED
@@ -44,7 +38,9 @@ typedef struct gx_dash_params_s {
   NULL, 0, 0.0, 0/*false*/, 0.0, 1/*true*/, 0, 0.0
 typedef struct gx_line_params_s {
     float half_width;		/* one-half line width */
-    gs_line_cap cap;
+    gs_line_cap start_cap;      /* Cap to use on start of line */
+    gs_line_cap end_cap;        /* Cap to use on end of line */
+    gs_line_cap dash_cap;       /* Cap to use on start/end of dash segment */
     gs_line_join join;
     int curve_join;		/* <0 means use join between segments of */
 				/* flattened curves, >=0 means use this join */
@@ -73,7 +69,7 @@ int gx_set_dot_length(gx_line_params *, floatp, bool);
 
 /* See gsline.c for the computation of miter_check. */
 #define gx_line_params_initial\
- 0.0, gs_cap_butt, gs_join_miter, -1,\
+ 0.0, gs_cap_butt, gs_cap_butt, gs_cap_butt, gs_join_miter, -1,\
  10.0, (float)0.20305866, 0.0, 0/*false*/,\
   { identity_matrix_body }, { gx_dash_params_initial }
 

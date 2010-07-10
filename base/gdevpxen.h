@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpxen.h,v 1.1 2009/04/23 23:27:00 Arabidopsis Exp $ */
+/* $Id: gdevpxen.h,v 1.2 2010/07/10 22:02:26 Arabidopsis Exp $ */
 /* Enumerated attribute value definitions for PCL XL */
 
 #ifndef gdevpxen_INCLUDED
@@ -204,6 +198,7 @@ typedef enum {
  * The arguments are:
  *      media size code, resolution for width/height, width, height.
  */
+
 #define px_enumerate_media(m)\
   m(eDefaultPaperSize, -1, -1, -1)\
   m(eLetterPaper, 300, 2550, 3300)\
@@ -216,18 +211,18 @@ typedef enum {
   m(eMonarchEnvelope, 300, 1162, 2250)\
   m(eC5Envelope, 300, 1913, 2704)\
   m(eDLEnvelope, 300, 1299, 2598)\
-  m(eJB4Paper, -1, -1, -1)\
+  m(eJB4Paper, 300, 3035, 4299)\
   m(eJB5Paper, 300, 2150, 3035)\
   m(eB5Envelope, 300, 2078, 2952)\
   m(eB5Paper, 300, 2150, 3035)\
-  m(eJPostcard,  300, 1181, 1748)\
-  m(eJDoublePostcard, -1, -1, -1)\
+  m(eJPostcard, 300, 1181, 1748)\
+  m(eJDoublePostcard, 300, 2362, 1748)\
   m(eA5Paper,300,1748, 2480)\
-  m(eA6Paper,-1, -1, -1)\
-  m(eJB6Paper,-1, -1, -1)\
-  m(eJIS8K, -1, -1, -1)\
-  m(eJIS16K, -1, -1, -1)\
-  m(eJISExec, -1, -1, -1)
+  m(eA6Paper,300, 1240, 1748)\
+  m(eJB6Paper,300, 1512, 2150)\
+  m(eJIS8K, 300, 3154, 4606)\
+  m(eJIS16K, 300, 2303, 3154)\
+  m(eJISExec, 300, 2551, 3898)
 
 typedef enum {
     eDefaultSource = 0,

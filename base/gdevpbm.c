@@ -1,22 +1,16 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id: gdevpbm.c,v 1.1 2009/04/23 23:27:20 Arabidopsis Exp $ */
+/* $Id: gdevpbm.c,v 1.2 2010/07/10 22:02:28 Arabidopsis Exp $ */
 /* Portable Bit/Gray/PixMap drivers */
 #include "gdevprn.h"
 #include "gscdefs.h"
@@ -680,7 +674,7 @@ pbm_print_page_loop(gx_device_printer * pdev, char magic, FILE * pstream,
 	if (fprintf(pstream, "%d %d\n", pdev->width, pdev->height) < 0) {
             code = gs_note_error(gs_error_ioerror);
             goto punt;
-    }
+        }
     }
     switch (magic) {
 	case '1':		/* pbm */
@@ -688,6 +682,13 @@ pbm_print_page_loop(gx_device_printer * pdev, char magic, FILE * pstream,
 	case '7':		/* pam */
 	case '9':		/* plan9bm */
 	    break;
+        case '3':               /* pkm */
+        case '6':               /* pkmraw */
+	    if (fprintf(pstream, "%d\n", 255) < 0) {
+                code = gs_note_error(gs_error_ioerror);
+                goto punt;
+            }
+            break;
 	default:
 	    if (fprintf(pstream, "%d\n", pdev->color_info.max_gray) < 0) {
                 code = gs_note_error(gs_error_ioerror);
@@ -928,8 +929,8 @@ ppgm_print_row(gx_device_printer * pdev, byte * data, int depth,
 			 '\n' : ' ')) < 0)
                     return_error(gs_error_ioerror);
 	    }
-	    }
 	}
+    }
     return 0;
 }
 static int
@@ -998,9 +999,9 @@ pkm_print_row_4(gx_device_printer * pdev, byte * data, int depth,
 	gx_color_value rgb[3];
 
 	cmyk_1bit_map_color_rgb((gx_device *)pdev, (gx_color_index)i, rgb);
-	rv[i] = rgb[0] / gx_max_color_value;
-	gv[i] = rgb[1] / gx_max_color_value;
-	bv[i] = rgb[2] / gx_max_color_value;
+	rv[i] = rgb[0] / gx_max_color_value * 0xff;
+	gv[i] = rgb[1] / gx_max_color_value * 0xff;
+	bv[i] = rgb[2] / gx_max_color_value * 0xff;
     }
     /*
      * Contrary to what the documentation implies, gcc compiles putc

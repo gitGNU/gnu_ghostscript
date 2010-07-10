@@ -65,7 +65,7 @@
 /*
  * Primitive Types
  *
- * $Id: jas_types.h,v 1.5 2007/09/11 15:25:12 Arabidopsis Exp $
+ * $Id: jas_types.h,v 1.6 2010/07/10 22:02:56 Arabidopsis Exp $
  */
 
 #ifndef JAS_TYPES_H

@@ -1,5 +1,5 @@
 @echo off
-@rem $Id: ps2pdfxx.bat,v 1.4 2008/05/04 14:34:58 Arabidopsis Exp $
+@rem $Id: ps2pdfxx.bat,v 1.5 2010/07/10 22:02:38 Arabidopsis Exp $
 rem Internal batch file for calling pdfwrite driver.
 
 rem The files that call this one (ps2pdf*.bat) write the command-line
@@ -7,7 +7,7 @@ rem options into _.at, and then pass the last 2 (or fewer) arguments
 rem to this file.
 
 call gssetgs.bat
-echo -q -dSAFER -dNOPAUSE -dBATCH -sDEVICE#pdfwrite >_.at2
+echo -q -P- -dSAFER -dNOPAUSE -dBATCH -sDEVICE#pdfwrite >_.at2
 
 if "%OS%"=="Windows_NT" goto nt
 

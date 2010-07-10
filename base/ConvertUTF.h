@@ -20,9 +20,7 @@
  * remains attached.
  */
 
-/* The full license terms for this file can be found at LICENSE.Unicode */
-
-/* $Id: ConvertUTF.h,v 1.1 2009/04/23 23:27:27 Arabidopsis Exp $*/
+/* $Id: ConvertUTF.h,v 1.2 2010/07/10 22:02:31 Arabidopsis Exp $*/
 
 #ifndef ConvertUTF_INCLUDED
 #define ConvertUTF_INCLUDED

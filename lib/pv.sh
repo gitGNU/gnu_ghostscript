@@ -1,5 +1,5 @@
 #!/bin/sh -f
-# $Id: pv.sh,v 1.5 2007/09/11 15:24:50 Arabidopsis Exp $
+# $Id: pv.sh,v 1.6 2010/07/10 22:02:37 Arabidopsis Exp $
 #
 # pv - preview a specified page of a dvi file in a Ghostscript window
 # usage: pv page file
@@ -46,5 +46,5 @@ fi
 trap "rm -rf $tmpfile" 0 1 2 15
 #dvips -D$RESOLUTION -p $PAGE -n 1 "$FILE" "$@" -o $tmpfile
 dvips -p $PAGE -n 1 "$FILE" "$@" -o $tmpfile
-$GS_EXECUTABLE $tmpfile
+$GS_EXECUTABLE -P- -dSAFER $tmpfile
 exit 0

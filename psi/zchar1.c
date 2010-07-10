@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zchar1.c,v 1.1 2009/04/23 23:31:36 Arabidopsis Exp $ */
+/* $Id: zchar1.c,v 1.2 2010/07/10 22:02:42 Arabidopsis Exp $ */
 /* Type 1 character display operator */
 #include "memory_.h"
 #include "ghost.h"
@@ -309,7 +303,7 @@ charstring_execchar_aux(i_ctx_t *i_ctx_p, gs_text_enum_t *penum, gs_font *pfont)
 	        pt.x = cxs.sbw[2], pt.y = cxs.sbw[3];
                 gs_type1_set_width(pcis, &pt);
             }
-	}
+        }
 
 	/* Continue interpreting. */
       icont:
@@ -333,7 +327,7 @@ charstring_execchar_aux(i_ctx_t *i_ctx_p, gs_text_enum_t *penum, gs_font *pfont)
                         cxs.sbw[2] = fixed2float(pcis->width.x);
                         cxs.sbw[3] = fixed2float(pcis->width.y);
                 }
-		opstr = 0;
+                opstr = 0;
 		goto icont;
 	}
     }

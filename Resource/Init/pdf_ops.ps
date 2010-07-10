@@ -1,20 +1,19 @@
 %    Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
 % 
-%  This file is part of GNU ghostscript
-%
-%  GNU ghostscript is free software; you can redistribute it and/or modify it under
-%  the terms of the version 2 of the GNU General Public License as published by the Free Software
-%  Foundation.
-%
-%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-%
-%  You should have received a copy of the GNU General Public License along with
-%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-%
-% $Id: pdf_ops.ps,v 1.1 2009/04/23 23:25:39 Arabidopsis Exp $
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
+% $Id: pdf_ops.ps,v 1.2 2010/07/10 22:02:13 Arabidopsis Exp $
 % Definitions for most of the PDF operators.
 
 .currentglobal true .setglobal
@@ -66,11 +65,12 @@ userdict /GS_PDF_ProcSet 127 dict dup begin
 %	FontMatrixNonHV % TextFont.FontMatrix alters horz/vert glyph advance vector direction
 
 /nodict 1 dict def
-nodict /self { //nodict } executeonly put
+nodict /self { //nodict } executeonly put % to avoid recursion in dumps
 nodict readonly pop
 
 /dictbeginpage {	% <initialdict> dictbeginpage -
-  //nodict 20 dict .copydict begin { def } forall
+  20 dict copy dup begin
+  1 packedarray cvx executeonly /self exch def
   graphicsbeginpage textbeginpage
 } bdef
 /endpage {	% - endpage -
@@ -87,19 +87,17 @@ nodict readonly pop
 
 /gput		% <value> <key> gput -
  { exch currentdict //nodict eq { /self dup load end 5 dict begin def } if
-		% If we're in a Level 1 system, we need to grow the
-		% dictionary explicitly.
-   currentdict length currentdict maxlength ge %eq
-    { currentdict dup length 3 mul 2 idiv 1 add dict .copydict end begin 
-    }
-   if def
+   def
  } bdef
 
 /q {
   gsave //nodict begin
+  PDFusingtransparency {.pushextendedgstate cvx} if
 } bdef
+
 % Some PDF files have excess Q operators!
 /Q {
+  PDFusingtransparency {.popextendedgstate cvx} if
   currentdict /self .knownget {
     exec //nodict eq {
       end
@@ -115,7 +113,7 @@ nodict readonly pop
   } {
     //true	% formaterror -- not a gsave dict
   } ifelse
-  { (\n   **** File has imbalanced q/Q operators \(too many Q's\) ****\n)
+  { (\n   **** File has unbalanced q/Q operators \(too many Q's\) ****\n)
     pdfformaterror
   } if
 } bdef
@@ -136,6 +134,44 @@ nodict readonly pop
   } ifelse
 } bdef
 
+% Save most of graphic state attributes.
+% - get-gs-attrs ...
+/get-gs-attrs {
+  currentsmoothness
+  currentflat
+  currentoverprint
+  currentstrokeadjust
+  currentdash
+  currentmiterlimit
+  currentlinejoin
+  currentlinecap
+  currentlinewidth
+  currentfont
+  currentcolor
+  currentcolorspace
+  { currentpoint } stopped
+  matrix currentmatrix
+} bdef
+
+% Restore most of graphic state attributes.
+% ... get-gs-attrs -
+/set-gs-attrs {
+  setmatrix
+  { newpath } { moveto } ifelse
+  setcolorspace
+  setcolor
+  setfont
+  setlinewidth
+  setlinecap
+  setlinejoin
+  setmiterlimit
+  setdash
+  setstrokeadjust
+  setoverprint
+  setflat
+  setsmoothness
+} bdef
+
 % ---------------- Color setting ---------------- %
 
 /fcput		% <color> <colorspace> fcput -
@@ -152,11 +188,11 @@ nodict readonly pop
 /csdevrgb [/DeviceRGB] readonly def
 /csdevcmyk [/DeviceCMYK] readonly def
 /cspattern [/Pattern] readonly def
-/nullpattern1 mark
+/nullpatternproc { pop } bdef
+/nullpattern mark
    /PatternType 1 /PaintType 1 /TilingType 3 /BBox [0 0 1 1]
-   /XStep 1 /YStep 1 /PaintProc { pop } bind
+   /XStep 1 /YStep 1 /PaintProc //nullpatternproc
 .dicttomark readonly def
-/nullpattern2 nullpattern1 dup length dict copy readonly def
 
 % Each entry in the color space dictionary is a procedure of the form
 %	<cspace> -proc- <cspace> <initial-color>
@@ -174,9 +210,9 @@ nodict readonly pop
   /Indexed { 0 } bind
   /Pattern {
     dup type /nametype eq 1 index length 1 eq or {
-      pop //cspattern //nullpattern1 matrix makepattern
+      pop //cspattern //nullpattern matrix makepattern
     } {
-      //nullpattern2 matrix makepattern 1 index 1 get csset
+      //nullpattern matrix makepattern 1 index 1 get csset
 		% Stack: patternspace nullpattern basecolor basespace
       pop [ 3 1 roll dup type /arraytype eq { aload pop } if
       counttomark -1 roll ] cvx
@@ -332,10 +368,13 @@ nodict readonly pop
      dup DefaultQstate .knownget {
        exch pop
      } {
-       dup dup /Matrix knownoget not { { 1 0 0 1 0 0 } } if
-       gsave DefaultQstate setqstate makepattern grestore
-       dup 3 1 roll
-       DefaultQstate exch put
+       % But don't update read-only initial null pattern.
+       dup /PaintProc .knownget { //nullpatternproc ne } { //true } ifelse {
+         dup dup /Matrix knownoget not { { 1 0 0 1 0 0 } } if
+         gsave DefaultQstate setqstate makepattern grestore
+         dup 3 1 roll
+         DefaultQstate exch put
+       } if
      } ifelse
      setcolor
    } bdef
@@ -370,37 +409,80 @@ end def
   } ifelse
 } bdef
 /fsexec		% <fillop|strokeop> fsexec -
- {		% Preserve the current point, if any.
-    { currentpoint } stopped
-    { $error /newerror false put   cvx exec }
-    { 3 -1 roll cvx exec moveto }
-   ifelse
+ {
+   SoftMask //null ne {
+     mark /Subtype /Group /Isolated true .dicttomark pathbbox .begintransparencygroup
+   } if
+   cvx exec
+   SoftMask //null ne {
+     .endtransparencygroup
+   } if
  } bdef
 
 % ---------------- Path painting and clipping ---------------- %
 
-/S { setstrokestate /stroke fsexec } bdef
-/f { setfillstate /fill fsexec } bdef
-/f* { setfillstate /eofill fsexec } bdef
+/S {
+  OFFlevels length 0 eq {
+    setstrokestate /stroke fsexec
+  } {
+    newpath
+  } ifelse
+} bdef
+
+/f {
+  OFFlevels length 0 eq {
+    setfillstate /fill fsexec
+  } {
+    newpath
+  } ifelse
+} bdef
+
+/f* {
+  OFFlevels length 0 eq {
+    setfillstate /eofill fsexec
+  } {
+    newpath
+  } ifelse
+} bdef
+
 /n { newpath } bdef		% don't allow n to get bound in
+
 /s { closepath S } bdef
-/B { gsave setfillstate fill grestore S } bdef
+
+/B {
+  OFFlevels length 0 eq {
+    gsave setfillstate fill grestore
+    setstrokestate /stroke fsexec
+  } {
+    newpath
+  } ifelse
+} bdef
+
 /b { closepath B } bdef
-/B* { gsave setfillstate eofill grestore S } bdef
+
+/B* {
+  OFFlevels length 0 eq {
+    gsave setfillstate eofill grestore
+    setstrokestate /stroke fsexec
+  } {
+    newpath
+  } ifelse
+} bdef
+
 /b* { closepath B* } bdef
 
 % Clipping:
 
 /Wdict 4 dict dup begin
-/S { gsave setstrokestate stroke grestore n } bdef
-/f { gsave setfillstate fill grestore n } bdef
-/f* { gsave setfillstate eofill grestore n } bdef
-/n { end clip newpath } bdef
+/S { OFFlevels length 0 eq { gsave setstrokestate stroke grestore } if n } bdef
+/f { OFFlevels length 0 eq { gsave setfillstate fill grestore } if n } bdef
+/f* { OFFlevels length 0 eq { gsave setfillstate eofill grestore } if n } bdef
+/n { end { currentpoint } stopped not { pop pop clip } if newpath } bdef
 end readonly def
 /W { //Wdict begin } bdef
 /W*dict 4 dict dup begin
 Wdict { def } forall
-/n { end eoclip newpath } bdef
+/n { end { currentpoint } stopped not { pop pop eoclip } if newpath } bdef
 end readonly def
 /W* { //W*dict begin } bdef
 
@@ -812,19 +894,34 @@ end readonly def
 /showfirst { setshowstate Show } def
 
 /Tj {
-  0 0 moveto Show settextposition
+  { 0 0 moveto Show settextposition }
+  OFFlevels length 0 eq {
+    exec
+  } {
+    gsave get-gs-attrs nulldevice set-gs-attrs
+    exec
+    get-gs-attrs grestore set-gs-attrs
+  } ifelse
 } bdef
 /' { T* Tj } bdef
 /" { exch Tc exch Tw T* Tj } bdef
 /TJ {
-  0 0 moveto {
-    dup type /stringtype eq {
-      Show
-    } { -1000 div
-      currentfont /ScaleMatrix .knownget { 0 get mul } if
-      0 Vexch rmoveto
-    } ifelse
-  } forall settextposition
+  { 0 0 moveto {
+      dup type /stringtype eq {
+        Show
+      } { -1000 div
+        currentfont /ScaleMatrix .knownget { 0 get mul } if
+        0 Vexch rmoveto
+      } ifelse
+    } forall settextposition
+  }
+  OFFlevels length 0 eq {
+    exec
+  } {
+    gsave get-gs-attrs nulldevice set-gs-attrs
+    exec
+    get-gs-attrs grestore set-gs-attrs
+  } ifelse
 } bdef
 
 /tf { setfillstate currentpoint fill moveto } bdef

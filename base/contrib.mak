@@ -1,24 +1,16 @@
 #  Copyright (C) 2001-2006 Artifex Software, Inc.
 #  All Rights Reserved.
-# 
-# This file is part of GNU ghostscript
 #
-# GNU ghostscript is free software; you can redistribute it and/or
-# modify it under the terms of the version 2 of the GNU General Public
-# License as published by the Free Software Foundation.
+#  This software is provided AS-IS with no warranty, either express or
+#  implied.
 #
-# This software is provided AS-IS with no warranty, either express or
-# implied. That is, this program is distributed in the hope that it will 
-# be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details
+#  This software is distributed under license and may not be copied, modified
+#  or distributed except as expressly authorized under the terms of that
+#  license.  Refer to licensing information at http://www.artifex.com/
+#  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+#  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
-
-
-# $Id: contrib.mak,v 1.1 2009/04/23 23:27:22 Arabidopsis Exp $
+# $Id: contrib.mak,v 1.2 2010/07/10 22:02:30 Arabidopsis Exp $
 # makefile for contributed device drivers.
 
 # Define the name of this makefile.
@@ -853,16 +845,16 @@ $(GLOBJ)gdevsunr.$(OBJ) : $(GLSRC)gdevsunr.c $(PDEVH)
 ### These drivers are based on patches on existing device drivers in the
 ### src/ directory, therefore they are not in addons/
 
-$(DD)ljet4pjl.dev: $(HPMONO) $(DD)page.dev
+$(DD)ljet4pjl.dev : $(HPMONO) $(DD)page.dev
 	$(SETPDEV) $(DD)ljet4pjl $(HPMONO)
 
-$(DD)lj4dithp.dev: $(cdeskjet_) $(DD)page.dev
+$(DD)lj4dithp.dev : $(cdeskjet_) $(DD)page.dev
 	$(SETPDEV) $(DD)lj4dithp $(cdeskjet_)
 
-$(DD)dj505j.dev: $(cdeskjet_)
+$(DD)dj505j.dev : $(cdeskjet_)
 	$(SETPDEV) $(DD)dj505j $(cdeskjet_)
 
-$(DD)picty180.dev: $(cdeskjet_)
+$(DD)picty180.dev : $(cdeskjet_)
 	$(SETPDEV) $(DD)picty180 $(cdeskjet_)
 
 #########################################################################

@@ -1,26 +1,21 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdtt.c,v 1.1 2009/04/23 23:27:10 Arabidopsis Exp $ */
+/* $Id: gdevpdtt.c,v 1.2 2010/07/10 22:02:27 Arabidopsis Exp $ */
 /* Text processing for pdfwrite. */
 #include "math_.h"
 #include "string_.h"
+#include <stdlib.h> /* abs() */
 #include "gx.h"
 #include "gserrors.h"
 #include "gscencs.h"
@@ -329,18 +324,24 @@ gdev_pdf_text_begin(gx_device * dev, gs_imager_state * pis,
     gx_device_pdf *const pdev = (gx_device_pdf *)dev;
     gx_path *path = path0;
     pdf_text_enum_t *penum;
-    int code;
+    int code, user_defined = 0;
 
     /* Track the dominant text rotation. */
     {
 	gs_matrix tmat;
+	gs_point p;
 	int i;
 
-	gs_matrix_multiply(&font->FontMatrix, &ctm_only(pis), &tmat);
-	if (is_xxyy(&tmat))
-	    i = (tmat.xx >= 0 ? 0 : 2);
-	else if (is_xyyx(&tmat))
-	    i = (tmat.xy >= 0 ? 1 : 3);
+ 	gs_matrix_multiply(&font->FontMatrix, &ctm_only(pis), &tmat);
+	gs_distance_transform(1, 0, &tmat, &p);
+	if (p.x > fabs(p.y))
+	    i = 0;
+	else if (p.x < -fabs(p.y))
+	    i = 2;
+	else if (p.y > fabs(p.x))
+	    i = 1;
+	else if (p.y < -fabs(p.x))
+	    i = 3;
 	else
 	    i = 4;
 	pdf_current_page(pdev)->text_rotation.counts[i] += text->size;
@@ -348,28 +349,68 @@ gdev_pdf_text_begin(gx_device * dev, gs_imager_state * pis,
 
     pdev->last_charpath_op = 0;
     if ((text->operation & TEXT_DO_ANY_CHARPATH) && !path0->first_subpath) {
-	if(pdf_compare_text_state_for_charpath(pdev->text->text_state, pdev, pis, font, text))
+	if (pdf_compare_text_state_for_charpath(pdev->text->text_state, pdev, pis, font, text))
 	    pdev->last_charpath_op = text->operation & TEXT_DO_ANY_CHARPATH;
     }
 
-    if (font->FontType != ft_user_defined || !(text->operation & TEXT_DO_ANY_CHARPATH)) {
-    if (font->FontType == ft_user_defined &&
-	(text->operation & TEXT_DO_NONE) && (text->operation & TEXT_RETURN_WIDTH)) {
-	/* This is stringwidth, see gx_default_text_begin.
-	 * We need to prevent writing characters to PS cache,
-	 * otherwise the font converts to bitmaps.
-	 * So pass through even with stringwidth.
-	 */
-	code = gx_hld_stringwidth_begin(pis, &path);
-	if (code < 0)
+    if(font->FontType == ft_user_defined)
+	user_defined = 1;
+
+    /* We need to know whether any of the glyphs in a string using a composite font
+     * use a descendant font which is a type 3 (user-defined) so that we can properly
+     * skip the caching below.
+     */
+    if(font->FontType == ft_composite && ((gs_font_type0 *)font)->data.FMapType != fmap_CMap) {
+	int font_code;
+	gs_char chr;
+	gs_glyph glyph;
+
+	rc_alloc_struct_1(penum, pdf_text_enum_t, &st_pdf_text_enum, mem,
+		      return_error(gs_error_VMerror), "gdev_pdf_text_begin");
+	penum->rc.free = rc_free_text_enum;
+	penum->pte_default = 0; 
+	penum->charproc_accum = false;
+	penum->cdevproc_callout = false;
+	penum->returned.total_width.x = penum->returned.total_width.y = 0;
+	penum->cgp = NULL;
+	penum->output_char_code = GS_NO_CHAR;
+	code = gs_text_enum_init((gs_text_enum_t *)penum, &pdf_text_procs,
+			     dev, pis, text, font, path, pdcolor, pcpath, mem);
+	if (code < 0) {
+	    gs_free_object(mem, penum, "gdev_pdf_text_begin");
 	    return code;
-    } else if ((!(text->operation & TEXT_DO_DRAW) && pis->text_rendering_mode != 3) 
+	}
+	do {
+	    font_code = penum->orig_font->procs.next_char_glyph
+		((gs_text_enum_t *)penum, &chr, &glyph);   
+	    if (font_code == 1){
+		if (penum->fstack.items[penum->fstack.depth].font->FontType == 3) {
+		    user_defined = 1;
+		    break;
+		}
+	    }
+	} while(font_code != 2 && font_code >= 0);
+	gs_text_release((gs_text_enum_t *)penum, "pdf_text_process");
+    }
+
+    if (!user_defined || !(text->operation & TEXT_DO_ANY_CHARPATH)) {
+        if (user_defined &&
+	    (text->operation & TEXT_DO_NONE) && (text->operation & TEXT_RETURN_WIDTH)) {
+	    /* This is stringwidth, see gx_default_text_begin.
+	     * We need to prevent writing characters to PS cache,
+	     * otherwise the font converts to bitmaps.
+	     * So pass through even with stringwidth.
+	     */
+	    code = gx_hld_stringwidth_begin(pis, &path);
+	    if (code < 0)
+		return code;
+	} else if ((!(text->operation & TEXT_DO_DRAW) && pis->text_rendering_mode != 3) 
 		    || path == 0 || !path_position_valid(path)
 		    || pdev->type3charpath) 
-	return gx_default_text_begin(dev, pis, text, font, path, pdcolor,
+	    return gx_default_text_begin(dev, pis, text, font, path, pdcolor,
 					 pcpath, mem, ppte);
-    else if (text->operation & TEXT_DO_ANY_CHARPATH)
-	return gx_default_text_begin(dev, pis, text, font, path, pdcolor,
+	else if (text->operation & TEXT_DO_ANY_CHARPATH)
+	    return gx_default_text_begin(dev, pis, text, font, path, pdcolor,
 					 pcpath, mem, ppte);
     }
 
@@ -740,7 +781,7 @@ pdf_check_encoding_compatibility(const pdf_font_resource_t *pdfont,
 }
 
 /* 
- * Check ������� the Encoding has listed glyphs.
+ * Check whether the Encoding has listed glyphs.
  */
 static bool
 pdf_check_encoding_has_glyphs(const pdf_font_resource_t *pdfont, 
@@ -951,7 +992,9 @@ pdf_obtain_cidfont_resource(gx_device_pdf *pdev, gs_font *subfont,
 {
     int code = 0;
 
-    pdf_attached_font_resource(pdev, subfont, ppdsubf, NULL, NULL, NULL, NULL);
+    code = pdf_attached_font_resource(pdev, subfont, ppdsubf, NULL, NULL, NULL, NULL);
+    if (code < 0)
+	return code;
     if (*ppdsubf != NULL) {
 	const gs_font_base *cfont = pdf_font_resource_font(*ppdsubf, false);
 
@@ -1550,10 +1593,10 @@ do_unknown:
 	for (i = 0; i < pstr->size; i++) {
 	    /* Picked up by Coverity, if pdfont is NULL then the call would dereference it */
 	    if (pdfont != NULL) {
-	    /* A trick : pdf_reserve_char_code_in_pdfont here simply encodes with cgp. */
-	    ch = pdf_reserve_char_code_in_pdfont(pdfont, cgp, gdata[i], &pdfont->u.simple.last_reserved_char);
-	    pstr->data[i] = ch;
-	}
+		/* A trick : pdf_reserve_char_code_in_pdfont here simply encodes with cgp. */
+		ch = pdf_reserve_char_code_in_pdfont(pdfont, cgp, gdata[i], &pdfont->u.simple.last_reserved_char);
+		pstr->data[i] = ch;
+	    }
 	}
 	return 0;
     }
@@ -1642,7 +1685,9 @@ pdf_obtain_font_resource_encoded(gx_device_pdf *pdev, gs_font *font,
 	    same_encoding = ((base_font->procs.same_font(base_font, font, 
 	                      FONT_SAME_ENCODING) & FONT_SAME_ENCODING) != 0);
 	/* Find or make font resource. */
-	pdf_attached_font_resource(pdev, base_font, ppdfont, NULL, NULL, NULL, NULL);
+	code = pdf_attached_font_resource(pdev, base_font, ppdfont, NULL, NULL, NULL, NULL);
+	if (code < 0)
+	    return code;
 	if (*ppdfont != NULL && base_font != font) {
 	    if (pdfont_not_allowed == *ppdfont)
 		*ppdfont = NULL;	
@@ -2043,20 +2088,21 @@ pdf_update_text_state(pdf_text_process_state_t *ppts,
 	 * the scaling value.
 	 */
 	double scale = 72.0 / pdev->HWResolution[1];
-
+	
 	if (font->FontMatrix.yy != 0)
 	    scaled_width *= fabs(font->orig_FontMatrix.yy) * size * tmat.yy * scale;
 	else
 	    scaled_width *= fabs(font->orig_FontMatrix.xy) * size * tmat.xy * scale;
 
-	ppts->values.render_mode = 1;
+	ppts->values.render_mode = 1;	
 
 	/* Sort out any pending glyphs */
 	code = pdf_set_PaintType0_params(pdev, pis, size, scaled_width, &ppts->values);
 
 	pis->line_params.half_width = scaled_width / 2;
-        code = pdf_set_text_process_state(pdev, (const gs_text_enum_t *)penum,
+	code = pdf_set_text_process_state(pdev, (const gs_text_enum_t *)penum,
 				      ppts);
+
 	pis->line_params.half_width = saved_width;
     } else {
 	code = pdf_set_text_process_state(pdev, (const gs_text_enum_t *)penum,
@@ -2252,6 +2298,7 @@ pdf_glyph_widths(pdf_font_resource_t *pdfont, int wmode, gs_glyph glyph,
 	pwidths->Width.xy.x = pwidths->Width.xy.y = pwidths->Width.w = 0;
 #endif
     if (cdevproc_result == NULL) {
+	info.members = 0;
 	code = ofont->procs.glyph_info(ofont, glyph, NULL,
 					    (GLYPH_INFO_WIDTH0 << wmode) |
 					    (GLYPH_INFO_VVECTOR0 << wmode) | 
@@ -2261,8 +2308,8 @@ pdf_glyph_widths(pdf_font_resource_t *pdfont, int wmode, gs_glyph glyph,
 	if (info.members & GLYPH_INFO_CDEVPROC) {
 	    if (allow_cdevproc_callout)
 		return TEXT_PROCESS_CDEVPROC;
-	    else
-		return_error(gs_error_rangecheck);
+	else
+	    return_error(gs_error_rangecheck);
 	}
     } else {
 	info.width[0].x = cdevproc_result[0];
@@ -2504,7 +2551,9 @@ pdf_text_process(gs_text_enum_t *pte)
 		   but at this moment we don't know in what contexts
 		   it will be used. */
 		pdev->state.line_params.half_width = -1;
-		pdev->state.line_params.cap = gs_cap_unknown;
+		pdev->state.line_params.start_cap = gs_cap_unknown;
+		pdev->state.line_params.end_cap = gs_cap_unknown;
+		pdev->state.line_params.dash_cap = gs_cap_unknown;
 		pdev->state.line_params.join = gs_join_unknown;
 		pdev->state.line_params.miter_limit = -1;
 		pdev->state.line_params.dash.pattern_size = -1;

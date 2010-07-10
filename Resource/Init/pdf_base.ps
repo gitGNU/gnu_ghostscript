@@ -1,20 +1,19 @@
 %    Copyright (C) 1994-2006 Artifex Software, Inc.  All rights reserved.
 % 
-%  This file is part of GNU ghostscript
-%
-%  GNU ghostscript is free software; you can redistribute it and/or modify it under
-%  the terms of the version 2 of the GNU General Public License as published by the Free Software
-%  Foundation.
-%
-%  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-%  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-%  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-%
-%  You should have received a copy of the GNU General Public License along with
-%  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-%  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-%
-% $Id: pdf_base.ps,v 1.1 2009/04/23 23:25:37 Arabidopsis Exp $
+% This software is provided AS-IS with no warranty, either express or
+% implied.
+% 
+% This software is distributed under license and may not be copied,
+% modified or distributed except as expressly authorized under the terms
+% of the license contained in the file LICENSE in this distribution.
+% 
+% For more information about licensing, please refer to
+% http://www.ghostscript.com/licensing/. For information on
+% commercial licensing, go to http://www.artifex.com/licensing/ or
+% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
+% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+
+% $Id: pdf_base.ps,v 1.2 2010/07/10 22:02:12 Arabidopsis Exp $
 % pdf_base.ps
 % Basic parser for PDF reader.
 
@@ -31,11 +30,31 @@ pdfdict begin
 % Define the name interpretation dictionary for reading values.
 /valueopdict mark
   (<<) cvn { mark } bind	% don't push an actual mark!
-  (>>) cvn { { .dicttomark } stopped {
+
+  (>>) cvn { { counttomark } stopped {
       (   **** File has an unbalanced >> \(close dictionary\).\n)
       pdfformaterror
     } if
+    131068 le {
+      .dicttomark
+    } {
+      % Checks for other resources can be added if needed.
+      counttomark 1 add index /XObject eq {
+        counttomark mark exch 1 add 1 roll
+        { counttomark
+          dup 0 eq {
+            pop pop ] exit
+          } if
+          131068 .min
+          mark exch 1 add 1 roll .dicttomark
+          counttomark 1 add 1 roll
+        } loop
+      } {
+        .dicttomark                 % will fail
+      } ifelse
+    } ifelse
   } bind
+
   ([) cvn { mark } bind		% ditto
   (]) cvn dup load
 %  /true true		% see .pdfexectoken below
@@ -471,6 +490,12 @@ currentdict /token_nofail_dict .undef
   } ifelse
 } bind def
 
+% See /knownoget above.
+/oknown {	% <dict> <key> oknown <bool>
+  .knownget { oforce //null ne } { //false } ifelse
+} bind def
+
+
 /knownogetdict { % <dict> <key> knownogetdict <dict> true
 		 % <dict> <key> knownogetdict false
   //knownoget exec dup {
@@ -693,15 +718,15 @@ currentdict /token_nofail_dict .undef
     dup 3 index exch get 	% Get our current object number
                 % Stack: strm# objstreamdict N [obj#] [objects] loopindex obj#
     dup ObjectStream exch lget 7 index eq {
-    dup resolved? {		% If we already have this object
-      pop pop			% Remove object and object number
-    } {				% Else if we do not have this object
-      PDFDEBUG { (%Resolving compressed object: [) print dup =only ( 0]) = } if
-      Objects exch 3 index	% Put the object into Objects
-      3 index get
-      PDFDEBUG { dup === flush } if
-      lput
-    } ifelse
+      dup resolved? {		% If we already have this object
+        pop pop			% Remove object and object number
+      } {			% Else if we do not have this object
+        PDFDEBUG { (%Resolving compressed object: [) print dup =only ( 0]) = } if
+        Objects exch 3 index	% Put the object into Objects
+        3 index get
+        PDFDEBUG { dup === flush } if
+        lput
+      } ifelse
     } {
       pop	% Ignore old object; remove object number.
     } ifelse
@@ -719,6 +744,10 @@ currentdict /no_debug_dict undef
   /endobj { endobj exit } bind
   /endjobj { % Bug 689876.
      (   **** Operator 'endobj' is misspelled as 'endjobj'.\n) pdfformaterror
+     endobj exit
+  } bind
+  /enbobj { % Bug 690397.
+     (   **** Operator 'endobj' is misspelled as 'enbobj'.\n) pdfformaterror
      endobj exit
   } bind
                 % OmniForm generates PDF file with endobj missing in some
@@ -862,7 +891,7 @@ currentdict /no_debug_dict undef
     PDFsource (??) .peekstring pop (>>) eq { % Bug 690161, sample #1
       (   **** Warning: Spurious '>>' after 'endstream' ignored.\n) pdfformaterror
       PDFsource (12) readstring pop pop
-  } if
+    } if
   } ifelse
   cvx
 } bind def
@@ -912,14 +941,34 @@ currentdict /no_debug_dict undef
     /.EOFDecode
   } ifelse
 } bind def
+
+/pdf_rules_dict << /PDFRules //true >> readonly def
+
+% Add PDF option to ASCII85Decode filter
+% <source>        <name> add_A85_param <source> <dict'> <name>
+% <source> <dict> <name> add_A85_param <source> <dict'> <name>
+/add_A85_param {
+  dup /ASCII85Decode eq {
+    1 index type /dicttype eq {
+      3 -1 roll dup length 1 add dict copy
+      dup /PDFRules //true put
+      3 1 roll
+    } {
+      //pdf_rules_dict exch
+    } ifelse
+  } if
+} bind def
+
+currentdict /pdf_rules_dict undef
+
 /applyfilters {		% <parms> <source> <filternames> applyfilters <stream>
-  2 index null eq {
-    { filtername filter }
+  2 index //null eq {
+    { filtername add_A85_param filter }
   } {
     {		% Stack: parms source filtername
-      2 index 0 oget dup null eq { pop } {
+      2 index 0 oget dup //null eq { pop } {
         exch filtername dup /JBIG2Decode eq { exch jbig2cachectx exch } if
-      } ifelse filter
+      } ifelse add_A85_param filter
       exch dup length 1 sub 1 exch getinterval exch
     }
   } ifelse forall exch pop

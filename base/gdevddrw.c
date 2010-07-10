@@ -1,22 +1,16 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id: gdevddrw.c,v 1.1 2009/04/23 23:27:13 Arabidopsis Exp $ */
+/* $Id: gdevddrw.c,v 1.2 2010/07/10 22:02:27 Arabidopsis Exp $ */
 /* Default polygon and image drawing device procedures */
 #include "math_.h"
 #include "memory_.h"
@@ -775,30 +769,35 @@ gx_default_fill_triangle(gx_device * dev,
 int
 gx_default_draw_thin_line(gx_device * dev,
 			  fixed fx0, fixed fy0, fixed fx1, fixed fy1,
-		  const gx_device_color * pdevc, gs_logical_operation_t lop)
+		    const gx_device_color * pdevc, gs_logical_operation_t lop,
+			  fixed adjustx, fixed adjusty)
 {
-    int ix = fixed2int_var(fx0);
-    int iy = fixed2int_var(fy0);
-    int itox = fixed2int_var(fx1);
-    int itoy = fixed2int_var(fy1);
-
+    int ix, iy, itox, itoy;
+    fixed tf;
+    int epsilon;
+    
     return_if_interrupt(dev->memory);
-    if (itoy == iy) {		/* horizontal line */
-	return (ix <= itox ?
-		gx_fill_rectangle_device_rop(ix, iy, itox - ix + 1, 1,
-					     pdevc, dev, lop) :
-		gx_fill_rectangle_device_rop(itox, iy, ix - itox + 1, 1,
-					     pdevc, dev, lop)
-	    );
-    }
-    if (itox == ix) {		/* vertical line */
-	return (iy <= itoy ?
-		gx_fill_rectangle_device_rop(ix, iy, 1, itoy - iy + 1,
-					     pdevc, dev, lop) :
-		gx_fill_rectangle_device_rop(ix, itoy, 1, iy - itoy + 1,
-					     pdevc, dev, lop)
-	    );
-    } {
+    
+    /* This function was updated in revision 10391 to fix problems with
+     * mispositioned thin lines. This introduced a regression (see bug
+     * 691030). The code was then reworked to behave in what we believe is
+     * the correct manner, but this causes unacceptable problems with PCL
+     * output. While the current PCL work is underway, we have therefore
+     * amended this code to take note of the fill adjust values; if non-
+     * zero (i.e. postscript) we do "the correct thing". If zero, we do
+     * what we used to.
+     *
+     * The one case where this doesn't work is in the case where our PCL
+     * implementation thickens lines slightly to try and approximate HP
+     * printer behaviour. Here we do use a non-zero fill_adjust and hence
+     * have differences; tests show that these are acceptable though.
+     *
+     * It is hoped that this difference in behaviour will be short lived.
+     */
+    
+    epsilon = ((adjustx | adjusty) == 0 ? fixed_epsilon : 0);
+    
+    {
 	fixed h = fy1 - fy0;
 	fixed w = fx1 - fx0;
 	fixed tf;
@@ -806,20 +805,123 @@ gx_default_draw_thin_line(gx_device * dev,
 	gs_fixed_edge left, right;
 
 	if ((w < 0 ? -w : w) <= (h < 0 ? -h : h)) {
+            /* A "mostly-vertical" line */
 	    if (h < 0)
 		SWAP(fx0, fx1, tf), SWAP(fy0, fy1, tf),
 		    h = -h;
-	    right.start.x = (left.start.x = fx0 - fixed_half) + fixed_1;
-	    right.end.x = (left.end.x = fx1 - fixed_half) + fixed_1;
+	    /* So we are plotting a trapezoid with horizontal thin edges.
+	     * Check for whether a triangular extension area on the end
+	     * covers an additional pixel centre. */
+	    {
+	        int deltay = int2fixed(fixed2int_var(fy1)) + fixed_half -fy1;
+	        int deltax = int2fixed(fixed2int_var(fx1)) + fixed_half -fx1;
+
+                if (deltax < 0) deltax=-deltax;
+	        if ((deltay > 0) && (deltay <= fixed_half) &&
+	            (deltay+deltax <= fixed_half))
+                {
+                    int c = gx_fill_rectangle_device_rop(fixed2int_var(fx1),
+                                                         fixed2int_var(fy1),
+                                                         1,1,pdevc,dev,lop);
+                    if (c < 0) return c;
+                }
+	    }
+	    {
+	        int deltay = int2fixed(fixed2int_var(fy0)) + fixed_half -fy0;
+	        int deltax = int2fixed(fixed2int_var(fx0)) + fixed_half -fx0;
+
+                if (deltax < 0) deltax=-deltax;
+	        if ((deltay < 0) && (deltay >= -fixed_half) &&
+	            (-deltay+deltax <= fixed_half))
+                {
+                    int c = gx_fill_rectangle_device_rop(fixed2int_var(fx0),
+                                                         fixed2int_var(fy0),
+                                                         1,1,pdevc,dev,lop);
+                    if (c < 0) return c;
+                }
+	    }
+	    /* Can we treat it as a vertical rectangle? */
+            ix   = fixed2int_var(fx0-epsilon);
+            itox = fixed2int_var(fx1-epsilon);
+            if (itox == ix) {
+                int sy, sh;
+                /* Figure out the start/height, allowing for our "covers
+                 * centre of pixel" rule. */
+                iy   = fixed2int_var(fy0+fixed_half-fixed_epsilon);
+                itoy = fixed2int_var(fy1+fixed_half-fixed_epsilon);
+                itoy = itoy - iy;
+                if (itoy <= 0) {
+                    /* Zero height; drawing this as a trapezoid wouldn't
+                     * fill any pixels, so just exit. */
+                    return 0;
+                }
+                return gx_fill_rectangle_device_rop(ix, iy, 1, itoy,
+                                                    pdevc, dev, lop);
+            }
+	    left.start.x = fx0 - fixed_half + fixed_epsilon - epsilon;
+	    right.start.x = left.start.x + fixed_1;
+	    left.end.x = fx1 - fixed_half + fixed_epsilon - epsilon;
+	    right.end.x = left.end.x + fixed_1;
 	    left.start.y = right.start.y = fy0;
 	    left.end.y = right.end.y = fy1;
 	    swap_axes = false;
 	} else {
+            /* A "mostly-horizontal" line */
 	    if (w < 0)
 		SWAP(fx0, fx1, tf), SWAP(fy0, fy1, tf),
 		    w = -w;
-	    right.start.x = (left.start.x = fy0 - fixed_half) + fixed_1;
-	    right.end.x = (left.end.x = fy1 - fixed_half) + fixed_1;
+	    /* So we are plotting a trapezoid with vertical thin edges
+	     * Check for whether a triangular extension area on the end
+	     * covers an additional pixel centre. */
+	    {
+	        int deltax = int2fixed(fixed2int_var(fx1)) + fixed_half -fx1;
+	        int deltay = int2fixed(fixed2int_var(fy1)) + fixed_half -fy1;
+
+                if (deltay < 0) deltay=-deltay;
+	        if ((deltax > 0) && (deltax <= fixed_half) &&
+	            (deltax+deltay <= fixed_half))
+                {
+                    int c = gx_fill_rectangle_device_rop(fixed2int_var(fx1),
+                                                         fixed2int_var(fy1),
+                                                         1,1,pdevc,dev,lop);
+                    if (c < 0) return c;
+                }
+	    }
+	    {
+	        int deltax = int2fixed(fixed2int_var(fx0)) + fixed_half -fx0;
+	        int deltay = int2fixed(fixed2int_var(fy0)) + fixed_half -fy0;
+
+                if (deltay < 0) deltay=-deltay;
+	        if ((deltax < 0) && (deltax >= -fixed_half) &&
+	            (-deltax+deltay <= fixed_half))
+                {
+                    int c = gx_fill_rectangle_device_rop(fixed2int_var(fx0),
+                                                         fixed2int_var(fy0),
+                                                         1,1,pdevc,dev,lop);
+                    if (c < 0) return c;
+                }
+	    }
+            /* Can we treat this as a horizontal rectangle? */
+            iy   = fixed2int_var(fy0 - epsilon);
+            itoy = fixed2int_var(fy1 - epsilon);
+            if (itoy == iy) {
+                /* Figure out the start/width, allowing for our "covers
+                * centre of pixel" rule. */
+                ix   = fixed2int_var(fx0+fixed_half-fixed_epsilon);
+                itox = fixed2int_var(fx1+fixed_half-fixed_epsilon);
+                itox = itox - ix;
+                if (itox <= 0) {
+                    /* Zero width; drawing this as a trapezoid wouldn't
+                     * fill any pixels, so just exit. */
+                    return 0;
+                }
+                return gx_fill_rectangle_device_rop(ix, iy, itox, 1,
+                                                    pdevc, dev, lop);
+            }
+	    left.start.x = fy0 - fixed_half + fixed_epsilon - epsilon;
+	    right.start.x = left.start.x + fixed_1;
+	    left.end.x = fy1 - fixed_half + fixed_epsilon - epsilon;
+	    right.end.x = left.end.x + fixed_1;
 	    left.start.y = right.start.y = fx0;
 	    left.end.y = right.end.y = fx1;
 	    swap_axes = true;

@@ -1,4 +1,4 @@
-/* $Id: pdf2ps.cmd,v 1.3 2007/05/07 11:22:07 Arabidopsis Exp $ */
+/* $Id: pdf2ps.cmd,v 1.4 2010/07/10 22:02:35 Arabidopsis Exp $ */
 /*
  * This file is maintained by a user: if you have any questions about it,
  * please contact Mark Hale (mark.hale@physics.org).
@@ -14,7 +14,7 @@ outext='.ps'
 
 if params='' then call usage
 
-options='-dNOPAUSE -dBATCH -dSAFER -sDEVICE=pswrite'
+options='-dNOPAUSE -dBATCH -P- -dSAFER -sDEVICE=pswrite'
 
 /* extract options from command line */
 i=1

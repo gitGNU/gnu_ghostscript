@@ -1,22 +1,16 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id: gxblend.h,v 1.1 2009/04/23 23:27:06 Arabidopsis Exp $ */
+/* $Id: gxblend.h,v 1.2 2010/07/10 22:02:26 Arabidopsis Exp $ */
 /* PDF 1.4 blending functions */
 
 #ifndef gxblend_INCLUDED
@@ -25,12 +19,13 @@
 #include "gxcindex.h"
 #include "gxcvalue.h"
 #include "gxfrac.h"
+#include "gxdevcli.h"
 
 #define RAW_DUMP 0
 
 /* #define DUMP_TO_PNG */
 
-#define	PDF14_MAX_PLANES (GX_DEVICE_COLOR_MAX_COMPONENTS + 1)	/* one extra for alpha channel */
+#define	PDF14_MAX_PLANES GX_DEVICE_COLOR_MAX_COMPONENTS+3  /* Needed for alpha channel, shape, group alpha */
 
 typedef bits16 ArtPixMaxDepth;
 
@@ -80,6 +75,27 @@ typedef struct {
 
 typedef pdf14_nonseparable_blending_procs_s
 		pdf14_nonseparable_blending_procs_t;
+
+
+/* This is used to so that we can change procedures based
+ * upon the Smask color space. previously we always
+ *  went to the device space */
+
+typedef struct {
+
+    pdf14_nonseparable_blending_procs_t device_procs;
+    gx_device_procs color_mapping_procs;
+
+} pdf14_parent_cs_params_s;
+
+typedef pdf14_parent_cs_params_s pdf14_parent_cs_params_t;
+
+/* This function is used for mapping Smask CMYK or RGB data to a monochrome alpha buffer */
+
+void Smask_Luminosity_Mapping(int num_rows, int num_cols, int n_chan, int row_stride, 
+                         int plane_stride, byte *dst, const byte *src, bool isadditive,
+                            bool SMask_is_CIE, gs_transparency_mask_subtype_t SMask_SubType);
+
 
 /**
  * art_blend_pixel: Compute PDF 1.4 blending function.
@@ -345,6 +361,12 @@ void pdf14_preserve_backdrop(pdf14_buf *buf, pdf14_buf *tos, bool has_shape);
 void pdf14_compose_group(pdf14_buf *tos, pdf14_buf *nos, pdf14_buf *maskbuf, 
 	      int x0, int x1, int y0, int y1, int n_chan, bool additive,
 	      const pdf14_nonseparable_blending_procs_t * pblend_procs);
+
+gx_color_index pdf14_encode_smask_color(gx_device *dev, 
+             const gx_color_value colors[], int ncomp);
+
+int pdf14_decode_smask_color(gx_device * dev, gx_color_index color, 
+                             gx_color_value * out, int ncomp);
 
 
 gx_color_index pdf14_encode_color(gx_device *dev, const gx_color_value colors[]);

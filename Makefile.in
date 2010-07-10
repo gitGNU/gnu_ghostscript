@@ -1,24 +1,16 @@
 #  Copyright (C) 2001-2006 Artifex Software, Inc.
 #  All Rights Reserved.
-# 
-# This file is part of GNU ghostscript
 #
-# GNU ghostscript is free software; you can redistribute it and/or
-# modify it under the terms of the version 2 of the GNU General Public
-# License as published by the Free Software Foundation.
+#  This software is provided AS-IS with no warranty, either express or
+#  implied.
 #
-# This software is provided AS-IS with no warranty, either express or
-# implied. That is, this program is distributed in the hope that it will 
-# be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details
+#  This software is distributed under license and may not be copied, modified
+#  or distributed except as expressly authorized under the terms of that
+#  license.  Refer to licensing information at http://www.artifex.com/
+#  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+#  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301.
-
-
-# $Id: Makefile.in,v 1.21 2009/04/23 23:31:55 Arabidopsis Exp $
+# $Id: Makefile.in,v 1.22 2010/07/10 22:02:45 Arabidopsis Exp $
 # makefile template for/from the autoconf build.
 # @configure_input@
 
@@ -102,6 +94,7 @@ CUPSLIBDIRS=@CUPSLIBDIRS@
 CUPSSERVERBIN=@CUPSSERVERBIN@
 CUPSSERVERROOT=@CUPSSERVERROOT@
 CUPSDATA=@CUPSDATA@
+CUPSPDFTORASTER=@CUPSPDFTORASTER@
 
 # Define the default directory/ies for the runtime
 # initialization and font files.  Separate multiple directories with a :.
@@ -115,12 +108,9 @@ GS_CACHE_DIR="~/.ghostscript/cache/"
 
 # Define whether or not searching for initialization files should always
 # look in the current directory first.  This leads to well-known security
-# and confusion problems, but users insist on it.
-# NOTE: this also affects searching for files named on the command line:
-# see the "File searching" section of Use.htm for full details.
-# Because of this, setting SEARCH_HERE_FIRST to 0 is not recommended.
+# and confusion problems,  but may be convenient sometimes.
 
-SEARCH_HERE_FIRST=1
+SEARCH_HERE_FIRST=0
 
 # Define the name of the interpreter initialization file.
 # (There is no reason to change this.)
@@ -187,6 +177,13 @@ SHARE_LIBPNG=@SHARE_LIBPNG@
 PNGSRCDIR=@LIBPNGDIR@
 LIBPNG_NAME=png
 
+# libtiff
+SHARE_LIBTIFF=@SHARE_LIBTIFF@
+TIFFSRCDIR=@LIBTIFFDIR@
+TIFFPLATFORM=unix
+TIFFCONFIG_SUFFIX=
+LIBTIFF_NAME=tiff
+
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.
 
@@ -200,11 +197,14 @@ JBIG2_LIB=jbig2dec
 SHARE_JBIG2=@SHARE_JBIG2@
 JBIG2SRCDIR=@JBIG2DIR@
 
-# uncomment the following to compile in the Luratech ldf_jb2 codec
+# uncomment the following three lines and one of the last two to
+# compile in the Luratech ldf_jb2 codec
 #JBIG2_LIB=luratech
 #SHARE_JBIG2=0
 #JBIG2SRCDIR=ldf_jb2
-#JBIG2_CFLAGS=-DUSE_LDF_JB2
+#JBIG2_CFLAGS=-DUSE_LDF_JB2 -DLINUX
+#JBIG2_CFLAGS=-DUSE_LDF_JB2 -DMAC -DMAC_OS_X_BUILD
+
 
 # Choose the library to use for (JPXDecode support)
 # whether to link to an external build or compile in from source
@@ -214,11 +214,13 @@ SHARE_JPX=@SHARE_JASPER@
 JPXSRCDIR=@JASPERDIR@
 JPX_CFLAGS=-DJAS_CONFIGURE
 
-# uncomment the following to compile in the Luratech lwf_jp2 codec
+# uncomment the following three lines and one of the last two to
+# compile in the Luratech lwf_jp2 codec
 #JPX_LIB=luratech
 #SHARE_JPX=0
 #JPXSRCDIR=lwf_jp2
 #JPX_CFLAGS=-DUSE_LWF_JP2 -DLINUX
+#JPX_CFLAGS=-DUSE_LWF_JP2 -DMAC -DMAC_OS_X_BUILD
 
 # Define the directory where the icclib source are stored.
 # See icclib.mak for more information
@@ -368,11 +370,11 @@ CAIRO_LIBS	=	@CAIRO_LIBS@
 
 # Choose the language feature(s) to include.  See gs.mak for details.
 
-FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)epsf.dev $(GLD)pipe.dev $(PSD)fapi.dev @JBIG2DEVS@ @JPXDEVS@
+FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)epsf.dev $(GLD)pipe.dev $(GLD)gsnogc.dev $(GLD)roplib.dev $(GLD)htxlib.dev $(PSD)fapi.dev @JBIG2DEVS@ @JPXDEVS@
 #FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev
 #FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)rasterop.dev $(GLD)pipe.dev
 # The following is strictly for testing.
-FEATURE_DEVS_ALL=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)rasterop.dev $(PSD)double.dev $(PSD)trapping.dev $(PSD)stocht.dev $(GLD)pipe.dev @JBIG2DEVS@ @JPXDEVS@
+FEATURE_DEVS_ALL=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)rasterop.dev $(PSD)double.dev $(PSD)trapping.dev $(PSD)stocht.dev $(GLD)pipe.dev $(GLD)gsnogc.dev $(GLD)htxlib.dev @JBIG2DEVS@ @JPXDEVS@
 #FEATURE_DEVS=$(FEATURE_DEVS_ALL)
 
 # The list of resources to be included in the %rom% file system.
@@ -420,7 +422,7 @@ DISPLAY_DEV=$(DD)bbox.dev
 #DEVICE_DEVS=$(DISPLAY_DEV) @X_DEVS@
 
 #DEVICE_DEVS1=$(DD)bmpmono.dev $(DD)bmpgray.dev $(DD)bmpsep1.dev $(DD)bmpsep8.dev $(DD)bmp16.dev $(DD)bmp256.dev $(DD)bmp16m.dev $(DD)bmp32b.dev
-#DEVICE_DEVS2=$(DD)wep24pin.dev $(DD)wep9pin.dev #$(DD)gdevjbig2.dev $(DD)gdevjpx.dev #$(DD)rinkj.dev
+#DEVICE_DEVS2=#$(DD)gdevjbig2.dev $(DD)gdevjpx.dev #$(DD)rinkj.dev
 #DEVICE_DEVS3=$(DD)deskjet.dev $(DD)djet500.dev $(DD)laserjet.dev $(DD)ljetplus.dev $(DD)ljet2p.dev $(DD)ljet3.dev $(DD)ljet3d.dev $(DD)ljet4.dev $(DD)ljet4d.dev $(DD)lj5mono.dev $(DD)lj5gray.dev
 #DEVICE_DEVS4=$(DD)cdeskjet.dev $(DD)cdjcolor.dev $(DD)cdjmono.dev $(DD)cdj550.dev $(DD)pj.dev $(DD)pjxl.dev $(DD)pjxl300.dev
 #DEVICE_DEVS5=$(DD)uniprint.dev @IJSDEVS@
@@ -429,7 +431,7 @@ DISPLAY_DEV=$(DD)bbox.dev
 #DEVICE_DEVS8=$(DD)pcxmono.dev $(DD)pcxgray.dev $(DD)pcx16.dev $(DD)pcx256.dev $(DD)pcx24b.dev $(DD)pcxcmyk.dev
 #DEVICE_DEVS9=$(DD)pbm.dev $(DD)pbmraw.dev $(DD)pgm.dev $(DD)pgmraw.dev $(DD)pgnm.dev $(DD)pgnmraw.dev $(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev $(DD)pkm.dev $(DD)pkmraw.dev $(DD)pksm.dev $(DD)pksmraw.dev
 #DEVICE_DEVS10=$(DD)tiffcrle.dev $(DD)tiffg3.dev $(DD)tiffg32d.dev $(DD)tiffg4.dev $(DD)tifflzw.dev $(DD)tiffpack.dev
-#DEVICE_DEVS11=$(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiffsep.dev
+#DEVICE_DEVS11=$(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiff48nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiff64nc $(DD)tiffsep.dev $(DD)tiffsep1.dev
 #DEVICE_DEVS12=$(DD)psmono.dev $(DD)psgray.dev $(DD)psrgb.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
 #DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev
 #DEVICE_DEVS13=@PNGDEVS@
@@ -485,7 +487,7 @@ AK=
 
 CCFLAGS=$(GENOPT) $(CAPOPT) $(CFLAGS)
 CC_=$(CC) $(CCFLAGS)
-CCAUX=$(CC) $(GCFLAGS)
+CCAUX=$(CC) $(CFLAGS)
 CC_LEAF=$(CC_)
 # note gcc can't use -fomit-frame-pointer with -pg.
 CC_LEAF_PG=$(CC_)
@@ -507,6 +509,7 @@ include $(GLSRCDIR)/jpeg.mak
 # zlib.mak must precede libpng.mak
 include $(GLSRCDIR)/zlib.mak
 include $(GLSRCDIR)/libpng.mak
+include $(GLSRCDIR)/libtiff.mak
 include $(GLSRCDIR)/jbig2.mak
 include $(GLSRCDIR)/jasper.mak
 include $(GLSRCDIR)/ldf_jb2.mak
@@ -526,7 +529,7 @@ include $(GLSRCDIR)/unixinst.mak
 # Clean up after the autotools scripts
 # configure.ac and Makefile.in are symlinks from a subdir 
 # (created by autogen.sh) and so are safe to remove
-distclean : clean config-clean
+distclean : clean config-clean soclean debugclean
 	-$(RM_) -r $(BINDIR) $(GLOBJDIR) $(PSOBJDIR)
 	-$(RM_) -r autom4te.cache
 	-$(RM_) config.log config.status

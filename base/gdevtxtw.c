@@ -1,21 +1,16 @@
 /* Copyright (C) 2001-2006 artofcode LLC.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/*$Id: gdevtxtw.c,v 1.1 2009/04/23 23:26:03 Arabidopsis Exp $ */
+/*$Id: gdevtxtw.c,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $ */
 /* Device for ASCII or Unicode text extraction */
 /* FIXME: not all .h files are listed as dependencies */
 #include "memory_.h"
@@ -323,7 +318,8 @@ txtwrite_fill_triangle(gx_device * dev,
 static int
 txtwrite_draw_thin_line(gx_device * dev,
 		    fixed fx0, fixed fy0, fixed fx1, fixed fy1,
-		    const gx_device_color * pdevc, gs_logical_operation_t lop)
+		    const gx_device_color * pdevc, gs_logical_operation_t lop,
+		    fixed adjustx, fixed adjusty)
 {
     return 0;
 }

@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
-  This file is part of GNU ghostscript
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: ztrans.c,v 1.1 2009/04/23 23:31:28 Arabidopsis Exp $ */
+/* $Id: ztrans.c,v 1.2 2010/07/10 22:02:42 Arabidopsis Exp $ */
 /* Transparency operators */
 #include "string_.h"
 #include "memory_.h"
@@ -70,7 +64,7 @@ current_float_value(i_ctx_t *i_ctx_p,
 }
 
 static int
-enum_param(const gs_memory_t *mem, const ref *pnref, 
+enum_param(const gs_memory_t *mem, const ref *pnref,
 	   const char *const names[])
 {
     const char *const *p;
@@ -213,6 +207,7 @@ zbegintransparencygroup(i_ctx_t *i_ctx_p)
     os_ptr dop = op - 4;
     gs_transparency_group_params_t params;
     gs_rect bbox;
+    ref *dummy;
     int code;
 
     check_type(*dop, t_dictionary);
@@ -226,7 +221,14 @@ zbegintransparencygroup(i_ctx_t *i_ctx_p)
     code = rect_param(&bbox, op);
     if (code < 0)
 	return code;
-    params.ColorSpace = gs_currentcolorspace(igs);
+    /* If the CS is not given in the transparency group dict, set to NULL   */
+    /* so that the transparency code knows to inherit from the parent layer */
+    if (dict_find_string(dop, "CS", &dummy) <= 0) {
+	params.ColorSpace = NULL;
+    } else {
+	/* the PDF interpreter set the colorspace, so use it */
+	params.ColorSpace = gs_currentcolorspace(igs);
+    }
     code = gs_begin_transparency_group(igs, &params, &bbox);
     if (code < 0)
 	return code;
@@ -250,7 +252,8 @@ zendtransparencygroup(i_ctx_t *i_ctx_p)
     return gs_end_transparency_group(igs);
 }
 
-/* <paramdict> <llx> <lly> <urx> <ury> .begintransparencymaskgroup - */
+/* <cs_set?> <paramdict> <llx> <lly> <urx> <ury> .begintransparencymaskgroup -	*/
+/*             cs_set == false if we are inheriting the colorspace		*/
 static int tf_using_function(floatp, float *, void *);
 static int
 zbegintransparencymaskgroup(i_ctx_t *i_ctx_p)
@@ -273,18 +276,16 @@ zbegintransparencymaskgroup(i_ctx_t *i_ctx_p)
 	return code;
     gs_trans_mask_params_init(&params, code);
     params.replacing = true;
-    if ((code = dict_floats_param(imemory, dop, "Background", 
+    if ((code = dict_floats_param(imemory, dop, "Background",
 		    cs_num_components(gs_currentcolorspace(i_ctx_p->pgs)),
-				  params.Background, NULL)) < 0
-	)
+				  params.Background, NULL)) < 0)
 	return code;
     else if (code > 0)
 	params.Background_components = code;
-    if ((code = dict_floats_param(imemory, dop, "GrayBackground", 
-		    1, &params.GrayBackground, NULL)) < 0
-	)
+    if ((code = dict_floats_param(imemory, dop, "GrayBackground",
+		    1, &params.GrayBackground, NULL)) < 0)
 	return code;
-    if (dict_find_string(dop, "TransferFunction", &pparam) >0) {
+    if (dict_find_string(dop, "TransferFunction", &pparam) > 0) {
 	gs_function_t *pfn = ref_function(pparam);
 
 	if (pfn == 0 || pfn->params.m != 1 || pfn->params.n != 1)
@@ -295,10 +296,16 @@ zbegintransparencymaskgroup(i_ctx_t *i_ctx_p)
     code = rect_param(&bbox, op);
     if (code < 0)
 	return code;
+    /* Is the colorspace set for this mask ? */
+    if (op[-5].value.boolval) {
+		params.ColorSpace = gs_currentcolorspace(igs);
+    } else {
+	params.ColorSpace = NULL;
+    }
     code = gs_begin_transparency_mask(igs, &params, &bbox, false);
     if (code < 0)
 	return code;
-    pop(5);
+    pop(6);
     return code;
 }
 
@@ -309,11 +316,16 @@ zbegintransparencymaskimage(i_ctx_t *i_ctx_p)
     gs_transparency_mask_params_t params;
     gs_rect bbox = { { 0, 0} , { 1, 1} };
     int code;
+    gs_color_space *gray_cs = gs_cspace_new_DeviceGray(imemory);
 
+    if (!gray_cs)
+	return_error(e_VMerror);
+    params.ColorSpace = gray_cs;	/* per PDF spec, Image SMask is alway DeviceGray */
     gs_trans_mask_params_init(&params, TRANSPARENCY_MASK_Luminosity);
     code = gs_begin_transparency_mask(igs, &params, &bbox, true);
     if (code < 0)
 	return code;
+    rc_decrement(gray_cs, "zbegintransparencymaskimage");
     return code;
 }
 
@@ -346,7 +358,7 @@ zendtransparencymask(i_ctx_t *i_ctx_p)
 /* ------ Soft-mask images ------ */
 
 /* <dict> .image3x - */
-static int mask_dict_param(const gs_memory_t *mem, os_ptr, 
+static int mask_dict_param(const gs_memory_t *mem, os_ptr,
 			    image_params *, const char *, int,
 			    gs_image3x_mask_t *);
 static int
@@ -376,10 +388,10 @@ zimage3x(i_ctx_t *i_ctx_p)
      * We have to process the masks in the reverse order, because they
      * insert their DataSource before the one(s) for the DataDict.
      */
-    if ((code = mask_dict_param(imemory, op, &ip_data, 
+    if ((code = mask_dict_param(imemory, op, &ip_data,
 				"ShapeMaskDict", num_components,
 				&image.Shape)) < 0 ||
-	(code = mask_dict_param(imemory, op, &ip_data, 
+	(code = mask_dict_param(imemory, op, &ip_data,
 				"OpacityMaskDict", num_components,
 				&image.Opacity)) < 0
 	)
@@ -387,11 +399,11 @@ zimage3x(i_ctx_t *i_ctx_p)
     return zimage_setup(i_ctx_p, (gs_pixel_image_t *)&image,
 			&ip_data.DataSource[0],
 			image.CombineWithColor, 1);
-}    
+}
 
 /* Get one soft-mask dictionary parameter. */
 static int
-mask_dict_param(const gs_memory_t *mem, os_ptr op, 
+mask_dict_param(const gs_memory_t *mem, os_ptr op,
 image_params *pip_data, const char *dict_name,
 		int num_components, gs_image3x_mask_t *pixm)
 {
@@ -440,7 +452,7 @@ zpushpdf14devicefilter(i_ctx_t *i_ctx_p)
     os_ptr op = osp;
 
     check_type(*op, t_integer);
-    code = gs_push_pdf14trans_device(igs); 
+    code = gs_push_pdf14trans_device(igs);
     if (code < 0)
         return code;
     pop(1);
@@ -452,7 +464,33 @@ zpushpdf14devicefilter(i_ctx_t *i_ctx_p)
 static int
 zpoppdf14devicefilter(i_ctx_t *i_ctx_p)
 {
-    return gs_pop_pdf14trans_device(igs); 
+    return gs_pop_pdf14trans_device(igs);
+}
+
+/* This is used to communicate to the transparency compositor
+   when a q (save extended graphic state) occurs.  Since
+   the softmask is part of the graphic state we need to know
+   this to handle clist processing properly */
+
+static int
+zpushextendedgstate(i_ctx_t *i_ctx_p)
+{
+    int code;
+    code = gs_push_transparency_state(igs);
+    return(code);
+}
+
+/* This is used to communicate to the transparency compositor
+   when a Q (restore extended graphic state) occurs.  Since
+   the softmask is part of the graphic state we need to know
+   this to handle clist processing properly */
+
+static int
+zpopextendedgstate(i_ctx_t *i_ctx_p)
+{
+    int code;
+    code = gs_pop_transparency_state(igs);
+    return(code);
 }
 
 /* ------ Initialization procedure ------ */
@@ -467,6 +505,8 @@ const op_def ztrans1_op_defs[] = {
     {"0.currentshapealpha", zcurrentshapealpha},
     {"1.settextknockout", zsettextknockout},
     {"0.currenttextknockout", zcurrenttextknockout},
+    {"0.pushextendedgstate", zpushextendedgstate},
+    {"0.popextendedgstate", zpopextendedgstate},
     op_def_end(0)
 };
 const op_def ztrans2_op_defs[] = {

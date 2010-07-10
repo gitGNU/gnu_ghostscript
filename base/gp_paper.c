@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gp_paper.c,v 1.1 2009/04/23 23:26:35 Arabidopsis Exp $ */
+/* $Id: gp_paper.c,v 1.2 2010/07/10 22:02:22 Arabidopsis Exp $ */
 /* Standard implementation of gp_defaultpapersize */
 #include "gx.h"
 #include "gp.h"

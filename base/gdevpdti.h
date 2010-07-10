@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdti.h,v 1.1 2009/04/23 23:27:12 Arabidopsis Exp $ */
+/* $Id: gdevpdti.h,v 1.2 2010/07/10 22:02:27 Arabidopsis Exp $ */
 /* Bitmap font interface for pdfwrite */
 
 #ifndef gdevpdti_INCLUDED
@@ -31,6 +25,15 @@
  */
 
 /* ================ Types and structures ================ */
+
+/* Define the state structure for tracking bitmap fonts. */
+/*typedef struct pdf_bitmap_fonts_s pdf_bitmap_fonts_t;*/
+struct pdf_bitmap_fonts_s {
+    pdf_font_resource_t *open_font;  /* current Type 3 synthesized font */
+    bool use_open_font;		/* if false, start new open_font */
+    long bitmap_encoding_id;
+    int max_embedded_code;	/* max Type 3 code used */
+};
 
 #ifndef pdf_bitmap_fonts_DEFINED
 #  define pdf_bitmap_fonts_DEFINED
@@ -51,9 +54,13 @@ void pdf_close_text_page(gx_device_pdf *pdev);
 /* Return the Y offset for a bitmap character image. */
 int pdf_char_image_y_offset(const gx_device_pdf *pdev, int x, int y, int h);
 
+/* Retrieve the x and y offsets for a charproc */
+int pdf_charproc_x_offset(pdf_char_proc_t *pcp);
+int pdf_charproc_y_offset(pdf_char_proc_t *pcp);
+
 /* Begin a CharProc for an embedded (bitmap) font. */
 int pdf_begin_char_proc(gx_device_pdf * pdev, int w, int h, int x_width,
-			int y_offset, gs_id id, pdf_char_proc_t **ppcp,
+			int y_offset, int x_offset, gs_id id, pdf_char_proc_t **ppcp,
 			pdf_stream_position_t * ppos);
 
 /* End a CharProc. */

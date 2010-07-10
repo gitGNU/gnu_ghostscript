@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsline.h,v 1.1 2009/04/23 23:27:23 Arabidopsis Exp $ */
+/* $Id: gsline.h,v 1.2 2010/07/10 22:02:30 Arabidopsis Exp $ */
 /* Line parameter and quality definitions */
 
 #ifndef gsline_INCLUDED
@@ -30,6 +24,9 @@ int gs_setlinewidth(gs_state *, floatp);
 float gs_currentlinewidth(const gs_state *);
 int gs_setlinecap(gs_state *, gs_line_cap);
 gs_line_cap gs_currentlinecap(const gs_state *);
+int gs_setlinestartcap(gs_state *, gs_line_cap);
+int gs_setlineendcap(gs_state *, gs_line_cap);
+int gs_setlinedashcap(gs_state *, gs_line_cap);
 int gs_setlinejoin(gs_state *, gs_line_join);
 gs_line_join gs_currentlinejoin(const gs_state *);
 int gs_setmiterlimit(gs_state *, floatp);

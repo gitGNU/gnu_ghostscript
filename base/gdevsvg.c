@@ -1,23 +1,17 @@
 /* Copyright (C) 2007-2008 Artifex Software, Inc.
    All Rights Reserved.
 
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevsvg.c,v 1.1 2009/04/23 23:26:08 Arabidopsis Exp $ */
+/* $Id: gdevsvg.c,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
 /* SVG (Scalable Vector Graphics) output device */
 
 #include "string_.h"
@@ -124,12 +118,13 @@ static dev_proc_put_params(svg_put_params);
         NULL			/* strip_copy_rop */\
 }
 
-gs_public_st_suffix_add0_final(st_device_svg, gx_device_svg,
+gs_public_st_suffix_string2_final(st_device_svg, gx_device_svg,
                                "gx_device_svg",
-                               device_svg_enum_ptrs, 
+                               device_svg_enum_ptrs,
 			       device_svg_reloc_ptrs,
-                               gx_device_finalize, 
-			       st_device_vector);
+                               gx_device_finalize,
+			       st_device_vector,
+			       strokecolor, fillcolor);
 
 /* The output device is named 'svg' but we're referred to as the
    'svgwrite' device by the build system to avoid conflicts with
@@ -256,6 +251,7 @@ svg_open_device(gx_device *dev)
     svg->linecap = SVG_DEFAULT_LINECAP;
     svg->linejoin = SVG_DEFAULT_LINEJOIN;
     svg->miterlimit = SVG_DEFAULT_MITERLIMIT;
+
     return code;
 }
 
@@ -610,7 +606,7 @@ svg_setfillcolor(gx_device_vector *vdev, const gs_imager_state *pis,
     /* update our state with the new color */
     if (svg->fillcolor)
 	gs_free_string(svg->memory, (byte *)svg->fillcolor, 8,
-	"svg_setfillcolor");
+		"svg_setfillcolor");
     svg->fillcolor = fill;
     /* request a new group element */
     svg->dirty++;
@@ -630,13 +626,13 @@ svg_setstrokecolor(gx_device_vector *vdev, const gs_imager_state *pis,
     stroke = svg_make_color(svg, pdc);
     if (!stroke)
       return gs_rethrow_code(gs_error_VMerror);
-    if (svg->strokecolor && !strcmp(stroke, svg->strokecolor)) 
+    if (svg->strokecolor && !strcmp(stroke, svg->strokecolor))
       return 0; /* not a new color */
 
     /* update our state with the new color */
     if (svg->strokecolor)
 	gs_free_string(svg->memory, (byte *)svg->strokecolor, 8,
-	"svg_setstrokecolor");
+		"svg_setstrokecolor");
     svg->strokecolor = stroke;
     /* request a new group element */
     svg->dirty++;
@@ -845,11 +841,11 @@ svg_endpath(gx_device_vector *vdev, gx_path_type_t type)
 
     /* override the inherited stroke attribute if we're not stroking */
     if (!(type & gx_path_type_stroke) && svg->strokecolor)
-	svg_write(svg, " stroke='none'");
+      svg_write(svg, " stroke='none'");
 
     /* override the inherited fill attribute if we're not filling */
     if (!(type & gx_path_type_fill) && svg->fillcolor)
-	svg_write(svg, " fill='none'");
+      svg_write(svg, " fill='none'");
 
     svg_write(svg, "/>\n");
 

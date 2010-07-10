@@ -1,22 +1,19 @@
 /*
     jbig2dec
-    
+
     Copyright (C) 2002 Artifex Software, Inc.
-    
+
     This software is distributed under license and may not
     be copied, modified or distributed except as expressly
     authorized under the terms of the license contained in
     the file LICENSE in this distribution.
-                                                                                
-    For information on commercial licensing, go to
-    http://www.artifex.com/licensing/ or contact
-    Artifex Software, Inc.,  101 Lucas Valley Road #110,
+
+    For further licensing information refer to http://artifex.com/ or
+    contact Artifex Software, Inc., 7 Mt. Lassen Drive - Suite A-134,
     San Rafael, CA  94903, U.S.A., +1(415)492-9861.
-        
-    $Id: jbig2_priv.h,v 1.5 2007/09/11 15:24:52 Arabidopsis Exp $
-    
-    shared library internals
 */
+
+/* library internals */
 
 typedef uint8_t byte;
 typedef int bool;
@@ -62,7 +59,7 @@ struct _Jbig2Ctx {
   Jbig2Segment **segments;
   int n_segments;	/* index of last segment header parsed */
   int segment_index;    /* index of last segment body parsed */
-  
+
   /* list of decoded pages, including the one in progress,
      currently stored as a contiguous, 0-indexed array. */
   int current_page;
@@ -120,10 +117,10 @@ struct _Jbig2Page {
     Jbig2Image *image;
 };
 
-int jbig2_parse_page_info (Jbig2Ctx *ctx, Jbig2Segment *segment, const uint8_t *segment_data);
-int jbig2_parse_end_of_stripe(Jbig2Ctx *ctx, Jbig2Segment *segment, const uint8_t *segment_data);
-int jbig2_parse_end_of_page(Jbig2Ctx *ctx, Jbig2Segment *segment, const uint8_t *segment_data);
-int jbig2_parse_extension_segment(Jbig2Ctx *ctx, Jbig2Segment *segment, const uint8_t *segment_data);
+int jbig2_page_info (Jbig2Ctx *ctx, Jbig2Segment *segment, const uint8_t *segment_data);
+int jbig2_end_of_stripe(Jbig2Ctx *ctx, Jbig2Segment *segment, const uint8_t *segment_data);
+int jbig2_end_of_page(Jbig2Ctx *ctx, Jbig2Segment *segment, const uint8_t *segment_data);
+int jbig2_extension_segment(Jbig2Ctx *ctx, Jbig2Segment *segment, const uint8_t *segment_data);
 
 typedef enum {
     JBIG2_COMPOSE_OR = 0,
@@ -148,14 +145,20 @@ typedef struct {
 } Jbig2RegionSegmentInfo;
 
 void jbig2_get_region_segment_info(Jbig2RegionSegmentInfo *info, const uint8_t *segment_data);
-int jbig2_parse_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment, const uint8_t *segment_data);
+int jbig2_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment, const uint8_t *segment_data);
 
 /* 7.4 */
 int jbig2_immediate_generic_region(Jbig2Ctx *ctx, Jbig2Segment *segment,
 			       const uint8_t *segment_data);
 int jbig2_refinement_region(Jbig2Ctx *ctx, Jbig2Segment *segment,
                                const byte *segment_data);
-          
+
+int jbig2_pattern_dictionary(Jbig2Ctx *ctx, Jbig2Segment *segment,
+                               const byte *segment_data);
+int jbig2_halftone_region(Jbig2Ctx *ctx, Jbig2Segment *segment,
+                               const byte *segment_data);
+
+
 /* The word stream design is a compromise between simplicity and
    trying to amortize the number of method calls. Each ::get_next_word
    invocation pulls 4 bytes from the stream, packed big-endian into a

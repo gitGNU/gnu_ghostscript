@@ -62,7 +62,7 @@
  */
 
 /*
- * $Id: jpc_enc.h,v 1.4 2007/05/07 11:22:21 Arabidopsis Exp $
+ * $Id: jpc_enc.h,v 1.5 2010/07/10 22:02:55 Arabidopsis Exp $
  */
 
 #ifndef JPC_ENC_H

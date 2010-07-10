@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2008 Artifex Software, Inc.
    All Rights Reserved.
-  
-  This file is part of GNU ghostscript
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gscdef.c,v 1.1 2009/04/23 23:27:20 Arabidopsis Exp $ */
+/* $Id: gscdef.c,v 1.2 2010/07/10 22:02:28 Arabidopsis Exp $ */
 /* Configuration scalars */
 
 #include "std.h"
@@ -37,7 +31,7 @@ const long gs_buildtime = GS_BUILDTIME;
 
 #ifndef GS_COPYRIGHT
 #  define GS_COPYRIGHT\
-	"Copyright (C) 2009 Artifex Software, Inc.  All rights reserved."
+	"Copyright (C) 2010 Artifex Software, Inc.  All rights reserved."
 #endif
 const char *const gs_copyright = GS_COPYRIGHT;
 
@@ -57,14 +51,6 @@ const char *
 gs_program_name(void)
 {
     return gs_product;
-}
-
-/* GS_VERSION must be defined in the Makefile. */
-const long gs_version = GS_VERSION;
-
-long gs_version_number(void)
-{
-	return gs_version;
 }
 
 /* GS_REVISION must be defined in the makefile. */

@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: imain.c,v 1.1 2009/04/23 23:31:53 Arabidopsis Exp $ */
+/* $Id: imain.c,v 1.2 2010/07/10 22:02:44 Arabidopsis Exp $ */
 /* Common support for interpreter front ends */
 #include "malloc_.h"
 #include "memory_.h"
@@ -444,7 +438,7 @@ gs_run_init_file(gs_main_instance * minst, int *pexit_code, ref * perror_object)
     scanner_state state;
 
     gs_main_set_lib_paths(minst);
-	code = gs_main_run_file_open(minst, gs_init_file, &ifile);
+    code = gs_main_run_file_open(minst, gs_init_file, &ifile);
     if (code < 0) {
 	*pexit_code = 255;
 	return code;
@@ -790,8 +784,10 @@ gs_main_finit(gs_main_instance * minst, int exit_status, int code)
         "serverdict /.jobsavelevel get 0 eq {/quit} {/stop} ifelse .systemvar exec",
 	0 , &exit_code, &error_object);
     gp_readline_finit(minst->readline_data);
-    if (gs_debug_c(':'))
+    if (gs_debug_c(':')) {
 	print_resource_usage(minst, &gs_imemory, "Final");
+	dprintf1("%% Exiting instance 0x%p\n", minst);
+    }
     /* Do the equivalent of a restore "past the bottom". */
     /* This will release all memory, close all open files, etc. */
     if (minst->init_done >= 1) {

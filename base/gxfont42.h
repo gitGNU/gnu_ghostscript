@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxfont42.h,v 1.1 2009/04/23 23:26:59 Arabidopsis Exp $ */
+/* $Id: gxfont42.h,v 1.2 2010/07/10 22:02:26 Arabidopsis Exp $ */
 /* Type 42 font data definition */
 
 #ifndef gxfont42_INCLUDED
@@ -43,6 +37,10 @@ typedef struct gs_type42_data_s gs_type42_data;
 typedef struct gs_font_type42_s gs_font_type42;
 #endif
 
+#ifndef gs_matrix_fixed_DEFINED
+#define gs_matrix_fixed_DEFINED
+typedef struct gs_matrix_fixed_s gs_matrix_fixed;
+#endif
 
 typedef enum gs_type42_metrics_options_s {
     gs_type42_metrics_options_WMODE0 = 0,
@@ -182,4 +180,10 @@ int gs_truetype_font_info(gs_font *font, const gs_point *pscale, int members,
 
 uint gs_type42_substitute_glyph_index_vertical(gs_font_type42 *pfont, uint glyph_index,
 					  int WMode, gs_glyph glyph);
+
+/* Get next component in a composite TrueType glyph. */
+void gs_type42_parse_component(const byte **pdata, uint *pflags, gs_matrix_fixed *psmat,
+                               int *pmp /*[2], may be null*/, const gs_font_type42 *pfont,
+                               const gs_matrix_fixed *pmat);
+
 #endif /* gxfont42_INCLUDED */

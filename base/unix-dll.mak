@@ -1,21 +1,16 @@
 #  Copyright (C) 2001-2007 Artifex Software, Inc.
 #  All Rights Reserved.
 #
-#  This file is part of GNU ghostscript
+#  This software is provided AS-IS with no warranty, either express or
+#  implied.
 #
-#  GNU ghostscript is free software; you can redistribute it and/or modify it under
-#  the terms of the version 2 of the GNU General Public License as published by the Free Software
-#  Foundation.
+#  This software is distributed under license and may not be copied, modified
+#  or distributed except as expressly authorized under the terms of that
+#  license.  Refer to licensing information at http://www.artifex.com/
+#  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+#  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-#  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-#  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-#  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License along with
-#  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# $Id: unix-dll.mak,v 1.1 2009/04/23 23:26:01 Arabidopsis Exp $
+# $Id: unix-dll.mak,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $
 # Partial makefile for Unix shared library target
 
 # Useful make commands:
@@ -61,9 +56,9 @@ LDFLAGS_SO=-shared -Wl,-soname=$(GS_SONAME_MAJOR)
 #GS_SONAME=$(GS_SONAME_BASE).$(GS_SOEXT)
 #GS_SONAME_MAJOR=$(GS_SONAME_BASE).$(GS_VERSION_MAJOR).$(GS_SOEXT)
 #GS_SONAME_MAJOR_MINOR=$(GS_SONAME_BASE).$(GS_VERSION_MAJOR).$(GS_VERSION_MINOR).$(GS_SOEXT)
-#LDFLAGS_SO=-dynamiclib -flat-namespace
-#LDFLAGS_SO=-dynamiclib -install-name $(GS_SONAME_MAJOR_MINOR)
-#LDFLAGS_SO=-dynamiclib
+#LDFLAGS_SO=-dynamiclib -flat_namespace
+#LDFLAGS_SO=-dynamiclib -install_name $(GS_SONAME_MAJOR_MINOR)
+#LDFLAGS_SO=-dynamiclib -install_name $(FRAMEWORK_NAME)
 
 GS_SO=$(BINDIR)/$(GS_SONAME)
 GS_SO_MAJOR=$(BINDIR)/$(GS_SONAME_MAJOR) 
@@ -84,11 +79,12 @@ $(GS_SO_MAJOR): $(GS_SO_MAJOR_MINOR)
 # Build the small Ghostscript loaders, with Gtk+ and without
 
 $(GSSOC_XE): $(GS_SO) $(PSSRC)$(SOC_LOADER)
-	$(GLCC) -g -o $(GSSOC_XE) $(PSSRC)dxmainc.c -L$(BINDIR) -l$(GS)
+	$(GLCC) -g -o $(GSSOC_XE) $(PSSRC)dxmainc.c \
+	$(LDFLAGS) -L$(BINDIR) -l$(GS)
 
 $(GSSOX_XE): $(GS_SO) $(PSSRC)$(SOC_LOADER)
 	$(GLCC) -g $(SOC_CFLAGS) -o $(GSSOX_XE) $(PSSRC)$(SOC_LOADER) \
-	-L$(BINDIR) -l$(GS) $(SOC_LIBS)
+	$(LDFLAGS) -L$(BINDIR) -l$(GS) $(SOC_LIBS)
 
 # ------------------------- Recursive make targets ------------------------- #
 
@@ -105,12 +101,18 @@ SODEFS=LDFLAGS='$(LDFLAGS) $(LDFLAGS_SO)'\
 
 # Normal shared object
 so: SODIRS
+	@if test -z "$(MAKE)" -o -z "`$(MAKE) --version 2>&1 | grep GNU`";\
+	  then echo "Warning: this target requires gmake";\
+	fi
 	$(MAKE) $(SODEFS) CFLAGS='$(CFLAGS_STANDARD) $(CFLAGS_SO) $(GCFLAGS) $(XCFLAGS)' prefix=$(prefix) $(GSSOC) $(GSSOX)
 
 # Debug shared object
 # Note that this is in the same directory as the normal shared
 # object, so you will need to use 'make soclean', 'make sodebug'
 sodebug: SODIRS
+	@if test -z "$(MAKE)" -o -z "`$(MAKE) --version 2>&1 | grep GNU`";\
+	  then echo "Warning: this target requires gmake";\
+	fi
 	$(MAKE) $(SODEFS) GENOPT='-DDEBUG' CFLAGS='$(CFLAGS_DEBUG) $(CFLAGS_SO) $(GCFLAGS) $(XCFLAGS)' $(GSSOC) $(GSSOX)
 
 install-so: so

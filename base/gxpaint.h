@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxpaint.h,v 1.1 2009/04/23 23:26:36 Arabidopsis Exp $ */
+/* $Id: gxpaint.h,v 1.2 2010/07/10 22:02:22 Arabidopsis Exp $ */
 /* Internal interface to fill/stroke */
 /* Requires gsropt.h, gxfixed.h, gxpath.h */
 
@@ -54,7 +48,7 @@ typedef struct gx_device_color_s gx_device_color;
 int gx_fill_path(gx_path * ppath, gx_device_color * pdevc, gs_state * pgs,
 		 int rule, fixed adjust_x, fixed adjust_y);
 int gx_stroke_fill(gx_path * ppath, gs_state * pgs);
-int gx_stroke_add(gx_path *ppath, gx_path *to_path, const gs_state * pgs);
+int gx_stroke_add(gx_path *ppath, gx_path *to_path, const gs_state * pgs, bool traditional);
 /*
  * gx_imager_stroke_add needs a device for the sake of absolute-length
  * dots (and for no other reason).
@@ -101,8 +95,6 @@ struct gx_fill_params_s {
     int rule;			/* -1 = winding #, 1 = even/odd */
     gs_fixed_point adjust;
     float flatness;
-    bool fill_zero_width;	/* if true, make zero-width/height */
-    /* rectangles one pixel wide/high */
 };
 
 #define gx_fill_path_only(ppath, dev, pis, params, pdevc, pcpath)\
@@ -115,6 +107,7 @@ typedef struct gx_stroke_params_s gx_stroke_params;
 #endif
 struct gx_stroke_params_s {
     float flatness;
+    bool  traditional;
 };
 
 int gx_stroke_path_only(gx_path * ppath, gx_path * to_path, gx_device * dev,

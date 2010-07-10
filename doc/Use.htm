@@ -3,7 +3,7 @@
 <html>
 <head>
 <title>How to use Ghostscript</title>
-<!-- $Id: Use.htm,v 1.14 2009/04/23 23:32:05 Arabidopsis Exp $ -->
+<!-- $Id: Use.htm,v 1.15 2010/07/10 22:02:52 Arabidopsis Exp $ -->
 <!-- Originally: use.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -521,9 +521,6 @@ program by using the special file name '<code>-</code>' which is interpreted as 
 </blockquote>
 
 <p>
-<em>Ghostscript cannot read PDF files from standard input or a pipe because the PDF language inherently requires random access to the file. Thus '<tt>-</tt>' only works with PostScript documents.</em>
-
-<p>
 When Ghostscript finishes reading from the pipe, it quits rather than
 going into interactive mode.  Because of this, options and files after the '<tt>-</tt>' in the command line will be ignored.
 
@@ -577,8 +574,9 @@ Ghostscript is normally built to interpret both PostScript and PDF files, examin
 
  <dl>
 <dt><code>-dPDFFitPage</code>
-<dd>Rather than selecting a PageSize given by the PDF MediaBox or
-CropBox (see -dUseCropBox), the PDF file will be scaled to fit
+<dd>Rather than selecting a PageSize given by the PDF MediaBox,
+TrimBox (see -dUseTrimBox), or CropBox (see -dUseCropBox),
+the PDF file will be scaled to fit
 the current device page size (usually the default page size).
 <p>
 This is useful to avoid clipping information on a PDF document when
@@ -612,19 +610,19 @@ appropriately for a viewer.
 </dl>
 
 <dl>
-<dt><code>-sPDFPassword=</code><em>password</em>
-<dd>Sets the user or owner password to be used in decoding encrypted
-PDF files.
+<dt><code>-dUseTrimBox</code>
+<dd>Sets the page size to the TrimBox rather than the MediaBox.
+The trim box defines the intended dimensions of the finished page
+after trimming. Some files have a TrimBox that is smaller than the
+MediaBox and may include white space, registration or cutting marks
+outside the CropBox. Using this option simulates appearance of the
+finished printed page.
 </dl>
 
 <dl>
-<dt><code>-dIgnoreTTEncoding</code>
-<dd>
-Force the PDF interpreter to use an encoding specified in the 'cmap' table
-of embedded TrueType fonts and ignore the Encoding dictionary.
-This is a last resort measure for the files that have an incorrect Encoding
-entry for a TrueType font dictionary. This option is known to cause
-regressions and should not be used routinely.
+<dt><code>-sPDFPassword=</code><em>password</em>
+<dd>Sets the user or owner password to be used in decoding encrypted
+PDF files.
 </dl>
 
 <dl>
@@ -825,8 +823,8 @@ file name specifies an absolute path.
 using the name given.  Otherwise it tries directories in this order:
 
 <ol>
-<li>The current directory (unless disabled by the
-<a href="#P-_switch"><code>-P-</code> switch</a>);
+<li>The current directory if enabled by the
+<a href="#P-_switch"><code>-P</code> switch</a>;
 
 <li>The directories specified by <a href="#I_switch"><code>-I</code>
 switches</a> in the command line, if any;
@@ -834,9 +832,12 @@ switches</a> in the command line, if any;
 <li>The directories specified by the <code>GS_LIB</code>
 environment variable, if any;
 
-<li>The directories specified by the
-<code>GS_LIB_DEFAULT</code> macro (if any) in the makefile
-when this executable was built.
+<li>If built with COMPILE_INITS=1 (currently the default build) the files in the
+<code>%rom%Resource/Init/</code> and <code>%rom%lib/</code> file system built
+into the executable ;
+
+<li>The directories specified by the <code>GS_LIB_DEFAULT</code> macro
+(if any) in the makefile when this executable was built.
 </ol>
 
 <p>
@@ -846,21 +847,16 @@ when this executable was built.
 directory or a list of directories separated by a character appropriate for
 the operating system ("<code>:</code>" on Unix systems,
 "<code>,</code>" on VMS systems, and
-"<code>;</code>" on MS Windows systems).  We think that trying
-the current directory first is a very bad idea -- it opens serious security
-loopholes and can lead to very confusing errors if one has more than one
-version of Ghostscript in one's environment -- but when we attempted to
-change it, users insisted that we change it back.  You can disable looking
-in the current directory first by using the
-<a href="#P_switch"><code>-P-</code> switch</a>.
+"<code>;</code>" on MS Windows systems).
+By default, Ghostscript no longer searches the current directory first
+but provides <a href="#P_switch"><code>-P</code> switch</a> for a degree
+of backward compatibility.
 
 <p>
 Note that Ghostscript does not use this file searching algorithm for the
-<code>run</code> or <b><tt>file</tt></b>
-operators: for these operators, it simply opens the file with the name
-given.  To run a file using the searching algorithm, use
-<code>runlibfile</code> instead of
-<code>run</code>.
+<b><tt>run</tt></b> or <b><tt>file</tt></b> operators: for these operators, it
+simply opens the file with the name given.  To run a file using the searching
+algorithm, use <code>runlibfile</code> instead of <code>run</code>.
 
 <h3><a name="PS_resources"></a>Finding PostScript Level 2 resources</h3>
 
@@ -877,12 +873,16 @@ specifies an absolute path. The user may set it as explained in
 
 <p>
 If the user doesn't set the system parameter <code>GenericResourceDir</code>,
-Ghostscript creates a default value for it with
-attaching the string <code>../Resource</code>
-to directory paths explained in 
-<a href="#Finding_files">How Ghostscript finds files</a>,
-except the current directory.
-The first successful combination is used.
+or use the <code>-sGenericResourceDir=</code> command line option, Ghostscript
+creates a default value for it by looking on the directory paths explained in
+<a href="#Finding_files">How Ghostscript finds files</a>, excluding the current directory. 
+The first path with <code>Resource</code> in it is used, including any prefix
+up to the path separator character following the string <code>Resource</code>.
+For example, when COMPILE_INITS=1 (the current default build), if the first path
+is <code>%rom%Resource/Init/</code>, then the <code>GenericResourceDir</code>
+systemparam will be set to <code>%rom%Resource/</code> by default.
+
+
 
 <p>
 If the value of the system parameter <code>GenericResourceDir</code>
@@ -2058,14 +2058,14 @@ for library files.
 <dl>
 <dt><a name="P_switch"></a><code>-P</code>
 <dd>Makes Ghostscript look first in the current directory for library
-files.  This is currently the default.
+files.
 </dl>
 
 <dl>
 <dt><a name="P-_switch"></a><code>-P-</code>
 <dd>Makes Ghostscript <b><em>not</em></b> look first in the current
 directory for library files (unless, of course, the first explicitly
-supplied directory is "<code>.</code>").
+supplied directory is "<code>.</code>"). This is now the default.
 </dl>
 
 <h4><a name="Parameters"></a>Setting parameters</h4>
@@ -2509,9 +2509,8 @@ another program is "driving" Ghostscript.
 <dl>
 <dt><code>-dNOPROMPT</code>
 <dd>Disables the prompt printed by Ghostscript when it expects interactive
-input, as well as the end-of-page prompt (<code>-dNOPAGEPROMPT</code>);
-also disables the implicit <code>flushpage</code> that normally occurs
-each time Ghostscript asks for more input.  This allows piping input
+input, as well as the end-of-page prompt (<code>-dNOPAGEPROMPT</code>).
+This allows piping input
 directly into Ghostscript, as long as the data doesn't refer to
 <code>currentfile</code>.
 </dl>
@@ -2534,6 +2533,11 @@ currently necessary when redirecting device output to standard output.
 To redirect stdout to stderr use <code>-sstdout=%stderr</code>.
 To cancel redirection of stdout use <code>-sstdout=%stdout</code>
 or <code>-sstdout=-</code>.
+<p>
+Note that this redirects PostScript output to %stdout but <b>does not</b>
+change the destination FILE of device output as with <tt>-sOutputFile=-</tt>
+or even <tt>-sOutputFile=%stdout</tt> since devices write directly using
+the stdout FILE * pointer with C function calls such as fwrite or fputs.
 </dl>
 
 <dl>
@@ -3244,6 +3248,8 @@ guide to international paper sizes can be found at
         <td>&nbsp;<td align=right>8.5<td>&nbsp;<td align=right>13.0<td>&nbsp;<td align=right>216<td>&nbsp;<td align=right>330<td>&nbsp;<td align=right>612<td>&nbsp;<td align=right>936<td>&nbsp;<td>European foolscap
 <tr>    <td>halfletter
         <td>&nbsp;<td align=right>5.5<td>&nbsp;<td align=right>8.5<td>&nbsp;<td align=right>140<td>&nbsp;<td align=right>216<td>&nbsp;<td align=right>396<td>&nbsp;<td align=right>612<td>&nbsp;<td>&nbsp;
+<tr>    <td>hagaki
+        <td>&nbsp;<td align=right>3.9<td>&nbsp;<td align=right>5.8<td>&nbsp;<td align=right>100<td>&nbsp;<td align=right>148<td>&nbsp;<td align=right>283<td>&nbsp;<td align=right>420<td>&nbsp;<td>Japanese postcard
 </table>
 
 <p>
@@ -3676,7 +3682,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.64, 3 February 2009
+<small>Ghostscript version 8.71, 10 February 2010
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

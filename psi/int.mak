@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: int.mak,v 1.1 2009/04/23 23:31:33 Arabidopsis Exp $
+# $Id: int.mak,v 1.2 2010/07/10 22:02:42 Arabidopsis Exp $
 # (Platform-independent) makefile for PostScript and PDF language
 # interpreters.
 # Users of this makefile must define the following:
@@ -103,7 +103,7 @@ $(PSOBJ)ialloc.$(OBJ) : $(PSSRC)ialloc.c $(AK) $(memory__h) $(gx_h)\
 # but since all the GC enumeration and relocation routines refer to them,
 # it's too hard to separate them out from the Level 1 base.
 $(PSOBJ)igc.$(OBJ) : $(PSSRC)igc.c $(GH) $(memory__h)\
- $(ierrors_h) $(gsexit_h) $(gsmdebug_h) $(gsstruct_h) $(gsutil_h)\
+ $(ierrors_h) $(gsexit_h) $(gsmdebug_h) $(gsstruct_h)\
  $(iastate_h) $(idict_h) $(igc_h) $(igcstr_h) $(inamedef_h)\
  $(ipacked_h) $(isave_h) $(isstate_h) $(istruct_h) $(opdef_h)
 	$(PSCC) $(PSO_)igc.$(OBJ) $(C_) $(PSSRC)igc.c
@@ -255,7 +255,7 @@ bfont_h=$(PSSRC)bfont.h $(ifont_h)
 icontext_h=$(PSSRC)icontext.h $(gsstype_h) $(icstate_h)
 ifilter_h=$(PSSRC)ifilter.h $(istream_h) $(ivmspace_h)
 igstate_h=$(PSSRC)igstate.h $(gsstate_h) $(gxstate_h) $(imemory_h) $(istruct_h) $(gxcindex_h)
-iscan_h=$(PSSRC)iscan.h $(sa85x_h) $(sstring_h)
+iscan_h=$(PSSRC)iscan.h $(sa85x_h) $(sstring_h) $(inamestr_h)
 sbhc_h=$(PSSRC)sbhc.h $(shc_h)
 zfile_h=$(PSSRC)zfile.h
 # Include files for optional features
@@ -263,7 +263,7 @@ ibnum_h=$(PSSRC)ibnum.h
 zcolor_h=$(PSSRC)zcolor.h
 zcie_h=$(PSSRC)zcie.h
 zicc_h=$(PSSRC)zicc.h
-
+zfrsd_h=$(PSSRC)zfrsd.h
 
 ### Initialization and scanning
 
@@ -458,8 +458,9 @@ $(PSOBJ)zcolor.$(OBJ) : $(PSSRC)zcolor.c $(OP)\
  $(gzstate_h) $(gxdcolor_h) $(gxdevice_h) $(gxdevmem_h) $(gxcmap_h)\
  $(gxcspace_h) $(gxcolor2_h) $(gxpcolor_h)\
  $(idict_h) $(icolor_h) $(idparam_h) $(iname_h) $(iutil_h) $(icsmap_h)\
- $(ifunc_h) $(zht2_h) $(zcolor_h) $(zcie_h) $(zicc_h)
-	$(PSCC) $(PSO_)zcolor.$(OBJ) $(C_) $(PSSRC)zcolor.c
+ $(ifunc_h) $(zht2_h) $(zcolor_h) $(zcie_h) $(zicc_h) $(gscspace_h)\
+ $(zfrsd_h)
+	$(PSCC) $(PSO_)zcolor.$(OBJ) $(C_) $(PSSRC)zcolor.c 
 
 $(PSOBJ)zdevice.$(OBJ) : $(PSSRC)zdevice.c $(OP) $(string__h)\
  $(ialloc_h) $(idict_h) $(igstate_h) $(iname_h) $(interp_h) $(iparam_h) $(ivmspace_h)\
@@ -921,7 +922,7 @@ $(PSOBJ)zfrsd.$(OBJ) : $(PSSRC)zfrsd.c $(OP) $(memory__h)\
  $(gsfname_h) $(gxiodev_h)\
  $(sfilter_h) $(stream_h) $(strimpl_h)\
  $(files_h) $(idict_h) $(idparam_h) $(iname_h) $(istruct_h) $(store_h)\
- $(zfile_h)
+ $(zfile_h) $(zfrsd_h)
 	$(PSCC) $(PSO_)zfrsd.$(OBJ) $(C_) $(PSSRC)zfrsd.c
 
 # ======================== PostScript Level 2 ======================== #
@@ -1455,7 +1456,7 @@ $(PSOBJ)zpcolor.$(OBJ) : $(PSSRC)zpcolor.c $(OP)\
  $(estack_h)\
  $(ialloc_h) $(icremap_h) $(idict_h) $(idparam_h) $(igstate_h)\
  $(ipcolor_h) $(istruct_h)\
- $(store_h) $(gzstate_h) $(memory__h)
+ $(store_h) $(gzstate_h) $(memory__h) $(gdevp14_h)
 	$(PSCC) $(PSO_)zpcolor.$(OBJ) $(C_) $(PSSRC)zpcolor.c
 
 # ---------------- Separation color ---------------- #
@@ -1716,13 +1717,13 @@ $(PSD)pdf.dev : $(INT_MAK) $(ECHOGS_XE)\
  $(PSD)psbase.dev $(GLD)dps2lib.dev $(PSD)dps2read.dev\
  $(PSD)pdffonts.dev $(PSD)psl3.dev $(PSD)pdfread.dev $(PSD)cff.dev\
  $(PSD)fmd5.dev $(PSD)farc4.dev $(PSD)faes.dev\
- $(PSD)ttfont.dev $(PSD)type2.dev $(PSD)icc.dev
+ $(PSD)ttfont.dev $(PSD)type2.dev $(PSD)icc.dev $(PSD)pdfops.dev 
 	$(SETMOD) $(PSD)pdf -include $(PSD)psbase $(GLD)dps2lib
 	$(ADDMOD) $(PSD)pdf -include $(PSD)dps2read $(PSD)pdffonts $(PSD)psl3
 	$(ADDMOD) $(PSD)pdf -include $(GLD)psl2lib $(PSD)pdfread $(PSD)cff
 	$(ADDMOD) $(PSD)pdf -include $(PSD)fmd5 $(PSD)farc4 $(PSD)faes.dev
 	$(ADDMOD) $(PSD)pdf -include $(PSD)ttfont $(PSD)type2
-	$(ADDMOD) $(PSD)pdf -include $(PSD)icc
+	$(ADDMOD) $(PSD)pdf -include $(PSD)icc $(PSD)pdfops
 	$(ADDMOD) $(PSD)pdf -functiontype 4
 	$(ADDMOD) $(PSD)pdf -emulator PDF
 
@@ -1801,43 +1802,37 @@ $(PSD)fapiu.dev : $(INT_MAK) $(ECHOGS_XE)
 
 # FreeType bridge :
 
-FT_LIB=$(FT_ROOT)$(D)objs$(D)freetype214MT_D
-FT_INC=$(I_)$(FT_ROOT)$(D)include$(_I)
+# the top-level makefile should define
+# FT_CFLAGS for the include directive and other switches, and
+# FT_LIBS for the the library link command
 
 wrfont_h=$(stdpre_h) $(PSSRC)wrfont.h
 write_t1_h=$(ifapi_h) $(PSSRC)write_t1.h
 write_t2_h=$(ifapi_h) $(PSSRC)write_t2.h
 
-$(PSD)fapif1.dev : $(INT_MAK) $(ECHOGS_XE) \
- $(FT_LIB)$(FT_LIB_EXT) \
- $(PSOBJ)fapi_ft.$(OBJ) \
+$(PSD)fapif1.dev : $(INT_MAK) $(ECHOGS_XE) $(PSOBJ)fapi_ft.$(OBJ) \
  $(PSOBJ)write_t1.$(OBJ) $(PSOBJ)write_t2.$(OBJ) $(PSOBJ)wrfont.$(OBJ)
 	$(SETMOD) $(PSD)fapif1 $(PSOBJ)fapi_ft.$(OBJ) $(PSOBJ)write_t1.$(OBJ)
 	$(ADDMOD) $(PSD)fapif1 $(PSOBJ)write_t2.$(OBJ) $(PSOBJ)wrfont.$(OBJ)
 	$(ADDMOD) $(PSD)fapif1 -plugin fapi_ft
-	$(ADDMOD) $(PSD)fapif1 -link $(FT_LIB)$(FT_LIB_EXT)
+	$(ADDMOD) $(PSD)fapif1 -link $(FT_LIBS)
 
 $(PSOBJ)fapi_ft.$(OBJ) : $(PSSRC)fapi_ft.c $(AK)\
  $(stdio__h) $(math__h) $(ifapi_h) $(gserror_h)\
- $(FT_ROOT)$(D)include$(D)freetype$(D)freetype.h\
- $(FT_ROOT)$(D)include$(D)freetype$(D)ftincrem.h\
- $(FT_ROOT)$(D)include$(D)freetype$(D)ftglyph.h\
- $(FT_ROOT)$(D)include$(D)freetype$(D)ftoutln.h\
- $(FT_ROOT)$(D)include$(D)freetype$(D)fttrigon.h\
  $(write_t1_h) $(write_t2_h)
-	$(PSCC) $(FT_CFLAGS) $(FT_INC) $(PSO_)fapi_ft.$(OBJ) $(C_) $(PSSRC)fapi_ft.c
+	$(PSCC) $(FT_CFLAGS) $(PSO_)fapi_ft.$(OBJ) $(C_) $(PSSRC)fapi_ft.c
 
 $(PSOBJ)write_t1.$(OBJ) : $(PSSRC)write_t1.c $(AK)\
  $(wrfont_h) $(write_t1_h) 
-	$(PSCC) $(FT_CFLAGS) $(FT_INC) $(PSO_)write_t1.$(OBJ) $(C_) $(PSSRC)write_t1.c
+	$(PSCC) $(FT_CFLAGS) $(PSO_)write_t1.$(OBJ) $(C_) $(PSSRC)write_t1.c
 
 $(PSOBJ)write_t2.$(OBJ) : $(PSSRC)write_t2.c $(AK)\
- $(wrfont_h) $(write_t2_h) $(stdio_h)
-	$(PSCC) $(FT_CFLAGS) $(FT_INC) $(PSO_)write_t2.$(OBJ) $(C_) $(PSSRC)write_t2.c
+ $(wrfont_h) $(write_t2_h) $(ghost_h) $(gxfont_h) $(gxfont1_h)
+	$(PSCC) $(FT_CFLAGS) $(PSO_)write_t2.$(OBJ) $(C_) $(PSSRC)write_t2.c
 
 $(PSOBJ)wrfont.$(OBJ) : $(PSSRC)wrfont.c $(AK)\
  $(wrfont_h) $(stdio_h)
-	$(PSCC) $(FT_CFLAGS) $(FT_INC) $(PSO_)wrfont.$(OBJ) $(C_) $(PSSRC)wrfont.c
+	$(PSCC) $(FT_CFLAGS) $(PSO_)wrfont.$(OBJ) $(C_) $(PSSRC)wrfont.c
 
 # stub for FreeType bridge :
 
@@ -1850,6 +1845,17 @@ $(PSD)fapif.dev : $(INT_MAK) $(ECHOGS_XE)
 $(PSOBJ)zncdummy.$(OBJ) : $(PSSRC)zncdummy.c $(OP) $(GX) $(math_h)\
   $(memory__h) $(gscdefs_h) $(gsnamecl_h) $(malloc__h) $(gsncdummy_h)
 	$(PSCC) $(PSO_)zncdummy.$(OBJ) $(C_) $(PSSRC)zncdummy.c
+
+# ---------------- Custom operators for PDF interpreter ---------------- #
+
+zpdfops_=$(PSOBJ)zpdfops.$(OBJ)
+$(PSD)pdfops.dev : $(INT_MAK) $(ECHOGS_XE) $(zpdfops_)
+	$(SETMOD) $(PSD)pdfops $(zpdfops_)
+	$(ADDMOD) $(PSD)pdfops -oper zpdfops
+
+$(PSOBJ)zpdfops.$(OBJ) : $(PSSRC)zpdfops.c $(OP)\
+ $(igstate_h) $(istack_h) $(iutil_h) $(gspath_h) $(math__h)
+	$(PSCC) $(PSO_)zpdfops.$(OBJ) $(C_) $(PSSRC)zpdfops.c
 
 # ================ Dependencies for auxiliary programs ================ #
 

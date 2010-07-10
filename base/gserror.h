@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2008 Artifex Software, Inc.
    All Rights Reserved.
-  
-  This file is part of GNU ghostscript
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gserror.h,v 1.1 2009/04/23 23:25:54 Arabidopsis Exp $ */
+/* $Id: gserror.h,v 1.2 2010/07/10 22:02:17 Arabidopsis Exp $ */
 /* Error return macros */
 
 #ifndef gserror_INCLUDED
@@ -44,7 +38,7 @@ int gs_log_error(int, const char *, int);
 
 /*
  * Error reporting macros.
- * 
+ *
  */
 
 #ifndef __printflike
@@ -63,10 +57,10 @@ int gs_throw_imp(const char *func, const char *file, int line,
 
 
 
-/* Use throw at origin of error 
+/* Use throw at origin of error
 */
 #define gs_throw_code(code) \
-    gs_throw((code), gs_errstr((code)))
+    gs_throw1((code), "%s", gs_errstr((code)))
 
 #define gs_throw(code, fmt) \
     gs_throw_imp(__func__, __FILE__, __LINE__, 0, code, fmt)
@@ -90,10 +84,10 @@ int gs_throw_imp(const char *func, const char *file, int line,
     gs_throw_imp(__func__, __FILE__, __LINE__, 0, code, fmt, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
 
 
-/* Bubble the code up the stack 
+/* Bubble the code up the stack
 */
 #define gs_rethrow_code(code) \
-    gs_rethrow((code), gs_errstr((code)))
+    gs_rethrow1((code), "%s", gs_errstr((code)))
 
 #define gs_rethrow(code, fmt) \
     gs_throw_imp(__func__, __FILE__, __LINE__, 1, code, fmt)
@@ -119,7 +113,7 @@ int gs_throw_imp(const char *func, const char *file, int line,
 
 
 /* This will cause trouble, as it implies you are fixing an error
- * the system will spew messages 
+ * the system will spew messages
  */
 #define gs_catch(code, fmt) \
     gs_throw_imp(__func__, __FILE__, __LINE__, 2, code, fmt)

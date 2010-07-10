@@ -1,5 +1,5 @@
 /*
- * "$Id: gdevcups.c,v 1.2 2009/04/23 23:31:59 Arabidopsis Exp $"
+ * "$Id: gdevcups.c,v 1.3 2010/07/10 22:02:49 Arabidopsis Exp $"
  *
  *   GNU Ghostscript raster output driver for the Common UNIX Printing
  *   System (CUPS).
@@ -252,9 +252,7 @@ private gx_device_procs	cups_procs =
    NULL,				/* image_data */
    NULL,				/* end_image */
    NULL,				/* strip_tile_rectangle */
-   NULL					/* strip_copy_rop */
-#ifdef dev_t_proc_encode_color
-   ,
+   NULL,				/* strip_copy_rop */
    NULL,				/* get_clipping_box */
    NULL,				/* begin_typed_image */
    NULL,				/* get_bits_rectangle */
@@ -268,11 +266,26 @@ private gx_device_procs	cups_procs =
    NULL,				/* begin_transparency_mask */
    NULL,				/* end_transparency_mask */
    NULL,				/* discard_transparency_layer */
+#ifdef dev_t_proc_encode_color
    cups_get_color_mapping_procs,
-   NULL,				/* get_color_comp_index */
+   gx_error_get_color_comp_index,	/* Dummy to avoid segfault */
    cups_encode_color,
-   cups_decode_color
+   cups_decode_color,
+#else
+   NULL,                                /* get_color_mapping_procs */
+   NULL,                                /* get_color_comp_index */
+   NULL,                                /* encode_color */
+   NULL,                                /* decode_color */
 #endif /* dev_t_proc_encode_color */
+   NULL,				/* pattern_manage */
+   NULL,				/* fill_rectangle_hl_color */
+   NULL,				/* include_color_space */
+   NULL,				/* fill_linear_color_scanline */
+   NULL,				/* fill_linear_color_trapezoid */
+   NULL,				/* fill_linear_color_triangle */
+   NULL,				/* update_spot_equivalent_colors */
+   NULL,				/* ret_devn_params */
+   NULL 				/* fillpage */
 };
 
 #define prn_device_body_copies(dtype, procs, dname, w10, h10, xdpi, ydpi, lo, to, lm, bm, rm, tm, ncomp, depth, mg, mc, dg, dc, print_pages)\
@@ -365,9 +378,10 @@ gx_device_cups	gs_cups_device =
                                         /* cupsString */
     "",                                 /* cupsMarkerType */
     "",                                 /* cupsRenderingIntent */
-    "Letter"                            /* cupsPageSizeName */
+    ""                                  /* cupsPageSizeName */
 #endif /* CUPS_RASTER_SYNCv1 */
-  }
+  },
+  0                                     /* landscape */
 };
 
 /*
@@ -413,7 +427,6 @@ static unsigned char	cupsRevLower1[16] =
 			  0x00, 0x40, 0x80, 0xc0, 0x10, 0x50, 0x90, 0xd0,
 			  0x20, 0x60, 0xa0, 0xe0, 0x30, 0x70, 0xb0, 0xf0
 			};
-
 
 /*
  * Local functions...
@@ -605,54 +618,25 @@ cups_get_matrix(gx_device *pdev,	/* I - Device info */
   * Set the transform matrix...
   */
 
-  dprintf1("DEBUG2: cups->header.Duplex = %d\n", cups->header.Duplex);
-  dprintf1("DEBUG2: cups->page = %d\n", cups->page);
-
-  if (cupsPPD)
-  {
-    dprintf1("DEBUG2: cupsPPD = %p\n", cupsPPD);
-    dprintf1("DEBUG2: cupsPPD->flip_duplex = %d\n", cupsPPD->flip_duplex);
-  }
-
   if (cups->landscape)
   {
    /*
     * Do landscape orientation...
     */
-
-    if (cups->header.Duplex && !cups->header.Tumble &&
-	cupsPPD && cupsPPD->flip_duplex && !(cups->page & 1))
-    {
-      pmat->xx = 0.0;
-      pmat->xy = (float)cups->header.HWResolution[0] / 72.0;
-      pmat->yx = -(float)cups->header.HWResolution[1] / 72.0;
-      pmat->yy = 0.0;
-      pmat->tx = -(float)cups->header.HWResolution[0] * pdev->HWMargins[2] / 72.0;
-      pmat->ty = (float)cups->header.HWResolution[1] *
-                 ((float)cups->header.PageSize[0] - pdev->HWMargins[3]) / 72.0;
-    }
-    else
-    {
-      pmat->xx = 0.0;
-      pmat->xy = (float)cups->header.HWResolution[0] / 72.0;
-      pmat->yx = (float)cups->header.HWResolution[1] / 72.0;
-      pmat->yy = 0.0;
-      pmat->tx = -(float)cups->header.HWResolution[0] * pdev->HWMargins[0] / 72.0;
-      pmat->ty = -(float)cups->header.HWResolution[1] * pdev->HWMargins[1] / 72.0;
-    }
-  }
-  else if (cups->header.Duplex && !cups->header.Tumble &&
-           cupsPPD && cupsPPD->flip_duplex && !(cups->page & 1))
-  {
-    pmat->xx = (float)cups->header.HWResolution[0] / 72.0;
-    pmat->xy = 0.0;
-    pmat->yx = 0.0;
-    pmat->yy = (float)cups->header.HWResolution[1] / 72.0;
-    pmat->tx = -(float)cups->header.HWResolution[0] * pdev->HWMargins[2] / 72.0;
-    pmat->ty = -(float)cups->header.HWResolution[1] * pdev->HWMargins[3] / 72.0;
+    dprintf("DEBUG2: Landscape matrix: XX=0 XY=+1 YX=+1 YY=0\n");
+    pmat->xx = 0.0;
+    pmat->xy = (float)cups->header.HWResolution[1] / 72.0;
+    pmat->yx = (float)cups->header.HWResolution[0] / 72.0;
+    pmat->yy = 0.0;
+    pmat->tx = -(float)cups->header.HWResolution[0] * pdev->HWMargins[1] / 72.0;
+    pmat->ty = -(float)cups->header.HWResolution[1] * pdev->HWMargins[0] / 72.0;
   }
   else
   {
+   /*
+    * Do portrait orientation...
+    */
+    dprintf("DEBUG2: Portrait matrix: XX=+1 XY=0 YX=0 YY=-1\n");
     pmat->xx = (float)cups->header.HWResolution[0] / 72.0;
     pmat->xy = 0.0;
     pmat->yx = 0.0;
@@ -991,7 +975,7 @@ cups_map_cmyk(gx_device *pdev,		/* I - Device info */
 	      frac      k,		/* I - Black value */
 	      frac      *out)		/* O - Device colors */
 {
-  int	c0, c1, c2;			/* Temporary color values */
+  int	c0, c1, c2, c3;			/* Temporary color values */
   float	rr, rg, rb,			/* Real RGB colors */
 	ciex, ciey, ciez,		/* CIE XYZ colors */
 	ciey_yn,			/* Normalized luminance */
@@ -1010,44 +994,56 @@ cups_map_cmyk(gx_device *pdev,		/* I - Device info */
   switch (cups->header.cupsColorSpace)
   {
     case CUPS_CSPACE_W :
-        c0 = frac_1 - (c * 31 + m * 61 + y * 8) / 100 - k;
-
+        c0 = (c * 31 + m * 61 + y * 8) / 100 + k;
+	
 	if (c0 < 0)
-	  out[0] = 0;
+	  c0 = 0;
 	else if (c0 > frac_1)
-	  out[0] = (frac)cupsDensity[frac_1];
-	else
-	  out[0] = (frac)cupsDensity[c0];
+	  c0 = frac_1;
+	out[0] = frac_1 - (frac)cupsDensity[c0];
         break;
 
     case CUPS_CSPACE_RGBA :
         out[3] = frac_1;
 
     case CUPS_CSPACE_RGB :
-        c0 = frac_1 - c - k;
-	c1 = frac_1 - m - k;
-	c2 = frac_1 - y - k;
+    case CUPS_CSPACE_RGBW :
+        if (cups->header.cupsColorSpace == CUPS_CSPACE_RGBW) {
+	  c0 = c;
+	  c1 = m;
+	  c2 = y;
+	  c3 = k;
+	} else {
+	  c0 = c + k;
+	  c1 = m + k;
+	  c2 = y + k;
+	}
 
         if (c0 < 0)
-	  out[0] = 0;
+	  c0 = 0;
 	else if (c0 > frac_1)
-	  out[0] = (frac)cupsDensity[frac_1];
-	else
-	  out[0] = (frac)cupsDensity[c0];
+	  c0 = frac_1;
+	out[0] = frac_1 - (frac)cupsDensity[c0];
 
         if (c1 < 0)
-	  out[1] = 0;
+	  c1 = 0;
 	else if (c1 > frac_1)
-	  out[1] = (frac)cupsDensity[frac_1];
-	else
-	  out[1] = (frac)cupsDensity[c1];
+	  c1 = frac_1;
+	out[1] = frac_1 - (frac)cupsDensity[c1];
 
         if (c2 < 0)
-	  out[2] = 0;
+	  c2 = 0;
 	else if (c2 > frac_1)
-	  out[2] = (frac)cupsDensity[frac_1];
-	else
-	  out[2] = (frac)cupsDensity[c2];
+	  c2 = frac_1;
+	out[2] = frac_1 - (frac)cupsDensity[c2];
+
+        if (cups->header.cupsColorSpace == CUPS_CSPACE_RGBW) {
+	  if (c3 < 0)
+	    c3 = 0;
+	  else if (c3 > frac_1)
+	    c3 = frac_1;
+	  out[3] = frac_1 - (frac)cupsDensity[c3];
+	}
         break;
 
     default :
@@ -1116,11 +1112,6 @@ cups_map_cmyk(gx_device *pdev,		/* I - Device info */
 	  out[2] = (frac)cupsDensity[c2];
         break;
 
-    case CUPS_CSPACE_RGBW :
-        c = frac_1 - c;
-        m = frac_1 - m;
-        y = frac_1 - y;
-        k = frac_1 - k;
     case CUPS_CSPACE_CMYK :
         if (c < 0)
 	  out[0] = 0;
@@ -1556,14 +1547,16 @@ cups_map_rgb(gx_device             *pdev,
 private gx_color_index			/* O - Color index */
 cups_map_cmyk_color(gx_device      *pdev,
 					/* I - Device info */
-                    gx_color_value c,	/* I - Cyan value */
-                    gx_color_value m,	/* I - Magenta value */
-                    gx_color_value y,	/* I - Yellow value */
-		    gx_color_value k)	/* I - Black value */
+                    const gx_color_value cv[4])/* I - CMYK color values */
 {
   gx_color_index	i;		/* Temporary index */
+  gx_color_value	c, m, y, k;
   gx_color_value	ic, im, iy, ik;	/* Integral CMYK values */
 
+  c = cv[0];
+  m = cv[1];
+  y = cv[2];
+  k = cv[3];
 
 #ifdef DEBUG
   dprintf5("DEBUG2: cups_map_cmyk_color(%p, %d, %d, %d, %d)\n", pdev,
@@ -1722,7 +1715,7 @@ cups_map_color_rgb(gx_device      *pdev,/* I - Device info */
 					/* O - RGB values */
 {
   unsigned char		c0, c1, c2, c3;	/* Color index components */
-  gx_color_value	k, divk;	/* Black & divisor */
+  gx_color_value	c, m, y, k, divk; /* Colors, Black & divisor */
 
 
 #ifdef DEBUG
@@ -1966,11 +1959,10 @@ cups_map_color_rgb(gx_device      *pdev,/* I - Device info */
 
 private gx_color_index			/* O - Color index */
 cups_map_rgb_color(gx_device      *pdev,/* I - Device info */
-                   gx_color_value r,	/* I - Red value */
-                   gx_color_value g,	/* I - Green value */
-                   gx_color_value b)	/* I - Blue value */
+                   const gx_color_value cv[3])/* I - RGB color values */
 {
   gx_color_index	i;		/* Temporary index */
+  gx_color_value        r, g, b;
   gx_color_value	ic, im, iy, ik;	/* Integral CMYK values */
   gx_color_value	mk;		/* Maximum K value */
   int			tc, tm, ty;	/* Temporary color values */
@@ -1981,6 +1973,9 @@ cups_map_rgb_color(gx_device      *pdev,/* I - Device info */
 			ciel, ciea, cieb;
 					/* CIE Lab colors */
 
+  r = cv[0];
+  g = cv[1];
+  b = cv[2];
 
 #ifdef DEBUG
   dprintf4("DEBUG2: cups_map_rgb_color(%p, %d, %d, %d)\n", pdev, r, g, b);
@@ -2708,8 +2703,16 @@ cups_put_params(gx_device     *pdev,	/* I - Device info */
   int			color_set;	/* Were the color attrs set? */
   gdev_prn_space_params	sp;		/* Space parameter data */
   int			width,		/* New width of page */
-			height;		/* New height of page */
-
+                        height;		/* New height of page */
+  static int            width_old = 0,  /* Previous width */
+                        height_old = 0; /* Previous height */
+  ppd_attr_t            *backside = NULL,
+                        *backsiderequiresflippedmargins = NULL;
+  float                 swap;
+  int                   xflip = 0,
+                        yflip = 0;
+  int                   found = 0;
+  static int            lastpage = 0;
 
   dprintf2("DEBUG2: cups_put_params(%p, %p)\n", pdev, plist);
 
@@ -2792,7 +2795,7 @@ cups_put_params(gx_device     *pdev,	/* I - Device info */
       dprintf1("DEBUG: Setting %s to zero\n", sname); \
       for (i = 0; i < count; i ++) \
 	cups->header.name[i] = 0; \
-  } \
+    } \
   } \
   else if (code == 0) \
   { \
@@ -2808,6 +2811,14 @@ cups_put_params(gx_device     *pdev,	/* I - Device info */
   margins_set = param_read_float_array(plist, "Margins", &arrayval) == 0;
   color_set   = param_read_int(plist, "cupsColorSpace", &intval) == 0 ||
                 param_read_int(plist, "cupsBitsPerColor", &intval) == 0;
+  /* We also recompute page size and margins if we simply get onto a new
+     page without necessarily having a page size change in the PostScript
+     code, as for some printers margins have to flipped on the back sides of
+     the sheets (even pages) when printing duplex */
+  if (cups->page != lastpage) {
+    size_set = 1;
+    lastpage = cups->page;
+  }
 
   stringoption(MediaClass, "MediaClass")
   stringoption(MediaColor, "MediaColor")
@@ -2921,6 +2932,98 @@ cups_put_params(gx_device     *pdev,	/* I - Device info */
 
     if (cupsPPD != NULL)
     {
+      dprintf1("DEBUG2: cups->header.Duplex = %d\n", cups->header.Duplex);
+      dprintf1("DEBUG2: cups->header.Tumble = %d\n", cups->header.Tumble);
+      dprintf1("DEBUG2: cups->page = %d\n", cups->page);
+      dprintf1("DEBUG2: cupsPPD = %p\n", cupsPPD);
+
+      backside = ppdFindAttr(cupsPPD, "cupsBackSide", NULL); 
+      if (backside) {
+	dprintf1("DEBUG2: cupsBackSide = %s\n", backside->value);
+	cupsPPD->flip_duplex = 0;
+      }
+      dprintf1("DEBUG2: cupsPPD->flip_duplex = %d\n", cupsPPD->flip_duplex);
+
+      backsiderequiresflippedmargins =
+	ppdFindAttr(cupsPPD, "APDuplexRequiresFlippedMargin", NULL);
+      if (backsiderequiresflippedmargins)
+	dprintf1("DEBUG2: APDuplexRequiresFlippedMargin = %s\n",
+		 backsiderequiresflippedmargins->value);
+
+      if (cups->header.Duplex &&
+	  (cups->header.Tumble &&
+	   (backside && !strcasecmp(backside->value, "Flipped"))) &&
+	  !(cups->page & 1))
+      {
+	xflip = 1;
+	if (backsiderequiresflippedmargins &&
+	    !strcasecmp(backsiderequiresflippedmargins->value, "False")) {
+	  dprintf("DEBUG2: (1) Flip: X=1 Y=0\n");
+	  yflip = 0;
+	} else {
+	  dprintf("DEBUG2: (1) Flip: X=1 Y=1\n");
+	  yflip = 1;
+	}
+      }
+      else if (cups->header.Duplex &&
+	       (!cups->header.Tumble &&
+		(backside && !strcasecmp(backside->value, "Flipped"))) &&
+	       !(cups->page & 1))
+      {
+	xflip = 0;
+	if (backsiderequiresflippedmargins &&
+	    !strcasecmp(backsiderequiresflippedmargins->value, "False")) {
+	  dprintf("DEBUG2: (2) Flip: X=0 Y=1\n");
+	  yflip = 1;
+	} else {
+	  dprintf("DEBUG2: (2) Flip: X=0 Y=0\n");
+	  yflip = 0;
+	}
+      }
+      else if (cups->header.Duplex &&
+	       ((!cups->header.Tumble &&
+		 (cupsPPD->flip_duplex ||
+		  (backside && !strcasecmp(backside->value, "Rotated")))) ||
+		(cups->header.Tumble &&
+		 (backside && !strcasecmp(backside->value, "ManualTumble")))) &&
+	       !(cups->page & 1))
+      { 
+	xflip = 1;
+	if (backsiderequiresflippedmargins &&
+	    !strcasecmp(backsiderequiresflippedmargins->value, "True")) {
+	  dprintf("DEBUG2: (3) Flip: X=1 Y=0\n");
+	  yflip = 0;
+	} else {
+	  dprintf("DEBUG2: (3) Flip: X=1 Y=1\n");
+	  yflip = 1;
+	}
+      }
+      else
+      {
+	dprintf("DEBUG2: (4) Flip: X=0 Y=0\n");
+	xflip = 0;
+	yflip = 0;
+      }
+
+#ifdef CUPS_RASTER_SYNCv1
+     /*
+      * Chack whether cupsPageSizeName has a valid value
+      */
+
+      if (strlen(cups->header.cupsPageSizeName) != 0) {
+	found = 0;
+	for (i = cupsPPD->num_sizes, size = cupsPPD->sizes;
+	     i > 0;
+	     i --, size ++)
+	  if (strcasecmp(cups->header.cupsPageSizeName, size->name) == 0) {
+	    found = 1;
+	    break;
+	  }
+	if (found == 0) cups->header.cupsPageSizeName[0] = '\0';
+      }
+      dprintf1("DEBUG2: cups->header.cupsPageSizeName = %s\n", cups->header.cupsPageSizeName);
+#endif
+
      /*
       * Find the matching page size...
       */
@@ -2930,9 +3033,24 @@ cups_put_params(gx_device     *pdev,	/* I - Device info */
            i --, size ++)
 	if (fabs(cups->MediaSize[1] - size->length) < 5.0 &&
             fabs(cups->MediaSize[0] - size->width) < 5.0 &&
+#ifdef CUPS_RASTER_SYNCv1
+	    ((strlen(cups->header.cupsPageSizeName) == 0) ||
+	     (strcasecmp(cups->header.cupsPageSizeName, size->name) == 0)) &&
+#endif
+	    /* We check whether all 4 margins match with the margin info
+	       of the page size in the PPD. Here we check also for swapped
+	       left/right and top/bottom margins as the cups->HWMargins
+	       info can be from the previous page and there the margins
+	       can be swapped due to duplex printing requirements */
 	    (!margins_set ||
-	     (fabs(cups->HWMargins[0] - size->left) < 1.0 &&
-	      fabs(cups->HWMargins[1] - size->bottom) < 1.0)))
+	     (((fabs(cups->HWMargins[0] - size->left) < 1.0 &&
+		fabs(cups->HWMargins[2] - size->width + size->right) < 1.0) ||
+	       (fabs(cups->HWMargins[0] - size->width + size->right) < 1.0 &&
+		fabs(cups->HWMargins[2] - size->left) < 1.0)) &&
+	      ((fabs(cups->HWMargins[1] - size->bottom) < 1.0 &&
+		fabs(cups->HWMargins[3] - size->length + size->top) < 1.0) ||
+	       (fabs(cups->HWMargins[1] - size->length + size->top) < 1.0 &&
+		fabs(cups->HWMargins[3] - size->bottom) < 1.0)))))
 	  break;
 
       if (i > 0)
@@ -2949,6 +3067,14 @@ cups_put_params(gx_device     *pdev,	/* I - Device info */
 	margins[1] = size->bottom / 72.0;
 	margins[2] = (size->width - size->right) / 72.0;
 	margins[3] = (size->length - size->top) / 72.0;
+	if (xflip == 1)
+	{
+	  swap = margins[0]; margins[0] = margins[2]; margins[2] = swap;
+	}
+	if (yflip == 1)
+	{
+	  swap = margins[1]; margins[1] = margins[3]; margins[3] = swap;
+	}
       }
       else
       {
@@ -2962,9 +3088,24 @@ cups_put_params(gx_device     *pdev,	/* I - Device info */
              i --, size ++)
 	  if (fabs(cups->MediaSize[0] - size->length) < 5.0 &&
               fabs(cups->MediaSize[1] - size->width) < 5.0 &&
+#ifdef CUPS_RASTER_SYNCv1
+	      ((strlen(cups->header.cupsPageSizeName) == 0) ||
+	       (strcasecmp(cups->header.cupsPageSizeName, size->name) == 0)) &&
+#endif
+	      /* We check whether all 4 margins match with the margin info
+		 of the page size in the PPD. Here we check also for swapped
+		 left/right and top/bottom margins as the cups->HWMargins
+		 info can be from the previous page and there the margins
+		 can be swapped due to duplex printing requirements */
 	      (!margins_set ||
-	       (fabs(cups->HWMargins[0] - size->left) < 1.0 &&
-		fabs(cups->HWMargins[1] - size->bottom) < 1.0)))
+	       (((fabs(cups->HWMargins[1] - size->left) < 1.0 &&
+		  fabs(cups->HWMargins[3] - size->width + size->right) < 1.0) ||
+		 (fabs(cups->HWMargins[1] - size->width + size->right) < 1.0 &&
+		  fabs(cups->HWMargins[3] - size->left) < 1.0)) &&
+		((fabs(cups->HWMargins[0] - size->bottom) < 1.0 &&
+		  fabs(cups->HWMargins[2] - size->length + size->top) < 1.0) ||
+		 (fabs(cups->HWMargins[0] - size->length + size->top) < 1.0 &&
+		  fabs(cups->HWMargins[2] - size->bottom) < 1.0)))))
 	    break;
 
 	if (i > 0)
@@ -2979,10 +3120,18 @@ cups_put_params(gx_device     *pdev,	/* I - Device info */
 
           cups->landscape = 1;
 
-	  margins[0] = size->left / 72.0;
-	  margins[1] = size->bottom / 72.0;
-	  margins[2] = (size->width - size->right) / 72.0;
-	  margins[3] = (size->length - size->top) / 72.0;
+	  margins[0] = (size->length - size->top) / 72.0;
+	  margins[1] = size->left / 72.0;
+	  margins[2] = size->bottom / 72.0;
+	  margins[3] = (size->width - size->right) / 72.0;
+	  if (xflip == 1)
+	  {
+	    swap = margins[1]; margins[1] = margins[3]; margins[3] = swap;
+	  }
+	  if (yflip == 1)
+	  {
+	    swap = margins[0]; margins[0] = margins[2]; margins[2] = swap;
+	  }
 	}
 	else
 	{
@@ -2994,6 +3143,14 @@ cups_put_params(gx_device     *pdev,	/* I - Device info */
 
 	  for (i = 0; i < 4; i ++)
             margins[i] = cupsPPD->custom_margins[i] / 72.0;
+	  if (xflip == 1)
+	  {
+	    swap = margins[0]; margins[0] = margins[2]; margins[2] = swap;
+	  }
+	  if (yflip == 1)
+	  {
+	    swap = margins[1]; margins[1] = margins[3]; margins[3] = swap;
+	  }
 	}
       }
 
@@ -3020,9 +3177,9 @@ cups_put_params(gx_device     *pdev,	/* I - Device info */
   cups->header.cupsPageSize[1] = pdev->MediaSize[1];
 
   cups->header.cupsImagingBBox[0] = pdev->HWMargins[0];
-  cups->header.cupsImagingBBox[1] = pdev->HWMargins[3];
+  cups->header.cupsImagingBBox[1] = pdev->HWMargins[1];
   cups->header.cupsImagingBBox[2] = pdev->MediaSize[0] - pdev->HWMargins[2];
-  cups->header.cupsImagingBBox[3] = pdev->MediaSize[1] - pdev->HWMargins[1];
+  cups->header.cupsImagingBBox[3] = pdev->MediaSize[1] - pdev->HWMargins[3];
 
   if ((sf = cups->header.cupsBorderlessScalingFactor) < 1.0)
     sf = 1.0;
@@ -3034,11 +3191,11 @@ cups_put_params(gx_device     *pdev,	/* I - Device info */
   cups->header.PageSize[1] = pdev->MediaSize[1] * sf;
 
   cups->header.ImagingBoundingBox[0] = pdev->HWMargins[0] * sf;
-  cups->header.ImagingBoundingBox[1] = pdev->HWMargins[3] * sf;
+  cups->header.ImagingBoundingBox[1] = pdev->HWMargins[1] * sf;
   cups->header.ImagingBoundingBox[2] = (pdev->MediaSize[0] -
                                         pdev->HWMargins[2]) * sf;
   cups->header.ImagingBoundingBox[3] = (pdev->MediaSize[1] -
-                                        pdev->HWMargins[1]) * sf;
+                                        pdev->HWMargins[3]) * sf;
 #else
   cups->header.Margins[0] = pdev->HWMargins[0];
   cups->header.Margins[1] = pdev->HWMargins[1];
@@ -3065,9 +3222,9 @@ cups_put_params(gx_device     *pdev,	/* I - Device info */
 
     if (cups->landscape)
     {
-      width  = (pdev->MediaSize[1] - pdev->HWMargins[0] - pdev->HWMargins[2]) *
+      width  = (pdev->MediaSize[1] - pdev->HWMargins[1] - pdev->HWMargins[3]) *
                pdev->HWResolution[0] / 72.0f + 0.499f;
-      height = (pdev->MediaSize[0] - pdev->HWMargins[1] - pdev->HWMargins[3]) *
+      height = (pdev->MediaSize[0] - pdev->HWMargins[0] - pdev->HWMargins[2]) *
                pdev->HWResolution[1] / 72.0f + 0.499f;
     }
     else
@@ -3088,12 +3245,17 @@ cups_put_params(gx_device     *pdev,	/* I - Device info */
 
    /*
     * Don't reallocate memory unless the device has been opened...
+    * Also reallocate only if the size has actually changed...
     */
 
-    if (pdev->is_open)
+    if (pdev->is_open && (width != width_old || height != height_old))
     {
+
+      width_old = width;
+      height_old = height;
+
      /*
-      * Device is open, so reallocate...
+      * Device is open and size has changed, so reallocate...
       */
 
       dprintf4("DEBUG2: Reallocating memory, [%.0f %.0f] = %dx%d pixels...\n",
@@ -3567,24 +3729,61 @@ cups_print_chunked(gx_device_printer *pdev,
   unsigned char	*srcptr,		/* Pointer to data */
 		*dstptr;		/* Pointer to bits */
   int		count;			/* Count for loop */
-  int		flip;			/* Flip scanline? */
+  int		xflip,			/* Flip scanline? */
+                yflip,			/* Reverse scanline order? */
+                ystart, yend, ystep;    /* Loop control for scanline order */   
+  ppd_attr_t    *backside = NULL;
 
+  dprintf1("DEBUG2: cups->header.Duplex = %d\n", cups->header.Duplex);
+  dprintf1("DEBUG2: cups->header.Tumble = %d\n", cups->header.Tumble);
+  dprintf1("DEBUG2: cups->page = %d\n", cups->page);
+  dprintf1("DEBUG2: cupsPPD = %p\n", cupsPPD);
 
-  if (cups->header.Duplex && !cups->header.Tumble &&
-      cupsPPD && cupsPPD->flip_duplex && !(cups->page & 1))
-    flip = 1;
+  if (cupsPPD) {
+    backside = ppdFindAttr(cupsPPD, "cupsBackSide", NULL);
+    if (backside) {
+      dprintf1("DEBUG2: cupsBackSide = %s\n", backside->value);
+      cupsPPD->flip_duplex = 0;
+    }
+  }
+  if (cups->header.Duplex && cupsPPD &&
+      ((!cups->header.Tumble &&
+	(cupsPPD->flip_duplex ||
+	 (backside && !strcasecmp(backside->value, "Rotated")))) ||
+       (cups->header.Tumble &&
+	(backside && (!strcasecmp(backside->value, "Flipped") ||
+		      !strcasecmp(backside->value, "ManualTumble"))))) &&
+      !(cups->page & 1))
+    xflip = 1;
   else
-    flip = 0;
+    xflip = 0;
+  if (cups->header.Duplex && cupsPPD &&
+      ((!cups->header.Tumble &&
+	(cupsPPD->flip_duplex ||
+	 (backside && (!strcasecmp(backside->value, "Flipped") ||
+		       !strcasecmp(backside->value, "Rotated"))))) ||
+       (cups->header.Tumble &&
+	(backside && !strcasecmp(backside->value, "ManualTumble")))) &&
+      !(cups->page & 1)) {
+    yflip = 1;
+    ystart = cups->height - 1;
+    yend = -1;
+    ystep = -1;
+  } else {
+    yflip = 0;
+    ystart = 0;
+    yend = cups->height;
+    ystep = 1;
+  }
 
-  dprintf2("DEBUG: cups_print_chunked - flip = %d, height = %d\n",
-	   flip, cups->height);
+  dprintf3("DEBUG: cups_print_chunked: xflip = %d, yflip = %d, height = %d\n",
+	   xflip, yflip, cups->height);
 
  /*
   * Loop through the page bitmap and write chunked pixels, reversing as
   * needed...
   */
-
-  for (y = 0; y < cups->height; y ++)
+  for (y = ystart; y != yend; y += ystep)
   {
    /*
     * Grab the scanline data...
@@ -3596,7 +3795,7 @@ cups_print_chunked(gx_device_printer *pdev,
       gs_exit(gs_lib_ctx_get_non_gc_memory_t(), 1);
     }
 
-    if (flip)
+    if (xflip)
     {
      /*
       * Flip the raster data before writing it...
@@ -3750,17 +3949,55 @@ cups_print_banded(gx_device_printer *pdev,
   unsigned char	*srcptr;		/* Pointer to data */
   unsigned char	*cptr, *mptr, *yptr,	/* Pointer to components */
 		*kptr, *lcptr, *lmptr;	/* ... */
-  int		flip;			/* Flip scanline? */
+  int		xflip,			/* Flip scanline? */
+                yflip,			/* Reverse scanline order? */
+                ystart, yend, ystep;    /* Loop control for scanline order */   
+  ppd_attr_t    *backside = NULL;
 
+  dprintf1("DEBUG2: cups->header.Duplex = %d\n", cups->header.Duplex);
+  dprintf1("DEBUG2: cups->header.Tumble = %d\n", cups->header.Tumble);
+  dprintf1("DEBUG2: cups->page = %d\n", cups->page);
+  dprintf1("DEBUG2: cupsPPD = %p\n", cupsPPD);
 
-  if (cups->header.Duplex && !cups->header.Tumble &&
-      cupsPPD && cupsPPD->flip_duplex && !(cups->page & 1))
-    flip = 1;
+  if (cupsPPD) {
+    backside = ppdFindAttr(cupsPPD, "cupsBackSide", NULL);
+    if (backside) {
+      dprintf1("DEBUG2: cupsBackSide = %s\n", backside->value);
+      cupsPPD->flip_duplex = 0;
+    }
+  }
+  if (cups->header.Duplex && cupsPPD &&
+      ((!cups->header.Tumble &&
+	(cupsPPD->flip_duplex ||
+	 (backside && !strcasecmp(backside->value, "Rotated")))) ||
+       (cups->header.Tumble &&
+	(backside && (!strcasecmp(backside->value, "Flipped") ||
+		      !strcasecmp(backside->value, "ManualTumble"))))) &&
+      !(cups->page & 1))
+    xflip = 1;
   else
-    flip = 0;
+    xflip = 0;
+  if (cups->header.Duplex && cupsPPD &&
+      ((!cups->header.Tumble &&
+	(cupsPPD->flip_duplex ||
+	 (backside && (!strcasecmp(backside->value, "Flipped") ||
+		       !strcasecmp(backside->value, "Rotated"))))) ||
+       (cups->header.Tumble &&
+	(backside && !strcasecmp(backside->value, "ManualTumble")))) &&
+      !(cups->page & 1)) {
+    yflip = 1;
+    ystart = cups->height - 1;
+    yend = -1;
+    ystep = -1;
+  } else {
+    yflip = 0;
+    ystart = 0;
+    yend = cups->height;
+    ystep = 1;
+  }
 
-  dprintf2("DEBUG: cups_print_banded - flip = %d, height = %d\n",
-	   flip, cups->height);
+  dprintf3("DEBUG: cups_print_chunked: xflip = %d, yflip = %d, height = %d\n",
+	   xflip, yflip, cups->height);
 
  /*
   * Loop through the page bitmap and write banded pixels...  We have
@@ -3777,7 +4014,7 @@ cups_print_banded(gx_device_printer *pdev,
     bandbytes = cups->header.cupsBytesPerLine / cups->color_info.num_components;
 #endif /* CUPS_RASTER_SYNCv1 */
 
-  for (y = 0; y < cups->height; y ++)
+  for (y = ystart; y != yend; y += ystep)
   {
    /*
     * Grab the scanline data...
@@ -3797,7 +4034,7 @@ cups_print_banded(gx_device_printer *pdev,
       memset(dst, 0, cups->header.cupsBytesPerLine);
     else
     {
-      if (flip)
+      if (xflip)
         cptr = dst + bandbytes - 1;
       else
         cptr = dst;
@@ -3816,7 +4053,7 @@ cups_print_banded(gx_device_printer *pdev,
             switch (cups->header.cupsColorSpace)
 	    {
 	      default :
-	          for (x = cups->width, bit = flip ? 1 << (x & 7) : 128;
+	          for (x = cups->width, bit = xflip ? 1 << (x & 7) : 128;
 		       x > 0;
 		       x --, srcptr ++)
 		  {
@@ -3827,7 +4064,7 @@ cups_print_banded(gx_device_printer *pdev,
 		    if (*srcptr & 0x10)
 		      *yptr |= bit;
 
-                    if (flip)
+                    if (xflip)
 		    {
 		      if (bit < 128)
 			bit <<= 1;
@@ -3853,7 +4090,7 @@ cups_print_banded(gx_device_printer *pdev,
 		    if (*srcptr & 0x1)
 		      *yptr |= bit;
 
-                    if (flip)
+                    if (xflip)
 		    {
 		      if (bit < 128)
 			bit <<= 1;
@@ -3883,7 +4120,7 @@ cups_print_banded(gx_device_printer *pdev,
 	      case CUPS_CSPACE_CMYK :
 	      case CUPS_CSPACE_YMCK :
 	      case CUPS_CSPACE_KCMY :
-	          for (x = cups->width, bit = flip ? 1 << (x & 7) : 128;
+	          for (x = cups->width, bit = xflip ? 1 << (x & 7) : 128;
 		       x > 0;
 		       x --, srcptr ++)
 		  {
@@ -3896,7 +4133,7 @@ cups_print_banded(gx_device_printer *pdev,
 		    if (*srcptr & 0x10)
 		      *kptr |= bit;
 
-                    if (flip)
+                    if (xflip)
 		    {
 		      if (bit < 128)
 			bit <<= 1;
@@ -3925,7 +4162,7 @@ cups_print_banded(gx_device_printer *pdev,
 		    if (*srcptr & 0x1)
 		      *kptr |= bit;
 
-                    if (flip)
+                    if (xflip)
 		    {
 		      if (bit < 128)
 			bit <<= 1;
@@ -3951,7 +4188,7 @@ cups_print_banded(gx_device_printer *pdev,
 		  }
 	          break;
 	      case CUPS_CSPACE_KCMYcm :
-	          for (x = cups->width, bit = flip ? 1 << (x & 7) : 128;
+	          for (x = cups->width, bit = xflip ? 1 << (x & 7) : 128;
 		       x > 0;
 		       x --, srcptr ++)
 		  {
@@ -3974,7 +4211,7 @@ cups_print_banded(gx_device_printer *pdev,
 		    if (*srcptr & 0x01)
 		      *lmptr |= bit;
 
-                    if (flip)
+                    if (xflip)
 		    {
 		      if (bit < 128)
 			bit <<= 1;
@@ -4012,7 +4249,7 @@ cups_print_banded(gx_device_printer *pdev,
             switch (cups->header.cupsColorSpace)
 	    {
 	      default :
-	          for (x = cups->width, bit = flip ? 3 << (2 * (x & 3)) : 0xc0;
+	          for (x = cups->width, bit = xflip ? 3 << (2 * (x & 3)) : 0xc0;
 		       x > 0;
 		       x --, srcptr ++)
 		    switch (bit)
@@ -4025,7 +4262,7 @@ cups_print_banded(gx_device_printer *pdev,
 			  if ((temp = *srcptr & 0x03) != 0)
 			    *yptr |= temp << 6;
 
-                          if (flip)
+                          if (xflip)
 			  {
 			    bit = 0x03;
 			    cptr --;
@@ -4043,7 +4280,7 @@ cups_print_banded(gx_device_printer *pdev,
 			  if ((temp = *srcptr & 0x03) != 0)
 			    *yptr |= temp << 4;
 
-			  if (flip)
+			  if (xflip)
 			    bit = 0xc0;
 			  else
 			    bit = 0x0c;
@@ -4056,7 +4293,7 @@ cups_print_banded(gx_device_printer *pdev,
 			  if ((temp = *srcptr & 0x03) != 0)
 			    *yptr |= temp << 2;
 
-			  if (flip)
+			  if (xflip)
 			    bit = 0x30;
 			  else
 			    bit = 0x03;
@@ -4069,7 +4306,7 @@ cups_print_banded(gx_device_printer *pdev,
 			  if ((temp = *srcptr & 0x03) != 0)
 			    *yptr |= temp;
 
-			  if (flip)
+			  if (xflip)
 			    bit = 0x0c;
 			  else
 			  {
@@ -4089,7 +4326,7 @@ cups_print_banded(gx_device_printer *pdev,
 	      case CUPS_CSPACE_YMCK :
 	      case CUPS_CSPACE_KCMY :
 	      case CUPS_CSPACE_KCMYcm :
-	          for (x = cups->width, bit = flip ? 3 << (2 * (x & 3)) : 0xc0;
+	          for (x = cups->width, bit = xflip ? 3 << (2 * (x & 3)) : 0xc0;
 		       x > 0;
 		       x --, srcptr ++)
 		    switch (bit)
@@ -4104,7 +4341,7 @@ cups_print_banded(gx_device_printer *pdev,
 			  if ((temp = *srcptr & 0x03) != 0)
 			    *kptr |= temp << 6;
 
-                          if (flip)
+                          if (xflip)
 			  {
 			    bit = 0x03;
 			    cptr --;
@@ -4125,7 +4362,7 @@ cups_print_banded(gx_device_printer *pdev,
 			  if ((temp = *srcptr & 0x03) != 0)
 			    *kptr |= temp << 4;
 
-			  if (flip)
+			  if (xflip)
 			    bit = 0xc0;
 			  else
 			    bit = 0x0c;
@@ -4140,7 +4377,7 @@ cups_print_banded(gx_device_printer *pdev,
 			  if ((temp = *srcptr & 0x03) != 0)
 			    *kptr |= temp << 2;
 
-			  if (flip)
+			  if (xflip)
 			    bit = 0x30;
 			  else
 			    bit = 0x03;
@@ -4155,7 +4392,7 @@ cups_print_banded(gx_device_printer *pdev,
 			  if ((temp = *srcptr & 0x03) != 0)
 			    *kptr |= temp;
 
-			  if (flip)
+			  if (xflip)
 			    bit = 0x0c;
 			  else
 			  {
@@ -4177,7 +4414,7 @@ cups_print_banded(gx_device_printer *pdev,
             switch (cups->header.cupsColorSpace)
 	    {
 	      default :
-	          for (x = cups->width, bit = flip && (x & 1) ? 0xf0 : 0x0f;
+	          for (x = cups->width, bit = xflip && (x & 1) ? 0xf0 : 0x0f;
 		       x > 0;
 		       x --, srcptr += 2)
 		    switch (bit)
@@ -4192,7 +4429,7 @@ cups_print_banded(gx_device_printer *pdev,
 
 			  bit = 0x0f;
 
-                          if (flip)
+                          if (xflip)
 			  {
 			    cptr --;
 			    mptr --;
@@ -4209,7 +4446,7 @@ cups_print_banded(gx_device_printer *pdev,
 
 			  bit = 0xf0;
 
-                          if (!flip)
+                          if (!xflip)
 			  {
 			    cptr ++;
 			    mptr ++;
@@ -4226,7 +4463,7 @@ cups_print_banded(gx_device_printer *pdev,
 	      case CUPS_CSPACE_YMCK :
 	      case CUPS_CSPACE_KCMY :
 	      case CUPS_CSPACE_KCMYcm :
-	          for (x = cups->width, bit = flip && (x & 1) ? 0xf0 : 0x0f;
+	          for (x = cups->width, bit = xflip && (x & 1) ? 0xf0 : 0x0f;
 		       x > 0;
 		       x --, srcptr += 2)
 		    switch (bit)
@@ -4243,7 +4480,7 @@ cups_print_banded(gx_device_printer *pdev,
 
 			  bit = 0x0f;
 
-                          if (flip)
+                          if (xflip)
 			  {
 			    cptr --;
 			    mptr --;
@@ -4263,7 +4500,7 @@ cups_print_banded(gx_device_printer *pdev,
 
 			  bit = 0xf0;
 
-                          if (!flip)
+                          if (!xflip)
 			  {
 			    cptr ++;
 			    mptr ++;
@@ -4280,7 +4517,7 @@ cups_print_banded(gx_device_printer *pdev,
             switch (cups->header.cupsColorSpace)
 	    {
 	      default :
-	          if (flip)
+	          if (xflip)
 	            for (x = cups->width; x > 0; x --)
 		    {
 		      *cptr-- = *srcptr++;
@@ -4303,7 +4540,7 @@ cups_print_banded(gx_device_printer *pdev,
 	      case CUPS_CSPACE_YMCK :
 	      case CUPS_CSPACE_KCMY :
 	      case CUPS_CSPACE_KCMYcm :
-	          if (flip)
+	          if (xflip)
 	            for (x = cups->width; x > 0; x --)
 		    {
 		      *cptr-- = *srcptr++;
@@ -4327,7 +4564,7 @@ cups_print_banded(gx_device_printer *pdev,
             switch (cups->header.cupsColorSpace)
 	    {
 	      default :
-	          if (flip)
+	          if (xflip)
 	            for (x = cups->width; x > 0; x --, srcptr += 6)
 		    {
 		      *cptr-- = srcptr[1];
@@ -4356,7 +4593,7 @@ cups_print_banded(gx_device_printer *pdev,
 	      case CUPS_CSPACE_YMCK :
 	      case CUPS_CSPACE_KCMY :
 	      case CUPS_CSPACE_KCMYcm :
-	          if (flip)
+	          if (xflip)
 	            for (x = cups->width; x > 0; x --, srcptr += 8)
 		    {
 		      *cptr-- = srcptr[1];
@@ -4767,5 +5004,5 @@ cups_print_planar(gx_device_printer *pdev,
 
 
 /*
- * End of "$Id: gdevcups.c,v 1.2 2009/04/23 23:31:59 Arabidopsis Exp $".
+ * End of "$Id: gdevcups.c,v 1.3 2010/07/10 22:02:49 Arabidopsis Exp $".
  */

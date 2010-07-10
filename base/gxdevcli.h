@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxdevcli.h,v 1.1 2009/04/23 23:26:26 Arabidopsis Exp $ */
+/* $Id: gxdevcli.h,v 1.2 2010/07/10 22:02:21 Arabidopsis Exp $ */
 /* Definitions for device clients */
 
 #ifndef gxdevcli_INCLUDED
@@ -1027,10 +1021,16 @@ typedef struct gs_param_list_s gs_param_list;
 #define dev_proc_fill_triangle(proc)\
   dev_t_proc_fill_triangle(proc, gx_device)
 
+		/* adjustx and adjusty were added in 8.71 to get around a
+		 * problem with PCL (Bug 691030). In the fullness of time
+		 * hopefully PCL can be fixed to not need them and they can
+		 * be removed again. */
+
 #define dev_t_proc_draw_thin_line(proc, dev_t)\
   int proc(dev_t *dev,\
     fixed fx0, fixed fy0, fixed fx1, fixed fy1,\
-    const gx_drawing_color *pdcolor, gs_logical_operation_t lop)
+    const gx_drawing_color *pdcolor, gs_logical_operation_t lop,\
+    fixed adjustx, fixed adjusty)
 #define dev_proc_draw_thin_line(proc)\
   dev_t_proc_draw_thin_line(proc, gx_device)
 
@@ -1204,6 +1204,7 @@ typedef struct gs_param_list_s gs_param_list;
 */
 #define dev_t_proc_end_transparency_mask(proc, dev_t)\
   int proc(gx_device *dev,\
+    gs_imager_state *pis,\
     gs_transparency_mask_t **pptm)
 #define dev_proc_end_transparency_mask(proc)\
   dev_t_proc_end_transparency_mask(proc, gx_device)
@@ -1393,6 +1394,21 @@ typedef struct gs_devn_params_s gs_devn_params;
   int proc(gx_device *dev, gs_imager_state * pis, gx_device_color *pdevc)
 #define dev_proc_fillpage(proc)\
   dev_t_proc_fillpage(proc, gx_device)
+
+
+#define dev_t_proc_push_transparency_state(proc, dev_t)\
+  int proc(gx_device *dev,\
+    gs_imager_state *pis)
+#define dev_proc_push_transparency_state(proc)\
+  dev_t_proc_push_transparency_state(proc, gx_device)
+
+
+#define dev_t_proc_pop_transparency_state(proc, dev_t)\
+  int proc(gx_device *dev,\
+    gs_imager_state *pis)
+#define dev_proc_pop_transparency_state(proc)\
+  dev_t_proc_pop_transparency_state(proc, gx_device)
+
 /* Define the device procedure vector template proper. */
 
 #define gx_device_proc_struct(dev_t)\
@@ -1458,8 +1474,9 @@ typedef struct gs_devn_params_s gs_devn_params;
 	dev_t_proc_update_spot_equivalent_colors((*update_spot_equivalent_colors), dev_t); \
 	dev_t_proc_ret_devn_params((*ret_devn_params), dev_t); \
 	dev_t_proc_fillpage((*fillpage), dev_t); \
+        dev_t_proc_push_transparency_state((*push_transparency_state), dev_t); \
+        dev_t_proc_pop_transparency_state((*pop_transparency_state), dev_t); \
 }
-
 
 /*
  * Provide procedures for passing image data.  image_data and end_image

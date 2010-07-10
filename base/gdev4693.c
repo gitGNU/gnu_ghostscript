@@ -6,7 +6,7 @@
  * This software is provided "as is" without express or implied warranty.
  */
 
-/* $Id: gdev4693.c,v 1.1 2009/04/23 23:26:58 Arabidopsis Exp $*/
+/* $Id: gdev4693.c,v 1.2 2010/07/10 22:02:25 Arabidopsis Exp $*/
 /* Driver for the Tektronix 4693d color plotter. */
 #include "gdevprn.h"
 #define prn_dev ((gx_device_printer *)dev) /* needed in 5.31 et seq */

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: wftopfa,v 1.5 2007/09/11 15:24:50 Arabidopsis Exp $
+# $Id: wftopfa,v 1.6 2010/07/10 22:02:37 Arabidopsis Exp $
 
 # This definition is changed on install to match the
 # executable name set in the makefile
@@ -10,4 +10,4 @@ if test ! -x "$gs"; then
 fi
 GS_EXECUTABLE="$gs"
 
-exec "$GS_EXECUTABLE" -q -dNODISPLAY -- wftopfa.ps "$@"
+exec "$GS_EXECUTABLE" -q -P- -dSAFER -dNODISPLAY -- wftopfa.ps "$@"

@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxcpath.c,v 1.1 2009/04/23 23:25:58 Arabidopsis Exp $ */
+/* $Id: gxcpath.c,v 1.2 2010/07/10 22:02:17 Arabidopsis Exp $ */
 /* Implementation of clipping paths, other than actual clipping */
 #include "gx.h"
 #include "gserrors.h"
@@ -219,6 +213,7 @@ gx_cpath_init_local_shared(gx_clip_path * pcpath, const gx_clip_path * shared,
 	pcpath->path_list = shared->path_list;
 	rc_increment(pcpath->path_list);
 	cpath_share_own_contents(pcpath, shared);
+	pcpath->rule = shared->rule;
     } else {
 	gx_path_init_local(&pcpath->path, mem);
 	rc_init_free(&pcpath->local_list, mem, 1, rc_free_cpath_list_local);
@@ -608,8 +603,6 @@ gx_cpath_intersect_with_params(gx_clip_path *pcpath, /*const*/ gx_path *ppath_or
 		if (adjust.x == -1)
 		    adjust_xl = adjust_xu = adjust_yl = adjust_yu = 0;
 		else {
-		    if (params->fill_zero_width)
-			gx_adjust_if_empty(&new_box, &adjust);
 		    adjust_xl = (adjust.x == fixed_half ? fixed_half - fixed_epsilon : adjust.x);
 		    adjust_yl = (adjust.y == fixed_half ? fixed_half - fixed_epsilon : adjust.y);
 		    adjust_xu = adjust.x;
@@ -732,9 +725,9 @@ gx_cpath_scale_exp2_shared(gx_clip_path * pcpath, int log2_scale_x,
 	    list->xmin <<= log2_scale_x;
 	    list->xmax <<= log2_scale_x;
 	} else {
-	list->xmin = arith_rshift(list->xmin, -log2_scale_x);
-	list->xmax = arith_rshift(list->xmax, -log2_scale_x);
-    }
+	    list->xmin = arith_rshift(list->xmin, -log2_scale_x);
+	    list->xmax = arith_rshift(list->xmax, -log2_scale_x);
+	}
     }
     pcpath->id = gs_next_ids(pcpath->path.memory, 1);	/* path changed => change id */
     return 0;
@@ -788,6 +781,7 @@ gx_cpath_enum_init(gs_cpath_enum * penum, const gx_clip_path * pcpath)
     if ((penum->using_path = pcpath->path_valid)) {
 	gx_path_enum_init(&penum->path_enum, &pcpath->path);
 	penum->rp = penum->visit = 0;
+	penum->first_visit = visit_left;
     } else {
 	gx_path empty_path;
 	gx_clip_list *clp = gx_cpath_list_private(pcpath);
@@ -797,6 +791,7 @@ gx_cpath_enum_init(gs_cpath_enum * penum, const gx_clip_path * pcpath)
 	/* Initialize the pointers in the path_enum properly. */
 	gx_path_init_local(&empty_path, pcpath->path.memory);
 	gx_path_enum_init(&penum->path_enum, &empty_path);
+	penum->first_visit = visit_left;
 	penum->visit = head;
 	for (rp = head; rp != 0; rp = rp->next)
 	    rp->to_visit =

@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxfill.c,v 1.1 2009/04/23 23:25:58 Arabidopsis Exp $ */
+/* $Id: gxfill.c,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $ */
 /* A topological spot decomposition algorithm with dropout prevention. */
 /* 
    This is a dramaticly reorganized and improved revision of the 
@@ -261,36 +255,6 @@ unclose_path(gx_path * ppath, int count)
 }
 
 /*
- * Tweak the fill adjustment if necessary so that (nearly) empty
- * rectangles are guaranteed to produce some output.  This is a hack
- * to work around a bug in the Microsoft Windows PostScript driver,
- * which draws thin lines by filling zero-width rectangles, and in
- * some other drivers that try to fill epsilon-width rectangles.
- */
-void
-gx_adjust_if_empty(const gs_fixed_rect * pbox, gs_fixed_point * adjust)
-{
-    /*
-     * For extremely large coordinates, the obvious subtractions could
-     * overflow.  We can work around this easily by noting that since
-     * we know q.{x,y} >= p.{x,y}, the subtraction overflows iff the
-     * result is negative.
-     */
-    const fixed
-	  dx = pbox->q.x - pbox->p.x, dy = pbox->q.y - pbox->p.y;
-
-    if (dx < fixed_half && dx > 0 && (dy >= int2fixed(2) || dy < 0)) {
-	adjust->x = arith_rshift_1(fixed_1 + fixed_epsilon - dx);
-	if_debug1('f', "[f]thin adjust_x=%g\n",
-		  fixed2float(adjust->x));
-    } else if (dy < fixed_half && dy > 0 && (dx >= int2fixed(2) || dx < 0)) {
-	adjust->y = arith_rshift_1(fixed_1 + fixed_epsilon - dy);
-	if_debug1('f', "[f]thin adjust_y=%g\n",
-		  fixed2float(adjust->y));
-    }
-}
-
-/*
  * The general fill  path algorithm.
  */
 static int
@@ -336,8 +300,6 @@ gx_general_fill_path(gx_device * pdev, const gs_imager_state * pis,
 	adjust.x = adjust.y = 0;
     else
 	adjust = params->adjust;
-    if (params->fill_zero_width && !pseudo_rasterization)
-	gx_adjust_if_empty(&ibox, &adjust);
     lst.contour_count = 0;
     lst.windings = NULL;
     lst.bbox_left = fixed2int(ibox.p.x - adjust.x - fixed_epsilon);
@@ -604,42 +566,29 @@ gx_default_fill_path(gx_device * pdev, const gs_imager_state * pis,
 	/*  We need a single clipping path here, because shadings and
 	    halftones don't take 2 paths. Compute the clipping path intersection.
 	*/
+	gx_clip_path cpath_intersection, cpath_with_shading_bbox;
+	const gx_clip_path *pcpath1, *pcpath2;
 	gs_imager_state *pis_noconst = (gs_imager_state *)pis; /* Break const. */
 
-	gx_clip_path cpath_intersection;
-	const gs_fixed_rect *pcbox = (pcpath == NULL ? NULL : cpath_is_rectangle(pcpath));
-	gs_fixed_rect shading_rect;
-	int shading_rect_code = gx_dc_pattern2_is_rectangular_cell(pdevc, pdev, &shading_rect);
-	    gs_fixed_rect clip_box;
-
-	if (shading_rect_code < 0)
-	    return shading_rect_code;
-	if (shading_rect_code != 0 && (pcpath == NULL || pcbox != NULL)) {
-	    if (pcbox != NULL) 
-		clip_box = *pcbox;
-	    else
-		(*dev_proc(pdev, get_clipping_box)) (pdev, &clip_box);
-	    rect_intersect(clip_box, shading_rect);
-	    if (clip_box.p.x > clip_box.q.x || clip_box.p.y > clip_box.q.y)
-		return 0; /* Empty clipping, must not pass to gx_cpath_from_rectangle. */
-	    gx_cpath_init_local(&cpath_intersection, pdev->memory);
-	    code = gx_cpath_from_rectangle(&cpath_intersection, &clip_box);
-	} else if (pcpath != NULL) {
-	    /* either *pcpath is not a rectangle, or shading cell is not a rectangle.  */
+	if (ppath != NULL) {
 	    code = gx_cpath_init_local_shared(&cpath_intersection, pcpath, pdev->memory);
 	    if (code < 0)
 		return code;
-	    if (gx_dc_is_pattern2_color(pdevc))
-		code = gx_dc_pattern2_clip_with_bbox_simple(pdevc, pdev, &cpath_intersection);
-	} else {
-	    /* Happens with a pattern1 color. */
-	    (*dev_proc(pdev, get_clipping_box)) (pdev, &clip_box);
-	    gx_cpath_init_local(&cpath_intersection, ppath->memory);
-	    code = gx_cpath_from_rectangle(&cpath_intersection, &clip_box);
-	}
-	if (ppath != NULL && code >= 0)
-	    code = gx_cpath_intersect_with_params(&cpath_intersection, ppath, params->rule, 
-		    pis_noconst, params);
+	    if (pcpath == NULL) {
+		gs_fixed_rect clip_box1;
+
+		(*dev_proc(pdev, get_clipping_box)) (pdev, &clip_box1);
+		code = gx_cpath_from_rectangle(&cpath_intersection, &clip_box1);
+	    }
+	    if (code >= 0)
+		code = gx_cpath_intersect_with_params(&cpath_intersection, ppath, params->rule, 
+			pis_noconst, params);
+	    pcpath1 = &cpath_intersection;
+	} else
+	    pcpath1 = pcpath;
+	pcpath2 = pcpath1;
+	if (code >= 0)
+	    code = gx_dc_pattern2_clip_with_bbox(pdevc, pdev, &cpath_with_shading_bbox, &pcpath1);
 	/* Do fill : */
 	if (code >= 0) {
 	    gs_fixed_rect clip_box;
@@ -648,7 +597,7 @@ gx_default_fill_path(gx_device * pdev, const gs_imager_state * pis,
 	    gx_device *dev;
 	    gx_device_clip cdev;
 
-	    gx_cpath_outer_box(&cpath_intersection, &clip_box);
+	    gx_cpath_outer_box(pcpath1, &clip_box);
 	    cb.p.x = fixed2int_pixround(clip_box.p.x);
 	    cb.p.y = fixed2int_pixround(clip_box.p.y);
 	    cb.q.x = fixed2int_pixround(clip_box.q.x);
@@ -658,10 +607,10 @@ gx_default_fill_path(gx_device * pdev, const gs_imager_state * pis,
 		/* A special interaction with clist writer device : 
 		   pass the intersected clipping path. It uses an unusual call to
 		   fill_path with NULL device color. */
-		code = (*dev_proc(pdev, fill_path))(pdev, pis, ppath, params, NULL, &cpath_intersection);
+		code = (*dev_proc(pdev, fill_path))(pdev, pis, ppath, params, NULL, pcpath1);
 		dev = pdev;
 	    } else {
-		gx_make_clip_device_on_stack(&cdev, &cpath_intersection, pdev);
+		gx_make_clip_device_on_stack(&cdev, pcpath1, pdev);
 		dev = (gx_device *)&cdev;
 		if ((*dev_proc(pdev, pattern_manage))(pdev, 
 			gs_no_id, NULL, pattern_manage__shading_area) > 0)
@@ -673,7 +622,10 @@ gx_default_fill_path(gx_device * pdev, const gs_imager_state * pis,
 			cb.p.x, cb.p.y, cb.q.x - cb.p.x, cb.q.y - cb.p.y,
 			dev, pis->log_op, rs);
 	}
-	gx_cpath_free(&cpath_intersection, "shading_fill_cpath_intersection");
+	if (ppath != NULL)
+	    gx_cpath_free(&cpath_intersection, "shading_fill_cpath_intersection");
+	if (pcpath1 != pcpath2)
+	    gx_cpath_free(&cpath_with_shading_bbox, "shading_fill_cpath_intersection");
     } else {
 	bool got_dc = false;
         vd_save;
@@ -1018,8 +970,12 @@ scan_contour(line_list *ll, contour_cursor *q)
 		ll->y_break = p.fi->ly1;
 	    if (p.monotonic_y && p.dir == DIR_HORIZONTAL && 
 		    !fo->pseudo_rasterization && 
+#ifdef FILL_ZERO_WIDTH
+		    (fo->adjust_below | fo->adjust_above) != 0) {
+#else
 		    fixed2int_pixround(p.pseg->pt.y - fo->adjust_below) <
 		    fixed2int_pixround(p.pseg->pt.y + fo->adjust_above)) {
+#endif
 		/* Add it here to avoid double processing in process_h_segments. */
 		code = add_y_line(p.prev, p.pseg, DIR_HORIZONTAL, ll);
 		if (code < 0)

@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
-  This file is part of GNU ghostscript
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsicc.c,v 1.1 2009/04/23 23:26:07 Arabidopsis Exp $ */
+/* $Id: gsicc.c,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
 /* Implementation of the ICCBased color space family */
 
 #include "math_.h"
@@ -101,7 +95,7 @@ RELOC_PTRS_END
  * Color space methods for ICCBased color spaces.
  *
  * As documented, ICCBased color spaces may be used as both base and
- * alternative color spaces. Futhermore,, they can themselves contain paint
+ * alternative color spaces. Futhermore, they can themselves contain paint
  * color spaces as alternative color space. In this implementation we allow
  * them to be used as base and alternative color spaces, but only to contain
  * "small" base color spaces (CIEBased or smaller). This arrangement avoids
@@ -110,9 +104,9 @@ RELOC_PTRS_END
  *
  * Several of the methods used by ICCBased color space apply as well to
  * DeviceN color spaces, in that they are generic to color spaces having
- * a variable number of components. We have elected not to attempt to 
+ * a variable number of components. We have elected not to attempt to
  * extract and combine these operations, because this would save only a
- * small amount of code, and much more could be saved by intorducing certain
+ * small amount of code, and much more could be saved by introducing certain
  * common elements (ranges, number of components, etc.) into the color space
  * root class.
  */
@@ -147,7 +141,7 @@ static const gs_color_space_type gs_color_space_type_CIEICC = {
     gx_spot_colors_set_overprint,   /* set_overprint */
     gx_final_CIEICC,                /* final */
     gx_no_adjust_color_count,       /* adjust_color_count */
-    gx_serialize_CIEICC,		    /* serialize */
+    gx_serialize_CIEICC,            /* serialize */
     gx_cspace_is_linear_default
 };
 
@@ -198,11 +192,11 @@ gx_restrict_CIEICC(gs_client_color * pcc, const gs_color_space * pcs)
 }
 
 /*
- * Return the conrecte space to which this color space will map. If the
+ * Return the concrete space to which this color space will map. If the
  * ICCBased color space is being used in native mode, the concrete space
  * will be dependent on the current color rendering dictionary, as it is
  * for all CIE bases. If the alternate color space is being used, then
- * this question is passed on the the appropriate method of that space.
+ * this question is passed on to the appropriate method of that space.
  */
 static const gs_color_space *
 gx_concrete_space_CIEICC(const gs_color_space * pcs, const gs_imager_state * pis)
@@ -260,7 +254,8 @@ gx_concretize_CIEICC(
     for (i = 0; i < ncomps; i++)
         inv[i] = lcc.paint.values[i];
 
-	/* Since the original limits were wrong for this case, We need to adjust things a bit different */
+    /* Since the original limits were wrong for this case,
+       we need to adjust things a bit different */
 
     /* For input Lab color space massage the values into Lab range */
 
@@ -268,7 +263,7 @@ gx_concretize_CIEICC(
 
         inv[0] *= 100;
         inv[1] = inv[1]*255 - 128;
-        inv[2] = inv[2]*255 - 128; 
+        inv[2] = inv[2]*255 - 128;
 
     } */
 
@@ -278,6 +273,7 @@ gx_concretize_CIEICC(
      * legitimate. Other non-zero return values indicate an error, which
      * should not occur in practice.
      */
+
     if (picc_info->plu->lookup(picc_info->plu, outv, inv) > 1)
         return_error(gs_error_unregistered);
 
@@ -438,7 +434,7 @@ gx_load_icc_profile(gs_cie_icc *picc_info)
     icc *           picc;
     icmLuBase * plu = NULL;
     icmFile *pfile = NULL;
-	
+
 #if   SAVEICCPROFILE
 
     unsigned int num_bytes;
@@ -446,7 +442,7 @@ gx_load_icc_profile(gs_cie_icc *picc_info)
     FILE *fid;
 
 #endif
-	
+
     /* verify that the file is legitimate */
     if (picc_info->file_id != (instrp->read_id | instrp->write_id))
 	return_error(gs_error_ioerror);
@@ -454,7 +450,7 @@ gx_load_icc_profile(gs_cie_icc *picc_info)
      * Load the top-level ICC profile.
      *
      * If an ICC profile fails to load, generate an error.
-     * 
+     *
      * Testing demonstrates, however, Acrobat Reader silently
      * ignores the error and uses the alternate color space.
      * This behaviour is implemented by catching the error using
@@ -472,10 +468,10 @@ gx_load_icc_profile(gs_cie_icc *picc_info)
 	gs_vector3 *            ppt;
 
 	pfile = gx_wrap_icc_stream (instrp);
-      
+
 	if ((picc->read(picc, pfile, 0)) != 0)
 	    goto return_rangecheck;
-            
+
 #if SAVEICCPROFILE
 
         num_bytes = picc->header->size;
@@ -488,8 +484,8 @@ gx_load_icc_profile(gs_cie_icc *picc_info)
         free(iccbuffer);
 
 #endif
-        
-            
+
+
 	/* verify the profile type */
 	profile_class = picc->header->deviceClass;
 	if ( profile_class != icSigInputClass     &&
@@ -545,7 +541,7 @@ gx_load_icc_profile(gs_cie_icc *picc_info)
 	 * If absolute colorimetry is employed, the XYZ or L*a*b* values
 	 * generated will be absolute in the chromatic sense (they are
 	 * not literally "absolute", as we still must have overall
-	 * intensity information inorder to determine weighted spectral
+	 * intensity information in order to determine weighted spectral
 	 * power levels). To achieve relative colorimetry for the output,
 	 * these colors must be evaluated relative to the source white
 	 * and black points. Hence, in this case, the appropriate white
@@ -580,7 +576,7 @@ gx_load_icc_profile(gs_cie_icc *picc_info)
 	if (plu == NULL)
 	    goto return_rangecheck;
 
-	/* 
+	/*
 	 * Get the appropriate white and black points. See the note on
 	 * rendering intent above for a discussion of why we are using
 	 * the profile space illuminant and pure black. (Pure black need
@@ -678,7 +674,7 @@ gs_cspace_build_CIEICC(
      * valid WhitepPoint since PostScript always requires this, but ICC
      * assumes a D50 WhitePoint as a default
      */
-    picc_info->common.points.WhitePoint.u = (float)0.9642;		/* Profile illuminant - D50 */
+    picc_info->common.points.WhitePoint.u = (float)0.9642; /* Profile illuminant - D50 */
     picc_info->common.points.WhitePoint.v = 1.0000;
     picc_info->common.points.WhitePoint.w = (float)0.8249;
     picc_info->common.install_cspace = gx_install_CIEICC;
@@ -697,7 +693,7 @@ gs_cspace_build_CIEICC(
 
 /* ---------------- Serialization. -------------------------------- */
 
-static int 
+static int
 gx_serialize_CIEICC(const gs_color_space * pcs, stream * s)
 {
     const gs_icc_params * p = &pcs->params.icc;

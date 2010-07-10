@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: lprsetup.sh,v 1.2 2007/05/07 11:22:07 Arabidopsis Exp $
+# $Id: lprsetup.sh,v 1.3 2010/07/10 22:02:38 Arabidopsis Exp $
 #
 # BSD PRINT FILTER SETUP utility for Ghostscript - used and tested on
 # SunOS 4.1.3, but I hope it will be useful on other BSD systems

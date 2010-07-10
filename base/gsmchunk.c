@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsmchunk.c,v 1.1 2009/04/23 23:27:27 Arabidopsis Exp $ */
+/* $Id: gsmchunk.c,v 1.2 2010/07/10 22:02:30 Arabidopsis Exp $ */
 /* chunk consolidating wrapper on a base memory allocator */
 
 #include "memory_.h"
@@ -110,6 +104,8 @@ typedef struct gs_memory_chunk_s {
     chunk_mem_node_t *head_chunk;
 #ifdef DEBUG
     unsigned long sequence_counter;
+    unsigned long used;
+    unsigned long max_used;
 #endif
 } gs_memory_chunk_t;
 
@@ -138,6 +134,8 @@ gs_memory_chunk_wrap( gs_memory_t **wrapped,	/* chunk allocator init */
     cmem->head_chunk = NULL;
 #ifdef DEBUG
     cmem->sequence_counter = 0;
+    cmem->used = 0;
+    cmem->max_used = 0;
 #endif
 
     /* Init the chunk management values */
@@ -174,6 +172,7 @@ gs_memory_chunk_dump_memory(const gs_memory_t *mem)
     chunk_mem_node_t *current;
     chunk_mem_node_t *next;
 
+    dprintf2("chunk_dump_memory: current used=%d, max_used=%d\n", cmem->used, cmem->max_used);
     current = head;
     while ( current != NULL ) { 
 	if (current->objlist != NULL) {
@@ -274,6 +273,11 @@ chunk_mem_node_add(gs_memory_chunk_t *cmem, uint size_needed, chunk_mem_node_t *
 
     *newchunk = NULL;
     node = (chunk_mem_node_t *)gs_alloc_bytes_immovable(target, chunk_size, "chunk_mem_node_add");
+#ifdef DEBUG
+    cmem->used += chunk_size;
+    if (cmem->used > cmem->max_used)
+	cmem->max_used = cmem->used;
+#endif
     if ( node == NULL )
         return -1;
     node->size = chunk_size;	/* how much we allocated */
@@ -323,6 +327,9 @@ chunk_mem_node_remove(gs_memory_chunk_t *cmem, chunk_mem_node_t *addr)
         dprintf("FAIL - no nodes to be removed\n" );
         return -1;
     }
+#ifdef DEBUG
+    cmem->used -= addr->size;
+#endif
     if (head == addr) {
         cmem->head_chunk = head->next;
 	gs_free_object(target, head, "chunk_mem_node_remove");
@@ -368,8 +375,13 @@ chunk_obj_alloc(gs_memory_t *mem, uint size, gs_memory_type_ptr_t type, client_n
     }
     if (current == NULL) {
 	/* No chunks with enough space, allocate one */
-	if (chunk_mem_node_add(cmem, newsize, &current) < 0)
+	if (chunk_mem_node_add(cmem, newsize, &current) < 0) {
+#ifdef DEBUG
+	if (gs_debug_c('a'))
+	    dlprintf1("[a+]chunk_obj_alloc(chunk_mem_node_add)(%u) Failed.\n", size);
+#endif
 	    return NULL;
+	}
     }
     /* Find the first free area in the current chunk that is big enough */
     /* LATER: might be better to find the 'best fit' */
@@ -429,6 +441,11 @@ chunk_obj_alloc(gs_memory_t *mem, uint size, gs_memory_type_ptr_t type, client_n
     }
 
     /* return the client area of the object we allocated */
+#ifdef DEBUG
+    if (gs_debug_c('A'))
+	dlprintf3("[a+]chunk_obj_alloc (%s)(%u) = 0x%lx: OK.\n",
+		  client_name_string(cname), size, (ulong) newobj);
+#endif
     return (byte *)(newobj) + sizeof(chunk_obj_node_t);
 }
 
@@ -490,13 +507,30 @@ chunk_alloc_struct_array(gs_memory_t * mem, uint num_elements,
 static void *
 chunk_resize_object(gs_memory_t * mem, void *ptr, uint new_num_elements, client_name_t cname)
 {
-    /* get the type from the old object */
-    chunk_obj_node_t *obj = ((chunk_obj_node_t *)ptr) - 1;
-    uint new_size = (obj->type->ssize * new_num_elements);
-
     /* This isn't particularly efficient, but it is rarely used */
+    chunk_obj_node_t *obj = ((chunk_obj_node_t *)ptr) - 1;
+    ulong new_size = (obj->type->ssize * new_num_elements);
+    ulong old_size = obj->size;
+    /* get the type from the old object */
+    gs_memory_type_ptr_t type = obj->type;
+    void *new_ptr;
+#ifdef DEBUG
+    gs_memory_chunk_t *cmem = (gs_memory_chunk_t *)mem;
+    ulong save_max_used = cmem->max_used;
+#endif
+
+    if (new_size == old_size)
+	return ptr;
+    if ((new_ptr = chunk_obj_alloc(mem, new_size, type, cname)) == 0)
+	return 0;
+    memcpy(new_ptr, ptr, min(old_size, new_size));
     chunk_free_object(mem, ptr, cname);
-    return chunk_obj_alloc(mem, new_size, obj->type, cname);
+#ifdef DEBUG
+    cmem->max_used = save_max_used;
+    if (cmem->used > cmem->max_used)
+	cmem->max_used = cmem->used;
+#endif
+    return new_ptr;
 }
 	
 static void
@@ -547,6 +581,9 @@ chunk_free_object(gs_memory_t * mem, void *ptr, client_name_t cname)
 	    current->objlist = obj->next;
 	else 
 	    prev_obj->next = obj->next;
+
+	if_debug3('A', "[a-]chunk_free_object(%s) 0x%lx(%u)\n",
+		  client_name_string(cname), (ulong) ptr, obj->size);
 
 	/* Add this object's space (including the header) to the free list */
 

@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gstrans.h,v 1.1 2009/04/23 23:26:12 Arabidopsis Exp $ */
+/* $Id: gstrans.h,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
 /* Transparency definitions and interface */
 
 #ifndef gstrans_INCLUDED
@@ -26,6 +20,7 @@
 #include "gstparam.h"
 #include "gxcomp.h"
 #include "gsmatrix.h"
+#include "gxblend.h"
 
 /*
  * Define the operations for the PDF 1.4 transparency compositor.
@@ -37,7 +32,9 @@ typedef enum {
     PDF14_END_TRANS_GROUP,
     PDF14_BEGIN_TRANS_MASK,
     PDF14_END_TRANS_MASK,
-    PDF14_SET_BLEND_PARAMS
+    PDF14_SET_BLEND_PARAMS,
+    PDF14_PUSH_TRANS_STATE,
+    PDF14_POP_TRANS_STATE
 } pdf14_compositor_operations;
 
 #define PDF14_OPCODE_NAMES \
@@ -48,7 +45,9 @@ typedef enum {
     "PDF14_END_TRANS_GROUP  ",\
     "PDF14_BEGIN_TRANS_MASK ",\
     "PDF14_END_TRANS_MASK   ",\
-    "PDF14_SET_BLEND_PARAMS "\
+    "PDF14_SET_BLEND_PARAMS ",\
+    "PDF14_PUSH_TRANS_STATE ",\
+    "PDF14_POP_TRANS_STATE  "\
 }
 
 /* Bit definitions for serializing PDF 1.4 parameters */
@@ -86,7 +85,12 @@ struct gs_pdf14trans_params_s {
     int Background_components;
     bool function_is_identity;
     float Background[GS_CLIENT_COLOR_MAX_COMPONENTS];
-    float GrayBackground;
+    float GrayBackground;  /* This is used to determine if the 
+                              softmask's bbox needs to be adjusted
+                              to the parent groups bbox.  Since
+                              the soft mask can affect areas 
+                              outside its own groups bounding
+                              box in such a case */
     gs_function_t *transfer_function;
     byte transfer_fn[MASK_TRANSFER_FUNCTION_SIZE];
     /* Individual transparency parameters */
@@ -101,6 +105,9 @@ struct gs_pdf14trans_params_s {
 	bool overprint_mode;
     bool idle; /* For clist reader.*/
     uint mask_id; /* For clist reader.*/
+    bool SMask_is_CIE;
+    int group_color_numcomps;
+    gs_transparency_color_t group_color;
 };
 
 #ifndef gs_pdf14trans_params_DEFINED
@@ -180,6 +187,22 @@ int gx_end_transparency_mask(gs_imager_state * pis, gx_device * pdev,
 				const gs_pdf14trans_params_t * pparams);
 
 int gx_discard_transparency_layer(gs_imager_state *pis);
+
+/* These are used for watching for q Smask Q events.  We need to 
+   send special compositor commands to keep the bands in sync
+   with the current softmask during clist rendering.  Like the
+   other transparency operations the gs functions occur on the
+   clist writer side and the gx functions occur on the
+   clist reader side */
+
+int gs_push_transparency_state(gs_state *pgs);
+
+int gs_pop_transparency_state(gs_state *pgs);
+
+int gx_push_transparency_state(gs_imager_state * pis, gx_device * pdev);
+
+int gx_pop_transparency_state(gs_imager_state * pis, gx_device * pdev);
+
 
 /*
  * Verify that a compositor data structure is for the PDF 1.4 compositor.

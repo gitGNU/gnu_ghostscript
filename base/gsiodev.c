@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsiodev.c,v 1.1 2009/04/23 23:26:44 Arabidopsis Exp $ */
+/* $Id: gsiodev.c,v 1.2 2010/07/10 22:02:23 Arabidopsis Exp $ */
 /* IODevice implementation for Ghostscript */
 #include "errno_.h"
 #include "string_.h"
@@ -26,6 +20,7 @@
 #include "gserrors.h"
 #include "gp.h"
 #include "gscdefs.h"
+#include "gsfname.h"
 #include "gsparam.h"
 #include "gsstruct.h"
 #include "gxiodev.h"
@@ -356,4 +351,85 @@ gs_fopen_errno_to_code(int eno)
 	default:
 	    return_error(gs_error_ioerror);
     }
+}
+
+/* Generic interface for filesystem enumeration given a path that may	*/
+/* include a %iodev% prefix */
+
+typedef struct gs_file_enum_s gs_file_enum;
+struct gs_file_enum_s {
+    gs_memory_t *memory;
+    gx_io_device *piodev;	/* iodev's are static, so don't need GC tracing */
+    file_enum *pfile_enum;
+    int prepend_iodev_name;
+};
+
+gs_private_st_ptrs1(st_gs_file_enum, gs_file_enum, "gs_file_enum",
+		    gs_file_enum_enum_ptrs, gs_file_enum_reloc_ptrs, pfile_enum);
+
+file_enum *
+gs_enumerate_files_init(const char *pat, uint patlen, gs_memory_t * mem)
+{
+    file_enum *pfen;
+    gs_file_enum *pgs_file_enum;
+    gx_io_device *iodev = NULL;
+    gs_parsed_file_name_t pfn;
+    int code = 0;
+
+    /* Get the iodevice */
+    code = gs_parse_file_name(&pfn, pat, patlen);
+    if (code < 0)
+	return NULL;
+    iodev = (pfn.iodev == NULL) ? iodev_default : pfn.iodev;
+
+    /* Check for several conditions that just cause us to return success */
+    if (pfn.len == 0 || iodev->procs.enumerate_files == iodev_no_enumerate_files) {
+        return NULL;	/* no pattern, or device not found -- just return */
+    }
+    pfen = iodev->procs.enumerate_files(iodev, (const char *)pfn.fname,
+    		pfn.len, mem);
+    if (pfen == 0)
+	return NULL;
+    pgs_file_enum = gs_alloc_struct(mem, gs_file_enum, &st_gs_file_enum,
+			   "gs_enumerate_files_init");
+    if (pgs_file_enum == 0)
+	return NULL;
+    pgs_file_enum->memory = mem;
+    pgs_file_enum->piodev = iodev;
+    pgs_file_enum->pfile_enum = pfen;
+    pgs_file_enum->prepend_iodev_name = (pfn.iodev != NULL);
+    return (file_enum *)pgs_file_enum;
+}
+
+uint
+gs_enumerate_files_next(file_enum * pfen, char *ptr, uint maxlen)
+{
+    gs_file_enum *pgs_file_enum = (gs_file_enum *)pfen;
+    int iodev_name_len = pgs_file_enum->prepend_iodev_name ?
+			strlen(pgs_file_enum->piodev->dname) : 0;
+    uint return_len;
+
+    if (iodev_name_len > maxlen)
+	return maxlen + 1;	/* signal overflow error */
+    if (iodev_name_len > 0)
+	memcpy(ptr, pgs_file_enum->piodev->dname, iodev_name_len);
+    return_len = pgs_file_enum->piodev->procs.enumerate_next(pgs_file_enum->pfile_enum,
+				ptr + iodev_name_len, maxlen - iodev_name_len);
+    if (return_len == ~0) {
+        gs_memory_t *mem = pgs_file_enum->memory;
+
+        gs_free_object(mem, pgs_file_enum, "gs_enumerate_files_close");
+	return ~0;
+    }
+    return return_len+iodev_name_len;
+}
+
+void
+gs_enumerate_files_close(file_enum * pfen)
+{
+    gs_file_enum *pgs_file_enum = (gs_file_enum *)pfen;
+    gs_memory_t *mem = pgs_file_enum->memory;
+
+    pgs_file_enum->piodev->procs.enumerate_close(pgs_file_enum->pfile_enum);
+    gs_free_object(mem, pgs_file_enum, "gs_enumerate_files_close");
 }

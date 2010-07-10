@@ -64,7 +64,7 @@
 /*
  * Multicomponent Transform Code
  *
- * $Id: jpc_mct.h,v 1.3 2007/05/07 11:22:21 Arabidopsis Exp $
+ * $Id: jpc_mct.h,v 1.4 2010/07/10 22:02:54 Arabidopsis Exp $
  */
 
 #ifndef JPC_MCT_H

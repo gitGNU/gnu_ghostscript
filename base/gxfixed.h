@@ -1,23 +1,17 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
   
-  This file is part of GNU ghostscript
+   This software is provided AS-IS with no warranty, either express or
+   implied.
 
-  GNU ghostscript is free software; you can redistribute it and/or
-  modify it under the terms of the version 2 of the GNU General Public
-  License as published by the Free Software Foundation.
-
-  GNU ghostscript is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  ghostscript; see the file COPYING. If not, write to the Free Software Foundation,
-  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
+   This software is distributed under license and may not be copied, modified
+   or distributed except as expressly authorized under the terms of that
+   license.  Refer to licensing information at http://www.artifex.com/
+   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
+   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxfixed.h,v 1.1 2009/04/23 23:26:52 Arabidopsis Exp $ */
+/* $Id: gxfixed.h,v 1.2 2010/07/10 22:02:25 Arabidopsis Exp $ */
 /* Fixed-point arithmetic for Ghostscript */
 
 #ifndef gxfixed_INCLUDED
@@ -28,12 +22,23 @@
  * quantities: integers lose accuracy in crucial places,
  * and floating point arithmetic is slow.
  */
+#if ARCH_SIZEOF_INT == 4
+typedef int fixed;
+typedef uint ufixed;		/* only used in a very few places */
+# define ARCH_SIZEOF_FIXED ARCH_SIZEOF_INT
+# define max_fixed max_int
+# define min_fixed min_int
+#else
+# if ARCH_SIZEOF_LONG == 4
 typedef long fixed;
 typedef ulong ufixed;		/* only used in a very few places */
-#define ARCH_SIZEOF_FIXED ARCH_SIZEOF_LONG
+#  define ARCH_SIZEOF_FIXED ARCH_SIZEOF_LONG
+#  define max_fixed max_long
+#  define min_fixed min_long
+# endif
+#endif
 
-#define max_fixed max_long
-#define min_fixed min_long
+
 #define fixed_0 0L
 #define fixed_epsilon 1L
 /*
@@ -125,13 +130,9 @@ typedef ulong ufixed;		/* only used in a very few places */
 #define fixed_truncated(x) ((x) < 0 ? fixed_ceiling(x) : fixed_floor(x))
 
 /* Define the largest and smallest integer values that fit in a fixed. */
-#if arch_sizeof_int == arch_sizeof_long
-#  define max_int_in_fixed fixed2int(max_fixed)
-#  define min_int_in_fixed fixed2int(min_fixed)
-#else
-#  define max_int_in_fixed max_int
-#  define min_int_in_fixed min_int
-#endif
+#define max_int_in_fixed fixed2int(max_fixed)
+#define min_int_in_fixed fixed2int(min_fixed)
+
 /*
  * Define a macro for checking for overflow of the sum of two fixed values
  * and and setting the result to the sum if no overflow.
