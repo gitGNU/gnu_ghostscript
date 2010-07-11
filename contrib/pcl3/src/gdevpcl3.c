@@ -1,5 +1,5 @@
 /******************************************************************************
-  File:     $Id: gdevpcl3.c,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $
+  File:     $Id: gdevpcl3.c,v 1.3 2010/07/11 19:47:19 Arabidopsis Exp $
   Contents: Ghostscript device 'pcl3' for PCL-3+ printers
   Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
             Germany. E-mail: Martin.Lottermoser@t-online.de.
@@ -26,7 +26,7 @@
 /* Configuration management identification */
 #ifndef lint
 static const char
-  cm_id[] = "@(#)$Id: gdevpcl3.c,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $";
+  cm_id[] = "@(#)$Id: gdevpcl3.c,v 1.3 2010/07/11 19:47:19 Arabidopsis Exp $";
 #endif
 
 /*****************************************************************************/

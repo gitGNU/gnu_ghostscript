@@ -1,6 +1,6 @@
 *PPD-Adobe: "4.3"
 *% ****************************************************************************
-*% File:     @(#)$Id: gs-pcl3-hpdj8xxc.ppd,v 1.1 2007/09/11 15:24:58 Arabidopsis Exp $
+*% File:     @(#)$Id: gs-pcl3-hpdj8xxc.ppd,v 1.2 2010/07/11 19:47:19 Arabidopsis Exp $
 *% Contents: PPD file for the ghostscript devices "hpdj850c", "hpdj855c",
 *%	     "hpdj870c", and "hpdj890c" of the pcl3 driver
 *% Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,

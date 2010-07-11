@@ -19,12 +19,12 @@
 
 /* dviprlib.h */
 
-/* $Id: dviprlib.h,v 1.3 2010/07/10 22:02:55 Arabidopsis Exp $ */
+/* $Id: dviprlib.h,v 1.4 2010/07/11 19:47:16 Arabidopsis Exp $ */
 
 #ifndef s_cfgbld_h_INCLUDED
 
 
-/* $Id: dviprlib.h,v 1.3 2010/07/10 22:02:55 Arabidopsis Exp $ */
+/* $Id: dviprlib.h,v 1.4 2010/07/11 19:47:16 Arabidopsis Exp $ */
 
 #ifndef s_cfg_h_INCLUDED
 #define CFG_MAGIC_NUMBER   ":K"

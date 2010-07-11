@@ -1,5 +1,5 @@
 /******************************************************************************
-  File:     $Id: pagecount.h,v 1.1 2007/09/11 15:25:15 Arabidopsis Exp $
+  File:     $Id: pagecount.h,v 1.2 2010/07/11 19:47:19 Arabidopsis Exp $
   Contents: Header for pagecount file functions
   Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
             Germany; e-mail: Martin.Lottermoser@t-online.de.
@@ -15,7 +15,7 @@
 #define _pagecount_h
 
 /* Configuration management identification */
-#pragma ident "@(#)$Id: pagecount.h,v 1.1 2007/09/11 15:25:15 Arabidopsis Exp $"
+#pragma ident "@(#)$Id: pagecount.h,v 1.2 2010/07/11 19:47:19 Arabidopsis Exp $"
 
 /*****************************************************************************/
 

@@ -1,5 +1,5 @@
 /******************************************************************************
-  File:     $Id: pclscan.h,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $
+  File:     $Id: pclscan.h,v 1.3 2010/07/11 19:47:19 Arabidopsis Exp $
   Contents: Header for PCL scanner
   Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
             Germany, e-mail: Martin.Lottermoser@t-online.de
@@ -16,9 +16,9 @@
 
 /* Configuration management identification */
 #ifdef __GNUC__
-#ident "@(#)$Id: pclscan.h,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $"
+#ident "@(#)$Id: pclscan.h,v 1.3 2010/07/11 19:47:19 Arabidopsis Exp $"
 #else
-#pragma ident "@(#)$Id: pclscan.h,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $"
+#pragma ident "@(#)$Id: pclscan.h,v 1.3 2010/07/11 19:47:19 Arabidopsis Exp $"
 #endif
 
 /*****************************************************************************/

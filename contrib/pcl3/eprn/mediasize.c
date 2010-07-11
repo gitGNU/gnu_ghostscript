@@ -1,5 +1,5 @@
 /******************************************************************************
-  File:     $Id: mediasize.c,v 1.2 2008/03/23 15:28:30 Arabidopsis Exp $
+  File:     $Id: mediasize.c,v 1.3 2010/07/11 19:47:19 Arabidopsis Exp $
   Contents: Operations and data for handling media sizes
   Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
             Germany. E-mail: Martin.Lottermoser@t-online.de.
@@ -14,7 +14,7 @@
 /* Configuration management identification */
 #ifndef lint
 static const char
-  cm_id[] = "@(#)$Id: mediasize.c,v 1.2 2008/03/23 15:28:30 Arabidopsis Exp $";
+  cm_id[] = "@(#)$Id: mediasize.c,v 1.3 2010/07/11 19:47:19 Arabidopsis Exp $";
 #endif
 
 /*****************************************************************************/
@@ -26,7 +26,7 @@ static const char
 #include "std.h"
 
 /* Standard headers */
-#include <assert.h>
+#include <assert_.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>

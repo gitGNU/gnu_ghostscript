@@ -16,7 +16,7 @@
   all copies.
 */
 
-/*$Id: gdevmd2k.c,v 1.2 2008/03/23 15:28:31 Arabidopsis Exp $*/
+/*$Id: gdevmd2k.c,v 1.3 2010/07/11 19:47:17 Arabidopsis Exp $*/
 /* ALPS MD series printer driver for Ghostscript 5.xx */
 /*
  *  1999-04-18  Ver. 0.1   Masakazu Higaki <higamasa@dd.mbn.or.jp>

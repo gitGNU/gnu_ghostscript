@@ -1,5 +1,5 @@
 /******************************************************************************
-  File:     $Id: gdeveprn.c,v 1.1 2007/09/11 15:25:15 Arabidopsis Exp $
+  File:     $Id: gdeveprn.c,v 1.2 2010/07/11 19:47:19 Arabidopsis Exp $
   Contents: Implementation of the abstract ghostscript device 'eprn':
             general functions and page layout
   Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
@@ -36,7 +36,7 @@
 /* Configuration management identification */
 #ifndef lint
 static const char
-  cm_id[] = "@(#)$Id: gdeveprn.c,v 1.1 2007/09/11 15:25:15 Arabidopsis Exp $";
+  cm_id[] = "@(#)$Id: gdeveprn.c,v 1.2 2010/07/11 19:47:19 Arabidopsis Exp $";
 #endif
 
 /*****************************************************************************/
@@ -314,7 +314,7 @@ static void print_flags(ms_MediaCode flags, const ms_Flag *user_flags)
   if (user_flags != NULL) {
     while (user_flags->code != ms_none) {
       if (user_flags->code & flags) {
-	errprintf(user_flags->name);
+	errprintf("%s", user_flags->name);
 	flags &= ~user_flags->code;
       }
       user_flags++;

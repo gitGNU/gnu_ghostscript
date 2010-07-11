@@ -1,5 +1,5 @@
 /******************************************************************************
-  File:     $Id: gdeveprn.h,v 1.1 2007/09/11 15:25:14 Arabidopsis Exp $
+  File:     $Id: gdeveprn.h,v 1.2 2010/07/11 19:47:19 Arabidopsis Exp $
   Contents: Header file for the abstract ghostscript device 'eprn'
   Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
             Germany; e-mail: Martin.Lottermoser@t-online.de.
@@ -178,7 +178,7 @@
 #define _gdeveprn_h
 
 /* Configuration management identification */
-#pragma ident "@(#)$Id: gdeveprn.h,v 1.1 2007/09/11 15:25:14 Arabidopsis Exp $"
+#pragma ident "@(#)$Id: gdeveprn.h,v 1.2 2010/07/11 19:47:19 Arabidopsis Exp $"
 
 /*****************************************************************************/
 

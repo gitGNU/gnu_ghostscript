@@ -30,7 +30,7 @@
    copyright notice and this notice be preserved on all copies.
  */
 
-/*$Id: gdevdj9.c,v 1.2 2008/03/23 15:28:31 Arabidopsis Exp $*/
+/*$Id: gdevdj9.c,v 1.3 2010/07/11 19:47:17 Arabidopsis Exp $*/
 
 /*
    A printer driver for the HP970Cxi color printer. 

@@ -1,5 +1,5 @@
 *******************************************************************************
-  File:     @(#)$Id: gs-mods.txt,v 1.1 2007/09/11 15:24:47 Arabidopsis Exp $
+  File:     @(#)$Id: gs-mods.txt,v 1.2 2010/07/11 19:47:18 Arabidopsis Exp $
   Contents: Suggested changes to ghostscript's source code or configuration
   Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
             Germany. E-mail: Martin.Lottermoser@t-online.de.

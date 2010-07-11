@@ -1,7 +1,7 @@
 /* BJC-210/240/250/265/1000 Bubble Jet Printer driver for GhostScript
  * utility subroutines and dithering code
  *
- * Copyright 2000, 2001, 2002 Gergely Szï¿½sz (Gergely Sza'sz)
+ * Copyright 2000, 2001, 2002 Gergely Szász (Gergely Sza'sz)
  * mailto://szaszg@hu.inter.net http://bjc250gs.sourceforge.net
  *
  *   This program may be distributed and/or modified under the terms of
@@ -469,8 +469,7 @@ int bjc_treshold[1024];
 
 uint bjc_rand(void)
 {
-    uint ret=bjc_rand_seed[bjc_j] = bjc_rand_seed[bjc_j++] +
-                                        bjc_rand_seed[bjc_k++];
+    uint ret = (bjc_rand_seed[bjc_j++] += bjc_rand_seed[bjc_k++]);
     if(bjc_j==55) bjc_j = 0;
     if(bjc_k==55) bjc_k = 0;
     return ret & 0x03ff;

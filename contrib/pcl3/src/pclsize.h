@@ -1,5 +1,5 @@
 /******************************************************************************
-  File:     $Id: pclsize.h,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $
+  File:     $Id: pclsize.h,v 1.3 2010/07/11 19:47:19 Arabidopsis Exp $
   Contents: Header file for maps between PCL Page Size codes and size
 	    information
   Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
@@ -16,7 +16,7 @@
 #define _pclsize_h
 
 /* Configuration management identification */
-#pragma ident "@(#)$Id: pclsize.h,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $"
+#pragma ident "@(#)$Id: pclsize.h,v 1.3 2010/07/11 19:47:19 Arabidopsis Exp $"
 
 /*****************************************************************************/
 

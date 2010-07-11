@@ -1,5 +1,5 @@
 /******************************************************************************
-  File:     $Id: eprnrend.c,v 1.1 2007/09/11 15:25:15 Arabidopsis Exp $
+  File:     $Id: eprnrend.c,v 1.2 2010/07/11 19:47:19 Arabidopsis Exp $
   Contents: Colour rendering functionality for the ghostscript device 'eprn'
   Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
             Germany. E-mail: Martin.Lottermoser@t-online.de.
@@ -47,7 +47,7 @@
 /* Configuration management identification */
 #ifndef lint
 static const char
-  cm_id[] = "@(#)$Id: eprnrend.c,v 1.1 2007/09/11 15:25:15 Arabidopsis Exp $";
+  cm_id[] = "@(#)$Id: eprnrend.c,v 1.2 2010/07/11 19:47:19 Arabidopsis Exp $";
 #endif
 
 /*****************************************************************************/
@@ -61,7 +61,7 @@ static const char
 #include "std.h"
 
 /* Standard headers */
-#include <assert.h>
+#include "assert_.h"
 #include <stdlib.h>
 
 /* Ghostscript headers */
@@ -975,7 +975,7 @@ static void split_line_4x2(eprn_Device *dev, const eprn_Octet *line,
   if (k != 0) {
     int shift = 8 - k;
     for (j = 0; j < 8; j++)
-      *(ptr[j]++) = *ptr[j] << shift;
+      *(ptr[j]++) <<= shift;
   }
 
   /* Set the lengths of the bit plane strings */

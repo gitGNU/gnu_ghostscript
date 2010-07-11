@@ -1,6 +1,6 @@
 #!/bin/sh
 #******************************************************************************
-# File:     @(#)$Id: catppd,v 1.1 2007/09/11 15:24:58 Arabidopsis Exp $
+# File:     @(#)$Id: catppd,v 1.2 2010/07/11 19:47:19 Arabidopsis Exp $
 # Contents: Primitive *Include resolver for PPD files
 # Call:     catppd <top-level file> <target directory or file>
 # Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,

@@ -16,7 +16,7 @@
 
 */
 
-/* $Id: gdevopvp.c,v 1.5 2010/07/10 22:02:58 Arabidopsis Exp $ */
+/* $Id: gdevopvp.c,v 1.6 2010/07/11 19:47:20 Arabidopsis Exp $ */
 /* gdevopvp.c  ver.1.00 rel.1.0     26 Nov 2004 */
 /* OpenPrinting Vector Printer Driver Glue Code */
 

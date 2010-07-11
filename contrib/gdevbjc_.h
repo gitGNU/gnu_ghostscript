@@ -1,7 +1,7 @@
 /* BJC-210/240/250/265/1000 Bubble Jet Printer driver for GhostScript
  * header file
  *
- * Copyright 2000, 2001, 2002 Gergely Szï¿½sz (Gergely Sza'sz)
+ * Copyright 2000, 2001, 2002 Gergely Szász (Gergely Sza'sz)
  * mailto://szaszg@hu.inter.net http://bjc250gs.sourceforge.net
  *
  *   This program may be distributed and/or modified under the terms of

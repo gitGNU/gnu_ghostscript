@@ -1,5 +1,5 @@
 /******************************************************************************
-  File:     $Id: pcl3opts.c,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $
+  File:     $Id: pcl3opts.c,v 1.3 2010/07/11 19:47:19 Arabidopsis Exp $
   Contents: Program to convert information in PCL-3+ files into options to be
 	    used for the ghostscript device "pcl3" in order to produce a
 	    file using a similar configuration
@@ -16,7 +16,7 @@
 /* Configuration management identification */
 #ifndef lint
 static char
-  cm_id[] = "@(#)$Id: pcl3opts.c,v 1.2 2010/07/10 22:02:49 Arabidopsis Exp $";
+  cm_id[] = "@(#)$Id: pcl3opts.c,v 1.3 2010/07/11 19:47:19 Arabidopsis Exp $";
 #endif
 
 /*****************************************************************************/

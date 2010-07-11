@@ -18,7 +18,7 @@
    copies.
  */
 
-/*$Id: gdevl4r.c,v 1.3 2010/07/10 22:02:45 Arabidopsis Exp $ */
+/*$Id: gdevl4r.c,v 1.4 2010/07/11 19:47:18 Arabidopsis Exp $ */
 /* Raster Version of LIPS driver */
 
 #include "gdevlprn.h"
