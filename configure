@@ -12703,8 +12703,8 @@ fi
 
 	fi
 	if test -z "$PNGDEVS"; then
-	  { $as_echo "$as_me:${as_lineno-$LINENO}: disabling png output devices" >&5
-$as_echo "$as_me: disabling png output devices" >&6;}
+	  as_fn_error "I did not find a copy of zlib on your system.
+	  Please install it or install the -dev package too." "$LINENO" 5
 	fi
 fi
 
@@ -12781,10 +12781,10 @@ done
 fi
 
 	if test -z $LOCAL_LIBTIFF_VERSION && test "x$HAVE_SYSTEM_LIBTIFF" == x; then
-	    { $as_echo "$as_me:${as_lineno-$LINENO}: Could not find a copy of libtiff on your system.
-Disabling tiff output devices." >&5
-$as_echo "$as_me: Could not find a copy of libtiff on your system.
-Disabling tiff output devices." >&6;}
+	as_fn_error "I wasn't able to find a copy
+  of the tiff library. This is required for compiling
+  ghostscript. Please install libtiff and -dev packages for your system.
+  " "$LINENO" 5
 	else
 	    TIFFDEVS="$TIFFDEVS_ALL"
 	fi

@@ -17,7 +17,7 @@ dnl    You should have received a copy of the GNU General Public License
 dnl   along with GNU ghostscript.  If not, see <http://www.gnu.org/licenses/>.
 dnl   for further information.
 dnl
-dnl $Id: configure.ac,v 1.21 2010/07/10 22:02:45 Arabidopsis Exp $
+dnl $Id: configure.ac,v 1.22 2010/07/11 19:25:47 Arabidopsis Exp $
 
 dnl Process this file with autoconf to produce a configure script
 
@@ -447,7 +447,8 @@ if test x$with_png != xno; then
 		], [SHARE_LIBPNG=0], [-lz])
 	fi
 	if test -z "$PNGDEVS"; then
-	  AC_MSG_NOTICE([disabling png output devices])
+	  AC_MSG_ERROR([I did not find a copy of zlib on your system.
+	  Please install it or install the -dev package too.])
 	fi
 fi
 AC_SUBST(SHARE_LIBPNG)
@@ -456,7 +457,7 @@ AC_SUBST(PNGDEVS)
 
 
 dnl look for libtiff, it also requires lib
-dnl png for the png output device; it also requires zlib
+dnl jpeg
 AC_ARG_WITH([system-libtiff], AC_HELP_STRING([--with-system-libtiff],
 					     [Force using the systems libtiff]),
 	    [], [with_system_libtiff=check])
@@ -473,8 +474,10 @@ case "x$with_system_libtiff" in
 		     [AC_CHECK_HEADERS(tiff.h, [HAVE_SYSTEM_LIBTIFF=1;SHARE_LIBTIFF=1])],
 		     [], [-ljpeg])
 	if test -z $LOCAL_LIBTIFF_VERSION && test "x$HAVE_SYSTEM_LIBTIFF" == x; then
-	    AC_MSG_NOTICE([Could not find a copy of libtiff on your system.
-Disabling tiff output devices.])
+	AC_MSG_ERROR([I wasn't able to find a copy
+  of the tiff library. This is required for compiling
+  ghostscript. Please install libtiff and -dev packages for your system.
+  ])
 	else
 	    TIFFDEVS="$TIFFDEVS_ALL"
 	fi

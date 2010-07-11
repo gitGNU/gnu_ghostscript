@@ -8,6 +8,8 @@ Version 8.71.0 main changes:
 * Update some last files with the new LICENSE statement for a real complete
     GPL V3 release.
 
+* Make libpng and libtiff hard dependencies because compilation failed without it.
+
 * Changes included from the 8.70 version from Artifex:
     This release fixes a large number of issues with transparency, especially
     as it interacts with color space conversion, mask contexts and patterns.
