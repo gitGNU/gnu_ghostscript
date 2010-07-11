@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: msvc32.mak,v 1.2 2010/07/10 22:02:43 Arabidopsis Exp $
+# $Id: msvc32.mak,v 1.3 2010/07/11 17:40:56 Arabidopsis Exp $
 # makefile for 32-bit Microsoft Visual C++, Windows NT or Windows 95 platform.
 #
 # All configurable options are surrounded by !ifndef/!endif to allow 
@@ -314,7 +314,6 @@ WARNOPT=-W2
 #!include $(COMMONDIR)\msvcdefs.mak
 #!include $(COMMONDIR)\pcdefs.mak
 #!include $(COMMONDIR)\generic.mak
-!include $(GLSRCDIR)\version.mak
 # The following is a hack to get around the special treatment of \ at
 # the end of a line.
 NUL=

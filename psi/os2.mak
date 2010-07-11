@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: os2.mak,v 1.2 2010/07/10 22:02:43 Arabidopsis Exp $
+# $Id: os2.mak,v 1.3 2010/07/11 17:40:56 Arabidopsis Exp $
 # makefile for MS-DOS or OS/2 GCC/EMX platform.
 # Uses Borland (MSDOS) MAKER or 
 # Uses IBM NMAKE.EXE Version 2.000.000 Mar 27 1992
@@ -446,7 +446,6 @@ DEVICE_DEVS20=$(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev $(DD)pam
 DEVICE_DEVS21= $(DD)spotcmyk.dev $(DD)devicen.dev $(DD)bmpsep1.dev $(DD)bmpsep8.dev $(DD)bmp16m.dev $(DD)bmp32b.dev $(DD)psdcmyk.dev $(DD)psdrgb.dev
 
 # Include the generic makefiles.
-!include "$(GLSRCDIR)\version.mak"
 !include "$(GLSRCDIR)\gs.mak"
 # psromfs.mak must precede lib.mak
 !include "$(PSSRCDIR)\psromfs.mak"
