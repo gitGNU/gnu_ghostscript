@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: unix-aux.mak,v 1.2 2010/07/10 22:02:23 Arabidopsis Exp $
+# $Id: unix-aux.mak,v 1.3 2010/07/11 20:39:24 Arabidopsis Exp $
 # Partial makefile common to all Unix configurations.
 # This makefile contains the build rules for the auxiliary programs such as
 # echogs, and the 'platform' modules.
@@ -90,7 +90,11 @@ MKROMFS_OBJS=$(MKROMFS_ZLIB_OBJS) $(GLOBJ)gscdefs.$(OBJ) $(GLOBJ)gsmisc.$(OBJ) \
 endif
 
 $(MKROMFS_XE): $(GLSRC)mkromfs.c $(MKROMFS_COMMON_DEPS) $(MKROMFS_OBJS)
+ifeq ($(SHARE_ZLIB),1)
+    $(CCAUX) $(GENOPT) $(CFLAGS_DEBUG) $(I_)$(GLSRCDIR)$(_I) $(I_)$(GLOBJ)$(_I) $(I_)$(ZSRCDIR)$(_I) $(GLSRC)mkromfs.c $(O_)$(MKROMFS_XE) $(MKROMFS_OBJS) -lm -lz
+else
 	$(CCAUX) $(GENOPT) $(CFLAGS) $(I_)$(GLSRCDIR)$(_I) $(I_)$(GLOBJ)$(_I) $(I_)$(ZSRCDIR)$(_I) $(GLSRC)mkromfs.c $(O_)$(MKROMFS_XE) $(MKROMFS_OBJS) -lm $(EXTRALIBS)
+endif
 
 # Query the environment to construct gconfig_.h.
 # The "else true;" is required because Ultrix's implementation of sh -e
