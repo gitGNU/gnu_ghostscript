@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: unix-dll.mak,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $
+# $Id: unix-dll.mak,v 1.3 2010/07/11 17:04:13 Arabidopsis Exp $
 # Partial makefile for Unix shared library target
 
 # Useful make commands:
@@ -88,8 +88,9 @@ $(GSSOX_XE): $(GS_SO) $(PSSRC)$(SOC_LOADER)
 
 # ------------------------- Recursive make targets ------------------------- #
 
-SODEFS=LDFLAGS='$(LDFLAGS) $(LDFLAGS_SO)'\
+SODEFS=\
  GS_XE=$(BINDIR)/$(SOBINRELDIR)/$(GS_SONAME_MAJOR_MINOR)\
+ GS_XE_LDFLAGS='$(LDFLAGS_SO)'\
  STDIO_IMPLEMENTATION=c\
  DISPLAY_DEV=$(DD)$(SOOBJRELDIR)/display.dev\
  BINDIR=$(BINDIR)/$(SOBINRELDIR)\

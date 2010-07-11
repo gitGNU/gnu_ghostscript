@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: unixlink.mak,v 1.2 2010/07/10 22:02:17 Arabidopsis Exp $
+# $Id: unixlink.mak,v 1.3 2010/07/11 17:04:13 Arabidopsis Exp $
 # Partial makefile common to all Unix configurations.
 # This part of the makefile contains the linking steps.
 
@@ -50,7 +50,7 @@ $(GS_A): $(obj_tr) $(ECHOGS_XE) $(INT_ARCHIVE_ALL) $(INT_ALL) $(DEVS_ALL)
 # which has limited environment space.
 ldt_tr=$(PSOBJ)ldt.tr
 $(GS_XE): $(ld_tr) $(ECHOGS_XE) $(XE_ALL) $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ)
-	$(ECHOGS_XE) -w $(ldt_tr) -n - $(CCLD) $(LDFLAGS) -o $(GS_XE)
+	$(ECHOGS_XE) -w $(ldt_tr) -n - $(CCLD) $(GS_XE_LDFLAGS) $(LDFLAGS) -o $(GS_XE)
 	$(ECHOGS_XE) -a $(ldt_tr) -n -s $(PSOBJ)gsromfs$(COMPILE_INITS).$(OBJ) $(PSOBJ)gs.$(OBJ) -s
 	cat $(ld_tr) >>$(ldt_tr)
 	$(ECHOGS_XE) -a $(ldt_tr) -s - $(EXTRALIBS) $(STDLIBS)

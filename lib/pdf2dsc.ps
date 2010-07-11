@@ -13,7 +13,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: pdf2dsc.ps,v 1.9 2010/07/10 22:02:37 Arabidopsis Exp $
+% $Id: pdf2dsc.ps,v 1.10 2010/07/11 17:04:13 Arabidopsis Exp $
 % pdf2dsc.ps
 % read pdf file and produce DSC "index" file.
 %
@@ -116,7 +116,7 @@ systemdict /.setsafe known { .setsafe } if
    DSCfile PDFname write==only
    ( \(r\) file { DELAYSAFER { .setsafe } if } stopped pop\n) puts
    ( pdfopen begin\n) puts
-   ( copy_trailer_attrs\n) puts
+   ( process_trailer_attrs\n) puts
    (%%EndSetup\n) puts
 
    /.hasPageLabels false def % see "Page Labels" in the PDF Reference
