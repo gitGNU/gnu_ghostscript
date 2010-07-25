@@ -5,6 +5,12 @@ Version 8.71.0 main changes:
 	condition in file search; bug 691350), plus SEARCH_HERE_FIRST=0 by default
 	enabled in current dev tree.
 
+* A new configure option is available: --enable-safer-default
+	This option allow to have gs SAFER mode enabled by default. If you need to
+	have a less restrictive gs with this option, you need to add "-dNOSAFER" to
+	the gs command line. This mode isn't the default for now but after testing
+	with the option enabled, the next release will see this option ON by default.
+
 * Update some last files with the new LICENSE statement for a real complete
     GPL V3 release.
 

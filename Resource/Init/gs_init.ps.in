@@ -13,7 +13,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_init.ps.in,v 1.2 2010/07/10 22:02:13 Arabidopsis Exp $
+% $Id: gs_init.ps.in,v 1.3 2010/07/25 21:37:13 Arabidopsis Exp $
 % Initialization file for the interpreter.
 % When this is run, systemdict is still writable.
 
@@ -2063,7 +2063,7 @@ readonly def
 } .bind executeonly odef
 
 % If we are running in SAFER mode, lock things down
-SAFER { .setsafe } if
+@DEFAULT_SAFER@
 
 % If we delayed binding, make it possible to do it later.
 /.bindnow {

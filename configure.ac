@@ -17,7 +17,7 @@ dnl    You should have received a copy of the GNU General Public License
 dnl   along with GNU ghostscript.  If not, see <http://www.gnu.org/licenses/>.
 dnl   for further information.
 dnl
-dnl $Id: configure.ac,v 1.22 2010/07/11 19:25:47 Arabidopsis Exp $
+dnl $Id: configure.ac,v 1.23 2010/07/25 21:37:13 Arabidopsis Exp $
 
 dnl Process this file with autoconf to produce a configure script
 
@@ -1137,6 +1137,18 @@ AC_SUBST(DYNAMIC_FLAGS)
 AC_SUBST(DYNAMIC_LDFLAGS)
 AC_SUBST(DYNAMIC_LIBS)
 AC_SUBST(INSTALL_SHARED)
+
+dnl enable SAFER by default or not
+
+AC_ARG_ENABLE([safer-default], AC_HELP_STRING([--enable-safer-default], [Set the SAFER mode ON by default]))
+
+DEFAULT_SAFER="SAFER { .setsafe } if"
+
+if test x$enable_safer_default = xyes; then
+	DEFAULT_SAFER="currentdict /NOSAFER known { null } { .setsafe } ifelse"
+fi
+
+AC_SUBST(DEFAULT_SAFER)
 
 dnl look for default font path...
 AC_ARG_WITH([fontpath],  AC_HELP_STRING([--with-fontpath],
