@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: lib.mak,v 1.2 2010/07/10 22:02:20 Arabidopsis Exp $
+# $Id: lib.mak,v 1.3 2010/07/30 14:47:08 Arabidopsis Exp $
 # (Platform-independent) makefile for Ghostscript graphics library
 # and other support code.
 # Users of this makefile must define the following:
@@ -895,7 +895,7 @@ $(GLOBJ)gsparam.$(OBJ) : $(GLSRC)gsparam.c $(GXERR) $(memory__h) $(string__h)\
 $(GLOBJ)gsparamx.$(OBJ) : $(GLSRC)gsparamx.c $(string__h)\
  $(gserror_h) $(gserrors_h) $(gsmemory_h) $(gsparam_h) $(gsparamx_h)\
  $(gstypes_h)
-	$(GLCC) $(GLO_)gsparamx.$(OBJ) $(C_) $(GLSRC)gsparamx.c
+	$(GLCCSHARED) $(GLO_)gsparamx.$(OBJ) $(C_) $(GLSRC)gsparamx.c
 
 # Future replacement for gsparams.c
 $(GLOBJ)gsparam2.$(OBJ) : $(GLSRC)gsparam2.c $(GXERR) $(memory__h)\
