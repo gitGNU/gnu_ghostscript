@@ -8,6 +8,9 @@ as primitive operations in the Postscript language and in PDF, and a
 set of utility programs that include the ability to convert PostScript
 to PDF.
 
+More details are available on GNU Ghostscript website 
+http://www.gnu.org/software/ghostscript/
+
 GNU Ghostscript is based on the GPLed Ghostscript made by Ralph Giles,
 artofcode LLC and Artifex Software, Inc.  Thanks to Ralph's hard work
 for making this release of Ghostscript possible. Also thanks to Andy
@@ -28,11 +31,13 @@ bug-ghostscript@gnu.org.  Please do not contact artofcode LLC or Ralph
 Giles for bugs or support issues in this version of Ghostscript as
 they are not responsible for it.
 
-GNU Ghostscript is available from
+GNU Ghostscript is available from:
 
-ftp://ftp.gnu.org/gnu/ghostscript/
+http://ftp.gnu.org/gnu/ghostscript/
 
-and GNU ftp mirror sites worldwide.
+and GNU ftp mirror sites worldwide:
+
+http://ftpmirror.gnu.org
 
 Didier Link
 didier@famille-link.fr
