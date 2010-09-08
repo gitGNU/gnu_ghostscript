@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: imainarg.c,v 1.2 2010/07/10 22:02:44 Arabidopsis Exp $ */
+/* $Id: imainarg.c,v 1.3 2010/09/08 23:03:33 Arabidopsis Exp $ */
 /* Command line parsing and dispatching */
 #include "ctype_.h"
 #include "memory_.h"
@@ -935,7 +935,7 @@ print_help(gs_main_instance * minst)
 static void
 print_revision(const gs_main_instance *minst)
 {
-    printf_program_ident(minst->heap, gs_product, gs_revision);
+    printf_program_ident(minst->heap, gs_product, gs_version);
     outprintf(minst->heap, " (%d-%02d-%02d)\n%s\n",
 	    (int)(gs_revisiondate / 10000),
 	    (int)(gs_revisiondate / 100 % 100),
@@ -947,7 +947,7 @@ print_revision(const gs_main_instance *minst)
 static void
 print_version(const gs_main_instance *minst)
 {
-    printf_program_ident(minst->heap, NULL, gs_revision);
+    printf_program_ident(minst->heap, NULL, gs_version);
 }
 
 /* Print usage information. */

@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gscdef.c,v 1.2 2010/07/10 22:02:28 Arabidopsis Exp $ */
+/* $Id: gscdef.c,v 1.3 2010/09/08 23:03:33 Arabidopsis Exp $ */
 /* Configuration scalars */
 
 #include "std.h"
@@ -51,6 +51,15 @@ const char *
 gs_program_name(void)
 {
     return gs_product;
+}
+
+/* GS_VERSION must be defined in the Makefile. */
+const long gs_version = GS_VERSION;
+
+long
+gs_version_number(void)
+{
+	return gs_version;
 }
 
 /* GS_REVISION must be defined in the makefile. */

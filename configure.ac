@@ -17,7 +17,7 @@ dnl    You should have received a copy of the GNU General Public License
 dnl   along with GNU ghostscript.  If not, see <http://www.gnu.org/licenses/>.
 dnl   for further information.
 dnl
-dnl $Id: configure.ac,v 1.23 2010/07/25 21:37:13 Arabidopsis Exp $
+dnl $Id: configure.ac,v 1.24 2010/09/08 23:03:33 Arabidopsis Exp $
 
 dnl Process this file with autoconf to produce a configure script
 
@@ -26,7 +26,7 @@ dnl Initialization and Versioning
 dnl ------------------------------------------------
 
 AC_PREREQ(2.60)
-AC_INIT([gnu-ghostscript], [8.71.0], [gnu-ghostscript-bug@gnu.org])
+AC_INIT([gnu-ghostscript], [8.71.1], [gnu-ghostscript-bug@gnu.org])
 AC_CONFIG_SRCDIR(psi/gs.c)
 AM_INIT_AUTOMAKE([-Wall])
 
@@ -38,8 +38,8 @@ LDFLAGS="${LDFLAGS:=}"
 
 GS_VERSION_MAJOR=8
 GS_VERSION_MINOR=71
-GS_VERSION_PATCH=0
-GS_REVISIONDATE=20100509
+GS_VERSION_PATCH=1
+GS_REVISIONDATE=20100909
 
 GS_VERSION=`expr $GS_VERSION_MAJOR \* 10000 + $GS_VERSION_MINOR \* 100 + $GS_VERSION_PATCH`
 
