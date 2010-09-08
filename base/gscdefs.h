@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id: gscdefs.h,v 1.2 2010/07/10 22:02:23 Arabidopsis Exp $ */
+/*$Id: gscdefs.h,v 1.3 2010/09/08 23:27:15 Arabidopsis Exp $ */
 /* Prototypes for configuration definitions in gconfig.c. */
 
 #ifndef gscdefs_INCLUDED
@@ -30,6 +30,7 @@ extern const long gs_buildtime;
 extern const char *const gs_copyright;
 extern const char *const gs_product;
 extern const char *const gs_productfamily;
+extern const long gs_version;
 extern const long gs_revision;
 extern const long gs_revisiondate;
 extern const long gs_serialnumber;
