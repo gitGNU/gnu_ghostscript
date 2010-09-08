@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsmisc.c,v 1.3 2010/09/08 23:03:33 Arabidopsis Exp $ */
+/* $Id: gsmisc.c,v 1.4 2010/09/08 23:57:34 Arabidopsis Exp $ */
 /* Miscellaneous utilities for Ghostscript library */
 
 
@@ -167,7 +167,7 @@ printf_program_ident(const gs_memory_t *mem, const char *program_name, long revi
     if (revision_number) {
 	int ppart = revision_number % 100;
 
-	outprintf(mem, "%d.%02d.%02d", (int)(revision_number / 10000 % 100),
+	outprintf(mem, "%d.%02d.%d", (int)(revision_number / 10000 % 100),
 			(int)(revision_number / 100 % 100), ppart);
     }
 }
@@ -180,7 +180,7 @@ eprintf_program_ident(const char *program_name,
 	if (revision_number) {
 	    int ppart = revision_number % 100;
 
-	    epf("%d.%02d.%02d", (int)(revision_number / 10000 % 100),
+	    epf("%d.%02d.%d", (int)(revision_number / 10000 % 100),
 				(int)(revision_number / 100 % 100), ppart);
 	}
 	epf(": ");

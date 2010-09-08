@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: std.h,v 1.2 2010/07/10 22:02:23 Arabidopsis Exp $ */
+/* $Id: std.h,v 1.3 2010/09/08 23:57:34 Arabidopsis Exp $ */
 /* Standard definitions for Ghostscript code */
 
 #ifndef std_INCLUDED
@@ -255,6 +255,7 @@ void printf_program_ident(const gs_memory_t *mem, const char *program_name, long
 void eprintf_program_ident(const char *program_name, long revision_number);
 const char *gs_program_name(void);
 long gs_revision_number(void);
+long gs_version_number(void);
 
 #define _epi eprintf_program_ident(gs_program_name(), gs_revision_number()),
 

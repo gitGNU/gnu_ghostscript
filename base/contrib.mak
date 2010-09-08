@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: contrib.mak,v 1.2 2010/07/10 22:02:30 Arabidopsis Exp $
+# $Id: contrib.mak,v 1.3 2010/09/08 23:57:34 Arabidopsis Exp $
 # makefile for contributed device drivers.
 
 # Define the name of this makefile.
@@ -856,23 +856,6 @@ $(DD)dj505j.dev : $(cdeskjet_)
 
 $(DD)picty180.dev : $(cdeskjet_)
 	$(SETPDEV) $(DD)picty180 $(cdeskjet_)
-
-#########################################################################
-### -------------------- The Brother HL-1250 printer -------------------- ###
-### This printer is ljet4-compatible, plus support for source tray        ###
-### selection and special 1200x600 dpi mode.                              ###
-
-hl1250_=$(GLOBJ)gdevhl12.$(OBJ) $(HPDLJM)
-$(DD)hl1250.dev : $(hl1250_) $(DD)page.dev
-	$(SETPDEV) $(DD)hl1250 $(hl1250_)
-
-$(DD)hl1240.dev : $(hl1250_) $(DD)page.dev
-	$(SETPDEV) $(DD)hl1240 $(hl1250_)
-
-# Author: Marek Michalkiewicz <marekm@linux.org.pl>
-# Printer: Brother HL-1250 (may work with some other models too)
-$(GLOBJ)gdevhl12.$(OBJ) : $(GLSRC)gdevhl12.c $(PDEVH) $(gdevdljm_h)
-	$(GLCC) $(GLO_)gdevhl12.$(OBJ) $(C_) $(GLSRC)gdevhl12.c
 
 #     WeP     WeP-compatible dot matrix printers (9- or 24-pin)
 

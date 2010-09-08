@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: gs.mak,v 1.3 2010/07/11 17:40:56 Arabidopsis Exp $
+# $Id: gs.mak,v 1.4 2010/09/08 23:57:34 Arabidopsis Exp $
 # Generic makefile, common to all platforms, products, and configurations.
 # The platform-specific makefiles `include' this file.
 
@@ -433,6 +433,8 @@ $(gconfigd_h) : $(ECHOGS_XE) $(GS_MAK) $(TOP_MAKEFILES)
 	$(EXP)$(ECHOGS_XE) -a $(gconfigd_h) -x 23 define -s -u GS_INIT -x 2022 $(GS_INIT) -x 22
 	$(EXP)$(ECHOGS_XE) -a $(gconfigd_h) -x 23 define -s -u GS_REVISION -s $(GS_REVISION)
 	$(EXP)$(ECHOGS_XE) -a $(gconfigd_h) -x 23 define -s -u GS_REVISIONDATE -s $(GS_REVISIONDATE)
+	$(EXP)$(ECHOGS_XE) -a $(gconfigd_h) -x 23 define -s -u GS_VERSION -s $(GS_VERSION)
+	
 
 obj_tr=$(GLGENDIR)$(D)obj.tr
 $(obj_tr) : $(ld_tr)
