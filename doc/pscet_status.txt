@@ -1,5 +1,5 @@
 # Report of Ghostscript's conformance against the Quality Logic CET suite
-# $Id: pscet_status.txt,v 1.3 2010/07/10 22:02:52 Arabidopsis Exp $
+# $Id$
 #
 Test	 Status	Comments
 

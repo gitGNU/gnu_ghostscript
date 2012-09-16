@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,22 +11,35 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: dwtext.h,v 1.2 2010/07/10 22:02:44 Arabidopsis Exp $ */
+/* $Id$ */
 /* Text Window class */
 
 #ifndef dwtext_INCLUDED
 #  define dwtext_INCLUDED
 
-
 #ifdef _WINDOWS
 #define _Windows
 #endif
 
+#ifndef WINDOWS_NO_UNICODE
+#define UNICODE
+#endif
+
+#include "windows_.h"
+
+#undef UNICODE
 
 typedef struct TEXTWINDOW_S {
     const char *Title;		/* required */
+#ifndef WINDOWS_NO_UNICODE
+    wchar_t *TitleW;             /* required */
+#endif
     HICON hIcon;		/* optional */
+#ifdef WINDOWS_NO_UNICODE
     BYTE *ScreenBuffer;
+#else
+    wchar_t *ScreenBuffer;
+#endif
     POINT ScreenSize;		/* optional */
     char *DragPre;		/* optional */
     char *DragPost;		/* optional */
@@ -64,8 +77,10 @@ typedef struct TEXTWINDOW_S {
     POINT ScrollMax;
 
     int x, y, cx, cy;	/* window position */
+#ifndef WINDOWS_NO_UNICODE
+    int utf8shift;
+#endif
 } TW;
-
 
 /* Create new TW structure */
 TW *text_new(void);
@@ -128,7 +143,7 @@ int text_getpos(TW *tw, int *px, int *py, int *pcx, int *pcy);
 
 /* Set pre drag and post drag strings
  * If a file is dropped on the window, the following will
- * be poked into the keyboard buffer: 
+ * be poked into the keyboard buffer:
  *   the pre_drag string
  *   the file name
  *   the post_drag string
@@ -139,6 +154,5 @@ void text_drag(TW *tw, const char *pre_drag, const char *post_drag);
 HWND text_get_handle(TW *tw);
 
 /* ================================== */
-
 
 #endif /* dwtext_INCLUDED */

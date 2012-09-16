@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gstrans.h,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
+/* $Id$ */
 /* Transparency definitions and interface */
 
 #ifndef gstrans_INCLUDED
@@ -34,7 +34,9 @@ typedef enum {
     PDF14_END_TRANS_MASK,
     PDF14_SET_BLEND_PARAMS,
     PDF14_PUSH_TRANS_STATE,
-    PDF14_POP_TRANS_STATE
+    PDF14_POP_TRANS_STATE,
+    PDF14_PUSH_SMASK_COLOR,
+    PDF14_POP_SMASK_COLOR
 } pdf14_compositor_operations;
 
 #define PDF14_OPCODE_NAMES \
@@ -47,7 +49,9 @@ typedef enum {
     "PDF14_END_TRANS_MASK   ",\
     "PDF14_SET_BLEND_PARAMS ",\
     "PDF14_PUSH_TRANS_STATE ",\
-    "PDF14_POP_TRANS_STATE  "\
+    "PDF14_POP_TRANS_STATE  ",\
+    "PDF14_PUSH_SMASK_COLOR ",\
+    "PDF14_POP_SMASK_COLOR  "\
 }
 
 /* Bit definitions for serializing PDF 1.4 parameters */
@@ -85,10 +89,10 @@ struct gs_pdf14trans_params_s {
     int Background_components;
     bool function_is_identity;
     float Background[GS_CLIENT_COLOR_MAX_COMPONENTS];
-    float GrayBackground;  /* This is used to determine if the 
+    float GrayBackground;  /* This is used to determine if the
                               softmask's bbox needs to be adjusted
                               to the parent groups bbox.  Since
-                              the soft mask can affect areas 
+                              the soft mask can affect areas
                               outside its own groups bounding
                               box in such a case */
     gs_function_t *transfer_function;
@@ -101,13 +105,17 @@ struct gs_pdf14trans_params_s {
     bool mask_is_image;
     gs_matrix ctm;
     bool replacing;
-	bool overprint;
-	bool overprint_mode;
+    bool overprint;
+    bool overprint_mode;
     bool idle; /* For clist reader.*/
     uint mask_id; /* For clist reader.*/
-    bool SMask_is_CIE;
     int group_color_numcomps;
     gs_transparency_color_t group_color;
+    int64_t icc_hash;
+    cmm_profile_t *iccprofile;               /* The profile  */
+    bool crop_blend_params;  /* This is used when the blend params are updated
+                                during a transparency group push */
+    bool is_pattern;      /* Needed to detect device push and pop for clist pattern */
 };
 
 #ifndef gs_pdf14trans_params_DEFINED
@@ -124,7 +132,6 @@ typedef struct gs_pdf14trans_s {
     gs_composite_common;
     gs_pdf14trans_params_t  params;
 } gs_pdf14trans_t;
-
 
 /* Access transparency-related graphics state elements. */
 int gs_setblendmode(gs_state *, gs_blend_mode_t);
@@ -148,27 +155,29 @@ gs_transparency_state_type_t
  * We have to abbreviate the procedure name because procedure names are
  * only unique to 23 characters on VMS.
  */
-int gs_push_pdf14trans_device(gs_state * pgs);
+int gs_push_pdf14trans_device(gs_state * pgs, bool is_pattern);
 
-int gs_pop_pdf14trans_device(gs_state * pgs);
+int gs_pop_pdf14trans_device(gs_state * pgs, bool is_pattern);
 
 void gs_trans_group_params_init(gs_transparency_group_params_t *ptgp);
 
+int gs_update_trans_marking_params(gs_state * pgs);
+
 int gs_begin_transparency_group(gs_state * pgs,
-				const gs_transparency_group_params_t *ptgp,
-				const gs_rect *pbbox);
+                                const gs_transparency_group_params_t *ptgp,
+                                const gs_rect *pbbox);
 
 int gs_end_transparency_group(gs_state *pgs);
 
 void gs_trans_mask_params_init(gs_transparency_mask_params_t *ptmp,
-			       gs_transparency_mask_subtype_t subtype);
+                               gs_transparency_mask_subtype_t subtype);
 
 int gs_begin_transparency_mask(gs_state *pgs,
-			       const gs_transparency_mask_params_t *ptmp,
-			       const gs_rect *pbbox, bool mask_is_image);
+                               const gs_transparency_mask_params_t *ptmp,
+                               const gs_rect *pbbox, bool mask_is_image);
 
 int gs_end_transparency_mask(gs_state *pgs,
-			     gs_transparency_channel_selector_t csel);
+                             gs_transparency_channel_selector_t csel);
 
 int gs_discard_transparency_layer(gs_state *pgs);
 
@@ -176,19 +185,19 @@ int gs_discard_transparency_layer(gs_state *pgs);
  * Imager level routines for the PDF 1.4 transparency operations.
  */
 int gx_begin_transparency_group(gs_imager_state * pis, gx_device * pdev,
-				const gs_pdf14trans_params_t * pparams);
+                                const gs_pdf14trans_params_t * pparams);
 
 int gx_end_transparency_group(gs_imager_state * pis, gx_device * pdev);
 
 int gx_begin_transparency_mask(gs_imager_state * pis, gx_device * pdev,
-				const gs_pdf14trans_params_t * pparams);
+                                const gs_pdf14trans_params_t * pparams);
 
 int gx_end_transparency_mask(gs_imager_state * pis, gx_device * pdev,
-				const gs_pdf14trans_params_t * pparams);
+                                const gs_pdf14trans_params_t * pparams);
 
 int gx_discard_transparency_layer(gs_imager_state *pis);
 
-/* These are used for watching for q Smask Q events.  We need to 
+/* These are used for watching for q Smask Q events.  We need to
    send special compositor commands to keep the bands in sync
    with the current softmask during clist rendering.  Like the
    other transparency operations the gs functions occur on the
@@ -202,7 +211,6 @@ int gs_pop_transparency_state(gs_state *pgs);
 int gx_push_transparency_state(gs_imager_state * pis, gx_device * pdev);
 
 int gx_pop_transparency_state(gs_imager_state * pis, gx_device * pdev);
-
 
 /*
  * Verify that a compositor data structure is for the PDF 1.4 compositor.
@@ -228,9 +236,9 @@ int gs_is_pdf14trans_compositor(const gs_composite_t * pct);
 #define BITS_PER_CHANNEL 8
 /* The estimated size of an individual PDF 1.4 buffer row (in bits) */
 #define ESTIMATED_PDF14_ROW_SIZE(width) ((width) * BITS_PER_CHANNEL\
-	* (NUM_ALPHA_CHANNELS + NUM_COLOR_CHANNELS))
+        * (NUM_ALPHA_CHANNELS + NUM_COLOR_CHANNELS))
 /* The estimated size of one row in all PDF 1.4 buffers (in bits) */
 #define ESTIMATED_PDF14_ROW_SPACE(width) \
-	(NUM_PDF14_BUFFERS * ESTIMATED_PDF14_ROW_SIZE(width))
+        (NUM_PDF14_BUFFERS * ESTIMATED_PDF14_ROW_SIZE(width))
 
 #endif /* gstrans_INCLUDED */

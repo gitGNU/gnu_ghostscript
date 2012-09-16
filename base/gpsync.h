@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,11 +11,13 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gpsync.h,v 1.2 2010/07/10 22:02:21 Arabidopsis Exp $ */
+/* $Id$ */
 /* Interface to platform-dependent synchronization primitives */
 
 #if !defined(gpsync_INCLUDED)
 #  define gpsync_INCLUDED
+
+#include "stdint_.h" /* make sure stdint types are available - for int64_t */
 
 /* Initial version 4/1/98 by John Desrosiers (soho@crl.com). */
 /* 8/9/98 L. Peter Deutsch (ghost@aladdin.com) Changed ...sizeof to
@@ -28,8 +30,13 @@
  * control to proceed iff the number of signals since semaphore creation
  * is greater than the number of waits.
  */
-typedef struct {
-    void *dummy_;
+
+/* Needs to have maximum alignment */
+typedef union {
+    void *dummy1;
+    double dummy2;
+    long dummy3;
+    int64_t dummy4;
 } gp_semaphore;
 
 uint gp_semaphore_sizeof(void);
@@ -63,8 +70,30 @@ int gp_monitor_leave(gp_monitor * mon);
 /*
  * A new thread starts by calling a procedure, passing it a void * that
  * allows it to gain access to whatever data it needs.
+ *
+ * NOW DEPRECATED: USE gs_create_handled_thread instead.
  */
 typedef void (*gp_thread_creation_callback_t) (void *);
 int gp_create_thread(gp_thread_creation_callback_t, void *);
+
+/*
+ * Start a new thread in which the given callback procedure (fun) is called,
+ * passing it the given void * (arg) that allows it to gain access to whatever
+ * data it needs. If thread creation succeeds, this returns 0, and a thread id
+ * is placed in *thread. Otherwise a negative value is returned and *thread
+ * becomes NULL.
+ *
+ * This thread id cannot simply be discarded, it must be gp_thread_finished to
+ * avoid resource leakage or even crashes.
+ */
+typedef void *gp_thread_id;
+int gp_thread_start(gp_thread_creation_callback_t fun, void *arg, gp_thread_id *thread);
+
+/*
+ * Given a thread id created by gp_thread_start, this causes the current
+ * thread to wait until that thread has completed, and to discard
+ * the thread id. No further operations on the thread id are permitted.
+ */
+void gp_thread_finish(gp_thread_id thread);
 
 #endif /* !defined(gpsync_INCLUDED) */

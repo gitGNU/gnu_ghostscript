@@ -1,6 +1,6 @@
 #!/bin/sh
 #******************************************************************************
-# File:     @(#)$Id: if-pcl3,v 1.2 2010/07/11 19:47:20 Arabidopsis Exp $
+# File:     @(#)$Id: if-pcl3,v 2.6 2001/07/07 10:05:34 Martin Rel $
 # Contents: Example of a pcl3-based input filter for a Berkeley spooler (lpr)
 #	    driving a PCL-3 printer
 # Call:     if-pcl3 <input filter arguments>

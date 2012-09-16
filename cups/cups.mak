@@ -1,5 +1,5 @@
 #
-# "$Id: cups.mak,v 1.4 2010/07/10 22:02:49 Arabidopsis Exp $"
+# "$Id$"
 #
 # CUPS driver makefile for Ghostscript.
 #
@@ -35,38 +35,30 @@ cups_=	$(GLOBJ)gdevcups.$(OBJ)
 # CUPSDATA=`cups-config --datadir`
 # CUPSPDFTORASTER= 1 if CUPS is new enough (cups-config --version)
 
-$(DD)cups.dev : $(CUPS_MAK) $(cups_) $(GLD)page.dev
-	$(SETPDEV2) $(DD)cups $(cups_)
-	$(ADDMOD) $(DD)cups -libpath $(CUPSLIBDIRS)
-	$(ADDMOD) $(DD)cups -lib $(CUPSLIBS)
+GSTORASTER_XE=$(BINDIR)$(D)gstoraster$(XE)
 
-$(GLOBJ)gdevcups.$(OBJ) : cups/gdevcups.c $(PDEVH)
-	$(GLCC) $(CUPSCFLAGS) $(GLO_)gdevcups.$(OBJ) $(C_) cups/gdevcups.c
+cups: gstoraster
 
-PDFTORASTER_XE=$(BINDIR)$(D)pdftoraster$(XE)
+gstoraster: $(GSTORASTER_XE)
+gstoraster_=cups/gstoraster.c cups/colord.c
 
-cups: pdftoraster
-pdftoraster: $(PDFTORASTER_XE)
-pdftoraster_=cups/pdftoraster.c
-
-$(PDFTORASTER_XE): $(pdftoraster_)
+$(GSTORASTER_XE): $(gstoraster_)
 	if [ "$(CUPSPDFTORASTER)" = "1" ]; then \
-	    $(GLCC) $(LDFLAGS) -DBINDIR='"$(bindir)"' -DGS='"$(GS)"' -o $@ $(pdftoraster_) `cups-config --image --libs`; \
+	    $(GLCC) $(LDFLAGS) $(DBUS_CFLAGS) -DBINDIR='"$(bindir)"' -DCUPSDATA='"$(CUPSDATA)"' -DGS='"$(GS)"' -o $@ $(gstoraster_) `cups-config --image --ldflags --libs` $(DBUS_LIBS); \
 	fi
 
-install:	install-cups
+
+install:	$(CUPSINSTTARGET)
 
 install-cups: cups
 	-mkdir -p $(DESTDIR)$(CUPSSERVERBIN)/filter
-	$(INSTALL_PROGRAM) cups/pstoraster $(DESTDIR)$(CUPSSERVERBIN)/filter
 	if [ "$(CUPSPDFTORASTER)" = "1" ]; then \
-	    $(INSTALL_PROGRAM) $(PDFTORASTER_XE) $(DESTDIR)$(CUPSSERVERBIN)/filter; \
+	    $(INSTALL_PROGRAM) $(GSTORASTER_XE) $(DESTDIR)$(CUPSSERVERBIN)/filter; \
 	fi
 	$(INSTALL_PROGRAM) cups/pstopxl $(DESTDIR)$(CUPSSERVERBIN)/filter
 	-mkdir -p $(DESTDIR)$(CUPSSERVERROOT)
-	$(INSTALL_DATA) cups/pstoraster.convs $(DESTDIR)$(CUPSSERVERROOT)
 	if [ "$(CUPSPDFTORASTER)" = "1" ]; then \
-	    $(INSTALL_DATA) cups/pdftoraster.convs $(DESTDIR)$(CUPSSERVERROOT); \
+	    $(INSTALL_DATA) cups/gstoraster.convs $(DESTDIR)$(CUPSSERVERROOT); \
 	fi
 	-mkdir -p $(DESTDIR)$(CUPSDATA)/model
 	$(INSTALL_DATA) cups/pxlcolor.ppd $(DESTDIR)$(CUPSDATA)/model
@@ -74,5 +66,5 @@ install-cups: cups
 
 
 #
-# End of "$Id: cups.mak,v 1.4 2010/07/10 22:02:49 Arabidopsis Exp $".
+# End of "$Id$".
 #

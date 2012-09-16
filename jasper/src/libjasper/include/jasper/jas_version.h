@@ -62,7 +62,7 @@
  */
 
 /*
- * $Id: jas_version.h,v 1.4 2010/07/10 22:02:56 Arabidopsis Exp $
+ * $Id$
  */
 
 #ifndef JAS_VERSION_H

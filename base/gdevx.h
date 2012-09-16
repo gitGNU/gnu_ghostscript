@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevx.h,v 1.2 2010/07/10 22:02:22 Arabidopsis Exp $ */
+/* $Id$ */
 /* Definitions for X Windows drivers */
 /* Requires gxdevice.h and x_.h */
 
@@ -28,26 +28,6 @@ typedef unsigned long x_pixel;
 extern XtResource gdev_x_resources[];
 extern const int gdev_x_resource_count;
 extern String gdev_x_fallback_resources[];
-
-/* Define PostScript to X11 font name mapping */
-/*
- * x11fontlist is only used within x11fontmap.
- * The names array is managed by Xlib, so the structure is simple.
- */
-typedef struct x11fontlist_s {
-    char **names;
-    int count;
-} x11fontlist;
-typedef struct x11fontmap_s x11fontmap;
-struct x11fontmap_s {
-    char *ps_name;
-    char *x11_name;
-    x11fontlist std, iso;
-    x11fontmap *next;
-};
-#define private_st_x11fontmap()	/* in gdevxini.c */\
-  gs_private_st_ptrs3(st_x11fontmap, x11fontmap, "x11fontmap",\
-    x11fontmap_enum_ptrs, x11fontmap_reloc_ptrs, ps_name, x11_name, next)
 
 /* Define the X Windows device */
 typedef struct gx_device_X_s {
@@ -79,16 +59,16 @@ typedef struct gx_device_X_s {
 
     /* A backing pixmap so X will handle exposure automatically */
     Pixmap bpixmap;		/* 0 if useBackingPixmap is false, */
-				/* or if it can't be allocated */
+                                /* or if it can't be allocated */
     int ghostview;		/* flag to tell if ghostview is in control */
     Window mwin;		/* window to receive ghostview messages */
     gs_matrix initial_matrix;	/* the initial transformation */
     Atom NEXT, PAGE, DONE;	/* Atoms used to talk to ghostview */
     struct {
-	gs_int_rect box;	/* region needing updating */
-	long area;		/* total area of update */
-	long total;		/* total of individual area updates */
-	int count;		/* # of updates since flush */
+        gs_int_rect box;	/* region needing updating */
+        long area;		/* total area of update */
+        long total;		/* total of individual area updates */
+        int count;		/* # of updates since flush */
     } update;
     Pixmap dest;		/* bpixmap if non-0, else use win */
     x_pixel colors_or;		/* 'or' of all device colors used so far */
@@ -96,19 +76,19 @@ typedef struct gx_device_X_s {
 
     /* An intermediate pixmap for the stencil case of copy_mono */
     struct {
-	Pixmap pixmap;
-	GC gc;
-	int raster, height;
+        Pixmap pixmap;
+        GC gc;
+        int raster, height;
     } cp;
 
     /* Structure for dealing with the halftone tile. */
     /* Later this might become a multi-element cache. */
     struct {
-	Pixmap pixmap;
-	Pixmap no_pixmap;	/* kludge to get around X bug */
-	gx_bitmap_id id;
-	int width, height, raster;
-	x_pixel fore_c, back_c;
+        Pixmap pixmap;
+        Pixmap no_pixmap;	/* kludge to get around X bug */
+        gx_bitmap_id id;
+        int width, height, raster;
+        x_pixel fore_c, back_c;
     } ht;
 
     /* Cache the function and fill style from the GC */
@@ -168,13 +148,6 @@ typedef struct gx_device_X_s {
     String geometry;
     int maxGrayRamp, maxRGBRamp;
     String palette;
-    String regularFonts;
-    String symbolFonts;
-    String dingbatFonts;
-    x11fontmap *regular_fonts;
-    x11fontmap *symbol_fonts;
-    x11fontmap *dingbat_fonts;
-    Boolean useXFonts, useFontExtensions, useScalableFonts, logXFonts;
     float xResolution, yResolution;
 
     /* Flags work around various X server problems. */
@@ -213,15 +186,15 @@ typedef struct gx_device_X_s {
      * Buffered text awaiting display.
      */
     struct {
-	int item_count;
+        int item_count;
 #define IN_TEXT(xdev) ((xdev)->text.item_count != 0)
-	int char_count;
-	gs_int_point origin;
-	int x;			/* after last buffered char */
+        int char_count;
+        gs_int_point origin;
+        int x;			/* after last buffered char */
 #define MAX_TEXT_ITEMS 12
-	XTextItem items[MAX_TEXT_ITEMS];
+        XTextItem items[MAX_TEXT_ITEMS];
 #define MAX_TEXT_CHARS 25
-	char chars[MAX_TEXT_CHARS];
+        char chars[MAX_TEXT_CHARS];
     } text;
 /*
  * All the GC parameters are set correctly when we buffer the first
@@ -230,14 +203,13 @@ typedef struct gx_device_X_s {
  */
 #define DRAW_TEXT(xdev)\
    XDrawText(xdev->dpy, xdev->dest, xdev->gc, xdev->text.origin.x,\
-	     xdev->text.origin.y, xdev->text.items, xdev->text.item_count)
+             xdev->text.origin.y, xdev->text.items, xdev->text.item_count)
 
 } gx_device_X;
 #define private_st_device_X()	/* in gdevx.c */\
-  gs_public_st_suffix_add4_final(st_device_X, gx_device_X,\
+  gs_public_st_suffix_add1_final(st_device_X, gx_device_X,\
     "gx_device_X", device_x_enum_ptrs, device_x_reloc_ptrs,\
-    gx_device_finalize, st_device_bbox, buffer, regular_fonts,\
-    symbol_fonts, dingbat_fonts)
+    gx_device_finalize, st_device_bbox, buffer)
 
 /* Send an event to the Ghostview process */
 void gdev_x_send_event(gx_device_X *xdev, Atom msg);
@@ -266,7 +238,6 @@ dev_proc_map_rgb_color(gdev_x_map_rgb_color);  /* gdevxcmp.c */
 dev_proc_map_color_rgb(gdev_x_map_color_rgb);  /* gdevxcmp.c */
 dev_proc_get_params(gdev_x_get_params);  /* gdevxini.c */
 dev_proc_put_params(gdev_x_put_params);  /* gdevxini.c */
-dev_proc_get_xfont_procs(gdev_x_get_xfont_procs);  /* gdevxxf.c */
 dev_proc_finish_copydevice(gdev_x_finish_copydevice);  /* gdevxini.c */
 
 #endif /* gdevx_INCLUDED */

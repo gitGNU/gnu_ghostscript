@@ -1,5 +1,5 @@
 /******************************************************************************
-  File:     $Id: pclcap.h,v 1.3 2010/07/11 19:47:18 Arabidopsis Exp $
+  File:     $Id: pclcap.h,v 1.10 2000/11/19 07:05:17 Martin Rel $
   Contents: Header for describing capabilities of PCL printers
   Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
             Germany. E-mail: Martin.Lottermoser@t-online.de.
@@ -15,7 +15,7 @@
 #define _pclcap_h
 
 /* Configuration management identification */
-#pragma ident "@(#)$Id: pclcap.h,v 1.3 2010/07/11 19:47:18 Arabidopsis Exp $"
+#pragma ident "@(#)$Id: pclcap.h,v 1.10 2000/11/19 07:05:17 Martin Rel $"
 
 /*****************************************************************************/
 

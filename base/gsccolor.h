@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsccolor.h,v 1.2 2010/07/10 22:02:27 Arabidopsis Exp $ */
+/* $Id$ */
 /* Client color structure definition */
 
 #ifndef gsccolor_INCLUDED
@@ -28,17 +28,17 @@ typedef struct gs_pattern_instance_s gs_pattern_instance_t;
 /*
  * Define the maximum number of components in a client color.
  * This must be at least 4, and should be at least 6 to accommodate
- * hexachrome DeviceN color spaces. We saw 9-component colors in
- * the wild. (bug 691002).
+ * hexachrome DeviceN color spaces. We saw 9-component (bug 691002)
+ * and 13-component (bug 691425) colors in the wild.
  */
 #ifndef GS_CLIENT_COLOR_MAX_COMPONENTS		/* Allow override with XCFLAGS */
-#  define GS_CLIENT_COLOR_MAX_COMPONENTS (12)
+#  define GS_CLIENT_COLOR_MAX_COMPONENTS (14)
 #endif
 
 /* Paint (non-Pattern) colors */
 typedef struct gs_paint_color_s {
     float values[GS_CLIENT_COLOR_MAX_COMPONENTS];
-    /* CAUTION: The shading decomposition algorithm may allocate 
+    /* CAUTION: The shading decomposition algorithm may allocate
        a smaller space when a small number of color components is in use.
     */
 } gs_paint_color;
@@ -52,8 +52,8 @@ typedef struct gs_client_color_s gs_client_color;
 struct gs_client_color_s {
     gs_pattern_instance_t *pattern;
     gs_paint_color paint;	/* also color for uncolored pattern */
-    /* CAUTION: gs_paint_color structure must be the last field in 
-       gs_client_color_s to allow allocating a smaller space when 
+    /* CAUTION: gs_paint_color structure must be the last field in
+       gs_client_color_s to allow allocating a smaller space when
        a small number of color components is in use.
     */
 };
@@ -74,9 +74,9 @@ typedef enum {
     DEVICE_CMYK,
     CIE_XYZ,
     DEVICEN,
+    ICC,
     UNKNOWN,
     OTHER
 } gs_transparency_color_t;
-
 
 #endif /* gsccolor_INCLUDED */

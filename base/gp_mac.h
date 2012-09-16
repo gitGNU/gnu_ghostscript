@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gp_mac.h,v 1.2 2010/07/10 22:02:31 Arabidopsis Exp $ */
+/* $Id$ */
 
 #ifndef gp_mac_INCLUDED
 #  define gp_mac_INCLUDED
@@ -19,4 +19,3 @@
 /* no special definitions for macos */
 
 #endif 				/* gp_mac_INCLUDED */
-

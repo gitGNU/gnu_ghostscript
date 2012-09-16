@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: ugcclib.mak,v 1.2 2010/07/10 22:02:30 Arabidopsis Exp $
+# $Id$
 # makefile for Unix / gcc library testing.
 
 BINDIR=./libobj
@@ -24,6 +24,7 @@ GLD=$(GLGENDIR)/
 #include $(COMMONDIR)/gccdefs.mak
 #include $(COMMONDIR)/unixdefs.mak
 #include $(COMMONDIR)/generic.mak
+include $(GLSRCDIR)/version.mak
 
 gsdir = /usr/local/share/ghostscript
 gsdatadir = $(gsdir)/$(GS_DOT_VERSION)
@@ -37,8 +38,8 @@ GENOPT=
 GS=gslib
 
 # We don't expect to build debug or profiling configurations....
-DEBUGRELDIR=.
-PGRELDIR=.
+DEBUGDIRPREFIX=
+PGDIRPREFIX=
 
 JSRCDIR=jpeg
 SHARE_JPEG=0
@@ -56,15 +57,22 @@ SHARE_JBIG2=0
 JBIG2_LIB=jbig2dec
 JBIG2SRCDIR=jbig2dec
 
-# Define the directory where the icclib source are stored.
-# See icclib.mak for more information
+# Define the directory where the lcms source is stored.
+# See lcms.mak for more information
 
-ICCSRCDIR=icclib
+LCMSSRCDIR=lcms
+
+# Define the directory where the lcms2 source is stored.
+# See lcms2.mak for more information
+
+LCMS2SRCDIR=lcms2
 
 # Define the directory where the ijs source is stored,
 # and the process forking method to use for the server.
 # See ijs.mak for more information.
 
+SHARE_IJS=0
+IJS_NAME=
 IJSSRCDIR=ijs
 IJSEXECTYPE=unix
 
@@ -103,8 +111,7 @@ SYNC=posync
 
 FEATURE_DEVS=$(GLD)dps2lib.dev $(GLD)psl2cs.dev $(GLD)cielib.dev\
  $(GLD)psl3lib.dev $(GLD)path1lib.dev $(GLD)patlib.dev $(GLD)htxlib.dev\
- $(GLD)cidlib.dev $(GLD)psf0lib.dev $(GLD)psf1lib.dev\
- $(GLD)roplib.dev
+ $(GLD)cidlib.dev $(GLD)psf0lib.dev $(GLD)psf1lib.dev
 
 COMPILE_INITS?=0
 BAND_LIST_STORAGE=file
@@ -149,9 +156,9 @@ include $(GLSRCDIR)/unixhead.mak
 include $(GLSRCDIR)/gs.mak
 include $(GLSRCDIR)/lib.mak
 include $(GLSRCDIR)/jpeg.mak
-# zlib.mak must precede libpng.mak
+# zlib.mak must precede png.mak
 include $(GLSRCDIR)/zlib.mak
-include $(GLSRCDIR)/libpng.mak
+include $(GLSRCDIR)/png.mak
 include $(GLSRCDIR)/jbig2.mak
 include $(GLSRCDIR)/icclib.mak
 include $(GLSRCDIR)/ijs.mak

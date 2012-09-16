@@ -64,7 +64,7 @@
 /*
  * MQ Arithmetic Encoder
  *
- * $Id: jpc_mqenc.h,v 1.4 2010/07/10 22:02:55 Arabidopsis Exp $
+ * $Id$
  */
 
 #ifndef JPC_MQENC_H

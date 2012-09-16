@@ -36,11 +36,13 @@
  *  http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
  */
 
-/* $Id: aes.c,v 1.2 2010/07/10 22:02:24 Arabidopsis Exp $ */
+/* $Id$ */
 /* AES block cipher implementation from XYSSL */
 
 #include "string_.h"	/* memcmp() */
 #include "aes.h"
+
+#define XYSSL_AES_ROM_TABLES 1 /* avoid regenerating tables each time */
 
 /*
  * 32-bit integer manipulation macros (little endian)
@@ -1083,7 +1085,6 @@ int aes_self_test( int verbose )
         if( verbose != 0 )
             printf( "passed\n" );
     }
-
 
     if( verbose != 0 )
         printf( "\n" );

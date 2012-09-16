@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsalloc.h,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $ */
+/* $Id$ */
 /* Memory allocator extensions for standard allocator */
 
 #ifndef gsalloc_INCLUDED
@@ -28,14 +28,14 @@ typedef struct gs_ref_memory_s gs_ref_memory_t;
  * Define a structure and interface for GC-related allocator state.
  */
 typedef struct gs_memory_gc_status_s {
-	/* Set by client */
+        /* Set by client */
     long vm_threshold;		/* GC interval */
     long max_vm;		/* maximum allowed allocation */
     int *psignal;		/* if not NULL, store signal_value */
-				/* here if we go over the vm_threshold */
+                                /* here if we go over the vm_threshold */
     int signal_value;		/* value to store in *psignal */
     bool enabled;		/* auto GC enabled if true */
-	/* Set by allocator */
+        /* Set by allocator */
     long requested;		/* amount of last failing request */
 } gs_memory_gc_status_t;
 void gs_memory_gc_status(const gs_ref_memory_t *, gs_memory_gc_status_t *);

@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gscolor2.h,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
+/* $Id$ */
 /* Client interface to Level 2 color facilities */
 /* (requires gscspace.h, gsmatrix.h) */
 
@@ -32,6 +32,7 @@
 /* General color routines */
 gs_color_space *gs_currentcolorspace(const gs_state *);
 int gs_setcolorspace(gs_state *, gs_color_space *);
+int gs_setcolorspace_only(gs_state *, gs_color_space *);
 const gs_client_color *gs_currentcolor(const gs_state *);
 int gs_setcolor(gs_state *, const gs_client_color *);
 const gx_device_color *gs_currentdevicecolor(const gs_state *);
@@ -39,7 +40,7 @@ const gx_device_color *gs_currentdevicecolor(const gs_state *);
 /* Look up with restriction */
 int
 gs_indexed_limit_and_lookup(const gs_client_color * pc,const gs_color_space *pcs,
-			 gs_client_color *pcc);
+                         gs_client_color *pcc);
 
 /* Declare the Indexed color space type. */
 extern const gs_color_space_type gs_color_space_type_Indexed;

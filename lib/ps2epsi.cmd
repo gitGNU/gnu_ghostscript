@@ -1,4 +1,4 @@
-/* $Id: ps2epsi.cmd,v 1.5 2010/07/10 22:02:36 Arabidopsis Exp $ */
+/* $Id$ */
 /*
  * This file is maintained by a user: if you have any questions about it,
  * please contact Mark Hale (mark.hale@physics.org).

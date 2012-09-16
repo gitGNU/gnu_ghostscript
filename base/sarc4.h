@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: sarc4.h,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
+/* $Id$ */
 /* Definitions for Arcfour cipher and filter */
 /* Requires scommon.h; strimpl.h if any templates are referenced */
 
@@ -38,7 +38,7 @@ typedef struct stream_arcfour_state_s stream_arcfour_state;
 #endif
 
 int s_arcfour_set_key(stream_arcfour_state * state, const unsigned char *key,
-		      int keylength);
+                      int keylength);
 
 #define private_st_arcfour_state()	/* used in sarc4.c */\
   gs_private_st_simple(st_arcfour_state, stream_arcfour_state,\

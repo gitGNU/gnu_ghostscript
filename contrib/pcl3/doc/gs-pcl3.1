@@ -529,7 +529,7 @@ The driver checks whether the subdevice selected accepts the given
 resolution unless the subdevice is \fBunspecold\fP or
 \fBunspec\fP\&.
 Resolutions supported by at least some of the other subdevices
-for some of the colour models are 75, 100, 150, 300, 600×300 and 600 ppi\&.
+for some of the colour models are 75, 100, 150, 300, 600ï¿½300 and 600 ppi\&.
 Consult the PPD files in the \fBpcl3\fP distribution if you want
 to know the details\&.
 The default resolution for \fBpcl3\fP is 300 ppi\&.
@@ -549,7 +549,7 @@ use \fBpcl3opts\fP to find out about the settings used by that
 driver\&.
 .IP "" 10
 At least some of the series-500 DeskJets claim to
-permit a resolution of 600 × 300 ppi\&.
+permit a resolution of 600 ï¿½ 300 ppi\&.
 However,
 although these models have a 600 dpi addressable horizontal resolution grid
 they do not permit neighbouring pixels to be activated
@@ -563,7 +563,7 @@ for the printer\&'s builtin fonts and not for general raster data\&.
 Concerning the DeskJet 870C,
 my impression is that although some HP documents and drivers use expressions
 like "600x300 dpi C-REt color" for this printer,
-the model does not really support a resolution of 600 × 300 ppi\&.
+the model does not really support a resolution of 600 ï¿½ 300 ppi\&.
 First, it does not accept \fBpcl3\fP\&'s output with this resolution,
 and second,
 if one inspects the best output of HP\&'s Windows driver for this printer
@@ -916,8 +916,8 @@ the number of pixels in the halftone cell times
 one less than the number of hardware intensity levels,
 something has gone wrong\&.
 This is, for example, the case if
-you specified 4 black levels and a 2×2 halftone cell,
-and you then can distinguish more than 1 + 4×3 = 13 intensity levels\&.
+you specified 4 black levels and a 2ï¿½2 halftone cell,
+and you then can distinguish more than 1 + 4ï¿½3 = 13 intensity levels\&.
 You should also watch for non-monotonic jumps in intensity and incompletely
 filled shapes\&.
 .IP "" 10
@@ -1547,53 +1547,53 @@ The following keywords are accepted
 (entries marked with an asterisk (*) are those used by the subdevice
 \fBunspec\fP
 if no media file is employed;
-entries with a section/paragraph sign (§) similarly identify the sizes
+entries with a section/paragraph sign (ï¿½) similarly identify the sizes
 used by \fBunspecold\fP):
 
 .TS
 tab();
 r l.
-\fBIndex3x5in\fPUS index card 3 × 5 in
+\fBIndex3x5in\fPUS index card 3 ï¿½ 5 in
 \fBEnvChou4\fPT{
-Japanese long envelope #4 (90 × 205 mm)
+Japanese long envelope #4 (90 ï¿½ 205 mm)
 T}
 \fBEnvMonarch\fPT{
-US Monarch envelope (3\&.875 × 7\&.5 in)
+US Monarch envelope (3\&.875 ï¿½ 7\&.5 in)
 T}
-*\fBPostcard\fPJapanese Hagaki card (100 × 148 mm)
-*\fBIndex4x6in\fPUS index card 4 × 6 in
-§*\fBEnv10\fPUS no\&. 10 envelope (4\&.125 × 9\&.5 in)
-\fBA6\fPISO/JIS A6 (105 × 148 mm)
-*\fBA6Card\fPISO/JIS A6 postcard (105 × 148 mm)
-§*\fBEnvDL\fPISO DL envelope (110 × 220 mm)
-\fBEnvUS_A2\fPUS A2 envelope (4\&.375 × 5\&.75 in)
-*\fBEnvC6\fPISO C6 envelope (114 × 162 mm)
+*\fBPostcard\fPJapanese Hagaki card (100 ï¿½ 148 mm)
+*\fBIndex4x6in\fPUS index card 4 ï¿½ 6 in
+ï¿½*\fBEnv10\fPUS no\&. 10 envelope (4\&.125 ï¿½ 9\&.5 in)
+\fBA6\fPISO/JIS A6 (105 ï¿½ 148 mm)
+*\fBA6Card\fPISO/JIS A6 postcard (105 ï¿½ 148 mm)
+ï¿½*\fBEnvDL\fPISO DL envelope (110 ï¿½ 220 mm)
+\fBEnvUS_A2\fPUS A2 envelope (4\&.375 ï¿½ 5\&.75 in)
+*\fBEnvC6\fPISO C6 envelope (114 ï¿½ 162 mm)
 \fBEnvChou3\fPT{
-Japanese long envelope #3 (120 × 235 mm)
+Japanese long envelope #3 (120 ï¿½ 235 mm)
 T}
-*\fBIndex5x8in\fPUS index card 5 × 8 in
-\fBStatement\fPUS Statement (5\&.5 × 8\&.5 in)
-\fBDoublePostcard\fPdouble Postcard (148 × 200 mm)
-*\fBA5\fPISO/JIS A5 (148 × 210 mm)
-\fBEnvC5\fPISO C5 envelope (162 × 229 mm)
-\fBISOB5\fPISO B5 (176 × 250 mm)
-*\fBJISB5\fPJIS B5 (182 × 257 mm)
-§*\fBExecutive\fPUS Executive (7\&.25 × 10\&.5 in)
-§*\fBA4\fPISO/JIS A4 (210 × 297 mm)
-§*\fBLetter\fPUS Letter (8\&.5 × 11 in)
-§*\fBLegal\fPUS Legal (8\&.5 × 14 in)
+*\fBIndex5x8in\fPUS index card 5 ï¿½ 8 in
+\fBStatement\fPUS Statement (5\&.5 ï¿½ 8\&.5 in)
+\fBDoublePostcard\fPdouble Postcard (148 ï¿½ 200 mm)
+*\fBA5\fPISO/JIS A5 (148 ï¿½ 210 mm)
+\fBEnvC5\fPISO C5 envelope (162 ï¿½ 229 mm)
+\fBISOB5\fPISO B5 (176 ï¿½ 250 mm)
+*\fBJISB5\fPJIS B5 (182 ï¿½ 257 mm)
+ï¿½*\fBExecutive\fPUS Executive (7\&.25 ï¿½ 10\&.5 in)
+ï¿½*\fBA4\fPISO/JIS A4 (210 ï¿½ 297 mm)
+ï¿½*\fBLetter\fPUS Letter (8\&.5 ï¿½ 11 in)
+ï¿½*\fBLegal\fPUS Legal (8\&.5 ï¿½ 14 in)
 \fBEnvKaku2\fPT{
-Japanese Kaku envelope (240 × 332 mm)
+Japanese Kaku envelope (240 ï¿½ 332 mm)
 T}
 \fBJISB4\fPT{
-JIS B4 (257 × 364 mm)\&.
-This is distinct from ISO B4 (250 × 353 mm)\&.
+JIS B4 (257 ï¿½ 364 mm)\&.
+This is distinct from ISO B4 (250 ï¿½ 353 mm)\&.
 T}
 \fBTabloid\fPT{
-US Tabloid (11 × 17 in; in landscape orientation also called "Ledger")
+US Tabloid (11 ï¿½ 17 in; in landscape orientation also called "Ledger")
 T}
-\fBA3\fPISO/JIS A3 (297 × 420 mm)
-\fBHPSuperB\fPwhat HP calls Super B (13 × 19 in)
+\fBA3\fPISO/JIS A3 (297 ï¿½ 420 mm)
+\fBHPSuperB\fPwhat HP calls Super B (13 ï¿½ 19 in)
 *\fBCustomPageSize\fPcustom page size
 .TE
 
@@ -2125,7 +2125,7 @@ Third edition, 1999\&.
 .SH "AUTHOR"
 .PP
 Copyright \(co 2000, 2001 by Martin Lottermoser,
-Greifswaldstraße 28, 38124 Braunschweig, Germany\&.
+Greifswaldstraï¿½e 28, 38124 Braunschweig, Germany\&.
 E-mail:
 Martin\&.Lottermoser@t-online\&.de\&.
 .PP

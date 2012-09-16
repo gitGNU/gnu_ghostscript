@@ -64,7 +64,7 @@
 /*
  * Tier 2 Encoder
  *
- * $Id: jpc_t2enc.h,v 1.4 2010/07/10 22:02:55 Arabidopsis Exp $
+ * $Id$
  */
 
 #ifndef JPC_T2ENC_H

@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevsvga.h,v 1.2 2010/07/10 22:02:25 Arabidopsis Exp $ */
+/* $Id$ */
 /* Common definitions and procedures for SuperVGA drivers */
 /* Requires gdevpcfb.h */
 
@@ -20,7 +20,7 @@
 
 /* Common procedures */
 
-	/* See gxdevice.h for the definitions of the procedures. */
+        /* See gxdevice.h for the definitions of the procedures. */
 
 dev_proc_close_device(svga_close);
 dev_proc_map_rgb_color(svga_map_rgb_color);
@@ -53,17 +53,17 @@ struct gx_device_svga_s {
     int wnum_read, wnum_write;	/* window #s for read vs. write */
     /* Following are device-specific. */
     union {
-	struct {
-	    void (*bios_set_page) (int, int);	/* set-page function */
-	    int pn_shift;	/* log2(64K/granularity) */
-	} vesa;
-	struct {
-	    int select_reg;	/* page-select register */
-	} atiw;
-	struct {
-	    int et_model;	/* 4 for ET4000, */
-	    /* 3 for ET3000 */
-	} tseng;
+        struct {
+            void (*bios_set_page) (int, int);	/* set-page function */
+            int pn_shift;	/* log2(64K/granularity) */
+        } vesa;
+        struct {
+            int select_reg;	/* page-select register */
+        } atiw;
+        struct {
+            int et_model;	/* 4 for ET4000, */
+            /* 3 for ET3000 */
+        } tseng;
     } info;
 };
 
@@ -71,13 +71,13 @@ struct gx_device_svga_s {
 /* the screen to a full-page coordinate space. */
 /* This may or may not be what is desired! */
 #define svga_color_device(procs, name, depth, maxv, dither, get_mode, set_mode, set_page) {\
-	std_device_color_body(gx_device_svga, &procs, name,\
-	  640, 480,\
-	  480 / PAGE_HEIGHT_INCHES, 480 / PAGE_HEIGHT_INCHES,\
-	  /*dci_color(*/depth, maxv, dither/*)*/),\
-	 { 0 },		/* std_procs */\
-	get_mode, set_mode, set_page,\
-	0 /*fixed_colors*/\
+        std_device_color_body(gx_device_svga, &procs, name,\
+          640, 480,\
+          480 / PAGE_HEIGHT_INCHES, 480 / PAGE_HEIGHT_INCHES,\
+          /*dci_color(*/depth, maxv, dither/*)*/),\
+         { 0 },		/* std_procs */\
+        get_mode, set_mode, set_page,\
+        0 /*fixed_colors*/\
    }
 #define svga_device(procs, name, get_mode, set_mode, set_page)\
   svga_color_device(procs, name, 8, 31, 4, get_mode, set_mode, set_page)

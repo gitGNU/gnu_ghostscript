@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpdfb.h,v 1.2 2010/07/10 22:02:24 Arabidopsis Exp $ */
+/* $Id$ */
 /* pdfwrite, ps2write device body template. */
 
 /* This file is allowed to #include several times into a single .c file.
@@ -22,14 +22,13 @@
    PDF_FOR_OPDFREAD - an integer 0 (false) or 1 (true).
  */
 
-
 const gx_device_pdf PDF_DEVICE_IDENT =
 {std_device_dci_type_body(gx_device_pdf, 0, PDF_DEVICE_NAME,
-			  &st_device_pdfwrite,
-			  DEFAULT_WIDTH_10THS * X_DPI / 10,
-			  DEFAULT_HEIGHT_10THS * Y_DPI / 10,
-			  X_DPI, Y_DPI,
-			  3, 24, 255, 255, 256, 256),
+                          &st_device_pdfwrite,
+                          DEFAULT_WIDTH_10THS * X_DPI / 10,
+                          DEFAULT_HEIGHT_10THS * Y_DPI / 10,
+                          X_DPI, Y_DPI,
+                          3, 24, 255, 255, 256, 256),
  {pdf_open,
   gx_upright_get_initial_matrix,
   NULL,				/* sync_output */
@@ -83,7 +82,7 @@ const gx_device_pdf PDF_DEVICE_IDENT =
   NULL,				/* get_color_comp_index */
   NULL,				/* encode_color */
   NULL,				/* decode_color */
-  gdev_pdf_pattern_manage, 	/* pattern_manage */
+  NULL, 			/* pattern_manage */
   gdev_pdf_fill_rectangle_hl_color, 	/* fill_rectangle_hl_color */
   gdev_pdf_include_color_space, 	/* include_color_space */
   NULL,				/* fill_linear_color_scanline */
@@ -91,7 +90,11 @@ const gx_device_pdf PDF_DEVICE_IDENT =
   NULL,				/* fill_linear_color_triangle */
   NULL,				/* update_spot_equivalent_colors */
   NULL,				/* ret_devn_params */
-  gdev_pdf_fillpage		/* fillpage */
+  gdev_pdf_fillpage,		/* fillpage */
+  NULL,				/* push_transparency_state */
+  NULL,				/* pop_transparency_state */
+  NULL,				/* put_image */
+  gdev_pdf_dev_spec_op		/* dev_spec_op */
  },
  psdf_initial_values(PSDF_VERSION_INITIAL, 0 /*false */ ),  /* (!ASCII85EncodePages) */
  PDF_FOR_OPDFREAD,		/* is_ps2write */
@@ -120,11 +123,11 @@ const gx_device_pdf PDF_DEVICE_IDENT =
  {0, 0, 0},			/* InstanceUUID */
  0,				/* DocumentTimeSeq */
  PDF_FOR_OPDFREAD,		/* ForOPDFRead */
- {0, 0, 0},			/* OPDFReadProcsetPath */
  false,				/* CompressEntireFile */
  0 /*false*/,			/* ResourcesBeforeUsage */
  1 /*true*/,			/* HavePDFWidths */
  0 /*false*/,			/* HaveStrokeColor */
+ 1 /*true*/,			/* ProduceDSC */
  1 /*true*/,			/* HaveTransparency */
  0 /*false*/,			/* PatternImagemask */
  0 /*false*/,			/* PDFX */
@@ -183,7 +186,7 @@ const gx_device_pdf PDF_DEVICE_IDENT =
  1,				/* used_mask */
  {
      {
-	 {0}}},			/* resources */
+         {0}}},			/* resources */
  {0},				/* cs_Patterns */
  {0},				/* Identity_ToUnicode_CMaps */
  0,				/* last_resource */
@@ -191,14 +194,14 @@ const gx_device_pdf PDF_DEVICE_IDENT =
  gs_no_id,			/* IdentityCIDSystemInfo_id */
  {
      {
-	 {0}}},			/* outline_levels */
+         {0}}},			/* outline_levels */
  0,				/* outline_depth */
  0,				/* closed_outline_depth */
  0,				/* outlines_open */
  0,				/* articles */
  0,				/* Dests */
  {0},				/* fileID */
-	 {0, 0},		/* uuid_time */
+         {0, 0},		/* uuid_time */
  0,				/* global_named_objects */
  0,				/* local_named_objects */
  0,				/* NI_stack */
@@ -220,6 +223,7 @@ const gx_device_pdf PDF_DEVICE_IDENT =
  0,				/* sbstack_size */
  0,				/* sbstack_depth */
  0,				/* sbstack */
+ 0,				/* FormDepth */
  0,				/* substream_Resources */
  1,				/* pcm_color_info_index == DeviceRGB */
  false,				/* skip_colors */
@@ -228,6 +232,7 @@ const gx_device_pdf PDF_DEVICE_IDENT =
  0,				/* accumulating_substream_resource */
  {0,0,0,0,0,0,0,0,0},		/* charproc_ctm */
  0,				/* charproc_just_accumulated */
+ 1,             /* PS_accumulator */
  0,				/* accumulating_a_global_object */
  0,				/* cgp */
  0,				/* substituted_pattern_count */
@@ -251,6 +256,13 @@ const gx_device_pdf PDF_DEVICE_IDENT =
  0,				/* DoNumCopies */
  true,				/* PreserveSeparation */
  true,				/* PreserveDeviceN */
- 0				/* PDFACompatibilityPolicy */
+ 0,				/* PDFACompatibilityPolicy */
+ true,				/* DetectDuplicateImages */
+ false,				/* AllowIncrementalCFF */
+ true,				/* HighLevelDevice */
+ !PDF_FOR_OPDFREAD,		/* WantsToUnicode */
+ PDF_FOR_OPDFREAD,		/* AllowPSRepeatFunctions */
+ true,				/* IsDistiller (true even for ps2write!) */
+ !PDF_FOR_OPDFREAD,		/* PreserveSMask */
+ !PDF_FOR_OPDFREAD		/* PreserveTrMode */
 };
-

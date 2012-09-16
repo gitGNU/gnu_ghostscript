@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gserrors.h,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $ */
+/* $Id$ */
 /* Error code definitions */
 
 #ifndef gserrors_INCLUDED
@@ -41,5 +41,8 @@
 #define gs_error_hit_detected (-99)
 
 #define gs_error_Fatal (-100)
+
+/* Need the remap color error for high level pattern support */
+#define gs_error_Remap_Color (-107)
 
 #endif /* gserrors_INCLUDED */

@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: all-arch.mak,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $
+# $Id$
 #
 # Author:
 # 	Nelson H. F. Beebe
@@ -157,6 +157,8 @@ DD			= $(GLD)
 GLD			= $(GLGENDIR)/
 GLGENDIR		= ./obj
 GLOBJ			= ./obj/
+AUXDIR                  = $(GLGENDIR)/aux
+AUX                     = $(AUX)/
 PSD			= $(PSGENDIR)/
 PSGENDIR		= ./obj
 
@@ -275,6 +277,7 @@ clean mostlyclean clobber distclean maintainer-clean:
 
 init:
 	-if test ! -d obj ; then mkdir obj ; fi
+	-if test ! -d obj/aux ; then mkdir obj/aux ; fi
 
 install:	install-binary install-fontmap install-pdfsec
 

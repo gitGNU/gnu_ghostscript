@@ -64,7 +64,7 @@
 /*
  * Image Class
  *
- * $Id: jas_image.h,v 1.5 2010/07/10 22:02:57 Arabidopsis Exp $
+ * $Id$
  */
 
 #ifndef JAS_IMAGE_H
@@ -255,9 +255,6 @@ typedef struct {
 * File format related classes.
 \******************************************************************************/
 
-#define	JAS_IMAGE_MAXFMTS	32
-/* The maximum number of image data formats supported. */
-
 /* Image format-dependent operations. */
 
 typedef struct {
@@ -280,13 +277,13 @@ typedef struct {
 	int id;
 	/* The ID for this format. */
 
-	char *name;
+	char name[4];
 	/* The name by which this format is identified. */
 
-	char *ext;
+	char ext[4];
 	/* The file name extension associated with this format. */
 
-	char *desc;
+	char desc[60];
 	/* A brief description of the format. */
 
 	jas_image_fmtops_t ops;
@@ -468,13 +465,13 @@ int jas_image_addfmt(int id, char *name, char *ext, char *desc,
 int jas_image_strtofmt(char *s);
 
 /* Get the name of the image format with the specified ID. */
-char *jas_image_fmttostr(int fmt);
+const char *jas_image_fmttostr(int fmt);
 
 /* Lookup image format information by the format ID. */
-jas_image_fmtinfo_t *jas_image_lookupfmtbyid(int id);
+const jas_image_fmtinfo_t *jas_image_lookupfmtbyid(int id);
 
 /* Lookup image format information by the format name. */
-jas_image_fmtinfo_t *jas_image_lookupfmtbyname(const char *name);
+const jas_image_fmtinfo_t *jas_image_lookupfmtbyname(const char *name);
 
 /* Guess the format of an image file based on its name. */
 int jas_image_fmtfromname(char *filename);

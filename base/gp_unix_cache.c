@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gp_unix_cache.c,v 1.2 2010/07/10 22:02:20 Arabidopsis Exp $ */
+/* $Id$ */
 /* Generic POSIX persistent-cache implementation for Ghostscript */
 
 #include "stdio_.h"
@@ -79,7 +79,7 @@ static char *gp_cache_prefix(void)
     if (plen >= 1 && prefix[0] == '~') {
         char *home, *path;
         int hlen = 0;
-	unsigned int pathlen = 0;
+        unsigned int pathlen = 0;
         gp_file_name_combine_result result;
 
         if (gp_getenv("HOME", (char *)NULL, &hlen) < 0) {
@@ -214,14 +214,14 @@ static int gp_cache_loaditem(FILE *file, gp_cache_entry *item, gp_cache_alloc al
     unsigned char *filekey;
     int len, keylen;
 
-    fread(&version, 1, 1, file);
+    (void)fread(&version, 1, 1, file);
     if (version != GP_CACHE_VERSION) {
 #ifdef DEBUG_CACHE
         dlprintf2("pcache file version mismatch (%d vs expected %d)\n", version, GP_CACHE_VERSION);
 #endif
         return -1;
     }
-    fread(&keylen, 1, sizeof(keylen), file);
+    (void)fread(&keylen, 1, sizeof(keylen), file);
     if (keylen != item->keylen) {
 #ifdef DEBUG_CACHE
         dlprintf2("pcache file has correct hash but wrong key length (%d vs %d)\n",
@@ -234,7 +234,7 @@ static int gp_cache_loaditem(FILE *file, gp_cache_entry *item, gp_cache_alloc al
         dprintf("pcache: couldn't allocate file key!\n");
         return -1;
     }
-    fread(filekey, 1, keylen, file);
+    (void)fread(filekey, 1, keylen, file);
     if (memcmp(filekey, item->key, keylen)) {
 #ifdef DEBUG_CACHE
         dlprintf("pcache file has correct hash but doesn't match the full key\n");
@@ -246,7 +246,7 @@ static int gp_cache_loaditem(FILE *file, gp_cache_entry *item, gp_cache_alloc al
     }
     free(filekey);
 
-    fread(&len, 1, sizeof(len), file);
+    (void)fread(&len, 1, sizeof(len), file);
 #ifdef DEBUG_CACHE
     dlprintf2("key matches file with version %d, data length %d\n", version, len);
 #endif
@@ -321,7 +321,6 @@ gp_cache_write_entry(FILE *file, gp_cache_entry *item)
     fprintf(file, "%s %lu\n", item->filename, item->last_used);
     return 0;
 }
-
 
 /* insert a buffer under a (type, key) pair */
 int gp_cache_insert(int type, byte *key, int keylen, void *buffer, int buflen)

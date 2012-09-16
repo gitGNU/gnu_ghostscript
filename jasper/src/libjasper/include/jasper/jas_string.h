@@ -64,7 +64,7 @@
 /*
  * String Library
  *
- * $Id: jas_string.h,v 1.4 2010/07/10 22:02:57 Arabidopsis Exp $
+ * $Id$
  */
 
 #ifndef	JAS_STRING_H

@@ -10,7 +10,7 @@
 # of the license contained in the file LICENSE in this distribution.
 
 # script to analyse differences in Adobe Font Metrics files
-# $Id: afmutil.py,v 1.5 2010/07/10 22:02:46 Arabidopsis Exp $
+# $Id$
 
 import string
 

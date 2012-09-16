@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsmemlok.h,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $ */
+/* $Id$ */
 /* Interface to monitor-locked heap memory allocator */
 
 /* Initial version 2/1/98 by John Desrosiers (soho@crl.com) */
@@ -38,9 +38,9 @@ typedef struct gs_memory_locked_s {
 
 /* Initialize a locked memory manager. */
 int gs_memory_locked_init(
-			  gs_memory_locked_t * lmem,	/* allocator to init */
-			  gs_memory_t * target	/* allocator to monitor lock */
-			  );
+                          gs_memory_locked_t * lmem,	/* allocator to init */
+                          gs_memory_t * target	/* allocator to monitor lock */
+                          );
 
 /* Release a locked memory manager. */
 /* Note that this has no effect on the target. */

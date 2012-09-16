@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: stdpre.h,v 1.2 2010/07/10 22:02:27 Arabidopsis Exp $ */
+/* $Id$ */
 /* Standard definitions for Ghostscript code not needing arch.h */
 
 #ifndef stdpre_INCLUDED
@@ -181,9 +181,9 @@ extern_inline int xyz(<<parameters>>)
 
 /*
  * Some versions of gcc have a bug such that after
-	byte *p;
-	...
-	x = *(long *)p;
+        byte *p;
+        ...
+        x = *(long *)p;
  * the compiler then thinks that p always points to long-aligned data.
  * Detect this here so it can be handled appropriately in the few places
  * that (we think) matter.

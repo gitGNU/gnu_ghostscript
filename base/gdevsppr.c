@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevsppr.c,v 1.2 2010/07/10 22:02:28 Arabidopsis Exp $*/
+/* $Id$*/
 /* SPARCprinter driver for Ghostscript */
 #include "gdevprn.h"
 #include <stdio.h>
@@ -60,13 +60,13 @@ prn_device(prn_sparc_procs,
 static int
 sparc_open(gx_device *pdev)
 {	/* Change the margins according to the paper size. */
-	const float *m;
-	static const float m_a4[4] = { SPARC_MARGINS_A4 };
-	static const float m_letter[4] = { SPARC_MARGINS_LETTER };
+        const float *m;
+        static const float m_a4[4] = { SPARC_MARGINS_A4 };
+        static const float m_letter[4] = { SPARC_MARGINS_LETTER };
 
-	m = (pdev->height / pdev->y_pixels_per_inch >= 11.1 ? m_a4 : m_letter);
-	gx_device_set_margins(pdev, m, true);
-	return gdev_prn_open(pdev);
+        m = (pdev->height / pdev->y_pixels_per_inch >= 11.1 ? m_a4 : m_letter);
+        gx_device_set_margins(pdev, m, true);
+        return gdev_prn_open(pdev);
 }
 
 char *errmsg[]={
@@ -115,7 +115,7 @@ sparc_print_page(gx_device_printer *pdev, FILE *prn)
   int out_size;
   if (ioctl(fileno(prn),LPVIIOC_GETPAGE,&lpvipage)!=0)
     {
-    errprintf("sparc_print_page: LPVIIOC_GETPAGE failed\n");
+    errprintf(pdev->memory, "sparc_print_page: LPVIIOC_GETPAGE failed\n");
     return -1;
     }
   lpvipage.bitmap_width=gdev_mem_bytes_per_scan_line((gx_device *)pdev);
@@ -124,7 +124,7 @@ sparc_print_page(gx_device_printer *pdev, FILE *prn)
   lpvipage.resolution = (pdev->x_pixels_per_inch == 300 ? DPI300 : DPI400);
   if (ioctl(fileno(prn),LPVIIOC_SETPAGE,&lpvipage)!=0)
     {
-    errprintf("sparc_print_page: LPVIIOC_SETPAGE failed\n");
+    errprintf(pdev->memory, "sparc_print_page: LPVIIOC_SETPAGE failed\n");
     return -1;
     }
   out_size=lpvipage.bitmap_width*lpvipage.page_length;
@@ -134,49 +134,49 @@ sparc_print_page(gx_device_printer *pdev, FILE *prn)
     {
     if (ioctl(fileno(prn),LPVIIOC_GETERR,&lpvierr)!=0)
       {
-      errprintf("sparc_print_page: LPVIIOC_GETERR failed\n");
+      errprintf(pdev->memory, "sparc_print_page: LPVIIOC_GETERR failed\n");
       return -1;
       }
     switch (lpvierr.err_type)
       {
       case 0:
-	if (warning==0)
+        if (warning==0)
           {
-          errprintf(
-            "sparc_print_page: Printer Problem with unknown reason...");
+          errprintf(pdev->memory,
+                    "sparc_print_page: Printer Problem with unknown reason...");
           dflush();
           warning=1;
           }
-	sleep(5);
-	break;
+        sleep(5);
+        break;
       case ENGWARN:
-	errprintf(
-          "sparc_print_page: Printer-Warning: %s...",
-          err_code_string(lpvierr.err_code));
-	dflush();
-	warning=1;
-	sleep(5);
-	break;
+        errprintf(pdev->memory,
+                  "sparc_print_page: Printer-Warning: %s...",
+                  err_code_string(lpvierr.err_code));
+        dflush();
+        warning=1;
+        sleep(5);
+        break;
       case ENGFATL:
-	errprintf(
-          "sparc_print_page: Printer-Fatal: %s\n",
-          err_code_string(lpvierr.err_code));
-	return -1;
+        errprintf(pdev->memory,
+                  "sparc_print_page: Printer-Fatal: %s\n",
+                  err_code_string(lpvierr.err_code));
+        return -1;
       case EDRVR:
-	errprintf(
-          "sparc_print_page: Interface/driver error: %s\n",
-          err_code_string(lpvierr.err_code));
-	return -1;
+        errprintf(pdev->memory,
+                  "sparc_print_page: Interface/driver error: %s\n",
+                  err_code_string(lpvierr.err_code));
+        return -1;
       default:
-	errprintf(
-          "sparc_print_page: Unknown err_type=%d(err_code=%d)\n",
-          lpvierr.err_type,lpvierr.err_code);
-	return -1;
+        errprintf(pdev->memory,
+                  "sparc_print_page: Unknown err_type=%d(err_code=%d)\n",
+                  lpvierr.err_type,lpvierr.err_code);
+        return -1;
       }
     }
   if (warning==1)
     {
-    errprintf("OK.\n");
+    errprintf(pdev->memory, "OK.\n");
     warning=0;
     }
   gs_free(pdev->memory, out_buf,out_size,1,"sparc_print_page: out_buf");

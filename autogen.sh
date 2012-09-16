@@ -1,9 +1,9 @@
 #!/bin/sh
 # Run this to set up the build system: configure, makefiles, etc.
 
-# $Id: autogen.sh,v 1.9 2010/07/10 22:02:45 Arabidopsis Exp $
+# $Id$
 
-package="gnu-ghostscript"
+package="ghostscript"
 
 srcdir=`dirname $0`
 test -z "$srcdir" && srcdir=.
@@ -20,10 +20,11 @@ cd "$srcdir"
 
 echo "Generating configuration files for $package, please wait...."
 
-echo "  libtoolize"
-libtoolize -c -f
-echo "  aclocal $ACLOCAL_FLAGS"
-aclocal $ACLOCAL_FLAGS  || exit 1
+echo "  creating links to configuration sources"
+rm -f configure.ac Makefile.in
+ln -s base/configure.ac .
+ln -s base/Makefile.in .
+
 echo "  running autoconf"
 autoconf || exit 1
 

@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: stdint_.h,v 1.2 2010/07/10 22:02:30 Arabidopsis Exp $ */
+/* $Id$ */
 /* Generic substitute for stdint.h */
 
 #ifndef stdint__INCLUDED
@@ -57,7 +57,7 @@
    typedef unsigned int            uint32_t;
    typedef unsigned __int64        uint64_t;
 #  define STDINT_TYPES_DEFINED
-# elif defined(__VMS) /* OpenVMS provides these types in inttypes.h */
+# elif defined(__VMS) || defined(__osf__) /* OpenVMS and Tru64 provide these types in inttypes.h */
 #  include <inttypes.h>
 #  define STDINT_TYPES_DEFINED
 # elif defined(__CYGWIN__)
@@ -68,7 +68,7 @@
    typedef unsigned long long uint64_t;
 #  define STDINT_TYPES_DEFINED
 # endif
-   /* other archs may want to add defines here, 
+   /* other archs may want to add defines here,
       or use the fallbacks in std.h */
 #endif
 

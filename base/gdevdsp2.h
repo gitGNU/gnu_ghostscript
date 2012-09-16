@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -10,7 +10,7 @@
    or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id: gdevdsp2.h,v 1.2 2010/07/10 22:02:16 Arabidopsis Exp $ */
+/* $Id$ */
 /* gdevdsp2.c */
 
 #ifndef gdevdsp2_INCLUDED
@@ -19,13 +19,13 @@
 typedef struct gx_device_display_s gx_device_display;
 
 #define gx_device_display_common\
-	gx_device_memory *mdev;\
-	display_callback *callback;\
-	void *pHandle;\
-	int nFormat;\
-	void *pBitmap;\
-	unsigned long ulBitmapSize;\
-	int HWResolution_set;\
+        gx_device_memory *mdev;\
+        display_callback *callback;\
+        void *pHandle;\
+        int nFormat;\
+        void *pBitmap;\
+        unsigned long ulBitmapSize;\
+        int HWResolution_set;\
         gs_devn_params devn_params;\
         equivalent_cmyk_color_params equiv_cmyk_colors
 

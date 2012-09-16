@@ -1,18 +1,18 @@
 %!PS
 % Set defaults for Ghostscript to match Adobe CPSI behaviour for CET
-% $Id: gs_cet.ps,v 1.2 2010/07/10 22:02:13 Arabidopsis Exp $
+% $Id$
 
 % do this in the server level so it is persistent across jobs
-true 0 startjob not {
+//true 0 startjob not {
   (*** Warning: CET startup is not in server default) = flush
 } if
 
 300 .sethiresscreen	% needed for language switch build since it
-			% processes gs_init.ps BEFORE setting the resolution
+                        % processes gs_init.ps BEFORE setting the resolution
 
 0 array 0 setdash % CET 09-08 wants local setdash
 
-currentglobal true setglobal
+currentglobal //true setglobal
 
 {
   systemdict dup dup dup
@@ -34,7 +34,7 @@ setundercolorremoval
 % Redefine Font category to return -1 (unknown) VM usage
 % in all cases to avoid differences between hosts.
 /Font /Category findresource
-dup length dict copy 
+dup length dict copy
 dup
 dup /.loadfontresource get
 dup length array copy cvx
@@ -45,7 +45,7 @@ dup 7 -1 put
 
 % Some previously compile time options such as USE_ADOBE_CMYK_RGB
 % and GS_CHAR_FILL are now dynamic. Force CPSI compatibility.
-true .setCPSImode
+//true .setCPSImode
 
 setglobal
 
@@ -61,13 +61,13 @@ setpagedevice
 
 % Patch setsmoothness, currentsmoothness for a better view of shadings :
 userdict /.smoothness currentsmoothness put
-/setsmoothness { 
+/setsmoothness {
    dup type dup /integertype eq exch /realtype eq or {
-     userdict /.smoothness 3 2 roll cvr put 
+     userdict /.smoothness 3 2 roll cvr put
    } {
      /setsmoothness .systemvar /typecheck signalerror
    } ifelse
 } bind odef
 /currentsmoothness { userdict /.smoothness get } bind odef % for 09-55.PS, 09-57.PS .
 
-false 0 startjob pop		% re-enter encapsulated mode
+//false 0 startjob pop		% re-enter encapsulated mode

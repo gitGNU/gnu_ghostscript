@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsht.h,v 1.2 2010/07/10 22:02:25 Arabidopsis Exp $ */
+/* $Id$ */
 /* Public interface to halftone functionality */
 
 #ifndef gsht_INCLUDED
@@ -33,10 +33,10 @@ typedef struct gs_screen_halftone_s {
 /* Client definition of color (Type 2) halftones */
 typedef struct gs_colorscreen_halftone_s {
     union _css {
-	gs_screen_halftone indexed[4];
-	struct _csc {
-	    gs_screen_halftone red, green, blue, gray;
-	} colored;
+        gs_screen_halftone indexed[4];
+        struct _csc {
+            gs_screen_halftone red, green, blue, gray;
+        } colored;
     } screens;
 } gs_colorscreen_halftone;
 

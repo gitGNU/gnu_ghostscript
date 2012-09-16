@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: iimage.h,v 1.2 2010/07/10 22:02:42 Arabidopsis Exp $ */
+/* $Id$ */
 /* Image operator entry points */
 /* Requires gscspace.h, gxiparam.h */
 
@@ -31,11 +31,11 @@ typedef struct image_params_s {
 } image_params;
 
 /* Extract and check parameters for an image. */
-int data_image_params(const gs_memory_t *mem, 
-		      const ref *op, gs_data_image_t *pim,
+int data_image_params(const gs_memory_t *mem,
+                      const ref *op, gs_data_image_t *pim,
                       image_params *pip, bool require_DataSource,
                       int num_components, int max_bits_per_component,
-                      bool has_alpha);
+                      bool has_alpha, bool islab);
 int pixel_image_params(i_ctx_t *i_ctx_p, const ref *op,
                        gs_pixel_image_t *pim, image_params * pip,
                        int max_bits_per_component, bool has_alpha,

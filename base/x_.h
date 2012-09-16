@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: x_.h,v 1.2 2010/07/10 22:02:30 Arabidopsis Exp $ */
+/* $Id$ */
 /* Header for including X library calls in Ghostscript X11 driver */
 
 #ifndef x__INCLUDED
@@ -111,7 +111,7 @@
 #    define XtToolkitInitialize		xttoolkitinitialize
 
 #    define CADDR_T		/* Without this DEFINE, VAX GNUC    */
-					/* gets trashed reading Intrinsic.h */
+                                        /* gets trashed reading Intrinsic.h */
 #else
 #include <vms_x_fix.h>
 #   endif			/* ifdef __GNUC__ */

@@ -64,7 +64,7 @@
 /*
  * Tree-Structured Filter Bank (TSFB) Library
  *
- * $Id: jpc_tsfb.c,v 1.5 2010/07/10 22:02:55 Arabidopsis Exp $
+ * $Id$
  */
 
 /******************************************************************************\

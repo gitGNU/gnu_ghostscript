@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevsunr.c,v 1.2 2010/07/10 22:02:28 Arabidopsis Exp $ */
+/* $Id$ */
 /* Sun raster file driver */
 #include "gdevprn.h"
 
@@ -24,14 +24,14 @@
 #define RT_STANDARD	1	/* Raw pixrect image in 68000 byte order */
 #define RMT_NONE	0	/* ras_maplength is expected to be 0 */
 typedef struct sun_rasterfile_s {
-	int	ras_magic;		/* magic number */
-	int	ras_width;		/* width (pixels) of image */
-	int	ras_height;		/* height (pixels) of image */
-	int	ras_depth;		/* depth (1, 8, or 24 bits) of pixel */
-	int	ras_length;		/* length (bytes) of image */
-	int	ras_type;		/* type of file; see RT_* below */
-	int	ras_maptype;		/* type of colormap; see RMT_* below */
-	int	ras_maplength;		/* length (bytes) of following map */
+        int	ras_magic;		/* magic number */
+        int	ras_width;		/* width (pixels) of image */
+        int	ras_height;		/* height (pixels) of image */
+        int	ras_depth;		/* depth (1, 8, or 24 bits) of pixel */
+        int	ras_length;		/* length (bytes) of image */
+        int	ras_type;		/* type of file; see RT_* below */
+        int	ras_maptype;		/* type of colormap; see RMT_* below */
+        int	ras_maplength;		/* length (bytes) of following map */
 } sun_rasterfile_t;
 
 #ifndef X_DPI
@@ -45,10 +45,10 @@ static dev_proc_print_page(sunhmono_print_page);
 
 const gx_device_printer gs_sunhmono_device =
     prn_device(prn_std_procs, "sunhmono",
-	       DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
-	       X_DPI, Y_DPI,
-	       0, 0, 0, 0,	/* margins */
-	       1, sunhmono_print_page);
+               DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
+               X_DPI, Y_DPI,
+               0, 0, 0, 0,	/* margins */
+               1, sunhmono_print_page);
 
 static int
 sunhmono_print_page(gx_device_printer * pdev, FILE * prn_stream)
@@ -63,13 +63,13 @@ sunhmono_print_page(gx_device_printer * pdev, FILE * prn_stream)
     int code = 0;
 
     /*
-      errprintf("pdev->width:%d (%d/%d) gsLineBytes:%d rasLineBytes:%d\n",
+      errprintf(pdev->memory, "pdev->width:%d (%d/%d) gsLineBytes:%d rasLineBytes:%d\n",
       pdev->width, pdev->width/8, pdev->width%8,gsLineBytes,rasLineBytes);
     */
     lineStorage = gs_malloc(pdev->memory, gsLineBytes, 1, "rasterfile_print_page(in)");
     if (lineStorage == 0) {
-	code = gs_note_error(gs_error_VMerror);
-	goto out;
+        code = gs_note_error(gs_error_VMerror);
+        goto out;
     }
     /* Setup values in header */
     ras.ras_magic = RAS_MAGIC;
@@ -84,10 +84,10 @@ sunhmono_print_page(gx_device_printer * pdev, FILE * prn_stream)
     fwrite(&ras, 1, sizeof(ras), prn_stream);
     /* For each raster line */
     for (lineCnt = 0; lineCnt < pdev->height; ++lineCnt) {
-	gdev_prn_get_bits(pdev, lineCnt, lineStorage, &data);
-	fwrite(data, 1, gsLineBytes, prn_stream);
-	if (gsLineBytes % 2)
-	    fputc(0, prn_stream); /* pad to even # of bytes with a 0 */
+        gdev_prn_get_bits(pdev, lineCnt, lineStorage, &data);
+        fwrite(data, 1, gsLineBytes, prn_stream);
+        if (gsLineBytes % 2)
+            fputc(0, prn_stream); /* pad to even # of bytes with a 0 */
     }
     /* The weird file terminator */
     fwrite("};\n", 1, 3, prn_stream);

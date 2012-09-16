@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxi16bit.c,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
+/* $Id$ */
 /* 16-bit image procedures */
 #include "gx.h"
 #include "memory_.h"
@@ -35,8 +35,8 @@
 
 static const byte *
 sample_unpack_16(byte * bptr, int *pdata_x, const byte * data,
-		 int data_x, uint dsize, const sample_map *ignore_smap, int spread,
-		 int ignore_num_components_per_plane)
+                 int data_x, uint dsize, const sample_map *ignore_smap, int spread,
+                 int ignore_num_components_per_plane)
 {
     /* Assuming an identity map for all components. */
     register frac *bufp = (frac *) bptr;
@@ -47,17 +47,41 @@ sample_unpack_16(byte * bptr, int *pdata_x, const byte * data,
     int left = dsize - dskip;
 
     while (left > 2) {
-	sample = ((uint) psrc[0] << 8) + psrc[1];
-	*bufp = (frac)((frac_1 * (sample + 1)) >> 16);
-	inc_bufp(bufp, spread);
-	psrc += 2;
-	left -= 2;
+        sample = ((uint) psrc[0] << 8) + psrc[1];
+        *bufp = (frac)((frac_1 * (sample + 1)) >> 16);
+        inc_bufp(bufp, spread);
+        psrc += 2;
+        left -= 2;
     }
     *pdata_x = 0;
     return bptr;
 }
 
+static const byte *
+sample_unpackicc_16(byte * bptr, int *pdata_x, const byte * data,
+                 int data_x, uint dsize, const sample_map *ignore_smap, int spread,
+                 int ignore_num_components_per_plane)
+{
+    /* Assuming an identity map for all components. */
+    register unsigned short *bufp = (unsigned short *) bptr;
+    uint dskip = data_x << 1;
+    const byte *psrc = data + dskip;
+#define inc_bufp16(bp, n) bp = ( unsigned short *)((byte *)(bp) + (n))
+    uint sample;
+    int left = dsize - dskip;
+
+    while (left >= 2) {
+        sample = ((uint) psrc[0] << 8) + psrc[1];
+        *bufp = (unsigned short)(sample);
+        inc_bufp16(bufp, spread);
+        psrc += 2;
+        left -= 2;
+    }
+    *pdata_x = 0;
+    return bptr;
+}
 const sample_unpack_proc_t sample_unpack_16_proc = sample_unpack_16;
+const sample_unpack_proc_t sample_unpackicc_16_proc = sample_unpackicc_16;
 
 /* ---------------- Rendering procedures ---------------- */
 

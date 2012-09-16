@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,13 +11,13 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: macos_classic_d_pre.h,v 1.2 2010/07/10 22:02:25 Arabidopsis Exp $ */
+/* $Id$ */
 /* prefix include for MacOS CodeWarrior build, debug classic target */
 
 #ifndef macos_classic_d_pre_INCLUDED
 #define macos_classic_d_pre_INCLUDED
 
 /* turn on (verbose) debugging output */
-#define DEBUG 
+#define DEBUG
 
 #endif /* macos_classic_d_pre_INCLUDED */

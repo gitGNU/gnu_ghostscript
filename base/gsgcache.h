@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsgcache.h,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
+/* $Id$ */
 /* Glyph data cache definition. */
 
 #ifndef gxgcache_INCLUDED
@@ -42,13 +42,12 @@ typedef struct gs_glyph_cache_s gs_glyph_cache;
 #endif
 
 typedef int (*get_glyph_data_from_file)(gs_font_type42 *pfont, stream *s, uint glyph_index,
-		gs_glyph_data_t *pgd);
-
+                gs_glyph_data_t *pgd);
 
 /* Methods : */
 
 gs_glyph_cache *gs_glyph_cache__alloc(gs_font_type42 *pfont, stream *s,
-			get_glyph_data_from_file read_data);
+                        get_glyph_data_from_file read_data);
 int gs_glyph_cache__release(void /* gs_glyph_cache */ *data, void*);
 int gs_get_glyph_data_cached(gs_font_type42 *pfont, uint glyph_index, gs_glyph_data_t *pgd);
 

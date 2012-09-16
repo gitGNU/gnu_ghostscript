@@ -62,7 +62,7 @@
 /*
  * JPG Format Library
  *
- * $Id: jpg_cod.h,v 1.4 2010/07/10 22:02:48 Arabidopsis Exp $
+ * $Id$
  */
 
 #ifndef JPG_COD_H

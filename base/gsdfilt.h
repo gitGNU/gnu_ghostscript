@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -10,7 +10,7 @@
    or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id: gsdfilt.h,v 1.2 2010/07/10 22:02:23 Arabidopsis Exp $ */
+/* $Id$ */
 
 #ifndef gsdfilt_INCLUDED
 #  define gsdfilt_INCLUDED
@@ -37,11 +37,11 @@ typedef struct gs_device_filter_s gs_device_filter_t;
 
 struct gs_device_filter_s {
     int (*push)(gs_device_filter_t *self, gs_memory_t *mem, gs_state *pgs,
-		gx_device **pdev, gx_device *target);
+                gx_device **pdev, gx_device *target);
     int (*prepop)(gs_device_filter_t *self, gs_memory_t *mem, gs_state *pgs,
-		  gx_device *dev);
+                  gx_device *dev);
     int (*postpop)(gs_device_filter_t *self, gs_memory_t *mem, gs_state *pgs,
-		   gx_device *dev);
+                   gx_device *dev);
 };
 
 extern_st(st_gs_device_filter);
@@ -80,6 +80,5 @@ int gs_pop_device_filter(gs_memory_t *mem, gs_state *pgs);
  * Return value: 0 on success, or error code.
  **/
 int gs_clear_device_filters(gs_memory_t *mem, gs_state *pgs);
-
 
 #endif /* gsdfilt_INCLUDED */

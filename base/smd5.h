@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: smd5.h,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
+/* $Id$ */
 /* Definitions for MD5Encode filter */
 /* Requires scommon.h; strimpl.h if any templates are referenced */
 
@@ -37,7 +37,7 @@ extern const stream_template s_MD5E_template;
 stream *s_MD5E_make_stream(gs_memory_t *mem, byte *digest, int digest_size);
 
 /*
- * The MD5Counter filter accepts an arbitrary amount of input data, 
+ * The MD5Counter filter accepts an arbitrary amount of input data,
  * and copies them to output. It also computes an MD5 digest of the data,
  * which may be gathered at any time by s_MD5C_get_digest;
  */

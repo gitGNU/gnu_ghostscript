@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsiparm3.h,v 1.2 2010/07/10 22:02:26 Arabidopsis Exp $ */
+/* $Id$ */
 /* ImageType 3 image parameter definition */
 
 #ifndef gsiparm3_INCLUDED
@@ -50,6 +50,6 @@ typedef struct gs_image3_s {
  * Initialize an ImageType 3 image.
  */
 void gs_image3_t_init(gs_image3_t * pim, gs_color_space * color_space,
-		      gs_image3_interleave_type_t interleave_type);
+                      gs_image3_interleave_type_t interleave_type);
 
 #endif /* gsiparm3_INCLUDED */

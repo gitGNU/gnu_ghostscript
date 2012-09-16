@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gp_nsync.c,v 1.2 2010/07/10 22:02:20 Arabidopsis Exp $ */
+/* $Id$ */
 /* Dummy thread / semaphore / monitor implementation */
 #include "std.h"
 #include "gserror.h"
@@ -32,7 +32,7 @@ int
 gp_semaphore_open(gp_semaphore * sema)
 {
     if (sema)
-	*(int *)sema = 0;
+        *(int *)sema = 0;
     return 0;
 }
 
@@ -46,7 +46,7 @@ int
 gp_semaphore_wait(gp_semaphore * sema)
 {
     if (*(int *)sema == 0)
-	return_error(gs_error_unknownerror); /* no real waiting */
+        return_error(gs_error_unknownerror); /* no real waiting */
     --(*(int *)sema);
     return 0;
 }
@@ -70,7 +70,7 @@ int
 gp_monitor_open(gp_monitor * mon)
 {
     if (mon)
-	mon->dummy_ = 0;
+        mon->dummy_ = 0;
     return 0;
 }
 
@@ -84,7 +84,7 @@ int
 gp_monitor_enter(gp_monitor * mon)
 {
     if (mon->dummy_ != 0)
-	return_error(gs_error_unknownerror);
+        return_error(gs_error_unknownerror);
     mon->dummy_ = mon;
     return 0;
 }
@@ -93,7 +93,7 @@ int
 gp_monitor_leave(gp_monitor * mon)
 {
     if (mon->dummy_ != mon)
-	return_error(gs_error_unknownerror);
+        return_error(gs_error_unknownerror);
     mon->dummy_ = 0;
     return 0;
 }
@@ -104,4 +104,16 @@ int
 gp_create_thread(gp_thread_creation_callback_t proc, void *proc_data)
 {
     return_error(gs_error_unknownerror);
+}
+
+int
+gp_thread_start(gp_thread_creation_callback_t proc, void *proc_data, gp_thread_id *thread)
+{
+    *thread = NULL;
+    return_error(gs_error_unknownerror);
+}
+
+void
+gp_thread_finish(gp_thread_id thread)
+{
 }

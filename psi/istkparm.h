@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: istkparm.h,v 1.2 2010/07/10 22:02:40 Arabidopsis Exp $ */
+/* $Id$ */
 /* Parameter structure for expandable stacks of refs */
 
 #ifndef istkparm_INCLUDED
@@ -27,7 +27,7 @@ struct ref_stack_params_s {
     uint block_size;		/* size of each block */
     uint data_size;		/* # of data slots in each block */
     ref guard_value;		/* t__invalid or t_operator, */
-				/* bottom guard value */
+                                /* bottom guard value */
     int underflow_error;	/* error code for underflow */
     int overflow_error;		/* error code for overflow */
     bool allow_expansion;	/* if false, don't expand */

@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: gs.mak,v 1.4 2010/09/08 23:57:34 Arabidopsis Exp $
+# $Id$
 # Generic makefile, common to all platforms, products, and configurations.
 # The platform-specific makefiles `include' this file.
 
@@ -34,10 +34,15 @@
 #	    look for files in the current directory first).
 #	GS_DOCDIR - the directory where documentation will be available
 #	    at run time.
+#	FTSRCDIR - the directory where there the FreeType library
+#	    source code is stored, relative to the source directory.
 #	JSRCDIR - the directory where the IJG JPEG library source code
 #	    is stored (at compilation time).
 #	PNGSRCDIR - the same for libpng.
 #	ZSRCDIR - the same for zlib.
+#	SHARE_FT - normally 0; if set to 1, asks the linker to use
+#	    and existing compiled freetype library instead of compiling
+#	    in the source code availabel in FTSRCDIR.
 #	SHARE_JPEG - normally 0; if set to 1, asks the linker to use
 #	    an existing compiled libjpeg (-ljpeg) instead of compiling and
 #	    linking libjpeg explicitly.  (We strongly recommend against
@@ -61,18 +66,21 @@
 #	JBIG2SRCDIR - the name of the jbig2dec library source directory
 #	    typically 'jbig2dec' or 'jbig2dec-/version/'
 #	JPX_LIB - choice of which jpeg2k implementation to use
-#	SHARE_JPX - if set to 1, asks the linker to use an existing
-#	    complied jpeg2k library. if set to 0, asks to compile and 
+#	SHARE_JPX - If set to 1, asks the linker to use an existing
+#	    complied jpeg2k library. If set to 0, asks to compile and 
 #	    link from a local copy of the source using our custom 
 #	    makefile.
 #	JPXSRCDIR - the name of the jpeg2k library source directory
 #	    e.g. 'jasper' or 'jasper-/version/'
 #	JPX_CFLAGS - any platform-specific flags that are required
 #	    to properly compile in the jpeg2k library source
-#	ICCSRCDIR - the name of the ICC lib source dir, currently
-#	    always icclib (compiled in statically)
 #	IMDISRCDIR - the name of the IMDI lib source directory
 #	    generally 'imdi'
+#	SHARE_LCMS - If set to 1, asks the linker to use a separately
+#	    compiled lcms library. If set to 0, the build will compile
+#	    in the library source found in LCMSSRCDIR
+#	LCMSSRCDIR - the name of the lcms library source directory
+#	    e.g. 'lcms' or 'lcms-<version>'
 #	DEVICE_DEVS - the devices to include in the executable.
 #	    See devs.mak for details.
 #	DEVICE_DEVS1...DEVICE_DEVS21 - additional devices, if the definition
@@ -204,12 +212,15 @@
 #	    such as paths that must be defined by all top-level makefiles.
 
 #**************** PATCHES
+FTGENDIR=$(GLGENDIR)
+FTOBJDIR=$(GLOBJDIR)
 JGENDIR=$(GLGENDIR)
 JOBJDIR=$(GLOBJDIR)
 PNGGENDIR=$(GLGENDIR)
 PNGOBJDIR=$(GLOBJDIR)
 ZGENDIR=$(GLGENDIR)
 ZOBJDIR=$(GLOBJDIR)
+ZAUXDIR=$(AUXDIR)
 TIFFGENDIR=$(GLGENDIR)
 TIFFOBJDIR=$(GLOBJDIR)
 JBIG2GENDIR=$(GLGENDIR)
@@ -218,10 +229,18 @@ JPXGENDIR=$(GLGENDIR)
 JPXOBJDIR=$(GLOBJDIR)
 ICCGENDIR=$(GLGENDIR)
 ICCOBJDIR=$(GLOBJDIR)
+LCMSGENDIR=$(GLGENDIR)
+LCMSOBJDIR=$(GLOBJDIR)
+LCMS2GENDIR=$(GLGENDIR)
+LCMS2OBJDIR=$(GLOBJDIR)
 EXPATGENDIR=$(GLGENDIR)
 EXPATOBJDIR=$(GLOBJDIR)
 IJSGENDIR=$(GLGENDIR)
 IJSOBJDIR=$(GLOBJDIR)
+LCUPSGENDIR=$(GLGENDIR)
+LCUPSOBJDIR=$(GLOBJDIR)
+LCUPSIGENDIR=$(GLGENDIR)
+LCUPSIOBJDIR=$(GLOBJDIR)
 #**************** END PATCHES
 
 GSGEN=$(GLGENDIR)$(D)
@@ -234,15 +253,13 @@ GS_MAK=$(GLSRCDIR)$(D)gs.mak
 
 # Define the names of the executables.
 GS_XE=$(BINDIR)$(D)$(GS)$(XE)
-AUXGENDIR=$(GLGENDIR)
-AUXGEN=$(AUXGENDIR)$(D)
-ECHOGS_XE=$(AUXGEN)echogs$(XEAUX)
-GENARCH_XE=$(AUXGEN)genarch$(XEAUX)
-GENCONF_XE=$(AUXGEN)genconf$(XEAUX)
-GENDEV_XE=$(AUXGEN)gendev$(XEAUX)
-GENHT_XE=$(AUXGEN)genht$(XEAUX)
-GENINIT_XE=$(AUXGEN)geninit$(XEAUX)
-MKROMFS_XE=$(AUXGEN)mkromfs$(XEAUX)
+AUX=$(AUXDIR)$(D)
+ECHOGS_XE=$(AUX)echogs$(XEAUX)
+GENARCH_XE=$(AUX)genarch$(XEAUX)
+GENCONF_XE=$(AUX)genconf$(XEAUX)
+GENDEV_XE=$(AUX)gendev$(XEAUX)
+GENHT_XE=$(AUX)genht$(XEAUX)
+MKROMFS_XE=$(AUX)mkromfs$(XEAUX)
 
 # Define the names of the generated header files.
 # gconfig*.h and gconfx*.h are generated dynamically.
@@ -250,7 +267,7 @@ gconfig_h=$(GLGENDIR)$(D)gconfxx.h
 gconfigf_h=$(GLGENDIR)$(D)gconfxc.h
 gconfigd_h=$(GLGENDIR)$(D)gconfigd.h
 
-all default : $(GS_XE) $(GS_SHARED_OBJS)
+all default : $(GS_XE) $(GS_SHARED_OBJS) $(MAKEDIRSTOP) $(MAKEDIRS)
 	$(NO_OP)
 
 # the distclean and maintainer-clean targets (if any)
@@ -271,18 +288,21 @@ mostlyclean : config-clean
 	$(RMN_) $(GSGEN)deflate.h $(GSGEN)zutil.h
 	$(RMN_) $(GSGEN)gconfig*.c $(GSGEN)gscdefs*.c $(GSGEN)iconfig*.c
 	$(RMN_) $(GSGEN)_temp_* $(GSGEN)_temp_*.* $(GSOBJ)*.map $(GSOBJ)*.sym
-	$(RMN_) $(GENARCH_XE) $(GENCONF_XE) $(GENDEV_XE) $(GENHT_XE) $(GENINIT_XE)
+	$(RMN_) $(GENARCH_XE) $(GENCONF_XE) $(GENDEV_XE) $(GENHT_XE)
 	$(RMN_) $(ECHOGS_XE)
 	$(RMN_) $(GSGEN)gs_init.ps $(BEGINFILES)
 	$(RMN_) $(MKROMFS_XE)
+	$(RMN_) $(MKROMFS_XE)_0
+	$(RMN_) $(MKROMFS_XE)_1
 	$(RMN_) $(PSGEN)$(GS_INIT)
-	$(RMN_) $(GSGEN)gsromfs1.c
+	$(RMN_) $(GSGEN)gsromfs1.c $(GSGEN)gsromfs1_.c $(GSGEN)gsromfs1_1.c
+	$(RMN_) $(AUX)*.$(OBJ) $(AUX)gscdefs*.c
 
 # Remove only configuration-dependent information.
 #****** FOLLOWING IS WRONG, NEEDS TO BE PER-SUBSYSTEM ******
 config-clean :
 	$(RMN_) $(GSGEN)*.dev $(GSGEN)devs*.tr $(GSGEN)gconfig*.h
-	$(RMN_) $(GSGEN)gconfx*.h $(GSGEN)j*.h
+	$(RMN_) $(GSGEN)gconfx*.h $(GSGEN)j*.h $(GSGEN)tif*.h
 	$(RMN_) $(GSGEN)c*.tr $(GSGEN)o*.tr $(GSGEN)l*.tr
 
 # Macros for constructing the *.dev files that describe features and

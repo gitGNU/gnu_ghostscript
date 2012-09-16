@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: main.h,v 1.2 2010/07/10 22:02:43 Arabidopsis Exp $ */
+/* $Id$ */
 /* Backward-compatible interface to gsmain.c */
 
 #ifndef main_INCLUDED
@@ -28,8 +28,7 @@
  */
 
 /* conditional out the entire file */
-#if 0 
-
+#if 0
 
 /* ================ Data elements ================ */
 
@@ -72,7 +71,7 @@
 
 #define gs_run_string_with_length(str, len, ue, pec, peo)\
   gs_main_run_string_with_length(gs_main_instance_default(),\
-				 str, len, ue, pec, peo)
+                                 str, len, ue, pec, peo)
 
 #define gs_run_file_open(fn, pfref)\
   gs_main_run_file_open(gs_main_instance_default(), fn, pfref)
@@ -82,7 +81,7 @@
 
 #define gs_run_string_continue(str, len, ue, pec, peo)\
   gs_main_run_string_continue(gs_main_instance_default(),\
-			      str, len, ue, pec, peo)
+                              str, len, ue, pec, peo)
 
 #define gs_run_string_end(ue, pec, peo)\
   gs_main_run_string_end(gs_main_instance_default(), ue, pec, peo)
@@ -100,7 +99,6 @@
 void gs_debug_dump_stack(int code, ref * perror_object);
 
 /* ---------------- Termination ---------------- */
-
 
 #endif /* full file conditional */
 

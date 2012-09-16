@@ -1,5 +1,5 @@
 /* This is the default Ghostscript stylesheet */
-/* $Id: gs.css,v 1.7 2010/07/10 22:02:52 Arabidopsis Exp $ */
+/* $Id$ */
 
 body
 {
@@ -51,7 +51,7 @@ tt
 code
 {
   color: rgb(40%,24%,24%);
-  text-weight: bold;
+  font-weight: bold;
 }
 
 a > tt, a > b > tt

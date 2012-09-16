@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: inouparm.c,v 1.2 2010/07/10 22:02:41 Arabidopsis Exp $ */
+/* $Id$ */
 /* Dummy set_user_params for Level 1 systems */
 #include "ghost.h"
 #include "icontext.h"		/* for set_user_params prototype */

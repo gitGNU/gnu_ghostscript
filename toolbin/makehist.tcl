@@ -16,7 +16,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: makehist.tcl,v 1.3 2010/07/10 22:02:46 Arabidopsis Exp $
+# $Id$
 
 # Make various Ghostscript filesets.  Assumes the current directory is gs.
 #   makehist
@@ -273,7 +273,7 @@ proc mergehist {news changes histn tmph details detailn tmpd} {
 	puts $tmph $l
     }
     
-    puts $tmph "<small>Ghostscript version $nver, $nday $nmonthname $nyear"
+    puts $tmph "<small>Ghostscript version $nver, $nday $nmonthname $nyear</small>"
     while {[gets $histn l] >= 0} {
 	puts $tmph $l
     }
@@ -289,7 +289,7 @@ proc mergehist {news changes histn tmph details detailn tmpd} {
 	puts $tmpd $l
     }
     
-    puts $tmpd "<small>Ghostscript version $nver, $nday $nmonthname $nyear"
+    puts $tmpd "<small>Ghostscript version $nver, $nday $nmonthname $nyear</small>"
     while {[gets $detailn l] >= 0} {
 	puts $tmpd $l
     }

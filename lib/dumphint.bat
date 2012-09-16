@@ -1,19 +1,19 @@
 @echo off 
-@rem $Id: dumphint.bat 6300 2005-12-28 19:56:24Z giles $
+@rem $Id$
 @rem Linearized PDF hint formatting utility.
 
 if %1/==/ goto usage
-call gssetgs.bat
-echo -q -dNODISPLAY -P- -dSAFER -dDELAYSAFER >_.at
+call "%~dp0gssetgs.bat"
+echo -q -dNODISPLAY -P- -dSAFER -dDELAYSAFER >"%TEMP%\_.at"
 :cp
 if %2/==/ goto doit
-echo %2 >>_.at
+echo %2 >>"%TEMP%\_.at"
 shift
 goto cp
 
 :doit
-%GSC% -q @_.at -- dumphint.ps %1
-if exist _.at erase _.at
+%GSC% -q @"%TEMP%\_.at" -- dumphint.ps %1
+if exist "%TEMP%\_.at" erase "%TEMP%\_.at"
 goto end
 
 :usage

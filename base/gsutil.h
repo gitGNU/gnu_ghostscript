@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsutil.h,v 1.2 2010/07/10 22:02:20 Arabidopsis Exp $ */
+/* $Id$ */
 /* Prototypes for procedures in gsutil.c */
 
 #ifndef gsutil_INCLUDED
@@ -41,7 +41,7 @@ ulong get_u32_msb(const byte *p);
 /* 0 if they are equal, and 1 if first is greater. */
 /* We can't use memcmp, because we always use unsigned characters. */
 int bytes_compare(const byte * str1, uint len1,
-		  const byte * str2, uint len2);
+                  const byte * str2, uint len2);
 
 /* Test whether a string matches a pattern with wildcards. */
 /* If psmp == NULL, use standard parameters: '*' = any substring, */
@@ -55,25 +55,7 @@ typedef struct string_match_params_s {
 } string_match_params;
 extern const string_match_params string_match_params_default;
 bool string_match(const byte * str, uint len,
-		  const byte * pstr, uint plen,
-		  const string_match_params * psmp);
-
-/* graphical object tags */
-typedef enum {
-    GS_DEVICE_DOESNT_SUPPORT_TAGS = 0, /* default */
-    GS_UNKNOWN_TAG = 0x1,
-    GS_TEXT_TAG = 0x2,
-    GS_IMAGE_TAG = 0x4,
-    GS_PATH_TAG = 0x8,
-    GS_UNTOUCHED_TAG = 0x10
-} gs_object_tag_type_t;
-
-/* accessors for object tags */
-gs_object_tag_type_t gs_current_object_tag(void);
-
-#include "gxstate.h"
-
-void gs_set_object_tag(gs_state * pgs, const gs_object_tag_type_t tag);
-void gs_enable_object_tagging(void);
+                  const byte * pstr, uint plen,
+                  const string_match_params * psmp);
 
 #endif /* gsutil_INCLUDED */

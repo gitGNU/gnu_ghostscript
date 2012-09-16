@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gp_mktmp.c,v 1.2 2010/07/10 22:02:30 Arabidopsis Exp $ */
+/* $Id$ */
 /* Replacement for missing mktemp */
 #include "stat_.h"
 #include "string_.h"
@@ -23,22 +23,22 @@ mktemp(char *fname)
     struct stat fst;
     int len = strlen(fname);
     char *end = fname + len - 6;
-    
+
     if (len < 6 || strcmp(end, "XXXXXX"))
-	return (char *)0;	/* invalid  */
+        return (char *)0;	/* invalid  */
     strcpy(end, "AA.AAA");
 
     while (stat(fname, &fst) == 0) {
-	char *inc = fname + len - 1;
+        char *inc = fname + len - 1;
 
-	while (*inc == 'Z' || *inc == '.') {
-	    if (inc == end)
-		return (char *)0;	/* failure */
-	    if (*inc == 'Z')
-		*inc = 'A';
-	    --inc;
-	}
-	++*inc;
+        while (*inc == 'Z' || *inc == '.') {
+            if (inc == end)
+                return (char *)0;	/* failure */
+            if (*inc == 'Z')
+                *inc = 'A';
+            --inc;
+        }
+        ++*inc;
     }
     return fname;
 }

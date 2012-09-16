@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id: rinkj-device.h,v 1.2 2010/07/10 22:02:58 Arabidopsis Exp $ */
+/*$Id$ */
 /* The device abstraction within the Rinkj driver. */
 
 typedef struct _RinkjDevice RinkjDevice;
@@ -37,12 +37,12 @@ rinkj_device_set (RinkjDevice *self, const char *config);
 
 int
 rinkj_device_set_param (RinkjDevice *self, const char *key,
-			const char *value, int value_size);
+                        const char *value, int value_size);
 
 /* Convenience functions */
 int
 rinkj_device_set_param_string (RinkjDevice *self, const char *key,
-			       const char *value);
+                               const char *value);
 int
 rinkj_device_set_param_int (RinkjDevice *self, const char *key, int value);
 

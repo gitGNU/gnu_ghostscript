@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: ifont.h,v 1.2 2010/07/10 22:02:44 Arabidopsis Exp $ */
+/* $Id$ */
 /* Interpreter internal font representation */
 
 #ifndef ifont_INCLUDED
@@ -38,25 +38,25 @@ typedef struct font_data_s {
     ref CharStrings;
     ref GlyphNames2Unicode;
     union _fs {
-	struct _f1 {
-	    ref OtherSubrs;	/* from Private dictionary */
-	    ref Subrs;		/* from Private dictionary */
-	    ref GlobalSubrs;	/* from Private dictionary, */
-	    /* for Type 2 charstrings */
-	} type1;
-	struct _f42 {
-	    ref sfnts;
-	    ref CIDMap;		/* for CIDFontType 2 fonts */
-	    ref GlyphDirectory;
-	    /* the following are used to optimize lookups into sfnts */
-	    uint mru_sfnts_index;   /* index of most recently used sfnts string */
-	    ulong mru_sfnts_pos;    /* data bytes before sfnts string at index mru_sfnts_index */
-	} type42;
-	struct _fc0 {
-	    ref GlyphDirectory;
-	    ref GlyphData;	/* (if preloaded) string or array of strings */
-	    ref DataSource;	/* (if not preloaded) reusable stream */
-	} cid0;
+        struct _f1 {
+            ref OtherSubrs;	/* from Private dictionary */
+            ref Subrs;		/* from Private dictionary */
+            ref GlobalSubrs;	/* from Private dictionary, */
+            /* for Type 2 charstrings */
+        } type1;
+        struct _f42 {
+            ref sfnts;
+            ref CIDMap;		/* for CIDFontType 2 fonts */
+            ref GlyphDirectory;
+            /* the following are used to optimize lookups into sfnts */
+            uint mru_sfnts_index;   /* index of most recently used sfnts string */
+            ulong mru_sfnts_pos;    /* data bytes before sfnts string at index mru_sfnts_index */
+        } type42;
+        struct _fc0 {
+            ref GlyphDirectory;
+            ref GlyphData;	/* (if preloaded) string or array of strings */
+            ref DataSource;	/* (if not preloaded) reusable stream */
+        } cid0;
     } u;
 } font_data;
 

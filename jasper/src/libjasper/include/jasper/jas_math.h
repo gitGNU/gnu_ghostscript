@@ -64,7 +64,7 @@
 /*
  * Math-Related Code
  *
- * $Id: jas_math.h,v 1.4 2010/07/10 22:02:56 Arabidopsis Exp $
+ * $Id$
  */
 
 #ifndef	JAS_MATH_H

@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gscrypt1.c,v 1.2 2010/07/10 22:02:27 Arabidopsis Exp $ */
+/* $Id$ */
 /* Adobe Type 1 encryption/decryption. */
 #include "stdpre.h"
 #include "gstypes.h"
@@ -27,8 +27,8 @@ gs_type1_encrypt(byte * dest, const byte * src, uint len, crypt_state * pstate)
     uint count = len;
 
     while (count) {
-	encrypt_next(*from, state, *to);
-	from++, to++, count--;
+        encrypt_next(*from, state, *to);
+        from++, to++, count--;
     }
     *pstate = state;
     return 0;
@@ -43,12 +43,12 @@ gs_type1_decrypt(byte * dest, const byte * src, uint len, crypt_state * pstate)
     uint count = len;
 
     while (count) {
-	/* If from == to, we can't use the obvious */
-	/*      decrypt_next(*from, state, *to);        */
-	byte ch = *from++;
+        /* If from == to, we can't use the obvious */
+        /*      decrypt_next(*from, state, *to);        */
+        byte ch = *from++;
 
-	decrypt_next(ch, state, *to);
-	to++, count--;
+        decrypt_next(ch, state, *to);
+        to++, count--;
     }
     *pstate = state;
     return 0;

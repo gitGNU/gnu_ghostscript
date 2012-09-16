@@ -1,4 +1,4 @@
-/* $Id: ps2ps.cmd,v 1.4 2010/07/10 22:02:37 Arabidopsis Exp $ */
+/* $Id$ */
 /*
  * This file is maintained by a user: if you have any questions about it,
  * please contact Mark Hale (mark.hale@physics.org).
@@ -28,7 +28,7 @@ if infile='' then call usage
 outfile=word(params,i+1)
 if outfile='' then call usage
 
-gs '-q -sDEVICE=pswrite -sOutputFile='outfile options infile
+gs '-q -sDEVICE=ps2write -sOutputFile='outfile options infile
 exit
 
 usage:

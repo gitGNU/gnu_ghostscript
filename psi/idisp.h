@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: idisp.h,v 1.2 2010/07/10 22:02:40 Arabidopsis Exp $ */
+/* $Id$ */
 
 #ifndef idisp_INCLUDED
 #  define idisp_INCLUDED
@@ -23,6 +23,5 @@ typedef struct display_callback_s display_callback;
 
 /* Called from imain.c to set the display callback in the device instance. */
 int display_set_callback(gs_main_instance *minst, display_callback *callback);
-
 
 #endif /* idisp_INCLUDED */

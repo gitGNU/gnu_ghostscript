@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevplnx.h,v 1.2 2010/07/10 22:02:23 Arabidopsis Exp $*/
+/* $Id$*/
 /* Definitions and API for plane extraction device */
 /* Requires gxdevcli.h */
 
@@ -45,14 +45,14 @@
 
 typedef struct gx_device_plane_extract_s {
     gx_device_forward_common;
-	/* The following are set by the client before opening the device. */
+        /* The following are set by the client before opening the device. */
     gx_device *plane_dev;		/* the drawing device for the plane */
     gx_render_plane_t plane;
-	/* The following are set by open_device. */
+        /* The following are set by open_device. */
     gx_color_index plane_white;
     uint plane_mask;
     bool plane_dev_is_memory;
-	/* The following change dynamically. */
+        /* The following change dynamically. */
     bool any_marks;
 } gx_device_plane_extract;
 extern_st(st_device_plane_extract);
@@ -63,7 +63,7 @@ extern_st(st_device_plane_extract);
 
 /* Initialize a plane extraction device. */
 int plane_device_init(gx_device_plane_extract *edev, gx_device *target,
-		      gx_device *plane_dev,
-		      const gx_render_plane_t *render_plane, bool clear);
+                      gx_device *plane_dev,
+                      const gx_render_plane_t *render_plane, bool clear);
 
 #endif /* gdevplnx_INCLUDED */

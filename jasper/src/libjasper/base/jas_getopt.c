@@ -64,7 +64,7 @@
 /*
  * Command Line Option Parsing Library
  *
- * $Id: jas_getopt.c,v 1.5 2010/07/10 22:02:57 Arabidopsis Exp $
+ * $Id$
  */
 
 /******************************************************************************\

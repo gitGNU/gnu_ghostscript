@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: isave.h,v 1.2 2010/07/10 22:02:44 Arabidopsis Exp $ */
+/* $Id$ */
 /* Procedures for save/restore */
 /* Requires imemory.h */
 
@@ -115,5 +115,9 @@ void alloc_set_not_in_save(gs_dual_memory_t *);
 
 /* Remove entries from font and character caches. */
 int  font_restore(const alloc_save_t * save);
+
+/* Accessor to get a memory pointer from the saved state for the
+   express purpose of getting the library context. */
+gs_memory_t *gs_save_any_memory(const alloc_save_t *save);
 
 #endif /* isave_INCLUDED */

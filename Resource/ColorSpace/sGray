@@ -13,7 +13,7 @@
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: sGray,v 1.1 2010/07/10 22:02:57 Arabidopsis Exp $
+% $Id$
 % One-component color space similar to sRGB color space.
 
 currentglobal true setglobal

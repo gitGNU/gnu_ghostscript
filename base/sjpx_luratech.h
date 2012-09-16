@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: sjpx_luratech.h,v 1.2 2010/07/10 22:02:25 Arabidopsis Exp $ */
+/* $Id$ */
 /* Definitions for JPXDecode filter (JPEG 2000) */
 /* we link to the Luratech CSDK for the actual decoding */
 
@@ -45,8 +45,12 @@ typedef struct stream_jpxd_state_s
     unsigned long inbuf_size;
     unsigned long inbuf_fill;
     gs_jpx_cs colorspace;	/* requested output colorspace */
+    bool alpha; /* return opacity channel */
+    bool image_is_indexed;      /* image is indexed, needs decoding */
+                                /*  if colorspace != gs_jpx_cs_indexed */
     int ncomp;			/* number of image components */
     int bpc;			/* sample bits per component */
+    int *clut;			/* channel indices */
     unsigned long width, height;
     unsigned long stride;
     unsigned char *image;	/* decoded image buffer */
@@ -72,9 +76,9 @@ typedef struct stream_jpxe_state_s {
 
     /* the following members can be optionally set by the caller: */
     unsigned int quality;       /* compressed image quality target; 1-100
-					leave unset for the default */
+                                        leave unset for the default */
     int lossless;		/* set to 1 to specify lossless image
-					compression; overrides quality */
+                                        compression; overrides quality */
 
     /* the remainder are handled internally: */
     unsigned int components;	/* number of image channels */

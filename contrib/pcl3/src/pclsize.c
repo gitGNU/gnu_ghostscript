@@ -1,5 +1,5 @@
 /******************************************************************************
-  File:     $Id: pclsize.c,v 1.3 2010/07/11 19:47:19 Arabidopsis Exp $
+  File:     $Id: pclsize.c,v 1.10 2001/08/18 17:41:49 Martin Rel $
   Contents: Maps between PCL Page Size codes und size information
   Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
             Germany. E-mail: Martin.Lottermoser@t-online.de.
@@ -14,7 +14,7 @@
 /* Configuration management identification */
 #ifndef lint
 static const char
-  cm_id[] = "@(#)$Id: pclsize.c,v 1.3 2010/07/11 19:47:19 Arabidopsis Exp $";
+  cm_id[] = "@(#)$Id: pclsize.c,v 1.10 2001/08/18 17:41:49 Martin Rel $";
 #endif
 
 /*****************************************************************************/
@@ -175,10 +175,10 @@ ms_MediaCode pcl3_media_code(pcl_PageSize code)
   if (result == NULL) {
     key.ps = -code;
      /* Actually, this is a generalization on my part: I am assuming that any
-	two valid PCL Page Size codes with the same absolute value refer to the
-	same media extension irrespective of sheet orientation in raster space.
+        two valid PCL Page Size codes with the same absolute value refer to the
+        same media extension irrespective of sheet orientation in raster space.
         I have found negative Page Size codes in HP documentation only for
-	Env10 and EnvDL. */
+        Env10 and EnvDL. */
     result = (const CodeEntry *)bsearch(&key, inverse_map,
       array_size(inverse_map), sizeof(CodeEntry), cmp_by_code);
   }

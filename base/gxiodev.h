@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxiodev.h,v 1.2 2010/07/10 22:02:31 Arabidopsis Exp $ */
+/* $Id$ */
 /* Structure and default implementation of IODvices */
 /* Requires gsmemory.h */
 
@@ -81,12 +81,12 @@ struct gx_io_device_procs_s {
 
 #define iodev_proc_open_device(proc)\
   int proc(gx_io_device *iodev, const char *access, stream **ps,\
-	   gs_memory_t *mem)
+           gs_memory_t *mem)
     iodev_proc_open_device((*open_device));
 
 #define iodev_proc_open_file(proc)\
   int proc(gx_io_device *iodev, const char *fname, uint namelen,\
-	   const char *access, stream **ps, gs_memory_t *mem)
+           const char *access, stream **ps, gs_memory_t *mem)
     iodev_proc_open_file((*open_file));
 
     /* fopen was changed in release 2.9.6, */
@@ -94,7 +94,7 @@ struct gx_io_device_procs_s {
 
 #define iodev_proc_fopen(proc)\
   int proc(gx_io_device *iodev, const char *fname, const char *access,\
-	   FILE **pfile, char *rfname, uint rnamelen)
+           FILE **pfile, char *rfname, uint rnamelen)
     iodev_proc_fopen((*fopen));
 
 #define iodev_proc_fclose(proc)\
@@ -115,7 +115,7 @@ struct gx_io_device_procs_s {
 
 #define iodev_proc_enumerate_files(proc)\
   file_enum *proc(gx_io_device *iodev, const char *pat, uint patlen,\
-		  gs_memory_t *mem)
+                  gs_memory_t *mem)
     iodev_proc_enumerate_files((*enumerate_files));
 
 #define iodev_proc_enumerate_next(proc)\
@@ -160,12 +160,12 @@ iodev_proc_fopen(iodev_os_fopen);
 iodev_proc_fclose(iodev_os_fclose);
 
 /* Get the N'th IODevice. */
-gx_io_device *gs_getiodevice(int);
+gx_io_device *gs_getiodevice(const gs_memory_t *,int);
 
-#define iodev_default (gs_getiodevice(0))
+#define iodev_default(mem) (gs_getiodevice(mem,0))
 
 /* Look up an IODevice name. */
-gx_io_device *gs_findiodevice(const byte *, uint);
+gx_io_device *gs_findiodevice(const gs_memory_t *,const byte *, uint);
 
 /* Get and put IODevice parameters. */
 int gs_getdevparams(gx_io_device *, gs_param_list *);

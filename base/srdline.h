@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: srdline.h,v 1.2 2010/07/10 22:02:16 Arabidopsis Exp $ */
+/* $Id$ */
 /* Interface for readline */
 /* Requires gsmemory.h, gstypes.h */
 
@@ -35,9 +35,9 @@ typedef struct stream_s stream;
 #endif
 #define sreadline_proc(proc)\
   int proc(stream *s_in, stream *s_out, void *readline_data,\
-	   gs_const_string *prompt, gs_string *buf,\
-	   gs_memory_t *bufmem, uint *pcount, bool *pin_eol,\
-	   bool (*is_stdin)(const stream *))
+           gs_const_string *prompt, gs_string *buf,\
+           gs_memory_t *bufmem, uint *pcount, bool *pin_eol,\
+           bool (*is_stdin)(const stream *))
 
 /* Declare the default implementation. */
 extern sreadline_proc(sreadline);

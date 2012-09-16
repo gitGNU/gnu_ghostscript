@@ -10,7 +10,7 @@
    or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id: dmmain.r,v 1.1 2010/07/10 22:02:42 Arabidopsis Exp $ */
+/* $Id$ */
 
 /* Resource data (Rez format) for the MacOS Ghostscript shlib example wrapper
    contributed by Nigel Hathaway. See dmmain.c for rest of this code.

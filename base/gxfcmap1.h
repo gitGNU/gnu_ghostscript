@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxfcmap1.h,v 1.2 2010/07/10 22:02:23 Arabidopsis Exp $ */
+/* $Id$ */
 /* Adobe CMapType 1 CMap structure definitions */
 
 #ifndef gxfcmap1_INCLUDED
@@ -108,9 +108,9 @@ extern_st(st_cmap_adobe1);
  * the code space ranges, lookup tables, keys, and values.
  */
 int gs_cmap_adobe1_alloc(gs_cmap_adobe1_t **ppcmap, int wmode,
-			 const byte *map_name, uint name_size,
-			 uint num_fonts, uint num_ranges, uint num_lookups,
-			 uint keys_size, uint values_size,
-			 const gs_cid_system_info_t *pcidsi, gs_memory_t *mem);
+                         const byte *map_name, uint name_size,
+                         uint num_fonts, uint num_ranges, uint num_lookups,
+                         uint keys_size, uint values_size,
+                         const gs_cid_system_info_t *pcidsi, gs_memory_t *mem);
 
 #endif /* gxfcmap1_INCLUDED */

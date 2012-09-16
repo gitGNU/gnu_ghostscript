@@ -75,11 +75,9 @@ jbig2_hd_new(Jbig2Ctx *ctx,
   int i;
 
   /* allocate a new struct */
-  new = (Jbig2PatternDict *)jbig2_alloc(ctx->allocator,
-				sizeof(Jbig2PatternDict));
+  new = jbig2_new(ctx, Jbig2PatternDict, 1);
   if (new != NULL) {
-    new->patterns = (Jbig2Image **)jbig2_alloc(ctx->allocator,
-				N*sizeof(Jbig2Image*));
+    new->patterns = jbig2_new(ctx, Jbig2Image*, N);
     if (new->patterns == NULL) {
       jbig2_free(ctx->allocator, new);
       return NULL;
@@ -220,7 +218,7 @@ jbig2_pattern_dictionary(Jbig2Ctx *ctx, Jbig2Segment *segment,
   params.HDTEMPLATE = (flags & 6) >> 1;
   params.HDPW = segment_data[1];
   params.HDPH = segment_data[2];
-  params.GRAYMAX = jbig2_get_int32(segment_data + 3);
+  params.GRAYMAX = jbig2_get_uint32(segment_data + 3);
   offset += 7;
 
   jbig2_error(ctx, JBIG2_SEVERITY_INFO, segment->number,
@@ -241,7 +239,7 @@ jbig2_pattern_dictionary(Jbig2Ctx *ctx, Jbig2Segment *segment,
   if (!params.HDMMR) {
     /* allocate and zero arithmetic coding stats */
     int stats_size = jbig2_generic_stats_size(ctx, params.HDTEMPLATE);
-    GB_stats = jbig2_alloc(ctx->allocator, stats_size);
+    GB_stats = jbig2_new(ctx, Jbig2ArithCx, stats_size);
     memset(GB_stats, 0, stats_size);
   }
 
@@ -300,7 +298,7 @@ jbig2_halftone_region(Jbig2Ctx *ctx, Jbig2Segment *segment, const byte *segment_
   params.HMMR = params.flags & 1;
   params.HTEMPLATE = (params.flags & 6) >> 1;
   params.HENABLESKIP = (params.flags & 8) >> 3;
-  params.op = (params.flags & 0x70) >> 4;
+  params.op = (Jbig2ComposeOp)((params.flags & 0x70) >> 4);
   params.HDEFPIXEL = (params.flags &0x80) >> 7;
   offset += 1;
 
@@ -322,16 +320,16 @@ jbig2_halftone_region(Jbig2Ctx *ctx, Jbig2Segment *segment, const byte *segment_
 
   /* Figure 43 */
   if (segment->data_length - offset < 16) goto too_short;
-  params.HGW = jbig2_get_int32(segment_data + offset);
-  params.HGH = jbig2_get_int32(segment_data + offset + 4);
+  params.HGW = jbig2_get_uint32(segment_data + offset);
+  params.HGH = jbig2_get_uint32(segment_data + offset + 4);
   params.HGX = jbig2_get_int32(segment_data + offset + 8);
   params.HGY = jbig2_get_int32(segment_data + offset + 12);
   offset += 16;
 
   /* Figure 44 */
   if (segment->data_length - offset < 4) goto too_short;
-  params.HRX = jbig2_get_int16(segment_data + offset);
-  params.HRY = jbig2_get_int16(segment_data + offset + 2);
+  params.HRX = jbig2_get_uint16(segment_data + offset);
+  params.HRY = jbig2_get_uint16(segment_data + offset + 2);
   offset += 4;
 
   jbig2_error(ctx, JBIG2_SEVERITY_INFO, segment->number,
@@ -346,7 +344,7 @@ jbig2_halftone_region(Jbig2Ctx *ctx, Jbig2Segment *segment, const byte *segment_
   if (!params.HMMR) {
     /* allocate and zero arithmetic coding stats */
     int stats_size = jbig2_generic_stats_size(ctx, params.HTEMPLATE);
-    GB_stats = jbig2_alloc(ctx->allocator, stats_size);
+    GB_stats = jbig2_new(ctx, Jbig2ArithCx, stats_size);
     memset(GB_stats, 0, stats_size);
   }
 

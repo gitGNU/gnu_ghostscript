@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id: gsequivc.h,v 1.2 2010/07/10 22:02:22 Arabidopsis Exp $ */
+/*$Id$ */
 /* Header for routines for determining equivalent color for spot colors */
 
 /* For more information, see comment at the start of src/gsequivc.c */
@@ -43,16 +43,16 @@ typedef struct equivalent_cmyk_color_params_s {
  * If possible, update the equivalent CMYK color for spot colors.
  */
 void update_spot_equivalent_cmyk_colors(gx_device * pdev,
-		const gs_state * pgs, gs_devn_params * pdevn_params,
-		equivalent_cmyk_color_params * pparams);
+                const gs_state * pgs, gs_devn_params * pdevn_params,
+                equivalent_cmyk_color_params * pparams);
 
 /*
  * Utiliy routine:  Capture equivalent color when given a modified
  * color space.
  */
 void capture_spot_equivalent_cmyk_colors(gx_device * pdev,
-		const gs_state * pgs, const gs_client_color * pcc,
-		const gs_color_space * pcs, int sep_num,
-		equivalent_cmyk_color_params * pparams);
+                const gs_state * pgs, const gs_client_color * pcc,
+                const gs_color_space * pcs, int sep_num,
+                equivalent_cmyk_color_params * pparams);
 
 #endif		/* define gsequivc_INCLUDED */

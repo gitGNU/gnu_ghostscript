@@ -64,7 +64,7 @@
 /*
  * Floating-Point Class
  *
- * $Id: jpc_flt.h,v 1.4 2010/07/10 22:02:55 Arabidopsis Exp $
+ * $Id$
  */
 
 #ifndef JPC_FLT_H

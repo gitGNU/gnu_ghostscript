@@ -1,6 +1,6 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2011 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,12 +11,11 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gp_mswin.h,v 1.2 2010/07/10 22:02:23 Arabidopsis Exp $ */
+/* $Id$ */
 /* (used by both C code and Windows 'resource') */
 
 #ifndef gp_mswin_INCLUDED
 #  define gp_mswin_INCLUDED
-
 
 #define GSTEXT_ICON	50
 #define GSIMAGE_ICON	51
@@ -38,7 +37,7 @@
 #define _export
 #endif
 
-/* 
+/*
 extern HWND hwndtext;
 extern HWND hDlgModeless;
 */

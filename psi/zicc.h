@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,12 +11,14 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zicc.h,v 1.2 2010/07/10 22:02:44 Arabidopsis Exp $ */
+/* $Id$ */
 /* Definitions for setcolorspace */
 
 #ifndef zicc_INCLUDED
 #  define zicc_INCLUDED
 
 int seticc(i_ctx_t * i_ctx_p, int ncomps, ref *ICCdict, float *range_buff);
-
+int seticc_lab(i_ctx_t * i_ctx_p, float *white, float *black, float *range_buff);
+int seticc_cal(i_ctx_t * i_ctx_p, float *white, float *black, float *gamma,
+               float *matrix, int num_colorants,ulong dictkey);
 #endif /* zicc_INCLUDED */

@@ -10,11 +10,10 @@
    or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id: dwimg.h,v 1.2 2010/07/10 22:02:41 Arabidopsis Exp $ */
+/* $Id$ */
 
 #ifndef dwimg_INCLUDED
 #  define dwimg_INCLUDED
-
 
 /* Windows Image Window structure */
 
@@ -93,6 +92,5 @@ void image_updatesize(IMAGE *img);
 
 /* To be called during initialization after the text window has been created */
 void image_textwindow(HWND hwnd);
-
 
 #endif /* dwimg_INCLUDED */

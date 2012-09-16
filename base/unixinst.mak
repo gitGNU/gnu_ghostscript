@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: unixinst.mak,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $
+# $Id$
 # Partial makefile common to all Unix and Desqview/X configurations,
 # containing the `install' targets.
 # This is the very last part of the makefile for these configurations.
@@ -24,7 +24,7 @@ install: install-exec install-scripts install-data $(INSTALL_SHARED) $(INSTALL_C
 # We include mkdirs for datadir, gsdir, and gsdatadir in all 3 install
 # rules, just in case bindir or scriptdir is a subdirectory of any of these.
 
-install-exec: STDDIRS $(GS_XE)
+install-exec: $(GS_XE) $(MAKEDIRS)
 	-mkdir -p $(DESTDIR)$(datadir)
 	-mkdir -p $(DESTDIR)$(gsdir)
 	-mkdir -p $(DESTDIR)$(gsdatadir)
@@ -39,7 +39,7 @@ install-scripts: $(PSLIBDIR)/gsnd
 	$(SH) -c 'for f in \
 gsbj gsdj gsdj500 gslj gslp gsnd \
 bdftops dumphint dvipdf eps2eps font2c \
-pdf2dsc pdf2ps pdfopt pf2afm pfbtopfa printafm \
+pdf2dsc pdf2ps pdfopt pf2afm pfbtopfa pphs printafm \
 ps2ascii ps2epsi ps2pdf ps2pdf12 ps2pdf13 ps2pdf14 ps2pdfwr ps2ps ps2ps2 \
 wftopfa fixmswrd.pl lprsetup.sh pj-gs.sh pv.sh sysvlp.sh unix-lpr.sh ;\
 	do if ( test -f $(PSLIBDIR)/$$f ); then \
@@ -49,11 +49,12 @@ wftopfa fixmswrd.pl lprsetup.sh pj-gs.sh pv.sh sysvlp.sh unix-lpr.sh ;\
 	done'
 
 PSRESDIR=$(PSLIBDIR)/../Resource
+ICCRESDIR=$(PSLIBDIR)/../iccprofiles
 PSDOCDIR=$(PSLIBDIR)/../doc
 PSEXDIR=$(PSLIBDIR)/../examples
 PSMANDIR=$(PSLIBDIR)/../man
 
-install-data: install-libdata install-resdata install-doc install-man install-examples
+install-data: install-libdata install-resdata$(COMPILE_INITS) install-iccdata$(COMPILE_INITS) install-doc install-man install-examples
 
 # There's no point in providing a complete dependency list: we include
 # one file from each subdirectory just as a sanity check.
@@ -70,9 +71,9 @@ acctest.ps addxchar.ps align.ps bdftops.ps \
 caption.ps cid2code.ps decrypt.ps docie.ps dumphint.ps \
 errpage.ps font2c.ps font2pcl.ps gslp.ps gsnup.ps image-qa.ps impath.ps \
 jispaper.ps landscap.ps level1.ps lines.ps markhint.ps markpath.ps \
-mkcidfm.ps opdfread.ps PDFA_def.ps PDFX_def.ps \
+mkcidfm.ps PDFA_def.ps PDFX_def.ps \
 packfile.ps pcharstr.ps pf2afm.ps pfbtopfa.ps ppath.ps \
-pphs pphs.ps \
+pphs.ps \
 prfont.ps printafm.ps \
 ps2ai.ps ps2ascii.ps ps2epsi.ps quit.ps rollconv.ps \
 showchar.ps showpage.ps stcinfo.ps stcolor.ps stocht.ps \
@@ -93,7 +94,7 @@ pdf2dsc.ps pdfopt.ps ;\
 # install the default resource files
 # copy in every category (directory) but CVS
 RES_CATEGORIES=`ls $(PSRESDIR) | grep -v CVS` 
-install-resdata: $(PSRESDIR)/Decoding/Unicode
+install-resdata0 : $(PSRESDIR)/Decoding/Unicode
 	-mkdir -p $(DESTDIR)$(datadir)
 	-mkdir -p $(DESTDIR)$(gsdir)
 	-mkdir -p $(DESTDIR)$(gsdatadir)/Resource
@@ -104,6 +105,21 @@ install-resdata: $(PSRESDIR)/Decoding/Unicode
 	    if test -f $$file; then $(INSTALL_DATA) $$file $$rdir ; fi \
 	  done \
 	done'
+
+# install default iccprofiles
+install-iccdata0 : $(ICCRESDIR)
+	-mkdir -p $(DESTDIR)$(datadir)
+	-mkdir -p $(DESTDIR)$(gsdir)
+	-mkdir -p $(DESTDIR)$(gsdatadir)/iccprofiles
+	$(SH) -c 'for file in $(ICCRESDIR)/*; do \
+	    if test -f $$file; then $(INSTALL_DATA) $$file $(DESTDIR)$(gsdatadir)/iccprofiles ; fi \
+	done'
+
+#COMPILE_INITS=1 don't need Resources, nor ICC
+
+install-resdata1 :
+
+install-iccdata1 :
 
 # install html documentation
 DOC_PAGES=PUBLIC README index.html gs.css \
@@ -168,6 +184,12 @@ alphabet.ps annots.pdf chess.ps colorcir.ps doretree.ps escher.ps \
 golfer.eps grayalph.ps snowflak.ps tiger.eps vasarely.ps waterfal.ps \
 ridt91.eps ;\
 	do $(INSTALL_DATA) $(PSEXDIR)/$$f $(DESTDIR)$(exdir) ;\
+	done
+	-mkdir -p $(DESTDIR)$(exdir)/cjk
+	for f in \
+all_ac1.ps all_aj1.ps all_ak1.ps gscjk_ac.ps gscjk_aj.ps iso2022.ps \
+all_ag1.ps all_aj2.ps article9.ps gscjk_ag.ps gscjk_ak.ps iso2022v.ps ;\
+	do $(INSTALL_DATA) $(PSEXDIR)/cjk/$$f $(DESTDIR)$(exdir)/cjk ;\
 	done
 
 install-shared: $(GS_SHARED_OBJS)

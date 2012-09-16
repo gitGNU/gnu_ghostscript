@@ -62,7 +62,7 @@
 /*
  * Image Comparison Program
  *
- * $Id: imgcmp.c,v 1.5 2010/07/10 22:02:57 Arabidopsis Exp $
+ * $Id: $
  */
 
 /******************************************************************************\
@@ -381,7 +381,6 @@ int main(int argc, char **argv)
 
 	jas_image_destroy(origimage);
 	jas_image_destroy(reconimage);
-	jas_image_clearfmts();
 
 	return EXIT_SUCCESS;
 }

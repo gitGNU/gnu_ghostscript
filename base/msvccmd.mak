@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: msvccmd.mak,v 1.2 2010/07/10 22:02:30 Arabidopsis Exp $
+# $Id$
 # Command definition section for Microsoft Visual C++ 4.x/5.x,
 # Windows NT or Windows 95 platform.
 # Created 1997-05-22 by L. Peter Deutsch from msvc4/5 makefiles.
@@ -56,7 +56,7 @@ SH=
 
 # Define switches for the compilers.
 
-C_=
+C_=/c
 O_=-Fo
 RO_=$(O_)
 
@@ -150,7 +150,8 @@ CD=
 !if $(MSVC_VERSION) >= 8
 CPCH=/Fp$(GLOBJDIR)\gs.pch
 !else
-CPCH=/YX /Fp$(GLOBJDIR)\gs.pch
+# Precompiled headers don't work with #include MACRO used by freetype
+CPCH=
 !endif
 
 !ifndef DEBUGSYM
@@ -218,7 +219,7 @@ COMPILE_FOR_CONSOLE_EXE=
 GENOPT=$(CP) $(CD) $(CT) $(CS) $(WARNOPT) $(VC8WARN) /nologo $(CMT)
 
 CCFLAGS=$(PLATOPT) $(FPFLAGS) $(CPFLAGS) $(CFLAGS) $(XCFLAGS) $(MSINCFLAGS) $(SBRFLAGS)
-CC=$(COMP) /c $(CCFLAGS) @$(GLGENDIR)\ccf32.tr
+CC=$(COMP) /c $(CCFLAGS) $(COMPILE_FULL_OPTIMIZED) @$(GLGENDIR)\ccf32.tr
 CPP=$(COMPCPP) /c $(CCFLAGS) @$(GLGENDIR)\ccf32.tr
 !if $(MAKEDLL)
 WX=$(COMPILE_FOR_DLL)
@@ -235,14 +236,14 @@ ZM=
 
 # /Za disables the MS-specific extensions & enables ANSI mode.
 CC_WX=$(CC) $(WX)
-CC_=$(CC_WX) $(COMPILE_FULL_OPTIMIZED) /Za $(ZM)
-CC_D=$(CC_WX) $(COMPILE_WITH_FRAMES)
-CC_INT=$(CC_)
+CC_=$(CC_WX) /Za $(ZM)
 CC_NO_WARN=$(CC_)
 
 # Compiler for auxiliary programs
 
 CCAUX=$(COMPAUX) $(VC8WARN) $(CFLAGS)
+CCAUX_=$(COMPAUX) $(VC8WARN) $(CFLAGS)
+CCAUX_NO_WARN=$(COMPAUX) $(CFLAGS)
 
 # Compiler for Windows programs.
 CCWINFLAGS=$(COMPILE_FULL_OPTIMIZED)

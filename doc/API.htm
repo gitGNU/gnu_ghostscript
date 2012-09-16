@@ -1,8 +1,9 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii">
 <title>The Ghostscript Interpreter Application Programming Interface (API)</title>
-<!-- $Id: API.htm,v 1.15 2010/07/10 22:02:52 Arabidopsis Exp $ -->
+<!-- $Id$ -->
 <!-- Supercedes the API in DLL.htm -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -110,7 +111,7 @@ by multiple applications at once.
 
 <p>
 The source for the executable is in <code>dw</code>*.* (Windows),
-<code>dp</code>*.* (OS/2) and  <b><tt>dx</tt></b>*.* (Linux).  
+<code>dp</code>*.* (OS/2) and  <code>dx</code>*.* (Linux).  
 See these source files for examples of how to use the DLL. A similar
 example for MacOS using the Carbon API is provided in <code>dm</code>*.*.
 
@@ -261,7 +262,7 @@ typedef struct gsapi_revision_s {
 gsapi_revision_t r;
 
 if (gsapi_revision(&amp;r, sizeof(r)) == 0) {
-    if (r.revision < 650)
+    if (r.revision &lt; 650)
        printf("Need at least Ghostscript 6.50");
 }
 else {
@@ -285,7 +286,7 @@ The caller_handle will be provided to callback functions.
 Destroy an instance of Ghostscript.
 Before you call this, Ghostscript must have finished.
 If Ghostscript has been initialised, you must call 
-<code>gsapi_exit</code> before <b><tt>gsapi_delete_instance</tt></b>.
+<code>gsapi_exit</code> before <code>gsapi_delete_instance</code>.
 </blockquote>
 
 
@@ -301,14 +302,19 @@ the number of characters written.
 
 <h3><a name="set_poll"></a><code>gsapi_set_poll()</code></h3>
 <blockquote>
-Set the callback function for polling.
-This is used for handling window events or cooperative
-multitasking.  This function will only be called if
+Set the callback function for polling. This function will only be called if
 the Ghostscript interpreter was compiled with <code>CHECK_INTERRUPTS</code>
 as described in <code><a href="../base/gpcheck.h">gpcheck.h</a></code>.
-The polling function should return zero if all is well,
-and return negative if it wants ghostscript to abort.
-The polling function must be fast.
+<p>
+The polling function should return zero if all is well, and return
+negative if it wants ghostscript to abort. This is often
+used for checking for a user cancel. This can also be used for
+handling window events or cooperative multitasking.
+<p>
+The polling function is called very frequently during interpretation and
+rendering so it must be fast. If the function is slow, then using a counter
+to return 0 immediately some number of times can be used to reduce the
+performance impact.
 </blockquote>
 
 <h3><a name="set_display_callback"></a><code>gsapi_set_display_callback()</code></h3>
@@ -337,7 +343,7 @@ are argv[1] to argv[argc-1].
 <blockquote>
 The <code>gsapi_run_*</code> functions are like 
 <code>gs_main_run_*</code> except that the error_object is omitted.
-If these functions return <= -100, either quit or a fatal
+If these functions return &lt;= -100, either quit or a fatal
 error has occured.  You must call <code>gsapi_exit()</code> next.
 The only exception is <code>gsapi_run_string_continue()</code>
 which will return <code>e_NeedInput</code> if all is well.
@@ -350,7 +356,7 @@ errors should be handled through the normal mechanisms within the
 interpreted code. If set to a negative value, the functions will return 
 an error code directly to the caller, bypassing the interpreted 
 language. The interpreted language's error handler is bypassed, regardless of 
-<code>user_errors</code> parameter, for the <b><tt>e_interrupt</tt></b> 
+<code>user_errors</code> parameter, for the <code>e_interrupt</code> 
 generated when <a href="#set_poll">the polling callback</a> returns a negative 
 value. A positive <code>user_errors</code> is treated the same as zero.
 <p>
@@ -380,7 +386,7 @@ This function is useful for debug clients only. Release clients must not call it
 <h3><a name="return_codes"></a>Return codes</h3>
 
 <p>
-The <code>gsapi_init_with_args</code>, <b><tt>gsapi_run_*</tt></b> and
+The <code>gsapi_init_with_args</code>, <code>gsapi_run_*</code> and
 <code>gsapi_exit</code> functions return an integer code.
 
 <p>
@@ -453,7 +459,7 @@ same directory as the example source.</p>
 <pre>
 /* Example of using GS DLL as a ps2pdf converter.  */
 
-#if defined(_WIN32) && !defined(_Windows)
+#if defined(_WIN32) &amp;&amp; !defined(_Windows)
 # define _Windows
 #endif
 #ifdef _Windows
@@ -506,7 +512,7 @@ int main(int argc, char *argv[])
 <pre>
 /* Similar to command line gs */
 
-#if defined(_WIN32) && !defined(_Windows)
+#if defined(_WIN32) &amp;&amp; !defined(_Windows)
 # define _Windows
 #endif
 #ifdef _Windows
@@ -563,7 +569,7 @@ int main(int argc, char *argv[])
     int exit_code;
 
     code = gsapi_new_instance(&amp;minst, NULL);
-    if (code < 0)
+    if (code &lt; 0)
 	return 1;
     gsapi_set_stdio(minst, gsdll_stdin, gsdll_stdout, gsdll_stderr);
     code = gsapi_init_with_args(minst, argc, argv);
@@ -594,7 +600,7 @@ int main(int argc, char *argv[])
     int exit_code;
 
     code = gsapi_new_instance(&amp;minst, NULL);
-    if (code < 0)
+    if (code &lt; 0)
 	return 1;
     code = gsapi_init_with_args(minst, argc, argv);
 
@@ -760,10 +766,10 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.71, 10 February 2010
+<small>Ghostscript version 9.04, 5 August 2011
 
 
 <!-- [3.0 end visible trailer] ============================================= -->
 
-</small></body>
+</body>
 </html>

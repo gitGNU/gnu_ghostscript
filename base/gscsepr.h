@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,14 +11,13 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gscsepr.h,v 1.2 2010/07/10 22:02:24 Arabidopsis Exp $ */
+/* $Id$ */
 /* Client interface to Separation color */
 
 #ifndef gscsepr_INCLUDED
 #  define gscsepr_INCLUDED
 
 #include "gscspace.h"
-
 
 /*
  * Separation color spaces.
@@ -51,18 +50,18 @@ typedef struct gs_function_s gs_function_t;
 #  define gs_function_DEFINED
 #endif
 int gs_cspace_set_sepr_proc(gs_color_space * pcspace,
-			int (*proc)(const float *,
-				    float *,
-				    const gs_imager_state *,
-				    void *
-				    ),
-			void *proc_data
-			);
+                        int (*proc)(const float *,
+                                    float *,
+                                    const gs_imager_state *,
+                                    void *
+                                    ),
+                        void *proc_data
+                        );
 /*
  * Set the Separation tint transformation procedure to a Function.
  */
 int gs_cspace_set_sepr_function(const gs_color_space *pcspace,
-				    gs_function_t *pfn);
+                                    gs_function_t *pfn);
 /*
  * If the Separation tint transformation procedure is a Function,
  * return the function object, otherwise return 0.

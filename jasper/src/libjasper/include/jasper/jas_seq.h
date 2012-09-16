@@ -64,7 +64,7 @@
 /*
  * Sequence/Matrix Library
  *
- * $Id: jas_seq.h,v 1.4 2010/07/10 22:02:57 Arabidopsis Exp $
+ * $Id$
  */
 
 #ifndef JAS_SEQ_H

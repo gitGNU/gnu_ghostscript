@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: sfilter.h,v 1.2 2010/07/10 22:02:17 Arabidopsis Exp $ */
+/* $Id$ */
 /* Definitions for simple Ghostscript streams */
 /* Requires scommon.h; should require strimpl.h only if any templates */
 /* are referenced, but some compilers always require strimpl.h. */
@@ -53,12 +53,12 @@ typedef struct stream_exD_state_s {
     int binary;			/* 1=binary, 0=hex, -1=don't know yet */
     int lenIV;			/* # of initial decoded bytes to skip */
     stream_PFBD_state *pfb_state;	/* state of underlying */
-				/* PFBDecode stream, if any */
+                                /* PFBDecode stream, if any */
     bool keep_spaces;           /* PS skips spaces after eexec, PDF doesn't */
     /* The following change dynamically. */
     int odd;			/* odd digit */
     long hex_left;		/* # of encoded chars to process as hex */
-				/* if binary == 0 */
+                                /* if binary == 0 */
     int skip;			/* # of decoded bytes to skip */
     bool is_leading_space;      /* handle the space as leading space */
 } stream_exD_state;

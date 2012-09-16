@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zfont32.c,v 1.2 2010/07/10 22:02:43 Arabidopsis Exp $ */
+/* $Id$ */
 /* Type 32 font operators */
 #include "ghost.h"
 #include "oper.h"
@@ -44,12 +44,12 @@ zbuildfont32(i_ctx_t *i_ctx_p)
     check_type(*op, t_dictionary);
     code = build_proc_name_refs(imemory, &build, NULL, "%Type32BuildGlyph");
     if (code < 0)
-	return code;
+        return code;
     code = build_gs_simple_font(i_ctx_p, op, &pfont, ft_CID_bitmap,
-				&st_gs_font_base, &build,
-				bf_Encoding_optional);
+                                &st_gs_font_base, &build,
+                                bf_Encoding_optional);
     if (code < 0)
-	return code;
+        return code;
     /* Always transform cached bitmaps. */
     pfont->BitmapWidths = true;
     pfont->ExactSize = fbit_transform_bitmaps;
@@ -58,7 +58,7 @@ zbuildfont32(i_ctx_t *i_ctx_p)
     /* The encode_char procedure of a Type 32 font */
     /* should never be called. */
     pfont->procs.encode_char = zfont_no_encode_char;
-    return define_gs_font((gs_font *) pfont);
+    return define_gs_font(i_ctx_p, (gs_font *) pfont);
 }
 
 /* - .getshowoperator <oper|null> */
@@ -68,7 +68,7 @@ zgetshowoperator(i_ctx_t *i_ctx_p)
 {
     os_ptr op = osp;
     gs_text_enum_t *osenum = op_show_find(i_ctx_p);
-  
+
     push(1);
     if (osenum == NULL)
         make_null(op);
@@ -79,7 +79,6 @@ zgetshowoperator(i_ctx_t *i_ctx_p)
     }
     return 0;
 }
-
 
 /* ------ Initialization procedure ------ */
 

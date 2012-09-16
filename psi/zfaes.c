@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zfaes.c,v 1.2 2010/07/10 22:02:42 Arabidopsis Exp $ */
+/* $Id$ */
 
 /* this is the ps interpreter interface to the AES cipher filter
    used in PDF encryption. We currently provide only decode support. */
@@ -22,6 +22,7 @@
 #include "gsstruct.h"
 #include "ialloc.h"
 #include "idict.h"
+#include "idparam.h"
 #include "stream.h"
 #include "strimpl.h"
 #include "ifilter.h"
@@ -35,14 +36,21 @@ z_aes_d(i_ctx_t * i_ctx_p)
     os_ptr op = osp;		/* i_ctx_p->op_stack.stack.p defined in osstack.h */
     ref *sop = NULL;
     stream_aes_state state;
+    int use_padding;
 
     /* extract the key from the parameter dictionary */
     check_type(*op, t_dictionary);
     check_dict_read(*op);
     if (dict_find_string(op, "Key", &sop) <= 0)
-	return_error(e_rangecheck);
+        return_error(e_rangecheck);
 
     s_aes_set_key(&state, sop->value.const_bytes, r_size(sop));
+
+    /* extract the padding flag, which defaults to true for compatibility */
+    if (dict_bool_param(op, "Padding", 1, &use_padding) < 0)
+        return_error(e_rangecheck);
+
+    s_aes_set_padding(&state, use_padding);
 
     /* we pass npop=0, since we've no arguments left to consume */
     /* FIXME: passing 0 instead of the usual rspace(sop) will allocate
@@ -50,7 +58,7 @@ z_aes_d(i_ctx_t * i_ctx_p)
        it's coding. this caused no trouble when we were the arcfour cipher
        and maintained no pointers. */
     return filter_read(i_ctx_p, 0, &s_aes_template,
-		       (stream_state *) & state, 0);
+                       (stream_state *) & state, 0);
 }
 
 /* Match the above routine to its postscript filter name.

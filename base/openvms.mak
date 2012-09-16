@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: openvms.mak,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $
+# $Id$
 # makefile for OpenVMS VAX and Alpha
 #
 # Please contact Jim Dunham (dunham@omtool.com) if you have questions.
@@ -106,7 +106,7 @@ JSRCDIR=[.jpeg]
 # Define the directory where the PNG library sources are stored,
 # and the version of the library that is stored there.
 # You may need to change this if the libpng version changes.
-# See libpng.mak for more information.
+# See png.mak for more information.
 
 PNGSRCDIR=[.libpng]
 
@@ -126,10 +126,21 @@ JBIG2SRCDIR=[.jbig2dec]
 JPX_LIB=jasper
 JPXSRCDIR=jasper
 
-# Define the directory where the icclib source are stored.
-# See icclib.mak for more information
+# Define the directory where the lcms source is stored.
+# See lcms.mak for more information
 
-ICCSRCDIR=[.icclib]
+LCMSSRCDIR=[.lcms]
+
+
+# Define the directory where the lcms2 source is stored.
+# See lcms2.mak for more information
+
+LCMS2SRCDIR=[.lcms2]
+
+# Which CMS are we using?
+# Options are currently lcms or lcms2
+
+WHICH_CMS=lcms
 
 # IJS has not been ported to OpenVMS. If you do the port,
 # you'll need to set these values. You'll also need to
@@ -222,9 +233,9 @@ DEVICE_DEVS7=$(DD)faxg3.dev $(DD)faxg32d.dev $(DD)faxg4.dev
 DEVICE_DEVS8=$(DD)pcxmono.dev $(DD)pcxgray.dev $(DD)pcx16.dev $(DD)pcx256.dev $(DD)pcx24b.dev $(DD)pcxcmyk.dev
 DEVICE_DEVS9=$(DD)pbm.dev $(DD)pbmraw.dev $(DD)pgm.dev $(DD)pgmraw.dev $(DD)pgnm.dev $(DD)pgnmraw.dev
 DEVICE_DEVS10=$(DD)tiffcrle.dev $(DD)tiffg3.dev $(DD)tiffg32d.dev $(DD)tiffg4.dev $(DD)tifflzw.dev $(DD)tiffpack.dev
-DEVICE_DEVS11=$(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiffsep.dev $(DD)tiffsep1.dev
+DEVICE_DEVS11=$(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiffsep.dev $(DD)tiffsep1.dev $(DD)tiffscaled.dev $(DD)tiffscaled8.dev $(DD)tiffscaled24.dev
 DEVICE_DEVS12=$(DD)psmono.dev $(DD)psgray.dev $(DD)psrgb.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
-DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
+DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pngmonod.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev $(DD)jpegcmyk.dev
 DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)txtwrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
 DEVICE_DEVS16=$(DD)bbox.dev
@@ -385,12 +396,19 @@ CONFLDTR=-o
 # automatically.
 
 # I wasn't able to find a "do nothing" command in the DCL manual!
-std: STDDIRS default
+std: directories default
 	WRITE SYS$$OUTPUT "Done."
 
-STDDIRS:
+directories:
 	$$ If F$$Search("$(BIN_DIR)") .EQS. "" Then Create/Directory/Log $(BINDIR)
 	$$ If F$$Search("$(OBJ_DIR)") .EQS. "" Then Create/Directory/Log $(GLOBJDIR)
+
+# MAKEDIRS = the dependency on ALL object files (must be the last one on
+# the line. Requires GNU make to make it an 'order only' dependency
+# MAKEDIRSTOP = the topmost dependency - set this if you can't set MAKEDIRS
+
+MAKEDIRS=
+MAKEDIRSTOP=directories
 
 # ------------------- Include the generic makefiles ---------------------- #
 
@@ -418,9 +436,9 @@ PS_ROMFS_ARGS=-c -d Resource/ $(RESOURCE_LIST) -d lib/ -P $(PSLIBDIR) $(EXTRA_IN
 include $(GLSRCDIR)lib.mak
 include $(PSSRCDIR)int.mak
 include $(GLSRCDIR)jpeg.mak
-# zlib.mak must precede libpng.mak
+# zlib.mak must precede png.mak
 include $(GLSRCDIR)zlib.mak
-include $(GLSRCDIR)libpng.mak
+include $(GLSRCDIR)png.mak
 include $(GLSRCDIR)jbig2.mak
 include $(GLSRCDIR)icclib.mak
 include $(GLSRCDIR)devs.mak
@@ -429,7 +447,6 @@ include $(GLSRCDIR)contrib.mak
 # Define various incantations of the 'c' compiler.
 
 CC_=$(COMP)
-CC_INT=$(CC_)
 CC_NO_WARN=$(CC_)
 CC_SHARED=$(CC_)
 
@@ -481,12 +498,6 @@ $(GENHT_XE) : $(GLOBJDIR)genht.$(OBJ)
 
 $(GLOBJ)genht.$(OBJ) :  $(GLSRC)genht.c $(GENHT_DEPS)
 	$(CCAUX)/obj=$(GLOBJ)genht.$(OBJ) $(GENHT_CFLAGS) $(GLSRC)genht.c
-
-$(GENINIT_XE) : $(GLOBJDIR)geninit.$(OBJ)
-	LINK/EXE=$@ $(GLOBJ)geninit.$(OBJ)
-
-$(GLOBJ)geninit.$(OBJ) :  $(GLSRC)geninit.c $(GENINIT_DEPS)
-	$(CCAUX)/obj=$(GLOBJ)geninit.$(OBJ)  $(GLSRC)geninit.c
 
 $(GLOBJ)mkromfs.$(OBJ) :  $(GLSRC)mkromfs.c $(MKROMFS_COMMON_DEPS)
 	$(CCAUX)/obj=$(GLOBJ)mkromfs.$(OBJ) $(I_)$(GLI_) $(II)$(ZI_)$(_I) $(GLSRC)mkromfs.c

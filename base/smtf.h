@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: smtf.h,v 1.2 2010/07/10 22:02:21 Arabidopsis Exp $ */
+/* $Id$ */
 /* Definitions for MoveToFront filters */
 /* Requires scommon.h; strimpl.h if any templates are referenced */
 
@@ -23,8 +23,8 @@ typedef struct stream_MTF_state_s {
     stream_state_common;
     /* The following change dynamically. */
     union _p {
-	ulong l[256 / sizeof(long)];
-	byte b[256];
+        ulong l[256 / sizeof(long)];
+        byte b[256];
     } prev;
 } stream_MTF_state;
 typedef stream_MTF_state stream_MTFE_state;

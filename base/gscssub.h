@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gscssub.h,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
+/* $Id$ */
 /* Client interface to color space substitution */
 
 #ifndef gscssub_INCLUDED
@@ -52,10 +52,10 @@
 
 /* If pcs is NULL, it means undo any substitution. */
 int gs_setsubstitutecolorspace(gs_state *pgs, gs_color_space_index csi,
-			       const gs_color_space *pcs);
+                               const gs_color_space *pcs);
 const gs_color_space *
     gs_currentsubstitutecolorspace(const gs_state *pgs,
-				   gs_color_space_index csi);
+                                   gs_color_space_index csi);
 
 /*
  * The following procedures are primarily for internal use, to provide

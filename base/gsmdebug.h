@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,12 +11,14 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsmdebug.h,v 1.2 2010/07/10 22:02:22 Arabidopsis Exp $ */
+/* $Id$ */
 /* Allocator debugging definitions and interface */
 /* Requires gdebug.h (for gs_debug) */
 
 #ifndef gsmdebug_INCLUDED
 #  define gsmdebug_INCLUDED
+
+#include "valgrind.h"
 
 /* Define the fill patterns used for debugging the allocator. */
 extern const byte
@@ -34,11 +36,16 @@ extern const byte
 extern void gs_alloc_memset(void *, int /*byte */ , ulong);
 
 #ifdef DEBUG
-#  define gs_alloc_fill(ptr, fill, len)\
-     BEGIN if ( gs_alloc_debug ) gs_alloc_memset(ptr, fill, (ulong)(len)); END
+#  define gs_alloc_fill(ptr, fill, len)                              \
+     BEGIN                                                           \
+     if ( gs_alloc_debug ) gs_alloc_memset(ptr, fill, (ulong)(len)); \
+     VALGRIND_MAKE_MEM_UNDEFINED(ptr,(ulong)(len));                  \
+     END
 #else
-#  define gs_alloc_fill(ptr, fill, len)\
-     DO_NOTHING
+#  define gs_alloc_fill(ptr, fill, len)                              \
+     BEGIN                                                           \
+     VALGRIND_MAKE_MEM_UNDEFINED(ptr,(ulong)(len));                  \
+     END
 #endif
 
 #endif /* gsmdebug_INCLUDED */

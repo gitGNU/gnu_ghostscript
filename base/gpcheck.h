@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gpcheck.h,v 1.2 2010/07/10 22:02:27 Arabidopsis Exp $ */
+/* $Id$ */
 /* Interrupt check interface */
 
 #ifndef gpcheck_INCLUDED
@@ -38,7 +38,7 @@ int gp_check_interrupts(const gs_memory_t *mem);
 #  define return_if_interrupt(mem)\
     { int icode_ = gp_check_interrupts(mem);	\
       if ( icode_ )\
-	return gs_note_error((icode_ > 0 ? gs_error_interrupt : icode_));\
+        return gs_note_error((icode_ > 0 ? gs_error_interrupt : icode_));\
     }
 #  define return_check_interrupt(mem, code)	\
     return gs_return_check_interrupt(mem, code)

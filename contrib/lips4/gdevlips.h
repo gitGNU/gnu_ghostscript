@@ -18,7 +18,7 @@
    copies.
  */
 
-/*$Id: gdevlips.h,v 1.3 2010/07/11 19:47:18 Arabidopsis Exp $ */
+/*$Id: gdevlips.h,v 1.4 2002/10/12 23:24:34 tillkamppeter Exp $ */
 /* Common header file for LIPS driver */
 
 #define	LIPS_ESC	0x1b
@@ -103,8 +103,8 @@
 #define LIPS_FACEUP_DEFAULT FALSE
 
 /* display text to printer panel */
-#define LIPS_USERNAME_MAX 12	/* If your printer have two line display, 
-				   this value can change to 14 */
+#define LIPS_USERNAME_MAX 12	/* If your printer have two line display,
+                                   this value can change to 14 */
 #define LIPS_MEDIACHAR_MAX 32
 #define LIPS_USERNAME_DEFAULT "Ghostscript"
 #define LIPS_MEDIATYPE_DEFAULT "Default"	/* Dummy */

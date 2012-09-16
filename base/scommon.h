@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: scommon.h,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
+/* $Id$ */
 /* Definitions common to stream clients and implementors */
 
 #ifndef scommon_INCLUDED
@@ -157,11 +157,11 @@ stream_proc_report_error(s_no_report_error);
  */
 #define STREAM_MAX_ERROR_STRING 79
 #define stream_state_common\
-	const stream_template *template;\
-	gs_memory_t *memory;\
-	stream_proc_report_error((*report_error));\
+        const stream_template *template;\
+        gs_memory_t *memory;\
+        stream_proc_report_error((*report_error));\
         int min_left; /* required bytes for lookahead */ \
-	char error_string[STREAM_MAX_ERROR_STRING + 1]
+        char error_string[STREAM_MAX_ERROR_STRING + 1]
 struct stream_state_s {
     stream_state_common;
 };

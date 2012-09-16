@@ -64,7 +64,7 @@
 /*
  * JasPer Transcoder Program
  *
- * $Id: jasper.c,v 1.5 2010/07/10 22:02:57 Arabidopsis Exp $
+ * $Id: $
  */
 
 /******************************************************************************\
@@ -298,7 +298,6 @@ int main(int argc, char **argv)
 
 	cmdopts_destroy(cmdopts);
 	jas_image_destroy(image);
-	jas_image_clearfmts();
 
 	/* Success at last! :-) */
 	return EXIT_SUCCESS;

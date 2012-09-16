@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2008 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id: gdevrinkj.c,v 1.2 2010/07/10 22:02:25 Arabidopsis Exp $ */
+/*$Id$ */
 /* Support for rinkj (resplendent inkjet) drivers. */
 
 #include "math_.h"
@@ -22,13 +22,29 @@
 #include "gxlum.h"
 #include "gdevdcrd.h"
 #include "gstypes.h"
-#include "icc.h"
 #include "gxdcconv.h"
+#include "gscms.h"
+#include "gsicc_cache.h"
+#include "gsicc_manage.h"
+
+#ifndef cmm_gcmmhlink_DEFINED
+    #define cmm_gcmmhlink_DEFINED
+    typedef void* gcmmhlink_t;
+#endif
+
+#ifndef cmm_gcmmhprofile_DEFINED
+    #define cmm_gcmmhprofile_DEFINED
+    typedef void* gcmmhprofile_t;
+#endif
 
 #include "rinkj/rinkj-device.h"
 #include "rinkj/rinkj-byte-stream.h"
 #include "rinkj/rinkj-screen-eb.h"
 #include "rinkj/rinkj-epson870.h"
+
+#ifndef MAX_CHAN
+#   define MAX_CHAN 15
+#endif
 
 /* Define the device parameters. */
 #ifndef X_DPI
@@ -40,6 +56,7 @@
 
 /* The device descriptor */
 static dev_proc_get_params(rinkj_get_params);
+static dev_proc_close_device(rinkj_close_device);
 static dev_proc_put_params(rinkj_put_params);
 static dev_proc_print_page(rinkj_print_page);
 static dev_proc_map_color_rgb(rinkj_map_color_rgb);
@@ -110,7 +127,16 @@ typedef struct rinkj_device_s {
 
     /* ICC color profile objects, for color conversion. */
     char profile_out_fn[256];
-    icmLuBase *lu_out;
+
+    /* This device can use a device link ICC profile to map
+       the colors to the appropriate color space.  Not
+       as flexible as having source and destination profiles
+       and creating the link on the fly, but I am doing
+       the minimal changes on this device to make it work
+       with the new ICC architecture.  No optimizations yet. */
+
+    gcmmhlink_t icc_link;
+    cmm_profile_t *link_profile;
 
     char setup_fn[256];
 } rinkj_device;
@@ -120,97 +146,95 @@ typedef struct rinkj_device_s {
  */
 #define device_procs(get_color_mapping_procs)\
 {	gdev_prn_open,\
-	gx_default_get_initial_matrix,\
-	NULL,				/* sync_output */\
-	gdev_prn_output_page,		/* output_page */\
-	gdev_prn_close,			/* close */\
-	NULL,				/* map_rgb_color - not used */\
-	rinkj_map_color_rgb,		/* map_color_rgb */\
-	NULL,				/* fill_rectangle */\
-	NULL,				/* tile_rectangle */\
-	NULL,				/* copy_mono */\
-	NULL,				/* copy_color */\
-	NULL,				/* draw_line */\
-	NULL,				/* get_bits */\
-	rinkj_get_params,		/* get_params */\
-	rinkj_put_params,		/* put_params */\
-	NULL,				/* map_cmyk_color - not used */\
-	NULL,				/* get_xfont_procs */\
-	NULL,				/* get_xfont_device */\
-	NULL,				/* map_rgb_alpha_color */\
-	gx_page_device_get_page_device,	/* get_page_device */\
-	NULL,				/* get_alpha_bits */\
-	NULL,				/* copy_alpha */\
-	NULL,				/* get_band */\
-	NULL,				/* copy_rop */\
-	NULL,				/* fill_path */\
-	NULL,				/* stroke_path */\
-	NULL,				/* fill_mask */\
-	NULL,				/* fill_trapezoid */\
-	NULL,				/* fill_parallelogram */\
-	NULL,				/* fill_triangle */\
-	NULL,				/* draw_thin_line */\
-	NULL,				/* begin_image */\
-	NULL,				/* image_data */\
-	NULL,				/* end_image */\
-	NULL,				/* strip_tile_rectangle */\
-	NULL,				/* strip_copy_rop */\
-	NULL,				/* get_clipping_box */\
-	NULL,				/* begin_typed_image */\
-	NULL,				/* get_bits_rectangle */\
-	NULL,				/* map_color_rgb_alpha */\
-	NULL,				/* create_compositor */\
-	NULL,				/* get_hardware_params */\
-	NULL,				/* text_begin */\
-	NULL,				/* finish_copydevice */\
-	NULL,				/* begin_transparency_group */\
-	NULL,				/* end_transparency_group */\
-	NULL,				/* begin_transparency_mask */\
-	NULL,				/* end_transparency_mask */\
-	NULL,				/* discard_transparency_layer */\
-	get_color_mapping_procs,	/* get_color_mapping_procs */\
-	rinkj_get_color_comp_index,	/* get_color_comp_index */\
-	rinkj_encode_color,		/* encode_color */\
-	rinkj_decode_color		/* decode_color */\
+        gx_default_get_initial_matrix,\
+        NULL,				/* sync_output */\
+        gdev_prn_output_page,		/* output_page */\
+        rinkj_close_device,		/* close */\
+        NULL,				/* map_rgb_color - not used */\
+        rinkj_map_color_rgb,		/* map_color_rgb */\
+        NULL,				/* fill_rectangle */\
+        NULL,				/* tile_rectangle */\
+        NULL,				/* copy_mono */\
+        NULL,				/* copy_color */\
+        NULL,				/* draw_line */\
+        NULL,				/* get_bits */\
+        rinkj_get_params,		/* get_params */\
+        rinkj_put_params,		/* put_params */\
+        NULL,				/* map_cmyk_color - not used */\
+        NULL,				/* get_xfont_procs */\
+        NULL,				/* get_xfont_device */\
+        NULL,				/* map_rgb_alpha_color */\
+        gx_page_device_get_page_device,	/* get_page_device */\
+        NULL,				/* get_alpha_bits */\
+        NULL,				/* copy_alpha */\
+        NULL,				/* get_band */\
+        NULL,				/* copy_rop */\
+        NULL,				/* fill_path */\
+        NULL,				/* stroke_path */\
+        NULL,				/* fill_mask */\
+        NULL,				/* fill_trapezoid */\
+        NULL,				/* fill_parallelogram */\
+        NULL,				/* fill_triangle */\
+        NULL,				/* draw_thin_line */\
+        NULL,				/* begin_image */\
+        NULL,				/* image_data */\
+        NULL,				/* end_image */\
+        NULL,				/* strip_tile_rectangle */\
+        NULL,				/* strip_copy_rop */\
+        NULL,				/* get_clipping_box */\
+        NULL,				/* begin_typed_image */\
+        NULL,				/* get_bits_rectangle */\
+        NULL,				/* map_color_rgb_alpha */\
+        NULL,				/* create_compositor */\
+        NULL,				/* get_hardware_params */\
+        NULL,				/* text_begin */\
+        NULL,				/* finish_copydevice */\
+        NULL,				/* begin_transparency_group */\
+        NULL,				/* end_transparency_group */\
+        NULL,				/* begin_transparency_mask */\
+        NULL,				/* end_transparency_mask */\
+        NULL,				/* discard_transparency_layer */\
+        get_color_mapping_procs,	/* get_color_mapping_procs */\
+        rinkj_get_color_comp_index,	/* get_color_comp_index */\
+        rinkj_encode_color,		/* encode_color */\
+        rinkj_decode_color		/* decode_color */\
 }
 
-
 static const fixed_colorant_names_list DeviceGrayComponents = {
-	"Gray",
-	0		/* List terminator */
+        "Gray",
+        0		/* List terminator */
 };
 
 static const fixed_colorant_names_list DeviceRGBComponents = {
-	"Red",
-	"Green",
-	"Blue",
-	0		/* List terminator */
+        "Red",
+        "Green",
+        "Blue",
+        0		/* List terminator */
 };
 
 static const fixed_colorant_names_list DeviceCMYKComponents = {
-	"Cyan",
-	"Magenta",
-	"Yellow",
-	"Black",
-	0		/* List terminator */
+        "Cyan",
+        "Magenta",
+        "Yellow",
+        "Black",
+        0		/* List terminator */
 };
-
 
 static const gx_device_procs spot_cmyk_procs = device_procs(get_rinkj_color_mapping_procs);
 
 const rinkj_device gs_rinkj_device =
-{   
+{
     prn_device_body_extended(rinkj_device, spot_cmyk_procs, "rinkj",
-	 DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
-	 X_DPI, Y_DPI,		/* X and Y hardware resolution */
-	 0, 0, 0, 0,		/* margins */
-    	 GX_DEVICE_COLOR_MAX_COMPONENTS, 4,	/* MaxComponents, NumComp */
-	 GX_CINFO_POLARITY_SUBTRACTIVE,		/* Polarity */
-	 32, 0,			/* Depth, Gray_index, */
-	 255, 255, 1, 1,	/* MaxGray, MaxColor, DitherGray, DitherColor */
-	 GX_CINFO_SEP_LIN,      /* Linear & Separable */
-	 "DeviceN",		/* Process color model name */
-	 rinkj_print_page),	/* Printer page print routine */
+         DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
+         X_DPI, Y_DPI,		/* X and Y hardware resolution */
+         0, 0, 0, 0,		/* margins */
+         GX_DEVICE_COLOR_MAX_COMPONENTS, 4,	/* MaxComponents, NumComp */
+         GX_CINFO_POLARITY_SUBTRACTIVE,		/* Polarity */
+         32, 0,			/* Depth, Gray_index, */
+         255, 255, 1, 1,	/* MaxGray, MaxColor, DitherGray, DitherColor */
+         GX_CINFO_SEP_LIN,      /* Linear & Separable */
+         "DeviceN",		/* Process color model name */
+         rinkj_print_page),	/* Printer page print routine */
     /* DeviceN device specific parameters */
     RINKJ_DEVICE_CMYK,		/* Color model */
     8,				/* Bits per color - must match ncomp, depth, etc. above */
@@ -238,7 +262,7 @@ gray_cs_to_spotrgb_cm(gx_device * dev, frac gray, frac out[])
 
 static void
 rgb_cs_to_spotrgb_cm(gx_device * dev, const gs_imager_state *pis,
-				  frac r, frac g, frac b, frac out[])
+                                  frac r, frac g, frac b, frac out[])
 {
 /* TO_DO_DEVICEN  This routine needs to include the effects of the SeparationOrder array */
     int i = ((rinkj_device *)dev)->separation_names.num_names;
@@ -256,10 +280,10 @@ cmyk_cs_to_spotrgb_cm(gx_device * dev, frac c, frac m, frac y, frac k, frac out[
 /* TO_DO_DEVICEN  This routine needs to include the effects of the SeparationOrder array */
     int i = ((rinkj_device *)dev)->separation_names.num_names;
 
-    color_cmyk_to_rgb(c, m, y, k, NULL, out);
+    color_cmyk_to_rgb(c, m, y, k, NULL, out, dev->memory);
     for(; i>0; i--)			/* Clear spot colors */
         out[2 + i] = 0;
-};
+}
 
 static void
 gray_cs_to_spotcmyk_cm(gx_device * dev, frac gray, frac out[])
@@ -275,16 +299,16 @@ gray_cs_to_spotcmyk_cm(gx_device * dev, frac gray, frac out[])
 
 static void
 rgb_cs_to_spotcmyk_cm(gx_device * dev, const gs_imager_state *pis,
-				   frac r, frac g, frac b, frac out[])
+                                   frac r, frac g, frac b, frac out[])
 {
 /* TO_DO_DEVICEN  This routine needs to include the effects of the SeparationOrder array */
     rinkj_device *rdev = (rinkj_device *)dev;
     int n = rdev->separation_names.num_names;
     int i;
 
-    color_rgb_to_cmyk(r, g, b, pis, out);
+    color_rgb_to_cmyk(r, g, b, pis, out, dev->memory);
     for(i = 0; i < n; i++)			/* Clear spot colors */
-	out[4 + i] = 0;
+        out[4 + i] = 0;
 }
 
 static void
@@ -300,7 +324,7 @@ cmyk_cs_to_spotcmyk_cm(gx_device * dev, frac c, frac m, frac y, frac k, frac out
     out[2] = y;
     out[3] = k;
     for(i = 0; i < n; i++)			/* Clear spot colors */
-	out[4 + i] = 0;
+        out[4 + i] = 0;
 };
 
 static void
@@ -317,7 +341,7 @@ cmyk_cs_to_spotn_cm(gx_device * dev, frac c, frac m, frac y, frac k, frac out[])
     out[2] = y;
     out[3] = k;
     for(i = 0; i < n; i++)			/* Clear spot colors */
-	out[4 + i] = 0;
+        out[4 + i] = 0;
 };
 
 static void
@@ -330,14 +354,14 @@ gray_cs_to_spotn_cm(gx_device * dev, frac gray, frac out[])
 
 static void
 rgb_cs_to_spotn_cm(gx_device * dev, const gs_imager_state *pis,
-				   frac r, frac g, frac b, frac out[])
+                                   frac r, frac g, frac b, frac out[])
 {
 /* TO_DO_DEVICEN  This routine needs to include the effects of the SeparationOrder array */
     frac cmyk[4];
 
-    color_rgb_to_cmyk(r, g, b, pis, cmyk);
+    color_rgb_to_cmyk(r, g, b, pis, cmyk, dev->memory);
     cmyk_cs_to_spotn_cm(dev, cmyk[0], cmyk[1], cmyk[2], cmyk[3],
-			out);
+                        out);
 }
 
 static const gx_cm_color_map_procs spotRGB_procs = {
@@ -363,13 +387,13 @@ get_rinkj_color_mapping_procs(const gx_device * dev)
     const rinkj_device *rdev = (const rinkj_device *)dev;
 
     if (rdev->color_model == RINKJ_DEVICE_RGB)
-	return &spotRGB_procs;
+        return &spotRGB_procs;
     else if (rdev->color_model == RINKJ_DEVICE_CMYK)
-	return &spotCMYK_procs;
+        return &spotCMYK_procs;
     else if (rdev->color_model == RINKJ_DEVICE_N)
-	return &spotN_procs;
+        return &spotN_procs;
     else
-	return NULL;
+        return NULL;
 }
 
 /*
@@ -385,7 +409,7 @@ rinkj_encode_color(gx_device *dev, const gx_color_value colors[])
     int ncomp = dev->color_info.num_components;
 
     for (; i<ncomp; i++) {
-	color <<= bpc;
+        color <<= bpc;
         color |= (colors[i] >> drop);
     }
     return (color == gx_no_color_index ? color ^ 1 : color);
@@ -405,7 +429,7 @@ rinkj_decode_color(gx_device * dev, gx_color_index color, gx_color_value * out)
 
     for (; i<ncomp; i++) {
         out[ncomp - i - 1] = (color & mask) << drop;
-	color >>= bpc;
+        color >>= bpc;
     }
     return 0;
 }
@@ -419,7 +443,7 @@ rinkj_map_color_rgb(gx_device *dev, gx_color_index color, gx_color_value rgb[3])
     rinkj_device *rdev = (rinkj_device *)dev;
 
     if (rdev->color_model == RINKJ_DEVICE_RGB)
-	return rinkj_decode_color(dev, color, rgb);
+        return rinkj_decode_color(dev, color, rgb);
     /* TODO: return reasonable values. */
     rgb[0] = 0;
     rgb[1] = 0;
@@ -428,41 +452,33 @@ rinkj_map_color_rgb(gx_device *dev, gx_color_index color, gx_color_value rgb[3])
 }
 
 static int
-rinkj_open_profile(rinkj_device *rdev, char *profile_fn, icmLuBase **pluo,
-		 int *poutn)
+rinkj_open_profile(rinkj_device *rdev)
 {
-    icmFile *fp;
-    icc *icco;
-    icmLuBase *luo;
+    gsicc_rendering_param_t rendering_params;
 
-#ifdef VERBOSE
-    dlprintf1("rinkj_open_profile %s\n", profile_fn);
-#endif
-    fp = new_icmFileStd_name(profile_fn, (char *)"r");
-    if (fp == NULL)
-	return_error(gs_error_undefinedfilename);
-    icco = new_icc();
-    if (icco == NULL)
-	return_error(gs_error_VMerror);
-    if (icco->read(icco, fp, 0))
-	return_error(gs_error_rangecheck);
-    luo = icco->get_luobj(icco, icmFwd, icmDefaultIntent, icmSigDefaultData, icmLuOrdNorm);
-    if (luo == NULL)
-	return_error(gs_error_rangecheck);
-    *pluo = luo;
-    luo->spaces(luo, NULL, NULL, NULL, poutn, NULL, NULL, NULL, NULL);
-    return 0;
-}
+    if (rdev->link_profile == NULL && rdev->profile_out_fn[0]) {
 
-static int
-rinkj_open_profiles(rinkj_device *rdev)
-{
-    int code = 0;
-    if (rdev->lu_out == NULL && rdev->profile_out_fn[0]) {
-	code = rinkj_open_profile(rdev, rdev->profile_out_fn,
-				    &rdev->lu_out, NULL);
+        rdev->link_profile = gsicc_get_profile_handle_file(rdev->profile_out_fn,
+                    strlen(rdev->profile_out_fn), rdev->memory);
+
+        if (rdev->link_profile == NULL)
+            return gs_throw(-1, "Could not create output profile for rinkj device");
+
+        /* Set up the rendering parameters */
+
+        rendering_params.black_point_comp = false;
+        rendering_params.graphics_type_tag = GS_UNKNOWN_TAG;  /* Already rendered */
+        rendering_params.rendering_intent = gsPERCEPTUAL;
+
+        /* Call with a NULL destination profile since we are using a device link profile here */
+        rdev->icc_link = gscms_get_link(rdev->link_profile,
+                        NULL, &rendering_params);
+
+        if (rdev->icc_link == NULL)
+            return gs_throw(-1, "Could not create link handle for rinkj device");
+
     }
-    return code;
+    return(0);
 }
 
 #define set_param_array(a, d, s)\
@@ -483,19 +499,19 @@ rinkj_get_params(gx_device * pdev, gs_param_list * plist)
 
     if ( (code = gdev_prn_get_params(pdev, plist)) < 0 ||
          (code = sample_device_crd_get_params(pdev, plist, "CRDDefault")) < 0 ||
-	 (code = param_write_name_array(plist, "SeparationColorNames", &scna)) < 0 ||
-	 (code = param_write_bool(plist, "Separations", &seprs)) < 0)
-	return code;
+         (code = param_write_name_array(plist, "SeparationColorNames", &scna)) < 0 ||
+         (code = param_write_bool(plist, "Separations", &seprs)) < 0)
+        return code;
 
     pos.data = (const byte *)rdev->profile_out_fn,
-	pos.size = strlen(rdev->profile_out_fn),
-	pos.persistent = false;
+        pos.size = strlen(rdev->profile_out_fn),
+        pos.persistent = false;
     code = param_write_string(plist, "ProfileOut", &pos);
     if (code < 0)
-	return code;
+        return code;
 
     sfs.data = (const byte *)rdev->setup_fn,
-	sfs.size = strlen(rdev->setup_fn),
+        sfs.size = strlen(rdev->setup_fn),
         sfs.persistent = false;
     code = param_write_string(plist, "SetupFile", &sfs);
 
@@ -505,7 +521,7 @@ rinkj_get_params(gx_device * pdev, gs_param_list * plist)
 
 #define compare_color_names(name, name_size, str, str_size) \
     (name_size == str_size && \
-	(strncmp((const char *)name, (const char *)str, name_size) == 0))
+        (strncmp((const char *)name, (const char *)str, name_size) == 0))
 
 /*
  * This routine will check if a name matches any item in a list of process model
@@ -513,18 +529,18 @@ rinkj_get_params(gx_device * pdev, gs_param_list * plist)
  */
 static bool
 check_process_color_names(const fixed_colorant_names_list * pcomp_list,
-			  const gs_param_string * pstring)
+                          const gs_param_string * pstring)
 {
     if (pcomp_list) {
         const fixed_colorant_name * plist = *pcomp_list;
         uint size = pstring->size;
-    
-	while( *plist) {
-	    if (compare_color_names(*plist, strlen(*plist), pstring->data, size)) {
-		return true;
-	    }
-	    plist++;
-	}
+
+        while( *plist) {
+            if (compare_color_names(*plist, strlen(*plist), pstring->data, size)) {
+                return true;
+            }
+            plist++;
+        }
     }
     return false;
 }
@@ -546,47 +562,47 @@ static int
 bpc_to_depth(int ncomp, int bpc)
 {
     static const byte depths[4][8] = {
-	{1, 2, 0, 4, 8, 0, 0, 8},
-	{2, 4, 0, 8, 16, 0, 0, 16},
-	{4, 8, 0, 16, 16, 0, 0, 24},
-	{4, 8, 0, 16, 32, 0, 0, 32}
+        {1, 2, 0, 4, 8, 0, 0, 8},
+        {2, 4, 0, 8, 16, 0, 0, 16},
+        {4, 8, 0, 16, 16, 0, 0, 24},
+        {4, 8, 0, 16, 32, 0, 0, 32}
     };
 
     if (ncomp <=4 && bpc <= 8)
         return depths[ncomp -1][bpc-1];
     else
-    	return (ncomp * bpc + 7) & 0xf8;
+        return (ncomp * bpc + 7) & 0xf8;
 }
 
 #define BEGIN_ARRAY_PARAM(pread, pname, pa, psize, e)\
     BEGIN\
     switch (code = pread(plist, (param_name = pname), &(pa))) {\
       case 0:\
-	if ((pa).size != psize) {\
-	  ecode = gs_note_error(gs_error_rangecheck);\
-	  (pa).data = 0;	/* mark as not filled */\
-	} else
+        if ((pa).size != psize) {\
+          ecode = gs_note_error(gs_error_rangecheck);\
+          (pa).data = 0;	/* mark as not filled */\
+        } else
 #define END_ARRAY_PARAM(pa, e)\
-	goto e;\
+        goto e;\
       default:\
-	ecode = code;\
+        ecode = code;\
 e:	param_signal_error(plist, param_name, ecode);\
       case 1:\
-	(pa).data = 0;		/* mark as not filled */\
+        (pa).data = 0;		/* mark as not filled */\
     }\
     END
 
 static int
 rinkj_param_read_fn(gs_param_list *plist, const char *name,
-		  gs_param_string *pstr, int max_len)
+                  gs_param_string *pstr, int max_len)
 {
     int code = param_read_string(plist, name, pstr);
 
     if (code == 0) {
-	if (pstr->size >= max_len)
-	    param_signal_error(plist, name, code = gs_error_rangecheck);
+        if (pstr->size >= max_len)
+            param_signal_error(plist, name, code = gs_error_rangecheck);
     } else {
-	pstr->data = 0;
+        pstr->data = 0;
     }
     return code;
 }
@@ -596,7 +612,7 @@ static bool
 param_string_eq(const gs_param_string *pcs, const char *str)
 {
     return (strlen(str) == pcs->size &&
-	    !strncmp(str, (const char *)pcs->data, pcs->size));
+            !strncmp(str, (const char *)pcs->data, pcs->size));
 }
 
 static int
@@ -606,27 +622,27 @@ rinkj_set_color_model(rinkj_device *rdev, rinkj_color_model color_model)
 
     rdev->color_model = color_model;
     if (color_model == RINKJ_DEVICE_GRAY) {
-	rdev->std_colorant_names = &DeviceGrayComponents;
-	rdev->num_std_colorant_names = 1;
-	rdev->color_info.cm_name = "DeviceGray";
-	rdev->color_info.polarity = GX_CINFO_POLARITY_ADDITIVE;
+        rdev->std_colorant_names = &DeviceGrayComponents;
+        rdev->num_std_colorant_names = 1;
+        rdev->color_info.cm_name = "DeviceGray";
+        rdev->color_info.polarity = GX_CINFO_POLARITY_ADDITIVE;
     } else if (color_model == RINKJ_DEVICE_RGB) {
-	rdev->std_colorant_names = &DeviceRGBComponents;
-	rdev->num_std_colorant_names = 3;
-	rdev->color_info.cm_name = "DeviceRGB";
-	rdev->color_info.polarity = GX_CINFO_POLARITY_ADDITIVE;
+        rdev->std_colorant_names = &DeviceRGBComponents;
+        rdev->num_std_colorant_names = 3;
+        rdev->color_info.cm_name = "DeviceRGB";
+        rdev->color_info.polarity = GX_CINFO_POLARITY_ADDITIVE;
     } else if (color_model == RINKJ_DEVICE_CMYK) {
-	rdev->std_colorant_names = &DeviceCMYKComponents;
-	rdev->num_std_colorant_names = 4;
-	rdev->color_info.cm_name = "DeviceCMYK";
-	rdev->color_info.polarity = GX_CINFO_POLARITY_SUBTRACTIVE;
+        rdev->std_colorant_names = &DeviceCMYKComponents;
+        rdev->num_std_colorant_names = 4;
+        rdev->color_info.cm_name = "DeviceCMYK";
+        rdev->color_info.polarity = GX_CINFO_POLARITY_SUBTRACTIVE;
     } else if (color_model == RINKJ_DEVICE_N) {
-	rdev->std_colorant_names = &DeviceCMYKComponents;
-	rdev->num_std_colorant_names = 4;
-	rdev->color_info.cm_name = "DeviceN";
-	rdev->color_info.polarity = GX_CINFO_POLARITY_SUBTRACTIVE;
+        rdev->std_colorant_names = &DeviceCMYKComponents;
+        rdev->num_std_colorant_names = 4;
+        rdev->color_info.cm_name = "DeviceN";
+        rdev->color_info.polarity = GX_CINFO_POLARITY_SUBTRACTIVE;
     } else {
-	return -1;
+        return -1;
     }
 
     rdev->color_info.max_components = rdev->num_std_colorant_names;
@@ -653,34 +669,35 @@ rinkj_put_params(gx_device * pdev, gs_param_list * plist)
     rinkj_color_model color_model = pdevn->color_model;
 
     BEGIN_ARRAY_PARAM(param_read_name_array, "SeparationColorNames", scna, scna.size, scne) {
-	break;
+        break;
     } END_ARRAY_PARAM(scna, scne);
 
     if (code >= 0)
-	code = rinkj_param_read_fn(plist, "ProfileOut", &po,
-				 sizeof(pdevn->profile_out_fn));
-    if (code >= 0)
-	code = rinkj_param_read_fn(plist, "SetupFile", &sf,
-				 sizeof(pdevn->setup_fn));
+        code = rinkj_param_read_fn(plist, "ProfileOut", &po,
+                                 sizeof(pdevn->profile_out_fn));
 
     if (code >= 0)
-	code = param_read_name(plist, "ProcessColorModel", &pcm);
+        code = rinkj_param_read_fn(plist, "SetupFile", &sf,
+                                 sizeof(pdevn->setup_fn));
+
+    if (code >= 0)
+        code = param_read_name(plist, "ProcessColorModel", &pcm);
     if (code == 0) {
-	if (param_string_eq (&pcm, "DeviceGray"))
-	    color_model = RINKJ_DEVICE_GRAY;
-	else if (param_string_eq (&pcm, "DeviceRGB"))
-	    color_model = RINKJ_DEVICE_RGB;
-	else if (param_string_eq (&pcm, "DeviceCMYK"))
-	    color_model = RINKJ_DEVICE_CMYK;
-	else if (param_string_eq (&pcm, "DeviceN"))
-	    color_model = RINKJ_DEVICE_N;
-	else {
-	    param_signal_error(plist, "ProcessColorModel",
-			       code = gs_error_rangecheck);
-	}
+        if (param_string_eq (&pcm, "DeviceGray"))
+            color_model = RINKJ_DEVICE_GRAY;
+        else if (param_string_eq (&pcm, "DeviceRGB"))
+            color_model = RINKJ_DEVICE_RGB;
+        else if (param_string_eq (&pcm, "DeviceCMYK"))
+            color_model = RINKJ_DEVICE_CMYK;
+        else if (param_string_eq (&pcm, "DeviceN"))
+            color_model = RINKJ_DEVICE_N;
+        else {
+            param_signal_error(plist, "ProcessColorModel",
+                               code = gs_error_rangecheck);
+        }
     }
     if (code < 0)
-	ecode = code;
+        ecode = code;
 
     /*
      * Save the color_info in case gdev_prn_put_params fails, and for
@@ -689,65 +706,79 @@ rinkj_put_params(gx_device * pdev, gs_param_list * plist)
     save_info = pdevn->color_info;
     ecode = rinkj_set_color_model(pdevn, color_model);
     if (ecode == 0)
-	ecode = gdev_prn_put_params(pdev, plist);
+        ecode = gdev_prn_put_params(pdev, plist);
     if (ecode < 0) {
-	pdevn->color_info = save_info;
-	return ecode;
+        pdevn->color_info = save_info;
+        return ecode;
     }
 
     /* Separations are only valid with a subtractive color model */
     if (pdev->color_info.polarity == GX_CINFO_POLARITY_SUBTRACTIVE) {
         /*
          * Process the separation color names.  Remove any names that already
-	 * match the process color model colorant names for the device.
+         * match the process color model colorant names for the device.
          */
         if (scna.data != 0) {
-	    int i;
-	    int num_names = scna.size;
-	    const fixed_colorant_names_list * pcomp_names = 
-	    			((rinkj_device *)pdev)->std_colorant_names;
+            int i;
+            int num_names = scna.size;
+            const fixed_colorant_names_list * pcomp_names =
+                                ((rinkj_device *)pdev)->std_colorant_names;
 
-	    for (i = num_spot = 0; i < num_names; i++) {
-	        if (!check_process_color_names(pcomp_names, &scna.data[i]))
-	            pdevn->separation_names.names[num_spot++] = &scna.data[i];
-	    }
-	    pdevn->separation_names.num_names = num_spot;
-	    if (pdevn->is_open)
-	        gs_closedevice(pdev);
+            for (i = num_spot = 0; i < num_names; i++) {
+                if (!check_process_color_names(pcomp_names, &scna.data[i]))
+                    pdevn->separation_names.names[num_spot++] = &scna.data[i];
+            }
+            pdevn->separation_names.num_names = num_spot;
+            if (pdevn->is_open)
+                gs_closedevice(pdev);
         }
     }
     npcmcolors = pdevn->num_std_colorant_names;
     pdevn->color_info.num_components = npcmcolors + num_spot;
-    /* 
+    /*
      * The DeviceN device can have zero components if nothing has been
      * specified.  This causes some problems so force at least one
      * component until something is specified.
      */
     if (!pdevn->color_info.num_components)
-	pdevn->color_info.num_components = 1;
+        pdevn->color_info.num_components = 1;
     pdevn->color_info.depth = bpc_to_depth(pdevn->color_info.num_components,
-					   pdevn->bitspercomponent);
+                                           pdevn->bitspercomponent);
     if (pdevn->color_info.depth != save_info.depth) {
-	gs_closedevice(pdev);
+        gs_closedevice(pdev);
     }
 
     if (po.data != 0) {
-	memcpy(pdevn->profile_out_fn, po.data, po.size);
-	pdevn->profile_out_fn[po.size] = 0;
+        memcpy(pdevn->profile_out_fn, po.data, po.size);
+        pdevn->profile_out_fn[po.size] = 0;
     }
     if (sf.data != 0) {
-	memcpy(pdevn->setup_fn, sf.data, sf.size);
-	pdevn->setup_fn[sf.size] = 0;
+        memcpy(pdevn->setup_fn, sf.data, sf.size);
+        pdevn->setup_fn[sf.size] = 0;
     }
-    code = rinkj_open_profiles(pdevn);
+    code = rinkj_open_profile(pdevn);
 
     return code;
 }
 
+/*
+ * Close device and clean up ICC structures.
+ */
+
+static int
+rinkj_close_device(gx_device *dev)
+{
+    rinkj_device * const rdev = (rinkj_device *) dev;
+
+    gscms_release_link(rdev->icc_link);
+    rc_decrement(rdev->link_profile, "rinkj_close_device");
+
+    return gdev_prn_close(dev);
+}
 
 /*
  * This routine will check to see if the color component name  match those
- * that are available amoung the current device's color components.  
+ * that are available amoung the current device's color components.
  *
  * Parameters:
  *   dev - pointer to device data structure.
@@ -759,7 +790,7 @@ rinkj_put_params(gx_device * pdev, gs_param_list * plist)
  */
 static int
 rinkj_get_color_comp_index(gx_device * dev, const char * pname, int name_size,
-				int src_index)
+                                int src_index)
 {
 /* TO_DO_DEVICEN  This routine needs to include the effects of the SeparationOrder array */
     const fixed_colorant_names_list * list = ((const rinkj_device *)dev)->std_colorant_names;
@@ -769,26 +800,26 @@ rinkj_get_color_comp_index(gx_device * dev, const char * pname, int name_size,
 
     /* Check if the component is in the implied list. */
     if (pcolor) {
-	while( *pcolor) {
-	    if (compare_color_names(pname, name_size, *pcolor, strlen(*pcolor)))
-		return color_component_number;
-	    pcolor++;
-	    color_component_number++;
-	}
+        while( *pcolor) {
+            if (compare_color_names(pname, name_size, *pcolor, strlen(*pcolor)))
+                return color_component_number;
+            pcolor++;
+            color_component_number++;
+        }
     }
 
     /* Check if the component is in the separation names list. */
     {
-	const gs_separation_names * separations = &((const rinkj_device *)dev)->separation_names;
-	int num_spot = separations->num_names;
+        const gs_separation_names * separations = &((const rinkj_device *)dev)->separation_names;
+        int num_spot = separations->num_names;
 
-	for (i=0; i<num_spot; i++) {
-	    if (compare_color_names((const char *)separations->names[i]->data,
-		  separations->names[i]->size, pname, name_size)) {
-		return color_component_number;
-	    }
-	    color_component_number++;
-	}
+        for (i=0; i<num_spot; i++) {
+            if (compare_color_names((const char *)separations->names[i]->data,
+                  separations->names[i]->size, pname, name_size)) {
+                return color_component_number;
+            }
+            color_component_number++;
+        }
     }
 
     return -1;
@@ -803,7 +834,7 @@ rinkj_graph_lookup (const double *graph_x, const double *graph_y, int n_graph, d
   for (i = 0; i < n_graph - 1; i++)
     {
       if (graph_x[i + 1] > x)
-	break;
+        break;
     }
   return graph_y[i] + (x - graph_x[i]) * (graph_y[i + 1] - graph_y[i]) /
     (graph_x[i + 1] - graph_x[i]);
@@ -813,7 +844,7 @@ typedef struct rinkj_lutset_s rinkj_lutset;
 typedef struct rinkj_lutchain_s rinkj_lutchain;
 
 struct rinkj_lutset_s {
-    char *plane_names;
+    const char *plane_names;
     rinkj_lutchain *lut[MAX_CHAN];
 };
 
@@ -835,34 +866,34 @@ rinkj_add_lut(rinkj_device *rdev, rinkj_lutset *lutset, char plane, FILE *f)
     rinkj_lutchain **pp;
 
     for (plane_ix = 0; lutset->plane_names[plane_ix]; plane_ix++)
-	if (lutset->plane_names[plane_ix] == plane)
-	    break;
+        if (lutset->plane_names[plane_ix] == plane)
+            break;
     if (lutset->plane_names[plane_ix] != plane)
-	return -1;
+        return -1;
     pp = &lutset->lut[plane_ix];
 
     if (fgets(linebuf, sizeof(linebuf), f) == NULL)
-	return -1;
+        return -1;
     if (sscanf(linebuf, "%d", &n_graph) != 1)
-	return -1;
+        return -1;
     chain = (rinkj_lutchain *)gs_alloc_bytes(rdev->memory, sizeof(rinkj_lutchain), "rinkj_add_lut");
     chain->next = NULL;
     chain->n_graph = n_graph;
     chain->graph_x = (double *)gs_alloc_bytes(rdev->memory, sizeof(double) * n_graph, "rinkj_add_lut");
     chain->graph_y = (double *)gs_alloc_bytes(rdev->memory, sizeof(double) * n_graph, "rinkj_add_lut");
     for (i = 0; i < n_graph; i++) {
-	double x, y;
+        double x, y;
 
-	if (fgets(linebuf, sizeof(linebuf), f) == NULL)
-	    return -1;
-	if (sscanf(linebuf, "%lf %lf", &y, &x) != 2)
-	    return -1;
-	chain->graph_x[i] = x / 1.0;
-	chain->graph_y[i] = y / 1.0;
+        if (fgets(linebuf, sizeof(linebuf), f) == NULL)
+            return -1;
+        if (sscanf(linebuf, "%lf %lf", &y, &x) != 2)
+            return -1;
+        chain->graph_x[i] = x / 1.0;
+        chain->graph_y[i] = y / 1.0;
     }
     /* add at end of chain */
     while (*pp) {
-	pp = &((*pp)->next);
+        pp = &((*pp)->next);
     }
     *pp = chain;
     return 0;
@@ -875,28 +906,28 @@ rinkj_apply_luts(rinkj_device *rdev, RinkjDevice *cmyk_dev, const rinkj_lutset *
     double lut[256];
 
     for (plane_ix = 0; plane_ix < 7; plane_ix++) {
-	int i;
-	for (i = 0; i < 256; i++) {
-	    double g = i / 255.0;
-	    rinkj_lutchain *chain;
+        int i;
+        for (i = 0; i < 256; i++) {
+            double g = i / 255.0;
+            rinkj_lutchain *chain;
 
-	    for (chain = lutset->lut[plane_ix]; chain; chain = chain->next) {
-		g = rinkj_graph_lookup(chain->graph_x, chain->graph_y,
-				       chain->n_graph, g);
-	    }
-	    lut[i] = g;
-	}
-	rinkj_screen_eb_set_lut(cmyk_dev, plane_ix, lut);
+            for (chain = lutset->lut[plane_ix]; chain; chain = chain->next) {
+                g = rinkj_graph_lookup(chain->graph_x, chain->graph_y,
+                                       chain->n_graph, g);
+            }
+            lut[i] = g;
+        }
+        rinkj_screen_eb_set_lut(cmyk_dev, plane_ix, lut);
     }
     return 0;
 }
 
 static int
 rinkj_set_luts(rinkj_device *rdev,
-	       RinkjDevice *printer_dev, RinkjDevice *cmyk_dev,
-	       const char *config_fn, const RinkjDeviceParams *params)
+               RinkjDevice *printer_dev, RinkjDevice *cmyk_dev,
+               const char *config_fn, const RinkjDeviceParams *params)
 {
-    FILE *f = fopen(config_fn, "r");
+    FILE *f = gp_fopen(config_fn, "r");
     char linebuf[256];
     char key[256];
     char *val;
@@ -905,29 +936,29 @@ rinkj_set_luts(rinkj_device *rdev,
 
     lutset.plane_names = "KkCMcmY";
     for (i = 0; i < MAX_CHAN; i++) {
-	lutset.lut[i] = NULL;
+        lutset.lut[i] = NULL;
     }
     for (;;) {
-	if (fgets(linebuf, sizeof(linebuf), f) == NULL)
-	    break;
-	for (i = 0; linebuf[i]; i++)
-	    if (linebuf[i] == ':') break;
-	if (linebuf[i] != ':') {
-	    continue;
-	}
-	memcpy(key, linebuf, i);
-	key[i] = 0;
-	for (i++; linebuf[i] == ' '; i++);
-	val = linebuf + i;
+        if (fgets(linebuf, sizeof(linebuf), f) == NULL)
+            break;
+        for (i = 0; linebuf[i]; i++)
+            if (linebuf[i] == ':') break;
+        if (linebuf[i] != ':') {
+            continue;
+        }
+        memcpy(key, linebuf, i);
+        key[i] = 0;
+        for (i++; linebuf[i] == ' '; i++);
+        val = linebuf + i;
 
-	if (!strcmp(key, "AddLut")) {
-	    if_debug1('r', "[r]%s", linebuf);
-	    rinkj_add_lut(rdev, &lutset, val[0], f);
-	} else if (!strcmp(key, "Dither") || !strcmp(key, "Aspect")) {
-	    rinkj_device_set_param_string(cmyk_dev, key, val);
-	} else {
-	    rinkj_device_set_param_string(printer_dev, key, val);
-	}
+        if (!strcmp(key, "AddLut")) {
+            if_debug1('r', "[r]%s", linebuf);
+            rinkj_add_lut(rdev, &lutset, val[0], f);
+        } else if (!strcmp(key, "Dither") || !strcmp(key, "Aspect")) {
+            rinkj_device_set_param_string(cmyk_dev, key, val);
+        } else {
+            rinkj_device_set_param_string(printer_dev, key, val);
+        }
     }
 
     fclose(f);
@@ -986,34 +1017,35 @@ rinkj_write_image_data(gx_device_printer *pdev, RinkjDevice *cmyk_dev)
     rinkj_device *rdev = (rinkj_device *)pdev;
     int raster = gdev_prn_raster(rdev);
     byte *line;
-    char *plane_data[MAX_CHAN];
-    const char *split_plane_data[MAX_CHAN];
+    byte *plane_data[MAX_CHAN];
+    const byte *split_plane_data[MAX_CHAN];
     int xsb;
     int n_planes;
     int n_planes_in = pdev->color_info.num_components;
     int n_planes_out = 4;
     int i;
     int y;
-    icmLuBase *luo = rdev->lu_out;
     int code = 0;
     rinkj_color_cache_entry *cache = NULL;
-
 
     n_planes = n_planes_in + rdev->separation_names.num_names;
     if_debug1('r', "[r]n_planes = %d\n", n_planes);
     xsb = pdev->width;
     for (i = 0; i < n_planes_out; i++)
-	plane_data[i] = gs_alloc_bytes(pdev->memory, xsb, "rinkj_write_image_data");
+        plane_data[i] = gs_alloc_bytes(pdev->memory, xsb, "rinkj_write_image_data");
 
-    if (luo != NULL) {
-	cache = (rinkj_color_cache_entry *)gs_alloc_bytes(pdev->memory, RINKJ_CCACHE_SIZE * sizeof(rinkj_color_cache_entry), "rinkj_write_image_data");
-	if (cache == NULL)
-	    return gs_note_error(gs_error_VMerror);
+    if (rdev->icc_link != NULL) {
 
-	/* Set up cache so that none of the keys will hit. */
-	cache[0].key = 1;
-	for (i = 1; i < RINKJ_CCACHE_SIZE; i++)
-	    cache[i].key = 0;
+        cache = (rinkj_color_cache_entry *)gs_alloc_bytes(pdev->memory, RINKJ_CCACHE_SIZE * sizeof(rinkj_color_cache_entry), "rinkj_write_image_data");
+        if (cache == NULL)
+            return gs_note_error(gs_error_VMerror);
+
+        /* Set up cache so that none of the keys will hit. */
+
+        cache[0].key = 1;
+        for (i = 1; i < RINKJ_CCACHE_SIZE; i++)
+            cache[i].key = 0;
+
     }
 
     /* do CMYK -> CMYKcmk ink split by plane replication */
@@ -1027,125 +1059,126 @@ rinkj_write_image_data(gx_device_printer *pdev, RinkjDevice *cmyk_dev)
 
     line = gs_alloc_bytes(pdev->memory, raster, "rinkj_write_image_data");
     for (y = 0; y < pdev->height; y++) {
-	byte *row;
-	int x;
+        byte *row;
+        int x;
 
-	code = gdev_prn_get_bits(pdev, y, line, &row);
+        code = gdev_prn_get_bits(pdev, y, line, &row);
 
-	if (luo == NULL) {
-	    int rowix = 0;
-	    for (x = 0; x < pdev->width; x++) {
-		for (i = 0; i < n_planes_in; i++)
-		    plane_data[i][x] = row[rowix + i];
-		rowix += n_planes;
-	    }
-	} else if (n_planes == 3) {
-	    int rowix = 0;
-	    for (x = 0; x < pdev->width; x++) {
-		byte cbuf[4] = {0, 0, 0, 0};
-		bits32 color;
-		bits32 hash = rinkj_color_hash(color);
-		byte vbuf[4];
+        if (rdev->icc_link == NULL) {
+            int rowix = 0;
+            for (x = 0; x < pdev->width; x++) {
+                for (i = 0; i < n_planes_in; i++)
+                    plane_data[i][x] = row[rowix + i];
+                rowix += n_planes;
+            }
+        } else if (n_planes == 3) {
+            int rowix = 0;
+            for (x = 0; x < pdev->width; x++) {
+                byte cbuf[4] = {0, 0, 0, 0};
+                bits32 color;
+                bits32 hash;
+                byte vbuf[4];
 
-		memcpy(cbuf, row + rowix, 3);
-		color = ((bits32 *)cbuf)[0];
-		
-		if (cache[hash].key != color) {
-		    double in[MAX_CHAN], out[MAX_CHAN];
+                memcpy(cbuf, row + rowix, 3);
+                color = ((bits32 *)cbuf)[0];
+                hash = rinkj_color_hash(color);
 
-		    for (i = 0; i < 3; i++)
-			in[i] = cbuf[i] * (1.0 / 255);
-		    luo->lookup(luo, out, in);
-		    for (i = 0; i < 4; i++)
-			vbuf[i] = (int)(0.5 + 255 * out[i]);
-		    cache[hash].key = color;
-		    cache[hash].value = ((bits32 *)vbuf)[0];
-		} else {
-		    ((bits32 *)vbuf)[0] = cache[hash].value;
-		}
-		plane_data[0][x] = vbuf[0];
-		plane_data[1][x] = vbuf[1];
-		plane_data[2][x] = vbuf[2];
-		plane_data[3][x] = vbuf[3];
-		rowix += n_planes;
-	    }
-	} else if (n_planes == 4) {
-	    for (x = 0; x < pdev->width; x++) {
-		bits32 color = ((bits32 *)row)[x];
-		bits32 hash = rinkj_color_hash(color);
-		byte vbuf[4];
+                if (cache[hash].key != color) {
 
-		if (cache[hash].key != color) {
-		    byte cbuf[4];
-		    double in[MAX_CHAN], out[MAX_CHAN];
+                    /* 3 channel to CMYK */
+                    gscms_transform_color(rdev->icc_link, &cbuf,
+                        &(vbuf), 1, NULL);
 
-		    ((bits32 *)cbuf)[0] = color;
-		    for (i = 0; i < 4; i++)
-			in[i] = cbuf[i] * (1.0 / 255);
-		    luo->lookup(luo, out, in);
-		    for (i = 0; i < 4; i++)
-			vbuf[i] = (int)(0.5 + 255 * out[i]);
-		    cache[hash].key = color;
-		    cache[hash].value = ((bits32 *)vbuf)[0];
-		} else {
-		    ((bits32 *)vbuf)[0] = cache[hash].value;
-		}
-		plane_data[0][x] = vbuf[0];
-		plane_data[1][x] = vbuf[1];
-		plane_data[2][x] = vbuf[2];
-		plane_data[3][x] = vbuf[3];
-	    }
-	} else if (n_planes == 5) {
-	    int rowix = 0;
-	    for (x = 0; x < pdev->width; x++) {
-		byte cbuf[4];
-		bits32 color;
-		bits32 hash = rinkj_color_hash(color);
-		byte vbuf[4];
-		byte spot;
-		int scolor[4] = { 0x08, 0xc0, 0x80, 0 };
+                    cache[hash].key = color;
+                    cache[hash].value = ((bits32 *)vbuf)[0];
 
-		memcpy(cbuf, row + rowix, 4);
-		color = ((bits32 *)cbuf)[0];
-		
-		if (cache[hash].key != color) {
-		    double in[MAX_CHAN], out[MAX_CHAN];
+                } else {
+                    ((bits32 *)vbuf)[0] = cache[hash].value;
+                }
+                plane_data[0][x] = vbuf[0];
+                plane_data[1][x] = vbuf[1];
+                plane_data[2][x] = vbuf[2];
+                plane_data[3][x] = vbuf[3];
+                rowix += n_planes;
+            }
+        } else if (n_planes == 4) {
+            for (x = 0; x < pdev->width; x++) {
+                bits32 color = ((bits32 *)row)[x];
+                bits32 hash = rinkj_color_hash(color);
+                byte vbuf[4];
 
-		    for (i = 0; i < 4; i++)
-			in[i] = cbuf[i] * (1.0 / 255);
-		    luo->lookup(luo, out, in);
-		    for (i = 0; i < 4; i++)
-			vbuf[i] = (int)(0.5 + 255 * out[i]);
-		    cache[hash].key = color;
-		    cache[hash].value = ((bits32 *)vbuf)[0];
-		} else {
-		    ((bits32 *)vbuf)[0] = cache[hash].value;
-		}
-		spot = row[rowix + 4];
-		if (spot != 0) {
-		    for (i = 0; i < 4; i++) {
-			int cmyk = vbuf[i], sp_i = spot;
-			int tmp = (cmyk << 8) - cmyk;
-			tmp += (sp_i * scolor[i] * (255 - cmyk)) >> 8;
-			tmp += 0x80;
-			plane_data[i][x] = (tmp + (tmp >> 8)) >> 8;
-		    }
-		} else {
-		    plane_data[0][x] = vbuf[0];
-		    plane_data[1][x] = vbuf[1];
-		    plane_data[2][x] = vbuf[2];
-		    plane_data[3][x] = vbuf[3];
-		}
-		rowix += n_planes;
-	    }
-	}
+                if (cache[hash].key != color) {
+                    byte cbuf[4];
 
-	code = rinkj_device_write(cmyk_dev, split_plane_data);
+                    ((bits32 *)cbuf)[0] = color;
+
+                    /* 4 channel to CMYK */
+                    gscms_transform_color(rdev->icc_link, &cbuf,
+                        &(vbuf), 1, NULL);
+
+                    cache[hash].key = color;
+                    cache[hash].value = ((bits32 *)vbuf)[0];
+                } else {
+                    ((bits32 *)vbuf)[0] = cache[hash].value;
+                }
+                plane_data[0][x] = vbuf[0];
+                plane_data[1][x] = vbuf[1];
+                plane_data[2][x] = vbuf[2];
+                plane_data[3][x] = vbuf[3];
+            }
+        } else if (n_planes == 5) {
+            int rowix = 0;
+            for (x = 0; x < pdev->width; x++) {
+                byte cbuf[4];
+                bits32 color;
+                bits32 hash;
+                byte vbuf[4];
+                byte spot;
+                int scolor[4] = { 0x08, 0xc0, 0x80, 0 };
+
+                memcpy(cbuf, row + rowix, 4);
+                color = ((bits32 *)cbuf)[0];
+                hash = rinkj_color_hash(color);
+
+                if (cache[hash].key != color) {
+
+                    /* Not sure what is going on here.  Old
+                       code was still working with 4 to 4
+                       conversion.  Replacing with new ICC AMP call */
+
+                    gscms_transform_color(rdev->icc_link, &cbuf,
+                        &(vbuf), 1, NULL);
+
+                    cache[hash].key = color;
+                    cache[hash].value = ((bits32 *)vbuf)[0];
+                } else {
+                    ((bits32 *)vbuf)[0] = cache[hash].value;
+                }
+                spot = row[rowix + 4];
+                if (spot != 0) {
+                    for (i = 0; i < 4; i++) {
+                        int cmyk = vbuf[i], sp_i = spot;
+                        int tmp = (cmyk << 8) - cmyk;
+                        tmp += (sp_i * scolor[i] * (255 - cmyk)) >> 8;
+                        tmp += 0x80;
+                        plane_data[i][x] = (tmp + (tmp >> 8)) >> 8;
+                    }
+                } else {
+                    plane_data[0][x] = vbuf[0];
+                    plane_data[1][x] = vbuf[1];
+                    plane_data[2][x] = vbuf[2];
+                    plane_data[3][x] = vbuf[3];
+                }
+                rowix += n_planes;
+            }
+        }
+
+        code = rinkj_device_write(cmyk_dev, (const char **)split_plane_data);
     }
 
     rinkj_device_write(cmyk_dev, NULL);
     for (i = 0; i < n_planes_in; i++)
-	gs_free_object(pdev->memory, plane_data[i], "rinkj_write_image_data");
+        gs_free_object(pdev->memory, plane_data[i], "rinkj_write_image_data");
     gs_free_object(pdev->memory, line, "rinkj_write_image_data");
     gs_free_object(pdev->memory, cache, "rinkj_write_image_data");
 
@@ -1161,7 +1194,7 @@ rinkj_print_page(gx_device_printer *pdev, FILE *file)
 
     cmyk_dev = rinkj_init(rdev, file);
     if (cmyk_dev == 0)
-	return gs_note_error(gs_error_ioerror);
+        return gs_note_error(gs_error_ioerror);
 
     code = rinkj_write_image_data(pdev, cmyk_dev);
     return code;

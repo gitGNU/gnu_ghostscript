@@ -10,7 +10,7 @@
 %  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 %  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
-% $Id: Latin1,v 1.6 2010/07/10 22:02:57 Arabidopsis Exp $
+% $Id$
 % Decoding for mapping PS names to codes for renderers which cannot
 % retrive characters by names.
 

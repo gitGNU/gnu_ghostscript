@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: igc.h,v 1.2 2010/07/10 22:02:41 Arabidopsis Exp $ */
+/* $Id$ */
 /* Internal interfaces in Ghostscript GC */
 
 #ifndef igc_INCLUDED
@@ -78,17 +78,17 @@ ptr_proc_mark(ptr_ref_mark);
 void ialloc_validate_memory(const gs_ref_memory_t *, gc_state_t *);
 void ialloc_validate_chunk(const chunk_t *, gc_state_t *);
 void ialloc_validate_object(const obj_header_t *, const chunk_t *,
-			    gc_state_t *);
+                            gc_state_t *);
 
 /* Exported by igc.c for ilocate.c */
 const gs_memory_t * gcst_get_memory_ptr(gc_state_t *gcst);
 
 /* Macro for returning a relocated pointer */
 const void *print_reloc_proc(const void *obj, const char *cname,
-			     const void *robj);
+                             const void *robj);
 #ifdef DEBUG
 #  define print_reloc(obj, cname, nobj)\
-	(gs_debug_c('9') ? print_reloc_proc(obj, cname, nobj) : nobj)
+        (gs_debug_c('9') ? print_reloc_proc(obj, cname, nobj) : nobj)
 #else
 #  define print_reloc(obj, cname, nobj) (nobj)
 #endif

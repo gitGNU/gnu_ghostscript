@@ -3,7 +3,7 @@
 # script to generate ldf_jb2.mak
 # whose source sometimes changes
 
-# $Id: gen_ldf_jb2.py,v 1.5 2010/07/10 22:02:46 Arabidopsis Exp $
+# $Id$
 
 import time, glob
 import os.path
@@ -25,7 +25,7 @@ license = """#    Copyright (C) %d Artifex Software, Inc.  All rights reserved.
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: gen_ldf_jb2.py,v 1.5 2010/07/10 22:02:46 Arabidopsis Exp $
+# $""" """Id$
 """ % time.gmtime().tm_year
 
 comment = """

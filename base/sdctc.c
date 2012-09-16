@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: sdctc.c,v 1.2 2010/07/10 22:02:26 Arabidopsis Exp $ */
+/* $Id$ */
 /* Code common to DCT encoding and decoding streams */
 #include "stdio_.h"
 #include "jpeglib_.h"
@@ -26,12 +26,12 @@ s_DCT_set_defaults(stream_state * st)
 {
     stream_DCT_state *const ss = (stream_DCT_state *) st;
 
-    ss->jpeg_memory = (gs_memory_t *)gs_lib_ctx_get_non_gc_memory_t(); /* cast away const */
+    ss->jpeg_memory = ss->memory->non_gc_memory;
     ss->data.common = 0;
-	/****************
-	  ss->data.common->Picky = 0;
-	  ss->data.common->Relax = 0;
-	 ****************/
+        /****************
+          ss->data.common->Picky = 0;
+          ss->data.common->Relax = 0;
+         ****************/
     ss->ColorTransform = -1;
     ss->QFactor = 1.0;
     /* Clear pointers */

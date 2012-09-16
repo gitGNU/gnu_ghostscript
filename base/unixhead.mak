@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: unixhead.mak,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $
+# $Id$
 # Partial makefile common to all Unix configurations.
 
 # This part of the makefile gets inserted after the compiler-specific part
@@ -65,13 +65,4 @@ CONFLDTR=-ol
 
 # Define the compilation rules and flags.
 
-CC_D=$(CC_)
-CC_INT=$(CC_)
-
 BEGINFILES=
-
-# Define the default build rule, so the object directories get created
-# automatically.
-
-std: STDDIRS default
-	$(NO_OP)

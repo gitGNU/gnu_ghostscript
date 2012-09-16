@@ -1,5 +1,5 @@
 %!
-% $Id: FAPIconfig-FCO,v 1.2 2010/07/10 22:02:37 Arabidopsis Exp $
+% $Id$
 % This is configuration file for FAPI client.
 
 /FontPath             () % A default directory for FAPI-handled font files path in FAPIfontmap.

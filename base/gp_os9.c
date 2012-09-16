@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gp_os9.c,v 1.2 2010/07/10 22:02:28 Arabidopsis Exp $ */
+/* $Id$ */
 /* OSK-specific routines for Ghostscript */
 
 #include "pipe_.h"
@@ -53,15 +53,15 @@ signalhandler(int sig)
 {
     clearerr(stdin);
     switch (sig) {
-	case SIGINT:
-	case SIGQUIT:
-	    interrupted = 1;
-	    break;
-	case SIGFPE:
-	    interrupted = 2;
-	    break;
-	default:
-	    break;
+        case SIGINT:
+        case SIGQUIT:
+            interrupted = 1;
+            break;
+        case SIGFPE:
+            interrupted = 2;
+            break;
+        default:
+            break;
     }
 }
 
@@ -101,7 +101,6 @@ gp_get_usertime(long *pdt)
     return gp_get_realtime(pdt);	/* not yet implemented */
 }
 
-
 /* ------ Persistent data cache ------*/
 
 /* insert a buffer under a (type, key) pair */
@@ -126,12 +125,14 @@ int gp_cache_query(int type, byte* key, int keylen, void **buffer,
 /* "|command" opens an output pipe. */
 /* Return NULL if the connection could not be opened. */
 FILE *
-gp_open_printer(char fname[gp_file_name_sizeof], int binary_mode)
+gp_open_printer(const gs_memory_t *mem,
+                      char         fname[gp_file_name_sizeof],
+                      int          binary_mode)
 {
     return
-	(strlen(fname) == 0 ? 0 :
-	 fname[0] == '|' ? popen(fname + 1, "w") :
-	 rbfopen(fname, "w"));
+        (strlen(fname) == 0 ? 0 :
+         fname[0] == '|' ? popen(fname + 1, "w") :
+         rbfopen(fname, "w"));
 }
 
 FILE *
@@ -145,12 +146,12 @@ rbfopen(char *fname, char *perm)
 
 /* Close the connection to the printer. */
 void
-gp_close_printer(FILE * pfile, const char *fname)
+gp_close_printer(const gs_memory_t *mem, FILE * pfile, const char *fname)
 {
     if (fname[0] == '|')
-	pclose(pfile);
+        pclose(pfile);
     else
-	fclose(pfile);
+        fclose(pfile);
 }
 
 /* ------ File accessing -------- */
@@ -160,29 +161,29 @@ int
 gp_setmode_binary(FILE * pfile, bool binary)
 {
     if (binary)
-	file->_flag |= _RBF;
+        file->_flag |= _RBF;
     else
-	file->_flag &= ~_RBF;
+        file->_flag &= ~_RBF;
     return 0;
 }
 
 /* ------ Font enumeration ------ */
- 
+
  /* This is used to query the native os for a list of font names and
   * corresponding paths. The general idea is to save the hassle of
   * building a custom fontmap file.
   */
- 
+
 void *gp_enumerate_fonts_init(gs_memory_t *mem)
 {
     return NULL;
 }
-         
+
 int gp_enumerate_fonts_next(void *enum_state, char **fontname, char **path)
 {
     return 0;
 }
-                         
+
 void gp_enumerate_fonts_free(void *enum_state)
 {
-}           
+}

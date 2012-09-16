@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevpsu.h,v 1.2 2010/07/10 22:02:17 Arabidopsis Exp $ */
+/* $Id$ */
 /* Interface to PostScript-writing utilities */
 
 #ifndef gdevpsu_INCLUDED
@@ -22,7 +22,7 @@ typedef struct gx_device_pswrite_common_s {
     float LanguageLevel;
     bool ProduceEPS;
     int ProcSet_version;
-    long bbox_position;		/* set when writing file header */
+    int64_t bbox_position;		/* set when writing file header */
 } gx_device_pswrite_common_t;
 #define PSWRITE_COMMON_PROCSET_VERSION 1000 /* for definitions in gdevpsu.c */
 #define PSWRITE_COMMON_VALUES(ll, eps, psv)\
@@ -40,16 +40,16 @@ int psw_print_lines(FILE *f, const char *const lines[]);
  * file, not a stream, because it may be called during finalization.
  */
 int psw_begin_file_header(FILE *f, const gx_device *dev,
-			   const gs_rect *pbbox,
-			   gx_device_pswrite_common_t *pdpc, bool ascii);
+                           const gs_rect *pbbox,
+                           gx_device_pswrite_common_t *pdpc, bool ascii);
 
 /* End the file header.*/
 int psw_end_file_header(FILE *f);
 
 /* End the file. */
 int psw_end_file(FILE *f, const gx_device *dev,
-		  const gx_device_pswrite_common_t *pdpc,
-		  const gs_rect *pbbox, int page_count);
+                  const gx_device_pswrite_common_t *pdpc,
+                  const gs_rect *pbbox, int page_count);
 
 /* ---------------- Page level ---------------- */
 
@@ -57,8 +57,8 @@ int psw_end_file(FILE *f, const gx_device *dev,
  * Write the page header.
  */
 int psw_write_page_header(stream *s, const gx_device *dev,
-			   const gx_device_pswrite_common_t *pdpc,
-			   bool do_scale, long page_ord,  int dictsize);
+                           const gx_device_pswrite_common_t *pdpc,
+                           bool do_scale, long page_ord,  int dictsize);
 /*
  * Write the page trailer.  We do this directly to the file, rather than to
  * the stream, because we may have to do it during finalization.
@@ -66,4 +66,3 @@ int psw_write_page_header(stream *s, const gx_device *dev,
 int psw_write_page_trailer(FILE *f, int num_copies, int flush);
 
 #endif /* gdevpsu_INCLUDED */
-

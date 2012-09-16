@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: ipcolor.h,v 1.2 2010/07/10 22:02:41 Arabidopsis Exp $ */
+/* $Id$ */
 /* Interpreter definitions for Pattern color */
 
 #ifndef ipcolor_INCLUDED
@@ -32,6 +32,6 @@ typedef struct int_pattern_s {
 
 /* Create an interpreter pattern structure. */
 int int_pattern_alloc(int_pattern **ppdata, const ref *op,
-		      gs_memory_t *mem);
+                      gs_memory_t *mem);
 
 #endif /* ipcolor_INCLUDED */

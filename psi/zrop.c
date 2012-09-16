@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zrop.c,v 1.2 2010/07/10 22:02:40 Arabidopsis Exp $ */
+/* $Id$ */
 /* RasterOp control operators */
 #include "memory_.h"
 #include "ghost.h"
@@ -33,7 +33,7 @@ zsetrasterop(i_ctx_t *i_ctx_p)
     int code = int_param(op, 0xff, &param);
 
     if (code < 0)
-	return code;
+        return code;
     gs_setrasterop(igs, (gs_rop3_t)param);
     pop(1);
     return 0;

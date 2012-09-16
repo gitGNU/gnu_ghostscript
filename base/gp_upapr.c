@@ -1,6 +1,6 @@
 /* Copyright (C) 2009 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gp_upapr.c,v 1.2 2010/07/10 22:02:25 Arabidopsis Exp $ */
+/* $Id:$ */
 /* Unix implementation of gp_defaultpapersize */
 
 #ifdef USE_LIBPAPER
@@ -19,46 +19,53 @@
 #endif
 
 #include "string_.h"
+#include "malloc_.h"
 #include "gx.h"
 #include "gp.h"
 
 /* ------ Default paper size ------ */
 
 /* Get the default paper size.  See gp_paper.h for details. */
-int 
+int
 gp_defaultpapersize(char *ptr, int *plen)
 {
 #ifdef USE_LIBPAPER
     const char *paper;
+    bool is_systempaper;
 
     paperinit();
 
     paper = systempapername();
-    if (!paper) paper = defaultpapername();
+    if (paper)
+        is_systempaper =  true;
+    else {
+        paper = defaultpapername();
+        is_systempaper =  false;
+    }
 
     if (paper) {
-	int len = strlen(paper);
+        int rc, len = strlen(paper);
 
-	if (len < *plen) {
-	    /* string fits */
-	    strcpy(ptr, paper);
-	    *plen = len + 1;
-	    paperdone();
-	    return 0;
-	}
-	/* string doesn't fit */
-	*plen = len + 1;
-	paperdone();
-	return -1;
+        if (len < *plen) {
+            /* string fits */
+            strcpy(ptr, paper);
+            rc = 0;
+        } else {
+            /* string doesn't fit */
+            rc = -1;
+        }
+        *plen = len + 1;
+        paperdone();
+        if (is_systempaper)
+            free(paper);
+        return rc;
     }
 #endif
 
     /* No default paper size */
 
     if (*plen > 0)
-	*ptr = 0;
+        *ptr = 0;
     *plen = 1;
     return 1;
 }
-
-

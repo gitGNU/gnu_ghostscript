@@ -1,4 +1,4 @@
-# $Id: contrib.mak,v 1.5 2010/07/11 19:47:17 Arabidopsis Exp $
+# $Id: contrib.mak,v 1.28 2002/10/16 23:26:33 giles Exp $
 
 # Makefile for device drivers which are not in the original GPL GhostScript
 # distributiion
@@ -550,7 +550,7 @@ $(GLOBJ)gdevl4r.$(OBJ) : $(LIPS_SRC)gdevl4r.c $(LIPS_SRC)gdevlips.h $(PDEVH)
 	$(GLCC) -DA4 $(GLO_)gdevl4r.$(OBJ) $(LIPS_OPT) $(C_)\
  $(LIPS_SRC)gdevl4r.c
 
-$(GLOBJ)gdevlips.$(OBJ) : $(GX) $(LIPS_SRC)gdevlips.c
+$(GLOBJ)gdevlips.$(OBJ) : $(GX) $(LIPS_SRC)gdevlips.c $(std_h)
 	$(GLCC) $(GLO_)gdevlips.$(OBJ) $(LIPS_OPT) $(C_) $(LIPS_SRC)gdevlips.c
 
 $(DD)lips4.dev : $(lipsr_) $(DD)page.dev
@@ -1011,7 +1011,7 @@ $(GLOBJ)gdevfmlbp.$(OBJ) : $(JAPSRC)gdevfmlbp.c $(PDEVH)
 #
 #  by N.Tagawa
 #
-#  $Id: contrib.mak,v 1.5 2010/07/11 19:47:17 Arabidopsis Exp $
+#  $Id: gdevml6.mak,v 1.2 1998/03/16 13:32:33 tagawa Exp $
 #
 
 ml6_=$(GLOBJ)gdevml6.$(OBJ) $(GLOBJ)gdevprn.$(OBJ)

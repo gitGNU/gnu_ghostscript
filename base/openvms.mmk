@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: openvms.mmk,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $
+# $Id$
 # makefile for OpenVMS VAX and Alpha using MMK
 #
 # Please contact Jim Dunham (dunham@omtool.com) if you have questions.
@@ -115,7 +115,7 @@ JSRCDIR=[.jpeg]
 # Define the directory where the PNG library sources are stored,
 # and the version of the library that is stored there.
 # You may need to change this if the libpng version changes.
-# See libpng.mak for more information.
+# See png.mak for more information.
 
 .ifdef SYSLIB
 PNGSRCDIR=sys$library:
@@ -427,9 +427,9 @@ all : macro [.lib]Fontmap. $(GS_XE)
 .include $(GLSRCDIR)lib.mak
 .include $(PSSRCDIR)int.mak
 .include $(GLSRCDIR)jpeg.mak
-# zlib.mak must precede libpng.mak
+# zlib.mak must precede png.mak
 .include $(GLSRCDIR)zlib.mak
-.include $(GLSRCDIR)libpng.mak
+.include $(GLSRCDIR)png.mak
 JBIG2_EXTRA_OBJS=$(JBIG2OBJDIR)$(D)snprintf.$(OBJ)
 .include $(GLSRCDIR)jbig2.mak
 .include $(GLSRCDIR)icclib.mak

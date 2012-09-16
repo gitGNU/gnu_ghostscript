@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -14,7 +14,7 @@
 #ifndef gxarith_INCLUDED
 #  define gxarith_INCLUDED
 
-/* $Id: gxarith.h,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $ */
+/* $Id$ */
 /* Arithmetic macros for Ghostscript library */
 
 /* Define an in-line abs function, good for any signed numeric type. */

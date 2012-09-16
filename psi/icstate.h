@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: icstate.h,v 1.2 2010/07/10 22:02:40 Arabidopsis Exp $ */
+/* $Id$ */
 /* Externally visible context state */
 
 #ifndef icstate_INCLUDED
@@ -22,6 +22,8 @@
 #include "idsdata.h"
 #include "iesdata.h"
 #include "iosdata.h"
+#include "stream.h"
+#include "opdef.h"
 
 /*
  * Define the externally visible state of an interpreter context.
@@ -38,7 +40,6 @@ typedef struct gs_context_state_s gs_context_state_t;
 typedef struct gs_file_path_s *gs_file_path_ptr;
 #endif
 
-
 struct gs_context_state_s {
     gs_state *pgs;
     gs_dual_memory_t memory;
@@ -47,7 +48,7 @@ struct gs_context_state_s {
     ref binary_object_format;	/* t_integer */
     long rand_state;		/* (not in Red Book) */
     long usertime_total;	/* total accumulated usertime, */
-				/* not counting current time if running */
+                                /* not counting current time if running */
     bool keep_usertime;		/* true if context ever executed usertime */
     int in_superexec;		/* # of levels of superexec */
     /* View clipping is handled in the graphics state. */
@@ -59,6 +60,13 @@ struct gs_context_state_s {
     bool RenderTTNotdef;	/* accessed from userparams */
     gs_file_path_ptr lib_path;	/* library search list (GS_LIB) */
     ref stdio[3];		/* t_file */
+    stream *invalid_file_stream;/* An invalid file object (stable memory) */
+    op_array_table op_array_table_global; /* Global operator table */
+    op_array_table op_array_table_local;  /* Local operator table */
+    int (*time_slice_proc)(i_ctx_t **);   /* Time slice procedure */
+    int time_slice_ticks;                 /* Ticks before next slice */
+    int (*reschedule_proc)(i_ctx_t **);   /* Reschedule procedure */
+
     /* Put the stacks at the end to minimize other offsets. */
     dict_stack_t dict_stack;
     exec_stack_t exec_stack;

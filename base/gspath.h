@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gspath.h,v 1.2 2010/07/10 22:02:28 Arabidopsis Exp $ */
+/* $Id$ */
 /* Graphics state path procedures */
 /* Requires gsstate.h */
 
@@ -19,6 +19,18 @@
 #  define gspath_INCLUDED
 
 #include "gspenum.h"
+
+/*
+ * Define clamped values for out-of-range coordinates.
+ * Currently the path drawing routines can't handle values
+ * close to the edge of the representable space.
+ */
+#define max_coord_fixed (max_fixed - int2fixed(1000))	/* arbitrary */
+#define min_coord_fixed (-max_coord_fixed)
+#define clamp_coord(xy)\
+    (xy > fixed2float(max_coord_fixed) ? max_coord_fixed :\
+     xy < fixed2float(min_coord_fixed) ? min_coord_fixed :\
+     float2fixed(xy))
 
 /* Path constructors */
 int gs_newpath(gs_state *),
@@ -53,8 +65,8 @@ typedef struct gs_matrix_fixed_s gs_matrix_fixed;
 #endif
 
 /* Imager-level procedures */
-void make_quadrant_arc(gs_point *p, const gs_point *c, 
-	const gs_point *p0, const gs_point *p1, double r);
+void make_quadrant_arc(gs_point *p, const gs_point *c,
+        const gs_point *p0, const gs_point *p1, double r);
 
 /* Add the current path to the path in the previous graphics state. */
 int gs_upmergepath(gs_state *);

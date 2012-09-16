@@ -1,5 +1,5 @@
 /******************************************************************************
-  File:     $Id: mediasize.h,v 1.2 2010/07/11 19:47:19 Arabidopsis Exp $
+  File:     $Id: mediasize.h,v 1.11 2001/04/12 18:35:26 Martin Rel $
   Contents: Header file for working with various media sizes
   Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
             Germany. E-mail: Martin.Lottermoser@t-online.de.
@@ -15,7 +15,7 @@
 #define _mediasize_h
 
 /* Configuration management identification */
-#pragma ident "@(#)$Id: mediasize.h,v 1.2 2010/07/11 19:47:19 Arabidopsis Exp $"
+#pragma ident "@(#)$Id: mediasize.h,v 1.11 2001/04/12 18:35:26 Martin Rel $"
 
 /*****************************************************************************/
 
@@ -115,7 +115,7 @@ typedef enum {
   ms_SuperB,
   ms_EnvC3,
   ms_HPSuperB,		/* what Hewlett-Packard calls "SuperB" (13x19 in).
-			   Not a mediaOption keyword. */
+                           Not a mediaOption keyword. */
   ms_ISOB3,
   ms_JISB3,		/* PPD 4.3 calls this "B3" */
   ms_A2,
@@ -139,7 +139,6 @@ typedef enum {
   ms_CustomPageSize,	/* no particular size. Not a mediaOption keyword. */
   ms_MaxPage		/* largest available size on a particular device */
 } ms_Size;
-
 
 typedef struct {
   ms_Size size;

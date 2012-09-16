@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: sjpx.h,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
+/* $Id$ */
 /* Definitions for JPXDecode filter (JPEG 2000) */
 /* we link to the JasPer library for the actual decoding */
 
@@ -51,6 +51,7 @@ typedef struct stream_jpxd_state_s
     long bufsize; /* total size of the buffer */
     long buffill; /* number of bytes written into the buffer */
     gs_jpx_cs colorspace; /* external colorspace setting */
+    bool alpha; /* return opacity channel */
 }
 stream_jpxd_state;
 

@@ -1,6 +1,6 @@
 *PPD-Adobe: "4.3"
 *% ****************************************************************************
-*% File:     @(#)$Id: gs-pcl3-common.ppd,v 1.2 2010/07/11 19:47:19 Arabidopsis Exp $
+*% File:     @(#)$Id: gs-pcl3-common.ppd,v 1.4 2001/04/10 16:36:27 Martin Rel $
 *% Contents: PPD file part common to all subdevices provided by the pcl3 driver
 *% Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
 *%           Germany; Martin.Lottermoser@t-online.de

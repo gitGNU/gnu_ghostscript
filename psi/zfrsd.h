@@ -1,6 +1,6 @@
 /* Copyright (C) 2009 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zfrsd.h,v 1.1 2010/07/10 22:02:40 Arabidopsis Exp $ */
+/* $Id$ */
 /* Reusable straem implementation */
 
 #ifndef zfrsd_INCLUDED
@@ -25,7 +25,7 @@ make_rss(i_ctx_t *i_ctx_p, os_ptr op, const byte * data, uint size,
 #endif /* zfrsd_INCLUDED */
 /* Copyright (C) 2009 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -36,7 +36,7 @@ make_rss(i_ctx_t *i_ctx_p, os_ptr op, const byte * data, uint size,
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zfrsd.h,v 1.1 2010/07/10 22:02:40 Arabidopsis Exp $ */
+/* $Id$ */
 /* Reusable straem implementation */
 
 #ifndef zfrsd_INCLUDED

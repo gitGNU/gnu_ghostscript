@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -12,7 +12,7 @@
 */
 
 /* dwnodll.c */
-/* $Id: dwnodll.c,v 1.2 2010/07/10 22:02:44 Arabidopsis Exp $ */
+/* $Id$ */
 
 #define STRICT
 #include <windows.h>

@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: wrfont.h,v 1.1 2010/07/10 22:02:43 Arabidopsis Exp $ */
+/* $Id$ */
 /*
 Header for support functions to serialize fonts as PostScript code that can
 then be passed to FreeType via the FAPI FreeType bridge.
@@ -24,13 +24,13 @@ Started by Graham Asher, 9th August 2002.
 #include "stdpre.h"
 
 typedef struct WRF_output_
-	{
-	unsigned char* m_pos;
-	long m_limit;
-	long m_count;
-	bool m_encrypt;
-	unsigned short m_key;
-	} WRF_output;
+        {
+        unsigned char* m_pos;
+        long m_limit;
+        long m_count;
+        bool m_encrypt;
+        unsigned short m_key;
+        } WRF_output;
 
 void WRF_init(WRF_output* a_output,unsigned char* a_buffer,long a_buffer_size);
 void WRF_wbyte(WRF_output* a_output,unsigned char a_byte);

@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: ifilter.h,v 1.2 2010/07/10 22:02:39 Arabidopsis Exp $ */
+/* $Id$ */
 /* Interpreter filter support */
 /* Requires oper.h, stream.h, strimpl.h */
 
@@ -27,32 +27,32 @@
  * and all relevant parameters (if any) are in global VM.
  */
 int filter_read(
-	/* Operator arguments that were passed to zfxxx operator */
-		i_ctx_t *i_ctx_p,
-	/* # of parameters to pop off o-stack, */
-	/* not counting the source/target and also not counting any */
-	/* top dictionary operand (both of which will always be popped) */
-		int npop,
-	/* Template for stream */
-		const stream_template * template,
-	/* Initialized s_xxx_state, 0 if no separate state */
-		stream_state * st,
-	/* Max of space attributes of all parameters referenced by */
-	/* the state, 0 if no such parameters */
-		uint space
-		);
+        /* Operator arguments that were passed to zfxxx operator */
+                i_ctx_t *i_ctx_p,
+        /* # of parameters to pop off o-stack, */
+        /* not counting the source/target and also not counting any */
+        /* top dictionary operand (both of which will always be popped) */
+                int npop,
+        /* Template for stream */
+                const stream_template * template,
+        /* Initialized s_xxx_state, 0 if no separate state */
+                stream_state * st,
+        /* Max of space attributes of all parameters referenced by */
+        /* the state, 0 if no such parameters */
+                uint space
+                );
 int filter_write(i_ctx_t *i_ctx_p, int npop,
-		 const stream_template * template,
-		 stream_state * st, uint space);
+                 const stream_template * template,
+                 stream_state * st, uint space);
 
 /*
  * Define a simplified interface for streams with no parameters (except
  * an optional dictionary) or state.
  */
 int filter_read_simple(i_ctx_t *i_ctx_p,
-		       const stream_template * template);
+                       const stream_template * template);
 int filter_write_simple(i_ctx_t *i_ctx_p,
-			const stream_template * template);
+                        const stream_template * template);
 
 /* Mark a filter stream as temporary. */
 /* See stream.h for the meaning of is_temp. */

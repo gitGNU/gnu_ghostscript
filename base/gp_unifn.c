@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gp_unifn.c,v 1.2 2010/07/10 22:02:31 Arabidopsis Exp $ */
+/* $Id$ */
 /* Unix-like file name syntax platform routines for Ghostscript */
 #include "gx.h"
 #include "gp.h"
@@ -33,17 +33,17 @@ const char gp_fmode_wb[] = "w";
 
 uint gp_file_name_root(const char *fname, uint len)
 {   if (len > 0 && fname[0] == '/')
-	return 1;
+        return 1;
     return 0;
 }
 
 uint gs_file_name_check_separator(const char *fname, int len, const char *item)
 {   if (len > 0) {
-	if (fname[0] == '/')
-	    return 1;
+        if (fname[0] == '/')
+            return 1;
     } else if (len < 0) {
-	if (fname[-1] == '/')
-	    return 1;
+        if (fname[-1] == '/')
+            return 1;
     }
     return 0;
 }
@@ -81,9 +81,9 @@ bool gp_file_name_is_empty_item_meanful(void)
 }
 
 gp_file_name_combine_result
-gp_file_name_combine(const char *prefix, uint plen, const char *fname, uint flen, 
-		    bool no_sibling, char *buffer, uint *blen)
+gp_file_name_combine(const char *prefix, uint plen, const char *fname, uint flen,
+                    bool no_sibling, char *buffer, uint *blen)
 {
-    return gp_file_name_combine_generic(prefix, plen, 
-	    fname, flen, no_sibling, buffer, blen);
+    return gp_file_name_combine_generic(prefix, plen,
+            fname, flen, no_sibling, buffer, blen);
 }

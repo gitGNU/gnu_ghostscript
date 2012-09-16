@@ -12,7 +12,7 @@
 */
 
 
-/* $Id: gsdll32.rc,v 1.2 2010/07/10 22:02:40 Arabidopsis Exp $*/
+/* $Id$*/
 
 #include <windows.h>
 #include "gp_mswin.h"

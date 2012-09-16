@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsdsrc.h,v 1.2 2010/07/10 22:02:21 Arabidopsis Exp $ */
+/* $Id$ */
 /* DataSource definitions */
 
 #ifndef gsdsrc_INCLUDED
@@ -46,7 +46,7 @@ typedef struct stream_s stream;
  */
 #define data_source_proc_access(proc)\
   int proc(const gs_data_source_t *psrc, ulong start, uint length,\
-	   byte *buf, const byte **ptr)
+           byte *buf, const byte **ptr)
 
 typedef enum {
     data_source_type_string,
@@ -62,8 +62,8 @@ struct gs_data_source_s {
     data_source_proc_access((*access));
     gs_data_source_type_t type;
     union d_ {
-	gs_const_string str;	/* also used for byte objects */
-	stream *strm;
+        gs_const_string str;	/* also used for byte objects */
+        stream *strm;
     } data;
 };
 

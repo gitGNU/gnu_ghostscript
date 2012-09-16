@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: iinit.h,v 1.2 2010/07/10 22:02:42 Arabidopsis Exp $ */
+/* $Id$ */
 /* (Internal) interface to iinit.c */
 
 #ifndef iinit_INCLUDED
@@ -24,7 +24,7 @@
 int obj_init(i_ctx_t **, gs_dual_memory_t *);
 int zop_init(i_ctx_t *);
 int op_init(i_ctx_t *);
-#ifdef DEBUG_TRACE_PS_OPERATORS
+#if defined(DEBUG_TRACE_PS_OPERATORS) || defined(DEBUG)
 const char *op_get_name_string(op_proc_t opproc);
 #endif
 

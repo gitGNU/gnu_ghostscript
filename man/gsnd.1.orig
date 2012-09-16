@@ -1,0 +1,24 @@
+.\" $Id$
+<<<<<<< HEAD
+.TH GSND 1 "5 August 2011" 9.04 Ghostscript \" -*- nroff -*-
+=======
+.TH GSND 1 "28 July 2011" 9.04 Ghostscript \" -*- nroff -*-
+>>>>>>> Merge doc changes from the gs904 branch to master.
+.SH NAME
+gsnd \- Run ghostscript (PostScript and PDF engine) without display
+.SH SYNOPSIS
+\fBgsnd\fR [ \fIoptions\fR ] [ \fIfiles\fR ] ...
+.SH DESCRIPTION
+This script simply invokes
+.BR gs (1)
+with the
+.B -NODISPLAY
+flag, followed by any other arguments from the command-line.
+.SH SEE ALSO
+gs(1)
+.SH VERSION
+This document was last revised for Ghostscript version 9.04.
+.SH AUTHOR
+Artifex Software, Inc. are the
+primary maintainers of Ghostscript.
+This manpage by George Ferguson.

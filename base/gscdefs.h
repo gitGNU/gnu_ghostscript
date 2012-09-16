@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id: gscdefs.h,v 1.3 2010/09/08 23:27:15 Arabidopsis Exp $ */
+/*$Id$ */
 /* Prototypes for configuration definitions in gconfig.c. */
 
 #ifndef gscdefs_INCLUDED
@@ -69,7 +69,7 @@ extern const unsigned gx_io_device_table_count;
 /* descriptors (no longer used), and (as the value) the length of the lists. */
 #define extern_gs_lib_device_list()\
   int gs_lib_device_list(const gx_device * const **plist,\
-			 gs_memory_struct_type_t **pst)
+                         gs_memory_struct_type_t **pst)
 
 /* find a compositor by name */
 #define extern_gs_find_compositor() \

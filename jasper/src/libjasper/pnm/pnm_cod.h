@@ -64,7 +64,7 @@
 /*
  * Portable Pixmap/Graymap Format Support
  *
- * $Id: pnm_cod.h,v 1.5 2010/07/10 22:02:56 Arabidopsis Exp $
+ * $Id$
  */
 
 #ifndef PNM_COD_H

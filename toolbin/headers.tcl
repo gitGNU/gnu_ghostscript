@@ -15,7 +15,7 @@
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: headers.tcl,v 1.6 2010/07/10 22:02:46 Arabidopsis Exp $
+# $Id$
 
 # Make TOC from 1-line module headers in source files.
 # Usage: headers.tcl

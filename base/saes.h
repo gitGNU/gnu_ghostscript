@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: saes.h,v 1.2 2010/07/10 22:02:25 Arabidopsis Exp $ */
+/* $Id$ */
 /* Stream wrapper for the AES cypher implementation */
 /* Requires scommon.h; strimpl.h if any templates are referenced */
 
@@ -22,7 +22,7 @@
 #include "aes.h"
 
 /* maximum supported key length in bytes */
-#define SAES_MAX_KEYLENGTH 16
+#define SAES_MAX_KEYLENGTH 32
 
 /* AES is a symmetric block cipher so we share the stream states.
    The internal cypher state is all held in the ctx pointer */
@@ -33,6 +33,7 @@ struct stream_aes_state_s
     unsigned int keylength;
     unsigned char iv[16];	/* CBC initialization vector */
     int initialized;		/* whether we're set up */
+    int use_padding;		/* are we using RFC 1423-style padding? */
     aes_context *ctx;		/* from aes.h */
 };
 
@@ -42,7 +43,8 @@ typedef struct stream_aes_state_s stream_aes_state;
 #endif
 
 int s_aes_set_key(stream_aes_state * state,
-			const unsigned char *key, int keylength);
+                        const unsigned char *key, int keylength);
+void s_aes_set_padding(stream_aes_state *state, int use_padding);
 
 /* state declaration macro;
    should be updated for the aes_context finalization */

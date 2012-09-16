@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gp_stdin.c,v 1.2 2010/07/10 22:02:16 Arabidopsis Exp $ */
+/* $Id$ */
 /* Read stdin on platforms that do not support unbuffered read.
  * This is the most portable implementation, but it is very slow
  * when reading stdin because it will read one byte at a time.
@@ -24,11 +24,10 @@
 #include "gp.h"
 
 /* Read bytes from stdin, using unbuffered if possible.
- * This implementation doesn't do unbuffered, so if 
+ * This implementation doesn't do unbuffered, so if
  * interactive read one byte at a time.
  */
 int gp_stdin_read(char *buf, int len, int interactive, FILE *f)
 {
     return fread(buf, 1, interactive ? 1 : len, f);
 }
-

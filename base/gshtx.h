@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gshtx.h,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $ */
+/* $Id$ */
 /* High-level interface to stand-alone halftone/transfer objects */
 
 #ifndef gshtx_INCLUDED
@@ -24,7 +24,7 @@
 
 /*
  * The stand-alone halftone structures are opaque, and are placed in an opaque
- * graphic state. 
+ * graphic state.
  */
 
 /* Alias type names */
@@ -78,32 +78,32 @@ typedef gs_mapping_closure_proc_t gs_ht_transfer_proc;	/* see gxtmap.h */
  *    Individual component halftones of a gs_ht structure must always be
  *    provided with transfer functions.
  *
- *    Releasing the gs_ht structure will NOT release the client data 
+ *    Releasing the gs_ht structure will NOT release the client data
  *    (the client must do that directly).
  */
 
 extern int gs_ht_build(gs_ht ** ppht, uint num_comps, gs_memory_t * pmem);
 
 extern int gs_ht_set_spot_comp(
-				     gs_ht * pht,
-				     int component_index,
-				     floatp freq,
-				     floatp angle,
-				     float (*spot_func) (floatp, floatp),
-				     bool accurate,
-				     gs_ht_transfer_proc transfer,
-				     const void *client_data
-			       );
+                                     gs_ht * pht,
+                                     int component_index,
+                                     floatp freq,
+                                     floatp angle,
+                                     float (*spot_func) (floatp, floatp),
+                                     bool accurate,
+                                     gs_ht_transfer_proc transfer,
+                                     const void *client_data
+                               );
 
 extern int gs_ht_set_threshold_comp(
-					  gs_ht * pht,
-					  int component_index,
-					  int width,
-					  int height,
-					  const gs_const_string * thresholds,
-					  gs_ht_transfer_proc transfer,
-					  const void *client_data
-				    );
+                                          gs_ht * pht,
+                                          int component_index,
+                                          int width,
+                                          int height,
+                                          const gs_const_string * thresholds,
+                                          gs_ht_transfer_proc transfer,
+                                          const void *client_data
+                                    );
 
 /*
  * This procedure specifies a (possibly non-monotonic) halftone of size
@@ -115,15 +115,15 @@ extern int gs_ht_set_threshold_comp(
  * Note that the client is responsible for releasing the mask data.
  */
 extern int gs_ht_set_mask_comp(
-				     gs_ht * pht,
-				     int component_index,
-				     int width,
-				     int height,
-				     int num_levels,
-				     const byte * masks,	/* width x height x num_levels */
-				     gs_ht_transfer_proc transfer,
-				     const void *client_data
-			       );
+                                     gs_ht * pht,
+                                     int component_index,
+                                     int width,
+                                     int height,
+                                     int num_levels,
+                                     const byte * masks,	/* width x height x num_levels */
+                                     gs_ht_transfer_proc transfer,
+                                     const void *client_data
+                               );
 
 extern void gs_ht_reference(gs_ht * pht);
 extern void gs_ht_release(gs_ht * pht);

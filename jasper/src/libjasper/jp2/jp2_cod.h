@@ -64,7 +64,7 @@
 /*
  * JP2 Library
  *
- * $Id: jp2_cod.h,v 1.5 2010/07/10 22:02:58 Arabidopsis Exp $
+ * $Id$
  */
 
 #ifndef JP2_COD_H

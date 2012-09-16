@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxclmem.h,v 1.2 2010/07/10 22:02:29 Arabidopsis Exp $ */
+/* $Id$ */
 /* Definitions and declarations for clist implementation in memory. */
 
 #ifndef gxclmem_INCLUDED
@@ -49,7 +49,7 @@ typedef struct RAW_BUFFER {
 typedef struct PHYS_MEMFILE_BLK {
     struct PHYS_MEMFILE_BLK *link;
     char *data_limit;		/* end of data when compressed  */
-    			/* data_limit is NULL if not compressed */
+                        /* data_limit is NULL if not compressed */
     char data_spare[4];		/* used during de-compress      */
     char data[MEMFILE_DATA_SIZE];
 } PHYS_MEMFILE_BLK;
@@ -66,37 +66,37 @@ struct MEMFILE_s {
     gs_memory_t *data_memory;	/* storage allocator for data */
     bool ok_to_compress;	/* if true, OK to compress this file */
     bool is_open;		/* track open/closed for each access struct */
- 	/*
-	 * We need to maintain a linked list of other structs that
-	 * have beed opened on this 'file'. This allows for a writer
-	 * to create a file, close it (but not unlink it), then other
-	 * 'opens' of the same file, using the pseudo file-name that
-	 * consists of a flag 0xff byte followed by the address as
-	 * a 0x____ string. 
-	 * 
-	 * When the file is 'unlinked' it must check for other open
-	 * 'readers' and set the 'READER INSTANCE' values of the
-	 * cloned structures so that calls into 'read' and 'seek'
-	 * etc., will be harmless.
-	 */
-    struct MEMFILE_s *openlist;	
+        /*
+         * We need to maintain a linked list of other structs that
+         * have beed opened on this 'file'. This allows for a writer
+         * to create a file, close it (but not unlink it), then other
+         * 'opens' of the same file, using the pseudo file-name that
+         * consists of a flag 0xff byte followed by the address as
+         * a 0x____ string.
+         *
+         * When the file is 'unlinked' it must check for other open
+         * 'readers' and set the 'READER INSTANCE' values of the
+         * cloned structures so that calls into 'read' and 'seek'
+         * etc., will be harmless.
+         */
+    struct MEMFILE_s *openlist;
     struct MEMFILE_s *base_memfile;	/* reader instances set this to the file that was written */
-	/*
-	 * Reserve memory blocks: these are used to guarantee that a
-	 * given-sized write (or sequence of writes) will always succeed.
-	 * More specifically, the guarantee is that N bytes can successfully
-	 * be written after a low-memory warning is first returned by
-	 * fwrite.  The reserve of N bytes for a given file is (re)allocated
-	 * by a successful call to memfile_set_memory_warning(N).  Fwrite
-	 * allocates memory only from the reserve when its normal allocation
-	 * attempts fail; in such cases, it allocates blocks from the
-	 * reserve pool as needed and completes normally, but returns a
-	 * low-memory warning status. Once a low-memory warning has been
-	 * returned, fwrite will continue to attempt to allocate memory from
-	 * the usual allocator on subsequent fwrites, but does *not* try to
-	 * "top up" the reserve if becomes available -- only an explicit
-	 * memfile_set_memory_warning does so.
-	 */
+        /*
+         * Reserve memory blocks: these are used to guarantee that a
+         * given-sized write (or sequence of writes) will always succeed.
+         * More specifically, the guarantee is that N bytes can successfully
+         * be written after a low-memory warning is first returned by
+         * fwrite.  The reserve of N bytes for a given file is (re)allocated
+         * by a successful call to memfile_set_memory_warning(N).  Fwrite
+         * allocates memory only from the reserve when its normal allocation
+         * attempts fail; in such cases, it allocates blocks from the
+         * reserve pool as needed and completes normally, but returns a
+         * low-memory warning status. Once a low-memory warning has been
+         * returned, fwrite will continue to attempt to allocate memory from
+         * the usual allocator on subsequent fwrites, but does *not* try to
+         * "top up" the reserve if becomes available -- only an explicit
+         * memfile_set_memory_warning does so.
+         */
     PHYS_MEMFILE_BLK *reservePhysBlockChain;  /* chain of reserve phys blks */
     int reservePhysBlockCount; 	/* count of entries on reservePhysBlockChain */
     LOG_MEMFILE_BLK *reserveLogBlockChain;	/* chain of reserve log blks */
@@ -135,8 +135,9 @@ typedef struct MEMFILE_s MEMFILE;
 
 /* Declare the procedures for returning the prototype filter states */
 /* for compressing and decompressing the band list. */
-const stream_state *clist_compressor_state(void *);
-const stream_state *clist_decompressor_state(void *);
-int gs_cl_zlib_init(gs_memory_t * mem);
+const stream_template *clist_compressor_template(void);
+const stream_template *clist_decompressor_template(void);
+void clist_compressor_init(stream_state *state);
+void clist_decompressor_init(stream_state *state);
 
 #endif /* gxclmem_INCLUDED */

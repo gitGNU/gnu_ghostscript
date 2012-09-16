@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: sjpeg.h,v 1.2 2010/07/10 22:02:28 Arabidopsis Exp $ */
+/* $Id$ */
 /* IJG entry point wrappers */
 /* Requires sdct.h, jpeg/jpeglib.h */
 
@@ -42,25 +42,25 @@ int gs_jpeg_destroy(stream_DCT_state * st);
 int gs_jpeg_create_compress(stream_DCT_state * st);
 int gs_jpeg_set_defaults(stream_DCT_state * st);
 int gs_jpeg_set_colorspace(stream_DCT_state * st,
-			   J_COLOR_SPACE colorspace);
+                           J_COLOR_SPACE colorspace);
 int gs_jpeg_set_linear_quality(stream_DCT_state * st,
-			       int scale_factor, boolean force_baseline);
+                               int scale_factor, boolean force_baseline);
 int gs_jpeg_set_quality(stream_DCT_state * st,
-			int quality, boolean force_baseline);
+                        int quality, boolean force_baseline);
 int gs_jpeg_start_compress(stream_DCT_state * st,
-			   boolean write_all_tables);
+                           boolean write_all_tables);
 int gs_jpeg_write_scanlines(stream_DCT_state * st,
-			    JSAMPARRAY scanlines, int num_lines);
+                            JSAMPARRAY scanlines, int num_lines);
 int gs_jpeg_finish_compress(stream_DCT_state * st);
 
 /* Decode */
 
 int gs_jpeg_create_decompress(stream_DCT_state * st);
 int gs_jpeg_read_header(stream_DCT_state * st,
-			boolean require_image);
+                        boolean require_image);
 int gs_jpeg_start_decompress(stream_DCT_state * st);
 int gs_jpeg_read_scanlines(stream_DCT_state * st,
-			   JSAMPARRAY scanlines, int max_lines);
+                           JSAMPARRAY scanlines, int max_lines);
 int gs_jpeg_finish_decompress(stream_DCT_state * st);
 
 #endif /* sjpeg_INCLUDED */

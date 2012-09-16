@@ -7,7 +7,7 @@
  * the file image.h on SGI's file server; there is no copyright on that file.
  */
 
-/* $Id: gdevsgi.h,v 1.2 2010/07/10 22:02:31 Arabidopsis Exp $*/
+/* $Id$*/
 /* SGI raster file definitions */
 
 #ifndef gdevsgi_INCLUDED
@@ -36,8 +36,8 @@
 #define	ifileno(p)		((p)->file)
 #define	getpix(p)		(--(p)->cnt>=0 ? *(p)->ptr++ : ifilbuf(p))
 #define putpix(p,x)		(--(p)->cnt>=0 \
-				    ? ((int)(*(p)->ptr++=(unsigned)(x))) \
-				    : iflsbuf(p,(unsigned)(x)))
+                                    ? ((int)(*(p)->ptr++=(unsigned)(x))) \
+                                    : iflsbuf(p,(unsigned)(x)))
 
 typedef struct {
     unsigned short	imagic;		/* stuff saved on disk . . */

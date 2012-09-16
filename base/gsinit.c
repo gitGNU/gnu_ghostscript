@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsinit.c,v 1.2 2010/07/10 22:02:23 Arabidopsis Exp $ */
+/* $Id$ */
 /* Initialization for the imager */
 #include "stdio_.h"
 #include "memory_.h"
@@ -36,7 +36,7 @@ gs_lib_init0(FILE * debug_out)
 {
     gs_memory_t *mem;
 
-    mem = (gs_memory_t *) gs_malloc_init(NULL);
+    mem = (gs_memory_t *) gs_malloc_init();
 
     /* Reset debugging flags */
     memset(gs_debug, 0, 128);
@@ -51,8 +51,8 @@ gs_lib_init1(gs_memory_t * mem)
     int code;
 
     for (ipp = gx_init_table; *ipp != 0; ++ipp)
-	if ((code = (**ipp)(mem)) < 0)
-	    return code;
+        if ((code = (**ipp)(mem)) < 0)
+            return code;
     return 0;
 }
 
@@ -68,6 +68,6 @@ gs_lib_finit(int exit_status, int code, gs_memory_t *mem)
      *    gs_malloc_release(mem);
      * else
      *    someone else has control of mem so we can't free it.
-     *    gs_view and iapi.h interface 
+     *    gs_view and iapi.h interface
      */
 }

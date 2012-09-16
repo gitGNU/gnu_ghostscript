@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gscrypt1.h,v 1.2 2010/07/10 22:02:27 Arabidopsis Exp $ */
+/* $Id$ */
 /* Interface to Adobe Type 1 encryption/decryption. */
 
 #ifndef gscrypt1_INCLUDED
@@ -20,9 +20,9 @@
 /* Normal public interface */
 typedef ushort crypt_state;
 int gs_type1_encrypt(byte * dest, const byte * src, uint len,
-		     crypt_state * pstate);
+                     crypt_state * pstate);
 int gs_type1_decrypt(byte * dest, const byte * src, uint len,
-		     crypt_state * pstate);
+                     crypt_state * pstate);
 
 /* Define the encryption parameters and procedures. */
 #define crypt_c1 ((ushort)52845)

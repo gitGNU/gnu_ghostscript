@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id: evenbetter-rll.h,v 1.2 2010/07/10 22:02:58 Arabidopsis Exp $ */
+/*$Id$ */
 /* Header file for testbed implementation of Even Better Screening. */
 
 #ifdef __cplusplus
@@ -81,11 +81,11 @@ even_better_new (const EvenBetterParams *params);
 
 void
 even_better_line_rll (EvenBetterCtx *ctx, uchar **dest,
-		      const ET_Rll *const *src);
+                      const ET_Rll *const *src);
 
 void
 even_better_line (EvenBetterCtx *ctx, uchar **dest,
-		  const ET_SrcPixel *const *src);
+                  const ET_SrcPixel *const *src);
 
 void
 even_better_free (EvenBetterCtx *ctx);

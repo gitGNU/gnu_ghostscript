@@ -17,7 +17,7 @@ exec tclsh "$0" "$@"
 # contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-# $Id: errlist.tcl,v 1.6 2010/07/10 22:02:46 Arabidopsis Exp $
+# $Id$
 
 # Usage:
 #	errlist < compiler-output-log > interleaved-listing

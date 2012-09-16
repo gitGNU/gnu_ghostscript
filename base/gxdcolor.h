@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id: gxdcolor.h,v 1.2 2010/07/10 22:02:17 Arabidopsis Exp $ */
+/*$Id$ */
 /* Device color representation for Ghostscript */
 
 #ifndef gxdcolor_INCLUDED
@@ -56,7 +56,7 @@ typedef struct gx_rop_source_s {
 #define gx_rop_source_set_color(prs, pixel)\
   ((prs)->scolors[0] = (prs)->scolors[1] = (pixel))
 void gx_set_rop_no_source(const gx_rop_source_t **psource,
-			  gx_rop_source_t *pno_source, gx_device *dev);
+                          gx_rop_source_t *pno_source, gx_device *dev);
 #define set_rop_no_source(source, no_source, dev)\
   gx_set_rop_no_source(&(source), &(no_source), dev)
 
@@ -94,15 +94,15 @@ struct gx_device_color_type_s {
      */
 #define dev_color_proc_save_dc(proc)\
   void proc(const gx_device_color * pdevc, gx_device_color_saved * psdc)
-			 dev_color_proc_save_dc((*save_dc));
+                         dev_color_proc_save_dc((*save_dc));
 
 #define dev_color_proc_get_dev_halftone(proc)\
   const gx_device_halftone * proc(const gx_device_color * pdevc)
-			 dev_color_proc_get_dev_halftone((*get_dev_halftone));
+                         dev_color_proc_get_dev_halftone((*get_dev_halftone));
 
 #define dev_color_proc_get_phase(proc)\
   bool proc(const gx_device_color * pdevc, gs_int_point * pphase)
-			dev_color_proc_get_phase((*get_phase));
+                        dev_color_proc_get_phase((*get_phase));
 
     /*
      * If necessary and possible, load the halftone or Pattern cache
@@ -155,13 +155,13 @@ struct gx_device_color_type_s {
      * the routine sets *psize to 0 and returns 1. Otherwise, if *psize
      * is large enough, the procedure sets *psize to the amount actually
      * used and returns 0. If *psize is zero and no other problem
-     * is detected, *psize is set to the amount required and 
-     * gs_error_rangecheck is returned. If *psize is not zero, 
+     * is detected, *psize is set to the amount required and
+     * gs_error_rangecheck is returned. If *psize is not zero,
      * a data block is written into the buffer, and the function returns 0.
      * Note the function always fills entire buffer of *psize length,
-     * except for the last block of the stream, which is written until 
-     * the stream end. If some other error is detected, *psize is left unchanged 
-     * and the error code is returned. When *psize is not zero, 
+     * except for the last block of the stream, which is written until
+     * the stream end. If some other error is detected, *psize is left unchanged
+     * and the error code is returned. When *psize is not zero,
      * the offset operand specifies the position of the block in the stream.
      *
      * The "read" routine converts the stream representation back into
@@ -216,13 +216,13 @@ struct gx_device_color_type_s {
 #define dev_color_proc_write(proc)\
   int proc(const gx_device_color *pdevc, const gx_device_color_saved *psdc,\
     const gx_device * dev, uint offset, byte *data, uint *psize)
-			dev_color_proc_write((*write));
+                        dev_color_proc_write((*write));
 
 #define dev_color_proc_read(proc)\
   int proc(gx_device_color *pdevc, const gs_imager_state * pis,\
     const gx_device_color *prior_devc, const gx_device * dev, uint offset,\
     const byte *data, uint size, gs_memory_t *mem)
-			dev_color_proc_read((*read));
+                        dev_color_proc_read((*read));
 
     /*
      * Identify which color model components have non-zero intensities in
@@ -268,7 +268,7 @@ extern const gx_device_color_type_t
 #define gx_dc_type_pure (&gx_dc_type_data_pure)
       gx_dc_type_data_pure,	/* gxdcolor.c */
 /*#define gx_dc_type_pattern (&gx_dc_type_data_pattern) */
-						/*gx_dc_type_data_pattern, *//* gspcolor.c */
+                                                /*gx_dc_type_data_pattern, *//* gspcolor.c */
 #define gx_dc_type_ht_binary (&gx_dc_type_data_ht_binary)
       gx_dc_type_data_ht_binary,	/* gxht.c */
 #define gx_dc_type_ht_colored (&gx_dc_type_data_ht_colored)
@@ -289,9 +289,8 @@ extern const gx_device_color_type_t * gx_get_dc_type_from_index(int);
 extern  dev_color_proc_get_phase(gx_dc_no_get_phase);
 extern  dev_color_proc_get_phase(gx_dc_ht_get_phase);
 
-
 #define gs_color_writes_pure(pgs)\
-  color_writes_pure((pgs)->dev_color, (pgs)->log_op)
+  color_writes_pure(gs_currentdevicecolor_inline(pgs), (pgs)->log_op)
 
 /* Set up device color 1 for writing into a mask cache */
 /* (e.g., the character cache). */
@@ -301,14 +300,16 @@ void gx_set_device_color_1(gs_state * pgs);
 int gx_remap_color(gs_state *);
 
 #define gx_set_dev_color(pgs)\
-  if ( !color_is_set((pgs)->dev_color) )\
+  if ( !color_is_set(gs_currentdevicecolor_inline(pgs)) )\
    { int code_dc = gx_remap_color(pgs);\
      if ( code_dc != 0 ) return code_dc;\
    }
 
 /* Indicate that the device color needs remapping. */
 #define gx_unset_dev_color(pgs)\
-  color_unset((pgs)->dev_color)
+  color_unset(gs_currentdevicecolor_inline(pgs))
+#define gx_unset_alt_dev_color(pgs)\
+  color_unset(gs_altdevicecolor_inline(pgs))
 
 /* Load the halftone cache in preparation for drawing. */
 #define gx_color_load_select(pdevc, pis, dev, select)\
@@ -316,8 +317,8 @@ int gx_remap_color(gs_state *);
 #define gx_color_load(pdevc, pis, dev)\
   gx_color_load_select(pdevc, pis, dev, gs_color_select_texture)
 #define gs_state_color_load(pgs)\
-  gx_color_load((pgs)->dev_color, (const gs_imager_state *)(pgs),\
-		(pgs)->device)
+  gx_color_load(gs_currentdevicecolor_inline(pgs), (const gs_imager_state *)(pgs),\
+                (pgs)->device)
 
 /* Fill a rectangle with a color. */
 #define gx_device_color_fill_rectangle(pdevc, x, y, w, h, dev, lop, source)\

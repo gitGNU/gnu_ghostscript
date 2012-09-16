@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -10,7 +10,7 @@
    or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id: gdevmrun.h,v 1.2 2010/07/10 22:02:26 Arabidopsis Exp $ */
+/* $Id$ */
 /* Definition of run-length encoded memory device */
 
 #ifndef gdevmrun_INCLUDED
@@ -37,13 +37,13 @@ typedef struct gx_device_run_s {
      * ones, for use with the uncompressed representation.
      */
     struct sp_ {
-	dev_proc_copy_mono((*copy_mono));
-	dev_proc_copy_color((*copy_color));
-	dev_proc_fill_rectangle((*fill_rectangle));
-	dev_proc_copy_alpha((*copy_alpha));
-	dev_proc_strip_tile_rectangle((*strip_tile_rectangle));
-	dev_proc_strip_copy_rop((*strip_copy_rop));
-	dev_proc_get_bits_rectangle((*get_bits_rectangle));
+        dev_proc_copy_mono((*copy_mono));
+        dev_proc_copy_color((*copy_color));
+        dev_proc_fill_rectangle((*fill_rectangle));
+        dev_proc_copy_alpha((*copy_alpha));
+        dev_proc_strip_tile_rectangle((*strip_tile_rectangle));
+        dev_proc_strip_copy_rop((*strip_copy_rop));
+        dev_proc_get_bits_rectangle((*get_bits_rectangle));
     } save_procs;
 } gx_device_run;
 

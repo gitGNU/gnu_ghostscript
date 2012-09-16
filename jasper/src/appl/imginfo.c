@@ -62,7 +62,7 @@
 /*
  * Image Information Program
  *
- * $Id: imginfo.c,v 1.5 2010/07/10 22:02:57 Arabidopsis Exp $
+ * $Id: $
  */
 
 /******************************************************************************\
@@ -199,7 +199,6 @@ int main(int argc, char **argv)
 	jas_eprintf("%s %d %d %d %d %ld\n", fmtname, numcmpts, width, height, depth, (long) jas_image_rawsize(image));
 
 	jas_image_destroy(image);
-	jas_image_clearfmts();
 
 	return EXIT_SUCCESS;
 }

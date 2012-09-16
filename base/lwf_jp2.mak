@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: lwf_jp2.mak,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $
+# $Id$
 
 # makefile for Luratech lwf_jp2 library code.
 # Users of this makefile must define the following:

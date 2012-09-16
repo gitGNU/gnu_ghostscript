@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: icolor.h,v 1.2 2010/07/10 22:02:44 Arabidopsis Exp $ */
+/* $Id$ */
 /* Declarations for transfer function & similar cache remapping */
 
 #ifndef icolor_INCLUDED
@@ -32,7 +32,7 @@ extern const int zcolor_remap_one_estack;
  * a change as of release 5.95; formerly, it returned 0 in this case.)
  */
 int zcolor_remap_one(i_ctx_t *, const ref *, gx_transfer_map *,
-		     const gs_state *, op_proc_t);
+                     const gs_state *, op_proc_t);
 
 /* Reload a cache with entries in [0..1] after sampling. */
 int zcolor_remap_one_finish(i_ctx_t *);

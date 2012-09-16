@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zcolor2.c,v 1.2 2010/07/10 22:02:43 Arabidopsis Exp $ */
+/* $Id$ */
 /* Level 2 color operators */
 #include "ghost.h"
 #include "string_.h"
@@ -22,7 +22,6 @@
 #include "gscolor2.h"
 #include "igstate.h"
 #include "store.h"
-
 
 /*
  *  -   .useralternate   <bool>
@@ -41,7 +40,6 @@ zusealternate(i_ctx_t * i_ctx_p)
     make_bool(op, pcs->base_space != 0);
     return 0;
 }
-
 
 /* ------ Initialization procedure ------ */
 

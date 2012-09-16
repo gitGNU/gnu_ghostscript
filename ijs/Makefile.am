@@ -20,7 +20,7 @@
 ## CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ## SOFTWARE.
 
-## $Id: Makefile.am,v 1.7 2010/07/10 22:02:54 Arabidopsis Exp $
+## $Id$
 
 ## Process this file with automake to produce Makefile.in.
 

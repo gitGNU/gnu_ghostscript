@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsfunc0.h,v 1.2 2010/07/10 22:02:21 Arabidopsis Exp $ */
+/* $Id$ */
 /* Definitions for FunctionType 0 (Sampled) Functions */
 
 #ifndef gsfunc0_INCLUDED
@@ -48,11 +48,11 @@ typedef struct gs_function_Sd_params_s {
 
 /* Allocate and initialize a Sampled function. */
 int gs_function_Sd_init(gs_function_t ** ppfn,
-			const gs_function_Sd_params_t * params,
-			gs_memory_t * mem);
+                        const gs_function_Sd_params_t * params,
+                        gs_memory_t * mem);
 
 /* Free the parameters of a Sampled function. */
 void gs_function_Sd_free_params(gs_function_Sd_params_t * params,
-				gs_memory_t * mem);
+                                gs_memory_t * mem);
 
 #endif /* gsfunc0_INCLUDED */

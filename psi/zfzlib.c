@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zfzlib.c,v 1.2 2010/07/10 22:02:42 Arabidopsis Exp $ */
+/* $Id$ */
 /* zlib and Flate filter creation */
 #include "ghost.h"
 #include "oper.h"
@@ -34,7 +34,7 @@ filter_zlib(i_ctx_t *i_ctx_p, stream_zlib_state *pzls)
 
     (*s_zlibE_template.set_defaults)((stream_state *)pzls);
     if (r_has_type(op, t_dictionary))
-	code = dict_int_param(op, "Effort", -1, 9, -1, &pzls->level);
+        code = dict_int_param(op, "Effort", -1, 9, -1, &pzls->level);
     return code;
 }
 
@@ -47,7 +47,7 @@ zzlibE(i_ctx_t *i_ctx_p)
     int code = filter_zlib(i_ctx_p, &zls);
 
     if (code < 0)
-	return code;
+        return code;
     return filter_write(i_ctx_p, 0, &s_zlibE_template, (stream_state *)&zls, 0);
 }
 
@@ -71,9 +71,9 @@ zFlateE(i_ctx_t *i_ctx_p)
     int code = filter_zlib(i_ctx_p, &zls);
 
     if (code < 0)
-	return code;
+        return code;
     return filter_write_predictor(i_ctx_p, 0, &s_zlibE_template,
-				  (stream_state *)&zls);
+                                  (stream_state *)&zls);
 }
 
 /* <target> FlateDecode/filter <file> */
@@ -85,7 +85,7 @@ zFlateD(i_ctx_t *i_ctx_p)
 
     (*s_zlibD_template.set_defaults)((stream_state *)&zls);
     return filter_read_predictor(i_ctx_p, 0, &s_zlibD_template,
-				 (stream_state *)&zls);
+                                 (stream_state *)&zls);
 }
 
 /* ------ Initialization procedure ------ */

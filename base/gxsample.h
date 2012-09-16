@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxsample.h,v 1.2 2010/07/10 22:02:29 Arabidopsis Exp $ */
+/* $Id$ */
 /* Sample lookup and expansion */
 
 #ifndef gxsample_INCLUDED
@@ -56,8 +56,8 @@ typedef struct sample_map_s sample_map;
  */
 #define SAMPLE_UNPACK_PROC(proc)\
   const byte *proc(byte *bptr, int *pdata_x, const byte * data, int data_x,\
-		   uint dsize, const sample_map *smap, int spread,\
-		   int num_components_per_plane)
+                   uint dsize, const sample_map *smap, int spread,\
+                   int num_components_per_plane)
 typedef SAMPLE_UNPACK_PROC((*sample_unpack_proc_t));
 
 /*

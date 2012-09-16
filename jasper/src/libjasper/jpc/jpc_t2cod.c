@@ -64,7 +64,7 @@
 /*
  * Tier-2 Coding Library
  *
- * $Id: jpc_t2cod.c,v 1.5 2010/07/10 22:02:55 Arabidopsis Exp $
+ * $Id$
  */
 
 #include "jasper/jas_math.h"

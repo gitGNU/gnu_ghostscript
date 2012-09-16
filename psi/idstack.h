@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: idstack.h,v 1.2 2010/07/10 22:02:43 Arabidopsis Exp $ */
+/* $Id$ */
 /* Generic dictionary stack API */
 
 #ifndef idstack_INCLUDED
@@ -52,9 +52,9 @@ ref *dstack_find_name_by_index(dict_stack_t *, uint);
  */
 #define if_dstack_find_name_by_index_top(pds,nidx,htemp,pvslot)\
   if ( (((pds)->top_keys[htemp = dict_hash_mod_inline(dict_name_index_hash(nidx),\
-	 (pds)->top_npairs) + 1] == pt_tag(pt_literal_name) + (nidx)) ?\
-	((pvslot) = (pds)->top_values + (htemp), 1) :\
-	0)\
+         (pds)->top_npairs) + 1] == pt_tag(pt_literal_name) + (nidx)) ?\
+        ((pvslot) = (pds)->top_values + (htemp), 1) :\
+        0)\
      )
 
 #endif /* idstack_INCLUDED */

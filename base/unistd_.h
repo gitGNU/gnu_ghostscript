@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: unistd_.h,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $ */
+/* $Id$ */
 /* Generic substitute for Unix unistd.h */
 
 #ifndef unistd__INCLUDED
@@ -33,7 +33,7 @@
 #  include <io.h>
 #endif
 
-#if defined(_MSC_VER) 
+#if defined(_MSC_VER)
 #  define fsync(handle) _commit(handle)
 #  define read(fd, buf, len) _read(fd, buf, len)
 #  define isatty(fd) _isatty(fd)
@@ -42,7 +42,7 @@
 #  define dup(fd) _dup(fd)
 #  define open(fname, flags, mode) _open(fname, flags, mode)
 #  define close(fd) _close(fd)
-#elif defined(__BORLANDC__) && defined(__WIN32__) 
+#elif defined(__BORLANDC__) && defined(__WIN32__)
 #  define fsync(handle) _commit(handle)
 #  define read(fd, buf, len) _read(fd, buf, len)
 #  define isatty(fd) _isatty(fd)
@@ -52,4 +52,3 @@
 #endif
 
 #endif   /* unistd__INCLUDED */
-

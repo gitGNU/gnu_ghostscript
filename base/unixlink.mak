@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: unixlink.mak,v 1.3 2010/07/11 17:04:13 Arabidopsis Exp $
+# $Id$
 # Partial makefile common to all Unix configurations.
 # This part of the makefile contains the linking steps.
 

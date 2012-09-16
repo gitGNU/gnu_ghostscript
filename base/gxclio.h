@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxclio.h,v 1.2 2010/07/10 22:02:27 Arabidopsis Exp $ */
+/* $Id$ */
 /* I/O interface for command lists */
 
 #ifndef gxclio_INCLUDED
@@ -40,9 +40,9 @@ struct clist_io_procs_s {
      * Mode "r" with *fname = 0 is an error.
      */
     int (*fopen)(char fname[gp_file_name_sizeof], const char *fmode,
-		    clist_file_ptr * pcf,
-		    gs_memory_t * mem, gs_memory_t *data_mem,
-		    bool ok_to_compress);
+                    clist_file_ptr * pcf,
+                    gs_memory_t * mem, gs_memory_t *data_mem,
+                    bool ok_to_compress);
 
     /*
      * Close a file, optionally deleting it.

@@ -1,19 +1,19 @@
 %    Copyright (C) 2000 Artifex Software, Inc.  All rights reserved.
-% 
+%
 % This software is provided AS-IS with no warranty, either express or
 % implied.
-% 
+%
 % This software is distributed under license and may not be copied,
 % modified or distributed except as expressly authorized under the terms
 % of the license contained in the file LICENSE in this distribution.
-% 
+%
 % For more information about licensing, please refer to
 % http://www.ghostscript.com/licensing/. For information on
 % commercial licensing, go to http://www.artifex.com/licensing/ or
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_cidfm.ps,v 1.2 2010/07/10 22:02:13 Arabidopsis Exp $
+% $Id$
 % Redefine CIDFont category with cidfmap .
 
 languagelevel 2 .setlanguagelevel
@@ -53,7 +53,7 @@ languagelevel 2 .setlanguagelevel
   } bind def
 
   /GetCSI   % <record> GetCSI null
-  	    % <record> GetCSI dict
+            % <record> GetCSI dict
   { % We know that currentdict is the category.
     RESMPDEBUG { (cidfm GetCSI beg ) = } if
     /Substitute get			% /Name
@@ -62,7 +62,7 @@ languagelevel 2 .setlanguagelevel
   } bind def
 
   /IsActive % <record> IsActive <bool>
-  { pop true
+  { pop //true
   } bind def
 
 currentdict end def
@@ -72,8 +72,8 @@ currentdict end def
   dup length dict copy                  % <<map>>
   dup length dict                       % <<map>> <<temp>>
   { % Choose a random record :
-    true 2 index {                      % <<map>> <<temp>> true /Name /Subs
-      3 2 roll pop false exit           % <<map>> <<temp>> /Name /Subs false
+    //true 2 index {                    % <<map>> <<temp>> true /Name /Subs
+      3 2 roll pop //false exit         % <<map>> <<temp>> /Name /Subs false
     } forall
     { exit                              % <<map>> <<temp>>
     } if                                % <<map>> <<temp>> /Name /Subs
@@ -98,8 +98,8 @@ currentdict end def
     } loop
     % Not cycled, now purge the <<temp>> :
     { % Choose a random record :
-      true 1 index {                    % <<map>> <<temp>> true /Name /Subs
-        3 2 roll pop false exit         % <<map>> <<temp>> /Name /Subs false
+      //true 1 index {                  % <<map>> <<temp>> true /Name /Subs
+        3 2 roll pop //false exit       % <<map>> <<temp>> /Name /Subs false
       } forall
       { exit                            % <<map>> <<temp>>
       } if                              % <<map>> <<temp>> /Name /Subs
@@ -116,13 +116,13 @@ currentdict end def
     /Substitute exch def
     /RecordVirtualMethods //RecordVirtualMethods def
     currentdict end
-    true
+    //true
   } {
-    false
+    //false
   } ifelse
 } bind def
 
-currentdict end 
+currentdict end
 
 /MappedCategoryRedefiner /ProcSet findresource /Redefine get exec
 

@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsdll2.rc,v 1.2 2010/07/10 22:02:39 Arabidopsis Exp $*/
+/* $Id$*/
 /* Resources for gsdll2.dll, Ghostscript DLL for OS/2 */
 
 ICON 1 gsos2.ico

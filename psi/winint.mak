@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2010 Artifex Software, Inc.
+#  Copyright (C) 2001-2011 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This software is provided AS-IS with no warranty, either express or
@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: winint.mak,v 1.2 2010/07/10 22:02:43 Arabidopsis Exp $
+# $Id$
 # Common interpreter makefile section for 32-bit MS Windows.
 
 # This makefile must be acceptable to Microsoft Visual C++, Watcom C++,
@@ -33,10 +33,19 @@ WININT_MAK=$(PSSRC)winint.mak
 
 # Define the location of the WinZip self-extracting-archive-maker.
 !ifndef WINZIPSE_XE
-!ifdef WIN64
+!if $(BUILD_SYSTEM) == 64
 WINZIPSE_XE="C:\Program Files (x86)\WinZip Self-Extractor\WZIPSE32.EXE"
 !else
 WINZIPSE_XE="C:\Program Files\WinZip Self-Extractor\WZIPSE32.EXE"
+!endif
+!endif
+
+# Define the location of the NSIS makensis installer utility
+!ifndef MAKENSIS_XE
+!if $(BUILD_SYSTEM) == 64
+MAKENSIS_XE="C:\Program Files (x86)\NSIS\makensis.exe"
+!else
+MAKENSIS_XE="C:\Program Files\NSIS\makensis.exe"
 !endif
 !endif
 
@@ -59,6 +68,9 @@ UNINSTALL_XE_NAME=uninstgs.exe
 !endif
 !ifndef UNINSTALL_XE
 UNINSTALL_XE=$(BINDIR)\$(UNINSTALL_XE_NAME)
+!endif
+!ifndef MAKE_FILELIST_XE
+MAKE_FILELIST_XE=$(BINDIR)\make_filelist.exe
 !endif
 
 # Define the RCOMP switch for including INCDIR.
@@ -181,6 +193,18 @@ $(PSOBJ)dwreg.obj: $(PSSRC)dwreg.c $(AK) $(dwreg_h)
         $(PSCCWIN) $(COMPILE_FOR_EXE) $(PSO_)dwreg.obj $(C_) $(PSSRC)dwreg.c
 
 
+# ------------ Windows version of the .locale_to_utf8 operator ------------ #
+
+zwinutf8_=$(PSOBJ)zwinutf8.$(OBJ)
+$(PSD)winutf8.dev : $(MAKEFILE) $(ECHOGS_XE) $(zwinutf8_)
+	$(SETMOD) $(PSD)winutf8 $(zwinutf8_)
+	$(ADDMOD) $(PSD)winutf8 -oper zwinutf8
+
+$(PSOBJ)zwinutf8.$(OBJ) : $(PSSRC)zwinutf8.c $(OP)\
+ $(ghost_h) $(oper_h) $(iutil_h) $(store_h) $(windows__h)
+	$(PSCCWIN) $(PSO_)zwinutf8.$(OBJ) $(C_) $(PSSRC)zwinutf8.c
+
+
 # ---------------------- Setup and uninstall program ---------------------- #
 
 
@@ -191,10 +215,10 @@ $(PSOBJ)dwreg.obj: $(PSSRC)dwreg.c $(AK) $(dwreg_h)
 $(PSOBJ)dwsetup.res: $(PSSRC)dwsetup.rc $(PSSRC)dwsetup.h $(GLGEN)gswin.ico
 	$(RCOMP) -i$(PSSRCDIR) -i$(PSGENDIR) -i$(PSOBJDIR) $(i_INCDIR) -r $(RO_)$(PSOBJ)dwsetup.res $(PSSRC)dwsetup.rc
 
-$(PSOBJ)dwsetup.obj: $(PSSRC)dwsetup.cpp $(PSSRC)dwsetup.h $(PSSRC)dwinst.h
+$(PSOBJ)dwsetup.obj: $(PSSRC)dwsetup.cpp $(PSSRC)dwsetup.h $(PSSRC)dwinst.h $(AK)
 	$(PSCCWIN) $(COMPILE_FOR_EXE) $(PSO_)dwsetup.obj $(C_) $(PSSRC)dwsetup.cpp
 
-$(PSOBJ)dwinst.obj: $(PSSRC)dwinst.cpp $(PSSRC)dwinst.h
+$(PSOBJ)dwinst.obj: $(PSSRC)dwinst.cpp $(PSSRC)dwinst.h $(AK)
 	$(PSCCWIN) $(COMPILE_FOR_EXE) $(PSO_)dwinst.obj $(C_) $(PSSRC)dwinst.cpp
 
 # Modules for uninstall program
@@ -202,7 +226,7 @@ $(PSOBJ)dwinst.obj: $(PSSRC)dwinst.cpp $(PSSRC)dwinst.h
 $(PSOBJ)dwuninst.res: $(PSSRC)dwuninst.rc $(PSSRC)dwuninst.h $(GLGEN)gswin.ico
 	$(RCOMP) -i$(PSSRCDIR) -i$(PSGENDIR) -i$(PSOBJDIR) $(i_INCDIR) -r $(RO_)$(PSOBJ)dwuninst.res $(PSSRC)dwuninst.rc
 
-$(PSOBJ)dwuninst.obj: $(PSSRC)dwuninst.cpp $(PSSRC)dwuninst.h
+$(PSOBJ)dwuninst.obj: $(PSSRC)dwuninst.cpp $(PSSRC)dwuninst.h $(AK)
 	$(PSCCWIN) $(COMPILE_FOR_EXE) $(PSO_)dwuninst.obj $(C_) $(PSSRC)dwuninst.cpp
 
 
@@ -218,11 +242,18 @@ $(PSOBJ)dwuninst.obj: $(PSSRC)dwuninst.cpp $(PSSRC)dwuninst.h
 # directories listed in ZIPTEMPFILE are the complete list
 # of needed files and directories relative to the current directory's parent.
 
-ZIPTEMPFILE=gs$(GS_DOT_VERSION)\obj\dwfiles.rsp
+ZIPTEMPFILE=gs$(GS_DOT_VERSION)\$(PSOBJ)\dwfiles.rsp
+!ifdef WIN64
+ZIPPROGFILE1=gs$(GS_DOT_VERSION)\bin\gsdll64.dll
+ZIPPROGFILE2=gs$(GS_DOT_VERSION)\bin\gsdll64.lib
+ZIPPROGFILE3=gs$(GS_DOT_VERSION)\bin\gswin64.exe
+ZIPPROGFILE4=gs$(GS_DOT_VERSION)\bin\gswin64c.exe
+!else
 ZIPPROGFILE1=gs$(GS_DOT_VERSION)\bin\gsdll32.dll
 ZIPPROGFILE2=gs$(GS_DOT_VERSION)\bin\gsdll32.lib
 ZIPPROGFILE3=gs$(GS_DOT_VERSION)\bin\gswin32.exe
 ZIPPROGFILE4=gs$(GS_DOT_VERSION)\bin\gswin32c.exe
+!endif
 ZIPPROGFILE5=gs$(GS_DOT_VERSION)\doc
 ZIPPROGFILE6=gs$(GS_DOT_VERSION)\examples
 ZIPPROGFILE7=gs$(GS_DOT_VERSION)\lib
@@ -238,9 +269,9 @@ ZIPTARGET=gs$(GS_VERSION)w64
 !else
 ZIPTARGET=gs$(GS_VERSION)w32
 !endif
-zip: $(SETUP_XE) $(UNINSTALL_XE)
+zip: $(SETUP_XE) $(UNINSTALL_XE) $(MAKE_FILELIST_XE)
 	cd ..
-	copy gs$(GS_DOT_VERSION)\$(SETUP_XE) make_filelist.exe
+	copy gs$(GS_DOT_VERSION)\$(MAKE_FILELIST_XE) make_filelist.exe
 	copy gs$(GS_DOT_VERSION)\$(SETUP_XE) .
 	copy gs$(GS_DOT_VERSION)\$(UNINSTALL_XE) .
 	echo $(ZIPPROGFILE1) >  $(ZIPTEMPFILE)
@@ -283,13 +314,18 @@ ZIP_RSP = $(PSOBJ)setupgs.rsp
 # Use a special icon WinZip SE can't handle 48 pixel 32-bit icons 
 # as used by Windows XP.
 archive: zip $(PSOBJ)gswin16.ico $(ECHOGS_XE)
+!ifdef WIN64
+	$(ECHOGS_XE) -w $(ZIP_RSP) -q "-win64 -setup"
+	$(ECHOGS_XE) -a $(ZIP_RSP) -q -st -x 22 GPL Ghostscript $(GS_DOT_VERSION) for Win64 -x 22
+!else
 	$(ECHOGS_XE) -w $(ZIP_RSP) -q "-win32 -setup"
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -st -x 22 GPL Ghostscript $(GS_DOT_VERSION) for Win32 -x 22
+!endif
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -i -s $(PSOBJ)gswin16.ico
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -a -s $(PSOBJ)about.txt
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -t -s $(PSOBJ)dialog.txt
 	$(ECHOGS_XE) -a $(ZIP_RSP) -q -c -s $(SETUP_XE_NAME)
-	$(ECHOGS_XE) -w $(PSOBJ)about.txt "GPL Ghostscript is Copyright " -x A9 " 2010 Artifex Software, Inc."
+	$(ECHOGS_XE) -w $(PSOBJ)about.txt "GPL Ghostscript is Copyright " -x A9 " 2011 Artifex Software, Inc."
 	$(ECHOGS_XE) -a $(PSOBJ)about.txt See license in gs$(GS_DOT_VERSION)\doc\COPYING.
 	$(ECHOGS_XE) -a $(PSOBJ)about.txt See gs$(GS_DOT_VERSION)\doc\Commprod.htm regarding commercial distribution.
 	$(ECHOGS_XE) -w $(PSOBJ)dialog.txt This installs GPL Ghostscript $(GS_DOT_VERSION).
@@ -301,6 +337,8 @@ archive: zip $(PSOBJ)gswin16.ico $(ECHOGS_XE)
 #	-del $(PSOBJ)about.txt
 #	-del $(PSOBJ)dialog.txt
 
+nsis: $(PSSRC)nsisinst.nsi $(GSCONSOLE_XE) $(GS_XE) $(GSDLL_DLL) $(BINDIR)\$(GSDLL).lib $(ICONS)
+	$(MAKENSIS_XE) -NOCD -DTARGET=$(ZIPTARGET) -DVERSION=$(GS_DOT_VERSION) $(PSSRC)nsisinst.nsi
 
 # -------------------- Distribution source archive ------------------- #
 # This creates a zip file containing the files needed to build 
@@ -319,7 +357,7 @@ archive: zip $(PSOBJ)gswin16.ico $(ECHOGS_XE)
 gs$(GS_VERSION)src.zip:
 	-rmdir /s /q gs$(GS_DOT_VERSION)
 	-del temp.zip
-	zip -r -X temp.zip LICENSE doc examples icclib ijs jasper jbig2dec jpeg lib libpng base psi Resource tiff zlib -x ".svn/*" -x "*/.svn/*" -x "*/*/.svn/*" -x "*/*/*/.svn/*" -x "*/*/*/*/.svn/*" -x "*/*/*/*/*/.svn/*"
+	zip -r -X temp.zip LICENSE doc examples icclib ijs jasper jbig2dec jpeg lib libpng base psi Resource tiff zlib freetype lcms cups -x ".svn/*" -x "*/.svn/*" -x "*/*/.svn/*" -x "*/*/*/.svn/*" -x "*/*/*/*/.svn/*" -x "*/*/*/*/*/.svn/*"
 	mkdir gs$(GS_DOT_VERSION)
 	cd gs$(GS_DOT_VERSION)
 	unzip -a ../temp.zip

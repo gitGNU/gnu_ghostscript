@@ -24,7 +24,7 @@
 % parameters, usually absent from Type 1 fonts.
 
 % Tribute:
-% $Id: pf2afm.ps,v 1.6 2010/07/10 22:02:38 Arabidopsis Exp $
+% $Id$
 % The program is based on James Clark's <jjc@jclark.uucp> printafm.ps
 % (with alterations by d.love@dl.ac.uk and L. Peter Deutsch) from
 % Ghostscript 5.10 distribution.
@@ -448,7 +448,6 @@
   } ifelse
 } bind def
 
-
 % pf[ba]filename makeafm -
 /makeafm {
   count 0 eq {(Missing font file name\n) printquit} if
@@ -518,7 +517,6 @@
     .locksafe
   } if
 
-
   pfmn
   isPFB {pfbn}{pfan} ifelse
   printafm
@@ -536,4 +534,3 @@
   }
   {pop}
 ifelse
-

@@ -7,39 +7,73 @@ use Data::Dumper;
 
 my $verbose=0;
 
+# bmpcmp usage: [gs] [pcl] [xps] [gs] [bmpcmp] [lowres] [$user] | abort
+
+
+
 my %products=('abort' =>1,
+              'bmpcmp' =>1,
+              'bmpcmphead' =>1,
               'gs' =>1,
               'pcl'=>1,
               'svg'=>1,
-              'xps'=>1);
+              'xps'=>1,
+              'ls'=>1);
 
+my $user;
+my $product="";
+my $command="";
 my $res="";
+my $t1;
+while ($t1=shift) {
+  if ($t1 eq "lowres") {
+    $res="lowres";
+  } elsif ($t1 eq "highres") {
+    $res="highres";
+  } elsif ($t1=~m/^-/ || $t1=~m/^\d/) {
+    $command.=$t1.' ';
+  } elsif (exists $products{$t1}) {
+    $product.=$t1.' ';
+  } elsif ($t1 =~ m/ /) {
+    $product.=$t1.' ';
+  } else {
+    $user=$t1;
+  }
+}
 
-my $product=shift;
-if ($product && $product eq "lowres") {
-  $product=shift;
-  $res="lowres";
+# Strip the stray space off the end. This can probably be done far more
+# efficiently with some unreadable bit of perl, but I am too simple for
+# that.
+while (substr($product,-1) eq " ") {
+  $product = substr($product,0,-1);
 }
-if ($product && $product eq "highres") {
-  $product=shift;
-  $res="highres";
-}
-my $user=shift;
-if ($user && $user eq "lowres") {
-  $user=shift;
-  $res="lowres";
-}
-if ($user && $user eq "highres") {
-  $user=shift;
-  $res="highres";
-}
+
+$product="" if (!$product);
+$user=""    if (!$user);
+
+
+#print "product=$product res=$res user=$user command=$command\n";  exit;
 
 unlink "cluster_command.run";
 
 my $host="casper.ghostscript.com";
 my $dir="/home/regression/cluster/users";
+
+# To cater for those whose cluster user name doesn't match the user name
+# on their development machine.
+if (!$user) {
+  $user=`echo \$CLUSTER_USER`;
+  chomp $user;
+}
+
 if (!$user) {
   $user=`echo \$USER`;
+  chomp $user;
+}
+
+# Msys Bash seems to set USERNAME, not USER
+if (!$user) {
+  $user=`echo \$USERNAME`;
   chomp $user;
 }
 
@@ -57,9 +91,12 @@ if ($directory ne 'gs' && $directory ne 'ghostpdl') {
   }
 }
 
-die "can't figure out if this is a ghostscript or ghostpdl directory" if ($directory eq "");
+#$directory="gs" if ($directory eq "" && $product eq "bmpcmp");
+$directory="gs" if ($directory eq "" && $product && $product eq "abort");
 
-$product='gs pcl xps' if (!$product);
+die "can't figure out if this is a ghostpdl or gs directory" if ($directory eq "");
+
+$product='gs pcl xps ls' if (!$product);
 print "$user $directory $product\n" if ($verbose);
 
 
@@ -76,39 +113,55 @@ foreach my $i (@a) {
   }
 }
 
+# Detect if we are running under msys
+my $bashversion=`bash --version`;
+my $msys=0;
+if ($bashversion =~ /pc-msys/) {
+   $msys=1;
+}
+my $ssh="ssh -l regression -i \\\"\$HOME/.ssh/cluster_key\\\"";
+my $hostpath="regression\@$host:$dir/$user/$directory";
+if ($msys) {
+  $ssh="cygnative plink";
+  $hostpath="regression:$dir/$user/$directory";
+}
 
-my $cmd="rsync -avxcz".
+my $cmd="rsync -avxcz ".
+" --max-size=10000000".
 " --delete".
-" --max-size=2500000".
 " --exclude .svn --exclude .git".
 " --exclude _darcs --exclude .bzr --exclude .hg".
 " --exclude .deps --exclude .libs --exclude autom4te.cache".
 " --exclude bin --exclude obj --exclude debugobj --exclude pgobj".
-" --exclude sobin --exclude soobj".
-" --exclude main/obj --exclude main/debugobj".
-" --exclude language_switch/obj --exclude language_switch/obj".
-" --exclude xps/obj --exclude xps/debugobj".
-" --exclude svg/obj --exclude svg/debugobj".
-" --exclude ufst --exclude ufst-obj".
+" --exclude sobin --exclude soobj --exclude debugbin".
+" --exclude ufst --exclude ufst-obj --exclude ufst-debugobj".
+" --exclude config.log".
 " --exclude .ppm --exclude .pkm --exclude .pgm --exclude .pbm".
-" -e \"ssh -l regression -i \$HOME/.ssh/cluster_key\"".
+" -e \"$ssh\" ".
 " .".
-" regression\@$host:$dir/$user/$directory";
+" $hostpath";
 
-if ($product ne "abort") {
+if ($product ne "abort" ) { #&& $product ne "bmpcmp") {
   print STDERR "syncing\n";
   print "$cmd\n" if ($verbose);
   #`$cmd`;
   open(T,"$cmd |");
   while(<T>) {
-    print $_;
+    chomp;
+    print "$_\n" if (!m/\/$/);
   }
   close(T);
 }
 
 open(F,">cluster_command.run");
 print F "$user $product $res\n";
+print F "$command\n";
 close(F);
+
+$cmd="rsync -avxcz".
+" -e \"$ssh\"".
+" cluster_command.run".
+" $hostpath";
 
 if ($product ne "abort") {
   print STDERR "\nqueueing\n";

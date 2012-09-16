@@ -1,23 +1,23 @@
 %    Copyright (C) 1994, 1996, 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
-% 
+%
 % This software is provided AS-IS with no warranty, either express or
 % implied.
-% 
+%
 % This software is distributed under license and may not be copied,
 % modified or distributed except as expressly authorized under the terms
 % of the license contained in the file LICENSE in this distribution.
-% 
+%
 % For more information about licensing, please refer to
 % http://www.ghostscript.com/licensing/. For information on
 % commercial licensing, go to http://www.artifex.com/licensing/ or
 % contact Artifex Software, Inc., 101 Lucas Valley Road #110,
 % San Rafael, CA  94903, U.S.A., +1(415)492-9861.
 
-% $Id: gs_ciddc.ps,v 1.2 2010/07/10 22:02:13 Arabidopsis Exp $
+% $Id$
 % Define SubstCID, Decoding and CIDDecoding resource categories and related procsets.
 
 languagelevel 2 .setlanguagelevel
-currentglobal true setglobal
+currentglobal //true setglobal
 
 %----------------ParseDecoding procset----------------------------
 
@@ -55,11 +55,11 @@ dup /InstanceType /dicttype put
   /defineresource { pop pop } bind
   /dict {}
   /def { pop pop } bind
-  /dup null
+  /dup //null
   /begin { pop } bind
   /end {}
-  /currentdict null
-  /CMapName null
+  /currentdict //null
+  /CMapName //null
   /usecmap { pop } bind
   /begincmap {}
   /endcmap {}
@@ -202,7 +202,7 @@ begin
 
   /FindResource      % <name> FindResource <dict>
   { currentglobal exch                               % bGlobal /InstName
-    true setglobal
+    //true setglobal
     dup //.MakeInstance exec                         % bGlobal /InstName <Inst>
     DefineResource                                   % bGlobal <Inst>
     exch setglobal                                   % <Inst>

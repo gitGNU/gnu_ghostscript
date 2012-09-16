@@ -66,7 +66,7 @@
 /*
  * Quadrature Mirror-Image Filter Bank (QMFB) Library
  *
- * $Id: jpc_qmfb.c,v 1.7 2010/07/10 22:02:54 Arabidopsis Exp $
+ * $Id$
  */
 
 /******************************************************************************\

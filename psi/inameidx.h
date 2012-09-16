@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: inameidx.h,v 1.2 2010/07/10 22:02:43 Arabidopsis Exp $ */
+/* $Id$ */
 /* Name index definitions */
 
 #ifndef inameidx_INCLUDED
@@ -32,7 +32,7 @@
 /* Define the size of a name sub-table. */
 /* With NT_LOG2_SUB_SIZE >= 10 the subtable goes into a large chunk, */
 /* which names_trace_finish() cannot handle. */
-# define NT_LOG2_SUB_SIZE (8 + (EXTEND_NAMES >= 2)) 
+# define NT_LOG2_SUB_SIZE (8 + (EXTEND_NAMES >= 2))
 # define NT_SUB_SIZE (1 << NT_LOG2_SUB_SIZE)
 # define NT_SUB_INDEX_MASK (NT_SUB_SIZE - 1)
 

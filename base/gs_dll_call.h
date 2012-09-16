@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -10,16 +10,17 @@
    or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/*$Id: gs_dll_call.h,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
+/*$Id$ */
 
 /* calling convention macros for windows style dlls.
- */ 
+ */
 #ifndef GS_DLL_CALL_H
 #define GS_DLL_CALL_H
 
-
 #ifdef __WINDOWS__
+#ifndef _Windows
 # define _Windows
+#endif
 #endif
 
 #ifdef _Windows
@@ -62,7 +63,7 @@
 # define GSDLLCALLPTR * GSDLLCALL
 #else
 # define GSDLLAPIPTR GSDLLAPI *
-# define GSDLLCALLPTR GSDLLCALL * 
+# define GSDLLCALLPTR GSDLLCALL *
 #endif
 
 #endif /* GS_DLL_CALL_H */

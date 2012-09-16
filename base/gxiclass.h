@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxiclass.h,v 1.2 2010/07/10 22:02:27 Arabidopsis Exp $ */
+/* $Id$ */
 /* Define image rendering algorithm classes */
 
 #ifndef gxiclass_INCLUDED
@@ -44,7 +44,7 @@ typedef struct gx_device_s gx_device;
  */
 #define irender_proc(proc)\
   int proc(gx_image_enum *penum, const byte *buffer, int data_x,\
-	   uint w, int h, gx_device *dev)
+           uint w, int h, gx_device *dev)
 typedef irender_proc((*irender_proc_t));
 
 /*

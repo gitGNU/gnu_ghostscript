@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gp_strdl.c,v 1.2 2010/07/10 22:02:26 Arabidopsis Exp $ */
+/* $Id$ */
 /* Default, stream-based readline implementation */
 #include "std.h"
 #include "gstypes.h"
@@ -26,12 +26,12 @@ gp_readline_init(void **preadline_data, gs_memory_t * mem)
 
 int
 gp_readline(stream *s_in, stream *s_out, void *readline_data,
-	    gs_const_string *prompt, gs_string * buf,
-	    gs_memory_t * bufmem, uint * pcount, bool *pin_eol,
-	    bool (*is_stdin)(const stream *))
+            gs_const_string *prompt, gs_string * buf,
+            gs_memory_t * bufmem, uint * pcount, bool *pin_eol,
+            bool (*is_stdin)(const stream *))
 {
     return sreadline(s_in, s_out, readline_data, prompt, buf, bufmem, pcount,
-		     pin_eol, is_stdin);
+                     pin_eol, is_stdin);
 }
 
 void

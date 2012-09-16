@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id: rinkj-byte-stream.c,v 1.2 2010/07/10 22:02:58 Arabidopsis Exp $ */
+/*$Id$ */
 /* Bytestream abstraction for Rinkj driver. */
 
 #include <string.h>
@@ -43,11 +43,10 @@ rinkj_byte_stream_printf (RinkjByteStream *bs, const char *fmt, ...)
   va_list ap;
 
   va_start (ap, fmt);
-  len = vsprintf (str, fmt, ap);
+  len = vsnprintf (str, sizeof(str), fmt, ap);
   va_end (ap);
   return rinkj_byte_stream_write (bs, str, len);
 }
-
 
 int
 rinkj_byte_stream_close (RinkjByteStream *bs)
@@ -87,9 +86,9 @@ rinkj_byte_stream_file_write (RinkjByteStream *self, const char *buf, int size)
 #endif
       status = fwrite (buf, 1, size, z->f);
       if (status == size)
-	return 0;
+        return 0;
       else
-	return -1;
+        return -1;
     }
 }
 

@@ -1,4 +1,4 @@
-/* $Id: ps2ascii.cmd,v 1.4 2010/07/10 22:02:39 Arabidopsis Exp $ */
+/* $Id$ */
 /*
  * This file is maintained by a user: if you have any questions about it,
  * please contact Mark Hale (mark.hale@physics.org).

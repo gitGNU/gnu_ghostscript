@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: ziodev2.c,v 1.2 2010/07/10 22:02:44 Arabidopsis Exp $ */
+/* $Id$ */
 /* (Level 2) IODevice operators */
 #include "string_.h"
 #include "ghost.h"
@@ -32,24 +32,24 @@ static iodev_proc_open_device(null_open);
 const gx_io_device gs_iodev_null = {
     "%null%", "Special",
     {
-	iodev_no_init, null_open, iodev_no_open_file,
-	iodev_os_fopen, iodev_os_fclose,
-	iodev_no_delete_file, iodev_no_rename_file, iodev_no_file_status,
-	iodev_no_enumerate_files, NULL, NULL,
-	iodev_no_get_params, iodev_no_put_params
+        iodev_no_init, null_open, iodev_no_open_file,
+        iodev_os_fopen, iodev_os_fclose,
+        iodev_no_delete_file, iodev_no_rename_file, iodev_no_file_status,
+        iodev_no_enumerate_files, NULL, NULL,
+        iodev_no_get_params, iodev_no_put_params
     }
 };
 
 static int
 null_open(gx_io_device * iodev, const char *access, stream ** ps,
-	  gs_memory_t * mem)
+          gs_memory_t * mem)
 {
     if (!streq1(access, 'w'))
-	return_error(e_invalidfileaccess);
+        return_error(e_invalidfileaccess);
     return file_open_stream(gp_null_file_name,
-			    strlen(gp_null_file_name),
-			    access, 256 /* arbitrary */ , ps,
-			    iodev, iodev->procs.fopen, mem);
+                            strlen(gp_null_file_name),
+                            access, 256 /* arbitrary */ , ps,
+                            iodev, iodev->procs.fopen, mem);
 }
 
 /* ------ Operators ------ */
@@ -66,13 +66,13 @@ zgetdevparams(i_ctx_t *i_ctx_p)
     ref *pmark;
 
     check_read_type(*op, t_string);
-    iodev = gs_findiodevice(op->value.bytes, r_size(op));
+    iodev = gs_findiodevice(imemory, op->value.bytes, r_size(op));
     if (iodev == 0)
-	return_error(e_undefined);
+        return_error(e_undefined);
     stack_param_list_write(&list, &o_stack, NULL, iimemory);
     if ((code = gs_getdevparams(iodev, plist)) < 0) {
-	ref_stack_pop(&o_stack, list.count * 2);
-	return code;
+        ref_stack_pop(&o_stack, list.count * 2);
+        return code;
     }
     pmark = ref_stack_index(&o_stack, list.count * 2);
     make_mark(pmark);
@@ -91,25 +91,25 @@ zputdevparams(i_ctx_t *i_ctx_p)
     password system_params_password;
 
     check_read_type(*op, t_string);
-    iodev = gs_findiodevice(op->value.bytes, r_size(op));
+    iodev = gs_findiodevice(imemory, op->value.bytes, r_size(op));
     if (iodev == 0)
-	return_error(e_undefined);
+        return_error(e_undefined);
     code = stack_param_list_read(&list, &o_stack, 1, NULL, false, iimemory);
     if (code < 0)
-	return code;
+        return code;
     code = dict_read_password(&system_params_password, systemdict,
-			      "SystemParamsPassword");
+                              "SystemParamsPassword");
     if (code < 0)
-	return code;
+        return code;
     code = param_check_password(plist, &system_params_password);
     if (code != 0) {
-	iparam_list_release(&list);
-	return_error(code < 0 ? code : e_invalidaccess);
+        iparam_list_release(&list);
+        return_error(code < 0 ? code : e_invalidaccess);
     }
     code = gs_putdevparams(iodev, plist);
     iparam_list_release(&list);
     if (code < 0)
-	return code;
+        return code;
     ref_stack_pop(&o_stack, list.count * 2 + 2);
     return 0;
 }

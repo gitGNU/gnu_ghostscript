@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gsmalloc.h,v 1.2 2010/07/10 22:02:22 Arabidopsis Exp $ */
+/* $Id$ */
 /* Client interface to default (C heap) allocator */
 /* Requires gsmemory.h */
 
@@ -38,9 +38,9 @@ gs_malloc_memory_t *gs_malloc_memory_init(void);
 /* The cast is unfortunate, but unavoidable. */
 #define gs_malloc_memory_release(mem)\
   gs_memory_free_all((gs_memory_t *)mem, FREE_ALL_EVERYTHING,\
-		     "gs_malloc_memory_release")
+                     "gs_malloc_memory_release")
 
-gs_memory_t * gs_malloc_init(const gs_memory_t *parent);
+gs_memory_t * gs_malloc_init(void);
 void gs_malloc_release(gs_memory_t *mem);
 
 #define gs_malloc(mem, nelts, esize, cname)\

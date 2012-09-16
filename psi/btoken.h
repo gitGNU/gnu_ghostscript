@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: btoken.h,v 1.2 2010/07/10 22:02:44 Arabidopsis Exp $ */
+/* $Id$ */
 /* Definitions for Level 2 binary tokens */
 
 #ifndef btoken_INCLUDED
@@ -27,11 +27,11 @@
 
 /* Create a system or user name table (in the stable memory of mem). */
 int create_names_array(ref **ppnames, gs_memory_t *mem,
-		       client_name_t cname); /* in zbseq.c */
+                       client_name_t cname); /* in zbseq.c */
 
 /* Convert an object to its representation in a binary object sequence. */
 int encode_binary_token(i_ctx_t *i_ctx_p, const ref *obj, int    *ref_offset,
-			int *char_offset, byte *str); /* in iscanbin.c */
+                        int *char_offset, byte *str); /* in iscanbin.c */
 
 /* Define the current binary object format for operators. */
 /* This is a ref so that it can be managed properly by save/restore. */

@@ -62,7 +62,7 @@
 /*
  * Tag/Value Parser
  *
- * $Id: jas_tvp.h,v 1.4 2010/07/10 22:02:56 Arabidopsis Exp $
+ * $Id$
  */
 
 #ifndef JAS_TVP_H

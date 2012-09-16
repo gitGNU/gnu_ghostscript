@@ -1,4 +1,4 @@
-#  Copyright (C) 2001-2008 Artifex Software, Inc.
+#  Copyright (C) 2001-2009 Artifex Software, Inc.
 #  All Rights Reserved.
 #
 #  This software is provided AS-IS with no warranty, either express or
@@ -10,7 +10,7 @@
 #  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 #  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 #
-# $Id: int.mak,v 1.2 2010/07/10 22:02:42 Arabidopsis Exp $
+# $Id$
 # (Platform-independent) makefile for PostScript and PDF language
 # interpreters.
 # Users of this makefile must define the following:
@@ -79,7 +79,7 @@ inamedef_h=$(PSSRC)inamedef.h\
  $(gsstruct_h) $(inameidx_h) $(inames_h) $(inamestr_h)
 store_h=$(PSSRC)store.h $(ialloc_h) $(idosave_h)
 iplugin_h=$(PSSRC)iplugin.h
-ifapi_h=$(PSSRC)ifapi.h $(iplugin_h) $(gstypes_h) $(gsmatrix_h)
+ifapi_h=$(PSSRC)ifapi.h $(iplugin_h) $(gstypes_h) $(gsmatrix_h) $(gp_h) $(memory__h)
 zht2_h=$(PSSRC)zht2.h $(gscspace_h)
 zchar42_h=$(PSSRC)zchar42.h
 zfunc_h=$(PSSRC)zfunc.h
@@ -464,7 +464,7 @@ $(PSOBJ)zcolor.$(OBJ) : $(PSSRC)zcolor.c $(OP)\
 
 $(PSOBJ)zdevice.$(OBJ) : $(PSSRC)zdevice.c $(OP) $(string__h)\
  $(ialloc_h) $(idict_h) $(igstate_h) $(iname_h) $(interp_h) $(iparam_h) $(ivmspace_h)\
- $(gsmatrix_h) $(gsstate_h) $(gxdevice_h) $(gxgetbit_h) $(store_h)
+ $(gsmatrix_h) $(gsstate_h) $(gxdevice_h) $(gxgetbit_h) $(store_h) $(gsicc_manage_h)
 	$(PSCC) $(PSO_)zdevice.$(OBJ) $(C_) $(PSSRC)zdevice.c
 
 $(PSOBJ)zdfilter.$(OBJ) : $(PSSRC)zdfilter.c $(OP) $(string__h) $(ghost_h) $(oper_h)\
@@ -774,9 +774,10 @@ $(PSOBJ)zchar2.$(OBJ) : $(PSSRC)zchar2.c $(OP)\
  $(ichar1_h)
 	$(PSCC) $(PSO_)zchar2.$(OBJ) $(C_) $(PSSRC)zchar2.c
 
-$(PSOBJ)zfont2.$(OBJ) : $(PSSRC)zfont2.c $(OP)\
+$(PSOBJ)zfont2.$(OBJ) : $(PSSRC)zfont2.c $(OP) $(string__h)\
  $(gsmatrix_h) $(gxfixed_h) $(gxfont_h) $(gxfont1_h)\
- $(bfont_h) $(idict_h) $(idparam_h) $(ifont1_h) $(ifont2_h)
+ $(bfont_h) $(idict_h) $(idparam_h) $(ifont1_h) $(ifont2_h)\
+ $(iname_h) $(iddict_h) $(store_h)
 	$(PSCC) $(PSO_)zfont2.$(OBJ) $(C_) $(PSSRC)zfont2.c
 
 type2_=$(PSOBJ)zchar2.$(OBJ) $(PSOBJ)zfont2.$(OBJ)
@@ -993,7 +994,7 @@ $(PSOBJ)zusparam.$(OBJ) : $(PSSRC)zusparam.c $(OP) $(memory__h) $(string__h)\
  $(gscdefs_h) $(gsfont_h) $(gsstruct_h) $(gsutil_h) $(gxht_h)\
  $(ialloc_h) $(icontext_h) $(idict_h) $(idparam_h) $(iparam_h)\
  $(iname_h) $(itoken_h) $(iutil2_h) $(ivmem2_h)\
- $(dstack_h) $(estack_h) $(store_h) $(gsnamecl_h)
+ $(dstack_h) $(estack_h) $(store_h) $(gsnamecl_h) $(gslibctx_h)
 	$(PSCC) $(PSO_)zusparam.$(OBJ) $(C_) $(PSSRC)zusparam.c
 
 # Define full Level 2 support.
@@ -1144,6 +1145,18 @@ $(PSOBJ)zfmd5.$(OBJ) : $(PSSRC)zfmd5.c $(OP) $(memory__h)\
  $(smd5_h) $(stream_h) $(strimpl_h)
 	$(PSCC) $(PSO_)zfmd5.$(OBJ) $(C_) $(PSSRC)zfmd5.c
 
+# SHA-256 digest filter
+fsha2_=$(PSOBJ)zfsha2.$(OBJ)
+$(PSD)fsha2.dev : $(INT_MAK) $(ECHOGS_XE) $(fsha2_) $(GLD)ssha2.dev
+	$(SETMOD) $(PSD)fsha2 $(fsha2_)
+	$(ADDMOD) $(PSD)fsha2 -include $(GLD)ssha2
+	$(ADDMOD) $(PSD)fsha2 -oper zfsha2
+
+$(PSOBJ)zfsha2.$(OBJ) : $(PSSRC)zfsha2.c $(OP) $(memory__h)\
+ $(ghost_h) $(oper_h) $(gsstruct_h) $(stream_h) $(strimpl_h)\
+ $(ialloc_h) $(ifilter_h) $(ssha2_h)
+	$(PSCC) $(PSO_)zfsha2.$(OBJ) $(C_) $(PSSRC)zfsha2.c
+
 # Arcfour cipher filter
 farc4_=$(PSOBJ)zfarc4.$(OBJ)
 $(PSD)farc4.dev : $(INT_MAK) $(ECHOGS_XE) $(farc4_) $(GLD)sarc4.dev
@@ -1164,7 +1177,7 @@ $(PSD)faes.dev : $(INT_MAK) $(ECHOGS_XE) $(faes_) $(GLD)saes.dev
 	$(ADDMOD) $(PSD)faes -oper zfaes
 
 $(PSOBJ)zfaes.$(OBJ) : $(PSSRC)zfaes.c $(OP) $(memory__h)\
- $(gsstruct_h) $(ialloc_h) $(idict_h) $(ifilter_h)\
+ $(gsstruct_h) $(ialloc_h) $(idict_h) $(idparam_h) $(ifilter_h)\
  $(saes_h) $(stream_h) $(strimpl_h)
 	$(PSCC) $(PSO_)zfaes.$(OBJ) $(C_) $(PSSRC)zfaes.c
 
@@ -1428,7 +1441,8 @@ icie_h=$(PSSRC)icie.h
 $(PSOBJ)zcie.$(OBJ) : $(PSSRC)zcie.c $(OP) $(math__h) $(memory__h)\
  $(gscolor2_h) $(gscie_h) $(gsstruct_h) $(gxcspace_h)\
  $(ialloc_h) $(icie_h) $(idict_h) $(idparam_h) $(estack_h)\
- $(isave_h) $(igstate_h) $(ivmspace_h) $(store_h)
+ $(isave_h) $(igstate_h) $(ivmspace_h) $(store_h)\
+ $(zcie_h) $(gsicc_create_h) $(gsicc_manage_h) $(gsicc_profilecache_h) 
 	$(PSCC) $(PSO_)zcie.$(OBJ) $(C_) $(PSSRC)zcie.c
 
 $(PSOBJ)zcrd.$(OBJ) : $(PSSRC)zcrd.c $(OP) $(math__h)\
@@ -1684,9 +1698,10 @@ $(PSD)icc.dev : $(INT_MAK) $(ECHOGS_XE) $(PSD)cie.dev $(iccread_) \
 
 $(PSOBJ)zicc.$(OBJ) : $(PSSRC)zicc.c  $(OP) $(math__h) $(memory__h)\
  $(gsstruct_h) $(gxcspace_h) $(stream_h) $(files_h) $(gscolor2_h)\
- $(icc_h) $(gsicc_h) $(estack_h) $(idict_h) $(idparam_h) $(igstate_h)\
- $(icie_h) $(ialloc_h) $(zicc_h)
-	$(GLICCCC) $(PSO_)zicc.$(OBJ) $(C_) $(PSSRC)zicc.c
+ $(gsicc_h) $(estack_h) $(idict_h) $(idparam_h) $(igstate_h)\
+ $(icie_h) $(ialloc_h) $(zicc_h) $(gsicc_manage_h) $(GX) $(gxistate_h)\
+ $(gserror_h) $(gsicc_create_h) $(gsicc_profilecache_h)
+	$(PSCC) $(PSO_)zicc.$(OBJ) $(C_) $(PSSRC)zicc.c
 
 # ---------------- Support for %disk IODevices ---------------- #
 
@@ -1716,12 +1731,13 @@ $(GLD)diskn.dev : $(LIB_MAK) $(ECHOGS_XE) $(diskn_)
 $(PSD)pdf.dev : $(INT_MAK) $(ECHOGS_XE)\
  $(PSD)psbase.dev $(GLD)dps2lib.dev $(PSD)dps2read.dev\
  $(PSD)pdffonts.dev $(PSD)psl3.dev $(PSD)pdfread.dev $(PSD)cff.dev\
- $(PSD)fmd5.dev $(PSD)farc4.dev $(PSD)faes.dev\
+ $(PSD)fmd5.dev $(PSD)fsha2.dev $(PSD)farc4.dev $(PSD)faes.dev\
  $(PSD)ttfont.dev $(PSD)type2.dev $(PSD)icc.dev $(PSD)pdfops.dev 
 	$(SETMOD) $(PSD)pdf -include $(PSD)psbase $(GLD)dps2lib
 	$(ADDMOD) $(PSD)pdf -include $(PSD)dps2read $(PSD)pdffonts $(PSD)psl3
 	$(ADDMOD) $(PSD)pdf -include $(GLD)psl2lib $(PSD)pdfread $(PSD)cff
-	$(ADDMOD) $(PSD)pdf -include $(PSD)fmd5 $(PSD)farc4 $(PSD)faes.dev
+	$(ADDMOD) $(PSD)pdf -include $(PSD)fmd5 $(PSD)fsha2
+	$(ADDMOD) $(PSD)pdf -include $(PSD)farc4 $(PSD)faes.dev
 	$(ADDMOD) $(PSD)pdf -include $(PSD)ttfont $(PSD)type2
 	$(ADDMOD) $(PSD)pdf -include $(PSD)icc $(PSD)pdfops
 	$(ADDMOD) $(PSD)pdf -functiontype 4
@@ -1748,14 +1764,33 @@ $(PSD)cslayer.dev : $(INT_MAK) $(ECHOGS_XE) $(PSD)pdfread.dev
 # ---------------- Font API ---------------- #
 
 $(PSD)fapi.dev : $(INT_MAK) $(ECHOGS_XE) $(PSOBJ)zfapi.$(OBJ)\
- $(PSD)fapiu$(UFST_BRIDGE).dev $(PSD)fapif$(FT_BRIDGE).dev
+ $(PSD)fapiu$(UFST_BRIDGE).dev $(PSD)fapif$(FT_BRIDGE).dev \
+ $(PSD)fapib$(BITSTREAM_BRIDGE).dev 
 	$(SETMOD) $(PSD)fapi $(PSOBJ)zfapi.$(OBJ)
 	$(ADDMOD) $(PSD)fapi -oper zfapi
 	$(ADDMOD) $(PSD)fapi -ps gs_fntem gs_fapi
 	$(ADDMOD) $(PSD)fapi -include $(PSD)fapiu$(UFST_BRIDGE)
 	$(ADDMOD) $(PSD)fapi -include $(PSD)fapif$(FT_BRIDGE)
+	$(ADDMOD) $(PSD)fapi -include $(PSD)fapib$(BITSTREAM_BRIDGE)
+
+wrfont_h=$(stdpre_h) $(PSSRC)wrfont.h
+write_t1_h=$(ifapi_h) $(PSSRC)write_t1.h
+write_t2_h=$(ifapi_h) $(PSSRC)write_t2.h
+
+$(PSOBJ)write_t1.$(OBJ) : $(PSSRC)write_t1.c $(AK)\
+ $(wrfont_h) $(write_t1_h) 
+	$(PSCC) $(FT_CFLAGS) $(PSO_)write_t1.$(OBJ) $(C_) $(PSSRC)write_t1.c
+
+$(PSOBJ)write_t2.$(OBJ) : $(PSSRC)write_t2.c $(AK)\
+ $(wrfont_h) $(write_t2_h) $(ghost_h) $(gxfont_h) $(gxfont1_h)
+	$(PSCC) $(FT_CFLAGS) $(PSO_)write_t2.$(OBJ) $(C_) $(PSSRC)write_t2.c
+
+$(PSOBJ)wrfont.$(OBJ) : $(PSSRC)wrfont.c $(AK)\
+ $(wrfont_h) $(stdio__h)
+	$(PSCC) $(FT_CFLAGS) $(PSO_)wrfont.$(OBJ) $(C_) $(PSSRC)wrfont.c
 
 $(PSOBJ)zfapi.$(OBJ) : $(PSSRC)zfapi.c $(OP) $(math__h) $(memory__h) $(string__h)\
+ $(stat__h)\
  $(gp_h) $(gscoord_h) $(gscrypt1_h) $(gsfont_h) $(gspaint_h) $(gspath_h)\
  $(gxchar_h) $(gxchrout_h) $(gximask_h) $(gxdevice_h) $(gxfcache_h) $(gxfcid_h)\
  $(gxfont_h) $(gxfont1_h) $(gxpath_h) $(gzstate_h) $(gdevpsf_h)\
@@ -1764,6 +1799,82 @@ $(PSOBJ)zfapi.$(OBJ) : $(PSSRC)zfapi.c $(OP) $(math__h) $(memory__h) $(string__h
  $(icid_h) $(igstate_h) $(icharout_h) $(ifapi_h) $(iplugin_h) \
  $(oper_h) $(store_h) $(stream_h)
 	$(PSCC) $(PSO_)zfapi.$(OBJ) $(C_) $(PSSRC)zfapi.c
+
+# Bitstream bridge :
+
+BITSTREAM_LIB=$(BITSTREAM_ROOT)$(D)core$(D)
+BITSTREAM_INC=$(I_)"$(BITSTREAM_ROOT)$(D)core"
+
+$(PSD)fapib1.dev : $(INT_MAK) $(ECHOGS_XE) \
+ $(PSOBJ)fapibstm.$(OBJ) $(PSOBJ)t2k.$(OBJ) $(PSOBJ)t2kextra.$(OBJ) $(PSOBJ)tsimem.$(OBJ)\
+   $(PSOBJ)t2ktt.$(OBJ) $(PSOBJ)cstream.$(OBJ) $(PSOBJ)fft1hint.$(OBJ) $(PSOBJ)ghints.$(OBJ)\
+   $(PSOBJ)glyph.$(OBJ) $(PSOBJ)t1.$(OBJ) $(PSOBJ)t2kstrm.$(OBJ) $(PSOBJ)truetype.$(OBJ)\
+   $(PSOBJ)util.$(OBJ) $(PSOBJ)fnt.$(OBJ) $(PSOBJ)pclread.$(OBJ) $(PSOBJ)t2ksc.$(OBJ)\
+   $(PSOBJ)write_t1.$(OBJ) $(PSOBJ)write_t2.$(OBJ) $(PSOBJ)wrfont.$(OBJ)
+	$(SETMOD) $(PSD)fapib1 $(PSOBJ)fapibstm.$(OBJ) 
+	$(ADDMOD) $(PSD)fapib1 $(PSOBJ)t2k.$(OBJ) $(PSOBJ)t2kextra.$(OBJ) $(PSOBJ)fnt.$(OBJ)
+	$(ADDMOD) $(PSD)fapib1 $(PSOBJ)tsimem.$(OBJ) $(PSOBJ)t2ktt.$(OBJ) $(PSOBJ)util.$(OBJ)
+	$(ADDMOD) $(PSD)fapib1 $(PSOBJ)t2kstrm.$(OBJ) $(PSOBJ)truetype.$(OBJ) $(PSOBJ)cstream.$(OBJ)
+	$(ADDMOD) $(PSD)fapib1 $(PSOBJ)fft1hint.$(OBJ) $(PSOBJ)ghints.$(OBJ) $(PSOBJ)glyph.$(OBJ) 
+	$(ADDMOD) $(PSD)fapib1 $(PSOBJ)t1.$(OBJ) $(PSOBJ)pclread.$(OBJ) $(PSOBJ)t2ksc.$(OBJ)
+	$(ADDMOD) $(PSD)fapib1 $(PSOBJ)write_t1.$(OBJ) $(PSOBJ)write_t2.$(OBJ) $(PSOBJ)wrfont.$(OBJ)
+	$(ADDMOD) $(PSD)fapib1 -plugin fapibstm
+
+$(PSOBJ)fapibstm.$(OBJ) : $(PSSRC)fapibstm.c $(AK)\
+ $(memory__h) $(stdio__h) $(math__h) $(strmio_h)\
+ $(ierrors_h) $(iplugin_h) $(ifapi_h) $(gxfapi_h) $(gp_h) 
+	$(PSCC) $(BITSTREAM_CFLAGS) $(BITSTREAM_INC) $(PSO_)fapibstm.$(OBJ) $(C_) $(PSSRC)fapibstm.c
+
+$(PSOBJ)t2k.$(OBJ) : "$(BITSTREAM_LIB)t2k.c" $(AK)
+	$(PSCC) $(BITSTREAM_CFLAGS) $(BITSTREAM_INC) $(PSO_)t2k.$(OBJ) $(C_) "$(BITSTREAM_LIB)t2k.c"
+
+$(PSOBJ)t2kextra.$(OBJ) : "$(BITSTREAM_LIB)t2kextra.c" $(AK)
+	$(PSCC) $(BITSTREAM_CFLAGS) $(BITSTREAM_INC) $(PSO_)t2kextra.$(OBJ) $(C_) "$(BITSTREAM_LIB)t2kextra.c"
+
+$(PSOBJ)tsimem.$(OBJ) : "$(BITSTREAM_LIB)tsimem.c" $(AK)
+	$(PSCC) $(BITSTREAM_CFLAGS) $(BITSTREAM_INC) $(PSO_)tsimem.$(OBJ) $(C_) "$(BITSTREAM_LIB)tsimem.c"
+
+$(PSOBJ)t2ktt.$(OBJ) : "$(BITSTREAM_LIB)t2ktt.c" $(AK)
+	$(PSCC) $(BITSTREAM_CFLAGS) $(BITSTREAM_INC) $(PSO_)t2ktt.$(OBJ) $(C_) "$(BITSTREAM_LIB)t2ktt.c"
+
+$(PSOBJ)cstream.$(OBJ) : "$(BITSTREAM_LIB)cstream.c" $(AK)
+	$(PSCC) $(BITSTREAM_CFLAGS) $(BITSTREAM_INC) $(PSO_)cstream.$(OBJ) $(C_) "$(BITSTREAM_LIB)cstream.c"
+
+$(PSOBJ)fft1hint.$(OBJ) : "$(BITSTREAM_LIB)fft1hint.c" $(AK)
+	$(PSCC) $(BITSTREAM_CFLAGS) $(BITSTREAM_INC) $(PSO_)fft1hint.$(OBJ) $(C_) "$(BITSTREAM_LIB)fft1hint.c"
+
+$(PSOBJ)ghints.$(OBJ) : "$(BITSTREAM_LIB)ghints.c" $(AK)
+	$(PSCC) $(BITSTREAM_CFLAGS) $(BITSTREAM_INC) $(PSO_)ghints.$(OBJ) $(C_) "$(BITSTREAM_LIB)ghints.c"
+
+$(PSOBJ)glyph.$(OBJ) : "$(BITSTREAM_LIB)glyph.c" $(AK)
+	$(PSCC) $(BITSTREAM_CFLAGS) $(BITSTREAM_INC) $(PSO_)glyph.$(OBJ) $(C_) "$(BITSTREAM_LIB)glyph.c"
+
+$(PSOBJ)t1.$(OBJ) : "$(BITSTREAM_LIB)t1.c" $(AK)
+	$(PSCC) $(BITSTREAM_CFLAGS) $(BITSTREAM_INC) $(PSO_)t1.$(OBJ) $(C_) "$(BITSTREAM_LIB)t1.c"
+
+$(PSOBJ)t2kstrm.$(OBJ) : "$(BITSTREAM_LIB)t2kstrm.c" $(AK)
+	$(PSCC) $(BITSTREAM_CFLAGS) $(BITSTREAM_INC) $(PSO_)t2kstrm.$(OBJ) $(C_) "$(BITSTREAM_LIB)t2kstrm.c"
+
+$(PSOBJ)truetype.$(OBJ) : "$(BITSTREAM_LIB)truetype.c" $(AK)
+	$(PSCC) $(BITSTREAM_CFLAGS) $(BITSTREAM_INC) $(PSO_)truetype.$(OBJ) $(C_) "$(BITSTREAM_LIB)truetype.c"
+
+$(PSOBJ)util.$(OBJ) : "$(BITSTREAM_LIB)util.c" $(AK)
+	$(PSCC) $(BITSTREAM_CFLAGS) $(BITSTREAM_INC) $(PSO_)util.$(OBJ) $(C_) "$(BITSTREAM_LIB)util.c"
+
+$(PSOBJ)fnt.$(OBJ) : "$(BITSTREAM_LIB)fnt.c" $(AK)
+	$(PSCC) $(BITSTREAM_CFLAGS) $(BITSTREAM_INC) $(PSO_)fnt.$(OBJ) $(C_) "$(BITSTREAM_LIB)fnt.c"
+
+$(PSOBJ)pclread.$(OBJ) : "$(BITSTREAM_LIB)pclread.c" $(AK)
+	$(PSCC) $(BITSTREAM_CFLAGS) $(BITSTREAM_INC) $(PSO_)pclread.$(OBJ) $(C_) "$(BITSTREAM_LIB)pclread.c"
+
+$(PSOBJ)t2ksc.$(OBJ) : "$(BITSTREAM_LIB)t2ksc.c" $(AK)
+	$(PSCC) $(BITSTREAM_CFLAGS) $(BITSTREAM_INC) $(PSO_)t2ksc.$(OBJ) $(C_) "$(BITSTREAM_LIB)t2ksc.c"
+
+# stub for Bitstream bridge :
+
+$(PSD)fapib.dev : $(INT_MAK) $(ECHOGS_XE)
+	$(SETMOD) $(PSD)fapib
+
 
 # UFST bridge :
 
@@ -1783,7 +1894,7 @@ $(PSD)fapiu1.dev : $(INT_MAK) $(ECHOGS_XE) \
 	$(ADDMOD) $(PSD)fapiu1 -link $(UFST_LIB)if_lib$(UFST_LIB_EXT) $(UFST_LIB)fco_lib$(UFST_LIB_EXT)
 	$(ADDMOD) $(PSD)fapiu1 -link $(UFST_LIB)tt_lib$(UFST_LIB_EXT) $(UFST_LIB)psi_lib$(UFST_LIB_EXT)
 
-$(PSOBJ)fapiufst.$(OBJ) : $(PSSRC)fapiufst.c $(AK)\
+fapiufst_1 : $(PSSRC)fapiufst.c $(AK)\
  $(memory__h) $(stdio__h) $(math__h) $(strmio_h)\
  $(ierrors_h) $(iplugin_h) $(ifapi_h) $(gxfapi_h) $(gp_h) $(gxfapiu_h) \
  $(UFST_ROOT)$(D)rts$(D)inc$(D)cgconfig.h\
@@ -1793,7 +1904,22 @@ $(PSOBJ)fapiufst.$(OBJ) : $(PSSRC)fapiufst.c $(AK)\
  $(UFST_ROOT)$(D)rts$(D)psi$(D)t1isfnt.h\
  $(UFST_ROOT)$(D)rts$(D)tt$(D)sfntenum.h\
  $(UFST_ROOT)$(D)rts$(D)tt$(D)ttpcleo.h
-	$(PSCC) $(UFST_CFLAGS) $(UFST_INC) $(PSO_)fapiufst.$(OBJ) $(C_) $(PSSRC)fapiufst.c
+	$(PSCC) $(UFST_CFLAGS) -DUFSTFONTDIR=$(UFSTROMFONTDIR) $(UFST_INC) $(PSO_)fapiufst.$(OBJ) $(C_) $(PSSRC)fapiufst.c
+
+fapiufst_0 : $(PSSRC)fapiufst.c $(AK)\
+ $(memory__h) $(stdio__h) $(math__h) $(strmio_h)\
+ $(ierrors_h) $(iplugin_h) $(ifapi_h) $(gxfapi_h) $(gp_h) $(gxfapiu_h) \
+ $(UFST_ROOT)$(D)rts$(D)inc$(D)cgconfig.h\
+ $(UFST_ROOT)$(D)rts$(D)inc$(D)shareinc.h\
+ $(UFST_ROOT)$(D)sys$(D)inc$(D)ufstport.h\
+ $(UFST_ROOT)$(D)sys$(D)inc$(D)cgmacros.h\
+ $(UFST_ROOT)$(D)rts$(D)psi$(D)t1isfnt.h\
+ $(UFST_ROOT)$(D)rts$(D)tt$(D)sfntenum.h\
+ $(UFST_ROOT)$(D)rts$(D)tt$(D)ttpcleo.h
+	$(PSCC) $(UFST_CFLAGS) -DUFSTFONTDIR=$(UFSTDISCFONTDIR) $(UFST_INC) $(PSO_)fapiufst.$(OBJ) $(C_) $(PSSRC)fapiufst.c
+
+
+$(PSOBJ)fapiufst.$(OBJ) : fapiufst_$(COMPILE_INITS)
 
 # stub for UFST bridge :
 
@@ -1803,41 +1929,25 @@ $(PSD)fapiu.dev : $(INT_MAK) $(ECHOGS_XE)
 # FreeType bridge :
 
 # the top-level makefile should define
-# FT_CFLAGS for the include directive and other switches, and
-# FT_LIBS for the the library link command
-
-wrfont_h=$(stdpre_h) $(PSSRC)wrfont.h
-write_t1_h=$(ifapi_h) $(PSSRC)write_t1.h
-write_t2_h=$(ifapi_h) $(PSSRC)write_t2.h
+# FT_CFLAGS for the include directive and other switches
 
 $(PSD)fapif1.dev : $(INT_MAK) $(ECHOGS_XE) $(PSOBJ)fapi_ft.$(OBJ) \
- $(PSOBJ)write_t1.$(OBJ) $(PSOBJ)write_t2.$(OBJ) $(PSOBJ)wrfont.$(OBJ)
+ $(PSOBJ)write_t1.$(OBJ) $(PSOBJ)write_t2.$(OBJ) $(PSOBJ)wrfont.$(OBJ) \
+ $(GLD)freetype.dev
 	$(SETMOD) $(PSD)fapif1 $(PSOBJ)fapi_ft.$(OBJ) $(PSOBJ)write_t1.$(OBJ)
 	$(ADDMOD) $(PSD)fapif1 $(PSOBJ)write_t2.$(OBJ) $(PSOBJ)wrfont.$(OBJ)
 	$(ADDMOD) $(PSD)fapif1 -plugin fapi_ft
-	$(ADDMOD) $(PSD)fapif1 -link $(FT_LIBS)
+	$(ADDMOD) $(PSD)fapif1 -include $(GLD)freetype
 
 $(PSOBJ)fapi_ft.$(OBJ) : $(PSSRC)fapi_ft.c $(AK)\
  $(stdio__h) $(math__h) $(ifapi_h) $(gserror_h)\
  $(write_t1_h) $(write_t2_h)
 	$(PSCC) $(FT_CFLAGS) $(PSO_)fapi_ft.$(OBJ) $(C_) $(PSSRC)fapi_ft.c
 
-$(PSOBJ)write_t1.$(OBJ) : $(PSSRC)write_t1.c $(AK)\
- $(wrfont_h) $(write_t1_h) 
-	$(PSCC) $(FT_CFLAGS) $(PSO_)write_t1.$(OBJ) $(C_) $(PSSRC)write_t1.c
-
-$(PSOBJ)write_t2.$(OBJ) : $(PSSRC)write_t2.c $(AK)\
- $(wrfont_h) $(write_t2_h) $(ghost_h) $(gxfont_h) $(gxfont1_h)
-	$(PSCC) $(FT_CFLAGS) $(PSO_)write_t2.$(OBJ) $(C_) $(PSSRC)write_t2.c
-
-$(PSOBJ)wrfont.$(OBJ) : $(PSSRC)wrfont.c $(AK)\
- $(wrfont_h) $(stdio_h)
-	$(PSCC) $(FT_CFLAGS) $(PSO_)wrfont.$(OBJ) $(C_) $(PSSRC)wrfont.c
-
 # stub for FreeType bridge :
 
-$(PSD)fapif.dev : $(INT_MAK) $(ECHOGS_XE)
-	$(SETMOD) $(PSD)fapif
+$(PSD)fapif0.dev : $(INT_MAK) $(ECHOGS_XE)
+	$(SETMOD) $(PSD)fapif0
 
 
 # ---------------- Custom color dummy callback ---------------- #
@@ -1853,18 +1963,28 @@ $(PSD)pdfops.dev : $(INT_MAK) $(ECHOGS_XE) $(zpdfops_)
 	$(SETMOD) $(PSD)pdfops $(zpdfops_)
 	$(ADDMOD) $(PSD)pdfops -oper zpdfops
 
-$(PSOBJ)zpdfops.$(OBJ) : $(PSSRC)zpdfops.c $(OP)\
- $(igstate_h) $(istack_h) $(iutil_h) $(gspath_h) $(math__h)
+$(PSOBJ)zpdfops.$(OBJ) : $(PSSRC)zpdfops.c $(OP) $(MAKEFILE)\
+ $(igstate_h) $(istack_h) $(iutil_h) $(gspath_h) $(math__h) $(ialloc_h)\
+ $(string__h) $(store_h)
 	$(PSCC) $(PSO_)zpdfops.$(OBJ) $(C_) $(PSSRC)zpdfops.c
 
-# ================ Dependencies for auxiliary programs ================ #
+zutf8_=$(PSOBJ)zutf8.$(OBJ)
+$(PSD)utf8.dev : $(INT_MAK) $(ECHOGS_XE) $(zutf8_)
+	$(SETMOD) $(PSD)utf8 $(zutf8_)
+	$(ADDMOD) $(PSD)utf8 -oper zutf8
 
-GENINIT_DEPS=$(stdpre_h)
+$(PSOBJ)zutf8.$(OBJ) : $(PSSRC)zutf8.c $(OP)\
+ $(ghost_h) $(oper_h) $(iutil_h) $(ialloc_h) $(malloc__h) $(string__h)\
+ $(store_h)
+	$(PSCC) $(PSO_)zutf8.$(OBJ) $(C_) $(PSSRC)zutf8.c
+
+# ================ Dependencies for auxiliary programs ================ #
 
 # ============================= Main program ============================== #
 
 $(PSOBJ)gs.$(OBJ) : $(PSSRC)gs.c $(GH)\
- $(ierrors_h) $(iapi_h) $(imain_h) $(imainarg_h) $(iminst_h) $(gsmalloc_h)
+ $(ierrors_h) $(iapi_h) $(imain_h) $(imainarg_h) $(iminst_h) $(gsmalloc_h)\
+ $(locale__h)
 	$(PSCC) $(PSO_)gs.$(OBJ) $(C_) $(PSSRC)gs.c
 
 $(PSOBJ)iapi.$(OBJ) : $(PSSRC)iapi.c $(AK)\

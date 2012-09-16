@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2007 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: std.h,v 1.3 2010/09/08 23:57:34 Arabidopsis Exp $ */
+/* $Id$ */
 /* Standard definitions for Ghostscript code */
 
 #ifndef std_INCLUDED
@@ -63,7 +63,7 @@
 
 /* Define unsigned 16- and 32-bit types.  These are needed in */
 /* a surprising number of places that do bit manipulation. */
-#if ARCH_SIZEOF_SHORT == 2	/* no plausible alternative! */
+#if ARCH_SIZEOF_SHORT == 2      /* no plausible alternative! */
 typedef ushort bits16;
 #endif
 #if ARCH_SIZEOF_INT == 4
@@ -114,7 +114,7 @@ typedef ulong bits32;
 #  define arith_rshift(x,n) ((x) >> (n))
 #  define arith_rshift_1(x) ((x) >> 1)
 #else
-#if arch_arith_rshift == 1	/* OK except for n=1 */
+#if arch_arith_rshift == 1      /* OK except for n=1 */
 #  define arith_rshift(x,n) ((x) >> (n))
 #  define arith_rshift_1(x) arith_rshift_slow(x,1)
 #else
@@ -128,7 +128,10 @@ typedef ulong bits32;
  * Use dprintf for messages that just go to dpf;
  * dlprintf for messages to dpf with optional with file name (and,
  * if available, line number);
- * eprintf for error messages to epf that include the program name;
+ * eprintf or eprintfm for error messages to epf that include the program
+ * name (eprintfm requires a memory pointer and is safe to use in
+ * multithreaded environments - eprint does not, and is not, and should
+ * therefore be avoided where possible);
  * lprintf for debugging messages that should include line number info.
  * Since we all stdout/stderr output must go via outprintf/errprintf,
  * we have to define dputc and dputs in terms of errprintf also.
@@ -151,19 +154,26 @@ typedef struct gs_memory_s gs_memory_t;
 #define init_proc(proc)\
   int proc(gs_memory_t *)
 
-
 /* dpf and epf may be redefined */
-#define dpf errprintf
-#define epf errprintf
+#define dpf errprintf_nomem
+#define epf errprintf_nomem
+#define epfm errprintf
 
-/* To allow stdout and stderr to be redirected, all stdout goes 
+/* To allow stdout and stderr to be redirected, all stdout goes
  * though outwrite and all stderr goes through errwrite.
  */
 
 int outwrite(const gs_memory_t *mem, const char *str, int len);
-int errwrite(const char *str, int len);
+int errwrite(const gs_memory_t *mem, const char *str, int len);
 void outflush(const gs_memory_t *mem);
-void errflush(void);
+void errflush(const gs_memory_t *mem);
+
+/* As a temporary measure, we allow forms of errwrite/errflush that do not
+ * need to be given a memory pointer. Any uses of this (largely the debugging
+ * system) will fail with multithreaded usage. */
+int errwrite_nomem(const char *str, int len);
+void errflush_nomem(void);
+
 /* Formatted output to outwrite and errwrite.
  * The maximum string length is 1023 characters.
  */
@@ -178,14 +188,16 @@ void errflush(void);
 #    endif
 #  endif
 int outprintf(const gs_memory_t *mem, const char *fmt, ...) __printflike(2, 3);
-int errprintf(const char *fmt, ...) __printflike(1, 2);
+int errprintf(const gs_memory_t *mem, const char *fmt, ...) __printflike(2, 3);
+int errprintf_nomem(const char *fmt, ...) __printflike(1, 2);
 #else
 int outprintf();
 int errprintf();
+int errprintf_nomem();
 #endif
 
 /* Print the program line # for debugging. */
-#if __LINE__			/* compiler provides it */
+#if __LINE__                    /* compiler provides it */
 void dprintf_file_and_line(const char *, int);
 #  define _dpl dprintf_file_and_line(__FILE__, __LINE__),
 #else
@@ -193,7 +205,7 @@ void dprintf_file_only(const char *);
 #  define _dpl dprintf_file_only(__FILE__),
 #endif
 
-void dflush(void);		/* flush stderr */
+void dflush(void);              /* flush stderr */
 #define dputc(chr) dprintf1("%c", chr)
 #define dlputc(chr) dlprintf1("%c", chr)
 #define dputs(str) dprintf1("%s", str)
@@ -253,6 +265,9 @@ void dflush(void);		/* flush stderr */
 
 void printf_program_ident(const gs_memory_t *mem, const char *program_name, long revision_number);
 void eprintf_program_ident(const char *program_name, long revision_number);
+void emprintf_program_ident(const gs_memory_t *mem,
+                            const char *program_name,
+                            long revision_number);
 const char *gs_program_name(void);
 long gs_revision_number(void);
 long gs_version_number(void);
@@ -281,6 +296,31 @@ long gs_version_number(void);
   (_epi epf(str, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9))
 #define eprintf10(str,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10)\
   (_epi epf(str, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10))
+
+#define _epim(mem) emprintf_program_ident(mem, gs_program_name(), gs_revision_number()),
+
+#define emprintf(mem, str)\
+  (_epim(mem) epfm(mem, str))
+#define emprintf1(mem, str,arg1)\
+  (_epim(mem) epfm(mem, str, arg1))
+#define emprintf2(mem, str,arg1,arg2)\
+  (_epim(mem) epfm(mem, str, arg1, arg2))
+#define emprintf3(mem, str,arg1,arg2,arg3)\
+  (_epim(mem) epfm(mem, str, arg1, arg2, arg3))
+#define emprintf4(mem, str,arg1,arg2,arg3,arg4)\
+  (_epim(mem) epfm(mem, str, arg1, arg2, arg3, arg4))
+#define emprintf5(mem, str,arg1,arg2,arg3,arg4,arg5)\
+  (_epim(mem) epfm(mem, str, arg1, arg2, arg3, arg4, arg5))
+#define emprintf6(mem, str,arg1,arg2,arg3,arg4,arg5,arg6)\
+  (_epim(mem) epfm(mem, str, arg1, arg2, arg3, arg4, arg5, arg6))
+#define emprintf7(mem, str,arg1,arg2,arg3,arg4,arg5,arg6,arg7)\
+  (_epim(mem) epfm(mem, str, arg1, arg2, arg3, arg4, arg5, arg6, arg7))
+#define emprintf8(mem, str,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8)\
+  (_epim(mem) epfm(mem, str, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8))
+#define emprintf9(mem, str,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9)\
+  (_epim(mem) epfm(mem, str, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9))
+#define emprintf10(mem, str,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10)\
+  (_epim(mem) epfm(mem, str, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10))
 
 #if __LINE__			/* compiler provides it */
 void lprintf_file_and_line(const char *, int);

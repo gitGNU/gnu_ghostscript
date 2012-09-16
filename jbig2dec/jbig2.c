@@ -121,7 +121,7 @@ jbig2_ctx_new (Jbig2Allocator *allocator,
   if (error_callback == NULL)
       error_callback = &jbig2_default_error;
 
-  result = (Jbig2Ctx *)jbig2_alloc(allocator, sizeof(Jbig2Ctx));
+  result = (Jbig2Ctx*)jbig2_alloc(allocator, sizeof(Jbig2Ctx));
   if (result == NULL) {
     error_callback(error_callback_data, "initial context allocation failed!",
                     JBIG2_SEVERITY_FATAL, -1);
@@ -142,12 +142,12 @@ jbig2_ctx_new (Jbig2Allocator *allocator,
 
   result->n_segments = 0;
   result->n_segments_max = 16;
-  result->segments = (Jbig2Segment **)jbig2_alloc(allocator, result->n_segments_max * sizeof(Jbig2Segment *));
+  result->segments = jbig2_new(result, Jbig2Segment*, result->n_segments_max);
   result->segment_index = 0;
 
   result->current_page = 0;
   result->max_page_index = 4;
-  result->pages = (Jbig2Page *)jbig2_alloc(allocator, result->max_page_index * sizeof(Jbig2Page));
+  result->pages = jbig2_new(result, Jbig2Page, result->max_page_index);
   {
     int index;
     for (index = 0; index < result->max_page_index; index++) {
@@ -160,16 +160,33 @@ jbig2_ctx_new (Jbig2Allocator *allocator,
   return result;
 }
 
-int32_t
-jbig2_get_int32 (const byte *buf)
-{
-  return (buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | buf[3];
-}
+#define get_uint16(bptr)\
+  (((bptr)[0] << 8) | (bptr)[1])
+#define get_int16(bptr)\
+  (((int)get_uint16(bptr) ^ 0x8000) - 0x8000)
 
 int16_t
-jbig2_get_int16 (const byte *buf)
-{
-  return (buf[0] << 8) | buf[1];
+jbig2_get_int16(const byte *bptr)
+{	
+    return get_int16(bptr);
+}
+
+uint16_t
+jbig2_get_uint16(const byte *bptr)
+{	
+    return get_uint16(bptr);
+}
+
+int32_t
+jbig2_get_int32(const byte *bptr)
+{	
+    return ((int32_t)get_int16(bptr) << 16) | get_uint16(bptr + 2);
+}
+
+uint32_t
+jbig2_get_uint32(const byte *bptr)
+{	
+    return ((uint32_t)get_uint16(bptr) << 16) | get_uint16(bptr + 2);
 }
 
 
@@ -198,7 +215,7 @@ jbig2_data_in (Jbig2Ctx *ctx, const unsigned char *data, size_t size)
       do
 	buf_size <<= 1;
       while (buf_size < size);
-      ctx->buf = (byte *)jbig2_alloc(ctx->allocator, buf_size);
+      ctx->buf = jbig2_new(ctx, byte, buf_size);
       ctx->buf_size = buf_size;
       ctx->buf_rd_ix = 0;
       ctx->buf_wr_ix = 0;
@@ -219,7 +236,7 @@ jbig2_data_in (Jbig2Ctx *ctx, const unsigned char *data, size_t size)
 	  do
 	    buf_size <<= 1;
 	  while (buf_size < ctx->buf_wr_ix - ctx->buf_rd_ix + size);
-	  buf = (byte *)jbig2_alloc(ctx->allocator, buf_size);
+	  buf = jbig2_new(ctx, byte, buf_size);
 	  memcpy(buf, ctx->buf + ctx->buf_rd_ix,
 		  ctx->buf_wr_ix - ctx->buf_rd_ix);
 	  jbig2_free(ctx->allocator, ctx->buf);
@@ -412,7 +429,7 @@ jbig2_word_stream_buf_get_next_word(Jbig2WordStream *self, int offset)
 Jbig2WordStream *
 jbig2_word_stream_buf_new(Jbig2Ctx *ctx, const byte *data, size_t size)
 {
-  Jbig2WordStreamBuf *result = (Jbig2WordStreamBuf *)jbig2_alloc(ctx->allocator, sizeof(Jbig2WordStreamBuf));
+  Jbig2WordStreamBuf *result = jbig2_new(ctx, Jbig2WordStreamBuf, 1);
 
   result->super.get_next_word = jbig2_word_stream_buf_get_next_word;
   result->data = data;

@@ -603,12 +603,12 @@ the black cartridge can print at a higher resolution than the CMY cartridge,
 although the converse does also occur.
 In addition, ghostscript is generally fastest for Gray.</P
 ><P
->PCL 3+ also supports the colour model RGB
+>PCLï¿½3+ also supports the colour model RGB
 although Hewlett-Packard discourages its use.
 For this model the printer internally converts the RGB data it receives into
 CMY data for printing.
 Note that not everything which can be demanded when using a CMY palette
-in PCL 3+ is also permitted when using RGB.
+in PCLï¿½3+ is also permitted when using RGB.
 Because of its limited usefulness,
 <B
 CLASS="COMMAND"
@@ -797,7 +797,7 @@ CLASS="CITETITLE"
 >CONFIGURATION</I
 > section below).</P
 ><P
->There is no command in PCL 3+ to tell the printer about the
+>There is no command in PCLï¿½3+ to tell the printer about the
 sheet's orientation in the input tray,
 therefore it cannot be chosen and the manufacturer must prescribe it.
 I am not aware of any precise and complete statement from Hewlett-Packard
@@ -1216,7 +1216,7 @@ CLASS="USERINPUT"
 ></TT
 >.
 Resolutions supported by at least some of the other subdevices
-for some of the colour models are 75, 100, 150, 300, 600×300 and 600 ppi.
+for some of the colour models are 75, 100, 150, 300, 600ï¿½300 and 600 ppi.
 Consult the PPD files in the <B
 CLASS="COMMAND"
 >pcl3</B
@@ -1248,7 +1248,7 @@ CLASS="COMMAND"
 driver.</P
 ><P
 >At least some of the series-500 DeskJets claim to
-permit a resolution of 600 × 300 ppi.
+permit a resolution of 600 ï¿½ 300 ppi.
 However,
 although these models have a 600 dpi addressable horizontal resolution grid
 they do not permit neighbouring pixels to be activated
@@ -1265,7 +1265,7 @@ for the printer's builtin fonts and not for general raster data.</P
 >Concerning the DeskJet 870C,
 my impression is that although some HP documents and drivers use expressions
 like "600x300 dpi C-REt color" for this printer,
-the model does not really support a resolution of 600 × 300 ppi.
+the model does not really support a resolution of 600 ï¿½ 300 ppi.
 First, it does not accept <B
 CLASS="COMMAND"
 >pcl3</B
@@ -1701,7 +1701,7 @@ CLASS="USERINPUT"
 >hpdj500</B
 ></TT
 > where it is 3
-(these printers do not support method 9),
+(these printers do not support methodï¿½9),
 and for the subdevices <TT
 CLASS="USERINPUT"
 ><B
@@ -1715,7 +1715,7 @@ CLASS="USERINPUT"
 ></TT
 > where it is 2
 (this seems to give the best combination of portability and compression).
-Requesting method 3 actually leads to a combination of methods 2 and 3.
+Requesting method 3 actually leads to a combination of methods 2 andï¿½3.
 The driver may temporarily choose method 0 if a compressed data sequence would
 be longer than its uncompressed version.</P
 ><P
@@ -1754,7 +1754,7 @@ The option is superfluous for printers which are truly PCL-3-conforming.</P
 >Use this parameter if you discover that you can print single-page documents
 without problems but that the printer does not accept multi-page files.
 At present, the only printer I know of for which such a reconfiguration is
-needed is the Xerox DocuPrint M750.</P
+needed is the Xerox DocuPrintï¿½M750.</P
 ></DD
 ><DT
 ><TT
@@ -2428,20 +2428,20 @@ number of shades with smaller halftone cells.</P
 ><LI
 ><P
 >Most of the ways of increasing the halftone screen frequency seem to fail.
-I have been successful only with the somewhat pedestrian approach of
+Iï¿½have been successful only with the somewhat pedestrian approach of
 using threshold arrays,
 and even that worked only for some cases.</P
 ></LI
 ><LI
 ><P
->For particular CMYK values and with ghostscript version 6 or higher,
+>For particular CMYK values and with ghostscript versionï¿½6 or higher,
 the colour becomes drastically wrong.
 One example is CMYK = (0.99998472, 0.002549, 0, 0.00367827);
 this should be almost a pure cyan but is instead displayed as a sort of pink.
 If one subtracts one unit in the last position for any of the non-zero
 components,
 the result becomes acceptable.
-The problem has not been observed with ghostscript 5.50.</P
+The problem has not been observed with ghostscriptï¿½5.50.</P
 ></LI
 ><LI
 ><P
@@ -2493,8 +2493,8 @@ the number of pixels in the halftone cell times
 one less than the number of hardware intensity levels,
 something has gone wrong.
 This is, for example, the case if
-you specified 4 black levels and a 2×2 halftone cell,
-and you then can distinguish more than 1 + 4×3 = 13 intensity levels.
+you specified 4 black levels and a 2ï¿½2 halftone cell,
+and you then can distinguish more than 1 + 4ï¿½3 = 13 intensity levels.
 You should also watch for non-monotonic jumps in intensity and incompletely
 filled shapes.</P
 ><P
@@ -2516,7 +2516,7 @@ hence this value should only be used when it is really needed
 (e.g., when you run into one of ghostscript's halftoning problems)
 or when the delay is acceptable.</P
 ><P
->If you are using ghostscript 5.50 and
+>If you are using ghostscriptï¿½5.50 and
 the page to be rendered needs a lot of memory
 (this applies in particular to <TT
 CLASS="USERINPUT"
@@ -3307,7 +3307,7 @@ CLASS="REPLACEABLE"
 ></TT
 > may not contain double quotes
 or control characters except HT
-(the forbidden byte codes are 0 to 8, 10 to 31, and 34).</P
+(the forbidden byte codes are 0 toï¿½8, 10 toï¿½31, andï¿½34).</P
 ><P
 >Use this option if your printer understands PJL and
 you discover either that settings for one job influence the following job
@@ -3331,9 +3331,9 @@ CLASS="REPLACEABLE"
 ></DT
 ><DD
 ><P
->If a printer supports several command languages and PCL 3+ is not the
+>If a printer supports several command languages and PCLï¿½3+ is not the
 default,
-the printer must be told to switch to PCL 3+ at the beginning of the
+the printer must be told to switch to PCLï¿½3+ at the beginning of the
 print job.
 Hewlett-Packard's printers use a Printer Job Language (PJL) command
 for this purpose.
@@ -3614,7 +3614,7 @@ a PCL-3+ printer expects the colour information for a row of pixels
 in the order black, cyan, magenta, and finally yellow (KCMY).</P
 ><P
 >There exists at least one printer (Olivetti JP792) which claims to accept
-PCL 3+ 
+PCLï¿½3+ 
 but expects the colour planes to arrive in the order CMYK.
 If you have a printer with this property, use this option.
 The default value is <TT
@@ -4645,7 +4645,7 @@ CLASS="USERINPUT"
 ></TT
 >
 if no media file is employed;
-entries with a section/paragraph sign (§) similarly identify the sizes
+entries with a section/paragraph sign (ï¿½) similarly identify the sizes
 used by <TT
 CLASS="USERINPUT"
 ><B
@@ -4673,7 +4673,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->US index card 3 × 5 in</TD
+>US index card 3 ï¿½ 5 in</TD
 ></TR
 ><TR
 ><TD
@@ -4688,7 +4688,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->Japanese long envelope #4 (90 × 205 mm)</TD
+>Japanese long envelope #4 (90 ï¿½ 205 mm)</TD
 ></TR
 ><TR
 ><TD
@@ -4703,7 +4703,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->US Monarch envelope (3.875 × 7.5 in)</TD
+>US Monarch envelope (3.875 ï¿½ 7.5 in)</TD
 ></TR
 ><TR
 ><TD
@@ -4718,7 +4718,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->Japanese Hagaki card (100 × 148 mm)</TD
+>Japanese Hagaki card (100 ï¿½ 148 mm)</TD
 ></TR
 ><TR
 ><TD
@@ -4733,13 +4733,13 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->US index card 4 × 6 in</TD
+>US index card 4 ï¿½ 6 in</TD
 ></TR
 ><TR
 ><TD
 ALIGN="RIGHT"
 VALIGN="TOP"
->§*<TT
+>ï¿½*<TT
 CLASS="USERINPUT"
 ><B
 >Env10</B
@@ -4748,7 +4748,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->US no. 10 envelope (4.125 × 9.5 in)</TD
+>US no. 10 envelope (4.125 ï¿½ 9.5 in)</TD
 ></TR
 ><TR
 ><TD
@@ -4763,7 +4763,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->ISO/JIS A6 (105 × 148 mm)</TD
+>ISO/JIS A6 (105 ï¿½ 148 mm)</TD
 ></TR
 ><TR
 ><TD
@@ -4778,13 +4778,13 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->ISO/JIS A6 postcard (105 × 148 mm)</TD
+>ISO/JIS A6 postcard (105 ï¿½ 148 mm)</TD
 ></TR
 ><TR
 ><TD
 ALIGN="RIGHT"
 VALIGN="TOP"
->§*<TT
+>ï¿½*<TT
 CLASS="USERINPUT"
 ><B
 >EnvDL</B
@@ -4793,7 +4793,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->ISO DL envelope (110 × 220 mm)</TD
+>ISO DL envelope (110 ï¿½ 220 mm)</TD
 ></TR
 ><TR
 ><TD
@@ -4808,7 +4808,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->US A2 envelope (4.375 × 5.75 in)</TD
+>US A2 envelope (4.375 ï¿½ 5.75 in)</TD
 ></TR
 ><TR
 ><TD
@@ -4823,7 +4823,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->ISO C6 envelope (114 × 162 mm)</TD
+>ISO C6 envelope (114 ï¿½ 162 mm)</TD
 ></TR
 ><TR
 ><TD
@@ -4838,7 +4838,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->Japanese long envelope #3 (120 × 235 mm)</TD
+>Japanese long envelope #3 (120 ï¿½ 235 mm)</TD
 ></TR
 ><TR
 ><TD
@@ -4853,7 +4853,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->US index card 5 × 8 in</TD
+>US index card 5 ï¿½ 8 in</TD
 ></TR
 ><TR
 ><TD
@@ -4868,7 +4868,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->US Statement (5.5 × 8.5 in)</TD
+>US Statement (5.5 ï¿½ 8.5 in)</TD
 ></TR
 ><TR
 ><TD
@@ -4883,7 +4883,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->double Postcard (148 × 200 mm)</TD
+>double Postcard (148 ï¿½ 200 mm)</TD
 ></TR
 ><TR
 ><TD
@@ -4898,7 +4898,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->ISO/JIS A5 (148 × 210 mm)</TD
+>ISO/JIS A5 (148 ï¿½ 210 mm)</TD
 ></TR
 ><TR
 ><TD
@@ -4913,7 +4913,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->ISO C5 envelope (162 × 229 mm)</TD
+>ISO C5 envelope (162 ï¿½ 229 mm)</TD
 ></TR
 ><TR
 ><TD
@@ -4928,7 +4928,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->ISO B5 (176 × 250 mm)</TD
+>ISO B5 (176 ï¿½ 250 mm)</TD
 ></TR
 ><TR
 ><TD
@@ -4943,13 +4943,13 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->JIS B5 (182 × 257 mm)</TD
+>JIS B5 (182 ï¿½ 257 mm)</TD
 ></TR
 ><TR
 ><TD
 ALIGN="RIGHT"
 VALIGN="TOP"
->§*<TT
+>ï¿½*<TT
 CLASS="USERINPUT"
 ><B
 >Executive</B
@@ -4958,13 +4958,13 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->US Executive (7.25 × 10.5 in)</TD
+>US Executive (7.25 ï¿½ 10.5 in)</TD
 ></TR
 ><TR
 ><TD
 ALIGN="RIGHT"
 VALIGN="TOP"
->§*<TT
+>ï¿½*<TT
 CLASS="USERINPUT"
 ><B
 >A4</B
@@ -4973,13 +4973,13 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->ISO/JIS A4 (210 × 297 mm)</TD
+>ISO/JIS A4 (210 ï¿½ 297 mm)</TD
 ></TR
 ><TR
 ><TD
 ALIGN="RIGHT"
 VALIGN="TOP"
->§*<TT
+>ï¿½*<TT
 CLASS="USERINPUT"
 ><B
 >Letter</B
@@ -4988,13 +4988,13 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->US Letter (8.5 × 11 in)</TD
+>US Letter (8.5 ï¿½ 11 in)</TD
 ></TR
 ><TR
 ><TD
 ALIGN="RIGHT"
 VALIGN="TOP"
->§*<TT
+>ï¿½*<TT
 CLASS="USERINPUT"
 ><B
 >Legal</B
@@ -5003,7 +5003,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->US Legal (8.5 × 14 in)</TD
+>US Legal (8.5 ï¿½ 14 in)</TD
 ></TR
 ><TR
 ><TD
@@ -5018,7 +5018,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->Japanese Kaku envelope (240 × 332 mm)</TD
+>Japanese Kaku envelope (240 ï¿½ 332 mm)</TD
 ></TR
 ><TR
 ><TD
@@ -5033,8 +5033,8 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->JIS B4 (257 × 364 mm).
-This is distinct from ISO B4 (250 × 353 mm).</TD
+>JIS B4 (257 ï¿½ 364 mm).
+This is distinct from ISO B4 (250 ï¿½ 353 mm).</TD
 ></TR
 ><TR
 ><TD
@@ -5049,7 +5049,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->US Tabloid (11 × 17 in; in landscape orientation also called "Ledger")</TD
+>US Tabloid (11 ï¿½ 17 in; in landscape orientation also called "Ledger")</TD
 ></TR
 ><TR
 ><TD
@@ -5064,7 +5064,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->ISO/JIS A3 (297 × 420 mm)</TD
+>ISO/JIS A3 (297 ï¿½ 420 mm)</TD
 ></TR
 ><TR
 ><TD
@@ -5079,7 +5079,7 @@ CLASS="USERINPUT"
 ><TD
 ALIGN="LEFT"
 VALIGN="TOP"
->what HP calls Super B (13 × 19 in)</TD
+>what HP calls Super B (13 ï¿½ 19 in)</TD
 ></TR
 ><TR
 ><TD
@@ -5181,7 +5181,7 @@ CLASS="USERINPUT"
 ><B
 >unspec</B
 ></TT
-> (group 3).
+> (groupï¿½3).
 In these cases you can print, within certain limits, on arbitrarily-sized media.
 The driver knows these limits and refuses to generate a file if you exceed them.
 For <TT
@@ -5597,7 +5597,7 @@ CLASS="COMMAND"
 >pcl3opts</B
 >
 if you can in order to find out which values other drivers generate.
-Don't bother testing the value 0:
+Don't bother testing the valueï¿½0:
 in PCL its effect is to eject a page and, as this is not needed,
 <B
 CLASS="COMMAND"
@@ -5608,7 +5608,7 @@ selected.</P
 >I do not know of any PCL-3+ printer supporting more than one output tray,
 hence the corresponding implementation is based on the speculation that such
 a feature, if made available,
-would use the same command as in PCL 5.
+would use the same command as in PCLï¿½5.
 Again, a value of zero is used by <B
 CLASS="COMMAND"
 >pcl3</B
@@ -5965,14 +5965,14 @@ CLASS="REPLACEABLE"
 ><I
 >number</I
 ></TT
-> &#60; 1
+> &#60;ï¿½1
 will lead to lighter colours and
 <TT
 CLASS="REPLACEABLE"
 ><I
 >number</I
 ></TT
-> &#62; 1 results in darker colours.</P
+> &#62;ï¿½1 results in darker colours.</P
 ><P
 >The best value for <TT
 CLASS="REPLACEABLE"
@@ -5989,7 +5989,7 @@ and the properties of the document to be printed.</P
 >Note that there is no common convention for the interpretation of
 stand-alone gamma values.
 When dealing with other software you might for example find that the boundary
-between light and dark is at a value of 1000 and
+between light and dark is at a value ofï¿½1000 and
 that lighter colours are obtained with larger values.
 In order to understand what a "gamma value" means
 you therefore need the complete specification of the transfer function and,
@@ -6238,8 +6238,8 @@ CLASS="REFSECT1"
 ><H2
 >AUTHOR</H2
 ><P
->Copyright © 2000, 2001 by Martin Lottermoser,
-Greifswaldstraße 28, 38124 Braunschweig, Germany.
+>Copyright ï¿½ 2000, 2001 by Martin Lottermoser,
+Greifswaldstraï¿½e 28, 38124 Braunschweig, Germany.
 E-mail:
 <A HREF="mailto:Martin.Lottermoser@t-online.de"><TT
 CLASS="EMAIL"

@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gdevsvg.c,v 1.2 2010/07/10 22:02:19 Arabidopsis Exp $ */
+/* $Id$ */
 /* SVG (Scalable Vector Graphics) output device */
 
 #include "string_.h"
@@ -55,7 +55,7 @@ typedef struct gx_device_svg_s {
     int dirty;		/* whether we need to rewrite the <g> element */
     int mark;		/* <g> nesting level */
     int page_count;	/* how many output_page calls we've seen */
-    char *strokecolor, *fillcolor;
+    gx_color_index strokecolor, fillcolor;
     double linewidth;
     gs_line_cap linecap;
     gs_line_join linejoin;
@@ -64,12 +64,12 @@ typedef struct gx_device_svg_s {
 
 #define svg_device_body(dname, depth)\
   std_device_dci_type_body(gx_device_svg, 0, dname, &st_device_svg, \
-			   DEFAULT_WIDTH_10THS * X_DPI / 10, \
-			   DEFAULT_HEIGHT_10THS * Y_DPI / 10, \
-			   X_DPI, Y_DPI, \
-			   (depth > 8 ? 3 : 1), depth, \
-			   (depth > 1 ? 255 : 1), (depth > 8 ? 255 : 0), \
-			   (depth > 1 ? 256 : 2), (depth > 8 ? 256 : 1))
+                           DEFAULT_WIDTH_10THS * X_DPI / 10, \
+                           DEFAULT_HEIGHT_10THS * Y_DPI / 10, \
+                           X_DPI, Y_DPI, \
+                           (depth > 8 ? 3 : 1), depth, \
+                           (depth > 1 ? 255 : 1), (depth > 8 ? 255 : 0), \
+                           (depth > 1 ? 256 : 2), (depth > 8 ? 256 : 1))
 
 static dev_proc_open_device(svg_open_device);
 static dev_proc_output_page(svg_output_page);
@@ -80,7 +80,7 @@ static dev_proc_put_params(svg_put_params);
 
 #define svg_device_procs \
 { \
-	svg_open_device, \
+        svg_open_device, \
         NULL,                   /* get_initial_matrix */\
         NULL,                   /* sync_output */\
         svg_output_page,\
@@ -118,13 +118,10 @@ static dev_proc_put_params(svg_put_params);
         NULL			/* strip_copy_rop */\
 }
 
-gs_public_st_suffix_string2_final(st_device_svg, gx_device_svg,
+gs_public_st_suffix_add0_final(st_device_svg, gx_device_svg,
                                "gx_device_svg",
-                               device_svg_enum_ptrs,
-			       device_svg_reloc_ptrs,
-                               gx_device_finalize,
-			       st_device_vector,
-			       strokecolor, fillcolor);
+                               device_svg_enum_ptrs, device_svg_reloc_ptrs,
+                               gx_device_finalize, st_device_vector);
 
 /* The output device is named 'svg' but we're referred to as the
    'svgwrite' device by the build system to avoid conflicts with
@@ -148,40 +145,40 @@ static int
 svg_setmiterlimit(gx_device_vector *vdev, floatp limit);
 static int
 svg_setdash(gx_device_vector *vdev, const float *pattern,
-	    uint count, floatp offset);
+            uint count, floatp offset);
 static int
 svg_setlogop(gx_device_vector *vdev, gs_logical_operation_t lop,
-	     gs_logical_operation_t diff);
+             gs_logical_operation_t diff);
 
 static int
 svg_can_handle_hl_color(gx_device_vector *vdev, const gs_imager_state *pis,
-			const gx_drawing_color * pdc);
+                        const gx_drawing_color * pdc);
 static int
 svg_setfillcolor(gx_device_vector *vdev, const gs_imager_state *pis,
                  const gx_drawing_color *pdc);
 static int
 svg_setstrokecolor(gx_device_vector *vdev, const gs_imager_state *pis,
-		   const gx_drawing_color *pdc);
+                   const gx_drawing_color *pdc);
 
 static int
 svg_dorect(gx_device_vector *vdev, fixed x0, fixed y0,
-	   fixed x1, fixed y1, gx_path_type_t type);
+           fixed x1, fixed y1, gx_path_type_t type);
 static int
 svg_beginpath(gx_device_vector *vdev, gx_path_type_t type);
 
 static int
 svg_moveto(gx_device_vector *vdev, floatp x0, floatp y0,
-	   floatp x, floatp y, gx_path_type_t type);
+           floatp x, floatp y, gx_path_type_t type);
 static int
 svg_lineto(gx_device_vector *vdev, floatp x0, floatp y0,
-	   floatp x, floatp y, gx_path_type_t type);
+           floatp x, floatp y, gx_path_type_t type);
 static int
 svg_curveto(gx_device_vector *vdev, floatp x0, floatp y0,
-	    floatp x1, floatp y1, floatp x2, floatp y2,
-	    floatp x3, floatp y3, gx_path_type_t type);
+            floatp x1, floatp y1, floatp x2, floatp y2,
+            floatp x3, floatp y3, gx_path_type_t type);
 static int
 svg_closepath(gx_device_vector *vdev, floatp x, floatp y,
-	      floatp x_start, floatp y_start, gx_path_type_t type);
+              floatp x_start, floatp y_start, gx_path_type_t type);
 static int
 svg_endpath(gx_device_vector *vdev, gx_path_type_t type);
 
@@ -216,7 +213,7 @@ static const gx_device_vector_procs svg_vector_procs = {
 /* local utility prototypes */
 
 static int svg_write_bytes(gx_device_svg *svg,
-		const char *string, uint length);
+                const char *string, uint length);
 static int svg_write(gx_device_svg *svg, const char *string);
 
 static int svg_write_header(gx_device_svg *svg);
@@ -235,7 +232,7 @@ svg_open_device(gx_device *dev)
     vdev->vec_procs = &svg_vector_procs;
     gdev_vector_init(vdev);
     code = gdev_vector_open_file_options(vdev, 512,
-	VECTOR_OPEN_FILE_SEQUENTIAL);
+        VECTOR_OPEN_FILE_SEQUENTIAL);
     if (code < 0)
       return gs_rethrow_code(code);
 
@@ -244,8 +241,8 @@ svg_open_device(gx_device *dev)
     svg->dirty = 0;
     svg->mark = 0;
     svg->page_count = 0;
-    svg->strokecolor = NULL;
-    svg->fillcolor = NULL;
+    svg->strokecolor = gx_no_color_index;
+    svg->fillcolor = gx_no_color_index;
     /* these should be the graphics library defaults instead? */
     svg->linewidth = SVG_DEFAULT_LINEWIDTH;
     svg->linecap = SVG_DEFAULT_LINECAP;
@@ -287,11 +284,6 @@ svg_close_device(gx_device *dev)
       svg->header = 0;
     }
 
-    if (svg->fillcolor) gs_free_string(svg->memory,
-	(byte *)svg->fillcolor, 8, "svg_close_device");
-    if (svg->strokecolor) gs_free_string(svg->memory,
-	(byte *)svg->strokecolor, 8, "svg_close_device");
-
     if (ferror(svg->file))
       return gs_throw_code(gs_error_ioerror);
 
@@ -304,7 +296,7 @@ svg_get_params(gx_device *dev, gs_param_list *plist)
 {
     int code = 0;
 
-    dprintf("svg_get_params\n");
+    if_debug0('_', "svg_get_params\n");
 
     /* call our superclass to add its standard set */
     code = gdev_vector_get_params(dev, plist);
@@ -322,7 +314,7 @@ svg_put_params(gx_device *dev, gs_param_list *plist)
 {
     int code = 0;
 
-    dprintf("svg_put_params\n");
+    if_debug0('_', "svg_put_params\n");
 
     /* svg specific parameters are parsed here */
 
@@ -364,7 +356,7 @@ svg_write_header(gx_device_svg *svg)
     uint used;
     char line[300];
 
-    dprintf("svg_write_header\n");
+    if_debug0('_', "svg_write_header\n");
 
     /* only write the header once */
     if (svg->header)
@@ -378,17 +370,17 @@ svg_write_header(gx_device_svg *svg)
     /* svg_write(svg, line); */
     sputs(s, (byte *)line, strlen(line), &used);
     sprintf(line, "<svg xmlns='%s' version='%s'",
-	SVG_XMLNS, SVG_VERSION);
+        SVG_XMLNS, SVG_VERSION);
     /* svg_write(svg, line); */
     sputs(s, (byte *)line, strlen(line), &used);
     sprintf(line, "\n\twidth='%dpt' height='%dpt'>\n",
-	(int)svg->MediaSize[0], (int)svg->MediaSize[1]);
+        (int)svg->MediaSize[0], (int)svg->MediaSize[1]);
     sputs(s, (byte *)line, strlen(line), &used);
 
     /* Scale drawing so our coordinates are in pixels */
     sprintf(line, "<g transform='scale(%lf,%lf)'>\n",
-    	72.0 / svg->HWResolution[0],
-    	72.0 / svg->HWResolution[1]);
+        72.0 / svg->HWResolution[0],
+        72.0 / svg->HWResolution[1]);
     /* svg_write(svg, line); */
     sputs(s, (byte *)line, strlen(line), &used);
     svg->mark++;
@@ -399,28 +391,15 @@ svg_write_header(gx_device_svg *svg)
     return 0;
 }
 
-static char *
-svg_make_color(gx_device_svg *svg, const gx_drawing_color *pdc)
+static gx_color_index
+svg_get_color(gx_device_svg *svg, const gx_drawing_color *pdc)
 {
-    char *paint = (char *)gs_alloc_string(svg->memory, 8, "svg_make_color");
 
-    if (!paint) {
-      gs_throw(gs_error_VMerror, "string allocation failed");
-      return NULL;
-    }
+    gx_color_index color = gx_no_color_index;
 
-    if (gx_dc_is_pure(pdc)) {
-      gx_color_index color = gx_dc_pure_color(pdc);
-      sprintf(paint, "#%06x", (int)(color & 0xffffffL));
-    } else if (gx_dc_is_null(pdc)) {
-      sprintf(paint, "None");
-    } else {
-      gs_free_string(svg->memory, (byte *)paint, 8, "svg_make_color");
-      gs_throw(gs_error_rangecheck, "unknown color type");
-      return NULL;
-    }
-
-    return paint;
+    if (gx_dc_is_pure(pdc))
+	color = gx_dc_pure_color(pdc);
+    return color;
 }
 
 static int
@@ -439,15 +418,15 @@ svg_write_state(gx_device_svg *svg)
     }
     /* write out the new current state */
     svg_write(svg, "<g ");
-    if (svg->strokecolor) {
-        sprintf(line, " stroke='%s'", svg->strokecolor);
-	svg_write(svg, line);
+    if (svg->strokecolor != gx_no_color_index) {
+	sprintf(line, " stroke='#%06x'", svg->strokecolor & 0xffffffL);
+        svg_write(svg, line);
     } else {
-	svg_write(svg, " stroke='none'");
+        svg_write(svg, " stroke='none'");
     }
-    if (svg->fillcolor) {
-	sprintf(line, " fill='%s'", svg->fillcolor);
-	svg_write(svg, line);
+    if (svg->fillcolor != gx_no_color_index) {
+        sprintf(line, "#%06x", svg->fillcolor & 0xffffffL);
+        svg_write(svg, line);
     } else {
       svg_write(svg, " fill='none'");
     }
@@ -456,38 +435,38 @@ svg_write_state(gx_device_svg *svg)
       svg_write(svg, line);
     }
     if (svg->linecap != SVG_DEFAULT_LINECAP) {
-	switch (svg->linecap) {
-	  case gs_cap_round:
-	    svg_write(svg, " stroke-linecap='round'");
-	    break;
-	  case gs_cap_square:
-	    svg_write(svg, " stroke-linecap='square'");
-	    break;
-	  case gs_cap_butt:
-	  default:
-	    /* treat all the other options as the default */
-	    svg_write(svg, " stroke-linecap='butt'");
-	    break;
-	}
+        switch (svg->linecap) {
+          case gs_cap_round:
+            svg_write(svg, " stroke-linecap='round'");
+            break;
+          case gs_cap_square:
+            svg_write(svg, " stroke-linecap='square'");
+            break;
+          case gs_cap_butt:
+          default:
+            /* treat all the other options as the default */
+            svg_write(svg, " stroke-linecap='butt'");
+            break;
+        }
     }
     if (svg->linejoin != SVG_DEFAULT_LINEJOIN) {
-	switch (svg->linejoin) {
-	  case gs_join_round:
-	    svg_write(svg, " stroke-linejoin='round'");
-	    break;
-	  case gs_join_bevel:
-	    svg_write(svg, " stroke-linejoin='bevel'");
-	    break;
-	  case gs_join_miter:
-	  default:
-	    /* SVG doesn't support any other variants */
-	    svg_write(svg, " stroke-linejoin='miter'");
-	    break;
-	}
+        switch (svg->linejoin) {
+          case gs_join_round:
+            svg_write(svg, " stroke-linejoin='round'");
+            break;
+          case gs_join_bevel:
+            svg_write(svg, " stroke-linejoin='bevel'");
+            break;
+          case gs_join_miter:
+          default:
+            /* SVG doesn't support any other variants */
+            svg_write(svg, " stroke-linejoin='miter'");
+            break;
+        }
     }
     if (svg->miterlimit != SVG_DEFAULT_MITERLIMIT) {
-	sprintf(line, " stroke-miterlimit='%lf'", svg->miterlimit);
-	svg_write(svg, line);
+        sprintf(line, " stroke-miterlimit='%lf'", svg->miterlimit);
+        svg_write(svg, line);
     }
     svg_write(svg, ">\n");
     svg->mark++;
@@ -506,7 +485,7 @@ svg_beginpage(gx_device_vector *vdev)
 
     svg_write_header(svg);
 
-    dprintf1("svg_beginpage (page count %d)\n", svg->page_count);
+    if_debug1('_', "svg_beginpage (page count %d)\n", svg->page_count);
     return 0;
 }
 
@@ -516,7 +495,7 @@ svg_setlinewidth(gx_device_vector *vdev, floatp width)
 {
     gx_device_svg *svg = (gx_device_svg *)vdev;
 
-    dprintf1("svg_setlinewidth(%lf)\n", width);
+    if_debug1('_', "svg_setlinewidth(%lf)\n", width);
 
     svg->linewidth = width;
     svg->dirty++;
@@ -528,11 +507,11 @@ svg_setlinecap(gx_device_vector *vdev, gs_line_cap cap)
 {
     gx_device_svg *svg = (gx_device_svg *)vdev;
     const char *linecap_names[] = {"butt", "round", "square",
-	"triangle", "unknown"};
+        "triangle", "unknown"};
 
     if (cap < 0 || cap > gs_cap_unknown)
-	return gs_throw_code(gs_error_rangecheck);
-    dprintf1("svg_setlinecap(%s)\n", linecap_names[cap]);
+        return gs_throw_code(gs_error_rangecheck);
+    if_debug1('_', "svg_setlinecap(%s)\n", linecap_names[cap]);
 
     svg->linecap = cap;
     svg->dirty++;
@@ -544,11 +523,11 @@ svg_setlinejoin(gx_device_vector *vdev, gs_line_join join)
 {
     gx_device_svg *svg = (gx_device_svg *)vdev;
     const char *linejoin_names[] = {"miter", "round", "bevel",
-	"none", "triangle", "unknown"};
+        "none", "triangle", "unknown"};
 
     if (join < 0 || join > gs_join_unknown)
-	return gs_throw_code(gs_error_rangecheck);
-    dprintf1("svg_setlinejoin(%s)\n", linejoin_names[join]);
+        return gs_throw_code(gs_error_rangecheck);
+    if_debug1('_', "svg_setlinejoin(%s)\n", linejoin_names[join]);
 
     svg->linejoin = join;
     svg->dirty++;
@@ -558,22 +537,22 @@ svg_setlinejoin(gx_device_vector *vdev, gs_line_join join)
 static int
 svg_setmiterlimit(gx_device_vector *vdev, floatp limit)
 {
-    dprintf1("svg_setmiterlimit(%lf)\n", limit);
+    if_debug1('_', "svg_setmiterlimit(%lf)\n", limit);
     return 0;
 }
 static int
 svg_setdash(gx_device_vector *vdev, const float *pattern,
-	    uint count, floatp offset)
+            uint count, floatp offset)
 {
-    dprintf("svg_setdash\n");
+    if_debug0('_', "svg_setdash\n");
     return 0;
 }
 static int
 svg_setlogop(gx_device_vector *vdev, gs_logical_operation_t lop,
-	     gs_logical_operation_t diff)
+             gs_logical_operation_t diff)
 {
-    dprintf2("svg_setlogop(%u,%u) set logical operation\n",
-	lop, diff);
+    if_debug2('_', "svg_setlogop(%u,%u) set logical operation\n",
+        lop, diff);
     /* SVG can fake some simpler modes, but we ignore this for now. */
     return 0;
 }
@@ -582,57 +561,43 @@ svg_setlogop(gx_device_vector *vdev, gs_logical_operation_t lop,
 
 static int
 svg_can_handle_hl_color(gx_device_vector *vdev, const gs_imager_state *pis,
-			  const gx_drawing_color * pdc)
+                          const gx_drawing_color * pdc)
 {
-    dprintf("svg_can_handle_hl_color\n");
+    if_debug0('_', "svg_can_handle_hl_color\n");
     return 0;
 }
 
 static int
 svg_setfillcolor(gx_device_vector *vdev, const gs_imager_state *pis,
-		 const gx_drawing_color *pdc)
+                 const gx_drawing_color *pdc)
 {
     gx_device_svg *svg = (gx_device_svg*)vdev;
-    char *fill;
+    gx_color_index fill = svg_get_color(svg, pdc);
 
-    dprintf("svg_setfillcolor\n");
+    if_debug0('_', "svg_setfillcolor\n");
 
-    fill = svg_make_color(svg, pdc);
-    if (!fill)
-      return gs_rethrow_code(gs_error_VMerror);
-    if (svg->fillcolor && !strcmp(fill, svg->fillcolor))
+    if (svg->fillcolor != fill)
       return 0; /* not a new color */
-
     /* update our state with the new color */
-    if (svg->fillcolor)
-	gs_free_string(svg->memory, (byte *)svg->fillcolor, 8,
-		"svg_setfillcolor");
     svg->fillcolor = fill;
     /* request a new group element */
     svg->dirty++;
-
     return 0;
 }
 
 static int
 svg_setstrokecolor(gx_device_vector *vdev, const gs_imager_state *pis,
-		   const gx_drawing_color *pdc)
+                   const gx_drawing_color *pdc)
 {
     gx_device_svg *svg = (gx_device_svg*)vdev;
-    char *stroke;
+    gx_color_index stroke = svg_get_color(svg, pdc);
 
-    dprintf("svg_setstrokecolor\n");
+    if_debug0('_', "svg_setstrokecolor\n");
 
-    stroke = svg_make_color(svg, pdc);
-    if (!stroke)
-      return gs_rethrow_code(gs_error_VMerror);
-    if (svg->strokecolor && !strcmp(stroke, svg->strokecolor))
+    if (svg->strokecolor != stroke)
       return 0; /* not a new color */
 
     /* update our state with the new color */
-    if (svg->strokecolor)
-	gs_free_string(svg->memory, (byte *)svg->strokecolor, 8,
-		"svg_setstrokecolor");
     svg->strokecolor = stroke;
     /* request a new group element */
     svg->dirty++;
@@ -640,25 +605,25 @@ svg_setstrokecolor(gx_device_vector *vdev, const gs_imager_state *pis,
     return 0;
 }
 
-	/* Paths */
+        /* Paths */
 /*    gdev_vector_dopath */
 
 static int svg_print_path_type(gx_device_svg *svg, gx_path_type_t type)
 {
     const char *path_type_names[] = {"winding number", "fill", "stroke",
-    	"fill and stroke", "clip"};
+        "fill and stroke", "clip"};
 
     if (type <= 4)
-	dprintf2("type %d (%s)", type, path_type_names[type]);
+        if_debug2('_', "type %d (%s)", type, path_type_names[type]);
     else
-	dprintf1("type %d", type);
+        if_debug1('_', "type %d", type);
 
     return 0;
 }
 
 static int
 svg_dorect(gx_device_vector *vdev, fixed x0, fixed y0,
-	   fixed x1, fixed y1, gx_path_type_t type)
+           fixed x1, fixed y1, gx_path_type_t type)
 {
     gx_device_svg *svg = (gx_device_svg *)vdev;
     char line[300];
@@ -667,30 +632,30 @@ svg_dorect(gx_device_vector *vdev, fixed x0, fixed y0,
     if (svg->page_count)
       return 0;
 
-    dprintf("svg_dorect ");
+    if_debug0('_', "svg_dorect");
     svg_print_path_type(svg, type);
-    dprintf("\n");
+    if_debug0('_', "\n");
 
     svg_write_state(svg);
 
     if (type & gx_path_type_clip) {
-	svg_write(svg, "<clipPath>\n");
+        svg_write(svg, "<clipPath>\n");
     }
 
     sprintf(line, "<rect x='%lf' y='%lf' width='%lf' height='%lf'",
-	fixed2float(x0), fixed2float(y0),
-	fixed2float(x1 - x0), fixed2float(y1 - y0));
+        fixed2float(x0), fixed2float(y0),
+        fixed2float(x1 - x0), fixed2float(y1 - y0));
     svg_write(svg, line);
     /* override the inherited stroke attribute if we're not stroking */
-    if (!(type & gx_path_type_stroke) && svg->strokecolor)
-	svg_write(svg, " stroke='none'");
+    if (!(type & gx_path_type_stroke) && (svg->strokecolor != gx_no_color_index))
+        svg_write(svg, " stroke='none'");
     /* override the inherited fill attribute if we're not filling */
-    if (!(type & gx_path_type_fill) && svg->fillcolor)
-	svg_write(svg, " fill='none'");
+    if (!(type & gx_path_type_fill) && (svg->fillcolor != gx_no_color_index))
+        svg_write(svg, " fill='none'");
     svg_write(svg, "/>\n");
 
     if (type & gx_path_type_clip) {
-	svg_write(svg, "</clipPath>\n");
+        svg_write(svg, "</clipPath>\n");
     }
 
     return 0;
@@ -709,9 +674,9 @@ svg_beginpath(gx_device_vector *vdev, gx_path_type_t type)
     if (!(type & gx_path_type_fill) && !(type & gx_path_type_stroke))
       return 0;
 
-    dprintf("svg_beginpath ");
+    if_debug0('_', "svg_beginpath ");
     svg_print_path_type(svg, type);
-    dprintf("\n");
+    if_debug0('_', "\n");
 
     svg_write_state(svg);
     svg_write(svg, "<path d='");
@@ -721,7 +686,7 @@ svg_beginpath(gx_device_vector *vdev, gx_path_type_t type)
 
 static int
 svg_moveto(gx_device_vector *vdev, floatp x0, floatp y0,
-	   floatp x, floatp y, gx_path_type_t type)
+           floatp x, floatp y, gx_path_type_t type)
 {
     gx_device_svg *svg = (gx_device_svg *)vdev;
     char line[SVG_LINESIZE];
@@ -734,9 +699,9 @@ svg_moveto(gx_device_vector *vdev, floatp x0, floatp y0,
     if (!(type & gx_path_type_fill) && !(type & gx_path_type_stroke))
       return 0;
 
-    dprintf4("svg_moveto(%lf,%lf,%lf,%lf) ", x0, y0, x, y);
+    if_debug4('_', "svg_moveto(%lf,%lf,%lf,%lf) ", x0, y0, x, y);
     svg_print_path_type(svg, type);
-    dprintf("\n");
+    if_debug0('_', "\n");
 
     sprintf(line, " M%lf,%lf", x, y);
     svg_write(svg, line);
@@ -746,7 +711,7 @@ svg_moveto(gx_device_vector *vdev, floatp x0, floatp y0,
 
 static int
 svg_lineto(gx_device_vector *vdev, floatp x0, floatp y0,
-	   floatp x, floatp y, gx_path_type_t type)
+           floatp x, floatp y, gx_path_type_t type)
 {
     gx_device_svg *svg = (gx_device_svg *)vdev;
     char line[SVG_LINESIZE];
@@ -759,9 +724,9 @@ svg_lineto(gx_device_vector *vdev, floatp x0, floatp y0,
     if (!(type & gx_path_type_fill) && !(type & gx_path_type_stroke))
       return 0;
 
-    dprintf4("svg_lineto(%lf,%lf,%lf,%lf) ", x0,y0, x,y);
+    if_debug4('_', "svg_lineto(%lf,%lf,%lf,%lf) ", x0,y0, x,y);
     svg_print_path_type(svg, type);
-    dprintf("\n");
+    if_debug0('_', "\n");
 
     sprintf(line, " L%lf,%lf", x, y);
     svg_write(svg, line);
@@ -771,8 +736,8 @@ svg_lineto(gx_device_vector *vdev, floatp x0, floatp y0,
 
 static int
 svg_curveto(gx_device_vector *vdev, floatp x0, floatp y0,
-	    floatp x1, floatp y1, floatp x2, floatp y2,
-	    floatp x3, floatp y3, gx_path_type_t type)
+            floatp x1, floatp y1, floatp x2, floatp y2,
+            floatp x3, floatp y3, gx_path_type_t type)
 {
     gx_device_svg *svg = (gx_device_svg *)vdev;
     char line[SVG_LINESIZE];
@@ -785,10 +750,10 @@ svg_curveto(gx_device_vector *vdev, floatp x0, floatp y0,
     if (!(type & gx_path_type_fill) && !(type & gx_path_type_stroke))
       return 0;
 
-    dprintf8("svg_curveto(%lf,%lf, %lf,%lf, %lf,%lf, %lf,%lf) ",
-	x0,y0, x1,y1, x2,y2, x3,y3);
+    if_debug8('_', "svg_curveto(%lf,%lf, %lf,%lf, %lf,%lf, %lf,%lf) ",
+        x0,y0, x1,y1, x2,y2, x3,y3);
     svg_print_path_type(svg, type);
-    dprintf("\n");
+    if_debug0('_', "\n");
 
     sprintf(line, " C%lf,%lf %lf,%lf %lf,%lf", x1,y1, x2,y2, x3,y3);
     svg_write(svg, line);
@@ -798,7 +763,7 @@ svg_curveto(gx_device_vector *vdev, floatp x0, floatp y0,
 
 static int
 svg_closepath(gx_device_vector *vdev, floatp x, floatp y,
-	      floatp x_start, floatp y_start, gx_path_type_t type)
+              floatp x_start, floatp y_start, gx_path_type_t type)
 {
     gx_device_svg *svg = (gx_device_svg *)vdev;
 
@@ -810,9 +775,9 @@ svg_closepath(gx_device_vector *vdev, floatp x, floatp y,
     if (!(type & gx_path_type_fill) && !(type & gx_path_type_stroke))
       return 0;
 
-    dprintf("svg_closepath ");
+    if_debug0('_', "svg_closepath ");
     svg_print_path_type(svg, type);
-    dprintf("\n");
+    if_debug0('_', "\n");
 
     svg_write(svg, " z");
 
@@ -832,23 +797,22 @@ svg_endpath(gx_device_vector *vdev, gx_path_type_t type)
     if (!(type & gx_path_type_fill) && !(type & gx_path_type_stroke))
       return 0;
 
-    dprintf("svg_endpath ");
+    if_debug0('_', "svg_endpath ");
     svg_print_path_type(svg, type);
-    dprintf("\n");
+    if_debug0('_', "\n");
 
     /* close the path data attribute */
     svg_write(svg, "'");
 
     /* override the inherited stroke attribute if we're not stroking */
-    if (!(type & gx_path_type_stroke) && svg->strokecolor)
+    if (!(type & gx_path_type_stroke) && (svg->strokecolor != gx_no_color_index))
       svg_write(svg, " stroke='none'");
 
     /* override the inherited fill attribute if we're not filling */
-    if (!(type & gx_path_type_fill) && svg->fillcolor)
+    if (!(type & gx_path_type_fill) && (svg->fillcolor != gx_no_color_index))
       svg_write(svg, " fill='none'");
 
     svg_write(svg, "/>\n");
 
     return 0;
 }
-

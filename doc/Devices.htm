@@ -1,8 +1,9 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii">
 <title>Details of Ghostscript output devices</title>
-<!-- $Id: Devices.htm,v 1.15 2010/07/10 22:02:53 Arabidopsis Exp $ -->
+<!-- $Id$ -->
 <!-- Originally: devices.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -39,8 +40,9 @@
 <li><a href="#PS">PostScript file output</a>
 <li><a href="#EPS">EPS file output</a>
 <li><a href="#PXL">PCL-XL file output</a>
+<li><a href="#TXT">Text output</a>
 </ul>
-<li><a href="#Display_devices">Display devices</a>
+<li><a href="#Dis	play_devices">Display devices</a>
 <ul>
 <li><a href="#x11_devices">X Window System</a>
 <li><a href="#display_device">display device (MS Windows, OS/2, gtk+)</a>
@@ -187,8 +189,11 @@ for a complete description of the format.</p>
 
 <p>Ghostscript provides a variety of devices for <acronym>PNG</acronym> output
 varying by bit depth. For normal use we recommend <tt>png16m</tt> for 24-bit RGB color,
-or <tt>pnggray</tt> for grayscale. The png256, png16 and pngmono devices respectively
-provide 8-bit color, 4-bit color and black-and-white for special needs.</p>
+or <tt>pnggray</tt> for grayscale. The <tt>png256</tt>, <tt>png16</tt> and
+<tt>pngmono</tt> devices respectively provide 8-bit color, 4-bit color and
+black-and-white for special needs. The <tt>pngmonod</tt> device is also a
+black-and-white device, but the output is formed from an internal 8 bit grayscale
+rendering which is then error diffused and converted down to 1bpp.</p>
 
 <p>The pngalpha device is 32-bit RGBA color with transparency 
 indicating pixel coverage.  The background is transparent unless
@@ -198,8 +203,44 @@ anti-aliasing are enabled by default.</p>
 
 <h4>Options</h4>
 
-<p>The pngalpha device has one option. 
-The other png devices have no special options.</p>
+<p>The <tt>pngmonod</tt>, <tt>png16m</tt> and <tt>pnggray</tt> devices all
+respond to the following:</p>
+
+<blockquote>
+<dl>
+<dt><code>-dDownScaleFactor=</code><b><em>integer</em></b>
+<dd>This causes the internal rendering to be scaled down by the given (small
+integer) factor before being output. For example, the following will produce
+a 200dpi output png from a 300dpi internal rendering:
+<blockquote>
+<pre>
+ <kbd>gs -sDEVICE=png16m -r600 -dDownScaleFactor=3 -o tiger.png\
+      examples/tiger.png</kbd>
+</pre>
+</blockquote>
+
+</dl>
+</blockquote>
+
+<p>The <tt>pngmonod</tt> device responds to the following option:</p>
+
+<blockquote>
+<dl>
+<dt><code>-dMinFeatureSize=</code><em>state</em> (0 to 4; default = 1)
+<dd>This option allows a minimum feature size to be set; if any output pixel
+appears on its own, or as part of a group of pixels smaller than
+<tt>MinFeatureSize</tt> x <tt>MinFeatureSize</tt>, it will be expanded to
+ensure that it does. This is useful for output devices that are high
+resolution, but that have trouble rendering isolated pixels.
+
+<dd>While this parameter will accept values from 0 to 4, not all are fully
+implemented. 0 and 1 cause no change to the output (as expected). 2 works
+as specified. Values of 3 and 4 are accepted for compatibility, but
+behave as for 2.
+</dl>
+</blockquote>
+
+<p>The <tt>pngalpha</tt> device responds to the following option:</p>
 
 <blockquote>
 <dl>
@@ -385,6 +426,12 @@ SeparationOrder parameter, the composite CMYK output contains
 the equivalent CMYK data only for the selected colorants.  
 
 <p>
+NOTE: the composite CMYK output, because it uses the tint transformed
+colour equivalents for any spot colours (see Postscript Language
+Reference "Separation Color Spaces" and "DeviceN Color Spaces"), may
+not produce an accurate preview, if the job uses overprinting.
+
+<p>
 The tiffsep device also prints the names of any spot colors
 detected within a document to stderr.  (stderr is also used for the
 output from the bbox device.)  For each spot color the name of
@@ -403,8 +450,8 @@ more than 4 colorants by doing multiple passes. For each pass after the
 first one, the names of all of the separations need to be specified via 
 the SeparationColorNames parameter and the names of the desired separations 
 need to be specified via the SeparationOrder parameter. For instance, 
-add the following to the command line: <code>-c "<< /SeparationColorNames 
-[ /Name1 /Name2 ] /SeparationOrder [ /Name1 ] >> setpagedevice" -f</code>. 
+add the following to the command line: <code>-c "&lt;&lt; /SeparationColorNames 
+[ /Name1 /Name2 ] /SeparationOrder [ /Name1 ] &gt;&gt; setpagedevice" -f</code>. 
 This will produce a single separation file for the spot color called 'Name1'. 
 It is possible to create an overall CMYK composite for more than 4 colorants 
 by then adding together (via an external application like imagemagick) 
@@ -430,6 +477,32 @@ If the file name specified via the OutputFile parameter ends with the suffix
 '.tif', then the suffix is removed prior to adding the component name in
 '(' and ').tif'.
 
+<a name="tiffscaled"></a><dt><code>tiffscaled</code>
+<dd>
+The tiffscaled device renders internally at the specified resolution to an
+8 bit greyscale image. This is then scaled down by an integer scale factor
+(set by -dDownScaleFactor= described below) and then error diffused to give
+1bpp output. The compression can be set using -sCompression= as described
+below.
+
+<a name="tiffscaled8"></a><dt><code>tiffscaled8</code>
+<dd>
+The tiffscaled8 device renders internally at the specified resolution to an
+8 bit greyscale image. This is then scaled down by an integer scale factor
+(set by -dDownScaleFactor= described below) and then error diffused to give
+8bpp output (error diffusion at this stage is probably pointless and may
+be removed in future versions). The compression can be set using
+-sCompression= as described below.
+
+<a name="tiffscaled24"></a><dt><code>tiffscaled24</code>
+<dd>
+The tiffscaled24 device renders internally at the specified resolution to a
+24 bit rgb image. This is then scaled down by an integer scale factor
+(set by -dDownScaleFactor= described below) and then error diffused to give
+24bpp output (error diffusion at this stage is probably pointless and may
+be removed in future versons). The compression can be set using
+-sCompression= as described below.
+
 </dl>
 </blockquote>
 
@@ -454,6 +527,8 @@ compression modes:
 </dl>
 </blockquote>
 
+<p>See the <tt>AdjustWidth</tt> option documentation below for important
+information about these devices.
 
 <h4>Options</h4>
 
@@ -521,14 +596,52 @@ composite cmyk file.  It defaults to <code>g4</code> for the
 <code>tiffsep1</code> device.
 
 <p>
-The black-and-white TIFF drivers also provide this parameter:
+The black-and-white TIFF devices also provide the following parameters:
 
 <blockquote><dl>
-<dt><code>-dAdjustWidth=<em>state</em></code> (0 or 1; default = 1)
-<dd>If this option set then if the requested page width is in the range of either
-1680..1736 or 2000..2056 columns, set the page width to A4 (1728 columns)
-or B4 (2048 columns) respectively.
-This behavior is the default. Pass -dAdjustWidth=0 to turn off this behavior.
+<dt><code>-dAdjustWidth=<em>state</em></code> (0, 1, or value; default = 1)
+<dd>If this option is 1 then if the requested page width is in the range
+of either 1680..1736 or 2000..2056 columns, set the page width to A4
+(1728 columns) or B4 (2048 columns) respectively. If this option is set
+to a value &gt;1 then the width is unconditionally adjusted to this value.
+
+This behavior is the default for all the fax based devices (i.e. all the black
+and white devices except <tt>tifflzw</tt>, <tt>tiffpack</tt> and
+<tt>tiffscaled</tt>). Pass <tt>-dAdjustWidth=0</tt> to force this behaviour
+off.
+
+<dd>When using this option with <tt>tiffscaled</tt> it is the downsampled size
+that triggers the adjustment.
+
+<dt><code>-dMinFeatureSize=<em>state</em></code> (0 to 4; default = 1)
+<dd>This option allows a minimum feature size to be set; if any output pixel
+appears on its own, or as part of a group of pixels smaller than
+<tt>MinFeatureSize</tt> x <tt>MinFeatureSize</tt>, it will be expanded to
+ensure that it does. This is useful for output devices that are high
+resolution, but that have trouble rendering isolated pixels.
+
+<dd>While this parameter will accept values from 0 to 4, not all are fully
+implemented. 0 and 1 cause no change to the output (as expected). 2 works
+as specified. 3 and 4 currently expand pixels correctly horizontally, but
+only expand vertically to the 2 pixel size.
+
+<dd>The mechanism by which <tt>MinFeatureSize</tt> is implemented for
+<tt>tiffscaled</tt> is different, in that it is done as part of the error
+diffusion. Values of 0 to 2 work as expected, but values 3 and 4 (while
+accepted for compatibility) will behave as for 2.
+
+</dl></blockquote>
+
+<p>
+The <tt>tiffscaled</tt>, <tt>tiffscaled8</tt> and <tt>tiffscaled24</tt> TIFF
+drivers also provide this parameter:
+
+<blockquote><dl>
+<dt><code>-dDownScaleFactor=<em>factor</em></code> (small non-negative integer; default = 1)
+<dd>If this option set then the page is downscaled by the given factor on both
+axes before error diffusion takes place. For example rendering with
+<tt>-r600</tt> and then specifying <tt>-dDownScaleFactor=3</tt> will produce a
+200dpi image.
 </dl></blockquote>
 
 
@@ -542,6 +655,11 @@ described here.
 
 <p>
 The fax devices are <tt>faxg3</tt>, <tt>faxg32d</tt> and <tt>faxg4</tt>.
+</p>
+
+<p>
+The fax devices support the <tt>MinFeatureSize</tt> parameter as defined in
+the TIFF device section.
 </p>
 
 <h3><a name="BMP"></a>BMP</h3>
@@ -585,9 +703,18 @@ resolution independence, and editability.</p>
 <a href="Ps2pdf.htm">Ps2pdf.htm</a> for the extensive <tt>pdfwrite</tt>
 device options.</p>
 
+<h3><a name="PS"></a>PS2 writer</h3>
+
+<p>The <tt>ps2write</tt> device outputs postscript language levels 2 and 3.
+Please refer to <a href="Ps2ps2.htm">Ps2ps2.htm</a> for the <tt>ps2write</tt>
+device options. It is recommnded that this device is used for PostScript output,
+unless level 1 PostScript is required in which case you must
+use the pswrite device below.</p>
+
 <h3><a name="PS"></a>PS writer</h3>
 
-<p>The <tt>pswrite</tt> device outputs postscript.</p>
+<p>The <tt>pswrite</tt> device outputs postscript. This device is now deprecated and
+should only be used when level 1 PostScript output is required.</p>
 
 <h4>Options</h4>
 
@@ -623,6 +750,22 @@ a graphic language understood by many recent laser printers.
 <dl>
 <dt><code>-dCompressMode=<em>1 | 3</em></code> (default is 1)
 <dd>Set the compression algorithm used for bitmap graphics. RLE=1, DeltaRow=3. (JPEG=2 is unimplemented)
+</dl></blockquote>
+
+<h3><a name="TXT"></a>Text output</h3>
+
+<p> The txtwrite device will output the text contained in the original
+document as Unicode (UTF-16). This device is currently under development
+and should not be considered as being of production quality.
+
+<h4>Options</h4>
+<blockquote>
+<dl>
+<dt><code>-dTextFormat=<em>0 | 1</em></code> (default is 0)
+<dd>Format 0 outputs Unicode text (with a Byte Order Mark) which approximates
+to the layout of the text in the original document. Format 1 is intended
+for use by developers and outputs Unicode along with information regarding
+the format of the text (position, font name, point size, etc).
 </dl></blockquote>
 
 <p>
@@ -827,7 +970,7 @@ are summarized below:
 
 <dl>
 <dt><code>-r</code><em>number</em>
-<br><code>-r</code><em>number1</em><b><tt>x</tt></b><em>number2</em>
+<br><code>-r</code><em>number1</em><code>x</code><em>number2</em>
 <dd>Sets the resolution, in dpi. If the resolution is not specified,
 Ghostscript queries the IJS server to determine the preferred resolution.
 When the resolution is specified, it overrides the value (if any)
@@ -857,7 +1000,7 @@ autoconf'ed builds. Others may need some makefile tweaking. First,
 make sure the IJS device is selected:
 
 <blockquote>
-DEVICE_DEVS2=$(DD)ijs.dev
+DEVICE_DEVS2=&#36;(DD)ijs.dev
 </blockquote>
 
 <p> Next, make sure that the path and execution type are set in
@@ -889,7 +1032,7 @@ currently recommended for the faint of heart.</p>
 <p>You will need to add the following line to your makefile:
 
 <blockquote>
-DEVICE_DEVS2=$(DD)rinkj.dev
+DEVICE_DEVS2=&#36;(DD)rinkj.dev
 </blockquote>
 
 <p>Most of the configuration parameters, including resolution, choice
@@ -1025,7 +1168,7 @@ As of the 0.97 version, hpijs supports the following printer models:
 <p>You will need to add the following line to your makefile:
 
 <blockquote>
-DEVICE_DEVS2=$(DD)DJ630.dev $(DD)DJ6xx.dev $(DD)DJ6xxP.dev $(DD)DJ8xx.dev $(DD)DJ9xx.dev $(DD)DJ9xxVIP.dev $(DD)AP21xx.dev
+DEVICE_DEVS2=&#36;(DD)DJ630.dev &#36;(DD)DJ6xx.dev &#36;(DD)DJ6xxP.dev &#36;(DD)DJ8xx.dev &#36;(DD)DJ9xx.dev &#36;(DD)DJ9xxVIP.dev &#36;(DD)AP21xx.dev
 </blockquote>
 
 <p>
@@ -1205,7 +1348,7 @@ shows the <em>printer setup dialog</em> (<code>2</code>) or selects the
 
 <dt><code>/BitsPerPixel <em>integer</em></code></dt>
 <dd>Sets the device depth to the specified bits per pixel. Currently supported
-values are <code>1</code> (monochrome), <tt><b>4</b></tt> (CMYK with screening
+values are <code>1</code> (monochrome), <code>4</code> (CMYK with screening
 handled by Ghostscript) and <code>24</code> (True Color, dithering handled by
 the Windows printer driver; this option can produce huge print jobs).</dd>
 
@@ -1259,7 +1402,7 @@ us /SelectedRange get ==    % displays the selected page range
 
 % other misc. information (don't rely on them)
 
-us /Color get ==            % 1 => monochrome output, 2 => color output
+us /Color get ==            % 1 =&gt; monochrome output, 2 =&gt; color output
 us /PrintCopies get ==      % displays the number of copies requested
 </pre></blockquote>
 
@@ -1275,7 +1418,7 @@ they could be removed in a future version.
 If the Windows printer supports the duplex printing feature, then it will
 also be available through the <code>mswinpr2</code> device. You can query
 for this support through the <code>/Duplex</code> property of the
-<code>currentpagedevice</code>. If it returns <b><tt>null</tt></b>, then
+<code>currentpagedevice</code>. If it returns <code>null</code>, then
 the feature is not supported by the selected printer. Otherwise, <code>true</code>
 means that the printer is currently set up to print on both faces of the paper
 and <code>false</code> that it is not, but that it can.
@@ -1320,7 +1463,7 @@ shown here.
 <h3><a name="SPARC_install"></a>Installation</h3>
 
 <p>
-Add <code>sparc.dev</code> to <b><tt>DEVICE_DEVS</tt></b> and compile
+Add <code>sparc.dev</code> to <code>DEVICE_DEVS</code> and compile
 Ghostscript as described in the documentation on <a href="Make.htm">how to
 build Ghostscript</a>.  Afterwards you can use the following script as an
 example for printing after modifying it with the right pathnames --
@@ -1331,11 +1474,11 @@ executable:
 <pre>outcmd1='/vol/local/lib/troff2/psxlate -r'
 outcmd2='<b><em>{GSPATH}</em></b> -sDEVICE=sparc -sOUTPUTFILE=/dev/lpvi0 -'
 
-if [ $# -eq 0 ]
+if [ &#36;# -eq 0 ]
 then
-  $outcmd1 | $outcmd2
+  &#36;outcmd1 | &#36;outcmd2
 else
-  cat $* | $outcmd1 | $outcmd2
+  cat &#36;* | &#36;outcmd1 | &#36;outcmd2
 fi
 </pre></blockquote>
 
@@ -1394,12 +1537,12 @@ assumes that carriage return-newline is needed, and not just carriage
 return.  These are all switch settings on the DMP, and I have configured
 them for 8-bit data and carriage return exclusively.  Ensure that the Unix
 printer daemon handles 8-bit (binary) data properly; in my SunOS 4.1.1
-<code>printcap</code> file the string "<b><tt>ms=pass8,-opost</tt></b>"
+<code>printcap</code> file the string "<code>ms=pass8,-opost</code>"
 works fine for this.
 
 <p>
 Finally, you can search <code>devdemp.c</code> for
-"<code>Init</code>" and "<b><tt>Reset</tt></b>" to find the strings that
+"<code>Init</code>" and "<code>Reset</code>" to find the strings that
 initialize the printer and reset things when finished, and change them to
 meet your needs.
 
@@ -1450,7 +1593,7 @@ many files fill the whole page with white before drawing other objects.
 This can be changed by:
 
 <blockquote><code>
-<< /WhiteIsOpaque true >> setpagedevice
+&lt;&lt; /WhiteIsOpaque true &gt;&gt; setpagedevice
 </code></blockquote>
 
 <p>
@@ -1511,8 +1654,8 @@ device which supports spot colors.
 Spot colors need to be specified prior to opening the
 first page.
 This can be done via adding the
-following to the command line: <code>-c "<< /SeparationColorNames [ /Name1 /Name2 ]
->> setpagedevice" -f</code>.
+following to the command line: <code>-c "&lt;&lt; /SeparationColorNames [ /Name1 /Name2 ]
+&gt;&gt; setpagedevice" -f</code>.
 
 <p>
 The <tt>spotcmyk</tt> device produces a binary data file (similar to the bitcmyk
@@ -1587,8 +1730,8 @@ DeviceCMYK process color model allows the <tt>xcfcmyk</tt> device to also
 support spot colors. Spot colors need to be specified prior to opening the
 first page.
 This can be done via adding the
-following to the command line: <code>-c "<< /SeparationColorNames [ /Name1 /Name2 ]
->> setpagedevice" -f</code>.
+following to the command line: <code>-c "&lt;&lt; /SeparationColorNames [ /Name1 /Name2 ]
+&gt;&gt; setpagedevice" -f</code>.
 
 <p>
 After a page is complete, the <tt>xcfcmyk</tt> converts the CMYK image data into
@@ -1618,10 +1761,10 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.71, 10 February 2010
+<small>Ghostscript version 9.04, 5 August 2011
 
 <!-- [3.0 end visible trailer] ============================================= -->
 
-</small></body>
+</body>
 </html>
 

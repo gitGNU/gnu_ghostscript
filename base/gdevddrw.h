@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -10,7 +10,7 @@
    or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id: gdevddrw.h,v 1.2 2010/07/10 22:02:27 Arabidopsis Exp $ */
+/* $Id$ */
 /* Prototypes of some polygon and image drawing procedures */
 
 #ifndef gdevddrw_INCLUDED
@@ -30,4 +30,3 @@ int gx_fill_trapezoid_cf_nd(gx_device * dev, const gs_fixed_edge * left,
     const gx_device_color * pdevc, gs_logical_operation_t lop);
 
 #endif /* gdevddrw_INCLUDED */
-

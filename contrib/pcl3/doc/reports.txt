@@ -1,5 +1,5 @@
 #******************************************************************************
-# File:     @(#)$Id: reports.txt,v 1.2 2010/07/11 19:47:18 Arabidopsis Exp $
+# File:     @(#)$Id: reports.txt,v 2.13 2001/08/14 16:20:35 Martin Rel $
 # Contents: Hardware compatibility reports for pcl3
 # Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
 #           Germany. E-mail: Martin.Lottermoser@t-online.de.

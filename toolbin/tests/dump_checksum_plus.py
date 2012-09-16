@@ -13,7 +13,7 @@
 # or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
-# $Id: dump_checksum_plus.py,v 1.3 2010/07/10 22:02:48 Arabidopsis Exp $
+# $Id: dump_testdb,v 1.7 2004/07/14 18:21:24 ray Exp $
 
 #
 # dump_baseline_plus.py [<dbfile> [name]]

@@ -1,8 +1,8 @@
 /******************************************************************************
-  File:     $Id: pagecount.c,v 1.3 2010/07/11 19:47:19 Arabidopsis Exp $
+  File:     $Id: pagecount.c,v 1.6 2000/10/07 17:48:49 Martin Rel $
   Contents: Simple (page) count file facility on UNIX
   Author:   Martin Lottermoser, Greifswaldstrasse 28, 38124 Braunschweig,
-	    Germany. E-mail: Martin.Lottermoser@t-online.de.
+            Germany. E-mail: Martin.Lottermoser@t-online.de.
 
 *******************************************************************************
 *									      *
@@ -14,7 +14,7 @@
 /* Configuration management identification */
 #ifndef lint
 static const char
-  cm_id[] = "@(#)$Id: pagecount.c,v 1.3 2010/07/11 19:47:19 Arabidopsis Exp $";
+  cm_id[] = "@(#)$Id: pagecount.c,v 1.6 2000/10/07 17:48:49 Martin Rel $";
 #endif
 
 /*****************************************************************************/
@@ -225,22 +225,22 @@ int pcf_inccount(const char *filename, unsigned long by)
     FILE *f1 = fopen(filename, "w");
 
     if (f1 == NULL) {
-      fprintf(stderr, ERRPREFIX 
-	"Error opening page count file `%s' a second time: %s.\n",
-	filename, strerror(errno));
+      fprintf(stderr, ERRPREFIX
+        "Error opening page count file `%s' a second time: %s.\n",
+        filename, strerror(errno));
       rc = 1;
     }
     else {
       if (fprintf(f1, "%lu\n", count + by) < 0) {
-	fprintf(stderr, ERRPREFIX "Error writing to `%s': %s.\n",
-	  filename, strerror(errno));
-	rc = -1;
+        fprintf(stderr, ERRPREFIX "Error writing to `%s': %s.\n",
+          filename, strerror(errno));
+        rc = -1;
       }
       if (fclose(f1) != 0) {
-	fprintf(stderr,
-	  ERRPREFIX "Error closing `%s' after writing: %s.\n",
-	  filename, strerror(errno));
-	rc = -1;
+        fprintf(stderr,
+          ERRPREFIX "Error closing `%s' after writing: %s.\n",
+          filename, strerror(errno));
+        rc = -1;
       }
     }
   }

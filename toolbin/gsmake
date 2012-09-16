@@ -1,3 +1,3 @@
 #!/bin/sh
-# $Id: gsmake,v 1.3 2010/07/10 22:02:46 Arabidopsis Exp $
+# $Id$
 exec $0.tcl "$@"

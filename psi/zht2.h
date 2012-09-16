@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: zht2.h,v 1.2 2010/07/10 22:02:42 Arabidopsis Exp $ */
+/* $Id$ */
 /* Level 2 sethalftone support */
 
 #ifndef zht2_INCLUDED
@@ -23,9 +23,9 @@
  * This routine translates a gs_separation_name value into a character string
  * pointer and a string length.
  */
-int gs_get_colorname_string(const gs_memory_t *mem, 
-			    gs_separation_name colorname_index,
-			    unsigned char **ppstr, 
-			    unsigned int *pname_size);
+int gs_get_colorname_string(const gs_memory_t *mem,
+                            gs_separation_name colorname_index,
+                            unsigned char **ppstr,
+                            unsigned int *pname_size);
 
 #endif /* zht2_INCLUDED */

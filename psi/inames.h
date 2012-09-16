@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: inames.h,v 1.2 2010/07/10 22:02:43 Arabidopsis Exp $ */
+/* $Id$ */
 /* Name table interface */
 
 #ifndef inames_INCLUDED
@@ -62,7 +62,7 @@ gs_memory_t *names_memory(const name_table * nt);
  * we have assigned all possible name indices).
  */
 int names_ref(name_table * nt, const byte * ptr, uint size, ref * pnref,
-	      int enterflag);
+              int enterflag);
 void names_string_ref(const name_table * nt, const ref * pnref, ref * psref);
 
 /*

@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxbitmap.h,v 1.2 2010/07/10 22:02:26 Arabidopsis Exp $ */
+/* $Id$ */
 /* Definitions for stored bitmaps for Ghostscript */
 
 #ifndef gxbitmap_INCLUDED
@@ -44,7 +44,7 @@ typedef gs_bitmap_id gx_bitmap_id;
  * assumption is not true in some MSVC implementations, but even in those
  * implementations, the alignment is sufficient to satisfy the hardware.
  * See gsmemraw.h for more information about this.)
- * 
+ *
  * The padding requirement is that if the last data byte being operated on
  * is at offset B relative to the start of the scan line, bytes up to and
  * including offset ROUND_UP(B + 1, align_bitmap_mod) - 1 may be accessed,
@@ -129,9 +129,9 @@ typedef struct gx_const_tile_bitmap_s {
  *      shift = (rep_shift * (size.y / rep_height)) % rep_width
  */
 #define gx_strip_bitmap_common(data_type)\
-	gx_tile_bitmap_common(data_type);\
-	ushort rep_shift;\
-	ushort shift
+        gx_tile_bitmap_common(data_type);\
+        ushort rep_shift;\
+        ushort shift
 typedef struct gx_strip_bitmap_s {
     gx_strip_bitmap_common(byte);
 } gx_strip_bitmap;

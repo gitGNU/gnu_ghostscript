@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: iht.h,v 1.2 2010/07/10 22:02:41 Arabidopsis Exp $ */
+/* $Id$ */
 /* Procedures exported by zht.c for zht1.c and zht2.c */
 
 #ifndef iht_INCLUDED
@@ -20,7 +20,7 @@
 int zscreen_params(os_ptr op, gs_screen_halftone * phs);
 
 int zscreen_enum_init(i_ctx_t *i_ctx_p, const gx_ht_order * porder,
-		      gs_screen_halftone * phs, ref * pproc, int npop,
-		      op_proc_t finish_proc, int space_index);
+                      gs_screen_halftone * phs, ref * pproc, int npop,
+                      op_proc_t finish_proc, int space_index);
 
 #endif /* iht_INCLUDED */

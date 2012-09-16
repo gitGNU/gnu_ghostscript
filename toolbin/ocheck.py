@@ -6,7 +6,7 @@
 # This script requires GNU-compatible 'nm' and 'objdump' programs:
 # it has only been tested on (32- and 64-bit) x86 systems.
 
-# $Id: ocheck.py,v 1.3 2010/07/10 22:02:46 Arabidopsis Exp $
+# $Id$
 
 USAGE = """\
 Usage: python ocheck.py [<cwd>] <ld-script> (--exclude [from]:[to]* |

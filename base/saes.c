@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: saes.c,v 1.2 2010/07/10 22:02:25 Arabidopsis Exp $ */
+/* $Id$ */
 
 /* AES filter implementation */
 
@@ -24,19 +24,19 @@
 /* stream implementation */
 
 private_st_aes_state();	/* creates a gc object for our state,
-			   defined in saes.h */
+                           defined in saes.h */
 
 /* Store a key in our crypt context */
 int
 s_aes_set_key(stream_aes_state * state, const unsigned char *key,
-		  int keylength)
+                  int keylength)
 {
     int code = 0;
 
     if ( (keylength < 1) || (keylength > SAES_MAX_KEYLENGTH) )
-	return_error(gs_error_rangecheck);
+        return_error(gs_error_rangecheck);
     if (key == NULL)
-	return_error(gs_error_invalidaccess);
+        return_error(gs_error_invalidaccess);
 
     /* we can't set the key here because the interpreter's
        filter implementation wants to duplicate our state
@@ -51,6 +51,15 @@ s_aes_set_key(stream_aes_state * state, const unsigned char *key,
 
     /* return successfully */
     return 0;
+}
+
+/* Specify whether the plaintext stream uses RFC 1423-style padding
+ * (allowing it to be an arbitrary length), or is unpadded (and must
+ * therefore be a multiple of 16 bytes long). */
+void
+s_aes_set_padding(stream_aes_state *state, int use_padding)
+{
+    state->use_padding = use_padding;
 }
 
 /* initialize our state object. */
@@ -81,7 +90,7 @@ s_aes_release(stream_state *ss)
  */
 static int
 s_aes_process(stream_state * ss, stream_cursor_read * pr,
-		  stream_cursor_write * pw, bool last)
+                  stream_cursor_write * pw, bool last)
 {
     stream_aes_state *const state = (stream_aes_state *) ss;
     const unsigned char *limit;
@@ -92,11 +101,11 @@ s_aes_process(stream_state * ss, stream_cursor_read * pr,
 
     /* figure out if we're going to run out of space */
     if (in_size > out_size) {
-	limit = pr->ptr + out_size;
-	status = 1; /* need more output space */
+        limit = pr->ptr + out_size;
+        status = 1; /* need more output space */
     } else {
-	limit = pr->limit;
-	status = last ? EOFC : 0; /* need more input */
+        limit = pr->limit;
+        status = last ? EOFC : 0; /* need more input */
     }
 
     /* set up state and context */
@@ -105,41 +114,63 @@ s_aes_process(stream_state * ss, stream_cursor_read * pr,
          contains internal pointers, so we need to store it separately
          in immovable memory like any opaque structure. */
       state->ctx = (aes_context *)gs_alloc_bytes_immovable(state->memory,
-		sizeof(aes_context), "aes context structure");
+                sizeof(aes_context), "aes context structure");
       if (state->ctx == NULL) {
-	gs_throw(gs_error_VMerror, "could not allocate aes context");
-	return ERRC;
+        gs_throw(gs_error_VMerror, "could not allocate aes context");
+        return ERRC;
       }
       if (state->keylength < 1 || state->keylength > SAES_MAX_KEYLENGTH) {
-	gs_throw1(gs_error_rangecheck, "invalid aes key length (%d bytes)",
-		state->keylength);
-	return ERRC;
+        gs_throw1(gs_error_rangecheck, "invalid aes key length (%d bytes)",
+                state->keylength);
+        return ERRC;
       }
       aes_setkey_dec(state->ctx, state->key, state->keylength * 8);
     }
     if (!state->initialized) {
-	/* read the initialization vector from the first 16 bytes */
-	if (in_size < 16) return 0; /* get more data */
-	memcpy(state->iv, pr->ptr + 1, 16);
-	state->initialized = 1;
-	pr->ptr += 16;
+        /* read the initialization vector from the first 16 bytes */
+        if (in_size < 16) return 0; /* get more data */
+        memcpy(state->iv, pr->ptr + 1, 16);
+        state->initialized = 1;
+        pr->ptr += 16;
     }
 
     /* decrypt available blocks */
     while (pr->ptr + 16 <= limit) {
       aes_crypt_cbc(state->ctx, AES_DECRYPT, 16, state->iv,
-				pr->ptr + 1, temp);
+                                pr->ptr + 1, temp);
       pr->ptr += 16;
       if (last && pr->ptr == pr->limit) {
-        /* we're on the last block; unpad */
-        int pad = temp[15];
-        if (pad < 1 || pad > 16) return ERRC;
+        /* we're on the last block; unpad if necessary */
+        int pad;
+
+        if (state->use_padding) {
+          /* we are using RFC 1423-style padding, so the last byte of the
+             plaintext gives the number of bytes to discard */
+          pad = temp[15];
+          if (pad < 1 || pad > 16) {
+            gs_throw1(gs_error_rangecheck, "invalid aes padding byte (0x%02x)",
+                  (unsigned char)pad);
+            return ERRC;
+          }
+        } else {
+          /* not using padding */
+          pad = 0;
+        }
+
         memcpy(pw->ptr + 1, temp, 16 - pad);
         pw->ptr +=  16 - pad;
         return EOFC;
       }
       memcpy(pw->ptr + 1, temp, 16);
       pw->ptr += 16;
+    }
+
+    /* if we got to the end of the file without triggering the padding
+       check, the input must not have been a multiple of 16 bytes long.
+       complain. */
+    if (status == EOFC) {
+      gs_throw(gs_error_rangecheck, "aes stream isn't a multiple of 16 bytes");
+      return ERRC;
     }
 
     return status;

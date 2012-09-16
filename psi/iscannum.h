@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: iscannum.h,v 1.2 2010/07/10 22:02:41 Arabidopsis Exp $ */
+/* $Id$ */
 /* Interface to Ghostscript number scanner */
 
 #ifndef iscannum_INCLUDED
@@ -23,6 +23,6 @@
  * Note that scan_number does not mark the result ref as "new".
  */
 int scan_number(const byte * sp, const byte * end, int sign, ref * pref,
-		const byte ** psp, int scanner_options);
+                const byte ** psp, int scanner_options);
 
 #endif /* iscannum_INCLUDED */

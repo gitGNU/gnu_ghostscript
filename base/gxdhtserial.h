@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxdhtserial.h,v 1.2 2010/07/10 22:02:17 Arabidopsis Exp $ */
+/* $Id$ */
 /* Interface to [de-]serialization for (traditional) halftones */
 
 #ifndef gxdhtserial_INCLUDED
@@ -36,7 +36,6 @@ typedef struct gx_device_halftone_s gx_device_halftone;
 #  define gs_imager_state_DEFINED
 typedef struct gs_imager_state_s    gs_imager_state;
 #endif
-
 
 /*
  * Serialize a halftone.

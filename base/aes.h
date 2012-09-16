@@ -30,7 +30,7 @@
  *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $Id: aes.h,v 1.2 2010/07/10 22:02:24 Arabidopsis Exp $ */
+/* $Id$ */
 /* AES block cipher implementation from XYSSL */
 
 #ifndef XYSSL_AES_H
@@ -62,7 +62,7 @@ extern "C" {
  * \param keysize  must be 128, 192 or 256
  */
 void aes_setkey_enc( aes_context *ctx, const unsigned char *key,
-			int keysize );
+                        int keysize );
 
 /**
  * \brief          AES key schedule (decryption)
@@ -72,7 +72,7 @@ void aes_setkey_enc( aes_context *ctx, const unsigned char *key,
  * \param keysize  must be 128, 192 or 256
  */
 void aes_setkey_dec( aes_context *ctx, const unsigned char *key,
-			int keysize );
+                        int keysize );
 
 /**
  * \brief          AES-ECB block encryption/decryption

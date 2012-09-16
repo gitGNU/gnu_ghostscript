@@ -64,7 +64,7 @@
 /*
  * I/O Stream Class
  *
- * $Id: jas_stream.h,v 1.6 2010/07/10 22:02:56 Arabidopsis Exp $
+ * $Id$
  */
 
 #ifndef JAS_STREAM_H
@@ -259,7 +259,11 @@ typedef struct {
 typedef struct {
 	int fd;
 	int flags;
+#ifndef _WIN32
 	char pathname[L_tmpnam + 1];
+#else
+	char pathname[_MAX_PATH + 1];
+#endif
 } jas_stream_fileobj_t;
 
 #define	JAS_STREAM_FILEOBJ_DELONCLOSE	0x01

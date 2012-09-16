@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxfapiu.h,v 1.2 2010/07/10 22:02:20 Arabidopsis Exp $ */
+/* $Id$ */
 /* Font API support : UFST callback dispatch. */
 
 #ifndef gxfapiu_INCLUDED
@@ -23,7 +23,7 @@
 /* Warning : the language switch project doesn't guarantee
    that this function is called when switching
    to another interpreter. Therefore each interpreter must take
-   care for its own callback methods before they 
+   care for its own callback methods before they
    may be called by UFST.
  */
  /* Warning : this function may cause a reentrancy problem
@@ -59,8 +59,22 @@ SW16 gx_UFST_find_fco_handle_by_name(const char *font_file_path);
 fco_list_elem *gx_UFST_find_static_fco(const char *font_file_path);
 fco_list_elem *gx_UFST_find_static_fco_handle(SW16 fcHandle);
 
-int gx_UFST_init(const UB8 *ufst_root_dir);
+int gx_UFST_init(gs_memory_t *mem, const UB8 *ufst_root_dir);
 
 int gx_UFST_fini(void);
+
+FILE * FAPIU_fopen (char *path, char *mode);
+void * FAPIU_open (char *path, int mode);
+int FAPIU_fread (void *ptr, int size, int count, FILE *s);
+int FAPIU_read (void *s, void *ptr, int count);
+int FAPIU_fgetc (FILE *s);
+int FAPIU_fseek (FILE *s, int offset, int whence);
+int FAPIU_lseek (void *s, int offset, int whence);
+int FAPIU_frewind (FILE *s);
+int FAPIU_ftell (FILE *s);
+int FAPIU_feof (FILE *s);
+int FAPIU_ferror (FILE *s);
+int FAPIU_fclose (FILE *s);
+int FAPIU_close (void *s);
 
 #endif /* gxfapiu_INCLUDED */

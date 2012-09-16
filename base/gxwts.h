@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -10,7 +10,7 @@
    or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/*$Id: gxwts.h,v 1.2 2010/07/10 22:02:25 Arabidopsis Exp $ */
+/*$Id$ */
 #ifndef gxwts_INCLUDED
 #  define gxwts_INCLUDED
 
@@ -22,7 +22,7 @@ typedef struct wts_screen_s wts_screen_t;
 #endif
 
 /* We cache intermediate results for wts_get_samples_j. In general, if these
-   are set so that a band fits, then the hit rate will be excellent. */ 
+   are set so that a band fits, then the hit rate will be excellent. */
 #define WTS_CACHE_SIZE_X 512
 #define WTS_CACHE_SIZE_Y 512
 
@@ -88,6 +88,6 @@ typedef struct {
 
 int
 wts_get_samples(wts_screen_t *ws, int x, int y,
-		int *pcellx, int *pcelly, int *p_nsamples);
+                int *pcellx, int *pcelly, int *p_nsamples);
 
 #endif

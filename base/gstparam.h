@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gstparam.h,v 1.2 2010/07/10 22:02:21 Arabidopsis Exp $ */
+/* $Id$ */
 /* Transparency parameter definitions */
 
 #ifndef gstparam_INCLUDED
@@ -19,10 +19,11 @@
 
 #include "gsccolor.h"
 #include "gsrefct.h"
+#include "gscspace.h"
+#include "stdint_.h"
 
 /* Define the names of the known blend modes. */
 typedef enum {
-    BLEND_MODE_Compatible,
     BLEND_MODE_Normal,
     BLEND_MODE_Multiply,
     BLEND_MODE_Screen,
@@ -38,14 +39,17 @@ typedef enum {
     BLEND_MODE_Luminosity,
     BLEND_MODE_Hue,
     BLEND_MODE_Saturation,
-    BLEND_MODE_Color
+    BLEND_MODE_Color,
 #define MAX_BLEND_MODE BLEND_MODE_Color
+
+    /* For compatibility with old PDFs */
+    BLEND_MODE_Compatible
 } gs_blend_mode_t;
 #define GS_BLEND_MODE_NAMES\
-  "Compatible", "Normal", "Multiply", "Screen", "Difference",\
+  "Normal", "Multiply", "Screen", "Difference",\
   "Darken", "Lighten", "ColorDodge", "ColorBurn", "Exclusion",\
   "HardLight", "Overlay", "SoftLight", "Luminosity", "Hue",\
-  "Saturation", "Color"
+  "Saturation", "Color", "Compatible"
 
 /* Define the common part for a transparency stack state. */
 typedef enum {
@@ -87,6 +91,8 @@ typedef struct gs_transparency_group_params_s {
     uint mask_id;
     int group_color_numcomps;
     gs_transparency_color_t group_color;
+    int64_t icc_hashcode;                    /* Needed when we are doing clist reading */
+    cmm_profile_t *iccprofile;               /* The profile  */
 } gs_transparency_group_params_t;
 
 /* Define the parameter structure for a transparency mask. */
@@ -109,6 +115,8 @@ typedef struct gs_transparency_mask_params_s {
     int (*TransferFunction)(floatp in, float *out, void *proc_data);
     gs_function_t *TransferFunction_data;
     bool replacing;
+    int64_t icc_hashcode;                    /* Needed when we are doing clist reading */
+    cmm_profile_t *iccprofile;               /* The profile  */
 } gs_transparency_mask_params_t;
 
 #define MASK_TRANSFER_FUNCTION_SIZE 256
@@ -116,7 +124,6 @@ typedef struct gs_transparency_mask_params_s {
 /* The post clist version of transparency mask parameters */
 typedef struct gx_transparency_mask_params_s {
     gs_transparency_mask_subtype_t subtype;
-    bool SMask_is_CIE;
     int group_color_numcomps;
     gs_transparency_color_t group_color;
     int Background_components;
@@ -127,6 +134,8 @@ typedef struct gx_transparency_mask_params_s {
     bool replacing;
     uint mask_id;
     byte transfer_fn[MASK_TRANSFER_FUNCTION_SIZE];
+    int64_t icc_hashcode;                    /* Needed when we are doing clist reading */
+    cmm_profile_t *iccprofile;               /* The profile  */
 } gx_transparency_mask_params_t;
 
 /*
@@ -138,13 +147,16 @@ typedef struct gx_transparency_mask_params_s {
              4 /* the clist cmd prefix byte cmd_opv_extend + extended function + 2 bytes for band_id */ + \
              1 + sizeof(float) * 6 /* See sput_matrix. */ + \
              sizeof(((gs_pdf14trans_params_t *)0)->subtype) + \
-             3 /* replacing, function_is_identity, Background_components */ + \
-	     sizeof(((gs_pdf14trans_params_t *)0)->bbox) + \
-	     sizeof(((gs_pdf14trans_params_t *)0)->mask_id) + \
-	     sizeof(((gs_pdf14trans_params_t *)0)->Background) + \
-	     sizeof(((gs_pdf14trans_params_t *)0)->GrayBackground))	     
+             sizeof(((gs_pdf14trans_params_t *)0)->group_color_numcomps) + \
+             4 /* group color, replacing, function_is_identity, Background_components */ + \
+             sizeof(((gs_pdf14trans_params_t *)0)->bbox) + \
+             sizeof(((gs_pdf14trans_params_t *)0)->mask_id) + \
+             sizeof(((gs_pdf14trans_params_t *)0)->Background) + \
+             sizeof(float)*4 + /* If cmyk background */ \
+             sizeof(((gs_pdf14trans_params_t *)0)->GrayBackground) + \
+             sizeof(int64_t)) /* ICC band information */
 #define MAX_CLIST_TRANSPARENCY_COMPOSITOR_SIZE (MAX_CLIST_TRANSPARENCY_BUFFER_SIZE + \
-	     sizeof(((gs_pdf14trans_params_t *)0)->transfer_fn))
+             sizeof(((gs_pdf14trans_params_t *)0)->transfer_fn))
 #define MAX_CLIST_COMPOSITOR_SIZE MAX_CLIST_TRANSPARENCY_COMPOSITOR_SIZE
 
 /* Select the opacity or shape parameters. */

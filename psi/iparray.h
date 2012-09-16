@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: iparray.h,v 1.2 2010/07/10 22:02:43 Arabidopsis Exp $ */
+/* $Id$ */
 /* Packed array constructor for Ghostscript */
 /* Requires ipacked.h, istack.h */
 
@@ -28,6 +28,6 @@
 
 /* Make a packed array from the top N elements of a stack. */
 int make_packed_array(ref *, ref_stack_t *, uint, gs_dual_memory_t *,
-		      client_name_t);
+                      client_name_t);
 
 #endif /* iparray_INCLUDED */

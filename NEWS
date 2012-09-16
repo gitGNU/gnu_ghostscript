@@ -1,3 +1,8 @@
+Version 9.04.1 main changes:
+* A lot of changes from releases 9.00, 9.01, 9.02, 9.03 and 9.04 of GPL-Ghostscript,
+	notably in color management, see the file doc/History9.htm for complete
+	list of changes and bug fixed.
+ 
 Version 8.71.0 main changes:
 * A big security update from upstream was included,
 	r11351(Adding -P- and -dSAFER to many POSIX shell scripts, win32 and OS/2

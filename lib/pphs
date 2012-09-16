@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: pphs,v 1.6 2010/07/10 22:02:36 Arabidopsis Exp $
+# $Id$
 # Print the Primary Hint Stream from a linearized PDF file.  Usage:
 #	pphs filename.pdf
 # Output goes to stdout.
@@ -7,7 +7,7 @@
 # This definition is changed on install to match the
 # executable name set in the makefile
 GS_EXECUTABLE=gs
-gs="`dirname $0`/$GS_EXECUTABLE"
+gs="`dirname \"$0\"`/$GS_EXECUTABLE"
 if test ! -x "$gs"; then
 	gs="$GS_EXECUTABLE"
 fi

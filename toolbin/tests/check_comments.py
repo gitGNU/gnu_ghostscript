@@ -12,7 +12,7 @@
 # or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
-# $Id: check_comments.py,v 1.9 2010/07/10 22:02:48 Arabidopsis Exp $
+# $Id$
 
 # Check for C++ style comments
 

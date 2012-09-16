@@ -1,10 +1,10 @@
 @echo off 
-@rem $Id: ps2epsi.bat,v 1.5 2010/07/10 22:02:35 Arabidopsis Exp $
+@rem $Id$
 
 if %1/==/ goto usage
 if %2/==/ goto usage
 
-call gssetgs.bat
+call "%~dp0gssetgs.bat"
 set infile=%1
 set outfile=%2
 

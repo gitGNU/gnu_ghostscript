@@ -1,8 +1,9 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii">
 <title>Ghostscript projects</title>
-<!-- $Id: Projects.htm,v 1.14 2010/07/10 22:02:51 Arabidopsis Exp $ -->
+<!-- $Id$ -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
 
@@ -217,7 +218,7 @@ important now that H-P's laser printers are shipping with less memory.</I>
 <p>
 We would like a "GDI driver" for MS Windows that would implement more
 higher-level constructs (specifically for text).  <I> The
-<code>mswin</code> and <b><tt>mswinprn</tt></b> drivers both do some of
+<code>mswin</code> and <code>mswinprn</code> drivers both do some of
 this.  Some of the the 'xfont' support code for MS Windows should be useful.
 We were frustrated in the past because the GDI calls for getting font sizes
 and metrics consistently returned incorrect information and provided no way
@@ -534,7 +535,7 @@ notify_proc(proc_data, pchar_data)
 whenever a bitmap was removed from the character cache.
 <code>pchar_data</code> would point to some identification of the
 character; perhaps just the bitmap ID, but possibly a
-<code>gx_cached_bits_common</code> or even a <b><tt>cached_char</tt></b>.
+<code>gx_cached_bits_common</code> or even a <code>cached_char</code>.
 
 <li>The <code>char_cache</code> structure would be need an additional
 member, a <code>gs_notify_list_t</code>.  It would also need to add
@@ -606,7 +607,7 @@ track of them would be stored in global VM.
 <p>
 <I>This is an obscure feature that matters only because some PostScript code
 uses <code>filenameforall</code> with this IODevice, rather than
-<code>filenameforall</code> with the <b><tt>/Font</tt></b> Resource
+<code>filenameforall</code> with the <code>/Font</code> Resource
 category, to enumerate available fonts.</I>
 
 <h3>Repairing damaged or EOL-converted PDF files.</h3>
@@ -669,7 +670,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 8.71, 10 February 2010
+<small>Ghostscript version 9.04, 5 August 2011
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

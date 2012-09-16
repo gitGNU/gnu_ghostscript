@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxdevbuf.h,v 1.2 2010/07/10 22:02:21 Arabidopsis Exp $ */
+/* $Id$ */
 /* Definitions for device buffer management */
 
 #ifndef gxdevbuf_INCLUDED
@@ -55,7 +55,6 @@ typedef struct gx_band_complexity_s {
 #endif
 } gx_band_complexity_t;
 
-
 typedef struct gx_device_buf_procs_s {
 
     /*
@@ -72,8 +71,8 @@ typedef struct gx_device_buf_procs_s {
 
 #define dev_proc_create_buf_device(proc)\
   int proc(gx_device **pbdev, gx_device *target, int y,\
-	   const gx_render_plane_t *render_plane, gs_memory_t *mem,\
-	   gx_band_complexity_t *band_complexity)
+           const gx_render_plane_t *render_plane, gs_memory_t *mem,\
+           gx_band_complexity_t *band_complexity)
 
     dev_proc_create_buf_device((*create_buf_device));
 
@@ -83,8 +82,8 @@ typedef struct gx_device_buf_procs_s {
 
 #define dev_proc_size_buf_device(proc)\
   int proc(gx_device_buf_space_t *space, gx_device *target,\
-	   const gx_render_plane_t *render_plane,\
-	   int height, bool for_band)
+           const gx_render_plane_t *render_plane,\
+           int height, bool for_band)
 
     dev_proc_size_buf_device((*size_buf_device));
 
@@ -103,8 +102,8 @@ typedef struct gx_device_buf_procs_s {
 
 #define dev_proc_setup_buf_device(proc)\
   int proc(gx_device *bdev, byte *buffer, int bytes_per_line,\
-	   byte **line_ptrs /*[height]*/, int y, int setup_height,\
-	   int full_height)
+           byte **line_ptrs /*[height]*/, int y, int setup_height,\
+           int full_height)
 
     dev_proc_setup_buf_device((*setup_buf_device));
 

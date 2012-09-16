@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -10,7 +10,7 @@
    or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id: errno_.h,v 1.2 2010/07/10 22:02:16 Arabidopsis Exp $ */
+/* $Id$ */
 /* Generic substitute for Unix errno.h */
 
 #ifndef errno__INCLUDED
@@ -24,7 +24,12 @@
 #include <errno.h>
 #ifndef errno			/* in case it was #defined (very implausible!) */
 extern int errno;
+#endif
 
+/* Some systems don't have EILSEQ, so (following GNU iconv) we use */
+/* ENOENT instead if necessary. */
+#ifndef EILSEQ
+#  define EILSEQ ENOENT
 #endif
 
 #endif /* errno__INCLUDED */

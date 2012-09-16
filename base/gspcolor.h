@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gspcolor.h,v 1.2 2010/07/10 22:02:21 Arabidopsis Exp $ */
+/* $Id$ */
 /* Client interface to Pattern color */
 
 #ifndef gspcolor_INCLUDED
@@ -108,7 +108,7 @@ int gs_setpatternspace(gs_state *);
  * uses rc_alloc_struct_1 to allocate pattern instances.
  */
 int gs_make_pattern(gs_client_color *, const gs_pattern_template_t *,
-		    const gs_matrix *, gs_state *, gs_memory_t *);
+                    const gs_matrix *, gs_state *, gs_memory_t *);
 const gs_pattern_template_t *gs_get_pattern(const gs_client_color *);
 
 /*

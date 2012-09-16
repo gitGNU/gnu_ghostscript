@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: sjbig2_luratech.h,v 1.2 2010/07/10 22:02:27 Arabidopsis Exp $ */
+/* $Id$ */
 /* Definitions for jbig2decode filter - Luratech version */
 /* Requires scommon.h; strimpl.h if any templates are referenced */
 
@@ -23,7 +23,7 @@
 
 /* See zfjbig2.c for details. */
 typedef struct s_jbig2_global_data_s {
-	void *data;
+        void *data;
 } s_jbig2_global_data_t;
 
 /* JBIG2Decode internal stream state */
@@ -58,7 +58,6 @@ s_jbig2decode_set_global_data(stream_state *ss, s_jbig2_global_data_t *gs);
 void
 s_jbig2decode_free_global_data(void *data);
 
-
 /* JBIG2 encoder internal state */
 typedef struct stream_jbig2encode_state_s
 {
@@ -70,9 +69,9 @@ typedef struct stream_jbig2encode_state_s
     unsigned char *line;	/* single line working buffer */
     unsigned long linefill;	/* bytes in the working buffer */
     unsigned char *outbuf;	/* output data buffer */
-    unsigned long outsize;	/* bytes available in the buffer */ 
-    unsigned long outfill;	/* bytes written to the buffer */ 
-    unsigned long offset;	/* bytes written from the buffer */ 
+    unsigned long outsize;	/* bytes available in the buffer */
+    unsigned long outfill;	/* bytes written to the buffer */
+    unsigned long offset;	/* bytes written from the buffer */
 
 } stream_jbig2encode_state;
 

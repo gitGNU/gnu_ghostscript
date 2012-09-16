@@ -64,7 +64,7 @@
 /*
  * JPEG-2000 Code Stream Library
  *
- * $Id: jpc_cs.h,v 1.5 2010/07/10 22:02:55 Arabidopsis Exp $
+ * $Id$
  */
 
 #ifndef JPC_CS_H

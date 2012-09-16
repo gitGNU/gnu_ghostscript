@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -10,7 +10,7 @@
    or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id: gdevmpla.h,v 1.2 2010/07/10 22:02:30 Arabidopsis Exp $ */
+/* $Id$ */
 /* Interface to planar memory devices. */
 
 #ifndef gdevmpla_INCLUDED
@@ -37,6 +37,6 @@
  * mdev->color_info.depth.
  */
 int gdev_mem_set_planar(gx_device_memory * mdev, int num_planes,
-			const gx_render_plane_t *planes /*[num_planes]*/);
+                        const gx_render_plane_t *planes /*[num_planes]*/);
 
 #endif /* gdevmpla_INCLUDED */

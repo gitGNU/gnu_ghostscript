@@ -12,7 +12,7 @@
 # or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 # San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
-# $Id: check_dirs.py,v 1.8 2010/07/10 22:02:48 Arabidopsis Exp $
+# $Id$
 
 # Check the contents of Ghostscript directories.
 
@@ -43,7 +43,7 @@ class GSCheckEmptyTopDirectory(GSTestCase):
 
 gsFilesInTopDirectory = ['LICENSE', 'autogen.sh', 'Makefile',
 			 'configure', 'config.log', 'config.status',
-			 'ghostscript.vcproj']
+			 'ghostscript.vcproj', 'ghostscript-ufst.vcproj']
 # Add the tests defined in this file to a suite.
 
 def addTests(suite, gsroot, **args):

@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: scfparam.c,v 1.2 2010/07/10 22:02:27 Arabidopsis Exp $ */
+/* $Id$ */
 /* CCITTFax filter parameter setting and reading */
 #include "std.h"
 #include "gserror.h"
@@ -54,10 +54,10 @@ s_CF_get_params(gs_param_list * plist, const stream_CF_state * ss, bool all)
     const stream_CF_state *defaults;
 
     if (all)
-	defaults = 0;
+        defaults = 0;
     else {
-	s_CF_set_defaults_inline(&cfs_defaults);
-	defaults = &cfs_defaults;
+        s_CF_set_defaults_inline(&cfs_defaults);
+        defaults = &cfs_defaults;
     }
     return gs_param_write_items(plist, ss, defaults, s_CF_param_items);
 }
@@ -73,16 +73,16 @@ s_CF_put_params(gs_param_list * plist, stream_CF_state * ss)
     state = *ss;
     code = gs_param_read_items(plist, (void *)&state, s_CF_param_items);
     if (code >= 0 &&
-	(state.K < -cf_max_height || state.K > cf_max_height ||
-	 state.Columns < 0 || state.Columns > cfe_max_width ||
-	 state.Rows < 0 || state.Rows > cf_max_height ||
-	 state.DamagedRowsBeforeError < 0 ||
-	 state.DamagedRowsBeforeError > cf_max_height ||
-	 state.DecodedByteAlign < 1 || state.DecodedByteAlign > 16 ||
-	 (state.DecodedByteAlign & (state.DecodedByteAlign - 1)) != 0)
-	)
-	code = gs_note_error(gs_error_rangecheck);
+        (state.K < -cf_max_height || state.K > cf_max_height ||
+         state.Columns < 0 || state.Columns > cfe_max_width ||
+         state.Rows < 0 || state.Rows > cf_max_height ||
+         state.DamagedRowsBeforeError < 0 ||
+         state.DamagedRowsBeforeError > cf_max_height ||
+         state.DecodedByteAlign < 1 || state.DecodedByteAlign > 16 ||
+         (state.DecodedByteAlign & (state.DecodedByteAlign - 1)) != 0)
+        )
+        code = gs_note_error(gs_error_rangecheck);
     if (code >= 0)
-	*ss = state;
+        *ss = state;
     return code;
 }

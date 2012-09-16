@@ -1,5 +1,5 @@
 #! /bin/sh
-# $Id: pdf2dsc,v 1.6 2010/07/10 22:02:38 Arabidopsis Exp $
+# $Id$
 
 # psf2dsc: generates an index of a PDF file.
 #
@@ -9,7 +9,7 @@
 # This definition is changed on install to match the
 # executable name set in the makefile
 GS_EXECUTABLE=gs
-gs="`dirname $0`/$GS_EXECUTABLE"
+gs="`dirname \"$0\"`/$GS_EXECUTABLE"
 if test ! -x "$gs"; then
 	gs="$GS_EXECUTABLE"
 fi

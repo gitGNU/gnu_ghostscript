@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: ttconf.h,v 1.2 2010/07/10 22:02:18 Arabidopsis Exp $ */
+/* $Id$ */
 /* Configuration of the True Type interpreter. */
 /* This file is copied from the FreeType project and modified to satisfy Ghostscript needs. */
 
@@ -64,7 +64,6 @@
 
 /* Define if you have the basename function.  */
 #undef HAVE_BASENAME
-
 
 /* End of ft_conf.h */
 

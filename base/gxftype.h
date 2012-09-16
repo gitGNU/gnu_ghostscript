@@ -1,6 +1,6 @@
 /* Copyright (C) 2001-2006 Artifex Software, Inc.
    All Rights Reserved.
-  
+
    This software is provided AS-IS with no warranty, either express or
    implied.
 
@@ -11,7 +11,7 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id: gxftype.h,v 1.2 2010/07/10 22:02:22 Arabidopsis Exp $ */
+/* $Id$ */
 /* Definition of font type and bitmap font behavior */
 
 #ifndef gxftype_INCLUDED
@@ -32,7 +32,30 @@ typedef enum {
     ft_Chameleon = 14,
     ft_CID_bitmap = 32,		/* CIDFontType 4 */
     ft_TrueType = 42,
-    ft_MicroType = 51		/* MicroType 51 is arbitrary */
+    ft_MicroType = 51,		/* MicroType 51 is arbitrary */
+    /* We need to identify the PCL 'stick' font specially for pdfwrite. The
+     * reason is that the stick font is drawn by stroking a path, and the width
+     * of that path is supposed to be consistent. If there is anamorphic
+     * scaling in play, then the scaling is taken into account during path
+     * construction (when rendering) and when the path is stroked the stroke
+     * width remains the same. However if we capture the path in pdfwrite as
+     * a font, the scaling is applied after the glyph is drawn, and this
+     * results in the stroke width being anamorphically scaled as well, which
+     * is wrong. In this case we want to be able to avoid capturing the text
+     * as a font and instead draw a path and stroke it. Previously the stick
+     * font was just a ft_user_defined but this allows us to tell the
+     * difference.
+     */
+    ft_GL2_stick_user_defined = 52,
+    /* Another special case. PCL bitmap fonts differ from PS type 3 fonts in
+     * that 'slots' (character codes) can be resued, which can't be done with
+     * PS/PDF type 3 fonts. Not a problem for rendering since we just clear
+     * the glyph from the caceh, which means the new definition gets rendered
+     * as required. However pdfwrite needs to know that this is not a regular
+     * type 3 font, otherwise it won't know to look out for the cache entry
+     * being freed, and will reuse the original definition
+     */
+    ft_PCL_user_defined = 53
 } font_type;
 
 /* Define the bitmap font behaviors. */

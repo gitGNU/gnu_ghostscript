@@ -64,7 +64,7 @@
 /*
  * Quadrature Mirror-Image Filter Bank (QMFB) Routines
  *
- * $Id: jpc_qmfb.h,v 1.4 2010/07/10 22:02:54 Arabidopsis Exp $
+ * $Id$
  */
 
 #ifndef JPC_QMFB_H
