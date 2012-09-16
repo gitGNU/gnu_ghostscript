@@ -26,6 +26,7 @@
 #include "gxistate.h"
 #include "gzht.h"
 #include "gsserial.h"
+#include "gxdevsop.h"
 
 /* Define whether to force use of the slow code, for testing. */
 #define USE_SLOW_CODE 0
@@ -184,7 +185,7 @@ gx_dc_ht_colored_write(
     const gx_device_color *         pdevc,
     const gx_device_color_saved *   psdc0,
     const gx_device *               dev,
-    uint			    offset,
+    int64_t			    offset,
     byte *                          pdata,
     uint *                          psize )
 {
@@ -353,7 +354,7 @@ gx_dc_ht_colored_read(
     const gs_imager_state * pis,
     const gx_device_color * prior_devc,
     const gx_device *       dev,
-    uint		    offset,
+    int64_t		    offset,
     const byte *            pdata,
     uint                    size,
     gs_memory_t *           mem )       /* ignored */
@@ -583,8 +584,7 @@ gx_dc_ht_colored_fill_rectangle(const gx_device_color * pdevc,
 #if USE_SLOW_CODE
          set_ht_colors_gt_4
 #else
-         (dev_proc(dev, map_cmyk_color) == gx_default_encode_color &&
-          dev->color_info.depth == 4) ?
+         (dev_proc(dev, dev_spec_op)(dev, gxdso_is_std_cmyk_1bit, NULL, 0) > 0) ?
             set_cmyk_1bit_colors :
             nplanes <= 4 ? set_ht_colors_le_4 :
                           set_ht_colors_gt_4
@@ -610,9 +610,17 @@ gx_dc_ht_colored_fill_rectangle(const gx_device_color * pdevc,
     int lw = pdht->lcm_width, lh = pdht->lcm_height;
     bool no_rop;
     int i;
+    int origx, origy;
+
+#ifdef MEMENTO
+    /* Pacify valgrind */
+    memset(tbits, 0, sizeof(ulong) * tile_longs_allocated);
+#endif
 
     if (w <= 0 || h <= 0)
         return 0;
+    origx = x;
+    origy = y;
     if ((w | h) >= 16) {
         /* It's worth taking the trouble to check the clipping box. */
         gs_fixed_rect cbox;
@@ -650,6 +658,9 @@ gx_dc_ht_colored_fill_rectangle(const gx_device_color * pdevc,
     }
     special = set_ht_colors(&vp, colors, sbits, pdevc, dev, caches, nplanes);
     no_rop = source == NULL && lop_no_S_is_T(lop);
+    if ((!no_rop) && (source == NULL))
+        set_rop_no_source(source, no_source, dev);
+
     /*
      * If the LCM of the plane cell sizes is smaller than the rectangle
      * being filled, compute a single tile and let tile_rectangle do the
@@ -673,23 +684,38 @@ gx_dc_ht_colored_fill_rectangle(const gx_device_color * pdevc,
             tiles.rep_height = tiles.size.y = lh;
             tiles.id = gs_next_ids(pdht->rc.memory, 1);
             tiles.rep_shift = tiles.shift = 0;
+            tiles.num_planes = 1;
             set_color_ht((byte *)tbits, raster, 0, 0, lw, lh, depth,
                          special, nplanes, pdevc->colors.colored.plane_mask,
                          dev, &vp, colors, sbits);
             if (no_rop)
                 return (*dev_proc(dev, strip_tile_rectangle)) (dev, &tiles,
                                                                x, y, w, h,
-                                       gx_no_color_index, gx_no_color_index,
-                                            pdevc->phase.x, pdevc->phase.y);
-            if (source == NULL)
-                set_rop_no_source(source, no_source, dev);
-            return (*dev_proc(dev, strip_copy_rop)) (dev, source->sdata,
-                               source->sourcex, source->sraster, source->id,
-                             (source->use_scolors ? source->scolors : NULL),
-                                                     &tiles, NULL,
-                                                     x, y, w, h,
-                                             pdevc->phase.x, pdevc->phase.y,
-                                                lop);
+                                                               gx_no_color_index,
+                                                               gx_no_color_index,
+                                                               pdevc->phase.x,
+                                                               pdevc->phase.y);
+            if (source->planar_height == 0)
+                return (*dev_proc(dev, strip_copy_rop))
+                               (dev,
+                                source->sdata + (y - origy) * source->sraster,
+                                source->sourcex + (x - origx),
+                                source->sraster, source->id,
+                                (source->use_scolors ? source->scolors : NULL),
+                                &tiles, NULL,
+                                x, y, w, h,
+                                pdevc->phase.x, pdevc->phase.y, lop);
+            else
+                return (*dev_proc(dev, strip_copy_rop2))
+                               (dev,
+                                source->sdata + (y - origy) * source->sraster,
+                                source->sourcex + (x - origx),
+                                source->sraster, source->id,
+                                (source->use_scolors ? source->scolors : NULL),
+                                &tiles, NULL,
+                                x, y, w, h,
+                                pdevc->phase.x, pdevc->phase.y, lop,
+                                source->planar_height);
         }
     }
     size_x = w * depth;
@@ -728,6 +754,7 @@ fit:				/* Now the tile will definitely fit. */
         tiles.raster = raster;
         tiles.rep_width = tiles.size.x = size_x / depth;
         tiles.rep_shift = tiles.shift = 0;
+        tiles.num_planes = 1;
     }
     while (w) {
         int cy = y, ch = dh, left = h;
@@ -744,14 +771,23 @@ fit:				/* Now the tile will definitely fit. */
                      x, cy, dw, ch);
             } else {
                 tiles.rep_height = tiles.size.y = ch;
-                if (source == NULL)
-                    set_rop_no_source(source, no_source, dev);
-                /****** WRONG - MUST ADJUST source VALUES ******/
-                code = (*dev_proc(dev, strip_copy_rop))
-                    (dev, source->sdata, source->sourcex, source->sraster,
-                     source->id,
-                     (source->use_scolors ? source->scolors : NULL),
-                     &tiles, NULL, x, cy, dw, ch, 0, 0, lop);
+                if (source->planar_height == 0)
+                    code = (*dev_proc(dev, strip_copy_rop))
+                          (dev, source->sdata + source->sraster * (cy-origy),
+                           source->sourcex + (x - origx),
+                           source->sraster,
+                           source->id,
+                           (source->use_scolors ? source->scolors : NULL),
+                           &tiles, NULL, x, cy, dw, ch, 0, 0, lop);
+                else
+                    code = (*dev_proc(dev, strip_copy_rop2))
+                          (dev, source->sdata + source->sraster * (cy-origy),
+                           source->sourcex + (x - origx),
+                           source->sraster,
+                           source->id,
+                           (source->use_scolors ? source->scolors : NULL),
+                           &tiles, NULL, x, cy, dw, ch, 0, 0, lop,
+                           source->planar_height);
             }
             if (code < 0)
                 return code;

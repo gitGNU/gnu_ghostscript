@@ -77,12 +77,12 @@ cmd_compress_bitmap(stream_state * st, const byte * data, uint width_bits,
     r.ptr = data - 1;
     if (raster == width_bytes) {
         r.limit = r.ptr + raster * height;
-        status = (*st->template->process) (st, &r, pw, true);
+        status = (*st->templat->process) (st, &r, pw, true);
     } else {			/* Compress row-by-row. */
         uint y;
 
         for (y = 1; (r.limit = r.ptr + width_bytes), y < height; ++y) {
-            status = (*st->template->process) (st, &r, pw, false);
+            status = (*st->templat->process) (st, &r, pw, false);
             if (status)
                 break;
             if (r.ptr != r.limit) {	/* We don't attempt to handle compressors that */
@@ -93,10 +93,10 @@ cmd_compress_bitmap(stream_state * st, const byte * data, uint width_bits,
             r.ptr += raster - width_bytes;
         }
         if (status == 0)
-            status = (*st->template->process) (st, &r, pw, true);
+            status = (*st->templat->process) (st, &r, pw, true);
     }
-    if (st->template->release)
-        (*st->template->release) (st);
+    if (st->templat->release)
+        (*st->templat->release) (st);
     return status;
 }
 
@@ -245,7 +245,8 @@ cmd_size_tile_params(const gx_strip_bitmap * tile, bool for_pattern)
          cmd_size_w(tile->size.x / tile->rep_width)) +
         (tile->rep_height == tile->size.y ? 0 :
          cmd_size_w(tile->size.y / tile->rep_height)) +
-        (tile->rep_shift == 0 ? 0 : cmd_size_w(tile->rep_shift));
+        (tile->rep_shift == 0 ? 0 : cmd_size_w(tile->rep_shift)) +
+        (tile->num_planes == 1 ? 0 : 1);
 }
 static void
 cmd_store_tile_params(byte * dp, const gx_strip_bitmap * tile, int depth,
@@ -268,8 +269,12 @@ cmd_store_tile_params(byte * dp, const gx_strip_bitmap * tile, int depth,
         bd |= 0x40;
     }
     if (tile->rep_shift != 0) {
-        cmd_put_w(tile->rep_shift, p);
+        p = cmd_put_w(tile->rep_shift, p);
         bd |= 0x80;
+    }
+    if (tile->num_planes != 1) {
+        *p++ = (byte)tile->num_planes;
+        bd |= 0x10;
     }
     dp[1] = bd;
 }
@@ -425,7 +430,7 @@ clist_add_tile(gx_device_clist_writer * cldev, const gx_strip_bitmap * tiles,
                uint sraster, int depth)
 {
     uint raster = tiles->raster;
-    uint size_bytes = raster * tiles->size.y;
+    uint size_bytes = raster * tiles->size.y * tiles->num_planes;
     uint tsize =
     sizeof(tile_slot) + cldev->tile_band_mask_size + size_bytes;
     gx_cached_bits_head *slot_head;
@@ -470,11 +475,14 @@ clist_add_tile(gx_device_clist_writer * cldev, const gx_strip_bitmap * tiles,
     slot->shift = slot->rep_shift = tiles->rep_shift;
     slot->x_reps = slot->y_reps = 1;
     slot->id = tiles->id;
+    slot->num_planes = (byte)tiles->num_planes;
+    if (slot->num_planes != 1)
+        depth /= slot->num_planes;
     memset(ts_mask(slot), 0, cldev->tile_band_mask_size);
     bytes_copy_rectangle_zero_padding(ts_bits(cldev, slot), raster,
                                       tiles->data, sraster,
                                       (tiles->rep_width * depth + 7) >> 3,
-                                      tiles->rep_height);
+                                      tiles->rep_height * slot->num_planes);
     /* Make the hash table entry. */
     {
         tile_loc loc;
@@ -509,7 +517,8 @@ clist_new_tile_params(gx_strip_bitmap * new_tile, const gx_strip_bitmap * tiles,
                                  * as long as we don't exceed a total tile size of 256 bytes,
                                  * or more than 255 repetitions in X or Y, or make the tile so
                                  * large that not all possible tiles will fit in the cache.
-                                 * Also, don't attempt Y replication if shifting is required.
+                                 * Also, don't attempt Y replication if shifting is required,
+                                 * or if num_planes != 1.
                                  */
 #define max_tile_reps_x 255
 #define max_tile_bytes_x 32
@@ -517,10 +526,15 @@ clist_new_tile_params(gx_strip_bitmap * new_tile, const gx_strip_bitmap * tiles,
 #define max_tile_bytes 256
     uint rep_width = tiles->rep_width;
     uint rep_height = tiles->rep_height;
-    uint rep_width_bits = rep_width * depth;
+    uint rep_width_bits;
     uint tile_overhead =
     sizeof(tile_slot) + cldev->tile_band_mask_size;
-    uint max_bytes = cldev->chunk.size / (rep_width_bits * rep_height);
+    uint max_bytes;
+
+    if (tiles->num_planes != 1)
+        depth /= tiles->num_planes;
+    rep_width_bits = rep_width * depth;
+    max_bytes = cldev->chunk.size / (rep_width_bits * rep_height);
 
     max_bytes -= min(max_bytes, tile_overhead);
     if (max_bytes > max_tile_bytes)
@@ -536,7 +550,7 @@ clist_new_tile_params(gx_strip_bitmap * new_tile, const gx_strip_bitmap * tiles,
             reps_x >>= 1;
         new_tile->size.x = max(reps_x, 1) * rep_width;
         new_tile->raster = bitmap_raster(new_tile->size.x * depth);
-        if (tiles->shift != 0)
+        if (tiles->shift != 0 || tiles->num_planes != 1)
             reps_y = 1;
         else {
             reps_y = max_bytes / (new_tile->raster * rep_height);
@@ -625,14 +639,19 @@ clist_change_tile(gx_device_clist_writer * cldev, gx_clist_state * pcls,
                     extra + 1 + cmd_size_w(loc.index) + cmd_size_w(offset);
                 byte *dp;
                 uint csize;
-                int code =
-                cmd_put_bits(cldev, pcls, ts_bits(cldev, loc.tile),
-                             tiles->rep_width * depth, tiles->rep_height,
-                             loc.tile->cb_raster, rsize,
-                             (cldev->tile_params.size.x > tiles->rep_width ?
-                              decompress_elsewhere | decompress_spread :
-                              decompress_elsewhere),
-                             &dp, &csize);
+                int code;
+                int pdepth = depth;
+                if (tiles->num_planes != 1)
+                    pdepth /= tiles->num_planes;
+
+                code = cmd_put_bits(cldev, pcls, ts_bits(cldev, loc.tile),
+                                    tiles->rep_width * pdepth,
+                                    tiles->rep_height * tiles->num_planes,
+                                    loc.tile->cb_raster, rsize,
+                                    (cldev->tile_params.size.x > tiles->rep_width ?
+                                     decompress_elsewhere | decompress_spread :
+                                     decompress_elsewhere),
+                                    &dp, &csize);
 
                 if (code < 0)
                     return code;
@@ -710,12 +729,15 @@ clist_change_bits(gx_device_clist_writer * cldev, gx_clist_state * pcls,
             uint csize;
             gx_clist_state *bit_pcls = pcls;
             int code;
+            int pdepth = depth;
 
+            if (tiles->num_planes != 1)
+                    pdepth /= loc.tile->num_planes;
             if (loc.tile->num_bands == CHAR_ALL_BANDS_COUNT)
                 bit_pcls = NULL;
             code = cmd_put_bits(cldev, bit_pcls, ts_bits(cldev, loc.tile),
-                                loc.tile->width * depth,
-                                loc.tile->height, loc.tile->cb_raster,
+                                loc.tile->width * pdepth,
+                                loc.tile->height * loc.tile->num_planes, loc.tile->cb_raster,
                                 rsize,
                              (1 << cmd_compress_cfe) | decompress_elsewhere,
                                 &dp, &csize);

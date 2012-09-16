@@ -29,10 +29,17 @@
  * turn printout on and off during debugging.  (In fact, we even provide a
  * PostScript operator, .setdebug, that does this.)
  *
- * The debugging flags are normally indexed by character code.  This is more
- * than a convention: gs_debug_c, which tests whether a given flag is set,
- * considers that if a flag named by a given upper-case letter is set, the
- * flag named by the corresponding lower-case letter is also set.
+ * The debugging flags are normally indexed by character code.  Originally
+ * this was more than a convention: gs_debug_c, which tests whether a given
+ * flag is set, considers that if a flag named by a given upper-case letter
+ * is set, the flag named by the corresponding lower-case letter is also
+ * set.
+ *
+ * The new code uses a 'implication' table that allows us to be more general;
+ * any debug flag can now 'imply' another one. By default this is setup
+ * to give the same behaviour as before, but newly added flags are not
+ * constrained in the same way - we can have A -> B -> C etc or can have
+ * upper case flags that don't imply lower case ones.
  *
  * If the output selected by a given flag can be printed by a single
  * printf, the conventional way to produce the output is
@@ -45,6 +52,29 @@
  *        ... start each line with dlprintfN(...)
  *        ... produce additional output within a line with dprintfN(...)
  * } */
+
+
+typedef enum {
+#define FLAG(a,b,c,d) gs_debug_flag_ ## a = b
+#define UNUSED(a)
+#include "gdbflags.h"
+#undef FLAG
+#undef UNUSED
+} gs_debug_flag;
+
+typedef struct {
+    int used;
+    char short_desc[20];
+    char long_desc[80];
+} gs_debug_flag_details;
+
+#define gs_debug_flags_max 127
+extern const byte gs_debug_flag_implied_by[gs_debug_flags_max];
+extern const gs_debug_flag_details gs_debug_flags[gs_debug_flags_max];
+
+
+int gs_debug_flags_parse(gs_memory_t *heap, const char *arg);
+void gs_debug_flags_list(gs_memory_t *heap);
 
 /* Define the array of debugging flags, indexed by character code. */
 extern char gs_debug[128];

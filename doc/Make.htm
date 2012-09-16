@@ -398,7 +398,25 @@ and JPEG 2000 implementations. If you have the source code for these
 and wish the compile them into Ghostscript, the build system expects 
 them to be in directories named <code>luratech/ldf_jb2</code> and
 <code>luratech/lwf_jp2</code> in the top level gs source directory, alongside
-the other third-party libraries.
+the other third-party libraries. With the Luratech source directories in the
+expected place, the build system will automatically include them.
+<p>
+If you have the Luratech code but wish to build without it, on "configure"
+based builds you can acheive this by doing:
+<br>
+<blockquote>
+<code>./configure --without-luratech</code>
+</blockquote>
+<p>
+On Windows, you can acheive it by adding:
+<br>
+<blockquote>
+<code>NO_LURATECH=1</code>
+</blockquote>
+to your nmake command line.
+<p>
+With either of these options, the build will fall back to the defaults for
+both JBIG2 and JPEG2000 decoding.
 
 <hr>
 
@@ -1491,7 +1509,13 @@ allow you to use Ghostscript from the command line as a BSD-layer tool
 to rasterize postscript and pdf to image files, and convert between the 
 high-level formats supported by Ghostscript. See the instructions for the
 unix build below for details of how to customize this build.
-
+<p>
+NOTE: If you have MacPorts (http://www.macports.org/) installed, it can
+"confuse" the configure script because it includes some librares which
+duplicate the "system" ones. This can cause missing symbol link errors.
+In order to resolve this, you can do:<code> LDFLAGS="-L/usr/lib" ./configure</code>.
+That will force the linker to search the default directory first, and thus pick
+up the system libraries first.
 <p>
 There is also a support for building Ghostscript as a framework. This is
 a special encapsulated shared library format specific to MacOS X. To build
@@ -2887,7 +2911,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 9.04, 5 August 2011
+<small>Ghostscript version 9.05, 8 February 2012
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

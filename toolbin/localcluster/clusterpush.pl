@@ -7,7 +7,7 @@ use Data::Dumper;
 
 my $verbose=0;
 
-# bmpcmp usage: [gs] [pcl] [xps] [gs] [bmpcmp] [lowres] [$user] | abort
+# bmpcmp usage: [gs] [pcl] [xps] [gs] [mupdf] [bmpcmp] [lowres] [$user] | abort
 
 
 
@@ -18,10 +18,12 @@ my %products=('abort' =>1,
               'pcl'=>1,
               'svg'=>1,
               'xps'=>1,
-              'ls'=>1);
+              'ls'=>1,
+              'mupdf'=>1);
 
 my $user;
 my $product="";
+my $filters="";
 my $command="";
 my $res="";
 my $t1;
@@ -32,6 +34,8 @@ while ($t1=shift) {
     $res="highres";
   } elsif ($t1=~m/^-/ || $t1=~m/^\d/) {
     $command.=$t1.' ';
+  } elsif ($t1 =~ m/filter=.*/) {
+    $filters.=$t1.' ';
   } elsif (exists $products{$t1}) {
     $product.=$t1.' ';
   } elsif ($t1 =~ m/ /) {
@@ -81,7 +85,7 @@ my $directory=`pwd`;
 chomp $directory;
 
 $directory =~ s|.+/||;
-if ($directory ne 'gs' && $directory ne 'ghostpdl') {
+if ($directory ne 'gs' && $directory ne 'ghostpdl' && $directory ne 'mupdf') {
   $directory="";
   if (-d "base" && -d "Resource") {
     $directory='gs';
@@ -89,14 +93,24 @@ if ($directory ne 'gs' && $directory ne 'ghostpdl') {
   if (-d "pxl" && -d "pcl") {
     $directory='ghostpdl';
   }
+  if (-d "fitz" && -d "draw" && -d "pdf") {
+    $directory='mupdf';
+  }
 }
 
 #$directory="gs" if ($directory eq "" && $product eq "bmpcmp");
 $directory="gs" if ($directory eq "" && $product && $product eq "abort");
 
-die "can't figure out if this is a ghostpdl or gs directory" if ($directory eq "");
+die "can't figure out if this is a ghostpdl, gs, or mupdf source directory" if ($directory eq "");
 
-$product='gs pcl xps ls' if (!$product);
+if (!$product) {
+  if ($directory eq 'mupdf') {
+    $product='mupdf';
+  } else {
+    $product='gs pcl xps ls'
+  }
+}
+
 print "$user $directory $product\n" if ($verbose);
 
 
@@ -133,10 +147,14 @@ my $cmd="rsync -avxcz ".
 " --exclude _darcs --exclude .bzr --exclude .hg".
 " --exclude .deps --exclude .libs --exclude autom4te.cache".
 " --exclude bin --exclude obj --exclude debugobj --exclude pgobj".
+" --exclude bin64 --exclude obj64 --exclude debugobj64 --exclude pgobj64".
+" --exclude membin --exclude memobj --exclude membin64 --exclude memobj64".
+" --exclude profbin --exclude profobj --exclude profbin64 --exclude profobj64".
 " --exclude sobin --exclude soobj --exclude debugbin".
 " --exclude ufst --exclude ufst-obj --exclude ufst-debugobj".
-" --exclude config.log".
+" --exclude config.log --exclude .png".
 " --exclude .ppm --exclude .pkm --exclude .pgm --exclude .pbm".
+" --exclude build --exclude generated".
 " -e \"$ssh\" ".
 " .".
 " $hostpath";
@@ -156,6 +174,7 @@ if ($product ne "abort" ) { #&& $product ne "bmpcmp") {
 open(F,">cluster_command.run");
 print F "$user $product $res\n";
 print F "$command\n";
+print F "$filters\n";
 close(F);
 
 $cmd="rsync -avxcz".

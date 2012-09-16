@@ -758,8 +758,10 @@ currentdict /no_debug_dict undef
       (%Resolving: ) print 2 copy 2 array astore //== exec
     } if
   } if
-  1 index 0 lt {
-    (   **** Considering object with a negative number as null.\n) pdfformaterror
+  1 index dup 0 lt exch NumObjects ge or {
+    (   **** Considering object with an invalid number ) 
+    2 index 20 string cvs concatstrings   
+    ( as null.\n) concatstrings pdfformaterror
     pop pop //null
   } {
     1 index resolved? {           % If object has already been resolved ...
@@ -971,7 +973,7 @@ currentdict /pdf_rules_dict undef
     { filtername add_A85_param filter }
   } {
     {		% Stack: parms source filtername
-      2 index 0 oget dup //null eq { pop } {
+      2 index 0 oget dup type /dicttype ne { pop } {
         exch filtername dup /JBIG2Decode eq { exch jbig2cachectx exch } if
       } ifelse add_A85_param filter
       exch dup length 1 sub 1 exch getinterval exch
@@ -1075,7 +1077,7 @@ currentdict /pdf_rules_dict undef
   dup /Kids knownoget {
     exch pop .branchget
   } {
-    exch get .leafget
+    exch oget .leafget
   } ifelse
 } bind def
 

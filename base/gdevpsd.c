@@ -150,12 +150,12 @@ RELOC_PTRS_END
 /* we need to implement it separately because st_composite_final */
 /* declares all 3 procedures as private. */
 static void
-psd_device_finalize(void *vpdev)
+psd_device_finalize(const gs_memory_t *cmem, void *vpdev)
 {
     /* We need to deallocate the compressed_color_list.
        and the names. */
     devn_free_params((gx_device*) vpdev);
-    gx_device_finalize(vpdev);
+    gx_device_finalize(cmem, vpdev);
 }
 
 gs_private_st_composite_final(st_psd_device, psd_device,
@@ -458,8 +458,8 @@ cmyk_cs_to_spotn_cm(gx_device * dev, frac c, frac m, frac y, frac k, frac out[])
         in[2] = frac2ushort(y);
         in[3] = frac2ushort(k);
 
-        gscms_transform_color(link, &(in[0]),
-                        &(tmp[0]), 2, NULL);
+        gscms_transform_color(dev, link, &(in[0]),
+                        &(tmp[0]), 2);
 
         for (i = 0; i < outn; i++)
             out[i] = ushort2frac(tmp[i]);
@@ -502,8 +502,8 @@ rgb_cs_to_spotn_cm(gx_device * dev, const gs_imager_state *pis,
         in[1] = frac2ushort(g);
         in[2] = frac2ushort(b);
 
-        gscms_transform_color(link, &(in[0]),
-                        &(tmp[0]), 2, NULL);
+        gscms_transform_color(dev, link, &(in[0]),
+                        &(tmp[0]), 2);
 
         for (i = 0; i < outn; i++)
             out[i] = ushort2frac(tmp[i]);
@@ -569,14 +569,15 @@ static gx_color_index
 psd_encode_color(gx_device *dev, const gx_color_value colors[])
 {
     int bpc = ((psd_device *)dev)->devn_params.bitspercomponent;
-    int drop = sizeof(gx_color_value) * 8 - bpc;
     gx_color_index color = 0;
     int i = 0;
     int ncomp = dev->color_info.num_components;
+    COLROUND_VARS;
 
+    COLROUND_SETUP(bpc);
     for (; i<ncomp; i++) {
         color <<= bpc;
-        color |= (colors[i] >> drop);
+        color |= COLROUND_ROUND(colors[i]);
     }
     return (color == gx_no_color_index ? color ^ 1 : color);
 }
@@ -588,13 +589,14 @@ static int
 psd_decode_color(gx_device * dev, gx_color_index color, gx_color_value * out)
 {
     int bpc = ((psd_device *)dev)->devn_params.bitspercomponent;
-    int drop = sizeof(gx_color_value) * 8 - bpc;
     int mask = (1 << bpc) - 1;
     int i = 0;
     int ncomp = dev->color_info.num_components;
+    COLDUP_VARS;
 
+    COLDUP_SETUP(bpc);
     for (; i<ncomp; i++) {
-        out[ncomp - i - 1] = (gx_color_value) ((color & mask) << drop);
+        out[ncomp - i - 1] = COLDUP_DUP(color & mask);
         color >>= bpc;
     }
     return 0;
@@ -1123,7 +1125,7 @@ psd_write_header(psd_write_ctx *xc, psd_device *pdev)
 }
 
 static void
-psd_calib_row(psd_write_ctx *xc, byte **tile_data, const byte *row,
+psd_calib_row(gx_device *dev, psd_write_ctx *xc, byte **tile_data, const byte *row,
                 int channel, gcmmhlink_t link, int inn, int outn)
 {
     int base_bytes_pp = xc->base_bytes_pp;
@@ -1139,8 +1141,8 @@ psd_calib_row(psd_write_ctx *xc, byte **tile_data, const byte *row,
             for (plane_idx = 0; plane_idx < inn; plane_idx++)
                 in[plane_idx] = row[x*channels+plane_idx];
 
-            gscms_transform_color(link, &(in[0]),
-                &((*tile_data)[x]), 1, NULL);
+            gscms_transform_color(dev, link, &(in[0]),
+                &((*tile_data)[x]), 1);
 
         } else {
             (*tile_data)[x] = 255 ^ row[x*channels+base_bytes_pp+channel];
@@ -1241,7 +1243,7 @@ psd_write_image_data(psd_write_ctx *xc, gx_device_printer *pdev)
                         }
                     }
                 } else {
-                    psd_calib_row(xc, &sep_line, unpacked, data_pos,
+                    psd_calib_row((gx_device*) xdev, xc, &sep_line, unpacked, data_pos,
                         link, xdev->output_profile->num_comps,
                         xdev->output_profile->num_comps_out);
                 }

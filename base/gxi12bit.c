@@ -145,8 +145,8 @@ gs_image_class_2_fracs(gx_image_enum * penum)
             cmm_dev_profile_t *dev_profile;
 
             code = dev_proc(penum->dev, get_profile)(penum->dev, &dev_profile);
-            num_des_comps = dev_profile->device_profile[0]->num_comps;
-             penum->icc_setup.need_decode = false;
+            num_des_comps = gsicc_get_device_profile_comps(dev_profile);
+            penum->icc_setup.need_decode = false;
             /* Check if we need to do any decoding.  If yes, then that will slow us down */
             for (k = 0; k < src_num_comp; k++) {
                 if ( penum->map[k].decoding != sd_none ) {
@@ -170,7 +170,7 @@ gs_image_class_2_fracs(gx_image_enum * penum)
             if (penum->icc_setup.is_lab) penum->icc_setup.need_decode = false;
             if (penum->icc_link == NULL) {
                 penum->icc_link = gsicc_get_link(penum->pis, penum->dev, pcs, NULL,
-                    &rendering_params, penum->memory, false);
+                    &rendering_params, penum->memory);
             }
             /* Use the direct unpacking proc */
             penum->unpack = sample_unpackicc_16_proc;
@@ -291,7 +291,7 @@ image_render_frac(gx_image_enum * penum, const byte * buffer, int data_x,
                     (*map_cmyk) (next.v[0], next.v[1],
                                  next.v[2], next.v[3],
                                  pdevc_next, pis, dev,
-                                 gs_color_select_source);
+                                 gs_color_select_source, NULL);
                     goto f;
                 }
                 decode_frac(next.v[0], cc, 0);
@@ -578,7 +578,7 @@ image_render_icc16(gx_image_enum * penum, const byte * buffer, int data_x,
     color_fracs run;		/* run value */
     color_fracs next;		/* next sample value */
     const unsigned short *bufend = psrc + w;
-    int code = 0, mcode = 0;
+    int code = 0;
     gsicc_bufferdesc_t input_buff_desc;
     gsicc_bufferdesc_t output_buff_desc;
     unsigned short *psrc_cm, *psrc_cm_start, *psrc_decode;
@@ -610,10 +610,8 @@ image_render_icc16(gx_image_enum * penum, const byte * buffer, int data_x,
     /* These used to be set by init clues */
     pdevc->type = gx_dc_type_none;
     pdevc_next->type = gx_dc_type_none;
-    if (h == 0)
-        return 0;
     code = dev_proc(dev, get_profile)(dev, &dev_profile);
-    num_des_comps = dev_profile->device_profile[0]->num_comps;
+    num_des_comps = gsicc_get_device_profile_comps(dev_profile);
     /* If the link is the identity, then we don't need to do any color
        conversions except for potentially a decode. */
     if (penum->icc_link->is_identity && !need_decode) {
@@ -660,15 +658,19 @@ image_render_icc16(gx_image_enum * penum, const byte * buffer, int data_x,
                                         (const unsigned short*) (psrc_decode+w),
                                          penum->cie_range);
                 }
-                gscms_transform_color_buffer(penum->icc_link, &input_buff_desc,
-                                        &output_buff_desc, (void*) psrc_decode,
-                                        (void*) psrc_cm);
+                (penum->icc_link->procs.map_buffer)(dev, penum->icc_link, 
+                                                    &input_buff_desc,
+                                                    &output_buff_desc, 
+                                                    (void*) psrc_decode,
+                                                    (void*) psrc_cm);
                 gs_free_object(pis->memory, (byte *)psrc_decode, "image_render_color_icc");
             } else {
                 /* CM only. No decode */
-                gscms_transform_color_buffer(penum->icc_link, &input_buff_desc,
-                                            &output_buff_desc, (void*) psrc,
-                                            (void*) psrc_cm);
+                (penum->icc_link->procs.map_buffer)(dev, penum->icc_link, 
+                                                    &input_buff_desc,
+                                                    &output_buff_desc, 
+                                                    (void*) psrc, 
+                                                    (void*) psrc_cm);
             }
         }
     }
@@ -746,7 +748,6 @@ image_render_icc16(gx_image_enum * penum, const byte * buffer, int data_x,
         if (code < 0)
             goto err;
         rsrc = psrc;
-        if ((code = mcode) < 0) goto err;
         /* Swap around the colors due to a change */
         ptemp = pdevc;
         pdevc = pdevc_next;

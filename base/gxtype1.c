@@ -409,7 +409,12 @@ gs_type1_piece_codes(/*const*/ gs_font_type1 *pfont,
             cnext;
             goto out;
         case c2_shortint:
-            cip += 2;
+            {
+                short sint = *cip++;
+                sint = (sint << 8) + *cip++;
+                CS_CHECK_PUSH(csp, cstack);
+                *++csp = int2fixed(sint);
+            }
             break;
         case c2_hstemhm:
             hhints += ((csp - cstack) + 1) / 2;
@@ -632,7 +637,7 @@ gs_type1_glyph_info(gs_font *font, gs_glyph glyph, const gs_matrix *pmat,
             info->v.y = fixed2float(cis.lsb.y);
             break;
         }
-        info->members |= width_members | (GLYPH_INFO_VVECTOR0 << wmode);
+        info->members |= width_members;
     }
 
     gs_glyph_data_free(&gdata, "gs_type1_glyph_info");

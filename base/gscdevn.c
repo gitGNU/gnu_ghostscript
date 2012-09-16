@@ -384,7 +384,7 @@ gx_concretize_DeviceN(const gs_client_color * pc, const gs_color_space * pcs,
 {
     int code, tcode = 0;
     gs_client_color cc;
-    const gs_color_space *pacs = pcs->base_space;
+    gs_color_space *pacs = (gs_color_space*) (pcs->base_space);
     gs_device_n_map *map = pcs->params.device_n.map;
     bool is_lab;
 
@@ -587,7 +587,14 @@ static int
 gx_set_overprint_DeviceN(const gs_color_space * pcs, gs_state * pgs)
 {
     gs_devicen_color_map *  pcmap = &pgs->color_component_map;
+    int code;
 
+    /* It is possible that the color map information in the graphic state
+       is not current due to save/restore and or if we are coming from 
+       a color space that is inside a PatternType 2 */
+    code = check_DeviceN_component_names(pcs, pgs);
+    if (code < 0)
+       return code;
     if (pcmap->use_alt_cspace) {
         const gs_color_space_type* base_type = pcs->base_space->type;
 

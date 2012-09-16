@@ -329,7 +329,8 @@ cmap_rgb_capture_cmyk_color(frac r, frac g, frac b, gx_device_color * pdc,
 
 static void
 cmap_cmyk_capture_cmyk_color(frac c, frac m, frac y, frac k, gx_device_color * pdc,
-     const gs_imager_state * pis, gx_device * dev, gs_color_select_t select)
+     const gs_imager_state * pis, gx_device * dev, gs_color_select_t select,
+     const gs_color_space *pcs)
 {
     equivalent_cmyk_color_params * pparams =
             ((color_capture_device *)dev)->pequiv_cmyk_colors;
@@ -396,12 +397,15 @@ capture_spot_equivalent_cmyk_colors(gx_device * pdev, const gs_state * pgs,
     temp_device.color_info = pdev->color_info;
     temp_device.sep_num = sep_num;
     temp_device.pequiv_cmyk_colors = pparams;
-    temp_device.memory = pgs->memory;
+    temp_device.memory = pgs->memory; 
 
+    temp_profile.usefastcolor = false;  /* This avoids a few headaches */
     temp_profile.device_profile[0] = curr_output_profile;
     temp_profile.device_profile[1] = NULL;
     temp_profile.device_profile[2] = NULL;
     temp_profile.device_profile[2] = NULL;
+    temp_profile.link_profile = NULL;
+    temp_profile.proof_profile = NULL;
     temp_device.icc_struct = &temp_profile;
     set_dev_proc(&temp_device, get_profile, gx_default_get_profile);
 
@@ -416,6 +420,6 @@ capture_spot_equivalent_cmyk_colors(gx_device * pdev, const gs_state * pgs,
     temp_state.color_component_map.use_alt_cspace = true;
 
     /* Now capture the color */
-    pcs->type->remap_color (pcc, pcs, &dev_color, &temp_state,
-                    (gx_device *)&temp_device, gs_color_select_texture);
+    pcs->type->remap_color (pcc, pcs, &dev_color, &temp_state, 
+                            (gx_device *)&temp_device, gs_color_select_texture);
 }

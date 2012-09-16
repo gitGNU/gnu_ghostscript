@@ -74,8 +74,6 @@
 #	    e.g. 'jasper' or 'jasper-/version/'
 #	JPX_CFLAGS - any platform-specific flags that are required
 #	    to properly compile in the jpeg2k library source
-#	IMDISRCDIR - the name of the IMDI lib source directory
-#	    generally 'imdi'
 #	SHARE_LCMS - If set to 1, asks the linker to use a separately
 #	    compiled lcms library. If set to 0, the build will compile
 #	    in the library source found in LCMSSRCDIR
@@ -347,6 +345,7 @@ LDF_JB2I_=$(JBIG2SRCDIR)$(D)source$(D)libraries
 JPXI_=$(JPXSRCDIR)$(D)src$(D)libjasper$(D)include
 LWF_JPXI_=$(JPXSRCDIR)$(D)library$(D)source
 JPXCF_=$(JPX_CFLAGS)
+JPX_OPENJPEG_I_=$(JPXSRCDIR)$(D)libopenjpeg
 
 ######################## How to define new 'features' #######################
 #

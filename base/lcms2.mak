@@ -20,7 +20,7 @@
 # gs.mak and friends define the following:
 #	LCMS2OBJDIR - the output obj directory
 #	LCMS2GENDIR - generated (.dev) file directory
-#	LCMS2I_ LCMS2CF_ - include and cflags for compiling the lib
+#	LCMS2I_ LCMS2_CFLAGS - include and cflags for compiling the lib
 
 # We define the lcms2.dev target and its dependencies
 #
@@ -65,7 +65,7 @@ lcms2_OBJS=\
 
 lcms2_HDRS=\
         $(LCMS2SRCDIR)$(D)include$(D)lcms2.h \
-        $(LCMS2SRCDIR)$(D)include$(D)icc34.h
+        $(GLSRC)icc34.h
 
 lcms2.clean : lcms2.config-clean lcms2.clean-not-config-clean
 
@@ -78,7 +78,7 @@ lcms2.config-clean :
 
 # NB: we can't use the normal $(CC_) here because msvccmd.mak
 # adds /Za which conflicts with the lcms source.
-LCMS2_CC=$(CC) $(CFLAGS) $(I_)$(LCMS2SRCDIR)$(D)include $(LCMS2CF_)
+LCMS2_CC=$(CC) $(CFLAGS) $(LCMS2_CFLAGS) $(I_)$(LCMS2SRCDIR)$(D)include $(LCMS2CF_)
 LCMS2O_=$(O_)$(LCMS2OBJ)
 
 # switch in the version of lcms2.dev we're actually using
@@ -161,5 +161,5 @@ $(LCMS2OBJ)cmswtpnt.$(OBJ) : $(LCMS2SRC)cmswtpnt.c $(lcms2_HDRS)
 $(LCMS2OBJ)cmsvirt.$(OBJ) : $(LCMS2SRC)cmsvirt.c $(lcms2_HDRS)
 	$(LCMS2_CC) $(LCMS2O_)cmsvirt.$(OBJ) $(C_) $(LCMS2SRC)cmsvirt.c
 
-$(LCMS2OBJ)cmsxform.$(OBJ) : $(LCMS2SRC)cmsxform.c $(lcms2_HDRS)
+$(LCMS2OBJ)cmsxform.$(OBJ) : $(LCMS2SRC)cmsxform.c $(LCMS2SRC)cmsxform.h $(lcms2_HDRS)
 	$(LCMS2_CC) $(LCMS2O_)cmsxform.$(OBJ) $(C_) $(LCMS2SRC)cmsxform.c

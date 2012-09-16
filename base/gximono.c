@@ -87,11 +87,16 @@ gs_image_class_3_mono(gx_image_enum * penum)
            the interpolations occur this can cause a minor mismatch at large
            scalings */
 
-           /* Allow this for CMYK planar and mono binary halftoned devices */
-           dev_color_ok = ((penum->dev->color_info.num_components == 1 &&
-                            penum->dev->color_info.depth == 1) ||
-                           (penum->dev->color_info.num_components == 4 &&
-                            penum->dev->color_info.depth == 4 && is_planar_dev));
+        /* Allow this for CMYK planar and mono binary halftoned devices */
+        dev_color_ok = ((penum->dev->color_info.num_components == 1 &&
+                         penum->dev->color_info.depth == 1) ||
+#if 1
+                         /* Don't allow CMYK Planar devices just yet */
+                         0);
+#else
+                        (penum->dev->color_info.num_components == 4 &&
+                         penum->dev->color_info.depth == 4 && is_planar_dev));
+#endif
 
         if (use_fast_code && penum->pcs != NULL && dev_color_ok &&
             penum->bps == 8 && (penum->posture == image_portrait
@@ -107,7 +112,7 @@ gs_image_class_3_mono(gx_image_enum * penum)
                 }
             }
             code = dev_proc(penum->dev, get_profile)(penum->dev, &dev_profile);
-            num_des_comps = dev_profile->device_profile[0]->num_comps;
+            num_des_comps = gsicc_get_device_profile_comps(dev_profile);
             /* Define the rendering intents */
             rendering_params.black_point_comp = BP_ON;
             rendering_params.graphics_type_tag = GS_IMAGE_TAG;
@@ -137,7 +142,7 @@ gs_image_class_3_mono(gx_image_enum * penum)
             if (penum->icc_setup.is_lab) penum->icc_setup.need_decode = false;
             if (penum->icc_link == NULL) {
                 penum->icc_link = gsicc_get_link(penum->pis, penum->dev, pcs, NULL,
-                    &rendering_params, penum->memory, false);
+                    &rendering_params, penum->memory);
             }
             /* PS CIE color spaces may have addition decoding that needs to
                be performed to ensure that the range of 0 to 1 is provided
@@ -784,14 +789,13 @@ image_render_mono_ht(gx_image_enum * penum_orig, const byte * buffer, int data_x
     image_posture posture = penum->posture;
     int vdi;  /* amounts to replicate */
     fixed xrun;
-    byte *contone_align, *thresh_align;
+    byte *thresh_align;
     int spp_out = penum->dev->color_info.num_components;
     byte *devc_contone[GX_DEVICE_COLOR_MAX_COMPONENTS];
     byte *devc_contone_gray;
     const byte *psrc = buffer + data_x;
     int dest_width, dest_height, data_length;
     byte *color_cache;
-    gx_ht_order *d_order = &(penum->pis->dev_ht->components[0].corder);
     int position, k, j;
     int offset_bits = penum->ht_offset_bits;
     int contone_stride = 0;  /* Not used in landscape case */
@@ -802,7 +806,6 @@ image_render_mono_ht(gx_image_enum * penum_orig, const byte * buffer, int data_x
     int offset_threshold;  /* to ensure 128 bit boundary */
     gx_dda_int_t dda_ht;
     int code = 0;
-    bool allow_reset;
     byte *dev_value;
 
     if (h == 0) {
@@ -816,7 +819,7 @@ image_render_mono_ht(gx_image_enum * penum_orig, const byte * buffer, int data_x
             flush_buff = true;
         }
     }
-    src_size = (penum->rect.w - 1.0);
+    src_size = penum->rect.w - 1;
 
     switch (posture) {
         case image_portrait:
@@ -843,7 +846,7 @@ image_render_mono_ht(gx_image_enum * penum_orig, const byte * buffer, int data_x
             scale_factor = float2fixed_rounded((float) src_size / (float) (dest_width - 1));
 #ifdef DEBUG
             /* Help in spotting problems */
-            memset(penum->ht_buffer,0x00, penum->ht_stride * vdi);
+            memset(penum->ht_buffer,0x00, penum->ht_stride * vdi * spp_out);
 #endif
             break;
         case image_landscape:
@@ -880,10 +883,13 @@ image_render_mono_ht(gx_image_enum * penum_orig, const byte * buffer, int data_x
                 if (penum->ht_landscape.index < 0) {
                     penum->ht_landscape.xstart = penum->xci + vdi - 1;
                     offset_bits = (penum->ht_landscape.xstart % 16) + 1;
+                    /* xci can be negative, so allow for that */
+                    if (offset_bits <= 0) offset_bits += 16;
                 } else {
                     penum->ht_landscape.xstart = penum->xci;
+                    /* xci can be negative, see Bug 692569. */
                     offset_bits = 16 - penum->xci % 16;
-                    if (offset_bits == 16) offset_bits = 0;
+                    if (offset_bits >= 16) offset_bits -= 16;
                 }
                 if (offset_bits == 0 || offset_bits == 16) {
                     penum->ht_landscape.offset_set = false;
@@ -1097,24 +1103,8 @@ image_render_mono_ht(gx_image_enum * penum_orig, const byte * buffer, int data_x
     /* Apply threshold array to image data */
 flush:
     thresh_align = penum->thresh_buffer + offset_threshold;
-    for (k = 0; k < spp_out; k++) {
-        d_order = &(penum->pis->dev_ht->components[k].corder);
-        if (posture == image_portrait) {
-            contone_align = penum->line + contone_stride * k + 
-                            offset_contone[k];
-            allow_reset = true;
-        } else {
-            contone_align = penum->line + offset_contone[k] +
-                              LAND_BITS * k * contone_stride;
-            if (k == spp_out - 1) {
-                allow_reset = true;
-            } else {
-                allow_reset = false;
-            }
-        }
-        code = gxht_thresh_plane(penum, d_order, xrun, dest_width, dest_height,
-                                 thresh_align, contone_align, contone_stride, 
-                                 dev, k, allow_reset);
-    }
+    code = gxht_thresh_planes(penum, xrun, dest_width, dest_height,
+                              thresh_align, dev, offset_contone,
+                              contone_stride);
     return code;
 }

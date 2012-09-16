@@ -146,11 +146,6 @@ JBIG2SRCDIR=jbig2dec
 #IJSSRCDIR=ijs
 #IJSEXECTYPE=win
 
-# Define the directory where the imdi library source is stored.
-# See devs.mak for more information
-
-IMDISRCDIR=imdi
-
 # 1 --> Use 64 bits for gx_color_index.  This is required only for
 # non standard devices or DeviceN process color model devices.
 USE_LARGE_COLOR_INDEX=1
@@ -504,7 +499,7 @@ $(GLD)os2print.dev: $(ECHOGS_XE) $(os2print_)
 
 $(GLOBJ)gp_os2pr.$(OBJ): $(GLSRC)gp_os2pr.c $(GLSRC)gp_os2.h $(AK)\
  $(ctype__h) $(errno__h) $(stdio__h) $(string__h)\
- $(gserror_h) $(gsmemory_h) $(gstypes_h) $(gxiodev_h)
+ $(gsmemory_h) $(gstypes_h) $(gxiodev_h)
 	$(GLCC) $(GLO_)gp_os2pr.$(OBJ) $(C_) $(GLSRC)gp_os2pr.c
 
 

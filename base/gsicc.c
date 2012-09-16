@@ -32,19 +32,6 @@
 #define SAVEICCPROFILE 0
 
 /*
- * Discard a gs_cie_icc_s structure. This requires that we call the
- * destructor for ICC profile, lookup, and file objects (which are
- * stored in "foreign" memory).
- *
- * No special action is taken with respect to the stream pointer; that is
- * the responsibility of the client.  */
-static void
-cie_icc_finalize(void * pvicc_info)
-{
-
-    }
-
-/*
  * Color space methods for ICCBased color spaces.
    ICC spaces are now considered to be concrete in that
    they always provide a mapping to a specified destination
@@ -86,18 +73,18 @@ const gs_color_space_type gs_color_space_type_ICC = {
 };
 
 static inline void
-gsicc_remap_fast(unsigned short *psrc, unsigned short *psrc_cm,
-                       gsicc_link_t *icc_link)
+gsicc_remap_fast(gx_device *dev, unsigned short *psrc, unsigned short *psrc_cm,
+                 gsicc_link_t *icc_link)
 {
-    gscms_transform_color(icc_link, psrc, psrc_cm, 2, NULL);
+    (icc_link->procs.map_color)(dev, icc_link, psrc, psrc_cm, 2);
 }
 
 /* ICC color mapping linearity check, a 2-points case. Check only the 1/2 point */
 static int
 gx_icc_is_linear_in_line(const gs_color_space *cs, const gs_imager_state * pis,
-                gx_device *dev,
-                const gs_client_color *c0, const gs_client_color *c1,
-                float smoothness, gsicc_link_t *icclink)
+                        gx_device *dev,
+                        const gs_client_color *c0, const gs_client_color *c1,
+                        float smoothness, gsicc_link_t *icclink)
 {
     int nsrc = cs->type->num_components(cs);
     int ndes = dev->color_info.num_components;
@@ -118,9 +105,9 @@ gx_icc_is_linear_in_line(const gs_color_space *cs, const gs_imager_state * pis,
         src01[k] = ((unsigned int) src0[k] + (unsigned int) src1[k]) >> 1;
     }
     /* Transform the end points and the interpolated point */
-    gsicc_remap_fast(&(src0[0]), &(des0[0]), icclink);
-    gsicc_remap_fast(&(src1[0]), &(des1[0]), icclink);
-    gsicc_remap_fast(&(src01[0]), &(des01[0]), icclink);
+    gsicc_remap_fast(dev, &(src0[0]), &(des0[0]), icclink);
+    gsicc_remap_fast(dev, &(src1[0]), &(des1[0]), icclink);
+    gsicc_remap_fast(dev, &(src01[0]), &(des01[0]), icclink);
     /* Interpolate 1/2 value in des space and compare */
     for (k = 0; k < ndes; k++) {
         interp_des = (des0[k] + des1[k]) >> 1;
@@ -170,13 +157,13 @@ gx_icc_is_linear_in_triangle(const gs_color_space *cs, const gs_imager_state * p
         src012[k] = (src12[k] + src0[k]) >> 1;
     }
     /* Map the points */
-    gsicc_remap_fast(&(src0[0]), &(des0[0]), icclink);
-    gsicc_remap_fast(&(src1[0]), &(des1[0]), icclink);
-    gsicc_remap_fast(&(src2[0]), &(des2[0]), icclink);
-    gsicc_remap_fast(&(src01[0]), &(des01[0]), icclink);
-    gsicc_remap_fast(&(src12[0]), &(des12[0]), icclink);
-    gsicc_remap_fast(&(src02[0]), &(des02[0]), icclink);
-    gsicc_remap_fast(&(src012[0]), &(des012[0]), icclink);
+    gsicc_remap_fast(dev, &(src0[0]), &(des0[0]), icclink);
+    gsicc_remap_fast(dev, &(src1[0]), &(des1[0]), icclink);
+    gsicc_remap_fast(dev, &(src2[0]), &(des2[0]), icclink);
+    gsicc_remap_fast(dev, &(src01[0]), &(des01[0]), icclink);
+    gsicc_remap_fast(dev, &(src12[0]), &(des12[0]), icclink);
+    gsicc_remap_fast(dev, &(src02[0]), &(des02[0]), icclink);
+    gsicc_remap_fast(dev, &(src012[0]), &(des012[0]), icclink);
     /* Interpolate in des space and check it */
     for (k = 0; k < ndes; k++){
         interp_des = (des0[k] + des1[k]) >> 1;
@@ -286,7 +273,7 @@ gx_remap_concrete_ICC(const frac * pconc, const gs_color_space * pcs,
     cmm_dev_profile_t *dev_profile;
 
     code = dev_proc(dev, get_profile)(dev, &dev_profile);
-    num_colorants = dev_profile->device_profile[0]->num_comps;
+    num_colorants = gsicc_get_device_profile_comps(dev_profile);
     switch( num_colorants ) {
         case 1:
             code = gx_remap_concrete_DGray(pconc, pcs, pdc, pis, dev, select);
@@ -303,7 +290,7 @@ gx_remap_concrete_ICC(const frac * pconc, const gs_color_space * pcs,
             code = -1;
             break;
         }
-    return(code);
+    return code;
     }
 
 /*
@@ -328,7 +315,7 @@ gx_remap_ICC(const gs_client_color * pcc, const gs_color_space * pcs,
     cmm_dev_profile_t *dev_profile;
 
     code = dev_proc(dev, get_profile)(dev, &dev_profile);
-    num_des_comps = dev_profile->device_profile[0]->num_comps;
+    num_des_comps = gsicc_get_device_profile_comps(dev_profile);
     rendering_params.black_point_comp = BP_ON;
     rendering_params.graphics_type_tag = dev->graphics_type_tag;
     /* Need to figure out which one rules here on rendering intent.  The
@@ -350,26 +337,29 @@ gx_remap_ICC(const gs_client_color * pcc, const gs_color_space * pcs,
         }
     }
     /* Get a link from the cache, or create if it is not there. Need to get 16 bit profile */
-    icc_link = gsicc_get_link(pis, dev, pcs, NULL, &rendering_params, pis->memory, false);
+    icc_link = gsicc_get_link(pis, dev, pcs, NULL, &rendering_params, pis->memory);
+    if (icc_link == NULL) {
+        return gs_rethrow(-1, "Could not create ICC link:  Check profiles");
+    }
     if (icc_link->is_identity) {
         psrc_temp = &(psrc[0]);
     } else {
         /* Transform the color */
         psrc_temp = &(psrc_cm[0]);
-        gscms_transform_color(icc_link, psrc, psrc_temp, 2, NULL);
+        (icc_link->procs.map_color)(dev, icc_link, psrc, psrc_temp, 2);
     }
 #ifdef DEBUG
     if (!icc_link->is_identity) {
         num_src_comps = pcs->cmm_icc_profile_data->num_comps;
-        if_debug0('c',"[c]ICC remap [ ");
+        if_debug0(gs_debug_flag_icc,"[icc] remap [ ");
         for (k = 0; k < num_src_comps; k++) {
-            if_debug1('c', "%d ",psrc[k]);
+            if_debug1(gs_debug_flag_icc, "%d ",psrc[k]);
         }
-        if_debug0('c',"] --> [ ");
+        if_debug0(gs_debug_flag_icc,"] --> [ ");
         for (k = 0; k < num_des_comps; k++) {
-            if_debug1('c', "%d ",psrc_temp[k]);
+            if_debug1(gs_debug_flag_icc, "%d ",psrc_temp[k]);
         }
-        if_debug0('c',"]\n");
+        if_debug0(gs_debug_flag_icc,"]\n");
     }
 #endif
     /* Release the link */
@@ -413,23 +403,26 @@ gx_concretize_ICC(
     cmm_dev_profile_t *dev_profile;
 
     code = dev_proc(dev, get_profile)(dev, &dev_profile);
-    num_des_comps = dev_profile->device_profile[0]->num_comps;
+    num_des_comps = gsicc_get_device_profile_comps(dev_profile);
     /* Define the rendering intents.  MJV to fix */
     rendering_params.black_point_comp = BP_ON;
     rendering_params.graphics_type_tag = dev->graphics_type_tag;
     rendering_params.rendering_intent = pis->renderingintent;
-    for (k = 0; k < pcs->cmm_icc_profile_data->num_comps; k++){
+    for (k = 0; k < pcs->cmm_icc_profile_data->num_comps; k++) {
         psrc[k] = (unsigned short) (pcc->paint.values[k]*65535.0);
-        }
+    }
     /* Get a link from the cache, or create if it is not there. Get 16 bit profile */
-    icc_link = gsicc_get_link(pis, dev, pcs, NULL, &rendering_params, pis->memory, false);
+    icc_link = gsicc_get_link(pis, dev, pcs, NULL, &rendering_params, pis->memory);
+    if (icc_link == NULL) {
+        return gs_rethrow(-1, "Could not create ICC link:  Check profiles");
+    }
     /* Transform the color */
     if (icc_link->is_identity) {
         psrc_temp = &(psrc[0]);
     } else {
         /* Transform the color */
         psrc_temp = &(psrc_cm[0]);
-        gscms_transform_color(icc_link, psrc, psrc_temp, 2, NULL);
+        (icc_link->procs.map_color)(dev, icc_link, psrc, psrc_temp, 2);
     }
     /* This needs to be optimized */
     for (k = 0; k < num_des_comps; k++){

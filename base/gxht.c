@@ -331,13 +331,24 @@ gx_dc_ht_binary_fill_rectangle(const gx_device_color * pdevc, int x, int y,
         lop = rop3_use_D_when_T_1(lop);
     if (source == NULL)
         set_rop_no_source(source, no_source, dev);
-    return (*dev_proc(dev, strip_copy_rop)) (dev, source->sdata,
-                               source->sourcex, source->sraster, source->id,
-                             (source->use_scolors ? source->scolors : NULL),
-                                        &pdevc->colors.binary.b_tile->tiles,
-                                             pdevc->colors.binary.color,
-                                 x, y, w, h, pdevc->phase.x, pdevc->phase.y,
-                                             lop);
+    if (source->planar_height == 0)
+        return (*dev_proc(dev, strip_copy_rop))
+                             (dev, source->sdata,
+                              source->sourcex, source->sraster, source->id,
+                              (source->use_scolors ? source->scolors : NULL),
+                              &pdevc->colors.binary.b_tile->tiles,
+                              pdevc->colors.binary.color,
+                              x, y, w, h, pdevc->phase.x, pdevc->phase.y,
+                              lop);
+    else
+        return (*dev_proc(dev, strip_copy_rop2))
+                             (dev, source->sdata,
+                              source->sourcex, source->sraster, source->id,
+                              (source->use_scolors ? source->scolors : NULL),
+                              &pdevc->colors.binary.b_tile->tiles,
+                              pdevc->colors.binary.color,
+                              x, y, w, h, pdevc->phase.x, pdevc->phase.y,
+                              lop, source->planar_height);
 }
 
 static int
@@ -421,7 +432,7 @@ gx_dc_ht_binary_write(
     const gx_device_color *         pdevc,
     const gx_device_color_saved *   psdc0,
     const gx_device *               dev,
-    uint			    offset,
+    int64_t			    offset,
     byte *                          pdata,
     uint *                          psize )
 {
@@ -554,7 +565,7 @@ gx_dc_ht_binary_read(
     const gs_imager_state * pis,
     const gx_device_color * prior_devc,
     const gx_device *       dev,        /* ignored */
-    uint		    offset,
+    int64_t		    offset,
     const byte *            pdata,
     uint                    size,
     gs_memory_t *           mem )       /* ignored */
@@ -786,6 +797,7 @@ render_ht(gx_ht_tile * pbt, int level /* [1..num_bits-1] */ ,
         return code;
     pbt->level = level;
     pbt->tiles.id = new_id;
+    pbt->tiles.num_planes = 1;
     /*
      * Check whether we want to replicate the tile in the cache.
      * Since we only do this when all the renderings will fit

@@ -28,6 +28,7 @@
 #define SMASK_CMYK_ICC    "ps_cmyk.icc"
 #define GRAY_TO_K         "gray_to_k.icc"
 #define DEFAULT_DIR_ICC   "%rom%iccprofiles/"
+#define MAX_DEFAULT_ICC_LENGTH 17
 
 /* Key names for special common canned profiles.
    These are found in some image file formats as
@@ -79,7 +80,6 @@ int gsicc_set_device_profile_intent(gx_device *dev, gsicc_profile_types_t intent
                                 gsicc_profile_types_t profile_type);
 int gsicc_init_device_profile_struct(gx_device * dev,  char *profile_name,
                                      gsicc_profile_types_t profile_type);
-cmm_dev_profile_name_array_t* gsicc_new_dev_icc_names(gs_memory_t *memory);
 int gsicc_set_profile(gsicc_manager_t *icc_manager, const char *pname,
                       int namelen, gsicc_profile_t defaulttype);
 int gsicc_set_srcgtag_struct(gsicc_manager_t *icc_manager, const char* pname,
@@ -102,12 +102,12 @@ gcmmhprofile_t gsicc_get_profile_handle_buffer(unsigned char *buffer,
 gsicc_smask_t* gsicc_new_iccsmask(gs_memory_t *memory);
 int gsicc_initialize_iccsmask(gsicc_manager_t *icc_manager);
 unsigned int gsicc_getprofilesize(unsigned char *buffer);
+void gscms_set_icc_range(cmm_profile_t **icc_profile);
 cmm_profile_t* gsicc_read_serial_icc(gx_device * dev, int64_t icc_hashcode);
 cmm_profile_t* gsicc_finddevicen(const gs_color_space *pcs,
                                  gsicc_manager_t *icc_manager);
 gs_color_space_index gsicc_get_default_type(cmm_profile_t *profile_data);
 cmm_dev_profile_t* gsicc_new_device_profile_array(gs_memory_t *memory);
-int gsicc_sync_iccdir(gx_device *dev, const gs_state *pgs);
 void gs_setoverrideicc(gs_imager_state *pis, bool value);
 bool gs_currentoverrideicc(const gs_imager_state *pis);
 void gs_setoverride_ri(gs_imager_state *pis, bool value);
@@ -117,6 +117,7 @@ cmm_profile_t* gsicc_set_iccsmaskprofile(const char *pname, int namelen,
                                          gs_memory_t *mem);
 int gsicc_set_device_profile(gx_device * pdev, gs_memory_t * mem, 
                              char *file_name, gsicc_profile_types_t defaulttype);
+void gsicc_setrange_lab(cmm_profile_t *profile);
 
 #if ICC_DUMP
 static void dump_icc_buffer(int buffersize, char filename[],byte *Buffer);

@@ -1236,7 +1236,7 @@ upd_print_page(gx_device_printer *pdev, FILE *out)
 /**
 "upd_open" is -through the specified table of procedures- called instead
 of the normal open-procedures for printer-devices, that performs quite
-a complex job. Thus it is necessary to call this  `superclass-open�
+a complex job. Thus it is necessary to call this  `superclass-open´
 here.
 
 Besides that, this routine does quite a complex job too, in initializes

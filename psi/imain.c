@@ -241,15 +241,14 @@ gs_main_interpret(gs_main_instance *minst, ref * pref, int user_errors,
     return code;
 }
 
-int
-gs_main_init2(gs_main_instance * minst)
-{
-    i_ctx_t *i_ctx_p;
-    int code = gs_main_init1(minst);
+/* gcc wants prototypes for all external functions. */
+int gs_main_init2aux(gs_main_instance * minst);
 
-    if (code < 0)
-        return code;
-    i_ctx_p = minst->i_ctx_p;
+/* This is an external function to work around      */
+/* a bug in gcc 4.5.1 optimizer. See bug 692684.    */
+int gs_main_init2aux(gs_main_instance * minst) {
+    i_ctx_t * i_ctx_p = minst->i_ctx_p;
+
     if (minst->init_done < 2) {
         int code, exit_code;
         ref error_object;
@@ -275,7 +274,6 @@ gs_main_init2(gs_main_instance * minst)
         if (code < 0)
             return code;
         minst->init_done = 2;
-        i_ctx_p = minst->i_ctx_p; /* init file may change it */
         /* NB this is to be done with device parameters
          * both minst->display and  display_set_callback() are going away
         */
@@ -293,6 +291,22 @@ gs_main_init2(gs_main_instance * minst)
            return code;
 #endif /* PSI_INCLUDED */
     }
+    return 0;
+}
+
+int
+gs_main_init2(gs_main_instance * minst)
+{
+    i_ctx_t *i_ctx_p;
+    int code = gs_main_init1(minst);
+
+    if (code < 0)
+        return code;
+    i_ctx_p = minst->i_ctx_p;
+    code = gs_main_init2aux(minst);
+    if (code < 0)
+       return code;
+    i_ctx_p = minst->i_ctx_p; /* display_set_callback or run_string may change it */
     if (gs_debug_c(':'))
         print_resource_usage(minst, &gs_imemory, "Start");
     gp_readline_init(&minst->readline_data, imemory_system);
@@ -853,6 +867,7 @@ gs_main_finit(gs_main_instance * minst, int exit_status, int code)
         "serverdict /.jobsavelevel get 0 eq {/quit} {/stop} ifelse .systemvar exec",
         0 , &exit_code, &error_object);
     gp_readline_finit(minst->readline_data);
+    i_ctx_p = minst->i_ctx_p;		/* get current interp context */
     if (gs_debug_c(':')) {
         print_resource_usage(minst, &gs_imemory, "Final");
         dprintf1("%% Exiting instance 0x%p\n", minst);

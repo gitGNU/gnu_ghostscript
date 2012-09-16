@@ -18,7 +18,6 @@
 #include "memory_.h"
 #include "string_.h"
 #include "ghost.h"
-#include "gscdefs.h"		/* for gs_serialnumber */
 #include "gp.h"
 #include "oper.h"
 #include "ialloc.h"
@@ -29,6 +28,7 @@
 #include "ivmspace.h"
 #include "store.h"
 #include "igstate.h"            /* for gs_currentcpsimode */
+#include "memento.h"
 
 /**********************************************************************/
 
@@ -167,7 +167,7 @@ zserialnumber(i_ctx_t *i_ctx_p)
     os_ptr op = osp;
 
     push(1);
-    make_int(op, gs_serialnumber);
+    make_int(op, gp_serialnumber());
     return 0;
 }
 
@@ -382,6 +382,14 @@ zsetdebug(i_ctx_t *i_ctx_p)
     return 0;
 }
 
+/* .mementolistnew - */
+static int
+zmementolistnewblocks(i_ctx_t *i_ctx_p)
+{
+    Memento_listNewBlocks();
+    return 0;
+}
+
 /* There are a few cases where a customer/user might want CPSI behavior
  * instead of the GS default behavior. cmyk_to_rgb and Type 1 char fill
  * method are two that have come up so far. This operator allows a PS
@@ -497,6 +505,7 @@ const op_def zmisc_op_defs[] =
     {"0realtime", zrealtime},
     {"1serialnumber", zserialnumber},
     {"2.setdebug", zsetdebug},
+    {"0.mementolistnewblocks", zmementolistnewblocks},
     {"1.setoserrno", zsetoserrno},
     {"0usertime", zusertime},
     {"1.setCPSImode", zsetCPSImode},

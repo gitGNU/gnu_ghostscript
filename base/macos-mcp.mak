@@ -126,7 +126,7 @@ LCMS2SRCDIR=lcms2
 # Which CMS are we using?
 # Options are currently lcms or lcms2
 
-WHICH_CMS=lcms
+WHICH_CMS=lcms2
 
 # IJS has not been ported to MacOS Classic. If you do the port,
 # you'll need to set these values. You'll also need to
@@ -138,11 +138,6 @@ WHICH_CMS=lcms
 
 #IJSSRCDIR=ijs
 #IJSEXECTYPE=unix
-
-# Define the directory where the imdi library source is stored.
-# See devs.mak for more information
-
-IMDISRCDIR=imdi
 
 # ------ Platform-specific options ------ #
 
@@ -239,7 +234,7 @@ DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pngmonod.dev $(DD)pnggray.dev $(DD)png16.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev $(DD)jpegcmyk.dev
 DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)txtwrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
 
-DEVICE_DEVS16=$(DD)bbox.dev
+DEVICE_DEVS16=$(DD)bbox.dev $(DD)inkcov.dev
 DEVICE_DEVS17=
 DEVICE_DEVS18=
 DEVICE_DEVS19=
@@ -290,6 +285,7 @@ include $(GLSRCDIR)/jbig2.mak
 include $(GLSRCDIR)/jasper.mak
 include $(GLSRCDIR)/ldf_jb2.mak
 include $(GLSRCDIR)/lwf_jp2.mak
+include $(GLSRCDIR)/openjpeg.mak
 include $(GLSRCDIR)/icclib.mak
 include $(GLSRCDIR)/devs.mak
 include $(GLSRCDIR)/contrib.mak

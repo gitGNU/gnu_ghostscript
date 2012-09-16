@@ -357,11 +357,8 @@ top:
         }
     if (num_colors <= 32) {
         gx_ht_order_component *components = pis->dev_ht->components;
-        if (components && components[0].corder.wts)
-            num_colors = 256;
-        else
-            /****** WRONG FOR MULTI-PLANE HALFTONES ******/
-            num_colors *= pis->dev_ht->components[0].corder.num_levels;
+        /****** WRONG FOR MULTI-PLANE HALFTONES ******/
+        num_colors *= pis->dev_ht->components[0].corder.num_levels;
     }
     if (psh->head.type == 2 || psh->head.type == 3) {
         max_error *= 0.25;
@@ -389,7 +386,7 @@ top:
     /* Grab the icc link transform that we need now */
     if (pcs->cmm_icc_profile_data != NULL) {
         pfs->icclink = gsicc_get_link(pis, pis->trans_device, pcs, NULL,
-                                      &rendering_params, pis->memory, false);
+                                      &rendering_params, pis->memory);
         if (pfs->icclink == NULL)
             return gs_error_VMerror;
     } else {
@@ -398,7 +395,7 @@ top:
                through special range adjustments in this case */
             pfs->icclink = gsicc_get_link(pis, pis->trans_device,
                                           pcs->icc_equivalent, NULL,
-                                          &rendering_params, pis->memory, false);
+                                          &rendering_params, pis->memory);
             if (pfs->icclink == NULL)
                 return gs_error_VMerror;
         } else {

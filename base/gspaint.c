@@ -84,7 +84,9 @@ gs_fillpage(gs_state * pgs)
     /* Processing a fill object operation */
     dev_proc(pgs->device, set_graphics_type_tag)(pgs->device, GS_PATH_TAG);
 
-    gx_set_dev_color(pgs);
+    code = gx_set_dev_color(pgs);
+    if (code != 0)
+        return code;
 
     code = (*dev_proc(dev, fillpage))(dev, (gs_imager_state *)pgs,
                                       gs_currentdevicecolor_inline(pgs));
@@ -272,7 +274,9 @@ static int do_fill(gs_state *pgs, int rule)
     else {
         dev_proc(pgs->device, set_graphics_type_tag)(pgs->device, GS_TEXT_TAG);
     }
-    gx_set_dev_color(pgs);
+    code = gx_set_dev_color(pgs);
+    if (code != 0)
+        return code;
     code = gs_state_color_load(pgs);
     if (code < 0)
         return code;
@@ -387,8 +391,9 @@ do_stroke(gs_state * pgs)
     else {
         dev_proc(pgs->device, set_graphics_type_tag)(pgs->device, GS_TEXT_TAG);
     }
-    /* Evil: The following call is a macro that might return! */
-    gx_set_dev_color(pgs);
+    code = gx_set_dev_color(pgs);
+    if (code != 0)
+        return code;
     code = gs_state_color_load(pgs);
     if (code < 0)
         return code;
@@ -501,7 +506,7 @@ gs_strokepath_aux(gs_state * pgs, bool traditional)
     if (code < 0)
         return code;
     /* NB: needs testing with PCL */
-    if (gs_currentcpsimode(pgs->memory) && gx_path_is_void(pgs->path))
+    if (gx_path_is_void(pgs->path))
         pgs->current_point_valid = false;
     else
         gx_setcurrentpoint(pgs, fixed2float(spath.position.x), fixed2float(spath.position.y));

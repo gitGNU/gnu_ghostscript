@@ -890,8 +890,20 @@ currentdict end readonly def
     } if
     pop pop 3 index 3 index 2 copy                      % bw bh px0 py0 bw bh bw bh
     currentglobal false setglobal 3 1 roll              % bw bh px0 py0 bw bh bool bw bh
-    2 array astore                                      % bw bh px0 py0 bw bh bool []
-    << exch /PageSize exch >> setpagedevice             % bw bh px0 py0 bw bh bool
+    currentpagedevice dup /PageSize known {
+      /PageSize get aload pop                           % Get current page size
+    } {
+      0 0                                               % dummy page size values if not known
+    }ifelse
+                                                        % bw bh px0 py0 bw bh bool bw bh Width Height
+    round cvi 2 index round cvi                         % bw bh px0 py0 bw bh bool bw bh Width bool
+    exch round cvi 3 index round cvi eq and             % bw bh px0 py0 bw bh bool bw bh bool
+    {                                                   % Page Size unchanged, do not emit setpagedevice
+      pop pop                                           % bw bh px0 py0 bw bh bool
+    } {
+      2 array astore                                    % bw bh px0 py0 bw bh bool []
+      << exch /PageSize exch >> setpagedevice           % bw bh px0 py0 bw bh bool
+    } ifelse
     userdict /PDFR_InitialGS gstate put
     setglobal                                           % bw bh px0 py0 bw bh
   } if
@@ -1947,7 +1959,7 @@ end
       2 copy get                                        % fr E M s mw c0 W i w
       exch 3 index add                                  % fr E M s mw c0 W w c
       7 index exch get                                  % fr E M s mw c0 W w n
-      dup null ne {
+      dup dup null ne exch /.notdef ne and {
         6 index 3 1 roll exch                           % fr E M s mw c0 W M n w
         6 index div
         3 copy pop //knownget exec {
@@ -1994,6 +2006,33 @@ end
   closepath stroke
 } bind def
 
+%% These two routines may have more general application.
+%% When executing BuildChar we need to run in the context of the font
+%% as far as resources are concerned (in case the glyph uses another font)
+%% but since we are executing a page stream, we must not lose the original
+%% context, or we won't be able to find page resources. Originally this was
+%% a simpler routine, but this failed when presented with a type 3 font
+%% whose BuildChar/CharProcs used another type 3 font
+/SaveResourcesToStack
+{
+  [
+  //PDFReader /OldResources known {
+    //PDFReader /OldResources get
+  }{
+    null
+  } ifelse
+  //PDFReader /CurrentObject get /Context get /Resources get
+  ]
+  //PDFReader /OldResources 3 -1 roll put
+}bind def
+
+/RestoreResourcesFromStack
+{
+  //PDFReader /OldResources get dup
+  0 get //PDFReader /OldResources 3 -1 roll put
+  1 get //PDFReader /CurrentObject get /Context get /Resources 3 -1 roll put
+} bind def
+
 /BuildChar  % <font> <char_code> BuildChar -
 { //PDFR_DEBUG {
     (BuildChar ) print dup //=only exec ( ) print
@@ -2005,12 +2044,24 @@ end
   } if
   dup null eq {
     pop //NotDef exec                                   %
-  } {                                                   % n
-    CharProcs exch //knownget exec {                    % cp_stream
-      //RunDelayedStream exec
-    } {
+  }
+  {                                                   % n
+    CharProcs exch//knownget exec
+    {
+      currentfont /Font get /Resources //knownget exec{       %% Does the Font have any Resources ?
+        exec                                                  %% Get them
+        SaveResourcesToStack                                  %% Save the current Resources
+        //PDFReader /CurrentObject get /Context get           %% Replace the current resources
+        /Resources 3 -1 roll put                              %% With the Font resources
+        //RunDelayedStream exec
+        RestoreResourcesFromStack                             %% Restore the previous Resources
+      } {
+        //RunDelayedStream exec
+      } ifelse
+    }
+    {
       //NotDef exec
-    } ifelse
+    }ifelse
   } ifelse                                              %
   end % font
 } bind def
@@ -2319,6 +2370,7 @@ end
                 % idiosyncratic fonts that start at 0xf000:
     pop
     /firstcode startc 0 getu16 16#ff00 and dup 16#f000 ne { pop 0 } if def
+    /striptopbyte false def
     /putglyph {
       glyphs code 3 -1 roll put /code code 1 add def
     } bind def
@@ -2328,14 +2380,20 @@ end
       /i2 exch def
       /scode startc i2 getu16 def
       /ecode endc i2 getu16 def
-      numcodes scode firstcode sub
-                % Hack for fonts that have only 0x0000 and 0xf000 ranges
-      %dup 16#e000 ge { 255 and } if
-      % the previous line is obstructive to CJK fonts, so it was removed
-      exch sub 0 .max ecode scode sub 1 add add
-      exch 1 index add exch
-      numcodes add /numcodes exch def
-    } for array def
+      ecode lastcode gt {
+        /lastcode ecode def
+      } if
+    } for pop
+    % If the glyph range is within 0x..00 to 0x..FF, make sure that we strip
+    % off any top bytes.
+    firstcode 16#f000 ge lastcode firstcode sub 255 le and {
+      lastcode 255 and
+      /striptopbyte true def
+    } {
+      lastcode
+    }ifelse
+    1 add
+    array def
     % prefill the array with 0's faster than a { 0 putglyph } repeat
     glyphs length 1024 ge {
       .array1024z 0 1024 glyphs length 1023 sub { glyphs exch 2 index putinterval } for
@@ -2365,9 +2423,19 @@ end
       } if
       idroff i2 getu16 dup 0 eq {
         pop scode delta add 65535 and 1 ecode delta add 65535 and
+        striptopbyte {
+          /code scode 255 and def
+        } {
+          /code scode def
+        } ifelse
         { putglyph } for
       } {       % The +2 is for the 'reserved pad'.
         /gloff exch 14 nseg2 3 mul add 2 add i2 add add def
+        striptopbyte {
+          /code scode 255 and def
+        } {
+          /code scode def
+        } ifelse
         0 1 ecode scode sub {
           2 mul gloff add etab exch getu16
           dup 0 ne { delta add 65535 and } if putglyph
@@ -3563,7 +3631,7 @@ end
     dup 0 get /CalGray eq {
       1 get                                             % dict
       dup /Gamma //knownget exec {
-        [ exch /exp load ] cvx
+        [ exch [ exch /exp load ] cvx dup dup ]
         1 index exch /DecodeLMN exch put
       } if
       [ exch /CIEBasedA exch ]                          % []
@@ -3717,6 +3785,16 @@ end
     2 copy 3 exch put
     pop
   } if
+  dup 0 get/Pattern eq{
+    dup length 1 gt {
+      dup dup 1 get dup type /arraytype eq {
+        ResolveColorSpaceArray
+        1 index 1 3 -1 roll put
+      }{
+        pop
+      }ifelse
+    }if
+  }if
   PDFR_DEBUG {
     (Construcrted color space :) =
     dup ==

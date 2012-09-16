@@ -169,6 +169,7 @@ GS=@GS@@EXEEXT@
 # the standard binaries.
 
 DEBUGDIRPREFIX=debug
+MEMENTODIRPREFIX=mem
 PGDIRPREFIX=pg
 
 # Define whether to compile in the FreeType library, and if so, where
@@ -259,7 +260,7 @@ JBIG2_CFLAGS=@JBIG2_AUTOCONF_CFLAGS@
 # whether to link to an external build or compile in from source
 # and source location and configuration flags for compiling in
 JPX_LIB=@JPX_DECODER@
-SHARE_JPX=@SHARE_JASPER@
+SHARE_JPX=@SHARE_JPX@
 JPXSRCDIR=@JPXDIR@
 JPX_CFLAGS=@JPX_AUTOCONF_CFLAGS@
 
@@ -271,19 +272,27 @@ JPX_CFLAGS=@JPX_AUTOCONF_CFLAGS@
 #JPX_CFLAGS=-DUSE_LWF_JP2 -DLINUX
 #JPX_CFLAGS=-DUSE_LWF_JP2 -DMAC -DMAC_OS_X_BUILD
 
+# Uncomment the following 4 lines to to compile in OpenJPEG codec
+#JPX_LIB=openjpeg
+#SHARE_JPX=0
+#JPXSRCDIR=openjpeg
+#JPX_CFLAGS=-DUSE_OPENJPEG_JP2 -DOPJ_STATIC
+
 # Define the directory where the icclib source are stored.
 # See icclib.mak for more information
 
 ICCSRCDIR=icclib
 
 # options for lcms color management library
-SHARE_LCMS=@SHARE_LCMS@
+SHARE_LCMS=@SHARELCMS@
 LCMSSRCDIR=@LCMSDIR@
 LCMS2SRCDIR=@LCMS2DIR@
+LCMS_CFLAGS=@LCMS_ENDIAN@
+LCMS2_CFLAGS=@LCMS2_ENDIAN@
 
 # Which CMS are we using?
 # Options are currently lcms or lcms2
-WHICH_CMS=@WHICHCMS@
+WHICH_CMS=@WHICHLCMS@
 
 # Define the directory where the ijs source is stored,
 # and the process forking method to use for the server.
@@ -306,11 +315,6 @@ LCUPSI_NAME=cupsimage
 LCUPSISRCDIR=cups
 CUPS_CC=$(CC)
 
-
-# Define the directory where the imdi library source is stored.
-# See devs.mak for more information.
-
-IMDISRCDIR=imdi
 
 # Define how to build the library archives.  (These are not used in any
 # standard configuration.)
@@ -354,7 +358,8 @@ CFLAGS_SO=@DYNAMIC_CFLAGS@
 # We don't include -ansi, because this gets in the way of the platform-
 #   specific stuff that <math.h> typically needs; nevertheless, we expect
 #   gcc to accept ANSI-style function prototypes and function definitions.
-XCFLAGS=@DYNAMIC_FLAGS@
+# CFLAGS from autoconf
+AC_CFLAGS=@DYNAMIC_FLAGS@
 
 # fontconfig flags, used by unix-aux.mak
 FONTCONFIG_CFLAGS=@FONTCONFIG_CFLAGS@
@@ -367,7 +372,7 @@ DBUS_LIBS=@DBUS_LIBS@
 # defines from autoconf; note that we don't use these at present.
 ACDEFS=@DEFS@
 
-CFLAGS=$(CFLAGS_STANDARD) $(GCFLAGS) $(XCFLAGS)
+CFLAGS=$(CFLAGS_STANDARD) $(GCFLAGS) $(AC_CFLAGS) $(XCFLAGS)
 
 # Define platform flags for ld.
 # SunOS 4.n may need -Bstatic.
@@ -376,9 +381,10 @@ CFLAGS=$(CFLAGS_STANDARD) $(GCFLAGS) $(XCFLAGS)
 #	-R /usr/local/xxx/lib:/usr/local/lib
 # giving the full path names of the shared library directories.
 # XLDFLAGS can be set from the command line.
-XLDFLAGS=@X_LDFLAGS@
+# AC_LDFLAGS from autoconf
+AC_LDFLAGS=@X_LDFLAGS@
 
-LDFLAGS=@LDFLAGS@ $(XLDFLAGS)
+LDFLAGS=@LDFLAGS@ $(AC_LDFLAGS) $(XLDFLAGS)
 
 # Define any extra libraries to link into the executable.
 # ISC Unix 2.2 wants -linet.
@@ -387,7 +393,7 @@ LDFLAGS=@LDFLAGS@ $(XLDFLAGS)
 # Solaris may need -lnsl -lsocket -lposix4.
 # (Libraries required by individual drivers are handled automatically.)
 
-EXTRALIBS=@LIBS@ @DYNAMIC_LIBS@ @FONTCONFIG_LIBS@
+EXTRALIBS=$(XTRALIBS) @LIBS@ @DYNAMIC_LIBS@ @FONTCONFIG_LIBS@ @FT_LIBS@
 
 # Define the standard libraries to search at the end of linking.
 # Most platforms require -lpthread for the POSIX threads library;
@@ -572,6 +578,7 @@ CCAUX_NO_WARN=$(CCAUX_)
 CC_SHARED=$(CC_) @DYNAMIC_CFLAGS@
 
 LD_SET_DT_SONAME=@SET_DT_SONAME@
+FOR_MAC=@SO_FOR_MAC@
 
 # MAKEDIRS = the dependency on ALL object files (must be the last one on
 # the line. Requires GNU make to make it an 'order only' dependency
@@ -599,6 +606,7 @@ include $(GLSRCDIR)/jbig2.mak
 include $(GLSRCDIR)/jasper.mak
 include $(GLSRCDIR)/ldf_jb2.mak
 include $(GLSRCDIR)/lwf_jp2.mak
+include $(GLSRCDIR)/openjpeg.mak
 include $(GLSRCDIR)/icclib.mak
 include $(GLSRCDIR)/$(WHICH_CMS).mak
 include $(GLSRCDIR)/ijs.mak
@@ -629,6 +637,8 @@ distclean : clean config-clean soclean pgclean debugclean
 
 # a debug-clean target for consistency with the ghostpdl builds
 debug-clean : debugclean
+
+memento-clean : mementoclean
 
 maintainer-clean : distclean
 	-$(RM_) configure.ac

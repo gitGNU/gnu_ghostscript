@@ -33,6 +33,7 @@
 #include "gxcolor2.h"
 #include "gxhldevc.h"
 #include "gxdevsop.h"
+#include "gsicc_manage.h"
 
 /* Forward references */
 static image_enum_proc_plane_data(pdf_image_plane_data);
@@ -130,7 +131,7 @@ pdf_convert_image4_to_image1(gx_device_pdf *pdev,
                              gx_drawing_color *pdcolor)
 {
     if (pim4->BitsPerComponent == 1 &&
-        pim4->ColorSpace->type->num_components == gx_num_components_1 &&
+        pim4->ColorSpace->type->num_components(pim4->ColorSpace) == 1 &&
         (pim4->MaskColor_is_range ?
          pim4->MaskColor[0] | pim4->MaskColor[1] :
          pim4->MaskColor[0]) <= 1
@@ -543,8 +544,18 @@ pdf_begin_typed_image_impl(gx_device_pdf *pdev, const gs_imager_state * pis,
     if (pim->Width == 0 || pim->Height == 0)
         goto nyi;
     /* PDF doesn't support images with more than 8 bits per component. */
-    if (pim->BitsPerComponent > 8)
-        goto nyi;
+    switch (pim->BitsPerComponent) {
+        case 1:
+        case 2:
+        case 4:
+        case 8:
+            break;
+        case 12:
+        case 16:
+            goto nyi;
+        default:
+            return_error(gs_error_rangecheck);
+    }
     pcs = pim->ColorSpace;
     num_components = (is_mask ? 1 : gs_color_space_num_components(pcs));
 
@@ -657,9 +668,20 @@ pdf_begin_typed_image_impl(gx_device_pdf *pdev, const gs_imager_state * pis,
              */
             cos_c_string_value(&cs_value, names->DeviceRGB);
         } else {
-            code = pdf_color_space_named(pdev, &cs_value, &pranges,
-                                     pcs,
-                                     names, in_line, NULL, 0);
+            /* A minor hack to deal with CIELAB images. */
+            if (pcs->cmm_icc_profile_data != NULL &&
+                pcs->cmm_icc_profile_data->islab) {
+                    gscms_set_icc_range((cmm_profile_t **)&(pcs->cmm_icc_profile_data));
+            }
+            code = pdf_convert_ICC(pdev, pcs, &cs_value, names);
+            if (code == 0) {
+                code = pdf_color_space_named(pdev, &cs_value, &pranges, pcs, names,
+                                         in_line, NULL, 0);
+            }
+            if (pcs->cmm_icc_profile_data != NULL &&
+                pcs->cmm_icc_profile_data->islab) {
+                gsicc_setrange_lab(pcs->cmm_icc_profile_data);
+            }
             if (code < 0)
                 convert_to_process_colors = true;
         }
@@ -1004,13 +1026,13 @@ use_image_as_pattern(gx_device_pdf *pdev, pdf_resource_t *pres1,
     s.ctm.ty = pmat->ty;
     memset(&inst, 0, sizeof(inst));
     inst.saved = (gs_state *)&s; /* HACK : will use s.ctm only. */
-    inst.template.PaintType = 1;
-    inst.template.TilingType = 1;
-    inst.template.BBox.p.x = inst.template.BBox.p.y = 0;
-    inst.template.BBox.q.x = 1;
-    inst.template.BBox.q.y = 1;
-    inst.template.XStep = 2; /* Set 2 times bigger step against artifacts. */
-    inst.template.YStep = 2;
+    inst.templat.PaintType = 1;
+    inst.templat.TilingType = 1;
+    inst.templat.BBox.p.x = inst.templat.BBox.p.y = 0;
+    inst.templat.BBox.q.x = 1;
+    inst.templat.BBox.q.y = 1;
+    inst.templat.XStep = 2; /* Set 2 times bigger step against artifacts. */
+    inst.templat.YStep = 2;
     code = (*dev_proc(pdev, dev_spec_op))((gx_device *)pdev,
         gxdso_pattern_start_accum, &inst, id);
     if (code >= 0)

@@ -1,3 +1,6 @@
+Version 9.05.0 main changes:
+* Include all bugfixes and changes from GPL version 9.05
+
 Version 9.04.1 main changes:
 * A lot of changes from releases 9.00, 9.01, 9.02, 9.03 and 9.04 of GPL-Ghostscript,
 	notably in color management, see the file doc/History9.htm for complete

@@ -82,8 +82,8 @@ jbig2_page_info (Jbig2Ctx *ctx, Jbig2Segment *segment, const uint8_t *segment_da
             index++;
             if (index >= ctx->max_page_index) {
                 /* grow the list */
-		ctx->pages = (Jbig2Page*)jbig2_realloc(ctx->allocator, ctx->pages,
-			(ctx->max_page_index <<= 2) * sizeof(Jbig2Page));
+		ctx->pages = jbig2_renew(ctx, ctx->pages, Jbig2Page,
+                    (ctx->max_page_index <<= 2));
                 for (j=index; j < ctx->max_page_index; j++) {
                     ctx->pages[j].state = JBIG2_PAGE_FREE;
                     ctx->pages[j].number = 0;
@@ -145,7 +145,7 @@ jbig2_page_info (Jbig2Ctx *ctx, Jbig2Segment *segment, const uint8_t *segment_da
         page->image = jbig2_image_new(ctx, page->width, page->height);
     }
     if (page->image == NULL) {
-        return jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number,
+        return jbig2_error(ctx, JBIG2_SEVERITY_WARNING, segment->number,
             "failed to allocate buffer for page image");
     } else {
 	/* 8.2 (3) fill the page with the default pixel value */
@@ -195,11 +195,11 @@ jbig2_end_of_stripe(Jbig2Ctx *ctx, Jbig2Segment *segment, const uint8_t *segment
 int
 jbig2_complete_page (Jbig2Ctx *ctx)
 {
+    int code = 0;
 
     /* check for unfinished segments */
     if (ctx->segment_index != ctx->n_segments) {
       Jbig2Segment *segment = ctx->segments[ctx->segment_index];
-      int code = 0;
       /* Some versions of Xerox Workcentre generate PDF files
          with the segment data length field of the last segment
          set to -1. Try to cope with this here. */
@@ -213,9 +213,14 @@ jbig2_complete_page (Jbig2Ctx *ctx)
         ctx->segment_index++;
       }
     }
-    ctx->pages[ctx->current_page].state = JBIG2_PAGE_COMPLETE;
 
-    return 0;
+    /* ensure image exists before marking page as complete */
+    if (ctx->pages[ctx->current_page].image != NULL)
+    {
+        ctx->pages[ctx->current_page].state = JBIG2_PAGE_COMPLETE;
+    }
+
+    return code;
 }
 
 /**

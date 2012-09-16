@@ -722,7 +722,7 @@ typedef struct gx_device_cached_colors_s {
         bool UseCIEColor;		/* for PS LL3 */\
         bool LockSafetyParams;		/* If true, prevent unsafe changes */\
         long band_offset_x;		/* offsets of clist band base to (mem device) buffer */\
-        long band_offset_y;		/* for rendering that is phase sensitive (wtsimdi) */\
+        long band_offset_y;		/* for rendering that is phase sensitive (old wtsimdi) */\
         gx_stroked_gradient_recognizer_t sgr;\
         int MaxPatternBitmap;		/* Threshold for switching to pattern_clist mode */\
         cmm_dev_profile_t *icc_struct;  /* object dependent profiles */\
@@ -1421,12 +1421,12 @@ typedef struct gs_devn_params_s gs_devn_params;
 #define dev_proc_dev_spec_op(proc)\
   dev_t_proc_dev_spec_op(proc, gx_device)
 
-#define dev_t_proc_copy_plane(proc, dev_t)\
+#define dev_t_proc_copy_planes(proc, dev_t)\
   int proc(dev_t *dev,\
     const byte *data, int data_x, int raster, gx_bitmap_id id,\
-    int x, int y, int width, int height, int plane)
-#define dev_proc_copy_plane(proc)\
-  dev_t_proc_copy_plane(proc, gx_device)
+    int x, int y, int width, int height, int plane_height)
+#define dev_proc_copy_planes(proc)\
+  dev_t_proc_copy_planes(proc, gx_device)
 
 #define dev_t_proc_get_profile(proc, dev_t)\
   int proc(dev_t *dev, cmm_dev_profile_t **dev_profile)
@@ -1437,6 +1437,17 @@ typedef struct gs_devn_params_s gs_devn_params;
   void proc(dev_t *dev, gs_graphics_type_tag_t)
 #define dev_proc_set_graphics_type_tag(proc)\
   dev_t_proc_set_graphics_type_tag(proc, gx_device)
+
+#define dev_t_proc_strip_copy_rop2(proc, dev_t)\
+  int proc(dev_t *dev,\
+    const byte *sdata, int sourcex, uint sraster, gx_bitmap_id id,\
+    const gx_color_index *scolors,\
+    const gx_strip_bitmap *textures, const gx_color_index *tcolors,\
+    int x, int y, int width, int height,\
+    int phase_x, int phase_y, gs_logical_operation_t lop,\
+    uint planar_height)
+#define dev_proc_strip_copy_rop2(proc)\
+  dev_t_proc_strip_copy_rop2(proc, gx_device)
 
 /* Define the device procedure vector template proper. */
 
@@ -1507,9 +1518,10 @@ typedef struct gs_devn_params_s gs_devn_params;
         dev_t_proc_pop_transparency_state((*pop_transparency_state), dev_t); \
         dev_t_proc_put_image((*put_image), dev_t); \
         dev_t_proc_dev_spec_op((*dev_spec_op), dev_t); \
-        dev_t_proc_copy_plane((*copy_plane), dev_t); \
+        dev_t_proc_copy_planes((*copy_planes), dev_t); \
         dev_t_proc_get_profile((*get_profile), dev_t); \
         dev_t_proc_set_graphics_type_tag((*set_graphics_type_tag), dev_t); \
+        dev_t_proc_strip_copy_rop2((*strip_copy_rop2), dev_t);\
 }
 
 /*

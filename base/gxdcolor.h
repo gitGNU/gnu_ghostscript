@@ -21,6 +21,7 @@
 #include "gsdcolor.h"
 #include "gsropt.h"
 #include "gsstruct.h"		/* for extern_st, GC procs */
+#include "stdint_.h"		/* for int64_t */
 
 /* Define opaque types. */
 
@@ -43,6 +44,7 @@ typedef struct gx_rop_source_s {
     uint sraster;
     gx_bitmap_id id;
     gx_color_index scolors[2];
+    uint planar_height;
     bool use_scolors;
 } gx_rop_source_t;
 
@@ -52,7 +54,7 @@ typedef struct gx_rop_source_s {
  * a different null source if necessary.
  */
 #define gx_rop_no_source_body(black_pixel)\
-  NULL, 0, 0, gx_no_bitmap_id, {black_pixel, black_pixel}, true
+  NULL, 0, 0, gx_no_bitmap_id, {black_pixel, black_pixel}, 0, true
 #define gx_rop_source_set_color(prs, pixel)\
   ((prs)->scolors[0] = (prs)->scolors[1] = (pixel))
 void gx_set_rop_no_source(const gx_rop_source_t **psource,
@@ -215,12 +217,12 @@ struct gx_device_color_type_s {
      */
 #define dev_color_proc_write(proc)\
   int proc(const gx_device_color *pdevc, const gx_device_color_saved *psdc,\
-    const gx_device * dev, uint offset, byte *data, uint *psize)
+    const gx_device * dev, int64_t offset, byte *data, uint *psize)
                         dev_color_proc_write((*write));
 
 #define dev_color_proc_read(proc)\
   int proc(gx_device_color *pdevc, const gs_imager_state * pis,\
-    const gx_device_color *prior_devc, const gx_device * dev, uint offset,\
+    const gx_device_color *prior_devc, const gx_device * dev, int64_t offset,\
     const byte *data, uint size, gs_memory_t *mem)
                         dev_color_proc_read((*read));
 
@@ -272,9 +274,7 @@ extern const gx_device_color_type_t
 #define gx_dc_type_ht_binary (&gx_dc_type_data_ht_binary)
       gx_dc_type_data_ht_binary,	/* gxht.c */
 #define gx_dc_type_ht_colored (&gx_dc_type_data_ht_colored)
-      gx_dc_type_data_ht_colored,	/* gxcht.c */
-#define gx_dc_type_wts (&gx_dc_type_data_wts)
-      gx_dc_type_data_wts;	/* gxwts.c */
+      gx_dc_type_data_ht_colored;	/* gxcht.c */
 
 /* the following are exported for the benefit of gsptype1.c */
 extern  dev_color_proc_get_nonzero_comps(gx_dc_pure_get_nonzero_comps);
@@ -300,10 +300,8 @@ void gx_set_device_color_1(gs_state * pgs);
 int gx_remap_color(gs_state *);
 
 #define gx_set_dev_color(pgs)\
-  if ( !color_is_set(gs_currentdevicecolor_inline(pgs)) )\
-   { int code_dc = gx_remap_color(pgs);\
-     if ( code_dc != 0 ) return code_dc;\
-   }
+    color_is_set(gs_currentdevicecolor_inline(pgs)) ? 0 :\
+      gx_remap_color(pgs);
 
 /* Indicate that the device color needs remapping. */
 #define gx_unset_dev_color(pgs)\

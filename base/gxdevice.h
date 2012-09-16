@@ -280,6 +280,7 @@ dev_proc_ret_devn_params(gx_default_ret_devn_params);
 dev_proc_fillpage(gx_default_fillpage);
 dev_proc_get_profile(gx_default_get_profile);
 dev_proc_set_graphics_type_tag(gx_default_set_graphics_type_tag);
+dev_proc_strip_copy_rop2(gx_default_strip_copy_rop2);
 /* BACKWARD COMPATIBILITY */
 #define gx_non_imaging_create_compositor gx_null_create_compositor
 
@@ -366,6 +367,7 @@ dev_proc_fillpage(gx_forward_fillpage);
 dev_proc_create_compositor(gx_forward_create_compositor);
 dev_proc_get_profile(gx_forward_get_profile);
 dev_proc_set_graphics_type_tag(gx_forward_set_graphics_type_tag);
+dev_proc_strip_copy_rop2(gx_forward_strip_copy_rop2);
 
 /* ---------------- Implementation utilities ---------------- */
 
@@ -431,6 +433,11 @@ void gx_device_copy_params(gx_device *dev, const gx_device *target);
 int gx_parse_output_file_name(gs_parsed_file_name_t *pfn,
                               const char **pfmt, const char *fname,
                               uint len, gs_memory_t *memory);
+
+/*
+ * Returns true if the outputfile requests separate pages (contains %d)
+ */
+bool gx_outputfile_is_separate_pages(const char *fname, gs_memory_t *memory);
 
 /*
  * Open the output file for a device.  Note that if the file name is empty,

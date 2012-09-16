@@ -40,8 +40,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|x64"
-			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="debugobj64"
+			IntermediateDirectory="debugobj64"
 			ConfigurationType="0"
 			>
 			<Tool
@@ -80,8 +80,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|x64"
-			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="obj64"
+			IntermediateDirectory="obj64"
 			ConfigurationType="0"
 			>
 			<Tool
@@ -120,8 +120,8 @@
 		</Configuration>
 		<Configuration
 			Name="Profile|x64"
-			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="profobj64"
+			IntermediateDirectory="profobj64"
 			ConfigurationType="0"
 			>
 			<Tool
@@ -129,6 +129,46 @@
 				BuildCommandLine="nmake -f psi\msvc32.mak WIN64= SBR=1 DEVSTUDIO= debug &amp;&amp; nmake -f psi\msvc32.mak WIN64= DEVSTUDIO= debugbsc"
 				ReBuildCommandLine="nmake -f psi\msvc32.mak WIN64= DEVSTUDIO= debugclean &amp;&amp; nmake -f psi\msvc32.mak WIN64= SBR=1 DEVSTUDIO= debug &amp;&amp; nmake -f psi\msvc32.mak WIN64= DEVSTUDIO= debugbsc"
 				CleanCommandLine="nmake -f psi\msvc32.mak WIN64= DEVSTUDIO= debugclean"
+				Output=""
+				PreprocessorDefinitions="WIN64;_DEBUG;DEBUG=1;TDEBUG=1"
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
+			/>
+		</Configuration>
+		<Configuration
+			Name="Memento|Win32"
+			OutputDirectory="memobj"
+			IntermediateDirectory="memobj"
+			ConfigurationType="0"
+			>
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="nmake -f psi\msvc32.mak SBR=1 DEVSTUDIO= memento-target &amp;&amp; nmake -f psi\msvc32.mak DEVSTUDIO= mementobsc"
+				ReBuildCommandLine="nmake -f psi\msvc32.mak DEVSTUDIO= mementoclean &amp;&amp; nmake -f psi\msvc32.mak SBR=1 DEVSTUDIO= memento-target &amp;&amp; nmake -f psi\msvc32.mak DEVSTUDIO= mementobsc"
+				CleanCommandLine="nmake -f psi\msvc32.mak DEVSTUDIO= mementoclean"
+				Output=""
+				PreprocessorDefinitions="WIN32;_DEBUG;DEBUG=1;TDEBUG=1;HAVE_SSE2=1"
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
+			/>
+		</Configuration>
+		<Configuration
+			Name="Memento|x64"
+			OutputDirectory="memobj64"
+			IntermediateDirectory="memobj64"
+			ConfigurationType="0"
+			>
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="nmake -f psi\msvc32.mak WIN64= SBR=1 DEVSTUDIO= memento-target &amp;&amp; nmake -f psi\msvc32.mak WIN64= DEVSTUDIO= mementobsc"
+				ReBuildCommandLine="nmake -f psi\msvc32.mak WIN64= DEVSTUDIO= mementoclean &amp;&amp; nmake -f psi\msvc32.mak WIN64= SBR=1 DEVSTUDIO= memento-target &amp;&amp; nmake -f psi\msvc32.mak WIN64= DEVSTUDIO= mementobsc"
+				CleanCommandLine="nmake -f psi\msvc32.mak WIN64= DEVSTUDIO= mementoclean"
 				Output=""
 				PreprocessorDefinitions="WIN64;_DEBUG;DEBUG=1;TDEBUG=1"
 				IncludeSearchPath=""
@@ -695,10 +735,6 @@
 					>
 				</File>
 				<File
-					RelativePath="base\gswts.c"
-					>
-				</File>
-				<File
 					RelativePath="base\gxacpath.c"
 					>
 				</File>
@@ -848,10 +884,6 @@
 				</File>
 				<File
 					RelativePath="base\gxtype1.c"
-					>
-				</File>
-				<File
-					RelativePath="base\gxwts.c"
 					>
 				</File>
 				<File
@@ -1130,10 +1162,6 @@
 					RelativePath="base\vdtrace.c"
 					>
 				</File>
-				<File
-					RelativePath="base\wtsimdi.c"
-					>
-				</File>
 				<Filter
 					Name="rinkj"
 					>
@@ -1366,15 +1394,15 @@
 						>
 					</File>
 					<File
+						RelativePath="base\gdevicov.c"
+						>
+					</File>
+					<File
 						RelativePath="base\gdevifno.c"
 						>
 					</File>
 					<File
 						RelativePath="base\gdevijs.c"
-						>
-					</File>
-					<File
-						RelativePath="base\gdevimdi.c"
 						>
 					</File>
 					<File
@@ -2109,6 +2137,10 @@
 							>
 						</File>
 						<File
+							RelativePath=".\base\gsicc_nocm.c"
+							>
+						</File>
+						<File
 							RelativePath=".\base\gsicc_profilecache.c"
 							>
 						</File>
@@ -2123,10 +2155,6 @@
 					</File>
 					<File
 						RelativePath="base\gxht_thresh.c"
-						>
-					</File>
-					<File
-						RelativePath="base\gxht_thresh.h"
 						>
 					</File>
 					<File
@@ -3578,6 +3606,10 @@
 					RelativePath=".\lcms\src\cmsxform.h"
 					>
 				</File>
+				<File
+					RelativePath=".\lcms\include\lcms.h"
+					>
+				</File>
 			</Filter>
 			<Filter
 				Name="ijs"
@@ -3624,66 +3656,6 @@
 				</File>
 				<File
 					RelativePath="ijs\unistd_.h"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="imdi"
-				>
-				<File
-					RelativePath="imdi\arch.h"
-					>
-				</File>
-				<File
-					RelativePath="imdi\cctiff.c"
-					>
-				</File>
-				<File
-					RelativePath="imdi\cgen.c"
-					>
-				</File>
-				<File
-					RelativePath="imdi\config.h"
-					>
-				</File>
-				<File
-					RelativePath="imdi\copyright.h"
-					>
-				</File>
-				<File
-					RelativePath="imdi\imdi.c"
-					>
-				</File>
-				<File
-					RelativePath="imdi\imdi.h"
-					>
-				</File>
-				<File
-					RelativePath="imdi\imdi_gen.c"
-					>
-				</File>
-				<File
-					RelativePath="imdi\imdi_gen.h"
-					>
-				</File>
-				<File
-					RelativePath="imdi\imdi_imp.h"
-					>
-				</File>
-				<File
-					RelativePath="imdi\imdi_k.c"
-					>
-				</File>
-				<File
-					RelativePath="imdi\imdi_k.h"
-					>
-				</File>
-				<File
-					RelativePath="imdi\imdi_tab.c"
-					>
-				</File>
-				<File
-					RelativePath="imdi\imdi_tab.h"
 					>
 				</File>
 			</Filter>
@@ -4231,6 +4203,10 @@
 					>
 				</File>
 				<File
+					RelativePath=".\base\gdbflags.h"
+					>
+				</File>
+				<File
 					RelativePath="base\gdebug.h"
 					>
 				</File>
@@ -4444,10 +4420,6 @@
 				</File>
 				<File
 					RelativePath="base\gsequivc.h"
-					>
-				</File>
-				<File
-					RelativePath="base\gserror.h"
 					>
 				</File>
 				<File
@@ -5068,6 +5040,10 @@
 				</File>
 				<File
 					RelativePath="base\gxht.h"
+					>
+				</File>
+				<File
+					RelativePath="base\gxht_thresh.h"
 					>
 				</File>
 				<File
@@ -7858,6 +7834,122 @@
 				<File
 					RelativePath=".\doc\Xfonts.htm"
 					DeploymentContent="true"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="lcms2"
+				>
+				<File
+					RelativePath=".\lcms2\src\cmscam02.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmscgats.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmscnvrt.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmserr.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmsgamma.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmsgmt.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmsintrp.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmsio0.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmsio1.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmslut.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmsmd5.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmsmtrx.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmsnamed.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmsopt.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmspack.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmspcs.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmsplugin.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmsps2.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmssamp.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmssm.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmstypes.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmsvirt.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmswtpnt.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmsxform.c"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\cmsxform.h"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\include\lcms2.h"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\src\lcms2_internal.h"
+					>
+				</File>
+				<File
+					RelativePath=".\lcms2\include\lcms2_plugin.h"
 					>
 				</File>
 			</Filter>

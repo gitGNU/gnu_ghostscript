@@ -385,10 +385,13 @@ static dev_proc_put_params(tiffsep_put_params);
 static dev_proc_print_page(tiffsep_print_page);
 static dev_proc_get_color_mapping_procs(tiffsep_get_color_mapping_procs);
 static dev_proc_get_color_comp_index(tiffsep_get_color_comp_index);
-static dev_proc_encode_color(tiffsep_encode_color);
-static dev_proc_decode_color(tiffsep_decode_color);
+#if USE_COMPRESSED_ENCODING
 static dev_proc_encode_color(tiffsep_encode_compressed_color);
 static dev_proc_decode_color(tiffsep_decode_compressed_color);
+#else
+static dev_proc_encode_color(tiffsep_encode_color);
+#endif
+static dev_proc_decode_color(tiffsep_decode_color);
 static dev_proc_update_spot_equivalent_colors(tiffsep_update_spot_equivalent_colors);
 static dev_proc_ret_devn_params(tiffsep_ret_devn_params);
 static dev_proc_open_device(tiffsep1_prn_open);
@@ -463,12 +466,12 @@ RELOC_PTRS_END
 /* we need to implement it separately because st_composite_final */
 /* declares all 3 procedures as private. */
 static void
-tiffsep_device_finalize(void *vpdev)
+tiffsep_device_finalize(const gs_memory_t *cmem, void *vpdev)
 {
     /* We need to deallocate the compressed_color_list.
        and the names. */
     devn_free_params((gx_device*) vpdev);
-    gx_device_finalize(vpdev);
+    gx_device_finalize(cmem, vpdev);
 }
 
 gs_private_st_composite_final(st_tiffsep_device, tiffsep_device,
@@ -697,6 +700,7 @@ tiffsep_get_color_mapping_procs(const gx_device * dev)
     return &tiffsep_cm_procs;
 }
 
+#if USE_COMPRESSED_ENCODING
 /*
  * Encode a list of colorant values into a gx_color_index_value.
  * With 64 bit gx_color_index values, we compress the colorant values.  This
@@ -719,7 +723,7 @@ tiffsep_decode_compressed_color(gx_device * dev, gx_color_index color, gx_color_
     return devn_decode_compressed_color(dev, color, out,
                     &(((tiffsep_device *)dev)->devn_params));
 }
-
+#else
 /*
  * Encode a list of colorant values into a gx_color_index_value.
  * With 32 bit gx_color_index values, we simply pack values.
@@ -728,17 +732,19 @@ static gx_color_index
 tiffsep_encode_color(gx_device *dev, const gx_color_value colors[])
 {
     int bpc = ((tiffsep_device *)dev)->devn_params.bitspercomponent;
-    int drop = sizeof(gx_color_value) * 8 - bpc;
     gx_color_index color = 0;
     int i = 0;
     int ncomp = dev->color_info.num_components;
+    COLROUND_VARS;
 
+    COLROUND_SETUP(bpc);
     for (; i < ncomp; i++) {
         color <<= bpc;
-        color |= (colors[i] >> drop);
+        color |= COLROUND_ROUND(colors[i]);
     }
     return (color == gx_no_color_index ? color ^ 1 : color);
 }
+#endif
 
 /*
  * Decode a gx_color_index value back to a list of colorant values.
@@ -1438,6 +1444,14 @@ threshold_from_order( gx_ht_order *d_order, int *Width, int *Height, gs_memory_t
    int i, j, l, prev_l;
    unsigned char *thresh;
    gx_ht_bit *bits = (gx_ht_bit *)d_order->bit_data;
+    int num_repeat, shift;
+    int row_kk, col_kk, kk;
+
+    /* We can have simple or complete orders.  Simple ones tile the threshold
+       with shifts.   To handle those we simply loop over the number of 
+       repeats making sure to shift columns when we set our threshold values */
+    num_repeat = d_order->full_height / d_order->height;
+    shift = d_order->shift;
 
 #ifdef DEBUG
 if ( gs_debug_c('h') ) {
@@ -1448,7 +1462,7 @@ if ( gs_debug_c('h') ) {
 }
 #endif
 
-   thresh = (byte *)gs_malloc(memory, d_order->num_bits, 1,
+   thresh = (byte *)gs_malloc(memory, d_order->width * d_order->full_height, 1,
                                   "tiffsep1_threshold_array");
    if( thresh == NULL ) {
 #ifdef DEBUG
@@ -1464,7 +1478,7 @@ if ( gs_debug_c('h') ) {
       thresh[i] = 1;
 
    *Width  = d_order->width;
-   *Height = d_order->height;
+   *Height = d_order->full_height;
 
    prev_l = 0;
    l = 1;
@@ -1493,8 +1507,14 @@ if ( gs_debug_c('h') ) {
                dprintf3("row=%2d, col=%2d, t_level=%3d\n",
                   row, col, t_level);
 #endif
-            if( col < (int)d_order->width )
-               *(thresh+col+(row * d_order->width)) = t_level;
+            if( col < (int)d_order->width ) {
+                for (kk = 0; kk < num_repeat; kk++) {
+                    row_kk = row + kk * d_order->height;
+                    col_kk = col + kk * shift;
+                    col_kk = col_kk % d_order->width;
+                    *(thresh + col_kk + (row_kk * d_order->width)) = t_level;
+                }
+            }
          }
          prev_l = l;
       }
@@ -1502,7 +1522,7 @@ if ( gs_debug_c('h') ) {
    }
 
 #ifdef DEBUG
-   if ( gs_debug_c('h') ) {
+   if (gs_debug_c('h')) {
       for( i=0; i<(int)d_order->height; i++ ) {
          dprintf1("threshold array row %3d= ", i);
          for( j=(int)d_order->width-1; j>=0; j-- )
@@ -1535,6 +1555,7 @@ tiffsep_print_page(gx_device_printer * pdev, FILE * file)
     char name[MAX_FILE_NAME_SIZE];
     int base_filename_length = length_base_file_name(tfdev);
     int save_depth = pdev->color_info.depth;
+    int save_numcomps = pdev->color_info.num_components;
     const char *fmt;
     gs_parsed_file_name_t parsed;
     int non_encodable_count = 0;
@@ -1609,12 +1630,14 @@ tiffsep_print_page(gx_device_printer * pdev, FILE * file)
         }
 
         pdev->color_info.depth = 8;     /* Create files for 8 bit gray */
+        pdev->color_info.num_components = 1;
         if (pdev->height > (max_long - ftell(file))/(pdev->width)) /* note width is never 0 in print_page */
             return_error(gs_error_rangecheck);  /* this will overflow max_long */
 
         code = tiff_set_fields_for_printer(pdev, tfdev->tiff[comp_num], 1, 0);
         tiff_set_gray_fields(pdev, tfdev->tiff[comp_num], 8, tfdev->Compression, tfdev->MaxStripSize);
         pdev->color_info.depth = save_depth;
+        pdev->color_info.num_components = save_numcomps;
         if (code < 0)
             return code;
     }
@@ -1709,6 +1732,7 @@ tiffsep1_print_page(gx_device_printer * pdev, FILE * file)
     short map_comp_to_sep[GX_DEVICE_COLOR_MAX_COMPONENTS];
     char name[MAX_FILE_NAME_SIZE];
     int save_depth = pdev->color_info.depth;
+    int save_numcomps = pdev->color_info.num_components;
     const char *fmt;
     gs_parsed_file_name_t parsed;
     int non_encodable_count = 0;
@@ -1785,9 +1809,11 @@ tiffsep1_print_page(gx_device_printer * pdev, FILE * file)
         }
 
         pdev->color_info.depth = 8;     /* Create files for 8 bit gray */
+        pdev->color_info.num_components = 1;
         code = tiff_set_fields_for_printer(pdev, tfdev->tiff[comp_num], 1, 0);
         tiff_set_gray_fields(pdev, tfdev->tiff[comp_num], 1, tfdev->Compression, tfdev->MaxStripSize);
         pdev->color_info.depth = save_depth;
+        pdev->color_info.num_components = save_numcomps;
         if (code < 0)
             return code;
 

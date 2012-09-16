@@ -11,8 +11,9 @@
    San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 /*$Id: gdevtxtw.c 7795 2007-03-23 13:56:11Z tim $ */
-/* Device for ASCII or Unicode text extraction */
+/* Device for Unicode (UTF-8 or UCS2) text extraction */
 #include "memory_.h"
+#include "string_.h"
 #include "gp.h"			/* for gp_file_name_sizeof */
 #include "gx.h"
 #include "gserrors.h"
@@ -25,9 +26,15 @@
 #include "gstext.h"
 #include "gxfcid.h"
 #include "gxistate.h"
+#include "gxpath.h"
 #include "gdevagl.h"
-#include "string.h"
 
+/* #define TRACE_TXTWRITE 1 */
+
+extern single_glyph_list_t *SingleGlyphList;
+extern double_glyph_list_t *DoubleGlyphList;
+extern treble_glyph_list_t *TrebleGlyphList;
+extern quad_glyph_list_t *QuadGlyphList;
 /*
  * Define the structure used to return glyph width information.  Note that
  * there are two different sets of width information: real-number (x,y)
@@ -52,14 +59,14 @@ typedef struct txt_glyph_widths_s {
  * rendering mode, writing mode etc. These are stored as a series of x-ordered
  * entries in a list, using the starting x co-ordinate.
  */
-typedef struct text_list_entry_s text_list_entry_t;
 typedef struct text_list_entry_s {
-    text_list_entry_t *previous;
-    text_list_entry_t *next;
+    struct text_list_entry_s *previous;
+    struct text_list_entry_s *next;
 
     gs_point start;
     gs_point end;
-    gs_point topleft, topright;
+    gs_point FontBBox_bottomleft, FontBBox_topright;
+    float *Widths;
     unsigned short *Unicode_Text;
     int Unicode_Text_Size;
     int render_mode;
@@ -71,19 +78,18 @@ typedef struct text_list_entry_s {
     int wmode;			/* WMode of font */
     double PaintType0Width;
     double size;
-};
+} text_list_entry_t;
 
 /* Structure to maintain a list of text fragments, ordered by X co-ordinate.
- * These strucutres are themselves maintained in a Y-ordered list.
+ * These structures are themselves maintained in a Y-ordered list.
  */
-typedef struct page_text_list_s page_text_list_t;
 typedef struct page_text_list_s {
-    page_text_list_t *previous;
-    page_text_list_t *next;
+    struct page_text_list_s *previous;
+    struct page_text_list_s *next;
     gs_point start;
     float MinY, MaxY;
     text_list_entry_t *x_ordered_list;
-};
+} page_text_list_t;
 
 /* A simple structure to maintain the lists of text fragments, it is also
  * a convenient place to record the page number and anything else we may
@@ -102,7 +108,7 @@ typedef struct gx_device_txtwrite_s {
     char fname[gp_file_name_sizeof];	/* OutputFile */
     FILE *file;
     int TextFormat;
-#if DEBUG
+#ifdef TRACE_TXTWRITE
     FILE *DebugFile;
 #endif
 } gx_device_txtwrite_t;
@@ -119,19 +125,8 @@ static dev_proc_output_page(txtwrite_output_page);
 static dev_proc_fill_rectangle(txtwrite_fill_rectangle);
 static dev_proc_get_params(txtwrite_get_params);
 static dev_proc_put_params(txtwrite_put_params);
-static dev_proc_copy_alpha(txtwrite_copy_alpha);
-static dev_proc_copy_mono(txtwrite_copy_mono);
-static dev_proc_copy_color(txtwrite_copy_color);
 static dev_proc_fill_path(txtwrite_fill_path);
 static dev_proc_stroke_path(txtwrite_stroke_path);
-static dev_proc_fill_mask(txtwrite_fill_mask);
-static dev_proc_fill_trapezoid(txtwrite_fill_trapezoid);
-static dev_proc_fill_parallelogram(txtwrite_fill_parallelogram);
-static dev_proc_fill_triangle(txtwrite_fill_triangle);
-static dev_proc_draw_thin_line(txtwrite_draw_thin_line);
-static dev_proc_strip_tile_rectangle(txtwrite_strip_tile_rectangle);
-static dev_proc_strip_copy_rop(txtwrite_strip_copy_rop);
-static dev_proc_begin_typed_image(txtwrite_begin_typed_image);
 static dev_proc_text_begin(txtwrite_text_begin);
 
 /* The device prototype */
@@ -145,6 +140,7 @@ typedef struct textw_text_enum_s {
     bool charproc_accum;
     bool cdevproc_callout;
     double cdevproc_result[10];
+    float *Widths;
     unsigned short *TextBuffer;
     int TextBufferIndex;
     text_list_entry_t *text_state;
@@ -166,45 +162,45 @@ const gx_device_txtwrite_t gs_txtwrite_device =
                         X_DPI, Y_DPI,
                         1, 8, 255, 0, 256, 1),
     {txtwrite_open_device,
-     NULL, //gx_upright_get_initial_matrix,
-     NULL, //gx_default_sync_output,
+     NULL, /*gx_upright_get_initial_matrix,*/
+     NULL, /*gx_default_sync_output,*/
      txtwrite_output_page,
      txtwrite_close_device,
-     NULL, //gx_default_gray_map_rgb_color,
-     NULL, //gx_default_gray_map_color_rgb,
+     NULL, /*gx_default_gray_map_rgb_color,*/
+     NULL, /*gx_default_gray_map_color_rgb,*/
      txtwrite_fill_rectangle,               /* Can't be NULL and there is no gx_default_fill_rectangle! */
-     NULL, //gx_default_tile_rectangle,
-     NULL, //gx_default_copy_mono,
-     NULL, //gx_default_copy_color,
-     NULL, //gx_default_draw_line,
-     NULL, //gx_default_get_bits,
+     NULL, /*gx_default_tile_rectangle,*/
+     NULL, /*gx_default_copy_mono,*/
+     NULL, /*gx_default_copy_color,*/
+     NULL, /*gx_default_draw_line,*/
+     NULL, /*gx_default_get_bits,*/
      txtwrite_get_params,
      txtwrite_put_params,
-     NULL, //gx_default_map_cmyk_color,
-     NULL, //gx_default_get_xfont_procs,
-     NULL, //gx_default_get_xfont_device,
-     NULL, //gx_default_map_rgb_alpha_color,
-     NULL, //gx_page_device_get_page_device,
+     NULL, /*gx_default_map_cmyk_color,*/
+     NULL, /*gx_default_get_xfont_procs,*/
+     NULL, /*gx_default_get_xfont_device,*/
+     NULL, /*gx_default_map_rgb_alpha_color,*/
+     gx_page_device_get_page_device, /*gx_page_device_get_page_device,*/
      NULL,			/* get_alpha_bits */
-     NULL, //gx_default_copy_alpha,
+     NULL, /*gx_default_copy_alpha,*/
      NULL,			/* get_band */
      NULL,			/* copy_rop */
      txtwrite_fill_path,
      txtwrite_stroke_path,
-     NULL, //gx_default_fill_mask,
-     NULL, //gx_default_fill_trapezoid,
-     NULL, //gx_default_fill_parallelogram,
-     NULL, //gx_default_fill_triangle,
-     NULL, //gx_default_draw_thin_line,
+     NULL, /*gx_default_fill_mask,*/
+     NULL, /*gx_default_fill_trapezoid,*/
+     NULL, /*gx_default_fill_parallelogram,*/
+     NULL, /*gx_default_fill_triangle,*/
+     NULL, /*gx_default_draw_thin_line,*/
      NULL,                      /* begin image */
      NULL,			/* image_data */
      NULL,			/* end_image */
-     NULL, //gx_default_strip_tile_rectangle,
-     NULL, //gx_default_strip_copy_rop,
+     NULL, /*gx_default_strip_tile_rectangle,*/
+     NULL, /*gx_default_strip_copy_rop,*/
      NULL,			/* get_clipping_box */
      NULL,                      /* txtwrite_begin_typed_image */
      NULL,			/* get_bits_rectangle */
-     NULL, //gx_default_map_color_rgb_alpha,
+     NULL, /*gx_default_map_color_rgb_alpha,*/
      gx_null_create_compositor,
      NULL,			/* get_hardware_params */
      txtwrite_text_begin,
@@ -219,12 +215,10 @@ const gx_device_txtwrite_t gs_txtwrite_device =
      NULL,			/* encode_color */
      NULL			/* decode_color */
     },
-    0,				/* example_data */
-    { 0 },			/* LastFont */
-    0,				/* LastSize */
-    0,				/* Page */
-    { 0 },                      /* OutputFile */
-    0                           /* FILE *file */
+    { 0 },			/* Page Data */
+    { 0 },			/* Output Filename */
+    0,				/* Output FILE * */
+    3				/* TextFormat */
 };
 
 #ifndef gx_device_textw_DEFINED
@@ -244,7 +238,6 @@ static const gs_param_item_t txt_param_items[] = {
 static int
 txtwrite_open_device(gx_device * dev)
 {
-    int code;
     gx_device_txtwrite_t *const tdev = (gx_device_txtwrite_t *) dev;
 
     gx_device_fill_in_procs(dev);
@@ -254,7 +247,7 @@ txtwrite_open_device(gx_device * dev)
     tdev->PageData.PageNum = 0;
     tdev->PageData.y_ordered_list = NULL;
     tdev->file = NULL;
-#if DEBUG
+#ifdef TRACE_TXTWRITE
     tdev->DebugFile = fopen("/temp/txtw_dbg.txt", "wb+");
 #endif
     return 0;
@@ -269,35 +262,23 @@ txtwrite_close_device(gx_device * dev)
     if (tdev->file)
         code = gx_device_close_output_file(dev, tdev->fname, tdev->file);
 
-#if DEBUG
+#ifdef TRACE_TXTWRITE
     fclose(tdev->DebugFile);
 #endif
     return code;
 }
 
-static int simple_text_output(gx_device_txtwrite_t *tdev)
+/* Routine inspects horizontal lines of text to see if they can be collapsed
+ * into a single line. This essentially detects superscripts and subscripts
+ * as well as lines which are slightly mis-aligned.
+ */
+static int merge_vertically(gx_device_txtwrite_t *tdev)
 {
-    int code, chars_wide;
-    float char_size, min_size, min_width_size;
-#if DEBUG
+#ifdef TRACE_TXTWRITE
     text_list_entry_t *debug_x;
 #endif
-    text_list_entry_t * x_entry;
-    page_text_list_t *y_list;
-    char PageNum[32], *p;
-    unsigned short UnicodeSpace = 0x20, UnicodeTab = 0x09, BOM=0xFEFF, UnicodeEOL[2] = {0x00D, 0x0a}, u;
+    page_text_list_t *y_list = tdev->PageData.y_ordered_list;
 
-    /* Write out the page number as a unicode string */
-    sprintf(PageNum, "PAGE:%d\n", tdev->PageData.PageNum++);
-    p = (char *)&PageNum;
-    fwrite(&BOM, sizeof(unsigned short), 1, tdev->file);
-    while(*p != 0x00){
-        u = *p++;
-        fwrite(&u, sizeof(unsigned short), 1, tdev->file);
-    }
-
-    /* First lets try and consolidate horizontal lines of text */
-    y_list = tdev->PageData.y_ordered_list;
     while (y_list && y_list->next) {
         page_text_list_t *next = y_list->next;
         bool collision = false;
@@ -305,7 +286,7 @@ static int simple_text_output(gx_device_txtwrite_t *tdev)
 
         if (overlap >= (y_list->MaxY - y_list->MinY) / 4) {
             /* At least a 25% overlap, lets test for x collisions */
-            text_list_entry_t *upper = y_list->x_ordered_list, *lower, *next_x;
+            text_list_entry_t *upper = y_list->x_ordered_list, *lower;
             while (upper && !collision) {
                 lower = next->x_ordered_list;
                 while (lower && !collision) {
@@ -327,11 +308,11 @@ static int simple_text_output(gx_device_txtwrite_t *tdev)
                 upper = upper->next;
             }
             if (!collision) {
-                text_list_entry_t *from, *to, *new_order, *next_from, *next_to, *current;
+                text_list_entry_t *from, *to, *new_order, *current;
                 /* Consolidate y lists */
                 to = y_list->x_ordered_list;
                 from = next->x_ordered_list;
-#if DEBUG
+#ifdef TRACE_TXTWRITE
                 fprintf(tdev->DebugFile, "\nConsolidating two horizontal lines, line 1:");
                 debug_x = from;
                 while (debug_x) {
@@ -376,7 +357,7 @@ static int simple_text_output(gx_device_txtwrite_t *tdev)
                     }
                 }
                 y_list->x_ordered_list = new_order;
-#if DEBUG
+#ifdef TRACE_TXTWRITE
                 fprintf(tdev->DebugFile, "\nAfter:");
                 debug_x = new_order;
                 while (debug_x) {
@@ -395,9 +376,22 @@ static int simple_text_output(gx_device_txtwrite_t *tdev)
         } else
             y_list = next;
     }
+    return 0;
+}
 
-    /* Now lets try and merge horizontal fragments */
-    y_list = tdev->PageData.y_ordered_list;
+/* Routine to merge horizontally adjacent text fragments. If the distance
+ * between two horizontal fragments is small, then they are treated as one
+ * frament of text, if its larger then we insert a space (and set the Width
+ * entry appropriately). Otherwise we leave them as separate.
+ */
+static int merge_horizontally(gx_device_txtwrite_t *tdev)
+{
+#ifdef TRACE_TXTWRITE
+    text_list_entry_t *debug_x;
+#endif
+    unsigned short UnicodeSpace = 0x20;
+    page_text_list_t *y_list = tdev->PageData.y_ordered_list;
+
     while (y_list) {
         float average_width;
         text_list_entry_t *from, *to;
@@ -410,15 +404,20 @@ static int simple_text_output(gx_device_txtwrite_t *tdev)
             if (to->start.x - from->end.x < average_width / 2) {
                 /* consolidate fragments */
                 unsigned short *NewText;
+                float *NewWidths;
 
                 NewText = (unsigned short *)gs_malloc(tdev->memory->stable_memory,
-                    (from->Unicode_Text_Size + to->Unicode_Text_Size), sizeof(unsigned short), "txtwrite alloc text state");
-                if (!NewText) {
+                    (from->Unicode_Text_Size + to->Unicode_Text_Size), sizeof(unsigned short), "txtwrite alloc working text buffer");
+                NewWidths = (float *)gs_malloc(tdev->memory->stable_memory,
+                    (from->Unicode_Text_Size + to->Unicode_Text_Size), sizeof(float), "txtwrite alloc Widths array");
+                if (!NewText || !NewWidths) {
+                    if (NewText)
+                        gs_free(tdev->memory, NewText, from->Unicode_Text_Size + to->Unicode_Text_Size, sizeof (unsigned short), "free working text fragment");
                     /* ran out of memory, don't consolidate */
                     from = from->next;
                     to = to->next;
                 } else {
-#if DEBUG
+#ifdef TRACE_TXTWRITE
                     fprintf(tdev->DebugFile, "Consolidating two horizontal fragments in one line, before:\n\t");
                     fwrite(from->Unicode_Text, sizeof(unsigned short), from->Unicode_Text_Size, tdev->DebugFile);
                     fprintf(tdev->DebugFile, "\n\t");
@@ -426,12 +425,17 @@ static int simple_text_output(gx_device_txtwrite_t *tdev)
 #endif
                     memcpy(NewText, from->Unicode_Text, from->Unicode_Text_Size * sizeof(unsigned short));
                     memcpy(&NewText[from->Unicode_Text_Size], to->Unicode_Text, to->Unicode_Text_Size * sizeof(unsigned short));
+                    memcpy(NewWidths, from->Widths, from->Unicode_Text_Size * sizeof(float));
+                    memcpy(&NewWidths[from->Unicode_Text_Size], to->Widths, to->Unicode_Text_Size * sizeof(float));
                     gs_free(tdev->memory, from->Unicode_Text, from->Unicode_Text_Size, sizeof (unsigned short), "free consolidated text fragment");
                     gs_free(tdev->memory, to->Unicode_Text, to->Unicode_Text_Size, sizeof (unsigned short), "free consolidated text fragment");
+                    gs_free(tdev->memory, from->Widths, from->Unicode_Text_Size, sizeof (float), "free consolidated Widths array");
+                    gs_free(tdev->memory, to->Widths, to->Unicode_Text_Size, sizeof (float), "free consolidated Widths array");
                     gs_free(tdev->memory, to->FontName, 1, strlen(from->FontName) + 1, "free FontName");
                     from->Unicode_Text = NewText;
                     from->Unicode_Text_Size += to->Unicode_Text_Size;
-#if DEBUG
+                    from->Widths = NewWidths;
+#ifdef TRACE_TXTWRITE
                     fprintf(tdev->DebugFile, "After:\n\t");
                     fwrite(from->Unicode_Text, sizeof(unsigned short), from->Unicode_Text_Size, tdev->DebugFile);
 #endif
@@ -445,10 +449,15 @@ static int simple_text_output(gx_device_txtwrite_t *tdev)
             } else {
                 if (to->start.x - from->end.x < average_width *2){
                     unsigned short *NewText;
+                    float *NewWidths;
 
                     NewText = (unsigned short *)gs_malloc(tdev->memory->stable_memory,
                         (from->Unicode_Text_Size + to->Unicode_Text_Size + 1), sizeof(unsigned short), "txtwrite alloc text state");
-                    if (!NewText) {
+                    NewWidths = (float *)gs_malloc(tdev->memory->stable_memory,
+                        (from->Unicode_Text_Size + to->Unicode_Text_Size + 1), sizeof(float), "txtwrite alloc Widths array");
+                    if (!NewText || !NewWidths) {
+                        if (NewText)
+                            gs_free(tdev->memory, NewText, from->Unicode_Text_Size + to->Unicode_Text_Size, sizeof (unsigned short), "free working text fragment");
                         /* ran out of memory, don't consolidate */
                         from = from->next;
                         to = to->next;
@@ -456,11 +465,17 @@ static int simple_text_output(gx_device_txtwrite_t *tdev)
                         memcpy(NewText, from->Unicode_Text, from->Unicode_Text_Size * sizeof(unsigned short));
                         memcpy(&NewText[from->Unicode_Text_Size], &UnicodeSpace, sizeof(unsigned short));
                         memcpy(&NewText[from->Unicode_Text_Size + 1], to->Unicode_Text, to->Unicode_Text_Size * sizeof(unsigned short));
+                        memcpy(NewWidths, from->Widths, from->Unicode_Text_Size * sizeof(float));
+                        NewWidths[from->Unicode_Text_Size] = to->start.x - from->end.x;
+                        memcpy(&NewWidths[from->Unicode_Text_Size + 1], to->Widths, to->Unicode_Text_Size * sizeof(float));
                         gs_free(tdev->memory, from->Unicode_Text, from->Unicode_Text_Size, sizeof (unsigned short), "free consolidated text fragment");
                         gs_free(tdev->memory, to->Unicode_Text, to->Unicode_Text_Size, sizeof (unsigned short), "free consolidated text fragment");
+                        gs_free(tdev->memory, from->Widths, from->Unicode_Text_Size, sizeof (float), "free consolidated Widths array");
+                        gs_free(tdev->memory, to->Widths, to->Unicode_Text_Size, sizeof (float), "free consolidated Widths array");
                         gs_free(tdev->memory, to->FontName, 1, strlen(from->FontName) + 1, "free FontName");
                         from->Unicode_Text = NewText;
                         from->Unicode_Text_Size += to->Unicode_Text_Size + 1;
+                        from->Widths = NewWidths;
                         from->end = to->end;
                         from->next = to->next;
                         if (from->next)
@@ -476,6 +491,62 @@ static int simple_text_output(gx_device_txtwrite_t *tdev)
         }
         y_list = y_list->next;
     }
+    return 0;
+}
+
+static int write_simple_text(unsigned short *text, int count, gx_device_txtwrite_t *tdev)
+{
+    switch(tdev->TextFormat) {
+        case 2:
+            fwrite(text, sizeof (unsigned short), count, tdev->file);
+            break;
+        case 3:
+            {
+                int i;
+                unsigned short *UTF16 = (unsigned short *)text;
+                unsigned char UTF8[3];
+
+                for (i=0;i<count;i++) {
+                    if (*UTF16 < 0x80) {
+                        UTF8[0] = *UTF16 & 0xff;
+                        fwrite (UTF8, sizeof(unsigned char), 1, tdev->file);
+                    } else {
+                        if (*UTF16 < 0x800) {
+                            UTF8[0] = (*UTF16 >> 11) + 0xC0;
+                            UTF8[1] = (*UTF16 & 0x3F) + 0x80;
+                            fwrite (UTF8, sizeof(unsigned char), 2, tdev->file);
+                        } else {
+                            UTF8[0] = (*UTF16 >> 12) + 0xE0;
+                            UTF8[1] = ((*UTF16 >> 6) & 0x3F) + 0x80;
+                            UTF8[2] = (*UTF16 & 0x3F) + 0x80;
+                            fwrite (UTF8, sizeof(unsigned char), 3, tdev->file);
+                        }
+                    }
+                    UTF16++;
+                }
+            }
+            break;
+        default:
+            return gs_note_error(gs_error_rangecheck);
+            break;
+    }
+    return 0;
+}
+
+static int simple_text_output(gx_device_txtwrite_t *tdev)
+{
+    int chars_wide;
+    float char_size, min_size, min_width_size;
+#ifdef TRACE_TXTWRITE
+    text_list_entry_t *debug_x;
+#endif
+    text_list_entry_t * x_entry;
+    page_text_list_t *y_list;
+    unsigned short UnicodeSpace = 0x20, UnicodeEOL[2] = {0x00D, 0x0a};
+
+    merge_vertically(tdev);
+
+    merge_horizontally(tdev);
 
     min_size = (float)tdev->width;
     /* Estimate maximum text density */
@@ -515,10 +586,10 @@ static int simple_text_output(gx_device_txtwrite_t *tdev)
         x_entry = y_list->x_ordered_list;
         while (x_entry) {
             while (xpos < x_entry->start.x) {
-                fwrite(&UnicodeSpace, sizeof (unsigned short), 1, tdev->file);
+                write_simple_text(&UnicodeSpace, 1, tdev);
                 xpos += char_size;
             }
-            fwrite(x_entry->Unicode_Text, sizeof (unsigned short), x_entry->Unicode_Text_Size, tdev->file);
+            write_simple_text(x_entry->Unicode_Text, x_entry->Unicode_Text_Size, tdev);
             xpos += x_entry->Unicode_Text_Size * char_size;
             if (x_entry->next) {
                 x_entry = x_entry->next;
@@ -526,7 +597,7 @@ static int simple_text_output(gx_device_txtwrite_t *tdev)
                 x_entry = NULL;
             }
         }
-        fwrite(&UnicodeEOL, sizeof(unsigned short), 2, tdev->file);
+        write_simple_text((unsigned short *)&UnicodeEOL, 2, tdev);
         if (y_list->next) {
             y_list = y_list->next;
         } else {
@@ -536,24 +607,187 @@ static int simple_text_output(gx_device_txtwrite_t *tdev)
     return 0;
 }
 
+static int escaped_Unicode (unsigned short Unicode, char *Buf)
+{
+    switch (Unicode)
+    {
+    case 0x3C: sprintf(Buf, "&lt;"); break;
+    case 0x3E: sprintf(Buf, "&gt;"); break;
+    case 0x26: sprintf(Buf, "&amp;"); break;
+    case 0x22: sprintf(Buf, "&quot;"); break;
+    case 0x27: sprintf(Buf, "&apos;"); break;
+    default:
+        if (Unicode >= 32 && Unicode <= 127)
+            sprintf(Buf, "%c", Unicode);
+        else
+            sprintf(Buf, "&#x%x;", Unicode);
+        break;
+    }
+
+    return 0;
+}
+
 static int decorated_text_output(gx_device_txtwrite_t *tdev)
 {
-    int code;
+    int i;
     text_list_entry_t * x_entry, *next_x;
-    unsigned short UnicodeEOL[2] = {0x00D, 0x0a};
-    char TextBuffer[512], Fontname[256];
-    gs_font *base;
+    char TextBuffer[512], Escaped[32];
+    float xpos;
+    page_text_list_t *y_list;
+#ifdef TRACE_TXTWRITE
+    text_list_entry_t *debug_x;
+#endif
 
-    x_entry = tdev->PageData.unsorted_text_list;
-    while (x_entry) {
-        next_x = x_entry->next;
-        sprintf(TextBuffer, "<FontName=%s, size=%d, render mode=%d, WMode=%d,start=%d,%d, end= %d,%d> ",
-            x_entry->FontName, x_entry->size, x_entry->render_mode, x_entry->wmode, x_entry->start.x,
-            x_entry->start.y, x_entry->end.x,x_entry->end.y);
-        fwrite(TextBuffer, 1, strlen(TextBuffer), tdev->file);
-        fwrite(x_entry->Unicode_Text, sizeof (unsigned short), x_entry->Unicode_Text_Size, tdev->file);
-        fwrite(&UnicodeEOL, sizeof(unsigned short), 2, tdev->file);
-        x_entry = next_x;
+    if (tdev->TextFormat == 0) {
+        fwrite("<page>\n", sizeof(unsigned char), 7, tdev->file);
+        x_entry = tdev->PageData.unsorted_text_list;
+        while (x_entry) {
+            next_x = x_entry->next;
+            sprintf(TextBuffer, "<span bbox=\"%0.0f %0.0f %0.0f %0.0f\" font=\"%s\" size=\"%0.4f\">\n", x_entry->start.x, x_entry->start.y,
+                x_entry->end.x, x_entry->end.y, x_entry->FontName,x_entry->size);
+            fwrite(TextBuffer, 1, strlen(TextBuffer), tdev->file);
+            xpos = x_entry->start.x;
+            for (i=0;i<x_entry->Unicode_Text_Size;i++) {
+                escaped_Unicode(x_entry->Unicode_Text[i], (char *)&Escaped);
+                sprintf(TextBuffer, "<char bbox=\"%0.0f %0.0f %0.0f %0.0f\" c=\"%s\">\n", xpos,
+                    x_entry->start.y, xpos + x_entry->Widths[i], x_entry->end.y, Escaped);
+                fwrite(TextBuffer, 1, strlen(TextBuffer), tdev->file);
+                xpos += x_entry->Widths[i];
+            }
+            fwrite("</span>\n", sizeof(unsigned char), 8, tdev->file);
+
+            x_entry = next_x;
+        }
+        fwrite("</page>\n", sizeof(unsigned char), 8, tdev->file);
+    } else {
+
+        merge_vertically(tdev);
+        merge_horizontally(tdev);
+
+        y_list = tdev->PageData.y_ordered_list;
+        fwrite("<page>\n", sizeof(unsigned char), 7, tdev->file);
+        /* Walk the list looking for 'blocks' */
+        do {
+            page_text_list_t *temp;
+            page_text_t block;
+            page_text_list_t *block_line;
+            float BBox[4];
+
+            memset(&block, 0x00, sizeof(page_text_t));
+            memset(BBox, 0x00, sizeof(float) * 4);
+
+            while (y_list) {
+                if (block.y_ordered_list) {
+                    text_list_entry_t *x_entry = y_list->x_ordered_list;
+
+                    block_line = block.y_ordered_list;
+                    while (x_entry) {
+                        if (x_entry->start.x > BBox[2] || x_entry->end.x < BBox[0] ||
+                            x_entry->start.y > (BBox[1] + (BBox[3] - BBox[1]))) {
+                                ;
+                        } else {
+                            block_line->next = (page_text_list_t *)gs_malloc(tdev->memory->stable_memory, 1,
+                                sizeof(page_text_list_t), "txtwrite alloc Y-list");
+                            memset(block_line->next, 0x00, sizeof(page_text_list_t));
+                            block_line = block_line->next;
+                            block_line->x_ordered_list = x_entry;
+                            if(x_entry->next)
+                                x_entry->next->previous = x_entry->previous;
+                            if (x_entry->previous)
+                                x_entry->previous->next = x_entry->next;
+                            else {
+                                if (x_entry->next == 0x00) {
+                                    /* remove Y entry */
+                                    temp = y_list->next;
+                                    if (y_list->previous)
+                                        y_list->previous->next = y_list->next;
+                                    if (y_list->next)
+                                        y_list->next->previous = y_list->previous;
+                                    else {
+                                        if (y_list->previous == 0x00) {
+                                            tdev->PageData.y_ordered_list = 0x00;
+                                        }
+                                    }
+                                    gs_free(tdev->memory, y_list, 1, sizeof(page_text_list_t), "txtwrite free text list");
+                                    if (tdev->PageData.y_ordered_list == y_list)
+                                        tdev->PageData.y_ordered_list = temp;
+                                    y_list = temp;
+                                    x_entry = x_entry->next;
+                                    continue;
+                                }
+                            }
+                            if (block_line->x_ordered_list->start.x < BBox[0])
+                                BBox[0] = block_line->x_ordered_list->start.x;
+                            if (block_line->x_ordered_list->start.y < BBox[1])
+                                BBox[1] = block_line->x_ordered_list->start.y;
+                            if (block_line->x_ordered_list->end.x < BBox[2])
+                                BBox[2] = block_line->x_ordered_list->end.x;
+                            if (block_line->x_ordered_list->end.y + block_line->x_ordered_list->FontBBox_topright.y < BBox[3])
+                                BBox[3] = block_line->x_ordered_list->end.y + block_line->x_ordered_list->FontBBox_topright.y;
+                        }
+                        x_entry = x_entry->next;
+                    }
+                } else {
+                    block.y_ordered_list = block_line = (page_text_list_t *)gs_malloc(tdev->memory->stable_memory, 1,
+                        sizeof(page_text_list_t), "txtwrite alloc Y-list");
+                    memset(block_line, 0x00, sizeof(page_text_list_t));
+                    block_line->x_ordered_list = y_list->x_ordered_list;
+                    y_list->x_ordered_list = y_list->x_ordered_list->next;
+                    if (y_list->x_ordered_list == 0x00) {
+                        temp = y_list->next;
+                        if (y_list->previous)
+                            y_list->previous->next = y_list->next;
+                        if (y_list->next)
+                            y_list->next->previous = y_list->previous;
+                        else {
+                            if (y_list->previous == 0x00) {
+                                tdev->PageData.y_ordered_list = 0x00;
+                            }
+                        }
+                        gs_free(tdev->memory, y_list, 1, sizeof(page_text_list_t), "txtwrite free text list");
+                        if (tdev->PageData.y_ordered_list == y_list)
+                            tdev->PageData.y_ordered_list = temp;
+                        y_list = temp;
+                        continue;
+                    }
+                    block_line->x_ordered_list->next = block_line->x_ordered_list->previous = 0x00;
+                    BBox[0] = block_line->x_ordered_list->start.x;
+                    BBox[1] = block_line->x_ordered_list->start.y;
+                    BBox[2] = block_line->x_ordered_list->end.x;
+                    BBox[3] = block_line->x_ordered_list->end.y + block_line->x_ordered_list->FontBBox_topright.y;
+                }
+                if (y_list)
+                    y_list = y_list->next;
+            }
+            /* FIXME - need to free the used memory in here */
+            fwrite("<block>\n", sizeof(unsigned char), 8, tdev->file);
+            block_line = block.y_ordered_list;
+            while (block_line) {
+                fwrite("<line>\n", sizeof(unsigned char), 7, tdev->file);
+                x_entry = block_line->x_ordered_list;
+                while(x_entry) {
+                    sprintf(TextBuffer, "<span bbox=\"%0.0f %0.0f %0.0f %0.0f\" font=\"%s\" size=\"%0.4f\">\n", x_entry->start.x, x_entry->start.y,
+                        x_entry->end.x, x_entry->end.y, x_entry->FontName,x_entry->size);
+                    fwrite(TextBuffer, 1, strlen(TextBuffer), tdev->file);
+                    xpos = x_entry->start.x;
+                    for (i=0;i<x_entry->Unicode_Text_Size;i++) {
+                        escaped_Unicode(x_entry->Unicode_Text[i], (char *)&Escaped);
+                        sprintf(TextBuffer, "<char bbox=\"%0.0f %0.0f %0.0f %0.0f\" c=\"%s\">\n", xpos,
+                            x_entry->start.y, xpos + x_entry->Widths[i], x_entry->end.y, Escaped);
+                        fwrite(TextBuffer, 1, strlen(TextBuffer), tdev->file);
+                        xpos += x_entry->Widths[i];
+                    }
+                    fwrite("</span>\n", sizeof(unsigned char), 8, tdev->file);
+                    x_entry = x_entry->next;
+                }
+                fwrite("</line>\n", sizeof(unsigned char), 8, tdev->file);
+                block_line = block_line->next;
+            }
+            fwrite("</block>\n", sizeof(unsigned char), 9, tdev->file);
+            y_list = tdev->PageData.y_ordered_list;
+        } while (y_list);
+
+        fwrite("</page>\n", sizeof(unsigned char), 8, tdev->file);
     }
     return 0;
 }
@@ -578,13 +812,15 @@ txtwrite_output_page(gx_device * dev, int num_copies, int flush)
 
     switch(tdev->TextFormat) {
         case 0:
-            code = simple_text_output(tdev);
+        case 1:
+            code = decorated_text_output(tdev);
             if (code < 0)
                 return code;
             break;
 
-        case 1:
-            code = decorated_text_output(tdev);
+        case 2:
+        case 3:
+            code = simple_text_output(tdev);
             if (code < 0)
                 return code;
             break;
@@ -604,6 +840,7 @@ txtwrite_output_page(gx_device * dev, int num_copies, int flush)
         x_entry = y_list->x_ordered_list;
         while (x_entry) {
             gs_free(tdev->memory, x_entry->Unicode_Text, x_entry->Unicode_Text_Size, sizeof (usnigned short), "txtwrite free text fragment text buffer");
+            gs_free(tdev->memory, x_entry->Widths, x_entry->Unicode_Text_Size, sizeof (float), "txtwrite free widths array");
             gs_free(tdev->memory, x_entry->FontName, 1, strlen(x_entry->FontName) + 1, "txtwrite free Font Name");
             if (x_entry->next) {
                 x_entry = x_entry->next;
@@ -628,6 +865,7 @@ txtwrite_output_page(gx_device * dev, int num_copies, int flush)
     while (x_entry) {
         next_x = x_entry->next;
         gs_free(tdev->memory, x_entry->Unicode_Text, x_entry->Unicode_Text_Size, sizeof (usnigned short), "txtwrite free unsorted text fragment text buffer");
+        gs_free(tdev->memory, x_entry->Widths, x_entry->Unicode_Text_Size, sizeof (float), "txtwrite free widths array");
         gs_free(tdev->memory, x_entry->FontName, 1, strlen(x_entry->FontName) + 1, "txtwrite free Font Name");
         gs_free(tdev->memory, x_entry, 1, sizeof(text_list_entry_t), "txtwrite free unsorted text fragment");
         x_entry = next_x;
@@ -744,6 +982,7 @@ txtwrite_put_params(gx_device * dev, gs_param_list * plist)
     int code;
     const char *param_name;
     gs_param_string ofs;
+    bool dummy;
 
     switch (code = param_read_string(plist, (param_name = "OutputFile"), &ofs)) {
         case 0:
@@ -770,6 +1009,18 @@ txtwrite_put_params(gx_device * dev, gs_param_list * plist)
         return ecode;
 
     code = param_read_int(plist, "TextFormat", &tdev->TextFormat);
+    if (code < 0)
+        return code;
+
+    code = param_read_bool(plist, "WantsToUnicode", &dummy);
+    if (code < 0)
+        return code;
+
+    code = param_read_bool(plist, "HighLevelDevice", &dummy);
+    if (code < 0)
+        return code;
+
+    code = param_read_bool(plist, "PreserveTrMode", &dummy);
     if (code < 0)
         return code;
 
@@ -1206,7 +1457,7 @@ get_missing_width(gs_font *font, int wmode, const gs_matrix *scale_c,
  * Return TEXT_PROCESS_CDEVPROC if a CDevProc callout is needed.
  * cdevproc_result != NULL if we restart after a CDevProc callout.
  */
-int
+static int
 txt_glyph_widths(gs_font *font, int wmode, gs_glyph glyph,
                  gs_font *orig_font, txt_glyph_widths_t *pwidths,
                  const double cdevproc_result[10])
@@ -1245,7 +1496,8 @@ txt_glyph_widths(gs_font *font, int wmode, gs_glyph glyph,
        to be equal to half glyph width, and AR5 takes it from W, DW.
        So make a compatibe data here.
      */
-    if (code == gs_error_undefined || !(info.members & (GLYPH_INFO_WIDTH0 << wmode))) {
+    if (font->FontType != ft_PCL_user_defined && font->FontType != ft_GL2_stick_user_defined
+        && (code == gs_error_undefined || !(info.members & (GLYPH_INFO_WIDTH0 << wmode)))) {
         code = get_missing_width(font, wmode, &scale_c, pwidths);
         if (code < 0)
             v.y = 0;
@@ -1290,14 +1542,10 @@ txt_glyph_widths(gs_font *font, int wmode, gs_glyph glyph,
         }
     }
     pwidths->Width.v = v;
-#if 0
-    if (code > 0)
-        pwidths->Width.xy.x = pwidths->Width.xy.y = pwidths->Width.w = 0;
-#else /* Skip only if not paralel to the axis. */
+    /* Skip only if not paralel to the axis. */
     if (code > 0 && ofont->FontType != ft_CID_encrypted &&
             ofont->FontType != ft_CID_TrueType)
         pwidths->Width.xy.x = pwidths->Width.xy.y = pwidths->Width.w = 0;
-#endif
     if (cdevproc_result == NULL) {
         info.members = 0;
         code = ofont->procs.glyph_info(ofont, glyph, NULL,
@@ -1369,7 +1617,7 @@ txt_char_widths_to_uts(gs_font *font /* may be NULL for non-Type3 */,
 /* Simple routine to update the current point by the accumulated width of the
  * text.
  */
-int
+static int
 txt_shift_text_currentpoint(textw_text_enum_t *penum, gs_point *wpt)
 {
     gs_state *pgs;
@@ -1419,7 +1667,6 @@ static int get_unicode(gs_font *font, gs_glyph glyph, gs_char ch, unsigned short
             }
         }
         if (unicode == GS_NO_CHAR) {
-            char *Glyph;
             int index = 0;
 
             /* Search glyph to single Unicode value table */
@@ -1504,25 +1751,22 @@ static int get_unicode(gs_font *font, gs_glyph glyph, gs_char ch, unsigned short
  * text rendering mode, writing mode, etc.
  */
 
-int txtwrite_process_cmap_text(gs_text_enum_t *pte)
+static int
+txtwrite_process_cmap_text(gs_text_enum_t *pte)
 {
     textw_text_enum_t *const penum = (textw_text_enum_t *)pte;
-    gx_device_txtwrite_t *const tdev = (gx_device_txtwrite_t *) pte->dev;
-    unsigned int unicode, rcode = 0;
+    unsigned int rcode = 0;
     gs_text_enum_t scan = *(gs_text_enum_t *)pte;
 
     /* Composite font using a CMap */
     for ( ; ; ) {
         gs_glyph glyph;
-        gs_glyph_info_t info;
         int font_code, font_index, code;
-        gs_font *subfont;//new_font = 0;
+        gs_font *subfont;
         gs_char chr;
-        gs_matrix scale_c, scale_o;
-        gs_font_info_t finfo;
         txt_glyph_widths_t widths;
         gs_matrix m3;
-        gs_point did, wanted, tpt;	/* user space */
+        gs_point wanted;	/* user space */
         gs_point dpt = {0,0};
 
         font_code = scan.orig_font->procs.next_char_glyph
@@ -1556,6 +1800,7 @@ int txtwrite_process_cmap_text(gs_text_enum_t *pte)
                           &penum->text_state->matrix, &wanted);
                 pte->returned.total_width.x += wanted.x;
                 pte->returned.total_width.y += wanted.y;
+                penum->Widths[pte->index - 1] = wanted.x;
 
                 if (pte->text.operation & TEXT_ADD_TO_ALL_WIDTHS) {
                     gs_point tpt;
@@ -1577,6 +1822,7 @@ int txtwrite_process_cmap_text(gs_text_enum_t *pte)
                 pte->returned.total_width.y += dpt.y;
 
                 penum->TextBufferIndex += get_unicode((gs_font *)pte->orig_font, glyph, chr, &penum->TextBuffer[penum->TextBufferIndex]);
+                penum->Widths[pte->index - 1] += dpt.x;
                 break;
             case 2:		/* end of string */
                 return 0;
@@ -1589,24 +1835,19 @@ int txtwrite_process_cmap_text(gs_text_enum_t *pte)
     return rcode;
 }
 
-int txtwrite_process_plain_text(gs_text_enum_t *pte)
+static int
+txtwrite_process_plain_text(gs_text_enum_t *pte)
 {
     /* one byte regular font */
     textw_text_enum_t *const penum = (textw_text_enum_t *)pte;
-    gx_device_txtwrite_t *const tdev = (gx_device_txtwrite_t *) pte->dev;
-    uint size = pte->text.size - pte->index;
-    char *ptr;
     gs_font *font = pte->orig_font;
     const gs_glyph *gdata = NULL;
     gs_glyph glyph;
-    gs_const_string gnstr;
     gs_char ch;
-    unsigned int unicode;
     int i, code;
     uint operation = pte->text.operation;
     txt_glyph_widths_t widths;
-    gs_matrix m3;
-    gs_point did, wanted, tpt;	/* user space */
+    gs_point wanted;	/* user space */
     gs_point dpt = {0,0};
 
     for (i=0;i<pte->text.size;i++) {
@@ -1634,6 +1875,7 @@ int txtwrite_process_plain_text(gs_text_enum_t *pte)
                           &penum->text_state->matrix, &wanted);
         pte->returned.total_width.x += wanted.x;
         pte->returned.total_width.y += wanted.y;
+        penum->Widths[pte->index - 1] = wanted.x;
 
         if (pte->text.operation & TEXT_ADD_TO_ALL_WIDTHS) {
             gs_point tpt;
@@ -1655,6 +1897,7 @@ int txtwrite_process_plain_text(gs_text_enum_t *pte)
         pte->returned.total_width.y += dpt.y;
 
         penum->TextBufferIndex += get_unicode((gs_font *)pte->orig_font, glyph, ch, &penum->TextBuffer[penum->TextBufferIndex]);
+        penum->Widths[pte->index - 1] += dpt.x;
     }
     return 0;
 }
@@ -1666,7 +1909,8 @@ int txtwrite_process_plain_text(gs_text_enum_t *pte)
  * properties, at least when outputting a simple representation. We won't
  * do this for languages which don't read left/right or right/left though.
  */
-int txt_add_sorted_fragment(gx_device_txtwrite_t *tdev, textw_text_enum_t *penum)
+static int
+txt_add_sorted_fragment(gx_device_txtwrite_t *tdev, textw_text_enum_t *penum)
 {
     if (!tdev->PageData.y_ordered_list) {
         /* first entry, no need to sort, just store it */
@@ -1709,14 +1953,14 @@ int txt_add_sorted_fragment(gx_device_txtwrite_t *tdev, textw_text_enum_t *penum
                 if (penum->text_state->next)
                     penum->text_state->next->previous = penum->text_state;
             }
-            if (penum->text_state->topleft.y < Y_List->MinY)
-                Y_List->MinY = penum->text_state->topleft.y;
-            if (penum->text_state->topleft.y > Y_List->MaxY)
-                Y_List->MaxY = penum->text_state->topleft.y;
-            if (penum->text_state->topright.y < Y_List->MinY)
-                Y_List->MinY = penum->text_state->topright.y;
-            if (penum->text_state->topright.y > Y_List->MaxY)
-                Y_List->MaxY = penum->text_state->topright.y;
+            if (penum->text_state->FontBBox_bottomleft.y < Y_List->MinY)
+                Y_List->MinY = penum->text_state->FontBBox_bottomleft.y;
+            if (penum->text_state->FontBBox_bottomleft.y > Y_List->MaxY)
+                Y_List->MaxY = penum->text_state->FontBBox_bottomleft.y;
+            if (penum->text_state->FontBBox_topright.y < Y_List->MinY)
+                Y_List->MinY = penum->text_state->FontBBox_topright.y;
+            if (penum->text_state->FontBBox_topright.y > Y_List->MaxY)
+                Y_List->MaxY = penum->text_state->FontBBox_topright.y;
         } else {
             /* New y-position, make a Y list new record */
             page_text_list_t *Y_Entry = (page_text_list_t *)gs_malloc(tdev->memory->stable_memory, 1,
@@ -1726,12 +1970,12 @@ int txt_add_sorted_fragment(gx_device_txtwrite_t *tdev, textw_text_enum_t *penum
 
             Y_Entry->x_ordered_list = penum->text_state;
             Y_Entry->start = penum->text_state->start;
-            if (penum->text_state->topleft.y > penum->text_state->topright.y) {
-                Y_Entry->MinY = penum->text_state->topright.y;
-                Y_Entry->MaxY = penum->text_state->topleft.y;
+            if (penum->text_state->FontBBox_bottomleft.y > penum->text_state->FontBBox_topright.y) {
+                Y_Entry->MinY = penum->text_state->FontBBox_topright.y;
+                Y_Entry->MaxY = penum->text_state->FontBBox_bottomleft.y;
             } else {
-                Y_Entry->MaxY = penum->text_state->topright.y;
-                Y_Entry->MinY = penum->text_state->topleft.y;
+                Y_Entry->MaxY = penum->text_state->FontBBox_topright.y;
+                Y_Entry->MinY = penum->text_state->FontBBox_bottomleft.y;
             }
 
             if (Y_List->start.y > penum->text_state->start.y) {
@@ -1758,7 +2002,8 @@ int txt_add_sorted_fragment(gx_device_txtwrite_t *tdev, textw_text_enum_t *penum
     return 0;
 }
 
-int txt_add_fragment(gx_device_txtwrite_t *tdev, textw_text_enum_t *penum)
+static int
+txt_add_fragment(gx_device_txtwrite_t *tdev, textw_text_enum_t *penum)
 {
     text_list_entry_t *unsorted_entry, *t;
 
@@ -1785,11 +2030,23 @@ int txt_add_fragment(gx_device_txtwrite_t *tdev, textw_text_enum_t *penum)
         return gs_note_error(gs_error_VMerror);
     memcpy(penum->text_state->Unicode_Text, penum->TextBuffer, penum->TextBufferIndex * sizeof(unsigned short));
 
+    penum->text_state->Widths = (float *)gs_malloc(tdev->memory->stable_memory,
+        penum->TextBufferIndex, sizeof(float), "txtwrite alloc widths array");
+    if (!penum->text_state->Widths)
+        return gs_note_error(gs_error_VMerror);
+    memcpy(penum->text_state->Widths, penum->Widths, penum->TextBufferIndex * sizeof(float));
+
     unsorted_entry->Unicode_Text = (unsigned short *)gs_malloc(tdev->memory->stable_memory,
         penum->TextBufferIndex, sizeof(unsigned short), "txtwrite alloc sorted text buffer");
     if (!unsorted_entry->Unicode_Text)
         return gs_note_error(gs_error_VMerror);
     memcpy(unsorted_entry->Unicode_Text, penum->TextBuffer, penum->TextBufferIndex * sizeof(unsigned short));
+
+    unsorted_entry->Widths = (float *)gs_malloc(tdev->memory->stable_memory,
+        penum->TextBufferIndex, sizeof(float), "txtwrite alloc widths array");
+    if (!unsorted_entry->Widths)
+        return gs_note_error(gs_error_VMerror);
+    memcpy(unsorted_entry->Widths, penum->Widths, penum->TextBufferIndex * sizeof(float));
 
     unsorted_entry->FontName = (char *)gs_malloc(tdev->memory->stable_memory,
         (strlen(penum->text_state->FontName) + 1), sizeof(unsigned short), "txtwrite alloc sorted text buffer");
@@ -1820,19 +2077,14 @@ int txt_add_fragment(gx_device_txtwrite_t *tdev, textw_text_enum_t *penum)
  * because there are ways that regular text can be handled that aren't possible
  * with CIDFonts.
  */
-int
+static int
 textw_text_process(gs_text_enum_t *pte)
 {
     textw_text_enum_t *const penum = (textw_text_enum_t *)pte;
     gx_device_txtwrite_t *const tdev = (gx_device_txtwrite_t *) pte->dev;
-    uint operation = pte->text.operation;
-    uint size = pte->text.size - pte->index;
     gs_font *font = pte->orig_font;
     gs_font_base *font_base = (gs_font_base *)pte->current_font;
-    char *ptr;
-    unsigned short BOM=0xFEFF;
     int code = 0;
-    gs_state *pgs;
 
     if (!penum->TextBuffer) {
         /* We can get up to 4 Unicode points per glyph, and a glyph can be
@@ -1845,6 +2097,10 @@ textw_text_process(gs_text_enum_t *pte)
         penum->TextBuffer = (unsigned short *)gs_malloc(tdev->memory->stable_memory,
             pte->text.size * 4, sizeof(unsigned short), "txtwrite temporary text buffer");
         if (!penum->TextBuffer)
+            return gs_note_error(gs_error_VMerror);
+        penum->Widths = (float *)gs_malloc(tdev->memory->stable_memory,
+            pte->text.size, sizeof(float), "txtwrite temporary widths array");
+        if (!penum->Widths)
             return gs_note_error(gs_error_VMerror);
     }
     {
@@ -1879,8 +2135,10 @@ textw_text_process(gs_text_enum_t *pte)
                 gs_point_transform(font_base->FontBBox.p.x, font_base->FontBBox.q.y, &m, &p1);
                 gs_point_transform(font_base->FontBBox.q.x, font_base->FontBBox.p.y, &m, &p2);
                 gs_point_transform(font_base->FontBBox.q.x, font_base->FontBBox.q.y, &m, &p3);
-                penum->text_state->topleft.y = min(min(p0.y, p1.y), min(p1.y, p2.y));
-                penum->text_state->topright.y = max(max(p0.y, p1.y), max(p1.y, p2.y));
+                penum->text_state->FontBBox_bottomleft.x = min(min(p0.x, p1.x), min(p1.x, p2.x));
+                penum->text_state->FontBBox_topright.x = max(max(p0.x, p1.x), max(p1.x, p2.x));
+                penum->text_state->FontBBox_bottomleft.y = min(min(p0.y, p1.y), min(p1.y, p2.y));
+                penum->text_state->FontBBox_topright.y = max(max(p0.y, p1.y), max(p1.y, p2.y));
             }
             code = txt_shift_text_currentpoint(penum, &penum->returned.total_width);
             if (code != 0)
@@ -1946,6 +2204,8 @@ textw_text_release(gs_text_enum_t *pte, client_name_t cname)
     /* Free the working buffer where the Unicode was assembled from the enumerated text */
     if (penum->TextBuffer)
         gs_free(tdev->memory, penum->TextBuffer, 1, penum->TextBufferIndex, "txtwrite free temporary text buffer");
+    if (penum->Widths)
+        gs_free(tdev->memory, penum->Widths, sizeof(float), pte->text.size, "txtwrite free temporary widths array");
     /* If this is copied away when we complete the text enumeration succesfully, then
      * we set the pointer to NULL, if we get here with it non-NULL , then there was
      * an error.

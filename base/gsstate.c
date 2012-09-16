@@ -852,7 +852,8 @@ gstate_free_parts(const gs_state * parts, gs_memory_t * mem, client_name_t cname
     if (!parts->effective_clip_shared)
         gx_cpath_free(parts->effective_clip_path, cname);
     gx_cpath_free(parts->clip_path, cname);
-    gx_path_free(parts->path, cname);
+    if (parts->path)
+	gx_path_free(parts->path, cname);
 }
 
 /* Allocate the privately allocated parts of a gstate. */
@@ -1029,7 +1030,6 @@ gstate_free_contents(gs_state * pgs)
         (*pgs->client_procs.free) (pgs->client_data, mem);
     gs_free_object(mem, pgs->line_params.dash.pattern, cname);
     gstate_free_parts(pgs, mem, cname);
-    gs_imager_state_release((gs_imager_state *)pgs);
 }
 
 /* Copy one gstate to another. */

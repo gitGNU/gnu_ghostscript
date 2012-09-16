@@ -213,6 +213,9 @@ currentdict /runpdfstring .undef
       QUIET not { (Page ) print dup //== exec flush } if
       pdfgetpage pdfshowpage
     } for
+  % Indicate that the number of spot colors is unknown in case the next page
+  % imaged is a PS file.
+  << /PageSpotColors -1 >> .setpagedevice
   << /PDFScanRules //null >> setuserparams	% restore scanning rules for PS
 } bind def
 
@@ -258,6 +261,35 @@ currentdict /runpdfstring .undef
   } ifelse
 } bind def
 
+% Recursively enumerate /Names entries
+% <node> pdf_collection_names /temp_file_name ...
+/pdf_collection_names {
+  dup /Names knownoget {
+    exch pop
+    { oforce
+      dup type /dicttype eq {
+        /EF knownoget {
+          /F knownoget {
+            copy_embedded_file
+          } if
+        } if
+      } {
+        pop
+      } ifelse
+    } forall
+  } {
+    /Kids knownoget {
+      { oforce 
+        dup //null ne {
+          pdf_collection_names
+        } {
+          pop
+        } ifelse
+      } forall
+    } if
+  } ifelse
+} bind def
+
 % Copy selected subfiles to temporary files and return the file names
 % as a PostScript names to protect them from restore.
 % Currently, all PDF files in the Portfolio are extracted and returned.
@@ -269,19 +301,7 @@ currentdict /runpdfstring .undef
   dup /Collection oknown {
     /Names knownoget {
       /EmbeddedFiles knownoget {
-        /Names knownoget {
-          { oforce
-            dup type /dicttype eq {
-              /EF knownoget {
-                /F knownoget {
-                  copy_embedded_file
-                } if
-              } if
-            } {
-              pop
-            } ifelse
-          } forall
-        } if
+        pdf_collection_names
       } if
     } if
   } {
@@ -373,6 +393,18 @@ pdfdict begin
   55  1 index   % '7'
   56  1 index   % '8'
   57  1 index   % '9'
+ 116  {         % 't'railer
+        PDFfile 7 string .peekstring not { () } if
+        dup /trailer eq {
+          % Empty xref section
+          pop exit
+        } {
+          (   **** Warning: bad string \() exch concatstrings
+          (\) follows xref section header.\n) concatstrings
+          pdfformaterror
+          /setxrefentry cvx /syntaxerror signalerror
+        } ifelse
+      } bind
 >> readonly def
 
  %  Read original version (pre PDF 1.5) of the xref table.
@@ -408,9 +440,18 @@ pdfdict begin
        exch token pop		% generation #
        exch token pop		% n or f
        exch			% stack: <err count> <obj#> <loc> <gen#> <tag> <remainder of line>
-       dup length 0 ne {
-         % check to make sure trailing garbage is just white space
-         dup { 32 gt { 5 -1 roll 1 add 5 1 roll } if } forall   % bump error count on garbage
+       % check to make sure trailing garbage is just white space
+       //false 1 index { 32 gt or } forall {
+         6 -1 roll 1 add 6 1 roll  % bump error count on garbage
+         dup (\n) search {
+           exch pop exch pop
+         } {
+           (\r) search {
+             exch pop exch pop
+           } if
+         } ifelse
+         length
+         PDFfile fileposition exch sub PDFfile exch setfileposition
        } if
        pop			% Stack: <err count> <obj#> <loc> <gen#> <tag>
        dup /n eq {		% xref line tag is /n
@@ -755,7 +796,7 @@ currentdict /xref-char-dict undef
 
 /pdfopenfile {		% <file> pdfopenfile <dict>
    pdfdict readonly pop		% can't do it any earlier than this
-   30 dict begin
+   31 dict begin
    /LocalResources 0 dict def
    /DefaultQstate //null def	% establish binding
    /Printed where { pop } {
@@ -829,6 +870,8 @@ currentdict /xref-char-dict undef
        } forall
      } loop			% Loop to previous trailer
    } ifelse			% Ifelse readxref stopped
+
+   /NumObjects Objects llength def  % To check that obj# < NumObjects
 
    % Scan numbers in the range 2147483648..4294967295 in Encrypt dictionary
    % as unsigned integers for compatibility with Acrobat Reader. Bug 689010.
@@ -1469,11 +1512,12 @@ end readonly def
     currentpagedevice /.HWMargins get aload pop
     currentpagedevice /PageSize get aload pop
     % Adjust PageSize and .HWMargins for the page portrait/landscape orientation
-    2 copy gt
+    2 copy gt	% PageSize_is_landscape
     7 index aload pop 3 -1 roll sub 3 1 roll exch sub exch
     10 index /Rotate pget not { 0 } if 90 idiv 1 and 0 ne { exch } if
-    gt
+    gt	% Box_is_landscape
     ne {
+      1 index 0 translate 90 rotate	% add in a rotation
       2 copy ne {
         % rotate the .HWMargins
         2 copy lt {
@@ -1494,8 +1538,15 @@ end readonly def
     2 index aload pop 2 index sub exch 3 index sub exch 4 2 roll pop pop
     5 index /Rotate pget not { 0 } if 90 idiv 1 and 0 ne { exch } if
             % stack: savedCTM <pdfpagedict> [Box] XImageable YImageable XBox YBox
+    4 copy
     3 -1 roll exch div 3 1 roll div .min
+            % stack: savedCTM <pdfpagedict> [Box] XImageable YImageable XBox YBox scale
     PDFDEBUG { (    Scale by ) print dup = flush } if
+    5 -4 roll
+            % stack: savedCTM <pdfpagedict> [Box] scale XImageable YImageable XBox YBox
+    3 index 2 index 6 index mul sub 2 div 3 index 2 index 7 index mul sub 2 div
+    PDFDEBUG { (    Centering translate by [ ) print 1 index =print (, ) print dup =print ( ]) = flush } if
+    translate pop pop pop pop
   } {
     //systemdict /NoUserUnit .knownget not { //false } if {
       1
@@ -1711,18 +1762,19 @@ currentdict /PDF2PS_matrix_key undef
   % problems, for example with the pnga device.
   endpage
   end			% scratch dict
-  % Indicate that the number of spot colors is unknown in case the next page
-  % imaged is a PS file.
-  << /PageSpotColors -1 >> .setpagedevice
   % Some PDF files don't have matching q/Q (gsave/grestore) so we need
   % to clean up any left over dicts from the dictstack
-  countdictstack PDFdictstackcount sub dup 0 ne {
+  
+  PDFdictstackcount //false
+  { countdictstack 2 index le { exit } if
+    currentdict /n known not or
+    end
+  } loop {
     (   **** Warning: File has unbalanced q/Q operators \(too many q's\)\n)
     pdfformaterror
-    { end } repeat
-  } {
-    pop
-  } ifelse
+  } if
+  pop
+
   (after exec) VMDEBUG
   Repaired		% pass Repaired state around the restore
   PDFSave restore
@@ -1818,7 +1870,7 @@ currentdict /PDF2PS_matrix_key undef
 
 % Check if transparency is used in a Pattern
 /patternusestransparency {	% <Pattern dict> patternusestransparency <bool>
-  NOTRANSPARENCY
+  dup //null eq NOTRANSPARENCY or
   { pop //false }
   { //false exch		% Assume no transparency
     {
@@ -1863,15 +1915,20 @@ currentdict /PDF2PS_matrix_key undef
       dup type dup /dicttype eq exch /arraytype eq or {
         //false exch
         { {
-            exch pop oforce dup /Subtype get
-            dup /Image eq {
-              1 index /SMask oknown { pop pop not exit } if
-              1 index /SMaskInData knownoget {
-                0 ne { pop pop not exit } if
+            exch pop oforce 
+            dup //null ne {
+              dup /Subtype get
+              dup /Image eq {
+                1 index /SMask oknown { pop pop not exit } if
+                1 index /SMaskInData knownoget {
+                  0 ne { pop pop not exit } if
+                } if
               } if
-            } if
-            /Form eq {
-              3 index exch resourceusestransparency { not exit } if
+              /Form eq {
+                3 index exch resourceusestransparency { not exit } if
+              } {
+                pop
+              } ifelse
             } {
               pop
             } ifelse
@@ -2043,8 +2100,21 @@ currentdict /PDF2PS_matrix_key undef
   0 dict exch
   % Create a dict to be used to check for reference loops.
   4 dict exch
-  % Check for color spaces in the Resources
+  % Check for color spaces in the Resources  
   resourcespotcolors
+  % now check upwards in the object hierarchy in case of inherited resources
+  2 index
+  {
+    /Parent knownoget
+    {
+      dup 4 1 roll
+      resourcespotcolors
+      3 -1 roll
+    }
+    {
+      exit
+    } ifelse
+  } loop
   % Also check for color spaces in the annotations.
   3 -1 roll
   /Annots knownoget { annotsspotcolors } if

@@ -168,7 +168,7 @@ check_for_nontrans_pattern(gs_state *pgs, unsigned char *comp_name)
             gx_device_clist_writer *clwdev = (gx_device_clist_writer*) dev;
             const gs_pattern1_instance_t *pinst = clwdev->pinst;
 
-            if (!(pinst->template.uses_transparency)) {
+            if (!(pinst->templat.uses_transparency)) {
                 if_debug1('v',
                     "[v]%s NOT sending in pattern\n",comp_name);
                 return(1);
@@ -178,7 +178,7 @@ check_for_nontrans_pattern(gs_state *pgs, unsigned char *comp_name)
             gx_device_pattern_accum *padev = (gx_device_pattern_accum*) dev;
             const gs_pattern1_instance_t *pinst = padev->instance;
 
-            if (!(pinst->template.uses_transparency)) {
+            if (!(pinst->templat.uses_transparency)) {
                 if_debug1('v',
                     "[v]%s NOT sending in pattern\n",comp_name);
                 return(1);
@@ -585,6 +585,8 @@ gs_begin_transparency_mask(gs_state * pgs,
        go ahead and take care of that now */
     if (icc_manager->smask_profiles == NULL) {
         code = gsicc_initialize_iccsmask(icc_manager);
+        if (code < 0)
+            return(code);
     }
     /* A new soft mask group,  make sure the profiles are set */
     if_debug0('v', "[v]pushing soft mask color sending\n");

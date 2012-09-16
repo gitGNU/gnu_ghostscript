@@ -201,7 +201,9 @@ gs_rectfill(gs_state * pgs, const gs_rect * pr, uint count)
     /* Processing a fill object operation */
     dev_proc(pgs->device, set_graphics_type_tag)(pgs->device, GS_PATH_TAG);
 
-    gx_set_dev_color(pgs);
+    code = gx_set_dev_color(pgs);
+    if (code != 0)
+        return code;
     if ((is_fzero2(pgs->ctm.xy, pgs->ctm.yx) ||
          is_fzero2(pgs->ctm.xx, pgs->ctm.yy)) &&
         gx_effective_clip_path(pgs, &pcpath) >= 0 &&
@@ -209,8 +211,7 @@ gs_rectfill(gs_state * pgs, const gs_rect * pr, uint count)
         (hl_color ||
          pdc->type == gx_dc_type_pure ||
          pdc->type == gx_dc_type_ht_binary ||
-         pdc->type == gx_dc_type_ht_colored
-         /* DeviceN todo: add wts case */) &&
+         pdc->type == gx_dc_type_ht_colored) &&
         gs_state_color_load(pgs) >= 0 &&
         (*dev_proc(pdev, get_alpha_bits)) (pdev, go_graphics)
         <= 1 &&

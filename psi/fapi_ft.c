@@ -25,12 +25,18 @@
 #include "write_t1.h"
 #include "write_t2.h"
 #include "math_.h"
-#include "gserror.h"
+#include "gserrors.h"
 #include "gsmemory.h"
 #include "gsmalloc.h"
 #include "gxfixed.h"
 #include "gdebug.h"
 #include "gxbitmap.h"
+#include "gsmchunk.h"
+
+#include "stream.h"
+#include "gxiodev.h"            /* must come after stream.h */
+
+#include "gsfname.h"
 
 /* FreeType headers */
 #include <ft2build.h>
@@ -55,6 +61,7 @@ typedef struct FF_server_s
     FT_BitmapGlyph bitmap_glyph;
     gs_memory_t *mem;
     FT_Memory ftmemory;
+    struct  FT_MemoryRec_ ftmemory_rec;
 } FF_server;
 
 typedef struct FF_face_s
@@ -69,7 +76,8 @@ typedef struct FF_face_s
 
     /* If non-null, the incremental interface object passed to FreeType. */
     FT_Incremental_InterfaceRec *ft_inc_int;
-
+    /* If non-null, we're using a custom stream object for Freetype to read the font file */
+    FT_Stream ftstrm;
     /* Non-null if font data is owned by this object. */
     unsigned char *font_data;
 } FF_face;
@@ -111,7 +119,6 @@ FF_realloc(FT_Memory memory, long cur_size, long new_size, void* block)
     }
 
     tmp = gs_malloc (mem, new_size, 1, "FF_realloc");
-
     if (tmp && block) {
         memcpy (tmp, block, min(cur_size, new_size));
 
@@ -128,8 +135,107 @@ FF_free(FT_Memory memory, void* block)
     gs_free (mem, block, 0, 0, "FF_free");
 }
 
+/* The following three functions are used in providing a custom stream
+ * object to Freetype, so file access happens through Ghostscript's
+ * file i/o. Most importantly, this gives Freetype direct access to
+ * files in the romfs
+ */
+static FT_ULong FF_stream_read (FT_Stream str, unsigned long offset, unsigned char* buffer, unsigned long count)
+{
+    stream *ps = (stream *)str->descriptor.pointer;
+    unsigned int rlen = 0;
+    int status = 0;
+
+    if (sseek(ps, offset) < 0)
+        return_error(-1);
+
+    if (count) {
+        status = sgets(ps, buffer, count, &rlen);
+
+        if (status < 0 && status != EOFC)
+            return(-1);
+    }
+    return(rlen);
+}
+
+static void FF_stream_close (FT_Stream str)
+{
+    stream *ps = (stream *)str->descriptor.pointer;
+
+    (void)sclose(ps);
+}
+
+extern const uint file_default_buffer_size;
+
+static int FF_open_read_stream (gs_memory_t *mem, char *fname, FT_Stream *fts)
+{
+    int code = 0;
+    gs_parsed_file_name_t pfn;
+    stream *ps = (stream *)NULL;
+    long length;
+    FT_Stream ftstrm = NULL;
+
+    code = gs_parse_file_name(&pfn, (const char *)fname, strlen(fname), mem);
+    if (code < 0){
+        goto error_out;
+    }
+    
+    if (!pfn.fname) {
+        code = e_undefinedfilename;
+        goto error_out;
+    }
+    
+    if (pfn.iodev == NULL) {
+        pfn.iodev = iodev_default(mem);
+    }
+    
+    if (pfn.iodev) {
+        gx_io_device *const iodev = pfn.iodev;
+        iodev_proc_open_file((*open_file)) = iodev->procs.open_file;
+
+        if (open_file) {
+            code = open_file(iodev, pfn.fname, pfn.len, "r", &ps, mem);
+            if (code < 0) {
+                goto error_out;
+            }
+        }
+        else {
+            code = file_open_stream(pfn.fname, pfn.len, "r", file_default_buffer_size,
+                          &ps, pfn.iodev, pfn.iodev->procs.fopen, mem);
+            if (code < 0) {
+                goto error_out;
+            }
+        }
+    }
+
+    if ((code = savailable(ps, &length)) < 0){
+        goto error_out;
+    }
+
+    ftstrm = gs_malloc(mem, sizeof(FT_StreamRec), 1, "FF_open_read_stream");
+    if (!ftstrm){
+        code = e_VMerror;
+        goto error_out;
+    }
+    memset(ftstrm, 0x00, sizeof(FT_StreamRec));
+
+    ftstrm->descriptor.pointer = ps;
+    ftstrm->read = FF_stream_read;
+    ftstrm->close = FF_stream_close;
+    ftstrm->size = length;
+    *fts = ftstrm;
+
+error_out:
+    if (code < 0) {
+        if (ps) (void)sclose(ps);
+        if (ftstrm) gs_free(mem, ftstrm, 0, 0, "FF_open_read_stream");
+    }
+    return(code);
+}
+
+
 static FF_face *
-new_face(FAPI_server *a_server, FT_Face a_ft_face, FT_Incremental_InterfaceRec *a_ft_inc_int, unsigned char *a_font_data)
+new_face(FAPI_server *a_server, FT_Face a_ft_face, FT_Incremental_InterfaceRec *a_ft_inc_int, FT_Stream ftstrm, unsigned char *a_font_data)
 {
     FF_server *s = (FF_server*)a_server;
 
@@ -139,6 +245,7 @@ new_face(FAPI_server *a_server, FT_Face a_ft_face, FT_Incremental_InterfaceRec *
         face->ft_face = a_ft_face;
         face->ft_inc_int = a_ft_inc_int;
         face->font_data = a_font_data;
+        face->ftstrm = ftstrm;
     }
     return face;
 }
@@ -153,6 +260,9 @@ delete_face(FAPI_server *a_server, FF_face *a_face)
         FT_Done_Face(a_face->ft_face);
         FF_free(s->ftmemory, a_face->ft_inc_int);
         FF_free(s->ftmemory, a_face->font_data);
+        if (a_face->ftstrm) {
+            FF_free(s->ftmemory, a_face->ftstrm);
+        }
         FF_free(s->ftmemory, a_face);
     }
 }
@@ -558,7 +668,7 @@ load_glyph(FAPI_server *a_server, FAPI_font *a_fapi_font, const FAPI_char_ref *a
         ft_error = FT_Get_Glyph(ft_face->glyph, a_glyph);
     }
     else {
-        if (a_bitmap == true) {
+        if (ft_face->glyph->format == FT_GLYPH_FORMAT_BITMAP) {
             FT_BitmapGlyph bmg;
             ft_error = FT_Get_Glyph(ft_face->glyph, (FT_Glyph *)&bmg);
             if (!ft_error) {
@@ -651,11 +761,6 @@ ensure_open(FAPI_server *a_server, const byte *server_param, int server_param_si
         /* As we want FT to use our memory management, we cannot use the convenience of
          * FT_Init_FreeType(), we have to do each stage "manually"
          */
-        s->ftmemory = gs_malloc (s->mem, sizeof(*s->ftmemory), 1, "ensure_open");
-        if (!s->ftmemory) {
-            return(-1);
-        }
-
         s->ftmemory->user = s->mem;
         s->ftmemory->alloc = FF_alloc;
         s->ftmemory->free = FF_free;
@@ -717,33 +822,31 @@ transform_decompose(FT_Matrix *a_transform, FT_UInt *xresp, FT_UInt *yresp,
     FT_Matrix ftscale_mat;
     FT_UInt xres;
     FT_UInt yres;
-    FT_Vector vectx, vecty;
     bool indep_scale;
 
     scalex = hypot ((double)a_transform->xx, (double)a_transform->xy);
     scaley = hypot ((double)a_transform->yx, (double)a_transform->yy);
 
     if (*xresp != *yresp) {
-        /* We need to give the resolution in "glyph space", taking account
-         * of rotation and shearing, so that makes life a little complicated
-         * when non-square resolutions are used.
+        /* To get good results, we have to pull the implicit scaling from
+         * non-square resolutions, and apply it in the matrix. This means
+         * we get the correct "shearing" effect for rotated glyphs.
+         * The previous solution was only effective for for glyphs whose
+         * axes were coincident with the axes of the page.
          */
-        ftscale_mat.xx = scalex;
+        bool use_x = true;
+                
+        if (*xresp < *yresp) {
+            use_x = false;
+        }
+
+        ftscale_mat.xx = (int)(((double)(*xresp) / ((double)(use_x ? (*xresp) : (*yresp)))) * 65536);
         ftscale_mat.xy = ftscale_mat.yx = 0;
-        ftscale_mat.yy = scaley;
+        ftscale_mat.yy = (int)(((double)(*yresp) / ((double)(use_x ? (*xresp) : (*yresp)))) * 65536);
 
-        FT_Matrix_Invert(&ftscale_mat);
+        FT_Matrix_Multiply (&ftscale_mat, a_transform);
 
-        FT_Matrix_Multiply (a_transform, &ftscale_mat);
-
-        vectx.x = *xresp << 16;
-        vecty.y = *yresp << 16;
-        vectx.y = vecty.x = 0;
-
-        FT_Vector_Transform (&vectx, &ftscale_mat);
-        FT_Vector_Transform (&vecty, &ftscale_mat);
-        xres = (FT_UInt)((hypot ((double)vectx.x, (double)vecty.x) * (1.0/65536.0)) + 0.5);
-        yres = (FT_UInt)((hypot ((double)vectx.y, (double)vecty.y) * (1.0/65536.0)) + 0.5);
+        xres = yres = (use_x ? (*xresp) : (*yresp));
     }
     else {
         /* Life is considerably easier when square resolutions are in use! */
@@ -801,14 +904,21 @@ transform_decompose(FT_Matrix *a_transform, FT_UInt *xresp, FT_UInt *yresp,
         }
 
         /* We also have to watch for variable overflow in Freetype.
-         * I've opted to fiddle with the resolution here, as it is
-         * almost always a larger value than the text size, and therefore
-         * we have more scope to manipulate it.
+         * We fiddle with whichever of the resolution or the scale
+         * is larger for the current iteration, but change the scale
+         * by a smaller multiple, firstly because it is a floating point
+         * value, so we can, but also because varying the scale by larger
+         * amounts is more prone to causing rounding errors.
          */
         facty = 1.0;
-        while (scaley * yres > 256.0 * 72 && yres > 0) {
-            yres >>= 1;
-            facty *= 2.0;
+        while (scaley * yres > 512.0 * 72 && yres > 0 && scaley > 0.0) {
+            if (scaley < yres) {
+                yres >>= 1;
+                facty *= 2.0;
+            }
+            else {
+                scaley /= 1.25;
+            }
         }
 
         if (scalex < 10.0) {
@@ -824,9 +934,14 @@ transform_decompose(FT_Matrix *a_transform, FT_UInt *xresp, FT_UInt *yresp,
 
         /* see above */
         factx = 1.0;
-        while (scalex * xres > 256.0 * 72.0 && xres > 0) {
-            xres >>= 1;
-            factx *= 2.0;
+        while (scalex * xres > 512.0 * 72.0 && xres > 0 && scalex > 0.0) {
+            if (scalex < xres) {
+                xres >>= 1;
+                factx *= 2.0;
+            }
+            else {
+                scalex /= 1.25;
+            }
         }
     }
     else {
@@ -856,15 +971,21 @@ transform_decompose(FT_Matrix *a_transform, FT_UInt *xresp, FT_UInt *yresp,
             }
 
             /* We also have to watch for variable overflow in Freetype.
-             * I've opted to fiddle with the resolution here, as it is
-             * almost always a larger value than the text size, and therefore
-             * we have more scope to manipulate it.
+             * We fiddle with whichever of the resolution or the scale
+             * is larger for the current iteration.
              */
             fact = 1.0;
-            while (scalex * xres > 256.0 * 72 && xres > 0 && yres > 0) {
-                xres >>= 1;
-                yres >>= 1;
-                fact *= 2.0;
+            while (scalex * xres > 512.0 * 72 && xres > 0 && yres > 0
+                   && (scalex > 0.0 && scaley > 0.0)) {
+                if (scalex < xres) {
+                    xres >>= 1;
+                    yres >>= 1;
+                    fact *= 2.0;
+                }
+                else {
+                  scalex /= 1.25;
+                  scaley /= 1.25;
+                }
             }
         }
         else {
@@ -883,19 +1004,25 @@ transform_decompose(FT_Matrix *a_transform, FT_UInt *xresp, FT_UInt *yresp,
 
             /* see above */
             fact = 1.0;
-            while (scaley * yres > 256.0 * 72.0 && xres > 0 && yres > 0) {
-                xres >>= 1;
-                yres >>= 1;
-
-                fact *= 2.0;
+            while (scaley * yres > 512.0 * 72.0 && (xres > 0 && yres > 0)
+                   && (scalex > 0.0 && scaley > 0.0)) {
+                if (scaley < yres) {
+                    xres >>= 1;
+                    yres >>= 1;
+                    fact *= 2.0;
+                }
+                else {
+                  scalex /= 1.25;
+                  scaley /= 1.25;
+                }
             }
         }
         factx = facty = fact;
     }
-    ftscale_mat.xx = (FT_Fixed)(65536.0 / scalex) * factx;
+    ftscale_mat.xx = (FT_Fixed)((65536.0 / scalex) * factx);
     ftscale_mat.xy = 0;
     ftscale_mat.yx = 0;
-    ftscale_mat.yy = (FT_Fixed)(65536.0 / scaley) * facty;
+    ftscale_mat.yy = (FT_Fixed)((65536.0 / scaley) * facty);
 
     FT_Matrix_Multiply (a_transform, &ftscale_mat);
     memcpy(a_transform, &ftscale_mat, sizeof(FT_Matrix));
@@ -953,13 +1080,28 @@ get_scaled_font(FAPI_server *a_server, FAPI_font *a_font,
         FT_Parameter ft_param;
         FT_Incremental_InterfaceRec *ft_inc_int = NULL;
         unsigned char *own_font_data = NULL;
+        FT_Stream ft_strm = NULL;
 
         /* dpf("get_scaled_font creating face\n"); */
 
         /* Load a typeface from a file. */
         if (a_font->font_file_path)
         {
-            ft_error = FT_New_Face(s->freetype_library, a_font->font_file_path, a_font->subfont, &ft_face);
+            FT_Open_Args args;
+            int code;
+
+            memset(&args, 0x00, sizeof(args));
+
+            if ((code = FF_open_read_stream ((gs_memory_t *)(s->ftmemory->user),
+                        (char *)a_font->font_file_path, &ft_strm)) < 0){
+                return(code);
+            }
+
+            args.flags = FT_OPEN_STREAM;
+            args.stream = ft_strm;
+
+            ft_error = FT_Open_Face(s->freetype_library, &args, a_font->subfont, &ft_face);
+
             if (!ft_error && ft_face)
                 ft_error = FT_Select_Charmap(ft_face, ft_encoding_unicode);
         }
@@ -1040,7 +1182,7 @@ get_scaled_font(FAPI_server *a_server, FAPI_font *a_font,
 
         if (ft_face)
         {
-            face = new_face(a_server, ft_face, ft_inc_int, own_font_data);
+            face = new_face(a_server, ft_face, ft_inc_int, ft_strm, own_font_data);
             if (!face)
             {
                 FF_free(s->ftmemory, own_font_data);
@@ -1185,8 +1327,8 @@ get_char_width(FAPI_server *a_server, FAPI_font *a_font, FAPI_char_ref *a_char_r
 {
     FF_server *s = (FF_server*)a_server;
     return load_glyph(a_server, a_font, a_char_ref, a_metrics,
-                      a_server->max_bitmap > 0 ? (FT_Glyph*)&s->bitmap_glyph : (FT_Glyph*)&s->outline_glyph,
-                      a_server->max_bitmap > 0 ? true : false, a_server->max_bitmap);
+                      (FT_Glyph*)&s->outline_glyph,
+                      false, a_server->max_bitmap);
 }
 
 static FAPI_retcode get_fontmatrix(FAPI_server *server, gs_matrix *m)
@@ -1455,11 +1597,21 @@ plugin_instantiation_proc(gs_fapi_ft_instantiate);
 int gs_fapi_ft_instantiate( i_plugin_client_memory *a_memory, i_plugin_instance **a_plugin_instance)
 {
     FF_server *server = (FF_server*) a_memory->alloc(a_memory, sizeof (FF_server), "FF_server");
+    int code;
+    
     if (!server)
         return e_VMerror;
     memset(server, 0, sizeof(*server));
-    server->mem = a_memory->client_data;
+
+    code = gs_memory_chunk_wrap(&(server->mem), a_memory->client_data);
+    if (code != 0) {
+        return(code);
+    }
+
     server->fapi_server = TheFreeTypeServer;
+
+    server->ftmemory = (FT_Memory)(&(server->ftmemory_rec));
+
     *a_plugin_instance = &server->fapi_server.ig;
     return 0;
 }
@@ -1476,7 +1628,6 @@ static void gs_freetype_destroy(i_plugin_instance *a_plugin_instance, i_plugin_c
      * FT_Done_Library () and then discard the memory ourselves
      */
     FT_Done_Library(server->freetype_library);
-    gs_free (server->mem, server->ftmemory, 0, 0, "gs_freetype_destroy");
-
+    gs_memory_chunk_release (server->mem);
     a_memory->free(a_memory, server, "FF_server");
 }

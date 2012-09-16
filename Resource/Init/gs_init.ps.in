@@ -112,7 +112,7 @@ currentdict /PDFSTEP known /PDFSTEP exch def
 % if PDFSTEP is on, turn on PDFDEBUG
 PDFSTEP { /PDFDEBUG //true def } if
 
-currentdict /PDFSTOPONERROR known /PDFSTOPONERROR exch def
+currentdict /PDFNOCIDFALLBACK known /PDFNOCIDFALLBACK exch def
 
   /VMDEBUG
     INITDEBUG {{print mark
@@ -561,6 +561,10 @@ odef
         0 .endpage .doneshowpage {
           .currentnumcopies //true .outputpage
           (>>showpage, press <return> to continue<<\n) .confirm
+          % Uncomment the following line, and use a Memento build to track
+          % blocks that are created and not destroyed between each successive
+          % page.
+          % 2 .vmreclaim .mementolistnewblocks
           initgraphics
           currentoverprint //false setoverprint 1 setcolor
           .fillpage
@@ -2165,9 +2169,9 @@ currentdict /.wheredict .undef
 currentdict /.renderingintentdict .undef
 end
 
-% Clean up VM, and enable GC.
+% Clean up VM, and enable GC. Use .vmreclaim to force the GC.
 /vmreclaim where
- { pop NOGC not { 2 vmreclaim 0 vmreclaim } if
+ { pop NOGC not { 2 .vmreclaim 0 vmreclaim } if
  } if
 DELAYBIND not {
   systemdict /.forcecopynew .undef	% remove temptation

@@ -88,6 +88,25 @@ typedef struct gsicc_bufferdesc_s {
     int pixels_per_row;
 } gsicc_bufferdesc_t;
 
+/* Mapping procedures to allow easy vectoring depending upon if we are using
+   the CMM or doing "dumb" color transforms */
+typedef void (*gscms_trans_color_proc_t) (gx_device * dev, gsicc_link_t *icclink, 
+                                          void *inputcolor, void *outputcolor,
+                                          int num_bytes);
+
+typedef void (*gscms_trans_buffer_proc_t) (gx_device * dev, gsicc_link_t *icclink,
+                                           gsicc_bufferdesc_t *input_buff_desc,
+                                           gsicc_bufferdesc_t *output_buff_desc,
+                                           void *inputbuffer, void *outputbuffer);
+
+typedef void (*gscms_link_free_proc_t) (gsicc_link_t *icclink);
+
+typedef struct gscms_procs_s {
+    gscms_trans_buffer_proc_t map_buffer;
+    gscms_trans_color_proc_t  map_color;
+    gscms_link_free_proc_t free_link;
+} gscms_procs_t;
+
 /* Enumerate the ICC rendering intents */
 typedef enum {
     gsPERCEPTUAL = 0,
@@ -109,6 +128,8 @@ typedef enum {
     gsGRAPHICPROFILE,
     gsIMAGEPROFILE,
     gsTEXTPROFILE,
+    gsPROOFPROFILE,
+    gsLINKPROFILE
 } gsicc_profile_types_t;
 
 typedef enum {
@@ -133,23 +154,14 @@ typedef struct cmm_srcgtag_profile_s {
 /* Destination profiles for different objects */
 typedef struct cmm_dev_profile_s {
         cmm_profile_t  *device_profile[NUM_DEVICE_PROFILES];
+        cmm_profile_t  *proof_profile;
+        cmm_profile_t  *link_profile;
         gsicc_rendering_intents_t intent[NUM_DEVICE_PROFILES];
         bool devicegraytok;        /* Used for forcing gray to pure black */
+        bool usefastcolor;         /* Used when we want to use no cm */
         gs_memory_t *memory;
         rc_header rc;
 } cmm_dev_profile_t;
-
-typedef struct cmm_dev_profile_name_s {
-    char *name;
-    unsigned int name_length;
-} cmm_dev_profile_name_t;
-
-typedef struct cmm_dev_profile_name_array_s {
-    cmm_dev_profile_name_t file_names[NUM_DEVICE_PROFILES];
-    rc_header rc; 
-    gs_memory_t *memory;
-    char *icc_output_dir;
-} cmm_dev_profile_name_array_t;
 
 /*  Doing this an an enum type for now.  There is alot going on with respect
  *  to this and V2 versus V4 profiles
@@ -173,9 +185,7 @@ typedef enum {
     DEFAULT_GRAY,   /* The default DeviceGray profile */
     DEFAULT_RGB,    /* The default DeviceRGB profile */
     DEFAULT_CMYK,   /* The default DeviceCMYK profile */
-    PROOF_TYPE,     /* The proofing profile */
     NAMED_TYPE,     /* The named color profile */
-    LINKED_TYPE,    /* The linked profile */
     LAB_TYPE,       /* The CIELAB profile */
     DEVICEN_TYPE,   /* A special device N profile */
     DEFAULT_GRAY_s, /* Same as default but a source profile from document */
@@ -310,6 +320,7 @@ typedef struct gsicc_hashlink_s {
 struct gsicc_link_s {
     void *link_handle;
     void *contextptr;
+    gscms_procs_t procs;   
     gsicc_hashlink_t hashcode;
     struct gsicc_link_cache_s *icc_link_cache;
     int ref_count;
@@ -317,6 +328,7 @@ struct gsicc_link_s {
     gx_semaphore_t *wait;		/* semaphore used by waiting threads */
     int num_waiting;
     bool includes_softproof;
+    bool includes_devlink;
     bool is_identity;  /* Used for noting that this is an identity profile */
     bool valid;		/* true once link is completely built and usable */
 };
@@ -382,8 +394,6 @@ typedef struct gsicc_manager_s {
     cmm_profile_t *default_gray;    /* Default gray profile for device gray */
     cmm_profile_t *default_rgb;     /* Default RGB profile for device RGB */
     cmm_profile_t *default_cmyk;    /* Default CMYK profile for device CMKY */
-    cmm_profile_t *proof_profile;   /* Proofing profile */
-    cmm_profile_t *output_link;     /* Output device Link profile */
     cmm_profile_t *lab_profile;     /* Colorspace type ICC profile from LAB to LAB */
     cmm_profile_t *graytok_profile; /* A specialized profile for mapping gray to K */
     gsicc_devicen_t *device_n;      /* A linked list of profiles used for DeviceN support */

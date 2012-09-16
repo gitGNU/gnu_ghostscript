@@ -17,7 +17,6 @@
 #include "memory_.h"
 #include "malloc_.h"  /* should use a gs mem pointer */
 #include "gserrors.h"
-#include "gserror.h"
 #include "gdebug.h"
 #include "strimpl.h"
 #include "sjbig2_luratech.h"
@@ -189,9 +188,11 @@ s_jbig2_read(unsigned char *buffer,
 
     /* else return data from the image stream */
     offset -= state->global_size;
+    if (state->infill <= offset)
+        return 0;
     available = state->infill - offset;
-    if (available > size) available = size;
-    if (available <= 0) return 0;
+    if (available > size)
+        available = size;
 
     memcpy(buffer, state->inbuf + offset, available);
     return available;

@@ -1068,23 +1068,20 @@ currentdict /eexec_pdf_param_dict .undef
                                           % Stack: filepos fontres cidfont
   } {
                                           % filepos fontres stream
-    1 index /Encoding knownoget {
-      dup /MacRomanEncoding eq exch /WinAnsiEncoding eq or {
-        //false  % => non-symbolic
-      } {
-        1 index /FontDescriptor oget /Flags oget
-        4 and 0 ne  % depending on the flag
-      } ifelse
+    1 index /FontDescriptor oget
+    /Flags oget 4 and 0 ne {
+       //true  %  symbolic
     } {
-      //true % no encoding => symbolic
+       1 index /Encoding oknown not  % no encoding => symbolic
     } ifelse
-  
-    dup {
-      //null
-    } {
+
+    2 index /Encoding oknown {
       StandardEncoding
       3 index getencoding
-    } ifelse                              % filepos fontres stream is_symbolic Encoding
+    } {
+      //null
+    } ifelse
+
     dup 4 index exch                      % filepos fontres stream is_symbolic Encoding fontres Encoding
     /prebuilt_encoding exch put           % filepos fontres stream is_symbolic Encoding
     .loadpdfttfont
@@ -1526,9 +1523,29 @@ currentdict /CMap_read_dict undef
     } if
     .remove_font_name_prefix
     dup dup length string cvs
+
     (,Bold) tailmatch {
       exch pop
-      cvn findCIDFont 0.03 makeboldfont
+      % If we're substituting a standard weight font for a
+      % "Light,Bold" font, don't artificially bolden further
+      dup (Light) tailmatch
+      {
+        pop cvn findCIDFont dup /FontName .knownget
+        {
+          (Light) tailmatch exch pop
+        }
+        {
+          //true
+        } ifelse
+
+        {
+          0.03 makeboldfont
+        } if
+      }
+      {
+        pop
+        cvn findCIDFont 0.03 makeboldfont
+      } ifelse
       exit
     } if
     (,Italic) tailmatch {
@@ -1539,7 +1556,25 @@ currentdict /CMap_read_dict undef
     } if
     (,BoldItalic) tailmatch {
       exch pop
-      cvn findCIDFont 0.03 makeboldfont
+      % see above
+      dup (Light) tailmatch
+      {
+        pop cvn findCIDFont dup /FontName .knownget
+        {
+          (Light) tailmatch exch pop
+        }
+        {
+          //true
+        } ifelse
+
+        {
+          0.03 makeboldfont
+        } if
+      }
+      {
+        pop
+        cvn findCIDFont 0.03 makeboldfont
+      } ifelse
       [ 1 0 0.3 1 0 0 ] makefont
       exit
     } if
@@ -1552,7 +1587,7 @@ currentdict /CMap_read_dict undef
     concatstrings concatstrings
     cvn
     QUIET not {
-      (Substituting CID font ) print dup ==only
+      (Attempting to substitute CID font ) print dup ==only
       ( for ) print 1 index ==only (, see doc/Use.htm#CIDFontSubstitution.) = flush
     } if
     exch pop
@@ -1562,13 +1597,92 @@ currentdict /CMap_read_dict undef
     QUIET not {
       (The substitute CID font ") print dup =string cvs print
       (" is not provided either. ) print
-      PDFSTOPONERROR
-      {
+    } if
+
+    PDFNOCIDFALLBACK {
+      PDFSTOPONERROR {
         (Will exit with error.) = flush
       }
       {
-        (Will continue, but content may be missing.) = flush
+        (Will attempt to continue, but content may be missing.) = flush
       } ifelse
+      exit
+    } if
+
+    QUIET not {
+      (attempting to use fallback CIDFont.) print
+      (See doc/Use.htm#CIDFontSubstitution.) = flush
+    } if
+
+    PDFNOCIDFALLBACK not {
+      % This previously worked by loading the substitute font, and using that
+      % as a "template" to create a new CIDFont dictionary with the CIDSystemInfo
+      % dict appropriate for the requested font.
+      % This, however, caused problems with the CIDMap and thus broke pdfwrite.
+      % Hence, we now modify the CIDFont resource .map dictionary on the fly
+      % so it includes an appropriate mapping, so the subsitute font is loaded
+      % from the beginning with the correct ordering and supplement settings.
+      /CIDFont /Category findresource /.map get dup /CIDFallBack .knownget {
+        dup type /dicttype eq {
+          dup /FileType get /TrueType eq {
+            currentglobal
+            4 1 roll
+            dup gcheck setglobal
+            dup length dict copy dup
+            6 index /CIDSystemInfo oget dup /Ordering oget exch /Supplement get
+            % we have to copy the string, for VM correctness
+            exch dup length string copy exch 2 array astore
+            /CSI exch put 2 index exch .forceput
+            exch setglobal
+            {
+              % This *should* not execute arbitrary Postscript, so we ought to
+              % be safe running in a stopped context, in knowledge we know how
+              % to clean up afterwards - this would not be safe if CIDFallBack
+              % were a "real" CIDFont.
+              /CIDFont findresource
+            }
+            % if the above fails, try just using the CIDFallBack font directly
+            stopped
+            {
+              pop pop
+              (Warning: falling back to Identity ordering\n) print flush
+              /CIDFallBack /CIDFont findresource
+            } if
+            exit
+          } if
+        } if
+      } if
+
+      pop pop pop
+      /CIDFallBack
+
+      QUIET not {
+        (The fallback CID font ") print dup =string cvs print
+        (" is not provided. ) print
+        ( Finally attempting to use ArtifexBullet.\n) print flush
+      }if
+
+      % We'll just use Identity for this, we have only one glyph anyway.
+      /ArtifexBullet /CIDFont resourcestatus {
+        pop pop pop
+        /ArtifexBullet /CIDFont findresource
+        exit
+      }
+      {
+        pop /ArtifexBullet
+      } ifelse
+
+      QUIET not {
+        (The CID font ") print dup =string cvs print
+        (" is not provided. ) print
+        PDFSTOPONERROR
+        {
+          (Will exit with error.) = flush
+        }
+        {
+          (Will continue, but content may be missing.) = flush
+        } ifelse
+      } if
     } if
     /findresource cvx /undefined signalerror
   } loop
@@ -1937,13 +2051,39 @@ drawopdict begin
   } bdef
   /Tf {
     1 index Page /Font rget {
-      resourcefont exch Tf pop
+      dup type /dicttype eq {
+        resourcefont exch
+        Tf pop
+      }
+      {
+        PDFSTOPONERROR
+        {
+          /typecheck cvx signalerror
+        }
+        {
+          % Bug 689450
+          type
+          (   **** Warning: Tf refers to a resource key with an invalid value type: ) pdfformaterror
+          .namestring pdfformaterror
+          (. Assuming resource key: ) pdfformaterror
+          1 index .namestring pdfformaterror
+          ( is a font name.\n) pdfformaterror
+          Tf
+        } ifelse
+      }ifelse
     }
-    { % Bug 689037
-      (   **** Warning: Tf refers to an unknown resource name: ) pdfformaterror
-      1 index .namestring pdfformaterror
-      ( Assuming it's a font name.\n) pdfformaterror
-      Tf
+    {
+      PDFSTOPONERROR
+      {
+          pop /undefined cvx signalerror
+      }
+      {
+        % Bug 689037
+        (   **** Warning: Tf refers to an unknown resource name: ) pdfformaterror
+        1 index .namestring pdfformaterror
+        ( Assuming it's a font name.\n) pdfformaterror
+        Tf
+      } ifelse
     } ifelse
   } bdef
 end

@@ -72,7 +72,7 @@ clist_fill_mask(gx_device * dev,
     int data_x_bit;
     byte copy_op =
         (depth > 1 ? cmd_op_copy_color_alpha :
-         cmd_op_copy_mono_plane + cmd_copy_ht_color);  /* Plane not needed here */
+         cmd_op_copy_mono_planes + cmd_copy_ht_color);  /* Plane not needed here */
     bool slow_rop =
         cmd_slow_rop(dev, lop_know_S_0(lop), pdcolor) ||
         cmd_slow_rop(dev, lop_know_S_1(lop), pdcolor);
@@ -160,6 +160,7 @@ clist_fill_mask(gx_device * dev,
             tile.size.y = tile.rep_height = orig_height;
             tile.rep_shift = tile.shift = 0;
             tile.id = id;
+            tile.num_planes = 1;
             do {
                 code = clist_change_bits(cdev, re.pcls, &tile, depth);
             } while (RECT_RECOVER(code));
@@ -180,7 +181,7 @@ clist_fill_mask(gx_device * dev,
             rect.x = orig_x, rect.y = y0;
             rect.width = orig_width, rect.height = re.yend - y0;
             rsize = 1 + cmd_sizexy(rect);
-            if (depth == 1) rsize = rsize + cmd_sizew(255);  /* need planar 255 setting */
+            if (depth == 1) rsize = rsize + cmd_sizew(0);  /* need planar_height 0 setting */
             do {
                 code = (orig_data_x ?
                         cmd_put_set_data_x(cdev, re.pcls, orig_data_x) : 0);
@@ -199,7 +200,7 @@ clist_fill_mask(gx_device * dev,
                     if (code >= 0) {
                         dp++;
                         if (depth == 1) {
-                            cmd_putw(255, dp);
+                            cmd_putw(0, dp);
                         } 
                         cmd_putxy(rect, dp);
                     }
@@ -527,7 +528,8 @@ clist_begin_typed_image(gx_device * dev,
                         code = dev_proc(dev, get_profile)(dev,  &dev_profile);
                         gsicc_extract_profile(dev->graphics_type_tag, dev_profile,
                                               &(gs_output_profile), 
-                                              &(pis_nonconst->renderingintent));
+                                              (gsicc_rendering_intents_t *)\
+                                              (&(pis_nonconst->renderingintent)));
                     }
                 }
                 if (renderingintent != pis_nonconst->renderingintent)

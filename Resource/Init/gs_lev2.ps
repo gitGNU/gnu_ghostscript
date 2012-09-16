@@ -419,8 +419,14 @@ psuserparams /ProcessDSCComment {.checkprocesscomment} put
 } odef
 /vmreclaim {			% <int> vmreclaim -
   dup 0 gt {
-    .vmreclaim
+    dup 2 le 1 index type /integertype eq and {
+      pop    % ignore user requests for vmreclaim
+             % (reclaim will still happen controlled by vmthreshold)
+    }
+    { .vmreclaim }    % let internal operator handle error conditions
+    ifelse
   } {
+    % VMReclaim userparam controls enable/disable GC
     mark /VMReclaim 2 index .dicttomark .setuserparams2 pop
   } ifelse
 } odef
@@ -481,7 +487,6 @@ end		% serverdict
   clear cleardictstack
   initgraphics
   //false setglobal
-  2 vmreclaim	% Make sure GC'ed memory is reclaimed and freed.
 } bind def
 /.startjob {			% <exit_bool> <password> <finish_proc>
                                 %   .startjob <ok_bool>
@@ -510,7 +515,7 @@ end		% serverdict
   clear cleardictstack
   serverdict /.jobsave get dup //null eq { pop } { restore } ifelse
   serverdict /.jobsave //null put
-  2 vmreclaim   % recover local and global VM
+  2 .vmreclaim   % recover local and global VM
 } odef
 
 systemdict begin
@@ -639,7 +644,7 @@ currentuserparams /WaitTimeout known
 
 //systemdict /ICCProfilesDir .knownget {
   % Set the directory sepcified by the command line option
-  mark exch /ICCProfilesDir exch .dicttomark .setuserparams
+  mark exch /ICCProfilesDir exch .dicttomark .setuserparams2
 } {
   % First see if the current value is valid so we don't have to guess
   mark .currentuserparams .dicttomark /ICCProfilesDir get
@@ -654,7 +659,7 @@ currentuserparams /WaitTimeout known
         .file_name_separator concatstrings
         dup (default_gray.icc) concatstrings status {
           pop pop pop pop
-          mark exch /ICCProfilesDir exch .dicttomark .setuserparams
+          mark exch /ICCProfilesDir exch .dicttomark .setuserparams2
           exit
         } {
           pop
@@ -681,11 +686,6 @@ mark exch /DefaultCMYKProfile exch .dicttomark
 .setuserparams
 } if
 
-//systemdict /ProofProfile .knownget{
-mark exch /ProofProfile exch .dicttomark
-.setuserparams
-} if
-
 //systemdict /DeviceNProfile .knownget{
 mark exch /DeviceNProfile exch .dicttomark
 .setuserparams
@@ -696,11 +696,6 @@ mark exch /NamedProfile exch .dicttomark
 .setuserparams
 } if
 
-//systemdict /DeviceLinkProfile .knownget{
-mark exch /DeviceLinkProfile exch .dicttomark
-.setuserparams
-} if
-
 //systemdict /SourceObjectICC .knownget{
 mark exch /SourceObjectICC exch .dicttomark
 .setuserparams
@@ -708,6 +703,11 @@ mark exch /SourceObjectICC exch .dicttomark
 
 //systemdict /OverrideICC .knownget{
 mark exch /OverrideICC exch .dicttomark
+.setuserparams
+} if
+
+//systemdict /OverrideRI .knownget{
+mark exch /OverrideRI exch .dicttomark
 .setuserparams
 } if
 

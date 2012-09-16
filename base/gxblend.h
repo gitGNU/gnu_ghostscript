@@ -27,6 +27,10 @@
 #define VD_PAINT_ALPHA 1
 
 #define RAW_DUMP 0
+#define RAW_DUMP_AS_PAM 0
+/* Useful bash fragment to batch convert pams to pngs:
+ * for f in *.pam; do g=${f%.*}; echo $g; convert $g.pam $g.png ; done
+ */
 
 /* #define DUMP_TO_PNG */
 
@@ -103,9 +107,9 @@ void smask_blend(byte *src, int width, int height, int rowstride,
 
 void smask_copy(int num_rows, int num_cols, int row_stride,
                          byte *src, const byte *des);
-void smask_icc(int num_rows, int num_cols, int n_chan, int row_stride,
-                         int plane_stride, byte *src, const byte *des,
-                         gsicc_link_t *icclink);
+void smask_icc(gx_device *dev, int num_rows, int num_cols, int n_chan, 
+               int row_stride, int plane_stride, byte *src, const byte *des,
+               gsicc_link_t *icclink);
 /**
  * art_blend_pixel: Compute PDF 1.4 blending function.
  * @dst: Where to store resulting pixel.

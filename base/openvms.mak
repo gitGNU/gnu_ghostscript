@@ -140,7 +140,7 @@ LCMS2SRCDIR=[.lcms2]
 # Which CMS are we using?
 # Options are currently lcms or lcms2
 
-WHICH_CMS=lcms
+WHICH_CMS=lcms2
 
 # IJS has not been ported to OpenVMS. If you do the port,
 # you'll need to set these values. You'll also need to
@@ -152,11 +152,6 @@ WHICH_CMS=lcms
 
 #IJSSRCDIR=[.ijs]
 #IJSEXECTYPE=unix
-
-# Define the directory where the imdi source are stored.
-# See imdi.mak for more information
-
-IMDISRCDIR=[.imdi]
 
 # Note that built-in third-party libraries aren't available.
 
@@ -238,7 +233,7 @@ DEVICE_DEVS12=$(DD)psmono.dev $(DD)psgray.dev $(DD)psrgb.dev $(DD)bit.dev $(DD)b
 DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pngmonod.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev $(DD)jpegcmyk.dev
 DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)txtwrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
-DEVICE_DEVS16=$(DD)bbox.dev
+DEVICE_DEVS16=$(DD)bbox.dev $(DD)inkcov.dev
 # Overflow from DEVS9
 DEVICE_DEVS17=$(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev $(DD)pkm.dev $(DD)pkmraw.dev $(DD)pksm.dev $(DD)pksmraw.dev $(DD)pamcmyk32.dev
 DEVICE_DEVS18=

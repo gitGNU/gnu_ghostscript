@@ -39,6 +39,7 @@ GS=gslib
 
 # We don't expect to build debug or profiling configurations....
 DEBUGDIRPREFIX=
+MEMENTODIRPREFIX=
 PGDIRPREFIX=
 
 JSRCDIR=jpeg
@@ -75,11 +76,6 @@ SHARE_IJS=0
 IJS_NAME=
 IJSSRCDIR=ijs
 IJSEXECTYPE=unix
-
-# Define the directory where the imdi library source is stored.
-# See devs.mak for more information
-
-IMDISRCDIR=imdi
 
 # Define how to build the library archives.  (These are not used in any
 # standard configuration.)

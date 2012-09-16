@@ -18,10 +18,10 @@
 #include "string_.h"
 #include "ctype_.h"
 #include <io.h>
-#include "gserror.h"
 #include "gstypes.h"
 #include "gsmemory.h"		/* for gxiodev.h */
 #include "gxiodev.h"
+#include "gserrors.h"
 
 /* The MS-Windows handle IODevice */
 

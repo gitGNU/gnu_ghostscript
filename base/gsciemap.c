@@ -146,8 +146,8 @@ get_cie_range( const gs_color_space * pcs )
 }
 
 static void
-rescale_input_color(gs_range *ranges, int num_colorants, gs_client_color *src,
-                    gs_client_color *des)
+rescale_input_color(gs_range *ranges, int num_colorants, 
+                    const gs_client_color *src, gs_client_color *des)
 {
     int k;
 
@@ -199,6 +199,7 @@ gx_ciedefg_to_icc(gs_color_space **ppcs_icc, gs_color_space *pcs, gs_memory_t *m
     gx_cie_scalar_cache    *lmn_caches = &(pcs->params.abc->common.caches.DecodeLMN[0]);
     gx_cie_scalar_cache *defg_caches = &(pcs->params.defg->caches_defg.DecodeDEFG[0]);
 
+    if_debug0(gs_debug_flag_icc,"[icc] Creating ICC profile from defg object");  
     /* build the ICC color space object */
     code = gs_cspace_build_ICC(ppcs_icc, NULL, memory->stable_memory);
     /* record the cie alt space as the icc alternative color space */
@@ -211,17 +212,19 @@ gx_ciedefg_to_icc(gs_color_space **ppcs_icc, gs_color_space *pcs, gs_memory_t *m
     gsicc_init_profile_info((*ppcs_icc)->cmm_icc_profile_data);
     (*ppcs_icc)->cmm_icc_profile_data->default_match = CIE_DEFG;
     pcs->icc_equivalent = *ppcs_icc;
+    pcs->icc_equivalent->cmm_icc_profile_data->data_cs = gsCMYK;
     return(0);
 }
 
 int
-gx_remap_CIEDEFG(const gs_client_color * pc, const gs_color_space * pcs,
+gx_remap_CIEDEFG(const gs_client_color * pc, const gs_color_space * pcs_in,
         gx_device_color * pdc, const gs_imager_state * pis, gx_device * dev,
                 gs_color_select_t select)
 {
     gs_color_space *pcs_icc;
     int code, i;
     gs_client_color scale_pc;
+    gs_color_space *pcs = (gs_color_space *) pcs_in;
 
     if_debug4('c', "[c]remap CIEDEFG [%g %g %g %g]\n",
               pc->paint.values[0], pc->paint.values[1],
@@ -252,13 +255,13 @@ gx_remap_CIEDEFG(const gs_client_color * pc, const gs_color_space * pcs,
 
 /* Render a CIEBasedDEFG color. */
 int
-gx_concretize_CIEDEFG(const gs_client_color * pc, const gs_color_space * pcs,
+gx_concretize_CIEDEFG(const gs_client_color * pc, const gs_color_space * pcs_in,
                       frac * pconc, const gs_imager_state * pis, gx_device *dev)
 {
-    const gs_cie_defg *pcie = pcs->params.defg;
     int code;
     gs_color_space *pcs_icc;
     gs_client_color scale_pc;
+    gs_color_space *pcs = (gs_color_space *) pcs_in;
 
     if_debug4('c', "[c]concretize DEFG [%g %g %g %g]\n",
               pc->paint.values[0], pc->paint.values[1],
@@ -467,6 +470,7 @@ gx_ciedef_to_icc(gs_color_space **ppcs_icc, gs_color_space *pcs, gs_memory_t *me
     gx_cie_scalar_cache    *lmn_caches = &(pcs->params.abc->common.caches.DecodeLMN[0]);
     gx_cie_scalar_cache *def_caches = &(pcs->params.def->caches_def.DecodeDEF[0]);
 
+    if_debug0(gs_debug_flag_icc,"[icc] Creating ICC profile from def object");  
     /* build the ICC color space object */
     code = gs_cspace_build_ICC(ppcs_icc, NULL, memory->stable_memory);
     /* record the cie alt space as the icc alternative color space */
@@ -480,17 +484,19 @@ gx_ciedef_to_icc(gs_color_space **ppcs_icc, gs_color_space *pcs, gs_memory_t *me
     (*ppcs_icc)->cmm_icc_profile_data->default_match = CIE_DEF;
     /* Assign to the icc_equivalent member variable */
     pcs->icc_equivalent = *ppcs_icc;
+    pcs->icc_equivalent->cmm_icc_profile_data->data_cs = gsUNDEFINED;
     return(0);
     }
 
 int
-gx_remap_CIEDEF(const gs_client_color * pc, const gs_color_space * pcs,
+gx_remap_CIEDEF(const gs_client_color * pc, const gs_color_space * pcs_in,
         gx_device_color * pdc, const gs_imager_state * pis, gx_device * dev,
                 gs_color_select_t select)
 {
     gs_color_space *pcs_icc;
     gs_client_color scale_pc;
     int i,code;
+    gs_color_space *pcs = (gs_color_space *) pcs_in;
 
     if_debug3('c', "[c]remap CIEDEF [%g %g %g]\n",
               pc->paint.values[0], pc->paint.values[1],
@@ -521,13 +527,13 @@ gx_remap_CIEDEF(const gs_client_color * pc, const gs_color_space * pcs,
 
 /* Render a CIEBasedDEF color. */
 int
-gx_concretize_CIEDEF(const gs_client_color * pc, const gs_color_space * pcs,
+gx_concretize_CIEDEF(const gs_client_color * pc, const gs_color_space * pcs_in,
                      frac * pconc, const gs_imager_state * pis, gx_device *dev)
 {
-    const gs_cie_def *pcie = pcs->params.def;
     int code;
     gs_color_space *pcs_icc;
     gs_client_color scale_pc;
+    gs_color_space *pcs = (gs_color_space *) pcs_in;
 
     if_debug3('c', "[c]concretize DEF [%g %g %g]\n",
               pc->paint.values[0], pc->paint.values[1],
@@ -562,6 +568,7 @@ gx_cieabc_to_icc(gs_color_space **ppcs_icc, gs_color_space *pcs, bool *islab,
     gx_cie_vector_cache *abc_caches = &(pcs->params.abc->caches.DecodeABC.caches[0]);
     gx_cie_scalar_cache *lmn_caches = &(pcs->params.abc->common.caches.DecodeLMN[0]);
 
+    if_debug0(gs_debug_flag_icc,"[icc] Creating ICC profile from abc object");  
     /* build the ICC color space object */
     code = gs_cspace_build_ICC(ppcs_icc, NULL, memory);
     /* record the cie alt space as the icc alternative color space */
@@ -575,14 +582,15 @@ gx_cieabc_to_icc(gs_color_space **ppcs_icc, gs_color_space *pcs, bool *islab,
     (*ppcs_icc)->cmm_icc_profile_data->default_match = CIE_ABC;
     /* Assign to the icc_equivalent member variable */
     pcs->icc_equivalent = *ppcs_icc;
-                                return(0);
+    pcs->icc_equivalent->cmm_icc_profile_data->data_cs = gsRGB;
+    return(0);
     }
 
 /* Render a CIEBasedABC color. */
 /* We provide both remap and concretize, but only the former */
 /* needs to be efficient. */
 int
-gx_remap_CIEABC(const gs_client_color * pc, const gs_color_space * pcs,
+gx_remap_CIEABC(const gs_client_color * pc, const gs_color_space * pcs_in,
         gx_device_color * pdc, const gs_imager_state * pis, gx_device * dev,
                 gs_color_select_t select)
 {
@@ -590,6 +598,8 @@ gx_remap_CIEABC(const gs_client_color * pc, const gs_color_space * pcs,
     gs_client_color scale_pc;
     bool islab;
     int i,code;
+    gs_color_space *pcs = (gs_color_space *) pcs_in;
+
 
     if_debug3('c', "[c]remap CIEABC [%g %g %g]\n",
               pc->paint.values[0], pc->paint.values[1],
@@ -620,12 +630,13 @@ gx_remap_CIEABC(const gs_client_color * pc, const gs_color_space * pcs,
 }
 
 int
-gx_concretize_CIEABC(const gs_client_color * pc, const gs_color_space * pcs,
+gx_concretize_CIEABC(const gs_client_color * pc, const gs_color_space * pcs_in,
                      frac * pconc, const gs_imager_state * pis, gx_device *dev)
 {
     gs_color_space *pcs_icc;
     gs_client_color scale_pc;
     bool islab;
+    gs_color_space *pcs = (gs_color_space *) pcs_in;
 
     if_debug3('c', "[c]concretize CIEABC [%g %g %g]\n",
               pc->paint.values[0], pc->paint.values[1],
@@ -658,6 +669,7 @@ gx_ciea_to_icc(gs_color_space **ppcs_icc, gs_color_space *pcs, gs_memory_t *memo
     gx_cie_vector_cache *a_cache = &(pcs->params.a->caches.DecodeA);
     gx_cie_scalar_cache    *lmn_caches = &(pcs->params.a->common.caches.DecodeLMN[0]);
 
+    if_debug0(gs_debug_flag_icc,"[icc] Creating ICC profile from CIEA object");  
     /* build the ICC color space object */
     code = gs_cspace_build_ICC(ppcs_icc, NULL, memory);
     /* record the cie alt space as the icc alternative color space */
@@ -671,17 +683,19 @@ gx_ciea_to_icc(gs_color_space **ppcs_icc, gs_color_space *pcs, gs_memory_t *memo
     (*ppcs_icc)->cmm_icc_profile_data->default_match = CIE_A;
     /* Assign to the icc_equivalent member variable */
     pcs->icc_equivalent = *ppcs_icc;
+    pcs->icc_equivalent->cmm_icc_profile_data->data_cs = gsGRAY;
     return(code);
 }
 
 int
-gx_remap_CIEA(const gs_client_color * pc, const gs_color_space * pcs,
+gx_remap_CIEA(const gs_client_color * pc, const gs_color_space * pcs_in,
         gx_device_color * pdc, const gs_imager_state * pis, gx_device * dev,
                 gs_color_select_t select)
 {
     int code;
     gs_color_space *pcs_icc;
     gs_client_color scale_pc;
+    gs_color_space *pcs = (gs_color_space *) pcs_in;
 
     if_debug1('c', "[c]remap CIEA [%g]\n",pc->paint.values[0]);
    /* If we are coming in here then we may have not completed
@@ -710,12 +724,13 @@ gx_remap_CIEA(const gs_client_color * pc, const gs_color_space * pcs,
 
 /* Render a CIEBasedA color. */
 int
-gx_concretize_CIEA(const gs_client_color * pc, const gs_color_space * pcs,
+gx_concretize_CIEA(const gs_client_color * pc, const gs_color_space * pcs_in,
                    frac * pconc, const gs_imager_state * pis, gx_device *dev)
 {
     int code;
     gs_color_space *pcs_icc;
     gs_client_color scale_pc;
+    gs_color_space *pcs = (gs_color_space *) pcs_in;
 
     if_debug1('c', "[c]concretize CIEA %g\n", pc->paint.values[0]);
     /* If we are comming in here then we have not completed

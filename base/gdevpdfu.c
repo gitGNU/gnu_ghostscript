@@ -45,11 +45,13 @@
 #endif
 
 #include "opdfread.h"
-#include "gs_agl.h"
+#include "gdevagl.h"
 #include "gs_mgl_e.h"
 #include "gs_mro_e.h"
 
-/* Define the size of internal stream buffers. */
+extern single_glyph_list_t *SingleGlyphList;
+
+    /* Define the size of internal stream buffers. */
 /* (This is not a limitation, it only affects performance.) */
 #define sbuf_size 512
 
@@ -334,13 +336,18 @@ static int write_tt_encodings(stream *s, bool HaveTrueTypes)
     } while (1);
 
     if (HaveTrueTypes) {
-        index = 0;
-        do {
-            if (gs_agl_ps[index] == 0x00)
-                break;
-            stream_write(s, gs_agl_ps[index], strlen(gs_agl_ps[index]));
-            index++;
-        } while (1);
+        char Buffer[256];
+        single_glyph_list_t *entry = (single_glyph_list_t *)&SingleGlyphList;
+
+        sprintf(Buffer, "/AdobeGlyphList mark\n");
+        stream_write(s, Buffer, strlen(Buffer));
+        while (entry->Glyph) {
+            sprintf(Buffer, "/%s 16#%04x\n", entry->Glyph, entry->Unicode);
+            stream_write(s, Buffer, strlen(Buffer));
+            entry++;
+        };
+        sprintf(Buffer, ".dicttomark readonly def\n");
+        stream_write(s, Buffer, strlen(Buffer));
 
         index = 0;
         do {
@@ -870,47 +877,47 @@ none_to_stream(gx_device_pdf * pdev)
             return code;
         pdev->strm = s;
         if (pdev->compression == pdf_compress_Flate) {	/* Set up the Flate filter. */
-            const stream_template *template;
+            const stream_template *templat;
             stream *es;
             byte *buf;
             compression_filter_state *st;
 
             if (!pdev->binary_ok) {	/* Set up the A85 filter */
-                const stream_template *template = &s_A85E_template;
+                const stream_template *templat2 = &s_A85E_template;
                 stream *as = s_alloc(pdev->pdf_memory, "PDF contents stream");
                 byte *buf = gs_alloc_bytes(pdev->pdf_memory, sbuf_size,
                                            "PDF contents buffer");
                 stream_A85E_state *ast = gs_alloc_struct(pdev->pdf_memory, stream_A85E_state,
-                                template->stype, "PDF contents state");
+                                templat2->stype, "PDF contents state");
                 if (as == 0 || ast == 0 || buf == 0)
                     return_error(gs_error_VMerror);
                 s_std_init(as, buf, sbuf_size, &s_filter_write_procs,
                            s_mode_write);
                 ast->memory = pdev->pdf_memory;
-                ast->template = template;
+                ast->templat = templat2;
                 as->state = (stream_state *) ast;
-                as->procs.process = template->process;
+                as->procs.process = templat2->process;
                 as->strm = s;
-                (*template->init) ((stream_state *) ast);
+                (*templat2->init) ((stream_state *) ast);
                 pdev->strm = s = as;
             }
-            template = &compression_filter_template;
+            templat = &compression_filter_template;
             es = s_alloc(pdev->pdf_memory, "PDF compression stream");
             buf = gs_alloc_bytes(pdev->pdf_memory, sbuf_size,
                                        "PDF compression buffer");
             st = gs_alloc_struct(pdev->pdf_memory, compression_filter_state,
-                                template->stype, "PDF compression state");
+                                 templat->stype, "PDF compression state");
             if (es == 0 || st == 0 || buf == 0)
                 return_error(gs_error_VMerror);
             s_std_init(es, buf, sbuf_size, &s_filter_write_procs,
                        s_mode_write);
             st->memory = pdev->pdf_memory;
-            st->template = template;
+            st->templat = templat;
             es->state = (stream_state *) st;
-            es->procs.process = template->process;
+            es->procs.process = templat->process;
             es->strm = s;
-            (*template->set_defaults) ((stream_state *) st);
-            (*template->init) ((stream_state *) st);
+            (*templat->set_defaults) ((stream_state *) st);
+            (*templat->init) ((stream_state *) st);
             pdev->strm = s = es;
         }
     }
@@ -1898,7 +1905,26 @@ pdf_put_encoded_string_as_hex(const gx_device_pdf *pdev, const byte *str, uint s
                     oct += str[i+3] - 0x30;
                     i+=3;
                 } else {
-                    oct = str[++i];
+                    switch (str[++i]) {
+                        case 'b' :
+                            oct = 8;
+                            break;
+                        case 't' :
+                            oct = 9;
+                            break;
+                        case 'n' :
+                            oct = 10;
+                            break;
+                        case 'f' :
+                            oct = 12;
+                            break;
+                        case 'r' :
+                            oct = 13;
+                            break;
+                        default:
+                            oct = str[i];
+                            break;
+                    }
                 }
                 if (width > 252 && pdev->ForOPDFRead && pdev->ProduceDSC) {
                     stream_write(pdev->strm, "\n", 1);
@@ -2074,10 +2100,10 @@ pdf_put_filters(cos_dict_t *pcd, gx_device_pdf *pdev, stream *s,
 
     for (; fs != 0; fs = fs->strm) {
         const stream_state *st = fs->state;
-        const stream_template *template = st->template;
+        const stream_template *templat = st->templat;
 
 #define TEMPLATE_IS(atemp)\
-  (template->process == (atemp).process)
+  (templat->process == (atemp).process)
         if (TEMPLATE_IS(s_A85E_template))
             binary_ok = false;
         else if (TEMPLATE_IS(s_CFE_template)) {
@@ -2172,16 +2198,16 @@ pdf_put_filters(cos_dict_t *pcd, gx_device_pdf *pdev, stream *s,
 static int
 pdf_flate_binary(gx_device_pdf *pdev, psdf_binary_writer *pbw)
 {
-    const stream_template *template = (pdev->CompatibilityLevel < 1.3 ?
+    const stream_template *templat = (pdev->CompatibilityLevel < 1.3 ?
                     &s_LZWE_template : &s_zlibE_template);
-    stream_state *st = s_alloc_state(pdev->pdf_memory, template->stype,
+    stream_state *st = s_alloc_state(pdev->pdf_memory, templat->stype,
                                      "pdf_write_function");
 
     if (st == 0)
         return_error(gs_error_VMerror);
-    if (template->set_defaults)
-        template->set_defaults(st);
-    return psdf_encode_binary(pbw, template, st);
+    if (templat->set_defaults)
+        templat->set_defaults(st);
+    return psdf_encode_binary(pbw, templat, st);
 }
 
 /*

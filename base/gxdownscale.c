@@ -13,7 +13,6 @@
 
 #include "gxdownscale.h"
 #include "gserrors.h"
-#include "gserror.h"
 #include "gdevprn.h"
 
 /* Error diffusion data is stored in errors block.
@@ -740,7 +739,7 @@ int gx_downscaler_init(gx_downscaler_t   *ds,
     int                code;
     gx_downscale_core *core;
     
-    if (adjust_width != NULL)
+    if (adjust_width_proc != NULL)
         awidth = (*adjust_width_proc)(width, adjust_width);
     pad_white = awidth - width;
     if (pad_white < 0)

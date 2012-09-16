@@ -533,7 +533,7 @@ clist_playback_band(clist_playback_action playback_action,
     bool clipper_dev_open;
     patch_fill_state_t pfs;
     int op = 0;
-    short plane = 0;
+    int plane_height = 0;
 
 #ifdef DEBUG
     stream_state *st = s->state; /* Save because s_close resets s->state. */
@@ -574,6 +574,7 @@ in:                             /* Initialize for a new page. */
     state_tile.id = gx_no_bitmap_id;
     state_tile.shift = state_tile.rep_shift = 0;
     state_tile.size.x = state_tile.size.y = 0;
+    state_tile.num_planes = 1;
     tile_phase.x = color_phase.x = x0;
     tile_phase.y = color_phase.y = y0;
     gx_path_init_local(&path, mem);
@@ -705,6 +706,7 @@ in:                             /* Initialize for a new page. */
                             bitmap_raster(bits.width * bits.cb_depth);
                         bits.x_reps = bits.y_reps = 1;
                         bits.shift = bits.rep_shift = 0;
+                        bits.num_planes = 1;
                         goto stb;
                     case cmd_opv_set_tile_color:
                         set_colors = state.tile_colors;
@@ -923,9 +925,15 @@ in:                             /* Initialize for a new page. */
                 }
                 state.rect.width += (op & 7) + cmd_min_dw_tiny;
                 break;
-            case cmd_op_copy_mono_plane >> 4:
-                cmd_getw(plane, cbp);
-                depth = 1;
+            case cmd_op_copy_mono_planes >> 4:
+                cmd_getw(plane_height, cbp);
+                if (plane_height == 0) {
+                    /* We are doing a copy mono */
+                    depth = 1;
+                } else {
+                    depth = tdev->color_info.depth;
+                }
+                if_debug1('L', " plane_height=0x%x", plane_height);
                 goto copy;
             case cmd_op_copy_color_alpha >> 4:
                 if (state.color_is_alpha) {
@@ -933,6 +941,7 @@ in:                             /* Initialize for a new page. */
                         depth = *cbp++;
                 } else
                     depth = tdev->color_info.depth;
+                plane_height = 0;
               copy:cmd_getw(state.rect.x, cbp);
                 cmd_getw(state.rect.y, cbp);
                 if (op & 8) {   /* Use the current "tile". */
@@ -954,20 +963,27 @@ in:                             /* Initialize for a new page. */
                     /* depth was set already. */
                     uint width_bits, width_bytes;
                     uint bytes;
+                    uint planes = 1;
+                    uint plane_depth = depth;
+                    uint pln;
+                    byte compression = op & 3;
 
                     cmd_getw(state.rect.width, cbp);
                     cmd_getw(state.rect.height, cbp);
-                    width_bits = state.rect.width * depth;
-                    bytes =
-                        clist_bitmap_bytes(width_bits,
-                                           state.rect.height,
-                                           op & 3, &width_bytes,
-                                           (uint *)&raster);
+                    if (plane_height != 0) {
+                        planes = tdev->color_info.num_components;
+                        plane_depth /= planes;
+                    }
+                    width_bits = state.rect.width * plane_depth;
+                    bytes = clist_bitmap_bytes(width_bits,
+                                               state.rect.height,
+                                               op & 3, &width_bytes,
+                                               (uint *)&raster);
                     /* copy_mono and copy_color/alpha */
                     /* ensure that the bits will fit in a single buffer, */
                     /* even after decompression if compressed. */
 #ifdef DEBUG
-                    if (bytes > cbuf_size) {
+                    if (planes * bytes > cbuf_size) {
                         lprintf6("bitmap size exceeds buffer!  width=%d raster=%d height=%d\n    file pos %ld buf pos %d/%d\n",
                                  state.rect.width, raster,
                                  state.rect.height,
@@ -977,72 +993,80 @@ in:                             /* Initialize for a new page. */
                         goto out;
                     }
 #endif
-                    if (op & 3) {       /* Decompress the image data. */
-                        stream_cursor_read r;
-                        stream_cursor_write w;
+                    for (pln = 0; pln < planes; pln++)
+                    {
+                        byte *plane_bits = data_bits + plane_height * raster;
+                        if (pln)
+                            compression = *cbp++;
+                        if (compression) {       /* Decompress the image data. */
+                            stream_cursor_read r;
+                            stream_cursor_write w;
 
-                        /* We don't know the data length a priori, */
-                        /* so to be conservative, we read */
-                        /* the uncompressed size. */
-                        uint cleft = cbuf.end - cbp;
+                            /* We don't know the data length a priori, */
+                            /* so to be conservative, we read */
+                            /* the uncompressed size. */
+                            uint cleft = cbuf.end - cbp;
 
-                        if (cleft < bytes  && !cbuf.end_status) {
-                            uint nread = cbuf_size - cleft;
+                            if (cleft < bytes  && !cbuf.end_status) {
+                                uint nread = cbuf_size - cleft;
 
-#                           ifdef DEBUG
-                                code = top_up_offset_map(st, cbuf.data, cbp, cbuf.end);
-                                if (code < 0)
-                                    return code;
-#                           endif
-                            memmove(cbuf.data, cbp, cleft);
-                            cbuf.end_status = sgets(s, cbuf.data + cleft, nread, &nread);
-                            set_cb_end(&cbuf, cbuf.data + cleft + nread);
-                            cbp = cbuf.data;
+#                               ifdef DEBUG
+                                    code = top_up_offset_map(st, cbuf.data, cbp, cbuf.end);
+                                    if (code < 0)
+                                        return code;
+#                               endif
+                                memmove(cbuf.data, cbp, cleft);
+                                cbuf.end_status = sgets(s, cbuf.data + cleft, nread, &nread);
+                                set_cb_end(&cbuf, cbuf.data + cleft + nread);
+                                cbp = cbuf.data;
+                            }
+                            r.ptr = cbp - 1;
+                            r.limit = cbuf.end - 1;
+                            w.ptr = plane_bits - 1;
+                            w.limit = w.ptr + data_bits_size;
+                            switch (compression) {
+                                case cmd_compress_rle:
+                                    {
+                                        stream_RLD_state sstate;
+
+                                        clist_rld_init(&sstate);
+                                        /* The process procedure can't fail. */
+                                        (*s_RLD_template.process)
+                                            ((stream_state *)&sstate, &r, &w, true);
+                                    }
+                                    break;
+                                case cmd_compress_cfe:
+                                    {
+                                        stream_CFD_state sstate;
+
+                                        clist_cfd_init(&sstate,
+                                        width_bytes << 3 /*state.rect.width */ ,
+                                                       state.rect.height, mem);
+                                        /* The process procedure can't fail. */
+                                        (*s_CFD_template.process)
+                                            ((stream_state *)&sstate, &r, &w, true);
+                                        (*s_CFD_template.release)
+                                            ((stream_state *)&sstate);
+                                    }
+                                    break;
+                                default:
+                                    goto bad_op;
+                            }
+                            cbp = r.ptr + 1;
+                            if (pln == 0)
+                                source = data_bits;
+                        } else if ((state.rect.height > 1 && width_bytes != raster) ||
+                                   (plane_height != 0)) {
+                            if (pln == 0)
+                                source = data_bits;
+                            cbp = cmd_read_short_bits(&cbuf, plane_bits, width_bytes,
+                                                      state.rect.height,
+                                                      raster, cbp);
+                        } else {
+                            /* Never used for planar data */
+                            cmd_read(cbuf.data, bytes, cbp);
+                            source = cbuf.data;
                         }
-                        r.ptr = cbp - 1;
-                        r.limit = cbuf.end - 1;
-                        w.ptr = data_bits - 1;
-                        w.limit = w.ptr + data_bits_size;
-                        switch (op & 3) {
-                            case cmd_compress_rle:
-                                {
-                                    stream_RLD_state sstate;
-
-                                    clist_rld_init(&sstate);
-                                    /* The process procedure can't fail. */
-                                    (*s_RLD_template.process)
-                                        ((stream_state *)&sstate, &r, &w, true);
-                                }
-                                break;
-                            case cmd_compress_cfe:
-                                {
-                                    stream_CFD_state sstate;
-
-                                    clist_cfd_init(&sstate,
-                                    width_bytes << 3 /*state.rect.width */ ,
-                                                   state.rect.height, mem);
-                                    /* The process procedure can't fail. */
-                                    (*s_CFD_template.process)
-                                        ((stream_state *)&sstate, &r, &w, true);
-                                    (*s_CFD_template.release)
-                                        ((stream_state *)&sstate);
-                                }
-                                break;
-                            default:
-                                goto bad_op;
-                        }
-                        cbp = r.ptr + 1;
-                        source = data_bits;
-                    } else if (state.rect.height > 1 &&
-                               width_bytes != raster
-                        ) {
-                        source = data_bits;
-                        cbp = cmd_read_short_bits(&cbuf, source, width_bytes,
-                                                  state.rect.height,
-                                                  raster, cbp);
-                    } else {
-                        cmd_read(cbuf.data, bytes, cbp);
-                        source = cbuf.data;
                     }
 #ifdef DEBUG
                     if (gs_debug_c('L')) {
@@ -1077,6 +1101,7 @@ in:                             /* Initialize for a new page. */
                 state_tile.rep_shift = state_slot->rep_shift;
                 state_tile.shift = state_slot->shift;
                 state_tile.id = state_slot->id;
+                state_tile.num_planes = state_slot->num_planes;
 set_phase:      /*
                  * state.tile_phase is overloaded according to the command
                  * to which it will apply:
@@ -2012,15 +2037,29 @@ idata:                  data_size = 0;
                 colors[0] = colors[1] = state.colors[1];
                 log_op = state.lop;
                 pcolor = colors;
-              do_rop:code = (*dev_proc(tdev, strip_copy_rop))
-                    (tdev, source, data_x, raster, gx_no_bitmap_id,
-                     pcolor, &state_tile,
-                     (state.tile_colors[0] == gx_no_color_index &&
-                      state.tile_colors[1] == gx_no_color_index ?
-                      NULL : state.tile_colors),
-                     state.rect.x - x0, state.rect.y - y0,
-                     state.rect.width - data_x, state.rect.height,
-                     tile_phase.x, tile_phase.y, log_op);
+         do_rop:if (plane_height == 0) {
+                    code = (*dev_proc(tdev, strip_copy_rop))
+                                (tdev, source, data_x, raster, gx_no_bitmap_id,
+                                 pcolor, &state_tile,
+                                 (state.tile_colors[0] == gx_no_color_index &&
+                                  state.tile_colors[1] == gx_no_color_index ?
+                                  NULL : state.tile_colors),
+                                 state.rect.x - x0, state.rect.y - y0,
+                                 state.rect.width - data_x, state.rect.height,
+                                 tile_phase.x, tile_phase.y, log_op);
+                } else {
+                    code = (*dev_proc(tdev, strip_copy_rop2))
+                                (tdev, source, data_x, raster, gx_no_bitmap_id,
+                                 pcolor, &state_tile,
+                                 (state.tile_colors[0] == gx_no_color_index &&
+                                  state.tile_colors[1] == gx_no_color_index ?
+                                  NULL : state.tile_colors),
+                                 state.rect.x - x0, state.rect.y - y0,
+                                 state.rect.width - data_x, state.rect.height,
+                                 tile_phase.x, tile_phase.y, log_op,
+                                 plane_height);
+                     plane_height = 0;
+                }
                 data_x = 0;
                 break;
             case cmd_op_tile_rect >> 4:
@@ -2039,7 +2078,7 @@ idata:                  data_size = 0;
                      state.tile_colors[0], state.tile_colors[1],
                      tile_phase.x, tile_phase.y);
                 break;
-            case cmd_op_copy_mono_plane >> 4:
+            case cmd_op_copy_mono_planes >> 4:
                 if (state.lop_enabled) {
                     pcolor = state.colors;
                     log_op = state.lop;
@@ -2055,21 +2094,21 @@ idata:                  data_size = 0;
                          state.rect.width - data_x, state.rect.height,
                          &dev_color, 1, imager_state.log_op, pcpath);
                 } else {
-                    if (plane == 255) {
+                    if (plane_height == 0) {
                         code = (*dev_proc(tdev, copy_mono))
                              (tdev, source, data_x, raster, gx_no_bitmap_id,
                               state.rect.x - x0, state.rect.y - y0,
                               state.rect.width - data_x, state.rect.height,
                               state.colors[0], state.colors[1]);
                     } else {
-                        code = (*dev_proc(tdev, copy_plane))
+                        code = (*dev_proc(tdev, copy_planes))
                              (tdev, source, data_x, raster, gx_no_bitmap_id,
                               state.rect.x - x0, state.rect.y - y0,
                               state.rect.width - data_x, state.rect.height,
-                              plane);
+                              plane_height);
                     }
                 }
-                plane = -1;
+                plane_height = 0;
                 data_x = 0;
                 break;
             case cmd_op_copy_color_alpha >> 4:
@@ -2172,6 +2211,7 @@ read_set_tile_size(command_buf_t *pcb, tile_slot *bits, bool for_pattern)
 {
     const byte *cbp = pcb->ptr;
     uint rep_width, rep_height;
+    uint pdepth;
     byte bd = *cbp++;
 
     bits->cb_depth = cmd_code_to_depth(bd);
@@ -2197,14 +2237,21 @@ read_set_tile_size(command_buf_t *pcb, tile_slot *bits, bool for_pattern)
         cmd_getw(bits->rep_shift, cbp);
     else
         bits->rep_shift = 0;
-    if_debug6('L', " depth=%d size=(%d,%d), rep_size=(%d,%d), rep_shift=%d\n",
+    if (bd & 0x10)
+        bits->num_planes = *cbp++;
+    else
+        bits->num_planes = 1;
+    if_debug7('L', " depth=%d size=(%d,%d), rep_size=(%d,%d), rep_shift=%d, num_planes=%d\n",
               bits->cb_depth, bits->width,
               bits->height, rep_width,
-              rep_height, bits->rep_shift);
+              rep_height, bits->rep_shift, bits->num_planes);
     bits->shift =
         (bits->rep_shift == 0 ? 0 :
          (bits->rep_shift * (bits->height / rep_height)) % rep_width);
-    bits->cb_raster = bitmap_raster(bits->width * bits->cb_depth);
+    pdepth = bits->cb_depth;
+    if (bits->num_planes != 1)
+        pdepth /= bits->num_planes;
+    bits->cb_raster = bitmap_raster(bits->width * pdepth);
     pcb->ptr = cbp;
     return 0;
 }
@@ -2219,19 +2266,25 @@ read_set_bits(command_buf_t *pcb, tile_slot *bits, int compress,
     uint rep_height = bits->height / bits->y_reps;
     uint index;
     ulong offset;
-    uint width_bits = rep_width * bits->cb_depth;
+    uint width_bits;
     uint width_bytes;
     uint raster;
-    uint bytes =
-        clist_bitmap_bytes(width_bits, rep_height,
-                           compress |
-                           (rep_width < bits->width ?
-                            decompress_spread : 0) |
-                           decompress_elsewhere,
-                           &width_bytes,
-                           (uint *)&raster);
+    uint bytes;
     byte *data;
     tile_slot *slot;
+    uint depth = bits->cb_depth;
+
+    if (bits->num_planes != 1)
+        depth /= bits->num_planes;
+    width_bits = rep_width * depth;
+
+    bytes = clist_bitmap_bytes(width_bits, rep_height * bits->num_planes,
+                               compress |
+                               (rep_width < bits->width ?
+                                decompress_spread : 0) |
+                               decompress_elsewhere,
+                               &width_bytes,
+                               (uint *)&raster);
 
     cmd_getw(index, cbp);
     cmd_getw(offset, cbp);
@@ -2308,18 +2361,18 @@ read_set_bits(command_buf_t *pcb, tile_slot *bits, int compress,
             return_error(gs_error_unregistered);
         }
         cbp = r.ptr + 1;
-    } else if (rep_height > 1 && width_bytes != bits->cb_raster) {
+    } else if (rep_height * bits->num_planes > 1 && width_bytes != bits->cb_raster) {
         cbp = cmd_read_short_bits(pcb, data,
-                                  width_bytes, rep_height,
+                                  width_bytes, rep_height * bits->num_planes,
                                   bits->cb_raster, cbp);
     } else {
         cbp = cmd_read_data(pcb, data, bytes, cbp);
     }
     if (bits->width > rep_width)
         bits_replicate_horizontally(data,
-                                    rep_width * bits->cb_depth, rep_height,
+                                    rep_width * depth, rep_height * bits->num_planes,
                                     bits->cb_raster,
-                                    bits->width * bits->cb_depth,
+                                    bits->width * depth,
                                     bits->cb_raster);
     if (bits->height > rep_height)
         bits_replicate_vertically(data,
@@ -2427,12 +2480,15 @@ read_set_misc2(command_buf_t *pcb, gs_imager_state *pis, segment_notes *pnotes)
     cmd_getw(mask, cbp);
     if (mask & cap_join_known) {
         cb = *cbp++;
-        pis->line_params.start_cap =
-            pis->line_params.end_cap =
-                pis->line_params.dash_cap = (gs_line_cap)((cb >> 3) & 7);
+        pis->line_params.start_cap = (gs_line_cap)((cb >> 3) & 7);
         pis->line_params.join = (gs_line_join)(cb & 7);
-        if_debug2('L', " cap=%d join=%d\n",
+        if_debug2('L', " start_cap=%d join=%d\n",
                   pis->line_params.start_cap, pis->line_params.join);
+        cb = *cbp++;
+        pis->line_params.end_cap = (gs_line_cap)((cb >> 3) & 7);
+        pis->line_params.dash_cap = (gs_line_cap)(cb & 7);
+        if_debug2('L', "end_cap=%d dash_cap=%d\n",
+                  pis->line_params.end_cap, pis->line_params.dash_cap);
     }
     if (mask & cj_ac_sa_known) {
         cb = *cbp++;
@@ -2463,17 +2519,17 @@ read_set_misc2(command_buf_t *pcb, gs_imager_state *pis, segment_notes *pnotes)
     }
     if (mask & op_bm_tk_known) {
         cb = *cbp++;
-        pis->renderingintent = (cb & 0xf0) >> 4;
-        cb = cb & 0x0f;
         pis->blend_mode = cb >> 3;
         pis->text_knockout = (cb & 4) != 0;
         /* the following usually have no effect; see gxclpath.c */
         pis->overprint_mode = (cb >> 1) & 1;
         pis->effective_overprint_mode = pis->overprint_mode;
         pis->overprint = cb & 1;
-        if_debug4('L', " BM=%d TK=%d OPM=%d OP=%d\n",
+        cb = *cbp++;
+        pis->renderingintent = cb;
+        if_debug5('L', " BM=%d TK=%d OPM=%d OP=%d RI=%d\n",
                   pis->blend_mode, pis->text_knockout, pis->overprint_mode,
-                  pis->overprint);
+                  pis->overprint, pis->renderingintent);
     }
     if (mask & segment_notes_known) {
         cb = *cbp++;

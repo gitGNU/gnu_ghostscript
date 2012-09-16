@@ -17,6 +17,12 @@
  * to speed the operation */
 #undef MEMENTO_LEAKONLY
 
+#ifndef MEMENTO_STACKTRACE_METHOD
+#ifdef __GNUC__
+#define MEMENTO_STACKTRACE_METHOD 1
+#endif
+#endif
+
 /* Don't keep blocks around if they'd mean losing more than a quarter of
  * the freelist. */
 #define MEMENTO_FREELIST_MAX_SINGLE_BLOCK (MEMENTO_FREELIST_MAX/4)
@@ -24,6 +30,12 @@
 #define COMPILING_MEMENTO_C
 /* For GS we include malloc_.h. Anyone else would just include memento.h */
 #include "malloc_.h"
+
+#if defined(__linux__)
+#define MEMENTO_HAS_FORK
+#elif defined(__APPLE__) && defined(__MACH__)
+#define MEMENTO_HAS_FORK
+#endif
 
 /* Define the underlying allocators, just in case */
 void *MEMENTO_UNDERLYING_MALLOC(size_t);
@@ -47,6 +59,10 @@ enum {
     Memento_PostSize = 16
 };
 
+enum {
+    Memento_Flag_OldBlock = 1
+};
+
 typedef struct Memento_BlkHeader Memento_BlkHeader;
 
 struct Memento_BlkHeader
@@ -54,6 +70,7 @@ struct Memento_BlkHeader
     size_t             rawsize;
     int                sequence;
     int                lastCheckedOK;
+    int                flags;
     Memento_BlkHeader *next;
     char               preblk[Memento_PreSize];
 };
@@ -211,10 +228,47 @@ static int Memento_Internal_checkFreedBlock(Memento_BlkHeader *b, void *arg)
 
     p = MEMBLK_TOBLK(b);
     i = b->rawsize;
+    /* Attempt to speed this up by checking an (aligned) int at a time */
     do {
-        if (*p++ != (char)MEMENTO_FREEFILL)
-            break;
-    } while (--i);
+        if (((size_t)p) & 1) {
+            if (*p++ != (char)MEMENTO_FREEFILL)
+                break;
+            i--;
+            if (i == 0)
+                break;
+        }
+        if ((i >= 2) && (((size_t)p) & 2)) {
+            if (*(short *)p != (short)(MEMENTO_FREEFILL | (MEMENTO_FREEFILL<<8)))
+                goto mismatch;
+            p += 2;
+            i -= 2;
+            if (i == 0)
+                break;
+        }
+        i -= 4;
+        while (i >= 0) {
+            if (*(int *)p != (MEMENTO_FREEFILL |
+                              (MEMENTO_FREEFILL<<8) |
+                              (MEMENTO_FREEFILL<<16) |
+                              (MEMENTO_FREEFILL<<24)))
+                goto mismatch;
+            p += 4;
+            i -= 4;
+        }
+        i += 4;
+        if ((i >= 2) && (((size_t)p) & 2)) {
+            if (*(short *)p != (short)(MEMENTO_FREEFILL | (MEMENTO_FREEFILL<<8)))
+                goto mismatch;
+            p += 2;
+            i -= 2;
+        }
+mismatch:
+        while (i) {
+            if (*p++ != (char)MEMENTO_FREEFILL)
+                break;
+            i--;
+        }
+    } while (0);
     if (i) {
         data->freeCorrupt = 1;
         data->index       = b->rawsize-i;
@@ -240,6 +294,7 @@ static void Memento_removeBlock(Memento_Blocks    *blks,
         /* FAIL! Will have been reported to user earlier, so just exit. */
         return;
     }
+    VALGRIND_MAKE_MEM_DEFINED(blks->tail, sizeof(*blks->tail));
     if (*blks->tail == head) {
         /* Removing the tail of the list */
         if (prev == NULL) {
@@ -338,22 +393,41 @@ static int Memento_appBlock(Memento_Blocks    *blks,
 }
 
 static int Memento_listBlock(Memento_BlkHeader *b,
-                              void              *arg)
+                             void              *arg)
 {
     int *counts = (int *)arg;
-    fprintf(stderr, "    0x%x:(size=%d,num=%d)\n",
-            MEMBLK_TOBLK(b), b->rawsize, b->sequence);
+    fprintf(stderr, "    0x%p:(size=%d,num=%d)\n",
+            MEMBLK_TOBLK(b), (int)b->rawsize, b->sequence);
     counts[0]++;
     counts[1]+= b->rawsize;
     return 0;
 }
 
-static void Memento_listBlocks(void) {
+void Memento_listBlocks(void) {
     int counts[2];
     counts[0] = 0;
     counts[1] = 0;
     fprintf(stderr, "Allocated blocks:\n");
     Memento_appBlocks(&globals.used, Memento_listBlock, &counts[0]);
+    fprintf(stderr, "  Total number of blocks = %d\n", counts[0]);
+    fprintf(stderr, "  Total size of blocks = %d\n", counts[1]);
+}
+
+static int Memento_listNewBlock(Memento_BlkHeader *b,
+                                void              *arg)
+{
+    if (b->flags & Memento_Flag_OldBlock)
+        return 0;
+    b->flags |= Memento_Flag_OldBlock;
+    return Memento_listBlock(b, arg);
+}
+
+void Memento_listNewBlocks(void) {
+    int counts[2];
+    counts[0] = 0;
+    counts[1] = 0;
+    fprintf(stderr, "Blocks allocated and still extant since last list:\n");
+    Memento_appBlocks(&globals.used, Memento_listNewBlock, &counts[0]);
     fprintf(stderr, "  Total number of blocks = %d\n", counts[0]);
     fprintf(stderr, "  Total size of blocks = %d\n", counts[1]);
 }
@@ -443,9 +517,17 @@ int Memento_breakAt(int event)
 
 #ifdef MEMENTO_HAS_FORK
 #include <unistd.h>
-#include <sys/syslimits.h>
 #include <sys/wait.h>
 #include <signal.h>
+#ifdef MEMENTO_STACKTRACE_METHOD
+#if MEMENTO_STACKTRACE_METHOD == 1
+#include <signal.h>
+#endif
+#endif
+
+/* FIXME: Find some portable way of getting this */
+/* MacOSX has 10240, Ubuntu seems to have 256 */
+#define OPEN_MAX 10240
 
 /* stashed_map[j] = i means that filedescriptor i-1 was duplicated to j */
 int stashed_map[OPEN_MAX];
@@ -453,6 +535,22 @@ int stashed_map[OPEN_MAX];
 static void Memento_signal(void)
 {
     fprintf(stderr, "SEGV after Memory squeezing @ %d\n", globals.squeezed);
+
+#ifdef MEMENTO_STACKTRACE_METHOD
+#if MEMENTO_STACKTRACE_METHOD == 1
+    {
+      void *array[100];
+      size_t size;
+
+      size = backtrace(array, 100);
+      fprintf(stderr, "------------------------------------------------------------------------\n");
+      fprintf(stderr, "Backtrace:\n");
+      backtrace_symbols_fd(array, size, 2);
+      fprintf(stderr, "------------------------------------------------------------------------\n");
+    }
+#endif
+#endif
+
     exit(1);
 }
 
@@ -502,6 +600,19 @@ void squeeze(void)
 }
 #endif
 
+int Memento_failThisEvent(void)
+{
+    if (!globals.inited)
+        Memento_init();
+
+    Memento_event();
+
+    if ((globals.squeezing) && (!globals.squeezed))
+        squeeze();
+
+    return globals.failing;
+}
+
 void *Memento_malloc(size_t s)
 {
     Memento_BlkHeader *memblk;
@@ -537,6 +648,7 @@ void *Memento_malloc(size_t s)
     memblk->rawsize       = s;
     memblk->sequence      = globals.sequence;
     memblk->lastCheckedOK = memblk->sequence;
+    memblk->flags         = 0;
     Memento_addBlockHead(&globals.used, memblk, 0);
     return MEMBLK_TOBLK(memblk);
 }
@@ -560,12 +672,12 @@ static int checkBlock(Memento_BlkHeader *memblk, const char *action)
                      &data, memblk);
     if (!data.found) {
         /* Failure! */
-        fprintf(stderr, "Attempt to %s block 0x%x(size=%d,num=%d) not on allocated list!\n",
+        fprintf(stderr, "Attempt to %s block 0x%p(size=%d,num=%d) not on allocated list!\n",
                 action, memblk, memblk->rawsize, memblk->sequence);
         Memento_breakpoint();
         return 1;
     } else if (data.preCorrupt || data.postCorrupt) {
-        fprintf(stderr, "Block 0x%x(size=%d,num=%d) found to be corrupted on %s!\n",
+        fprintf(stderr, "Block 0x%p(size=%d,num=%d) found to be corrupted on %s!\n",
                 action, memblk->rawsize, memblk->sequence, action);
         if (data.preCorrupt) {
             fprintf(stderr, "Preguard corrupted\n");
@@ -695,7 +807,7 @@ static int Memento_Internal_checkAllAlloced(Memento_BlkHeader *memblk, void *arg
             fprintf(stderr, "Allocated blocks:\n");
             data->found |= 2;
         }
-        fprintf(stderr, "  Block 0x%x(size=%d,num=%d)",
+        fprintf(stderr, "  Block 0x%p(size=%d,num=%d)",
                 memblk, memblk->rawsize, memblk->sequence);
         if (data->preCorrupt) {
             fprintf(stderr, " Preguard ");
@@ -724,10 +836,10 @@ static int Memento_Internal_checkAllFreed(Memento_BlkHeader *memblk, void *arg)
             fprintf(stderr, "Freed blocks:\n");
             data->found |= 4;
         }
-        fprintf(stderr, "  0x%x(size=%d,num=%d) ",
+        fprintf(stderr, "  0x%p(size=%d,num=%d) ",
                 MEMBLK_TOBLK(memblk), memblk->rawsize, memblk->sequence);
         if (data->freeCorrupt) {
-            fprintf(stderr, "index %d (address 0x%x) onwards ", data->index,
+            fprintf(stderr, "index %d (address 0x%p) onwards ", data->index,
                     &((char *)MEMBLK_TOBLK(memblk))[data->index]);
             if (data->preCorrupt) {
                 fprintf(stderr, "+ preguard ");
@@ -843,7 +955,7 @@ int Memento_find(void *a)
     data.flags = 0;
     Memento_appBlocks(&globals.used, Memento_containsAddr, &data);
     if (data.blk != NULL) {
-        fprintf(stderr, "Address 0x%x is in %sallocated block 0x%x(size=%d,num=%d)\n",
+        fprintf(stderr, "Address 0x%p is in %sallocated block 0x%p(size=%d,num=%d)\n",
                 data.addr,
                 (data.flags == 1 ? "" : (data.flags == 2 ?
                                          "preguard of " : "postguard of ")),
@@ -854,7 +966,7 @@ int Memento_find(void *a)
     data.flags = 0;
     Memento_appBlocks(&globals.free, Memento_containsAddr, &data);
     if (data.blk != NULL) {
-        fprintf(stderr, "Address 0x%x is in %sfreed block 0x%x(size=%d,num=%d)\n",
+        fprintf(stderr, "Address 0x%p is in %sfreed block 0x%p(size=%d,num=%d)\n",
                 data.addr,
                 (data.flags == 1 ? "" : (data.flags == 2 ?
                                          "preguard of " : "postguard of ")),
@@ -948,6 +1060,14 @@ void *Memento_realloc(void *b, size_t s)
 void *Memento_calloc(size_t n, size_t s)
 {
     return MEMENTO_UNDERLYING_CALLOC(n, s);
+}
+
+void (Memento_listBlocks)(void)
+{
+}
+
+void (Memento_listNewBlocks)(void)
+{
 }
 
 

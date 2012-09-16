@@ -44,9 +44,10 @@ extern_gs_lib_device_list();
  * descriptor if it is dynamic.
  */
 void
-gx_device_finalize(void *vptr)
+gx_device_finalize(const gs_memory_t *cmem, void *vptr)
 {
     gx_device * const dev = (gx_device *)vptr;
+    (void)cmem; /* unused */
 
     if (dev->icc_struct != NULL) {
         rc_decrement(dev->icc_struct, "gx_device_finalize(icc_profile)");
@@ -63,7 +64,7 @@ gx_device_finalize(void *vptr)
 void
 gx_device_free_local(gx_device *dev)
 {
-    gx_device_finalize(dev);
+    gx_device_finalize(dev->memory, dev);
 }
 
 /* GC procedures */
@@ -960,6 +961,18 @@ gx_parse_output_file_name(gs_parsed_file_name_t *pfn, const char **pfmt,
     if (strlen(pfn->iodev->dname) + pfn->len + code >= gp_file_name_sizeof)
         return_error(gs_error_undefinedfilename);
     return 0;
+}
+
+/* Check if we write each page into separate file. */
+bool
+gx_outputfile_is_separate_pages(const char *fname, gs_memory_t *memory)
+{
+    const char *fmt;
+    gs_parsed_file_name_t parsed;
+    int code = gx_parse_output_file_name(&parsed, &fmt, fname,
+                                         strlen(fname), memory);
+
+    return (code >= 0 && fmt != 0);
 }
 
 /* Open the output file for a device. */

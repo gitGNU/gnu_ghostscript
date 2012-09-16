@@ -378,7 +378,7 @@ set_linear_color_bits_mask_shift(gx_device * dev)
  * a value of zero then the bits associated with that colorant are zero.
  * These criteria allows the graphics library to build gx_color_index values
  * from the colorant values and not using the encode_color routine. This is
- * useful and necessary for overprinting, the WTS screeening, halftoning more
+ * useful and necessary for overprinting, halftoning more
  * than four colorants, and the fast shading logic.  However this information
  * is not setup by the default device macros.  Thus we attempt to derive this
  * information.
@@ -559,6 +559,7 @@ gx_device_fill_in_procs(register gx_device * dev)
 #undef CHECK_NON_DEFAULT
     fill_dev_proc(dev, strip_tile_rectangle, gx_default_strip_tile_rectangle);
     fill_dev_proc(dev, strip_copy_rop, gx_default_strip_copy_rop);
+    fill_dev_proc(dev, strip_copy_rop2, gx_default_strip_copy_rop2);
     fill_dev_proc(dev, get_clipping_box, gx_default_get_clipping_box);
     fill_dev_proc(dev, begin_typed_image, gx_default_begin_typed_image);
     fill_dev_proc(dev, get_bits_rectangle, gx_default_get_bits_rectangle);
@@ -669,7 +670,7 @@ gx_device_fill_in_procs(register gx_device * dev)
     /* NOT pop_transparency_state */
     /* NOT put_image */
     fill_dev_proc(dev, dev_spec_op, gx_default_dev_spec_op);
-    /* NOT copy_plane */
+    /* NOT copy_planes */
 }
 
 int

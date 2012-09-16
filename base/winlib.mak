@@ -111,7 +111,7 @@ FT_BRIDGE = 0
 
 # Which CMS are we using?
 !ifndef WHICH_CMS
-WHICH_CMS=lcms
+WHICH_CMS=lcms2
 !endif
 
 # Define the files to be removed by `make clean'.
@@ -140,6 +140,7 @@ BEGINFILES=$(GLGENDIR)\ccf32.tr\
 !include $(GLSRCDIR)\jasper.mak
 !include $(GLSRCDIR)\ldf_jb2.mak
 !include $(GLSRCDIR)\lwf_jp2.mak
+!include $(GLSRCDIR)\openjpeg.mak
 !include $(GLSRCDIR)\icclib.mak
 !include $(GLSRCDIR)\$(WHICH_CMS).mak
 !include $(GLSRCDIR)\ijs.mak
@@ -206,7 +207,7 @@ $(GLD)mshandle.dev: $(ECHOGS_XE) $(mshandle_)
 
 $(GLOBJ)gp_mshdl.$(OBJ): $(GLSRC)gp_mshdl.c $(AK)\
  $(ctype__h) $(errno__h) $(stdio__h) $(string__h)\
- $(gserror_h) $(gsmemory_h) $(gstypes_h) $(gxiodev_h)
+ $(gsmemory_h) $(gstypes_h) $(gxiodev_h) $(gserrors_h)
 	$(GLCC) $(GLO_)gp_mshdl.$(OBJ) $(C_) $(GLSRC)gp_mshdl.c
 
 # Define MS-Windows printer (file system) as a separable feature.
@@ -218,7 +219,7 @@ $(GLD)msprinter.dev: $(ECHOGS_XE) $(msprinter_)
 
 $(GLOBJ)gp_msprn.$(OBJ): $(GLSRC)gp_msprn.c $(AK)\
  $(ctype__h) $(errno__h) $(stdio__h) $(string__h)\
- $(gserror_h) $(gsmemory_h) $(gstypes_h) $(gxiodev_h)
+ $(gsmemory_h) $(gstypes_h) $(gxiodev_h)
 	$(GLCCWIN) $(GLO_)gp_msprn.$(OBJ) $(C_) $(GLSRC)gp_msprn.c
 
 # Define MS-Windows polling as a separable feature

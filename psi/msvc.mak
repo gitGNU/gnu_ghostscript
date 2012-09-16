@@ -26,6 +26,41 @@
 # Note: If you are planning to make self-extracting executables,
 # see winint.mak to find out about third-party software you will need.
 
+# If we are building MEMENTO=1, then adjust default debug flags
+!if "$(MEMENTO)"=="1"
+!ifndef DEBUG
+DEBUG=1
+!endif
+!ifndef TDEBUG
+TDEBUG=1
+!endif
+!ifndef DEBUGSYM
+DEBUGSYM=1
+!endif
+!endif
+
+# If we are building PROFILE=1, then adjust default debug flags
+!if "$(PROFILE)"=="1"
+!ifndef DEBUG
+DEBUG=0
+!endif
+!ifndef TDEBUG
+TDEBUG=0
+!endif
+!ifndef DEBUGSYM
+DEBUGSYM=1
+!endif
+!endif
+
+# Pick the target architecture file
+!if "$(TARGET_ARCH_FILE)"==""
+!ifdef WIN64
+TARGET_ARCH_FILE=$(GLSRCDIR)\..\arch\windows-x64-msvc.h
+!else
+TARGET_ARCH_FILE=$(GLSRCDIR)\..\arch\windows-x86-msvc.h
+!endif
+!endif
+
 # ------------------------------- Options ------------------------------- #
 
 ###### This section is the only part of the file you should need to edit.
@@ -36,26 +71,21 @@
 # source, generated intermediate file, and object directories
 # for the graphics library (GL) and the PostScript/PDF interpreter (PS).
 
-!if "$(DEBUG)"=="1"
-!ifdef WIN64
-DEFAULT_OBJ_DIR=.\debugobj64
+!if "$(MEMENTO)"=="1"
+DEFAULT_OBJ_DIR=.\memobj
 !else
-DEFAULT_OBJ_DIR=.\debugobj
-!endif
-!else
-!if "$(DEBUGSYM)"=="1"
-!ifdef WIN64
-DEFAULT_OBJ_DIR=.\profobj64
-!else
+!if "$(PROFILE)"=="1"
 DEFAULT_OBJ_DIR=.\profobj
-!endif
 !else
-!ifdef WIN64
-DEFAULT_OBJ_DIR=.\obj64
+!if "$(DEBUG)"=="1"
+DEFAULT_OBJ_DIR=.\debugobj
 !else
 DEFAULT_OBJ_DIR=.\obj
 !endif
 !endif
+!endif
+!ifdef WIN64
+DEFAULT_OBJ_DIR=$(DEFAULT_OBJ_DIR)64
 !endif
 
 !ifndef AUXDIR
@@ -65,6 +95,9 @@ AUXDIR=$(DEFAULT_OBJ_DIR)\aux_
 # Note that 32-bit and 64-bit binaries reside in a common directory
 # since the names are unique
 !ifndef BINDIR
+!if "$(MEMENTO)"=="1"
+BINDIR=.\membin
+!else
 !if "$(DEBUG)"=="1"
 BINDIR=.\debugbin
 !else
@@ -72,6 +105,7 @@ BINDIR=.\debugbin
 BINDIR=.\profbin
 !else
 BINDIR=.\bin
+!endif
 !endif
 !endif
 !endif
@@ -318,9 +352,14 @@ JPX_LIB=luratech
 !endif
 !endif
 
+!if !defined(JPX_LIB) && (defined(USE_JASPER))
+!if exist("jasper\src")
+JPX_LIB=jasper
+!endif
+!endif
 
 !ifndef JPX_LIB
-JPX_LIB=jasper
+JPX_LIB=openjpeg
 !endif
 
 # Alternatively, you can build a separate DLL
@@ -347,13 +386,6 @@ SHARE_IJS=0
 IJS_NAME=
 IJSSRCDIR=ijs
 IJSEXECTYPE=win
-!endif
-
-# Define the directory where the imdi library source is stored.
-# See devs.mak for more information
-
-!ifndef IMDISRCDIR
-IMDISRCDIR=imdi
 !endif
 
 # Define the directory where the CUPS library sources are stored,
@@ -391,6 +423,10 @@ UNICODECFLAGS=
 
 !ifndef CFLAGS
 CFLAGS=
+!endif
+
+!if "$(MEMENTO)"=="1"
+CFLAGS=$(CFLAGS) -DMEMENTO
 !endif
 
 CFLAGS=$(CFLAGS) $(XCFLAGS) $(UNICODECFLAGS)
@@ -818,12 +854,30 @@ JPX_CFLAGS=-DUSE_LWF_JP2 -DWIN64 -DNO_ASSEMBLY
 JPX_CFLAGS=-DUSE_LWF_JP2 -DWIN32 -DNO_ASSEMBLY
 !endif
 !endif
+!endif
+
+# OpenJPEG compiler flags
+#
+!if "$(JPX_LIB)" == "openjpeg"
+!ifndef JPXSRCDIR
+JPXSRCDIR=openjpeg
+!endif
+!ifndef JPX_CFLAGS
+!ifdef WIN64
+JPX_CFLAGS=-DUSE_OPENJPEG_JP2 -DWIN64 
 !else
-# Use jasper by default. See jasper.mak for more information.
+JPX_CFLAGS=-DUSE_OPENJPEG_JP2 -DWIN32 
+!endif
+!else
+JPX_CFLAGS = $JPX_CFLAGS -DUSE_OPENJPEG_JP2
+!endif
+!endif
+
+# Use jasper if nothing else works. See jasper.mak for more information.
 !ifndef JPXSRCDIR
 JPXSRCDIR=jasper
 !endif
-!endif
+
 
 # ------ Devices and features ------ #
 
@@ -949,7 +1003,7 @@ $(PSGEN)lib.rsp: $(TOP_MAKEFILES)
 
 !if $(MAKEDLL)
 # The graphical small EXE loader
-$(GS_XE): $(GSDLL_DLL)  $(DWOBJ) $(GSCONSOLE_XE) $(SETUP_XE) $(UNINSTALL_XE) $(GLOBJ)gp_wutf8.$(OBJ)
+$(GS_XE): $(GSDLL_DLL)  $(DWOBJ) $(GSCONSOLE_XE) $(GLOBJ)gp_wutf8.$(OBJ)
 	echo /SUBSYSTEM:WINDOWS > $(PSGEN)gswin.rsp
 !ifdef WIN64
 	echo /DEF:$(PSSRCDIR)\dwmain64.def /OUT:$(GS_XE) >> $(PSGEN)gswin.rsp
@@ -1015,49 +1069,6 @@ $(GSCONSOLE_XE): $(GS_ALL) $(DEVS_ALL) $(GSDLL_OBJS) $(OBJCNO) $(GS_OBJ).res $(P
 	del $(PSGEN)gswin.tr
 !endif
 
-# ---------------------- Setup and uninstall programs ---------------------- #
-
-!if $(MAKEDLL)
-
-$(SETUP_XE): $(PSOBJ)dwsetup.obj $(PSOBJ)dwinst.obj $(PSOBJ)dwsetup.res $(PSSRC)dwsetup.def $(PSSRC)dwsetup_x86.manifest $(PSSRC)dwsetup_x64.manifest $(LIBCTR)
-	echo /DEF:$(PSSRC)dwsetup.def /OUT:$(SETUP_XE) > $(PSGEN)dwsetup.rsp
-	echo $(PSOBJ)dwsetup.obj $(PSOBJ)dwinst.obj >> $(PSGEN)dwsetup.rsp
-	copy $(LIBCTR) $(PSGEN)dwsetup.tr
-	echo ole32.lib >> $(PSGEN)dwsetup.tr
-	echo uuid.lib >> $(PSGEN)dwsetup.tr
-	$(LINK) $(LCT) @$(PSGEN)dwsetup.rsp $(LINKLIBPATH) @$(PSGEN)dwsetup.tr $(PSOBJ)dwsetup.res
-	del $(PSGEN)dwsetup.rsp
-	del $(PSGEN)dwsetup.tr
-!if $(MSVC_VERSION) >= 8
-!ifdef WIN64
-	mt -nologo -manifest $(PSSRC)dwsetup_x64.manifest -outputresource:$(SETUP_XE);#1
-!else
-	mt -nologo -manifest $(PSSRC)dwsetup_x86.manifest -outputresource:$(SETUP_XE);#1
-!endif
-!endif
-
-$(UNINSTALL_XE): $(PSOBJ)dwuninst.obj $(PSOBJ)dwuninst.res $(PSSRC)dwuninst.def $(PSSRC)dwuninst_x86.manifest $(PSSRC)dwuninst_x64.manifest $(LIBCTR)
-	echo /DEF:$(PSSRC)dwuninst.def /OUT:$(UNINSTALL_XE) > $(PSGEN)dwuninst.rsp
-	echo $(PSOBJ)dwuninst.obj >> $(PSGEN)dwuninst.rsp
-	copy $(LIBCTR) $(PSGEN)dwuninst.tr
-	echo ole32.lib >> $(PSGEN)dwuninst.tr
-	echo uuid.lib >> $(PSGEN)dwuninst.tr
-	$(LINK) $(LCT) @$(PSGEN)dwuninst.rsp $(LINKLIBPATH) @$(PSGEN)dwuninst.tr $(PSOBJ)dwuninst.res
-	del $(PSGEN)dwuninst.rsp
-	del $(PSGEN)dwuninst.tr
-!if $(MSVC_VERSION) >= 8
-!ifdef WIN64
-	mt -nologo -manifest $(PSSRC)dwuninst_x64.manifest -outputresource:$(UNINSTALL_XE);#1
-!else
-	mt -nologo -manifest $(PSSRC)dwuninst_x86.manifest -outputresource:$(UNINSTALL_XE);#1
-!endif
-!endif
-
-!endif
-
-$(MAKE_FILELIST_XE): $(PSSRC)mkfilelt.cpp
-	$(CCAUX) /Fe$(MAKE_FILELIST_XE) $(PSSRC)mkfilelt.cpp $(CCAUX_TAIL)
-
 # ---------------------- Debug targets ---------------------- #
 # Simply set some definitions and call ourselves back         #
 
@@ -1078,10 +1089,24 @@ debugclean:
 debugbsc:
 	nmake -f $(MAKEFILE) DEVSTUDIO="$(DEVSTUDIO)" FT_BRIDGE=$(FT_BRIDGE) $(DEBUGDEFS) $(WINDEFS) bsc
 
-# ---------------------- Profile targets ---------------------- #
+# --------------------- Memento targets --------------------- #
 # Simply set some definitions and call ourselves back         #
 
-PROFILEDEFS=DEBUGSYM=1
+MEMENTODEFS=$(DEBUGDEFS) MEMENTO=1
+
+memento-target:
+	nmake -f $(MAKEFILE) DEVSTUDIO="$(DEVSTUDIO)" FT_BRIDGE=$(FT_BRIDGE) $(MEMENTODEFS) $(WINDEFS)
+
+mementoclean:
+	nmake -f $(MAKEFILE) DEVSTUDIO="$(DEVSTUDIO)" FT_BRIDGE=$(FT_BRIDGE) $(MEMENTODEFS) $(WINDEFS) clean
+
+mementobsc:
+	nmake -f $(MAKEFILE) DEVSTUDIO="$(DEVSTUDIO)" FT_BRIDGE=$(FT_BRIDGE) $(MEMENTODEFS) $(WINDEFS) bsc
+
+# --------------------- Profile targets --------------------- #
+# Simply set some definitions and call ourselves back         #
+
+PROFILEDEFS=PROFILE=1
 
 profile:
 	nmake -f $(MAKEFILE) DEVSTUDIO="$(DEVSTUDIO)" FT_BRIDGE=$(FT_BRIDGE) $(PROFILEDEFS) $(WINDEFS)

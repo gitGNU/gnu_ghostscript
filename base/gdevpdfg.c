@@ -234,6 +234,8 @@ pdf_reset_graphics_old(gx_device_pdf * pdev)
     }
     pdev->fill_overprint = false;
     pdev->stroke_overprint = false;
+    pdev->remap_fill_color = false;
+    pdev->remap_stroke_color = false;
     pdf_reset_text(pdev);
 }
 
@@ -417,8 +419,14 @@ pdf_reset_color(gx_device_pdf * pdev, const gs_imager_state * pis,
                 else if (pdc->type == &gx_dc_pure_masked) {
                     code = pdf_put_uncolored_pattern(pdev, pdc, pcs,
                                 ppscc, pis->have_pattern_streams, &pres);
-                    if (code < 0 || pres == 0)
+                    if (code < 0 || pres == 0) {
+                        /* replaced a pattern with a flat fill, but we still
+                         * need to change the 'saved' colour or we will
+                         * get out of step with the PDF content.
+                         */
+                        *psc = temp;
                         return code;
+                    }
                     if (pis->have_pattern_streams)
                         code = pdf_write_ccolor(pdev, pis, pcc);
                 } else if (pdc->type == &gx_dc_pattern2) {
@@ -878,6 +886,18 @@ pdf_write_spot_function(gx_device_pdf *pdev, const gx_ht_order *porder,
     gs_free_object(mem, values, "pdf_write_spot_function");
     return code;
 }
+
+/* if (memcmp(order.levels, porder->levels, order.num_levels * sizeof(*order.levels))) */ 
+static int
+compare_gx_ht_order_levels(const gx_ht_order *order1, const gx_ht_order *order2) {
+  int i;
+  for (i=0;  i<order1->num_levels;  i++) {
+    if (order1->levels[i] != order2->levels[i])
+      return(1);
+  }
+  return(0);
+}
+
 static int
 pdf_write_spot_halftone(gx_device_pdf *pdev, const gs_spot_halftone *psht,
                         const gx_ht_order *porder, long *pid)
@@ -916,8 +936,7 @@ pdf_write_spot_halftone(gx_device_pdf *pdev, const gs_spot_halftone *psht,
             if (code < 0)
                 continue;
             /* Compare the bits and levels arrays. */
-            if (memcmp(order.levels, porder->levels,
-                       order.num_levels * sizeof(*order.levels)))
+            if (compare_gx_ht_order_levels(&order,porder))
                 continue;
             if (memcmp(order.bit_data, porder->bit_data,
                        order.num_bits * porder->procs->bit_data_elt_size))

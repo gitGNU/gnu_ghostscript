@@ -255,6 +255,95 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
             return code;
         }
     }
+
+    /* Grid fit: A common construction in postscript/PDF files is for images
+     * to be constructed as a series of 'stacked' 1 pixel high images.
+     * Furthermore, many of these are implemented as an imagemask plotted on
+     * top of thin rectangles. The different fill rules for images and line
+     * art produces problems; line art fills a pixel if any part of it is
+     * touched - images only fill a pixel if the centre of the pixel is
+     * covered. Bug 692666 is such a problem.
+     *
+     * As a workaround for this problem, the code below was introduced. The
+     * concept is that orthogonal images can be 'grid fitted' (or 'stretched')
+     * to entirely cover pixels that they touch. Initially I had this working
+     * for all images regardless of type, but as testing has proceeded, this
+     * showed more and more regressions, so I've cut the cases back in which
+     * this code is used until it now only triggers on imagemasks that are
+     * either 1 pixel high, or wide, and then not if we are rendering a
+     * glyph (such as from a type3 font).
+     */
+    if (pis != NULL && pis->is_gstate && ((gs_state *)pis)->show_gstate != NULL) {
+        /* If we're a graphics state, and we're in a text object, then we
+         * must be in a type3 font. Don't fiddle with it. */
+    } else if (!penum->masked || penum->image_parent_type != 0) {
+        /* We only grid fit for ImageMasks, currently */
+    } else if (pis != NULL && pis->fill_adjust.x == 0 && pis->fill_adjust.y == 0) {
+        /* If fill adjust is disabled, so is grid fitting */
+    } else if (mat.xy == 0 && mat.yx == 0) {
+        if (width == 1) {
+            if (mat.xx > 0) {
+                fixed ix0 = int2fixed(fixed2int(float2fixed(mat.tx)));
+                double x1 = mat.tx + mat.xx * width;
+                fixed ix1 = int2fixed(fixed2int_ceiling(float2fixed(x1)));
+                mat.tx = (double)fixed2float(ix0);
+                mat.xx = (double)(fixed2float(ix1 - ix0)/width);
+            } else if (mat.xx < 0) {
+                fixed ix0 = int2fixed(fixed2int_ceiling(float2fixed(mat.tx)));
+                double x1 = mat.tx + mat.xx * width;
+                fixed ix1 = int2fixed(fixed2int(float2fixed(x1)));
+                mat.tx = (double)fixed2float(ix0);
+                mat.xx = (double)(fixed2float(ix1 - ix0)/width);
+            }
+        }
+        if (height == 1) {
+            if (mat.yy > 0) {
+                fixed iy0 = int2fixed(fixed2int(float2fixed(mat.ty)));
+                double y1 = mat.ty + mat.yy * height;
+                fixed iy1 = int2fixed(fixed2int_ceiling(float2fixed(y1)));
+                mat.ty = (double)fixed2float(iy0);
+                mat.yy = (double)(fixed2float(iy1 - iy0)/height);
+            } else if (mat.yy < 0) {
+                fixed iy0 = int2fixed(fixed2int_ceiling(float2fixed(mat.ty)));
+                double y1 = mat.ty + mat.yy * height;
+                fixed iy1 = int2fixed(fixed2int(float2fixed(y1)));
+                mat.ty = (double)fixed2float(iy0);
+                mat.yy = ((double)fixed2float(iy1 - iy0)/height);
+            }
+        }
+    } else if (mat.xx == 0 && mat.yy == 0) {
+        if (height == 1) {
+            if (mat.yx > 0) {
+                fixed ix0 = int2fixed(fixed2int(float2fixed(mat.tx)));
+                double x1 = mat.tx + mat.yx * height;
+                fixed ix1 = int2fixed(fixed2int_ceiling(float2fixed(x1)));
+                mat.tx = (double)fixed2float(ix0);
+                mat.yx = (double)(fixed2float(ix1 - ix0)/height);
+            } else if (mat.yx < 0) {
+                fixed ix0 = int2fixed(fixed2int_ceiling(float2fixed(mat.tx)));
+                double x1 = mat.tx + mat.yx * height;
+                fixed ix1 = int2fixed(fixed2int(float2fixed(x1)));
+                mat.tx = (double)fixed2float(ix0);
+                mat.yx = (double)(fixed2float(ix1 - ix0)/height);
+            }
+        }
+        if (width == 1) {
+            if (mat.xy > 0) {
+                fixed iy0 = int2fixed(fixed2int(float2fixed(mat.ty)));
+                double y1 = mat.ty + mat.xy * width;
+                fixed iy1 = int2fixed(fixed2int_ceiling(float2fixed(y1)));
+                mat.ty = (double)fixed2float(iy0);
+                mat.xy = (double)(fixed2float(iy1 - iy0)/width);
+            } else if (mat.xy < 0) {
+                fixed iy0 = int2fixed(fixed2int_ceiling(float2fixed(mat.ty)));
+                double y1 = mat.ty + mat.xy * width;
+                fixed iy1 = int2fixed(fixed2int(float2fixed(y1)));
+                mat.ty = (double)fixed2float(iy0);
+                mat.xy = ((double)fixed2float(iy1 - iy0)/width);
+            }
+        }
+    }
+
     /*penum->matrix = mat;*/
     penum->matrix.xx = mat.xx;
     penum->matrix.xy = mat.xy;
@@ -734,8 +823,9 @@ color_draws_b_w(gx_device * dev, const gx_drawing_color * pdcolor)
     return -1;
 }
 
+
 static void
-image_cache_decode(gx_image_enum *penum, byte input, byte *output)
+image_cache_decode(gx_image_enum *penum, byte input, byte *output, bool scale)
 {
     float temp;
 
@@ -752,7 +842,9 @@ image_cache_decode(gx_image_enum *penum, byte input, byte *output)
         case sd_compute:
             temp = penum->map[0].decode_base +
                 (float) input * penum->map[0].decode_factor;
-            temp *= 255;
+            if (scale) {
+                temp = temp * 255.0;
+            }
             if (temp > 255) temp = 255;
             if (temp < 0 ) temp = 0;
             *output = (unsigned char) temp;
@@ -761,6 +853,20 @@ image_cache_decode(gx_image_enum *penum, byte input, byte *output)
             *output = 0;
             break;
     }
+}
+
+static bool
+decode_range_needed(gx_image_enum *penum)
+{
+    bool scale = true;
+
+    if (penum->map[0].decoding == sd_compute) {
+        if (!(gs_color_space_is_ICC(penum->pcs) || 
+            gs_color_space_is_PSCIE(penum->pcs))) {
+            scale = false;
+        } 
+    } 
+    return scale;
 }
 
 /* A special case where we go ahead and initialize the whole index cache with
@@ -777,6 +883,7 @@ image_init_color_cache(gx_image_enum * penum, int bps, int spp)
     bool need_decode = penum->icc_setup.need_decode;
     bool has_transfer = penum->icc_setup.has_transfer;
     byte value;
+    bool decode_scale = true;
     int k, kk;
     byte psrc[4];
     byte *temp_buffer;
@@ -819,6 +926,11 @@ image_init_color_cache(gx_image_enum * penum, int bps, int spp)
        the manner shown below so that the common case of no decode and indexed
        image with a look-up-table uses the table data directly or does as many
        operations with memcpy as we can */
+    /* Need to check the decode output range so we know how we need to scale.
+       We want 8 bit output */
+    if (need_decode) {
+        decode_scale = decode_range_needed(penum);
+    }
     if (penum->icc_link->is_identity) {
         /* No CM needed.  */
         if (need_decode || has_transfer) {
@@ -827,7 +939,7 @@ image_init_color_cache(gx_image_enum * penum, int bps, int spp)
             for (k = 0; k < num_entries; k++) {
                 /* Data is in k */
                 if (need_decode) {
-                    image_cache_decode(penum, k, &value);
+                    image_cache_decode(penum, k, &value, decode_scale);
                 } else {
                     value = k;
                 }
@@ -856,7 +968,7 @@ image_init_color_cache(gx_image_enum * penum, int bps, int spp)
             if (penum->pcs->params.indexed.use_proc) {
                 /* Have to do the slow way */
                 for (k = 0; k < num_entries; k++) {
-                    gs_cspace_indexed_lookup_bytes(penum->pcs, k, psrc);
+                    gs_cspace_indexed_lookup_bytes(penum->pcs, (float)k, psrc);
                     memcpy(&(penum->color_cache->device_contone[k * num_des_comp]),
                                psrc, num_des_comp);
                 }
@@ -882,14 +994,14 @@ image_init_color_cache(gx_image_enum * penum, int bps, int spp)
             if (is_indexed) {
                 /* Decode and un-indexed */
                 for (k = 0; k < num_entries; k++) {
-                    image_cache_decode(penum, k, &value);
+                    image_cache_decode(penum, k, &value, decode_scale);
                     gs_cspace_indexed_lookup_bytes(penum->pcs, value, psrc);
                     memcpy(&(temp_buffer[k * num_src_comp]), psrc, num_src_comp);
                 }
             } else {
                 /* Decode only */
                 for (k = 0; k < num_entries; k++) {
-                    image_cache_decode(penum, k, &(temp_buffer[k]));
+                    image_cache_decode(penum, k, &(temp_buffer[k]), decode_scale);
                 }
             }
         } else {
@@ -899,11 +1011,11 @@ image_init_color_cache(gx_image_enum * penum, int bps, int spp)
                 if (penum->pcs->params.indexed.use_proc) {
                     /* Have to do the slow way */
                     for (k = 0; k < num_entries; k++) {
-                        gs_cspace_indexed_lookup_bytes(penum->pcs, k, psrc);
+                        gs_cspace_indexed_lookup_bytes(penum->pcs, (float)k, psrc);
                         memcpy(&(temp_buffer[k * num_src_comp]), psrc, num_src_comp);
                     }
                 } else {
-                    /* Use the index table dirctly. */
+                    /* Use the index table directly. */
                     gs_free_object(penum->memory, temp_buffer, "image_init_color_cache");
                     free_temp_buffer = false;
                     temp_buffer = penum->pcs->params.indexed.lookup.table.data;
@@ -921,9 +1033,10 @@ image_init_color_cache(gx_image_enum * penum, int bps, int spp)
         gsicc_init_buffer(&output_buff_desc, num_des_comp, 1, false, false, false,
                           0, num_entries * num_des_comp,
                       1, num_entries);
-        gscms_transform_color_buffer(penum->icc_link, &input_buff_desc,
-                                    &output_buff_desc, (void*) temp_buffer,
-                                    (void*) penum->color_cache->device_contone);
+        (penum->icc_link->procs.map_buffer)(penum->dev, penum->icc_link, 
+                                            &input_buff_desc, &output_buff_desc, 
+                                            (void*) temp_buffer,
+                                            (void*) penum->color_cache->device_contone);
         /* Check if we need to apply any transfer functions.  If so then do it now */
         if (has_transfer) {
             for (k = 0; k < num_entries; k++) {

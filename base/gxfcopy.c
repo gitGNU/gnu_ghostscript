@@ -809,7 +809,7 @@ compare_glyphs(const gs_font *cfont, const gs_font *ofont, gs_glyph *glyphs,
                 return_error(gs_error_rangecheck); /* abnormal glyph recursion */
             if (info0.num_pieces > countof(pieces0) / 2) {
                 pieces = (gs_glyph *)gs_alloc_bytes(cfont->memory,
-                    sizeof(glyphs) * info0.num_pieces * 2, "compare_glyphs");
+                    sizeof(gs_glyph) * info0.num_pieces * 2, "compare_glyphs");
                 if (pieces == 0)
                     return_error(gs_error_VMerror);
             }
@@ -2004,7 +2004,13 @@ gs_copy_font(gs_font *font, const gs_matrix *orig_matrix, gs_memory_t *mem, gs_f
         break;
     case ft_CID_encrypted:
         procs = &copied_procs_cid0;
-        glyphs_size = ((gs_font_cid0 *)font)->cidata.common.CIDCount;
+        /* We used to use the CIDCount here, but for CIDFonts with a GlyphDirectory
+         * (dictionary form) the number of CIDs is not the same as the highest CID.
+         * Because we use the CID as the slot, we need to assign the highest possible
+         * CID, not the number of CIDs. Don't forget to add one because CIDs
+         * count from 0.
+         */
+        glyphs_size = ((gs_font_cid0 *)font)->cidata.common.MaxCID + 1;
         break;
     case ft_CID_TrueType:
         procs = &copied_procs_cid2;
@@ -2168,6 +2174,20 @@ gs_copy_glyph_options(gs_font *font, gs_glyph glyph, gs_font *copied,
                                      (options & ~COPY_GLYPH_NO_OLD) | COPY_GLYPH_BY_INDEX);
         if (code < 0)
             return code;
+        /* if code > 0 then we already have the glyph, so no need to process further.
+         * If the original glyph was not a CID then we are copying by name, not by index.
+         * But the copy above copies by index which means we don't have an entry for
+         * the glyp-h component in the name table. If we are using names then we
+         * absolutely *must* have an entry in the name table, so go ahead and add
+         * one here. Note that the array returned by psf_add_subset_pieces has the
+         * GIDs with an offset of GS_MIN_GLYPH_INDEX added.
+         */
+        if (code == 0 && glyph < GS_MIN_CID_GLYPH && glyphs[i] > GS_MIN_GLYPH_INDEX) {
+            code = copy_glyph_name(font, glyphs[i] - GS_MIN_GLYPH_INDEX, copied,
+                               glyphs[i]);
+            if (code < 0)
+                return code;
+        }
     }
     /*
      * Because 'seac' accesses the Encoding of the font as well as the

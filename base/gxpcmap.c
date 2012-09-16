@@ -34,6 +34,7 @@
 #include "gzstate.h"
 #include "gxdevsop.h"
 #include "gdevmpla.h"
+#include "gdevp14.h"
 
 #if RAW_PATTERN_DUMP
 unsigned int global_pat_index = 0;
@@ -88,7 +89,7 @@ static dev_proc_close_device(pattern_accum_close);
 static dev_proc_fill_rectangle(pattern_accum_fill_rectangle);
 static dev_proc_copy_mono(pattern_accum_copy_mono);
 static dev_proc_copy_color(pattern_accum_copy_color);
-static dev_proc_copy_plane(pattern_accum_copy_plane);
+static dev_proc_copy_planes(pattern_accum_copy_planes);
 static dev_proc_get_bits_rectangle(pattern_accum_get_bits_rectangle);
 
 /* The device descriptor */
@@ -164,8 +165,10 @@ static const gx_device_pattern_accum gs_pattern_accum_device =
      NULL,                              /* pop_transparency_state */
      NULL,                              /* put_image */
      NULL,                              /* dev_spec_op */
-     pattern_accum_copy_plane,          /* copy_plane */
-     NULL                               /* get_profile */
+     pattern_accum_copy_planes,         /* copy_planes */
+     NULL,                              /* get_profile */
+     NULL,                              /* set_graphics_type_tag */
+     gx_default_strip_copy_rop2
 },
  0,                             /* target */
  0, 0, 0, 0                     /* bitmap_memory, bits, mask, instance */
@@ -210,11 +213,11 @@ static int
 gx_pattern_size_estimate(gs_pattern1_instance_t *pinst, int has_tags)
 {
     gx_device *tdev = pinst->saved->device;
-    int depth = (pinst->template.PaintType == 2 ? 1 : tdev->color_info.depth);
+    int depth = (pinst->templat.PaintType == 2 ? 1 : tdev->color_info.depth);
     int64_t raster;
     int64_t size;
 
-    if (pinst->template.uses_transparency) {
+    if (pinst->templat.uses_transparency) {
         raster = (pinst->size.x * ((depth/8) + 1 + has_tags));
         size = raster > max_int / pinst->size.y ? (max_int & ~0xFFFF) : raster * pinst->size.y;
     } else {
@@ -248,6 +251,12 @@ gx_pattern_accum_alloc(gs_memory_t * mem, gs_memory_t * storage_memory,
     int force_no_clist = 0;
     int max_pattern_bitmap = tdev->MaxPatternBitmap == 0 ? MaxPatternBitmap_DEFAULT :
                                 tdev->MaxPatternBitmap;
+
+     if (dev_proc(tdev, dev_spec_op)(tdev, gxdso_is_native_planar, NULL, 0)) {
+        pinst->is_planar = true;
+     } else {
+        pinst->is_planar = false;
+     }
     /*
      * If the target device can accumulate a pattern stream and the language
      * client supports high level patterns (ps and pdf only) we don't need a
@@ -267,7 +276,7 @@ gx_pattern_accum_alloc(gs_memory_t * mem, gs_memory_t * storage_memory,
         gxdso_pattern_can_accum, pinst, 0) == 1)
         force_no_clist = 1; /* Set only for first time through */
     if (force_no_clist || (size < max_pattern_bitmap && !pinst->is_clist)
-        || pinst->template.PaintType != 1 ) {
+        || pinst->templat.PaintType != 1 ) {
         gx_device_pattern_accum *adev = gs_alloc_struct(mem, gx_device_pattern_accum,
                         &st_device_pattern_accum, cname);
         if (adev == 0)
@@ -357,7 +366,7 @@ gx_pattern_accum_alloc(gs_memory_t * mem, gs_memory_t * storage_memory,
         cwdev->data = data;
         cwdev->data_size = data_size;
         cwdev->buf_procs = buf_procs;
-        if ( pinst->template.uses_transparency) {
+        if ( pinst->templat.uses_transparency) {
             cwdev->band_params.page_uses_transparency = true;
             cwdev->page_uses_transparency = true;
         } else {
@@ -424,7 +433,7 @@ pattern_accum_open(gx_device * dev)
     padev->color_info = target->color_info;
     /* Bug 689737: If PaintType == 2 (Uncolored tiling pattern), pattern is
      * 1bpp bitmap. No antialiasing in this case! */
-    if (pinst->template.PaintType == 2) {
+    if (pinst->templat.PaintType == 2) {
         padev->color_info.anti_alias.text_bits = 1;
         padev->color_info.anti_alias.graphics_bits = 1;
     }
@@ -432,7 +441,7 @@ pattern_accum_open(gx_device * dev)
        now so that the mem device allocates the proper
        buffer space for the pattern template.  We can
        do this since the transparency code all */
-    if (pinst->template.uses_transparency) {
+    if (pinst->templat.uses_transparency) {
         /* Allocate structure that we will use for the trans pattern */
         padev->transbuff = gs_alloc_struct(mem,gx_pattern_trans_t,&st_pattern_trans,"pattern_accum_open(trans)");
         padev->transbuff->transbytes = NULL;
@@ -464,7 +473,7 @@ pattern_accum_open(gx_device * dev)
     }
 
     if (code >= 0) {
-        if (pinst->template.uses_transparency) {
+        if (pinst->templat.uses_transparency) {
             /* In this case, we will grab the buffer created
                by the graphic state's device (which is pdf14) and
                we will be tiling that into a transparency group buffer
@@ -473,7 +482,7 @@ pattern_accum_open(gx_device * dev)
                best just to keep the data in that form */
             gx_device_set_target((gx_device_forward *)padev, target);
         } else {
-            switch (pinst->template.PaintType) {
+            switch (pinst->templat.PaintType) {
             case 2:             /* uncolored */
                 gx_device_set_target((gx_device_forward *)padev, target);
                 break;
@@ -642,15 +651,15 @@ pattern_accum_copy_color(gx_device * dev, const byte * data, int data_x,
 
 /* Copy a color plane. */
 static int
-pattern_accum_copy_plane(gx_device * dev, const byte * data, int data_x,
-                         int raster, gx_bitmap_id id,
-                         int x, int y, int w, int h, int plane)
+pattern_accum_copy_planes(gx_device * dev, const byte * data, int data_x,
+                          int raster, gx_bitmap_id id,
+                          int x, int y, int w, int h, int plane_height)
 {
     gx_device_pattern_accum *const padev = (gx_device_pattern_accum *) dev;
 
     if (padev->bits)
-        (*dev_proc(padev->target, copy_plane))
-            (padev->target, data, data_x, raster, id, x, y, w, h, plane);
+        (*dev_proc(padev->target, copy_planes))
+            (padev->target, data, data_x, raster, id, x, y, w, h, plane_height);
     if (padev->mask)
         return (*dev_proc(padev->mask, fill_rectangle))
             ((gx_device *) padev->mask, x, y, w, h, (gx_color_index) 1);
@@ -671,7 +680,7 @@ pattern_accum_get_bits_rectangle(gx_device * dev, const gs_int_rect * prect,
         return (*dev_proc(padev->target, get_bits_rectangle))
             (padev->target, prect, params, unread);
 
-    if (pinst->template.PaintType == 2)
+    if (pinst->templat.PaintType == 2)
         return 0;
     else
         return_error(gs_error_Fatal); /* shouldn't happen */
@@ -727,6 +736,7 @@ gx_pattern_alloc_cache(gs_memory_t * mem, uint num_tiles, ulong max_bits)
         tiles->index = i;
         tiles->cdev = NULL;
         tiles->ttrans = NULL;
+        tiles->is_planar = false;
     }
     return pcache;
 }
@@ -961,9 +971,10 @@ gx_pattern_cache_add_entry(gs_imager_state * pis,
     ctile = &pcache->tiles[id % pcache->num_tiles];
     gx_pattern_cache_free_entry(pcache, ctile);         /* ensure that this cache slot is empty */
     ctile->id = id;
+    ctile->is_planar = pinst->is_planar;
     ctile->depth = fdev->color_info.depth;
-    ctile->uid = pinst->template.uid;
-    ctile->tiling_type = pinst->template.TilingType;
+    ctile->uid = pinst->templat.uid;
+    ctile->tiling_type = pinst->templat.TilingType;
     ctile->step_matrix = pinst->step_matrix;
     ctile->bbox = pinst->bbox;
     ctile->is_simple = pinst->is_simple;
@@ -1061,8 +1072,8 @@ gx_pattern_cache_add_dummy_entry(gs_imager_state *pis,
     gx_pattern_cache_free_entry(pcache, ctile);
     ctile->id = id;
     ctile->depth = depth;
-    ctile->uid = pinst->template.uid;
-    ctile->tiling_type = pinst->template.TilingType;
+    ctile->uid = pinst->templat.uid;
+    ctile->tiling_type = pinst->templat.TilingType;
     ctile->step_matrix = pinst->step_matrix;
     ctile->bbox = pinst->bbox;
     ctile->is_simple = pinst->is_simple;
@@ -1085,30 +1096,78 @@ gx_pattern_cache_add_dummy_entry(gs_imager_state *pis,
    file name */
 static void
 dump_raw_pattern(int height, int width, int n_chan, int depth,
-                byte *Buffer, int raster)
+                byte *Buffer, int raster, const gx_device_memory * mdev)
 {
     char full_file_name[50];
     FILE *fid;
     int max_bands;
-    int j,k;
+    int j, k, m;
     int byte_number, bit_position;
     unsigned char current_byte;
     unsigned char output_val;
+    bool is_planar;
+    byte *curr_ptr = Buffer;
+    int plane_offset;
 
+    is_planar = dev_proc(mdev, dev_spec_op)(mdev, gxdso_is_native_planar, NULL, 0);
     max_bands = ( n_chan < 57 ? n_chan : 56);   /* Photoshop handles at most 56 bands */
-    sprintf(full_file_name,"%d)PATTERN_%dx%dx%d.raw",global_pat_index,width,height,max_bands);
-    fid = fopen(full_file_name,"wb");
-    if (depth > 1) {
-        fwrite(Buffer,1,max_bands*height*width,fid);
+    if (is_planar) {
+        sprintf(full_file_name,"%d)PATTERN_PLANE_%dx%dx%d.raw",global_pat_index,
+                width,height,max_bands);
     } else {
-        /* Binary image. Lets get to 8 bit for debugging */
-        for (j = 0; j < height; j++) {
-            for (k = 0; k < width; k++) {
-                byte_number = (int) ceil((( (float) k + 1.0) / 8.0)) - 1;
-                current_byte = Buffer[j*raster+byte_number];
-                bit_position = 7 - (k -  byte_number*8);
-                output_val = ((current_byte >> bit_position) & 0x1) * 255;
-                fwrite(&output_val,1,1,fid);
+        sprintf(full_file_name,"%d)PATTERN_CHUNK_%dx%dx%d.raw",global_pat_index,
+                width,height,max_bands);
+    }
+    fid = fopen(full_file_name,"wb");
+    if (depth == 8 * n_chan) {
+        /* Contone data. */
+        if (is_planar) {
+            for (m = 0; m < max_bands; m++) {
+                curr_ptr = mdev->line_ptrs[m*mdev->height];
+                fwrite(curr_ptr,1,height*width,fid);
+            }
+        } else {
+            /* Just dump it like it is */
+            fwrite(Buffer,1,max_bands*height*width,fid);
+        }
+    } else {
+        /* Binary Data. Lets get to 8 bit for debugging.  We have to 
+           worry about planar vs. chunky.  Note this assumes 1 bit data
+           only. */
+        if (is_planar) {
+            plane_offset = mdev->raster * mdev->height;
+            for (m = 0; m < max_bands; m++) {
+                curr_ptr = mdev->line_ptrs[m*mdev->height];
+                for (j = 0; j < height; j++) {
+                    for (k = 0; k < width; k++) {
+                        byte_number = (int) ceil((( (float) k + 1.0) / 8.0)) - 1;
+                        current_byte = curr_ptr[j*(mdev->raster) + byte_number];
+                        bit_position = 7 - (k -  byte_number*8);
+                        output_val = ((current_byte >> bit_position) & 0x1) * 255;
+                        fwrite(&output_val,1,1,fid);
+                    }
+                }
+            }
+        } else {
+            for (j = 0; j < height; j++) {
+                for (k = 0; k < width; k++) {
+                    for (m = 0; m < max_bands; m++) {
+                        /* index current byte */
+                        byte_number = 
+                            (int) ceil((( (float) k * (float) max_bands + 
+                                          (float) m + 1.0) / 8.0)) - 1;
+                        /* get byte of interest */
+                        current_byte = 
+                                curr_ptr[j*(mdev->raster) + byte_number];
+                        /* get bit position */
+                        bit_position = 
+                                7 - (k * max_bands + m -  byte_number * 8);
+                        /* extract and create byte */
+                        output_val = 
+                                ((current_byte >> bit_position) & 0x1) * 255;
+                        fwrite(&output_val,1,1,fid);
+                    }
+                }
             }
         }
     }
@@ -1126,6 +1185,7 @@ make_bitmap(register gx_strip_bitmap * pbm, const gx_device_memory * mdev,
     pbm->rep_height = pbm->size.y = mdev->height;
     pbm->id = id;
     pbm->rep_shift = pbm->shift = 0;
+    pbm->num_planes = (mdev->num_planes > 1 ? mdev->num_planes : 1);
 
         /* Lets dump this for debug purposes */
 
@@ -1134,7 +1194,7 @@ make_bitmap(register gx_strip_bitmap * pbm, const gx_device_memory * mdev,
                         mdev->color_info.num_components,
                         mdev->color_info.depth,
                         (unsigned char*) mdev->base,
-                        pbm->raster);
+                        pbm->raster, mdev);
 
         global_pat_index++;
 
@@ -1235,7 +1295,7 @@ gx_pattern_load(gx_device_color * pdc, const gs_imager_state * pis,
     if (saved->pattern_cache == 0)
         saved->pattern_cache = pis->pattern_cache;
     gs_setdevice_no_init(saved, (gx_device *)adev);
-    if (pinst->template.uses_transparency) {
+    if (pinst->templat.uses_transparency) {
         if_debug0('v', "gx_pattern_load: pushing the pdf14 compositor device into this graphics state\n");
         if ((code = gs_push_pdf14trans_device(saved, true)) < 0)
             return code;
@@ -1248,15 +1308,15 @@ gx_pattern_load(gx_device_color * pdc, const gs_imager_state * pis,
            make a similar change in zpcolor.c where much of this
            pattern code is duplicated to support high level stream
            patterns. */
-        if (pinst->template.PaintType == 1)
+        if (pinst->templat.PaintType == 1 && !(pinst->is_clist))
             if ((code = gx_erase_colored_pattern(saved)) < 0)
                 return code;
     }
 
-    code = (*pinst->template.PaintProc)(&pdc->ccolor, saved);
+    code = (*pinst->templat.PaintProc)(&pdc->ccolor, saved);
     if (code < 0) {
         gx_device_retain(saved->device, false);         /* device no longer retained */
-        if (pinst->template.uses_transparency) {
+        if (pinst->templat.uses_transparency) {
             dev_proc(saved->device, close_device)((gx_device *)saved->device);
             dev_proc(adev, close_device)((gx_device *)adev);
             if (pinst->is_clist == 0)
@@ -1272,10 +1332,27 @@ gx_pattern_load(gx_device_color * pdc, const gs_imager_state * pis,
         gs_state_free(saved);
         return code;
     }
-    if (pinst->template.uses_transparency) {
-        if_debug0('v', "gx_pattern_load: popping the pdf14 compositor device from this graphics state\n");
+    if (pinst->templat.uses_transparency) {
+        /* if_debug0('v', "gx_pattern_load: popping the pdf14 compositor device from this graphics state\n");
         if ((code = gs_pop_pdf14trans_device(saved, true)) < 0)
-            return code;
+            return code; */
+            if (pinst->is_clist) {
+                /* Send the compositor command to close the PDF14 device */
+                code = (gs_pop_pdf14trans_device(saved, true) < 0);
+                if (code < 0)
+                    return code;
+            } else {
+                /* Not a clist, get PDF14 buffer information */
+                code = 
+                    pdf14_get_buffer_information(saved->device,
+                                                ((gx_device_pattern_accum*)adev)->transbuff,
+                                                 saved->memory,
+                                                 true);
+                /* PDF14 device (and buffer) is destroyed when pattern cache
+                   entry is removed */
+                if (code < 0)
+                    return code;
+            }
     }
     /* We REALLY don't like the following cast.... */
     code = gx_pattern_cache_add_entry((gs_imager_state *)pis,
@@ -1334,7 +1411,7 @@ gs_pattern1_remap_color(const gs_client_color * pc, const gs_color_space * pcs,
         color_set_null_pattern(pdc);
         return 0;
     }
-    if (pinst->template.PaintType == 2) {       /* uncolored */
+    if (pinst->templat.PaintType == 2) {       /* uncolored */
         code = (pcs->base_space->type->remap_color)
             (pc, pcs->base_space, pdc, pis, dev, select);
         if (code < 0)

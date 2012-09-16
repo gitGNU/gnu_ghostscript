@@ -40,7 +40,6 @@ orig_sqrt(double x)
 #include "string_.h"
 #include "gx.h"
 #include "gpcheck.h"            /* for gs_return_check_interrupt */
-#include "gserror.h"            /* for prototype */
 #include "gserrors.h"
 #include "gxfarith.h"
 #include "gxfixed.h"
@@ -118,12 +117,21 @@ int errprintf(const gs_memory_t *mem, const char *fmt, ...)
 char gs_debug[128];
 
 /* Test whether a given debugging option is selected. */
-/* Upper-case letters automatically include their lower-case counterpart. */
+/* Some letters automatically imply others. */
 bool
 gs_debug_c(int c)
 {
-    return
-        (c >= 'a' && c <= 'z' ? gs_debug[c] | gs_debug[c ^ 32] : gs_debug[c]);
+    bool ret = gs_debug[c];
+
+    /* Unroll the first one, to minimise the speed hit */
+    c = gs_debug_flag_implied_by[c];
+    if (c == 0)
+        return ret;
+
+    do {
+        ret |= gs_debug[c];
+    } while (c = gs_debug_flag_implied_by[c]);
+    return ret;
 }
 
 /* Define the formats for debugging printout. */
@@ -1064,3 +1072,120 @@ gx_intersect_small_bars(fixed q0x, fixed q0y, fixed q1x, fixed q1y, fixed q2x, f
     }
     return false;
 }
+
+/* gs_debug_flags handling code */
+
+const gs_debug_flag_details gs_debug_flags[] =
+{
+#define FLAG(a,b,c,d) {1, # a ,d}
+#define UNUSED(a) { 0, "", "" },
+#include "gdbflags.h"
+#undef FLAG
+#undef UNUSED
+};
+
+const byte gs_debug_flag_implied_by[] =
+{
+#define FLAG(a,b,c,d) c
+#define UNUSED(a) 0,
+#include "gdbflags.h"
+#undef FLAG
+#undef UNUSED
+};
+
+int gs_debug_flags_parse(gs_memory_t *heap, const char *arg)
+{
+#ifdef DEBUG
+    const char *p;
+    int i, j;
+    int result = 0;
+
+    while (*arg != 0) {
+        /* Skip over any commas */
+        byte value = 0xff;
+        while (*arg == ',')
+            arg++;
+        if (*arg == '-') {
+            value = 0;
+            arg++;
+        }
+        if (*arg == ',') {
+            arg++;
+            continue;
+        }
+        if (*arg == 0)
+            return result;
+        for (i=0; i < gs_debug_flags_max; i++) {
+            char c, d;
+            if (!gs_debug_flags[i].used)
+                continue;
+            p = arg;
+            for (j=0; j < sizeof(gs_debug_flags[i].short_desc); j++) {
+                d = gs_debug_flags[i].short_desc[j];
+                c = *p++;
+                if (d == '_') d = '-';
+                if (c == ',')
+                    c = 0;
+                if ((c != d) || (c == 0))
+                    break;
+            }
+            if ((c == 0) && (d == 0))
+                break;
+        }
+        if (i < gs_debug_flags_max)
+            gs_debug[i] = value;
+        else {
+            outprintf(heap, "Unknown debug flag: ");
+            p = arg;
+            do {
+                char c = *p++;
+                if ((c == 0) || (c == ','))
+                    break;
+                outprintf(heap, "%c", c);
+            } while (1);
+            outprintf(heap, "\n");
+            result = gs_error_Fatal;
+        }
+        arg = p-1;
+    }
+    return result;
+#else
+    outprintf(heap, "Warning: debug flags ignored in release builds\n");
+    return 0;
+#endif
+}
+
+void
+gs_debug_flags_list(gs_memory_t *heap)
+{
+#ifdef DEBUG
+    int i, j;
+
+    outprintf(heap, "Debugging flags are as follows:\n\n-Z  --debug=                Description\n");
+    for (i=0; i < gs_debug_flags_max; i++) {
+        if (!gs_debug_flags[i].used)
+            continue;
+        outprintf(heap, " %c  ", (i < 32 || i > 126 ? ' ' : i));
+        for (j=0; j < sizeof(gs_debug_flags[i].short_desc); j++) {
+            char c = gs_debug_flags[i].short_desc[j];
+            if (c == 0)
+                break;
+            if (c == '_')
+                c = '-';
+            outprintf(heap, "%c", c);
+        }
+        for (; j < sizeof(gs_debug_flags[i].short_desc); j++) {
+            outprintf(heap, " ");
+        }
+        outprintf(heap, "%s\n", gs_debug_flags[i].long_desc);
+    }
+    outprintf(heap,
+              "\nDebugging may be enabled by using -Zx (where x is one of the 1 character\n"
+              "codes given above), or by using --debug=xxxxx. Multiple flags may be specified\n"
+              "at once, using -Zxyz or --debug=xxxxx,yyyyy,zzzzz. -Z=-x or --debug=-xxxxx\n"
+              "disables a flag once set.\n");
+#else
+    outprintf(heap, "No debug flags supported in release builds\n");
+#endif
+}
+

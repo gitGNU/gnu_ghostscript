@@ -133,9 +133,6 @@ GDEV=$(AK) $(ECHOGS_XE) $(GDEVH)
 #	bmp256		8-bit (256-color) .BMP file format
 #	bmp16m		24-bit .BMP file format
 #	bmp32b		32-bit pseudo-.BMP file format
-#	cgmmono		Monochrome (black-and-white) CGM -- LOW LEVEL OUTPUT ONLY
-#	cgm8		8-bit (256-color) CGM -- DITTO
-#	cgm24		24-bit color CGM -- DITTO
 #	jpeg		JPEG format, RGB output
 #	jpeggray	JPEG format, gray output
 #	jpegcmyk	JPEG format, cmyk output
@@ -801,13 +798,23 @@ $(GLOBJ)gdevps.$(OBJ) : $(GLSRC)gdevps.c $(GDEV)\
 
 # Plain text writer
 
-txtwrite_=$(GLOBJ)gdevtxtw.$(OBJ)
-$(DD)txtwrite.dev : $(DEVS_MAK) $(ECHOGS_XE) $(txtwrite_) $(GDEV)
+gdevagl_h=$(GLSRC)gdevagl.h
+
+txtwrite_=$(GLOBJ)gdevtxtw.$(OBJ) $(GLOBJ)gdevagl.$(OBJ)
+
+$(DD)txtwrite.dev : $(DEVS_MAK) $(ECHOGS_XE) $(txtwrite_) $(GDEV)\
+ $(gdevagl_h)
 	$(SETDEV2) $(DD)txtwrite $(txtwrite_)
 
 $(GLOBJ)gdevtxtw.$(OBJ) : $(GLSRC)gdevtxtw.c $(GDEV)\
- $(math__h) $(memory__h) $(string__h) $(time__h)
+  $(memory__h) $(string__h) $(gp_h) $(gsparam_h) $(gsutil_h) \
+  $(gsdevice_h) $(gxfont_h) $(gxfont0_h) $(gstext_h) $(gxfcid_h)\
+  $(gxistate_h) $(gxpath_h) $(gdevagl_h)
 	$(GLCC) $(GLO_)gdevtxtw.$(OBJ) $(C_) $(GLSRC)gdevtxtw.c
+
+$(GLOBJ)gdevagl.$(OBJ) : $(GLSRC)gdevagl.c $(GDEV)\
+ $(gdevagl_h)
+	$(GLCC) $(GLO_)gdevagl.$(OBJ) $(C_) $(GLSRC)gdevagl.c
 
 
 ################ BEGIN PDF WRITER ################
@@ -824,7 +831,7 @@ pdfwrite4_=$(GLOBJ)gdevpdfi.$(OBJ) $(GLOBJ)gdevpdfj.$(OBJ) $(GLOBJ)gdevpdfk.$(OB
 pdfwrite5_=$(GLOBJ)gdevpdfm.$(OBJ)
 pdfwrite6_=$(GLOBJ)gdevpdfo.$(OBJ) $(GLOBJ)gdevpdfp.$(OBJ) $(GLOBJ)gdevpdft.$(OBJ)
 pdfwrite7_=$(GLOBJ)gdevpdfr.$(OBJ)
-pdfwrite8_=$(GLOBJ)gdevpdfu.$(OBJ) $(GLOBJ)gdevpdfv.$(OBJ)
+pdfwrite8_=$(GLOBJ)gdevpdfu.$(OBJ) $(GLOBJ)gdevpdfv.$(OBJ) $(GLOBJ)gdevagl.$(OBJ)
 pdfwrite9_= $(GLOBJ)ConvertUTF.$(OBJ)
 pdfwrite10_=$(GLOBJ)gsflip.$(OBJ)
 pdfwrite11_=$(GLOBJ)scantab.$(OBJ) $(GLOBJ)sfilter2.$(OBJ)
@@ -873,7 +880,6 @@ gdevpdfx_h=$(GLSRC)gdevpdfx.h\
  $(spprint_h) $(stream_h) $(gdevpsdf_h) $(gxdevmem_h) $(sarc4_h) 
 
 opdfread_h=$(GLSRC)opdfread.h
-gs_agl_h=$(GLSRC)gs_agl.h
 gs_mro_e_h=$(GLSRC)gs_mro_e.h
 gs_mgl_e_h=$(GLSRC)gs_mgl_e.h
 
@@ -921,7 +927,7 @@ $(GLOBJ)gdevpdfi.$(OBJ) : $(GLSRC)gdevpdfi.c $(memory__h) $(math__h)\
  $(gserrors_h) $(gsdevice_h) $(gsflip_h) $(gsiparm4_h) $(gsstate_h) $(gscolor2_h)\
  $(gdevpdfx_h) $(gdevpdfg_h) $(gdevpdfo_h)\
  $(gxcspace_h) $(gximage3_h) $(gximag3x_h) $(gxdcolor_h) $(gxpcolor_h)\
- $(gxhldevc_h)
+ $(gxhldevc_h) $(gsicc_manage_h)
 	$(GLCC) $(GLO_)gdevpdfi.$(OBJ) $(C_) $(GLSRC)gdevpdfi.c
 
 $(GLOBJ)gdevpdfj.$(OBJ) : $(GLSRC)gdevpdfj.c\
@@ -970,7 +976,7 @@ $(GLOBJ)gdevpdfu.$(OBJ) : $(GLSRC)gdevpdfu.c $(GXERR)\
  $(sa85x_h) $(scfx_h) $(sdct_h) $(slzwx_h) $(spngpx_h)\
  $(srlx_h) $(sarc4_h) $(smd5_h) $(sstring_h) $(strimpl_h) $(szlibx_h)\
  $(strmio_h) $(sjbig2_luratech_h) $(sjpx_luratech_h)\
- $(opdfread_h) $(gs_agl_h) $(gs_mro_e_h) $(gs_mgl_e_h)
+ $(opdfread_h) $(gdevagl_h) $(gs_mro_e_h) $(gs_mgl_e_h)
 	$(GDEVLWFJB2JPXCC) $(GLO_)gdevpdfu.$(OBJ) $(C_) $(GLSRC)gdevpdfu.c
 
 $(GLOBJ)gdevpdfv.$(OBJ) : $(GLSRC)gdevpdfv.c $(GXERR) $(math__h) $(string__h)\
@@ -1240,33 +1246,6 @@ $(DD)bmpa32b.dev : $(DEVS_MAK) $(bmpa_) $(GLD)page.dev $(GLD)async.dev\
  $(GDEV)
 	$(SETPDEV2) $(DD)bmpa32b $(bmpa_)
 	$(ADDMOD) $(DD)bmpa32b -include $(GLD)async
-
-### -------------------------- CGM file format ------------------------- ###
-### This driver is under development.  Use at your own risk.             ###
-### The output is very low-level, consisting only of rectangles and      ###
-### cell arrays.                                                         ###
-
-cgm_=$(GLOBJ)gdevcgm.$(OBJ) $(GLOBJ)gdevcgml.$(OBJ)
-
-gdevcgml_h=$(GLSRC)gdevcgml.h
-gdevcgmx_h=$(GLSRC)gdevcgmx.h $(gdevcgml_h)
-
-$(GLOBJ)gdevcgm.$(OBJ) : $(GLSRC)gdevcgm.c $(GDEV) $(memory__h)\
- $(gp_h) $(gsparam_h) $(gsutil_h) $(gdevpccm_h) $(gdevcgml_h)
-	$(GLCC) $(GLO_)gdevcgm.$(OBJ) $(C_) $(GLSRC)gdevcgm.c
-
-$(GLOBJ)gdevcgml.$(OBJ) : $(GLSRC)gdevcgml.c $(memory__h) $(stdio__h)\
- $(gdevcgmx_h)
-	$(GLCC) $(GLO_)gdevcgml.$(OBJ) $(C_) $(GLSRC)gdevcgml.c
-
-$(DD)cgmmono.dev : $(DEVS_MAK) $(cgm_) $(GDEV)
-	$(SETDEV) $(DD)cgmmono $(cgm_)
-
-$(DD)cgm8.dev : $(DEVS_MAK) $(cgm_) $(GDEV)
-	$(SETDEV) $(DD)cgm8 $(cgm_)
-
-$(DD)cgm24.dev : $(DEVS_MAK) $(cgm_) $(GDEV)
-	$(SETDEV) $(DD)cgm24 $(cgm_)
 
 ### ------------------------ The DeviceN device ------------------------ ###
 
@@ -1563,56 +1542,6 @@ $(DD)png48.dev : $(DEVS_MAK) $(libpng_dev) $(png_) $(GLD)page.dev $(GDEV)
 $(DD)pngalpha.dev : $(DEVS_MAK) $(libpng_dev) $(png_) $(GLD)page.dev $(GDEV)
 	$(SETPDEV2) $(DD)pngalpha $(png_)
 	$(ADDMOD) $(DD)pngalpha $(png_i_)
-
-### --------------------- WTS Halftoning drivers ----------------------  ###
-
-### IMDI from Argyll
-
-IMDISRC=$(IMDISRCDIR)$(D)
-
-simdi_=$(GLOBJ)imdi.$(OBJ) $(GLOBJ)imdi_tab.$(OBJ)
-
-$(GLOBJ)imdi.$(OBJ) : $(IMDISRC)imdi.c
-	$(GLCC) $(GLO_)imdi.$(OBJ) $(C_) $(IMDISRC)imdi.c
-
-$(GLOBJ)imdi_tab.$(OBJ) : $(IMDISRC)imdi_tab.c
-	$(GLCC) $(GLO_)imdi_tab.$(OBJ) $(C_) $(IMDISRC)imdi_tab.c
-
-$(DD)simdi.dev : $(DEVS_MAK) $(simdi_) $(GDEV)
-	$(SETMOD) $(DD)simdi $(simdi_)
-
-### WTS halftoning CMYK device
-
-wts_=$(GLOBJ)gdevwts.$(OBJ)
-
-$(GLOBJ)gdevwts.$(OBJ) : $(GLSRC)gdevwts.c $(PDEVH)\
- $(gscdefs_h) $(gscspace_h) $(gxgetbit_h) $(gxiparam_h) $(gxlum_h)\
- $(gscms_h) $(gsicc_cache_h) $(gsicc_manage_h)
-	$(GLCC) -I$(IMDISRCDIR) $(GLO_)gdevwts.$(OBJ) $(C_) $(GLSRC)gdevwts.c
-
-$(DD)wtscmyk.dev : $(DEVS_MAK) $(wts_) $(GLD)page.dev $(GDEV)
-	$(SETPDEV2) $(DD)wtscmyk $(wts_)
-
-$(DD)wtsimdi.dev : $(DEVS_MAK) $(wts_) $(GLD)sicclib.dev $(GLD)simdi.dev\
- $(GLD)page.dev $(GDEV)
-	$(SETPDEV2) $(DD)wtsimdi $(wts_)
-	$(ADDMOD) $(DD)wtsimdi -include $(GLD)sicclib
-	$(ADDMOD) $(DD)wtsimdi -include $(GLD)simdi
-
-### IMDI color converting device
-
-imdi_=$(GLOBJ)gdevimdi.$(OBJ)
-
-$(GLOBJ)gdevimdi.$(OBJ) : $(GLSRC)gdevimdi.c $(PDEVH) \
-    $(gscdefs_h) $(gscspace_h) $(gxgetbit_h) $(gxiparam_h) $(gxlum_h)\
-    $(gscms_h) $(gsicc_cache_h) $(gsicc_manage_h)
-	$(GLCC) -I$(IMDISRCDIR) $(GLO_)gdevimdi.$(OBJ) $(C_) $(GLSRC)gdevimdi.c
-
-$(DD)imdi.dev : $(DEVS_MAK) $(imdi_) $(GLD)page.dev $(GLD)sicclib.dev\
- $(GLD)simdi.dev $(GDEV)
-	$(SETPDEV2) $(DD)imdi $(imdi_)
-	$(ADDMOD) $(DD)imdi -include $(GLD)sicclib
-	$(ADDMOD) $(DD)imdi -include $(GLD)simdi
 
 ### ---------------------- PostScript image format ---------------------- ###
 ### These devices make it possible to print monochrome Level 2 files on a ###

@@ -130,7 +130,8 @@ DOC_PAGES=PUBLIC README index.html gs.css \
 	   Fonts.htm Helpers.htm Hershey.htm \
 	   History1.htm History2.htm History3.htm History4.htm \
 	   History5.htm History6.htm History7.htm History8.htm \
-	   Details.htm Details8.htm \
+	   History9.htm \
+	   Details.htm Details8.htm Details9.htm \
 	   Htmstyle.htm Humor.htm Issues.htm Install.htm Language.htm \
 	   Lib.htm Maintain.htm Make.htm New-user.htm \
 	   News.htm Projects.htm Ps-style.htm Ps2epsi.htm Ps2pdf.htm \
@@ -146,7 +147,7 @@ install-doc: $(PSDOCDIR)/News.htm
 # install the man pages for each locale
 MAN_LCDIRS=. de
 MAN1_LINKS_PS2PS=eps2eps
-MAN1_LINKS_PS2PDF=ps2pdf12 ps2pdf13
+MAN1_LINKS_PS2PDF=ps2pdf12 ps2pdf13 ps2pdf14
 MAN1_LINKS_GSLP=gsbj gsdj gsdj500 gslj
 install-man: $(PSMANDIR)/gs.1
 	$(SH) -c 'test -d $(DESTDIR)$(mandir) || mkdir -p $(DESTDIR)$(mandir)'
@@ -167,7 +168,7 @@ install-man: $(PSMANDIR)/gs.1
 			  ln -s ps2pdf.$(man1ext) $$f.$(man1ext) ) ;\
 	      done ;\
 	    fi ;\
-	    if ( test -f $$man1dir/ps2lp.$(man1ext) ) ;\
+            if ( test -f $$man1dir/gslp.$(man1ext) ) ;\
 	      then for f in $(MAN1_LINKS_GSLP) ;\
 	        do ( cd $$man1dir; rm -f $$f.$(man1ext) ;\
 			  ln -s gslp.$(man1ext) $$f.$(man1ext) ) ;\

@@ -36,6 +36,7 @@
 #include "gxcdevn.h"
 #include "gscspace.h"
 #include "gsicc_manage.h"
+#include "gsicc_cache.h"
 
 /*
  * PDF doesn't have general CIEBased color spaces.  However, it provides
@@ -430,9 +431,9 @@ static void pdf_SepCMYK_ConvertToRGB (float *in, float *out)
 {
     float RGB[3];
 
-    RGB[0] = in[0] + in[4];
-    RGB[1] = in[1] + in[4];
-    RGB[2] = in[2] + in[4];
+    RGB[0] = in[0] + in[3];
+    RGB[1] = in[1] + in[3];
+    RGB[2] = in[2] + in[3];
 
     if (RGB[0] > 1)
         out[0] = 0.0f;
@@ -508,14 +509,23 @@ pdf_separation_color_space(gx_device_pdf *pdev,
         code = pdf_make_base_space_function(pdev, &new_pfn, 4, out_low, out_high);
         if (code < 0)
             return code;
-        if ((code = cos_array_add(pca, cos_c_string_value(&v, csname))) < 0 ||
-            (code = cos_array_add_no_copy(pca, snames)) < 0 ||
-            (code = (int)cos_c_string_value(&v, (const char *)pcsn->DeviceCMYK)) < 0 ||
-            (code = cos_array_add(pca, &v)) < 0 ||
-            (code = pdf_function_scaled(pdev, new_pfn, 0x00, &v)) < 0 ||
-            (code = cos_array_add(pca, &v)) < 0 ||
-            (v_attributes != NULL ? code = cos_array_add(pca, v_attributes) : 0) < 0
-            ) {}
+
+        code = cos_array_add(pca, cos_c_string_value(&v, csname));
+        if (code >= 0) {
+            code = cos_array_add_no_copy(pca, snames);
+            if (code >= 0) {
+                cos_c_string_value(&v, (const char *)pcsn->DeviceCMYK);
+                code = cos_array_add(pca, &v);
+                if (code >= 0) {
+                    code = pdf_function_scaled(pdev, new_pfn, 0x00, &v);
+                    if (code >= 0) {
+                        code = cos_array_add(pca, &v);
+                        if (code >= 0 && v_attributes != NULL)
+                            code = cos_array_add(pca, v_attributes);
+                    }
+                }
+            }
+        }
         pdf_delete_base_space_function(pdev, new_pfn);
         return code;
     }
@@ -543,14 +553,23 @@ pdf_separation_color_space(gx_device_pdf *pdev,
         code = pdf_make_base_space_function(pdev, &new_pfn, 3, out_low, out_high);
         if (code < 0)
             return code;
-        if ((code = cos_array_add(pca, cos_c_string_value(&v, csname))) < 0 ||
-            (code = cos_array_add_no_copy(pca, snames)) < 0 ||
-            (code = (int)cos_c_string_value(&v, pcsn->DeviceRGB)) < 0 ||
-            (code = cos_array_add(pca, &v)) < 0 ||
-            (code = pdf_function_scaled(pdev, new_pfn, 0x00, &v)) < 0 ||
-            (code = cos_array_add(pca, &v)) < 0 ||
-            (v_attributes != NULL ? code = cos_array_add(pca, v_attributes) : 0) < 0
-            ) {}
+
+        code = cos_array_add(pca, cos_c_string_value(&v, csname));
+        if (code >= 0) {
+            code = cos_array_add_no_copy(pca, snames);
+            if (code >= 0) {
+                cos_c_string_value(&v, pcsn->DeviceRGB);
+                code = cos_array_add(pca, &v);
+                if (code >= 0) {
+                    code = pdf_function_scaled(pdev, new_pfn, 0x00, &v);
+                    if (code >= 0) {
+                        code = cos_array_add(pca, &v);
+                        if (code >= 0 && v_attributes != NULL)
+                            code = cos_array_add(pca, v_attributes);
+                    }
+                }
+            }
+        }
         pdf_delete_base_space_function(pdev, new_pfn);
         return code;
     }
@@ -723,6 +742,58 @@ pdf_find_cspace_resource(gx_device_pdf *pdev, const byte *serialized, uint seria
     return NULL;
 }
 
+int pdf_convert_ICC(gx_device_pdf *pdev,
+                const gs_color_space *pcs, cos_value_t *pvalue,
+                const pdf_color_space_names_t *pcsn)
+{
+    gs_color_space_index csi;
+    int code;
+
+    csi = gs_color_space_get_index(pcs);
+    if (csi == gs_color_space_index_ICC) {
+        csi = gsicc_get_default_type(pcs->cmm_icc_profile_data);
+    }
+    if (csi == gs_color_space_index_Indexed) {
+        pcs = pcs->base_space;
+        csi = gs_color_space_get_index(pcs);
+    }
+    if (csi == gs_color_space_index_ICC) {
+        if (pcs->cmm_icc_profile_data == NULL ||
+            pdev->CompatibilityLevel < 1.3
+            ) {
+            if (pcs->base_space != NULL) {
+                return 0;
+            } else {
+                int num_des_comps;
+                cmm_dev_profile_t *dev_profile;
+
+                /* determine number of components in device space */
+                code = dev_proc((gx_device *)pdev, get_profile)((gx_device *)pdev, &dev_profile);
+                if (code < 0)
+                    return code;
+
+                num_des_comps = gsicc_get_device_profile_comps(dev_profile);
+                /* Set image color space to be device space */
+                switch( num_des_comps )  {
+                    case 1:
+                        cos_c_string_value(pvalue, pcsn->DeviceGray);
+                        /* negative return means we do conversion */
+                        return -1;
+                    case 3:
+                        cos_c_string_value(pvalue, pcsn->DeviceRGB);
+                        return -1;
+                    case 4:
+                        cos_c_string_value(pvalue, pcsn->DeviceCMYK);
+                        return -1;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
 /*
  * Create a PDF color space corresponding to a PostScript color space.
  * For parameterless color spaces, set *pvalue to a (literal) string with
@@ -822,7 +893,6 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
                                     pcs->base_space,
                                     pcsn, by_name, NULL, 0);
             } else {
-                /* Base space is NULL, use appropriate device space */
                 switch( cs_num_components(pcs) )  {
                     case 1:
                         cos_c_string_value(pvalue, pcsn->DeviceGray);
@@ -835,7 +905,7 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
                         return 0;
                     default:
                         break;
-        }
+                }
             }
         }
 

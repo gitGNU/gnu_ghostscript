@@ -598,31 +598,38 @@ static void pgm_read(FILE          *file,
                      unsigned char *bmp)
 {
     int w;
+    unsigned char *out;
 
     bmp += width*(height-1)<<2;
 
     if (maxval == 255)
     {
         for (; height>0; height--) {
+            fread(bmp, 1, width, file);
+            out  = bmp + width*4;
+            bmp += width;
             for (w=width; w>0; w--) {
-                int g = fgetc(file);
-                *bmp++ = g;
-                *bmp++ = g;
-                *bmp++ = g;
-                *bmp++ = 0;
+                int g = *--bmp;
+                *--out = 0;
+                *--out = g;
+                *--out = g;
+                *--out = g;
             }
-            bmp -= width<<3;
+            bmp -= width<<2;
         }
     } else if (maxval < 255) {
         for (; height>0; height--) {
+            fread(bmp, 1, width, file);
+            out  = bmp + width*4;
+            bmp += width;
             for (w=width; w>0; w--) {
-                int g = fgetc(file)*255/maxval;
-                *bmp++ = g;
-                *bmp++ = g;
-                *bmp++ = g;
-                *bmp++ = 0;
+                int g = (*--bmp)*255/maxval;
+                *--out = 0;
+                *--out = g;
+                *--out = g;
+                *--out = g;
             }
-            bmp -= width<<3;
+            bmp -= width<<2;
         }
     } else {
         for (; height>0; height--) {
@@ -644,44 +651,50 @@ static void ppm_read(FILE          *file,
                      int            maxval,
                      unsigned char *bmp)
 {
-    int r,g,b;
     int w;
+    unsigned char *out;
 
     bmp += width*(height-1)<<2;
 
     if (maxval == 255)
     {
         for (; height>0; height--) {
+            fread(bmp, 1, 3*width, file);
+            out  = bmp + 4*width;
+            bmp += 3*width;
             for (w=width; w>0; w--) {
-                r = fgetc(file);
-                g = fgetc(file);
-                b = fgetc(file);
-                *bmp++ = b;
-                *bmp++ = g;
-                *bmp++ = r;
-                *bmp++ = 0;
+                unsigned char b = *--bmp;
+                unsigned char g = *--bmp;
+                unsigned char r = *--bmp;
+                *--out = 0;
+                *--out = r;
+                *--out = g;
+                *--out = b;
             }
-            bmp -= width<<3;
+            bmp -= width<<2;
         }
     } else if (maxval < 255) {
         for (; height>0; height--) {
+            fread(bmp, 1, 3*width, file);
+            out  = bmp + 4*width;
+            bmp += 3*width;
             for (w=width; w>0; w--) {
-                r = fgetc(file)*255/maxval;
-                g = fgetc(file)*255/maxval;
-                b = fgetc(file)*255/maxval;
-                *bmp++ = b;
-                *bmp++ = g;
-                *bmp++ = r;
-                *bmp++ = 0;
+                unsigned char b = *--bmp;
+                unsigned char g = *--bmp;
+                unsigned char r = *--bmp;
+                *--out = 0;
+                *--out = r * 255/maxval;
+                *--out = g * 255/maxval;
+                *--out = b * 255/maxval;
             }
-            bmp -= width<<3;
+            bmp -= width<<2;
         }
     } else {
         for (; height>0; height--) {
             for (w=width; w>0; w--) {
-                r = ((fgetc(file)<<8) + (fgetc(file)))*255/maxval;
-                g = ((fgetc(file)<<8) + (fgetc(file)))*255/maxval;
-                b = ((fgetc(file)<<8) + (fgetc(file)))*255/maxval;
+                int r = ((fgetc(file)<<8) + (fgetc(file)))*255/maxval;
+                int g = ((fgetc(file)<<8) + (fgetc(file)))*255/maxval;
+                int b = ((fgetc(file)<<8) + (fgetc(file)))*255/maxval;
                 *bmp++ = b;
                 *bmp++ = g;
                 *bmp++ = r;
@@ -706,29 +719,17 @@ static void pam_read(FILE          *file,
     if (maxval == 255)
     {
         for (; height>0; height--) {
-            for (w=width; w>0; w--) {
-                c = fgetc(file);
-                m = fgetc(file);
-                y = fgetc(file);
-                k = fgetc(file);
-                *bmp++ = c;
-                *bmp++ = m;
-                *bmp++ = y;
-                *bmp++ = k;
-            }
-            bmp -= width<<3;
+            fread(bmp, 1, 4*width, file);
+            bmp -= width<<2;
         }
     } else if (maxval < 255) {
         for (; height>0; height--) {
+            fread(bmp, 1, 4*width, file);
             for (w=width; w>0; w--) {
-                c = fgetc(file)*255/maxval;
-                m = fgetc(file)*255/maxval;
-                y = fgetc(file)*255/maxval;
-                k = fgetc(file)*255/maxval;
-                *bmp++ = c;
-                *bmp++ = m;
-                *bmp++ = y;
-                *bmp++ = k;
+                *bmp++ = (*bmp++)*255/maxval;
+                *bmp++ = (*bmp++)*255/maxval;
+                *bmp++ = (*bmp++)*255/maxval;
+                *bmp++ = (*bmp++)*255/maxval;
             }
             bmp -= width<<3;
         }
@@ -1794,7 +1795,7 @@ static void diff_bmp(unsigned char *bmp,
     }
 }
 
-static void save_meta(BBox *bbox, char *str, int w, int h, int page)
+static void save_meta(BBox *bbox, char *str, int w, int h, int page, int threshold, int window)
 {
     FILE *file;
 
@@ -1802,9 +1803,10 @@ static void save_meta(BBox *bbox, char *str, int w, int h, int page)
     if (file == NULL)
         return;
 
-    fprintf(file, "PW=%d\nPH=%d\nX=%d\nY=%d\nW=%d\nH=%d\nPAGE=%d\n",
+    fprintf(file, "PW=%d\nPH=%d\nX=%d\nY=%d\nW=%d\nH=%d\nPAGE=%d\nTHRESHOLD=%d\nWINDOW=%d\n",
             w, h, bbox->xmin, h-bbox->ymax,
-            bbox->xmax-bbox->xmin, bbox->ymax-bbox->ymin, page);
+            bbox->xmax-bbox->xmin, bbox->ymax-bbox->ymin, page,
+            threshold, window);
     fclose(file);
 }
 
@@ -2393,7 +2395,7 @@ int main(int argc, char *argv[])
                     save_bmp(bmp, boxlist, s, bpp, str3);
 #endif
                     sprintf(str4, "%s.%05d.meta", params.outroot, n);
-                    save_meta(boxlist, str4, w, h, imagecount);
+                    save_meta(boxlist, str4, w, h, imagecount, params.threshold, params.window);
                     n += 3;
                     /* If there is a maximum set */
                     if (params.maxdiffs > 0)

@@ -76,9 +76,9 @@ typedef struct clj_paper_size_s {
  */
 static const clj_paper_size    clj_paper_sizes[] = {
     /* U.S. letter size comes first so it will be the default. */
-    {   2,  1, 11.00 * 72.0, 8.50 * 72.0, { .200 * 72.0, 0.0 } },
-    {   1,  1, 10.50 * 72.0, 7.25 * 72.0, { .200 * 72.0, 0.0 } },
-    {  26,  1, 11.69 * 72.0, 8.27 * 72.0, { .197 * 72.0, 0.0 } }
+    {   2,  1, 11.00f * 72.0f, 8.50f * 72.0f, { .200f * 72.0f, 0.0 } },
+    {   1,  1, 10.50f * 72.0f, 7.25f * 72.0f, { .200f * 72.0f, 0.0 } },
+    {  26,  1, 11.69f * 72.0f, 8.27f * 72.0f, { .197f * 72.0f, 0.0 } }
 };
 
 /*
@@ -436,12 +436,12 @@ clj_print_page(
      * of page size into pdev->width & height has been done. We just use
      * rotate to access the correct offsets. */
     if (pclj->rotated) {
-        imageable_width = pdev->width - (2 * psize->offsets.x) * fs_res;
-        imageable_height = pdev->height - (2 * psize->offsets.y) * ss_res;
+        imageable_width = pdev->width - (int)((2 * psize->offsets.x) * fs_res);
+        imageable_height = pdev->height - (int)((2 * psize->offsets.y) * ss_res);
     }
     else {
-        imageable_width = pdev->width - (2 * psize->offsets.y) * ss_res;
-        imageable_height = pdev->height - (2 * psize->offsets.x) * fs_res;
+        imageable_width = pdev->width - (int)((2 * psize->offsets.y) * ss_res);
+        imageable_height = pdev->height - (int)((2 * psize->offsets.x) * fs_res);
     }
 
     /* start the page.  The pcl origin (0, 150 dots by default, y

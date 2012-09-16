@@ -102,9 +102,9 @@ RELOC_PTRS_END
 /* we need to implement it separately because st_composite_final */
 /* declares all 3 procedures as private. */
 static void
-device_pdfwrite_finalize(void *vpdev)
+device_pdfwrite_finalize(const gs_memory_t *cmem, void *vpdev)
 {
-    gx_device_finalize(vpdev);
+    gx_device_finalize(cmem, vpdev);
 }
 
 /* Driver procedures */
@@ -994,7 +994,7 @@ pdf_write_page(gx_device_pdf *pdev, int page_num)
     }
     pdf_print_orientation(pdev, page);
     pprintld1(s, "/Parent %ld 0 R\n", pdev->Pages->id);
-    if (pdev->ForOPDFRead) {
+    if (pdev->ForOPDFRead && pdev->DoNumCopies && !pdev->ProduceDSC) {
         if (page->NumCopies_set)
             pprintld1(s, "/NumCopies %ld\n", page->NumCopies);
     }
@@ -1049,15 +1049,29 @@ pdf_write_page(gx_device_pdf *pdev, int page_num)
 }
 
 /* Wrap up ("output") a page. */
+/* if we are doing separate pages, call pdf_close to emit the file, then */
+/* pdf_open to open the next page as a new file */
+/* NB: converting an input PDF with offpage links will generate warnings */
 static int
 pdf_output_page(gx_device * dev, int num_copies, int flush)
 {
     gx_device_pdf *const pdev = (gx_device_pdf *) dev;
     int code = pdf_close_page(pdev, num_copies);
 
-    return (code < 0 ? code :
-            pdf_ferror(pdev) ? gs_note_error(gs_error_ioerror) :
-            gx_finish_output_page(dev, num_copies, flush));
+    if (code < 0)
+        return code;
+    if (pdf_ferror(pdev))
+        gs_note_error(gs_error_ioerror);
+
+    if ((code = gx_finish_output_page(dev, num_copies, flush)) < 0)
+        return code;
+
+    if (gx_outputfile_is_separate_pages(((gx_device_vector *)dev)->fname, dev->memory)) {
+        if ((code = pdf_close(dev)) < 0)
+            return code;
+        code = pdf_open(dev);
+    }
+    return code;
 }
 
 static int find_end_xref_section (gx_device_pdf *pdev, FILE *tfile, int64_t start, int resource_pos)

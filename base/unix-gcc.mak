@@ -112,6 +112,7 @@ GS=gs
 # the standard binaries.
 
 DEBUGDIRPREFIX=debug
+MEMENTODIRPREFIX=mem
 PGDIRPREFIX=pg
 
 # Define whether to compile in the FreeType library, and if so, where
@@ -198,7 +199,7 @@ LCMS2SRCDIR=lcms2
 # Which CMS are we using?
 # Options are currently lcms or lcms2
 
-WHICH_CMS=lcms
+WHICH_CMS=lcms2
 
 # Define the directory where the ijs source is stored,
 # and the process forking method to use for the server.
@@ -211,11 +212,6 @@ IJSEXECTYPE=unix
 
 # Define how to build the library archives.  (These are not used in any
 # standard configuration.)
-
-# Define the directory where the imdi library source is stored.
-# See devs.mak for more information
-
-IMDISRCDIR=imdi
 
 AR=ar
 ARFLAGS=qc
@@ -412,7 +408,7 @@ DEVICE_DEVS12=$(DD)psmono.dev $(DD)psgray.dev $(DD)psrgb.dev $(DD)bit.dev $(DD)b
 DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pngmonod.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev $(DD)jpegcmyk.dev
 DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)txtwrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
-DEVICE_DEVS16=$(DD)bbox.dev
+DEVICE_DEVS16=$(DD)bbox.dev $(DD)inkcov.dev
 
 DEVICE_DEVS17=$(DD)plan.dev $(DD)planm.dev $(DD)plang.dev $(DD)planc.dev $(DD)plank.dev
 

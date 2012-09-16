@@ -64,8 +64,9 @@ gx_default_encode_color(gx_device * dev, const gx_color_value cv[])
     }
 #endif
     for (i = 0; i < ncomps; i++) {
-        color |= (gx_color_index)(cv[i] >> (gx_color_value_bits - comp_bits[i]))
-                << comp_shift[i];
+        COLROUND_VARS;
+        COLROUND_SETUP(comp_bits[i]);
+        color |= COLROUND_ROUND(cv[i]) << comp_shift[i];
 
     }
     return color;
@@ -163,7 +164,9 @@ gx_error_decode_color(gx_device * dev, gx_color_index cindex, gx_color_value col
 gx_color_index
 gx_default_gray_fast_encode(gx_device * dev, const gx_color_value cv[])
 {
-    return cv[0] >> (gx_color_value_bits - dev->color_info.depth);
+    COLROUND_VARS;
+    COLROUND_SETUP(dev->color_info.depth);
+    return COLROUND_ROUND(cv[0]);
 }
 
 gx_color_index
@@ -736,7 +739,7 @@ gx_remap_concrete_DCMYK(const frac * pconc, const gs_color_space * pcs,
 {
 /****** IGNORE alpha ******/
     gx_remap_concrete_cmyk(pconc[0], pconc[1], pconc[2], pconc[3], pdc,
-                           pis, dev, select);
+                           pis, dev, select, pcs);
     return 0;
 }
 int
@@ -755,7 +758,7 @@ gx_remap_DeviceCMYK(const gs_client_color * pc, const gs_color_space * pcs,
                            gx_unit_frac(pc->paint.values[1]),
                            gx_unit_frac(pc->paint.values[2]),
                            gx_unit_frac(pc->paint.values[3]),
-                           pdc, pis, dev, select);
+                           pdc, pis, dev, select, pcs);
     return 0;
 }
 
@@ -917,12 +920,18 @@ cmap_rgb_direct(frac r, frac g, frac b, gx_device_color * pdc,
 
 static void
 cmap_cmyk_direct(frac c, frac m, frac y, frac k, gx_device_color * pdc,
-     const gs_imager_state * pis, gx_device * dev, gs_color_select_t select)
+     const gs_imager_state * pis, gx_device * dev, gs_color_select_t select,
+     const gs_color_space *source_pcs)
 {
     int i, ncomps = dev->color_info.num_components;
     frac cm_comps[GX_DEVICE_COLOR_MAX_COMPONENTS];
     gx_color_value cv[GX_DEVICE_COLOR_MAX_COMPONENTS];
     gx_color_index color;
+    int black_index;
+    cmm_dev_profile_t *dev_profile;
+    gsicc_colorbuffer_t src_space = gsUNDEFINED;
+    int code;
+    bool gray_to_k;
 
     /* map to the color model */
     for (i=0; i < ncomps; i++)
@@ -934,11 +943,30 @@ cmap_cmyk_direct(frac c, frac m, frac y, frac k, gx_device_color * pdc,
         for (i = 0; i < ncomps; i++)
             cm_comps[i] = gx_map_color_frac(pis,
                                 cm_comps[i], effective_transfer[i]);
-    else
-        for (i = 0; i < ncomps; i++)
-            cm_comps[i] = frac_1 - gx_map_color_frac(pis,
-                        (frac)(frac_1 - cm_comps[i]), effective_transfer[i]);
-
+    else {
+        /* Check if source space is gray.  In this case we are to use only the
+           transfer function on the K channel.  Do this only if gray to K is
+           also set */
+        code = dev_proc(dev, get_profile)(dev, &dev_profile);
+        gray_to_k = dev_profile->devicegraytok;
+        if (source_pcs != NULL && source_pcs->cmm_icc_profile_data != NULL) {
+            src_space = source_pcs->cmm_icc_profile_data->data_cs;
+        } else if (source_pcs != NULL && source_pcs->icc_equivalent != NULL) {
+            src_space = source_pcs->icc_equivalent->cmm_icc_profile_data->data_cs;
+        }
+        if (src_space == gsGRAY && gray_to_k) {
+            /* Find the black channel location */
+            black_index = dev_proc(dev, get_color_comp_index)(dev, "Black",
+                                    strlen("Black"), SEPARATION_NAME);
+            cm_comps[black_index] = frac_1 - gx_map_color_frac(pis,
+                                    (frac)(frac_1 - cm_comps[black_index]), 
+                                    effective_transfer[black_index]);
+        } else {
+            for (i = 0; i < ncomps; i++)
+                cm_comps[i] = frac_1 - gx_map_color_frac(pis,
+                            (frac)(frac_1 - cm_comps[i]), effective_transfer[i]);
+        }
+    }
     /* We make a test for direct vs. halftoned, rather than */
     /* duplicating most of the code of this procedure. */
     if (gx_device_must_halftone(dev)) {
@@ -1203,13 +1231,12 @@ cmap_separation_direct(frac all, gx_device_color * pdc, const gs_imager_state * 
 
         icc_link = gsicc_get_link_profile(pis, dev, pis->icc_manager->default_rgb,
                                           des_profile, &rendering_params,
-                                          pis->memory, false, 
-                                          dev_profile->devicegraytok);
+                                          pis->memory, dev_profile->devicegraytok);
         /* Transform the color */
         for (i = 0; i < ncomps; i++) {
             psrc[i] = cv[i];
         }
-        gscms_transform_color(icc_link, &(psrc[0]), &(psrc_cm[0]), 2, NULL);
+        (icc_link->procs.map_color)(dev, icc_link, &(psrc[0]), &(psrc_cm[0]), 2);
         gsicc_release_link(icc_link);
         for (i = 0; i < ncomps; i++) {
             cv[i] = psrc_cm[i];
@@ -1270,7 +1297,7 @@ devicen_icc_cmyk(frac cm_comps[], const gs_imager_state * pis, gx_device *dev)
         psrc[k] = frac2cv(cm_comps[k]);
     }
     icc_link = gsicc_get_link_profile(pis, dev, pis->icc_manager->default_cmyk,
-                des_profile, &rendering_params, pis->memory, false, 
+                des_profile, &rendering_params, pis->memory, 
                 dev_profile->devicegraytok);
     /* Transform the color */
     if (icc_link->is_identity) {
@@ -1278,7 +1305,7 @@ devicen_icc_cmyk(frac cm_comps[], const gs_imager_state * pis, gx_device *dev)
     } else {
         /* Transform the color */
         psrc_temp = &(psrc_cm[0]);
-        gscms_transform_color(icc_link, psrc, psrc_temp, 2, NULL);
+        (icc_link->procs.map_color)(dev, icc_link, psrc, psrc_temp, 2);
     }
     /* This needs to be optimized */
     for (k = 0; k < 4; k++){
@@ -1573,11 +1600,13 @@ gx_default_rgb_map_rgb_color(gx_device * dev, const gx_color_value cv[])
             ((uint) gx_color_value_to_byte(cv[1]) << 8) +
             ((ulong) gx_color_value_to_byte(cv[0]) << 16);
     else {
+        COLROUND_VARS;
         int bpc = dev->color_info.depth / 3;
-        int drop = sizeof(gx_color_value) * 8 - bpc;
-        return ( ( (((gx_color_index)cv[0] >> drop) << bpc) +
-                    ((gx_color_index)cv[1] >> drop)         ) << bpc) +
-               ((gx_color_index)cv[2] >> drop);
+        COLROUND_SETUP(bpc);
+
+        return (((COLROUND_ROUND(cv[0]) << bpc) +
+                 COLROUND_ROUND(cv[1])) << bpc) +
+               COLROUND_ROUND(cv[2]);
     }
 }
 
@@ -1875,9 +1904,7 @@ void
 cmap_transfer_plane(gx_color_value *pconc, const gs_imager_state *pis,
                     gx_device *dev, int plane)
 {
-    int ncomps = dev->color_info.num_components;
     frac frac_value;
-    int i;
     frac cv_frac;
 
     /* apply the transfer function(s) */

@@ -19,7 +19,6 @@
 #include "stdio_.h" /* sprintf() for debug output */
 
 #include "gserrors.h"
-#include "gserror.h"
 #include "gdebug.h"
 #include "strimpl.h"
 #include "sjbig2.h"
@@ -105,6 +104,7 @@ s_jbig2decode_make_global_data(byte *data, uint length, void **result)
     /* allocate a context with which to parse our global segments */
     ctx = jbig2_ctx_new(NULL, JBIG2_OPTIONS_EMBEDDED, NULL,
                             s_jbig2decode_error, NULL);
+    if (ctx == NULL) return 0;
 
     /* parse the global bitstream */
     code = jbig2_data_in(ctx, data, length);
@@ -149,13 +149,14 @@ s_jbig2decode_init(stream_state * ss)
 {
     stream_jbig2decode_state *const state = (stream_jbig2decode_state *) ss;
     Jbig2GlobalCtx *global_ctx = state->global_ctx; /* may be NULL */
+    state->error = 0;
 
     /* initialize the decoder with the parsed global context if any */
     state->decode_ctx = jbig2_ctx_new(NULL, JBIG2_OPTIONS_EMBEDDED,
                 global_ctx, s_jbig2decode_error, ss);
     state->image = 0;
-    state->error = 0;
-    return 0; /* todo: check for allocation failure */
+
+    return (state->error);
 }
 
 /* process a section of the input and return any decoded data.

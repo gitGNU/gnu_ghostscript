@@ -27,6 +27,7 @@
 #include "gxfont.h"
 #include "gxfont1.h"
 #include "gxchar.h"
+#include "gzpath.h"
 #include "gxpath.h"
 #include "gxfcache.h"
 #include "gxchrout.h"
@@ -1108,11 +1109,6 @@ static int FAPI_FF_get_glyph(FAPI_font *ff, int char_code, byte *buf, ushort buf
 static bool using_transparency_pattern (gs_state *pgs)
 {
     gx_device *dev = gs_currentdevice_inline(pgs);
-    int abits = 1;
-
-    if (dev_proc(dev, get_alpha_bits)) {
-        abits = (*dev_proc(dev, get_alpha_bits)) (dev, go_text);
-    }
 
     return((!gs_color_writes_pure(pgs)) && dev->procs.begin_transparency_group != NULL && dev->procs.end_transparency_group != NULL);
 }
@@ -1698,7 +1694,6 @@ static const int frac_pixel_shift = 4;
  */
 static int fapi_image_uncached_glyph (i_ctx_t *i_ctx_p, gs_show_enum *penum, FAPI_raster *rast, const int import_shift_v)
 {
-    gx_device *dev1;
     gx_device *dev = penum->dev;
     gs_state *pgs = (gs_state *)penum->pis;
     int code;
@@ -1712,8 +1707,6 @@ static int fapi_image_uncached_glyph (i_ctx_t *i_ctx_p, gs_show_enum *penum, FAP
     byte *src, *dst;
     int h, padbytes, cpbytes, dstr = bitmap_raster(rast->width);
     int sstr = rast->line_step;
-
-    dev1 = gs_currentdevice_inline(pgs); /* Possibly changed by zchar_set_cache. */
 
     /* we can only safely use the gx_image_fill_masked() "shortcut" if we're drawing
      * a "simple" colour, rather than a pattern.
@@ -1791,8 +1784,8 @@ static int fapi_image_uncached_glyph (i_ctx_t *i_ctx_p, gs_show_enum *penum, FAP
             return_error(e_VMerror);
         }
 
-        x = (floatp) (pgs->ctm.tx + (double)rast_orig_x / (1 << frac_pixel_shift) + 0.5);
-        y = (floatp) (pgs->ctm.ty + (double)rast_orig_y / (1 << frac_pixel_shift) + 0.5);
+        x = (int) (pgs->ctm.tx + (double)rast_orig_x / (1 << frac_pixel_shift) + 0.5);
+        y = (int) (pgs->ctm.ty + (double)rast_orig_y / (1 << frac_pixel_shift) + 0.5);
         w = rast->width;
         h = rast->height;
 
@@ -1828,7 +1821,6 @@ static int fapi_finish_render_aux(i_ctx_t *i_ctx_p, gs_font_base *pbfont, FAPI_s
     gs_show_enum *penum_s = (gs_show_enum *)penum;
     gs_state *pgs;
     gx_device *dev1;
-    gx_device *dev;
     const int import_shift_v = _fixed_shift - 32; /* we always 32.32 values for the outline interface now */
     FAPI_raster rast;
     int code;
@@ -1838,7 +1830,6 @@ static int fapi_finish_render_aux(i_ctx_t *i_ctx_p, gs_font_base *pbfont, FAPI_s
     if(penum == NULL) {
         return_error(e_undefined);
     }
-    dev = penum_s->dev;
 
     /* Ensure that pis points to a st_gs_gstate (graphics state) structure */
     if (gs_object_type(penum->memory, penum->pis) != &st_gs_state) {
@@ -1866,53 +1857,63 @@ static int fapi_finish_render_aux(i_ctx_t *i_ctx_p, gs_font_base *pbfont, FAPI_s
         if (I->skip_glyph) {
             gs_point pt;
 
-            if ((code = gs_currentpoint(pgs, &pt)) < 0)
+            if ((code = gs_currentpoint(pgs->show_gstate, &pt)) < 0)
                 return code;
 
-            if ((code = gx_path_add_line_notes(pgs->show_gstate->path, (fixed)pt.x, (fixed)pt.y, 0)) < 0)
+            if (!path_position_valid(pgs->path)) {
+                if ((code = gx_path_add_point(pgs->path, (fixed)pt.x, (fixed)pt.y)) < 0)
+                    return(code);
+            }
+
+            if ((code = gx_path_add_line_notes(pgs->path, (fixed)pt.x, (fixed)pt.y, 0)) < 0)
                 return(code);
 
-            if ((code = gx_path_close_subpath_notes(pgs->show_gstate->path, 0)) < 0)
+            if ((code = gx_path_close_subpath_notes(pgs->path, 0)) < 0)
                 return(code);
         }
         else {
-            if ((code = outline_char(i_ctx_p, I, import_shift_v, penum_s, pgs->show_gstate->path, !pbfont->PaintType)) < 0)
+            if ((code = outline_char(i_ctx_p, I, import_shift_v, penum_s, pgs->path, !pbfont->PaintType)) < 0)
                 return code;
         }
+
+        if ((code = gx_path_add_char_path(pgs->show_gstate->path, pgs->path, pgs->in_charpath)) < 0)
+            return code;
+
     } else {
         int code = I->get_char_raster(I, &rast);
         if (!SHOW_IS(penum, TEXT_DO_NONE) && I->use_outline) {
             /* The server provides an outline instead the raster. */
             gs_imager_state *pis = (gs_imager_state *)pgs->show_gstate;
             gs_point pt;
-
-            if ((code = gs_currentpoint(pgs, &pt)) < 0)
-                return code;
-            if ((code = outline_char(i_ctx_p, I, import_shift_v, penum_s, pgs->path, !pbfont->PaintType)) < 0)
-                return code;
-            if ((code = gs_imager_setflat((gs_imager_state *)pgs, gs_char_flatness(pis, 1.0))) < 0)
-                return code;
-            if (pbfont->PaintType) {
-                float lw = gs_currentlinewidth(pgs);
-
-                gs_setlinewidth(pgs, pbfont->StrokeWidth);
-                code = gs_stroke(pgs);
-                gs_setlinewidth(pgs, lw);
-                if (code < 0)
+            if (!I->skip_glyph) {
+                if ((code = gs_currentpoint(pgs, &pt)) < 0)
                     return code;
-            } else {
-                gs_in_cache_device_t in_cachedevice = pgs->in_cachedevice;
-                pgs->in_cachedevice = CACHE_DEVICE_NOT_CACHING;
-
-                pgs->fill_adjust.x = pgs->fill_adjust.y = 0;
-
-                if ((code = gs_fill(pgs)) < 0)
+                if ((code = outline_char(i_ctx_p, I, import_shift_v, penum_s, pgs->path, !pbfont->PaintType)) < 0)
                     return code;
+                if ((code = gs_imager_setflat((gs_imager_state *)pgs, gs_char_flatness(pis, 1.0))) < 0)
+                    return code;
+                if (pbfont->PaintType) {
+                    float lw = gs_currentlinewidth(pgs);
 
-                pgs->in_cachedevice = in_cachedevice;
+                    gs_setlinewidth(pgs, pbfont->StrokeWidth);
+                    code = gs_stroke(pgs);
+                    gs_setlinewidth(pgs, lw);
+                    if (code < 0)
+                        return code;
+                } else {
+                    gs_in_cache_device_t in_cachedevice = pgs->in_cachedevice;
+                    pgs->in_cachedevice = CACHE_DEVICE_NOT_CACHING;
+
+                    pgs->fill_adjust.x = pgs->fill_adjust.y = 0;
+
+                    if ((code = gs_fill(pgs)) < 0)
+                        return code;
+
+                    pgs->in_cachedevice = in_cachedevice;
+                }
+                if ((code = gs_moveto(pgs, pt.x, pt.y)) < 0)
+                    return code;
             }
-            if ((code = gs_moveto(pgs, pt.x, pt.y)) < 0)
-                return code;
         } else {
             int rast_orig_x =   rast.orig_x;
             int rast_orig_y = - rast.orig_y;
@@ -2001,6 +2002,10 @@ find_substring(const byte *where, int length, const char *what)
 
 #define GET_U16_MSB(p) (((uint)((p)[0]) << 8) + (p)[1])
 #define GET_S16_MSB(p) (int)((GET_U16_MSB(p) ^ 0x8000) - 0x8000)
+
+#define MTX_EQ(mtx1,mtx2) (mtx1->xx == mtx2->xx && mtx1->xy == mtx2->xy && \
+                           mtx1->yx == mtx2->yx && mtx1->yy == mtx2->yy && \
+                           mtx1->tx == mtx2->tx && mtx1->ty == mtx2->ty)
 
 static int FAPI_do_char(i_ctx_t *i_ctx_p, gs_font_base *pbfont, gx_device *dev, char *font_file_path, bool bBuildGlyph, ref *charstring)
 {   /* Stack : <font> <code|name> --> - */
@@ -2099,10 +2104,31 @@ static int FAPI_do_char(i_ctx_t *i_ctx_p, gs_font_base *pbfont, gx_device *dev, 
         log2_scale.y = 0;
     }
 
+    /* Prepare font data
+     * This needs done here (earlier than it used to be) because FAPI/UFST has conflicting
+     * requirements in what I->get_fontmatrix() returns based on font type, so it needs to
+     * find the font type.
+     */
+    if (dict_find_string(pdr, "SubfontId", &SubfontId) > 0 && r_has_type(SubfontId, t_integer))
+        I->ff.subfont = SubfontId->value.intval;
+    else
+        I->ff.subfont = 0;
+    I->ff.memory = pbfont->memory;
+    I->ff.font_file_path = font_file_path;
+    I->ff.client_font_data = pbfont;
+    I->ff.client_font_data2 = pdr;
+    I->ff.server_font_data = pbfont->FAPI_font_data;
+    I->ff.is_type1 = bIsType1GlyphData;
+    I->ff.is_cid = bCID;
+    I->ff.is_outline_font = pbfont->PaintType != 0;
+    I->ff.is_mtx_skipped = (get_MetricsCount(&I->ff) != 0);
+    I->ff.is_vertical = bVertical;
+    I->ff.client_ctx_p = i_ctx_p;
+
     scale = 1 << I->frac_shift;
 retry_oversampling:
     if (I->face.font_id != pbfont->id ||
-        memcmp(&I->face.ctm, &ctm, sizeof(&I->face.ctm)) ||
+        !MTX_EQ((&I->face.ctm),ctm) ||
         I->face.log2_scale.x != log2_scale.x ||
         I->face.log2_scale.y != log2_scale.y ||
         I->face.align_to_pixels != align_to_pixels ||
@@ -2187,22 +2213,6 @@ retry_oversampling:
         }
         else {
 
-            /* Prepare font data : */
-            if (dict_find_string(pdr, "SubfontId", &SubfontId) > 0 && r_has_type(SubfontId, t_integer))
-                I->ff.subfont = SubfontId->value.intval;
-            else
-                I->ff.subfont = 0;
-            I->ff.memory = pbfont->memory;
-            I->ff.font_file_path = font_file_path;
-            I->ff.client_font_data = pbfont;
-            I->ff.client_font_data2 = pdr;
-            I->ff.server_font_data = pbfont->FAPI_font_data;
-            I->ff.is_type1 = bIsType1GlyphData;
-            I->ff.is_cid = bCID;
-            I->ff.is_outline_font = pbfont->PaintType != 0;
-            I->ff.is_mtx_skipped = (get_MetricsCount(&I->ff) != 0);
-            I->ff.is_vertical = bVertical;
-            I->ff.client_ctx_p = i_ctx_p;
             if ((code = renderer_retcode(i_ctx_p, I, I->get_scaled_font(I, &I->ff, &font_scale,
                                      NULL,
                                      (!bCID || (pbfont->FontType != ft_encrypted  &&
@@ -2210,6 +2220,8 @@ retry_oversampling:
                                             ? FAPI_TOPLEVEL_PREPARED : FAPI_DESCENDANT_PREPARED)))) < 0)
                 return code;
         }
+    }
+    else {
     }
 
     /* Obtain the character name : */
@@ -2521,7 +2533,7 @@ retry_oversampling:
             if (code < 0)
                 return code;
             if (code == metricsNone) {
-                if (bCID) {
+                if (bCID && (!bIsType1GlyphData && font_file_path)) {
                     cr.sb_x = fapi_round(sbw[2] / 2 * scale);
                     cr.sb_y = fapi_round(pbfont->FontBBox.q.y * scale);
                     cr.aw_y = fapi_round(- pbfont->FontBBox.q.x * scale); /* Sic ! */
@@ -2573,9 +2585,9 @@ retry_oversampling:
                 sbw_state = SBW_DONE;
             }
         }
-
+        memset(&metrics, 0x00, sizeof(metrics));
         /* Take metrics from font : */
-        if (SHOW_IS(penum, TEXT_DO_NONE)) {
+        if (zchar_show_width_only(penum)) {
             code = I->get_char_width(I, &I->ff, &cr, &metrics);
             /* A VMerror could be a real out of memory, or the glyph being too big for a bitmap
              * so it's worth retrying as an outline glyph
@@ -2622,9 +2634,10 @@ retry_oversampling:
             os_ptr op = osp;
             ref *proc;
             if ((get_charstring(&I->ff, code - 1, &proc) >= 0) && (r_has_type(proc, t_array) || r_has_type(proc, t_mixedarray))) {
+                push(2);
+                ref_assign(op - 1, &char_name);
                 ref_assign(op, proc);
-                push_op_estack(zexec);  /* execute the operand */
-                return o_push_estack;
+                return(zchar_exec_char_proc(i_ctx_p));
             }
         }
 

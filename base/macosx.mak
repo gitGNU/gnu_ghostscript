@@ -113,6 +113,7 @@ GS=gs
 # the standard binaries.
 
 DEBUGDIRPREFIX=debug
+MEMENTODIRPREFIX=debug
 PGDIRPREFIX=pg
 SODIRPREFIX=so
 
@@ -177,7 +178,7 @@ LCMS2SRCDIR=lcms2
 # Which CMS are we using?
 # Options are currently lcms or lcms2
 
-WHICH_CMS=lcms
+WHICH_CMS=lcms2
 
 # Define the directory where the ijs source is stored,
 # and the process forking method to use for the server.
@@ -187,11 +188,6 @@ SHARE_IJS=0
 IJS_NAME=
 IJSSRCDIR=ijs
 IJSEXECTYPE=unix
-
-# Define the directory where the imdi library source is stored.
-# See devs.mak for more information
-
-IMDISRCDIR=imdi
 
 # Define how to build the library archives.  (These are not used in any
 # standard configuration.)
@@ -375,7 +371,7 @@ DEVICE_DEVS12=
 DEVICE_DEVS13=$(DD)png16.dev $(DD)png256.dev $(DD)pngalpha.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev $(DD)jpegcmyk.dev
 DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)txtwrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
-DEVICE_DEVS16=$(DD)bbox.dev
+DEVICE_DEVS16=$(DD)bbox.dev $(DD)inkcov.dev
 DEVICE_DEVS17=
 DEVICE_DEVS18=
 DEVICE_DEVS19=

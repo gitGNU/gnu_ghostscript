@@ -494,6 +494,17 @@ prepare_fill_with_clip(gx_device_pdf *pdev, const gs_imager_state * pis,
 public_st_pdf_lcvd_t();
 
 static int
+lcvd_copy_color_shifted(gx_device * dev,
+               const byte * base, int sourcex, int sraster, gx_bitmap_id id,
+                      int x, int y, int w, int h)
+{
+    pdf_lcvd_t *cvd = (pdf_lcvd_t *)dev;
+
+    return cvd->std_copy_color((gx_device *)&cvd->mdev, base, sourcex, sraster, id,
+        x - cvd->mdev.mapped_x, y - cvd->mdev.mapped_y, w, h);
+}
+
+static int
 lcvd_fill_rectangle_shifted(gx_device *dev, int x, int y, int width, int height, gx_color_index color)
 {
     pdf_lcvd_t *cvd = (pdf_lcvd_t *)dev;
@@ -832,13 +843,13 @@ pdf_dump_converted_image(gx_device_pdf *pdev, pdf_lcvd_t *cvd)
         s.ctm.ty = cvd->m.ty;
         memset(&inst, 0, sizeof(inst));
         inst.saved = (gs_state *)&s; /* HACK : will use s.ctm only. */
-        inst.template.PaintType = 1;
-        inst.template.TilingType = 1;
-        inst.template.BBox.p.x = inst.template.BBox.p.y = 0;
-        inst.template.BBox.q.x = cvd->mdev.width;
-        inst.template.BBox.q.y = cvd->mdev.height;
-        inst.template.XStep = (float)cvd->mdev.width;
-        inst.template.YStep = (float)cvd->mdev.height;
+        inst.templat.PaintType = 1;
+        inst.templat.TilingType = 1;
+        inst.templat.BBox.p.x = inst.templat.BBox.p.y = 0;
+        inst.templat.BBox.q.x = cvd->mdev.width;
+        inst.templat.BBox.q.y = cvd->mdev.height;
+        inst.templat.XStep = (float)cvd->mdev.width;
+        inst.templat.YStep = (float)cvd->mdev.height;
         code = (*dev_proc(pdev, dev_spec_op))((gx_device *)pdev,
             gxdso_pattern_start_accum, &inst, id);
         if (code >= 0) {
@@ -980,6 +991,7 @@ pdf_setup_masked_image_converter(gx_device_pdf *pdev, gs_memory_t *mem, const gs
                 return code;
         }
     }
+    cvd->std_copy_color = dev_proc(&cvd->mdev, copy_color);
     cvd->std_fill_rectangle = dev_proc(&cvd->mdev, fill_rectangle);
     cvd->std_close_device = dev_proc(&cvd->mdev, close_device);
     cvd->std_get_clipping_box = dev_proc(&cvd->mdev, get_clipping_box);
@@ -992,6 +1004,7 @@ pdf_setup_masked_image_converter(gx_device_pdf *pdev, gs_memory_t *mem, const gs
         dev_proc(&cvd->mdev, fill_rectangle) = lcvd_fill_rectangle_shifted;
         dev_proc(&cvd->mdev, get_clipping_box) = lcvd_get_clipping_box_shifted_from_mdev;
     }
+    dev_proc(&cvd->mdev, copy_color) = lcvd_copy_color_shifted;
     dev_proc(&cvd->mdev, dev_spec_op) = lcvd_dev_spec_op;
     dev_proc(&cvd->mdev, fill_path) = lcvd_handle_fill_path_as_shading_coverage;
     cvd->m = *m;
@@ -1150,12 +1163,12 @@ gdev_pdf_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath
                 code = gdev_vector_dopath((gx_device_vector *)pdev, ppath,
                                         gx_path_type_clip, NULL);
                 if (code >= 0)
-                    stream_puts(pdev->strm, "W n\n");
+                    stream_puts(pdev->strm, (params->rule < 0 ? "W n\n" : "W* n\n"));
             }
             pdf_put_matrix(pdev, NULL, &cvd.m, " cm q\n");
             cvd.write_matrix = false;
             if (code >= 0)
-                code = gs_shading_do_fill_rectangle(pi.template.Shading,
+                code = gs_shading_do_fill_rectangle(pi.templat.Shading,
                      NULL, (gx_device *)&cvd.mdev, (gs_imager_state *)pgs, !pi.shfill);
             if (code >= 0)
                 code = pdf_dump_converted_image(pdev, &cvd);
@@ -1219,7 +1232,7 @@ gdev_pdf_stroke_path(gx_device * dev, const gs_imager_state * pis,
     if (pdf_must_put_clip_path(pdev, pcpath))
         code = pdf_unclip(pdev);
     else if ((pdev->last_charpath_op & TEXT_DO_FALSE_CHARPATH) && ppath->current_subpath &&
-        (ppath->last_charpath_segment == ppath->current_subpath->last)) {
+        (ppath->last_charpath_segment == ppath->current_subpath->last) && !pdev->ForOPDFRead) {
         bool hl_color = pdf_can_handle_hl_color((gx_device_vector *)pdev, pis, pdcolor);
         const gs_imager_state *pis_for_hl_color = (hl_color ? pis : NULL);
 

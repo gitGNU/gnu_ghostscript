@@ -101,6 +101,40 @@ s_DCTD_init(stream_state * st)
     return 0;
 }
 
+static int
+compact_jpeg_buffer(stream_cursor_read *pr)
+{
+    byte *o, *i;
+
+    /* Search backwards from the end for 2 consecutive 0xFFs */
+    o = (byte *)pr->limit;
+    while (o - pr->ptr >= 2) {
+        if (*o-- == 0xFF) {
+            if (*o == 0xFF)
+                goto compact;
+            o--;
+        }
+    }
+    return 0;
+compact:
+    i = o-1;
+    do {
+        /* Skip i backwards over 0xFFs */
+        while ((i != pr->ptr) && (*i == 0xFF))
+            i--;
+        /* Repeatedly copy from i to o */
+        while (i != pr->ptr) {
+            byte c = *i--;
+            *o-- = c;
+            if (c == 0xFF)
+                break;
+        }
+    } while (i != pr->ptr);
+
+    pr->ptr = o;
+    return o - i;
+}
+
 /* Process a buffer */
 static int
 s_DCTD_process(stream_state * st, stream_cursor_read * pr,
@@ -186,8 +220,8 @@ s_DCTD_process(stream_state * st, stream_cursor_read * pr,
             if_debug4('w', "[wdd]width=%u, components=%d, scan_line_size=%u, min_out_size=%u\n",
                       jddp->dinfo.output_width,
                       jddp->dinfo.output_components,
-                      ss->scan_line_size, jddp->template.min_out_size);
-            if (ss->scan_line_size > (uint) jddp->template.min_out_size) {
+                      ss->scan_line_size, jddp->templat.min_out_size);
+            if (ss->scan_line_size > (uint) jddp->templat.min_out_size) {
                 /* Create a spare buffer for oversize scanline */
                 jddp->scanline_buffer =
                     gs_alloc_bytes_immovable(gs_memory_stable(jddp->memory),
@@ -236,8 +270,25 @@ s_DCTD_process(stream_state * st, stream_cursor_read * pr,
                           (int)jddp->faked_eoi);
                 pr->ptr =
                     (jddp->faked_eoi ? pr->limit : src->next_input_byte - 1);
-                if (!read)
+                if (!read) {
+                    /* We are suspending. If nothing was consumed, and the
+                     * buffer was full, compact the data in the buffer. If
+                     * this fails to save anything, then we'll never succeed;
+                     * throw an error to avoid an infinite loop.
+                     * The tricky part here is knowing "if the buffer is
+                     * full"; we do that by comparing the number of bytes in
+                     * the buffer with the min_in_size set for the stream.
+                     */
+                    /* TODO: If we ever find a file with valid data that trips
+                     * this test, we should implement a scheme whereby we keep
+                     * a local buffer and copy the data into it. The local
+                     * buffer can be grown as required. */
+                    if ((src->next_input_byte-1 == pr->ptr) &&
+                        (pr->limit - pr->ptr >= ss->templat->min_in_size) &&
+                        (compact_jpeg_buffer(pr) == 0))
+                        return ERRC;
                     return 0;	/* need more data */
+                }
                 if (jddp->scanline_buffer != NULL) {
                     jddp->bytes_in_scanline = ss->scan_line_size;
                     goto dumpbuffer;
@@ -276,7 +327,7 @@ s_DCTD_release(stream_state * st)
     gs_free_object(ss->data.common->memory, ss->data.decompress,
                    "s_DCTD_release");
     /* Switch the template pointer back in case we still need it. */
-    st->template = &s_DCTD_template;
+    st->templat = &s_DCTD_template;
 }
 
 /* Stream template */
