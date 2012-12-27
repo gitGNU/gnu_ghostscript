@@ -1,4 +1,5 @@
-%    Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
+% Copyright (C) 2001-2012 Artifex Software, Inc.
+% All Rights Reserved.
 %
 % This software is provided AS-IS with no warranty, either express or
 % implied.
@@ -7,13 +8,11 @@
 % modified or distributed except as expressly authorized under the terms
 % of the license contained in the file LICENSE in this distribution.
 %
-% For more information about licensing, please refer to
-% http://www.ghostscript.com/licensing/. For information on
-% commercial licensing, go to http://www.artifex.com/licensing/ or
-% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
-% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+% Refer to licensing information at http://www.artifex.com or contact
+% Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+% CA  94903, U.S.A., +1(415)492-9861, for further information.
+%
 
-% $Id$
 % Definitions for most of the PDF operators.
 
 .currentglobal //true .setglobal
@@ -338,6 +337,7 @@ nodict readonly pop
 /setfillstate {
   FillColor FillColorSpace setgcolor setfillblend
 } def
+
 /setstrokestate {
   .swapcolors
   StrokeColor StrokeColorSpace setgcolor StrokeOverprint setoverprint
@@ -805,7 +805,7 @@ end readonly def
         % if the CTM had been unity.
           currentlinewidth dup
           matrix defaultmatrix idtransform TextSaveMatrix dtransform
-          abs 2 copy abs eq {
+          abs 2 copy exch abs eq {
             pop
           }{
             % non-square scaling reduces to Text matrix in pdfwrite , so
@@ -821,7 +821,7 @@ end readonly def
         % if the CTM had been unity.
           currentlinewidth dup
           matrix defaultmatrix idtransform TextSaveMatrix dtransform
-          abs 2 copy abs eq {
+          abs 2 copy exch abs eq {
             pop
           }{
             % non-square scaling reduces to Text matrix in pdfwrite , so
@@ -844,7 +844,7 @@ end readonly def
         { gsave 1 .settextrenderingmode
           currentlinewidth dup
           matrix defaultmatrix idtransform TextSaveMatrix dtransform
-          abs 2 copy abs eq {
+          abs 2 copy exch abs eq {
             pop
           }{
             % non-square scaling reduces to Text matrix in pdfwrite , so
@@ -857,7 +857,7 @@ end readonly def
         { gsave 2 .settextrenderingmode
           currentlinewidth dup
           matrix defaultmatrix idtransform TextSaveMatrix dtransform
-          abs 2 copy abs eq {
+          abs 2 copy exch abs eq {
             pop
           }{
             % non-square scaling reduces to Text matrix in pdfwrite , so
@@ -885,7 +885,7 @@ end readonly def
           % not signs.
           currentlinewidth dup
           matrix defaultmatrix idtransform TextSaveMatrix dtransform
-          abs 2 copy abs eq {
+          abs 2 copy exch abs eq {
             pop
           }{
             % non-square scaling reduces to Text matrix in pdfwrite , so
@@ -907,7 +907,10 @@ end readonly def
               pdfwrite_textrenderingprocs TextRenderingMode get
       }
       {
-              TextRenderingMode 0 eq {
+              TextRenderingMode 0 eq
+              currentfont /FontType get 3 eq TextRenderingMode 3 eq not
+              and or 
+               {
                 { setfillstate show }
               } {
                 TextRenderingMode 3 eq {
@@ -947,6 +950,9 @@ end readonly def
       % a device supporting text rendering modes, then go through this route.
       %
       TextRenderingMode 0 eq TextRenderingMode 3 eq or
+      
+      currentfont /FontType get 3 eq or 
+
       currentdevice 1 dict dup /PreserveTrMode dup put .getdeviceparams
       dup type /booleantype eq not {cleartomark //false}{3 1 roll cleartomark}ifelse
       % pdfwrite can't handle rendering modes which involve clipping
@@ -975,43 +981,37 @@ end readonly def
              setlinewidth
            }
          } {
-           WordSpacing 0 eq
-            { {
-              % preserve current line width around possible stroke setup
-              % This *should* work the same as the others by using
-              % currentlinewidth...setlinewidth, but it doesn't. In particular
-              % Bug688796b.pdf throws an error. I am unabel to understand why.
-              /MyDict 5 dict def
-              MyDict begin
-              /SaveLW currentlinewidth def end
-
-              setstrokeforTrpreservation
-              setfillstate TextSpacing 0 Vexch 3 -1 roll ashow
-
-              MyDict begin
-              SaveLW setlinewidth
-              end
-            } }
-            {
-              TextSpacing 0 eq
-              { {
-                % preserve current line width around possible stroke setup
-                currentlinewidth exch
-                setstrokeforTrpreservation
-                setfillstate WordSpacing 0 Vexch 32 4 -1 roll widthshow
-                setlinewidth
-              } }
-              { {
-                % preserve current line width around possible stroke setup
-                currentlinewidth exch
-                setstrokeforTrpreservation
-                setfillstate WordSpacing 0 Vexch 32
-                TextSpacing 0 Vexch 6 -1 roll awidthshow
-                setlinewidth
-               } }
-              ifelse
-            }
-           ifelse
+           WordSpacing 0 eq { 
+             {
+               { setstrokeforTrpreservation
+                 setfillstate TextSpacing 0 Vexch 3 -1 roll ashow
+               } 
+               currentlinewidth
+               { setlinewidth }
+               3 .execn
+             }  
+           } {
+              TextSpacing 0 eq { 
+                { % preserve current line width around possible stroke setup
+                  { setstrokeforTrpreservation
+                    setfillstate WordSpacing 0 Vexch 32 4 -1 roll .pdfwidthshow
+                  }
+                  currentlinewidth
+                  { setlinewidth }
+                  3 .execn
+                } 
+              } { 
+                { % preserve current line width around possible stroke setup
+                  { setstrokeforTrpreservation
+                    setfillstate WordSpacing 0 Vexch 32
+                    TextSpacing 0 Vexch 6 -1 roll .pdfawidthshow
+                  }
+                  currentlinewidth
+                  { setlinewidth }
+                  3 .execn
+                } 
+              } ifelse
+           } ifelse
          } ifelse
        }
        {
@@ -1111,9 +1111,16 @@ end readonly def
 % the line width will be transformed properly.
 /Tmatrix matrix def
 /tS
- { setstrokestate
-   currentpoint //Tmatrix currentmatrix TextSaveMatrix setmatrix .swapcolors stroke .swapcolors
-   setmatrix moveto
+ { 
+   currentfont /FontType get 3 eq
+   {
+     setfillstate currentpoint fill moveto
+   }
+   {
+     setstrokestate
+     currentpoint //Tmatrix currentmatrix TextSaveMatrix setmatrix .swapcolors stroke .swapcolors
+     setmatrix moveto
+   } ifelse
  } bdef
 
 % Handle transparency the same as /B operator

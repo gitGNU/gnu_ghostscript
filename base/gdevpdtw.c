@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Font resource writing for pdfwrite text */
 #include "memory_.h"
 #include "gx.h"
@@ -378,7 +380,7 @@ pdf_write_CIDFont_widths(gx_device_pdf *pdev,
                     pprintd3(s, "\n%d %d %d", width, vx, vy);
                 } else
                     pprintd1(s, "\n%d", width);
-            } else if (!pdev->PDFA && width == dw &&
+            } else if (pdev->PDFA == 0 && width == dw &&
                     (!wmode || (int)(pdfont->u.cidfont.v[cid * 2 + 0] + 0.5) ==
                                 (int)(pdfont->Widths[cid] / 2 + 0.5)) &&
                     (!wmode || (int)(pdfont->u.cidfont.v[cid * 2 + 1] + 0.5) == dv))
@@ -622,7 +624,7 @@ pdf_write_font_resource(gx_device_pdf *pdev, pdf_font_resource_t *pdfont)
  * Close the text-related parts of a document, including writing out font
  * and related resources.
  */
-static int
+int
 write_font_resources(gx_device_pdf *pdev, pdf_resource_list_t *prlist)
 {
     int j;
@@ -664,6 +666,8 @@ pdf_finish_resources(gx_device_pdf *pdev, pdf_resource_type_t type,
         }
     return 0;
 }
+
+#ifdef DEPRECATED_906
 int
 pdf_close_text_document(gx_device_pdf *pdev)
 {
@@ -676,20 +680,39 @@ pdf_close_text_document(gx_device_pdf *pdev)
      */
 
     pdf_clean_standard_fonts(pdev);
-    if ((code = pdf_free_font_cache(pdev)) < 0 ||
-        (code = pdf_write_resource_objects(pdev, resourceCharProc)) < 0 ||
-        (code = pdf_finish_resources(pdev, resourceFont, pdf_convert_truetype_font)) < 0 ||
-        (code = pdf_finish_resources(pdev, resourceFontDescriptor, pdf_finish_FontDescriptor)) < 0 ||
-        (code = write_font_resources(pdev, &pdev->resources[resourceCIDFont])) < 0 ||
-        (code = write_font_resources(pdev, &pdev->resources[resourceFont])) < 0 ||
-        (code = pdf_finish_resources(pdev, resourceFontDescriptor, pdf_write_FontDescriptor)) < 0
-        )
+    code = pdf_free_font_cache(pdev);
+    if (code < 0)
+        return code;
+
+    code = pdf_write_resource_objects(pdev, resourceCharProc);
+    if (code < 0)
+        return code;
+
+    code = pdf_finish_resources(pdev, resourceFont, pdf_convert_truetype_font);
+    if (code < 0)
+        return code;
+
+    code = pdf_finish_resources(pdev, resourceFontDescriptor, pdf_finish_FontDescriptor);
+    if (code < 0)
+        return code;
+
+    code = write_font_resources(pdev, &pdev->resources[resourceCIDFont]);
+    if (code < 0)
+        return code;
+
+    code = write_font_resources(pdev, &pdev->resources[resourceFont]);
+    if (code < 0)
+        return code;
+
+    code = pdf_finish_resources(pdev, resourceFontDescriptor, pdf_write_FontDescriptor);
+    if (code < 0)
         return code;
 
     /* If required, write the Encoding for Type 3 bitmap fonts. */
 
     return pdf_write_bitmap_fonts_Encoding(pdev);
 }
+#endif
 
 /* ================ CMap resource writing ================ */
 

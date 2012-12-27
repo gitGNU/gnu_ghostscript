@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Common header file for memory-buffered printers */
 
 #ifndef gdevprn_INCLUDED
@@ -229,16 +231,17 @@ struct gdev_prn_space_params_s {
                 /* ------ before calling the device open routine. ------ */\
         gdev_prn_space_params space_params;\
         char fname[prn_fname_sizeof];	/* OutputFile */\
+        bool BLS_force_memory;\
                 /* ------ Other device parameters ------ */\
         bool OpenOutputFile;\
         bool ReopenPerPage;\
         bool page_uses_transparency; /* PDF 1.4 transparency is used on page */\
         bool Duplex;\
-          int Duplex_set;		/* -1 = not supported */\
+        int Duplex_set;		        /* -1 = not supported */\
                 /* ------ End of parameters ------ */\
         bool file_is_new;		/* true iff file just opened */\
         FILE *file;			/* output file */\
-        long buffer_space;	/* amount of space for clist buffer, */\
+        long buffer_space;	        /* amount of space for clist buffer, */\
                                         /* 0 means not using clist */\
         byte *buf;			/* buffer for rendering */\
                 /* ---- Begin async rendering support --- */\
@@ -290,13 +293,17 @@ prn_dev_proc_buffer_page(gx_default_buffer_page); /* returns an error */
 
 /* Macro for generating procedure table */
 #define prn_procs(p_open, p_output_page, p_close)\
-  prn_color_procs(p_open, p_output_page, p_close, gdev_prn_map_rgb_color, gdev_prn_map_color_rgb)
+  prn_color_procs_enc_dec(p_open, p_output_page, p_close, gdev_prn_map_rgb_color, gdev_prn_map_color_rgb, gdev_prn_map_rgb_color, gdev_prn_map_color_rgb)
 #define prn_params_procs(p_open, p_output_page, p_close, p_get_params, p_put_params)\
-  prn_color_params_procs(p_open, p_output_page, p_close, gdev_prn_map_rgb_color, gdev_prn_map_color_rgb, p_get_params, p_put_params)
+  prn_color_params_procs_enc_dec(p_open, p_output_page, p_close, gdev_prn_map_rgb_color, gdev_prn_map_color_rgb, p_get_params, p_put_params, gdev_prn_map_rgb_color, gdev_prn_map_color_rgb)
 #define prn_color_procs(p_open, p_output_page, p_close, p_map_rgb_color, p_map_color_rgb)\
   prn_color_params_procs(p_open, p_output_page, p_close, p_map_rgb_color, p_map_color_rgb, gdev_prn_get_params, gdev_prn_put_params)
+#define prn_color_procs_enc_dec(p_open, p_output_page, p_close, p_map_rgb_color, p_map_color_rgb, p_encode_color, p_decode_color)\
+  prn_color_params_procs_enc_dec(p_open, p_output_page, p_close, p_map_rgb_color, p_map_color_rgb, gdev_prn_get_params, gdev_prn_put_params, p_encode_color, p_decode_color)
 /* See gdev_prn_open for explanation of the NULLs below. */
-#define prn_color_params_procs(p_open, p_output_page, p_close, p_map_rgb_color, p_map_color_rgb, p_get_params, p_put_params) {\
+#define prn_color_params_procs(p_open, p_output_page, p_close, p_map_rgb_color, p_map_color_rgb, p_get_params, p_put_params) \
+  prn_color_params_procs_enc_dec(p_open, p_output_page, p_close, p_map_rgb_color, p_map_color_rgb, p_get_params, p_put_params, NULL, NULL)
+#define prn_color_params_procs_enc_dec(p_open, p_output_page, p_close, p_map_rgb_color, p_map_color_rgb, p_get_params, p_put_params, p_encode_color, p_decode_color) {\
         p_open,\
         NULL,	/* get_initial_matrix */\
         NULL,	/* sync_output */\
@@ -348,8 +355,8 @@ prn_dev_proc_buffer_page(gx_default_buffer_page); /* returns an error */
         NULL,	/* discard_transparency_layer */\
         NULL,  /* get_color_mapping_procs */\
         NULL,  /* get_color_comp_index */\
-        NULL,  /* encode_color */\
-        NULL,  /* decode_color */\
+        p_encode_color,	/* encode_color */\
+        p_decode_color,	/* decode_color */\
         NULL,  /* pattern_manage */\
         NULL,  /* fill_rectangle_hl_color */\
         NULL,  /* include_color_space */\
@@ -408,6 +415,7 @@ extern const gx_device_procs prn_std_procs;
            BandingAuto	/* banding_type */\
          },\
          { 0 },		/* fname */\
+        0/*false*/,     /* BLS_force_memory */\
         0/*false*/,	/* OpenOutputFile */\
         0/*false*/,	/* ReopenPerPage */\
         0/*false*/,	/* page_uses_transparency */\
@@ -558,17 +566,17 @@ bool gdev_prn_file_is_new(const gx_device_printer *pdev);
  * is stored in *range_start, and the height of the range is returned.
  * If the parameters are invalid, the procedure returns -1.
  */
-int gdev_prn_colors_used(gx_device *dev, int y, int height,
-                         gx_colors_used_t *colors_used,
+int gdev_prn_color_usage(gx_device *dev, int y, int height,
+                         gx_color_usage_t *color_usage,
                          int *range_start);
 /*
  * Determine the colors used in a saved page.  We still need the device
  * in order to know the total page height.
  */
-int gx_page_info_colors_used(const gx_device *dev,
+int gx_page_info_color_usage(const gx_device *dev,
                              const gx_band_page_info_t *page_info,
                              int y, int height,
-                             gx_colors_used_t *colors_used,
+                             gx_color_usage_t *color_usage,
                              int *range_start);
 
 /*

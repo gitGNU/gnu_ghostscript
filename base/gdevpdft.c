@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* transparency processing for PDF-writing driver */
 #include "gx.h"
 #include "string_.h"
@@ -186,14 +188,13 @@ pdf_begin_transparency_group(gs_imager_state * pis, gx_device_pdf * pdev,
         if (code < 0)
             return code;
     }
-    pdev->image_with_SMask = false;
     if (!in_page)
         pdev->pages[pdev->next_page].group_id = group_dict->id;
     else if (pparams->image_with_SMask) {
         /* An internal group for the image implementation.
            See doimagesmask in gs/lib/pdf_draw.ps .
            Just set a flag for skipping pdf_end_transparency_group. */
-        pdev->image_with_SMask = true;
+        pdev->image_with_SMask |= 1 << ++pdev->FormDepth;
     } else {
         pdf_resource_t *pres, *pres_gstate = NULL;
 
@@ -220,10 +221,10 @@ pdf_end_transparency_group(gs_imager_state * pis, gx_device_pdf * pdev)
 
     if (!is_in_page(pdev))
         return 0;	/* corresponds to check in pdf_begin_transparency_group */
-    if (pdev->image_with_SMask) {
+    if (pdev->image_with_SMask & (1 << pdev->FormDepth)) {
         /* An internal group for the image implementation.
            See pdf_begin_transparency_group. */
-        pdev->image_with_SMask = 0;
+        pdev->image_with_SMask &= ~(1 << pdev->FormDepth--);
         return 0;
     } else if (pdev->sbstack_depth == bottom) {
         /* We're closing the page group. */

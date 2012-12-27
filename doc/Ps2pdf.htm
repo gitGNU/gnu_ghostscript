@@ -3,7 +3,6 @@
 <head>
 <meta http-equiv="content-type" content="text/html; charset=us-ascii">
 <title>ps2pdf: PostScript-to-PDF converter</title>
-<!-- $Id$ -->
 <!-- Originally: ps2pdf.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -891,12 +890,12 @@ Please also see the <code>PDFACompatibilityPolicy</code> control described under
 <h2><a name="PDFA"></a>Creating a PDF/A document</h2>
 
 <p>
-To create a PDF/A document, please follow instructions about <a href="#PDFX">creating a PDF/X-3 document</a>,
+To create a PDF/A document, please follow the instructions for <a href="#PDFX">creating a PDF/X-3 document</a>,
 with the following exceptions :
 
 <ul>
 <li> Specify the <code>pdfwrite</code> device or use the <code>ps2pdf</code> script.
-<li> Specify the <code>-dPDFA</code> option.
+<li> Specify the <code>-dPDFA</code> option to specify PDF/A-1 or PDF/A-2.
 <li> Specify <code>-sProcessColorModel=DeviceGray</code>,  <code>-sProcessColorModel=DeviceRGB</code> or <code>-sProcessColorModel=DeviceCMYK</code>
      You must specify a ProcessColorModel, even if you plan
      to create a device-independent colour PDF file using -dUseCIEColor.
@@ -929,7 +928,7 @@ depending on the nature of the PDF/A incompatibility.
 
 Here is a sample command line to invoke Ghostscript for generating a PDF/A document :
 <blockquote><code>
-gs -dPDFA -dBATCH -dNOPAUSE -dNOOUTERSAVE -dUseCIEColor -sProcessColorModel=DeviceCMYK -sDEVICE=pdfwrite -sOutputFile=out-a.pdf PDFA_def.ps input.ps
+gs -dPDFA=1 -dBATCH -dNOPAUSE -dNOOUTERSAVE -dUseCIEColor -sProcessColorModel=DeviceCMYK -sDEVICE=pdfwrite -sOutputFile=out-a.pdf PDFA_def.ps input.ps
 </code></blockquote>
 
 <p>
@@ -1094,7 +1093,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 9.05, 8 February 2012
+<small>Ghostscript version 9.06, 8 August 2012
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

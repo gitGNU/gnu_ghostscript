@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Font and CMap resource implementation for pdfwrite text */
 #include "memory_.h"
 #include "gx.h"
@@ -405,6 +407,80 @@ font_resource_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfres,
     return code;
 }
 
+int font_resource_free(gx_device_pdf *pdev, pdf_font_resource_t *pdfont)
+{
+        if(pdfont->BaseFont.size) {
+            gs_free_string(pdev->pdf_memory, pdfont->BaseFont.data, pdfont->BaseFont.size, "Free BaseFont string");
+            pdfont->BaseFont.data = (byte *)0L;
+            pdfont->BaseFont.size = 0;
+        }
+        if(pdfont->Widths) {
+            gs_free_object(pdev->pdf_memory, pdfont->Widths, "Free Widths array");
+            pdfont->Widths = 0;
+        }
+        if(pdfont->used) {
+            gs_free_object(pdev->pdf_memory, pdfont->used, "Free used array");
+            pdfont->used = 0;
+        }
+        if(pdfont->res_ToUnicode) {
+            /* ToUnicode resources are tracked amd released separately */
+            pdfont->res_ToUnicode = 0;
+        }
+        if(pdfont->cmap_ToUnicode) {
+            gs_cmap_ToUnicode_free(pdev->pdf_memory, pdfont->cmap_ToUnicode);
+            pdfont->cmap_ToUnicode = 0;
+        }
+        switch(pdfont->FontType) {
+            case ft_composite:
+                break;
+            case ft_PCL_user_defined:
+            case ft_GL2_stick_user_defined:
+            case ft_user_defined:
+                if(pdfont->u.simple.Encoding) {
+                    gs_free_object(pdev->pdf_memory, pdfont->u.simple.Encoding, "Free simple Encoding");
+                    pdfont->u.simple.Encoding = 0;
+                }
+                if(pdfont->u.simple.v) {
+                    gs_free_object(pdev->pdf_memory, pdfont->u.simple.v, "Free simple v");
+                    pdfont->u.simple.v = 0;
+                }
+                if (pdfont->u.simple.s.type3.char_procs) {
+                    pdf_free_charproc_ownership(pdev, (pdf_resource_t *)pdfont->u.simple.s.type3.char_procs);
+                    pdfont->u.simple.s.type3.char_procs = 0;
+                }
+                break;
+            case ft_CID_encrypted:
+            case ft_CID_TrueType:
+                if(pdfont->u.cidfont.used2) {
+                    gs_free_object(pdev->pdf_memory, pdfont->u.cidfont.used2, "Free CIDFont used2");
+                    pdfont->u.cidfont.used2 = 0;
+                }
+                if(pdfont->u.cidfont.CIDToGIDMap) {
+                    gs_free_object(pdev->pdf_memory, pdfont->u.cidfont.CIDToGIDMap, "Free CIDToGID map");
+                    pdfont->u.cidfont.CIDToGIDMap = 0;
+                }
+                break;
+            default:
+                if(pdfont->u.simple.Encoding) {
+                    gs_free_object(pdev->pdf_memory, pdfont->u.simple.Encoding, "Free simple Encoding");
+                    pdfont->u.simple.Encoding = 0;
+                }
+                if(pdfont->u.simple.v) {
+                    gs_free_object(pdev->pdf_memory, pdfont->u.simple.v, "Free simple v");
+                    pdfont->u.simple.v = 0;
+                }
+                break;
+        }
+        if (pdfont->object) {
+            gs_free_object(pdev->pdf_memory, pdfont->object, "Free font resource object");
+            pdfont->object = 0;
+        }
+        /* We free FontDescriptor resources separately */
+        if(pdfont->FontDescriptor)
+            pdfont->FontDescriptor = NULL;
+    return 0;
+}
+
 int
 pdf_assign_font_object_id(gx_device_pdf *pdev, pdf_font_resource_t *pdfont)
 {
@@ -689,7 +765,7 @@ pdf_font_embed_status(gx_device_pdf *pdev, gs_font *font, int *pindex,
             len = min(gs_font_name_max, font->font_name.size);
             memcpy(name, font->font_name.chars, len);
             name[len] = 0;
-            emprintf1(pdev->memory,
+            emprintf1(pdev->pdf_memory,
                       "\nWarning: %s cannot be embedded because of licensing restrictions\n",
                       name);
             return FONT_EMBED_NO;
@@ -704,7 +780,7 @@ pdf_font_embed_status(gx_device_pdf *pdev, gs_font *font, int *pindex,
      */
     if (pindex)
         *pindex = index;
-    if (pdev->PDFX || pdev->PDFA)
+    if (pdev->PDFX || pdev->PDFA != 0)
         return FONT_EMBED_YES;
     if (pdev->CompatibilityLevel < 1.3) {
         if (index >= 0 &&
@@ -805,6 +881,8 @@ pdf_compute_BaseFont(gx_device_pdf *pdev, pdf_font_resource_t *pdfont, bool fini
     default:
         break;
     }
+    if (pdfont->BaseFont.size)
+        gs_free_string(pdev->pdf_memory, pdfont->BaseFont.data, pdfont->BaseFont.size, "Replacing BaseFont string");
     pdfont->BaseFont.data = fname.data = data;
     pdfont->BaseFont.size = fname.size = size;
     /* Compute names for subset fonts. */
@@ -1028,7 +1106,7 @@ pdf_obtain_cidfont_widths_arrays(gx_device_pdf *pdev, pdf_font_resource_t *pdfon
 int
 pdf_convert_truetype_font(gx_device_pdf *pdev, pdf_resource_t *pres)
 {
-    if (!pdev->PDFA)
+    if (pdev->PDFA == 0)
         return 0;
     else {
         pdf_font_resource_t *pdfont = (pdf_font_resource_t *)pres;

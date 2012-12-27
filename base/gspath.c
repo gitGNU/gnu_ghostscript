@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Basic path routines for Ghostscript library */
 #include "gx.h"
 #include "math_.h"
@@ -25,6 +27,7 @@
 #include "gxdevice.h"		/* for gxcpath.h */
 #include "gxdevmem.h"		/* for gs_device_is_memory */
 #include "gzcpath.h"
+#include "gxpaint.h"
 
 /* ------ Miscellaneous ------ */
 
@@ -154,12 +157,22 @@ gs_moveto_aux(gs_imager_state *pis, gx_path *ppath, floatp x, floatp y)
     code = clamp_point_aux(pis->clamp_coordinates, &pt, x, y);
     if (code < 0)
         return code;
-    code = gx_path_add_point(ppath, pt.x, pt.y);
-    if (code < 0)
-        return code;
-    ppath->start_flags = ppath->state_flags;
-    gx_setcurrentpoint(pis, x, y);
-    pis->subpath_start = pis->current_point;
+    if (pis->hpgl_path_mode && path_subpath_open(ppath))
+    {
+        code = gx_path_add_gap_notes(ppath, pt.x, pt.y, 0);
+        if (code < 0)
+            return code;
+        gx_setcurrentpoint(pis, x, y);
+    }
+    else
+    {
+        code = gx_path_add_point(ppath, pt.x, pt.y);
+        if (code < 0)
+            return code;
+        ppath->start_flags = ppath->state_flags;
+        gx_setcurrentpoint(pis, x, y);
+        pis->subpath_start = pis->current_point;
+    }
     pis->current_point_valid = true;
     return 0;
 }
@@ -308,6 +321,65 @@ gs_rcurveto(gs_state * pgs,
 
 /* Forward references */
 static int common_clip(gs_state *, int);
+
+/* Figure out the bbox for a path and a clip path with adjustment if we are
+   also doing a stroke.  This is used by the xps interpeter to deteremine
+   how big of a transparency group or softmask should be pushed.  Often in 
+   xps we fill a path with a particular softmask and some other graphic object.
+   The transparency group will be the intersection of the path and clipping
+   path */
+int
+gx_curr_bbox(gs_state * pgs, gs_rect *bbox, gs_bbox_comp_t comp_type)
+{
+    gx_clip_path *clip_path;
+    int code;
+    gs_fixed_rect path_bbox;
+    int expansion_code;
+    bool include_path = true;
+    gs_fixed_point expansion;
+
+    code = gx_effective_clip_path(pgs, &clip_path);
+        if (code < 0) return code;
+    if (comp_type == NO_PATH) {
+        bbox->p.x = fixed2float(clip_path->outer_box.p.x);
+        bbox->p.y = fixed2float(clip_path->outer_box.p.y);
+        bbox->q.x = fixed2float(clip_path->outer_box.q.x);
+        bbox->q.y = fixed2float(clip_path->outer_box.q.y);
+        return 0;
+    }
+    code = gx_path_bbox(pgs->path, &path_bbox);
+        if (code < 0) return code;
+    if (comp_type == PATH_STROKE) {
+        /* Handle any stroke expansion of our bounding box */
+        expansion_code = gx_stroke_path_expansion((const gs_imager_state *) pgs, 
+                                                   pgs->path, &expansion);
+        if (expansion_code >= 0) {
+            path_bbox.p.x -= expansion.x;
+            path_bbox.p.y -= expansion.y;
+            path_bbox.q.x += expansion.x;
+            path_bbox.q.y += expansion.y;
+        } else {
+            /* Stroke is super wide or we could not figure out the stroke bbox
+               due to wacky joints etc. Just use the clip path */
+            include_path = false;
+        }
+    }
+    if (include_path) {
+        rect_intersect(path_bbox, clip_path->outer_box);
+        /* clip path and drawing path */
+        bbox->p.x = fixed2float(path_bbox.p.x);
+        bbox->p.y = fixed2float(path_bbox.p.y);
+        bbox->q.x = fixed2float(path_bbox.q.x);
+        bbox->q.y = fixed2float(path_bbox.q.y);
+    } else {
+        /* clip path only */
+        bbox->p.x = fixed2float(clip_path->outer_box.p.x);
+        bbox->p.y = fixed2float(clip_path->outer_box.p.y);
+        bbox->q.x = fixed2float(clip_path->outer_box.q.x);
+        bbox->q.y = fixed2float(clip_path->outer_box.q.y);
+    }
+    return 0;
+}
 
 /*
  * Return the effective clipping path of a graphics state.  Sometimes this

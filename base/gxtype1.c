@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Adobe Type 1 font interpreter support */
 #include "math_.h"
 #include "memory_.h"
@@ -366,13 +368,14 @@ gs_type1_piece_codes(/*const*/ gs_font_type1 *pfont,
     fixed *csp;
     ip_state_t ipstack[ipstack_size + 1];
     ip_state_t *ipsp = &ipstack[0];
-    const byte *cip;
+    const byte *cip, *end;
     crypt_state state;
     int c, hhints = 0, vhints = 0;
     int code;
 
     CLEAR_CSTACK(cstack, csp);
     cip = pgd->bits.data;
+    end = pgd->bits.data + pgd->bits.size;
  call:
     state = crypt_charstring_seed;
     if (encrypted) {
@@ -384,7 +387,16 @@ gs_type1_piece_codes(/*const*/ gs_font_type1 *pfont,
     }
  top:
     for (;;) {
-        uint c0 = *cip++;
+        uint c0;
+
+        if (cip > end)
+             /* We used to treat buffer overrun as a simple invalid font, now we assume that
+             * there is an implicit endcharr.
+             * Part of bug #693170 where the fonts are invalid (no endchar on some glyphs).
+             */
+            goto out;
+
+        c0 = *cip++;
 
         charstring_next(c0, state, c, encrypted);
         if (c >= c_num1) {
@@ -444,9 +456,10 @@ gs_type1_piece_codes(/*const*/ gs_font_type1 *pfont,
             if (code < 0)
                 return_error(code);
             --csp;
-            ipsp->ip = cip, ipsp->dstate = state;
+            ipsp->ip = cip, ipsp->dstate = state, ipsp->ip_end = end;
             ++ipsp;
             cip = ipsp->cs_data.bits.data;
+            end = ipsp->cs_data.bits.data + ipsp->cs_data.bits.size;
             goto call;
         case c_callsubr:
             c = fixed2int_var(*csp) + pdata->subroutineNumberBias;
@@ -455,16 +468,17 @@ gs_type1_piece_codes(/*const*/ gs_font_type1 *pfont,
             if (code < 0)
                 return_error(code);
             --csp;
-            ipsp->ip = cip, ipsp->dstate = state;
+            ipsp->ip = cip, ipsp->dstate = state, ipsp->ip_end = end;
             ++ipsp;
             cip = ipsp->cs_data.bits.data;
+            end = ipsp->cs_data.bits.data + ipsp->cs_data.bits.size;
             goto call;
         case c_return:
             gs_glyph_data_free(&ipsp->cs_data, "gs_type1_piece_codes");
             --ipsp;
             if (ipsp < ipstack)
                 return (gs_note_error(gs_error_invalidfont));
-            cip = ipsp->ip, state = ipsp->dstate;
+            cip = ipsp->ip, state = ipsp->dstate, end = ipsp->ip_end;
             goto top;
         case cx_hstem:
             hhints += ((csp - cstack) + 1) / 2;

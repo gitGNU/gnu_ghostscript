@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Common code for ImageType 1 and 4 initialization */
 #include "gx.h"
 #include "math_.h"
@@ -185,6 +187,10 @@ gx_image_enum_alloc(const gs_image_common_t * pic,
         penum->rect.x = 0, penum->rect.y = 0;
         penum->rect.w = width, penum->rect.h = height;
     }
+    penum->rrect.x = penum->rect.x;
+    penum->rrect.y = penum->rect.y;
+    penum->rrect.w = penum->rect.w;
+    penum->rrect.h = penum->rect.h;
 #ifdef DEBUG
     if (gs_debug_c('b')) {
         dlprintf2("[b]Image: w=%d h=%d", width, height);
@@ -255,7 +261,6 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
             return code;
         }
     }
-
     /* Grid fit: A common construction in postscript/PDF files is for images
      * to be constructed as a series of 'stacked' 1 pixel high images.
      * Furthermore, many of these are implemented as an imagemask plotted on
@@ -342,6 +347,70 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
                 mat.xy = ((double)fixed2float(iy1 - iy0)/width);
             }
         }
+    }
+
+    /* Can we restrict the amount of image we need? */
+    while (pcpath) /* So we can break out of it */
+    {
+        gs_rect rect, rect_out;
+        gs_matrix mi;
+        gs_fixed_rect obox;
+        gs_int_rect irect;
+        if ((code = gs_matrix_invert(&ctm_only(pis), &mi)) < 0 ||
+            (code = gs_matrix_multiply(&mi, &pic->ImageMatrix, &mi)) < 0) {
+            /* Give up trying to shrink the render box, but continue processing */
+            break;
+        }
+        gx_cpath_outer_box(pcpath, &obox);
+        rect.p.x = fixed2float(obox.p.x);
+        rect.p.y = fixed2float(obox.p.y);
+        rect.q.x = fixed2float(obox.q.x);
+        rect.q.y = fixed2float(obox.q.y);
+        code = gs_bbox_transform(&rect, &mi, &rect_out);
+        if (code < 0) {
+            /* Give up trying to shrink the render box, but continue processing */
+            break;
+        }
+        irect.p.x = (int)(rect_out.p.x-1.0);
+        irect.p.y = (int)(rect_out.p.y-1.0);
+        irect.q.x = (int)(rect_out.q.x+1.0);
+        irect.q.y = (int)(rect_out.q.y+1.0);
+        /* Need to expand the region to allow for the fact that the mitchell
+         * scaler reads multiple pixels in. This calculation can probably be
+         * improved. */
+        /* If mi.{xx,yy} > 1 then we are downscaling. During downscaling,
+         * the support increases to ensure that we don't lose pixels contributions
+         * entirely. */
+        /* I do not understand the need for the +/- 1 fudge factors in the Y,
+         * but they seem to be required. Increasing the render rectangle can
+         * never be bad at least... RJW */
+        irect.p.x -= MAX_ISCALE_SUPPORT * (int)any_abs(mi.xx) + 1;
+        irect.p.y -= MAX_ISCALE_SUPPORT * (int)any_abs(mi.yy) + 1;
+        irect.q.x += MAX_ISCALE_SUPPORT * (int)max(1,any_abs(mi.xx)+1.0) + 1;
+        irect.q.y += MAX_ISCALE_SUPPORT * (int)max(1,any_abs(mi.yy)+1.0) + 1;
+        if (penum->rrect.x < irect.p.x) {
+            penum->rrect.w -= irect.p.x - penum->rrect.x;
+            if (penum->rrect.w < 0)
+               penum->rrect.w = 0;
+            penum->rrect.x = irect.p.x;
+        }
+        if (penum->rrect.x + penum->rrect.w > irect.q.x) {
+            penum->rrect.w = irect.q.x - penum->rrect.x;
+            if (penum->rrect.w < 0)
+                penum->rrect.w = 0;
+        }
+        if (penum->rrect.y < irect.p.y) {
+            penum->rrect.h -= irect.p.y - penum->rrect.y;
+            if (penum->rrect.h < 0)
+                penum->rrect.h = 0;
+            penum->rrect.y = irect.p.y;
+        }
+        if (penum->rrect.y + penum->rrect.h > irect.q.y) {
+            penum->rrect.h = irect.q.y - penum->rrect.y;
+            if (penum->rrect.h < 0)
+                penum->rrect.h = 0;
+        }
+        break; /* Out of the while */
     }
 
     /*penum->matrix = mat;*/
@@ -1112,7 +1181,7 @@ image_init_colors(gx_image_enum * penum, int bps, int spp,
 
     /* Clues are only used with image_mono_render */
     if (spp == 1) {
-    image_init_clues(penum, bps, spp);
+        image_init_clues(penum, bps, spp);
     }
     decode_type = 3; /* 0=custom, 1=identity, 2=inverted, 3=impossible */
     for (ci = 0; ci < spp; ci +=2 ) {

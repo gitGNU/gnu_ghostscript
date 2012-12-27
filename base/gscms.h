@@ -1,15 +1,18 @@
-/* Copyright (C) 2001-2009 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
+
 
 /*  Data type definitions when using the gscms  */
 
@@ -129,7 +132,8 @@ typedef enum {
     gsIMAGEPROFILE,
     gsTEXTPROFILE,
     gsPROOFPROFILE,
-    gsLINKPROFILE
+    gsLINKPROFILE,
+    gsOIPROFILE
 } gsicc_profile_types_t;
 
 typedef enum {
@@ -156,9 +160,11 @@ typedef struct cmm_dev_profile_s {
         cmm_profile_t  *device_profile[NUM_DEVICE_PROFILES];
         cmm_profile_t  *proof_profile;
         cmm_profile_t  *link_profile;
+        cmm_profile_t  *oi_profile;  /* output intent profile */
         gsicc_rendering_intents_t intent[NUM_DEVICE_PROFILES];
         bool devicegraytok;        /* Used for forcing gray to pure black */
         bool usefastcolor;         /* Used when we want to use no cm */
+        bool supports_devn;        /* If the target handles devn colors */
         gs_memory_t *memory;
         rc_header rc;
 } cmm_dev_profile_t;
@@ -380,11 +386,16 @@ struct gsicc_devicen_s {
     int count;
 };
 
+/* Had to add bool so that we know if things were swapped.
+   The reason is that if we are in a swapped state and 
+   there is a vmreclaim we then end up sending the user 
+   params again and we will find that there is a mismatch */
 typedef struct gsicc_smask_s {
     cmm_profile_t *smask_gray;
     cmm_profile_t *smask_rgb;
     cmm_profile_t *smask_cmyk;
     gs_memory_t *memory;
+    bool swapped;  
 } gsicc_smask_t;
 
 /* The manager object */

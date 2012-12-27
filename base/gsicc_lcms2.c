@@ -1,15 +1,18 @@
-/* Copyright (C) 2001-2011 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
+
 
 /* gsicc interface to littleCMS */
 
@@ -329,7 +332,7 @@ gscms_get_link(gcmmhprofile_t  lcms_srchandle,
       when we use the transformation. */
     src_data_type = (COLORSPACE_SH(lcms_src_color_space)|
                         CHANNELS_SH(src_nChannels)|BYTES_SH(2));
-#if arch_is_big_endian
+#if 0
     src_data_type = src_data_type | ENDIAN16_SH(1);
 #endif
     if (lcms_deshandle != NULL) {
@@ -344,7 +347,7 @@ gscms_get_link(gcmmhprofile_t  lcms_srchandle,
     des_data_type = (COLORSPACE_SH(lcms_des_color_space)|
                         CHANNELS_SH(des_nChannels)|BYTES_SH(2));
     /* endian */
-#if arch_is_big_endian
+#if 0
     des_data_type = des_data_type | ENDIAN16_SH(1);
 #endif
 /* Create the link */

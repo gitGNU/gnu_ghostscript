@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id$ */
+
 /* Routines for determining equivalent color for spot colors */
 
 #include "math_.h"
@@ -26,6 +28,7 @@
 #include "gscspace.h"
 #include "gxcspace.h"
 #include "gsicc_manage.h"
+#include "gxdevsop.h"
 
 /*
  * These routines are part of the logic for determining an equivalent
@@ -171,8 +174,18 @@ update_DeviceN_spot_equivalent_cmyk_colors(gx_device * pdev,
         pcs->params.device_n.get_colorname_string
             (pdev->memory, pcs->params.device_n.names[j],
              &pcs_sep_name, &cs_sep_name_size);
-        if (compare_color_names("None", 4, pcs_sep_name, cs_sep_name_size))
+        if (compare_color_names("None", 4, pcs_sep_name, cs_sep_name_size)) {
+            /* If we are going out to a device that supports devn colors
+               then it is possible that any preview that such a device creates
+               will be in error due to the lack of the proper mappings from
+               the full DeviceN colors (whicn can include one or more \None
+               enrties). Display a warning about this if in debug mode */
+#ifdef DEBUG
+            if (dev_proc(pdev, dev_spec_op)(pdev, gxdso_supports_devn, NULL, 0))
+                gs_warn("Separation preview may be inaccurate due to presence of \\None colorants");
+#endif
             return;
+        }
     }
 
     /*
@@ -400,12 +413,14 @@ capture_spot_equivalent_cmyk_colors(gx_device * pdev, const gs_state * pgs,
     temp_device.memory = pgs->memory; 
 
     temp_profile.usefastcolor = false;  /* This avoids a few headaches */
+    temp_profile.supports_devn = false;
     temp_profile.device_profile[0] = curr_output_profile;
     temp_profile.device_profile[1] = NULL;
     temp_profile.device_profile[2] = NULL;
     temp_profile.device_profile[2] = NULL;
     temp_profile.link_profile = NULL;
     temp_profile.proof_profile = NULL;
+    temp_profile.oi_profile = NULL;
     temp_device.icc_struct = &temp_profile;
     set_dev_proc(&temp_device, get_profile, gx_default_get_profile);
 

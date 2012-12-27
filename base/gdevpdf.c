@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2007 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* PDF-writing driver */
 #include "fcntl_.h"
 #include "memory_.h"
@@ -27,6 +29,11 @@
 #include "smd5.h"
 #include "sarc4.h"
 #include "gscms.h"
+#include "gdevpdtf.h"
+#include "gdevpdtx.h"
+#include "gdevpdtd.h"
+#include "gdevpdti.h"
+#include "gsfcmap.h"        /* For gs_cmap_ToUnicode_free */
 
 /* Define the default language level and PDF compatibility level. */
 /* Acrobat 4 (PDF 1.3) is the default. */
@@ -336,7 +343,7 @@ pdf_compute_fileID(gx_device_pdf * pdev)
         return code;
     sclose(s);
     gs_free_object(mem, s, "pdf_compute_fileID");
-#if 0
+#ifdef DEPRECATED_906
     memcpy(pdev->fileID, "xxxxxxxxxxxxxxxx", sizeof(pdev->fileID)); /* Debug */
 #endif
     return 0;
@@ -749,8 +756,8 @@ pdf_print_orientation(gx_device_pdf * pdev, pdf_page_t *page)
             (page != NULL ? &page->text_rotation : &pdev->text_rotation);
         int angle = -1;
 
-#define Bug687800
-#ifndef Bug687800 	/* Bug 687800 together with Bug687489.ps . */
+#ifdef DEPRECATED_906
+        /* Bug 687800 together with Bug687489.ps . */
         const gs_point *pbox = &(page != NULL ? page : &pdev->pages[0])->MediaBox;
 
         if (dsc_orientation >= 0 && pbox->x > pbox->y) {
@@ -771,22 +778,11 @@ pdf_print_orientation(gx_device_pdf * pdev, pdf_page_t *page)
         }
 
         if (angle < 0) {
-#define Bug688793
-#ifdef  Bug688793
         /* If not combinable, prefer dsc rotation : */
             if (dsc_orientation >= 0)
                 angle = dsc_orientation * 90;
             else
                 angle = ptr->Rotate;
-#else
-        /* If not combinable, prefer text rotation : */
-            if (ptr->Rotate >= 0)
-                angle = ptr->Rotate;
-#ifdef Bug687800
-            else
-                angle = dsc_orientation * 90;
-#endif
-#endif
         }
 
         /* If got some, write it out : */
@@ -808,7 +804,7 @@ pdf_close_page(gx_device_pdf * pdev, int num_copies)
      * before doing anything else.
      */
 
-    code = pdf_open_document(pdev);
+    code = pdfwrite_pdf_open_document(pdev);
     if (code < 0)
         return code;
     if (pdev->ForOPDFRead && pdev->context == PDF_IN_NONE) {
@@ -854,6 +850,7 @@ pdf_close_page(gx_device_pdf * pdev, int num_copies)
 
         /* Save viewer's memory with cleaning resources. */
 
+#ifdef DEPRECATED_906
         if (pdev->MaxViewerMemorySize < 10000000) {
             /* fixme: the condition above and the cleaning algorithm
                 may be improved with counting stored resource size
@@ -875,6 +872,7 @@ pdf_close_page(gx_device_pdf * pdev, int num_copies)
             if (code < 0)
                 return code;
         }
+#endif
 
         /* Close use of text on the page. */
 
@@ -897,11 +895,10 @@ pdf_close_page(gx_device_pdf * pdev, int num_copies)
         page->dsc_info = pdev->page_dsc_info;
         if (page->dsc_info.orientation < 0)
             page->dsc_info.orientation = pdev->doc_dsc_info.orientation;
-#ifdef Bug688793
+        /* Bug 688793 */
         if (page->dsc_info.viewing_orientation < 0)
         page->dsc_info.viewing_orientation =
            pdev->doc_dsc_info.viewing_orientation;
-#endif
         if (page->dsc_info.bounding_box.p.x >= page->dsc_info.bounding_box.q.x ||
             page->dsc_info.bounding_box.p.y >= page->dsc_info.bounding_box.q.y
             )
@@ -1186,9 +1183,42 @@ pdf_close(gx_device * dev)
     code1 = pdf_free_resource_objects(pdev, resourceSoftMaskDict);
     if (code >= 0)
         code = code1;
+#ifdef DEPRECATED_906
     code1 = pdf_close_text_document(pdev);
     if (code >= 0)
         code = code1;
+#endif
+    /* This was in pdf_close_document, but that made no sense, so moved here
+     * for more consistency (and ease of fiding it). This code deals with
+     * emitting fonts and FontDescriptors
+     */
+    pdf_clean_standard_fonts(pdev);
+    code1 = pdf_free_font_cache(pdev);
+    if (code >= 0)
+        code = code1;
+    code1 = pdf_write_resource_objects(pdev, resourceCharProc);
+    if (code >= 0)
+        code = code1;
+    code1 = pdf_finish_resources(pdev, resourceFont, pdf_convert_truetype_font);
+    if (code >= 0)
+        code = code1;
+    code1 = pdf_finish_resources(pdev, resourceFontDescriptor, pdf_finish_FontDescriptor);
+    if (code >= 0)
+        code = code1;
+    code1 = write_font_resources(pdev, &pdev->resources[resourceCIDFont]);
+    if (code >= 0)
+        code = code1;
+    code1 = write_font_resources(pdev, &pdev->resources[resourceFont]);
+    if (code >= 0)
+        code = code1;
+    code1 = pdf_finish_resources(pdev, resourceFontDescriptor, pdf_write_FontDescriptor);
+    if (code >= 0)
+        code = code1;
+    /* If required, write the Encoding for Type 3 bitmap fonts. */
+    code1 = pdf_write_bitmap_fonts_Encoding(pdev);
+    if (code >= 0)
+        code = code1;
+
     code1 = pdf_write_resource_objects(pdev, resourceCMap);
     if (code >= 0)
         code = code1;
@@ -1477,8 +1507,206 @@ pdf_close(gx_device * dev)
         pprintld1(s, "startxref\n%ld\n%%%%EOF\n", xref);
     }
 
-    /* Release the resource records. */
+    /* Require special handling for Fonts, ColorSpace and Pattern resources
+     * These are tracked in pdev->last_resource, and are complex structures which may
+     * contain other memory allocations. All other resource types can be simply dicarded
+     * as above.
+     */
+    {
+        /* PDF font records and all their associated contents need to be
+         * freed by means other than the garbage collector, or the memory
+         * usage will increase with languages other than PostScript. In addition
+         * debug builds of non-PS languages take a long time to close down
+         * due to reporting the dangling memory allocations.
+         */
+        int j, code = 0;
 
+        for (j = 0; j < NUM_RESOURCE_CHAINS && code >= 0; ++j) {
+            pdf_resource_t *pres = pdev->resources[resourceFont].chains[j];
+
+            for (; pres != 0;) {
+                pdf_font_resource_t *pdfont = (pdf_font_resource_t *)pres;
+
+                font_resource_free(pdev, pdfont);
+                pres = pres->next;
+            }
+        }
+    }
+
+    {
+        int j, code = 0;
+
+        for (j = 0; j < NUM_RESOURCE_CHAINS && code >= 0; ++j) {
+            pdf_resource_t *pres = pdev->resources[resourceCIDFont].chains[j];
+
+            for (; pres != 0;) {
+                pdf_font_resource_t *pdfont = (pdf_font_resource_t *)pres;
+
+                font_resource_free(pdev, pdfont);
+                pres = pres->next;
+            }
+        }
+    }
+
+    {
+        int j, code = 0;
+
+        for (j = 0; j < NUM_RESOURCE_CHAINS && code >= 0; ++j) {
+            pdf_resource_t *pres = pdev->resources[resourceFontDescriptor].chains[j];
+            for (; pres != 0;) {
+                pdf_font_descriptor_free(pdev, pres);
+                pres = pres->next;
+            }
+        }
+    }
+
+    {
+        int j, code = 0;
+
+        for (j = 0; j < NUM_RESOURCE_CHAINS && code >= 0; ++j) {
+            pdf_resource_t *pres = pdev->resources[resourceCharProc].chains[j];
+
+            for (; pres != 0;) {
+                if (pres->object) {
+                    gs_free_object(pdev->pdf_memory, (byte *)pres->object, "Free CharProc");
+                    pres->object = 0;
+                }
+                pres = pres->next;
+            }
+        }
+    }
+
+    {
+        int j, code = 0;
+
+        for (j = 0; j < NUM_RESOURCE_CHAINS && code >= 0; ++j) {
+            pdf_resource_t *pres = pdev->resources[resourceColorSpace].chains[j];
+            for (; pres != 0;) {
+                free_color_space(pdev, pres);
+                pres = pres->next;
+            }
+        }
+    }
+
+    {
+        int j, code = 0;
+
+        for (j = 0; j < NUM_RESOURCE_CHAINS && code >= 0; ++j) {
+            pdf_resource_t *pres = pdev->resources[resourceExtGState].chains[j];
+
+            for (; pres != 0;) {
+                if (pres->object) {
+                    cos_release(pres->object, "release ExtGState object");
+                    gs_free_object(pdev->pdf_memory, pres->object, "free ExtGState");
+                    pres->object = 0;
+                }
+                pres = pres->next;
+            }
+        }
+    }
+
+    {
+        int j, code = 0;
+
+        for (j = 0; j < NUM_RESOURCE_CHAINS && code >= 0; ++j) {
+            pdf_resource_t *pres = pdev->resources[resourcePattern].chains[j];
+
+            for (; pres != 0;) {
+                if (pres->object) {
+                    cos_release(pres->object, "free pattern dict");
+                    gs_free_object(pdev->pdf_memory, pres->object, "free pattern resources");
+                    pres->object = 0;
+                }
+                pres = pres->next;
+            }
+        }
+    }
+
+    {
+        int j, code = 0;
+
+        for (j = 0; j < NUM_RESOURCE_CHAINS && code >= 0; ++j) {
+            pdf_resource_t *pres = pdev->resources[resourceShading].chains[j];
+
+            for (; pres != 0;) {
+                if (pres->object) {
+                    cos_release(pres->object, "free Shading dict");
+                    gs_free_object(pdev->pdf_memory, pres->object, "free Shading resources");
+                    pres->object = 0;
+                }
+                pres = pres->next;
+            }
+        }
+    }
+
+    {
+        int j, code = 0;
+
+        for (j = 0; j < NUM_RESOURCE_CHAINS && code >= 0; ++j) {
+            pdf_resource_t *pres = pdev->resources[resourceGroup].chains[j];
+
+            for (; pres != 0;) {
+                if (pres->object) {
+                    cos_release(pres->object, "free Group dict");
+                    gs_free_object(pdev->pdf_memory, pres->object, "free Group resources");
+                    pres->object = 0;
+                }
+                pres = pres->next;
+            }
+        }
+    }
+
+    {
+        int j, code = 0;
+
+        for (j = 0; j < NUM_RESOURCE_CHAINS && code >= 0; ++j) {
+            pdf_resource_t *pnext = 0, *pres = pdev->resources[resourceFunction].chains[j];
+
+            for (; pres != 0;) {
+                if (pres->object) {
+                    cos_release(pres->object, "free function dict");
+                    gs_free_object(pdev->pdf_memory, pres->object, "free function resources");
+                    pres->object = 0;
+                    pnext = pres->next;
+                }
+                pres = pnext;
+            }
+        }
+    }
+
+    {
+        int i, j;
+
+        for (i = 0; i < NUM_RESOURCE_TYPES; i++) {
+            for (j = 0; j < NUM_RESOURCE_CHAINS && code >= 0; ++j) {
+                pdev->resources[i].chains[j] = 0;
+            }
+        }
+    }
+
+    /* Release the resource records. */
+    /* So what exactly is stored in this list ? I believe the following types of resource:
+     *
+     * resourceCharProc
+     * resourceFont
+     * resourceCIDFont
+     * resourceFontDescriptor
+     * resourceColorSpace
+     * resourceExtGState
+     * resourceXObject
+     * resourceSoftMaskDict
+     * resourceGroup
+     * resourcePattern
+     * resourceShading
+     *
+     * resourceCMap resourcePage and resourceFunction don't appear to be tracked. I note
+     * that resourcePage and resourceCMap are freed above, as is resourceXObject and resourceSoftmaskDict.
+     * So presumably reourceFunction just leaks.
+     *
+     * It seems that all these types of resources are added when they are created
+     * in addition there are 'pdf_forget_resource' and pdf_cancel_resource which
+     * remove entries from this list.
+     */
     {
         pdf_resource_t *pres;
         pdf_resource_t *prev;
@@ -1495,17 +1723,56 @@ pdf_close(gx_device * dev)
     cos_dict_objects_delete(pdev->local_named_objects);
     COS_FREE(pdev->local_named_objects, "pdf_close(local_named_objects)");
     pdev->local_named_objects = 0;
+
+    /* global resources include the Catalog object and apparently the Info dict */
     cos_dict_objects_delete(pdev->global_named_objects);
     COS_FREE(pdev->global_named_objects, "pdf_close(global_named_objects)");
     pdev->global_named_objects = 0;
 
     /* Wrap up. */
 
+    pdev->font_cache = 0;
+
+    {
+        int i;
+        for (i=0;i < pdev->next_page;i++) {
+            cos_release((cos_object_t *)pdev->pages[i].Page, "Free page dict");
+            if (pdev->pages[i].Annots) {
+                cos_release((cos_object_t *)pdev->pages[i].Annots, "Release Annots dict");
+                gs_free_object(mem, pdev->pages[i].Annots, "Free Annots dict");
+            }
+            gs_free_object(mem, pdev->pages[i].Page, "Free Page object");
+        }
+    }
     gs_free_object(mem, pdev->pages, "pages");
     pdev->pages = 0;
+
     pdev->num_pages = 0;
 
-    if (pdev->ForOPDFRead) {
+    gs_free_object(mem, pdev->sbstack, "Free sbstack");
+    pdev->sbstack = 0;
+
+    text_data_free(mem, pdev->text);
+    pdev->text = 0;
+
+    cos_release((cos_object_t *)pdev->Pages, "release Pages dict");
+    gs_free_object(mem, pdev->Pages, "Free Pages dict");
+    pdev->Pages = 0;
+
+    cos_release((cos_object_t *)pdev->NI_stack, "Release Name Index stack");
+    gs_free_object(mem, pdev->NI_stack, "Free Name Index stack");
+    pdev->NI_stack = 0;
+
+    cos_release((cos_object_t *)pdev->Namespace_stack, "release Name space stack");
+    gs_free_object(mem, pdev->Namespace_stack, "Free Name space stack");
+    pdev->Namespace_stack = 0;
+
+    pdev->Catalog = 0;
+    pdev->Info = 0;
+
+    memset(&pdev->outline_levels, 0x00, MAX_OUTLINE_DEPTH * sizeof(pdf_outline_level_t));
+
+    {
         /* pdf_open_dcument could set up filters for entire document.
            Removing them now. */
         int status;
@@ -1529,7 +1796,7 @@ pdf_close(gx_device * dev)
         emprintf2(pdev->memory, "ERROR: A pdfmark destination page %d "
                   "points beyond the last page %d.\n",
                   pdev->max_referred_page, pdev->next_page);
-#if 0 /* Temporary disabled due to Bug 687686. */
+#ifdef DEPRECATED_906 /* Temporary disabled due to Bug 687686. */
         if (code >= 0)
             code = gs_note_error(gs_error_rangecheck);
 #endif

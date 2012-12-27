@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Color value writing for pdfwrite driver */
 #include "math_.h"
 #include "string_.h"
@@ -151,11 +153,23 @@ pdf_pattern(gx_device_pdf *pdev, const gx_drawing_color *pdc,
         cos_dict_t *pcd_XObject = cos_dict_alloc(pdev, "pdf_pattern(XObject)");
         char key[MAX_REF_CHARS + 3];
         cos_value_t v;
+        cos_object_t *object;
 
         if (pcd_XObject == 0)
             return_error(gs_error_VMerror);
         sprintf(key, "/R%ld", pcs_image->id);
-        COS_OBJECT_VALUE(&v, pcs_image);
+        /* This is non-obvious code. Previously we would put the image object (pcs_image)
+         * into the Resources dit. When we come to write out the Resources dict
+         * that code writes a reference (index 0 R) using the ID from the object.
+         * However that means we have two pointers to the XObject. One in the chain
+         * of resoruces (which we need in order to write teh XObject) and one from
+         * the pattern here. That seriously messes up memory handling. So instead
+         * we now make a new object, and copy the id from the pcs_image. Since that's
+         * all that the writing code will use, we cna avoid the double pointers.
+         */
+        object = cos_reference_alloc(pdev, "pdf_pattern(reference copy of XObject)");
+        object->id = pcs_image->id;
+        COS_OBJECT_VALUE(&v, object);
         if ((code = cos_dict_put(pcd_XObject, (byte *)key, strlen(key), &v)) < 0 ||
             (code = cos_dict_put_c_key_object(pcd_Resources, "/XObject",
                                               COS_OBJECT(pcd_XObject))) < 0
@@ -233,6 +247,16 @@ pdf_store_pattern1_params(gx_device_pdf *pdev, pdf_resource_t *pres,
         gs_matrix_multiply(&smat2, &scaled, &smat);
     } else {
         smat = smat2;
+    }
+    if (pdev->ForOPDFRead) {
+        if (pdev->PatternDepth) {
+            gs_matrix_multiply(&smat, &pdev->AccumulatedPatternMatrix, &smat2);
+            gs_matrix_multiply(&pdev->AccumulatedPatternMatrix, &smat, &pdev->AccumulatedPatternMatrix);
+            smat = smat2;
+        } else {
+            gs_make_identity(&pdev->AccumulatedPatternMatrix);
+            gs_matrix_multiply(&pdev->AccumulatedPatternMatrix, &smat, &pdev->AccumulatedPatternMatrix);
+        }
     }
     if (any_abs(smat.tx) < 0.0001)  /* Noise. */
         smat.tx = 0;

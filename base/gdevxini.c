@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* X Windows driver initialization/finalization */
 #include "memory_.h"
 #include "x_.h"
@@ -871,6 +873,13 @@ gdev_x_put_params(gx_device * dev, gs_param_list * plist)
         /* pixels */
         dev->width = min(dev->width, area_width);
         dev->height = min(dev->height, area_height);
+
+        if (dev->width <= 0 || dev->height <= 0) {
+            emprintf3(dev->memory, "Requested pagesize %d x %d not supported by %s device\n",
+                                  dev->width, dev->height, dev->dname);
+            return_error(gs_error_rangecheck);
+        }
+        
         /* points */
         dev->MediaSize[0] = (float)dev->width / xdev->x_pixels_per_inch * 72;
         dev->MediaSize[1] = (float)dev->height / xdev->y_pixels_per_inch * 72;
@@ -908,6 +917,7 @@ gdev_x_put_params(gx_device * dev, gs_param_list * plist)
     xdev->MaxBufferedTotal = values.MaxBufferedTotal;
     xdev->MaxBufferedArea = values.MaxBufferedArea;
     xdev->MaxBufferedCount = values.MaxBufferedCount;
+    
     if (clear_window || xdev->MaxBitmap != values.MaxBitmap) {
         /****** DO MORE FOR RESETTING MaxBitmap ******/
         xdev->MaxBitmap = values.MaxBitmap;

@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Pattern color mapping for Ghostscript library */
 #include "math_.h"
 #include "memory_.h"
@@ -91,6 +93,7 @@ static dev_proc_copy_mono(pattern_accum_copy_mono);
 static dev_proc_copy_color(pattern_accum_copy_color);
 static dev_proc_copy_planes(pattern_accum_copy_planes);
 static dev_proc_get_bits_rectangle(pattern_accum_get_bits_rectangle);
+static dev_proc_fill_rectangle_hl_color(pattern_accum_fill_rectangle_hl_color);
 
 /* The device descriptor */
 static const gx_device_pattern_accum gs_pattern_accum_device =
@@ -153,7 +156,7 @@ static const gx_device_pattern_accum gs_pattern_accum_device =
      NULL,                              /* encode_color */
      NULL,                              /* decode_color */
      NULL,                              /* pattern_manage */
-     NULL,                              /* fill_rectangle_hl_color */
+     pattern_accum_fill_rectangle_hl_color, /* fill_rectangle_hl_color */
      NULL,                              /* include_color_space */
      NULL,                              /* fill_linear_color_scanline */
      NULL,                              /* fill_linear_color_trapezoid */
@@ -168,7 +171,8 @@ static const gx_device_pattern_accum gs_pattern_accum_device =
      pattern_accum_copy_planes,         /* copy_planes */
      NULL,                              /* get_profile */
      NULL,                              /* set_graphics_type_tag */
-     gx_default_strip_copy_rop2
+     gx_default_strip_copy_rop2,
+     gx_default_strip_tile_rect_devn
 },
  0,                             /* target */
  0, 0, 0, 0                     /* bitmap_memory, bits, mask, instance */
@@ -336,6 +340,7 @@ gx_pattern_accum_alloc(gs_memory_t * mem, gs_memory_t * storage_memory,
         cwdev->width = pinst->size.x;
         cwdev->height = pinst->size.y;
         cwdev->LeadingEdge = tdev->LeadingEdge;
+        cwdev->is_planar = pinst->is_planar;
         /* Fields left zeroed :
         float MediaSize[2];
         float ImagingBBox[4];
@@ -582,6 +587,33 @@ pattern_accum_close(gx_device * dev)
     /* Un-retain the device now, so reference counting will free it. */
     gx_device_retain(dev, false);
     return 0;
+}
+
+/* _hl_color */
+static int
+pattern_accum_fill_rectangle_hl_color(gx_device *dev, const gs_fixed_rect *rect,
+                                      const gs_imager_state *pis, 
+                                      const gx_drawing_color *pdcolor, 
+                                      const gx_clip_path *pcpath)
+{
+    gx_device_pattern_accum *const padev = (gx_device_pattern_accum *) dev;
+
+    if (padev->bits)
+        (*dev_proc(padev->target, fill_rectangle_hl_color))
+            (padev->target, rect, pis, pdcolor, pcpath);
+    if (padev->mask) {
+        int x, y, w, h;
+
+        x = rect->p.x;
+        y = rect->p.y;
+        w = rect->q.x - x;
+        h = rect->q.y - y;
+
+        return (*dev_proc(padev->mask, fill_rectangle))
+            ((gx_device *) padev->mask, x, y, w, h, (gx_color_index) 1);
+    }
+     else
+        return 0;
 }
 
 /* Fill a rectangle */
@@ -1119,7 +1151,7 @@ dump_raw_pattern(int height, int width, int n_chan, int depth,
                 width,height,max_bands);
     }
     fid = fopen(full_file_name,"wb");
-    if (depth == 8 * n_chan) {
+    if (depth >= 8) {
         /* Contone data. */
         if (is_planar) {
             for (m = 0; m < max_bands; m++) {
@@ -1315,19 +1347,21 @@ gx_pattern_load(gx_device_color * pdc, const gs_imager_state * pis,
 
     code = (*pinst->templat.PaintProc)(&pdc->ccolor, saved);
     if (code < 0) {
+        /* RJW: At this point, in the non transparency case,
+         * saved->device == adev. So unretain it, close it, and the
+         * gs_state_free(saved) will remove it. In the transparency case,
+         * saved->device = the pdf14 device. So we need to unretain it,
+         * close adev, and finally close saved->device
+         * (which frees adev). */
         gx_device_retain(saved->device, false);         /* device no longer retained */
         if (pinst->templat.uses_transparency) {
-            dev_proc(saved->device, close_device)((gx_device *)saved->device);
-            dev_proc(adev, close_device)((gx_device *)adev);
             if (pinst->is_clist == 0)
                 gs_free_object(((gx_device_pattern_accum *)adev)->bitmap_memory,
                                ((gx_device_pattern_accum *)adev)->transbuff,
                                "gx_pattern_load");
-            // rc_decrement_only(adev, "gx_pattern_load");      /* may free the device */
-            // gs_free_object(mem, adev, "gx_pattern_load");
-        } else {
             dev_proc(adev, close_device)((gx_device *)adev);
         }
+        dev_proc(saved->device, close_device)((gx_device *)saved->device);
         /* Freeing the state should now free the device which may be the pdf14 compositor. */
         gs_state_free(saved);
         return code;
@@ -1422,6 +1456,8 @@ gs_pattern1_remap_color(const gs_client_color * pc, const gs_color_space * pcs,
             pdc->type = &gx_dc_binary_masked;
         else if (pdc->type == gx_dc_type_ht_colored)
             pdc->type = &gx_dc_colored_masked;
+        else if (pdc->type == gx_dc_type_devn)
+            pdc->type = &gx_dc_devn_masked;
         else
             return_error(gs_error_unregistered);
     } else

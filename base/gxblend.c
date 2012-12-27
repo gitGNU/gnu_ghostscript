@@ -1,16 +1,18 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id$ */
+
 /* PDF 1.4 blending functions */
 
 #include "memory_.h"
@@ -905,11 +907,7 @@ art_pdf_composite_pixel_alpha_8(byte *dst, const byte *src, int n_chan,
         /* backdrop alpha is zero, just copy source pixels and avoid
            computation. */
 
-        /* this idiom is faster than memcpy (dst, src, n_chan + 1); for
-           expected small values of n_chan. */
-        for (i = 0; i <= n_chan >> 2; i++) {
-            ((bits32 *) dst)[i] = ((const bits32 *)src)[i];
-        }
+        memcpy (dst, src, n_chan + 1);
 
         return;
     }
@@ -996,11 +994,8 @@ art_pdf_composite_pixel_knockout_8(byte *dst,
         return;
     if (src[n_chan + 1] == 255 && blend_mode == BLEND_MODE_Normal ||
         dst[n_chan] == 0) {
-        /* this idiom is faster than memcpy (dst, src, n_chan + 2); for
-           expected small values of n_chan. */
-        for (i = 0; i <= (n_chan + 1) >> 2; i++) {
-            ((bits32 *) dst)[i] = ((const bits32 *)src[i]);
-        }
+
+        memcpy (dst, src, n_chan + 2);
 
         return;
     }
@@ -1111,8 +1106,8 @@ art_pdf_recomposite_group_8(byte *dst, byte *dst_alpha_g,
            other out. Note: if the reason that alpha == 255 is that
            there is no constant mask and no soft mask, then this
            operation should be optimized away at a higher level. */
-        for (i = 0; i <= n_chan >> 2; i++)
-            ((bits32 *) dst)[i] = ((const bits32 *)src)[i];
+
+        memcpy(dst, src, n_chan + 1);
         if (dst_alpha_g != NULL) {
             tmp = (255 - *dst_alpha_g) * (255 - src_alpha_g) + 0x80;
             *dst_alpha_g = 255 - ((tmp + (tmp >> 8)) >> 8);
@@ -1124,8 +1119,7 @@ art_pdf_recomposite_group_8(byte *dst, byte *dst_alpha_g,
 
         dst_alpha = dst[n_chan];
         if (src_alpha_g == 255 || dst_alpha == 0) {
-            for (i = 0; i < (n_chan + 3) >> 2; i++)
-                ((bits32 *) ca)[i] = ((const bits32 *)src)[i];
+            memcpy(ca, src, n_chan + 3);
         } else {
             /* Uncomposite the color. In other words, solve
                "src = (ca, src_alpha_g) over dst" for ca */
@@ -1173,7 +1167,6 @@ art_pdf_composite_group_8(byte *dst, byte *dst_alpha_g,
 {
     byte src_alpha;		/* $\alpha g_n$ */
     byte src_tmp[ART_MAX_CHAN + 1];
-    int i;
     int tmp;
 
     if (alpha == 255) {
@@ -1187,8 +1180,7 @@ art_pdf_composite_group_8(byte *dst, byte *dst_alpha_g,
         src_alpha = src[n_chan];
         if (src_alpha == 0)
             return;
-        for (i = 0; i < (n_chan + 3) >> 2; i++)
-            ((bits32 *) src_tmp)[i] = ((const bits32 *)src)[i];
+        memcpy(src_tmp, src, n_chan + 3);
         tmp = src_alpha * alpha + 0x80;
         src_tmp[n_chan] = (tmp + (tmp >> 8)) >> 8;
         art_pdf_composite_pixel_alpha_8(dst, src_tmp, n_chan,
@@ -1205,15 +1197,13 @@ art_pdf_composite_group_8(byte *dst, byte *dst_alpha_g,
 void
 art_pdf_knockoutisolated_group_8(byte *dst, const byte *src, int n_chan)
 {
-    int i;
     byte src_alpha;
 
     src_alpha = src[n_chan];
     if (src_alpha == 0)
         return;
-    for (i = 0; i <= n_chan >> 2; i++) {
-        ((bits32 *) dst)[i] = ((const bits32 *)src)[i];
-    }
+
+    memcpy (dst, src, n_chan + 1);
 }
 
 void
@@ -1230,8 +1220,7 @@ art_pdf_composite_knockout_simple_8(byte *dst,
     if (src_shape == 0)
         return;
     else if (src_shape == 255) {
-        for (i = 0; i < (n_chan + 3) >> 2; i++)
-            ((bits32 *) dst)[i] = ((const bits32 *)src)[i];
+        memcpy (dst, src, n_chan + 3);
         dst[n_chan] = opacity;
         if (dst_shape != NULL)
             *dst_shape = 255;
@@ -1279,8 +1268,8 @@ art_pdf_composite_knockout_isolated_8(byte *dst,
     if (shape == 0)
         return;
     else if ((shape & shape_mask) == 255) {
-        for (i = 0; i < (n_chan + 3) >> 2; i++)
-            ((bits32 *) dst)[i] = ((const bits32 *)src)[i];
+
+        memcpy(dst, src, n_chan + 3);
         tmp = src[n_chan] * alpha_mask + 0x80;
         dst[n_chan] = (tmp + (tmp >> 8)) >> 8;
         if (dst_shape != NULL)
@@ -1463,10 +1452,33 @@ dump_raw_buffer(int num_rows, int width, int n_chan,
    /* during a particular band if we have a large file */
    /* if (clist_band_count != 65) return; */
     buff_ptr = Buffer;
-#ifdef RAW_DUMP_AS_PAM
-    if ((n_chan == 4) || (n_chan == 5)) {
+#if RAW_DUMP_AS_PAM
+    /* FIXME: GRAY + ALPHA + SHAPE + TAGS will be interpreted as RGB + ALPHA */
+    if ((n_chan == 2) || (n_chan == 3)) {
         int x;
-        sprintf(full_file_name,"%d)%s.pam",global_index,filename);
+        sprintf(full_file_name,"%02d)%s.pam",global_index,filename);
+        fid = fopen(full_file_name,"wb");
+        fprintf(fid, "P7\nWIDTH %d\nHEIGHT %d\nDEPTH 4\nMAXVAL 255\nTUPLTYPE GRAYSCALE_ALPHA\nENDHDR\n",
+                width, num_rows);
+        for(y=0; y<num_rows; y++)
+            for(x=0; x<width; x++)
+                for(z=0; z<2; z++)
+                    fputc(Buffer[z*plane_stride + y*rowstride + x], fid);
+        fclose(fid);
+        if (n_chan == 3) {
+            sprintf(full_file_name,"%02d)%s_shape.pam",global_index,filename);
+            fid = fopen(full_file_name,"wb");
+            fprintf(fid, "P7\nWIDTH %d\nHEIGHT %d\nDEPTH 1\nMAXVAL 255\nTUPLTYPE GRAYSCALE\nENDHDR\n",
+                    width, num_rows);
+            for(y=0; y<num_rows; y++)
+                for(x=0; x<width; x++)
+                    fputc(Buffer[2*plane_stride + y*rowstride + x], fid);
+            fclose(fid);
+        }
+    }
+    if ((n_chan == 4) || (n_chan == 5) || (n_chan == 6)) {
+        int x;
+        sprintf(full_file_name,"%02d)%s.pam",global_index,filename);
         fid = fopen(full_file_name,"wb");
         fprintf(fid, "P7\nWIDTH %d\nHEIGHT %d\nDEPTH 4\nMAXVAL 255\nTUPLTYPE RGB_ALPHA\nENDHDR\n",
                 width, num_rows);
@@ -1475,21 +1487,31 @@ dump_raw_buffer(int num_rows, int width, int n_chan,
                 for(z=0; z<4; z++)
                     fputc(Buffer[z*plane_stride + y*rowstride + x], fid);
         fclose(fid);
-        if (n_chan == 5) {
-            sprintf(full_file_name,"%d)%s_shape.pam",global_index,filename);
+        if (n_chan > 4) {
+            sprintf(full_file_name,"%02d)%s_shape.pam",global_index,filename);
             fid = fopen(full_file_name,"wb");
             fprintf(fid, "P7\nWIDTH %d\nHEIGHT %d\nDEPTH 1\nMAXVAL 255\nTUPLTYPE GRAYSCALE\nENDHDR\n",
                     width, num_rows);
             for(y=0; y<num_rows; y++)
                 for(x=0; x<width; x++)
                     fputc(Buffer[4*plane_stride + y*rowstride + x], fid);
+            fclose(fid);
         }
-        fclose(fid);
+        if (n_chan == 6) {
+            sprintf(full_file_name,"%02d)%s_tags.pam",global_index,filename);
+            fid = fopen(full_file_name,"wb");
+            fprintf(fid, "P7\nWIDTH %d\nHEIGHT %d\nDEPTH 1\nMAXVAL 255\nTUPLTYPE GRAYSCALE\nENDHDR\n",
+                    width, num_rows);
+            for(y=0; y<num_rows; y++)
+                for(x=0; x<width; x++)
+                    fputc(Buffer[5*plane_stride + y*rowstride + x], fid);
+            fclose(fid);
+        }
         return;
     }
 #endif
     max_bands = ( n_chan < 57 ? n_chan : 56);   /* Photoshop handles at most 56 bands */
-    sprintf(full_file_name,"%d)%s_%dx%dx%d.raw",global_index,filename,width,num_rows,max_bands);
+    sprintf(full_file_name,"%02d)%s_%dx%dx%d.raw",global_index,filename,width,num_rows,max_bands);
     fid = fopen(full_file_name,"wb");
 
     for (z = 0; z < max_bands; ++z) {

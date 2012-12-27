@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Default image rendering state structure */
 /* Requires gxcpath.h, gxdevmem.h, gxdcolor.h, gzpath.h */
 
@@ -211,8 +213,11 @@ struct gx_image_enum_s {
     byte interpolate;           /* true if Interpolate requested */
     gs_matrix matrix;           /* image space -> device space */
     struct r_ {
-        int x, y, w, h;         /* subrectangle being rendered */
+        int x, y, w, h;         /* subrectangle for which data is supplied */
     } rect;
+    struct {
+        int x, y, w, h;         /* subrectangle that actually needs to be rendered */
+    } rrect;
     fixed dst_height;           /* Full image height in the device space for siscale.c only;
                                    assumes posture == image_portrait. */
     fixed dst_width;            /* Full image width in the device space for siscale.c only;

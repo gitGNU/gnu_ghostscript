@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Fast case character cache routines for Ghostscript library */
 #include "memory_.h"
 #include "gx.h"
@@ -34,6 +36,7 @@
 #include "gscspace.h"		/* for gsimage.h */
 #include "gsimage.h"
 #include "gxhttile.h"
+#include "gsptype1.h"       /* for gx_dc_is_pattern1_color_with_trans */
 
 /* Forward references */
 static byte *compress_alpha_bits(const cached_char *, gs_memory_t *);
@@ -295,9 +298,9 @@ gx_image_cached_char(register gs_show_enum * penum, register cached_char * cc)
      * We need to map 4 bitmap bits to 2 alpha bits.
      */
     depth = (cc_depth(cc) == 3 ? 2 : cc_depth(cc));
-    if (dev_proc(orig_dev, fill_mask) != gx_default_fill_mask ||
-        !lop_no_S_is_T(pgs->log_op)
-        ) {
+    if ((dev_proc(orig_dev, fill_mask) != gx_default_fill_mask ||
+        !lop_no_S_is_T(pgs->log_op))) {
+
         gx_clip_path *pcpath;
 
         if (penum) {

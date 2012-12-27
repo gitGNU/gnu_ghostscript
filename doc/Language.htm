@@ -4,7 +4,6 @@
 <head>
 <meta http-equiv="content-type" content="text/html; charset=us-ascii">
 <title>Ghostscript and the PostScript language</title>
-<!-- $Id$ -->
 <!-- Originally: language.txt -->
 <link rel="stylesheet" type="text/css" href="gs.css" title="Ghostscript Style">
 </head>
@@ -736,6 +735,24 @@ array lemgth.
 <li>there's no special handling of an empty path or trailing <code>moveto</code>.
 The saved path can be restored by <code>newpath { exec } forall</code>.
 </ul>
+</dl>
+
+<dl>
+<dt><code>- .sethpglpathmode</code>
+<dd>If the single numerical parameter is non zero, then future path
+creation operations will make an HPGL-style path. HPGL style paths
+differ from postscript style paths in that moveto operations only
+begin a new subpath if there is not already an open subpath. (i.e.
+<code>a b moveto c d moveto e f lineto closepath</code> will draw
+back to (a,b), not (c,d). HPGL paths treat these non-subpath starting
+<tt>moveto</tt>s as <tt>lineto</tt> segments when filling, and as
+unstroked gaps when stroking.
+</dl>
+
+<dl>
+<dt><code>.currenthpglpathmode -</code>
+<dd>Leave the current hpglpathmode on the stack. The initial value
+of hpglpathmode is 0.
 </dl>
 
 <h4><a name="Painting"></a>Painting operators</h4>
@@ -1948,6 +1965,15 @@ full page buffer may be somewhat larger than the bitmap size alone.
 </dl>
 
 <dl>
+<dt><code>BandListStorage &lt;file|memory&gt;</code>
+<dd>The default is determined by the make file macro <code>BAND_LIST_STORAGE</code>.
+Since <code>memory</code> is always included, specifying <code>-sBandListStorage=memory</code>
+when the default is <code>file</code> will use memory based storage for the
+band list of the page. This is primarily intended for testing, but if the disk I/O is
+slow, band list storage in memory may be faster.
+</dl>
+
+<dl>
 <dt><code>BufferSpace &lt;integer&gt;</code>
 <dd>Size of the buffer space for band lists, if the full page raster image 
 (bitmap) is larger than <code>MaxBitmap</code> (see above.)
@@ -2343,7 +2369,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 9.05, 8 February 2012
+<small>Ghostscript version 9.06, 8 August 2012
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

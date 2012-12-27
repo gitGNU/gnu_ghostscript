@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2008 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-  This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Generate source data for the %rom% IODevice */
 /*
  * For reasons of convenience and footprint reduction, the various postscript
@@ -267,9 +269,10 @@ void put_bytes_padded(FILE *out, unsigned char *p, unsigned int len)
 /* clear the internal memory of an inode */
 void inode_clear(romfs_inode* node)
 {
-    int i, blocks = (node->disc_length+ROMFS_BLOCKSIZE-1)/ROMFS_BLOCKSIZE;
+    int i, blocks;
 
     if (node) {
+        blocks = (node->disc_length+ROMFS_BLOCKSIZE-1)/ROMFS_BLOCKSIZE;
         if (node->data) {
             for (i = 0; i < blocks; i++) {
                 if (node->data[i]) free(node->data[i]);

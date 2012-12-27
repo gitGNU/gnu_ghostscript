@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Type 42 character display operator */
 #include "ghost.h"
 #include "oper.h"
@@ -35,6 +37,7 @@
 #include "store.h"
 #include "string_.h"
 #include "zchar42.h"
+#include "idict.h"
 
 /* Get a Type 42 character metrics and set the cache device. */
 int
@@ -48,12 +51,20 @@ zchar42_set_cache(i_ctx_t *i_ctx_p, gs_font_base *pbfont, ref *cnref,
     gs_rect bbox;
     int vertical = gs_rootfont(igs)->WMode;
     float sbw_bbox[8];
+    float sbw_bbox_h[8];
+    ref *fdict = (ref *)pbfont->client_data;
+    ref *rpath = NULL;
+    bool embedded = true;
 
     if (code < 0)
         return code;
     present = code;
+
+    if (dict_find_string(fdict, "Path", &rpath) > 0) {
+        embedded = false;
+    }
+
     if (vertical) { /* for vertically-oriented metrics */
-        float sbw_bbox_h[8];
 
         /* Always call get_metrics because we'll need glyph bbox below in any case
            as a workaround for Dynalab fonts. We can't recognize Dynalab here. */
@@ -64,7 +75,13 @@ zchar42_set_cache(i_ctx_t *i_ctx_p, gs_font_base *pbfont, ref *cnref,
         code = pfont42->data.get_metrics(pfont42, glyph_index,
                 gs_type42_metrics_options_WMODE1_AND_BBOX, sbw_bbox);
         /* Here code=0 means success, code<0 means no vertical metrics. */
-        if (code < 0) {
+        /* We only want to create fake vertical metrics for TTF fonts
+           being used to emulate a vertical writing CIDFont. If we have
+           a CIDType 2 font, without vertical metrics, we're supposed to
+           treat it as a horizontal writing font, regardless of the wmode
+           setting
+         */
+        if (code < 0 && !embedded) {
             /* No vertical metrics in the font,
                hewristically compose vertical metrics from bounding boxes. */
             sbw_bbox[0] = 0;
@@ -72,6 +89,11 @@ zchar42_set_cache(i_ctx_t *i_ctx_p, gs_font_base *pbfont, ref *cnref,
             sbw_bbox[2] = 0;
             sbw_bbox[3] = -1;
         }
+        else {
+            vertical = false;
+        }
+    }
+    if (vertical) {
         if (present != metricsSideBearingAndWidth) {
             /* metricsNone or metricsWidthOnly. */
             /* No top side bearing (in Metrics2) in Postscript font. */
@@ -130,7 +152,7 @@ zchar42_set_cache(i_ctx_t *i_ctx_p, gs_font_base *pbfont, ref *cnref,
                            NULL,
                            w, &bbox,
                            cont, exec_cont,
-                           gs_rootfont(igs)->WMode ? sbw : NULL);
+                           vertical ? sbw : NULL);
 }
 
 /* <font> <code|name> <name> <glyph_index> .type42execchar - */

@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Metadata writer. */
 #include "gx.h"
 #include "gserrors.h"
@@ -562,7 +564,7 @@ pdf_write_document_metadata(gx_device_pdf *pdev, const byte digest[6])
         return code;
 
     /* PDF/A XMP reference recommends setting UUID to empty. If not empty must be a URI */
-    if (pdev->PDFA)
+    if (pdev->PDFA != 0)
         instance_uuid[0] = 0x00;
 
     cre_date_time_len = pdf_get_docinfo_item(pdev, "/CreationDate", cre_date_time, sizeof(cre_date_time));
@@ -570,7 +572,7 @@ pdf_write_document_metadata(gx_device_pdf *pdev, const byte digest[6])
         cre_date_time_len = pdf_xmp_time(cre_date_time, sizeof(cre_date_time));
     else
         cre_date_time_len = pdf_xmp_convert_time(cre_date_time, cre_date_time_len, date_time_buf, sizeof(date_time_buf));
-    mod_date_time_len = pdf_get_docinfo_item(pdev, "/CreationDate", mod_date_time, sizeof(mod_date_time));
+    mod_date_time_len = pdf_get_docinfo_item(pdev, "/ModDate", mod_date_time, sizeof(mod_date_time));
     if (!mod_date_time_len)
         mod_date_time_len = pdf_xmp_time(mod_date_time, sizeof(mod_date_time));
     else
@@ -745,14 +747,17 @@ pdf_write_document_metadata(gx_device_pdf *pdev, const byte digest[6])
             }
             pdf_xml_tag_close(s, "rdf:Description");
             pdf_xml_newline(s);
-            if (pdev->PDFA) {
+            if (pdev->PDFA != 0) {
                 pdf_xml_tag_open_beg(s, "rdf:Description");
                 pdf_xml_attribute_name(s, "rdf:about");
                 pdf_xml_attribute_value(s, instance_uuid);
                 pdf_xml_attribute_name(s, "xmlns:pdfaid");
                 pdf_xml_attribute_value(s, "http://www.aiim.org/pdfa/ns/id/");
                 pdf_xml_attribute_name(s, "pdfaid:part");
-                pdf_xml_attribute_value(s,"1");
+                if (pdev->PDFA == 1)
+                    pdf_xml_attribute_value(s,"1");
+                else
+                    pdf_xml_attribute_value(s,"2");
                 pdf_xml_attribute_name(s, "pdfaid:conformance");
                 pdf_xml_attribute_value(s,"B");
                 pdf_xml_tag_end_empty(s);

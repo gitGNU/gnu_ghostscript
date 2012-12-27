@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Default implementation of text writing */
 #include "gx.h"
 #include "memory_.h"
@@ -531,13 +533,19 @@ set_cache_device(gs_show_enum * penum, gs_state * pgs, floatp llx, floatp lly,
         cached_char *cc;
         gs_fixed_rect clip_box;
         int code;
+        gs_fixed_point cll, clr, cul, cur, cdim;
+
+        /* Reject setcachedevice arguments that are too big and, probably, invalid */
+        /* The threshold is arbitrary. A font from bug 692832 has a 1237340,       */
+        /* normal fonts should have about 1000. */
+        if (fabs(llx) > 32000. || fabs(lly) > 32000. || fabs(urx) > 32000. || fabs(ury) >= 32000.)
+            return 0;           /* don't cache */
 
         /* Compute the bounding box of the transformed character. */
         /* Since we accept arbitrary transformations, the extrema */
         /* may occur in any order; however, we can save some work */
         /* by observing that opposite corners before transforming */
         /* are still opposite afterwards. */
-        gs_fixed_point cll, clr, cul, cur, cdim;
 
         if ((code = gs_distance_transform2fixed(&pgs->ctm, llx, lly, &cll)) < 0 ||
             (code = gs_distance_transform2fixed(&pgs->ctm, llx, ury, &clr)) < 0 ||
@@ -907,8 +915,13 @@ show_move(gs_show_enum * penum)
             return code;
     } else {
         double dx = 0, dy = 0;
-
-        if (SHOW_IS_ADD_TO_SPACE(penum)) {
+        /* Specifically for applying PDF word spacing, if single_byte_space == true
+           we'll only apply the delta for single byte character codes == space.s_char
+           See psi/zchar.c zpdfwidthshow and zpdfawidthshow for more detail
+         */
+        if (SHOW_IS_ADD_TO_SPACE(penum)
+            && (!penum->single_byte_space
+            || penum->fstack.depth <= 0)) {
             gs_char chr = gx_current_char((const gs_text_enum_t *)penum);
 
             if (chr == penum->text.space.s_char) {

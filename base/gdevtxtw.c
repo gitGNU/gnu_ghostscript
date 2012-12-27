@@ -1,15 +1,18 @@
-/* Copyright (C) 2001-2006 artofcode LLC.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
+
 /*$Id: gdevtxtw.c 7795 2007-03-23 13:56:11Z tim $ */
 /* Device for Unicode (UTF-8 or UCS2) text extraction */
 #include "memory_.h"
@@ -128,6 +131,7 @@ static dev_proc_put_params(txtwrite_put_params);
 static dev_proc_fill_path(txtwrite_fill_path);
 static dev_proc_stroke_path(txtwrite_stroke_path);
 static dev_proc_text_begin(txtwrite_text_begin);
+static dev_proc_strip_copy_rop(txtwrite_strip_copy_rop);
 
 /* The device prototype */
 #define X_DPI 72
@@ -196,9 +200,9 @@ const gx_device_txtwrite_t gs_txtwrite_device =
      NULL,			/* image_data */
      NULL,			/* end_image */
      NULL, /*gx_default_strip_tile_rectangle,*/
-     NULL, /*gx_default_strip_copy_rop,*/
+     txtwrite_strip_copy_rop,
      NULL,			/* get_clipping_box */
-     NULL,                      /* txtwrite_begin_typed_image */
+     NULL, /* txtwrite_begin_typed_image */
      NULL,			/* get_bits_rectangle */
      NULL, /*gx_default_map_color_rgb_alpha,*/
      gx_null_create_compositor,
@@ -213,7 +217,25 @@ const gx_device_txtwrite_t gs_txtwrite_device =
      NULL,			/* get_color_mapping_procs */
      NULL,			/* get_color_comp_index */
      NULL,			/* encode_color */
-     NULL			/* decode_color */
+     NULL,			/* decode_color */
+     NULL,                      /* pattern manager */
+     NULL,                      /* fill_rectangle_hl_color */
+     NULL,                      /* include_color_space */
+     NULL,                      /* fill_linear_color_scanline */
+     NULL,                      /* fill_linear_color_trapezoid */
+     NULL,                      /* fill_linear_color_triangle */
+     NULL,                      /* update_spot_equivalent_colors */
+     NULL,                      /* ret_devn_params */
+     NULL,                      /* fillpage */
+     NULL,                      /* push_transparency_state */
+     NULL,                      /* pop_transparency_state */
+     NULL,                      /* put_image */
+     NULL,                      /* dev_spec_op */
+     NULL,                      /* copy_planes */
+     NULL,                      /* get_profile */
+     NULL,                      /* set_graphics_type_tag */
+     NULL,                      /* strip_copy_rop2 */
+     NULL                       /* strip_tile_rect_devn */
     },
     { 0 },			/* Page Data */
     { 0 },			/* Output Filename */
@@ -1094,7 +1116,8 @@ txtwrite_stroke_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppa
     return 0;
 }
 
-/*static int
+#if 0
+static int
 txtwrite_fill_mask(gx_device * dev,
                const byte * data, int dx, int raster, gx_bitmap_id id,
                int x, int y, int w, int h,
@@ -1104,7 +1127,7 @@ txtwrite_fill_mask(gx_device * dev,
     return 0;
 }
 
-static int
+int
 txtwrite_begin_typed_image(gx_device * dev,
                        const gs_imager_state * pis, const gs_matrix * pmat,
                    const gs_image_common_t * pic, const gs_int_rect * prect,
@@ -1113,7 +1136,8 @@ txtwrite_begin_typed_image(gx_device * dev,
                        gs_memory_t * memory, gx_image_enum_common_t ** pinfo)
 {
     return 0;
-}*/
+}
+#endif
 
 /* ------ Text imaging ------ */
 
@@ -1854,7 +1878,7 @@ txtwrite_process_plain_text(gs_text_enum_t *pte)
         if (operation & (TEXT_FROM_STRING | TEXT_FROM_BYTES)) {
             ch = pte->text.data.bytes[pte->index++];
         } else if (operation & (TEXT_FROM_CHARS | TEXT_FROM_SINGLE_CHAR)) {
-            ;
+            ch = pte->text.data.bytes[pte->index++];
         } else if (operation & (TEXT_FROM_GLYPHS | TEXT_FROM_SINGLE_GLYPH)) {
             if (operation & TEXT_FROM_GLYPHS) {
                 gdata = pte->text.data.glyphs + (pte->index++ * sizeof (gs_glyph));
@@ -2272,5 +2296,18 @@ txtwrite_text_begin(gx_device * dev, gs_imager_state * pis,
 
     *ppenum = (gs_text_enum_t *)penum;
 
+    return 0;
+}
+
+static int
+txtwrite_strip_copy_rop(gx_device * dev,
+                    const byte * sdata, int sourcex, uint sraster,
+                    gx_bitmap_id id,
+                    const gx_color_index * scolors,
+                    const gx_strip_bitmap * textures,
+                    const gx_color_index * tcolors,
+                    int x, int y, int w, int h,
+                    int phase_x, int phase_y, gs_logical_operation_t lop)
+{
     return 0;
 }

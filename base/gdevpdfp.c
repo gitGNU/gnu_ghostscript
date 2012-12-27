@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Get/put parameters for PDF-writing driver */
 #include "memory_.h"
 #include "gx.h"
@@ -88,13 +90,15 @@ static const gs_param_item_t pdf_param_items[] = {
     pi("PatternImagemask", gs_param_type_bool, PatternImagemask),
     pi("MaxClipPathSize", gs_param_type_int, MaxClipPathSize),
     pi("MaxShadingBitmapSize", gs_param_type_int, MaxShadingBitmapSize),
+#ifdef DEPRECATED_906
     pi("MaxViewerMemorySize", gs_param_type_int, MaxViewerMemorySize),
+#endif
     pi("HaveTrueTypes", gs_param_type_bool, HaveTrueTypes),
     pi("HaveCIDSystem", gs_param_type_bool, HaveCIDSystem),
     pi("HaveTransparency", gs_param_type_bool, HaveTransparency),
     pi("CompressEntireFile", gs_param_type_bool, CompressEntireFile),
     pi("PDFX", gs_param_type_bool, PDFX),
-    pi("PDFA", gs_param_type_bool, PDFA),
+    pi("PDFA", gs_param_type_int, PDFA),
     pi("DocumentUUID", gs_param_type_string, DocumentUUID),
     pi("InstanceUUID", gs_param_type_string, InstanceUUID),
     pi("DocumentTimeSeq", gs_param_type_int, DocumentTimeSeq),
@@ -115,12 +119,12 @@ static const gs_param_item_t pdf_param_items[] = {
     pi("PDFACompatibilityPolicy", gs_param_type_int, PDFACompatibilityPolicy),
     pi("DetectDuplicateImages", gs_param_type_bool, DetectDuplicateImages),
     pi("AllowIncrementalCFF", gs_param_type_bool, AllowIncrementalCFF),
-    pi("HighLevelDevice", gs_param_type_bool, HighLevelDevice),
     pi("WantsToUnicode", gs_param_type_bool, WantsToUnicode),
     pi("AllowPSRepeatFunctions", gs_param_type_bool, AllowPSRepeatFunctions),
     pi("IsDistiller", gs_param_type_bool, IsDistiller),
     pi("PreserveSMask", gs_param_type_bool, PreserveSMask),
     pi("PreserveTrMode", gs_param_type_bool, PreserveTrMode),
+    pi("NoT3CCITT", gs_param_type_bool, NoT3CCITT),
 #undef pi
     gs_param_item_end
 };
@@ -249,7 +253,7 @@ gdev_pdf_put_params_impl(gx_device * dev, const gx_device_pdf * save_dev, gs_par
         code = param_read_string_array(plist, (param_name = "pdfmark"), &ppa);
         switch (code) {
             case 0:
-                code = pdf_open_document(pdev);
+                code = pdfwrite_pdf_open_document(pdev);
                 if (code < 0)
                     return code;
                 code = pdfmark_process(pdev, &ppa);
@@ -266,7 +270,7 @@ gdev_pdf_put_params_impl(gx_device * dev, const gx_device_pdf * save_dev, gs_par
         code = param_read_string_array(plist, (param_name = "DSC"), &ppa);
         switch (code) {
             case 0:
-                code = pdf_open_document(pdev);
+                code = pdfwrite_pdf_open_document(pdev);
                 if (code < 0)
                     return code;
                 code = pdf_dsc_process(pdev, &ppa);
@@ -416,11 +420,16 @@ gdev_pdf_put_params_impl(gx_device * dev, const gx_device_pdf * save_dev, gs_par
      * or less impossible to alter the setting in the (potentially saved) page
      * device dictionary, so we use this rather clunky method.
      */
-    if(pdev->PDFA && pdev->AbortPDFAX)
-        pdev->PDFA = false;
+    if (pdev->PDFA < 0 || pdev->PDFA > 2){
+        ecode = gs_note_error(gs_error_rangecheck);
+        param_signal_error(plist, "PDFA", ecode);
+        goto fail;
+    }
+    if(pdev->PDFA != 0 && pdev->AbortPDFAX)
+        pdev->PDFA = 0;
     if(pdev->PDFX && pdev->AbortPDFAX)
-        pdev->PDFX = false;
-    if (pdev->PDFX && pdev->PDFA) {
+        pdev->PDFX = 0;
+    if (pdev->PDFX && pdev->PDFA != 0) {
         ecode = gs_note_error(gs_error_rangecheck);
         param_signal_error(plist, "PDFA", ecode);
         goto fail;
@@ -430,12 +439,12 @@ gdev_pdf_put_params_impl(gx_device * dev, const gx_device_pdf * save_dev, gs_par
         param_signal_error(plist, "PDFX", ecode);
         goto fail;
     }
-    if (pdev->PDFA && pdev->ForOPDFRead) {
+    if (pdev->PDFA != 0 && pdev->ForOPDFRead) {
         ecode = gs_note_error(gs_error_rangecheck);
         param_signal_error(plist, "PDFA", ecode);
         goto fail;
     }
-    if (pdev->PDFA)
+    if (pdev->PDFA == 1)
          pdev->HaveTransparency = false;
     /*
      * We have to set version to the new value, because the set of
@@ -444,7 +453,7 @@ gdev_pdf_put_params_impl(gx_device * dev, const gx_device_pdf * save_dev, gs_par
      */
     if (pdev->PDFX)
         cl = (float)1.3; /* Instead pdev->CompatibilityLevel = 1.2; - see below. */
-    if (pdev->PDFA && cl < 1.4)
+    if (pdev->PDFA != 0 && cl < 1.4)
         cl = (float)1.4;
     pdev->version = (cl < 1.2 ? psdf_version_level2 : psdf_version_ll3);
     if (pdev->ForOPDFRead) {

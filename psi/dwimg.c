@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2008 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 
 /* display device image window for Windows */
 
@@ -1114,6 +1116,32 @@ create_palette(IMAGE *img)
     return palette;
 }
 
+static void UpdateScrollBarX(IMAGE *img)
+{
+    SCROLLINFO si;
+    si.cbSize = sizeof(si);
+    si.fMask = SIF_PAGE | SIF_POS | SIF_RANGE;
+    si.nPage = img->cxClient;
+    si.nMin = 0;
+    si.nMax = img->bmih.biWidth-1;
+    si.nPos = img->nHscrollPos;
+    si.nTrackPos = 0;
+    SetScrollInfo(img->hwnd, SB_HORZ, &si, TRUE);
+}
+
+static void UpdateScrollBarY(IMAGE *img)
+{
+    SCROLLINFO si;
+    si.cbSize = sizeof(si);
+    si.fMask = SIF_PAGE | SIF_POS | SIF_RANGE;
+    si.nPage = img->cyClient;
+    si.nMin = 0;
+    si.nMax = img->bmih.biHeight-1;
+    si.nPos = img->nVscrollPos;
+    si.nTrackPos = 0;
+    SetScrollInfo(img->hwnd, SB_VERT, &si, TRUE);
+}
+
 /* image window */
 /* All accesses to img->image or dimensions must be protected by mutex */
 LRESULT CALLBACK
@@ -1209,8 +1237,7 @@ WndImg2Proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
             img->nVscrollMax = max(0, img->bmih.biHeight - img->cyClient);
             img->nVscrollPos = min(img->nVscrollPos, img->nVscrollMax);
 
-            SetScrollRange(hwnd, SB_VERT, 0, img->nVscrollMax, FALSE);
-            SetScrollPos(hwnd, SB_VERT, img->nVscrollPos, TRUE);
+            UpdateScrollBarY(img);
 
             img->cxAdjust = min(img->bmih.biWidth,  img->cxClient) - img->cxClient;
             img->cxClient += img->cxAdjust;
@@ -1218,8 +1245,7 @@ WndImg2Proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
             img->nHscrollMax = max(0, img->bmih.biWidth - img->cxClient);
             img->nHscrollPos = min(img->nHscrollPos, img->nHscrollMax);
 
-            SetScrollRange(hwnd, SB_HORZ, 0, img->nHscrollMax, FALSE);
-            SetScrollPos(hwnd, SB_HORZ, img->nHscrollPos, TRUE);
+            UpdateScrollBarX(img);
 
             if ((wParam==SIZENORMAL)
                 && (img->cxAdjust!=0 || img->cyAdjust!=0)) {
@@ -1263,7 +1289,7 @@ WndImg2Proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
                 min(nVscrollInc, img->nVscrollMax - img->nVscrollPos)))!=0) {
                 img->nVscrollPos += nVscrollInc;
                 ScrollWindow(hwnd,0,-nVscrollInc,NULL,NULL);
-                SetScrollPos(hwnd,SB_VERT,img->nVscrollPos,TRUE);
+                UpdateScrollBarY(img);
                 UpdateWindow(hwnd);
             }
             return(0);
@@ -1292,7 +1318,7 @@ WndImg2Proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
                 min(nHscrollInc, img->nHscrollMax - img->nHscrollPos)))!=0) {
                 img->nHscrollPos += nHscrollInc;
                 ScrollWindow(hwnd,-nHscrollInc,0,NULL,NULL);
-                SetScrollPos(hwnd,SB_HORZ,img->nHscrollPos,TRUE);
+                UpdateScrollBarX(img);
                 UpdateWindow(hwnd);
             }
             return(0);

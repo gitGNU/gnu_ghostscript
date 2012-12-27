@@ -1,4 +1,5 @@
-%    Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
+% Copyright (C) 2001-2012 Artifex Software, Inc.
+% All Rights Reserved.
 %
 % This software is provided AS-IS with no warranty, either express or
 % implied.
@@ -7,13 +8,11 @@
 % modified or distributed except as expressly authorized under the terms
 % of the license contained in the file LICENSE in this distribution.
 %
-% For more information about licensing, please refer to
-% http://www.ghostscript.com/licensing/. For information on
-% commercial licensing, go to http://www.artifex.com/licensing/ or
-% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
-% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+% Refer to licensing information at http://www.artifex.com or contact
+% Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+% CA  94903, U.S.A., +1(415)492-9861, for further information.
+%
 
-% $Id$
 % pdf_main.ps
 % PDF file- and page-level operations.
 
@@ -184,24 +183,63 @@ currentdict /runpdfstring .undef
 } bind def
 
 /runpdfpagerange {	% - runpdfpagerange <firstpage#> <lastpage#>
-   /FirstPage where
-    { pop FirstPage dup pdfpagecount gt
-      { (\nRequested FirstPage is greater than the number of pages in the file: ) print
-        pdfpagecount = flush
-      } if
-    } {
-      1
-    } ifelse
-   /LastPage where { pop LastPage pdfpagecount .min } { pdfpagecount } ifelse
-   1 index 1 index gt
-    { (   No pages will be processed \(FirstPage > LastPage\).) = flush }
-    { QUIET not
-      { (Processing pages ) print 1 index =only ( through ) print dup =only
-        (.) = flush
-      }
-     if
-    }
-   ifelse
+   /PortfolioPage where {
+     pop
+     PortfolioPage cvi dup pdfpagecount add                  % a b+1
+     /PortfolioPage dup load                                 % a b+1 /P ()
+     (          ) 1 index  copy pop
+     dup 3 index exch cvs pop                                % a b+1 /P (b+1)
+     store
+     1 sub                                                   % a b
+     /FirstPage where { pop FirstPage } { 1 } ifelse
+     /LastPage  where { pop LastPage  } {2000000000} ifelse  % a b fp lp
+     2 index 2 index lt { % b < fp
+       1e10
+     } {
+       3 index 2 index gt { % a > fp
+         1
+       } {
+         1 index 4 index sub 1 add  
+       } ifelse
+     } ifelse                                                % a b fp lp f
+     3 index 2 index lt { % b < bp
+       3 index 5 index sub 1 add  % b-a+1=count
+     } {
+       4 index 2 index gt {
+         0
+       } {
+         1 index 5 index sub 1 add
+       } ifelse
+     } ifelse                                                % a b fp lp f l
+     6 2 roll pop pop pop pop
+
+     QUIET not { 
+       1 index 1 index gt { 
+         (Skipping the subfuile.) = flush 
+       } { 
+           (Processing pages ) print 1 index =only ( through ) print dup =only
+           (.) = flush
+       } ifelse
+     } if
+   } {
+     /FirstPage where { 
+       pop FirstPage dup pdfpagecount gt {
+         (\nRequested FirstPage is greater than the number of pages in the file: ) print
+          pdfpagecount = flush
+       } if
+     } {
+        1
+     } ifelse
+     /LastPage where { pop LastPage pdfpagecount .min } { pdfpagecount } ifelse
+     1 index 1 index gt { 
+       (   No pages will be processed \(FirstPage > LastPage\).) = flush 
+     } { 
+       QUIET not { 
+         (Processing pages ) print 1 index =only ( through ) print dup =only
+         (.) = flush
+       } if
+     } ifelse
+   } ifelse
 } bind def
 
 /dopdfpages {   % firstpage# lastpage# dopdfpages -
@@ -320,9 +358,12 @@ currentdict /runpdfstring .undef
     //runpdfend exec
   } {
     //runpdfend exec
-    ] {
+    ] 
+    (1         ) 10 string copy exch
+    {
         dup type /filetype eq {
           //runpdfbegin exec
+          dup /PortfolioPage exch def
           process_trailer_attrs
           //runpdfpagerange exec
           //dopdfpages exec
@@ -331,6 +372,7 @@ currentdict /runpdfstring .undef
         } {
           .namestring dup (r) file
           //runpdfbegin exec
+          /PortfolioPage 2 index def
           process_trailer_attrs
           //runpdfpagerange exec
           //dopdfpages exec
@@ -338,6 +380,7 @@ currentdict /runpdfstring .undef
           deletefile
         } ifelse
     } forall
+    pop
   } ifelse
 } bind def
 
@@ -544,6 +587,7 @@ currentdict /xref-char-dict undef
  %  In PDF 1.5, the XRef dictionary also serves as the trailer dictionary
 /readpdf15xref		% <pos> readpdf15xref <trailerdict>
  {
+   /Classic-xref //false store
    PDFfile exch setfileposition		% move to start of object
         % Get object number, revision, and 'obj' and discard
    PDFfile token pop pop
@@ -730,6 +774,42 @@ currentdict /xref-char-dict undef
       pop
     } ifelse
   } if
+  
+  % Use OutputIntent ICC profile
+  systemdict /UsePDFX3Profile .knownget {
+    dup //false eq {
+      pop
+    } {
+      dup //true eq { pop 0 } if
+      dup type /integertype eq {
+        Trailer /Root oget /OutputIntents knownoget {
+          dup length 2 index le  % i [] bool
+          2 index 0 lt or {
+            pop pop
+            (Source file has no OutputIntent with this number.\n)
+          } {
+            exch oget dup type /dicttype ne { pop << >> } if
+            /DestOutputProfile knownoget {
+              [ /ICCBased 3 -1 roll ] ICCBased-resolve
+              1 get .set_outputintent
+              ()
+            } {
+              (This OutputputIntents dictionary has no profile.\n)
+            } ifelse
+          } ifelse
+        } {
+          pop (File has no /OutputIntents attribute\n)
+        } ifelse
+      } {
+        pop (UsePDFX3Profile must be a boolean or an integer.\n)
+      } ifelse
+      dup () eq {
+        pop
+      } {
+        (   **** ) stderrprint stderrprint
+      } ifelse
+    } ifelse
+  } if
 } bind def
 
 % Verify that each entry in the xref table is pointing at an object with
@@ -836,6 +916,7 @@ currentdict /xref-char-dict undef
      ifelse
    } loop
 
+   /Classic-xref //true def
    /PDFversion exch def
         % Read the last cross-reference table.
    count /pdfemptycount exch def
@@ -850,7 +931,10 @@ currentdict /xref-char-dict undef
         % is not defined.
      Trailer
      { /Prev knownoget not {	% If no previous xref table then ...
-         /NoVerifyXref where { pop } { verify_xref } ifelse exit
+         Classic-xref {
+           /NoVerifyXref where { pop } { verify_xref } ifelse 
+         } if  
+         exit
        } if
        { readxref } .internalstopped {
          recover_xref_data	% Read failed.  Attempt to recover xref data.
@@ -2033,7 +2117,14 @@ currentdict /PDF2PS_matrix_key undef
       { { exch pop oforce 3 index colorspacespotcolors } forall } big-res-forall
     } if
     dup /Pattern knownoget {
-      { { exch pop oforce 4 copy exch pop resourcespotcolors pop pop pop } forall } big-res-forall
+      { { exch pop oforce 
+          dup /Shading knownoget {
+            exch pop
+            /ColorSpace oget 3 index colorspacespotcolors
+          } {
+            4 copy exch pop resourcespotcolors pop pop pop 
+          } ifelse
+       } forall } big-res-forall
     } if
     dup /Shading knownoget {
       { { exch pop oforce /ColorSpace oget 3 index colorspacespotcolors } forall } big-res-forall

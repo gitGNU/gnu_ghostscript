@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Interface for pdfwrite text and fonts */
 
 #ifndef gdevpdt_INCLUDED
@@ -42,6 +44,8 @@ pdf_text_state_t *pdf_text_state_alloc(gs_memory_t *mem);
  */
 pdf_text_data_t *pdf_text_data_alloc(gs_memory_t *mem);	/* gdevpdts.h */
 
+int text_data_free(gs_memory_t *mem, pdf_text_data_t *ptd);
+
 /*
  * Reset the text state at the beginning of the page.
  */
@@ -57,11 +61,13 @@ void pdf_reset_text_state(pdf_text_data_t *ptd); /* gdevpdts.h */
  */
 void pdf_close_text_page(gx_device_pdf *pdev); /* gdevpdti.h */
 
+#ifdef DEPRECATED_906
 /*
  * Close the text-related parts of a document, including writing out font
  * and related resources.
  */
 int pdf_close_text_document(gx_device_pdf *pdev); /* gdevpdtw.h */
+#endif
 
 /* ---------------- Contents state (for gdevpdfu.c) ---------------- */
 

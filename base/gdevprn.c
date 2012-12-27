@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Generic printer driver support */
 #include "ctype_.h"
 #include "gdevprn.h"
@@ -140,7 +142,7 @@ BACKTRACE(pdev);
 open_c:
     ppdev->buf = base;
     ppdev->buffer_space = space;
-    clist_init_io_procs(pclist_dev, false);
+    clist_init_io_procs(pclist_dev, ppdev->BLS_force_memory);
     clist_init_params(pclist_dev, base, space, pdev,
                       ppdev->printer_procs.buf_procs,
                       space_params->band, ppdev->is_async_renderer,
@@ -418,7 +420,8 @@ gdev_prn_allocate(gx_device *pdev, gdev_prn_space_params *new_space_params,
         COPY_PROC(decode_color);
         COPY_PROC(update_spot_equivalent_colors);
         COPY_PROC(ret_devn_params);
-        COPY_PROC(put_image);
+        /* This can be set from the memory device (planar) or target */
+        fill_dev_proc(ppdev, put_image, ppdev->orig_procs.put_image);
 #undef COPY_PROC
         /* If using a command list, already opened the device. */
         if (is_command_list)
@@ -497,23 +500,38 @@ gdev_prn_get_params(gx_device * pdev, gs_param_list * plist)
     gx_device_printer * const ppdev = (gx_device_printer *)pdev;
     int code = gx_default_get_params(pdev, plist);
     gs_param_string ofns;
+    gs_param_string bls;
 
     if (code < 0 ||
-        (code = param_write_long(plist, "MaxBitmap", &ppdev->space_params.MaxBitmap)) < 0 ||
-        (code = param_write_long(plist, "BufferSpace", &ppdev->space_params.BufferSpace)) < 0 ||
-        (code = param_write_int(plist, "BandWidth", &ppdev->space_params.band.BandWidth)) < 0 ||
-        (code = param_write_int(plist, "BandHeight", &ppdev->space_params.band.BandHeight)) < 0 ||
         (code = param_write_long(plist, "BandBufferSpace", &ppdev->space_params.band.BandBufferSpace)) < 0 ||
+        (code = param_write_int(plist, "BandHeight", &ppdev->space_params.band.BandHeight)) < 0 ||
+        (code = param_write_int(plist, "BandWidth", &ppdev->space_params.band.BandWidth)) < 0 ||
+        (code = param_write_long(plist, "BufferSpace", &ppdev->space_params.BufferSpace)) < 0 ||
+        (ppdev->Duplex_set >= 0 &&
+        (code = (ppdev->Duplex_set ?
+                  param_write_bool(plist, "Duplex", &ppdev->Duplex) :
+                  param_write_null(plist, "Duplex"))) < 0) ||
+        (code = param_write_long(plist, "MaxBitmap", &ppdev->space_params.MaxBitmap)) < 0 ||
         (code = param_write_int(plist, "NumRenderingThreads", &ppdev->num_render_threads_requested)) < 0 ||
         (code = param_write_bool(plist, "OpenOutputFile", &ppdev->OpenOutputFile)) < 0 ||
-        (code = param_write_bool(plist, "ReopenPerPage", &ppdev->ReopenPerPage)) < 0 ||
-        (code = param_write_bool(plist, "PageUsesTransparency",
-                                &ppdev->page_uses_transparency)) < 0 ||
-        (ppdev->Duplex_set >= 0 &&
-         (code = (ppdev->Duplex_set ?
-                  param_write_bool(plist, "Duplex", &ppdev->Duplex) :
-                  param_write_null(plist, "Duplex"))) < 0)
+        (code = param_write_bool(plist, "PageUsesTransparency", &ppdev->page_uses_transparency)) < 0 ||
+        (code = param_write_bool(plist, "ReopenPerPage", &ppdev->ReopenPerPage)) < 0
         )
+        return code;
+
+    /* Force the default to 'memory' if clist file I/O is not included in this build */
+    if (clist_io_procs_file_global == NULL)
+        ppdev->BLS_force_memory = true;
+    if (ppdev->BLS_force_memory) {
+        bls.data = (byte *)"memory";
+        bls.size = 6;
+        bls.persistent = false;
+    } else {
+        bls.data = (byte *)"file";
+        bls.size = 4;
+        bls.persistent = false;
+    }
+    if( (code = param_write_string(plist, "BandListStorage", &bls)) < 0 )
         return code;
 
     ofns.data = (const byte *)ppdev->fname,
@@ -553,6 +571,7 @@ gdev_prn_put_params(gx_device * pdev, gs_param_list * plist)
     int nthreads = ppdev->num_render_threads_requested;
     gdev_prn_space_params sp, save_sp;
     gs_param_string ofs;
+    gs_param_string bls;
     gs_param_dict mdict;
 
     sp = ppdev->space_params;
@@ -617,7 +636,7 @@ label:\
         break
 
     switch (code = param_read_long(plist, (param_name = "MaxBitmap"), &sp.MaxBitmap)) {
-        CHECK_PARAM_CASES(MaxBitmap, sp.MaxBitmap < 10000, mbe);
+        CHECK_PARAM_CASES(MaxBitmap, sp.MaxBitmap < 0, mbe);
     }
 
     switch (code = param_read_long(plist, (param_name = "BufferSpace"), &sp.BufferSpace)) {
@@ -634,6 +653,21 @@ label:\
 
     switch (code = param_read_long(plist, (param_name = "BandBufferSpace"), &sp.band.BandBufferSpace)) {
         CHECK_PARAM_CASES(band.BandBufferSpace, sp.band.BandBufferSpace < 0, bbse);
+    }
+
+    switch (code = param_read_string(plist, (param_name = "BandListStorage"), &bls)) {
+        case 0:
+            /* Only accept 'file' if the file procs are include in the build */
+            if ((bls.size > 1) && (bls.data[0] == 'm' ||
+                 (clist_io_procs_file_global != NULL && bls.data[0] == 'f')))
+                break;
+            /* falls through */
+        default:
+            ecode = code;
+            param_signal_error(plist, param_name, ecode);
+        case 1:
+            bls.data = 0;
+            break;
     }
 
     switch (code = param_read_string(plist, (param_name = "OutputFile"), &ofs)) {
@@ -702,6 +736,9 @@ label:\
     }
     ppdev->space_params = sp;
     ppdev->num_render_threads_requested = nthreads;
+    if (bls.data != 0) {
+        ppdev->BLS_force_memory = (bls.data[0] == 'm');
+    }
 
     /* If necessary, free and reallocate the printer memory. */
     /* Formerly, would not reallocate if device is not open: */
@@ -947,14 +984,14 @@ gdev_prn_file_is_new(const gx_device_printer *pdev)
 
 /* Determine the colors used in a range of lines. */
 int
-gx_page_info_colors_used(const gx_device *dev,
+gx_page_info_color_usage(const gx_device *dev,
                          const gx_band_page_info_t *page_info,
                          int y, int height,
-                         gx_colors_used_t *colors_used, int *range_start)
+                         gx_color_usage_t *color_usage, int *range_start)
 {
     int start, end, i;
     int num_lines = page_info->scan_lines_per_colors_used;
-    gx_color_index or = 0;
+    gx_color_usage_bits or = 0;
     bool slow_rop = false;
 
     if (y < 0 || height < 0 || height > dev->height - y)
@@ -962,32 +999,32 @@ gx_page_info_colors_used(const gx_device *dev,
     start = y / num_lines;
     end = (y + height + num_lines - 1) / num_lines;
     for (i = start; i < end; ++i) {
-        or |= page_info->band_colors_used[i].or;
-        slow_rop |= page_info->band_colors_used[i].slow_rop;
+        or |= page_info->band_color_usage[i].or;
+        slow_rop |= page_info->band_color_usage[i].slow_rop;
     }
-    colors_used->or = or;
-    colors_used->slow_rop = slow_rop;
+    color_usage->or = or;
+    color_usage->slow_rop = slow_rop;
     *range_start = start * num_lines;
     return min(end * num_lines, dev->height) - *range_start;
 }
 int
-gdev_prn_colors_used(gx_device *dev, int y, int height,
-                     gx_colors_used_t *colors_used, int *range_start)
+gdev_prn_color_usage(gx_device *dev, int y, int height,
+                     gx_color_usage_t *color_usage, int *range_start)
 {
     gx_device_clist_writer *cldev;
 
     /* If this isn't a banded device, return default values. */
     if (dev_proc(dev, open_device) != gs_clist_device_procs.open_device) {
         *range_start = 0;
-        colors_used->or = ((gx_color_index)1 << dev->color_info.depth) - 1;
+        color_usage->or = gx_color_usage_all(dev);
         return dev->height;
     }
     cldev = (gx_device_clist_writer *)dev;
     if (cldev->page_info.scan_lines_per_colors_used == 0) /* not set yet */
-        clist_compute_colors_used(cldev);
+        clist_compute_color_usage(cldev);
     return
-        gx_page_info_colors_used(dev, &cldev->page_info,
-                                 y, height, colors_used, range_start);
+        gx_page_info_color_usage(dev, &cldev->page_info,
+                                 y, height, color_usage, range_start);
 }
 
 /*

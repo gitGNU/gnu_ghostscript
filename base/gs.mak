@@ -1,16 +1,18 @@
-#  Copyright (C) 2001-2009 Artifex Software, Inc.
-#  All Rights Reserved.
+# Copyright (C) 2001-2012 Artifex Software, Inc.
+# All Rights Reserved.
 #
-#  This software is provided AS-IS with no warranty, either express or
-#  implied.
+# This software is provided AS-IS with no warranty, either express or
+# implied.
 #
-#  This software is distributed under license and may not be copied, modified
-#  or distributed except as expressly authorized under the terms of that
-#  license.  Refer to licensing information at http://www.artifex.com/
-#  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-#  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+# This software is distributed under license and may not be copied,
+# modified or distributed except as expressly authorized under the terms
+# of the license contained in the file LICENSE in this distribution.
 #
-# $Id$
+# Refer to licensing information at http://www.artifex.com or contact
+# Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+# CA  94903, U.S.A., +1(415)492-9861, for further information.
+#
+#
 # Generic makefile, common to all platforms, products, and configurations.
 # The platform-specific makefiles `include' this file.
 
@@ -261,7 +263,8 @@ MKROMFS_XE=$(AUX)mkromfs$(XEAUX)
 
 # Define the names of the generated header files.
 # gconfig*.h and gconfx*.h are generated dynamically.
-gconfig_h=$(GLGENDIR)$(D)gconfxx.h
+gconfig_h=$(GLGENDIR)$(D)gconfig.h
+gconfxx_h=$(GLGENDIR)$(D)gconfxx.h
 gconfigf_h=$(GLGENDIR)$(D)gconfxc.h
 gconfigd_h=$(GLGENDIR)$(D)gconfigd.h
 
@@ -279,6 +282,7 @@ clean : mostlyclean
 	$(RM_) $(GSGEN)arch.h
 	$(RM_) $(GS_XE)
 	$(RM_) $(GS_SHARED_OBJS)
+	$(RMN_) -r $(BINDIR) $(GLGENDIR) $(GLOBJDIR) $(PSGENDIR) $(PSOBJDIR)
 
 #****** FOLLOWING IS WRONG, NEEDS TO BE PER-SUBSYSTEM ******
 mostlyclean : config-clean
@@ -292,7 +296,6 @@ mostlyclean : config-clean
 	$(RMN_) $(MKROMFS_XE)
 	$(RMN_) $(MKROMFS_XE)_0
 	$(RMN_) $(MKROMFS_XE)_1
-	$(RMN_) $(PSGEN)$(GS_INIT)
 	$(RMN_) $(GSGEN)gsromfs1.c $(GSGEN)gsromfs1_.c $(GSGEN)gsromfs1_1.c
 	$(RMN_) $(AUX)*.$(OBJ) $(AUX)gscdefs*.c
 

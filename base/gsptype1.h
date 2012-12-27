@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Client interface to PatternType 1 Patterns */
 
 #ifndef gsptype1_INCLUDED
@@ -90,6 +92,9 @@ const gs_client_pattern *gs_getpattern(const gs_client_color *);
 
 /* Check device color for Pattern Type 1. */
 bool gx_dc_is_pattern1_color(const gx_device_color *pdevc);
+
+/* Check device color for Pattern Type 1 with transparency involved */
+bool gx_dc_is_pattern1_color_with_trans(const gx_device_color *pdevc);
 
 /* Get transparency pointer */
 void * gx_pattern1_get_transptr(const gx_device_color *pdevc);

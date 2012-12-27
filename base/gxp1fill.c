@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* PatternType 1 filling algorithms */
 #include "string_.h"
 #include "math_.h"
@@ -84,6 +86,11 @@ typedef struct tile_fill_trans_state_s {
     int xoff, yoff;             /* set dynamically */
 
 } tile_fill_trans_state_t;
+
+/* we need some means of detecting if a forwarding clipping device was
+   installed.  If the tile state contains a device different from the
+   target output device it must be the clipping device. */
+#define CLIPDEV_INSTALLED (state.pcdev != dev)
 
 /* Initialize the filling state. */
 static int
@@ -238,36 +245,19 @@ tile_colored_fill(const tile_fill_state_t * ptfs,
     bool full_transfer = (w == ptfs->w0 && h == ptfs->h0);
     int code = 0;
 
-    if (source == NULL && lop_no_S_is_T(lop) && ptfs->num_planes < 0) {
-        /* RJW: Ideally, we'd like to remove the 'ptfs->num_planes < 0' test
-         * above, and then do:
-         *
-         * if (ptfs->num_planes >= 0) {
-         *     int plane_step = ptile->tbits.raster * ptile->tbits.rep_height;
-         *     int k;
-         *     for (k = 0; k < ptfs->num_planes; k++) {
-         *         byte *data_plane = (byte*) (data + plane_step * k);
-         *         (*dev_proc(ptfs->pcdev, copy_plane))
-         *                                 (ptfs->pcdev,
-         *                                  data_plane + bits->raster * yoff,
-         *                                  xoff, bits->raster,
-         *                                  gx_no_bitmap_id, x, y,
-         *                                  w, h, k);
-         *     }
-         * } else
-         *
-         * Unfortunately, this can cause the rop source device to be called
-         * with copy_plane. This is currently broken (and I fear cannot ever
-         * be done properly). We therefore drop back to the strip_copy_rop
-         * case below.
-         */
-        {
+    if (source == NULL && lop_no_S_is_T(lop) && dev->procs.copy_planes != NULL &&
+        ptfs->num_planes > 0) {
+            code = (*dev_proc(ptfs->pcdev, copy_planes))
+                    (ptfs->pcdev, data + bits->raster * yoff, xoff,
+                     bits->raster,
+                     (full_transfer ? bits->id : gx_no_bitmap_id),
+                     x, y, w, h, ptile->tbits.rep_height);
+    } else if (source == NULL && lop_no_S_is_T(lop)) {
             code = (*dev_proc(ptfs->pcdev, copy_color))
                     (ptfs->pcdev, data + bits->raster * yoff, xoff,
                      bits->raster,
                      (full_transfer ? bits->id : gx_no_bitmap_id),
                      x, y, w, h);
-        }
     } else {
         gx_strip_bitmap data_tile;
         gx_bitmap_id source_id;
@@ -373,14 +363,9 @@ gx_dc_pattern_fill_rectangle(const gx_device_color * pdevc, int x, int y,
             imod(-(int)fastfloor(ptile->step_matrix.ty - state.phase.y + 0.5),
                  bits->rep_height);
 
-        if (state.pcdev != dev)
+        if (CLIPDEV_INSTALLED)
             tile_clip_set_phase(&state.cdev, px, py);
-        /* RJW: Can we get away with calling the simpler version? Not
-         * if we are working in planar mode because the default
-         * strip_tile_rectangle doesn't understand bits being in planar
-         * mode at the moment.
-         */
-        if (source == NULL && lop_no_S_is_T(lop) && state.num_planes == -1)
+        if (source == NULL && lop_no_S_is_T(lop))
             code = (*dev_proc(state.pcdev, strip_tile_rectangle))
                 (state.pcdev, bits, x, y, w, h,
                  gx_no_color_index, gx_no_color_index, px, py);
@@ -424,6 +409,8 @@ gx_dc_pattern_fill_rectangle(const gx_device_color * pdevc, int x, int y,
                                  &tbits, tile_pattern_clist);
         }
     }
+    if (CLIPDEV_INSTALLED)
+        tile_clip_release((gx_device_tile_clip *) &state.cdev);
     if(state.cdev.finalize)
         state.cdev.finalize((gx_device *)&state.cdev);
     return code;
@@ -473,16 +460,49 @@ gx_dc_pure_masked_fill_rect(const gx_device_color * pdevc,
     if (code < 0)
         return code;
     if (state.pcdev == dev || ptile->is_simple)
-        return (*gx_dc_type_data_pure.fill_rectangle)
+        code = (*gx_dc_type_data_pure.fill_rectangle)
             (pdevc, x, y, w, h, state.pcdev, lop, source);
     else {
         state.lop = lop;
         state.source = source;
         state.fill_rectangle = gx_dc_type_data_pure.fill_rectangle;
+        code = tile_by_steps(&state, x, y, w, h, ptile, &ptile->tmask,
+                             tile_masked_fill);
+    }
+    if (CLIPDEV_INSTALLED)
+        tile_clip_release((gx_device_tile_clip *) &state.cdev);
+    return code;
+}
+
+int
+gx_dc_devn_masked_fill_rect(const gx_device_color * pdevc,
+                            int x, int y, int w, int h, gx_device * dev,
+                            gs_logical_operation_t lop,
+                            const gx_rop_source_t * source)
+{
+    gx_color_tile *ptile = pdevc->mask.m_tile;
+    tile_fill_state_t state;
+    int code;
+
+    /*
+     * This routine should never be called if there is no masking,
+     * but we leave the checks below just in case.
+     */
+    code = tile_fill_init(&state, pdevc, dev, true);
+    if (code < 0)
+        return code;
+    if (state.pcdev == dev || ptile->is_simple)
+        return (*gx_dc_type_data_devn.fill_rectangle)
+            (pdevc, x, y, w, h, state.pcdev, lop, source);
+    else {
+        state.lop = lop;
+        state.source = source;
+        state.fill_rectangle = gx_dc_type_data_devn.fill_rectangle;
         return tile_by_steps(&state, x, y, w, h, ptile, &ptile->tmask,
                              tile_masked_fill);
     }
 }
+
 int
 gx_dc_binary_masked_fill_rect(const gx_device_color * pdevc,
                               int x, int y, int w, int h, gx_device * dev,
@@ -497,16 +517,20 @@ gx_dc_binary_masked_fill_rect(const gx_device_color * pdevc,
     if (code < 0)
         return code;
     if (state.pcdev == dev || ptile->is_simple)
-        return (*gx_dc_type_data_ht_binary.fill_rectangle)
+        code = (*gx_dc_type_data_ht_binary.fill_rectangle)
             (pdevc, x, y, w, h, state.pcdev, lop, source);
     else {
         state.lop = lop;
         state.source = source;
         state.fill_rectangle = gx_dc_type_data_ht_binary.fill_rectangle;
-        return tile_by_steps(&state, x, y, w, h, ptile, &ptile->tmask,
+        code = tile_by_steps(&state, x, y, w, h, ptile, &ptile->tmask,
                              tile_masked_fill);
     }
+    if (CLIPDEV_INSTALLED)
+        tile_clip_release((gx_device_tile_clip *) &state.cdev);
+    return code;
 }
+
 int
 gx_dc_colored_masked_fill_rect(const gx_device_color * pdevc,
                                int x, int y, int w, int h, gx_device * dev,
@@ -521,15 +545,18 @@ gx_dc_colored_masked_fill_rect(const gx_device_color * pdevc,
     if (code < 0)
         return code;
     if (state.pcdev == dev || ptile->is_simple)
-        return (*gx_dc_type_data_ht_colored.fill_rectangle)
+        code = (*gx_dc_type_data_ht_colored.fill_rectangle)
             (pdevc, x, y, w, h, state.pcdev, lop, source);
     else {
         state.lop = lop;
         state.source = source;
         state.fill_rectangle = gx_dc_type_data_ht_colored.fill_rectangle;
-        return tile_by_steps(&state, x, y, w, h, ptile, &ptile->tmask,
+        code = tile_by_steps(&state, x, y, w, h, ptile, &ptile->tmask,
                              tile_masked_fill);
     }
+    if (CLIPDEV_INSTALLED)
+        tile_clip_release((gx_device_tile_clip *) &state.cdev);
+    return code;
 }
 
 /*
@@ -892,8 +919,8 @@ gx_dc_pat_trans_fill_rectangle(const gx_device_color * pdevc, int x, int y,
     return code;
 }
 
-/* This fills the transparency buffer rectangles with a pattern
-   buffer that includes transparency */
+/* This fills the transparency buffer rectangles with a pattern buffer
+   that includes transparency */
 
 int
 gx_trans_pattern_fill_rect(int xmin, int ymin, int xmax, int ymax,
@@ -905,7 +932,7 @@ gx_trans_pattern_fill_rect(int xmin, int ymin, int xmax, int ymax,
 
     tile_fill_trans_state_t state_trans;
     tile_fill_state_t state_clist_trans;
-    int code;
+    int code = 0;
 
     if (ptile == 0)             /* null pattern */
         return 0;
@@ -941,6 +968,7 @@ gx_trans_pattern_fill_rect(int xmin, int ymin, int xmax, int ymax,
                transformed bbox */
             code = tile_by_steps_trans(&state_trans, xmin, ymin, xmax-xmin,
                                         ymax-ymin, fill_trans_buffer, ptile);
+
         } else {
             /* clist for the trans tile.  This uses the pdf14 device as a target
                and should blend directly into the buffer.  Note that the
@@ -966,9 +994,14 @@ gx_trans_pattern_fill_rect(int xmin, int ymin, int xmax, int ymax,
             tbits = ptile->tbits;
             tbits.size.x = crdev->width;
             tbits.size.y = crdev->height;
-            code = tile_by_steps(&state_clist_trans, xmin, ymin, xmax,
-                                 ymax, ptile, &tbits, tile_pattern_clist);
+            if (code >= 0)
+                code = tile_by_steps(&state_clist_trans, xmin, ymin, xmax,
+                                     ymax, ptile, &tbits, tile_pattern_clist);
+
+            if (code >= 0 && (state_clist_trans.pcdev != dev))
+                tile_clip_release((gx_device_tile_clip *)&state_clist_trans.cdev);
+
         }
     }
-    return(0);
+    return(code);
 }

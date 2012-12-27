@@ -1,16 +1,17 @@
-#  Copyright (C) 2001-2007 Artifex Software, Inc.
-#  All Rights Reserved.
+# Copyright (C) 2001-2012 Artifex Software, Inc.
+# All Rights Reserved.
 #
-#  This software is provided AS-IS with no warranty, either express or
-#  implied.
+# This software is provided AS-IS with no warranty, either express or
+# implied.
 #
-#  This software is distributed under license and may not be copied, modified
-#  or distributed except as expressly authorized under the terms of that
-#  license.  Refer to licensing information at http://www.artifex.com/
-#  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-#  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+# This software is distributed under license and may not be copied,
+# modified or distributed except as expressly authorized under the terms
+# of the license contained in the file LICENSE in this distribution.
 #
-# $Id$
+# Refer to licensing information at http://www.artifex.com or contact
+# Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+# CA  94903, U.S.A., +1(415)492-9861, for further information.
+#
 # makefile for PNG (Portable Network Graphics) code.
 # Users of this makefile must define the following:
 #	ZSRCDIR - the zlib source directory
@@ -56,7 +57,9 @@ PNGO_=$(O_)$(PNGOBJ)
 PZGEN=$(ZGENDIR)$(D)
 
 # PI_ and PF_ are defined in gs.mak.
-PNGCC=$(CC_) $(I_)$(PI_)$(_I) $(PF_) $(D_)PNG_NO_ASSEMBLER_CODE$(_D)
+# NB: we can't use the normal $(CC_) here because msvccmd.mak
+# adds /Za which conflicts with the libpng 1.5.x source.
+PNGCC=$(CC) $(CFLAGS) $(I_)$(PI_)$(_I) $(I_)$(PNGGENDIR)$(_I) $(PF_) $(D_)PNG_NO_ASSEMBLER_CODE$(_D)
 
 # Define the name of this makefile.
 LIBPNG_MAK=$(GLSRC)png.mak
@@ -67,10 +70,16 @@ png.clean : png.config-clean png.clean-not-config-clean
 png.clean-not-config-clean :
 	$(RM_) $(PNGOBJ)*.$(OBJ)
 
+pnglibconf_h=$(PNGGENDIR)$(D)pnglibconf.h
+
 png.config-clean :
+	$(RM_) $(pnglibconf_h)
 	$(RM_) $(PNGGEN)lpg*.dev
 
-PDEP=$(AK)
+$(pnglibconf_h) : $(PNGSRC)scripts$(D)pnglibconf.h.prebuilt
+	$(CP_)  $(PNGSRC)scripts$(D)pnglibconf.h.prebuilt $(pnglibconf_h)
+
+PDEP=$(AK) $(pnglibconf_h)
 
 png_1=$(PNGOBJ)png.$(OBJ) $(PNGOBJ)pngmem.$(OBJ) $(PNGOBJ)pngerror.$(OBJ) $(PNGOBJ)pngset.$(OBJ)
 png_2=$(PNGOBJ)pngtrans.$(OBJ) $(PNGOBJ)pngwrite.$(OBJ) $(PNGOBJ)pngwtran.$(OBJ) $(PNGOBJ)pngwutil.$(OBJ) $(PNGOBJ)pngwio.$(OBJ)

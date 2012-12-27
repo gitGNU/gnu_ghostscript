@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Output utilities for PDF-writing driver */
 #include "memory_.h"
 #include "jpeglib_.h"		/* for sdct.h */
@@ -377,14 +379,14 @@ copy_procsets(stream *s, bool HaveTrueTypes, bool stripping)
 static int
 encode(stream **s, const stream_template *t, gs_memory_t *mem)
 {
-    stream_state *st = s_alloc_state(mem, t->stype, "pdf_open_document.encode");
+    stream_state *st = s_alloc_state(mem, t->stype, "pdfwrite_pdf_open_document.encode");
 
     if (st == 0)
         return_error(gs_error_VMerror);
     if (t->set_defaults)
         t->set_defaults(st);
     if (s_add_filter(s, t, st, mem) == 0) {
-        gs_free_object(mem, st, "pdf_open_document.encode");
+        gs_free_object(mem, st, "pdfwrite_pdf_open_document.encode");
         return_error(gs_error_VMerror);
     }
     return 0;
@@ -400,11 +402,31 @@ int ps2write_dsc_header(gx_device_pdf * pdev, int pages)
         char cre_date_time[41];
         int code, status, cre_date_time_len;
         char BBox[256];
-        int width = (int)(pdev->width * 72.0 / pdev->HWResolution[0] + 0.5);
-        int height = (int)(pdev->height * 72.0 / pdev->HWResolution[1] + 0.5);
 
         stream_write(s, (byte *)"%!PS-Adobe-3.0\n", 15);
-        sprintf(BBox, "%%%%BoundingBox: 0 0 %d %d\n", width, height);
+        /* We need to calculate the document BoundingBox which is a 'high water'
+         * mark derived from the BoundingBox of all the individual pages.
+         */
+        {
+            int pagecount = 1;
+            int urx=0, ury=0, j;
+
+            for (j = 0; j < NUM_RESOURCE_CHAINS; ++j) {
+                pdf_resource_t *pres = pdev->resources[resourcePage].chains[j];
+
+                for (; pres != 0; pres = pres->next)
+                    if ((!pres->named || pdev->ForOPDFRead)
+                        && !pres->object->written) {
+                        pdf_page_t *page = &pdev->pages[pagecount - 1];
+                        if ((int)ceil(page->MediaBox.x) > urx)
+                            urx = page->MediaBox.x;
+                        if ((int)ceil(page->MediaBox.y) > urx)
+                            ury = page->MediaBox.y;
+                        pagecount++;
+                    }
+            }
+            sprintf(BBox, "%%%%BoundingBox: 0 0 %d %d\n", urx, ury);
+        }
         stream_write(s, (byte *)BBox, strlen(BBox));
         cre_date_time_len = pdf_get_docinfo_item(pdev, "/CreationDate", cre_date_time, sizeof(cre_date_time) - 1);
         cre_date_time[cre_date_time_len] = 0;
@@ -452,7 +474,7 @@ int ps2write_dsc_header(gx_device_pdf * pdev, int pages)
 
 /* Open the document if necessary. */
 int
-pdf_open_document(gx_device_pdf * pdev)
+pdfwrite_pdf_open_document(gx_device_pdf * pdev)
 {
     if (!is_in_page(pdev) && pdf_stell(pdev) == 0) {
         stream *s = pdev->strm;
@@ -1021,7 +1043,7 @@ stream_to_none(gx_device_pdf * pdev)
         pdf_end_encrypt(pdev);
         s = pdev->strm;
         length = pdf_stell(pdev) - pdev->contents_pos;
-        if (pdev->PDFA)
+        if (pdev->PDFA != 0)
             stream_puts(s, "\n");
         stream_puts(s, "endstream\n");
         pdf_end_obj(pdev, resourceStream);
@@ -1080,17 +1102,21 @@ const gs_memory_struct_type_t *const pdf_resource_type_structs[] = {
 int
 pdf_cancel_resource(gx_device_pdf * pdev, pdf_resource_t *pres, pdf_resource_type_t rtype)
 {
-    /* fixme : remove *pres from resource chain. */
+    /* fixme : Remove *pres from resource chain. */
     pres->where_used = 0;
-    pres->object->written = true;
-    if (rtype == resourceXObject || rtype == resourceCharProc || rtype == resourceOther
-        || rtype > NUM_RESOURCE_TYPES) {
-        int code = cos_stream_release_pieces((cos_stream_t *)pres->object);
+    if (pres->object) {
+        pres->object->written = true;
+        if (rtype == resourceXObject || rtype == resourceCharProc || rtype == resourceOther
+            || rtype > NUM_RESOURCE_TYPES) {
+            int code = cos_stream_release_pieces((cos_stream_t *)pres->object);
 
-        if (code < 0)
-            return code;
+            if (code < 0)
+                return code;
+        }
+        cos_release(pres->object, "pdf_cancel_resource");
+        gs_free_object(pdev->pdf_memory, pres->object, "pdf_cancel_resources");
+        pres->object = 0;
     }
-    cos_release(pres->object, "pdf_cancel_resource");
     return 0;
 }
 
@@ -1113,8 +1139,11 @@ pdf_forget_resource(gx_device_pdf * pdev, pdf_resource_t *pres1, pdf_resource_ty
         for (; (pres = *pprev) != 0; pprev = &pres->next)
             if (pres == pres1) {
                 *pprev = pres->next;
-                COS_RELEASE(pres->object, "pdf_forget_resource");
-                gs_free_object(pdev->pdf_memory, pres->object, "pdf_forget_resource");
+                if (pres->object) {
+                    COS_RELEASE(pres->object, "pdf_forget_resource");
+                    gs_free_object(pdev->pdf_memory, pres->object, "pdf_forget_resource");
+                    pres->object = 0;
+                }
                 gs_free_object(pdev->pdf_memory, pres, "pdf_forget_resource");
                 break;
             }
@@ -1212,7 +1241,7 @@ pdf_find_same_resource(gx_device_pdf * pdev, pdf_resource_type_t rtype, pdf_reso
                 int code;
                 cos_object_t *pco1 = pres->object;
 
-                if (cos_type(pco0) != cos_type(pco1))
+                if (pco1 == NULL || cos_type(pco0) != cos_type(pco1))
                     continue;	    /* don't compare different types */
                 code = pco0->cos_procs->equal(pco0, pco1, pdev);
                 if (code < 0)
@@ -1256,8 +1285,11 @@ pdf_drop_resources(gx_device_pdf * pdev, pdf_resource_type_t rtype,
     for (; (pres = *pprev) != 0; )
         if (pres->next == pres) {
             *pprev = pres->prev;
-            COS_RELEASE(pres->object, "pdf_drop_resources");
-            gs_free_object(pdev->pdf_memory, pres->object, "pdf_drop_resources");
+            if (pres->object) {
+                COS_RELEASE(pres->object, "pdf_drop_resources");
+                gs_free_object(pdev->pdf_memory, pres->object, "pdf_drop_resources");
+                pres->object = 0;
+            }
             gs_free_object(pdev->pdf_memory, pres, "pdf_drop_resources");
         } else
             pprev = &pres->prev;
@@ -1289,7 +1321,7 @@ long
 pdf_open_separate(gx_device_pdf * pdev, long id, pdf_resource_type_t type)
 {
     int code;
-    code = pdf_open_document(pdev);
+    code = pdfwrite_pdf_open_document(pdev);
     if (code < 0)
         return code;
     pdev->asides.save_strm = pdev->strm;
@@ -1457,7 +1489,7 @@ pdf_write_resource_objects(gx_device_pdf *pdev, pdf_resource_type_t rtype)
 
         for (; pres != 0; pres = pres->next)
             if ((!pres->named || pdev->ForOPDFRead)
-                && !pres->object->written) {
+                && pres->object && !pres->object->written) {
                     code = cos_write_object(pres->object, pdev, rtype);
             }
     }
@@ -1507,8 +1539,10 @@ pdf_free_resource_objects(gx_device_pdf *pdev, pdf_resource_type_t rtype)
             if (pres->named) {	/* named, don't free */
                 prev = &pres->next;
             } else {
-                cos_free(pres->object, "pdf_free_resource_objects");
-                pres->object = 0;
+                if (pres->object) {
+                    cos_free(pres->object, "pdf_free_resource_objects");
+                    pres->object = 0;
+                }
                 *prev = pres->next;
             }
         }
@@ -1516,6 +1550,7 @@ pdf_free_resource_objects(gx_device_pdf *pdev, pdf_resource_type_t rtype)
     return 0;
 }
 
+#ifdef DEPRECATED_906
 /* Write and free all resource objects. */
 
 int
@@ -1539,6 +1574,7 @@ pdf_write_and_free_all_resource_objects(gx_device_pdf *pdev)
     }
     return code;
 }
+#endif
 
 /*
  * Store the resource sets for a content stream (page or XObject).
@@ -1708,7 +1744,7 @@ pdf_open_page(gx_device_pdf * pdev, pdf_context_t context)
 
         if (pdf_page_id(pdev, pdev->next_page + 1) == 0)
             return_error(gs_error_VMerror);
-        code = pdf_open_document(pdev);
+        code = pdfwrite_pdf_open_document(pdev);
         if (code < 0)
             return code;
     }

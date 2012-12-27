@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2007 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Command line parsing and dispatching */
 #include "ctype_.h"
 #include "memory_.h"
@@ -316,27 +318,24 @@ run_stdin:
                 }
                 psarg = arg_copy(psarg, minst->heap);
                 if (psarg == NULL)
-                    return e_Fatal;
-                code = gs_main_init2(minst);
-                if (code < 0)
-                    return code;
-                code = run_string(minst, "userdict/ARGUMENTS[", 0);
-                if (code < 0)
-                    return code;
-                while ((arg = arg_next(pal, &code)) != 0) {
-                    char *fname = arg_copy(arg, minst->heap);
-                    if (fname == NULL)
-                        return e_Fatal;
-                    code = runarg(minst, "", fname, "", runInit);
-                    if (code < 0)
-                        return code;
-                }
-                if (code < 0)
-                    return e_Fatal;
-                code = runarg(minst, "]put", psarg, ".runfile", runInit | runFlush);
-                if (code < 0)
-                    return code;
-                return e_Quit;
+                    code = e_Fatal;
+                else
+                    code = gs_main_init2(minst);
+                if (code >= 0)
+                    code = run_string(minst, "userdict/ARGUMENTS[", 0);
+                if (code >= 0)
+                    while ((arg = arg_next(pal, &code)) != 0) {
+                        code = runarg(minst, "", arg, "", runInit);
+                        if (code < 0)
+                            break;
+                    }
+                if (code >= 0)
+                    code = runarg(minst, "]put", psarg, ".runfile", runInit | runFlush);
+                arg_free(psarg, minst->heap);
+                if (code >= 0)
+                    code = e_Quit;
+                
+                return code;
             }
         case 'A':               /* trace allocator */
             switch (*arg) {
@@ -377,16 +376,11 @@ run_stdin:
                     return code;
                 pal->expand_ats = false;
                 while ((arg = arg_next(pal, &code)) != 0) {
-                    char *sarg;
-
                     if (arg[0] == '@' ||
                         (arg[0] == '-' && !isdigit((unsigned char)arg[1]))
                         )
                         break;
-                    sarg = arg_copy(arg, minst->heap);
-                    if (sarg == NULL)
-                        return e_Fatal;
-                    code = runarg(minst, "", sarg, ".runstring", 0);
+                    code = runarg(minst, "", arg, ".runstring", 0);
                     if (code < 0)
                         return code;
                 }
@@ -459,7 +453,17 @@ run_stdin:
             return e_Info;      /* show usage info on exit */
         case 'I':               /* specify search path */
             {
-                char *path = arg_copy(arg, minst->heap);
+                const char *path;
+
+                if (arg[0] == 0) {
+                    path = arg_next(pal, &code);
+                    if (code < 0)
+                        return code;
+                } else
+                    path = arg;
+                if (path == NULL)
+                    return e_Fatal;
+                path = arg_copy(path, minst->heap);
                 if (path == NULL)
                     return e_Fatal;
                 gs_main_add_lib_path(minst, path);
@@ -742,19 +746,15 @@ static int
 argproc(gs_main_instance * minst, const char *arg)
 {
     int code = gs_main_init1(minst);            /* need i_ctx_p to proceed */
-    char *filearg;
 
     if (code < 0)
         return code;
-    filearg = arg_copy(arg, minst->heap);
-    if (filearg == NULL)
-        return e_Fatal;
     if (minst->run_buffer_size) {
         /* Run file with run_string. */
-        return run_buffered(minst, filearg);
+        return run_buffered(minst, arg);
     } else {
         /* Run file directly in the normal way. */
-        return runarg(minst, "", filearg, ".runfile", runInit | runFlush);
+        return runarg(minst, "", arg, ".runfile", runInit | runFlush);
     }
 }
 static int
@@ -812,7 +812,7 @@ runarg(gs_main_instance * minst, const char *pre, const char *arg,
         if (code < 0)
             return code;
     }
-    line = (char *)gs_alloc_bytes(minst->heap, len, "argproc");
+    line = (char *)gs_alloc_bytes(minst->heap, len, "runarg");
     if (line == 0) {
         lprintf("Out of memory!\n");
         return_error(e_VMerror);
@@ -823,6 +823,7 @@ runarg(gs_main_instance * minst, const char *pre, const char *arg,
     minst->i_ctx_p->starting_arg_file = true;
     code = run_string(minst, line, options);
     minst->i_ctx_p->starting_arg_file = false;
+    gs_free_object(minst->heap, line, "runarg");
     return code;
 }
 static int

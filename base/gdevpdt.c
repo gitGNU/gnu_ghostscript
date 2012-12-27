@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Miscellaneous external entry points for pdfwrite text */
 #include "gx.h"
 #include "memory_.h"
@@ -50,4 +52,15 @@ pdf_text_data_alloc(gs_memory_t *mem)
     ptd->bitmap_fonts = pbfs;
     ptd->text_state = pts;
     return ptd;
+}
+
+int text_data_free(gs_memory_t *mem, pdf_text_data_t *ptd)
+{
+    gs_free_object(mem, ptd->outline_fonts->standard_fonts, "Free text Outline standard fonts");;
+    gs_free_object(mem, ptd->outline_fonts, "Free text Outline fonts");;
+    gs_free_object(mem, ptd->bitmap_fonts, "Free text Bitmap fotns");;
+    gs_free_object(mem, ptd->text_state, "Free text state");;
+    gs_free_object(mem, ptd, "Free text");
+
+    return 0;
 }

@@ -1,16 +1,18 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/*$Id$ */
+
 /* Device for tracking bounding box */
 #include "math_.h"
 #include "memory_.h"
@@ -50,6 +52,7 @@ static dev_proc_draw_thin_line(bbox_draw_thin_line);
 static dev_proc_strip_tile_rectangle(bbox_strip_tile_rectangle);
 static dev_proc_strip_copy_rop(bbox_strip_copy_rop);
 static dev_proc_strip_copy_rop2(bbox_strip_copy_rop2);
+static dev_proc_strip_tile_rect_devn(bbox_strip_tile_rect_devn);
 static dev_proc_begin_typed_image(bbox_begin_typed_image);
 static dev_proc_create_compositor(bbox_create_compositor);
 static dev_proc_text_begin(bbox_text_begin);
@@ -153,7 +156,8 @@ gx_device_bbox gs_bbox_device =
      NULL,                      /* copy_planes */
      NULL,                      /* get_profile */
      NULL,                      /* set_graphics_type_tag */
-     bbox_strip_copy_rop2
+     bbox_strip_copy_rop2,
+     bbox_strip_tile_rect_devn
     },
     0,				/* target */
     1,				/*true *//* free_standing */
@@ -473,6 +477,22 @@ bbox_strip_tile_rectangle(gx_device * dev, const gx_strip_bitmap * tiles,
         (tdev == 0 ? 0 :
          dev_proc(tdev, strip_tile_rectangle)
          (tdev, tiles, x, y, w, h, color0, color1, px, py));
+    BBOX_ADD_INT_RECT(bdev, x, y, x + w, y + h);
+    return code;
+}
+
+static int
+bbox_strip_tile_rect_devn(gx_device * dev, const gx_strip_bitmap * tiles,
+   int x, int y, int w, int h, const gx_drawing_color *pdcolor0, 
+   const gx_drawing_color *pdcolor1, int px, int py)
+{
+    gx_device_bbox *const bdev = (gx_device_bbox *) dev;
+    /* Skip the call if there is no target. */
+    gx_device *tdev = bdev->target;
+    int code =
+        (tdev == 0 ? 0 :
+         dev_proc(tdev, strip_tile_rect_devn)
+         (tdev, tiles, x, y, w, h, pdcolor0, pdcolor1, px, py));
     BBOX_ADD_INT_RECT(bdev, x, y, x + w, y + h);
     return code;
 }

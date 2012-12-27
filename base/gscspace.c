@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Color space operators and support */
 #include "memory_.h"
 #include "gx.h"
@@ -157,6 +159,46 @@ gs_cspace_new_DeviceCMYK(gs_memory_t *mem)
 {
     return gs_cspace_alloc_with_id(mem, cs_DeviceCMYK_id,
                                    &gs_color_space_type_DeviceCMYK);
+}
+
+/* For use in initializing ICC color spaces for XPS */
+gs_color_space *
+gs_cspace_new_ICC(gs_memory_t *pmem, gs_state * pgs, int components)
+{
+    gsicc_manager_t *icc_manage = pgs->icc_manager;
+    int code;
+    gs_color_space *pcspace = gs_cspace_alloc(pmem, &gs_color_space_type_ICC);
+
+    switch (components) {
+        case -1: /* alpha case */
+            if (icc_manage->smask_profiles == NULL) {
+                code = gsicc_initialize_iccsmask(icc_manage);
+            }
+            if (code == 0) {
+                pcspace->cmm_icc_profile_data = 
+                    icc_manage->smask_profiles->smask_gray;
+            } else {
+                pcspace->cmm_icc_profile_data = icc_manage->default_gray;
+            }
+            break;
+        case -3: /* alpha case.  needs linear RGB */
+            if (icc_manage->smask_profiles == NULL) {
+                code = gsicc_initialize_iccsmask(icc_manage);
+            }
+            if (code == 0) {
+                pcspace->cmm_icc_profile_data = 
+                    icc_manage->smask_profiles->smask_rgb;
+            } else {
+                pcspace->cmm_icc_profile_data = icc_manage->default_rgb;
+            }
+            break;
+        case 1: pcspace->cmm_icc_profile_data = icc_manage->default_gray; break; 
+        case 3: pcspace->cmm_icc_profile_data = icc_manage->default_rgb; break; 
+        case 4: pcspace->cmm_icc_profile_data = icc_manage->default_cmyk; break; 
+        default: rc_decrement(pcspace,"gs_cspace_new_ICC"); return NULL;
+    }
+    rc_increment(pcspace->cmm_icc_profile_data);
+    return pcspace;
 }
 
 /* ------ Accessors ------ */
@@ -348,7 +390,9 @@ gx_install_DeviceCMYK(gs_color_space * pcs, gs_state * pgs)
  * at most, the spot color parameters are to be preserved.
  *
  * This routine should be used for all Device, CIEBased, and ICCBased
- * color spaces, except for DeviceCMKY. The latter color space requires a
+ * color spaces, except for DeviceCMKY. Also, it would not be used for
+ * DeviceRGB if we have simulated overprint turned on.
+ * These latter cases requires a
  * special verson that supports overprint mode.
  */
 int
@@ -360,6 +404,7 @@ gx_spot_colors_set_overprint(const gs_color_space * pcs, gs_state * pgs)
     if ((params.retain_any_comps = pis->overprint))
         params.retain_spot_comps = true;
     pgs->effective_overprint_mode = 0;
+    params.k_value = 0;
     return gs_state_update_overprint(pgs, &params);
 }
 
@@ -458,6 +503,65 @@ check_cmyk_color_model_comps(gx_device * dev)
     pcinfo->opmode = GX_CINFO_OPMODE;
     pcinfo->process_comps = process_comps;
     pcinfo->black_component = black_c;
+    return process_comps;
+}
+
+/* This is used in the RGB simulation overprint case */
+
+gx_color_index
+check_rgb_color_model_comps(gx_device * dev)
+{
+    gx_device_color_info *          pcinfo = &dev->color_info;
+    int                             ncomps = pcinfo->num_components;
+    int                             red_c, green_c, blue_c;
+    const gx_cm_color_map_procs *   pprocs;
+    cm_map_proc_rgb((*map_rgb));
+    frac                            frac_14 = frac_1 / 4;
+    frac                            out[GX_DEVICE_COLOR_MAX_COMPONENTS];
+    gx_color_index                  process_comps;
+
+    /* check for the appropriate components */
+    if ( ncomps < 3                                       ||
+         (red_c = dev_proc(dev, get_color_comp_index)(
+                       dev,
+                       "Red",
+                       sizeof("Red") - 1,
+                       NO_COMP_NAME_TYPE )) < 0           ||
+         red_c == GX_DEVICE_COLOR_MAX_COMPONENTS         ||
+         (green_c = dev_proc(dev, get_color_comp_index)(
+                          dev,
+                          "Green",
+                          sizeof("Green") - 1,
+                          NO_COMP_NAME_TYPE )) < 0        ||
+         green_c == GX_DEVICE_COLOR_MAX_COMPONENTS      ||
+         (blue_c = dev_proc(dev, get_color_comp_index)(
+                        dev,
+                        "Blue",
+                        sizeof("Blue") - 1,
+                        NO_COMP_NAME_TYPE )) < 0               ||
+         blue_c == GX_DEVICE_COLOR_MAX_COMPONENTS        )
+        return 0;
+
+    /* check the mapping */
+    if ( (pprocs = dev_proc(dev, get_color_mapping_procs)(dev)) == 0 ||
+         (map_rgb = pprocs->map_rgb) == 0                            )
+        return 0;
+
+    map_rgb(dev, NULL, frac_14, frac_0, frac_0, out);
+    if (!check_single_comp(red_c, frac_14, ncomps, out))
+        return 0;
+    map_rgb(dev, NULL, frac_0, frac_14, frac_0, out);
+    if (!check_single_comp(green_c, frac_14, ncomps, out))
+        return 0;
+    map_rgb(dev, NULL, frac_0, frac_0, frac_14, out);
+    if (!check_single_comp(blue_c, frac_14, ncomps, out))
+        return 0;
+
+    process_comps =  ((gx_color_index)1 << red_c)
+                   | ((gx_color_index)1 << green_c)
+                   | ((gx_color_index)1 << blue_c);
+    pcinfo->opmode = GC_CINFO_OPMODE_RGB_SET;
+    pcinfo->process_comps = process_comps;
     return process_comps;
 }
 
@@ -570,6 +674,94 @@ int gx_set_overprint_cmyk(const gs_color_space * pcs, gs_state * pgs)
                     }
                 }
             }
+            /* For some reason we don't have one of the standard colorants */
+            if (!colorant_ok) {
+                if ((code = procp(pdc, dev, &nz_comps)) < 0)
+                    return code;
+            }
+        } else {
+            if ((code = procp(pdc, dev, &nz_comps)) < 0)
+                return code;
+        }
+        drawn_comps &= nz_comps;
+    }
+    params.retain_any_comps = true;
+    params.retain_spot_comps = false;
+    params.drawn_comps = drawn_comps;
+    params.k_value = 0;
+    return gs_state_update_overprint(pgs, &params);
+}
+
+/* This is used for the case where we have an RGB based device, but we want 
+   to simulate CMY overprinting.  Color management is pretty much thrown out
+   the window when doing this. */
+
+int gx_set_overprint_rgb(const gs_color_space * pcs, gs_state * pgs)
+{
+    gx_device *             dev = pgs->device;
+    gx_device_color_info *  pcinfo = (dev == 0 ? 0 : &dev->color_info);
+    gx_color_index          drawn_comps = 0;
+    gs_overprint_params_t   params;
+    gx_device_color        *pdc;
+
+    /* check if color model behavior must be determined.  This is why we 
+       need the GX_CINFO_OPMODE_RGB and GX_CINFO_OPMODE_RGB_SET.  
+       We only need to do this once */
+    if (pcinfo->opmode == GX_CINFO_OPMODE_RGB)
+        drawn_comps = check_rgb_color_model_comps(dev);
+    else
+        drawn_comps = pcinfo->process_comps;
+    if (drawn_comps == 0)
+        return gx_spot_colors_set_overprint(pcs, pgs);
+
+    /* correct for any zero'ed color components.  Note that matching of
+       ICC profiles as a condition is not possible here, since the source
+       will be CMYK and the destination RGB */
+    pgs->effective_overprint_mode = 1;
+    pdc = gs_currentdevicecolor_inline(pgs);
+    params.k_value = 0;
+    if (color_is_set(pdc)) {
+        gx_color_index  nz_comps, one, temp;
+        int             code;
+        int             num_colorant[3], k;
+        bool            colorant_ok;
+
+        dev_color_proc_get_nonzero_comps((*procp));
+
+        procp = pdc->type->get_nonzero_comps;
+        if (pdc->ccolor_valid) {
+            /* If we have the source colors, then use those in making the 
+               decision as to which ones are non-zero.  Then we avoid 
+               accidently looking at small values that get quantized to zero 
+               Note that to get here in the code, the source color data color 
+               space has to be CMYK. Trick is that we do need to worry about 
+               the RGB colorant order on the target device */
+            num_colorant[0] = (dev_proc(dev, get_color_comp_index))\
+                             (dev, "Red", strlen("Red"), NO_COMP_NAME_TYPE);
+            num_colorant[1] = (dev_proc(dev, get_color_comp_index))\
+                             (dev, "Green", strlen("Green"), NO_COMP_NAME_TYPE);
+            num_colorant[2] = (dev_proc(dev, get_color_comp_index))\
+                             (dev, "Blue", strlen("Blue"), NO_COMP_NAME_TYPE);
+            nz_comps = 0;
+            one = 1;
+            colorant_ok = true;
+            for (k = 0; k < 3; k++) {
+                if (pdc->ccolor.paint.values[k] != 0) {
+                    if (num_colorant[k] == -1) {
+                        colorant_ok = false;
+                    } else {
+                        temp = one << num_colorant[k];
+                        nz_comps = nz_comps | temp;
+                    }
+                }
+            }
+            /* Check for the case where we have a K component.  In this case
+               we need to fudge things a bit.  And we will end up needing
+               to do some special stuff in the overprint compositor's rect
+               fill to reduce the destination RGB values of the ones
+               that we are not blowing away with the source values.  Those
+               that have the source value will have already been reduced */
+            params.k_value = (unsigned short) (pdc->ccolor.paint.values[3] * 256);
             /* For some reason we don't have one of the standard colorants */
             if (!colorant_ok) {
                 if ((code = procp(pdc, dev, &nz_comps)) < 0)

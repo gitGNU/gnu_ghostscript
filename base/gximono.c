@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* General mono-component image rendering */
 #include "gx.h"
 #include "memory_.h"
@@ -197,6 +199,9 @@ not_fast_halftoning:
             if (penum->mask_color.values[1] >= 255)
                 color_set_null(penum->icolor1);
         }
+        /* Reset the clues here, rather than in image_render_mono as
+         * previously. Even doing so this often may be overzealous. */
+        image_init_clues(penum, penum->bps, penum->spp);
         return &image_render_mono;
     }
     return 0;
@@ -209,7 +214,7 @@ image_set_gray(byte sample_value, const bool masked, uint mask_base,
                 uint mask_limit, gx_device_color **ppdevc, gs_client_color *cc,
                 const gs_color_space *pcs, const gs_imager_state *pis,
                 gx_device * dev, gs_color_select_t gs_color_select_source,
-                gx_image_enum * penum, bool tiles_fit)
+                gx_image_enum * penum)
 {
    cs_proc_remap_color((*remap_color));
    int code;
@@ -238,11 +243,9 @@ image_set_gray(byte sample_value, const bool masked, uint mask_base,
             return(code);
         }
     } else if (!color_is_pure(pdevc)) {
-        if (!tiles_fit) {
-            code = gx_color_load_select(pdevc, pis, dev, gs_color_select_source);
-            if (code < 0)
-                return(code);
-        }
+        code = gx_color_load_select(pdevc, pis, dev, gs_color_select_source);
+        if (code < 0)
+            return(code);
     }
     return(0);
 }
@@ -265,7 +268,6 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
     cs_proc_remap_color((*remap_color)) = NULL; /* ditto */
     gs_client_color cc;
     gx_device_color *pdevc = penum->icolor1;    /* color for masking */
-    bool tiles_fit;
     uint mask_base =            /* : 0 to pacify Valgrind */
         (penum->use_mask_color ? penum->mask_color.values[0] : 0);
     uint mask_limit =
@@ -273,7 +275,7 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
          penum->mask_color.values[1] - mask_base + 1 : 0);
 /*
  * Free variables of IMAGE_SET_GRAY:
- *   Read: penum, pis, dev, tiles_fit, mask_base, mask_limit
+ *   Read: penum, pis, dev, mask_base, mask_limit
  *   Set: pdevc, code, cc
  */
 #define IMAGE_SET_GRAY(sample_value)\
@@ -289,11 +291,9 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
                 goto err;\
         }\
     } else if (!color_is_pure(pdevc)) {\
-        if (!tiles_fit) {\
-            code = gx_color_load_select(pdevc, pis, dev, gs_color_select_source);\
-            if (code < 0)\
-                goto err;\
-        }\
+        code = gx_color_load_select(pdevc, pis, dev, gs_color_select_source);\
+        if (code < 0)\
+            goto err;\
     }\
   END
     gx_dda_fixed_point next;    /* (y not used in fast loop) */
@@ -316,12 +316,6 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
      * for masked images with a pure color.
      */
 
-    /* TO_DO_DEVICEN - The gx_check_tile_cache_current() routine is bogus */
-
-    if (pis == 0 || !gx_check_tile_cache_current(pis)) {
-        image_init_clues(penum, penum->bps, penum->spp);
-    }
-    tiles_fit = (pis && penum->device_color ? gx_check_tile_cache(pis) : false);
     next = penum->dda.pixel0;
     xrun = dda_current(next.x);
     if (!masked) {
@@ -530,7 +524,7 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
                         htrun = run;
 #if USE_SET_GRAY_FUNCTION
                         code = image_set_gray(run,masked,mask_base,mask_limit,&pdevc,
-                            &cc,pcs,pis,dev,gs_color_select_source,penum,tiles_fit);
+                            &cc,pcs,pis,dev,gs_color_select_source,penum);
                         if (code < 0)
                             goto err;
 #else
@@ -572,7 +566,7 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
                     htrun = run;
 #if USE_SET_GRAY_FUNCTION
                     code = image_set_gray(run,masked,mask_base,mask_limit,&pdevc,
-                        &cc,pcs,pis,dev,gs_color_select_source,penum,tiles_fit);
+                        &cc,pcs,pis,dev,gs_color_select_source,penum);
                     if (code < 0)
                         goto err;
 #else
@@ -599,7 +593,7 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
             if (!masked) {
 #if USE_SET_GRAY_FUNCTION
                     code = image_set_gray(*stop, masked,mask_base,mask_limit,&pdevc,
-                        &cc,pcs,pis,dev,gs_color_select_source,penum,tiles_fit);
+                        &cc,pcs,pis,dev,gs_color_select_source,penum);
                     if (code < 0)
                         goto err;
 #else
@@ -707,7 +701,7 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
                             if (run != htrun) {
 #if USE_SET_GRAY_FUNCTION
                                 code = image_set_gray(run, masked,mask_base,mask_limit,&pdevc,
-                                    &cc,pcs,pis,dev,gs_color_select_source,penum,tiles_fit);
+                                    &cc,pcs,pis,dev,gs_color_select_source,penum);
                                 if (code < 0)
                                     goto err;
 #else
@@ -754,7 +748,7 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
             }
 #if USE_SET_GRAY_FUNCTION
             code = image_set_gray(*stop, masked,mask_base,mask_limit,&pdevc,
-                &cc,pcs,pis,dev,gs_color_select_source,penum,tiles_fit);
+                &cc,pcs,pis,dev,gs_color_select_source,penum);
             if (code < 0)
                 goto err;
 #else

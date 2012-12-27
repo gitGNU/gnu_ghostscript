@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* FontDescriptor implementation for pdfwrite */
 #include "math_.h"
 #include "memory_.h"
@@ -19,6 +21,7 @@
 #include "gserrors.h"
 #include "gsrect.h"		/* for rect_merge */
 #include "gscencs.h"
+#include "gxfcopy.h"
 #include "gdevpdfx.h"
 #include "gdevpdfo.h"		/* for object->written */
 #include "gdevpdtb.h"
@@ -252,6 +255,27 @@ pdf_font_descriptor_alloc(gx_device_pdf *pdev, pdf_font_descriptor_t **ppfd,
     pfd->FontType = font->FontType;
     pfd->embed = embed;
     *ppfd = pfd;
+    return 0;
+}
+
+int pdf_font_descriptor_free(gx_device_pdf *pdev, pdf_resource_t *pres)
+{
+    pdf_font_descriptor_t *pfd = (pdf_font_descriptor_t *)pres;
+    pdf_base_font_t *pbfont = pfd->base_font;
+    gs_font *copied = (gs_font *)pbfont->copied;
+
+    gs_free_copied_font(copied);
+    if (pbfont && pbfont->font_name.size) {
+        gs_free_string(pdev->memory, pbfont->font_name.data, pbfont->font_name.size, "Free BaseFont FontName string");
+        pbfont->font_name.data = (byte *)0L;
+        pbfont->font_name.size = 0;
+    }
+    if (pbfont)
+        gs_free_object(cos_object_memory(pres->object), pbfont, "Free base font from FontDescriptor)");
+    if (pres->object) {
+        gs_free_object(cos_object_memory(pres->object), pres->object, "free FontDescriptor object");
+        pres->object = NULL;
+    }
     return 0;
 }
 
@@ -526,7 +550,7 @@ pdf_compute_font_descriptor(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
     if (!(desc.Flags & FONT_IS_SYMBOLIC)) {
         desc.Flags |= FONT_IS_ADOBE_ROMAN; /* required if not symbolic */
         desc.XHeight = (int)x_height;
-        if (!small_present && (!pdev->PDFA || bfont->FontType != ft_TrueType))
+        if (!small_present && (!pdev->PDFA != 0 || bfont->FontType != ft_TrueType))
             desc.Flags |= FONT_IS_ALL_CAPS;
         desc.CapHeight = cap_height;
         /*
@@ -577,10 +601,10 @@ pdf_compute_font_descriptor(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
     desc.Descent = desc.FontBBox.p.y;
     if (!(desc.Flags & (FONT_IS_SYMBOLIC | FONT_IS_ALL_CAPS)) &&
         (small_descent > desc.Descent / 3 || desc.XHeight > small_height * 0.9) &&
-        (!pdev->PDFA || bfont->FontType != ft_TrueType)
+        (!pdev->PDFA != 0 || bfont->FontType != ft_TrueType)
         )
         desc.Flags |= FONT_IS_SMALL_CAPS;
-    if (fixed_width > 0 && (!pdev->PDFA || bfont->FontType != ft_TrueType)) {
+    if (fixed_width > 0 && (!pdev->PDFA != 0 || bfont->FontType != ft_TrueType)) {
         desc.Flags |= FONT_IS_FIXED_WIDTH;
         desc.AvgWidth = desc.MaxWidth = desc.MissingWidth = fixed_width;
     }
@@ -637,9 +661,11 @@ pdf_write_FontDescriptor(gx_device_pdf *pdev, pdf_resource_t *pres)
     case ft_CID_encrypted:
     case ft_CID_TrueType:
         if (pdf_do_subset_font(pdev, pfd->base_font, pfd->common.rid)) {
-            code = pdf_write_CIDSet(pdev, pfd->base_font, &cidset_id);
-            if (code < 0)
-                return code;
+            if (pdev->PDFA < 2) {
+                code = pdf_write_CIDSet(pdev, pfd->base_font, &cidset_id);
+                if (code < 0)
+                    return code;
+            }
         }
     default:
         break;
@@ -694,6 +720,7 @@ pdf_write_FontDescriptor(gx_device_pdf *pdev, pdf_resource_t *pres)
     pfd->common.object->written = true;
     {	const cos_object_t *pco = (const cos_object_t *)pdf_get_FontFile_object(pfd->base_font);
         if (pco != NULL) {
+            pprintld1(s, "%%BeginResource: file (PDF FontFile obj_%ld)\n", pco->id);
             code = COS_WRITE_OBJECT(pco, pdev, resourceNone);
             if (code < 0)
                 return code;
@@ -755,16 +782,25 @@ pdf_convert_truetype_font_descriptor(gx_device_pdf *pdev, pdf_font_resource_t *p
     if (pdfont->u.cidfont.CIDToGIDMap == NULL)
         return_error(gs_error_VMerror);
     memset(pdfont->u.cidfont.CIDToGIDMap, 0, length_CIDToGIDMap);
-    for (ch = FirstChar; ch <= LastChar; ch++) {
-        if (Encoding[ch].glyph != GS_NO_GLYPH) {
+    if(pdev->PDFA == 1) {
+        for (ch = FirstChar; ch <= LastChar; ch++) {
+            if (Encoding[ch].glyph != GS_NO_GLYPH) {
+                gs_glyph glyph = pfont->procs.encode_char(pfont, ch, GLYPH_SPACE_INDEX);
+
+                pbfont->CIDSet[ch / 8] |= 0x80 >> (ch % 8);
+                pdfont->u.cidfont.CIDToGIDMap[ch] = glyph - GS_MIN_GLYPH_INDEX;
+            }
+        }
+        /* Set the CIDSet bit for CID 0 (the /.notdef) which must always be present */
+        pbfont->CIDSet[0] |= 0x80;
+    } else {
+        for (ch = 0; ch <= pbfont->num_glyphs; ch++) {
             gs_glyph glyph = pfont->procs.encode_char(pfont, ch, GLYPH_SPACE_INDEX);
 
             pbfont->CIDSet[ch / 8] |= 0x80 >> (ch % 8);
             pdfont->u.cidfont.CIDToGIDMap[ch] = glyph - GS_MIN_GLYPH_INDEX;
         }
     }
-    /* Set the CIDSet bit for CID 0 (the /.notdef) which must always be present */
-    pbfont->CIDSet[0] |= 0x80;
     pbfont->CIDSetLength = length_CIDSet;
     pdfont->u.cidfont.CIDToGIDMapLength = length_CIDToGIDMap / sizeof(ushort);
     pdfont->u.cidfont.Widths2 = NULL;

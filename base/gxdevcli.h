@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2011 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Definitions for device clients */
 
 #ifndef gxdevcli_INCLUDED
@@ -207,7 +209,7 @@ typedef struct gs_linear_color_edge_s {
  * gx_device_color_info structure. These form an order, with lower
  * values having weaker properties.
  *
- *  GX_CINFO_SEP_LIN_UNKNOWN
+ *  GX_CINFO_UNKNOWN_SEP_LIN
  *    The properties of the color encoding are not yet known. This is
  *    always a safe default value.
  *
@@ -261,11 +263,17 @@ typedef enum {
  * or not a color model supports overprint is delayed until this
  * information is required, hence the use of an enumeration with an
  * "unknown" setting.
+ *
+ * GX_CINFO_OPMODE_RGB is an odd case where by the device is RGB based 
+ * but we attempt to simulate CMY overprinting.  GC_CINFO_OPMODE_RGB_SET
+ * is the value after we verify the color model and the colorant positions
  */
 typedef enum {
     GX_CINFO_OPMODE_UNKNOWN = -1,
     GX_CINFO_OPMODE_NOT = 0,
-    GX_CINFO_OPMODE
+    GX_CINFO_OPMODE = 1,
+    GX_CINFO_OPMODE_RGB,
+    GC_CINFO_OPMODE_RGB_SET
 } gx_cm_opmode_t;
 
 /* component index value used to indicate no color component.  */
@@ -323,8 +331,10 @@ typedef struct gx_device_color_info_s {
     /*
      * The number of bits of gx_color_index actually used.
      * This must be <= arch_sizeof_color_index, which is usually 64.
+     * Note that we now have planar devices which can support much more.
+     * Changing this to a ushort to reflect this.
      */
-    byte depth;
+    ushort depth;
 
     /*
      * Index of the gray color component, if any. The max_gray and
@@ -444,6 +454,9 @@ typedef struct gx_device_color_info_s {
      * be a bit mask, with the (1 << i) bit set if i'th component is the
      * cyan, magenta, yellow, or black component and black_component will
      * be set to the index of a black component.
+     *
+     * A new mode GX_CINFO_OPMODE_RGB was added so that an RGB device could
+     * simulate CMYK overprinting.
      */
     gx_cm_opmode_t opmode;
     gx_color_index process_comps;
@@ -1275,8 +1288,10 @@ typedef enum {
   the high level color. The device should skip such rectangles returning
   a proper code.
 
-  Currently this function is used with gs_rectfill and gs_fillpage only.
-  In future it should be called while decomposing other objects.
+  Currently this function is used with gs_rectfill and gs_fillpage.  It is
+  also used for the handling of the devn color type for supporting 
+  large number of spot colorants to planar separation devices. 
+  
 */
 
 #define dev_t_proc_fill_rectangle_hl_color(proc, dev_t)\
@@ -1449,6 +1464,21 @@ typedef struct gs_devn_params_s gs_devn_params;
 #define dev_proc_strip_copy_rop2(proc)\
   dev_t_proc_strip_copy_rop2(proc, gx_device)
 
+#define dev_t_proc_strip_tile_rect_devn(proc, dev_t)\
+  int proc(dev_t *dev,\
+    const gx_strip_bitmap *tiles, int x, int y, int width, int height,\
+    const gx_drawing_color *pdcolor0, const gx_drawing_color *pdcolor1,\
+    int phase_x, int phase_y)
+#define dev_proc_strip_tile_rect_devn(proc)\
+  dev_t_proc_strip_tile_rect_devn(proc, gx_device)
+
+#define dev_t_proc_copy_alpha_hl_color(proc, dev_t)\
+  int proc(dev_t *dev, const byte *data, int data_x,\
+    int raster, gx_bitmap_id id, int x, int y, int width, int height,\
+    const gx_drawing_color *pdcolor, int depth)
+#define dev_proc_copy_alpha_hl_color(proc)\
+  dev_t_proc_copy_alpha_hl_color(proc, gx_device)
+
 /* Define the device procedure vector template proper. */
 
 #define gx_device_proc_struct(dev_t)\
@@ -1522,6 +1552,8 @@ typedef struct gs_devn_params_s gs_devn_params;
         dev_t_proc_get_profile((*get_profile), dev_t); \
         dev_t_proc_set_graphics_type_tag((*set_graphics_type_tag), dev_t); \
         dev_t_proc_strip_copy_rop2((*strip_copy_rop2), dev_t);\
+        dev_t_proc_strip_tile_rect_devn((*strip_tile_rect_devn), dev_t);\
+        dev_t_proc_copy_alpha_hl_color((*copy_alpha_hl_color), dev_t);\
 }
 
 /*

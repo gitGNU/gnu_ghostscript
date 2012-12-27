@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Internal definitions for "objects" for pdfwrite driver. */
 
 #ifndef gdevpdfo_INCLUDED
@@ -135,6 +137,9 @@ cos_object_struct(cos_object_s, cos_element_t);
 extern const cos_object_procs_t cos_generic_procs;
 #define cos_type_generic (&cos_generic_procs)
 
+extern const cos_object_procs_t cos_reference_procs;
+#define cos_type_reference (&cos_reference_procs)
+
 /*
  * Define the macro for casting any cos object to type cos_object_t.
  * Using cos_procs ensures that the argument is, in fact, a cos object.
@@ -201,6 +206,9 @@ cos_array_t *cos_array_from_floats(gx_device_pdf *, const float *, uint,
                                    client_name_t);
 cos_dict_t *cos_dict_alloc(gx_device_pdf *, client_name_t);
 cos_stream_t *cos_stream_alloc(gx_device_pdf *, client_name_t);
+
+/* A 'dummy object, used only to create a reference in a dict when writing */
+cos_object_t *cos_reference_alloc(gx_device_pdf *, client_name_t);
 
 /* Get the allocator for a Cos object. */
 gs_memory_t *cos_object_memory(const cos_object_t *);

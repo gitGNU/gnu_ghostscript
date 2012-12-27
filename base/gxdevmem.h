@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Structure and procedures for memory devices */
 /* Requires gxdevice.h */
 
@@ -139,6 +141,8 @@ struct gx_device_memory_s {
     int mapped_height;		/* # of Y values mapped to buffer */
     int mapped_start;		/* local Y value corresponding to mapped_y */
     gx_color_index save_color;	/* last (only) color displayed */
+    const gx_drawing_color *save_hl_color;
+                                /* last (only) hl color displayed */
     /* Following are used only for planar devices. */
     int plane_depth;		/* if non-zero, depth of all planes */
     int band_y; /* Debug purpose only. */
@@ -230,7 +234,7 @@ void gs_make_mem_device(gx_device_memory * mdev,
 void gs_make_mem_abuf_device(gx_device_memory * adev, gs_memory_t * mem,
                              gx_device * target,
                              const gs_log2_scale_point * pscale,
-                             int alpha_bits, int mapped_x);
+                             int alpha_bits, int mapped_x, bool devn);
 void gs_make_mem_alpha_device(gx_device_memory * adev, gs_memory_t * mem,
                               gx_device * target, int alpha_bits);
 

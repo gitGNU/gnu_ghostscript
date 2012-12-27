@@ -1,16 +1,18 @@
-/* Copyright (C) 2011 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id$ */
+
 /* Debugging flag definitions */
 
 /* This is a chameleonic header file; that is to say, it appears differently
@@ -21,8 +23,8 @@
 
 UNUSED(0) /* Never use 0, as lots of things 'imply' 0. */
 FLAG(icc, 1, 'c', "ICC profile"),
-UNUSED(2)
-UNUSED(3)
+FLAG(validate_chunks, 2, 0, "Validate chunks during interpretation"),
+FLAG(gc_disable, 3, 0, "Disable Garbage Collection (completely)"),
 UNUSED(4)
 UNUSED(5)
 UNUSED(6)

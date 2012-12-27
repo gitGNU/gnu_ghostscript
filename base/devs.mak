@@ -1,17 +1,18 @@
-#  Copyright (C) 2001-2008 Artifex Software, Inc.
-#  All Rights Reserved.
+# Copyright (C) 2001-2012 Artifex Software, Inc.
+# All Rights Reserved.
 #
-#  This software is provided AS-IS with no warranty, either express or
-#  implied.
+# This software is provided AS-IS with no warranty, either express or
+# implied.
 #
-#  This software is distributed under license and may not be copied, modified
-#  or distributed except as expressly authorized under the terms of that
-#  license.  Refer to licensing information at http://www.artifex.com/
-#  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-#  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+# This software is distributed under license and may not be copied,
+# modified or distributed except as expressly authorized under the terms
+# of the license contained in the file LICENSE in this distribution.
 #
-# $Id$
-# makefile for Aladdin's device drivers.
+# Refer to licensing information at http://www.artifex.com or contact
+# Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+# CA  94903, U.S.A., +1(415)492-9861, for further information.
+#
+# makefile for Artifex's device drivers.
 
 # Define the name of this makefile.
 DEVS_MAK=$(GLSRC)devs.mak
@@ -27,11 +28,11 @@ GDEV=$(AK) $(ECHOGS_XE) $(GDEVH)
 # target platforms.
 
 # The catalog in this file, devs.mak, lists all the drivers that were
-# written by Aladdin, or by people working closely with Aladdin, and for
-# which Aladdin is willing to take problem reports (although since
+# written by Artifex, or by people working closely with Artifex, and for
+# which Artifex is willing to take problem reports (although since
 # Ghostscript is provided with NO WARRANTY and NO SUPPORT, we can't promise
 # that we'll solve your problem).  Another file, contrib.mak, lists all the
-# drivers contributed by other people that are distributed by Aladdin with
+# drivers contributed by other people that are distributed by Artifex with
 # Ghostscript.  Note in particular that all drivers for color inkjets and
 # other non-PostScript-capable color printers are in contrib.mak.
 
@@ -202,12 +203,12 @@ GDEV=$(AK) $(ECHOGS_XE) $(GDEVH)
 # drivers are there too, because they share some definitions.
 
 # User-contributed drivers marked with * require hardware or software
-# that is not available to Aladdin Enterprises.  Please contact the
-# original contributors, not Aladdin Enterprises, if you have questions.
+# that is not available to Artifex Software Inc.  Please contact the
+# original contributors, not Artifex Software Inc, if you have questions.
 # Contact information appears in the driver entry below.
 #
-# Drivers marked with a + are maintained by Aladdin Enterprises with
-# the assistance of users, since Aladdin Enterprises doesn't have access to
+# Drivers marked with a + are maintained by Artifex Software Inc with
+# the assistance of users, since Artifex Software Inc doesn't have access to
 # the hardware for these either.
 
 # If you add drivers, it would be nice if you kept each list
@@ -440,7 +441,7 @@ $(GLOBJ)vgalib.so : $(vgalib_)
 
 ### -------------------------- The X11 device -------------------------- ###
 
-# Please note that Aladdin Enterprises does not support Ghostview.
+# Please note that Artifex Software Inc does not support Ghostview.
 # For more information about Ghostview, please contact Tim Theisen
 # (ghostview@cs.wisc.edu).
 
@@ -1290,13 +1291,14 @@ $(DD)psdcmyk.dev : $(DEVS_MAK) $(psd_) $(GLD)page.dev $(GDEV)
 $(GLOBJ)gdevpsd.$(OBJ) : $(GLSRC)gdevpsd.c $(PDEVH) $(math__h)\
  $(gdevdcrd_h) $(gscrd_h) $(gscrdp_h) $(gsparam_h) $(gxlum_h)\
  $(gstypes_h) $(gxdcconv_h) $(gdevdevn_h) $(gsequivc_h)\
- $(gscms_h) $(gsicc_cache_h) $(gsicc_manage_h)
+ $(gscms_h) $(gsicc_cache_h) $(gsicc_manage_h) $(gxgetbit_h)\
+ $(gdevppla_h)
 	$(GLCC) $(GLO_)gdevpsd.$(OBJ) $(C_) $(GLSRC)gdevpsd.c
 
 $(GLOBJ)gsequivc.$(OBJ) : $(GLSRC)gsequivc.c $(math__h)\
  $(PDEVH) $(gsparam_h) $(gstypes_h) $(gxdconv_h) $(gdevdevn_h)\
  $(gsequivc_h) $(gzstate_h) $(gsstate_h) $(gscspace_h) $(gxcspace_h)\
- $(gsicc_manage_h)
+ $(gsicc_manage_h) $(gxdevsop_h)
 	$(GLCC) $(GLO_)gsequivc.$(OBJ) $(C_) $(GLSRC)gsequivc.c
 
 ### ----------------------- The permutation device --------------------- ###
@@ -1694,7 +1696,8 @@ $(DD)tiffgray.dev : $(DEVS_MAK) $(libtiff_dev) $(tiffgray_) $(DD)tiffs.dev\
 	$(ADDMOD) $(DD)tiffgray -include $(DD)tiffs $(tiff_i_)
 
 $(GLOBJ)gdevtsep.$(OBJ) : $(GLSRC)gdevtsep.c $(PDEVH) $(stdint__h)\
- $(gdevtifs_h) $(gdevdevn_h) $(gsequivc_h) $(stdio__h) $(ctype__h) $(GDEV)
+ $(gdevtifs_h) $(gdevdevn_h) $(gsequivc_h) $(stdio__h) $(ctype__h)\
+ $(gxgetbit_h) $(gdevppla_h) $(GDEV)
 	$(GLCC) $(I_)$(TI_)$(_I) $(GLO_)gdevtsep.$(OBJ) $(C_) $(GLSRC)gdevtsep.c
 
 # TIFF Scaled (downscaled gray -> mono), configurable compression

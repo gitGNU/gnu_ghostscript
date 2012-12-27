@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Command list definitions for Ghostscript. */
 /* Requires gxdevice.h and gxdevmem.h */
 
@@ -280,6 +282,7 @@ typedef struct clist_icc_color_s {
     int64_t icc_hash;           /* hash code for icc profile */
     byte icc_num_components;   /* needed to avoid having to read icc data early */
     bool is_lab;               /* also needed early */
+    gsicc_colorbuffer_t data_cs;
 } clist_icc_color_t;
 
 typedef struct clist_color_space_s {
@@ -394,6 +397,7 @@ typedef struct gx_device_clist_reader_s {
     byte *main_thread_data;		/* saved data pointer of main thread */
     int curr_render_thread;		/* index into array */
     int thread_lookahead_direction;	/* +1 or -1 */
+    int next_band;			/* may be < 0 or >= num bands when no more remain to render */
 
 } gx_device_clist_reader;
 
@@ -461,7 +465,7 @@ int clist_close_page_info(gx_band_page_info_t *ppi);
  * end of a page.  gdev_prn_colors_used calls this procedure if it hasn't
  * been called since the page was started.  clist_end_page also calls it.
  */
-void clist_compute_colors_used(gx_device_clist_writer *cldev);
+void clist_compute_color_usage(gx_device_clist_writer *cldev);
 
 /* Define the abstract type for a printer device. */
 #ifndef gx_device_printer_DEFINED

@@ -1,16 +1,18 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id$ */
+
 /* Null and forwarding device implementation */
 #include "gx.h"
 #include "gserrors.h"
@@ -111,6 +113,7 @@ gx_device_forward_fill_in_procs(register gx_device_forward * dev)
     fill_dev_proc(dev, get_profile, gx_forward_get_profile);
     fill_dev_proc(dev, set_graphics_type_tag, gx_forward_set_graphics_type_tag);
     fill_dev_proc(dev, strip_copy_rop2, gx_forward_strip_copy_rop2);
+    fill_dev_proc(dev, strip_tile_rect_devn, gx_forward_strip_tile_rect_devn); 
     gx_device_fill_in_procs((gx_device *) dev);
 }
 
@@ -269,6 +272,20 @@ gx_forward_copy_color(gx_device * dev, const byte * data,
         return_error(gs_error_Fatal);
     return dev_proc(tdev, copy_color)
         (tdev, data, dx, raster, id, x, y, w, h);
+}
+
+int
+gx_forward_copy_planes(gx_device * dev, const byte * data,
+                       int dx, int raster, gx_bitmap_id id,
+                       int x, int y, int w, int h, int plane_height)
+{
+    gx_device_forward * const fdev = (gx_device_forward *)dev;
+    gx_device *tdev = fdev->target;
+
+    if (tdev == 0)
+        return_error(gs_error_Fatal);
+    return dev_proc(tdev, copy_planes)
+        (tdev, data, dx, raster, id, x, y, w, h, plane_height);
 }
 
 int
@@ -589,6 +606,22 @@ gx_forward_strip_copy_rop2(gx_device * dev, const byte * sdata, int sourcex,
     }
 }
 
+int
+gx_forward_strip_tile_rect_devn(gx_device * dev, const gx_strip_bitmap * tiles,
+   int x, int y, int w, int h, const gx_drawing_color * pdcolor0, 
+   const gx_drawing_color * pdcolor1, int px, int py)
+{
+    gx_device_forward * const fdev = (gx_device_forward *)dev;
+    gx_device *tdev = fdev->target;
+
+    if (tdev == 0)
+        return gx_default_strip_tile_rect_devn(dev, tiles, x, y, w, h, pdcolor0, 
+                                               pdcolor1, px, py);
+    else
+        return dev_proc(tdev, strip_tile_rect_devn)(dev, tiles, x, y, w, h, 
+                                                    pdcolor0, pdcolor1, px, py);
+}
+
 void
 gx_forward_get_clipping_box(gx_device * dev, gs_fixed_rect * pbox)
 {
@@ -837,6 +870,21 @@ gx_forward_fill_rectangle_hl_color(gx_device *dev,
 }
 
 int
+gx_forward_copy_alpha_hl_color(gx_device * dev, const byte * data, int data_x,
+           int raster, gx_bitmap_id id, int x, int y, int width, int height,
+                      const gx_drawing_color *pdcolor, int depth)
+{
+    gx_device_forward * const fdev = (gx_device_forward *)dev;
+    gx_device *tdev = fdev->target;
+
+    if (tdev == 0)
+        return_error(gs_error_rangecheck);
+    else
+        return dev_proc(tdev, copy_alpha_hl_color)
+        (tdev, data, data_x, raster, id, x, y, width, height, pdcolor, depth);
+}
+
+int
 gx_forward_include_color_space(gx_device *dev, gs_color_space *cspace,
             const byte *res_name, int name_length)
 {
@@ -990,6 +1038,7 @@ static dev_proc_decode_color(null_decode_color);
 /* Y position so it can return 1 when done. */
 static dev_proc_strip_copy_rop(null_strip_copy_rop);
 static dev_proc_strip_copy_rop2(null_strip_copy_rop2);
+static dev_proc_strip_tile_rect_devn(null_strip_tile_rect_devn);
 
 #define null_procs(get_initial_matrix, get_page_device) {\
         gx_default_open_device,\
@@ -1061,7 +1110,8 @@ static dev_proc_strip_copy_rop2(null_strip_copy_rop2);
         NULL, /* copy_planes */\
         NULL, /* get_profile */\
         NULL, /* set_graphics_type_tag */\
-        null_strip_copy_rop2\
+        null_strip_copy_rop2,\
+        null_strip_tile_rect_devn\
 }
 
 #define NULLD_X_RES 72
@@ -1223,6 +1273,14 @@ null_strip_copy_rop2(gx_device * dev, const byte * sdata, int sourcex,
                      int x, int y, int width, int height,
                      int phase_x, int phase_y, gs_logical_operation_t lop,
                      uint plane_height)
+{
+    return 0;
+}
+
+static int
+null_strip_tile_rect_devn(gx_device * dev, const gx_strip_bitmap * tiles,
+   int x, int y, int w, int h, const gx_drawing_color * pdcolor0, 
+   const gx_drawing_color * pdcolor1, int px, int py)
 {
     return 0;
 }

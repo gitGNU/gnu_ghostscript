@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Level 2 character operators */
 #include "ghost.h"
 #include "oper.h"
@@ -57,7 +59,7 @@ zglyphshow(i_ctx_t *i_ctx_p)
     int code;
 
     if ((code = glyph_show_setup(i_ctx_p, &glyph)) != 0 ||
-        (code = gs_glyphshow_begin(igs, glyph, imemory, &penum)) < 0)
+        (code = gs_glyphshow_begin(igs, glyph, imemory_local, &penum)) < 0)
         return code;
     *(op_proc_t *)&penum->enum_client_data = zglyphshow;
     if ((code = op_show_finish_setup(i_ctx_p, penum, 1, NULL)) < 0) {
@@ -92,7 +94,7 @@ static int
 moveshow(i_ctx_t *i_ctx_p, bool have_x, bool have_y)
 {
     os_ptr op = osp;
-    gs_text_enum_t *penum;
+    gs_text_enum_t *penum = NULL;
     int code = op_show_setup(i_ctx_p, op - 1);
     int format;
     uint i, size, widths_needed;
@@ -113,8 +115,10 @@ moveshow(i_ctx_t *i_ctx_p, bool have_x, bool have_y)
     if ((code = gs_xyshow_begin(igs, op[-1].value.bytes, r_size(op - 1),
                                 (have_x ? values : (float *)0),
                                 (have_y ? values : (float *)0),
-                                size, imemory, &penum)) < 0) {
+                                size, imemory_local, &penum)) < 0) {
         ifree_object(values, "moveshow");
+        if (penum)	/* if there was an error, the text_enum may not have been allocated */
+            penum->text.x_widths = penum->text.y_widths = NULL;
         return code;
     }
     if (CPSI_mode) {
@@ -143,11 +147,13 @@ moveshow(i_ctx_t *i_ctx_p, bool have_x, bool have_y)
             /* falls through */
         default:
             ifree_object(values, "moveshow");
+        penum->text.x_widths = penum->text.y_widths = NULL;
             return code;
         }
     }
     if ((code = op_show_finish_setup(i_ctx_p, penum, 2, NULL)) < 0) {
         ifree_object(values, "moveshow");
+        penum->text.x_widths = penum->text.y_widths = NULL;
         return code;
     }
     pop(2);

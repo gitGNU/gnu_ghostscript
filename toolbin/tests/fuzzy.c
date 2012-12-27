@@ -1,5 +1,5 @@
 /**
- * Fuzzy comparison utility. Copyright 2001-2008 Artifex Software, Inc.
+ * Fuzzy comparison utility. Copyright 2001-2012 Artifex Software, Inc.
  **/
 
 #include <stdio.h>
@@ -489,7 +489,7 @@ fuzzy_diff_images (Image *image1, Image *image2, const FuzzyParams *fparams,
 
   if (image_out != NULL)
     {
-      out_buf = malloc(out_buffer_size);
+      out_buf = malloc(out_buffer_size*2);
       if (out_buf == NULL)
         printf ("Can't allocate output buffer.\n");
     }
@@ -533,7 +533,7 @@ fuzzy_diff_images (Image *image1, Image *image2, const FuzzyParams *fparams,
                 goto ex;
         }
       if (out_buf)
-        memset(out_buf, 0, out_buffer_size);
+        memset(out_buf, 0, out_buffer_size*2);
 
       if (memcmp(rowmid1, rowmid2, width * 3))
         {
@@ -747,11 +747,13 @@ main (int argc, char **argv)
       return 1;
     }
     if (image1->width != image2->width) {
-        printf("Different image width for page %d\n", page);
+        printf("Different image width for page %d (%d vs %d)\n", page,image1->width,image2->width);
         rcode = MAX(rcode, 1);
+        if (image1->width*2<image2->width)
+          return(rcode);
     }
     if (image1->height != image2->height) {
-        printf("Different image height for page %d\n", page);
+        printf("Different image height for page %d (%d vs %d)\n", page,image1->height,image2->height);
         rcode = MAX(rcode, 1);
     }
     if (out_fn != NULL) {

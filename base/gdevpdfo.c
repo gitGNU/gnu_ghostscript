@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Cos object support */
 #include "memory_.h"
 #include "gx.h"
@@ -317,7 +319,7 @@ cos_value_write_spaced(const cos_value_t *pcv, gx_device_pdf *pdev,
         pprintld1(s, "/R%ld", pcv->contents.object->id);
         break;
     case COS_VALUE_OBJECT: {
-        const cos_object_t *pco = pcv->contents.object;
+        cos_object_t *pco = pcv->contents.object;
 
         if (!pco->id) {
             if (do_space &&
@@ -332,6 +334,8 @@ cos_value_write_spaced(const cos_value_t *pcv, gx_device_pdf *pdev,
         if (do_space)
             stream_putc(s, ' ');
         pprintld1(s, "%ld 0 R", pco->id);
+        if (pco->cos_procs == cos_type_reference)
+            pco->id = 0;
         break;
     }
     default:			/* can't happen */
@@ -397,12 +401,16 @@ static int cos_value_hash(cos_value_t *pcv0, gs_md5_state_t *md5, gs_md5_byte_t 
 
 /* ------ Generic objects ------ */
 
+static cos_proc_release(cos_reference_release);
 static cos_proc_release(cos_generic_release);
 static cos_proc_write(cos_generic_write);
 static cos_proc_equal(cos_generic_equal);
 static cos_proc_hash(cos_generic_hash);
 const cos_object_procs_t cos_generic_procs = {
     cos_generic_release, cos_generic_write, cos_generic_equal, cos_generic_hash
+};
+const cos_object_procs_t cos_reference_procs = {
+    cos_reference_release, cos_generic_write, cos_generic_equal, cos_generic_hash
 };
 
 cos_object_t *
@@ -414,6 +422,23 @@ cos_object_alloc(gx_device_pdf *pdev, client_name_t cname)
 
     cos_object_init(pco, pdev, &cos_generic_procs);
     return pco;
+}
+
+cos_object_t *
+cos_reference_alloc(gx_device_pdf *pdev, client_name_t cname)
+{
+    gs_memory_t *mem = pdev->pdf_memory;
+    cos_object_t *pco =
+        gs_alloc_struct(mem, cos_object_t, &st_cos_object, cname);
+
+    cos_object_init(pco, pdev, &cos_reference_procs);
+    return pco;
+}
+
+static void
+cos_reference_release(cos_object_t *pco, client_name_t cname)
+{
+    /* Do nothing. */
 }
 
 static void
@@ -512,19 +537,19 @@ cos_array_write(const cos_object_t *pco, gx_device_pdf *pdev, gs_id object_id)
     for (pcae = first; pcae; ++last_index, pcae = pcae->next) {
         Element_Count++;
 
-        if(pdev->PDFA && Element_Count > 8191) {
+        if(pdev->PDFA != 0 && Element_Count > 8191) {
             switch (pdev->PDFACompatibilityPolicy) {
             case 0:
                 emprintf(pdev->memory,
                     "Too many entries in array,\n max 8191 in PDF/A, reverting to normal PDF output\n");
                 pdev->AbortPDFAX = true;
-                pdev->PDFA = false;
+                pdev->PDFA = 0;
                 break;
             case 1:
                 emprintf(pdev->memory,
                      "Too many entries in array,\n max 8191 in PDF/A. Cannot simply elide dictionary, reverting to normal output\n");
                 pdev->AbortPDFAX = true;
-                pdev->PDFA = false;
+                pdev->PDFA = 0;
                 break;
             case 2:
                 emprintf(pdev->memory,
@@ -538,7 +563,7 @@ cos_array_write(const cos_object_t *pco, gx_device_pdf *pdev, gs_id object_id)
                 emprintf(pdev->memory,
                      "Too many entries in array,\n max 8191 in PDF/A. Unrecognised PDFACompatibilityLevel,\nreverting to normal PDF output\n");
                 pdev->AbortPDFAX = true;
-                pdev->PDFA = false;
+                pdev->PDFA = 0;
                 break;
             }
         }
@@ -550,7 +575,7 @@ cos_array_write(const cos_object_t *pco, gx_device_pdf *pdev, gs_id object_id)
     }
     DISCARD(cos_array_reorder(pca, first));
     stream_puts(s, "]");
-    if (pdev->PDFA)
+    if (pdev->PDFA != 0)
         stream_puts(s, "\n");
     return 0;
 }
@@ -821,19 +846,19 @@ cos_elements_write(stream *s, const cos_dict_element_t *pcde,
 
             Element_Count++;
 
-            if(pdev->PDFA && Element_Count > 4095) {
+            if(pdev->PDFA != 0 && Element_Count > 4095) {
                 switch (pdev->PDFACompatibilityPolicy) {
                     case 0:
                         emprintf(pdev->memory,
                              "Too many entries in dictionary,\n max 4095 in PDF/A, reverting to normal PDF output\n");
                         pdev->AbortPDFAX = true;
-                        pdev->PDFA = false;
+                        pdev->PDFA = 0;
                         break;
                     case 1:
                         emprintf(pdev->memory,
                              "Too many entries in dictionary,\n max 4095 in PDF/A. Cannot simply elide dictionary, reverting to normal output\n");
                         pdev->AbortPDFAX = true;
-                        pdev->PDFA = false;
+                        pdev->PDFA = 0;
                         break;
                     case 2:
                         emprintf(pdev->memory,
@@ -847,7 +872,7 @@ cos_elements_write(stream *s, const cos_dict_element_t *pcde,
                         emprintf(pdev->memory,
                              "Too many entries in dictionary,\n max 4095 in PDF/A. Unrecognised PDFACompatibilityLevel,\nreverting to normal PDF output\n");
                         pdev->AbortPDFAX = true;
-                        pdev->PDFA = false;
+                        pdev->PDFA = 0;
                         break;
                 }
             }
@@ -878,7 +903,7 @@ cos_dict_write(const cos_object_t *pco, gx_device_pdf *pdev, gs_id object_id)
     stream_puts(s, "<<");
     cos_elements_write(s, ((const cos_dict_t *)pco)->elements, pdev, false, object_id);
     stream_puts(s, ">>");
-    if (pdev->PDFA)
+    if (pdev->PDFA != 0)
         stream_puts(s, "\n");
     return 0;
 }

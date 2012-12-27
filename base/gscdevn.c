@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* DeviceN color space and operation definition */
 
 #include "memory_.h"
@@ -74,7 +76,14 @@ const gs_color_space_type gs_color_space_type_DeviceN = {
 /* GC procedures */
 
 static
-ENUM_PTRS_BEGIN(cs_DeviceN_enum_ptrs) return 0;
+ENUM_PTRS_BEGIN(cs_DeviceN_enum_ptrs)
+{
+    gs_device_n_params *params = &((gs_color_space *)vptr)->params.device_n;
+    if (index-3 < params->num_components)
+        return ENUM_NAME_INDEX(params->names[index-3]);
+    else
+        return 0;
+}
 ENUM_PTR(0, gs_color_space, params.device_n.names);
 ENUM_PTR(1, gs_color_space, params.device_n.map);
 ENUM_PTR(2, gs_color_space, params.device_n.colorants);
@@ -434,7 +443,8 @@ gx_concretize_DeviceN(const gs_client_color * pc, const gs_color_space * pcs,
             /* Use the ICC equivalent color space */
             pacs = pacs->icc_equivalent;
         }
-        if (pacs->cmm_icc_profile_data->data_cs == gsCIELAB) {
+        if (pacs->cmm_icc_profile_data->data_cs == gsCIELAB ||
+            pacs->cmm_icc_profile_data->islab) {
             /* Get the data in a form that is concrete for the CMM */
             cc.paint.values[0] /= 100.0;
             cc.paint.values[1] = (cc.paint.values[1]+128)/255.0;
@@ -528,9 +538,20 @@ check_DeviceN_component_names(const gs_color_space * pcs, gs_state * pgs)
             pcolor_component_map->color_map[i] =
             (colorant_number == GX_DEVICE_COLOR_MAX_COMPONENTS) ? -1
                                                    : colorant_number;
+        } else {
+            if (strncmp((char *) pname, "None", name_size) != 0) {
+                    non_match = true;
+            } else {
+                /* Device N includes one or more None Entries. We can't reduce 
+                   the number of components in the list count, since the None Name(s)
+                   are present in the list and GCd and we may need the None
+                   entries in the alternate tint trasform calcuation.
+                   So we will detect the presence of them by setting 
+                   pcolor_component_map->color_map[i] = -1 and watching
+                   for this case later during the remap operation. */
+                pcolor_component_map->color_map[i] = -1;
+            }
         }
-        else
-            non_match = true;
     }
     pcolor_component_map->use_alt_cspace = non_match;
     return 0;
@@ -612,6 +633,7 @@ gx_set_overprint_DeviceN(const gs_color_space * pcs, gs_state * pgs)
 
             params.retain_spot_comps = false;
             params.drawn_comps = 0;
+            params.k_value = 0;
             for (i = 0; i < ncomps; i++) {
                 int     mcomp = pcmap->color_map[i];
 

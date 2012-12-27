@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* 16-bit image procedures */
 #include "gx.h"
 #include "memory_.h"
@@ -46,7 +48,7 @@ sample_unpack_16(byte * bptr, int *pdata_x, const byte * data,
     uint sample;
     int left = dsize - dskip;
 
-    while (left > 2) {
+    while (left >= 2) {
         sample = ((uint) psrc[0] << 8) + psrc[1];
         *bufp = (frac)((frac_1 * (sample + 1)) >> 16);
         inc_bufp(bufp, spread);

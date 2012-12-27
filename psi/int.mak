@@ -1,16 +1,18 @@
-#  Copyright (C) 2001-2009 Artifex Software, Inc.
-#  All Rights Reserved.
+# Copyright (C) 2001-2012 Artifex Software, Inc.
+# All Rights Reserved.
 #
-#  This software is provided AS-IS with no warranty, either express or
-#  implied.
+# This software is provided AS-IS with no warranty, either express or
+# implied.
 #
-#  This software is distributed under license and may not be copied, modified
-#  or distributed except as expressly authorized under the terms of that
-#  license.  Refer to licensing information at http://www.artifex.com/
-#  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-#  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+# This software is distributed under license and may not be copied,
+# modified or distributed except as expressly authorized under the terms
+# of the license contained in the file LICENSE in this distribution.
 #
-# $Id$
+# Refer to licensing information at http://www.artifex.com or contact
+# Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+# CA  94903, U.S.A., +1(415)492-9861, for further information.
+#
+#
 # (Platform-independent) makefile for PostScript and PDF language
 # interpreters.
 # Users of this makefile must define the following:
@@ -272,7 +274,6 @@ $(PSOBJ)iconfig.$(OBJ) : $(gconfig_h) $(PSSRC)iconf.c $(stdio__h)\
  $(gconf_h) $(gconfigd_h) $(gsmemory_h) $(gstypes_h)\
  $(iminst_h) $(iref_h) $(ivmspace_h) $(opdef_h) $(iplugin_h)
 	$(RM_) $(PSGEN)iconfig.c
-	$(CP_) $(gconfig_h) $(PSGEN)gconfig.h
 	$(CP_) $(PSSRC)iconf.c $(PSGEN)iconfig.c
 	$(PSCC) $(PSO_)iconfig.$(OBJ) $(C_) $(PSGEN)iconfig.c
 
@@ -835,7 +836,7 @@ $(PSOBJ)zchar42.$(OBJ) : $(PSSRC)zchar42.c $(OP)\
  $(gxfixed_h) $(gxfont_h) $(gxfont42_h)\
  $(gxistate_h) $(gxpath_h) $(gxtext_h) $(gzstate_h)\
  $(dstack_h) $(estack_h) $(ichar_h) $(icharout_h)\
- $(ifont_h) $(igstate_h) $(store_h) $(string_h) $(zchar42_h)
+ $(ifont_h) $(igstate_h) $(store_h) $(string_h) $(zchar42_h) $(idict_h) 
 	$(PSCC) $(PSO_)zchar42.$(OBJ) $(C_) $(PSSRC)zchar42.c
 
 $(PSOBJ)zfont42.$(OBJ) : $(PSSRC)zfont42.c $(OP) $(memory__h)\
@@ -1715,7 +1716,7 @@ $(PSOBJ)zicc.$(OBJ) : $(PSSRC)zicc.c  $(OP) $(math__h) $(memory__h)\
  $(gsstruct_h) $(gxcspace_h) $(stream_h) $(files_h) $(gscolor2_h)\
  $(gsicc_h) $(estack_h) $(idict_h) $(idparam_h) $(igstate_h)\
  $(icie_h) $(ialloc_h) $(zicc_h) $(gsicc_manage_h) $(GX) $(gxistate_h)\
- $(gsicc_create_h) $(gsicc_profilecache_h)
+ $(gsicc_create_h) $(gsicc_profilecache_h) $(gxdevice_h) $(gsicc_cache_h)
 	$(PSCC) $(PSO_)zicc.$(OBJ) $(C_) $(PSSRC)zicc.c
 
 # ---------------- Support for %disk IODevices ---------------- #

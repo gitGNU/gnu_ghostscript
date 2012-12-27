@@ -1,16 +1,18 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id$	*/
+
 /* Compositing devices for implementing	PDF 1.4	imaging	model */
 
 #include "math_.h"
@@ -80,6 +82,17 @@ static int pdf14_clist_update_params(pdf14_clist_device * pdev,
                                       const gs_imager_state * pis,
                                       bool crop_blend_params,
                                       gs_pdf14trans_params_t *group_params);
+static	int pdf14_mark_fill_rectangle(gx_device * dev, int x, int y, int w, int h, 
+                          gx_color_index color, const gx_device_color *pdc,
+                          bool devn);
+static	int pdf14_mark_fill_rectangle_ko_simple(gx_device *	dev, int x, int y, 
+                                                int w, int h, gx_color_index color, 
+                                                const gx_device_color *pdc, 
+                                                bool devn);
+static int pdf14_copy_alpha_color(gx_device * dev, const byte * data, int data_x,
+           int aa_raster, gx_bitmap_id id, int x, int y, int w, int h,
+                      gx_color_index color, const gx_device_color *pdc,
+                      int depth, bool devn);
 
 /* Functions for dealing with soft mask color */
 static int pdf14_decrement_smask_color(gs_imager_state * pis, gx_device * dev);
@@ -156,8 +169,7 @@ dev_proc_encode_color(pdf14_compressed_encode_color);
 dev_proc_decode_color(pdf14_decode_color);
 dev_proc_decode_color(pdf14_compressed_decode_color);
 static	dev_proc_fill_rectangle(pdf14_fill_rectangle);
-static	dev_proc_fill_rectangle(pdf14_mark_fill_rectangle);
-static	dev_proc_fill_rectangle(pdf14_mark_fill_rectangle_ko_simple);
+static  dev_proc_fill_rectangle_hl_color(pdf14_fill_rectangle_hl_color);
 static	dev_proc_fill_path(pdf14_fill_path);
 static  dev_proc_copy_mono(pdf14_copy_mono);
 static	dev_proc_fill_mask(pdf14_fill_mask);
@@ -176,6 +188,8 @@ static	dev_proc_push_transparency_state(pdf14_push_transparency_state);
 static	dev_proc_pop_transparency_state(pdf14_pop_transparency_state);
 static  dev_proc_ret_devn_params(pdf14_ret_devn_params);
 static  dev_proc_copy_alpha(pdf14_copy_alpha);
+static  dev_proc_copy_planes(pdf14_copy_planes);
+static  dev_proc_copy_alpha_hl_color(pdf14_copy_alpha_hl_color);
 
 static	const gx_color_map_procs *
     pdf14_get_cmap_procs(const gs_imager_state *, const gx_device *);
@@ -243,7 +257,7 @@ static	const gx_color_map_procs *
         encode_color,			/* encode_color */\
         decode_color,			/* decode_color */\
         NULL,                           /* pattern_manage */\
-        NULL,				/* fill_rectangle_hl_color */\
+        pdf14_fill_rectangle_hl_color,	/* fill_rectangle_hl_color */\
         NULL,				/* include_color_space */\
         NULL,				/* fill_linear_color_scanline */\
         NULL,				/* fill_linear_color_trapezoid */\
@@ -254,7 +268,13 @@ static	const gx_color_map_procs *
         pdf14_push_transparency_state,  /* push_transparency_state */\
         pdf14_pop_transparency_state,   /* pop_transparency_state */\
         NULL,                           /* put_image */\
-        pdf14_dev_spec_op               /* dev_spec_op */\
+        pdf14_dev_spec_op,               /* dev_spec_op */\
+        pdf14_copy_planes,               /* copy_planes */\
+        NULL,                           /*  */\
+        NULL,                           /* set_graphics_type_tag */\
+        NULL,                           /* strip_copy_rop2 */\
+        NULL,                           /* strip_tile_rect_devn */\
+        pdf14_copy_alpha_hl_color       /* copy_alpha_hl_color */\
 }
 
 static	const gx_device_procs pdf14_Gray_procs =
@@ -459,7 +479,7 @@ const pdf14_device gs_pdf14_custom_device = {
 static
 ENUM_PTRS_WITH(pdf14_device_enum_ptrs, pdf14_device *pdev)
 {
-    index -= 5;
+    index -= 6;
     if (index < pdev->devn_params.separations.num_separations)
         ENUM_RETURN(pdev->devn_params.separations.names[index].data);
     index -= pdev->devn_params.separations.num_separations;
@@ -472,6 +492,7 @@ case 1: return ENUM_OBJ(pdev->trans_group_parent_cmap_procs);
 case 2: return ENUM_OBJ(pdev->smaskcolor);
 case 3:	ENUM_RETURN(gx_device_enum_ptr(pdev->target));
 case 4: ENUM_RETURN(pdev->devn_params.compressed_color_list);
+case 5: ENUM_RETURN(pdev->devn_params.pdf14_compressed_color_list);
 ENUM_PTRS_END
 
 static	RELOC_PTRS_WITH(pdf14_device_reloc_ptrs, pdf14_device *pdev)
@@ -484,6 +505,7 @@ static	RELOC_PTRS_WITH(pdf14_device_reloc_ptrs, pdf14_device *pdev)
         }
     }
     RELOC_PTR(pdf14_device, devn_params.compressed_color_list);
+    RELOC_PTR(pdf14_device, devn_params.pdf14_compressed_color_list);
     RELOC_VAR(pdev->ctx);
     RELOC_VAR(pdev->smaskcolor);
     RELOC_VAR(pdev->trans_group_parent_cmap_procs);
@@ -839,7 +861,7 @@ pdf14_pop_transparency_group(gs_imager_state *pis, pdf14_ctx *ctx,
     dump_raw_buffer(ctx->stack->rect.q.y-ctx->stack->rect.p.y,
                 ctx->stack->rowstride, ctx->stack->n_planes,
                 ctx->stack->planestride, ctx->stack->rowstride,
-                "Trans_Group_Pop",ctx->stack->data);
+                "aTrans_Group_Pop",ctx->stack->data);
 #endif
 /* Note currently if a pattern space has transparency, the ICC profile is not used
    for blending purposes.  Instead we rely upon the gray, rgb, or cmyk parent space.
@@ -1234,19 +1256,23 @@ pdf14_pop_transparency_mask(pdf14_ctx *ctx, gs_imager_state *pis, gx_device *dev
                 }
             }
         }
-         /* Free the old object, NULL test was above */
-          gs_free_object(ctx->memory, tos->data, "pdf14_buf_free");
-             tos->data = new_data_buf;
-         /* Data is single channel now */
-         tos->n_chan = 1;
-         tos->n_planes = 1;
+        /* Free the old object, NULL test was above */
+        gs_free_object(ctx->memory, tos->data, "pdf14_buf_free");
+        tos->data = new_data_buf;
+        /* Data is single channel now */
+        tos->n_chan = 1;
+        tos->n_planes = 1;
         /* Assign as reference counted mask buffer */
         if (ctx->mask_stack != NULL) {
             gs_free_object(ctx->memory, ctx->mask_stack,
                            "pdf14_pop_transparency_group");
         }
         ctx->mask_stack = pdf14_mask_element_new(ctx->memory);
+	if (ctx->mask_stack == NULL)
+		return gs_note_error(gs_error_VMerror);
         ctx->mask_stack->rc_mask = pdf14_rcmask_new(ctx->memory);
+	if (ctx->mask_stack->rc_mask == NULL)
+		return gs_note_error(gs_error_VMerror);
         ctx->mask_stack->rc_mask->mask_buf = tos;
      }
     return 0;
@@ -1286,7 +1312,8 @@ pdf14_push_transparency_state(gx_device *dev, gs_imager_state *pis)
         /* Duplicate and make the link */
         new_mask->rc_mask = ctx->mask_stack->rc_mask;
         rc_increment(new_mask->rc_mask);
-        ctx->mask_stack->previous = new_mask;
+        new_mask->previous = ctx->mask_stack;
+        ctx->mask_stack = new_mask;
     }
 #ifdef DEBUG
     pdf14_debug_mask_stack_state(pdev->ctx);
@@ -1693,7 +1720,8 @@ pdf14_cmykspot_put_image(gx_device * dev, gs_imager_state * pis, gx_device * tar
     clist_band_count++;
 #endif
     return gx_put_blended_image_cmykspot(target, buf_ptr, planestride, rowstride,
-                      rect.p.x, rect.p.y, width, height, num_comp, bg, pseparations);
+                      rect.p.x, rect.p.y, width, height, num_comp, bg, 
+                      buf->has_tags, rect, pseparations);
 }
 
 /**
@@ -1797,6 +1825,7 @@ gs_pdf14_device_copy_params(gx_device *dev, const gx_device *target)
                                           &(profile_targ));
         profile_dev14->device_profile[0] = profile_targ->device_profile[0];
         dev->icc_struct->devicegraytok = profile_targ->devicegraytok;
+        dev->icc_struct->supports_devn = profile_targ->supports_devn;
         gx_monitor_enter(profile_dev14->device_profile[0]->lock);
         rc_increment(profile_dev14->device_profile[0]);
         gx_monitor_leave(profile_dev14->device_profile[0]->lock);
@@ -1910,8 +1939,9 @@ update_lop_for_pdf14(gs_imager_state *pis, const gx_drawing_color *pdcolor)
             hastrans = true;
         }
     }
+    /* The only idempotent blend modes are Normal, Darken and Lighten */
     if ((pis->alpha != 0xFFFF) ||
-        (pis->blend_mode != BLEND_MODE_Normal) ||
+        (pis->blend_mode != BLEND_MODE_Normal && pis->blend_mode != BLEND_MODE_Darken && pis->blend_mode != BLEND_MODE_Lighten) ||
         (pis->opacity.alpha != 1.0) ||
         (pis->shape.alpha != 1.0) ||
         (hastrans))
@@ -2022,6 +2052,25 @@ pdf14_copy_alpha(gx_device * dev, const byte * data, int data_x,
            int aa_raster, gx_bitmap_id id, int x, int y, int w, int h,
                       gx_color_index color, int depth)
 {
+    return pdf14_copy_alpha_color(dev, data, data_x, aa_raster, id, x, y, w, h, 
+                                  color, NULL, depth, false);
+}
+
+static int
+pdf14_copy_alpha_hl_color(gx_device * dev, const byte * data, int data_x,
+           int aa_raster, gx_bitmap_id id, int x, int y, int w, int h,
+                      const gx_drawing_color *pdcolor, int depth)
+{
+    return pdf14_copy_alpha_color(dev, data, data_x, aa_raster, id, x, y, w, h, 
+                                  0, pdcolor, depth, true);
+}
+
+static int
+pdf14_copy_alpha_color(gx_device * dev, const byte * data, int data_x,
+           int aa_raster, gx_bitmap_id id, int x, int y, int w, int h,
+                      gx_color_index color, const gx_device_color *pdc,
+                      int depth, bool devn)
+{
     const byte *aa_row;
     pdf14_device *pdev = (pdf14_device *)dev;
     pdf14_buf *buf = pdev->ctx->stack;
@@ -2051,6 +2100,8 @@ pdf14_copy_alpha(gx_device * dev, const byte * data, int data_x,
     int alpha2_aa, alpha_aa, sx;
     int alpha_aa_act;
     int xoff;
+    gx_color_index mask = ((gx_color_index)1 << 8) - 1;
+    int shift = 8;
 
     if (buf->data == NULL)
         return 0;
@@ -2058,7 +2109,19 @@ pdf14_copy_alpha(gx_device * dev, const byte * data, int data_x,
     if (has_tags) {
         curr_tag = (color >> (num_comp*8)) & 0xff;
     }
-    pdev->pdf14_procs->unpack_color(num_comp, color, pdev, src);
+
+    if (devn) {
+        if (additive) {
+            for (j = 0; j < num_comp; j++) {
+                src[j] = ((pdc->colors.devn.values[j]) >> shift & mask);
+            }
+        } else {
+            for (j = 0; j < num_comp; j++) {
+                src[j] = 255 - ((pdc->colors.devn.values[j]) >> shift & mask);
+            }
+        }
+    } else 
+        pdev->pdf14_procs->unpack_color(num_comp, color, pdev, src);
     src_alpha = src[num_comp] = (byte)floor (255 * pdev->alpha + 0.5);
     if (has_shape)
         shape = (byte)floor (255 * pdev->shape + 0.5);
@@ -2072,6 +2135,7 @@ pdf14_copy_alpha(gx_device * dev, const byte * data, int data_x,
     }
     if (y < buf->rect.p.y) {
       h += y - buf->rect.p.y;
+      aa_row -= (y - buf->rect.p.y) * aa_raster;
       y = buf->rect.p.y;
     }
     if (x + w > buf->rect.q.x) w = buf->rect.q.x - x;
@@ -2689,6 +2753,7 @@ pdf14_forward_device_procs(gx_device * dev)
      */
     set_dev_proc(dev, close_device, gx_forward_close_device);
     set_dev_proc(dev, fill_rectangle, gx_forward_fill_rectangle);
+    set_dev_proc(dev, fill_rectangle_hl_color, gx_forward_fill_rectangle_hl_color);
     set_dev_proc(dev, tile_rectangle, gx_forward_tile_rectangle);
     set_dev_proc(dev, copy_mono, gx_forward_copy_mono);
     set_dev_proc(dev, copy_color, gx_forward_copy_color);
@@ -2841,9 +2906,11 @@ get_pdf14_device_proto(gx_device * dev, pdf14_device ** pdevproto,
                     ptempdevproto->devn_params.num_std_colorant_names +
                     pdf14pct->params.num_spot_colors;
                 if (ptempdevproto->color_info.num_components >
-                        ptempdevproto->color_info.max_components)
+                        GS_CLIENT_COLOR_MAX_COMPONENTS)
                     ptempdevproto->color_info.num_components =
-                        ptempdevproto->color_info.max_components;
+                        GS_CLIENT_COLOR_MAX_COMPONENTS;
+                ptempdevproto->color_info.depth = 
+                                    ptempdevproto->color_info.num_components * 8;
                 *pdevproto = ptempdevproto;
             }
             break;
@@ -3157,6 +3224,77 @@ pdf14_copy_mono(gx_device * dev,
     return 0;
 }
 
+/* Used in a few odd cases where the target device is planar and we have
+   a planar tile (pattern) and we are copying it into place here */
+
+static int
+pdf14_copy_planes(gx_device * dev, const byte * data, int data_x, int raster, 
+                  gx_bitmap_id id, int x, int y, int w, int h, int plane_height)
+{
+    pdf14_device *pdev = (pdf14_device *)dev;
+#if RAW_DUMP
+    pdf14_ctx *ctx = pdev->ctx;
+#endif
+    pdf14_buf *buf = pdev->ctx->stack;
+    int num_planes = dev->color_info.num_components;
+    byte *dptr = data + data_x;
+    int yinc, xinc, pi;
+    gx_drawing_color dcolor;
+    int code = 0;
+
+    fit_fill_xywh(dev, x, y, w, h);
+    if (w <= 0 || h <= 0)
+        return 0;
+
+    dcolor.type = gx_dc_type_devn;
+    /* Because of the complexity of the blending and my desire to finish
+       this planar sep device work, I am going to make this a series of
+       rect fills.  ToDo: optimize this for more efficient planar operation.
+       It would be interesting to use the put_image procedure. */
+    for (yinc = 0; yinc < h; yinc++) {
+        for (xinc = 0; xinc < w; xinc++) {
+            for (pi = 0; pi < num_planes; pi++) {
+                dcolor.colors.devn.values[pi] = 
+                    *(dptr + plane_height * raster * pi) << 8;
+            }
+            if (buf->knockout)
+                code = 
+                    pdf14_mark_fill_rectangle_ko_simple(dev, x + xinc, 
+                                                        y + yinc, 1, 1, 0, 
+                                                        &dcolor, true);
+            else
+                code = 
+                    pdf14_mark_fill_rectangle(dev, x + xinc, y + yinc, 1, 1, 0, 
+                                               &dcolor, true);
+            dptr++;
+        }
+        dptr = data + raster * yinc + data_x;
+    }
+    return code;
+}
+
+static int
+pdf14_fill_rectangle_hl_color(gx_device *dev, const gs_fixed_rect *rect,
+    const gs_imager_state *pis, const gx_drawing_color *pdcolor,
+    const gx_clip_path *pcpath)
+{
+    pdf14_device *pdev = (pdf14_device *)dev;
+    pdf14_buf *buf = pdev->ctx->stack;
+    int x = rect->p.x;
+    int y = rect->p.y;
+    int w = rect->q.x - x;
+    int h = rect->q.y -y;
+
+    fit_fill_xywh(dev, x, y, w, h);
+    if (w <= 0 || h <= 0)
+        return 0;
+    if (buf->knockout)
+        return pdf14_mark_fill_rectangle_ko_simple(dev, x, y, w, h, 0, pdcolor, 
+                                                   true);
+    else
+        return pdf14_mark_fill_rectangle(dev, x, y, w, h, 0, pdcolor, true);
+}
+
 static	int
 pdf14_fill_rectangle(gx_device * dev,
                     int x, int y, int w, int h, gx_color_index color)
@@ -3168,9 +3306,10 @@ pdf14_fill_rectangle(gx_device * dev,
     if (w <= 0 || h <= 0)
         return 0;
     if (buf->knockout)
-        return pdf14_mark_fill_rectangle_ko_simple(dev, x, y, w, h, color);
+        return pdf14_mark_fill_rectangle_ko_simple(dev, x, y, w, h, color, NULL, 
+                                                   false);
     else
-        return pdf14_mark_fill_rectangle(dev, x, y, w, h, color);
+        return pdf14_mark_fill_rectangle(dev, x, y, w, h, color, NULL, false);
 }
 
 static int
@@ -3220,7 +3359,7 @@ pdf14_begin_transparency_group(gx_device *dev,
     gs_int_rect rect;
     int code;
     bool isolated;
-    bool sep_target = (strcmp(pdev->dname, "pdf14cmykspot") == 0);
+    bool sep_target;
     int group_color_numcomps;
     gs_transparency_color_t group_color;
     cmm_profile_t *curr_profile;
@@ -3228,17 +3367,15 @@ pdf14_begin_transparency_group(gx_device *dev,
     gsicc_rendering_intents_t rendering_intent;
     cmm_dev_profile_t *dev_profile;
 
+    sep_target = (strcmp(pdev->dname, "pdf14cmykspot") == 0) ||
+                 (dev_proc(dev, dev_spec_op)(dev, gxdso_supports_devn, NULL, 0));
     code = dev_proc(dev, get_profile)(dev,  &dev_profile);
     gsicc_extract_profile(GS_UNKNOWN_TAG, dev_profile, &group_profile,
                           &rendering_intent);
-
-
     /* If the target device supports separations, then
        we should should NOT create the group.  The exception to this
        rule would be if we just popped a transparency mask */
-
     code = compute_group_device_int_rect(pdev, &rect, pbbox, pis);
-
     if (code < 0)
         return code;
     if_debug4('v', "[v]pdf14_begin_transparency_group, I = %d, K = %d, alpha = %g, bm = %d\n",
@@ -4062,8 +4199,9 @@ pdf14_end_transparency_mask(gx_device *dev, gs_imager_state *pis,
 }
 
 static	int
-pdf14_mark_fill_rectangle(gx_device * dev,
-                         int x, int y, int w, int h, gx_color_index color)
+pdf14_mark_fill_rectangle(gx_device * dev, int x, int y, int w, int h, 
+                          gx_color_index color, const gx_device_color *pdc,
+                          bool devn)
 {
     pdf14_device *pdev = (pdf14_device *)dev;
     pdf14_buf *buf = pdev->ctx->stack;
@@ -4075,7 +4213,7 @@ pdf14_mark_fill_rectangle(gx_device * dev,
     bool additive = pdev->ctx->additive;
     int rowstride = buf->rowstride;
     int planestride = buf->planestride;
-    gs_graphics_type_tag_t curr_tag;
+    gs_graphics_type_tag_t curr_tag = GS_UNKNOWN_TAG; /* Quite compiler */
     bool has_alpha_g = buf->has_alpha_g;
     bool has_shape = buf->has_shape;
     bool has_tags = buf->has_tags;
@@ -4089,6 +4227,9 @@ pdf14_mark_fill_rectangle(gx_device * dev,
     gx_color_index comps;
     byte shape = 0; /* Quiet compiler. */
     byte src_alpha;
+    gx_color_index mask = ((gx_color_index)1 << 8) - 1;
+    int shift = 8;
+
 
     if (buf->data == NULL)
         return 0;
@@ -4110,7 +4251,18 @@ pdf14_mark_fill_rectangle(gx_device * dev,
     if (has_tags) {
         curr_tag = (color >> (num_comp*8)) & 0xff;
     }
-    pdev->pdf14_procs->unpack_color(num_comp, color, pdev, src);
+    if (devn) {
+        if (additive) {
+            for (j = 0; j < num_comp; j++) {
+                src[j] = ((pdc->colors.devn.values[j]) >> shift & mask);
+            }
+        } else {
+            for (j = 0; j < num_comp; j++) {
+                src[j] = 255 - ((pdc->colors.devn.values[j]) >> shift & mask);
+            }
+        }
+    } else 
+        pdev->pdf14_procs->unpack_color(num_comp, color, pdev, src);
     src_alpha = src[num_comp] = (byte)floor (255 * pdev->alpha + 0.5);
     if (has_shape)
         shape = (byte)floor (255 * pdev->shape + 0.5);
@@ -4202,8 +4354,9 @@ pdf14_mark_fill_rectangle(gx_device * dev,
 }
 
 static	int
-pdf14_mark_fill_rectangle_ko_simple(gx_device *	dev,
-                                   int x, int y, int w, int h, gx_color_index color)
+pdf14_mark_fill_rectangle_ko_simple(gx_device *	dev, int x, int y, int w, int h, 
+                                    gx_color_index color, 
+                                    const gx_device_color *pdc, bool devn)
 {
     pdf14_device *pdev = (pdf14_device *)dev;
     pdf14_buf *buf = pdev->ctx->stack;
@@ -4223,6 +4376,8 @@ pdf14_mark_fill_rectangle_ko_simple(gx_device *	dev,
     bool has_tags = buf->has_tags;
     bool additive = pdev->ctx->additive;
     gs_graphics_type_tag_t curr_tag = dev->graphics_type_tag & ~GS_DEVICE_ENCODES_TAGS;
+    gx_color_index mask = ((gx_color_index)1 << 8) - 1;
+    int shift = 8;
 
     if (buf->data == NULL)
         return 0;
@@ -4243,7 +4398,18 @@ pdf14_mark_fill_rectangle_ko_simple(gx_device *	dev,
     if (has_tags) {
         curr_tag = (color >> (num_comp*8)) & 0xff;
     }
-    pdev->pdf14_procs->unpack_color(num_comp, color, pdev, src);
+    if (devn) {
+        if (additive) {
+            for (j = 0; j < num_comp; j++) {
+                src[j] = ((pdc->colors.devn.values[j]) >> shift & mask);
+            }
+        } else {
+            for (j = 0; j < num_comp; j++) {
+                src[j] = 255 - ((pdc->colors.devn.values[j]) >> shift & mask);
+            }
+        }
+    } else 
+        pdev->pdf14_procs->unpack_color(num_comp, color, pdev, src);
     src[num_comp] = (byte)floor (255 * pdev->alpha + 0.5);
     /* Fit the mark into the bounds of the buffer */
     if (x < buf->rect.p.x) {
@@ -4439,9 +4605,19 @@ pdf14_cmap_cmyk_direct(frac c, frac m, frac y, frac k, gx_device_color * pdc,
     dev_proc(trans_device, get_color_mapping_procs)(trans_device)->map_cmyk(trans_device, c, m, y, k, cm_comps);
     for (i = 0; i < ncomps; i++)
         cv[i] = frac2cv(cm_comps[i]);
-    color = dev_proc(trans_device, encode_color)(trans_device, cv);
-    if (color != gx_no_color_index)
-        color_set_pure(pdc, color);
+    /* if output device supports devn, we need to make sure we send it the
+       proper color type */
+    if (dev_proc(trans_device, dev_spec_op)(trans_device, gxdso_supports_devn, NULL, 0)) {
+        for (i = 0; i < ncomps; i++)
+            pdc->colors.devn.values[i] = cv[i];
+        pdc->type = gx_dc_type_devn;
+    } else {
+    /* encode as a color index */
+        color = dev_proc(trans_device, encode_color)(trans_device, cv);
+        /* check if the encoding was successful; we presume failure is rare */
+        if (color != gx_no_color_index)
+            color_set_pure(pdc, color);
+    }
 }
 
 /* color mapping for when we have an smask or a isolated transparency group with
@@ -4664,11 +4840,20 @@ pdf14_cmap_separation_direct(frac all, gx_device_color * pdc, const gs_imager_st
         for (i = 0; i < ncomps; i++)
             cv[i] = frac2cv(frac_1 - gx_map_color_frac(pis,
                         (frac)(frac_1 - cm_comps[i]), effective_transfer[i]));
-    /* encode as a color index */
-    color = dev_proc(dev, encode_color)(dev, cv);
-    /* check if the encoding was successful; we presume failure is rare */
-    if (color != gx_no_color_index)
-        color_set_pure(pdc, color);
+
+    /* if output device supports devn, we need to make sure we send it the
+       proper color type */
+    if (dev_proc(dev, dev_spec_op)(dev, gxdso_supports_devn, NULL, 0)) {
+        for (i = 0; i < ncomps; i++)
+            pdc->colors.devn.values[i] = cv[i];
+        pdc->type = gx_dc_type_devn;
+    } else {
+        /* encode as a color index */
+        color = dev_proc(dev, encode_color)(dev, cv);
+        /* check if the encoding was successful; we presume failure is rare */
+        if (color != gx_no_color_index)
+            color_set_pure(pdc, color);
+    }
 }
 
 static	void
@@ -4704,11 +4889,19 @@ pdf14_cmap_devicen_direct(const	frac * pcc,
         for (i = 0; i < ncomps; i++)
             cv[i] = frac2cv(frac_1 - gx_map_color_frac(pis,
                         (frac)(frac_1 - cm_comps[i]), effective_transfer[i]));
+    /* if output device supports devn, we need to make sure we send it the
+       proper color type */
+    if (dev_proc(trans_device, dev_spec_op)(trans_device, gxdso_supports_devn, NULL, 0)) {
+        for (i = 0; i < ncomps; i++)
+            pdc->colors.devn.values[i] = cv[i];
+        pdc->type = gx_dc_type_devn;
+    } else {
     /* encode as a color index */
-    color = dev_proc(trans_device, encode_color)(trans_device, cv);
-    /* check if the encoding was successful; we presume failure is rare */
-    if (color != gx_no_color_index)
-        color_set_pure(pdc, color);
+        color = dev_proc(trans_device, encode_color)(trans_device, cv);
+        /* check if the encoding was successful; we presume failure is rare */
+        if (color != gx_no_color_index)
+            color_set_pure(pdc, color);
+    }
 }
 
 static	bool
@@ -4747,6 +4940,27 @@ pdf14_dev_spec_op(gx_device *pdev, int dev_spec_op,
             return 1;
         }
     }
+    if (dev_spec_op == gxdso_is_native_planar) {
+        /* Only return true here if the target is planar.  While the pdf14
+           device is planar, the underlying buffers for the target 
+           device is what is being asked about */
+        gx_device_forward * fdev = (gx_device_forward *)pdev;
+        gx_device * target = fdev->target;
+        if (target != NULL) {
+            return dev_proc(target, dev_spec_op)(target, gxdso_is_native_planar, 
+                                                 NULL, 0);
+        } else return 0;
+    }
+    if (dev_spec_op == gxdso_supports_devn) {
+        cmm_dev_profile_t *dev_profile;
+        int code;
+        code = dev_proc(pdev, get_profile)((gx_device*) pdev, &dev_profile);
+        if (code == 0) {
+            return dev_profile->supports_devn;
+        } else {
+            return 0;
+        }
+    }
     return gx_default_dev_spec_op(pdev, dev_spec_op, data, size);
 }
 
@@ -4780,7 +4994,7 @@ gs_pdf14_device_push(gs_memory_t *mem, gs_imager_state * pis,
        proper blending.  During put_image we will convert from RGB to
        CIELAB.  Need to check that we have a default profile, which
        will not be the case if we are coming from the clist reader */
-    if (icc_profile->data_cs == gsCIELAB
+    if ((icc_profile->data_cs == gsCIELAB || icc_profile->islab)
         && pis->icc_manager->default_rgb != NULL) {
         p14dev->icc_struct->device_profile[0] =
                                         pis->icc_manager->default_rgb;
@@ -4920,7 +5134,7 @@ c_pdf14trans_write(const gs_composite_t	* pct, byte * data, uint * psize,
                to CIELAB at the end.  To do this, we need to store the
                default RGB profile in the clist so that we can grab it
                later on during the clist read back and put image command */
-            if (icc_profile->data_cs == gsCIELAB) {
+            if (icc_profile->data_cs == gsCIELAB || icc_profile->islab) {
                 /* Get the default RGB profile.  Set the device hash code
                    so that we can extract it during the put_image operation. */
                 cdev->trans_dev_icc_hash = pparams->iccprofile->hashcode;
@@ -5594,7 +5808,7 @@ send_pdf14trans(gs_imager_state	* pis, gx_device * dev,
         encode_color,			/* encode_color */\
         decode_color,			/* decode_color */\
         NULL,                           /* pattern_manage */\
-        NULL,				/* fill_rectangle_hl_color */\
+        gx_forward_fill_rectangle_hl_color,	/* fill_rectangle_hl_color */\
         NULL,				/* include_color_space */\
         NULL,				/* fill_linear_color_scanline */\
         NULL,				/* fill_linear_color_trapezoid */\
@@ -5605,7 +5819,13 @@ send_pdf14trans(gs_imager_state	* pis, gx_device * dev,
         pdf14_push_transparency_state,\
         pdf14_pop_transparency_state,\
         NULL,                           /* put_image */\
-        pdf14_dev_spec_op\
+        pdf14_dev_spec_op,\
+        NULL,                           /* copy planes */\
+        NULL,                           /* get_profile */\
+        NULL,                           /* set_graphics_type_tag */\
+        NULL,                           /* strip_copy_rop2 */\
+        NULL,                           /* strip_tile_rect_devn */\
+        gx_forward_copy_alpha_hl_color\
 }
 
 static	dev_proc_create_compositor(pdf14_clist_create_compositor);
@@ -5633,11 +5853,19 @@ static	const gx_device_procs pdf14_clist_CMYK_procs =
                         gx_default_DevCMYK_get_color_comp_index,
                         pdf14_encode_color, pdf14_decode_color);
 
+#if USE_COMPRESSED_ENCODING
 static	const gx_device_procs pdf14_clist_CMYKspot_procs =
         pdf14_clist_procs(pdf14_cmykspot_get_color_mapping_procs,
                         pdf14_cmykspot_get_color_comp_index,
                         pdf14_compressed_encode_color,
                         pdf14_compressed_decode_color);
+#else
+static	const gx_device_procs pdf14_clist_CMYKspot_procs =
+        pdf14_clist_procs(pdf14_cmykspot_get_color_mapping_procs,
+                        pdf14_cmykspot_get_color_comp_index,
+                        pdf14_encode_color,
+                        pdf14_decode_color);
+#endif
 
 static	const gx_device_procs pdf14_clist_custom_procs =
         pdf14_clist_procs(gx_forward_get_color_mapping_procs,
@@ -5785,6 +6013,8 @@ get_pdf14_clist_device_proto(gx_device * dev, pdf14_clist_device ** pdevproto,
                         ptempdevproto->color_info.max_components)
                     ptempdevproto->color_info.num_components =
                         ptempdevproto->color_info.max_components;
+                ptempdevproto->color_info.depth = 
+                                    ptempdevproto->color_info.num_components * 8;
             }
             *pdevproto = ptempdevproto;
             break;
@@ -5855,7 +6085,7 @@ pdf14_create_clist_device(gs_memory_t *mem, gs_imager_state * pis,
     /* If the target profile was CIELAB, then overide with default RGB for
        proper blending.  During put_image we will convert from RGB to
        CIELAB */
-    if (target_profile->data_cs == gsCIELAB) {
+    if (target_profile->data_cs == gsCIELAB || target_profile->islab) {
         rc_assign(pdev->icc_struct->device_profile[0],
                   pis->icc_manager->default_rgb, "pdf14_create_clist_device");
     }
@@ -5863,6 +6093,13 @@ pdf14_create_clist_device(gs_memory_t *mem, gs_imager_state * pis,
     pdev->my_decode_color = pdev->procs.decode_color;
     pdev->my_get_color_mapping_procs = pdev->procs.get_color_mapping_procs;
     pdev->my_get_color_comp_index = pdev->procs.get_color_comp_index;
+    /* The number of color planes should not exceed that of the target */
+    if (pdev->color_info.num_components > target->color_info.num_components)
+        pdev->color_info.num_components = target->color_info.num_components;
+    if (pdev->color_info.max_components > target->color_info.max_components)
+        pdev->color_info.max_components = target->color_info.max_components;
+    pdev->color_info.separable_and_linear = 
+        target->color_info.separable_and_linear;
     *ppdev = (gx_device *) pdev;
     return code;
 }
@@ -6403,7 +6640,8 @@ pdf14_clist_create_compositor(gx_device	* dev, gx_device ** pcdev,
                 /* Now update the device procs. Not
                    if we have a sep target though */
                 sep_target = (strcmp(pdev->dname, "pdf14clistcustom") == 0) ||
-                    (strcmp(pdev->dname, "pdf14clistcmykspot") == 0);
+                    (strcmp(pdev->dname, "pdf14clistcmykspot") == 0) ||
+                    (dev_proc(dev, dev_spec_op)(dev, gxdso_supports_devn, NULL, 0));
                 if (!sep_target)
                    code = pdf14_update_device_color_procs_push_c(dev,
                                   pdf14pct->params.group_color,
@@ -6433,7 +6671,8 @@ pdf14_clist_create_compositor(gx_device	* dev, gx_device ** pcdev,
                    the group color space. */
                 /* First restore our procs */
                 sep_target = (strcmp(pdev->dname, "pdf14clistcustom") == 0) ||
-                    (strcmp(pdev->dname, "pdf14clistcmykspot") == 0);
+                    (strcmp(pdev->dname, "pdf14clistcmykspot") == 0) ||
+                    (dev_proc(dev, dev_spec_op)(dev, gxdso_supports_devn, NULL, 0));
                 if (!sep_target)
                code = pdf14_update_device_color_procs_pop_c(dev,pis);
                 /* We always do this push and pop */
@@ -6590,7 +6829,6 @@ pdf14_clist_fill_path(gx_device	*dev, const gs_imager_state *pis,
     int code;
     gs_pattern2_instance_t *pinst = NULL;
     gx_device_forward * fdev = (gx_device_forward *)dev;
-    bool cs_change;
     cmm_dev_profile_t *dev_profile, *fwd_profile;
     gsicc_rendering_intents_t rendering_intent;
     cmm_profile_t *icc_profile_fwd, *icc_profile_dev;
@@ -6619,12 +6857,8 @@ pdf14_clist_fill_path(gx_device	*dev, const gs_imager_state *pis,
        color space as well as the transparency.  Some of the shading code ignores
        this, so we have to pass on the clist_writer device to enable proper
        mapping to the transparency group color space. */
-    /* Right now we only set the trans device if we are in a transparency group
-       with a color space different than the output device OR if we have a goofy
-       device output profile like CIELAB.  In the CIELAB case, the profile for the
-       PDF14 device will not match the target device profile */
-    cs_change = (icc_profile_fwd->hashcode != icc_profile_dev->hashcode);
-    if (pdcolor != NULL && gx_dc_is_pattern2_color(pdcolor) && cs_change) {
+
+    if (pdcolor != NULL && gx_dc_is_pattern2_color(pdcolor)) {
         pinst =
             (gs_pattern2_instance_t *)pdcolor->ccolor.pattern;
            pinst->saved->has_transparency = true;
@@ -7111,7 +7345,7 @@ c_pdf14trans_clist_read_update(gs_composite_t *	pcte, gx_device	* cdev,
                device.  This will occur if our source profile for our device
                happens to be something like CIELAB.  Then we will blend in
                RGB (unless a trans group is specified) */
-            if (cl_icc_profile->data_cs == gsCIELAB) {
+            if (cl_icc_profile->data_cs == gsCIELAB || cl_icc_profile->islab) {
                 cl_icc_profile =
                     gsicc_read_serial_icc(cdev, pcrdev->trans_dev_icc_hash);
                 /* Keep a pointer to the clist device */
@@ -7171,9 +7405,9 @@ c_pdf14trans_get_cropping(const gs_composite_t *pcte, int *ry, int *rheight,
                 code =
                     pdf14_compute_group_device_int_rect(&pdf14pct->params.ctm,
                                                     &pdf14pct->params.bbox, &rect);
-                /* We have to crop this by the parent object and worry about the
-                   BC outside the range */
-                if ( pdf14pct->params.GrayBackground == 1.0 ) {
+                /* We have to crop this by the parent object and worry about the BC outside
+                   the range, except for image SMask which don't affect areas outside the image */
+                if ( pdf14pct->params.GrayBackground == 1.0 || pdf14pct->params.mask_is_image) {
                     /* In this case there will not be a background effect to
                        worry about.  The mask will not have any effect outside
                        the bounding box.  This is NOT the default or common case. */
@@ -7303,9 +7537,22 @@ pdf14_increment_smask_color(gs_imager_state * pis, gx_device * dev)
     gsicc_smask_t *smask_profiles = pis->icc_manager->smask_profiles;
     int k;
 
-    /* See if we have profiles already in place */
+    /* See if we have profiles already in place.   Note we also have to
+       worry about a corner case where this device does not have a
+       smaskcolor stucture to store the profiles AND the profiles were
+       already swapped out in the icc_manager.  This can occur when we
+       pushed a transparency mask and then inside the mask we have a pattern
+       which also has a transparency mask.   The state of the icc_manager
+       is that it already has done the swap and there is no need to fool
+       with any of this while dealing with the soft mask within the pattern */
+    if (pdev->smaskcolor == NULL && pis->icc_manager->smask_profiles != NULL &&
+        pis->icc_manager->smask_profiles->swapped) {
+            return 0;
+    }
     if (pdev->smaskcolor != NULL) {
         pdev->smaskcolor->ref_count++;
+        if_debug1(gs_debug_flag_icc,"[icc] Increment smask color now %d\n",
+                  pdev->smaskcolor->ref_count); 
     } else {
         /* Allocate and swap out the current profiles.  The softmask
            profiles should already be in place */
@@ -7326,6 +7573,9 @@ pdf14_increment_smask_color(gs_imager_state * pis, gx_device * dev)
         pis->icc_manager->default_gray = smask_profiles->smask_gray;
         pis->icc_manager->default_rgb = smask_profiles->smask_rgb;
         pis->icc_manager->default_cmyk = smask_profiles->smask_cmyk;
+        pis->icc_manager->smask_profiles->swapped = true;
+        if_debug0(gs_debug_flag_icc,
+                  "[icc] Initial creation of smask color. Ref count 1\n");
         pdev->smaskcolor->ref_count = 1;
         /* We also need to update the profile that is currently in the
            color spaces of the graphic state.  Otherwise this can be
@@ -7360,12 +7610,8 @@ pdf14_increment_smask_color(gs_imager_state * pis, gx_device * dev)
 
                             break;
                     }
-                    if (profile != pcs->cmm_icc_profile_data) {
-                        rc_decrement(pcs->cmm_icc_profile_data,
-                                     "pdf14_increment_smask_color");
-                        rc_increment(profile);
-                        pcs->cmm_icc_profile_data = profile;
-                    }
+                    rc_assign(pcs->cmm_icc_profile_data, profile, 
+                              "pdf14_increment_smask_color");
                 }
             }
         }
@@ -7381,16 +7627,25 @@ pdf14_decrement_smask_color(gs_imager_state * pis, gx_device * dev)
     gsicc_manager_t *icc_manager = pis->icc_manager;
     int k;
 
+    /* See comment in pdf14_increment_smask_color to understand this one */
+    if (pdev->smaskcolor == NULL && pis->icc_manager->smask_profiles != NULL &&
+        pis->icc_manager->smask_profiles->swapped) {
+            return 0;
+    }
     if (smaskcolor != NULL) {
         smaskcolor->ref_count--;
+        if_debug1(gs_debug_flag_icc,"[icc] Decrement smask color.  Now %d\n",
+                  smaskcolor->ref_count); 
         if (smaskcolor->ref_count == 0) {
+            if_debug0(gs_debug_flag_icc,"[icc] Reset smask color.\n");
             /* Lets return the profiles and clean up */
             /* First see if we need to "reset" the profiles that are in
                the graphic state */
             if (pis->is_gstate) {
                 gs_state *pgs = (gs_state*) pis;
+                if_debug0(gs_debug_flag_icc, "[icc] Reseting graphic state color spaces\n"); 
                 for (k = 0; k < 2; k++) {
-                    gs_color_space *pcs     = pgs->color[k].color_space;
+                    gs_color_space *pcs = pgs->color[k].color_space;
                     cmm_profile_t  *profile = pcs->cmm_icc_profile_data;
                     if (profile != NULL) {
                         switch(profile->data_cs) {
@@ -7419,20 +7674,16 @@ pdf14_decrement_smask_color(gs_imager_state * pis, gx_device * dev)
 
                                 break;
                         }
-                        if (profile != pcs->cmm_icc_profile_data) {
-                            rc_decrement(pcs->cmm_icc_profile_data,
-                                         "pdf14_decrement_smask_color");
-                            rc_increment(profile);
-                            pcs->cmm_icc_profile_data = profile;
-                        }
+                        rc_assign(pcs->cmm_icc_profile_data, profile,
+                                  "pdf14_decrement_smask_color");
                     }
                 }
             }
-
             /* Decrement handled in pdf14_free_smask_color */
             icc_manager->default_gray = smaskcolor->profiles->smask_gray;
             icc_manager->default_rgb = smaskcolor->profiles->smask_rgb;
             icc_manager->default_cmyk = smaskcolor->profiles->smask_cmyk;
+            icc_manager->smask_profiles->swapped = false;
             pdf14_free_smask_color(pdev);
         }
     }
@@ -7502,4 +7753,4 @@ pdf14_debug_mask_stack_state(pdf14_ctx *ctx)
 }
 #endif
 
-#endif
+#endif /* DUMP_MASK_STACK */

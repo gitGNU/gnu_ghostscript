@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* (Distiller) parameter handling for PostScript and PDF writers */
 #include "string_.h"
 #include "jpeglib_.h"		/* for sdct.h */
@@ -316,34 +318,43 @@ psdf_get_image_params(gs_param_list * plist,
      * all parameter names will be recognized as settable by -d or -s
      * from the command line.
      */
-    if (
-           (code = gs_param_write_items(plist, params, NULL, items)) < 0 ||
-           (code = psdf_get_image_dict_param(plist, pnames->ACSDict,
-                                             params->ACSDict)) < 0 ||
+    code = gs_param_write_items(plist, params, NULL, items);
+    if (code < 0)
+        return code;
+
+    code = psdf_get_image_dict_param(plist, pnames->ACSDict, params->ACSDict);
+    if (code < 0)
+        return code;
+
            /* (AntiAlias) */
            /* (AutoFilter) */
            /* (Depth) */
-           (code = psdf_get_image_dict_param(plist, pnames->Dict,
-                                             params->Dict)) < 0 ||
+    code = psdf_get_image_dict_param(plist, pnames->Dict, params->Dict);
+    if (code < 0)
+        return code;
+
            /* (Downsample) */
-           (code = psdf_write_name(plist, pnames->DownsampleType,
-                DownsampleType_names[params->DownsampleType])) < 0 ||
+    code = psdf_write_name(plist, pnames->DownsampleType,
+                DownsampleType_names[params->DownsampleType]);
+    if (code < 0)
+        return code;
+
            /* (DownsampleThreshold) */
            /* (Encode) */
-           (code = psdf_write_name(plist, pnames->Filter,
+    code = psdf_write_name(plist, pnames->Filter,
                                    (params->Filter == 0 ?
                                     pnames->filter_names[0].pname :
-                                    params->Filter))) < 0
+                                    params->Filter));
+    if (code < 0)
+        return code;
+
            /* (Resolution) */
 #ifdef USE_LWF_JP2
-           ||
-           (pnames->AutoFilterStrategy != 0 &&
-           (code = psdf_write_name(plist, pnames->AutoFilterStrategy,
+    if (pnames->AutoFilterStrategy != 0)
+        code = psdf_write_name(plist, pnames->AutoFilterStrategy,
                                    (params->AutoFilterStrategy == 0 ?
-                                   "JPEG2000" : params->AutoFilterStrategy))) < 0)
+                                   "JPEG2000" : params->AutoFilterStrategy));
 #endif
-        )
-        DO_NOTHING;
     return code;
 }
 
@@ -365,58 +376,100 @@ gdev_psdf_get_params(gx_device * dev, gs_param_list * plist)
 {
     gx_device_psdf *pdev = (gx_device_psdf *) dev;
     int code = gdev_vector_get_params(dev, plist);
+    if (code < 0)
+        return code;
 
-    if (
-        code < 0 ||
-        (code = gs_param_write_items(plist, &pdev->params, NULL, psdf_param_items)) < 0 ||
+    code = gs_param_write_items(plist, &pdev->params, NULL, psdf_param_items);
+    if (code < 0)
+        return code;
 
     /* General parameters */
 
-        (code = psdf_write_name(plist, "AutoRotatePages",
-                AutoRotatePages_names[(int)pdev->params.AutoRotatePages])) < 0 ||
-        (code = psdf_write_name(plist, "Binding",
-                Binding_names[(int)pdev->params.Binding])) < 0 ||
-        (code = psdf_write_name(plist, "DefaultRenderingIntent",
-                DefaultRenderingIntent_names[(int)pdev->params.DefaultRenderingIntent])) < 0 ||
-        (code = psdf_write_name(plist, "TransferFunctionInfo",
-                TransferFunctionInfo_names[(int)pdev->params.TransferFunctionInfo])) < 0 ||
-        (code = psdf_write_name(plist, "UCRandBGInfo",
-                UCRandBGInfo_names[(int)pdev->params.UCRandBGInfo])) < 0 ||
+    code = psdf_write_name(plist, "AutoRotatePages",
+                AutoRotatePages_names[(int)pdev->params.AutoRotatePages]);
+    if (code < 0)
+        return code;
+
+    code = psdf_write_name(plist, "Binding",
+                Binding_names[(int)pdev->params.Binding]);
+    if (code < 0)
+        return code;
+
+    code = psdf_write_name(plist, "DefaultRenderingIntent",
+                DefaultRenderingIntent_names[(int)pdev->params.DefaultRenderingIntent]);
+    if (code < 0)
+        return code;
+
+    code = psdf_write_name(plist, "TransferFunctionInfo",
+                TransferFunctionInfo_names[(int)pdev->params.TransferFunctionInfo]);
+    if (code < 0)
+        return code;
+
+    code = psdf_write_name(plist, "UCRandBGInfo",
+                UCRandBGInfo_names[(int)pdev->params.UCRandBGInfo]);
+    if (code < 0)
+        return code;
 
     /* Color sampled image parameters */
 
-    (code = psdf_get_image_params(plist,
+    code = psdf_get_image_params(plist,
                         (pdev->ParamCompatibilityLevel >= 1.5 ? &Color_names15 : &Color_names),
-                        &pdev->params.ColorImage)) < 0 ||
-        (code = psdf_write_name(plist, "ColorConversionStrategy",
-                ColorConversionStrategy_names[(int)pdev->params.ColorConversionStrategy])) < 0 ||
-        (code = psdf_write_string_param(plist, "CalCMYKProfile",
-                                        &pdev->params.CalCMYKProfile)) < 0 ||
-        (code = psdf_write_string_param(plist, "CalGrayProfile",
-                                        &pdev->params.CalGrayProfile)) < 0 ||
-        (code = psdf_write_string_param(plist, "CalRGBProfile",
-                                        &pdev->params.CalRGBProfile)) < 0 ||
-        (code = psdf_write_string_param(plist, "sRGBProfile",
-                                        &pdev->params.sRGBProfile)) < 0 ||
+                        &pdev->params.ColorImage);
+    if (code < 0)
+        return code;
+
+    code = psdf_write_name(plist, "ColorConversionStrategy",
+                ColorConversionStrategy_names[(int)pdev->params.ColorConversionStrategy]);
+    if (code < 0)
+        return code;
+
+    code = psdf_write_string_param(plist, "CalCMYKProfile",
+                                        &pdev->params.CalCMYKProfile);
+    if (code < 0)
+        return code;
+
+    code = psdf_write_string_param(plist, "CalGrayProfile",
+                                        &pdev->params.CalGrayProfile);
+    if (code < 0)
+        return code;
+
+    code = psdf_write_string_param(plist, "CalRGBProfile",
+                                        &pdev->params.CalRGBProfile);
+    if (code < 0)
+        return code;
+
+    code = psdf_write_string_param(plist, "sRGBProfile",
+                                        &pdev->params.sRGBProfile);
+    if (code < 0)
+        return code;
 
     /* Gray sampled image parameters */
 
-        (code = psdf_get_image_params(plist,
+    code = psdf_get_image_params(plist,
                         (pdev->ParamCompatibilityLevel >= 1.5 ? &Gray_names15 : &Gray_names),
-                        &pdev->params.GrayImage)) < 0 ||
+                        &pdev->params.GrayImage);
+    if (code < 0)
+        return code;
 
     /* Mono sampled image parameters */
 
-        (code = psdf_get_image_params(plist, &Mono_names, &pdev->params.MonoImage)) < 0 ||
+    code = psdf_get_image_params(plist, &Mono_names, &pdev->params.MonoImage);
+    if (code < 0)
+        return code;
 
     /* Font embedding parameters */
 
-        (code = psdf_get_embed_param(plist, ".AlwaysEmbed", &pdev->params.AlwaysEmbed)) < 0 ||
-        (code = psdf_get_embed_param(plist, ".NeverEmbed", &pdev->params.NeverEmbed)) < 0 ||
-        (code = psdf_write_name(plist, "CannotEmbedFontPolicy",
-                CannotEmbedFontPolicy_names[(int)pdev->params.CannotEmbedFontPolicy])) < 0
-        )
-        DO_NOTHING;
+    code = psdf_get_embed_param(plist, ".AlwaysEmbed", &pdev->params.AlwaysEmbed);
+    if (code < 0)
+        return code;
+
+    code = psdf_get_embed_param(plist, ".NeverEmbed", &pdev->params.NeverEmbed);
+    if (code < 0)
+        return code;
+
+    code = psdf_write_name(plist, "CannotEmbedFontPolicy",
+                CannotEmbedFontPolicy_names[(int)pdev->params.CannotEmbedFontPolicy]);
+
     return code;
 }
 

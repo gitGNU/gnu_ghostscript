@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id$ */
+
 /* Command list document- and page-level code. */
 #include "memory_.h"
 #include "string_.h"
@@ -181,7 +183,7 @@ const gx_device_procs gs_clist_device_procs = {
     gx_forward_encode_color,
     gx_forward_decode_color,
     NULL,                       /* pattern_manage */
-    gx_default_fill_rectangle_hl_color,
+    clist_fill_rectangle_hl_color,
     gx_default_include_color_space,
     gx_default_fill_linear_color_scanline,
     clist_fill_linear_color_trapezoid,
@@ -196,7 +198,9 @@ const gx_device_procs gs_clist_device_procs = {
     clist_copy_planes,         /* copy planes */
     gx_default_get_profile,
     gx_default_set_graphics_type_tag,
-    clist_strip_copy_rop2
+    clist_strip_copy_rop2,
+    clist_strip_tile_rect_devn,
+    clist_copy_alpha_hl_color,
 };
 
 /*------------------- Choose the implementation -----------------------
@@ -211,6 +215,8 @@ const clist_io_procs_t *clist_io_procs_memory_global = NULL;
 void
 clist_init_io_procs(gx_device_clist *pclist_dev, bool in_memory)
 {
+    /* if clist_io_procs_file_global is NULL, then BAND_LIST_STORAGE=memory */
+    /* was specified in the build, and "file" is not available */
     if (in_memory || clist_io_procs_file_global == NULL)
         pclist_dev->common.page_info.io_procs = clist_io_procs_memory_global;
     else
@@ -402,7 +408,9 @@ clist_init_data(gx_device * dev, byte * init_data, uint data_size)
     cdev->graphics_type_tag = target->graphics_type_tag;	/* initialize to same as target */
 
     /* Call create_buf_device to get the memory planarity set up. */
-    cdev->buf_procs.create_buf_device(&pbdev, target, 0, NULL, NULL, clist_get_band_complexity(0, 0));
+    code = cdev->buf_procs.create_buf_device(&pbdev, target, 0, NULL, NULL, clist_get_band_complexity(0, 0));
+    if (code < 0)
+        return code;
     /* HACK - if the buffer device can't do copy_alpha, disallow */
     /* copy_alpha in the commmand list device as well. */
     if (dev_proc(pbdev, copy_alpha) == gx_no_copy_alpha)
@@ -614,8 +622,8 @@ clist_reset_page(gx_device_clist_writer *cwdev)
     cwdev->page_bfile_end_pos = 0;
     /* Indicate that the colors_used information hasn't been computed. */
     cwdev->page_info.scan_lines_per_colors_used = 0;
-    memset(cwdev->page_info.band_colors_used, 0,
-           sizeof(cwdev->page_info.band_colors_used));
+    memset(cwdev->page_info.band_color_usage, 0,
+           sizeof(cwdev->page_info.band_color_usage));
 }
 
 /* Open the device's bandfiles */
@@ -820,7 +828,7 @@ clist_end_page(gx_device_clist_writer * cldev)
             code = 0;
     }
     if (code >= 0) {
-        clist_compute_colors_used(cldev);
+        clist_compute_color_usage(cldev);
         ecode |= code;
         cldev->page_bfile_end_pos = cldev->page_info.io_procs->ftell(cldev->page_bfile);
     }
@@ -847,6 +855,20 @@ clist_end_page(gx_device_clist_writer * cldev)
     return 0;
 }
 
+gx_color_usage_bits
+gx_color_index2usage(gx_device *dev, gx_color_index color)
+{
+    gx_color_usage_bits bits = 0;
+    int i;
+
+    for (i = 0; i < dev->color_info.num_components; i++) {
+        if (color & dev->color_info.comp_mask[i])
+            bits |= (1<<i);
+    }
+
+    return bits;
+}
+
 /* Compute the set of used colors in the page_info structure.
  *
  * NB: Area for improvement, move states[band] and page_info to clist
@@ -855,7 +877,7 @@ clist_end_page(gx_device_clist_writer * cldev)
  */
 
 void
-clist_compute_colors_used(gx_device_clist_writer *cldev)
+clist_compute_color_usage(gx_device_clist_writer *cldev)
 {
     int nbands = cldev->nbands;
     int bands_per_colors_used =
@@ -865,15 +887,15 @@ clist_compute_colors_used(gx_device_clist_writer *cldev)
 
     cldev->page_info.scan_lines_per_colors_used =
         cldev->page_band_height * bands_per_colors_used;
-    memset(cldev->page_info.band_colors_used, 0,
-           sizeof(cldev->page_info.band_colors_used));
+    memset(cldev->page_info.band_color_usage, 0,
+           sizeof(cldev->page_info.band_color_usage));
     for (band = 0; band < nbands; ++band) {
         int entry = band / bands_per_colors_used;
 
-        cldev->page_info.band_colors_used[entry].or |=
-            cldev->states[band].colors_used.or;
-        cldev->page_info.band_colors_used[entry].slow_rop |=
-            cldev->states[band].colors_used.slow_rop;
+        cldev->page_info.band_color_usage[entry].or |=
+            cldev->states[band].color_usage.or;
+        cldev->page_info.band_color_usage[entry].slow_rop |=
+            cldev->states[band].color_usage.slow_rop;
 
     }
 }

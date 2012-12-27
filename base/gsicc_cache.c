@@ -1,15 +1,18 @@
-/* Copyright (C) 2001-2009 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
+
 /*  GS ICC link cache.  Initial stubbing of functions.  */
 
 #include "std.h"
@@ -66,12 +69,16 @@ static void rc_gsicc_link_cache_free(gs_memory_t * mem, void *ptr_in, client_nam
 
 /* Structure pointer information */
 
-gs_private_st_ptrs4(st_icc_link, gsicc_link_t, "gsiccmanage_link",
-                    icc_link_enum_ptrs, icc_link_reloc_ptrs,
+struct_proc_finalize(icc_link_finalize);
+
+gs_private_st_ptrs4_final(st_icc_link, gsicc_link_t, "gsiccmanage_link",
+                    icc_link_enum_ptrs, icc_link_reloc_ptrs, icc_link_finalize,
                     contextptr, icc_link_cache, next, wait);
 
-gs_private_st_ptrs3(st_icc_linkcache, gsicc_link_cache_t, "gsiccmanage_linkcache",
-                    icc_linkcache_enum_ptrs, icc_linkcache_reloc_ptrs,
+struct_proc_finalize(icc_linkcache_finalize);
+
+gs_private_st_ptrs3_final(st_icc_linkcache, gsicc_link_cache_t, "gsiccmanage_linkcache",
+                    icc_linkcache_enum_ptrs, icc_linkcache_reloc_ptrs, icc_linkcache_finalize,
                     head, lock, wait);
 
 /* These are used to construct a hash for the ICC link based upon the
@@ -129,10 +136,24 @@ rc_gsicc_link_cache_free(gs_memory_t * mem, void *ptr_in, client_name_t cname)
     }
 #endif
     gx_semaphore_free(link_cache->wait);
+    link_cache->wait = NULL;
     gx_monitor_free(link_cache->lock);
+    link_cache->lock = NULL;
     if_debug2(gs_debug_flag_icc,"[icc] Removing link cache = 0x%x memory = 0x%x\n", link_cache,
         link_cache->memory);
     gs_free_object(mem->stable_memory, link_cache, "rc_gsicc_link_cache_free");
+}
+
+/* release the semaphore and monitor of the link_cache when it is freed */
+void
+icc_linkcache_finalize(const gs_memory_t *mem, void *ptr)
+{
+    gsicc_link_cache_t *link_cache = (gsicc_link_cache_t * ) ptr;
+
+    gx_semaphore_free(link_cache->wait);
+    link_cache->wait = NULL;
+    gx_monitor_free(link_cache->lock);
+    link_cache->lock = NULL;
 }
 
 static gsicc_link_t *
@@ -208,7 +229,18 @@ gsicc_link_free(gsicc_link_t *icc_link, gs_memory_t *memory)
 {
     icc_link->procs.free_link(icc_link);
     gx_semaphore_free(icc_link->wait);
+    icc_link->wait = NULL;
     gs_free_object(memory->stable_memory, icc_link, "gsicc_link_free");
+}
+
+/* release the semaphore of the link when it is freed */
+void
+icc_link_finalize(const gs_memory_t *mem, void *ptr)
+{
+    gsicc_link_t *icc_link = (gsicc_link_t * ) ptr;
+
+    gx_semaphore_free(icc_link->wait);
+    icc_link->wait = NULL;
 }
 
 static void
@@ -476,7 +508,8 @@ gsicc_get_link(const gs_imager_state *pis, gx_device *dev_in,
         if (index < gs_color_space_index_DevicePixel && 
             dev_profile->usefastcolor) {
             /* Return a "link" from the source space to the device color space */
-            gsicc_link_t *link = gsicc_nocm_get_link(pis, dev, index);
+            gsicc_link_t *link = gsicc_nocm_get_link(pis, dev, 
+                                                     gs_input_profile->num_comps);
             if (link != NULL) {
                 if (gs_input_profile->num_comps == 
                     dev_profile->device_profile[0]->num_comps) {
@@ -629,6 +662,11 @@ gsicc_get_link_profile(const gs_imager_state *pis, gx_device *dev,
                 gsicc_get_profile_handle_buffer(gs_input_profile->buffer,
                                                 gs_input_profile->buffer_size);
             gs_input_profile->profile_handle = cms_input_profile;
+            /* This *must* be a default profile that was not set up at start-up/
+               However it could be one from the icc creator code which does not
+               do an initialization at the time of creation from CalRGB etc. */
+            code = gsicc_initialize_default_profile(gs_input_profile); 
+            if (code < 0) return (NULL);
         } else {
             /* See if we have a clist device pointer. */
             if ( gs_input_profile->dev != NULL ) {
@@ -657,6 +695,9 @@ gsicc_get_link_profile(const gs_imager_state *pis, gx_device *dev,
                 gsicc_get_profile_handle_buffer(gs_output_profile->buffer,
                                                 gs_output_profile->buffer_size);
             gs_output_profile->profile_handle = cms_output_profile;
+            /* This *must* be a default profile that was not set up at start-up */
+            code = gsicc_initialize_default_profile(gs_output_profile); 
+            if (code < 0) return (NULL);
         } else {
               /* See if we have a clist device pointer. */
             if ( gs_output_profile->dev != NULL ) {

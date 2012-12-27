@@ -1,4 +1,5 @@
-%    Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
+% Copyright (C) 2001-2012 Artifex Software, Inc.
+% All Rights Reserved.
 %
 % This software is provided AS-IS with no warranty, either express or
 % implied.
@@ -7,13 +8,11 @@
 % modified or distributed except as expressly authorized under the terms
 % of the license contained in the file LICENSE in this distribution.
 %
-% For more information about licensing, please refer to
-% http://www.ghostscript.com/licensing/. For information on
-% commercial licensing, go to http://www.artifex.com/licensing/ or
-% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
-% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+% Refer to licensing information at http://www.artifex.com or contact
+% Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+% CA  94903, U.S.A., +1(415)492-9861, for further information.
+%
 
-% $Id$
 % pdf_draw.ps
 % PDF drawing operations (graphics, text, and images).
 
@@ -712,7 +711,7 @@ currentdict /csncompdict undef
 
   /ICCBased {
     dup 1 get type /dicttype ne {	% don't resolve more than once
-      //ICCBased-resolve exec
+      ICCBased-resolve
     } if
   } bdef
 
@@ -862,8 +861,7 @@ currentdict end readonly def
   dup type /dicttype eq { dup /N known } { //false } ifelse {
       (   **** ICCBased color space is a bare stream dictionary\n)
       pdfformaterror
-      [ /ICCBased 3 -1 roll ]
-      //ICCBased-resolve exec
+      [ /ICCBased 3 -1 roll ] ICCBased-resolve exec
   } {
     dup dup type /arraytype eq { 0 get } if
     //csrdict exch .knownget  {
@@ -877,8 +875,6 @@ currentdict end readonly def
     } ifelse
   } ifelse
 } bdef
-
-currentdict /ICCBased-resolve undef
 
 /scresolve {	% <c0> ... scresolve <multi>
                 % We can't really make sc[n] and SC[N] work, because
@@ -1073,10 +1069,10 @@ currentdict /ignore_color_op undef
 drawopdict begin
                         % Path construction
   /m { moveto } bind 0 get def
-  /l { lineto } bind 0 get def
-  /c { curveto } bind 0 get def
-  /v { currentpoint 6 2 roll curveto } bdef
-  /y { 2 copy curveto } bdef
+  /l { { lineto } stopped { pop pop } if } bdef
+  /c { { curveto } stopped { pop pop pop pop pop pop } if } bdef
+  /v { { currentpoint } stopped { pop pop pop pop } { 6 2 roll curveto } ifelse } bdef
+  /y { 2 copy { curveto } stopped { pop pop pop pop pop pop } if } bdef
   /re {
    4 2 roll moveto  exch dup 0 rlineto  0 3 -1 roll rlineto  neg 0 rlineto
    closepath
@@ -1096,10 +1092,20 @@ drawopdict begin
   /W* { W* } def
 
   /sh_save 1 array def
+  /sh_group  << /Subtype /Group /Isolated //true >> readonly def
   /sh {
       OFFlevels length 0 eq {
         setfillstate resolvesh
         //sh_save 0 save put
+        SoftMask //null ne {
+          //sh_group
+          1 index /BBox knownoget {
+            { oforce } forall
+          } {
+            gsave clippath pathbbox grestore
+          } ifelse
+          .begintransparencygroup
+        } if
         0 .setoverprintmode
         dup /.shading .knownget {
           exch
@@ -1111,13 +1117,14 @@ drawopdict begin
           pop 
           (   **** Warning: Dropping incorrect smooth shading object.\n)
           pdfformaterror
-        } if 
+        } if
+        SoftMask //null ne { .endtransparencygroup } if
         //sh_save 0 get restore
       } {
         pop
       } ifelse
     } bdef
-  currentdict /sh_save undef
+  currentdict dup /sh_save undef /sh_group undef
 end
 
 % ---------------- XObjects ---------------- %
@@ -1567,17 +1574,37 @@ currentdict /last-ditch-bpc-csp undef
         [ exch { 0.5 add cvi } forall ]  % following AR4, 5, 6 implementation
       } if
     } if
-        % Check elements of array are within 0::(2**BitsPerComponent)-1
-        % This is a PostScript error, but AR ignores Mask in that case
+      % Check elements of array are within 0::(2**BitsPerComponent)-1
+      % This is a PostScript error, but AR tries to fix the Mask.
     1 BitsPerComponent bitshift 1 sub //false 2 index {
       % stack: max_value result_bool value
       dup 0 lt exch 3 index gt or or
     } forall exch pop {
-      (\n   **** Warning: Some elements of Mask array are out of range.\n)
+      (   **** Warning: Some elements of Mask array are out of range.\n)
       pdfformaterror
-      [ exch { 1 BitsPerComponent bitshift 1 sub and } forall ] % AR5 does this
+      
+      ColorSpace dup type /arraytype eq { 0 oget } if /Indexed eq 
+      BitsPerComponent 1 eq and {
+        % AR9 treats Indexed 1 bpc images specially. Bug 692852.
+        dup 0 oget
+        dup 0 lt exch 1 BitsPerComponent bitshift ge or {
+          % First component is invalid - AR9 ignores the mask
+          pop //null
+        } {
+          % Second component is invalid; AR9 replaces it with 1.
+          [ exch 0 oget 1 ]
+        } ifelse
+      } {
+        % AR5, AR9 do this for most cases. Bug 690786.
+        [ exch { 1 BitsPerComponent bitshift 1 sub and } forall ]
+      } ifelse
     } if
-    /MaskColor exch def
+    dup //null ne {
+      /MaskColor exch def
+    } {
+      pop
+      /ImageType 1 def
+    } ifelse
   } {
                 % Mask is a stream, another Image XObject.
                 % Stack: datasource imagemask(false) maskstreamdict
@@ -1707,7 +1734,7 @@ currentdict /last-ditch-bpc-csp undef
    { currentdict end setfillstate { imagemask } }
    { ColorSpace setgcolorspace currentdict end setfillblend { image } }
   ifelse
-  stopped {
+  PDFSTOPONERROR { exec //false } { stopped } ifelse {
     dup type /dicttype eq { pop } if % Sometimes image fails to restore the stack
     $error /errorname get dup /ioerror eq {
       pop (\n   **** Warning: File has insufficient data for an image.\n)
@@ -2180,7 +2207,28 @@ end
   end
 } bdef
 
+/can-regenerate-ap { % <annot> -> <bool>
+  //false exch
+  NeedAppearances {
+    dup /FT fget {
+      /Tx eq {
+        dup /V oknown {
+          dup /DA fget {
+            pop pop not 1
+          } if
+        } if
+      } if
+    } if
+  } if
+  pop 
+} bdef
+
 /drawwidget {			% <scalefactor_x> <scalefactor_y> <annot> drawwidget -
+  dup /UpdatedAP known not {
+    dup can-regenerate-ap {
+      dup /AP undef
+    } if
+  } if
   dup /AP knownoget {
     dup /N known not {
       (   **** Appearance dictionary (AP) lacks the mandatory normal (N) appearance.\n)
@@ -2267,19 +2315,11 @@ end
       } if
       pop
     } if
-    NeedAppearances {
-      dup /FT fget {
-        /Tx eq {
-          % Stack: scalex scaley annot
-          dup /V oknown {
-            dup /DA fget {
-              pop
-              make_tx_da
-              3 copy drawwidget
-            } if
-          } if
-        } if
-      } if
+
+    dup can-regenerate-ap {
+      make_tx_da
+      dup /UpdatedAP //true put
+      3 copy drawwidget
     } if
   } ifelse
   pop pop pop
@@ -2461,7 +2501,7 @@ currentdict /set_bc_color undef
   /highlight-arc {                      % x1 y1 x0 y0 -> -
     4 2 roll                            % x0 y0 x1 y1
     dup 3 index add 2 div               % x0 y0 x1 y1 (y1+y0)/2
-    2 index 5 index sub .9375 mul add   % x0 y0 x1 y1 (y1+y0)/2+15/16*dx=yc
+    2 index 5 index sub .9375 mul sub   % x0 y0 x1 y1 (y1+y0)/2-15/16*dx=yc
     4 index 3 index add 2 div           % x0 y0 x1 y1 yc (x0+x1)/2
     2 index 5 index sub .9375 mul add   % x0 y0 x1 y1 yc xc
     exch                                % x0 y0 x1 y1 xc yc

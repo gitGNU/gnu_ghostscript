@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Support for printer devices with planar buffering. */
 #include "gdevprn.h"
 #include "gdevmpla.h"
@@ -84,21 +86,23 @@ static int
 gdev_prn_set_planar(gx_device_memory *mdev, const gx_device *tdev)
 {
     int num_comp = tdev->color_info.num_components;
-    gx_render_plane_t planes[4];
+    gx_render_plane_t planes[GX_DEVICE_COLOR_MAX_COMPONENTS];
     int depth = tdev->color_info.depth / num_comp;
+    int k;
 
-    if (num_comp < 1 || num_comp > 4)
+    if (num_comp < 1 || num_comp > GX_DEVICE_COLOR_MAX_COMPONENTS)
         return_error(gs_error_rangecheck);
     /* Round up the depth per plane to a power of 2. */
     while (depth & (depth - 1))
         --depth, depth = (depth | (depth >> 1)) + 1;
-    planes[3].depth = planes[2].depth = planes[1].depth = planes[0].depth =
-        depth;
+
     /* We want the most significant plane to come out first. */
-    planes[0].shift = depth * (num_comp - 1);
-    planes[1].shift = planes[0].shift - depth;
-    planes[2].shift = planes[1].shift - depth;
-    planes[3].shift = 0;
+    planes[num_comp-1].shift = 0;
+    planes[num_comp-1].depth = depth;
+    for (k = (num_comp - 2); k >= 0; k--) {
+        planes[k].depth = depth;
+        planes[k].shift = planes[k + 1].shift + depth;
+    }
     return gdev_mem_set_planar(mdev, num_comp, planes);
 }
 

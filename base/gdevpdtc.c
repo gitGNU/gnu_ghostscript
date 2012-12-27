@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Composite and CID-based text processing for pdfwrite. */
 #include "memory_.h"
 #include "gx.h"
@@ -153,10 +155,25 @@ process_composite_text(gs_text_enum_t *pte, void *vbuf, uint bsize)
             }
             pte->xy_index = out.xy_index;
             if (return_width) {
-                pte->returned.total_width.x = total_width.x +=
-                    out.returned.total_width.x;
-                pte->returned.total_width.y = total_width.y +=
-                    out.returned.total_width.y;
+                /* This is silly, but its a consequence of the way pdf_process_string
+                 * works. When we have TEXT_DO_NONE (stringwidth) we add the width of the
+                 * glyph(s) to the enumerator 'returned.total_width' so we keep track
+                 * of the total width as we go. However when we are returning the width
+                 * but its NOT for a stringwidth, we set the enumerator 'retuerned'
+                 * value to just the width of the glyph(s) processed. So when we are *not*
+                 * handling a stringwidth we need to keep track of the total width
+                 * ourselves. I'd have preferred to alter pdf_process_string, but that
+                 * is used in many other places, and those places rely on this behaviour.
+                 */
+                if (pte->text.operation & TEXT_DO_NONE) {
+                    pte->returned.total_width.x = total_width.x = out.returned.total_width.x;
+                    pte->returned.total_width.y = total_width.y = out.returned.total_width.y;
+                } else {
+                    pte->returned.total_width.x = total_width.x +=
+                        out.returned.total_width.x;
+                    pte->returned.total_width.y = total_width.y +=
+                        out.returned.total_width.y;
+                }
             }
             pdf_text_release_cgp(penum);
         }
@@ -559,7 +576,7 @@ scan_cmap_text(pdf_text_enum_t *pte, void *vbuf)
                         rcode = TEXT_PROCESS_CDEVPROC;
                         break;
                     }
-                    if (code == 0) { /* OK to cache */
+                    if (code >= 0) {
                         if (cid > pdsubf->count)
                             return_error(gs_error_unregistered); /* Must not happen. */
                         w[cid] = widths.Width.w;

@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Fixed-point path procedures */
 /* Requires gxfixed.h */
 
@@ -46,6 +48,18 @@ typedef enum {
     sn_dash_head = 4,           /* segment follows a dash break          */
     sn_dash_tail = 8,           /* segment is followed by dash break     */
 } segment_notes;
+
+/* 
+ * Used by interpreters for optimizing bbox size for transparency groups.  
+ * Depending upon the option we will return a bbox that may just included the 
+ * clip path or may include the intersection of the current path and the clip 
+ * path and may include an adjustement for the stroke width.
+*/
+typedef enum {
+    PATH_FILL,
+    PATH_STROKE,
+    NO_PATH
+} gs_bbox_comp_t;
 
 /* Debugging routines */
 #ifdef DEBUG
@@ -141,6 +155,7 @@ int gx_path_new(gx_path *),
     gx_path_add_point(gx_path *, fixed, fixed),
     gx_path_add_relative_point(gx_path *, fixed, fixed),
     gx_path_add_line_notes(gx_path *, fixed, fixed, segment_notes),
+    gx_path_add_gap_notes(gx_path *, fixed, fixed, segment_notes),
     gx_path_add_dash_notes(gx_path * ppath, fixed x, fixed y, fixed dx, fixed dy, segment_notes notes),
     gx_path_add_lines_notes(gx_path *, const gs_fixed_point *, int, segment_notes),
     gx_path_add_rectangle(gx_path *, fixed, fixed, fixed, fixed),
@@ -282,6 +297,8 @@ int gx_clip_to_rectangle(gs_state *, gs_fixed_rect *);
 int gx_clip_to_path(gs_state *);
 int gx_default_clip_box(const gs_state *, gs_fixed_rect *);
 int gx_effective_clip_path(gs_state *, gx_clip_path **);
+int gx_curr_bbox(gs_state * pgs, gs_rect *bbox, gs_bbox_comp_t comp_type);
+ 
 
 /* Opaque type for a clip list. */
 #ifndef gx_clip_list_DEFINED

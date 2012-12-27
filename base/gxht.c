@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id$ */
+
 /* Halftone rendering for imaging library */
 #include "memory_.h"
 #include "gx.h"
@@ -165,39 +167,6 @@ gx_ht_free_cache(gs_memory_t * mem, gx_ht_cache * pcache)
     gs_free_object(mem, pcache->ht_tiles, "free_ht_cache(ht_tiles)");
     gs_free_object(mem, pcache->bits, "free_ht_cache(bits)");
     gs_free_object(mem, pcache, "free_ht_cache(struct)");
-}
-
-/* Check whether the tile cache corresponds to the current order */
-bool
-gx_check_tile_cache_current(const gs_imager_state * pis)
-{
-    /* TO_DO_DEVICEN - this routine is no longer used - delete. */
-    return false;
-}
-
-/* Make the cache order current, and return whether */
-/* there is room for all possible tiles in the cache. */
-bool
-gx_check_tile_cache(const gs_imager_state * pis)
-{
-    /* TO_DO_DEVICEN - this routine is no longer used - delete. */
-    return false;
-}
-
-/*
- * Determine whether a given (width, y, height) might fit into a single
- * (non-strip) tile. If so, return the byte offset of the appropriate row
- * from the beginning of the tile, and set *ppx to the x phase offset
- * within the tile; if not, return -1.
- *
- * This routine cannot be supported in the DeviceN code.
- */
-int
-gx_check_tile_size(const gs_imager_state * pis, int w, int y, int h,
-                   gs_color_select_t select, int *ppx)
-{
-    /* TO_DO_DEVICEN - this routine is no longer used - delete. */
-    return -1;
 }
 
 /* Render a given level into a halftone cache. */
@@ -761,6 +730,7 @@ gx_ht_init_cache(const gs_memory_t *mem, gx_ht_cache * pcache, const gx_ht_order
         bt->tiles.rep_width = width;
         bt->tiles.rep_height = height;
         bt->tiles.shift = bt->tiles.rep_shift = shift;
+        bt->tiles.num_planes = 1;
     }
     pcache->render_ht = gx_render_ht_default;
 }

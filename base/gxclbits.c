@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Halftone and bitmap writing for command lists */
 #include "memory_.h"
 #include "gx.h"
@@ -20,6 +22,7 @@
 #include "gsbitops.h"
 #include "gxdevice.h"
 #include "gxdevmem.h"		/* must precede gxcldev.h */
+#include "gdevprn.h"            /* for BLS_force_memory */
 #include "gxcldev.h"
 #include "gxfmap.h"
 
@@ -739,7 +742,7 @@ clist_change_bits(gx_device_clist_writer * cldev, gx_clist_state * pcls,
                                 loc.tile->width * pdepth,
                                 loc.tile->height * loc.tile->num_planes, loc.tile->cb_raster,
                                 rsize,
-                             (1 << cmd_compress_cfe) | decompress_elsewhere,
+                              decompress_elsewhere | (((gx_device_printer *)cldev->target)->BLS_force_memory ? (1 << cmd_compress_cfe) : 0),
                                 &dp, &csize);
 
             if (code < 0)

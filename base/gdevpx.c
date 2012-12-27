@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* H-P PCL XL driver */
 #include "math_.h"
 #include "memory_.h"
@@ -1717,9 +1719,18 @@ pclxl_strip_copy_rop(gx_device * dev, const byte * sdata, int sourcex,
                      const gx_color_index * tcolors,
                      int x, int y, int width, int height,
                      int phase_x, int phase_y, gs_logical_operation_t lop)
-{				/* We can't do general RasterOps yet. */
-/****** WORK IN PROGRESS ******/
-    return 0;
+{
+  /* Improvements possible here using PXL ROP3
+     for some combinations of args; use gx_default for now */
+  if (!rop3_uses_D(lop)) /* gx_default() cannot cope with D ops */
+    return gx_default_strip_copy_rop(dev, sdata, sourcex,
+                                     sraster, id,
+                                     scolors,
+                                     textures,
+                                     tcolors,
+                                     x, y, width, height,
+                                     phase_x, phase_y, lop);
+  return 0;
 }
 
 /* ------ High-level images ------ */

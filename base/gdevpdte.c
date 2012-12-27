@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Encoding-based (Type 1/2/42) text processing for pdfwrite. */
 
 #include "math_.h"
@@ -117,7 +119,7 @@ pdf_add_ToUnicode(gx_device_pdf *pdev, gs_font *font, pdf_font_resource_t *pdfon
                 key_size = 2;
             } else if (font->FontType == ft_CID_TrueType || font->FontType == ft_composite) {
                 key_size = 2;
-#if 0
+#ifdef DEPRECATED_906
                 gs_font_cid2 *pfcid = (gs_font_cid2 *)font;
 
                 num_codes = pfcid->cidata.common.CIDCount;
@@ -246,13 +248,13 @@ pdf_encode_string_element(gx_device_pdf *pdev, gs_font *font, pdf_font_resource_
         if (code < 0 && code != gs_error_undefined)
             return code;
         if (code == gs_error_undefined) {
-            if (pdev->PDFA || pdev->PDFX) {
+            if (pdev->PDFA != 0 || pdev->PDFX) {
                 switch (pdev->PDFACompatibilityPolicy) {
                     case 0:
                         emprintf(pdev->memory,
                              "Requested glyph not present in source font,\n not permitted in PDF/A, reverting to normal PDF output\n");
                         pdev->AbortPDFAX = true;
-                        pdev->PDFA = false;
+                        pdev->PDFA = 0;
                         break;
                     case 1:
                         emprintf(pdev->memory,
@@ -276,7 +278,7 @@ pdf_encode_string_element(gx_device_pdf *pdev, gs_font *font, pdf_font_resource_
                         emprintf(pdev->memory,
                              "Requested glyph not present in source font,\n not permitted in PDF/A, unrecognised PDFACompatibilityLevel,\nreverting to normal PDF output\n");
                         pdev->AbortPDFAX = true;
-                        pdev->PDFA = false;
+                        pdev->PDFA = 0;
                         break;
                 }
             }
@@ -378,8 +380,39 @@ process_text_estimate_bbox(pdf_text_enum_t *pte, gs_font_base *font,
                                             GLYPH_INFO_WIDTH0 << WMode,
                                             &info);
 
-        if (code < 0)
-            return code;
+        /* If we got an undefined error, and its a type 1/CFF font, try to
+         * find the /.notdef glyph and use its width instead (as this is the
+         * glyph which will be rendered). We don't do this for other font types
+         * as it seems Acrobat/Distiller may not do so either.
+         */
+        /* The GL/2 stick font does not supply the enumerate_glyphs method,
+         * *and* leaves it uninitialised. But it should not be possible to
+         * get an undefiend error with this font anyway.
+         */
+        if (code < 0) {
+            if ((font->FontType == ft_encrypted ||
+            font->FontType == ft_encrypted2)) {
+                int index;
+
+                for (index = 0;
+                    (font->procs.enumerate_glyph((gs_font *)font, &index,
+                    (GLYPH_SPACE_NAME), &glyph)) >= 0 &&
+                    index != 0;) {
+
+                    if (gs_font_glyph_is_notdef(font, glyph)) {
+                        code = font->procs.glyph_info((gs_font *)font, glyph, NULL,
+                                            GLYPH_INFO_WIDTH0 << WMode,
+                                            &info);
+
+                    if (code < 0)
+                        return code;
+                    }
+                    break;
+                }
+            }
+            if (code < 0)
+                return code;
+        }
         gs_point_transform(font->FontBBox.p.x, font->FontBBox.p.y, &m, &p0);
         gs_point_transform(font->FontBBox.p.x, font->FontBBox.q.y, &m, &p1);
         gs_point_transform(font->FontBBox.q.x, font->FontBBox.p.y, &m, &p2);
@@ -688,6 +721,9 @@ pdf_char_widths(gx_device_pdf *const pdev,
         if (code == 0) {
             pdfont->Widths[ch] = pwidths->Width.w;
             real_widths[ch] = pwidths->real_width.w;
+        } else {
+            if (font->WMode == 0 && !pwidths->replaced_v)
+                pdfont->Widths[ch] = pwidths->real_width.w;
         }
     } else {
         if (font->FontType == ft_user_defined || font->FontType == ft_PCL_user_defined ||
@@ -877,8 +913,7 @@ process_text_return_width(const pdf_text_enum_t *pte, gs_font_base *font,
     return widths_differ;
 }
 
-#define RIGHT_SBW 1 /* Old code = 0, new code = 1. */
-#if !RIGHT_SBW
+#ifdef DEPRECATED_906
 /*
  * Retrieve glyph origing shift for WMode = 1 in design units.
  */
@@ -954,9 +989,7 @@ process_text_modify_width(pdf_text_enum_t *pte, gs_font *font,
         int index = pte->index;
         gs_text_enum_t pte1 = *(gs_text_enum_t *)pte;
         int FontType;
-#if RIGHT_SBW
         bool use_cached_v = true;
-#endif
         byte composite_type3_text[1];
 
         code = pte1.orig_font->procs.next_char_glyph(&pte1, &chr, &glyph);
@@ -1040,7 +1073,6 @@ process_text_modify_width(pdf_text_enum_t *pte, gs_font *font,
             return code;
         }
         gs_text_enum_copy_dynamic((gs_text_enum_t *)pte, &pte1, true);
-#if RIGHT_SBW
         if (composite || !use_cached_v) {
             if (cw.replaced_v) {
                 v.x = cw.real_width.v.x - cw.Width.v.x;
@@ -1058,18 +1090,6 @@ process_text_modify_width(pdf_text_enum_t *pte, gs_font *font,
                The glyph shifts in same direction.  */
         }
         /* pdf_glyph_origin is not longer used. */
-#else
-        if ((pte->text.operation & TEXT_FROM_SINGLE_GLYPH) ||
-            (pte->text.operation & TEXT_FROM_GLYPHS)) {
-            v.x = v.y = 0;
-        } else if (composite) {
-            if (cw.replaced_v) {
-                v.x = cw.real_width.v.x - cw.Width.v.x;
-                v.y = cw.real_width.v.y - cw.Width.v.y;
-            }
-        } else
-            pdf_glyph_origin(ppts->values.pdfont, chr, font->WMode, &v);
-#endif
         if (v.x != 0 || v.y != 0) {
             gs_point glyph_origin_shift;
             double scale0;
@@ -1078,13 +1098,8 @@ process_text_modify_width(pdf_text_enum_t *pte, gs_font *font,
                 scale0 = (float)0.001;
             else
                 scale0 = 1;
-#if RIGHT_SBW
             glyph_origin_shift.x = v.x * scale0;
             glyph_origin_shift.y = v.y * scale0;
-#else
-            glyph_origin_shift.x = - v.x * scale0;
-            glyph_origin_shift.y = - v.y * scale0;
-#endif
             if (composite) {
                 gs_font *subfont = pte->fstack.items[pte->fstack.depth].font;
 

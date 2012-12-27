@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Band-processing parameters for Ghostscript */
 
 #ifndef gxband_INCLUDED
@@ -34,14 +36,24 @@ typedef struct gx_band_params_s {
 
 #define BAND_PARAMS_INITIAL_VALUES 0, 0, 0, 0
 
+/* We hold color usage as a bitfield that needs to be at least as wide as
+ * a gx_color_index - so for simplicity define it that way, even though
+ * the two are not equal. */
+typedef gx_color_index gx_color_usage_bits;
+
+#define gx_color_usage_all(dev) \
+  (((gx_color_usage_bits)1 << (dev)->color_info.num_components) - 1)
+
+gx_color_usage_bits gx_color_index2usage(gx_device *dev, gx_color_index);
+
 /*
  * Define information about the colors used on a page.
  */
-typedef struct gx_colors_used_s {
-    gx_color_index or;		/* the "or" of all the used colors */
+typedef struct gx_colors_usage_s {
+    gx_color_usage_bits or;	/* the "or" of all the used colors */
     bool slow_rop;		/* true if any RasterOps that can't be */
                                 /* executed plane-by-plane on CMYK devices */
-} gx_colors_used_t;
+} gx_color_usage_t;
 
 /*
  * We want to store color usage information for each band in the page_info
@@ -71,7 +83,7 @@ typedef struct gx_band_page_info_s {
                                 /* (actual values, no 0s) */
     int scan_lines_per_colors_used; /* number of scan lines per colors_used */
                                 /* entry (a multiple of the band height) */
-    gx_colors_used_t band_colors_used[PAGE_INFO_NUM_COLORS_USED];  /* colors used on the page */
+    gx_color_usage_t band_color_usage[PAGE_INFO_NUM_COLORS_USED];  /* colors used on the page */
 } gx_band_page_info_t;
 #define PAGE_INFO_NULL_VALUES\
   { 0 }, 0, { 0 }, NULL, 0, 0, 0, { BAND_PARAMS_INITIAL_VALUES },\

@@ -1,34 +1,41 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Mask clipping for patterns */
 #include "memory_.h"
 #include "gx.h"
+#include "gpcheck.h"
 #include "gserrors.h"
 #include "gsstruct.h"
 #include "gxdevice.h"
 #include "gxdevmem.h"
 #include "gxclip2.h"
+#include "gxdcolor.h"
+#include "gdevmpla.h"
 
 private_st_device_tile_clip();
 
 /* Device procedures */
 static dev_proc_fill_rectangle(tile_clip_fill_rectangle);
+static dev_proc_fill_rectangle_hl_color(tile_clip_fill_rectangle_hl_color);
 static dev_proc_copy_mono(tile_clip_copy_mono);
 static dev_proc_copy_color(tile_clip_copy_color);
 static dev_proc_copy_planes(tile_clip_copy_planes);
 static dev_proc_copy_alpha(tile_clip_copy_alpha);
+static dev_proc_copy_alpha_hl_color(tile_clip_copy_alpha_hl_color);
 static dev_proc_strip_copy_rop(tile_clip_strip_copy_rop);
 static dev_proc_strip_copy_rop2(tile_clip_strip_copy_rop2);
 
@@ -90,7 +97,7 @@ static const gx_device_tile_clip gs_tile_clip_device =
   gx_forward_encode_color,
   gx_forward_decode_color,
   NULL,                 /* pattern_manage */
-  gx_forward_fill_rectangle_hl_color,
+  tile_clip_fill_rectangle_hl_color,
   gx_forward_include_color_space,
   gx_forward_fill_linear_color_scanline,
   gx_forward_fill_linear_color_trapezoid,
@@ -105,7 +112,9 @@ static const gx_device_tile_clip gs_tile_clip_device =
   tile_clip_copy_planes,
   NULL,                      /* get_profile */
   NULL,                      /* set_graphics_type_tag */
-  tile_clip_strip_copy_rop2
+  tile_clip_strip_copy_rop2,
+  gx_default_strip_tile_rect_devn,
+  tile_clip_copy_alpha_hl_color
  }
 };
 
@@ -126,12 +135,48 @@ tile_clip_initialize(gx_device_tile_clip * cdev, const gx_strip_bitmap * tiles,
     return code;
 }
 
+void
+tile_clip_release(gx_device_tile_clip *cdev)
+{
+    /* release the target reference */
+    gx_device_set_target((gx_device_forward *)cdev, NULL);
+}
+
 /* Set the phase of the tile. */
 void
 tile_clip_set_phase(gx_device_tile_clip * cdev, int px, int py)
 {
     cdev->phase.x = px;
     cdev->phase.y = py;
+}
+
+/* Fill a rectangle with high level devn color by tiling with the mask. */
+static int
+tile_clip_fill_rectangle_hl_color(gx_device *dev, const gs_fixed_rect *rect,
+                const gs_imager_state *pis, const gx_drawing_color *pdcolor, 
+                const gx_clip_path *pcpath)
+{
+    gx_device_tile_clip *cdev = (gx_device_tile_clip *) dev;
+    gx_device *tdev = cdev->target;
+    int x, y, w, h;
+    gx_device_color dcolor0, dcolor1;
+    int k;
+
+    /* Have to pack the no color index into the pure device type */
+    dcolor0.type = gx_dc_type_pure;
+    dcolor0.colors.pure = gx_no_color_index;
+    /* Have to set the dcolor1 to a none mask type */
+    dcolor1.type = gx_dc_type_devn;
+    for (k = 0; k < GS_CLIENT_COLOR_MAX_COMPONENTS; k++) {
+        dcolor1.colors.devn.values[k] = pdcolor->colors.devn.values[k];
+    }
+    x = rect->p.x;
+    y = rect->p.y;
+    w = rect->q.x - x;
+    h = rect->q.y - y;
+    return (*dev_proc(tdev, strip_tile_rect_devn))(tdev, &cdev->tiles,
+                                                    x, y, w, h, &dcolor0, &dcolor1, 
+                                                    cdev->phase.x, cdev->phase.y);
 }
 
 /* Fill a rectangle by tiling with the mask. */
@@ -320,6 +365,30 @@ tile_clip_copy_alpha(gx_device * dev,
             int code = (*dev_proc(cdev->target, copy_alpha))
             (cdev->target, data_row, sourcex + txrun - x, raster,
              gx_no_bitmap_id, txrun, ty, tx - txrun, 1, color, depth);
+
+            if (code < 0)
+                return code;
+        }
+        END_FOR_RUNS();
+    }
+    return 0;
+}
+
+static int
+tile_clip_copy_alpha_hl_color(gx_device * dev,
+                const byte * data, int sourcex, int raster, gx_bitmap_id id,
+                int x, int y, int w, int h, const gx_drawing_color *pdcolor, 
+                int depth)
+{
+    gx_device_tile_clip *cdev = (gx_device_tile_clip *) dev;
+
+    fit_copy(dev, data, sourcex, raster, id, x, y, w, h);
+    {
+        FOR_RUNS(data_row, txrun, tx, ty) {
+            /* Copy the run. */
+            int code = (*dev_proc(cdev->target, copy_alpha_hl_color))
+            (cdev->target, data_row, sourcex + txrun - x, raster,
+             gx_no_bitmap_id, txrun, ty, tx - txrun, 1, pdcolor, depth);
 
             if (code < 0)
                 return code;

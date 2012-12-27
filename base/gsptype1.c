@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* PatternType 1 pattern implementation */
 #include "math_.h"
 #include "memory_.h"
@@ -999,6 +1001,8 @@ static dev_color_proc_load(gx_dc_pattern_load);
 /*dev_color_proc_fill_rectangle(gx_dc_pattern_fill_rectangle); *//*gxp1fill.h */
 static dev_color_proc_equal(gx_dc_pattern_equal);
 static dev_color_proc_load(gx_dc_pure_masked_load);
+static dev_color_proc_load(gx_dc_devn_masked_load);
+static dev_color_proc_equal(gx_dc_devn_masked_equal);
 
 static dev_color_proc_get_dev_halftone(gx_dc_pure_masked_get_dev_halftone);
 /*dev_color_proc_fill_rectangle(gx_dc_pure_masked_fill_rect); *//*gxp1fill.h */
@@ -1074,6 +1078,19 @@ const gx_device_color_type_t gx_dc_colored_masked = {
     gx_dc_default_fill_masked, gx_dc_colored_masked_equal,
     gx_dc_cannot_write, gx_dc_cannot_read,
     gx_dc_ht_colored_get_nonzero_comps
+};
+
+gs_private_st_composite_only(st_dc_devn_masked, gx_device_color,
+                             "dc_devn_masked",
+                             dc_masked_enum_ptrs, dc_masked_reloc_ptrs);
+const gx_device_color_type_t gx_dc_devn_masked = {
+    &st_dc_devn_masked,
+    gx_dc_pattern_save_dc, gx_dc_pure_masked_get_dev_halftone,
+    gx_dc_no_get_phase,
+    gx_dc_devn_masked_load, gx_dc_devn_masked_fill_rect,
+    gx_dc_devn_fill_masked, gx_dc_devn_masked_equal,
+    gx_dc_cannot_write, gx_dc_cannot_read,
+    gx_dc_devn_get_nonzero_comps
 };
 
 #undef gx_dc_type_pattern
@@ -1230,6 +1247,16 @@ gx_dc_pure_masked_load(gx_device_color * pdevc, const gs_imager_state * pis,
     FINISH_PATTERN_LOAD
 }
 static int
+gx_dc_devn_masked_load(gx_device_color * pdevc, const gs_imager_state * pis,
+                       gx_device * dev, gs_color_select_t select)
+{
+    int code = (*gx_dc_type_data_devn.load) (pdevc, pis, dev, select);
+
+    if (code < 0)
+        return code;
+    FINISH_PATTERN_LOAD
+}
+static int
 gx_dc_binary_masked_load(gx_device_color * pdevc, const gs_imager_state * pis,
                          gx_device * dev, gs_color_select_t select)
 {
@@ -1265,6 +1292,7 @@ gx_pattern_cache_lookup(gx_device_color * pdevc, const gs_imager_state * pis,
     if (pcache != 0) {
         gx_color_tile *ctile = &pcache->tiles[id % pcache->num_tiles];
         bool internal_accum = true;
+        bool is_p1_c;
         if (pis->have_pattern_streams) {
             int code = dev_proc(dev, dev_spec_op)(dev, gxdso_pattern_load, NULL, id);
             internal_accum = (code == 0);
@@ -1273,13 +1301,13 @@ gx_pattern_cache_lookup(gx_device_color * pdevc, const gs_imager_state * pis,
         }
         if (ctile->id == id &&
             ctile->is_dummy == !internal_accum &&
-            (!(gx_dc_is_pattern1_color(pdevc)) ||
+            (!(is_p1_c = gx_dc_is_pattern1_color(pdevc)) ||
              ctile->depth == dev->color_info.depth)
             ) {
             int px = pis->screen_phase[select].x;
             int py = pis->screen_phase[select].y;
 
-            if (gx_dc_is_pattern1_color(pdevc)) {       /* colored */
+            if (is_p1_c) {       /* colored */
                 pdevc->colors.pattern.p_tile = ctile;
 #           if 0 /* Debugged with Bug688308.ps and applying patterns after clist.
                     Bug688308.ps has a step_matrix much bigger than pattern bbox;
@@ -1332,6 +1360,13 @@ gx_dc_pattern_get_nonzero_comps(
 }
 
 static bool
+gx_dc_devn_masked_equal(const gx_device_color * pdevc1,
+                        const gx_device_color * pdevc2)
+{
+    return (*gx_dc_type_devn->equal) (pdevc1, pdevc2) &&
+        pdevc1->mask.id == pdevc2->mask.id;
+}
+static bool
 gx_dc_pure_masked_equal(const gx_device_color * pdevc1,
                         const gx_device_color * pdevc2)
 {
@@ -1368,13 +1403,18 @@ typedef struct gx_dc_serialized_tile_s {
     gs_int_point size;
     gs_matrix step_matrix;
     gs_rect bbox;
-    byte is_clist;
-    byte uses_transparency;
-    byte depth;
-    byte tiling_type;
-    byte is_simple;
-    byte has_overlap;
+    int flags;
 } gx_dc_serialized_tile_t;
+
+enum {
+    TILE_HAS_OVERLAP = 0x80000000,
+    TILE_IS_SIMPLE   = 0x40000000,
+    TILE_USES_TRANSP = 0x20000000,
+    TILE_IS_CLIST    = 0x10000000,
+    TILE_TYPE_MASK   = 0x0F000000,
+    TILE_TYPE_SHIFT  = 24,
+    TILE_DEPTH_MASK  = 0x00FFFFFF
+};
 
 static int
 gx_dc_pattern_write_raster(gx_color_tile *ptile, int64_t offset, byte *data, 
@@ -1396,7 +1436,6 @@ gx_dc_pattern_write_raster(gx_color_tile *ptile, int64_t offset, byte *data,
         gx_dc_serialized_tile_t buf;
         gx_strip_bitmap buf1;
 
-        buf.uses_transparency = 0;
         buf.id = ptile->id;
         buf.size.x = 0; /* fixme: don't write with raster patterns. */
         buf.size.y = 0; /* fixme: don't write with raster patterns. */
@@ -1404,11 +1443,10 @@ gx_dc_pattern_write_raster(gx_color_tile *ptile, int64_t offset, byte *data,
         buf.size_c = size_c;
         buf.step_matrix = ptile->step_matrix;
         buf.bbox = ptile->bbox;
-        buf.is_clist = false;
-        buf.depth = ptile->depth;
-        buf.tiling_type = ptile->tiling_type;
-        buf.is_simple = ptile->is_simple;
-        buf.has_overlap = ptile->has_overlap;
+        buf.flags = ptile->depth
+                  | (ptile->tiling_type<<TILE_TYPE_SHIFT)
+                  | (ptile->is_simple ? TILE_IS_SIMPLE : 0)
+                  | (ptile->has_overlap ? TILE_HAS_OVERLAP : 0);
         if (sizeof(buf) > left) {
             /* For a while we require the client to provide enough buffer size. */
             return_error(gs_error_unregistered); /* Must not happen. */
@@ -1489,19 +1527,18 @@ gx_dc_pattern_trans_write_raster(gx_color_tile *ptile, int64_t offset, byte *dat
         gx_dc_serialized_tile_t buf;
         tile_trans_clist_info_t trans_info;
 
-        buf.uses_transparency = 1;
         buf.id = ptile->id;
         buf.size.x = 0; /* fixme: don't write with raster patterns. */
         buf.size.y = 0; /* fixme: don't write with raster patterns. */
         buf.size_b = size - size_h;
         buf.size_c = 0;
+        buf.flags = ptile->depth
+                  | TILE_USES_TRANSP
+                  | (ptile->tiling_type<<TILE_TYPE_SHIFT)
+                  | (ptile->is_simple ? TILE_IS_SIMPLE : 0)
+                  | (ptile->has_overlap ? TILE_HAS_OVERLAP : 0);
         buf.step_matrix = ptile->step_matrix;
         buf.bbox = ptile->bbox;
-        buf.is_clist = false;
-        buf.depth = ptile->depth;
-        buf.tiling_type = ptile->tiling_type;
-        buf.is_simple = ptile->is_simple;
-        buf.has_overlap = ptile->has_overlap;
         if (sizeof(buf) > left) {
             /* For a while we require the client to provide enough buffer size. */
             return_error(gs_error_unregistered); /* Must not happen. */
@@ -1615,12 +1652,12 @@ gx_dc_pattern_write(
         buf.size_c = size_c;
         buf.step_matrix = ptile->step_matrix;
         buf.bbox = ptile->bbox;
-        buf.is_clist = true;
-        buf.depth = ptile->depth;
-        buf.tiling_type = ptile->tiling_type;
-        buf.is_simple = ptile->is_simple;
-        buf.has_overlap = ptile->has_overlap;
-        buf.uses_transparency = ptile->cdev->common.page_uses_transparency;
+        buf.flags = ptile->depth
+                  | TILE_IS_CLIST
+                  | (ptile->tiling_type<<TILE_TYPE_SHIFT)
+                  | (ptile->is_simple ? TILE_IS_SIMPLE : 0)
+                  | (ptile->has_overlap ? TILE_HAS_OVERLAP : 0)
+                  | (ptile->cdev->common.page_uses_transparency ? TILE_USES_TRANSP : 0);
         if (sizeof(buf) > left) {
             /* For a while we require the client to provide enough buffer size. */
             return_error(gs_error_unregistered); /* Must not happen. */
@@ -1808,7 +1845,7 @@ gx_dc_pattern_read(
         left -= sizeof(buf);
         offset1 += sizeof(buf);
 
-        if (buf.uses_transparency && !buf.is_clist){
+        if ((buf.flags & TILE_USES_TRANSP) && !(buf.flags & TILE_IS_CLIST)){
 
             if (sizeof(buf) + sizeof(tile_trans_clist_info_t) > size) {
                 return_error(gs_error_unregistered); /* Must not happen. */
@@ -1840,15 +1877,15 @@ gx_dc_pattern_read(
         pdevc->mask.id = buf.id;
         ptile->step_matrix = buf.step_matrix;
         ptile->bbox = buf.bbox;
-        ptile->depth = buf.depth;
-        ptile->tiling_type = buf.tiling_type;
-        ptile->is_simple = buf.is_simple;
-        ptile->has_overlap = buf.has_overlap;
+        ptile->depth = buf.flags & TILE_DEPTH_MASK;
+        ptile->tiling_type = (buf.flags & TILE_TYPE_MASK)>>TILE_TYPE_SHIFT;
+        ptile->is_simple = !!(buf.flags & TILE_IS_SIMPLE);
+        ptile->has_overlap = !!(buf.flags & TILE_HAS_OVERLAP);
         ptile->is_dummy = 0;
 
-        if (!buf.is_clist) {
+        if (!(buf.flags & TILE_IS_CLIST)) {
 
-            if (buf.uses_transparency){
+            if (buf.flags & TILE_USES_TRANSP){
 
                 /* Make a new ttrans object */
 
@@ -1898,14 +1935,14 @@ gx_dc_pattern_read(
             inst.size.x = buf.size.x;
             inst.size.y = buf.size.y;
             inst.saved = &state;
-            inst.is_clist = buf.is_clist;	/* tell gx_pattern_accum_alloc to use clist */
+            inst.is_clist = !!(buf.flags & TILE_IS_CLIST);	/* tell gx_pattern_accum_alloc to use clist */
             ptile->cdev = (gx_device_clist *)gx_pattern_accum_alloc(mem, mem,
                                &inst, "gx_dc_pattern_read");
             if (ptile->cdev == NULL)
                 return_error(gs_error_VMerror);
             ptile->cdev->common.band_params.page_uses_transparency =
-                                                        buf.uses_transparency;
-            ptile->cdev->common.page_uses_transparency = buf.uses_transparency;
+                                                         !!(buf.flags & TILE_USES_TRANSP);
+            ptile->cdev->common.page_uses_transparency = !!(buf.flags & TILE_USES_TRANSP);
             code = dev_proc(&ptile->cdev->writer, open_device)((gx_device *)&ptile->cdev->writer);
             if (code < 0)
                 return code;
@@ -1973,4 +2010,14 @@ bool
 gx_dc_is_pattern1_color(const gx_device_color *pdevc)
 {
     return (pdevc->type == &gx_dc_pattern || pdevc->type == &gx_dc_pattern_trans);
+}
+
+/* Check device color for Pattern Type 1 with transparency involved */
+bool
+gx_dc_is_pattern1_color_with_trans(const gx_device_color *pdevc)
+{
+    if (!(pdevc->type == &gx_dc_pattern || pdevc->type == &gx_dc_pattern_trans)) {
+        return(false);
+    }
+    return(gx_pattern1_get_transptr(pdevc) != NULL);
 }

@@ -2,6 +2,10 @@
  * bmpcmp.c: BMP Comparison - utility for use with htmldiff.pl
  */
 
+/* Compile from inside ghostpdl with:
+ * gcc -Igs/libpng -Igs/zlib -o bmpcmp -DHAVE_LIBPNG gs/toolbin/bmpcmp.c gs/libpng/png.c gs/libpng/pngerror.c gs/libpng/pngget.c gs/libpng/pngmem.c gs/libpng/pngpread.c gs/libpng/pngread.c gs/libpng/pngrio.c gs/libpng/pngrtran.c gs/libpng/pngrutil.c gs/libpng/pngset.c gs/libpng/pngtrans.c gs/libpng/pngwio.c gs/libpng/pngwrite.c gs/libpng/pngwtran.c gs/libpng/pngwutil.c gs/zlib/adler32.c gs/zlib/crc32.c gs/zlib/infback.c gs/zlib/inflate.c gs/zlib/uncompr.c gs/zlib/compress.c gs/zlib/deflate.c gs/zlib/gzio.c gs/zlib/inffast.c gs/zlib/inftrees.c gs/zlib/trees.c gs/zlib/zutil.c -lm
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -98,12 +102,17 @@ typedef void (DiffFn)(unsigned char *bmp,
                       BBox          *bbox,
                       Params        *params);
 
+/* Nasty (as if the rest of this code isn't!) global variables for holding
+ * spot color details. */
+static unsigned char spots[256*4];
+static int spotfill = 0;
+
 static void *Malloc(size_t size) {
     void *block;
 
     block = malloc(size);
     if (block == NULL) {
-        fprintf(stderr, "Failed to malloc %u bytes\n", (unsigned int)size);
+        fprintf(stderr, "bmpcmp: Failed to malloc %u bytes\n", (unsigned int)size);
         exit(EXIT_FAILURE);
     }
     return block;
@@ -308,7 +317,7 @@ static unsigned char *bmp_load_sub(unsigned char *bmp,
         break;
       case 32:
         if (masks) {
-          printf("Send this file to Robin, now! (32bpp with colour masks)\n");
+          printf("bmpcmp: Send this file to Robin, now! (32bpp with colour masks)\n");
           free(dst);
           return NULL;
         } else {
@@ -331,7 +340,7 @@ static unsigned char *bmp_load_sub(unsigned char *bmp,
         break;
     }
   } else {
-    printf("Send this file to Robin, now! (compressed)\n");
+    printf("bmpcmp: Send this file to Robin, now! (compressed)\n");
     free(dst);
     return NULL;
   }
@@ -409,6 +418,20 @@ static int get_int(FILE *file, int rev)
     return c;
 }
 
+static int get_short(FILE *file, int rev)
+{
+    int c;
+
+    if (rev) {
+        c  = fgetc(file)<<8;
+        c |= fgetc(file);
+    } else {
+        c  = fgetc(file);
+        c |= fgetc(file)<<8;
+    }
+    return c;
+}
+
 static void *cups_read(ImageReader *im,
                        int         *width,
                        int         *height,
@@ -429,27 +452,27 @@ static void *cups_read(ImageReader *im,
         return NULL;
     bpc  = get_int(im->file, rev);
     if (get_int(im->file, rev) != 1) {
-        fprintf(stderr, "Only 1bpp cups files for now!\n");
+        fprintf(stderr, "bmpcmp: Only 1bpp cups files for now!\n");
         return NULL;
     }
     bpl = get_int(im->file, rev);
     if (get_int(im->file, rev) != 0) {
-        fprintf(stderr, "Only chunky cups files for now!\n");
+        fprintf(stderr, "bmpcmp: Only chunky cups files for now!\n");
         return NULL;
     }
     colspace = get_int(im->file, rev);
     if ((colspace != 0) && (colspace != 3)) {
-        fprintf(stderr, "Only gray/black cups files for now!\n");
+        fprintf(stderr, "bmpcmp: Only gray/black cups files for now!\n");
         return NULL;
     }
     if (get_int(im->file, rev) != 0) {
-        fprintf(stderr, "Only uncompressed cups files for now!\n");
+        fprintf(stderr, "bmpcmp: Only uncompressed cups files for now!\n");
         return NULL;
     }
     if (skip_bytes(im->file, 12) == EOF)
         return NULL;
     if (get_int(im->file, rev) != 1) {
-        fprintf(stderr, "Only num_colors=1 cups files for now!\n");
+        fprintf(stderr, "bmpcmp: Only num_colors=1 cups files for now!\n");
         return NULL;
     }
     if (skip_bytes(im->file, 1796-424) == EOF)
@@ -894,14 +917,14 @@ static void pam_header_read(FILE *file,
             *height = get_pnm_num(file);
         } else if (skip_string(file, "DEPTH")) {
             if (get_pnm_num(file) != 4) {
-                fprintf(stderr, "Only CMYK PAMs!\n");
+                fprintf(stderr, "bmpcmp: Only CMYK PAMs!\n");
                 exit(1);
             }
         } else if (skip_string(file, "MAXVAL")) {
             *maxval = get_pnm_num(file);
         } else if (skip_string(file, "TUPLTYPE")) {
             if (!skip_string(file, "CMYK")) {
-                fprintf(stderr, "Only CMYK PAMs!\n");
+                fprintf(stderr, "bmpcmp: Only CMYK PAMs!\n");
                 exit(1);
             }
         } else if (skip_string(file, "ENDHDR")) {
@@ -959,7 +982,7 @@ static void *pnm_read(ImageReader *im,
             break;
         default:
             /* Eh? */
-            fprintf(stderr, "Unknown PxM format!\n");
+            fprintf(stderr, "bmpcmp: Unknown PxM format!\n");
             return NULL;
     }
     if (read == pam_read) {
@@ -992,8 +1015,9 @@ static void *png_read(ImageReader *im,
 {
     png_structp png;
     png_infop info;
-    int stride, w, h, y;
+    int stride, w, h, y, x;
     unsigned char *data;
+    int expand = 0;
 
     /* There is only one image in each file */
     if (ftell(im->file) != 0)
@@ -1002,7 +1026,7 @@ static void *png_read(ImageReader *im,
     png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     info = png_create_info_struct(png);
     if (setjmp(png_jmpbuf(png))) {
-        fprintf(stderr, "libpng failure\n");
+        fprintf(stderr, "bmpcmp: libpng failure\n");
         exit(EXIT_FAILURE);
     }
 
@@ -1014,9 +1038,12 @@ static void *png_read(ImageReader *im,
     png_set_expand(png);
     png_set_packing(png);
     png_set_strip_16(png);
-    if (png_get_color_type(png, info) == PNG_COLOR_TYPE_GRAY_ALPHA)
+    if (png_get_color_type(png, info) == PNG_COLOR_TYPE_GRAY_ALPHA) {
         png_set_strip_alpha(png);
-    if (png_get_color_type(png, info) == PNG_COLOR_TYPE_RGB)
+        expand = 1;
+    } else if (png_get_color_type(png, info) == PNG_COLOR_TYPE_GRAY) {
+        expand = 1;
+    } else if (png_get_color_type(png, info) == PNG_COLOR_TYPE_RGB)
         png_set_add_alpha(png, 0xff, PNG_FILLER_AFTER);
 
     png_read_update_info(png, info);
@@ -1024,10 +1051,25 @@ static void *png_read(ImageReader *im,
     w = png_get_image_width(png, info);
     h = png_get_image_height(png, info);
     stride = png_get_rowbytes(png, info);
+    if (expand)
+        stride *= sizeof(int);
 
     data = malloc(h * stride);
-    for (y = 0; y < h; y++)
-        png_read_row(png, data + (h - y - 1) * stride, NULL);
+    for (y = 0; y < h; y++) {
+        unsigned char *row = data + (h - y - 1) * stride;
+        png_read_row(png, row, NULL);
+        if (expand) {
+            unsigned char *dst = row + w*sizeof(int);
+            unsigned char *src = row + w;
+            for (x = w; x > 0; x--) {
+                unsigned char c = *--src;
+                *--dst = 0;
+                *--dst = c;
+                *--dst = c;
+                *--dst = c;
+            }
+        }
+    }
 
     png_read_end(png, NULL);
     png_destroy_read_struct(&png, &info, NULL);
@@ -1041,6 +1083,226 @@ static void *png_read(ImageReader *im,
 }
 #endif
 
+static void *psd_read(ImageReader *im,
+                      int         *width,
+                      int         *height,
+                      int         *span,
+                      int         *bpp,
+                      int         *cmyk)
+{
+    int c, ir_start, ir_len, w, h, n, x, y, z, i, N;
+    unsigned char *bmp, *line, *ptr;
+
+    if (feof(im->file))
+        return NULL;
+
+    /* Skip version */
+    c = get_short(im->file, 1);
+    if (c != 1) {
+        fprintf(stderr, "bmpcmp: We only support v1 psd files!\n");
+        exit(1);
+    }
+
+    /* Skip zeros */
+    c = get_short(im->file, 1);
+    c = get_int(im->file, 1);
+
+    n = get_short(im->file, 1);
+    *bpp = n * 8;
+
+    h = *height = get_int(im->file, 1);
+    w = *width = get_int(im->file, 1);
+    c = get_short(im->file, 1);
+    if (c != 8) {
+        fprintf(stderr, "bmpcmp: We only support 8bpp psd files!\n");
+        exit(1);
+    }
+    c = get_short(im->file, 1);
+    if (c == 4) {
+        *cmyk = 1;
+        if (n < 4) {
+            fprintf(stderr, "bmpcmp: Unexpected number of components (%d) in a CMYK (+spots) PSD file!\n", n);
+            exit(1);
+        }
+    } else if (c == 3) {
+        *cmyk = 0; /* RGB */
+        if (n != 3) {
+            fprintf(stderr, "bmpcmp: Unexpected number of components (%d) in a RGB PSD file!\n", n);
+            exit(1);
+        }
+    } else if (c == 1) {
+        *cmyk = 0; /* Greyscale */
+        if (n != 1) {
+            fprintf(stderr, "bmpcmp: Unexpected number of components (%d) in a Greyscale PSD file!\n", n);
+            exit(1);
+        }
+    } else {
+        fprintf(stderr, "bmpcmp: We only support Grey/RGB/CMYK psd files!\n");
+        exit(1);
+    }
+
+    /* Skip color data section */
+    c = get_int(im->file, 1);
+    if (c != 0) {
+        fprintf(stderr, "bmpcmp: Unexpected color data found!\n");
+        exit(1);
+    }
+
+    /* Image Resources section */
+    spotfill = 0;
+    ir_len = get_int(im->file, 1);
+    while (ir_len > 0)
+    {
+        int data_len, pad;
+        c  = fgetc(im->file);     if (--ir_len == 0) break;
+        c |= fgetc(im->file)<<8;  if (--ir_len == 0) break;
+        c |= fgetc(im->file)<<16; if (--ir_len == 0) break;
+        c |= fgetc(im->file)<<24; if (--ir_len == 0) break;
+        /* c == 8BIM */
+        c  = fgetc(im->file);     if (--ir_len == 0) break;
+        c |= fgetc(im->file)<<8;  if (--ir_len == 0) break;
+        /* Skip the padded id (which will always be 00 00) */
+        pad  = fgetc(im->file);     if (--ir_len == 0) break;
+        pad |= fgetc(im->file)<<8;  if (--ir_len == 0) break;
+        /* Get the data len */
+        data_len  = fgetc(im->file)<<24; if (--ir_len == 0) break;
+        data_len |= fgetc(im->file)<<16; if (--ir_len == 0) break;
+        data_len |= fgetc(im->file)<<8;  if (--ir_len == 0) break;
+        data_len |= fgetc(im->file);     if (--ir_len == 0) break;
+        if (c == 0x3ef) {
+          while (data_len > 0) {
+                /* Read the colorspace */
+                c  = fgetc(im->file)<<8;  if (--ir_len == 0) break;
+                c |= fgetc(im->file);     if (--ir_len == 0) break;
+                /* We only support CMYK spots! */
+                if (c != 2) {
+                    fprintf(stderr, "bmpcmp: Spot color equivalent not CMYK!\n");
+                    exit(EXIT_FAILURE);
+                }
+                /* c == 2 = COLORSPACE = CMYK */
+                /* 16 bits C, 16 bits M, 16 bits Y, 16 bits K */
+                spots[spotfill++] = fgetc(im->file);  if (--ir_len == 0) break;
+                c = fgetc(im->file);  if (--ir_len == 0) break;
+                spots[spotfill++] = fgetc(im->file);  if (--ir_len == 0) break;
+                c = fgetc(im->file);  if (--ir_len == 0) break;
+                spots[spotfill++] = fgetc(im->file);  if (--ir_len == 0) break;
+                c = fgetc(im->file);  if (--ir_len == 0) break;
+                spots[spotfill++] = fgetc(im->file);  if (--ir_len == 0) break;
+                c = fgetc(im->file);  if (--ir_len == 0) break;
+                /* 2 bytes opacity (always seems to be 0) */
+                c = fgetc(im->file);  if (--ir_len == 0) break;
+                c = fgetc(im->file);  if (--ir_len == 0) break;
+                /* 1 byte 'kind' (0 = selected, 1 = protected) */
+                c = fgetc(im->file);  if (--ir_len == 0) break;
+                /* 1 byte padding */
+                c = fgetc(im->file);  if (--ir_len == 0) break;
+                data_len -= 14;
+            }
+        }
+        while (data_len > 0)
+        {
+            c = fgetc(im->file); if (--ir_len == 0) break;
+        }
+    }
+
+    /* Skip Layer and Mask section */
+    c = get_int(im->file, 1);
+    if (c != 0) {
+        fprintf(stderr, "bmpcmp: Unexpected layer and mask section found!\n");
+        exit(1);
+    }
+
+    /* Image data section */
+    c = get_short(im->file, 1);
+    if (c != 0) {
+        fprintf(stderr, "bmpcmp: Unexpected compression method found!\n");
+        exit(1);
+    }
+
+    N = n;
+    if (N < 4)
+        N = 4;
+    *span = (w * N + 3) & ~3;
+    bmp = Malloc(*span * h);
+    line = Malloc(w);
+    ptr = bmp + *span * (h-1);
+    if (n == 1) {
+        /* Greyscale */
+        for (y = 0; y < h; y++)
+        {
+            fread(line, 1, w, im->file);
+            for (x = 0; x < w; x++)
+            {
+                unsigned char val = 255 - *line++;
+                *ptr++ = val;
+                *ptr++ = val;
+                *ptr++ = val;
+                *ptr++ = 0;
+            }
+            ptr -= w*N + *span;
+            line -= w;
+        }
+        ptr += *span * h + 1;
+    } else if (n == 3) {
+        /* RGB */
+        for (z = 0; z < n; z++)
+        {
+            for (y = 0; y < h; y++)
+            {
+                fread(line, 1, w, im->file);
+                for (x = 0; x < w; x++)
+                {
+                    *ptr = *line++;
+                    ptr += N;
+                }
+                ptr -= w*N + *span;
+                line -= w;
+            }
+            ptr += *span * h + 1;
+        }
+        for (y = 0; y < h; y++)
+        {
+            for (x = 0; x < w; x++)
+            {
+                *ptr = 0;
+                ptr += N;
+            }
+            ptr -= w*N + *span;
+        }
+        ptr += *span * h + 1;
+    } else {
+        /* CMYK + (maybe) spots */
+        for (z = 0; z < n; z++)
+        {
+            for (y = 0; y < h; y++)
+            {
+                fread(line, 1, w, im->file);
+                for (x = 0; x < w; x++)
+                {
+                    *ptr = 255 - *line++;
+                    ptr += n;
+                }
+                ptr -= w*n + *span;
+                line -= w;
+            }
+            ptr += *span * h + 1;
+        }
+    }
+    free(line);
+
+    /* Skip over any following header */
+    if (!feof(im->file))
+        c = fgetc(im->file);
+    if (!feof(im->file))
+        c = fgetc(im->file);
+    if (!feof(im->file))
+        c = fgetc(im->file);
+    if (!feof(im->file))
+        c = fgetc(im->file);
+
+    return bmp;
+}
+
 static void image_open(ImageReader *im,
                        char        *filename)
 {
@@ -1048,7 +1310,7 @@ static void image_open(ImageReader *im,
 
     im->file = fopen(filename, "rb");
     if (im->file == NULL) {
-        fprintf(stderr, "%s failed to open\n", filename);
+        fprintf(stderr, "bmpcmp: %s failed to open\n", filename);
         exit(EXIT_FAILURE);
     }
 
@@ -1080,9 +1342,16 @@ static void image_open(ImageReader *im,
             /* BMP format; Win v2 or above */
             im->read = bmp_read;
         } else {
-        fail:
-            fprintf(stderr, "%s: Unrecognised image type\n", filename);
-            exit(EXIT_FAILURE);
+            type |= (fgetc(im->file)<<16);
+            type |= (fgetc(im->file)<<24);
+            if (type == 0x53504238) { /* 8BPS */
+                /* PSD format */
+                im->read = psd_read;
+            } else {
+              fail:
+                fprintf(stderr, "bmpcmp: %s: Unrecognised image type\n", filename);
+                exit(EXIT_FAILURE);
+            }
         }
     }
 }
@@ -1093,11 +1362,11 @@ static void image_close(ImageReader *im)
     im->file = NULL;
 }
 
-static void simple_diff(unsigned char *bmp,
-                        unsigned char *bmp2,
-                        unsigned char *map,
-                        BBox          *bbox2,
-                        Params        *params)
+static void simple_diff_int(unsigned char *bmp,
+                            unsigned char *bmp2,
+                            unsigned char *map,
+                            BBox          *bbox2,
+                            Params        *params)
 {
     int    x, y;
     int   *isrc, *isrc2;
@@ -1142,40 +1411,36 @@ static void simple_diff(unsigned char *bmp,
     *bbox2 = bbox;
 }
 
-static void simple_diff2(unsigned char *bmp,
-                         unsigned char *bmp2,
-                         unsigned char *map,
-                         BBox          *bbox2,
-                         Params        *params)
+static void simple_diff_n(unsigned char *bmp,
+                          unsigned char *bmp2,
+                          unsigned char *map,
+                          BBox          *bbox2,
+                          Params        *params)
 {
-    int    x, y;
-    int   *isrc, *isrc2;
-    short *ssrc, *ssrc2;
-    BBox   bbox;
-    int    w;
-    int    h;
-    int    span = params->span;
+    int            x, y, z;
+    unsigned char *src, *src2;
+    BBox           bbox;
+    int            w    = params->width;
+    int            h    = params->height;
+    int            n    = params->bpp>>3;
+    int            span = params->span;
 
-    w = bbox2->xmax - bbox2->xmin;
-    h = bbox2->ymax - bbox2->ymin;
-    bbox.xmin = bbox2->xmax;
-    bbox.ymin = bbox2->ymax;
+    bbox.xmin = w;
+    bbox.ymin = h;
     bbox.xmax = -1;
     bbox.ymax = -1;
 
-    if (params->bpp == 32)
+    src  = bmp;
+    src2 = bmp2;
+    span -= w*n;
+    for (y = 0; y < h; y++)
     {
-        isrc  = (int *)bmp;
-        isrc2 = (int *)bmp2;
-        span >>= 2;
-        isrc  += span*(bbox2->ymin)+bbox2->xmin;
-        isrc2 += span*(bbox2->ymin)+bbox2->xmin;
-        span -= w;
-        for (y = 0; y < h; y++)
+        for (x = 0; x < w; x++)
         {
-            for (x = 0; x < w; x++)
+            *map = 0;
+            for (z = 0; z < n; z++)
             {
-                if (*isrc++ != *isrc2++)
+                if (*src++ != *src2++)
                 {
                     if (x < bbox.xmin)
                         bbox.xmin = x;
@@ -1185,41 +1450,27 @@ static void simple_diff2(unsigned char *bmp,
                         bbox.ymin = y;
                     if (y > bbox.ymax)
                         bbox.ymax = y;
+                    *map = 1;
                 }
             }
-            isrc  += span;
-            isrc2 += span;
+            map++;
         }
-    }
-    else
-    {
-        ssrc  = (short *)bmp;
-        ssrc2 = (short *)bmp2;
-        ssrc  += span*(bbox2->ymin)+bbox2->xmin;
-        ssrc2 += span*(bbox2->ymin)+bbox2->xmin;
-        span >>= 1;
-        span -= w;
-        for (y = 0; y < h; y++)
-        {
-            for (x = 0; x < w; x++)
-            {
-                if (*ssrc++ != *ssrc2++)
-                {
-                    if (x < bbox.xmin)
-                        bbox.xmin = x;
-                    if (x > bbox.xmax)
-                        bbox.xmax = x;
-                    if (y < bbox.ymin)
-                        bbox.ymin = y;
-                    if (y > bbox.ymax)
-                        bbox.ymax = y;
-                }
-            }
-            ssrc  += span;
-            ssrc2 += span;
-        }
+        src  += span;
+        src2 += span;
     }
     *bbox2 = bbox;
+}
+
+static void simple_diff(unsigned char *bmp,
+                        unsigned char *bmp2,
+                        unsigned char *map,
+                        BBox          *bbox2,
+                        Params        *params)
+{
+    if (params->bpp <= 32)
+        simple_diff_int(bmp, bmp2, map, bbox2, params);
+    else
+        simple_diff_n(bmp, bmp2, map, bbox2, params);
 }
 
 typedef struct FuzzyParams FuzzyParams;
@@ -1232,6 +1483,7 @@ struct FuzzyParams {
     int            width;
     int            height;
     int            span;
+    int            num_chans;
     int          (*slowFn)(FuzzyParams   *self,
                            unsigned char *src,
                            unsigned char *src2,
@@ -1277,7 +1529,7 @@ static int fuzzy_slow(FuzzyParams   *fuzzy_params,
     {
         for (x = xmin; x < xmax; x++)
         {
-            int o = x+y*span;
+            int o = x*4+y*span;
             int v;
 
             v = isrc[0]-isrc2[o];
@@ -1341,7 +1593,7 @@ static int fuzzy_slow_exhaustive(FuzzyParams   *fuzzy_params,
     {
         for (x = xmin; x < xmax; x++)
         {
-            int o = x+y*span;
+            int o = x*4+y*span;
             int v;
             int exact = 1;
 
@@ -1484,11 +1736,11 @@ static int fuzzy_fast_exhaustive(FuzzyParams   *fuzzy_params,
     return ret;
 }
 
-static void fuzzy_diff(unsigned char *bmp,
-                       unsigned char *bmp2,
-                       unsigned char *map,
-                       BBox          *bbox2,
-                       Params        *params)
+static void fuzzy_diff_int(unsigned char *bmp,
+                           unsigned char *bmp2,
+                           unsigned char *map,
+                           BBox          *bbox2,
+                           Params        *params)
 {
     int          x, y;
     int         *isrc, *isrc2;
@@ -1684,9 +1936,448 @@ static void fuzzy_diff(unsigned char *bmp,
     *bbox2 = bbox;
 }
 
+static int fuzzy_slow_n(FuzzyParams   *fuzzy_params,
+                        unsigned char *src,
+                        unsigned char *src2,
+                        unsigned char *map,
+                        int            x,
+                        int            y)
+{
+    int xmin, ymin, xmax, ymax;
+    int span, t, n, z;
+
+    /* left of window = max(0, x - window) - x */
+    xmin = - fuzzy_params->window;
+    if (xmin < -x)
+        xmin = -x;
+    /* right of window = min(width, x + window) - x */
+    xmax = fuzzy_params->window;
+    if (xmax > fuzzy_params->width-x)
+        xmax = fuzzy_params->width-x;
+    /* top of window = max(0, y - window) - y */
+    ymin = - fuzzy_params->window;
+    if (ymin < -y)
+        ymin = -y;
+    /* bottom of window = min(height, y + window) - y */
+    ymax = fuzzy_params->window;
+    if (ymax > fuzzy_params->height-y)
+        ymax = fuzzy_params->height-y;
+    span = fuzzy_params->span;
+    t    = fuzzy_params->threshold;
+    n    = fuzzy_params->num_chans;
+
+    for (y = ymin; y < ymax; y++)
+    {
+        for (x = xmin; x < xmax; x++)
+        {
+            int o = x*n+y*span;
+            for (z = 0; z < n; z++)
+            {
+                int v;
+
+                v = src[z]-src2[o++];
+                if (v < 0)
+                    v = -v;
+                if (v > t)
+                    goto too_big;
+            }
+            return 0;
+          too_big:
+            {}
+        }
+    }
+    *map |= 15;
+    return 1;
+}
+
+static int fuzzy_slow_exhaustive_n(FuzzyParams   *fuzzy_params,
+                                   unsigned char *isrc,
+                                   unsigned char *isrc2,
+                                   unsigned char *map,
+                                   int            x,
+                                   int            y)
+{
+    int          xmin, ymin, xmax, ymax;
+    int          span, t, n, z;
+    unsigned int flags = 15;
+    int          ret   = 1;
+
+    /* left of window = max(0, x - window) - x */
+    xmin = - fuzzy_params->window;
+    if (xmin < -x)
+        xmin = -x;
+    /* right of window = min(width, x + window) - x */
+    xmax = fuzzy_params->window;
+    if (xmax > fuzzy_params->width-x)
+        xmax = fuzzy_params->width-x;
+    /* top of window = max(0, y - window) - y */
+    ymin = - fuzzy_params->window;
+    if (ymin < -y)
+        ymin = -y;
+    /* bottom of window = min(height, y + window) - y */
+    ymax = fuzzy_params->window;
+    if (ymax > fuzzy_params->height-y)
+        ymax = fuzzy_params->height-y;
+    span = fuzzy_params->span;
+    t    = fuzzy_params->threshold;
+    n    = fuzzy_params->num_chans;
+
+    for (y = ymin; y < ymax; y++)
+    {
+        for (x = xmin; x < xmax; x++)
+        {
+            int o = x*n+y*span;
+            int exact = 1;
+            for (z = 0; z < n; z++)
+            {
+                int v;
+
+                v = isrc[z]-isrc2[o++];
+                if (v < 0)
+                    v = -v;
+                if (v != 0)
+                    exact = 0;
+                if (v > t)
+                    goto too_big;
+            }
+            /* We match within the tolerance */
+            flags &= ~(1<<3);
+            if ((x | y) == 0)
+                flags &= ~(1<<2);
+            if (exact) {
+                *map |= 1;
+                return 0;
+            }
+            ret = 0;
+          too_big:
+            {}
+        }
+    }
+    *map |= flags;
+    return ret;
+}
+
+static int fuzzy_fast_n(FuzzyParams   *fuzzy_params,
+                        unsigned char *isrc,
+                        unsigned char *isrc2,
+                        unsigned char *map)
+{
+    int        i, z;
+    ptrdiff_t *wTab = fuzzy_params->wTab;
+    int        t    = fuzzy_params->threshold;
+    int        n    = fuzzy_params->num_chans;
+
+    for (i = fuzzy_params->wTabLen; i > 0; i--)
+    {
+        int o = *wTab++;
+        for (z = 0; z < n; z++)
+        {
+            int v;
+
+            v = isrc[z]-isrc2[o++];
+            if (v < 0)
+                v = -v;
+            if (v > t)
+                goto too_big;
+        }
+        return 0;
+      too_big:
+        {}
+    }
+    *map |= 15;
+    return 1;
+}
+
+static int fuzzy_fast_exhaustive_n(FuzzyParams   *fuzzy_params,
+                                   unsigned char *isrc,
+                                   unsigned char *isrc2,
+                                   unsigned char *map)
+{
+    int            i, z;
+    ptrdiff_t     *wTab  = fuzzy_params->wTab;
+    int            t     = fuzzy_params->threshold;
+    unsigned char  flags = 15;
+    int            ret   = 1;
+    int            n     = fuzzy_params->num_chans;
+
+    for (i = fuzzy_params->wTabLen; i > 0; i--)
+    {
+        int o = *wTab++;
+        int exact = 1;
+        for (z = 0; z < n; z++)
+        {
+            int v;
+
+            v = isrc[z]-isrc2[o++];
+            if (v < 0)
+                v = -v;
+            if (v > t)
+                goto too_big;
+            if (v != 0)
+                exact = 0;
+        }
+        /* We match within the tolerance */
+        flags &= ~(1<<3);
+        if (o == 0)
+            flags &= ~(1<<2);
+        if (exact) {
+            *map |= 1;
+            return 0;
+        }
+        ret = 0;
+      too_big:
+        {}
+    }
+    *map |= flags;
+    return ret;
+}
+
+static void fuzzy_diff_n(unsigned char *bmp,
+                         unsigned char *bmp2,
+                         unsigned char *map,
+                         BBox          *bbox2,
+                         Params        *params)
+{
+    int            x, y, z;
+    unsigned char *src, *src2;
+    BBox           bbox;
+    int            w, h, span, n;
+    int            border;
+    int            lb, rb, tb, bb;
+    FuzzyParams    fuzzy_params;
+
+    w = params->width;
+    h = params->height;
+    n = params->bpp>>3;
+    bbox.xmin = w;
+    bbox.ymin = h;
+    bbox.xmax = -1;
+    bbox.ymax = -1;
+    fuzzy_params.window    = params->window>>1;
+    fuzzy_params.threshold = params->threshold;
+    fuzzy_params.wTab      = params->wTab;
+    fuzzy_params.wTabLen   = params->wTabLen;
+    fuzzy_params.threshold = params->threshold;
+    fuzzy_params.width     = params->width;
+    fuzzy_params.height    = params->height;
+    fuzzy_params.span      = params->span;
+    fuzzy_params.num_chans = params->bpp>>3;
+    if (params->exhaustive)
+    {
+        fuzzy_params.slowFn    = fuzzy_slow_exhaustive_n;
+        fuzzy_params.fastFn    = fuzzy_fast_exhaustive_n;
+    } else {
+        fuzzy_params.slowFn    = fuzzy_slow_n;
+        fuzzy_params.fastFn    = fuzzy_fast_n;
+    }
+    span                   = params->span;
+
+    /* Figure out borders */
+    border = params->window>>1;
+    lb     = border;
+    if (lb > params->width)
+        lb = params->width;
+    tb     = border;
+    if (tb > params->height)
+        tb = params->height;
+    rb     = border;
+    if (rb > params->width-lb)
+        rb = params->width-lb;
+    bb     = border;
+    if (bb > params->height-tb)
+        bb = params->height;
+
+    src  = bmp;
+    src2 = bmp2;
+    span -= w * n;
+    for (y = 0; y < tb; y++)
+    {
+        for (x = 0; x < w; x++)
+        {
+            int diff = 0;
+            for (z = 0; z < n; z++)
+            {
+                if (*src++ != *src2++)
+                    diff = 1;
+            }
+            if (diff)
+            {
+                *map++ |= 1;
+                if (fuzzy_params.slowFn(&fuzzy_params,
+                                        src-n,
+                                        src2-n,
+                                        map-1,
+                                        x, y))
+                {
+                    if (x < bbox.xmin)
+                        bbox.xmin = x;
+                    if (x > bbox.xmax)
+                        bbox.xmax = x;
+                    if (y < bbox.ymin)
+                        bbox.ymin = y;
+                    if (y > bbox.ymax)
+                        bbox.ymax = y;
+                }
+            }
+            else
+            {
+                *map++ = 0;
+            }
+        }
+        src  += span;
+        src2 += span;
+    }
+    for (; y < h-bb; y++)
+    {
+        for (x = 0; x < lb; x++)
+        {
+            int diff = 0;
+            for (z = 0; z < n; z++)
+            {
+                if (*src++ != *src2++)
+                    diff = 1;
+            }
+            if (diff)
+            {
+                *map++ |= 1;
+                if (fuzzy_params.slowFn(&fuzzy_params,
+                                        src-n,
+                                        src2-n,
+                                        map-1,
+                                        x, y))
+                {
+                    if (x < bbox.xmin)
+                        bbox.xmin = x;
+                    if (x > bbox.xmax)
+                        bbox.xmax = x;
+                    if (y < bbox.ymin)
+                        bbox.ymin = y;
+                    if (y > bbox.ymax)
+                        bbox.ymax = y;
+                }
+            }
+            else
+            {
+                *map++ = 0;
+            }
+        }
+        for (; x < w-rb; x++)
+        {
+            int diff = 0;
+            for (z = 0; z < n; z++)
+            {
+                if (*src++ != *src2++)
+                    diff = 1;
+            }
+            if (diff)
+            {
+                *map++ |= 1;
+                if (fuzzy_params.fastFn(&fuzzy_params,
+                                        src-n,
+                                        src2-n,
+                                        map-1))
+                {
+                    if (x < bbox.xmin)
+                        bbox.xmin = x;
+                    if (x > bbox.xmax)
+                        bbox.xmax = x;
+                    if (y < bbox.ymin)
+                        bbox.ymin = y;
+                    if (y > bbox.ymax)
+                        bbox.ymax = y;
+                }
+            }
+            else
+            {
+                *map++ = 0;
+            }
+        }
+        for (; x < w; x++)
+        {
+            int diff = 0;
+            for (z = 0; z < n; z++)
+            {
+                if (*src++ != *src2++)
+                    diff = 1;
+            }
+            if (diff)
+            {
+                *map++ |= 1;
+                if (fuzzy_params.slowFn(&fuzzy_params,
+                                        src-n,
+                                        src2-n,
+                                        map-1,
+                                        x, y))
+                {
+                    if (x < bbox.xmin)
+                        bbox.xmin = x;
+                    if (x > bbox.xmax)
+                        bbox.xmax = x;
+                    if (y < bbox.ymin)
+                        bbox.ymin = y;
+                    if (y > bbox.ymax)
+                        bbox.ymax = y;
+                }
+            }
+            else
+            {
+                *map++ = 0;
+            }
+        }
+        src  += span;
+        src2 += span;
+    }
+    for (; y < bb; y++)
+    {
+        for (x = 0; x < w; x++)
+        {
+            int diff = 0;
+            for (z = 0; z < n; z++)
+            {
+                if (*src++ != *src2++)
+                    diff = 1;
+            }
+            if (diff)
+            {
+                *map++ |= 1;
+                if (fuzzy_params.slowFn(&fuzzy_params,
+                                        src-n,
+                                        src2-n,
+                                        map-1,
+                                        x, y))
+                {
+                    if (x < bbox.xmin)
+                        bbox.xmin = x;
+                    if (x > bbox.xmax)
+                        bbox.xmax = x;
+                    if (y < bbox.ymin)
+                        bbox.ymin = y;
+                    if (y > bbox.ymax)
+                        bbox.ymax = y;
+                }
+            }
+        }
+        src  += span;
+        src2 += span;
+    }
+    *bbox2 = bbox;
+}
+
 static int BBox_valid(BBox *bbox)
 {
     return ((bbox->xmin < bbox->xmax) && (bbox->ymin < bbox->ymax));
+}
+
+static void fuzzy_diff(unsigned char *bmp,
+                       unsigned char *bmp2,
+                       unsigned char *map,
+                       BBox          *bbox2,
+                       Params        *params)
+{
+    if (params->bpp <= 32)
+        fuzzy_diff_int(bmp, bmp2, map, bbox2, params);
+    else
+        fuzzy_diff_n(bmp, bmp2, map, bbox2, params);
 }
 
 static void uncmyk_bmp(unsigned char *bmp,
@@ -1696,7 +2387,7 @@ static void uncmyk_bmp(unsigned char *bmp,
     int w, h;
     int x, y;
 
-    bmp  += span    *(bbox->ymin)+(bbox->xmin<<2);
+    bmp  += span    *(bbox->ymin)+(bbox->xmin*4);
     w     = bbox->xmax - bbox->xmin;
     h     = bbox->ymax - bbox->ymin;
     span -= 4*w;
@@ -1785,7 +2476,7 @@ static void diff_bmp(unsigned char *bmp,
                     break;
                 default:
                     fprintf(stderr,
-                            "Internal error: unexpected map type %d\n", m);
+                            "bmpcmp: Internal error: unexpected map type %d\n", m);
                     isrc++;
                     break;
             }
@@ -1822,6 +2513,7 @@ static void save_bmp(unsigned char *data,
     int            src_bypp;
     int            width, height;
     int            x, y;
+    int            n = bpp>>3;
 
     file = fopen(str, "wb");
     if (file == NULL)
@@ -1858,7 +2550,7 @@ static void save_bmp(unsigned char *data,
 
     fwrite(bmp, 1, 14+40, file);
 
-    data += bbox->xmin * src_bypp;
+    data += bbox->xmin * 4;
     data += bbox->ymin * span;
 
     if (bpp == 16)
@@ -1931,7 +2623,10 @@ static void save_png(unsigned char *data,
 
     /* fill out pointers to each row */
     /* we use bmp coordinates where the zero-th row is at the bottom */
-    src_bypp = (bpp == 16 ? 2 : 4);
+    if (bpp == 16)
+        src_bypp = 2;
+    else
+        src_bypp = 4;
     if (bpp == 16)
         word_width = width*2;
     else
@@ -2217,6 +2912,43 @@ static void rediff(unsigned char *map,
     *global = local;
 }
 
+static void unspot(unsigned char *bmp, int w, int h, int span, int bpp)
+{
+    int x, y, z, n = bpp>>3;
+    unsigned char *p = bmp;
+
+    span -= w*4;
+    n -= 4;
+    for (y = h; y > 0; y--)
+    {
+        unsigned char *q = p;
+        for (x = w; x > 0; x--)
+        {
+            int C = *q++;
+            int M = *q++;
+            int Y = *q++;
+            int K = *q++;
+            for (z = 0; z < n; z++)
+            {
+                int v = *q++;
+                C += spots[4*z  ]*v/0xff;
+                M += spots[4*z+1]*v/0xff;
+                Y += spots[4*z+2]*v/0xff;
+                K += spots[4*z+3]*v/0xff;
+            }
+            if (C > 255) C = 255;
+            if (M > 255) M = 255;
+            if (Y > 255) Y = 255;
+            if (K > 255) K = 255;
+            *p++ = C;
+            *p++ = M;
+            *p++ = Y;
+            *p++ = K;
+        }
+        p += span;
+    }
+}
+
 int main(int argc, char *argv[])
 {
     int            w,  h,  s,  bpp,  cmyk;
@@ -2236,6 +2968,7 @@ int main(int argc, char *argv[])
     ImageReader    image1, image2;
     DiffFn        *diffFn;
     Params         params;
+    int            noDifferences = 1;
 
     parseArgs(argc, argv, &params);
     if (params.window <= 1 && params.threshold == 0) {
@@ -2258,10 +2991,10 @@ int main(int argc, char *argv[])
             (cmyk != cmyk2))
         {
             fprintf(stderr,
-                    "Can't compare images "
+                    "bmpcmp: Page %d: Can't compare images "
                     "(w=%d,%d) (h=%d,%d) (s=%d,%d) (bpp=%d,%d) (cmyk=%d,%d)!\n",
-                    w, w2, h, h2, s, s2, bpp, bpp2, cmyk, cmyk2);
-            exit(EXIT_FAILURE);
+                    imagecount, w, w2, h, h2, s, s2, bpp, bpp2, cmyk, cmyk2);
+            continue;
         }
 
         if (params.window != 0)
@@ -2269,6 +3002,7 @@ int main(int argc, char *argv[])
             makeWindowTable(&params, s, bpp);
         }
         map = Malloc(s*h*sizeof(unsigned char));
+        memset(map, 0, s*h*sizeof(unsigned char));
         params.width  = w;
         params.height = h;
         params.span   = s;
@@ -2280,7 +3014,7 @@ int main(int argc, char *argv[])
             bbox.xmax++;
             bbox.ymax++;
 
-            DEBUG_BBOX(fprintf(stderr, "Raw bbox=%d %d %d %d\n",
+            DEBUG_BBOX(fprintf(stderr, "bmpcmp: Raw bbox=%d %d %d %d\n",
                                bbox.xmin, bbox.ymin, bbox.xmax, bbox.ymax));
             /* Make bbox2.xmin/ymin be the centre of the changed area */
             bbox2.xmin = (bbox.xmin + bbox.xmax + 1)/2;
@@ -2338,11 +3072,17 @@ int main(int argc, char *argv[])
                 bbox2.ymax = h;
             }
 
-            DEBUG_BBOX(fprintf(stderr, "Expanded bbox=%d %d %d %d\n",
+            DEBUG_BBOX(fprintf(stderr, "bmpcmp: Expanded bbox=%d %d %d %d\n",
                                bbox2.xmin, bbox2.ymin, bbox2.xmax, bbox2.ymax));
 
             /* bbox */
             boxlist = Malloc(sizeof(*boxlist) * nx * ny);
+
+            if (bpp >= 32)
+            {
+                unspot(bmp, w, h, s, bpp);
+                unspot(bmp2, w, h, s, bpp);
+            }
 
             /* Now save the changed bmps */
             n = params.basenum;
@@ -2360,14 +3100,14 @@ int main(int argc, char *argv[])
                     boxlist->ymax = boxlist->ymin + ystep;
                     if (boxlist->ymax > bbox2.ymax)
                         boxlist->ymax = bbox2.ymax;
-                    DEBUG_BBOX(fprintf(stderr, "Retesting bbox=%d %d %d %d\n",
+                    DEBUG_BBOX(fprintf(stderr, "bmpcmp: Retesting bbox=%d %d %d %d\n",
                                        boxlist->xmin, boxlist->ymin,
                                        boxlist->xmax, boxlist->ymax));
 
                     rediff(map, boxlist, &params);
                     if (!BBox_valid(boxlist))
                         continue;
-                    DEBUG_BBOX(fprintf(stderr, "Reduced bbox=%d %d %d %d\n",
+                    DEBUG_BBOX(fprintf(stderr, "bmpcmp: Reduced bbox=%d %d %d %d\n",
                                        boxlist->xmin, boxlist->ymin,
                                        boxlist->xmax, boxlist->ymax));
                     if (cmyk)
@@ -2397,6 +3137,7 @@ int main(int argc, char *argv[])
                     sprintf(str4, "%s.%05d.meta", params.outroot, n);
                     save_meta(boxlist, str4, w, h, imagecount, params.threshold, params.window);
                     n += 3;
+                    noDifferences = 0;
                     /* If there is a maximum set */
                     if (params.maxdiffs > 0)
                     {
@@ -2424,19 +3165,22 @@ done:
     /* If one loaded, and the other didn't - that's an error */
     if ((bmp2 != NULL) && (bmp == NULL))
     {
-        fprintf(stderr, "Failed to load image %d from '%s'\n",
+        fprintf(stderr, "bmpcmp: Failed to load (candidate) image %d from '%s'\n",
                 imagecount+1, params.filename1);
         exit(EXIT_FAILURE);
     }
     if ((bmp != NULL) && (bmp2 == NULL))
     {
-        fprintf(stderr, "Failed to load image %d from '%s'\n",
+        fprintf(stderr, "bmpcmp: Failed to load (reference) image %d from '%s'\n",
                 imagecount+1, params.filename2);
         exit(EXIT_FAILURE);
     }
 
     image_close(&image1);
     image_close(&image2);
+
+    if (noDifferences == 1)
+      fprintf(stderr, "bmpcmp: no differences detected\n");
 
     return EXIT_SUCCESS;
 }

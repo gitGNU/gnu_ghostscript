@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id$ */
+
 /* Higher-level path operations for band lists */
 #include "math_.h"
 #include "memory_.h"
@@ -100,7 +102,8 @@ cmd_slow_rop(gx_device *dev, gs_logical_operation_t lop,
 /* If the pattern color is big, it can write to "all" bands. */
 int
 cmd_put_drawing_color(gx_device_clist_writer * cldev, gx_clist_state * pcls,
-                      const gx_drawing_color * pdcolor, cmd_rects_enum_t *pre)
+                      const gx_drawing_color * pdcolor, cmd_rects_enum_t *pre,
+                      dc_devn_cl_type devn_type)
 {
     const gx_device_halftone * pdht = pdcolor->type->get_dev_halftone(pdcolor);
     int                        code, di;
@@ -131,6 +134,7 @@ cmd_put_drawing_color(gx_device_clist_writer * cldev, gx_clist_state * pcls,
      *
      * The complete cmd_opv_ext_put_drawing_color consists of:
      *  comand code (2 bytes)
+     *  tile index value or non tile color (1) 
      *  device color type index (1)
      *  length of serialized device color (enc_u_sizew(dc_size))
      *  the serialized device color itself (dc_size)
@@ -144,7 +148,7 @@ cmd_put_drawing_color(gx_device_clist_writer * cldev, gx_clist_state * pcls,
                                  &dc_size );
 
     /* if the returned value is > 0, no change in the color is necessary */
-    if (code > 0)
+    if (code > 0 && devn_type == devn_not_tile)
         return 0;
     else if (code < 0 && code != gs_error_rangecheck)
         return code;
@@ -206,7 +210,19 @@ cmd_put_drawing_color(gx_device_clist_writer * cldev, gx_clist_state * pcls,
         if (code < 0)
             return code;
         dp0 = dp;
-        dp[1] = cmd_opv_ext_put_drawing_color;
+        switch (devn_type) {
+            case devn_not_tile:
+                dp[1] = cmd_opv_ext_put_drawing_color;
+                break;
+            case devn_tile0:
+                dp[1] = cmd_opv_ext_put_tile_devn_color0;
+                break;
+            case devn_tile1:
+                dp[1] = cmd_opv_ext_put_tile_devn_color1;
+                break;
+            default:
+                dp[1] = cmd_opv_ext_put_drawing_color;
+        }
         dp += 2;
         *dp++ = di | (offset > 0 ? 0x80 : 0);
         if (offset > 0)
@@ -228,7 +244,7 @@ cmd_put_drawing_color(gx_device_clist_writer * cldev, gx_clist_state * pcls,
     } while (left);
 
     /* should properly calculate colors_used, but for now just punt */
-    pcls->colors_used.or = ((gx_color_index)1 << cldev->clist_color_info.depth) - 1;
+    pcls->color_usage.or = gx_color_usage_all(cldev);
 
     /* Here we can't know whether a pattern paints colors besides
        black and white, so assume that it does.
@@ -265,17 +281,19 @@ cmd_put_drawing_color(gx_device_clist_writer * cldev, gx_clist_state * pcls,
 
 /* Compute the colors used by a drawing color. */
 gx_color_index
-cmd_drawing_colors_used(gx_device_clist_writer *cldev,
+cmd_drawing_color_usage(gx_device_clist_writer *cldev,
                         const gx_drawing_color * pdcolor)
 {
     if (gx_dc_is_pure(pdcolor))
-        return gx_dc_pure_color(pdcolor);
+        return gx_color_index2usage((gx_device *)cldev, gx_dc_pure_color(pdcolor));
     else if (gx_dc_is_binary_halftone(pdcolor))
-        return gx_dc_binary_color0(pdcolor) | gx_dc_binary_color1(pdcolor);
+        return gx_color_index2usage((gx_device *)cldev,
+                                    gx_color_index2usage((gx_device *)cldev, gx_dc_binary_color0(pdcolor)) |
+                                    gx_color_index2usage((gx_device *)cldev, gx_dc_binary_color1(pdcolor)));
     else if (gx_dc_is_colored_halftone(pdcolor))
-        return colored_halftone_colors_used(cldev, pdcolor);
+        return gx_color_index2usage((gx_device *)cldev, colored_halftone_colors_used(cldev, pdcolor));
     else
-        return ((gx_color_index)1 << cldev->clist_color_info.depth) - 1;
+        return gx_color_usage_all(cldev);
 }
 
 /* Clear (a) specific 'known' flag(s) for all bands. */
@@ -772,7 +790,8 @@ clist_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
                 (code = cmd_update_lop(cdev, re.pcls, lop)) < 0
                 )
                 return code;
-            code = cmd_put_drawing_color(cdev, re.pcls, pdcolor, &re);
+            code = cmd_put_drawing_color(cdev, re.pcls, pdcolor, &re, 
+                                         devn_not_tile);
             if (code == gs_error_unregistered)
                 return code;
             if (code < 0) {
@@ -780,7 +799,7 @@ clist_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
                 return gx_default_fill_path(dev, pis, ppath, params, pdcolor,
                                             pcpath);
             }
-            re.pcls->colors_used.slow_rop |= slow_rop;
+            re.pcls->color_usage.slow_rop |= slow_rop;
             code = cmd_put_path(cdev, re.pcls, ppath,
                                 int2fixed(max(re.y - 1, y0)),
                                 int2fixed(min(re.y + re.height + 1, y1)),
@@ -915,7 +934,7 @@ clist_stroke_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
             (code = cmd_update_lop(cdev, re.pcls, lop)) < 0
             )
             return code;
-        code = cmd_put_drawing_color(cdev, re.pcls, pdcolor, &re);
+        code = cmd_put_drawing_color(cdev, re.pcls, pdcolor, &re, devn_not_tile);
             if (code == gs_error_unregistered)
                 return code;
         if (code < 0) {
@@ -923,7 +942,7 @@ clist_stroke_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath,
             return gx_default_stroke_path(dev, pis, ppath, params, pdcolor,
                                           pcpath);
         }
-        re.pcls->colors_used.slow_rop |= slow_rop;
+        re.pcls->color_usage.slow_rop |= slow_rop;
         {
             fixed ymin, ymax;
 
@@ -996,9 +1015,9 @@ clist_put_polyfill(gx_device *dev, fixed px, fixed py,
     do {
         RECT_STEP_INIT(re);
         if ((code = cmd_update_lop(cdev, re.pcls, lop)) < 0 ||
-            (code = cmd_put_drawing_color(cdev, re.pcls, pdcolor, &re)) < 0)
+            (code = cmd_put_drawing_color(cdev, re.pcls, pdcolor, &re, devn_not_tile)) < 0)
             goto out;
-        re.pcls->colors_used.slow_rop |= slow_rop;
+        re.pcls->color_usage.slow_rop |= slow_rop;
         code = cmd_put_path(cdev, re.pcls, &path,
                             int2fixed(max(re.y - 1, y0)),
                             int2fixed(min(re.y + re.height + 1, y1)),
@@ -1201,6 +1220,8 @@ cmd_put_segment(cmd_segment_writer * psw, byte op,
 /* Put out a line segment command. */
 #define cmd_put_rmoveto(psw, operands)\
   cmd_put_segment(psw, cmd_opv_rmoveto, operands, sn_none)
+#define cmd_put_rgapto(psw, operands, notes)\
+  cmd_put_segment(psw, cmd_opv_rgapto, operands, notes)
 #define cmd_put_rlineto(psw, operands, notes)\
   cmd_put_segment(psw, cmd_opv_rlineto, operands, notes)
 
@@ -1338,6 +1359,48 @@ cmd_put_path(gx_device_clist_writer * cldev, gx_clist_state * pcls,
                 code = cmd_put_rmoveto(&writer, &C);
                 if_debug2('p', "[p]moveto (%g,%g)\n",
                           fixed2float(px), fixed2float(py));
+                break;
+            case gs_pe_gapto:
+                {
+                    int next_side = which_side(B);
+                    segment_notes notes =
+                    gx_path_enum_notes(&cenum) & keep_notes;
+
+                    if (next_side == side && side != 0) {	/* Skip a line completely outside the clip region. */
+                        if (open < 0)
+                            start_skip = true;
+                        out.x = A, out.y = B;
+                        out_notes = notes;
+                        if_debug3('p', "[p]skip gapto (%g,%g) side %d\n",
+                                  fixed2float(out.x), fixed2float(out.y),
+                                  side);
+                        continue;
+                    }
+                    /* If we skipped any segments, put out a moveto/lineto. */
+                    if (side && (px != out.x || py != out.y || first_point())) {
+                        C = out.x - px, D = out.y - py;
+                        if (open < 0) {
+                            first = out;
+                            code = cmd_put_rmoveto(&writer, &C);
+                        } else
+                            code = cmd_put_rlineto(&writer, &C, out_notes);
+                        if (code < 0)
+                            return code;
+                        px = out.x, py = out.y;
+                        if_debug3('p', "[p]catchup %s (%g,%g) for line\n",
+                                  (open < 0 ? "moveto" : "lineto"),
+                                  fixed2float(px), fixed2float(py));
+                    }
+                    if ((side = next_side) != 0) {	/* Note a vertex going outside the clip region. */
+                        out.x = A, out.y = B;
+                    }
+                    C = A - px, D = B - py;
+                    px = A, py = B;
+                    open = 1;
+                    code = cmd_put_rgapto(&writer, &C, notes);
+                }
+                if_debug3('p', "[p]gapto (%g,%g) side %d\n",
+                          fixed2float(px), fixed2float(py), side);
                 break;
             case gs_pe_lineto:
                 {

@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* pdfmark processing for PDF-writing driver */
 #include "math_.h"
 #include "memory_.h"
@@ -713,7 +715,7 @@ pdfmark_annot(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
     /* Annotations are only permitted in PDF/A if they have the
      * Print flag enabled, so we need to prescan for that here.
      */
-    if(pdev->PDFA) {
+    if(pdev->PDFA != 0) {
         int i, Flags = 0;
         /* Check all the keys to see if we have a /F (Flags) key/value pair defined */
         for (i = 0; i < count; i += 2) {
@@ -737,7 +739,7 @@ pdfmark_annot(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
                     emprintf(pdev->memory,
                              "Annotation set to non-printing,\n not permitted in PDF/A, reverting to normal PDF output\n");
                     pdev->AbortPDFAX = true;
-                    pdev->PDFA = false;
+                    pdev->PDFA = 0;
                     break;
                     /* Since the annotation would break PDF/A compatibility, do not
                      * include it, but warn the user that it has been dropped.
@@ -756,7 +758,7 @@ pdfmark_annot(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
                     emprintf(pdev->memory,
                              "Annotation set to non-printing,\n not permitted in PDF/A, unrecognised PDFACompatibilityLevel,\nreverting to normal PDF output\n");
                     pdev->AbortPDFAX = true;
-                    pdev->PDFA = false;
+                    pdev->PDFA = 0;
                     break;
             }
         }

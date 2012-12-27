@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id$ */
+
 /* Internal path management routines for Ghostscript library */
 #include "gx.h"
 #include "gserrors.h"
@@ -66,6 +68,7 @@ static rc_free_proc(rc_free_path_segments_local);
 static int
     gz_path_add_point(gx_path *, fixed, fixed),
     gz_path_add_line_notes(gx_path *, fixed, fixed, segment_notes),
+    gz_path_add_gap_notes(gx_path *, fixed, fixed, segment_notes),
     gz_path_add_curve_notes(gx_path *, fixed, fixed, fixed, fixed, fixed, fixed, segment_notes),
     gz_path_close_subpath_notes(gx_path *, segment_notes);
 static byte gz_path_state_flags(gx_path *ppath, byte flags);
@@ -73,6 +76,7 @@ static byte gz_path_state_flags(gx_path *ppath, byte flags);
 static gx_path_procs default_path_procs = {
     gz_path_add_point,
     gz_path_add_line_notes,
+    gz_path_add_gap_notes,
     gz_path_add_curve_notes,
     gz_path_close_subpath_notes,
     gz_path_state_flags
@@ -84,12 +88,14 @@ static gx_path_procs default_path_procs = {
 static int
     gz_path_bbox_add_point(gx_path *, fixed, fixed),
     gz_path_bbox_add_line_notes(gx_path *, fixed, fixed, segment_notes),
+    gz_path_bbox_add_gap_notes(gx_path *, fixed, fixed, segment_notes),
     gz_path_bbox_add_curve_notes(gx_path *, fixed, fixed, fixed, fixed, fixed, fixed, segment_notes),
     gz_path_bbox_close_subpath_notes(gx_path *, segment_notes);
 
 static gx_path_procs path_bbox_procs = {
     gz_path_bbox_add_point,
     gz_path_bbox_add_line_notes,
+    gz_path_bbox_add_gap_notes,
     gz_path_bbox_add_curve_notes,
     gz_path_bbox_close_subpath_notes,
     gz_path_state_flags
@@ -588,6 +594,36 @@ gz_path_bbox_add_line_notes(gx_path * ppath, fixed x, fixed y, segment_notes not
     gz_path_bbox_move(ppath, x, y);
     return 0;
 }
+/* Add a gap to the current path (lineto). */
+int
+gx_path_add_gap_notes(gx_path * ppath, fixed x, fixed y, segment_notes notes)
+{
+    return ppath->procs->add_gap(ppath, x, y, notes);
+}
+static int
+gz_path_add_gap_notes(gx_path * ppath, fixed x, fixed y, segment_notes notes)
+{
+    subpath *psub;
+    line_segment *lp;
+
+    if (ppath->bbox_set)
+        check_in_bbox(ppath, x, y);
+    path_open();
+    path_alloc_segment(lp, line_segment, &st_line, s_gap, notes,
+                       "gx_path_add_gap");
+    path_alloc_link(lp);
+    path_set_point(lp, x, y);
+    path_update_draw(ppath);
+    trace_segment("[P]", (segment *) lp);
+    return 0;
+}
+static int
+gz_path_bbox_add_gap_notes(gx_path * ppath, fixed x, fixed y, segment_notes notes)
+{
+    gz_path_bbox_add(ppath, x, y);
+    gz_path_bbox_move(ppath, x, y);
+    return 0;
+}
 
 /* Add multiple lines to the current path. */
 /* Note that all lines have the same notes. */
@@ -1018,6 +1054,9 @@ gx_print_segment(const segment * pseg)
             }
         case s_line:
             dprintf3("   %1.4f %1.4f lineto\t%% %s\n", px, py, out);
+            break;
+        case s_gap:
+            dprintf3("   %1.4f %1.4f gapto\t%% %s\n", px, py, out);
             break;
         case s_dash:{
                 const dash_segment *const pd = (const dash_segment *)pseg;

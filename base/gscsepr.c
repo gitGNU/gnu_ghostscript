@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Separation color space and operation definition */
 #include "memory_.h"
 #include "gx.h"
@@ -66,6 +68,7 @@ const gs_color_space_type gs_color_space_type_Separation = {
 static
 ENUM_PTRS_BEGIN(cs_Separation_enum_ptrs) return 0;
     ENUM_PTR(0, gs_color_space, params.separation.map);
+    case 1 : return ENUM_NAME_INDEX_ELT(gs_color_space, params.separation.sep_name);
 ENUM_PTRS_END
 static RELOC_PTRS_BEGIN(cs_Separation_reloc_ptrs)
 {
@@ -150,6 +153,7 @@ gx_set_overprint_Separation(const gs_color_space * pcs, gs_state * pgs)
         if (params.retain_any_comps) {
             params.retain_spot_comps = false;
             params.drawn_comps = 0;
+            params.k_value = 0;
             if (pcs->params.separation.sep_type != SEP_NONE) {
                 int     mcomp = pcmap->color_map[0];
 
@@ -360,7 +364,8 @@ gx_concretize_Separation(const gs_client_color *pc, const gs_color_space *pcs,
             /* Use the ICC equivalent color space */
             pacs = pacs->icc_equivalent;
         }
-        if (pacs->cmm_icc_profile_data->data_cs == gsCIELAB) {
+        if (pacs->cmm_icc_profile_data->data_cs == gsCIELAB ||
+            pacs->cmm_icc_profile_data->islab) {
             /* Get the data in a form that is concrete for the CMM */
             cc.paint.values[0] /= 100.0;
             cc.paint.values[1] = (cc.paint.values[1]+128)/255.0;
@@ -448,7 +453,7 @@ check_Separation_component_name(const gs_color_space * pcs, gs_state * pgs)
      */
     colorant_number = (*dev_proc(dev, get_color_comp_index))
                 (dev, (const char *)pname, name_size, SEPARATION_NAME);
-    if (colorant_number >= 0) {		/* If valid colorant name */
+    if (colorant_number >= 0 && colorant_number < dev->color_info.max_components) {		/* If valid colorant name */
         pcolor_component_map->color_map[0] =
                     (colorant_number == GX_DEVICE_COLOR_MAX_COMPONENTS) ? -1
                                                            : colorant_number;

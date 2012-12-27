@@ -1,16 +1,18 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
- */
-/* $Id$ */
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
+*/
+
 
 /*
    GhostScript Font API plug-in that allows fonts to be rendered by FreeType.
@@ -562,10 +564,11 @@ load_glyph(FAPI_server *a_server, FAPI_font *a_fapi_font, const FAPI_char_ref *a
         }
     }
 
-    if (ft_error == FT_Err_Too_Many_Hints || ft_error == FT_Err_Invalid_Argument
-        || ft_error == FT_Err_Too_Many_Function_Defs || ft_error == FT_Err_Invalid_Glyph_Index
-        || ft_error == FT_Err_Invalid_Reference) {
+    if (ft_error == FT_Err_Invalid_Argument || ft_error == FT_Err_Invalid_Glyph_Index
+        || (ft_error >= FT_Err_Invalid_Opcode && ft_error <= FT_Err_Too_Many_Instruction_Defs)) {
+
         a_fapi_font->char_data = saved_char_data;
+
         /* We want to prevent hinting, even for a "tricky" font - it shouldn't matter for the notdef */
         fflags = ft_face->face_flags;
         ft_face->face_flags &= ~FT_FACE_FLAG_TRICKY;
@@ -1571,7 +1574,6 @@ static const FAPI_server TheFreeTypeServer =
     {gs_no_id},
     {0},
     0,
-    false,
     false,
     {1, 0, 0, 1, 0, 0},
     ensure_open,

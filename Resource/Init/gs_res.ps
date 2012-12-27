@@ -1,4 +1,5 @@
-%    Copyright (C) 1994, 1996, 1997, 1998, 1999, 2000 Aladdin Enterprises.  All rights reserved.
+% Copyright (C) 2001-2012 Artifex Software, Inc.
+% All Rights Reserved.
 %
 % This software is provided AS-IS with no warranty, either express or
 % implied.
@@ -7,13 +8,11 @@
 % modified or distributed except as expressly authorized under the terms
 % of the license contained in the file LICENSE in this distribution.
 %
-% For more information about licensing, please refer to
-% http://www.ghostscript.com/licensing/. For information on
-% commercial licensing, go to http://www.artifex.com/licensing/ or
-% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
-% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+% Refer to licensing information at http://www.artifex.com or contact
+% Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+% CA  94903, U.S.A., +1(415)492-9861, for further information.
+%
 
-% $Id$
 % Initialization file for Level 2 resource machinery.
 % When this is run, systemdict is still writable,
 % but (almost) everything defined here goes into level2dict.
@@ -520,7 +519,7 @@ status {
         mark                                             % args [
         Category .namestring .file_name_separator concatstrings
         2 index 0 get                                    % args [ (c/) (t)
-        dup length 3 1 roll                              % args [ l (c/) (t)
+        1 index length 3 1 roll                          % args [ l (c/) (t)
         concatstrings                                    % args [ l (c/t)
         [
           //true /LIBPATH .systemvar 3 index
@@ -528,14 +527,11 @@ status {
             % also add on the Resources as specified by the GenericResourceDir
           //true [ currentsystemparams /GenericResourceDir get]
           counttomark 1 add index .generate_dir_list_templates_with_length
-            % Resource files on OpenVMS require a separate template (gs:[dir.*]*)
-          //true [ currentsystemparams /GenericResourceDir get]
-          counttomark 1 add index .file_name_separator (*)
-          concatstrings concatstrings .generate_dir_list_templates_with_length
           ] exch pop
         dup length 1 sub 0 exch 2 exch {                 % args [ l [] i
           2 copy get                                     % args [ l [] i (pt)
           exch 2 index exch 1 add get                    % args [ l [] (pt) Lp
+          3 index add
           exch                                           % args [ l [] Lp (pt)
 
           {                                              % args [ l [] Lp (pf)

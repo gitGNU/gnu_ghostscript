@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Text processing for pdfwrite. */
 #include "math_.h"
 #include "string_.h"
@@ -652,7 +654,7 @@ private_st_pdf_font_cache_elem();
 static ulong
 pdf_font_cache_elem_id(gs_font *font)
 {
-#if 0
+#ifdef DEPRECATED_906
     /*
      *        For compatibility with Ghostscript rasterizer's
      *        cache logic we use UniqueID to identify fonts.
@@ -785,7 +787,18 @@ alloc_font_cache_elem_arrays(gx_device_pdf *pdev, pdf_font_cache_elem_t *e,
 int
 pdf_free_font_cache(gx_device_pdf *pdev)
 {
-    /* fixme : release elements. */
+    pdf_font_cache_elem_t *e = pdev->font_cache, *next;
+
+    /* fixed! fixme : release elements.
+     * We no longer track font_cache elements in the original font, which is where
+     * the memory used to be released. So now we must release it ourselves.
+     */
+
+    while (e != NULL) {
+        next = e->next;
+        pdf_remove_font_cache_elem(e);
+        e = next;
+    }
     pdev->font_cache = NULL;
     return 0;
 }
@@ -820,14 +833,6 @@ pdf_attached_font_resource(gx_device_pdf *pdev, gs_font *font,
     return 0;
 }
 
-static int
-pdf_notify_remove_font(void *proc_data, void *event_data)
-{   /* gs_font_finalize passes event_data == NULL, so check it here. */
-    if (event_data == NULL)
-        pdf_remove_font_cache_elem((pdf_font_cache_elem_t *)proc_data);
-    return 0;
-}
-
 /*
  * Attach font resource to a font.
  */
@@ -858,7 +863,6 @@ pdf_attach_font_resource(gx_device_pdf *pdev, gs_font *font,
         memset(e->glyph_usage, 0, len);
         memset(e->real_widths, 0, num_widths * sizeof(*e->real_widths));
     } else {
-        int code;
         e = (pdf_font_cache_elem_t *)gs_alloc_struct(pdev->pdf_memory,
                 pdf_font_cache_elem_t, &st_pdf_font_cache_elem,
                             "pdf_attach_font_resource");
@@ -872,9 +876,7 @@ pdf_attach_font_resource(gx_device_pdf *pdev, gs_font *font,
         e->pdev = pdev;
         e->next = pdev->font_cache;
         pdev->font_cache = e;
-        code = gs_notify_register(&font->notify_list, pdf_notify_remove_font, e);
-        if (code < 0)
-            return code;
+        return 0;
     }
     return 0;
 }
@@ -1518,9 +1520,9 @@ pdf_make_font_resource(gx_device_pdf *pdev, gs_font *font,
         pdfont->mark_glyph = font->dir->ccache.mark_glyph;
     }
 
-    if (pdev->PDFA && font->FontType == ft_TrueType) {
+    if (pdev->PDFA != 0 && font->FontType == ft_TrueType) {
         /* The Adobe preflight tool for PDF/A
-           checks whether Widht or W include elements
+           checks whether Width or W include elements
            for all characters in the True Type font.
            Due to that we need to provide a width
            for .notdef glyph.
@@ -2456,9 +2458,9 @@ store_glyph_width(pdf_glyph_width_t *pwidth, int wmode, const gs_matrix *scale,
         w = pwidth->xy.y, v = pwidth->xy.x;
     else
         w = pwidth->xy.x, v = pwidth->xy.y;
+    pwidth->w = w;
     if (v != 0)
         return 1;
-    pwidth->w = w;
     gs_distance_transform(pinfo->v.x, pinfo->v.y, scale, &pwidth->v);
     return 0;
 }
@@ -2544,21 +2546,54 @@ pdf_glyph_widths(pdf_font_resource_t *pdfont, int wmode, gs_glyph glyph,
        to be equal to half glyph width, and AR5 takes it from W, DW.
        So make a compatibe data here.
      */
-    if (code == gs_error_undefined || !(info.members & (GLYPH_INFO_WIDTH0 << wmode))) {
-        code = get_missing_width(cfont, wmode, &scale_c, pwidths);
-        if (code < 0)
-            v.y = 0;
-        else
-            v.y = pwidths->Width.v.y;
-        if (wmode && pdf_is_CID_font(ofont)) {
-            pdf_glyph_widths_t widths1;
+    if ((code == gs_error_undefined || !(info.members & (GLYPH_INFO_WIDTH0 << wmode)))) {
+        /* If we got an undefined error, and its a type 1/CFF font, try to
+         * find the /.notdef glyph and use its width instead (as this is the
+         * glyph which will be rendered). We don't do this for other font types
+         * as it seems Acrobat/Distiller may not do so either.
+         */
+        if (code == gs_error_undefined && (ofont->FontType == ft_encrypted || ofont->FontType == ft_encrypted2)) {
+            int index;
+            gs_glyph notdef_glyph;
 
-            if (get_missing_width(cfont, 0, &scale_c, &widths1) < 0)
-                v.x = 0;
+            for (index = 0;
+                (ofont->procs.enumerate_glyph((gs_font *)ofont, &index,
+                (GLYPH_SPACE_NAME), &notdef_glyph)) >= 0 &&
+                index != 0;) {
+                    if (gs_font_glyph_is_notdef((gs_font_base *)ofont, notdef_glyph)) {
+                        code = ofont->procs.glyph_info((gs_font *)ofont, notdef_glyph, NULL,
+                                            GLYPH_INFO_WIDTH0 << wmode,
+                                            &info);
+
+                    if (code < 0)
+                        return code;
+                    code = store_glyph_width(&pwidths->Width, wmode, &scale_c, &info);
+                    if (code < 0)
+                        return code;
+                    rcode |= code;
+                    if (info.members  & (GLYPH_INFO_VVECTOR0 << wmode))
+                        gs_distance_transform(info.v.x, info.v.y, &scale_c, &v);
+                    else
+                        v.x = v.y = 0;
+                    break;
+                }
+            }
+        } else {
+        code = get_missing_width(cfont, wmode, &scale_c, pwidths);
+            if (code < 0)
+                v.y = 0;
             else
-                v.x = widths1.Width.w / 2;
-        } else
-            v.x = pwidths->Width.v.x;
+                v.y = pwidths->Width.v.y;
+            if (wmode) {
+                pdf_glyph_widths_t widths1;
+
+                if (get_missing_width(cfont, 0, &scale_c, &widths1) < 0)
+                    v.x = 0;
+                else
+                    v.x = widths1.Width.w / 2;
+            } else
+                v.x = pwidths->Width.v.x;
+        }
     } else if (code < 0)
         return code;
     else {
@@ -2587,7 +2622,7 @@ pdf_glyph_widths(pdf_font_resource_t *pdfont, int wmode, gs_glyph glyph,
         }
     }
     pwidths->Width.v = v;
-#if 0
+#ifdef DEPRECATED_906
     if (code > 0)
         pwidths->Width.xy.x = pwidths->Width.xy.y = pwidths->Width.w = 0;
 #else /* Skip only if not paralel to the axis. */
@@ -3354,7 +3389,8 @@ pdf_text_process(gs_text_enum_t *pte)
     if (code < 0 ||
             ((pte->current_font->FontType == ft_user_defined ||
             pte->current_font->FontType == ft_PCL_user_defined ||
-            pte->current_font->FontType == ft_GL2_stick_user_defined) &&
+            pte->current_font->FontType == ft_GL2_stick_user_defined ||
+            pte->current_font->FontType == ft_TrueType) &&
              code != TEXT_PROCESS_INTERVENE &&
             penum->index < penum->text.size)) {
         if (code == gs_error_unregistered) /* Debug purpose only. */

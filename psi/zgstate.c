@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Graphics state operators */
 #include "math_.h"
 #include "ghost.h"
@@ -513,6 +515,20 @@ zcurrenttextrenderingmode(i_ctx_t *i_ctx_p)
     return zcurrent_uint(i_ctx_p, gs_currenttextrenderingmode);
 }
 
+/* <int> .sethpglpathmode - */
+static int
+zsethpglpathmode(i_ctx_t *i_ctx_p)
+{
+    return zset_uint(i_ctx_p, gs_sethpglpathmode);
+}
+
+/* - .currenthpglpathmode <int> */
+static int
+zcurrenthpglpathmode(i_ctx_t *i_ctx_p)
+{
+    return zcurrent_uint(i_ctx_p, gs_currenthpglpathmode);
+}
+
 /* ------ Initialization procedure ------ */
 
 /* We need to split the table because of the 16-element limit. */
@@ -555,6 +571,8 @@ const op_def zgstate2_op_defs[] = {
 const op_def zgstate3_op_defs[] = {
     {"0.settextrenderingmode", zsettextrenderingmode},
     {"0.currenttextrenderingmode", zcurrenttextrenderingmode},
+    {"0.sethpglpathmode", zsethpglpathmode},
+    {"0.currenthpglpathmode", zcurrenthpglpathmode},
     op_def_end(0)
 };
 

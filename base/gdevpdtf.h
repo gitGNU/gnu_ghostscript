@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Font and CMap resource structure and API for pdfwrite */
 
 #ifndef gdevpdtf_INCLUDED
@@ -393,6 +395,8 @@ int font_resource_encoded_alloc(gx_device_pdf *pdev, pdf_font_resource_t **ppfre
                             pdf_font_write_contents_proc_t write_contents);
 int pdf_assign_font_object_id(gx_device_pdf *pdev, pdf_font_resource_t *pdfont);
 
+int font_resource_free(gx_device_pdf *pdev, pdf_font_resource_t *pdfont);
+
 /* Resize font resource arrays. */
 int pdf_resize_resource_arrays(gx_device_pdf *pdev, pdf_font_resource_t *pfres,
         int chars_count);
@@ -420,11 +424,13 @@ pdf_font_embed_t pdf_font_embed_status(gx_device_pdf *pdev, gs_font *font,
  */
 int pdf_compute_BaseFont(gx_device_pdf *pdev, pdf_font_resource_t *pdfont, bool finish);
 
+#ifdef DEPRECATED_906
 /*
  * Close the text-related parts of a document, including writing out font
  * and related resources.
  */
 int pdf_close_text_document(gx_device_pdf *pdev); /* in gdevpdtw.c */
+#endif
 
 /*
  * Convert True Type fonts into CID fonts for PDF/A.

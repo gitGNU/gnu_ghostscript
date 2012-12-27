@@ -1,16 +1,17 @@
-#  Copyright (C) 2001-2011 Artifex Software, Inc.
-#  All Rights Reserved.
+# Copyright (C) 2001-2012 Artifex Software, Inc.
+# All Rights Reserved.
 #
-#  This software is provided AS-IS with no warranty, either express or
-#  implied.
+# This software is provided AS-IS with no warranty, either express or
+# implied.
 #
-#  This software is distributed under license and may not be copied, modified
-#  or distributed except as expressly authorized under the terms of that
-#  license.  Refer to licensing information at http://www.artifex.com/
-#  or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-#  San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+# This software is distributed under license and may not be copied,
+# modified or distributed except as expressly authorized under the terms
+# of the license contained in the file LICENSE in this distribution.
 #
-# $Id$
+# Refer to licensing information at http://www.artifex.com or contact
+# Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+# CA  94903, U.S.A., +1(415)492-9861, for further information.
+#
 # Partial makefile for Unix shared library target
 
 # Useful make commands:
@@ -45,7 +46,7 @@ GSSOX=$(BINDIR)/$(GSSOX_XENAME)
 GS_SONAME_BASE=lib$(GS)
 
 # GNU/Linux
-GS_SOEXT=so
+GS_SOEXT=$(DYNANIC_LIB_EXT)
 GS_SONAME=$(GS_SONAME_BASE).$(GS_SOEXT)
 GS_SONAME_MAJOR=$(GS_SONAME).$(GS_VERSION_MAJOR)
 GS_SONAME_MAJOR_MINOR=$(GS_SONAME).$(GS_VERSION_MAJOR).$(GS_VERSION_MINOR)
@@ -192,7 +193,7 @@ clean-so-subsubtarget: clean
 	$(RM_) $(BINDIR)/$(GS_SONAME_MAJOR)
 	$(RM_) $(GSSOC)
 	$(RM_) $(GSSOX)
-	@-rmdir $(BINDIR) $(GLGENDIR) $(GLOBJDIR) $(PSGENDIR) $(PSOBJDIR) || true 
+	$(RMN_) -r $(BINDIR) $(GLGENDIR) $(GLOBJDIR) $(PSGENDIR) $(PSOBJDIR)
 
 sodebugclean:
 	$(MAKE)  BUILDDIRPREFIX=$(SODEBUGDIRPREFIX) clean-sodebug-subtarget

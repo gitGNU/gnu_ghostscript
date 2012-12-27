@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* BaseFont implementation for pdfwrite */
 #include "memory_.h"
 #include "ctype_.h"
@@ -320,6 +322,7 @@ pdf_base_font_alloc(gx_device_pdf *pdev, pdf_base_font_t **ppbfont,
                If the failed glyph will be used in the document,
                another error will hgappen when the glyph is used.
              */
+            gs_free_copied_font(complete);
             complete = copied;
         }
     } else
@@ -549,20 +552,32 @@ pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont, font_type 
     pdf_data_writer_t writer;
     byte digest[6] = {0,0,0,0,0,0};
     int code;
+    int options=0;
 
     if (pbfont->written)
         return 0;		/* already written */
     code = copied_order_font((gs_font *)out_font);
     if (code < 0)
         return code;
-    code = pdf_begin_data_stream(pdev, &writer, DATA_STREAM_BINARY |
-                            /* Don't set DATA_STREAM_ENCRYPT since we write to a temporary file.
-                               See comment in pdf_begin_encrypt. */
-                                 (pdev->CompressFonts ?
-                                  DATA_STREAM_COMPRESS : 0), 0);
+    /* Since we now always ASCIIHex encode the eexec encrypted portion of a
+     * Type 1 font, such a font cannot contain any binary data, if its not being
+     * compressed then there is no reason to ASCII encode it (which will happen
+     * we set DATA_STREAM_BINARY and the device does not permit binary output)
+     * NB if HaveCFF is true then we convert type 1 to CFF which is a binary
+     * format, so we still need to set DATA_STREAM_BINARY.
+     */
+    if (pdev->CompressFonts)
+        options = DATA_STREAM_BINARY | DATA_STREAM_COMPRESS;
+    else
+         if (FontType != ft_encrypted || pdev->HaveCFF)
+            options = DATA_STREAM_BINARY;
+    /* Don't set DATA_STREAM_ENCRYPT since we write to a temporary file.
+     * See comment in pdf_begin_encrypt.
+     */
+    code = pdf_begin_data_stream(pdev, &writer, options, 0);
     if (code < 0)
         return code;
-    if (pdev->PDFA) {
+    if (pdev->PDFA != 0) {
         stream *s = s_MD5C_make_stream(pdev->pdf_memory, writer.binary.strm);
 
         if (s == NULL)
@@ -610,8 +625,8 @@ pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont, font_type 
 
             code = psf_write_type1_font(writer.binary.strm,
                                 (gs_font_type1 *)out_font,
-                                WRITE_TYPE1_WITH_LENIV |
-                                    WRITE_TYPE1_EEXEC | WRITE_TYPE1_EEXEC_PAD,
+                                WRITE_TYPE1_WITH_LENIV | WRITE_TYPE1_EEXEC |
+                                WRITE_TYPE1_EEXEC_PAD | WRITE_TYPE1_ASCIIHEX,
                                 NULL, 0, &fnstr, lengths);
             if (lengths[0] > 0) {
                 if (code < 0)
@@ -653,7 +668,7 @@ pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont, font_type 
 #define TRUETYPE_OPTIONS (WRITE_TRUETYPE_NAME | WRITE_TRUETYPE_HVMTX)
         /* Acrobat Reader 3 doesn't handle cmap format 6 correctly. */
         const int options = TRUETYPE_OPTIONS |
-            (pdev->PDFA ? WRITE_TRUETYPE_UNICODE_CMAP : 0) |
+            (pdev->PDFA != 0 ? WRITE_TRUETYPE_UNICODE_CMAP : 0) |
             (pdev->CompatibilityLevel <= 1.2 ?
              WRITE_TRUETYPE_NO_TRIMMED_TABLE : 0) |
             /* Generate a cmap only for incrementally downloaded fonts
@@ -697,7 +712,7 @@ pdf_write_embedded_font(gx_device_pdf *pdev, pdf_base_font_t *pbfont, font_type 
                                    (gs_font_cid2 *)out_font,
                                    CID2_OPTIONS, NULL, 0, &fnstr);
     finish:
-        if (pdev->PDFA) {
+        if (pdev->PDFA != 0) {
             sflush(writer.binary.strm);
             s_MD5C_get_digest(writer.binary.strm, digest, sizeof(digest));
         }

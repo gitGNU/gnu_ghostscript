@@ -1,15 +1,18 @@
-/* Copyright (C) 2001-2011 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
+
 
 /* gsicc handling for unmanaged color. */
 
@@ -347,23 +350,7 @@ gsicc_nocm_get_link(const gs_imager_state *pis, gx_device *dev,
     nocm_link->cm_procs.map_cmyk = cm_procs->map_cmyk;
     nocm_link->cm_procs.map_rgb = cm_procs->map_rgb;
     nocm_link->cm_procs.map_gray = cm_procs->map_gray;
-    switch (src_index) {
-        case gs_color_space_index_DeviceGray:
-            nocm_link->num_in = 1;
-            break;
-        case gs_color_space_index_DeviceRGB:
-            nocm_link->num_in = 3;
-            break;
-        case gs_color_space_index_DeviceCMYK:
-            nocm_link->num_in = 4;
-            break;
-        default:
-            /* We should not be here! */
-            /* Free up link and return NULL */
-            gsicc_link_free(result, pis->icc_link_cache->memory);
-            result = NULL;
-            break;
-    }
+    nocm_link->num_in = src_index;
     if (result != NULL) {
         gsicc_set_link_data(result, nocm_link, NULL, hash, 
                             pis->icc_link_cache->lock, false, false);

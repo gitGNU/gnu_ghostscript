@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Ghostscript language interpreter */
 #include "memory_.h"
 #include "string_.h"
@@ -82,6 +84,8 @@ do_call_operator(op_proc_t op_proc, i_ctx_t *i_ctx_p)
 {
     int code;
     code = op_proc(i_ctx_p);
+    if (gs_debug_c(gs_debug_flag_validate_chunks))
+        ivalidate_clean_spaces(i_ctx_p);
     return code; /* A good place for a conditional breakpoint. */
 }
 static int
@@ -103,6 +107,8 @@ do_call_operator_verbose(op_proc_t op_proc, i_ctx_t *i_ctx_p)
             esp-i_ctx_p->exec_stack.stack.bot,
             osp-i_ctx_p->op_stack.stack.bot);
 #endif
+    if (gs_debug_c(gs_debug_flag_validate_chunks))
+        ivalidate_clean_spaces(i_ctx_p);
     return code; /* A good place for a conditional breakpoint. */
 }
 #else
@@ -415,6 +421,11 @@ interp_reclaim(i_ctx_t **pi_ctx_p, int space)
     i_ctx_t *i_ctx_p = *pi_ctx_p;
     gs_gc_root_t ctx_root;
     int code;
+
+#ifdef DEBUG
+    if (gs_debug_c(gs_debug_flag_gc_disable))
+        return 0;
+#endif
 
     gs_register_struct_root(imemory_system, &ctx_root,
                             (void **)pi_ctx_p, "interp_reclaim(pi_ctx_p)");

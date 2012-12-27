@@ -1,4 +1,5 @@
-%    Copyright (C) 1994, 2000 Aladdin Enterprises.  All rights reserved.
+% Copyright (C) 2001-2012 Artifex Software, Inc.
+% All Rights Reserved.
 %
 % This software is provided AS-IS with no warranty, either express or
 % implied.
@@ -7,13 +8,11 @@
 % modified or distributed except as expressly authorized under the terms
 % of the license contained in the file LICENSE in this distribution.
 %
-% For more information about licensing, please refer to
-% http://www.ghostscript.com/licensing/. For information on
-% commercial licensing, go to http://www.artifex.com/licensing/ or
-% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
-% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+% Refer to licensing information at http://www.artifex.com or contact
+% Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+% CA  94903, U.S.A., +1(415)492-9861, for further information.
+%
 
-% $Id$
 % PDF font operations.
 
 % Since PDF font are not unique and can collide with external font resources
@@ -723,8 +722,64 @@ setglobal
       } if
       pdffindcachedfont
                 % Stack: font-res fontname fontdesc font
+
+      3 index /FirstChar oget
+      0                                       % push an initial value for accumating the Widths
+      0 string                                % and an empty string to interrogate the font
+      7 index /Widths oget
+      0 1 2 index length 1 sub
+     {
+        dup 2 index exch get dup 0 gt         % We ignore entries of zero in the widths array
+        {
+          exch 5 index add                    % add FirstChar to the idx to get a char code
+          dup 64 gt 1 index 91 lt and         % we only want to consider A~Z and....
+          1 index 96 gt 2 index 123 lt and or % ... a~z
+          {
+            exch
+            5 -1 roll add 4 1 roll            % add the width to the accumulator on the stack
+            1 string dup 0 4 -1 roll put
+            3 -1 roll concatstrings exch      % add the char code to the string
+          }
+          {
+            pop pop
+          } ifelse
+        }
+        {
+           pop pop
+        } ifelse
+      } for
+      pop           % get rid of the Widths array
+      3 -1 roll pop % get rid of the FirstChar value
+      dup length dup 0 gt
+      {
+        3 -1 roll exch div % calculate an average width from the Widths array
+
+        gsave
+        2 index 10 scalefont setfont
+        exch dup length exch stringwidth
+        grestore
+        pop 100 mul exch div div
+        % Only make the font smaller/narrower, not larger/wider
+        dup 1.0 lt
+        {
+          0 0 2 index 0 0 6 array astore
+          exch //true .copyfontdict
+          dup /FontMatrix get 3 -1 roll matrix concatmatrix
+          exch dup 3 -1 roll /FontMatrix exch put
+          % we don't need to definfont here, we can leave that to .completefont below
+        }
+        {
+          pop
+        } ifelse
+      }
+      {
+        % no suitable Widths entries - carry on and hope for the best......
+        pop pop pop
+      } ifelse
+                % Stack: font-res fontname fontdesc font
                 % If this is a small-caps font, replace the CharString
                 % entries for a..z.
+
       exch /Flags oget 16#20000 and 0 ne {
         //true .copyfontdict
         dup /CharStrings 2 copy get dup length dict .copydict
@@ -1054,6 +1109,8 @@ currentdict /eexec_pdf_param_dict .undef
   //true resolvestream readfontfilter
                 % Stack: filepos fontres stream
   1 index /CIDSystemInfo oknown {
+    1 index /CIDSystemInfo get dup type /packedarraytype eq {exec}if
+    3 1 roll
     1 index /Subtype knownoget {
       /CIDFontType2 ne {
         (   **** Warning: Subtype of a TT CID font is not /CIDFontType2\n) pdfformaterror
@@ -1084,6 +1141,8 @@ currentdict /eexec_pdf_param_dict .undef
 
     dup 4 index exch                      % filepos fontres stream is_symbolic Encoding fontres Encoding
     /prebuilt_encoding exch put           % filepos fontres stream is_symbolic Encoding
+    5 index /BaseFont get                 % Use the BaseFont name for the font. Otherwise we
+                                          % would use the name table, or a manufactured name.
     .loadpdfttfont
   } ifelse
   exch pop
@@ -1159,26 +1218,23 @@ currentdict end readonly def
 % should not add one.
 % Following Acrobat we ignore everything outside
 % begincodespacerange .. endcmap.
-/read_CMap {  % <wmode> <name> <1> <stream> read_CMap <CMap>
-              % <wmode> <2> <stream> read_CMap <CMap>
+/read_CMap {  % <info> <wmode> <name> <stream> read_CMap <CMap>
   dup 0 (begincodespacerange) /SubFileDecode filter flushfile
-
   //CMap_read_dict begin
   /CIDInit /ProcSet findresource begin
   12 dict begin
-  5 2 index sub -1 roll dup //null eq {pop} {/WMode exch def} ifelse
+  4 2 roll
+  dup //null eq { pop } { /WMode exch def } ifelse
+  dup //null eq { pop } { /CIDSystemInfo exch def } ifelse
+  /CMapType 1 def
   /.last_CMap_def currentdict def % establish binding
-  /CMapType 3 -1 roll def
   mark exch % emulate 'begincodespacerange'
   0 (endcmap) /SubFileDecode filter cvx /begincmap cvx exch 2 .execn
   endcmap
-
   /.last_CMap_def load
   { currentdict end //CMap_read_dict eq { exit } if } loop
   dup /.last_CMap_def undef
-  dup /CMapType get 1 eq {
-     /CMap defineresource
-  } if
+  /CMap defineresource
 } bdef
 
 currentdict /CMap_read_dict undef
@@ -1195,10 +1251,15 @@ currentdict /CMap_read_dict undef
     } ifelse
   } {
     PDFfile fileposition exch
+    dup /CIDSystemInfo knownoget {
+      << exch { oforce } forall >>
+    } { 
+      //null
+    } ifelse exch
     dup /WMode knownoget not {//null} if exch
     dup /CMapName oget exch
     //true resolvestream
-    1 exch read_CMap
+    read_CMap
     exch PDFfile exch setfileposition
   } ifelse		% CMap
   [
@@ -1726,17 +1787,27 @@ currentdict /CMap_read_dict undef
 
 % Adjust a CIDFontType0 DW[2] in the font resource.
 /adjustCIDType0 {		% <font-resource> <font> adjustfont <font'>
-  addCIDmetrics
-  dup /CIDFontName get exch /CIDFont defineresource
+  dup /FontType get 1 eq {
+    (   **** Warning: Font resource has a wrong /Subtype.\n)  pdfformaterror
+    adjustfont
+  } {
+    addCIDmetrics
+    dup /CIDFontName get exch /CIDFont defineresource
+  } ifelse
 } bind def
 
 % Adjust a CIDFontType2 DW[2] and CIDToGIDMap in the font resource.
 /adjustCIDType2 {		% <font-resource> <font> adjustfont <font'>
-  addCIDmetrics
-  dup /CIDFontType get 2 eq {   % OpenType CFF font converts to CIDFontType 0
-    processCIDToGIDMap          %  that ignores CIDMap.
-  } if
-  dup /CIDFontName get exch /CIDFont defineresource
+  dup /FontType get 1 eq {
+    (   **** Warning: Font resource has a wrong /Subtype.\n)  pdfformaterror
+    adjustfont
+  } {
+    addCIDmetrics
+    dup /CIDFontType get 2 eq {   % OpenType CFF font converts to CIDFontType 0
+      processCIDToGIDMap          %  that ignores CIDMap.
+    } if
+    dup /CIDFontName get exch /CIDFont defineresource
+  } ifelse
 } bind def
 
 % ---------------- Other embedded fonts ---------------- %
@@ -2012,7 +2083,6 @@ currentdict /bndef undef
           pdfformaterror
           dup run-fonttypeproc            % /key res font
         } if
-
         1 index                           % /key res font res
         4 -1 roll 2 index                 % res font desc /key font
         put  % Save pointer to the font.

@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Utilities for "vector" devices */
 #include "math_.h"
 #include "memory_.h"
@@ -101,6 +103,7 @@ gdev_vector_dopath(gx_device_vector *vdev, const gx_path * ppath,
     sw:
         if (type & gx_path_type_optimize) {
         opt:
+            /* RJW: We fail to optimize gaptos */
             if (pe_op == gs_pe_lineto) {
                 if (!incomplete_line) {
                     line_end = vs[0];
@@ -173,6 +176,7 @@ gdev_vector_dopath(gx_device_vector *vdev, const gx_path * ppath,
             }
             goto draw;
         case gs_pe_lineto:
+        case gs_pe_gapto:
             if (need_moveto) {	/* see gs_pe_moveto case */
                 code = gdev_vector_dopath_segment(&state, gs_pe_moveto,
                                                   &line_start);
@@ -642,6 +646,7 @@ gdev_vector_dopath_segment(gdev_vector_dopath_state_t *state, int pe_op,
             state->prev = vp[0];
             break;
         case gs_pe_lineto:
+        case gs_pe_gapto: /* FIXME */
             code = gs_point_transform_inverse(fixed2float(vs[0].x),
                                        fixed2float(vs[0].y), pmat, &vp[0]);
             if (code < 0)
@@ -943,6 +948,7 @@ gdev_vector_get_params(gx_device * dev, gs_param_list * plist)
     int code = gx_default_get_params(dev, plist);
     int ecode;
     gs_param_string ofns;
+    bool bool_true = 1;
 
     if (code < 0)
         return code;
@@ -950,6 +956,8 @@ gdev_vector_get_params(gx_device * dev, gs_param_list * plist)
         ofns.size = strlen(vdev->fname),
         ofns.persistent = false;
     if ((ecode = param_write_string(plist, "OutputFile", &ofns)) < 0)
+        return ecode;
+    if ((ecode = param_write_bool(plist, "HighLevelDevice", &bool_true)) < 0)
         return ecode;
     return code;
 }
@@ -962,8 +970,12 @@ gdev_vector_put_params(gx_device * dev, gs_param_list * plist)
     int code;
     gs_param_name param_name;
     gs_param_string ofns;
-    bool open = dev->is_open;
+    bool open = dev->is_open, HighLevelDevice;
 
+
+    code = param_read_bool(plist, (param_name = "HighLevelDevice"), &HighLevelDevice);
+    if (code < 0)
+        return code;
 
     switch (code = param_read_string(plist, (param_name = "OutputFile"), &ofns)) {
         case 0:

@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Internal graphics interfaces for PDF-writing driver. */
 
 #ifndef gdevpdfg_INCLUDED
@@ -98,6 +100,8 @@ int pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
                     const gs_color_space *pcs,
                     const pdf_color_space_names_t *pcsn,
                     bool by_name, const byte *res_name, int name_length);
+
+int free_color_space(gx_device_pdf *pdev, pdf_resource_t *pres);
 
 /* Create colored and uncolored Pattern color spaces. */
 int pdf_cs_Pattern_colored(gx_device_pdf *pdev, cos_value_t *pvalue);

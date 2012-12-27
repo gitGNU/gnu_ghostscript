@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id$ */
+
 /* Higher-level image operations for band lists */
 #include "math_.h"
 #include "memory_.h"
@@ -36,6 +38,7 @@
 #include "gxdhtserial.h"
 #include "gsptype1.h"
 #include "gsicc_manage.h"
+#include "gsicc_cache.h"
 
 extern_gx_image_type_table();
 
@@ -139,7 +142,8 @@ clist_fill_mask(gx_device * dev,
         if (code < 0 && SET_BAND_CODE(code))
             goto error_in_rect;
         do {
-            code = cmd_put_drawing_color(cdev, re.pcls, pdcolor, &re);
+            code = cmd_put_drawing_color(cdev, re.pcls, pdcolor, &re, 
+                                         devn_not_tile);
             if (code == gs_error_unregistered)
                 return code;
             if (depth > 1 && code >= 0)
@@ -147,7 +151,7 @@ clist_fill_mask(gx_device * dev,
         } while (RECT_RECOVER(code));
         if (code < 0 && SET_BAND_CODE(code))
             goto error_in_rect;
-        re.pcls->colors_used.slow_rop |= slow_rop;
+        re.pcls->color_usage.slow_rop |= slow_rop;
         re.pcls->band_complexity.nontrivial_rops |= slow_rop;
         re.pcls->band_complexity.uses_color |= (pdcolor->colors.pure != 0 && pdcolor->colors.pure != 0xffffff);
         /* Put it in the cache if possible. */
@@ -241,7 +245,7 @@ typedef struct clist_image_enum_s {
     bool uses_color;
     clist_color_space_t color_space;
     int ymin, ymax;
-    gx_colors_used_t colors_used;
+    gx_color_usage_t color_usage;
     /* begin_image command prepared & ready to output */
     /****** SIZE COMPUTATION IS WRONG, TIED TO gximage.c, gsmatrix.c ******/
     byte begin_image_command[3 +
@@ -349,7 +353,7 @@ clist_begin_typed_image(gx_device * dev,
     gs_matrix mat;
     gs_rect sbox, dbox;
     gs_image_format_t format;
-    gx_color_index colors_used = 0;
+    gx_color_usage_bits color_usage = 0;
     int code;
     bool mask_use_hl;
     clist_icc_color_t icc_zero_init = { 0 };
@@ -388,7 +392,7 @@ clist_begin_typed_image(gx_device * dev,
         indexed = false;
         num_components = 1;
         uses_color = true;
-        /* cmd_put_drawing_color handles colors_used */
+        /* cmd_put_drawing_color handles color_usage */
     } else {
         const gs_color_space *pcs = pim->ColorSpace;
 
@@ -534,10 +538,18 @@ clist_begin_typed_image(gx_device * dev,
                 }
                 if (renderingintent != pis_nonconst->renderingintent)
                     intent_changed = true;
+                if (!(src_profile->hash_is_valid)) {
+                    int64_t hash;
+                    gsicc_get_icc_buff_hash(src_profile->buffer, &hash,
+                                            src_profile->buffer_size);
+                    src_profile->hashcode = hash;
+                    src_profile->hash_is_valid = true;
+                }
                 pie->color_space.icc_info.icc_hash = src_profile->hashcode;
                 pie->color_space.icc_info.icc_num_components = 
                     src_profile->num_comps;
                 pie->color_space.icc_info.is_lab = src_profile->islab;
+                pie->color_space.icc_info.data_cs = src_profile->data_cs;
                 clist_icc_addentry(cdev, src_profile->hashcode, src_profile);
             } else {
                 pie->color_space.icc_info = icc_zero_init;
@@ -582,11 +594,10 @@ clist_begin_typed_image(gx_device * dev,
          * this, but we won't bother unless there's evidence that it's
          * worthwhile.
          */
-        gx_color_index all =
-            ((gx_color_index)1 << cdev->clist_color_info.depth) - 1;
+        gx_color_usage_bits all = gx_color_usage_all(cdev);
 
         if (bits_per_pixel > 4 || pim->Interpolate || num_components > 1)
-            colors_used = all;
+            color_usage = all;
         else {
             int max_value = (1 << bits_per_pixel) - 1;
             float dmin = pim->Decode[0], dmax = pim->Decode[1];
@@ -597,7 +608,7 @@ clist_begin_typed_image(gx_device * dev,
             if (dmin != 0 ||
                 dmax != (indexed ? max_value : 1)
                 ) {
-                colors_used = all;
+                color_usage = all;
             } else {
                 /* Enumerate the possible pixel values. */
                 const gs_color_space *pcs = pim->ColorSpace;
@@ -611,13 +622,13 @@ clist_begin_typed_image(gx_device * dev,
                     cc.paint.values[0] = (double)i / denom;
                     remap_color(&cc, pcs, &dcolor, pis, dev,
                                 gs_color_select_source);
-                    colors_used |= cmd_drawing_colors_used(cdev, &dcolor);
+                    color_usage |= cmd_drawing_color_usage(cdev, &dcolor);
                 }
             }
         }
     }
-    pie->colors_used.or = colors_used;
-    pie->colors_used.slow_rop =
+    pie->color_usage.or = color_usage;
+    pie->color_usage.slow_rop =
         cmd_slow_rop(dev, pis->log_op, (uses_color ? pdcolor : NULL));
     pie->color_map_is_known = false;
     /*
@@ -789,10 +800,13 @@ clist_image_plane_data(gx_image_enum_common_t * info,
                 continue;
         }
 
-        re.pcls->colors_used.or |= pie->colors_used.or;
+        re.pcls->color_usage.or |= pie->color_usage.or;
         re.pcls->band_complexity.nontrivial_rops |=
-            re.pcls->colors_used.slow_rop |= pie->colors_used.slow_rop;
-        re.pcls->band_complexity.uses_color |= (pie->colors_used.or != 0 || pie->colors_used.or != 0xffffff);
+                   re.pcls->color_usage.slow_rop |= pie->color_usage.slow_rop;
+        /* FIXME: Wrong! pie->colors_usage.or could == all even when color is used */
+        re.pcls->band_complexity.uses_color |=
+                            (pie->color_usage.or != 0 ||
+                             pie->color_usage.or != gx_color_usage_all(dev));
 
         /* Write out begin_image & its preamble for this band */
         if (!(re.pcls->known & begin_image_known)) {
@@ -826,7 +840,8 @@ clist_image_plane_data(gx_image_enum_common_t * info,
                 goto error_in_rect;
             if (pie->uses_color) {
                 do {
-                    code = cmd_put_drawing_color(cdev, re.pcls, &pie->dcolor, &re);
+                    code = cmd_put_drawing_color(cdev, re.pcls, &pie->dcolor, 
+                                                 &re, devn_not_tile);
                 } while (RECT_RECOVER(code));
                 if (code < 0 && SET_BAND_CODE(code))
                     goto error_in_rect;

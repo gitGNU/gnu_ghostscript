@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* pdfwrite, ps2write device body template. */
 
 /* This file is allowed to #include several times into a single .c file.
@@ -134,7 +136,9 @@ const gx_device_pdf PDF_DEVICE_IDENT =
  0 /*false*/,			/* PDFA */
  0 /*false*/,			/* Abort generation of PDFA or X, produce PDF */
  12000,				/* MaxClipPathSize */ /* HP LaserJet 1320 hangs with 14000. */
+#ifdef DEPRECATED_906
  max_long,                      /* MaxViewerMemorySize */
+#endif
  256000,			/* MaxShadingBitmapSize */
  PDF_DEVICE_MaxInlineImageSize,	/* MaxInlineImageSize */
  {0, 0},                        /* DSCEncodingToUnicode */
@@ -226,6 +230,8 @@ const gx_device_pdf PDF_DEVICE_IDENT =
  0,				/* sbstack_depth */
  0,				/* sbstack */
  0,				/* FormDepth */
+ 0,				/* PatternDepth */
+ {0,0,0,0,0,0},                 /* AccumulatedPatternMatrix */
  0,				/* substream_Resources */
  1,				/* pcm_color_info_index == DeviceRGB */
  false,				/* skip_colors */
@@ -261,10 +267,10 @@ const gx_device_pdf PDF_DEVICE_IDENT =
  0,				/* PDFACompatibilityPolicy */
  true,				/* DetectDuplicateImages */
  false,				/* AllowIncrementalCFF */
- true,				/* HighLevelDevice */
  !PDF_FOR_OPDFREAD,		/* WantsToUnicode */
  PDF_FOR_OPDFREAD,		/* AllowPSRepeatFunctions */
  true,				/* IsDistiller (true even for ps2write!) */
  !PDF_FOR_OPDFREAD,		/* PreserveSMask */
- !PDF_FOR_OPDFREAD		/* PreserveTrMode */
+ !PDF_FOR_OPDFREAD,		/* PreserveTrMode */
+ false                          /* NoT3CCITT */
 };

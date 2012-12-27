@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Rendering for Coons and tensor patch shadings */
 /*
    A contiguous non-overlapping decomposition
@@ -1333,7 +1335,7 @@ gx_shade_trapezoid(patch_fill_state_t *pfs, const gs_fixed_point q[4],
 }
 
 static inline void
-dc2fc(const patch_fill_state_t *pfs, gx_color_index c,
+dc2fc(const patch_fill_state_t *pfs, gx_device_color *pdevc,
             frac31 fc[GX_DEVICE_COLOR_MAX_COMPONENTS])
 {
     int j;
@@ -1343,24 +1345,37 @@ dc2fc(const patch_fill_state_t *pfs, gx_color_index c,
        the device from which we want to get the color information from
        for this */
 
-    for (j = 0; j < cinfo->num_components; j++) {
-            int shift = cinfo->comp_shift[j];
-            int bits = cinfo->comp_bits[j];
+    if (pdevc->type == &gx_dc_type_data_pure) {
+        for (j = 0; j < cinfo->num_components; j++) {
+                int shift = cinfo->comp_shift[j];
+                int bits = cinfo->comp_bits[j];
 
-            fc[j] = ((c >> shift) & ((1 << bits) - 1)) << (sizeof(frac31) * 8 - 1 - bits);
+                fc[j] = ((pdevc->colors.pure >> shift) & ((1 << bits) - 1)) << 
+                        (sizeof(frac31) * 8 - 1 - bits);
+        }
+    } else {
+        for (j = 0; j < cinfo->num_components; j++) {
+                fc[j] = cv2frac(pdevc->colors.devn.values[j]);
+        }
     }
 }
 
 #define DEBUG_COLOR_INDEX_CACHE 0
 
 static inline int
-patch_color_to_device_color_inline(const patch_fill_state_t *pfs, const patch_color_t *c, gx_device_color *pdevc, frac31 *frac_values)
+patch_color_to_device_color_inline(const patch_fill_state_t *pfs, 
+                                   const patch_color_t *c, gx_device_color *pdevc, 
+                                   frac31 *frac_values)
 {
     /* Must return 2 if the color is not pure.
        See try_device_linear_color.
      */
     int code;
     gx_device_color devc;
+    gx_device *dev = pfs->dev;
+
+    if (pfs->trans_device != NULL) 
+        dev = pfs->trans_device;
 
     if (DEBUG_COLOR_INDEX_CACHE && pdevc == NULL)
         pdevc = &devc;
@@ -1387,9 +1402,10 @@ patch_color_to_device_color_inline(const patch_fill_state_t *pfs, const patch_co
             if (code < 0)
                 return code;
             if (frac_values != NULL) {
-                dc2fc(pfs, pdevc->colors.pure, frac_values);
-                if (pdevc->type != &gx_dc_type_data_pure)
+                if (!(pdevc->type == &gx_dc_type_data_devn ||
+                      pdevc->type == &gx_dc_type_data_pure)) 
                     return 2;
+                dc2fc(pfs, pdevc, frac_values);
             }
 #           if DEBUG_COLOR_INDEX_CACHE
             if (cindex != pdevc->colors.pure)
@@ -2146,7 +2162,8 @@ try_device_linear_color(patch_fill_state_t *pfs, bool wedge,
         code = patch_color_to_device_color_inline(pfs, p0->c, &dc[0], fc[0]);
         if (code != 0)
             return code;
-        if (dc[0].type != &gx_dc_type_data_pure)
+        if (!(dc[0].type == &gx_dc_type_data_pure || 
+            dc[0].type == &gx_dc_type_data_devn))
             return 2;
         if (!wedge) {
             code = patch_color_to_device_color_inline(pfs, p1->c, &dc[1], fc[1]);

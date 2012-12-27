@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id$ */
+
 /* PhotoShop (PSD) export device, supporting DeviceN color models. */
 
 #include "math_.h"
@@ -28,6 +30,9 @@
 #include "gscms.h"
 #include "gsicc_cache.h"
 #include "gsicc_manage.h"
+#include "gxgetbit.h"
+#include "gdevppla.h"
+#include "gxdownscale.h"
 
 #ifndef cmm_gcmmhlink_DEFINED
     #define cmm_gcmmhlink_DEFINED
@@ -66,8 +71,6 @@ static dev_proc_get_color_mapping_procs(get_psd_color_mapping_procs);
 static dev_proc_get_color_comp_index(psd_get_color_comp_index);
 static dev_proc_encode_color(psd_encode_color);
 static dev_proc_decode_color(psd_decode_color);
-static dev_proc_encode_color(psd_encode_compressed_color);
-static dev_proc_decode_color(psd_decode_compressed_color);
 static dev_proc_update_spot_equivalent_colors(psd_update_spot_equivalent_colors);
 static dev_proc_ret_devn_params(psd_ret_devn_params);
 
@@ -95,6 +98,9 @@ typedef struct psd_device_s {
 
     psd_color_model color_model;
 
+    long downscale_factor;
+    int max_spots;
+
     /* ICC color profile objects, for color conversion.
        These are all device link profiles.  At least that
        is how it appears looking at how this code
@@ -115,6 +121,8 @@ typedef struct psd_device_s {
     cmm_profile_t *output_profile;
     gcmmhlink_t output_icc_link;
 
+    bool warning_given;  /* Used to notify the user that max colorants reached */
+
 } psd_device;
 
 /* GC procedures */
@@ -123,6 +131,9 @@ ENUM_PTRS_WITH(psd_device_enum_ptrs, psd_device *pdev)
 {
     if (index == 0)
         ENUM_RETURN(pdev->devn_params.compressed_color_list);
+    index--;
+    if (index == 0)
+        ENUM_RETURN(pdev->devn_params.pdf14_compressed_color_list);
     index--;
     if (index < pdev->devn_params.separations.num_separations)
         ENUM_RETURN(pdev->devn_params.separations.names[index].data);
@@ -143,6 +154,7 @@ static RELOC_PTRS_WITH(psd_device_reloc_ptrs, psd_device *pdev)
         }
     }
     RELOC_PTR(psd_device, devn_params.compressed_color_list);
+    RELOC_PTR(psd_device, devn_params.pdf14_compressed_color_list);
 }
 RELOC_PTRS_END
 
@@ -282,6 +294,8 @@ const psd_device gs_psdrgb_device =
     { true },			/* equivalent CMYK colors for spot colors */
     /* PSD device specific parameters */
     psd_DEVICE_RGB,		/* Color model */
+    1,                          /* downscale_factor */
+    GS_SOFT_MAX_SPOTS           /* max_spots */
 };
 
 /*
@@ -291,17 +305,10 @@ const psd_device gs_psdrgb_device =
  * compressed encoding is not separable.  If we do not have 64 bits then we
  * use a simple non-compressable encoding.
  */
-#if USE_COMPRESSED_ENCODING
-#define NC GX_DEVICE_COLOR_MAX_COMPONENTS
-#define SL GX_CINFO_SEP_LIN_NONE
-#define ENCODE_COLOR psd_encode_compressed_color
-#define DECODE_COLOR psd_decode_compressed_color
-#else
 #define NC ARCH_SIZEOF_GX_COLOR_INDEX
 #define SL GX_CINFO_SEP_LIN
 #define ENCODE_COLOR psd_encode_color
 #define DECODE_COLOR psd_decode_color
-#endif
 #define GCIB (ARCH_SIZEOF_GX_COLOR_INDEX * 8)
 
 /*
@@ -326,6 +333,8 @@ const psd_device gs_psdcmyk_device =
     { true },			/* equivalent CMYK colors for spot colors */
     /* PSD device specific parameters */
     psd_DEVICE_CMYK,		/* Color model */
+    1,                          /* downscale_factor */
+    GS_SOFT_MAX_SPOTS           /* max_spots */
 };
 
 #undef NC
@@ -337,16 +346,44 @@ const psd_device gs_psdcmyk_device =
 int
 psd_prn_open(gx_device * pdev)
 {
-    int code = gdev_prn_open(pdev);
+    psd_device *pdev_psd = (psd_device *) pdev;
+    int code;
+    int k;
 
-#if !USE_COMPRESSED_ENCODING
-    /*
-     * If we are using the compressed encoding scheme, then set the separable
-     * and linear info.
-     */
-    set_linear_color_bits_mask_shift(pdev);
+    pdev_psd->warning_given = false;
+    /* With planar the depth can be more than 64.  Update the color
+       info to reflect the proper depth and number of planes.  Also note
+       that the number of spot colors can change from page to page.  
+       Update things so that we only output separations for the
+       inks on that page. */
+    if (pdev_psd->devn_params.page_spot_colors >= 0) {
+        pdev->color_info.num_components = 
+            (pdev_psd->devn_params.page_spot_colors 
+                                 + pdev_psd->devn_params.num_std_colorant_names);
+        if (pdev->color_info.num_components > pdev->color_info.max_components)
+            pdev->color_info.num_components = pdev->color_info.max_components;
+    } else {
+        /* We do not know how many spots may occur on the page. 
+           For this reason we go ahead and allocate the maximum that we
+           have available.  Note, lack of knowledge only occurs in the case
+           of PS files.  With PDF we know a priori the number of spot
+           colorants.  */
+        int num_comp = pdev_psd->max_spots + 4; /* Spots + CMYK */
+        if (num_comp > GS_CLIENT_COLOR_MAX_COMPONENTS)
+            num_comp = GS_CLIENT_COLOR_MAX_COMPONENTS;
+        pdev->color_info.num_components = num_comp;
+        pdev->color_info.max_components = num_comp;
+    }
+    /* Push this to the max amount as a default if someone has not set it */
+    if (pdev_psd->devn_params.num_separation_order_names == 0)
+        for (k = 0; k < GS_CLIENT_COLOR_MAX_COMPONENTS; k++) {
+            pdev_psd->devn_params.separation_order_map[k] = k;
+        }
+    pdev->color_info.depth = pdev->color_info.num_components * 
+                             pdev_psd->devn_params.bitspercomponent;
     pdev->color_info.separable_and_linear = GX_CINFO_SEP_LIN;
-#endif
+    pdev->icc_struct->supports_devn = true;
+    code = gdev_prn_open_planar(pdev, true);
     return code;
 }
 
@@ -433,9 +470,33 @@ static void
 cmyk_cs_to_psdcmyk_cm(gx_device * dev,
                         frac c, frac m, frac y, frac k, frac out[])
 {
-    int * map = ((psd_device *) dev)->devn_params.separation_order_map;
-
-    cmyk_cs_to_devn_cm(dev, map, c, m, y, k, out);
+    const gs_devn_params *devn = psd_ret_devn_params(dev);
+    const int *map = devn->separation_order_map;
+    int j;
+    
+    if (devn->num_separation_order_names > 0) {
+        /* This is to set only those that we are using */
+        for (j = 0; j < devn->num_separation_order_names; j++) {
+            switch (map[j]) {
+                case 0 : 
+                    out[0] = c;
+                    break;
+                case 1:
+                    out[1] = m;
+                    break;
+                case 2:
+                    out[2] = y;
+                    break;
+                case 3:
+                    out[3] = k;
+                    break;
+                default:
+                    break;
+            }
+        }
+    } else {
+        cmyk_cs_to_devn_cm(dev, map, c, m, y, k, out);
+    }
 }
 
 static void
@@ -577,7 +638,7 @@ psd_encode_color(gx_device *dev, const gx_color_value colors[])
     COLROUND_SETUP(bpc);
     for (; i<ncomp; i++) {
         color <<= bpc;
-        color |= COLROUND_ROUND(colors[i]);
+        color |= COLROUND_ROUND(colors[ncomp-1-i]);
     }
     return (color == gx_no_color_index ? color ^ 1 : color);
 }
@@ -596,33 +657,10 @@ psd_decode_color(gx_device * dev, gx_color_index color, gx_color_value * out)
 
     COLDUP_SETUP(bpc);
     for (; i<ncomp; i++) {
-        out[ncomp - i - 1] = COLDUP_DUP(color & mask);
+        out[i] = COLDUP_DUP(color & mask);
         color >>= bpc;
     }
     return 0;
-}
-
-/*
- * Encode a list of colorant values into a gx_color_index_value.
- * With 64 bit gx_color_index values, we compress the colorant values.  This
- * allows us to handle more than 8 colorants.
- */
-static gx_color_index
-psd_encode_compressed_color(gx_device *dev, const gx_color_value colors[])
-{
-    return devn_encode_compressed_color(dev, colors, &(((psd_device *)dev)->devn_params));
-}
-
-/*
- * Decode a gx_color_index value back to a list of colorant values.
- * With 64 bit gx_color_index values, we compress the colorant values.  This
- * allows us to handle more than 8 colorants.
- */
-static int
-psd_decode_compressed_color(gx_device * dev, gx_color_index color, gx_color_value * out)
-{
-    return devn_decode_compressed_color(dev, color, out,
-                    &(((psd_device *)dev)->devn_params));
 }
 
 /*
@@ -766,7 +804,15 @@ psd_get_params(gx_device * pdev, gs_param_list * plist)
         pcmyks.size = strlen(xdev->profile_cmyk_fn),
         pcmyks.persistent = false;
     code = param_write_string(plist, "ProfileCmyk", &prgbs);
+    if (code < 0)
+        return code;
 #endif
+    code = param_write_long(plist, "DownScaleFactor", &xdev->downscale_factor);
+    if (code < 0)
+        return code;
+    code = param_write_int(plist, "MaxSpots", &xdev->max_spots);
+    if (code < 0)
+        return code;
 
     return code;
 }
@@ -842,6 +888,37 @@ psd_put_params(gx_device * pdev, gs_param_list * plist)
     psd_color_model color_model = pdevn->color_model;
     gx_device_color_info save_info = pdevn->color_info;
 
+    switch (code = param_read_long(plist,
+                                   "DownScaleFactor",
+                                   &pdevn->downscale_factor)) {
+        case 0:
+            if (pdevn->downscale_factor <= 0)
+                pdevn->downscale_factor = 1;
+            break;
+        case 1:
+            break;
+        default:
+            param_signal_error(plist, "DownScaleFactor", code);
+            return code;
+    }
+
+    switch (code = param_read_int(plist,
+                                  "MaxSpots",
+                                  &pdevn->max_spots)) {
+        case 0:
+            if (pdevn->max_spots >= 0 && pdevn->max_spots <= GS_CLIENT_COLOR_MAX_COMPONENTS-4)
+                break;
+            emprintf1(pdevn->memory, "MaxSpots must be between 0 and %d\n",
+                      GS_CLIENT_COLOR_MAX_COMPONENTS-4);
+            code = gs_error_rangecheck;
+            /* fall through */
+        default:
+            param_signal_error(plist, "MaxSpots", code);
+            return code;
+        case 1:
+            break;
+    }
+
 #if ENABLE_ICC_PROFILE
     code = psd_param_read_fn(plist, "ProfileOut", &po,
                                  sizeof(pdevn->profile_out_fn));
@@ -901,7 +978,6 @@ psd_put_params(gx_device * pdev, gs_param_list * plist)
                             size_of(gx_device_color_info)) != 0)
         code = psd_open_profiles(pdevn);
 #endif
-
     return code;
 }
 
@@ -921,10 +997,29 @@ static int
 psd_get_color_comp_index(gx_device * dev, const char * pname,
                                         int name_size, int component_type)
 {
-    return devn_get_color_comp_index(dev,
+    int index;
+    psd_device *pdev = (psd_device *)dev;
+
+    if (strncmp(pname, "None", name_size) == 0) return -1;
+    index = devn_get_color_comp_index(dev,
                 &(((psd_device *)dev)->devn_params),
                 &(((psd_device *)dev)->equiv_cmyk_colors),
                 pname, name_size, component_type, ENABLE_AUTO_SPOT_COLORS);
+    /* This is a one shot deal.  That is it will simply post a notice once that 
+       some colorants will be converted due to a limit being reached.  It will
+       not list names of colorants since then I would need to keep track of 
+       which ones I have already mentioned.  Also, if someone is fooling with
+       num_order, then this warning is not given since they should know what
+       is going on already */
+    if (index < 0 && component_type == SEPARATION_NAME && 
+        pdev->warning_given == false && 
+        pdev->devn_params.num_separation_order_names == 0) {
+        dlprintf("**** Max spot colorants reached.\n");
+        dlprintf("**** Some colorants will be converted to equivalent CMYK values.\n");
+        dlprintf("**** If this is a Postscript file, try using the -dMaxSpots= option.\n");
+        pdev->warning_given = true;
+    }
+    return index;
 }
 
 /* ------ Private definitions ------ */
@@ -959,38 +1054,50 @@ static int
 psd_setup(psd_write_ctx *xc, psd_device *dev)
 {
     int i;
+    int spot_count;
 
 #define NUM_CMYK_COMPONENTS 4
     xc->base_bytes_pp = dev->devn_params.num_std_colorant_names;
     xc->num_channels = xc->base_bytes_pp;
-    xc->n_extra_channels = dev->devn_params.separations.num_separations;
-    xc->width = dev->width;
-    xc->height = dev->height;
-
+    if (dev->devn_params.num_separation_order_names == 0) {
+        xc->n_extra_channels = dev->devn_params.separations.num_separations;
+    } else {
+        /* Have to figure out how many in the order list were not std
+           colorants */
+        spot_count = 0;
+        for (i = 0; i < dev->devn_params.num_separation_order_names; i++) {
+            if (dev->devn_params.separation_order_map[i] >= NUM_CMYK_COMPONENTS) {
+                spot_count++;
+            }
+        }
+        xc->n_extra_channels = spot_count;
+    }
+    xc->width = gx_downscaler_scale(dev->width, dev->downscale_factor);
+    xc->height = gx_downscaler_scale(dev->height, dev->downscale_factor);
     /*
      * Determine the order of the output components.  This is based upon
      * the SeparationOrder parameter.  This parameter can be used to select
      * which planes are actually imaged.  For the process color model channels
      * we image the channels which are requested.  Non requested process color
      * model channels are simply filled with white.  For spot colors we only
-     * image the requested channels.  Note:  There are no spot colors with
-     * the RGB color model.
+     * image the requested channels. 
      */
-    for (i = 0; i < xc->base_bytes_pp + xc->n_extra_channels; i++)
-        xc->chnl_to_position[i] = -1;
     for (i = 0; i < xc->base_bytes_pp + xc->n_extra_channels; i++) {
-        int sep_order_num = dev->devn_params.separation_order_map[i];
-
-        if (sep_order_num != GX_DEVICE_COLOR_MAX_COMPONENTS) {
-            if (i < NUM_CMYK_COMPONENTS)	/* Do not rearrange CMYK */
-                xc->chnl_to_position[i] = sep_order_num;
-            else {				/* Re arrange separations */
+        xc->chnl_to_position[i] = i;
+        xc->chnl_to_orig_sep[i] = i;
+    }
+    /* If we had a specify order name, then we may need to adjust things */
+    if (dev->devn_params.num_separation_order_names > 0) {
+        for (i = 0; i < dev->devn_params.num_separation_order_names; i++) {
+            int sep_order_num = dev->devn_params.separation_order_map[i];
+            if (sep_order_num >= NUM_CMYK_COMPONENTS) {
                 xc->chnl_to_position[xc->num_channels] = sep_order_num;
-                xc->chnl_to_orig_sep[xc->num_channels++] = i;
+                xc->chnl_to_orig_sep[xc->num_channels++] = sep_order_num;
             }
         }
+    } else {
+        xc->num_channels += dev->devn_params.separations.num_separations;
     }
-
     return 0;
 }
 
@@ -1124,36 +1231,9 @@ psd_write_header(psd_write_ctx *xc, psd_device *pdev)
     return code;
 }
 
-static void
-psd_calib_row(gx_device *dev, psd_write_ctx *xc, byte **tile_data, const byte *row,
-                int channel, gcmmhlink_t link, int inn, int outn)
-{
-    int base_bytes_pp = xc->base_bytes_pp;
-    int n_extra_channels = xc->n_extra_channels;
-    int channels = base_bytes_pp + n_extra_channels;
-    int x;
-    unsigned char in[MAX_CHAN];
-
-    for (x = 0; x < xc->width; x++) {
-        if (channel < outn) {
-            int plane_idx;
-
-            for (plane_idx = 0; plane_idx < inn; plane_idx++)
-                in[plane_idx] = row[x*channels+plane_idx];
-
-            gscms_transform_color(dev, link, &(in[0]),
-                &((*tile_data)[x]), 1);
-
-        } else {
-            (*tile_data)[x] = 255 ^ row[x*channels+base_bytes_pp+channel];
-        }
-    }
-}
-
 /*
  * Close device and clean up ICC structures.
  */
-
 static int
 psd_prn_close(gx_device *dev)
 {
@@ -1196,71 +1276,100 @@ psd_prn_close(gx_device *dev)
  * data, we will write out any separation data which is specified in the
  * SeparationOrder data.
  */
+
 static int
 psd_write_image_data(psd_write_ctx *xc, gx_device_printer *pdev)
 {
+    int raster_plane = bitmap_raster(pdev->width * 8);
+    byte *planes[GS_CLIENT_COLOR_MAX_COMPONENTS];
     int code = 0;
-    int raster = gdev_prn_raster(pdev);
     int i, j;
-    byte *line, *sep_line;
+    byte *sep_line;
     int base_bytes_pp = xc->base_bytes_pp;
     int chan_idx;
-    psd_device *xdev = (psd_device *)pdev;
-    gcmmhlink_t link = xdev->output_icc_link;
-    byte * row, * unpacked;
-    int width = pdev->width;
-    int non_encodable_count = 0;
+/*  psd_device *xdev = (psd_device *)pdev;
+    gcmmhlink_t link = xdev->output_icc_link; */
+    byte * unpacked;
     int num_comp = xc->num_channels;
+    gs_int_rect rect;
+    gs_get_bits_params_t params;
+    gx_downscaler_t ds = { NULL };
+    psd_device *psd_dev = (psd_device *)pdev;
 
+    rect.q.x = pdev->width;
+    rect.p.x = 0;
+    /* Return planar data */
+    params.options = (GB_RETURN_POINTER | GB_RETURN_COPY |
+         GB_ALIGN_STANDARD | GB_OFFSET_0 | GB_RASTER_STANDARD |
+         GB_PACKING_PLANAR | GB_COLORS_NATIVE | GB_ALPHA_NONE);
+    params.x_offset = 0;
+    params.raster = bitmap_raster(pdev->width * pdev->color_info.depth);
     psd_write_16(xc, 0); /* Compression */
 
-    line = gs_alloc_bytes(pdev->memory, raster, "psd_write_image_data");
     sep_line = gs_alloc_bytes(pdev->memory, xc->width, "psd_write_sep_line");
-    unpacked = gs_alloc_bytes(pdev->memory, width *num_comp,
-                                                        "psd_write_image");
-    if (line == NULL || sep_line == NULL || unpacked == NULL)
+
+    for (chan_idx = 0; chan_idx < num_comp; chan_idx++) {
+        planes[chan_idx] = gs_alloc_bytes(pdev->memory, raster_plane, 
+                                        "psd_write_sep_line");
+        params.data[chan_idx] = planes[chan_idx];
+        if (params.data[chan_idx] == NULL)
+            return_error(gs_error_VMerror);
+    }
+
+    if (sep_line == NULL)
         return_error(gs_error_VMerror);
+
+    code = gx_downscaler_init_planar(&ds, (gx_device *)pdev, &params, num_comp,
+                                     psd_dev->downscale_factor, 0, 8, 8);
+    if (code < 0)
+        goto cleanup;
 
     /* Print the output planes */
     for (chan_idx = 0; chan_idx < num_comp; chan_idx++) {
-        for (j = 0; j < xc->height; ++j) {
-            int data_pos = xc->chnl_to_position[chan_idx];
+        int data_pos = xc->chnl_to_position[chan_idx];
+        if (data_pos >= 0) {
+            for (j = 0; j < xc->height; ++j) {
+                rect.p.y = j;   
+                rect.q.y = j + 1;
+                code = gx_downscaler_get_bits_rectangle(&ds, &params, j);
+                if (code < 0)
+                    goto cleanup;
 
-            /* Check if the separation is present in the SeparationOrder */
-            if (data_pos >= 0) {
-                code = gdev_prn_get_bits(pdev, j, line, &row);
-                /* Unpack the encoded color info */
-                non_encodable_count += devn_unpack_row((gx_device *)pdev,
-                        num_comp, &(xdev->devn_params), width, row, unpacked);
-                if (link == NULL) {
-                    for (i = 0; i < xc->width; ++i) {
-                        if (base_bytes_pp == 3) {
-                            /* RGB */
-                            sep_line[i] = unpacked[i * num_comp + data_pos];
-                        } else {
-                            /* CMYK */
-                            sep_line[i] = 255 - unpacked[i * num_comp + data_pos];
+                unpacked = params.data[data_pos];
+                /* To do, get ICC stuff in place for planar device */
+               // if (link == NULL) {
+                    if (base_bytes_pp == 3) {
+                        /* RGB */
+                        memcpy(sep_line, unpacked, xc->width);
+                    } else {
+                        for (i = 0; i < xc->width; ++i) {
+                            /* CMYK + spots*/
+                            sep_line[i] = 255 - unpacked[i];
                         }
                     }
-                } else {
+              /*  } else {
                     psd_calib_row((gx_device*) xdev, xc, &sep_line, unpacked, data_pos,
                         link, xdev->output_profile->num_comps,
                         xdev->output_profile->num_comps_out);
-                }
+                } */
                 psd_write(xc, sep_line, xc->width);
-            } else {
-                if (chan_idx < NUM_CMYK_COMPONENTS) {
-                    /* Write empty process color */
-                    for (i = 0; i < xc->width; ++i)
-                        sep_line[i] = 255;
-                    psd_write(xc, sep_line, xc->width);
-                }
+            }
+        } else {
+            if (chan_idx < NUM_CMYK_COMPONENTS) {
+                /* Write empty process color in the area */
+                memset(sep_line,255,xc->width);
+                psd_write(xc, sep_line, xc->width);
             }
         }
     }
 
+cleanup:
+    gx_downscaler_fin(&ds);
     gs_free_object(pdev->memory, sep_line, "psd_write_sep_line");
-    gs_free_object(pdev->memory, line, "psd_write_image_data");
+    for (chan_idx = 0; chan_idx < num_comp; chan_idx++) {
+        gs_free_object(pdev->memory, planes[chan_idx], 
+                                        "psd_write_image_data");
+    }
     return code;
 }
 
@@ -1268,12 +1377,15 @@ static int
 psd_print_page(gx_device_printer *pdev, FILE *file)
 {
     psd_write_ctx xc;
+    psd_device *psd_dev = (psd_device *)pdev;
 
     xc.f = file;
 
-    psd_setup(&xc, (psd_device *)pdev);
-    psd_write_header(&xc, (psd_device *)pdev);
+    psd_setup(&xc, psd_dev);
+    psd_write_header(&xc, psd_dev);
     psd_write_image_data(&xc, pdev);
-
+    /* Free up the list of spot names as they were only relevent to that page */
+    free_separation_names(pdev->memory, &(psd_dev->devn_params.separations));
+    psd_dev->devn_params.num_separation_order_names = 0;
     return 0;
 }

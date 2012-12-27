@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Dash expansion for paths */
 #include "math_.h"
 #include "gx.h"
@@ -96,6 +98,7 @@ subpath_expand_dashes(const subpath * psub, gx_path * ppath,
         double length, dx, dy;
         double scale = 1;
         double left;
+        int gap = pseg->type == s_gap;
 
         if (!(udx | udy)) {	/* degenerate */
             if (pgs_lp->dot_length == 0 &&
@@ -136,7 +139,7 @@ subpath_expand_dashes(const subpath * psub, gx_path * ppath,
             fixed nx = x + fx;
             fixed ny = y + fy;
 
-            if (ink_on) {
+            if (ink_on && !gap) {
                 if (drawing >= 0) {
                     if (left >= elt_length && any_abs(fx) + any_abs(fy) < fixed_half)
                         code = gx_path_add_dash_notes(ppath, nx, ny, udx, udy,
@@ -189,7 +192,7 @@ subpath_expand_dashes(const subpath * psub, gx_path * ppath,
                 pseg2 = pseg2->next;
             }
         }
-      on:if (ink_on) {
+      on:if (ink_on && !gap) {
             if (drawing >= 0) {
                 if (pseg->type == s_line_close && drawing > 0)
                     code = gx_path_close_subpath_notes(ppath,
@@ -216,7 +219,10 @@ subpath_expand_dashes(const subpath * psub, gx_path * ppath,
             code = gx_path_add_point(ppath, sx, sy);
             notes &= ~sn_not_first;
             if (elt_length < fixed2float(fixed_epsilon) &&
-                (pseg->next == 0 || pseg->next->type == s_start || elt_length == 0)) {
+                (pseg->next == 0 ||
+                 pseg->next->type == s_start ||
+                 pseg->next->type == s_gap ||
+                 elt_length == 0)) {
                 /*
                  * Ink is off, but we're within epsilon of the end
                  * of the dash element.
@@ -231,7 +237,9 @@ subpath_expand_dashes(const subpath * psub, gx_path * ppath,
                 if (++index == count)
                     index = 0;
                 elt_length1 = pattern[index] * scale;
-                if (pseg->next == 0 || pseg->next->type == s_start) {
+                if (pseg->next == 0 ||
+                    pseg->next->type == s_start ||
+                    pseg->next->type == s_gap) {
                     elt_length = elt_length1;
                     left = 0;
                     ink_on = true;

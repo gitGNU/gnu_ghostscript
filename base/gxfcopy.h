@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Font copying for high-level output */
 
 #ifndef gxfcopy_INCLUDED
@@ -71,6 +73,8 @@ int gs_copy_font(gs_font *font, const gs_matrix *orig_matrix,
                     gs_memory_t *mem, gs_font **pfont_new,
                     int max_reserved_glyphs);
 
+int gs_free_copied_font(gs_font *font);
+
 /*
  * Copy a glyph, including any sub-glyphs.  The destination font ("copied"
  * argument) must be a font created by gs_copy_font.  The source font
@@ -124,6 +128,9 @@ int gs_copy_glyph(gs_font *font, gs_glyph glyph, gs_font *copied);
 #define COPY_GLYPH_BY_INDEX 4
 int gs_copy_glyph_options(gs_font *font, gs_glyph glyph, gs_font *copied,
                           int options);
+
+int gs_copied_font_free_glyphs(gs_font *font);
+int gs_copied_font_free_data(gs_font *font);
 
 /*
  * Add an encoding entry to a copied font.  If the given encoding entry is

@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id$ */
+
 /* Structure and internal procedure definitions for paths */
 /* Requires gxfixed.h */
 
@@ -37,7 +39,8 @@ typedef enum {
     s_line,
     s_line_close,
     s_curve,
-    s_dash /* only for internal use of the stroking algorithm */
+    s_dash, /* only for internal use of the stroking algorithm */
+    s_gap
 } segment_type;
 
 /* Define the common structure for all segments. */
@@ -282,6 +285,7 @@ typedef enum {
 typedef struct gx_path_procs_s {
     int (*add_point)(gx_path *, fixed, fixed);
     int (*add_line)(gx_path *, fixed, fixed, segment_notes);
+    int (*add_gap)(gx_path *, fixed, fixed, segment_notes);
     int (*add_curve)(gx_path *, fixed, fixed, fixed, fixed, fixed, fixed, segment_notes);
     int (*close_subpath)(gx_path *, segment_notes);
     byte (*state_flags)(gx_path *, byte);

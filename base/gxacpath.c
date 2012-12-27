@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/*$Id$ */
+
 /* Accumulator for clipping paths */
 #include "gx.h"
 #include "gserrors.h"
@@ -105,7 +107,7 @@ static const gx_device_cpath_accum gs_cpath_accum_device =
   NULL,	/* begin_transparency_mask */
   NULL,	/* end_transparency_mask */
   NULL,	/* discard_transparency_layer */
-  NULL,	/* get_color_mapping_procs */
+  gx_default_DevGray_get_color_mapping_procs,
   NULL, /* get_color_comp_index */
   NULL,	/* encode_color */
   NULL,	/* decode_color */
@@ -138,6 +140,8 @@ gx_cpath_accum_begin(gx_device_cpath_accum * padev, gs_memory_t * mem)
     padev->list_memory = mem;
     padev->memory = mem; /* gx_general_fill_path may need a storage
                             for dropout prevention buffer. */
+    set_dev_proc(padev, encode_color, gx_default_gray_encode);
+    set_dev_proc(padev, decode_color, gx_default_decode_color);
     (*dev_proc(padev, open_device)) ((gx_device *) padev);
 }
 

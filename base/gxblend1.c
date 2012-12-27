@@ -1,16 +1,18 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id$ */
+
 /* PDF 1.4 blending functions */
 
 #include "memory_.h"
@@ -278,17 +280,17 @@ pdf14_compose_group(pdf14_buf *tos, pdf14_buf *nos, pdf14_buf *maskbuf,
 
     dump_raw_buffer(y1-y0, width, tos->n_planes,
             tos_planestride, tos->rowstride,
-            "ImageTOS",tos_ptr);
+            "bImageTOS",tos_ptr);
 
     dump_raw_buffer(y1-y0, width, nos->n_planes,
                 nos_planestride, nos->rowstride,
-                "ImageNOS",nos_ptr);
+                "cImageNOS",nos_ptr);
 
     if(mask_ptr != NULL){
 
         dump_raw_buffer(y1-y0, width, maskbuf->n_planes,
                         maskbuf->planestride, maskbuf->rowstride,
-                        "Mask",mask_ptr);
+                        "dMask",mask_ptr);
     }
 
 #endif
@@ -407,7 +409,7 @@ pdf14_compose_group(pdf14_buf *tos, pdf14_buf *nos, pdf14_buf *maskbuf,
         /* The group alpha should disappear */
     dump_raw_buffer(y1-y0, width, tos->n_planes - tos->has_alpha_g - tos->has_shape,
                 nos_planestride, nos->rowstride,
-                "Composed",composed_ptr);
+                "eComposed",composed_ptr);
 
     global_index++;
 
@@ -559,7 +561,7 @@ pdf14_rgb_cs_to_cmyk_cm(gx_device * dev, const gs_imager_state *pis,
         color_rgb_to_cmyk(r, g, b, pis, out, dev->memory);
     else {
         frac    c = frac_1 - r, m = frac_1 - g, y = frac_1 - b;
-        frac    k = min(c, min(m, g));
+        frac    k = min(c, min(m, y));
 
         out[0] = c - k;
         out[1] = m - k;
@@ -758,7 +760,7 @@ int
 gx_put_blended_image_cmykspot(gx_device *target, byte *buf_ptr,
                       int planestride, int rowstride,
                       int x0, int y0, int width, int height, int num_comp, byte bg,
-                      gs_separations * pseparations)
+                      bool has_tags, gs_int_rect rect, gs_separations * pseparations)
 {
     int code = 0;
     int x, y, tmp, comp_num, output_comp_num;
@@ -771,6 +773,8 @@ gx_put_blended_image_cmykspot(gx_device *target, byte *buf_ptr,
     int num_known_comp = 0;
     int output_num_comp = target->color_info.num_components;
     int num_sep = pseparations->num_separations++;
+    bool data_blended = false;
+    int num_rows_left;
 
     /*
      * The process color model for the PDF 1.4 compositor device is CMYK plus
@@ -801,6 +805,58 @@ gx_put_blended_image_cmykspot(gx_device *target, byte *buf_ptr,
                 output_comp_num < GX_DEVICE_COLOR_MAX_COMPONENTS) {
             output_map[num_known_comp] = output_comp_num;
             input_map[num_known_comp++] = comp_num + 4;
+        }
+    }
+    /* See if the target device has a put_image command.  If
+       yes then see if it can handle the image data directly.  */
+    if (target->procs.put_image != NULL) {
+        /* See if the target device can handle the data in its current
+           form with the alpha component */
+        int alpha_offset = num_comp;
+        int tag_offset = has_tags ? num_comp+1 : 0;
+        code = dev_proc(target, put_image) (target, buf_ptr, num_comp,
+                                            rect.p.x, rect.p.y, width, height,
+                                            rowstride, planestride,
+                                            num_comp,tag_offset);
+        if (code == 0) {
+            /* Device could not handle the alpha data.  Go ahead and
+               preblend now. Note that if we do this, and we end up in the
+               default below, we only need to repack in chunky not blend */
+#if RAW_DUMP
+            /* Dump before and after the blend to make sure we are doing that ok */
+            dump_raw_buffer(height, width, num_comp+1, planestride, rowstride,
+                            "pre_final_blend",buf_ptr);
+            global_index++;
+#endif
+            gx_blend_image_buffer(buf_ptr, width, height, rowstride, 
+                                  planestride, num_comp, bg);
+#if RAW_DUMP
+            /* Dump before and after the blend to make sure we are doing that ok */
+            dump_raw_buffer(height, width, num_comp, planestride, rowstride,
+                            "post_final_blend",buf_ptr);
+            global_index++;
+            /* clist_band_count++; */
+#endif
+            data_blended = true;
+            /* Try again now */
+            alpha_offset = 0;
+            code = dev_proc(target, put_image) (target, buf_ptr, num_comp,
+                                                rect.p.x, rect.p.y, width, height,
+                                                rowstride, planestride,
+                                                alpha_offset, tag_offset);
+        }
+        if (code > 0) {
+            /* We processed some or all of the rows.  Continue until we are done */
+            num_rows_left = height - code;
+            while (num_rows_left > 0) {
+                code = dev_proc(target, put_image) (target, buf_ptr, num_comp,
+                                                    rect.p.x, rect.p.y+code, width,
+                                                    num_rows_left, rowstride,
+                                                    planestride,
+                                                    alpha_offset, tag_offset);
+                num_rows_left = num_rows_left - code;
+            }
+            return 0;
         }
     }
 

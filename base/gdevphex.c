@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 
 /****************************************************************************/
 /*	Ghostscript printer driver for Epson Color Photo, Photo EX, Photo 700	*/
@@ -29,14 +31,14 @@
 HISTORY
 ~~~~~~~
 
-8 June 1999 Zoltán Kócsi (aka Kocsonya) zoltan@bendor.com.au
+8 June 1999 Zoltï¿½n Kï¿½csi (aka Kocsonya) zoltan@bendor.com.au
 
         Initial revision.
         No shingling, depletion.
         Colour only.
         Dither matrix is blatantly copied from gslib.c.
 
-17 April 2000 Zoltán Kócsi
+17 April 2000 Zoltï¿½n Kï¿½csi
 
         After much play worked out a reasonably simple colour mapping
         that gives fairly good results. It has some very hairy things
@@ -46,7 +48,7 @@ HISTORY
 LEGALISE
 ~~~~~~~~
 
-The usual disclaimer applies, neither me (Zoltán Kócsi) nor
+The usual disclaimer applies, neither me (Zoltï¿½n Kï¿½csi) nor
 Bendor Research Pty. Ltd. assume any liability whatsoever in
 relation to events arising out of or related to the use of
 the software or the included documentation in any form, way

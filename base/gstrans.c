@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Implementation of transparency, other than rendering */
 #include "math_.h"
 #include "memory_.h"
@@ -474,7 +476,7 @@ gs_push_transparency_state(gs_state *pgs)
 }
 
 int
-gs_pop_transparency_state(gs_state *pgs)
+gs_pop_transparency_state(gs_state *pgs, bool force)
 {
     gs_pdf14trans_params_t params = { 0 };
     gs_imager_state * pis = (gs_imager_state *)pgs;
@@ -488,7 +490,7 @@ gs_pop_transparency_state(gs_state *pgs)
        an active softmask for the graphic state.  We
        need to communicate to the compositor to pop
        the softmask */
-    if ( pis->trans_flags.xstate_change ) {
+    if ( pis->trans_flags.xstate_change || force) {
         if_debug0('v', "[v]gs_pop_transparency_state sending\n");
         params.pdf14_op = PDF14_POP_TRANS_STATE;
         code = gs_state_update_pdf14trans(pgs, &params);
@@ -797,7 +799,8 @@ gs_push_pdf14trans_device(gs_state * pgs, bool is_pattern)
        whose profile is CIELAB then we will need to make sure that we
        do our blending in RGB and convert to CIELAB when we do the put_image
        command */
-    if (icc_profile->data_cs == gsCIELAB) {
+    if (icc_profile->data_cs == gsCIELAB ||
+        icc_profile->islab) {
         params.iccprofile = pgs->icc_manager->default_rgb;
     }
     /* Note: Other parameters not used */

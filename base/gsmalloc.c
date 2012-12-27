@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* C heap allocator */
 #include "malloc_.h"
 #include "gdebug.h"
@@ -105,7 +107,7 @@ gs_malloc_memory_t *
 gs_malloc_memory_init(void)
 {
     gs_malloc_memory_t *mem =
-        (gs_malloc_memory_t *)malloc(sizeof(gs_malloc_memory_t));
+        (gs_malloc_memory_t *)Memento_label(malloc(sizeof(gs_malloc_memory_t)), "gs_malloc_memory_t");
 
     if (mem == NULL)
         return NULL;
@@ -178,7 +180,7 @@ gs_heap_alloc_bytes(gs_memory_t * mem, uint size, client_name_t cname)
 
         if (mmem->limit - added < mmem->used)
             set_msg("exceeded limit");
-        else if ((ptr = (byte *) malloc(added)) == 0)
+        else if ((ptr = (byte *) Memento_label(malloc(added), cname)) == 0)
             set_msg("failed");
         else {
             gs_malloc_block_t *bp = (gs_malloc_block_t *) ptr;
@@ -467,6 +469,9 @@ gs_heap_free_all(gs_memory_t * mem, uint free_mask, client_name_t cname)
      */
     mmem->monitor = NULL; 	/* delete reference to this monitor */
     gx_monitor_free(mon);	/* free the monitor */
+#ifndef MEMENTO
+    /* Normally gs calls this on closedown, and it frees every block that
+     * has ever been allocated. This is not helpful for leak checking. */
     if (free_mask & FREE_ALL_DATA) {
         gs_malloc_block_t *bp = mmem->allocated;
         gs_malloc_block_t *np;
@@ -480,6 +485,7 @@ gs_heap_free_all(gs_memory_t * mem, uint free_mask, client_name_t cname)
             free(bp);
         }
     }
+#endif
     if (free_mask & FREE_ALL_ALLOCATOR)
         free(mem);
 }

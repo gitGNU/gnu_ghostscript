@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Color space management and writing for pdfwrite driver */
 #include "math_.h"
 #include "memory_.h"
@@ -481,7 +483,7 @@ pdf_separation_color_space(gx_device_pdf *pdev,
         csi = gsicc_get_default_type(alt_space->cmm_icc_profile_data);
     }
     if (csi == gs_color_space_index_DeviceRGB && (pdev->PDFX ||
-        (pdev->PDFA && (pdev->pcm_color_info_index == gs_color_space_index_DeviceCMYK)))) {
+        (pdev->PDFA != 0 && (pdev->pcm_color_info_index == gs_color_space_index_DeviceCMYK)))) {
 
         /* We have a DeviceRGB alternate, but are producing either PDF/X or
          * PDF/A with a DeviceCMYK process color model. So we need to convert
@@ -530,7 +532,7 @@ pdf_separation_color_space(gx_device_pdf *pdev,
         return code;
     }
     if (csi == gs_color_space_index_DeviceCMYK &&
-        (pdev->PDFA && (pdev->pcm_color_info_index == gs_color_space_index_DeviceRGB))) {
+        (pdev->PDFA != 0 && (pdev->pcm_color_info_index == gs_color_space_index_DeviceRGB))) {
         /* We have a DeviceCMYK alternate, but are producingPDF/A with a
          * DeviceRGB process color model. See comment above re DviceRGB.
          */
@@ -825,7 +827,7 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
     byte *serialized = NULL, serialized0[100];
     pdf_resource_t *pres = NULL;
     int code;
-#if 0
+#ifdef DEPRECATED_906
     bool islab = false;
 #endif
 
@@ -838,7 +840,7 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
            color space.  This is disabled until I add the capability to
            specify the profile version to ensure compatability with
            the PDF versions */
-#if 0
+#ifdef DEPRECATED_906
         if (pcs_in->icc_equivalent != NULL) {
             pcs = pcs_in->icc_equivalent;
         } else {
@@ -916,17 +918,26 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
     if (pdev->params.ColorConversionStrategy == ccs_CMYK &&
             csi != gs_color_space_index_DeviceCMYK &&
             csi != gs_color_space_index_DeviceGray &&
-            csi != gs_color_space_index_Pattern)
-        return_error(gs_error_rangecheck);
+            csi != gs_color_space_index_Pattern) {
+          emprintf(pdev->memory,
+                 "\nUnable to convert color space to CMYK, reverting strategy to LeaveColorUnchanged.\n");
+          pdev->params.ColorConversionStrategy = ccs_LeaveColorUnchanged;
+    }
     if (pdev->params.ColorConversionStrategy == ccs_sRGB &&
             csi != gs_color_space_index_DeviceRGB &&
             csi != gs_color_space_index_DeviceGray &&
-            csi != gs_color_space_index_Pattern)
-        return_error(gs_error_rangecheck);
+            csi != gs_color_space_index_Pattern) {
+          emprintf(pdev->memory,
+                 "\nUnable to convert color space to sRGB, reverting strategy to LeaveColorUnchanged.\n");
+          pdev->params.ColorConversionStrategy = ccs_LeaveColorUnchanged;
+    }
     if (pdev->params.ColorConversionStrategy == ccs_Gray &&
             csi != gs_color_space_index_DeviceGray &&
-            csi != gs_color_space_index_Pattern)
-        return_error(gs_error_rangecheck);
+            csi != gs_color_space_index_Pattern) {
+          emprintf(pdev->memory,
+                 "\nUnable to convert color space to Gray, reverting strategy to LeaveColorUnchanged.\n");
+          pdev->params.ColorConversionStrategy = ccs_LeaveColorUnchanged;
+    }
     /* Check whether we already have a PDF object for this color space. */
     if (pcs->id != gs_no_id)
         pres = pdf_find_resource_by_gs_id(pdev, resourceColorSpace, pcs->id);
@@ -1293,6 +1304,20 @@ pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
         code = pdf_add_resource(pdev, pdev->substream_Resources, "/ColorSpace", pres);
         if (code < 0)
             return code;
+    }
+    return 0;
+}
+
+int free_color_space(gx_device_pdf *pdev, pdf_resource_t *pres)
+{
+    pdf_color_space_t *ppcs = (pdf_color_space_t *)pres;
+
+    if (ppcs->serialized)
+        gs_free_object(pdev->pdf_memory, ppcs->serialized, "free serialized colour space");
+    if (pres->object) {
+        cos_release(pres->object, "release ColorSpace object");
+        gs_free_object(pdev->pdf_memory, pres->object, "free ColorSpace object");
+        pres->object = 0;
     }
     return 0;
 }

@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 
 /*
 Functions to serialize a type 1 font as PostScript code that can then be
@@ -300,15 +302,26 @@ static void write_main_dictionary(FAPI_font* a_fapi_font,WRF_output* a_output, i
                 WRF_wstring(a_output, "] def\n");
             }
             WRF_wstring(a_output,"end readonly def\n");
-            WRF_wstring(a_output,"/$Blend {");
-            x = a_fapi_font->get_word(a_fapi_font,FAPI_FONT_FEATURE_DollarBlend_length,0);
-            if(a_output->m_count)
-                a_output->m_count += x;
-            x = a_fapi_font->get_proc(a_fapi_font,FAPI_FONT_FEATURE_DollarBlend,0,(char *)a_output->m_pos);
-            if(a_output->m_pos)
-                a_output->m_pos += x;
-            WRF_wstring(a_output,"} def\n");
-            WRF_wstring(a_output,"/$Blend {0.1 mul exch 0.45 mul add exch 0.17 mul add add} def\n");
+
+            /* Previously we tried to write $Blend twice - the "real" one from the font,
+             * and the boiler plate one below.
+             * For now, I assume there was a good reason for including the second, but it may
+             * be because the "get_proc" method below was missing the code to handle PS name
+             * objects.
+             */
+            if ((x = a_fapi_font->get_word(a_fapi_font,FAPI_FONT_FEATURE_DollarBlend_length,0)) > 0) {
+                WRF_wstring(a_output,"/$Blend {");
+                
+                if(a_output->m_count)
+                    a_output->m_count += x;
+                x = a_fapi_font->get_proc(a_fapi_font,FAPI_FONT_FEATURE_DollarBlend,0,(char *)a_output->m_pos);
+                if(a_output->m_pos)
+                    a_output->m_pos += x;
+                WRF_wstring(a_output,"} def\n");
+            }
+            else {
+                WRF_wstring(a_output,"/$Blend {0.1 mul exch 0.45 mul add exch 0.17 mul add add} def\n");
+            }
             WRF_wstring(a_output,"/WeightVector [");
             x = a_fapi_font->get_word(a_fapi_font,FAPI_FONT_FEATURE_WeightVector_count,0);
             for (i = 0;i < x;i++) {

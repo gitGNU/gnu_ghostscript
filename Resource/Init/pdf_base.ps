@@ -1,4 +1,5 @@
-%    Copyright (C) 1994-2006 Artifex Software, Inc.  All rights reserved.
+% Copyright (C) 2001-2012 Artifex Software, Inc.
+% All Rights Reserved.
 %
 % This software is provided AS-IS with no warranty, either express or
 % implied.
@@ -7,13 +8,11 @@
 % modified or distributed except as expressly authorized under the terms
 % of the license contained in the file LICENSE in this distribution.
 %
-% For more information about licensing, please refer to
-% http://www.ghostscript.com/licensing/. For information on
-% commercial licensing, go to http://www.artifex.com/licensing/ or
-% contact Artifex Software, Inc., 101 Lucas Valley Road #110,
-% San Rafael, CA  94903, U.S.A., +1(415)492-9861.
+% Refer to licensing information at http://www.artifex.com or contact
+% Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+% CA  94903, U.S.A., +1(415)492-9861, for further information.
+%
 
-% $Id$
 % pdf_base.ps
 % Basic parser for PDF reader.
 
@@ -98,6 +97,8 @@ pdfdict begin
   (#) search { name#escape } if concatstrings
 } bind def
 
+/num-chars-dict mark (0123456789-.) {dup} forall .dicttomark readonly def
+
 % Execute a file, interpreting its executable names in a given
 % dictionary.  The name procedures may do whatever they want
 % to the operand stack.
@@ -105,20 +106,32 @@ pdfdict begin
   BXlevel 0 le {
     (   **** Unknown operator: ') pdfformaterror
     dup =string cvs pdfformaterror
+    (') pdfformaterror
     % Attempt a retry scan of the element after changing to PDFScanInvNum
     << /PDFScanInvNum //true >> setuserparams
     =string cvs
     token pop exch pop dup type
     dup /integertype eq exch /realtype eq or {
       exch pop exch pop
-      (', processed as number, value: ) pdfformaterror
+      (, processed as number, value: ) pdfformaterror
       dup =string cvs pdfformaterror (\n) pdfformaterror
      << /PDFScanInvNum //null >> setuserparams    % reset to default scanning rules
       //false 	% suppress any stack cleanup
     } {
-      % error was non-recoverable with modified scanning rules
-    ('\n) pdfformaterror
-      //true
+      % error was non-recoverable with modified scanning rules, continue.
+      dup type /nametype eq {
+      //true 1 index .namestring {
+        //num-chars-dict exch known and
+      } forall { % perhaps, it's a malformed number.
+        pop pop pop 0 //false
+        ( looks like a malformed number, replacing with 0.) pdfformaterror
+      } {
+        //true % punt
+      } ifelse
+    } {
+      //true   % punt
+    } ifelse
+    (\n) pdfformaterror
     } ifelse
   } {
     //true
@@ -127,6 +140,9 @@ pdfdict begin
   pop pop count exch sub { pop } repeat	% pop all the operands
   } if
 } bind def
+
+currentdict /num-chars-dict .undef
+
 /.pdfexectoken {		% <count> <opdict> <exectoken> .pdfexectoken ?
   PDFDEBUG {
     pdfdict /PDFSTEPcount known not { pdfdict /PDFSTEPcount 1 .forceput } if
@@ -817,6 +833,13 @@ currentdict /no_debug_dict undef
 % We do the real work of constructing the data stream only when the
 % contents are needed.
 
+/stream-space-dict <<
+  % 0 is unlikely to be used as a space
+  10 { //false exit } bind 
+  13 {} 
+  32 {}
+>> readonly def
+
 % Construct a stream.  The length is not reliable in the face of
 % different end-of-line conventions, but it's all we've got.
 %
@@ -841,19 +864,18 @@ currentdict /no_debug_dict undef
       dup /File PDFfile put
       % make sure that we are just past the EOL \n character
       PDFfile dup fileposition 1 sub setfileposition	% back up one
-
-      PDFfile read pop
-      dup 13 eq {
-        % If there had been a \n, token would have advanced over it
-        % thus, if the terminator was \r, we have a format error!
-        (   **** Warning: stream operator not terminated by valid EOL.\n) pdfformaterror
-        pop   % fileposition is OK (just past the \r).
-      } {
-        % Otherwise, scan past \n
-        { 10 eq { exit } if
-          PDFfile read pop
-        } loop
-      } ifelse
+      % Skip spaces till \n or a non-space character is found.
+      { 
+        PDFfile read pop
+        //stream-space-dict exch .knownget {
+          exec
+        } {
+          PDFfile dup fileposition 1 sub setfileposition
+          //true exit
+        } ifelse
+      } loop {
+        (   **** Warning: stream operator isn't terminated by valid EOL.\n) pdfformaterror
+      } if
       dup /FilePosition PDFfile fileposition put
       PDFDEBUG {
         PDFSTEPcount 1 le {
@@ -902,6 +924,9 @@ currentdict /no_debug_dict undef
   } ifelse
   cvx
 } bind def
+
+currentdict /stream-space-dict undef
+
 /endstream {
   exit
 } bind def
@@ -920,6 +945,14 @@ currentdict /no_debug_dict undef
   2 index exch knownoget {
     oforce_recursive
     exch 2 index exch knownoget {
+      dup length 0 eq {
+        pop //false
+      } {
+        //true
+      } ifelse
+    } {
+      //false
+    } ifelse {
                 % Both filters and parameters.
       oforce_recursive
       exch dup type /nametype eq {

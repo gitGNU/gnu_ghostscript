@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Low-level bitmap image handling for PDF-writing driver */
 #include "string_.h"
 #include "gx.h"
@@ -293,16 +295,18 @@ pdf_copy_mono(gx_device_pdf *pdev,
      * that would need to be passed.
      */
     if (pres) {
-        /*
-         * Always use CCITTFax 2-D for character bitmaps.  It takes less
-         * space to invert the data with Decode than to set BlackIs1.
-         */
-        float d0 = image.Decode[0];
+        if (!pdev->NoT3CCITT) {
+            /*
+             * Always use CCITTFax 2-D for character bitmaps.  It takes less
+             * space to invert the data with Decode than to set BlackIs1.
+             */
+            float d0 = image.Decode[0];
 
-        image.Decode[0] = image.Decode[1];
-        image.Decode[1] = d0;
-        psdf_CFE_binary(&writer.binary[0], image.Width, image.Height, true);
-        invert ^= 0xff;
+            image.Decode[0] = image.Decode[1];
+            image.Decode[1] = d0;
+            psdf_CFE_binary(&writer.binary[0], image.Width, image.Height, true);
+            invert ^= 0xff;
+        }
     } else {
         /* Use the Distiller compression parameters. */
         pdev->ParamCompatibilityLevel = pdev->CompatibilityLevel;
@@ -585,7 +589,7 @@ gdev_pdf_strip_tile_rectangle(gx_device * dev, const gx_strip_bitmap * tiles,
 
             sprintf(buf, "/R%ld Do\n", image_id);
             pprintd1(s, "%d>>stream\n", strlen(buf));
-            if (pdev->PDFA)
+            if (pdev->PDFA != 0)
                 pprints1(s, "%s\nendstream\n", buf);
             else
                 pprints1(s, "%sendstream\n", buf);

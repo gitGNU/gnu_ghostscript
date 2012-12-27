@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Implementation of (path-based) clipping */
 #include "gx.h"
 #include "gxdevice.h"
@@ -30,12 +32,15 @@
 /* all drawing operations. */
 static dev_proc_open_device(clip_open);
 static dev_proc_fill_rectangle(clip_fill_rectangle);
+static dev_proc_fill_rectangle_hl_color(clip_fill_rectangle_hl_color);
 static dev_proc_copy_mono(clip_copy_mono);
 static dev_proc_copy_planes(clip_copy_planes);
 static dev_proc_copy_color(clip_copy_color);
 static dev_proc_copy_alpha(clip_copy_alpha);
+static dev_proc_copy_alpha_hl_color(clip_copy_alpha_hl_color);
 static dev_proc_fill_mask(clip_fill_mask);
 static dev_proc_strip_tile_rectangle(clip_strip_tile_rectangle);
+static dev_proc_strip_tile_rect_devn(clip_strip_tile_rect_devn);
 static dev_proc_strip_copy_rop(clip_strip_copy_rop);
 static dev_proc_strip_copy_rop2(clip_strip_copy_rop2);
 static dev_proc_get_clipping_box(clip_get_clipping_box);
@@ -100,7 +105,7 @@ static const gx_device_clip gs_clip_device =
   gx_forward_encode_color,
   gx_forward_decode_color,
   NULL,
-  gx_forward_fill_rectangle_hl_color,
+  clip_fill_rectangle_hl_color,
   gx_forward_include_color_space,
   gx_default_fill_linear_color_scanline,
   gx_default_fill_linear_color_trapezoid,
@@ -115,7 +120,9 @@ static const gx_device_clip gs_clip_device =
   clip_copy_planes,          /* copy planes */
   gx_forward_get_profile,
   gx_forward_set_graphics_type_tag,
-  clip_strip_copy_rop2
+  clip_strip_copy_rop2,
+  clip_strip_tile_rect_devn,
+  clip_copy_alpha_hl_color
  }
 };
 
@@ -134,6 +141,44 @@ gx_make_clip_device_on_stack(gx_device_clip * dev, const gx_clip_path *pcpath, g
     dev->graphics_type_tag = target->graphics_type_tag;	/* initialize to same as target */
     /* There is no finalization for device on stack so no rc increment */
     (*dev_proc(dev, open_device)) ((gx_device *)dev);
+}
+
+gx_device *
+gx_make_clip_device_on_stack_if_needed(gx_device_clip * dev, const gx_clip_path *pcpath, gx_device *target, gs_fixed_rect *rect)
+{
+    /* Reduce area if possible */
+    if (rect->p.x < pcpath->outer_box.p.x)
+        rect->p.x = pcpath->outer_box.p.x;
+    if (rect->q.x > pcpath->outer_box.q.x)
+        rect->q.x = pcpath->outer_box.q.x;
+    if (rect->p.y < pcpath->outer_box.p.y)
+        rect->p.y = pcpath->outer_box.p.y;
+    if (rect->q.y > pcpath->outer_box.q.y)
+        rect->q.y = pcpath->outer_box.q.y;
+    if (pcpath->inner_box.p.x <= rect->p.x && pcpath->inner_box.p.y <= rect->p.y &&
+        pcpath->inner_box.q.x >= rect->q.x && pcpath->inner_box.q.y >= rect->q.y)
+    {
+        /* Area is trivially included. No need for clip. */
+        return target;
+    }
+    else
+    {
+        /* Check for area being trivially clipped away. */
+        if (rect->p.x >= rect->q.x || rect->p.y >= rect->q.y)
+            return NULL;
+    }
+    gx_device_init((gx_device *)dev, (const gx_device *)&gs_clip_device, NULL, true);
+    dev->list = *gx_cpath_list(pcpath);
+    dev->translation.x = 0;
+    dev->translation.y = 0;
+    dev->HWResolution[0] = target->HWResolution[0];
+    dev->HWResolution[1] = target->HWResolution[1];
+    dev->sgr = target->sgr;
+    dev->target = target;
+    dev->graphics_type_tag = target->graphics_type_tag;	/* initialize to same as target */
+    /* There is no finalization for device on stack so no rc increment */
+    (*dev_proc(dev, open_device)) ((gx_device *)dev);
+    return (gx_device *)dev;
 }
 void
 gx_make_clip_device_in_heap(gx_device_clip * dev, const gx_clip_path *pcpath, gx_device *target,
@@ -378,6 +423,88 @@ clip_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
                                clip_call_fill_rectangle, &ccdata);
 }
 
+int
+clip_call_fill_rectangle_hl_color(clip_callback_data_t * pccd, int xc, int yc, 
+                                  int xec, int yec)
+{
+    gs_fixed_rect rect;
+
+    rect.p.x = xc;
+    rect.p.y = yc;
+    rect.q.x = xec;
+    rect.q.y = yec;
+    return (*dev_proc(pccd->tdev, fill_rectangle_hl_color))
+        (pccd->tdev, &rect, pccd->pis, pccd->pdcolor, pccd->pcpath);
+}
+
+static int
+clip_fill_rectangle_hl_color(gx_device *dev, const gs_fixed_rect *rect,
+    const gs_imager_state *pis, const gx_drawing_color *pdcolor,
+    const gx_clip_path *pcpath)
+{
+    gx_device_clip *rdev = (gx_device_clip *) dev;
+    clip_callback_data_t ccdata;
+    gx_device *tdev = rdev->target;
+    gx_clip_rect *rptr = rdev->current;
+    int xe, ye;
+    int w, h, x, y;
+    gs_fixed_rect newrect;
+
+    x = rect->p.x;
+    y = rect->p.y;
+    w = rect->q.x - rect->p.x;
+    h = rect->q.y - rect->p.y;
+
+    if (w <= 0 || h <= 0)
+        return 0;
+    x += rdev->translation.x;
+    xe = x + w;
+    y += rdev->translation.y;
+    ye = y + h;
+    /* We open-code the most common cases here. */
+    if ((y >= rptr->ymin && ye <= rptr->ymax) ||
+        ((rptr = rptr->next) != 0 &&
+         y >= rptr->ymin && ye <= rptr->ymax)
+        ) {
+        rdev->current = rptr;	/* may be redundant, but awkward to avoid */
+        INCR(in_y);
+        if (x >= rptr->xmin && xe <= rptr->xmax) {
+            INCR(in);
+            newrect.p.x = x;
+            newrect.p.y = y;
+            newrect.q.x = x + w;
+            newrect.q.y = y + h;
+            return dev_proc(tdev, fill_rectangle_hl_color)(tdev, &newrect, pis,
+                                                           pdcolor, pcpath);
+        }
+        else if ((rptr->prev == 0 || rptr->prev->ymax != rptr->ymax) &&
+                 (rptr->next == 0 || rptr->next->ymax != rptr->ymax)
+                 ) {
+            INCR(in1);
+            if (x < rptr->xmin)
+                x = rptr->xmin;
+            if (xe > rptr->xmax)
+                xe = rptr->xmax;
+            if (x >= xe)
+                return 0;
+            else {
+                newrect.p.x = x;
+                newrect.p.y = y;
+                newrect.q.x = xe;
+                newrect.q.y = y + h;
+                return dev_proc(tdev, fill_rectangle_hl_color)(tdev, &newrect, pis,
+                                                               pdcolor, pcpath);
+            }
+        }
+    }
+    ccdata.tdev = tdev;
+    ccdata.pdcolor = pdcolor;
+    ccdata.pis = pis;
+    ccdata.pcpath = pcpath;
+    return clip_enumerate_rest(rdev, x, y, xe, ye,
+                               clip_call_fill_rectangle_hl_color, &ccdata);
+}
+
 /* Copy a monochrome rectangle */
 int
 clip_call_copy_mono(clip_callback_data_t * pccd, int xc, int yc, int xec, int yec)
@@ -507,6 +634,30 @@ clip_copy_alpha(gx_device * dev,
     return clip_enumerate(rdev, x, y, w, h, clip_call_copy_alpha, &ccdata);
 }
 
+int
+clip_call_copy_alpha_hl_color(clip_callback_data_t * pccd, int xc, int yc, 
+                              int xec, int yec)
+{
+    return (*dev_proc(pccd->tdev, copy_alpha_hl_color))
+        (pccd->tdev, pccd->data + (yc - pccd->y) * pccd->raster,
+         pccd->sourcex + xc - pccd->x, pccd->raster, gx_no_bitmap_id,
+         xc, yc, xec - xc, yec - yc, pccd->pdcolor, pccd->depth);
+}
+
+static int
+clip_copy_alpha_hl_color(gx_device * dev,
+                const byte * data, int sourcex, int raster, gx_bitmap_id id,
+                int x, int y, int w, int h,
+                const gx_drawing_color *pdcolor, int depth)
+{
+    gx_device_clip *rdev = (gx_device_clip *) dev;
+    clip_callback_data_t ccdata;
+
+    ccdata.data = data, ccdata.sourcex = sourcex, ccdata.raster = raster;
+    ccdata.pdcolor = pdcolor, ccdata.depth = depth;
+    return clip_enumerate(rdev, x, y, w, h, clip_call_copy_alpha_hl_color, &ccdata);
+}
+
 /* Fill a region defined by a mask. */
 int
 clip_call_fill_mask(clip_callback_data_t * pccd, int xc, int yc, int xec, int yec)
@@ -534,6 +685,31 @@ clip_fill_mask(gx_device * dev,
     ccdata.data = data, ccdata.sourcex = sourcex, ccdata.raster = raster;
     ccdata.pdcolor = pdcolor, ccdata.depth = depth, ccdata.lop = lop;
     return clip_enumerate(rdev, x, y, w, h, clip_call_fill_mask, &ccdata);
+}
+
+/* Strip-tile a rectangle with devn colors. */
+int
+clip_call_strip_tile_rect_devn(clip_callback_data_t * pccd, int xc, int yc, int xec, int yec)
+{
+    return (*dev_proc(pccd->tdev, strip_tile_rect_devn))
+        (pccd->tdev, pccd->tiles, xc, yc, xec - xc, yec - yc,
+         pccd->pdc[0], pccd->pdc[1], pccd->phase.x, pccd->phase.y);
+}
+static int
+clip_strip_tile_rect_devn(gx_device * dev, const gx_strip_bitmap * tiles,
+                                int x, int y, int w, int h,
+                                const gx_drawing_color *pdcolor0, 
+                                const gx_drawing_color *pdcolor1, int phase_x, 
+                                int phase_y)
+{
+    gx_device_clip *rdev = (gx_device_clip *) dev;
+    clip_callback_data_t ccdata;
+
+    ccdata.tiles = tiles;
+    ccdata.pdc[0] = pdcolor0;
+    ccdata.pdc[1] = pdcolor1;
+    ccdata.phase.x = phase_x, ccdata.phase.y = phase_y;
+    return clip_enumerate(rdev, x, y, w, h, clip_call_strip_tile_rect_devn, &ccdata);
 }
 
 /* Strip-tile a rectangle. */

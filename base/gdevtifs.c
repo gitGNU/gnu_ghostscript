@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* TIFF-writing substructure */
 
 #include "stdint_.h"   /* for tiff.h */
@@ -326,16 +328,19 @@ int tiff_set_fields_for_printer(gx_device_printer *pdev,
                                 int                factor,
                                 int                adjustWidth)
 {
-    int width = pdev->width/factor;
+    int width = gx_downscaler_scale(pdev->width, factor);
+    int height = gx_downscaler_scale(pdev->height, factor);
+    int xpi = gx_downscaler_scale(pdev->x_pixels_per_inch, factor);
+    int ypi = gx_downscaler_scale(pdev->y_pixels_per_inch, factor);
     width = fax_adjusted_width(width, adjustWidth);
     TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, width);
-    TIFFSetField(tif, TIFFTAG_IMAGELENGTH, pdev->height/factor);
+    TIFFSetField(tif, TIFFTAG_IMAGELENGTH, height);
     TIFFSetField(tif, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);
     TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
 
     TIFFSetField(tif, TIFFTAG_RESOLUTIONUNIT, RESUNIT_INCH);
-    TIFFSetField(tif, TIFFTAG_XRESOLUTION, (float)pdev->x_pixels_per_inch/factor);
-    TIFFSetField(tif, TIFFTAG_YRESOLUTION, (float)pdev->y_pixels_per_inch/factor);
+    TIFFSetField(tif, TIFFTAG_XRESOLUTION, (float)xpi);
+    TIFFSetField(tif, TIFFTAG_YRESOLUTION, (float)ypi);
 
     {
         char revs[10];

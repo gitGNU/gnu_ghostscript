@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Internal definitions for PDF-writing driver. */
 
 #ifndef gdevpdfx_INCLUDED
@@ -166,6 +168,14 @@ typedef enum {
  * for synthesized fonts, rname is A, B, ....  The string is null-terminated.
  */
 
+    /* WARNING WILL ROBINSON!
+     * these 2 pointers may *look* like a double linked list but in fact these are pointers
+     * to two *different* single-linked lists. 'next' points to the next resource
+     * of this type, which is stored in the resource chains pointed to by the array
+     * 'resources' in the device structure. 'prev' is a pointer
+     * to the list of stored resources of all types, pointed to by the
+     * 'last_resource' member of the device structure.
+     */
 #define pdf_resource_common(typ)\
     typ *next;                        /* next resource of this type */\
     pdf_resource_t *prev;        /* previously allocated resource */\
@@ -257,6 +267,10 @@ struct pdf_article_s {
 /* ---------------- The device structure ---------------- */
 
 /* Resource lists */
+/* We seem to split the resources up into 'NUM_RESOURCE_CHAINS' linked
+ * lists purely as a performance boost. Presumably it save searching very
+ * long lists.
+ */
 #define NUM_RESOURCE_CHAINS 16
 typedef struct pdf_resource_list_s {
     pdf_resource_t *chains[NUM_RESOURCE_CHAINS];
@@ -465,11 +479,13 @@ struct gx_device_pdf_s {
     bool PatternImagemask; /* The target viewer|printer handles imagemask
                               with pattern color. */
     bool PDFX;                   /* Generate PDF/X */
-    bool PDFA;                   /* Generate PDF/A */
+    int PDFA;                   /* Generate PDF/A 0 = don't produce, otherwise level of PDF/A */
     bool AbortPDFAX;            /* Abort generation of PDFA or X, produce regular PDF */
     long MaxClipPathSize;  /* The maximal number of elements of a clipping path
                               that the target viewer|printer can handle. */
+#ifdef DEPRECATED_906
     long MaxViewerMemorySize;
+#endif
     long MaxShadingBitmapSize; /* The maximal number of bytes in
                               a bitmap representation of a shading.
                               (Bigger shadings to be downsampled). */
@@ -646,6 +662,15 @@ struct gx_device_pdf_s {
      */
     int FormDepth;
 
+    /* Nasty hack. OPDFread.ps resets the grpahics state to the identity before
+     * replaying the Pattern PaintProc, but if the Pattern is nested inside a
+     * previous pattern, this doesn't work. We use this to keep track of whether
+     * we are nested, and if we are (and are ps2write, not pdfwrite) we track the
+     * pattern CTM below.
+     */
+    int PatternDepth;
+    gs_matrix AccumulatedPatternMatrix;
+
     /* Accessories */
     cos_dict_t *substream_Resources;     /* Substream resources */
     gs_color_space_index pcm_color_info_index; /* Index of the ProcessColorModel space. */
@@ -677,7 +702,10 @@ struct gx_device_pdf_s {
     gs_id     image_mask_id;
     bool      image_mask_is_SMask;
     bool      image_mask_skip; /* A flag for pdf_begin_transparency_mask */
-    bool      image_with_SMask; /* A flag for pdf_begin_transparency_group. */
+    uint      image_with_SMask; /* A flag for pdf_begin_transparency_group. In order to
+                                 * deal with nested groups we set/test the bit according
+                                 * to the FormDepth
+                                 */
     gs_matrix converting_image_matrix;
     double    image_mask_scale;
     /* Temporary data for soft mask form. */
@@ -698,12 +726,16 @@ struct gx_device_pdf_s {
     int PDFACompatibilityPolicy;
     bool DetectDuplicateImages;
     bool AllowIncrementalCFF;
-    bool HighLevelDevice;
     bool WantsToUnicode;
     bool AllowPSRepeatFunctions;
     bool IsDistiller;
     bool PreserveSMask;
     bool PreserveTrMode;
+    bool NoT3CCITT;                 /* A bug in Brother printers causes CCITTFaxDecode
+                                     * to fail, especially with small amounts of data.
+                                     * This parameter is present only to allow
+                                     * ps2write output to work on those pritners.
+                                     */
 };
 
 #define is_in_page(pdev)\
@@ -802,7 +834,7 @@ void pdf_reset_text(gx_device_pdf *pdev);
 int ps2write_dsc_header(gx_device_pdf * pdev, int pages);
 
 /* Open the document if necessary. */
-int pdf_open_document(gx_device_pdf * pdev);
+int pdfwrite_pdf_open_document(gx_device_pdf * pdev);
 
 /* ------ Objects ------ */
 
@@ -935,9 +967,11 @@ void pdf_reverse_resource_chain(gx_device_pdf *pdev, pdf_resource_type_t rtype);
  */
 int pdf_free_resource_objects(gx_device_pdf *pdev, pdf_resource_type_t rtype);
 
+#ifdef DEPRECATED_906
 /* Write and free all resource objects. */
 
 int pdf_write_and_free_all_resource_objects(gx_device_pdf *pdev);
+#endif
 
 /*
  * Store the resource sets for a content stream (page or XObject).
@@ -1242,11 +1276,15 @@ int pdf_replace_names(gx_device_pdf *pdev, const gs_param_string *from,
 
 /* For gdevpdf.c */
 
+#ifdef DEPRECATED_906
 /*
  * Close the text-related parts of a document, including writing out font
  * and related resources.
  */
 int pdf_close_text_document(gx_device_pdf *pdev);
+#endif
+
+int write_font_resources(gx_device_pdf *pdev, pdf_resource_list_t *prlist);
 
 /* ---------------- Exported by gdevpdft.c ---------------- */
 

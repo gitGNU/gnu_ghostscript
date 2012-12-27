@@ -1,16 +1,18 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id$ */
+
 /* Portable Bit/Gray/PixMap drivers */
 #include "gdevprn.h"
 #include "gscdefs.h"
@@ -1228,22 +1230,22 @@ psm_print_page(gx_device_printer * pdev, FILE * pstream)
             byte *row;
 
             if (lnum == band_end) {
-                gx_colors_used_t colors_used;
+                gx_color_usage_t color_usage;
                 int band_start;
                 int band_height =
-                    gdev_prn_colors_used((gx_device *)pdev, lnum, 1,
-                                         &colors_used, &band_start);
+                    gdev_prn_color_usage((gx_device *)pdev, lnum, 1,
+                                         &color_usage, &band_start);
 
                 band_end = band_start + band_height;
-                marked = colors_used.or & (plane_mask << plane_shift);
+                marked = color_usage.or & (plane_mask << plane_shift);
                 if (!marked)
                     memset(data, 0, raster);
 #ifdef DEBUG
                 if (plane == 0)
                     if_debug4(':',
                               "[:]%4d - %4d mask = 0x%lx, slow_rop = %d\n",
-                              lnum, band_end - 1, (ulong)colors_used.or,
-                              colors_used.slow_rop);
+                              lnum, band_end - 1, (ulong)color_usage.or,
+                              color_usage.slow_rop);
 #endif
             }
             if (marked) {

@@ -1,16 +1,18 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
-/* $Id$ */
+
 /* Default device implementation */
 #include "math_.h"
 #include "gx.h"
@@ -560,6 +562,7 @@ gx_device_fill_in_procs(register gx_device * dev)
     fill_dev_proc(dev, strip_tile_rectangle, gx_default_strip_tile_rectangle);
     fill_dev_proc(dev, strip_copy_rop, gx_default_strip_copy_rop);
     fill_dev_proc(dev, strip_copy_rop2, gx_default_strip_copy_rop2);
+    fill_dev_proc(dev, strip_tile_rect_devn, gx_default_strip_tile_rect_devn);
     fill_dev_proc(dev, get_clipping_box, gx_default_get_clipping_box);
     fill_dev_proc(dev, begin_typed_image, gx_default_begin_typed_image);
     fill_dev_proc(dev, get_bits_rectangle, gx_default_get_bits_rectangle);
@@ -666,6 +669,8 @@ gx_device_fill_in_procs(register gx_device * dev)
     fill_dev_proc(dev, update_spot_equivalent_colors, gx_default_update_spot_equivalent_colors);
     fill_dev_proc(dev, ret_devn_params, gx_default_ret_devn_params);
     fill_dev_proc(dev, fillpage, gx_default_fillpage);
+    fill_dev_proc(dev, copy_alpha_hl_color, gx_default_copy_alpha_hl_color);
+
     /* NOT push_transparency_state */
     /* NOT pop_transparency_state */
     /* NOT put_image */
@@ -922,6 +927,8 @@ gx_default_dev_spec_op(gx_device *pdev, int dev_spec_op, void *data, int size)
         case gxdso_pattern_handles_clip_path:
         case gxdso_is_pdf14_device:
         case gxdso_is_native_planar:
+        case gxdso_supports_devn:
+        case gxdso_supports_hlcolor:
             return 0;
         case gxdso_pattern_shfill_doesnt_need_path:
             return (pdev->procs.fill_path == gx_default_fill_path);

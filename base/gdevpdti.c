@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Bitmap font implementation for pdfwrite */
 #include "memory_.h"
 #include "gx.h"
@@ -294,6 +296,25 @@ pdf_attach_charproc(gx_device_pdf * pdev, pdf_font_resource_t *pdfont, pdf_char_
     return 0;
 }
 
+int
+pdf_free_charproc_ownership(gx_device_pdf * pdev, pdf_resource_t *pres)
+{
+    pdf_char_proc_ownership_t *next, *pcpo = (pdf_char_proc_ownership_t *)pres;
+
+    while (pcpo) {
+        next = pcpo->char_next;
+        if(pcpo->char_name.size != 0 && pcpo->char_name.data) {
+            /* This causes PCL some trouble, don't know why yet FIXME-MEMORY
+            gs_free_string(pdev->pdf_memory, (byte *)pcpo->char_name.data, pcpo->char_name.size, "Free CharProc name");*/
+            pcpo->char_name.data = (byte *)0L;
+            pcpo->char_name.size = 0;
+        }
+        gs_free_object(pdev->pdf_memory, pcpo, "Free CharProc");
+        pcpo = next;
+    }
+    return 0;
+}
+
 /* Begin a CharProc for a synthesized (bitmap) font. */
 int
 pdf_begin_char_proc(gx_device_pdf * pdev, int w, int h, int x_width,
@@ -454,7 +475,7 @@ pdf_end_char_proc(gx_device_pdf * pdev, pdf_stream_position_t * ppos)
     sseek(s, start_pos - 15);
     pprintd1(s, "%d", length);
     sseek(s, end_pos);
-    if (pdev->PDFA)
+    if (pdev->PDFA != 0)
         stream_puts(s, "\n");
     stream_puts(s, "endstream\n");
     pdf_end_separate(pdev, resourceCharProc);
@@ -683,16 +704,15 @@ pdf_close_aside(gx_device_pdf *pdev)
        into pdf_substream_save stack to simplify garbager descriptors.
        Use a lower level functions instead that. */
     stream *s = pdev->strm;
-    int status = s_close_filters(&s, cos_write_stream_from_pipeline(s));
     cos_stream_t *pcs = cos_stream_from_pipeline(s);
-    int code = 0;
+    int status = s_close_filters(&s, NULL);
 
-    if (status < 0)
-         code = gs_note_error(gs_error_ioerror);
-    pcs->is_open = false;
-    sclose(s);
     pdev->strm = pdev->streams.save_strm;
-    return code;
+    if (status < 0)
+         return(gs_note_error(gs_error_ioerror));
+
+    pcs->is_open = false;
+    return 0;
 }
 
 /*

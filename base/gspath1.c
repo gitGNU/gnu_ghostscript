@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Additional PostScript Level 1 path routines for Ghostscript library */
 #include "math_.h"
 #include "gx.h"
@@ -641,6 +643,7 @@ gs_path_enum_next(gs_path_enum * penum, gs_point ppts[3])
             /* falls through */
         case gs_pe_moveto:
         case gs_pe_lineto:
+        case gs_pe_gapto:
             if ((code = gs_point_transform_inverse(
                                                       fixed2float(fpts[0].x),
                                                       fixed2float(fpts[0].y),

@@ -332,7 +332,7 @@ void tcd_malloc_encode(opj_tcd_t *tcd, opj_image_t * image, opj_cp_t * cp, int c
 							cblk->y0 = int_max(cblkystart, prc->y0);
 							cblk->x1 = int_min(cblkxend, prc->x1);
 							cblk->y1 = int_min(cblkyend, prc->y1);
-							cblk->data = (unsigned char*) opj_calloc(8192+2, sizeof(unsigned char));
+							cblk->data = (unsigned char*) opj_calloc(9728+2, sizeof(unsigned char));
 							/* FIXME: mqc_init_enc and mqc_byteout underrun the buffer if we don't do this. Why? */
 							cblk->data += 2;
 							cblk->layers = (opj_tcd_layer_t*) opj_calloc(100, sizeof(opj_tcd_layer_t));
@@ -687,6 +687,12 @@ void tcd_malloc_decode_tile(opj_tcd_t *tcd, opj_image_t * image, opj_cp_t * cp, 
 		opj_tccp_t *tccp = &tcp->tccps[compno];
 		opj_tcd_tilecomp_t *tilec = &tile->comps[compno];
 		
+		if (tccp->numresolutions <= 0)
+		{
+			cp->tileno[tileno] = -1;
+			return;
+		}
+
 		/* border of each tile component (global) */
 		tilec->x0 = int_ceildiv(tile->x0, image->comps[compno].dx);
 		tilec->y0 = int_ceildiv(tile->y0, image->comps[compno].dy);

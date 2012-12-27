@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Imager state housekeeping */
 #include "gx.h"
 #include "gserrors.h"
@@ -61,7 +63,6 @@ private_st_line_params();
  * pointers are handled in this manner.
  */
 public_st_imager_state();
-
 static
 ENUM_PTRS_BEGIN(imager_state_enum_ptrs)
     ENUM_SUPER(gs_imager_state, st_line_params, line_params, st_imager_state_num_ptrs - st_line_params_num_ptrs);
@@ -222,7 +223,7 @@ gs_imager_state_release(gs_imager_state * pis)
 
 #define RCDECR(element)\
     rc_decrement(pis->element, cname);\
-    pis->element = NULL;    /* clear the pointer to prevent multiple decrements */
+    pis->element = NULL	/* prevent subsequent decrements from this imager state */
 
     RCDECR(cie_joint_caches);
     RCDECR(set_transfer.gray);
@@ -243,24 +244,6 @@ gs_imager_state_release(gs_imager_state * pis)
     RCDECR(halftone);
     RCDECR(devicergb_cs);
     RCDECR(devicecmyk_cs);
-    RCDECR(icc_link_cache);
-    RCDECR(icc_profile_cache);
-    RCDECR(icc_manager);
-}
-
-/* release the parts of the imager_state when it is freed */
-void
-gs_imager_state_finalize(const gs_memory_t *mem, void *ptr)
-{
-    const char *const cname = "gs_imager_state_finalize";
-    gs_imager_state *pis = (gs_imager_state *)ptr;
-
-    /* we really ought to be able to use gs_imager_state_release, but the	*/
-    /* other elements in the imager state are not properly reference counted.	*/
-    /* At least these three elements are correct in that the final free as a 	*/
-    /* part of 'alloc_restore_all' is what decrements these to 0 and frees	*/
-    /* these elements. Important since some have semaphores and we must call	*/
-    /* gx_semaphore_free to release the handles on Windows.			*/
     RCDECR(icc_link_cache);
     RCDECR(icc_profile_cache);
     RCDECR(icc_manager);

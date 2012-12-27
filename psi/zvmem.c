@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* "Virtual memory" operators */
 #include "stat_.h" /* get system header early to avoid name clash on Cygwin */
 #include "ghost.h"
@@ -46,7 +48,7 @@ gs_private_st_ptrs1(st_vm_save, vm_save_t, "savetype",
                     vm_save_enum_ptrs, vm_save_reloc_ptrs, gsave);
 
 /* Clean up the stacks and validate storage. */
-static void
+void
 ivalidate_clean_spaces(i_ctx_t *i_ctx_p)
 {
     if (gs_debug_c('?')) {

@@ -1,17 +1,19 @@
-/* Copyright (C) 2001-2006 Artifex Software, Inc.
+/* Copyright (C) 2001-2012 Artifex Software, Inc.
    All Rights Reserved.
 
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license.  Refer to licensing information at http://www.artifex.com/
-   or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
-   San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file LICENSE in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+   CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-/* $Id$ */
+
 /* Command list reading for Ghostscript. */
 #include "memory_.h"
 #include "gx.h"
@@ -298,11 +300,11 @@ clist_select_render_plane(gx_device *dev, int y, int height,
                           gx_render_plane_t *render_plane, int index)
 {
     if (index >= 0) {
-        gx_colors_used_t colors_used;
+        gx_color_usage_t color_usage;
         int ignore_start;
 
-        gdev_prn_colors_used(dev, y, height, &colors_used,  &ignore_start);
-        if (colors_used.slow_rop)
+        gdev_prn_color_usage(dev, y, height, &color_usage,  &ignore_start);
+        if (color_usage.slow_rop)
             index = -1;
     }
     if (index < 0)
@@ -883,11 +885,11 @@ clist_get_band_complexity(gx_device *dev, int y)
         {
             /* NB this is a temporary workaround until the band
                complexity machinery can be removed entirely. */
-            gx_colors_used_t colors_used;
+            gx_color_usage_t color_usage;
             int range_ignored;
-            gdev_prn_colors_used(dev, y, 1, &colors_used, &range_ignored);
-            crdev->band_complexity_array[band_number].nontrivial_rops = (int)colors_used.slow_rop;
-            crdev->band_complexity_array[band_number].uses_color = (int)colors_used.or;
+            gdev_prn_color_usage(dev, y, 1, &color_usage, &range_ignored);
+            crdev->band_complexity_array[band_number].nontrivial_rops = (int)color_usage.slow_rop;
+            crdev->band_complexity_array[band_number].uses_color = !!color_usage.or;
         }
         return &crdev->band_complexity_array[band_number];
     }
