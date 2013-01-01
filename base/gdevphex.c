@@ -31,14 +31,14 @@
 HISTORY
 ~~~~~~~
 
-8 June 1999 Zolt�n K�csi (aka Kocsonya) zoltan@bendor.com.au
+8 June 1999 Zoltán Kócsi (aka Kocsonya) zoltan@bendor.com.au
 
         Initial revision.
         No shingling, depletion.
         Colour only.
         Dither matrix is blatantly copied from gslib.c.
 
-17 April 2000 Zolt�n K�csi
+17 April 2000 Zoltán Kócsi
 
         After much play worked out a reasonably simple colour mapping
         that gives fairly good results. It has some very hairy things
@@ -48,7 +48,7 @@ HISTORY
 LEGALISE
 ~~~~~~~~
 
-The usual disclaimer applies, neither me (Zolt�n K�csi) nor
+The usual disclaimer applies, neither me (Zoltán Kócsi) nor
 Bendor Research Pty. Ltd. assume any liability whatsoever in
 relation to events arising out of or related to the use of
 the software or the included documentation in any form, way

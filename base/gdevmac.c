@@ -767,8 +767,8 @@ mac_strip_tile_rectangle(register gx_device *dev, const gx_strip_bitmap *tile,
 
         if (color_0 != gx_no_color_index && color_1 != gx_no_color_index) {
                 // monochrome tiles
-                if (phase_x != 0 ||�phase_y != 0 || tile->shift != 0 ||
-                                tile->strip_height != 0 ||�tile->strip_shift != 0) {
+                if (phase_x != 0 ||Êphase_y != 0 || tile->shift != 0 ||
+                                tile->strip_height != 0 ||Êtile->strip_shift != 0) {
                         return gx_default_strip_tile_rectangle(dev, tile, x, y, w, h, color_0, color_1, phase_x, phase_y);
                 }
 
