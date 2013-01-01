@@ -1,4 +1,4 @@
-dnl  Copyright (C) 2001-2007 Artifex Software, Inc.
+dnl  Copyright (C) 2001-2012 Artifex Software, Inc.
 dnl  All Rights Reserved.
 
 dnl  This file is part of GNU ghostscript.
@@ -18,8 +18,6 @@ dnl   along with GNU ghostscript.  If not, see <http://www.gnu.org/licenses/>.
 dnl   for further information.
 dnl
 
-dnl $Id$
-
 dnl Process this file with autoconf to produce a configure script
 
 dnl ------------------------------------------------
@@ -27,7 +25,7 @@ dnl Initialization and Versioning
 dnl ------------------------------------------------
 
 AC_PREREQ(2.60)
-AC_INIT([gnu-ghostscript], [9.05.0], [gnu-ghostscript-bug@gnu.org])
+AC_INIT([gnu-ghostscript], [9.06.0], [gnu-ghostscript-bug@gnu.org])
 AC_CONFIG_SRCDIR(psi/gs.c)
 AM_INIT_AUTOMAKE([-Wall])
 
@@ -38,9 +36,9 @@ CXXFLAGS="${CXXFLAGS:=}"
 LDFLAGS="${LDFLAGS:=}"
 
 GS_VERSION_MAJOR=9
-GS_VERSION_MINOR=5
+GS_VERSION_MINOR=6
 GS_VERSION_PATCH=0
-GS_REVISIONDATE=20120903
+GS_REVISIONDATE=20130101
 
 GS_VERSION=`expr $GS_VERSION_MAJOR \* 10000 + $GS_VERSION_MINOR \* 100 + $GS_VERSION_PATCH`
 
@@ -133,10 +131,18 @@ AC_ARG_ENABLE([contrib], AC_HELP_STRING([--disable-contrib],
 CONTRIBINCLUDE="include contrib/contrib.mak"
 INSTALL_CONTRIB="install-contrib-extras"
 
-# This is just an arbitrary file in contrib to check
-if !(test -f contrib/gdevbjc_.c); then
-   enable_contrib=no
-fi
+case `uname` in
+    MINGW*)
+      AC_MSG_WARN([disabling contrib devices])
+      enable_contrib=no
+    ;;
+    *)
+#     This is just an arbitrary file in contrib to check
+      if !(test -f contrib/gdevbjc_.c); then
+        enable_contrib=no
+      fi
+    ;;
+esac
 
 if test x$enable_contrib = xno; then
     CONTRIBINCLUDE=""
@@ -250,7 +256,7 @@ dnl --------------------------------------------------
 
 AC_HEADER_DIRENT
 AC_HEADER_STDC
-AC_CHECK_HEADERS([errno.h fcntl.h limits.h malloc.h memory.h stdlib.h string.h strings.h sys/ioctl.h sys/param.h sys/time.h syslog.h unistd.h])
+AC_CHECK_HEADERS([errno.h fcntl.h limits.h malloc.h memory.h stdlib.h string.h strings.h sys/ioctl.h sys/param.h sys/time.h sys/times.h syslog.h unistd.h dirent.h ndir.h sys/dir.h sys/ndir.h])
 
 dnl --------------------------------------------------
 dnl Check for *BSD and apply BSD Make workaround
@@ -302,8 +308,28 @@ if test "x$ac_cv_header_stdint_h" = xyes; then
         GCFLAGS="$GCFLAGS -DHAVE_STDINT_H=1"
 fi
 
+if test "x$ac_cv_header_dirent_h" = xyes; then
+        GCFLAGS="$GCFLAGS -DHAVE_DIRENT_H=1"
+fi
+
+if test "x$ac_cv_header_ndir_h" = xyes; then
+        GCFLAGS="$GCFLAGS -DHAVE_NDIR_H=1"
+fi
+
+if test "x$ac_cv_header_sys_dir_h" = xyes; then
+        GCFLAGS="$GCFLAGS -DHAVE_SYS_DIR_H=1"
+fi
+
+if test "x$ac_cv_header_sys_ndir_h" = xyes; then
+        GCFLAGS="$GCFLAGS -DHAVE_SYS_NDIR_H=1"
+fi
+
 if test "x$ac_cv_header_sys_time_h" = xyes; then
         GCFLAGS="$GCFLAGS -DHAVE_SYS_TIME_H=1"
+fi
+
+if test "x$ac_cv_header_sys_times_h" = xyes; then
+        GCFLAGS="$GCFLAGS -DHAVE_SYS_TIMES_H=1"
 fi
 
 dnl try to find a 64 bit type for devicen color index
@@ -354,10 +380,19 @@ AC_CHECK_LIB(m, cos)
 
 SYNC="nosync"
 PTHREAD_LIBS=""
-AC_CHECK_LIB(pthread, pthread_create, [
-  SYNC=posync;
-  PTHREAD_LIBS="-lpthread"
-])
+
+case `uname` in
+    MINGW*)
+      AC_MSG_WARN([disabling support for pthreads......])
+    ;;
+    *)
+      AC_CHECK_LIB(pthread, pthread_create, [
+        SYNC=posync;
+        PTHREAD_LIBS="-lpthread"
+      ])
+    ;;
+esac
+
 AC_SUBST(SYNC)
 AC_SUBST(PTHREAD_LIBS)
 
@@ -667,6 +702,8 @@ AC_ARG_WITH(zlib, AC_HELP_STRING([--with-zlib],[include zlib support (local, sha
 # we must define ZLIBDIR regardless because libpng.mak does a -I$(ZLIBDIR)
 # this seems a harmless default
 ZLIBDIR=src
+AUX_SHARED_ZLIB=
+
 if test x$with_zlib != xno; then
 AC_MSG_CHECKING([for local zlib source])
 
@@ -677,7 +714,7 @@ AC_MSG_CHECKING([for local zlib source])
 	else
 		AC_MSG_RESULT([shared])
 		AC_CHECK_LIB(z, deflate, [
-		  AC_CHECK_HEADERS(zlib.h, [SHARE_ZLIB=1])
+		  AC_CHECK_HEADERS(zlib.h, [SHARE_ZLIB=1; AUX_SHARED_ZLIB="-l\$(ZLIB_NAME)"])
 		])
 	fi
 	if test -z "$SHARE_ZLIB"; then
@@ -701,6 +738,7 @@ if test x$FT_BRIDGE != x0; then
 fi
 
 AC_SUBST(SHARE_ZLIB)
+AC_SUBST(AUX_SHARED_ZLIB)
 AC_SUBST(ZLIBDIR)
 AC_SUBST(FT_SYS_ZLIB)
 
@@ -783,7 +821,9 @@ AC_ARG_WITH([system-libtiff], AC_HELP_STRING([--with-system-libtiff],
                                              [Force using the systems libtiff]),
             [], [with_system_libtiff=check])
 TIFFDEVS=''
-TIFFDEVS_ALL='$(DD)tiffs $(DD)tiff12nc $(DD)tiff24nc $(DD)tiff48nc $(DD)tiff32nc $(DD)tiff64nc $(DD)tiffcrle $(DD)tifflzw $(DD)tiffpack $(DD)tiffgray $(DD)tiffsep $(DD)tiffscaled'
+FAX_DEVS=''
+TIFFDEVS_ALL='tiffs tiff12nc tiff24nc tiff48nc tiff32nc tiff64nc tiffcrle tifflzw tiffpack tiffgray tiffsep tiffscaled'
+FAX_DEVS_ALL='cfax dfaxlow dfaxhigh fax faxg3 faxg32d faxg4 tiffg3 tiffg32d tiffg4 tfax'
 case "x$with_system_libtiff" in
     xcheck)
         if test -d tiff; then
@@ -814,6 +854,7 @@ case "x$with_system_libtiff" in
 Disabling tiff output devices.])
         else
             TIFFDEVS="$TIFFDEVS_ALL"
+            FAX_DEVS="$FAX_DEVS_ALL"
         fi
         ;;
     xyes)
@@ -837,6 +878,7 @@ Disabling tiff output devices.])
         if test "x$HAVE_SYSTEM_LIBTIFF" != x; then
             SHARE_LIBTIFF=1
             TIFFDEVS="$TIFFDEVS_ALL"
+            FAX_DEVS="$FAX_DEVS_ALL"
         else
             AC_MSG_NOTICE([Could not find a copy of libtiff on your system.
 Disabling tiff output devices.])
@@ -849,6 +891,7 @@ Disabling tiff output devices.])
             LIBTIFFDIR=tiff
             SHARE_LIBTIFF=0
             TIFFDEVS="$TIFFDEVS_ALL"
+            FAX_DEVS="$FAX_DEVS_ALL"
         else
             AC_MSG_RESULT([no])
             AC_MSG_NOTICE([Could not find local copy of libtiff.
@@ -861,7 +904,7 @@ if test "x$SHARE_LIBTIFF" = "x0"; then
       echo
       echo "Running libtiff configure script..."
       olddir=`pwd`
-      cd $LIBTIFFDIR && ./configure --disable-jbig $SUBCONFIG_OPTS
+      cd $LIBTIFFDIR && ./configure --disable-jbig --disable-lzma $SUBCONFIG_OPTS
       status=$?
       if test "$status" -ne 0 ; then
         AC_MSG_ERROR([libtiff configure script failed], $status)
@@ -872,7 +915,6 @@ if test "x$SHARE_LIBTIFF" = "x0"; then
 fi
 
 AC_SUBST(SHARE_LIBTIFF)
-AC_SUBST(TIFFDEVS)
 AC_SUBST(LIBTIFFDIR)
 
 
@@ -995,6 +1037,17 @@ AC_SUBST(CUPSPDFTORASTER)
 dnl look for IJS implementation
 AC_ARG_WITH([ijs], AC_HELP_STRING([--without-ijs],
     [disable IJS driver support]))
+
+case `uname` in
+    MINGW*)
+      AC_MSG_WARN([disabling the ijs device])
+      with_ijs=no
+    ;;
+    *)
+    ;;
+esac
+
+
 dnl set safe defaults
     IJSDIR=src
     IJSDEVS=''
@@ -1237,26 +1290,29 @@ SOC_CFLAGS=""
 SOC_LIBS=""
 SOC_LOADER="dxmainc.c"
 if test "x$enable_gtk" != "xno"; then
-    # Try GTK+ 2.x first...
+    # Try GTK+ 3.x first...
     if test "x$PKGCONFIG" != x; then
-        AC_MSG_CHECKING(for GTK+ 2.x)
-        if $PKGCONFIG --exists gtk+-2.0; then
+        AC_MSG_CHECKING(for GTK+ 3.x)
+        if $PKGCONFIG --exists gtk+-3.0; then
             SOC_LOADER="dxmain.c"
-            SOC_CFLAGS="`$PKGCONFIG gtk+-2.0 --cflags`"
-            SOC_LIBS="`$PKGCONFIG gtk+-2.0 --libs`"
+            SOC_CFLAGS="`$PKGCONFIG gtk+-3.0 --cflags`"
+            SOC_LIBS="`$PKGCONFIG gtk+-3.0 --libs`"
             AC_MSG_RESULT([yes])
         else
             AC_MSG_RESULT([no])
         fi
-    fi
 
-    # Then fall back on GTK+ 1.x...
-    if test "x$SOC_LOADER" = x; then
-        AC_PATH_PROG(GTKCONFIG, gtk-config)
-        if test "x$GTKCONFIG" != x; then
-            SOC_LOADER="dxmain.c"
-            SOC_CFLAGS="`$GTKCONFIG --cflags`"
-            SOC_LIBS="`$GTKCONFIG --libs`"
+        # Or resort to GTK+ 2.x
+        if test "x$SOC_LOADER" = x; then
+            AC_MSG_CHECKING(for GTK+ 2.x)
+            if $PKGCONFIG --exists gtk+-2.0; then
+                SOC_LOADER="dxmain.c"
+                SOC_CFLAGS="`$PKGCONFIG gtk+-2.0 --cflags`"
+                SOC_LIBS="`$PKGCONFIG gtk+-2.0 --libs`"
+                AC_MSG_RESULT([yes])
+            else
+                AC_MSG_RESULT([no])
+            fi
         fi
     fi
 fi
@@ -1422,10 +1478,10 @@ ETS_HALFTONING_DEVS='rinkj'
 
 dnl Known file formats
 BMP_DEVS='bmpmono bmpgray bmpsep1 bmpsep8 bmp16 bmp256 bmp16m bmp32b'
-FAX_DEVS='cfax dfaxlow dfaxhigh fax tfax tiffg3 tiffg32d tiffg4 faxg3 faxg32d faxg4'
+
 JPEG_DEVS='jpeg jpeggray jpegcmyk'
 # PNG_DEVS='png16 png16m png256 pngalpha pnggray pngmono'
-TIFF_DEVS='tiffs tiff12nc tiff24nc tiff48nc tiff32nc tiff64nc tiffcrle tifflzw tiffpack tiffgray tiffsep tiffsep1 tiffscaled tiffscaled8 tiffscaled24'
+
 PCX_DEVS='pcxmono pcxgray pcx16 pcx256 pcx24b pcxcmyk pcx2up'
 PBM_DEVS='pbm pbmraw pgm pgmraw pgnm pgnmraw pnm pnmraw ppm ppmraw pkm pkmraw pksm pksmraw pam pamcmyk4 pamcmyk32 plan plang planm planc plank'
 PS_DEVS='psdf psdcmyk psdrgb pdfwrite pswrite ps2write epswrite psgray psmono psrgb bbox txtwrite inkcov'
@@ -1460,7 +1516,7 @@ while test -n "$drivers"; do
                 fi
                 ;;
         FILES)
-                F_DEVS0="$F_DEVS0 $BMP_DEVS $FAX_DEVS $JPEG_DEVS $TIFF_DEVS $PCX_DEVS $PBM_DEVS $PS_DEVS $MISC_FDEVS"
+                F_DEVS0="$F_DEVS0 $BMP_DEVS $FAX_DEVS $JPEG_DEVS $TIFFDEVS $PCX_DEVS $PBM_DEVS $PS_DEVS $MISC_FDEVS"
                 CUPS_DEVS0="$CUPSDEV"
                 JBIG2_DEVS="$JBIG2DEVS"
                 PNG_DEVS0="$PNGDEVS"
@@ -1499,7 +1555,7 @@ while test -n "$drivers"; do
                 ;;
         TIFF)
                 # TIFF file formats
-                F_DEVS0="$F_DEVS0 $TIFF_DEVS"
+                F_DEVS0="$F_DEVS0 $TIFFDEVS"
                 ;;
         PCLXL)
                 # PCL XL/PCL 6 drivers
@@ -1631,6 +1687,7 @@ DYNAMIC_FLAGS=""
 DYNAMIC_LDFLAGS=""
 DYNAMIC_LIBS=""
 INSTALL_SHARED=""
+DYNANIC_LIB_EXT="so"
 
 case `uname` in
         Linux*|GNU*)
@@ -1642,15 +1699,18 @@ case `uname` in
         else
             DYNAMIC_LIBS=""
         fi
+        DYNANIC_LIB_EXT="so"
         ;;
         *BSD)
         DYNAMIC_CFLAGS="-fPIC"
         DYNAMIC_LDFLAGS="-fPIC -shared"
         DYNAMIC_LIBS=""
+        DYNANIC_LIB_EXT="so"
         ;;
         Darwin*)
         DYNAMIC_LDFLAGS="-dynamiclib"
         DYNAMIC_LIBS=""
+        DYNANIC_LIB_EXT="dylib"
         ;;
         SunOS)
         if test $ac_cv_prog_gcc = yes; then
@@ -1660,6 +1720,7 @@ case `uname` in
         fi
         DYNAMIC_LDFLAGS="-G"
         DYNAMIC_LIBS=""
+        DYNANIC_LIB_EXT="so"
         ;;
 esac
 
@@ -1714,6 +1775,7 @@ AC_SUBST(DYNAMIC_LDFLAGS)
 AC_SUBST(DYNAMIC_LIBS)
 AC_SUBST(INSTALL_SHARED)
 AC_SUBST(X11_DEVS)
+AC_SUBST(DYNANIC_LIB_EXT)
 
 dnl enable SAFER by default or not
 
@@ -1782,6 +1844,9 @@ AC_SUBST(HAVE_MKSTEMP64)
 AC_CHECK_FUNCS([setlocale], [HAVE_SETLOCALE=-DHAVE_SETLOCALE])
 AC_SUBST(HAVE_SETLOCALE)
 
+AC_CHECK_FUNCS([strerror], [HAVE_STRERROR=-DHAVE_STRERROR])
+AC_SUBST(HAVE_STRERROR)
+
 AC_PROG_GCC_TRADITIONAL
 
 dnl NB: We don't actually provide autoconf-switched fallbacks for any
@@ -1792,7 +1857,7 @@ AC_FUNC_MEMCMP
 AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([bzero dup2 floor gettimeofday memchr memmove memset mkdir mkfifo modf pow putenv rint setenv sqrt strchr strerror strrchr strspn strstr])
+AC_CHECK_FUNCS([bzero dup2 floor gettimeofday memchr memmove memset mkdir mkfifo modf pow putenv rint setenv sqrt strchr strrchr strspn strstr])
 
 dnl --------------------------------------------------
 dnl check for big/little endian for LCMS
@@ -1910,6 +1975,20 @@ else
 fi
 
 AC_SUBST(HAVE_BYTESWAP_H)
+
+# --------------------------------------------------
+# annoying: Windows doesn't allow "aux" as a
+# directory nor file name, so if we're building in
+# mingw, add the same prefix as the VS build uses
+# --------------------------------------------------
+AUXDIRPOSTFIX=""
+case `uname` in
+    MINGW*)
+    AUXDIRPOSTFIX="_"
+    ;;
+esac
+AC_SUBST(AUXDIRPOSTFIX)
+
 
 dnl --------------------------------------------------
 dnl Do substitutions

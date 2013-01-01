@@ -437,11 +437,15 @@ GCONFIG_EXTRAS=
 ld_tr=$(GLGENDIR)$(D)ld.tr
 $(ld_tr) : \
   $(GS_MAK) $(TOP_MAKEFILES) $(GENCONF_XE) $(ECHOGS_XE) $(devs_tr) $(DEVS_ALL) $(GLGENDIR)$(D)libcore.dev
-	$(EXP)$(GENCONF_XE) $(devs_tr) -h $(gconfig_h) $(CONFILES) $(CONFLDTR) $(ld_tr)
-	$(EXP)$(ECHOGS_XE) -a $(gconfig_h) $(GCONFIG_EXTRAS)
+	$(EXP)$(GENCONF_XE) $(devs_tr) -h $(gconfxx_h) $(CONFILES) $(CONFLDTR) $(ld_tr)
+	$(EXP)$(ECHOGS_XE) -a $(gconfxx_h) $(GCONFIG_EXTRAS)
 
-$(gconfig_h) : $(ld_tr)
+$(gconfxx_h) : $(ld_tr)
 	$(NO_OP)
+
+$(gconfig_h) : $(gconfxx_h)
+	$(RM_) $(gconfig_h)
+	$(CP_) $(gconfxx_h) $(gconfig_h)
 	
 # The line above is an empty command; don't delete.
 
