@@ -218,6 +218,33 @@ art_pdf_composite_pixel_alpha_8(byte *dst, const byte *src, int n_chan,
         gs_blend_mode_t blend_mode,
         const pdf14_nonseparable_blending_procs_t * pblend_procs);
 
+
+/**
+ * art_pdf_composite_pixel_alpha_8_fast: Tweaked version of art_pdf_composite_pixel_alpha_8.
+ * Same args, with an extra one:
+ * @stride: stride between dst pixel values.
+ * Dst data is therefore in dst[i * stride] for 0 <= i <= num_chan.
+ * Called with the guarantee that dst[stride * n_chan] != 0, src[n_chan] != 0
+ */
+void
+art_pdf_composite_pixel_alpha_8_fast(byte *dst, const byte *src, int n_chan,
+        gs_blend_mode_t blend_mode,
+        const pdf14_nonseparable_blending_procs_t * pblend_procs,
+        int stride);
+
+/**
+ * art_pdf_composite_pixel_alpha_8_fast_mono: Tweaked version of art_pdf_composite_pixel_alpha_8_fast.
+ * Same args, except n_chan, which is assumed to be 1:
+ * @stride: stride between dst pixel values.
+ * Dst data is therefore in dst[i * stride] for 0 <= i <= 1.
+ * Called with the guarantee that dst[stride] != 0, src[1] != 0
+ */
+void
+art_pdf_composite_pixel_alpha_8_fast_mono(byte *dst, const byte *src,
+        gs_blend_mode_t blend_mode,
+        const pdf14_nonseparable_blending_procs_t * pblend_procs,
+        int stride);
+
 /**
  * art_pdf_uncomposite_group_8: Uncomposite group pixel.
  * @dst: Where to store uncomposited pixel.
@@ -329,7 +356,8 @@ art_pdf_composite_knockout_isolated_8(byte *dst,
                                       int n_chan,
                                       byte shape,
                                       byte tag,
-                                      byte alpha_mask, byte shape_mask);
+                                      byte alpha_mask, byte shape_mask,
+                                      bool has_mask);
 
 /**
  * art_pdf_composite_knockout_8: General knockout compositing.
@@ -390,7 +418,9 @@ void pdf14_preserve_backdrop(pdf14_buf *buf, pdf14_buf *tos, bool has_shape);
 
 void pdf14_compose_group(pdf14_buf *tos, pdf14_buf *nos, pdf14_buf *maskbuf,
               int x0, int x1, int y0, int y1, int n_chan, bool additive,
-              const pdf14_nonseparable_blending_procs_t * pblend_procs);
+              const pdf14_nonseparable_blending_procs_t * pblend_procs,
+              bool overprint, gx_color_index drawn_comps, bool blendspot, 
+              gs_memory_t *memory);
 
 gx_color_index pdf14_encode_color(gx_device *dev, const gx_color_value colors[]);
 gx_color_index pdf14_encode_color_tag(gx_device *dev, const gx_color_value colors[]);

@@ -139,6 +139,13 @@ pdfmark_make_dest(char dstr[MAX_DEST_STRING], gx_device_pdf * pdev,
 
     if (present || RequirePage)
         page = pdfmark_page_number(pdev, &page_string);
+
+    if (page < pdev->FirstPage || (pdev->LastPage != 0 && page > pdev->LastPage))
+        return -1;
+    else
+        if (pdev->FirstPage != 0)
+            page = (page - pdev->FirstPage) + 1;
+
     if (view_string.size == 0)
         param_string_from_string(view_string, "[/XYZ null null null]");
     if (page == 0)
@@ -487,11 +494,13 @@ pdfmark_put_ao_pairs(gx_device_pdf * pdev, cos_dict_t *pcd,
             if (Dest.data == 0) {
                 code = pdfmark_make_dest(dest, params->pdev, "/Page", "/View",
                                          pairs, count, 0);
-                if (code < 0)
-                    return code;
-                param_string_from_string(Dest, dest);
-                if (for_outline)
-                    coerce_dest = false;
+                if (code >= 0) {
+                    param_string_from_string(Dest, dest);
+                    if (for_outline)
+                        coerce_dest = false;
+                } else {
+                    emprintf(pdev->memory, "   **** Warning: Outline has invalid link that was discarded.\n");
+                }
             }
         } else if (pdf_key_eq(pair, "/Subtype"))
             Subtype = pair[1];
@@ -760,6 +769,185 @@ pdfmark_annot(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
                     pdev->AbortPDFAX = true;
                     pdev->PDFA = 0;
                     break;
+            }
+        }
+    }
+    if (pdev->PDFX != 0) {
+        gs_param_string Subtype;
+        bool discard = true;
+        pdf_page_t *page = 0L;
+
+        page = &pdev->pages[pdev->next_page];
+
+        if (subtype) {
+            param_string_from_string(Subtype, subtype);
+            if (pdf_key_eq(&Subtype, "/TrapNet") ||
+                pdf_key_eq(&Subtype, "/PrinterMark"))
+                discard = false;
+        }
+        if (discard) {
+            int i;
+            for (i = 0; i < count; i += 2) {
+                const gs_param_string *pair = &pairs[i];
+                if (pdf_key_eq(pair, "/Rect")) {
+                    gs_rect rect;
+                    const cos_value_t *v_trimbox, *v_bleedbox, *v_artbox, *v_cropbox;
+                    const byte *p;
+                    char buf[100];
+                    int size, code;
+                    float temp[4]; /* the type is float for sscanf. */
+                    floatp pagebox[4] = {0, 0};
+
+                    pagebox[2] = pdev->MediaSize[0];
+                    pagebox[3] = pdev->MediaSize[1];
+
+                    v_cropbox = v_bleedbox = v_trimbox = v_artbox = 0x0L;
+
+                    code = pdfmark_scan_rect(&rect, pair + 1, pctm);
+
+                    if (code < 0)
+                        return code;
+
+                    if (page) {
+                        v_trimbox = cos_dict_find_c_key(page->Page, "/TrimBox");
+                        v_bleedbox = cos_dict_find_c_key(page->Page, "/BleedBox");
+                        v_artbox = cos_dict_find_c_key(page->Page, "/ArtBox");
+                        v_cropbox = cos_dict_find_c_key(page->Page, "/CropBox");
+                    }
+
+                    if (v_cropbox != NULL && v_cropbox->value_type == COS_VALUE_SCALAR) {
+                        p = v_cropbox->contents.chars.data;
+                        size = min (v_cropbox->contents.chars.size, sizeof(buf) - 1);
+                        memcpy(buf, p, size);
+                        buf[size] = 0;
+                        if (sscanf(buf, "[ %g %g %g %g ]",
+                                &temp[0], &temp[1], &temp[2], &temp[3]) == 4) {
+                            if (temp[0] > pagebox[0]) pagebox[0] = temp[0];
+                            if (temp[1] > pagebox[1]) pagebox[1] = temp[1];
+                        }
+                    }
+                    if (v_bleedbox != NULL && v_bleedbox->value_type == COS_VALUE_SCALAR) {
+                        p = v_bleedbox->contents.chars.data;
+                        size = min (v_bleedbox->contents.chars.size, sizeof(buf) - 1);
+                        memcpy(buf, p, size);
+                        buf[size] = 0;
+                        if (sscanf(buf, "[ %g %g %g %g ]",
+                                &temp[0], &temp[1], &temp[2], &temp[3]) == 4) {
+                            if (temp[0] > pagebox[0]) pagebox[0] = temp[0];
+                            if (temp[1] > pagebox[1]) pagebox[1] = temp[1];
+                        }
+                    }
+                    if (v_trimbox != NULL && v_trimbox->value_type == COS_VALUE_SCALAR) {
+                        p = v_trimbox->contents.chars.data;
+                        size = min (v_trimbox->contents.chars.size, sizeof(buf) - 1);
+                        memcpy(buf, p, size);
+                        buf[size] = 0;
+                        if (sscanf(buf, "[ %g %g %g %g ]",
+                                &temp[0], &temp[1], &temp[2], &temp[3]) == 4) {
+                            if (temp[0] > pagebox[0]) pagebox[0] = temp[0];
+                            if (temp[1] > pagebox[1]) pagebox[1] = temp[1];
+                        }
+                    }
+                    if (v_artbox != NULL && v_artbox->value_type == COS_VALUE_SCALAR) {
+                        p = v_artbox->contents.chars.data;
+                        size = min (v_artbox->contents.chars.size, sizeof(buf) - 1);
+                        memcpy(buf, p, size);
+                        buf[size] = 0;
+                        if (sscanf(buf, "[ %g %g %g %g ]",
+                                &temp[0], &temp[1], &temp[2], &temp[3]) == 4) {
+                            if (temp[0] > pagebox[0]) pagebox[0] = temp[0];
+                            if (temp[1] > pagebox[1]) pagebox[1] = temp[1];
+                        }
+                    }
+                    if (v_cropbox == 0 && v_trimbox == 0 && v_artbox == 0 && v_bleedbox == 0) {
+                        if (pdev->PDFXTrimBoxToMediaBoxOffset.size >= 4 &&
+                                    pdev->PDFXTrimBoxToMediaBoxOffset.data[0] >= 0 &&
+                                    pdev->PDFXTrimBoxToMediaBoxOffset.data[1] >= 0 &&
+                                    pdev->PDFXTrimBoxToMediaBoxOffset.data[2] >= 0 &&
+                                    pdev->PDFXTrimBoxToMediaBoxOffset.data[3] >= 0) {
+                            pagebox[0] += pdev->PDFXTrimBoxToMediaBoxOffset.data[0];
+                            pagebox[1] += pdev->PDFXTrimBoxToMediaBoxOffset.data[3];
+                            pagebox[2] -= pdev->PDFXTrimBoxToMediaBoxOffset.data[1];
+                            pagebox[3] -= pdev->PDFXTrimBoxToMediaBoxOffset.data[2];
+                        } else if (pdev->PDFXBleedBoxToTrimBoxOffset.size >= 4 &&
+                                pdev->PDFXBleedBoxToTrimBoxOffset.data[0] >= 0 &&
+                                pdev->PDFXBleedBoxToTrimBoxOffset.data[1] >= 0 &&
+                                pdev->PDFXBleedBoxToTrimBoxOffset.data[2] >= 0 &&
+                                pdev->PDFXBleedBoxToTrimBoxOffset.data[3] >= 0) {
+                            pagebox[0] -= pdev->PDFXBleedBoxToTrimBoxOffset.data[0];
+                            pagebox[1] -= pdev->PDFXBleedBoxToTrimBoxOffset.data[3];
+                            pagebox[2] += pdev->PDFXBleedBoxToTrimBoxOffset.data[1];
+                            pagebox[3] += pdev->PDFXBleedBoxToTrimBoxOffset.data[2];
+                        }
+                    }
+
+                    if (rect.p.x > pagebox[2] || rect.q.x < pagebox[0] ||
+                        rect.p.y > pagebox[3] || rect.q.y < pagebox[2])
+                        break;
+                    switch (pdev->PDFACompatibilityPolicy) {
+                        /* Default behaviour matches Adobe Acrobat, warn and continue,
+                         * output file will not be PDF/A compliant
+                         */
+                        case 0:
+                            emprintf(pdev->memory,
+                                     "Annotation (not TrapNet or PrinterMark) on page,\n not permitted in PDF/X, reverting to normal PDF output\n");
+                            pdev->AbortPDFAX = true;
+                            pdev->PDFX = 0;
+                            break;
+                            /* Since the annotation would break PDF/A compatibility, do not
+                             * include it, but warn the user that it has been dropped.
+                             */
+                        case 1:
+                            emprintf(pdev->memory,
+                                     "Annotation (not TrapNet or PrinterMark) on page,\n not permitted in PDF/X, annotation will not be present in output file\n");
+                            return 0;
+                            break;
+                        case 2:
+                            emprintf(pdev->memory,
+                                     "Annotation (not TrapNet or PrinterMark) on page,\n not permitted in PDF/X, aborting conversion\n");
+                            return gs_error_invalidfont;
+                            break;
+                        default:
+                            emprintf(pdev->memory,
+                                     "Annotation s(not TrapNet or PrinterMark) on page,\n not permitted in PDF/A, unrecognised PDFACompatibilityLevel,\nreverting to normal PDF output\n");
+                            pdev->AbortPDFAX = true;
+                            pdev->PDFX = 0;
+                            break;
+                    }
+                    break;
+                }
+            }
+            if (i > count) {
+                switch (pdev->PDFACompatibilityPolicy) {
+                    /* Default behaviour matches Adobe Acrobat, warn and continue,
+                     * output file will not be PDF/A compliant
+                     */
+                    case 0:
+                        emprintf(pdev->memory,
+                                 "Annotation (not TrapNet or PrinterMark) potentially on page (no /Rect in dict),\n not permitted in PDF/X, reverting to normal PDF output\n");
+                        pdev->AbortPDFAX = true;
+                        pdev->PDFX = 0;
+                        break;
+                        /* Since the annotation would break PDF/A compatibility, do not
+                         * include it, but warn the user that it has been dropped.
+                         */
+                    case 1:
+                        emprintf(pdev->memory,
+                                 "Annotation (not TrapNet or PrinterMark) potentially on page (no /Rect in dict),\n not permitted in PDF/X, annotation will not be present in output file\n");
+                        return 0;
+                        break;
+                    case 2:
+                        emprintf(pdev->memory,
+                                 "Annotation (not TrapNet or PrinterMark) potentially on page (no /Rect in dict),\n not permitted in PDF/X, aborting conversion\n");
+                        return gs_error_invalidfont;
+                        break;
+                    default:
+                        emprintf(pdev->memory,
+                                 "Annotation s(not TrapNet or PrinterMark) potentially on page (no /Rect in dict),\n not permitted in PDF/A, unrecognised PDFACompatibilityLevel,\nreverting to normal PDF output\n");
+                        pdev->AbortPDFAX = true;
+                        pdev->PDFX = 0;
+                        break;
+                }
             }
         }
     }
@@ -1618,6 +1806,7 @@ pdfmark_BP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
        if /PUT pdfmark executes before pdf_substitute_resource in pdfmark_EP
        drops this object.
     */
+    pdev->FormDepth++;
     return 0;
 }
 
@@ -1640,6 +1829,7 @@ pdfmark_EP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
     if (code < 0)
         return 0;
     gs_free_const_string(pdev->memory, objname.data, objname.size, "pdfmark_EP");
+    pdev->FormDepth--;
     return 0;
 }
 

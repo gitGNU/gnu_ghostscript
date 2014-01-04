@@ -60,8 +60,12 @@ typedef struct gx_device_pclxl_s {
     pxeMediaSize_t media_size;
     bool ManualFeed;            /* map ps setpage commands to pxl */
     bool ManualFeed_set;
+    int MediaPosition_old;	/* old Position attribute - for duplex detection */
     int MediaPosition;		/* MediaPosition attribute */
     int MediaPosition_set;
+    char MediaType_old[64];	/* old MediaType attribute - for duplex detection */
+    char MediaType[64];	/* MediaType attribute */
+    int MediaType_set;
     int page;			/* Page number starting at 0 */
     bool Duplex;		/* Duplex attribute */
     bool Tumble;		/* Tumble attribute */
@@ -1015,7 +1019,7 @@ pclxl_beginpage(gx_device_vector * vdev)
     stream *s = vdev->strm;
     byte media_source = eAutoSelect; /* default */
 
-    xdev->page ++;
+    xdev->page ++; /* even/odd for duplex front/back */
 
 /*
     errprintf(vdev->memory, "PAGE: %d %d\n", xdev->page, xdev->NumCopies);
@@ -1032,7 +1036,8 @@ pclxl_beginpage(gx_device_vector * vdev)
 
     px_write_select_media(s, (const gx_device *)vdev, &xdev->media_size,
                           &media_source,
-                          xdev->page, xdev->Duplex, xdev->Tumble);
+                          xdev->page, xdev->Duplex, xdev->Tumble,
+                          xdev->MediaType_set, xdev->MediaType);
 
     spputc(s, pxtBeginPage);
     return 0;
@@ -1389,6 +1394,12 @@ pclxl_open_device(gx_device * dev)
     xdev->media_size = pxeMediaSize_next;	/* no size selected */
     memset(&xdev->chars, 0, sizeof(xdev->chars));
     xdev->chars.next_in = xdev->chars.next_out = 2;
+    xdev->MediaPosition_set = false;
+    xdev->MediaType_set = false;
+    xdev->MediaPosition_old = eAutoSelect;
+    xdev->MediaPosition = eAutoSelect;
+    xdev->MediaType_old[0] = '\0';
+    xdev->MediaType[0] = '\0';
     return 0;
 }
 
@@ -1553,7 +1564,8 @@ pclxl_copy_mono(gx_device * dev, const byte * data, int data_x, int raster,
         palette[1] = (byte) color1;
         palette_size = 2;
         color_space = eGray;
-        if_debug2('b', "color palette %02X %02X\n", palette[0], palette[1]);
+        if_debug2m('b', dev->memory, "color palette %02X %02X\n",
+                   palette[0], palette[1]);
     } else {
         palette[0] = (byte) (color0 >> 16);
         palette[1] = (byte) (color0 >> 8);
@@ -1745,6 +1757,7 @@ typedef struct pclxl_image_enum_s {
         int first_y;
         uint raster;
     } rows;
+    bool flipped;
 } pclxl_image_enum_t;
 gs_private_st_suffix_add1(st_pclxl_image_enum, pclxl_image_enum_t,
                           "pclxl_image_enum_t", pclxl_image_enum_enum_ptrs,
@@ -1783,14 +1796,12 @@ pclxl_begin_image(gx_device * dev,
      */
     gs_matrix_invert(&pim->ImageMatrix, &mat);
     gs_matrix_multiply(&mat, &ctm_only(pis), &mat);
-    /* We can handle rotations of 90 degs + scaling.
+    /* We can handle rotations of 90 degs + scaling + reflections.
      * These have one of the diagonals being zeros
      * (and the other diagonals having non-zeros).
-     *
-     * Not to handle reflection (the two >< signs).
      */
-    if ((!((mat.xx * mat.yy > 0) && (mat.xy == 0) && (mat.yx == 0)) &&
-         !((mat.xx == 0) && (mat.yy == 0) && (mat.xy * mat.yx < 0))) ||
+    if ((!((mat.xx * mat.yy != 0) && (mat.xy == 0) && (mat.yx == 0)) &&
+         !((mat.xx == 0) && (mat.yy == 0) && (mat.xy * mat.yx != 0))) ||
         (pim->ImageMask ?
          (!gx_dc_is_pure(pdcolor) || pim->CombineWithColor) :
          (!pclxl_can_handle_color_space(pim->ColorSpace) ||
@@ -1822,6 +1833,7 @@ pclxl_begin_image(gx_device * dev,
         return code;
 
     /* emit a PXL XL rotation and adjust mat correspondingly */
+    pie->flipped = false;
     if (mat.xx * mat.yy >  0) {
         if (mat.xx < 0) {
             stream *s = pclxl_stream(xdev);
@@ -1834,7 +1846,20 @@ pclxl_begin_image(gx_device * dev,
             px_put_ac(s, pxaPageAngle, pxtSetPageRotation);
         }
         /* leave the matrix alone if it is portrait */
-    } else {
+    } else if (mat.xx * mat.yy <  0) {
+      pie->flipped = true;
+        if (mat.xx < 0) {
+          stream *s = pclxl_stream(xdev);
+            mat.xx = -mat.xx;
+            mat.tx = -mat.tx;
+            px_put_ss(s,+180);
+            xdev->state_rotated = +2;
+            px_put_ac(s, pxaPageAngle, pxtSetPageRotation);
+        } else {
+            mat.yy = -mat.yy;
+            mat.ty = -mat.ty;
+        }
+    } else if (mat.xy * mat.yx < 0) {
         /* rotate +90 or -90 */
         float tmpf;
         stream *s = pclxl_stream(xdev);
@@ -1852,6 +1877,29 @@ pclxl_begin_image(gx_device * dev,
             tmpf = mat.tx;
             mat.tx = -mat.ty;
             mat.ty = tmpf;
+            px_put_ss(s,+90);
+            xdev->state_rotated = +1;
+        }
+        mat.xy = mat.yx = 0;
+        px_put_ac(s, pxaPageAngle, pxtSetPageRotation);
+    } else if (mat.xy * mat.yx > 0) {
+        float tmpf;
+        stream *s = pclxl_stream(xdev);
+        pie->flipped = true;
+        if(mat.xy > 0) {
+            mat.xx = mat.xy;
+            mat.yy = mat.yx;
+            tmpf = mat.tx;
+            mat.tx = mat.ty;
+            mat.ty = tmpf;
+            px_put_ss(s,-90);
+            xdev->state_rotated = -1;
+        } else {
+            mat.xx = -mat.xy;
+            mat.yy = -mat.yx;
+            tmpf = mat.tx;
+            mat.tx = -mat.ty;
+            mat.ty = -tmpf;
             px_put_ss(s,+90);
             xdev->state_rotated = +1;
         }
@@ -1988,7 +2036,11 @@ pclxl_image_write_rows(pclxl_image_enum_t *pie)
     int dw = image_transform_x(pie, pie->width) - xo;
     int dh = image_transform_y(pie, y + h) - yo;
     int rows_raster=pie->rows.raster;
+    int offset_lastflippedstrip = 0;
 
+    if (pie->flipped) yo = -yo -dh;
+    if (pie->flipped)
+      offset_lastflippedstrip = pie->rows.raster * (pie->rows.num_rows - h);
     if (dw <= 0 || dh <= 0)
         return 0;
     pclxl_set_cursor(xdev, xo, yo);
@@ -2001,8 +2053,8 @@ pclxl_image_write_rows(pclxl_image_enum_t *pie)
         px_put_ub(s, eBit_values[8]);
         PX_PUT_LIT(s, ci_);
         if (xdev->color_info.depth==8) {
-          byte *in=pie->rows.data;
-          byte *out=pie->rows.data;
+          byte *in=pie->rows.data + offset_lastflippedstrip;
+          byte *out=pie->rows.data + offset_lastflippedstrip;
           int i;
           int j;
           rows_raster/=3;
@@ -2026,7 +2078,7 @@ pclxl_image_write_rows(pclxl_image_enum_t *pie)
         PX_PUT_LIT(s, ii_);
     }
     pclxl_write_begin_image(xdev, pie->width, h, dw, dh);
-    pclxl_write_image_data(xdev, pie->rows.data, 0, rows_raster,
+    pclxl_write_image_data(xdev, pie->rows.data + offset_lastflippedstrip, 0, rows_raster,
                            rows_raster << 3, 0, h);
     pclxl_write_end_image(xdev);
     return 0;
@@ -2057,7 +2109,7 @@ pclxl_image_plane_data(gx_image_enum_common_t * info,
             pie->rows.first_y = pie->y;
         }
         memcpy(pie->rows.data +
-                 pie->rows.raster * (pie->y - pie->rows.first_y),
+                 pie->rows.raster * (pie->flipped ? (pie->rows.num_rows - (pie->y - pie->rows.first_y) -1) :(pie->y - pie->rows.first_y)),
                planes[0].data + planes[0].raster * i + (data_bit >> 3),
                pie->rows.raster);
     }
@@ -2115,6 +2167,7 @@ pclxl_get_params(gx_device     *dev,	/* I - Device info */
 {
   gx_device_pclxl	*xdev;		/* PCL XL device */
   int			code;		/* Return code */
+  gs_param_string	s;		/* Temporary string value */
 
  /*
   * First process the "standard" page device parameters...
@@ -2132,9 +2185,17 @@ pclxl_get_params(gx_device     *dev,	/* I - Device info */
   if ((code = param_write_bool(plist, "Duplex", &(xdev->Duplex))) < 0)
     return (code);
 
-  if ((code = param_write_int(plist, "MediaPosition",
-                              &(xdev->MediaPosition))) < 0)
-    return (code);
+  if (xdev->MediaPosition_set)
+    if ((code = param_write_int(plist, "MediaPosition",
+                                &(xdev->MediaPosition))) < 0)
+      return (code);
+
+  if (xdev->MediaType_set) {
+    if ((code = param_string_from_string(s, xdev->MediaType)) < 0)
+      return (code);
+    if ((code = param_write_string(plist, "MediaType", &s)) < 0)
+      return (code);
+  }
 
   if ((code = param_write_bool(plist, "Tumble", &(xdev->Tumble))) < 0)
     return (code);
@@ -2158,6 +2219,7 @@ pclxl_put_params(gx_device     *dev,	/* I - Device info */
   int			code;		/* Error code */
   int			intval;		/* Integer value */
   bool			boolval;	/* Boolean value */
+  gs_param_string	stringval;	/* String value */
 
  /*
   * Process PCL-XL driver parameters...
@@ -2168,31 +2230,83 @@ pclxl_put_params(gx_device     *dev,	/* I - Device info */
 #define intoption(name, sname, type) \
   if ((code = param_read_int(plist, sname, &intval)) < 0) \
   { \
+    if_debug1('|', "Error setting %s\n", sname); \
     param_signal_error(plist, sname, code); \
     return (code); \
   } \
   else if (code == 0) \
   { \
+    if_debug2('|', "setting %s to %d\n", sname, intval); \
     xdev->name = (type)intval; \
   }
 
 #define booloption(name, sname) \
   if ((code = param_read_bool(plist, sname, &boolval)) < 0) \
   { \
+    if_debug1('|', "Error setting bool %s\n", sname);    \
     if ((code = param_read_null(plist, sname)) < 0) \
     { \
+      if_debug1('|', "Error setting bool %s null\n", sname);     \
       param_signal_error(plist, sname, code); \
       return (code); \
     } \
     if (code == 0) \
       xdev->name = false; \
   } \
-  else if (code == 0) \
-    xdev->name = (bool)boolval;
+  else if (code == 0) {                                   \
+    if_debug2('|', "setting %s to %d\n", sname, boolval); \
+    xdev->name = (bool)boolval; \
+  }
 
+#define stringoption(name, sname)                                \
+  if ((code = param_read_string(plist, sname, &stringval)) < 0)  \
+    {                                                            \
+      if_debug1('|', "Error setting %s string\n", sname);        \
+      if ((code = param_read_null(plist, sname)) < 0)            \
+        {                                                        \
+          if_debug1('|', "Error setting %s null\n", sname);      \
+          param_signal_error(plist, sname, code);                \
+          return (code);                                         \
+        }                                                        \
+      if (code == 0) {                                           \
+        if_debug1('|', "setting %s to empty\n", sname);          \
+        xdev->name[0] = '\0';                                    \
+      }                                                          \
+    }                                                            \
+  else if (code == 0) {                                          \
+    strncpy(xdev->name, (const char *)(stringval.data),          \
+            stringval.size);                                     \
+    xdev->name[stringval.size] = '\0';                           \
+    if_debug2('|', "setting %s to %s\n", sname, xdev->name);     \
+  }
+
+  /* We need to have *_set to distinguish defaults from explicitly sets */
   booloption(Duplex, "Duplex")
+  if (code == 0)
+    if (xdev->Duplex) {
+      if_debug0('|', "round up page count\n");
+      xdev->page = (xdev->page+1) & ~1 ;
+    }
   intoption(MediaPosition, "MediaPosition", int)
-  if (code == 0) xdev->MediaPosition_set = true;
+  if (code == 0) {
+    xdev->MediaPosition_set = true;
+    /* round up for duplex */
+    if (xdev->MediaPosition_old != xdev->MediaPosition) {
+      if_debug0('|', "round up page count\n");
+      xdev->page = (xdev->page+1) & ~1 ;
+      xdev->MediaPosition_old = xdev->MediaPosition;
+    }
+  }
+  stringoption(MediaType, "MediaType")
+  if (code == 0) {
+    xdev->MediaType_set = true;
+    /* round up for duplex */
+    if (strcmp(xdev->MediaType_old, xdev->MediaType)) {
+      if_debug0('|', "round up page count\n");
+      xdev->page = (xdev->page+1) & ~1 ;
+      strcpy(xdev->MediaType_old, xdev->MediaType);
+    }
+  }
   booloption(Tumble, "Tumble")
   intoption(CompressMode, "CompressMode", int)
 

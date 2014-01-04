@@ -44,7 +44,6 @@
 #include "gxdda.h"
 #include "gxdevsop.h"
 
-#define USE_FAST_CODE 1
 #define fastfloor(x) (((int)(x)) - (((x)<0) && ((x) != (float)(int)(x))))
 
 /* Enable the following define to perform a little extra work to stop
@@ -64,7 +63,7 @@ static irender_proc(image_render_mono_ht);
 irender_proc_t
 gs_image_class_3_mono(gx_image_enum * penum)
 {
-#if USE_FAST_CODE
+#if USE_FAST_HT_CODE
     bool use_fast_code = true;
 #else
     bool use_fast_code = false;
@@ -76,8 +75,8 @@ gs_image_class_3_mono(gx_image_enum * penum)
     int num_des_comps;
     cmm_dev_profile_t *dev_profile;
     bool dev_color_ok = false;
-    bool is_planar_dev = dev_proc(penum->dev, dev_spec_op)(penum->dev,
-                                 gxdso_is_native_planar, NULL, 0);
+    bool is_planar_dev = (dev_proc(penum->dev, dev_spec_op)(penum->dev,
+                                 gxdso_is_native_planar, NULL, 0) > 0);
             
     if (penum->spp == 1) {
         /* At this point in time, only use the ht approach if our device
@@ -92,7 +91,7 @@ gs_image_class_3_mono(gx_image_enum * penum)
         /* Allow this for CMYK planar and mono binary halftoned devices */
         dev_color_ok = ((penum->dev->color_info.num_components == 1 &&
                          penum->dev->color_info.depth == 1) ||
-#if 1
+#if 0
                          /* Don't allow CMYK Planar devices just yet */
                          0);
 #else
@@ -116,9 +115,12 @@ gs_image_class_3_mono(gx_image_enum * penum)
             code = dev_proc(penum->dev, get_profile)(penum->dev, &dev_profile);
             num_des_comps = gsicc_get_device_profile_comps(dev_profile);
             /* Define the rendering intents */
-            rendering_params.black_point_comp = BP_ON;
+            rendering_params.black_point_comp = penum->pis->blackptcomp;
             rendering_params.graphics_type_tag = GS_IMAGE_TAG;
+            rendering_params.override_icc = false;
+            rendering_params.preserve_black = gsBKPRESNOTSPECIFIED;
             rendering_params.rendering_intent = penum->pis->renderingintent;
+            rendering_params.cmm = gsCMM_DEFAULT;
             if (gs_color_space_get_index(penum->pcs) ==
                 gs_color_space_index_Indexed) {
                 pcs = penum->pcs->base_space;
@@ -150,13 +152,14 @@ gs_image_class_3_mono(gx_image_enum * penum)
                be performed to ensure that the range of 0 to 1 is provided
                to the CMM since ICC profiles are restricted to that range
                but the PS color spaces are not. */
+            penum->use_cie_range = false;
             if (gs_color_space_is_PSCIE(penum->pcs) &&
                 penum->pcs->icc_equivalent != NULL) {
                 /* We have a PS CIE space.  Check the range */
                 if ( !check_cie_range(penum->pcs) ) {
                     /* It is not 0 to 1.  We will be doing decode
                        plus an additional linear adjustment */
-                    penum->cie_range = get_cie_range(penum->pcs);
+                    penum->use_cie_range = (get_cie_range(penum->pcs) != NULL);
                 }
             }
             /* If the image has more than 256 pixels then go ahead and
@@ -183,7 +186,7 @@ not_fast_halftoning:
         /* We can bypass X clipping for portrait mono-component images. */
         if (!(penum->slow_loop || penum->posture != image_portrait))
             penum->clip_image &= ~(image_clip_xmin | image_clip_xmax);
-        if_debug0('b', "[b]render=mono\n");
+        if_debug0m('b', penum->memory, "[b]render=mono\n");
         /* Precompute values needed for rasterizing. */
         penum->dxx =
             float2fixed(penum->matrix.xx + fixed2float(fixed_epsilon) / 2);
@@ -625,8 +628,8 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
         int xmax = fixed2int_pixround(penum->clip_outer.q.x);
 #define xl dda_current(next.x)
 
-        if_debug2('b', "[b]image y=%d  dda.y.Q=%lg\n", penum->y + penum->rect.y,
-                    penum->dda.row.y.state.Q / 256.);
+        if_debug2m('b', penum->memory, "[b]image y=%d  dda.y.Q=%lg\n",
+                   penum->y + penum->rect.y, penum->dda.row.y.state.Q / 256.);
         /* Fold the adjustment into xrun and xl, */
         /* including the +0.5-epsilon for rounding. */
         xrun = xrun - xa + (fixed_half - fixed_epsilon);
@@ -813,7 +816,7 @@ image_render_mono_ht(gx_image_enum * penum_orig, const byte * buffer, int data_x
             flush_buff = true;
         }
     }
-    src_size = penum->rect.w - 1;
+    src_size = penum->rect.w;
 
     switch (posture) {
         case image_portrait:
@@ -837,7 +840,7 @@ image_render_mono_ht(gx_image_enum * penum_orig, const byte * buffer, int data_x
             }
             data_length = dest_width;
             dest_height = fixed2int_var_rounded(any_abs(penum->y_extent.y));
-            scale_factor = float2fixed_rounded((float) src_size / (float) (dest_width - 1));
+            scale_factor = float2fixed_rounded((float) src_size / (float) dest_width);
 #ifdef DEBUG
             /* Help in spotting problems */
             memset(penum->ht_buffer,0x00, penum->ht_stride * vdi * spp_out);
@@ -854,7 +857,7 @@ image_render_mono_ht(gx_image_enum * penum_orig, const byte * buffer, int data_x
             dest_width = fixed2int_var_rounded(any_abs(penum->y_extent.x));
             dest_height = fixed2int_var_rounded(any_abs(penum->x_extent.y));
             data_length = dest_height;
-            scale_factor = float2fixed_rounded((float) src_size / (float) (dest_height - 1));
+            scale_factor = float2fixed_rounded((float) src_size / (float) dest_height);
             offset_threshold = (-(long)(penum->thresh_buffer)) & 15;
             for (k = 0; k < spp_out; k ++) {
                 offset_contone[k] = (- ((long)(penum->line) +
@@ -906,7 +909,7 @@ image_render_mono_ht(gx_image_enum * penum_orig, const byte * buffer, int data_x
     }
     if (flush_buff) goto flush;  /* All done */
     /* Set up the dda.  We could move this out but the cost is pretty small */
-    dda_init(dda_ht, 0, src_size, data_length-1);
+    dda_init_half(dda_ht, 0, src_size, data_length);
     devc_contone_gray = devc_contone[0];
     if (penum->color_cache == NULL) {
         /* No look-up in the cache to fill the source buffer. Still need to
@@ -917,9 +920,9 @@ image_render_mono_ht(gx_image_enum * penum_orig, const byte * buffer, int data_x
         switch (posture) {
             case image_portrait:
                 if (penum->dst_width > 0) {
-                    if (scale_factor == fixed_1) {
+                    if (src_size == dest_width) {
                         memcpy(devc_contone_gray, psrc, data_length);
-                    } else if (scale_factor == fixed_half) {
+                    } else if (src_size * 2 == dest_width) {
                         const byte *psrc_temp = psrc;
                         for (k = 0; k < data_length; k+=2, devc_contone_gray+=2,
                              psrc_temp++) {
@@ -956,7 +959,7 @@ image_render_mono_ht(gx_image_enum * penum_orig, const byte * buffer, int data_x
                     /* Code up special cases for when we have no scaling
                        and 2x scaling which we will run into in 300 and
                        600dpi devices and content */
-                    if (scale_factor == fixed_1) {
+                    if (src_size == dest_height) {
                         for (k = 0; k < data_length; k++) {
                             devc_contone_gray[position] = psrc[k];
                             position += LAND_BITS;

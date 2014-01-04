@@ -32,7 +32,8 @@ typedef struct gsicc_lcms2_link_s gsicc_lcms2_link_t;
 static void
 gscms_error(cmsContext       ContextID,
             cmsUInt32Number  error_code,
-            const char      *error_text){
+            const char      *error_text)
+{
 #ifdef DEBUG
     gs_warn1("cmm error : %s",error_text);
 #endif
@@ -42,8 +43,9 @@ static
 void *gs_lcms2_malloc(cmsContext id, unsigned int size)
 {
     void *ptr;
+    gs_memory_t *mem = (gs_memory_t *)id;
 
-    ptr = gs_alloc_bytes(gs_lib_ctx_get_non_gc_memory_t(), size, "lcms");
+    ptr = gs_alloc_bytes(mem, size, "lcms");
 #if DEBUG_LCMS_MEM
     gs_warn2("lcms malloc (%d) at 0x%x",size,ptr);
 #endif
@@ -51,26 +53,35 @@ void *gs_lcms2_malloc(cmsContext id, unsigned int size)
 }
 
 static
-void *gs_lcms2_realloc(cmsContext id, void *ptr, unsigned int size)
-{
-    void *ptr2;
-
-    ptr2 = gs_resize_object(gs_lib_ctx_get_non_gc_memory_t(), ptr, size, "lcms");
-#if DEBUG_LCMS_MEM
-    gs_warn3("lcms realloc (%x,%d) at 0x%x",ptr,size,ptr2);
-#endif
-    return ptr2;
-}
-
-static
 void gs_lcms2_free(cmsContext id, void *ptr)
 {
+    gs_memory_t *mem = (gs_memory_t *)id;
     if (ptr != NULL) {
 #if DEBUG_LCMS_MEM
         gs_warn1("lcms free at 0x%x",ptr);
 #endif
-        gs_free_object(gs_lib_ctx_get_non_gc_memory_t(), ptr, "lcms");
+        gs_free_object(mem, ptr, "lcms");
     }
+}
+
+static
+void *gs_lcms2_realloc(cmsContext id, void *ptr, unsigned int size)
+{
+    gs_memory_t *mem = (gs_memory_t *)id;
+    void *ptr2;
+
+    if (ptr == 0)
+        return gs_lcms2_malloc(id, size);
+    if (size == 0)
+    {
+        gs_lcms2_free(id, ptr);
+        return NULL;
+    }
+    ptr2 = gs_resize_object(mem, ptr, size, "lcms");
+#if DEBUG_LCMS_MEM
+    gs_warn3("lcms realloc (%x,%d) at 0x%x",ptr,size,ptr2);
+#endif
+    return ptr2;
 }
 
 static cmsPluginMemHandler gs_cms_memhandler =
@@ -123,12 +134,12 @@ gscms_get_numberclrtnames(gcmmhprofile_t profile)
 
 /* Get the nth colorant name in the clrt tag */
 char*
-gscms_get_clrtname(gcmmhprofile_t profile, int colorcount)
+gscms_get_clrtname(gcmmhprofile_t profile, int colorcount, gs_memory_t *memory)
 {
     cmsNAMEDCOLORLIST *lcms_names;
-    /* FIXME: RJW: Need to avoid using a global here, but not possible with
-     * the current interface. Talk to mvrhel. */
-    static char name[256];
+    char name[256];
+    char *buf;
+    int length;
 
     lcms_names = (cmsNAMEDCOLORLIST *)cmsReadTag(profile,
                                                  cmsSigColorantTableTag);
@@ -141,11 +152,21 @@ gscms_get_clrtname(gcmmhprofile_t profile, int colorcount)
                           NULL,
                           NULL) == 0)
         return NULL;
-    return &name[0];
+    length = strlen(name);
+    buf = (char*) gs_alloc_bytes(memory, length, "gscms_get_clrtname");
+    if (buf)
+        strcpy(buf, name);
+    return buf;
+}
+
+/* Check if the profile is a device link type */
+bool
+gscms_is_device_link(gcmmhprofile_t profile)
+{
+    return (cmsGetDeviceClass(profile) == cmsSigLinkClass);
 }
 
 /* Get the device space associated with this profile */
-
 gsicc_colorbuffer_t
 gscms_get_profile_data_space(gcmmhprofile_t profile)
 {
@@ -170,17 +191,18 @@ gscms_get_profile_data_space(gcmmhprofile_t profile)
 
 /* Get ICC Profile handle from buffer */
 gcmmhprofile_t
-gscms_get_profile_handle_mem(unsigned char *buffer, unsigned int input_size)
+gscms_get_profile_handle_mem(gs_memory_t *mem, unsigned char *buffer, 
+                             unsigned int input_size)
 {
     cmsSetLogErrorHandler(gscms_error);
-    return(cmsOpenProfileFromMem(buffer,input_size));
+    return(cmsOpenProfileFromMemTHR((cmsContext)mem,buffer,input_size));
 }
 
 /* Get ICC Profile handle from file ptr */
 gcmmhprofile_t
-gscms_get_profile_handle_file(const char *filename)
+gscms_get_profile_handle_file(gs_memory_t *mem,const char *filename)
 {
-    return(cmsOpenProfileFromFile(filename, "r"));
+    return(cmsOpenProfileFromFileTHR((cmsContext)mem, filename, "r"));
 }
 
 /* Transform an entire buffer */
@@ -192,7 +214,7 @@ gscms_transform_color_buffer(gx_device *dev, gsicc_link_t *icclink,
                              void *outputbuffer)
 {
     cmsHTRANSFORM hTransform = (cmsHTRANSFORM)icclink->link_handle;
-    cmsUInt32Number dwInputFormat,dwOutputFormat;
+    cmsUInt32Number dwInputFormat,dwOutputFormat, num_src_lcms, num_des_lcms;
     int planar,numbytes,big_endian,hasalpha,k;
     unsigned char *inputpos, *outputpos;
     int numchannels;
@@ -231,11 +253,16 @@ gscms_transform_color_buffer(gx_device *dev, gsicc_link_t *icclink,
     big_endian = !output_buff_desc->little_endian;
     dwOutputFormat = dwOutputFormat | ENDIAN16_SH(big_endian);
 
-    /* number of channels */
-    numchannels = input_buff_desc->num_chan;
-    dwInputFormat = dwInputFormat | CHANNELS_SH(numchannels);
-    numchannels = output_buff_desc->num_chan;
-    dwOutputFormat = dwOutputFormat | CHANNELS_SH(numchannels);
+    /* number of channels.  This should not really be changing! */
+    num_src_lcms = T_CHANNELS(cmsGetTransformInputFormat(hTransform));
+    num_des_lcms = T_CHANNELS(cmsGetTransformOutputFormat(hTransform));
+    if (num_src_lcms != input_buff_desc->num_chan ||
+        num_des_lcms != output_buff_desc->num_chan) {
+        /* We can't transform this. Someone is doing something odd */
+        return;
+    }
+    dwInputFormat = dwInputFormat | CHANNELS_SH(num_src_lcms);
+    dwOutputFormat = dwOutputFormat | CHANNELS_SH(num_des_lcms);
 
     /* alpha, which is passed through unmolested */
     /* ToDo:  Right now we always must have alpha last */
@@ -311,13 +338,15 @@ gscms_transform_color(gx_device *dev, gsicc_link_t *icclink,
 /* Get the link from the CMS. TODO:  Add error checking */
 gcmmhlink_t
 gscms_get_link(gcmmhprofile_t  lcms_srchandle,
-                    gcmmhprofile_t lcms_deshandle,
-                    gsicc_rendering_param_t *rendering_params)
+               gcmmhprofile_t lcms_deshandle,
+               gsicc_rendering_param_t *rendering_params,
+               gs_memory_t *memory)
 {
     cmsUInt32Number src_data_type,des_data_type;
     cmsColorSpaceSignature src_color_space,des_color_space;
     int src_nChannels,des_nChannels;
     int lcms_src_color_space, lcms_des_color_space;
+    unsigned int flag;
 
     /* Check for case of request for a transfrom from a device link profile
        in that case, the destination profile is NULL */
@@ -350,21 +379,62 @@ gscms_get_link(gcmmhprofile_t  lcms_srchandle,
 #if 0
     des_data_type = des_data_type | ENDIAN16_SH(1);
 #endif
-/* Create the link */
-    return(cmsCreateTransform(lcms_srchandle, src_data_type, lcms_deshandle,
-                        des_data_type, rendering_params->rendering_intent,
-               (cmsFLAGS_BLACKPOINTCOMPENSATION | cmsFLAGS_HIGHRESPRECALC)));
+    /* Set up the flags */
+    flag = cmsFLAGS_HIGHRESPRECALC;
+    if (rendering_params->black_point_comp == gsBLACKPTCOMP_ON
+        || rendering_params->black_point_comp == gsBLACKPTCOMP_ON_OR) {
+        flag = (flag | cmsFLAGS_BLACKPOINTCOMPENSATION);
+    }
+    if (rendering_params->preserve_black == gsBLACKPRESERVE_KONLY) {
+        switch (rendering_params->rendering_intent) {
+            case INTENT_PERCEPTUAL:
+                rendering_params->rendering_intent = INTENT_PRESERVE_K_ONLY_PERCEPTUAL;
+                break;
+            case INTENT_RELATIVE_COLORIMETRIC:
+                rendering_params->rendering_intent = INTENT_PRESERVE_K_ONLY_RELATIVE_COLORIMETRIC;
+                break;
+            case INTENT_SATURATION:
+                rendering_params->rendering_intent = INTENT_PRESERVE_K_ONLY_SATURATION;
+                break;
+            default:
+                break;
+        }
+    }
+    if (rendering_params->preserve_black == gsBLACKPRESERVE_KPLANE) {
+        switch (rendering_params->rendering_intent) {
+            case INTENT_PERCEPTUAL:
+                rendering_params->rendering_intent = INTENT_PRESERVE_K_PLANE_PERCEPTUAL;
+                break;
+            case INTENT_RELATIVE_COLORIMETRIC:
+                rendering_params->rendering_intent = INTENT_PRESERVE_K_PLANE_RELATIVE_COLORIMETRIC;
+                break;
+            case INTENT_SATURATION:
+                rendering_params->rendering_intent = INTENT_PRESERVE_K_PLANE_SATURATION;
+                break;
+            default:
+                break;
+        }
+    }
+    /* Create the link */
+    return cmsCreateTransformTHR((cmsContext)memory,
+               lcms_srchandle, src_data_type,
+               lcms_deshandle, des_data_type,
+               rendering_params->rendering_intent,flag);
     /* cmsFLAGS_HIGHRESPRECALC)  cmsFLAGS_NOTPRECALC  cmsFLAGS_LOWRESPRECALC*/
 }
 
 /* Get the link from the CMS, but include proofing and/or a device link  
-   profile. */
+   profile.  Note also, that the source may be a device link profile, in
+   which case we will not have a destination profile but could still have
+   a proof profile or an additional device link profile */
 gcmmhlink_t
 gscms_get_link_proof_devlink(gcmmhprofile_t lcms_srchandle,
                              gcmmhprofile_t lcms_proofhandle,
                              gcmmhprofile_t lcms_deshandle, 
                              gcmmhprofile_t lcms_devlinkhandle, 
-                             gsicc_rendering_param_t *rendering_params)
+                             gsicc_rendering_param_t *rendering_params,
+                             bool src_dev_link,
+                             gs_memory_t *memory)
 {
     cmsUInt32Number src_data_type,des_data_type;
     cmsColorSpaceSignature src_color_space,des_color_space;
@@ -372,57 +442,147 @@ gscms_get_link_proof_devlink(gcmmhprofile_t lcms_srchandle,
     int lcms_src_color_space, lcms_des_color_space;
     cmsHPROFILE hProfiles[5]; 
     int nProfiles = 0;
+    unsigned int flag;
 
-   /* First handle all the source stuff */
-    src_color_space  = cmsGetColorSpace(lcms_srchandle);
-    lcms_src_color_space = _cmsLCMScolorSpace(src_color_space);
-    /* littlecms returns -1 for types it does not (but should) understand */
-    if (lcms_src_color_space < 0) lcms_src_color_space = 0;
-    src_nChannels = cmsChannelsOf(src_color_space);
-    /* For now, just do single byte data, interleaved.  We can change this
-      when we use the transformation. */
-    src_data_type = (COLORSPACE_SH(lcms_src_color_space)|
-                        CHANNELS_SH(src_nChannels)|BYTES_SH(2)); 
-    if (lcms_devlinkhandle == NULL) {
-        des_color_space = cmsGetColorSpace(lcms_deshandle);
+    /* Check if the rendering intent is something other than relative colorimetric
+       and  if we have a proofing profile.  In this case we need to create the 
+       combined profile a bit different.  LCMS does not allow us to use different
+       intents in the cmsCreateMultiprofileTransform transform.  Also, don't even
+       think about doing this if someone has snuck in a source based device link
+       profile into the mix */
+    if (lcms_proofhandle != NULL && 
+        rendering_params->rendering_intent != gsRELATIVECOLORIMETRIC &&
+        !src_dev_link) {
+        /* First handle the source to proof profile with its particular intent as
+           a device link profile */
+        cmsHPROFILE src_to_proof;
+        cmsHTRANSFORM temptransform;
+
+        temptransform = gscms_get_link(lcms_srchandle, lcms_proofhandle, 
+                                      rendering_params, memory);
+        /* Now mash that to a device link profile */
+        flag = cmsFLAGS_HIGHRESPRECALC;
+        if (rendering_params->black_point_comp == gsBLACKPTCOMP_ON || 
+            rendering_params->black_point_comp == gsBLACKPTCOMP_ON_OR) {
+            flag = (flag | cmsFLAGS_BLACKPOINTCOMPENSATION);
+        }
+        src_to_proof = cmsTransform2DeviceLink(temptransform, 3.4, flag); 
+        /* Free up the link handle */
+        cmsDeleteTransform(temptransform);
+        src_color_space  = cmsGetColorSpace(src_to_proof);
+        lcms_src_color_space = _cmsLCMScolorSpace(src_color_space);
+        /* littlecms returns -1 for types it does not (but should) understand */
+        if (lcms_src_color_space < 0) lcms_src_color_space = 0;
+        src_nChannels = cmsChannelsOf(src_color_space);
+        /* For now, just do single byte data, interleaved.  We can change this
+          when we use the transformation. */
+        src_data_type = (COLORSPACE_SH(lcms_src_color_space)|
+                            CHANNELS_SH(src_nChannels)|BYTES_SH(2)); 
+        if (lcms_devlinkhandle == NULL) {
+            des_color_space = cmsGetColorSpace(lcms_deshandle);
+        } else {
+            des_color_space = cmsGetPCS(lcms_devlinkhandle);
+        }
+        lcms_des_color_space = _cmsLCMScolorSpace(des_color_space);
+        if (lcms_des_color_space < 0) lcms_des_color_space = 0;
+        des_nChannels = cmsChannelsOf(des_color_space);
+        des_data_type = (COLORSPACE_SH(lcms_des_color_space)|
+                            CHANNELS_SH(des_nChannels)|BYTES_SH(2));
+        /* Now, we need to go back through the proofing profile, to the
+           destination and then to the device link profile if there was one. */
+        hProfiles[nProfiles++] = src_to_proof;  /* Src to proof with special intent */
+        hProfiles[nProfiles++] = lcms_proofhandle; /* Proof to CIELAB */
+        if (lcms_deshandle != NULL) {   
+            hProfiles[nProfiles++] = lcms_deshandle;  /* Our destination */
+        }
+        /* The output device link profile */
+        if (lcms_devlinkhandle != NULL) {
+            hProfiles[nProfiles++] = lcms_devlinkhandle;
+        }
+        flag = cmsFLAGS_HIGHRESPRECALC;
+        if (rendering_params->black_point_comp == gsBLACKPTCOMP_ON
+            || rendering_params->black_point_comp == gsBLACKPTCOMP_ON_OR) {
+            flag = (flag | cmsFLAGS_BLACKPOINTCOMPENSATION);
+        }
+        /* Use relative colorimetric here */
+        temptransform = cmsCreateMultiprofileTransformTHR((cmsContext)memory,
+                    hProfiles, nProfiles, src_data_type,
+                    des_data_type, gsRELATIVECOLORIMETRIC, flag);
+        cmsCloseProfile(src_to_proof);
+        return temptransform;
     } else {
-        des_color_space = cmsGetPCS(lcms_devlinkhandle);
+       /* First handle all the source stuff */
+        src_color_space  = cmsGetColorSpace(lcms_srchandle);
+        lcms_src_color_space = _cmsLCMScolorSpace(src_color_space);
+        /* littlecms returns -1 for types it does not (but should) understand */
+        if (lcms_src_color_space < 0) lcms_src_color_space = 0;
+        src_nChannels = cmsChannelsOf(src_color_space);
+        /* For now, just do single byte data, interleaved.  We can change this
+          when we use the transformation. */
+        src_data_type = (COLORSPACE_SH(lcms_src_color_space)|
+                            CHANNELS_SH(src_nChannels)|BYTES_SH(2)); 
+        if (lcms_devlinkhandle == NULL) {
+            if (src_dev_link) {
+                des_color_space = cmsGetPCS(lcms_srchandle);
+            } else {
+                des_color_space = cmsGetColorSpace(lcms_deshandle);
+            }
+        } else {
+            des_color_space = cmsGetPCS(lcms_devlinkhandle);
+        }
+        lcms_des_color_space = _cmsLCMScolorSpace(des_color_space);
+        if (lcms_des_color_space < 0) lcms_des_color_space = 0;
+        des_nChannels = cmsChannelsOf(des_color_space);
+        des_data_type = (COLORSPACE_SH(lcms_des_color_space)|
+                            CHANNELS_SH(des_nChannels)|BYTES_SH(2));
+        /* lcms proofing transform has a clunky API and can't include the device 
+           link profile if we have both. So use cmsCreateMultiprofileTransform 
+           instead and round trip the proofing profile. */
+        hProfiles[nProfiles++] = lcms_srchandle;
+        /* Note if source is device link, we cannot do any proofing */
+        if (lcms_proofhandle != NULL && !src_dev_link) {
+            hProfiles[nProfiles++] = lcms_proofhandle;
+            hProfiles[nProfiles++] = lcms_proofhandle;
+        }
+        /* This should be NULL if we have a source device link */
+        if (lcms_deshandle != NULL) {
+            hProfiles[nProfiles++] = lcms_deshandle;
+        }
+        /* Someone could have a device link at the output, giving us possibly two
+           device link profiles to smash together */
+        if (lcms_devlinkhandle != NULL) {
+            hProfiles[nProfiles++] = lcms_devlinkhandle;
+        }
+        flag = cmsFLAGS_HIGHRESPRECALC;
+        if (rendering_params->black_point_comp == gsBLACKPTCOMP_ON
+            || rendering_params->black_point_comp == gsBLACKPTCOMP_ON_OR) {
+            flag = (flag | cmsFLAGS_BLACKPOINTCOMPENSATION);
+        }
+        return cmsCreateMultiprofileTransformTHR((cmsContext)memory,
+                    hProfiles, nProfiles, src_data_type,
+                    des_data_type, rendering_params->rendering_intent, flag);
     }
-    lcms_des_color_space = _cmsLCMScolorSpace(des_color_space);
-    if (lcms_des_color_space < 0) lcms_des_color_space = 0;
-    des_nChannels = cmsChannelsOf(des_color_space);
-    des_data_type = (COLORSPACE_SH(lcms_des_color_space)|
-                        CHANNELS_SH(des_nChannels)|BYTES_SH(2));
-    /* lcms proofing transform has a clunky API and can't include the device 
-       link profile if we have both. So use cmsCreateMultiprofileTransform 
-       instead and round trip the proofing profile. */
-    hProfiles[nProfiles++] = lcms_srchandle;
-    if (lcms_proofhandle != NULL) {
-        hProfiles[nProfiles++] = lcms_proofhandle;
-        hProfiles[nProfiles++] = lcms_proofhandle;
-    }
-    hProfiles[nProfiles++] = lcms_deshandle;
-    if (lcms_devlinkhandle != NULL) {
-        hProfiles[nProfiles++] = lcms_devlinkhandle;
-    }
-    return(cmsCreateMultiprofileTransform(hProfiles, nProfiles, src_data_type, 
-                                          des_data_type, rendering_params->rendering_intent, 
-                                          (cmsFLAGS_BLACKPOINTCOMPENSATION | 
-                                          cmsFLAGS_HIGHRESPRECALC)));
 }
 
 /* Do any initialization if needed to the CMS */
-void
-gscms_create(void **contextptr)
+int
+gscms_create(gs_memory_t *memory)
 {
     /* Set our own error handling function */
     cmsSetLogErrorHandler(gscms_error);
-    cmsPlugin(&gs_cms_memhandler);
+    cmsPluginTHR(memory, &gs_cms_memhandler);
+    /* If we had created any persitent state that we needed access to in the
+     * other functions, we should store that by calling:
+     *   gs_lib_ctx_set_cms_context(memory, state);
+     * We can then retrieve it anywhere else by calling:
+     *   gs_lib_ctx_get_cms_context(memory);
+     * LCMS currently uses no such state. */
+    return 0;
 }
 
 /* Do any clean up when done with the CMS if needed */
 void
-gscms_destroy(void **contextptr)
+gscms_destroy(gs_memory_t *memory)
 {
     /* Nothing to do here for lcms */
 }
@@ -431,7 +591,7 @@ gscms_destroy(void **contextptr)
 void
 gscms_release_link(gsicc_link_t *icclink)
 {
-    if (icclink->link_handle !=NULL )
+    if (icclink->link_handle != NULL )
         cmsDeleteTransform(icclink->link_handle);
 }
 
@@ -491,9 +651,12 @@ gscms_transform_named_color(gsicc_link_t *icclink,  float tint_value,
    i.e. in namedcolor_information.  Note that an ICC named color profile
     need NOT contain the device values but must contain the CIELAB values. */
 void
-gscms_get_name2device_link(gsicc_link_t *icclink, gcmmhprofile_t  lcms_srchandle,
-                    gcmmhprofile_t lcms_deshandle, gcmmhprofile_t lcms_proofhandle,
-                    gsicc_rendering_param_t *rendering_params)
+gscms_get_name2device_link(gsicc_link_t *icclink,
+                           gcmmhprofile_t  lcms_srchandle,
+                           gcmmhprofile_t lcms_deshandle,
+                           gcmmhprofile_t lcms_proofhandle,
+                           gsicc_rendering_param_t *rendering_params,
+                           gs_memory_t *memory)
 {
     cmsHTRANSFORM hTransform;
     cmsUInt32Number dwOutputFormat;
@@ -509,7 +672,8 @@ gscms_get_name2device_link(gsicc_link_t *icclink, gcmmhprofile_t  lcms_srchandle
     }
     /* Create the transform */
     /* ToDo:  Adjust rendering intent */
-    hTransform = cmsCreateProofingTransform(lcms_srchandle, TYPE_NAMED_COLOR_INDEX,
+    hTransform = cmsCreateProofingTransformTHR(memory,
+                                            lcms_srchandle, TYPE_NAMED_COLOR_INDEX,
                                             lcms_deshandle, TYPE_CMYK_8,
                                             lcms_proofhandle,INTENT_PERCEPTUAL,
                                             INTENT_ABSOLUTE_COLORIMETRIC,

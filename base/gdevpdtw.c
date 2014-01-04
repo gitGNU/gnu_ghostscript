@@ -164,7 +164,8 @@ pdf_write_encoding(gx_device_pdf *pdev, const pdf_font_resource_t *pdfont, long 
             return code; /* Must not happen */
         if (code == 0 && (pdfont->FontType == ft_user_defined ||
             pdfont->FontType == ft_PCL_user_defined ||
-            pdfont->FontType == ft_GL2_stick_user_defined)) {
+            pdfont->FontType == ft_GL2_stick_user_defined ||
+            pdfont->FontType == ft_GL2_531)) {
             /* PDF 1.4 spec Appendix H Note 42 says that
              * Acrobat 4 can't properly handle Base Encoding.
              * Enforce writing differences against that.
@@ -205,8 +206,10 @@ pdf_write_encoding_ref(gx_device_pdf *pdev,
 {
     stream *s = pdev->strm;
 
-    if (id != 0)
+    if (id != 0) {
         pprintld1(s, "/Encoding %ld 0 R", id);
+        pdf_record_usage_by_parent(pdev, id, pdfont->object->id);
+    }
     else if (pdfont->u.simple.BaseEncoding > 0) {
         gs_encoding_index_t base_encoding = pdfont->u.simple.BaseEncoding;
         pprints1(s, "/Encoding/%s", encoding_names[base_encoding]);
@@ -561,12 +564,14 @@ pdf_write_font_resource(gx_device_pdf *pdev, pdf_font_resource_t *pdfont)
     stream *s;
     cos_dict_t *pcd_Resources = NULL;
     char *base14_name = NULL;
+    int id;
 
     if (pdfont->cmap_ToUnicode != NULL && pdfont->res_ToUnicode == NULL)
         if (pdfont->FontType == ft_composite ||
             ((pdfont->FontType == ft_encrypted || pdfont->FontType == ft_encrypted2 ||
                 pdfont->FontType == ft_TrueType || pdfont->FontType == ft_user_defined ||
-                pdfont->FontType == ft_GL2_stick_user_defined || pdfont->FontType == ft_PCL_user_defined ) &&
+                pdfont->FontType == ft_GL2_stick_user_defined || pdfont->FontType == ft_PCL_user_defined ||
+                pdfont->FontType == ft_GL2_531) &&
                 pdf_simple_font_needs_ToUnicode(pdfont))
            ) {
             pdf_resource_t *prcmap;
@@ -579,7 +584,8 @@ pdf_write_font_resource(gx_device_pdf *pdev, pdf_font_resource_t *pdfont)
     if (pdev->CompatibilityLevel >= 1.2 &&
             (pdfont->FontType == ft_user_defined ||
             pdfont->FontType == ft_PCL_user_defined ||
-            pdfont->FontType == ft_GL2_stick_user_defined) &&
+            pdfont->FontType == ft_GL2_stick_user_defined ||
+            pdfont->FontType == ft_GL2_531) &&
             pdfont->u.simple.s.type3.Resources != NULL &&
             pdfont->u.simple.s.type3.Resources->elements != NULL) {
         int code;
@@ -603,20 +609,29 @@ pdf_write_font_resource(gx_device_pdf *pdev, pdf_font_resource_t *pdfont)
         else
             pdf_put_name(pdev, (byte *)pdfont->BaseFont.data, pdfont->BaseFont.size);
     }
-    if (pdfont->FontDescriptor)
-        pprintld1(s, "/FontDescriptor %ld 0 R",
-                  pdf_font_descriptor_id(pdfont->FontDescriptor));
-    if (pdfont->res_ToUnicode)
-        pprintld1(s, "/ToUnicode %ld 0 R",
-                  pdf_resource_id((const pdf_resource_t *)pdfont->res_ToUnicode));
+    if (pdfont->FontDescriptor) {
+        id = pdf_font_descriptor_id(pdfont->FontDescriptor);
+        pprintld1(s, "/FontDescriptor %ld 0 R", id);
+        if (pdev->Linearise) {
+            pdf_set_font_descriptor_usage(pdev, pdfont->object->id, pdfont->FontDescriptor);
+        }
+    }
+    if (pdfont->res_ToUnicode) {
+        id = pdf_resource_id((const pdf_resource_t *)pdfont->res_ToUnicode);
+        pprintld1(s, "/ToUnicode %ld 0 R", id);
+        pdf_record_usage_by_parent(pdev, id, pdfont->object->id);
+    }
     if (pdev->CompatibilityLevel > 1.0)
         stream_puts(s, "/Type/Font\n");
     else
         pprintld1(s, "/Type/Font/Name/R%ld\n", pdf_font_id(pdfont));
     if (pdev->ForOPDFRead && pdfont->global)
         stream_puts(s, "/.Global true\n");
-    if (pcd_Resources != NULL)
-        pprintld1(s, "/Resources %ld 0 R\n", pcd_Resources->id);
+    if (pcd_Resources != NULL) {
+        id = pcd_Resources->id;
+        pprintld1(s, "/Resources %ld 0 R\n", id);
+        pdf_record_usage_by_parent(pdev, id, pdfont->object->id);
+    }
     return pdfont->write_contents(pdev, pdfont);
 }
 
@@ -723,12 +738,16 @@ static int
 pdf_write_cid_system_info_to_stream(gx_device_pdf *pdev, stream *s,
                           const gs_cid_system_info_t *pcidsi, gs_id object_id)
 {
-    byte Registry[32], Ordering[32];
+    byte *Registry, *Ordering;
 
-    if (pcidsi->Registry.size > sizeof(Registry))
-        return_error(gs_error_limitcheck);
-    if (pcidsi->Ordering.size > sizeof(Ordering))
-        return_error(gs_error_limitcheck);
+    Registry = gs_alloc_bytes(pdev->pdf_memory, pcidsi->Registry.size, "temporary buffer for Registry");
+    if (!Registry)
+        return(gs_note_error(gs_error_VMerror));
+    Ordering = gs_alloc_bytes(pdev->pdf_memory, pcidsi->Ordering.size, "temporary buffer for Registry");
+    if (!Ordering) {
+        gs_free_object(pdev->pdf_memory, Registry, "free temporary Registry buffer");
+        return(gs_note_error(gs_error_VMerror));
+    }
     memcpy(Registry, pcidsi->Registry.data, pcidsi->Registry.size);
     memcpy(Ordering, pcidsi->Ordering.data, pcidsi->Ordering.size);
     if (pdev->KeyLength && object_id != 0) {
@@ -736,12 +755,18 @@ pdf_write_cid_system_info_to_stream(gx_device_pdf *pdev, stream *s,
         int code;
 
         code = pdf_encrypt_init(pdev, object_id, &sarc4);
-        if (code < 0)
-            return code;
+        if (code < 0) {
+            gs_free_object(pdev->pdf_memory, Registry, "free temporary Registry buffer");
+            gs_free_object(pdev->pdf_memory, Ordering, "free temporary Ordering buffer");
+            return(gs_note_error(code));
+        }
         s_arcfour_process_buffer(&sarc4, Registry, pcidsi->Registry.size);
         code = pdf_encrypt_init(pdev, object_id, &sarc4);
-        if (code < 0)
-            return code;
+        if (code < 0) {
+            gs_free_object(pdev->pdf_memory, Registry, "free temporary Registry buffer");
+            gs_free_object(pdev->pdf_memory, Ordering, "free temporary Ordering buffer");
+            return(gs_note_error(code));
+        }
         s_arcfour_process_buffer(&sarc4, Ordering, pcidsi->Ordering.size);
     }
     stream_puts(s, "<<\n/Registry");
@@ -749,6 +774,8 @@ pdf_write_cid_system_info_to_stream(gx_device_pdf *pdev, stream *s,
     stream_puts(s, "\n/Ordering");
     s_write_ps_string(s, Ordering, pcidsi->Ordering.size, PRINT_HEX_NOT_OK);
     pprintd1(s, "\n/Supplement %d\n>>\n", pcidsi->Supplement);
+    gs_free_object(pdev->pdf_memory, Registry, "free temporary Registry buffer");
+    gs_free_object(pdev->pdf_memory, Ordering, "free temporary Ordering buffer");
     return 0;
 }
 

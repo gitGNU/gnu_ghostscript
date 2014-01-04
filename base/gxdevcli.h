@@ -1173,7 +1173,6 @@ typedef struct gs_param_list_s gs_param_list;
     const gs_transparency_group_params_t *ptgp,\
     const gs_rect *pbbox,\
     gs_imager_state *pis,\
-    gs_transparency_state_t **ppts,\
     gs_memory_t *mem)
 #define dev_proc_begin_transparency_group(proc)\
   dev_t_proc_begin_transparency_group(proc, gx_device)
@@ -1187,8 +1186,7 @@ typedef struct gs_param_list_s gs_param_list;
 */
 #define dev_t_proc_end_transparency_group(proc, dev_t)\
   int proc(gx_device *dev,\
-    gs_imager_state *pis,\
-    gs_transparency_state_t **ppts)
+    gs_imager_state *pis)
 #define dev_proc_end_transparency_group(proc)\
   dev_t_proc_end_transparency_group(proc, gx_device)
 
@@ -1202,7 +1200,6 @@ typedef struct gs_param_list_s gs_param_list;
     const gx_transparency_mask_params_t *ptmp,\
     const gs_rect *pbbox,\
     gs_imager_state *pis,\
-    gs_transparency_state_t **ppts,\
     gs_memory_t *mem)
 #define dev_proc_begin_transparency_mask(proc)\
   dev_t_proc_begin_transparency_mask(proc, gx_device)
@@ -1215,8 +1212,7 @@ typedef struct gs_param_list_s gs_param_list;
 */
 #define dev_t_proc_end_transparency_mask(proc, dev_t)\
   int proc(gx_device *dev,\
-    gs_imager_state *pis,\
-    gs_transparency_mask_t **pptm)
+    gs_imager_state *pis)
 #define dev_proc_end_transparency_mask(proc)\
   dev_t_proc_end_transparency_mask(proc, gx_device)
 
@@ -1225,8 +1221,7 @@ typedef struct gs_param_list_s gs_param_list;
   either a group or a mask.  Set *ppts to 0 iff the stack is now empty.
 */
 #define dev_t_proc_discard_transparency_layer(proc, dev_t)\
-  int proc(gx_device *dev,\
-    gs_transparency_state_t **ppts)
+  int proc(gx_device *dev)
 #define dev_proc_discard_transparency_layer(proc)\
   dev_t_proc_discard_transparency_layer(proc, gx_device)
 
@@ -1705,6 +1700,14 @@ extern_st(st_device_null);
  */
 void gx_device_init(gx_device * dev, const gx_device * proto,
                     gs_memory_t * mem, bool internal);
+
+/*
+ * Identical to gx_device_init, except that the reference counting is set
+ * up so that it doesn't attempt to free the device structure when the last
+ * instance is removed, and the device is always internal (never retained).
+ */
+void gx_device_init_on_stack(gx_device * dev, const gx_device * proto,
+                             gs_memory_t * mem);
 
 /* Make a null device. */
 /* The gs_memory_t argument is 0 if the device is temporary and local, */

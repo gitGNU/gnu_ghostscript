@@ -50,7 +50,7 @@ struct cos_element_s {
  */
 struct cos_stream_piece_s {
     cos_element_common(cos_stream_piece_t);
-    int64_t position;		/* in streams file */
+    gs_offset_t position;		/* in streams file */
     uint size;
 };
 #define private_st_cos_stream_piece()	/* in gdevpdfo.c */\
@@ -812,6 +812,30 @@ cos_dict_element_free(cos_dict_t *pcd, cos_dict_element_t *pcde,
     gs_free_object(mem, pcde, cname);
 }
 
+static int
+cos_dict_delete(cos_dict_t *pcd, const byte *key_data, uint key_size)
+{
+    cos_dict_element_t *pcde = pcd->elements, *prev = 0;
+
+    for (; pcde; pcde = pcde->next) {
+        if (!bytes_compare(key_data, key_size, pcde->key.data, pcde->key.size)) {
+            cos_dict_element_free(pcd, pcde, "cos_dict_delete");
+            if (prev != 0)
+                prev->next = pcde->next;
+            else
+                pcd->elements = pcde->next;
+            return 0;
+        }
+        prev = pcde;
+    }
+    return -1;
+}
+int
+cos_dict_delete_c_key(cos_dict_t *pcd, const char *key)
+{
+    return cos_dict_delete(pcd, (const byte *)key, strlen(key));
+}
+
 static void
 cos_dict_release(cos_object_t *pco, client_name_t cname)
 {
@@ -1531,7 +1555,7 @@ cos_stream_add(cos_stream_t *pcs, uint size)
 {
     gx_device_pdf *pdev = pcs->pdev;
     stream *s = pdev->streams.strm;
-    long position = stell(s);
+    gs_offset_t position = stell(s);
     cos_stream_piece_t *prev = pcs->pieces;
 
     /* Check for consecutive writing -- just an optimization. */
@@ -1592,7 +1616,7 @@ cos_stream_release_pieces(cos_stream_t *pcs)
 {
     gx_device_pdf *pdev = pcs->pdev;
     stream *s = pdev->streams.strm;
-    long position = stell(s), position0 = position;
+    gs_offset_t position = stell(s), position0 = position;
     gs_memory_t *mem = cos_object_memory((cos_object_t *)pcs);
 
     while (pcs->pieces != NULL &&
@@ -1632,7 +1656,7 @@ cos_write_stream_process(stream_state * st, stream_cursor_read * pr,
     cos_write_stream_state_t *ss = (cos_write_stream_state_t *)st;
     gx_device_pdf *pdev = ss->pdev;
     stream *target = ss->target;
-    long start_pos = stell(pdev->streams.strm);
+    gs_offset_t start_pos = stell(pdev->streams.strm);
     int code;
 
     stream_write(target, pr->ptr + 1, count);

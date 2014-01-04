@@ -70,6 +70,7 @@ typedef struct stream_band_read_state_s {
     int band_first, band_last;
     uint left;			/* amount of data left in this run */
     cmd_block b_this;
+    gs_memory_t *local_memory;
 #ifdef DEBUG
     bool skip_first;
     cbuf_offset_map_elem *offset_map;
@@ -159,7 +160,7 @@ s_band_read_process(stream_state * st, stream_cursor_read * ignore_pr,
             }
             q += count;
             left -= count;
-            process_interrupts(st->memory);
+            process_interrupts(ss->local_memory);
             continue;
         }
 rb:
@@ -198,12 +199,12 @@ rb:
                 ss->offset_map_length++;
             }
 #	    endif
-            if_debug7('l',
-                      "[l]reading for bands (%d,%d) at bfile %ld, cfile %ld, length %u color %d rop %d\n",
-                      bmin, bmax,
-                      (long)(io_procs->ftell(bfile) - sizeof(ss->b_this)), /* stefan foo was: 2 * sizeof ?? */
-                      (long)pos, left, ss->b_this.band_complexity.uses_color,
-                      ss->b_this.band_complexity.nontrivial_rops);
+            if_debug7m('l', ss->local_memory,
+                       "[l]reading for bands (%d,%d) at bfile %ld, cfile %ld, length %u color %d rop %d\n",
+                       bmin, bmax,
+                       (long)(io_procs->ftell(bfile) - sizeof(ss->b_this)), /* stefan foo was: 2 * sizeof ?? */
+                       (long)pos, left, ss->b_this.band_complexity.uses_color,
+                       ss->b_this.band_complexity.nontrivial_rops);
         }
     }
     pw->ptr = q;
@@ -739,7 +740,7 @@ clist_render_rectangle(gx_device_clist *cldev, const gs_int_rect *prect,
         crdev->yplane = *render_plane;
     else
         crdev->yplane.index = -1;
-    if_debug2('l', "[l]rendering bands (%d,%d)\n", band_first, band_last);
+    if_debug2m('l', bdev->memory, "[l]rendering bands (%d,%d)\n", band_first, band_last);
 #if 0 /* Disabled because it is slow and appears to have no useful effect. */
     if (clear)
         dev_proc(bdev, fill_rectangle)
@@ -807,10 +808,11 @@ clist_playback_file_bands(clist_playback_action action,
 
     /* setup stream */
     s_init_state((stream_state *)&rs, &s_band_read_template,
-                 (gs_memory_t *)0);
+                 (gs_memory_t *)0); /* Not mem, as we don't want to free rs */
     rs.band_first = band_first;
     rs.band_last = band_last;
     rs.page_info = *page_info;
+    rs.local_memory = mem;
 
     /* If this is a saved page, open the files. */
     if (rs.page_cfile == 0) {

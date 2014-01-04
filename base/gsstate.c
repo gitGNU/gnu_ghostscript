@@ -90,8 +90,6 @@ static void clip_stack_rc_adjust(gx_clip_stack_t *cs, int delta, client_name_t c
  *              view_clip, which is associated with the current
  *                save level (effectively, with the gstate sub-stack
  *                back to the save) and is managed specially;
- *              transparency_stack, which is associated with the entire
- *                stack but only stored in the topmost graphics state.
  *
  * (4) Objects that are referenced directly by exactly one gstate and that
  *      are not referenced (except transiently) from any other object.
@@ -277,7 +275,6 @@ gs_state_alloc(gs_memory_t * mem)
     pgs->show_gstate = 0;
     pgs->level = 0;
     pgs->dfilter_stack = 0;
-    pgs->transparency_group_stack = 0;
     if (gs_initgraphics(pgs) >= 0)
         return pgs;
     /* Something went very wrong. */
@@ -351,7 +348,7 @@ gs_gsave(gs_state * pgs)
     if (pgs->show_gstate == pgs)
         pgs->show_gstate = pnew->show_gstate = pnew;
     pgs->level++;
-    if_debug2('g', "[g]gsave -> 0x%lx, level = %d\n",
+    if_debug2m('g', pgs->memory, "[g]gsave -> 0x%lx, level = %d\n",
               (ulong) pnew, pgs->level);
     return 0;
 }
@@ -400,11 +397,10 @@ gs_grestore_only(gs_state * pgs)
     gs_state *saved = pgs->saved;
     void *pdata = pgs->client_data;
     void *sdata;
-    gs_transparency_state_t *tstack = pgs->transparency_stack;
     bool prior_overprint = pgs->overprint;
 
-    if_debug2('g', "[g]grestore 0x%lx, level was %d\n",
-              (ulong) saved, pgs->level);
+    if_debug2m('g', pgs->memory, "[g]grestore 0x%lx, level was %d\n",
+               (ulong) saved, pgs->level);
     if (!saved)
         return 1;
     sdata = saved->client_data;
@@ -417,7 +413,6 @@ gs_grestore_only(gs_state * pgs)
         gstate_copy_client_data(pgs, pdata, sdata, copy_for_grestore);
     gstate_free_contents(pgs);
     *pgs = *saved;
-    pgs->transparency_stack = tstack;
     if (pgs->show_gstate == saved)
         pgs->show_gstate = pgs;
     gs_free_object(pgs->memory, saved, "gs_grestore");
@@ -551,7 +546,6 @@ gs_setgstate(gs_state * pgs, const gs_state * pfrom)
     gs_state *saved_show = pgs->show_gstate;
     int level = pgs->level;
     gx_clip_path *view_clip = pgs->view_clip;
-    gs_transparency_state_t *tstack = pgs->transparency_stack;
     int code;
     int prior_op = pfrom->overprint;
 
@@ -563,7 +557,6 @@ gs_setgstate(gs_state * pgs, const gs_state * pfrom)
     pgs->view_clip = view_clip;
     pgs->show_gstate =
         (pgs->show_gstate == pfrom ? pgs : saved_show);
-    pgs->transparency_stack = tstack;
 
     /* update the overprint compositor but only if it is different */
     if (pgs->overprint != prior_op )
@@ -758,6 +751,19 @@ gs_currentrenderingintent(const gs_state * pgs)
     return pgs->renderingintent;
 }
 
+int
+gs_setblackptcomp(gs_state *pgs, bool bkpt) {
+    pgs->blackptcomp = bkpt;
+    return 0;
+}
+
+/* currentrenderingintent */
+bool
+gs_currentblackptcomp(const gs_state * pgs)
+{
+    return pgs->blackptcomp;
+}
+
 /*
  * Reset most of the graphics state.
  *
@@ -843,13 +849,13 @@ gs_currenttextrenderingmode(const gs_state * pgs)
 
 /* sethpglpathmode */
 void
-gs_sethpglpathmode(gs_state * pgs, int path)
+gs_sethpglpathmode(gs_state * pgs, bool path)
 {
     pgs->hpgl_path_mode = path;
 }
 
 /* currenthpglpathmode */
-int
+bool
 gs_currenthpglpathmode(const gs_state * pgs)
 {
     return pgs->hpgl_path_mode;
@@ -965,7 +971,6 @@ gstate_clone(gs_state * pfrom, gs_memory_t * mem, client_name_t cname,
         return 0;
     GSTATE_ASSIGN_PARTS(&parts, pgs);
     *pgs = *pfrom;
-    pgs->transparency_stack = 0;
     /* Copy the dash pattern if necessary. */
     if (pgs->line_params.dash.pattern) {
         int code;

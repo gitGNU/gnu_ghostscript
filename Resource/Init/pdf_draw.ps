@@ -550,15 +550,12 @@ def
     //false		% no defined colorspace
   } ifelse
   3 -1 roll dup
-  dup 4 1 roll /BBox get aload pop .begintransparencymaskgroup {
-    exch dup /Resources knownoget { oforce } { 2 dict } ifelse
-    3 -1 roll dup /GroupGState .knownget { 2 index /GroupGState 3 -1 roll put} if
-    /GroupExtGState .knownget { 1 index /GroupExtGState 3 -1 roll put} if
-    exch //false resolvestream
-    .execgroup .endtransparencymask
-  } stopped {
-    .discardtransparencymask stop
-  } if
+  dup 4 1 roll /BBox get aload pop .begintransparencymaskgroup
+  exch dup /Resources knownoget { oforce } { 2 dict } ifelse
+  3 -1 roll dup /GroupGState .knownget { 2 index /GroupGState 3 -1 roll put} if
+  /GroupExtGState .knownget { 1 index /GroupExtGState 3 -1 roll put} if
+  exch //false resolvestream
+  .execgroup .endtransparencymask
   PDFfile exch setfileposition
   .setuseciecolor setcolorspace setcolor
   setmatrix
@@ -609,11 +606,9 @@ def
 /.paintgroupform {	% <resdict> <stream> <formdict> .paintgroupform -
   dup /Group oget exch /BBox oget
                 % Stack: resdict stream groupdict bbox
-  .beginformgroup {
-    .execgroup
-  } stopped {
-    .discardtransparencygroup stop
-  } if .endtransparencygroup
+  .beginformgroup
+  .execgroup
+  .endtransparencygroup
 } bdef
 
 % Make an ImageType 103 (soft-masked) image.
@@ -751,7 +746,12 @@ currentdict /csncompdict undef
   } bdef
 
   /Indexed {
-    aload pop 3 -1 roll oforce resolvecolorspace
+    aload pop
+    1 index -1 eq {
+      exch pop 255 exch
+      (   **** Warning: Assuming that max color index -1 means 255.\n) pdfformaterror
+    } if
+    3 -1 roll oforce resolvecolorspace
                 % Stack: /Indexed hival lookup basespace
                 % If the underlying space is a Lab space, we must scale
                 % the output of the lookup table as part of DecodeABC.
@@ -857,12 +857,24 @@ currentdict end readonly def
     } ifelse
   } ifelse
 } bdef
+
 /resolvecolorspace {	% <cspace> resolvecolorspace <cspace'>
-  dup type /dicttype eq { dup /N known } { //false } ifelse {
-      (   **** ICCBased color space is a bare stream dictionary\n)
-      pdfformaterror
+  dup type /dicttype eq {
+      dup /N known {
+      (   **** ICCBased color space is a bare stream dictionary\n) pdfformaterror
       [ /ICCBased 3 -1 roll ] ICCBased-resolve exec
+      //false
+    } {
+      dup /ColorSpace knownoget {
+        (   **** Strange color space <</ColorSpace /Device...>>\n) pdfformaterror
+        exch pop //true
+      } {
+        //true
+      } ifelse
+    } ifelse
   } {
+    //true
+  } ifelse {
     dup dup type /arraytype eq { 0 get } if
     //csrdict exch .knownget  {
       exec dup type /nametype ne { dup length 1 eq { 0 get } if } if
@@ -873,7 +885,7 @@ currentdict end readonly def
         csset exch pop 
       } ifelse
     } ifelse
-  } ifelse
+  } if
 } bdef
 
 /scresolve {	% <c0> ... scresolve <multi>
@@ -1068,15 +1080,23 @@ currentdict /ignore_color_op undef
 
 drawopdict begin
                         % Path construction
-  /m { moveto } bind 0 get def
-  /l { { lineto } stopped { pop pop } if } bdef
-  /c { { curveto } stopped { pop pop pop pop pop pop } if } bdef
-  /v { { currentpoint } stopped { pop pop pop pop } { 6 2 roll curveto } ifelse } bdef
-  /y { 2 copy { curveto } stopped { pop pop pop pop pop pop } if } bdef
+  /m { { moveto }  stopped { count pdfemptycount sub 2 .min { pop } repeat 0 0 moveto } if } bdef
+  /l { { lineto }  stopped { count pdfemptycount sub 2 .min { pop } repeat } if } bdef
+  /c { { curveto } stopped { count pdfemptycount sub 6 .min { pop } repeat } if } bdef
+
+  /v { count pdfemptycount sub 4 ge {
+         { currentpoint 6 2 roll curveto } stopped { count pdfemptycount sub 6 .min { pop } repeat  } if
+       } {
+         count pdfemptycount sub { pop } repeat
+       } ifelse
+     } bdef
+  /y { { 2 copy curveto } stopped { count pdfemptycount sub 6 .min { pop } repeat } if } bdef
+
   /re {
    4 2 roll moveto  exch dup 0 rlineto  0 3 -1 roll rlineto  neg 0 rlineto
    closepath
   } bdef
+
   /h { closepath } bind 0 get def
                         % Path painting and clipping
   /n { n } def
@@ -1107,13 +1127,14 @@ drawopdict begin
           .begintransparencygroup
         } if
         0 .setoverprintmode
-        dup /.shading .knownget {
-          exch
-          pop
-        } {
-          .buildshading
-        } ifelse
-        { .shfill } stopped { 
+        { dup /.shading .knownget {
+            exch
+            pop
+          } {
+           .buildshading
+          } ifelse
+          .shfill 
+        } stopped { 
           pop 
           (   **** Warning: Dropping incorrect smooth shading object.\n)
           pdfformaterror
@@ -1384,7 +1405,7 @@ currentdict /jp2_csp_dict .undef
   /Width 2 copy oget def
   /Height 2 copy oget def
                 % Handle missing BitsPerComponent later.
-  /BitsPerComponent 2 copy knownoget { def } { pop } ifelse
+  /BitsPerComponent 2 copy knownoget { cvi def } { pop } ifelse
   /Interpolate 2 copy knownoget { def } { pop } ifelse
   makeimagekeys
 } bdef
@@ -1752,6 +1773,7 @@ currentdict /last-ditch-bpc-csp undef
 } bdef
 
 /.paintform {	% <formdict> <resdict> <stream> .paintform -
+  1 index /FormResDict gput  % For broken forms that inherit resources from the context.
   3 -1 roll dup /Group known PDFusingtransparency and {
     .paintgroupform
   } {
@@ -1773,9 +1795,8 @@ currentdict /last-ditch-bpc-csp undef
   ] cvx /PaintProc exch put
     % Adjust pdfemptycount since we have an extra dictionary on the stack
   pdfemptycount countdictstack  3 -1 roll
-  /pdfemptycount count 2 sub store
-  q execform  			% gsave / grestore around the Form
-
+  /pdfemptycount count 4 sub store
+  /q cvx /execform cvx 5 -2 roll 4 .execn
   % Restore pdfemptycount
   0
   { countdictstack 
@@ -1932,9 +1953,9 @@ drawopdict begin
     OFFlevels length 0 eq {
       doimage
     } {
-      Width
-      1 index /ImageMask knownoget dup { and } if not {
-        1 index /ColorSpace oget csncomp mul
+      pop Width
+      currentdict /ImageMask knownoget dup { and } if not {
+        ColorSpace oforce csncomp mul
         BitsPerComponent mul
       } if
       7 add 8 idiv Height mul
@@ -2333,21 +2354,28 @@ currentdict /set_bc_color undef
 /calc_annot_scale {		% <annot> calc_annot_scale <x_scale> <y_scale>
   dup /Rect knownoget {
     pop dup annotrect 4 2 roll pop pop	 % get width height size in user space
-    3 -1 roll /AP knownoget {
-      /N knownogetdict {
+    2 index /AP knownoget {
+      /N knownogetdict {        % <<Annot>> x y <<N>>
+        dup 4 index /AS knownoget {
+          knownoget {
+            exch pop
+          } if
+        } {
+          pop
+        } ifelse
         dup /Matrix knownoget not { {1 0 0 1 0 0} } if
-        exch /BBox knownoget {  % x y  {matrix} [box]
-          exch .bbox_transform  % x y  x0 y0 x1 y1
-          3 -1 roll sub         % x y  x0 x1 y1-y0
-          3 1 roll exch sub     % x y  y1-y0 x1-x0
+        exch /BBox knownoget {  % <<>> x y  {matrix} [box]
+          exch .bbox_transform  % <<>> x y  x0 y0 x1 y1
+          3 -1 roll sub         % <<>> x y  x0 x1 y1-y0
+          3 1 roll exch sub     % <<>> x y  y1-y0 x1-x0
           2 copy mul 0 eq {
             (   **** Warning: /BBox has zero width or height, which is not allowed.\n)
             pdfformaterror
             pop pop pop pop 1 1	% zero size -- revert to unity scaling
           } {
-            3 1 roll div        % x x1-x0 y/(y1-y0)
-            3 1 roll div        % y/(y1-y0) x/(x1-x0)
-            exch                % x/(x1-x0) y/(y1-y0)
+            3 1 roll div        % <<>> x x1-x0 y/(y1-y0)
+            3 1 roll div        % <<>> y/(y1-y0) x/(x1-x0)
+            exch                % <<>> x/(x1-x0) y/(y1-y0)
           } ifelse
         } {
           pop pop pop 1 1	% default to unity scaling
@@ -2358,6 +2386,7 @@ currentdict /set_bc_color undef
     } {
       pop pop 1 1
     } ifelse			% if we have /AP
+    3 -1 roll pop
   } {
     (   **** Warning: /Annot dict is missing required /Rect entry.\n)
     pdfformaterror

@@ -271,6 +271,14 @@ spaces.
 
 <dt><code>-dDetectDuplicateImages</code>
 <dd> Takes a Boolean argument, when set to true (the default) pdfwrite will compare all new images with all the images encountered to date (NOT small images which are stored in-line) to see if the new image is a duplicate of an earlier one. If it is a duplicate then instead of writing a new image into the PDF file, the PDF will reuse the reference to the earlier image. This can considerably reduce the size of the output PDF file, but increases the time taken to process the file. This time grows exponentially as more images are added, and on large input files with numerous images can be prohibitively slow. Setting this to false will improve performance at the cost of final file size.
+
+<dt><code>-dFastWebView</code>
+<dd> Takes a Boolean argument, default is false. When set to true pdfwrite will
+reorder the output PDF file to conform to the Adobe 'linearised' PDF specification.
+The Acrobat user interface refers to this as 'Optimised for Fast Web Viewing'.
+Note that this will cause the conversion to PDF to be slightly slower and will
+usually result in a slightly larger PDF file.</dd>
+</dt>
 </dl>
 
 <p>
@@ -607,12 +615,6 @@ to /Average.
 Currently, the transfer function is always applied.  If the corresponding
 parameter is set to <code>/Preserve</code>, the function setting is also
 copied into the PDF file.
-
-<p>
-<a name="note_5">(note 5)</a>
-Optimization (linearization) is implemented with a separate program,
-<code>pdfopt</code> <em>input.pdf</em> <em>output.pdf</em>; the
-<code>Optimize</code> parameter has no effect.
 
 <p>
 <a name="note_6">(note 6)</a>
@@ -1093,7 +1095,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 9.06, 8 August 2012
+<small>Ghostscript version 9.07, 12 February 2013
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

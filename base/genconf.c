@@ -684,7 +684,7 @@ read_dev(config_t * pconf, const char *arg)
     string_item_t *item;
     const char *in;
 
-#define MAX_TOKEN 256
+#define MAX_TOKEN 4096
     char *token;        /* Allocate after duplicate check, prevents */
     char *category;     /* memory leak */
     int file_index;
@@ -791,6 +791,8 @@ pre:		sprintf(templat, pat, pconf->name_prefix);
                     break;
                 } else if (IS_CAT("functiontype")) {
                     pat = "function_type_(%%s,%sbuild_function_%%s)";
+                } else if (IS_CAT("fapi")) {
+                    pat = "fapi_(%s%%s_init)";
                 } else
                     goto err;
                 goto pre;

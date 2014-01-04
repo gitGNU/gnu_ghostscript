@@ -19,6 +19,8 @@
 #ifndef iref_INCLUDED
 #  define iref_INCLUDED
 
+#include "stdint_.h"
+
 /*
  * Note: this file defines a large number of macros.  Many of these are
  * only used for internal purposes within this file, to help in the
@@ -41,6 +43,53 @@ typedef ushort ref_packed;
 
 #define log2_sizeof_ref_packed arch_log2_sizeof_short
 #define sizeof_ref_packed (1 << log2_sizeof_ref_packed)
+
+/* PS integer objects default to 64 bit, and the relevant operator
+ * C functions have code to allow the QL tests to pass when
+ * CPSI mode is "true".
+ * 32 bit PS integer objects can be configured at build time.
+ */
+#if !defined(PSINT32BIT) || PSINT32BIT == 0
+#define PSINT32BIT 0
+#else
+#define PSINT32BIT 1
+#endif
+
+#if PSINT32BIT==1
+typedef int ps_int;
+typedef uint ps_uint;
+typedef int ps_int32;
+typedef uint ps_uint32;
+#define MAX_PS_INT max_int
+#define MIN_PS_INT min_int
+#define MAX_PS_UINT max_uint
+#define MAX_PS_INT32 max_int
+#define MIN_PS_INT32 min_int
+#define MAX_PS_UINT32 max_uint
+
+#define PRIpsint PRId32
+#define PRIpsint32 PRId32
+#define PRIpsuint PRIu32
+#define PRIpsuint32 PRIu32
+
+#else
+typedef int64_t ps_int;
+typedef uint64_t ps_uint;
+typedef int ps_int32;
+typedef uint ps_uint32;
+#define MAX_PS_INT max_int64_t
+#define MIN_PS_INT min_int64_t
+#define MAX_PS_UINT max_uint64_t
+#define MAX_PS_INT32 max_int
+#define MIN_PS_INT32 min_int
+#define MAX_PS_UINT32 max_uint
+
+#define PRIpsint PRId64
+#define PRIpsint32 PRId32
+#define PRIpsuint PRIu64
+#define PRIpsuint32 PRIu32
+
+#endif
 
 /*
  * Define the object types.
@@ -375,14 +424,14 @@ typedef int (*op_proc_t)(i_ctx_t *i_ctx_p);
 struct tas_s {
 /* type_attrs is a single element for fast dispatching in the interpreter */
     ushort type_attrs;
-    ushort rsize;
+    uint32_t rsize;
 };
 struct ref_s {
 
     struct tas_s tas;
 
     union v {			/* name the union to keep gdb happy */
-        int intval;
+        ps_int intval;
         ushort boolval;
         float realval;
         ulong saveid;
@@ -405,6 +454,7 @@ struct ref_s {
         struct stream_s *pfile;
         struct gx_device_s *pdevice;
         obj_header_t *pstruct;
+        uint64_t dummy; /* force 16-byte ref on 32-bit platforms */
     } value;
 };
 
@@ -558,10 +608,10 @@ struct ref_s {
  (((ARCH_ALIGN_LONG_MOD - 1) | (ARCH_ALIGN_FLOAT_MOD - 1) |\
    (ARCH_ALIGN_PTR_MOD - 1)) + 1)
 
-/* Define the maximum size of an array or a string. */
-/* The maximum array size is determined by the fact that */
-/* the allocator cannot allocate a block larger than max_uint. */
-#define max_array_size (max_ushort & (max_uint / (uint)arch_sizeof_ref))
-#define max_string_size max_ushort
+/* Select reasonable values for PDF interpreter */
+/* The maximum array size cannot exceed max_uint/arch_sizeof_ref */
+/* because the allocator cannot allocate a block larger than max_uint. */
+#define max_array_size  (16*1024*1024)
+#define max_string_size (16*1024*1024)
 
 #endif /* iref_INCLUDED */

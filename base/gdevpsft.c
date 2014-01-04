@@ -136,8 +136,8 @@ write_range(stream *s, gs_font_type42 *pfont, ulong start, uint length)
 {
     ulong base = start, size = length;
 
-    if_debug3('l', "[l]write_range pos = %ld, start = %lu, length = %u\n",
-              stell(s), start, length);
+    if_debug3m('l', s->memory, "[l]write_range pos = %"PRId64", start = %"PRIu32", length = %"PRIu32"\n",
+               stell(s), start, length);
     while (size > 0) {
         const byte *ptr;
         int code;
@@ -714,12 +714,12 @@ write_post(stream *s, gs_font *font, post_t *post)
     return 0;
 }
 
-static inline bool check_position(const gs_memory_t *mem, int pos1, int pos2)
+static inline bool check_position(const gs_memory_t *mem, gs_offset_t pos1, gs_offset_t pos2)
 {
     if (pos1 == pos2)
         return false;
     emprintf2(mem,
-              "Actual TT subtable offset %d differs from one in the TT header %d.\n",
+              "Actual TT subtable offset %"PRId64" differs from one in the TT header %"PRId64".\n",
               pos1,
               pos2);
     return true;
@@ -792,7 +792,7 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
     uint maxp_length = 0;
     struct { int glyf, loca, cmap, name, os_2, mtx[2], post, head;
            } subtable_positions;
-    int start_position = stell(s);
+    gs_offset_t start_position = stell(s);
     int enlarged_numGlyphs = 0;
     int code;
     int TTCFontOffset = 0;
@@ -921,7 +921,7 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
         if (glyph < gs_min_cid_glyph)
             return_error(gs_error_invalidfont);
         glyph_index = glyph  & ~GS_GLYPH_TAG;
-        if_debug1('L', "[L]glyph_index %u\n", glyph_index);
+        if_debug1m('L', s->memory, "[L]glyph_index %u\n", glyph_index);
         glyph_data.memory = pfont->memory;
         if ((code = pfont->data.get_outline(pfont, glyph_index, &glyph_data)) >= 0) {
             /* Since indexToLocFormat==0 assumes even glyph lengths,
@@ -933,7 +933,7 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
             glyf_length += l;
             if (l != glyph_data.bits.size)
                 glyf_alignment++;
-            if_debug1('L', "[L]  size %u\n", glyph_data.bits.size);
+            if_debug1m('L', s->memory, "[L]  size %u\n", glyph_data.bits.size);
             gs_glyph_data_free(&glyph_data, "psf_write_truetype_data");
         }
     }
@@ -972,8 +972,8 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
         if (glyf_length == 0)
             glyf_length = 1;
     }
-    if_debug2('l', "[l]max_glyph = %lu, glyf_length = %lu\n",
-              (ulong)max_glyph, (ulong)glyf_length);
+    if_debug2m('l', s->memory, "[l]max_glyph = %lu, glyf_length = %lu\n",
+               (ulong)max_glyph, (ulong)glyf_length);
 
     /*
      * If necessary, compute the length of the post table.  Note that we
@@ -992,6 +992,7 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
     /* Fix up the head table. */
 
     memset(head + 8, 0, 4);
+    head[50] = 0x00;
     head[51] = (byte)indexToLocFormat;
     memset(head + 54, 0, 2);
     for (head_checksum = 0, i = 0; i < 56; i += 4)
@@ -1205,12 +1206,12 @@ psf_write_truetype_data(stream *s, gs_font_type42 *pfont, int options,
                 if (glyph_data.bits.size < l)
                     stream_write(s, &zero, 1);
                 offset += l;
-                if_debug2('L', "[L]glyf index = %u, size = %u\n",
+                if_debug2m('L', s->memory, "[L]glyf index = %u, size = %u\n",
                           i, glyph_data.bits.size);
                 gs_glyph_data_free(&glyph_data, "psf_write_truetype_data");
             }
         }
-        if_debug1('l', "[l]glyf final offset = %lu\n", offset);
+        if_debug1m('l', s->memory, "[l]glyf final offset = %lu\n", offset);
         /* Add a dummy byte if necessary to make glyf non-empty. */
         while (offset < glyf_length)
             stream_putc(s, 0), ++offset;

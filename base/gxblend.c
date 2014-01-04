@@ -54,17 +54,17 @@ smask_luminosity_mapping(int num_rows, int num_cols, int n_chan, int row_stride,
 
     global_index++;
 #endif
-    dstptr = dst;
+    dstptr = (byte *)dst;
     /* If subtype is Luminosity then we should just grab the Y channel */
     if ( SMask_SubType == TRANSPARENCY_MASK_Luminosity ){
-        memcpy(dst, &(src[plane_stride]), plane_stride);
+        memcpy(dstptr, &(src[plane_stride]), plane_stride);
         return;
     }
     /* If we are alpha type, then just grab that */
     /* We need to optimize this so that we are only drawing alpha in the rect fills */
     if ( SMask_SubType == TRANSPARENCY_MASK_Alpha ){
         mask_alpha_offset = (n_chan - 1) * plane_stride;
-        memcpy(dst, &(src[mask_alpha_offset]), plane_stride);
+        memcpy(dstptr, &(src[mask_alpha_offset]), plane_stride);
         return;
     }
     /* To avoid the if statement inside this loop,
@@ -187,7 +187,7 @@ void smask_copy(int num_rows, int num_cols, int row_stride,
     int y;
     byte *dstptr,*srcptr;
 
-    dstptr = dst;
+    dstptr = (byte *)dst;
     srcptr = src;
     for ( y = 0; y < num_rows; y++ ) {
         memcpy(dstptr,srcptr,num_cols);
@@ -726,8 +726,10 @@ art_blend_pixel_8(byte *dst, const byte *backdrop,
             }
             break;
         default:
+#ifndef GS_THREADSAFE
             dlprintf1("art_blend_pixel_8: blend mode %d not implemented\n",
                       blend_mode);
+#endif
             memcpy(dst, src, n_chan);
             break;
     }
@@ -851,8 +853,10 @@ art_blend_pixel(ArtPixMaxDepth* dst, const ArtPixMaxDepth *backdrop,
             }
             break;
         default:
+#ifndef GS_THREADSAFE
             dlprintf1("art_blend_pixel: blend mode %d not implemented\n",
                       blend_mode);
+#endif
             memcpy(dst, src, n_chan);
             break;
     }
@@ -947,6 +951,115 @@ art_pdf_composite_pixel_alpha_8(byte *dst, const byte *src, int n_chan,
         }
     }
     dst[n_chan] = a_r;
+}
+
+void
+art_pdf_composite_pixel_alpha_8_fast(byte *dst, const byte *src, int n_chan,
+                                     gs_blend_mode_t blend_mode,
+                                     const pdf14_nonseparable_blending_procs_t * pblend_procs,
+                                     int stride)
+{
+    byte a_b, a_s;
+    unsigned int a_r;
+    int tmp;
+    int src_scale;
+    int c_b, c_s;
+    int i;
+
+    a_s = src[n_chan];
+
+    a_b = dst[n_chan * stride];
+
+    /* Result alpha is Union of backdrop and source alpha */
+    tmp = (0xff - a_b) * (0xff - a_s) + 0x80;
+    a_r = 0xff - (((tmp >> 8) + tmp) >> 8);
+    /* todo: verify that a_r is nonzero in all cases */
+
+    /* Compute a_s / a_r in 16.16 format */
+    src_scale = ((a_s << 16) + (a_r >> 1)) / a_r;
+
+    if (blend_mode == BLEND_MODE_Normal) {
+        /* Do simple compositing of source over backdrop */
+        for (i = 0; i < n_chan; i++) {
+            c_s = src[i];
+            c_b = dst[i * stride];
+            tmp = (c_b << 16) + src_scale * (c_s - c_b) + 0x8000;
+            dst[i * stride] = tmp >> 16;
+       }
+    } else {
+        /* Do compositing with blending */
+        byte blend[ART_MAX_CHAN];
+        byte dst_tmp[ART_MAX_CHAN];
+
+        for (i = 0; i < n_chan; i++) {
+            dst_tmp[i] = dst[i * stride];
+        }
+        art_blend_pixel_8(blend, dst_tmp, src, n_chan, blend_mode, pblend_procs);
+        for (i = 0; i < n_chan; i++) {
+            int c_bl;		/* Result of blend function */
+            int c_mix;		/* Blend result mixed with source color */
+
+            c_s = src[i];
+            c_b = dst_tmp[i];
+            c_bl = blend[i];
+            tmp = a_b * (c_bl - ((int)c_s)) + 0x80;
+            c_mix = c_s + (((tmp >> 8) + tmp) >> 8);
+            tmp = (c_b << 16) + src_scale * (c_mix - c_b) + 0x8000;
+            dst[i * stride] = tmp >> 16;
+        }
+    }
+    dst[n_chan * stride] = a_r;
+}
+
+void
+art_pdf_composite_pixel_alpha_8_fast_mono(byte *dst, const byte *src,
+                                          gs_blend_mode_t blend_mode,
+                                          const pdf14_nonseparable_blending_procs_t * pblend_procs,
+                                          int stride)
+{
+    byte a_b, a_s;
+    unsigned int a_r;
+    int tmp;
+    int src_scale;
+    int c_b, c_s;
+
+    a_s = src[1];
+
+    a_b = dst[stride];
+
+    /* Result alpha is Union of backdrop and source alpha */
+    tmp = (0xff - a_b) * (0xff - a_s) + 0x80;
+    a_r = 0xff - (((tmp >> 8) + tmp) >> 8);
+    /* todo: verify that a_r is nonzero in all cases */
+
+    /* Compute a_s / a_r in 16.16 format */
+    src_scale = ((a_s << 16) + (a_r >> 1)) / a_r;
+
+    if (blend_mode == BLEND_MODE_Normal) {
+        /* Do simple compositing of source over backdrop */
+        c_s = src[0];
+        c_b = dst[0];
+        tmp = (c_b << 16) + src_scale * (c_s - c_b) + 0x8000;
+        dst[0] = tmp >> 16;
+    } else {
+        /* Do compositing with blending */
+        byte blend[ART_MAX_CHAN];
+
+        art_blend_pixel_8(blend, dst, src, 1, blend_mode, pblend_procs);
+        {
+            int c_bl;		/* Result of blend function */
+            int c_mix;		/* Blend result mixed with source color */
+
+            c_s = src[0];
+            c_b = dst[0];
+            c_bl = blend[0];
+            tmp = a_b * (c_bl - ((int)c_s)) + 0x80;
+            c_mix = c_s + (((tmp >> 8) + tmp) >> 8);
+            tmp = (c_b << 16) + src_scale * (c_mix - c_b) + 0x8000;
+            dst[0] = tmp >> 16;
+        }
+    }
+    dst[stride] = a_r;
 }
 
 #if 0
@@ -1260,14 +1373,18 @@ art_pdf_composite_knockout_isolated_8(byte *dst,
                                       int n_chan,
                                       byte shape,
                                       byte tag,
-                                      byte alpha_mask, byte shape_mask)
+                                      byte alpha_mask, byte shape_mask,
+                                      bool has_mask)
 {
     int tmp;
     int i;
 
-    if (shape == 0)
+    if (shape == 0) {
+        /* If a softmask was present pass it along Bug 693548 */
+        if (has_mask)
+            dst[n_chan] = alpha_mask; 
         return;
-    else if ((shape & shape_mask) == 255) {
+    } else if ((shape & shape_mask) == 255) {
 
         memcpy(dst, src, n_chan + 3);
         tmp = src[n_chan] * alpha_mask + 0x80;

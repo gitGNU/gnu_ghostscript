@@ -192,11 +192,11 @@ gs_pattern1_make_pattern(gs_client_color * pcc,
     }
 
 #define mat inst.step_matrix
-    if_debug6('t', "[t]step_matrix=[%g %g %g %g %g %g]\n",
-              inst.step_matrix.xx, inst.step_matrix.xy, inst.step_matrix.yx,
-              inst.step_matrix.yy, inst.step_matrix.tx, inst.step_matrix.ty);
-    if_debug5('t', "[t]bbox=(%g,%g),(%g,%g), uses_transparency=%d\n",
-              bbox.p.x, bbox.p.y, bbox.q.x, bbox.q.y, inst.templat.uses_transparency);
+    if_debug6m('t', mem, "[t]step_matrix=[%g %g %g %g %g %g]\n",
+               inst.step_matrix.xx, inst.step_matrix.xy, inst.step_matrix.yx,
+               inst.step_matrix.yy, inst.step_matrix.tx, inst.step_matrix.ty);
+    if_debug5m('t', mem, "[t]bbox=(%g,%g),(%g,%g), uses_transparency=%d\n",
+               bbox.p.x, bbox.p.y, bbox.q.x, bbox.q.y, inst.templat.uses_transparency);
     {
         float bbw = bbox.q.x - bbox.p.x;
         float bbh = bbox.q.y - bbox.p.y;
@@ -242,11 +242,11 @@ gs_pattern1_make_pattern(gs_client_color * pcc,
                     gs_scale(saved, (fabs(inst.size.x) - 1.0 / fixed_scale) / fabs(inst.size.x),
                                     (fabs(inst.size.y) - 1.0 / fixed_scale) / fabs(inst.size.y));
                 }
-                if_debug2('t',
-                          "[t]adjusted XStep & YStep to size=(%d,%d)\n",
-                          inst.size.x, inst.size.y);
-                if_debug4('t', "[t]bbox=(%g,%g),(%g,%g)\n",
-                          bbox.p.x, bbox.p.y, bbox.q.x, bbox.q.y);
+                if_debug2m('t', mem,
+                           "[t]adjusted XStep & YStep to size=(%d,%d)\n",
+                           inst.size.x, inst.size.y);
+                if_debug4m('t', mem, "[t]bbox=(%g,%g),(%g,%g)\n",
+                           bbox.p.x, bbox.p.y, bbox.q.x, bbox.q.y);
             } else if ((ADJUST_AS_ADOBE) && (inst.templat.TilingType != 2)) {
                 if (inst.step_matrix.xy == 0 && inst.step_matrix.yx == 0 &&
                     fabs(fabs(inst.step_matrix.xx) - bbw) < 0.5 &&
@@ -330,15 +330,15 @@ gs_pattern1_make_pattern(gs_client_color * pcc,
     }
     if ((code = gs_bbox_transform_inverse(&bbox, &inst.step_matrix, &inst.bbox)) < 0)
         goto fsaved;
-    if_debug4('t', "[t]ibbox=(%g,%g),(%g,%g)\n",
-              inst.bbox.p.x, inst.bbox.p.y, inst.bbox.q.x, inst.bbox.q.y);
+    if_debug4m('t', mem, "[t]ibbox=(%g,%g),(%g,%g)\n",
+               inst.bbox.p.x, inst.bbox.p.y, inst.bbox.q.x, inst.bbox.q.y);
     inst.is_simple = (fabs(inst.step_matrix.xx) == inst.size.x && inst.step_matrix.xy == 0 &&
                       inst.step_matrix.yx == 0 && fabs(inst.step_matrix.yy) == inst.size.y);
-    if_debug6('t',
-              "[t]is_simple? xstep=(%g,%g) ystep=(%g,%g) size=(%d,%d)\n",
-              inst.step_matrix.xx, inst.step_matrix.xy,
-              inst.step_matrix.yx, inst.step_matrix.yy,
-              inst.size.x, inst.size.y);
+    if_debug6m('t', mem,
+               "[t]is_simple? xstep=(%g,%g) ystep=(%g,%g) size=(%d,%d)\n",
+               inst.step_matrix.xx, inst.step_matrix.xy,
+               inst.step_matrix.yx, inst.step_matrix.yy,
+               inst.size.x, inst.size.y);
     /* Absent other information, instances always require a mask. */
     inst.uses_mask = true;
     inst.is_clist = false;      /* automatically set clist (don't force use) */
@@ -1067,9 +1067,9 @@ const gx_device_color_type_t gx_dc_binary_masked = {
     gx_dc_ht_binary_get_nonzero_comps
 };
 
-gs_private_st_composite_only(st_dc_colored_masked, gx_device_color,
-                             "dc_colored_masked",
-                             dc_masked_enum_ptrs, dc_masked_reloc_ptrs);
+gs_private_st_composite(st_dc_colored_masked, gx_device_color,
+                        "dc_colored_masked",
+                        dc_colored_masked_enum_ptrs, dc_colored_masked_reloc_ptrs);
 const gx_device_color_type_t gx_dc_colored_masked = {
     &st_dc_colored_masked,
     gx_dc_pattern_save_dc, gx_dc_colored_masked_get_dev_halftone,
@@ -1080,9 +1080,9 @@ const gx_device_color_type_t gx_dc_colored_masked = {
     gx_dc_ht_colored_get_nonzero_comps
 };
 
-gs_private_st_composite_only(st_dc_devn_masked, gx_device_color,
-                             "dc_devn_masked",
-                             dc_masked_enum_ptrs, dc_masked_reloc_ptrs);
+gs_private_st_composite(st_dc_devn_masked, gx_device_color,
+                        "dc_devn_masked",
+                        dc_devn_masked_enum_ptrs, dc_devn_masked_reloc_ptrs);
 const gx_device_color_type_t gx_dc_devn_masked = {
     &st_dc_devn_masked,
     gx_dc_pattern_save_dc, gx_dc_pure_masked_get_dev_halftone,
@@ -1141,6 +1141,29 @@ static RELOC_PTRS_WITH(dc_masked_reloc_ptrs, gx_device_color *cptr)
 
         RELOC_TYPED_OFFSET_PTR(gx_device_color, mask.m_tile, index);
     }
+}
+RELOC_PTRS_END
+static ENUM_PTRS_WITH(dc_colored_masked_enum_ptrs, gx_device_color *cptr)
+ENUM_SUPER(gx_device_color, st_client_color, ccolor, 1);
+case 0:
+{
+    ENUM_RETURN(cptr->colors.colored.c_ht);
+}
+ENUM_PTRS_END
+static RELOC_PTRS_WITH(dc_colored_masked_reloc_ptrs, gx_device_color *cptr)
+{
+    RELOC_SUPER(gx_device_color, st_client_color, ccolor);
+    if (cptr->colors.colored.c_ht != 0) {
+        RELOC_PTR(gx_device_color, colors.colored.c_ht);
+    }
+}
+RELOC_PTRS_END
+static ENUM_PTRS_WITH(dc_devn_masked_enum_ptrs, gx_device_color *cptr)
+ENUM_SUPER(gx_device_color, st_client_color, ccolor, 0);
+ENUM_PTRS_END
+static RELOC_PTRS_WITH(dc_devn_masked_reloc_ptrs, gx_device_color *cptr)
+{
+    RELOC_SUPER(gx_device_color, st_client_color, ccolor);
 }
 RELOC_PTRS_END
 static ENUM_PTRS_BEGIN(dc_binary_masked_enum_ptrs)
@@ -1292,7 +1315,6 @@ gx_pattern_cache_lookup(gx_device_color * pdevc, const gs_imager_state * pis,
     if (pcache != 0) {
         gx_color_tile *ctile = &pcache->tiles[id % pcache->num_tiles];
         bool internal_accum = true;
-        bool is_p1_c;
         if (pis->have_pattern_streams) {
             int code = dev_proc(dev, dev_spec_op)(dev, gxdso_pattern_load, NULL, id);
             internal_accum = (code == 0);
@@ -1300,14 +1322,12 @@ gx_pattern_cache_lookup(gx_device_color * pdevc, const gs_imager_state * pis,
                 return false;
         }
         if (ctile->id == id &&
-            ctile->is_dummy == !internal_accum &&
-            (!(is_p1_c = gx_dc_is_pattern1_color(pdevc)) ||
-             ctile->depth == dev->color_info.depth)
+            ctile->is_dummy == !internal_accum
             ) {
             int px = pis->screen_phase[select].x;
             int py = pis->screen_phase[select].y;
 
-            if (is_p1_c) {       /* colored */
+            if (gx_dc_is_pattern1_color(pdevc)) {       /* colored */
                 pdevc->colors.pattern.p_tile = ctile;
 #           if 0 /* Debugged with Bug688308.ps and applying patterns after clist.
                     Bug688308.ps has a step_matrix much bigger than pattern bbox;
@@ -1395,6 +1415,7 @@ typedef struct tile_trans_clist_info_s {
     int n_chan; /* number of pixel planes including alpha */
     int width;
     int height;
+    gs_blend_mode_t blend_mode;
 } tile_trans_clist_info_t;
 
 typedef struct gx_dc_serialized_tile_s {
@@ -1407,11 +1428,11 @@ typedef struct gx_dc_serialized_tile_s {
 } gx_dc_serialized_tile_t;
 
 enum {
-    TILE_HAS_OVERLAP = 0x80000000,
-    TILE_IS_SIMPLE   = 0x40000000,
-    TILE_USES_TRANSP = 0x20000000,
-    TILE_IS_CLIST    = 0x10000000,
-    TILE_TYPE_MASK   = 0x0F000000,
+    TILE_HAS_OVERLAP = 0x40000000,
+    TILE_IS_SIMPLE   = 0x20000000,
+    TILE_USES_TRANSP = 0x10000000,
+    TILE_IS_CLIST    = 0x08000000,
+    TILE_TYPE_MASK   = 0x07000000,	/* TilingType values are 1, 2, 3 */
     TILE_TYPE_SHIFT  = 24,
     TILE_DEPTH_MASK  = 0x00FFFFFF
 };
@@ -1433,8 +1454,13 @@ gx_dc_pattern_write_raster(gx_color_tile *ptile, int64_t offset, byte *data,
         return 0;
     }
     if (offset1 == 0) { /* Serialize tile parameters: */
+#if defined(DEBUG) || defined(PACIFY_VALGRIND) || defined(MEMENTO)
+        gx_dc_serialized_tile_t buf = { 0 };
+        gx_strip_bitmap buf1 = { 0 };
+#else
         gx_dc_serialized_tile_t buf;
         gx_strip_bitmap buf1;
+#endif
 
         buf.id = ptile->id;
         buf.size.x = 0; /* fixme: don't write with raster patterns. */
@@ -1549,7 +1575,7 @@ gx_dc_pattern_trans_write_raster(gx_color_tile *ptile, int64_t offset, byte *dat
         offset1 += sizeof(buf);
 
         /* Do the transparency information now */
-
+        trans_info.blend_mode = ptile->ttrans->blending_mode;
         trans_info.height = ptile->ttrans->height;
         trans_info.n_chan = ptile->ttrans->n_chan;
         trans_info.planestride = ptile->ttrans->planestride;
@@ -1559,6 +1585,7 @@ gx_dc_pattern_trans_write_raster(gx_color_tile *ptile, int64_t offset, byte *dat
         trans_info.rect.q.y = ptile->ttrans->rect.q.y;
         trans_info.rowstride = ptile->ttrans->rowstride;
         trans_info.width = ptile->ttrans->width;
+
         if (sizeof(trans_info) > left) {
             return_error(gs_error_unregistered); /* Must not happen. */
         }
@@ -1892,6 +1919,7 @@ gx_dc_pattern_read(
                 ptile->ttrans = new_pattern_trans_buff(mem);
                 /* trans_info was loaded above */
 
+                ptile->ttrans->blending_mode = trans_info.blend_mode;
                 ptile->ttrans->height = trans_info.height;
                 ptile->ttrans->n_chan = trans_info.n_chan;
                 ptile->ttrans->pdev14 = NULL;

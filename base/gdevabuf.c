@@ -339,9 +339,9 @@ y_transfer_next(y_transfer * pyt, gx_device * dev)
         tby -= mdev->height;
         tbh = ms + mh - dev->height - tby;
     }
-    if_debug7('V',
-              "[V]abuf: my=%d, mh=%d, ms=%d, ty=%d, th=%d, tby=%d, tbh=%d\n",
-              my, mh, ms, ty, th, tby, tbh);
+    if_debug7m('V', mdev->memory,
+               "[V]abuf: my=%d, mh=%d, ms=%d, ty=%d, th=%d, tby=%d, tbh=%d\n",
+               my, mh, ms, ty, th, tby, tbh);
     if (tbh > th)
         tbh = th;
     pyt->height_left = th - tbh;
@@ -416,10 +416,10 @@ mem_abuf_fill_rectangle_hl_color(gx_device * dev, const gs_fixed_rect *rect,
 {
     gx_device_memory * const mdev = (gx_device_memory *)dev;
     y_transfer yt;
-    int x = rect->p.x;
-    int y = rect->p.y;
-    int w = rect->q.x - rect->p.x;
-    int h = rect->q.y - rect->p.y;
+    int x = fixed2int(rect->p.x);
+    int y = fixed2int(rect->p.y);
+    int w = fixed2int(rect->q.x) - x;
+    int h = fixed2int(rect->q.y) - y;
 
     x -= mdev->mapped_x;
     fit_fill_xy(dev, x, y, w, h);

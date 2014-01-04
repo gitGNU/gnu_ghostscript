@@ -130,7 +130,7 @@ static const gx_device_clip gs_clip_device =
 void
 gx_make_clip_device_on_stack(gx_device_clip * dev, const gx_clip_path *pcpath, gx_device *target)
 {
-    gx_device_init((gx_device *)dev, (const gx_device *)&gs_clip_device, NULL, true);
+    gx_device_init_on_stack((gx_device *)dev, (const gx_device *)&gs_clip_device, target->memory);
     dev->list = *gx_cpath_list(pcpath);
     dev->translation.x = 0;
     dev->translation.y = 0;
@@ -167,7 +167,7 @@ gx_make_clip_device_on_stack_if_needed(gx_device_clip * dev, const gx_clip_path 
         if (rect->p.x >= rect->q.x || rect->p.y >= rect->q.y)
             return NULL;
     }
-    gx_device_init((gx_device *)dev, (const gx_device *)&gs_clip_device, NULL, true);
+    gx_device_init_on_stack((gx_device *)dev, (const gx_device *)&gs_clip_device, target->memory);
     dev->list = *gx_cpath_list(pcpath);
     dev->translation.x = 0;
     dev->translation.y = 0;
@@ -196,7 +196,7 @@ gx_make_clip_device_in_heap(gx_device_clip * dev, const gx_clip_path *pcpath, gx
     (*dev_proc(dev, open_device)) ((gx_device *)dev);
 }
 /* Define debugging statistics for the clipping loops. */
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(GS_THREADSAFE)
 struct stats_clip_s {
     long
          loops, out, in_y, in, in1, down, up, x, no_x;
@@ -226,14 +226,16 @@ clip_enumerate_rest(gx_device_clip * rdev,
     int yc;
     int code;
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(GS_THREADSAFE)
     if (INCR(loops) % clip_interval == 0 && gs_debug_c('q')) {
-        dprintf5("[q]loops=%ld out=%ld in_y=%ld in=%ld in1=%ld\n",
-                 stats_clip.loops, stats_clip.out, stats_clip.in,
-                 stats_clip.in_y, stats_clip.in1);
-        dprintf4("[q]   down=%ld up=%ld x=%ld no_x=%ld\n",
-                 stats_clip.down, stats_clip.up, stats_clip.x,
-                 stats_clip.no_x);
+        dmprintf5(rdev->memory,
+                  "[q]loops=%ld out=%ld in_y=%ld in=%ld in1=%ld\n",
+                  stats_clip.loops, stats_clip.out, stats_clip.in,
+                  stats_clip.in_y, stats_clip.in1);
+        dmprintf4(rdev->memory,
+                  "[q]   down=%ld up=%ld x=%ld no_x=%ld\n",
+                  stats_clip.down, stats_clip.up, stats_clip.x,
+                  stats_clip.no_x);
     }
 #endif
     pccd->x = x, pccd->y = y;
@@ -274,7 +276,7 @@ clip_enumerate_rest(gx_device_clip * rdev,
         const int ymax = rptr->ymax;
         int yec = min(ymax, ye);
 
-        if_debug2('Q', "[Q]yc=%d yec=%d\n", yc, yec);
+        if_debug2m('Q', rdev->memory, "[Q]yc=%d yec=%d\n", yc, yec);
         do {
             int xc = rptr->xmin;
             int xec = rptr->xmax;
@@ -285,7 +287,7 @@ clip_enumerate_rest(gx_device_clip * rdev,
                 xec = xe;
             if (xec > xc) {
                 clip_rect_print('Q', "match", rptr);
-                if_debug2('Q', "[Q]xc=%d xec=%d\n", xc, xec);
+                if_debug2m('Q', rdev->memory, "[Q]xc=%d xec=%d\n", xc, xec);
                 INCR(x);
 /*
  * Conditionally look ahead to detect unclipped vertical strips.  This is
@@ -429,10 +431,10 @@ clip_call_fill_rectangle_hl_color(clip_callback_data_t * pccd, int xc, int yc,
 {
     gs_fixed_rect rect;
 
-    rect.p.x = xc;
-    rect.p.y = yc;
-    rect.q.x = xec;
-    rect.q.y = yec;
+    rect.p.x = int2fixed(xc);
+    rect.p.y = int2fixed(yc);
+    rect.q.x = int2fixed(xec);
+    rect.q.y = int2fixed(yec);
     return (*dev_proc(pccd->tdev, fill_rectangle_hl_color))
         (pccd->tdev, &rect, pccd->pis, pccd->pdcolor, pccd->pcpath);
 }
@@ -450,10 +452,10 @@ clip_fill_rectangle_hl_color(gx_device *dev, const gs_fixed_rect *rect,
     int w, h, x, y;
     gs_fixed_rect newrect;
 
-    x = rect->p.x;
-    y = rect->p.y;
-    w = rect->q.x - rect->p.x;
-    h = rect->q.y - rect->p.y;
+    x = fixed2int(rect->p.x);
+    y = fixed2int(rect->p.y);
+    w = fixed2int(rect->q.x) - x;
+    h = fixed2int(rect->q.y) - y;
 
     if (w <= 0 || h <= 0)
         return 0;
@@ -470,10 +472,10 @@ clip_fill_rectangle_hl_color(gx_device *dev, const gs_fixed_rect *rect,
         INCR(in_y);
         if (x >= rptr->xmin && xe <= rptr->xmax) {
             INCR(in);
-            newrect.p.x = x;
-            newrect.p.y = y;
-            newrect.q.x = x + w;
-            newrect.q.y = y + h;
+            newrect.p.x = int2fixed(x);
+            newrect.p.y = int2fixed(y);
+            newrect.q.x = int2fixed(x + w);
+            newrect.q.y = int2fixed(y + h);
             return dev_proc(tdev, fill_rectangle_hl_color)(tdev, &newrect, pis,
                                                            pdcolor, pcpath);
         }
@@ -488,10 +490,10 @@ clip_fill_rectangle_hl_color(gx_device *dev, const gs_fixed_rect *rect,
             if (x >= xe)
                 return 0;
             else {
-                newrect.p.x = x;
-                newrect.p.y = y;
-                newrect.q.x = xe;
-                newrect.q.y = y + h;
+                newrect.p.x = int2fixed(x);
+                newrect.p.y = int2fixed(y);
+                newrect.q.x = int2fixed(xe);
+                newrect.q.y = int2fixed(y + h);
                 return dev_proc(tdev, fill_rectangle_hl_color)(tdev, &newrect, pis,
                                                                pdcolor, pcpath);
             }
@@ -876,7 +878,7 @@ clip_call_fill_path(clip_callback_data_t * pccd, int xc, int yc, int xec, int ye
     dev_proc_fill_path((*proc));
     int code;
     gx_clip_path cpath_intersection;
-    gx_clip_path *pcpath = pccd->pcpath;
+    gx_clip_path *pcpath = (gx_clip_path *)pccd->pcpath;
 
     if (pcpath != NULL) {
         gx_path rect_path;
@@ -886,7 +888,7 @@ clip_call_fill_path(clip_callback_data_t * pccd, int xc, int yc, int xec, int ye
         gx_path_init_local(&rect_path, pccd->ppath->memory);
         gx_path_add_rectangle(&rect_path, int2fixed(xc), int2fixed(yc), int2fixed(xec), int2fixed(yec));
         code = gx_cpath_intersect(&cpath_intersection, &rect_path,
-                                  gx_rule_winding_number, pccd->pis);
+                                  gx_rule_winding_number, (gs_imager_state *)(pccd->pis));
         gx_path_free(&rect_path, "clip_call_fill_path");
     } else {
         gs_fixed_rect clip_box;

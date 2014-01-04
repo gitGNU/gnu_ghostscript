@@ -34,7 +34,7 @@
 /*#define USE_MEMCPY*/
 
 /* Define debugging statistics. */
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(GS_THREADSAFE)
 struct stats_mem24_s {
     long
         fill, fwide, fgray[101], fsetc, fcolor[101], fnarrow[5],
@@ -108,7 +108,8 @@ mem_true24_fill_rectangle(gx_device * dev,
     declare_unpack_color(r, g, b, color);
     declare_scan_ptr(dest);
 
-    if_debug4('b', "[b]device y=%d h=%d x=%d w=%d\n", y + mdev->band_y, h, x, w);
+    if_debug4m('b', dev->memory,
+               "[b]device y=%d h=%d x=%d w=%d\n", y + mdev->band_y, h, x, w);
     /*
      * In order to avoid testing w > 0 and h > 0 twice, we defer
      * executing setup_rect, and use fit_fill_xywh instead of
@@ -116,7 +117,7 @@ mem_true24_fill_rectangle(gx_device * dev,
      */
     fit_fill_xywh(dev, x, y, w, h);
     INCR(fill);
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(GS_THREADSAFE)
     stats_mem24.ftotal += w;
 #endif
     if (w >= 5) {
@@ -198,7 +199,7 @@ mem_true24_fill_rectangle(gx_device * dev,
                 INCR(fsetc);
                 set_color24_cache(color, r, g, b);
             }
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(GS_THREADSAFE)
             {
                 int ci;
                 for (ci = 0; ci < prev_count; ++ci)
@@ -469,7 +470,8 @@ mem_true24_copy_color(gx_device * dev,
 {
     gx_device_memory * const mdev = (gx_device_memory *)dev;
 
-    if_debug1('w', "[w]device y=%d:\n", y + mdev->band_y); /* See siscale.c about 'w'. */
+    if_debug1m('w', dev->memory, "[w]device y=%d:\n",
+               y + mdev->band_y); /* See siscale.c about 'w'. */
     fit_copy(dev, base, sourcex, sraster, id, x, y, w, h);
     mem_copy_byte_rect(mdev, base, sourcex, sraster, x, y, w, h);
     return 0;

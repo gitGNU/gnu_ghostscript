@@ -7,7 +7,7 @@ use Data::Dumper;
 
 my $verbose=0;
 
-# bmpcmp usage: [gs] [pcl] [xps] [gs] [mupdf] [bmpcmp] [lowres] [$user] | abort
+# bmpcmp usage: [gs] [pcl] [xps] [gs] [mupdf] [bmpcmp] [lowres] [32] [$user] | abort
 
 
 
@@ -26,12 +26,18 @@ my $product="";
 my $filters="";
 my $command="";
 my $res="";
+my $w32="";
+my $relaxTimeout="";
 my $t1;
 while ($t1=shift) {
   if ($t1 eq "lowres") {
     $res="lowres";
   } elsif ($t1 eq "highres") {
     $res="highres";
+  } elsif ($t1 eq "32") {
+    $w32="32";
+  } elsif ($t1 eq "timeout" || $t1 eq "relaxtimeout") {
+    $relaxTimeout="relaxTimeout";
   } elsif ($t1=~m/^-/ || $t1=~m/^\d/) {
     $command.=$t1.' ';
   } elsif ($t1 =~ m/filter=.*/) {
@@ -142,7 +148,7 @@ if ($msys) {
 
 my $cmd="rsync -avxcz ".
 " --max-size=10000000".
-" --delete".
+" --delete --delete-excluded".
 " --exclude .svn --exclude .git".
 " --exclude _darcs --exclude .bzr --exclude .hg".
 " --exclude .deps --exclude .libs --exclude autom4te.cache".
@@ -154,7 +160,9 @@ my $cmd="rsync -avxcz ".
 " --exclude ufst --exclude ufst-obj --exclude ufst-debugobj".
 " --exclude config.log --exclude .png".
 " --exclude .ppm --exclude .pkm --exclude .pgm --exclude .pbm".
-" --exclude build --exclude generated".
+" --exclude .tif --exclude .bmp".
+" --exclude debug --exclude release --exclude generated".  # we cannot just exclude build, since tiff/build/Makefile.in, etc. is needed
+# " --exclude Makefile". We can't just exclude Makefile, since the GhostPDL top Makefile is not a derived file.
 " -e \"$ssh\" ".
 " .".
 " $hostpath";
@@ -172,7 +180,7 @@ if ($product ne "abort" ) { #&& $product ne "bmpcmp") {
 }
 
 open(F,">cluster_command.run");
-print F "$user $product $res\n";
+print F "$user $product $res $w32 $relaxTimeout\n";
 print F "$command\n";
 print F "$filters\n";
 close(F);

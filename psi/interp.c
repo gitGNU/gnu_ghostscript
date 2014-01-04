@@ -94,16 +94,16 @@ do_call_operator_verbose(op_proc_t op_proc, i_ctx_t *i_ctx_p)
     int code;
 
 #ifndef SHOW_STACK_DEPTHS
-    if_debug1('!', "[!]operator %s\n", op_get_name_string(op_proc));
+    if_debug1m('!', imemory, "[!]operator %s\n", op_get_name_string(op_proc));
 #else
-    if_debug3('!', "[!][es=%d os=%d]operator %s\n",
+    if_debug3m('!', imemory, "[!][es=%d os=%d]operator %s\n",
             esp-i_ctx_p->exec_stack.stack.bot,
             osp-i_ctx_p->op_stack.stack.bot,
             op_get_name_string(op_proc));
 #endif
     code = do_call_operator(op_proc, i_ctx_p);
 #if defined(SHOW_STACK_DEPTHS)
-    if_debug2('!', "[!][es=%d os=%d]\n",
+    if_debug2m('!', imemory, "[!][es=%d os=%d]\n",
             esp-i_ctx_p->exec_stack.stack.bot,
             osp-i_ctx_p->op_stack.stack.bot);
 #endif
@@ -115,8 +115,8 @@ do_call_operator_verbose(op_proc_t op_proc, i_ctx_t *i_ctx_p)
 #  define call_operator(proc, p) ((*(proc))(p))
 #endif
 
-/* Define debugging statistics. */
-#ifdef DEBUG
+/* Define debugging statistics (not threadsafe as uses globals) */
+#if defined(DEBUG) && !defined(GS_THREADSAFE)
 struct stats_interp_s {
     long top;
     long lit, lit_array, exec_array, exec_operator, exec_name;
@@ -909,7 +909,7 @@ interp(i_ctx_t **pi_ctx_p /* context for execution, updated if resched */,
     if (iosp >= osbot &&
         (r_type(iosp) == t__invalid || r_type(iosp) >= tx_next_op)
         ) {
-        lprintf("Invalid value on o-stack!\n");
+        mlprintf(imemory, "Invalid value on o-stack!\n");
         return_with_error_iref(e_Fatal);
     }
     if (gs_debug['I'] ||
@@ -923,18 +923,18 @@ interp(i_ctx_t **pi_ctx_p /* context for execution, updated if resched */,
 
         osp = iosp;
         esp = iesp;
-        dlprintf5("d%u,e%u<%u>0x%lx(%d): ",
+        dmlprintf5(imemory, "d%u,e%u<%u>0x%lx(%d): ",
                   ref_stack_count(&d_stack), ref_stack_count(&e_stack),
                   ref_stack_count(&o_stack), (ulong)IREF, icount);
         debug_print_ref(imemory, IREF);
         if (iosp >= osbot) {
-            dputs(" // ");
+            dmputs(imemory, " // ");
             debug_print_ref(imemory, iosp);
         }
-        dputc('\n');
+        dmputc(imemory, '\n');
         osp = save_osp;
         esp = save_esp;
-        dflush();
+        dmflush(imemory);
     }
 #endif
 /* Objects that have attributes (arrays, dictionaries, files, and strings) */
@@ -1008,7 +1008,8 @@ interp(i_ctx_t **pi_ctx_p /* context for execution, updated if resched */,
             /* Special operators. */
         case plain_exec(tx_op_add):
 x_add:      INCR(x_add);
-            if ((code = zop_add(iosp)) < 0)
+            osp = iosp; /* sync o_stack */
+            if ((code = zop_add(i_ctx_p)) < 0)
                 return_with_error_tx_op(code);
             iosp--;
             next_either();
@@ -1105,7 +1106,8 @@ x_roll:     INCR(x_roll);
             next_either();
         case plain_exec(tx_op_sub):
 x_sub:      INCR(x_sub);
-            if ((code = zop_sub(iosp)) < 0)
+            osp = iosp; /* sync o_stack */
+            if ((code = zop_sub(i_ctx_p)) < 0)
                 return_with_error_tx_op(code);
             iosp--;
             next_either();

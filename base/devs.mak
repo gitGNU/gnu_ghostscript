@@ -196,6 +196,7 @@ GDEV=$(AK) $(ECHOGS_XE) $(GDEVH)
 #	tiffscaled	TIFF (monochrome output, integer downsampled and dithered from grayscale rendering)
 #	tiffscaled8	TIFF (greyscale output, integer downsampled and dithered from grayscale rendering)
 #	tiffscaled24	TIFF (rgb output, integer downsampled and dithered from rgb rendering)
+#	tiffscaled4	TIFF (cmyk output, integer downsampled and dithered from cmyk rendering)
 
 # Note that MS Windows-specific drivers are defined in pcwin.mak, not here,
 # because they have special compilation requirements that require defining
@@ -1646,7 +1647,7 @@ $(DD)tiffs.dev : $(DEVS_MAK) $(libtiff_dev) $(tiffs_) $(GLD)page.dev\
 	$(ADDMOD) $(DD)tiffs -include $(GLD)page $(tiff_i_)
 
 $(GLOBJ)gdevtifs.$(OBJ) : $(GLSRC)gdevtifs.c $(PDEVH) $(stdint__h) $(stdio__h) $(time__h)\
- $(gdevtifs_h) $(gscdefs_h) $(gstypes_h)
+ $(gdevtifs_h) $(gscdefs_h) $(gstypes_h) $(stream_h) $(strmio_h)
 	$(GLCC) $(I_)$(GLI_) $(II)$(TI_)$(_I) $(GLO_)gdevtifs.$(OBJ) $(C_) $(GLSRC)gdevtifs.c
 
 # Black & white, G3/G4 fax
@@ -1697,7 +1698,7 @@ $(DD)tiffgray.dev : $(DEVS_MAK) $(libtiff_dev) $(tiffgray_) $(DD)tiffs.dev\
 
 $(GLOBJ)gdevtsep.$(OBJ) : $(GLSRC)gdevtsep.c $(PDEVH) $(stdint__h)\
  $(gdevtifs_h) $(gdevdevn_h) $(gsequivc_h) $(stdio__h) $(ctype__h)\
- $(gxgetbit_h) $(gdevppla_h) $(GDEV)
+ $(gxgetbit_h) $(gdevppla_h) $(gp_h) $(GDEV)
 	$(GLCC) $(I_)$(TI_)$(_I) $(GLO_)gdevtsep.$(OBJ) $(C_) $(GLSRC)gdevtsep.c
 
 # TIFF Scaled (downscaled gray -> mono), configurable compression
@@ -1726,6 +1727,15 @@ $(DD)tiffscaled24.dev : $(DEVS_MAK) $(libtiff_dev) $(tiffscaled24_)\
  $(DD)tiffs.dev $(minftrsz_h) $(GDEV)
 	$(SETPDEV2) $(DD)tiffscaled24 $(tiffscaled8_)
 	$(ADDMOD) $(DD)tiffscaled24 -include $(DD)tiffs $(tiff_i_)
+
+# TIFF Scaled 4 (downscaled cmyk -> cmyk), configurable compression
+
+tiffscaled4_=$(tiffgray_) $(GLOBJ)gdevtsep.$(OBJ) $(GLOBJ)minftrsz.$(OBJ)
+
+$(DD)tiffscaled4.dev : $(DEVS_MAK) $(libtiff_dev) $(tiffscaled4_)\
+ $(DD)tiffs.dev $(minftrsz_h) $(GDEV)
+	$(SETPDEV2) $(DD)tiffscaled4 $(tiffscaled8_)
+	$(ADDMOD) $(DD)tiffscaled4 -include $(DD)tiffs $(tiff_i_)
 
 # TIFF RGB, no compression
 

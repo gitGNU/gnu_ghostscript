@@ -25,6 +25,8 @@
  *                   8-bit Gray internal rendering)
  * tiffscaled24 device:24-bit RGB TIFF device (dithered downscaled output
  *                   from 24-bit RGB internal rendering)
+ * tiffscaled4 device:4-bit CMYK TIFF device (dithered downscaled output
+ *                   from 32-bit CMYK internal rendering)
  */
 
 #include "stdint_.h"   /* for tiff.h */
@@ -39,6 +41,7 @@
 #include "gxgetbit.h"
 #include "gdevppla.h"
 #include "gxdownscale.h"
+#include "gp.h"
 
 /*
  * Some of the code in this module is based upon the gdevtfnx.c module.
@@ -69,6 +72,7 @@ const gx_device_tiff gs_tiffgray_device = {
                     0, 0, 0, 0, /* Margins */
                     1, 8, 255, 0, 256, 0, tiffgray_print_page),
     arch_is_big_endian          /* default to native endian (i.e. use big endian iff the platform is so*/,
+    false,                      /* default to *not* bigtiff */
     COMPRESSION_NONE,
     TIFF_DEFAULT_STRIP_SIZE,
     TIFF_DEFAULT_DOWNSCALE,
@@ -101,6 +105,7 @@ const gx_device_tiff gs_tiffscaled_device = {
                     255, 0, 256, 0,
                     tiffscaled_print_page),
     arch_is_big_endian,/* default to native endian (i.e. use big endian iff the platform is so */
+    false,             /* default to not bigtiff */
     COMPRESSION_NONE,
     TIFF_DEFAULT_STRIP_SIZE,
     TIFF_DEFAULT_DOWNSCALE,
@@ -133,6 +138,7 @@ const gx_device_tiff gs_tiffscaled8_device = {
                     255, 0, 256, 0,
                     tiffscaled8_print_page),
     arch_is_big_endian,/* default to native endian (i.e. use big endian iff the platform is so */
+    false,             /* default to not bigtiff */
     COMPRESSION_NONE,
     TIFF_DEFAULT_STRIP_SIZE,
     TIFF_DEFAULT_DOWNSCALE,
@@ -165,6 +171,7 @@ const gx_device_tiff gs_tiffscaled24_device = {
                     255, 255, 256, 256,
                     tiffscaled24_print_page),
     arch_is_big_endian,/* default to native endian (i.e. use big endian iff the platform is so */
+    false,             /* default to not bigtiff */
     COMPRESSION_NONE,
     TIFF_DEFAULT_STRIP_SIZE,
     TIFF_DEFAULT_DOWNSCALE,
@@ -172,6 +179,36 @@ const gx_device_tiff gs_tiffscaled24_device = {
     1  /* MinFeatureSize */
 };
 
+/* ------ The tiffscaled4 device ------ */
+
+static dev_proc_print_page(tiffscaled4_print_page);
+
+static const gx_device_procs tiffscaled4_procs = {
+    tiff_open, NULL, NULL, tiff_output_page, tiff_close,
+    NULL, cmyk_8bit_map_color_cmyk, NULL, NULL, NULL, NULL, NULL, NULL,
+    tiff_get_params_downscale, tiff_put_params_downscale,
+    cmyk_8bit_map_cmyk_color, NULL, NULL, NULL, gx_page_device_get_page_device
+};
+
+const gx_device_tiff gs_tiffscaled4_device = {
+    prn_device_body(gx_device_tiff,
+                    tiffscaled4_procs,
+                    "tiffscaled4",
+                    DEFAULT_WIDTH_10THS, DEFAULT_HEIGHT_10THS,
+                    600, 600,   /* 600 dpi by default */
+                    0, 0, 0, 0, /* Margins */
+                    4,          /* num components */
+                    32,         /* bits per sample */
+                    255, 255, 256, 256,
+                    tiffscaled4_print_page),
+    arch_is_big_endian,/* default to native endian (i.e. use big endian iff the platform is so */
+    false,             /* default to not bigtiff */
+    COMPRESSION_NONE,
+    TIFF_DEFAULT_STRIP_SIZE,
+    TIFF_DEFAULT_DOWNSCALE,
+    0, /* Adjust size */
+    1  /* MinFeatureSize */
+};
 
 /* ------ Private functions ------ */
 
@@ -289,6 +326,43 @@ tiffscaled24_print_page(gx_device_printer * pdev, FILE * file)
                                          8, 3);
 }
 
+static void
+tiff_set_cmyk_fields(gx_device_printer *pdev, TIFF *tif,
+                     short bits_per_sample,
+                     uint16 compression,
+                     long max_strip_size)
+{
+    TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, bits_per_sample);
+    TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_SEPARATED);
+    TIFFSetField(tif, TIFFTAG_FILLORDER, FILLORDER_MSB2LSB);
+    TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, 4);
+
+    tiff_set_compression(pdev, tif, compression, max_strip_size);
+}
+
+static int
+tiffscaled4_print_page(gx_device_printer * pdev, FILE * file)
+{
+    gx_device_tiff *const tfdev = (gx_device_tiff *)pdev;
+    int code;
+
+    code = gdev_tiff_begin_page(tfdev, file);
+    if (code < 0)
+        return code;
+
+    tiff_set_cmyk_fields(pdev,
+                         tfdev->tif,
+                         1,
+                         tfdev->Compression,
+                         tfdev->MaxStripSize);
+
+    return tiff_downscale_and_print_page(pdev, tfdev->tif,
+                                         tfdev->DownScaleFactor,
+                                         tfdev->MinFeatureSize,
+                                         tfdev->AdjustWidth,
+                                         1, 4);
+}
+
 /* ------ The cmyk devices ------ */
 
 static dev_proc_print_page(tiffcmyk_print_page);
@@ -312,6 +386,7 @@ const gx_device_tiff gs_tiff32nc_device = {
                     0, 0, 0, 0, /* Margins */
                     4, 32, 255, 255, 256, 256, tiffcmyk_print_page),
     arch_is_big_endian          /* default to native endian (i.e. use big endian iff the platform is so*/,
+    false,                      /* default to not bigtiff */
     COMPRESSION_NONE,
     TIFF_DEFAULT_STRIP_SIZE,
     TIFF_DEFAULT_DOWNSCALE,
@@ -332,6 +407,7 @@ const gx_device_tiff gs_tiff64nc_device = {
                     0, 0, 0, 0, /* Margins */
                     4, 64, 255, 255, 256, 256, tiffcmyk_print_page),
     arch_is_big_endian          /* default to native endian (i.e. use big endian iff the platform is so*/,
+    false,                      /* default to not bigtiff */
     COMPRESSION_NONE,
     TIFF_DEFAULT_STRIP_SIZE,
     TIFF_DEFAULT_DOWNSCALE,
@@ -340,20 +416,6 @@ const gx_device_tiff gs_tiff64nc_device = {
 };
 
 /* ------ Private functions ------ */
-
-static void
-tiff_set_cmyk_fields(gx_device_printer *pdev, TIFF *tif,
-                     short bits_per_sample,
-                     uint16 compression,
-                     long max_strip_size)
-{
-    TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, bits_per_sample);
-    TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_SEPARATED);
-    TIFFSetField(tif, TIFFTAG_FILLORDER, FILLORDER_MSB2LSB);
-    TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, 4);
-
-    tiff_set_compression(pdev, tif, compression, max_strip_size);
-}
 
 static int
 tiffcmyk_print_page(gx_device_printer * pdev, FILE * file)
@@ -413,6 +475,7 @@ static dev_proc_output_page(tiffseps_output_page);
     FILE *sep_file[GX_DEVICE_COLOR_MAX_COMPONENTS];\
     TIFF *tiff[GX_DEVICE_COLOR_MAX_COMPONENTS]; \
     bool  BigEndian;            /* true = big endian; false = little endian */\
+    bool  UseBigTIFF;           /* true = output bigtiff, false don't */ \
     uint16 Compression;         /* for the separation files, same values as
                                    TIFFTAG_COMPRESSION */\
     bool close_files; \
@@ -590,13 +653,14 @@ gs_private_st_composite_final(st_tiffsep_device, tiffsep_device,
         { 0 },                  /* tiff state for separation files */\
         { 0 },                  /* separation files */\
         arch_is_big_endian      /* true = big endian; false = little endian */,\
+        false,                  /* UseBigTIFF */\
         compr                   /* COMPRESSION_* */,\
         true,                   /* close_files */ \
         TIFF_DEFAULT_STRIP_SIZE,/* MaxStripSize */\
         1,                      /* DownScaleFactor */\
         0,                      /* MinFeatureSize */\
         8,                      /* BitsPerComponent */\
-        GS_SOFT_MAX_SPOTS	/* max_spots */
+        GS_SOFT_MAX_SPOTS       /* max_spots */
 
 #define GCIB (ARCH_SIZEOF_GX_COLOR_INDEX * 8)
 
@@ -641,7 +705,7 @@ const tiffsep1_device gs_tiffsep1_device =
       {0, 1, 2, 3, 4, 5, 6, 7 } /* Initial component SeparationOrder */
     },
     { true },                   /* equivalent CMYK colors for spot colors */
-    false,			/* warning_given */
+    false,                      /* warning_given */
     { {0} },                    /* threshold arrays */
     0,                          /* fill_path */
 };
@@ -1039,6 +1103,9 @@ tiffsep1_prn_open(gx_device * pdev)
     tiffsep1_device *pdev_sep = (tiffsep1_device *) pdev;
     int code, k;
 
+    /* Use our own warning and error message handlers in libtiff */
+    tiff_set_handlers();
+
     /* With planar the depth can be more than 64.  Update the color
        info to reflect the proper depth and number of planes */
     pdev_sep->warning_given = false;
@@ -1206,9 +1273,9 @@ tiffsep_get_color_comp_index(gx_device * dev, const char * pname,
     if (index < 0 && component_type == SEPARATION_NAME &&
         pdev->warning_given == false &&
         pdev->devn_params.num_separation_order_names == 0) {
-        dlprintf("**** Max spot colorants reached.\n");
-        dlprintf("**** Some colorants will be converted to equivalent CMYK values.\n");
-        dlprintf("**** If this is a Postscript file, try using the -dMaxSpots= option.\n");
+        dmlprintf(dev->memory, "**** Max spot colorants reached.\n");
+        dmlprintf(dev->memory, "**** Some colorants will be converted to equivalent CMYK values.\n");
+        dmlprintf(dev->memory, "**** If this is a Postscript file, try using the -dMaxSpots= option.\n");
         pdev->warning_given = true;
     }
     return index;
@@ -1229,21 +1296,19 @@ copy_separation_name(tiffsep_device * pdev,
                 char * buffer, int max_size, int sep_num)
 {
     int sep_size = pdev->devn_params.separations.names[sep_num].size;
+    const byte *p = pdev->devn_params.separations.names[sep_num].data;
     int i;
-    int restricted_chars[] = { '/', '\\', ':', 0 };
 
     /* If name is too long then clip it. */
     if (sep_size > max_size - 1)
         sep_size = max_size - 1;
-    memcpy(buffer, pdev->devn_params.separations.names[sep_num].data,
-                sep_size);
-    /* Change some of the commonly known restricted characters to '_' */
-    for (i=0; restricted_chars[i] != 0; i++) {
-        char *p = buffer;
-
-        while ((p=memchr(p, restricted_chars[i], sep_size - (p - buffer))) != NULL)
-            *p = '_';
-    }
+    /* Avoid the use of '%' in names here. This is checked for here, rather
+     * than in gp_file_name_good_char, as this is NOT a requirement of the
+     * underlying file system, but rather a requirement of the code handling
+     * the separation names (where % is interpreted as a format specifier).
+     */
+    for (i=0; i < sep_size; i++)
+        buffer[i] = (gp_file_name_good_char(p[i]) && p[i] != '%') ? p[i] : '_';
     buffer[sep_size] = 0;       /* Terminate string */
 }
 
@@ -1393,16 +1458,71 @@ tiffsep_prn_open(gx_device * pdev)
     gx_device_printer * const ppdev = (gx_device_printer *)pdev;
     tiffsep_device *pdev_sep = (tiffsep_device *) pdev;
     int code, k;
+    bool force_pdf, limit_icc, force_ps;
+    cmm_dev_profile_t *profile_struct;
 
+    /* Use our own warning and error message handlers in libtiff */
+    tiff_set_handlers();
+
+    /* There are 2 approaches to the use of a DeviceN ICC output profile.  
+       One is to simply limit our device to only output the colorants
+       defined in the output ICC profile.   The other is to use the 
+       DeviceN ICC profile to color manage those N colorants and
+       to let any other separations pass through unmolested.   The define 
+       LIMIT_TO_ICC sets the option to limit our device to only the ICC
+       colorants defined by -sICCOutputColors (or to the ones that are used
+       as default names if ICCOutputColors is not used).  The pass through option 
+       (LIMIT_TO_ICC set to 0) makes life a bit more difficult since we don't 
+       know if the page_spot_colors overlap with any spot colorants that exist 
+       in the DeviceN ICC output profile. Hence we don't know how many planes
+       to use for our device.  This is similar to the issue when processing
+       a PostScript file.  So that I remember, the cases are
+       DeviceN Profile?     limit_icc       Result
+       0                    0               force_pdf 0 force_ps 0  (no effect)
+       0                    0               force_pdf 0 force_ps 0  (no effect)
+       1                    0               force_pdf 0 force_ps 1  (colorants not known)
+       1                    1               force_pdf 1 force_ps 0  (colorants known)
+       */
+#if LIMIT_TO_ICC
+    limit_icc = true;
+#else
+    limit_icc = false;
+#endif
+    code = dev_proc(pdev, get_profile)((gx_device *)pdev, &profile_struct);
+    if (profile_struct->spotnames == NULL) {
+        force_pdf = false;
+        force_ps = false;
+    } else {
+        if (limit_icc) {
+            force_pdf = true;
+            force_ps = false;
+        } else {
+            force_pdf = false;
+            force_ps = true;
+        }
+    }
     /* With planar the depth can be more than 64.  Update the color
        info to reflect the proper depth and number of planes */
     pdev_sep->warning_given = false;
-    if (pdev_sep->devn_params.page_spot_colors >= 0) {
-        pdev->color_info.num_components =
-            (pdev_sep->devn_params.page_spot_colors
-                                 + pdev_sep->devn_params.num_std_colorant_names);
-        if (pdev->color_info.num_components > pdev->color_info.max_components)
-            pdev->color_info.num_components = pdev->color_info.max_components;
+    if ((pdev_sep->devn_params.page_spot_colors >= 0 || force_pdf) && !force_ps) {
+        if (force_pdf) {
+            /* Use the information that is in the ICC profle.  We will be here
+               anytime that we have limited ourselves to a fixed number
+               of colorants specified by the DeviceN ICC profile */
+            pdev->color_info.num_components = 
+                (pdev_sep->devn_params.separations.num_separations 
+                 + pdev_sep->devn_params.num_std_colorant_names);
+            if (pdev->color_info.num_components > pdev->color_info.max_components)
+                pdev->color_info.num_components = pdev->color_info.max_components;
+            /* Limit us only to the ICC colorants */
+            pdev->color_info.max_components = pdev->color_info.num_components;
+        } else {
+            pdev->color_info.num_components =
+                (pdev_sep->devn_params.page_spot_colors
+                                     + pdev_sep->devn_params.num_std_colorant_names);
+            if (pdev->color_info.num_components > pdev->color_info.max_components)
+                pdev->color_info.num_components = pdev->color_info.max_components;
+        }
     } else {
         /* We do not know how many spots may occur on the page.
            For this reason we go ahead and allocate the maximum that we
@@ -1601,6 +1721,148 @@ build_cmyk_raster_line_fromplanar(gs_get_bits_params_t params, byte * dest,
     }
 }
 
+static void
+build_cmyk_raster_line_fromplanar_1bpc(gs_get_bits_params_t params, byte * dest,
+                                       int width, int num_comp,
+                                       cmyk_composite_map * cmyk_map, int num_order,
+                                       tiffsep_device * const tfdev)
+{
+    int pixel, comp_num;
+    uint temp, cyan, magenta, yellow, black;
+    cmyk_composite_map * cmyk_map_entry;
+
+    for (pixel = 0; pixel < width; pixel++) {
+        cmyk_map_entry = cmyk_map;
+        temp = *(params.data[tfdev->devn_params.separation_order_map[0]] + (pixel>>3));
+        temp = ((temp<<(pixel & 7))>>7) & 1;
+        cyan = cmyk_map_entry->c * temp;
+        magenta = cmyk_map_entry->m * temp;
+        yellow = cmyk_map_entry->y * temp;
+        black = cmyk_map_entry->k * temp;
+        cmyk_map_entry++;
+        for (comp_num = 1; comp_num < num_comp; comp_num++) {
+            temp =
+                *(params.data[tfdev->devn_params.separation_order_map[comp_num]] + (pixel>>3));
+            temp = ((temp<<(pixel & 7))>>7) & 1;
+            cyan += cmyk_map_entry->c * temp;
+            magenta += cmyk_map_entry->m * temp;
+            yellow += cmyk_map_entry->y * temp;
+            black += cmyk_map_entry->k * temp;
+            cmyk_map_entry++;
+        }
+        cyan /= frac_1;
+        magenta /= frac_1;
+        yellow /= frac_1;
+        black /= frac_1;
+        if (cyan > 1)
+            cyan = 1;
+        if (magenta > 1)
+            magenta = 1;
+        if (yellow > 1)
+            yellow = 1;
+        if (black > 1)
+            black = 1;
+        if ((pixel & 1) == 0)
+            *dest = (cyan<<7) | (magenta<<6) | (yellow<<5) | (black<<4);
+        else
+            *dest++ |= (cyan<<3) | (magenta<<2) | (yellow<<1) | black;
+    }
+}
+static void
+build_cmyk_raster_line_fromplanar_2bpc(gs_get_bits_params_t params, byte * dest,
+                                       int width, int num_comp,
+                                       cmyk_composite_map * cmyk_map, int num_order,
+                                       tiffsep_device * const tfdev)
+{
+    int pixel, comp_num;
+    uint temp, cyan, magenta, yellow, black;
+    cmyk_composite_map * cmyk_map_entry;
+
+    for (pixel = 0; pixel < width; pixel++) {
+        cmyk_map_entry = cmyk_map;
+        temp = *(params.data[tfdev->devn_params.separation_order_map[0]] + (pixel>>2));
+        temp = (((temp<<((pixel & 3)<<1))>>6) & 3) * 85;
+        cyan = cmyk_map_entry->c * temp;
+        magenta = cmyk_map_entry->m * temp;
+        yellow = cmyk_map_entry->y * temp;
+        black = cmyk_map_entry->k * temp;
+        cmyk_map_entry++;
+        for (comp_num = 1; comp_num < num_comp; comp_num++) {
+            temp =
+                *(params.data[tfdev->devn_params.separation_order_map[comp_num]] + (pixel>>2));
+            temp = (((temp<<((pixel & 3)<<1))>>6) & 3) * 85;
+            cyan += cmyk_map_entry->c * temp;
+            magenta += cmyk_map_entry->m * temp;
+            yellow += cmyk_map_entry->y * temp;
+            black += cmyk_map_entry->k * temp;
+            cmyk_map_entry++;
+        }
+        cyan /= frac_1;
+        magenta /= frac_1;
+        yellow /= frac_1;
+        black /= frac_1;
+        if (cyan > 3)
+            cyan = 3;
+        if (magenta > 3)
+            magenta = 3;
+        if (yellow > 3)
+            yellow = 3;
+        if (black > 3)
+            black = 3;
+        *dest++ = (cyan<<6) | (magenta<<4) | (yellow<<2) | black;
+    }
+}
+
+static void
+build_cmyk_raster_line_fromplanar_4bpc(gs_get_bits_params_t params, byte * dest,
+                                       int width, int num_comp,
+                                       cmyk_composite_map * cmyk_map, int num_order,
+                                       tiffsep_device * const tfdev)
+{
+    int pixel, comp_num;
+    uint temp, cyan, magenta, yellow, black;
+    cmyk_composite_map * cmyk_map_entry;
+
+    for (pixel = 0; pixel < width; pixel++) {
+        cmyk_map_entry = cmyk_map;
+        temp = *(params.data[tfdev->devn_params.separation_order_map[0]] + (pixel>>1));
+        if (pixel & 1)
+            temp >>= 4;
+        temp &= 15;
+        cyan = cmyk_map_entry->c * temp;
+        magenta = cmyk_map_entry->m * temp;
+        yellow = cmyk_map_entry->y * temp;
+        black = cmyk_map_entry->k * temp;
+        cmyk_map_entry++;
+        for (comp_num = 1; comp_num < num_comp; comp_num++) {
+            temp =
+                *(params.data[tfdev->devn_params.separation_order_map[comp_num]] + (pixel>>1));
+            if (pixel & 1)
+                temp >>= 4;
+            temp &= 15;
+            cyan += cmyk_map_entry->c * temp;
+            magenta += cmyk_map_entry->m * temp;
+            yellow += cmyk_map_entry->y * temp;
+            black += cmyk_map_entry->k * temp;
+            cmyk_map_entry++;
+        }
+        cyan /= frac_1;
+        magenta /= frac_1;
+        yellow /= frac_1;
+        black /= frac_1;
+        if (cyan > 15)
+            cyan = 15;
+        if (magenta > 15)
+            magenta = 15;
+        if (yellow > 15)
+            yellow = 15;
+        if (black > 15)
+            black = 15;
+        *dest++ = (cyan<<4) | magenta;
+        *dest++ = (yellow<<4) | black;
+    }
+}
+
 static int
 sep1_ht_order_to_thresholds(gx_device *pdev, const gs_imager_state *pis)
 {
@@ -1674,9 +1936,9 @@ threshold_from_order( gx_ht_order *d_order, int *Width, int *Height, gs_memory_t
 
 #ifdef DEBUG
 if ( gs_debug_c('h') ) {
-       dprintf2("   width=%d, height=%d,",
+       dmprintf2(memory, "   width=%d, height=%d,",
             d_order->width, d_order->height );
-       dprintf2(" num_levels=%d, raster=%d\n",
+       dmprintf2(memory, " num_levels=%d, raster=%d\n",
             d_order->num_levels, d_order->raster );
 }
 #endif
@@ -1707,12 +1969,12 @@ if ( gs_debug_c('h') ) {
          int row, col;
 #ifdef DEBUG
          if ( gs_debug_c('h') )
-            dprintf2("  level[%3d]=%3d\n", l, d_order->levels[l]);
+            dmprintf2(memory, "  level[%3d]=%3d\n", l, d_order->levels[l]);
 #endif
          for( j=d_order->levels[prev_l]; j<d_order->levels[l]; j++) {
 #ifdef DEBUG
             if ( gs_debug_c('h') )
-               dprintf2("       bits.offset=%3d, bits.mask=%8x  ",
+               dmprintf2(memory, "       bits.offset=%3d, bits.mask=%8x  ",
                    bits[j].offset, bits[j].mask);
 #endif
             row = bits[j].offset / d_order->raster;
@@ -1723,7 +1985,7 @@ if ( gs_debug_c('h') ) {
             col += 8 * ( bits[j].offset - (row * d_order->raster) );
 #ifdef DEBUG
             if ( gs_debug_c('h') )
-               dprintf3("row=%2d, col=%2d, t_level=%3d\n",
+               dmprintf3(memory, "row=%2d, col=%2d, t_level=%3d\n",
                   row, col, t_level);
 #endif
             if( col < (int)d_order->width ) {
@@ -1743,10 +2005,10 @@ if ( gs_debug_c('h') ) {
 #ifdef DEBUG
    if (gs_debug_c('h')) {
       for( i=0; i<(int)d_order->height; i++ ) {
-         dprintf1("threshold array row %3d= ", i);
+         dmprintf1(memory, "threshold array row %3d= ", i);
          for( j=(int)d_order->width-1; j>=0; j-- )
-            dprintf1("%3d ", *(thresh+j+(i*d_order->width)) );
-         dprintf("\n");
+            dmprintf1(memory, "%3d ", *(thresh+j+(i*d_order->width)) );
+         dmprintf(memory, "\n");
       }
    }
 #endif
@@ -1776,7 +2038,7 @@ tiffsep_print_page(gx_device_printer * pdev, FILE * file)
     int save_numcomps = pdev->color_info.num_components;
     const char *fmt;
     gs_parsed_file_name_t parsed;
-    int plane_count = 0;  /* quite compiler */
+    int plane_count = 0;  /* quiet compiler */
     int factor = tfdev->DownScaleFactor;
     int mfs = tfdev->MinFeatureSize;
     int dst_bpc = tfdev->BitsPerComponent;
@@ -1784,12 +2046,21 @@ tiffsep_print_page(gx_device_printer * pdev, FILE * file)
     int width = gx_downscaler_scale(tfdev->width, factor);
     int height = gx_downscaler_scale(tfdev->height, factor);
 
+    /* Sanity check the compression format */
+    if (dst_bpc != 8 && (tfdev->Compression==COMPRESSION_LZW ||
+                         tfdev->Compression==COMPRESSION_PACKBITS))
+        tfdev->Compression = COMPRESSION_NONE;
+    if (dst_bpc != 1 && (tfdev->Compression==COMPRESSION_CCITTRLE ||
+                         tfdev->Compression==COMPRESSION_CCITTFAX3 ||
+                         tfdev->Compression==COMPRESSION_CCITTFAX4))
+        tfdev->Compression = COMPRESSION_NONE;
+
     /* Print the names of the spot colors */
     if (num_order == 0) {
         for (sep_num = 0; sep_num < num_spot; sep_num++) {
             copy_separation_name(tfdev, name,
                 MAX_FILE_NAME_SIZE - base_filename_length - SUFFIX_SIZE, sep_num);
-            dlprintf1("%%%%SeparationName: %s\n", name);
+            dmlprintf1(pdev->memory, "%%%%SeparationName: %s\n", name);
         }
     }
 
@@ -1801,11 +2072,11 @@ tiffsep_print_page(gx_device_printer * pdev, FILE * file)
                                      strlen(tfdev->fname), pdev->memory);
 
     /* Write the page directory for the CMYK equivalent file. */
-    if (dst_bpc == 8 && !tfdev->comp_file) {
-        pdev->color_info.depth = 32;        /* Create directory for 32 bit cmyk */
+    if (!tfdev->comp_file) {
+        pdev->color_info.depth = dst_bpc*4;        /* Create directory for 32 bit cmyk */
         if (tfdev->Compression==COMPRESSION_NONE &&
-            height > ((unsigned long) 0xFFFFFFFF - ftell(file))/(width*4)) { /* note width is never 0 in print_page */
-            dprintf("CMYK composite file would be too large! Reduce resolution or enable compression.\n");
+            height > ((unsigned long) 0xFFFFFFFF - (file ? ftell(file) : 0))/(width*4)) { /* note width is never 0 in print_page */
+            dmprintf(pdev->memory, "CMYK composite file would be too large! Reduce resolution or enable compression.\n");
             return_error(gs_error_rangecheck);  /* this will overflow 32 bits */
         }
 
@@ -1813,25 +2084,23 @@ tiffsep_print_page(gx_device_printer * pdev, FILE * file)
         if (code < 0)
             return code;
 
-        tfdev->tiff_comp = tiff_from_filep(pdev->dname, tfdev->comp_file, tfdev->BigEndian);
+        tfdev->tiff_comp = tiff_from_filep(pdev, pdev->dname, tfdev->comp_file, tfdev->BigEndian, tfdev->UseBigTIFF);
         if (!tfdev->tiff_comp)
             return_error(gs_error_invalidfileaccess);
 
     }
-    if (dst_bpc == 8) {
-        code = tiff_set_fields_for_printer(pdev, tfdev->tiff_comp, factor, 0);
-        if (dst_bpc == 1 && (tfdev->Compression==COMPRESSION_NONE ||
-                             tfdev->Compression==COMPRESSION_CCITTRLE ||
-                             tfdev->Compression==COMPRESSION_CCITTFAX3 ||
-                             tfdev->Compression==COMPRESSION_CCITTFAX4))
-          tiff_set_cmyk_fields(pdev, tfdev->tiff_comp, 1, tfdev->Compression, tfdev->MaxStripSize);
-        else if (dst_bpc == 8 && (tfdev->Compression==COMPRESSION_NONE ||
-                                  tfdev->Compression==COMPRESSION_LZW ||
-                                  tfdev->Compression==COMPRESSION_PACKBITS))
-          tiff_set_cmyk_fields(pdev, tfdev->tiff_comp, 8, tfdev->Compression, tfdev->MaxStripSize);
-        else
-          tiff_set_cmyk_fields(pdev, tfdev->tiff_comp, 8, COMPRESSION_LZW, tfdev->MaxStripSize);
-}
+    code = tiff_set_fields_for_printer(pdev, tfdev->tiff_comp, factor, 0);
+    if (dst_bpc == 1 && (tfdev->Compression==COMPRESSION_NONE ||
+                         tfdev->Compression==COMPRESSION_CCITTRLE ||
+                         tfdev->Compression==COMPRESSION_CCITTFAX3 ||
+                         tfdev->Compression==COMPRESSION_CCITTFAX4))
+        tiff_set_cmyk_fields(pdev, tfdev->tiff_comp, 1, tfdev->Compression, tfdev->MaxStripSize);
+    else if (dst_bpc == 8 && (tfdev->Compression==COMPRESSION_NONE ||
+                              tfdev->Compression==COMPRESSION_LZW ||
+                              tfdev->Compression==COMPRESSION_PACKBITS))
+        tiff_set_cmyk_fields(pdev, tfdev->tiff_comp, 8, tfdev->Compression, tfdev->MaxStripSize);
+    else
+      tiff_set_cmyk_fields(pdev, tfdev->tiff_comp, dst_bpc, COMPRESSION_LZW, tfdev->MaxStripSize);
     pdev->color_info.depth = save_depth;
     if (code < 0)
         return code;
@@ -1841,7 +2110,7 @@ tiffsep_print_page(gx_device_printer * pdev, FILE * file)
                                         num_std_colorants, num_order, num_spot);
 
     if (!num_order && num_comp < num_std_colorants + num_spot) {
-        dlprintf("Warning: skipping one or more colour separations, see: Devices.htm#TIFF\n");
+        dmlprintf(pdev->memory, "Warning: skipping one or more colour separations, see: Devices.htm#TIFF\n");
     }
 
     for (comp_num = 0; comp_num < num_comp; comp_num++ ) {
@@ -1858,9 +2127,9 @@ tiffsep_print_page(gx_device_printer * pdev, FILE * file)
                     true, true, &(tfdev->sep_file[comp_num]));
             if (code < 0)
                 return code;
-            tfdev->tiff[comp_num] = tiff_from_filep(name,
+            tfdev->tiff[comp_num] = tiff_from_filep(pdev, name,
                                                     tfdev->sep_file[comp_num],
-                                                    tfdev->BigEndian);
+                                                    tfdev->BigEndian, tfdev->UseBigTIFF);
             if (!tfdev->tiff[comp_num])
                 return_error(gs_error_ioerror);
         }
@@ -1868,7 +2137,7 @@ tiffsep_print_page(gx_device_printer * pdev, FILE * file)
         pdev->color_info.depth = dst_bpc;     /* Create files for 8 bit gray */
         pdev->color_info.num_components = 1;
         if (tfdev->Compression==COMPRESSION_NONE &&
-            height*8/dst_bpc > ((unsigned long) 0xFFFFFFFF - ftell(file))/width) /* note width is never 0 in print_page */
+            height*8/dst_bpc > ((unsigned long) 0xFFFFFFFF - (file ? ftell(file): 0))/width) /* note width is never 0 in print_page */
             return_error(gs_error_rangecheck);  /* this will overflow 32 bits */
 
         code = tiff_set_fields_for_printer(pdev, tfdev->tiff[comp_num], factor, 0);
@@ -1879,8 +2148,7 @@ tiffsep_print_page(gx_device_printer * pdev, FILE * file)
             return code;
     }
 
-    if (dst_bpc == 8)
-        build_cmyk_map(tfdev, num_comp, cmyk_map);
+    build_cmyk_map(tfdev, num_comp, cmyk_map);
 
     {
         int raster_plane = bitmap_raster(width * 8);
@@ -1896,12 +2164,12 @@ tiffsep_print_page(gx_device_printer * pdev, FILE * file)
 
         for (comp_num = 0; comp_num < num_comp; comp_num++ )
             TIFFCheckpointDirectory(tfdev->tiff[comp_num]);
-        if (dst_bpc == 8)
-            TIFFCheckpointDirectory(tfdev->tiff_comp);
+        TIFFCheckpointDirectory(tfdev->tiff_comp);
 
         /* Write the page data. */
         {
             gs_get_bits_params_t params;
+            int byte_width;
 
             /* Return planar data */
             params.options = (GB_RETURN_POINTER | GB_RETURN_COPY |
@@ -1971,6 +2239,7 @@ tiffsep_print_page(gx_device_printer * pdev, FILE * file)
                                              num_comp, factor, mfs, 8, dst_bpc);
             if (code < 0)
                 goto cleanup;
+            byte_width = (width * dst_bpc + 7)>>3;
             for (y = 0; y < height; ++y) {
                 code = gx_downscaler_get_bits_rectangle(&ds, &params, y);
                 if (code < 0)
@@ -1984,17 +2253,36 @@ tiffsep_print_page(gx_device_printer * pdev, FILE * file)
                         src = params.data[tfdev->devn_params.separation_order_map[comp_num]];
                     } else
                         src = params.data[comp_num];
-                    for (pixel = 0; pixel < width; pixel++, dest++, src++)
+                    for (pixel = 0; pixel < byte_width; pixel++, dest++, src++)
                         *dest = MAX_COLOR_VALUE - *src;    /* Gray is additive */
                     TIFFWriteScanline(tfdev->tiff[comp_num], (tdata_t)sep_line, y, 0);
                 }
-                /* Write CMYK equivalent data (tiff32nc format) */
-                if (dst_bpc == 8) {
+                /* Write CMYK equivalent data */
+                switch(dst_bpc)
+                {
+                default:
+                case 8:
                     build_cmyk_raster_line_fromplanar(params, sep_line, width,
                                                       num_comp, cmyk_map, num_order,
                                                       tfdev);
-                    TIFFWriteScanline(tfdev->tiff_comp, (tdata_t)sep_line, y, 0);
+                    break;
+                case 4:
+                    build_cmyk_raster_line_fromplanar_4bpc(params, sep_line, width,
+                                                           num_comp, cmyk_map, num_order,
+                                                           tfdev);
+                    break;
+                case 2:
+                    build_cmyk_raster_line_fromplanar_2bpc(params, sep_line, width,
+                                                           num_comp, cmyk_map, num_order,
+                                                           tfdev);
+                    break;
+                case 1:
+                    build_cmyk_raster_line_fromplanar_1bpc(params, sep_line, width,
+                                                           num_comp, cmyk_map, num_order,
+                                                           tfdev);
+                    break;
                 }
+                TIFFWriteScanline(tfdev->tiff_comp, (tdata_t)sep_line, y, 0);
             }
 cleanup:
             if (num_order > 0) {
@@ -2034,8 +2322,7 @@ cleanup:
             }
         }
 
-        if (dst_bpc == 8)
-            TIFFWriteDirectory(tfdev->tiff_comp);
+        TIFFWriteDirectory(tfdev->tiff_comp);
         if (fmt) {
             code = tiffsep_close_comp_file(tfdev, pdev->fname);
         }
@@ -2124,9 +2411,9 @@ tiffsep1_print_page(gx_device_printer * pdev, FILE * file)
                     true, true, &(tfdev->sep_file[comp_num]));
             if (code < 0)
                 return code;
-            tfdev->tiff[comp_num] = tiff_from_filep(name,
+            tfdev->tiff[comp_num] = tiff_from_filep(pdev, name,
                                                     tfdev->sep_file[comp_num],
-                                                    tfdev->BigEndian);
+                                                    tfdev->BigEndian, tfdev->UseBigTIFF);
             if (!tfdev->tiff[comp_num])
                 return_error(gs_error_ioerror);
         }
@@ -2144,7 +2431,6 @@ tiffsep1_print_page(gx_device_printer * pdev, FILE * file)
 
 
     {   /* Get the expanded contone line, halftone and write out the dithered separations */
-        int raster = gdev_prn_raster(pdev);
         byte *planes[GS_CLIENT_COLOR_MAX_COMPONENTS];
         int width = tfdev->width;
         int raster_plane = bitmap_raster(width * 8);
@@ -2296,7 +2582,7 @@ cleanup:
      * If we have any non encodable pixels then signal an error.
      */
     if (non_encodable_count) {
-        dlprintf1("WARNING:  Non encodable pixels = %d\n", non_encodable_count);
+        dmlprintf1(pdev->memory, "WARNING:  Non encodable pixels = %d\n", non_encodable_count);
         return_error(gs_error_rangecheck);
     }
 

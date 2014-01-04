@@ -36,6 +36,7 @@ gs_lib_ctx_get_real_stdio(FILE **in, FILE **out, FILE **err)
 #include "gslibctx.h"
 #include "gsmemory.h"
 
+#ifndef GS_THREADSAFE
 static gs_memory_t *mem_err_print = NULL;
 
 gs_memory_t *
@@ -43,6 +44,7 @@ gs_lib_ctx_get_non_gc_memory_t()
 {
     return mem_err_print ? mem_err_print->non_gc_memory : NULL;
 }
+#endif
 
 /*  This sets the directory to prepend to the ICC profile names specified for
     defaultgray, defaultrgb, defaultcmyk, proofing, linking, named color and device */
@@ -76,7 +78,6 @@ gs_lib_ctx_set_icc_directory(const gs_memory_t *mem_gc, const char* pname,
     }
 }
 
-
 int gs_lib_ctx_init( gs_memory_t *mem )
 {
     gs_lib_ctx_t *pio = 0;
@@ -84,15 +85,16 @@ int gs_lib_ctx_init( gs_memory_t *mem )
     if ( mem == 0 )
         return -1;  /* assert mem != 0 */
 
+#ifndef GS_THREADSAFE
     mem_err_print = mem;
+#endif
 
     if (mem->gs_lib_ctx) /* one time initialization */
         return 0;
 
-    pio = mem->gs_lib_ctx =
-        (gs_lib_ctx_t*)gs_alloc_bytes_immovable(mem,
-                                                sizeof(gs_lib_ctx_t),
-                                                "gs_lib_ctx_init");
+    pio = (gs_lib_ctx_t*)gs_alloc_bytes_immovable(mem,
+                                                  sizeof(gs_lib_ctx_t),
+                                                  "gs_lib_ctx_init");
     if( pio == 0 )
         return -1;
 
@@ -106,14 +108,30 @@ int gs_lib_ctx_init( gs_memory_t *mem )
     /* id's 1 through 4 are reserved for Device color spaces; see gscspace.h */
     pio->gs_next_id           = 5;  /* this implies that each thread has its own complete state */
 
+    /* Need to set this before calling gs_lib_ctx_set_icc_directory. */
+    mem->gs_lib_ctx = pio;
     /* Initialize our default ICCProfilesDir */
     pio->profiledir = NULL;
     pio->profiledir_len = 0;
     gs_lib_ctx_set_icc_directory(mem, DEFAULT_DIR_ICC, strlen(DEFAULT_DIR_ICC));
+
+    /* Initialise the underlying CMS. */
+    if (gscms_create(mem)) {
+        gs_free_object(mem, pio, "gsicc_set_icc_directory");
+        mem->gs_lib_ctx = NULL;
+        return -1;
+    }
  
     gp_get_realtime(pio->real_time_0);
 
     return 0;
+}
+
+void gs_lib_ctx_fin( gs_memory_t *mem )
+{
+    if (!mem || !mem->gs_lib_ctx)
+        return;
+    gscms_destroy(mem);
 }
 
 gs_lib_ctx_t *gs_lib_ctx_get_interp_instance(const gs_memory_t *mem)
@@ -121,6 +139,20 @@ gs_lib_ctx_t *gs_lib_ctx_get_interp_instance(const gs_memory_t *mem)
     if (mem == NULL)
         return NULL;
     return mem->gs_lib_ctx;
+}
+
+void *gs_lib_ctx_get_cms_context( const gs_memory_t *mem )
+{
+    if (mem == NULL)
+        return NULL;
+    return mem->gs_lib_ctx->cms_context;
+}
+
+void gs_lib_ctx_set_cms_context( const gs_memory_t *mem, void *cms_context )
+{
+    if (mem == NULL)
+        return;
+    mem->gs_lib_ctx->cms_context = cms_context;
 }
 
 /* Provide a single point for all "C" stdout and stderr.
@@ -150,10 +182,12 @@ int outwrite(const gs_memory_t *mem, const char *str, int len)
     return code;
 }
 
+#ifndef GS_THREADSAFE
 int errwrite_nomem(const char *str, int len)
 {
     return errwrite(mem_err_print, str, len);
 }
+#endif
 
 int errwrite(const gs_memory_t *mem, const char *str, int len)
 {
@@ -182,10 +216,13 @@ void outflush(const gs_memory_t *mem)
         fflush(mem->gs_lib_ctx->fstdout);
 }
 
+#ifndef GS_THREADSAFE
 void errflush_nomem(void)
 {
     errflush(mem_err_print);
 }
+#endif
+
 void errflush(const gs_memory_t *mem)
 {
     if (!mem->gs_lib_ctx->stderr_fn)

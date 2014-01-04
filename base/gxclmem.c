@@ -20,6 +20,10 @@
 #include "gserrors.h"
 #include "gxclmem.h"
 
+#ifdef PACIFY_VALGRIND
+#include <valgrind/helgrind.h>
+#endif
+
 /*
  * Based on: memfile.c        Version: 1.4 3/21/95 14:59:33 by Ray Johnston.
  * Copyright assigned to Aladdin Enterprises.
@@ -708,7 +712,7 @@ memfile_next_blk(MEMFILE * f)
 
         /* check if need to start compressing                             */
         if (NEED_TO_COMPRESS(f)) {
-            if_debug0(':', "[:]Beginning compression\n");
+            if_debug0m(':', f->memory, "[:]Beginning compression\n");
             /* compress the entire file up to this point                   */
             if (!f->compressor_initialized) {
                 int code = 0;
@@ -890,8 +894,8 @@ memfile_get_pdata(MEMFILE * f)
             }
             f->raw_tail->fwd = NULL;
             num_raw_buffers = i + 1;    /* if MALLOC failed, then OK    */
-            if_debug1(':', "[:]Number of raw buffers allocated=%d\n",
-                      num_raw_buffers);
+            if_debug1m(':', f->memory, "[:]Number of raw buffers allocated=%d\n",
+                       num_raw_buffers);
             if (f->decompress_state->templat->init != 0)
                 code = (*f->decompress_state->templat->init)
                     (f->decompress_state);
@@ -1125,18 +1129,18 @@ memfile_free_mem(MEMFILE * f)
     /* output some diagnostics about the effectiveness                   */
     if (tot_raw > 100) {
         if (tot_raw > 0xFFFFFFFF)
-            if_debug4(':', "[:]tot_raw=%lu%0lu, tot_compressed=%lu%0lu\n",
-                      tot_raw >> 32, tot_raw & 0xFFFFFFFF,
-                      tot_compressed >> 32, tot_compressed & 0xFFFFFFFF);
+            if_debug4m(':', f->memory, "[:]tot_raw=%lu%0lu, tot_compressed=%lu%0lu\n",
+                       tot_raw >> 32, tot_raw & 0xFFFFFFFF,
+                       tot_compressed >> 32, tot_compressed & 0xFFFFFFFF);
          else
-            if_debug2(':', "[:]tot_raw=%lu, tot_compressed=%lu\n",
-                      tot_raw, tot_compressed);
+            if_debug2m(':', f->memory, "[:]tot_raw=%lu, tot_compressed=%lu\n",
+                       tot_raw, tot_compressed);
     }
     if (tot_cache_hits != 0) {
-        if_debug3(':', "[:]Cache hits=%lu, cache misses=%lu, swapouts=%lu\n",
-                 tot_cache_hits,
-                 (long)(tot_cache_miss - (f->log_length / MEMFILE_DATA_SIZE)),
-                 tot_swap_out);
+        if_debug3m(':', f->memory, "[:]Cache hits=%lu, cache misses=%lu, swapouts=%lu\n",
+                   tot_cache_hits,
+                   (long)(tot_cache_miss - (f->log_length / MEMFILE_DATA_SIZE)),
+                   tot_swap_out);
     }
     tot_raw = 0;
     tot_compressed = 0;
@@ -1262,6 +1266,9 @@ init_proc(gs_gxclmem_init);
 int
 gs_gxclmem_init(gs_memory_t *mem)
 {
+#ifdef PACIFY_VALGRIND
+    VALGRIND_HG_DISABLE_CHECKING(&clist_io_procs_memory_global, sizeof(clist_io_procs_memory_global));
+#endif
     clist_io_procs_memory_global = &clist_io_procs_memory;
     return 0;
 }

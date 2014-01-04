@@ -87,7 +87,7 @@ gx_concrete_space_Separation(const gs_color_space * pcs,
      * Verify that the color space and imager state info match.
      */
     if (pcs->id != pis->color_component_map.cspace_id)
-        dprintf("gx_concretze_space_Separation: color space id mismatch");
+        dmprintf(pis->memory, "gx_concretze_space_Separation: color space id mismatch");
 #endif
 
     /*
@@ -124,16 +124,18 @@ gx_install_Separation(gs_color_space * pcs, gs_state * pgs)
        return code;
     gs_currentcolorspace_inline(pgs)->params.separation.use_alt_cspace =
         using_alt_color_space(pgs);
-    if (gs_currentcolorspace_inline(pgs)->params.separation.use_alt_cspace)
+    if (gs_currentcolorspace_inline(pgs)->params.separation.use_alt_cspace) {
         code = (pcs->base_space->type->install_cspace)
             (pcs->base_space, pgs);
-    /*
-     * Give the device an opportunity to capture equivalent colors for any
-     * spot colors which might be present in the color space.
-     */
-    if (code >= 0)
-        code = dev_proc(pgs->device, update_spot_equivalent_colors)
-                                                        (pgs->device, pgs);
+    } else {
+        /*
+         * Give the device an opportunity to capture equivalent colors for any
+         * spot colors which might be present in the color space.
+         */
+        if (code >= 0)
+            code = dev_proc(pgs->device, update_spot_equivalent_colors)
+                                                            (pgs->device, pgs);
+    }
     return code;
 }
 
@@ -142,9 +144,15 @@ static int
 gx_set_overprint_Separation(const gs_color_space * pcs, gs_state * pgs)
 {
     gs_devicen_color_map *  pcmap = &pgs->color_component_map;
-
+    gx_device *dev = pgs->device;
+    cmm_dev_profile_t *dev_profile;
+    
+    dev_proc(dev, get_profile)(dev, &(dev_profile));
     if (pcmap->use_alt_cspace)
-        return gx_spot_colors_set_overprint( pcs->base_space, pgs );
+        if (dev_profile->sim_overprint)
+            return gx_simulated_set_overprint(pcs->base_space, pgs);
+        else
+            return gx_spot_colors_set_overprint(pcs->base_space, pgs);
     else {
         gs_overprint_params_t   params;
 
@@ -154,6 +162,7 @@ gx_set_overprint_Separation(const gs_color_space * pcs, gs_state * pgs)
             params.retain_spot_comps = false;
             params.drawn_comps = 0;
             params.k_value = 0;
+            params.blendspot = false;
             if (pcs->params.separation.sep_type != SEP_NONE) {
                 int     mcomp = pcmap->color_map[0];
 
@@ -310,6 +319,7 @@ gx_concretize_Separation(const gs_client_color *pc, const gs_color_space *pcs,
     bool is_lab;
     int k;
     int num_des_comps = dev->color_info.num_components;
+    gsicc_namedcolor_t named_color;
 
     if (pcs->params.separation.sep_type == SEP_OTHER &&
         pcs->params.separation.use_alt_cspace) {
@@ -326,15 +336,20 @@ gx_concretize_Separation(const gs_client_color *pc, const gs_color_space *pcs,
             gsicc_rendering_param_t rendering_params;
 
             /* Define the rendering intents. */
-            rendering_params.black_point_comp = BP_ON;
-            rendering_params.graphics_type_tag = GS_PATH_TAG;
+            rendering_params.black_point_comp = pis->blackptcomp;
+            rendering_params.graphics_type_tag = dev->graphics_type_tag;
+            rendering_params.override_icc = false;
+            rendering_params.preserve_black = gsBKPRESNOTSPECIFIED;
             rendering_params.rendering_intent = pis->renderingintent;
-
+            rendering_params.cmm = gsCMM_DEFAULT;
             pcs->params.separation.get_colorname_string(pis->memory, name,
                                                 &pname, &name_size);
-            code = gsicc_transform_named_color(pc->paint.values[0], pname,
-                            name_size, device_values, pis, dev, NULL,
-                            &rendering_params);
+            /* Make the name structure and initialized it */
+            named_color.colorant_name = (char*) pname;
+            named_color.name_size = name_size;
+            code = gsicc_transform_named_color(pc->paint.values, &named_color,
+                                               1, device_values, pis, dev, NULL,
+                                               &rendering_params);
             if (code == 0) {
                 for (k = 0; k < num_des_comps; k++){
                     pconc[k] = float2frac(((float) device_values[k])/65535.0);
@@ -355,6 +370,7 @@ gx_concretize_Separation(const gs_client_color *pc, const gs_color_space *pcs,
              pis, pcs->params.separation.map->tint_transform_data);
         if (code < 0)
             return code;
+        (*pacs->type->restrict_color)(&cc, pacs);
         /* First check if this was PS based. */
         if (gs_color_space_is_PSCIE(pacs)) {
             /* If we have not yet create the profile do that now */
@@ -389,7 +405,7 @@ gx_remap_concrete_Separation(const frac * pconc,  const gs_color_space * pcs,
      * Verify that the color space and imager state info match.
      */
     if (pcs->id != pis->color_component_map.cspace_id)
-        dprintf("gx_remap_concrete_Separation: color space id mismatch");
+        dmprintf(pis->memory, "gx_remap_concrete_Separation: color space id mismatch");
 #endif
 
     if (pis->color_component_map.use_alt_cspace) {

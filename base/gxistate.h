@@ -205,14 +205,20 @@ typedef struct gx_transfer_s {
  */
 #define st_cr_state_num_ptrs 14
 
-typedef struct gs_devicen_color_map_s {
+#ifndef gs_devicen_color_map_DEFINED
+#  define gs_devicen_color_map_DEFINED
+typedef struct gs_devicen_color_map_s gs_devicen_color_map;
+#endif
+
+struct gs_devicen_color_map_s {
     bool use_alt_cspace;
     separation_type sep_type;
     uint num_components;	/* Input - Duplicate of value in gs_device_n_params */
     uint num_colorants;		/* Number of colorants - output */
     gs_id cspace_id;		/* Used to verify color space and map match */
     int color_map[GS_CLIENT_COLOR_MAX_COMPONENTS];
-} gs_devicen_color_map;
+};
+
 
 /* These flags are used to keep track of qQ
    combinations surrounding a graphic state
@@ -251,7 +257,6 @@ typedef struct gs_xstate_trans_flags {
         gs_id soft_mask_id;\
         bool text_knockout;\
         uint text_rendering_mode;\
-        gs_transparency_state_t *transparency_stack;\
         bool has_transparency;   /* used to keep from doing shading fills in device color space */\
         gx_device *trans_device;  /* trans device has all mappings to group color space */\
         bool overprint;\
@@ -267,6 +272,7 @@ typedef struct gs_xstate_trans_flags {
         bool have_pattern_streams;\
         float smoothness;\
         int renderingintent; /* See gsstate.c */\
+        bool blackptcomp;\
         gsicc_manager_t *icc_manager; /* ICC color manager, profile */\
         gsicc_link_cache_t *icc_link_cache; /* ICC linked transforms */\
         gsicc_profile_cache_t *icc_profile_cache;  /* ICC profiles from PS. */\
@@ -275,7 +281,7 @@ typedef struct gs_xstate_trans_flags {
           (*get_cmap_procs)(const gs_imager_state *, const gx_device *);\
         gs_color_rendering_state_common
 #define st_imager_state_num_ptrs\
-  (st_line_params_num_ptrs + st_cr_state_num_ptrs + 6)
+  (st_line_params_num_ptrs + st_cr_state_num_ptrs + 5)
 /* Access macros */
 #define ctm_only(pis) (*(const gs_matrix *)&(pis)->ctm)
 #define ctm_only_writable(pis) (*(gs_matrix *)&(pis)->ctm)
@@ -301,9 +307,9 @@ struct gs_imager_state_s {
    { (float)(scale), 0.0, 0.0, (float)(-(scale)), 0.0, 0.0 },\
   false, {0, 0}, {0, 0}, false, \
   lop_default, gx_max_color_value, BLEND_MODE_Compatible,\
-{ 1.0 }, { 1.0 }, {0, 0}, 0, 0/*false*/, 0, 0, 0, 0, 0/*false*/, 0, 0, 0/*false*/, 0, 0, 1.0,  \
+{ 1.0 }, { 1.0 }, {0, 0}, 0, 0/*false*/, 0, 0, 0, 0/*false*/, 0, 0, 0/*false*/, 0, 0, 1.0,  \
    { fixed_half, fixed_half }, 0/*false*/, 0/*false*/, 0/*false*/, 1.0,\
-  1, 0, 0, 0, INIT_CUSTOM_COLOR_PTR	/* 'Custom color' callback pointer */  \
+  1, 1/* bpt true */, 0, 0, 0, INIT_CUSTOM_COLOR_PTR	/* 'Custom color' callback pointer */  \
   gx_default_get_cmap_procs
 
 /* The imager state structure is public only for subclassing. */

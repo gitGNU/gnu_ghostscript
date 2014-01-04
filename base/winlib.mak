@@ -57,7 +57,11 @@ CUPS_CC=$(CC) $(CFLAGS) -DWIN32
 # Define the platform name.
 
 !ifndef PLATFORM
+!ifdef METRO
+PLATFORM=metro_
+!else
 PLATFORM=mswin32_
+!endif
 !endif
 
 # Define the auxiliary program dependency. We use this to 
@@ -101,7 +105,6 @@ PLATOPT=
 
 # Define conditinal name for UFST bridge :
 !ifdef UFST_ROOT
-UFST_BRIDGE = 1
 UFST_LIB_EXT=.lib
 !endif
 
@@ -132,23 +135,25 @@ BEGINFILES=$(GLGENDIR)\ccf32.tr\
 !include $(GLSRCDIR)\gs.mak
 !include $(GLSRCDIR)\lib.mak
 !include $(GLSRCDIR)\freetype.mak
+!if "$(UFST_BRIDGE)"=="1"
+!include $(UFST_ROOT)\fapiufst.mak
+!endif
 !include $(GLSRCDIR)\jpeg.mak
 # zlib.mak must precede png.mak
 !include $(GLSRCDIR)\zlib.mak
 !include $(GLSRCDIR)\png.mak
 !include $(GLSRCDIR)\tiff.mak
 !include $(GLSRCDIR)\jbig2.mak
-!include $(GLSRCDIR)\jasper.mak
 !include $(GLSRCDIR)\ldf_jb2.mak
 !include $(GLSRCDIR)\lwf_jp2.mak
 !include $(GLSRCDIR)\openjpeg.mak
-!include $(GLSRCDIR)\icclib.mak
 !include $(GLSRCDIR)\$(WHICH_CMS).mak
 !include $(GLSRCDIR)\ijs.mak
 !include $(GLSRCDIR)\lcups.mak
 !include $(GLSRCDIR)\lcupsi.mak
 !include $(GLSRCDIR)\devs.mak
 !include $(GLSRCDIR)\contrib.mak
+!include $(CONTRIBDIR)\contrib.mak
 
 # Define the compilation rule for Windows devices.
 # This requires GL*_ to be defined, so it has to come after lib.mak.
@@ -198,6 +203,17 @@ $(GLOBJ)gp_wpapr.$(OBJ): $(GLSRC)gp_wpapr.c $(AK) $(gp_h)
 $(GLOBJ)gp_stdia.$(OBJ): $(GLSRC)gp_stdia.c $(AK)\
   $(stdio__h) $(time__h) $(unistd__h) $(gx_h) $(gp_h)
 	$(GLCCWIN) $(GLO_)gp_stdia.$(OBJ) $(C_) $(GLSRC)gp_stdia.c
+
+# The Metro platform
+
+metro__=$(GLOBJ)gp_mswin.$(OBJ) $(GLOBJ)gp_wgetv.$(OBJ) $(GLOBJ)gp_wpapr.$(OBJ)\
+  $(GLOBJ)gp_stdia.$(OBJ)
+#$(GLOBJ)gp_wutf8.$(OBJ)
+metro_inc=$(GLD)nosync.dev $(GLD)winplat.dev
+
+$(GLGEN)metro_.dev:  $(metro__) $(ECHOGS_XE) $(metro_inc)
+	$(SETMOD) $(GLGEN)metro_ $(metro__)
+	$(ADDMOD) $(GLGEN)metro_ -include $(metro_inc)
 
 # Define MS-Windows handles (file system) as a separable feature.
 

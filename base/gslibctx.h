@@ -23,6 +23,11 @@
 
 typedef struct name_table_s *name_table_ptr;
 
+#ifndef gs_fapi_server_DEFINED
+#define gs_fapi_server_DEFINED
+typedef struct gs_fapi_server_s gs_fapi_server;
+#endif
+
 #ifndef gs_font_dir_DEFINED
 #  define gs_font_dir_DEFINED
 typedef struct gs_font_dir_s gs_font_dir;
@@ -73,6 +78,8 @@ typedef struct gs_lib_ctx_s
      * and one in the device */
     char *profiledir;               /* Directory used in searching for ICC profiles */
     int profiledir_len;             /* length of directory name (allows for Unicode) */
+    void *cms_context;  /* Opaque context pointer from underlying CMS in use */
+    gs_fapi_server **fapi_servers;
 } gs_lib_ctx_t;
 
 /** initializes and stores itself in the given gs_memory_t pointer.
@@ -81,12 +88,22 @@ typedef struct gs_lib_ctx_s
  */
 int gs_lib_ctx_init( gs_memory_t *mem );
 
+/** Called when the lowest level allocator (the one which the lib_ctx was
+ * initialised under) is about to be destroyed. The lib_ctx should tidy up
+ * after itself. */
+void gs_lib_ctx_fin( gs_memory_t *mem );
+
 gs_lib_ctx_t *gs_lib_ctx_get_interp_instance( const gs_memory_t *mem );
 
+void *gs_lib_ctx_get_cms_context( const gs_memory_t *mem );
+void gs_lib_ctx_set_cms_context( const gs_memory_t *mem, void *cms_context );
+
+#ifndef GS_THREADSAFE
 /* HACK to get at non garbage collection memory pointer
  *
  */
 gs_memory_t * gs_lib_ctx_get_non_gc_memory_t(void);
+#endif
 
 void gs_lib_ctx_set_icc_directory(const gs_memory_t *mem_gc, const char* pname,
                         int dir_namelen);

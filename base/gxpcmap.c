@@ -255,12 +255,14 @@ gx_pattern_accum_alloc(gs_memory_t * mem, gs_memory_t * storage_memory,
     int force_no_clist = 0;
     int max_pattern_bitmap = tdev->MaxPatternBitmap == 0 ? MaxPatternBitmap_DEFAULT :
                                 tdev->MaxPatternBitmap;
+    int ret;
 
-     if (dev_proc(tdev, dev_spec_op)(tdev, gxdso_is_native_planar, NULL, 0)) {
-        pinst->is_planar = true;
-     } else {
+    ret = dev_proc(tdev, dev_spec_op)(tdev, gxdso_is_native_planar, NULL, 0);
+    if (ret > 0) {
+        pinst->is_planar = ret;
+    } else {
         pinst->is_planar = false;
-     }
+    }
     /*
      * If the target device can accumulate a pattern stream and the language
      * client supports high level patterns (ps and pdf only) we don't need a
@@ -287,7 +289,7 @@ gx_pattern_accum_alloc(gs_memory_t * mem, gs_memory_t * storage_memory,
             return 0;
 #ifdef DEBUG
         if (pinst->is_clist)
-            eprintf("not using clist even though clist is requested\n");
+            emprintf(mem, "not using clist even though clist is requested\n");
 #endif
         pinst->is_clist = false;
         gx_device_init((gx_device *)adev,
@@ -379,7 +381,7 @@ gx_pattern_accum_alloc(gs_memory_t * mem, gs_memory_t * storage_memory,
             cwdev->page_uses_transparency = false;
         }
         cwdev->band_params.BandWidth = pinst->size.x;
-        cwdev->band_params.BandHeight = pinst->size.x;
+        cwdev->band_params.BandHeight = pinst->size.y;
         cwdev->band_params.BandBufferSpace = 0;
         cwdev->do_not_open_or_close_bandfiles = false;
         cwdev->bandlist_memory = storage_memory->non_gc_memory;
@@ -498,6 +500,7 @@ pattern_accum_open(gx_device * dev)
                 if (bits == 0)
                     code = gs_note_error(gs_error_VMerror);
                 else {
+                    int depth;
                     gs_make_mem_device(bits,
                             gdev_mem_device_for_bits(padev->color_info.depth),
                                        mem, -1, target);
@@ -505,11 +508,11 @@ pattern_accum_open(gx_device * dev)
 #undef PDSET
                     bits->color_info = padev->color_info;
                     bits->bitmap_memory = mem;
-                    if (dev_proc(target, dev_spec_op)(target, gxdso_is_native_planar, NULL, 0))
+                    depth = dev_proc(target, dev_spec_op)(target, gxdso_is_native_planar, NULL, 0);
+                    if (depth > 0)
                     {
                         gx_render_plane_t planes[GX_DEVICE_COLOR_MAX_COMPONENTS];
                         int num_comp = padev->color_info.num_components;
-                        int depth = padev->color_info.depth/num_comp;
                         int i;
                         for (i = 0; i < num_comp; i++)
                         {
@@ -604,10 +607,10 @@ pattern_accum_fill_rectangle_hl_color(gx_device *dev, const gs_fixed_rect *rect,
     if (padev->mask) {
         int x, y, w, h;
 
-        x = rect->p.x;
-        y = rect->p.y;
-        w = rect->q.x - x;
-        h = rect->q.y - y;
+        x = fixed2int(rect->p.x);
+        y = fixed2int(rect->p.y);
+        w = fixed2int(rect->q.x) - x;
+        h = fixed2int(rect->q.y) - y;
 
         return (*dev_proc(padev->mask, fill_rectangle))
             ((gx_device *) padev->mask, x, y, w, h, (gx_color_index) 1);
@@ -861,7 +864,7 @@ gx_pattern_cache_free_entry(gx_pattern_cache * pcache, gx_color_tile * ctile)
                 ctile->ttrans->fill_trans_buffer = NULL;
             } else {
                 dev_proc(ctile->ttrans->pdev14, close_device)((gx_device *)ctile->ttrans->pdev14);
-                temp_device = ctile->ttrans->pdev14;
+                temp_device = (gx_device *)(ctile->ttrans->pdev14);
                 gx_device_retain(temp_device, false);
                 rc_decrement(temp_device,"gx_pattern_cache_free_entry");
                 ctile->ttrans->pdev14 = NULL;
@@ -1141,7 +1144,7 @@ dump_raw_pattern(int height, int width, int n_chan, int depth,
     byte *curr_ptr = Buffer;
     int plane_offset;
 
-    is_planar = dev_proc(mdev, dev_spec_op)(mdev, gxdso_is_native_planar, NULL, 0);
+    is_planar = dev_proc(mdev, dev_spec_op)(mdev, gxdso_is_native_planar, NULL, 0) > 0;
     max_bands = ( n_chan < 57 ? n_chan : 56);   /* Photoshop handles at most 56 bands */
     if (is_planar) {
         sprintf(full_file_name,"%d)PATTERN_PLANE_%dx%dx%d.raw",global_pat_index,
@@ -1307,7 +1310,7 @@ gx_pattern_load(gx_device_color * pdc, const gs_imager_state * pis,
         return 0;
 
     /* Get enough space in the cache for this pattern (estimated if it is a clist) */
-    gx_pattern_cache_ensure_space(pis, gx_pattern_size_estimate(pinst, has_tags));
+    gx_pattern_cache_ensure_space((gs_imager_state *)pis, gx_pattern_size_estimate(pinst, has_tags));
     /*
      * Note that adev is an internal device, so it will be freed when the
      * last reference to it from a graphics state is deleted.
@@ -1328,7 +1331,7 @@ gx_pattern_load(gx_device_color * pdc, const gs_imager_state * pis,
         saved->pattern_cache = pis->pattern_cache;
     gs_setdevice_no_init(saved, (gx_device *)adev);
     if (pinst->templat.uses_transparency) {
-        if_debug0('v', "gx_pattern_load: pushing the pdf14 compositor device into this graphics state\n");
+        if_debug0m('v', mem, "gx_pattern_load: pushing the pdf14 compositor device into this graphics state\n");
         if ((code = gs_push_pdf14trans_device(saved, true)) < 0)
             return code;
         saved->device->is_open = true;
@@ -1367,7 +1370,7 @@ gx_pattern_load(gx_device_color * pdc, const gs_imager_state * pis,
         return code;
     }
     if (pinst->templat.uses_transparency) {
-        /* if_debug0('v', "gx_pattern_load: popping the pdf14 compositor device from this graphics state\n");
+        /* if_debug0m('v', saved->memory, "gx_pattern_load: popping the pdf14 compositor device from this graphics state\n");
         if ((code = gs_pop_pdf14trans_device(saved, true)) < 0)
             return code; */
             if (pinst->is_clist) {
@@ -1393,7 +1396,7 @@ gx_pattern_load(gx_device_color * pdc, const gs_imager_state * pis,
                 adev, &ctile);
     if (code >= 0) {
         if (!gx_pattern_cache_lookup(pdc, pis, dev, select)) {
-            lprintf("Pattern cache lookup failed after insertion!\n");
+            mlprintf(mem, "Pattern cache lookup failed after insertion!\n");
             code = gs_note_error(gs_error_Fatal);
         }
     }
@@ -1402,10 +1405,12 @@ gx_pattern_load(gx_device_color * pdc, const gs_imager_state * pis,
         gx_device_pattern_accum *pdev = (gx_device_pattern_accum *)adev;
 
         if (pdev->mask)
-            debug_dump_bitmap(pdev->mask->base, pdev->mask->raster,
+            debug_dump_bitmap(pdev->memory,
+                              pdev->mask->base, pdev->mask->raster,
                               pdev->mask->height, "[B]Pattern mask");
         if (pdev->bits)
-            debug_dump_bitmap(((gx_device_memory *) pdev->target)->base,
+            debug_dump_bitmap(pdev->memory,
+                              ((gx_device_memory *) pdev->target)->base,
                               ((gx_device_memory *) pdev->target)->raster,
                               pdev->target->height, "[B]Pattern bits");
     }

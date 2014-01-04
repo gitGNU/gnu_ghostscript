@@ -121,8 +121,12 @@ $(GLOBJ)gp_msdll.obj: $(GLSRC)gp_msdll.c $(AK) $(iapi_h)
 
 # Modules for console mode EXEs
 
-OBJC=$(PSOBJ)dwmainc.obj $(PSOBJ)dwdllc.obj $(GLOBJ)gscdefs.obj $(GLOBJ)gp_wgetv.obj \
-$(GLOBJ)dwimg.obj $(DWTRACE) $(GLOBJ)dwreg.obj
+OBJC=$(PSOBJ)dwmainc.obj $(PSOBJ)dwdllc.obj $(GLOBJ)gscdefs.obj\
+!ifdef METRO
+ $(GLOBJ)gp_wgetv.obj \
+!else
+ $(GLOBJ)gp_wgetv.obj $(GLOBJ)dwimg.obj $(DWTRACE) $(GLOBJ)dwreg.obj
+!endif
 
 OBJCNO=$(PSOBJ)dwmainc.obj $(PSOBJ)dwnodllc.obj $(GLOBJ)dwimg.obj $(DWTRACE) $(GLOBJ)dwreg.obj
 
@@ -200,7 +204,7 @@ nsis: $(PSSRC)nsisinst.nsi $(GSCONSOLE_XE) $(GS_ALL) $(GS_XE) $(GSDLL_DLL) $(BIN
 gs$(GS_VERSION)src.zip:
 	-rmdir /s /q gs$(GS_DOT_VERSION)
 	-del temp.zip
-	zip -r -X temp.zip LICENSE doc examples icclib ijs jasper jbig2dec jpeg lib libpng base psi Resource tiff zlib freetype lcms cups -x ".svn/*" -x "*/.svn/*" -x "*/*/.svn/*" -x "*/*/*/.svn/*" -x "*/*/*/*/.svn/*" -x "*/*/*/*/*/.svn/*"
+	zip -r -X temp.zip LICENSE Resource arch base conrib cups doc examples expat freetype iccprofiles ijs jbig2dec jpeg jpegxr lcms lcms2 lib libpng man openjpeg psi tiff toolbin zlib -x ".svn/*" -x "*/.svn/*" -x "*/*/.svn/*" -x "*/*/*/.svn/*" -x "*/*/*/*/.svn/*" -x "*/*/*/*/*/.svn/*"
 	mkdir gs$(GS_DOT_VERSION)
 	cd gs$(GS_DOT_VERSION)
 	unzip -a ../temp.zip

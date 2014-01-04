@@ -35,7 +35,7 @@ set_cinfo_polarity(gx_device * dev, gx_color_polarity_t new_polarity)
 #ifdef DEBUG
     /* sanity check */
     if (new_polarity == GX_CINFO_POLARITY_UNKNOWN) {
-        dprintf("set_cinfo_polarity: illegal operand\n");
+        dmprintf(dev->memory, "set_cinfo_polarity: illegal operand\n");
         return;
     }
 #endif
@@ -544,7 +544,7 @@ gx_device_fill_in_procs(register gx_device * dev)
 #  define CHECK_NON_DEFAULT(proc, default, procname)\
     BEGIN\
         if ( dev_proc(dev, proc) != NULL && dev_proc(dev, proc) != default )\
-            dprintf2("**** Warning: device %s implements obsolete procedure %s\n",\
+            dmprintf2(dev->memory, "**** Warning: device %s implements obsolete procedure %s\n",\
                      dev->dname, procname);\
     END
 #else
@@ -934,6 +934,26 @@ gx_default_dev_spec_op(gx_device *pdev, int dev_spec_op, void *data, int size)
             return (pdev->procs.fill_path == gx_default_fill_path);
         case gxdso_is_std_cmyk_1bit:
             return (pdev->procs.map_cmyk_color == cmyk_1bit_map_cmyk_color);
+        case gxdso_interpolate_antidropout:
+            if ((pdev->color_info.num_components == 1 &&
+                 pdev->color_info.max_gray < 15) ||
+                (pdev->color_info.num_components > 1 &&
+                 pdev->color_info.max_color < 15)) {
+                /* If we are are limited color device (i.e. we are halftoning)
+                 * then use the antidropout interpolators. */
+                return 1;
+            }
+            return 0;
+        case gxdso_interpolate_threshold:
+            if ((pdev->color_info.num_components == 1 &&
+                 pdev->color_info.max_gray < 15) ||
+                (pdev->color_info.num_components > 1 &&
+                 pdev->color_info.max_color < 15)) {
+                /* If we are a limited color device (i.e. we are halftoning)
+                 * then only interpolate if we are upscaling by at least 4 */
+                return 4;
+            }
+            return 0; /* Otherwise no change */
     }
     return gs_error_undefined;
 }

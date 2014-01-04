@@ -1,0 +1,46 @@
+--- openjpeg/libopenjpeg/jp2.c
++++ openjpeg/libopenjpeg/jp2.c
+@@ -1163,30 +1265,23 @@
+ 	for (i = 0; i < image->numcomps; i++) {
+ 		jp2->comps[i].bpcc = image->comps[i].prec - 1 + (image->comps[i].sgnd << 7);
+ 	}
+-
+-	/* Colour Specification box */
+-
+-	if ((image->numcomps == 1 || image->numcomps == 3) && (jp2->bpc != 255)) {
+-		jp2->meth = 1;	/* METH: Enumerated colourspace */
+-	} else {
+-		jp2->meth = 2;	/* METH: Restricted ICC profile */
+-	}
+-	if (jp2->meth == 1) {
+-		if (image->color_space == 1)
+-			jp2->enumcs = 16;	/* sRGB as defined by IEC 61966𣇻 */
+-		else if (image->color_space == 2)
+-			jp2->enumcs = 17;	/* greyscale */
+-		else if (image->color_space == 3)
+-			jp2->enumcs = 18;	/* YUV */
+-	} else {
+-		jp2->enumcs = 0;		/* PROFILE (??) */
+-	}
++	jp2->meth = 1;
++	if (image->color_space == 1)
++		jp2->enumcs = 16;	/* sRGB as defined by IEC 61966-2.1 */
++	else if (image->color_space == 2)
++		jp2->enumcs = 17;	/* greyscale */
++	else if (image->color_space == 3)
++		jp2->enumcs = 18;	/* YUV */
+ 	jp2->precedence = 0;	/* PRECEDENCE */
+ 	jp2->approx = 0;		/* APPROX */
+-
++	
++	jp2->jpip_on = parameters->jpip_on;
+ }
+ 
+-bool jp2_encode(opj_jp2_t *jp2, opj_cio_t *cio, opj_image_t *image, opj_codestream_info_t *cstr_info) {
++opj_bool opj_jp2_encode(opj_jp2_t *jp2, opj_cio_t *cio, opj_image_t *image, opj_codestream_info_t *cstr_info) {
++
++	int pos_iptr, pos_cidx, pos_jp2c, len_jp2c, len_cidx, end_pos, pos_fidx, len_fidx;
++	pos_jp2c = pos_iptr = -1; /* remove a warning */
+ 
+ 	/* JP2 encoding */
+ 

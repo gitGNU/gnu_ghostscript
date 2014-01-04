@@ -52,6 +52,10 @@
 #include "idisp.h"              /* for setting display device callback */
 #include "iplugin.h"
 
+#ifdef PACIFY_VALGRIND
+#include <valgrind/helgrind.h>
+#endif
+
 /* ------ Exported data ------ */
 
 /** using backpointers retrieve minst from any memory pointer
@@ -136,11 +140,14 @@ gs_main_init0(gs_main_instance * minst, FILE * in, FILE * out, FILE * err,
 
     /* Initialize the imager. */
 #   ifndef PSI_INCLUDED
-       /* Reset debugging flags */
-       memset(gs_debug, 0, 128);
-       gs_log_errors = 0;  /* gs_debug['#'] = 0 */
+    /* Reset debugging flags */
+#ifdef PACIFY_VALGRIND
+    VALGRIND_HG_DISABLE_CHECKING(gs_debug, 128);
+#endif
+    memset(gs_debug, 0, 128);
+    gs_log_errors = 0;  /* gs_debug['#'] = 0 */
 #   else
-       /* plmain settings remain in effect */
+    /* plmain settings remain in effect */
 #   endif
     gp_get_realtime(minst->base_time);
 
@@ -212,19 +219,6 @@ gs_main_init1(gs_main_instance * minst)
     return 0;
 }
 
-/* Initialization to be done before running any files. */
-static void
-init2_make_string_array(i_ctx_t *i_ctx_p, const ref * srefs, const char *aname)
-{
-    const ref *ifp = srefs;
-    ref ifa;
-
-    for (; ifp->value.bytes != 0; ifp++);
-    make_tasv(&ifa, t_array, a_readonly | avm_foreign,
-              ifp - srefs, const_refs, srefs);
-    initial_enter_name(aname, &ifa);
-}
-
 /*
  * Invoke the interpreter. This layer doesn't do much (previously stdio
  * callouts were handled here instead of in the stream processing.
@@ -253,7 +247,7 @@ int gs_main_init2aux(gs_main_instance * minst) {
 
     if (minst->init_done < 2) {
         int code, exit_code;
-        ref error_object;
+        ref error_object, ifa;
 
         code = zop_init(i_ctx_p);
         if (code < 0)
@@ -263,9 +257,17 @@ int gs_main_init2aux(gs_main_instance * minst) {
             return code;
 
         /* Set up the array of additional initialization files. */
-        init2_make_string_array(i_ctx_p, gs_init_file_array, "INITFILES");
+        make_const_string(&ifa, a_readonly | avm_foreign, gs_init_files_sizeof - 2, gs_init_files);
+        code = initial_enter_name("INITFILES", &ifa);
+        if (code < 0)
+            return code;
+
         /* Set up the array of emulator names. */
-        init2_make_string_array(i_ctx_p, gs_emulator_name_array, "EMULATORS");
+        make_const_string(&ifa, a_readonly | avm_foreign, gs_emulators_sizeof - 2, gs_emulators);
+        code = initial_enter_name("EMULATORS", &ifa);
+        if (code < 0)
+            return code;
+
         /* Pass the search path. */
         code = initial_enter_name("LIBPATH", &minst->lib_path.list);
         if (code < 0)
@@ -872,7 +874,7 @@ gs_main_finit(gs_main_instance * minst, int exit_status, int code)
     i_ctx_p = minst->i_ctx_p;		/* get current interp context */
     if (gs_debug_c(':')) {
         print_resource_usage(minst, &gs_imemory, "Final");
-        dprintf1("%% Exiting instance 0x%p\n", minst);
+        dmprintf1(minst->heap, "%% Exiting instance 0x%p\n", minst);
     }
     /* Do the equivalent of a restore "past the bottom". */
     /* This will release all memory, close all open files, etc. */
@@ -964,10 +966,10 @@ print_resource_usage(const gs_main_instance * minst, gs_dual_memory_t * dmem,
             }
         }
     }
-    dprintf4("%% %s time = %g, memory allocated = %lu, used = %lu\n",
-             msg, utime[0] - minst->base_time[0] +
-             (utime[1] - minst->base_time[1]) / 1000000000.0,
-             allocated, used);
+    dmprintf4(minst->heap, "%% %s time = %g, memory allocated = %lu, used = %lu\n",
+              msg, utime[0] - minst->base_time[0] +
+              (utime[1] - minst->base_time[1]) / 1000000000.0,
+              allocated, used);
 }
 
 /* Dump the stacks after interpretation */
@@ -977,11 +979,11 @@ gs_main_dump_stack(gs_main_instance *minst, int code, ref * perror_object)
     i_ctx_t *i_ctx_p = minst->i_ctx_p;
 
     zflush(i_ctx_p);            /* force out buffered output */
-    dprintf1("\nUnexpected interpreter error %d.\n", code);
+    dmprintf1(minst->heap, "\nUnexpected interpreter error %d.\n", code);
     if (perror_object != 0) {
-        dputs("Error object: ");
+        dmputs(minst->heap, "Error object: ");
         debug_print_ref(minst->heap, perror_object);
-        dputc('\n');
+        dmputc(minst->heap, '\n');
     }
     debug_dump_stack(minst->heap, &o_stack, "Operand stack");
     debug_dump_stack(minst->heap, &e_stack, "Execution stack");

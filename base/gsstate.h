@@ -57,6 +57,9 @@ int gs_do_set_overprint(gs_state *);
 int gs_currentrenderingintent(const gs_state *);
 int gs_setrenderingintent(gs_state *, int);
 
+int gs_currentblackptcomp(const gs_state *);
+int gs_setblackptcomp(gs_state *, int);
+
 int gs_initgraphics(gs_state *);
 
 bool gs_currentcpsimode(const gs_memory_t *);
@@ -92,7 +95,7 @@ void gs_settextrenderingmode(gs_state * pgs, uint trm);
 uint gs_currenttextrenderingmode(const gs_state * pgs);
 #include "gscpm.h"
 gs_in_cache_device_t gs_incachedevice(const gs_state *);
-void gs_sethpglpathmode(gs_state *, int);
-int gs_currenthpglpathmode(const gs_state *);
+void gs_sethpglpathmode(gs_state *, bool);
+bool gs_currenthpglpathmode(const gs_state *);
 
 #endif /* gsstate_INCLUDED */

@@ -128,6 +128,8 @@ GS_INIT=gs_init.ps
 
 # Choose generic configuration options.
 
+TARGET_ARCH_FILE=@ARCH_CONF_HEADER@
+
 # -DDEBUG
 #	includes debugging features (-Z switch) in the code.
 #	  Code runs substantially slower even if no debugging switches
@@ -160,7 +162,7 @@ GENOPT=
 # -DHAVE_SSE2
 #       use sse2 intrinsics
 
-CAPOPT= @HAVE_MKSTEMP@ @HAVE_FILE64@ @HAVE_MKSTEMP64@ @HAVE_FONTCONFIG@ @HAVE_LIBIDN@ @HAVE_SETLOCALE@ @HAVE_SSE2@ @HAVE_DBUS@ @HAVE_BSWAP32@ @HAVE_BYTESWAP_H@ @HAVE_STRERROR@
+CAPOPT= @HAVE_MKSTEMP@ @HAVE_FILE64@ @HAVE_FSEEKO@ @HAVE_MKSTEMP64@ @HAVE_FONTCONFIG@ @HAVE_LIBIDN@ @HAVE_SETLOCALE@ @HAVE_SSE2@ @HAVE_DBUS@ @HAVE_BSWAP32@ @HAVE_BYTESWAP_H@ @HAVE_STRERROR@
 
 # Define the name of the executable file.
 
@@ -279,17 +281,12 @@ JPX_CFLAGS=@JPX_AUTOCONF_CFLAGS@
 #JPXSRCDIR=openjpeg
 #JPX_CFLAGS=-DUSE_OPENJPEG_JP2 -DOPJ_STATIC
 
-# Define the directory where the icclib source are stored.
-# See icclib.mak for more information
-
-ICCSRCDIR=icclib
-
 # options for lcms color management library
 SHARE_LCMS=@SHARELCMS@
 LCMSSRCDIR=@LCMSDIR@
 LCMS2SRCDIR=@LCMS2DIR@
 LCMS_CFLAGS=@LCMS_ENDIAN@
-LCMS2_CFLAGS=@LCMS2_ENDIAN@
+LCMS2_CFLAGS=@LCMS2_ENDIAN@ @SQRTF_SUBST@
 
 # Which CMS are we using?
 # Options are currently lcms or lcms2
@@ -395,6 +392,7 @@ LDFLAGS=@LDFLAGS@ $(AC_LDFLAGS) $(XLDFLAGS)
 # (Libraries required by individual drivers are handled automatically.)
 
 EXTRALIBS=$(XTRALIBS) @LIBS@ @DYNAMIC_LIBS@ @FONTCONFIG_LIBS@ @FT_LIBS@
+AUXEXTRALIBS=$(XTRALIBS) @LIBS@ @DYNAMIC_LIBS@ @FONTCONFIG_LIBS@ @FT_LIBS@ @AUX_SHARED_ZLIB@
 
 # Define the standard libraries to search at the end of linking.
 # Most platforms require -lpthread for the POSIX threads library;
@@ -460,7 +458,7 @@ DYNANIC_LIB_EXT =       @DYNANIC_LIB_EXT@
 
 # Choose the language feature(s) to include.  See gs.mak for details.
 
-FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)epsf.dev $(GLD)pipe.dev $(GLD)gsnogc.dev $(GLD)htxlib.dev $(PSD)fapi.dev @JBIG2DEVS@ @JPXDEVS@ @UTF8DEVS@
+FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)epsf.dev $(GLD)pipe.dev $(GLD)gsnogc.dev $(GLD)htxlib.dev @JBIG2DEVS@ @JPXDEVS@ @UTF8DEVS@
 #FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev
 #FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)rasterop.dev $(GLD)pipe.dev
 # The following is strictly for testing.
@@ -572,7 +570,7 @@ AK=
 
 CCFLAGS=$(GENOPT) $(CAPOPT) $(CFLAGS)
 CC_=$(CC) $(CCFLAGS)
-CCAUX_=$(CCAUX) $(CFLAGS) @AUX_SHARED_ZLIB@
+CCAUX_=$(CCAUX) $(CFLAGS)
 CC_LEAF=$(CC_)
 # note gcc can't use -fomit-frame-pointer with -pg.
 CC_LEAF_PG=$(CC_)
@@ -589,7 +587,7 @@ FOR_MAC=@SO_FOR_MAC@
 # the line. Requires GNU make to make it an 'order only' dependency
 # MAKEDIRSTOP = the topmost dependency - set this if you can't set MAKEDIRS
 
-MAKEDIRS=| directories
+MAKEDIRS=@ORDER_ONLY@ directories
 MAKEDIRSTOP=
 
 # ---------------- End of platform-specific section ---------------- #
@@ -602,17 +600,16 @@ include $(PSSRCDIR)/psromfs.mak
 include $(GLSRCDIR)/lib.mak
 include $(PSSRCDIR)/int.mak
 include $(GLSRCDIR)/freetype.mak
+include @FAPIUFST_MAK@
 include $(GLSRCDIR)/jpeg.mak
 # zlib.mak must precede png.mak
 include $(GLSRCDIR)/zlib.mak
 include $(GLSRCDIR)/png.mak
 include $(GLSRCDIR)/tiff.mak
 include $(GLSRCDIR)/jbig2.mak
-include $(GLSRCDIR)/jasper.mak
 include $(GLSRCDIR)/ldf_jb2.mak
 include $(GLSRCDIR)/lwf_jp2.mak
 include $(GLSRCDIR)/openjpeg.mak
-include $(GLSRCDIR)/icclib.mak
 include $(GLSRCDIR)/$(WHICH_CMS).mak
 include $(GLSRCDIR)/ijs.mak
 @LCUPSINCLUDE@

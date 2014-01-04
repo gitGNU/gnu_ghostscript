@@ -50,33 +50,33 @@ trace_copy_rop(const char *cname, gx_device * dev,
                int x, int y, int width, int height,
                int phase_x, int phase_y, gs_logical_operation_t lop)
 {
-    dlprintf4("%s: dev=0x%lx(%s) depth=%d\n",
-              cname, (ulong) dev, dev->dname, dev->color_info.depth);
-    dlprintf4("  source data=0x%lx x=%d raster=%u id=%lu colors=",
-              (ulong) sdata, sourcex, sraster, (ulong) id);
+    dmlprintf4(dev->memory, "%s: dev=0x%lx(%s) depth=%d\n",
+               cname, (ulong) dev, dev->dname, dev->color_info.depth);
+    dmlprintf4(dev->memory, "  source data=0x%lx x=%d raster=%u id=%lu colors=",
+               (ulong) sdata, sourcex, sraster, (ulong) id);
     if (scolors)
-        dprintf2("(%lu,%lu);\n", scolors[0], scolors[1]);
+        dmprintf2(dev->memory, "(%lu,%lu);\n", scolors[0], scolors[1]);
     else
-        dputs("none;\n");
+        dmputs(dev->memory, "none;\n");
     if (textures)
-        dlprintf8("  textures=0x%lx size=%dx%d(%dx%d) raster=%u shift=%d(%d)",
+        dmlprintf8(dev->memory, "  textures=0x%lx size=%dx%d(%dx%d) raster=%u shift=%d(%d)",
                   (ulong) textures, textures->size.x, textures->size.y,
                   textures->rep_width, textures->rep_height,
                   textures->raster, textures->shift, textures->rep_shift);
     else
-        dlputs("  textures=none");
+        dmlputs(dev->memory, "  textures=none");
     if (tcolors)
-        dprintf2(" colors=(%lu,%lu)\n", tcolors[0], tcolors[1]);
+        dmprintf2(dev->memory, " colors=(%lu,%lu)\n", tcolors[0], tcolors[1]);
     else
-        dputs(" colors=none\n");
-    dlprintf7("  rect=(%d,%d),(%d,%d) phase=(%d,%d) op=0x%x\n",
+        dmputs(dev->memory, " colors=none\n");
+    dmlprintf7(dev->memory, "  rect=(%d,%d),(%d,%d) phase=(%d,%d) op=0x%x\n",
               x, y, x + width, y + height, phase_x, phase_y,
               (uint) lop);
     if (gs_debug_c('B')) {
         if (sdata)
-            debug_dump_bitmap(sdata, sraster, height, "source bits");
+            debug_dump_bitmap(dev->memory, sdata, sraster, height, "source bits");
         if (textures && textures->data)
-            debug_dump_bitmap(textures->data, textures->raster,
+            debug_dump_bitmap(dev->memory, textures->data, textures->raster,
                               textures->size.y, "textures bits");
     }
 }
@@ -131,6 +131,7 @@ gx_default_strip_copy_rop2(gx_device * dev,
     int code;
     int py;
     int is_planar = 0;
+    int plane_depth;
 
 #ifdef DEBUG
     if (gs_debug_c('b'))
@@ -158,16 +159,16 @@ gx_default_strip_copy_rop2(gx_device * dev,
     pmdev->height = block_height;
     pmdev->bitmap_memory = mem;
     pmdev->color_info = dev->color_info;
-    if (dev_proc(dev, dev_spec_op)(dev, gxdso_is_native_planar, NULL, 0))
+    plane_depth = dev_proc(dev, dev_spec_op)(dev, gxdso_is_native_planar, NULL, 0);
+    if (plane_depth > 0)
     {
         gx_render_plane_t planes[GX_DEVICE_COLOR_MAX_COMPONENTS];
         int num_comp = dev->color_info.num_components;
-        int depth = dev->color_info.depth/num_comp;
         int i;
         for (i = 0; i < num_comp; i++)
         {
-            planes[i].shift = depth * (num_comp - 1 - i);
-            planes[i].depth = depth;
+            planes[i].shift = plane_depth * (num_comp - 1 - i);
+            planes[i].depth = plane_depth;
             planes[i].index = i;
         }
         /* RJW: This code, like most of ghostscripts planar support,
@@ -602,7 +603,7 @@ mem_default_strip_copy_rop2(gx_device * dev,
                             gs_logical_operation_t lop,
                             uint planar_height)
 {
-    dlprintf("mem_default_strip_copy_rop2 should never be called!\n");
+    dmlprintf(dev->memory, "mem_default_strip_copy_rop2 should never be called!\n");
     return gs_error_Fatal;
 }
 
