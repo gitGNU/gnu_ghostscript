@@ -231,7 +231,8 @@ printf_program_ident(const gs_memory_t *mem, const char *program_name, long revi
     if (revision_number) {
         int fpart = revision_number % 100;
 
-        outprintf(mem, "%d.%02d", (int)(revision_number / 100), fpart);
+        outprintf(mem, "%d.%02d.%d", (int)(revision_number / 10000 % 100),
+        		(int)(revision_number / 100 % 100), fpart);
     }
 }
 void
