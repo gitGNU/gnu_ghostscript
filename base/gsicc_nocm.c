@@ -99,15 +99,62 @@ gsicc_nocm_planar_to_chunky(gx_device *dev, gsicc_link_t *icclink,
 
 }
 
-/* This is not really used yet */
+/* This is used with the fast thresholding code when doing -dUseFastColor
+   and going out to a planar device */
 static void
 gsicc_nocm_chunky_to_planar(gx_device *dev, gsicc_link_t *icclink,
                                   gsicc_bufferdesc_t *input_buff_desc,
                                   gsicc_bufferdesc_t *output_buff_desc,
                                   void *inputbuffer, void *outputbuffer)
 {
+    int k, j, m;
+    byte *inputpos = (byte *) inputbuffer;
+    byte *outputpos = (byte *) outputbuffer;
+    byte *output_loc;
+    byte *inputcolor;
+    byte outputcolor[8];  /* 8 since we have max 4 colorants and 2 bytes/colorant */
+    unsigned short *pos_in_short, *pos_out_short;
+    int num_bytes_in = input_buff_desc->bytes_per_chan;
+    int num_bytes_out = output_buff_desc->bytes_per_chan;
+    int pixel_in_step = num_bytes_in * input_buff_desc->num_chan;
+    int plane_stride = output_buff_desc->plane_stride;
 
+    /* Do row by row. */
+    for (k = 0; k < input_buff_desc->num_rows ; k++) {
+        inputcolor = inputpos;
+        output_loc = outputpos;
 
+        /* split the 2 byte 1 byte case here to avoid decision in inner loop */
+        if (output_buff_desc->bytes_per_chan == 1) {
+            for (j = 0; j < input_buff_desc->pixels_per_row; j++) {
+                gsicc_nocm_transform_general(dev, icclink, (void*) inputcolor, 
+                                             (void*) &(outputcolor[0]), num_bytes_in, 
+                                              num_bytes_out);
+                /* Stuff the output in the proper planar location */
+                for (m = 0; m < output_buff_desc->num_chan; m++) {
+                    *(output_loc + m * plane_stride + j) = outputcolor[m];
+                }
+                inputcolor += pixel_in_step;
+            }
+            inputpos += input_buff_desc->row_stride;
+            outputpos += output_buff_desc->row_stride;        
+        } else {
+            for (j = 0; j < input_buff_desc->pixels_per_row; j++) {
+                gsicc_nocm_transform_general(dev, icclink, (void*) inputcolor, 
+                                             (void*) &(outputcolor[0]), num_bytes_in, 
+                                              num_bytes_out);
+                /* Stuff the output in the proper planar location */
+                pos_in_short = (unsigned short*) &(outputcolor[0]);
+                pos_out_short = (unsigned short*) (output_loc);
+                for (m = 0; m < output_buff_desc->num_chan; m++) {
+                    *(pos_out_short + m * plane_stride + j) = pos_in_short[m];
+                }
+                inputcolor += pixel_in_step;
+            }
+            inputpos += input_buff_desc->row_stride;
+            outputpos += output_buff_desc->row_stride;
+        }
+    }
 }
 
 static void
@@ -250,6 +297,7 @@ static void
 gsicc_nocm_freelink(gsicc_link_t *icclink)
 {
     nocm_link_t *nocm_link = (nocm_link_t*) icclink->link_handle;
+
     if (nocm_link->pis != NULL) {
         if (nocm_link->pis->black_generation != NULL) {
             gs_free_object(nocm_link->memory, nocm_link->pis->black_generation, 
@@ -261,6 +309,7 @@ gsicc_nocm_freelink(gsicc_link_t *icclink)
         }
         gs_free_object(nocm_link->memory, nocm_link->pis, "gsicc_nocm_freelink");
     }
+    gs_free_object(nocm_link->memory, nocm_link, "gsicc_nocm_freelink");
 }
 
 /* Since this is the only occurence of this object we are not going to 
@@ -308,10 +357,10 @@ gsicc_nocm_get_link(const gs_imager_state *pis, gx_device *dev,
        Since the link is not GC we would need to copy the contents over
        each time a link was requested.  This could be costly if we had 
        a lot of link requests.  */
-    hash.rend_hash = 0;
+    hash.rend_hash = gsCMM_NONE;
     hash.des_hash = dev->color_info.num_components;
     hash.src_hash = src_index;
-    hash.link_hashcode = src_index + hash.des_hash * 256;
+    hash.link_hashcode = src_index + hash.des_hash * 256 + hash.rend_hash * 4096;
 
     /* Check the cache for a hit. */
     result = gsicc_findcachelink(hash, pis->icc_link_cache, false, false);
@@ -322,6 +371,7 @@ gsicc_nocm_get_link(const gs_imager_state *pis, gx_device *dev,
        another thread has already created it while we were trying to do so */ 
     if (gsicc_alloc_link_entry(pis->icc_link_cache, &result, hash, false, false)) 
         return result;
+
     /* Now compute the link contents */
     result->procs.map_buffer = gsicc_nocm_transform_color_buffer;
     result->procs.map_color = gsicc_nocm_transform_color;
@@ -352,7 +402,7 @@ gsicc_nocm_get_link(const gs_imager_state *pis, gx_device *dev,
     nocm_link->cm_procs.map_gray = cm_procs->map_gray;
     nocm_link->num_in = src_index;
     if (result != NULL) {
-        gsicc_set_link_data(result, nocm_link, NULL, hash, 
+        gsicc_set_link_data(result, nocm_link, hash,
                             pis->icc_link_cache->lock, false, false);
     }
     return result;

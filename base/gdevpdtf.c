@@ -72,6 +72,7 @@ case 8: switch (pdfont->FontType) {
  case ft_PCL_user_defined:
  case ft_GL2_stick_user_defined:
  case ft_user_defined:
+ case ft_GL2_531:
      ENUM_RETURN(pdfont->u.simple.v);
  case ft_CID_encrypted:
  case ft_CID_TrueType:
@@ -83,6 +84,7 @@ case 9: switch (pdfont->FontType) {
  case ft_PCL_user_defined:
  case ft_GL2_stick_user_defined:
  case ft_user_defined:
+ case ft_GL2_531:
      ENUM_RETURN(pdfont->u.simple.s.type3.char_procs);
  case ft_CID_encrypted:
  case ft_CID_TrueType:
@@ -94,6 +96,7 @@ case 10: switch (pdfont->FontType) {
  case ft_PCL_user_defined:
  case ft_GL2_stick_user_defined:
  case ft_user_defined:
+ case ft_GL2_531:
      ENUM_RETURN(pdfont->u.simple.s.type3.cached);
  case ft_CID_encrypted:
  case ft_CID_TrueType:
@@ -105,6 +108,7 @@ case 11: switch (pdfont->FontType) {
  case ft_PCL_user_defined:
  case ft_GL2_stick_user_defined:
  case ft_user_defined:
+ case ft_GL2_531:
      ENUM_RETURN(pdfont->u.simple.s.type3.Resources);
  case ft_CID_encrypted:
  case ft_CID_TrueType:
@@ -133,6 +137,7 @@ RELOC_PTRS_WITH(pdf_font_resource_reloc_ptrs, pdf_font_resource_t *pdfont)
     case ft_PCL_user_defined:
     case ft_GL2_stick_user_defined:
     case ft_user_defined:
+    case ft_GL2_531:
         RELOC_VAR(pdfont->u.simple.Encoding);
         RELOC_VAR(pdfont->u.simple.v);
         RELOC_VAR(pdfont->u.simple.s.type3.char_procs);
@@ -436,6 +441,7 @@ int font_resource_free(gx_device_pdf *pdev, pdf_font_resource_t *pdfont)
             case ft_PCL_user_defined:
             case ft_GL2_stick_user_defined:
             case ft_user_defined:
+            case ft_GL2_531:
                 if(pdfont->u.simple.Encoding) {
                     gs_free_object(pdev->pdf_memory, pdfont->u.simple.Encoding, "Free simple Encoding");
                     pdfont->u.simple.Encoding = 0;
@@ -626,6 +632,7 @@ pdf_resize_resource_arrays(gx_device_pdf *pdev, pdf_font_resource_t *pfres, int 
                     sizeof(*pfres->u.cidfont.CIDToGIDMap), pfres->count, chars_count);
             if (code < 0)
                 return code;
+            pfres->u.cidfont.CIDToGIDMapLength = chars_count;
         }
     }
     if (pfres->FontType == ft_CID_encrypted || pfres->FontType == ft_CID_TrueType) {
@@ -891,7 +898,12 @@ pdf_compute_BaseFont(gx_device_pdf *pdev, pdf_font_resource_t *pdfont, bool fini
         !pdf_has_subset_prefix(fname.data, fname.size) &&
         pdf_font_descriptor_embedding(pdfont->FontDescriptor)
         ) {
-        int code = pdf_add_subset_prefix(pdev, &fname, pdfont->used, pdfont->count);
+        int code;
+
+        if (pdfont->FontDescriptor)
+            code = pdf_add_subset_prefix(pdev, &fname, pdfont->used, pdfont->count, pdf_fontfile_hash(pdfont->FontDescriptor));
+        else
+            code = pdf_add_subset_prefix(pdev, &fname, pdfont->used, pdfont->count, 0);
 
         if (code < 0)
             return code;

@@ -71,13 +71,19 @@ gscms_get_numberclrtnames(gcmmhprofile_t profile)
 
 /* Get the nth colorant name in the clrt tag */
 char*
-gscms_get_clrtname(gcmmhprofile_t profile, int colorcount)
+gscms_get_clrtname(gcmmhprofile_t profile, int colorcount, gs_memory_t *memory)
 {
     LPcmsNAMEDCOLORLIST lcms_names;
+    int length;
+    char *name;
 
     lcms_names = cmsReadColorantTable(profile, icSigColorantTableTag);
     if (colorcount+1 > lcms_names->nColors) return(NULL);
-    return(lcms_names->List[colorcount].Name);
+    length = strlen(lcms_names->List[colorcount].Name);
+    name = (char*) gs_alloc_bytes(memory, length, "gscms_get_clrtname");
+    if (name)
+        strcpy(name, lcms_names->List[colorcount].Name);
+    return name;
 }
 
 /* Get the device space associated with this profile */
@@ -106,7 +112,7 @@ gscms_get_profile_data_space(gcmmhprofile_t profile)
 
 /* Get ICC Profile handle from buffer */
 gcmmhprofile_t
-gscms_get_profile_handle_mem(unsigned char *buffer, unsigned int input_size)
+gscms_get_profile_handle_mem(gs_memory_t *mem, unsigned char *buffer, unsigned int input_size)
 {
     cmsSetErrorHandler((cmsErrorHandlerFunction) gscms_error);
     return(cmsOpenProfileFromMem(buffer,input_size));
@@ -114,7 +120,7 @@ gscms_get_profile_handle_mem(unsigned char *buffer, unsigned int input_size)
 
 /* Get ICC Profile handle from file ptr */
 gcmmhprofile_t
-gscms_get_profile_handle_file(const char *filename)
+gscms_get_profile_handle_file(gs_memory_t *mem, const char *filename)
 {
     return(cmsOpenProfileFromFile(filename, "r"));
 }
@@ -264,8 +270,9 @@ gscms_transform_color(gx_device *dev, gsicc_link_t *icclink, void *inputcolor,
 /* Get the link from the CMS. TODO:  Add error checking */
 gcmmhlink_t
 gscms_get_link(gcmmhprofile_t  lcms_srchandle,
-                    gcmmhprofile_t lcms_deshandle,
-                    gsicc_rendering_param_t *rendering_params)
+               gcmmhprofile_t lcms_deshandle,
+               gsicc_rendering_param_t *rendering_params,
+               gs_memory_t *mem)
 {
     DWORD src_data_type,des_data_type;
     icColorSpaceSignature src_color_space,des_color_space;
@@ -309,7 +316,9 @@ gscms_get_link_proof_devlink(gcmmhprofile_t lcms_srchandle,
                              gcmmhprofile_t lcms_proofhandle,
                              gcmmhprofile_t lcms_deshandle, 
                              gcmmhprofile_t lcms_devlinkhandle, 
-                             gsicc_rendering_param_t *rendering_params)
+                             gsicc_rendering_param_t *rendering_params,
+                             bool src_dev_link,
+                             gs_memory_t *mem)
 {
     DWORD src_data_type,des_data_type;
     icColorSpaceSignature src_color_space,des_color_space;
@@ -359,16 +368,17 @@ gscms_get_link_proof_devlink(gcmmhprofile_t lcms_srchandle,
 }
 
 /* Do any initialization if needed to the CMS */
-void
-gscms_create(void **contextptr)
+int
+gscms_create(gs_memory_t *memory)
 {
     /* Set our own error handling function */
     cmsSetErrorHandler((cmsErrorHandlerFunction) gscms_error);
+    return 0;
 }
 
 /* Do any clean up when done with the CMS if needed */
 void
-gscms_destroy(void **contextptr)
+gscms_destroy(gs_memory_t *memory)
 {
     /* Nothing to do here for lcms */
 }

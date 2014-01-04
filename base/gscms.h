@@ -110,7 +110,14 @@ typedef struct gscms_procs_s {
     gscms_link_free_proc_t free_link;
 } gscms_procs_t;
 
-/* Enumerate the ICC rendering intents */
+/* Enumerate the ICC rendering intents and other parameters.  A note on 
+   these.  0-3 are for different values.   4-7 are for Override cases
+   where we are trying to override some value specified in the document.
+   8 is reserved for not specified.  This is used in the case were we
+   can specify multiple rendering values for the sources and wish to just
+   use default or document values for a particular value.  For example,
+   we may want for RGB Graphics to specify a Rendering Intent but not
+   a black point compensation. */
 typedef enum {
     gsPERCEPTUAL = 0,
     gsRELATIVECOLORIMETRIC,
@@ -119,11 +126,45 @@ typedef enum {
     gsPERCEPTUAL_OR,            /* These are needed for keeping track  */                                   
     gsRELATIVECOLORIMETRIC_OR,  /* of when the source ri is going to */
     gsSATURATION_OR,            /* override the destination profile intent */
-    gsABSOLUTECOLORIMETRIC_OR   /* in particular through the clist */
+    gsABSOLUTECOLORIMETRIC_OR,  /* in particular through the clist */
+    gsRINOTSPECIFIED = 8            /* Used to ignore value when source based setting */  
 } gsicc_rendering_intents_t;
 
+/* We make an enumerated type in case someone wants to add different types
+   of black point compensation.  Like lcms provides the option for. If 
+   any are added, be sure to add in the regular and the source overide 
+   option. Also not that we have at most 4 options due to gsBP_OVERRIDE  */
+typedef enum {
+    gsBLACKPTCOMP_OFF = 0,
+    gsBLACKPTCOMP_ON,
+    gsBLACKPTCOMP_OFF_OR = 4, /* These are needed for keeping track of the  */                                   
+    gsBLACKPTCOMP_ON_OR,      /* source blackpt is to overide dest. setting */
+    gsBPNOTSPECIFIED = 8     /* Used to ignore value when source based setting */  
+} gsicc_blackptcomp_t;
+
+/* This is used mainly for when the sourcegtag option specifies us to use no
+   color management or a replacement color management CMM */
+typedef enum {
+    gsCMM_DEFAULT = 0,
+    gsCMM_NONE,
+    gsCMM_REPLACE
+} gsicc_cmm_t;
+
+/* Since this is not specified by the source document we don't need to worry 
+   about override values */
+typedef enum {
+    gsBLACKPRESERVE_OFF = 0,
+    gsBLACKPRESERVE_KONLY,
+    gsBLACKPRESERVE_KPLANE,
+    gsBKPRESNOTSPECIFIED = 8   /* Used to ignore value when source based setting */  
+} gsicc_blackpreserve_t;
+  
 #define gsRI_OVERRIDE 0x4
+#define gsBP_OVERRIDE 0x4 
+#define gsKP_OVERRIDE 0x4
 #define gsRI_MASK 0x3;
+#define gsBP_MASK 0x3;
+#define gsKP_MASK 0x3;
 
 /* Enumerate the types of profiles */
 typedef enum {
@@ -142,18 +183,67 @@ typedef enum {
     gsSRC_TEXTPRO,
 } gsicc_profile_srctypes_t;
 
+/* --------------- graphical object tags ------------ */
+
+/* The default is "unknown" which has value 0 and by default devices don't encode tags */
+typedef enum {
+    GS_UNKNOWN_TAG = 0x0,
+    GS_TEXT_TAG = 0x1,
+    GS_IMAGE_TAG = 0x2,
+    GS_PATH_TAG = 0x4,
+    GS_UNTOUCHED_TAG = 0x8,
+    GS_DEVICE_ENCODES_TAGS = 0x80
+} gs_graphics_type_tag_t;
+
+/* Source profile graphic tag rendering conditions */
+typedef struct gsicc_rendering_param_s {
+    gsicc_rendering_intents_t rendering_intent;   /* Standard rendering intent */
+    gsicc_blackptcomp_t black_point_comp;         /* Black point compensation */
+    gsicc_blackpreserve_t preserve_black;         /* preserve K plane in CMYK2CMYK */
+    gs_graphics_type_tag_t graphics_type_tag;     /* Some CMM may want this */
+    gsicc_cmm_t cmm;                              /* which cmm? (used only with sourcetag) */
+    bool override_icc;                            /* Override source ICC (used only with sourcetag) */
+} gsicc_rendering_param_t;
+
 /* Source profiles for different objects.  only CMYK and RGB */
 typedef struct cmm_srcgtag_profile_s {
-        cmm_profile_t  *rgb_profiles[NUM_SOURCE_PROFILES];
-        gsicc_rendering_intents_t rgb_intent[NUM_SOURCE_PROFILES];
-        cmm_profile_t  *cmyk_profiles[NUM_SOURCE_PROFILES];
-        gsicc_rendering_intents_t cmyk_intent[NUM_SOURCE_PROFILES];
-        cmm_profile_t  *color_warp_profile;
-        gs_memory_t *memory;
-        int name_length;            /* Length of file name */
-        char *name;                 /* Name of file name where this is found */
-        rc_header rc;
+    cmm_profile_t  *rgb_profiles[NUM_SOURCE_PROFILES];
+    gsicc_rendering_param_t rgb_rend_cond[NUM_SOURCE_PROFILES];
+    cmm_profile_t  *cmyk_profiles[NUM_SOURCE_PROFILES];
+    gsicc_rendering_param_t cmyk_rend_cond[NUM_SOURCE_PROFILES];
+    cmm_profile_t  *color_warp_profile;
+    gs_memory_t *memory;
+    int name_length;            /* Length of file name */
+    char *name;                 /* Name of file name where this is found */
+    rc_header rc;
 } cmm_srcgtag_profile_t;
+
+typedef struct gsicc_colorname_s gsicc_colorname_t;
+
+struct gsicc_colorname_s {
+    char *name;
+    int length;
+    gsicc_colorname_t *next;
+};
+
+typedef struct gsicc_namelist_s gsicc_namelist_t;
+
+#ifndef gs_devicen_color_map_DEFINED
+#  define gs_devicen_color_map_DEFINED
+typedef struct gs_devicen_color_map_s gs_devicen_color_map;
+#endif
+
+struct gsicc_namelist_s {
+    int count;
+    gsicc_colorname_t *head;
+    char *name_str;
+    gs_devicen_color_map *color_map;
+    bool equiv_cmyk_set;   /* So that we make sure the equiv cmyk values are set */
+                           /* This can't be done at the time this structure
+                              is set up since we need the device and the graphic
+                              state for this, but instead is done when we
+                              do our first mapping */
+};
 
 /* Destination profiles for different objects */
 typedef struct cmm_dev_profile_s {
@@ -161,22 +251,16 @@ typedef struct cmm_dev_profile_s {
         cmm_profile_t  *proof_profile;
         cmm_profile_t  *link_profile;
         cmm_profile_t  *oi_profile;  /* output intent profile */
-        gsicc_rendering_intents_t intent[NUM_DEVICE_PROFILES];
+        gsicc_rendering_param_t rendercond[NUM_DEVICE_PROFILES];
         bool devicegraytok;        /* Used for forcing gray to pure black */
         bool usefastcolor;         /* Used when we want to use no cm */
         bool supports_devn;        /* If the target handles devn colors */
+        bool sim_overprint;     /* Indicates we want to do overprint blending */
+        gsicc_namelist_t *spotnames;  /* If our device profiles are devn */
+        bool prebandthreshold;     /* Used to indicate use of HT pre-clist */
         gs_memory_t *memory;
         rc_header rc;
 } cmm_dev_profile_t;
-
-/*  Doing this an an enum type for now.  There is alot going on with respect
- *  to this and V2 versus V4 profiles
- */
-
-typedef enum {
-    BP_ON = 0,
-    BP_OFF,
-} gsicc_black_point_comp_t;
 
 /*  Used so that we can specify if we want to link with Device input color spaces
     during the link creation process. For the DeviceN case, the DeviceN profile
@@ -185,7 +269,6 @@ typedef enum {
     the icc manager.  This is useful for reducing clist size since we will encode
     this value instead of the ICC profile.
 */
-
 typedef enum {
     DEFAULT_NONE,   /* A profile that was actually embedded in a doc */
     DEFAULT_GRAY,   /* The default DeviceGray profile */
@@ -213,6 +296,7 @@ typedef enum {
     bool islab;				/* Needed since we want to detect this to avoid */\
                                         /*  expensive decode on LAB images.  Is true */\
                                         /* if PDF color space is \Lab */\
+    bool isdevlink;                  /* is this a device link profile */\
     gsicc_profile_t default_match;	/* Used for detecting a match to a default space */\
     gsicc_colorbuffer_t data_cs;	/* The data color space of the profile (not the PCS) */\
     gs_range_icc_t Range;\
@@ -220,7 +304,9 @@ typedef enum {
     bool hash_is_valid;			/* Is the code valid? */\
     int devicen_permute[ICC_MAX_CHANNELS];	/* Permutation vector for deviceN laydown order */\
     bool devicen_permute_needed;		/* Check if we need to permute the DeviceN values */\
-    int buffer_size			/* size of ICC profile buffer */
+    int buffer_size;		/* size of ICC profile buffer */\
+    bool rend_is_valid;                 /* Needed for cond/profile coupling during */\
+    gsicc_rendering_param_t rend_cond   /* clist playback when rendering images */
 
 /* A subset of the profile information which is used when writing and reading
  * out to the c-list
@@ -229,21 +315,6 @@ typedef struct gsicc_serialized_profile_s {
     gsicc_serial_data;
 } gsicc_serialized_profile_t;
 
-typedef struct gsicc_colorname_s gsicc_colorname_t;
-
-struct gsicc_colorname_s {
-    char *name;
-    int length;
-    gsicc_colorname_t *next;
-};
-
-typedef struct gsicc_namelist_s gsicc_namelist_t;
-
-struct gsicc_namelist_s {
-    int count;
-    gsicc_colorname_t *head;
-};
-
 /* A structure for holding profile information.  A member variable
  * of the ghostscript color structure.   The item is reference counted.
  */
@@ -251,7 +322,7 @@ struct cmm_profile_s {
     gsicc_serial_data;
     byte *buffer;               /* A buffer with ICC profile content */
     gx_device *dev;             /* A pointer to the clist device in which the ICC data may be contained */
-    gsicc_namelist_t *spotnames;  /* Only used with NCLR ICC input profiles with named color tag */
+    gsicc_namelist_t *spotnames;  /* Used for profiles that have non-standard colorants */
     void *profile_handle;       /* The profile handle */
     rc_header rc;               /* Reference count.  So we know when to free */
     int name_length;            /* Length of file name */
@@ -268,6 +339,14 @@ struct cmm_profile_s {
 typedef struct cmm_profile_s cmm_profile_t;
 #define cmm_profile_DEFINED
 #endif
+
+/* The above definition is plagued with an offset issue.  Probably should
+   do away with gsicc_serialized_profile_t type */
+#ifndef offsetof
+#define offsetof(st, member) \
+   ((char *)&(((st *)(NULL))->member) - (char *)(NULL))
+#endif
+#define GSICC_SERIALIZED_SIZE offsetof(cmm_profile_t, buffer)
 
 /* A linked list structure for storing profiles in a table in which we
    can store and refer to from the clist and also when creating icc profiles
@@ -325,7 +404,6 @@ typedef struct gsicc_hashlink_s {
 
 struct gsicc_link_s {
     void *link_handle;
-    void *contextptr;
     gscms_procs_t procs;   
     gsicc_hashlink_t hashcode;
     struct gsicc_link_cache_s *icc_link_cache;
@@ -410,28 +488,9 @@ typedef struct gsicc_manager_s {
     gsicc_devicen_t *device_n;      /* A linked list of profiles used for DeviceN support */
     gsicc_smask_t *smask_profiles;  /* Profiles used when we are in a softmask group */
     bool override_internal;         /* Set via the user params */
-    bool override_ri;               /* Override rend intent. Set via the user params */
     cmm_srcgtag_profile_t *srcgtag_profile;
     gs_memory_t *memory;
     rc_header rc;
 } gsicc_manager_t;
-
-/* --------------- graphical object tags ------------ */
-
-/* The default is "unknown" which has value 0 and by default devices don't encode tags */
-typedef enum {
-    GS_UNKNOWN_TAG = 0x0,
-    GS_TEXT_TAG = 0x1,
-    GS_IMAGE_TAG = 0x2,
-    GS_PATH_TAG = 0x4,
-    GS_UNTOUCHED_TAG = 0x8,
-    GS_DEVICE_ENCODES_TAGS = 0x80
-} gs_graphics_type_tag_t;
-
-typedef struct gsicc_rendering_param_s {
-    gsicc_rendering_intents_t rendering_intent;
-    gs_graphics_type_tag_t    graphics_type_tag;
-    gsicc_black_point_comp_t  black_point_comp;
-} gsicc_rendering_param_t;
 
 #endif /* ifndef gscms_INCLUDED */

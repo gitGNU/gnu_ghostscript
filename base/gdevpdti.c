@@ -184,6 +184,7 @@ pdf_write_contents_bitmap(gx_device_pdf *pdev, pdf_font_resource_t *pdfont)
             pdf_put_name(pdev, pcpo->char_name.data, pcpo->char_name.size);
             pprintld1(s, " %ld 0 R\n", pdf_char_proc_id(pcpo->char_proc));
         }
+        pdf_record_usage_by_parent(pdev, pdf_char_proc_id(pcpo->char_proc), pdfont->object->id);
     }
     stream_puts(s, ">>");
     pprintg6(s, "/FontMatrix[%g %g %g %g %g %g]",
@@ -350,7 +351,8 @@ pdf_begin_char_proc(gx_device_pdf * pdev, int w, int h, int x_width,
      */
     if ((show_enum->current_font->FontType == ft_user_defined ||
         show_enum->current_font->FontType == ft_PCL_user_defined ||
-        show_enum->current_font->FontType == ft_GL2_stick_user_defined) && allowed_op &&
+        show_enum->current_font->FontType == ft_GL2_stick_user_defined ||
+        show_enum->current_font->FontType == ft_GL2_531) && allowed_op &&
         show_enum->current_font->FontMatrix.xx == 1 && show_enum->current_font->FontMatrix.xy == 0 &&
         show_enum->current_font->FontMatrix.yx == 0 && show_enum->current_font->FontMatrix.yy == 1) {
         pdf_char_proc_ownership_t *pcpo;
@@ -463,7 +465,7 @@ int
 pdf_end_char_proc(gx_device_pdf * pdev, pdf_stream_position_t * ppos)
 {
     stream *s;
-    long start_pos, end_pos, length;
+    gs_offset_t start_pos, end_pos, length;
 
     pdf_end_encrypt(pdev);
     s = pdev->strm;
@@ -499,7 +501,8 @@ pdf_mark_glyph_names(const pdf_font_resource_t *pdfont, const gs_memory_t *memor
      }
     if (pdfont->FontType == ft_user_defined ||
         pdfont->FontType == ft_PCL_user_defined ||
-        pdfont->FontType == ft_GL2_stick_user_defined) {
+        pdfont->FontType == ft_GL2_stick_user_defined ||
+        pdfont->FontType == ft_GL2_531) {
         const pdf_char_proc_ownership_t *pcpo = pdfont->u.simple.s.type3.char_procs;
 
         for (; pcpo != NULL; pcpo = pcpo->font_next)
@@ -615,7 +618,8 @@ pdf_set_charproc_attrs(gx_device_pdf *pdev, gs_font *font, double *pw, int narg,
          * all glyphs to be noted as cached in order for the bitmap font cache
          * probing to work properly.
          */
-        if (font->FontType == ft_PCL_user_defined || font->FontType == ft_GL2_stick_user_defined)
+        if (font->FontType == ft_PCL_user_defined || font->FontType == ft_GL2_stick_user_defined
+            || font->FontType == ft_GL2_531)
             pdfont->u.simple.s.type3.cached[ch >> 3] |= 0x80 >> (ch & 7);
     } else {
         double d;

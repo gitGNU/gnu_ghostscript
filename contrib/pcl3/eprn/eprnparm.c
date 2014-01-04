@@ -24,7 +24,8 @@
 
     EPRN_NO_PAGECOUNTFILE
         Define this if you do not want to use eprn's pagecount-file feature.
-        You very likely must define this on Microsoft Windows.
+        You very likely must define this on Microsoft Windows. This is
+        automatically defined under Visual Studio builds.
 
     EPRN_TRACE
         Define this to enable tracing. Only useful for development.
@@ -189,11 +190,11 @@ void eprn_dump_parameter_list(gs_param_list *plist)
     int j;
 
     count++;
-    dlprintf("  `");
-    for (j = 0; j < key.size; j++) dputc(key.data[j]);
-    dprintf("'\n");
+    dmlprintf(plist->memory, "  `");
+    for (j = 0; j < key.size; j++) dmputc(plist->memory, key.data[j]);
+    dmprintf(plist->memory, "'\n");
   }
-  dlprintf1("  Number of parameters: %d.\n", count);
+  dmlprintf1(plist->memory, "  Number of parameters: %d.\n", count);
 
   return;
 }
@@ -361,7 +362,7 @@ static char *next_word(char *s)
 
 #define cleanup()       (free(list), fclose(f))
 
-static int eprn_read_media_data(eprn_Eprn *eprn)
+static int eprn_read_media_data(eprn_Eprn *eprn, gs_memory_t *memory)
 {
   char buffer[BUFFER_SIZE];
   const char
@@ -552,7 +553,7 @@ static int eprn_read_media_data(eprn_Eprn *eprn)
   }
 
   /* Create a list in the device structure */
-  eprn->media_overrides = (eprn_PageDescription *) gs_malloc(gs_lib_ctx_get_non_gc_memory_t(), read + 1,
+  eprn->media_overrides = (eprn_PageDescription *) gs_malloc(memory, read + 1,
     sizeof(eprn_PageDescription), "eprn_read_media_data");
   if (eprn->media_overrides == NULL) {
     eprintf1("%s" ERRPREF
@@ -605,14 +606,14 @@ int eprn_set_media_data(eprn_Device *dev, const char *media_file, size_t length)
 
   /* Free old storage */
   if (eprn->media_file != NULL) {
-    gs_free(gs_lib_ctx_get_non_gc_memory_t(), eprn->media_file, strlen(eprn->media_file) + 1,
+    gs_free(dev->memory->non_gc_memory, eprn->media_file, strlen(eprn->media_file) + 1,
       sizeof(char), "eprn_set_media_data");
     eprn->media_file = NULL;
   }
   if (eprn->media_overrides != NULL) {
     int n = 0;
     while (eprn->media_overrides[n].code != ms_none) n++;
-    gs_free(gs_lib_ctx_get_non_gc_memory_t(), eprn->media_overrides, n+1, sizeof(eprn_PageDescription),
+    gs_free(dev->memory->non_gc_memory, eprn->media_overrides, n+1, sizeof(eprn_PageDescription),
       "eprn_set_media_data");
     eprn->media_overrides = NULL;
   }
@@ -623,7 +624,7 @@ int eprn_set_media_data(eprn_Device *dev, const char *media_file, size_t length)
   /* Read media configuration file, unless the name is NULL or the empty
      string */
   if (media_file != NULL && length > 0) {
-    eprn->media_file = (char *)gs_malloc(gs_lib_ctx_get_non_gc_memory_t(), length + 1, sizeof(char),
+    eprn->media_file = (char *)gs_malloc(dev->memory->non_gc_memory, length + 1, sizeof(char),
       "eprn_set_media_data");
     if (eprn->media_file == NULL) {
       eprintf1("%s" ERRPREF
@@ -635,8 +636,8 @@ int eprn_set_media_data(eprn_Device *dev, const char *media_file, size_t length)
     else {
       strncpy(eprn->media_file, media_file, length);
       eprn->media_file[length] = '\0';
-      if ((rc = eprn_read_media_data(eprn)) != 0) {
-        gs_free(gs_lib_ctx_get_non_gc_memory_t(), eprn->media_file, length + 1, sizeof(char),
+      if ((rc = eprn_read_media_data(eprn, dev->memory->non_gc_memory)) != 0) {
+        gs_free(dev->memory->non_gc_memory, eprn->media_file, length + 1, sizeof(char),
           "eprn_set_media_data");
         eprn->media_file = NULL;
       }
@@ -894,7 +895,7 @@ int eprn_put_params(gx_device *dev, gs_param_list *plist)
 
 #ifdef EPRN_TRACE
   if (gs_debug_c(EPRN_TRACE_CHAR)) {
-    dlprintf(
+    dmlprintf(dev->memory,
       "! eprn_put_params() called with the following device parameters:\n");
     eprn_dump_parameter_list(plist);
   }
@@ -1123,7 +1124,7 @@ int eprn_put_params(gx_device *dev, gs_param_list *plist)
   /* Page count file */
   if ((rc = param_read_null(plist, (pname = "PageCountFile"))) == 0) {
     if (eprn->pagecount_file != NULL) {
-      gs_free(gs_lib_ctx_get_non_gc_memory_t(), eprn->pagecount_file, strlen(eprn->pagecount_file) + 1,
+      gs_free(dev->memory->non_gc_memory, eprn->pagecount_file, strlen(eprn->pagecount_file) + 1,
         sizeof(char), "eprn_put_params");
       eprn->pagecount_file = NULL;
     }
@@ -1132,14 +1133,14 @@ int eprn_put_params(gx_device *dev, gs_param_list *plist)
   else if ((rc = param_read_string(plist, pname, &string_value)) == 0) {
     /* Free old storage */
     if (eprn->pagecount_file != NULL) {
-      gs_free(gs_lib_ctx_get_non_gc_memory_t(), eprn->pagecount_file, strlen(eprn->pagecount_file) + 1,
+      gs_free(dev->memory->non_gc_memory, eprn->pagecount_file, strlen(eprn->pagecount_file) + 1,
         sizeof(char), "eprn_put_params");
       eprn->pagecount_file = NULL;
     }
 
     /* Store file name unless it is the empty string */
     if (string_value.size > 0) {
-      eprn->pagecount_file = (char *)gs_malloc(gs_lib_ctx_get_non_gc_memory_t(), string_value.size + 1,
+      eprn->pagecount_file = (char *)gs_malloc(dev->memory->non_gc_memory, string_value.size + 1,
         sizeof(char), "eprn_put_params");
       if (eprn->pagecount_file == NULL) {
         eprintf1( "%s" ERRPREF

@@ -66,7 +66,11 @@ gs_image_class_4_color(gx_image_enum * penum)
 {
     bool std_cmap_procs;
     int code;
+#if USE_FAST_HT_CODE
+    bool use_fast_thresh = true;
+#else
     bool use_fast_thresh = false;
+#endif
     bool is_planar_dev = false;
 
     if (penum->use_mask_color) {
@@ -129,9 +133,12 @@ gs_image_class_4_color(gx_image_enum * penum)
             }
         }
         /* Define the rendering intents */
-        rendering_params.black_point_comp = BP_ON;
+        rendering_params.black_point_comp = penum->pis->blackptcomp;
         rendering_params.graphics_type_tag = GS_IMAGE_TAG;
+        rendering_params.override_icc = false;
+        rendering_params.preserve_black = gsBKPRESNOTSPECIFIED;
         rendering_params.rendering_intent = penum->pis->renderingintent;
+        rendering_params.cmm = gsCMM_DEFAULT;
         if (gs_color_space_is_PSCIE(penum->pcs) && penum->pcs->icc_equivalent != NULL) {
             pcs = penum->pcs->icc_equivalent;
         } else {
@@ -150,13 +157,14 @@ gs_image_class_4_color(gx_image_enum * penum)
            be performed to ensure that the range of 0 to 1 is provided
            to the CMM since ICC profiles are restricted to that range
            but the PS color spaces are not. */
+        penum->use_cie_range = false;
         if (gs_color_space_is_PSCIE(penum->pcs) &&
             penum->pcs->icc_equivalent != NULL) {
             /* We have a PS CIE space.  Check the range */
             if ( !check_cie_range(penum->pcs) ) {
                 /* It is not 0 to 1.  We will be doing decode
                    plus an additional linear adjustment */
-                penum->cie_range = get_cie_range(penum->pcs);
+                penum->use_cie_range = (get_cie_range(penum->pcs) != NULL);
             }
         }
         if (gx_device_must_halftone(penum->dev) && use_fast_thresh &&
@@ -166,8 +174,8 @@ gs_image_class_4_color(gx_image_enum * penum)
             /* If num components is 1 or if we are going to CMYK planar device
                then we will may use the thresholding if it is a halftone
                device*/
-            is_planar_dev = dev_proc(penum->dev, dev_spec_op)(penum->dev,
-                                 gxdso_is_native_planar, NULL, 0);
+            is_planar_dev = (dev_proc(penum->dev, dev_spec_op)(penum->dev,
+                                 gxdso_is_native_planar, NULL, 0) > 0);
             if ((penum->dev->color_info.num_components == 1 || is_planar_dev) &&
                  penum->bps == 8 ) {
                 code = gxht_thresh_image_init(penum);
@@ -285,8 +293,7 @@ decode_row(const gx_image_enum *penum, const byte *psrc, int spp, byte *pdes,
 static int
 image_color_icc_prep(gx_image_enum *penum_orig, const byte *psrc, uint w,
                      gx_device *dev, int *spp_cm_out, byte **psrc_cm,
-                     byte **psrc_cm_start, byte **psrc_decode, byte **bufend,
-                     bool planar_out)
+                     byte **psrc_cm_start, byte **bufend, bool planar_out)
 {
     const gx_image_enum *const penum = penum_orig; /* const within proc */
     const gs_imager_state *pis = penum->pis;
@@ -299,6 +306,11 @@ image_color_icc_prep(gx_image_enum *penum_orig, const byte *psrc, uint w,
     int num_des_comps;
     int code;
     cmm_dev_profile_t *dev_profile;
+    byte *psrc_decode;
+    const byte *planar_src;
+    byte *planar_des;
+    int k, j;
+    int width;
 
     code = dev_proc(dev, get_profile)(dev, &dev_profile);
     if (code < 0) return code;
@@ -323,12 +335,48 @@ image_color_icc_prep(gx_image_enum *penum_orig, const byte *psrc, uint w,
     } else {
         spp_cm = num_des_comps;
         *psrc_cm = gs_alloc_bytes(pis->memory,  w * spp_cm/spp,
-                                  "image_render_color_icc");
+                                  "image_color_icc_prep");
         *psrc_cm_start = *psrc_cm;
         *bufend = *psrc_cm +  w * spp_cm/spp;
-        if (penum->icc_link->is_identity && !force_planar) {
-            /* decode only. no CM.  This is slow but does not happen that often */
-            decode_row(penum, psrc, spp, *psrc_cm, *bufend);
+        if (penum->icc_link->is_identity) {
+            if (!force_planar) {
+                /* decode only. no CM.  This is slow but does not happen that often */
+                decode_row(penum, psrc, spp, *psrc_cm, *bufend);
+            } else {
+                /* CM is identity but we may need to do decode and then off 
+                   to planar. The planar out case is only used when coming from
+                   imager_render_color_thresh, which is limited to 8 bit case */
+                if (need_decode) {
+                    /* Need decode and then to planar */
+                    psrc_decode = gs_alloc_bytes(pis->memory,  w,
+                                                  "image_color_icc_prep");
+                    if (!penum->use_cie_range) {
+                        decode_row(penum, psrc, spp, psrc_decode, psrc_decode+w);
+                    } else {
+                        /* Decode needs to include adjustment for CIE range */
+                        decode_row_cie(penum, psrc, spp, psrc_decode,
+                                        psrc_decode + w, get_cie_range(penum->pcs));
+                    }
+                    planar_src = psrc_decode;
+                } else {
+                    psrc_decode = NULL;
+                    planar_src = psrc;
+                }
+                /* Now to planar */
+                width = w/spp;
+                planar_des = *psrc_cm;
+                for (k = 0; k < width; k++) {
+                    for (j = 0; j < spp; j++) {
+                        *(planar_des + j * width) = *planar_src++; 
+                    }
+                    planar_des++;
+                }
+                /* Free up decode if we used it */
+                if (psrc_decode != NULL) {
+                    gs_free_object(pis->memory, (byte *) psrc_decode,
+                                   "image_render_color_icc");
+                }
+            }
         } else {
             /* Set up the buffer descriptors. planar out always ends up here */
             num_pixels = w/spp;
@@ -351,22 +399,21 @@ image_color_icc_prep(gx_image_enum *penum_orig, const byte *psrc, uint w,
                less than or equal to the new one.  */
             if (need_decode) {
                 /* Need decode and CM.  This is slow but does not happen that often */
-                *psrc_decode = gs_alloc_bytes(pis->memory,  w,
-                                              "image_render_color_icc");
-                if (penum->cie_range == NULL) {
-                    decode_row(penum, psrc, spp, *psrc_decode, (*psrc_decode)+w);
+                psrc_decode = gs_alloc_bytes(pis->memory, w, 
+                                              "image_color_icc_prep");
+                if (!penum->use_cie_range) {
+                    decode_row(penum, psrc, spp, psrc_decode, psrc_decode+w);
                 } else {
                     /* Decode needs to include adjustment for CIE range */
-                    decode_row_cie(penum, psrc, spp, *psrc_decode,
-                                    (*psrc_decode)+w, penum->cie_range);
+                    decode_row_cie(penum, psrc, spp, psrc_decode,
+                                    psrc_decode+w, get_cie_range(penum->pcs));
                 }
                 (penum->icc_link->procs.map_buffer)(dev, penum->icc_link, 
                                                     &input_buff_desc,
                                                     &output_buff_desc, 
-                                                    (void*) *psrc_decode,
+                                                    (void*) psrc_decode,
                                                     (void*) *psrc_cm);
-                gs_free_object(pis->memory, (byte *) *psrc_decode,
-                               "image_render_color_icc");
+                gs_free_object(pis->memory, psrc_decode, "image_color_icc_prep");
             } else {
                 /* CM only. No decode */
                 (penum->icc_link->procs.map_buffer)(dev, penum->icc_link, 
@@ -408,7 +455,7 @@ image_render_color_thresh(gx_image_enum *penum_orig, const byte *buffer, int dat
     gx_dda_int_t dda_ht;
     int code = 0;
     int spp_cm = 0;
-    byte *psrc_cm = NULL, *psrc_cm_start = NULL, *psrc_decode = NULL;
+    byte *psrc_cm = NULL, *psrc_cm_start = NULL;
     byte *bufend = NULL, *curr_ptr;
     int psrc_planestride = w/penum->spp;
     gx_color_value conc;
@@ -417,8 +464,7 @@ image_render_color_thresh(gx_image_enum *penum_orig, const byte *buffer, int dat
     if (h != 0) {
         /* Get the buffer into the device color space */
         code = image_color_icc_prep(penum, psrc, w, dev, &spp_cm, &psrc_cm,
-                                    &psrc_cm_start, &psrc_decode, &bufend,
-                                    true);
+                                    &psrc_cm_start,  &bufend, true);
         /* Also, if need apply the transfer function at this time.  This
            should be reworked so that we are not doing all these conversions */
         if (penum->icc_setup.has_transfer) {
@@ -445,7 +491,7 @@ image_render_color_thresh(gx_image_enum *penum_orig, const byte *buffer, int dat
     /* Data is now in the proper destination color space.  Now we want
        to go ahead and get the data into the proper spatial setting and then
        threshold.  First get the data spatially sampled correctly */
-    src_size = penum->rect.w - 1;
+    src_size = penum->rect.w;
     switch (posture) {
         case image_portrait:
             /* Figure out our offset in the contone and threshold data
@@ -468,7 +514,7 @@ image_render_color_thresh(gx_image_enum *penum_orig, const byte *buffer, int dat
                 xrun += penum->x_extent.x;
             data_length = dest_width;
             dest_height = fixed2int_var_rounded(any_abs(penum->y_extent.y));
-            scale_factor = float2fixed_rounded((float) src_size / (float) (dest_width - 1));
+            scale_factor = float2fixed_rounded((float) src_size / (float) dest_width);
 #ifdef DEBUG
             /* Help in spotting problems */
             memset(penum->ht_buffer, 0x00, penum->ht_stride * vdi * spp_out);
@@ -490,7 +536,7 @@ image_render_color_thresh(gx_image_enum *penum_orig, const byte *buffer, int dat
             dest_width = fixed2int_var_rounded(any_abs(penum->y_extent.x));
             dest_height = fixed2int_var_rounded(any_abs(penum->x_extent.y));
             data_length = dest_height;
-            scale_factor = float2fixed_rounded((float) src_size / (float) (dest_height - 1));
+            scale_factor = float2fixed_rounded((float) src_size / (float) dest_height);
             /* In the landscaped case, we want to accumulate multiple columns
                of data before sending to the device.  We want to have a full
                byte of HT data in one write.  This may not be possible at the
@@ -528,7 +574,7 @@ image_render_color_thresh(gx_image_enum *penum_orig, const byte *buffer, int dat
     /* Get the pointers to our buffers */
     if (flush_buff) goto flush;  /* All done */
     /* Set up the dda.  We could move this out but the cost is pretty small */
-    dda_init(dda_ht, 0, src_size, data_length-1);
+    dda_init_half(dda_ht, 0, src_size, data_length);
     /* Do conversion to device resolution in quick small loops. */
     /* For now we have 3 cases.  A CMYK (4 channel), gray, or other case
        the latter of which is not yet implemented */
@@ -551,9 +597,9 @@ image_render_color_thresh(gx_image_enum *penum_orig, const byte *buffer, int dat
                 /* Monochrome portrait */
                 case image_portrait:
                     if (penum->dst_width > 0) {
-                        if (scale_factor == fixed_1) {
+                        if (src_size == dest_width) {
                             memcpy(devc_contone_gray, psrc_cm, data_length);
-                        } else if (scale_factor == fixed_half) {
+                        } else if (src_size * 2 == dest_width) {
                             psrc_temp = psrc_cm;
                             for (k = 0; k < data_length; k+=2,
                                  devc_contone_gray+=2, psrc_temp++) {
@@ -593,7 +639,7 @@ image_render_color_thresh(gx_image_enum *penum_orig, const byte *buffer, int dat
                         /* Code up special cases for when we have no scaling
                            and 2x scaling which we will run into in 300 and
                            600dpi devices and content */
-                        if (scale_factor == fixed_1) {
+                        if (src_size == dest_height) {
                             for (k = 0; k < data_length; k++) {
                                 devc_contone_gray[position] = psrc_cm[k];
                                 position += LAND_BITS;
@@ -634,12 +680,12 @@ image_render_color_thresh(gx_image_enum *penum_orig, const byte *buffer, int dat
                 /* CMYK portrait */
                 case image_portrait:
                     if (penum->dst_width > 0) {
-                        if (scale_factor == fixed_1) {
+                        if (src_size == dest_width) {
                             memcpy(devc_contone[0], psrc_plane[0], data_length);
                             memcpy(devc_contone[1], psrc_plane[1], data_length);
                             memcpy(devc_contone[2], psrc_plane[2], data_length);
                             memcpy(devc_contone[3], psrc_plane[3], data_length);
-                        } else if (scale_factor == fixed_half) {
+                        } else if (src_size * 2 == dest_width) {
                             for (k = 0; k < data_length; k+=2) {
                                 *(devc_contone[0]) = *(devc_contone[0]+1) =
                                     *psrc_plane[0]++;
@@ -707,7 +753,7 @@ image_render_color_thresh(gx_image_enum *penum_orig, const byte *buffer, int dat
                         for (k = 0; k < spp_out; k++) {
                             devc_contone[k] = devc_contone[k] + position;
                         }
-                        if (scale_factor == fixed_1) {
+                        if (src_size == dest_height) {
                             for (k = 0; k < data_length; k++) {
                                 /* Is it better to unwind this?  We know it is 4 */
                                 for (j = 0; j < spp_out; j++) {
@@ -798,7 +844,7 @@ image_render_color_icc(gx_image_enum *penum_orig, const byte *buffer, int data_x
     color_samples next;		/* next sample value */
     byte *bufend = NULL;
     int code = 0;
-    byte *psrc_cm = NULL, *psrc_cm_start = NULL, *psrc_decode = NULL;
+    byte *psrc_cm = NULL, *psrc_cm_start = NULL;
     int k;
     gx_color_value conc[GX_DEVICE_COLOR_MAX_COMPONENTS];
     int spp_cm = 0;
@@ -814,7 +860,7 @@ image_render_color_icc(gx_image_enum *penum_orig, const byte *buffer, int data_x
     if (h == 0)
         return 0;
     code = image_color_icc_prep(penum_orig, psrc, w, dev, &spp_cm, &psrc_cm,
-                                &psrc_cm_start, &psrc_decode, &bufend, false);
+                                &psrc_cm_start, &bufend, false);
     if (code < 0) return code;
     /* Needed for device N */
     memset(&(conc[0]), 0, sizeof(gx_color_value[GX_DEVICE_COLOR_MAX_COMPONENTS]));
@@ -834,8 +880,8 @@ image_render_color_icc(gx_image_enum *penum_orig, const byte *buffer, int data_x
             irun = fixed2int_var_rounded(yrun);
             break;
     }
-    if_debug5('b', "[b]y=%d data_x=%d w=%d xt=%f yt=%f\n",
-              penum->y, data_x, w, fixed2float(xprev), fixed2float(yprev));
+    if_debug5m('b', penum->memory, "[b]y=%d data_x=%d w=%d xt=%f yt=%f\n",
+               penum->y, data_x, w, fixed2float(xprev), fixed2float(yprev));
     memset(&run, 0, sizeof(run));
     memset(&next, 0, sizeof(next));
     run.v[0] = ~psrc_cm[0];	/* Force intial setting */
@@ -1054,8 +1100,8 @@ image_render_color_DeviceN(gx_image_enum *penum_orig, const byte *buffer, int da
             irun = fixed2int_var_rounded(yrun);
             break;
     }
-    if_debug5('b', "[b]y=%d data_x=%d w=%d xt=%f yt=%f\n",
-              penum->y, data_x, w, fixed2float(xprev), fixed2float(yprev));
+    if_debug5m('b', penum->memory, "[b]y=%d data_x=%d w=%d xt=%f yt=%f\n",
+               penum->y, data_x, w, fixed2float(xprev), fixed2float(yprev));
     memset(&run, 0, sizeof(run));
     memset(&next, 0, sizeof(next));
     cs_full_init_color(&cc, pcs);
@@ -1085,11 +1131,11 @@ image_render_color_DeviceN(gx_image_enum *penum_orig, const byte *buffer, int da
                 decode_sample(next.v[i], cc, i);
 #ifdef DEBUG
         if (gs_debug_c('B')) {
-            dprintf2("[B]cc[0..%d]=%g", spp - 1,
+            dmprintf2(dev->memory, "[B]cc[0..%d]=%g", spp - 1,
                      cc.paint.values[0]);
             for (i = 1; i < spp; ++i)
-                dprintf1(",%g", cc.paint.values[i]);
-            dputs("\n");
+                dmprintf1(dev->memory, ",%g", cc.paint.values[i]);
+            dmputs(dev->memory, "\n");
         }
 #endif
         mcode = remap_color(&cc, pcs, pdevc_next, pis, dev,
@@ -1097,21 +1143,23 @@ image_render_color_DeviceN(gx_image_enum *penum_orig, const byte *buffer, int da
 mapped:	if (mcode < 0)
             goto fill;
         if (sizeof(pdevc_next->colors.binary.color[0]) <= sizeof(ulong))
-            if_debug7('B', "[B]0x%x,0x%x,0x%x,0x%x -> 0x%lx,0x%lx,0x%lx\n",
-                  next.v[0], next.v[1], next.v[2], next.v[3],
-                  (ulong)pdevc_next->colors.binary.color[0],
-                  (ulong)pdevc_next->colors.binary.color[1],
-                  (ulong) pdevc_next->type);
+            if_debug7m('B', penum->memory,
+                       "[B]0x%x,0x%x,0x%x,0x%x -> 0x%lx,0x%lx,0x%lx\n",
+                       next.v[0], next.v[1], next.v[2], next.v[3],
+                       (ulong)pdevc_next->colors.binary.color[0],
+                       (ulong)pdevc_next->colors.binary.color[1],
+                       (ulong) pdevc_next->type);
         else
-            if_debug9('B', "[B]0x%x,0x%x,0x%x,0x%x -> 0x%08lx%08lx,0x%08lx%08lx,0x%lx\n",
-                  next.v[0], next.v[1], next.v[2], next.v[3],
-                  (ulong)(pdevc_next->colors.binary.color[0] >>
-                        8 * (sizeof(pdevc_next->colors.binary.color[0]) - sizeof(ulong))),
-                  (ulong)pdevc_next->colors.binary.color[0],
-                  (ulong)(pdevc_next->colors.binary.color[1] >>
-                        8 * (sizeof(pdevc_next->colors.binary.color[1]) - sizeof(ulong))),
-                  (ulong)pdevc_next->colors.binary.color[1],
-                  (ulong) pdevc_next->type);
+            if_debug9m('B', penum->memory,
+                       "[B]0x%x,0x%x,0x%x,0x%x -> 0x%08lx%08lx,0x%08lx%08lx,0x%lx\n",
+                       next.v[0], next.v[1], next.v[2], next.v[3],
+                       (ulong)(pdevc_next->colors.binary.color[0] >>
+                               8 * (sizeof(pdevc_next->colors.binary.color[0]) - sizeof(ulong))),
+                       (ulong)pdevc_next->colors.binary.color[0],
+                       (ulong)(pdevc_next->colors.binary.color[1] >>
+                               8 * (sizeof(pdevc_next->colors.binary.color[1]) - sizeof(ulong))),
+                       (ulong)pdevc_next->colors.binary.color[1],
+                       (ulong) pdevc_next->type);
         /* NB: printf above fails to account for sizeof gx_color_index 4 or 8 bytes */
         if (posture != image_skewed && dev_color_eq(*pdevc, *pdevc_next))
             goto set;

@@ -380,11 +380,14 @@ top:
     /* If the CS is PS based and we have not yet converted to the ICC form
        then go ahead and do that now */
     if (gs_color_space_is_PSCIE(pcs) && pcs->icc_equivalent == NULL) {
-        gs_colorspace_set_icc_equivalent(pcs, &(is_lab), pis->memory);
+        gs_colorspace_set_icc_equivalent((gs_color_space *)pcs, &(is_lab), pis->memory);
     }
-    rendering_params.black_point_comp = BP_ON;
+    rendering_params.black_point_comp = pis->blackptcomp;
     rendering_params.graphics_type_tag = GS_PATH_TAG;
+    rendering_params.override_icc = false;
+    rendering_params.preserve_black = gsBKPRESNOTSPECIFIED;
     rendering_params.rendering_intent = pis->renderingintent;
+    rendering_params.cmm = gsCMM_DEFAULT;
     /* Grab the icc link transform that we need now */
     if (pcs->cmm_icc_profile_data != NULL) {
         pfs->icclink = gsicc_get_link(pis, pis->trans_device, pcs, NULL,

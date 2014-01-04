@@ -408,8 +408,8 @@ int ps2write_dsc_header(gx_device_pdf * pdev, int pages)
          * mark derived from the BoundingBox of all the individual pages.
          */
         {
-            int pagecount = 1;
-            int urx=0, ury=0, j;
+            int pagecount = 1, j;
+            double urx=0, ury=0;
 
             for (j = 0; j < NUM_RESOURCE_CHAINS; ++j) {
                 pdf_resource_t *pres = pdev->resources[resourcePage].chains[j];
@@ -418,16 +418,18 @@ int ps2write_dsc_header(gx_device_pdf * pdev, int pages)
                     if ((!pres->named || pdev->ForOPDFRead)
                         && !pres->object->written) {
                         pdf_page_t *page = &pdev->pages[pagecount - 1];
-                        if ((int)ceil(page->MediaBox.x) > urx)
-                            urx = page->MediaBox.x;
-                        if ((int)ceil(page->MediaBox.y) > urx)
-                            ury = page->MediaBox.y;
+                        if (ceil(page->MediaBox.x) > urx)
+                            urx = ceil(page->MediaBox.x);
+                        if (ceil(page->MediaBox.y) > ury)
+                            ury = ceil(page->MediaBox.y);
                         pagecount++;
                     }
             }
-            sprintf(BBox, "%%%%BoundingBox: 0 0 %d %d\n", urx, ury);
+            sprintf(BBox, "%%%%BoundingBox: 0 0 %d %d\n", (int)urx, (int)ury);
+            stream_write(s, (byte *)BBox, strlen(BBox));
+            sprintf(BBox, "%%%%HiResBoundingBox: 0 0 %.2f %.2f\n", urx, ury);
+            stream_write(s, (byte *)BBox, strlen(BBox));
         }
-        stream_write(s, (byte *)BBox, strlen(BBox));
         cre_date_time_len = pdf_get_docinfo_item(pdev, "/CreationDate", cre_date_time, sizeof(cre_date_time) - 1);
         cre_date_time[cre_date_time_len] = 0;
         sprintf(BBox, "%%%%Creator: %s %d (%s)\n", gs_product, (int)gs_revision,
@@ -467,7 +469,7 @@ int ps2write_dsc_header(gx_device_pdf * pdev, int pages)
         if (status < 0)
             return_error(gs_error_ioerror);
         stream_puts(s, "\n");
-        pdev->OPDFRead_procset_length = stell(s);
+        pdev->OPDFRead_procset_length = (int)stell(s);
     }
     return 0;
 }
@@ -567,11 +569,11 @@ pdf_next_id(gx_device_pdf * pdev)
  * used locally (for computing lengths or patching), since there is no way
  * to map them later to the eventual position in the output file.
  */
-long
+gs_offset_t
 pdf_stell(gx_device_pdf * pdev)
 {
     stream *s = pdev->strm;
-    long pos = stell(s);
+    gs_offset_t pos = stell(s);
 
     if (s == pdev->asides.strm)
         pos += ASIDES_BASE_POSITION;
@@ -595,7 +597,7 @@ pdf_stell(gx_device_pdf * pdev)
 long pdf_obj_forward_ref(gx_device_pdf * pdev)
 {
     long id = pdf_next_id(pdev);
-    long pos = 0;
+    gs_offset_t pos = 0;
 
     fwrite(&pos, sizeof(pos), 1, pdev->xref.file);
     return id;
@@ -606,7 +608,7 @@ long
 pdf_obj_ref(gx_device_pdf * pdev)
 {
     long id = pdf_next_id(pdev);
-    long pos = pdf_stell(pdev);
+    gs_offset_t pos = pdf_stell(pdev);
 
     fwrite(&pos, sizeof(pos), 1, pdev->xref.file);
     return id;
@@ -621,7 +623,7 @@ pdf_open_obj(gx_device_pdf * pdev, long id, pdf_resource_type_t type)
     if (id <= 0) {
         id = pdf_obj_ref(pdev);
     } else {
-        long pos = pdf_stell(pdev);
+        gs_offset_t pos = pdf_stell(pdev);
         FILE *tfile = pdev->xref.file;
         int64_t tpos = gp_ftell_64(tfile);
 
@@ -1011,7 +1013,7 @@ static int
 stream_to_none(gx_device_pdf * pdev)
 {
     stream *s = pdev->strm;
-    long length;
+    gs_offset_t length;
     int code;
 
     if (pdev->ResourcesBeforeUsage) {
@@ -1048,7 +1050,7 @@ stream_to_none(gx_device_pdf * pdev)
         stream_puts(s, "endstream\n");
         pdf_end_obj(pdev, resourceStream);
         pdf_open_obj(pdev, pdev->contents_length_id, resourceLength);
-        pprintld1(s, "%ld\n", length);
+        pprintld1(s, "%ld\n", (long)length);
         pdf_end_obj(pdev, resourceLength);
     }
     return PDF_IN_NONE;
@@ -1311,7 +1313,7 @@ pdf_print_resource_statistics(gx_device_pdf * pdev)
         for (i = 0; i < NUM_RESOURCE_CHAINS; i++) {
             for (pres = pchain[i]; pres != 0; pres = pres->next, n++);
         }
-        dprintf3("Resource type %d (%s) has %d instances.\n", rtype,
+        dmprintf3(pdev->pdf_memory, "Resource type %d (%s) has %d instances.\n", rtype,
                 (name ? name : ""), n);
     }
 }
@@ -1605,11 +1607,13 @@ pdf_store_page_resources(gx_device_pdf *pdev, pdf_page_t *page, bool clear_usage
                         continue;
                     if (s == 0) {
                         page->resource_ids[i] = pdf_begin_separate(pdev, i);
+                        pdf_record_usage(pdev, page->resource_ids[i], pdev->next_page);
                         s = pdev->strm;
                         stream_puts(s, "<<");
                     }
                     pprints1(s, "/%s\n", pres->rname);
                     pprintld1(s, "%ld 0 R", id);
+                    pdf_record_usage(pdev, id, pdev->next_page);
                     if (clear_usage)
                         pres->where_used -= pdev->used_mask;
                 }
@@ -1618,9 +1622,14 @@ pdf_store_page_resources(gx_device_pdf *pdev, pdf_page_t *page, bool clear_usage
         if (s) {
             stream_puts(s, ">>\n");
             pdf_end_separate(pdev, i);
-            if (i != resourceFont)
-                pdf_write_resource_objects(pdev, i);
         }
+        /* If an object isn't used, we still need to emit it :-( This is because
+         * we reserved an object number for it, and the xref will have an entry
+         * for it. If we don't actually emit it then the xref will be invalid.
+         * An alternative would be to modify the xref to mark the object as unused.
+         */
+        if (i != resourceFont)
+            pdf_write_resource_objects(pdev, i);
     }
     page->procsets = pdev->procsets;
     return 0;
@@ -1628,9 +1637,10 @@ pdf_store_page_resources(gx_device_pdf *pdev, pdf_page_t *page, bool clear_usage
 
 /* Copy data from a temporary file to a stream. */
 void
-pdf_copy_data(stream *s, FILE *file, long count, stream_arcfour_state *ss)
+pdf_copy_data(stream *s, FILE *file, gs_offset_t count, stream_arcfour_state *ss)
 {
-    long r, left = count, code;
+    gs_offset_t r, left = count;
+    long code;
     byte buf[sbuf_size];
 
     while (left > 0) {
@@ -1651,7 +1661,7 @@ pdf_copy_data(stream *s, FILE *file, long count, stream_arcfour_state *ss)
 /* Copy data from a temporary file to a stream,
    which may be targetted to the same file. */
 void
-pdf_copy_data_safe(stream *s, FILE *file, int64_t position, long count)
+pdf_copy_data_safe(stream *s, FILE *file, gs_offset_t position, long count)
 {
     long r, left = count, code;
 
@@ -1908,7 +1918,7 @@ pdf_encrypt_encoded_string(const gx_device_pdf *pdev, const byte *str, uint size
         }
     }
     sclose(&sout); /* Writes ')'. */
-    return stell(&sinp) + 1;
+    return (int)stell(&sinp) + 1;
 }
 
 /* Write an encoded string with possible encryption. */

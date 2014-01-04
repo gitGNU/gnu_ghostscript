@@ -18,6 +18,9 @@
 #ifndef gdevdevn_INCLUDED
 # define gdevdevn_INCLUDED
 
+/* See Comments in gdevtsep.c or gdevpsd.c as to the purpose of this */
+#define LIMIT_TO_ICC 1
+
 /*
  * Define the maximum number of spot colors supported by this device.
  * This value is arbitrary.  It is set simply to define a limit on
@@ -162,7 +165,7 @@ void gray_cs_to_devn_cm(gx_device * dev, int * map, frac gray, frac out[]);
 void rgb_cs_to_devn_cm(gx_device * dev, int * map,
                 const gs_imager_state *pis, frac r, frac g, frac b, frac out[]);
 
-void cmyk_cs_to_devn_cm(gx_device * dev, int * map,
+void cmyk_cs_to_devn_cm(gx_device * dev, const int * map,
                 frac c, frac m, frac y, frac k, frac out[]);
 
 /*
@@ -554,7 +557,7 @@ extern int comp_bit_factor[];
  * A routine for debugging the encoded color colorant list.  This routine
  * dumps the contents of the list.
  */
-void print_compressed_color_list(compressed_color_list_t * pcomp_list, int num_comp);
+void print_compressed_color_list(const gs_memory_t *mem, compressed_color_list_t * pcomp_list, int num_comp);
 
 /*
  * Free the elements of a compressed color list.

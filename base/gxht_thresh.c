@@ -861,7 +861,7 @@ gxht_thresh_planes(gx_image_enum *penum, fixed xrun,
     byte *halftone;
     int dithered_stride = penum->ht_stride;
     bool is_planar_dev = dev_proc(dev, dev_spec_op)(dev, 
-                                                gxdso_is_native_planar, NULL, 0);
+                                                gxdso_is_native_planar, NULL, 0) > 0;
     gx_color_index dev_white = gx_device_white(dev);
     gx_color_index dev_black = gx_device_black(dev);
     bool done = false;
@@ -883,7 +883,7 @@ gxht_thresh_planes(gx_image_enum *penum, fixed xrun,
             for (j = 0; j < spp_out; j++) {
                 thresh_width = penum->pis->dev_ht->components[j].corder.width;
                 thresh_height = penum->pis->dev_ht->components[j].corder.full_height;
-                halftone = penum->ht_buffer + j * penum->ht_plane_height;
+                halftone = penum->ht_buffer + j * vdi * dithered_stride;
                 /* Compute the tiling positions with dest_width */
                 dx = fixed2int_var(xrun) % thresh_width;
                 /* Left remainder part */

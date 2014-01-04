@@ -286,6 +286,18 @@ pdf_font_descriptor_id(const pdf_font_descriptor_t *pfd)
     return pdf_resource_id((const pdf_resource_t *)pfd);
 }
 
+long pdf_set_font_descriptor_usage(gx_device_pdf *pdev, int parent_id, const pdf_font_descriptor_t *pfd)
+{
+    int id = pdf_resource_id((const pdf_resource_t *)pfd);
+
+    pdf_record_usage_by_parent(pdev, id, parent_id);
+    if (pfd->base_font->FontFile) {
+        id = pfd->base_font->FontFile->id;
+        pdf_record_usage_by_parent(pdev, id, parent_id);
+    }
+    return 0;
+}
+
 /*
  * Get the FontType of a FontDescriptor.
  */
@@ -320,6 +332,21 @@ pdf_font_descriptor_is_subset(const pdf_font_descriptor_t *pfd)
 gs_string *pdf_font_descriptor_name(pdf_font_descriptor_t *pfd)
 {
     return &pfd->common.values.FontName;
+}
+
+char *pdf_fontfile_hash(void *pfd)
+{
+    pdf_font_descriptor_t *fd = (pdf_font_descriptor_t *)pfd;
+    cos_dict_t *pcd;
+
+    if (fd->base_font && fd->base_font->FontFile) {
+        pcd = (cos_dict_t *)fd->base_font->FontFile;
+        if (pcd->stream_md5_valid)
+            return ((char *)pcd->stream_hash);
+        else
+            return 0;
+    } else
+        return 0;
 }
 
 /*
@@ -415,6 +442,7 @@ pdf_compute_font_descriptor(gx_device_pdf *pdev, pdf_font_descriptor_t *pfd)
         /* Type 3 fonts may use a FontMatrix in PDF, so we don't
          * need to deal with non-standard matrices
          */
+    case ft_GL2_531:
     case ft_PCL_user_defined:
     case ft_GL2_stick_user_defined:
     case ft_user_defined:
@@ -720,7 +748,8 @@ pdf_write_FontDescriptor(gx_device_pdf *pdev, pdf_resource_t *pres)
     pfd->common.object->written = true;
     {	const cos_object_t *pco = (const cos_object_t *)pdf_get_FontFile_object(pfd->base_font);
         if (pco != NULL) {
-            pprintld1(s, "%%BeginResource: file (PDF FontFile obj_%ld)\n", pco->id);
+            if (pdev->is_ps2write)
+                pprintld1(s, "%%BeginResource: file (PDF FontFile obj_%ld)\n", pco->id);
             code = COS_WRITE_OBJECT(pco, pdev, resourceNone);
             if (code < 0)
                 return code;

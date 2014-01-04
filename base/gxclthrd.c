@@ -60,7 +60,7 @@ clist_setup_render_threads(gx_device *dev, int y)
     crdev->num_render_threads = pdev->num_render_threads_requested;
 
     if(gs_debug[':'] != 0)
-        dprintf1("%% %d rendering threads requested.\n", pdev->num_render_threads_requested);
+        dmprintf1(mem, "%% %d rendering threads requested.\n", pdev->num_render_threads_requested);
 
     if (crdev->num_render_threads > band_count)
         crdev->num_render_threads = band_count; /* don't bother starting more threads than bands */
@@ -147,6 +147,7 @@ clist_setup_render_threads(gx_device *dev, int y)
                 ncdev->bandlist_memory = thread->memory;
         gs_c_param_list_read(&paramlist);
         ndev->PageCount = dev->PageCount;       /* copy to prevent mismatch error */
+        ndev->color_info = cdev->color_info;	/* copy before putdeviceparams */
 #if CMM_THREAD_SAFE
         ndev->icc_struct = dev->icc_struct;  /* Set before put params */
         rc_increment(ndev->icc_struct);
@@ -160,11 +161,14 @@ clist_setup_render_threads(gx_device *dev, int y)
             code = devn_copy_params(dev, (gx_device*) ncdev);
             if (code < 0) return_error(gs_error_VMerror);
         }
+        /* Also make sure supports_devn is set correctly */
+        ndev->icc_struct->supports_devn = cdev->icc_struct->supports_devn;
         ncdev->page_uses_transparency = cdev->page_uses_transparency;
-        if_debug3(gs_debug_flag_icc,"[icc] MT clist device = 0x%x profile = 0x%x handle = 0x%x\n", 
-                  ncdev,
-                  ncdev->icc_struct->device_profile[0],
-                  ncdev->icc_struct->device_profile[0]->profile_handle);
+        if_debug3m(gs_debug_flag_icc, cdev->memory,
+                   "[icc] MT clist device = 0x%x profile = 0x%x handle = 0x%x\n", 
+                   ncdev,
+                   ncdev->icc_struct->device_profile[0],
+                   ncdev->icc_struct->device_profile[0]->profile_handle);
         /* If the device is_planar, then set the flag in the new_device and the procs */
         if ((ncdev->is_planar = cdev->is_planar))
             gdev_prn_set_procs_planar(ndev);
@@ -196,12 +200,12 @@ clist_setup_render_threads(gx_device *dev, int y)
 #if CMM_THREAD_SAFE
         ncdev->icc_cache_cl = cdev->icc_cache_cl;
 #else
-        ncdev->icc_cache_cl = gsicc_cache_new(crdev->memory);
+        ncdev->icc_cache_cl = gsicc_cache_new(thread->memory);
 #endif
         ncdev->icc_table = cdev->icc_table;
         /* create the buf device for this thread, and allocate the semaphores */
         if ((code = gdev_create_buf_device(cdev->buf_procs.create_buf_device,
-                                &(thread->bdev), cdev->target,
+                                &(thread->bdev), ndev,
                                 band*crdev->page_band_height, NULL,
                                 thread->memory, clist_get_band_complexity(dev,y)) < 0))
             break;
@@ -235,8 +239,10 @@ clist_setup_render_threads(gx_device *dev, int y)
             gs_free_object(crdev->render_threads[i].memory, thread_cdev,
             "clist_setup_render_threads");
         }
-        if (crdev->render_threads[i].memory != NULL)
+        if (crdev->render_threads[i].memory != NULL) {
             gs_memory_chunk_release(crdev->render_threads[i].memory);
+            crdev->render_threads[i].memory = NULL;
+        }
     }
     /* If we weren't able to create at least one thread, punt   */
     /* Although a single thread isn't any more efficient, the   */
@@ -273,7 +279,7 @@ clist_setup_render_threads(gx_device *dev, int y)
         crdev->next_band = band;
 
     if(gs_debug[':'] != 0)
-        dprintf1("%% Using %d rendering threads\n", i);
+        dmprintf1(mem, "%% Using %d rendering threads\n", i);
 
     return 0;
 }
@@ -325,10 +331,10 @@ clist_teardown_render_threads(gx_device *dev)
             gs_free_object(thread->memory, thread_cdev, "clist_teardown_render_threads");
 #ifdef DEBUG
             if (gs_debug[':'])
-                dprintf2("%% Thread %d total usertime=%ld msec\n", i, thread->cputime);
-            dprintf1("\nthread: %d ending memory state...\n", i);
+                dmprintf2(mem, "%% Thread %d total usertime=%ld msec\n", i, thread->cputime);
+            dmprintf1(thread->memory, "\nthread: %d ending memory state...\n", i);
             gs_memory_chunk_dump_memory(thread->memory);
-            dprintf("                                    memory dump done.\n");
+            dmprintf(thread->memory, "                                    memory dump done.\n");
 #endif
 
             gs_memory_chunk_release(thread->memory);

@@ -193,9 +193,9 @@ gx_image_enum_alloc(const gs_image_common_t * pic,
     penum->rrect.h = penum->rect.h;
 #ifdef DEBUG
     if (gs_debug_c('b')) {
-        dlprintf2("[b]Image: w=%d h=%d", width, height);
+        dmlprintf2(mem, "[b]Image: w=%d h=%d", width, height);
         if (prect)
-            dprintf4(" ((%d,%d),(%d,%d))",
+            dmprintf4(mem, " ((%d,%d),(%d,%d))",
                      prect->p.x, prect->p.y, prect->q.x, prect->q.y);
     }
 #endif
@@ -381,13 +381,24 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
         /* If mi.{xx,yy} > 1 then we are downscaling. During downscaling,
          * the support increases to ensure that we don't lose pixels contributions
          * entirely. */
-        /* I do not understand the need for the +/- 1 fudge factors in the Y,
+        /* I do not understand the need for the +/- 1 fudge factors,
          * but they seem to be required. Increasing the render rectangle can
          * never be bad at least... RJW */
-        irect.p.x -= MAX_ISCALE_SUPPORT * (int)any_abs(mi.xx) + 1;
-        irect.p.y -= MAX_ISCALE_SUPPORT * (int)any_abs(mi.yy) + 1;
-        irect.q.x += MAX_ISCALE_SUPPORT * (int)max(1,any_abs(mi.xx)+1.0) + 1;
-        irect.q.y += MAX_ISCALE_SUPPORT * (int)max(1,any_abs(mi.yy)+1.0) + 1;
+        {
+            float support = any_abs(mi.xx);
+            int isupport;
+            if (any_abs(mi.yy) > support)
+                support = any_abs(mi.yy);
+            if (any_abs(mi.xy) > support)
+                support = any_abs(mi.xy);
+            if (any_abs(mi.yx) > support)
+                support = any_abs(mi.yx);
+            isupport = (int)(MAX_ISCALE_SUPPORT * (support+1)) + 1;
+            irect.p.x -= isupport;
+            irect.p.y -= isupport;
+            irect.q.x += isupport;
+            irect.q.y += isupport;
+        }
         if (penum->rrect.x < irect.p.x) {
             penum->rrect.w -= irect.p.x - penum->rrect.x;
             if (penum->rrect.w < 0)
@@ -420,7 +431,7 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
     penum->matrix.yy = mat.yy;
     penum->matrix.tx = mat.tx;
     penum->matrix.ty = mat.ty;
-    if_debug6('b', " [%g %g %g %g %g %g]\n",
+    if_debug6m('b', pis->memory, " [%g %g %g %g %g %g]\n",
               mat.xx, mat.xy, mat.yx, mat.yy, mat.tx, mat.ty);
     /* following works for 1, 2, 4, 8, 12, 16 */
     index_bps = (bps < 8 ? bps >> 1 : (bps >> 2) + 1);
@@ -537,12 +548,12 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
            is not yet set, go ahead and handle that now.  It may already
            be done due to the above init_colors which may go through remap. */
         if (gs_color_space_is_PSCIE(pcs) && pcs->icc_equivalent == NULL) {
-            gs_colorspace_set_icc_equivalent(pcs, &(penum->icc_setup.is_lab),
+            gs_colorspace_set_icc_equivalent((gs_color_space *)pcs, &(penum->icc_setup.is_lab),
                                                 pis->memory);
             if (penum->icc_setup.is_lab) {
                 /* Free what ever profile was created and use the icc manager's
                    cielab profile */
-                gs_color_space *curr_pcs = pcs;
+                gs_color_space *curr_pcs = (gs_color_space *)pcs;
                 rc_decrement(curr_pcs->icc_equivalent,"gx_image_enum_begin");
                 rc_decrement(curr_pcs->cmm_icc_profile_data,"gx_image_enum_begin");
                 curr_pcs->cmm_icc_profile_data = pis->icc_manager->lab_profile;
@@ -662,14 +673,14 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
     penum->color_cache = NULL;
     penum->ht_buffer = NULL;
     penum->thresh_buffer = NULL;
-    penum->cie_range = NULL;
+    penum->use_cie_range = false;
     penum->line_size = 0;
     penum->use_rop = lop != (masked ? rop3_T : rop3_S);
 #ifdef DEBUG
     if (gs_debug_c('*')) {
         if (penum->use_rop)
-            dprintf1("[%03x]", lop);
-        dprintf5("%c%d%c%dx%d ",
+            dmprintf1(mem, "[%03x]", lop);
+        dmprintf5(mem, "%c%d%c%dx%d ",
                  (masked ? (color_is_pure(pdcolor) ? 'm' : 'h') : 'i'),
                  bps,
                  (penum->posture == image_portrait ? ' ' :
@@ -741,20 +752,28 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
                 mty = (((mty + diff) | fixed_half) & -fixed_half) - diff;
             }
         }
-        if_debug5('b', "[b]Image: %sspp=%d, bps=%d, mt=(%g,%g)\n",
-                  (masked? "masked, " : ""), spp, bps,
-                  fixed2float(mtx), fixed2float(mty));
-        if_debug9('b',
-                  "[b]   cbox=(%g,%g),(%g,%g), obox=(%g,%g),(%g,%g), clip_image=0x%x\n",
-                  fixed2float(cbox.p.x), fixed2float(cbox.p.y),
-                  fixed2float(cbox.q.x), fixed2float(cbox.q.y),
-                  fixed2float(obox.p.x), fixed2float(obox.p.y),
-                  fixed2float(obox.q.x), fixed2float(obox.q.y),
-                  penum->clip_image);
+        if_debug5m('b', penum->memory, "[b]Image: %sspp=%d, bps=%d, mt=(%g,%g)\n",
+                   (masked? "masked, " : ""), spp, bps,
+                   fixed2float(mtx), fixed2float(mty));
+        if_debug9m('b', penum->memory,
+                   "[b]   cbox=(%g,%g),(%g,%g), obox=(%g,%g),(%g,%g), clip_image=0x%x\n",
+                   fixed2float(cbox.p.x), fixed2float(cbox.p.y),
+                   fixed2float(cbox.q.x), fixed2float(cbox.q.y),
+                   fixed2float(obox.p.x), fixed2float(obox.p.y),
+                   fixed2float(obox.q.x), fixed2float(obox.q.y),
+                   penum->clip_image);
+        /* These DDAs enumerate the starting position of each source pixel
+         * row in device space. */
         dda_init(penum->dda.row.x, mtx, col_extent.x, height);
         dda_init(penum->dda.row.y, mty, col_extent.y, height);
-        penum->dst_width = row_extent.x;
-        penum->dst_height = col_extent.y;
+        if (penum->posture == image_portrait) {
+            penum->dst_width = row_extent.x;
+            penum->dst_height = col_extent.y;
+        } else {
+            penum->dst_width = col_extent.x;
+            penum->dst_height = row_extent.y;
+        }
+        /* For gs_image_class_0_interpolate. */
         penum->yi0 = fixed2int_pixround_perfect(dda_current(penum->dda.row.y)); /* For gs_image_class_0_interpolate. */
         if (penum->rect.y) {
             int y = penum->rect.y;
@@ -766,12 +785,16 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
         }
         penum->cur.x = penum->prev.x = dda_current(penum->dda.row.x);
         penum->cur.y = penum->prev.y = dda_current(penum->dda.row.y);
+        /* These DDAs enumerate the starting positions of each row of our
+         * source pixel data, in the subrectangle ('strip') that we are
+         * actually rendering. */
         dda_init(penum->dda.strip.x, penum->cur.x, row_extent.x, width);
         dda_init(penum->dda.strip.y, penum->cur.y, row_extent.y, width);
         if (penum->rect.x) {
             dda_advance(penum->dda.strip.x, penum->rect.x);
             dda_advance(penum->dda.strip.y, penum->rect.x);
-        } {
+        }
+        {
             fixed ox = dda_current(penum->dda.strip.x);
             fixed oy = dda_current(penum->dda.strip.y);
 
@@ -827,7 +850,7 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
         } else {
             penum->unpack = procs[interleaved][index_bps];
         }
-        if_debug1('b', "[b]unpack=%d\n", bps);
+        if_debug1m('b', penum->memory, "[b]unpack=%d\n", bps);
         /* Set up pixel0 for image class procedures. */
         penum->dda.pixel0 = penum->dda.strip;
         for (i = 0; i < gx_image_class_table_count; ++i)
@@ -986,7 +1009,6 @@ image_init_color_cache(gx_image_enum * penum, int bps, int spp)
                    num_des_comp * num_entries * sizeof(byte), "image_init_color_cache");
     penum->color_cache->is_transparent = (bool*) gs_alloc_bytes(penum->memory,
              num_entries * sizeof(bool), "image_init_color_cache");
-    penum->color_cache->free_contone = true;
     /* Initialize */
     memset(penum->color_cache->is_transparent,0,num_entries * sizeof(bool));
     /* Depending upon if we need decode and ICC CM, fill the cache a couple
@@ -1034,21 +1056,10 @@ image_init_color_cache(gx_image_enum * penum, int bps, int spp)
             }
         } else {
             /* Indexing only.  No CM, decode or transfer functions. */
-            if (penum->pcs->params.indexed.use_proc) {
-                /* Have to do the slow way */
-                for (k = 0; k < num_entries; k++) {
-                    gs_cspace_indexed_lookup_bytes(penum->pcs, (float)k, psrc);
-                    memcpy(&(penum->color_cache->device_contone[k * num_des_comp]),
-                               psrc, num_des_comp);
-                }
-            } else {
-                /* Possible GC issue? In this case we just use the pointer
-                   of the index table data directly for our cache */
-                gs_free_object(penum->memory, penum->color_cache->device_contone,
-                                "image_init_color_cache(device_contone)");
-                penum->color_cache->device_contone =
-                    (byte*) penum->pcs->params.indexed.lookup.table.data;
-                penum->color_cache->free_contone = false;
+            for (k = 0; k < num_entries; k++) {
+                gs_cspace_indexed_lookup_bytes(penum->pcs, (float)k, psrc);
+                memcpy(&(penum->color_cache->device_contone[k * num_des_comp]),
+                           psrc, num_des_comp);
             }
         }
     } else {
@@ -1087,7 +1098,7 @@ image_init_color_cache(gx_image_enum * penum, int bps, int spp)
                     /* Use the index table directly. */
                     gs_free_object(penum->memory, temp_buffer, "image_init_color_cache");
                     free_temp_buffer = false;
-                    temp_buffer = penum->pcs->params.indexed.lookup.table.data;
+                    temp_buffer = (byte *)(penum->pcs->params.indexed.lookup.table.data);
                 }
             } else {
                 /* CM only */

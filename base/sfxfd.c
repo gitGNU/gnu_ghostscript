@@ -56,8 +56,8 @@ void
 
 /* Forward references for file stream procedures */
 static int
-    s_fileno_available(stream *, long *),
-    s_fileno_read_seek(stream *, long),
+    s_fileno_available(stream *, gs_offset_t *),
+    s_fileno_read_seek(stream *, gs_offset_t),
     s_fileno_read_close(stream *),
     s_fileno_read_process(stream_state *, stream_cursor_read *,
                           stream_cursor_write *, bool);
@@ -78,7 +78,7 @@ sfileno(const stream *s)
 }
 
 /* Get the current position of a file descriptor. */
-static inline long
+static inline gs_offset_t
 ltell(int fd)
 {
     return lseek(fd, 0L, SEEK_CUR);
@@ -123,8 +123,8 @@ sread_fileno(register stream * s, FILE * file, byte * buf, uint len)
 
     s_std_init(s, buf, len, &p,
                (seekable ? s_mode_read + s_mode_seek : s_mode_read));
-    if_debug2('s', "[s]read file=0x%lx, fd=%d\n", (ulong) file,
-              fileno(file));
+    if_debug2m('s', s->memory, "[s]read file=0x%lx, fd=%d\n", (ulong) file,
+               fileno(file));
     s->file = file;
     s->file_modes = s->modes;
     s->file_offset = 0;
@@ -138,7 +138,7 @@ sread_fileno(register stream * s, FILE * file, byte * buf, uint len)
  */
 #ifndef KEEP_FILENO_API
 int
-sread_subfile(stream *s, long start, long length)
+sread_subfile(stream *s, gs_offset_t start, gs_offset_t length)
 {
     if (s->file == 0 || s->modes != s_mode_read + s_mode_seek ||
         s->file_offset != 0 || s->file_limit != max_long ||
@@ -155,15 +155,15 @@ sread_subfile(stream *s, long start, long length)
 
 /* Procedures for reading from a file */
 static int
-s_fileno_available(register stream * s, long *pl)
+s_fileno_available(register stream * s, gs_offset_t *pl)
 {
-    long max_avail = s->file_limit - stell(s);
-    long buf_avail = sbufavailable(s);
+    gs_offset_t max_avail = s->file_limit - stell(s);
+    gs_offset_t buf_avail = sbufavailable(s);
     int fd = sfileno(s);
 
     *pl = min(max_avail, buf_avail);
     if (sseekable(s)) {
-        long pos, end;
+        gs_offset_t pos, end;
 
         pos = ltell(fd);
         if (pos < 0)
@@ -182,10 +182,10 @@ s_fileno_available(register stream * s, long *pl)
     return 0;
 }
 static int
-s_fileno_read_seek(register stream * s, long pos)
+s_fileno_read_seek(register stream * s, gs_offset_t pos)
 {
-    uint end = s->srlimit - s->cbuf + 1;
-    long offset = pos - s->position;
+    gs_offset_t end = s->srlimit - s->cbuf + 1;
+    gs_offset_t offset = pos - s->position;
 
     if (offset >= 0 && offset <= end) {  /* Staying within the same buffer */
         s->srptr = s->cbuf + offset - 1;
@@ -227,7 +227,7 @@ again:
     max_count = pw->limit - pw->ptr;
     status = 1;
     if (s->file_limit < max_long) {
-        long limit_count = s->file_offset + s->file_limit - ltell(fd);
+        gs_offset_t limit_count = s->file_offset + s->file_limit - ltell(fd);
 
         if (max_count > limit_count)
             max_count = limit_count, status = EOFC;
@@ -264,8 +264,8 @@ swrite_fileno(register stream * s, FILE * file, byte * buf, uint len)
 
     s_std_init(s, buf, len, &p,
                (file == stdout ? s_mode_write : s_mode_write + s_mode_seek));
-    if_debug2('s', "[s]write file=0x%lx, fd=%d\n", (ulong) file,
-              fileno(file));
+    if_debug2m('s', s->memory, "[s]write file=0x%lx, fd=%d\n", (ulong) file,
+               fileno(file));
     s->file = file;
     s->file_modes = s->modes;
     s->file_offset = 0;		/* in case we switch to reading later */
@@ -282,7 +282,7 @@ sappend_fileno(register stream * s, FILE * file, byte * buf, uint len)
 }
 /* Procedures for writing on a file */
 static int
-s_fileno_write_seek(stream * s, long pos)
+s_fileno_write_seek(stream * s, gs_offset_t pos)
 {
     /* We must flush the buffer to reposition. */
     int code = sflush(s);
@@ -353,8 +353,8 @@ s_fileno_switch(stream * s, bool writing)
         if (!(s->file_modes & s_mode_write))
             return ERRC;
         pos = stell(s);
-        if_debug2('s', "[s]switch 0x%lx to write at %ld\n",
-                  (ulong) s, pos);
+        if_debug2m('s', s->memory, "[s]switch 0x%lx to write at %ld\n",
+                   (ulong) s, pos);
         lseek(fd, pos, SEEK_SET);	/* pacify OS */
         if (modes & s_mode_append) {
             sappend_file(s, s->file, s->cbuf, s->cbsize);  /* sets position */
@@ -367,8 +367,8 @@ s_fileno_switch(stream * s, bool writing)
         if (!(s->file_modes & s_mode_read))
             return ERRC;
         pos = stell(s);
-        if_debug2('s', "[s]switch 0x%lx to read at %ld\n",
-                  (ulong) s, pos);
+        if_debug2m('s', s->memory, "[s]switch 0x%lx to read at %ld\n",
+                   (ulong) s, pos);
         if (sflush(s) < 0)
             return ERRC;
         lseek(fd, 0L, SEEK_CUR);	/* pacify OS */

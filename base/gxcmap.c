@@ -62,7 +62,7 @@ gx_default_encode_color(gx_device * dev, const gx_color_value cv[])
 
 #ifdef DEBUG
     if ( dev->color_info.separable_and_linear != GX_CINFO_SEP_LIN ) {
-        dprintf( "gx_default_encode_color() requires separable and linear\n" );
+        dmprintf(dev->memory, "gx_default_encode_color() requires separable and linear\n" );
         return gx_no_color_index;
     }
 #endif
@@ -91,7 +91,7 @@ gx_default_decode_color(gx_device * dev, gx_color_index color, gx_color_value cv
 
 #ifdef DEBUG
     if ( dev->color_info.separable_and_linear != GX_CINFO_SEP_LIN ) {
-        dprintf( "gx_default_decode_color() requires separable and linear\n" );
+        dmprintf(dev->memory, "gx_default_decode_color() requires separable and linear\n" );
         return gs_error_rangecheck;
     }
 #endif
@@ -124,7 +124,7 @@ gx_error_encode_color(gx_device * dev, const gx_color_value colors[])
 #ifdef DEBUG
     /* The "null" device is expected to be missing encode_color */
     if (strcmp(dev->dname, "null") != 0)
-        dprintf("No encode_color proc defined for device.\n");
+        dmprintf(dev->memory, "No encode_color proc defined for device.\n");
 #endif
     return gx_no_color_index;
 }
@@ -135,7 +135,7 @@ gx_error_decode_color(gx_device * dev, gx_color_index cindex, gx_color_value col
      int i=dev->color_info.num_components;
 
 #ifdef DEBUG
-     dprintf("No decode_color proc defined for device.\n");
+     dmprintf(dev->memory, "No decode_color proc defined for device.\n");
 #endif
      for(; i>=0; i--)
         colors[i] = 0;
@@ -470,7 +470,7 @@ gx_error_get_color_comp_index(gx_device * dev, const char * pname,
      * routine for the device.
      */
 #ifdef DEBUG
-    dprintf("No get_color_comp_index proc defined for device.\n");
+    dmprintf(dev->memory, "No get_color_comp_index proc defined for device.\n");
 #endif
     return -1;			    /* Always return "unknown" component name */
 }
@@ -1181,15 +1181,14 @@ cmap_separation_direct(frac all, gx_device_color * pdc, const gs_imager_state * 
     gx_color_value cv[GX_DEVICE_COLOR_MAX_COMPONENTS];
     gx_color_index color;
     bool use_rgb2dev_icc = false;
-    gsicc_rendering_intents_t rendering_intent;
+    gsicc_rendering_param_t render_cond;   
     int code;
     cmm_dev_profile_t *dev_profile = NULL;
     cmm_profile_t *des_profile = NULL;
 
     code = dev_proc(dev, get_profile)(dev,  &dev_profile);
     gsicc_extract_profile(dev->graphics_type_tag,
-                          dev_profile, &des_profile,
-                          &rendering_intent);
+                          dev_profile, &des_profile, &render_cond);   
     for (i=0; i < ncomps; i++)
         cm_comps[i] = 0;
     if (pis->color_component_map.sep_type == SEP_ALL) {
@@ -1236,9 +1235,12 @@ cmap_separation_direct(frac all, gx_device_color * pdc, const gs_imager_state * 
         gsicc_rendering_param_t rendering_params;
         unsigned short psrc[GS_CLIENT_COLOR_MAX_COMPONENTS], psrc_cm[GS_CLIENT_COLOR_MAX_COMPONENTS];
 
-        rendering_params.black_point_comp = BP_ON;
-        rendering_params.graphics_type_tag = GS_PATH_TAG;
+        rendering_params.black_point_comp = pis->blackptcomp;
+        rendering_params.graphics_type_tag = dev->graphics_type_tag;
+        rendering_params.override_icc = false;
+        rendering_params.preserve_black = gsBKPRESNOTSPECIFIED;
         rendering_params.rendering_intent = pis->renderingintent;
+        rendering_params.cmm = gsCMM_DEFAULT;
 
         icc_link = gsicc_get_link_profile(pis, dev, pis->icc_manager->default_rgb,
                                           des_profile, &rendering_params,
@@ -1299,19 +1301,21 @@ devicen_icc_cmyk(frac cm_comps[], const gs_imager_state * pis, gx_device *dev)
     unsigned short psrc_cm[GS_CLIENT_COLOR_MAX_COMPONENTS];
     int k;
     unsigned short *psrc_temp;
-    gsicc_rendering_intents_t rendering_intent;
+    gsicc_rendering_param_t render_cond;   
     int code;
     cmm_dev_profile_t *dev_profile = NULL;
     cmm_profile_t *des_profile = NULL;
 
     code = dev_proc(dev, get_profile)(dev,  &dev_profile);
     gsicc_extract_profile(dev->graphics_type_tag,
-                          dev_profile, &des_profile,
-                          &rendering_intent);
+                          dev_profile, &des_profile, &render_cond);
     /* Define the rendering intents. */
-    rendering_params.black_point_comp = BP_ON;
-    rendering_params.graphics_type_tag = GS_PATH_TAG;
+    rendering_params.black_point_comp = pis->blackptcomp;
+    rendering_params.graphics_type_tag = dev->graphics_type_tag;
+    rendering_params.override_icc = false;
+    rendering_params.preserve_black = gsBKPRESNOTSPECIFIED;
     rendering_params.rendering_intent = pis->renderingintent;
+    rendering_params.cmm = gsCMM_DEFAULT;
     /* Sigh, frac to full 16 bit.  Need to clean this up */
     for (k = 0; k < 4; k++){
         psrc[k] = frac2cv(cm_comps[k]);
@@ -1350,14 +1354,13 @@ cmap_devicen_halftoned(const frac * pcc,
     int i, ncomps = dev->color_info.num_components;
     frac cm_comps[GX_DEVICE_COLOR_MAX_COMPONENTS];
     int code;
-    gsicc_rendering_intents_t rendering_intent;
+    gsicc_rendering_param_t render_cond;   
     cmm_dev_profile_t *dev_profile = NULL;
     cmm_profile_t *des_profile = NULL;
 
     code = dev_proc(dev, get_profile)(dev,  &dev_profile);
     gsicc_extract_profile(dev->graphics_type_tag,
-                          dev_profile, &des_profile,
-                          &rendering_intent);
+                          dev_profile, &des_profile, &render_cond);
     /* map to the color model */
     for (i=0; i < ncomps; i++)
         cm_comps[i] = 0;
@@ -1397,19 +1400,23 @@ cmap_devicen_direct(const frac * pcc,
     gx_color_value cv[GX_DEVICE_COLOR_MAX_COMPONENTS];
     gx_color_index color;
     int code;
-    gsicc_rendering_intents_t rendering_intent;
+    gsicc_rendering_param_t render_cond;   
     cmm_dev_profile_t *dev_profile = NULL;
     cmm_profile_t *des_profile = NULL;
 
     code = dev_proc(dev, get_profile)(dev,  &dev_profile);
     gsicc_extract_profile(dev->graphics_type_tag,
-                          dev_profile, &des_profile,
-                          &rendering_intent);
+                          dev_profile, &des_profile, &render_cond);
     /*   See the comment below */
     /* map to the color model */
     for (i=0; i < ncomps; i++)
         cm_comps[i] = 0;
-    map_components_to_colorants(pcc, &(pis->color_component_map), cm_comps);;
+    if (dev_profile->spotnames != NULL && dev_profile->spotnames->equiv_cmyk_set) {
+        map_components_to_colorants(pcc, dev_profile->spotnames->color_map, 
+                                    cm_comps);
+    } else {
+        map_components_to_colorants(pcc, &(pis->color_component_map), cm_comps);
+    }
     /*  Check if we have the standard colorants.  If yes, then we will apply
        ICC color management to those colorants. To understand why, consider
        the example where I have a Device with CMYK + O  and I have a
@@ -1973,15 +1980,14 @@ bool
 gx_device_uses_std_cmap_procs(gx_device * dev, const gs_imager_state * pis)
 {
     const gx_cm_color_map_procs *pprocs;
-    gsicc_rendering_intents_t rendering_intent;
+    gsicc_rendering_param_t render_cond;   
     int code;
     cmm_dev_profile_t *dev_profile = NULL;
     cmm_profile_t *des_profile = NULL;
 
     code = dev_proc(dev, get_profile)(dev,  &dev_profile);
     gsicc_extract_profile(dev->graphics_type_tag,
-                          dev_profile, &des_profile,
-                          &rendering_intent);
+                          dev_profile, &des_profile, &render_cond);
 
     if (des_profile != NULL) {
         pprocs = dev_proc(dev, get_color_mapping_procs)(dev);

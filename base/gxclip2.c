@@ -121,12 +121,12 @@ static const gx_device_tile_clip gs_tile_clip_device =
 /* Initialize a tile clipping device from a mask. */
 int
 tile_clip_initialize(gx_device_tile_clip * cdev, const gx_strip_bitmap * tiles,
-                     gx_device * tdev, int px, int py, gs_memory_t *mem)
+                     gx_device * tdev, int px, int py)
 {
     int code =
     gx_mask_clip_initialize(cdev, &gs_tile_clip_device,
                             (const gx_bitmap *)tiles,
-                            tdev, 0, 0, mem);	/* phase will be reset */
+                            tdev, 0, 0, NULL);	/* phase will be reset */
 
     if (code >= 0) {
         cdev->tiles = *tiles;
@@ -170,10 +170,10 @@ tile_clip_fill_rectangle_hl_color(gx_device *dev, const gs_fixed_rect *rect,
     for (k = 0; k < GS_CLIENT_COLOR_MAX_COMPONENTS; k++) {
         dcolor1.colors.devn.values[k] = pdcolor->colors.devn.values[k];
     }
-    x = rect->p.x;
-    y = rect->p.y;
-    w = rect->q.x - x;
-    h = rect->q.y - y;
+    x = fixed2int(rect->p.x);
+    y = fixed2int(rect->p.y);
+    w = fixed2int(rect->q.x) - x;
+    h = fixed2int(rect->q.y) - y;
     return (*dev_proc(tdev, strip_tile_rect_devn))(tdev, &cdev->tiles,
                                                     x, y, w, h, &dcolor0, &dcolor1, 
                                                     cdev->phase.x, cdev->phase.y);
@@ -291,7 +291,7 @@ tile_clip_copy_mono(gx_device * dev,
             do {\
               t_next(tx);\
             } while ( tx < x + w && (*tp & tbit) != 0 );\
-            if_debug3('T', "[T]run x=(%d,%d), y=%d\n", tx1, tx, ty);
+            if_debug3m('T', cdev->memory, "[T]run x=(%d,%d), y=%d\n", tx1, tx, ty);
 /* (body goes here) */
 #define END_FOR_RUNS()\
           }\

@@ -32,6 +32,10 @@
 #include "gsicc_cache.h"
 #include "gxdevsop.h"
 
+#ifdef PACIFY_VALGRIND
+#include <valgrind/helgrind.h>
+#endif
+
 extern dev_proc_open_device(pattern_clist_open_device);
 
 /* GC information */
@@ -215,6 +219,10 @@ const clist_io_procs_t *clist_io_procs_memory_global = NULL;
 void
 clist_init_io_procs(gx_device_clist *pclist_dev, bool in_memory)
 {
+#ifdef PACIFY_VALGRIND
+    VALGRIND_HG_DISABLE_CHECKING(&clist_io_procs_file_global, sizeof(clist_io_procs_file_global));
+    VALGRIND_HG_DISABLE_CHECKING(&clist_io_procs_memory_global, sizeof(clist_io_procs_memory_global));
+#endif
     /* if clist_io_procs_file_global is NULL, then BAND_LIST_STORAGE=memory */
     /* was specified in the build, and "file" is not available */
     if (in_memory || clist_io_procs_file_global == NULL)
@@ -335,8 +343,8 @@ clist_init_bands(gx_device * dev, gx_device_memory *bdev, uint data_size,
     cdev->nbands = nbands;
 #ifdef DEBUG
     if (gs_debug_c('l') | gs_debug_c(':'))
-        dlprintf4("[:]width=%d, band_width=%d, band_height=%d, nbands=%d\n",
-                  bdev->width, band_width, band_height, nbands);
+        dmlprintf4(dev->memory, "[:]width=%d, band_width=%d, band_height=%d, nbands=%d\n",
+                   bdev->width, band_width, band_height, nbands);
 #endif
     return 0;
 }
@@ -693,11 +701,13 @@ static void
 clist_set_planar(gx_device *dev)
 {
     gx_device_clist_common * cdev = &((gx_device_clist *)dev)->common;
+    int ret;
 
-    if (dev_proc(dev, dev_spec_op)(dev, gxdso_is_native_planar, NULL, 0) > 0) {
-        cdev->is_planar = true;
+    ret = dev_proc(dev, dev_spec_op)(dev, gxdso_is_native_planar, NULL, 0);
+    if (ret > 0) {
+        cdev->is_planar = ret;
     } else {
-        cdev->is_planar = false;
+        cdev->is_planar = 0;
     }
 }
 
@@ -844,10 +854,10 @@ clist_end_page(gx_device_clist_writer * cldev)
 #ifdef DEBUG
     if (gs_debug_c('l') | gs_debug_c(':')) {
         if (cb.pos <= 0xFFFFFFFF)
-            dlprintf2("[:]clist_end_page at cfile=%lu, bfile=%lu\n",
+            dmlprintf2(cldev->memory, "[:]clist_end_page at cfile=%lu, bfile=%lu\n",
                   (unsigned long)cb.pos, (unsigned long)cldev->page_bfile_end_pos);
         else
-            dlprintf3("[:]clist_end_page at cfile=%lu%0lu, bfile=%lu\n",
+            dmlprintf3(cldev->memory, "[:]clist_end_page at cfile=%lu%0lu, bfile=%lu\n",
                 (unsigned long) (cb.pos >> 32), (unsigned long) (cb.pos & 0xFFFFFFFF),
                 (unsigned long)cldev->page_bfile_end_pos);
     }
@@ -928,7 +938,7 @@ clist_VMerror_recover(gx_device_clist_writer *cldev,
         }
     } while (pages_remain);
 
-    if_debug1('L', "[L]soft flush of command list, status: %d\n", code);
+    if_debug1m('L', cldev->memory, "[L]soft flush of command list, status: %d\n", code);
     return code;
 }
 
@@ -968,7 +978,7 @@ clist_VMerror_recover_flush(gx_device_clist_writer *cldev,
     }
 
     code = (reset_code < 0 ? reset_code : free_code < 0 ? old_error_code : 0);
-    if_debug1('L', "[L]hard flush of command list, status: %d\n", code);
+    if_debug1m('L', cldev->memory, "[L]hard flush of command list, status: %d\n", code);
     return code;
 }
 
@@ -1090,12 +1100,17 @@ clist_icc_writetable(gx_device_clist_writer *cldev)
     clist_icctable_entry_t *curr_entry;
     int size_data;
     int k;
+    bool rend_is_valid;
 
     /* First we need to write out the ICC profiles themselves and update
-       in the table where they will be stored and their size. */
+       in the table where they will be stored and their size.  Set the
+       rend cond valid flag prior to writing */
     curr_entry = icc_table->head;
     for ( k = 0; k < number_entries; k++ ){
+        rend_is_valid = curr_entry->icc_profile->rend_is_valid;
+        curr_entry->icc_profile->rend_is_valid = curr_entry->render_is_valid;
         curr_entry->serial_data.file_position = clist_icc_addprofile(cldev, curr_entry->icc_profile, &size_data);
+        curr_entry->icc_profile->rend_is_valid = rend_is_valid;
         curr_entry->serial_data.size = size_data;
         rc_decrement(curr_entry->icc_profile, "clist_icc_writetable");
         curr_entry->icc_profile = NULL;
@@ -1130,7 +1145,11 @@ clist_icc_addprofile(gx_device_clist_writer *cldev, cmm_profile_t *iccprofile, i
 
     clist_file_ptr cfile = cldev->page_cfile;
     int64_t fileposit;
+#if defined(DEBUG) || defined(PACIFY_VALGRIND)
+    gsicc_serialized_profile_t profile_data = { 0 };
+#else
     gsicc_serialized_profile_t profile_data;
+#endif
     int count1, count2;
 
     /* Get the current position */
@@ -1138,8 +1157,8 @@ clist_icc_addprofile(gx_device_clist_writer *cldev, cmm_profile_t *iccprofile, i
     /* Get the serialized header */
     gsicc_profile_serialize(&profile_data, iccprofile);
     /* Write the header */
-    if_debug1('l', "[l]writing icc profile in cfile at pos %ld\n",fileposit);
-    count1 = cldev->page_info.io_procs->fwrite_chars(&profile_data, sizeof(gsicc_serialized_profile_t), cfile);
+    if_debug1m('l', cldev->memory, "[l]writing icc profile in cfile at pos %"PRId64"\n",fileposit);
+    count1 = cldev->page_info.io_procs->fwrite_chars(&profile_data, GSICC_SERIALIZED_SIZE, cfile);
     /* Now write the profile */
     count2 = cldev->page_info.io_procs->fwrite_chars(iccprofile->buffer, iccprofile->buffer_size, cfile);
     /* Return where we wrote this in the cfile */
@@ -1179,6 +1198,7 @@ clist_icc_addentry(gx_device_clist_writer *cdev, int64_t hashcode_in, cmm_profil
         entry->serial_data.size = -1;
         entry->serial_data.file_position = -1;
         entry->icc_profile = icc_profile;
+        entry->render_is_valid = icc_profile->rend_is_valid;
         rc_increment(icc_profile);
         icc_table = gs_alloc_struct(stable_mem, clist_icctable_t, 
                                     &st_clist_icctable, "clist_icc_addentry");
@@ -1195,9 +1215,9 @@ clist_icc_addentry(gx_device_clist_writer *cdev, int64_t hashcode_in, cmm_profil
     } else {
         /* First check if we already have this entry */
         curr_entry = icc_table->head;
-        for ( k = 0; k < icc_table->tablesize; k++ ) {
-            if ( curr_entry->serial_data.hashcode == hashcode )
-                return(0);  /* A hit */
+        for (k = 0; k < icc_table->tablesize; k++) {
+            if (curr_entry->serial_data.hashcode == hashcode)
+                return 0;  /* A hit */
             curr_entry = curr_entry->next;
         }
          /* Add a new ICC profile */
@@ -1213,6 +1233,7 @@ clist_icc_addentry(gx_device_clist_writer *cdev, int64_t hashcode_in, cmm_profil
         entry->serial_data.size = -1;
         entry->serial_data.file_position = -1;
         entry->icc_profile = icc_profile;
+        entry->render_is_valid = icc_profile->rend_is_valid;
         rc_increment(icc_profile);
         icc_table->final->next = entry;
         icc_table->final = entry;
@@ -1230,7 +1251,7 @@ clist_writer_push_no_cropping(gx_device_clist_writer *cdev)
 
     if (buf == NULL)
         return_error(gs_error_VMerror);
-    if_debug1('v', "[v]push cropping[%d]\n", cdev->cropping_level);
+    if_debug1m('v', cdev->memory, "[v]push cropping[%d]\n", cdev->cropping_level);
     buf->next = cdev->cropping_stack;
     cdev->cropping_stack = buf;
     buf->cropping_min = cdev->cropping_min;
@@ -1266,7 +1287,7 @@ clist_writer_pop_cropping(gx_device_clist_writer *cdev)
     cdev->temp_mask_id = buf->temp_mask_id;
     cdev->cropping_stack = buf->next;
     cdev->cropping_level--;
-    if_debug1('v', "[v]pop cropping[%d]\n", cdev->cropping_level);
+    if_debug1m('v', cdev->memory, "[v]pop cropping[%d]\n", cdev->cropping_level);
     gs_free_object(cdev->memory, buf, "clist_writer_transparency_pop");
     return 0;
 }
@@ -1275,7 +1296,7 @@ int
 clist_writer_check_empty_cropping_stack(gx_device_clist_writer *cdev)
 {
     if (cdev->cropping_stack != NULL) {
-        if_debug1('v', "[v]Error: left %d cropping(s)\n", cdev->cropping_level);
+        if_debug1m('v', cdev->memory, "[v]Error: left %d cropping(s)\n", cdev->cropping_level);
         return_error(gs_error_unregistered); /* Must not happen */
     }
     return 0;

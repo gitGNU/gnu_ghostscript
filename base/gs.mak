@@ -73,7 +73,7 @@
 #	    link from a local copy of the source using our custom 
 #	    makefile.
 #	JPXSRCDIR - the name of the jpeg2k library source directory
-#	    e.g. 'jasper' or 'jasper-/version/'
+#	    e.g. 'openjpeg'
 #	JPX_CFLAGS - any platform-specific flags that are required
 #	    to properly compile in the jpeg2k library source
 #	SHARE_LCMS - If set to 1, asks the linker to use a separately
@@ -227,8 +227,6 @@ JBIG2GENDIR=$(GLGENDIR)
 JBIG2OBJDIR=$(GLOBJDIR)
 JPXGENDIR=$(GLGENDIR)
 JPXOBJDIR=$(GLOBJDIR)
-ICCGENDIR=$(GLGENDIR)
-ICCOBJDIR=$(GLOBJDIR)
 LCMSGENDIR=$(GLGENDIR)
 LCMSOBJDIR=$(GLOBJDIR)
 LCMS2GENDIR=$(GLGENDIR)
@@ -317,15 +315,6 @@ ADDMOD=$(EXP)$(ECHOGS_XE) -e .dev -a- $(NULL)
 SETCOMP=$(EXP)$(ECHOGS_XE) -e .dev -w- -l-comp
 ADDCOMP=$(EXP)$(ECHOGS_XE) -e .dev -a- -l-comp
 
-# Define the search lists and compilation switches for the third-party
-# libraries, and the compilation switches for their clients.
-# The search lists must be enclosed in $(I_) and $(_I).
-# Note that we can't define the entire compilation command,
-# because this must include $(GLSRCDIR), which isn't defined yet.
-ICCI_=$(ICCSRCDIR)
-ICCF_=
-# Currently there is no option for sharing icclib.
-ICCCF_=
 IJSI_=$(IJSSRCDIR)
 IJSF_=
 # Currently there is no option for sharing ijs.
@@ -345,7 +334,6 @@ ZCF_=$(D_)SHARE_ZLIB=$(SHARE_ZLIB)$(_D)
 JB2I_=$(JBIG2SRCDIR)
 JB2CF_=$(JBIG2_CFLAGS)
 LDF_JB2I_=$(JBIG2SRCDIR)$(D)source$(D)libraries
-JPXI_=$(JPXSRCDIR)$(D)src$(D)libjasper$(D)include
 LWF_JPXI_=$(JPXSRCDIR)$(D)library$(D)source
 JPXCF_=$(JPX_CFLAGS)
 JPX_OPENJPEG_I_=$(JPXSRCDIR)$(D)libopenjpeg

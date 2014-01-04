@@ -36,9 +36,9 @@ CXXFLAGS="${CXXFLAGS:=}"
 LDFLAGS="${LDFLAGS:=}"
 
 GS_VERSION_MAJOR=9
-GS_VERSION_MINOR=6
+GS_VERSION_MINOR=7
 GS_VERSION_PATCH=0
-GS_REVISIONDATE=20130101
+GS_REVISIONDATE=20140104
 
 GS_VERSION=`expr $GS_VERSION_MAJOR \* 10000 + $GS_VERSION_MINOR \* 100 + $GS_VERSION_PATCH`
 
@@ -57,6 +57,21 @@ AC_SUBST(GS_VERSION_MINOR0, $GS_VERSION_MINOR0)
 AC_SUBST(GS_VERSION_PATCH, $GS_VERSION_PATCH)
 AC_SUBST(GS_VERSION, $GS_VERSION)
 AC_SUBST(GS_REVISION, $GS_REVISION)
+
+dnl --------------------------------------------------
+dnl List of non-threadsafe devices
+dnl defined at the top of the file for ease of access
+dnl --------------------------------------------------
+
+NTS_DEVS='opvp oprp'
+NTS_DEVS="$NTS_DEVS uniprint"
+NTS_DEVS="$NTS_DEVS x11 x11alpha"
+NTS_DEVS="$NTS_DEVS pcl3 hpdjplus hpdjportable hpdj310 hpdj320 hpdj340 hpdj400 hpdj500 hpdj500c hpdj510 hpdj520 hpdj540 hpdj550c hpdj560c hpdj600 hpdj660c hpdj670c hpdj680c hpdj690c hpdj850c hpdj855c hpdj870c hpdj890c hpdj1120c"
+
+# We use this to store a list of devices we have excluded
+# and emit a warning on completion.
+NTS_EXCLUDES=""
+
 
 dnl --------------------------------------------------
 dnl Local utilities
@@ -138,7 +153,7 @@ case `uname` in
     ;;
     *)
 #     This is just an arbitrary file in contrib to check
-      if !(test -f contrib/gdevbjc_.c); then
+      if ! test -f contrib/gdevbjc_.c; then
         enable_contrib=no
       fi
     ;;
@@ -210,6 +225,19 @@ else
     dbgflags_to_try="$CC_DBG_FLAGS_TO_TRY"
 fi
 
+ARCH_CONF_HEADER=
+
+case `uname` in
+        Darwin*)
+          ARCH_CONF_HEADER="\$(GLSRCDIR)/../arch/osx-x86-x86_64-gcc.h"
+        ;;
+        *)
+          ARCH_CONF_HEADER=
+        ;;
+esac
+
+AC_SUBST(ARCH_CONF_HEADER)
+
 # debug configurarion is available by default with "make debug"
 #AC_ARG_ENABLE([debug], AC_HELP_STRING([--enable-debug],
 #    [turn on debugging]))
@@ -250,13 +278,38 @@ done
 
 AC_MSG_RESULT([ ...done.])
 
+dnl ----------------------------
+dnl check for big/little endian
+dnl ----------------------------
+
+AC_MSG_CHECKING([for big endian])
+
+AC_RUN_IFELSE(
+  [AC_LANG_PROGRAM([#include <stdio.h>], [
+   static const int one = 1;
+   return (*(char*)&one == 0 ? 0 : 1);
+  ])],
+  [BIGENDIAN=1;AC_MSG_RESULT(big)],
+  [BIGENDIAN=0;AC_MSG_RESULT(little)])
+
+
+
+dnl --------------------------------------------------
+dnl Enable thread safe build
+dnl --------------------------------------------------
+AC_ARG_ENABLE([threadsafe], AC_HELP_STRING([--enable-threadsafe],
+    [enable a thread safe build - NOTE: this will exclude non-threadsafe devices]))
+if test x$enable_threadsafe = xyes; then
+    CFLAGS="-DGS_THREADSAFE"
+fi
+
 dnl --------------------------------------------------
 dnl Check for headers
 dnl --------------------------------------------------
 
 AC_HEADER_DIRENT
 AC_HEADER_STDC
-AC_CHECK_HEADERS([errno.h fcntl.h limits.h malloc.h memory.h stdlib.h string.h strings.h sys/ioctl.h sys/param.h sys/time.h sys/times.h syslog.h unistd.h dirent.h ndir.h sys/dir.h sys/ndir.h])
+AC_CHECK_HEADERS([errno.h fcntl.h limits.h malloc.h memory.h stdlib.h string.h strings.h sys/ioctl.h sys/param.h sys/time.h sys/times.h syslog.h unistd.h dirent.h ndir.h sys/dir.h sys/ndir.h inttypes.h])
 
 dnl --------------------------------------------------
 dnl Check for *BSD and apply BSD Make workaround
@@ -330,6 +383,10 @@ fi
 
 if test "x$ac_cv_header_sys_times_h" = xyes; then
         GCFLAGS="$GCFLAGS -DHAVE_SYS_TIMES_H=1"
+fi
+
+if test "x$ac_cv_header_inttypes_h" = xyes; then
+        GCFLAGS="$GCFLAGS -DHAVE_INTTYPES_H=1"
 fi
 
 dnl try to find a 64 bit type for devicen color index
@@ -562,49 +619,71 @@ AC_CHECK_LIB(dl, dlopen)
 
 AC_ARG_ENABLE([freetype], AC_HELP_STRING([--disable-freetype],
         [Disable freetype for font rasterization]))
+
 FT_BRIDGE=0
 SHARE_FT=0
 FTSRCDIR=
 FT_CFLAGS=
 FT_LIBS=
 
-dnl UFST detection
-AC_ARG_WITH([ufst], AC_HELP_STRING([--with-ufst=UFST_ROOT_DIR],
-                                   [Use UFST]),
-            [], [with_ufst=no])
 INSERT_UFST_BRIDGE_EQUAL_ONE=
 UFST_ROOT=
 UFST_CFLAGS=
 UFST_LIB_EXT=
-if test -d $with_ufst; then
-INSERT_UFST_BRIDGE_EQUAL_ONE="UFST_BRIDGE=1"
-UFST_ROOT=$with_ufst
-UFST_CFLAGS=-DGCCx86
-UFST_LIB_EXT=.a
-fi
-AC_SUBST(INSERT_UFST_BRIDGE_EQUAL_ONE)
-AC_SUBST(UFST_ROOT)
-AC_SUBST(UFST_CFLAGS)
-AC_SUBST(UFST_LIB_EXT)
+FAPIUFST_MAK="\$(GLSRCDIR)/stub.mak"
 
-if test x"$enable_freetype" != xno; then
-  AC_MSG_CHECKING([for local freetype library source])
-  dnl We prefer freetype2 over freetype, so it is easy to override
-  dnl the included freetype source with a checkout from upstream.
-  
-  for dir in freetype2 freetype; do
-    if test -f $dir/src/base/ftbbox.c; then
+AC_ARG_ENABLE([fapi], AC_HELP_STRING([--disable-fapi],
+       [Force use of the (deprecated) Artifex font scaler/renderer]))
+
+if test x"$enable_fapi" != xno; then
+
+  dnl UFST detection
+  AC_ARG_WITH([ufst], AC_HELP_STRING([--with-ufst=UFST_ROOT_DIR],
+                                   [Use UFST]),
+            [], [with_ufst=no])
+  if test -d $with_ufst; then
+    INSERT_UFST_BRIDGE_EQUAL_ONE="UFST_BRIDGE=1"
+    case $with_ufst in
+      /*) UFST_ROOT=$with_ufst ;;
+       *) UFST_ROOT=`pwd`/$with_ufst ;;
+    esac
+
+    FAPIUFST_MAK="\$(UFST_ROOT)/fapiufst.mak"
+
+    # Check pointer size
+    AC_CHECK_SIZEOF(char*)
+
+    # UFST 5.x uses strcmpi() but on GNU systems the equivalent is
+    # strcasecmp()
+    if test "x$ac_cv_sizeof_charp" = "x8"; then
+      UFST_CFLAGS="-DGCCx86_64 -DO_BINARY=0 -Dstrcmpi=strcasecmp"
+    else
+      if test "x$ac_cv_sizeof_charp" = "x4"; then
+        UFST_CFLAGS="-DGCCx86 -DO_BINARY=0 -Dstrcmpi=strcasecmp"
+      fi
+    fi
+
+    UFST_LIB_EXT=.a
+  fi
+
+  if test x"$enable_freetype" != xno; then
+    AC_MSG_CHECKING([for local freetype library source])
+    dnl We prefer freetype2 over freetype, so it is easy to override
+    dnl the included freetype source with a checkout from upstream.
+    for dir in freetype2 freetype; do
+      if test -f $dir/src/base/ftbbox.c; then
         AC_MSG_RESULT(yes)
         SHARE_FT=0
         FTSRCDIR="$dir"
         FT_CFLAGS="-I$dir/include"
         FT_BRIDGE=1
         break;
-    fi
-  done
-  if test -z $FTSRCDIR; then
-    AC_MSG_RESULT([no])
-    if test "x$PKGCONFIG" != x; then
+      fi
+    done
+
+    if test -z $FTSRCDIR; then
+      AC_MSG_RESULT([no])
+      if test "x$PKGCONFIG" != x; then
         AC_MSG_CHECKING(for system freetype2 >= 2.4.2 with pkg-config)
             # pkg-config needs the libtool version, which != the freetype2 version <sigh!>
             # There is a table of corresponding ft2<->libtool numbers in freetype/docs/VERSION.DLL
@@ -619,7 +698,7 @@ if test x"$enable_freetype" != xno; then
                 AC_MSG_WARN([freetype library source not found...using native rasterizer])
                 AFS=1
             fi
-    else        
+      else        
         AC_CHECK_HEADER([ft2build.h], [FT_BRIDGE=1], [AFS=1])
         
         if test "x$FT_BRIDGE" = x1; then
@@ -645,10 +724,18 @@ if test x"$enable_freetype" != xno; then
               [FT_BRIDGE=1;AC_MSG_RESULT(yes)], [FT_BRIDGE=0; AFS=1;AC_MSG_RESULT(no)])
           fi
         fi
-        
+
+      fi
     fi
   fi
 fi
+
+AC_SUBST(INSERT_UFST_BRIDGE_EQUAL_ONE)
+AC_SUBST(UFST_ROOT)
+AC_SUBST(UFST_CFLAGS)
+AC_SUBST(UFST_LIB_EXT)
+AC_SUBST(FAPIUFST_MAK)
+
 AC_SUBST(FT_BRIDGE)
 AC_SUBST(SHARE_FT)
 AC_SUBST(FTSRCDIR)
@@ -786,9 +873,12 @@ if test x$with_lcms != xyes; then
   else
     AC_MSG_RESULT([no])
     AC_MSG_CHECKING([for system lcms2 library])
-     AC_CHECK_LIB(lcms2, cmsCreateXYZProfile, [
+     AC_CHECK_LIB(lcms2, cmsGetTransformOutputFormat, [
            AC_CHECK_HEADERS([lcms2.h], [LCMS2DIR="";SHARELCMS=1;WHICHLCMS=lcms2])
          ])
+    if test x$WHICHLCMS = x; then
+      AC_MSG_WARN([lcms2 not found, or too old])
+    fi
   fi
 fi
 
@@ -822,7 +912,7 @@ AC_ARG_WITH([system-libtiff], AC_HELP_STRING([--with-system-libtiff],
             [], [with_system_libtiff=check])
 TIFFDEVS=''
 FAX_DEVS=''
-TIFFDEVS_ALL='tiffs tiff12nc tiff24nc tiff48nc tiff32nc tiff64nc tiffcrle tifflzw tiffpack tiffgray tiffsep tiffscaled'
+TIFFDEVS_ALL='tiffs tiff12nc tiff24nc tiff48nc tiff32nc tiff64nc tiffcrle tifflzw tiffpack tiffgray tiffsep tiffsep1 tiffscaled'
 FAX_DEVS_ALL='cfax dfaxlow dfaxhigh fax faxg3 faxg32d faxg4 tiffg3 tiffg32d tiffg4 tfax'
 case "x$with_system_libtiff" in
     xcheck)
@@ -904,12 +994,12 @@ if test "x$SHARE_LIBTIFF" = "x0"; then
       echo
       echo "Running libtiff configure script..."
       olddir=`pwd`
-      cd $LIBTIFFDIR && ./configure --disable-jbig --disable-lzma $SUBCONFIG_OPTS
+      cd "$LIBTIFFDIR" && ./configure --disable-jbig --disable-lzma $SUBCONFIG_OPTS
       status=$?
       if test "$status" -ne 0 ; then
         AC_MSG_ERROR([libtiff configure script failed], $status)
       fi
-      cd $olddir
+      cd "$olddir"
       echo
       echo "Continuing with Ghostscript configuration..."
 fi
@@ -1108,6 +1198,8 @@ if test x$with_luratech != xno; then
   fi
 fi
 
+JB2_STDINT_TYPES_IN=
+
 if test "x$JBIG2_DECODER" = x; then
   dnl look for jbig2dec
   AC_ARG_WITH([jbig2dec], AC_HELP_STRING([--without-jbig2dec],
@@ -1119,20 +1211,48 @@ if test "x$JBIG2_DECODER" = x; then
     done
     if test "x$JBIG2DIR" != xsrc; then
         JBIG2_DECODER=jbig2dec
-        echo "Running jbig2dec configure script..."
-        olddir=`pwd`
-        cd $JBIG2DIR && ./configure $SUBCONFIG_OPTS
-        status=$?
-        if test "$status" -ne 0 ; then
-          AC_MSG_ERROR([jbig2dec configure script failed], $status)
+        if test x$ac_cv_header_stdint_h = xyes ; then
+            JBIG2_AUTOCONF_CFLAGS="-DHAVE_STDINT_H=1"
+        else
+
+          for include in sys/types.h inttypes.h sys/inttypes.h sys/int_types.h ; do
+            AC_MSG_CHECKING([for uint32_t in $include])
+            AC_TRY_COMPILE([#include <$include>], [uint32_t canary;], [
+              AC_MSG_RESULT([yes])
+              stdint_types_in="$include"
+              break;
+              ], AC_MSG_RESULT([no])
+            )
+          done
+
+          case "$stdint_types_in" in
+            "sys/types.h")
+              JBIG2_AUTOCONF_CFLAGS="$JBIG2_AUTOCONF_CFLAGS -DSTD_INT_USE_SYS_TYPES_H"
+              ;;
+            "inttypes.h")
+              JBIG2_AUTOCONF_CFLAGS="$JBIG2_AUTOCONF_CFLAGS -DSTD_INT_USE_INTTYPES_H"
+              ;;
+            "sys/inttypes.h")
+              JBIG2_AUTOCONF_CFLAGS="$JBIG2_AUTOCONF_CFLAGS -DSTD_INT_USE_SYS_INTTYPES_H"
+              ;;
+            "sys/int_types.h")
+              JBIG2_AUTOCONF_CFLAGS="$JBIG2_AUTOCONF_CFLAGS -DSTD_INT_USE_SYS_INT_TYPES_H"
+              ;;
+            *)
+              AC_MSG_ERROR([
+                Unable to find suitable definitions of the stdint.h types (uint32_t and friends).
+                These are required by jbig2dec.
+              ])
+          esac
         fi
-        if test "$status" -eq 0 ; then
-          JBIG2_AUTOCONF_CFLAGS=-DHAVE_CONFIG_H
+
+        if test "x$BIGENDIAN" != "x0"; then
+            JBIG2_AUTOCONF_CFLAGS="$JBIG2_AUTOCONF_CFLAGS -DWORDS_BIGENDIAN"
         fi
-        cd $olddir
+
         echo
-        echo "Continuing with Ghostscript configuration..."
         AC_MSG_RESULT([$JBIG2DIR])
+        echo "Continuing with Ghostscript configuration..."
     else
       AC_MSG_RESULT([no])
       AC_CHECK_LIB([jbig2dec], [jbig2_page_out], [
@@ -1147,11 +1267,12 @@ if test "x$JBIG2_DECODER" = x; then
     fi
   fi
   if test x$with_jbig2dec != xno; then
-    if test x$ac_cv_header_stdint_h != xyes && test x$ac_cv_header_inttypes_h != xyes; then
-      AC_MSG_WARN([JBIG2 support requires stdint types which do not seem to be available.])
-    else
+# I *think* jbig2dec handles these being missing gracefully
+#    if test x$ac_cv_header_stdint_h != xyes && test x$ac_cv_header_inttypes_h != xyes; then
+#      AC_MSG_WARN([JBIG2 support requires stdint types which do not seem to be available.])
+#    else
       JBIG2DEVS='$(PSD)jbig2.dev'
-    fi
+#    fi
   fi
 fi
 
@@ -1198,81 +1319,18 @@ if test "x$JPX_DECODER" = "x"; then
       JPXDIR="$OPENJPEGDIR"
       JPX_DECODER=openjpeg
       SHARE_JPX=0
-      JPX_AUTOCONF_CFLAGS="-DUSE_OPENJPEG_JP2"
+      AC_CHECK_FUNCS([memalign], [have_memalign=1])
+
+      if test "x$have_memalign" = "x1"; then
+        JPX_AUTOCONF_CFLAGS="-DUSE_OPENJPEG_JP2"
+      else
+        JPX_AUTOCONF_CFLAGS="-DUSE_OPENJPEG_JP2 -D\"memalign(a,b)=malloc(b)\""
+      fi
+
       JPXDEVS='$(PSD)jpx.dev'
     else
       AC_MSG_RESULT([no])
     fi
-  fi
-fi
-
-if test "x$JPX_DECODER" = "x"; then
-  dnl look for the jasper JPEG 2000 library
-  AC_ARG_WITH([jasper], AC_HELP_STRING([--without-jasper],
-    [Do not use the JasPer library for JPEG 2000]))
-  if test x$with_jasper != xno; then
-    AC_MSG_CHECKING([for local jasper library source])
-    for d in jasper jasper-1.7*; do
-      test -d "$d" && JPXDIR=$d && break
-    done
-    if test "x$JPXDIR" != xsrc; then
-      AC_MSG_RESULT([$JPXDIR])
-      AC_MSG_CHECKING([for local jasper configure script])
-      if test -x $JPXDIR/configure; then
-        AC_MSG_RESULT([yes])
-        echo
-        echo "Running jasper configure script..."
-        olddir=`pwd`
-        cd $JPXDIR && ./configure $SUBCONFIG_OPTS
-        status=$?
-        if test "$status" -ne 0 ; then
-          AC_MSG_ERROR([jasper configure script failed], $status)
-        fi
-        cd $olddir
-        echo
-        echo "Continuing with Ghostscript configuration..."
-      else
-        AC_MSG_RESULT([no])
-        AC_MSG_CHECKING([for local jasper autogen.sh script])
-        if test -x $JPXDIR/autogen.sh; then
-          AC_MSG_RESULT([yes])
-          echo
-          echo "Running jasper autogen script..."
-          olddir=`pwd`
-          cd $JPXDIR && ./autogen.sh
-          status=$?
-          if test "$status" -ne 0 ; then
-            AC_MSG_ERROR([jasper autogen script failed], $status)
-          fi
-          cd $olddir
-          echo
-          echo "Continuing with Ghostscript configuration..."
-        else
-          AC_MSG_ERROR([
-Unable to find $JPXDIR/src/libjasper/include/jas_config.h,
-or generate generate such a file for this system. You will
-have to build one by hand, or configure, build and install
-the jasper library separately.
-
-You can also pass --without-jasper to configure to disable
-JPEG 2000 PDF image support entirely.
-])
-        fi
-      fi
-    else
-      AC_MSG_RESULT([no])
-      AC_CHECK_LIB([jasper], [jas_image_create], [
-          SHARE_JPX=1
-      ], [
-          AC_MSG_WARN([disabling support for JPEG 2000 images])
-          with_jasper=no
-      ])
-    fi
-  fi
-  if test x$with_jasper != xno; then
-    JPX_DECODER=jasper
-    JPX_AUTOCONF_CFLAGS="-DJAS_CONFIGURE"
-    JPXDEVS='$(PSD)jpx.dev'
   fi
 fi
 
@@ -1288,7 +1346,7 @@ AC_ARG_ENABLE([gtk], AC_HELP_STRING([--disable-gtk],
     [Do not build the gtk loader]))
 SOC_CFLAGS=""
 SOC_LIBS=""
-SOC_LOADER="dxmainc.c"
+SOC_LOADER=""
 if test "x$enable_gtk" != "xno"; then
     # Try GTK+ 3.x first...
     if test "x$PKGCONFIG" != x; then
@@ -1303,7 +1361,7 @@ if test "x$enable_gtk" != "xno"; then
         fi
 
         # Or resort to GTK+ 2.x
-        if test "x$SOC_LOADER" = x; then
+        if test "x$SOC_LOADER" = "x"; then
             AC_MSG_CHECKING(for GTK+ 2.x)
             if $PKGCONFIG --exists gtk+-2.0; then
                 SOC_LOADER="dxmain.c"
@@ -1316,6 +1374,11 @@ if test "x$enable_gtk" != "xno"; then
         fi
     fi
 fi
+
+if test "x$SOC_LOADER" = "x"; then
+  SOC_LOADER="dxmainc.c"
+fi
+
 AC_SUBST(SOC_CFLAGS)
 AC_SUBST(SOC_LIBS)
 AC_SUBST(SOC_LOADER)
@@ -1516,7 +1579,7 @@ while test -n "$drivers"; do
                 fi
                 ;;
         FILES)
-                F_DEVS0="$F_DEVS0 $BMP_DEVS $FAX_DEVS $JPEG_DEVS $TIFFDEVS $PCX_DEVS $PBM_DEVS $PS_DEVS $MISC_FDEVS"
+                F_DEVS0="$F_DEVS0 $BMP_DEVS $FAX_DEVS $JPEG_DEVS $TIFFDEVS $PCX_DEVS $PBM_DEVS $PS_DEVS $MISC_FDEVS $SVGDEV"
                 CUPS_DEVS0="$CUPSDEV"
                 JBIG2_DEVS="$JBIG2DEVS"
                 PNG_DEVS0="$PNGDEVS"
@@ -1632,7 +1695,53 @@ while test -n "$drivers"; do
         esac
 done
 
+if test x$enable_threadsafe = xyes; then
+
+  for ntsdev in $NTS_DEVS ; do
+    NTS_EXCLUDES="$(echo \"$P_DEVS0{[@]:0}\" | grep -o $ntsdev) $NTS_EXCLUDES"
+    P_DEVS0=`echo $P_DEVS0 | sed "s/\b$ntsdev\b//g"`
+  done
+
+  for ntsdev in $NTS_DEVS ; do
+    NTS_EXCLUDES="$(echo \"$F_DEVS0{[@]:0}\" | grep -o $ntsdev) $NTS_EXCLUDES"
+    F_DEVS0=`echo $F_DEVS0 | sed "s/\b$ntsdev\b//g"`
+  done
+
+  for ntsdev in $NTS_DEVS ; do
+    NTS_EXCLUDES="$(echo \"$CUPS_DEVS0{[@]:0}\" | grep -o $ntsdev) $NTS_EXCLUDES"
+    CUPS_DEVS0=`echo $CUPS_DEVS0 | sed "s/\b$ntsdev\b//g"`
+  done
+
+  for ntsdev in $NTS_DEVS ; do
+    NTS_EXCLUDES="$(echo \"$SVG_DEVS0{[@]:0}\" | grep -o $ntsdev) $NTS_EXCLUDES"
+    SVG_DEVS0=`echo $SVG_DEVS0 | sed "s/\b$ntsdev\b//g"`
+  done
+
+  for ntsdev in $NTS_DEVS ; do
+    NTS_EXCLUDES="$(echo \"$IJS_DEVS0{[@]:0}\" | grep -o $ntsdev) $NTS_EXCLUDES"
+    IJS_DEVS0=`echo $IJS_DEVS0 | sed "s/\b$ntsdev\b//g"`
+  done
+
+  for ntsdev in $NTS_DEVS ; do
+    NTS_EXCLUDES="$(echo \"$PNG_DEVS0{[@]:0}\" | grep -o $ntsdev) $NTS_EXCLUDES"
+    PNG_DEVS0=`echo $PNG_DEVS0 | sed "s/\b$ntsdev\b//g"`
+  done
+
+  for ntsdev in $NTS_DEVS ; do
+    NTS_EXCLUDES="$(echo \"$X11_DEVS0{[@]:0}\" | grep -o $ntsdev) $NTS_EXCLUDES"
+    X11_DEVS0=`echo $X11_DEVS0 | sed "s/\b$ntsdev\b//g"`
+  done
+
+  for ntsdev in $NTS_DEVS ; do
+    NTS_EXCLUDES="$(echo \"$JBIG2_DEVS{[@]:0}\" | grep -o $ntsdev) $NTS_EXCLUDES"
+    JBIG2_DEVS=`echo $JBIG2_DEVS | sed "s/\b$ntsdev\b//g"`
+  done
+
+  NTS_EXCLUDES=`echo "$NTS_EXCLUDES" | tr " " "\n" | sort | uniq | tr "\n" " "`
+fi # x$enable_threadsafe = xyes
+
 noncontribmakefiles=`find . -name '*.mak' -print | grep -v '^\./contrib/'`
+
 # No need to include opvp/oprp driver without iconv/libiconv.
 if test -n "$P_DEVS0"; then
     if test x$found_iconv = xno ; then
@@ -1838,6 +1947,9 @@ AC_SUBST(HAVE_MKSTEMP)
 AC_CHECK_FUNCS([fopen64], [HAVE_FILE64=-DHAVE_FILE64])
 AC_SUBST(HAVE_FILE64)
 
+AC_CHECK_FUNCS([fseeko], [HAVE_FSEEKO=-DHAVE_FSEEKO])
+AC_SUBST(HAVE_FSEEKO)
+
 AC_CHECK_FUNCS([mkstemp64], [HAVE_MKSTEMP64=-DHAVE_MKSTEMP64])
 AC_SUBST(HAVE_MKSTEMP64)
 
@@ -1860,32 +1972,27 @@ AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([bzero dup2 floor gettimeofday memchr memmove memset mkdir mkfifo modf pow putenv rint setenv sqrt strchr strrchr strspn strstr])
 
 dnl --------------------------------------------------
-dnl check for big/little endian for LCMS
+dnl set big/little endian for LCMS
 dnl --------------------------------------------------
 
-AC_MSG_CHECKING([for big endian])
-
-AC_RUN_IFELSE(
-  [AC_LANG_PROGRAM([#include <stdio.h>], [
-   static const int one = 1;
-   return (*(char*)&one == 0 ? 0 : 1);
-  ])],
-  [LCMS_BIGENDIAN=1],
-  [LCMS_BIGENDIAN=0])
-
-if test "x$LCMS_BIGENDIAN" != "x0"; then
-  LCMS_ENDIAN="-DUSE_BIG_ENDIAN=$LCMS_BIGENDIAN"
-  LCMS2_ENDIAN="-DCMS_USE_BIG_ENDIAN=$LCMS_BIGENDIAN"
-  AC_MSG_RESULT(yes)
+if test "x$BIGENDIAN" != "x0"; then
+  LCMS_ENDIAN="-DUSE_BIG_ENDIAN=$BIGENDIAN"
+  LCMS2_ENDIAN="-DCMS_USE_BIG_ENDIAN=$BIGENDIAN"
 else
   LCMS_ENDIAN=
   LCMS2_ENDIAN=
-  AC_MSG_RESULT(no)
 fi
-
 
 AC_SUBST(LCMS_ENDIAN)
 AC_SUBST(LCMS2_ENDIAN)
+
+dnl --------------------------------------------------
+dnl decide if we have to "hack" sqrtf() for lcms2
+dnl --------------------------------------------------
+
+AC_CHECK_FUNC([sqrtf], [SQRTF_SUBST=], [SQRTF_SUBST="-Dsqrtf=\"(float)sqrt\""])
+
+AC_SUBST(SQRTF_SUBST)
 
 dnl --------------------------------------------------
 dnl check for sse2 intrinsics
@@ -1977,6 +2084,22 @@ fi
 AC_SUBST(HAVE_BYTESWAP_H)
 
 # --------------------------------------------------
+# Sun, BSD possibly other makes don't have quite the
+# feature set of GNU make. We still prefer GNU make,
+# but......
+# --------------------------------------------------
+AC_ARG_WITH([gnu-make],  AC_HELP_STRING([--without-gnu-make],
+    [disable GNU make features]), gnu_make=no)
+
+if test "x$gnu_make" != "xno"; then
+  ORDER_ONLY="|"
+else
+  ORDER_ONLY=""
+fi
+
+AC_SUBST(ORDER_ONLY)
+
+# --------------------------------------------------
 # annoying: Windows doesn't allow "aux" as a
 # directory nor file name, so if we're building in
 # mingw, add the same prefix as the VS build uses
@@ -2005,13 +2128,12 @@ AC_OUTPUT(cups/gstopxl)
 chmod +x cups/gstopxl
 fi
 
-if test "x$JPX_DECODER" = "xjasper"; then
-   AC_MSG_WARN([Using JasPer for PDF JPXDecode support])
-   AC_MSG_WARN([Support for JaSPER is deprecated and will be removed in a future release])
-fi
-
 if test "x$AFS" = "x1"; then
    AC_MSG_WARN([Using "native" font scaler which is now deprecated (rather than freetype),])
    AC_MSG_WARN([Support for this will be removed in a future release])
 fi
 
+if test "x$NTS_EXCLUDES" != "x" ; then
+   AC_MSG_WARN([Due to the --enable-threadsafe option, the following devices have been excluded because they are not threadsafe:])
+   echo "$NTS_EXCLUDES"
+fi

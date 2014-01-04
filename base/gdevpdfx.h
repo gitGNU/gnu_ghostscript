@@ -285,7 +285,7 @@ typedef struct pdf_resource_list_s {
 /* Define the bookkeeping for an open stream. */
 typedef struct pdf_stream_position_s {
     long length_id;
-    long start_pos;
+    gs_offset_t start_pos;
 } pdf_stream_position_t;
 
 /*
@@ -346,6 +346,112 @@ typedef struct pdf_temp_file_s {
 #  define gx_device_pdf_DEFINED
 typedef struct gx_device_pdf_s gx_device_pdf;
 #endif
+
+/* Structures and definitions for linearisation */
+typedef struct linearisation_record_s {
+    int PageUsage;
+    int NumPagesUsing;
+    int *PageList;
+    uint NewObjectNumber;
+    gs_offset_t OriginalOffset;
+    gs_offset_t LinearisedOffset;
+    gs_offset_t Length;
+} pdf_linearisation_record_t;
+
+#define private_st_pdf_linearisation_record()\
+  gs_private_st_ptrs1(st_pdf_linearisation_record, pdf_linearisation_record_t,\
+    "pdf_linearisation_record_t", pdf_linearisation_record_enum_ptrs, pdf_linearisation_record_reloc_ptrs,\
+    PageList)
+
+typedef struct page_hint_stream_header_s {
+    unsigned int LeastObjectsPerPage;    /* Including the page object */
+    /* Item 2 is already stored elsewhere */
+    unsigned int MostObjectsPerPage;
+    unsigned short ObjectNumBits;
+    unsigned int LeastPageLength;        /* From beginning of page object to end of last object used by page */
+    unsigned int MostPageLength;
+    unsigned short PageLengthNumBits;
+    unsigned int LeastPageOffset;
+    unsigned int MostPageOffset;
+    unsigned short PageOffsetNumBits;
+    unsigned int LeastContentLength;
+    unsigned int MostContentLength;
+    unsigned short ContentLengthNumBits;
+    unsigned int MostSharedObjects;
+    unsigned int LargestSharedObject;
+    unsigned short SharedObjectNumBits;
+} page_hint_stream_header_t;
+
+typedef struct page_hint_stream_s {
+    unsigned int NumUniqueObjects; /* biased by the least number of objects on any page */
+    unsigned int PageLength;       /* biased by the least page length*/
+    unsigned int NumSharedObjects;
+    unsigned int *SharedObjectRef; /* one for each shaed object on the page */
+    /* Item 5 we invent */
+    gs_offset_t ContentOffset; /* biased by the least offset to the conent stream for any page */
+    gs_offset_t ContentLength;/* biased by the least content stream length */
+} page_hint_stream_t;
+
+typedef struct shared_hint_stream_header_s {
+    unsigned int FirstSharedObject;
+    gs_offset_t FirstObjectOffset;
+    unsigned int FirstPageEntries;
+    unsigned int NumSharedObjects;
+    /* Item 5 is always 1 as far as we are concerned */
+    unsigned int LeastObjectLength;
+    unsigned int MostObjectLength;
+    unsigned short LengthNumBits;
+} shared_hint_stream_header_t;
+
+typedef struct share_hint_stream_s {
+    unsigned int ObjectNumber;
+    gs_offset_t ObjectOffset;
+    unsigned int ObjectLength;   /* biased by the LeastObjectLength */
+    /* item 2 is always 0 */
+    /* Which means that item 3 is never present */
+    /* Finally item 4 is always 0 (1 less than the number of objects in the group, which is always 1) */
+} shared_hint_stream_t;
+
+typedef struct pdf_linearisation_s {
+    FILE *sfile;
+    pdf_temp_file_t Lin_File;
+    char HintBuffer[256];
+    unsigned char HintBits;
+    unsigned char HintByte;
+    long Catalog_id;
+    long Info_id;
+    long Pages_id;
+    long NumPage1Resources;
+    long NumPart1StructureResources;
+    long NumSharedResources;
+    long NumUniquePageResources;
+    long NumPart9Resources;
+    long NumNonPageResources;
+    long LastResource;
+    long MainFileEnd;
+    gs_offset_t *Offsets;
+    gs_offset_t xref;
+    gs_offset_t FirstxrefOffset;
+    gs_offset_t FirsttrailerOffset;
+    gs_offset_t LDictOffset;
+    gs_offset_t FileLength;
+    gs_offset_t T;
+    gs_offset_t E;
+    page_hint_stream_header_t PageHintHeader;
+    int NumPageHints;
+    page_hint_stream_t *PageHints;
+    shared_hint_stream_header_t SharedHintHeader;
+    int NumSharedHints;
+    shared_hint_stream_t *SharedHints;
+} pdf_linearisation_t;
+
+/* These are the values for 'PageUsage' above, values > 0 indicate the page number that uses the resource */
+#define resource_usage_not_referenced 0
+#define resource_usage_page_shared -1
+/* Thses need to be lower than the shared value */
+#define resource_usage_part1_structure -2
+#define resource_usage_part9_structure -3
+#define resource_usage_written -4
 
 /*
  * Define the structure for PDF font cache element.
@@ -564,7 +670,7 @@ struct gx_device_pdf_s {
     long contents_id;
     pdf_context_t context;
     long contents_length_id;
-    long contents_pos;
+    gs_offset_t contents_pos;
     pdf_procset_t procsets;        /* used on this page */
     pdf_text_data_t *text;
     pdf_text_rotation_t text_rotation;
@@ -736,6 +842,19 @@ struct gx_device_pdf_s {
                                      * This parameter is present only to allow
                                      * ps2write output to work on those pritners.
                                      */
+    bool Linearise;                 /* Whether to Linearizse the file, the next 2 parameter
+                                     * are only used if this is true.
+                                     */
+    int FirstPage;
+    int LastPage;
+    pdf_linearisation_record_t
+        *ResourceUsage;             /* An array, one per resource defined to date, which
+                                     * contains either -2 (shared on multiple pages), -1
+                                     * (structure object, eg catalog), 0 (not used on a page
+                                     * or the page number. This does limit us to a mere 2^31
+                                     * pages
+                                     */
+    int ResourceUsageSize;          /* Size of the above array, currently */
 };
 
 #define is_in_page(pdev)\
@@ -761,8 +880,9 @@ struct gx_device_pdf_s {
  m(31,accumulating_substream_resource) \
  m(32,pres_soft_mask_dict) m(33,PDFXTrimBoxToMediaBoxOffset.data)\
  m(34,PDFXBleedBoxToTrimBoxOffset.data) m(35, DSCEncodingToUnicode.data)\
- m(36,Identity_ToUnicode_CMaps[0]) m(37,Identity_ToUnicode_CMaps[1])
-#define gx_device_pdf_num_ptrs 38
+ m(36,Identity_ToUnicode_CMaps[0]) m(37,Identity_ToUnicode_CMaps[1])\
+ m(38,ResourceUsage)
+#define gx_device_pdf_num_ptrs 39
 #define gx_device_pdf_do_param_strings(m)\
     m(0, OwnerPassword) m(1, UserPassword) m(2, NoEncrypt)\
     m(3, DocumentUUID) m(4, InstanceUUID)
@@ -810,7 +930,6 @@ dev_proc_begin_transparency_group(gdev_pdf_begin_transparency_group);
 dev_proc_end_transparency_group(gdev_pdf_end_transparency_group);
 dev_proc_begin_transparency_mask(gdev_pdf_begin_transparency_mask);
 dev_proc_end_transparency_mask(gdev_pdf_end_transparency_mask);
-dev_proc_discard_transparency_layer(gdev_pdf_discard_transparency_layer);
 dev_proc_dev_spec_op(gdev_pdf_dev_spec_op);
 
 /* ================ Utility procedures ================ */
@@ -845,7 +964,7 @@ long pdf_obj_forward_ref(gx_device_pdf * pdev);
 long pdf_obj_ref(gx_device_pdf * pdev);
 
 /* Read the current position in the output stream. */
-long pdf_stell(gx_device_pdf * pdev);
+gs_offset_t pdf_stell(gx_device_pdf * pdev);
 
 /* Begin an object, optionally allocating an ID. */
 long pdf_open_obj(gx_device_pdf * pdev, long id, pdf_resource_type_t type);
@@ -868,12 +987,16 @@ int pdf_close_contents(gx_device_pdf * pdev, bool last);
 extern const char *const pdf_resource_type_names[];
 extern const gs_memory_struct_type_t *const pdf_resource_type_structs[];
 
+/* Record usage of resoruces by pages */
+int pdf_record_usage(gx_device_pdf *const pdev, long resource_id, int page_num);
+int pdf_record_usage_by_parent(gx_device_pdf *const pdev, long resource_id, long parent);
+
 /*
  * Define the offset that indicates that a file position is in the
  * asides file rather than the main (contents) file.
  * Must be a power of 2, and larger than the largest possible output file.
  */
-#define ASIDES_BASE_POSITION min_long
+#define ASIDES_BASE_POSITION min_int64_t
 
 /* Begin an object logically separate from the contents. */
 /* (I.e., an object in the resource file.) */
@@ -980,8 +1103,8 @@ int pdf_write_and_free_all_resource_objects(gx_device_pdf *pdev);
 int pdf_store_page_resources(gx_device_pdf *pdev, pdf_page_t *page, bool clear_usage);
 
 /* Copy data from a temporary file to a stream. */
-void pdf_copy_data(stream *s, FILE *file, long count, stream_arcfour_state *ss);
-void pdf_copy_data_safe(stream *s, FILE *file, int64_t position, long count);
+void pdf_copy_data(stream *s, FILE *file, gs_offset_t count, stream_arcfour_state *ss);
+void pdf_copy_data_safe(stream *s, FILE *file, gs_offset_t position, long count);
 
 /* Add the encryption filter. */
 int pdf_begin_encrypt(gx_device_pdf * pdev, stream **s, gs_id object_id);
@@ -1104,8 +1227,8 @@ int pdf_put_filters(cos_dict_t *pcd, gx_device_pdf *pdev, stream *s,
 /* Define a possibly encoded and compressed data stream. */
 typedef struct pdf_data_writer_s {
     psdf_binary_writer binary;
-    long start;
-    long length_pos;
+    gs_offset_t start;
+    gs_offset_t length_pos;
     pdf_resource_t *pres;
     gx_device_pdf *pdev; /* temporary for backward compatibility of pdf_end_data prototype. */
     long length_id;

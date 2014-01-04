@@ -43,8 +43,6 @@
 #define GSICC_STANDARD_PROFILES\
   "srgb.icc", "sgray.icc"
 #define GSICC_NUMBER_STANDARD_PROFILES 2
-#define GSICC_STANDARD_INTENT_KEYS\
-  "per", "col" , "sat", "abs"
 /* This enumeration has to be in sync with GSICC_SRCGTAG_KEYS */
 typedef enum {
     COLOR_TUNE,  
@@ -55,6 +53,9 @@ typedef enum {
     IMAGE_RGB,
     TEXT_RGB
 } gsicc_srcgtagkey_t;
+
+#define GSICC_SRCTAG_NOCM "None"
+#define GSICC_SRCTAG_REPLACE "Replace"
 
 #define GSICC_SRCGTAG_KEYS\
   "ColorTune", "Graphic_CMYK", "Image_CMYK", "Text_CMYK",\
@@ -68,20 +69,28 @@ typedef enum {
 void gsicc_profile_reference(cmm_profile_t *icc_profile, int delta);
 void gsicc_extract_profile(gs_graphics_type_tag_t graphics_type_tag,
                        cmm_dev_profile_t *profile_struct,
-                       cmm_profile_t **profile,
-                       gsicc_rendering_intents_t *rendering_intent);
+                       cmm_profile_t **profile, gsicc_rendering_param_t *render_cond);
 void gsicc_get_srcprofile(gsicc_colorbuffer_t data_cs,
                      gs_graphics_type_tag_t graphics_type_tag,
                      cmm_srcgtag_profile_t *srcgtag_profile,
-                     cmm_profile_t **profile, 
-                     gsicc_rendering_intents_t *rendering_intent);
+                     cmm_profile_t **profile, gsicc_rendering_param_t *render_cond);
 int gsicc_getsrc_channel_count(cmm_profile_t *icc_profile);
 int gsicc_init_iccmanager(gs_state * pgs);
 int gsicc_init_gs_colors(gs_state *pgs);
 void  gsicc_profile_serialize(gsicc_serialized_profile_t *profile_data,
                               cmm_profile_t *iccprofile);
-int gsicc_set_device_profile_intent(gx_device *dev, gsicc_profile_types_t intent,
-                                gsicc_profile_types_t profile_type);
+int gsicc_set_device_profile_intent(gx_device *dev, 
+                                    gsicc_rendering_intents_t intent,
+                                    gsicc_profile_types_t profile_type);
+int gsicc_set_device_blackptcomp(gx_device *dev, 
+                                    gsicc_blackptcomp_t blackptcomp,
+                                    gsicc_profile_types_t profile_type);
+int gsicc_set_device_blackpreserve(gx_device *dev, 
+                                   gsicc_blackpreserve_t blackpreserve,
+                                   gsicc_profile_types_t profile_type);
+void gsicc_set_devicen_equiv_colors(gx_device *dev, const gs_imager_state * pis,
+                                    cmm_profile_t *profile);
+int gsicc_set_device_profile_colorants(gx_device *dev, char *name_str);
 int gsicc_init_device_profile_struct(gx_device * dev,  char *profile_name,
                                      gsicc_profile_types_t profile_type);
 int gsicc_set_profile(gsicc_manager_t *icc_manager, const char *pname,
@@ -103,7 +112,8 @@ void gsicc_init_hash_cs(cmm_profile_t *picc_profile, gs_imager_state *pis);
 gcmmhprofile_t gsicc_get_profile_handle_clist(cmm_profile_t *picc_profile,
                                               gs_memory_t *memory);
 gcmmhprofile_t gsicc_get_profile_handle_buffer(unsigned char *buffer,
-                                               int profile_size);
+                                               int profile_size,
+                                               gs_memory_t *memory);
 gsicc_smask_t* gsicc_new_iccsmask(gs_memory_t *memory);
 int gsicc_initialize_iccsmask(gsicc_manager_t *icc_manager);
 unsigned int gsicc_getprofilesize(unsigned char *buffer);
@@ -115,13 +125,12 @@ gs_color_space_index gsicc_get_default_type(cmm_profile_t *profile_data);
 cmm_dev_profile_t* gsicc_new_device_profile_array(gs_memory_t *memory);
 void gs_setoverrideicc(gs_imager_state *pis, bool value);
 bool gs_currentoverrideicc(const gs_imager_state *pis);
-void gs_setoverride_ri(gs_imager_state *pis, bool value);
-bool gs_currentoverride_ri(const gs_imager_state *pis);
 cmm_profile_t* gsicc_set_iccsmaskprofile(const char *pname, int namelen, 
                                          gsicc_manager_t *icc_manager, 
                                          gs_memory_t *mem);
 int gsicc_set_device_profile(gx_device * pdev, gs_memory_t * mem, 
                              char *file_name, gsicc_profile_types_t defaulttype);
+char* gsicc_get_dev_icccolorants(cmm_dev_profile_t *dev_profile);
 void gsicc_setrange_lab(cmm_profile_t *profile);
 /* system and user params */
 void gs_currentdevicenicc(const gs_state * pgs, gs_param_string * pval);

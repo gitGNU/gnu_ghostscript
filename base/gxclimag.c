@@ -39,6 +39,7 @@
 #include "gsptype1.h"
 #include "gsicc_manage.h"
 #include "gsicc_cache.h"
+#include "gxdevsop.h"
 
 extern_gx_image_type_table();
 
@@ -360,10 +361,17 @@ clist_begin_typed_image(gx_device * dev,
     cmm_profile_t *src_profile;
     cmm_srcgtag_profile_t *srcgtag_profile;
     gsicc_rendering_intents_t renderingintent = pis->renderingintent;
+    gsicc_blackptcomp_t blackptcomp = pis->blackptcomp;
+    gsicc_rendering_param_t stored_rendering_cond;
+    gsicc_rendering_param_t dev_render_cond;
     gs_imager_state *pis_nonconst = (gs_imager_state*) pis;   
     bool intent_changed = false;
-    cmm_dev_profile_t *dev_profile;
+    bool bp_changed = false;
+    cmm_dev_profile_t *dev_profile = NULL;
     cmm_profile_t *gs_output_profile;
+    bool is_planar_dev = dev_proc(dev, dev_spec_op)(dev, gxdso_is_native_planar, NULL, 0) > 0;
+    bool render_is_valid;
+    int csi;
 
     /* We can only handle a limited set of image types. */
     switch ((gs_debug_c('`') ? -1 : pic->type->index)) {
@@ -497,47 +505,100 @@ clist_begin_typed_image(gx_device * dev,
                 (pie->color_space.space = pim->ColorSpace)->id;
             /* Get the hash code of the ICC space */
             if ( base_index == gs_color_space_index_ICC ) {
+                code = dev_proc(dev, get_profile)(dev,  &dev_profile);
+                gsicc_extract_profile(dev->graphics_type_tag, dev_profile,
+                                      &(gs_output_profile), 
+                                      (&(dev_render_cond)));
                 if (!indexed) {
                     src_profile = pim->ColorSpace->cmm_icc_profile_data;
                 } else {
                     src_profile =  
                         pim->ColorSpace->base_space->cmm_icc_profile_data;
                 }
+                /* Initialize the rendering conditions to what we currently
+                   have before we may blow them away with what is set in 
+                   the srcgtag information */
+                stored_rendering_cond.graphics_type_tag = GS_IMAGE_TAG;
+                stored_rendering_cond.override_icc = 
+                                dev_render_cond.override_icc;
+                stored_rendering_cond.preserve_black =  
+                                dev_render_cond.preserve_black;
+                stored_rendering_cond.cmm = gsCMM_DEFAULT;  /* Unless spec. below */
                 /* We may need to do some substitions for the source profile */
                 if (pis->icc_manager->srcgtag_profile != NULL) {
                     srcgtag_profile = pis->icc_manager->srcgtag_profile;
                     if (src_profile->data_cs == gsRGB) {
                         if (srcgtag_profile->rgb_profiles[gsSRC_IMAGPRO] != NULL) {
-                            src_profile = 
-                                srcgtag_profile->rgb_profiles[gsSRC_IMAGPRO];
-                            pis_nonconst->renderingintent = 
-                                srcgtag_profile->rgb_intent[gsSRC_IMAGPRO];
+                            /* We only do this replacement depending upon the
+                               ICC override setting for this object and the 
+                               original color space of this object */
+                            csi = gsicc_get_default_type(src_profile);
+                            if (srcgtag_profile->rgb_rend_cond[gsSRC_IMAGPRO].override_icc || 
+                                csi == gs_color_space_index_DeviceRGB) {
+                                src_profile = 
+                                    srcgtag_profile->rgb_profiles[gsSRC_IMAGPRO];
+                                pis_nonconst->renderingintent =
+                                    srcgtag_profile->rgb_rend_cond[gsSRC_IMAGPRO].rendering_intent;
+                                pis_nonconst->blackptcomp =
+                                    srcgtag_profile->rgb_rend_cond[gsSRC_IMAGPRO].black_point_comp;
+                                stored_rendering_cond = 
+                                    srcgtag_profile->rgb_rend_cond[gsSRC_IMAGPRO];
+                            }
+                        } else {
+                            /* A possible do not use CM case */
+                            stored_rendering_cond.cmm = 
+                                srcgtag_profile->rgb_rend_cond[gsSRC_IMAGPRO].cmm;
                         }
                     } else if (src_profile->data_cs == gsCMYK) {
                         if (srcgtag_profile->cmyk_profiles[gsSRC_IMAGPRO] != NULL) {
-                            src_profile = 
-                                srcgtag_profile->cmyk_profiles[gsSRC_IMAGPRO];
-                            pis_nonconst->renderingintent = 
-                                srcgtag_profile->cmyk_intent[gsSRC_IMAGPRO];
+                            csi = gsicc_get_default_type(src_profile);
+                            if (srcgtag_profile->rgb_rend_cond[gsSRC_IMAGPRO].override_icc || 
+                                csi == gs_color_space_index_DeviceCMYK) {
+                                src_profile = 
+                                    srcgtag_profile->cmyk_profiles[gsSRC_IMAGPRO];
+                                pis_nonconst->renderingintent =
+                                    srcgtag_profile->cmyk_rend_cond[gsSRC_IMAGPRO].rendering_intent;
+                                pis_nonconst->blackptcomp =
+                                    srcgtag_profile->cmyk_rend_cond[gsSRC_IMAGPRO].black_point_comp;
+                                stored_rendering_cond = 
+                                    srcgtag_profile->cmyk_rend_cond[gsSRC_IMAGPRO];
+                            }
+                        } else {
+                            /* A possible do not use CM case */
+                            stored_rendering_cond.cmm = 
+                                srcgtag_profile->cmyk_rend_cond[gsSRC_IMAGPRO].cmm;
                         }
                     }
                 }
-                /* If override is set to true and we are not overriding from
-                   setting the RI by the source structure, then override any
-                   rendering intent specified in the document by the ri 
-                   specified for the device */ 
-                if (!(pis_nonconst->renderingintent & gsRI_OVERRIDE)) {
-                    if (pis->icc_manager != NULL && 
-                        pis->icc_manager->override_ri == true) {
-                        code = dev_proc(dev, get_profile)(dev,  &dev_profile);
-                        gsicc_extract_profile(dev->graphics_type_tag, dev_profile,
-                                              &(gs_output_profile), 
-                                              (gsicc_rendering_intents_t *)\
-                                              (&(pis_nonconst->renderingintent)));
+                /* If the device RI is set and we are not  setting the RI from 
+                   the source structure, then override any RI specified in the 
+                   document by the RI specified in the device */
+                if (!(pis_nonconst->renderingintent & gsRI_OVERRIDE)) {  /* was set by source? */
+                    /* No it was not.  See if we should override with the 
+                       device setting */
+                    if (dev_render_cond.rendering_intent != gsRINOTSPECIFIED) {
+                        pis_nonconst->renderingintent = 
+                                        dev_render_cond.rendering_intent;
+                        }
+                }
+                /* We have a similar issue to deal with with respect to the 
+                   black point.  */
+                if (!(pis_nonconst->blackptcomp & gsBP_OVERRIDE)) {
+                    if (dev_render_cond.black_point_comp != gsBPNOTSPECIFIED) {
+                        pis_nonconst->blackptcomp = 
+                                            dev_render_cond.black_point_comp;
                     }
                 }
                 if (renderingintent != pis_nonconst->renderingintent)
                     intent_changed = true;
+                if (blackptcomp != pis_nonconst->blackptcomp)
+                    bp_changed = true;
+                /* Set for the rendering param structure also */
+                stored_rendering_cond.rendering_intent = 
+                                                pis_nonconst->renderingintent;
+                stored_rendering_cond.black_point_comp = 
+                                                pis_nonconst->blackptcomp;
+                stored_rendering_cond.graphics_type_tag = GS_IMAGE_TAG;
                 if (!(src_profile->hash_is_valid)) {
                     int64_t hash;
                     gsicc_get_icc_buff_hash(src_profile->buffer, &hash,
@@ -550,7 +611,11 @@ clist_begin_typed_image(gx_device * dev,
                     src_profile->num_comps;
                 pie->color_space.icc_info.is_lab = src_profile->islab;
                 pie->color_space.icc_info.data_cs = src_profile->data_cs;
+                src_profile->rend_cond = stored_rendering_cond;
+                render_is_valid = src_profile->rend_is_valid;
+                src_profile->rend_is_valid = true;
                 clist_icc_addentry(cdev, src_profile->hashcode, src_profile);
+                src_profile->rend_is_valid = render_is_valid;
             } else {
                 pie->color_space.icc_info = icc_zero_init;
             }
@@ -579,6 +644,36 @@ clist_begin_typed_image(gx_device * dev,
                                 (int)floor(dbox.p.x), (int)floor(dbox.p.y),
                                 (int)ceil(dbox.q.x), (int)ceil(dbox.q.y)))
             goto use_default;
+
+    /* If we are going out to a halftone device and the size of the stored
+       image at device resolution and color space is going to be smaller, 
+       go ahead and do the default handler. This occurs only for planar 
+       devices where if we prerender we will end up doing the fast theshold 
+       halftone and going out as copy_planes commands into the clist.
+       There is already a test above with regard to the posture so that
+       we are only doing portrait or landscape cases if we are here.  Only
+       question is penum->image_parent_type == gs_image_type1 */
+    if (dev_profile == NULL) {
+        gsicc_rendering_param_t temp_render_cond;   
+        code = dev_proc(dev, get_profile)(dev,  &dev_profile);
+        gsicc_extract_profile(dev->graphics_type_tag, dev_profile,
+                                              &(gs_output_profile), 
+                                              &(temp_render_cond));
+    }
+    if (gx_device_must_halftone(dev) && pim->BitsPerComponent == 8 && !masked &&
+        (dev->color_info.num_components == 1 || is_planar_dev) && 
+        dev_profile->prebandthreshold) {
+        int dev_width = dbox.q.x - dbox.p.x;
+        int dev_height = dbox.q.y - dbox.p.y;
+        
+        int src_size = pim->Height * 
+                       bitmap_raster(pim->Width * pim->BitsPerComponent * 
+                                     num_components);
+        int des_size = dev_height * bitmap_raster(dev_width * 
+                                                  dev->color_info.depth);
+        if (src_size > des_size)
+            goto use_default;        
+    }
     /* Create the begin_image command. */
     if ((pie->begin_image_command_length =
          begin_image_command(pie->begin_image_command,
@@ -639,8 +734,15 @@ clist_begin_typed_image(gx_device * dev,
         int y0 = (int)floor(dbox.p.y - 0.51);   /* adjust + rounding slop */
         int y1 = (int)ceil(dbox.q.y + 0.51);    /* ditto */
 
-        pie->ymin = max(y0, 0);
-        pie->ymax = min(y1, dev->height);
+        if (pcpath) {
+            gs_fixed_rect obox;
+            gx_cpath_outer_box(pcpath, &obox);
+            pie->ymin = max(y0, fixed2int(obox.p.y));
+            pie->ymax = min(y1, fixed2int(obox.q.y));
+        } else {
+            pie->ymin = max(y0, 0);
+            pie->ymax = min(y1, dev->height);
+        }
     }
 
     /*
@@ -654,6 +756,8 @@ clist_begin_typed_image(gx_device * dev,
        on the pis here for this and reset back */    
     if (intent_changed)
         pis_nonconst->renderingintent = renderingintent;
+    if (bp_changed)
+        pis_nonconst->blackptcomp = blackptcomp;
 
     cdev->image_enum_id = pie->id;
     return 0;
@@ -1043,14 +1147,14 @@ clist_create_compositor(gx_device * dev,
 
         if(cropping_op != 0) {
 
-           dprintf2("[v] cropping_op = %d. Total number of bands is %d \n",
+           dmprintf2(dev->memory, "[v] cropping_op = %d. Total number of bands is %d \n",
                      cropping_op, no_of_bands);
-           dprintf2("[v]  Writing out from band %d through band %d \n",
+           dmprintf2(dev->memory, "[v]  Writing out from band %d through band %d \n",
                      first_band, last_band);
 
         } else {
 
-           dprintf1("[v] cropping_op = %d. Writing out to all bands \n",
+           dmprintf1(dev->memory, "[v] cropping_op = %d. Writing out to all bands \n",
                      cropping_op);
 
         }
@@ -1417,14 +1521,19 @@ image_band_box(gx_device * dev, const clist_image_enum * pie, int y, int h,
     bbox.q.x = fixed2float(cbox.q.x + fixed_half);
     bbox.p.y = fixed2float(max(cbox.p.y, by0) - fixed_half);
     bbox.q.y = fixed2float(min(cbox.q.y, by1) + fixed_half);
+    /* Limit the box further if possible (because of a clipping path) */
+    if (bbox.p.y < pie->ymin)
+        bbox.p.y = pie->ymin;
+    if (bbox.q.y > pie->ymax)
+        bbox.q.y = pie->ymax;
 #ifdef DEBUG
     if (gs_debug_c('b')) {
-        dlprintf6("[b]band box for (%d,%d),(%d,%d), band (%d,%d) =>\n",
-                  px, py, qx, qy, y, y + h);
-        dlprintf10("      (%g,%g),(%g,%g), matrix=[%g %g %g %g %g %g]\n",
-                   bbox.p.x, bbox.p.y, bbox.q.x, bbox.q.y,
-                   pie->matrix.xx, pie->matrix.xy, pie->matrix.yx,
-                   pie->matrix.yy, pie->matrix.tx, pie->matrix.ty);
+        dmlprintf6(dev->memory, "[b]band box for (%d,%d),(%d,%d), band (%d,%d) =>\n",
+                   px, py, qx, qy, y, y + h);
+        dmlprintf10(dev->memory, "      (%g,%g),(%g,%g), matrix=[%g %g %g %g %g %g]\n",
+                    bbox.p.x, bbox.p.y, bbox.q.x, bbox.q.y,
+                    pie->matrix.xx, pie->matrix.xy, pie->matrix.yx,
+                    pie->matrix.yy, pie->matrix.tx, pie->matrix.ty);
     }
 #endif
     if (is_xxyy(&pie->matrix) || is_xyyx(&pie->matrix)) {
@@ -1475,7 +1584,8 @@ image_band_box(gx_device * dev, const clist_image_enum * pie, int y, int h,
             gs_point_transform_inverse(bbox.p.x, bbox.q.y, &pie->matrix,
                                        &corners[3]) < 0
             ) {
-            if_debug0('b', "[b]can't inverse-transform a band corner!\n");
+            if_debug0m('b', dev->memory,
+                       "[b]can't inverse-transform a band corner!\n");
             return false;
         }
         corners[4] = corners[0];
@@ -1509,34 +1619,34 @@ image_band_box(gx_device * dev, const clist_image_enum * pie, int y, int h,
             if (dx != 0) {
                 double t = (px - pa.x) / dx;
 
-                if_debug3('b', "   (px) t=%g => (%d,%g)\n",
-                          t, px, pa.y + t * dy);
+                if_debug3m('b', dev->memory, "   (px) t=%g => (%d,%g)\n",
+                           t, px, pa.y + t * dy);
                 if (in_range(t, pa.y + t * dy, py, qy))
                     box_merge_point(pbox, (floatp) px, t);
                 t = (qx - pa.x) / dx;
-                if_debug3('b', "   (qx) t=%g => (%d,%g)\n",
-                          t, qx, pa.y + t * dy);
+                if_debug3m('b', dev->memory, "   (qx) t=%g => (%d,%g)\n",
+                           t, qx, pa.y + t * dy);
                 if (in_range(t, pa.y + t * dy, py, qy))
                     box_merge_point(pbox, (floatp) qx, t);
             }
             if (dy != 0) {
                 double t = (py - pa.y) / dy;
 
-                if_debug3('b', "   (py) t=%g => (%g,%d)\n",
-                          t, pa.x + t * dx, py);
+                if_debug3m('b', dev->memory, "   (py) t=%g => (%g,%d)\n",
+                           t, pa.x + t * dx, py);
                 if (in_range(t, pa.x + t * dx, px, qx))
                     box_merge_point(pbox, t, (floatp) py);
                 t = (qy - pa.y) / dy;
-                if_debug3('b', "   (qy) t=%g => (%g,%d)\n",
-                          t, pa.x + t * dx, qy);
+                if_debug3m('b', dev->memory, "   (qy) t=%g => (%g,%d)\n",
+                           t, pa.x + t * dx, qy);
                 if (in_range(t, pa.x + t * dx, px, qx))
                     box_merge_point(pbox, t, (floatp) qy);
             }
 #undef in_range
         }
     }
-    if_debug4('b', "    => (%d,%d),(%d,%d)\n", pbox->p.x, pbox->p.y,
-              pbox->q.x, pbox->q.y);
+    if_debug4m('b', dev->memory, "    => (%d,%d),(%d,%d)\n",
+               pbox->p.x, pbox->p.y, pbox->q.x, pbox->q.y);
     /*
      * If necessary, add pixels around the edges so we will have
      * enough information to do interpolation.
@@ -1708,7 +1818,7 @@ write_image_end_all(gx_device *dev, const clist_image_enum *pie)
         RECT_STEP_INIT(re);
         if (re.pcls->known & begin_image_known) {
             do {
-                if_debug1('L', "[L]image_end for band %d\n", re.band);
+                if_debug1m('L', dev->memory, "[L]image_end for band %d\n", re.band);
                 code = set_cmd_put_op(dp, cdev, re.pcls, cmd_opv_image_data, 2);
             } while (RECT_RECOVER(code));
             if (code < 0 && SET_BAND_CODE(code))

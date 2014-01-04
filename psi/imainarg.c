@@ -205,7 +205,7 @@ gs_main_init_with_args(gs_main_instance * minst, int argc, char *argv[])
                 return e_Fatal;
         }
     }
-    while ((arg = arg_next(&args, &code)) != 0) {
+    while ((arg = arg_next(&args, &code, minst->heap)) != 0) {
         switch (*arg) {
             case '-':
                 code = swproc(minst, arg, &args);
@@ -216,10 +216,10 @@ gs_main_init_with_args(gs_main_instance * minst, int argc, char *argv[])
                 if (gs_debug[':'] && arg[1] == 'Z') {
                     int i;
 
-                    dprintf1("%% Init started, instance 0x%p, with args: ", minst);
+                    dmprintf1(minst->heap, "%% Init started, instance 0x%p, with args: ", minst);
                     for (i=1; i<argc; i++)
-                        dprintf1("%s ", argv[i]);
-                    dprintf("\n");
+                        dmprintf1(minst->heap, "%s ", argv[i]);
+                    dmprintf(minst->heap, "\n");
                 }
                 break;
             default:
@@ -238,10 +238,10 @@ gs_main_init_with_args(gs_main_instance * minst, int argc, char *argv[])
     if (gs_debug[':']) {
         int i;
 
-        dprintf1("%% Init done, instance 0x%p, with args: ", minst);
+        dmprintf1(minst->heap, "%% Init done, instance 0x%p, with args: ", minst);
         for (i=1; i<argc; i++)
-            dprintf1("%s ", argv[i]);
-        dprintf("\n");
+            dmprintf1(minst->heap, "%s ", argv[i]);
+        dmprintf(minst->heap, "\n");
     }
     if (!minst->run_start)
         return e_Quit;
@@ -307,7 +307,7 @@ run_stdin:
             /* FALLTHROUGH */
         case '@':               /* ditto with @-expansion */
             {
-                const char *psarg = arg_next(pal, &code);
+                const char *psarg = arg_next(pal, &code, minst->heap);
 
                 if (code < 0)
                     return e_Fatal;
@@ -324,14 +324,14 @@ run_stdin:
                 if (code >= 0)
                     code = run_string(minst, "userdict/ARGUMENTS[", 0);
                 if (code >= 0)
-                    while ((arg = arg_next(pal, &code)) != 0) {
+                    while ((arg = arg_next(pal, &code, minst->heap)) != 0) {
                         code = runarg(minst, "", arg, "", runInit);
                         if (code < 0)
                             break;
                     }
                 if (code >= 0)
                     code = runarg(minst, "]put", psarg, ".runfile", runInit | runFlush);
-                arg_free(psarg, minst->heap);
+                arg_free((char *)psarg, minst->heap);
                 if (code >= 0)
                     code = e_Quit;
                 
@@ -375,7 +375,7 @@ run_stdin:
                 if (code < 0)
                     return code;
                 pal->expand_ats = false;
-                while ((arg = arg_next(pal, &code)) != 0) {
+                while ((arg = arg_next(pal, &code, minst->heap)) != 0) {
                     if (arg[0] == '@' ||
                         (arg[0] == '-' && !isdigit((unsigned char)arg[1]))
                         )
@@ -456,7 +456,7 @@ run_stdin:
                 const char *path;
 
                 if (arg[0] == 0) {
-                    path = arg_next(pal, &code);
+                    path = arg_next(pal, &code, minst->heap);
                     if (code < 0)
                         return code;
                 } else
@@ -519,7 +519,7 @@ run_stdin:
                 int len;
 
                 if (arg[0] == 0) {
-                    adef = arg_next(pal, &code);
+                    adef = arg_next(pal, &code, minst->heap);
                     if (code < 0)
                         return code;
                 } else
@@ -594,7 +594,7 @@ run_stdin:
                 if ((code = gs_main_init1(minst)) < 0)
                     return code;
                 if (eqp == adef) {
-                    puts(minst->heap, "Usage: -dname, -dname=token, -sname=string");
+                    puts(minst->heap, "Usage: -dNAME, -dNAME=TOKEN, -sNAME=STRING");
                     return e_Fatal;
                 }
                 if (eqp == NULL) {
@@ -610,38 +610,69 @@ run_stdin:
                     *eqp++ = 0;
                     ialloc_set_space(idmemory, avm_system);
                     if (isd) {
-                        stream astream;
-                        scanner_state state;
+                        int num, i;
 
-                        s_init(&astream, NULL);
-                        sread_string(&astream,
-                                     (const byte *)eqp, strlen(eqp));
-                        gs_scanner_init_stream(&state, &astream);
-                        code = gs_scan_token(minst->i_ctx_p, &value, &state);
-                        if (code) {
-                            puts(minst->heap, "-dname= must be followed by a valid token");
-                            return e_Fatal;
-                        }
-                        if (r_has_type_attrs(&value, t_name,
-                                             a_executable)) {
-                            ref nsref;
+                        /* Check for numbers so we can provide for suffix scalers */
+                        /* Note the check for '#' is for PS "radix" numbers such as 16#ff */
+                        /* and check for '.' and 'e' or 'E' which are 'real' numbers */
+                        if ((strchr(eqp, '#') == NULL) && (strchr(eqp, '.') == NULL) &&
+                            (strchr(eqp, 'e') == NULL) && (strchr(eqp, 'E') == NULL) &&
+                            ((i = sscanf((const char *)eqp, "%d", &num)) == 1)) {
+                            char suffix = eqp[strlen(eqp) - 1];
 
-                            name_string_ref(minst->heap, &value, &nsref);
-#define string_is(nsref, str, len)\
-  (r_size(&(nsref)) == (len) &&\
-   !strncmp((const char *)(nsref).value.const_bytes, str, (len)))
-                            if (string_is(nsref, "null", 4))
-                                make_null(&value);
-                            else if (string_is(nsref, "true", 4))
-                                make_true(&value);
-                            else if (string_is(nsref, "false", 5))
-                                make_false(&value);
-                            else {
-                                puts(minst->heap,
-                                     "-dvar=name requires name=null, true, or false");
+                            switch (suffix) {
+                                case 'k':
+                                case 'K':
+                                    num *= 1024;
+                                    break;
+                                case 'm':
+                                case 'M':
+                                    num *= 1024 * 1024;
+                                    break;
+                                case 'g':
+                                case 'G':
+                                    /* caveat emptor: more than 2g will overflow */
+                                    /* and really should produce a 'real', so don't do this */
+                                    num *= 1024 * 1024 * 1024;
+                                    break;
+                                default:
+                                    break;   /* not a valid suffix or last char was digit */
+                            }
+                            make_int(&value, num);
+                        } else {
+                            /* use the PS scanner to capture other valid token types */
+                            stream astream;
+                            scanner_state state;
+
+                            s_init(&astream, NULL);
+                            sread_string(&astream,
+                                         (const byte *)eqp, strlen(eqp));
+                            gs_scanner_init_stream(&state, &astream);
+                            code = gs_scan_token(minst->i_ctx_p, &value, &state);
+                            if (code) {
+                                outprintf(minst->heap, "Invalid value for option -d%s, -dNAME= must be followed by a valid token\n", arg);
                                 return e_Fatal;
                             }
-#undef name_is_string
+                            if (r_has_type_attrs(&value, t_name,
+                                                 a_executable)) {
+                                ref nsref;
+
+                                name_string_ref(minst->heap, &value, &nsref);
+#undef string_is
+#define string_is(nsref, str, len)\
+       (r_size(&(nsref)) == (len) &&\
+       !strncmp((const char *)(nsref).value.const_bytes, str, (len)))
+                                if (string_is(nsref, "null", 4))
+                                    make_null(&value);
+                                else if (string_is(nsref, "true", 4))
+                                    make_true(&value);
+                                else if (string_is(nsref, "false", 5))
+                                    make_false(&value);
+                                else {
+                                    outprintf(minst->heap, "Invalid value for option -d%s, use -sNAME= to define string constants\n", arg);
+                                    return e_Fatal;
+                                }
+                            }
                         }
                     } else {
                         int len = strlen(eqp);
@@ -1048,17 +1079,10 @@ print_emulators(const gs_main_instance *minst)
 {
     outprintf(minst->heap, "%s", help_emulators);
     {
-        const ref *pes;
+        const byte *s;
 
-        for (pes = gs_emulator_name_array;
-             pes->value.const_bytes != 0; pes++
-            )
-            /*
-             * Even though gs_emulator_name_array is declared and used as
-             * an array of string refs, each string is actually a
-             * (null terminated) C string.
-             */
-            outprintf(minst->heap, " %s", (const char *)pes->value.const_bytes);
+        for (s = gs_emulators; s[0] != 0; s += strlen((const char *)s) + 1)
+            outprintf(minst->heap, " %s", s);
     }
     outprintf(minst->heap, "\n");
 }

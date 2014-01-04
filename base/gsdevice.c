@@ -472,10 +472,6 @@ gs_setdevice_no_erase(gs_state * pgs, gx_device * dev)
                     if ((code = gsicc_init_device_profile_struct(dev, NULL,
                                                             gsDEFAULTPROFILE)) < 0)
                         return(code);
-                    /* set the intent too */
-                    if ((code = gsicc_set_device_profile_intent(dev, gsPERCEPTUAL,
-                                                           gsDEFAULTPROFILE)) < 0)
-                        return(code);
                 }
             }
         }
@@ -540,6 +536,16 @@ gx_device_init(gx_device * dev, const gx_device * proto, gs_memory_t * mem,
     dev->memory = mem;
     dev->retained = !internal;
     rc_init(dev, mem, (internal ? 0 : 1));
+}
+
+void
+gx_device_init_on_stack(gx_device * dev, const gx_device * proto,
+                        gs_memory_t * mem)
+{
+    memcpy(dev, proto, proto->params_size);
+    dev->memory = mem;
+    dev->retained = 0;
+    rc_init(dev, NULL, 0);
 }
 
 /* Make a null device. */

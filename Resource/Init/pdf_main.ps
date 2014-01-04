@@ -253,7 +253,7 @@ currentdict /runpdfstring .undef
     } for
   % Indicate that the number of spot colors is unknown in case the next page
   % imaged is a PS file.
-  << /PageSpotColors -1 >> .setpagedevice
+  << /PageSpotColors -1 >> setpagedevice
   << /PDFScanRules //null >> setuserparams	% restore scanning rules for PS
 } bind def
 
@@ -717,7 +717,17 @@ currentdict /xref-char-dict undef
         { dup writeoutline /Next knownoget not { exit } if } loop
       } if
     } if
-  } if		% end .writepdfmarks
+    Trailer /Info knownoget {
+      mark exch
+      { /Author /Creator /Title /Subject /Keywords
+        % /Producer is Ghostscript; /CreationDate is now; /ModDate is also now.
+      } {
+        2 copy knownoget { 3 -1 roll } { pop } ifelse
+      } forall
+      pop
+      dup mark ne { /DOCINFO pdfmark } { pop } ifelse
+    } if
+  } if
   % Initialize OC groups
   Trailer /Root oget /OCProperties knownoget {
     % By default, OCGs are 'on'; mark only 'off' OCGs.
@@ -810,6 +820,9 @@ currentdict /xref-char-dict undef
       } ifelse
     } ifelse
   } if
+  Trailer /Root oget /PageLabels knownoget {
+     .pdfpagelabels
+  } if
 } bind def
 
 % Verify that each entry in the xref table is pointing at an object with
@@ -876,7 +889,7 @@ currentdict /xref-char-dict undef
 
 /pdfopenfile {		% <file> pdfopenfile <dict>
    pdfdict readonly pop		% can't do it any earlier than this
-   31 dict begin
+   32 dict begin
    /LocalResources 0 dict def
    /DefaultQstate //null def	% establish binding
    /Printed where { pop } {
@@ -889,6 +902,7 @@ currentdict /xref-char-dict undef
    cvlit /PDFfile exch def
    /PDFsource PDFfile def
    /Repaired //false def
+   /StreamRunAborted //false def
    /NeedAppearances //false def
    currentglobal //true .setglobal globaldict begin
    /UndefProcList 0 dict def
@@ -1161,39 +1175,34 @@ currentdict /xref-char-dict undef
 /rget {			% <resname> <pagedict> <restype> rget <value> -true-
                         % <resname> <pagedict> <restype> rget -false-
   LocalResources 1 index knownoget {
-     dup type /dicttype eq {
-       3 index knownoget
-     } {
-       //false exch {
-         4 index knownoget {
-           exch not exit
-         } if
-       } forall
-     } ifelse
+     3 index knownoget
   } {
     //false
   } ifelse {
     exch pop exch pop exch pop //true
   } {
-    exch /Resources pget {
-      exch knownoget {                 % /Name [<<>> ...]
-          dup type /dicttype eq {
-            exch knownoget
-          } {
-            % GS uses array of dicts if resources don't fit in one dict.
-            //false 3 1 roll {         % false /Name <<>>
-              1 index knownoget {      % false /Name val
-                exch pop exch not % i.e. true
-                0 exit
-              } if
-            } forall
-            pop
-          } ifelse
-      } {
-        pop //false
-      } ifelse
+    1 index /Resources pget {
+      1 index  knownoget { 3 index knownoget } { //false } ifelse
     } {
-      pop pop //false
+      //false
+    } ifelse {
+      4 1 roll pop pop pop //true
+    } {
+      countdictstack array dictstack
+      //false 5 1 roll
+      dup length 1 sub -1 4 {       % false /Name <<>> /Type [<<gstate>>] i
+        1 index exch get            % false /Name <<>> /Type [] <<gstate>>
+        /FormResDict .knownget {    % false /Name <<>> /Type [] <<res>>
+          2 index knownoget {       % false /Name <<>> /Type [] <<type_dict>>
+            4 index knownoget {     % false /Name <<>> /type [] <<res_dict>>
+              (   **** Warning: resource was found only in the external context.\n) pdfformaterror
+              //true 7 2 roll       % <<res_dict>> true false /Name <<>> /Type []
+              pop exit
+            } if
+          } if
+        } if
+      } for
+      pop pop pop pop
     } ifelse
   } ifelse
 } bind def
@@ -1431,8 +1440,6 @@ end readonly def
                dup pdf_cached_PDF2PS_matrix exch
                dup /Rotate pget not { 0 } if 90 idiv exch
                pdfpagenumber
-               /FirstPage where {pop dup FirstPage lt {/rangecheck signalerror} if} if
-               /LastPage where {pop dup LastPage gt {/rangecheck signalerror} if} if
                //true % now we have a page# and a transformation matrix
              } if
            } if
@@ -1469,7 +1476,7 @@ end readonly def
 /annottypes 5 dict dup begin
   /Text {
     mark exch
-     { /Rect /Open /Contents }
+     { /Rect /Open /Contents /F}
      { 2 copy knownoget { 3 -1 roll } { pop } ifelse }
     forall pop /ANN pdfmark
   } bind def
@@ -1530,9 +1537,9 @@ end readonly def
 % **** implemented in one of those three procedures.
 /pdfshowpage		% <pagedict> pdfshowpage -
  { dup /Page exch store
-   pdfshowpage_init
-   pdfshowpage_setpage
-   pdfshowpage_finish
+   pdfshowpage_init     % <pagedict>
+   pdfshowpage_setpage  % <pagedict>
+   pdfshowpage_finish   % -
  } bind def
 
 /pdfpagecontents	% <pagedict> pdfpagecontents <contents>
@@ -1556,6 +1563,13 @@ end readonly def
   //systemdict /UseTrimBox .knownget dup { and } if {
     dup /TrimBox pget {
       /TrimBox exch
+    } if
+  } if
+  dup type /arraytype ne {
+    //systemdict /UseArtBox .knownget dup { and } if {
+      dup /ArtBox pget {
+        /ArtBox exch
+      } if
     } if
   } if
   dup type /arraytype ne {
@@ -1589,7 +1603,7 @@ end readonly def
   matrix currentmatrix matrix setmatrix exch
   % stack: savedCTM <pdfpagedict>
   dup get_any_box
-  % stack: savedCTM <pdfpagedict> /Trim|Crop|MediaBox <Trim|Crop|Media Box>
+  % stack: savedCTM <pdfpagedict> /Trim|Crop|Art|MediaBox <Trim|Crop|Art|Media Box>
   oforce_elems normrect_elems fix_empty_rect_elems 4 array astore
   //systemdict /PDFFitPage known {
     PDFDEBUG { (Fiting PDF to imageable area of the page.) = flush } if
@@ -1742,15 +1756,13 @@ currentdict /PDF2PS_matrix_key undef
 /.free_page_resources {   % - .free_page_resources -
   Page /Resources pget {
     /Shading knownoget {
-      { {
-          dup type /dicttype eq {
-            dup /.shading_dict known {
-              dup /.shading_dict undef
-            } if
+      { dup type /dicttype eq {
+          dup /.shading_dict known {
+            dup /.shading_dict undef
           } if
-          pop pop
-        } forall
-      } big-res-forall
+        } if
+        pop pop
+      } forall
     } if
   } if
 } bind def
@@ -1758,6 +1770,7 @@ currentdict /PDF2PS_matrix_key undef
 /pdfshowpage_finish {	% <pagedict> pdfshowpage_finish -
    save /PDFSave exch store
    /PDFdictstackcount countdictstack store
+   /PDFexecstackcount count 2 sub store
    (before exec) VMDEBUG
 
    % set up color space substitution (this must be inside the page save)
@@ -1765,16 +1778,18 @@ currentdict /PDF2PS_matrix_key undef
 
   .writepdfmarks {
 
-        % Copy the crop box.
-    dup /CropBox pget {
-        % .pdfshowpage_Install transforms the user space -
-        % do same here with the CropBox.
-      oforce_elems
-      2 { Page pdf_cached_PDF2PS_matrix transform 4 2 roll } repeat
-      normrect_elems /CropBox 5 1 roll fix_empty_rect_elems 4 array astore
-      mark /CropBox 3 -1 roll
-      /PAGE pdfmark
-    } if
+        % Copy the boxes.
+    { /CropBox /BleedBox /TrimBox /ArtBox } {
+      2 copy pget {
+        % .pdfshowpage_Install transforms the user space do same here with the boxes
+        oforce_elems
+        2 { Page pdf_cached_PDF2PS_matrix transform 4 2 roll } repeat
+        normrect_elems 4 index 5 1 roll fix_empty_rect_elems 4 array astore
+        mark 3 1 roll /PAGE pdfmark
+      } {
+        pop
+      } ifelse
+    } forall
 
         % Copy annotations and links.
     dup /Annots knownoget {
@@ -1823,11 +1838,9 @@ currentdict /PDF2PS_matrix_key undef
         } {
           1 index get_media_box pop /MediaBox exch
         } ifelse
-        oforce_elems normrect_elems fix_empty_rect_elems 4 array astore .beginformgroup {
-          showpagecontents
-        } stopped {
-          .discardtransparencygroup stop
-        } if .endtransparencygroup
+        oforce_elems normrect_elems fix_empty_rect_elems 4 array astore .beginformgroup 
+        showpagecontents
+        .endtransparencygroup
       } {
         showpagecontents
       } ifelse
@@ -1854,11 +1867,13 @@ currentdict /PDF2PS_matrix_key undef
     currentdict /n known not or
     end
   } loop {
-    (   **** Warning: File has unbalanced q/Q operators \(too many q's\)\n)
-    pdfformaterror
+    StreamRunAborted not {
+      (   **** Warning: File has unbalanced q/Q operators \(too many q's\)\n)
+      pdfformaterror
+    } if
   } if
   pop
-
+  count PDFexecstackcount sub { pop } repeat
   (after exec) VMDEBUG
   Repaired		% pass Repaired state around the restore
   PDFSave restore
@@ -1981,44 +1996,38 @@ currentdict /PDF2PS_matrix_key undef
     2 copy //true put              % In the current chain.
     dup /ExtGState knownoget {
       //false exch
-      { { exch pop oforce extgstateusestransparency { pop //true exit } if
-        } forall
-        dup { exit } if
-      } big-res-forall
+      { exch pop oforce extgstateusestransparency { pop //true exit } if
+      } forall
       { pop //true exit } if
     } if
     dup /Pattern knownoget {
       //false exch
-      { { exch pop oforce patternusestransparency { pop //true exit } if
-        } forall
-        dup { exit } if
-      } big-res-forall
+      { exch pop oforce patternusestransparency { pop //true exit } if
+      } forall
       { pop //true exit } if
     } if
     dup /XObject knownoget {
-      dup type dup /dicttype eq exch /arraytype eq or {
+      dup type /dicttype eq {
         //false exch
-        { {
-            exch pop oforce 
-            dup //null ne {
-              dup /Subtype get
-              dup /Image eq {
-                1 index /SMask oknown { pop pop not exit } if
-                1 index /SMaskInData knownoget {
-                  0 ne { pop pop not exit } if
-                } if
+        {
+          exch pop oforce 
+          dup //null ne {
+            dup /Subtype get
+            dup /Image eq {
+              1 index /SMask oknown { pop pop not exit } if
+              1 index /SMaskInData knownoget {
+                0 ne { pop pop not exit } if
               } if
-              /Form eq {
-                3 index exch resourceusestransparency { not exit } if
-              } {
-                pop
-              } ifelse
+            } if
+            /Form eq {
+              3 index exch resourceusestransparency { not exit } if
             } {
               pop
             } ifelse
-          } forall
-          dup { exit } if
-        } big-res-forall
+          } {
+            pop
+          } ifelse
+        } forall
         { pop //true exit } if
       } {
         (   **** Ignoring non-dictionary /XObject attribute.\n)
@@ -2088,13 +2097,6 @@ currentdict /PDF2PS_matrix_key undef
   pop pop
 } bind def
 
-% Enumerate resource dictionary or an array of dictionaries
-% <object> <proc> big-res-forall -
-/big-res-forall {
-  1 index type /dicttype eq { 0 get } if
-  forall
-} bind def
-
 % Check the Resources of a page, form, or annotation.  Determine which spot
 % colors are used within the resource  Note: The spot color dict will include
 % all colors used in Separation or DeviceN color spaces.  Thus it may include
@@ -2114,42 +2116,41 @@ currentdict /PDF2PS_matrix_key undef
 
     % Scan resources that might contain a color space.
     dup /ColorSpace knownoget {
-      { { exch pop oforce 3 index colorspacespotcolors } forall } big-res-forall
+      { exch pop oforce 3 index colorspacespotcolors } forall
     } if
     dup /Pattern knownoget {
-      { { exch pop oforce 
-          dup /Shading knownoget {
-            exch pop
-            /ColorSpace oget 3 index colorspacespotcolors
-          } {
-            4 copy exch pop resourcespotcolors pop pop pop 
-          } ifelse
-       } forall } big-res-forall
+      { exch pop oforce 
+        dup /Shading knownoget {
+          exch pop
+          /ColorSpace oget 3 index colorspacespotcolors
+        } {
+          4 copy exch pop resourcespotcolors pop pop pop 
+        } ifelse
+      } forall
     } if
     dup /Shading knownoget {
-      { { exch pop oforce /ColorSpace oget 3 index colorspacespotcolors } forall } big-res-forall
+      { exch pop oforce /ColorSpace oget 3 index colorspacespotcolors } forall
     } if
     /XObject knownoget {
-      dup type dup /dicttype eq exch /arraytype eq or {
-        { { exch pop oforce
-            dup //null ne {
-              dup /Subtype oget 
-              dup /Form eq { 
-                pop resourcespotcolors 
-              } { 
-                /Image eq {
-                  /ColorSpace knownoget {
-                    2 index colorspacespotcolors
-                  } if
-                } {
-                  pop
-                } ifelse 
-              } ifelse
-            } {
-              pop
+      dup type /dicttype eq {
+        { exch pop oforce
+          dup //null ne {
+            dup /Subtype oget 
+            dup /Form eq { 
+              pop resourcespotcolors 
+            } { 
+              /Image eq {
+                /ColorSpace knownoget {
+                  2 index colorspacespotcolors
+                } if
+              } {
+                pop
+              } ifelse 
             } ifelse
-          } forall
-        } big-res-forall
+          } {
+            pop
+          } ifelse
+        } forall
       } {
         pop % Just ignore here, already reported by resourceusestransparency.
       } ifelse
@@ -2247,6 +2248,7 @@ currentdict /PDF2PS_matrix_key undef
   //false
   /DefaultGray 2 index /ColorSpace //rget exec {
     resolvecolorspace dup csncomp 1 eq {
+      dup type /nametype eq { 1 array astore } if
       /DefaultGray exch /ColorSpace defineresource pop
       pop //true
     } {
@@ -2258,17 +2260,19 @@ currentdict /PDF2PS_matrix_key undef
 
   /DefaultRGB 2 index /ColorSpace //rget exec {
     resolvecolorspace dup csncomp 3 eq {
+      dup type /nametype eq { 1 array astore } if
       /DefaultRGB exch /ColorSpace defineresource pop
       pop //true
     } {
       pop
-      (   **** Warning: ignoring invalid /DefaultCMYK color space.\n)
+      (   **** Warning: ignoring invalid /DefaultRGB color space.\n)
       pdfformaterror
     } ifelse
   } if
 
   /DefaultCMYK 2 index /ColorSpace //rget exec {
     resolvecolorspace dup csncomp 4 eq {
+      dup type /nametype eq { 1 array astore } if
       /DefaultCMYK exch /ColorSpace defineresource pop
       pop //true
     } {

@@ -125,6 +125,9 @@ static const gs_param_item_t pdf_param_items[] = {
     pi("PreserveSMask", gs_param_type_bool, PreserveSMask),
     pi("PreserveTrMode", gs_param_type_bool, PreserveTrMode),
     pi("NoT3CCITT", gs_param_type_bool, NoT3CCITT),
+    pi("FastWebView", gs_param_type_bool, Linearise),
+    pi("FirstPage", gs_param_type_int, FirstPage),
+    pi("LastPage", gs_param_type_int, LastPage),
 #undef pi
     gs_param_item_end
 };
@@ -249,6 +252,7 @@ gdev_pdf_put_params_impl(gx_device * dev, const gx_device_pdf * save_dev, gs_par
 
     {
         gs_param_string_array ppa;
+        gs_param_string pps;
 
         code = param_read_string_array(plist, (param_name = "pdfmark"), &ppa);
         switch (code) {
@@ -276,6 +280,30 @@ gdev_pdf_put_params_impl(gx_device * dev, const gx_device_pdf * save_dev, gs_par
                 code = pdf_dsc_process(pdev, &ppa);
                 if (code >= 0)
                     return code;
+                /* falls through for errors */
+            default:
+                param_signal_error(plist, param_name, code);
+                return code;
+            case 1:
+                break;
+        }
+
+        code = param_read_string(plist, (param_name = "pdfpagelabels"), &pps);
+        switch (code) {
+            case 0:
+                {
+                    if (!pdev->ForOPDFRead) {
+                        cos_dict_t *const pcd = pdev->Catalog;
+                        code = pdfwrite_pdf_open_document(pdev);
+                        if (code < 0)
+                            return code;
+                        code = cos_dict_put_string(pcd, (const byte *)"/PageLabels", 11,
+                                   pps.data, pps.size);
+                        if (code >= 0)
+                            return code;
+                    } else
+                        return 0;
+                 }
                 /* falls through for errors */
             default:
                 param_signal_error(plist, param_name, code);
@@ -444,8 +472,10 @@ gdev_pdf_put_params_impl(gx_device * dev, const gx_device_pdf * save_dev, gs_par
         param_signal_error(plist, "PDFA", ecode);
         goto fail;
     }
-    if (pdev->PDFA == 1)
+    if (pdev->PDFA == 1 || pdev->PDFX || pdev->CompatibilityLevel < 1.4) {
          pdev->HaveTransparency = false;
+         pdev->PreserveSMask = false;
+    }
     /*
      * We have to set version to the new value, because the set of
      * legal parameter values for psdf_put_params varies according to
@@ -586,6 +616,12 @@ gdev_pdf_put_params_impl(gx_device * dev, const gx_device_pdf * save_dev, gs_par
                 emprintf(pdev->memory, "Owner Password changed mid-job, ignoring.\n");
         }
     }
+
+    if (pdev->Linearise && pdev->is_ps2write) {
+        emprintf(pdev->memory, "Can't linearise PostScript output, ignoring\n");
+        pdev->Linearise = false;
+    }
+
     return 0;
  fail:
     /* Restore all the parameters to their original state. */

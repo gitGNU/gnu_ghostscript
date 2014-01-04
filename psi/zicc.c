@@ -114,7 +114,8 @@ int seticc(i_ctx_t * i_ctx_p, int ncomps, ref *ICCdict, float *range_buff)
        if it has a data space that is CIELAB */
     picc_profile->profile_handle =
         gsicc_get_profile_handle_buffer(picc_profile->buffer,
-                                        picc_profile->buffer_size);
+                                        picc_profile->buffer_size,
+                                        gs_state_memory(igs));
     if (picc_profile->profile_handle == NULL) {
         /* Free up everything, the profile is not valid. We will end up going
            ahead and using a default based upon the number of components */
@@ -246,7 +247,7 @@ zset_outputintent(i_ctx_t * i_ctx_p)
 
     check_type(*op, t_dictionary);
     check_dict_read(*op);
-    if_debug0(gs_debug_flag_icc,"[icc] Using OutputIntent\n");
+    if_debug0m(gs_debug_flag_icc, imemory, "[icc] Using OutputIntent\n");
 
     /* Get the device structure */
     code = dev_proc(dev, get_profile)(dev,  &dev_profile);
@@ -271,7 +272,8 @@ zset_outputintent(i_ctx_t * i_ctx_p)
     picc_profile->num_comps = ncomps;
     picc_profile->profile_handle =
         gsicc_get_profile_handle_buffer(picc_profile->buffer,
-                                        picc_profile->buffer_size);
+                                        picc_profile->buffer_size,
+                                        gs_state_memory(igs));
     if (picc_profile->profile_handle == NULL) {
         rc_decrement(picc_profile,"zset_outputintent");
         return -1;
@@ -340,7 +342,7 @@ zset_outputintent(i_ctx_t * i_ctx_p)
            color management */
         rc_assign(dev_profile->device_profile[0], picc_profile, 
                   "zset_outputintent");
-        if_debug0(gs_debug_flag_icc,"[icc] OutputIntent used for device profile\n");
+        if_debug0m(gs_debug_flag_icc, imemory, "[icc] OutputIntent used for device profile\n");
     } else {
         if (dev_profile->proof_profile == NULL) {
             /* This means that we should use the OI profile as the proofing 
@@ -350,7 +352,7 @@ zset_outputintent(i_ctx_t * i_ctx_p)
                just for the source data below */
             dev_profile->proof_profile = picc_profile;
             rc_increment(picc_profile);
-            if_debug0(gs_debug_flag_icc,"[icc] OutputIntent used for proof profile\n");
+            if_debug0m(gs_debug_flag_icc, imemory, "[icc] OutputIntent used for proof profile\n");
         }
     }
     /* Now the source colors.  See which source color space needs to use the
@@ -360,17 +362,17 @@ zset_outputintent(i_ctx_t * i_ctx_p)
         /* source_profile is currently the default.  Set it to the OI profile */
         switch (picc_profile->data_cs) {
             case gsGRAY:
-                if_debug0(gs_debug_flag_icc,"[icc] OutputIntent used source Gray\n");
+                if_debug0m(gs_debug_flag_icc, imemory, "[icc] OutputIntent used source Gray\n");
                 rc_assign(icc_manager->default_gray, picc_profile, 
                           "zset_outputintent");
                 break;
             case gsRGB:
-                if_debug0(gs_debug_flag_icc,"[icc] OutputIntent used source RGB\n");
+                if_debug0m(gs_debug_flag_icc, imemory, "[icc] OutputIntent used source RGB\n");
                 rc_assign(icc_manager->default_rgb, picc_profile, 
                           "zset_outputintent");
                 break;
             case gsCMYK:
-                if_debug0(gs_debug_flag_icc,"[icc] OutputIntent used source CMYK\n");
+                if_debug0m(gs_debug_flag_icc, imemory, "[icc] OutputIntent used source CMYK\n");
                 rc_assign(icc_manager->default_cmyk, picc_profile, 
                           "zset_outputintent");
                 break;
@@ -454,7 +456,7 @@ zseticcspace(i_ctx_t * i_ctx_p)
      * color space (the range may be smaller than the native range of values
      * provided by that color space).
      *
-     * Because the icclib code will perform normalization based on color
+     * Because the cms code will perform normalization based on color
      * space, we use the range values only to restrict the set of input
      * values; they are not used for normalization.
      */

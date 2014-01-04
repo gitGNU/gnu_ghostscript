@@ -29,6 +29,7 @@
 #include "gsicc.h"
 #include "gsicc_cache.h"
 #include "gsicc_cms.h"
+#include "gsicc_manage.h"
 #include "gxdevice.h"
 
 #define SAVEICCPROFILE 0
@@ -270,6 +271,31 @@ gx_restrict_ICC(gs_client_color * pcc, const gs_color_space * pcs)
     }
 }
 
+static int
+gx_remap_concrete_icc_devicen(const frac * pconc, const gs_color_space * pcs,
+        gx_device_color * pdc, const gs_imager_state * pis, gx_device * dev,
+                          gs_color_select_t select)
+{
+    /* Check if this is a device with a DeviceN ICC profile.  In this case,
+       we need to do some special stuff */
+    cmm_dev_profile_t *dev_profile;
+    int code;
+
+    code = dev_proc(dev, get_profile)(dev, &dev_profile);
+    if (dev_profile->spotnames != NULL  && 
+        !dev_profile->spotnames->equiv_cmyk_set) {
+        /* This means that someone has specified a DeviceN (Ncolor) 
+           ICC destination profile for this device and we still need to set
+           up the equivalent CMYK colors for the spot colors that are present.
+           This allows us to have some sort of composite viewing of the spot
+           colors as they would colorimetrically appear. */
+        gsicc_set_devicen_equiv_colors(dev, pis, dev_profile->device_profile[0]);
+        dev_profile->spotnames->equiv_cmyk_set = true;
+    }
+    gx_remap_concrete_devicen(pconc, pdc, pis, dev, select);
+    return 0;
+}
+
 /* If the color is already concretized, then we are in the color space
    defined by the device profile.  The remaining things to do would
    be to potentially apply alpha, apply the transfer function, and
@@ -297,9 +323,10 @@ gx_remap_concrete_ICC(const frac * pconc, const gs_color_space * pcs,
             code = gx_remap_concrete_DCMYK(pconc, pcs, pdc, pis, dev, select);
             break;
         default:
-            /* Need to do some work on integrating DeviceN and the new ICC flow */
-            /* code = gx_remap_concrete_DeviceN(pconc, pcs, pdc, pis, dev, select); */
-            code = -1;
+            /* This is a special case where we have a source color and our 
+               output profile must be DeviceN.   We will need to map our 
+               colorants to the proper planes */
+            code = gx_remap_concrete_icc_devicen(pconc, pcs, pdc, pis, dev, select);
             break;
         }
     return code;
@@ -328,12 +355,12 @@ gx_remap_ICC(const gs_client_color * pcc, const gs_color_space * pcs,
 
     code = dev_proc(dev, get_profile)(dev, &dev_profile);
     num_des_comps = gsicc_get_device_profile_comps(dev_profile);
-    rendering_params.black_point_comp = BP_ON;
+    rendering_params.black_point_comp = pis->blackptcomp;
     rendering_params.graphics_type_tag = dev->graphics_type_tag;
-    /* Need to figure out which one rules here on rendering intent.  The
-       source of the device */
+    rendering_params.override_icc = false;
+    rendering_params.preserve_black = gsBKPRESNOTSPECIFIED;
     rendering_params.rendering_intent = pis->renderingintent;
-
+    rendering_params.cmm = gsCMM_DEFAULT;
     /* Need to clear out psrc_cm in case we have separation bands that are
        not color managed */
     memset(psrc_cm,0,sizeof(unsigned short)*GS_CLIENT_COLOR_MAX_COMPONENTS);
@@ -364,15 +391,15 @@ gx_remap_ICC(const gs_client_color * pcc, const gs_color_space * pcs,
 #ifdef DEBUG
     if (!icc_link->is_identity) {
         num_src_comps = pcs->cmm_icc_profile_data->num_comps;
-        if_debug0(gs_debug_flag_icc,"[icc] remap [ ");
+        if_debug0m(gs_debug_flag_icc, dev->memory, "[icc] remap [ ");
         for (k = 0; k < num_src_comps; k++) {
-            if_debug1(gs_debug_flag_icc, "%d ",psrc[k]);
+            if_debug1m(gs_debug_flag_icc, dev->memory, "%d ", psrc[k]);
         }
-        if_debug0(gs_debug_flag_icc,"] --> [ ");
+        if_debug0m(gs_debug_flag_icc, dev->memory, "] --> [ ");
         for (k = 0; k < num_des_comps; k++) {
-            if_debug1(gs_debug_flag_icc, "%d ",psrc_temp[k]);
+            if_debug1m(gs_debug_flag_icc, dev->memory, "%d ", psrc_temp[k]);
         }
-        if_debug0(gs_debug_flag_icc,"]\n");
+        if_debug0m(gs_debug_flag_icc, dev->memory, "]\n");
     }
 #endif
     /* Release the link */
@@ -417,12 +444,12 @@ gx_remap_ICC_imagelab(const gs_client_color * pcc, const gs_color_space * pcs,
 
     code = dev_proc(dev, get_profile)(dev, &dev_profile);
     num_des_comps = gsicc_get_device_profile_comps(dev_profile);
-    rendering_params.black_point_comp = BP_ON;
+    rendering_params.black_point_comp = pis->blackptcomp;
     rendering_params.graphics_type_tag = dev->graphics_type_tag;
-    /* Need to figure out which one rules here on rendering intent.  The
-       source of the device */
+    rendering_params.override_icc = false;
+    rendering_params.preserve_black = gsBKPRESNOTSPECIFIED;
     rendering_params.rendering_intent = pis->renderingintent;
-
+    rendering_params.cmm = gsCMM_DEFAULT;
     /* Need to clear out psrc_cm in case we have separation bands that are
        not color managed */
     memset(psrc_cm,0,sizeof(unsigned short)*GS_CLIENT_COLOR_MAX_COMPONENTS);
@@ -483,10 +510,13 @@ gx_concretize_ICC(
 
     code = dev_proc(dev, get_profile)(dev, &dev_profile);
     num_des_comps = gsicc_get_device_profile_comps(dev_profile);
-    /* Define the rendering intents.  MJV to fix */
-    rendering_params.black_point_comp = BP_ON;
+    /* Define the rendering intents.  */
+    rendering_params.black_point_comp = pis->blackptcomp;
     rendering_params.graphics_type_tag = dev->graphics_type_tag;
+    rendering_params.override_icc = false;
+    rendering_params.preserve_black = gsBKPRESNOTSPECIFIED;
     rendering_params.rendering_intent = pis->renderingintent;
+    rendering_params.cmm = gsCMM_DEFAULT;
     for (k = 0; k < pcs->cmm_icc_profile_data->num_comps; k++) {
         psrc[k] = (unsigned short) (pcc->paint.values[k]*65535.0);
     }
@@ -568,7 +598,7 @@ gx_serialize_ICC(const gs_color_space * pcs, stream * s)
     if (code < 0)
         return code;
     profile__serial = (gsicc_serialized_profile_t*) pcs->cmm_icc_profile_data;
-    code = sputs(s, (byte *)profile__serial, sizeof(gsicc_serialized_profile_t), &n);
+    code = sputs(s, (byte *)profile__serial, GSICC_SERIALIZED_SIZE, &n);
     return(code);
 }
 

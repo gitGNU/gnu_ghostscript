@@ -96,6 +96,12 @@ jbig2_sd_new(Jbig2Ctx *ctx, int n_symbols)
 {
    Jbig2SymbolDict *new = NULL;
 
+   if (n_symbols < 0) {
+     jbig2_error(ctx, JBIG2_SEVERITY_FATAL, -1,
+         "Negative number of symbols in symbol dict: %d", n_symbols);
+     return NULL;
+   }
+
    new = jbig2_new(ctx, Jbig2SymbolDict, 1);
    if (new != NULL) {
      new->glyphs = jbig2_new(ctx, Jbig2Image*, n_symbols);
@@ -149,7 +155,10 @@ jbig2_sd_count_referred(Jbig2Ctx *ctx, Jbig2Segment *segment)
 
     for (index = 0; index < segment->referred_to_segment_count; index++) {
         rsegment = jbig2_find_segment(ctx, segment->referred_to_segments[index]);
-        if (rsegment && ((rsegment->flags & 63) == 0)) n_dicts++;
+        if (rsegment && ((rsegment->flags & 63) == 0) &&
+            rsegment->result &&
+            ((*((Jbig2SymbolDict *)rsegment->result)->glyphs) != NULL))
+            n_dicts++;
     }
 
     return (n_dicts);
@@ -175,7 +184,8 @@ jbig2_sd_list_referred(Jbig2Ctx *ctx, Jbig2Segment *segment)
 
     for (index = 0; index < segment->referred_to_segment_count; index++) {
         rsegment = jbig2_find_segment(ctx, segment->referred_to_segments[index]);
-        if (rsegment && ((rsegment->flags & 63) == 0)) {
+        if (rsegment && ((rsegment->flags & 63) == 0) && rsegment->result &&
+            ((*((Jbig2SymbolDict *)rsegment->result)->glyphs) != NULL)) {
             /* add this referred to symbol dictionary */
             dicts[dindex++] = (Jbig2SymbolDict *)rsegment->result;
         }
@@ -184,7 +194,7 @@ jbig2_sd_list_referred(Jbig2Ctx *ctx, Jbig2Segment *segment)
     if (dindex != n_dicts) {
         /* should never happen */
         jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number,
-            "counted %d symbol dictionaries but build a list with %d.\n",
+            "counted %d symbol dictionaries but built a list with %d.\n",
             n_dicts, dindex);
     }
 
@@ -291,7 +301,7 @@ jbig2_decode_symbol_dict(Jbig2Ctx *ctx,
       }
       if (params->SDREFAGG) {
           int64_t tmp = params->SDNUMINSYMS + params->SDNUMNEWSYMS;
-          for (SBSYMCODELEN = 0; (1 << SBSYMCODELEN) < tmp; SBSYMCODELEN++);
+          for (SBSYMCODELEN = 0; ((int64_t)1 << SBSYMCODELEN) < tmp; SBSYMCODELEN++);
           IAID = jbig2_arith_iaid_ctx_new(ctx, SBSYMCODELEN);
           IARDX = jbig2_arith_int_ctx_new(ctx);
           IARDY = jbig2_arith_int_ctx_new(ctx);
@@ -355,7 +365,7 @@ jbig2_decode_symbol_dict(Jbig2Ctx *ctx,
       TOTWIDTH = 0;
       HCFIRSTSYM = NSYMSDECODED;
 
-      if (HCHEIGHT < 0) {
+      if ((int32_t)HCHEIGHT < 0) {
           code = jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number,
               "Invalid HCHEIGHT value");
           goto cleanup2;
@@ -393,7 +403,7 @@ jbig2_decode_symbol_dict(Jbig2Ctx *ctx,
 
 	  SYMWIDTH = SYMWIDTH + DW;
 	  TOTWIDTH = TOTWIDTH + SYMWIDTH;
-	  if (SYMWIDTH < 0) {
+	  if ((int32_t)SYMWIDTH < 0) {
           code = jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number,
               "Invalid SYMWIDTH value (%d) at symbol %d", SYMWIDTH, NSYMSDECODED+1);
           goto cleanup4;
@@ -597,6 +607,13 @@ jbig2_decode_symbol_dict(Jbig2Ctx *ctx,
 		      rparams.reference = (ID < ninsyms) ?
 					params->SDINSYMS->glyphs[ID] :
 					SDNEWSYMS->glyphs[ID-ninsyms];
+		      /* SumatraPDF: fail on missing glyphs */
+		      if (rparams.reference == NULL) {
+		          code = jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number,
+		              "missing glyph %d/%d!", ID, ninsyms);
+		          jbig2_image_release(ctx, image);
+		          goto cleanup4;
+		      }
 		      rparams.DX = RDX;
 		      rparams.DY = RDY;
 		      rparams.TPGRON = 0;
@@ -675,6 +692,13 @@ jbig2_decode_symbol_dict(Jbig2Ctx *ctx,
 		((image->width & 7) ? 1 : 0);
 	  byte *dst = image->data;
 
+	  /* SumatraPDF: prevent read access violation */
+	  if (size - jbig2_huffman_offset(hs) < image->height * stride) {
+	    jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number, "not enough data for decoding (%d/%d)", image->height * stride, size - jbig2_huffman_offset(hs));
+	    jbig2_image_release(ctx, image);
+	    goto cleanup4;
+	  }
+
 	  BMSIZE = image->height * stride;
 	  jbig2_error(ctx, JBIG2_SEVERITY_DEBUG, segment->number,
 	    "reading %dx%d uncompressed bitmap"
@@ -688,6 +712,13 @@ jbig2_decode_symbol_dict(Jbig2Ctx *ctx,
 	  }
 	} else {
 	  Jbig2GenericRegionParams rparams;
+
+	  /* SumatraPDF: prevent read access violation */
+	  if (size - jbig2_huffman_offset(hs) < BMSIZE) {
+	    jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number, "not enough data for decoding (%d/%d)", BMSIZE, size - jbig2_huffman_offset(hs));
+	    jbig2_image_release(ctx, image);
+	    goto cleanup4;
+	  }
 
 	  jbig2_error(ctx, JBIG2_SEVERITY_DEBUG, segment->number,
 	    "reading %dx%d collective bitmap for %d symbols (%d bytes)",
@@ -744,16 +775,24 @@ jbig2_decode_symbol_dict(Jbig2Ctx *ctx,
     int exflag = 0;
     int64_t limit = params->SDNUMINSYMS + params->SDNUMNEWSYMS;
     int32_t exrunlength;
+    /* SumatraPDF: prevent infinite loop */
+    int zerolength = 0;
 
     while (i < limit) {
       if (params->SDHUFF)
         exrunlength = jbig2_huffman_get(hs, SBHUFFRSIZE, &code);
       else
         code = jbig2_arith_int_decode(IAEX, as, &exrunlength);
-      if (code || (exrunlength > limit - i)) {
+      /* SumatraPDF: prevent infinite loop */
+      zerolength = exrunlength > 0 ? 0 : zerolength + 1;
+      if (code || (exrunlength > limit - i) || (exrunlength < 0) || (zerolength > 4)) {
         if (code)
           jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number,
             "failed to decode exrunlength for exported symbols");
+        /* SumatraPDF: prevent infinite loop */
+        else if (exrunlength <= 0)
+          jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number,
+            "runlength too small in export symbol table (%d <= 0)\n", exrunlength);
         else
           jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number,
             "runlength too large in export symbol table (%d > %d - %d)\n",
@@ -1081,6 +1120,8 @@ jbig2_symbol_dictionary(Jbig2Ctx *ctx, Jbig2Segment *segment,
   /* 7.4.2.2 (7) */
   if (flags & 0x0200) {
       /* todo: retain GB_stats, GR_stats */
+      jbig2_free(ctx->allocator, GR_stats);
+      jbig2_free(ctx->allocator, GB_stats);
       jbig2_error(ctx, JBIG2_SEVERITY_WARNING, segment->number,
           "segment marks bitmap coding context as retained (NYI)");
   } else {
