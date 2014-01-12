@@ -215,7 +215,7 @@ FF_open_read_stream(gs_memory_t * mem, char *fname, FT_Stream * fts)
             code =
                 file_open_stream(pfn.fname, pfn.len, "r",
                                  file_default_buffer_size, &ps, pfn.iodev,
-                                 pfn.iodev->procs.fopen, mem);
+                                 pfn.iodev->procs.gp_fopen, mem);
             if (code < 0) {
                 goto error_out;
             }
@@ -617,6 +617,7 @@ load_glyph(gs_fapi_server * a_server, gs_fapi_font * a_fapi_font,
     }
 
     if (ft_error == FT_Err_Invalid_Argument
+        || ft_error == FT_Err_Invalid_Reference
         || ft_error == FT_Err_Invalid_Glyph_Index
         || (ft_error >= FT_Err_Invalid_Opcode
             && ft_error <= FT_Err_Too_Many_Instruction_Defs)) {
@@ -689,11 +690,15 @@ load_glyph(gs_fapi_server * a_server, gs_fapi_font * a_fapi_font,
          * loaded as CIDFont replacements are not incrementally handled. So here, if its a CIDFont, and
          * its not type 1 outlines, and its not a vertical mode fotn, ignore the advance.
          */
-        if (!a_fapi_font->is_type1 && a_fapi_font->is_cid
-            && !a_fapi_font->is_vertical)
-            vadv = 0;
-        else
+        if (a_fapi_font->is_type1
+           || ((a_fapi_font->full_font_buf || a_fapi_font->font_file_path)
+           && a_fapi_font->is_vertical &&  FT_HAS_VERTICAL(ft_face))) {
+
             vadv = ft_face->glyph->linearVertAdvance;
+        }
+        else {
+            vadv = 0;
+        }
 
         a_metrics->bbox_x0 = hx;
         a_metrics->bbox_y0 = hy - h;

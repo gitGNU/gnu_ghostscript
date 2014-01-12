@@ -16,9 +16,13 @@
 
 /* VAX/VMS specific routines for Ghostscript */
 
+/* prevent gp.h from defining fopen */
+#define fopen fopen
+
 #include "string_.h"
 #include "memory_.h"
 #include "gx.h"
+
 #include "gp.h"
 #include "gpmisc.h"
 #include "gsstruct.h"
@@ -259,7 +263,7 @@ gp_open_scratch_file(const gs_memory_t *mem,
         return 0;		/* file name too long */
     strcat(fname, "XXXXXX");
     mktemp(fname);
-    f = fopen(fname, mode);
+    f = gp_fopen(fname, mode);
 
     if (f == NULL)
         emprintf1(mem, "**** Could not open temporary file %s\n", fname);
@@ -645,7 +649,7 @@ gp_file_name_combine(const char *prefix, uint plen, const char *fname, uint flen
 bool
 gp_file_name_good_char(unsigned char c)
 {
-	return (c >= 'A' && c <= 'Z') || (c >='a' && c <= 'z') || (c >= '0' && c <= '9') || c == '$' || c = '-' || c == '_';
+        return (c >= 'A' && c <= 'Z') || (c >='a' && c <= 'z') || (c >= '0' && c <= '9') || c == '$' || c == '-' || c == '_';
 }
 
 
@@ -707,4 +711,19 @@ int gp_fseek_64(FILE *strm, int64_t offset, int origin)
     if (offset != offset1)
         return -1;
     return fseek(strm, offset1, origin);
+}
+
+bool gp_fseekable (FILE *f)
+{
+    struct stat s;
+    int fno;
+    
+    fno = fileno(f);
+    if (fno < 0)
+        return(false);
+    
+    if (fstat(fno, &s) < 0)
+        return(false);
+
+    return((bool)S_ISREG(s.st_mode));
 }

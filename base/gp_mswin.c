@@ -29,9 +29,13 @@
 /* DLL version must now be used under MS-Windows */
 /* Russell Lang 16 March 1996 */
 
+/* prevent gp.h from defining fopen */
+#define fopen fopen
+
 #include "stdio_.h"
 #include "string_.h"
 #include "memory_.h"
+#include "stat_.h"
 #include "pipe_.h"
 #include <stdlib.h>
 #include <stdarg.h>
@@ -41,6 +45,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include "gx.h"
+
 #include "gp.h"
 #include "gpcheck.h"
 #include "gpmisc.h"
@@ -53,6 +58,7 @@
 #include <shellapi.h>
 #include <winspool.h>
 #include "gp_mswin.h"
+#include "winrtsup.h"
 
 /* Library routines not declared in a standard header */
 extern char *getenv(const char *);
@@ -262,7 +268,7 @@ gp_printfile(const char *filename, const char *pmport)
 
         /* WinNT stores default printer in registry and win.ini */
         /* Win95 stores default printer in win.ini */
-#ifdef WINDOWS_NO_UNICODE
+#ifdef GS_NO_UTF8
         GetProfileString("windows", "device", "", buf, sizeof(buf));
 #else
         wchar_t wbuf[512];
@@ -316,7 +322,7 @@ get_queues(void)
         char buf[256];
 
         free(enumbuffer);
-        sprintf(buf, "EnumPrinters() failed, error code = %d", GetLastError());
+        gs_sprintf(buf, "EnumPrinters() failed, error code = %d", GetLastError());
         MessageBox((HWND) NULL, buf, szAppName, MB_OK | MB_ICONSTOP);
         return NULL;
     }
@@ -381,7 +387,7 @@ BOOL gp_OpenPrinter(char *port, LPHANDLE printer)
 #ifdef METRO
     return FALSE;
 #else
-#ifdef WINDOWS_NO_UNICODE
+#ifdef GS_NO_UTF8
     return OpenPrinter(port, printer, NULL);
 #else
     BOOL opened;
@@ -423,7 +429,7 @@ gp_printfile_win32(const char *filename, char *port)
     if (!gp_OpenPrinter(port, &printer)) {
         char buf[256];
 
-        sprintf(buf, "OpenPrinter() failed for \042%s\042, error code = %d", port, GetLastError());
+        gs_sprintf(buf, "OpenPrinter() failed for \042%s\042, error code = %d", port, GetLastError());
         MessageBox((HWND) NULL, buf, szAppName, MB_OK | MB_ICONSTOP);
         free(buffer);
         return FALSE;
@@ -436,7 +442,7 @@ gp_printfile_win32(const char *filename, char *port)
     if (!StartDocPrinter(printer, 1, (LPBYTE) & di)) {
         char buf[256];
 
-        sprintf(buf, "StartDocPrinter() failed, error code = %d", GetLastError());
+        gs_sprintf(buf, "StartDocPrinter() failed, error code = %d", GetLastError());
         MessageBox((HWND) NULL, buf, szAppName, MB_OK | MB_ICONSTOP);
         AbortPrinter(printer);
         free(buffer);
@@ -457,7 +463,7 @@ gp_printfile_win32(const char *filename, char *port)
     if (!EndDocPrinter(printer)) {
         char buf[256];
 
-        sprintf(buf, "EndDocPrinter() failed, error code = %d", GetLastError());
+        gs_sprintf(buf, "EndDocPrinter() failed, error code = %d", GetLastError());
         MessageBox((HWND) NULL, buf, szAppName, MB_OK | MB_ICONSTOP);
         AbortPrinter(printer);
         return FALSE;
@@ -465,7 +471,7 @@ gp_printfile_win32(const char *filename, char *port)
     if (!ClosePrinter(printer)) {
         char buf[256];
 
-        sprintf(buf, "ClosePrinter() failed, error code = %d", GetLastError());
+        gs_sprintf(buf, "ClosePrinter() failed, error code = %d", GetLastError());
         MessageBox((HWND) NULL, buf, szAppName, MB_OK | MB_ICONSTOP);
         return FALSE;
     }
@@ -480,7 +486,7 @@ gp_printfile_win32(const char *filename, char *port)
 FILE *mswin_popen(const char *cmd, const char *mode)
 {
     SECURITY_ATTRIBUTES saAttr;
-#ifdef WINDOWS_NO_UNICODE
+#ifdef GS_NO_UTF8
     STARTUPINFO siStartInfo;
 #else
     STARTUPINFOW siStartInfo;
@@ -493,7 +499,7 @@ FILE *mswin_popen(const char *cmd, const char *mode)
     HANDLE hChildStderrWr = INVALID_HANDLE_VALUE;
     HANDLE hProcess = GetCurrentProcess();
     int handle = 0;
-#ifdef WINDOWS_NO_UNICODE
+#ifdef GS_NO_UTF8
     char *command = NULL;
 #else
     wchar_t *command = NULL;
@@ -543,7 +549,7 @@ FILE *mswin_popen(const char *cmd, const char *mode)
     siStartInfo.hStdError = hChildStderrWr;
 
     if (handle == 0) {
-#ifdef WINDOWS_NO_UNICODE
+#ifdef GS_NO_UTF8
         command = (char *)malloc(strlen(cmd)+1);
         if (command)
             strcpy(command, cmd);
@@ -557,7 +563,7 @@ FILE *mswin_popen(const char *cmd, const char *mode)
     }
 
     if (handle == 0)
-#ifdef WINDOWS_NO_UNICODE
+#ifdef GS_NO_UTF8
         if (!CreateProcess(NULL,
 #else
         if (!CreateProcessW(NULL,
@@ -625,7 +631,11 @@ gp_open_scratch_file(const gs_memory_t *mem,
         int plen = sizeof(sTempDir);
 
         if (gp_gettmpdir(sTempDir, &plen) != 0)
+#if METRO
+            l = GetTempPathWRT(sizeof(sTempDir), sTempDir);
+#else
             l = GetTempPath(sizeof(sTempDir), sTempDir);
+#endif
         else
             l = strlen(sTempDir);
     } else {
@@ -638,7 +648,11 @@ gp_open_scratch_file(const gs_memory_t *mem,
         sTempDir[l-1] = '\\';		/* What Windoze prefers */
 
     if (l <= sizeof(sTempDir)) {
+#ifdef METRO
+        n = GetTempFileNameWRT(sTempDir, prefix, sTempFileName);
+#else
         n = GetTempFileName(sTempDir, prefix, 0, sTempFileName);
+#endif
         if (n == 0) {
             /* If 'prefix' is not a directory, it is a path prefix. */
             int l = strlen(sTempDir), i;
@@ -653,10 +667,14 @@ gp_open_scratch_file(const gs_memory_t *mem,
                 }
             }
             if (i > 0)
+#ifdef METRO
+                n = GetTempFileNameWRT(sTempDir, sTempDir + i, sTempFileName);
+#else
                 n = GetTempFileName(sTempDir, sTempDir + i, 0, sTempFileName);
+#endif
         }
         if (n != 0) {
-#ifdef WINDOWS_NO_UNICODE
+#ifdef GS_NO_UTF8
             hfile = CreateFile(sTempFileName,
                                GENERIC_READ | GENERIC_WRITE | DELETE,
                                FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -670,12 +688,20 @@ gp_open_scratch_file(const gs_memory_t *mem,
                 hfile = INVALID_HANDLE_VALUE;
             else {
                 utf8_to_wchar(uni, sTempFileName);
+#ifdef METRO
+                hfile = CreateFile2(uni,
+                                    GENERIC_READ | GENERIC_WRITE | DELETE,
+                                    FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                    CREATE_ALWAYS,
+                                    NULL);
+#else
                 hfile = CreateFileW(uni,
                                     GENERIC_READ | GENERIC_WRITE | DELETE,
                                     FILE_SHARE_READ | FILE_SHARE_WRITE,
                                     NULL, CREATE_ALWAYS,
                                     FILE_ATTRIBUTE_NORMAL /* | FILE_FLAG_DELETE_ON_CLOSE */,
                                     NULL);
+#endif
                 free(uni);
             }
 #endif
@@ -718,7 +744,7 @@ gp_open_scratch_file(const gs_memory_t *mem,
 FILE *
 gp_fopen(const char *fname, const char *mode)
 {
-#ifdef WINDOWS_NO_UNICODE
+#ifdef GS_NO_UTF8
     return fopen(fname, mode);
 #else
     int len = utf8_to_wchar(NULL, fname);
@@ -823,6 +849,21 @@ int gp_fseek_64(FILE *strm, gs_offset_t offset, int origin)
 #else
     return _fseeki64(strm, offset, origin);
 #endif
+}
+
+bool gp_fseekable (FILE *f)
+{
+    struct stat s;
+    int fno;
+    
+    fno = fileno(f);
+    if (fno < 0)
+        return(false);
+    
+    if (fstat(fno, &s) < 0)
+        return(false);
+
+    return((bool)S_ISREG(s.st_mode));
 }
 
 /* -------------------------  _snprintf -----------------------------*/

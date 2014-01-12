@@ -53,7 +53,7 @@
 #include "iplugin.h"
 #include "store.h"
 #include "gzstate.h"
-#include "gdevpsf.h"
+/* #include "gdevpsf.h" */
 #include "stream.h"             /* for files.h */
 #include "gscrypt1.h"
 #include "gxfcid.h"
@@ -96,18 +96,20 @@ sfnts_next_elem(sfnts_reader *r)
 
     if (r->error)
         return;
-    r->index++;
-    code = array_get(r->memory, r->sfnts, r->index, &s);
-    if (code == e_rangecheck) {
-        r->error |= 2;
-    }
-    else if (code < 0) {
-        r->error |= 1;
-    }
-    if (r->error)
-        return;
-    r->p = s.value.const_bytes;
-    r->length = r_size(&s) & ~(uint) 1; /* See Adobe Technical Note # 5012, section 4.2. */
+    do {
+    	r->index++;
+    	code = array_get(r->memory, r->sfnts, r->index, &s);
+    	if (code == e_rangecheck) {
+    		r->error |= 2;
+    	}
+    	else if (code < 0) {
+    		r->error |= 1;
+    	}
+    	if (r->error)
+    		return;
+    	r->p = s.value.const_bytes;
+    	r->length = r_size(&s) & ~(uint) 1; /* See Adobe Technical Note # 5012, section 4.2. */
+    } while (r->length == 0);
     r->offset = 0;
 }
 
@@ -583,11 +585,11 @@ FAPI_FF_get_word(gs_fapi_font *ff, gs_fapi_font_feature var_id, int index)
                             length += r_size(&string) + 1;
                             break;
                         case t_real:
-                            sprintf(Buffer, "%f", Element.value.realval);
+                            gs_sprintf(Buffer, "%f", Element.value.realval);
                             length += strlen(Buffer) + 1;
                             break;
                         case t_integer:
-                            sprintf(Buffer, "%"PRIpsint, Element.value.intval);
+                            gs_sprintf(Buffer, "%"PRIpsint, Element.value.intval);
                             length += strlen(Buffer) + 1;
                             break;
                         case t_operator:
@@ -823,12 +825,12 @@ FAPI_FF_get_proc(gs_fapi_font *ff, gs_fapi_font_feature var_id, int index,
                             ptr += r_size(&string);
                             break;
                         case t_real:
-                            sprintf(Buf, "%f", Element.value.realval);
+                            gs_sprintf(Buf, "%f", Element.value.realval);
                             strcpy(ptr, Buf);
                             ptr += strlen(Buf);
                             break;
                         case t_integer:
-                            sprintf(Buf, "%"PRIpsint, Element.value.intval);
+                            gs_sprintf(Buf, "%"PRIpsint, Element.value.intval);
                             strcpy(ptr, Buf);
                             ptr += strlen(Buf);
                             break;
@@ -1781,6 +1783,8 @@ ps_get_glyphname_or_cid(gs_font_base *pbfont, gs_string *charstring,
          * it to the renderer for a disk based font. But the metrics dictionary may have
          * been constructed using the extended name....
          */
+        if (!r_has_type(&char_name, t_name))
+            return_error(e_invalidfont);
         name_string_ref(imemory, &char_name, &cname_str);
         enc_char_name->data = cname_str.value.bytes;
         enc_char_name->size = r_size(&cname_str);
@@ -1901,8 +1905,7 @@ ps_get_glyphname_or_cid(gs_font_base *pbfont, gs_string *charstring,
                 if (r_has_type(CIDMap, t_array)) {
 
                     /* Too big for single string, so its an array of 2 strings */
-                    code =
-                        string_array_access_proc(pbfont->memory, CIDMap, 1,
+                    code = string_array_access_proc(pbfont->memory, CIDMap, 1,
                                                  client_char_code * gdb, gdb,
                                                  NULL, NULL,
                                                  (const byte **)&Map);
@@ -1915,8 +1918,20 @@ ps_get_glyphname_or_cid(gs_font_base *pbfont, gs_string *charstring,
                 }
                 cr->char_codes[0] = 0;
 
-                for (i = 0; i < gdb; i++) {
-                    cr->char_codes[0] = (cr->char_codes[0] << 8) + Map[i];
+                if (code >= 0) {
+                    for (i = 0; i < gdb; i++) {
+                        cr->char_codes[0] = (cr->char_codes[0] << 8) + Map[i];
+                    }
+                }
+                else {
+                    ref *cstr, *refcode;
+                    code = dict_find_string(pdr, "CharStrings", &cstr);
+                    if (code > 0) {
+                        code = dict_find_string(cstr, ".notdef", &refcode);
+                        if (code > 0) {
+                            cr->char_codes[0] = refcode->value.intval;
+                        }
+                    }
                 }
             }
             else
@@ -2140,6 +2155,8 @@ FAPI_char(i_ctx_t *i_ctx_p, bool bBuildGlyph, ref *charstring)
 
         /* initialise the FAPI font, this includes language specific stuff */
         I->ff = ps_ff_stub;
+
+        I->client_ctx_p = i_ctx_p;
 
         if (bBuildGlyph && !bCID) {
             if (r_type(op) != t_name) {

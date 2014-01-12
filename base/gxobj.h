@@ -25,6 +25,37 @@
 #  define IGC_PTR_STABILITY_CHECK 0
 #endif
 
+#ifndef GS_USE_MEMORY_HEADER_ID
+#define GS_USE_MEMORY_HEADER_ID 1
+#endif
+
+#if GS_USE_MEMORY_HEADER_ID
+
+  typedef gs_id hdr_id_t;
+
+  extern hdr_id_t hdr_id;
+
+# define HDR_ID_OFFSET (sizeof(obj_header_t) - offset_of(obj_header_t, d.o.hdr_id))
+
+# ifdef DEBUG
+
+# define ASSIGN_HDR_ID(obj) (*(hdr_id_t *)(((byte *)obj) - HDR_ID_OFFSET)) = hdr_id++
+
+  gs_id get_mem_hdr_id (void *ptr);
+
+# else /* DEBUG */
+
+#  define ASSIGN_HDR_ID(obj_hdr)
+
+# endif /* DEBUG */
+
+#else
+
+# define ASSIGN_HDR_ID(obj_hdr)
+# define HDR_ID_OFFSET 0
+
+#endif /* GS_USE_MEMORY_HEADER_ID */
+
 /* ================ Objects ================ */
 
 /*
@@ -80,7 +111,7 @@
 typedef struct obj_header_data_s {
     union _f {
         struct _h {
-            unsigned alone:1;
+            unsigned alone:1, pad:obj_mb_bits;
         } h;
         struct _m {
             unsigned _:1, smark:obj_mb_bits;
@@ -96,6 +127,10 @@ typedef struct obj_header_data_s {
     } t;
 #   if IGC_PTR_STABILITY_CHECK
     unsigned space_id:3; /* r_space_bits + 1 bit for "instability". */
+#   endif
+
+#   if GS_USE_MEMORY_HEADER_ID
+    hdr_id_t hdr_id; /* should be last, to save wasting space in the "strings" case. Makes object easier to trace thru GC */
 #   endif
 } obj_header_data_t;
 
@@ -142,6 +177,7 @@ struct obj_header_s {		/* must be a struct because of forward reference */
 
 /* Define some reasonable abbreviations for the fields. */
 #define o_alone d.o.f.h.alone
+#define o_pad d.o.f.h.pad
 #define o_back d.o.f.b.back
 #define o_smark d.o.f.m.smark
 #define o_size d.o.size

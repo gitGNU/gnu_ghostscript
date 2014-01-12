@@ -40,6 +40,11 @@
 #include "gsicc_manage.h"
 #include "gsicc_cache.h"
 #include "gxdevsop.h"
+#include "gscindex.h"
+#include "gsicc_cms.h"
+#include "gxsample.h"
+#include "gximage.h"
+#include "gxfrac.h"
 
 extern_gx_image_type_table();
 
@@ -54,6 +59,78 @@ static bool check_rect_for_trivial_clip(
     const gx_clip_path *pcpath,  /* May be NULL, clip to evaluate */
     int px, int py, int qx, int qy  /* corners of box to test */
 );
+
+static bool
+palette_has_color(const gs_color_space *pcs, const gs_pixel_image_t * const pim)
+{
+    gs_color_space *pbcs = pcs->base_space;
+    gs_color_space_index base_type = gs_color_space_get_index(pbcs);
+    bool ((*is_neutral)(void*, int));
+    int bps = pim->BitsPerComponent;
+    int num_entries = 1 << bps;
+    int k;
+    byte psrc[4];
+    int code;
+
+    switch(base_type) {
+
+    case gs_color_space_index_DeviceGray:
+    case gs_color_space_index_CIEA:
+        return false;
+        break;
+
+    case gs_color_space_index_DeviceRGB:
+    case gs_color_space_index_CIEABC:
+    case gs_color_space_index_CIEDEF:
+        is_neutral = &gsicc_mcm_monitor_rgb;
+        break;
+
+    case gs_color_space_index_DeviceCMYK:
+    case gs_color_space_index_CIEDEFG:
+        is_neutral = &gsicc_mcm_monitor_cmyk;
+        break;
+
+     case gs_color_space_index_DevicePixel:
+     case gs_color_space_index_DeviceN:
+     case gs_color_space_index_Separation:
+     case gs_color_space_index_Indexed:
+     case gs_color_space_index_Pattern:
+        return true;
+        break;
+
+     case gs_color_space_index_ICC:
+        switch(pbcs->cmm_icc_profile_data->data_cs) {
+        case gsRGB:
+            is_neutral = &gsicc_mcm_monitor_rgb;
+            break;
+
+        case gsCMYK:
+            is_neutral = &gsicc_mcm_monitor_cmyk;
+            break;
+
+        case gsCIELAB:
+            is_neutral = &gsicc_mcm_monitor_lab;
+            break;
+
+        default:
+            return true;
+        }
+        break;
+     default:
+        return true;
+    }
+    /* Now go through the palette with the check color function */
+    for (k = 0; k < num_entries; k++) {
+        code = gs_cspace_indexed_lookup_bytes(pcs, (float) k, psrc);
+        if (!is_neutral(psrc, 1)) {
+            /* Has color end this now */
+            return true;
+        }
+    }
+    /* Must not have color */
+    return false;
+}
+
 
 /* ------ Driver procedures ------ */
 
@@ -113,6 +190,17 @@ clist_fill_mask(gx_device * dev,
     data_x_bit = data_x << log2_depth;
     if (cdev->permanent_error < 0)
       return (cdev->permanent_error);
+    /* If needed, update the trans_bbox */
+    if (cdev->pdf14_needed) {
+        gs_int_rect bbox;
+
+        bbox.p.x = rx;
+        bbox.q.x = rx + rwidth - 1;
+        bbox.p.y = ry;
+        bbox.q.y = ry + rheight - 1;
+
+        clist_update_trans_bbox(cdev, &bbox);
+    }
     RECT_ENUM_INIT(re, ry, rheight);
     do {
         int code;
@@ -143,7 +231,7 @@ clist_fill_mask(gx_device * dev,
         if (code < 0 && SET_BAND_CODE(code))
             goto error_in_rect;
         do {
-            code = cmd_put_drawing_color(cdev, re.pcls, pdcolor, &re, 
+            code = cmd_put_drawing_color(cdev, re.pcls, pdcolor, &re,
                                          devn_not_tile);
             if (code == gs_error_unregistered)
                 return code;
@@ -153,8 +241,6 @@ clist_fill_mask(gx_device * dev,
         if (code < 0 && SET_BAND_CODE(code))
             goto error_in_rect;
         re.pcls->color_usage.slow_rop |= slow_rop;
-        re.pcls->band_complexity.nontrivial_rops |= slow_rop;
-        re.pcls->band_complexity.uses_color |= (pdcolor->colors.pure != 0 && pdcolor->colors.pure != 0xffffff);
         /* Put it in the cache if possible. */
         if (!cls_has_tile_id(cdev, re.pcls, id, offset_temp)) {
             gx_strip_bitmap tile;
@@ -206,7 +292,7 @@ clist_fill_mask(gx_device * dev,
                         dp++;
                         if (depth == 1) {
                             cmd_putw(0, dp);
-                        } 
+                        }
                         cmd_putxy(rect, dp);
                     }
                 }
@@ -265,11 +351,18 @@ typedef struct clist_image_enum_s {
     /* Updated dynamically */
     int y;
     bool color_map_is_known;
+    bool monitor_color;
+    int bps;
+    int spp;
+    SAMPLE_UNPACK_PROC((*unpack));
+    byte *buffer;  /* needed for unpacking during monitoring */
+    int spread;
+    sample_map map[GS_IMAGE_MAX_COMPONENTS];
 } clist_image_enum;
-gs_private_st_suffix_add3(st_clist_image_enum, clist_image_enum,
+gs_private_st_suffix_add4(st_clist_image_enum, clist_image_enum,
                           "clist_image_enum", clist_image_enum_enum_ptrs,
                           clist_image_enum_reloc_ptrs, st_gx_image_enum_common,
-                          pis, pcpath, color_space.space);
+                          pis, pcpath, color_space.space, buffer);
 
 static image_enum_proc_plane_data(clist_image_plane_data);
 static image_enum_proc_end_image(clist_image_end_image);
@@ -277,6 +370,189 @@ static const gx_image_enum_procs_t clist_image_enum_procs =
 {
     clist_image_plane_data, clist_image_end_image
 };
+
+/* data_size is number of bytes per component, width is number of pixels in the row. */
+static bool
+row_has_color(byte *data_ptr, clist_image_enum *pie_c, int data_size, int width)
+{
+    clist_color_space_t pclcs = pie_c->color_space;
+    bool ((*is_neutral)(void*, int));
+    int step_size = data_size * pie_c->spp;
+    byte *ptr;
+    bool is_mono;
+    int k;
+
+    if (pclcs.icc_info.is_lab) {
+        is_neutral = &gsicc_mcm_monitor_lab;
+    } else {
+        switch(pclcs.icc_info.icc_num_components) {
+        case 3:
+            is_neutral = &gsicc_mcm_monitor_rgb;
+            break;
+        case 4:
+            is_neutral = &gsicc_mcm_monitor_cmyk;
+            break;
+        default:
+            return true;
+        }
+    }
+    /* Now go through the raster line and determine if we have any color. */
+    ptr = data_ptr;
+    for (k = 0; k < width; k++) {
+        is_mono = is_neutral(ptr, data_size);
+        if (!is_mono) {
+            return true;
+        }
+        ptr += step_size;
+    }
+    return false;
+}
+
+/* We need to have the unpacking proc so that we can monitor the data. */
+static void
+get_unpack_proc(clist_image_enum *pie, const float *decode) {
+
+static sample_unpack_proc_t procs[2][6] = {
+    {   sample_unpack_1, sample_unpack_2,
+        sample_unpack_4, sample_unpack_8,
+        0, 0
+    },
+    {   sample_unpack_1_interleaved, sample_unpack_2_interleaved,
+        sample_unpack_4_interleaved, sample_unpack_8_interleaved,
+        0, 0
+    }};
+    int num_planes = pie->num_planes;
+    bool interleaved = (num_planes == 1 && pie->plane_depths[0] != pie->bps);
+    int i;
+    int index_bps = (pie->bps < 8 ? pie->bps >> 1 : (pie->bps >> 2) + 1);
+    gs_image_format_t format = pie->format;
+    int log2_xbytes = (pie->bps <= 8 ? 0 : arch_log2_sizeof_frac);
+
+    switch (format) {
+        case gs_image_format_chunky:
+            pie->spread = 1 << log2_xbytes;
+            break;
+        case gs_image_format_component_planar:
+            pie->spread = (pie->spp) << log2_xbytes;
+            break;
+        case gs_image_format_bit_planar:
+            pie->spread = (pie->spp) << log2_xbytes;
+            break;
+        default:
+           pie->spread = 0;
+    }
+
+    procs[0][4] = procs[1][4] = sample_unpack_12_proc;
+    procs[0][5] = procs[1][5] = sample_unpackicc_16_proc;
+    if (interleaved) {
+        int num_components = pie->plane_depths[0] / pie->bps;
+
+        for (i = 1; i < num_components; i++) {
+            if (decode[0] != decode[i * 2 + 0] ||
+                decode[1] != decode[i * 2 + 1])
+                break;
+        }
+        if (i == num_components)
+            interleaved = false; /* Use single table. */
+    }
+    pie->unpack = procs[interleaved][index_bps];
+}
+
+/* We also need the mapping method for the unpacking proc */
+static void
+get_map(clist_image_enum *pie, gs_image_format_t format, const float *decode)
+{
+    int ci, decode_type;
+    int bps = pie->bps;
+    int spp = pie->spp;
+    static const float default_decode[] = {
+        0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0
+    };
+
+    decode_type = 3; /* 0=custom, 1=identity, 2=inverted, 3=impossible */
+    for (ci = 0; ci < spp; ci +=2 ) {
+        decode_type &= (decode[ci] == 0. && decode[ci + 1] == 1.) |
+                       (decode[ci] == 1. && decode[ci + 1] == 0.) << 1;
+    }
+
+    /* Initialize the maps from samples to intensities. */
+    for (ci = 0; ci < spp; ci++) {
+        sample_map *pmap = &pie->map[ci];
+
+        /* If the decoding is [0 1] or [1 0], we can fold it */
+        /* into the expansion of the sample values; */
+        /* otherwise, we have to use the floating point method. */
+
+        const float *this_decode = &decode[ci * 2];
+        const float *map_decode;        /* decoding used to */
+                                        /* construct the expansion map */
+        const float *real_decode;       /* decoding for expanded samples */
+
+        map_decode = real_decode = this_decode;
+        if (!(decode_type & 1)) {
+            if ((decode_type & 2) && bps <= 8) {
+                real_decode = default_decode;
+            } else {
+                map_decode = default_decode;
+            }
+        }
+        if (bps > 2 || format != gs_image_format_chunky) {
+            if (bps <= 8)
+                image_init_map(&pmap->table.lookup8[0], 1 << bps,
+                               map_decode);
+        } else {                /* The map index encompasses more than one pixel. */
+            byte map[4];
+            register int i;
+
+            image_init_map(&map[0], 1 << bps, map_decode);
+            switch (bps) {
+                case 1:
+                    {
+                        register bits32 *p = &pmap->table.lookup4x1to32[0];
+
+                        if (map[0] == 0 && map[1] == 0xff)
+                            memcpy((byte *) p, lookup4x1to32_identity, 16 * 4);
+                        else if (map[0] == 0xff && map[1] == 0)
+                            memcpy((byte *) p, lookup4x1to32_inverted, 16 * 4);
+                        else
+                            for (i = 0; i < 16; i++, p++)
+                                ((byte *) p)[0] = map[i >> 3],
+                                    ((byte *) p)[1] = map[(i >> 2) & 1],
+                                    ((byte *) p)[2] = map[(i >> 1) & 1],
+                                    ((byte *) p)[3] = map[i & 1];
+                    }
+                    break;
+                case 2:
+                    {
+                        register bits16 *p = &pmap->table.lookup2x2to16[0];
+
+                        for (i = 0; i < 16; i++, p++)
+                            ((byte *) p)[0] = map[i >> 2],
+                                ((byte *) p)[1] = map[i & 3];
+                    }
+                    break;
+            }
+        }
+        pmap->decode_base /* = decode_lookup[0] */  = real_decode[0];
+        pmap->decode_factor =
+            (real_decode[1] - real_decode[0]) /
+            (bps <= 8 ? 255.0 : (float)frac_1);
+        pmap->decode_max /* = decode_lookup[15] */  = real_decode[1];
+        if (decode_type) {
+            pmap->decoding = sd_none;
+            pmap->inverted = map_decode[0] != 0;
+        } else if (bps <= 4) {
+            int step = 15 / ((1 << bps) - 1);
+            int i;
+
+            pmap->decoding = sd_lookup;
+            for (i = 15 - step; i > 0; i -= step)
+                pmap->decode_lookup[i] = pmap->decode_base +
+                    i * (255.0 / 15) * pmap->decode_factor;
+        } else
+            pmap->decoding = sd_compute;
+    }
+}
 
 /* Forward declarations */
 static bool image_band_box(gx_device * dev, const clist_image_enum * pie,
@@ -289,6 +565,13 @@ static int cmd_image_plane_data(gx_device_clist_writer * cldev,
                                  const gx_image_enum_common_t * pie,
                                  uint bytes_per_plane,
                                  const uint * offsets, int dx, int h);
+static int cmd_image_plane_data_mon(gx_device_clist_writer * cldev,
+                                 gx_clist_state * pcls,
+                                 const gx_image_plane_t * planes,
+                                 const gx_image_enum_common_t * pie,
+                                 uint bytes_per_plane,
+                                 const uint * offsets, int dx, int h,
+                                 bool *found_color);
 static uint clist_image_unknowns(gx_device *dev,
                                   const clist_image_enum *pie);
 static int write_image_end_all(gx_device *dev,
@@ -333,11 +616,11 @@ image_matrix_ok_to_band(const gs_matrix * pmat)
 
 /* Start processing an image. */
 int
-clist_begin_typed_image(gx_device * dev,
-                        const gs_imager_state * pis, const gs_matrix * pmat,
-                   const gs_image_common_t * pic, const gs_int_rect * prect,
-              const gx_drawing_color * pdcolor, const gx_clip_path * pcpath,
-                        gs_memory_t * mem, gx_image_enum_common_t ** pinfo)
+clist_begin_typed_image(gx_device * dev, const gs_imager_state * pis,
+                        const gs_matrix * pmat, const gs_image_common_t * pic,
+                        const gs_int_rect * prect, const gx_drawing_color * pdcolor,
+                        const gx_clip_path * pcpath, gs_memory_t * mem,
+                        gx_image_enum_common_t ** pinfo)
 {
     const gs_pixel_image_t * const pim = (const gs_pixel_image_t *)pic;
     gx_device_clist_writer * const cdev =
@@ -364,7 +647,7 @@ clist_begin_typed_image(gx_device * dev,
     gsicc_blackptcomp_t blackptcomp = pis->blackptcomp;
     gsicc_rendering_param_t stored_rendering_cond;
     gsicc_rendering_param_t dev_render_cond;
-    gs_imager_state *pis_nonconst = (gs_imager_state*) pis;   
+    gs_imager_state *pis_nonconst = (gs_imager_state*) pis;
     bool intent_changed = false;
     bool bp_changed = false;
     cmm_dev_profile_t *dev_profile = NULL;
@@ -392,6 +675,7 @@ clist_begin_typed_image(gx_device * dev,
     if (pie == 0)
         return_error(gs_error_VMerror);
     pie->memory = mem;
+    pie->buffer = NULL;
     *pinfo = (gx_image_enum_common_t *) pie;
     /* num_planes and plane_depths[] are set later, */
     /* by gx_image_enum_common_init. */
@@ -467,6 +751,8 @@ clist_begin_typed_image(gx_device * dev,
         int bytes_per_plane, bytes_per_row;
 
         bits_per_pixel = pim->BitsPerComponent * num_components;
+        pie->bps = bits_per_pixel/num_components;
+        pie->spp = num_components;
         pie->image = *pim;
         pie->dcolor = *pdcolor;
         if (prect)
@@ -477,6 +763,7 @@ clist_begin_typed_image(gx_device * dev,
         }
         pie->pis = pis;
         pie->pcpath = pcpath;
+        pie->buffer = NULL;
         pie->format = format;
         pie->bits_per_plane = bits_per_pixel / pie->num_planes;
         pie->matrix = mat;
@@ -507,21 +794,21 @@ clist_begin_typed_image(gx_device * dev,
             if ( base_index == gs_color_space_index_ICC ) {
                 code = dev_proc(dev, get_profile)(dev,  &dev_profile);
                 gsicc_extract_profile(dev->graphics_type_tag, dev_profile,
-                                      &(gs_output_profile), 
+                                      &(gs_output_profile),
                                       (&(dev_render_cond)));
                 if (!indexed) {
                     src_profile = pim->ColorSpace->cmm_icc_profile_data;
                 } else {
-                    src_profile =  
+                    src_profile =
                         pim->ColorSpace->base_space->cmm_icc_profile_data;
                 }
                 /* Initialize the rendering conditions to what we currently
-                   have before we may blow them away with what is set in 
+                   have before we may blow them away with what is set in
                    the srcgtag information */
                 stored_rendering_cond.graphics_type_tag = GS_IMAGE_TAG;
-                stored_rendering_cond.override_icc = 
+                stored_rendering_cond.override_icc =
                                 dev_render_cond.override_icc;
-                stored_rendering_cond.preserve_black =  
+                stored_rendering_cond.preserve_black =
                                 dev_render_cond.preserve_black;
                 stored_rendering_cond.cmm = gsCMM_DEFAULT;  /* Unless spec. below */
                 /* We may need to do some substitions for the source profile */
@@ -530,62 +817,62 @@ clist_begin_typed_image(gx_device * dev,
                     if (src_profile->data_cs == gsRGB) {
                         if (srcgtag_profile->rgb_profiles[gsSRC_IMAGPRO] != NULL) {
                             /* We only do this replacement depending upon the
-                               ICC override setting for this object and the 
+                               ICC override setting for this object and the
                                original color space of this object */
                             csi = gsicc_get_default_type(src_profile);
-                            if (srcgtag_profile->rgb_rend_cond[gsSRC_IMAGPRO].override_icc || 
+                            if (srcgtag_profile->rgb_rend_cond[gsSRC_IMAGPRO].override_icc ||
                                 csi == gs_color_space_index_DeviceRGB) {
-                                src_profile = 
+                                src_profile =
                                     srcgtag_profile->rgb_profiles[gsSRC_IMAGPRO];
                                 pis_nonconst->renderingintent =
                                     srcgtag_profile->rgb_rend_cond[gsSRC_IMAGPRO].rendering_intent;
                                 pis_nonconst->blackptcomp =
                                     srcgtag_profile->rgb_rend_cond[gsSRC_IMAGPRO].black_point_comp;
-                                stored_rendering_cond = 
+                                stored_rendering_cond =
                                     srcgtag_profile->rgb_rend_cond[gsSRC_IMAGPRO];
                             }
                         } else {
                             /* A possible do not use CM case */
-                            stored_rendering_cond.cmm = 
+                            stored_rendering_cond.cmm =
                                 srcgtag_profile->rgb_rend_cond[gsSRC_IMAGPRO].cmm;
                         }
                     } else if (src_profile->data_cs == gsCMYK) {
                         if (srcgtag_profile->cmyk_profiles[gsSRC_IMAGPRO] != NULL) {
                             csi = gsicc_get_default_type(src_profile);
-                            if (srcgtag_profile->rgb_rend_cond[gsSRC_IMAGPRO].override_icc || 
+                            if (srcgtag_profile->rgb_rend_cond[gsSRC_IMAGPRO].override_icc ||
                                 csi == gs_color_space_index_DeviceCMYK) {
-                                src_profile = 
+                                src_profile =
                                     srcgtag_profile->cmyk_profiles[gsSRC_IMAGPRO];
                                 pis_nonconst->renderingintent =
                                     srcgtag_profile->cmyk_rend_cond[gsSRC_IMAGPRO].rendering_intent;
                                 pis_nonconst->blackptcomp =
                                     srcgtag_profile->cmyk_rend_cond[gsSRC_IMAGPRO].black_point_comp;
-                                stored_rendering_cond = 
+                                stored_rendering_cond =
                                     srcgtag_profile->cmyk_rend_cond[gsSRC_IMAGPRO];
                             }
                         } else {
                             /* A possible do not use CM case */
-                            stored_rendering_cond.cmm = 
+                            stored_rendering_cond.cmm =
                                 srcgtag_profile->cmyk_rend_cond[gsSRC_IMAGPRO].cmm;
                         }
                     }
                 }
-                /* If the device RI is set and we are not  setting the RI from 
-                   the source structure, then override any RI specified in the 
+                /* If the device RI is set and we are not  setting the RI from
+                   the source structure, then override any RI specified in the
                    document by the RI specified in the device */
                 if (!(pis_nonconst->renderingintent & gsRI_OVERRIDE)) {  /* was set by source? */
-                    /* No it was not.  See if we should override with the 
+                    /* No it was not.  See if we should override with the
                        device setting */
                     if (dev_render_cond.rendering_intent != gsRINOTSPECIFIED) {
-                        pis_nonconst->renderingintent = 
+                        pis_nonconst->renderingintent =
                                         dev_render_cond.rendering_intent;
                         }
                 }
-                /* We have a similar issue to deal with with respect to the 
+                /* We have a similar issue to deal with with respect to the
                    black point.  */
                 if (!(pis_nonconst->blackptcomp & gsBP_OVERRIDE)) {
                     if (dev_render_cond.black_point_comp != gsBPNOTSPECIFIED) {
-                        pis_nonconst->blackptcomp = 
+                        pis_nonconst->blackptcomp =
                                             dev_render_cond.black_point_comp;
                     }
                 }
@@ -594,9 +881,9 @@ clist_begin_typed_image(gx_device * dev,
                 if (blackptcomp != pis_nonconst->blackptcomp)
                     bp_changed = true;
                 /* Set for the rendering param structure also */
-                stored_rendering_cond.rendering_intent = 
+                stored_rendering_cond.rendering_intent =
                                                 pis_nonconst->renderingintent;
-                stored_rendering_cond.black_point_comp = 
+                stored_rendering_cond.black_point_comp =
                                                 pis_nonconst->blackptcomp;
                 stored_rendering_cond.graphics_type_tag = GS_IMAGE_TAG;
                 if (!(src_profile->hash_is_valid)) {
@@ -607,7 +894,7 @@ clist_begin_typed_image(gx_device * dev,
                     src_profile->hash_is_valid = true;
                 }
                 pie->color_space.icc_info.icc_hash = src_profile->hashcode;
-                pie->color_space.icc_info.icc_num_components = 
+                pie->color_space.icc_info.icc_num_components =
                     src_profile->num_comps;
                 pie->color_space.icc_info.is_lab = src_profile->islab;
                 pie->color_space.icc_info.data_cs = src_profile->data_cs;
@@ -646,33 +933,69 @@ clist_begin_typed_image(gx_device * dev,
             goto use_default;
 
     /* If we are going out to a halftone device and the size of the stored
-       image at device resolution and color space is going to be smaller, 
-       go ahead and do the default handler. This occurs only for planar 
-       devices where if we prerender we will end up doing the fast theshold 
+       image at device resolution and color space is going to be smaller,
+       go ahead and do the default handler. This occurs only for planar
+       devices where if we prerender we will end up doing the fast theshold
        halftone and going out as copy_planes commands into the clist.
        There is already a test above with regard to the posture so that
        we are only doing portrait or landscape cases if we are here.  Only
        question is penum->image_parent_type == gs_image_type1 */
     if (dev_profile == NULL) {
-        gsicc_rendering_param_t temp_render_cond;   
+        gsicc_rendering_param_t temp_render_cond;
         code = dev_proc(dev, get_profile)(dev,  &dev_profile);
         gsicc_extract_profile(dev->graphics_type_tag, dev_profile,
-                                              &(gs_output_profile), 
+                                              &(gs_output_profile),
                                               &(temp_render_cond));
     }
+    /* Decide if we need to do any monitoring of the colors.  Note that multiple source
+       (planes) is treated as color */
+    pie->unpack = NULL;
+    if (dev_profile->pageneutralcolor && pie->color_space.icc_info.data_cs != gsGRAY) {
+        /* If it is an index image, then check the pallete only */
+        if (!indexed) {
+            pie->monitor_color = true;
+            /* Set up the unpacking proc for monitoring */
+            get_unpack_proc(pie, pim->Decode);
+            get_map(pie, pim->format, pim->Decode);
+            if (pie->unpack == NULL) {
+                /* If we cant unpack, then end monitoring now. Treat as has color */
+                dev_profile->pageneutralcolor = false;
+                gsicc_mcm_end_monitor(pis->icc_link_cache, dev);
+            } else {
+                /* We need to allocate the buffer for unpacking during monitoring.
+                    This is mainly for the 12bit case */
+                int bsize = ((pie->bps > 8 ? (pim->Width) * 2 : pim->Width) + 15) * num_components;
+                pie->buffer = gs_alloc_bytes(mem, bsize, "image buffer");
+                if (pie->buffer == 0) {
+                    gs_free_object(mem, pie->buffer, "clist_begin_typed_image");
+                    return_error(gs_error_VMerror);
+                }
+            }
+        } else {
+            pie->monitor_color = false;
+            /* Check the Palette here */
+            if (palette_has_color(pim->ColorSpace, pim)) {
+                /* Has color.  We are done monitoring */
+                dev_profile->pageneutralcolor = false;
+                gsicc_mcm_end_monitor(pis->icc_link_cache, dev);
+            }
+        }
+    } else {
+        pie->monitor_color = false;
+    }
     if (gx_device_must_halftone(dev) && pim->BitsPerComponent == 8 && !masked &&
-        (dev->color_info.num_components == 1 || is_planar_dev) && 
+        (dev->color_info.num_components == 1 || is_planar_dev) &&
         dev_profile->prebandthreshold) {
         int dev_width = dbox.q.x - dbox.p.x;
         int dev_height = dbox.q.y - dbox.p.y;
-        
-        int src_size = pim->Height * 
-                       bitmap_raster(pim->Width * pim->BitsPerComponent * 
+
+        int src_size = pim->Height *
+                       bitmap_raster(pim->Width * pim->BitsPerComponent *
                                      num_components);
-        int des_size = dev_height * bitmap_raster(dev_width * 
+        int des_size = dev_height * bitmap_raster(dev_width *
                                                   dev->color_info.depth);
         if (src_size > des_size)
-            goto use_default;        
+            goto use_default;
     }
     /* Create the begin_image command. */
     if ((pie->begin_image_command_length =
@@ -751,9 +1074,9 @@ clist_begin_typed_image(gx_device * dev,
      * are known at the time of the begin_image command.
      */
     cmd_clear_known(cdev, clist_image_unknowns(dev, pie) | begin_image_known);
-    /* Because the rendering intent may be driven by the source color 
+    /* Because the rendering intent may be driven by the source color
        settings we may have needed to overide the intent.  Need to break the const
-       on the pis here for this and reset back */    
+       on the pis here for this and reset back */
     if (intent_changed)
         pis_nonconst->renderingintent = renderingintent;
     if (bp_changed)
@@ -761,16 +1084,15 @@ clist_begin_typed_image(gx_device * dev,
 
     cdev->image_enum_id = pie->id;
     return 0;
-
     /*
-     * We couldn't handle the image.  It is up to the caller to
-     * use the default algorithms, which
-     * break the image up into rectangles or small pixmaps.
-     * If we are doing the PDF14 transparency device
-     * then we want to make sure we do NOT use the target
-     * device.  In this case we return -1.
+     * We couldn't handle the image.  It is up to the caller to use the default
+     * algorithms, which break the image up into rectangles or small pixmaps.
+     * If we are doing the PDF14 transparency device then we want to make sure we do
+     * NOT use the target device.  In this case we return -1.
      */
 use_default:
+    if (pie != NULL)
+        gs_free_object(mem, pie->buffer, "clist_begin_typed_image");
     gs_free_object(mem, pie, "clist_begin_typed_image");
 
     if (pis->has_transparency){
@@ -818,6 +1140,7 @@ clist_image_plane_data(gx_image_enum_common_t * info,
     int ry, rheight;
     int code;
     cmd_rects_enum_t re;
+    bool found_color = false;
 
 #ifdef DEBUG
     if (pie->id != cdev->image_enum_id) {
@@ -877,6 +1200,17 @@ clist_image_plane_data(gx_image_enum_common_t * info,
 
     if (cdev->permanent_error < 0)
       return (cdev->permanent_error);
+    /* If needed, update the trans_bbox */
+    if (cdev->pdf14_needed) {
+        gs_int_rect bbox;
+
+        bbox.p.x = (int)floor(dbox.p.x);
+        bbox.q.x = (int)ceil(dbox.q.x);
+        bbox.p.y = pie->ymin;
+        bbox.q.y = pie->ymax;
+
+        clist_update_trans_bbox(cdev, &bbox);
+    }
     RECT_ENUM_INIT(re, ry, rheight);
     do {
         gs_int_rect ibox;
@@ -905,12 +1239,7 @@ clist_image_plane_data(gx_image_enum_common_t * info,
         }
 
         re.pcls->color_usage.or |= pie->color_usage.or;
-        re.pcls->band_complexity.nontrivial_rops |=
-                   re.pcls->color_usage.slow_rop |= pie->color_usage.slow_rop;
-        /* FIXME: Wrong! pie->colors_usage.or could == all even when color is used */
-        re.pcls->band_complexity.uses_color |=
-                            (pie->color_usage.or != 0 ||
-                             pie->color_usage.or != gx_color_usage_all(dev));
+        re.pcls->color_usage.slow_rop |= pie->color_usage.slow_rop;
 
         /* Write out begin_image & its preamble for this band */
         if (!(re.pcls->known & begin_image_known)) {
@@ -944,7 +1273,7 @@ clist_image_plane_data(gx_image_enum_common_t * info,
                 goto error_in_rect;
             if (pie->uses_color) {
                 do {
-                    code = cmd_put_drawing_color(cdev, re.pcls, &pie->dcolor, 
+                    code = cmd_put_drawing_color(cdev, re.pcls, &pie->dcolor,
                                                  &re, devn_not_tile);
                 } while (RECT_RECOVER(code));
                 if (code < 0 && SET_BAND_CODE(code))
@@ -1008,23 +1337,53 @@ clist_image_plane_data(gx_image_enum_common_t * info,
             bytes_per_plane = ((bx1 - (pie->rect.p.x + xskip)) * bpp + 7) >> 3;
             bytes_per_row = bytes_per_plane * pie->num_planes;
             rows_per_cmd =
-                (cbuf_size - cmd_largest_size) / max(bytes_per_row, 1);
+                (data_bits_size - cmd_largest_size) / max(bytes_per_row, 1);
 
             if (rows_per_cmd == 0) {
                 /* The reader will have to buffer a row separately. */
                 rows_per_cmd = 1;
             }
-            for (iy = by0, ih = by1 - by0; ih > 0; iy += nrows, ih -= nrows) {
-                nrows = min(ih, rows_per_cmd);
-                do {
-                    code = cmd_image_plane_data(cdev, re.pcls, planes, info,
-                                                bytes_per_plane, offsets,
-                                                xoff - xskip, nrows);
-                } while (RECT_RECOVER(code));
-                if (code < 0 && SET_BAND_CODE(code))
-                    goto error_in_rect;
-                for (i = 0; i < num_planes; ++i)
-                    offsets[i] += planes[i].raster * nrows;
+            if (pie->monitor_color) {
+                for (iy = by0, ih = by1 - by0; ih > 0; iy += nrows, ih -= nrows) {
+                    nrows = min(ih, rows_per_cmd);
+                    do {
+                        if (!found_color) {
+                            code = cmd_image_plane_data_mon(cdev, re.pcls, planes, info,
+                                                        bytes_per_plane, offsets,
+                                                        xoff - xskip, nrows,
+                                                        &found_color);
+                            if (found_color) {
+                                /* Has color.  We are done monitoring */
+                                cmm_dev_profile_t *dev_profile;
+                                code = dev_proc(dev, get_profile)(dev,  &dev_profile);
+                                dev_profile->pageneutralcolor = false;
+                                gsicc_mcm_end_monitor(pie->pis->icc_link_cache, dev);
+                                pie->monitor_color = false;
+                            }
+                        } else {
+                            code = cmd_image_plane_data(cdev, re.pcls, planes, info,
+                                                        bytes_per_plane, offsets,
+                                                        xoff - xskip, nrows);
+                        }
+                    } while (RECT_RECOVER(code));
+                    if (code < 0 && SET_BAND_CODE(code))
+                        goto error_in_rect;
+                    for (i = 0; i < num_planes; ++i)
+                        offsets[i] += planes[i].raster * nrows;
+                }
+            } else {
+                for (iy = by0, ih = by1 - by0; ih > 0; iy += nrows, ih -= nrows) {
+                    nrows = min(ih, rows_per_cmd);
+                    do {
+                        code = cmd_image_plane_data(cdev, re.pcls, planes, info,
+                                                    bytes_per_plane, offsets,
+                                                    xoff - xskip, nrows);
+                    } while (RECT_RECOVER(code));
+                    if (code < 0 && SET_BAND_CODE(code))
+                        goto error_in_rect;
+                    for (i = 0; i < num_planes; ++i)
+                        offsets[i] += planes[i].raster * nrows;
+                }
             }
         }
     continue;
@@ -1202,7 +1561,6 @@ clist_create_compositor(gx_device * dev,
         RECT_ENUM_INIT(re, temp_cropping_min, temp_cropping_max - temp_cropping_min);
         do {
             RECT_STEP_INIT(re);
-            re.pcls->band_complexity.nontrivial_rops = true;
             do {
                 code = set_cmd_put_op(dp, cdev, re.pcls, cmd_opv_extend, size);
                 if (code >= 0) {
@@ -1792,6 +2150,73 @@ cmd_image_plane_data(gx_device_clist_writer * cldev, gx_clist_state * pcls,
     return 0;
 }
 
+/* Write data for a partial image with color monitor. */
+static int
+cmd_image_plane_data_mon(gx_device_clist_writer * cldev, gx_clist_state * pcls,
+                     const gx_image_plane_t * planes,
+                     const gx_image_enum_common_t * pie,
+                     uint bytes_per_plane, const uint * offsets,
+                     int dx, int h, bool *found_color)
+{
+    clist_image_enum *pie_c = (clist_image_enum *) pie;
+    int data_x = planes[0].data_x + dx;
+    uint nbytes = bytes_per_plane * pie->num_planes * h;
+    uint len = 1 + cmd_size2w(h, bytes_per_plane) + nbytes;
+    byte *dp;
+    uint offset = 0;
+    int plane, i;
+    int code;
+    int width = pie_c->rect.q.x - pie_c->rect.p.x;
+    int dsize = (((width + (planes[0]).data_x) * pie_c->spp *
+                   pie_c->bps / pie->num_planes + 7) >> 3);
+    int data_size = pie_c->spread / pie->num_planes;
+
+    *found_color = false;
+
+    if (data_x) {
+        code = cmd_put_set_data_x(cldev, pcls, data_x);
+        if (code < 0)
+            return code;
+        offset = ((data_x & ~7) * cldev->clist_color_info.depth) >> 3;
+    }
+    code = set_cmd_put_op(dp, cldev, pcls, cmd_opv_image_data, len);
+    if (code < 0)
+        return code;
+    dp++;
+
+    cmd_put2w(h, bytes_per_plane, dp);
+
+    for (i = 0; i < h; ++i) {
+        if (!(*found_color)) {
+            /* Here we need to unpack and actually look at the image data
+               to see if we have any non-neutral colors */
+            int pdata_x;
+            byte *data_ptr = planes[0].data + i * planes[0].raster + offsets[0] + offset;
+            byte *buffer = (*pie_c->unpack)(pie_c->buffer, &pdata_x, data_ptr, 0, dsize, pie_c->map,
+                                            pie_c->spread, pie_c->spp);
+
+            for (plane = 1; plane < pie->num_planes; ++plane) {
+                /* unpack planes after the first (if any), relying on spread to place the */
+                /* data at the correct spacing, with the buffer start adjusted for each plane */
+                data_ptr = planes[plane].data + i * planes[plane].raster + offsets[plane] + offset;
+                (*pie_c->unpack)(pie_c->buffer + (data_size * plane), &pdata_x, data_ptr, 0,
+                                 dsize, pie_c->map, pie_c->spread, pie_c->spp);
+            }
+            if (row_has_color(buffer, pie_c, data_size, width)) {
+                /* Has color.  We are done monitoring */
+                *found_color = true;
+            }
+        }
+        /* Now copy the plane data into the clist buffer */
+        for (plane = 0; plane < pie->num_planes; ++plane) {
+            memcpy(dp, planes[plane].data + i * planes[plane].raster +
+                   offsets[plane] + offset, bytes_per_plane);
+            dp += bytes_per_plane;
+        }
+    }
+    return 0;
+}
+
 /* Write image_end commands into all bands */
 static int      /* ret 0 ok, else -ve error status */
 write_image_end_all(gx_device *dev, const clist_image_enum *pie)
@@ -1805,9 +2230,9 @@ write_image_end_all(gx_device *dev, const clist_image_enum *pie)
 
     /*
      * We need to check specially for images lying entirely outside the
-     * page, since FOR_RECTS doesn't do this.
+     * page, since the RECT writing logic doesn't do this.
      */
-    if (rheight <= 0)
+    if (pie->ymax < 0 || ry >= dev->height)
         return 0;
     if (cdev->permanent_error < 0)
       return (cdev->permanent_error);
@@ -1833,6 +2258,10 @@ error_in_rect:
                 SET_BAND_CODE(clist_VMerror_recover_flush(cdev, re.band_code)) >= 0))
            return re.band_code;
     } while (re.y < re.yend);
+    /* Make sure to clean up the buffer if we were monitoring */
+    if (pie->buffer != NULL) {
+        gs_free_object(pie->memory, pie->buffer, "write_image_end_all");
+    }
     return 0;
 }
 

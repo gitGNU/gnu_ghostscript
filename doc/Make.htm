@@ -48,6 +48,7 @@
 <li><a href="#Borland_build">Borland/Inprise environment</a>
 <li><a href="#Microsoft_build">Microsoft environment</a>
 <li><a href="#Microsoft_build_64">Microsoft environment 64-bit</a>
+<li><a href="#Microsoft_build_winrt">Microsoft environment WinRT</a>
 <li><a href="#Self-extracting_executables">Making self-extracting executables</a>
 <li><a href="#Watcom_build">Watcom environment</a>
 <li><a href="#Cygwin32_build">Cygwin32 gcc</a>
@@ -1360,6 +1361,23 @@ You will have to edit <code>psi/winint.mak</code> to define
 path names of these programs.  See <a href="Release.htm">Release.htm</a> for
 the detailed procedure.
 
+<h3><a name="Microsoft_build_winrt"></a>Microsoft Environment for WinRT</h3>
+
+<p>
+Ghostscript can be built in the form of a win32 DLL for use within a Windows Runtime
+application or Windows Runtime component. Building for WinRT requires use of
+Microsoft Visual Studio 2012. There is a solution file that can be loaded into VS 2012,
+in the directory <code>winrt</code>
+
+<p>
+The WinRT application or component should include <code>iapi.h</code> from
+<code>gs/psi</code> and link with <code>gsdll32metro.lib</code> from
+<code>gs/debugbin</code> or <code>gs/releasebin</code>. Also any app using
+ghostscript either directly or via a component should add <code>gsdll32metro.dll</code>
+as &quot;content&quot;. This inclusion of the dll is necessary so that it
+will be packaged with the app. If one wishes to be able to run the debugger on
+ghostscript then <code>gsdll32metro.pdb</code> should also be added as content.
+
 <h3><a name="Watcom_build"></a>Watcom environment</h3>
 
 <p>
@@ -1530,15 +1548,29 @@ and <tt>x86_64</tt> binaries in one file, using the <tt>Makefile</tt>
 from <tt>configure</tt>. This can be achieved by using the following invokation of
 <tt>configure</tt>
 <blockquote>
-./configure CC="gcc -arch i386 -arch x86_64" CPP="gcc -E"
+<code>
+./configure CC="gcc -arch i386 -arch x86_64 -arch ppc" CPP="gcc -E"
+</code>
 </blockquote>
+<p>
+You can choose the combination of valid architectures (i386/x86_64/ppc) that you
+require.
 <p>
 The separate options for <tt>CC</tt> and <tt>CPP</tt> are required because some of
 the features used by <tt>configure</tt> to explore the capabilities of the preprocessor
 are not compatible with having multiple <tt>-arch</tt> options.
 <p>
-Universal binaries including <tt>PPC</tt> support are not currently supported,
-although building single architecture MacOS X/PPC binaries is.
+Building a shared library on MacOS X is the same as for other Unix-like systems, the
+"configure" step is done normally, and the "so" target is given to the make invocation,
+thus:
+<blockquote>
+<code>
+make so
+</code>
+</blockquote>
+The only difference compared to other Unix-like systems is that on OS X the resulting
+shared library is created with the ".dylib" file name extension, instead of the more
+usual ".so".
 <p>
 Finally, there is a <tt>macos-mcp.mak</tt> makefile that can be
 used to set up the Codewarrior shared library component build described
@@ -2930,7 +2962,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 9.07, 12 February 2013
+<small>Ghostscript version 9.08, 14 August 2013
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

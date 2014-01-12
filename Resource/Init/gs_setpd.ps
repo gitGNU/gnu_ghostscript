@@ -170,7 +170,12 @@ level2dict begin
   % the default policy to "7" (impose) to avoid numerous problems with
   % printing within CUPS...
   %
-  /PageSize NOMEDIAATTRS { 7 } { 0 } ifelse
+  % If NOMEDIAATTRS is false, the set the default depending on whether
+  % PSFitPage is true. Policy 13 does best fit with page scaling up or down
+  % so it is only useful if FIXEDMEDIA is also specified, or if the set of
+  % media in the InputAttributes dictionary is the actual available choices
+  % and does not include any "range" page sizes.
+  /PageSize NOMEDIAATTRS { 7 } { //systemdict /PSFitPage known { 13 } { 0 } ifelse } ifelse
   /PolicyNotFound 1
   /PolicyReport {
     dup /.LockSafetyParams known {
@@ -201,23 +206,26 @@ level2dict begin
     % This satifies those that have devices built with a4 as the default
     0 mark /PageSize currentdevice /PageSize gsgetdeviceprop .dicttomark
 
-    statusdict /.pagetypenames get {
-      statusdict /.pagetypeprocs get
-      exch get 0 2 getinterval cvlit
-      counttomark 1 sub 2 idiv exch mark exch /PageSize exch
-      % stack: mark --dict-- --dict-- ... key mark /PageSize [x y]
-      % see note above about pagetype executable array contents.
-      .dicttomark
-    } forall
-    % If NORANGEPAGESIZE is defined, (-dNORANGEPAGESIZE), then don't add
-    % the 'match any' PageSize entry
-    systemdict /NORANGEPAGESIZE known not {
-      % Add one last entry which is the 4 element range array (non-standard)
-      counttomark 2 idiv
-        % PageSize with either dimension 0 will be detected in
-        % match_page_size, so we can allow it here
-      mark /PageSize [0 dup 16#7ffff dup] .dicttomark
-    } if
+    % Only populate the other entries if we aren't FIXEDMEDIA
+    FIXEDMEDIA not {
+      statusdict /.pagetypenames get {
+        statusdict /.pagetypeprocs get
+        exch get 0 2 getinterval cvlit
+        counttomark 1 sub 2 idiv exch mark exch /PageSize exch
+        % stack: mark --dict-- --dict-- ... key mark /PageSize [x y]
+        % see note above about pagetype executable array contents.
+        .dicttomark
+      } forall
+      % If NORANGEPAGESIZE is defined, (-dNORANGEPAGESIZE), then don't add
+      % the 'match any' PageSize entry
+      systemdict /NORANGEPAGESIZE known not {
+        % Add one last entry which is the 4 element range array (non-standard)
+        counttomark 2 idiv
+          % PageSize with either dimension 0 will be detected in
+          % match_page_size, so we can allow it here
+        mark /PageSize [0 dup 16#7ffff dup] .dicttomark
+      } if
+    } if % FIXEDMEDIA false
     .dicttomark
   }
   (%MediaSource) 0
@@ -652,7 +660,33 @@ SETPDDEBUG { (Result of putting.) = pstack flush } if
 % ---------------- setpagedevice itself ---------------- %
 
 /setpagedevice
- {		% We mustn't pop the argument until the very end,
+ {
+                % To avoid VM mismatches caused by copying subsidiary
+                % dictionaries to local VM (see WorPerfect bug in
+                % .makecurrentpagedevice) we want to make the dict
+                % returned by currentpagedevice local. However, if we
+                % run with -dSAFER we get a call to setpagedevice from
+                % .setsafe in gs_init.ps during startup. The dict returned
+                % by currentpagdevice is stored to the graphics state by
+                % .setpagedevice below, and returned by currentpagdevice.
+                % The Display PostScript code insists that the savedinitialgstate
+                % not have any pointers to local VM objects, so if we simply
+                % make the dict local then we fail in gs_dps.ps. The only
+                % solution is to make sure the VM mode is global during
+                % startup (to satisfy gs_dps.ps) and local thereafter
+                % (to satisfy the WordPerfect bug).
+   dup dup length 1 eq exch /.LockSafetyParams known and {
+     currentglobal exch true setglobal
+   } {
+                % ensure that we are always in local VM mode to avoid
+                % mismatches. This is because we always create child
+                % dictionaries in local VM, regardless of the current VM state,
+                % (see .makecurrentpagdevice) and we can't store local objects
+                % in a global object, so we must ensure teh dictionary returned
+                % from currentpagedevice is in local VM.
+     currentglobal exch false setglobal
+   } ifelse
+                % We mustn't pop the argument until the very end,
                 % so that the pseudo-operator machinery can restore the stack
                 % if an error occurs.
    mark 1 index currentpagedevice
@@ -722,8 +756,8 @@ SETPDDEBUG { (Merging.) = pstack flush } if
                 % change HWResolution.
    FIXEDRESOLUTION { dup /HWResolution .undef } if
                 % Hack: if FIXEDMEDIA is true, discard any attempt to change
-                % PageSize or HWSize.
-   FIXEDMEDIA
+                % PageSize or HWSize unless the PageSize Policy 13 (for FitPage).
+   dup /Policies get /PageSize get 13 ne FIXEDMEDIA and 
     { dup /PageSize 4 index /PageSize get put
       dup /HWSize 4 index /HWSize get put
     } if
@@ -878,6 +912,7 @@ SETPDDEBUG { (Installing.) = pstack flush } if
   } {
     .postinstall
   } ifelse
+  setglobal           % return to original VM allocation mode
 } odef
 
 % We break out the code after calling the Install procedure into a

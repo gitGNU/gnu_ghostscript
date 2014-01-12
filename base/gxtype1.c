@@ -371,7 +371,7 @@ gs_type1_piece_codes(/*const*/ gs_font_type1 *pfont,
     const byte *cip, *end;
     crypt_state state;
     int c, hhints = 0, vhints = 0;
-    int code;
+    int code, call_depth = 0;
 
     CLEAR_CSTACK(cstack, csp);
     cip = pgd->bits.data;
@@ -450,30 +450,50 @@ gs_type1_piece_codes(/*const*/ gs_font_type1 *pfont,
             }
             break;
         case c2_callgsubr:
-            c = fixed2int_var(*csp) + pdata->gsubrNumberBias;
+            call_depth++;
+            if (csp < &(cstack[0])) {
+                c = pdata->gsubrNumberBias;
+            }
+            else {
+                c = fixed2int_var(*csp) + pdata->subroutineNumberBias;
+            }
             code = pdata->procs.subr_data
                 (pfont, c, true, &ipsp[1].cs_data);
             if (code < 0)
                 return_error(code);
-            --csp;
+            if (csp >= &(cstack[0])) {
+                --csp;
+            }
             ipsp->ip = cip, ipsp->dstate = state, ipsp->ip_end = end;
             ++ipsp;
             cip = ipsp->cs_data.bits.data;
             end = ipsp->cs_data.bits.data + ipsp->cs_data.bits.size;
             goto call;
         case c_callsubr:
-            c = fixed2int_var(*csp) + pdata->subroutineNumberBias;
+            call_depth++;
+            if (csp < &(cstack[0])) {
+                c = pdata->subroutineNumberBias;
+            }
+            else {
+                c = fixed2int_var(*csp) + pdata->subroutineNumberBias;
+            }
             code = pdata->procs.subr_data
                 (pfont, c, false, &ipsp[1].cs_data);
             if (code < 0)
                 return_error(code);
-            --csp;
+            if (csp >= &(cstack[0])) {
+                --csp;
+            }
             ipsp->ip = cip, ipsp->dstate = state, ipsp->ip_end = end;
             ++ipsp;
             cip = ipsp->cs_data.bits.data;
             end = ipsp->cs_data.bits.data + ipsp->cs_data.bits.size;
             goto call;
         case c_return:
+            if (call_depth == 0)
+                return (gs_note_error(gs_error_invalidfont));
+            else
+                call_depth--;
             gs_glyph_data_free(&ipsp->cs_data, "gs_type1_piece_codes");
             --ipsp;
             if (ipsp < ipstack)
@@ -521,7 +541,8 @@ gs_type1_piece_codes(/*const*/ gs_font_type1 *pfont,
                 default:
                     goto out;
                 case 3:
-                    csp -= 2;
+                    if (csp >= &(cstack[1]))
+                        csp -= 2;
                     goto top;
                 case 12:
                 case 13:

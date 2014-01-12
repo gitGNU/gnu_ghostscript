@@ -16,11 +16,12 @@
 
 /* gsicc interface to littleCMS */
 
-#include "gsicc_cms.h"
 #include "lcms2.h"
 #include "lcms2_plugin.h"
 #include "gslibctx.h"
 #include "gserrors.h"
+#include "gp.h"
+#include "gsicc_cms.h"
 
 #define DUMP_CMS_BUFFER 0
 #define DEBUG_LCMS_MEM 0
@@ -298,8 +299,8 @@ gscms_transform_color_buffer(gx_device *dev, gsicc_link_t *icclink,
         }
     }
 #if DUMP_CMS_BUFFER
-    fid_in = fopen("CM_Input.raw","ab");
-    fid_out = fopen("CM_Output.raw","ab");
+    fid_in = gp_fopen("CM_Input.raw","ab");
+    fid_out = gp_fopen("CM_Output.raw","ab");
     fwrite((unsigned char*) inputbuffer,sizeof(unsigned char),
                             input_buff_desc->row_stride,fid_in);
     fwrite((unsigned char*) outputbuffer,sizeof(unsigned char),
@@ -333,6 +334,13 @@ gscms_transform_color(gx_device *dev, gsicc_link_t *icclink,
     cmsChangeBuffersFormat(hTransform,dwInputFormat,dwOutputFormat);
     /* Do conversion */
     cmsDoTransform(hTransform,inputcolor,outputcolor,1);
+}
+
+void
+gscms_get_link_dim(gcmmhlink_t link, int *num_inputs, int *num_outputs)
+{
+    *num_inputs = T_CHANNELS(cmsGetTransformInputFormat(link));
+    *num_outputs = T_CHANNELS(cmsGetTransformOutputFormat(link));
 }
 
 /* Get the link from the CMS. TODO:  Add error checking */
@@ -570,7 +578,7 @@ gscms_create(gs_memory_t *memory)
 {
     /* Set our own error handling function */
     cmsSetLogErrorHandler(gscms_error);
-    cmsPluginTHR(memory, &gs_cms_memhandler);
+    cmsPluginTHR(memory, (void *)&gs_cms_memhandler);
     /* If we had created any persitent state that we needed access to in the
      * other functions, we should store that by calling:
      *   gs_lib_ctx_set_cms_context(memory, state);

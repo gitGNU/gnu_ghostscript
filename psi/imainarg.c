@@ -134,7 +134,9 @@ gs_main_init_with_args(gs_main_instance * minst, int argc, char *argv[])
     int code;
 
     arg_init(&args, (const char **)argv, argc,
-             gs_main_arg_fopen, (void *)minst);
+             gs_main_arg_fopen, (void *)minst,
+             minst->get_codepoint,
+             minst->heap);
     code = gs_main_init0(minst, 0, 0, 0, GS_MAX_LIB_DIRS);
     if (code < 0)
         return code;
@@ -167,18 +169,18 @@ gs_main_init_with_args(gs_main_instance * minst, int argc, char *argv[])
         bool helping = false;
 
         for (i = 1; i < argc; ++i)
-            if (!strcmp(argv[i], "--")) {
+            if (!arg_strcmp(&args, argv[i], "--")) {
                 /* A PostScript program will be interpreting all the */
                 /* remaining switches, so stop scanning. */
                 helping = false;
                 break;
-            } else if (!strcmp(argv[i], "--help")) {
+            } else if (!arg_strcmp(&args, argv[i], "--help")) {
                 print_help(minst);
                 helping = true;
-            } else if (!strcmp(argv[i], "--debug")) {
+            } else if (!arg_strcmp(&args, argv[i], "--debug")) {
                 gs_debug_flags_list(minst->heap);
                 helping = true;
-            } else if (!strcmp(argv[i], "--version")) {
+            } else if (!arg_strcmp(&args, argv[i], "--version")) {
                 print_version(minst);
                 puts(minst->heap, "");  /* \n */
                 helping = true;
@@ -201,8 +203,13 @@ gs_main_init_with_args(gs_main_instance * minst, int argc, char *argv[])
             (char *)gs_alloc_bytes(minst->heap, len, "GS_OPTIONS");
 
             gp_getenv(GS_OPTIONS, opts, &len);  /* can't fail */
+#if defined(GS_NO_UTF8)
             if (arg_push_memory_string(&args, opts, false, minst->heap))
                 return e_Fatal;
+#else
+            if (arg_push_decoded_memory_string(&args, opts, false, true, minst->heap))
+                return e_Fatal;
+#endif
         }
     }
     while ((arg = arg_next(&args, &code, minst->heap)) != 0) {
@@ -246,6 +253,20 @@ gs_main_init_with_args(gs_main_instance * minst, int argc, char *argv[])
     if (!minst->run_start)
         return e_Quit;
     return code ;
+}
+
+/*
+ * Specify a decoding function
+ */
+void gs_main_inst_arg_decode(gs_main_instance * minst,
+                             gs_arg_get_codepoint *get_codepoint)
+{
+    minst->get_codepoint = get_codepoint;
+}
+
+gs_arg_get_codepoint *gs_main_inst_get_arg_decode(gs_main_instance * minst)
+{
+    return minst->get_codepoint;
 }
 
 /*
@@ -380,7 +401,7 @@ run_stdin:
                         (arg[0] == '-' && !isdigit((unsigned char)arg[1]))
                         )
                         break;
-                    code = runarg(minst, "", arg, ".runstring", 0);
+                    code = runarg(minst, "", arg, ".runstring", runBuffer);
                     if (code < 0)
                         return code;
                 }
@@ -528,6 +549,8 @@ run_stdin:
                     return code;
                 len = strlen(adef);
                 str = (char *)gs_alloc_bytes(minst->heap, (uint)len, "-o");
+                if (str == NULL)
+                    return e_VMerror;
                 memcpy(str, adef, len);
                 make_const_string(&value, a_readonly | avm_foreign,
                                   len, (const byte *)str);
@@ -851,7 +874,16 @@ runarg(gs_main_instance * minst, const char *pre, const char *arg,
     strcpy(line, pre);
     esc_strcat(line, arg);
     strcat(line, post);
-    minst->i_ctx_p->starting_arg_file = true;
+    /* If we're running PS from a buffer (i.e. from the "-c" option
+       we don't want lib_file_open() to search the current directory
+       during this call to run_string()
+     */
+    if ((options & runBuffer)) {
+        minst->i_ctx_p->starting_arg_file = false;
+    }
+    else {
+        minst->i_ctx_p->starting_arg_file = true;
+    }
     code = run_string(minst, line, options);
     minst->i_ctx_p->starting_arg_file = false;
     gs_free_object(minst->heap, line, "runarg");
@@ -959,6 +991,11 @@ static const char help_devices[] = "Available devices:";
 static const char help_default_device[] = "Default output device:";
 static const char help_emulators[] = "Input formats:";
 static const char help_paths[] = "Search path:";
+#ifdef HAVE_FONTCONFIG
+static const char help_fontconfig[] = "Ghostscript is also using fontconfig to search for font files\n";
+#else
+static const char help_fontconfig[] = "";
+#endif
 
 extern_gx_io_device_table();
 
@@ -1128,6 +1165,7 @@ print_paths(gs_main_instance * minst)
         }
     }
     outprintf(minst->heap, "\n");
+    outprintf(minst->heap, "%s", help_fontconfig);
 }
 
 /* Print the help trailer. */

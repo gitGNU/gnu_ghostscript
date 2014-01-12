@@ -24,8 +24,11 @@
 
 BINDIR=./$(BUILDDIRPREFIX)bin
 GLSRCDIR=./base
+DEVSRCDIR=./devices
 GLGENDIR=./$(BUILDDIRPREFIX)obj
 GLOBJDIR=./$(BUILDDIRPREFIX)obj
+DEVGENDIR=./$(BUILDDIRPREFIX)obj
+DEVOBJDIR=./$(BUILDDIRPREFIX)obj
 AUXDIR=$(GLGENDIR)/aux
 PSSRCDIR=./psi
 PSLIBDIR=./lib
@@ -147,9 +150,12 @@ LIBPNG_NAME=png
 
 SHARE_LIBTIFF=0
 TIFFSRCDIR=tiff
+TIFFCONFDIR=tiff
 TIFFPLATFORM=unix
 TIFFCONFIG_SUFFIX=.unix
 LIBTIFF_NAME=tiff
+
+TRIOSRCDIR=trio
 
 # Define the directory where the zlib sources are stored.
 # See zlib.mak for more information.
@@ -347,8 +353,8 @@ DEVICE_DEVS7=$(DD)faxg3.dev $(DD)faxg32d.dev $(DD)faxg4.dev
 DEVICE_DEVS8=$(DD)pcxmono.dev $(DD)pcxgray.dev $(DD)pcx16.dev $(DD)pcx256.dev $(DD)pcx24b.dev $(DD)pcxcmyk.dev
 DEVICE_DEVS9=$(DD)pbm.dev $(DD)pbmraw.dev $(DD)pgm.dev $(DD)pgmraw.dev $(DD)pgnm.dev $(DD)pgnmraw.dev
 DEVICE_DEVS10=$(DD)tiffcrle.dev $(DD)tiffg3.dev $(DD)tiffg32d.dev $(DD)tiffg4.dev $(DD)tifflzw.dev $(DD)tiffpack.dev
-DEVICE_DEVS11=$(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiffsep.dev $(DD)tiffsep1.dev $(DD)tiffscaled.dev $(DD)tiffscaled8.dev $(DD)tiffscaled24.dev $(DD)tiffscaled4.dev
-DEVICE_DEVS12=$(DD)psmono.dev $(DD)psgray.dev $(DD)psrgb.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
+DEVICE_DEVS11=$(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiffsep.dev $(DD)tiffsep1.dev $(DD)tiffscaled.dev $(DD)tiffscaled8.dev $(DD)tiffscaled24.dev $(DD)tiffscaled32.dev $(DD)tiffscaled4.dev
+DEVICE_DEVS12=$(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
 DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pngmonod.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev $(DD)jpegcmyk.dev
 DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)txtwrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
@@ -391,6 +397,7 @@ CC_SHARED=$(CC_)
 
 include $(GLSRCDIR)/unixhead.mak
 include $(GLSRCDIR)/gs.mak
+include $(GLSRCDIR)/trio.mak
 # psromfs.mak must precede lib.mak
 include $(PSSRCDIR)/psromfs.mak
 include $(GLSRCDIR)/lib.mak

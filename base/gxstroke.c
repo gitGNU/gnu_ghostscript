@@ -714,12 +714,7 @@ gx_stroke_path_only_aux(gx_path * ppath, gx_path * to_path, gx_device * pdev,
             fixed sx, udx, sy, udy;
             bool is_dash_segment = false;
 
-         d1:if (pseg->type != s_dash && pseg->type != s_gap) {
-                sx = pseg->pt.x;
-                sy = pseg->pt.y;
-                udx = sx - x;
-                udy = sy - y;
-            } else {
+        d1:if (pseg->type == s_dash) {
                 dash_segment *pd = (dash_segment *)pseg;
 
                 sx = pd->pt.x;
@@ -727,6 +722,17 @@ gx_stroke_path_only_aux(gx_path * ppath, gx_path * to_path, gx_device * pdev,
                 udx = pd->tangent.x;
                 udy = pd->tangent.y;
                 is_dash_segment = true;
+            } else if (pseg->type == s_gap) {
+                sx = pseg->pt.x;
+                sy = pseg->pt.y;
+                udx = sx - x;
+                udy = sy - y;
+                is_dash_segment = true;
+            } else {
+                sx = pseg->pt.x;
+                sy = pseg->pt.y;
+                udx = sx - x;
+                udy = sy - y;
             }
             zero_length &= ((udx | udy) == 0);
             pl.o.p.x = x, pl.o.p.y = y;
@@ -1662,13 +1668,17 @@ stroke_add_fast(gx_path * ppath, gx_path * rpath, bool ensure_closed, int first,
         r = (double)(nplp->width.x) /* x2 */ * (plp->width.y) /* y1 */;
 
         if ((l == r) && (join == gs_join_round)) {
-            /* Do a cap, and leave the point on the same side as it was
-             * originally. This is required for paths that come to a stop
-             * and then reverse themselves, but may produce more complexity
-             * than we'd really like at the ends of smooth beziers. */
+            /* Do a cap */
             code = add_pie_cap(ppath, &plp->e);
-            if (code >= 0)
-                code = gx_path_add_line(ppath, plp->e.co.x, plp->e.co.y);
+            if (code >= 0) {
+                /* If the next line is in the opposite direction as the current one
+                 * we want to leave the point on the same side as it was
+                 * originally. This is required for paths that come to a stop
+                 * and then reverse themselves, but may produce more complexity
+                 * than we'd really like at the ends of smooth beziers. */
+                if ((double)(plp->width.x) * nplp->width.x + (double)plp->width.y * nplp->width.y >= 0)
+                    code = gx_path_add_line(ppath, plp->e.co.x, plp->e.co.y);
+            }
         } else if ((l > r) ^ reflected) {
             /* CCW rotation. Join in the forward path. "Underjoin" in the
              * reverse path. */

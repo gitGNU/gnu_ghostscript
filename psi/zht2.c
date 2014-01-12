@@ -74,6 +74,7 @@ zsethalftone5(i_ctx_t *i_ctx_p)
     gs_halftone_component *pc;
     int code = 0;
     int j;
+    bool have_default;
     gs_halftone *pht = 0;
     gx_device_halftone *pdht = 0;
     ref sprocs[GS_CLIENT_COLOR_MAX_COMPONENTS + 1];
@@ -112,8 +113,8 @@ zsethalftone5(i_ctx_t *i_ctx_p)
 
     /* Count how many components that we will actually use. */
 
+    have_default = false;
     for (count = 0; ;) {
-        bool have_default = false;
 
         /* Move to next element in the dictionary */
         if ((dict_enum = dict_next(op, dict_enum, rvalue)) == -1)
@@ -122,6 +123,8 @@ zsethalftone5(i_ctx_t *i_ctx_p)
          * Verify that we have a valid component.  We may have a
          * /HalfToneType entry.
          */
+        if (!r_has_type(&rvalue[0], t_name))
+            continue;
         if (!r_has_type(&rvalue[1], t_dictionary))
             continue;
 
@@ -151,6 +154,9 @@ zsethalftone5(i_ctx_t *i_ctx_p)
             break;
         }
     }
+    if (count == 0 || (halftonetype == ht_type_multiple && ! have_default))
+        code = gs_note_error(e_rangecheck);
+
     if (code >= 0) {
         check_estack(5);		/* for sampling Type 1 screens */
         refset_null(sprocs, count);
@@ -181,6 +187,8 @@ zsethalftone5(i_ctx_t *i_ctx_p)
              * Verify that we have a valid component.  We may have a
              * /HalfToneType entry.
              */
+            if (!r_has_type(&rvalue[0], t_name))
+                continue;
             if (!r_has_type(&rvalue[1], t_dictionary))
                 continue;
 
@@ -247,6 +255,8 @@ zsethalftone5(i_ctx_t *i_ctx_p)
                 break;
 
             /* Verify that we have a valid component */
+            if (!r_has_type(&rvalue[0], t_name))
+                continue;
             if (!r_has_type(&rvalue[1], t_dictionary))
                 continue;
 

@@ -28,15 +28,12 @@
 #include "gspath.h"
 #include "gzstate.h"
 #include "gxfcid.h"
-#include "gxchar.h"             /* for st_gs_show_enum */
+#include "gxchar.h"             /* for st_gs_show_enum and MAX_CCACHE_TEMP_BITMAP_BITS */
 #include "gdebug.h"
 #include "gsimage.h"
 #include "gsbittab.h"
 
 #include "gxfapi.h"
-
-/* lifted from gxchar.c */
-static const uint MAX_TEMP_BITMAP_BITS = 80000;
 
 extern_gs_get_fapi_server_inits();
 
@@ -1029,7 +1026,11 @@ gs_fapi_finish_render(gs_font *pfont, gs_state *pgs, gs_text_enum_t *penum, gs_f
 
     }
     else {
-        int code = I->get_char_raster(I, &rast);
+        int code;
+
+        memset(&rast, 0x00, sizeof(rast));
+
+        code = I->get_char_raster(I, &rast);
 
         if (!SHOW_IS(penum, TEXT_DO_NONE) && I->use_outline) {
             /* The server provides an outline instead the raster. */
@@ -1223,8 +1224,8 @@ gs_fapi_do_char(gs_font *pfont, gs_state *pgs, gs_text_enum_t *penum, char *font
          */
         I->max_bitmap =
             pbfont->dir->ccache.upper + (pbfont->dir->ccache.upper >> 1) <
-            MAX_TEMP_BITMAP_BITS ? pbfont->dir->ccache.upper +
-            (pbfont->dir->ccache.upper >> 1) : MAX_TEMP_BITMAP_BITS;
+            MAX_CCACHE_TEMP_BITMAP_BITS ? pbfont->dir->ccache.upper +
+            (pbfont->dir->ccache.upper >> 1) : MAX_CCACHE_TEMP_BITMAP_BITS;
     }
 
     /* Compute the scale : */
@@ -1244,6 +1245,7 @@ gs_fapi_do_char(gs_font *pfont, gs_state *pgs, gs_text_enum_t *penum, char *font
      */
 
     I->ff.memory = pbfont->memory;
+    I->ff.subfont = subfont;
     I->ff.font_file_path = font_file_path;
     I->ff.client_font_data = pbfont;
     I->ff.client_font_data2 = pbfont;
@@ -1507,9 +1509,6 @@ gs_fapi_do_char(gs_font *pfont, gs_state *pgs, gs_text_enum_t *penum, char *font
                 return code;
         }
     }
-
-    if (!bVertical)
-        metrics.v_escapement = 0;
 
     /* This handles the situation where a charstring has been replaced with a PS procedure.
      * against the rules, but not *that* rare.

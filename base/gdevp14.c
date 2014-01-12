@@ -479,7 +479,7 @@ const pdf14_device gs_pdf14_custom_device = {
 static
 ENUM_PTRS_WITH(pdf14_device_enum_ptrs, pdf14_device *pdev)
 {
-    index -= 6;
+    index -= 7;
     if (index < pdev->devn_params.separations.num_separations)
         ENUM_RETURN(pdev->devn_params.separations.names[index].data);
     index -= pdev->devn_params.separations.num_separations;
@@ -493,6 +493,7 @@ case 2: return ENUM_OBJ(pdev->smaskcolor);
 case 3:	ENUM_RETURN(gx_device_enum_ptr(pdev->target));
 case 4: ENUM_RETURN(pdev->devn_params.compressed_color_list);
 case 5: ENUM_RETURN(pdev->devn_params.pdf14_compressed_color_list);
+case 6:	ENUM_RETURN(gx_device_enum_ptr(pdev->pclist_device));
 ENUM_PTRS_END
 
 static	RELOC_PTRS_WITH(pdf14_device_reloc_ptrs, pdf14_device *pdev)
@@ -510,6 +511,7 @@ static	RELOC_PTRS_WITH(pdf14_device_reloc_ptrs, pdf14_device *pdev)
     RELOC_VAR(pdev->smaskcolor);
     RELOC_VAR(pdev->trans_group_parent_cmap_procs);
     pdev->target = gx_device_reloc_ptr(pdev->target, gcst);
+    pdev->pclist_device = gx_device_reloc_ptr(pdev->pclist_device, gcst);
 }
 RELOC_PTRS_END
 
@@ -857,7 +859,9 @@ pdf14_pop_transparency_group(gs_imager_state *pis, pdf14_ctx *ctx,
         goto exit;
     if (maskbuf != NULL && maskbuf->data == NULL && maskbuf->alpha == 255)
         goto exit;
-    if (maskbuf != NULL) {
+    /* We can only do this clipping if we have a soft mask AND if the alpha outside
+       the soft mask is zero */
+    if (maskbuf != NULL && maskbuf->alpha == 0) {
         y0 = max(y0, maskbuf->rect.p.y);
         y1 = min(y1, maskbuf->rect.q.y);
         x0 = max(x0, maskbuf->rect.p.x);
@@ -1305,13 +1309,13 @@ pdf14_pop_transparency_mask(pdf14_ctx *ctx, gs_imager_state *pis, gx_device *dev
             pdf14_free_mask_stack(ctx->mask_stack, ctx->memory);
         }
         ctx->mask_stack = pdf14_mask_element_new(ctx->memory);
-	if (ctx->mask_stack == NULL)
-		return gs_note_error(gs_error_VMerror);
-    ctx->mask_stack->rc_mask = pdf14_rcmask_new(ctx->memory);
-	if (ctx->mask_stack->rc_mask == NULL)
-		return gs_note_error(gs_error_VMerror);
+        if (ctx->mask_stack == NULL)
+            return gs_note_error(gs_error_VMerror);
+        ctx->mask_stack->rc_mask = pdf14_rcmask_new(ctx->memory);
+        if (ctx->mask_stack->rc_mask == NULL)
+            return gs_note_error(gs_error_VMerror);
         ctx->mask_stack->rc_mask->mask_buf = tos;
-     }
+    }
     return 0;
 }
 
@@ -1864,7 +1868,9 @@ gs_pdf14_device_copy_params(gx_device *dev, const gx_device *target)
             dev_proc((gx_device *) target, get_profile)((gx_device *) target,
                                           &(profile_targ));
         profile_dev14->device_profile[0] = profile_targ->device_profile[0];
-        dev->icc_struct->devicegraytok = profile_targ->devicegraytok;
+        dev->icc_struct->devicegraytok = profile_targ->devicegraytok;        
+        dev->icc_struct->graydetection = profile_targ->graydetection;
+        dev->icc_struct->pageneutralcolor = profile_targ->pageneutralcolor;
         dev->icc_struct->supports_devn = profile_targ->supports_devn;
         gx_monitor_enter(profile_dev14->device_profile[0]->lock);
         rc_increment(profile_dev14->device_profile[0]);
@@ -4149,7 +4155,7 @@ pdf14_begin_transparency_mask(gx_device	*dev,
                               gs_imager_state *pis, gs_memory_t *mem)
 {
     pdf14_device *pdev = (pdf14_device *)dev;
-    byte bg_alpha = 255;
+    byte bg_alpha = 0;   /* By default the background alpha (area outside mask) is zero */
     byte *transfer_fn = (byte *)gs_alloc_bytes(pdev->ctx->memory, 256,
                                                "pdf14_begin_transparency_mask");
     gs_int_rect rect;
@@ -4162,6 +4168,7 @@ pdf14_begin_transparency_mask(gx_device	*dev,
     code = compute_group_device_int_rect(pdev, &rect, pbbox, pis);
     if (code < 0)
         return code;
+    /* If we have background components the background alpha may be nonzero */
     if (ptmp->Background_components)
         bg_alpha = (int)(255 * ptmp->GrayBackground + 0.5);
     if_debug1m('v', dev->memory,
@@ -4375,7 +4382,7 @@ pdf14_mark_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
                 } else {
                     art_pdf_composite_pixel_alpha_8_fast_mono(dst_ptr, src,
                                                 blend_mode, pdev->blend_procs, planestride);
-		}
+                }
                 if (alpha_g_off) {
                     int tmp = (255 - dst_ptr[alpha_g_off]) * src_alpha + 0x80;
                     dst_ptr[alpha_g_off] = 255 - ((tmp + (tmp >> 8)) >> 8);
@@ -5092,6 +5099,20 @@ pdf14_dev_spec_op(gx_device *pdev, int dev_spec_op,
     return gx_default_dev_spec_op(pdev, dev_spec_op, data, size);
 }
 
+/* Needed to set color monitoring in the target device's profile */
+int 
+gs_pdf14_device_color_mon_set(gx_device *pdev, bool monitoring)
+{
+    pdf14_device * p14dev = (pdf14_device *)pdev;
+    gx_device *targ = p14dev->target;
+    cmm_dev_profile_t *dev_profile;
+    int code = dev_proc(targ, get_profile)((gx_device*) targ, &dev_profile);
+
+    if (code == 0)
+        dev_profile->pageneutralcolor = monitoring;
+    return code;
+}
+
 int
 gs_pdf14_device_push(gs_memory_t *mem, gs_imager_state * pis,
         gx_device ** pdev, gx_device * target, const gs_pdf14trans_t * pdf14pct)
@@ -5237,8 +5258,9 @@ c_pdf14trans_write_ctm(byte **ppbuf, const gs_pdf14trans_params_t *pparams)
 
 /*
  * Convert a PDF 1.4 transparency compositor to string form for use by the command
- * list device.
- */
+ * list device. This is also where we update the pdf14_needed. When set the clist
+ * painting procs will update the trans_bbox state for bands that are affected.
+*/
 static	int
 c_pdf14trans_write(const gs_composite_t	* pct, byte * data, uint * psize,
                    gx_device_clist_writer *cdev)
@@ -5269,6 +5291,9 @@ c_pdf14trans_write(const gs_composite_t	* pct, byte * data, uint * psize,
         default:			/* Should not occur. */
             break;
         case PDF14_PUSH_DEVICE:
+            cdev->pdf14_needed = false;		/* reset pdf14_needed */
+            cdev->pdf14_trans_group_level = 0;
+            cdev->pdf14_smask_level = 0;
             put_value(pbuf, pparams->num_spot_colors);
             put_value(pbuf, pparams->is_pattern);
             /* If we happen to be going to a color space like CIELAB then
@@ -5290,11 +5315,19 @@ c_pdf14trans_write(const gs_composite_t	* pct, byte * data, uint * psize,
             }
             break;
         case PDF14_POP_DEVICE:
+            cdev->pdf14_needed = false;		/* reset pdf14_needed */
+            cdev->pdf14_trans_group_level = 0;
+            cdev->pdf14_smask_level = 0;
             put_value(pbuf, pparams->is_pattern);
             break;
         case PDF14_END_TRANS_GROUP:
+            cdev->pdf14_trans_group_level--;	/* if now at page level, pdf14_needed will be updated */
+            if (cdev->pdf14_smask_level == 0 && cdev->pdf14_trans_group_level == 0)
+                cdev->pdf14_needed = false;
             break;			/* No data */
         case PDF14_BEGIN_TRANS_GROUP:
+            cdev->pdf14_needed = true;		/* the compositor will be needed while reading */
+            cdev->pdf14_trans_group_level++;
             code = c_pdf14trans_write_ctm(&pbuf, pparams);
             if (code < 0)
                 return code;
@@ -5327,6 +5360,8 @@ c_pdf14trans_write(const gs_composite_t	* pct, byte * data, uint * psize,
             }
             break;
         case PDF14_BEGIN_TRANS_MASK:
+            cdev->pdf14_needed = true;		/* the compositor will be needed while reading */
+            cdev->pdf14_smask_level++;
             code = c_pdf14trans_write_ctm(&pbuf, pparams);
             if (code < 0)
                 return code;
@@ -5369,8 +5404,16 @@ c_pdf14trans_write(const gs_composite_t	* pct, byte * data, uint * psize,
             }
             break;
         case PDF14_END_TRANS_MASK:
+            cdev->pdf14_smask_level--;
+            if (cdev->pdf14_smask_level == 0 && cdev->pdf14_trans_group_level == 0)
+                cdev->pdf14_needed = false;
             break;
         case PDF14_SET_BLEND_PARAMS:
+            if (pparams->blend_mode != BLEND_MODE_Normal || pparams->opacity.alpha != 1.0 ||
+                pparams->shape.alpha != 1.0)
+                cdev->pdf14_needed = true;		/* the compositor will be needed while reading */
+            else if (cdev->pdf14_trans_group_level == 0)
+                cdev->pdf14_needed = false;		/* reset pdf14_needed */
             *pbuf++ = pparams->changed;
             if (pparams->changed & PDF14_SET_BLEND_MODE)
                 *pbuf++ = pparams->blend_mode;
@@ -6427,7 +6470,7 @@ get_param_compressed_color_list_elem(pdf14_clist_device * pdev,
         pkeyname_list_elem->next = *pkeyname_list;
         pkeyname_list_elem->key_name = keyname_buf;
         *pkeyname_list = pkeyname_list_elem;
-        sprintf(keyname_buf, "%s_%d", keyname, i);
+        gs_sprintf(keyname_buf, "%s_%d", keyname, i);
         get_param_compressed_color_list_elem(pdev, plist,
                                 pcomp_list->u.sub_level_ptrs[i], keyname_buf,
                                 pkeyname_list);
@@ -6498,7 +6541,7 @@ put_param_compressed_color_list_elem(gx_device * pdev,
         char buff[50];
         compressed_color_list_t * sub_list_ptr;
 
-        sprintf(buff, "%s_%d", keyname, i);
+        gs_sprintf(buff, "%s_%d", keyname, i);
         put_param_compressed_color_list_elem(pdev, plist,
                                         &sub_list_ptr, buff, num_comps - 1);
         pcomp_list->u.sub_level_ptrs[i] = sub_list_ptr;
@@ -6560,7 +6603,7 @@ get_param_spot_color_names(pdf14_clist_device * pdev,
         pkeyname_list_elem->next = *pkeyname_list;
         pkeyname_list_elem->key_name = keyname_buf;
         *pkeyname_list = pkeyname_list_elem;
-        sprintf(keyname_buf, "PDF14SpotName_%d", i);
+        gs_sprintf(keyname_buf, "PDF14SpotName_%d", i);
         str.size = separations->names[i].size;
         str.data = separations->names[i].data;
         str.persistent = false;
@@ -6596,7 +6639,7 @@ put_param_pdf14_spot_names(gx_device * pdev,
                 char buff[20];
                 byte * sep_name;
 
-                sprintf(buff, "PDF14SpotName_%d", i);
+                gs_sprintf(buff, "PDF14SpotName_%d", i);
                 code = param_read_string(plist, buff, &str);
                 switch (code) {
                     default:

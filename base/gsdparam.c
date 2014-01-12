@@ -79,8 +79,9 @@ gx_default_get_params(gx_device * dev, gs_param_list * plist)
     gsicc_blackptcomp_t blackptcomps[NUM_DEVICE_PROFILES];
     gsicc_blackpreserve_t blackpreserve[NUM_DEVICE_PROFILES];
     bool devicegraytok = true;  /* Default if device profile stuct not set */
+    bool graydetection = false;
     bool usefastcolor = false;  /* set for unmanaged color */
-    bool sim_overprint = false;
+    bool sim_overprint = true;  /* By default simulate overprinting */
     bool prebandthreshold = true;
     int k;
     gs_param_float_array msa, ibba, hwra, ma;
@@ -168,6 +169,7 @@ gx_default_get_params(gx_device * dev, gs_param_list * plist)
                                      dev_profile->link_profile->name);
         }
         devicegraytok = dev_profile->devicegraytok;
+        graydetection = dev_profile->graydetection;
         usefastcolor = dev_profile->usefastcolor;
         sim_overprint = dev_profile->sim_overprint;
         prebandthreshold = dev_profile->prebandthreshold;
@@ -225,6 +227,7 @@ gx_default_get_params(gx_device * dev, gs_param_list * plist)
         /* Note:  if change is made in NUM_DEVICE_PROFILES we need to name
            that profile here for the device parameter on the command line */
         (code = param_write_bool(plist, "DeviceGrayToK", &devicegraytok)) < 0 ||
+        (code = param_write_bool(plist, "GrayDetection", &graydetection)) < 0 ||
         (code = param_write_bool(plist, "UseFastColor", &usefastcolor)) < 0 ||
         (code = param_write_bool(plist, "SimulateOverprint", &sim_overprint)) < 0 ||
         (code = param_write_bool(plist, "PreBandThreshold", &prebandthreshold)) < 0 ||
@@ -377,7 +380,7 @@ gdev_write_input_media(int index, gs_param_dict * pdict,
     int code;
     gs_param_string as;
 
-    sprintf(key, "%d", index);
+    gs_sprintf(key, "%d", index);
     mdict.size = 4;
     code = param_begin_write_dict(pdict->list, key, &mdict, false);
     if (code < 0)
@@ -465,7 +468,7 @@ gdev_write_output_media(int index, gs_param_dict * pdict,
     gs_param_dict mdict;
     int code;
 
-    sprintf(key, "%d", index);
+    gs_sprintf(key, "%d", index);
     mdict.size = 4;
     code = param_begin_write_dict(pdict->list, key, &mdict, false);
     if (code < 0)
@@ -515,11 +518,11 @@ gs_putdeviceparams(gx_device * dev, gs_param_list * plist)
     code = (*dev_proc(dev, put_params)) (dev, plist);
     return (code < 0 ? code : was_open && !dev->is_open ? 1 : code);
 }
-  
-static void
-gx_default_put_graytok(bool graytok, gx_device * dev) 
+
+static int
+gx_default_put_graydetection(bool graydetection, gx_device * dev) 
 {
-    int code;
+    int code = 0;
     cmm_dev_profile_t *profile_struct;
 
     if (dev->procs.get_profile == NULL) {
@@ -532,6 +535,40 @@ gx_default_put_graytok(bool graytok, gx_device * dev)
         if (dev->icc_struct == NULL) {
             /* Allocate at this time the structure */
             dev->icc_struct = gsicc_new_device_profile_array(dev->memory);
+        }
+        dev->icc_struct->graydetection = graydetection;
+        dev->icc_struct->pageneutralcolor = graydetection;
+    } else {
+        code = dev_proc(dev, get_profile)(dev,  &profile_struct);
+        if (profile_struct == NULL) {
+            /* Create now  */
+            dev->icc_struct = gsicc_new_device_profile_array(dev->memory);
+            profile_struct =  dev->icc_struct;
+        }
+        profile_struct->graydetection = graydetection;
+        profile_struct->pageneutralcolor = graydetection;
+    }
+    return code;
+}
+  
+static int
+gx_default_put_graytok(bool graytok, gx_device * dev) 
+{
+    int code = 0;
+    cmm_dev_profile_t *profile_struct;
+
+    if (dev->procs.get_profile == NULL) {
+        /* This is an odd case where the device has not yet fully been 
+           set up with its procedures yet.  We want to make sure that
+           we catch this so we assume here that we are dealing with 
+           the target device.  For now allocate the profile structure
+           but do not intialize the profile yet as the color info 
+           may not be fully set up at this time.  */
+        if (dev->icc_struct == NULL) {
+            /* Allocate at this time the structure */
+            dev->icc_struct = gsicc_new_device_profile_array(dev->memory);
+            if (dev->icc_struct == NULL)
+                return_error(gs_error_VMerror);
         }
         dev->icc_struct->devicegraytok = graytok;
     } else {
@@ -540,15 +577,18 @@ gx_default_put_graytok(bool graytok, gx_device * dev)
             /* Create now  */
             dev->icc_struct = gsicc_new_device_profile_array(dev->memory);
             profile_struct =  dev->icc_struct;
+            if (profile_struct == NULL)
+                return_error(gs_error_VMerror);
         }
         profile_struct->devicegraytok = graytok;
     }
+    return code;
 }
 
-static void
+static int
 gx_default_put_prebandthreshold(bool prebandthreshold, gx_device * dev) 
 {
-    int code;
+    int code = 0;
     cmm_dev_profile_t *profile_struct;
 
     if (dev->procs.get_profile == NULL) {
@@ -561,6 +601,8 @@ gx_default_put_prebandthreshold(bool prebandthreshold, gx_device * dev)
         if (dev->icc_struct == NULL) {
             /* Allocate at this time the structure */
             dev->icc_struct = gsicc_new_device_profile_array(dev->memory);
+            if (dev->icc_struct == NULL)
+                return_error(gs_error_VMerror);
         }
         dev->icc_struct->prebandthreshold = prebandthreshold;
     } else {
@@ -569,15 +611,18 @@ gx_default_put_prebandthreshold(bool prebandthreshold, gx_device * dev)
             /* Create now  */
             dev->icc_struct = gsicc_new_device_profile_array(dev->memory);
             profile_struct =  dev->icc_struct;
+            if (profile_struct == NULL)
+                return_error(gs_error_VMerror);
         }
         profile_struct->prebandthreshold = prebandthreshold;
     }
+    return code;
 }
 
-static void
+static int
 gx_default_put_usefastcolor(bool fastcolor, gx_device * dev) 
 {
-    int code;
+    int code = 0;
     cmm_dev_profile_t *profile_struct;
 
     if (dev->procs.get_profile == NULL) {
@@ -590,6 +635,8 @@ gx_default_put_usefastcolor(bool fastcolor, gx_device * dev)
         if (dev->icc_struct == NULL) {
             /* Allocate at this time the structure */
             dev->icc_struct = gsicc_new_device_profile_array(dev->memory);
+            if (dev->icc_struct == NULL)
+                return_error(gs_error_VMerror);
         }
         dev->icc_struct->usefastcolor = fastcolor;
     } else {
@@ -598,15 +645,18 @@ gx_default_put_usefastcolor(bool fastcolor, gx_device * dev)
             /* Create now  */
             dev->icc_struct = gsicc_new_device_profile_array(dev->memory);
             profile_struct =  dev->icc_struct;
+            if (profile_struct == NULL)
+                return_error(gs_error_VMerror);
         }
         profile_struct->usefastcolor = fastcolor;
     }
+    return code;
 }
 
-static void
+static int
 gx_default_put_simulateoverprint(bool sim_overprint, gx_device * dev) 
 {
-    int code;
+    int code = 0;
     cmm_dev_profile_t *profile_struct;
 
     if (dev->procs.get_profile == NULL) {
@@ -619,6 +669,8 @@ gx_default_put_simulateoverprint(bool sim_overprint, gx_device * dev)
         if (dev->icc_struct == NULL) {
             /* Allocate at this time the structure */
             dev->icc_struct = gsicc_new_device_profile_array(dev->memory);
+            if (dev->icc_struct == NULL)
+                return_error(gs_error_VMerror);
         }
         dev->icc_struct->sim_overprint = sim_overprint;
     } else {
@@ -627,12 +679,15 @@ gx_default_put_simulateoverprint(bool sim_overprint, gx_device * dev)
             /* Create now  */
             dev->icc_struct = gsicc_new_device_profile_array(dev->memory);
             profile_struct =  dev->icc_struct;
+            if (profile_struct == NULL)
+                return_error(gs_error_VMerror);
         }
         profile_struct->sim_overprint = sim_overprint;
     }
+    return code;
 }
 
-static void
+static int
 gx_default_put_intent(gsicc_rendering_intents_t icc_intent, gx_device * dev,  
                    gsicc_profile_types_t index) 
 {
@@ -647,6 +702,8 @@ gx_default_put_intent(gsicc_rendering_intents_t icc_intent, gx_device * dev,
         if (dev->icc_struct == NULL) {
             /* Intializes the device structure.  Not the profile though for index */
             dev->icc_struct = gsicc_new_device_profile_array(dev->memory);
+            if (dev->icc_struct == NULL)
+                return_error(gs_error_VMerror);
         }
         code = gsicc_set_device_profile_intent(dev, icc_intent, index);
     } else {
@@ -654,12 +711,15 @@ gx_default_put_intent(gsicc_rendering_intents_t icc_intent, gx_device * dev,
         if (profile_struct == NULL) {
             /* Create now  */
             dev->icc_struct = gsicc_new_device_profile_array(dev->memory);
+            if (dev->icc_struct == NULL)
+                return_error(gs_error_VMerror);
         }
         code = gsicc_set_device_profile_intent(dev, icc_intent, index);
     }
+    return code;
 }
 
-static void
+static int
 gx_default_put_blackpreserve(gsicc_blackpreserve_t blackpreserve, gx_device * dev,  
                            gsicc_profile_types_t index) 
 {
@@ -674,22 +734,29 @@ gx_default_put_blackpreserve(gsicc_blackpreserve_t blackpreserve, gx_device * de
         if (dev->icc_struct == NULL) {
             /* Intializes the device structure.  Not the profile though for index */
             dev->icc_struct = gsicc_new_device_profile_array(dev->memory);
+            if (dev->icc_struct == NULL)
+                return_error(gs_error_VMerror);
         }
         code = gsicc_set_device_blackpreserve(dev, blackpreserve, index);
     } else {
         code = dev_proc(dev, get_profile)(dev,  &profile_struct);
+        if (code < 0)
+            return code;
         if (profile_struct == NULL) {
             /* Create now  */
             dev->icc_struct = gsicc_new_device_profile_array(dev->memory);
+            if (dev->icc_struct == NULL)
+                return_error(gs_error_VMerror);
         }
         code = gsicc_set_device_blackpreserve(dev, blackpreserve, index);
     }
+    return code;
 }
 
 
 
 
-static void
+static int
 gx_default_put_blackptcomp(gsicc_blackptcomp_t blackptcomp, gx_device * dev,  
                            gsicc_profile_types_t index) 
 {
@@ -704,25 +771,32 @@ gx_default_put_blackptcomp(gsicc_blackptcomp_t blackptcomp, gx_device * dev,
         if (dev->icc_struct == NULL) {
             /* Intializes the device structure.  Not the profile though for index */
             dev->icc_struct = gsicc_new_device_profile_array(dev->memory);
+            if (dev->icc_struct == NULL)
+                return_error(gs_error_VMerror);
         }
         code = gsicc_set_device_blackptcomp(dev, blackptcomp, index);
     } else {
         code = dev_proc(dev, get_profile)(dev,  &profile_struct);
+        if (code < 0)
+            return code;
         if (profile_struct == NULL) {
             /* Create now  */
             dev->icc_struct = gsicc_new_device_profile_array(dev->memory);
+            if (dev->icc_struct == NULL)
+                return_error(gs_error_VMerror);
         }
         code = gsicc_set_device_blackptcomp(dev, blackptcomp, index);
     }
+    return code;
 }
 
-static void
+static int
 gx_default_put_icc_colorants(gs_param_string *colorants, gx_device * dev)
 {
     char *tempstr;
     int code;
 
-    if (colorants->size == 0) return;
+    if (colorants->size == 0) return 0;
 
     /* See below about this device fill proc */
     fill_dev_proc(dev, get_profile, gx_default_get_profile);
@@ -733,16 +807,17 @@ gx_default_put_icc_colorants(gs_param_string *colorants, gx_device * dev)
     tempstr[colorants->size] = 0;
     code = gsicc_set_device_profile_colorants(dev, tempstr);
     gs_free_object(dev->memory, tempstr, "gx_default_put_icc_colorants");
+    return code;
 }
 
-static void
+static int
 gx_default_put_icc(gs_param_string *icc_pro, gx_device * dev,  
                    gsicc_profile_types_t index) 
 {
     char *tempstr;
-    int code;
+    int code = 0;
 
-    if (icc_pro->size == 0) return;
+    if (icc_pro->size == 0) return 0;
     /* If this has not yet been set, then set it to the default.
        I don't like doing this here but if we are in here trying to
        set a profile for our device and if the proc for this has not
@@ -753,12 +828,15 @@ gx_default_put_icc(gs_param_string *icc_pro, gx_device * dev,
     if (icc_pro->size < gp_file_name_sizeof) {
         tempstr = (char *) gs_alloc_bytes(dev->memory, icc_pro->size+1, 
                                           "gx_default_put_icc");
+        if (tempstr == NULL)
+            return_error(gs_error_VMerror);
         memcpy(tempstr, icc_pro->data, icc_pro->size);
         /* Set last position to NULL. */
         tempstr[icc_pro->size] = 0;
         code = gsicc_init_device_profile_struct(dev, tempstr, index);
         gs_free_object(dev->memory, tempstr, "gx_default_put_icc");
     }
+    return code;
 }
 
 /* Set standard parameters. */
@@ -802,8 +880,9 @@ gx_default_put_params(gx_device * dev, gs_param_list * plist)
     int leadingedge = dev->LeadingEdge;
     int k;
     bool devicegraytok = true;
+    bool graydetection = false;
     bool usefastcolor = false;
-    bool sim_overprint = false;
+    bool sim_overprint = true;
     bool prebandthreshold = false;
     int  profile_types[NUM_DEVICE_PROFILES] = {gsDEFAULTPROFILE,
                                                gsGRAPHICPROFILE,
@@ -816,6 +895,7 @@ gx_default_put_params(gx_device * dev, gs_param_list * plist)
             blackptcomp[k] = dev->icc_struct->rendercond[k].black_point_comp;
             blackpreserve[k] = dev->icc_struct->rendercond[k].preserve_black;
         }
+        graydetection = dev->icc_struct->graydetection;
         devicegraytok = dev->icc_struct->devicegraytok;
         usefastcolor = dev->icc_struct->usefastcolor;
         prebandthreshold = dev->icc_struct->prebandthreshold;
@@ -1090,6 +1170,11 @@ nce:
         ecode = code;
         param_signal_error(plist, param_name, ecode);
     }
+    if ((code = param_read_bool(plist, (param_name = "GrayDetection"), 
+                                                        &graydetection)) < 0) {
+        ecode = code;
+        param_signal_error(plist, param_name, ecode);
+    }
     if ((code = param_read_bool(plist, (param_name = "UseFastColor"), 
                                                         &usefastcolor)) < 0) {
         ecode = code;
@@ -1302,38 +1387,57 @@ nce:
        are not set special, the default provides an override */
     if (dev->icc_struct != NULL) {
         /* Set the default object */
-        gx_default_put_intent(rend_intent[0], dev, gsDEFAULTPROFILE); 
-        gx_default_put_blackptcomp(blackptcomp[0], dev, gsDEFAULTPROFILE);
-        gx_default_put_blackpreserve(blackpreserve[0], dev, gsDEFAULTPROFILE);
+        code = gx_default_put_intent(rend_intent[0], dev, gsDEFAULTPROFILE); 
+        if (code < 0)
+            return code;
+        code = gx_default_put_blackptcomp(blackptcomp[0], dev, gsDEFAULTPROFILE);
+        if (code < 0)
+            return code;
+        code = gx_default_put_blackpreserve(blackpreserve[0], dev, gsDEFAULTPROFILE);
+        if (code < 0)
+            return code;
         /* If the default was specified and not a specialized one (e.g. graphic
            image or text) then the special one will get set to the default.  */
         for (k = 1; k < NUM_DEVICE_PROFILES; k++) {
-            if (rend_intent[0] != gsRINOTSPECIFIED && 
+            if (rend_intent[0] != gsRINOTSPECIFIED &&
                 rend_intent[k] == gsRINOTSPECIFIED) {
-                gx_default_put_intent(rend_intent[0], dev, profile_types[k]);
+                code = gx_default_put_intent(rend_intent[0], dev, profile_types[k]);
             } else {
-                gx_default_put_intent(rend_intent[k], dev, profile_types[k]);
+                code = gx_default_put_intent(rend_intent[k], dev, profile_types[k]);
             }
-            if (blackptcomp[0] != gsBPNOTSPECIFIED && 
+            if (code < 0)
+                return code;
+            if (blackptcomp[0] != gsBPNOTSPECIFIED &&
                 blackptcomp[k] == gsBPNOTSPECIFIED) {
-                gx_default_put_blackptcomp(blackptcomp[0], dev, profile_types[k]); 
+                code = gx_default_put_blackptcomp(blackptcomp[0], dev, profile_types[k]);
             } else {
-                gx_default_put_blackptcomp(blackptcomp[k], dev, profile_types[k]); 
+                code = gx_default_put_blackptcomp(blackptcomp[k], dev, profile_types[k]);
             }
-            if (blackpreserve[0] != gsBKPRESNOTSPECIFIED && 
+            if (code < 0)
+                return code;
+            if (blackpreserve[0] != gsBKPRESNOTSPECIFIED &&
                 blackpreserve[k] == gsBKPRESNOTSPECIFIED) {
-                gx_default_put_blackpreserve(blackpreserve[0], dev, profile_types[k]); 
+                code = gx_default_put_blackpreserve(blackpreserve[0], dev, profile_types[k]);
             } else {
-                gx_default_put_blackpreserve(blackpreserve[k], dev, profile_types[k]); 
+                code = gx_default_put_blackpreserve(blackpreserve[k], dev, profile_types[k]);
             }
+            if (code < 0)
+                return code;
         }
     }
-    gx_default_put_graytok(devicegraytok, dev);
-    gx_default_put_usefastcolor(usefastcolor, dev);
-    gx_default_put_simulateoverprint(sim_overprint, dev);
-    gx_default_put_prebandthreshold(prebandthreshold, dev);
-    return 0;
-}
+    code = gx_default_put_graytok(devicegraytok, dev);
+    if (code < 0)
+        return code;
+    code = gx_default_put_usefastcolor(usefastcolor, dev);
+    if (code < 0)
+        return code;
+    code = gx_default_put_simulateoverprint(sim_overprint, dev);
+    if (code < 0)
+        return code;
+    code = gx_default_put_graydetection(graydetection, dev);
+    if (code < 0)
+        return code;
+    return gx_default_put_prebandthreshold(prebandthreshold, dev);}
 
 void
 gx_device_request_leadingedge(gx_device *dev, int le_req)

@@ -128,7 +128,6 @@ RELOC_PTRS_END
 /* Forward declarations */
 static int color_draws_b_w(gx_device * dev,
                             const gx_drawing_color * pdcolor);
-static void image_init_map(byte * map, int map_size, const float *decode);
 static void image_init_colors(gx_image_enum * penum, int bps, int spp,
                                gs_image_format_t format,
                                const float *decode,
@@ -201,6 +200,18 @@ gx_image_enum_alloc(const gs_image_common_t * pic,
 #endif
     *ppenum = penum;
     return 0;
+}
+
+/* Convert and restrict to a valid range. */
+static inline fixed float2fixed_rounded_boxed(double src) {
+	float v = floor(src*fixed_scale + 0.5);
+
+	if (v <= min_fixed)
+		return min_fixed;
+	else if (v >= max_fixed)
+		return max_fixed;
+	else
+		return 	(fixed)v;
 }
 
 /*
@@ -423,6 +434,19 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
         }
         break; /* Out of the while */
     }
+    /* Check for the intersection being null */
+    if (penum->rrect.x + penum->rrect.w <= penum->rect.x  ||
+        penum->rect.x  + penum->rect.w  <= penum->rrect.x ||
+        penum->rrect.y + penum->rrect.h <= penum->rect.y  ||
+        penum->rect.y  + penum->rect.h  <= penum->rrect.y)
+    {
+          /* Something may have gone wrong with the floating point above.
+           * set the region to something sane. */
+        penum->rrect.x = penum->rect.x;
+        penum->rrect.y = penum->rect.y;
+        penum->rrect.w = 0;
+        penum->rrect.h = 0;
+    }
 
     /*penum->matrix = mat;*/
     penum->matrix.xx = mat.xx;
@@ -453,14 +477,14 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
         mty = float2fixed(mat.ty + f) - int2fixed(f);
     }
 
-    row_extent.x = float2fixed_rounded(width * mat.xx);
+    row_extent.x = float2fixed_rounded_boxed(width * mat.xx);
     row_extent.y =
         (is_fzero(mat.xy) ? fixed_0 :
-         float2fixed_rounded(width * mat.xy));
+         float2fixed_rounded_boxed(width * mat.xy));
     col_extent.x =
         (is_fzero(mat.yx) ? fixed_0 :
-         float2fixed_rounded(height * mat.yx));
-    col_extent.y = float2fixed_rounded(height * mat.yy);
+         float2fixed_rounded_boxed(height * mat.yx));
+    col_extent.y = float2fixed_rounded_boxed(height * mat.yy);
     gx_image_enum_common_init((gx_image_enum_common_t *)penum,
                               (const gs_data_image_t *)pim,
                               &image1_enum_procs, dev,
@@ -472,14 +496,14 @@ gx_image_enum_begin(gx_device * dev, const gs_imager_state * pis,
     } else {
         int rw = penum->rect.w, rh = penum->rect.h;
 
-        x_extent.x = float2fixed_rounded(rw * mat.xx);
+        x_extent.x = float2fixed_rounded_boxed(rw * mat.xx);
         x_extent.y =
             (is_fzero(mat.xy) ? fixed_0 :
-             float2fixed_rounded(rw * mat.xy));
+             float2fixed_rounded_boxed(rw * mat.xy));
         y_extent.x =
             (is_fzero(mat.yx) ? fixed_0 :
-             float2fixed_rounded(rh * mat.yx));
-        y_extent.y = float2fixed_rounded(rh * mat.yy);
+             float2fixed_rounded_boxed(rh * mat.yx));
+        y_extent.y = float2fixed_rounded_boxed(rh * mat.yy);
     }
     /* Set icolor0 and icolor1 to point to image clues locations if we have
        1spp or an imagemask, otherwise image clues is not used and
@@ -1072,7 +1096,7 @@ image_init_color_cache(gx_image_enum * penum, int bps, int spp)
                                              "image_init_color_cache");
         if (need_decode) {
             if (is_indexed) {
-                /* Decode and un-indexed */
+                /* Decode and lookup in index */
                 for (k = 0; k < num_entries; k++) {
                     image_cache_decode(penum, k, &value, decode_scale);
                     gs_cspace_indexed_lookup_bytes(penum->pcs, value, psrc);
@@ -1087,11 +1111,16 @@ image_init_color_cache(gx_image_enum * penum, int bps, int spp)
         } else {
             /* No Decode */
             if (is_indexed) {
-                /* If index uses a table then just use its pointer */
-                if (penum->pcs->params.indexed.use_proc) {
+                /* If index uses a num_entries sized table then just use its pointer */
+                if (penum->pcs->params.indexed.use_proc ||
+                    penum->pcs->params.indexed.hival < (num_entries - 1)) {
                     /* Have to do the slow way */
-                    for (k = 0; k < num_entries; k++) {
+                    for (k = 0; k <= penum->pcs->params.indexed.hival; k++) {
                         gs_cspace_indexed_lookup_bytes(penum->pcs, (float)k, psrc);
+                        memcpy(&(temp_buffer[k * num_src_comp]), psrc, num_src_comp);
+                    }
+                    /* just use psrc results from converting 'hival' to fill the remaining slots */
+                    for (; k < num_entries; k++) {
                         memcpy(&(temp_buffer[k * num_src_comp]), psrc, num_src_comp);
                     }
                 } else {
@@ -1289,12 +1318,11 @@ image_init_colors(gx_image_enum * penum, int bps, int spp,
                                        pis, dev, gs_color_select_source);
         }
     }
-
 }
 /* Construct a mapping table for sample values. */
 /* map_size is 2, 4, 16, or 256.  Note that 255 % (map_size - 1) == 0, */
 /* so the division 0xffffL / (map_size - 1) is always exact. */
-static void
+void
 image_init_map(byte * map, int map_size, const float *decode)
 {
     float min_v = decode[0];

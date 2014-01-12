@@ -864,7 +864,7 @@ iodev_os_open_file(gx_io_device * iodev, const char *fname, uint len,
 {
     return file_open_stream(fname, len, file_access,
                             file_default_buffer_size, ps,
-                            iodev, iodev->procs.fopen, mem);
+                            iodev, iodev->procs.gp_fopen, mem);
 }
 
 /* Make a t_file reference to a stream. */
@@ -947,6 +947,8 @@ lib_file_open_search_with_combine(gs_file_path_ptr  lib_path, const gs_memory_t 
             code = gs_parse_file_name(&pname, pstr, plen, mem);
             if (code < 0)
                 continue;
+            if (blen < max(pname.len, plen) + flen)
+            	return_error(e_limitcheck);
             memcpy(buffer, pname.fname, pname.len);
             memcpy(buffer+pname.len, fname, flen);
             code = pname.iodev->procs.open_file(pname.iodev, buffer, pname.len + flen, fmode,
@@ -997,6 +999,11 @@ lib_file_open(gs_file_path_ptr  lib_path, const gs_memory_t *mem, i_ctx_t *i_ctx
     gx_io_device *iodev = iodev_default(mem);
     gs_main_instance *minst = get_minst_from_memory(mem);
     int code;
+
+    /* Once we've opened the arg file, prevent searching current dir from now on */
+    /* If this causes problems with "strange" scripts and utlities, we have to rethink */
+    if (i_ctx_p)
+        i_ctx_p->starting_arg_file = false;
 
     /* when starting arg files (@ files) iodev_default is not yet set */
     if (iodev == 0)

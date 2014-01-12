@@ -58,26 +58,28 @@ data_image_params(const gs_memory_t *mem,
                   bool has_alpha, bool islab)
 {
     int code;
-    int decode_size;
     ref *pds;
 
     check_type(*op, t_dictionary);
     check_dict_read(*op);
-    if ((code = dict_int_param(op, "Width", 0, max_int_in_fixed / 2,
-                               -1, &pim->Width)) < 0 ||
-        (code = dict_int_param(op, "Height", 0, max_int_in_fixed / 2,
-                               -1, &pim->Height)) < 0 ||
-        (code = dict_matrix_param(mem, op, "ImageMatrix",
-                                  &pim->ImageMatrix)) < 0 ||
-        (code = dict_bool_param(op, "MultipleDataSources", false,
-                                &pip->MultipleDataSources)) < 0 ||
-        (code = dict_int_param(op, "BitsPerComponent", 1,
-                               max_bits_per_component, -1,
-                               &pim->BitsPerComponent)) < 0 ||
-        (code = dict_bool_param(op, "Interpolate", false,
-                                &pim->Interpolate)) < 0
-        )
-        return code;
+    code = dict_int_param(op, "Width", 0, max_int_in_fixed/2, -1, &pim->Width);
+    if (code < 0)
+    	return code;
+    code = dict_int_param(op, "Height", 0, max_int_in_fixed/2, -1, &pim->Height);
+    if (code < 0)
+    	return code;
+    code = dict_matrix_param(mem, op, "ImageMatrix", &pim->ImageMatrix);
+    if (code < 0)
+    	return code;
+    code = dict_bool_param(op, "MultipleDataSources", false, &pip->MultipleDataSources);
+    if (code < 0)
+    	return code;
+    code = dict_int_param(op, "BitsPerComponent", 1, max_bits_per_component, -1, &pim->BitsPerComponent);
+    if (code < 0)
+    	return code;
+    code = dict_bool_param(op, "Interpolate", false, &pim->Interpolate);
+    if (code < 0)
+    	return code;
 
     /* Decode size pulled out of here to catch case of Lab color space which
        has a 4 entry range.  We also do NOT want to do Lab decoding IF range
@@ -89,23 +91,25 @@ data_image_params(const gs_memory_t *mem,
     if (islab) {
         /* Note that it is possible that only the ab range values are there
            or the lab values.  I have seen both cases.... */
-        code = decode_size = dict_floats_param(mem, op, "Decode", 4,
-                                                    &pim->Decode[2], NULL);
+        code = dict_floats_param(mem, op, "Decode", 4,
+                                 &pim->Decode[2], NULL);
         if (code < 0) {
-            /* Try for all three */
-            code = decode_size = dict_floats_param(mem, op, "Decode", 6,
-                                                        &pim->Decode[0], NULL);
+            /* Try for all three pairs. Ignore more than 6 elements */
+                code = dict_float_array_check_param(mem, op, "Decode", 6,
+                                                    &pim->Decode[0], NULL, e_rangecheck, 0);	/* over_error = 0 */
         } else {
             /* Set the range on the L */
             pim->Decode[0] = 0;
             pim->Decode[1] = 100.0;
         }
-        if (code < 0) return code;
+        if (code < 0)
+            return code;
     } else {
-        code = decode_size = dict_floats_param(mem, op, "Decode",
-                                                    num_components * 2,
-                                                    &pim->Decode[0], NULL);
-        if (code < 0) return code;
+            /* more elements than we need is OK */
+        code = dict_float_array_check_param(mem, op, "Decode", 2 * num_components,
+                                            &pim->Decode[0], NULL, e_rangecheck, 0);	/* over_error = 0 */
+        if (code < 0)
+            return code;
     }
     pip->pDecode = &pim->Decode[0];
     /* Extract and check the data sources. */

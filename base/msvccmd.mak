@@ -34,14 +34,17 @@ QI0f=
 QI0f=/QI0f
 
 # Define separate CCAUX command-line switch that must be at END of line.
+!if $(TDEBUG)!=0
+CCAUX_TAIL_DEBUG=/DEBUG
+!endif
 
 !if $(MSVC_VERSION) < 7
-CCAUX_TAIL= /link
+CCAUX_TAIL= /link $(COMPAUXLDFLAGS) $(CCAUX_TAIL_DEBUG)
 !else
 !ifdef WIN64
-CCAUX_TAIL= /link $(LINKLIBPATH)
+CCAUX_TAIL= /link $(COMPAUXLDFLAGS) $(LINKLIBPATH) $(CCAUX_TAIL_DEBUG)
 !else
-CCAUX_TAIL= /link /LIBPATH:"$(COMPBASE)\lib"
+CCAUX_TAIL= /link $(COMPAUXLDFLAGS) /LIBPATH:"$(COMPBASE)\lib" $(CCAUX_TAIL_DEBUG)
 !endif
 !endif
 
@@ -242,9 +245,9 @@ CC_NO_WARN=$(CC_)
 
 # Compiler for auxiliary programs
 
-CCAUX=$(COMPAUX) $(VC8WARN) $(CFLAGS)
-CCAUX_=$(COMPAUX) $(VC8WARN) $(CFLAGS)
-CCAUX_NO_WARN=$(COMPAUX) $(CFLAGS)
+CCAUX=$(COMPAUX) $(VC8WARN) $(CCFLAGS) @$(GLGENDIR)\ccf32.tr
+CCAUX_=$(COMPAUX) $(VC8WARN) $(CCFLAGS) @$(GLGENDIR)\ccf32.tr
+CCAUX_NO_WARN=$(COMPAUX) $(CCFLAGS) @$(GLGENDIR)\ccf32.tr
 
 # Compiler for Windows programs.
 CCWINFLAGS=$(COMPILE_FULL_OPTIMIZED)

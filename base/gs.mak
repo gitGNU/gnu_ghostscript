@@ -160,7 +160,7 @@
 #   symbols, but we describe them here for completeness:
 #	GS_INIT - the name of the initialization file for the interpreter,
 #		normally gs_init.ps.
-#	PLATFORM - a "device" name for the platform, so that platforms can
+#	GSPLATFORM - a "device" name for the platform, so that platforms can
 #		add various kinds of resources like devices and features.
 #	CMD - the suffix for shell command files (e.g., null or .bat).
 #		(This is only needed in a few places.)
@@ -239,6 +239,8 @@ LCUPSGENDIR=$(GLGENDIR)
 LCUPSOBJDIR=$(GLOBJDIR)
 LCUPSIGENDIR=$(GLGENDIR)
 LCUPSIOBJDIR=$(GLOBJDIR)
+
+TRIOOBJDIR=$(GLOBJDIR)
 #**************** END PATCHES
 
 GSGEN=$(GLGENDIR)$(D)
@@ -325,7 +327,7 @@ JCF_=$(D_)SHARE_JPEG=$(SHARE_JPEG)$(_D)
 PI_=$(PNGSRCDIR) $(II)$(ZSRCDIR)
 # PF_ should include PNG_USE_CONST, but this doesn't work.
 #PF_=-DPNG_USE_CONST
-TI_=$(TIFFSRCDIR)$(D)libtiff $(II)$(JGENDIR)  $(II)$(ZSRCDIR)
+TI_=$(TIFFSRCDIR)$(D)libtiff $(II)$(TIFFCONFDIR)$(D)libtiff $(II)$(JGENDIR)  $(II)$(ZSRCDIR)
 PF_=
 PCF_=$(D_)SHARE_LIBPNG=$(SHARE_LIBPNG)$(_D)
 ZI_=$(ZSRCDIR)
@@ -373,10 +375,8 @@ JPX_OPENJPEG_I_=$(JPXSRCDIR)$(D)libopenjpeg
 
 # FEATURE_DEVS_EXTRA and DEVICE_DEVS_EXTRA are explicitly reserved
 # to be set from the command line.
-FEATURE_DEVS_EXTRA=
-DEVICE_DEVS_EXTRA=
 
-DEVS_ALL=$(GLGENDIR)$(D)$(PLATFORM).dev\
+DEVS_ALL=$(GLGENDIR)$(D)$(GSPLATFORM).dev\
  $(FEATURE_DEVS) $(FEATURE_DEVS_EXTRA) \
  $(DEVICE_DEVS) $(DEVICE_DEVS1) \
  $(DEVICE_DEVS2) $(DEVICE_DEVS3) $(DEVICE_DEVS4) $(DEVICE_DEVS5) \
@@ -388,7 +388,7 @@ DEVS_ALL=$(GLGENDIR)$(D)$(PLATFORM).dev\
 
 devs_tr=$(GLGENDIR)$(D)devs.tr
 $(devs_tr) : $(GS_MAK) $(TOP_MAKEFILES) $(ECHOGS_XE)
-	$(EXP)$(ECHOGS_XE) -w $(devs_tr) - -include $(GLGENDIR)$(D)$(PLATFORM)
+	$(EXP)$(ECHOGS_XE) -w $(devs_tr) - -include $(GLGENDIR)$(D)$(GSPLATFORM)
 	$(EXP)$(ECHOGS_XE) -a $(devs_tr) -+ $(FEATURE_DEVS)
 	$(EXP)$(ECHOGS_XE) -a $(devs_tr) -+ $(FEATURE_DEVS_EXTRA)
 	$(EXP)$(ECHOGS_XE) -a $(devs_tr) -+ $(DEVICE_DEVS)

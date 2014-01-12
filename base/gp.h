@@ -489,6 +489,8 @@ int64_t gp_ftell_64(FILE *strm);
 
 int gp_fseek_64(FILE *strm, int64_t offset, int origin);
 
+bool gp_fseekable (FILE *f);
+
 /* We don't define gp_fread_64, gp_fwrite_64,
    because (1) known platforms allow regular fread, fwrite
    to be applied to a file opened with O_LARGEFILE,
@@ -496,5 +498,12 @@ int gp_fseek_64(FILE *strm, int64_t offset, int origin);
    perform writing/reading a long (over 4gb) block
    in one operation.
  */
+
+/* Some platforms (currently only windows) may supply a function to convert
+ * characters from an encoded command line arg from the local encoding into
+ * a unicode codepoint. Returns EOF for end of file (or string).
+ */
+int
+gp_local_arg_encoding_get_codepoint(FILE *file, const char **astr);
 
 #endif /* gp_INCLUDED */

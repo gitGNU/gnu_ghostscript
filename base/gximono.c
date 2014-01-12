@@ -394,29 +394,44 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
                 dda_step_add(dxx4, next.x.step);
                 for (;;) {      /* Skip a run of zeros. */
                     while (!psrc[0])
-                        if (!psrc[1]) {
-                            if (!psrc[2]) {
-                                if (!psrc[3]) {
-                                    psrc += 4;
-                                    dda_state_next(next.x.state, dxx4);
-                                    continue;
+                        if (psrc + 4 <= endp) {
+                            /* We can use fast skipping */
+                            if (!psrc[1]) {
+                                if (!psrc[2]) {
+                                    if (!psrc[3]) {
+                                        psrc += 4;
+                                        dda_state_next(next.x.state, dxx4);
+                                        if (psrc >= endp)
+                                            break;
+                                        continue;
+                                    }
+                                    psrc += 3;
+                                    dda_state_next(next.x.state, dxx3);
+                                    break;
                                 }
-                                psrc += 3;
-                                dda_state_next(next.x.state, dxx3);
+                                psrc += 2;
+                                dda_state_next(next.x.state, dxx2);
+                                break;
+                            } else {
+                                ++psrc;
+                                dda_next(next.x);
                                 break;
                             }
-                            psrc += 2;
-                            dda_state_next(next.x.state, dxx2);
-                            break;
                         } else {
-                            ++psrc;
-                            dda_next(next.x);
-                            break;
+                            /* We're too close to the end - skip 1 at a time */
+                            while (!psrc[0]) {
+                                ++psrc;
+                                dda_next(next.x);
+                                if (psrc >= endp)
+                                    break;
+                            }
+                            if (psrc >= endp)
+                                break;
                         }
                     xrun = xl;
                     if (psrc >= stop)
                         break;
-                    for (; *psrc; ++psrc)
+                    for (; psrc < endp && *psrc; ++psrc)
                         dda_next(next.x);
                     code = (*fill_pgram)(dev, xrun, yrun,
                                          xl - xrun + ax, fixed_0, fixed_0, dyy,
@@ -449,12 +464,12 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
                 dda_translate(next.y, -ay);
                 ay <<= 1;
                 for (;;) {
-                    for (; !*psrc; ++psrc)
+                    for (; psrc < endp && !*psrc; ++psrc)
                         dda_next(next.y);
                     yrun = ytf;
                     if (psrc >= stop)
                         break;
-                    for (; *psrc; ++psrc)
+                    for (; psrc < endp && *psrc; ++psrc)
                         dda_next(next.y);
                     code = (*fill_pgram)(dev, xrun, yrun, fixed_0,
                                          ytf - yrun + ay, dyx, fixed_0,
@@ -483,7 +498,7 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
                 stop = endp;
                 for (;;) {
                     /* skip forward until we find a 1 bit */
-                    for (; !*psrc; ++psrc) {
+                    for (; psrc < stop && !*psrc; ++psrc) {
                         dda_next(next.x);
                         dda_next(next.y);
                     }
@@ -549,6 +564,8 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
                 psrc++;
                 dda_next(next.x);
                 dda_next(next.y);
+                if (psrc >= endp)
+                    break;
             }
         } else {
 
@@ -651,6 +668,8 @@ image_render_mono(gx_image_enum * penum, const byte * buffer, int data_x,
                             if (psrc[3] == run) {
                                 psrc += 4;
                                 dda_state_next(next.x.state, dxx4);
+                                if (psrc >= endp)
+                                    break;
                                 goto skf;
                             } else {
                                 psrc += 4;

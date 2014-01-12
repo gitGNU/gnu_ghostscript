@@ -22,7 +22,7 @@
 # Define the platform name.  For a "stock" System V platform,
 # use sysv_ instead of unix_.
 
-PLATFORM=unix_
+GSPLATFORM=unix_
 
 # Define the syntax for command, object, and executable files.
 
@@ -42,8 +42,6 @@ NO_OP=@:
 O_=-o $(NULL)
 OBJ=o
 Q=
-XE=
-XEAUX=
 
 # Define the current directory prefix and command invocations.
 

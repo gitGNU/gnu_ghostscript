@@ -95,6 +95,10 @@ gs_image_class_0_interpolate(gx_image_enum * penum)
         penum->interpolate = false;
         return 0;
     }
+    if (penum->Width == 0 || penum->Height == 0) {
+        penum->interpolate = false; /* No need to interpolate and      */
+        return 0;                  /* causes division by 0 if we try. */
+    }
     if ( pcs->cmm_icc_profile_data != NULL ) {
         use_icc = true;
     }
@@ -611,7 +615,16 @@ initial_decode(gx_image_enum * penum, const byte * buffer, int data_x, int h,
                 stream_r->ptr = (byte *) psrc - 1;
                 if_debug0m('B', penum->memory, "[B]Remap row:\n[B]");
                 if (is_icc) {
-                    stream_r->ptr = (byte *) pdata - 1;
+                    if (reversed) {
+                        byte *to = penum->line;
+                        for (i = 0; i < pss->params.WidthIn; i++) {
+                            memcpy(to, pdata, -dpd);
+                            to -= dpd;
+                            pdata += dpd;
+                        }
+                    } else {
+                        stream_r->ptr = (byte *) pdata - 1;
+                    }
                 } else {
                     for (i = 0; i < pss->params.WidthIn; i++, 
                          psrc += spp_decode) {
@@ -974,10 +987,10 @@ image_render_interpolate_icc(gx_image_enum * penum, const byte * buffer,
                 /* Set up the buffer descriptors. */
                 gsicc_init_buffer(&input_buff_desc, spp_decode, 2,
                               false, false, false, 0, width * spp_decode,
-                              1, width);
+                              1, pss->params.PatchWidthOut);
                 gsicc_init_buffer(&output_buff_desc, spp_cm, 2,
                               false, false, false, 0, width * spp_cm,
-                              1, width);
+                              1, pss->params.PatchWidthOut);
             }
         }
         for (;;) {
@@ -1014,16 +1027,18 @@ image_render_interpolate_icc(gx_image_enum * penum, const byte * buffer,
                 if (penum->icc_link->is_identity || pss->params.early_cm) {
                     /* Fastest case. No CM needed */
                     p_cm_interp = (unsigned short *) pinterp;
+                    p_cm_interp += pss->params.LeftMarginOut * spp_cm;
                 } else {
                     /* Transform */
+                    pinterp += pss->params.LeftMarginOut * spp_decode;
                     p_cm_interp = (unsigned short *) p_cm_buff;
+                    p_cm_interp += pss->params.LeftMarginOut * spp_cm;
                     (penum->icc_link->procs.map_buffer)(dev, penum->icc_link,
                                                         &input_buff_desc,
                                                         &output_buff_desc,
                                                         (void*) pinterp,
                                                         (void*) p_cm_interp);
                 }
-                p_cm_interp += pss->params.LeftMarginOut * spp_cm;
                 for (x = xo; x < xe;) {
 #ifdef DEBUG
                     if (gs_debug_c('B')) {

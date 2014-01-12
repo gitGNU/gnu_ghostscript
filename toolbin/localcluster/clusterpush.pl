@@ -7,7 +7,7 @@ use Data::Dumper;
 
 my $verbose=0;
 
-# bmpcmp usage: [gs] [pcl] [xps] [gs] [mupdf] [bmpcmp] [lowres] [32] [$user] | abort
+# bmpcmp usage: [gs] [pcl] [xps] [gs] [mupdf] [mujstest] [bmpcmp] [lowres] [32] [pdfwrite] [$user] | abort
 
 
 
@@ -19,7 +19,8 @@ my %products=('abort' =>1,
               'svg'=>1,
               'xps'=>1,
               'ls'=>1,
-              'mupdf'=>1);
+              'mupdf'=>1,
+              'mujstest'=>1);
 
 my $user;
 my $product="";
@@ -27,6 +28,9 @@ my $filters="";
 my $command="";
 my $res="";
 my $w32="";
+my $nr="";
+my $pdfwrite="";
+my $singlePagePDF="";
 my $relaxTimeout="";
 my $t1;
 while ($t1=shift) {
@@ -34,8 +38,15 @@ while ($t1=shift) {
     $res="lowres";
   } elsif ($t1 eq "highres") {
     $res="highres";
+  } elsif ($t1 eq "singlePagePDF") {
+    $singlePagePDF="singlePagePDF";
+    $pdfwrite="pdfwrite";
   } elsif ($t1 eq "32") {
     $w32="32";
+  } elsif ($t1 eq "nr" || $t1 eq "nonredundnat") {
+    $nr="nonredundant";
+  } elsif ($t1 eq "pdfwrite" || $t1 eq "ps2write") {
+    $pdfwrite="pdfwrite";
   } elsif ($t1 eq "timeout" || $t1 eq "relaxtimeout") {
     $relaxTimeout="relaxTimeout";
   } elsif ($t1=~m/^-/ || $t1=~m/^\d/) {
@@ -113,7 +124,7 @@ if (!$product) {
   if ($directory eq 'mupdf') {
     $product='mupdf';
   } else {
-    $product='gs pcl xps ls'
+    $product='gs pcl xps'
   }
 }
 
@@ -162,6 +173,7 @@ my $cmd="rsync -avxcz ".
 " --exclude .ppm --exclude .pkm --exclude .pgm --exclude .pbm".
 " --exclude .tif --exclude .bmp".
 " --exclude debug --exclude release --exclude generated".  # we cannot just exclude build, since tiff/build/Makefile.in, etc. is needed
+" --exclude tiff-config".  # we cannot just exclude build, since tiff/build/Makefile.in, etc. is needed
 # " --exclude Makefile". We can't just exclude Makefile, since the GhostPDL top Makefile is not a derived file.
 " -e \"$ssh\" ".
 " .".
@@ -180,7 +192,7 @@ if ($product ne "abort" ) { #&& $product ne "bmpcmp") {
 }
 
 open(F,">cluster_command.run");
-print F "$user $product $res $w32 $relaxTimeout\n";
+print F "$user $product $res $w32 $nr $pdfwrite $relaxTimeout $singlePagePDF\n";
 print F "$command\n";
 print F "$filters\n";
 close(F);
