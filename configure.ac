@@ -148,7 +148,7 @@ case `uname` in
     ;;
     *)
 #     This is just an arbitrary file in contrib to check
-      if ! test -f $rscdir/contrib/gdevbjc_.c; then
+      if ! test -f $srcdir/contrib/gdevbjc_.c; then
         enable_contrib=no
       fi
     ;;
@@ -323,8 +323,6 @@ AC_LINK_IFELSE(
   input1 = _mm_loadu_si128((const __m128i *)buf1);
   return(0);
   ])],
-  [BIGENDIAN=1;AC_MSG_RESULT(big)],
-  [BIGENDIAN=0;AC_MSG_RESULT(little)])
   [HAVE_SSE2="-DHAVE_SSE2"], [HAVE_SSE2=""])
 
 AC_ARG_ENABLE([sse2], AC_HELP_STRING([--disable-sse2],
@@ -402,6 +400,7 @@ fi
 
 dnl we aren't interested in all of DEFS, so manually insert
 dnl the flags we care about
+
 if test "$ac_cv_c_const" != yes; then
         GCFLAGS="$GCFLAGS -Dconst="
 fi
@@ -460,6 +459,7 @@ uint64_type="none"
  fi
 dnl we don't need to do anything if a 64-bit type wasn't found
 dnl the code falls back to a (probably 32-bit) default
+
 if test "$uint64_type" != "none"; then
         GCFLAGS="$GCFLAGS -DGX_COLOR_INDEX_TYPE=\"$uint64_type\""
 fi
@@ -727,6 +727,7 @@ if test x"$enable_fapi" != xno; then
     AC_MSG_CHECKING([for local freetype library source])
     dnl We prefer freetype2 over freetype, so it is easy to override
     dnl the included freetype source with a checkout from upstream.
+    
     for dir in $srcdir/freetype2 $srcdir/freetype; do
       if test -f $dir/src/base/ftbbox.c; then
         AC_MSG_RESULT(yes)
@@ -805,14 +806,14 @@ dnl build, so that the D_MAX_BLOCKS_IN_MCU patch will be applied.
 dnl A more sophisticated approach would be to test the shared lib
 dnl to see whether it has already been patched.
 LIBJPEGDIR=src
-if test -f jpeg/jpeglib.h; then
+if test -f $srcdir/jpeg/jpeglib.h; then
         AC_MSG_RESULT([jpeg])
         SHARE_LIBJPEG=0
-        LIBJPEGDIR=jpeg
-elif test -f jpeg-6b/jpeglib.h; then
+        LIBJPEGDIR=$srcdir/jpeg
+elif test -f $srcdir/jpeg-6b/jpeglib.h; then
         AC_MSG_RESULT([jpeg-6b])
         SHARE_LIBJPEG=0
-        LIBJPEGDIR=jpeg-6b
+        LIBJPEGDIR=$srcdir/jpeg-6b
 else
         AC_MSG_RESULT([no])
         AC_CHECK_LIB(jpeg, jpeg_set_defaults, [
@@ -842,32 +843,27 @@ fi
 
 AC_MSG_CHECKING([for local zlib source])
 dnl zlib is needed for language level 3, and libpng
-AC_ARG_WITH(zlib, AC_HELP_STRING([--with-zlib],[include zlib support (local, shared, no) (required for PNG and language level 3)]))
 # we must define ZLIBDIR regardless because libpng.mak does a -I$(ZLIBDIR)
 # this seems a harmless default
 ZLIBDIR=src
 AUX_SHARED_ZLIB=
 
-if test x$with_zlib != xno; then
-AC_MSG_CHECKING([for local zlib source])
-
-	if test x$with_zlib != xshared && test -d zlib; then
-		AC_MSG_RESULT([yes])
-		SHARE_ZLIB=0
-		ZLIBDIR=zlib
-	else
-		AC_MSG_RESULT([shared])
-		AC_CHECK_LIB(z, deflate, [
-		  AC_CHECK_HEADERS(zlib.h, [SHARE_ZLIB=1; AUX_SHARED_ZLIB="-l\$(ZLIB_NAME)"])
-		])
-	fi
-	if test -z "$SHARE_ZLIB"; then
-	  AC_MSG_ERROR([I did not find a copy of zlib on your system.
-	  Please either install it, or unpack a copy of the source in a
-	  local directory named 'zlib'. See http://www.gzip.org/zlib/
-	  for more information.
-	  ])
-	fi
+if test -d $srcdir/zlib; then
+        AC_MSG_RESULT([yes])
+        SHARE_ZLIB=0
+        ZLIBDIR=$srcdir/zlib
+else
+        AC_MSG_RESULT([no])
+        AC_CHECK_LIB(z, deflate, [
+          AC_CHECK_HEADERS(zlib.h, [SHARE_ZLIB=1; AUX_SHARED_ZLIB="-l\$(ZLIB_NAME)"])
+        ])
+fi
+if test -z "$SHARE_ZLIB"; then
+  AC_MSG_ERROR([I did not find a copy of zlib on your system.
+  Please either install it, or unpack a copy of the source in a
+  local directory named 'zlib'. See http://www.gzip.org/zlib/
+  for more information.
+  ])
 fi
 
 dnl if GS is to use the system zlib, freetype
@@ -887,16 +883,14 @@ AC_SUBST(ZLIBDIR)
 AC_SUBST(FT_SYS_ZLIB)
 
 dnl png for the png output device; it also requires zlib
-AC_ARG_WITH(png, AC_HELP_STRING([--with-png],[include PNG support (local, shared, no)]))
-dnl set safe defaults
 LIBPNGDIR=src
 PNGDEVS=''
 PNGDEVS_ALL='png48 png16m pnggray pngmono png256 png16 pngalpha'
 AC_MSG_CHECKING([for local png library source])
-if test -f libpng/pngread.c; then
+if test -f $srcdir/libpng/pngread.c; then
         AC_MSG_RESULT([yes])
         SHARE_LIBPNG=0
-        LIBPNGDIR=libpng
+        LIBPNGDIR=$srcdir/libpng
         PNGDEVS="$PNGDEVS_ALL"
 else
         AC_MSG_RESULT([no])
@@ -908,8 +902,7 @@ else
         ], [SHARE_LIBPNG=0], [-lz])
 fi
 if test -z "$PNGDEVS"; then
-  AC_MSG_ERROR([I did not find a copy of zlib on your system.
-	  Please install it or install the -dev package too.])
+  AC_MSG_NOTICE([disabling png output devices])
 fi
 AC_SUBST(SHARE_LIBPNG)
 AC_SUBST(LIBPNGDIR)
@@ -922,7 +915,7 @@ AC_ARG_WITH([lcms], AC_HELP_STRING([--with-lcms],
 
 if test x$with_lcms != xyes; then
   AC_MSG_CHECKING([for local lcms2 library source])
-  LCMS2DIR=lcms2
+  LCMS2DIR=$srcdir/lcms2
   if test -f $LCMS2DIR/include/lcms2.h; then
         AC_MSG_RESULT([yes])
         SHARELCMS=0
@@ -930,7 +923,7 @@ if test x$with_lcms != xyes; then
   else
     AC_MSG_RESULT([no])
     AC_MSG_CHECKING([for system lcms2 library])
-     AC_CHECK_LIB(lcms2, cmsGetTransformOutputFormat, [
+    AC_CHECK_LIB(lcms2, cmsGetTransformOutputFormat, [
            AC_CHECK_HEADERS([lcms2.h], [LCMS2DIR="";SHARELCMS=1;WHICHLCMS=lcms2])
          ])
     if test x$WHICHLCMS = x; then
@@ -941,7 +934,7 @@ fi
 
 if test x$WHICHLCMS = x; then
   AC_MSG_CHECKING([for local lcms library source])
-  LCMSDIR=lcms
+  LCMSDIR=$srcdir/lcms
   SHARELCMS=0
   if test -f $LCMSDIR/include/lcms.h; then
         AC_MSG_RESULT([yes])
@@ -969,12 +962,17 @@ AC_ARG_WITH([system-libtiff], AC_HELP_STRING([--with-system-libtiff],
             [], [with_system_libtiff=check])
 TIFFDEVS=''
 FAX_DEVS=''
+
+LIBTIFFDIR=''
+LIBTIFFCONFDIR=''
+
 TIFFDEVS_ALL='tiffs tiff12nc tiff24nc tiff48nc tiff32nc tiff64nc tiffcrle tifflzw tiffpack tiffgray tiffsep tiffsep1 tiffscaled'
 FAX_DEVS_ALL='cfax dfaxlow dfaxhigh fax faxg3 faxg32d faxg4 tiffg3 tiffg32d tiffg4 tfax'
 case "x$with_system_libtiff" in
     xcheck)
-        if test -d tiff; then
-            LIBTIFFDIR=tiff
+        if test -d $srcdir/tiff; then
+            LIBTIFFDIR=$srcdir/tiff
+            LIBTIFFCONFDIR=tiff-config
             HAVE_LOCAL_LIBTIFF=1
             SHARE_LIBTIFF=0
         else
@@ -990,7 +988,7 @@ case "x$with_system_libtiff" in
                         HAVE_SYSTEM_LIBTIFF=1
                 fi
             fi
-            if test "x$HAVE_SYSTEM_LIBTIFF" != "x" ; then
+            if test "x$HAVE_SYSTEM_LIBTIFF" = "x1"; then
             AC_CHECK_LIB(tiff, TIFFOpen,
                      [AC_CHECK_HEADERS(tiff.h, [HAVE_SYSTEM_LIBTIFF=1;SHARE_LIBTIFF=1])],
                      [], [-ljpeg])
@@ -1033,9 +1031,10 @@ Disabling tiff output devices.])
         ;;
     xno)
         AC_MSG_CHECKING([for local libtiff source])
-        if test -d tiff; then
+        if test -d $srcdir/tiff; then
             AC_MSG_RESULT([yes])
-            LIBTIFFDIR=tiff
+            LIBTIFFDIR=$srcdir/tiff
+            LIBTIFFCONFDIR=tiff-config
             SHARE_LIBTIFF=0
             TIFFDEVS="$TIFFDEVS_ALL"
             FAX_DEVS="$FAX_DEVS_ALL"
@@ -1047,11 +1046,14 @@ Disabling tiff output devices.])
         ;;
 esac
 
-if test "x$SHARE_LIBTIFF" = "x0"; then
+if test $SHARE_LIBTIFF -eq 0; then
       echo
       echo "Running libtiff configure script..."
       olddir=`pwd`
-      cd "$LIBTIFFDIR" && ./configure --disable-jbig --disable-lzma $SUBCONFIG_OPTS
+      if ! test -d $LIBTIFFCONFDIR ; then
+        mkdir $LIBTIFFCONFDIR
+      fi
+      cd "$LIBTIFFCONFDIR" && $olddir/$LIBTIFFDIR/configure --disable-jbig --disable-lzma $SUBCONFIG_OPTS
       status=$?
       if test "$status" -ne 0 ; then
         AC_MSG_ERROR([libtiff configure script failed], $status)
@@ -1063,7 +1065,7 @@ fi
 
 AC_SUBST(SHARE_LIBTIFF)
 AC_SUBST(LIBTIFFDIR)
-
+AC_SUBST(LIBTIFFCONFDIR)
 
 dnl look for CUPS...
 AC_ARG_ENABLE([cups], AC_HELP_STRING([--disable-cups],
@@ -1075,10 +1077,6 @@ AC_ARG_WITH([pdftoraster], AC_HELP_STRING([--without-pdftoraster],
 AC_ARG_WITH([local-cups], AC_HELP_STRING([--with-local-cups],
                                              [Force using the GS supplied cups code - only useful for debugging]),
             [with_local_cups=yes], [with_local_cups=no])
-
-AC_ARG_WITH([install-cups], AC_HELP_STRING([--with-install-cups],
-                                             [Install the cups conversion tools]),
-            [CUPSINSTALL=install-cups], [CUPSINSTALL=])
 
 AC_ARG_WITH([cups-serverbin],  AC_HELP_STRING([--with-cups-serverbin],
     [override the "cups-config --serverbin" path]), CUPS_SERVERBIN="$withval", CUPS_SERVERBIN="")
@@ -1101,11 +1099,13 @@ CUPSSERVERROOT=""
 CUPSDATA=""
 CUPSVERSION="0"
 CUPSPDFTORASTER="0"
+CUPS_DIR=""
 
 SHARELCUPS=1
 SHARELCUPSI=1
 
-if ( test -d cups ); then
+if ( test -d $srcdir/cups ); then
+    CUPS_DIR="$srcdir/cups"
     if test x$enable_cups != xno; then
         if test x$with_local_cups != xyes; then
             AC_PATH_PROG(CUPSCONFIG,cups-config)
@@ -1136,7 +1136,7 @@ if ( test -d cups ); then
                   CUPSDATA="`$CUPSCONFIG --datadir`"
                 fi
 
-                CUPSINCLUDE="include cups/cups.mak"
+                CUPSINCLUDE="include $srcdir/cups/cups.mak"
                 CUPSDEV="cups"
                 CUPSVERSION="`$CUPSCONFIG --version`"
                 LCUPSINCLUDE="include \$(GLSRCDIR)/lcups.mak"
@@ -1156,7 +1156,6 @@ if ( test -d cups ); then
                 LCUPSINCLUDE="include \$(GLSRCDIR)/lcups.mak"
                 LCUPSIINCLUDE="include \$(GLSRCDIR)/lcupsi.mak"
                 CUPSDEV="cups"
-                
             fi
         fi
     fi
@@ -1171,6 +1170,7 @@ AC_SUBST(CUPSSERVERBIN)
 AC_SUBST(CUPSSERVERROOT)
 AC_SUBST(CUPSDATA)
 AC_SUBST(CUPSINSTALL)
+AC_SUBST(CUPS_DIR)
 
 AC_SUBST(SHARELCUPS)
 AC_SUBST(SHARELCUPSI)
@@ -1201,9 +1201,9 @@ dnl set safe defaults
     SHAREIJS=0
 if test x$with_ijs != xno; then
     AC_MSG_CHECKING([for local ijs library source])
-    if test -d ijs; then
+    if test -d $srcdir/ijs; then
         AC_MSG_RESULT([yes])
-        IJSDIR=ijs
+        IJSDIR=$srcdir/ijs
         IJSDEVS='ijs'
     else
         AC_MSG_RESULT([no])
@@ -1239,16 +1239,17 @@ AC_ARG_WITH([luratech], AC_HELP_STRING([--without-luratech],
 
 if test x$with_luratech != xno; then
   AC_MSG_CHECKING([for local Luratech JBIG2 library source])
-  if test -d luratech/ldf_jb2; then
+  if test -d $srcdir/luratech/ldf_jb2; then
     AC_MSG_RESULT([yes])
     JBIG2_DECODER=luratech
     SHARE_JBIG2=0
-    JBIG2DIR=luratech/ldf_jb2
+    JBIG2DIR=$srcdir/luratech/ldf_jb2
     if test "$(uname)" = "Darwin"; then
       JBIG2_AUTOCONF_CFLAGS="-DUSE_LDF_JB2 -DMAC -DMAC_OS_X_BUILD"
     else
       JBIG2_AUTOCONF_CFLAGS="-DUSE_LDF_JB2 -DLINUX"
     fi
+    JBIG2FILEDEVS='$(DD)gdevjbig2.dev'
     JBIG2DEVS='$(PSD)jbig2.dev'
   else
     AC_MSG_RESULT([no])
@@ -1263,7 +1264,7 @@ if test "x$JBIG2_DECODER" = x; then
       [disable JBIG2 decode support]))
   if test x$with_jbig2dec != xno; then
     AC_MSG_CHECKING([for local jbig2dec library source])
-    for d in jbig2dec jbig2dec-0.2 jbig2dec-0.3; do
+    for d in $srcdir/jbig2dec $srcdir/jbig2dec-0.2 $srcdir/jbig2dec-0.3; do
       test -d "$d" && JBIG2DIR=$d && break
     done
     if test "x$JBIG2DIR" != xsrc; then
@@ -1347,11 +1348,11 @@ JPX_AUTOCONF_CFLAGS=
 
 if test x$with_luratech != xno; then
   AC_MSG_CHECKING([for local Luratech JPEG2K library source])
-  if test -d luratech/lwf_jp2; then
+  if test -d $srcdir/luratech/lwf_jp2; then
     AC_MSG_RESULT([yes])
     JPX_DECODER=luratech
     SHARE_JPX=0
-    JPXDIR=luratech/lwf_jp2
+    JPXDIR=$srcdir/luratech/lwf_jp2
     if test "$(uname)" = "Darwin"; then
       JPX_AUTOCONF_CFLAGS="-DUSE_LWF_JP2 -DMAC -DMAC_OS_X_BUILD"
     else
@@ -1363,7 +1364,15 @@ if test x$with_luratech != xno; then
   fi
 fi
 
-OPENJPEGDIR=openjpeg
+OPENJPEGDIR=$srcdir/openjpeg
+
+JPX_SSE_CFLAGS=""
+
+if test "x$HAVE_SSE2" = "x" ; then
+  if test $ac_cv_prog_gcc = yes; then
+    JPX_SSE_CFLAGS="-U__SSE__"
+  fi
+fi
 
 AC_ARG_ENABLE([openjpeg], AC_HELP_STRING([--disable-openjpeg],
         [Do not use OpenJPEG for JPX decoding]))
@@ -1379,9 +1388,9 @@ if test "x$JPX_DECODER" = "x"; then
       AC_CHECK_FUNCS([memalign], [have_memalign=1])
 
       if test "x$have_memalign" = "x1"; then
-        JPX_AUTOCONF_CFLAGS="-DUSE_OPENJPEG_JP2"
+        JPX_AUTOCONF_CFLAGS="-DUSE_OPENJPEG_JP2 $JPX_SSE_CFLAGS"
       else
-        JPX_AUTOCONF_CFLAGS="-DUSE_OPENJPEG_JP2 -D\"memalign(a,b)=malloc(b)\""
+        JPX_AUTOCONF_CFLAGS="-DUSE_OPENJPEG_JP2 $JPX_SSE_CFLAGS -D\"memalign(a,b)=malloc(b)\""
       fi
 
       JPXDEVS='$(PSD)jpx.dev'
@@ -1574,6 +1583,7 @@ P_DEVS0=""
 F_DEVS0=""
 CUPS_DEVS0=""
 SVG_DEVS0=""
+XPS_DEVS0=""
 JBIG2_DEVS=""
 IJS_DEVS0=""
 PNG_DEVS0=""
@@ -1604,9 +1614,10 @@ JPEG_DEVS='jpeg jpeggray jpegcmyk'
 
 PCX_DEVS='pcxmono pcxgray pcx16 pcx256 pcx24b pcxcmyk pcx2up'
 PBM_DEVS='pbm pbmraw pgm pgmraw pgnm pgnmraw pnm pnmraw ppm ppmraw pkm pkmraw pksm pksmraw pam pamcmyk4 pamcmyk32 plan plang planm planc plank'
-PS_DEVS='psdf psdcmyk psdrgb pdfwrite pswrite ps2write epswrite psgray psmono psrgb bbox txtwrite inkcov'
+PS_DEVS='psdf psdcmyk psdrgb pdfwrite ps2write epswrite bbox txtwrite inkcov'
 MISC_FDEVS='ccr cif inferno mag16 mag256 mgr4 mgr8 mgrgray2 mgrgray4 mgrgray8 mgrmono miff24 plan9bm sgirgb sunhmono bit bitrgb bitrgbtags bitcmyk devicen spotcmyk xcf'
 SVGDEV='svgwrite'
+XPSDEV='xpswrite'
 
 while test -n "$drivers"; do
         if echo $drivers |grep "," >/dev/null; then
@@ -1636,9 +1647,9 @@ while test -n "$drivers"; do
                 fi
                 ;;
         FILES)
-                F_DEVS0="$F_DEVS0 $BMP_DEVS $FAX_DEVS $JPEG_DEVS $TIFFDEVS $PCX_DEVS $PBM_DEVS $PS_DEVS $MISC_FDEVS $SVGDEV"
+                F_DEVS0="$F_DEVS0 $BMP_DEVS $FAX_DEVS $JPEG_DEVS $TIFFDEVS $PCX_DEVS $PBM_DEVS $PS_DEVS $MISC_FDEVS $SVGDEV $XPSDEV"
                 CUPS_DEVS0="$CUPSDEV"
-                JBIG2_DEVS="$JBIG2DEVS"
+                JBIG2_DEVS="$JBIG2FILEDEVS"
                 PNG_DEVS0="$PNGDEVS"
                 ;;
         APPLE)
@@ -1726,9 +1737,14 @@ while test -n "$drivers"; do
                 F_DEVS0="$F_DEVS0 $PS_DEVS"
                 ;;
         SVG)
-                # PostScript/PDF writing
+                # SVG writing
                 SVG_DEVS0="$SVGDEV"
                 ;;
+        XPS)
+                # SVG writing
+                XPS_DEVS0="$XPSDEV"
+                ;;
+
         ETS)
                 # ETS Halftoning devices
                 F_DEVS0="$F_DEVS0 $ETS_HALFTONING_DEVS"
@@ -1775,6 +1791,11 @@ if test x$enable_threadsafe = xyes; then
   done
 
   for ntsdev in $NTS_DEVS ; do
+    NTS_EXCLUDES="$(echo \"$XPS_DEVS0{[@]:0}\" | grep -o $ntsdev) $NTS_EXCLUDES"
+    XPS_DEVS0=`echo $XPS_DEVS0 | sed "s/\b$ntsdev\b//g"`
+  done
+
+  for ntsdev in $NTS_DEVS ; do
     NTS_EXCLUDES="$(echo \"$IJS_DEVS0{[@]:0}\" | grep -o $ntsdev) $NTS_EXCLUDES"
     IJS_DEVS0=`echo $IJS_DEVS0 | sed "s/\b$ntsdev\b//g"`
   done
@@ -1797,7 +1818,7 @@ if test x$enable_threadsafe = xyes; then
   NTS_EXCLUDES=`echo "$NTS_EXCLUDES" | tr " " "\n" | sort | uniq | tr "\n" " "`
 fi # x$enable_threadsafe = xyes
 
-noncontribmakefiles=`find . -name '*.mak' -print | grep -v '^\./contrib/'`
+noncontribmakefiles=`find $srcdir -name '*.mak' -print | grep -v '^\./contrib/'`
 
 # No need to include opvp/oprp driver without iconv/libiconv.
 if test -n "$P_DEVS0"; then
@@ -1823,6 +1844,10 @@ if test -n "$SVG_DEVS0"; then
     SVG_DEVS=`(for i in $SVG_DEVS0; do d='$(DD)'${i}.dev; if ( grep '^'$d $noncontribmakefiles  2>&1 >/dev/null) || ( ! test -z "$CONTRIBINCLUDE" ); then echo $d; fi; done) | sort | uniq | tr '\012\015' '  '`
 fi
 
+if test -n "$XPS_DEVS0"; then
+    XPS_DEVS=`(for i in $XPS_DEVS0; do d='$(DD)'${i}.dev; if ( grep '^'$d $noncontribmakefiles  2>&1 >/dev/null) || ( ! test -z "$CONTRIBINCLUDE" ); then echo $d; fi; done) | sort | uniq | tr '\012\015' '  '`
+fi
+
 if test -n "$IJS_DEVS0"; then
     IJS_DEVS=`(for i in $IJS_DEVS0; do d='$(DD)'${i}.dev; if ( grep '^'$d $noncontribmakefiles  2>&1 >/dev/null) || ( ! test -z "$CONTRIBINCLUDE" ); then echo $d; fi; done) | sort | uniq | tr '\012\015' '  '`
 fi
@@ -1839,6 +1864,7 @@ AC_SUBST(P_DEVS)
 AC_SUBST(F_DEVS)
 AC_SUBST(CUPS_DEVS)
 AC_SUBST(SVG_DEVS)
+AC_SUBST(XPS_DEVS)
 AC_SUBST(JBIG2_DEVS)
 AC_SUBST(IJS_DEVS)
 AC_SUBST(PNG_DEVS)
@@ -1853,40 +1879,50 @@ DYNAMIC_FLAGS=""
 DYNAMIC_LDFLAGS=""
 DYNAMIC_LIBS=""
 INSTALL_SHARED=""
-DYNANIC_LIB_EXT="so"
+SO_LIB_EXT=".so"
+DLL_EXT=""
+SO_LIB_VERSION_SEPARATOR="."
 
 case `uname` in
         Linux*|GNU*)
-        DYNAMIC_CFLAGS="-fPIC"
-        DYNAMIC_LDFLAGS="-fPIC -shared"
-        if test $ac_cv_prog_gcc = yes; then
+          DYNAMIC_CFLAGS="-fPIC"
+          DYNAMIC_LDFLAGS="-shared -Wl,\$(LD_SET_DT_SONAME)\$(LDFLAGS_SO_PREFIX)\$(GS_SONAME_MAJOR)"
+          if test $ac_cv_prog_gcc = yes; then
             # GCC high level flag
             DYNAMIC_LIBS="-rdynamic -ldl"
-        else
+          else
             DYNAMIC_LIBS=""
-        fi
-        DYNANIC_LIB_EXT="so"
+          fi
+          SO_LIB_EXT=".so"
+        ;;
+        MINGW*)
+          DYNAMIC_CFLAGS=""
+          DYNAMIC_LDFLAGS="-shared  -Wl,--out-implib=\$(BINDIR)/lib\$(GS_SO_BASE).dll.a -Wl,--export-all-symbols -Wl,--enable-auto-import"
+          SO_LIB_EXT=""
+          DLL_EXT=".dll"
+          SO_LIB_VERSION_SEPARATOR="-"
         ;;
         *BSD)
-        DYNAMIC_CFLAGS="-fPIC"
-        DYNAMIC_LDFLAGS="-fPIC -shared"
-        DYNAMIC_LIBS=""
-        DYNANIC_LIB_EXT="so"
+          DYNAMIC_CFLAGS="-fPIC"
+          DYNAMIC_LDFLAGS="-shared -Wl,\$(LD_SET_DT_SONAME)\$(LDFLAGS_SO_PREFIX)\$(GS_SONAME_MAJOR)"
+          DYNAMIC_LIBS=""
+          SO_LIB_EXT=".so"
         ;;
         Darwin*)
-        DYNAMIC_LDFLAGS="-dynamiclib"
-        DYNAMIC_LIBS=""
-        DYNANIC_LIB_EXT="dylib"
+          DYNAMIC_LDFLAGS="-dynamiclib -install_name \$(GS_SONAME_MAJOR_MINOR)"
+          DYNAMIC_LIBS=""
+          SO_LIB_EXT=".dylib"
         ;;
         SunOS)
-        if test $ac_cv_prog_gcc = yes; then
+          if test $ac_cv_prog_gcc = yes; then
             DYNAMIC_CFLAGS="-fPIC"
-        else
+          else
             DYNAMIC_CFLAGS="-KPIC"
-        fi
-        DYNAMIC_LDFLAGS="-G"
-        DYNAMIC_LIBS=""
-        DYNANIC_LIB_EXT="so"
+          fi
+-
+-          DYNAMIC_LDFLAGS="-G -shared -Wl,\$(LD_SET_DT_SONAME)\$(LDFLAGS_SO_PREFIX)\$(GS_SONAME_MAJOR)"
+-          DYNAMIC_LIBS=""
+-          SO_LIB_EXT=".so"
         ;;
 esac
 
@@ -1941,7 +1977,9 @@ AC_SUBST(DYNAMIC_LDFLAGS)
 AC_SUBST(DYNAMIC_LIBS)
 AC_SUBST(INSTALL_SHARED)
 AC_SUBST(X11_DEVS)
-AC_SUBST(DYNANIC_LIB_EXT)
+AC_SUBST(SO_LIB_EXT)
+AC_SUBST(DLL_EXT)
+AC_SUBST(SO_LIB_VERSION_SEPARATOR)
 
 dnl enable SAFER by default or not
 
@@ -2052,39 +2090,6 @@ AC_CHECK_FUNC([sqrtf], [SQRTF_SUBST=], [SQRTF_SUBST="-Dsqrtf=\"(float)sqrt\""])
 AC_SUBST(SQRTF_SUBST)
 
 dnl --------------------------------------------------
-dnl check for sse2 intrinsics
-dnl --------------------------------------------------
-
-AC_MSG_CHECKING([sse2 support])
-save_cflags=$CFLAGS
-CFLAGS="$CFLAGS $OPT_CFLAGS"
-
-HAVE_SSE2=""
-AC_LINK_IFELSE(
-  [AC_LANG_PROGRAM([#include <emmintrin.h>], [
-  __m128i input1;
-  unsigned char buf1[[128]];
-  input1 = _mm_loadu_si128((const __m128i *)buf1);
-  return(0);
-  ])],
-  [HAVE_SSE2="-DHAVE_SSE2"], [HAVE_SSE2=""])
-
-AC_ARG_ENABLE([sse2], AC_HELP_STRING([--disable-sse2],
-       [Do not use sse2 instrinsics]), [
-             if test "x$enable_sse2" = xno; then
-                HAVE_SSE2=""
-             fi])
-
-if test "x$HAVE_SSE2" != x; then
-  AC_MSG_RESULT(yes)
-else
-  AC_MSG_RESULT(no)
-fi
-
-AC_SUBST(HAVE_SSE2)
-CFLAGS=$save_cflags
-
-dnl --------------------------------------------------
 dnl check for byte swap intrinsics
 dnl --------------------------------------------------
 AC_MSG_CHECKING([byteswap support])
@@ -2165,6 +2170,7 @@ AUXDIRPOSTFIX=""
 case `uname` in
     MINGW*)
     AUXDIRPOSTFIX="_"
+    CFLAGS="-DGS_NO_UTF8=1 $CFLAGS"
     ;;
 esac
 AC_SUBST(AUXDIRPOSTFIX)
@@ -2179,11 +2185,6 @@ AC_SUBST(DBG_CFLAGS)
 AC_SUBST(GCFLAGS)
 AC_CONFIG_FILES([Makefile Resource/Init/gs_init.ps doc/version.texi])
 AC_OUTPUT
-
-if ( test -d cups ); then
-AC_OUTPUT(cups/gstopxl)
-chmod +x cups/gstopxl
-fi
 
 if test "x$AFS" = "x1"; then
    AC_MSG_WARN([Using "native" font scaler which is now deprecated (rather than freetype),])
