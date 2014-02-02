@@ -112,7 +112,9 @@ jbig2_decode_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment,
 
 	/* parse and build the runlength code huffman table */
 	for (index = 0; index < 35; index++) {
-	  runcodelengths[index].PREFLEN = jbig2_huffman_get_bits(hs, 4);
+	  runcodelengths[index].PREFLEN = jbig2_huffman_get_bits(hs, 4, &code);
+	  if (code < 0)
+	    goto cleanup1;
 	  runcodelengths[index].RANGELEN = 0;
 	  runcodelengths[index].RANGELOW = index;
 	  jbig2_error(ctx, JBIG2_SEVERITY_DEBUG, segment->number,
@@ -152,19 +154,22 @@ jbig2_decode_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment,
 	    range = 1;
 	  } else {
 	    if (code == 32) {
-	      len = symcodelengths[index-1].PREFLEN;
 	      if (index < 1) {
 		jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number,
 	 	  "error decoding symbol id table: run length with no antecedent!");
 	        code = -1;
-            goto cleanup1;
+                goto cleanup1;
 	      }
+	      len = symcodelengths[index-1].PREFLEN;
 	    } else {
 	      len = 0; /* code == 33 or 34 */
 	    }
-	    if (code == 32) range = jbig2_huffman_get_bits(hs, 2) + 3;
-	    else if (code == 33) range = jbig2_huffman_get_bits(hs, 3) + 3;
-	    else if (code == 34) range = jbig2_huffman_get_bits(hs, 7) + 11;
+	    err = 0;
+	    if (code == 32) range = jbig2_huffman_get_bits(hs, 2, &err) + 3;
+	    else if (code == 33) range = jbig2_huffman_get_bits(hs, 3, &err) + 3;
+	    else if (code == 34) range = jbig2_huffman_get_bits(hs, 7, &err) + 11;
+	    if (err < 0)
+	      goto cleanup1;
 	  }
 	  jbig2_error(ctx, JBIG2_SEVERITY_DEBUG, segment->number,
 	    "  read runcode%d at index %d (length %d range %d)", code, index, len, range);
@@ -274,11 +279,11 @@ cleanup1:
 	    if (params->SBSTRIPS == 1) {
 		CURT = 0;
 	    } else if (params->SBHUFF) {
-		CURT = jbig2_huffman_get_bits(hs, params->LOGSBSTRIPS);
+		CURT = jbig2_huffman_get_bits(hs, params->LOGSBSTRIPS, &code);
 	    } else {
 		code = jbig2_arith_int_decode(params->IAIT, as, &CURT);
-                if (code < 0) goto cleanup2;
 	    }
+	    if (code < 0) goto cleanup2;
 	    T = STRIPT + CURT;
 
 	    /* (3b.iv) / 6.4.10 - decode the symbol id */
@@ -311,11 +316,11 @@ cleanup1:
 	    }
 	    if (params->SBREFINE) {
 	      if (params->SBHUFF) {
-		RI = jbig2_huffman_get_bits(hs, 1);
+		RI = jbig2_huffman_get_bits(hs, 1, &code);
 	      } else {
 		code = jbig2_arith_int_decode(params->IARI, as, &RI);
-        if (code < 0) goto cleanup2;
 	      }
+	      if (code < 0) goto cleanup2;
 	    } else {
 		RI = 0;
 	    }
@@ -374,8 +379,9 @@ cleanup1:
 		rparams.DY = (RDH >> 1) + RDY;
 		rparams.TPGRON = 0;
 		memcpy(rparams.grat, params->sbrat, 4);
-		jbig2_decode_refinement_region(ctx, segment,
+		code = jbig2_decode_refinement_region(ctx, segment,
 		    &rparams, as, refimage, GR_stats);
+		if (code < 0) goto cleanup2;
 		IB = refimage;
 
 		jbig2_image_release(ctx, IBO);
@@ -829,7 +835,7 @@ jbig2_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment, const byte *segment_data
     }
 
     /* 7.4.3.2 (3) */
-    if (!params.SBHUFF && params.SBREFINE) {
+    {
 	int stats_size = params.SBRTEMPLATE ? 1 << 10 : 1 << 13;
 	GR_stats = jbig2_new(ctx, Jbig2ArithCx, stats_size);
     if (GR_stats == NULL)

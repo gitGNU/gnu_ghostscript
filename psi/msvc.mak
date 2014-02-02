@@ -60,7 +60,11 @@ DEBUGSYM=1
 !ifdef WIN64
 TARGET_ARCH_FILE=$(GLSRCDIR)\..\arch\windows-x64-msvc.h
 !else
+!ifdef ARM
+TARGET_ARCH_FILE=$(GLSRCDIR)\..\arch\windows-arm-msvc.h
+!else
 TARGET_ARCH_FILE=$(GLSRCDIR)\..\arch\windows-x86-msvc.h
+!endif
 !endif
 !endif
 
@@ -86,6 +90,9 @@ DEFAULT_OBJ_DIR=.\debugobj
 DEFAULT_OBJ_DIR=.\obj
 !endif
 !endif
+!endif
+!ifdef METRO
+DEFAULT_OBJ_DIR=$(DEFAULT_OBJ_DIR)rt
 !endif
 !ifdef WIN64
 DEFAULT_OBJ_DIR=$(DEFAULT_OBJ_DIR)64
@@ -118,9 +125,19 @@ GLSRCDIR=.\base
 !ifndef GLGENDIR
 GLGENDIR=$(DEFAULT_OBJ_DIR)
 !endif
+!ifndef DEVSRCDIR
+DEVSRCDIR=.\devices
+!endif
 !ifndef GLOBJDIR
 GLOBJDIR=$(DEFAULT_OBJ_DIR)
 !endif
+!ifndef DEVGENDIR
+DEVGENDIR=$(DEFAULT_OBJ_DIR)
+!endif
+!ifndef DEVOBJDIR
+DEVOBJDIR=$(DEFAULT_OBJ_DIR)
+!endif
+
 !ifndef PSSRCDIR
 PSSRCDIR=.\psi
 !endif
@@ -237,7 +254,11 @@ BUILD_SYSTEM=32
 !ifdef WIN64
 GS=gswin64
 !else
+!ifdef ARM
+GS=gswinARM
+!else
 GS=gswin32
+!endif
 !endif
 !endif
 !ifndef GSCONSOLE
@@ -248,7 +269,11 @@ GSCONSOLE=$(GS)c
 !ifdef WIN64
 GSDLL=gsdll64metro
 !else
+!ifdef ARM
+GSDLL=gsdllARM32metro
+!else
 GSDLL=gsdll32metro
+!endif
 !endif
 !else
 !ifdef WIN64
@@ -328,8 +353,13 @@ PNGSRCDIR=libpng
 
 !ifndef TIFFSRCDIR
 TIFFSRCDIR=tiff$(D)
+TIFFCONFDIR=$(TIFFSRCDIR)
 TIFFCONFIG_SUFFIX=.vc
 TIFFPLATFORM=win32
+!endif
+
+!ifndef TRIOSRCDIR
+TRIOSRCDIR=trio
 !endif
 
 # Define the directory where the zlib sources are stored.
@@ -437,10 +467,10 @@ CUPS_CC=$(CC) $(CFLAGS) -DWIN32 -DHAVE_BOOLEAN
 XCFLAGS=
 !endif
 
-# To try the UNICODE/UTF8 you can comment out the following
-# or specify USEUNICODE=1 when you invoke nmake
-!if !defined(USEUNICODE) || "$(USEUNICODE)" != "1"
-UNICODECFLAGS=/DWINDOWS_NO_UNICODE
+# We now build with unicode support by default. To avoid this, build
+# with GS_NO_UTF8=1.
+!if "$(GS_NO_UTF8)" != ""
+UNICODECFLAGS=/DGS_NO_UTF8
 !else
 UNICODECFLAGS=
 !endif
@@ -456,7 +486,10 @@ CFLAGS=$(CFLAGS) -DMEMENTO
 !ifdef METRO
 # Ideally the TIF_PLATFORM_CONSOLE define should only be for libtiff,
 # but we aren't set up to do that easily
-CFLAGS=$(CFLAGS) -DMETRO -DTIF_PLATFORM_CONSOLE
+CFLAGS=$(CFLAGS) -DMETRO -DWINAPI_FAMILY=WINAPI_PARTITION_APP -DTIF_PLATFORM_CONSOLE
+# WinRT doesn't allow ExitProcess() so we have to suborn it here.
+# it shouldn't matter since we actually rely on setjmp()/longjmp() for error handling in libtiff
+PNG_CFLAGS=/DExitProcess=exit
 !endif
 
 CFLAGS=$(CFLAGS) $(XCFLAGS) $(UNICODECFLAGS)
@@ -545,6 +578,9 @@ MSVC_VERSION=9
 MSVC_VERSION=10
 !endif
 !if "$(_NMAKE_VER)" == "11.00.50522.1"
+MSVC_VERSION=11
+!endif
+!if "$(_NMAKE_VER)" == "11.00.60315.1"
 MSVC_VERSION=11
 !endif
 !endif
@@ -711,6 +747,34 @@ LINKLIBPATH=/LIBPATH:"$(COMPBASE)\lib\amd64" /LIBPATH:"$(COMPBASE)\PlatformSDK\L
 !endif
 !endif
 
+!if "$(ARM)"=="1"
+VCINSTDIR=$(VS110COMNTOOLS)..\..\VC\
+
+!ifndef WINSDKVER
+WINSDKVER=8.0
+!endif
+
+!ifndef WINSDKDIR
+WINSDKDIR=$(VS110COMNTOOLS)..\..\..\Windows Kits\$(WINSDKVER)\
+!endif
+
+COMPAUX__="$(VCINSTDIR)\bin\cl.exe"
+COMPAUXCFLAGS=/I"$(VCINSTDIR)\INCLUDE" /I"$(VCINSTDIR)\ATLMFC\INCLUDE" \
+/I"$(WINSDKDIR)\include\shared" /I"$(WINSDKDIR)\include\um" \
+/I"$(WINDSKDIR)include\winrt"
+
+COMPAUXLDFLAGS=/LIBPATH:"$(VCINSTDIR)\LIB" \
+/LIBPATH:"$(VCINSTDIR)\ATLMFC\LIB" \
+/LIBPATH:"$(WINSDKDIR)\lib\win8\um\x86"
+
+COMPAUX=$(COMPAUX__) $(COMPAUXCFLAGS)
+
+!else
+
+COMPAUXLDFLAGS=""
+
+!endif
+
 # Some environments don't want to specify the path names for the tools at all.
 # Typical definitions for such an environment would be:
 #   MSINCDIR= LIBDIR= COMP=cl COMPAUX=cl RCOMP=rc LINK=link
@@ -850,6 +914,7 @@ CPU_TYPE=486
 # We'll assume that if you have an x86 machine, you've got a modern
 # enough one to have SSE2 instructions. If you don't, then predefine
 # DONT_HAVE_SSE2 when calling this makefile
+!ifndef ARM
 !if "$(CPU_FAMILY)" == "i386"
 !ifndef DONT_HAVE_SSE2
 !ifndef HAVE_SSE2
@@ -860,6 +925,9 @@ CPU_TYPE=486
 !endif
 HAVE_SSE2=1
 CFLAGS=$(CFLAGS) /DHAVE_SSE2
+# add "/D__SSE__" here, but causes crashes just now
+JPX_SSE_CFLAGS=
+!endif
 !endif
 !endif
 
@@ -897,9 +965,9 @@ JPXSRCDIR=openjpeg
 !endif
 !ifndef JPX_CFLAGS
 !ifdef WIN64
-JPX_CFLAGS=-DUSE_OPENJPEG_JP2 -DWIN64 
+JPX_CFLAGS=-DUSE_OPENJPEG_JP2 $(JPX_SSE_CFLAGS) -DWIN64
 !else
-JPX_CFLAGS=-DUSE_OPENJPEG_JP2 -DWIN32 
+JPX_CFLAGS=-DUSE_OPENJPEG_JP2 $(JPX_SSE_CFLAGS) -DWIN32
 !endif
 !else
 JPX_CFLAGS = $JPX_CFLAGS -DUSE_OPENJPEG_JP2
@@ -959,22 +1027,22 @@ STDIO_IMPLEMENTATION=c
 !ifdef METRO
 DEVICE_DEVS=
 !else
-DEVICE_DEVS=$(DD)display.dev $(DD)mswindll.dev $(DD)mswinpr2.dev
+DEVICE_DEVS=$(DD)display.dev $(DD)mswindll.dev $(DD)mswinpr2.dev $(DD)ijs.dev
 !endif
 DEVICE_DEVS2=$(DD)epson.dev $(DD)eps9high.dev $(DD)eps9mid.dev $(DD)epsonc.dev $(DD)ibmpro.dev
 DEVICE_DEVS3=$(DD)deskjet.dev $(DD)djet500.dev $(DD)laserjet.dev $(DD)ljetplus.dev $(DD)ljet2p.dev
 DEVICE_DEVS4=$(DD)cdeskjet.dev $(DD)cdjcolor.dev $(DD)cdjmono.dev $(DD)cdj550.dev
-DEVICE_DEVS5=$(DD)uniprint.dev $(DD)djet500c.dev $(DD)declj250.dev $(DD)lj250.dev $(DD)ijs.dev
+DEVICE_DEVS5=$(DD)uniprint.dev $(DD)djet500c.dev $(DD)declj250.dev $(DD)lj250.dev
 DEVICE_DEVS6=$(DD)st800.dev $(DD)stcolor.dev $(DD)bj10e.dev $(DD)bj200.dev
 DEVICE_DEVS7=$(DD)t4693d2.dev $(DD)t4693d4.dev $(DD)t4693d8.dev $(DD)tek4696.dev
 DEVICE_DEVS8=$(DD)pcxmono.dev $(DD)pcxgray.dev $(DD)pcx16.dev $(DD)pcx256.dev $(DD)pcx24b.dev $(DD)pcxcmyk.dev
 DEVICE_DEVS9=$(DD)pbm.dev $(DD)pbmraw.dev $(DD)pgm.dev $(DD)pgmraw.dev $(DD)pgnm.dev $(DD)pgnmraw.dev $(DD)pkmraw.dev
 DEVICE_DEVS10=$(DD)tiffcrle.dev $(DD)tiffg3.dev $(DD)tiffg32d.dev $(DD)tiffg4.dev $(DD)tifflzw.dev $(DD)tiffpack.dev
-DEVICE_DEVS11=$(DD)bmpmono.dev $(DD)bmpgray.dev $(DD)bmp16.dev $(DD)bmp256.dev $(DD)bmp16m.dev $(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiff48nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiff64nc.dev $(DD)tiffsep.dev $(DD)tiffsep1.dev $(DD)tiffscaled.dev $(DD)tiffscaled8.dev $(DD)tiffscaled24.dev $(DD)tiffscaled4.dev
-DEVICE_DEVS12=$(DD)psmono.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
+DEVICE_DEVS11=$(DD)bmpmono.dev $(DD)bmpgray.dev $(DD)bmp16.dev $(DD)bmp256.dev $(DD)bmp16m.dev $(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiff48nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiff64nc.dev $(DD)tiffsep.dev $(DD)tiffsep1.dev $(DD)tiffscaled.dev $(DD)tiffscaled8.dev $(DD)tiffscaled24.dev $(DD)tiffscaled32.dev $(DD)tiffscaled4.dev
+DEVICE_DEVS12=$(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
 DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pngmonod.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev $(DD)jpegcmyk.dev
-DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)txtwrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev $(DD)svgwrite.dev $(DD)inkcov.dev
+DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)txtwrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev $(DD)svgwrite.dev $(DD)xpswrite.dev $(DD)inkcov.dev
 DEVICE_DEVS16=$(DD)bbox.dev $(DD)plib.dev $(DD)plibg.dev $(DD)plibm.dev $(DD)plibc.dev $(DD)plibk.dev $(DD)plan.dev $(DD)plang.dev $(DD)planm.dev $(DD)planc.dev $(DD)plank.dev
 !if "$(WITH_CUPS)" == "1"
 DEVICE_DEVS16=$(DEVICE_DEVS16) $(DD)cups.dev
@@ -983,7 +1051,7 @@ DEVICE_DEVS16=$(DEVICE_DEVS16) $(DD)cups.dev
 DEVICE_DEVS17=$(DD)ljet3.dev $(DD)ljet3d.dev $(DD)ljet4.dev $(DD)ljet4d.dev
 DEVICE_DEVS18=$(DD)pj.dev $(DD)pjxl.dev $(DD)pjxl300.dev $(DD)jetp3852.dev $(DD)r4081.dev
 DEVICE_DEVS19=$(DD)lbp8.dev $(DD)m8510.dev $(DD)necp6.dev $(DD)bjc600.dev $(DD)bjc800.dev
-DEVICE_DEVS20=$(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev $(DD)pamcmyk32.dev $(DD)pamcmyk4.dev
+DEVICE_DEVS20=$(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev $(DD)pamcmyk32.dev $(DD)pamcmyk4.dev $(DD)pnmcmyk.dev
 DEVICE_DEVS21=$(DD)spotcmyk.dev $(DD)devicen.dev $(DD)bmpsep1.dev $(DD)bmpsep8.dev $(DD)bmp16m.dev $(DD)bmp32b.dev $(DD)psdcmyk.dev $(DD)psdrgb.dev $(DD)cp50.dev
 !endif
 CONTRIB_DEVS=$(DD)pcl3.dev $(DD)hpdjplus.dev $(DD)hpdjportable.dev $(DD)hpdj310.dev $(DD)hpdj320.dev $(DD)hpdj340.dev $(DD)hpdj400.dev $(DD)hpdj500.dev $(DD)hpdj500c.dev $(DD)hpdj510.dev $(DD)hpdj520.dev $(DD)hpdj540.dev $(DD)hpdj550c.dev $(DD)hpdj560c.dev $(DD)hpdj600.dev $(DD)hpdj660c.dev $(DD)hpdj670c.dev $(DD)hpdj680c.dev $(DD)hpdj690c.dev $(DD)hpdj850c.dev $(DD)hpdj855c.dev $(DD)hpdj870c.dev $(DD)hpdj890c.dev $(DD)hpdj1120c.dev $(DD)cdj670.dev $(DD)cdj850.dev $(DD)cdj880.dev $(DD)cdj890.dev $(DD)cdj970.dev $(DD)cdj1600.dev $(DD)cdnj500.dev $(DD)chp2200.dev $(DD)lips3.dev $(DD)lxm3200.dev $(DD)lex2050.dev $(DD)lxm3200.dev $(DD)lex5700.dev $(DD)lex7000.dev $(DD)oki4w.dev $(DD)gdi.dev $(DD)samsunggdi.dev $(DD)dl2100.dev $(DD)la50.dev $(DD)la70.dev $(DD)la75.dev $(DD)la75plus.dev $(DD)ln03.dev $(DD)xes.dev $(DD)md2k.dev $(DD)md5k.dev $(DD)lips4.dev $(DD)bj10v.dev $(DD)bj10vh.dev $(DD)md50Mono.dev $(DD)md50Eco.dev $(DD)md1xMono.dev $(DD)lp2000.dev $(DD)escpage.dev $(DD)npdl.dev $(DD)rpdl.dev $(DD)fmpr.dev $(DD)fmlbp.dev $(DD)jj100.dev $(DD)lbp310.dev $(DD)lbp320.dev $(DD)mj700v2c.dev $(DD)mj500c.dev $(DD)mj6000c.dev $(DD)mj8000c.dev $(DD)pr201.dev $(DD)pr150.dev $(DD)pr1000.dev $(DD)pr1000_4.dev $(DD)lips2p.dev $(DD)bjc880j.dev $(DD)mag16.dev $(DD)mag256.dev $(DD)bjcmono.dev $(DD)bjcgray.dev $(DD)bjccmyk.dev $(DD)bjccolor.dev
@@ -1034,20 +1102,28 @@ GSDLL_OBJS=$(PSOBJ)gsdll.$(OBJ) $(GLOBJ)gp_msdll.$(OBJ)
 $(PSGEN)lib.rsp: $(TOP_MAKEFILES)
 	echo /NODEFAULTLIB:LIBC.lib > $(PSGEN)lib.rsp
 	echo /NODEFAULTLIB:LIBCMT.lib >> $(PSGEN)lib.rsp
+!ifdef METRO
+	echo kernel32.lib runtimeobject.lib rpcrt4.lib >> $(PSGEN)lib.rsp
+!else
 	echo LIBCMTD.lib >> $(PSGEN)lib.rsp
+!endif
 !else
 $(PSGEN)lib.rsp: $(TOP_MAKEFILES)
 	echo /NODEFAULTLIB:LIBC.lib > $(PSGEN)lib.rsp
 	echo /NODEFAULTLIB:LIBCMTD.lib >> $(PSGEN)lib.rsp
+!ifdef METRO
+	echo kernel32.lib runtimeobject.lib rpcrt4.lib >> $(PSGEN)lib.rsp
+!else
 	echo LIBCMT.lib >> $(PSGEN)lib.rsp
+!endif
 !endif
 
 
 !if $(MAKEDLL)
 # The graphical small EXE loader
 !ifdef METRO
-# Avoid window usage for Metro for now. This means no GS_XE, only GSCONSOLE_XE
-$(GS_XE): $(GSDLL_DLL) $(GSCONSOLE_XE) $(GLOBJ)gp_wutf8.$(OBJ)
+# For METRO build only the dll
+$(GS_XE): $(GSDLL_DLL)
 
 !else
 $(GS_XE): $(GSDLL_DLL)  $(DWOBJ) $(GSCONSOLE_XE) $(GLOBJ)gp_wutf8.$(OBJ)
@@ -1170,6 +1246,7 @@ mementobsc:
 PROFILEDEFS=PROFILE=1
 
 profile:
+profile-target:
 	nmake -f $(MAKEFILE) DEVSTUDIO="$(DEVSTUDIO)" FT_BRIDGE=$(FT_BRIDGE) $(PROFILEDEFS) $(WINDEFS)
 
 profileclean:

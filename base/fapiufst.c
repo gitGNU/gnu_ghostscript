@@ -45,7 +45,7 @@
 #include "gxfapi.h"
 
 #include "gzstate.h"
-#include "gdevpsf.h"
+
 #include "gscrypt1.h"
 #include "gxfcid.h"
 #include "gsstype.h"
@@ -699,7 +699,7 @@ pack_long(LPUB8 * p, UL32 v)
 static inline void
 pack_float(LPUB8 * p, float v)
 {
-    sprintf((char *)(*p), "%f", v);
+    gs_sprintf((char *)(*p), "%f", v);
     *p += strlen((const char *)*p) + 1;
 }
 
@@ -1683,7 +1683,7 @@ get_char(fapi_ufst_server * r, gs_fapi_font * ff, gs_fapi_char_ref * c,
         fc->ExtndFlags |= savehint;
         (void)CGIFfont(FSA fc);
     }
-    if (result == NULL
+    if ((result == NULL && code != ERR_bm_buff && code != ERR_bm_too_big)
         || (code && code != ERR_fixed_space && code != ERR_bm_buff
             && code != ERR_bm_too_big)) {
         /* There is no such char in the font, try the glyph 0 (notdef) : */
@@ -1782,8 +1782,24 @@ get_char(fapi_ufst_server * r, gs_fapi_font * ff, gs_fapi_char_ref * c,
     else if (result) {
         IFOUTLINE *pol = (IFOUTLINE *) result;
 
-        design_escapement[0] = glyph_width[0];
-        design_escapement[1] = glyph_width[1];
+        if (glyph_width[0] == 0x7fff) { /* not found */
+            design_escapement[0] = pol->escapement;
+        }
+        else {
+            design_escapement[0] = glyph_width[0];
+        }
+        if (ff->is_vertical) {
+            if (glyph_width[1] == 0x7fff) { /* not found */
+                design_escapement[1] = pol->advanceHeight;
+            }
+            else {
+                design_escapement[1] = glyph_width[1];
+            }
+        }
+        else {
+            design_escapement[1] = 0;
+        }
+
         du_emx = pol->du_emx;
         du_emy = pol->du_emy;
 

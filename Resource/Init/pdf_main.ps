@@ -458,7 +458,7 @@ pdfdict begin
    pop				% We do not need the position.
    0				% Initialize xref table error counter
    { PDFfile token pop		% first object # or trailer
-     dup /trailer eq { pop exit } if
+     dup /trailer eq { pop Objects llength 0 eq {/setxrefentry cvx /syntaxerror signalerror} {exit} ifelse } if
      PDFfile token pop		% entry count
  
      % remaining must be whitespace only (otherwise this xref Size was invalid.
@@ -590,9 +590,20 @@ currentdict /xref-char-dict undef
    /Classic-xref //false store
    PDFfile exch setfileposition		% move to start of object
         % Get object number, revision, and 'obj' and discard
-   PDFfile token pop pop
-   PDFfile token pop pop
-   PDFfile token pop pop
+   //false PDFfile token {
+     type /integertype eq {
+       PDFfile token {
+         type /integertype eq {
+           PDFfile token {
+             /obj eq or
+           } if
+         } if
+       } if
+     } if
+   } if
+   not {
+     /readpdf15xref cvx /syntaxerror signalerror
+   } if
         % Get the XRef dicitionary
    /dictlevelcount 0 def PDFfile xrefopdict .pdfrun
         % Verify that we have an XRef dictionary
@@ -821,7 +832,15 @@ currentdict /xref-char-dict undef
     } ifelse
   } if
   Trailer /Root oget /PageLabels knownoget {
-     .pdfpagelabels
+    %% Currenlty only the pdfwrite device can handle PageLabels
+    %% because we deal with these using putparams, not pdfmarks
+    %% This is because the pdfmark syntax can't handle all the
+    %% possible page label formats in a PDF file!
+    currentdevice .devicename /pdfwrite eq {
+      .pdfpagelabels
+    } {
+      pop
+    } ifelse
   } if
 } bind def
 
@@ -1254,11 +1273,15 @@ currentdict /xref-char-dict undef
     dup 1 def
     dup /Kids knownoget {
       { oforce
-        currentdict 1 index known {
-          (   **** Error: there's a loop in the page tree. Giving up.\n) pdfformaterror
-          /verify_page_tree cvx /syntaxerror signalerror
-        } if
-        verify_page_tree_recursive
+        dup //null ne {
+          currentdict 1 index known {
+            (   **** Error: there's a loop in the page tree. Giving up.\n) pdfformaterror
+            /verify_page_tree cvx /syntaxerror signalerror
+          } if
+          verify_page_tree_recursive
+        } {
+          pop
+        } ifelse
       } forall
     } if
     currentdict exch undef
@@ -1337,6 +1360,14 @@ currentdict /xref-char-dict undef
 % Arrange the four elements that define a rectangle into a 'normal' order.
 /normrect_elems   % <x1> <y1> <x2> <y2> normrect_elems <llx> <lly> <urx> <ury>
 {
+    4 { % Bug 693919
+      dup type dup /integertype ne exch /realtype ne and {
+         (   **** Warning: replacing malformed number ') pdfformaterror pdfstring cvs pdfformaterror
+         (' with 0.\n) pdfformaterror
+         0
+      } if
+      4 1 roll
+    } repeat
     exch 4 1 roll			% <x2> <x1> <y1> <y2>
     2 copy gt { exch } if		% <x2> <x1> <lly> <ury>
     4 2 roll 2 copy lt { exch } if	% <lly> <ury> <urx> <llx>

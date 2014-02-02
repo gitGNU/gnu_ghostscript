@@ -14,6 +14,9 @@
 */
 
 
+/* prevent gp.h from defining fopen */
+#define fopen fopen
+
 
 #ifndef __CARBON__
 //#include "MacHeaders"
@@ -54,6 +57,7 @@
 #include <console.h>
 
 #include "gx.h"
+
 #include "gp.h"
 #include "gpmisc.h"
 #include "gxdevice.h"
@@ -162,7 +166,7 @@ getenv(const char * env) {
                 convertSpecToPath(&pFile, fpath, 256);
 //		sprintf(fpath,"%s",fpath);
                 p = (char*)malloc((size_t) ( 4*strlen(fpath) + 40));
-                sprintf(p,"%s,%sGhostscript:lib,%sGhostscript:fonts",
+                gs_sprintf(p,"%s,%sGhostscript:lib,%sGhostscript:fonts",
                                                 (char *)&fpath[0],(char *)&fpath[0],
                                                 (char *)&fpath[0] );
 
@@ -402,9 +406,9 @@ gp_open_scratch_file (const gs_memory_t *mem,
                 }
                 FSMakeFSSpec(foundVRefNum, foundDirID,thepfname, &fSpec);
                 convertSpecToPath(&fSpec, thefname, sizeof(thefname) - 1);
-                sprintf(fname,"%s",thefname);
+                gs_sprintf(fname,"%s",thefname);
    } else {
-       sprintf((char*)&thefname[0],"%s\0",fname);
+       gs_sprintf((char*)&thefname[0],"%s\0",fname);
        memmove((char*)&thepfname[1],(char *)&thefname[0],strlen(thefname));
            thepfname[0]=strlen(thefname);
    }
@@ -535,9 +539,9 @@ gp_fopen (const char * fname, const char * mode) {
 //(*pgsdll_callback) (GSDLL_STDOUT, thefname, strlen(fname));
    if ( strrchr(fname,':') == NULL )
 //      sprintf((char *)&thefname[0],"%s%s\0",g_homeDir,fname);
-      sprintf((char *)&thefname[0],"%s%s\0","",fname);
+      gs_sprintf((char *)&thefname[0],"%s%s\0","",fname);
    else
-       sprintf((char*)&thefname[0],"%s\0",fname);
+       gs_sprintf((char*)&thefname[0],"%s\0",fname);
 
    fid = fopen(thefname,mode);
 

@@ -65,7 +65,7 @@ s_jbig2decode_error(void *error_callback_data, const char *msg, Jbig2Severity se
         default: type = "unknown message:"; break;;
     }
     if (seg_idx == -1) segment[0] = '\0';
-    else sprintf(segment, "(segment 0x%02x)", seg_idx);
+    else gs_sprintf(segment, "(segment 0x%02x)", seg_idx);
 
     if (state)
     {
@@ -77,8 +77,10 @@ s_jbig2decode_error(void *error_callback_data, const char *msg, Jbig2Severity se
     }
     else
     {
-        // FIXME error_callback_data should be updated so that jbig2_ctx_new is not called
-        // with a NULL argument (see jbig2.h) and we never reach here with a NULL state
+/*
+        FIXME error_callback_data should be updated so that jbig2_ctx_new is not called
+        with a NULL argument (see jbig2.h) and we never reach here with a NULL state
+*/
         if (severity == JBIG2_SEVERITY_FATAL) {
             dlprintf3("jbig2dec %s %s %s\n", type, msg, segment);
         } else {

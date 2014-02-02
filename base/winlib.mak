@@ -56,11 +56,11 @@ CUPS_CC=$(CC) $(CFLAGS) -DWIN32
 
 # Define the platform name.
 
-!ifndef PLATFORM
+!ifndef GSPLATFORM
 !ifdef METRO
-PLATFORM=metro_
+GSPLATFORM=metro_
 !else
-PLATFORM=mswin32_
+GSPLATFORM=mswin32_
 !endif
 !endif
 
@@ -126,13 +126,14 @@ BEGINFILES=$(GLGENDIR)\ccf32.tr\
  $(GLOBJDIR)\*.res $(GLOBJDIR)\*.ico\
  $(BINDIR)\$(GSDLL).dll $(BINDIR)\$(GSCONSOLE).exe\
  $(BINDIR)\setupgs.exe $(BINDIR)\uninstgs.exe\
- $(GLOBJDIR)\cups\*.h\
+ $(GLOBJDIR)\cups\*.h $(AUXDIR)\*.sbr $(AUXDIR)\*.pdb \
  $(BEGINFILES2)
 
 # Include the generic makefiles.
 #!include $(COMMONDIR)/pcdefs.mak
 #!include $(COMMONDIR)/generic.mak
 !include $(GLSRCDIR)\gs.mak
+!include $(GLSRCDIR)\trio.mak
 !include $(GLSRCDIR)\lib.mak
 !include $(GLSRCDIR)\freetype.mak
 !if "$(UFST_BRIDGE)"=="1"
@@ -151,8 +152,8 @@ BEGINFILES=$(GLGENDIR)\ccf32.tr\
 !include $(GLSRCDIR)\ijs.mak
 !include $(GLSRCDIR)\lcups.mak
 !include $(GLSRCDIR)\lcupsi.mak
-!include $(GLSRCDIR)\devs.mak
-!include $(GLSRCDIR)\contrib.mak
+!include $(DEVSRCDIR)\devs.mak
+!include $(DEVSRCDIR)\contrib.mak
 !include $(CONTRIBDIR)\contrib.mak
 
 # Define the compilation rule for Windows devices.
@@ -194,6 +195,9 @@ $(GLOBJ)gp_mswin.$(OBJ): $(GLSRC)gp_mswin.c $(AK) $(gp_mswin_h) \
 $(GLOBJ)gp_wutf8.$(OBJ): $(GLSRC)gp_wutf8.c $(windows__h)
 	$(GLCCWIN) $(GLO_)gp_wutf8.$(OBJ) $(C_) $(GLSRC)gp_wutf8.c
 
+$(AUX)gp_wutf8.$(OBJ): $(GLSRC)gp_wutf8.c $(windows__h)
+	$(GLCCAUX) $(AUXO_)gp_wutf8.$(OBJ) $(C_) $(GLSRC)gp_wutf8.c
+
 $(GLOBJ)gp_wgetv.$(OBJ): $(GLSRC)gp_wgetv.c $(AK) $(gscdefs_h)
 	$(GLCCWIN) $(GLO_)gp_wgetv.$(OBJ) $(C_) $(GLSRC)gp_wgetv.c
 
@@ -205,15 +209,25 @@ $(GLOBJ)gp_stdia.$(OBJ): $(GLSRC)gp_stdia.c $(AK)\
 	$(GLCCWIN) $(GLO_)gp_stdia.$(OBJ) $(C_) $(GLSRC)gp_stdia.c
 
 # The Metro platform
+!ifdef METRO
+METRO_OBJS=$(GLOBJ)winrtsup.$(OBJ) $(GLOBJ)gp_wutf8.$(OBJ)
+
+$(GLOBJ)winrtsup.$(OBJ): $(GLSRCDIR)/winrtsup.cpp
+	$(GLCCWIN) /EHsc $(GLO_)winrtsup.$(OBJ) $(C_) $(GLSRCDIR)/winrtsup.cpp
+!else
+METRO_OBJS=
+!endif
+
 
 metro__=$(GLOBJ)gp_mswin.$(OBJ) $(GLOBJ)gp_wgetv.$(OBJ) $(GLOBJ)gp_wpapr.$(OBJ)\
-  $(GLOBJ)gp_stdia.$(OBJ)
+  $(GLOBJ)gp_stdia.$(OBJ) $(METRO_OBJS)
 #$(GLOBJ)gp_wutf8.$(OBJ)
 metro_inc=$(GLD)nosync.dev $(GLD)winplat.dev
 
 $(GLGEN)metro_.dev:  $(metro__) $(ECHOGS_XE) $(metro_inc)
 	$(SETMOD) $(GLGEN)metro_ $(metro__)
 	$(ADDMOD) $(GLGEN)metro_ -include $(metro_inc)
+
 
 # Define MS-Windows handles (file system) as a separable feature.
 

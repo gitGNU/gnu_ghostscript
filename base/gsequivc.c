@@ -322,7 +322,7 @@ update_spot_equivalent_cmyk_colors(gx_device * pdev, const gs_state * pgs,
             dev_profile->spotnames != NULL) {
             /* In this case, we are trying to set up the equivalent colors
                for the spots in the output ICC profile */
-            update_ICC_spot_equivalent_cmyk_colors(pdev, pgs, pcs, pdevn_params, 
+            update_ICC_spot_equivalent_cmyk_colors(pdev, pgs, pcs, pdevn_params,
                                                    pparams);
             pparams->all_color_info_valid = check_all_colors_known
                     (pdevn_params->separations.num_separations, pparams);
@@ -452,11 +452,20 @@ capture_spot_equivalent_cmyk_colors(gx_device * pdev, const gs_state * pgs,
     gs_imager_state temp_state = *((const gs_imager_state *)pgs);
     color_capture_device temp_device = { 0 };
     gx_device_color dev_color;
-    gsicc_rendering_param_t render_cond;   
+    gsicc_rendering_param_t render_cond;
     int code;
     cmm_dev_profile_t *dev_profile;
     cmm_profile_t *curr_output_profile;
-    cmm_dev_profile_t temp_profile;
+    cmm_dev_profile_t temp_profile = {	/* Initialize to 0's/NULL's */
+                          { 0 } /* device_profile[] */, 0 /* proof_profile */,
+                          0 /* link_profile */, 0 /* oi_profile */, 
+                          { {0} } /* rendercond[] */, 0 /* devicegraytok */, 
+                          0 /* graydection */, 0 /* pageneutralcolor */, 
+                          0 /* usefastcolor */, 0 /* supports_devn */,
+                          0 /* sim_overprint */, 0 /* spotnames */, 
+                          0 /* prebandthreshold */, 0 /* memory */, 
+                          { 0 } /* rc_header */
+                          };
 
     code = dev_proc(pdev, get_profile)(pdev, &dev_profile);
     gsicc_extract_profile(pdev->graphics_type_tag,
@@ -470,18 +479,15 @@ capture_spot_equivalent_cmyk_colors(gx_device * pdev, const gs_state * pgs,
     temp_device.color_info = pdev->color_info;
     temp_device.sep_num = sep_num;
     temp_device.pequiv_cmyk_colors = pparams;
-    temp_device.memory = pgs->memory; 
+    temp_device.memory = pgs->memory;
 
     temp_profile.usefastcolor = false;  /* This avoids a few headaches */
     temp_profile.prebandthreshold = true;
     temp_profile.supports_devn = false;
-    temp_profile.device_profile[1] = NULL;
-    temp_profile.device_profile[2] = NULL;
-    temp_profile.device_profile[2] = NULL;
-    temp_profile.link_profile = NULL;
-    temp_profile.proof_profile = NULL;
-    temp_profile.spotnames = NULL;
-    temp_profile.oi_profile = NULL;
+    temp_profile.rendercond[0] = render_cond;
+    temp_profile.rendercond[1] = render_cond;
+    temp_profile.rendercond[2] = render_cond;
+    temp_profile.rendercond[3] = render_cond;
     temp_device.icc_struct = &temp_profile;
 
     /* The equivalent CMYK colors are used for
@@ -512,6 +518,6 @@ capture_spot_equivalent_cmyk_colors(gx_device * pdev, const gs_state * pgs,
     temp_state.color_component_map.use_alt_cspace = true;
 
     /* Now capture the color */
-    pcs->type->remap_color (pcc, pcs, &dev_color, &temp_state, 
+    pcs->type->remap_color (pcc, pcs, &dev_color, &temp_state,
                             (gx_device *)&temp_device, gs_color_select_texture);
 }

@@ -100,6 +100,9 @@ BINDIR=.\bin
 !endif
 !ifndef GLSRCDIR
 GLSRCDIR=.\base
+!ifndef DEVSRCDIR
+DEVSRCDIR=.\devices
+!endif
 !ifndef PSRESDIR
 PSRESDIR=.\Resource
 !endif
@@ -118,6 +121,19 @@ GLOBJDIR=.\debugobj
 GLOBJDIR=.\obj
 !endif
 !endif
+
+!ifndef DEVGENDIR
+!if "$(DEBUG)"="1"
+DEVGENDIR=.\debugobj
+!else
+DEVGENDIR=.\obj
+!endif
+!endif
+
+!ifndef DEVOBJDIR
+DEVOBJDIR=$(DEVGENDIR)
+!endif
+
 
 # Do not edit the next group of lines.
 NUL=
@@ -434,14 +450,15 @@ TOP_MAKEFILES=$(MAKEFILE) $(GLSRCDIR)\msvccmd.mak $(GLSRCDIR)\msvctail.mak $(GLS
 # nmake expands macros when encountered, not when used,
 # so this must precede the !include statements.
 
-BEGINFILES2=$(GLOBJDIR)\$(GS).ilk $(GLOBJDIR)\$(GS).pdb $(GLOBJDIR)\genarch.ilk $(GLOBJDIR)\genarch.pdb $(GLOBJDIR)\*.sbr $(GLOBJDIR)\cups\*.h
+BEGINFILES2=$(GLOBJDIR)\$(GS).ilk $(GLOBJDIR)\$(GS).pdb $(GLOBJDIR)\genarch.ilk $(GLOBJDIR)\genarch.pdb \
+$(GLOBJDIR)\*.sbr $(GLOBJDIR)\cups\*.h $(AUXDIR)\*.sbr $(AUXDIR)\*.pdb
 
 # Define these right away because they modify the behavior of
 # msvccmd.mak, msvctail.mak & winlib.mak.
 
 LIB_ONLY=$(GLOBJDIR)\gslib.obj $(GLOBJDIR)\gsnogc.obj $(GLOBJDIR)\gconfig.obj $(GLOBJDIR)\gscdefs.obj $(GLOBJDIR)\gsromfs$(COMPILE_INITS).obj
 MAKEDLL=0
-PLATFORM=mslib32_
+GSPLATFORM=mslib32_
 
 !include $(GLSRCDIR)\msvccmd.mak
 !include $(GLSRCDIR)\winlib.mak

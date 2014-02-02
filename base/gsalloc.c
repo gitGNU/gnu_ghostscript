@@ -25,6 +25,20 @@
 #include "stream.h"		/* for clearing stream list */
 #include "malloc_.h" /* For MEMENTO */
 
+#if GS_USE_MEMORY_HEADER_ID
+gs_id hdr_id = 0;
+#ifdef DEBUG
+/**** BIG WARNING: Calling this could be catastrophic if "ptr" does not point
+ **** to a GS "struct" allocation.
+ ****/
+gs_id get_mem_hdr_id (void *ptr)
+{
+    return (*((hdr_id_t *)((byte *)ptr) - HDR_ID_OFFSET));
+}
+#endif
+#endif
+
+
 /*
  * Define whether to try consolidating space before adding a new chunk.
  * The default is not to do this, because it is computationally
@@ -252,17 +266,36 @@ ialloc_solo(gs_memory_t * parent, gs_memory_type_ptr_t pstype,
     byte *cdata = gs_alloc_bytes_immovable(parent, csize, "ialloc_solo");
     obj_header_t *obj = (obj_header_t *) (cdata + sizeof(chunk_head_t));
 
-    if (cp == 0 || cdata == 0)
+    if (cp == 0 || cdata == 0) {
+        gs_free_object(parent, cp, "ialloc_solo(allocation failure)");
+        gs_free_object(parent, cdata, "ialloc_solo(allocation failure)");
         return 0;
+    }
     alloc_init_chunk(cp, cdata, cdata + csize, false, (chunk_t *) NULL);
     cp->cbot = cp->ctop;
     cp->cprev = cp->cnext = 0;
     /* Construct the object header "by hand". */
+    obj->o_pad = 0;
     obj->o_alone = 1;
     obj->o_size = pstype->ssize;
     obj->o_type = pstype;
     *pcp = cp;
     return (void *)(obj + 1);
+}
+
+void
+ialloc_free_state(gs_ref_memory_t *iimem)
+{
+    chunk_t *cp;
+    gs_memory_t *mem;
+    if (iimem == NULL)
+        return;
+    cp = iimem->cfirst;
+    mem = iimem->non_gc_memory;
+    if (cp == NULL)
+        return;
+    gs_free_object(mem, cp->chead, "ialloc_solo(allocation failure)");
+    gs_free_object(mem, cp, "ialloc_solo(allocation failure)");
 }
 
 /*
@@ -504,6 +537,7 @@ gs_memory_set_vm_reclaim(gs_ref_memory_t * mem, bool enabled)
                 *pfl = *(obj_header_t **)ptr;\
                 ptr[-1].o_size = size;\
                 ptr[-1].o_type = pstype;\
+                ASSIGN_HDR_ID(ptr);\
                 /* If debugging, clear the block in an attempt to */\
                 /* track down uninitialized data errors. */\
                 gs_alloc_fill(ptr, gs_alloc_fill_alloc, size);
@@ -512,6 +546,7 @@ gs_memory_set_vm_reclaim(gs_ref_memory_t * mem, bool enabled)
         else if (size > max_freelist_size &&\
                  (ptr = large_freelist_alloc(imem, size)) != 0)\
         {	ptr[-1].o_type = pstype;\
+                ASSIGN_HDR_ID(ptr);\
                 /* If debugging, clear the block in an attempt to */\
                 /* track down uninitialized data errors. */\
                 gs_alloc_fill(ptr, gs_alloc_fill_alloc, size);
@@ -522,10 +557,12 @@ gs_memory_set_vm_reclaim(gs_ref_memory_t * mem, bool enabled)
              size < imem->large_size\
            )\
         {	imem->cc.cbot = (byte *)ptr + obj_size_round(size);\
+                ptr->o_pad = 0;\
                 ptr->o_alone = 0;\
                 ptr->o_size = size;\
                 ptr->o_type = pstype;\
                 ptr++;\
+                ASSIGN_HDR_ID(ptr);\
                 /* If debugging, clear the block in an attempt to */\
                 /* track down uninitialized data errors. */\
                 gs_alloc_fill(ptr, gs_alloc_fill_alloc, size);
@@ -953,6 +990,8 @@ i_alloc_string(gs_memory_t * mem, uint nbytes, client_name_t cname)
      */
     chunk_t *cp_orig = imem->pcc;
 
+    nbytes += HDR_ID_OFFSET;
+
 #ifdef MEMENTO
     if (Memento_failThisEvent())
         return NULL;
@@ -969,6 +1008,8 @@ top:
                    (ulong) (imem->cc.ctop - nbytes));
         str = imem->cc.ctop -= nbytes;
         gs_alloc_fill(str, gs_alloc_fill_alloc, nbytes);
+        str += HDR_ID_OFFSET;
+        ASSIGN_HDR_ID(str);
         return str;
     }
     /* Try the next chunk. */
@@ -1012,6 +1053,8 @@ i_alloc_string_immovable(gs_memory_t * mem, uint nbytes, client_name_t cname)
     uint asize;
     chunk_t *cp;
 
+    nbytes += HDR_ID_OFFSET;
+
 #ifdef MEMENTO
     if (Memento_failThisEvent())
         return NULL;
@@ -1028,8 +1071,12 @@ i_alloc_string_immovable(gs_memory_t * mem, uint nbytes, client_name_t cname)
                alloc_trace_space(imem), client_name_string(cname), nbytes,
                (ulong) str);
     gs_alloc_fill(str, gs_alloc_fill_alloc, nbytes);
+    str += HDR_ID_OFFSET;
+    ASSIGN_HDR_ID(str);
+
     return str;
 }
+
 static byte *
 i_resize_string(gs_memory_t * mem, byte * data, uint old_num, uint new_num,
                 client_name_t cname)
@@ -1039,7 +1086,12 @@ i_resize_string(gs_memory_t * mem, byte * data, uint old_num, uint new_num,
 
     if (old_num == new_num)	/* same size returns the same string */
         return data;
-    if (data == imem->cc.ctop &&	/* bottom-most string */
+
+    data -= HDR_ID_OFFSET;
+    old_num += HDR_ID_OFFSET;
+    new_num += HDR_ID_OFFSET;
+
+    if ( data == imem->cc.ctop &&	/* bottom-most string */
         (new_num < old_num ||
          imem->cc.ctop - imem->cc.cbot > new_num - old_num)
         ) {			/* Resize in place. */
@@ -1058,6 +1110,8 @@ i_resize_string(gs_memory_t * mem, byte * data, uint old_num, uint new_num,
         else
             gs_alloc_fill(data, gs_alloc_fill_free, old_num - new_num);
 #endif
+        ptr += HDR_ID_OFFSET;
+        ASSIGN_HDR_ID(ptr);
     } else
         if (new_num < old_num) {
             /* trim the string and create a free space hole */
@@ -1068,13 +1122,20 @@ i_resize_string(gs_memory_t * mem, byte * data, uint old_num, uint new_num,
             if_debug5m('A', mem, "[a%d:<> ]%s(%u->%u) 0x%lx\n",
                        alloc_trace_space(imem), client_name_string(cname),
                        old_num, new_num, (ulong)ptr);
+            ptr += HDR_ID_OFFSET;
+            ASSIGN_HDR_ID(ptr);
         } else {			/* Punt. */
+            data += HDR_ID_OFFSET;
+            old_num -= HDR_ID_OFFSET;
+            new_num -= HDR_ID_OFFSET;
+
             ptr = gs_alloc_string(mem, new_num, cname);
             if (ptr == 0)
                 return 0;
             memcpy(ptr, data, min(old_num, new_num));
             gs_free_string(mem, data, old_num, cname);
         }
+
     return ptr;
 }
 
@@ -1083,18 +1144,23 @@ i_free_string(gs_memory_t * mem, byte * data, uint nbytes,
               client_name_t cname)
 {
     gs_ref_memory_t * const imem = (gs_ref_memory_t *)mem;
-    if (data == imem->cc.ctop) {
-        if_debug4m('A', mem, "[a%d:-> ]%s(%u) 0x%lx\n",
-                   alloc_trace_space(imem), client_name_string(cname), nbytes,
-                   (ulong) data);
-        imem->cc.ctop += nbytes;
-    } else {
-        if_debug4m('A', mem, "[a%d:->#]%s(%u) 0x%lx\n",
-                   alloc_trace_space(imem), client_name_string(cname), nbytes,
-                   (ulong) data);
-        imem->lost.strings += nbytes;
+
+    if (data) {
+        data -= HDR_ID_OFFSET;
+        nbytes += HDR_ID_OFFSET;
+        if (data == imem->cc.ctop) {
+            if_debug4m('A', mem, "[a%d:-> ]%s(%u) 0x%lx\n",
+                       alloc_trace_space(imem), client_name_string(cname), nbytes,
+                       (ulong) data);
+            imem->cc.ctop += nbytes;
+        } else {
+            if_debug4m('A', mem, "[a%d:->#]%s(%u) 0x%lx\n",
+                       alloc_trace_space(imem), client_name_string(cname), nbytes,
+                       (ulong) data);
+            imem->lost.strings += nbytes;
+        }
+        gs_alloc_fill(data, gs_alloc_fill_free, nbytes);
     }
-    gs_alloc_fill(data, gs_alloc_fill_free, nbytes);
 }
 
 static gs_memory_t *
@@ -1251,6 +1317,7 @@ alloc_obj(gs_ref_memory_t *mem, ulong lsize, gs_memory_type_ptr_t pstype,
             return 0;
         ptr = (obj_header_t *) cp->cbot;
         cp->cbot += asize;
+        ptr->o_pad = 0;
         ptr->o_alone = 1;
         ptr->o_size = lsize;
     } else {
@@ -1355,6 +1422,7 @@ alloc_obj(gs_ref_memory_t *mem, ulong lsize, gs_memory_type_ptr_t pstype,
         else if (!mem->is_controlled ||
                  (ptr = scavenge_low_free(mem, (uint)lsize)) == 0)
             return 0;	/* allocation failed */
+        ptr->o_pad = 0;
         ptr->o_alone = 0;
         ptr->o_size = (uint) lsize;
     }
@@ -1364,6 +1432,7 @@ done:
         ptr->d.o.space_id = mem->space_id;
 #   endif
     ptr++;
+    ASSIGN_HDR_ID(ptr);
     gs_alloc_fill(ptr, gs_alloc_fill_alloc, lsize);
     return ptr;
 }
@@ -1605,11 +1674,13 @@ trim_obj(gs_ref_memory_t *mem, obj_header_t *obj, uint size, chunk_t *cp)
          * Something very weird is going on.  This probably shouldn't
          * ever happen, but if it does....
          */
+        pre_obj->o_pad = 0;
         pre_obj->o_alone = 0;
     }
     /* make excess into free obj */
     excess_pre->o_type = &st_free;  /* don't confuse GC */
     excess_pre->o_size = excess_size;
+    excess_pre->o_pad = 0;
     excess_pre->o_alone = 0;
     if (excess_size >= obj_align_mod) {
         /* Put excess object on a freelist */
@@ -2045,7 +2116,7 @@ debug_dump_contents(const gs_memory_t *mem, const byte * bot,
             }
             continue;
         }
-        sprintf(label, "0x%lx:", (ulong) block);
+        gs_sprintf(label, "0x%lx:", (ulong) block);
         debug_indent(mem, indent);
         dmputs(mem, label);
         for (i = 0; i < block_size; ++i) {

@@ -170,9 +170,9 @@ See <a href="#Limitations">Limitations</a> below.
 
 <p>
 Ghostscript passes the orientation values from DSC comments to
-<code>pdfwrite</code> driver
-but they are effectively ignored there. This appears to be consistent with
-Distiller 5 behavior.
+<code>pdfwrite</code> driver, and these are compared with the
+auto-rotate heuristic. If they are different then the auto-rotate
+value will be used. To use the DSC comment instead select AutoRotatePages=/None
 
 <hr>
 
@@ -1095,7 +1095,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 9.07, 12 February 2013
+<small>Ghostscript version 9.08, 14 August 2013
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

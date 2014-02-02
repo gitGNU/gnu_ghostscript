@@ -29,6 +29,7 @@
 #include "gxdevice.h"
 #include "gxdevmem.h"
 #include "gxclist.h"
+#include "gxclthrd.h"		/* for background printing */
 #include "gxrplane.h"
 #include "gsparam.h"
 
@@ -101,8 +102,8 @@ typedef struct gx_printer_device_procs_s {
 
     /*
      * Print the page on the output file.  Required only for devices
-     * where output_page is gdev_prn_output_page; ignored for other
-     * devices.
+     * where output_page is gdev_prn_output_page or gdev_prn_bg_output_page
+     * ignored for other devices (unless their output_page calls those).
      */
 
 #define prn_dev_proc_print_page(proc)\
@@ -223,6 +224,14 @@ struct gdev_prn_space_params_s {
     gdev_prn_banding_type banding_type;	/* used to force banding or bitmap */
 };
 
+typedef struct bg_print_s {
+    gx_semaphore_t *sema;		/* used by foreground to wait */
+    gx_device *device;			/* printer/clist device for bg printing */
+    gp_thread_id thread_id;
+    int num_copies;
+    int return_code;			/* result from background print thread */
+} bg_print_t;
+
 #define gx_prn_device_common\
         byte skip[max(sizeof(gx_device_memory), sizeof(gx_device_clist)) -\
                   sizeof(gx_device) + sizeof(double) /* padding */];\
@@ -253,6 +262,8 @@ struct gdev_prn_space_params_s {
         gx_device_printer *async_renderer;	/* in async writer, pointer to async renderer */\
         uint clist_disable_mask;	/* mask of clist options to disable */\
                 /* ---- End async rendering support --- */\
+        bool bg_print_requested;	/* request background printing of page from clist */\
+        bg_print_t bg_print;            /* background printing data shared with thread */\
         int num_render_threads_requested;	/* for multiple band rendering threads */\
         gx_device_procs save_procs_while_delaying_erasepage;	/* save device procs while delaying erasepage. */\
         gx_device_procs orig_procs	/* original (std_)procs */
@@ -262,6 +273,9 @@ struct gx_device_printer_s {
     gx_device_common;
     gx_prn_device_common;
 };
+
+/* A useful check to determine if the page is being rendered as a clist */
+#define PRINTER_IS_CLIST(pdev) ((gx_device_printer *)(pdev)->buffer_space != 0)
 
 extern_st(st_device_printer);
 #define public_st_device_printer()	/* in gdevprn.c */\
@@ -275,6 +289,9 @@ typedef dev_proc_print_page((*dev_proc_print_page_t));
 /* Standard device procedures for printers */
 dev_proc_open_device(gdev_prn_open);
 dev_proc_output_page(gdev_prn_output_page);
+dev_proc_output_page(gdev_prn_output_page_seekable);
+dev_proc_output_page(gdev_prn_bg_output_page);
+dev_proc_output_page(gdev_prn_bg_output_page_seekable);
 dev_proc_close_device(gdev_prn_close);
 #define gdev_prn_map_rgb_color gx_default_b_w_map_rgb_color
 #define gdev_prn_map_color_rgb gx_default_b_w_map_color_rgb
@@ -378,6 +395,7 @@ prn_dev_proc_buffer_page(gx_default_buffer_page); /* returns an error */
 /* The standard printer device procedures */
 /* (using gdev_prn_open/output_page/close). */
 extern const gx_device_procs prn_std_procs;
+extern const gx_device_procs prn_bg_procs;
 
 /*
  * Define macros for generating the device structure,
@@ -422,6 +440,8 @@ extern const gx_device_procs prn_std_procs;
         0/*false*/, duplex_set,	/* Duplex[_set] */\
         0/*false*/, 0, 0, 0, /* file_is_new ... buf */\
         0, 0, 0, 0, 0/*false*/, 0, 0, /* buffer_memory ... clist_dis'_mask */\
+        0/*false*/,	/* bg_print_requested */\
+        {  0/*sema*/, 0/*device*/, 0/*thread_id*/, 0/*num_copies*/, 0/*return_code*/ }, /* bg_print */\
         0, 		/* num_render_threads_requested */\
         { 0 },	/* save_procs_while_delaying_erasepage */\
         { 0 }	/* ... orig_procs */
@@ -571,7 +591,8 @@ int gdev_prn_color_usage(gx_device *dev, int y, int height,
                          int *range_start);
 /*
  * Determine the colors used in a saved page.  We still need the device
- * in order to know the total page height.
+ * in order to know the total page height. Saved pages are always
+ * clist, so we will get this using clist_read_color_usage_array.
  */
 int gx_page_info_color_usage(const gx_device *dev,
                              const gx_band_page_info_t *page_info,
@@ -692,7 +713,7 @@ typedef dev_proc_create_buf_device((*create_buf_device_proc_t));
 int gdev_create_buf_device(create_buf_device_proc_t cbd_proc,
                            gx_device **pbdev, gx_device *target, int y,
                            const gx_render_plane_t *render_plane,
-                           gs_memory_t *mem, gx_band_complexity_t *band_complexity);
+                           gs_memory_t *mem, gx_color_usage_t *color_usage);
 
 /* BACKWARD COMPATIBILITY */
 #define dev_print_scan_lines(dev)\

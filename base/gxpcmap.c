@@ -18,6 +18,7 @@
 #include "math_.h"
 #include "memory_.h"
 #include "gx.h"
+#include "gp.h"
 #include "gserrors.h"
 #include "gsstruct.h"
 #include "gsutil.h"             /* for gs_next_ids */
@@ -1147,13 +1148,13 @@ dump_raw_pattern(int height, int width, int n_chan, int depth,
     is_planar = dev_proc(mdev, dev_spec_op)(mdev, gxdso_is_native_planar, NULL, 0) > 0;
     max_bands = ( n_chan < 57 ? n_chan : 56);   /* Photoshop handles at most 56 bands */
     if (is_planar) {
-        sprintf(full_file_name,"%d)PATTERN_PLANE_%dx%dx%d.raw",global_pat_index,
+        gs_sprintf(full_file_name,"%d)PATTERN_PLANE_%dx%dx%d.raw",global_pat_index,
                 width,height,max_bands);
     } else {
-        sprintf(full_file_name,"%d)PATTERN_CHUNK_%dx%dx%d.raw",global_pat_index,
+        gs_sprintf(full_file_name,"%d)PATTERN_CHUNK_%dx%dx%d.raw",global_pat_index,
                 width,height,max_bands);
     }
-    fid = fopen(full_file_name,"wb");
+    fid = gp_fopen(full_file_name,"wb");
     if (depth >= 8) {
         /* Contone data. */
         if (is_planar) {

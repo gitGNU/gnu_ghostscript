@@ -21,6 +21,7 @@
 #include <stdlib.h>		/* for getenv */
 #include <string.h>
 #include "gscdefs.h"		/* for gs_productfamily and gs_revision and gs_serialnumber */
+#include "gssprintf.h"		/* for gs_sprintf when GS_NO_UTF8=1 */
 
 #if defined(__WIN32__) && !defined(METRO)
 /*
@@ -28,7 +29,7 @@
  * Key = hkeyroot\\key, named value = name.
  * name, ptr, plen and return values are the same as in gp_getenv();
  */
-#ifdef WINDOWS_NO_UNICODE
+#ifdef GS_NO_UTF8
 static int
 gp_getenv_registry(HKEY hkeyroot, const char *key, const char *name,
     char *ptr, int *plen)
@@ -58,7 +59,7 @@ gp_getenv_registry(HKEY hkeyroot, const char *key, const char *name,
     }
     return 1;	/* not found */
 }
-#else        /* ifdef WINDOWS_NO_UNICODE */
+#else        /* ifdef GS_NO_UTF8 */
 int
 gp_getenv_registry(HKEY hkeyroot, const wchar_t *key, const char *name,
     char *ptr, int *plen)
@@ -135,7 +136,7 @@ gp_getenv_registry(HKEY hkeyroot, const wchar_t *key, const char *name,
     free(wname);
     return 1;                           /* environment variable does not exist */
 }
-#endif        /* ifdef WINDOWS_NO_UNICODE */
+#endif        /* ifdef GS_NO_UTF8 */
 #endif    /* ifdef __WIN32__ */
 
 /* ------ Environment variables ------ */
@@ -144,6 +145,7 @@ gp_getenv_registry(HKEY hkeyroot, const wchar_t *key, const char *name,
 int
 gp_getenv(const char *name, char *ptr, int *plen)
 {
+#ifdef GS_NO_UTF8
     const char *str = getenv(name);
 
     if (str) {
@@ -159,6 +161,23 @@ gp_getenv(const char *name, char *ptr, int *plen)
         *plen = len + 1;
         return -1;
     }
+#else
+    const wchar_t *str = _wgetenv(name);
+
+    if (str) {
+        /* wchar_to_utf8 returns INCLUDING terminator */
+        int len = wchar_to_utf8(NULL, str);
+
+        if (len <= *plen) {
+            /* string fits */
+            *plen = wchar_to_utf8(ptr, str);
+            return 0;
+        }
+        /* string doesn't fit */
+        *plen = len;
+        return -1;
+    }
+#endif
     /* environment variable was not found */
 
 #if defined(__WIN32__) && !defined(METRO)
@@ -177,13 +196,13 @@ gp_getenv(const char *name, char *ptr, int *plen)
               && ((HIWORD(version) & 0x4000) == 0))) {
             /* not Win32s */
             int code;
-#ifdef WINDOWS_NO_UNICODE
+#ifdef GS_NO_UTF8
             char key[256];
             char dotversion[16];
 
-            sprintf(dotversion, "%d.%02d", (int)(gs_revision / 100),
+            gs_sprintf(dotversion, "%d.%02d", (int)(gs_revision / 100),
                     (int)(gs_revision % 100));
-            sprintf(key, "Software\\%s\\%s", gs_productfamily, dotversion);
+            gs_sprintf(key, "Software\\%s\\%s", gs_productfamily, dotversion);
 #else
             wchar_t key[256];
             wchar_t dotversion[16];
@@ -221,15 +240,15 @@ gp_serialnumber(void)
     byte buf[SERIALNUMBER_BUFSIZE];
     int buflen = SERIALNUMBER_BUFSIZE;
     int code, i;
-#ifdef WINDOWS_NO_UNICODE
+#ifdef GS_NO_UTF8
     char key[256];
 
-    sprintf(key, "Software\\Microsoft\\MSLicensing\\HardwareID");
-#else        /* WINDOWS_NO_UNICODE */
+    gs_sprintf(key, "Software\\Microsoft\\MSLicensing\\HardwareID");
+#else        /* GS_NO_UTF8 */
     wchar_t key[256];
 
     wsprintfW(key, L"Software\\Microsoft\\MSLicensing\\HardwareID");
-#endif        /* WINDOWS_NO_UNICODE */
+#endif        /* GS_NO_UTF8 */
     code = gp_getenv_registry(HKEY_LOCAL_MACHINE, key, "ClientHWID", (char *)buf, &buflen);
     if ( code != 0 )
         return (int)(gs_serialnumber); 	/* error - just return the default */

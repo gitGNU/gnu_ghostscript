@@ -1,4 +1,4 @@
-# Copyright (C) 2001-2012 Artifex Software, Inc.
+# Copyright (C) 2001-2013 Artifex Software, Inc.
 # All Rights Reserved.
 #
 # This software is provided AS-IS with no warranty, either express or
@@ -43,7 +43,7 @@ GLCPP=$(CPP) $(CO) $(I_)$(GLI_)$(_I)
 
 # Define the compilation rule for Windows interpreter code.
 # This requires PS*_ to be defined, so it has to come after int.mak.
-PSCCWIN=$(CC_WX) $(CCWINFLAGS) $(I_)$(PSI_)$(_I) $(PSF_)
+PSCCWIN=$(CC_WX) $(CCWINFLAGS) $(I_)$(PSI_)$(_I) $(I_)$(DEVSRCDIR)$(_I) $(PSF_)
 
 # Define the name of this makefile.
 WININT_MAK=$(PSSRC)winint.mak
@@ -204,7 +204,7 @@ nsis: $(PSSRC)nsisinst.nsi $(GSCONSOLE_XE) $(GS_ALL) $(GS_XE) $(GSDLL_DLL) $(BIN
 gs$(GS_VERSION)src.zip:
 	-rmdir /s /q gs$(GS_DOT_VERSION)
 	-del temp.zip
-	zip -r -X temp.zip LICENSE Resource arch base conrib cups doc examples expat freetype iccprofiles ijs jbig2dec jpeg jpegxr lcms lcms2 lib libpng man openjpeg psi tiff toolbin zlib -x ".svn/*" -x "*/.svn/*" -x "*/*/.svn/*" -x "*/*/*/.svn/*" -x "*/*/*/*/.svn/*" -x "*/*/*/*/*/.svn/*"
+	zip -r -X temp.zip LICENSE Resource arch base conrib cups doc examples expat freetype iccprofiles ijs jbig2dec jpeg jpegxr lcms lcms2 lib libpng man openjpeg psi tiff toolbin trio zlib -x ".svn/*" -x "*/.svn/*" -x "*/*/.svn/*" -x "*/*/*/.svn/*" -x "*/*/*/*/.svn/*" -x "*/*/*/*/*/.svn/*"
 	mkdir gs$(GS_DOT_VERSION)
 	cd gs$(GS_DOT_VERSION)
 	unzip -a ../temp.zip

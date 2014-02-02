@@ -389,7 +389,7 @@ specifications. Some examples are:
 <p><b>
 Note, however that the one page per file feature may not supported by all devices.
 Also, since some devices write output files when opened, there may be an extra
-blank page written (pdfwrite, ps2write, pswrite, pxlmono, pxlcolor, ...).
+blank page written (pdfwrite, ps2write, epswrite, pxlmono, pxlcolor, ...).
 </b>
 
 <p>
@@ -481,6 +481,13 @@ using the default page sizes in the <code>InputAttributes</code> dictionary,
 the command line option <code>-dNORANGEPAGESIZE</code> can be used. Using
 this option will result in automatic rotation of the document page if the requested
 page size matches one of the default page sizes.
+
+<p>
+When the <a href="#FIXEDMEDIA"><code>-dFIXEDMEDIA</code> switch</a> is given on the
+command line, the  <code>InputAttributes</code> dictionary will only be populated
+with the single page size. This allows the <code>-dPSFitPage</code> option to fit
+the page size requested in a PostScript file to be rotated, scaled and centered
+for the best fit on the specified page.
 
 <h3><a name="Change_default_size"></a>Changing the installed default paper size</h3>
 
@@ -593,15 +600,13 @@ Pages of all documents in PDF collections are numbered sequentionally.
 <dt><code>-dPDFFitPage</code>
 <dd>Rather than selecting a PageSize given by the PDF MediaBox,
 TrimBox (see -dUseTrimBox), ArtBox (see -dUseArtBox), or CropBox (see -dUseCropBox),
-the PDF file will be scaled to fit
-the current device page size (usually the default page size).
+the PDF file will be scaled to fit the current device page size
+(usually the default page size).
 <p>
-This is useful to avoid clipping information on a PDF document when
-sending to a printer that may have unprintable areas at the edge of
-the media larger than allowed for in the document.
+This is useful for creating fixed size images of PDF files that may have
+a variety of page sizes, for example thumbnail images.
 <p>
-This is also useful for creating fixed size images of PDF files
-that may have a variety of page sizes, for example thumbnail images.
+This option is also set by the <code>-dFitPage</code> option.
 </dl>
 
 <dl>
@@ -630,7 +635,7 @@ finished printed page.
 <dl>
 <dt><code>-dUseArtBox</code>
 <dd>Sets the page size to the ArtBox rather than the MediaBox.
-The art box defines the extent of the page's meaningful content 
+The art box defines the extent of the page's meaningful content
 (including potential white space) as intended by the page's creator.
 The art box is likely to be the smallest box. It can be useful
 when one wants to crop the page as much as possible
@@ -640,10 +645,11 @@ without losing the content.
 <dl>
 <dt><code>-dUseCropBox</code>
 <dd>Sets the page size to the CropBox rather than the MediaBox.
-Some files have a CropBox that is smaller than the MediaBox and
-may include white space, registration or cutting marks outside
-the CropBox.  Using this option will set the page size
-appropriately for a viewer.
+Unlike the other "page boundary" boxes, CropBox does not have a
+defined meaning, it simply provides a rectangle to which the
+page contents will be clipped (cropped). By convention, it is
+often, but not exclusively, used to aid the positioning of content
+on the (usually larger, in these cases) media.
 </dl>
 
 <dl>
@@ -2065,8 +2071,7 @@ Mb for a 24-bit 1024x768 window), the default value of
 </dl>
 
 <dl>
-<dt><code>MaxTempPixmap, MaxTempImage, MaxBufferedTotal, MaxBufferedArea,
-MaxBufferedCount &lt;integer&gt;</code>
+<dt><code>MaxTempPixmap, MaxTempImage &lt;integer&gt;</code>
 <dd>These control various aspects of the driver's buffering behavior.  For
 details, please consult the source file <code>gdevx.h</code>.
 </dl>
@@ -2393,8 +2398,12 @@ For more information see the description of the user parameter
 <dl>
 <dt><code>-dUseCIEColor</code>
 <dd>Set UseCIEColor in the page device dictionary, remapping device-dependent
-color values through a CIE color space. This can can improve conversion
-of CMYK documents to RGB.
+color values through a Postscript defined CIE color space.  Document DeviceGray,
+DeviceRGB and DeviceCMYK source colors will be substituted respectively by Postscript
+CIEA, CIEABC and CIEDEFG color spaces.   See the document
+<a href="GS9_Color_Management.pdf">GS9 Color Management</a> for details on how
+this option will interact with Ghostscript's ICC-based color workflow.   If accurate colors
+are desired, it is recommended that an ICC workflow be used.
 </dl>
 
 <dl>
@@ -2480,6 +2489,19 @@ automatically sets <code>-dFIXEDRESOLUTION</code>.
 </dl>
 
 <dl>
+<dt><code>-dPSFitPage</code>
+<dd>The page size from the PostScript file <code>setpagedevice</code> operator,
+or one of the older  <code>statusdict</code> page size operators (such as
+<code>letter</code> or <code>a4</code>) will be rotated, scaled and centered on the
+"best fit" page size from those availiable in the InputAttributes list.
+The <code>-dPSFitPage</code> is most easily used to fit pages when used with the
+<code>-dFIXEDMEDIA</code> option.
+
+<p>
+This option is also set by the <code>-dFitPage</code> option.
+</dl>
+
+<dl>
 <dt><code>-dORIENT1=true
 <br>-dORIENT1=false</code>
 <dd>Defines the meaning of the 0 and 1 orientation values for the
@@ -2512,6 +2534,14 @@ the default size).
 </dd>
 </dl>
 
+<dl>
+<dt><code>-dFitPage</code>
+<dd>This is a "convenience" operator that sets the various options to perform
+page fitting for specific file types.
+<p>
+This option sets the <code>-dEPSFitPage</code>, <code>-dPDFFitPage</code>, and
+the <code>-dFitPage</code> options.
+</dl>
 <h4><a name="Font_related_parameters"></a>Font-related parameters</h4>
 
 <dl>
@@ -2766,7 +2796,9 @@ This is useful when converting an EPS file to a bitmap.
 <dl>
 <dt><code>-dEPSFitPage</code>
 <dd>Resize an EPS file to fit the page.
-This is useful for enlarging an EPS file to fit the paper size when printing.
+This is useful for shrinking or enlarging an EPS file to fit the paper size when printing.
+<p>
+This option is also set by the <code>-dFitPage</code> option.
 </dl>
 
 <dl>
@@ -2830,7 +2862,7 @@ selected from those in the directory specified by ICCProfilesDir (see below).
  Note that if the output device is CMYK + spot colorants, a CMYK
 profile can be used to provide color management for the CMYK colorants only.
 In this case, spot colors will pass through unprocessed assuming the
-device supports those colorants.  It is also possible for these devices to 
+device supports those colorants.  It is also possible for these devices to
 specify NCLR ICC profiles for output.
 </dl>
 
@@ -2840,13 +2872,13 @@ specify NCLR ICC profiles for output.
 be an NCLR profile, which means something that includes non-traditional inks
 like Orange, Violet, etc.   In this case, the list of the colorant names in the
 order that they exist in the profile must be provided with this command line
-option.   Note that if a colorant name that is specified for the profile occurs also within 
+option.   Note that if a colorant name that is specified for the profile occurs also within
 the document (e.g. "Orange" above), then these colorants will be associated with
 the same separation.  It is possible through a compile time option LIMIT_TO_ICC
 defined in gdevdevn.h to restrict the output colorants of the psdcmyk and tiffsep
 device to the colorants of the ICC profile or to allow additional spot colorants
 in the document to be created as different separations.  If restricted, the other
-spot colorants will go through the alternate tint transform and then be mapped to 
+spot colorants will go through the alternate tint transform and then be mapped to
 the color space defined by the NCLR profile.   If an NCLR ICC profile is specified
 and ICCOutputColors is not used, then a set of default names will be used for
 the extra colorants (non-CMYK) in the profile.
@@ -2887,7 +2919,7 @@ This command option is for developer use when an implementation
 for named color management is designed for the function
 gsicc_transform_named_color located in gsicccache.c .  An example
 implementation is currently contained in the code for the handling of both
-Separation and DeviceN colors.  For the general user this command option 
+Separation and DeviceN colors.  For the general user this command option
 should really not be used.
 </dl>
 
@@ -2902,17 +2934,17 @@ Saturation, and Absolute Colorimetric.
 <dl>
 <dt><code>-dBlackPtComp=</code><em>0/1</em>
 <dd>Specify if black point compensation should be used with the
-profile specified above by -sOutputICCProfile.  
+profile specified above by -sOutputICCProfile.
 </dl>
 
 <dl>
 <dt><code>-dKPreserve=</code><em>0/1/2</em>
 <dd>Specify if black preservation should be used when mapping
-from CMYK to CMYK.   When using littleCMS as the CMM, the code 0 
+from CMYK to CMYK.   When using littleCMS as the CMM, the code 0
 corresponds to no preservation, 1 corresponds to the PRESERVE_K_ONLY approach
-described in the littleCMS documentation and 2 corresponds to the 
+described in the littleCMS documentation and 2 corresponds to the
 PRESERVE_K_PLANE approach.   This is only valid when using littleCMS for
-color management. 
+color management.
 </dl>
 
 <dl>
@@ -2934,7 +2966,7 @@ options are the same as specified for -dRenderIntent.
 
 <dl>
 <dt><code>-dGraphicBlackPt=</code><em>0/1</em>
-<dd>Specify if black point compensation should be used for graphic objects.  
+<dd>Specify if black point compensation should be used for graphic objects.
 </dl>
 
 <dl>
@@ -2961,7 +2993,7 @@ pleasing images.
 
 <dl>
 <dt><code>-dImageBlackPt=</code><em>0/1</em>
-<dd>Specify if black point compensation should be used with images.  
+<dd>Specify if black point compensation should be used with images.
 </dl>
 
 <dl>
@@ -2988,7 +3020,7 @@ options are the same as specified for -dRenderIntent.
 
 <dl>
 <dt><code>-dTextBlackPt=</code><em>0/1</em>
-<dd>Specify if black point compensation should be used with text objects. 
+<dd>Specify if black point compensation should be used with text objects.
 </dl>
 
 <dl>
@@ -3053,42 +3085,48 @@ are used to convert between RGB and CMYK with black generation and undercolor
 removal mappings.
 </dl>
 
-
 <dl>
 <dt><code>-dSimulateOverprint=</code><em>true/false</em>
 <dd>
-This option enables CMYK devices (e.g. tiff32nc) to provide an simulation of
-overprinting. 
+This option enables continous tone CMYK devices (e.g. tiff32nc) the capability to
+provide a  simulation of spot color overprinting.  The default setting is true.  
+Note that not all spot color overprint cases can be accurately simulated with a CMYK 
+only device.   For example, a case where you have a spot color overprinted with CMYK
+colors will be indistiguishable from a case where you have spot color equivalent 
+CMYK colorants overprinted with CMYK colors, even though they may need to show 
+significantly different overprint simulations.  To obtain a full overprint simulation,
+use the psdcmyk or tiffsep device, where the spot colors are kept in their own 
+individual planes.
 </dl>
 
 <dl>
 <dt><code>-dUsePDFX3Profile=</code><em>int</em>
 <dd>
-This option enables rendering with an output intent defined in 
+This option enables rendering with an output intent defined in
 the PDF source file.   If this option is included in the command line,
-source device color values (e.g DeviceCMYK, DeviceRGB, or DeviceGray) 
+source device color values (e.g DeviceCMYK, DeviceRGB, or DeviceGray)
 that match the color model of the output intent will be interpreted to
 be in the output intent color space.   In addition, if the output device
-color model matches the output intent color model, then the 
+color model matches the output intent color model, then the
 destination ICC profile will be the output intent ICC profile.
 
 If there is a mismatch between the device color model and the
-output intent, the output intent profile will be used as a 
+output intent, the output intent profile will be used as a
 proofing profile, since that is the intended rendering.
 
-Note that a PDF document can have multiple 
-rendering intents per the PDF specification.  As such, with 
-the option -dUsePDFX3Profile the first output intent 
-encountered will be used.   It is possible to specify 
-a particular output intent where <em>int</em> is an 
-integer (a value of 0 is the same as not specifying a number).  
+Note that a PDF document can have multiple
+rendering intents per the PDF specification.  As such, with
+the option -dUsePDFX3Profile the first output intent
+encountered will be used.   It is possible to specify
+a particular output intent where <em>int</em> is an
+integer (a value of 0 is the same as not specifying a number).
 Probing of the output intents for a particular file
 is possible using extractICCprofiles.ps in ./gs/toolbin.
 
 Finally, note that the ICC profile member entry is an option in
 the output intent dictionary.   In these cases, the output intent
 specifies a registry and a standard profile (e.g. Fogra39).  Ghostscript will
-not make use of these output intents.  Instead, if desired, these standard 
+not make use of these output intents.  Instead, if desired, these standard
 profiles should be used with the commands specified above (e.g. -sOutputICCProfile).
 </dl>
 
@@ -3242,6 +3280,15 @@ be used to hide the save object from the restricted procedure.
 </dl>
 
 <dl>
+<dt><code>-dPreBandThreshold=true/false</code>
+<dd>If the target device is a halftone device, then images that are 
+normally stored in the command list during banded output will be halftoned during
+the command list writing phase, if the resulting image will result in a smaller 
+command list.   The decision to halftone depends upon the output and source resolution as well as 
+the output and source color space.
+</dl>
+
+<dl>
 <dt><code>-dSTRICT</code>
 <dd>Disables as many Ghostscript extensions as feasible, to be more helpful
 in debugging applications that produce output for Adobe and other RIPs.
@@ -3388,7 +3435,6 @@ needed to investigate particular areas. For backward compatibilty, the
   <tr><td><code>-dFAPIDEBUG</code><td><td>Font API
   <tr><td><code>-dINITDEBUG</code><td><td>Initialization
   <tr><td><code>-dPDFDEBUG</code><td><td>PDF Interpreter
-  <tr><td><code>-dPDFOPTDEBUG</code><td><td>PDF Optimizer (Linearizer)
   <tr><td><code>-dPDFWRDEBUG</code><td><td>PDF Writer
   <tr><td><code>-dSETPDDEBUG</code><td><td>setpagedevice
   <tr><td><code>-dSTRESDEBUG</code><td><td>Static Resources
@@ -4233,7 +4279,7 @@ or contact Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134,
 San Rafael, CA  94903, U.S.A., +1(415)492-9861, for further information.
 
 <p>
-<small>Ghostscript version 9.07, 12 February 2013
+<small>Ghostscript version 9.08, 14 August 2013
 
 <!-- [3.0 end visible trailer] ============================================= -->
 

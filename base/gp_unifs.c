@@ -16,10 +16,14 @@
 
 /* "Unix-like" file system platform routines for Ghostscript */
 
+/* prevent gp.h from defining fopen */
+#define fopen fopen
+
 #include "stdio_.h"             /* for FILENAME_MAX */
 #include "memory_.h"
 #include "string_.h"
 #include "gx.h"
+
 #include "gp.h"
 #include "gpmisc.h"
 #include "gsstruct.h"
@@ -269,6 +273,11 @@ gp_enumerate_files_init(const char *pat, uint patlen, gs_memory_t * mem)
     /* pattern and work could be allocated as strings, */
     /* but it's simpler for GC and freeing to allocate them as bytes. */
 
+    pfen->memory = mem;
+    pfen->dstack = 0;
+    pfen->first_time = true;
+    pfen->patlen = patlen;
+    pfen->work = 0;
     pfen->pattern =
         (char *)gs_alloc_bytes(mem, patlen + 1,
                                "gp_enumerate_files(pattern)");
@@ -313,10 +322,6 @@ gp_enumerate_files_init(const char *pat, uint patlen, gs_memory_t * mem)
         pfen->worklen = p - work;
     }
 
-    pfen->memory = mem;
-    pfen->dstack = 0;
-    pfen->first_time = true;
-    pfen->patlen = patlen;
     return pfen;
 }
 
@@ -356,11 +361,13 @@ gp_enumerate_files_next(file_enum * pfen, char *ptr, uint maxlen)
             worklen = p - work;
         } else
             worklen = 0;
-        p = rchr(pattern, '/', pathead);
-        if (p != 0)
-            pathead = p - pattern;
-        else
-            pathead = 0;
+        if (pathead != pfen->patlen) {
+            p = rchr(pattern, '/', pathead);
+            if (p != 0)
+                pathead = p - pattern;
+            else
+                pathead = 0;
+        }
 
         if (popdir(pfen)) {     /* Back up the directory tree. */
             if_debug1m('e', pfen->memory, "[e]file_enum:Dir popped '%s'\n", work);
@@ -394,7 +401,7 @@ gp_enumerate_files_next(file_enum * pfen, char *ptr, uint maxlen)
         goto top;
 
     /* Perhaps descend into subdirectories */
-    if (pathead < pfen->patlen) {
+    if (pathead < maxlen) {
         DIR *dp;
 
         if (((stat(work, &stbuf) >= 0)
@@ -404,7 +411,7 @@ gp_enumerate_files_next(file_enum * pfen, char *ptr, uint maxlen)
          * we'll be able to list it anyway.
          * If it isn't or we can't, no harm done. */
              : 0))
-            goto top;
+            goto winner;
 
         if (pfen->patlen == pathead + 1) {      /* Listing "foo/?/" -- return this entry */
             /* if it's a directory. */
@@ -538,4 +545,19 @@ int gp_fseek_64(FILE *strm, int64_t offset, int origin)
         return -1;
     return fseeko(strm, offset1, origin);
 #endif
+}
+
+bool gp_fseekable (FILE *f)
+{
+    struct stat s;
+    int fno;
+    
+    fno = fileno(f);
+    if (fno < 0)
+        return(false);
+    
+    if (fstat(fno, &s) < 0)
+        return(false);
+
+    return((bool)S_ISREG(s.st_mode));
 }

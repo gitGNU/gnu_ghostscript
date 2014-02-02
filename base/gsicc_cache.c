@@ -162,46 +162,50 @@ static gsicc_link_t *
 gsicc_alloc_link(gs_memory_t *memory, gsicc_hashlink_t hashcode)
 {
     gsicc_link_t *result;
-    gx_semaphore_t *wait;
 
     /* The link has to be added in stable memory. We want them
        to be maintained across the gsave and grestore process */
     result = gs_alloc_struct(memory->stable_memory, gsicc_link_t, &st_icc_link,
                              "gsicc_alloc_link");
-    wait = gx_semaphore_alloc(memory->stable_memory);
-    if (wait == NULL) {
-        gs_free_object(memory, result, "gsicc_alloc_link(wait)");
-        result = NULL;
+    if (result == NULL)
+        return NULL;
+    result->wait = gx_semaphore_alloc(memory->stable_memory);
+    if (result->wait == NULL) {
+        gs_free_object(memory->stable_memory, result, "gsicc_alloc_link(wait)");
+        return NULL;
     }
-    if (result != NULL) {
-        /* set up placeholder values */
-        result->next = NULL;
-        result->link_handle = NULL;
-        result->procs.map_buffer = gscms_transform_color_buffer;
-        result->procs.map_color = gscms_transform_color;
-        result->procs.free_link = gscms_release_link;
-        result->hashcode.link_hashcode = hashcode.link_hashcode;
-        result->hashcode.des_hash = 0;
-        result->hashcode.src_hash = 0;
-        result->hashcode.rend_hash = 0;
-        result->ref_count = 1;		/* prevent it from being freed */
-        result->includes_softproof = 0;
-        result->includes_devlink = 0;
-        result->is_identity = false;
-        result->valid = false;		/* not yet complete */
-        result->num_waiting = 0;
-        result->wait = wait;
-    }
+    /* set up placeholder values */
+    result->is_monitored = false;
+    result->orig_procs.map_buffer = NULL;
+    result->orig_procs.map_color = NULL;
+    result->orig_procs.free_link = NULL;
+    result->next = NULL;
+    result->link_handle = NULL;
+    result->procs.map_buffer = gscms_transform_color_buffer;
+    result->procs.map_color = gscms_transform_color;
+    result->procs.free_link = gscms_release_link;
+    result->hashcode.link_hashcode = hashcode.link_hashcode;
+    result->hashcode.des_hash = 0;
+    result->hashcode.src_hash = 0;
+    result->hashcode.rend_hash = 0;
+    result->ref_count = 1;		/* prevent it from being freed */
+    result->includes_softproof = 0;
+    result->includes_devlink = 0;
+    result->is_identity = false;
+    result->valid = false;		/* not yet complete */
+    result->num_waiting = 0;
     return(result);
 }
 
-void
+static void
 gsicc_set_link_data(gsicc_link_t *icc_link, void *link_handle,
                     gsicc_hashlink_t hashcode, gx_monitor_t *lock,
-                    bool includes_softproof, bool includes_devlink)
+                    bool includes_softproof, bool includes_devlink,
+                    bool pageneutralcolor, gsicc_colorbuffer_t data_cs)
 {
     gx_monitor_enter(lock);		/* lock the cache while changing data */
     icc_link->link_handle = link_handle;
+    gscms_get_link_dim(link_handle, &(icc_link->num_input), &(icc_link->num_output));
     icc_link->hashcode.link_hashcode = hashcode.link_hashcode;
     icc_link->hashcode.des_hash = hashcode.des_hash;
     icc_link->hashcode.src_hash = hashcode.src_hash;
@@ -215,6 +219,11 @@ gsicc_set_link_data(gsicc_link_t *icc_link, void *link_handle,
         icc_link->is_identity = false;
     }
     icc_link->valid = true;
+
+    /* Set up for monitoring */
+    icc_link->data_cs = data_cs;
+    if (pageneutralcolor) 
+        gsicc_mcm_set_link(icc_link);
 
     /* Now release any tasks/threads waiting for these contents */
     while (icc_link->num_waiting > 0) {
@@ -384,7 +393,7 @@ gsicc_findcachelink(gsicc_hashlink_t hash, gsicc_link_cache_t *icc_link_cache,
         curr = curr->next;
     }
     gx_monitor_leave(icc_link_cache->lock);
-    return(NULL);
+    return NULL;
 }
 
 /* Find entry with zero ref count and remove it */
@@ -478,6 +487,7 @@ gsicc_get_link(const gs_imager_state *pis, gx_device *dev_in,
     } else {
         gs_input_profile = input_colorspace->cmm_icc_profile_data;
     }
+    code = dev_proc(dev, get_profile)(dev,  &dev_profile);
     /* If present, use an graphic object defined source profile */
     if (pis->icc_manager != NULL && 
         pis->icc_manager->srcgtag_profile != NULL) {
@@ -487,7 +497,6 @@ gsicc_get_link(const gs_imager_state *pis, gx_device *dev_in,
                                       dev->graphics_type_tag,
                                       pis->icc_manager->srcgtag_profile,
                                       &(gs_srcgtag_profile), &render_cond);
-                code = dev_proc(dev, get_profile)(dev,  &dev_profile);
                 if (gs_srcgtag_profile != NULL) {
                     /* In this case, the user is letting the source profiles
                        drive the color management.  Let that set the 
@@ -520,10 +529,11 @@ gsicc_get_link(const gs_imager_state *pis, gx_device *dev_in,
                             render_cond.rendering_intent & gsRI_MASK;
                         rendering_params->black_point_comp = 
                             render_cond.black_point_comp & gsBP_MASK;
-                        return gsicc_get_link_profile(pis, dev, gs_input_profile, 
-                                                      dev_profile->device_profile[0], 
-                                                      rendering_params, memory, 
-                                                      false);
+
+                            return gsicc_get_link_profile(pis, dev, gs_input_profile, 
+                                                          dev_profile->device_profile[0], 
+                                                          rendering_params, memory, 
+                                                          false);
                     }
                 } else {
                     /* In this case we may be wanting for a "unmanaged color"
@@ -611,8 +621,8 @@ gsicc_get_link(const gs_imager_state *pis, gx_device *dev_in,
     rendering_params->rendering_intent = rendering_params->rendering_intent & gsRI_MASK;
     rendering_params->black_point_comp = rendering_params->black_point_comp & gsBP_MASK;
     rendering_params->preserve_black = rendering_params->preserve_black & gsKP_MASK;
-    return(gsicc_get_link_profile(pis, dev, gs_input_profile, gs_output_profile,
-                    rendering_params, memory, devicegraytok));
+    return gsicc_get_link_profile(pis, dev, gs_input_profile, gs_output_profile,
+                    rendering_params, memory, devicegraytok);
 }
 
 /* This operation of adding in a new link entry is actually shared amongst
@@ -659,12 +669,14 @@ gsicc_alloc_link_entry(gsicc_link_cache_t *icc_link_cache,
     /* insert an empty link that we will reserve so we */
     /* can unlock while building the link contents     */
     (*ret_link) = gsicc_alloc_link(cache_mem->stable_memory, hash);
-    (*ret_link)->icc_link_cache = icc_link_cache;
-    (*ret_link)->next = icc_link_cache->head;
-    icc_link_cache->head = *ret_link;
-    icc_link_cache->num_links++;
-    /* now that we own this link we can release 
-       the lock since it is not valid */
+    if (*ret_link) {
+        (*ret_link)->icc_link_cache = icc_link_cache;
+        (*ret_link)->next = icc_link_cache->head;
+        icc_link_cache->head = *ret_link;
+        icc_link_cache->num_links++;
+        /* now that we own this link we can release
+          the lock since it is not valid */
+    }
     gx_monitor_leave(icc_link_cache->lock);
     return false;
 }
@@ -700,6 +712,7 @@ gsicc_get_link_profile(const gs_imager_state *pis, gx_device *dev,
     cmm_profile_t *proof_profile = NULL;
     cmm_profile_t *devlink_profile = NULL;
     bool src_dev_link = gs_input_profile->isdevlink;
+    bool pageneutralcolor = false;
 
     /* Determine if we are using a soft proof or device link profile */
     if (dev != NULL ) {
@@ -707,6 +720,7 @@ gsicc_get_link_profile(const gs_imager_state *pis, gx_device *dev,
         if (dev_profile != NULL) {
             proof_profile = dev_profile->proof_profile;
             devlink_profile = dev_profile->link_profile;
+            pageneutralcolor = dev_profile->pageneutralcolor;
         }
         /* If the source color is the same as the proofing color then we do not 
            need to apply the proofing color in this case.  This occurs in cases
@@ -739,7 +753,7 @@ gsicc_get_link_profile(const gs_imager_state *pis, gx_device *dev,
         if_debug2m(gs_debug_flag_icc, memory,
                    "[icc] output_numcomps = %d, output_hash = %I64d \n",
                    gs_output_profile->num_comps, gs_output_profile->hashcode);
-        return(found_link);
+        return found_link;
     }
     /* Before we do anything, check if we have a case where the source profile
        is coming from the clist and we don't even want to be doing any color
@@ -794,6 +808,9 @@ gsicc_get_link_profile(const gs_imager_state *pis, gx_device *dev,
     if (gsicc_alloc_link_entry(icc_link_cache, &link, hash, include_softproof,
                                include_devicelink)) 
         return link;
+    if (link == NULL)
+        return NULL;
+
     /* Now compute the link contents */
     cms_input_profile = gs_input_profile->profile_handle;
     if (cms_input_profile == NULL) {
@@ -802,12 +819,16 @@ gsicc_get_link_profile(const gs_imager_state *pis, gx_device *dev,
                 gsicc_get_profile_handle_buffer(gs_input_profile->buffer,
                                                 gs_input_profile->buffer_size,
                                                 memory);
+            if (cms_input_profile == NULL)
+                return NULL;
             gs_input_profile->profile_handle = cms_input_profile;
+            if (cms_input_profile == NULL)
+                return NULL;
             /* This *must* be a default profile that was not set up at start-up/
                However it could be one from the icc creator code which does not
                do an initialization at the time of creation from CalRGB etc. */
             code = gsicc_initialize_default_profile(gs_input_profile); 
-            if (code < 0) return (NULL);
+            if (code < 0) return NULL;
         } else {
             /* Cant create the link.  No profile present,
                nor any defaults to use for this.  Really
@@ -901,10 +922,11 @@ gsicc_get_link_profile(const gs_imager_state *pis, gx_device *dev,
         if (icc_manager->graytok_profile == NULL) {
             icc_manager->graytok_profile =
                 gsicc_set_iccsmaskprofile(GRAY_TO_K, strlen(GRAY_TO_K), 
-                pis->icc_manager, pis->icc_manager->memory->stable_memory);
-                if (icc_manager->graytok_profile == NULL) {
-                    return NULL;
-                }
+                                          pis->icc_manager,
+                                          pis->icc_manager->memory->stable_memory);
+            if (icc_manager->graytok_profile == NULL) {
+                return NULL;
+            }
         }
         if (icc_manager->smask_profiles == NULL) {
             code = gsicc_initialize_iccsmask(icc_manager);
@@ -938,8 +960,11 @@ gsicc_get_link_profile(const gs_imager_state *pis, gx_device *dev,
     }
     gx_monitor_leave(gs_input_profile->lock);
     if (link_handle != NULL) {
+        if (gs_input_profile->data_cs == gsGRAY) 
+            pageneutralcolor = false;
         gsicc_set_link_data(link, link_handle, hash, icc_link_cache->lock,
-                            include_softproof, include_devicelink);
+                            include_softproof, include_devicelink, pageneutralcolor, 
+                            gs_input_profile->data_cs);
         if_debug2m(gs_debug_flag_icc, cache_mem,
                    "[icc] New Link = 0x%x, hash = %I64d \n", 
                    link, hash.link_hashcode);
@@ -1245,7 +1270,7 @@ gsicc_transform_named_color(const float tint_values[],
             return 0;
         }
     }
-    return(-1);
+    return -1;
 }
 
 /* Used by gs to notify the ICC manager that we are done with this link for now */

@@ -24,6 +24,7 @@
 #include "gsbitops.h"
 #include "gsparams.h"
 #include "gsstate.h"            /* (should only be imager state) */
+#include "gstrans.h"		/* for gs_is_pdf14trans_compositor */
 #include "gxdcolor.h"
 #include "gxdevice.h"
 #include "gscoord.h"            /* requires gsmatrix.h */
@@ -472,13 +473,10 @@ clist_playback_band(clist_playback_action playback_action,
                     gx_device_clist_reader *cdev, stream *s,
                     gx_device *target, int x0, int y0, gs_memory_t * mem)
 {
-    /* cbuf must be maximally aligned, but still be a byte *. */
-    typedef union { void *p; double d; long l; } aligner_t;
-    aligner_t cbuf_storage[cbuf_size / sizeof(aligner_t) + 1];
+    byte *cbuf_storage;
     command_buf_t cbuf;
     /* data_bits is for short copy_* bits and copy_* compressed, */
     /* must be aligned */
-#define data_bits_size cbuf_size
     byte *data_bits = 0;
     const byte *cbp;
     int dev_depth;              /* May vary due to compositing devices */
@@ -543,6 +541,11 @@ clist_playback_band(clist_playback_action playback_action,
     gs_composite_t *pcomp_first = NULL, *pcomp_last = NULL;
     tile_slot bits;             /* parameters for reading bits */
 
+    /* pad the cbuf data area a bit (just in case) */
+    if ((cbuf_storage = gs_alloc_bytes(mem, cbuf_size + sizeof(double),
+                               "clist_playback_band(cbuf_storage)")) == NULL) {
+        return_error(gs_error_VMerror);
+    }
     cbuf.data = (byte *)cbuf_storage;
     cbuf.size = cbuf_size;
     cbuf.s = s;
@@ -973,7 +976,7 @@ in:                             /* Initialize for a new page. */
                     uint plane_depth = depth;
                     uint pln;
                     byte compression = op & 3;
-		    uint out_bytes;
+                    uint out_bytes;
 
                     cmd_getw(state.rect.width, cbp);
                     cmd_getw(state.rect.height, cbp);
@@ -986,18 +989,17 @@ in:                             /* Initialize for a new page. */
                                                state.rect.height,
                                                op & 3, &width_bytes,
                                                (uint *)&raster);
-		    if (planes > 1)
-		    {
-			    out_bytes = raster * state.rect.height;
-			    plane_height = state.rect.height;
-		    } else {
-			    out_bytes = bytes;
-		    }
+                    if (planes > 1) {
+                        out_bytes = raster * state.rect.height;
+                        plane_height = state.rect.height;
+                    } else {
+                        out_bytes = bytes;
+                    }
                     /* copy_mono and copy_color/alpha */
                     /* ensure that the bits will fit in a single buffer, */
                     /* even after decompression if compressed. */
 #ifdef DEBUG
-                    if (planes * out_bytes > cbuf_size) {
+                    if (planes * out_bytes > data_bits_size) {
                         mlprintf6(mem, "bitmap size exceeds buffer!  width=%d raster=%d height=%d\n    file pos %"PRId64" buf pos %d/%d\n",
                                   state.rect.width, raster,
                                   state.rect.height,
@@ -1007,19 +1009,18 @@ in:                             /* Initialize for a new page. */
                         goto out;
                     }
 #endif
-                    for (pln = 0; pln < planes; pln++)
-                    {
+                    for (pln = 0; pln < planes; pln++) {
                         byte *plane_bits = data_bits + pln * plane_height * raster;
-                        if (pln)
-                        {
-                            if (cbp >= cbuf.warn_limit)
-                            {
-                                code = top_up_cbuf(&cbuf, &cbp);
-                                if (code < 0)
-                                    return code;
-	                    }
-                            compression = *cbp++;
+
+                        /* Fill the cbuf if needed to get the data for the plane */
+                        if (cbp + out_bytes >= cbuf.warn_limit) {
+                            code = top_up_cbuf(&cbuf, &cbp);
+                            if (code < 0)
+                                return code;
                         }
+                        if (pln)
+                            compression = *cbp++;
+
                         if (compression == cmd_compress_const) {
                             cbp = cmd_read_data(&cbuf, plane_bits, 1, cbp);
                             if (width_bytes > 0 && state.rect.height > 0)
@@ -1562,6 +1563,13 @@ idata:                  data_size = 0;
                                         cbp = cbuf.ptr;
                                         if (pcomp == NULL)
                                             continue;
+                                        if (gs_is_pdf14trans_compositor(pcomp) &&
+                                            playback_action == playback_action_render_no_pdf14) {
+                                            /* free the compositor object */
+                                            gs_free_object(mem, pcomp, "read_create_compositor");
+                                            pcomp = NULL;
+                                            continue;
+                                        }
                                         pcomp_opening = pcomp_last;
                                         code = pcomp->type->procs.is_closing(pcomp, &pcomp_opening, tdev);
                                         if (code < 0)
@@ -2285,6 +2293,7 @@ idata:                  data_size = 0;
         goto in;
     if (pfs.dev != NULL)
         term_patch_fill_state(&pfs);
+    gs_free_object(mem, cbuf_storage, "clist_playback_band(cbuf_storage)");
     return code;
 }
 

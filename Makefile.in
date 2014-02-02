@@ -24,16 +24,19 @@
 # for the graphics library (GL) and the PostScript/PDF interpreter (PS).
 
 BINDIR=./$(BUILDDIRPREFIX)bin
-GLSRCDIR=./base
+GLSRCDIR=@srcdir@/base
+DEVSRCDIR=@srcdir@/devices
 GLGENDIR=./$(BUILDDIRPREFIX)@OBJDIR_BSDMAKE_WORKAROUND@
 GLOBJDIR=./$(BUILDDIRPREFIX)@OBJDIR_BSDMAKE_WORKAROUND@
+DEVGENDIR=./$(BUILDDIRPREFIX)@OBJDIR_BSDMAKE_WORKAROUND@
+DEVOBJDIR=./$(BUILDDIRPREFIX)@OBJDIR_BSDMAKE_WORKAROUND@
 AUXDIR=$(GLGENDIR)/aux@AUXDIRPOSTFIX@
-PSSRCDIR=./psi
-PSLIBDIR=./lib
-PSRESDIR=./Resource
+PSSRCDIR=@srcdir@/psi
+PSLIBDIR=@srcdir@/lib
+PSRESDIR=@srcdir@/Resource
 PSGENDIR=./$(BUILDDIRPREFIX)@OBJDIR_BSDMAKE_WORKAROUND@
 PSOBJDIR=./$(BUILDDIRPREFIX)@OBJDIR_BSDMAKE_WORKAROUND@
-CONTRIBDIR=./contrib
+CONTRIBDIR=@srcdir@/contrib
 
 # Do not edit the next group of lines.
 
@@ -88,17 +91,6 @@ gsincludedir = @includedir@/ghostscript/
 docdir=$(gsdatadir)/doc
 exdir=$(gsdatadir)/examples
 GS_DOCDIR=$(docdir)
-
-# Define install location for 'cups' device/filter support
-CUPSCFLAGS=@CUPSCFLAGS@
-CUPSLIBS=@CUPSLIBS@
-CUPSLIBDIRS=@CUPSLIBDIRS@
-CUPSSERVERBIN=@CUPSSERVERBIN@
-CUPSSERVERROOT=@CUPSSERVERROOT@
-CUPSDATA=@CUPSDATA@
-CUPSPDFTORASTER=@CUPSPDFTORASTER@
-
-CUPSINSTTARGET=@CUPSINSTALL@
 
 # Choose whether to compile the .ps initialization files into the executable.
 # See gs.mak for details.
@@ -167,6 +159,9 @@ CAPOPT= @HAVE_MKSTEMP@ @HAVE_FILE64@ @HAVE_FSEEKO@ @HAVE_MKSTEMP64@ @HAVE_FONTCO
 # Define the name of the executable file.
 
 GS=@GS@@EXEEXT@
+GS_SO_BASE=@GS@
+XE=@EXEEXT@
+XEAUX=@EXEEXT@
 
 # Define the directories for debugging and profiling binaries, relative to
 # the standard binaries.
@@ -231,6 +226,7 @@ LIBPNG_NAME=png
 # libtiff
 SHARE_LIBTIFF=@SHARE_LIBTIFF@
 TIFFSRCDIR=@LIBTIFFDIR@
+TIFFCONFDIR=@LIBTIFFCONFDIR@
 TIFFPLATFORM=unix
 TIFFCONFIG_SUFFIX=
 LIBTIFF_NAME=tiff
@@ -301,18 +297,29 @@ IJS_NAME=@IJSLIB@
 IJSSRCDIR=@IJSDIR@
 IJSEXECTYPE=unix
 
+# Define install location for 'cups' device/filter support
+CUPSCFLAGS=@CUPSCFLAGS@
+CUPSLIBS=@CUPSLIBS@
+CUPSLIBDIRS=@CUPSLIBDIRS@
+CUPSSERVERBIN=@CUPSSERVERBIN@
+CUPSSERVERROOT=@CUPSSERVERROOT@
+CUPSDATA=@CUPSDATA@
+CUPSPDFTORASTER=@CUPSPDFTORASTER@
+
 
 SHARE_LCUPS=@SHARELCUPS@
 LCUPS_NAME=cups
-LCUPSSRCDIR=cups
+LCUPSSRCDIR=@CUPS_DIR@
 LCUPSBUILDTYPE=@LCUPSBUILDTYPE@
 CUPS_CC=$(CC)
 
 SHARE_LCUPSI=@SHARELCUPSI@
 LCUPSI_NAME=cupsimage
-LCUPSISRCDIR=cups
+LCUPSISRCDIR=@CUPS_DIR@
 CUPS_CC=$(CC)
 
+
+TRIOSRCDIR=@srcdir@/trio
 
 # Define how to build the library archives.  (These are not used in any
 # standard configuration.)
@@ -384,6 +391,8 @@ AC_LDFLAGS=@X_LDFLAGS@
 
 LDFLAGS=@LDFLAGS@ $(AC_LDFLAGS) $(XLDFLAGS)
 
+LDFLAGS_SO=@DYNAMIC_LDFLAGS@
+
 # Define any extra libraries to link into the executable.
 # ISC Unix 2.2 wants -linet.
 # SCO Unix needs -lsocket if you aren't including the X11 driver.
@@ -449,7 +458,9 @@ SOC_LOADER	=	@SOC_LOADER@
 # on virtually every Unix-a-like system, this is "so",
 # but Apple just had to be different, so it's now set
 # by configure
-DYNANIC_LIB_EXT =       @DYNANIC_LIB_EXT@
+SO_LIB_EXT=@SO_LIB_EXT@
+DLL_EXT=@DLL_EXT@
+SO_LIB_VERSION_SEPARATOR=@SO_LIB_VERSION_SEPARATOR@
 
 #CAIRO_CFLAGS	=	@CAIRO_CFLAGS@
 #CAIRO_LIBS	=	@CAIRO_LIBS@
@@ -515,11 +526,11 @@ DISPLAY_DEV=$(DD)bbox.dev
 #DEVICE_DEVS9=$(DD)pbm.dev $(DD)pbmraw.dev $(DD)pgm.dev $(DD)pgmraw.dev $(DD)pgnm.dev $(DD)pgnmraw.dev $(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev $(DD)pkm.dev $(DD)pkmraw.dev $(DD)pksm.dev $(DD)pksmraw.dev
 #DEVICE_DEVS10=$(DD)tiffcrle.dev $(DD)tiffg3.dev $(DD)tiffg32d.dev $(DD)tiffg4.dev $(DD)tifflzw.dev $(DD)tiffpack.dev
 #DEVICE_DEVS11=$(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiff48nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiff64nc $(DD)tiffsep.dev $(DD)tiffsep1.dev
-#DEVICE_DEVS12=$(DD)psmono.dev $(DD)psgray.dev $(DD)psrgb.dev $(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
+#DEVICE_DEVS12=$(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
 #DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev
 #DEVICE_DEVS13=@PNGDEVS@
 #DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev
-#DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)pswrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)txtwrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
+#DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)txtwrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev
 #DEVICE_DEVS16=$(DD)bbox.dev
 
 #DEVICE_DEVS17=
@@ -536,7 +547,7 @@ DEVICE_DEVS5=@OMNIDEVS@
 DEVICE_DEVS6=@PNG_DEVS@
 DEVICE_DEVS7=@JBIG2_DEVS@
 DEVICE_DEVS8=@SVG_DEVS@
-DEVICE_DEVS9=
+DEVICE_DEVS9=@XPS_DEVS@
 DEVICE_DEVS10=
 DEVICE_DEVS11=
 DEVICE_DEVS12=
@@ -581,7 +592,6 @@ CCAUX_NO_WARN=$(CCAUX_)
 CC_SHARED=$(CC_) @DYNAMIC_CFLAGS@
 
 LD_SET_DT_SONAME=@SET_DT_SONAME@
-FOR_MAC=@SO_FOR_MAC@
 
 # MAKEDIRS = the dependency on ALL object files (must be the last one on
 # the line. Requires GNU make to make it an 'order only' dependency
@@ -595,6 +605,7 @@ MAKEDIRSTOP=
 INSTALL_CONTRIB=@INSTALL_CONTRIB@
 include $(GLSRCDIR)/unixhead.mak
 include $(GLSRCDIR)/gs.mak
+include $(GLSRCDIR)/trio.mak
 # psromfs.mak must precede lib.mak
 include $(PSSRCDIR)/psromfs.mak
 include $(GLSRCDIR)/lib.mak
@@ -614,8 +625,8 @@ include $(GLSRCDIR)/$(WHICH_CMS).mak
 include $(GLSRCDIR)/ijs.mak
 @LCUPSINCLUDE@
 @LCUPSIINCLUDE@
-include $(GLSRCDIR)/devs.mak
-include $(GLSRCDIR)/contrib.mak
+include $(DEVSRCDIR)/devs.mak
+include $(DEVSRCDIR)/contrib.mak
 include $(GLSRCDIR)/unix-aux.mak
 include $(GLSRCDIR)/unixlink.mak
 include $(GLSRCDIR)/unix-dll.mak
@@ -625,16 +636,12 @@ include $(GLSRCDIR)/unixinst.mak
 @CUPSINCLUDE@
 
 # Clean up after the autotools scripts
-# configure.ac and Makefile.in are symlinks from a subdir 
-# (created by autogen.sh) and so are safe to remove
 distclean : clean config-clean soclean pgclean debugclean mementoclean
 	-$(RM_) -r $(BINDIR) $(GLOBJDIR) $(PSOBJDIR) $(AUXDIR)
 	-$(RM_) -r autom4te.cache
 	-$(RM_) config.log config.status
+	-$(RM_) -r $(TIFFCONFDIR)
 	-$(RM_) Makefile
-# The following is *very* poor - we shouldn't be creating derived files in
-# the source directory, but for now.....
-	-$(RM_) $(TIFFSRCDIR)$(D)libtiff$(D)tif_config.h $(TIFFSRCDIR)$(D)libtiff$(D)tiffconf.h
 
 # a debug-clean target for consistency with the ghostpdl builds
 debug-clean : debugclean
@@ -642,9 +649,7 @@ debug-clean : debugclean
 memento-clean : mementoclean
 
 maintainer-clean : distclean
-	-$(RM_) configure.ac
 	-$(RM_) configure
-	-$(RM_) Makefile.in
 
 check : default
 	$(NO_OP)
