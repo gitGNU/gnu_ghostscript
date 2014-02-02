@@ -115,48 +115,46 @@ systemdict begin
     dup 2 string .peekstring pop dup (%!) eq exch (%%) eq or {
       cvx .runps
     } {
-      dup 1023 string .peekstring pop dup length 400 ge {
-        % "1024 string" exceeds current %stdin buffer
-        % Valid PDF file cannot be smaller than 400 bytes.
-        (%PDF-) search {
-          3 1 roll pop pop
-          dup (%!PS) search not {
-            length 0 ne {
-              1 index exch readstring pop pop
-              (%stderr) (w) file dup
-              (   **** Warning: File has some garbage before %PDF- .\n)
-              writestring flushfile
-            } {
-              pop
-            } ifelse
-            dup (%stdin) (r) file eq {
-              % Copy PDF from stdin to temporary file then run it.
-              //null (w+) /.tempfile .systemvar exec exch 3 1 roll
-              % stack: tempname stdin tempfile
-              64000 string
-              {
-                % stack: tempname stdin tempfile string
-                2 index 1 index readstring
-                exch 3 index exch writestring
-                not { exit } if
-              }
-              loop
-              pop exch closefile
-              % stack: tempname tempfile
-              dup 0 setfileposition
-              dup runpdf
-              closefile deletefile
-            } {
-              runpdf
-            } ifelse
+      dup 1023 string .peekstring pop
+      % "1024 string" exceeds current %stdin buffer
+      % Valid PDF file cannot be smaller than 400 bytes.
+      (%PDF-) search {
+        3 1 roll pop pop
+        dup (%!PS) search not {
+          length 0 ne {
+            1 index exch readstring pop pop
+            (%stderr) (w) file dup
+            (   **** Warning: File has some garbage before %PDF- .\n)
+            writestring flushfile
           } {
-            pop pop pop pop cvx .runps % (%!PS) found first
+            pop
+          } ifelse
+          dup (%stdin) (r) file eq {
+            % Copy PDF from stdin to temporary file then run it.
+            //null (w+) /.tempfile .systemvar exec exch 3 1 roll
+            % stack: tempname stdin tempfile
+            64000 string
+            {
+              % stack: tempname stdin tempfile string
+              2 index 1 index readstring
+              exch 3 index exch writestring
+              not { exit } if
+            }
+            loop
+            pop exch closefile
+            % stack: tempname tempfile
+            dup 0 setfileposition
+            dup
+              runpdf
+            closefile deletefile
+          } {
+              runpdf
           } ifelse
         } {
-          pop cvx .runps % (%PDF-) not found
+          pop pop pop pop cvx .runps % (%!PS) found first
         } ifelse
       } {
-        pop cvx .runps   % too short for PDF
+        pop cvx .runps % (%PDF-) not found
       } ifelse
     } ifelse
   } {
@@ -180,6 +178,7 @@ currentdict /runpdfstring .undef
    GS_PDF_ProcSet begin
    pdfdict begin
    pdfopen begin
+   /CumulativePageCount currentpagedevice /PageCount get def
 } bind def
 
 /runpdfpagerange {	% - runpdfpagerange <firstpage#> <lastpage#>
@@ -335,16 +334,17 @@ currentdict /runpdfstring .undef
 % - pdf_collection_files [ /temp_file_name ... /temp_file_name
 /pdf_collection_files {
   mark
-  Trailer /Root oget
-  dup /Collection oknown {
-    /Names knownoget {
-      /EmbeddedFiles knownoget {
-        pdf_collection_names
+  Trailer /Root knownoget {
+    dup /Collection oknown {
+      /Names knownoget {
+        /EmbeddedFiles knownoget {
+          pdf_collection_names
+        } if
       } if
-    } if
-  } {
-    pop
-  } ifelse
+    } {
+      pop
+    } ifelse
+  } if
 } bind def
 
 /runpdf {		% <file> runpdf -
@@ -723,9 +723,21 @@ currentdict /xref-char-dict undef
   writeoutputintents
   .writepdfmarks {
         % Copy bookmarks (outline) to the output.
-    Trailer /Root oget /Outlines knownoget {
-      /First knownoget {
-        { dup writeoutline /Next knownoget not { exit } if } loop
+    Trailer /Root knownoget {
+     /Outlines knownoget {
+       /NO_PDFMARK_OUTLINES where {pop NO_PDFMARK_OUTLINES not}{true}ifelse
+       {
+        /First knownoget {
+            dup type /dicttype eq {
+              { dup writeoutline /Next knownoget not { exit } if
+                dup type /dicttype eq not {exit} if
+              } loop
+            }
+            {pop} ifelse
+          }if
+        } {
+          pop
+        }ifelse
       } if
     } if
     Trailer /Info knownoget {
@@ -736,11 +748,12 @@ currentdict /xref-char-dict undef
         2 copy knownoget { 3 -1 roll } { pop } ifelse
       } forall
       pop
-      dup mark ne { /DOCINFO pdfmark } { pop } ifelse
+      dup mark ne { {/DOCINFO pdfmark} stopped {cleartomark} if } { pop } ifelse
     } if
   } if
   % Initialize OC groups
-  Trailer /Root oget /OCProperties knownoget {
+  Trailer /Root knownoget {
+    /OCProperties knownoget {
     % By default, OCGs are 'on'; mark only 'off' OCGs.
     % If, contrary to the spec, BaseState is OFF, mark all OCGs
     % and unmark ON ones. Bug 691491.
@@ -777,10 +790,12 @@ currentdict /xref-char-dict undef
     } if
     pop
   } if
+  } if
 
   % Enumerate all AcroForm fielda and link all separate widgets
   % to the parent field.
-  Trailer /Root oget /AcroForm knownoget {
+  Trailer /Root knownoget {
+    /AcroForm knownoget {
     dup /NeedAppearances knownoget not { //false } if {
       /NeedAppearances //true def
       dup
@@ -794,6 +809,7 @@ currentdict /xref-char-dict undef
     } {
       pop
     } ifelse
+  } if
   } if
   
   % Use OutputIntent ICC profile
@@ -831,7 +847,7 @@ currentdict /xref-char-dict undef
       } ifelse
     } ifelse
   } if
-  Trailer /Root oget /PageLabels knownoget {
+  Trailer /Root knownoget { /PageLabels knownoget {
     %% Currenlty only the pdfwrite device can handle PageLabels
     %% because we deal with these using putparams, not pdfmarks
     %% This is because the pdfmark syntax can't handle all the
@@ -841,6 +857,7 @@ currentdict /xref-char-dict undef
     } {
       pop
     } ifelse
+  } if
   } if
 } bind def
 
@@ -915,6 +932,15 @@ currentdict /xref-char-dict undef
                 % Guess whether the output device is a printer.
      /Printed currentpagedevice /OutputFile known def
    } ifelse
+   currentpagedevice /OutputFile known {
+     currentpagedevice /OutputFile get (%d) search {
+       pop pop pop
+       /NO_PDFMARK_OUTLINES true def
+       /NO_PDFMARK_DESTS true def
+     } {
+       pop
+     }ifelse
+   } if
    /PSLevel1 where { pop } { /PSLevel1 //false def } ifelse
    % NB: PDFfile is used outside of the PDF code to determine that a
    % PDF job is being processed; to not change or hide this key.
@@ -1146,8 +1172,8 @@ currentdict /xref-char-dict undef
       (   **** Warning: Outline has invalid link that was discarded.\n)
       pdfformaterror
     } {
-      /Title knownoget { 
-        /Title exch /OUT pdfmark
+      /Title knownoget {
+        {/Title exch /OUT pdfmark} stopped {cleartomark} if
       } {
         cleartomark
         (   **** Warning: Outline without /Title attribute was discarded.\n)
@@ -1228,66 +1254,76 @@ currentdict /xref-char-dict undef
 
 % Get the total number of pages in the document.
 /pdfpagecount		% - pdfpagecount <int>
- { Trailer /Root oget /Pages oget
-   dup /Count knownoget {
-     dup type /integertype eq { dup 0 le } { //true } ifelse {
-       pop
-       dup /Kids knownoget {
+ { Trailer /Root knownoget {
+    /Pages knownoget {
+     dup /Count knownoget {
+       dup type /integertype eq { dup 0 le } { //true } ifelse {
          pop
-         (   **** Warning:  Invalid Page count.\n) pdfformaterror
-         % find the last page and use that as the Count
-         1 1 999999999 {
-           dup pdffindpage?
-           exch pop
-           //null eq { exit } { pop } ifelse
-         } for
-         1 sub		% decrement to last page that we were able to find
-         2 copy /Count exch put
-       } {
-         0 % return 0 and keep 0 page count.
-         (   **** Warning:  PDF document has no pages.\n) pdfformaterror
-       } ifelse
-     } if
-     exch pop
-   } {
-       dup /Type oget /Page eq {
-         << exch 1 array astore /Kids exch /Count 1 /Type /Pages >>
-         Trailer /Root oget /Pages 3 -1 roll put
-         1
-         (   **** Warning:  No /Pages node. The document root directly point a page.\n)
-         pdfformaterror
+         dup /Kids knownoget {
+           pop
+           (   **** Warning:  Invalid Page count.\n) pdfformaterror
+           % find the last page and use that as the Count
+           1 1 999999999 {
+             dup pdffindpage?
+             exch pop
+             //null eq { exit } { pop } ifelse
+           } for
+           1 sub		% decrement to last page that we were able to find
+           2 copy /Count exch put
+         } {
+           0 % return 0 and keep 0 page count.
+           (   **** Warning:  PDF document has no pages.\n) pdfformaterror
+         } ifelse
+       } if
+       exch pop
      } {
-       (   **** Warning:  Page count not found; assuming 1.\n)
-       pdfformaterror
-       pop 1
+         dup /Type oget /Page eq {
+           << exch 1 array astore /Kids exch /Count 1 /Type /Pages >>
+           Trailer /Root oget /Pages 3 -1 roll put
+           1
+           (   **** Warning:  No /Pages node. The document root directly point a page.\n)
+           pdfformaterror
+       } {
+         (   **** Warning:  Page count not found; assuming 1.\n)
+         pdfformaterror
+         pop 1
+       } ifelse
      } ifelse
-   } ifelse
+     } {
+     0
+     }ifelse
+  }{
+   0
+  } ifelse
  } bind def
 
 % Check for loops in the 'page tree' but accept an acyclic graph.
 % - verify_page_tree -
 /verify_page_tree {
-  Trailer /Root oget /Pages oget
-  10 dict begin
-  /verify_page_tree_recursive {
-    dup 1 def
-    dup /Kids knownoget {
-      { oforce
-        dup //null ne {
-          currentdict 1 index known {
-            (   **** Error: there's a loop in the page tree. Giving up.\n) pdfformaterror
-            /verify_page_tree cvx /syntaxerror signalerror
-          } if
-          verify_page_tree_recursive
-        } {
-          pop
-        } ifelse
-      } forall
+  Trailer /Root knownoget {
+    /Pages knownoget {
+      10 dict begin
+      /verify_page_tree_recursive {
+        dup 1 def
+        dup /Kids knownoget {
+          { oforce
+            dup //null ne {
+              currentdict 1 index known {
+                (   **** Error: there's a loop in the page tree. Giving up.\n) pdfformaterror
+                /verify_page_tree cvx /syntaxerror signalerror
+              } if
+              verify_page_tree_recursive
+            } {
+              pop
+            } ifelse
+          } forall
+        } if
+        currentdict exch undef
+      } def
+      verify_page_tree_recursive
+      end
     } if
-    currentdict exch undef
-  } def
-  verify_page_tree_recursive
-  end
+  } if
 } bind def
 
 /pdffindpage? {		% <int> pdffindpage? 1 null 	(page not found)
@@ -1470,7 +1506,7 @@ end readonly def
                pop % the "false" flag
                dup pdf_cached_PDF2PS_matrix exch
                dup /Rotate pget not { 0 } if 90 idiv exch
-               pdfpagenumber
+               pdfpagenumber CumulativePageCount add
                //true % now we have a page# and a transformation matrix
              } if
            } if
@@ -1485,6 +1521,7 @@ end readonly def
            3 -1 roll
          } {
            dup type /integertype eq {
+             CumulativePageCount add
              /Page exch 1 add 4 2 roll
            } {
              pop
@@ -1498,10 +1535,10 @@ end readonly def
 } bind def
 % <pagedict> mark ... -proc- <page#> <error>
 /namedactions 8 dict dup begin
-  /FirstPage { 1 //false } def
-  /LastPage { pdfpagecount //false } def
-  /NextPage { counttomark 2 add index pdfpagenumber 1 add dup pdfpagecount gt } bind def
-  /PrevPage { counttomark 2 add index pdfpagenumber 1 sub dup 1 lt } bind def
+  /FirstPage { 1 CumulativePageCount add //false } def
+  /LastPage { pdfpagecount CumulativePageCount add //false } def
+  /NextPage { counttomark 2 add index pdfpagenumber 1 add dup pdfpagecount gt exch CumulativePageCount add exch} bind def
+  /PrevPage { counttomark 2 add index pdfpagenumber 1 sub dup 1 lt exch CumulativePageCount add exch} bind def
 end readonly def
 % <pagedict> <annotdict> -proc- -
 /annottypes 5 dict dup begin
@@ -1509,9 +1546,11 @@ end readonly def
     mark exch
      { /Rect /Open /Contents /F}
      { 2 copy knownoget { 3 -1 roll } { pop } ifelse }
-    forall pop /ANN pdfmark
+    forall pop {/ANN pdfmark} stopped {cleartomark} if
   } bind def
   /Link {
+    /NO_PDFMARK_DESTS where {pop NO_PDFMARK_DESTS not}{true}ifelse
+    {
     mark exch
     dup /BS knownoget { << exch { oforce } forall >> /BS exch 3 -1 roll } if
     dup /F knownoget { /F exch 3 -1 roll } if
@@ -1556,8 +1595,9 @@ end readonly def
       (   **** Warning: Link annotation points out of the document page range.\n)
       pdfformaterror
     } {
-      pop /LNK pdfmark
+      pop {/LNK pdfmark} stopped {cleartomark} if
     } ifelse
+    }{pop} ifelse
   } bind def
 end readonly def
 
@@ -1816,13 +1856,13 @@ currentdict /PDF2PS_matrix_key undef
         oforce_elems
         2 { Page pdf_cached_PDF2PS_matrix transform 4 2 roll } repeat
         normrect_elems 4 index 5 1 roll fix_empty_rect_elems 4 array astore
-        mark 3 1 roll /PAGE pdfmark
+        mark 3 1 roll {/PAGE pdfmark} stopped {cleartomark} if
       } {
         pop
       } ifelse
     } forall
 
-        % Copy annotations and links.
+    % Copy annotations and links.
     dup /Annots knownoget {
       0 1 2 index length 1 sub
        { 1 index exch oget
