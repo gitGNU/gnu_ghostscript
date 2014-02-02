@@ -1,22 +1,16 @@
-dnl  Copyright (C) 2001-2012 Artifex Software, Inc.
-dnl  All Rights Reserved.
+dnl Copyright (C) 2001-2012 Artifex Software, Inc.
+dnl All Rights Reserved.
+dnl
+dnl This software is provided AS-IS with no warranty, either express or
+dnl implied.
+dnl This software is distributed under license and may not be copied,
+dnl modified or distributed except as expressly authorized under the terms
+dnl of the license contained in the file LICENSE in this distribution.
+dnl
+dnl Refer to licensing information at http://www.artifex.com or contact
+dnl Artifex Software, Inc.,  7 Mt. Lassen Drive - Suite A-134, San Rafael,
+dnl CA  94903, U.S.A., +1(415)492-9861, for further information.
 
-dnl  This file is part of GNU ghostscript.
-dnl
-dnl    GNU ghostscript is free software: you can redistribute it and/or modify
-dnl    it under the terms of the GNU General Public License as published by
-dnl    the Free Software Foundation, either version 3 of the License, or
-dnl    (at your option) any later version.
-dnl
-dnl    GNU ghostscript is distributed in the hope that it will be useful,
-dnl    but WITHOUT ANY WARRANTY; without even the implied warranty of
-dnl    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-dnl    GNU General Public License for more details.
-dnl
-dnl    You should have received a copy of the GNU General Public License
-dnl   along with GNU ghostscript.  If not, see <http://www.gnu.org/licenses/>.
-dnl   for further information.
-dnl
 
 dnl Process this file with autoconf to produce a configure script
 
@@ -24,9 +18,10 @@ dnl ------------------------------------------------
 dnl Initialization and Versioning
 dnl ------------------------------------------------
 
-AC_PREREQ(2.60)
 AC_INIT([gnu-ghostscript], [9.08.0], [gnu-ghostscript-bug@gnu.org])
-AC_CONFIG_SRCDIR(psi/gs.c)
+AC_PREREQ(2.61)
+AC_LANG(C)
+AC_CONFIG_SRCDIR([psi/gs.c])
 AM_INIT_AUTOMAKE([-Wall])
 
 dnl Inherit compiler flags from the environment...
@@ -143,7 +138,7 @@ dnl --------------------------------------------------
 
 AC_ARG_ENABLE([contrib], AC_HELP_STRING([--disable-contrib],
     [Do not include contributed drivers]))
-CONTRIBINCLUDE="include contrib/contrib.mak"
+CONTRIBINCLUDE="include $srcdir/contrib/contrib.mak"
 INSTALL_CONTRIB="install-contrib-extras"
 
 case `uname` in
@@ -153,7 +148,7 @@ case `uname` in
     ;;
     *)
 #     This is just an arbitrary file in contrib to check
-      if ! test -f contrib/gdevbjc_.c; then
+      if ! test -f $rscdir/contrib/gdevbjc_.c; then
         enable_contrib=no
       fi
     ;;
@@ -175,28 +170,26 @@ dnl --------------------------------------------------
 
 CC_OPT_FLAGS_TO_TRY="-O"
 SET_DT_SONAME="-soname="
-SO_FOR_MAC=""
 
 case `uname` in
         Linux*|GNU*)
         if test $ac_cv_prog_gcc = yes; then
             CC_OPT_FLAGS_TO_TRY="-O2"
-            CC_DBG_FLAGS_TO_TRY="-g -O0"
+            CC_DBG_FLAGS_TO_TRY="-gdwarf-2 -g3 -O0"
         fi
         ;;
         *BSD)
         if test $ac_cv_prog_gcc = yes; then
             CC_OPT_FLAGS_TO_TRY="-O2"
-            CC_DBG_FLAGS_TO_TRY="-g -O0"
+            CC_DBG_FLAGS_TO_TRY="-gdwarf-2 -g3 -O0"
         fi
         ;;
         Darwin*)
         if test $ac_cv_prog_gcc = yes; then
             CC_OPT_FLAGS_TO_TRY="-O2"
-            CC_DBG_FLAGS_TO_TRY="-g -O0"
+            CC_DBG_FLAGS_TO_TRY="-gdwarf-2 -g3 -O0"
         fi
         SET_DT_SONAME=""
-        SO_FOR_MAC="_1"
         ;;
         SunOS)
         CC_OPT_FLAGS_TO_TRY="-O2"
@@ -204,12 +197,16 @@ case `uname` in
         if test $ac_cv_prog_gcc = no; then
             SET_DT_SONAME="-h "
         fi
-        CC_DBG_FLAGS_TO_TRY="-g -O0"
+        if test $ac_cv_prog_gcc = yes; then
+            CC_OPT_FLAGS_TO_TRY="-O2"
+            CC_DBG_FLAGS_TO_TRY="-gdwarf-2 -g3 -O0"
+        else
+            CC_DBG_FLAGS_TO_TRY="-g -O0"
+        fi
         ;;
 esac
 
 AC_SUBST(SET_DT_SONAME)
-AC_SUBST(SO_FOR_MAC)
 
 
 if test $ac_cv_prog_gcc = yes; then
@@ -229,7 +226,7 @@ ARCH_CONF_HEADER=
 
 case `uname` in
         Darwin*)
-          ARCH_CONF_HEADER="\$(GLSRCDIR)/../arch/osx-x86-x86_64-gcc.h"
+          ARCH_CONF_HEADER="\$(GLSRCDIR)/../arch/osx-x86-x86_64-ppc-gcc.h"
         ;;
         *)
           ARCH_CONF_HEADER=
@@ -251,19 +248,19 @@ old_cflags=$CFLAGS
 echo
 for flag in $optflags_to_try; do
     CFLAGS="$CFLAGS $flag"
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[return 0;]])],[
-	echo "   $flag"
-	OPT_CFLAGS="$OPT_CFLAGS $flag"
-    ],[])
+    AC_TRY_COMPILE(, [return 0;], [
+        echo "   $flag"
+        OPT_CFLAGS="$OPT_CFLAGS $flag"
+    ])
     CFLAGS=$old_cflags
 done
 for flag in $cflags_to_try; do
-	CFLAGS="$CFLAGS $flag"
-	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[return 0;]])],[
-		echo "   $flag"
-		GCFLAGS="$GCFLAGS $flag"
-	],[])
-	CFLAGS=$old_cflags
+        CFLAGS="$CFLAGS $flag"
+        AC_TRY_COMPILE(, [return 0;], [
+                echo "   $flag"
+                GCFLAGS="$GCFLAGS $flag"
+        ])
+        CFLAGS=$old_cflags
 done
 old_cflags=$CFLAGS
 echo
@@ -282,16 +279,68 @@ dnl ----------------------------
 dnl check for big/little endian
 dnl ----------------------------
 
+BIGENDIAN=
+
 AC_MSG_CHECKING([for big endian])
 
-AC_RUN_IFELSE(
-  [AC_LANG_PROGRAM([#include <stdio.h>], [
-   static const int one = 1;
-   return (*(char*)&one == 0 ? 0 : 1);
+AC_ARG_ENABLE([big-endian], AC_HELP_STRING([--enable-big-endian],
+    [Force big endian]), [BIGENDIAN=1])
+
+if test x$BIGENDIAN = x; then
+  AC_ARG_ENABLE([little-endian], AC_HELP_STRING([--enable-little-endian],
+      [Force little endian]), [BIGENDIAN=0])
+fi
+
+if test x$BIGENDIAN = x ; then
+  AC_RUN_IFELSE(
+    [AC_LANG_PROGRAM([#include <stdio.h>], [
+     static const int one = 1;
+     return (*(char*)&one == 0 ? 0 : 1);
+    ])],
+    [BIGENDIAN=1;AC_MSG_RESULT(big)],
+    [BIGENDIAN=0;AC_MSG_RESULT(little)])
+else
+  if test x$BIGENDIAN = x1 ; then
+    AC_MSG_RESULT(big)
+  else
+    AC_MSG_RESULT(little)
+  fi
+fi
+
+dnl --------------------------------------------------
+dnl check for sse2 intrinsics
+dnl --------------------------------------------------
+
+AC_MSG_CHECKING([sse2 support])
+save_cflags=$CFLAGS
+CFLAGS="$CFLAGS $OPT_CFLAGS"
+
+HAVE_SSE2=""
+AC_LINK_IFELSE(
+  [AC_LANG_PROGRAM([#include <emmintrin.h>], [
+  __m128i input1;
+  unsigned char buf1[[128]];
+  input1 = _mm_loadu_si128((const __m128i *)buf1);
+  return(0);
   ])],
   [BIGENDIAN=1;AC_MSG_RESULT(big)],
   [BIGENDIAN=0;AC_MSG_RESULT(little)])
+  [HAVE_SSE2="-DHAVE_SSE2"], [HAVE_SSE2=""])
 
+AC_ARG_ENABLE([sse2], AC_HELP_STRING([--disable-sse2],
+       [Do not use sse2 instrinsics]), [
+             if test "x$enable_sse2" = xno; then
+                HAVE_SSE2=""
+             fi])
+
+if test "x$HAVE_SSE2" != x; then
+  AC_MSG_RESULT(yes)
+else
+  AC_MSG_RESULT(no)
+fi
+ 
+AC_SUBST(HAVE_SSE2)
+CFLAGS=$save_cflags
 
 
 dnl --------------------------------------------------
@@ -299,7 +348,7 @@ dnl Enable thread safe build
 dnl --------------------------------------------------
 AC_ARG_ENABLE([threadsafe], AC_HELP_STRING([--enable-threadsafe],
     [enable a thread safe build - NOTE: this will exclude non-threadsafe devices]))
-if test x$enable_threadsafe = xyes; then
+if test x$enable_threadsafe = xyes ; then
     CFLAGS="-DGS_THREADSAFE"
 fi
 
@@ -353,7 +402,6 @@ fi
 
 dnl we aren't interested in all of DEFS, so manually insert
 dnl the flags we care about
-
 if test "$ac_cv_c_const" != yes; then
         GCFLAGS="$GCFLAGS -Dconst="
 fi
@@ -412,7 +460,6 @@ uint64_type="none"
  fi
 dnl we don't need to do anything if a 64-bit type wasn't found
 dnl the code falls back to a (probably 32-bit) default
-
 if test "$uint64_type" != "none"; then
         GCFLAGS="$GCFLAGS -DGX_COLOR_INDEX_TYPE=\"$uint64_type\""
 fi
@@ -473,7 +520,7 @@ case $with_libiconv in
     fi
     ;;
   no)
-    AC_CHECK_FUNC(iconv_open, [with_libiconv=no; found_iconv=yes])
+    found_iconv=no
     ;;
   gnu|yes)
     AC_CHECK_LIB(iconv, libiconv_open, [with_libiconv=gnu; found_iconv=yes])
@@ -641,36 +688,46 @@ if test x"$enable_fapi" != xno; then
   AC_ARG_WITH([ufst], AC_HELP_STRING([--with-ufst=UFST_ROOT_DIR],
                                    [Use UFST]),
             [], [with_ufst=no])
-  if test -d $with_ufst; then
-    INSERT_UFST_BRIDGE_EQUAL_ONE="UFST_BRIDGE=1"
-    case $with_ufst in
-      /*) UFST_ROOT=$with_ufst ;;
-       *) UFST_ROOT=`pwd`/$with_ufst ;;
-    esac
 
-    FAPIUFST_MAK="\$(UFST_ROOT)/fapiufst.mak"
+  if test x"$with_ufst" != xno; then
+    if test -d $with_ufst; then
+      INSERT_UFST_BRIDGE_EQUAL_ONE="UFST_BRIDGE=1"
+      case $with_ufst in
+        /*) UFST_ROOT=$with_ufst ;;
+         *) UFST_ROOT=`pwd`/$with_ufst ;;
+      esac
 
-    # Check pointer size
-    AC_CHECK_SIZEOF(char*)
-
-    # UFST 5.x uses strcmpi() but on GNU systems the equivalent is
-    # strcasecmp()
-    if test "x$ac_cv_sizeof_charp" = "x8"; then
-      UFST_CFLAGS="-DGCCx86_64 -DO_BINARY=0 -Dstrcmpi=strcasecmp"
-    else
-      if test "x$ac_cv_sizeof_charp" = "x4"; then
-        UFST_CFLAGS="-DGCCx86 -DO_BINARY=0 -Dstrcmpi=strcasecmp"
+      FAPIUFST_MAK="\$(UFST_ROOT)/fapiufst.mak"
+    
+      if ! test -f $UFST_ROOT/fapiufst.mak ; then
+        echo $UFST_ROOT/fapiufst.mak
+        AC_MSG_ERROR([UFST: fapiufst.mak not found])
       fi
-    fi
 
-    UFST_LIB_EXT=.a
+      # Check pointer size
+      AC_CHECK_SIZEOF(char*)
+
+      # UFST 5.x uses strcmpi() but on GNU systems the equivalent is
+      # strcasecmp()
+      if test "x$ac_cv_sizeof_charp" = "x8"; then
+        UFST_CFLAGS="-DGCCx86_64 -DO_BINARY=0 -Dstrcmpi=strcasecmp"
+      else
+        if test "x$ac_cv_sizeof_charp" = "x4"; then
+          UFST_CFLAGS="-DGCCx86 -DO_BINARY=0 -Dstrcmpi=strcasecmp"
+        fi
+      fi
+
+      UFST_LIB_EXT=.a
+    else
+      AC_MSG_ERROR([UFST source directory not found])
+    fi
   fi
 
   if test x"$enable_freetype" != xno; then
     AC_MSG_CHECKING([for local freetype library source])
     dnl We prefer freetype2 over freetype, so it is easy to override
     dnl the included freetype source with a checkout from upstream.
-    for dir in freetype2 freetype; do
+    for dir in $srcdir/freetype2 $srcdir/freetype; do
       if test -f $dir/src/base/ftbbox.c; then
         AC_MSG_RESULT(yes)
         SHARE_FT=0
