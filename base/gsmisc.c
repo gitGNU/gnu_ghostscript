@@ -245,7 +245,7 @@ emprintf_program_ident(const gs_memory_t *mem,
         if (revision_number) {
             int fpart = revision_number % 100;
 
-            epfm("%d.%02d.%d", (int)(revision_number / 10000 % 100),
+            epfm(mem, "%d.%02d.%d", (int)(revision_number / 10000 % 100),
     				(int)(revision_number / 100 % 100), fpart);
         }
         epfm(mem, ": ");
