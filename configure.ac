@@ -18,7 +18,7 @@ dnl ------------------------------------------------
 dnl Initialization and Versioning
 dnl ------------------------------------------------
 
-AC_INIT([gnu-ghostscript], [9.08.0], [gnu-ghostscript-bug@gnu.org])
+AC_INIT([gnu-ghostscript], [9.10.0], [gnu-ghostscript-bug@gnu.org])
 AC_PREREQ(2.61)
 AC_LANG(C)
 AC_CONFIG_SRCDIR([psi/gs.c])
@@ -31,9 +31,9 @@ CXXFLAGS="${CXXFLAGS:=}"
 LDFLAGS="${LDFLAGS:=}"
 
 GS_VERSION_MAJOR=9
-GS_VERSION_MINOR=8
+GS_VERSION_MINOR=10
 GS_VERSION_PATCH=0
-GS_REVISIONDATE=20140112
+GS_REVISIONDATE=20140202
 
 GS_VERSION=`expr $GS_VERSION_MAJOR \* 10000 + $GS_VERSION_MINOR \* 100 + $GS_VERSION_PATCH`
 
@@ -1244,11 +1244,23 @@ if test x$with_luratech != xno; then
     JBIG2_DECODER=luratech
     SHARE_JBIG2=0
     JBIG2DIR=$srcdir/luratech/ldf_jb2
-    if test "$(uname)" = "Darwin"; then
-      JBIG2_AUTOCONF_CFLAGS="-DUSE_LDF_JB2 -DMAC -DMAC_OS_X_BUILD"
-    else
-      JBIG2_AUTOCONF_CFLAGS="-DUSE_LDF_JB2 -DLINUX"
-    fi
+
+    case `uname` in
+      Darwin*)
+        JBIG2_AUTOCONF_CFLAGS="-DUSE_LDF_JB2 -DMAC -DMAC_OS_X_BUILD"
+      ;;
+      AIX)
+        if test $ac_cv_prog_gcc = yes; then
+          JBIG2_AUTOCONF_CFLAGS="-DUSE_LDF_JB2 -fsigned-char -DLINUX"
+        else
+          JBIG2_AUTOCONF_CFLAGS="-DUSE_LDF_JB2 -qchars=signed -DLINUX"
+        fi
+     ;;
+     *)
+        JBIG2_AUTOCONF_CFLAGS="-DUSE_LDF_JB2 -DLINUX"
+     ;;
+     esac
+
     JBIG2FILEDEVS='$(DD)gdevjbig2.dev'
     JBIG2DEVS='$(PSD)jbig2.dev'
   else
@@ -1353,11 +1365,23 @@ if test x$with_luratech != xno; then
     JPX_DECODER=luratech
     SHARE_JPX=0
     JPXDIR=$srcdir/luratech/lwf_jp2
-    if test "$(uname)" = "Darwin"; then
-      JPX_AUTOCONF_CFLAGS="-DUSE_LWF_JP2 -DMAC -DMAC_OS_X_BUILD"
-    else
-      JPX_AUTOCONF_CFLAGS="-DUSE_LWF_JP2 -DLINUX"
-    fi
+
+    case `uname` in
+      Darwin*)
+        JPX_AUTOCONF_CFLAGS="-DUSE_LWF_JP2 -DMAC -DMAC_OS_X_BUILD"
+      ;;
+      AIX)
+        if test $ac_cv_prog_gcc = yes; then
+          JPX_AUTOCONF_CFLAGS="-DUSE_LWF_JP2 -fsigned-char -DLINUX"
+        else
+          JPX_AUTOCONF_CFLAGS="-DUSE_LWF_JP2 -qchars=signed -DLINUX"
+        fi
+     ;;
+     *)
+        JPX_AUTOCONF_CFLAGS="-DUSE_LWF_JP2 -DLINUX"
+     ;;
+     esac
+
     JPXDEVS='$(PSD)jpx.dev'
   else
     AC_MSG_RESULT([no])
@@ -1985,10 +2009,10 @@ dnl enable SAFER by default or not
 
 AC_ARG_ENABLE([safer-default], AC_HELP_STRING([--enable-safer-default], [Set the SAFER mode ON by default]))
 
-DEFAULT_SAFER="SAFER { .setsafe } if"
+DEFAULT_SAFER="SAFER { .setsafeglobal } if"
 
 if test x$enable_safer_default = xyes; then
-	DEFAULT_SAFER="currentdict /NOSAFER known { null } { .setsafe } ifelse"
+	DEFAULT_SAFER="currentdict /NOSAFER known { null } { .setsafeglobal } ifelse"
 fi
 
 AC_SUBST(DEFAULT_SAFER)
