@@ -160,7 +160,7 @@ scale_paths(gs_state * pgs, int log2_scale_x, int log2_scale_y, bool do_path)
     return 0;
 }
 static void
-scale_dash_pattern(gs_state * pgs, floatp scale)
+scale_dash_pattern(gs_state * pgs, double scale)
 {
     int i;
 
@@ -205,7 +205,7 @@ alpha_buffer_init(gs_state * pgs, fixed extra_x, fixed extra_y, int alpha_bits,
         return 0;		/* if no room, don't buffer */
     /* We may have to update the marking parameters if we have a pdf14 device
        as our target.  Need to do while dev is still active in pgs */
-    if (dev_proc(dev, dev_spec_op)(dev, gxdso_is_pdf14_device, NULL, 0)) {
+    if (dev_proc(dev, dev_spec_op)(dev, gxdso_is_pdf14_device, NULL, 0) > 0) {
         gs_update_trans_marking_params(pgs);
     }
     gs_make_mem_abuf_device(mdev, mem, dev, &log2_scale,

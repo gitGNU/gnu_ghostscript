@@ -708,7 +708,7 @@ gs_setoverprint(gs_state * pgs, bool ovp)
         } else {
             dev_proc(dev, get_profile)(dev,  &profile_struct);
         }
-        if (profile_struct->sim_overprint == false) return;
+        if (profile_struct != NULL && profile_struct->sim_overprint == false) return;
     }
     pgs->overprint = ovp;
     if (prior_ovp != ovp)
@@ -833,7 +833,7 @@ gs_initgraphics(gs_state * pgs)
 
 /* setfilladjust */
 int
-gs_setfilladjust(gs_state * pgs, floatp adjust_x, floatp adjust_y)
+gs_setfilladjust(gs_state * pgs, double adjust_x, double adjust_y)
 {
 #define CLAMP_TO_HALF(v)\
     ((v) <= 0 ? fixed_0 : (v) >= 0.5 ? fixed_half : float2fixed(v));
@@ -1024,6 +1024,7 @@ gstate_clone(gs_state * pfrom, gs_memory_t * mem, client_name_t cname,
     }
     gs_imager_state_copied((gs_imager_state *)pgs);
     /* Don't do anything to clip_stack. */
+
     rc_increment(pgs->device);
     *parts.color[0].ccolor    = *pfrom->color[0].ccolor;
     *parts.color[0].dev_color = *pfrom->color[0].dev_color;

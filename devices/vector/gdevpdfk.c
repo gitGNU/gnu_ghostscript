@@ -41,7 +41,7 @@ pdf_cie_add_ranges(cos_dict_t *pcd, const gs_range *prange, int n, bool clamp)
     if (pca == 0)
         return_error(gs_error_VMerror);
     for (i = 0; i < n; ++i) {
-        floatp rmin = prange[i].rmin, rmax = prange[i].rmax;
+        double rmin = prange[i].rmin, rmax = prange[i].rmax;
 
         if (clamp) {
             if (rmin < 0) rmin = 0;
@@ -73,7 +73,7 @@ cie_to_xyz(const double *in, double out[3], const gs_color_space *pcs,
 
     gs_color_space_index cs_index;
     const gs_vector3 *const pWhitePoint = &pciec->points.WhitePoint;
-    double xyz_float[3];
+    float xyz_float[3];
 
     cs_index = gs_color_space_get_index(pcs);
     /* Need a device profile */
@@ -100,16 +100,16 @@ cie_to_xyz(const double *in, double out[3], const gs_color_space *pcs,
 
     switch (cs_index) {
         case gs_color_space_index_CIEA:
-            gx_psconcretize_CIEA(&cc, pcs, xyz, pis);
+            gx_psconcretize_CIEA(&cc, pcs, xyz, xyz_float, pis);
             break;
         case gs_color_space_index_CIEABC:
-            gx_psconcretize_CIEABC(&cc, pcs, xyz, pis);
+            gx_psconcretize_CIEABC(&cc, pcs, xyz, xyz_float, pis);
             break;
         case gs_color_space_index_CIEDEF:
-            gx_psconcretize_CIEDEF(&cc, pcs, xyz, pis);
+            gx_psconcretize_CIEDEF(&cc, pcs, xyz, xyz_float, pis);
             break;
         case gs_color_space_index_CIEDEFG:
-           gx_psconcretize_CIEDEFG(&cc, pcs, xyz, pis);
+           gx_psconcretize_CIEDEFG(&cc, pcs, xyz, xyz_float, pis);
            break;
         default:
             break;
@@ -121,14 +121,9 @@ cie_to_xyz(const double *in, double out[3], const gs_color_space *pcs,
         /* Use the resulting Y value to scale the wp Illumination.
         note that we scale to the whitepoint here.  Matrix out
         handles mapping to CIE D50.  This forces an achromatic result */
-        xyz_float[1] = frac2float(xyz[1]);
         xyz_float[0] = pWhitePoint->u * xyz_float[1];
         xyz_float[2] = pWhitePoint->w * xyz_float[1];
-    } else {
-        xyz_float[0] = frac2float(xyz[0]);
-        xyz_float[1] = frac2float(xyz[1]);
-        xyz_float[2] = frac2float(xyz[2]);
-    }
+    } 
 
     /* Do wp mapping to D50 in XYZ for now.  We should do bradford correction.
        Will add that in next release */
@@ -334,7 +329,7 @@ pdf_make_iccbased(gx_device_pdf *pdev, cos_array_t *pca, int ncomps,
             break;			/* implicit (default) */
         default:
             if ((code = pdf_color_space_named(pdev, &v, NULL, pcs_alt,
-                                        &pdf_color_space_names, false, NULL, 0)) < 0 ||
+                                        &pdf_color_space_names, false, NULL, 0, true)) < 0 ||
                 (code = cos_dict_put_c_key(cos_stream_dict(pcstrm), "/Alternate",
                                            &v)) < 0
                 )
@@ -409,7 +404,7 @@ set_uint32(byte bytes[4], uint value)
     bytes[3] = (byte)value;
 }
 static void
-set_XYZ(byte bytes[4], floatp value)
+set_XYZ(byte bytes[4], double value)
 {
     set_uint32(bytes, (uint)(int)(value * 65536));
 }
@@ -424,7 +419,7 @@ add_table_xyz3(profile_table_t **ppnt, const char *tag, byte bytes[20],
     DISCARD(add_table(ppnt, tag, bytes, 20));
 }
 static void
-set_sample16(byte *p, floatp v)
+set_sample16(byte *p, double v)
 {
     int value = (int)(v * 65535);
 

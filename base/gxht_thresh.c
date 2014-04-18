@@ -789,10 +789,12 @@ move_landscape_buffer(ht_landscape_info_t *ht_landscape, byte *contone_align,
         position_curr = ht_landscape->curr_pos - 1;
         position_new = 0;
     }
-    for (k = 0; k < data_length; k++) {
-            contone_align[position_new] = contone_align[position_curr];
-            position_curr += LAND_BITS;
-            position_new += LAND_BITS;
+    if (position_curr != position_new) {
+        for (k = 0; k < data_length; k++) {
+                contone_align[position_new] = contone_align[position_curr];
+                position_curr += LAND_BITS;
+                position_new += LAND_BITS;
+        }
     }
 }
 
@@ -804,13 +806,11 @@ reset_landscape_buffer(ht_landscape_info_t *ht_landscape, byte *contone_align,
                        int data_length, int num_used)
 {
     int k;
-    int position_curr, position_new, delta;
+    int delta;
     int curr_x_pos = ht_landscape->xstart;
 
     if (ht_landscape->index < 0) {
         /* Moving right to left, move column to far right */
-        position_curr = ht_landscape->curr_pos + 1;
-        position_new = LAND_BITS-1;
         delta = ht_landscape->count - num_used;
         memset(&(ht_landscape->widths[0]), 0, sizeof(int)*LAND_BITS);
         ht_landscape->widths[LAND_BITS-1] = delta;
@@ -818,8 +818,6 @@ reset_landscape_buffer(ht_landscape_info_t *ht_landscape, byte *contone_align,
         ht_landscape->xstart = curr_x_pos - num_used;
     } else {
         /* Moving left to right, move column to far left */
-        position_curr = ht_landscape->curr_pos - 1;
-        position_new = 0;
         delta = ht_landscape->count - num_used;
         memset(&(ht_landscape->widths[0]), 0, sizeof(int)*LAND_BITS);
         ht_landscape->widths[0] = delta;
@@ -828,11 +826,6 @@ reset_landscape_buffer(ht_landscape_info_t *ht_landscape, byte *contone_align,
     }
     ht_landscape->count = delta;
     ht_landscape->num_contones = 1;
-    for (k = 0; k < data_length; k++) {
-            contone_align[position_new] = contone_align[position_curr];
-            position_curr += LAND_BITS;
-            position_new += LAND_BITS;
-    }
 }
 
 /* This performs a thresholding operation on multiple planes of data and
@@ -860,12 +853,9 @@ gxht_thresh_planes(gx_image_enum *penum, fixed xrun,
     int offset_bits = penum->ht_offset_bits;
     byte *halftone;
     int dithered_stride = penum->ht_stride;
-    bool is_planar_dev = dev_proc(dev, dev_spec_op)(dev, 
-                                                gxdso_is_native_planar, NULL, 0) > 0;
+    bool is_planar_dev = dev->is_planar;
     gx_color_index dev_white = gx_device_white(dev);
     gx_color_index dev_black = gx_device_black(dev);
-    bool done = false;
-    bool allow_reset = false; /* Init to silence compiler warnings */
     int spp_out = dev->color_info.num_components;
     byte *contone_align = NULL; /* Init to silence compiler warnings */
 
@@ -876,7 +866,6 @@ gxht_thresh_planes(gx_image_enum *penum, fixed xrun,
     /* Figure out the tile steps.  Left offset, Number of tiles, Right offset. */
     switch (posture) {
         case image_portrait:
-            allow_reset = true;
             vdi = penum->hci;
             /*  Iterate over the vdi and fill up our threshold buffer.  We
                  also need to loop across the planes of data */
@@ -983,7 +972,7 @@ gxht_thresh_planes(gx_image_enum *penum, fixed xrun,
                    first if we have enough data or are all done */
             while ( (penum->ht_landscape.count >= LAND_BITS ||
                    ((penum->ht_landscape.count >= offset_bits) &&
-                    penum->ht_landscape.offset_set)) && !done ) {
+                    penum->ht_landscape.offset_set))) {
                 /* Go ahead and 2D tile in the threshold buffer at this time */
                 /* Always work the tiling from the upper left corner of our
                    LAND_BITS columns */
@@ -998,11 +987,6 @@ gxht_thresh_planes(gx_image_enum *penum, fixed xrun,
                     /* Point to the proper contone data */
                     contone_align = penum->line + offset_contone[j] +
                                       LAND_BITS * j * contone_stride;
-                    if (j == spp_out - 1) {
-                        allow_reset = true;
-                    } else {
-                        allow_reset = false;
-                    }
                     if (penum->ht_landscape.offset_set) {
                         width = offset_bits;
                     } else {
@@ -1076,6 +1060,13 @@ gxht_thresh_planes(gx_image_enum *penum, fixed xrun,
                         gx_ht_threshold_landscape(contone_align, thresh_align,
                                             penum->ht_landscape, halftone, dest_height);
                     }
+                    /* We may have a line left over that has to be maintained
+                       due to line replication in the resolution conversion. */
+                    if (width != penum->ht_landscape.count) {
+                        /* move the line do not reset the stuff */
+                        move_landscape_buffer(&(penum->ht_landscape),
+                                              contone_align, dest_height);
+                    }
                 }
                 /* Perform the copy mono */
                 if (penum->ht_landscape.index < 0) {
@@ -1113,36 +1104,23 @@ gxht_thresh_planes(gx_image_enum *penum, fixed xrun,
                                                      penum->ht_plane_height);
                     }
                 }
-                /* Clean up and reset our buffer.  We may have a line left
-                   over that has to be maintained due to line replication in the
-                   resolution conversion.  However, pay attention to the reset
-                   flag which indicates we are done with our last plane */
-                if (!allow_reset) {
-                    if (width != penum->ht_landscape.count) {
-                        /* move the line do not reset the stuff */
-                        move_landscape_buffer(&(penum->ht_landscape), 
-                                              contone_align, dest_height);
-                    }
-                    done = true;
+                penum->ht_landscape.offset_set = false;
+                if (width != penum->ht_landscape.count) {
+                    reset_landscape_buffer(&(penum->ht_landscape),
+                                           contone_align, dest_height,
+                                           width);
                 } else {
-                    penum->ht_landscape.offset_set = false;
-                    if (width != penum->ht_landscape.count) {
-                        reset_landscape_buffer(&(penum->ht_landscape), 
-                                               contone_align, dest_height, 
-                                               width);
+                    /* Reset the whole buffer */
+                    penum->ht_landscape.count = 0;
+                    if (penum->ht_landscape.index < 0) {
+                        /* Going right to left */
+                        penum->ht_landscape.curr_pos = LAND_BITS-1;
                     } else {
-                        /* Reset the whole buffer */
-                        penum->ht_landscape.count = 0;
-                        if (penum->ht_landscape.index < 0) {
-                            /* Going right to left */
-                            penum->ht_landscape.curr_pos = LAND_BITS-1;
-                        } else {
-                            /* Going left to right */
-                            penum->ht_landscape.curr_pos = 0;
-                        }
-                        penum->ht_landscape.num_contones = 0;
-                        memset(&(penum->ht_landscape.widths[0]), 0, sizeof(int)*LAND_BITS);
+                        /* Going left to right */
+                        penum->ht_landscape.curr_pos = 0;
                     }
+                    penum->ht_landscape.num_contones = 0;
+                    memset(&(penum->ht_landscape.widths[0]), 0, sizeof(int)*LAND_BITS);
                 }
             }
             break;

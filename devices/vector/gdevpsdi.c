@@ -143,13 +143,21 @@ choose_DCT_params(gx_device *pdev, const gs_color_space *pcs,
            suppress an ununiformity by subtracting the image of {0,0,0},
            and then check for giagonal domination.  */
         cc.paint.values[0] = cc.paint.values[1] = cc.paint.values[2] = MIN_FLOAT;
-        convert_color((gx_device *)&mdev, pcs, pis, &cc, c[3]);
+        code = convert_color((gx_device *)&mdev, pcs, pis, &cc, c[3]);
+        if (code < 0)
+            return code;
         cc.paint.values[0] = MAX_FLOAT; cc.paint.values[1] = MIN_FLOAT; cc.paint.values[2] = MIN_FLOAT;
-        convert_color((gx_device *)&mdev, pcs, pis, &cc, c[0]);
+        code = convert_color((gx_device *)&mdev, pcs, pis, &cc, c[0]);
+        if (code < 0)
+            return code;
         cc.paint.values[0] = MIN_FLOAT; cc.paint.values[1] = MAX_FLOAT; cc.paint.values[2] = MIN_FLOAT;
-        convert_color((gx_device *)&mdev, pcs, pis, &cc, c[1]);
+        code = convert_color((gx_device *)&mdev, pcs, pis, &cc, c[1]);
+        if (code < 0)
+            return code;
         cc.paint.values[0] = MIN_FLOAT; cc.paint.values[1] = MIN_FLOAT; cc.paint.values[2] = MAX_FLOAT;
-        convert_color((gx_device *)&mdev, pcs, pis, &cc, c[2]);
+        code = convert_color((gx_device *)&mdev, pcs, pis, &cc, c[2]);
+        if (code < 0)
+            return code;
         c[0][0] -= c[3][0]; c[0][1] -= c[3][1]; c[0][2] -= c[3][2];
         c[1][0] -= c[3][0]; c[1][1] -= c[3][1]; c[1][2] -= c[3][2];
         c[2][0] -= c[3][0]; c[2][1] -= c[3][1]; c[2][2] -= c[3][2];
@@ -286,6 +294,9 @@ setup_image_compression(psdf_binary_writer *pbw, const psdf_image_params *pdip,
     st = s_alloc_state(mem, templat->stype, "setup_image_compression");
     if (st == 0)
         return_error(gs_error_VMerror);
+
+    st->templat = templat;
+
     if (templat->set_defaults)
         (*templat->set_defaults) (st);
     if (templat == &s_CFE_template) {
@@ -314,6 +325,7 @@ setup_image_compression(psdf_binary_writer *pbw, const psdf_image_params *pdip,
                 code = gs_note_error(gs_error_VMerror);
                 goto fail;
             }
+            st->templat = templat;
             if (templat->set_defaults)
                 (*templat->set_defaults) (st);
             {
@@ -386,9 +398,9 @@ setup_image_compression(psdf_binary_writer *pbw, const psdf_image_params *pdip,
 /* Determine whether an image should be downsampled. */
 static bool
 do_downsample(const psdf_image_params *pdip, const gs_pixel_image_t *pim,
-              floatp resolution)
+              double resolution)
 {
-    floatp factor = resolution / pdip->Resolution;
+    double factor = resolution / pdip->Resolution;
 
     return (pdip->Downsample && factor >= pdip->DownsampleThreshold &&
             factor <= pim->Width && factor <= pim->Height);
@@ -400,7 +412,7 @@ do_downsample(const psdf_image_params *pdip, const gs_pixel_image_t *pim,
 static int
 setup_downsampling(psdf_binary_writer * pbw, const psdf_image_params * pdip,
                    gs_pixel_image_t * pim, const gs_imager_state * pis,
-                   floatp resolution, bool lossless)
+                   double resolution, bool lossless)
 {
     gx_device_psdf *pdev = pbw->dev;
     const stream_template *templat = &s_Subsample_template;
@@ -700,6 +712,8 @@ psdf_setup_compression_chooser(psdf_binary_writer *pbw, gx_device_psdf *pdev,
 
     if (ss == 0)
         return_error(gs_error_VMerror);
+    ss->templat = &s_compr_chooser_template;
+
     pbw->memory = pdev->memory;
     pbw->strm = pdev->strm; /* just a stub - will not write to it. */
     pbw->dev = pdev;

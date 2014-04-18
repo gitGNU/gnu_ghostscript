@@ -174,10 +174,9 @@ gs_image_class_4_color(gx_image_enum * penum)
             /* If num components is 1 or if we are going to CMYK planar device
                then we will may use the thresholding if it is a halftone
                device*/
-            is_planar_dev = (dev_proc(penum->dev, dev_spec_op)(penum->dev,
-                                 gxdso_is_native_planar, NULL, 0) > 0);
-            if ((penum->dev->color_info.num_components == 1 || is_planar_dev) &&
-                 penum->bps == 8 ) {
+            is_planar_dev = penum->dev->is_planar;
+            if (((penum->dev->color_info.num_components == 1 && penum->dev->color_info.depth == 1) ||
+                 is_planar_dev) && penum->bps == 8 ) {
                 code = gxht_thresh_image_init(penum);
                 if (code == 0) {
                      return &image_render_color_thresh;
@@ -465,6 +464,8 @@ image_render_color_thresh(gx_image_enum *penum_orig, const byte *buffer, int dat
         /* Get the buffer into the device color space */
         code = image_color_icc_prep(penum, psrc, w, dev, &spp_cm, &psrc_cm,
                                     &psrc_cm_start,  &bufend, true);
+        if (code < 0)
+            return code;
         /* Also, if need apply the transfer function at this time.  This
            should be reworked so that we are not doing all these conversions */
         if (penum->icc_setup.has_transfer) {

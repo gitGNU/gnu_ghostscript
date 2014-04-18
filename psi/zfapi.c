@@ -1152,9 +1152,19 @@ FAPI_FF_get_glyph(gs_fapi_font *ff, int char_code, byte *buf,
     else {                      /* type 42 */
         const byte *data_ptr;
         int l = ff->get_glyphdirectory_data(ff, char_code, &data_ptr);
+        ref *render_notdef_ref;
+        bool render_notdef = true;
+
+        if (dict_find_string(pdr, ".render_notdef", &render_notdef_ref) > 0
+            && r_has_type(render_notdef_ref, t_boolean)) {
+            render_notdef = render_notdef_ref->value.boolval;
+        }
+        else {
+            render_notdef = i_ctx_p->RenderTTNotdef;
+        }
 
         /* We should only render the TT notdef if we've been told to - logic lifted from zchar42.c */
-        if (!i_ctx_p->RenderTTNotdef
+        if (!render_notdef
             &&
             ((ff->char_data_len == 7
               && strncmp((const char *)ff->char_data, ".notdef", 7) == 0)
@@ -1266,6 +1276,7 @@ static const gs_fapi_font ps_ff_stub = {
     false,                      /* is_outline_font */
     false,                      /* is_mtx_skipped */
     false,                      /* is_vertical */
+    false,                      /* metrics_only */
     {{-1, -1}},                 /* ttf_cmap_req */
     0,                          /* client_ctx_p */
     0,                          /* client_font_data */
@@ -1528,7 +1539,7 @@ zFAPIrebuildfont(i_ctx_t *i_ctx_p)
         strncpy((char *)FAPI_ID, (const char *)pchars, len);
         FAPI_ID[len] = 0;
 
-        gs_fapi_set_servers_client_data(imemory, NULL, i_ctx_p);
+        gs_fapi_set_servers_client_data(imemory, &ps_ff_stub, i_ctx_p);
 
         code =
             gs_fapi_find_server(imemory, FAPI_ID,

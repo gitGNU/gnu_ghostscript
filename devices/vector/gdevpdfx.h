@@ -47,7 +47,7 @@
 
 /* Define the maximum depth of an outline tree. */
 /* Note that there is no limit on the breadth of the tree. */
-#define MAX_OUTLINE_DEPTH 32
+#define INITIAL_MAX_OUTLINE_DEPTH 32
 
 /* Define the maximum size of a destination array string. */
 #define MAX_DEST_STRING 80
@@ -136,6 +136,8 @@ typedef enum {
     resourceMetadata,
     resourceICC,
     resourceAnnotation,
+    resourceEmbeddedFiles,
+    resourceFontFile,
     resourceNone        /* Special, used when this isn't a resource at all
                          * eg when we execute a resource we've just written, such as
                          * a Pattern.
@@ -500,7 +502,8 @@ typedef struct pdf_viewer_state_s {
     gx_hl_saved_color saved_fill_color;
     gx_hl_saved_color saved_stroke_color;
     gx_line_params line_params;
-    float dash_pattern[max_dash];
+    float *dash_pattern;
+    uint dash_pattern_size;
     gs_id soft_mask_id;
 } pdf_viewer_state;
 
@@ -576,6 +579,7 @@ struct gx_device_pdf_s {
     gs_param_string InstanceUUID;
     int DocumentTimeSeq;
     bool ForOPDFRead;          /* PS2WRITE only. */
+    bool Eps2Write;            /* EPS2WRITE only */
     bool CompressEntireFile;  /* PS2WRITE only. */
     bool ResourcesBeforeUsage; /* PS2WRITE only. */
     bool HavePDFWidths;        /* PS2WRITE only. */
@@ -589,9 +593,6 @@ struct gx_device_pdf_s {
     bool AbortPDFAX;            /* Abort generation of PDFA or X, produce regular PDF */
     long MaxClipPathSize;  /* The maximal number of elements of a clipping path
                               that the target viewer|printer can handle. */
-#ifdef DEPRECATED_906
-    long MaxViewerMemorySize;
-#endif
     long MaxShadingBitmapSize; /* The maximal number of bytes in
                               a bitmap representation of a shading.
                               (Bigger shadings to be downsampled). */
@@ -614,6 +615,8 @@ struct gx_device_pdf_s {
     uint EncryptionV;
     /* Values derived from DSC comments */
     bool is_EPS;
+    int AccumulatingBBox;
+    gs_rect BBox;
     pdf_page_dsc_info_t doc_dsc_info; /* document default */
     pdf_page_dsc_info_t page_dsc_info; /* current page */
     /* Additional graphics state */
@@ -627,6 +630,9 @@ struct gx_device_pdf_s {
     /* Following are set when device is opened. */
     pdf_compression_type compression;
     pdf_compression_type compression_at_page_start;
+    /* pdf_memory is 'stable' memory, it is not subject to save and restore
+     * and is the allocator which should be used for pretty much ewverything
+     */
 #define pdf_memory v_memory
     /*
      * The xref temporary file is logically an array of longs.
@@ -685,12 +691,14 @@ struct gx_device_pdf_s {
     pdf_resource_t *last_resource;
     pdf_resource_t *OneByteIdentityH;
     gs_id IdentityCIDSystemInfo_id;
-    pdf_outline_level_t outline_levels[MAX_OUTLINE_DEPTH];
+    pdf_outline_level_t *outline_levels;
     int outline_depth;
+    int max_outline_depth;
     int closed_outline_depth;
     int outlines_open;
     pdf_article_t *articles;
     cos_dict_t *Dests;
+    cos_dict_t *EmbeddedFiles;
     byte fileID[16];
     /* Use a single time moment for all UUIDs to minimize an indeterminizm. */
     long uuid_time[2];
@@ -767,7 +775,12 @@ struct gx_device_pdf_s {
      */
     int FormDepth;
 
-    /* Nasty hack. OPDFread.ps resets the grpahics state to the identity before
+    /* Determine if we have a high level form. We want to do things differently
+     * sometimes, if we are capturing a form
+     */
+    int HighLevelForm;
+
+    /* Nasty hack. OPDFread.ps resets the graphics state to the identity before
      * replaying the Pattern PaintProc, but if the Pattern is nested inside a
      * previous pattern, this doesn't work. We use this to keep track of whether
      * we are nested, and if we are (and are ps2write, not pdfwrite) we track the
@@ -784,6 +797,8 @@ struct gx_device_pdf_s {
     pdf_resource_t *font3; /* The owner of the accumulated charstring. */
     pdf_resource_t *accumulating_substream_resource;
     gs_matrix_fixed charproc_ctm;
+    bool accumulating_charproc;
+    gs_rect charproc_BBox;
     bool charproc_just_accumulated; /* A flag for controlling
                         the glyph variation recognition.
                         Used only with uncached charprocs. */
@@ -857,6 +872,12 @@ struct gx_device_pdf_s {
                                      * pages
                                      */
     int ResourceUsageSize;          /* Size of the above array, currently */
+    bool InOutputPage;              /* Used when closing the file, if this is true then we were
+                                     * called from output_page and should emit a page even if there
+                                     * are no marks. If false, then we probably were called from
+                                     * closedevice and, if there are no marks, we should delete
+                                     * the last file *if* we are emitting one file per page.
+                                     */
 };
 
 #define is_in_page(pdev)\
@@ -881,8 +902,9 @@ struct gx_device_pdf_s {
  m(32,pres_soft_mask_dict) m(33,PDFXTrimBoxToMediaBoxOffset.data)\
  m(34,PDFXBleedBoxToTrimBoxOffset.data) m(35, DSCEncodingToUnicode.data)\
  m(36,Identity_ToUnicode_CMaps[0]) m(37,Identity_ToUnicode_CMaps[1])\
- m(38,ResourceUsage) m(39,vgstack)
-#define gx_device_pdf_num_ptrs 40
+ m(38,ResourceUsage) m(39,vgstack)\
+ m(40, outline_levels) m(41, EmbeddedFiles)
+#define gx_device_pdf_num_ptrs 42
 #define gx_device_pdf_do_param_strings(m)\
     m(0, OwnerPassword) m(1, UserPassword) m(2, NoEncrypt)\
     m(3, DocumentUUID) m(4, InstanceUUID)
@@ -890,11 +912,6 @@ struct gx_device_pdf_s {
 #define gx_device_pdf_do_const_strings(m)\
     m(0, objname)
 #define gx_device_pdf_num_const_strings 1
-#define st_device_pdf_max_ptrs\
-  (st_device_psdf_max_ptrs + gx_device_pdf_num_ptrs +\
-   gx_device_pdf_num_param_strings + gx_device_pdf_num_const_strings +\
-   NUM_RESOURCE_TYPES * NUM_RESOURCE_CHAINS /* resources[].chains[] */ +\
-   MAX_OUTLINE_DEPTH * 2 /* outline_levels[].{first,last}.action */
 
 #define private_st_device_pdfwrite()        /* in gdevpdf.c */\
   gs_private_st_composite_final(st_device_pdfwrite, gx_device_pdf,\
@@ -1089,12 +1106,6 @@ void pdf_reverse_resource_chain(gx_device_pdf *pdev, pdf_resource_type_t rtype);
  * Free unnamed Cos objects for resources local to a content stream.
  */
 int pdf_free_resource_objects(gx_device_pdf *pdev, pdf_resource_type_t rtype);
-
-#ifdef DEPRECATED_906
-/* Write and free all resource objects. */
-
-int pdf_write_and_free_all_resource_objects(gx_device_pdf *pdev);
-#endif
 
 /*
  * Store the resource sets for a content stream (page or XObject).
@@ -1398,14 +1409,6 @@ int pdf_replace_names(gx_device_pdf *pdev, const gs_param_string *from,
 /* ---------------- Exported by gdevpdfw.c ---------------- */
 
 /* For gdevpdf.c */
-
-#ifdef DEPRECATED_906
-/*
- * Close the text-related parts of a document, including writing out font
- * and related resources.
- */
-int pdf_close_text_document(gx_device_pdf *pdev);
-#endif
 
 int write_font_resources(gx_device_pdf *pdev, pdf_resource_list_t *prlist);
 

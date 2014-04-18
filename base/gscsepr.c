@@ -34,6 +34,7 @@
 #include "stream.h"
 #include "gsicc_cache.h"
 #include "gxdevice.h"
+#include "gxcie.h"
 
 /* ---------------- Color space ---------------- */
 
@@ -61,7 +62,7 @@ const gs_color_space_type gs_color_space_type_Separation = {
     gx_set_overprint_Separation,
     gx_final_Separation, gx_no_adjust_color_count,
     gx_serialize_Separation,
-    gx_cspace_is_linear_default
+    gx_cspace_is_linear_default, gx_polarity_subtractive
 };
 
 /* GC procedures */
@@ -174,7 +175,6 @@ gx_set_overprint_Separation(const gs_color_space * pcs, gs_state * pgs)
                     gs_overprint_set_drawn_comp( params.drawn_comps, mcomp);
             }
         }
-
         pgs->effective_overprint_mode = 0;
         return gs_state_update_overprint(pgs, &params);
     }
@@ -377,7 +377,9 @@ gx_concretize_Separation(const gs_client_color *pc, const gs_color_space *pcs,
         (*pacs->type->restrict_color)(&cc, pacs);
         /* First check if this was PS based. */
         if (gs_color_space_is_PSCIE(pacs)) {
-            /* If we have not yet create the profile do that now */
+            /* We may have to rescale data to 0 to 1 range */
+            rescale_cie_colors(pacs, &cc);
+            /* If we have not yet created the profile do that now */
             if (pacs->icc_equivalent == NULL) {
                 gs_colorspace_set_icc_equivalent(pacs, &(is_lab), pis->memory);
             }

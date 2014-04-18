@@ -345,16 +345,18 @@ gs_fapi_prepare_font(gs_font *pfont, gs_fapi_server *I, int subfont, const char 
     gs_font_base *pbfont = (gs_font_base *)pfont;
     int code, bbox_set = 0;
     int BBox[4], scale;
-    double size, size1;
+    int units[2];
+    double size;
     gs_fapi_font_scale font_scale =
         { {1, 0, 0, 1, 0, 0}, {0, 0}, {1, 1}, true };
 
     scale = 1 << I->frac_shift;
-    size1 = size = 1 / hypot(pbfont->FontMatrix.xx, pbfont->FontMatrix.xy);
+    size = 1 / hypot(pbfont->FontMatrix.xx, pbfont->FontMatrix.xy);
+    /* I believe this is just to ensure minimal rounding problems with scalers that
+       scale the FontBBox values with the font scale.
+     */
     if (size < 1000)
         size = 1000;
-    if (size1 > 100)
-        size1 = (int)(size1 + 0.5);
 
     font_scale.matrix[0] = font_scale.matrix[3] = (int)(size * scale + 0.5);
 
@@ -399,15 +401,15 @@ gs_fapi_prepare_font(gs_font *pfont, gs_fapi_server *I, int subfont, const char 
         if ((code =
              gs_fapi_renderer_retcode(mem, I,
                                       I->get_font_bbox(I, &I->ff,
-                                                       BBox))) < 0) {
+                                                       BBox, units))) < 0) {
             gs_fapi_release_typeface(I, &pbfont->FAPI_font_data);
             return code;
         }
         /* Refine FontBBox : */
-        pbfont->FontBBox.p.x = (double)BBox[0] * size1 / size;
-        pbfont->FontBBox.p.y = (double)BBox[1] * size1 / size;
-        pbfont->FontBBox.q.x = (double)BBox[2] * size1 / size;
-        pbfont->FontBBox.q.y = (double)BBox[3] * size1 / size;
+        pbfont->FontBBox.p.x = ((double)BBox[0] / units[0]);
+        pbfont->FontBBox.p.y = ((double)BBox[1] / units[1]);
+        pbfont->FontBBox.q.x = ((double)BBox[2] / units[0]);
+        pbfont->FontBBox.q.y = ((double)BBox[3] / units[1]);
 
         bbox_set = 1;
     }
@@ -435,6 +437,7 @@ gs_fapi_prepare_font(gs_font *pfont, gs_fapi_server *I, int subfont, const char 
         for (i = 0; i < n; i++) {
             gs_font_type1 *pbfont1 = FDArray[i];
             int BBox_temp[4];
+            int units_temp[2];
 
             pbfont1->FontBBox = pbfont->FontBBox;       /* Inherit FontBBox from the type 9 font. */
 
@@ -462,7 +465,7 @@ gs_fapi_prepare_font(gs_font *pfont, gs_fapi_server *I, int subfont, const char 
             if ((code =
                  gs_fapi_renderer_retcode(mem, I,
                                           I->get_font_bbox(I, &I->ff,
-                                                           BBox_temp))) < 0) {
+                                                           BBox_temp, units_temp))) < 0) {
                 break;
             }
         }
@@ -880,7 +883,7 @@ fapi_image_uncached_glyph(gs_font *pfont, gs_state *pgs, gs_show_enum *penum,
         /* Make a matrix that will place the image */
         /* at (x,y) with no transformation. */
         gs_image_t_init_mask(&image, true);
-        gs_make_translation((floatp) - x, (floatp) (- y + ascent), &image.ImageMatrix);
+        gs_make_translation((double) - x, (double) (- y + ascent), &image.ImageMatrix);
         gs_matrix_multiply(&ctm_only(penum_pgs), &image.ImageMatrix, &image.ImageMatrix);
         image.Width = w + bold;
         image.Height = h + bold;
@@ -1156,8 +1159,7 @@ gs_fapi_finish_render(gs_font *pfont, gs_state *pgs, gs_text_enum_t *penum, gs_f
 #define GET_S16_MSB(p) (int)((GET_U16_MSB(p) ^ 0x8000) - 0x8000)
 
 #define MTX_EQ(mtx1,mtx2) (mtx1->xx == mtx2->xx && mtx1->xy == mtx2->xy && \
-                           mtx1->yx == mtx2->yx && mtx1->yy == mtx2->yy && \
-                           mtx1->tx == mtx2->tx && mtx1->ty == mtx2->ty)
+                           mtx1->yx == mtx2->yx && mtx1->yy == mtx2->yy)
 
 int
 gs_fapi_do_char(gs_font *pfont, gs_state *pgs, gs_text_enum_t *penum, char *font_file_path,
@@ -1228,6 +1230,8 @@ gs_fapi_do_char(gs_font *pfont, gs_state *pgs, gs_text_enum_t *penum, char *font
             (pbfont->dir->ccache.upper >> 1) : MAX_CCACHE_TEMP_BITMAP_BITS;
     }
 
+    I->grid_fit = pbfont->dir->grid_fit_tt;
+
     /* Compute the scale : */
     if (!SHOW_IS(penum, TEXT_DO_NONE) && !I->use_outline) {
         gs_currentcharmatrix(pgs, NULL, 1);     /* make char_tm valid */
@@ -1253,6 +1257,7 @@ gs_fapi_do_char(gs_font *pfont, gs_state *pgs, gs_text_enum_t *penum, char *font
     I->ff.is_type1 = bIsType1GlyphData;
     I->ff.is_cid = bCID;
     I->ff.is_outline_font = pbfont->PaintType != 0;
+    I->ff.metrics_only = fapi_gs_char_show_width_only(penum);
 
     if (!I->ff.is_mtx_skipped)
         I->ff.is_mtx_skipped = (gs_fapi_get_metrics_count(&I->ff) != 0);
@@ -1467,8 +1472,8 @@ gs_fapi_do_char(gs_font *pfont, gs_state *pgs, gs_text_enum_t *penum, char *font
     }
     memset(&metrics, 0x00, sizeof(metrics));
     /* Take metrics from font : */
-    if (fapi_gs_char_show_width_only(penum)) {
-        code = I->get_char_width(I, &I->ff, &cr, &metrics);
+    if (I->ff.metrics_only) {
+        code = I->get_char_outline_metrics(I, &I->ff, &cr, &metrics);
         /* A VMerror could be a real out of memory, or the glyph being too big for a bitmap
          * so it's worth retrying as an outline glyph
          */
@@ -1632,7 +1637,7 @@ gs_fapi_do_char(gs_font *pfont, gs_state *pgs, gs_text_enum_t *penum, char *font
      */
 
     /* Don't allow caching if we're only returning the metrics */
-    if (fapi_gs_char_show_width_only(penum)) {
+    if (I->ff.metrics_only) {
         pgs->in_cachedevice = CACHE_DEVICE_NOT_CACHING;
     }
 

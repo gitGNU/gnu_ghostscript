@@ -63,6 +63,22 @@
 #  define DEFAULT_HEIGHT_10THS DEFAULT_HEIGHT_10THS_US_LETTER
 #endif
 
+/* Define parameters for machines with little dinky RAMs.... */
+#if arch_small_memory
+#   define MAX_BITMAP 32000
+#   define BUFFER_SPACE 25000
+#   define MIN_MEMORY_LEFT 32000
+#else
+#   define MAX_BITMAP 10000000L /* reasonable on most modern hosts */
+#   define BUFFER_SPACE 4000000L
+#   define MIN_MEMORY_LEFT 500000L
+#endif
+#define MIN_BUFFER_SPACE 10000	/* give up if less than this */
+
+#ifndef MaxPatternBitmap_DEFAULT
+#  define MaxPatternBitmap_DEFAULT MAX_BITMAP
+#endif
+
 /* ---------------- Device structure ---------------- */
 
 /*
@@ -94,7 +110,7 @@
  */
 #define std_device_part2_(width, height, x_dpi, y_dpi)\
         { gx_no_color_index, gx_no_color_index },\
-          width, height, 0/*TrayOrientation*/,\
+          width, height, 0/*Pad*/, 0/*align*/, 0/*Num planes*/, 0/*TrayOrientation*/,\
         { (float)((((width) * 72.0 + 0.5) - 0.5) / (x_dpi))/*MediaSize[0]*/,\
           (float)((((height) * 72.0 + 0.5) - 0.5) / (y_dpi))/*MediaSize[1]*/},\
         { 0, 0, 0, 0 }/*ImagingBBox*/, 0/*ImagingBBox_set*/,\
@@ -104,7 +120,13 @@
 #define std_device_part3_()\
         0/*PageCount*/, 0/*ShowpageCount*/, 1/*NumCopies*/, 0/*NumCopies_set*/,\
         0/*IgnoreNumCopies*/, 0/*UseCIEColor*/, 0/*LockSafetyParams*/,\
-        0/*band_offset_x*/, 0/*band_offset_y*/, {false}/* sgr */, 0/* MaxPatternBitmap */,\
+        0/*band_offset_x*/, 0/*band_offset_y*/, {false}/* sgr */,\
+        0/* MaxPatternBitmap */, 0/*page_uses_transparency*/,\
+        { MAX_BITMAP, BUFFER_SPACE,\
+             { BAND_PARAMS_INITIAL_VALUES },\
+           0/*false*/, /* params_are_read_only */\
+           BandingAuto /* banding_type */\
+        }, /*space_params*/\
         0/*Profile Array*/,\
         0/* graphics_type_tag default GS_UNKNOWN_TAG */,\
         { gx_default_install, gx_default_begin_page, gx_default_end_page }
@@ -286,6 +308,7 @@ dev_proc_set_graphics_type_tag(gx_default_set_graphics_type_tag);
 dev_proc_strip_copy_rop2(gx_default_strip_copy_rop2);
 dev_proc_strip_tile_rect_devn(gx_default_strip_tile_rect_devn);
 dev_proc_copy_alpha_hl_color(gx_default_copy_alpha_hl_color);
+dev_proc_process_page(gx_default_process_page);
 /* BACKWARD COMPATIBILITY */
 #define gx_non_imaging_create_compositor gx_null_create_compositor
 
@@ -459,6 +482,9 @@ int gx_device_open_output_file(const gx_device * dev, char *fname,
 int gx_device_close_output_file(const gx_device * dev, const char *fname,
                                 FILE *file);
 
+/* Delete the current output file for a device (file must be closed first) */
+int gx_device_delete_output_file(const gx_device * dev, const char *fname);
+
 /*
  * Define the number of levels for a colorant above which we do not halftone.
  */
@@ -583,7 +609,7 @@ int gdev_begin_input_media(gs_param_list * mlist, gs_param_dict * pdict,
                            int count);
 
 int gdev_write_input_page_size(int index, gs_param_dict * pdict,
-                               floatp width_points, floatp height_points);
+                               double width_points, double height_points);
 
 int gdev_write_input_media(int index, gs_param_dict * pdict,
                            const gdev_input_media_t * pim);

@@ -159,6 +159,20 @@ pdfdict begin
 % ---------------- Shadings ---------------- %
 
 /shrdict mark
+  /Coords {
+    aload
+    5 1 roll
+    4 { % Bug 694542
+      dup type dup /integertype ne exch /realtype ne and {
+         (   **** Warning: replacing malformed number ') pdfformaterror pdfstring cvs pdfformaterror
+         (' with 0.\n) pdfformaterror
+         0
+      } if
+      4 1 roll
+    } repeat
+    5 -1 roll
+    astore
+  } bind
   /BBox {
     dup dup dup aload pop normrect_elems
     5 -1 roll astore
@@ -1249,9 +1263,36 @@ end
     1 index (1234567890abcd) readstring pop  % file len-14 (14)
     /JPXComponents 1 index 8 getu16          % file len-14 (14) /JPXComponents NC
     def                                      % file len-14 (14)
-    10 get 16#7F and 1 add
-    dup 12 eq { pop 16 } if
-    /BitsPerComponent exch def               % file len-14
+    10 get
+    %% If the BPC is 255 then each component has variable depth
+    %% we can't handle this, but JasPer is known to produce
+    %% images whcih declare this, but are actually all equal, we cater
+    %% for that in the bpcc box below.
+    dup 16#FF eq not {
+      16#7F and 1 add
+      dup 12 eq { pop 16 } if
+      /BitsPerComponent exch def               % file len-14
+    } {pop} ifelse
+  } bdef
+
+  %% if the ihdr has a BPC of 255 then we get a bpcc box which
+  %% gives the bpc for each component individually. We cannot
+  %% actually deal with differing component depths, but it
+  %% seems JasPer produces images with this box where all the
+  %% component depths are in fact the same.
+  /bpcc {
+    JPXComponents sub
+    1 index JPXComponents string readstring pop
+    dup 0 get /BitsPerComponent exch def
+    1 1 JPXComponents 1 sub {
+      1 index exch get BitsPerComponent eq not {
+        (   **** Warning: colour channels do not all have the same colour depth\n)
+        pdfformaterror
+      } if
+    } for
+
+    pop
+    /BitsPerComponent BitsPerComponent 1 add def
   } bdef
 
   /colr {
@@ -1809,7 +1850,7 @@ currentdict /last-ditch-bpc-csp undef
     % Adjust pdfemptycount since we have an extra dictionary on the stack
   pdfemptycount countdictstack  3 -1 roll
   /pdfemptycount count 4 sub store
-  /q cvx /execform cvx 5 -2 roll 4 .execn
+  /q cvx /PDFexecform cvx 5 -2 roll 4 .execn
   % Restore pdfemptycount
   0
   { countdictstack 
@@ -2258,11 +2299,21 @@ end
 } bdef
 
 /drawwidget {			% <scalefactor_x> <scalefactor_y> <annot> drawwidget -
-  dup /UpdatedAP known not {
-    dup can-regenerate-ap {
-      dup /AP undef
-    } if
-  } if
+
+%% This code checks to see if we can geenrate an appearance stream for the
+%% given widget, and if we can it ignores the given Appearance stream, so that
+%% we generate one instead. This seems wrong to me, if we've been given an
+%% appearance stream we should use it, no synthesize something else. Several
+%% files in our regression test suite render 'incorrectly' when compared to
+%% Acrobat with this removed, clearly Acrobat always ignores appearances. However
+%% several other files are rendered better when we *don't* ignore the Appearance
+%% So on balance I'm choosing to honour the appearance.
+%%
+%  dup /UpdatedAP known not {
+%    dup can-regenerate-ap {
+%      dup /AP undef
+%    } if
+%  } if
   dup /AP knownoget {
     dup /N known not {
       (   **** Appearance dictionary (AP) lacks the mandatory normal (N) appearance.\n)
@@ -2307,18 +2358,23 @@ end
                 % Stack: scalex scaley annot appearance true
                 % Stack: scalex scaley annot false
     {
+      dup type /dicttype eq {
                 % Draw appearance
                 % Initialize graphic following "7.4.4 Appearance Streams"
-      q graphicsbeginpage textbeginpage
-      1 index annotrect pop pop translate
-      3 index 3 index scale	% Apply scale factors
-      dup /BBox knownoget {
-        1 index /Matrix knownoget not { {1 0 0 1 0 0} } if
-        .bbox_transform pop pop
-        % Compensate for non-zero origin of BBox
-        neg exch neg exch translate
-      } if
-      DoForm Q
+        q graphicsbeginpage textbeginpage
+        1 index annotrect pop pop translate
+        3 index 3 index scale	% Apply scale factors
+        dup /BBox knownoget {
+          1 index /Matrix knownoget not { {1 0 0 1 0 0} } if
+          .bbox_transform pop pop
+          % Compensate for non-zero origin of BBox
+          neg exch neg exch translate
+        } if
+        DoForm Q
+      } {
+        (   **** Annotation's appearance is not a dictionary.\n)
+        pdfformaterror
+      } ifelse
     } if
   } {
     dup /MK knownoget {    % mk

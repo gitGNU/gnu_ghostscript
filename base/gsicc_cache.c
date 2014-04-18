@@ -481,9 +481,14 @@ gsicc_get_link(const gs_imager_state *pis, gx_device *dev_in,
     } else {
         dev = dev_in;
     }
-    if ( input_colorspace->cmm_icc_profile_data == NULL ) {
-        /* Use default type */
-        gs_input_profile = gsicc_get_gscs_profile(input_colorspace, pis->icc_manager);
+    if (input_colorspace->cmm_icc_profile_data == NULL) {
+        if (input_colorspace->icc_equivalent != NULL) {
+            gs_input_profile = input_colorspace->icc_equivalent->cmm_icc_profile_data;        
+        } else {
+            /* Use default type */
+            gs_input_profile = gsicc_get_gscs_profile(input_colorspace, 
+                                                      pis->icc_manager);
+        }
     } else {
         gs_input_profile = input_colorspace->cmm_icc_profile_data;
     }
@@ -713,6 +718,7 @@ gsicc_get_link_profile(const gs_imager_state *pis, gx_device *dev,
     cmm_profile_t *devlink_profile = NULL;
     bool src_dev_link = gs_input_profile->isdevlink;
     bool pageneutralcolor = false;
+    int cms_flags = 0;
 
     /* Determine if we are using a soft proof or device link profile */
     if (dev != NULL ) {
@@ -762,10 +768,9 @@ gsicc_get_link_profile(const gs_imager_state *pis, gx_device *dev,
         gs_input_profile->buffer == NULL &&
         gs_input_profile->dev != NULL) {
 
-        /* ICC profile should be in clist. This is
-        the first call to it.  Note that the profiles are not
-        really shared amongst threads like the links are.  Hence
-        the memory is for the local thread's chunk */
+        /* ICC profile should be in clist. This is the first call to it.  Note that 
+           the profiles are not really shared amongst threads like the links are.  
+           Hence the memory is for the local thread's chunk */
         cms_input_profile =
             gsicc_get_profile_handle_clist(gs_input_profile,
                                            gs_input_profile->memory);
@@ -813,6 +818,12 @@ gsicc_get_link_profile(const gs_imager_state *pis, gx_device *dev,
 
     /* Now compute the link contents */
     cms_input_profile = gs_input_profile->profile_handle;
+    /*  Check if the source was generated from a PS CIE color space.  If yes, 
+        then we need to make sure that the CMM does not do something like 
+        force a white point mapping like lcms does */
+    if (gsicc_profile_from_ps(gs_input_profile)) {
+        cms_flags = cms_flags | gscms_avoid_white_fix_flag(); 
+    } 
     if (cms_input_profile == NULL) {
         if (gs_input_profile->buffer != NULL) {
             cms_input_profile =
@@ -935,6 +946,9 @@ gsicc_get_link_profile(const gs_imager_state *pis, gx_device *dev,
             icc_manager->smask_profiles->smask_gray->profile_handle;
         cms_output_profile = 
             icc_manager->graytok_profile->profile_handle;
+        /* Turn off bp compensation in this case as there is a bug in lcms */
+        rendering_params->black_point_comp = false;
+        cms_flags = 0;  /* Turn off any flag setting */
     }
     /* Get the link with the proof and or device link profile */
     if (include_softproof || include_devicelink || src_dev_link) {
@@ -943,7 +957,7 @@ gsicc_get_link_profile(const gs_imager_state *pis, gx_device *dev,
                                                    cms_output_profile,
                                                    cms_devlink_profile,
                                                    rendering_params,
-                                                   src_dev_link,
+                                                   src_dev_link, cms_flags,
                                                    cache_mem->non_gc_memory);
         if (include_softproof) {
             gx_monitor_leave(proof_profile->lock);
@@ -953,7 +967,8 @@ gsicc_get_link_profile(const gs_imager_state *pis, gx_device *dev,
         }
     } else {
         link_handle = gscms_get_link(cms_input_profile, cms_output_profile,
-                                     rendering_params, cache_mem->non_gc_memory);
+                                     rendering_params, cms_flags, 
+                                     cache_mem->non_gc_memory);
     }
     if (!src_dev_link) {
         gx_monitor_leave(gs_output_profile->lock);
@@ -1110,7 +1125,7 @@ gsicc_transform_named_color(const float tint_values[],
                     (gsicc_namedcolortable_t*) gs_malloc(pis->memory->stable_memory, 1,
                                                     sizeof(gsicc_namedcolortable_t),
                                                     "gsicc_transform_named_color");
-                if (namedcolor_table == NULL) return(-1);
+                if (namedcolor_table == NULL) return(gs_error_VMerror);
                 /* Parse buffer and load the structure we will be searching */
                 buffptr = (char*) named_profile->buffer;
                 buffer_count = named_profile->buffer_size;
@@ -1137,7 +1152,7 @@ gsicc_transform_named_color(const float tint_values[],
                     gs_free(pis->memory, namedcolor_table, 1,
                             sizeof(gsicc_namedcolortable_t),
                             "gsicc_transform_named_color");
-                    return (-1);
+                    return (gs_error_VMerror);
                 }
                 namedcolor_table->number_entries = num_entries;
                 namedcolor_table->named_color = namedcolor_data;
@@ -1164,6 +1179,8 @@ gsicc_transform_named_color(const float tint_values[],
                         (char*) gs_malloc(pis->memory->stable_memory,1,
                                           curr_name_size+1,
                                           "gsicc_transform_named_color");
+                    if (namedcolor_data[k].colorant_name == NULL)
+                        return gs_error_VMerror;
                     strncpy(namedcolor_data[k].colorant_name,temp_ptr,
                             namedcolor_data[k].name_size+1);
                     for (j = 0; j < 3; j++) {
@@ -1360,4 +1377,3 @@ gsicc_get_device_profile_comps(cmm_dev_profile_t *dev_profile)
        return dev_profile->link_profile->num_comps_out;
     }
 }
-

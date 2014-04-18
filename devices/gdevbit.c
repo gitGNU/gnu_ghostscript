@@ -254,7 +254,7 @@ const gx_device_bit gs_bitrgbtags_device =
             ( "DeviceRGBT" ),            /* color model name */
             GX_CINFO_OPMODE_UNKNOWN ,   /* overprint mode */
             0,                           /* process comps */
-            0                            /* icc_locations */    
+            0                            /* icc_locations */
         },
         {
             ((gx_color_index)(~0)),
@@ -262,6 +262,9 @@ const gx_device_bit gs_bitrgbtags_device =
         },
         (int)((float)(85) * (X_DPI) / 10 + 0.5),
         (int)((float)(110) * (Y_DPI) / 10 + 0.5),
+        0, /* Pad */
+        0, /* Align */
+        0, /* Num planes */
         0,
         {
             (float)(((((int)((float)(85) * (X_DPI) / 10 + 0.5)) * 72.0 + 0.5) - 0.5) / (X_DPI)) ,
@@ -281,18 +284,24 @@ const gx_device_bit gs_bitrgbtags_device =
          (float)((0) * 72.0),
          (float)((0) * 72.0),
          (float)((0) * 72.0)},
-        0 ,
-        0 ,
-        1 ,
-        0 ,
-        0 ,
-        0 ,
-        0 ,
-        0,
-        0,
-        {false},
-        0,
-        0,
+        0 , /*PAgeCount*/
+        0 , /*ShowPageCount*/
+        1 , /*NumCopies*/
+        0 , /*NumCopiesSet*/
+        0 , /*IgnoreNumCopies*/
+        0 , /*UseCIEColor*/
+        0 , /*LockSafetyParams*/
+        0,  /*band_offset_x*/
+        0,  /*band_offset_*/
+        {false}, /*sgr*/
+        0, /*MaxPatternBitmap*/
+        0, /*page_uses_transparency*/
+        { MAX_BITMAP, BUFFER_SPACE,
+          { BAND_PARAMS_INITIAL_VALUES },
+          0/*false*/, /* params_are_read_only */
+          BandingAuto /* banding_type */
+        }, /*space_params*/
+        0, /*icc_struct*/
         GS_UNKNOWN_TAG,         /* this device supports tags */
         {
             gx_default_install,
@@ -312,12 +321,6 @@ const gx_device_bit gs_bitrgbtags_device =
           gx_default_open_render_device,
           gx_default_close_render_device,
           gx_default_buffer_page },
-        {
-            PRN_MAX_BITMAP,
-            PRN_BUFFER_SPACE,
-            { 0, 0, 0 },
-            0 ,
-            BandingAuto },
         { 0 },
         0 ,
         0 ,
@@ -553,16 +556,19 @@ bit_put_params(gx_device * pdev, gs_param_list * plist)
     gx_device_color_info save_info;
     int ncomps = pdev->color_info.num_components;
     int real_ncomps = REAL_NUM_COMPONENTS(pdev);
-    int bpc = pdev->color_info.depth / real_ncomps;
     int v;
     int ecode = 0;
     int code;
-    static const byte depths[4][16] = {
-        {1, 2, 0, 4, 8, 0, 0, 8, 0, 0, 0, 16, 0, 0, 0, 16},
-        {0},
-        {4, 8, 0, 16, 16, 0, 0, 24, 0, 0, 0, 40, 0, 0, 0, 48},
-        {4, 8, 0, 16, 32, 0, 0, 32, 0, 0, 0, 48, 0, 0, 0, 64}
+    /* map to depths that we actually have memory devices to support */
+    static const byte depths[4 /* ncomps - 1 */][16 /* bpc - 1 */] = {
+        {1, 2, 0, 4, 8, 0, 0, 8, 0, 0, 0, 16, 0, 0, 0, 16}, /* ncomps = 1 */
+        {0}, /* ncomps = 2, not supported */
+        {4, 8, 0, 16, 16, 0, 0, 24, 0, 0, 0, 40, 0, 0, 0, 48}, /* ncomps = 3 (rgb) */
+        {4, 8, 0, 16, 32, 0, 0, 32, 0, 0, 0, 48, 0, 0, 0, 64}  /* ncomps = 4 (cmyk) */
     };
+    /* map back from depth to the actual bits per component */
+    static int real_bpc[17] = { 0, 1, 2, 2, 4, 4, 4, 4, 8, 8, 8, 8, 12, 12, 12, 12, 16 };
+    int bpc = real_bpc[pdev->color_info.depth / real_ncomps];
     const char *vname;
     int FirstLine = ((gx_device_bit *)pdev)->FirstLine;
     int LastLine = ((gx_device_bit *)pdev)->LastLine;
@@ -585,7 +591,6 @@ bit_put_params(gx_device * pdev, gs_param_list * plist)
                 case   2: bpc = 1; break;
                 case   4: bpc = 2; break;
                 case  16: bpc = 4; break;
-                case  32: bpc = 5; break;
                 case 256: bpc = 8; break;
                 case 4096: bpc = 12; break;
                 case 65536: bpc = 16; break;

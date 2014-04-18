@@ -18,7 +18,7 @@ dnl ------------------------------------------------
 dnl Initialization and Versioning
 dnl ------------------------------------------------
 
-AC_INIT([gnu-ghostscript], [9.10.0], [gnu-ghostscript-bug@gnu.org])
+AC_INIT([gnu-ghostscript], [9.14.0], [gnu-ghostscript-bug@gnu.org])
 AC_PREREQ(2.61)
 AC_LANG(C)
 AC_CONFIG_SRCDIR([psi/gs.c])
@@ -31,9 +31,9 @@ CXXFLAGS="${CXXFLAGS:=}"
 LDFLAGS="${LDFLAGS:=}"
 
 GS_VERSION_MAJOR=9
-GS_VERSION_MINOR=10
+GS_VERSION_MINOR=14
 GS_VERSION_PATCH=0
-GS_REVISIONDATE=20140202
+GS_REVISIONDATE=20140418
 
 GS_VERSION=`expr $GS_VERSION_MAJOR \* 10000 + $GS_VERSION_MINOR \* 100 + $GS_VERSION_PATCH`
 
@@ -202,6 +202,13 @@ case `uname` in
             CC_DBG_FLAGS_TO_TRY="-gdwarf-2 -g3 -O0"
         else
             CC_DBG_FLAGS_TO_TRY="-g -O0"
+        fi
+        ;;
+        AIX)
+        if test $ac_cv_prog_gcc = yes; then
+            CC_OPT_FLAGS_TO_TRY="-O2"
+            CC_DBG_FLAGS_TO_TRY="-gdwarf-2 -g3 -O0"
+            SET_DT_SONAME="so"
         fi
         ;;
 esac
@@ -436,32 +443,60 @@ if test "x$ac_cv_header_inttypes_h" = xyes; then
         GCFLAGS="$GCFLAGS -DHAVE_INTTYPES_H=1"
 fi
 
-dnl try to find a 64 bit type for devicen color index
-uint64_type="none"
- AC_CHECK_SIZEOF(unsigned long int)
- if test $ac_cv_sizeof_unsigned_long_int = 8; then
-        uint64_type="unsigned long int"
- else
-  AC_CHECK_SIZEOF(unsigned long long)
-  if test $ac_cv_sizeof_unsigned_long_long = 8; then
-        uint64_type="unsigned long long"
-  else
-   AC_CHECK_SIZEOF(unsigned __int64)
-   if test $ac_cv_sizeof_unsigned___int64 = 8; then
-        uint64_type="unsigned __int64"
+large_color_index=1
+
+AC_ARG_WITH([large_color_index],, large_color_index="$with_large_color_index")
+
+if test x"$large_color_index" != "x0"; then
+  dnl try to find a 64 bit type for devicen color index
+  color_ind_type="none"
+   AC_CHECK_SIZEOF(unsigned long int)
+   if test $ac_cv_sizeof_unsigned_long_int = 8; then
+          color_ind_type="unsigned long int"
    else
-    AC_CHECK_SIZEOF(u_int64_t)
-    if test $ac_cv_sizeof_u_int64_t = 8; then
-        uint64_type="u_int64_t"
+    AC_CHECK_SIZEOF(unsigned long long)
+    if test $ac_cv_sizeof_unsigned_long_long = 8; then
+          color_ind_type="unsigned long long"
+    else
+     AC_CHECK_SIZEOF(unsigned __int64)
+     if test $ac_cv_sizeof_unsigned___int64 = 8; then
+          color_ind_type="unsigned __int64"
+     else
+      AC_CHECK_SIZEOF(u_int64_t)
+      if test $ac_cv_sizeof_u_int64_t = 8; then
+          color_ind_type="u_int64_t"
+      fi
+     fi
     fi
    fi
-  fi
- fi
-dnl we don't need to do anything if a 64-bit type wasn't found
-dnl the code falls back to a (probably 32-bit) default
+else
+  dnl try to find a 32 bit type for devicen color index
+  color_ind_type="none"
+   AC_CHECK_SIZEOF(unsigned long int)
+   if test $ac_cv_sizeof_unsigned_long_int = 4; then
+          color_ind_type="unsigned long int"
+   else
+    AC_CHECK_SIZEOF(unsigned int)
+    if test $ac_cv_sizeof_unsigned_int = 4; then
+          color_ind_type="unsigned int"
+    else
+     AC_CHECK_SIZEOF(unsigned __int32)
+     if test $ac_cv_sizeof_unsigned___int32 = 4; then
+          color_ind_type="unsigned __int32"
+     else
+      AC_CHECK_SIZEOF(u_int32_t)
+      if test $ac_cv_sizeof_u_int32_t = 4; then
+          color_ind_type="u_int32_t"
+      fi
+     fi
+    fi
+   fi
+fi
 
-if test "$uint64_type" != "none"; then
-        GCFLAGS="$GCFLAGS -DGX_COLOR_INDEX_TYPE=\"$uint64_type\""
+dnl if a suitable type wasn't found above, we fall back to
+dnl a default in genarch.
+if test "$color_ind_type" != "none"; then
+        GCFLAGS="$GCFLAGS -DGX_COLOR_INDEX_TYPE=\"$color_ind_type\""
 fi
 
 dnl --------------------------------------------------
@@ -1137,7 +1172,7 @@ if ( test -d $srcdir/cups ); then
                 fi
 
                 CUPSINCLUDE="include $srcdir/cups/cups.mak"
-                CUPSDEV="cups"
+                CUPSDEV="cups pwgraster"
                 CUPSVERSION="`$CUPSCONFIG --version`"
                 LCUPSINCLUDE="include \$(GLSRCDIR)/lcups.mak"
                 LCUPSIINCLUDE="include \$(GLSRCDIR)/lcupsi.mak"
@@ -1155,7 +1190,7 @@ if ( test -d $srcdir/cups ); then
                 LCUPSBUILDTYPE=linux
                 LCUPSINCLUDE="include \$(GLSRCDIR)/lcups.mak"
                 LCUPSIINCLUDE="include \$(GLSRCDIR)/lcupsi.mak"
-                CUPSDEV="cups"
+                CUPSDEV="cups pwgraster"
             fi
         fi
     fi
@@ -1390,6 +1425,12 @@ fi
 
 OPENJPEGDIR=$srcdir/openjpeg
 
+if test "x$ac_cv_header_stdint_h" = xyes; then
+  CFLAGS_OPJ_HAVE_STDINT_H="-DOPJ_HAVE_STDINT_H"
+else
+  CFLAGS_OPJ_HAVE_STDINT_H=""
+fi
+
 JPX_SSE_CFLAGS=""
 
 if test "x$HAVE_SSE2" = "x" ; then
@@ -1412,9 +1453,9 @@ if test "x$JPX_DECODER" = "x"; then
       AC_CHECK_FUNCS([memalign], [have_memalign=1])
 
       if test "x$have_memalign" = "x1"; then
-        JPX_AUTOCONF_CFLAGS="-DUSE_OPENJPEG_JP2 $JPX_SSE_CFLAGS"
+        JPX_AUTOCONF_CFLAGS="-DUSE_OPENJPEG_JP2 $CFLAGS_OPJ_HAVE_STDINT_H"
       else
-        JPX_AUTOCONF_CFLAGS="-DUSE_OPENJPEG_JP2 $JPX_SSE_CFLAGS -D\"memalign(a,b)=malloc(b)\""
+        JPX_AUTOCONF_CFLAGS="-DUSE_OPENJPEG_JP2 $CFLAGS_OPJ_HAVE_STDINT_H -D\"memalign(a,b)=malloc(b)\""
       fi
 
       JPXDEVS='$(PSD)jpx.dev'
@@ -1606,7 +1647,6 @@ dnl Check which drivers we'd like to support.
 P_DEVS0=""
 F_DEVS0=""
 CUPS_DEVS0=""
-SVG_DEVS0=""
 XPS_DEVS0=""
 JBIG2_DEVS=""
 IJS_DEVS0=""
@@ -1638,9 +1678,8 @@ JPEG_DEVS='jpeg jpeggray jpegcmyk'
 
 PCX_DEVS='pcxmono pcxgray pcx16 pcx256 pcx24b pcxcmyk pcx2up'
 PBM_DEVS='pbm pbmraw pgm pgmraw pgnm pgnmraw pnm pnmraw ppm ppmraw pkm pkmraw pksm pksmraw pam pamcmyk4 pamcmyk32 plan plang planm planc plank'
-PS_DEVS='psdf psdcmyk psdrgb pdfwrite ps2write epswrite bbox txtwrite inkcov'
+PS_DEVS='psdf psdcmyk psdrgb pdfwrite ps2write eps2write epswrite bbox txtwrite inkcov ink_cov psdcmykog fpng'
 MISC_FDEVS='ccr cif inferno mag16 mag256 mgr4 mgr8 mgrgray2 mgrgray4 mgrgray8 mgrmono miff24 plan9bm sgirgb sunhmono bit bitrgb bitrgbtags bitcmyk devicen spotcmyk xcf'
-SVGDEV='svgwrite'
 XPSDEV='xpswrite'
 
 while test -n "$drivers"; do
@@ -1671,7 +1710,7 @@ while test -n "$drivers"; do
                 fi
                 ;;
         FILES)
-                F_DEVS0="$F_DEVS0 $BMP_DEVS $FAX_DEVS $JPEG_DEVS $TIFFDEVS $PCX_DEVS $PBM_DEVS $PS_DEVS $MISC_FDEVS $SVGDEV $XPSDEV"
+                F_DEVS0="$F_DEVS0 $BMP_DEVS $FAX_DEVS $JPEG_DEVS $TIFFDEVS $PCX_DEVS $PBM_DEVS $PS_DEVS $MISC_FDEVS $XPSDEV"
                 CUPS_DEVS0="$CUPSDEV"
                 JBIG2_DEVS="$JBIG2FILEDEVS"
                 PNG_DEVS0="$PNGDEVS"
@@ -1760,12 +1799,8 @@ while test -n "$drivers"; do
                 # PostScript/PDF writing
                 F_DEVS0="$F_DEVS0 $PS_DEVS"
                 ;;
-        SVG)
-                # SVG writing
-                SVG_DEVS0="$SVGDEV"
-                ;;
         XPS)
-                # SVG writing
+                # XPS writing
                 XPS_DEVS0="$XPSDEV"
                 ;;
 
@@ -1807,11 +1842,6 @@ if test x$enable_threadsafe = xyes; then
   for ntsdev in $NTS_DEVS ; do
     NTS_EXCLUDES="$(echo \"$CUPS_DEVS0{[@]:0}\" | grep -o $ntsdev) $NTS_EXCLUDES"
     CUPS_DEVS0=`echo $CUPS_DEVS0 | sed "s/\b$ntsdev\b//g"`
-  done
-
-  for ntsdev in $NTS_DEVS ; do
-    NTS_EXCLUDES="$(echo \"$SVG_DEVS0{[@]:0}\" | grep -o $ntsdev) $NTS_EXCLUDES"
-    SVG_DEVS0=`echo $SVG_DEVS0 | sed "s/\b$ntsdev\b//g"`
   done
 
   for ntsdev in $NTS_DEVS ; do
@@ -1864,10 +1894,6 @@ if test -n "$CUPS_DEVS0"; then
     CUPS_DEVS=`(for i in $CUPS_DEVS0; do d='$(DD)'${i}.dev; if ( grep '^'$d $noncontribmakefiles  2>&1 >/dev/null) || ( ! test -z "$CONTRIBINCLUDE" ); then echo $d; fi; done) | sort | uniq | tr '\012\015' '  '`
 fi
 
-if test -n "$SVG_DEVS0"; then
-    SVG_DEVS=`(for i in $SVG_DEVS0; do d='$(DD)'${i}.dev; if ( grep '^'$d $noncontribmakefiles  2>&1 >/dev/null) || ( ! test -z "$CONTRIBINCLUDE" ); then echo $d; fi; done) | sort | uniq | tr '\012\015' '  '`
-fi
-
 if test -n "$XPS_DEVS0"; then
     XPS_DEVS=`(for i in $XPS_DEVS0; do d='$(DD)'${i}.dev; if ( grep '^'$d $noncontribmakefiles  2>&1 >/dev/null) || ( ! test -z "$CONTRIBINCLUDE" ); then echo $d; fi; done) | sort | uniq | tr '\012\015' '  '`
 fi
@@ -1887,7 +1913,6 @@ fi
 AC_SUBST(P_DEVS)
 AC_SUBST(F_DEVS)
 AC_SUBST(CUPS_DEVS)
-AC_SUBST(SVG_DEVS)
 AC_SUBST(XPS_DEVS)
 AC_SUBST(JBIG2_DEVS)
 AC_SUBST(IJS_DEVS)
@@ -1947,6 +1972,18 @@ case `uname` in
 -          DYNAMIC_LDFLAGS="-G -shared -Wl,\$(LD_SET_DT_SONAME)\$(LDFLAGS_SO_PREFIX)\$(GS_SONAME_MAJOR)"
 -          DYNAMIC_LIBS=""
 -          SO_LIB_EXT=".so"
+        ;;
+        AIX)
+          DYNAMIC_CFLAGS="-fPIC"
+          GCFLAGS="-Wl,-brtl $GCFLAGS"
+          DYNAMIC_LDFLAGS="-shared -Wl,-brtl,-G -fPIC"
+          if test $ac_cv_prog_gcc = yes; then
+            # GCC high level flag
+            DYNAMIC_LIBS="-ldl"
+          else
+            DYNAMIC_LIBS=""
+          fi
+          SO_LIB_EXT=".so"
         ;;
 esac
 
@@ -2112,6 +2149,26 @@ dnl --------------------------------------------------
 AC_CHECK_FUNC([sqrtf], [SQRTF_SUBST=], [SQRTF_SUBST="-Dsqrtf=\"(float)sqrt\""])
 
 AC_SUBST(SQRTF_SUBST)
+
+
+dnl --------------------------------------------------
+dnl currently just for trio
+dnl --------------------------------------------------
+
+AC_CHECK_FUNC([floorl], [TRIO_NO_FLOORL=""], [TRIO_NO_FLOORL="-DTRIO_NO_FLOORL"])
+
+AC_CHECK_FUNC([ceill], [TRIO_NO_CEILL=""], [TRIO_NO_CEILL="-DTRIO_NO_CEILL"])
+
+AC_CHECK_FUNC([powl], [TRIO_NO_POWL=""], [TRIO_NO_POWL="-DTRIO_NO_POWL"])
+
+AC_CHECK_FUNC([fmodl], [TRIO_NO_FMODL=""], [TRIO_NO_FMODL="-DTRIO_NO_FMODL"])
+
+AC_CHECK_FUNC([log10l], [TRIO_NO_LOG10L=""], [TRIO_NO_LOG10L="-DTRIO_NO_LOG10L"])
+
+AC_TRIO_CFLAGS="$TRIO_NO_FLOORL $TRIO_NO_CEILL $TRIO_NO_POWL $TRIO_NO_FMODL $TRIO_NO_LOG10L"
+
+
+AC_SUBST(AC_TRIO_CFLAGS)
 
 dnl --------------------------------------------------
 dnl check for byte swap intrinsics

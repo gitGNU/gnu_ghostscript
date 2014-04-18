@@ -1,4 +1,4 @@
-# Copyright (C) 2001-2012 Artifex Software, Inc.
+# Copyright (C) 2001-2014 Artifex Software, Inc.
 # All Rights Reserved.
 #
 # This software is provided AS-IS with no warranty, either express or
@@ -244,9 +244,65 @@ WIN32=0
 # We can build either 32-bit or 64-bit target on a 64-bit platform
 # but the location of the binaries differs. Would be nice if the
 # detection of the platform could be automatic.
-#!ifndef BUILD_SYSTEM
+!ifndef BUILD_SYSTEM
+!if "$(PROCESSOR_ARCHITEW6432)"=="AMD64" || "$(PROCESSOR_ARCHITECTURE)"=="AMD64"
+BUILD_SYSTEM=64
+PGMFILES=$(SYSTEMDRIVE)\Program Files
+PGMFILESx86=$(SYSTEMDRIVE)\Program Files (x86)
+!else
 BUILD_SYSTEM=32
-#!endif
+PGMFILES=$(SYSTEMDRIVE)\Program Files
+PGMFILESx86=$(SYSTEMDRIVE)\Program Files
+!endif
+!endif
+
+!ifndef MSWINSDKPATH
+!if exist ("$(PGMFILESx86)\Microsoft SDKs\Windows")
+!if exist ("$(PGMFILESx86)\Microsoft SDKs\Windows\v7.1A")
+MSWINSDKPATH=$(PGMFILESx86)\Microsoft SDKs\Windows\v7.1A
+!else
+!if exist ("$(PGMFILESx86)\Microsoft SDKs\Windows\v7.1")
+MSWINSDKPATH=$(PGMFILESx86)\Microsoft SDKs\Windows\v7.1
+!else
+!if exist ("$(PGMFILESx86)\Microsoft SDKs\Windows\v7.0A")
+MSWINSDKPATH=$(PGMFILESx86)\Microsoft SDKs\Windows\v7.0A
+!else
+!if exist ("$(PGMFILESx86)\Microsoft SDKs\Windows\v7.0")
+MSWINSDKPATH=$(PGMFILESx86)\Microsoft SDKs\Windows\v7.0
+!endif
+!endif
+!endif
+!endif
+!else
+!if exist ("$(PGMFILES)\Microsoft SDKs\Windows")
+!if exist ("$(PGMFILES)\Microsoft SDKs\Windows\v7.1A")
+MSWINSDKPATH=$(PGMFILES)\Microsoft SDKs\Windows\v7.1A
+!else
+!if exist ("$(PGMFILES)\Microsoft SDKs\Windows\v7.1")
+MSWINSDKPATH=$(PGMFILES)\Microsoft SDKs\Windows\v7.1
+!else
+!if exist ("$(PGMFILES)\Microsoft SDKs\Windows\v7.0A")
+MSWINSDKPATH=$(PGMFILES)\Microsoft SDKs\Windows\v7.0A
+!else
+!if exist ("$(PGMFILES)\Microsoft SDKs\Windows\v7.0")
+MSWINSDKPATH=$(PGMFILES)\Microsoft SDKs\Windows\v7.0
+!endif
+!endif
+!endif
+!endif
+!endif
+!endif
+!endif
+
+XPSPRINTCFLAGS=
+XPSPRINT=0
+
+!ifdef MSWINSDKPATH
+!if exist ("$(MSWINSDKPATH)\Include\XpsPrint.h")
+XPSPRINTCFLAGS=/DXPSPRINT=1 /I"$(MSWINSDKPATH)\Include"
+XPSPRINT=1
+!endif
+!endif
 
 # Define the name of the executable file.
 
@@ -580,8 +636,17 @@ MSVC_VERSION=10
 !if "$(_NMAKE_VER)" == "11.00.50522.1"
 MSVC_VERSION=11
 !endif
+!if "$(_NMAKE_VER)" == "11.00.50727.1"
+MSVC_VERSION=11
+!endif
 !if "$(_NMAKE_VER)" == "11.00.60315.1"
 MSVC_VERSION=11
+!endif
+!if "$(_NMAKE_VER)" == "11.00.60610.1"
+MSVC_VERSION=11
+!endif
+!if "$(_NMAKE_VER)" == "12.00.21005.1"
+MSVC_VERSION=12
 !endif
 !endif
 
@@ -739,6 +804,90 @@ SHAREDBASE=$(DEVSTUDIO)\VC
 !if $(BUILD_SYSTEM) == 64
 COMPDIR64=$(COMPBASE)\bin\amd64
 LINKLIBPATH=/LIBPATH:"$(MSSDK)\lib\x64" /LIBPATH:"$(COMPBASE)\lib\amd64"
+!else
+COMPDIR64=$(COMPBASE)\bin\x86_amd64
+LINKLIBPATH=/LIBPATH:"$(COMPBASE)\lib\amd64" /LIBPATH:"$(COMPBASE)\PlatformSDK\Lib\x64"
+!endif
+!endif
+!endif
+!endif
+
+!if $(MSVC_VERSION) == 11
+! ifndef DEVSTUDIO
+!if $(BUILD_SYSTEM) == 64
+DEVSTUDIO=C:\Program Files (x86)\Microsoft Visual Studio 11.0
+!else
+DEVSTUDIO=C:\Program Files\Microsoft Visual Studio 11.0
+!endif
+! endif
+!if "$(DEVSTUDIO)"==""
+COMPBASE=
+SHAREDBASE=
+!else
+# There are at least 4 different values:
+# "v6.0"=Vista, "v6.0A"=Visual Studio 2008,
+# "v6.1"=Windows Server 2008, "v7.0"=Windows 7
+! ifdef MSSDK
+!  ifdef WIN64
+RCDIR=$(MSSDK)\bin\x64
+!  else
+RCDIR=$(MSSDK)\bin
+!  endif
+! else
+!if $(BUILD_SYSTEM) == 64
+RCDIR=C:\Program Files (x86)\Windows Kits\8.0\bin\x64
+!else
+RCDIR=C:\Program Files\Windows Kits\8.0\bin\x86
+!endif
+! endif
+COMPBASE=$(DEVSTUDIO)\VC
+SHAREDBASE=$(DEVSTUDIO)\VC
+!ifdef WIN64
+!if $(BUILD_SYSTEM) == 64
+COMPDIR64=$(COMPBASE)\bin\x86_amd64
+LINKLIBPATH=/LIBPATH:"$(MSSDK)\lib\x64" /LIBPATH:"$(COMPBASE)\lib\amd64"
+!else
+COMPDIR64=$(COMPBASE)\bin\x86_amd64
+LINKLIBPATH=/LIBPATH:"$(COMPBASE)\lib\amd64" /LIBPATH:"$(COMPBASE)\PlatformSDK\Lib\x64"
+!endif
+!endif
+!endif
+!endif
+
+!if $(MSVC_VERSION) == 12
+! ifndef DEVSTUDIO
+!if $(BUILD_SYSTEM) == 64
+DEVSTUDIO=C:\Program Files (x86)\Microsoft Visual Studio 12.0
+!else
+DEVSTUDIO=C:\Program Files\Microsoft Visual Studio 12.0
+!endif
+! endif
+!if "$(DEVSTUDIO)"==""
+COMPBASE=
+SHAREDBASE=
+!else
+# There are at least 4 different values:
+# "v6.0"=Vista, "v6.0A"=Visual Studio 2008,
+# "v6.1"=Windows Server 2008, "v7.0"=Windows 7
+! ifdef MSSDK
+!  ifdef WIN64
+RCDIR=$(MSSDK)\bin\x64
+!  else
+RCDIR=$(MSSDK)\bin
+!  endif
+! else
+!if $(BUILD_SYSTEM) == 64
+RCDIR=C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Bin
+!else
+RCDIR=C:\Program Files\Microsoft SDKs\Windows\v7.1A\Bin
+!endif
+! endif
+COMPBASE=$(DEVSTUDIO)\VC
+SHAREDBASE=$(DEVSTUDIO)\VC
+!ifdef WIN64
+!if $(BUILD_SYSTEM) == 64
+COMPDIR64=$(COMPBASE)\bin\x86_amd64
+LINKLIBPATH=/LIBPATH:"$(COMPBASE)\lib\amd64"
 !else
 COMPDIR64=$(COMPBASE)\bin\x86_amd64
 LINKLIBPATH=/LIBPATH:"$(COMPBASE)\lib\amd64" /LIBPATH:"$(COMPBASE)\PlatformSDK\Lib\x64"
@@ -979,7 +1128,7 @@ JPX_CFLAGS = $JPX_CFLAGS -DUSE_OPENJPEG_JP2
 # Choose the language feature(s) to include.  See gs.mak for details.
 
 !ifndef FEATURE_DEVS
-FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)rasterop.dev $(PSD)epsf.dev $(PSD)mshandle.dev $(PSD)mspoll.dev $(PSD)fapi_ps.dev $(PSD)jbig2.dev $(PSD)jpx.dev $(PSD)winutf8.dev
+FEATURE_DEVS=$(PSD)psl3.dev $(PSD)pdf.dev $(PSD)dpsnext.dev $(PSD)ttfont.dev $(PSD)rasterop.dev $(PSD)epsf.dev $(PSD)mshandle.dev $(PSD)mspoll.dev $(PSD)fapi_ps.dev $(PSD)jbig2.dev $(PSD)jpx.dev $(PSD)winutf8.dev $(PSD)ramfs.dev
 !ifndef METRO
 FEATURE_DEVS=$(FEATURE_DEVS) $(PSD)msprinter.dev $(GLD)pipe.dev
 !endif
@@ -1040,9 +1189,9 @@ DEVICE_DEVS9=$(DD)pbm.dev $(DD)pbmraw.dev $(DD)pgm.dev $(DD)pgmraw.dev $(DD)pgnm
 DEVICE_DEVS10=$(DD)tiffcrle.dev $(DD)tiffg3.dev $(DD)tiffg32d.dev $(DD)tiffg4.dev $(DD)tifflzw.dev $(DD)tiffpack.dev
 DEVICE_DEVS11=$(DD)bmpmono.dev $(DD)bmpgray.dev $(DD)bmp16.dev $(DD)bmp256.dev $(DD)bmp16m.dev $(DD)tiff12nc.dev $(DD)tiff24nc.dev $(DD)tiff48nc.dev $(DD)tiffgray.dev $(DD)tiff32nc.dev $(DD)tiff64nc.dev $(DD)tiffsep.dev $(DD)tiffsep1.dev $(DD)tiffscaled.dev $(DD)tiffscaled8.dev $(DD)tiffscaled24.dev $(DD)tiffscaled32.dev $(DD)tiffscaled4.dev
 DEVICE_DEVS12=$(DD)bit.dev $(DD)bitrgb.dev $(DD)bitcmyk.dev
-DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pngmonod.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev
+DEVICE_DEVS13=$(DD)pngmono.dev $(DD)pngmonod.dev $(DD)pnggray.dev $(DD)png16.dev $(DD)png256.dev $(DD)png16m.dev $(DD)pngalpha.dev $(DD)fpng.dev $(DD)psdcmykog.dev
 DEVICE_DEVS14=$(DD)jpeg.dev $(DD)jpeggray.dev $(DD)jpegcmyk.dev
-DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)ps2write.dev $(DD)epswrite.dev $(DD)txtwrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev $(DD)svgwrite.dev $(DD)xpswrite.dev $(DD)inkcov.dev
+DEVICE_DEVS15=$(DD)pdfwrite.dev $(DD)ps2write.dev $(DD)eps2write.dev $(DD)epswrite.dev $(DD)txtwrite.dev $(DD)pxlmono.dev $(DD)pxlcolor.dev $(DD)xpswrite.dev $(DD)inkcov.dev $(DD)ink_cov.dev
 DEVICE_DEVS16=$(DD)bbox.dev $(DD)plib.dev $(DD)plibg.dev $(DD)plibm.dev $(DD)plibc.dev $(DD)plibk.dev $(DD)plan.dev $(DD)plang.dev $(DD)planm.dev $(DD)planc.dev $(DD)plank.dev
 !if "$(WITH_CUPS)" == "1"
 DEVICE_DEVS16=$(DEVICE_DEVS16) $(DD)cups.dev
@@ -1051,7 +1200,7 @@ DEVICE_DEVS16=$(DEVICE_DEVS16) $(DD)cups.dev
 DEVICE_DEVS17=$(DD)ljet3.dev $(DD)ljet3d.dev $(DD)ljet4.dev $(DD)ljet4d.dev
 DEVICE_DEVS18=$(DD)pj.dev $(DD)pjxl.dev $(DD)pjxl300.dev $(DD)jetp3852.dev $(DD)r4081.dev
 DEVICE_DEVS19=$(DD)lbp8.dev $(DD)m8510.dev $(DD)necp6.dev $(DD)bjc600.dev $(DD)bjc800.dev
-DEVICE_DEVS20=$(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev $(DD)pamcmyk32.dev $(DD)pamcmyk4.dev $(DD)pnmcmyk.dev
+DEVICE_DEVS20=$(DD)pnm.dev $(DD)pnmraw.dev $(DD)ppm.dev $(DD)ppmraw.dev $(DD)pamcmyk32.dev $(DD)pamcmyk4.dev $(DD)pnmcmyk.dev $(DD)pam.dev
 DEVICE_DEVS21=$(DD)spotcmyk.dev $(DD)devicen.dev $(DD)bmpsep1.dev $(DD)bmpsep8.dev $(DD)bmp16m.dev $(DD)bmp32b.dev $(DD)psdcmyk.dev $(DD)psdrgb.dev $(DD)cp50.dev
 !endif
 CONTRIB_DEVS=$(DD)pcl3.dev $(DD)hpdjplus.dev $(DD)hpdjportable.dev $(DD)hpdj310.dev $(DD)hpdj320.dev $(DD)hpdj340.dev $(DD)hpdj400.dev $(DD)hpdj500.dev $(DD)hpdj500c.dev $(DD)hpdj510.dev $(DD)hpdj520.dev $(DD)hpdj540.dev $(DD)hpdj550c.dev $(DD)hpdj560c.dev $(DD)hpdj600.dev $(DD)hpdj660c.dev $(DD)hpdj670c.dev $(DD)hpdj680c.dev $(DD)hpdj690c.dev $(DD)hpdj850c.dev $(DD)hpdj855c.dev $(DD)hpdj870c.dev $(DD)hpdj890c.dev $(DD)hpdj1120c.dev $(DD)cdj670.dev $(DD)cdj850.dev $(DD)cdj880.dev $(DD)cdj890.dev $(DD)cdj970.dev $(DD)cdj1600.dev $(DD)cdnj500.dev $(DD)chp2200.dev $(DD)lips3.dev $(DD)lxm3200.dev $(DD)lex2050.dev $(DD)lxm3200.dev $(DD)lex5700.dev $(DD)lex7000.dev $(DD)oki4w.dev $(DD)gdi.dev $(DD)samsunggdi.dev $(DD)dl2100.dev $(DD)la50.dev $(DD)la70.dev $(DD)la75.dev $(DD)la75plus.dev $(DD)ln03.dev $(DD)xes.dev $(DD)md2k.dev $(DD)md5k.dev $(DD)lips4.dev $(DD)bj10v.dev $(DD)bj10vh.dev $(DD)md50Mono.dev $(DD)md50Eco.dev $(DD)md1xMono.dev $(DD)lp2000.dev $(DD)escpage.dev $(DD)npdl.dev $(DD)rpdl.dev $(DD)fmpr.dev $(DD)fmlbp.dev $(DD)jj100.dev $(DD)lbp310.dev $(DD)lbp320.dev $(DD)mj700v2c.dev $(DD)mj500c.dev $(DD)mj6000c.dev $(DD)mj8000c.dev $(DD)pr201.dev $(DD)pr150.dev $(DD)pr1000.dev $(DD)pr1000_4.dev $(DD)lips2p.dev $(DD)bjc880j.dev $(DD)mag16.dev $(DD)mag256.dev $(DD)bjcmono.dev $(DD)bjcgray.dev $(DD)bjccmyk.dev $(DD)bjccolor.dev

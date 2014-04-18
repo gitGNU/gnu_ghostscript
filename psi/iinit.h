@@ -16,6 +16,10 @@
 
 /* (Internal) interface to iinit.c */
 
+/* The following will allow for -Z! to trace PS operators. */
+/* This is slightly less noisy but less informative than -ZI */
+/* #define DEBUG_TRACE_PS_OPERATORS */
+
 #ifndef iinit_INCLUDED
 #  define iinit_INCLUDED
 

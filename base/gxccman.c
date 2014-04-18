@@ -358,7 +358,12 @@ gx_add_fm_pair(register gs_font_dir * dir, gs_font * font, const gs_uid * puid,
                                 char_tm, log2_scale, design_grid);
             if (code < 0)
                 return code;
-        }
+    }
+    else {
+       if (font->FontType == ft_TrueType) {
+           pair->design_grid = design_grid;
+       }
+    }
     pair->memory = 0;
     if_debug8m('k', dir->memory,
                "[k]adding pair 0x%lx: font=0x%lx [%g %g %g %g] UID %ld, 0x%lx\n",
@@ -534,6 +539,7 @@ gx_alloc_char_bits(gs_font_dir * dir, gx_device_memory * dev,
         pdev->retained = retained;
         pdev->width = iwidth;
         pdev->height = iheight;
+        pdev->raster = gx_device_raster((gx_device *)pdev, 1);
         gdev_mem_bitmap_size(pdev, &isize);	/* Assume less than max_ulong */
         pdev->HWResolution[0] = HWResolution0;
         pdev->HWResolution[1] = HWResolution1;

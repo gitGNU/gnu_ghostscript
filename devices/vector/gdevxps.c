@@ -13,7 +13,6 @@
    CA  94903, U.S.A., +1(415)492-9861, for further information.
 */
 
-
 /* XPS output device */
 #include "string_.h"
 #include "gx.h"
@@ -22,6 +21,11 @@
 #include "gxpath.h"
 #include "stream.h"
 #include "zlib.h"
+
+#define MAXPRINTERNAME 64
+#if defined(__WIN32__) && XPSPRINT==1
+int XPSPrint(char *FileName, char *PrinterName, int *reason);
+#endif
 
 /* default resolution. */
 #ifndef X_DPI
@@ -118,6 +122,7 @@ typedef struct gx_device_xps_s {
     gs_line_join linejoin;
     double miterlimit;
     bool can_stroke;
+    unsigned char PrinterName[MAXPRINTERNAME];
 } gx_device_xps;
 
 #define xps_device_body(dname, depth)\
@@ -191,16 +196,16 @@ const gx_device_xps gs_xpswrite_device = {
 static int
 xps_beginpage(gx_device_vector *vdev);
 static int
-xps_setlinewidth(gx_device_vector *vdev, floatp width);
+xps_setlinewidth(gx_device_vector *vdev, double width);
 static int
 xps_setlinecap(gx_device_vector *vdev, gs_line_cap cap);
 static int
 xps_setlinejoin(gx_device_vector *vdev, gs_line_join join);
 static int
-xps_setmiterlimit(gx_device_vector *vdev, floatp limit);
+xps_setmiterlimit(gx_device_vector *vdev, double limit);
 static int
 xps_setdash(gx_device_vector *vdev, const float *pattern,
-            uint count, floatp offset);
+            uint count, double offset);
 static int
 xps_setlogop(gx_device_vector *vdev, gs_logical_operation_t lop,
              gs_logical_operation_t diff);
@@ -222,18 +227,18 @@ static int
 xps_beginpath(gx_device_vector *vdev, gx_path_type_t type);
 
 static int
-xps_moveto(gx_device_vector *vdev, floatp x0, floatp y0,
-           floatp x, floatp y, gx_path_type_t type);
+xps_moveto(gx_device_vector *vdev, double x0, double y0,
+           double x, double y, gx_path_type_t type);
 static int
-xps_lineto(gx_device_vector *vdev, floatp x0, floatp y0,
-           floatp x, floatp y, gx_path_type_t type);
+xps_lineto(gx_device_vector *vdev, double x0, double y0,
+           double x, double y, gx_path_type_t type);
 static int
-xps_curveto(gx_device_vector *vdev, floatp x0, floatp y0,
-            floatp x1, floatp y1, floatp x2, floatp y2,
-            floatp x3, floatp y3, gx_path_type_t type);
+xps_curveto(gx_device_vector *vdev, double x0, double y0,
+            double x1, double y1, double x2, double y2,
+            double x3, double y3, gx_path_type_t type);
 static int
-xps_closepath(gx_device_vector *vdev, floatp x, floatp y,
-              floatp x_start, floatp y_start, gx_path_type_t type);
+xps_closepath(gx_device_vector *vdev, double x, double y,
+              double x_start, double y_start, gx_path_type_t type);
 static int
 xps_endpath(gx_device_vector *vdev, gx_path_type_t type);
 
@@ -285,7 +290,7 @@ static char *rels_magic = (char *)"<?xml version=\"1.0\" encoding=\"utf-8\"?>"
     "<Relationship Type=\"http://schemas.microsoft.com/xps/2005/06/fixedrepresentation\" Target=\"/FixedDocumentSequence.fdseq\" Id=\"Rdd12fb46c1de43ab\" />"
     "</Relationships>";
 
-/* Procedures to manage the containing zip archive */
+    /* Procedures to manage the containing zip archive */
 
 /* Append a node of info for this archive file */
 static int
@@ -293,6 +298,7 @@ zip_new_info_node(gx_device_xps *xps_dev, const char *filename)
 {
     gx_device *dev = (gx_device *)xps_dev;
     gs_memory_t *mem = dev->memory;
+    int lenstr;
 
     /* NB should use GC */
     gx_device_xps_zinfo_t *info = 
@@ -317,7 +323,10 @@ zip_new_info_node(gx_device_xps *xps_dev, const char *filename)
         xps_dev->f2i_tail = f2i;
     }
 
-    f2i->filename = strdup(filename);
+    lenstr = strlen(filename);
+    f2i->filename = (char*)gs_alloc_bytes(mem->non_gc_memory, lenstr + 1, "zinfo_filename");
+    strcpy(f2i->filename, filename);
+        
     info->data.fp = 0;
     info->data.count = 0;
     if (gs_debug_c('_')) {
@@ -367,12 +376,23 @@ zip_append_data(gs_memory_t *mem, gx_device_xps_zinfo_t *info, byte *data, uint 
     /* if there is no data then this is the first call for this
        archive file, open a temporary file to store the data. */
     if (info->data.count == 0) {
-        char filename[gp_file_name_sizeof];
-        FILE *fp = gp_open_scratch_file(mem, "xpsdata-",
+        char *filename =
+          (char *)gs_alloc_bytes(mem, gp_file_name_sizeof, "zip_append_data(filename)");
+        FILE *fp;
+        
+        if (!filename) {
+            return(gs_throw_code(gs_error_VMerror));
+        }
+        
+        fp = gp_open_scratch_file(mem, "xpsdata-",
                                         filename, "wb+");
-        if (fp == NULL)
+
+        if (fp == NULL) {
+            gs_free_object(mem, filename, "zip_append_data(filename)");
             return gs_throw_code(gs_error_Fatal);
+        }
         unlink(filename);
+        gs_free_object(mem, filename, "zip_append_data(filename)");
         info->data.fp = fp;
     }
 
@@ -646,6 +666,7 @@ xps_open_device(gx_device *dev)
     /* zip info */
     xps->f2i = NULL;
     xps->f2i_tail = NULL;
+
     code = write_str_to_zip_file(xps, (char *)"FixedDocumentSequence.fdseq",
                                  fixed_document_sequence);
     if (code < 0)
@@ -739,7 +760,69 @@ xps_close_device(gx_device *dev)
     if (code < 0)
         return gs_rethrow_code(code);
 
+#if defined(__WIN32__) && XPSPRINT==1
+    code = gdev_vector_close_file((gx_device_vector*)dev);
+    if (code < 0)
+        return gs_rethrow_code(code);
+
+    if (strlen((const char *)xps->PrinterName)) {
+        int reason;
+        code = XPSPrint(xps->fname, (char *)xps->PrinterName, &reason);
+        if (code < 0) {
+            switch(code) {
+                case -1:
+                    break;
+                case -2:
+                    eprintf1("ERROR: Could not create competion event: %08X\n", reason);
+                    break;
+                case -3:
+                    eprintf1("ERROR: Could not create MultiByteString from PrinerName: %s\n", xps->PrinterName);
+                    break;
+                case -4:
+                    eprintf1("ERROR: Could not start XPS print job: %08X\n", reason);
+                    break;
+                case -5:
+                    eprintf1("ERROR: Could not create XPS OM Object Factory: %08X\n", reason);
+                    break;
+                case -6:
+                    eprintf1("ERROR: Could not create MultiByteString from OutputFile: %s\n", xps->fname);
+                    break;
+                case -7:
+                    eprintf1("ERROR: Could not create Package from File %08X\n", reason);
+                    break;
+                case -8:
+                    eprintf1("ERROR: Could not write Package to stream %08X\n", reason);
+                    break;
+                case -9:
+                    eprintf1("ERROR: Could not close job stream: %08X\n", reason);
+                    break;
+                case -10:
+                    eprintf1("ERROR: Wait for completion event failed: %08X\n", reason);
+                    break;
+                case -11:
+                    eprintf1("ERROR: Could not get job status: %08X\n", reason);
+                    break;
+                case -12:
+                    eprintf("ERROR: job was cancelled\n");
+                    break;
+                case -13:
+                    eprintf1("ERROR: Print job failed: %08X\n", reason);
+                    break;
+                case -14:
+                    eprintf("ERROR: unexpected failure\n");
+                    break;
+                case -15:
+                case -16:
+                    eprintf("ERROR: XpsPrint.dll does not exist or is missing a required method\n");
+                    break;
+            }
+            return(gs_throw_code(gs_error_invalidaccess));
+        }
+        return(0);
+    }
+#else
     return gdev_vector_close_file((gx_device_vector*)dev);
+#endif
 }
 
 /* Respond to a device parameter query from the client */
@@ -747,6 +830,8 @@ static int
 xps_get_params(gx_device *dev, gs_param_list *plist)
 {
     int code = 0;
+    gx_device_xps *const xps = (gx_device_xps*)dev;
+    gs_param_string ofns;
 
     if_debug0m('_', dev->memory, "xps_get_params\n");
 
@@ -756,6 +841,11 @@ xps_get_params(gx_device *dev, gs_param_list *plist)
       return gs_rethrow_code(code);
 
     /* xps specific parameters are added to plist here */
+    ofns.data = (const byte *)&xps->PrinterName;
+    ofns.size = strlen(xps->fname);
+    ofns.persistent = false;
+    if ((code = param_write_string(plist, "PrinterName", &ofns)) < 0)
+        return code;
 
     return code;
 }
@@ -765,11 +855,29 @@ static int
 xps_put_params(gx_device *dev, gs_param_list *plist)
 {
     int code = 0;
+    gs_param_string pps;
+    gs_param_name param_name;
+    gx_device_xps *const xps = (gx_device_xps*)dev;
 
     if_debug0m('_', dev->memory, "xps_put_params\n");
 
     /* xps specific parameters are parsed here */
 
+    switch (code = param_read_string(plist, (param_name = "PrinterName"), &pps)) {
+        case 0:
+            if (pps.size > 64) {
+                eprintf1("\nERROR: PrinterName too long (max %d)\n", MAXPRINTERNAME);
+            } else {
+                memcpy(xps->PrinterName, pps.data, pps.size);
+                xps->PrinterName[pps.size] = 0;
+            }
+            break;
+        default:
+            param_signal_error(plist, param_name, code);
+        case 1:
+/*            memset(&xps->PrinterName, 0x00, MAXPRINTERNAME);*/
+            break;
+    }
     /* call our superclass to get its parameters, like OutputFile */
     code = gdev_vector_put_params(dev, plist);
     if (code < 0)
@@ -874,7 +982,7 @@ xps_beginpage(gx_device_vector *vdev)
 }
 
 static int
-xps_setlinewidth(gx_device_vector *vdev, floatp width)
+xps_setlinewidth(gx_device_vector *vdev, double width)
 {
     gx_device_xps *xps = (gx_device_xps *)vdev;
 
@@ -915,14 +1023,14 @@ xps_setlinejoin(gx_device_vector *vdev, gs_line_join join)
     return 0;
 }
 static int
-xps_setmiterlimit(gx_device_vector *vdev, floatp limit)
+xps_setmiterlimit(gx_device_vector *vdev, double limit)
 {
     if_debug1m('_', vdev->memory, "xps_setmiterlimit(%lf)\n", limit);
     return 0;
 }
 static int
 xps_setdash(gx_device_vector *vdev, const float *pattern,
-            uint count, floatp offset)
+            uint count, double offset)
 {
     gx_device_xps *xps = (gx_device_xps *)vdev;
     if_debug2m('_', vdev->memory, "xps_setdash count:%d offset:%g\n", count, offset);
@@ -1080,8 +1188,8 @@ xps_beginpath(gx_device_vector *vdev, gx_path_type_t type)
 }
 
 static int
-xps_moveto(gx_device_vector *vdev, floatp x0, floatp y0,
-           floatp x, floatp y, gx_path_type_t type)
+xps_moveto(gx_device_vector *vdev, double x0, double y0,
+           double x, double y, gx_path_type_t type)
 {
     gx_device_xps *xps = (gx_device_xps *)vdev;
     char line[300];
@@ -1101,8 +1209,8 @@ xps_moveto(gx_device_vector *vdev, floatp x0, floatp y0,
 }
 
 static int
-xps_lineto(gx_device_vector *vdev, floatp x0, floatp y0,
-           floatp x, floatp y, gx_path_type_t type)
+xps_lineto(gx_device_vector *vdev, double x0, double y0,
+           double x, double y, gx_path_type_t type)
 {
     gx_device_xps *xps = (gx_device_xps *)vdev;
     char line[200];
@@ -1121,9 +1229,9 @@ xps_lineto(gx_device_vector *vdev, floatp x0, floatp y0,
 }
 
 static int
-xps_curveto(gx_device_vector *vdev, floatp x0, floatp y0,
-            floatp x1, floatp y1, floatp x2, floatp y2,
-            floatp x3, floatp y3, gx_path_type_t type)
+xps_curveto(gx_device_vector *vdev, double x0, double y0,
+            double x1, double y1, double x2, double y2,
+            double x3, double y3, gx_path_type_t type)
 {
     gx_device_xps *xps = (gx_device_xps *)vdev;
     char line[200];
@@ -1143,8 +1251,8 @@ xps_curveto(gx_device_vector *vdev, floatp x0, floatp y0,
 }
 
 static int
-xps_closepath(gx_device_vector *vdev, floatp x, floatp y,
-              floatp x_start, floatp y_start, gx_path_type_t type)
+xps_closepath(gx_device_vector *vdev, double x, double y,
+              double x_start, double y_start, gx_path_type_t type)
 {
     gx_device_xps *xps = (gx_device_xps *)vdev;
 

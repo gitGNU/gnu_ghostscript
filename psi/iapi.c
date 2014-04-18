@@ -21,6 +21,7 @@
 #include "ierrors.h"
 #include "gscdefs.h"
 #include "gstypes.h"
+#include "gdebug.h"
 #include "iapi.h"	/* Public API */
 #include "iref.h"
 #include "iminst.h"

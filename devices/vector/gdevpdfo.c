@@ -705,7 +705,7 @@ cos_array_add_int(cos_array_t *pca, int i)
     return cos_array_add(pca, cos_string_value(&v, (byte *)str, strlen(str)));
 }
 int
-cos_array_add_real(cos_array_t *pca, floatp r)
+cos_array_add_real(cos_array_t *pca, double r)
 {
     byte str[50];		/****** ADHOC ******/
     stream s;
@@ -820,11 +820,11 @@ cos_dict_delete(cos_dict_t *pcd, const byte *key_data, uint key_size)
 
     for (; pcde; pcde = pcde->next) {
         if (!bytes_compare(key_data, key_size, pcde->key.data, pcde->key.size)) {
-            cos_dict_element_free(pcd, pcde, "cos_dict_delete");
             if (prev != 0)
                 prev->next = pcde->next;
             else
                 pcd->elements = pcde->next;
+            cos_dict_element_free(pcd, pcde, "cos_dict_delete");
             return 0;
         }
         prev = pcde;
@@ -931,6 +931,243 @@ cos_dict_write(const cos_object_t *pco, gx_device_pdf *pdev, gs_id object_id)
     if (pdev->PDFA != 0)
         stream_puts(s, "\n");
     return 0;
+}
+
+static int find_last_dict_entry(const cos_dict_t *d, const cos_dict_element_t **element)
+{
+    const cos_dict_element_t *pcde = d->elements, *Last;
+    int code, length, length1, length2;
+
+    *element = 0L;
+
+    Last = pcde;
+    if (Last->key.data[0] == '/') {
+        length1 = Last->key.size - 1;
+    } else {
+        if (pcde->key.data[0] == '(') {
+            length1 = Last->key.size - 2;
+        } else {
+            return_error(gs_error_typecheck);
+        }
+    }
+
+    pcde = pcde->next;
+    while (pcde){
+        if (pcde->key.data[0] == '/') {
+            length2 = pcde->key.size - 1;
+        } else {
+            if (pcde->key.data[0] == '(') {
+                length2 = pcde->key.size - 2;
+            } else {
+                return_error(gs_error_typecheck);
+            }
+        }
+
+        if (length2 < length1)
+            length = length2;
+        else
+            length = length1;
+        code = strncmp((const char *)&pcde->key.data[1], (const char *)&Last->key.data[1], length);
+        if (code == 0) {
+            if (pcde->key.size > Last->key.size) {
+                Last = pcde;
+                length1 = length2;
+            }
+        } else if (code > 0) {
+            Last = pcde;
+            length1 = length2;
+        }
+        pcde = pcde->next;
+    }
+    *element = Last;
+    return 0;
+}
+
+static int find_first_dict_entry(const cos_dict_t *d, const cos_dict_element_t **element)
+{
+    const cos_dict_element_t *pcde = d->elements, *First;
+    int code, length, length1, length2;
+
+    *element = 0L;
+
+    First = pcde;
+    if (First->key.data[0] == '/') {
+        length1 = First->key.size - 1;
+    } else {
+        if (pcde->key.data[0] == '(') {
+            length1 = First->key.size - 2;
+        } else {
+            return_error(gs_error_typecheck);
+        }
+    }
+
+    pcde = pcde->next;
+    while (pcde){
+        if (pcde->key.data[0] == '/') {
+            length2 = pcde->key.size - 1;
+        } else {
+            if (pcde->key.data[0] == '(') {
+                length2 = pcde->key.size - 2;
+            } else {
+                return_error(gs_error_typecheck);
+            }
+        }
+
+        if (length2 < length1)
+            length = length2;
+        else
+            length = length1;
+        code = strncmp((const char *)&pcde->key.data[1], (const char *)&First->key.data[1], length);
+        if (code == 0) {
+            if (pcde->key.size < First->key.size) {
+                First = pcde;
+                length1 = length2;
+            }
+        } else if (code < 0) {
+            First = pcde;
+            length1 = length2;
+        }
+        pcde = pcde->next;
+    }
+    *element = First;
+    return 0;
+}
+
+static int find_next_dict_entry(const cos_dict_t *d, const cos_dict_element_t **element)
+{
+    const cos_dict_element_t *pcde = d->elements, *Current = *element, *Next = 0L;
+    int code, length, length1, length2, length3;
+
+    if (Current->key.data[0] == '/') {
+        length1 = Current->key.size - 1;
+    } else {
+        if (Current->key.data[0] == '(') {
+            length1 = Current->key.size - 2;
+        } else {
+            return_error(gs_error_typecheck);
+        }
+    }
+
+    while (pcde) {
+        if (pcde->key.data[0] == '/') {
+            length2 = pcde->key.size - 1;
+        } else {
+            if (pcde->key.data[0] == '(') {
+                length2 = pcde->key.size - 2;
+            } else {
+                return_error(gs_error_typecheck);
+            }
+        }
+
+        if (length2 < length1)
+            length = length2;
+        else
+            length = length1;
+        code = strncmp((const char *)&pcde->key.data[1], (const char *)&Current->key.data[1], length);
+        if (code > 0 || (code == 0 && length2 > length1)) {
+            if (Next) {
+                if (length3 < length2)
+                    length = length3;
+                else
+                    length = length2;
+                code = strncmp((const char *)&pcde->key.data[1], (const char *)&Next->key.data[1], length);
+                if (code < 0 || (code == 0 && length3 > length2)) {
+                    Next = pcde;
+                    if (Next->key.data[0] == '/') {
+                        length3 = pcde->key.size - 1;
+                    } else {
+                        if (Next->key.data[0] == '(') {
+                            length3 = pcde->key.size - 2;
+                        } else {
+                            return_error(gs_error_typecheck);
+                        }
+                    }
+                }
+            } else {
+                Next = pcde;
+                if (Next->key.data[0] == '/') {
+                    length3 = pcde->key.size - 1;
+                } else {
+                    if (Next->key.data[0] == '(') {
+                        length3 = pcde->key.size - 2;
+                    } else {
+                        return_error(gs_error_typecheck);
+                    }
+                }
+            }
+        }
+        pcde = pcde->next;
+    }
+    *element = Next;
+    return 0;
+}
+
+static int write_key_as_string(stream *s, const cos_dict_element_t *element)
+{
+    if (element->key.data[0] == '/') {
+        spputc(s, '(');
+        stream_write(s, &element->key.data[1], element->key.size - 1);
+        spputc(s, ')');
+    } else {
+        stream_write(s, element->key.data, element->key.size);
+    }
+    return 0;
+}
+
+int
+cos_write_dict_as_ordered_array(cos_object_t *pco, gx_device_pdf *pdev, pdf_resource_type_t type)
+{
+    stream *s;
+    int code;
+    const cos_dict_t *d;
+    const cos_dict_element_t *pcde, *First, *Last;
+
+    if (cos_type(pco) != cos_type_dict)
+        return_error(gs_error_typecheck);
+
+    d = (const cos_dict_t *)pco;
+
+    if (pco->id == 0 || pco->written)
+        return_error(gs_error_Fatal);
+    pdf_open_separate(pdev, pco->id, type);
+
+    s = pdev->strm;
+    pcde = d->elements;
+    if (!pcde){
+        stream_puts(s, "<<>>\n");
+        pdf_end_separate(pdev, type);
+        return 0;
+    }
+
+    code = find_first_dict_entry(d, &First);
+    if (code < 0) {
+        pdf_end_separate(pdev, type);
+        return code;
+    }
+
+    code = find_last_dict_entry(d, &Last);
+    if (code < 0) {
+        pdf_end_separate(pdev, type);
+        return code;
+    }
+
+    stream_puts(s, "<<\n/Limits [\n");
+    write_key_as_string(s, First);
+    stream_puts(s, "\n");
+    write_key_as_string(s, Last);
+    stream_puts(s, "\n]\n");
+    stream_puts(s, "/Names [");
+    do {
+        stream_puts(s, "\n");
+        write_key_as_string(s, First);
+        cos_value_write_spaced(&First->value, pdev, true, -1);
+        find_next_dict_entry(d, &First);
+    } while (First);
+    stream_puts(s, "]\n>>\n");
+
+    pdf_end_separate(pdev, type);
+    pco->written = true;
+    return code;
 }
 
 /* Write/delete definitions of named objects. */
@@ -1093,7 +1330,7 @@ cos_dict_put_c_key_bool(cos_dict_t *pcd, const char *key, bool value)
                               (value ? 4 : 5));
 }
 int
-cos_dict_put_c_key_real(cos_dict_t *pcd, const char *key, floatp value)
+cos_dict_put_c_key_real(cos_dict_t *pcd, const char *key, double value)
 {
     byte str[50];		/****** ADHOC ******/
     stream s;
@@ -1392,8 +1629,12 @@ static int hash_cos_stream(const cos_object_t *pco0, gs_md5_state_t *md5, gs_md5
     cos_stream_piece_t *pcsp = pcs->pieces;
     FILE *sfile = pdev->streams.file;
     byte *ptr;
-    int64_t position_save = gp_ftell_64(sfile);
+    int64_t position_save;
     int result;
+
+    sflush(pdev->strm);
+    sflush(pdev->streams.strm);
+    position_save = gp_ftell_64(sfile);
 
     if (!pcsp)
         return -1;
@@ -1401,8 +1642,13 @@ static int hash_cos_stream(const cos_object_t *pco0, gs_md5_state_t *md5, gs_md5
     gs_md5_init(md5);
     while(pcsp) {
         ptr = gs_malloc(pdev->memory, sizeof (byte), pcsp->size, "hash_cos_stream");
+        if (ptr == 0L) {
+            result = gs_note_error(gs_error_VMerror);
+            return result;
+        }
         gp_fseek_64(sfile, pcsp->position, SEEK_SET);
         if (fread(ptr, 1, pcsp->size, sfile) != pcsp->size) {
+            gs_free(pdev->memory, ptr, sizeof (byte), pcsp->size, "hash_cos_stream");
             result = gs_note_error(gs_error_ioerror);
             return result;
         }
@@ -1427,9 +1673,11 @@ static int cos_stream_hash(const cos_object_t *pco0, gs_md5_state_t *md5, gs_md5
     }
     gs_md5_append(md5, (byte *)&pco0->stream_hash, sizeof(pco0->stream_hash));
     if (!pco0->md5_valid) {
+        gs_md5_init((gs_md5_state_t *)&pco0->md5);
         code = cos_dict_hash(pco0, (gs_md5_state_t *)&pco0->md5, (gs_md5_byte_t *)pco0->hash, pdev);
         if (code < 0)
             return code;
+        gs_md5_finish((gs_md5_state_t *)&pco0->md5, (gs_md5_byte_t *)pco0->hash);
         pcs0->md5_valid = 1;
     }
     gs_md5_append(md5, (byte *)&pco0->hash, sizeof(pco0->hash));
@@ -1442,18 +1690,20 @@ cos_stream_equal(const cos_object_t *pco0, const cos_object_t *pco1, gx_device_p
     cos_stream_t *pcs0 = (cos_stream_t *)pco0;
     cos_stream_t *pcs1 = (cos_stream_t *)pco1;
     int code;
+    gs_md5_state_t md5;
+    gs_md5_byte_t hash[16];
+
+    gs_md5_init(&md5);
 
     if (!pco0->stream_md5_valid) {
-        code = cos_stream_hash(pco0, (gs_md5_state_t *)&pco0->md5, (gs_md5_byte_t *)&pco0->stream_hash, pdev);
+        code = cos_stream_hash(pco0, &md5, (gs_md5_byte_t *)hash, pdev);
         if (code < 0)
             return false;
-        pcs0->stream_md5_valid = 1;
     }
     if (!pco1->stream_md5_valid) {
-        code = cos_stream_hash(pco1, (gs_md5_state_t *)&pco1->md5, (gs_md5_byte_t *)&pco1->stream_hash, pdev);
+        code = cos_stream_hash(pco1, &md5, (gs_md5_byte_t *)hash, pdev);
         if (code < 0)
             return false;
-        pcs1->stream_md5_valid = 1;
     }
     if (memcmp(&pcs0->stream_hash, &pcs1->stream_hash, 16) != 0)
         return false;

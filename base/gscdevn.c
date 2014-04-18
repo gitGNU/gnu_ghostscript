@@ -41,6 +41,7 @@
 #include "gsicc.h"
 #include "gsicc_cache.h"
 #include "gxdevice.h"
+#include "gxcie.h"
 
 /* ---------------- Color space ---------------- */
 
@@ -62,6 +63,8 @@ static cs_proc_install_cspace(gx_install_DeviceN);
 static cs_proc_set_overprint(gx_set_overprint_DeviceN);
 static cs_proc_final(gx_final_DeviceN);
 static cs_proc_serialize(gx_serialize_DeviceN);
+static cs_proc_polarity(gx_polarity_DeviceN);
+
 const gs_color_space_type gs_color_space_type_DeviceN = {
     gs_color_space_index_DeviceN, true, false,
     &st_color_space_DeviceN, gx_num_components_DeviceN,
@@ -72,7 +75,7 @@ const gs_color_space_type gs_color_space_type_DeviceN = {
     gx_set_overprint_DeviceN,
     gx_final_DeviceN, gx_no_adjust_color_count,
     gx_serialize_DeviceN,
-    gx_cspace_is_linear_default
+    gx_cspace_is_linear_default, gx_polarity_DeviceN
 };
 
 /* GC procedures */
@@ -295,6 +298,18 @@ gx_num_components_DeviceN(const gs_color_space * pcs)
     return pcs->params.device_n.num_components;
 }
 
+/* Determine best guess of polarity */
+static gx_color_polarity_t
+gx_polarity_DeviceN(const gs_color_space * pcs)
+{
+    /* DeviceN initializes to 1.0 like a separation so
+       for now, treat this as subtractive.  It is possible
+       that we may have to do a special test for Red, Green
+       and Blue but for now, I believe the following is
+       correct */
+    return GX_CINFO_POLARITY_SUBTRACTIVE;
+}
+
 /* Initialize a DeviceN color. */
 static void
 gx_init_DeviceN(gs_client_color * pcc, const gs_color_space * pcs)
@@ -312,7 +327,7 @@ gx_restrict_DeviceN(gs_client_color * pcc, const gs_color_space * pcs)
     uint i;
 
     for (i = 0; i < pcs->params.device_n.num_components; ++i) {
-        floatp value = pcc->paint.values[i];
+        double value = pcc->paint.values[i];
         pcc->paint.values[i] = (value <= 0 ? 0 : value >= 1 ? 1 : value);
     }
 }
@@ -485,7 +500,9 @@ gx_concretize_DeviceN(const gs_client_color * pc, const gs_color_space * pcs,
             return tcode;
         /* First check if this was PS based. */
         if (gs_color_space_is_PSCIE(pacs)) {
-            /* If we have not yet create the profile do that now */
+            /* We may have to rescale data to 0 to 1 range */
+            rescale_cie_colors(pacs, &cc);
+            /* If we have not yet created the profile do that now */
             if (pacs->icc_equivalent == NULL) {
                 gs_colorspace_set_icc_equivalent(pacs, &(is_lab), pis->memory);
             }

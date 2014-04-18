@@ -337,7 +337,7 @@ pdf_put_uncolored_pattern(gx_device_pdf *pdev, const gx_drawing_color *pdc,
          */
         *ppres = 0;
         set_nonclient_dev_color(&dc_pure, gx_dc_pure_color(pdc));
-        return psdf_set_color((gx_device_vector *)pdev, &dc_pure, ppscc);
+        return psdf_set_color((gx_device_vector *)pdev, &dc_pure, ppscc, pdev->UseOldColor);
     } else {
         cos_value_t v;
         stream *s = pdev->strm;
@@ -376,7 +376,7 @@ pdf_put_uncolored_pattern(gx_device_pdf *pdev, const gx_drawing_color *pdc,
         if (have_pattern_streams)
             return 0;
         set_nonclient_dev_color(&dc_pure, gx_dc_pure_color(pdc));
-        return psdf_set_color((gx_device_vector *)pdev, &dc_pure, &no_scc);
+        return psdf_set_color((gx_device_vector *)pdev, &dc_pure, &no_scc, pdev->UseOldColor);
     }
 }
 
@@ -467,7 +467,7 @@ pdf_put_colored_pattern(gx_device_pdf *pdev, const gx_drawing_color *pdc,
      * space is always a Device space.
      */
     code = pdf_color_space_named(pdev, &cs_value, NULL, pcs_Device,
-                           &pdf_color_space_names, true, NULL, 0);
+                           &pdf_color_space_names, true, NULL, 0, false);
     if (code < 0)
         return code;
     if (!have_pattern_streams) {
@@ -535,7 +535,7 @@ pdf_put_shading_common(cos_dict_t *pscd, const gs_shading_t *psh,
         (psh->params.AntiAlias &&
          (code = cos_dict_put_c_strings(pscd, "/AntiAlias", "true")) < 0) ||
         (code = pdf_color_space_named(pscd->pdev, &cs_value, ppranges, pcs,
-                                &pdf_color_space_names, false, NULL, 0)) < 0 ||
+                                &pdf_color_space_names, false, NULL, 0, false)) < 0 ||
         (code = cos_dict_put_c_key(pscd, "/ColorSpace", &cs_value)) < 0
         )
         return code;
@@ -649,7 +649,7 @@ pdf_put_scalar_shading(cos_dict_t *pscd, const gs_shading_t *psh,
 
 /* Add a floating point range to an array. */
 static int
-pdf_array_add_real2(cos_array_t *pca, floatp lower, floatp upper)
+pdf_array_add_real2(cos_array_t *pca, double lower, double upper)
 {
     int code = cos_array_add_real(pca, lower);
 
@@ -669,7 +669,7 @@ typedef struct pdf_mesh_data_params_s {
 
 /* Put a clamped value into a data stream.  num_bytes < sizeof(int). */
 static void
-put_clamped(byte *p, floatp v, int num_bytes)
+put_clamped(byte *p, double v, int num_bytes)
 {
     int limit = 1 << (num_bytes * 8);
     int i, shift;
@@ -684,7 +684,7 @@ put_clamped(byte *p, floatp v, int num_bytes)
         *p++ = (byte)(i >> shift);
 }
 static inline void
-put_clamped_coord(byte *p, floatp v, int num_bytes)
+put_clamped_coord(byte *p, double v, int num_bytes)
 {
     put_clamped(p, ENCODE_MESH_COORDINATE(v), num_bytes);
 }
@@ -940,13 +940,13 @@ pdf_put_pattern2(gx_device_pdf *pdev, const gx_drawing_color *pdc,
 
     if (code < 0)
         return code;
-    code = pdf_alloc_resource(pdev, resourcePattern, gs_no_id, ppres, 0L);
+    code = pdf_alloc_resource(pdev, resourcePattern, gs_no_id, ppres, -1);
     if (code < 0)
         return code;
     pres = *ppres;
     cos_become(pres->object, cos_type_dict);
     pcd = (cos_dict_t *)pres->object;
-    code = pdf_alloc_resource(pdev, resourceShading, gs_no_id, &psres, 0L);
+    code = pdf_alloc_resource(pdev, resourceShading, gs_no_id, &psres, -1);
     if (code < 0)
         return code;
     psco = psres->object;
@@ -968,6 +968,13 @@ pdf_put_pattern2(gx_device_pdf *pdev, const gx_drawing_color *pdc,
         else
             /* We won't use this shading, we fall back because we couldn't write it */
             psres->where_used = 0;
+    }
+    if (psres->where_used) {
+        code = pdf_substitute_resource(pdev, &psres, resourceShading, NULL, false);
+        if (code < 0)
+            return code;
+        psco = psres->object;
+        psres->where_used |= pdev->used_mask;
     }
     /*
      * In PDF, the Matrix is the transformation from the pattern space to
@@ -994,6 +1001,12 @@ pdf_put_pattern2(gx_device_pdf *pdev, const gx_drawing_color *pdc,
         /****** ExtGState ******/
         )
         return code;
+    code = pdf_substitute_resource(pdev, &pres, resourcePattern, NULL, false);
+    if (code < 0)
+        return code;
+    pres->where_used |= pdev->used_mask;
+    *ppres = pres;
+
     cos_value_write(&v, pdev);
     pprints1(pdev->strm, " %s\n", ppscc->setcolorspace);
     return code1;
@@ -1009,5 +1022,5 @@ gdev_pdf_include_color_space(gx_device *dev, gs_color_space *cspace, const byte 
     cos_value_t cs_value;
 
     return pdf_color_space_named(pdev, &cs_value, NULL, cspace,
-                                &pdf_color_space_names, true, res_name, name_length);
+                                &pdf_color_space_names, true, res_name, name_length, false);
 }

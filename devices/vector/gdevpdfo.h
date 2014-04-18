@@ -221,6 +221,7 @@ int cos_become(cos_object_t *, cos_type_t);
 cos_proc_release(cos_release);
 #define COS_RELEASE(pc, cname) cos_release(COS_OBJECT(pc), cname)
 cos_proc_write(cos_write);
+int cos_write_dict_as_ordered_array(cos_object_t *pco, gx_device_pdf *pdev, pdf_resource_type_t type);
 #define COS_WRITE(pc, pdev) cos_write(CONST_COS_OBJECT(pc), pdev, (pc)->id)
 
 /* Make a value to store into a composite object. */
@@ -248,7 +249,7 @@ int cos_array_add(cos_array_t *, const cos_value_t *);
 int cos_array_add_no_copy(cos_array_t *, const cos_value_t *);
 int cos_array_add_c_string(cos_array_t *, const char *);
 int cos_array_add_int(cos_array_t *, int);
-int cos_array_add_real(cos_array_t *, floatp);
+int cos_array_add_real(cos_array_t *, double);
 int cos_array_add_object(cos_array_t *, cos_object_t *);
 /* add adds at the end, unadd removes the last element */
 int cos_array_unadd(cos_array_t *, cos_value_t *);
@@ -260,7 +261,7 @@ int cos_dict_put_c_key(cos_dict_t *, const char *, const cos_value_t *);
 int cos_dict_put_c_key_string(cos_dict_t *, const char *, const byte *, uint);
 int cos_dict_put_c_key_int(cos_dict_t *, const char *, int);
 int cos_dict_put_c_key_bool(cos_dict_t *pcd, const char *key, bool value);
-int cos_dict_put_c_key_real(cos_dict_t *, const char *, floatp);
+int cos_dict_put_c_key_real(cos_dict_t *, const char *, double);
 int cos_dict_put_c_key_floats(cos_dict_t *, const char *, const float *, uint);
 int cos_dict_put_c_key_object(cos_dict_t *, const char *, cos_object_t *);
 int cos_dict_put_string(cos_dict_t *, const byte *, uint, const byte *, uint);

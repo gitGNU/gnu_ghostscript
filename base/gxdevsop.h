@@ -197,18 +197,17 @@ enum {
     gxdso_is_std_cmyk_1bit,
 
     /* gxdso_is_pdf14_device:
+     * Either:
      *     data = NULL
      *     size = 0
-     * Returns 1 if the device is a pdf14 device .
+     *   Returns 1 if the device is a pdf14 device .
+     * Or:
+     *     data = pointer to a place to store a pdf14_device *
+     *     size = sizeof(pdf14_device *).
+     *   Returns 1 if the device is a pdf14 device, and fills data with the
+     *   pointer to the pdf14 device (may be a child of the original device)
      */
     gxdso_is_pdf14_device,
-
-    /* gxdso_is_native_planar:
-     *      data = NULL
-     *      size = 0
-     * Returns the number of bits per plane if the device's native format is planar
-     */
-    gxdso_is_native_planar,
 
     /* gxdso_device_child:
      *      data = pointer to gxdso_device_child_request struct
@@ -233,7 +232,7 @@ enum {
      *      data = NULL
      *      size = 0
      * Returns 1 if the device supports devicen colors.  example tiffsep.
-     */    
+     */
     gxdso_supports_devn,
     /* gxdso_supports_hlcolor:
      * for devices that can handle pattern and other high level structures
@@ -260,7 +259,21 @@ enum {
      * (eg pdfwrite) we can't deal with this. return '0' if the device
      * doesn't care if the palette changes, and 1 if it does.
      */
-     gxdso_needs_invariant_palette,
+    gxdso_needs_invariant_palette,
+    /* gxdso_supports_saved_pages:
+     * gx_device_printer devices can support this saving pages as clist
+     */
+    gxdso_supports_saved_pages,
+    /* Form handling, we need one to start and one to stop a form
+     * its up to the device to recognise duplicate execution of forms.
+     */
+    gxdso_form_begin,
+    gxdso_form_end,
+    /* gxdso_adjust_bandheight:
+     * Adjust the bandheight given in 'size' (normally downwards). Typically
+     * to round it to a multiple of a given number.
+     */
+    gxdso_adjust_bandheight,
     /* Add new gxdso_ keys above this. */
     gxdso_pattern__LAST
 };
