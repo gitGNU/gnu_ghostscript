@@ -573,7 +573,7 @@ WARNOPT=-W2
 #!include $(COMMONDIR)\msvcdefs.mak
 #!include $(COMMONDIR)\pcdefs.mak
 #!include $(COMMONDIR)\generic.mak
-!include $(GLSRCDIR)\version.mak
+#!include $(GLSRCDIR)\version.mak
 # The following is a hack to get around the special treatment of \ at
 # the end of a line.
 NUL=
