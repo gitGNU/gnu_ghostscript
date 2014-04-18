@@ -3,6 +3,7 @@ dnl All Rights Reserved.
 dnl
 dnl This software is provided AS-IS with no warranty, either express or
 dnl implied.
+dnl
 dnl This software is distributed under license and may not be copied,
 dnl modified or distributed except as expressly authorized under the terms
 dnl of the license contained in the file LICENSE in this distribution.
@@ -1968,10 +1969,10 @@ case `uname` in
           else
             DYNAMIC_CFLAGS="-KPIC"
           fi
--
--          DYNAMIC_LDFLAGS="-G -shared -Wl,\$(LD_SET_DT_SONAME)\$(LDFLAGS_SO_PREFIX)\$(GS_SONAME_MAJOR)"
--          DYNAMIC_LIBS=""
--          SO_LIB_EXT=".so"
+
+          DYNAMIC_LDFLAGS="-G -shared -Wl,\$(LD_SET_DT_SONAME)\$(LDFLAGS_SO_PREFIX)\$(GS_SONAME_MAJOR)"
+          DYNAMIC_LIBS=""
+          SO_LIB_EXT=".so"
         ;;
         AIX)
           DYNAMIC_CFLAGS="-fPIC"
