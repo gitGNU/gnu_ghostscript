@@ -99,7 +99,7 @@ int pdf_color_space_named(gx_device_pdf *pdev, cos_value_t *pvalue,
                     const gs_range_t **ppranges,
                     const gs_color_space *pcs,
                     const pdf_color_space_names_t *pcsn,
-                    bool by_name, const byte *res_name, int name_length);
+                    bool by_name, const byte *res_name, int name_length, bool keepICC);
 
 int free_color_space(gx_device_pdf *pdev, pdf_resource_t *pres);
 int pdf_indexed_color_space(gx_device_pdf *pdev, cos_value_t *pvalue,
@@ -241,7 +241,7 @@ void pdf_make_bitmap_matrix(gs_matrix * pmat, int x, int y, int w, int h,
 
 /* Put out the gsave and matrix for an image. */
 void pdf_put_image_matrix(gx_device_pdf * pdev, const gs_matrix * pmat,
-                          floatp y_scale);
+                          double y_scale);
 
 /* Put out a reference to an image resource. */
 int pdf_do_image_by_id(gx_device_pdf * pdev, double scale,

@@ -407,6 +407,9 @@ clamp_pattern_bbox(gs_pattern1_instance_t * pinst, gs_rect * pbbox,
     gs_point dev_pat_origin, dev_step;
     int code;
 
+    double xepsilon = FLT_EPSILON * width;
+    double yepsilon = FLT_EPSILON * height;
+
     /*
      * Scan across the page.  We determine the region to be scanned
      * by working in the pattern coordinate space.  This is logically
@@ -460,7 +463,21 @@ clamp_pattern_bbox(gs_pattern1_instance_t * pinst, gs_rect * pbbox,
             xupper = (xdev + pbbox->q.x < width) ? pbbox->q.x : -xdev + width;
             ylower = (ydev + pbbox->p.y > 0) ? pbbox->p.y : -ydev;
             yupper = (ydev + pbbox->q.y < height) ? pbbox->q.y : -ydev + height;
-            if (xlower < xupper && ylower < yupper) {
+
+            /* The use of floating point in these calculations causes us
+             * problems. Values which go through the calculation without ever
+             * being 'large' retain more accuracy in the lower bits than ones
+             * which momentarily become large. This is seen in bug 694528
+             * where a y value of 0.00017... becomes either 0 when 8000 is
+             * first added to it, then subtracted. This can lead to yupper
+             * and ylower being different.
+             *
+             * The "fix" implemented here is to amend the following test to
+             * ensure that the region found is larger that 'epsilon'. The
+             * epsilon values are calculated to reflect the floating point
+             * innacuracies at the appropriate range.
+             */
+            if (xlower + xepsilon < xupper && ylower + yepsilon < yupper) {
                 /*
                  * The pattern intersects the page.  Expand required area if
                  * needed.
@@ -1774,8 +1791,10 @@ gx_dc_pattern_write(
         /* A special case for writing a known pattern :
            Just write the tile id. */
         gs_id id = ptile->id; /* Ensure sizeof(gs_id). */
-
-        memcpy(dp, &ptile->id, sizeof(id));
+		if_debug2m('?', dev->memory,
+			"[v*] Writing trans tile ID into clist, uid = %ld id = %ld \n",
+			ptile->uid.id, ptile->id);
+		memcpy(dp, &ptile->id, sizeof(id));
         *psize = sizeof(gs_id);
         return 0;
     }
@@ -1783,9 +1802,12 @@ gx_dc_pattern_write(
     /* Check if pattern has transparency object
        If so then that is what we will stuff in
        the clist */
-
-    if (ptile->ttrans != NULL)
-        return gx_dc_pattern_trans_write_raster(ptile, offset, data, psize);
+	if (ptile->ttrans != NULL) {
+		if_debug2m('?', dev->memory,
+			"[v*] Writing trans tile into clist, uid = %ld id = %ld \n",
+			ptile->uid.id, ptile->id);
+		return gx_dc_pattern_trans_write_raster(ptile, offset, data, psize);
+	}
 
     if (ptile->cdev == NULL)
         return gx_dc_pattern_write_raster(ptile, offset, data, psize, dev);
@@ -2062,6 +2084,9 @@ gx_dc_pattern_read(
                 ptile->ttrans->rowstride = trans_info.rowstride;
                 ptile->ttrans->width = trans_info.width;
                 pdevc->type = &gx_dc_pattern_trans;
+				if_debug2m('?', pis->memory,
+					"[v*] Reading trans tile from clist into cache, uid = %ld id = %ld \n",
+					ptile->uid.id, ptile->id);
 
                 code = gx_dc_pattern_read_trans_buff(ptile, offset1, dp, left, mem);
                 if (code < 0)
@@ -2099,8 +2124,6 @@ gx_dc_pattern_read(
                                &inst, "gx_dc_pattern_read");
             if (ptile->cdev == NULL)
                 return_error(gs_error_VMerror);
-            ptile->cdev->common.band_params.page_uses_transparency =
-                                                         !!(buf.flags & TILE_USES_TRANSP);
             ptile->cdev->common.page_uses_transparency = !!(buf.flags & TILE_USES_TRANSP);
             code = dev_proc(&ptile->cdev->writer, open_device)((gx_device *)&ptile->cdev->writer);
             if (code < 0)

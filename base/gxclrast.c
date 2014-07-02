@@ -620,8 +620,13 @@ in:                             /* Initialize for a new page. */
         goto out;
 
     imager_state.line_params.dash.pattern = dash_pattern;
-    if (tdev != 0)
+    if (tdev != 0) {
         gx_set_cmap_procs(&imager_state, tdev);
+        /* We can only optimize contone color devices */
+        if ( !(tdev->color_info.max_gray > 15 || tdev->color_info.max_color > 15) &&
+             playback_action == playback_action_render_no_pdf14)
+             playback_action = playback_action_render;      /* can't optimize these cases */
+    }
     gx_imager_setscreenphase(&imager_state, -x0, -y0, gs_color_select_all);
     halftone_type = ht_type_none;
     pcs = gs_cspace_new_DeviceGray(mem);
@@ -682,7 +687,7 @@ in:                             /* Initialize for a new page. */
                     case cmd_opv_set_tile_size:
                         cbuf.ptr = cbp;
                         code = read_set_tile_size(&cbuf, &tile_bits,
-                                    IS_CLIST_FOR_PATTERN(cdev));
+                                    gx_device_is_pattern_clist((gx_device *)cdev));
                         cbp = cbuf.ptr;
                         if (code < 0)
                             goto out;
@@ -2281,7 +2286,8 @@ idata:                  data_size = 0;
             rc_decrement(target, "gxclrast(target compositor)");
         } else {
             /* Ref count was 1. close the device and then free it */
-            dev_proc(target, close_device)(target);
+            if (target->is_open)
+                dev_proc(target, close_device)(target);
             gs_free_object(target->memory, target, "gxclrast discard compositor");
         }
         target = orig_target;
@@ -2705,6 +2711,7 @@ read_set_color_space(command_buf_t *pcb, gs_imager_state *pis,
         picc_profile->hashcode = icc_information.icc_hash;
         picc_profile->hash_is_valid = true;
         picc_profile->islab = icc_information.is_lab;
+        picc_profile->default_match = icc_information.default_match;
         picc_profile->data_cs = icc_information.data_cs;
         /* Store the clist reader address in the profile
            structure so that we can get to the buffer

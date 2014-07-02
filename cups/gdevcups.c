@@ -336,109 +336,118 @@ private gx_device_procs	cups_procs =
 	),\
 	prn_device_body_copies_rest_(print_pages)
 
-gx_device_cups	gs_cups_device =
-{
-  prn_device_body_copies(gx_device_cups,/* type */
-                         cups_procs,	/* procedures */
-			 "cups",	/* device name */
-			 85,		/* initial width */
-			 110,		/* initial height */
-			 100,		/* initial x resolution */
-			 100,		/* initial y resolution */
-                         0,		/* initial left offset */
-			 0,		/* initial top offset */
-			 0,		/* initial left margin */
-			 0,		/* initial bottom margin */
-			 0,		/* initial right margin */
-			 0,		/* initial top margin */
-			 1,		/* number of color components */
-			 1,		/* number of color bits */
-			 1,		/* maximum gray value */
-			 0,		/* maximum color value */
-			 2,		/* number of gray values */
-			 0,		/* number of color values */
-			 cups_print_pages),
-					/* print procedure */
-  0,					/* page */
-  NULL,					/* stream */
-  {					/* header */
-    "",					/* MediaClass */
-    "",					/* MediaColor */
-    "",					/* MediaType */
-    "",					/* OutputType */
-    0,					/* AdvanceDistance */
-    CUPS_ADVANCE_NONE,			/* AdvanceMedia */
-    CUPS_FALSE,				/* Collate */
-    CUPS_CUT_NONE,			/* CutMedia */
-    CUPS_FALSE,				/* Duplex */
-    { 100, 100 },			/* HWResolution */
-    { 0, 0, 612, 792 },			/* ImagingBoundingBox */
-    CUPS_FALSE,				/* InsertSheet */
-    CUPS_JOG_NONE,			/* Jog */
-    CUPS_EDGE_TOP,			/* LeadingEdge */
-    { 0, 0 },				/* Margins */
-    CUPS_FALSE,				/* ManualFeed */
-    0,					/* MediaPosition */
-    0,					/* MediaWeight */
-    CUPS_FALSE,				/* MirrorPrint */
-    CUPS_FALSE,				/* NegativePrint */
-    1,					/* NumCopies */
-    CUPS_ORIENT_0,			/* Orientation */
-    CUPS_FALSE,				/* OutputFaceUp */
-    { 612, 792 },			/* PageSize */
-    CUPS_FALSE,				/* Separations */
-    CUPS_FALSE,				/* TraySwitch */
-    CUPS_FALSE,				/* Tumble */
-    850,				/* cupsWidth */
-    1100,				/* cupsHeight */
-    0,					/* cupsMediaType */
-    1,					/* cupsBitsPerColor */
-    1,					/* cupsBitsPerPixel */
-    107,				/* cupsBytesPerLine */
-    CUPS_ORDER_CHUNKED,			/* cupsColorOrder */
-    CUPS_CSPACE_K,			/* cupsColorSpace */
-    0,					/* cupsCompression */
-    0,					/* cupsRowCount */
-    0,					/* cupsRowFeed */
-    0					/* cupsRowStep */
+
+
 #ifdef CUPS_RASTER_SYNCv1
-    ,
-    1,                                  /* cupsNumColors */
-    1.0,                                /* cupsBorderlessScalingFactor */
-    { 612.0, 792.0 },                   /* cupsPageSize */
-    { 0.0, 0.0, 612.0, 792.0 },         /* cupsImagingBBox */
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, /* cupsInteger */
-    { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }, /* cupsReal */
-    { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "" },
-                                        /* cupsString */
-    "",                                 /* cupsMarkerType */
-    "",                                 /* cupsRenderingIntent */
+#define RASTER_SYNCv1_ENTRIES \
+    ,\
+    1,                                  /* cupsNumColors */\
+    1.0,                                /* cupsBorderlessScalingFactor */\
+    { 612.0, 792.0 },                   /* cupsPageSize */\
+    { 0.0, 0.0, 612.0, 792.0 },         /* cupsImagingBBox */\
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, /* cupsInteger */\
+    { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,\
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }, /* cupsReal */\
+    { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "" },\
+                                        /* cupsString */\
+    "",                                 /* cupsMarkerType */\
+    "",                                 /* cupsRenderingIntent */\
     ""                                  /* cupsPageSizeName */
+#else
+#define RASTER_SYNCv1_ENTRIES
 #endif /* CUPS_RASTER_SYNCv1 */
-  },
-  0,                                    /* landscape */
-  0,                                    /* lastpage */
-  0,                                    /* HaveProfile */
-  NULL,                                 /* Profile */
-  NULL,                                 /* PPD */
-  { 0x00, 0x08, 0x04, 0x0c, 0x02, 0x0a, 0x06, 0x0e,
-    0x01, 0x09, 0x05, 0x0d, 0x03, 0x0b, 0x07, 0x0f },/* RevLower1 */
-  { 0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0,
-    0x10, 0x90, 0x50, 0xd0, 0x30, 0xb0, 0x70, 0xf0 },/* RevUpper1 */
-  { 0x00, 0x04, 0x08, 0x0c, 0x01, 0x05, 0x09, 0x0d,
-    0x02, 0x06, 0x0a, 0x0e, 0x03, 0x07, 0x0b, 0x0f },/* RevLower2 */
-  { 0x00, 0x40, 0x80, 0xc0, 0x10, 0x50, 0x90, 0xd0,
-    0x20, 0x60, 0xa0, 0xe0, 0x30, 0x70, 0xb0, 0xf0 },/* RevUpper2 */
-  {0x00},                                  /* DecodeLUT */
-  {0x00},                                  /* EncodeLUT */
-  {0x00},                                  /* Density */
-  {{{0x00},{0x00},{0x00}},
-   {{0x00},{0x00},{0x00}},
-   {{0x00},{0x00},{0x00}}},                /* Matrix */
-  0,                                       /* user_icc */
+
+#define gs_xxx_device(dname, mediaclass)\
+  prn_device_body_copies(gx_device_cups,/* type */\
+                         cups_procs,	/* procedures */\
+			 dname,		/* device name */\
+			 85,		/* initial width */\
+			 110,		/* initial height */\
+			 100,		/* initial x resolution */\
+			 100,		/* initial y resolution */\
+                         0,		/* initial left offset */\
+			 0,		/* initial top offset */\
+			 0,		/* initial left margin */\
+			 0,		/* initial bottom margin */\
+			 0,		/* initial right margin */\
+			 0,		/* initial top margin */\
+			 1,		/* number of color components */\
+			 1,		/* number of color bits */\
+			 1,		/* maximum gray value */\
+			 0,		/* maximum color value */\
+			 2,		/* number of gray values */\
+			 0,		/* number of color values */\
+			 cups_print_pages),\
+					/* print procedure */\
+  0,					/* page */\
+  NULL,					/* stream */\
+  {					/* header */\
+    mediaclass,				/* MediaClass */\
+    "",					/* MediaColor */\
+    "",					/* MediaType */\
+    "",					/* OutputType */\
+    0,					/* AdvanceDistance */\
+    CUPS_ADVANCE_NONE,			/* AdvanceMedia */\
+    CUPS_FALSE,				/* Collate */\
+    CUPS_CUT_NONE,			/* CutMedia */\
+    CUPS_FALSE,				/* Duplex */\
+    { 100, 100 },			/* HWResolution */\
+    { 0, 0, 612, 792 },			/* ImagingBoundingBox */\
+    CUPS_FALSE,				/* InsertSheet */\
+    CUPS_JOG_NONE,			/* Jog */\
+    CUPS_EDGE_TOP,			/* LeadingEdge */\
+    { 0, 0 },				/* Margins */\
+    CUPS_FALSE,				/* ManualFeed */\
+    0,					/* MediaPosition */\
+    0,					/* MediaWeight */\
+    CUPS_FALSE,				/* MirrorPrint */\
+    CUPS_FALSE,				/* NegativePrint */\
+    1,					/* NumCopies */\
+    CUPS_ORIENT_0,			/* Orientation */\
+    CUPS_FALSE,				/* OutputFaceUp */\
+    { 612, 792 },			/* PageSize */\
+    CUPS_FALSE,				/* Separations */\
+    CUPS_FALSE,				/* TraySwitch */\
+    CUPS_FALSE,				/* Tumble */\
+    850,				/* cupsWidth */\
+    1100,				/* cupsHeight */\
+    0,					/* cupsMediaType */\
+    1,					/* cupsBitsPerColor */\
+    1,					/* cupsBitsPerPixel */\
+    107,				/* cupsBytesPerLine */\
+    CUPS_ORDER_CHUNKED,			/* cupsColorOrder */\
+    CUPS_CSPACE_K,			/* cupsColorSpace */\
+    0,					/* cupsCompression */\
+    0,					/* cupsRowCount */\
+    0,					/* cupsRowFeed */\
+    0					/* cupsRowStep */\
+    RASTER_SYNCv1_ENTRIES, /* See above */\
+  },\
+  0,                                    /* landscape */\
+  0,                                    /* lastpage */\
+  0,                                    /* HaveProfile */\
+  NULL,                                 /* Profile */\
+  NULL,                                 /* PPD */\
+  { 0x00, 0x08, 0x04, 0x0c, 0x02, 0x0a, 0x06, 0x0e,\
+    0x01, 0x09, 0x05, 0x0d, 0x03, 0x0b, 0x07, 0x0f },/* RevLower1 */\
+  { 0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0,\
+    0x10, 0x90, 0x50, 0xd0, 0x30, 0xb0, 0x70, 0xf0 },/* RevUpper1 */\
+  { 0x00, 0x04, 0x08, 0x0c, 0x01, 0x05, 0x09, 0x0d,\
+    0x02, 0x06, 0x0a, 0x0e, 0x03, 0x07, 0x0b, 0x0f },/* RevLower2 */\
+  { 0x00, 0x40, 0x80, 0xc0, 0x10, 0x50, 0x90, 0xd0,\
+    0x20, 0x60, 0xa0, 0xe0, 0x30, 0x70, 0xb0, 0xf0 },/* RevUpper2 */\
+  {0x00},                                  /* DecodeLUT */\
+  {0x00},                                  /* EncodeLUT */\
+  {0x00},                                  /* Density */\
+  {{{0x00},{0x00},{0x00}},\
+   {{0x00},{0x00},{0x00}},\
+   {{0x00},{0x00},{0x00}}},                /* Matrix */\
+  0,                                       /* user_icc */\
   3                                     /* cupsRasterVersion */
-};
+
+gx_device_cups	gs_cups_device = { gs_xxx_device("cups", "") };
+gx_device_cups	gs_pwgraster_device = { gs_xxx_device("pwgraster",
+						      "PwgRaster") };
 
 /*
  * Local functions...
@@ -3630,6 +3639,17 @@ cups_put_params(gx_device     *pdev,	/* I - Device info */
                 margins[0], margins[1], margins[2], margins[3]);
 #endif /* CUPS_DEBUG */
     }
+    else
+    {
+      /* If we do not have a PPD file, make sure that margins given via the
+	 input file or via something like
+	 "-c '<</.HWMargins[12 12 12 12] /Margins[0 0]>>setpagedevice'"
+	 on the command line are conserved */
+      margins[0] = pdev->HWMargins[0] / 72.0;
+      margins[1] = pdev->HWMargins[1] / 72.0;
+      margins[2] = pdev->HWMargins[2] / 72.0;
+      margins[3] = pdev->HWMargins[3] / 72.0;
+    }
 
    /*
     * Set the margins to update the bitmap size...
@@ -3733,85 +3753,125 @@ cups_put_params(gx_device     *pdev,	/* I - Device info */
     cups->header.cupsPageSize[0] = pdev->MediaSize[1];
     cups->header.cupsPageSize[1] = pdev->MediaSize[0];
 
-    cups->header.cupsImagingBBox[0] = pdev->HWMargins[1];
-    cups->header.cupsImagingBBox[1] = pdev->HWMargins[2];
-    cups->header.cupsImagingBBox[2] = pdev->MediaSize[1] - pdev->HWMargins[3];
-    cups->header.cupsImagingBBox[3] = pdev->MediaSize[0] - pdev->HWMargins[0];
-
     if ((sf = cups->header.cupsBorderlessScalingFactor) < 1.0)
       sf = 1.0;
 
-    cups->header.Margins[0] = pdev->HWMargins[1] * sf;
-    cups->header.Margins[1] = pdev->HWMargins[2] * sf;
+    cups->header.PageSize[0] = (pdev->MediaSize[1] * sf) + 0.5;
+    cups->header.PageSize[1] = (pdev->MediaSize[0] * sf) + 0.5;
 
-    cups->header.PageSize[0] = pdev->MediaSize[1] * sf;
-    cups->header.PageSize[1] = pdev->MediaSize[0] * sf;
-
-    cups->header.ImagingBoundingBox[0] = pdev->HWMargins[1] * sf;
-    cups->header.ImagingBoundingBox[1] = pdev->HWMargins[2] * sf;
-    cups->header.ImagingBoundingBox[2] = (pdev->MediaSize[1] -
-					  pdev->HWMargins[3]) * sf;
-    cups->header.ImagingBoundingBox[3] = (pdev->MediaSize[0] -
-					  pdev->HWMargins[0]) * sf;
+    if (strcasecmp(cups->header.MediaClass, "PwgRaster") != 0)
+    {
+      cups->header.Margins[0] = (pdev->HWMargins[1] * sf) + 0.5;
+      cups->header.Margins[1] = (pdev->HWMargins[2] * sf) + 0.5;
+      cups->header.ImagingBoundingBox[0] = (pdev->HWMargins[1] * sf) + 0.5;
+      cups->header.ImagingBoundingBox[1] = (pdev->HWMargins[2] * sf) + 0.5;
+      cups->header.ImagingBoundingBox[2] = ((pdev->MediaSize[1] -
+					     pdev->HWMargins[3]) * sf) + 0.5;
+      cups->header.ImagingBoundingBox[3] = ((pdev->MediaSize[0] -
+					     pdev->HWMargins[0]) * sf) + 0.5;
+      cups->header.cupsImagingBBox[0] = pdev->HWMargins[1];
+      cups->header.cupsImagingBBox[1] = pdev->HWMargins[2];
+      cups->header.cupsImagingBBox[2] = pdev->MediaSize[1] - pdev->HWMargins[3];
+      cups->header.cupsImagingBBox[3] = pdev->MediaSize[0] - pdev->HWMargins[0];
+    }
+    else
+    {
+      for (i = 0; i < 2; i ++)
+	cups->header.Margins[i] = 0;
+      for (i = 0; i < 4; i ++)
+      {
+	cups->header.ImagingBoundingBox[i] = 0;
+	cups->header.cupsImagingBBox[i] = 0.0;
+      }
+    }
   }
   else
   {
     cups->header.cupsPageSize[0] = pdev->MediaSize[0];
     cups->header.cupsPageSize[1] = pdev->MediaSize[1];
 
-    cups->header.cupsImagingBBox[0] = pdev->HWMargins[0];
-    cups->header.cupsImagingBBox[1] = pdev->HWMargins[1];
-    cups->header.cupsImagingBBox[2] = pdev->MediaSize[0] - pdev->HWMargins[2];
-    cups->header.cupsImagingBBox[3] = pdev->MediaSize[1] - pdev->HWMargins[3];
-
     if ((sf = cups->header.cupsBorderlessScalingFactor) < 1.0)
       sf = 1.0;
 
-    cups->header.Margins[0] = pdev->HWMargins[0] * sf;
-    cups->header.Margins[1] = pdev->HWMargins[1] * sf;
+    cups->header.PageSize[0] = (pdev->MediaSize[0] * sf) + 0.5;
+    cups->header.PageSize[1] = (pdev->MediaSize[1] * sf) + 0.5;
 
-    cups->header.PageSize[0] = pdev->MediaSize[0] * sf;
-    cups->header.PageSize[1] = pdev->MediaSize[1] * sf;
-
-    cups->header.ImagingBoundingBox[0] = pdev->HWMargins[0] * sf;
-    cups->header.ImagingBoundingBox[1] = pdev->HWMargins[1] * sf;
-    cups->header.ImagingBoundingBox[2] = (pdev->MediaSize[0] -
-					  pdev->HWMargins[2]) * sf;
-    cups->header.ImagingBoundingBox[3] = (pdev->MediaSize[1] -
-					  pdev->HWMargins[3]) * sf;
+    if (strcasecmp(cups->header.MediaClass, "PwgRaster") != 0)
+    {
+      cups->header.Margins[0] = (pdev->HWMargins[0] * sf) + 0.5;
+      cups->header.Margins[1] = (pdev->HWMargins[1] * sf) + 0.5;
+      cups->header.ImagingBoundingBox[0] = (pdev->HWMargins[0] * sf) + 0.5;
+      cups->header.ImagingBoundingBox[1] = (pdev->HWMargins[1] * sf) + 0.5;
+      cups->header.ImagingBoundingBox[2] = ((pdev->MediaSize[0] -
+					     pdev->HWMargins[2]) * sf) + 0.5;
+      cups->header.ImagingBoundingBox[3] = ((pdev->MediaSize[1] -
+					     pdev->HWMargins[3]) * sf) + 0.5;
+      cups->header.cupsImagingBBox[0] = pdev->HWMargins[0];
+      cups->header.cupsImagingBBox[1] = pdev->HWMargins[1];
+      cups->header.cupsImagingBBox[2] = pdev->MediaSize[0] - pdev->HWMargins[2];
+      cups->header.cupsImagingBBox[3] = pdev->MediaSize[1] - pdev->HWMargins[3];
+    }
+    else
+    {
+      for (i = 0; i < 2; i ++)
+	cups->header.Margins[i] = 0;
+      for (i = 0; i < 4; i ++)
+      {
+	cups->header.ImagingBoundingBox[i] = 0;
+	cups->header.cupsImagingBBox[i] = 0.0;
+      }
+    }
   }
 
 #else
 
   if (cups->landscape)
   {
-    cups->header.Margins[0] = pdev->HWMargins[1];
-    cups->header.Margins[1] = pdev->HWMargins[2];
+    cups->header.PageSize[0] = pdev->MediaSize[1] + 0.5;
+    cups->header.PageSize[1] = pdev->MediaSize[0] + 0.5;
 
-    cups->header.PageSize[0] = pdev->MediaSize[1];
-    cups->header.PageSize[1] = pdev->MediaSize[0];
-
-    cups->header.ImagingBoundingBox[0] = pdev->HWMargins[1];
-    cups->header.ImagingBoundingBox[1] = pdev->HWMargins[0];
-    cups->header.ImagingBoundingBox[2] = pdev->MediaSize[1] -
-                                         pdev->HWMargins[3];
-    cups->header.ImagingBoundingBox[3] = pdev->MediaSize[0] -
-                                         pdev->HWMargins[2];
+    if (strcasecmp(cups->header.MediaClass, "PwgRaster") != 0)
+    {
+      cups->header.Margins[0] = (pdev->HWMargins[1]) + 0.5;
+      cups->header.Margins[1] = (pdev->HWMargins[2]) + 0.5;
+      cups->header.ImagingBoundingBox[0] = (pdev->HWMargins[1]) + 0.5;
+      cups->header.ImagingBoundingBox[1] = (pdev->HWMargins[0]) + 0.5;
+      cups->header.ImagingBoundingBox[2] = (pdev->MediaSize[1] -
+					    pdev->HWMargins[3]) + 0.5;
+      cups->header.ImagingBoundingBox[3] = (pdev->MediaSize[0] -
+					    pdev->HWMargins[2]) + 0.5;
+    }
+    else
+    {
+      for (i = 0; i < 2; i ++)
+	cups->header.Margins[i] = 0;
+      for (i = 0; i < 4; i ++)
+	cups->header.ImagingBoundingBox[i] = 0;
+    }
   }
   else
   {
-    cups->header.Margins[0] = pdev->HWMargins[0];
-    cups->header.Margins[1] = pdev->HWMargins[1];
+    cups->header.PageSize[0] = pdev->MediaSize[0] + 0.5;
+    cups->header.PageSize[1] = pdev->MediaSize[1] + 0.5;
 
-    cups->header.PageSize[0] = pdev->MediaSize[0];
-    cups->header.PageSize[1] = pdev->MediaSize[1];
-
-    cups->header.ImagingBoundingBox[0] = pdev->HWMargins[0];
-    cups->header.ImagingBoundingBox[1] = pdev->HWMargins[3];
-    cups->header.ImagingBoundingBox[2] = pdev->MediaSize[0] -
-                                         pdev->HWMargins[2];
-    cups->header.ImagingBoundingBox[3] = pdev->MediaSize[1] -
-                                         pdev->HWMargins[1];
+    if (strcasecmp(cups->header.MediaClass, "PwgRaster") != 0)
+    {
+      cups->header.Margins[0] = (pdev->HWMargins[0]) + 0.5;
+      cups->header.Margins[1] = (pdev->HWMargins[1]) + 0.5;
+      cups->header.ImagingBoundingBox[0] = (pdev->HWMargins[0]) + 0.5;
+      cups->header.ImagingBoundingBox[1] = (pdev->HWMargins[3]) + 0.5;
+      cups->header.ImagingBoundingBox[2] = (pdev->MediaSize[0] -
+					    pdev->HWMargins[2]) + 0.5;
+      cups->header.ImagingBoundingBox[3] = (pdev->MediaSize[1] -
+					    pdev->HWMargins[1]) + 0.5;
+    }
+    else
+    {
+      for (i = 0; i < 2; i ++)
+	cups->header.Margins[i] = 0;
+      for (i = 0; i < 4; i ++)
+	cups->header.ImagingBoundingBox[i] = 0;
+    }
   }
 
 #endif /* CUPS_RASTER_SYNCv1 */

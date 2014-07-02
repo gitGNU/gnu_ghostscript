@@ -15,6 +15,7 @@
 
 
 /* Command line parsing and dispatching */
+
 #include "ctype_.h"
 #include "memory_.h"
 #include "string_.h"
@@ -26,9 +27,13 @@
 #include "gscdefs.h"
 #include "gsmalloc.h"           /* for gs_malloc_limit */
 #include "gsmdebug.h"
+#include "gspaint.h"		/* for gs_erasepage */
 #include "gxdevice.h"
 #include "gxdevmem.h"
 #include "gsdevice.h"
+#include "gxdevsop.h"		/* for gxdso_* enums */
+#include "gxclpage.h"
+#include "gdevprn.h"
 #include "stream.h"
 #include "ierrors.h"
 #include "estack.h"
@@ -230,9 +235,22 @@ gs_main_init_with_args(gs_main_instance * minst, int argc, char *argv[])
                 }
                 break;
             default:
+                /* default is to treat this as a file name to be run */
                 code = argproc(minst, arg);
                 if (code < 0)
                     return code;
+                if (minst->saved_pages_test_mode) {
+                    gx_device *pdev;
+
+                    /* get the current device */
+                    pdev = gs_currentdevice(minst->i_ctx_p->pgs);
+                    if ((code = gx_saved_pages_param_process((gx_device_printer *)pdev,
+                               (byte *)"print normal flush", 18)) < 0)
+                        return code;
+                    if (code > 0)
+                        if ((code = gs_erasepage(minst->i_ctx_p->pgs)) < 0)
+                            return code;
+                }
         }
     }
     if (code < 0)
@@ -314,12 +332,60 @@ run_stdin:
             code = run_string(minst, ".runstdin", runFlush);
             if (code < 0)
                 return code;
+            if (minst->saved_pages_test_mode) {
+                gx_device *pdev;
+
+                /* get the current device */
+                pdev = gs_currentdevice(minst->i_ctx_p->pgs);
+                if ((code = gx_saved_pages_param_process((gx_device_printer *)pdev,
+                           (byte *)"print normal flush", 18)) < 0)
+                    return code;
+                if (code > 0)
+                    if ((code = gs_erasepage(minst->i_ctx_p->pgs)) < 0)
+                        return code;
+            }
             break;
         case '-':               /* run with command line args */
             if (strncmp(arg, "debug=", 6) == 0) {
                 code = gs_debug_flags_parse(minst->heap, arg+6);
                 if (code < 0)
                     return code;
+                break;
+            } else if (strncmp(arg, "saved-pages=", 12) == 0) {
+                gx_device *pdev;
+                gx_device_printer *ppdev;
+
+                /* If init2 not yet done, just save the argument for processing then */
+                if (minst->init_done < 2) {
+                    if (minst->saved_pages_initial_arg == NULL) {
+                        /* Tuck the parameters away for later when init2 is done */
+                        minst->saved_pages_initial_arg = (char *)arg+12;
+                    } else {
+                        outprintf(minst->heap,
+                                  "   Only one --saved-pages=... command allowed before processing input\n");
+                        arg_finit(pal);
+                        return e_Fatal;
+                    }
+                } else {
+                    /* get the current device */
+                    pdev = gs_currentdevice(minst->i_ctx_p->pgs);
+                    if (dev_proc(pdev, dev_spec_op)(pdev, gxdso_supports_saved_pages, NULL, 0) == 0) {
+                        outprintf(minst->heap,
+                                  "   --saved-pages not supported by the '%s' device.\n",
+                                  pdev->dname);
+                        arg_finit(pal);
+                        return e_Fatal;
+                    }
+                    ppdev = (gx_device_printer *)pdev;
+                    code = gx_saved_pages_param_process(ppdev, (byte *)arg+12, strlen(arg+12));
+                    if (code > 0)
+                        if ((code = gs_erasepage(minst->i_ctx_p->pgs)) < 0)
+                            return code;
+                }
+                break;
+            /* The following code is only to allow regression testing of saved-pages */
+            } else if (strncmp(arg, "saved-pages-test", 16) == 0) {
+                minst->saved_pages_test_mode = true;
                 break;
             }
             /* FALLTHROUGH */
@@ -434,6 +500,19 @@ run_stdin:
                 code = argproc(minst, arg);
                 if (code < 0)
                     return code;
+                if (minst->saved_pages_test_mode) {
+                    gx_device *pdev;
+
+                    /* get the current device */
+                    pdev = gs_currentdevice(minst->i_ctx_p->pgs);
+                        return code;
+                    if ((code = gx_saved_pages_param_process((gx_device_printer *)pdev,
+                               (byte *)"print normal flush", 18)) < 0)
+                        return code;
+                    if (code > 0)
+                        if ((code = gs_erasepage(minst->i_ctx_p->pgs)) < 0)
+                            return code;
+                }
             }
             break;
         case 'F':               /* run file with buffer_size = 1 */
@@ -448,6 +527,18 @@ run_stdin:
                 minst->run_buffer_size = bsize;
                 if (code < 0)
                     return code;
+                if (minst->saved_pages_test_mode) {
+                    gx_device *pdev;
+
+                    /* get the current device */
+                    pdev = gs_currentdevice(minst->i_ctx_p->pgs);
+                    if ((code = gx_saved_pages_param_process((gx_device_printer *)pdev,
+                               (byte *)"print normal flush", 18)) < 0)
+                        return code;
+                    if (code > 0)
+                        if ((code = gs_erasepage(minst->i_ctx_p->pgs)) < 0)
+                            return code;
+                }
             }
             break;
         case 'g':               /* define device geometry */

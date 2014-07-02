@@ -381,7 +381,10 @@ cleanup1:
 		memcpy(rparams.grat, params->sbrat, 4);
 		code = jbig2_decode_refinement_region(ctx, segment,
 		    &rparams, as, refimage, GR_stats);
-		if (code < 0) goto cleanup2;
+		if (code < 0) {
+		    jbig2_image_release(ctx, refimage);
+		    goto cleanup2;
+		}
 		IB = refimage;
 
 		jbig2_image_release(ctx, IBO);
@@ -428,7 +431,10 @@ cleanup1:
 			params->SBNUMINSTANCES);
 #endif
 	    code = jbig2_image_compose(ctx, image, IB, x, y, params->SBCOMBOP);
-            if (code < 0) goto cleanup2;
+	    if (code < 0) {
+		jbig2_image_release(ctx, IB);
+		goto cleanup2;
+	    }
 
 	    /* (3c.x) */
 	    if ((!params->TRANSPOSED) && (params->REFCORNER < 2)) {
@@ -851,7 +857,7 @@ jbig2_text_region(Jbig2Ctx *ctx, Jbig2Segment *segment, const byte *segment_data
     if (image == NULL) {
         code =jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number,
             "couldn't allocate text region image");
-        goto cleanup1;
+        goto cleanup2;
     }
 
     ws = jbig2_word_stream_buf_new(ctx, segment_data + offset, segment->data_length - offset);
@@ -951,9 +957,7 @@ cleanup3:
     jbig2_word_stream_buf_free(ctx, ws);
 
 cleanup2:
-    if (!params.SBHUFF && params.SBREFINE) {
-        jbig2_free(ctx->allocator, GR_stats);
-    }
+    jbig2_free(ctx->allocator, GR_stats);
     jbig2_image_release(ctx, image);
 
 cleanup1:

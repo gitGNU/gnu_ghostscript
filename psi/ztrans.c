@@ -36,11 +36,12 @@
 #include "gdevdevn.h"
 #include "gxblend.h"
 #include "gdevp14.h"
+#include "gsicc_cms.h"
 
 /* ------ Utilities ------ */
 
 static int
-set_float_value(i_ctx_t *i_ctx_p, int (*set_value)(gs_state *, floatp))
+set_float_value(i_ctx_t *i_ctx_p, int (*set_value)(gs_state *, double))
 {
     os_ptr op = osp;
     double value;
@@ -228,8 +229,19 @@ zbegintransparencygroup(i_ctx_t *i_ctx_p)
     if (dict_find_string(dop, "CS", &dummy) <= 0) {
         params.ColorSpace = NULL;
     } else {
-        /* the PDF interpreter set the colorspace, so use it */
+        /* the PDF interpreter sets the colorspace, so use it */
         params.ColorSpace = gs_currentcolorspace(igs);
+        /* Lets make sure that it is not an ICC color space that came from 
+           a PS CIE color space or a PS color space. These are 1-way color
+           spaces and cannot be used for group color spaces */
+        if (gs_color_space_is_PSCIE(params.ColorSpace))
+            params.ColorSpace = NULL;
+        else if (gs_color_space_is_ICC(params.ColorSpace) &&
+            params.ColorSpace->cmm_icc_profile_data != NULL &&
+            params.ColorSpace->cmm_icc_profile_data->profile_handle != NULL) {
+            if (gscms_is_input(params.ColorSpace->cmm_icc_profile_data->profile_handle))
+                params.ColorSpace = NULL;
+        }
     }
     code = gs_begin_transparency_group(igs, &params, &bbox);
     if (code < 0)
@@ -247,7 +259,7 @@ zendtransparencygroup(i_ctx_t *i_ctx_p)
 
 /* <cs_set?> <paramdict> <llx> <lly> <urx> <ury> .begintransparencymaskgroup -	*/
 /*             cs_set == false if we are inheriting the colorspace		*/
-static int tf_using_function(floatp, float *, void *);
+static int tf_using_function(double, float *, void *);
 static int
 zbegintransparencymaskgroup(i_ctx_t *i_ctx_p)
 {
@@ -292,6 +304,17 @@ zbegintransparencymaskgroup(i_ctx_t *i_ctx_p)
     /* Is the colorspace set for this mask ? */
     if (op[-5].value.boolval) {
                 params.ColorSpace = gs_currentcolorspace(igs);
+                /* Lets make sure that it is not an ICC color space that came from
+                a PS CIE color space or a PS color space. These are 1-way color
+                spaces and cannot be used for group color spaces */
+                if (gs_color_space_is_PSCIE(params.ColorSpace))
+                    params.ColorSpace = NULL;
+                else if (gs_color_space_is_ICC(params.ColorSpace) &&
+                    params.ColorSpace->cmm_icc_profile_data != NULL &&
+                    params.ColorSpace->cmm_icc_profile_data->profile_handle != NULL) {
+                    if (gscms_is_input(params.ColorSpace->cmm_icc_profile_data->profile_handle))
+                        params.ColorSpace = NULL;
+                }
     } else {
         params.ColorSpace = NULL;
     }
@@ -323,7 +346,7 @@ zbegintransparencymaskimage(i_ctx_t *i_ctx_p)
 
 /* Implement the TransferFunction using a Function. */
 static int
-tf_using_function(floatp in_val, float *out, void *proc_data)
+tf_using_function(double in_val, float *out, void *proc_data)
 {
     float in = in_val;
     gs_function_t *const pfn = proc_data;
@@ -451,6 +474,13 @@ zpoppdf14devicefilter(i_ctx_t *i_ctx_p)
     return gs_pop_pdf14trans_device(igs, false);
 }
 
+/* Something has gone terribly wrong */
+static int
+zabortpdf14devicefilter(i_ctx_t *i_ctx_p)
+{
+    return gs_abort_pdf14trans_device(igs);
+}
+
 /* This is used to communicate to the transparency compositor
    when a q (save extended graphic state) occurs.  Since
    the softmask is part of the graphic state we need to know
@@ -502,5 +532,6 @@ const op_def ztrans2_op_defs[] = {
     {"1.image3x", zimage3x},
     {"1.pushpdf14devicefilter", zpushpdf14devicefilter},
     {"0.poppdf14devicefilter", zpoppdf14devicefilter},
+    {"0.abortpdf14devicefilter", zabortpdf14devicefilter},
     op_def_end(0)
 };

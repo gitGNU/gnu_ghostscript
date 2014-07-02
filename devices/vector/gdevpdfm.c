@@ -859,7 +859,7 @@ pdfmark_annot(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
                     char buf[100];
                     int size, code;
                     float temp[4]; /* the type is float for sscanf. */
-                    floatp pagebox[4] = {0, 0};
+                    double pagebox[4] = {0, 0};
 
                     pagebox[2] = pdev->MediaSize[0];
                     pagebox[3] = pdev->MediaSize[1];
@@ -871,7 +871,7 @@ pdfmark_annot(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
                     if (code < 0)
                         return code;
 
-                    if (page) {
+                    if (page && page->Page) {
                         v_trimbox = cos_dict_find_c_key(page->Page, "/TrimBox");
                         v_bleedbox = cos_dict_find_c_key(page->Page, "/BleedBox");
                         v_artbox = cos_dict_find_c_key(page->Page, "/ArtBox");
@@ -1161,8 +1161,18 @@ pdfmark_OUT(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
         if (pdf_key_eq(pair, "/Count"))
             pdfmark_scan_int(pair + 1, &sub_count);
     }
-    if (sub_count != 0 && depth == MAX_OUTLINE_DEPTH - 1)
-        return_error(gs_error_limitcheck);
+    if (sub_count != 0 && depth == pdev->max_outline_depth - 1) {
+        pdf_outline_level_t *new_ptr;
+
+        new_ptr = (pdf_outline_level_t *)gs_alloc_bytes(pdev->pdf_memory, (pdev->max_outline_depth + INITIAL_MAX_OUTLINE_DEPTH) * sizeof(pdf_outline_level_t) * sizeof(pdf_outline_level_t), "outline_levels array");
+        if (!new_ptr)
+            return_error(gs_error_VMerror);
+        memcpy (new_ptr, pdev->outline_levels, pdev->max_outline_depth * sizeof(pdf_outline_level_t));
+        gs_free_object(pdev->pdf_memory, pdev->outline_levels, "outline_levels array");
+        pdev->outline_levels = new_ptr;
+        pdev->max_outline_depth += INITIAL_MAX_OUTLINE_DEPTH;
+        plevel = &pdev->outline_levels[depth];
+    }
     node.action = cos_dict_alloc(pdev, "pdfmark_OUT");
     if (node.action == 0)
         return_error(gs_error_VMerror);
@@ -1347,6 +1357,36 @@ pdfmark_ARTICLE(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
     if (part->first.id == 0) {	/* This is the first bead of the article. */
         part->first = part->last;
         part->last.id = 0;
+    }
+    return 0;
+}
+
+/* EMBED pdfmark */
+static int
+pdfmark_EMBED(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
+             const gs_matrix * pctm, const gs_param_string * objname)
+{
+    gs_param_string key;
+    int i, code;
+
+    if (pdev->CompatibilityLevel < 1.4)
+        return_error(gs_error_undefined);
+    if (!pdfmark_find_key("/FS", pairs, count, &key))
+        return_error(gs_error_rangecheck);
+    if (!pdfmark_find_key("/Name", pairs, count, &key))
+        return_error(gs_error_rangecheck);
+    if (!pdev->EmbeddedFiles) {
+        pdev->EmbeddedFiles = cos_dict_alloc(pdev, "pdfmark_EMBED(EmbeddedFiles)");
+        if (pdev->EmbeddedFiles == 0)
+            return_error(gs_error_VMerror);
+        pdev->EmbeddedFiles->id = pdf_obj_ref(pdev);
+    }
+
+    for (i = 0; code >= 0 && i < count; i += 2) {
+        if (pdf_key_eq(&pairs[i], "/FS")) {
+            return cos_dict_put_string(pdev->EmbeddedFiles, key.data, key.size,
+                               pairs[i+1].data, pairs[i+1].size);
+        }
     }
     return 0;
 }
@@ -1920,6 +1960,11 @@ pdfmark_SP(gx_device_pdf * pdev, gs_param_string * pairs, uint count,
     pdf_put_matrix(pdev, "q ", pctm, "cm");
     pprintld1(pdev->strm, "/R%ld Do Q\n", pco->id);
     pco->pres->where_used |= pdev->used_mask;
+
+    code = pdf_add_resource(pdev, pdev->substream_Resources, "/XObject", pco->pres);
+    if (code < 0)
+        return code;
+
     return 0;
 }
 
@@ -2296,6 +2341,7 @@ static const pdfmark_name mark_names[] =
     {"OUT",          pdfmark_OUT,         0},
     {"ARTICLE",      pdfmark_ARTICLE,     0},
     {"DEST",         pdfmark_DEST,        PDFMARK_NAMEABLE},
+    {"EMBED",        pdfmark_EMBED,       PDFMARK_NAMEABLE},
     {"PS",           pdfmark_PS,          PDFMARK_NAMEABLE},
     {"PAGES",        pdfmark_PAGES,       0},
     {"PAGE",         pdfmark_PAGE,        0},

@@ -28,7 +28,7 @@ GLD=$(GLGENDIR)/
 #include $(COMMONDIR)/gccdefs.mak
 #include $(COMMONDIR)/unixdefs.mak
 #include $(COMMONDIR)/generic.mak
-include $(GLSRCDIR)/version.mak
+#include $(GLSRCDIR)/version.mak
 
 gsdir = /usr/local/share/ghostscript
 gsdatadir = $(gsdir)/$(GS_DOT_VERSION)

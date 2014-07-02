@@ -24,6 +24,7 @@
 #include "gscdefs.h"            /* for image type table */
 #include "gxarith.h"
 #include "gxcspace.h"
+#include "gxpcolor.h"
 #include "gxdevice.h"
 #include "gxdevmem.h"           /* must precede gxcldev.h */
 #include "gxcldev.h"
@@ -71,7 +72,6 @@ palette_has_color(const gs_color_space *pcs, const gs_pixel_image_t * const pim)
     int num_entries = 1 << bps;
     int k;
     byte psrc[4];
-    int code;
 
     switch(base_type) {
 
@@ -122,7 +122,7 @@ palette_has_color(const gs_color_space *pcs, const gs_pixel_image_t * const pim)
     }
     /* Now go through the palette with the check color function */
     for (k = 0; k < num_entries; k++) {
-        code = gs_cspace_indexed_lookup_bytes(pcs, (float) k, psrc);
+        (void)gs_cspace_indexed_lookup_bytes(pcs, (float) k, psrc); /* this always returns 0 */
         if (!is_neutral(psrc, 1)) {
             /* Has color end this now */
             return true;
@@ -149,9 +149,7 @@ clist_fill_mask(gx_device * dev,
     int orig_x = rx;            /* ditto */
     int orig_width = rwidth;    /* ditto */
     int orig_height = rheight;  /* ditto */
-    int log2_depth = ilog2(depth);
     int y0;
-    int data_x_bit;
     byte copy_op =
         (depth > 1 ? cmd_op_copy_color_alpha :
          cmd_op_copy_mono_planes + cmd_copy_ht_color);  /* Plane not needed here */
@@ -188,7 +186,6 @@ clist_fill_mask(gx_device * dev,
 
     if (cmd_check_clip_path(cdev, pcpath))
         cmd_clear_known(cdev, clip_path_known);
-    data_x_bit = data_x << log2_depth;
     if (cdev->permanent_error < 0)
       return (cdev->permanent_error);
     /* If needed, update the trans_bbox */
@@ -653,7 +650,7 @@ clist_begin_typed_image(gx_device * dev, const gs_imager_state * pis,
     bool bp_changed = false;
     cmm_dev_profile_t *dev_profile = NULL;
     cmm_profile_t *gs_output_profile;
-    bool is_planar_dev = dev_proc(dev, dev_spec_op)(dev, gxdso_is_native_planar, NULL, 0) > 0;
+    bool is_planar_dev = dev->is_planar;
     bool render_is_valid;
     int csi;
 
@@ -898,6 +895,7 @@ clist_begin_typed_image(gx_device * dev, const gs_imager_state * pis,
                 pie->color_space.icc_info.icc_num_components =
                     src_profile->num_comps;
                 pie->color_space.icc_info.is_lab = src_profile->islab;
+                pie->color_space.icc_info.default_match = src_profile->default_match;
                 pie->color_space.icc_info.data_cs = src_profile->data_cs;
                 src_profile->rend_cond = stored_rendering_cond;
                 render_is_valid = src_profile->rend_is_valid;
@@ -918,7 +916,7 @@ clist_begin_typed_image(gx_device * dev, const gs_imager_state * pis,
             goto use_default;
     }
     if (pim->Interpolate) {
-        if (strcmp("pattern-clist",dev->dname) == 0)
+        if (gx_device_is_pattern_clist(dev))
             goto use_default;
         pie->support.x = pie->support.y = MAX_ISCALE_SUPPORT + 1;
     } else {
@@ -971,7 +969,8 @@ clist_begin_typed_image(gx_device * dev, const gs_imager_state * pis,
                 int bsize = ((pie->bps > 8 ? (pim->Width) * 2 : pim->Width) + 15) * num_components;
                 pie->buffer = gs_alloc_bytes(mem, bsize, "image buffer");
                 if (pie->buffer == 0) {
-                    gs_free_object(mem, pie->buffer, "clist_begin_typed_image");
+                    gs_free_object(mem, pie, "clist_begin_typed_image");
+                    *pinfo = NULL;
                     return_error(gs_error_VMerror);
                 }
             }
@@ -1009,43 +1008,30 @@ clist_begin_typed_image(gx_device * dev, const gs_imager_state * pis,
     if (!masked) {
         /*
          * Calculate (conservatively) the set of colors that this image
-         * might generate.  For single-component images with up to 4 bits
-         * per pixel, standard Decode values, and no Interpolate, we
-         * generate all the possible colors now; otherwise, we assume that
-         * any color might be generated.  It is possible to do better than
-         * this, but we won't bother unless there's evidence that it's
-         * worthwhile.
+         * might generate.  For single-component images we can sample
+         * this. We generate all the possible colors now; otherwise,
+         * we assume that any color might be generated.  It is possible
+         * to do better than this, but we won't bother unless there's
+         * evidence that it's worthwhile.
          */
         gx_color_usage_bits all = gx_color_usage_all(cdev);
 
-        if (bits_per_pixel > 4 || pim->Interpolate || num_components > 1)
+        if (num_components > 1)
             color_usage = all;
         else {
-            int max_value = (1 << bits_per_pixel) - 1;
-            float dmin = pim->Decode[0], dmax = pim->Decode[1];
-            float dtemp;
+            const gs_color_space *pcs = pim->ColorSpace;
+            cs_proc_remap_color((*remap_color)) = pcs->type->remap_color;
+            gs_client_color cc;
+            gx_drawing_color dcolor;
+            int i;
+            int max_value = indexed ? pcs->params.indexed.hival : 1;
 
-            if (dmax < dmin)
-                dtemp = dmax, dmax = dmin, dmin = dtemp;
-            if (dmin != 0 ||
-                dmax != (indexed ? max_value : 1)
-                ) {
-                color_usage = all;
-            } else {
-                /* Enumerate the possible pixel values. */
-                const gs_color_space *pcs = pim->ColorSpace;
-                cs_proc_remap_color((*remap_color)) = pcs->type->remap_color;
-                gs_client_color cc;
-                gx_drawing_color dcolor;
-                int i;
-                double denom = (indexed ? 1 : max_value);
-
-                for (i = 0; i <= max_value; ++i) {
-                    cc.paint.values[0] = (double)i / denom;
-                    remap_color(&cc, pcs, &dcolor, pis, dev,
-                                gs_color_select_source);
-                    color_usage |= cmd_drawing_color_usage(cdev, &dcolor);
-                }
+            for (i = 0; i <= max_value; ++i) {
+                /* Enumerate the indexed colors, or just Black (DeviceGray = 0) */
+                cc.paint.values[0] = (double)i;
+                remap_color(&cc, pcs, &dcolor, pis, dev,
+                            gs_color_select_source);
+                color_usage |= cmd_drawing_color_usage(cdev, &dcolor);
             }
         }
     }
@@ -1064,8 +1050,8 @@ clist_begin_typed_image(gx_device * dev, const gs_imager_state * pis,
         if (pcpath) {
             gs_fixed_rect obox;
             gx_cpath_outer_box(pcpath, &obox);
-            pie->ymin = max(y0, fixed2int(obox.p.y));
-            pie->ymax = min(y1, fixed2int(obox.q.y));
+            pie->ymin = max(0, max(y0, fixed2int(obox.p.y)));
+            pie->ymax = min(min(y1, fixed2int(obox.q.y)), dev->height);
         } else {
             pie->ymin = max(y0, 0);
             pie->ymax = min(y1, dev->height);
@@ -1098,6 +1084,7 @@ use_default:
     if (pie != NULL)
         gs_free_object(mem, pie->buffer, "clist_begin_typed_image");
     gs_free_object(mem, pie, "clist_begin_typed_image");
+    *pinfo = NULL;
 
     if (pis->has_transparency){
         return -1;
@@ -1277,6 +1264,13 @@ clist_image_plane_data(gx_image_enum_common_t * info,
                 goto error_in_rect;
             if (pie->uses_color) {
                 do {
+                    /* We want to write the color taking into account the entire image so */
+                    /* we set re.rect_nbands from pie->ymin and pie->ymax so that we will */
+                    /* make the decision to write 'all_bands' the same for the whole image */
+                    /* This is slightly more efficient, and is required for patterns with */
+                    /* transparency that push the group at the begin_image step.          */
+                    re.rect_nbands = ((pie->ymax + re.band_height - 1) / re.band_height) -
+                                     ((pie->ymin) / re.band_height);
                     code = cmd_put_drawing_color(cdev, re.pcls, &pie->dcolor,
                                                  &re, devn_not_tile);
                 } while (RECT_RECOVER(code));
@@ -1765,7 +1759,6 @@ cmd_put_color_mapping(gx_device_clist_writer * cldev,
     /* Now put out the transfer functions. */
     {
         uint which = 0;
-        bool all_same = true;
         bool send_default_comp = false;
         int i;
         gs_id default_comp_id, xfer_ids[4];
@@ -1789,8 +1782,6 @@ cmd_put_color_mapping(gx_device_clist_writer * cldev,
         for (i = 0; i < countof(cldev->transfer_ids); ++i) {
             if (xfer_ids[i] != cldev->transfer_ids[i])
                 which |= 1 << i;
-            if (xfer_ids[i] != default_comp_id)
-                all_same = false;
             if (xfer_ids[i] == default_comp_id &&
                 cldev->transfer_ids[i] != default_comp_id)
                 send_default_comp = true;
@@ -1851,7 +1842,7 @@ cmd_put_color_mapping(gx_device_clist_writer * cldev,
 #define I_FLOOR(x) ((int)floor(x))
 #define I_CEIL(x) ((int)ceil(x))
 static void
-box_merge_point(gs_int_rect * pbox, floatp x, floatp y)
+box_merge_point(gs_int_rect * pbox, double x, double y)
 {
     int t;
 
@@ -1984,12 +1975,12 @@ image_band_box(gx_device * dev, const clist_image_enum * pie, int y, int h,
                 if_debug3m('b', dev->memory, "   (px) t=%g => (%d,%g)\n",
                            t, px, pa.y + t * dy);
                 if (in_range(t, pa.y + t * dy, py, qy))
-                    box_merge_point(pbox, (floatp) px, t);
+                    box_merge_point(pbox, (double) px, t);
                 t = (qx - pa.x) / dx;
                 if_debug3m('b', dev->memory, "   (qx) t=%g => (%d,%g)\n",
                            t, qx, pa.y + t * dy);
                 if (in_range(t, pa.y + t * dy, py, qy))
-                    box_merge_point(pbox, (floatp) qx, t);
+                    box_merge_point(pbox, (double) qx, t);
             }
             if (dy != 0) {
                 double t = (py - pa.y) / dy;
@@ -1997,12 +1988,12 @@ image_band_box(gx_device * dev, const clist_image_enum * pie, int y, int h,
                 if_debug3m('b', dev->memory, "   (py) t=%g => (%g,%d)\n",
                            t, pa.x + t * dx, py);
                 if (in_range(t, pa.x + t * dx, px, qx))
-                    box_merge_point(pbox, t, (floatp) py);
+                    box_merge_point(pbox, t, (double) py);
                 t = (qy - pa.y) / dy;
                 if_debug3m('b', dev->memory, "   (qy) t=%g => (%g,%d)\n",
                            t, pa.x + t * dx, qy);
                 if (in_range(t, pa.x + t * dx, px, qx))
-                    box_merge_point(pbox, t, (floatp) qy);
+                    box_merge_point(pbox, t, (double) qy);
             }
 #undef in_range
         }
@@ -2195,14 +2186,14 @@ cmd_image_plane_data_mon(gx_device_clist_writer * cldev, gx_clist_state * pcls,
             /* Here we need to unpack and actually look at the image data
                to see if we have any non-neutral colors */
             int pdata_x;
-            byte *data_ptr = planes[0].data + i * planes[0].raster + offsets[0] + offset;
-            byte *buffer = (*pie_c->unpack)(pie_c->buffer, &pdata_x, data_ptr, 0, dsize, pie_c->map,
-                                            pie_c->spread, pie_c->spp);
+            byte *data_ptr =  (byte *)(planes[0].data + i * planes[0].raster + offsets[0] + offset);
+            byte *buffer = (byte *)(*pie_c->unpack)(pie_c->buffer, &pdata_x, data_ptr, 0, dsize, pie_c->map,
+                                                    pie_c->spread, pie_c->spp);
 
             for (plane = 1; plane < pie->num_planes; ++plane) {
                 /* unpack planes after the first (if any), relying on spread to place the */
                 /* data at the correct spacing, with the buffer start adjusted for each plane */
-                data_ptr = planes[plane].data + i * planes[plane].raster + offsets[plane] + offset;
+                data_ptr = (byte *)(planes[plane].data + i * planes[plane].raster + offsets[plane] + offset);
                 (*pie_c->unpack)(pie_c->buffer + (data_size * plane), &pdata_x, data_ptr, 0,
                                  dsize, pie_c->map, pie_c->spread, pie_c->spp);
             }

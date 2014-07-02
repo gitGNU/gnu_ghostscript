@@ -39,7 +39,7 @@ public_st_vector_image_enum();
 /* ================ Default implementations of vector procs ================ */
 
 int
-gdev_vector_setflat(gx_device_vector * vdev, floatp flatness)
+gdev_vector_setflat(gx_device_vector * vdev, double flatness)
 {
     return 0;
 }
@@ -82,9 +82,9 @@ gdev_vector_dopath(gx_device_vector *vdev, const gx_path * ppath,
         ) {
         gs_point p, q;
 
-        gs_point_transform_inverse((floatp)rbox.p.x, (floatp)rbox.p.y,
+        gs_point_transform_inverse((double)rbox.p.x, (double)rbox.p.y,
                                    &state.scale_mat, &p);
-        gs_point_transform_inverse((floatp)rbox.q.x, (floatp)rbox.q.y,
+        gs_point_transform_inverse((double)rbox.q.x, (double)rbox.q.y,
                                    &state.scale_mat, &q);
         code = vdev_proc(vdev, dorect)(vdev, (fixed)p.x, (fixed)p.y,
                                        (fixed)q.x, (fixed)q.y, type);
@@ -434,7 +434,7 @@ gdev_vector_prepare_fill(gx_device_vector * vdev, const gs_imager_state * pis,
 
 /* Compare two dash patterns. */
 static bool
-dash_pattern_eq(const float *stored, const gx_dash_params * set, floatp scale)
+dash_pattern_eq(const float *stored, const gx_dash_params * set, double scale)
 {
     int i;
 
@@ -450,31 +450,33 @@ gdev_vector_prepare_stroke(gx_device_vector * vdev,
                            const gs_imager_state * pis,	/* may be NULL */
                            const gx_stroke_params * params, /* may be NULL */
                            const gx_drawing_color * pdcolor, /* may be NULL */
-                           floatp scale)
+                           double scale)
 {
     if (pis) {
         int pattern_size = pis->line_params.dash.pattern_size;
         float dash_offset = pis->line_params.dash.offset * scale;
         float half_width = pis->line_params.half_width * scale;
 
-        if (pattern_size > max_dash)
-            return_error(gs_error_limitcheck);
         if (dash_offset != vdev->state.line_params.dash.offset ||
             pattern_size != vdev->state.line_params.dash.pattern_size ||
             (pattern_size != 0 &&
              !dash_pattern_eq(vdev->dash_pattern, &pis->line_params.dash,
                               scale))
             ) {
-            float pattern[max_dash];
+            float *pattern;
             int i, code;
 
+            pattern = (float *)gs_alloc_bytes(vdev->memory->stable_memory, pattern_size * sizeof(float), "vector allocate dash pattern");
             for (i = 0; i < pattern_size; ++i)
                 pattern[i] = pis->line_params.dash.pattern[i] * scale;
             code = (*vdev_proc(vdev, setdash))
                 (vdev, pattern, pattern_size, dash_offset);
             if (code < 0)
                 return code;
-            memcpy(vdev->dash_pattern, pattern, pattern_size * sizeof(float));
+            if (vdev->dash_pattern)
+                gs_free_object(vdev->memory->stable_memory, vdev->dash_pattern, "vector free old dash pattern");
+            vdev->dash_pattern = pattern;
+            vdev->dash_pattern_size = pattern_size;
 
             vdev->state.line_params.dash.pattern_size = pattern_size;
             vdev->state.line_params.dash.offset = dash_offset;
@@ -816,6 +818,10 @@ gdev_vector_close_file(gx_device_vector * vdev)
     FILE *f = vdev->file;
     int err;
 
+    if (vdev->dash_pattern) {
+        gs_free_object(vdev->memory->stable_memory, vdev->dash_pattern, "vector free dash pattern");
+        vdev->dash_pattern = 0;
+    }
     if (vdev->bbox_device) {
         rc_decrement(vdev->bbox_device->icc_struct, "vector_close(bbox_device->icc_struct");
         vdev->bbox_device->icc_struct = NULL;
@@ -984,8 +990,10 @@ gdev_vector_put_params(gx_device * dev, gs_param_list * plist)
              * beginning of the file: changing the file name after writing
              * any pages should be an error.
              */
-            if (ofns.size > fname_size)
+            if (ofns.size > fname_size) {
+                eprintf1("\nERROR: Output filename too long (maximum %d bytes).\n", fname_size);
                 ecode = gs_error_limitcheck;
+            }
             else if (!bytes_compare(ofns.data, ofns.size,
                                     (const byte *)vdev->fname,
                                     strlen(vdev->fname))

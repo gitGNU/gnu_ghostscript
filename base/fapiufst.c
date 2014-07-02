@@ -117,7 +117,12 @@ EXTERN IF_STATE if_state;
 static fapi_ufst_server *static_server_ptr_for_ufst_callback = 0;
 #endif
 
+#if PCLEO_RDR  &&  BYTEORDER==LOHI
 GLOBAL UW16 PCLswapHdr(FSP LPUB8 p, UW16 gifct);        /* UFST header doesn't define it. */
+#define UFST_PCLswapHdr(p, gifct) PCLswapHdr(FSP p, gifct)
+#else
+#define UFST_PCLswapHdr(p, gifct)
+#endif
 
 typedef struct pcleo_glyph_list_elem_s pcleo_glyph_list_elem;
 struct pcleo_glyph_list_elem_s
@@ -890,7 +895,7 @@ ufst_make_font_data(fapi_ufst_server * r, const char *font_file_path,
         return (gs_error_invalidaccess);
 #else
         /* If we have the Freetype server available, always use it for non-FCO fonts */
-        if (gs_fapi_available(r->mem, (char *)"Freetype")) {
+        if (gs_fapi_available(r->mem, (char *)"FreeType")) {
             return (gs_error_invalidaccess);
         }
 
@@ -930,7 +935,7 @@ ufst_make_font_data(fapi_ufst_server * r, const char *font_file_path,
             return (gs_error_invalidaccess);
 #else
             /* If we have the Freetype server available, always use it for non-FCO fonts */
-            if (gs_fapi_available(r->mem, (char *)"Freetype")) {
+            if (gs_fapi_available(r->mem, (char *)"FreeType")) {
                 return (gs_error_invalidaccess);
             }
 #endif
@@ -988,9 +993,7 @@ ufst_make_font_data(fapi_ufst_server * r, const char *font_file_path,
             d->font_id = assign_font_id();
         }
         h = (PCLETTO_FHDR *) (buf + sizeof(ufst_common_font_data));
-        /* For some reason the bytes of fontDescriptorSize need swapped here
-           (PCLswapHdr() doesn't do it as needed), but only for TTF fonts - duh!?!?
-         */
+
         if (ff->is_type1) {
             h->fontDescriptorSize = PCLETTOFONTHDRSIZE;
         }
@@ -1047,7 +1050,8 @@ ufst_make_font_data(fapi_ufst_server * r, const char *font_file_path,
         /*  fixme : This code assumes 1-byte alignment for PCLETTO_FHDR structure.
            Use PACK_* macros to improve.
          */
-        PCLswapHdr(FSA(UB8 *) h, 0);
+        UFST_PCLswapHdr((UB8 *) h, 0);
+
         if (ff->is_type1) {
             LPUB8 fontdata = (LPUB8) h + PCLETTOFONTHDRSIZE;
 
@@ -1330,7 +1334,7 @@ gs_fapi_ufst_get_decodingID(gs_fapi_server * server, gs_fapi_font * ff,
 }
 
 static gs_fapi_retcode
-gs_fapi_ufst_get_font_bbox(gs_fapi_server * server, gs_fapi_font * ff, int BBox[4])
+gs_fapi_ufst_get_font_bbox(gs_fapi_server * server, gs_fapi_font * ff, int BBox[4], int unitsPerEm[2])
 {
     fapi_ufst_server *r = If_to_I(server);
     SW16 VLCPower = 0;
@@ -1352,6 +1356,9 @@ gs_fapi_ufst_get_font_bbox(gs_fapi_server * server, gs_fapi_font * ff, int BBox[
     BBox[1] >>= VLCPower;
     BBox[2] >>= VLCPower;
     BBox[3] >>= VLCPower;
+
+    unitsPerEm[0] = unitsPerEm[1] = 1;
+
     return 0;
 }
 
@@ -1576,9 +1583,10 @@ set_metrics(fapi_ufst_server * r, gs_fapi_metrics * metrics,
 }
 
 static gs_fapi_retcode
-get_char(fapi_ufst_server * r, gs_fapi_font * ff, gs_fapi_char_ref * c,
-         gs_fapi_path * p, gs_fapi_metrics * metrics, UW16 format)
+get_char(gs_fapi_server *server, gs_fapi_font *ff, gs_fapi_char_ref *c,
+         gs_fapi_path *p, gs_fapi_metrics *metrics, UW16 format)
 {
+    fapi_ufst_server *r = If_to_I(server);
     UW16 code = 0, code2 = 0;
     UL32 cc = (UL32) c->char_codes[0];
     SL32 design_bbox[4];
@@ -1601,6 +1609,15 @@ get_char(fapi_ufst_server * r, gs_fapi_font * ff, gs_fapi_char_ref * c,
     FSA_FROM_SERVER;
 
     design_escapement[0] = design_escapement[1] = 0;
+
+    /* NAFF! UFST requires that we recreate the MT font "object"
+     * each call (although, it should not!). So we want to defeat
+     * the optimisation that normally prevents that in gs_fapi_do_char()
+     * by blanking out the cached scale.
+     */
+    if(d->font_type == FC_FCO_TYPE) {
+        memset(&(server->face.ctm), 0x00, sizeof(server->face.ctm));
+    }
 
     if (ff->is_type1) {
         /* If a charstring in a Type 1 has been replaced with a PS procedure
@@ -1813,8 +1830,14 @@ get_char(fapi_ufst_server * r, gs_fapi_font * ff, gs_fapi_char_ref * c,
             design_escapement[1] = 0;
         }
 
-        du_emx = pol->du_emx;
-        du_emy = pol->du_emy;
+        if (pol->du_emx > 0 && pol->du_emy > 0) {
+            du_emx = pol->du_emx;
+            du_emy = pol->du_emy;
+        }
+        else {
+            du_emx = pIFS->cs.du_emx;
+            du_emy = pIFS->cs.du_emy;
+        }
 
         design_bbox[0] = pol->left;
         design_bbox[1] = pol->bottom;
@@ -1922,13 +1945,13 @@ get_char(fapi_ufst_server * r, gs_fapi_font * ff, gs_fapi_char_ref * c,
 }
 
 static gs_fapi_retcode
-gs_fapi_ufst_get_char_outline_metrics(gs_fapi_server * server, gs_fapi_font * ff,
+gs_fapi_ufst_get_char_outline_metrics(gs_fapi_server *server, gs_fapi_font * ff,
                          gs_fapi_char_ref * c, gs_fapi_metrics * metrics)
 {
     fapi_ufst_server *r = If_to_I(server);
 
     gs_fapi_ufst_release_char_data_inline(r);
-    return get_char(r, ff, c, NULL, metrics, FC_CUBIC_TYPE);
+    return get_char(server, ff, c, NULL, metrics, FC_CUBIC_TYPE);
     /*  UFST cannot render enough metrics information without generating raster or outline.
        r->char_data keeps an outline after calling this function.
      */
@@ -1950,7 +1973,7 @@ gs_fapi_ufst_get_char_raster_metrics(gs_fapi_server * server, gs_fapi_font * ff,
     int code;
 
     gs_fapi_ufst_release_char_data_inline(r);
-    code = get_char(r, ff, c, NULL, metrics, FC_BITMAP_TYPE);
+    code = get_char(server, ff, c, NULL, metrics, FC_BITMAP_TYPE);
     if (code == ERR_bm_buff || code == ERR_bm_too_big)  /* Too big character ? */
         return (gs_error_VMerror);
     return code;
@@ -1968,7 +1991,7 @@ gs_fapi_ufst_get_char_width(gs_fapi_server * server, gs_fapi_font * ff,
 
     gs_fapi_ufst_release_char_data_inline(r);
     code =
-        get_char(r, ff, c, NULL, metrics,
+        get_char(server, ff, c, NULL, metrics,
                  server->use_outline ? FC_CUBIC_TYPE : FC_BITMAP_TYPE);
     if (code == ERR_bm_buff || code == ERR_bm_too_big)  /* Too big character ? */
         return (gs_error_VMerror);
@@ -2097,6 +2120,7 @@ static const gs_fapi_server ufstserver = {
     {0},
     0,
     false,
+    1,
     {1, 0, 0, 1, 0, 0},
     gs_fapi_ufst_ensure_open,
     gs_fapi_ufst_get_scaled_font,

@@ -277,6 +277,7 @@ pdf_text_set_cache(gs_text_enum_t *pte, const double *pw,
             gs_matrix_multiply((gs_matrix *)&pdev->charproc_ctm, (gs_matrix *)&penum->pis->ctm, &m);
             gs_matrix_fixed_from_matrix(&penum->pis->ctm, &m);
             penum->charproc_accum = false;
+            pdev->accumulating_charproc = false;
         }
     }
     if (pdev->PS_accumulator && penum->pte_default) {
@@ -559,6 +560,7 @@ gdev_pdf_text_begin(gx_device * dev, gs_imager_state * pis,
         penum->rc.free = rc_free_text_enum;
         penum->pte_default = 0;
         penum->charproc_accum = false;
+        pdev->accumulating_charproc = false;
         penum->cdevproc_callout = false;
         penum->returned.total_width.x = penum->returned.total_width.y = 0;
         penum->cgp = NULL;
@@ -617,6 +619,7 @@ gdev_pdf_text_begin(gx_device * dev, gs_imager_state * pis,
     penum->rc.free = rc_free_text_enum;
     penum->pte_default = 0;
     penum->charproc_accum = false;
+    pdev->accumulating_charproc = false;
     penum->cdevproc_callout = false;
     penum->returned.total_width.x = penum->returned.total_width.y = 0;
     penum->cgp = NULL;
@@ -658,28 +661,7 @@ private_st_pdf_font_cache_elem();
 static ulong
 pdf_font_cache_elem_id(gs_font *font)
 {
-#ifdef DEPRECATED_906
-    /*
-     *        For compatibility with Ghostscript rasterizer's
-     *        cache logic we use UniqueID to identify fonts.
-     *  Note that with buggy documents, which don't
-     *        undefine UniqueID redefining a font,
-     *        Ghostscript PS interpreter can occasionaly
-     *        replace cache elements on insufficient cache size,
-     *        taking glyphs from random fonts with random metrics,
-     *        therefore the compatibility isn't complete.
-     */
-    /*
-     *        This branch is incompatible with pdf_notify_remove_font.
-     */
-    if (font->FontType == ft_composite || font->PaintType != 0 ||
-        !uid_is_valid(&(((gs_font_base *)font)->UID)))
-        return font->id;
-    else
-        return ((gs_font_base *)font)->UID.id;
-#else
     return font->id;
-#endif
 }
 
 pdf_font_cache_elem_t **
@@ -2575,6 +2557,7 @@ pdf_glyph_widths(pdf_font_resource_t *pdfont, int wmode, gs_glyph glyph,
     pwidths->real_width.v.x = pwidths->real_width.v.y = 0;
     pwidths->real_width.w = pwidths->real_width.xy.x = pwidths->real_width.xy.y = 0;
     pwidths->replaced_v = false;
+    pwidths->ignore_wmode = false;
     if (glyph == GS_NO_GLYPH)
         return get_missing_width(cfont, wmode, &scale_c, pwidths);
     code = cfont->procs.glyph_info((gs_font *)cfont, glyph, NULL,
@@ -2663,13 +2646,8 @@ pdf_glyph_widths(pdf_font_resource_t *pdfont, int wmode, gs_glyph glyph,
         }
     }
     pwidths->Width.v = v;
-#ifdef DEPRECATED_906
-    if (code > 0)
-        pwidths->Width.xy.x = pwidths->Width.xy.y = pwidths->Width.w = 0;
-#else /* Skip only if not paralel to the axis. */
     if (code > 0 && !pdf_is_CID_font(ofont))
         pwidths->Width.xy.x = pwidths->Width.xy.y = pwidths->Width.w = 0;
-#endif
     if (cdevproc_result == NULL) {
         info.members = 0;
         code = ofont->procs.glyph_info(ofont, glyph, NULL,
@@ -2700,8 +2678,11 @@ pdf_glyph_widths(pdf_font_resource_t *pdfont, int wmode, gs_glyph glyph,
     else if (code < 0)
         return code;
     else {
-        if ((info.members & (GLYPH_INFO_VVECTOR0 | GLYPH_INFO_VVECTOR1)) != 0)
+        if ((info.members & (GLYPH_INFO_VVECTOR0 | GLYPH_INFO_VVECTOR1)) != 0) {
             pwidths->replaced_v = true;
+            if ((info.members & GLYPH_INFO_VVECTOR1) == 0 && wmode == 1)
+                pwidths->ignore_wmode = true;
+        }
         else
             info.v.x = info.v.y = 0;
         code = store_glyph_width(&pwidths->real_width, wmode, &scale_o, &info);
@@ -2874,6 +2855,11 @@ static int install_PS_charproc_accumulator(gx_device_pdf *pdev, gs_text_enum_t *
         pdev->font3 = (pdf_resource_t *)pdfont;
         pdev->substream_Resources = pdfont->u.simple.s.type3.Resources;
         penum->charproc_accum = true;
+        pdev->accumulating_charproc = true;
+        pdev->charproc_BBox.p.x = 10000;
+        pdev->charproc_BBox.p.y = 10000;
+        pdev->charproc_BBox.q.x = 0;
+        pdev->charproc_BBox.q.y = 0;
         return TEXT_PROCESS_RENDER;
     }
     return 0;
@@ -2933,6 +2919,7 @@ static int install_charproc_accumulator(gx_device_pdf *pdev, gs_text_enum_t *pte
         pdev->font3 = (pdf_resource_t *)pdfont;
         pdev->substream_Resources = pdfont->u.simple.s.type3.Resources;
         penum->charproc_accum = true;
+        pdev->accumulating_charproc = true;
         return TEXT_PROCESS_RENDER;
     }
     return 0;
@@ -2987,6 +2974,7 @@ static int complete_charproc(gx_device_pdf *pdev, gs_text_enum_t *pte,
                 pte_default->returned.current_glyph, penum->output_char_code, &gnstr);
     if (code < 0)
         return code;
+    pdev->accumulating_charproc = false;
     penum->charproc_accum = false;
     code = gx_default_text_restore_state(pte_default);
     if (code < 0)

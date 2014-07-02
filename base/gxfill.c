@@ -667,7 +667,11 @@ gx_default_fill_path(gx_device * pdev, const gs_imager_state * pis,
             }
         } else
             vd_disable;
+#endif
+
         code = gx_general_fill_path(pdev, pis, ppath, params, pdevc, pcpath);
+
+#ifndef GS_THREADSAFE
         if (got_dc)
             vd_release_dc;
         vd_restore;
@@ -999,8 +1003,9 @@ scan_contour(line_list *ll, contour_cursor *q)
 #ifdef FILL_ZERO_WIDTH
                     (fo->adjust_below | fo->adjust_above) != 0) {
 #else
+                    (fo->adjust_below + fo->adjust_above >= (fixed_1 - fixed_epsilon) ||
                     fixed2int_pixround(p.pseg->pt.y - fo->adjust_below) <
-                    fixed2int_pixround(p.pseg->pt.y + fo->adjust_above)) {
+                    fixed2int_pixround(p.pseg->pt.y + fo->adjust_above))) {
 #endif
                 /* Add it here to avoid double processing in process_h_segments. */
                 code = add_y_line(p.prev, p.pseg, DIR_HORIZONTAL, ll);

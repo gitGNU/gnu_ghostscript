@@ -26,6 +26,7 @@ DEVF_=
 
 DEVCCFLAGS=$(I_)$(DEVI_)$(_I) $(I_)$(DEVVEC)$(_I) $(DEVF_)
 DEVCC=$(CC_) $(DEVCCFLAGS)
+XPSDEVCC=$(CC_) $(XPSPRINTCFLAGS) $(DEVCCFLAGS)
 
 DEVJCC=$(GLJCC)
 DEVCCSHARED=$(GLCCSHARED)
@@ -842,6 +843,12 @@ $(DD)ps2write.dev : $(DEVS_MAK) $(DD)pdfwrite.dev $(GDEV)
 	$(SETDEV2) $(DD)ps2write
 	$(ADDMOD) $(DD)ps2write -include $(DD)pdfwrite.dev
 
+# Since eps2write actually is a clone of pdfwrite,
+# we just depend on it.
+$(DD)eps2write.dev : $(DEVS_MAK) $(DD)pdfwrite.dev $(GDEV)
+	$(SETDEV2) $(DD)eps2write
+	$(ADDMOD) $(DD)eps2write -include $(DD)pdfwrite.dev
+
 # Note that for ps2pdf operation, we need to parse DSC comments to set
 # the Orientation (Page dict /Rotate value). This is not part of the
 # pdfwrite device, but part of the PS interpreter so that the pdfwrite
@@ -1187,24 +1194,13 @@ $(DEVOBJ)gdevpx.$(OBJ) : $(DEVVECSRC)gdevpx.c\
  $(srlx_h) $(strimpl_h)
 	$(DEVCC) $(DEVO_)gdevpx.$(OBJ) $(C_) $(DEVVECSRC)gdevpx.c
 
-# Scalable Vector Graphics (SVG) output device
-
-svgwrite_=$(DEVOBJ)gdevsvg.$(OBJ)
-$(DD)svgwrite.dev : $(DEVS_MAK) $(svgwrite_) $(GDEV) $(GLD)vector.dev
-	$(SETDEV2) $(DD)svgwrite $(svgwrite_)
-	$(ADDMOD) $(DD)svgwrite -include $(GLD)vector
-
-$(DEVOBJ)gdevsvg.$(OBJ) : $(DEVVECSRC)gdevsvg.c $(gx_h) $(gdevvec_h)
-	$(DEVCC) $(DEVO_)gdevsvg.$(OBJ) $(C_) $(DEVVECSRC)gdevsvg.c
-
-
 xpswrite_=$(DEVOBJ)gdevxps.$(OBJ)
 $(DD)xpswrite.dev : $(DEVS_MAK) $(xpswrite_) $(GDEV) $(GLD)vector.dev
 	$(SETDEV2) $(DD)xpswrite $(xpswrite_)
 	$(ADDMOD) $(DD)xpswrite -include $(GLD)vector
 
 $(DEVOBJ)gdevxps.$(OBJ) : $(DEVVECSRC)gdevxps.c $(gx_h) $(gdevvec_h)
-	$(GLCC) $(I_)$(TI_)$(_I) $(GLO_)gdevxps.$(OBJ) $(C_) $(DEVVECSRC)gdevxps.c
+	$(XPSDEVCC) $(I_)$(TI_)$(_I) $(GLO_)gdevxps.$(OBJ) $(C_) $(DEVVECSRC)gdevxps.c
 
 ###### --------------------- Raster file formats --------------------- ######
 
@@ -1594,6 +1590,27 @@ $(DD)pngalpha.dev : $(DEVS_MAK) $(libpng_dev) $(png_) $(GLD)page.dev $(GDEV)
 	$(SETPDEV2) $(DD)pngalpha $(png_)
 	$(ADDMOD) $(DD)pngalpha $(png_i_)
 
+### --------------- Portable Network Graphics file format --------------- ###
+### Requires zlib 0.95 (or more recent versions).                         ###
+### See zlib.mak for more details.                                        ###
+
+fpng_=$(DEVOBJ)gdevfpng.$(OBJ) $(DEVOBJ)gdevpccm.$(OBJ)
+
+$(DEVOBJ)gdevfpng_0.$(OBJ) : $(DEVSRC)gdevfpng.c\
+ $(gdevprn_h) $(gdevpccm_h) $(gscdefs_h) $(zlib_h)
+	$(CC_) $(I_)$(DEVI_) $(II)$(PI_)$(_I) $(PCF_) $(GLF_) $(DEVO_)gdevfpng_0.$(OBJ) $(C_) $(DEVSRC)gdevfpng.c
+
+$(DEVOBJ)gdevfpng_1.$(OBJ) : $(DEVSRC)gdevfpng.c\
+ $(gdevprn_h) $(gdevpccm_h) $(gscdefs_h)
+	$(CC_) $(I_)$(DEVI_) $(II)$(PI_)$(_I) $(PCF_) $(GLF_) $(DEVO_)gdevfpng_1.$(OBJ) $(C_) $(DEVSRC)gdevfpng.c
+
+$(DEVOBJ)gdevfpng.$(OBJ) : $(DEVOBJ)gdevfpng_$(SHARE_ZLIB).$(OBJ)
+	$(CP_) $(DEVOBJ)gdevfpng_$(SHARE_ZLIB).$(OBJ) $(DEVOBJ)gdevfpng.$(OBJ)
+ 
+$(DD)fpng.dev : $(DEVS_MAK) $(fpng_) $(GLD)page.dev $(GDEV)
+	$(SETPDEV2) $(DD)fpng $(fpng_)
+	$(ADDMOD) $(DD)fpng $(fpng_i_)
+
 ### ---------------------- PostScript image format ---------------------- ###
 ### These devices make it possible to print monochrome Level 2 files on a ###
 ###   Level 1 printer, by converting them to a bitmap in PostScript       ###
@@ -1891,6 +1908,9 @@ $(DD)plibk.dev : $(DEVS_MAK) $(plib_) $(GLD)page.dev $(GDEV)
 $(DD)inkcov.dev : $(ECHOGS_XE) $(LIB_MAK) $(DEVOBJ)gdevicov.$(OBJ)
 	$(SETDEV2) $(DD)inkcov $(DEVOBJ)gdevicov.$(OBJ)
 
+$(DD)ink_cov.dev : $(ECHOGS_XE) $(LIB_MAK) $(DEVOBJ)gdevicov.$(OBJ)
+	$(SETDEV2) $(DD)ink_cov $(DEVOBJ)gdevicov.$(OBJ)
+
 $(DEVOBJ)gdevicov.$(OBJ) : $(DEVSRC)gdevicov.c $(AK) $(MAKEDIRS) \
   $(arch_h) $(gdevprn_h) $(stdio__h)  $(stdint__h)
 	$(DEVCC) $(DEVO_)gdevicov.$(OBJ) $(C_) $(DEVSRC)gdevicov.c
@@ -1905,6 +1925,10 @@ $(DD)cups.dev : $(DEVS_MAK) $(lcups_dev) $(lcupsi_dev) $(cups_) $(GDEV)
 	$(SETPDEV2) $(DD)cups $(cups_)
 	$(ADDMOD) $(DD)cups -include $(lcups_dev)
 	$(ADDMOD) $(DD)cups -include $(lcupsi_dev)
+$(DD)pwgraster.dev : $(DEVS_MAK) $(lcups_dev) $(lcupsi_dev) $(cups_) $(GDEV)
+	$(SETPDEV2) $(DD)pwgraster $(cups_)
+	$(ADDMOD) $(DD)pwgraster -include $(lcups_dev)
+	$(ADDMOD) $(DD)pwgraster -include $(lcupsi_dev)
 
 $(DEVOBJ)gdevcups.$(OBJ) : $(LCUPSSRCDIR)$(D)gdevcups.c $(std_h)
 	$(CUPS_CC) $(DEVO_)gdevcups.$(OBJ) $(C_) $(CFLAGS) $(I_)$(GLSRC) \
@@ -1926,3 +1950,14 @@ $(DD)tracedev.dev : $(DEVS_MAK) $(GDEV) $(DEVOBJ)gdevtrac.$(OBJ)
 	$(SETMOD) $(DD)tracedev -dev2 tr_mono tr_rgb tr_cmyk
 	$(ADDMOD) $(DD)tracedev -obj $(DEVOBJ)gdevtrac.$(OBJ)
 
+###@@@--------------- PSDCMYKOG device --------------------------###
+
+psdcmykog_=$(DEVOBJ)gdevcmykog.$(OBJ)
+
+$(DD)psdcmykog.dev : $(DEVS_MAK) $(GDEV) $(psdcmykog_) $(DD)page.dev \
+  $(GLOBJ)gdevdevn.$(OBJ)
+	$(SETPDEV) $(DD)psdcmykog $(psdcmykog_)
+
+$(DEVOBJ)gdevcmykog.$(OBJ) : $(DEVSRC)gdevcmykog.c $(GDEV) \
+ $(GDEVH) $(gdevdevn_h) $(gsequivc_h) $(gdevdevnprn_h)
+	$(DEVCC) $(DEVO_)gdevcmykog.$(OBJ) $(C_) $(DEVSRC)gdevcmykog.c

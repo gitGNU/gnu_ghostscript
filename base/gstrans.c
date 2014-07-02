@@ -65,7 +65,7 @@ gs_currentblendmode(const gs_state *pgs)
 }
 
 int
-gs_setopacityalpha(gs_state *pgs, floatp alpha)
+gs_setopacityalpha(gs_state *pgs, double alpha)
 {
     if_debug2m('v', pgs->memory, "[v](0x%lx)opacity.alpha = %g\n", (ulong)pgs, alpha);
     pgs->opacity.alpha = (alpha < 0.0 ? 0.0 : alpha > 1.0 ? 1.0 : alpha);
@@ -79,7 +79,7 @@ gs_currentopacityalpha(const gs_state *pgs)
 }
 
 int
-gs_setshapealpha(gs_state *pgs, floatp alpha)
+gs_setshapealpha(gs_state *pgs, double alpha)
 {
     if_debug2m('v', pgs->memory, "[v](0x%lx)shape.alpha = %g\n", (ulong)pgs, alpha);
     pgs->shape.alpha = (alpha < 0.0 ? 0.0 : alpha > 1.0 ? 1.0 : alpha);
@@ -118,8 +118,8 @@ static int
 check_for_nontrans_pattern(gs_state *pgs, unsigned char *comp_name)
 {
     gx_device * dev = pgs->device;
-    bool is_patt_clist = (strcmp("pattern-clist",dev->dname) == 0);
-    bool is_patt_acum = (strcmp("pattern accumulator",dev->dname) == 0);
+    bool is_patt_clist = gx_device_is_pattern_clist(dev);
+    bool is_patt_acum = gx_device_is_pattern_accum(dev);
 
     /* Check if we are collecting data for a pattern that has no
        transparency.  In that case, we need to ignore the state changes */
@@ -161,18 +161,28 @@ gs_state_update_pdf14trans(gs_state * pgs, gs_pdf14trans_params_t * pparams)
     gx_device * dev = pgs->device;
     gx_device *pdf14dev = NULL;
     int code;
-
+    int curr_num = dev->color_info.num_components;
+    
     /*
      * Send the PDF 1.4 create compositor action specified by the parameters.
      */
     code = send_pdf14trans(pis, dev, &pdf14dev, pparams, pgs->memory);
+    if (code < 0)
+        return code;
     /*
      * If we created a new PDF 1.4 compositor device then we need to install it
      * into the graphics state.
      */
-    if (code >= 0 && pdf14dev != dev) {
+    if (pdf14dev != dev) {
         gx_set_device_only(pgs, pdf14dev);
     }
+
+    /* If we had a color space change and we are in overprint, then we need to 
+       update the drawn_comps */
+    if (pgs->overprint && curr_num != pdf14dev->color_info.num_components) {
+        code = gs_do_set_overprint(pgs);
+    }
+
     return code;
 }
 
@@ -363,8 +373,8 @@ gx_begin_transparency_group(gs_imager_state * pis, gx_device * pdev,
     }
 #endif
     if (dev_proc(pdev, begin_transparency_group) != 0)
-        return (*dev_proc(pdev, begin_transparency_group)) (pdev, &tgp,
-                                                        &bbox, pis, NULL);
+        return (*dev_proc(pdev, begin_transparency_group)) (pdev, &tgp, &bbox, pis, 
+                                                            NULL);
     else
         return 0;
 }
@@ -486,7 +496,7 @@ gx_push_transparency_state(gs_imager_state * pis, gx_device * pdev)
  * Handler for identity mask transfer functions.
  */
 static int
-mask_transfer_identity(floatp in, float *out, void *proc_data)
+mask_transfer_identity(double in, float *out, void *proc_data)
 {
     *out = (float) in;
     return 0;
@@ -732,6 +742,8 @@ gs_push_pdf14trans_device(gs_state * pgs, bool is_pattern)
     cmm_dev_profile_t *dev_profile;
 
     code = dev_proc(pgs->device, get_profile)(pgs->device,  &dev_profile);
+    if (code < 0)
+        return code;
     gsicc_extract_profile(GS_UNKNOWN_TAG, dev_profile, &icc_profile, 
                           &render_cond); 
     params.pdf14_op = PDF14_PUSH_DEVICE;
@@ -764,3 +776,25 @@ gs_pop_pdf14trans_device(gs_state * pgs, bool is_pattern)
     params.pdf14_op = PDF14_POP_DEVICE;  /* Other parameters not used */
     return gs_state_update_pdf14trans(pgs, &params);
 }
+
+int
+gs_abort_pdf14trans_device(gs_state * pgs)
+{
+    gs_pdf14trans_params_t params = { 0 };
+
+    params.pdf14_op = PDF14_ABORT_DEVICE;  /* Other parameters not used */
+    return gs_state_update_pdf14trans(pgs, &params);
+}
+
+/* Something has gone wrong have the device clean up everything */
+
+int
+gx_abort_trans_device(gs_imager_state * pis, gx_device * pdev)
+{
+    if_debug1m('v', pis->memory, "[v](0x%lx)gx_abort_trans_device(%d)\n", (ulong)pis);
+    if (dev_proc(pdev, discard_transparency_layer) != 0)
+    return (*dev_proc(pdev, discard_transparency_layer)) (pdev, pis);
+    else
+    return 0;
+}
+

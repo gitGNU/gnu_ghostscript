@@ -51,6 +51,36 @@ gdev_pdf_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
     gx_device_pdf *pdev = (gx_device_pdf *) dev;
     int code;
 
+    if (pdev->Eps2Write) {
+        float x0, y0, x1, y1;
+        gs_rect *Box;
+
+        if (!pdev->accumulating_charproc) {
+            Box = &pdev->BBox;
+            x0 = x / (pdev->HWResolution[0] / 72.0);
+            y0 = y / (pdev->HWResolution[1] / 72.0);
+            x1 = x0 + (w / (pdev->HWResolution[0] / 72.0));
+            y1 = y0 + (h / (pdev->HWResolution[1] / 72.0));
+        }
+        else {
+            Box = &pdev->charproc_BBox;
+            x0 = x / 100;
+            y0 = y / 100;
+            x1 = x0 + (w / 100);
+            y1 = y0 + (h / 100);
+        }
+
+        if (Box->p.x > x0)
+            Box->p.x = x0;
+        if (Box->p.y > y0)
+            Box->p.y = y0;
+        if (Box->q.x < x1)
+            Box->q.x = x1;
+        if (Box->q.y < y1)
+            Box->q.y = y1;
+        if (pdev->AccumulatingBBox)
+            return 0;
+    }
     code = pdf_open_page(pdev, PDF_IN_STREAM);
     if (code < 0)
         return code;
@@ -72,7 +102,7 @@ gdev_pdf_fill_rectangle(gx_device * dev, int x, int y, int w, int h,
 /* ------ Vector device implementation ------ */
 
 static int
-pdf_setlinewidth(gx_device_vector * vdev, floatp width)
+pdf_setlinewidth(gx_device_vector * vdev, double width)
 {
     /* Acrobat Reader doesn't accept negative line widths. */
     return psdf_setlinewidth(vdev, fabs(width));
@@ -434,7 +464,7 @@ pdf_put_clip_path(gx_device_pdf * pdev, const gx_clip_path * pcpath)
  */
 static bool
 make_rect_scaling(const gx_device_pdf *pdev, const gs_fixed_rect *bbox,
-                  floatp prescale, double *pscale)
+                  double prescale, double *pscale)
 {
     double bmin, bmax;
 
@@ -647,6 +677,7 @@ static void
 compute_subimage(int width, int height, int raster, byte *base,
                  int x0, int y0, long MaxClipPathSize, int *x1, int *y1)
 {
+    int bytes = (width + 7) / 8;
     /* Returns a semiopen range : [x0:x1)*[y0:y1). */
     if (x0 != 0) {
         long count;
@@ -674,7 +705,7 @@ compute_subimage(int width, int height, int raster, byte *base,
             count1 -= count;
             yy = y + 1;
             for (; yy < height; yy++)
-                if (memcmp(base + raster * y, base + raster * yy, raster))
+                if (memcmp(base + raster * y, base + raster * yy, bytes))
                     break;
             y = yy;
 
@@ -733,14 +764,14 @@ static int
 mask_to_clip(gx_device_pdf *pdev, int width, int height,
              int raster, byte *base, int x0, int y0, int x1, int y1)
 {
-    int y, yy, code = 0;
+    int y, yy, code = 0, bytes = (width + 7) / 8;
     bool has_segments = false;
 
     for (y = y0; y < y1 && code >= 0;) {
         yy = y + 1;
         if (x0 == 0) {
         for (; yy < y1; yy++)
-            if (memcmp(base + raster * y, base + raster * yy, raster))
+            if (memcmp(base + raster * y, base + raster * yy, bytes))
                 break;
         }
         code = image_line_to_clip(pdev, base + raster * y, x0, x1, y, yy, has_segments);
@@ -983,6 +1014,7 @@ pdf_setup_masked_image_converter(gx_device_pdf *pdev, gs_memory_t *mem, const gs
         gs_make_mem_mono_device(mask, mem, (gx_device *)pdev);
         mask->width = cvd->mdev.width;
         mask->height = cvd->mdev.height;
+        mask->raster = gx_device_raster((gx_device *)mask, 1);
         mask->bitmap_memory = mem;
         code = (*dev_proc(mask, open_device))((gx_device *)mask);
         if (code < 0)
@@ -1051,6 +1083,15 @@ gdev_pdf_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath
     bool have_path;
     gs_fixed_rect box = {{0, 0}, {0, 0}}, box1;
 
+    if (pdev->Eps2Write) {
+        pdev->AccumulatingBBox++;
+        code = gx_default_fill_path(dev, pis, ppath, params, pdcolor, pcpath);
+        pdev->AccumulatingBBox--;
+        if (code < 0)
+            return code;
+        if (pdev->AccumulatingBBox)
+            return 0;
+    }
     have_path = !gx_path_is_void(ppath);
     if (!have_path && !pdev->vg_initial_set) {
         /* See lib/gs_pdfwr.ps about "initial graphic state". */
@@ -1079,7 +1120,8 @@ gdev_pdf_fill_path(gx_device * dev, const gs_imager_state * pis, gx_path * ppath
         return 0;
     code = pdf_setfillcolor((gx_device_vector *)pdev, pis, pdcolor);
     if (code == gs_error_rangecheck) {
-        const bool convert_to_image = (pdev->CompatibilityLevel <= 1.2 &&
+        const bool convert_to_image = ((pdev->CompatibilityLevel <= 1.2 ||
+                pdev->params.ColorConversionStrategy != ccs_LeaveColorUnchanged) &&
                 gx_dc_is_pattern2_color(pdcolor));
 
         if (!convert_to_image) {
@@ -1380,6 +1422,14 @@ gdev_pdf_stroke_path(gx_device * dev, const gs_imager_state * pis,
     s = pdev->strm;
     stream_puts(s, (code ? "s" : "S"));
     stream_puts(s, (set_ctm ? " Q\n" : "\n"));
+    if (pdev->Eps2Write) {
+        pdev->AccumulatingBBox++;
+        code = gx_default_stroke_path(dev, pis, ppath, params, pdcolor,
+                                      pcpath);
+        pdev->AccumulatingBBox--;
+        if (code < 0)
+            return code;
+    }
     return 0;
 }
 
@@ -1426,6 +1476,23 @@ gdev_pdf_fill_rectangle_hl_color(gx_device *dev, const gs_fixed_rect *rect,
                 fixed2float(box1.q.x - box1.p.x) / scale, fixed2float(box1.q.y - box1.p.y) / scale);
         if (psmat)
             stream_puts(pdev->strm, "Q\n");
+        if (pdev->Eps2Write) {
+            gs_rect *Box;
+
+            if (!pdev->accumulating_charproc)
+                Box = &pdev->BBox;
+            else
+                Box = &pdev->charproc_BBox;
+
+            if (fixed2float(box1.p.x) / (pdev->HWResolution[0] / 72.0) < Box->p.x)
+                Box->p.x = fixed2float(box1.p.x) / (pdev->HWResolution[0] / 72.0);
+            if (fixed2float(box1.p.y) / (pdev->HWResolution[1] / 72.0) < Box->p.y)
+                Box->p.y = fixed2float(box1.p.y) / (pdev->HWResolution[1] / 72.0);
+            if (fixed2float(box1.q.x) / (pdev->HWResolution[0] / 72.0) > Box->q.x)
+                Box->q.x = fixed2float(box1.q.x) / (pdev->HWResolution[0] / 72.0) - Box->p.x;
+            if (fixed2float(box1.q.y) / (pdev->HWResolution[1] / 72.0) > Box->q.y)
+                Box->q.y = fixed2float(box1.q.y) / (pdev->HWResolution[1] / 72.0) - Box->p.y;
+        }
         return 0;
     } else {
         gx_fill_params params;

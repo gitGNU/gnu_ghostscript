@@ -944,13 +944,13 @@ $(PSD)psl2.dev : $(INT_MAK) $(ECHOGS_XE)\
  $(PSD)filter.dev $(PSD)iodevice.dev $(PSD)pagedev.dev $(PSD)pattern.dev\
  $(PSD)psl1.dev $(GLD)psl2lib.dev $(PSD)psl2read.dev\
  $(PSD)sepr.dev $(PSD)type32.dev $(PSD)type42.dev\
- $(PSD)fimscale.dev
+ $(PSD)fimscale.dev $(PSD)form.dev
 	$(SETMOD) $(PSD)psl2 -include $(PSD)dpsand2
 	$(ADDMOD) $(PSD)psl2 -include $(PSD)cidfont $(PSD)cie $(PSD)cmapread $(PSD)compfont
 	$(ADDMOD) $(PSD)psl2 -include $(PSD)dct $(PSD)filter $(PSD)iodevice
 	$(ADDMOD) $(PSD)psl2 -include $(PSD)pagedev $(PSD)pattern $(PSD)psl1 $(GLD)psl2lib $(PSD)psl2read
 	$(ADDMOD) $(PSD)psl2 -include $(PSD)sepr $(PSD)type32 $(PSD)type42
-	$(ADDMOD) $(PSD)psl2 -include $(PSD)fimscale
+	$(ADDMOD) $(PSD)psl2 -include $(PSD)fimscale $(PSD)form
 	$(ADDMOD) $(PSD)psl2 -emulator PostScript PostScriptLevel2
 
 # Define basic Level 2 language support.
@@ -1107,25 +1107,11 @@ $(PSOBJ)zfilter2.$(OBJ) : $(PSSRC)zfilter2.c $(OP) $(memory__h)\
 	$(PSCC) $(PSO_)zfilter2.$(OBJ) $(C_) $(PSSRC)zfilter2.c
 
 # Extensions beyond Level 2 standard.
-xfilter_=$(PSOBJ)sbhc.$(OBJ) $(PSOBJ)sbwbs.$(OBJ) $(PSOBJ)shcgen.$(OBJ)\
- $(PSOBJ)smtf.$(OBJ) $(PSOBJ)zfilterx.$(OBJ)
+xfilter_=$(GLD)smtf.$(OBJ) $(PSOBJ)zfilterx.$(OBJ)
 $(PSD)xfilter.dev : $(INT_MAK) $(ECHOGS_XE) $(xfilter_) $(GLD)pngp.dev
 	$(SETMOD) $(PSD)xfilter $(xfilter_)
 	$(ADDMOD) $(PSD)xfilter -include $(GLD)pngp
 	$(ADDMOD) $(PSD)xfilter -oper zfilterx
-
-$(PSOBJ)sbhc.$(OBJ) : $(PSSRC)sbhc.c $(AK) $(memory__h) $(stdio__h)\
- $(gdebug_h) $(sbhc_h) $(shcgen_h) $(strimpl_h)
-	$(PSCC) $(PSO_)sbhc.$(OBJ) $(C_) $(PSSRC)sbhc.c
-
-$(PSOBJ)sbwbs.$(OBJ) : $(PSSRC)sbwbs.c $(AK) $(stdio__h) $(memory__h)\
- $(gdebug_h) $(sbwbs_h) $(sfilter_h) $(strimpl_h)
-	$(PSCC) $(PSO_)sbwbs.$(OBJ) $(C_) $(PSSRC)sbwbs.c
-
-$(PSOBJ)shcgen.$(OBJ) : $(PSSRC)shcgen.c $(AK) $(memory__h) $(stdio__h)\
- $(gdebug_h) $(gserrors_h) $(gsmemory_h)\
- $(scommon_h) $(shc_h) $(shcgen_h)
-	$(PSCC) $(PSO_)shcgen.$(OBJ) $(C_) $(PSSRC)shcgen.c
 
 $(PSOBJ)smtf.$(OBJ) : $(PSSRC)smtf.c $(AK) $(stdio__h)\
  $(smtf_h) $(strimpl_h)
@@ -1133,8 +1119,7 @@ $(PSOBJ)smtf.$(OBJ) : $(PSSRC)smtf.c $(AK) $(stdio__h)\
 
 $(PSOBJ)zfilterx.$(OBJ) : $(PSSRC)zfilterx.c $(OP) $(memory__h)\
  $(gsstruct_h) $(ialloc_h) $(idict_h) $(idparam_h) $(ifilter_h)\
- $(store_h) $(sfilter_h) $(sbhc_h) $(sbtx_h) $(sbwbs_h) $(shcgen_h)\
- $(smtf_h) $(strimpl_h)
+ $(store_h) $(sfilter_h) $(sbtx_h) $(smtf_h) $(strimpl_h)
 	$(PSCC) $(PSO_)zfilterx.$(OBJ) $(C_) $(PSSRC)zfilterx.c
 
 # MD5 digest filter
@@ -1693,7 +1678,7 @@ $(PSOBJ)ztrans.$(OBJ) : $(PSSRC)ztrans.c $(OP) $(memory__h) $(string__h)\
  $(ghost_h) $(oper_h) $(gscspace_h) $(gscolor2_h) $(gsipar3x_h) $(gstrans_h)\
  $(gxiparam_h) $(gxcspace_h)\
  $(idict_h) $(idparam_h) $(ifunc_h) $(igstate_h) $(iimage_h) $(iname_h)\
- $(store_h) $(gsdflt_h)  $(gdevdevn_h)  $(gxblend_h) $(gdevp14_h)
+ $(store_h) $(gsdflt_h)  $(gdevdevn_h)  $(gxblend_h) $(gdevp14_h) $(gsicc_cms_h)
 	$(PSCC) $(PSO_)ztrans.$(OBJ) $(C_) $(PSSRC)ztrans.c
 
 # ---------------- ICCBased color spaces ---------------- #
@@ -1724,6 +1709,18 @@ $(GLD)diskn.dev : $(LIB_MAK) $(ECHOGS_XE) $(diskn_)
 	$(SETMOD) $(GLD)diskn $(diskn_)
 	$(ADDMOD) $(GLD)diskn -iodev disk0 disk1 disk2 disk3 disk4 disk5 disk6
 	$(ADDMOD) $(GLD)diskn -ps gs_diskn
+
+# ------------------ Support high level Forms ------------------ #
+form_=$(GLOBJ)zform.$(OBJ)
+$(GLD)form.dev : $(LIB_MAK) $(ECHOGS_XE) $(form_)
+	$(SETMOD) $(PSD)form $(form_)
+	$(ADDMOD) $(PSD)form -oper zform
+
+$(PSOBJ)zform.$(OBJ) : $(PSSRC)zform.c $(OP) $(ghost_h) $(oper_h)\
+  $(gxdevice_h) $(ialloc_h) $(idict_h) $(idparam_h) $(igstate_h)\
+  $(gxdevsop_h) $(gscoord_h) $(gsform1_h) $(gspath_h) $(gxpath_h)\
+  $(gzstate_h)
+	$(PSCC) $(PSO_)zform.$(OBJ) $(C_) $(PSSRC)zform.c
 
 # ================================ PDF ================================ #
 
@@ -1856,7 +1853,7 @@ $(PSOBJ)imainarg.$(OBJ) : $(PSSRC)imainarg.c $(GH)\
  $(ctype__h) $(memory__h) $(string__h)\
  $(gp_h)\
  $(gsargs_h) $(gscdefs_h) $(gsdevice_h) $(gsmalloc_h) $(gsmdebug_h)\
- $(gxdevice_h) $(gxdevmem_h)\
+ $(gspaint_h) $(gxclpage_h) $(gdevprn_h) $(gxdevice_h) $(gxdevmem_h)\
  $(ierrors_h) $(estack_h) $(files_h)\
  $(iapi_h) $(ialloc_h) $(iconf_h) $(imain_h) $(imainarg_h) $(iminst_h)\
  $(iname_h) $(interp_h) $(iscan_h) $(iutil_h) $(ivmspace_h)\
@@ -1866,7 +1863,7 @@ $(PSOBJ)imainarg.$(OBJ) : $(PSSRC)imainarg.c $(GH)\
 
 $(PSOBJ)imain.$(OBJ) : $(PSSRC)imain.c $(GH) $(memory__h) $(string__h)\
  $(gp_h) $(gscdefs_h) $(gslib_h) $(gsmatrix_h) $(gsutil_h)\
- $(gxalloc_h) $(gxdevice_h) $(gzstate_h)\
+ $(gspaint_h) $(gxclpage_h) $(gxalloc_h) $(gxdevice_h) $(gzstate_h)\
  $(dstack_h) $(ierrors_h) $(estack_h) $(files_h)\
  $(ialloc_h) $(iconf_h) $(idebug_h) $(idict_h) $(idisp_h) $(iinit_h)\
  $(iname_h) $(interp_h) $(iplugin_h) $(isave_h) $(iscan_h) $(ivmspace_h)\

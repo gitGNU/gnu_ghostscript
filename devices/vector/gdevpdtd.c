@@ -266,7 +266,7 @@ int pdf_font_descriptor_free(gx_device_pdf *pdev, pdf_resource_t *pres)
 
     gs_free_copied_font(copied);
     if (pbfont && pbfont->font_name.size) {
-        gs_free_string(pdev->memory, pbfont->font_name.data, pbfont->font_name.size, "Free BaseFont FontName string");
+        gs_free_string(pdev->pdf_memory, pbfont->font_name.data, pbfont->font_name.size, "Free BaseFont FontName string");
         pbfont->font_name.data = (byte *)0L;
         pbfont->font_name.size = 0;
     }
@@ -747,9 +747,7 @@ pdf_write_FontDescriptor(gx_device_pdf *pdev, pdf_resource_t *pres)
     pfd->common.object->written = true;
     {	const cos_object_t *pco = (const cos_object_t *)pdf_get_FontFile_object(pfd->base_font);
         if (pco != NULL) {
-            if (pdev->is_ps2write)
-                pprintld1(s, "%%BeginResource: file (PDF FontFile obj_%ld)\n", pco->id);
-            code = COS_WRITE_OBJECT(pco, pdev, resourceNone);
+            code = COS_WRITE_OBJECT(pco, pdev, resourceFontFile);
             if (code < 0)
                 return code;
         }
@@ -810,7 +808,7 @@ pdf_convert_truetype_font_descriptor(gx_device_pdf *pdev, pdf_font_resource_t *p
     if (pdfont->u.cidfont.CIDToGIDMap == NULL)
         return_error(gs_error_VMerror);
     memset(pdfont->u.cidfont.CIDToGIDMap, 0, length_CIDToGIDMap);
-    if(pdev->PDFA == 1) {
+    if(pdev->PDFA) {
         for (ch = FirstChar; ch <= LastChar; ch++) {
             if (Encoding[ch].glyph != GS_NO_GLYPH) {
                 gs_glyph glyph = pfont->procs.encode_char(pfont, ch, GLYPH_SPACE_INDEX);
