@@ -82,3 +82,7 @@
 2014-02-02 Didier Link <didier@famille-link.fr>
     * updates from AGPL 9.10 release
     * new GNU version 9.10.0
+
+2014-07-02 Didier Link <didier@famille-link.fr>
+	* update license files to AGPL
+	* micro version bump to 9.10.1
