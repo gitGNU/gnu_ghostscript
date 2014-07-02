@@ -75,6 +75,9 @@
 
 2014-02-02 Didier Link <didier@famille-link.fr>
 	* updates from GPL 9.07 release
-	* updates from AGPL 9.09 release
+	* updates from AGPL 9.08 release
 	* new GNU version 9.08.0
 
+2014-07-02 Didier Link <didier@famille-link.fr>
+    * update LICENSE and COPYING files to reflect move to AGPL
+    * micro version bump 9.08.1
