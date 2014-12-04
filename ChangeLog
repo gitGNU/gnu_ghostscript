@@ -92,3 +92,8 @@
 
 2014-07-02 Didier Link <didier@famille-link.fr>
     * update license files
+
+2014-12-04 Didier Link <didier@famille-link.fr>
+	* update license file
+	* remove jpegxr folder, not used in gs and not AGPL license compliant !
+	
