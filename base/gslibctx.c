@@ -121,7 +121,7 @@ int gs_lib_ctx_init( gs_memory_t *mem )
         mem->gs_lib_ctx = NULL;
         return -1;
     }
- 
+    pio->client_check_file_permission = NULL;
     gp_get_realtime(pio->real_time_0);
 
     return 0;
@@ -261,4 +261,14 @@ void errflush(const gs_memory_t *mem)
     if (!mem->gs_lib_ctx->stderr_fn)
         fflush(mem->gs_lib_ctx->fstderr);
     /* else nothing to flush */
+}
+
+int
+gs_check_file_permission (gs_memory_t *mem, const char *fname, const int len, const char *permission)
+{
+    int code = 0;
+    if (mem->gs_lib_ctx->client_check_file_permission != NULL) {
+        code = mem->gs_lib_ctx->client_check_file_permission(mem, fname, len, permission);
+    }
+    return code;
 }
