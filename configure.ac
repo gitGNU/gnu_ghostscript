@@ -19,7 +19,7 @@ dnl ------------------------------------------------
 dnl Initialization and Versioning
 dnl ------------------------------------------------
 
-AC_INIT([gnu-ghostscript], [9.14.0], [gnu-ghostscript-bug@gnu.org])
+AC_INIT([gnu-ghostscript], [9.14.1], [gnu-ghostscript-bug@gnu.org])
 AC_PREREQ(2.61)
 AC_LANG(C)
 AC_CONFIG_SRCDIR([psi/gs.c])
@@ -33,8 +33,8 @@ LDFLAGS="${LDFLAGS:=}"
 
 GS_VERSION_MAJOR=9
 GS_VERSION_MINOR=14
-GS_VERSION_PATCH=0
-GS_REVISIONDATE=20140702
+GS_VERSION_PATCH=1
+GS_REVISIONDATE=20161106
 
 GS_VERSION=`expr $GS_VERSION_MAJOR \* 10000 + $GS_VERSION_MINOR \* 100 + $GS_VERSION_PATCH`
 

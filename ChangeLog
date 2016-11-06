@@ -96,4 +96,10 @@
 2014-12-04 Didier Link <didier@famille-link.fr>
 	* update license file
 	* remove jpegxr folder, not used in gs and not AGPL license compliant !
+
+2016-11-06 Didier Link <didier@famille-link.fr>
+	* add security patches CVE-2013-5653, CVE-2016-7976, CVE-2016-7978, CVE-2016-7979 and CVE-2016-8602
+	* thanks to Mark H Weaver <mhw@netris.org> for adaptating the patches to gnu ghostscript and 
+	Ludovic Courtès <ludo@gnu.org> to point me the problems
+
 	
